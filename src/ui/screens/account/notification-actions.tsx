@@ -30,6 +30,9 @@ const icons: Record<NotificationType, LucideIcon> = {
   payout_paid: CircleDollarSign,
   review_published: Star,
   message_received: MessageCircle,
+  // Placeholders added by Claude with the UI-026 contract; Codex reviews them in UI-026.
+  support_replied: MessageCircle,
+  case_resolved: CheckCheck,
 };
 
 function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {

@@ -27,6 +27,10 @@ export const NOTIFICATION_TYPES = [
   'payout_paid',
   'review_published',
   'message_received',
+  /** Support wrote to the person on one of their cases (UI-026). */
+  'support_replied',
+  /** Support resolved a case the person is on (UI-026). */
+  'case_resolved',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

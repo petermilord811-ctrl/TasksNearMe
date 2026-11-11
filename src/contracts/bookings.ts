@@ -9,7 +9,7 @@ import type { PriceBreakdown, PricingInput } from './money';
 import { paymentChoiceSchema, type PaymentAttemptResult, type PaymentMethodLabel, type PaymentPanelData } from './payments';
 import type { ClientSummary, HelperSummary, PersonSummary } from './people';
 import type { PhotoUploadResult } from './posting';
-import type { BookingStatus, CancelReason, CompletedVia, PaymentStatus } from './status';
+import type { BookingStatus, CancelReason, CaseResolution, CaseStatus, CompletedVia, PaymentStatus } from './status';
 import type { TaskPublicView, TaskSchedule } from './tasks';
 import type { TimelineEvent } from './timeline';
 
@@ -199,8 +199,34 @@ export interface BookingView {
   helperSaved?: boolean;
   /** The viewer's review of this booking, once sent (UI-015). */
   myReview?: { rating: number; submittedAt: ISODateTime; publishedAt?: ISODateTime };
+  /** A problem report on this booking and how support resolved it (UI-026). */
+  dispute?: BookingDisputeView;
   /** From the domain (ui-contract §6): only actions that work today are included. */
   actions: ActionDescriptor<BookingActionId>[];
+}
+
+/**
+ * A problem report on a booking (UI-026), as each person sees it. The client always sees the case; the helper
+ * can open it once support writes to them (`canOpenCase`). Money outcomes are role-projected: the client sees
+ * their refund, the helper what they receive.
+ */
+export interface BookingDisputeView {
+  caseId: string;
+  status: CaseStatus;
+  reason: ProblemReason;
+  openedAt: ISODateTime;
+  /** The viewer can open `routes.app.supportCase(caseId)`. */
+  canOpenCase: boolean;
+  /** Once resolved: what support decided, with the money for this viewer. */
+  resolution?: {
+    type: CaseResolution;
+    summary: string;
+    at: ISODateTime;
+    /** Clients: what came back to their card. */
+    refundCents?: Cents;
+    /** Helpers: what they receive for the booking. */
+    receivesCents?: Cents;
+  };
 }
 
 /** A row on `/app/bookings`. */

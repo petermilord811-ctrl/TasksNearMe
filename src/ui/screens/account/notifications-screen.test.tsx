@@ -42,6 +42,8 @@ const copy: Record<NotificationType, RegExp> = {
   payout_paid: /You were paid \$54\.00/,
   review_published: /review.*was published/,
   message_received: /sent you a message/,
+  support_replied: /Support replied/,
+  case_resolved: /Support resolved/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -51,6 +53,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   find_work_task: { target: { kind: 'find_work_task', taskId: 'task / one' }, href: routes.app.findWorkTask('task / one') },
   onboarding: { target: { kind: 'onboarding', step: 'payout' }, href: routes.app.helperOnboarding('payout') },
   earnings: { target: { kind: 'earnings' }, href: routes.app.earnings() },
+  support_case: { target: { kind: 'support_case', caseId: 'case_dispute' }, href: routes.app.supportCase('case_dispute') },
 };
 
 describe('NotificationsScreen', () => {

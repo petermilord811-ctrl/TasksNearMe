@@ -723,3 +723,48 @@ export const fakeBookingSheetHandlers: BookingSheetHandlers = {
   onCantAccess: () => wait({ ok: true, code: 'updated' }),
   onSafetyReport: () => wait({ ok: true, code: 'submitted' }),
 };
+
+// ---- Disputes on the booking page (UI-026) ------------------------------------------------------------
+
+const deskDispute = { caseId: 'case_dispute', reason: 'not_done' as const, openedAt: '2026-11-22T15:00:00.000Z' };
+
+/** Maya reported a problem; support is looking at it. She can open the case. */
+export const deskBookingPosterDisputed: BookingView = {
+  ...deskBookingPosterCompletionSubmitted,
+  status: 'disputed',
+  deadlines: {},
+  dispute: { ...deskDispute, status: 'awaiting_support', canOpenCase: true },
+  actions: [action('message')],
+};
+
+/** Jordan before support wrote to Jordan: there's a report, without its details. */
+export const deskBookingHelperDisputed: BookingView = {
+  ...deskBookingHelperInProgress,
+  status: 'disputed',
+  checkIn: { onMyWayAt: '2026-11-21T15:58:00.000Z', arrivedAt: DESK_TIMES.arrived },
+  deadlines: {},
+  dispute: { ...deskDispute, status: 'awaiting_support', canOpenCase: false },
+  actions: [action('message')],
+};
+
+/** Support asked Jordan a question: Jordan can open the case to answer. */
+export const deskBookingHelperDisputedContacted: BookingView = {
+  ...deskBookingHelperDisputed,
+  dispute: { ...deskDispute, status: 'awaiting_helper', canOpenCase: true },
+};
+
+const settled = { type: 'settle' as const, summary: 'Settled at $45 because the drawers were left unfinished.', at: '2026-11-24T17:00:00.000Z' };
+
+/** Settled at $45: Maya got $16.50 back. */
+export const deskBookingPosterSettled: BookingView = {
+  ...deskBookingPosterCompleted,
+  completedVia: 'settlement',
+  dispute: { ...deskDispute, status: 'resolved', canOpenCase: true, resolution: { ...settled, refundCents: 1650 } },
+};
+
+/** Settled at $45: Jordan receives $40.50. */
+export const deskBookingHelperSettled: BookingView = {
+  ...deskBookingHelperCompleted,
+  completedVia: 'settlement',
+  dispute: { ...deskDispute, status: 'resolved', canOpenCase: true, resolution: { ...settled, receivesCents: 4050 } },
+};

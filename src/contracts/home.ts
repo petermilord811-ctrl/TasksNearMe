@@ -17,7 +17,9 @@ export type AttentionTarget =
   | { kind: 'messages' }
   | { kind: 'find_work_task'; taskId: string }
   | { kind: 'onboarding'; step: OnboardingStep }
-  | { kind: 'earnings' };
+  | { kind: 'earnings' }
+  /** A support case on `/app/support/[caseId]` (UI-026). */
+  | { kind: 'support_case'; caseId: string };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */

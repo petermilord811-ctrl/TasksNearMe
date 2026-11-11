@@ -11,7 +11,7 @@ describe('booking fixtures', () => {
   it('covers both roles and every booking state', () => {
     expect(new Set(views.map(([, view]) => view.viewerRole))).toEqual(new Set(['poster', 'helper']));
     expect(new Set(views.map(([, view]) => view.status))).toEqual(
-      new Set(['pending_funding', 'confirmed', 'in_progress', 'completion_submitted', 'completed', 'canceled']),
+      new Set(['pending_funding', 'confirmed', 'in_progress', 'completion_submitted', 'disputed', 'completed', 'canceled']),
     );
   });
 

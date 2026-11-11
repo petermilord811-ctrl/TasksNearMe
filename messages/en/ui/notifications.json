@@ -31,7 +31,9 @@
     "earnings_transferred": "{hasAmount, select, yes {{amount} was transferred} other {Your earnings were transferred}} to your payout account",
     "payout_paid": "You were paid{hasAmount, select, yes { {amount}} other {}}",
     "review_published": "{actorName}'s review for {title} was published",
-    "message_received": "{actorName} sent you a message about {title}"
+    "message_received": "{actorName} sent you a message about {title}",
+    "support_replied": "Support replied about {title}",
+    "case_resolved": "Support resolved your case about {title}"
   },
   "previews": {
     "group": "Notifications",

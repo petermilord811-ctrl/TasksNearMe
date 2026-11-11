@@ -39,6 +39,7 @@ const targetCases: Record<AttentionTarget['kind'], { target: AttentionTarget; hr
   find_work_task: { target: { kind: 'find_work_task', taskId: 'task / one' }, href: routes.app.findWorkTask('task / one') },
   onboarding: { target: { kind: 'onboarding', step: 'payout' }, href: routes.app.helperOnboarding('payout') },
   earnings: { target: { kind: 'earnings' }, href: routes.app.earnings() },
+  support_case: { target: { kind: 'support_case', caseId: 'case_dispute' }, href: routes.app.supportCase('case_dispute') },
 };
 
 describe('HomeScreen attention', () => {

@@ -82,3 +82,12 @@ export const fakeAccountHandlers: AccountHandlers = {
   onRequestDeletion: () => wait({ ok: true, code: 'submitted' }),
   onSignOut: () => wait({ ok: true, code: 'updated', redirectTo: routes.home() }),
 };
+
+/** Support wrote to Maya about the problem report, then resolved it (UI-026). */
+export const supportNotificationsData: NotificationsPageData = {
+  notifications: [
+    { id: 'ntf_case_resolved', type: 'case_resolved', title: 'Assemble a desk (flat-pack, 1 item)', target: { kind: 'support_case', caseId: 'case_dispute' }, createdAt: '2026-11-24T17:00:00.000Z' },
+    { id: 'ntf_support_replied', type: 'support_replied', title: 'Assemble a desk (flat-pack, 1 item)', target: { kind: 'support_case', caseId: 'case_dispute' }, createdAt: '2026-11-23T16:30:00.000Z', readAt: '2026-11-23T18:00:00.000Z' },
+  ],
+  unreadCount: 1,
+};
