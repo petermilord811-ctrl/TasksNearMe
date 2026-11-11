@@ -16,8 +16,7 @@ export interface SupportScreenProps {
 
 function CaseRow({ item, now }: { item: SupportCaseRow; now: ISODateTime }) {
   const t = useTranslations('support');
-  // The contract has no viewer role. Keep the shared role-neutral status label.
-  const status = useCaseStatus(item.status);
+  const status = useCaseStatus(item.status, item.viewerRole);
   return <li>
     <Link href={routes.app.supportCase(item.id)} className="flex min-w-0 items-center gap-3 rounded-xl border bg-card p-4 shadow-card transition-colors hover:bg-accent sm:p-5">
       <div className="min-w-0 flex-1 space-y-2">

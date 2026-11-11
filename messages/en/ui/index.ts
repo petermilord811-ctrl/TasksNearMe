@@ -54,7 +54,10 @@ import notifications from './notifications.json';
 import support from './support.json';
 import supportCase from './supportCase.json';
 import safety from './safety.json';
+import adminHome from './adminHome.json';
+import adminCases from './adminCases.json';
+import adminCase from './adminCase.json';
 
-const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, bookingSheets, paymentsPage, receipt, earnings, home, review, savedHelpers, account, notifications, support, supportCase, safety };
+const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, bookingSheets, paymentsPage, receipt, earnings, home, review, savedHelpers, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase };
 
 export default uiMessages;

@@ -38,7 +38,7 @@ describe('helper offer form', () => {
     await user.clear(price); await user.type(price, '$20');
     await user.click(screen.getByRole('button', { name: 'Send offer' }));
     expect(await screen.findByText(messages.forms.fieldErrors.out_of_range)).toBeInTheDocument();
-    expect(price).toHaveFocus();
+    await waitFor(() => expect(price).toHaveFocus());
     expect(handlers.onSubmitOffer).not.toHaveBeenCalled();
   });
 

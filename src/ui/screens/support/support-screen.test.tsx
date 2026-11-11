@@ -44,7 +44,7 @@ describe('SupportScreen', () => {
     expect(cases.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(data.cases.map((item) => routes.app.supportCase(item.id)));
     for (const item of data.cases) {
       expect(cases.getByRole('heading', { name: item.subject })).toBeVisible();
-      expect(cases.getByText(messages.status.case[item.status])).toBeVisible();
+      expect(cases.getByText(item.status === `awaiting_${item.viewerRole}` ? messages.status.case.awaiting_you : messages.status.case[item.status])).toBeVisible();
       expect(cases.getByText(formatDateTime(item.updatedAt))).toBeVisible();
     }
     expect(cases.getAllByText(messages.support.unread)).toHaveLength(1);
@@ -61,10 +61,22 @@ describe('SupportScreen', () => {
     expect(screen.getByRole('combobox', { name: messages.support.booking })).toHaveValue('');
   });
 
+  it.each(['poster', 'helper'] as const)('uses the supplied %s role to label their waiting cases', (viewerRole) => {
+    const item = mayaSupportPageData.cases[0]!;
+    mount({ ...mayaSupportPageData, cases: [
+      { ...item, id: 'waiting-poster', status: 'awaiting_poster', viewerRole },
+      { ...item, id: 'waiting-helper', status: 'awaiting_helper', viewerRole },
+    ] });
+    const cases = within(screen.getByRole('region', { name: messages.support.cases }));
+    const rows = cases.getAllByRole('listitem');
+    expect(rows[viewerRole === 'poster' ? 0 : 1]).toHaveTextContent(messages.status.case.awaiting_you);
+    expect(rows[viewerRole === 'poster' ? 1 : 0]).toHaveTextContent(messages.status.case[viewerRole === 'poster' ? 'awaiting_helper' : 'awaiting_poster']);
+  });
+
   it('has translated labels for every topic, case kind and case status', () => {
     const data: SupportPageData = {
       ...mayaSupportPageData,
-      cases: CASE_STATUSES.map((status, index) => ({ ...mayaSupportPageData.cases[0]!, id: `case_${status}`, status, kind: MEMBER_CASE_KINDS[index % MEMBER_CASE_KINDS.length]!, unread: false })),
+      cases: CASE_STATUSES.map((status, index) => ({ ...mayaSupportPageData.cases[0]!, id: `case_${status}`, status, viewerRole: undefined, kind: MEMBER_CASE_KINDS[index % MEMBER_CASE_KINDS.length]!, unread: false })),
     };
     mount(data);
     for (const topic of SUPPORT_TOPICS) expect(screen.getByRole('radio', { name: messages.support.topics[topic] })).toBeVisible();
@@ -82,7 +94,7 @@ describe('SupportScreen', () => {
     await fill(user, 'Too short');
     await user.click(screen.getByRole('button', { name: messages.support.submit }));
     expect(await screen.findByText(messages.forms.fieldErrors.too_short)).toBeVisible();
-    expect(screen.getByRole('textbox')).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveFocus());
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'x'.repeat(2001) } });
     await user.click(screen.getByRole('button', { name: messages.support.submit }));
     expect(await screen.findByText(messages.forms.fieldErrors.too_long)).toBeVisible();

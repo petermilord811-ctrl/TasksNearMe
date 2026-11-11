@@ -1,0 +1,62 @@
+{
+  "title": "Cases",
+  "intro": "Review reports and requests, then open a case to follow up.",
+  "count": "{count, plural, one {# case} other {# cases}}",
+  "queueFilter": "Queue",
+  "statusFilter": "Status",
+  "assignmentFilter": "Assignment",
+  "allQueues": "All queues",
+  "assignedToMe": "Assigned to me",
+  "filterOn": "On",
+  "filterOff": "Off",
+  "queues": {
+    "disputes": "Disputes",
+    "safety": "Safety",
+    "reports": "Reports",
+    "requests": "Requests"
+  },
+  "filters": {
+    "active": "Active",
+    "waiting": "Waiting",
+    "finished": "Finished",
+    "all": "All statuses"
+  },
+  "types": {
+    "dispute": "Problem report",
+    "no_show": "No-show report",
+    "cancellation_review": "Cancellation review",
+    "report_user": "Person report",
+    "report_content": "Content report",
+    "safety": "Safety report",
+    "payment_issue": "Payment question",
+    "reward_issue": "Reward question",
+    "account": "Account question",
+    "request": "Request"
+  },
+  "priorities": {
+    "low": "Low",
+    "normal": "Normal",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "priority": "Priority: {priority}",
+  "columns": {
+    "case": "Case",
+    "openedBy": "Opened by",
+    "status": "Status",
+    "response": "Response target",
+    "assignee": "Assignee"
+  },
+  "tableCaption": "Cases matching your filters, in response-target order",
+  "results": "Case results",
+  "newReply": "New reply",
+  "unassigned": "Unassigned",
+  "noTarget": "No response target",
+  "dueIn": "Due in {duration}",
+  "pastDue": "Past due {duration}",
+  "minutes": "{count, number} min",
+  "days": "{count, plural, one {# day} other {# days}}",
+  "emptyTitle": "No cases match these filters",
+  "emptyBody": "Try another queue or status to find the case you need.",
+  "clearFilters": "Clear filters"
+}

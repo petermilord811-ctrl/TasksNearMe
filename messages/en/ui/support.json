@@ -26,5 +26,5 @@
   "submit": "Send request",
   "submitting": "Sending request…",
   "success": "Your request was sent. Opening your case…",
-  "previews": { "group": "Support", "default": "Your cases and a new request", "empty": "No cases yet", "validationFailed": "Request needs changes", "submitting": "Sending a request", "submitted": "Request sent", "statuses": "All case kinds and statuses" }
+  "previews": { "group": "Support", "default": "Your cases and a new request", "helper": "Waiting on the helper", "empty": "No cases yet", "validationFailed": "Request needs changes", "submitting": "Sending a request", "submitted": "Request sent", "statuses": "All case kinds and neutral statuses" }
 }

@@ -1,5 +1,5 @@
-import { CASE_STATUSES, MEMBER_CASE_KINDS, routes, type ActionResult, type AppShellHandlers, type PreviewEntry, type SupportHandlers, type SupportPageData } from '@/contracts';
-import { fakeHandler, fakeSupportHandlers, mayaShell, mayaSupportPageData, supportEmptyData } from '@/fixtures';
+import { CASE_STATUSES, MEMBER_CASE_KINDS, routes, type ActionResult, type AppShellHandlers, type PreviewEntry, type SignedInViewer, type SupportHandlers, type SupportPageData } from '@/contracts';
+import { fakeHandler, fakeSupportHandlers, jordanShell, mayaShell, mayaSupportPageData, supportEmptyData } from '@/fixtures';
 import { SupportContent } from '@/ui/screens/support/support-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/support.json';
@@ -11,14 +11,14 @@ const shellHandlers: AppShellHandlers = {
   onSignOut: fakeHandler({ ok: true, code: 'updated' }),
 };
 
-function preview(variant: string, title: string, data: SupportPageData = mayaSupportPageData, options: { initialResult?: ActionResult; initialPending?: boolean } = {}): PreviewEntry {
+function preview(variant: string, title: string, data: SupportPageData = mayaSupportPageData, options: { initialResult?: ActionResult; initialPending?: boolean; viewer?: SignedInViewer } = {}): PreviewEntry {
   const handlers: SupportHandlers = {
     ...fakeSupportHandlers,
     onCreate: fakeHandler(options.initialResult ?? { ok: true, code: 'submitted', redirectTo: routes.app.supportCase('case_new') }, options.initialPending ? 60_000 : 400),
   };
   return {
     id: `screen-support/${variant}`, title, group: copy.previews.group, layout: 'fullscreen',
-    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.support()}>
+    render: () => <AppShell viewer={options.viewer ?? mayaShell} handlers={shellHandlers} currentPath={routes.app.support()}>
       <SupportContent data={data} handlers={handlers} now={now} {...options} />
     </AppShell>,
   };
@@ -26,6 +26,7 @@ function preview(variant: string, title: string, data: SupportPageData = mayaSup
 
 export const supportPreviews: PreviewEntry[] = [
   preview('default', copy.previews.default),
+  preview('helper', copy.previews.helper, { ...mayaSupportPageData, cases: [{ ...mayaSupportPageData.cases[0]!, status: 'awaiting_helper', viewerRole: 'helper' }] }, { viewer: jordanShell }),
   preview('empty', copy.previews.empty, supportEmptyData),
   preview('validation-failed', copy.previews.validationFailed, mayaSupportPageData, { initialResult: { ok: false, code: 'validation_failed', fieldErrors: { topic: ['required'], description: ['too_short'] } } }),
   preview('submitting', copy.previews.submitting, mayaSupportPageData, { initialPending: true }),
@@ -33,6 +34,6 @@ export const supportPreviews: PreviewEntry[] = [
   ...(['rate_limited', 'unknown'] as const).map((code) => preview(code.replaceAll('_', '-'), feedback.error[code], mayaSupportPageData, { initialResult: { ok: false, code } })),
   preview('all-statuses', copy.previews.statuses, {
     ...mayaSupportPageData,
-    cases: CASE_STATUSES.map((status, index) => ({ ...mayaSupportPageData.cases[0]!, id: `case_${status}`, status, kind: MEMBER_CASE_KINDS[index % MEMBER_CASE_KINDS.length]! })),
+    cases: CASE_STATUSES.map((status, index) => ({ ...mayaSupportPageData.cases[0]!, id: `case_${status}`, status, viewerRole: undefined, kind: MEMBER_CASE_KINDS[index % MEMBER_CASE_KINDS.length]! })),
   }),
 ];

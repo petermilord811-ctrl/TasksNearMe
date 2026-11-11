@@ -54,7 +54,7 @@ describe('sign-in forms', () => {
     show(<EmailStep data={signInEmailStep} handlers={handlers({ onRequestEmailCode })} />);
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByText(forms.fieldErrors.required)).toBeVisible();
-    expect(screen.getByLabelText('Email')).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText('Email')).toHaveFocus());
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(expect.stringContaining(forms.fieldErrors.required));
     expect(onRequestEmailCode).not.toHaveBeenCalled();
   });
@@ -78,7 +78,7 @@ describe('sign-in forms', () => {
     await userEvent.type(code, '123456');
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByText(forms.fieldErrors.incorrect)).toBeVisible();
-    expect(code).toHaveFocus();
+    await waitFor(() => expect(code).toHaveFocus());
     expect(code).toHaveAttribute('aria-invalid', 'true');
     expect(code).toHaveAccessibleDescription(expect.stringContaining(forms.fieldErrors.incorrect));
     expect(screen.queryByText(forms.fields.code.invalid)).not.toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('sign-in forms', () => {
     await userEvent.type(screen.getByLabelText('Last name'), 'Rivera');
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findAllByText(forms.fieldErrors.must_accept)).toHaveLength(2);
-    expect(screen.getByRole('checkbox', { name: /18 or older/ })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /18 or older/ })).toHaveFocus());
     expect(screen.getByRole('link', { name: 'Terms of service' })).toHaveAttribute('href', routes.legal('terms'));
     expect(screen.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute('href', routes.legal('privacy'));
     expect(onSaveProfile).not.toHaveBeenCalled();
