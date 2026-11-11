@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createTranslator, NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -10,7 +11,7 @@ import {
   deskBookingHelperCompleted, deskBookingHelperCompletedAddressHidden, deskBookingHelperConfirmed,
   deskBookingHelperInProgress, deskBookingHelperPendingFunding, deskBookingPosterCanceledLate,
   deskBookingPosterCompleted, deskBookingPosterCompletionSubmitted, deskBookingPosterConfirmed,
-  deskBookingPosterPendingFunding, deskExactAddress, fakeHandler, movingBookingPosterConfirmed,
+  deskBookingPosterCantAccessReported, deskBookingPosterPendingFunding, deskExactAddress, fakeBookingSheetHandlers, fakeHandler, movingBookingPosterConfirmed,
   remoteBookingHelperConfirmed,
 } from '@/fixtures';
 import { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
@@ -42,7 +43,7 @@ function mount(data: BookingView = deskBookingPosterConfirmed, now = '2026-11-17
   return {
     onError, onAction,
     ...render(<NextIntlClientProvider locale="en" messages={messages} onError={onError}>
-      <BookingHubScreen data={data} handlers={{ onAction }} now={now} />
+      <BookingHubScreen data={data} handlers={{ onAction }} sheets={fakeBookingSheetHandlers} now={now} />
     </NextIntlClientProvider>),
   };
 }
@@ -50,6 +51,17 @@ function mount(data: BookingView = deskBookingPosterConfirmed, now = '2026-11-17
 const roles: BookingViewerRole[] = ['poster', 'helper'];
 
 describe('BookingHubScreen privacy and supplied data', () => {
+  it('keeps the existing app caller compatible while failing closed until sheet handlers are supplied', async () => {
+    const onAction = vi.fn(fakeHandler<Parameters<BookingHubHandlers['onAction']>[0]>({ ok: true, code: 'updated' }, 0));
+    render(<NextIntlClientProvider locale="en" messages={messages}>
+      <BookingHubScreen data={{ ...deskBookingPosterConfirmed, actions: [{ id: 'cancel', kind: 'destructive', enabled: true }] }} handlers={{ onAction }} now="2026-11-21T16:00:00.000Z" />
+    </NextIntlClientProvider>);
+    await userEvent.click(screen.getByRole('button', { name: messages.actions.cancel }));
+    expect(await screen.findByText(messages.bookingSheets.cancel.loadError)).toBeVisible();
+    expect(screen.getByRole('alertdialog')).toBeVisible();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it('renders the address only through ExactAddressPanel with the route-built maps link', () => {
     mount();
     expect(addressRenderer).toHaveBeenCalledWith(expect.objectContaining({
@@ -151,6 +163,25 @@ describe('BookingHubScreen privacy and supplied data', () => {
     expect(container.textContent).toMatch(/On my way at 9:58 am/);
     expect(container.textContent).toMatch(/Running 20 minutes late/);
     expect(container.textContent).toMatch(/Arrived at 10:24 am/);
+  });
+
+  it('shows the supplied access report and client response deadline without deriving timers', () => {
+    mount(deskBookingPosterCantAccessReported);
+    const checkIn = screen.getByRole('region', { name: messages.bookingHub.checkIn });
+    expect(checkIn).toHaveTextContent(/Jordan T\. couldn.t get in at 10:50 am/);
+    expect(screen.getByText('Answer by 11:20 am or the booking is canceled')).toBeVisible();
+    expect(screen.getByRole('button', { name: messages.actions.im_here })).toBeEnabled();
+  });
+
+  it('shows an access-only check-in without the empty check-in copy, and keeps the response prompt client-only', () => {
+    mount({
+      ...deskBookingPosterCantAccessReported,
+      viewerRole: 'helper',
+      checkIn: { cantAccessAt: deskBookingPosterCantAccessReported.checkIn!.cantAccessAt },
+    });
+    expect(screen.getByRole('region', { name: messages.bookingHub.checkIn })).toHaveTextContent(/couldn.t get in at 10:50 am/);
+    expect(screen.queryByText(messages.bookingHub.noCheckIn)).not.toBeInTheDocument();
+    expect(screen.queryByText('Answer by 11:20 am or the booking is canceled')).not.toBeInTheDocument();
   });
 
   it('shows the hourly estimate, cap and allowance without adding the allowance to the canonical charge', () => {

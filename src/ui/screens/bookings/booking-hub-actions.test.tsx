@@ -2,22 +2,66 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, routes, type ActionResult, type BookingHubHandlers, type BookingView } from '@/contracts';
-import { deskBookingHelperConfirmed, deskBookingHelperDayOf, deskBookingPosterCompletionSubmitted, deskBookingPosterConfirmed, fakeHandler } from '@/fixtures';
+import { deskBookingHelperConfirmed, deskBookingHelperDayOf, deskBookingPosterCantAccessReported, deskBookingPosterCompletionSubmitted, deskBookingPosterConfirmed, deskBookingPosterNoShowNotYet, deskBookingPosterWithSheets, fakeBookingSheetHandlers, fakeHandler } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { BookingHubActions } from './booking-hub-actions';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+beforeEach(() => {
+  vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn(); });
+});
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 function mount(data: BookingView = deskBookingHelperDayOf, onAction = vi.fn(fakeHandler<{ action: Parameters<BookingHubHandlers['onAction']>[0]['action'] }>({ ok: true, code: 'updated' }, 0))) {
-  return { onAction, ...render(<NextIntlClientProvider locale="en" messages={messages}><BookingHubActions data={data} handlers={{ onAction }} /></NextIntlClientProvider>) };
+  return { onAction, ...render(<NextIntlClientProvider locale="en" messages={messages}><BookingHubActions data={data} handlers={{ onAction }} sheets={fakeBookingSheetHandlers} /></NextIntlClientProvider>) };
 }
 
 describe('BookingHubActions', () => {
+  it.each(['cancel', 'running_late', 'report_no_show', 'cant_access', 'safety_report'] as const)('opens %s as a sheet without calling the single-tap handler', async (id) => {
+    const { onAction } = mount({ ...deskBookingPosterWithSheets, actions: [{ id, kind: 'secondary', enabled: true }] });
+    await userEvent.click(screen.getByRole('button', { name: messages.actions[id] }));
+    expect(screen.queryByRole('dialog') ?? screen.queryByRole('alertdialog')).toBeVisible();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('keeps im_here a single tap and places the supplied response deadline beside it', async () => {
+    const { onAction } = mount(deskBookingPosterCantAccessReported);
+    const action = screen.getByRole('button', { name: messages.actions.im_here });
+    const bar = action.closest('[role="group"]')!.parentElement!;
+    expect(bar).toHaveTextContent('Answer by 11:20 am or the booking is canceled');
+    await userEvent.click(action);
+    expect(onAction).toHaveBeenCalledExactlyOnceWith({ action: 'im_here' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(await screen.findByText('Updated')).toBeVisible();
+  });
+
+  it('uses an alert dialog when a sheet action descriptor requires confirmation and restores focus on close', async () => {
+    const { onAction } = mount({ ...deskBookingHelperDayOf, actions: [{ id: 'running_late', kind: 'secondary', enabled: true, confirm: true }] });
+    const trigger = screen.getByRole('button', { name: messages.actions.running_late });
+    await userEvent.click(trigger);
+    const dialog = screen.getByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: messages.bookingSheets.back }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('does not open a no-show sheet before the supplied availability time', async () => {
+    const { onAction } = mount(deskBookingPosterNoShowNotYet);
+    const action = screen.getByRole('button', { name: messages.actions.report_no_show });
+    expect(action).toBeDisabled();
+    expect(action).toHaveAccessibleDescription('Available at 11:00 am');
+    await userEvent.click(action);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it('reserves the measured mobile bar height and releases it on unmount', () => {
     let notifyResize = () => {};
     const disconnect = vi.fn();
@@ -28,7 +72,7 @@ describe('BookingHubActions', () => {
     });
     const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ height: 100 } as DOMRect);
     const onAction = vi.fn(fakeHandler<Parameters<BookingHubHandlers['onAction']>[0]>({ ok: true, code: 'updated' }, 0));
-    const { container, unmount } = render(<NextIntlClientProvider locale="en" messages={messages}><div data-booking-hub><BookingHubActions data={deskBookingHelperDayOf} handlers={{ onAction }} /></div></NextIntlClientProvider>);
+    const { container, unmount } = render(<NextIntlClientProvider locale="en" messages={messages}><div data-booking-hub><BookingHubActions data={deskBookingHelperDayOf} handlers={{ onAction }} sheets={fakeBookingSheetHandlers} /></div></NextIntlClientProvider>);
     const page = container.querySelector<HTMLElement>('[data-booking-hub]')!;
     expect(page.style.getPropertyValue('--booking-actions-height')).toBe('100px');
     bounds.mockReturnValue({ height: 240 } as DOMRect);

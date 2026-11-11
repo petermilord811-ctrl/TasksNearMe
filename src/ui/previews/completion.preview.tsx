@@ -9,7 +9,7 @@ import {
   completionUnavailableData, deskAllowanceCompletionPageData, deskBookingPosterCompletionWithExpenses,
   deskBookingPosterCompletionWithWork, deskCompletionPageData, deskCompletionView,
   deskReportProblemPageData, deskWithExpensesCompletionView, fakeBookingHubHandlers,
-  fakeCompletionHandlers, fakeHandler, fakeReportProblemHandlers, jordanShell, mayaShell,
+  fakeBookingSheetHandlers, fakeCompletionHandlers, fakeHandler, fakeReportProblemHandlers, jordanShell, mayaShell,
   movingBookingHelperCompletionHourly, movingBookingPosterCompletionHourly,
   movingCompletionPageData, movingCompletionView, remoteCompletionPageData,
   remoteComputerBreakdown, reportProblemUnavailableData,
@@ -77,7 +77,7 @@ function bookingPreview(id: string, title: string, data: BookingView, at = now):
   return {
     id: `screen-booking/${id}`, title, group: copy.previews.group, layout: 'fullscreen',
     render: () => <AppShell viewer={viewer} handlers={shellHandlers} currentPath={routes.app.booking(data.id)} layout="flow">
-      <BookingHubScreen data={data} handlers={fakeBookingHubHandlers} now={at} />
+      <BookingHubScreen data={data} handlers={fakeBookingHubHandlers} sheets={fakeBookingSheetHandlers} now={at} />
     </AppShell>,
   };
 }

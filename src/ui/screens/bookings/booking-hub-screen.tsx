@@ -3,7 +3,7 @@ import { ArrowLeft, CalendarDays, Check, Clock3, HelpCircle, Lock, Navigation } 
 import { useTranslations } from 'next-intl';
 import {
   routes, type ActionResult, type BookingActionId, type BookingHubHandlers,
-  type BookingPaymentLine, type BookingView, type ISODateTime,
+  type BookingPaymentLine, type BookingSheetHandlers, type BookingView, type ISODateTime,
 } from '@/contracts';
 import { formatDate, formatDateTime, formatHours, formatMoney, formatMonthYear, formatRelative, formatTime, formatTimeRange } from '@/shared/format';
 import { CompletionSummary } from '@/ui/components/bookings/completion-summary';
@@ -19,15 +19,18 @@ import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus, usePaymentStatus } from '@/ui/components/status/use-status';
 import { Timeline } from '@/ui/components/timeline/timeline';
 import { BookingHubActions } from './booking-hub-actions';
+import { BookingHubWithoutSheetHandlers } from './booking-hub-with-sheets';
 
 export interface BookingHubScreenProps {
   data: BookingView;
   handlers: BookingHubHandlers;
+  /** Compatibility for the existing app route; new callers must supply sheet handlers. */
+  sheets?: BookingSheetHandlers;
   now: ISODateTime;
 }
 
-export function BookingHubScreen(props: BookingHubScreenProps) {
-  return <BookingHubContent {...props} />;
+export function BookingHubScreen({ sheets, ...props }: BookingHubScreenProps) {
+  return sheets ? <BookingHubContent {...props} sheets={sheets} /> : <BookingHubWithoutSheetHandlers {...props} />;
 }
 
 function BookingState({ data, now }: { data: BookingView; now: ISODateTime }) {
@@ -77,11 +80,13 @@ function BookingPayment({ payment }: { payment: BookingPaymentLine }) {
 }
 
 /** Initial result/pending states belong to the preview gallery. App pages use BookingHubScreen. */
-export function BookingHubContent({ data, handlers, now, initialResult, initialPending }: BookingHubScreenProps & {
+export function BookingHubContent({ data, handlers, sheets, now, initialResult, initialPending }: Omit<BookingHubScreenProps, 'sheets'> & {
+  sheets: BookingSheetHandlers;
   initialResult?: ActionResult;
   initialPending?: BookingActionId;
 }) {
   const t = useTranslations('bookingHub');
+  const sheetCopy = useTranslations('bookingSheets');
   const categories = useTranslations('helperCard.categories');
   const status = useBookingStatus(data.status, data.viewerRole);
   const { terms, checkIn } = data;
@@ -96,7 +101,7 @@ export function BookingHubContent({ data, handlers, now, initialResult, initialP
       <BookingState data={data} now={now} />
     </div>
 
-    <BookingHubActions key={data.id} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />
+    <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} />
 
     {data.completion && <section aria-label={t('work')} className="space-y-4">
       <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('work')}</h2>
@@ -151,8 +156,9 @@ export function BookingHubContent({ data, handlers, now, initialResult, initialP
         {checkIn.onMyWayAt && <li className="flex items-start gap-3"><Navigation aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><time dateTime={checkIn.onMyWayAt} className="tabular-nums">{t('onMyWay', { time: formatTime(checkIn.onMyWayAt) })}</time></li>}
         {checkIn.lateByMinutes !== undefined && <li className="flex items-start gap-3"><Clock3 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-warning" /><span className="tabular-nums">{t('runningLate', { minutes: checkIn.lateByMinutes })}</span></li>}
         {checkIn.arrivedAt && <li className="flex items-start gap-3"><Check aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-success" /><time dateTime={checkIn.arrivedAt} className="tabular-nums">{t('arrived', { time: formatTime(checkIn.arrivedAt) })}</time></li>}
+        {checkIn.cantAccessAt && <li className="flex items-start gap-3"><Lock aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-warning" /><time dateTime={checkIn.cantAccessAt} className="tabular-nums">{sheetCopy('cantAccessAt', { helper: data.helper.displayName, time: formatTime(checkIn.cantAccessAt) })}</time></li>}
       </ul>
-      {!checkIn.onMyWayAt && checkIn.lateByMinutes === undefined && !checkIn.arrivedAt && <p className="text-sm text-muted-foreground">{t('noCheckIn')}</p>}
+      {!checkIn.onMyWayAt && checkIn.lateByMinutes === undefined && !checkIn.arrivedAt && !checkIn.cantAccessAt && <p className="text-sm text-muted-foreground">{t('noCheckIn')}</p>}
     </section>}
 
     <section aria-label={t('terms')} className="space-y-4">
