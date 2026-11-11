@@ -4,6 +4,7 @@ import {
   bookshelfCounterBreakdown,
   deskBreakdown,
   deskChairChangeDeltaCents,
+  deskCancelPreviewPosterLate,
   deskConfirmData,
   deskOfferLeeBreakdown,
   deskOfferSamBreakdown,
@@ -19,6 +20,7 @@ import {
   remoteComputerBreakdown,
   remoteConfirmData,
   smallTaskBreakdown,
+  DESK_TIMES,
 } from '@/fixtures';
 import { DEFAULT_CANCELLATION, DEFAULT_FEES } from '@/modules/markets/policy-defaults';
 import {
@@ -91,6 +93,15 @@ describe('canonical examples (blueprint 04 §3, ui-contract §3)', () => {
       expect(data.breakdown).toEqual(quoteBreakdown(fees, data.offer.pricing));
       expect(data.cancellation).toEqual(cancellationSummary(DEFAULT_CANCELLATION, data.breakdown, data.offer.proposedStart));
     }
+  });
+
+  it('the cancel sheet fixtures follow the policy for the desk booking', () => {
+    const summary = cancellationSummary(DEFAULT_CANCELLATION, deskBreakdown, DESK_TIMES.agreedStart);
+    expect(deskCancelPreviewPosterLate).toMatchObject({
+      freeUntil: summary.freeUntil,
+      posterRefundCents: summary.lateRefundCents,
+      helperCompensationCents: summary.lateHelperCompensationCents,
+    });
   });
 
   it('late cancellation: helper receives $12.00, poster gets $54.00 back', () => {

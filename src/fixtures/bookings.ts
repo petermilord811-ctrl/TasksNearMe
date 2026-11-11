@@ -9,7 +9,9 @@ import type {
   BookingsPageData,
   BookingTermsView,
   BookingUnavailableReason,
+  BookingSheetHandlers,
   BookingView,
+  CancellationPreview,
   CompletionHandlers,
   CompletionPageData,
   CompletionRules,
@@ -632,4 +634,92 @@ export const fakeCompletionHandlers: CompletionHandlers = {
 export const fakeReportProblemHandlers: ReportProblemHandlers = {
   onUploadPhoto: () => wait(uploaded()),
   onSubmit: () => wait({ ok: true, code: 'submitted', redirectTo: routes.app.booking('bkg_desk') }),
+};
+
+// ---- Booking sheets (UI-012) ----------------------------------------------------------------------
+// The desk starts Sat 10:30 am; free cancellation until Fri 10:30 am (blueprint 04 §6).
+
+const deskFreeUntil = '2026-11-20T16:30:00.000Z';
+
+/** Maya cancels on Thursday: everything back. */
+export const deskCancelPreviewPosterEarly: CancellationPreview = {
+  by: 'poster',
+  late: false,
+  freeUntil: deskFreeUntil,
+  posterRefundCents: 6600,
+  helperCompensationCents: 0,
+  helperStrike: false,
+};
+
+/** Maya cancels on Friday evening: $54.00 back; Jordan receives $12.00. */
+export const deskCancelPreviewPosterLate: CancellationPreview = { ...deskCancelPreviewPosterEarly, late: true, posterRefundCents: 5400, helperCompensationCents: 1200 };
+
+/** Jordan cancels early: Maya gets everything back; no strike. */
+export const deskCancelPreviewHelperEarly: CancellationPreview = { ...deskCancelPreviewPosterEarly, by: 'helper' };
+
+/** Jordan cancels late: Maya still gets everything back; it counts against Jordan. */
+export const deskCancelPreviewHelperLate: CancellationPreview = { ...deskCancelPreviewHelperEarly, late: true, helperStrike: true };
+
+/** Maya's booking page with cancel and safety. */
+export const deskBookingPosterWithSheets: BookingView = {
+  ...deskBookingPosterConfirmed,
+  actions: [action('message'), action('add_to_calendar'), action('safety_report'), action('cancel', 'destructive')],
+};
+
+/** Jordan on the day: arrived, running late, cancel, safety. */
+export const deskBookingHelperWithSheets: BookingView = {
+  ...deskBookingHelperDayOf,
+  actions: [action('arrived', 'primary'), action('running_late'), action('message'), action('safety_report'), action('cancel', 'destructive')],
+};
+
+/** Jordan said he's running 20 minutes late. */
+export const deskBookingHelperRunningLate: BookingView = {
+  ...deskBookingHelperWithSheets,
+  checkIn: { onMyWayAt: '2026-11-21T15:58:00.000Z', lateByMinutes: 20 },
+  timeline: [...deskTimelineCompleted.slice(0, 5), { id: 'evt_late', at: '2026-11-21T16:25:00.000Z', actor: 'helper', actorName: 'Jordan T.', type: 'running_late', params: { minutes: 20 } }],
+};
+
+/** 11:00 am and no check-in: Maya may report a no-show. */
+export const deskBookingPosterNoShowReportable: BookingView = {
+  ...deskBookingPosterConfirmed,
+  actions: [action('report_no_show', 'primary'), action('message'), action('safety_report')],
+};
+
+/** Before 11:00 am, the report waits. */
+export const deskBookingPosterNoShowNotYet: BookingView = {
+  ...deskBookingPosterConfirmed,
+  actions: [
+    action('report_no_show', 'secondary', { enabled: false, disabledReason: { code: 'available_at', at: DESK_TIMES.noShowReportable } }),
+    action('message'),
+    action('add_to_calendar'),
+  ],
+};
+
+/** Jordan arrived 25 minutes ago and can't get in. */
+export const deskBookingHelperCantAccessAvailable: BookingView = {
+  ...deskBookingHelperInProgress,
+  actions: [action('submit_completion', 'primary'), action('cant_access'), action('message'), action('safety_report')],
+};
+
+/** Jordan reported he can't get in at 10:50; Maya has until 11:20 to answer. */
+export const deskBookingPosterCantAccessReported: BookingView = {
+  ...deskBookingPosterConfirmed,
+  status: 'in_progress',
+  checkIn: { onMyWayAt: '2026-11-21T15:58:00.000Z', arrivedAt: DESK_TIMES.arrived, cantAccessAt: '2026-11-21T16:50:00.000Z' },
+  deadlines: { posterResponseDueAt: '2026-11-21T17:20:00.000Z' },
+  timeline: [
+    ...deskTimelineCompleted.slice(0, 6),
+    { id: 'evt_ca', at: '2026-11-21T16:50:00.000Z', actor: 'helper', actorName: 'Jordan T.', type: 'cant_access' },
+  ],
+  actions: [action('im_here', 'primary'), action('message'), action('safety_report')],
+};
+
+/** Fake sheet handlers: the preview follows the viewer; everything else succeeds. */
+export const fakeBookingSheetHandlers: BookingSheetHandlers = {
+  onPreviewCancel: () => wait(deskCancelPreviewPosterLate),
+  onCancel: () => wait({ ok: true, code: 'canceled' }),
+  onRunningLate: () => wait({ ok: true, code: 'updated' }),
+  onReportNoShow: () => wait({ ok: true, code: 'canceled' }),
+  onCantAccess: () => wait({ ok: true, code: 'updated' }),
+  onSafetyReport: () => wait({ ok: true, code: 'submitted' }),
 };

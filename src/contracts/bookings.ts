@@ -143,6 +143,8 @@ export interface BookingCheckIn {
   /** The latest "running late" update, in minutes. */
   lateByMinutes?: 10 | 20 | 30;
   arrivedAt?: ISODateTime;
+  /** The helper reported they can't get in (UI-012). */
+  cantAccessAt?: ISODateTime;
 }
 
 /** The times that matter in the current state (each only when it applies). */
@@ -155,6 +157,8 @@ export interface BookingDeadlines {
   approvalDueAt?: ISODateTime;
   /** `completed`: the helper stops seeing the address at this time. */
   addressHiddenAt?: ISODateTime;
+  /** After a can't-access report: the client must answer ("I'm here") by then, or the booking is canceled (UI-012). */
+  posterResponseDueAt?: ISODateTime;
 }
 
 /** A charge or a refund on the booking. Posters only. */
@@ -367,4 +371,70 @@ export type ReportProblemInput = z.input<typeof reportProblemInputSchema>;
 export interface ReportProblemHandlers {
   onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
   onSubmit: ActionHandler<ReportProblemInput>;
+}
+
+// ---- Booking sheets: cancel, running late, no-show, can't access, safety (UI-012) -----------------
+// Blueprint 03 §4 (who can do what, timers), 04 §6 (cancellation money), ui-contract §6.
+
+/** Why the client cancels. */
+export const POSTER_CANCEL_REASONS = ['plans_changed', 'found_someone_else', 'helper_asked', 'other'] as const;
+/** Why the helper cancels. */
+export const HELPER_CANCEL_REASONS = ['unavailable', 'illness', 'scope_different', 'safety_concern', 'other'] as const;
+export type BookingCancelReasonChoice = (typeof POSTER_CANCEL_REASONS)[number] | (typeof HELPER_CANCEL_REASONS)[number];
+
+/** What cancelling now means, computed when the sheet opens (the timing matters). */
+export interface CancellationPreview {
+  by: BookingViewerRole;
+  /** Less than 24 h before the start. */
+  late: boolean;
+  /** Cancel before this time for the early terms. */
+  freeUntil: ISODateTime;
+  /** What the client gets back. */
+  posterRefundCents: Cents;
+  /** What the helper receives (late client cancellations only). */
+  helperCompensationCents: Cents;
+  /** A late helper cancellation counts against the helper. */
+  helperStrike: boolean;
+}
+
+export const cancelBookingInputSchema = z.object({
+  reason: z.string(code('required')).min(1, code('required')),
+  note: z.string(code('required')).trim().max(500, code('too_long')),
+});
+export type CancelBookingInput = z.input<typeof cancelBookingInputSchema>;
+
+export const LATE_BY_MINUTES = [10, 20, 30] as const;
+export type LateByMinutes = (typeof LATE_BY_MINUTES)[number];
+
+/** A short note with a no-show or can't-access report. */
+export const bookingNoteInputSchema = z.object({ note: z.string(code('required')).trim().max(500, code('too_long')) });
+export type BookingNoteInput = z.input<typeof bookingNoteInputSchema>;
+
+export const SAFETY_REPORT_KINDS = ['unsafe_now', 'harassment', 'threat', 'property_damage', 'other'] as const;
+export type SafetyReportKind = (typeof SAFETY_REPORT_KINDS)[number];
+
+export const safetyReportInputSchema = z.object({
+  kind: z.enum(SAFETY_REPORT_KINDS, code('required')),
+  description: z.string(code('required')).trim().min(10, code('too_short')).max(2000, code('too_long')),
+});
+export type SafetyReportInput = z.input<typeof safetyReportInputSchema>;
+
+/**
+ * Sheets the booking page opens for actions that need input; every other action stays a single tap
+ * (`BookingHubHandlers.onAction`).
+ * - `cancel` → `onPreviewCancel` when the sheet opens, then `onCancel` (ok `canceled`).
+ * - `running_late` → `onRunningLate` (ok `updated`).
+ * - `report_no_show` (client) → `onReportNoShow` (ok `canceled`: full refund).
+ * - `cant_access` (helper) → `onCantAccess` (ok `updated`: the client has 30 minutes to respond with `im_here`).
+ * - `safety_report` (both) → `onSafetyReport` (ok `submitted`: support gets an urgent case). The sheet shows
+ *   "Call 911" first, always.
+ * Errors for all: `validation_failed`, `not_allowed` (the booking changed: reload), `rate_limited`, `unknown`.
+ */
+export interface BookingSheetHandlers {
+  onPreviewCancel: QueryHandler<Record<string, never>, CancellationPreview>;
+  onCancel: ActionHandler<CancelBookingInput>;
+  onRunningLate: ActionHandler<{ minutes: LateByMinutes }>;
+  onReportNoShow: ActionHandler<BookingNoteInput>;
+  onCantAccess: ActionHandler<BookingNoteInput>;
+  onSafetyReport: ActionHandler<SafetyReportInput>;
 }
