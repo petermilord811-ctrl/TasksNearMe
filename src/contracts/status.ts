@@ -116,6 +116,8 @@ export const CASE_TYPES = [
   'payment_issue',
   'reward_issue',
   'account',
+  /** A member's general question (a booking question or "something else"). */
+  'request',
 ] as const;
 export type CaseType = (typeof CASE_TYPES)[number];
 

@@ -1,3 +1,4 @@
+import type { AdminCaseStatusFilter, AdminQueue } from './admin';
 import type { CategorySlug } from './common';
 import type { FindWorkQuery } from './helper-work';
 import type { ExactAddress } from './location';
@@ -121,7 +122,8 @@ export const routes = {
     reports: () => '/admin/reports',
     bookings: () => '/admin/bookings',
     booking: (bookingId: string) => `/admin/bookings/${enc(bookingId)}`,
-    cases: () => '/admin/cases',
+    cases: (filters: { queue?: AdminQueue; status?: AdminCaseStatusFilter; mine?: boolean } = {}) =>
+      withQuery('/admin/cases', { queue: filters.queue, status: filters.status, mine: filters.mine ? '1' : undefined }),
     case: (caseId: string) => `/admin/cases/${enc(caseId)}`,
     payments: () => '/admin/payments',
     rewards: () => '/admin/rewards',
