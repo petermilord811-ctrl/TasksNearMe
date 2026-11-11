@@ -4,7 +4,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { NOTIFICATION_TYPES, routes, type ActionResult, type AttentionTarget, type NotificationHandlers, type NotificationsPageData, type NotificationType } from '@/contracts';
-import { jordanNotificationsData, mayaNotificationsData, notificationsEmptyData, supportNotificationsData } from '@/fixtures';
+import { bookshelfInviteCounteredPoster, bookshelfInviteSentHelper, jordanNotificationsData, mayaNotificationsData, notificationsEmptyData, supportNotificationsData } from '@/fixtures';
 import { attentionHref } from '@/ui/lib/attention-href';
 import messages from '../../../../messages/en/ui';
 import { NotificationsScreen } from './notifications-screen';
@@ -46,10 +46,10 @@ const copy: Record<NotificationType, RegExp> = {
   support_replied: /Support replied about/,
   case_resolved: /Support resolved your case about/,
   change_proposed: /proposed a change/,
-  change_applied: /change to .* was applied/,
-  invite_received: /invited you/,
-  invite_countered: /countered your invite/,
-  invite_accepted: /accepted your invite/,
+  change_applied: /booking details for .* were updated/,
+  invite_received: /sent you a booking request/,
+  invite_countered: /sent a counter-offer/,
+  invite_accepted: /accepted your booking request.*You're booked/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -76,6 +76,48 @@ describe('NotificationsScreen', () => {
     expect(attentionHref(target)).toBe(href);
     show({ notifications: [{ ...mayaNotificationsData.notifications[0], target }], unreadCount: 1 });
     expect(screen.getByRole('link')).toHaveAttribute('href', href);
+  });
+
+  it.each([
+    { type: 'change_proposed', target: targets.booking },
+    { type: 'change_applied', target: targets.booking },
+    { type: 'invite_received', target: targets.invite },
+    { type: 'invite_countered', target: targets.task },
+    { type: 'invite_accepted', target: targets.booking },
+  ] as const)('opens the supplied destination for $type', async ({ type, target }) => {
+    const actions = handlers();
+    const notification = { ...mayaNotificationsData.notifications[0], id: type, type, target: target.target };
+    show({ notifications: [notification], unreadCount: 1 }, actions);
+    const link = screen.getByRole('link', { name: copy[type] });
+    expect(link).toHaveAttribute('href', target.href);
+    await userEvent.click(link);
+    expect(actions.onOpen).toHaveBeenCalledExactlyOnceWith({ notificationId: type });
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledExactlyOnceWith(target.href));
+  });
+
+  it('shows the supplied counter-offer amount without using the card hold amount', () => {
+    show({
+      notifications: [{
+        id: 'counter', type: 'invite_countered', title: bookshelfInviteCounteredPoster.task.title,
+        actorName: bookshelfInviteCounteredPoster.helper.displayName,
+        params: { amountCents: bookshelfInviteCounteredPoster.counter!.breakdown.taskPriceCents },
+        target: { kind: 'task', taskId: bookshelfInviteCounteredPoster.task.id }, createdAt: now,
+      }], unreadCount: 1,
+    });
+    expect(screen.getByRole('link')).toHaveTextContent('Jordan T. sent a counter-offer of $50.00 for Assemble a bookshelf');
+    expect(screen.getByRole('link')).not.toHaveTextContent('$55.00');
+  });
+
+  it('opens an invite sheet through the invite target after mark-read fails', async () => {
+    const invite = bookshelfInviteSentHelper;
+    show({
+      notifications: [{
+        id: 'received', type: 'invite_received', title: invite.task.title, actorName: invite.client.displayName,
+        target: { kind: 'invite', inviteId: invite.id }, createdAt: invite.sentAt,
+      }], unreadCount: 1,
+    }, handlers({ onOpen: vi.fn().mockResolvedValue({ ok: false, code: 'unknown' }) }));
+    await userEvent.click(screen.getByRole('link', { name: /sent you a booking request/ }));
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledExactlyOnceWith(routes.app.offers(invite.id)));
   });
 
   it.each(supportNotificationsData.notifications)('opens the support case for $type', async (notification) => {
@@ -106,7 +148,7 @@ describe('NotificationsScreen', () => {
     expect(screen.getByRole('link', { name: /You were paid \$62\.00/ })).toBeVisible();
   });
 
-  it.each(['helper_running_late', 'payout_paid', 'offer_received'] as const)('does not invent optional details for %s', (type) => {
+  it.each(['helper_running_late', 'payout_paid', 'offer_received', 'change_proposed', 'change_applied', 'invite_received', 'invite_countered', 'invite_accepted'] as const)('does not invent optional details for %s', (type) => {
     show({ notifications: [{ id: type, type, target: { kind: 'messages' }, createdAt: now }], unreadCount: 1 });
     expect(screen.getByRole('link').textContent).not.toMatch(/undefined|NaN|\$0\.00|0 minutes/);
   });

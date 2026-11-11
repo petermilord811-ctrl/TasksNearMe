@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarCheck, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, Clock, DoorOpen, Headset, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, Star, X, type LucideIcon } from 'lucide-react';
+import { ArrowLeftRight, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Headset, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
@@ -32,12 +32,11 @@ const icons: Record<NotificationType, LucideIcon> = {
   message_received: MessageCircle,
   support_replied: Headset,
   case_resolved: CircleCheck,
-  // Placeholders added by Claude with change and invite notifications; Codex reviews them in UI-020.
-  change_proposed: MessageCircle,
-  change_applied: CheckCheck,
-  invite_received: MessageCircle,
-  invite_countered: MessageCircle,
-  invite_accepted: CheckCheck,
+  change_proposed: ClipboardPenLine,
+  change_applied: ClipboardCheck,
+  invite_received: CalendarPlus,
+  invite_countered: ArrowLeftRight,
+  invite_accepted: CalendarCheck,
 };
 
 function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
