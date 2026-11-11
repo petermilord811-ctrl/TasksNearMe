@@ -28,7 +28,7 @@
     "test:db": "vitest run --config vitest.db.config.mts"
   },
   "dependencies": {
-    "@hookform/resolvers": "^7.0.5",
+    "@hookform/resolvers": "7.0.5",
     "better-auth": "1.7.20",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
