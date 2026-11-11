@@ -106,7 +106,7 @@ async function policyOf(db: Db, policyVersionId: string): Promise<BookingPolicy>
   return row ? { noShowMinutes: row.timers.noShowMinutes, addressHideAfterHours: row.timers.addressHideAfterHours } : DEFAULT_POLICY;
 }
 
-async function clientSummary(db: Db, userId: string): Promise<ClientSummary | null> {
+export async function clientSummary(db: Db, userId: string): Promise<ClientSummary | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return null;
   return {

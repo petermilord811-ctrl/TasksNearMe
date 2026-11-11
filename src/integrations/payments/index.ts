@@ -29,6 +29,11 @@ export interface CollectedCard {
   expYear: number;
 }
 
+export type AuthorizeResult =
+  | { status: 'authorized'; providerRef: string }
+  | { status: 'failed'; providerRef: string; failureCode: PaymentFailureCode }
+  | { status: 'requires_action'; providerRef: string };
+
 export interface PaymentProvider {
   readonly name: 'dev' | 'stripe';
   /** A charge captured right away (booking an offer). Same key, same result. */
@@ -37,6 +42,15 @@ export interface PaymentProvider {
   completeAction(input: { providerRef: string; outcome: 'approved' | 'failed' }): Promise<
     { status: 'succeeded' } | { status: 'failed'; failureCode: PaymentFailureCode }
   >;
+  /**
+   * Holds the amount on the card without charging it (direct invites), captured later or released. Same
+   * outcomes as `charge`, with `authorized` for success; a bank step finishes with `completeAction`.
+   */
+  authorize(input: { amountCents: number; method: ChargeMethod; idempotencyKey: string; description: string }): Promise<AuthorizeResult>;
+  /** Charges a held authorization (up to the held amount). */
+  capture(input: { authorizationRef: string; amountCents: number; idempotencyKey: string }): Promise<{ status: 'succeeded' } | { status: 'failed'; failureCode: PaymentFailureCode }>;
+  /** Releases a held authorization. */
+  cancelAuthorization(input: { authorizationRef: string }): Promise<{ status: 'canceled' }>;
   /** Refunds part or all of a captured charge. Same key, same result. */
   refund(input: { chargeRef: string; amountCents: number; idempotencyKey: string }): Promise<{ status: 'succeeded' | 'failed'; refundRef: string }>;
   /** Development only: the payment method for a test card (what the provider's card form would return). */
@@ -79,6 +93,25 @@ export function createDevPaymentProvider(): PaymentProvider {
         default:
           return { status: 'succeeded', providerRef };
       }
+    },
+    async authorize({ method }) {
+      const providerRef = intentId();
+      switch (devCardOf(method.providerRef)) {
+        case 'declined':
+          return { status: 'failed', providerRef, failureCode: 'payment_declined' };
+        case 'insufficient_funds':
+          return { status: 'failed', providerRef, failureCode: 'insufficient_funds' };
+        case 'requires_verification':
+          return { status: 'requires_action', providerRef };
+        default:
+          return { status: 'authorized', providerRef };
+      }
+    },
+    async capture() {
+      return { status: 'succeeded' };
+    },
+    async cancelAuthorization() {
+      return { status: 'canceled' };
     },
     async refund() {
       return { status: 'succeeded', refundRef: `devre_${randomBytes(8).toString('hex')}` };

@@ -421,6 +421,14 @@ export async function finishBankVerification(
   return settle(deps, posterId, payment.id, result, now);
 }
 
+/**
+ * A held booking whose money is in (a captured invite authorization): confirms it exactly as a paid offer
+ * does (the task is assigned, other offers are declined, the thread opens).
+ */
+export async function confirmFundedBooking(deps: BookingDeps, posterId: string, paymentId: string, providerRef: string, now: Date): Promise<PaymentAttemptResult> {
+  return settle(deps, posterId, paymentId, { status: 'succeeded', providerRef }, now);
+}
+
 /** Records the provider's answer. Success confirms the booking in one transaction. */
 async function settle(deps: BookingDeps, posterId: string, paymentId: string, result: ChargeResult, now: Date): Promise<PaymentAttemptResult> {
   const { db } = deps;

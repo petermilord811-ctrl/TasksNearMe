@@ -3,6 +3,8 @@ import { autoApproveDue } from '@/modules/bookings/completion-view';
 import { expireUnfundedBookings } from '@/modules/bookings/confirm';
 import { expireCantAccess } from '@/modules/bookings/sheets';
 import { dispatchNotifications } from '@/modules/notifications/service';
+import { createPaymentProvider } from '@/integrations/payments';
+import { expireDueInvites } from '@/modules/invites/service';
 import { expireDueOffers } from '@/modules/offers/helper';
 import { publishDueReviews } from '@/modules/reviews/service';
 import type { Db } from '@/platform/db/connect';
@@ -23,6 +25,7 @@ export interface Job {
 /** Expiries first, then what they produce (notifications last). */
 export const JOBS: Job[] = [
   { name: 'offers.expire', run: (db, now) => expireDueOffers(db, now, {}) },
+  { name: 'invites.expire', run: (db, now) => expireDueInvites(db, createPaymentProvider(), now) },
   { name: 'bookings.expire_unfunded', run: (db, now) => expireUnfundedBookings(db, now) },
   { name: 'bookings.expire_cant_access', run: (db, now) => expireCantAccess(db, now) },
   { name: 'bookings.auto_approve', run: (db, now) => autoApproveDue(db, now) },
