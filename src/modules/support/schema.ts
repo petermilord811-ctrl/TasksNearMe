@@ -1,29 +1,96 @@
-import { index, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
 import { users } from '../accounts/schema';
 
 /**
- * Support cases (docs/blueprint/03 §9). Started with disputes: a client reporting a problem opens one.
- * `booking_id` is a plain column so support doesn't depend on bookings.
+ * Support cases (docs/blueprint/03 §9). Disputes and safety reports open them from a booking; members
+ * open requests from `/app/support` and reports from a conversation. `booking_id` is a plain column so
+ * support doesn't depend on bookings.
  */
 export const supportCases = pgTable(
   'support_cases',
   {
     id: text('id').primaryKey(),
-    /** dispute | no_show | cancellation_review | report_user | report_content | safety | payment_issue | reward_issue | account */
+    /** dispute | no_show | cancellation_review | report_user | report_content | safety | payment_issue | reward_issue | account | request */
     type: text('type').notNull(),
-    /** open | waiting_on_user | waiting_on_other_party | resolved | closed */
+    /** open | awaiting_poster | awaiting_helper | awaiting_support | escalated | resolved | closed (`CASE_STATUSES`) */
     status: text('status').notNull(),
     priority: text('priority').notNull().default('normal'), // low | normal | high | urgent
     bookingId: text('booking_id'),
     openedByUserId: text('opened_by_user_id')
       .notNull()
       .references(() => users.id),
+    /** Requests: what the member asked about (`SUPPORT_TOPICS`). */
+    topic: text('topic'),
+    /** Reports: the person reported. */
+    subjectUserId: text('subject_user_id').references(() => users.id),
+    /** Where a report came from (the conversation and its task), for support's review. */
+    context: jsonb('context').$type<{ threadId?: string; taskId?: string }>(),
     reason: text('reason'),
     description: text('description').notNull().default(''),
     /** Photos sent with the case (files of kind `evidence`). */
     fileIds: jsonb('file_ids').$type<string[]>().notNull().default([]),
+    /** The staff member working the case. */
+    assigneeUserId: text('assignee_user_id').references(() => users.id),
+    /** First staff reply (the first-response target stops here). */
+    firstResponseAt: timestamp('first_response_at', { withTimezone: true }),
+    /** `CASE_RESOLUTIONS`, with the summary sent to the people on the case. */
+    resolution: text('resolution'),
+    resolutionSummary: text('resolution_summary'),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+    /** Staff changes check it, so two people can't move the same case at once. */
+    version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('support_cases_booking_idx').on(t.bookingId), index('support_cases_status_idx').on(t.status, t.createdAt)],
+  (t) => [
+    index('support_cases_booking_idx').on(t.bookingId),
+    index('support_cases_status_idx').on(t.status, t.createdAt),
+    index('support_cases_opener_idx').on(t.openedByUserId, t.updatedAt),
+    index('support_cases_assignee_idx').on(t.assigneeUserId, t.status),
+  ],
+);
+
+/**
+ * A case's conversation after it opened (the opening description is the case itself): messages between
+ * support and each person on the case, internal notes, and status changes. Each person sees only their
+ * own conversation with support and the status changes, never notes.
+ */
+export const supportCaseEvents = pgTable(
+  'support_case_events',
+  {
+    id: text('id').primaryKey(),
+    caseId: text('case_id')
+      .notNull()
+      .references(() => supportCases.id),
+    kind: text('kind').notNull(), // message | note | status | assignment | resolution
+    /** The member or a staff member; null for status changes. */
+    authorUserId: text('author_user_id').references(() => users.id),
+    /** Whose conversation with support this belongs to; null for the whole case (status changes, notes). */
+    partyUserId: text('party_user_id').references(() => users.id),
+    visibility: text('visibility').notNull().default('participants'), // participants | internal
+    body: text('body'),
+    fileIds: jsonb('file_ids').$type<string[]>().notNull().default([]),
+    /** Status changes: the new status. */
+    status: text('status'),
+    /** Assignment and resolution changes: the new assignee (null when unassigned) or the resolution. */
+    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string }>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('support_case_events_case_idx').on(t.caseId, t.createdAt)],
+);
+
+/** When each member last looked at a case (unread marks on `/app/support`). */
+export const supportCaseReads = pgTable(
+  'support_case_reads',
+  {
+    caseId: text('case_id')
+      .notNull()
+      .references(() => supportCases.id),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    readAt: timestamp('read_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.caseId, t.userId] })],
 );

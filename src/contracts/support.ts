@@ -28,6 +28,8 @@ export interface SupportCaseRow {
   subject: string;
   topic?: SupportTopic;
   bookingId?: string;
+  /** The viewer's side of the booking the case is about ("Waiting on you"). */
+  viewerRole?: 'poster' | 'helper';
   openedAt: ISODateTime;
   updatedAt: ISODateTime;
   /** Support wrote since the member last looked. */

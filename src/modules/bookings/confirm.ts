@@ -26,6 +26,7 @@ import { getHelperSummaries } from '@/modules/profiles/queries';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { tasks } from '@/modules/tasks/schema';
+import { isBlockedBetween } from '@/modules/trust/blocks';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import { fieldError, validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -281,6 +282,7 @@ export async function confirmBooking(
     return { ok: true, code: 'booked', redirectTo: routes.app.booking(existing.id) };
   }
   if (unavailableReason(ctx.task, ctx.offer, existing, now)) return { ok: false, code: 'not_allowed' };
+  if (await isBlockedBetween(db, posterId, ctx.offer.helperUserId)) return { ok: false, code: 'not_allowed' };
   if (ctx.offer.revision !== parsed.data.offerRevision) return { ok: false, code: 'version_conflict' };
 
   // The helper must still be bookable for this category (ID, payouts, background check where needed).

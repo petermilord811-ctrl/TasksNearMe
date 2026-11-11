@@ -19,6 +19,7 @@ import { getHelperSummaries } from '@/modules/profiles/queries';
 import { budgetOf } from '@/modules/tasks/projections';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { files, taskLocations, taskPhotos, tasks } from '@/modules/tasks/schema';
+import { blockedPeopleOf, isBlockedBetween } from '@/modules/trust/blocks';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import { auditLog } from '@/platform/audit/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
@@ -138,7 +139,7 @@ export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: 
   const found = await findTaskWithPublicView(deps.db, taskId);
   if (!found) return null;
 
-  const [offerRows, photoRows, location] = await Promise.all([
+  const [allOffers, photoRows, location, blocked] = await Promise.all([
     deps.db.select().from(offers).where(eq(offers.taskId, taskId)),
     deps.db
       .select({ file: files })
@@ -147,7 +148,9 @@ export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: 
       .where(eq(taskPhotos.taskId, taskId))
       .orderBy(asc(taskPhotos.position)),
     task.locationId ? deps.db.select().from(taskLocations).where(eq(taskLocations.id, task.locationId)).limit(1) : Promise.resolve([]),
+    blockedPeopleOf(deps.db, userId),
   ]);
+  const offerRows = allOffers.filter((offer) => !blocked.includes(offer.helperUserId));
   const exactAddress = location[0] ? (JSON.parse(deps.cipher.decrypt(location[0].addressEnc)) as ExactAddress) : undefined;
   const bookingId = (await bookingIdsOf(deps.db, [taskId])).get(taskId);
 
@@ -179,6 +182,7 @@ export async function getOfferDetail(
   const [row] = await deps.db.select().from(offers).where(and(eq(offers.id, offerId), eq(offers.taskId, taskId))).limit(1);
   const found = await findTaskWithPublicView(deps.db, taskId);
   if (!row || !found) return null;
+  if (await isBlockedBetween(deps.db, userId, row.helperUserId)) return null;
   const [offer] = await offerViews(deps, task, [row], now);
   if (!offer) return null;
   if (row.posterSeenAt === null) {

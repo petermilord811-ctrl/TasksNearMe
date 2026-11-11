@@ -57,7 +57,7 @@ async function isBookingParticipantFor(db: Db, fileId: string, userId: string): 
     .select({ id: bookings.id })
     .from(supportCases)
     .innerJoin(bookings, eq(bookings.id, supportCases.bookingId))
-    .where(and(sql`${supportCases.fileIds} @> ${JSON.stringify([fileId])}::jsonb`, participant))
+    .where(and(eq(supportCases.type, 'dispute'), sql`${supportCases.fileIds} @> ${JSON.stringify([fileId])}::jsonb`, participant))
     .limit(1);
   return Boolean(reported);
 }

@@ -25,6 +25,7 @@ import { quoteBreakdown } from '@/modules/payments/fees';
 import { BOARD_PAGE_SIZE, parseTaskBoardQuery } from '@/modules/tasks/projections';
 import { findTaskWithPublicView, listFeedTasks } from '@/modules/tasks/queries';
 import { files, taskPhotos, tasks } from '@/modules/tasks/schema';
+import { blockedPeopleOf, isBlockedBetween } from '@/modules/trust/blocks';
 import { maskContactDetails, publicExcerpt } from '@/modules/trust/contact-masking';
 import { computeOnboarding } from '@/modules/verification/progress';
 import { loadOnboardingState, nearestRadius } from '@/modules/verification/service';
@@ -154,11 +155,12 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
     db.select({ slug: categories.slug, requiresBackgroundCheck: categories.requiresBackgroundCheck }).from(categories),
   ]);
   const needsCheck = new Map(categoryRows.map((row) => [row.slug, row.requiresBackgroundCheck]));
+  const blocked = await blockedPeopleOf(db, userId);
   const { tasks: found, totalCount } = await listFeedTasks(db, {
     marketId: state.marketId,
     query,
     now,
-    excludePosterId: userId,
+    excludePosterIds: [userId, ...blocked],
     center: state.center,
     maxMiles: maxMilesOf(query.distance),
   });
@@ -264,6 +266,7 @@ function helperOfferView(row: OfferRow, task: TaskRow, fees: FeeSchedule, now: D
 export async function getHelperTaskView(db: Db, userId: string, taskId: string, now: Date): Promise<HelperTaskView | null> {
   const row = await taskWithCategory(db, taskId);
   if (!row || row.task.status === 'draft') return null;
+  if (await isBlockedBetween(db, userId, row.task.posterUserId)) return null;
   await expireDueOffers(db, now, { taskId });
   const [state, found, fees] = await Promise.all([loadHelperState(db, userId, now), findTaskWithPublicView(db, taskId), feesFor(db, row.task.marketId)]);
   if (!found || !fees) return null;
@@ -356,6 +359,7 @@ function pricingColumns(pricing: OfferInput['pricing']) {
 async function prepareOffer(db: Db, userId: string, taskId: string, input: OfferInput, now: Date) {
   const row = await taskWithCategory(db, String(taskId));
   if (!row || row.task.status === 'draft') return { ready: false as const, result: { ok: false, code: 'not_found' } as ActionResult };
+  if (await isBlockedBetween(db, userId, row.task.posterUserId)) return { ready: false as const, result: { ok: false, code: 'not_allowed' } as ActionResult };
   const state = await loadHelperState(db, userId, now);
   const point = row.task.publicLat !== null && row.task.publicLng !== null ? { lat: row.task.publicLat, lng: row.task.publicLng } : null;
   const distanceMiles = state.center && point && row.task.mode !== 'remote' ? milesBetween(state.center, point) : null;

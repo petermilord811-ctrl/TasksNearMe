@@ -19,13 +19,14 @@ import { MAX_PHOTO_BYTES, photoFromFile } from '@/modules/files/uploads';
 import { offers } from '@/modules/offers/schema';
 import { initialsOf } from '@/modules/profiles/queries';
 import { files, tasks } from '@/modules/tasks/schema';
+import { isBlockedBetween } from '@/modules/trust/blocks';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { blocks, messages, threadParticipants, threads } from './schema';
+import { messages, threadParticipants, threads } from './schema';
 
 /**
  * Threads between the two people on an offer or a booking (blueprint 02 J2 step 6, 06, 08). Bodies are
@@ -137,14 +138,7 @@ async function otherParticipant(db: Db, threadId: string, viewerId: string) {
   return row?.user ?? null;
 }
 
-async function isBlocked(db: Db, a: string, b: string): Promise<boolean> {
-  const [row] = await db
-    .select({ blockerId: blocks.blockerId })
-    .from(blocks)
-    .where(or(and(eq(blocks.blockerId, a), eq(blocks.blockedId, b)), and(eq(blocks.blockerId, b), eq(blocks.blockedId, a))))
-    .limit(1);
-  return Boolean(row);
-}
+const isBlocked = isBlockedBetween;
 
 function toView(row: typeof messages.$inferSelect, viewerId: string, masking: boolean, photos: Map<string, typeof files.$inferSelect>): MessageView {
   const sender: MessageView['sender'] = row.senderUserId === null ? 'system' : row.senderUserId === viewerId ? 'me' : 'them';

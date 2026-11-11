@@ -2,7 +2,7 @@
  * Idempotent seed: Austin market, areas, categories, policy v1 (published) and v2 (draft),
  * feature flags. People and tasks are added by later phases (from src/fixtures).
  */
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import { createDb } from '../../src/platform/db/connect';
 import {
   areas,
@@ -39,8 +39,8 @@ import { files } from '../../src/modules/tasks/schema';
 import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookingTerms, bookings, helperStrikes } from '../../src/modules/bookings/schema';
 import { earnings, payouts } from '../../src/modules/earnings/schema';
 import { savedHelpers } from '../../src/modules/reviews/schema';
-import { messages, threadParticipants, threads } from '../../src/modules/messaging/schema';
-import { supportCases } from '../../src/modules/support/schema';
+import { blocks, messages, threadParticipants, threads } from '../../src/modules/messaging/schema';
+import { supportCaseEvents, supportCaseReads, supportCases } from '../../src/modules/support/schema';
 import { notificationPreferences, notifications, privacyRequests } from '../../src/modules/notifications/schema';
 import { paymentMethods, payments, refunds } from '../../src/modules/payments/schema';
 import { devCardRef } from '../../src/integrations/payments';
@@ -185,6 +185,7 @@ export async function seedDatabase(url: string): Promise<void> {
       await seedPaymentMethods(tx);
       await seedBookings(tx);
       await seedNotifications(tx);
+      await seedSupport(tx);
     });
     await db.execute(sql`select 1`);
   } finally {
@@ -381,6 +382,13 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   await tx.delete(notifications).where(inArray(notifications.userId, people));
   await tx.delete(notificationPreferences).where(inArray(notificationPreferences.userId, people));
   await tx.delete(privacyRequests).where(inArray(privacyRequests.userId, people));
+  await tx.delete(blocks).where(or(inArray(blocks.blockerId, people), inArray(blocks.blockedId, people)));
+  const peopleCases = (await tx.select({ id: supportCases.id }).from(supportCases).where(inArray(supportCases.openedByUserId, people))).map((row) => row.id);
+  if (peopleCases.length > 0) {
+    await tx.delete(supportCaseEvents).where(inArray(supportCaseEvents.caseId, peopleCases));
+    await tx.delete(supportCaseReads).where(inArray(supportCaseReads.caseId, peopleCases));
+    await tx.delete(supportCases).where(inArray(supportCases.id, peopleCases));
+  }
   // Conversations on the seeded offers start empty each time.
   const offerThreads = await tx
     .select({ id: threads.id })
@@ -413,6 +421,11 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   if (payoutIds.length > 0) await tx.delete(payouts).where(inArray(payouts.id, payoutIds));
   await tx.delete(refunds).where(inArray(refunds.bookingId, ids));
   await tx.delete(helperStrikes).where(inArray(helperStrikes.bookingId, ids));
+  const bookingCases = (await tx.select({ id: supportCases.id }).from(supportCases).where(inArray(supportCases.bookingId, ids))).map((row) => row.id);
+  if (bookingCases.length > 0) {
+    await tx.delete(supportCaseEvents).where(inArray(supportCaseEvents.caseId, bookingCases));
+    await tx.delete(supportCaseReads).where(inArray(supportCaseReads.caseId, bookingCases));
+  }
   await tx.delete(supportCases).where(inArray(supportCases.bookingId, ids));
   await tx.delete(bookingCompletionPhotos).where(inArray(bookingCompletionPhotos.bookingId, ids));
   await tx.delete(bookingExpenses).where(inArray(bookingExpenses.bookingId, ids));
@@ -502,6 +515,28 @@ async function seedNotifications(tx: Tx): Promise<void> {
     { id: 'ntf_seed_ben_tv', userId: 'usr_ben', type: 'booking_confirmed', title: 'Mount a TV on the wall', target: { kind: 'booking', bookingId: 'bkg_tv' }, sourceEventId: 'seed:ben_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
     { id: 'ntf_seed_jordan_tv', userId: 'usr_jordan', type: 'booking_confirmed', title: 'Mount a TV on the wall', actorName: 'Ben W.', target: { kind: 'booking', bookingId: 'bkg_tv' }, sourceEventId: 'seed:jordan_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
   ]);
+}
+
+/** Maya asked about a payment; support (Alex) answered and waits on her (the support e2e reads it). */
+async function seedSupport(tx: Tx): Promise<void> {
+  const now = Date.now();
+  const at = (hoursAgo: number) => new Date(now - hoursAgo * 3_600_000);
+  await tx.insert(supportCases).values({
+    id: 'case_seed_maya_payment',
+    type: 'payment_issue',
+    status: 'awaiting_poster',
+    openedByUserId: 'usr_maya',
+    topic: 'payment',
+    description: 'I see a pending charge on my card for a booking I canceled. When does it go away?',
+    createdAt: at(30),
+    updatedAt: at(6),
+  });
+  await tx.insert(supportCaseEvents).values([
+    { id: 'cev_seed_maya_1', caseId: 'case_seed_maya_payment', kind: 'message', authorUserId: 'usr_alex', partyUserId: 'usr_maya', body: 'Thanks, Maya. We are looking into it. Which booking was this for?', createdAt: at(6) },
+    { id: 'cev_seed_maya_2', caseId: 'case_seed_maya_payment', kind: 'status', status: 'awaiting_poster', createdAt: new Date(at(6).getTime() + 1) },
+  ]);
+  // Maya last looked before support answered: the reply shows as new.
+  await tx.insert(supportCaseReads).values({ caseId: 'case_seed_maya_payment', userId: 'usr_maya', readAt: at(30) });
 }
 
 async function seedPaymentMethods(tx: Tx): Promise<void> {

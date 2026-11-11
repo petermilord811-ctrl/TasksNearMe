@@ -76,6 +76,11 @@ Copy namespaces: `support`, `supportCase`, `safety`.
 - Reporting tasks and reviews (later), staff tools (UI-018 onward), and dispute proposals (UI-026).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app/support` and `/app/support/[caseId]` in the `(main)` group; the thread page passes `safety` when the viewer is in the conversation.
+- Queries / actions: `src/modules/support/service.ts`:
+  - `getSupportPage`, `createSupportRequest`, `getSupportCasePage`, `replyToSupportCase`, `getReportSubject`, `reportFromThread`, `setThreadBlock`; actions in `src/modules/support/actions.ts`; photos reuse `uploadEvidencePhoto`.
+  - Members see the cases they opened, and cases where support wrote to them, without the opener's description or photos.
+  - Blocking lives in `src/modules/trust/blocks.ts` and is enforced in messaging, offers (send, revise, the feed, the task view, the poster's offers) and booking.
+  - Migration 0016: case events (party, visibility), per-person reads, staff columns.
+- e2e: `tests/e2e/support.spec.ts` (the seeded case with support's reply; a new request and a reply; report, block and unblock from a conversation). Integration: `tests/integration/support.test.ts`.
+- Contract request: `SupportCaseRow.viewerRole` added; Codex uses it in UI-018 ("Waiting on you").

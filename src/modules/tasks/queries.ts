@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, lt, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, lt, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import type { CategorySlug, FindWorkPageData, TaskBoardPageData, TaskPublicView } from '@/contracts';
 import type { Db } from '@/platform/db/connect';
 import { users } from '../accounts/schema';
@@ -114,7 +114,8 @@ export async function listFeedTasks(
     marketId: string;
     query: FindWorkPageData['query'];
     now: Date;
-    excludePosterId: string;
+    /** The viewer, and people they blocked or who blocked them. */
+    excludePosterIds: string[];
     /** The helper's area center; without one, distances are unknown and the limit is ignored. */
     center: { lat: number; lng: number } | null;
     maxMiles: number | null;
@@ -122,7 +123,7 @@ export async function listFeedTasks(
 ): Promise<{ tasks: { view: TaskPublicView; distanceMiles: number | null; posterUserId: string; status: string; windowEnd: Date }[]; totalCount: number }> {
   const { query, now, center } = options;
   const conditions = openIn(options.marketId, now);
-  conditions.push(ne(tasks.posterUserId, options.excludePosterId));
+  if (options.excludePosterIds.length > 0) conditions.push(notInArray(tasks.posterUserId, options.excludePosterIds));
   if (query.category) conditions.push(eq(categories.slug, query.category));
   if (query.remoteOnly) conditions.push(eq(tasks.mode, 'remote'));
   const range = whenRange(query.when, now);
