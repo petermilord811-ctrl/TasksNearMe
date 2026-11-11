@@ -1,5 +1,6 @@
 import { and, eq, ne, or, sql } from 'drizzle-orm';
 import { bookingCompletionPhotos, bookingExpenses, bookings } from '@/modules/bookings/schema';
+import { canViewMessageFile } from '@/modules/messaging/service';
 import { supportCases } from '@/modules/support/schema';
 import { loadHelperState } from '@/modules/offers/helper';
 import { taskPhotos, tasks } from '@/modules/tasks/schema';
@@ -11,10 +12,12 @@ import type { Db } from '@/platform/db/connect';
  * - task photos: helpers bookable in at least one category while the task is open, and the task's
  *   booked helper while the booking lasts (not after it's canceled);
  * - evidence and receipts: both people on the booking they were sent with (completion photos,
- *   receipts, photos in a problem report).
+ *   receipts, photos in a problem report);
+ * - message photos: the people in the thread.
  */
 export async function canViewRelatedFile(db: Db, file: { id: string; kind: string }, userId: string, now: Date): Promise<boolean> {
   if (file.kind === 'evidence' || file.kind === 'receipt') return isBookingParticipantFor(db, file.id, userId);
+  if (file.kind === 'message') return canViewMessageFile(db, file.id, userId);
   if (file.kind !== 'task_photo') return false;
   const [task] = await db
     .select({ id: tasks.id, status: tasks.status, windowEnd: tasks.windowEnd })

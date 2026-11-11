@@ -30,6 +30,7 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
+import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { autoApproveDue, completionViewOf } from './completion-view';
 import { addressVisibility, bookingActions, bookingDeadlines, needsAction, type BookingFacts, type BookingPolicy } from './domain';
 import { bookingTerms, bookings } from './schema';
@@ -288,6 +289,7 @@ export async function runBookingAction(db: Db, userId: string, bookingId: string
   const allowed = bookingActions(facts, role, now).find((item) => item.id === action);
   if (!allowed?.enabled) return { ok: false, code: 'not_allowed' };
 
+  const threadEvent: Partial<Record<BookingActionId, TimelineEvent['type']>> = { on_my_way: 'on_my_way', arrived: 'arrived', approve: 'approved' };
   const transition = async (expected: string, set: Partial<BookingRow>, event: string): Promise<ActionResult> => {
     const updated = await db.transaction(async (tx) => {
       const rows = await tx
@@ -298,6 +300,8 @@ export async function runBookingAction(db: Db, userId: string, bookingId: string
       if (rows.length === 0) return false;
       if (set.status === 'completed') await tx.update(tasks).set({ status: 'completed', updatedAt: now }).where(eq(tasks.id, booking.taskId));
       await recordEvent(tx, event, userId, booking);
+      const type = threadEvent[action];
+      if (type) await postEvent(tx, bookingThreadLink(booking), 'status', { type }, now);
       return true;
     });
     return updated ? { ok: true, code: 'updated' } : { ok: false, code: 'version_conflict' };

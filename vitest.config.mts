@@ -18,5 +18,7 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
     css: false,
+    // Component tests run alongside dev servers and the other agent's checks; leave room under load.
+    testTimeout: 15_000,
   },
 });

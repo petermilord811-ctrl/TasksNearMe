@@ -14,6 +14,7 @@ import { createCompletionInputSchema, reportProblemInputSchema, routes } from '@
 import { MAX_PHOTO_BYTES } from '@/modules/files/uploads';
 import { categories, marketPolicies } from '@/modules/markets/schema';
 import { finalBreakdown } from '@/modules/payments/fees';
+import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { supportCases } from '@/modules/support/schema';
 import { files, tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
@@ -184,6 +185,7 @@ export async function submitCompletion(db: Db, helperId: string, bookingId: stri
       payload: { bookingId: ctx.booking.id, posterUserId: ctx.booking.posterUserId, helperUserId: helperId },
     });
     await tx.insert(auditLog).values({ id: newId('aud'), actorId: helperId, actorRole: 'user', action: 'booking.completion_submitted', targetType: 'booking', targetId: ctx.booking.id });
+    await postEvent(tx, bookingThreadLink(ctx.booking), 'status', { type: 'completion_submitted' }, now);
     return true;
   });
   return updated ? { ok: true, code: 'submitted', redirectTo: routes.app.booking(ctx.booking.id) } : { ok: false, code: 'not_allowed' };
@@ -259,6 +261,7 @@ export async function reportProblem(db: Db, posterId: string, bookingId: string,
       payload: { bookingId: booking.id, caseId, posterUserId: posterId, helperUserId: booking.helperUserId, reason: parsed.data.reason },
     });
     await tx.insert(auditLog).values({ id: newId('aud'), actorId: posterId, actorRole: 'user', action: 'booking.disputed', targetType: 'booking', targetId: booking.id, reason: parsed.data.reason });
+    await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'problem_reported' }, now);
     return true;
   });
   return updated ? { ok: true, code: 'submitted', redirectTo: routes.app.booking(booking.id) } : { ok: false, code: 'not_allowed' };

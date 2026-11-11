@@ -4,6 +4,7 @@ import { photoFromFile } from '@/modules/files/uploads';
 import { files, tasks } from '@/modules/tasks/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookings } from './schema';
 
@@ -20,8 +21,9 @@ export async function autoApproveDue(db: Db, now: Date, scope: { bookingId?: str
     .update(bookings)
     .set({ status: 'completed', completedVia: 'auto', completedAt: now, updatedAt: now })
     .where(and(...conditions))
-    .returning({ id: bookings.id, taskId: bookings.taskId });
+    .returning({ id: bookings.id, taskId: bookings.taskId, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId });
   if (approved.length === 0) return;
+  for (const booking of approved) await postEvent(db, bookingThreadLink(booking), 'status', { type: 'auto_approved' }, now);
   await db.update(tasks).set({ status: 'completed', updatedAt: now }).where(inArray(tasks.id, approved.map((row) => row.taskId)));
   await db.insert(outboxEvents).values(
     approved.map((row) => ({

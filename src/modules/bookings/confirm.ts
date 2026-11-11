@@ -24,6 +24,7 @@ import { cancellationSummary, quoteBreakdown } from '@/modules/payments/fees';
 import { paymentMethods, payments } from '@/modules/payments/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
+import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { tasks } from '@/modules/tasks/schema';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import { fieldError, validationFailed } from '@/platform/actions/results';
@@ -503,6 +504,7 @@ async function settle(deps: BookingDeps, posterId: string, paymentId: string, re
       targetType: 'booking',
       targetId: booking.id,
     });
+    await postEvent(tx, bookingThreadLink(booking), 'system', { type: 'booked' }, now);
     return { kind: 'booked' as const, bookingId: booking.id };
   });
 
