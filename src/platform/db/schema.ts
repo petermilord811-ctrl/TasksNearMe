@@ -7,3 +7,4 @@ export * from '../outbox/schema';
 export * from '../dev-outbox/schema';
 export * from '../../modules/marketing/schema';
 export * from '../rate-limit/schema';
+export * from '../../modules/tasks/schema';

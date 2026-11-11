@@ -23,6 +23,12 @@ import { helperProfiles, helperServices } from '../../src/modules/profiles/schem
 import { AUSTIN, AUSTIN_AREAS, CATEGORIES } from './data/austin';
 import { PEOPLE, displayNameOf } from './data/people';
 import { CURRENT_TERMS_VERSION } from '../../src/modules/accounts/terms';
+import { FAKE_PLACES } from '../../src/integrations/geocoding';
+import { fuzzedPublicPoint, nearestArea } from '../../src/modules/markets/geo';
+import { taskLocations, tasks } from '../../src/modules/tasks/schema';
+import { createFieldCipher } from '../../src/platform/crypto/field-encryption';
+import { marketDayKey, marketLocalToUtc } from '../../src/shared/format';
+import { SEED_TASKS } from './data/tasks';
 
 export async function seedDatabase(url: string): Promise<void> {
   const { db, pool } = createDb(url, { max: 2 });
@@ -154,9 +160,91 @@ export async function seedDatabase(url: string): Promise<void> {
           }
         }
       }
+
+      await seedTasks(tx);
     });
     await db.execute(sql`select 1`);
   } finally {
     await pool.end();
+  }
+}
+
+type Tx = Parameters<Parameters<ReturnType<typeof createDb>['db']['transaction']>[0]>[0];
+
+function addDays(dayKey: string, days: number): string {
+  const [y, m, d] = dayKey.split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+/** Open tasks relative to today (market time), with encrypted exact addresses like real posts. */
+async function seedTasks(tx: Tx): Promise<void> {
+  const key = process.env.FIELD_ENCRYPTION_KEY;
+  if (!key) throw new Error('FIELD_ENCRYPTION_KEY is not set (see .env.example).');
+  const cipher = createFieldCipher(key);
+  const now = new Date();
+  const today = marketDayKey(now);
+  const areaRows = await tx.select().from(areas);
+
+  for (const seed of SEED_TASKS) {
+    const date = addDays(today, seed.daysFromToday);
+    const windowStart = new Date(marketLocalToUtc(date, seed.start ?? '00:00'));
+    const windowEnd = new Date(marketLocalToUtc(date, seed.end ?? '23:59'));
+    const place = seed.placeId ? FAKE_PLACES.find((p) => p.placeId === seed.placeId) : undefined;
+    if (seed.placeId && !place) throw new Error(`Unknown seed place ${seed.placeId}`);
+    const area = place ? nearestArea(areaRows, place) : null;
+    const locationId = place ? `loc_${seed.id.slice(4)}` : null;
+
+    if (place && area && locationId) {
+      const location = {
+        id: locationId,
+        ownerUserId: seed.posterId,
+        addressEnc: cipher.encrypt(
+          JSON.stringify({
+            line1: place.line1,
+            ...(seed.unit ? { line2: seed.unit } : {}),
+            city: place.city,
+            state: place.state,
+            zip: place.zip,
+            ...(seed.accessNotes ? { accessNotes: seed.accessNotes } : {}),
+          }),
+        ),
+        zip: place.zip,
+        areaId: area.id,
+      };
+      await tx.insert(taskLocations).values(location).onConflictDoUpdate({ target: taskLocations.id, set: location });
+    }
+
+    const point = area ? fuzzedPublicPoint({ lat: area.centerLat, lng: area.centerLng }, seed.id) : null;
+    const publishedAt = new Date(now.getTime() - seed.postedHoursAgo * 3_600_000);
+    const row = {
+      id: seed.id,
+      slug: seed.slug,
+      posterUserId: seed.posterId,
+      marketId: AUSTIN.id,
+      categoryId: seed.categoryId,
+      title: seed.title,
+      description: seed.description,
+      details: seed.details,
+      mode: place ? 'local' : 'remote',
+      status: 'open',
+      pricingType: seed.budget.type,
+      budgetCents: seed.budget.type === 'fixed' ? seed.budget.priceCents : null,
+      hourlyRateCents: seed.budget.type === 'hourly' ? seed.budget.rateCents : null,
+      estimatedHours: seed.budget.type === 'hourly' ? seed.budget.estimatedHours : null,
+      hoursCap: seed.budget.type === 'hourly' ? seed.budget.hoursCap : null,
+      windowStart,
+      windowEnd,
+      flexible: !seed.start,
+      locationId,
+      publicAreaId: area?.id ?? null,
+      publicLat: point?.lat ?? null,
+      publicLng: point?.lng ?? null,
+      offerCount: seed.offerCount,
+      publishedAt,
+      expiresAt: windowEnd,
+      createdAt: publishedAt,
+      updatedAt: now,
+    };
+    await tx.insert(tasks).values(row).onConflictDoUpdate({ target: tasks.id, set: row });
   }
 }

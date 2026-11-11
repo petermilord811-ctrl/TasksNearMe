@@ -55,7 +55,8 @@ export const CATEGORIES = [
     minPriceCents: 3500,
     minHours: 2,
     requiredEvidence: { photosMin: 0, hours: true, receipts: false, remoteNote: false },
-    prohibitedKeywords: ['piano', 'safe', 'truck', 'transport', 'haul away', 'hazardous'],
+    // Labor only: loading or unloading a rented truck is fine; transport in the helper's vehicle isn't (blueprint 01 §6.1).
+    prohibitedKeywords: ['piano', 'gun safe', 'your truck', 'your vehicle', 'your van', 'drive the truck', 'hazardous'],
     sortOrder: 2,
     guidance: { lowCents: 3200, highCents: 4000, unit: 'hour' as const },
   },
@@ -70,7 +71,7 @@ export const CATEGORIES = [
     minPriceCents: 2500,
     minHours: null,
     requiredEvidence: { photosMin: 1, hours: false, receipts: true, remoteNote: false },
-    prohibitedKeywords: ['pesticide', 'herbicide', 'weed killer', 'irrigation', 'chainsaw', 'tree removal', 'ladder'],
+    prohibitedKeywords: ['pesticide', 'herbicide', 'weed killer', 'irrigation', 'chainsaw', 'tree removal', 'ladder', 'haul away'],
     sortOrder: 3,
     guidance: { lowCents: 6000, highCents: 14000, unit: 'task' as const },
   },

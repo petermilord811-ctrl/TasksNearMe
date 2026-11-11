@@ -8,6 +8,8 @@ import type {
   ISODateTime,
   MarketPageData,
   PricingPageData,
+  PublicTaskPageData,
+  TaskBoardPageData,
   WaitlistPageData,
 } from '@/contracts';
 import {
@@ -20,6 +22,9 @@ import {
   listPublicMarketSlugs,
 } from '@/modules/markets/queries';
 import { countFoundingHelpers, listPublicHelpers } from '@/modules/profiles/queries';
+import { BOARD_PAGE_SIZE } from '@/modules/tasks/projections';
+import { findPublicTask, listBoardTasks, listRecentOpenTasks } from '@/modules/tasks/queries';
+import { db } from '@/platform/db/client';
 import { buildBecomeHelperPageData, buildPricingPageData } from './page-data';
 
 /**
@@ -36,20 +41,19 @@ export interface WithNow<T> {
 }
 
 const FEATURED_HELPERS = 3;
+const RECENT_TASKS = 4;
 
 async function loadMarketPage(slug: string): Promise<WithNow<MarketPageData> | null> {
   const market = await findPublicMarket(slug);
   if (!market) return null;
-  const [view, categories, featuredHelpers] = await Promise.all([
+  const now = new Date();
+  const [view, categories, featuredHelpers, recentTasks] = await Promise.all([
     getMarketView(market),
     listCategoryViews(market.id),
     listPublicHelpers({ marketId: market.id, limit: FEATURED_HELPERS }),
+    listRecentOpenTasks(db, { marketId: market.id, limit: RECENT_TASKS, now }),
   ]);
-  return {
-    // Open tasks arrive with the tasks module (Phase 2); until then the empty state shows.
-    data: { market: view, categories, recentTasks: [], featuredHelpers },
-    now: new Date().toISOString(),
-  };
+  return { data: { market: view, categories, recentTasks, featuredHelpers }, now: now.toISOString() };
 }
 
 export async function getHomePageData(): Promise<WithNow<HomePageData> | null> {
@@ -78,12 +82,12 @@ export async function getCategoryPageData(
   const [view, categories] = await Promise.all([getMarketView(market), listCategoryViews(market.id)]);
   const category = categories.find((c) => c.slug === categorySlug);
   if (!category) return null;
-  const topHelpers = await listPublicHelpers({
-    marketId: market.id,
-    categorySlug: category.slug as CategorySlug,
-    limit: FEATURED_HELPERS,
-  });
-  return { data: { market: view, category, recentTasks: [], topHelpers }, now: new Date().toISOString() };
+  const now = new Date();
+  const [topHelpers, recentTasks] = await Promise.all([
+    listPublicHelpers({ marketId: market.id, categorySlug: category.slug as CategorySlug, limit: FEATURED_HELPERS }),
+    listRecentOpenTasks(db, { marketId: market.id, categorySlug: category.slug as CategorySlug, limit: RECENT_TASKS, now }),
+  ]);
+  return { data: { market: view, category, recentTasks, topHelpers }, now: now.toISOString() };
 }
 
 /** Category slugs per public market, for generateStaticParams. */
@@ -132,4 +136,73 @@ export async function getWaitlistPageData(): Promise<WaitlistPageData> {
     }),
   );
   return { markets: markets.filter((market) => market !== null) };
+}
+
+/** `/[market]/tasks`: one page of open tasks for the filters in the URL. */
+export async function getTaskBoardPageData(
+  marketSlug: string,
+  query: TaskBoardPageData['query'],
+): Promise<WithNow<TaskBoardPageData> | null> {
+  'use cache';
+  cacheLife('minutes');
+  cacheTag(marketTag(marketSlug), 'tasks');
+  const market = await findPublicMarket(marketSlug);
+  if (!market) return null;
+  const now = new Date();
+  const [view, categories, board] = await Promise.all([
+    getMarketView(market),
+    listCategoryViews(market.id),
+    listBoardTasks(db, { marketId: market.id, query, now }),
+  ]);
+  return {
+    data: {
+      market: view,
+      categories,
+      query,
+      tasks: board.tasks,
+      totalCount: board.totalCount,
+      pageCount: Math.max(1, Math.ceil(board.totalCount / BOARD_PAGE_SIZE)),
+    },
+    now: now.toISOString(),
+  };
+}
+
+/** `/tasks/[taskSlug]`: what anyone may see, plus similar open tasks. */
+export async function getPublicTaskPageData(slug: string): Promise<WithNow<PublicTaskPageData> | null> {
+  'use cache';
+  cacheLife('minutes');
+  cacheTag('tasks', `task:${slug}`);
+  const now = new Date();
+  const found = await findPublicTask(db, slug, now);
+  if (!found) return null;
+  const market = await findPublicMarket(found.marketSlug);
+  if (!market) return null;
+  const [view, categories, similarTasks] = await Promise.all([
+    getMarketView(market),
+    listCategoryViews(market.id),
+    listRecentOpenTasks(db, {
+      marketId: market.id,
+      categorySlug: found.task.categorySlug,
+      limit: 3,
+      now,
+      excludeTaskId: found.task.id,
+    }),
+  ]);
+  const category = categories.find((c) => c.slug === found.task.categorySlug);
+  if (!category) return null;
+  return {
+    data: { task: found.task, category, market: view, acceptingOffers: found.acceptingOffers, similarTasks },
+    now: now.toISOString(),
+  };
+}
+
+/** Recent open task slugs, for generateStaticParams. */
+export async function listRecentTaskSlugs(limit = 20): Promise<string[]> {
+  'use cache';
+  cacheLife('minutes');
+  cacheTag('tasks');
+  const market = await findPublicMarket(DEFAULT_MARKET_SLUG);
+  if (!market) return [];
+  const recent = await listRecentOpenTasks(db, { marketId: market.id, limit, now: new Date() });
+  return recent.map((task) => task.slug);
 }

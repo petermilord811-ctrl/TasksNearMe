@@ -3,6 +3,7 @@ import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { CategorySlug, CategoryView, MarketView } from '@/contracts';
 import { CATEGORY_SLUGS } from '@/contracts';
 import { db } from '@/platform/db/client';
+import type { Db } from '@/platform/db/connect';
 import { areas, categories, featureFlags, marketCategories, marketPolicies, markets } from './schema';
 
 /** The market the home page shows. Configurable so another city can launch without code changes. */
@@ -14,8 +15,8 @@ const KM_PER_MILE = 1.609344;
 export type MarketRow = typeof markets.$inferSelect;
 
 /** A market people can see (pre-launch or live), or null. */
-export async function findPublicMarket(slug: string): Promise<MarketRow | null> {
-  const [row] = await db
+export async function findPublicMarket(slug: string, database: Db = db): Promise<MarketRow | null> {
+  const [row] = await database
     .select()
     .from(markets)
     .where(and(eq(markets.slug, slug), inArray(markets.status, [...PUBLIC_STATUSES])))
@@ -31,8 +32,8 @@ export async function listPublicMarketSlugs(): Promise<string[]> {
   return rows.map((row) => row.slug);
 }
 
-export async function getMarketView(market: MarketRow): Promise<MarketView> {
-  const areaRows = await db
+export async function getMarketView(market: MarketRow, database: Db = db): Promise<MarketView> {
+  const areaRows = await database
     .select({ name: areas.name })
     .from(areas)
     .where(eq(areas.marketId, market.id))
@@ -53,8 +54,8 @@ function isCategorySlug(slug: string): slug is CategorySlug {
 }
 
 /** Categories enabled in the market, in display order. */
-export async function listCategoryViews(marketId: string): Promise<CategoryView[]> {
-  const rows = await db
+export async function listCategoryViews(marketId: string, database: Db = db): Promise<CategoryView[]> {
+  const rows = await database
     .select({ category: categories, priceGuidance: marketCategories.priceGuidance })
     .from(marketCategories)
     .innerJoin(categories, eq(categories.id, marketCategories.categoryId))
@@ -81,8 +82,8 @@ export async function listCategoryViews(marketId: string): Promise<CategoryView[
 }
 
 /** The newest published policy version for the market. */
-export async function getPublishedPolicy(marketId: string) {
-  const [row] = await db
+export async function getPublishedPolicy(marketId: string, database: Db = db) {
+  const [row] = await database
     .select()
     .from(marketPolicies)
     .where(and(eq(marketPolicies.marketId, marketId), eq(marketPolicies.status, 'published')))
@@ -92,8 +93,8 @@ export async function getPublishedPolicy(marketId: string) {
 }
 
 /** Feature flags for the market: a market-specific row overrides the global one. */
-export async function getFlags(marketId: string): Promise<Record<string, boolean>> {
-  const rows = await db
+export async function getFlags(marketId: string, database: Db = db): Promise<Record<string, boolean>> {
+  const rows = await database
     .select({ key: featureFlags.key, marketId: featureFlags.marketId, enabled: featureFlags.enabled })
     .from(featureFlags)
     .where(inArray(featureFlags.marketId, ['global', marketId]));

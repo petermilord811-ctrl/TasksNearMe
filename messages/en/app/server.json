@@ -42,6 +42,10 @@
     "help": {
       "title": "Help center",
       "description": "Answers about posting tasks, payments and fees, getting verified as a helper, and staying safe."
+    },
+    "taskBoard": {
+      "title": "Open tasks in {market}",
+      "description": "Local tasks people need help with in {market}: furniture assembly, moving, yard work, cleaning, and computer help."
     }
   }
 }
