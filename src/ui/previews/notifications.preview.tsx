@@ -4,7 +4,7 @@ import {
 } from '@/contracts';
 import {
   fakeHandler, fakeNotificationHandlers, jordanNotificationsData, jordanShell,
-  mayaNotificationsData, mayaShell, notificationsEmptyData,
+  mayaNotificationsData, mayaShell, notificationsEmptyData, supportNotificationsData,
 } from '@/fixtures';
 import { NotificationsScreen } from '@/ui/screens/account/notifications-screen';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -16,12 +16,12 @@ const shellHandlers: AppShellHandlers = {
   onSignOut: fakeHandler({ ok: true, code: 'updated' }),
 };
 
-function preview(variant: string, title: string, data: NotificationsPageData, viewer: SignedInViewer = mayaShell, handlers: NotificationHandlers = fakeNotificationHandlers, markAllError = false): PreviewEntry {
+function preview(variant: string, title: string, data: NotificationsPageData, viewer: SignedInViewer = mayaShell, handlers: NotificationHandlers = fakeNotificationHandlers, markAllError = false, now = viewer.mode === 'helper' ? '2026-11-25T16:00:00.000Z' : '2026-11-21T18:00:00.000Z'): PreviewEntry {
   return {
     id: `screen-notifications/${variant}`, title, group: copy.previews.group, layout: 'fullscreen',
     render: () => <AppShell viewer={{ ...viewer, unreadNotifications: data.unreadCount }} handlers={shellHandlers} currentPath={routes.app.notifications()}>
       <AccountInteractionPreview action={markAllError ? 'button' : undefined} triggerLabel={copy.markAllRead}>
-        <NotificationsScreen data={data} handlers={handlers} now={viewer.mode === 'helper' ? '2026-11-25T16:00:00.000Z' : '2026-11-21T18:00:00.000Z'} />
+        <NotificationsScreen data={data} handlers={handlers} now={now} />
       </AccountInteractionPreview>
     </AppShell>,
   };
@@ -41,6 +41,7 @@ const allTypes: NotificationsPageData = {
 export const notificationPreviews: PreviewEntry[] = [
   preview('client', copy.previews.client, mayaNotificationsData),
   preview('helper', copy.previews.helper, jordanNotificationsData, jordanShell),
+  preview('support', copy.previews.support, supportNotificationsData, mayaShell, fakeNotificationHandlers, false, '2026-11-24T18:00:00.000Z'),
   preview('empty', copy.previews.empty, notificationsEmptyData),
   preview('all-types', copy.previews.allTypes, allTypes),
   preview('all-read', copy.previews.readOnly, {

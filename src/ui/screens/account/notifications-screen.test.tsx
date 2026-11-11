@@ -4,7 +4,8 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { NOTIFICATION_TYPES, routes, type ActionResult, type AttentionTarget, type NotificationHandlers, type NotificationsPageData, type NotificationType } from '@/contracts';
-import { jordanNotificationsData, mayaNotificationsData, notificationsEmptyData } from '@/fixtures';
+import { jordanNotificationsData, mayaNotificationsData, notificationsEmptyData, supportNotificationsData } from '@/fixtures';
+import { attentionHref } from '@/ui/lib/attention-href';
 import messages from '../../../../messages/en/ui';
 import { NotificationsScreen } from './notifications-screen';
 
@@ -42,8 +43,8 @@ const copy: Record<NotificationType, RegExp> = {
   payout_paid: /You were paid \$54\.00/,
   review_published: /review.*was published/,
   message_received: /sent you a message/,
-  support_replied: /Support replied/,
-  case_resolved: /Support resolved/,
+  support_replied: /Support replied about/,
+  case_resolved: /Support resolved your case about/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -53,7 +54,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   find_work_task: { target: { kind: 'find_work_task', taskId: 'task / one' }, href: routes.app.findWorkTask('task / one') },
   onboarding: { target: { kind: 'onboarding', step: 'payout' }, href: routes.app.helperOnboarding('payout') },
   earnings: { target: { kind: 'earnings' }, href: routes.app.earnings() },
-  support_case: { target: { kind: 'support_case', caseId: 'case_dispute' }, href: routes.app.supportCase('case_dispute') },
+  support_case: { target: { kind: 'support_case', caseId: 'case / one' }, href: routes.app.supportCase('case / one') },
 };
 
 describe('NotificationsScreen', () => {
@@ -66,8 +67,20 @@ describe('NotificationsScreen', () => {
   });
 
   it.each(Object.entries(targets))('builds the %s destination through routes', (_, { target, href }) => {
+    expect(attentionHref(target)).toBe(href);
     show({ notifications: [{ ...mayaNotificationsData.notifications[0], target }], unreadCount: 1 });
     expect(screen.getByRole('link')).toHaveAttribute('href', href);
+  });
+
+  it.each(supportNotificationsData.notifications)('opens the support case for $type', async (notification) => {
+    const actions = handlers();
+    show(supportNotificationsData, actions);
+    const link = screen.getByRole('link', { name: copy[notification.type] });
+    expect(link).toHaveTextContent(notification.title!);
+    expect(link).toHaveAttribute('href', routes.app.supportCase('case_dispute'));
+    await userEvent.click(link);
+    expect(actions.onOpen).toHaveBeenCalledWith({ notificationId: notification.id });
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(routes.app.supportCase('case_dispute')));
   });
 
   it('shows newest first, unread labels, and absolute Central time with relative time', () => {
@@ -116,6 +129,23 @@ describe('NotificationsScreen', () => {
     await act(async () => finish({ ok: true, code: 'updated' }));
     expect(screen.getByRole('status')).toHaveTextContent('All notifications marked as read.');
     expect(navigation.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the mark-read confirmation after refreshed data has zero unread notifications', async () => {
+    const actions = handlers();
+    const view = show(mayaNotificationsData, actions);
+    await userEvent.click(screen.getByRole('button', { name: 'Mark all as read' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('All notifications marked as read.');
+    const refreshed: NotificationsPageData = {
+      notifications: mayaNotificationsData.notifications.map((notification) => ({ ...notification, readAt: notification.readAt ?? now })),
+      unreadCount: 0,
+    };
+    view.rerender(<NextIntlClientProvider locale="en" messages={messages}><NotificationsScreen data={refreshed} handlers={actions} now={now} /></NextIntlClientProvider>);
+    expect(screen.getByRole('status')).toHaveTextContent('All notifications marked as read.');
+    expect(screen.getByRole('status').parentElement).toHaveAttribute('aria-live', 'polite');
+    expect(screen.queryByRole('button', { name: /Mark all/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Unread')).not.toBeInTheDocument();
+    expect(actions.onMarkAllRead).toHaveBeenCalledTimes(1);
   });
 
   it('shows mark-read errors without changing unread rows and permits retry', async () => {
