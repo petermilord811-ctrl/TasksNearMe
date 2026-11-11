@@ -37,6 +37,7 @@ import { completionPreviews } from './completion.preview';
 import { messagesScreenPreviews } from './messages-screens.preview';
 import { bookingSheetsPreviews } from './booking-sheets.preview';
 import { moneyPagePreviews } from './money-pages.preview';
+import { homePreviews } from './home.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -74,4 +75,5 @@ export const previews: PreviewEntry[] = [
   ...messagesScreenPreviews,
   ...bookingSheetsPreviews,
   ...moneyPagePreviews,
+  ...homePreviews,
 ];

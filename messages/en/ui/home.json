@@ -1,0 +1,82 @@
+{
+  "greeting": {
+    "morning": "Good morning, {firstName}",
+    "afternoon": "Good afternoon, {firstName}",
+    "evening": "Good evening, {firstName}"
+  },
+  "description": {
+    "poster": "A little help, one task at a time. Here’s what’s happening.",
+    "helper": "Your next steps and the tasks coming up."
+  },
+  "postTask": "Post a task",
+  "findWork": "Find work",
+  "allBookings": "All bookings",
+  "myTasks": "My tasks",
+  "myOffers": "My offers",
+  "earningsLink": "Earnings",
+  "sections": {
+    "attention": "Needs your attention",
+    "upcoming": "Upcoming",
+    "openTasks": "Open tasks",
+    "activeOffers": "Active offers",
+    "nearby": "Nearby tasks",
+    "earnings": "Earnings at a glance"
+  },
+  "attention": {
+    "taskFallback": "this task",
+    "approve_work": "Approve {title}",
+    "review_offers": "{count, plural, one {# new offer} other {# new offers}} on {title}",
+    "reviewOffersWithoutCount": "Review new offers on {title}",
+    "finish_payment": "Finish payment for {title}",
+    "answer_cant_access": "Your helper needs access for {title}",
+    "unread_messages": "{count, plural, one {# unread message} other {# unread messages}}",
+    "messagesWithoutCount": "Read your unread messages",
+    "check_in_today": "{title} starts today",
+    "reconfirm_offer": "Re-confirm your offer on {title}",
+    "finish_setup": "Finish setting up your helper profile",
+    "payout_action_needed": "Your payout needs attention",
+    "body": {
+      "approve_work": "Review the work, then approve it or report a problem.",
+      "review_offers": "Compare offers and choose a helper.",
+      "finish_payment": "Complete payment to confirm your booking.",
+      "answer_cant_access": "Open the booking and let your helper know how to get in.",
+      "unread_messages": "Open your messages to catch up.",
+      "check_in_today": "Open the booking to check in when you’re on your way.",
+      "reconfirm_offer": "The task changed. Review the details and confirm your offer again.",
+      "finish_setup": "Finish your next setup step so you can send offers.",
+      "payout_action_needed": "Update your bank details in Earnings to resolve the payout problem."
+    },
+    "deadline": "Due {deadline}",
+    "approvalDeadline": "Approve or report a problem by {deadline}. After that, the task is approved automatically.",
+    "paymentDeadline": "Finish payment by {deadline}.",
+    "answerDeadline": "Answer by {deadline}.",
+    "startTime": "Starts at {time} · {date}"
+  },
+  "empty": {
+    "attention": { "title": "You're all caught up", "body": "Anything that needs your attention will appear here." },
+    "upcoming": {
+      "title": "No upcoming bookings",
+      "posterBody": "When you book a helper, your next task will appear here.",
+      "helperBody": "When a client books you, your next task will appear here."
+    },
+    "openTasks": { "title": "What could you use a hand with?", "body": "Post a task to tell nearby helpers what you need. Your open tasks and new offers will appear here." },
+    "activeOffers": { "title": "No active offers yet", "body": "Find a task you can help with. The offers you send will appear here." },
+    "nearby": { "title": "No nearby tasks to show", "body": "Check Find work for more tasks and different search options." }
+  },
+  "earnings": { "upcoming": "Upcoming", "onTheWay": "On the way" },
+  "setup": {
+    "title": "Get ready to send offers",
+    "body": "You can browse tasks while you finish setting up your helper profile.",
+    "action": "Finish setup"
+  },
+  "previews": {
+    "group": "Screens · Home",
+    "client": "Client · attention and upcoming tasks",
+    "clientEmpty": "Client · a fresh start",
+    "helper": "Helper · today and nearby tasks",
+    "helperPayoutAction": "Helper · payout action needed",
+    "helperNotSetUp": "Helper · finish setting up",
+    "clientPaymentAccess": "Client · payment and access deadlines",
+    "helperEmpty": "Helper · empty sections"
+  }
+}

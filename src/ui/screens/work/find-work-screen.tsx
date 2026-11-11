@@ -26,7 +26,7 @@ function OwnOfferStatus({ status }: { status: OfferStatus }) {
   return <div className="space-y-2"><p className="text-sm font-medium">{t('myOffer')}</p><StatusBadge {...badge} /></div>;
 }
 
-function CardContext({ card }: { card: FindWorkCard }) {
+export function FindWorkCardContext({ card }: { card: FindWorkCard }) {
   const t = useTranslations('findWork');
   const location = useTranslations('location');
   return <div className="space-y-3">
@@ -74,7 +74,7 @@ export function FindWorkScreen({ data, now }: FindWorkScreenProps) {
     </section>
     <div className="space-y-4">
       <p className="font-semibold tabular-nums">{t('results', { count: data.totalCount })}</p>
-      {data.cards.length > 0 ? <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.cards.map((card) => <li key={card.task.id} className="min-w-0"><PublicTaskCard task={card.task} now={now} headingLevel={2} href={routes.app.findWorkTask(card.task.id)} footer={<CardContext card={card} />} /></li>)}</ul>
+      {data.cards.length > 0 ? <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.cards.map((card) => <li key={card.task.id} className="min-w-0"><PublicTaskCard task={card.task} now={now} headingLevel={2} href={routes.app.findWorkTask(card.task.id)} footer={<FindWorkCardContext card={card} />} /></li>)}</ul>
         : <EmptyState title={t('emptyTitle')} body={t('emptyBody')} action={{ label: t('clearFilters'), href: routes.app.findWork() }} />}
       {data.pageCount > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">
         {query.page > 1 && <Link href={routes.app.findWork({ ...query, page: query.page - 1 })} rel="prev" className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('previous')}</Link>}
