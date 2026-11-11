@@ -127,6 +127,13 @@
       "when": 1794423094431,
       "tag": "0017_rewards",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794432555531,
+      "tag": "0018_change_requests",
+      "breakpoints": true
     }
   ]
 }

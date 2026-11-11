@@ -15,6 +15,9 @@ export const ARRIVED_LEAD_MS = 30 * MINUTE;
 export const CANT_ACCESS_AFTER_ARRIVAL_MS = 20 * MINUTE;
 export const CANT_ACCESS_ANSWER_MS = 30 * MINUTE;
 /** The review page is wired (UI-015). */
+/** Change requests (UI-027): on once their pages are wired. */
+export const CHANGE_PAGES_READY = false;
+
 export const REVIEW_PAGE_READY = true;
 
 export interface BookingFacts {
@@ -57,7 +60,9 @@ export function bookingActions(booking: BookingFacts, role: BookingViewerRole, n
   // The booking thread: after the primary action, before the calendar.
   const at = actions.findIndex((item) => item.id === 'add_to_calendar');
   const message = make('message', 'secondary');
-  return at === -1 ? [...actions, message] : [...actions.slice(0, at), message, ...actions.slice(at)];
+  // Either person can propose new terms until the work is sent (blueprint 03 §5).
+  const extra = CHANGE_PAGES_READY && (booking.status === 'confirmed' || booking.status === 'in_progress') ? [message, make('propose_change', 'secondary')] : [message];
+  return at === -1 ? [...actions, ...extra] : [...actions.slice(0, at), ...extra, ...actions.slice(at)];
 }
 
 function baseActions(booking: BookingFacts, role: BookingViewerRole, now: Date): ActionDescriptor<BookingActionId>[] {

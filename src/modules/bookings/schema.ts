@@ -153,3 +153,47 @@ export const helperStrikes = pgTable(
   },
   (t) => [index('helper_strikes_helper_idx').on(t.helperUserId, t.createdAt)],
 );
+
+/**
+ * Change requests (blueprint 03 §5): new terms one person proposes and the other accepts. At most one open
+ * request per booking. The proposed terms are stored in full; applying one writes a new `booking_terms` version.
+ */
+export const bookingChangeRequests = pgTable(
+  'booking_change_requests',
+  {
+    id: text('id').primaryKey(),
+    bookingId: text('booking_id')
+      .notNull()
+      .references(() => bookings.id),
+    proposedByUserId: text('proposed_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    status: text('status').notNull(), // CHANGE_STATUSES
+    types: jsonb('types').$type<string[]>().notNull(),
+    /** The terms version it changes (a stale request can't apply). */
+    fromVersion: integer('from_version').notNull(),
+    pricingType: text('pricing_type').notNull(), // fixed | hourly
+    priceCents: integer('price_cents'),
+    hourlyRateCents: integer('hourly_rate_cents'),
+    estimatedHours: doublePrecision('estimated_hours'),
+    hoursCap: doublePrecision('hours_cap'),
+    startAt: timestamp('start_at', { withTimezone: true }).notNull(),
+    scopeText: text('scope_text').notNull(),
+    expenseAllowanceCents: integer('expense_allowance_cents').notNull().default(0),
+    message: text('message').notNull(),
+    beforeBreakdown: jsonb('before_breakdown').$type<PriceBreakdown>().notNull(),
+    afterBreakdown: jsonb('after_breakdown').$type<PriceBreakdown>().notNull(),
+    /** The client's total after minus before (positive: they pay more). */
+    differenceCents: integer('difference_cents').notNull(),
+    /** The payment for the difference, when the total went up. */
+    paymentId: text('payment_id'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('booking_change_requests_open_idx').on(t.bookingId).where(sql`status in ('proposed', 'accepted_pending_funding')`),
+    index('booking_change_requests_booking_idx').on(t.bookingId, t.createdAt),
+  ],
+);

@@ -127,7 +127,8 @@ function unavailableReason(task: TaskRow, offer: OfferRow, live: BookingRow | nu
   }
 }
 
-async function paymentPanel(db: Db, userId: string, provider: PaymentProvider): Promise<PaymentPanelData> {
+/** The client's saved cards and the new-card form (also used to pay change differences). */
+export async function paymentPanel(db: Db, userId: string, provider: PaymentProvider): Promise<PaymentPanelData> {
   const rows = await db
     .select()
     .from(paymentMethods)
@@ -221,7 +222,7 @@ export async function getBookingConfirmPage(
 
 // ---- Paying ---------------------------------------------------------------------------------------
 
-interface ChosenMethod {
+export interface ChosenMethod {
   providerRef: string;
   brand: CardBrand;
   last4: string;
@@ -232,7 +233,11 @@ interface ChosenMethod {
 }
 
 async function chosenMethod(deps: BookingDeps, posterId: string, input: ConfirmBookingInput): Promise<ChosenMethod | ActionResult> {
-  const choice = input.payment;
+  return methodForChoice(deps, posterId, input.payment);
+}
+
+/** The card a client chose (a saved one, or a development test card); also used to pay change differences. */
+export async function methodForChoice(deps: BookingDeps, posterId: string, choice: ConfirmBookingInput['payment']): Promise<ChosenMethod | ActionResult> {
   if (choice.kind === 'saved') {
     const [method] = await deps.db
       .select()
