@@ -561,6 +561,7 @@ export const movingCompletionView: CompletionView = {
   submittedAt: '2026-11-22T18:40:00.000Z',
   photos: [],
   hoursWorked: 3.5,
+  hoursCap: 4,
   expenses: [],
   finalBreakdown: movingFinalBreakdown,
 };

@@ -6,7 +6,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { outboxEvents } from '@/platform/outbox/schema';
-import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookings } from './schema';
+import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookings, bookingTerms } from './schema';
 
 /**
  * The submitted work as the booking page shows it, and the automatic approval when the client's
@@ -40,6 +40,12 @@ export async function autoApproveDue(db: Db, now: Date, scope: { bookingId?: str
 export async function completionViewOf(db: Db, bookingId: string): Promise<CompletionView | null> {
   const [completion] = await db.select().from(bookingCompletions).where(eq(bookingCompletions.bookingId, bookingId)).limit(1);
   if (!completion) return null;
+  const [terms] = await db
+    .select({ hoursCap: bookingTerms.hoursCap })
+    .from(bookingTerms)
+    .innerJoin(bookings, and(eq(bookings.id, bookingTerms.bookingId), eq(bookings.termsVersion, bookingTerms.version)))
+    .where(eq(bookingTerms.bookingId, bookingId))
+    .limit(1);
   const [photoRows, expenseRows] = await Promise.all([
     db
       .select({ file: files })
@@ -59,6 +65,7 @@ export async function completionViewOf(db: Db, bookingId: string): Promise<Compl
     ...(completion.note ? { note: completion.note } : {}),
     photos: photoRows.map(({ file }) => photoFromFile(file)),
     ...(completion.hoursWorked !== null ? { hoursWorked: completion.hoursWorked } : {}),
+    ...(completion.hoursWorked !== null && terms?.hoursCap ? { hoursCap: terms.hoursCap } : {}),
     expenses: expenseRows.map(({ expense, file }) => ({
       id: expense.id,
       description: expense.description,

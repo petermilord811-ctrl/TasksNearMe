@@ -27,6 +27,8 @@ Before a booking is confirmed, phone numbers and emails arrive already masked. T
 ## Follow-ups from earlier tickets
 1. **`message_poster`** (new offer action): the helper's own offer can now include it in `myOffer.actions` ("Message the client"). In `HelperTaskScreen`, call `onOfferAction({ offerId, action: 'message_poster' })` like the other offer actions. When the result has `redirectTo`, navigate to it with `router.push`. The same applies to any offer action result with `redirectTo`. Please also review the placeholder copy `actions.message_poster`.
 
+2. **`CompletionView.hoursCap`** (your UI-013 contract request, accepted): hourly completions now include the cap. In `CompletionSummary`, show "Hours worked: 3.5 of up to 4" when `hoursCap` is set. Keep the current wording otherwise. `movingCompletionView` has `hoursCap: 4`.
+
 ## Build
 
 **Screens** (`src/ui/screens/messages/`, exported from `src/ui/screens/messages/index.ts`). One H1 each.

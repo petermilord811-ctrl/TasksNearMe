@@ -319,6 +319,8 @@ export interface CompletionView {
   note?: string;
   photos: Photo[];
   hoursWorked?: number;
+  /** Hourly bookings: the cap the hours are measured against ("3.5 of up to 4"). */
+  hoursCap?: number;
   expenses: { id: string; description: string; amountCents: Cents; receipt: Photo }[];
   /** The final numbers with these hours and expenses (the UI shows the viewer's variant). */
   finalBreakdown: PriceBreakdown;
