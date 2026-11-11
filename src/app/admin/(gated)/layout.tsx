@@ -6,6 +6,9 @@ import { getViewer, toStaffViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { AdminShell } from '@/ui/shells';
 
+/** Instant navigations inside the signed-in area (per-segment Partial Prefetching). */
+export const prefetch = 'partial';
+
 /**
  * Staff area. Non-staff get a plain 404 (the admin area isn't advertised); staff must pass the
  * two-step check for this session first (/admin/verify, outside this group).

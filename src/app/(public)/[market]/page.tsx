@@ -1,10 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Suspense } from 'react';
 import { getMarketPageData } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
-import { PageSkeleton } from '@/ui/components';
 import { MarketScreen } from '@/ui/screens/public';
 
 export async function generateStaticParams() {
@@ -22,15 +20,8 @@ export async function generateMetadata({ params }: PageProps<'/[market]'>): Prom
   };
 }
 
-export default function MarketPage({ params }: PageProps<'/[market]'>) {
-  return (
-    <Suspense fallback={<PageSkeleton variant="cards" />}>
-      <Market params={params} />
-    </Suspense>
-  );
-}
-
-async function Market({ params }: Pick<PageProps<'/[market]'>, 'params'>) {
+/** Params are awaited outside Suspense, so every market URL gets its own cached render and unknown ones a real 404. */
+export default async function MarketPage({ params }: PageProps<'/[market]'>) {
   const { market } = await params;
   const page = await getMarketPageData(market);
   if (!page) notFound();

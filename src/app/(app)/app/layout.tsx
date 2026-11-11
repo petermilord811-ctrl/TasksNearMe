@@ -6,6 +6,9 @@ import { getViewer, toSignedInViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { AppShell } from '@/ui/shells';
 
+/** Instant navigations inside the signed-in area (per-segment Partial Prefetching). */
+export const prefetch = 'partial';
+
 /** Signed-in area. Visitors without a session go to sign-in. */
 export default function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
