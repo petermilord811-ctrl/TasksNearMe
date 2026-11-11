@@ -50,6 +50,14 @@ Handlers this ticket receives and the result codes to handle:
 
 Copy namespaces: `adminRewards`, `adminUsers`, `adminUser`.
 
+**Also (placeholders to review):** notifications gained `change_proposed`, `change_applied`, `invite_received`, `invite_countered` and `invite_accepted`, and attention targets gained `{ kind: 'invite', inviteId }` (→ `routes.app.offers(inviteId)`). Claude added placeholders so `main` compiles:
+- the icons in `notification-actions.tsx`;
+- the `attention-href.ts` case;
+- `types.*` copy in `messages/en/ui/notifications.json`;
+- the test map entries.
+
+Please review them and replace them properly.
+
 ## States to preview
 | Preview id | Fixture(s) | What it shows |
 |---|---|---|

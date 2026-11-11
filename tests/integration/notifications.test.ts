@@ -1,7 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { confirmBooking } from '@/modules/bookings/confirm';
+import { bookingTerms } from '@/modules/bookings/schema';
+import { invites } from '@/modules/invites/schema';
 import { getThreadPage, offerThreadId, sendMessage, unreadMessageCount } from '@/modules/messaging/service';
 import { notifications } from '@/modules/notifications/schema';
 import {
@@ -17,6 +19,7 @@ import {
 import { offers } from '@/modules/offers/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
+import { outboxEvents } from '@/platform/outbox/schema';
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 afterAll(() => pool.end());
@@ -62,6 +65,53 @@ describe('notifications', () => {
     expect(before - (await unreadMessageCount(db, 'usr_chris'))).toBeGreaterThanOrEqual(2);
     // Your own messages never count (sending also reads the thread).
     expect(await unreadMessageCount(db, 'usr_lee')).toBeLessThanOrEqual(leeBefore);
+  });
+});
+
+describe('change and invite notifications', () => {
+  // Other test files add events too: a large limit dispatches everything pending.
+  const dispatchAll = () => dispatchNotifications(db, new Date(), 10_000);
+
+  it('tells the other person about a proposed change, and both people when it applies', async () => {
+    await db.insert(outboxEvents).values([
+      { id: 'evt_ntf_chg_proposed', type: 'change.proposed', aggregateType: 'booking', aggregateId: bookingId, payload: { bookingId, changeId: 'chg_ntf', proposedByUserId: 'usr_lee' } },
+      { id: 'evt_ntf_chg_applied', type: 'change.applied', aggregateType: 'booking', aggregateId: bookingId, payload: { bookingId, changeId: 'chg_ntf' } },
+    ]);
+    await dispatchAll();
+    const rows = await db.select().from(notifications).where(inArray(notifications.sourceEventId, ['evt_ntf_chg_proposed', 'evt_ntf_chg_applied']));
+    expect(rows.filter((row) => row.type === 'change_proposed')).toEqual([
+      expect.objectContaining({ userId: 'usr_chris', actorName: 'Lee M.', title: 'Assemble a desk (flat-pack, 1 item)', target: { kind: 'booking', bookingId } }),
+    ]);
+    expect(rows.filter((row) => row.type === 'change_applied').map((row) => row.userId).sort()).toEqual(['usr_chris', 'usr_lee']);
+  });
+
+  it('tells the helper about an invite, and the client about a counter and an acceptance', async () => {
+    const [terms] = await db.select({ breakdown: bookingTerms.breakdown }).from(bookingTerms).where(eq(bookingTerms.bookingId, bookingId)).limit(1);
+    await db.insert(invites).values({
+      id: 'inv_ntf',
+      taskId: 'tsk_ntf',
+      posterUserId: 'usr_chris',
+      helperUserId: 'usr_lee',
+      status: 'accepted',
+      pricingType: 'fixed',
+      priceCents: 6000,
+      startAt: new Date(Date.now() + 5 * 86_400_000),
+      breakdown: terms!.breakdown,
+      bookingId,
+    });
+    const people = { inviteId: 'inv_ntf', posterUserId: 'usr_chris', helperUserId: 'usr_lee' };
+    await db.insert(outboxEvents).values([
+      { id: 'evt_ntf_inv_sent', type: 'invite.sent', aggregateType: 'invite', aggregateId: 'inv_ntf', payload: { ...people, taskId: 'tsk_ntf' } },
+      { id: 'evt_ntf_inv_countered', type: 'invite.countered', aggregateType: 'invite', aggregateId: 'inv_ntf', payload: people },
+      { id: 'evt_ntf_inv_accepted', type: 'invite.accepted', aggregateType: 'invite', aggregateId: 'inv_ntf', payload: { ...people, bookingId } },
+    ]);
+    await dispatchAll();
+    const rows = await db.select().from(notifications).where(inArray(notifications.sourceEventId, ['evt_ntf_inv_sent', 'evt_ntf_inv_countered', 'evt_ntf_inv_accepted']));
+    expect(rows).toHaveLength(3);
+    const byType = Object.fromEntries(rows.map((row) => [row.type, row]));
+    expect(byType.invite_received).toMatchObject({ userId: 'usr_lee', actorName: 'Chris D.', title: 'Assemble a desk (flat-pack, 1 item)', target: { kind: 'invite', inviteId: 'inv_ntf' } });
+    expect(byType.invite_countered).toMatchObject({ userId: 'usr_chris', actorName: 'Lee M.', target: { kind: 'task', taskId: 'tsk_ntf' } });
+    expect(byType.invite_accepted).toMatchObject({ userId: 'usr_chris', actorName: 'Lee M.', target: { kind: 'booking', bookingId } });
   });
 });
 

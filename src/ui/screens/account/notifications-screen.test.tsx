@@ -45,6 +45,11 @@ const copy: Record<NotificationType, RegExp> = {
   message_received: /sent you a message/,
   support_replied: /Support replied about/,
   case_resolved: /Support resolved your case about/,
+  change_proposed: /proposed a change/,
+  change_applied: /change to .* was applied/,
+  invite_received: /invited you/,
+  invite_countered: /countered your invite/,
+  invite_accepted: /accepted your invite/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -55,6 +60,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   onboarding: { target: { kind: 'onboarding', step: 'payout' }, href: routes.app.helperOnboarding('payout') },
   earnings: { target: { kind: 'earnings' }, href: routes.app.earnings() },
   support_case: { target: { kind: 'support_case', caseId: 'case / one' }, href: routes.app.supportCase('case / one') },
+  invite: { target: { kind: 'invite', inviteId: 'invite / one' }, href: routes.app.offers('invite / one') },
 };
 
 describe('NotificationsScreen', () => {

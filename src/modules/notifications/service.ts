@@ -19,6 +19,7 @@ import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { invites } from '@/modules/invites/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { notificationPreferences, notifications, privacyRequests } from './schema';
 
@@ -129,6 +130,39 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
         default:
           return [forPoster('review_published'), forHelper('review_published')];
       }
+    }
+    case 'change.proposed': {
+      const bookingId = text(p.bookingId);
+      const proposer = text(p.proposedByUserId);
+      const ctx = await bookingContext(db, bookingId);
+      if (!ctx || !bookingId || !proposer) return [];
+      const other = ctx.posterUserId === proposer ? ctx.helperUserId : ctx.posterUserId;
+      return [{ userId: other, type: 'change_proposed' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title: ctx.title, actorName: await nameOf(db, proposer) }];
+    }
+    case 'change.applied': {
+      const bookingId = text(p.bookingId);
+      const ctx = await bookingContext(db, bookingId);
+      if (!ctx || !bookingId) return [];
+      return [ctx.posterUserId, ctx.helperUserId].map((userId) => ({ userId, type: 'change_applied' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title: ctx.title }));
+    }
+    case 'invite.sent':
+    case 'invite.countered':
+    case 'invite.accepted': {
+      const inviteId = text(p.inviteId);
+      const posterId = text(p.posterUserId);
+      const helperId = text(p.helperUserId);
+      if (!inviteId || !posterId || !helperId) return [];
+      const [invite] = await db.select({ taskId: invites.taskId, bookingId: invites.bookingId }).from(invites).where(eq(invites.id, inviteId)).limit(1);
+      const title = await taskTitle(db, invite?.taskId);
+      if (event.type === 'invite.sent') {
+        return [{ userId: helperId, type: 'invite_received' as const, target: { kind: 'invite', inviteId } as AttentionTarget, title, actorName: await nameOf(db, posterId) }];
+      }
+      const actorName = await nameOf(db, helperId);
+      if (event.type === 'invite.countered') {
+        return invite?.taskId ? [{ userId: posterId, type: 'invite_countered' as const, target: { kind: 'task', taskId: invite.taskId } as AttentionTarget, title, actorName }] : [];
+      }
+      const bookingId = text(p.bookingId) ?? invite?.bookingId ?? undefined;
+      return bookingId ? [{ userId: posterId, type: 'invite_accepted' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title, actorName }] : [];
     }
     case 'support.replied': {
       const caseId = text(p.caseId);

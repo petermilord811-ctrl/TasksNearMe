@@ -32,6 +32,12 @@ const icons: Record<NotificationType, LucideIcon> = {
   message_received: MessageCircle,
   support_replied: Headset,
   case_resolved: CircleCheck,
+  // Placeholders added by Claude with change and invite notifications; Codex reviews them in UI-020.
+  change_proposed: MessageCircle,
+  change_applied: CheckCheck,
+  invite_received: MessageCircle,
+  invite_countered: MessageCircle,
+  invite_accepted: CheckCheck,
 };
 
 function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {

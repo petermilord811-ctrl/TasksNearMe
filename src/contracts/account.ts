@@ -31,6 +31,16 @@ export const NOTIFICATION_TYPES = [
   'support_replied',
   /** Support resolved a case the person is on (UI-026). */
   'case_resolved',
+  /** The other person proposed a change to a booking (UI-027). */
+  'change_proposed',
+  /** A change was applied to a booking (UI-027). */
+  'change_applied',
+  /** A client invited the helper to a task (UI-025). */
+  'invite_received',
+  /** The helper countered the client's invite (UI-025). */
+  'invite_countered',
+  /** The helper accepted the client's invite: booked (UI-025). */
+  'invite_accepted',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

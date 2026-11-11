@@ -11,5 +11,6 @@ export function attentionHref(target: AttentionTarget): string {
     case 'onboarding': return routes.app.helperOnboarding(target.step);
     case 'earnings': return routes.app.earnings();
     case 'support_case': return routes.app.supportCase(target.caseId);
+    case 'invite': return routes.app.offers(target.inviteId);
   }
 }

@@ -19,7 +19,9 @@ export type AttentionTarget =
   | { kind: 'onboarding'; step: OnboardingStep }
   | { kind: 'earnings' }
   /** A support case on `/app/support/[caseId]` (UI-026). */
-  | { kind: 'support_case'; caseId: string };
+  | { kind: 'support_case'; caseId: string }
+  /** An invite in the helper's offers (`routes.app.offers(inviteId)`, UI-025). */
+  | { kind: 'invite'; inviteId: string };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */

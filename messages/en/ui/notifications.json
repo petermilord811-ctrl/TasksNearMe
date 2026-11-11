@@ -33,7 +33,12 @@
     "review_published": "{actorName}'s review for {title} was published",
     "message_received": "{actorName} sent you a message about {title}",
     "support_replied": "Support replied about {title}",
-    "case_resolved": "Support resolved your case about {title}"
+    "case_resolved": "Support resolved your case about {title}",
+    "change_proposed": "{actorName} proposed a change to {title}",
+    "change_applied": "The change to {title} was applied",
+    "invite_received": "{actorName} invited you to {title}",
+    "invite_countered": "{actorName} countered your invite for {title}",
+    "invite_accepted": "{actorName} accepted your invite for {title}"
   },
   "previews": {
     "group": "Notifications",
