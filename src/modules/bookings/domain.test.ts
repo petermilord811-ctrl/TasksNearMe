@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addressVisibility, bookingActions, bookingDeadlines, needsAction, type BookingFacts } from './domain';
+import { addressVisibility, bookingActions, bookingDeadlines, needsAction, sheetActions, type BookingFacts } from './domain';
 
 const start = new Date('2026-11-21T16:30:00.000Z'); // Sat 10:30 am in Austin
 const policy = { noShowMinutes: 30, addressHideAfterHours: 48 };
@@ -72,5 +72,28 @@ describe('deadlines and needing action', () => {
     expect(needsAction({ ...confirmed, status: 'completion_submitted' }, 'poster', start)).toBe(true);
     expect(needsAction(confirmed, 'helper', at('2026-11-20T12:00:00.000Z'))).toBe(false);
     expect(needsAction(confirmed, 'helper', at('2026-11-21T15:00:00.000Z'))).toBe(true);
+  });
+});
+
+describe('sheet actions', () => {
+  it('lets the client report a no-show 30 min after the start (later after a late update), and cancel', () => {
+    expect(ids(sheetActions(confirmed, 'poster', policy, at('2026-11-21T16:59:00.000Z')))).toEqual(['report_no_show (off)', 'safety_report', 'cancel']);
+    expect(ids(sheetActions(confirmed, 'poster', policy, at('2026-11-21T17:00:00.000Z')))).toEqual(['report_no_show', 'safety_report', 'cancel']);
+    const late = { ...confirmed, lateByMinutes: 20 };
+    expect(ids(sheetActions(late, 'poster', policy, at('2026-11-21T17:10:00.000Z')))).toEqual(['report_no_show (off)', 'safety_report', 'cancel']);
+  });
+
+  it("opens can't access 20 min after arriving, and I'm here for the client until the answer is due", () => {
+    const arrived = { ...confirmed, status: 'in_progress', arrivedAt: at('2026-11-21T16:24:00.000Z') };
+    expect(ids(sheetActions(arrived, 'helper', policy, at('2026-11-21T16:40:00.000Z')))).toEqual(['cant_access (off)', 'safety_report']);
+    expect(ids(sheetActions(arrived, 'helper', policy, at('2026-11-21T16:44:00.000Z')))).toEqual(['cant_access', 'safety_report']);
+    const reported = { ...arrived, cantAccessAt: at('2026-11-21T16:50:00.000Z'), posterResponseDueAt: at('2026-11-21T17:20:00.000Z') };
+    expect(ids(sheetActions(reported, 'poster', policy, at('2026-11-21T17:00:00.000Z')))).toEqual(['im_here', 'safety_report']);
+    expect(ids(sheetActions(reported, 'poster', policy, at('2026-11-21T17:20:00.000Z')))).toEqual(['safety_report']);
+  });
+
+  it('offers running late from 2 h before the start, and nothing after the work is done', () => {
+    expect(ids(sheetActions(confirmed, 'helper', policy, at('2026-11-21T15:00:00.000Z')))).toEqual(['running_late', 'safety_report', 'cancel']);
+    expect(sheetActions({ ...confirmed, status: 'completed' }, 'helper', policy, start)).toEqual([]);
   });
 });

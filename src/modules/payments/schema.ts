@@ -68,3 +68,23 @@ export const payments = pgTable(
     uniqueIndex('payments_idempotency_idx').on(t.idempotencyKey),
   ],
 );
+
+/** Money back to the poster (blueprint 04 §6), one row per refund. */
+export const refunds = pgTable(
+  'refunds',
+  {
+    id: text('id').primaryKey(),
+    paymentId: text('payment_id')
+      .notNull()
+      .references(() => payments.id),
+    bookingId: text('booking_id'),
+    amountCents: integer('amount_cents').notNull(),
+    /** cancellation | unused_cap | unused_allowance | change_decrease | dispute_settlement | goodwill */
+    reason: text('reason').notNull(),
+    status: text('status').notNull(), // pending | succeeded | failed
+    providerRef: text('provider_ref'),
+    idempotencyKey: text('idempotency_key').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('refunds_booking_idx').on(t.bookingId), uniqueIndex('refunds_idempotency_idx').on(t.idempotencyKey)],
+);

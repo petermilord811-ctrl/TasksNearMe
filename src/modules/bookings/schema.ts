@@ -45,6 +45,13 @@ export const bookings = pgTable(
     /** `completion_submitted`: approved automatically at this time. */
     completionSubmittedAt: timestamp('completion_submitted_at', { withTimezone: true }),
     approvalDueAt: timestamp('approval_due_at', { withTimezone: true }),
+    /** The helper couldn't get in; the client must answer by `poster_response_due_at`. */
+    cantAccessAt: timestamp('cant_access_at', { withTimezone: true }),
+    posterResponseDueAt: timestamp('poster_response_due_at', { withTimezone: true }),
+    /** Who canceled, and their reason and note (`cancel_reason` keeps the policy outcome). */
+    canceledBy: text('canceled_by'),
+    cancelChoice: text('cancel_choice'),
+    cancelNote: text('cancel_note'),
     canceledAt: timestamp('canceled_at', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -127,4 +134,22 @@ export const bookingExpenses = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('booking_expenses_booking_idx').on(t.bookingId)],
+);
+
+/** Late cancellations and no-shows count against the helper (blueprint 03 §4: "strike if < 24 h"). */
+export const helperStrikes = pgTable(
+  'helper_strikes',
+  {
+    id: text('id').primaryKey(),
+    helperUserId: text('helper_user_id')
+      .notNull()
+      .references(() => users.id),
+    bookingId: text('booking_id')
+      .notNull()
+      .references(() => bookings.id),
+    reason: text('reason').notNull(), // late_cancellation | no_show
+    reversedAt: timestamp('reversed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('helper_strikes_helper_idx').on(t.helperUserId, t.createdAt)],
 );

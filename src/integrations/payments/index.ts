@@ -37,6 +37,8 @@ export interface PaymentProvider {
   completeAction(input: { providerRef: string; outcome: 'approved' | 'failed' }): Promise<
     { status: 'succeeded' } | { status: 'failed'; failureCode: PaymentFailureCode }
   >;
+  /** Refunds part or all of a captured charge. Same key, same result. */
+  refund(input: { chargeRef: string; amountCents: number; idempotencyKey: string }): Promise<{ status: 'succeeded' | 'failed'; refundRef: string }>;
   /** Development only: the payment method for a test card (what the provider's card form would return). */
   collectDevCard?(card: DevTestCard): CollectedCard;
 }
@@ -77,6 +79,9 @@ export function createDevPaymentProvider(): PaymentProvider {
         default:
           return { status: 'succeeded', providerRef };
       }
+    },
+    async refund() {
+      return { status: 'succeeded', refundRef: `devre_${randomBytes(8).toString('hex')}` };
     },
     async completeAction({ outcome }) {
       return outcome === 'approved' ? { status: 'succeeded' } : { status: 'failed', failureCode: 'payment_declined' };

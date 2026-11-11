@@ -11,6 +11,9 @@ const MINUTE = 60_000;
 /** "On my way" opens 2 h before the start; "Arrived" 30 min before. */
 export const ON_MY_WAY_LEAD_MS = 2 * HOUR;
 export const ARRIVED_LEAD_MS = 30 * MINUTE;
+/** "Can't get in" opens 20 min after arriving; the client then has 30 min to answer. */
+export const CANT_ACCESS_AFTER_ARRIVAL_MS = 20 * MINUTE;
+export const CANT_ACCESS_ANSWER_MS = 30 * MINUTE;
 
 export interface BookingFacts {
   status: BookingStatus | string;
@@ -21,6 +24,9 @@ export interface BookingFacts {
   fundingExpiresAt: Date | null;
   approvalDueAt: Date | null;
   completedAt: Date | null;
+  lateByMinutes?: number | null;
+  cantAccessAt?: Date | null;
+  posterResponseDueAt?: Date | null;
 }
 
 export interface BookingPolicy {
@@ -119,4 +125,36 @@ export function needsAction(booking: BookingFacts, role: BookingViewerRole, now:
   return (
     booking.status === 'confirmed' && !booking.remote && !booking.arrivedAt && now.getTime() >= booking.startAt.getTime() - ON_MY_WAY_LEAD_MS
   );
+}
+
+/**
+ * The actions that open sheets (UI-012): cancel, running late, report a no-show, can't access, and the
+ * client's "I'm here" answer, plus the safety report. Added to the booking page with UI-012.
+ */
+export function sheetActions(booking: BookingFacts, role: BookingViewerRole, policy: BookingPolicy, now: Date): ActionDescriptor<BookingActionId>[] {
+  const safety = make('safety_report', 'secondary');
+  const cancel = make('cancel', 'destructive');
+  const start = booking.startAt.getTime();
+  if (role === 'poster') {
+    if (booking.status === 'confirmed') {
+      if (booking.remote || booking.arrivedAt) return [safety, cancel];
+      // A late update moves the no-show time by the minutes the helper gave.
+      const reportableAt = new Date(start + (policy.noShowMinutes + (booking.lateByMinutes ?? 0)) * MINUTE);
+      return [opensAt('report_no_show', 'secondary', reportableAt, now), safety, cancel];
+    }
+    if (booking.status === 'in_progress') {
+      const waiting = booking.cantAccessAt && booking.posterResponseDueAt && now < booking.posterResponseDueAt;
+      return waiting ? [make('im_here', 'primary'), safety] : [safety];
+    }
+    return [];
+  }
+  if (booking.status === 'confirmed') {
+    if (booking.remote || booking.arrivedAt) return [safety, cancel];
+    return [opensAt('running_late', 'secondary', new Date(start - ON_MY_WAY_LEAD_MS), now), safety, cancel];
+  }
+  if (booking.status === 'in_progress') {
+    if (booking.remote || !booking.arrivedAt || booking.cantAccessAt) return [safety];
+    return [opensAt('cant_access', 'secondary', new Date(booking.arrivedAt.getTime() + CANT_ACCESS_AFTER_ARRIVAL_MS), now), safety];
+  }
+  return [];
 }
