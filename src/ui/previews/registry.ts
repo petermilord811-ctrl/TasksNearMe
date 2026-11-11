@@ -42,6 +42,9 @@ import { reviewPreviews } from './reviews.preview';
 import { savedHelpersPreviews } from './saved-helpers.preview';
 import { accountPreviews } from './account.preview';
 import { notificationPreviews } from './notifications.preview';
+import { supportPreviews } from './support.preview';
+import { supportCasePreviews } from './support-case.preview';
+import { safetyPreviews } from './safety.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -84,4 +87,7 @@ export const previews: PreviewEntry[] = [
   ...savedHelpersPreviews,
   ...accountPreviews,
   ...notificationPreviews,
+  ...supportPreviews,
+  ...supportCasePreviews,
+  ...safetyPreviews,
 ];
