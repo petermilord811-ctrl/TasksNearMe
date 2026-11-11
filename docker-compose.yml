@@ -1,0 +1,24 @@
+# Local development database: Postgres 17 + PostGIS. Dev-only credentials (also in .env.example).
+# Start: npm run db:up · Stop: npm run db:down · Reset data: npm run db:reset
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    container_name: tasksnearme-db
+    environment:
+      POSTGRES_USER: tnm
+      POSTGRES_PASSWORD: tnm_dev_password
+      POSTGRES_DB: tasksnearme
+    ports:
+      - "54329:5432"
+    volumes:
+      - tnm-pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tnm -d tasksnearme"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+    restart: unless-stopped
+
+volumes:
+  tnm-pgdata:
