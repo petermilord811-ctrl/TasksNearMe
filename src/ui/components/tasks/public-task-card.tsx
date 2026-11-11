@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { CalendarDays, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CategorySlug, type ISODateTime, type TaskPublicView } from '@/contracts';
@@ -9,6 +10,8 @@ export interface PublicTaskCardProps {
   task: TaskPublicView;
   now: ISODateTime;
   headingLevel?: 2 | 3;
+  href?: string;
+  footer?: ReactNode;
 }
 
 const categoryIcons: Record<CategorySlug, LucideIcon> = {
@@ -19,7 +22,7 @@ const categoryIcons: Record<CategorySlug, LucideIcon> = {
   'computer-help': Laptop,
 };
 
-export function PublicTaskCard({ task, now, headingLevel = 3 }: PublicTaskCardProps) {
+export function PublicTaskCard({ task, now, headingLevel = 3, href = routes.publicTask(task.slug), footer }: PublicTaskCardProps) {
   const t = useTranslations('taskCard');
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const CategoryIcon = categoryIcons[task.categorySlug];
@@ -45,7 +48,7 @@ export function PublicTaskCard({ task, now, headingLevel = 3 }: PublicTaskCardPr
         {t(`categories.${task.categorySlug}`)}
       </p>
       <Heading className="mt-3 text-[17px]/6 font-semibold md:text-lg/6.5">
-        <Link href={routes.publicTask(task.slug)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">
+        <Link href={href} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">
           {task.title}
         </Link>
       </Heading>
@@ -73,6 +76,7 @@ export function PublicTaskCard({ task, now, headingLevel = 3 }: PublicTaskCardPr
           {task.poster.phoneVerified && <VerificationBadges badges={{ phoneVerified: task.poster.phoneVerified }} compact />}
         </div>
       </div>
+      {footer && <div className="mt-4 border-t pt-4">{footer}</div>}
     </article>
   );
 }

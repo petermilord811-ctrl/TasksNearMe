@@ -28,6 +28,9 @@ import { taskManagePreviews } from './task-manage.preview';
 import { offerPreviews } from './offers.preview';
 import { helperOnboardingPreviews } from './helper-onboarding.preview';
 import { helperProfileEditorPreviews } from './helper-profile-editor.preview';
+import { findWorkPreviews } from './find-work.preview';
+import { helperTaskPreviews } from './helper-task.preview';
+import { myOffersPreviews } from './my-offers.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -56,4 +59,7 @@ export const previews: PreviewEntry[] = [
   ...offerPreviews,
   ...helperOnboardingPreviews,
   ...helperProfileEditorPreviews,
+  ...findWorkPreviews,
+  ...helperTaskPreviews,
+  ...myOffersPreviews,
 ];
