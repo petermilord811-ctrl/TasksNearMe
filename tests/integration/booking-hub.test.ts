@@ -44,7 +44,7 @@ describe('the booking page', () => {
     const view = await getBookingView(hub, 'usr_ana', bookingId, new Date());
     expect(view).toMatchObject({ status: 'confirmed', viewerRole: 'poster', addressVisibility: 'visible', exactAddress: { line1: '1234 Example Lane' } });
     expect(view?.payments).toEqual([expect.objectContaining({ kind: 'charge', amountCents: 6600, status: 'succeeded', method: { brand: 'visa', last4: '4242' } })]);
-    expect(view?.actions.map((a) => a.id)).toEqual(['message', 'add_to_calendar']);
+    expect(view?.actions.map((a) => a.id)).toEqual(['message', 'add_to_calendar', 'report_no_show', 'safety_report', 'cancel']);
     expect(view?.timeline.map((e) => e.type)).toEqual(['task_posted', 'offer_received', 'booked', 'payment_succeeded']);
     expect(await getBookingView(hub, 'usr_chris', bookingId, new Date())).toBeNull();
   });
@@ -58,6 +58,9 @@ describe('the booking page', () => {
       ['arrived', false],
       ['message', true],
       ['add_to_calendar', true],
+      ['running_late', false],
+      ['safety_report', true],
+      ['cancel', true],
     ]);
   });
 

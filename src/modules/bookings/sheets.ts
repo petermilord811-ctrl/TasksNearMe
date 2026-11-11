@@ -10,7 +10,7 @@ import type {
   SafetyReportInput,
 } from '@/contracts';
 import { bookingNoteInputSchema, cancelBookingInputSchema, HELPER_CANCEL_REASONS, LATE_BY_MINUTES, POSTER_CANCEL_REASONS, safetyReportInputSchema } from '@/contracts';
-import type { PaymentProvider } from '@/integrations/payments';
+import { createPaymentProvider, type PaymentProvider } from '@/integrations/payments';
 import { recordCompensation } from '@/modules/earnings/service';
 import { marketPolicies } from '@/modules/markets/schema';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
@@ -39,6 +39,13 @@ export interface SheetDeps {
 }
 
 type BookingRow = typeof bookings.$inferSelect;
+
+let defaultProvider: PaymentProvider | null | undefined;
+/** The app's payment provider (development stand-in), for work done while reading a booking. */
+function appPayments(): PaymentProvider | null {
+  if (defaultProvider === undefined) defaultProvider = createPaymentProvider();
+  return defaultProvider;
+}
 const SHEET_RATE_LIMIT = { limit: 20, windowSeconds: 600 };
 
 async function load(db: Db, bookingId: string) {
@@ -237,10 +244,12 @@ export async function reportCantAccess(db: Db, userId: string, bookingId: string
 }
 
 /** Can't-access reports the client didn't answer: canceled as a client no-show (late terms). */
-export async function expireCantAccess(deps: SheetDeps, now: Date, scope: { bookingId?: string } = {}): Promise<void> {
+export async function expireCantAccess(db: Db, now: Date, scope: { bookingId?: string } = {}, payments_ = appPayments()): Promise<void> {
   const conditions = [eq(bookings.status, 'in_progress'), lte(bookings.posterResponseDueAt, now)];
   if (scope.bookingId) conditions.push(eq(bookings.id, scope.bookingId));
-  const due = await deps.db.select({ id: bookings.id }).from(bookings).where(and(...conditions));
+  const due = await db.select({ id: bookings.id }).from(bookings).where(and(...conditions));
+  if (due.length === 0 || !payments_) return;
+  const deps: SheetDeps = { db, payments: payments_ };
   for (const { id } of due) {
     const row = await load(deps.db, id);
     if (row) await cancelWith(deps, row, 'system', outcomeOf(row, 'poster_unavailable', now), { by: 'system', expected: ['in_progress'] }, now);

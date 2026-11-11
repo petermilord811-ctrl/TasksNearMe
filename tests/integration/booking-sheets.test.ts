@@ -90,7 +90,7 @@ describe('the day of the task', () => {
     const { bookingId } = await booked('tsk_sh_access', 2 * HOUR);
     await db.update(bookings).set({ status: 'in_progress', arrivedAt: new Date() }).where(eq(bookings.id, bookingId));
     expect(await reportCantAccess(db, 'usr_jordan', bookingId, { note: 'Nobody at the door.' }, new Date())).toEqual({ ok: true, code: 'updated' });
-    await expireCantAccess(deps, new Date(Date.now() + 31 * 60_000), { bookingId });
+    await expireCantAccess(db, new Date(Date.now() + 31 * 60_000), { bookingId }, deps.payments);
     const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     expect(row).toMatchObject({ status: 'canceled', cancelReason: 'poster_no_show' });
     expect(await refundsOf(bookingId)).toEqual([{ amount: 5400, status: 'succeeded' }]);

@@ -116,6 +116,8 @@ export function bookingDeadlines(booking: BookingFacts, role: BookingViewerRole,
       return booking.fundingExpiresAt ? { pendingFundingExpiresAt: booking.fundingExpiresAt.toISOString() } : {};
     case 'confirmed':
       return booking.remote ? {} : { noShowReportableAt: new Date(booking.startAt.getTime() + policy.noShowMinutes * MINUTE).toISOString() };
+    case 'in_progress':
+      return booking.posterResponseDueAt && now < booking.posterResponseDueAt ? { posterResponseDueAt: booking.posterResponseDueAt.toISOString() } : {};
     case 'completion_submitted':
       return booking.approvalDueAt ? { approvalDueAt: booking.approvalDueAt.toISOString() } : {};
     case 'completed': {
@@ -134,6 +136,14 @@ export function needsAction(booking: BookingFacts, role: BookingViewerRole, now:
   return (
     booking.status === 'confirmed' && !booking.remote && !booking.arrivedAt && now.getTime() >= booking.startAt.getTime() - ON_MY_WAY_LEAD_MS
   );
+}
+
+const KIND_ORDER: Record<ActionDescriptor['kind'], number> = { primary: 0, secondary: 1, destructive: 2 };
+
+/** The booking page's actions: single taps (`bookingActions`) and sheets (`sheetActions`), primary first, destructive last. */
+export function allBookingActions(booking: BookingFacts, role: BookingViewerRole, policy: BookingPolicy, now: Date): ActionDescriptor<BookingActionId>[] {
+  const all = [...bookingActions(booking, role, now), ...sheetActions(booking, role, policy, now)];
+  return all.map((action, index) => ({ action, index })).sort((a, b) => KIND_ORDER[a.action.kind] - KIND_ORDER[b.action.kind] || a.index - b.index).map(({ action }) => action);
 }
 
 /**

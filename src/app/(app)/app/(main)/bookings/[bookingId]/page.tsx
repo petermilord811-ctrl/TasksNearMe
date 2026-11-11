@@ -3,6 +3,14 @@ import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { bookingActionHandler } from '@/modules/bookings/hub-actions';
+import {
+  cancelBookingAction,
+  cantAccessAction,
+  previewCancelAction,
+  reportNoShowAction,
+  runningLateAction,
+  safetyReportAction,
+} from '@/modules/bookings/sheet-actions';
 import { getBookingView } from '@/modules/bookings/hub';
 import { hubDeps } from '@/modules/bookings/server';
 import { getViewer } from '@/platform/auth/viewer';
@@ -26,5 +34,19 @@ async function Booking({ params }: Pick<PageProps<'/app/bookings/[bookingId]'>, 
   const now = new Date();
   const data = await getBookingView(hubDeps(), viewer.user.id, bookingId, now);
   if (!data) notFound();
-  return <BookingHubScreen data={data} now={now.toISOString()} handlers={{ onAction: bookingActionHandler.bind(null, bookingId) }} />;
+  return (
+    <BookingHubScreen
+      data={data}
+      now={now.toISOString()}
+      handlers={{ onAction: bookingActionHandler.bind(null, bookingId) }}
+      sheets={{
+        onPreviewCancel: previewCancelAction.bind(null, bookingId),
+        onCancel: cancelBookingAction.bind(null, bookingId),
+        onRunningLate: runningLateAction.bind(null, bookingId),
+        onReportNoShow: reportNoShowAction.bind(null, bookingId),
+        onCantAccess: cantAccessAction.bind(null, bookingId),
+        onSafetyReport: safetyReportAction.bind(null, bookingId),
+      }}
+    />
+  );
 }

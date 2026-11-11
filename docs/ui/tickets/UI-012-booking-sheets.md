@@ -1,6 +1,6 @@
 # UI-012 — Booking sheets: cancel, running late, no-show, can't access, safety
 
-**Status:** ready for Codex · **Branch:** `ui/UI-012-booking-sheets` · **Plan first:** no (unattended) · **Depends on:** UI-014 (merged)
+**Status:** wired · **Branch:** `ui/UI-012-booking-sheets` · **Plan first:** no (unattended) · **Depends on:** UI-014 (merged)
 
 ## Goal
 Some booking actions need a few words or a confirmation with consequences. Today they are single taps on the booking page (UI-011); this ticket gives them sheets (blueprint 03 §4, 04 §6):
@@ -100,6 +100,6 @@ Copy namespace: `bookingSheets`.
 - Change requests and paying a difference (a later ticket), disputes (UI-026), and blocking or reporting a person (UI-017).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): the booking page passes `sheets` (all six handlers bound to the booking).
+- Queries / actions: `allBookingActions` (single taps + `sheetActions`, primary first, destructive last); services in `src/modules/bookings/sheets.ts`; Server Actions in `sheet-actions.ts`; `im_here` through `runBookingAction`.
+- e2e: `tests/e2e/booking-sheets.spec.ts` (cancel preview, safety report on desktop; phones fixme until UI-030).

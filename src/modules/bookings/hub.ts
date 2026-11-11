@@ -33,7 +33,8 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { recordCompletionMoney } from '@/modules/earnings/service';
 import { bookingThreadLink, ensureThread, postEvent } from '@/modules/messaging/service';
 import { autoApproveDue, completionViewOf } from './completion-view';
-import { addressVisibility, bookingActions, bookingDeadlines, needsAction, type BookingFacts, type BookingPolicy } from './domain';
+import { addressVisibility, allBookingActions, bookingDeadlines, needsAction, type BookingFacts, type BookingPolicy } from './domain';
+import { expireCantAccess } from './sheets';
 import { bookingTerms, bookings } from './schema';
 
 /**
@@ -66,6 +67,9 @@ function factsOf(booking: BookingRow, remote: boolean): BookingFacts {
     fundingExpiresAt: booking.fundingExpiresAt,
     approvalDueAt: booking.approvalDueAt,
     completedAt: booking.completedAt,
+    lateByMinutes: booking.lateByMinutes,
+    cantAccessAt: booking.cantAccessAt,
+    posterResponseDueAt: booking.posterResponseDueAt,
   };
 }
 
@@ -130,6 +134,7 @@ function timelineOf(
 export async function getBookingView(deps: HubDeps, userId: string, bookingId: string, now: Date): Promise<BookingView | null> {
   const { db } = deps;
   await autoApproveDue(db, now, { bookingId });
+  await expireCantAccess(db, now, { bookingId });
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
   if (!booking) return null;
   const role = roleOf(booking, userId);
@@ -191,12 +196,13 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
         ? { expenseAllowance: { amountCents: terms.expenseAllowanceCents, description: task.expenseAllowanceNote ?? '' } }
         : {}),
     },
-    ...(booking.onMyWayAt || booking.arrivedAt || booking.lateByMinutes
+    ...(booking.onMyWayAt || booking.arrivedAt || booking.lateByMinutes || booking.cantAccessAt
       ? {
           checkIn: {
             ...(booking.onMyWayAt ? { onMyWayAt: booking.onMyWayAt.toISOString() } : {}),
             ...(booking.lateByMinutes === 10 || booking.lateByMinutes === 20 || booking.lateByMinutes === 30 ? { lateByMinutes: booking.lateByMinutes } : {}),
             ...(booking.arrivedAt ? { arrivedAt: booking.arrivedAt.toISOString() } : {}),
+            ...(booking.cantAccessAt ? { cantAccessAt: booking.cantAccessAt.toISOString() } : {}),
           },
         }
       : {}),
@@ -207,7 +213,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     }),
     ...(role === 'poster' ? { payments: paymentLines } : {}),
     ...(completion ? { completion } : {}),
-    actions: bookingActions(facts, role, now),
+    actions: allBookingActions(facts, role, policy, now),
   };
 }
 
@@ -282,12 +288,13 @@ async function recordEvent(db: Pick<Db, 'insert'>, type: string, actorId: string
 /** The booking page's actions: only those the domain offers right now. */
 export async function runBookingAction(db: Db, userId: string, bookingId: string, action: BookingActionId, now: Date): Promise<ActionResult> {
   await autoApproveDue(db, now, { bookingId: String(bookingId) });
+  await expireCantAccess(db, now, { bookingId: String(bookingId) });
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, String(bookingId))).limit(1);
   const role = booking ? roleOf(booking, userId) : null;
   if (!booking || !role) return { ok: false, code: 'not_found' };
   const found = await findTaskWithPublicView(db, booking.taskId);
   const facts = factsOf(booking, found?.view.location.kind === 'remote');
-  const allowed = bookingActions(facts, role, now).find((item) => item.id === action);
+  const allowed = allBookingActions(facts, role, await policyOf(db, booking.policyVersionId), now).find((item) => item.id === action);
   if (!allowed?.enabled) return { ok: false, code: 'not_allowed' };
 
   const threadEvent: Partial<Record<BookingActionId, TimelineEvent['type']>> = { on_my_way: 'on_my_way', arrived: 'arrived', approve: 'approved' };
@@ -315,6 +322,16 @@ export async function runBookingAction(db: Db, userId: string, bookingId: string
         : { ok: false, code: 'not_allowed' };
     case 'add_to_calendar':
       return { ok: true, code: 'updated', redirectTo: routes.app.bookingCalendar(booking.id) };
+    case 'im_here': {
+      const answered = await db
+        .update(bookings)
+        .set({ cantAccessAt: null, posterResponseDueAt: null, updatedAt: now })
+        .where(and(eq(bookings.id, booking.id), eq(bookings.status, 'in_progress')))
+        .returning({ id: bookings.id });
+      if (answered.length === 0) return { ok: false, code: 'version_conflict' };
+      await recordEvent(db, 'booking.client_present', userId, booking);
+      return { ok: true, code: 'updated' };
+    }
     case 'message': {
       const threadId = await ensureThread(db, bookingThreadLink(booking), now);
       return { ok: true, code: 'updated', redirectTo: routes.app.thread(threadId) };
