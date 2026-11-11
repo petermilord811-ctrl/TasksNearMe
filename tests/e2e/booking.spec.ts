@@ -37,10 +37,13 @@ test('a poster books an hourly offer after a declined card and a bank check', as
   await expect(bank.getByText('Your bank wants to confirm it’s you')).toBeVisible();
   await bank.getByRole('button', { name: 'Approve' }).click();
 
-  // Booked: the booking link lands on the task page for now (the booking page arrives with UI-011).
-  await expect(page).toHaveURL(/\/app\/tasks\/tsk_moving$/, { timeout: 30_000 });
+  // Booked: the booking page, with the charge.
+  await expect(page).toHaveURL(/\/app\/bookings\/bkg_/, { timeout: 30_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'Help loading a moving truck' })).toBeVisible();
+  await expect(page.getByText('$154.00').first()).toBeVisible();
+  // The confirmation page now sends Chris to the booking.
   await page.goto('/app/tasks/tsk_moving/offers/off_moving_jordan/confirm');
-  await expect(page).toHaveURL(/\/app\/tasks\/tsk_moving$/, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/app\/bookings\/bkg_/, { timeout: 30_000 });
 });
 
 test("other people can't open someone's confirmation page", async ({ page }, testInfo) => {

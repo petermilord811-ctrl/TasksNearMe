@@ -1,6 +1,6 @@
 # UI-011 — Bookings list and the booking page
 
-**Status:** ready for Codex · **Branch:** `ui/UI-011-bookings-and-booking-page` · **Plan first:** no (unattended) · **Depends on:** UI-010 (merged)
+**Status:** wired · **Branch:** `ui/UI-011-bookings-and-booking-page` · **Plan first:** no (unattended) · **Depends on:** UI-010 (merged)
 
 ## Goal
 After booking, both people manage the work from one page (blueprint 02 §1, J5–J8):
@@ -99,6 +99,6 @@ Copy namespaces: `bookings` (list) and `bookingHub` (the page). Action labels al
 - The action sheets (UI-012), completion, approval details and disputes (UI-013), messaging (UI-014), and reviews (UI-015).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app/bookings`, `/app/bookings/[bookingId]`, `/app/bookings/[bookingId]/calendar.ics` (area only, never the address).
+- Queries / actions: `getBookingsPage`, `getBookingView`, `runBookingAction` (`src/modules/bookings/hub.ts`); rules in `domain.ts`; Server Action `bookingActionHandler` bound to the booking.
+- e2e: `tests/e2e/booking-page.spec.ts` (seeded `bkg_tv`), `tests/e2e/booking.spec.ts` (booking lands on the booking page).

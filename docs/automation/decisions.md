@@ -62,3 +62,4 @@ Non-obvious choices made without asking, with the reason and the alternative. Ne
 | 2026-11-11 | Reporting a problem moves the booking to `disputed` and opens a minimal `support_cases` row (type `dispute`, high priority); the support module grows from there (UI-017/UI-018) | A case exists for staff from day one | Store the report on the booking |
 | 2026-11-11 | The booking's calendar file names the general area only, never the exact address | Calendar entries sync elsewhere and outlive the address window | Include the address for the helper |
 | 2026-11-11 | A seeded confirmed booking (Ben's TV with Jordan, `bkg_tv`) backs the read-only booking-page e2e | Both e2e projects can read it without booking first | Book in each test |
+| 2026-11-11 | The booking page (UI-011) replaces the redirect placeholder at `/app/bookings/[bookingId]`; booking results keep pointing there | The link was final from the start | — |
