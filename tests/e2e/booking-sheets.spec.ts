@@ -43,8 +43,8 @@ test('a safety report puts 911 first and reaches support', async ({ page }, test
   await expect(page.getByText('Support will contact you shortly').first()).toBeVisible({ timeout: 30_000 });
 });
 
-// UI-030: on phones the bottom tab bar covers the booking page's action bar, so "More" can't be tapped.
-test.fixme('phones can reach the booking actions under More (UI-030)', async ({ page }, testInfo) => {
+// UI-030 fixed the bottom tab bar covering the booking page's action bar on phones.
+test('phones can reach the booking actions under More (UI-030)', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-mobile', 'phones only');
   await devSignIn(page, 'ben@example.test');
   await page.goto('/app/bookings/bkg_tv');
