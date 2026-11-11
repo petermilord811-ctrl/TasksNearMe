@@ -1,0 +1,106 @@
+{
+  "page": {
+    "title": "Rewards",
+    "description": "Keep track of your gift card rewards and repeat bookings.",
+    "totals": {
+      "label": "Reward totals",
+      "ready": "Ready to redeem",
+      "pending": "On the way (pending)",
+      "redeemed": "Redeemed this year"
+    },
+    "grants": "Your rewards",
+    "empty": {
+      "title": "No rewards yet",
+      "body": "Gift card rewards from qualifying bookings will appear here. Find a task to get started.",
+      "action": "Find work"
+    },
+    "notHelper": {
+      "title": "Set up as a helper",
+      "body": "Rewards are for helpers. Finish your helper setup to find work and start making qualifying bookings.",
+      "action": "Set up as a helper"
+    },
+    "repeat": {
+      "title": "Repeat progress",
+      "progress": "{count, number} of {needed, plural, one {# paid booking} other {# paid bookings}} with {name} · by {date}",
+      "empty": "No repeat progress to track right now. Qualifying paid bookings with the same client will appear here."
+    },
+    "monthly": {
+      "title": "This month",
+      "used": "{used} of {cap} used",
+      "description": "The monthly limit covers all reward programs and resets each calendar month."
+    },
+    "rules": {
+      "title": "How rewards work",
+      "welcome": "{amount} for your first qualifying booking of {threshold} or more as a founding helper.",
+      "repeat": "{amount} for your third paid booking with the same client within 90 days.",
+      "repeatThreshold": "Each qualifying booking must have a task price of {threshold} or more.",
+      "hold": "Rewards have a 7-day hold after the work is completed and paid. Welcome rewards also need a check from our team before you can redeem them.",
+      "expiry": "Redeem within 90 days of a reward becoming ready to redeem.",
+      "giftCards": "Rewards are gift cards, not earnings",
+      "terms": "Read rewards terms",
+      "detailsInTerms": "See the rewards terms for this program's qualifying bookings and reward amounts."
+    }
+  },
+  "previews": {
+    "group": "Rewards",
+    "componentGroup": "Reward grant",
+    "pending": "Pending welcome reward",
+    "qualified": "Qualified welcome reward",
+    "redeemable": "Ready to redeem",
+    "delivered": "Gift card delivered",
+    "empty": "No rewards yet",
+    "notHelper": "Helper setup needed",
+    "redeeming": "Redeeming gift card",
+    "redeemError": "Reward no longer redeemable",
+    "rateLimited": "Redemption rate limited",
+    "unknownError": "Redemption unavailable",
+    "submitted": "Gift card requested",
+    "allStatuses": "Every reward status",
+    "grants": "Reward grants"
+  },
+  "programs": {
+    "welcome": "Welcome reward",
+    "acceptance": "Offer acceptance reward",
+    "repeat": "Repeat booking reward",
+    "completion": "Completion reward"
+  },
+  "card": {
+    "withClient": "With {name}",
+    "giftCard": "Gift card",
+    "opensInNewTab": "opens in a new tab",
+    "deliveryUnavailable": "The gift card link isn't available yet. Refresh the page or contact support."
+  },
+  "statusDetails": {
+    "pending": "Unlocks after the work is completed and paid",
+    "qualified": "Ready on {date}",
+    "in_review": "We're reviewing this reward",
+    "redeemable": "Redeem by {date}",
+    "issuing": "Your gift card is on its way",
+    "delivered": "Your gift card has arrived",
+    "failed": "Delivery failed. Support will reissue it",
+    "voided": "This reward wasn't earned. Contact support if you need help.",
+    "expired": "Expired on {date}"
+  },
+  "statusFallbacks": {
+    "qualified": "Your reward is in its hold period",
+    "redeemable": "Your reward is ready to redeem",
+    "expired": "The time to redeem this reward has passed"
+  },
+  "voidReasons": {
+    "booking_canceled": "The booking was canceled, so this reward wasn't earned.",
+    "refunded": "The booking was refunded, so this reward wasn't earned.",
+    "below_threshold": "The final task price was below the amount needed for this reward.",
+    "risk_review": "This reward didn't meet the program requirements. Contact support if you need help."
+  },
+  "actions": {
+    "redeem": "Redeem gift card",
+    "open_gift_card": "Open gift card"
+  },
+  "redeem": {
+    "pending": "Requesting gift card…",
+    "submitted": "Your gift card is on its way",
+    "not_allowed": "This reward is no longer available to redeem. Refresh the page to see its status.",
+    "rate_limited": "There have been too many requests. Wait a moment before redeeming again.",
+    "unknown": "We couldn't request your gift card. Try again, or contact support if it keeps happening."
+  }
+}
