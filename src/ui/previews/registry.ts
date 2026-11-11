@@ -31,6 +31,7 @@ import { helperProfileEditorPreviews } from './helper-profile-editor.preview';
 import { findWorkPreviews } from './find-work.preview';
 import { helperTaskPreviews } from './helper-task.preview';
 import { myOffersPreviews } from './my-offers.preview';
+import { bookingConfirmPreviews } from './booking-confirm.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -62,4 +63,5 @@ export const previews: PreviewEntry[] = [
   ...findWorkPreviews,
   ...helperTaskPreviews,
   ...myOffersPreviews,
+  ...bookingConfirmPreviews,
 ];

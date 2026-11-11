@@ -13,19 +13,6 @@ import { cn } from '@/ui/lib/utils';
 
 export interface FindWorkScreenProps { data: FindWorkPageData; now: ISODateTime }
 
-/** The contract supplies the pathname; this presentation query only describes selected filters. */
-function findWorkHref(query: FindWorkQuery = {}) {
-  const params = new URLSearchParams();
-  if (query.category) params.set('category', query.category);
-  if (query.when && query.when !== 'any') params.set('when', query.when);
-  if (query.remoteOnly) params.set('remote', '1');
-  if (query.sort && query.sort !== 'soonest') params.set('sort', query.sort);
-  if (query.page && query.page > 1) params.set('page', String(query.page));
-  if (query.distance && query.distance !== 'any') params.set('distance', query.distance);
-  const search = params.toString();
-  return search ? `${routes.app.findWork()}?${search}` : routes.app.findWork();
-}
-
 function FilterLink({ href, selected, children }: { href: string; selected: boolean; children: ReactNode }) {
   return <Link href={href} aria-current={selected ? 'true' : undefined} className={cn(
     'inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-accent',
@@ -51,7 +38,7 @@ function CardContext({ card }: { card: FindWorkCard }) {
 export function FindWorkScreen({ data, now }: FindWorkScreenProps) {
   const t = useTranslations('findWork');
   const { query } = data;
-  const filterHref = (change: FindWorkQuery) => findWorkHref({ ...query, ...change, page: undefined });
+  const filterHref = (change: FindWorkQuery) => routes.app.findWork({ ...query, ...change, page: undefined });
 
   return <div className="mx-auto w-full max-w-content space-y-section">
     <PageHeader title={t('title')} description={t('description')} />
@@ -90,9 +77,9 @@ export function FindWorkScreen({ data, now }: FindWorkScreenProps) {
       {data.cards.length > 0 ? <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.cards.map((card) => <li key={card.task.id} className="min-w-0"><PublicTaskCard task={card.task} now={now} headingLevel={2} href={routes.app.findWorkTask(card.task.id)} footer={<CardContext card={card} />} /></li>)}</ul>
         : <EmptyState title={t('emptyTitle')} body={t('emptyBody')} action={{ label: t('clearFilters'), href: routes.app.findWork() }} />}
       {data.pageCount > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">
-        {query.page > 1 && <Link href={findWorkHref({ ...query, page: query.page - 1 })} rel="prev" className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('previous')}</Link>}
+        {query.page > 1 && <Link href={routes.app.findWork({ ...query, page: query.page - 1 })} rel="prev" className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('previous')}</Link>}
         <p className="text-sm tabular-nums">{t('page', { page: query.page, count: data.pageCount })}</p>
-        {query.page < data.pageCount && <Link href={findWorkHref({ ...query, page: query.page + 1 })} rel="next" className={buttonVariants({ variant: 'outline' })}>{t('next')}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
+        {query.page < data.pageCount && <Link href={routes.app.findWork({ ...query, page: query.page + 1 })} rel="next" className={buttonVariants({ variant: 'outline' })}>{t('next')}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
       </nav>}
     </div>
     <p className="flex items-start gap-2 border-t pt-6 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>

@@ -1,0 +1,35 @@
+{
+  "brands": {
+    "visa": "Visa",
+    "mastercard": "Mastercard",
+    "amex": "American Express",
+    "discover": "Discover",
+    "apple_pay": "Apple Pay",
+    "google_pay": "Google Pay"
+  },
+  "cardLabel": "{brand} •••• {last4}",
+  "picker": {
+    "label": "Payment method",
+    "hint": "Choose a saved card or use a new card.",
+    "expires": "Expires {month}/{year}",
+    "default": "Default",
+    "newCard": "Use a new card",
+    "development": "Test card (development): no real charge",
+    "developmentHint": "Choose an outcome to try the payment flow.",
+    "outcome": "Test card outcome",
+    "save": "Save this card for next time"
+  },
+  "testCards": {
+    "success": "Approved",
+    "declined": "Declined",
+    "insufficient_funds": "Insufficient funds",
+    "requires_verification": "Bank verification"
+  },
+  "verification": {
+    "title": "Your bank wants to confirm it’s you",
+    "description": "This is a development stand-in for bank verification. Approve to continue booking, or fail to try another card. No real charge is made.",
+    "approve": "Approve",
+    "fail": "Fail",
+    "pending": "Verifying…"
+  }
+}
