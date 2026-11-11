@@ -1,15 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 
 /**
  * Booking an offer (UI-010) with the development payment stand-in. Chris books Jordan's hourly offer on
  * the seeded moving task; the seed clears its bookings before each run.
  */
-
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page.locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) }).getByRole('button').click();
-  await expect(page).toHaveURL(/\/app$/);
-}
 
 test('a poster books an hourly offer after a declined card and a bank check', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');

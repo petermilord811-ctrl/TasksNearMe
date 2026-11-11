@@ -1,12 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 
 /** Money pages (UI-016), read-only, on the seeded bookings: Ben paid $88.00 for the TV; Jordan helps. */
-
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page.locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) }).getByRole('button').click();
-  await expect(page).toHaveURL(/\/app$/);
-}
 
 test('the client sees the receipt for the booking, and only theirs', async ({ page }) => {
   await devSignIn(page, 'ben@example.test');

@@ -1,6 +1,6 @@
 # UI-015 — Reviews and saved helpers
 
-**Status:** ready for Codex · **Branch:** `ui/UI-015-reviews-and-saved` · **Plan first:** no (unattended) · **Depends on:** UI-023 (merged)
+**Status:** wired · **Branch:** `ui/UI-015-reviews-and-saved` · **Plan first:** no (unattended) · **Depends on:** UI-023 (merged)
 
 ## Goal
 After a completed booking both people review each other (blueprint 02 **J8**), on `/app/bookings/[bookingId]/review`. Reviews are double-blind: each becomes visible when both are in, or 14 days after completion. The client can save helpers and find them again on `/app/saved`.
@@ -67,6 +67,6 @@ Copy namespaces: `review`, `savedHelpers`.
 - Browsing and searching helpers, My clients, Book again (direct requests, UI-025), reporting a review (UI-017).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app/bookings/[bookingId]/review` (flow layout), `/app/saved`.
+- Queries / actions: `getReviewPage`, `submitReview`, `getSavedHelpers`, `setHelperSaved` (`src/modules/reviews/service.ts`); Server Actions in `src/modules/reviews/actions.ts` (publishing revalidates the helper's profile); `review` and `save_helper` booking actions.
+- e2e: `tests/e2e/completion.spec.ts` (approve, review, save, saved list).

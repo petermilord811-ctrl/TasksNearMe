@@ -1,15 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 
 /**
  * Messages (UI-014): Maya and Sam talk about Sam's offer on the desk before booking. Contact details
  * stay hidden from the other person until a booking is confirmed. The seed empties offer threads.
  */
-
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page.locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) }).getByRole('button').click();
-  await expect(page).toHaveURL(/\/app$/);
-}
 
 test('the client and the helper talk before booking, with contact details hidden', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');

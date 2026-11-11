@@ -1,16 +1,11 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 
 /**
  * The poster's tasks and offers, on the seeded data (reset by the e2e-setup project). Tests that
  * change shared data run in one project each, so the mobile and desktop runs don't collide.
  */
 test.describe.configure({ mode: 'serial' });
-
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page.locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) }).getByRole('button').click();
-  await expect(page).toHaveURL(/\/app$/);
-}
 
 test('the poster reviews offers and books one', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');

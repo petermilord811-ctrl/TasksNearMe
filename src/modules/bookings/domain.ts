@@ -14,8 +14,8 @@ export const ARRIVED_LEAD_MS = 30 * MINUTE;
 /** "Can't get in" opens 20 min after arriving; the client then has 30 min to answer. */
 export const CANT_ACCESS_AFTER_ARRIVAL_MS = 20 * MINUTE;
 export const CANT_ACCESS_ANSWER_MS = 30 * MINUTE;
-/** The review page arrives with UI-015; until it's wired, "Review" stays off the booking page. */
-export const REVIEW_PAGE_READY = false;
+/** The review page is wired (UI-015). */
+export const REVIEW_PAGE_READY = true;
 
 export interface BookingFacts {
   status: BookingStatus | string;

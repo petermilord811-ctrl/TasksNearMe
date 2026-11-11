@@ -36,10 +36,12 @@ import { HELPER_LANGUAGES, SEED_REVIEWS, SERVICE_DESCRIPTIONS, WORK_SAMPLES } fr
 import { reviews } from '../../src/modules/reviews/schema';
 import { helperWorkSamples } from '../../src/modules/profiles/schema';
 import { files } from '../../src/modules/tasks/schema';
-import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookingTerms, bookings } from '../../src/modules/bookings/schema';
+import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookingTerms, bookings, helperStrikes } from '../../src/modules/bookings/schema';
+import { earnings, payouts } from '../../src/modules/earnings/schema';
+import { savedHelpers } from '../../src/modules/reviews/schema';
 import { messages, threadParticipants, threads } from '../../src/modules/messaging/schema';
 import { supportCases } from '../../src/modules/support/schema';
-import { paymentMethods, payments } from '../../src/modules/payments/schema';
+import { paymentMethods, payments, refunds } from '../../src/modules/payments/schema';
 import { devCardRef } from '../../src/integrations/payments';
 import { quoteBreakdown } from '../../src/modules/payments/fees';
 
@@ -371,6 +373,7 @@ async function seedOffers(tx: Tx): Promise<void> {
  */
 async function clearSeedBookings(tx: Tx): Promise<void> {
   const taskIds = SEED_TASKS.map((task) => task.id);
+  await tx.delete(savedHelpers).where(inArray(savedHelpers.userId, PEOPLE.map((person) => person.id)));
   // Conversations on the seeded offers start empty each time.
   const offerThreads = await tx
     .select({ id: threads.id })
@@ -395,6 +398,14 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
     await tx.delete(threadParticipants).where(inArray(threadParticipants.threadId, threadIds));
     await tx.delete(threads).where(inArray(threads.id, threadIds));
   }
+  // Everything that points at the seeded bookings goes too: the bookings come back with the same ids.
+  await tx.delete(reviews).where(inArray(reviews.bookingId, ids));
+  const paidOut = await tx.select({ payoutId: earnings.payoutId }).from(earnings).where(inArray(earnings.bookingId, ids));
+  await tx.delete(earnings).where(inArray(earnings.bookingId, ids));
+  const payoutIds = paidOut.flatMap((row) => (row.payoutId ? [row.payoutId] : []));
+  if (payoutIds.length > 0) await tx.delete(payouts).where(inArray(payouts.id, payoutIds));
+  await tx.delete(refunds).where(inArray(refunds.bookingId, ids));
+  await tx.delete(helperStrikes).where(inArray(helperStrikes.bookingId, ids));
   await tx.delete(supportCases).where(inArray(supportCases.bookingId, ids));
   await tx.delete(bookingCompletionPhotos).where(inArray(bookingCompletionPhotos.bookingId, ids));
   await tx.delete(bookingExpenses).where(inArray(bookingExpenses.bookingId, ids));

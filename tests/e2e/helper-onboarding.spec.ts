@@ -1,12 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 
 /** Helper onboarding through the dev provider stand-ins. Changes Priya's data: desktop only. */
-
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page.locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) }).getByRole('button').click();
-  await expect(page).toHaveURL(/\/app$/);
-}
 
 test('a new helper finishes onboarding and becomes bookable', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');

@@ -1,13 +1,28 @@
-// Temporary until the poster/helper home screens (UI-007, UI-009) are wired here.
-import { EmptyState, PageHeader } from '@/ui/components';
+import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import { routes } from '@/contracts';
+import { getAppHome } from '@/modules/home/service';
+import { getViewer } from '@/platform/auth/viewer';
+import { db } from '@/platform/db/client';
+import { PageSkeleton } from '@/ui/components';
+import { HomeScreen } from '@/ui/screens/home';
 
-export const metadata = { title: 'Home' };
+export const metadata: Metadata = { title: 'Home', robots: { index: false } };
 
-export default function AppHomePlaceholderPage() {
+/** The signed-in home for the viewer's mode: needs your attention, then what's coming up. */
+export default function AppHomePage() {
   return (
-    <div className="space-y-6">
-      <PageHeader title="Home" />
-      <EmptyState title="Your home screen is on its way" body="Tasks, bookings and messages will appear here." />
-    </div>
+    <Suspense fallback={<PageSkeleton variant="cards" />}>
+      <Home />
+    </Suspense>
   );
+}
+
+async function Home() {
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.home()));
+  const now = new Date();
+  const data = await getAppHome(db, { id: viewer.user.id, firstName: viewer.user.firstName, mode: viewer.user.mode }, now);
+  return <HomeScreen data={data} now={now.toISOString()} />;
 }

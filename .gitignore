@@ -37,6 +37,7 @@ npm-debug.log*
 # autopilot runtime files
 automation/runs/
 automation/logs/
+automation/heavy.lock
 .npm-cache/
 
 # Local file storage (uploads in development)

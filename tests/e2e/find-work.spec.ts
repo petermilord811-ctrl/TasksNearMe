@@ -1,16 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 
 /**
  * The helper's side (UI-009): the feed, a task from the helper's view, and offers.
  * Jordan is a bookable helper in East Austin with a 5-mile area; the shelves task is kept free of
  * offers by the e2e setup.
  */
-
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page.locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) }).getByRole('button').click();
-  await expect(page).toHaveURL(/\/app$/);
-}
 
 const card = (page: Page, title: string) => page.getByRole('listitem').filter({ has: page.getByRole('link', { name: title }) });
 

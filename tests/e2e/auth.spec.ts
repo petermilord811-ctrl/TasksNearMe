@@ -1,13 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-
-/** Signs in through /dev/sign-in, which runs the real email-code flow against the dev database. */
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page
-    .locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) })
-    .getByRole('button')
-    .click();
-}
+import { expect, test } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 
 test.describe('sign-in and page shells', () => {
   test('signed-out visitors are sent to sign-in from the app', async ({ page }) => {
@@ -18,7 +10,8 @@ test.describe('sign-in and page shells', () => {
   test('a member signs in and lands in the app shell', async ({ page }) => {
     await devSignIn(page, 'maya@example.test');
     await expect(page).toHaveURL(/\/app$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible();
+    // The home greets by first name (UI-023).
+    await expect(page.getByRole('heading', { level: 1, name: /Good (morning|afternoon|evening), Maya/ })).toBeVisible();
     await expect(page.getByText('MR', { exact: true }).first()).toBeVisible();
   });
 
@@ -31,8 +24,7 @@ test.describe('sign-in and page shells', () => {
   });
 
   test('staff pass the two-step check, then see the admin shell', async ({ page }) => {
-    await devSignIn(page, 'alex@example.test');
-    await expect(page).toHaveURL(/\/admin\/verify$/);
+    await devSignIn(page, 'alex@example.test', { landing: /\/admin\/verify$/ });
     await page.getByLabel('Code').fill('123456');
     await page.getByRole('button', { name: 'Verify' }).click();
     await expect(page).toHaveURL(/\/admin$/);

@@ -1,16 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 
 /**
  * Booking sheets (UI-012) on the seeded booking (Ben's TV with Jordan, in a few days). The cancel sheet
  * is opened and closed without cancelling, so other tests can keep reading the booking; cancelling
  * itself is covered by integration tests. A safety report only opens a support case.
  */
-
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page.locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) }).getByRole('button').click();
-  await expect(page).toHaveURL(/\/app$/);
-}
 
 async function openAction(page: Page, name: string) {
   await expect(page.getByRole('heading', { level: 1, name: 'Mount a TV on the wall' })).toBeVisible({ timeout: 30_000 });

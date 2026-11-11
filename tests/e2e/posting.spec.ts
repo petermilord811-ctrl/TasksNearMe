@@ -1,11 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 
 /** Posting a task end to end: the wizard, the quote from the fee engine, and the public board. */
-
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page.locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) }).getByRole('button').click();
-}
 
 /** A calendar date in Austin, `days` from today. */
 function marketDate(days: number): string {

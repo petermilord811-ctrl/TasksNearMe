@@ -17,6 +17,7 @@
  * Exit codes: 0 handed off (handoff written and check:ui passes) · 1 failed · 2 bad usage or preconditions
  */
 import { execFileSync, execSync, spawn } from 'node:child_process';
+import { acquireHeavyLock } from './lib/heavy-lock.mjs';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -214,17 +215,26 @@ const handoffOk = fs.existsSync(handoffAbs) && fs.statSync(handoffAbs).mtimeMs >
 let checkUi = 'skipped';
 if (handoffOk) {
   const checkFd = fs.openSync(checkLogPath, 'a');
+  // One heavy job at a time (see scripts/lib/heavy-lock.mjs); one retry for machine hiccups.
+  const release = await acquireHeavyLock(`codex-check:${ticket}`, { log: (line) => fs.writeSync(checkFd, `${line}\n`) });
   try {
-    execSync('npm run check:ui', {
-      cwd: worktree,
-      env: runEnv,
-      stdio: ['ignore', checkFd, checkFd],
-      shell: true,
-      timeout: 25 * 60_000,
-    });
-    checkUi = 'pass';
-  } catch {
-    checkUi = 'fail';
+    for (let attempt = 1; attempt <= 2 && checkUi !== 'pass'; attempt += 1) {
+      if (attempt > 1) fs.writeSync(checkFd, '\n---- check:ui retry ----\n');
+      try {
+        execSync('npm run check:ui', {
+          cwd: worktree,
+          env: runEnv,
+          stdio: ['ignore', checkFd, checkFd],
+          shell: true,
+          timeout: 25 * 60_000,
+        });
+        checkUi = 'pass';
+      } catch {
+        checkUi = 'fail';
+      }
+    }
+  } finally {
+    release();
   }
   fs.closeSync(checkFd);
   fs.copyFileSync(handoffAbs, path.join(runsDir, `${ticket}.handoff.md`));

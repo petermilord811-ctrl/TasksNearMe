@@ -1,15 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 
 /**
  * The bookings list and the booking page (UI-011), read-only, on the seeded booking: Ben's TV with
  * Jordan ($80; $88.00 charged; Jordan earns $72.00), in a few days.
  */
-
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page.locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) }).getByRole('button').click();
-  await expect(page).toHaveURL(/\/app$/);
-}
 
 test('the client finds the booking with their address and the charge', async ({ page }) => {
   await devSignIn(page, 'ben@example.test');

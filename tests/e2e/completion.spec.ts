@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { devSignIn } from './support/sign-in';
 import sharp from 'sharp';
 
 /**
@@ -6,12 +7,6 @@ import sharp from 'sharp';
  * Jordan. The e2e setup reseeds it each run. Problem reports are covered by integration tests; here only
  * the page's guard is checked.
  */
-
-async function devSignIn(page: Page, email: string) {
-  await page.goto('/dev/sign-in');
-  await page.locator('form', { has: page.locator(`input[name="email"][value="${email}"]`) }).getByRole('button').click();
-  await expect(page).toHaveURL(/\/app$/);
-}
 
 /** A small JPEG made at test time; the server re-encodes it. */
 async function photo() {
@@ -39,6 +34,19 @@ test('the helper sends the finished work and the client approves it', async ({ p
   await page.getByRole('button', { name: 'Approve task' }).first().click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByRole('button', { name: 'Approve task' })).toHaveCount(0, { timeout: 30_000 });
+
+  // Review Jordan (UI-015): stays hidden until he reviews too.
+  await page.getByRole('button', { name: 'Leave a review' }).first().click();
+  await expect(page).toHaveURL(/\/app\/bookings\/bkg_bookcase\/review$/, { timeout: 30_000 });
+  await page.getByRole('radio', { name: '5 of 5 stars' }).check({ force: true });
+  await page.getByRole('button', { name: 'Send review' }).click();
+  await expect(page).toHaveURL(/\/app\/bookings\/bkg_bookcase$/, { timeout: 30_000 });
+
+  // Save Jordan, then find him in saved helpers.
+  await page.getByRole('button', { name: 'Save helper' }).first().click();
+  await expect(page.getByRole('button', { name: 'Save helper' })).toHaveCount(0, { timeout: 30_000 });
+  await page.goto('/app/saved');
+  await expect(page.getByText('Jordan T.').first()).toBeVisible();
 });
 
 test('the problem and completion pages are only for the right person and state', async ({ page }, testInfo) => {

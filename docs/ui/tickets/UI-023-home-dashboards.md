@@ -1,6 +1,6 @@
 # UI-023 — The home dashboards (client and helper)
 
-**Status:** ready for Codex · **Branch:** `ui/UI-023-home-dashboards` · **Plan first:** no (unattended) · **Depends on:** UI-030 (merged)
+**Status:** wired · **Branch:** `ui/UI-023-home-dashboards` · **Plan first:** no (unattended) · **Depends on:** UI-030 (merged)
 
 ## Goal
 `/app` is the first page after signing in (blueprint 02 §1.2): **"Needs your attention"**, then what's coming up. The mode switch decides which dashboard shows:
@@ -72,6 +72,6 @@ Browse and saved helpers move to UI-015. Claude wires the page inside `AppShell`
 - Browsing and saved helpers (UI-015), notifications (UI-017), and rewards (UI-028).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app` (`src/app/(app)/app/(main)/page.tsx`).
+- Queries / actions: `getAppHome` (`src/modules/home/service.ts`), composed from the bookings, offers, messaging, earnings and helper reads.
+- e2e: `tests/e2e/home.spec.ts`. A helper who isn't set up can't be in helper mode (the switch sends them to onboarding), so "finish setup" is covered by the integration test.
