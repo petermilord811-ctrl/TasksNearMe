@@ -79,6 +79,6 @@ All previews use `now = ADMIN_NOW` and render inside `AdminShell` with Alex as t
 - Money resolutions and refunds (UI-019), users, moderation and the audit page (later tickets), the staff search page, and the booking page for staff.
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/admin` (replaces the placeholder), `/admin/cases` (filters from the URL), `/admin/cases/[caseId]`, inside the gated admin layout. Each page also checks for a staff member who passed the two-step check.
+- Queries / actions: `src/modules/support/staff.ts` (queues count cases waiting on staff, which is what the cards link to; the list sorts by response target; the case page's moves are bound to the version it showed) and `staff-actions.ts`. Every staff change and every opened conversation is in the audit log.
+- e2e: `tests/e2e/admin.spec.ts` (queues and a case on phones; assign and reply, and the member sees it; members get the not-found page). Integration: `tests/integration/staff-cases.test.ts`.

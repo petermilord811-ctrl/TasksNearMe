@@ -1,0 +1,55 @@
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
+import { getAdminCase, staffActorOf } from '@/modules/support/staff';
+import {
+  addCaseNoteAction,
+  assignCaseAction,
+  closeCaseAction,
+  reopenCaseAction,
+  resolveCaseAction,
+  revealCaseConversationAction,
+  setCaseStatusAction,
+  staffReplyAction,
+} from '@/modules/support/staff-actions';
+import { getViewer } from '@/platform/auth/viewer';
+import { db } from '@/platform/db/client';
+import { PageSkeleton } from '@/ui/components';
+import { AdminCaseScreen } from '@/ui/screens/admin';
+
+export const metadata: Metadata = { title: 'Case', robots: { index: false } };
+
+/** One case for staff. Moves are bound to the version this page shows (stale pages get version_conflict). */
+export default function AdminCasePage({ params }: PageProps<'/admin/cases/[caseId]'>) {
+  return (
+    <Suspense fallback={<PageSkeleton variant="detail" />}>
+      <AdminCase params={params} />
+    </Suspense>
+  );
+}
+
+async function AdminCase({ params }: Pick<PageProps<'/admin/cases/[caseId]'>, 'params'>) {
+  const [{ caseId }, viewer] = await Promise.all([params, getViewer()]);
+  const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
+  if (!staff) notFound();
+  const now = new Date();
+  const found = await getAdminCase(db, staff, caseId, now);
+  if (!found) notFound();
+  const { data, version } = found;
+  return (
+    <AdminCaseScreen
+      data={data}
+      now={now.toISOString()}
+      handlers={{
+        onAssign: assignCaseAction.bind(null, caseId, version),
+        onSetStatus: setCaseStatusAction.bind(null, caseId, version),
+        onReply: staffReplyAction.bind(null, caseId),
+        onAddNote: addCaseNoteAction.bind(null, caseId),
+        onResolve: resolveCaseAction.bind(null, caseId, version),
+        onClose: closeCaseAction.bind(null, caseId, version),
+        onReopen: reopenCaseAction.bind(null, caseId, version),
+        onRevealConversation: revealCaseConversationAction.bind(null, caseId),
+      }}
+    />
+  );
+}

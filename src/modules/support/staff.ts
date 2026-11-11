@@ -178,11 +178,12 @@ async function caseRows(db: Db, rows: CaseRow[], now: Date): Promise<AdminCaseRo
   });
 }
 
-const OPEN_STATUSES: CaseStatus[] = ['open', 'awaiting_poster', 'awaiting_helper', 'awaiting_support', 'escalated'];
+/** Cases that wait on staff: what the queue cards count and link to (`active`). */
+const ACTIVE_STATUSES = STATUS_FILTERS.active!;
 
 /** `/admin`: the queues and the viewer's open cases. */
 export async function getAdminHome(db: Db, staff: StaffActor, now: Date): Promise<AdminHomeData> {
-  const open = await db.select().from(supportCases).where(inArray(supportCases.status, OPEN_STATUSES));
+  const open = await db.select().from(supportCases).where(inArray(supportCases.status, ACTIVE_STATUSES));
   const me = (await staffById(db, [staff.id])).get(staff.id);
   return {
     staff: me ?? { id: staff.id, displayName: 'Staff', initials: 'ST', roles: staff.roles },

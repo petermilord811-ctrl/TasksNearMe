@@ -37,7 +37,7 @@ export interface StaffSummary {
 
 export interface QueueSummary {
   queue: AdminQueue;
-  /** Cases not resolved or closed. */
+  /** Cases waiting on staff (open, waiting on support, escalated): what the card's link lists. */
   openCount: number;
   /** Open cases past their response target. */
   slaBreaches: number;
@@ -48,7 +48,7 @@ export interface QueueSummary {
 export interface AdminHomeData {
   staff: StaffSummary;
   queues: QueueSummary[];
-  /** Open cases assigned to the viewer. */
+  /** Cases waiting on staff that are assigned to the viewer. */
   myOpenCount: number;
 }
 
