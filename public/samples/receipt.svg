@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800" role="img" aria-label="Sample receipt">
+  <rect width="600" height="800" fill="#eef1f4"/>
+  <path d="M150 90h300v600l-25-18-25 18-25-18-25 18-25-18-25 18-25-18-25 18-25-18-25 18-25-18-25 18z" fill="#ffffff" stroke="#c9d1d9" stroke-width="2"/>
+  <rect x="190" y="140" width="220" height="22" rx="4" fill="#9aa5b1"/>
+  <rect x="190" y="200" width="150" height="14" rx="3" fill="#c9d1d9"/>
+  <rect x="360" y="200" width="50" height="14" rx="3" fill="#c9d1d9"/>
+  <rect x="190" y="236" width="120" height="14" rx="3" fill="#c9d1d9"/>
+  <rect x="360" y="236" width="50" height="14" rx="3" fill="#c9d1d9"/>
+  <rect x="190" y="272" width="170" height="14" rx="3" fill="#c9d1d9"/>
+  <rect x="360" y="272" width="50" height="14" rx="3" fill="#c9d1d9"/>
+  <line x1="190" y1="320" x2="410" y2="320" stroke="#9aa5b1" stroke-width="2" stroke-dasharray="6 6"/>
+  <rect x="190" y="346" width="90" height="18" rx="3" fill="#7b8794"/>
+  <rect x="340" y="346" width="70" height="18" rx="3" fill="#7b8794"/>
+  <rect x="230" y="560" width="140" height="40" rx="4" fill="#e4e7eb"/>
+</svg>

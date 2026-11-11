@@ -20,7 +20,7 @@ Claude updates this file, including the Codex notes column, from each handoff (`
 | [UI-010](tickets/UI-010-booking-confirmation.md) | Booking confirmation and payment (development payment stand-in, bank verification) | **verified** | `bookings` (confirm page, cancellation summary, handlers), `payments` (saved cards, test cards, payment choice, attempt result) | Unattended run, 24 min. 32 previews, 54 tests; no contract requests; find-work links now use `routes.app.findWork(query)` | Wired 2026-11-11: `/app/tasks/[taskId]/offers/[offerId]/confirm` on the bookings module (migration 0008: bookings, booking terms, payment methods, payments) and the development payment stand-in. 30-minute hold, bank step, auto-decline of other offers, task assigned. `/app/bookings/[id]` sends each participant to their side of the task until UI-011. e2e: Chris books Jordan's hourly offer after a decline and a bank check |
 | [UI-011](tickets/UI-011-bookings-and-booking-page.md) | Bookings list and booking page (every state and role; single-tap actions) | **ready for Codex** | `bookings` (booking view, terms, check-in, deadlines, payments, list rows, hub handlers) | | |
 | UI-012 | Booking action sheets: status, change requests, cancel, no-show, can't access, safety | planned | `bookings` (changes, policy preview) | | |
-| UI-013 | Completion, approval, report a problem, dispute and settlement | planned | `bookings` (completion, dispute) | | |
+| [UI-013](tickets/UI-013-completion-and-problems.md) | Mark the work complete (photos, hours, receipts, remote summary), the work on the booking page, report a problem (disputes and settlements move to UI-026) | **ready for Codex** (after UI-011 merges) | `bookings` (completion rules, schema factory, completion view, problem reasons and schema, handlers) | | |
 | UI-014 | Messaging inbox and conversation | planned | `messaging` (threads) | | |
 | UI-015 | Reviews, saved helpers, My clients, rebook proposals | planned | `reviews`, `profiles` | | |
 | UI-016 | Receipts and payment methods, earnings and payouts, rewards and redeem | planned | `payments`, `earnings`, `rewards` | | |
@@ -33,6 +33,7 @@ Claude updates this file, including the Codex notes column, from each handoff (`
 | UI-023 | Home dashboards (poster and helper), browse and saved helpers (moved from UI-007) | planned | `home`, `profiles` (search) | | |
 | [UI-024](tickets/UI-024-wizard-post-guard.md) | Fix: the posting wizard posts when pressing Next on the budget step | **verified** | none | Unattended run, 11 min. Next can't submit; posting needs an explicit Post task; 4 regression tests | Merged 2026-11-11 (the independent check failed only on a transient `ERR_NETWORK_CHANGED`; the harness now ignores it). Posting e2e re-enabled and passing |
 | UI-025 | Direct requests and funded invites (poster request form; helper accept, decline, counter; counters), availability posts | planned | `bookings` (invites, slots), `payments` | | |
+| UI-026 | Disputes: the case on the booking page, rework visits, settlement offers, accept and decline | planned | `bookings` (dispute view, proposals) | | |
 
 ## Notes
 

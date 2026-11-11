@@ -10,15 +10,32 @@ import type {
   BookingTermsView,
   BookingUnavailableReason,
   BookingView,
+  CompletionHandlers,
+  CompletionPageData,
+  CompletionRules,
+  CompletionUnavailableReason,
+  CompletionView,
   PaymentAttemptResult,
   PaymentPanelData,
+  Photo,
+  PhotoUploadResult,
+  ProblemUnavailableReason,
+  ReportProblemHandlers,
+  ReportProblemPageData,
   SavedPaymentMethod,
 } from '@/contracts';
 import { DEV_TEST_CARDS, routes } from '@/contracts';
 import { crestviewArea, deskExactAddress, muellerArea } from './locations';
 import { deskPublicTask, remoteComputerPublicTask } from './marketing';
 import { movingPublicTask } from './helper-work';
-import { deskBreakdown, movingFundedBreakdown, remoteComputerBreakdown } from './money';
+import {
+  deskBreakdown,
+  deskWithAllowanceFundedBreakdown,
+  deskWithExpensesFinalBreakdown,
+  movingFinalBreakdown,
+  movingFundedBreakdown,
+  remoteComputerBreakdown,
+} from './money';
 import { deskOfferJordan } from './offers';
 import { chris, jordan, lee, maya, ruth, sam } from './people';
 import { DESK_TIMES, deskTimelineCompleted } from './timeline';
@@ -470,4 +487,148 @@ export const fakeBookingHubHandlers: BookingHubHandlers = {
           ? { ok: true, code: 'updated', redirectTo: routes.app.messages() }
           : { ok: true, code: 'updated' },
     ),
+};
+
+// ---- Completing the work and reporting a problem (UI-013) ---------------------------------------
+
+const finishedDeskPhotos: Photo[] = [
+  { id: 'ph_done_desk', src: '/samples/work-desk.svg', alt: 'The assembled desk against the wall', width: 800, height: 600 },
+  { id: 'ph_done_drawers', src: '/samples/work-bookshelf.svg', alt: 'The drawer unit next to the desk', width: 800, height: 600 },
+];
+const anchorsReceipt: Photo = { id: 'ph_receipt', src: '/samples/receipt.svg', alt: 'Hardware store receipt for $8.00', width: 600, height: 800 };
+
+const deskAllowance = { amountCents: 2000, description: 'Up to $20 for wall anchors' };
+const deskAllowanceTerms: BookingTermsView = { ...deskTerms, breakdown: deskWithAllowanceFundedBreakdown, expenseAllowance: deskAllowance };
+/** The move as booked, without an expense allowance (matches `movingFundedBreakdown`). */
+const movingTerms: BookingTermsView = { ...movingBookingPosterConfirmed.terms, expenseAllowance: undefined };
+
+const completionBooking = (view: BookingView): CompletionPageData['booking'] => ({
+  id: view.id,
+  task: view.task,
+  poster: view.poster,
+  terms: view.terms,
+  location: view.location,
+});
+
+export const deskCompletionRules: CompletionRules = { photosMin: 1, photosMax: 8, noteRequired: false, noteMaxLength: 1000, maxPhotoMegabytes: 10 };
+
+/** Jordan at the desk, checked in: at least one photo of the finished work. */
+export const deskCompletionPageData: CompletionPageData = { booking: completionBooking(deskBookingHelperInProgress), rules: deskCompletionRules };
+
+/** The desk with a $20 expense allowance: receipts up to $20 in total. */
+export const deskAllowanceCompletionPageData: CompletionPageData = {
+  booking: { ...completionBooking(deskBookingHelperInProgress), terms: deskAllowanceTerms },
+  rules: { ...deskCompletionRules, expenses: { allowanceCents: deskAllowance.amountCents, description: deskAllowance.description, maxItems: 5 } },
+};
+
+/** The move, hourly: the hours worked (half hours, at most the 4 h cap); no photos needed. */
+export const movingCompletionPageData: CompletionPageData = {
+  booking: { ...completionBooking(movingBookingPosterConfirmed), terms: movingTerms },
+  rules: { photosMin: 0, photosMax: 8, hours: { estimated: 3.5, cap: 4 }, noteRequired: false, noteMaxLength: 1000, maxPhotoMegabytes: 10 },
+};
+
+/** Remote laptop help: a short summary instead of photos. */
+export const remoteCompletionPageData: CompletionPageData = {
+  booking: completionBooking(remoteBookingHelperConfirmed),
+  rules: { photosMin: 0, photosMax: 8, noteRequired: true, noteMaxLength: 1000, maxPhotoMegabytes: 10 },
+};
+
+/** One page per reason the form can't be used. */
+export const completionUnavailableData: Record<CompletionUnavailableReason, CompletionPageData> = {
+  already_submitted: { ...deskCompletionPageData, unavailable: 'already_submitted' },
+  not_started: { ...deskCompletionPageData, unavailable: 'not_started' },
+  closed: { ...deskCompletionPageData, unavailable: 'closed' },
+};
+
+/** What Jordan sent for the desk at 11:48 am. */
+export const deskCompletionView: CompletionView = {
+  submittedAt: DESK_TIMES.completionSubmitted,
+  note: 'Desk assembled, leveled and wiped down. I took the packaging with me.',
+  photos: finishedDeskPhotos,
+  expenses: [],
+  finalBreakdown: deskBreakdown,
+};
+
+/** With an $8 receipt against the $20 allowance: Maya gets $12.00 back; Jordan is reimbursed $8.00. */
+export const deskWithExpensesCompletionView: CompletionView = {
+  ...deskCompletionView,
+  expenses: [{ id: 'exp_anchors', description: 'Wall anchors', amountCents: 800, receipt: anchorsReceipt }],
+  finalBreakdown: deskWithExpensesFinalBreakdown,
+};
+
+/** The move: 3.5 of the 4 capped hours; Chris gets $19.25 back. */
+export const movingCompletionView: CompletionView = {
+  submittedAt: '2026-11-22T18:40:00.000Z',
+  photos: [],
+  hoursWorked: 3.5,
+  expenses: [],
+  finalBreakdown: movingFinalBreakdown,
+};
+
+/** Maya's booking page after Jordan submitted: the work is shown. */
+export const deskBookingPosterCompletionWithWork: BookingView = { ...deskBookingPosterCompletionSubmitted, completion: deskCompletionView };
+
+/** The same with the receipt. */
+export const deskBookingPosterCompletionWithExpenses: BookingView = {
+  ...deskBookingPosterCompletionSubmitted,
+  terms: deskAllowanceTerms,
+  completion: deskWithExpensesCompletionView,
+};
+
+/** Chris after the move was submitted: 3.5 hours. */
+export const movingBookingPosterCompletionHourly: BookingView = {
+  ...movingBookingPosterConfirmed,
+  terms: movingTerms,
+  status: 'completion_submitted',
+  checkIn: { arrivedAt: '2026-11-22T15:05:00.000Z' },
+  deadlines: { approvalDueAt: '2026-11-25T18:40:00.000Z' },
+  completion: movingCompletionView,
+  actions: [action('approve', 'primary', { confirm: true }), action('report_problem'), action('message')],
+};
+
+/** Jordan's view of the submitted move. */
+export const movingBookingHelperCompletionHourly: BookingView = {
+  ...movingBookingPosterCompletionHourly,
+  viewerRole: 'helper',
+  payments: undefined,
+  actions: [action('message')],
+};
+
+/** Maya reports a problem with the desk instead of approving. */
+export const deskReportProblemPageData: ReportProblemPageData = {
+  booking: {
+    id: deskBookingPosterCompletionSubmitted.id,
+    task: deskBookingPosterCompletionSubmitted.task,
+    helper: deskBookingPosterCompletionSubmitted.helper,
+    terms: deskBookingPosterCompletionSubmitted.terms,
+  },
+  completion: deskCompletionView,
+  approvalDueAt: DESK_TIMES.approvalDue,
+  maxPhotoMegabytes: 10,
+};
+
+/** One page per reason the problem form can't be used. */
+export const reportProblemUnavailableData: Record<ProblemUnavailableReason, ReportProblemPageData> = {
+  not_submitted: { ...deskReportProblemPageData, completion: undefined, approvalDueAt: undefined, unavailable: 'not_submitted' },
+  window_passed: { ...deskReportProblemPageData, unavailable: 'window_passed' },
+  closed: { ...deskReportProblemPageData, unavailable: 'closed' },
+};
+
+let uploadCount = 0;
+const uploaded = (): PhotoUploadResult => {
+  uploadCount += 1;
+  return { ok: true, photo: { id: `ph_upload_${uploadCount}`, src: '/samples/work-desk.svg', alt: `Uploaded photo ${uploadCount}`, width: 800, height: 600 } };
+};
+
+/** Fake handlers: uploads succeed, the final quote follows the hours and expenses, submitting goes to the booking. */
+export const fakeCompletionHandlers: CompletionHandlers = {
+  onUploadPhoto: () => wait(uploaded()),
+  onQuoteFinal: ({ hoursWorked, expensesCents }) =>
+    wait(hoursWorked !== undefined ? movingFinalBreakdown : expensesCents > 0 ? deskWithExpensesFinalBreakdown : deskBreakdown),
+  onSubmit: () => wait({ ok: true, code: 'submitted', redirectTo: routes.app.booking('bkg_desk') }),
+};
+
+export const fakeReportProblemHandlers: ReportProblemHandlers = {
+  onUploadPhoto: () => wait(uploaded()),
+  onSubmit: () => wait({ ok: true, code: 'submitted', redirectTo: routes.app.booking('bkg_desk') }),
 };

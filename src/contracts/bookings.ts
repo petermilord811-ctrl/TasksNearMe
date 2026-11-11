@@ -1,13 +1,14 @@
 import { z } from 'zod';
-import type { ActionDescriptor, ActionResult } from './actions';
+import type { ActionDescriptor, ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
 import type { BookingActionId } from './action-ids';
-import type { CategorySlug, Cents, ISODateTime } from './common';
+import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
 import { mustAcceptField } from './forms';
 import type { ExactAddress, TaskLocation } from './location';
 import type { MessageSegment } from './messaging';
 import type { PriceBreakdown, PricingInput } from './money';
 import { paymentChoiceSchema, type PaymentAttemptResult, type PaymentMethodLabel, type PaymentPanelData } from './payments';
 import type { ClientSummary, HelperSummary, PersonSummary } from './people';
+import type { PhotoUploadResult } from './posting';
 import type { BookingStatus, CancelReason, CompletedVia, PaymentStatus } from './status';
 import type { TaskPublicView, TaskSchedule } from './tasks';
 import type { TimelineEvent } from './timeline';
@@ -17,6 +18,8 @@ import type { TimelineEvent } from './timeline';
  * (blueprint 02 J4, 03 §4 `pending_funding`, 04 §4 "charged at confirmation", 04 §6 cancellation).
  * Route: `routes.app.confirmOffer(taskId, offerId)`. The booking page itself arrives with UI-011.
  */
+
+const code = (value: FieldErrorCode) => value;
 
 /** What the poster gets back if they cancel later (blueprint 04 §6, policy defaults D15). */
 export interface CancellationPolicySummary {
@@ -186,6 +189,8 @@ export interface BookingView {
   timeline: TimelineEvent[];
   /** Posters only: charges and refunds, oldest first. */
   payments?: BookingPaymentLine[];
+  /** The helper's submitted work (`completion_submitted`, `disputed`, `completed`). Shown from UI-013. */
+  completion?: CompletionView;
   /** From the domain (ui-contract §6): only actions that work today are included. */
   actions: ActionDescriptor<BookingActionId>[];
 }
@@ -226,4 +231,138 @@ export interface BookingsPageData {
  */
 export interface BookingHubHandlers {
   onAction: (input: { action: BookingActionId }) => Promise<ActionResult>;
+}
+
+// ---- Completing the work and the client's review of it (UI-013) ---------------------------------
+
+/** What the helper sends to mark the work complete: the category's evidence rules and the terms (blueprint 02 J6). */
+export interface CompletionRules {
+  /** Photos of the finished work: at least this many (0 when the category doesn't ask for any). */
+  photosMin: number;
+  photosMax: number;
+  /** Hourly bookings: the hours worked, in half hours, at most the cap. */
+  hours?: { estimated: number; cap: number };
+  /** Bookings with an expense allowance: receipts with amounts, the total at most the allowance. */
+  expenses?: { allowanceCents: Cents; description: string; maxItems: number };
+  /** Remote work: a short summary of what was done is required. */
+  noteRequired: boolean;
+  noteMaxLength: number;
+  maxPhotoMegabytes: number;
+}
+
+/** Why the completion form can't be used now. */
+export const COMPLETION_UNAVAILABLE_REASONS = [
+  /** Already sent: the booking page shows it. */
+  'already_submitted',
+  /** The helper hasn't checked in yet (in-person work). */
+  'not_started',
+  /** Canceled, disputed or completed. */
+  'closed',
+] as const;
+export type CompletionUnavailableReason = (typeof COMPLETION_UNAVAILABLE_REASONS)[number];
+
+/** `/app/bookings/[bookingId]/complete`: the helper marks the work complete. */
+export interface CompletionPageData {
+  booking: Pick<BookingView, 'id' | 'task' | 'poster' | 'terms' | 'location'>;
+  rules: CompletionRules;
+  unavailable?: CompletionUnavailableReason;
+}
+
+/** The completion form, checked against the booking's rules (client and server use the same schema). */
+export function createCompletionInputSchema(rules: CompletionRules) {
+  return z
+    .object({
+      photoIds: z.array(z.string().min(1)).max(rules.photosMax, code('too_long')),
+      note: z.string(code('required')).trim().max(rules.noteMaxLength, code('too_long')),
+      /** Hourly bookings only. */
+      hoursWorked: z.number(code('required')).positive(code('required')).multipleOf(0.5, code('invalid')).optional(),
+      expenses: z
+        .array(
+          z.object({
+            description: z.string(code('required')).trim().min(2, code('too_short')).max(80, code('too_long')),
+            amountCents: z.number(code('required')).int().positive(code('required')),
+            receiptPhotoId: z.string(code('required')).min(1, code('required')),
+          }),
+        )
+        .max(rules.expenses?.maxItems ?? 0, code('too_long')),
+    })
+    .superRefine((input, ctx) => {
+      const issue = (path: (string | number)[], message: FieldErrorCode) => ctx.addIssue({ code: 'custom', path, message });
+      if (input.photoIds.length < rules.photosMin) issue(['photoIds'], 'required');
+      if (rules.noteRequired && input.note.length === 0) issue(['note'], 'required');
+      if (rules.hours) {
+        if (input.hoursWorked === undefined) issue(['hoursWorked'], 'required');
+        else if (input.hoursWorked > rules.hours.cap) issue(['hoursWorked'], 'out_of_range');
+      }
+      const spent = input.expenses.reduce((sum, item) => sum + item.amountCents, 0);
+      if (input.expenses.length > 0 && (!rules.expenses || spent > rules.expenses.allowanceCents)) issue(['expenses'], 'out_of_range');
+    });
+}
+export type CompletionInput = z.input<ReturnType<typeof createCompletionInputSchema>>;
+
+/**
+ * Handlers on the completion page.
+ * - `onUploadPhoto`: work photos and receipt photos (re-encoded; location data removed).
+ * - `onQuoteFinal`: the final numbers for the hours and expenses entered, so the helper sees what they'll earn.
+ * - `onSubmit`: ok `submitted` with `redirectTo` (the booking). Errors: `validation_failed` (dotted `fieldErrors`),
+ *   `not_allowed` (the booking changed), `rate_limited`, `unknown`.
+ */
+export interface CompletionHandlers {
+  onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
+  onQuoteFinal: QueryHandler<{ hoursWorked?: number; expensesCents: Cents }, PriceBreakdown>;
+  onSubmit: ActionHandler<CompletionInput>;
+}
+
+/** The submitted work, as both people see it on the booking page and the problem form. */
+export interface CompletionView {
+  submittedAt: ISODateTime;
+  note?: string;
+  photos: Photo[];
+  hoursWorked?: number;
+  expenses: { id: string; description: string; amountCents: Cents; receipt: Photo }[];
+  /** The final numbers with these hours and expenses (the UI shows the viewer's variant). */
+  finalBreakdown: PriceBreakdown;
+}
+
+/** Why the client reports a problem (blueprint 02 J6; a support case opens). */
+export const PROBLEM_REASONS = ['not_done', 'not_as_agreed', 'damage', 'hours_wrong', 'expenses_wrong', 'other'] as const;
+export type ProblemReason = (typeof PROBLEM_REASONS)[number];
+
+/** Why the problem form can't be used now. */
+export const PROBLEM_UNAVAILABLE_REASONS = [
+  /** The helper hasn't submitted the work yet. */
+  'not_submitted',
+  /** The approval window ended: the booking was approved. Contact support instead. */
+  'window_passed',
+  /** Already reported, canceled or completed. */
+  'closed',
+] as const;
+export type ProblemUnavailableReason = (typeof PROBLEM_UNAVAILABLE_REASONS)[number];
+
+/** `/app/bookings/[bookingId]/problem`: the client reports a problem instead of approving. */
+export interface ReportProblemPageData {
+  booking: Pick<BookingView, 'id' | 'task' | 'helper' | 'terms'>;
+  completion?: CompletionView;
+  /** Report before this; afterwards the booking is approved automatically. */
+  approvalDueAt?: ISODateTime;
+  maxPhotoMegabytes: number;
+  unavailable?: ProblemUnavailableReason;
+}
+
+export const reportProblemInputSchema = z.object({
+  reason: z.enum(PROBLEM_REASONS, code('required')),
+  description: z.string(code('required')).trim().min(20, code('too_short')).max(2000, code('too_long')),
+  photoIds: z.array(z.string().min(1)).max(6, code('too_long')),
+});
+export type ReportProblemInput = z.input<typeof reportProblemInputSchema>;
+
+/**
+ * Handlers on the problem page.
+ * - `onUploadPhoto`: photos of the problem.
+ * - `onSubmit`: ok `submitted` with `redirectTo` (the booking, now `disputed`; support has a case). Errors:
+ *   `validation_failed`, `expired` (the approval window ended), `not_allowed`, `rate_limited`, `unknown`.
+ */
+export interface ReportProblemHandlers {
+  onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
+  onSubmit: ActionHandler<ReportProblemInput>;
 }
