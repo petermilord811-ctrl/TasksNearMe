@@ -23,7 +23,8 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run dev',
-    url: baseURL,
+    // The preview gallery needs no database, so the UI harness can start without one.
+    url: `${baseURL}/dev/ui`,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
   },

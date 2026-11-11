@@ -125,6 +125,15 @@ try {
   });
 }
 
+// ---- Local environment ------------------------------------------------------------------------
+// .env.local is gitignored, so a fresh worktree has none. Copy the main checkout's (the shared
+// dev database and dev-only secrets) so the preview server and checks start the same way here.
+const envSource = path.join(root, '.env.local');
+const envTarget = path.join(worktree, '.env.local');
+if (fs.existsSync(envSource) && fs.readFileSync(envSource, 'utf8') !== (fs.existsSync(envTarget) ? fs.readFileSync(envTarget, 'utf8') : '')) {
+  fs.copyFileSync(envSource, envTarget);
+}
+
 // ---- Dependencies (npm ci only when the lockfile changed) ------------------------------------
 const lockHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(worktree, 'package-lock.json'))).digest('hex');
 const marker = path.join(worktree, 'node_modules', '.tnm-lock-hash');
