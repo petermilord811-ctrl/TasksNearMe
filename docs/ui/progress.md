@@ -23,7 +23,7 @@ Claude updates this file, including the Codex notes column, from each handoff (`
 | [UI-013](tickets/UI-013-completion-and-problems.md) | Mark the work complete (photos, hours, receipts, remote summary), the work on the booking page, report a problem (disputes and settlements move to UI-026) | **verified** | `bookings` (completion rules, schema factory, completion view, problem reasons and schema, handlers) | Unattended run, 23 min. 39 previews; contract request accepted: `CompletionView.hoursCap`. The runner's check failed only on an untouched form test under load (passes alone) | Merged and wired 2026-11-11: `/app/bookings/[bookingId]/complete` and `/problem` (flow layout); `submit_completion` and `report_problem` actions; automatic approval; support case on a report. e2e: Jordan sends a photo on the seeded in-progress booking and Ruth approves; page guards |
 | [UI-014](tickets/UI-014-messaging.md) | Messaging inbox and conversation; the helper's "Message the client" on offers | **verified** | `messaging` (threads, messages, composer rules, send schema, handlers); offer action `message_poster` | Unattended run, 42 min; contract request accepted: `lastMessage.kind` and `event` | Merged and wired 2026-11-11: `/app/messages`, `/app/messages/[threadId]`; "Message" on bookings (both, not while paying), "Message helper" (client) and "Message the client" (helper) on offers open the thread. e2e: Maya and Sam talk before booking; Sam's number stays hidden from Maya |
 | UI-015 | Reviews, saved helpers, My clients, rebook proposals | planned | `reviews`, `profiles` | | |
-| UI-016 | Receipts and payment methods, earnings and payouts, rewards and redeem | planned | `payments`, `earnings`, `rewards` | | |
+| [UI-016](tickets/UI-016-money-pages.md) | Receipts and saved cards (client), earnings and payouts (helper); rewards move to UI-028 | **ready for Codex** (after UI-012 merges) | `earnings` (receipts, card handlers, earnings rows, payout account, handlers) | | |
 | UI-017 | Notifications, account settings, support cases, report and block | planned | `notifications`, `account`, `support` | | |
 | UI-018 | Admin: queues, users, moderation, reports | planned | `admin` | | |
 | UI-019 | Admin: bookings, cases and resolutions, refunds, payments | planned | `admin` (money) | | |
@@ -35,6 +35,7 @@ Claude updates this file, including the Codex notes column, from each handoff (`
 | UI-025 | Direct requests and funded invites (poster request form; helper accept, decline, counter; counters), availability posts | planned | `bookings` (invites, slots), `payments` | | |
 | UI-026 | Disputes: the case on the booking page, rework visits, settlement offers, accept and decline | planned | `bookings` (dispute view, proposals) | | |
 | UI-027 | Change requests: propose a new price, time, scope or hours cap; accept, decline, withdraw; pay the difference | planned | `bookings` (changes) | | |
+| UI-028 | Rewards: welcome gift card, repeat-client reward, redeem | planned | `rewards` | | |
 
 ## Notes
 

@@ -98,6 +98,8 @@ export const routes = {
     messages: () => '/app/messages',
     thread: (threadId: string) => `/app/messages/${enc(threadId)}`,
     payments: () => '/app/payments',
+    /** A receipt for one booking (printable). */
+    receipt: (bookingId: string) => `/app/payments/${enc(bookingId)}`,
     earnings: () => '/app/earnings',
     rewards: () => '/app/rewards',
     notifications: () => '/app/notifications',
