@@ -92,7 +92,11 @@ export function BookingHubActions({ data, handlers, sheets, initialResult, initi
       setSheetAction(action);
       return true;
     }}
-    getActionLink={(action) => action === 'add_to_calendar' ? { href: routes.app.bookingCalendar(data.id), download: true } : undefined}
+    getActionLink={(action) => {
+      if (action === 'add_to_calendar') return { href: routes.app.bookingCalendar(data.id), download: true };
+      if (action === 'propose_change') return { href: routes.app.bookingProposeChange(data.id) };
+      return undefined;
+    }}
     onAction={(action) => handlers.onAction({ action: action as BookingActionId })}
     onResult={(result) => {
       if (result.ok && result.code === 'updated' && !result.redirectTo) router.refresh();

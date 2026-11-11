@@ -91,7 +91,7 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
   const sheetCopy = useTranslations('bookingSheets');
   const categories = useTranslations('helperCard.categories');
   const status = useBookingStatus(data.status, data.viewerRole);
-  const { terms, checkIn } = data;
+  const { terms, checkIn, openChange } = data;
   const schedule = data.task.schedule;
 
   return <div data-booking-hub className="mx-auto max-w-reading space-y-6 pb-[var(--booking-actions-height,0px)] lg:pb-0">
@@ -102,6 +102,18 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
       <PageHeader title={data.task.title} description={categories(data.task.categorySlug)}><StatusBadge {...status} /></PageHeader>
       <BookingState data={data} now={now} />
     </div>
+
+    {openChange && <section aria-label={t('change.title')} className="space-y-2 rounded-xl border border-info/30 bg-card p-4 shadow-card sm:p-6">
+      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('change.title')}</h2>
+      <p className="tabular-nums">{openChange.status === 'proposed'
+        ? t(openChange.fromMe ? 'change.proposedByYou' : 'change.proposedByOther', { name: data.viewerRole === 'poster' ? data.helper.displayName : data.poster.displayName })
+        : data.viewerRole === 'helper'
+          ? t('change.waitingForPayment', { name: data.poster.displayName })
+          : openChange.differenceCents !== undefined
+            ? t('change.payDifference', { amount: formatMoney(openChange.differenceCents) })
+            : t('change.finishPayment')}</p>
+      <Link href={routes.app.bookingChange(data.id, openChange.id)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('change.view')}</Link>
+    </section>}
 
     {data.dispute && <BookingDisputeCard dispute={data.dispute} viewerRole={data.viewerRole} />}
 

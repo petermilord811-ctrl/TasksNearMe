@@ -48,6 +48,7 @@ import { safetyPreviews } from './safety.preview';
 import { adminPreviews } from './admin.preview';
 import { adminMoneyPreviews } from './admin-money.preview';
 import { rewardsPreviews } from './rewards.preview';
+import { changesPreviews } from './changes.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -96,4 +97,5 @@ export const previews: PreviewEntry[] = [
   ...adminPreviews,
   ...adminMoneyPreviews,
   ...rewardsPreviews,
+  ...changesPreviews,
 ];

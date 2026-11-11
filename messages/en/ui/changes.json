@@ -1,0 +1,148 @@
+{
+  "money": {
+    "before": "Money before",
+    "after": "Money after",
+    "increase": "You'd pay {amount} more",
+    "refund": "{amount} would come back to your card",
+    "unchanged": "Your total would stay the same"
+  },
+  "propose": {
+    "title": "Propose a change",
+    "back": "Back to booking",
+    "fields": "New terms",
+    "fieldsHint": "Edit what needs to change. Leave the other details as they are.",
+    "price": "Task price (USD)",
+    "rate": "Hourly rate (USD)",
+    "moneyHint": "Enter dollars and cents. Service fees are shown below.",
+    "hoursCap": "Hours cap",
+    "hoursHint": "The most hours included in the booking, up to 24.",
+    "start": "New start (Austin time)",
+    "startHint": "Choose a date and time in Austin's Central time zone.",
+    "windowHint": "Choose a start from {earliest} to {latest}, in Austin's Central time zone.",
+    "scope": "Task scope",
+    "scopeHint": "Describe the full task with the proposed changes. Use 10–2,000 characters.",
+    "expenses": "Expense allowance (USD)",
+    "expensesHint": "The amount set aside for agreed supplies. Enter 0 if none are needed.",
+    "message": "Message",
+    "messageHint": "Explain why you're proposing this change. Use 10–1,000 characters.",
+    "quoteHint": "Change at least one detail and add your message to see the money before and after.",
+    "quotePending": "Updating the money…",
+    "retry": "Try loading the money again",
+    "send": "Send change",
+    "sending": "Sending change…",
+    "confirmTitle": "Send this change?",
+    "confirmDescription": "The other person will review your proposal. Your current terms stay in place until the change is accepted and any payment is complete.",
+    "keepEditing": "Keep editing",
+    "confirmSend": "Send proposal",
+    "blockedTitle": "A change is already open",
+    "blockedDescription": "Review the open change before proposing another one.",
+    "viewChange": "View open change",
+    "notAllowed": "This booking can't change right now. Return to the booking to check for an open change.",
+    "noChanges": "Change at least one detail before sending your proposal."
+  },
+  "previews": {
+    "group": "Booking changes",
+    "propose": {
+      "desk": "Desk and chair proposal",
+      "moving": "Moving hours cap proposal",
+      "blocked": "A change is already open",
+      "quote-pending": "Updating the money",
+      "validation-failed": "Proposal validation error",
+      "not-allowed": "Proposal no longer allowed",
+      "rate-limited": "Proposal rate limit",
+      "unknown": "Proposal error",
+      "quote-validation-failed": "Money validation error",
+      "quote-not-allowed": "Money unavailable for this booking",
+      "quote-unknown": "Money loading error"
+    },
+    "review": {
+      "proposer": "Waiting for the other person",
+      "counterparty": "Review a client's proposal",
+      "pay-difference": "Pay the difference",
+      "applied": "Applied change",
+      "declined": "Declined change",
+      "moving-cap": "Review one more moving hour",
+      "bank-verification": "Bank verification",
+      "payment-declined": "Card declined",
+      "insufficient-funds": "Insufficient funds",
+      "expired": "Expired change",
+      "withdrawn": "Withdrawn change",
+      "result-expired": "Payment window expired",
+      "not-allowed": "Action no longer allowed",
+      "version-conflict": "Terms changed",
+      "unknown": "Payment error",
+      "pending": "Payment in progress"
+    },
+    "money": {
+      "poster": "Client money comparison",
+      "helper": "Helper earnings comparison",
+      "refund": "Money returned to the card"
+    }
+  },
+  "review": {
+    "title": "Change to {title}",
+    "back": "Back to booking",
+    "proposal": "About this change",
+    "proposedBy": {
+      "you": "You proposed this change",
+      "helper": "Your helper proposed this change",
+      "client": "Your client proposed this change"
+    },
+    "waiting": {
+      "helper": "Waiting for your helper",
+      "client": "Waiting for your client",
+      "you": "Waiting for your response"
+    },
+    "statuses": {
+      "proposed": "Proposed",
+      "accepted_pending_funding": "Accepted: waiting for payment",
+      "applied": "Applied",
+      "declined": "Declined",
+      "withdrawn": "Withdrawn",
+      "expired": "Expired"
+    },
+    "payToApply": "Accepted: pay {amount} to apply it",
+    "currentTermsApply": "The current terms stay in place until this change is applied.",
+    "newTermsApply": "The proposed terms now apply to this booking.",
+    "termsUnchanged": "The current booking terms stay in place.",
+    "expires": "Respond or finish payment by",
+    "comparison": "What would change",
+    "current": "Current terms",
+    "proposed": "Proposed terms",
+    "changed": "Changed",
+    "hourlyRate": "{amount} per hour",
+    "types": {
+      "price": "Task price",
+      "scope": "Task details",
+      "schedule": "Start (Central time)",
+      "hours_cap": "Hours cap",
+      "expense_allowance": "Expense allowance"
+    },
+    "payment": "Payment",
+    "paymentHint": "Choose the card for the difference. The new terms apply after payment goes through.",
+    "paymentMissing": "A payment method is needed to continue. Return to the booking and reopen this change to load your cards.",
+    "actionGroup": "Change actions",
+    "actions": {
+      "accept_change": "Accept change",
+      "decline_change": "Decline change",
+      "withdraw_change": "Withdraw change",
+      "pay_change_difference": "Pay the difference"
+    },
+    "payAmount": "Pay {amount}",
+    "confirmation": "Confirm change",
+    "backToReview": "Back to review",
+    "confirm": {
+      "accept_change": "Accept these proposed terms? Any payment shown is collected before the new terms apply.",
+      "acceptPayment": "Accept these proposed terms and pay {amount} with the selected card? The new terms apply after payment goes through.",
+      "decline_change": "Decline this change? The current booking terms stay in place.",
+      "withdraw_change": "Withdraw your proposal? The current booking terms stay in place.",
+      "pay_change_difference": "Pay {amount} with the selected card to apply the proposed terms."
+    },
+    "errors": {
+      "expired": "This change has expired. Reload the page to see the latest booking terms.",
+      "not_allowed": "This change can't be updated now. Reload the page to see what happens next.",
+      "version_conflict": "The booking changed while you were reviewing it. Reload the page to review the latest terms."
+    },
+    "reload": "Reload change"
+  }
+}
