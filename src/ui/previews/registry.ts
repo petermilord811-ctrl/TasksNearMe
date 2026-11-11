@@ -32,6 +32,7 @@ import { findWorkPreviews } from './find-work.preview';
 import { helperTaskPreviews } from './helper-task.preview';
 import { myOffersPreviews } from './my-offers.preview';
 import { bookingConfirmPreviews } from './booking-confirm.preview';
+import { bookingsPreviews } from './bookings.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -64,4 +65,5 @@ export const previews: PreviewEntry[] = [
   ...helperTaskPreviews,
   ...myOffersPreviews,
   ...bookingConfirmPreviews,
+  ...bookingsPreviews,
 ];

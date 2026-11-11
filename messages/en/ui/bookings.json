@@ -1,0 +1,37 @@
+{
+  "title": "Bookings",
+  "description": "Keep track of the help you've booked and the tasks you're helping with.",
+  "tabsLabel": "Booking lists",
+  "tabs": {
+    "needsAction": "Needs action",
+    "upcoming": "Upcoming",
+    "past": "Past"
+  },
+  "tabCount": "{label} ({count, number})",
+  "roles": {
+    "poster": "You booked",
+    "helper": "You're helping"
+  },
+  "needsAction": "Needs your action",
+  "amount": {
+    "poster": "Total {amount}",
+    "helper": "You'll earn {amount}"
+  },
+  "remote": "Remote",
+  "postTask": "Post a task",
+  "findWork": "Find work",
+  "empty": {
+    "needsAction": {
+      "title": "Nothing needs your action",
+      "body": "Bookings that need a payment, check-in, or approval will appear here."
+    },
+    "upcoming": {
+      "title": "No upcoming bookings",
+      "body": "Post a task to get help, or find a task you can help with. Your bookings will appear here."
+    },
+    "past": {
+      "title": "Nothing has finished yet",
+      "body": "Completed and canceled bookings will appear here."
+    }
+  }
+}

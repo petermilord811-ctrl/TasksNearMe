@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from 'react';
 import { Ellipsis, LoaderCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import type { ActionDescriptor, ActionResult } from '@/contracts';
 import { formatTime } from '@/shared/format';
 import { cn } from '@/ui/lib/utils';
-import { Button } from '@/ui/primitives/button';
+import { Button, buttonVariants } from '@/ui/primitives/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/ui/primitives/sheet';
 
@@ -16,24 +16,34 @@ export interface ActionBarProps {
   actions: ActionDescriptor[];
   onAction: (id: string) => Promise<ActionResult>;
   sticky?: boolean;
+  /** For actions near the top of a flow page; the caller reserves measured bottom space. */
+  mobileFixed?: boolean;
+  barRef?: Ref<HTMLDivElement>;
   /** Return true when a screen opens its own confirmation flow (for example, a required reason). */
   onRequestAction?: (id: string, trigger: HTMLButtonElement) => boolean;
+  /** Links stay in descriptor order and respect the same enabled/confirmation state. */
+  getActionLink?: (id: string) => { href: string; download?: boolean } | undefined;
+  onResult?: (result: ActionResult) => void;
+  renderResult?: (result: ActionResult) => ReactNode;
+  /** Static initial states for previews; normal screens leave these unset. */
+  initialResult?: ActionResult;
+  initialPending?: string;
 }
 
-export function ActionBar({ actions, onAction, sticky = false, onRequestAction }: ActionBarProps) {
+export function ActionBar({ actions, onAction, sticky = false, mobileFixed = false, barRef, onRequestAction, getActionLink, onResult, renderResult, initialResult, initialPending }: ActionBarProps) {
   const t = useTranslations('actions');
   const reason = useTranslations('actionReasons');
   const feedback = useTranslations('feedback');
   const router = useRouter();
   const id = useId();
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const pendingRef = useRef(false);
+  const [pendingId, setPendingId] = useState<string | null>(initialPending ?? null);
+  const pendingRef = useRef(Boolean(initialPending));
   const [confirmation, setConfirmation] = useState<ActionDescriptor | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreTrigger = useRef<HTMLButtonElement | null>(null);
   const customFlowRequested = useRef(false);
-  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
-  const confirmationTrigger = useRef<HTMLButtonElement | null>(null);
+  const [result, setResult] = useState<ActionResult | undefined>(initialResult);
+  const confirmationTrigger = useRef<HTMLElement | null>(null);
   const restoreAfterPending = useRef(false);
 
   useEffect(() => {
@@ -47,7 +57,7 @@ export function ActionBar({ actions, onAction, sticky = false, onRequestAction }
     if (!action.enabled || pendingRef.current) return;
     pendingRef.current = true;
     setPendingId(action.id);
-    setMessage(null);
+    setResult(undefined);
     let result: ActionResult;
     try {
       result = await onAction(action.id);
@@ -57,13 +67,20 @@ export function ActionBar({ actions, onAction, sticky = false, onRequestAction }
     pendingRef.current = false;
     setPendingId(null);
     const text = feedback(`${result.ok ? 'success' : 'error'}.${result.code}`);
-    setMessage({ text, error: !result.ok });
+    setResult(result);
     if (result.ok) {
       toast.success(text);
       if (result.redirectTo) router.push(result.redirectTo);
     } else {
       toast.error(text);
     }
+    onResult?.(result);
+  }
+
+  function resultContent() {
+    if (!result) return null;
+    if (renderResult) return renderResult(result);
+    return <p className={cn('text-sm', result.ok ? 'text-success' : 'text-destructive')}>{feedback(`${result.ok ? 'success' : 'error'}.${result.code}`)}</p>;
   }
 
   function renderAction(action: ActionDescriptor, context: string) {
@@ -75,17 +92,38 @@ export function ActionBar({ actions, onAction, sticky = false, onRequestAction }
       : undefined;
     const reasonId = `${id}-${context}-${action.id}-reason`;
     const pending = pendingId === action.id;
+    const link = getActionLink?.(action.id);
+    const disabled = !action.enabled || pendingId !== null;
+    const variant = action.kind === 'primary' ? 'default' : action.kind === 'destructive' ? 'destructive' : 'outline';
     return (
       <div key={action.id} className="min-w-0 flex-1 lg:flex-none">
-        <Button
+        {link ? <a
+          href={disabled ? undefined : link.href}
+          download={link.download}
+          role="link"
+          aria-disabled={disabled || undefined}
+          aria-describedby={reasonText ? reasonId : undefined}
+          tabIndex={disabled ? -1 : undefined}
+          data-action-id={action.id}
+          className={cn(buttonVariants({ variant }), 'min-h-11 w-full whitespace-normal px-4 py-2 text-center aria-disabled:pointer-events-none aria-disabled:opacity-50 lg:w-auto')}
+          onClick={(event) => {
+            if (disabled || pendingRef.current) { event.preventDefault(); return; }
+            if (action.confirm) {
+              event.preventDefault();
+              confirmationTrigger.current = event.currentTarget;
+              setConfirmation(action);
+            }
+          }}
+        >{t(action.id)}</a> : <Button
           type="button"
-          variant={action.kind === 'primary' ? 'default' : action.kind === 'destructive' ? 'destructive' : 'outline'}
-          disabled={!action.enabled || pendingId !== null}
+          variant={variant}
+          disabled={disabled}
           aria-busy={pending}
           aria-describedby={reasonText ? reasonId : undefined}
           data-action-id={action.id}
           className="min-h-11 w-full whitespace-normal px-4 py-2 text-center lg:w-auto"
           onClick={(event) => {
+            if (pendingRef.current) return;
             if (onRequestAction?.(action.id, context === 'more' ? moreTrigger.current ?? event.currentTarget : event.currentTarget)) {
               customFlowRequested.current = context === 'more';
               setMoreOpen(false);
@@ -101,7 +139,7 @@ export function ActionBar({ actions, onAction, sticky = false, onRequestAction }
         >
           {pending && <LoaderCircle aria-hidden="true" className="size-4 shrink-0 animate-spin motion-reduce:animate-none" />}
           {t(action.id)}
-        </Button>
+        </Button>}
         {reasonText && <p id={reasonId} className="mt-2 max-w-xs text-sm text-muted-foreground">{reasonText}</p>}
       </div>
     );
@@ -110,7 +148,7 @@ export function ActionBar({ actions, onAction, sticky = false, onRequestAction }
   if (actions.length === 0) return null;
 
   return (
-    <div className={cn('min-w-0 border-t border-border bg-background pt-4', sticky && 'sticky bottom-0 z-10 pb-[max(1rem,env(safe-area-inset-bottom))]')}>
+    <div ref={barRef} className={cn('min-w-0 border-t border-border bg-background pt-4', sticky && 'sticky bottom-0 z-10 pb-[max(1rem,env(safe-area-inset-bottom))]', mobileFixed && 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-10 max-lg:mx-auto max-lg:my-0! max-lg:max-h-[60dvh] max-lg:max-w-[calc(45rem+2*var(--page-gutter))] max-lg:overflow-y-auto max-lg:px-gutter max-lg:pb-[max(1rem,env(safe-area-inset-bottom))]')}>
       <div role="group" aria-label={feedback('actionBar')} aria-busy={pendingId !== null} className="flex flex-wrap items-start gap-3">
         {renderAction(actions[0], 'first')}
         {actions.length > 1 && <>
@@ -118,21 +156,21 @@ export function ActionBar({ actions, onAction, sticky = false, onRequestAction }
             {actions.slice(1).map((action) => renderAction(action, 'desktop'))}
           </div>
           <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-            <SheetTrigger asChild><Button ref={moreTrigger} variant="outline" className="min-h-11 min-w-11 lg:hidden"><Ellipsis aria-hidden="true" className="size-4" />{feedback('more')}</Button></SheetTrigger>
+            <SheetTrigger asChild><Button ref={moreTrigger} variant="outline" disabled={pendingId !== null} className="min-h-11 min-w-11 lg:hidden"><Ellipsis aria-hidden="true" className="size-4" />{feedback('more')}</Button></SheetTrigger>
             <SheetContent side="bottom" onCloseAutoFocus={(event) => {
               if (customFlowRequested.current) { event.preventDefault(); customFlowRequested.current = false; }
             }} className="max-h-[85dvh] overflow-y-auto rounded-t-xl pb-[max(1rem,env(safe-area-inset-bottom))]">
               <SheetHeader><SheetTitle>{feedback('moreTitle')}</SheetTitle><SheetDescription>{feedback('moreDescription')}</SheetDescription></SheetHeader>
               <div className="grid gap-4 px-4 pb-4">{actions.slice(1).map((action) => renderAction(action, 'more'))}</div>
               <div aria-live="polite" aria-atomic="true" className="px-4 pb-4">
-                {message && <p className={cn('text-sm', message.error ? 'text-destructive' : 'text-success')}>{message.text}</p>}
+                {resultContent()}
               </div>
             </SheetContent>
           </Sheet>
         </>}
       </div>
       <div aria-live="polite" aria-atomic="true" className="mt-3">
-        {message && <p className={cn('text-sm', message.error ? 'text-destructive' : 'text-success')}>{message.text}</p>}
+        {resultContent()}
       </div>
       <AlertDialog open={confirmation !== null} onOpenChange={(open) => { if (!open) setConfirmation(null); }}>
         <AlertDialogContent onCloseAutoFocus={(event) => { event.preventDefault(); if (!pendingRef.current) confirmationTrigger.current?.focus(); }}>
@@ -142,14 +180,14 @@ export function ActionBar({ actions, onAction, sticky = false, onRequestAction }
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{feedback('keepEditing')}</AlertDialogCancel>
-            <AlertDialogAction className={cn(confirmation?.kind === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')} onClick={() => {
+            {confirmation && getActionLink?.(confirmation.id) ? <AlertDialogAction asChild><a href={getActionLink(confirmation.id)?.href} download={getActionLink(confirmation.id)?.download}>{feedback('confirm')}</a></AlertDialogAction> : <AlertDialogAction className={cn(confirmation?.kind === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')} onClick={() => {
               const action = confirmation;
               setConfirmation(null);
               if (action) {
                 restoreAfterPending.current = true;
                 void run(action);
               }
-            }}>{feedback('confirm')}</AlertDialogAction>
+            }}>{feedback('confirm')}</AlertDialogAction>}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

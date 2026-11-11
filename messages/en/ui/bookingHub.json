@@ -1,0 +1,153 @@
+{
+  "previews": {
+    "group": "Bookings",
+    "listClient": "Your bookings",
+    "listNeedsAction": "Bookings needing action",
+    "listHelper": "Bookings as helper",
+    "listEmpty": "No bookings yet",
+    "clientConfirmed": "Client · booked",
+    "helperConfirmed": "Helper · booked",
+    "helperDayOf": "Helper · day of the task",
+    "helperInProgress": "Helper · in progress",
+    "clientPendingFunding": "Client · finish payment",
+    "helperPendingFunding": "Helper · client is booking",
+    "clientCompletionSubmitted": "Client · needs approval",
+    "clientCompleted": "Client · done",
+    "helperCompleted": "Helper · address still visible",
+    "helperAddressHidden": "Helper · address hidden",
+    "clientCanceledLate": "Client · late cancellation",
+    "clientCanceledByHelper": "Client · helper canceled",
+    "helperCanceled": "Helper · canceled",
+    "clientHourly": "Client · hourly task and allowance",
+    "helperRemote": "Helper · remote task",
+    "clientInProgress": "Client · in progress",
+    "helperCompletionSubmitted": "Helper · waiting for approval",
+    "clientDisputed": "Client · problem reported",
+    "helperDisputed": "Helper · problem reported",
+    "runningLate": "Helper · running late",
+    "submitting": "Saving check-in",
+    "updated": "Check-in saved",
+    "cancelReasons": {
+      "funding_failed": "Payment window ended",
+      "poster_early": "Client canceled early",
+      "helper_no_show": "Helper did not arrive",
+      "poster_no_show": "Client was unavailable",
+      "refunded_in_dispute": "Refunded after a problem",
+      "admin": "Canceled by support"
+    },
+    "completedVia": {
+      "auto": "Approved automatically",
+      "support": "Approved by support",
+      "settlement": "Completed by agreement"
+    },
+    "results": {
+      "validation_failed": "Check the details",
+      "payment_declined": "Payment declined",
+      "insufficient_funds": "Insufficient funds",
+      "requires_bank_verification": "Bank verification needed",
+      "version_conflict": "Booking changed",
+      "not_allowed": "Action unavailable",
+      "not_found": "Booking not found",
+      "expired": "Action expired",
+      "rate_limited": "Try again later",
+      "limit_reached": "Account limit reached",
+      "unknown": "Could not save"
+    }
+  },
+  "back": "All bookings",
+  "helper": "Your helper",
+  "client": "Your client",
+  "memberSince": "Member since {date}",
+  "whenWhere": "When and where",
+  "agreedStart": "Agreed start",
+  "taskWindow": "Task window",
+  "window": "{date} · {time}",
+  "flexibleWindow": "Any time on {date}",
+  "checkIn": "Check-in updates",
+  "onMyWay": "On my way at {time}",
+  "runningLate": "Running {minutes, plural, one {# minute} other {# minutes}} late",
+  "arrived": "Arrived at {time}",
+  "noCheckIn": "No check-in updates yet.",
+  "terms": "Terms and money",
+  "totalCharged": "Total charged",
+  "totalDue": "Total due",
+  "scope": "Agreed scope",
+  "pricing": "Agreed price",
+  "fixedPrice": "{amount} fixed price",
+  "hourlyPrice": "{rate}/h · {estimate} estimate · {cap} cap",
+  "allowance": "Expense allowance",
+  "noAllowance": "No expense allowance agreed.",
+  "hourlyNote": "You paid for up to {hours, plural, one {# hour} other {# hours}}. Unused hours are refunded after you approve.",
+  "payments": "Payments",
+  "charge": "Charge",
+  "refund": "Refund",
+  "noPayments": "No payments recorded yet.",
+  "helpLine": "Need a hand with this booking?",
+  "help": "Visit the help center",
+  "reload": "Reload booking",
+  "actionErrors": {
+    "not_allowed": "This booking changed. Reload it to see the actions available now."
+  },
+  "address": {
+    "visible": "You can see this address until {date}.",
+    "after_confirmation": "You'll see the exact address after the booking is confirmed.",
+    "hidden_after_completion": "The address was hidden 48 hours after the task was completed.",
+    "not_applicable": "Remote task: share a meeting link in messages."
+  },
+  "state": {
+    "poster": {
+      "pending_funding": "{hasTime, select, yes {Finish paying by {time}} other {Finish paying to confirm your booking.}}",
+      "confirmed": "Starts {date} at {time}",
+      "in_progress": "{hasTime, select, yes {Started at {time}} other {Your helper has started the task.}}",
+      "completion_submitted": "{hasTime, select, yes {Approve by {deadline}, or it's approved automatically.} other {Your helper submitted the work. Approve it or report a problem.}}",
+      "disputed": "A problem was reported. Follow the updates in your support case.",
+      "completed": "The task was completed.",
+      "canceled": "The booking was canceled."
+    },
+    "helper": {
+      "pending_funding": "{name} is booking you.",
+      "confirmed": "Starts {date} at {time}",
+      "in_progress": "{hasTime, select, yes {Started at {time}} other {You started the task.}}",
+      "completion_submitted": "Waiting for {name} to approve.",
+      "disputed": "A problem was reported. Follow the updates in your support case.",
+      "completed": "The task was completed.",
+      "canceled": "The booking was canceled."
+    }
+  },
+  "canceled": {
+    "poster": {
+      "funding_failed": "The booking was canceled because payment wasn't completed in time.",
+      "poster_early": "You canceled before the free cancellation deadline.",
+      "poster_late": "You canceled after the free cancellation deadline.",
+      "helper": "{helper} canceled the booking.",
+      "helper_no_show": "The booking was canceled because your helper didn't arrive.",
+      "poster_no_show": "The booking was canceled because your helper couldn't reach you or access the task.",
+      "refunded_in_dispute": "The booking was canceled with a full refund after the reported problem was resolved.",
+      "admin": "Support canceled the booking."
+    },
+    "helper": {
+      "funding_failed": "The booking was canceled because {name} didn't finish paying in time.",
+      "poster_early": "{name} canceled before the free cancellation deadline.",
+      "poster_late": "{name} canceled after the free cancellation deadline.",
+      "helper": "You canceled the booking.",
+      "helper_no_show": "The booking was canceled after you were reported as not arriving.",
+      "poster_no_show": "The booking was canceled because you couldn't reach the client or access the task.",
+      "refunded_in_dispute": "The booking was canceled with a full refund to {name} after the reported problem was resolved.",
+      "admin": "Support canceled the booking."
+    }
+  },
+  "completed": {
+    "poster": {
+      "poster": "You approved the completed task.",
+      "auto": "The completed task was approved automatically.",
+      "support": "Support approved the completed task.",
+      "settlement": "The task was completed with the agreed settlement."
+    },
+    "helper": {
+      "poster": "{name} approved your completed task.",
+      "auto": "Your completed task was approved automatically.",
+      "support": "Support approved your completed task.",
+      "settlement": "The task was completed with the agreed settlement."
+    }
+  }
+}
