@@ -1,0 +1,57 @@
+{
+  "title": "Earnings",
+  "description": "Track your task payments, reimbursed expenses, and bank payouts.",
+  "totals": {
+    "label": "Your totals",
+    "upcoming": "Upcoming",
+    "onTheWay": "On the way",
+    "paidThisYear": "Paid this year"
+  },
+  "account": {
+    "title": "Payout account",
+    "bank": "Payouts go to •••• {last4}",
+    "noBank": "No bank account added yet",
+    "timing": "Payouts usually reach your bank in about 2 business days after transfer.",
+    "statuses": {
+      "not_started": "Set up payouts",
+      "pending": "Payout setup in progress",
+      "requirements_due": "Bank details needed",
+      "active": "Ready for payouts",
+      "restricted": "Payouts restricted"
+    }
+  },
+  "dashboard": "Payout dashboard",
+  "updateBank": "Update bank details",
+  "actionNeeded": "A payout failed. Update your bank details",
+  "openingDashboard": "Opening payout dashboard…",
+  "dashboardReady": "Payout dashboard ready.",
+  "dashboardNotAllowed": "The payout dashboard isn't available for this account. Contact support for help.",
+  "firstPayoutNotice": "Your first payout usually arrives about 7 days after your first payment.",
+  "transfers": "Transfers",
+  "client": "Client: {name}",
+  "transferred": "Transferred {date}",
+  "kinds": {
+    "earnings": "Earnings",
+    "reimbursement": "Expense reimbursement",
+    "cancellation_compensation": "Late cancellation"
+  },
+  "holdReasons": {
+    "dispute": "A problem was reported; support is looking at it",
+    "payout_account": "Your payout account needs attention before this payment can be sent."
+  },
+  "payout": {
+    "pending": "Payout pending",
+    "in_transit": "Payout on the way",
+    "paid": "Payout paid",
+    "failed": "Payout failed",
+    "canceled": "Payout canceled",
+    "arrival": "Arrives {date} · •••• {last4}",
+    "paidOn": "Paid {date} · •••• {last4}",
+    "bank": "Bank account •••• {last4}"
+  },
+  "empty": {
+    "title": "No earnings yet",
+    "body": "Your task payments and reimbursed expenses will appear here after you complete a booking.",
+    "action": "Find work"
+  }
+}
