@@ -1,0 +1,28 @@
+{
+  "avatar": "Avatar with initials {initials}",
+  "new": "New",
+  "ratingSummary": "{average, number} out of 5, {count, plural, one {# review} other {# reviews}}",
+  "badges": "Verification badges",
+  "identity": "ID verified",
+  "identityAt": "ID verified · {date}",
+  "identityMeaningAt": "A government ID and selfie matched on {date}. This verifies identity; it does not guarantee work quality.",
+  "background": "Background checked",
+  "backgroundAt": "Background checked · {date}",
+  "backgroundMeaningAt": "The background check came back clear on {date}. It does not guarantee work quality or cover every possible concern.",
+  "phone": "Phone verified",
+  "phoneMeaning": "This person confirmed access to their phone number. This does not verify their identity or work quality.",
+  "none": "No verification badges yet",
+  "preview": {
+    "group": "People",
+    "avatars": "Initials avatars",
+    "badges": "Verification badges",
+    "ratings": "Ratings",
+    "all": "All badges",
+    "some": "Phone verification",
+    "none": "No badges",
+    "compact": "Compact badges",
+    "small": "Small",
+    "medium": "Medium",
+    "large": "Large"
+  }
+}

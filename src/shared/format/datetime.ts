@@ -4,6 +4,7 @@ import { MARKET_TIME_ZONE, type ISODateTime } from '@/contracts/common';
  * Date and time formatting for the Austin market. Always formats in America/Chicago,
  * whatever the server's or browser's own time zone is.
  *   formatDate        → "Sat, Nov 21"
+ *   formatMonthYear   → "Nov 2026"
  *   formatTime        → "10:30 am"
  *   formatDateTime    → "Sat, Nov 21 · 10:30 am"
  *   formatTimeRange   → "10:00 am–1:00 pm" (same day) or "Sat, Nov 21 · 10:00 pm–Sun, Nov 22 · 1:00 am"
@@ -23,6 +24,12 @@ const dateWithYearFormatter = new Intl.DateTimeFormat('en-US', {
   weekday: 'short',
   month: 'short',
   day: 'numeric',
+  year: 'numeric',
+});
+
+const monthYearFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: MARKET_TIME_ZONE,
+  month: 'short',
   year: 'numeric',
 });
 
@@ -49,6 +56,11 @@ function toDate(value: ISODateTime | Date): Date {
 export function formatDate(value: ISODateTime | Date, options: { withYear?: boolean } = {}): string {
   const date = toDate(value);
   return (options.withYear ? dateWithYearFormatter : dateFormatter).format(date);
+}
+
+/** Month and year in the market time zone, e.g. "Nov 2026" (verification badges, member-since). */
+export function formatMonthYear(value: ISODateTime | Date): string {
+  return monthYearFormatter.format(toDate(value));
 }
 
 export function formatTime(value: ISODateTime | Date): string {

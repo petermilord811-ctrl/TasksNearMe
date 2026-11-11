@@ -1,0 +1,146 @@
+'use client';
+
+import { useEffect, useId, useRef, useState } from 'react';
+import { Ellipsis, LoaderCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import type { ActionDescriptor, ActionResult } from '@/contracts';
+import { formatTime } from '@/shared/format';
+import { cn } from '@/ui/lib/utils';
+import { Button } from '@/ui/primitives/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/ui/primitives/sheet';
+
+export interface ActionBarProps {
+  actions: ActionDescriptor[];
+  onAction: (id: string) => Promise<ActionResult>;
+  sticky?: boolean;
+}
+
+export function ActionBar({ actions, onAction, sticky = false }: ActionBarProps) {
+  const t = useTranslations('actions');
+  const reason = useTranslations('actionReasons');
+  const feedback = useTranslations('feedback');
+  const router = useRouter();
+  const id = useId();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const pendingRef = useRef(false);
+  const [confirmation, setConfirmation] = useState<ActionDescriptor | null>(null);
+  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const confirmationTrigger = useRef<HTMLButtonElement | null>(null);
+  const restoreAfterPending = useRef(false);
+
+  useEffect(() => {
+    if (pendingId === null && restoreAfterPending.current) {
+      confirmationTrigger.current?.focus();
+      restoreAfterPending.current = false;
+    }
+  }, [pendingId]);
+
+  async function run(action: ActionDescriptor) {
+    if (!action.enabled || pendingRef.current) return;
+    pendingRef.current = true;
+    setPendingId(action.id);
+    setMessage(null);
+    let result: ActionResult;
+    try {
+      result = await onAction(action.id);
+    } catch {
+      result = { ok: false, code: 'unknown' };
+    }
+    pendingRef.current = false;
+    setPendingId(null);
+    const text = feedback(`${result.ok ? 'success' : 'error'}.${result.code}`);
+    setMessage({ text, error: !result.ok });
+    if (result.ok) {
+      toast.success(text);
+      if (result.redirectTo) router.push(result.redirectTo);
+    } else {
+      toast.error(text);
+    }
+  }
+
+  function renderAction(action: ActionDescriptor, context: string) {
+    const disabledReason = action.disabledReason;
+    const reasonText = disabledReason
+      ? (disabledReason.code === 'available_at' || disabledReason.code === 'deadline_passed') && !disabledReason.at
+        ? reason(`${disabledReason.code}_without_time`)
+        : reason(disabledReason.code, { at: disabledReason.at ? formatTime(disabledReason.at) : '' })
+      : undefined;
+    const reasonId = `${id}-${context}-${action.id}-reason`;
+    const pending = pendingId === action.id;
+    return (
+      <div key={action.id} className="min-w-0 flex-1 lg:flex-none">
+        <Button
+          type="button"
+          variant={action.kind === 'primary' ? 'default' : action.kind === 'destructive' ? 'destructive' : 'outline'}
+          disabled={!action.enabled || pendingId !== null}
+          aria-busy={pending}
+          aria-describedby={reasonText ? reasonId : undefined}
+          data-action-id={action.id}
+          className="min-h-11 w-full whitespace-normal px-4 py-2 text-center lg:w-auto"
+          onClick={(event) => {
+            if (action.confirm) {
+              confirmationTrigger.current = event.currentTarget;
+              setConfirmation(action);
+            } else {
+              void run(action);
+            }
+          }}
+        >
+          {pending && <LoaderCircle aria-hidden="true" className="size-4 shrink-0 animate-spin motion-reduce:animate-none" />}
+          {t(action.id)}
+        </Button>
+        {reasonText && <p id={reasonId} className="mt-2 max-w-xs text-sm text-muted-foreground">{reasonText}</p>}
+      </div>
+    );
+  }
+
+  if (actions.length === 0) return null;
+
+  return (
+    <div className={cn('min-w-0 border-t border-border bg-background pt-4', sticky && 'sticky bottom-0 z-10 pb-[max(1rem,env(safe-area-inset-bottom))]')}>
+      <div role="group" aria-label={feedback('actionBar')} aria-busy={pendingId !== null} className="flex flex-wrap items-start gap-3">
+        {renderAction(actions[0], 'first')}
+        {actions.length > 1 && <>
+          <div className="hidden flex-wrap items-start gap-3 lg:contents">
+            {actions.slice(1).map((action) => renderAction(action, 'desktop'))}
+          </div>
+          <Sheet>
+            <SheetTrigger asChild><Button variant="outline" className="min-h-11 min-w-11 lg:hidden"><Ellipsis aria-hidden="true" className="size-4" />{feedback('more')}</Button></SheetTrigger>
+            <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-xl pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <SheetHeader><SheetTitle>{feedback('moreTitle')}</SheetTitle><SheetDescription>{feedback('moreDescription')}</SheetDescription></SheetHeader>
+              <div className="grid gap-4 px-4 pb-4">{actions.slice(1).map((action) => renderAction(action, 'more'))}</div>
+              <div aria-live="polite" aria-atomic="true" className="px-4 pb-4">
+                {message && <p className={cn('text-sm', message.error ? 'text-destructive' : 'text-success')}>{message.text}</p>}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </>}
+      </div>
+      <div aria-live="polite" aria-atomic="true" className="mt-3">
+        {message && <p className={cn('text-sm', message.error ? 'text-destructive' : 'text-success')}>{message.text}</p>}
+      </div>
+      <AlertDialog open={confirmation !== null} onOpenChange={(open) => { if (!open) setConfirmation(null); }}>
+        <AlertDialogContent onCloseAutoFocus={(event) => { event.preventDefault(); if (!pendingRef.current) confirmationTrigger.current?.focus(); }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{feedback('confirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{feedback('confirmDescription', { action: confirmation ? t(confirmation.id) : '' })}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{feedback('keepEditing')}</AlertDialogCancel>
+            <AlertDialogAction className={cn(confirmation?.kind === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')} onClick={() => {
+              const action = confirmation;
+              setConfirmation(null);
+              if (action) {
+                restoreAfterPending.current = true;
+                void run(action);
+              }
+            }}>{feedback('confirm')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

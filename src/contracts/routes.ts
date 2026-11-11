@@ -1,4 +1,5 @@
 import type { CategorySlug } from './common';
+import type { ExactAddress } from './location';
 
 /**
  * Typed route builders for every page (docs/blueprint/02 §1 + docs/ui/ui-contract.md §13).
@@ -104,6 +105,19 @@ export const routes = {
     config: () => '/admin/config',
     audit: () => '/admin/audit',
     staff: () => '/admin/staff',
+  },
+
+  external: {
+    /**
+     * Google Maps search link for a helper who may see the exact address (only ExactAddressPanel
+     * receives it). Access notes are never included.
+     */
+    googleMapsSearch: (address: ExactAddress) => {
+      const query = [address.line1, address.line2, `${address.city}, ${address.state} ${address.zip}`]
+        .filter(Boolean)
+        .join(', ');
+      return `https://www.google.com/maps/search/?api=1&query=${enc(query)}`;
+    },
   },
 
   dev: {

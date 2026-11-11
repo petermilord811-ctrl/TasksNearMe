@@ -1,0 +1,47 @@
+{
+  "generalArea": "General area",
+  "areaName": "{area}, {market}",
+  "areaDescription": "About a 1-mile area. The exact address is private.",
+  "mapDescription": "General area around {area}, {market}, within about a 1-mile radius. This is not an exact address.",
+  "mapAreaLabel": "General area",
+  "demo": "Demo",
+  "remote": "Remote — no address needed",
+  "remoteDescription": "You can help from wherever you are.",
+  "distance": {
+    "under-1-mi": "Under 1 mile away",
+    "about-1-mi": "About 1 mile away",
+    "about-2-mi": "About 2 miles away",
+    "about-5-mi": "About 5 miles away",
+    "over-5-mi": "Over 5 miles away"
+  },
+  "exactAddress": "Task address",
+  "addressLocality": "{city}, {state} {zip}",
+  "accessNotes": "Getting inside",
+  "copyAddress": "Copy address",
+  "copyPending": "Copying address",
+  "copySuccess": "Address copied.",
+  "copyError": "The address couldn't be copied. Select the address and copy it manually.",
+  "openMaps": "Open in maps",
+  "opensNewTab": "Opens in a new tab",
+  "mapsUnavailable": "Copy the address to open it in your map app.",
+  "visibleUntil": "Visible to you until {date}",
+  "masked": {
+    "phone": "•••-•••-{hint} (hidden until booking)",
+    "phoneWithoutHint": "•••-•••-•••• (hidden until booking)",
+    "email": "•••@••• (hidden until booking)"
+  },
+  "previews": {
+    "locationGroup": "Location",
+    "messagingGroup": "Masked text",
+    "posterTitle": "General area for the poster",
+    "helperTitle": "General area for a helper",
+    "remoteTitle": "Remote task",
+    "exactTitle": "Exact address",
+    "exactNote": "The maps control is disabled until Claude supplies a Google Maps URL builder in the routes contract. Copy address is available.",
+    "withMap": "With a map",
+    "withoutMap": "Without a map",
+    "phoneTitle": "Phone number hidden until booking",
+    "emailTitle": "Email address hidden until booking",
+    "unmaskedTitle": "Message after booking"
+  }
+}

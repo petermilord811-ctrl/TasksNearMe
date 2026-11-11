@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
+import { AppToaster } from '@/ui/components/feedback/app-toaster';
 import { fontVariables } from '@/ui/theme/fonts';
 import '@/ui/theme/globals.css';
 
@@ -22,7 +23,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={fontVariables}>
       <body>
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider>
+          {children}
+          <AppToaster />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

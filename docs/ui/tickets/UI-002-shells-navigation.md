@@ -1,6 +1,16 @@
 # UI-002 — Page shells and navigation
 
-**Status:** ready for Codex (after UI-001 is merged) · **Branch:** `ui/UI-002-shells-navigation` · **Plan first:** yes · **Depends on:** UI-001
+**Status:** ready for Codex · **Branch:** `ui/UI-002-shells-navigation` · **Plan first:** yes · **Depends on:** UI-001 (merged)
+
+## First: UI-001 follow-ups
+Claude answered both UI-001 contract requests. Do these two small changes before the shells:
+1. **`VerificationBadges`:** replace the full-date fallback with `formatMonthYear` from `@/shared/format`, so the badge reads "ID verified · Nov 2026" and "Background checked · Nov 2026". Update its tests.
+2. **Maps link:**
+   - The `location/exact-address` preview passes `mapsHref={routes.external.googleMapsSearch(deskExactAddress)}`, so **Open in maps** is enabled.
+   - Add `location/exact-address-no-maps` for the disabled state.
+   - In the app, Claude passes `mapsHref` the same way.
+
+Then update the "App handoff and contract requests" notes in `src/ui/README.md` to say both requests are resolved.
 
 ## Goal
 The four page frames every route sits in: public site, signed-in app tab pages, detail/flow pages, and admin. They include the mode switch, bottom nav, sidebar, and account menus, all driven by props.

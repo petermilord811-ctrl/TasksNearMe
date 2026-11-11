@@ -17,4 +17,57 @@ Rules (full list in `AGENTS.md`):
 - UI code imports only from `@/ui`, `@/contracts`, `@/shared`, and UI libraries. Previews and tests may also import `@/fixtures`.
 - Components are **synchronous and isomorphic**: no `async` components, no data fetching, no `next/headers`, no server actions defined here.
 - Data arrives as typed props (from `@/contracts`). Mutations arrive as handler props (`ActionHandler`), which resolve to `ActionResult`.
+
+## UI-001 foundation
+
+The component entry point is `@/ui/components`. It exports the money, status, deadline, feedback,
+people, layout, location, masked-message, timeline, and action components. The 37 generated
+primitive files live in `primitives/` (the 36 requested primitives plus the toggle dependency).
+The theme follows the OS color preference; `theme/fonts.ts` keeps the `fontVariables` export used
+by the root layout.
+
+The gallery registers 53 previews, including every ticket state and seven primitive groups.
+Start with:
+
+- `/dev/ui/price-breakdown/moving-final-poster`
+- `/dev/ui/action-bar/approve-confirm`
+- `/dev/ui/action-bar/all-results`
+- `/dev/ui/people/verification-badges`
+- `/dev/ui/location/exact-address`
+- `/dev/ui/primitives/forms`
+
+Preview arrays remain isomorphic so the server gallery can read their metadata. Interactive demos
+live in `*-examples.tsx` client modules. Preview text and metadata use the UI message files.
+
+### App handoff and contract requests
+
+1. Add `formatMonthYear(at: ISODateTime): string` to `@/shared/format`, formatting in
+   `America/Chicago`, and use it for verification badge dates. Until it exists, badges display the
+   shared full date with the year rather than implementing a separate formatter.
+2. Add `routes.external.googleMapsSearch(address: ExactAddress): string`. Pass its result as
+   `ExactAddressPanel.mapsHref`. Without that contract-produced destination the Maps button is
+   disabled; Copy address still works. Exact addresses are rendered only by this panel.
+3. Mount `AppToaster` in the app root and use `PageSkeleton` as the app's Suspense fallback, as the
+   ticket requests. Previews mount their own toaster. No app route or root layout was edited.
+
+`ActionBar` preserves descriptor order. It forwards the selected id, asks for confirmation when
+requested, prevents duplicate submissions, announces outcomes, and follows `redirectTo` only on
+success. It does not decide action availability or calculate business values.
+
+### UI dependencies
+
+Installed through npm, with exact versions and existing framework versions preserved:
+
+- `radix-ui`: accessible shadcn primitives.
+- `class-variance-authority`, `clsx`, `tailwind-merge`: variants and the shared `cn()` utility.
+- `lucide-react`: icons; `sonner`: notifications.
+- `cmdk`: command primitive; `vaul`: drawer primitive.
+- `react-day-picker`, `date-fns`: calendar primitive and its date support.
+- `react-hook-form`: the field/form preview pattern.
+- `cn`, `next-themes`: generated shadcn dependencies. Generated source was adapted to the local
+  utility and OS theme, so these packages are not imported by the UI implementation.
+
+Generated primitives were adjusted for translated default labels, touch targets, focus rings,
+destructive contrast, and keyboard access to scroll viewports. The configured CLI destinations
+kept generated source inside `src/ui`; no read-only source was changed.
 - Every component or screen gets a preview, registered in `previews/registry.ts`.

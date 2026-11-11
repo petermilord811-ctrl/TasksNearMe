@@ -1,0 +1,11 @@
+{
+  "available_at": "Available at {at}",
+  "available_at_without_time": "This action isn't available yet.",
+  "open_change_exists": "Another change is already open",
+  "deadline_passed": "The deadline passed at {at}",
+  "deadline_passed_without_time": "The deadline has passed.",
+  "not_bookable": "Finish helper setup before continuing.",
+  "needs_background_check": "A background check is needed for this category.",
+  "already_done": "You've already completed this action.",
+  "not_allowed": "This action isn't available to you."
+}

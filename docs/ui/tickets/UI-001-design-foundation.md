@@ -121,4 +121,16 @@ Add the previews listed below and **delete `harness.preview.tsx`** from the regi
 Page shells and navigation (UI-002); any screen or route; mounting `AppToaster` (Claude does that).
 
 ## Claude wiring notes (after review)
-- Mount `AppToaster` in `src/app/layout.tsx`. Use `PageSkeleton` variants as `<Suspense>` fallbacks.
+- **Status: wired (2026-11-10).**
+- **Review:**
+  - Only Codex paths changed.
+  - `npm run check:ui` passes (55 unit tests; 53 previews at both viewports, axe clean). Production build passes, and `/dev/*` returns 404 in production.
+  - No fetching, server code, storage, or money arithmetic in the UI. `ExactAddress` appears only in `ExactAddressPanel`.
+- **Wiring:**
+  - `AppToaster` is mounted in `src/app/layout.tsx`.
+  - `PageSkeleton variant="detail"` is the Suspense fallback of the preview route. Real routes will use the variants as they're built.
+- **Contract requests:**
+  1. `formatMonthYear(at)` was added to `@/shared/format` ("Nov 2026", America/Chicago), with tests.
+  2. `routes.external.googleMapsSearch(address)` was added to `@/contracts/routes` (Google Maps search URL, no access notes), with tests. The app passes the result as `ExactAddressPanel.mapsHref`.
+- **Dependencies:** removed `cn`, `next-themes`, and `date-fns`. None of them is imported; `react-day-picker` brings `date-fns` itself.
+- **Follow-ups for Codex:** listed at the top of UI-002.

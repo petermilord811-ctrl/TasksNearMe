@@ -19,10 +19,20 @@
     "check:ui": "npm run check && npm run test:ui"
   },
   "dependencies": {
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "cmdk": "1.1.1",
+    "lucide-react": "1.71.0",
     "next": "16.4.6",
     "next-intl": "4.14.10",
+    "radix-ui": "1.8.1",
     "react": "19.3.0",
+    "react-day-picker": "10.0.2",
     "react-dom": "19.3.0",
+    "react-hook-form": "7.91.0",
+    "sonner": "2.0.8",
+    "tailwind-merge": "3.7.0",
+    "vaul": "1.1.2",
     "zod": "4.6.7"
   },
   "devDependencies": {

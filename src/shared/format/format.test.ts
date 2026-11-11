@@ -4,6 +4,7 @@ import {
   formatDateTime,
   formatHours,
   formatMoney,
+  formatMonthYear,
   formatRelative,
   formatTime,
   formatTimeRange,
@@ -70,6 +71,12 @@ describe('date and time in America/Chicago', () => {
     expect(formatRelative('2026-11-21T16:10:00.000Z', now)).toBe('2 hours ago');
     expect(formatRelative('2026-11-21T18:40:00.000Z', now)).toBe('in 30 minutes');
     expect(formatRelative('2026-11-21T18:10:20.000Z', now)).toBe('now');
+  });
+
+  it('formats month and year in the market time zone', () => {
+    expect(formatMonthYear('2026-11-04T16:00:00.000Z')).toBe('Nov 2026');
+    // 11:30 pm on Nov 30 in Austin is already Dec 1 in UTC.
+    expect(formatMonthYear('2026-12-01T05:30:00.000Z')).toBe('Nov 2026');
   });
 
   it('formats hours', () => {

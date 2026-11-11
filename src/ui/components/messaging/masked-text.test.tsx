@@ -1,0 +1,40 @@
+/** @vitest-environment jsdom */
+import { cleanup, render, screen } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import { afterEach, describe, expect, it } from 'vitest';
+import type { MessageSegment } from '@/contracts';
+import { maskedEmailMessage, maskedPhoneMessage, unmaskedMessage } from '@/fixtures';
+import uiMessages from '../../../../messages/en/ui';
+import location from '../../../../messages/en/ui/location.json';
+import { MaskedText } from './masked-text';
+
+afterEach(cleanup);
+
+function renderMessage(segments: MessageSegment[]) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={{ ...uiMessages, location }}>
+      <p data-testid="message"><MaskedText segments={segments} /></p>
+    </NextIntlClientProvider>,
+  );
+}
+
+describe('MaskedText', () => {
+  it('keeps the app-provided phone hint while marking the contact as hidden', () => {
+    renderMessage(maskedPhoneMessage);
+    expect(screen.getByTestId('message')).toHaveTextContent('Happy to help! Text me at •••-•••-0134 (hidden until booking) if that’s easier.');
+    expect(screen.getByTestId('message')).not.toHaveTextContent('512-555-0134');
+  });
+
+  it('masks email segments and supports phone segments without a hint', () => {
+    renderMessage([...maskedEmailMessage, { kind: 'masked', detail: 'phone' }]);
+    expect(screen.getByText('•••@••• (hidden until booking)')).toBeVisible();
+    expect(screen.getByText('•••-•••-•••• (hidden until booking)')).toBeVisible();
+  });
+
+  it('renders allowed text unchanged rather than running its own contact detection', () => {
+    const segments: MessageSegment[] = [...unmaskedMessage, { kind: 'text', text: ' Call 512-555-0134.' }];
+    renderMessage(segments);
+    expect(screen.getByTestId('message')).toHaveTextContent('See you Saturday at 10:30! Call 512-555-0134.');
+    expect(screen.queryByText(/hidden until booking/)).not.toBeInTheDocument();
+  });
+});

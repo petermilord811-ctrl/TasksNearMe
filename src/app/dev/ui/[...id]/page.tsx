@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { PreviewHost } from './preview-host';
 
 /**
@@ -7,7 +8,7 @@ import { PreviewHost } from './preview-host';
  */
 export default function PreviewPage({ params }: { params: Promise<{ id: string[] }> }) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageSkeleton variant="detail" />}>
       <PreviewById params={params} />
     </Suspense>
   );

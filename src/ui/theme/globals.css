@@ -1,14 +1,184 @@
-/*
- * Owned by Codex (UI). Initial stub created by Claude.
- * UI-001 replaces this with the design-system tokens (docs/ui/design-system.md §2).
- * The root layout imports this file; keep it the single global stylesheet.
- */
 @import "tailwindcss";
 
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
 :root {
-  --font-sans-fallback: ui-sans-serif, system-ui, sans-serif;
+  color-scheme: light dark;
+  --background: #fafaf7;
+  --foreground: #1c1b18;
+  --card: #ffffff;
+  --card-foreground: #1c1b18;
+  --popover: #ffffff;
+  --popover-foreground: #1c1b18;
+  --primary: #0e7c66;
+  --primary-foreground: #ffffff;
+  --secondary: #e9f4f0;
+  --secondary-foreground: #0b4f42;
+  --muted: #f1f0eb;
+  --muted-foreground: #5f5c54;
+  --accent: #eef5f2;
+  --accent-foreground: #1c1b18;
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+  --border: #e4e2da;
+  --input: #d9d6cc;
+  --ring: #0e7c66;
+  --success: #15803d;
+  --warning: #b45309;
+  --info: #1d4ed8;
+  --reward: #f2a93b;
+  --reward-foreground: #3b2a06;
+  --brand-soft: #e9f4f0;
+  --badge-neutral: #f1f0eb;
+  --badge-neutral-foreground: #3f3d37;
+  --badge-brand: #e9f4f0;
+  --badge-brand-foreground: #0b4f42;
+  --badge-info: #e8eefc;
+  --badge-info-foreground: #1d4ed8;
+  --badge-success: #e7f5ec;
+  --badge-success-foreground: #166534;
+  --badge-warning: #fdf3e1;
+  --badge-warning-foreground: #92400e;
+  --badge-danger: #fbeaea;
+  --badge-danger-foreground: #b91c1c;
+  --badge-reward: #fdf1dc;
+  --badge-reward-foreground: #7a4e05;
+  --radius: 0.75rem;
+  --card-shadow: 0 1px 2px rgb(28 27 24 / 0.06);
+  --overlay-shadow: 0 12px 40px rgb(28 27 24 / 0.16);
+  --page-gutter: 1rem;
+  --card-padding: 1rem;
+  --section-gap: 1.5rem;
+  --layer-action: 20;
+  --layer-navigation: 30;
+  --layer-dev: 40;
+  --layer-overlay: 50;
+  --layer-toast: 60;
 }
 
-body {
-  font-family: var(--font-sans), var(--font-sans-fallback);
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #121311;
+    --foreground: #f2f1ec;
+    --card: #1a1b19;
+    --card-foreground: #f2f1ec;
+    --popover: #1a1b19;
+    --popover-foreground: #f2f1ec;
+    --primary: #34b89a;
+    --primary-foreground: #06231c;
+    --secondary: #1f2e2a;
+    --secondary-foreground: #cfede4;
+    --muted: #24251f;
+    --muted-foreground: #a8a59c;
+    --accent: #232b28;
+    --accent-foreground: #f2f1ec;
+    --destructive: #f87171;
+    --destructive-foreground: #121311;
+    --border: #33342e;
+    --input: #3a3b35;
+    --ring: #34b89a;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --info: #93b4ff;
+    --reward: #f5b85a;
+    --reward-foreground: #2e2004;
+    --brand-soft: #1f2e2a;
+    --badge-neutral: #2a2b26;
+    --badge-neutral-foreground: #d9d7cf;
+    --badge-brand: #1f2e2a;
+    --badge-brand-foreground: #8fe0c9;
+    --badge-info: #1b2540;
+    --badge-info-foreground: #a9c1ff;
+    --badge-success: #16301f;
+    --badge-success-foreground: #86efac;
+    --badge-warning: #33260f;
+    --badge-warning-foreground: #fcd34d;
+    --badge-danger: #3a1616;
+    --badge-danger-foreground: #fca5a5;
+    --badge-reward: #33270f;
+    --badge-reward-foreground: #f5c77a;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-reward: var(--reward);
+  --color-reward-foreground: var(--reward-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-badge-neutral: var(--badge-neutral);
+  --color-badge-neutral-foreground: var(--badge-neutral-foreground);
+  --color-badge-brand: var(--badge-brand);
+  --color-badge-brand-foreground: var(--badge-brand-foreground);
+  --color-badge-info: var(--badge-info);
+  --color-badge-info-foreground: var(--badge-info-foreground);
+  --color-badge-success: var(--badge-success);
+  --color-badge-success-foreground: var(--badge-success-foreground);
+  --color-badge-warning: var(--badge-warning);
+  --color-badge-warning-foreground: var(--badge-warning-foreground);
+  --color-badge-danger: var(--badge-danger);
+  --color-badge-danger-foreground: var(--badge-danger-foreground);
+  --color-badge-reward: var(--badge-reward);
+  --color-badge-reward-foreground: var(--badge-reward-foreground);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-jakarta);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --radius-2xl: 1rem;
+  --shadow-card: var(--card-shadow);
+  --shadow-overlay: var(--overlay-shadow);
+  --spacing-gutter: var(--page-gutter);
+  --spacing-card: var(--card-padding);
+  --spacing-section: var(--section-gap);
+  --container-reading: 45rem;
+  --container-content: 70rem;
+  --container-admin: 90rem;
+  --z-index-action: var(--layer-action);
+  --z-index-navigation: var(--layer-navigation);
+  --z-index-dev: var(--layer-dev);
+  --z-index-overlay: var(--layer-overlay);
+  --z-index-toast: var(--layer-toast);
+  --default-transition-duration: 175ms;
+  --default-transition-timing-function: ease-out;
+}
+
+@layer base {
+  * { border-color: var(--border); }
+  body { background: var(--background); color: var(--foreground); font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif; font-size: 1rem; line-height: 1.5; }
+  h1, h2, h3, h4, h5, h6 { font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif; overflow-wrap: anywhere; }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  input, select, textarea { font-size: 1rem; }
+  button, input, select, textarea { font: inherit; }
+  button, [role="button"] { touch-action: manipulation; }
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
+}
+
+@utility tabular-nums { font-variant-numeric: tabular-nums; }
+
+@media (min-width: 768px) { :root { --page-gutter: 1.5rem; --card-padding: 1.25rem; --section-gap: 2rem; } }
+@media (min-width: 1024px) { :root { --page-gutter: 2rem; --card-padding: 1.5rem; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
