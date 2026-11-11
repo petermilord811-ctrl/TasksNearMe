@@ -22,14 +22,20 @@ afterEach(() => {
 });
 
 describe('VerificationBadges', () => {
+  it('shows the month and year for identity and background checks', () => {
+    render(<NextIntlClientProvider locale="en" messages={uiMessages}><VerificationBadges badges={jordan.badges} /></NextIntlClientProvider>);
+    expect(screen.getByRole('button', { name: 'ID verified · Nov 2026' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Background checked · Nov 2026' })).toBeInTheDocument();
+  });
+
   it('opens the badge explanation on click and keeps the date available in compact mode', async () => {
     const user = userEvent.setup();
     render(<NextIntlClientProvider locale="en" messages={uiMessages}><VerificationBadges badges={jordan.badges} compact /></NextIntlClientProvider>);
 
     await user.click(screen.getByRole('button', { name: 'ID verified' }));
     const tooltip = await screen.findByRole('tooltip');
-    expect(tooltip).toHaveTextContent('A government ID and selfie matched on');
-    expect(tooltip).toHaveTextContent('2026');
+    expect(tooltip).toHaveTextContent('A government ID and selfie matched in');
+    expect(tooltip).toHaveTextContent('Nov 2026');
     expect(tooltip).toHaveTextContent('does not guarantee work quality');
   });
 

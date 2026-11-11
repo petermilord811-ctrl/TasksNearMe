@@ -41,12 +41,12 @@ live in `*-examples.tsx` client modules. Preview text and metadata use the UI me
 
 ### App handoff and contract requests
 
-1. Add `formatMonthYear(at: ISODateTime): string` to `@/shared/format`, formatting in
-   `America/Chicago`, and use it for verification badge dates. Until it exists, badges display the
-   shared full date with the year rather than implementing a separate formatter.
-2. Add `routes.external.googleMapsSearch(address: ExactAddress): string`. Pass its result as
-   `ExactAddressPanel.mapsHref`. Without that contract-produced destination the Maps button is
-   disabled; Copy address still works. Exact addresses are rendered only by this panel.
+1. Resolved in UI-002: `formatMonthYear` is available from `@/shared/format` and verification
+   badges use it for month-and-year dates in `America/Chicago`.
+2. Resolved in UI-002: `routes.external.googleMapsSearch(address: ExactAddress)` supplies the
+   `ExactAddressPanel.mapsHref` destination in the exact-address preview; pass it the same way in
+   the app. The no-maps preview covers the disabled state when no destination is supplied. Copy
+   address still works. Exact addresses are rendered only by this panel.
 3. Mount `AppToaster` in the app root and use `PageSkeleton` as the app's Suspense fallback, as the
    ticket requests. Previews mount their own toaster. No app route or root layout was edited.
 

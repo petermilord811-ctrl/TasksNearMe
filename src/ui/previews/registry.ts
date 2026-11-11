@@ -13,6 +13,7 @@ import { timelinePreviews } from './timeline.preview';
 import { actionPreviews } from './actions.preview';
 import { layoutPreviews } from './layout.preview';
 import { primitivePreviews } from './primitives.preview';
+import { shellPreviews } from './shell.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -26,4 +27,5 @@ export const previews: PreviewEntry[] = [
   ...actionPreviews,
   ...layoutPreviews,
   ...primitivePreviews,
+  ...shellPreviews,
 ];

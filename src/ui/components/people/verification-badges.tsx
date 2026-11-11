@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { BadgeCheck, Phone, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { VerificationBadges as VerificationBadgeData } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { formatMonthYear } from '@/shared/format';
 import { cn } from '@/ui/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/ui/primitives/tooltip';
 
@@ -35,14 +35,14 @@ export function VerificationBadges({ badges, compact = false }: VerificationBadg
     ...(badges.idVerifiedAt ? [{
       key: 'identity',
       Icon: ShieldCheck,
-      label: compact ? t('identity') : t('identityAt', { date: formatDate(badges.idVerifiedAt, { withYear: true }) }),
-      meaning: t('identityMeaningAt', { date: formatDate(badges.idVerifiedAt, { withYear: true }) }),
+      label: compact ? t('identity') : t('identityAt', { date: formatMonthYear(badges.idVerifiedAt) }),
+      meaning: t('identityMeaningAt', { date: formatMonthYear(badges.idVerifiedAt) }),
     }] : []),
     ...(badges.backgroundCheckedAt ? [{
       key: 'background',
       Icon: BadgeCheck,
-      label: compact ? t('background') : t('backgroundAt', { date: formatDate(badges.backgroundCheckedAt, { withYear: true }) }),
-      meaning: t('backgroundMeaningAt', { date: formatDate(badges.backgroundCheckedAt, { withYear: true }) }),
+      label: compact ? t('background') : t('backgroundAt', { date: formatMonthYear(badges.backgroundCheckedAt) }),
+      meaning: t('backgroundMeaningAt', { date: formatMonthYear(badges.backgroundCheckedAt) }),
     }] : []),
     ...(badges.phoneVerified ? [{ key: 'phone', Icon: Phone, label: t('phone'), meaning: t('phoneMeaning') }] : []),
   ];
