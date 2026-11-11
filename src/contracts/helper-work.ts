@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { ActionDescriptor, ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
 import type { OfferActionId } from './action-ids';
 import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
+import type { InviteView } from './invites';
 import type { CategoryView } from './marketing';
 import type { PriceBreakdown, PricingInput } from './money';
 import type { OnboardingStep } from './routes';
@@ -181,4 +182,8 @@ export interface MyOffersPageData {
   booked: MyOfferRow[];
   /** `declined`, `withdrawn`, `expired`, newest first. */
   closed: MyOfferRow[];
+  /** Invites from clients (UI-025): open ones first (`sent`, `countered`), then the rest, newest first. */
+  invites?: InviteView[];
+  /** `routes.app.offers(inviteId)`: the invite to open in a sheet. */
+  openInviteId?: string;
 }

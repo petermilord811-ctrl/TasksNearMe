@@ -27,6 +27,7 @@ export * from './support';
 export * from './admin';
 export * from './rewards';
 export * from './changes';
+export * from './invites';
 export * from './shell';
 export * from './routes';
 export type { PreviewEntry } from './preview';

@@ -1,0 +1,81 @@
+import type { InviteHandlers, InviteView, MyOffersPageData, RequestHelperHandlers, RequestHelperPageData, TaskOwnerView } from '@/contracts';
+import { routes } from '@/contracts';
+import { mayaPaymentPanel } from './bookings';
+import { myOffersPageData } from './helper-work';
+import { bookshelfBreakdown, bookshelfCounterBreakdown } from './money';
+import { deskOwnerNoOffersView } from './offers';
+import { jordan, maya } from './people';
+
+/**
+ * Direct invites (UI-025; ui-contract scenarios `invite.*`): three weeks after the desk, Maya books Jordan
+ * again for a bookshelf at $45 ($49.50 held on her card, until Thu Dec 10, 10:00 am). Jordan counters at
+ * $50 (Maya would authorize $55.00).
+ */
+
+const bookshelfTask = { id: 'tsk_bookshelf', title: 'Assemble a bookshelf', categorySlug: 'furniture-assembly' as const };
+const START = '2026-12-12T16:00:00.000Z'; // Sat Dec 12, 10:00 am
+
+export const requestJordanData: RequestHelperPageData = {
+  helper: jordan,
+  tasks: [{ ...bookshelfTask, windowStart: '2026-12-12T15:00:00.000Z', windowEnd: '2026-12-12T21:00:00.000Z' }],
+  listedPricing: { 'furniture-assembly': { type: 'fixed', priceCents: 4000 } },
+  suggestion: { taskId: 'tsk_bookshelf', pricing: { type: 'fixed', priceCents: 4500 } },
+  payment: mayaPaymentPanel,
+};
+
+/** No open task in Jordan's categories yet: the page points to posting one. */
+export const requestNoTasksData: RequestHelperPageData = { ...requestJordanData, tasks: [], suggestion: undefined };
+
+const sent: InviteView = {
+  id: 'inv_bookshelf',
+  status: 'sent',
+  viewerRole: 'poster',
+  task: bookshelfTask,
+  client: maya,
+  helper: jordan,
+  terms: { pricing: { type: 'fixed', priceCents: 4500 }, start: START, message: 'Same as the desk last time: a flat-pack bookshelf.' },
+  breakdown: bookshelfBreakdown,
+  authorizedCents: 4950,
+  expiresAt: '2026-12-10T16:00:00.000Z',
+  sentAt: '2026-12-08T16:00:00.000Z',
+  actions: ['cancel_invite'],
+};
+
+export const bookshelfInviteSentPoster: InviteView = sent;
+export const bookshelfInviteSentHelper: InviteView = { ...sent, viewerRole: 'helper', authorizedCents: undefined, actions: ['accept_invite', 'decline_invite', 'counter_invite'] };
+
+const counter = { pricing: { type: 'fixed' as const, priceCents: 5000 }, start: START, message: 'This one has a glass door: $50 covers the extra care.', breakdown: bookshelfCounterBreakdown };
+
+export const bookshelfInviteCounteredPoster: InviteView = { ...sent, status: 'countered', counter, actions: ['accept_counter', 'decline_counter', 'cancel_invite'] };
+export const bookshelfInviteCounteredHelper: InviteView = { ...bookshelfInviteSentHelper, status: 'countered', counter, actions: [] };
+export const bookshelfInviteAcceptedPoster: InviteView = { ...sent, status: 'accepted', bookingId: 'bkg_bookshelf', expiresAt: undefined, actions: [] };
+export const bookshelfInviteDeclinedPoster: InviteView = { ...sent, status: 'declined', expiresAt: undefined, authorizedCents: undefined, actions: [] };
+export const bookshelfInviteExpiredHelper: InviteView = { ...bookshelfInviteSentHelper, status: 'expired', expiresAt: undefined, actions: [] };
+
+/** Jordan's offers page with Maya's invite open in the sheet. */
+export const myOffersWithInviteData: MyOffersPageData = { ...myOffersPageData, invites: [bookshelfInviteSentHelper, bookshelfInviteExpiredHelper], openInviteId: 'inv_bookshelf' };
+
+/** Maya's bookshelf task, with the invite she sent (no public offers). */
+export const bookshelfOwnerWithInviteView: TaskOwnerView = {
+  ...deskOwnerNoOffersView,
+  task: { ...deskOwnerNoOffersView.task, id: 'tsk_bookshelf', title: 'Assemble a bookshelf' },
+  invites: [bookshelfInviteCounteredPoster],
+};
+
+const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
+
+export const fakeRequestHelperHandlers: RequestHelperHandlers = {
+  onQuote: () => wait(bookshelfBreakdown),
+  onRequest: () => wait({ ok: true, code: 'sent', redirectTo: routes.app.task('tsk_bookshelf') }),
+  onFinishVerification: () => wait({ ok: true, code: 'sent', redirectTo: routes.app.task('tsk_bookshelf') }),
+};
+
+export const fakeInviteHandlers: InviteHandlers = {
+  onAccept: () => wait({ ok: true, code: 'booked', redirectTo: routes.app.booking('bkg_bookshelf') }),
+  onDecline: () => wait({ ok: true, code: 'updated' }),
+  onCounter: () => wait({ ok: true, code: 'sent' }),
+  onCancel: () => wait({ ok: true, code: 'updated' }),
+  onAcceptCounter: () => wait({ ok: true, code: 'booked', redirectTo: routes.app.booking('bkg_bookshelf') }),
+  onDeclineCounter: () => wait({ ok: true, code: 'updated' }),
+  onFinishVerification: () => wait({ ok: true, code: 'booked', redirectTo: routes.app.booking('bkg_bookshelf') }),
+};

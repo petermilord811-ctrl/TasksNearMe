@@ -1,6 +1,7 @@
 import type { ActionDescriptor, ActionHandler, ActionResult } from './actions';
 import type { OfferActionId, TaskActionId } from './action-ids';
 import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
+import type { InviteView } from './invites';
 import type { ExactAddress } from './location';
 import type { MessageSegment } from './messaging';
 import type { PriceBreakdown, PricingInput } from './money';
@@ -84,6 +85,8 @@ export interface TaskOwnerView {
   /** From the domain: cancel, edit, invite, post again. */
   actions: ActionDescriptor<TaskActionId>[];
   bookingId?: string;
+  /** Invites the client sent for this task (UI-025), open ones first. */
+  invites?: InviteView[];
 }
 
 /** `/app/tasks/[taskId]/offers/[offerId]`: one offer in full. */
