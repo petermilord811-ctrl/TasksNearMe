@@ -1,0 +1,196 @@
+/** @vitest-environment jsdom */
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { NextIntlClientProvider } from 'next-intl';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { routes, type InboxPageData, type MessageView, type ThreadPageData, type ThreadSubject } from '@/contracts';
+import {
+  blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData,
+  fakeThreadHandlers, inboxEmptyData, maskedEmailMessage, mayaInboxPageData,
+} from '@/fixtures';
+import { formatDate, formatRelative, formatTime } from '@/shared/format';
+import messages from '../../../../messages/en/ui';
+import { InboxScreen, ThreadScreen } from './index';
+
+const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
+const now = '2026-11-21T16:05:00.000Z';
+
+beforeEach(() => {
+  vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn(); });
+});
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  vi.clearAllMocks();
+  vi.unstubAllGlobals();
+});
+
+function inbox(data: InboxPageData = mayaInboxPageData) {
+  return render(<NextIntlClientProvider locale="en" messages={messages}><InboxScreen data={data} now={now} /></NextIntlClientProvider>);
+}
+
+function threadView(data: ThreadPageData) {
+  return <NextIntlClientProvider locale="en" messages={messages}><ThreadScreen data={data} handlers={fakeThreadHandlers} now={now} /></NextIntlClientProvider>;
+}
+
+function thread(data: ThreadPageData = deskOfferThreadPageData) {
+  return render(threadView(data));
+}
+
+describe('InboxScreen', () => {
+  it('shows one heading, supplied people, kind, unread count, time and route-built thread links', () => {
+    inbox();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Messages');
+    const links = screen.getAllByRole('link');
+    for (const row of mayaInboxPageData.threads) {
+      const link = links.find((item) => item.getAttribute('href') === routes.app.thread(row.id));
+      expect(link).toBeDefined();
+      expect(link).toHaveTextContent(row.otherParty.displayName);
+      expect(link).toHaveTextContent(row.title);
+      expect(link).toHaveTextContent(formatRelative(row.lastMessage!.createdAt, now));
+    }
+    expect(screen.getByText('Booking')).toBeVisible();
+    expect(screen.getByText('Offer')).toBeVisible();
+    expect(screen.getByText(/1 unread/)).toBeVisible();
+  });
+
+  it('renders masked phone and email previews without reconstructing contact details', () => {
+    const offer = deskOfferThreadPageData.thread;
+    const { container } = inbox({ threads: [offer, {
+      ...offer, id: 'thread-email-preview',
+      lastMessage: { ...offer.lastMessage!, preview: maskedEmailMessage },
+    }] });
+    expect(screen.getByText('•••-•••-0134 (hidden until booking)')).toBeVisible();
+    expect(screen.getByText('•••@••• (hidden until booking)')).toBeVisible();
+    expect(container.textContent).not.toContain('512-555-0134');
+  });
+
+  it('offers both route-built next steps when no conversations exist', () => {
+    inbox(inboxEmptyData);
+    expect(screen.getByRole('heading', { name: 'No messages yet' })).toBeVisible();
+    const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
+    expect(hrefs).toContain(routes.app.tasks());
+    expect(hrefs).toContain(routes.app.findWork());
+  });
+});
+
+describe('ThreadScreen', () => {
+  it('keeps contact segments masked and uses timeline copy inside a polite message log', () => {
+    const { container } = thread();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    const log = screen.getByRole('log');
+    expect(log).toHaveAttribute('aria-live', 'polite');
+    expect(within(log).getByText('•••-•••-0134 (hidden until booking)')).toBeVisible();
+    expect(within(log).getByText('•••@••• (hidden until booking)')).toBeVisible();
+    expect(log).toHaveTextContent('Offer received · $50.00');
+    expect(container.textContent).not.toContain('512-555-0134');
+    expect(screen.getByText(/Phone numbers and emails.*hidden until the booking is confirmed/)).toBeVisible();
+    const phoneMessage = deskOfferThreadPageData.messages[1]!;
+    expect(log.querySelector(`time[datetime="${phoneMessage.createdAt}"]`)).toHaveTextContent(formatTime(phoneMessage.createdAt));
+    expect(log).toHaveTextContent(deskOfferThreadPageData.thread.otherParty.displayName);
+  });
+
+  it('preserves allowed post-booking text and shows booking status copy', () => {
+    thread(deskBookingThreadPageData);
+    expect(screen.getByRole('log')).toHaveTextContent('512-555-0101');
+    expect(screen.getByRole('log')).toHaveTextContent('On the way');
+    expect(screen.queryByText(/Phone numbers and emails.*hidden until the booking is confirmed/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the photo label in its accessible name and restores focus after viewing the larger image', async () => {
+    const user = userEvent.setup();
+    thread(deskBookingThreadPageData);
+    const photo = deskBookingThreadPageData.messages.flatMap((message) => message.attachments)[0]!;
+    const trigger = screen.getByRole('button', { name: `View photo: ${photo.alt}` });
+    expect(trigger).toHaveTextContent('View photo');
+    expect(trigger).toHaveAccessibleName(expect.stringContaining(trigger.textContent!));
+    await user.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: 'Photo 1 of 1' });
+    expect(within(dialog).getByRole('img', { name: photo.alt })).toHaveAttribute('src', photo.src);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it.each([
+    [closedThreadPageData, 'This conversation is closed'],
+    [blockedThreadPageData, "You can't message each other"],
+  ] as const)('keeps disabled conversations readable and explains why sending is unavailable', (data, reason) => {
+    thread(data);
+    expect(screen.getByRole('log')).toHaveTextContent('0134');
+    expect(screen.getByText(reason)).toBeVisible();
+    expect(screen.queryByRole('button', { name: /^send/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  const subjects: Array<{ subject: ThreadSubject; href: string }> = [
+    { subject: { kind: 'offer_for_client', taskId: 'task with spaces', offerId: 'offer/encoded' }, href: routes.app.offer('task with spaces', 'offer/encoded') },
+    { subject: { kind: 'task_for_helper', taskId: 'task with spaces' }, href: routes.app.findWorkTask('task with spaces') },
+    { subject: { kind: 'booking', bookingId: 'booking/encoded' }, href: routes.app.booking('booking/encoded') },
+  ];
+  it.each(subjects)('links subject $subject.kind through the matching route builder', ({ subject, href }) => {
+    thread({ ...closedThreadPageData, thread: { ...closedThreadPageData.thread, subject } });
+    expect(screen.getAllByRole('link').some((link) => link.getAttribute('href') === href)).toBe(true);
+  });
+
+  it('groups dates in the market time zone across UTC midnight', () => {
+    const entries: MessageView[] = [
+      { id: 'day-one', sender: 'them', kind: 'text', segments: [{ kind: 'text', text: 'Before UTC midnight' }], attachments: [], createdAt: '2026-11-21T23:30:00.000Z' },
+      { id: 'same-market-day', sender: 'me', kind: 'text', segments: [{ kind: 'text', text: 'Same Austin day' }], attachments: [], createdAt: '2026-11-22T01:30:00.000Z' },
+      { id: 'day-two', sender: 'them', kind: 'text', segments: [{ kind: 'text', text: 'Next Austin day' }], attachments: [], createdAt: '2026-11-22T06:30:00.000Z' },
+    ];
+    thread({ ...closedThreadPageData, messages: entries });
+    const log = screen.getByRole('log');
+    expect(within(log).getAllByText(formatDate(entries[0]!.createdAt, { withYear: true }))).toHaveLength(1);
+    expect(within(log).getAllByText(formatDate(entries[2]!.createdAt, { withYear: true }))).toHaveLength(1);
+    const times = Array.from(log.querySelectorAll('time[datetime]')).map((element) => element.getAttribute('datetime'));
+    expect(times.filter((value) => entries.some((entry) => entry.createdAt === value))).toEqual(entries.map((entry) => entry.createdAt));
+  });
+
+  it('refreshes every 15 seconds only while visible and on focus, then cleans up', () => {
+    vi.useFakeTimers();
+    let visibility: DocumentVisibilityState = 'visible';
+    vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibility);
+    const view = thread(closedThreadPageData);
+    navigation.refresh.mockClear();
+    act(() => vi.advanceTimersByTime(14_999));
+    expect(navigation.refresh).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1));
+    expect(navigation.refresh).toHaveBeenCalledTimes(1);
+    visibility = 'hidden';
+    act(() => vi.advanceTimersByTime(30_000));
+    fireEvent.focus(window);
+    expect(navigation.refresh).toHaveBeenCalledTimes(1);
+    visibility = 'visible';
+    fireEvent.focus(window);
+    expect(navigation.refresh).toHaveBeenCalledTimes(2);
+    view.unmount();
+    act(() => vi.advanceTimersByTime(30_000));
+    fireEvent.focus(window);
+    expect(navigation.refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens at the latest message and follows new messages only when already at the bottom', () => {
+    let height = 900;
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(() => height);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(300);
+    const view = thread(closedThreadPageData);
+    const log = screen.getByRole('log');
+    expect(log.scrollTop).toBeGreaterThanOrEqual(600);
+    log.scrollTop = 100;
+    fireEvent.scroll(log);
+    const first: MessageView = { ...closedThreadPageData.messages[1]!, id: 'new-message-one' };
+    height = 1100;
+    const next = { ...closedThreadPageData, messages: [...closedThreadPageData.messages, first] };
+    view.rerender(threadView(next));
+    expect(log.scrollTop).toBe(100);
+    log.scrollTop = 800;
+    fireEvent.scroll(log);
+    height = 1300;
+    view.rerender(threadView({ ...next, messages: [...next.messages, { ...first, id: 'new-message-two' }] }));
+    expect(log.scrollTop).toBeGreaterThanOrEqual(1000);
+  });
+});

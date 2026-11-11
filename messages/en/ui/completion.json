@@ -6,6 +6,7 @@
   "openPhoto": "{label}: {description}",
   "photoTitle": "Photo {number} of {count}",
   "hoursWorked": "Hours worked: {hours}",
+  "hoursWorkedWithCap": "Hours worked: {hours, number} of up to {cap, number}",
   "receipts": "Receipts",
   "receiptTitle": "Receipt: {description}",
   "finalCost": "Final cost",

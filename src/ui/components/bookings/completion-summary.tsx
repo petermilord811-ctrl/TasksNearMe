@@ -45,7 +45,9 @@ export function CompletionSummary({ completion, variant }: CompletionSummaryProp
         {completion.photos.map((photo, index) => <li key={photo.id} className="min-w-0"><EvidencePhoto photo={photo} title={t('photoTitle', { number: index + 1, count: completion.photos.length })} /></li>)}
       </ul>}
       {completion.note && <p className="whitespace-pre-wrap break-words">{completion.note}</p>}
-      {completion.hoursWorked !== undefined && <p className="font-medium tabular-nums">{t('hoursWorked', { hours: formatHours(completion.hoursWorked) })}</p>}
+      {completion.hoursWorked !== undefined && <p className="font-medium tabular-nums">{completion.hoursCap !== undefined
+        ? t('hoursWorkedWithCap', { hours: completion.hoursWorked, cap: completion.hoursCap })
+        : t('hoursWorked', { hours: formatHours(completion.hoursWorked) })}</p>}
       {completion.expenses.length > 0 && <div className="space-y-3 border-t pt-5">
         <p className="font-semibold">{t('receipts')}</p>
         <ul aria-label={t('receipts')} className="space-y-4">

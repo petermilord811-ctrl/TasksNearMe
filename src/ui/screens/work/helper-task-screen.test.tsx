@@ -118,6 +118,16 @@ describe('HelperTaskScreen', () => {
     expect(push).toHaveBeenCalledExactlyOnceWith(routes.app.offers());
   });
 
+  it.each(['message_poster', 'withdraw_offer'] as const)('passes %s to the offer handler and follows the supplied redirect', async (action) => {
+    const user = userEvent.setup();
+    const redirectTo = routes.app.thread('thr_off_jordan');
+    const handlers = makeHandlers({ onOfferAction: vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated', redirectTo })) });
+    show({ ...helperDeskWithOffer, myOffer: { ...helperDeskWithOffer.myOffer!, actions: [{ id: action, kind: 'secondary', enabled: true }] } }, handlers);
+    await user.click(screen.getByRole('button', { name: actions[action] }));
+    expect(handlers.onOfferAction).toHaveBeenCalledExactlyOnceWith({ offerId: helperDeskWithOffer.myOffer!.id, action });
+    expect(push).toHaveBeenCalledExactlyOnceWith(redirectTo);
+  });
+
   it('preserves supplied action order, disabled reasons, and confirmation for revision', async () => {
     const user = userEvent.setup();
     const data: HelperTaskView = { ...helperDeskWithOffer, myOffer: { ...helperDeskWithOffer.myOffer!, actions: [

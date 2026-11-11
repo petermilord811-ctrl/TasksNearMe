@@ -64,6 +64,7 @@
   "previews": {
     "group": "Helper task",
     "with-offer": "Your offer",
+    "with-message-action": "Message the client about your offer",
     "offer-form": "Send a fixed-price offer",
     "hourly-form": "Send an hourly offer",
     "blocked": "Service not offered",

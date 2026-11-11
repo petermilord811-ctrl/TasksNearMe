@@ -23,6 +23,13 @@ function preview(variant: Exclude<keyof typeof copy.previews, 'group'>, data: He
 
 export const helperTaskPreviews: PreviewEntry[] = [
   preview('with-offer', helperDeskWithOffer),
+  preview('with-message-action', {
+    ...helperDeskWithOffer,
+    myOffer: {
+      ...helperDeskWithOffer.myOffer!,
+      actions: [...helperDeskWithOffer.myOffer!.actions, { id: 'message_poster', kind: 'secondary', enabled: true }],
+    },
+  }, { handlers: { ...handlers, onOfferAction: fakeHandler({ ok: true, code: 'updated', redirectTo: routes.app.thread('thr_off_jordan') }) } }),
   preview('offer-form', helperYardNoOffer),
   preview('hourly-form', helperMovingHourly),
   preview('blocked', helperComputerBlocked),
