@@ -15,6 +15,7 @@ export * from './content';
 export * from './profiles';
 export * from './posting';
 export * from './offers';
+export * from './onboarding';
 export * from './shell';
 export * from './routes';
 export type { PreviewEntry } from './preview';
