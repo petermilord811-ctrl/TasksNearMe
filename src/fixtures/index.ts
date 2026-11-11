@@ -25,3 +25,4 @@ export * from './reviews';
 export * from './account';
 export * from './support';
 export * from './admin';
+export * from './rewards';
