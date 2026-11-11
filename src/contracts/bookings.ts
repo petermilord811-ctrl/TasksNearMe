@@ -195,6 +195,10 @@ export interface BookingView {
   payments?: BookingPaymentLine[];
   /** The helper's submitted work (`completion_submitted`, `disputed`, `completed`). Shown from UI-013. */
   completion?: CompletionView;
+  /** The client saved this helper (`save_helper` is then left out). UI-015. */
+  helperSaved?: boolean;
+  /** The viewer's review of this booking, once sent (UI-015). */
+  myReview?: { rating: number; submittedAt: ISODateTime; publishedAt?: ISODateTime };
   /** From the domain (ui-contract §6): only actions that work today are included. */
   actions: ActionDescriptor<BookingActionId>[];
 }

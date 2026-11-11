@@ -21,6 +21,7 @@ export * from './payments';
 export * from './bookings';
 export * from './earnings';
 export * from './home';
+export * from './reviews';
 export * from './shell';
 export * from './routes';
 export type { PreviewEntry } from './preview';
