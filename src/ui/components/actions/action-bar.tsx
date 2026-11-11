@@ -25,12 +25,14 @@ export interface ActionBarProps {
   getActionLink?: (id: string) => { href: string; download?: boolean } | undefined;
   onResult?: (result: ActionResult) => void;
   renderResult?: (result: ActionResult) => ReactNode;
+  /** Context that stays beside the actions when the bar is fixed on phones. */
+  description?: ReactNode;
   /** Static initial states for previews; normal screens leave these unset. */
   initialResult?: ActionResult;
   initialPending?: string;
 }
 
-export function ActionBar({ actions, onAction, sticky = false, mobileFixed = false, barRef, onRequestAction, getActionLink, onResult, renderResult, initialResult, initialPending }: ActionBarProps) {
+export function ActionBar({ actions, onAction, sticky = false, mobileFixed = false, barRef, onRequestAction, getActionLink, onResult, renderResult, description, initialResult, initialPending }: ActionBarProps) {
   const t = useTranslations('actions');
   const reason = useTranslations('actionReasons');
   const feedback = useTranslations('feedback');
@@ -149,6 +151,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
 
   return (
     <div ref={barRef} className={cn('min-w-0 border-t border-border bg-background pt-4', sticky && 'sticky bottom-0 z-10 pb-[max(1rem,env(safe-area-inset-bottom))]', mobileFixed && 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-10 max-lg:mx-auto max-lg:my-0! max-lg:max-h-[60dvh] max-lg:max-w-[calc(45rem+2*var(--page-gutter))] max-lg:overflow-y-auto max-lg:px-gutter max-lg:pb-[max(1rem,env(safe-area-inset-bottom))]')}>
+      {description && <div className="mb-3 text-sm">{description}</div>}
       <div role="group" aria-label={feedback('actionBar')} aria-busy={pendingId !== null} className="flex flex-wrap items-start gap-3">
         {renderAction(actions[0], 'first')}
         {actions.length > 1 && <>
@@ -156,7 +159,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
             {actions.slice(1).map((action) => renderAction(action, 'desktop'))}
           </div>
           <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-            <SheetTrigger asChild><Button ref={moreTrigger} variant="outline" disabled={pendingId !== null} className="min-h-11 min-w-11 lg:hidden"><Ellipsis aria-hidden="true" className="size-4" />{feedback('more')}</Button></SheetTrigger>
+            <SheetTrigger asChild><Button ref={moreTrigger} data-action-more variant="outline" disabled={pendingId !== null} className="min-h-11 min-w-11 lg:hidden"><Ellipsis aria-hidden="true" className="size-4" />{feedback('more')}</Button></SheetTrigger>
             <SheetContent side="bottom" onCloseAutoFocus={(event) => {
               if (customFlowRequested.current) { event.preventDefault(); customFlowRequested.current = false; }
             }} className="max-h-[85dvh] overflow-y-auto rounded-t-xl pb-[max(1rem,env(safe-area-inset-bottom))]">

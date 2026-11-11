@@ -7,9 +7,9 @@ import {
 import {
   bookingsEmptyData, deskBookingHelperCompleted, deskBookingHelperCompletedAddressHidden,
   deskBookingHelperConfirmed, deskBookingHelperDayOf, deskBookingHelperInProgress,
-  deskBookingHelperPendingFunding, deskBookingPosterCanceledByHelper, deskBookingPosterCanceledLate,
+  deskBookingHelperPendingFunding, deskBookingHelperRunningLate, deskBookingPosterCanceledByHelper, deskBookingPosterCanceledLate,
   deskBookingPosterCompleted, deskBookingPosterCompletionSubmitted, deskBookingPosterConfirmed,
-  deskBookingPosterPendingFunding, fakeBookingHubHandlers, fakeHandler, jordanBookingsPageData,
+  deskBookingPosterPendingFunding, deskCancelPreviewHelperLate, fakeBookingHubHandlers, fakeBookingSheetHandlers, fakeHandler, jordanBookingsPageData,
   jordanShell, mayaBookingsNeedsActionData, mayaBookingsPageData, mayaShell,
   movingBookingPosterConfirmed, remoteBookingHelperConfirmed,
 } from '@/fixtures';
@@ -38,7 +38,9 @@ function hubPreview(id: string, title: string, data: BookingView, options: Parti
   return {
     id: `screen-booking/${id}`, title, group: copy.previews.group, layout: 'fullscreen',
     render: () => <AppShell viewer={viewer} handlers={shellHandlers} currentPath={routes.app.booking(data.id)} layout="flow">
-      <BookingHubContent data={data} handlers={fakeBookingHubHandlers} now={beforeTask} {...options} />
+      <BookingHubContent data={data} handlers={fakeBookingHubHandlers} sheets={data.viewerRole === 'helper'
+        ? { ...fakeBookingSheetHandlers, onPreviewCancel: async () => { await fakeHandler()(undefined); return deskCancelPreviewHelperLate; } }
+        : fakeBookingSheetHandlers} now={beforeTask} {...options} />
     </AppShell>,
   };
 }
@@ -90,9 +92,7 @@ export const bookingsPreviews: PreviewEntry[] = [
     ...deskBookingHelperInProgress, status: 'disputed', deadlines: {},
     actions: [{ id: 'contact_support', kind: 'primary', enabled: true }],
   }, { now: afterSubmission }),
-  hubPreview('helper-running-late', copy.previews.runningLate, {
-    ...deskBookingHelperDayOf, checkIn: { ...deskBookingHelperDayOf.checkIn, lateByMinutes: 20 },
-  }, { now: dayOf }),
+  hubPreview('helper-running-late', copy.previews.runningLate, deskBookingHelperRunningLate, { now: '2026-11-21T16:25:00.000Z' }),
   // Dedicated reason variants omit payment/event histories whose amounts or actors would imply a different cancellation.
   ...CANCEL_REASONS.filter((reason) => reason !== 'poster_late' && reason !== 'helper').map((reason) => hubPreview(
     `client-canceled-${reason.replaceAll('_', '-')}`,

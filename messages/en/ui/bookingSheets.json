@@ -1,0 +1,100 @@
+{
+  "previews": {
+    "group": "Booking sheets",
+    "open": "Open sheet",
+    "safetyDescription": "I felt unsafe and left the task location. Please contact me.",
+    "clientWithSheets": "Client booking with sheets",
+    "helperWithSheets": "Helper booking with sheets",
+    "helperRunningLate": "Helper running late",
+    "clientNoShowReportable": "No-show reporting available",
+    "clientNoShowNotYet": "No-show reporting not available yet",
+    "helperCantAccessAvailable": "Helper can't get in",
+    "clientCantAccessReported": "Client response needed",
+    "clientEarly": "Client cancels early",
+    "clientLate": "Client cancels late",
+    "helperEarly": "Helper cancels early",
+    "helperLate": "Helper cancels late",
+    "loading": "Loading cancellation terms",
+    "previewError": "Cancellation terms unavailable",
+    "resultNotAllowed": "Booking changed",
+    "runningLate": "Running late",
+    "noShow": "Report a no-show",
+    "cantAccess": "Can't get in",
+    "safety": "Safety report",
+    "sending": "Sending safety report",
+    "sent": "Safety report sent",
+    "validationFailed": "Safety report needs details"
+  },
+  "back": "Go back",
+  "sending": "Sending…",
+  "note": "Note (optional)",
+  "noteHint": "Add anything else we should know. Up to 500 characters.",
+  "count": "{count} of {max} characters",
+  "choose": "Choose one option.",
+  "changed": "This booking changed. Reload to see the latest details.",
+  "reload": "Reload booking",
+  "cantAccessAt": "{helper} couldn't get in at {time}",
+  "answerBy": "Answer by {time} or the booking is canceled",
+  "cancel": {
+    "title": "Cancel booking",
+    "intro": "Review what happens before you cancel.",
+    "loading": "Loading cancellation terms…",
+    "loadError": "Couldn't load the cancellation terms. Try again.",
+    "retry": "Try again",
+    "posterRefund": "You'll get <amount></amount> back",
+    "posterLate": "Canceling now costs {fee}. {helper} receives all of it. You'll get {refund} back.",
+    "helperRefund": "{client} gets a full refund",
+    "refundAmount": "Refund to {client}: <amount></amount>",
+    "freeEnded": "Free cancellation ended {at}",
+    "strike": "Cancelling this close to the start counts against your account",
+    "policy": "Read the cancellation policy",
+    "reason": "Why are you canceling?",
+    "submit": "Cancel booking",
+    "reasons": {
+      "plans_changed": "My plans changed",
+      "found_someone_else": "I found someone else",
+      "helper_asked": "My helper asked me to cancel",
+      "unavailable": "I'm no longer available",
+      "illness": "I'm unwell",
+      "scope_different": "The task is different from what we agreed",
+      "safety_concern": "I have a safety concern",
+      "other": "Another reason"
+    }
+  },
+  "late": {
+    "title": "How late will you be?",
+    "intro": "Let {client} know when to expect you.",
+    "minutes": "{minutes, plural, one {# minute} other {# minutes}}",
+    "label": "How many minutes late?",
+    "submit": "Send update"
+  },
+  "noShow": {
+    "title": "Report a no-show",
+    "intro": "{helper} hasn't checked in.",
+    "terms": "Reporting a no-show cancels this booking. You'll get a full refund, and support will see your report.",
+    "submit": "Report a no-show"
+  },
+  "cantAccess": {
+    "title": "Can't get in?",
+    "intro": "Let {client} know you're waiting to get in.",
+    "terms": "Your client has 30 minutes to answer. If they don't answer, the booking is canceled and you're paid the late-cancellation amount.",
+    "submit": "Report that I can't get in"
+  },
+  "safety": {
+    "emergency": "In danger? Call 911",
+    "title": "Report a safety concern",
+    "intro": "Tell support what happened so they can help.",
+    "kind": "What happened?",
+    "description": "Describe what happened",
+    "descriptionHint": "Use 10 to 2,000 characters. Include details that will help support respond.",
+    "submit": "Send safety report",
+    "sent": "Support will contact you shortly",
+    "kinds": {
+      "unsafe_now": "I feel unsafe right now",
+      "harassment": "Harassment",
+      "threat": "A threat",
+      "property_damage": "Property damage",
+      "other": "Another safety concern"
+    }
+  }
+}

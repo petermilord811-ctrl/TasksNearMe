@@ -35,6 +35,7 @@ import { bookingConfirmPreviews } from './booking-confirm.preview';
 import { bookingsPreviews } from './bookings.preview';
 import { completionPreviews } from './completion.preview';
 import { messagesScreenPreviews } from './messages-screens.preview';
+import { bookingSheetsPreviews } from './booking-sheets.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -70,4 +71,5 @@ export const previews: PreviewEntry[] = [
   ...bookingsPreviews,
   ...completionPreviews,
   ...messagesScreenPreviews,
+  ...bookingSheetsPreviews,
 ];

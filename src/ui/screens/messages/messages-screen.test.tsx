@@ -68,6 +68,22 @@ describe('InboxScreen', () => {
     expect(container.textContent).not.toContain('512-555-0134');
   });
 
+  it('uses timeline copy for status and system previews with empty segments', () => {
+    const booking = deskBookingThreadPageData.thread;
+    const offerMessage = deskOfferThreadPageData.messages[0]!;
+    inbox({ threads: [booking, {
+      ...deskOfferThreadPageData.thread,
+      lastMessage: { ...offerMessage, preview: [] },
+    }, {
+      ...booking, id: 'running-late-preview',
+      lastMessage: { ...booking.lastMessage!, sender: 'me', event: { type: 'running_late', params: { minutes: 20 } } },
+    }] });
+    expect(screen.getByText('On the way')).toBeVisible();
+    expect(screen.getByText('Offer received · $50.00')).toBeVisible();
+    expect(screen.getByText('Running 20 minutes late')).toBeVisible();
+    expect(screen.queryByText('You:')).not.toBeInTheDocument();
+  });
+
   it('offers both route-built next steps when no conversations exist', () => {
     inbox(inboxEmptyData);
     expect(screen.getByRole('heading', { name: 'No messages yet' })).toBeVisible();
