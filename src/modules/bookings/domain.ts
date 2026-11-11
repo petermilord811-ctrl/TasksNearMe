@@ -19,6 +19,8 @@ export const CANT_ACCESS_ANSWER_MS = 30 * MINUTE;
 export const CHANGE_PAGES_READY = true;
 
 export const REVIEW_PAGE_READY = true;
+/** Direct invites (UI-025): Book again opens the request page. */
+export const REQUEST_PAGE_READY = true;
 
 export interface BookingFacts {
   status: BookingStatus | string;
@@ -78,6 +80,7 @@ function baseActions(booking: BookingFacts, role: BookingViewerRole, now: Date):
         const actions: ActionDescriptor<BookingActionId>[] = [];
         if (REVIEW_PAGE_READY && !booking.reviewed && booking.reviewWindowOpen) actions.push(make('review', 'primary'));
         if (!booking.helperSaved) actions.push(make('save_helper', 'secondary'));
+        if (REQUEST_PAGE_READY) actions.push(make('book_again', 'secondary'));
         return actions;
       }
       case 'completion_submitted': {

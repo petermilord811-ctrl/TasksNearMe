@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider } from '@/integrations/payments';
+import { users } from '@/modules/accounts/schema';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { invites } from '@/modules/invites/schema';
 import {
@@ -17,6 +18,7 @@ import {
   requestHelper,
 } from '@/modules/invites/service';
 import { payments } from '@/modules/payments/schema';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
 
@@ -106,5 +108,15 @@ describe('direct invites', () => {
     expect(expired?.status).toBe('expired');
     expect((await db.select().from(payments).where(eq(payments.id, expired!.paymentId!)))[0]?.status).toBe('canceled');
     expect(await acceptInvite(deps, 'usr_jordan', expired!.id, now())).toEqual({ ok: false, code: 'expired' });
+  });
+
+  it("can't request a helper whose profile isn't live (paused here)", async () => {
+    const task = await openTask('tsk_inv6');
+    const [lee] = await db.select().from(users).where(eq(users.id, 'usr_lee'));
+    const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, 'usr_lee'));
+    await db.insert(users).values({ ...lee!, id: 'usr_inv_paused', email: 'inv-paused@example.test', name: 'Pat Q.', firstName: 'Pat', phone: '+15125550298' });
+    await db.insert(helperProfiles).values({ ...profile!, userId: 'usr_inv_paused', handle: 'pat-q', status: 'paused' });
+    expect(await getRequestHelperPage(db, pay, 'usr_chris', 'pat-q', {}, now())).toBeNull();
+    expect(await requestHelper(deps, 'usr_chris', 'pat-q', request(task), now())).toEqual({ ok: false, code: 'not_allowed' });
   });
 });

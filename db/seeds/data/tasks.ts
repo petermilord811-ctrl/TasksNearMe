@@ -174,4 +174,22 @@ export const SEED_TASKS: SeedTask[] = [
     offerCount: 2,
     postedHoursAgo: 21,
   },
+  {
+    // Open with no offers: the invite e2e asks Jordan to do it, and he accepts (UI-025).
+    id: 'tsk_nightstands',
+    slug: 'assemble-two-nightstands-mueller-8n2v',
+    posterId: 'usr_maya',
+    categoryId: 'cat_furniture_assembly',
+    title: 'Assemble two nightstands',
+    description: 'Two small flat-pack nightstands with one drawer each. All the parts and hardware are here.',
+    details: { itemType: 'other', itemCount: 2, toolsOnSite: true },
+    placeId: 'plc_mueller_1234',
+    unit: 'Apt 2B',
+    daysFromToday: 9,
+    start: '10:00',
+    end: '13:00',
+    budget: { type: 'fixed', priceCents: 4500 },
+    offerCount: 0,
+    postedHoursAgo: 5,
+  },
 ];

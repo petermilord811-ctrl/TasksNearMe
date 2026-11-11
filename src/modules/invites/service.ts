@@ -15,6 +15,7 @@ import type {
 } from '@/contracts';
 import { counterInviteInputSchema, requestHelperInputSchema, routes } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
+import { users } from '@/modules/accounts/schema';
 import { confirmFundedBooking, methodForChoice, paymentPanel, type BookingDeps } from '@/modules/bookings/confirm';
 import { clientSummary } from '@/modules/bookings/hub';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
@@ -64,8 +65,14 @@ const pricingColumns = (pricing: PricingInput) => ({
   hoursCap: pricing.type === 'hourly' ? pricing.hoursCap : null,
 });
 
+/** Only helpers whose public profile is live can be requested (not paused, suspended, or closed accounts). */
 async function helperIdOf(db: Db, handle: string): Promise<string | null> {
-  const [row] = await db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.handle, String(handle))).limit(1);
+  const [row] = await db
+    .select({ userId: helperProfiles.userId })
+    .from(helperProfiles)
+    .innerJoin(users, eq(users.id, helperProfiles.userId))
+    .where(and(eq(helperProfiles.handle, String(handle)), eq(helperProfiles.status, 'active'), eq(users.status, 'active')))
+    .limit(1);
   return row?.userId ?? null;
 }
 

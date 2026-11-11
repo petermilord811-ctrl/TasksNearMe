@@ -1,5 +1,5 @@
 import type { InviteHandlers, InviteView, MyOffersPageData, RequestHelperHandlers, RequestHelperPageData, TaskOwnerView } from '@/contracts';
-import { routes } from '@/contracts';
+import { compactTaskDetails, routes } from '@/contracts';
 import { mayaPaymentPanel } from './bookings';
 import { myOffersPageData } from './helper-work';
 import { bookshelfBreakdown, bookshelfCounterBreakdown } from './money';
@@ -14,10 +14,12 @@ import { jordan, maya } from './people';
 
 const bookshelfTask = { id: 'tsk_bookshelf', title: 'Assemble a bookshelf', categorySlug: 'furniture-assembly' as const };
 const START = '2026-12-12T16:00:00.000Z'; // Sat Dec 12, 10:00 am
+const BOOKSHELF_WINDOW = { windowStart: '2026-12-12T15:00:00.000Z', windowEnd: '2026-12-12T21:00:00.000Z' };
+const BOOKSHELF_DESCRIPTION = 'A flat-pack bookshelf with a glass door, still in the box. 2nd floor with an elevator.';
 
 export const requestJordanData: RequestHelperPageData = {
   helper: jordan,
-  tasks: [{ ...bookshelfTask, windowStart: '2026-12-12T15:00:00.000Z', windowEnd: '2026-12-12T21:00:00.000Z' }],
+  tasks: [{ ...bookshelfTask, ...BOOKSHELF_WINDOW }],
   listedPricing: { 'furniture-assembly': { type: 'fixed', priceCents: 4000 } },
   suggestion: { taskId: 'tsk_bookshelf', pricing: { type: 'fixed', priceCents: 4500 } },
   payment: mayaPaymentPanel,
@@ -50,15 +52,27 @@ export const bookshelfInviteCounteredPoster: InviteView = { ...sent, status: 'co
 export const bookshelfInviteCounteredHelper: InviteView = { ...bookshelfInviteSentHelper, status: 'countered', counter, actions: [] };
 export const bookshelfInviteAcceptedPoster: InviteView = { ...sent, status: 'accepted', bookingId: 'bkg_bookshelf', expiresAt: undefined, actions: [] };
 export const bookshelfInviteDeclinedPoster: InviteView = { ...sent, status: 'declined', expiresAt: undefined, authorizedCents: undefined, actions: [] };
-export const bookshelfInviteExpiredHelper: InviteView = { ...bookshelfInviteSentHelper, status: 'expired', expiresAt: undefined, actions: [] };
+/** An earlier invite for the same task that Jordan didn't answer in time. */
+export const bookshelfInviteExpiredHelper: InviteView = { ...bookshelfInviteSentHelper, id: 'inv_bookshelf_first', status: 'expired', sentAt: '2026-12-05T16:00:00.000Z', expiresAt: undefined, actions: [] };
 
 /** Jordan's offers page with Maya's invite open in the sheet. */
 export const myOffersWithInviteData: MyOffersPageData = { ...myOffersPageData, invites: [bookshelfInviteSentHelper, bookshelfInviteExpiredHelper], openInviteId: 'inv_bookshelf' };
 
-/** Maya's bookshelf task, with the invite she sent (no public offers). */
+/** Maya's bookshelf task, posted for the invite (no public offers), with Jordan's counter waiting. */
 export const bookshelfOwnerWithInviteView: TaskOwnerView = {
   ...deskOwnerNoOffersView,
-  task: { ...deskOwnerNoOffersView.task, id: 'tsk_bookshelf', title: 'Assemble a bookshelf' },
+  task: {
+    ...deskOwnerNoOffersView.task,
+    ...bookshelfTask,
+    slug: 'assemble-a-bookshelf-mueller-5h2d',
+    excerpt: BOOKSHELF_DESCRIPTION,
+    schedule: { ...BOOKSHELF_WINDOW, flexible: false },
+    budget: { type: 'fixed', priceCents: 4500 },
+    postedAt: '2026-12-08T15:30:00.000Z',
+  },
+  description: BOOKSHELF_DESCRIPTION,
+  details: compactTaskDetails({ itemType: 'bookshelf', itemCount: 1, floor: 2, elevator: true, toolsOnSite: false }),
+  photos: [],
   invites: [bookshelfInviteCounteredPoster],
 };
 

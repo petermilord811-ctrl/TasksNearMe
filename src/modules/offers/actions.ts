@@ -70,6 +70,7 @@ export async function taskOwnerAction(taskId: string, input: { action: Exclude<T
   if (input.action === 'post_again' && ['completed', 'canceled', 'expired'].includes(task.status)) {
     return { ok: true, code: 'updated', redirectTo: `${routes.app.newTask()}?category=${task.categorySlug}` };
   }
+  if (input.action === 'invite_helpers' && task.status === 'open') return { ok: true, code: 'updated', redirectTo: routes.app.saved() };
   return { ok: false, code: 'not_allowed' };
 }
 

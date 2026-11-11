@@ -29,7 +29,7 @@ describe('poster offer actions', () => {
 
 describe('task owner actions', () => {
   it('follow the task status', () => {
-    expect(taskOwnerActions({ status: 'open' }).map((a) => a.id)).toEqual(['cancel_task']);
+    expect(taskOwnerActions({ status: 'open' }).map((a) => a.id)).toEqual(['invite_helpers', 'cancel_task']);
     expect(taskOwnerActions({ status: 'assigned' })).toEqual([]);
     expect(taskOwnerActions({ status: 'expired' }).map((a) => a.id)).toEqual(['post_again']);
   });
