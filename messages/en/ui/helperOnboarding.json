@@ -1,0 +1,119 @@
+{
+  "forms": {
+    "save": "Save changes",
+    "saved": "Saved",
+    "saving": "Saving…",
+    "unsupported": "Choose one of the available services.",
+    "counter": "{count} of {maximum} characters",
+    "profile": {
+      "title": "Profile details",
+      "headline": "Headline",
+      "headlineHint": "Describe the help you offer in 10–80 characters.",
+      "bio": "About you",
+      "bioHint": "Tell clients about your experience and how you work. Use 40–1,000 characters.",
+      "languages": "Languages",
+      "languagesHint": "Choose 1–6 languages you can use with clients.",
+      "privacy": "Clients see your first name and last initial."
+    },
+    "services": {
+      "title": "Services",
+      "empty": "Add the services you can help with, then choose a price for each.",
+      "add": "Add service",
+      "remove": "Remove service {number}",
+      "service": "Service {number}",
+      "category": "Service category",
+      "categoryHint": "Choose each category only once.",
+      "duplicate": "This category is already listed. Choose a different service.",
+      "background": "Needs a background check",
+      "pricing": "Pricing type",
+      "pricingHint": "Choose a starting price or an hourly rate.",
+      "fixed": "Fixed starting price",
+      "hourly": "Hourly rate",
+      "fromPrice": "From price ($)",
+      "fromPriceHint": "The minimum starting price for this category is {amount}.",
+      "hourlyRate": "Hourly rate ($)",
+      "hourlyRateHint": "Your rate for one hour of help.",
+      "minHours": "Minimum hours",
+      "minHoursHint": "Choose 1–8 whole hours.",
+      "categoryMinimum": "Category minimum: {amount}{hours, plural, =0 {} one { per hour, with at least # hour} other { per hour, with at least # hours}}.",
+      "description": "Service description",
+      "descriptionHint": "Explain what's included in up to 300 characters."
+    },
+    "area": {
+      "title": "Service area",
+      "homeArea": "Home area",
+      "homeAreaHint": "Choose the area where you usually start from.",
+      "chooseArea": "Choose an area",
+      "radius": "Service radius",
+      "radiusHint": "How far you're willing to travel from your home area.",
+      "miles": "About {miles} miles",
+      "remote": "I also help remotely",
+      "remoteHint": "Available for the services you offer that support remote help."
+    },
+    "tools": {
+      "title": "Tools",
+      "hint": "List up to 20 tools you bring. Use 2–40 characters for each tool.",
+      "empty": "Add tools so clients know what you can bring.",
+      "tool": "Tool {number}",
+      "add": "Add tool",
+      "remove": "Remove tool {number}"
+    }
+  },
+  "screen": {
+    "title": "Set up your helper profile",
+    "description": "Tell clients how you can help, then finish your checks.",
+    "progressLabel": "Helper setup progress",
+    "steps": {
+      "profile": "Profile",
+      "services": "Services",
+      "area": "Area",
+      "identity": "ID check",
+      "payout": "Payout setup",
+      "background": "Background check",
+      "done": "Ready to help"
+    },
+    "states": {
+      "done": "Done",
+      "current": "Current step",
+      "todo": "Coming up",
+      "skipped": "Not needed",
+      "locked": "Locked"
+    },
+    "titles": {
+      "profile": "Introduce yourself",
+      "services": "Choose your services",
+      "area": "Where can you help?"
+    },
+    "descriptions": {
+      "profile": "A few details help clients understand your experience.",
+      "services": "Choose what you offer and set your starting prices.",
+      "area": "Choose a home area and how far you want to travel."
+    },
+    "saveContinue": "Save and continue",
+    "continueStep": "Continue to {step}",
+    "backgroundSkipped": "A background check isn't needed for your selected services.",
+    "doneReady": "You can make offers now",
+    "donePending": "A few steps left",
+    "doneReadyBody": "You're ready to help in these categories.",
+    "donePendingBody": "Finish the available steps below. Your setup status will update after each check.",
+    "remaining": "Still to finish",
+    "lockedStep": "{step}: Locked",
+    "finishStep": "Finish {step}",
+    "findWork": "Find work",
+    "rewardTitle": "Your welcome gift card reward",
+    "rewardBody": "Complete an eligible task priced at least <minimum></minimum> within {days, plural, one {# day} other {# days}} to earn a <amount></amount> gift card reward.",
+    "previews": {
+      "group": "Helper onboarding",
+      "identityRetry": "ID check: try again",
+      "identityProcessing": "ID check: processing",
+      "payoutActionNeeded": "Payouts: action needed",
+      "backgroundPending": "Background check: pending",
+      "donePending": "Setup still incomplete",
+      "remote": "Area with remote help",
+      "errors": "Provider action errors",
+      "errorHint": "Try the provider buttons to see pending and error feedback.",
+      "savedServices": "Services with prices",
+      "emptyTools": "Tools: empty"
+    }
+  }
+}
