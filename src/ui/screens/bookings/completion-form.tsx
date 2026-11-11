@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { FormProvider, useForm, useWatch, type FieldPath } from 'react-hook-form';
@@ -32,6 +32,7 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
   const [quoting, setQuoting] = useState(false);
   const locked = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const focusInvalid = useRef(false);
   const submitBar = useRef<HTMLDivElement>(null);
   const busy = pending || uploading || quoting;
   const disabled = busy || Boolean(result?.ok);
@@ -40,15 +41,25 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
     if (!result || result.ok || pending) return;
     for (const [name, codes] of Object.entries(result.fieldErrors ?? {})) {
       if (codes?.[0] && /^(photoIds|note|hoursWorked|expenses(?:\.\d+(?:\.(description|amountCents|receiptPhotoId))?)?)$/.test(name)) {
+        focusInvalid.current = true;
         setError(name as FieldPath<CompletionInput>, { type: 'server', message: codes[0] });
       }
     }
-    const timer = setTimeout(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-field-invalid="true"]')?.focus(), 0);
-    return () => clearTimeout(timer);
   }, [result, pending, setError]);
+  // Nested server errors render in a subsequent commit. Focus only once their
+  // controls exist and the fieldset is enabled, without racing a timer.
+  useLayoutEffect(() => {
+    if (!focusInvalid.current || disabled) return;
+    const invalid = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-field-invalid="true"]');
+    if (invalid) {
+      invalid.focus();
+      focusInvalid.current = false;
+    }
+  });
 
   async function submit(input: CompletionInput) {
     if (locked.current || busy) return;
+    focusInvalid.current = false;
     locked.current = true; setPending(true); setResult(undefined);
     let next: ActionResult;
     try { next = await handlers.onSubmit(input); } catch { next = { ok: false, code: 'unknown' }; }
@@ -56,7 +67,7 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
     if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
   const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
-  return <FormProvider {...form}><form ref={formRef} noValidate aria-label={t('form')} aria-busy={busy} className="space-y-6 rounded-xl border bg-card p-4 shadow-card sm:p-6" onSubmit={(event) => { if (disabled) { event.preventDefault(); return; } void form.handleSubmit(submit, () => { setTimeout(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-field-invalid="true"]')?.focus(), 0); })(event); }}>
+  return <FormProvider {...form}><form ref={formRef} noValidate aria-label={t('form')} aria-busy={busy} className="space-y-6 rounded-xl border bg-card p-4 shadow-card sm:p-6" onSubmit={(event) => { if (disabled) { event.preventDefault(); return; } void form.handleSubmit(submit, () => { focusInvalid.current = true; })(event); }}>
     <fieldset disabled={disabled} className="min-w-0" onFocusCapture={(event) => { const bar = submitBar.current; if (bar && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' }); }}><legend className="sr-only">{t('form')}</legend><CompletionFields rules={data.rules} onUploadPhoto={handlers.onUploadPhoto} onBusyChange={setUploading} expensesCents={expensesCents} /></fieldset>
     <CompletionEarnings hoursWorked={values.hoursWorked} expensesCents={expensesCents} valid={validQuote} onQuote={handlers.onQuoteFinal} onBusyChange={setQuoting} disabled={pending || uploading} initialError={initialQuoteError} />
     {result && !result.ok && result.code === 'not_allowed' ? <div role="status" className="space-y-3 rounded-xl border border-warning/40 p-4"><p>{t('changed')}</p><Button type="button" variant="outline" disabled={busy} onClick={() => router.refresh()}>{t('reload')}</Button></div> : <FormFeedback result={feedback} successMessage={t('submitted')} />}

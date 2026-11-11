@@ -1,0 +1,23 @@
+{
+  "title": "Receipt",
+  "brand": "TasksNearMe",
+  "number": "Receipt number",
+  "issued": "Issued",
+  "helper": "Helper",
+  "agreedStart": "Agreed start",
+  "breakdown": "Price breakdown",
+  "activity": "Charges and refunds",
+  "charge": "Charged",
+  "refund": "Refunded",
+  "net": "Net total",
+  "print": "Print",
+  "refundReasons": {
+    "cancellation": "Cancellation",
+    "unused_cap": "Unused hourly cap",
+    "unused_allowance": "Unused expense allowance",
+    "change_decrease": "Lower agreed price",
+    "dispute_settlement": "Problem resolved with a refund",
+    "goodwill": "Goodwill refund",
+    "other": "Refund"
+  }
+}

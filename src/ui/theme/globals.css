@@ -182,3 +182,47 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* A receipt prints in normal document flow, without app or preview navigation. */
+@media print {
+  body:has([data-print-receipt]) *:not([data-print-receipt]):not([data-print-receipt] *):not(:has([data-print-receipt])),
+  [data-print-receipt] [data-print-hidden] {
+    display: none !important;
+  }
+
+  body:has([data-print-receipt]),
+  body:has([data-print-receipt]) *:has([data-print-receipt]) {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: white !important;
+  }
+
+  [data-print-receipt] {
+    --foreground: #1c1b18;
+    --card-foreground: #1c1b18;
+    --muted-foreground: #5f5c54;
+    --primary: #0e7c66;
+    --border: #e4e2da;
+    --card: #ffffff;
+    color-scheme: light;
+    max-width: none;
+    color: var(--foreground);
+  }
+
+  [data-print-receipt] section,
+  [data-print-receipt] li {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  [data-print-receipt] a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
