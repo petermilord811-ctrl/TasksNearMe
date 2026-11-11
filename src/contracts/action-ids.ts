@@ -62,6 +62,8 @@ export const OFFER_ACTION_IDS = [
   'revise_offer',
   'withdraw_offer',
   'reconfirm_offer',
+  /** The helper messages the client about their offer (the offer thread). */
+  'message_poster',
 ] as const;
 export type OfferActionId = (typeof OFFER_ACTION_IDS)[number];
 

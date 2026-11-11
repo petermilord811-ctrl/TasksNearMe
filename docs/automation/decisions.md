@@ -63,3 +63,4 @@ Non-obvious choices made without asking, with the reason and the alternative. Ne
 | 2026-11-11 | The booking's calendar file names the general area only, never the exact address | Calendar entries sync elsewhere and outlive the address window | Include the address for the helper |
 | 2026-11-11 | A seeded confirmed booking (Ben's TV with Jordan, `bkg_tv`) backs the read-only booking-page e2e | Both e2e projects can read it without booking first | Book in each test |
 | 2026-11-11 | The booking page (UI-011) replaces the redirect placeholder at `/app/bookings/[bookingId]`; booking results keep pointing there | The link was final from the start | — |
+| 2026-11-11 | New offer action `message_poster` (the helper messages the client from their offer); placeholder copy "Message the client" for Codex to review in UI-014 | Helpers had no way into the offer thread; the client already had `message_helper` | Reuse `message_helper` for both sides (wrong label for helpers) |
