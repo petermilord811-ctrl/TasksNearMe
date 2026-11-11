@@ -239,6 +239,7 @@ export const samProfileEditorData: HelperProfileEditorData = {
   },
   workSamples: samProfilePageData.workSamples,
   maxWorkSamples: 12,
+  maxPhotoMegabytes: 10,
   badges: sam.badges,
   verification: {
     identity: { status: 'verified', verifiedAt: sam.badges.idVerifiedAt! },
@@ -266,7 +267,8 @@ export const fakeProfileEditorHandlers: HelperProfileEditorHandlers = {
   onSaveServices: () => wait({ ok: true, code: 'saved' }),
   onSaveArea: () => wait({ ok: true, code: 'saved' }),
   onSaveTools: () => wait({ ok: true, code: 'saved' }),
-  onUploadWorkSample: () => wait({ ok: true, photo: samProfilePageData.workSamples[0]!.photo }, 700),
+  onUploadWorkSample: () =>
+    wait({ ok: true, sample: samProfilePageData.workSamples[0]!, photo: samProfilePageData.workSamples[0]!.photo }, 700),
   onUpdateWorkSample: () => wait({ ok: true, code: 'updated' }),
   onRemoveWorkSample: () => wait({ ok: true, code: 'updated' }),
   onReorderWorkSamples: () => wait({ ok: true, code: 'updated' }),

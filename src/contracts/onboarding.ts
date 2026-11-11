@@ -152,6 +152,14 @@ export interface HelperOnboardingHandlers {
   onRefreshStatus: ActionHandler;
 }
 
+/**
+ * The upload result for work samples. The app always returns `sample` (the stored work sample,
+ * ready to caption, reorder, or remove); it's optional only until the editor relies on it.
+ */
+export type WorkSampleUploadResult =
+  | { ok: true; photo: WorkSampleView['photo']; sample?: WorkSampleView }
+  | Extract<PhotoUploadResult, { ok: false }>;
+
 /** `/app/helper/profile`: everything a helper can change after onboarding. */
 export interface HelperProfileEditorData {
   handle: string;
@@ -168,6 +176,8 @@ export interface HelperProfileEditorData {
   workSamples: WorkSampleView[];
   /** Up to this many work samples. */
   maxWorkSamples: number;
+  /** Same size limit as task photos. */
+  maxPhotoMegabytes: number;
   badges: VerificationBadges;
   verification: VerificationSummary;
   /** Paused profiles don't appear in search and can't receive invites. */
@@ -184,7 +194,7 @@ export interface HelperProfileEditorHandlers {
   onSaveArea: ActionHandler<HelperAreaInput>;
   onSaveTools: ActionHandler<HelperToolsInput>;
   /** FormData with one `file`, plus optional `caption` and `categorySlug`. */
-  onUploadWorkSample: QueryHandler<FormData, PhotoUploadResult>;
+  onUploadWorkSample: QueryHandler<FormData, WorkSampleUploadResult>;
   onUpdateWorkSample: ActionHandler<{ id: string; caption?: string; categorySlug?: CategorySlug }>;
   onRemoveWorkSample: ActionHandler<{ id: string }>;
   onReorderWorkSamples: ActionHandler<{ ids: string[] }>;
