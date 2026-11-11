@@ -96,6 +96,10 @@ Keep going until the Build plan below is done, then stop.
   - First choice: split the ticket (UI-0xxa/b).
   - Last resort: build that UI yourself in `src/ui`, following the ticket and `AGENTS.md`, and record it in `decisions.md`.
 
+## Environment gotchas (Windows)
+- Never run `npm ci` in the main checkout while `next dev` (or a Playwright-started server) is running. Native binaries are locked and `npm ci` leaves `node_modules` half-deleted. Stop the server first, or use `npm install`.
+- The Codex worktree needs `.env.local`. `scripts/codex-run.mjs` copies it; copy it by hand after recreating the worktree.
+
 ## Build plan
 
 Order matters. A UI ticket starts once its contracts are ready and the tickets it depends on are merged. **Prepare the next ticket while Codex works on the current one.**
