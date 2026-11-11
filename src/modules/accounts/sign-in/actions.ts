@@ -52,9 +52,10 @@ async function continueAfterSignIn(rawNext: string, userId: string, code: 'updat
 }
 
 async function sendEmailCode(email: string): Promise<ActionResult> {
+  const ip = await clientIp();
   const limited = await consumeRateLimits(db, [
     { key: `email-code:email:${email}`, rule: EMAIL_SEND_RULES.perEmail },
-    { key: `email-code:ip:${await clientIp()}`, rule: EMAIL_SEND_RULES.perIp },
+    ...(ip ? [{ key: `email-code:ip:${ip}`, rule: EMAIL_SEND_RULES.perIp }] : []),
   ]);
   if (!limited.ok) return rateLimited(limited.retryAt);
 

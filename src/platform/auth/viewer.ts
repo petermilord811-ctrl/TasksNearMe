@@ -1,12 +1,12 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
-import { headers } from 'next/headers';
 import { cache } from 'react';
 import { STAFF_ROLES, type Mode, type ShellViewer, type SignedInViewer, type StaffRole, type StaffViewer } from '@/contracts';
 import { staffRoles, staffSessionChecks } from '@/modules/accounts/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { db } from '@/platform/db/client';
 import { auth } from './auth';
+import { authRequestHeaders } from './request-headers';
 
 export interface ViewerUser {
   id: string;
@@ -31,7 +31,7 @@ function initialsOf(firstName: string, lastName: string, fallback: string): stri
 
 /** The signed-in person for this request (deduplicated per request). */
 export const getViewer = cache(async (): Promise<Viewer> => {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await auth.api.getSession({ headers: await authRequestHeaders() });
   if (!session) return { kind: 'public' };
 
   const u = session.user as typeof session.user & {

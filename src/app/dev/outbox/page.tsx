@@ -23,7 +23,13 @@ async function Messages() {
   return (
     <ol style={{ display: 'grid', gap: 12, marginTop: 16 }}>
       {rows.map((m) => (
-        <li key={m.id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12 }}>
+        <li
+          key={m.id}
+          data-testid="outbox-message"
+          data-channel={m.channel}
+          data-to={m.to}
+          style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12 }}
+        >
           <div>
             <strong>{m.channel.toUpperCase()}</strong> to {m.to} · {m.createdAt}
           </div>

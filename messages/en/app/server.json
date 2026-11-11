@@ -30,6 +30,18 @@
     "trustSafety": {
       "title": "Trust and safety",
       "description": "What our badges mean, how we protect your address and payment, and how to report a problem."
+    },
+    "signIn": {
+      "title": "Sign in or create an account",
+      "description": "Sign in to TasksNearMe with a code we email you. No password needed."
+    },
+    "waitlist": {
+      "title": "Join the waitlist",
+      "description": "TasksNearMe isn't in your city yet. Leave your email and ZIP code and we'll tell you when we open near you."
+    },
+    "help": {
+      "title": "Help center",
+      "description": "Answers about posting tasks, payments and fees, getting verified as a helper, and staying safe."
     }
   }
 }

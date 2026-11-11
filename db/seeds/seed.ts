@@ -22,6 +22,7 @@ import { staffRoles, users } from '../../src/modules/accounts/schema';
 import { helperProfiles, helperServices } from '../../src/modules/profiles/schema';
 import { AUSTIN, AUSTIN_AREAS, CATEGORIES } from './data/austin';
 import { PEOPLE, displayNameOf } from './data/people';
+import { CURRENT_TERMS_VERSION } from '../../src/modules/accounts/terms';
 
 export async function seedDatabase(url: string): Promise<void> {
   const { db, pool } = createDb(url, { max: 2 });
@@ -101,6 +102,10 @@ export async function seedDatabase(url: string): Promise<void> {
           lastName: person.lastName,
           phone: person.phone ?? null,
           phoneVerifiedAt: person.phone ? new Date(person.createdAt) : null,
+          // Seeded people finished sign-up (18+ and terms) when they joined.
+          adultAttestedAt: new Date(person.createdAt),
+          termsAcceptedAt: new Date(person.createdAt),
+          termsVersion: CURRENT_TERMS_VERSION,
           mode: person.mode,
           createdAt: new Date(person.createdAt),
         };

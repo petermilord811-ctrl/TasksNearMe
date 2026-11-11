@@ -8,6 +8,7 @@ import type {
   ISODateTime,
   MarketPageData,
   PricingPageData,
+  WaitlistPageData,
 } from '@/contracts';
 import {
   DEFAULT_MARKET_SLUG,
@@ -16,6 +17,7 @@ import {
   getMarketView,
   getPublishedPolicy,
   listCategoryViews,
+  listPublicMarketSlugs,
 } from '@/modules/markets/queries';
 import { countFoundingHelpers, listPublicHelpers } from '@/modules/profiles/queries';
 import { buildBecomeHelperPageData, buildPricingPageData } from './page-data';
@@ -116,4 +118,18 @@ export async function getBecomeHelperPageData(): Promise<BecomeHelperPageData> {
   const { market, policy } = await defaultMarketPolicy();
   const [flags, foundingSpotsClaimed] = await Promise.all([getFlags(market.id), countFoundingHelpers(market.id)]);
   return buildBecomeHelperPageData({ fees: policy.fees, flags, foundingSpotsClaimed });
+}
+
+/** `/waitlist`: the markets we serve or are about to open. */
+export async function getWaitlistPageData(): Promise<WaitlistPageData> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('markets');
+  const markets = await Promise.all(
+    (await listPublicMarketSlugs()).map(async (slug) => {
+      const market = await findPublicMarket(slug);
+      return market ? getMarketView(market) : null;
+    }),
+  );
+  return { markets: markets.filter((market) => market !== null) };
 }

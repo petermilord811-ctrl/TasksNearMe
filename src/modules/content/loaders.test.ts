@@ -1,0 +1,85 @@
+import { describe, expect, it } from 'vitest';
+import type { ContentBlock, InlineNode } from '@/contracts';
+import { CATEGORY_SLUGS, LEGAL_DOCS } from '@/contracts';
+import { getHelpArticle, getHelpCenterData, getLegalDoc, listHelpArticleSlugs } from './loaders';
+
+/** Checks the real files in content/: every article and document parses, and links resolve. */
+
+function hrefs(blocks: ContentBlock[]): string[] {
+  const fromNodes = (nodes: InlineNode[]) => nodes.flatMap((node) => (typeof node === 'object' && 'href' in node ? [node.href] : []));
+  return blocks.flatMap((block) => {
+    switch (block.type) {
+      case 'paragraph':
+      case 'callout':
+        return fromNodes(block.content);
+      case 'list':
+        return block.items.flatMap(fromNodes);
+      default:
+        return [];
+    }
+  });
+}
+
+const slugs = listHelpArticleSlugs();
+const STATIC_PAGES = ['/', '/pricing', '/how-it-works', '/trust-and-safety', '/become-a-helper', '/help', '/waitlist'];
+
+function isKnownInternalLink(href: string): boolean {
+  const pathname = href.split(/[?#]/)[0]!;
+  if (STATIC_PAGES.includes(pathname)) return true;
+  const legal = /^\/legal\/([a-z-]+)$/.exec(pathname);
+  if (legal) return (LEGAL_DOCS as readonly string[]).includes(legal[1]!);
+  const help = /^\/help\/([a-z0-9-]+)$/.exec(pathname);
+  if (help) return slugs.includes(help[1]!);
+  const category = /^\/austin\/([a-z-]+)$/.exec(pathname);
+  if (category) return (CATEGORY_SLUGS as readonly string[]).includes(category[1]!);
+  return false;
+}
+
+describe('help content', () => {
+  it('groups every article under a topic', () => {
+    const data = getHelpCenterData();
+    const listed = data.topics.flatMap((topic) => topic.articles.map((article) => article.slug));
+    expect(listed.sort()).toEqual([...slugs].sort());
+    expect(data.topics.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(slugs)('%s parses, has related articles, and links resolve', (slug) => {
+    const article = getHelpArticle(slug)!;
+    expect(article.blocks.length).toBeGreaterThan(1);
+    expect(article.related.length).toBeGreaterThan(0);
+    expect(article.related.map((r) => r.slug)).not.toContain(slug);
+    for (const href of hrefs(article.blocks)) {
+      if (href.startsWith('/')) expect(isKnownInternalLink(href), href).toBe(true);
+      else expect(href).toMatch(/^https:\/\//);
+    }
+  });
+
+  it('refuses unknown or unsafe slugs', () => {
+    expect(getHelpArticle('nope')).toBeNull();
+    expect(getHelpArticle('../legal/terms')).toBeNull();
+  });
+});
+
+describe('legal content', () => {
+  it.each([...LEGAL_DOCS])('%s is a draft with sections and resolvable links', (doc) => {
+    const data = getLegalDoc(doc)!;
+    expect(data.status).toBe('draft');
+    expect(data.version).toBe('Draft 0.1');
+    expect(data.sections.length).toBeGreaterThan(2);
+    expect(data.otherDocs).toHaveLength(LEGAL_DOCS.length - 1);
+    for (const href of data.sections.flatMap((section) => hrefs(section.blocks))) {
+      if (href.startsWith('/')) expect(isKnownInternalLink(href), href).toBe(true);
+    }
+  });
+
+  it('the cancellation policy agrees with the fee engine example', () => {
+    const text = JSON.stringify(getLegalDoc('cancellation-policy'));
+    expect(text).toContain('$66.00');
+    expect(text).toContain('$54.00');
+    expect(text).toContain('$12.00');
+  });
+
+  it('refuses unknown documents', () => {
+    expect(getLegalDoc('cookies')).toBeNull();
+  });
+});

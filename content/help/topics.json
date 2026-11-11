@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "getting-started",
+    "title": "Getting started",
+    "description": "Posting a task and choosing a helper."
+  },
+  {
+    "slug": "payments",
+    "title": "Payments and fees",
+    "description": "Charges, refunds, and service fees."
+  },
+  {
+    "slug": "helpers",
+    "title": "For helpers",
+    "description": "Verification, offers, and payouts."
+  },
+  {
+    "slug": "safety",
+    "title": "Safety and problems",
+    "description": "Staying safe and reporting a problem."
+  }
+]

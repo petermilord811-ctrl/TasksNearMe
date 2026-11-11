@@ -1,8 +1,10 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
+import { connection } from 'next/server';
 import { createSmsSender } from '@/integrations/sms';
 import { auth } from '@/platform/auth/auth';
+import { authRequestHeaders } from '@/platform/auth/request-headers';
 import { db } from '@/platform/db/client';
 import { createPhoneVerification } from '../phone-verification';
 import { users } from '../schema';
@@ -18,7 +20,7 @@ export const phoneVerification = createPhoneVerification({
 });
 
 export async function currentSessionUserId(): Promise<string | null> {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await auth.api.getSession({ headers: await authRequestHeaders() });
   return session?.user.id ?? null;
 }
 
@@ -40,6 +42,8 @@ export async function loadSignInUser(userId: string): Promise<(SignInUserState &
 
 /** Everything `/sign-in` needs to decide what to show. */
 export async function resolveCurrentSignIn(rawNext: string | null | undefined): Promise<SignInResolution> {
+  // Per-request: the session, pending codes, and the clock.
+  await connection();
   const next = safeNextPath(rawNext);
   const now = new Date();
   const userId = await currentSessionUserId();
@@ -60,10 +64,17 @@ export async function resolveCurrentSignIn(rawNext: string | null | undefined): 
   });
 }
 
-/** The first address in X-Forwarded-For (set by the platform's proxy), for rate-limit keys. */
-export async function clientIp(): Promise<string> {
+const LOOPBACK = new Set(['::1', '127.0.0.1', '::ffff:127.0.0.1', 'localhost']);
+
+/**
+ * The client's address from X-Forwarded-For (set by the hosting platform's proxy), for per-IP
+ * rate limits. Null when unknown or local (development and e2e runs), so those limits don't
+ * lump every local request together; per-account limits still apply.
+ */
+export async function clientIp(): Promise<string | null> {
   const list = await headers();
-  return list.get('x-forwarded-for')?.split(',')[0]?.trim() || list.get('x-real-ip') || 'unknown';
+  const ip = list.get('x-forwarded-for')?.split(',')[0]?.trim() || list.get('x-real-ip')?.trim();
+  return ip && !LOOPBACK.has(ip) ? ip : null;
 }
 
 /** Accounts that may not sign in (blueprint 08: users.status). */

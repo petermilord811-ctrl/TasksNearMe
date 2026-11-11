@@ -22,3 +22,14 @@ One entry per iteration, newest last.
 - UI-002 wired: route groups `(public)`, `(app)/app`, `admin/(gated)` render the Codex shells with the viewer.
 - Fixed: parallel e2e sign-ins replaced each other's codes (now serialized per email); placeholder pages no longer nest `<main>`; `typecheck` runs `next typegen` first.
 - Checks: `check` 126 tests, `test:db` 9, `e2e` 8 (mobile and desktop), `build` pass.
+
+## 2026-11-11 — iteration 3 (public site, sign-in, content)
+- UI-003 wired: fee engine (`modules/payments/fees`), cached market, category, and helper queries, seven public routes, metadata, and 12 e2e tests.
+- UI-004 (Codex, 32 min) merged and wired:
+  - `/sign-in`: server-driven steps, phone verification with a fake SMS provider, DB rate limits.
+  - `/waitlist`, `/help`, `/help/[article]`, `/legal/[doc]`, with 8 help articles and 7 legal drafts.
+  - 16 e2e tests.
+- The runner's independent check failed only on environment problems: no `.env.local` in the worktree, and the harness timing out with 116+ previews. Fixed with an env copy, `/dev/ui` readiness, and a sharded harness.
+- Mistake: `npm ci` in the main checkout while the dev server ran. Windows file locks left `node_modules` half-deleted. Recovered by stopping the server and reinstalling; added a runbook rule.
+- UI-005 (board, public task, helper profile, `PublicShell` promise fix) launched at 07:20 UTC.
+- Checks: `check` 277, `test:db` 15, `e2e` 36, `build` pass.
