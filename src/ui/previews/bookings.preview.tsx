@@ -9,6 +9,7 @@ import {
   deskBookingHelperConfirmed, deskBookingHelperDayOf, deskBookingHelperInProgress,
   deskBookingHelperPendingFunding, deskBookingHelperRunningLate, deskBookingPosterCanceledByHelper, deskBookingPosterCanceledLate,
   deskBookingPosterCompleted, deskBookingPosterCompletionSubmitted, deskBookingPosterConfirmed,
+  deskReviewPublishedData, deskReviewSubmittedData,
   deskBookingPosterPendingFunding, deskCancelPreviewHelperLate, fakeBookingHubHandlers, fakeBookingSheetHandlers, fakeHandler, jordanBookingsPageData,
   jordanShell, mayaBookingsNeedsActionData, mayaBookingsPageData, mayaShell,
   movingBookingPosterConfirmed, remoteBookingHelperConfirmed,
@@ -67,6 +68,19 @@ export const bookingsPreviews: PreviewEntry[] = [
   hubPreview('helper-pending-funding', copy.previews.helperPendingFunding, deskBookingHelperPendingFunding, { now: '2026-11-17T15:02:00.000Z' }),
   hubPreview('client-completion-submitted', copy.previews.clientCompletionSubmitted, deskBookingPosterCompletionSubmitted, { now: afterSubmission }),
   hubPreview('client-completed', copy.previews.clientCompleted, deskBookingPosterCompleted, { now: afterApproval }),
+  hubPreview('client-completed-saved-reviewed', copy.previews.clientSavedReviewed, {
+    ...deskBookingPosterCompleted,
+    helperSaved: true,
+    myReview: deskReviewSubmittedData.mine,
+    // The domain omits actions once the review is sent and the helper is saved.
+    actions: deskBookingPosterCompleted.actions.filter(({ id }) => id !== 'review' && id !== 'save_helper'),
+  }, { now: deskReviewSubmittedData.mine!.submittedAt }),
+  hubPreview('client-completed-review-published', copy.previews.clientReviewPublished, {
+    ...deskBookingPosterCompleted,
+    helperSaved: true,
+    myReview: deskReviewPublishedData.mine,
+    actions: deskBookingPosterCompleted.actions.filter(({ id }) => id !== 'review' && id !== 'save_helper'),
+  }, { now: deskReviewPublishedData.mine!.publishedAt! }),
   hubPreview('helper-completed', copy.previews.helperCompleted, deskBookingHelperCompleted, { now: afterApproval }),
   hubPreview('helper-completed-address-hidden', copy.previews.helperAddressHidden, deskBookingHelperCompletedAddressHidden, { now: '2026-11-24T19:10:00.000Z' }),
   hubPreview('client-canceled-late', copy.previews.clientCanceledLate, deskBookingPosterCanceledLate, { now: '2026-11-20T23:00:00.000Z' }),

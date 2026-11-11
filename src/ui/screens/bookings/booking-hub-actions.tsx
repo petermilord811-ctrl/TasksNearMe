@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { CircleAlert, CircleCheck } from 'lucide-react';
+import { BookmarkCheck, CircleAlert, CircleCheck } from 'lucide-react';
 import { routes, type ActionResult, type BookingActionId, type BookingHubHandlers, type BookingSheetHandlers, type BookingView } from '@/contracts';
 import { formatDateTime, formatTime } from '@/shared/format';
 import { ActionBar } from '@/ui/components/actions/action-bar';
@@ -45,6 +45,8 @@ export function BookingHubActions({ data, handlers, sheets, initialResult, initi
   const [sheetAction, setSheetAction] = useState<SheetAction | null>(null);
   const [sheetSuccess, setSheetSuccess] = useState<{ action: SheetAction; result: ActionResult }>();
   const ActiveSheet = sheetAction ? sheetComponents[sheetAction] : null;
+  const savedStatus = data.helperSaved ? <p className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground"><BookmarkCheck aria-hidden="true" className="size-4" />{t('saved')}</p> : null;
+  const responseDeadline = data.viewerRole === 'poster' ? data.deadlines.posterResponseDueAt : undefined;
 
   useEffect(() => {
     const bar = barRef.current;
@@ -71,15 +73,18 @@ export function BookingHubActions({ data, handlers, sheets, initialResult, initi
     };
   }, [data.id, data.actions.length]);
 
-  return <><ActionBar
+  return <>
+    {data.actions.length === 0 && savedStatus}
+    <ActionBar
     actions={data.actions}
     mobileFixed
     barRef={barRef}
     initialResult={initialResult}
     initialPending={initialPending}
-    description={data.viewerRole === 'poster' && data.deadlines.posterResponseDueAt
-      ? <time dateTime={data.deadlines.posterResponseDueAt} className="font-medium tabular-nums text-warning">{sheetCopy('answerBy', { time: formatTime(data.deadlines.posterResponseDueAt) })}</time>
-      : undefined}
+    description={savedStatus || responseDeadline ? <div className="space-y-2">
+      {savedStatus}
+      {responseDeadline && <time dateTime={responseDeadline} className="block font-medium tabular-nums text-warning">{sheetCopy('answerBy', { time: formatTime(responseDeadline) })}</time>}
+    </div> : undefined}
     onRequestAction={(action, trigger) => {
       if (!isSheetAction(action)) return false;
       sheetTrigger.current = trigger;

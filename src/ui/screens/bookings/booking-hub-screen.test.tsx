@@ -13,6 +13,7 @@ import {
   deskBookingPosterCompleted, deskBookingPosterCompletionSubmitted, deskBookingPosterConfirmed,
   deskBookingPosterCantAccessReported, deskBookingPosterPendingFunding, deskExactAddress, fakeBookingSheetHandlers, fakeHandler, movingBookingPosterConfirmed,
   remoteBookingHelperConfirmed,
+  deskReviewPublishedData, deskReviewSubmittedData,
 } from '@/fixtures';
 import { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
@@ -120,6 +121,56 @@ describe('BookingHubScreen privacy and supplied data', () => {
   it('uses a compact helper card for the client', () => {
     mount();
     expect(screen.getByRole('link', { name: deskBookingPosterConfirmed.helper.displayName })).toHaveAttribute('href', routes.helperProfile(deskBookingPosterConfirmed.helper.handle));
+  });
+
+  it('shows Saved beside the supplied actions and preserves their order and availability', () => {
+    const data: BookingView = {
+      ...deskBookingPosterCompleted,
+      helperSaved: true,
+      actions: [{ id: 'message', kind: 'secondary', enabled: false, disabledReason: { code: 'not_allowed' } }],
+    };
+    const { container } = mount(data);
+    const action = screen.getByRole('button', { name: messages.actions.message });
+    expect(action).toBeDisabled();
+    expect(action.closest('[role="group"]')!.parentElement).toHaveTextContent(messages.bookingHub.saved);
+    expect(Array.from(container.querySelectorAll('[data-action-id]'), (node) => node.getAttribute('data-action-id'))).toEqual(['message']);
+    expect(screen.queryByRole('button', { name: messages.actions.save_helper })).not.toBeInTheDocument();
+  });
+
+  it('still shows Saved when the domain supplies no actions', () => {
+    mount({ ...deskBookingPosterCompleted, helperSaved: true, actions: [] });
+    expect(screen.getByText(messages.bookingHub.saved)).toBeVisible();
+  });
+
+  it('does not remove supplied actions based on saved or review flags', () => {
+    const { container } = mount({ ...deskBookingPosterCompleted, helperSaved: true, myReview: deskReviewSubmittedData.mine });
+    expect(Array.from(container.querySelectorAll('[data-action-id]'), (node) => node.getAttribute('data-action-id'))).toEqual(deskBookingPosterCompleted.actions.map(({ id }) => id));
+    expect(screen.getByRole('button', { name: messages.actions.save_helper })).toBeEnabled();
+    expect(screen.getByRole('button', { name: messages.actions.review })).toBeEnabled();
+  });
+
+  it('shows a sent review and keeps it hidden based on the supplied publication state', () => {
+    mount({ ...deskBookingPosterCompleted, myReview: deskReviewSubmittedData.mine }, '2026-12-06T12:00:00.000Z');
+    const review = screen.getByRole('region', { name: messages.bookingHub.review.title });
+    expect(review).toHaveTextContent('You rated this 5 stars');
+    expect(review).toHaveTextContent(messages.bookingHub.review.hidden);
+    expect(review).not.toHaveTextContent('Visible since');
+  });
+
+  it('shows the supplied publication date and preserves low ratings', () => {
+    mount({ ...deskBookingHelperCompleted, myReview: { ...deskReviewPublishedData.mine!, rating: 1 } });
+    const review = screen.getByRole('region', { name: messages.bookingHub.review.title });
+    expect(review).toHaveTextContent('You rated this 1 star');
+    expect(review).toHaveTextContent(`Visible since ${formatDate(deskReviewPublishedData.mine!.publishedAt!)}`);
+    expect(review.querySelector('time')).toHaveAttribute('dateTime', deskReviewPublishedData.mine!.publishedAt);
+    expect(review).not.toHaveTextContent(messages.bookingHub.review.hidden);
+  });
+
+  it('omits saved and review states when the projection does not include them', () => {
+    mount(deskBookingPosterCompleted);
+    expect(screen.queryByText(messages.bookingHub.saved)).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: messages.bookingHub.review.title })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: messages.actions.save_helper })).toBeEnabled();
   });
 
   it('shows client identity and verification to the helper', () => {

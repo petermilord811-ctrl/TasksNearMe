@@ -1,0 +1,53 @@
+{
+  "title": "How was {name}?",
+  "backToBooking": "Back to booking",
+  "rating": "Your rating (required)",
+  "ratingHint": "Choose 1 to 5 stars. Share how the task went.",
+  "stars": "{count} of 5 stars",
+  "ratingRequired": "Choose a star rating before sending your review.",
+  "tagsLabel": "What stood out? (optional)",
+  "tagsHint": "Choose up to 5 tags.",
+  "tagsCount": "{count} of 5 tags selected",
+  "tagsLimit": "You've selected 5 tags. Remove one to choose another.",
+  "bodyLabel": "Your review (optional)",
+  "bodyHint": "Describe your experience with this task. Up to 1,000 characters.",
+  "bodyCount": "{count} / 1,000 characters",
+  "privacyNote": "Reviews stay hidden until you both send yours, or until {date}.",
+  "send": "Send review",
+  "sending": "Sending review…",
+  "sent": "Review sent. You can see its visibility status on the booking.",
+  "yourReview": "Your review",
+  "submittedAt": "Sent {date} · {relative}",
+  "published": "Visible since {date}",
+  "hidden": "Becomes visible when {name} sends theirs, or on {date}.",
+  "notAllowed": "This review can no longer be sent. Return to the booking to check its status.",
+  "unavailable": {
+    "title": "Review unavailable",
+    "not_completed": "You can send a review after this task is completed. Check the booking for the next step.",
+    "window_closed": "The 14-day review window has ended. You can still see the task details on the booking."
+  },
+  "tags": {
+    "on_time": "On time",
+    "friendly": "Friendly",
+    "careful": "Careful",
+    "clear_communication": "Clear communication",
+    "skilled": "Skilled",
+    "tidy": "Tidy",
+    "good_value": "Good value",
+    "clear_instructions": "Clear instructions",
+    "ready_on_time": "Ready on time",
+    "easy_access": "Easy access",
+    "respectful": "Respectful",
+    "quick_to_reply": "Quick to reply"
+  },
+  "previews": {
+    "group": "Review a completed task",
+    "byClient": "Client reviews the helper",
+    "byHelper": "Helper reviews the client",
+    "submitted": "Review sent and hidden",
+    "published": "Review visible",
+    "submitting": "Sending a review",
+    "success": "Review sent confirmation",
+    "unavailable": { "not_completed": "Task not completed", "window_closed": "Review window ended" }
+  }
+}
