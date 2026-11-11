@@ -30,9 +30,9 @@ export function ChangeReviewContent({ data, handlers, now, initialResult, initia
 }) {
   const t = useTranslations('changes.review');
   const { booking, change } = data;
-  const otherRole = booking.viewerRole === 'poster' ? 'helper' : 'client';
+  const otherName = booking.viewerRole === 'poster' ? booking.helperDisplayName : booking.posterDisplayName;
   const statusLabel = change.status === 'proposed'
-    ? t(change.fromMe ? `waiting.${otherRole}` : 'waiting.you')
+    ? change.fromMe ? t('waiting.person', { name: otherName }) : t('waiting.you')
     : change.status === 'accepted_pending_funding' && booking.viewerRole === 'poster' && change.differenceCents !== undefined
       ? t('payToApply', { amount: formatMoney(change.differenceCents) })
       : t(`statuses.${change.status}`);
@@ -48,7 +48,7 @@ export function ChangeReviewContent({ data, handlers, now, initialResult, initia
       {change.expiresAt && <Deadline at={change.expiresAt} now={now} label={t('expires')} tone="warning" />}
     </header>
     <section aria-label={t('proposal')} className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-6">
-      <h2 className="font-heading text-xl/7 font-semibold">{t(change.fromMe ? 'proposedBy.you' : `proposedBy.${otherRole}`)}</h2>
+      <h2 className="font-heading text-xl/7 font-semibold">{change.fromMe ? t('proposedBy.you') : t('proposedBy.person', { name: otherName })}</h2>
       <time dateTime={change.createdAt} className="block text-sm tabular-nums text-muted-foreground">{formatDateTime(change.createdAt)}</time>
       <p className="whitespace-pre-wrap break-words">{change.message}</p>
     </section>

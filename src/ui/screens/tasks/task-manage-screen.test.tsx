@@ -4,9 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, TASK_CANCEL_REASONS, routes, type ActionResult, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
-import { deskOwnerBookedView, deskOwnerNoOffersView, deskOwnerView, remoteOwnerView } from '@/fixtures';
+import { bookshelfOwnerWithInviteView, deskOwnerBookedView, deskOwnerNoOffersView, deskOwnerView, fakeInviteHandlers, remoteOwnerView } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import taskManage from '../../../../messages/en/ui/taskManage.json';
+import inviteCard from '../../../../messages/en/ui/inviteCard.json';
 import offers from '../../../../messages/en/ui/offers.json';
 import myTasks from '../../../../messages/en/ui/myTasks.json';
 import feedback from '../../../../messages/en/ui/feedback.json';
@@ -32,6 +33,14 @@ function show(data: TaskOwnerView = deskOwnerView, handlers = ownerHandlers(), e
 }
 
 describe('TaskManageScreen actions', () => {
+  it('shows sent invites above offers with the supplied response actions', () => {
+    render(<NextIntlClientProvider locale="en" messages={{ ...messages, inviteCard }}><TaskManageScreen data={bookshelfOwnerWithInviteView} handlers={ownerHandlers()} inviteHandlers={fakeInviteHandlers} now={now} /></NextIntlClientProvider>);
+    const invites = screen.getByRole('region', { name: 'Invites you sent' });
+    const offers = screen.getByRole('region', { name: '0 offers' });
+    expect(invites.compareDocumentPosition(offers) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(invites).getByRole('button', { name: 'Accept counter' })).toBeEnabled();
+  });
+
   it('requires a cancellation reason and submits it only after confirmation', async () => {
     const user = userEvent.setup();
     const handlers = ownerHandlers();

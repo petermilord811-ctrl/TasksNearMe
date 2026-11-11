@@ -1,5 +1,5 @@
 import { routes, type AppShellHandlers, type MyOffersPageData, type PreviewEntry } from '@/contracts';
-import { fakeHandler, jordanShell, myOffersEmptyData, myOffersPageData } from '@/fixtures';
+import { fakeHandler, fakeInviteHandlers, jordanShell, myOffersEmptyData, myOffersPageData, myOffersWithInviteData } from '@/fixtures';
 import { MyOffersScreen } from '@/ui/screens/work/my-offers-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/myOffers.json';
@@ -11,6 +11,10 @@ function preview(variant: string, title: string, data: MyOffersPageData, initial
 }
 
 export const myOffersPreviews: PreviewEntry[] = [
+  {
+    id: 'screen-my-offers/with-invite', title: copy.previews.withInvite, group: copy.previews.group, layout: 'fullscreen',
+    render: () => <AppShell viewer={jordanShell} handlers={shellHandlers} currentPath={routes.app.offers(myOffersWithInviteData.openInviteId)}><MyOffersScreen data={{ ...myOffersWithInviteData, invites: myOffersWithInviteData.invites?.map((invite, index) => index === 0 ? invite : { ...invite, id: `${invite.id}-${invite.status}` }) }} now="2026-12-08T17:00:00.000Z" inviteHandlers={fakeInviteHandlers} /></AppShell>,
+  },
   preview('default', copy.previews.default, myOffersPageData),
   preview('empty', copy.previews.empty, myOffersEmptyData),
   preview('booked', copy.previews.booked, { ...myOffersPageData, booked: [{ ...myOffersPageData.active[0], offer: { ...myOffersPageData.active[0].offer, status: 'accepted' } }] }, 'booked'),

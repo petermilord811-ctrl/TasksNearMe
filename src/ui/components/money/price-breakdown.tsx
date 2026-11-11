@@ -11,6 +11,7 @@ export interface PriceBreakdownProps {
   title?: string;
   /** Context-specific label for a poster's total, for example a booking already charged. */
   posterTotalLabel?: string;
+  headingLevel?: 2 | 3 | 4;
 }
 
 function Line({
@@ -33,17 +34,18 @@ function Line({
 }
 
 /** Every amount is supplied by the app. This component formats values; it never derives totals. */
-export function PriceBreakdown({ breakdown, variant, title, posterTotalLabel }: PriceBreakdownProps) {
+export function PriceBreakdown({ breakdown, variant, title, posterTotalLabel, headingLevel = 2 }: PriceBreakdownProps) {
   const t = useTranslations('money');
   const showPoster = variant === 'poster' || variant === 'admin';
   const showHelper = variant === 'helper' || variant === 'admin';
   const hourly = breakdown.pricingType === 'hourly' ? breakdown.hourly : undefined;
   const hasFinalExpenses = breakdown.approvedExpensesCents !== undefined;
   const titleText = title ?? t('title');
+  const Heading = headingLevel === 4 ? 'h4' : headingLevel === 3 ? 'h3' : 'h2';
 
   return (
     <section aria-label={titleText} className="w-full min-w-0 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-6">
-      <h2 className="mb-4 text-xl font-semibold leading-7">{titleText}</h2>
+      <Heading className="mb-4 text-xl font-semibold leading-7">{titleText}</Heading>
       <dl className="text-base">
         <Line label={t('taskPrice')}><Money cents={breakdown.taskPriceCents} /></Line>
         {hourly && (

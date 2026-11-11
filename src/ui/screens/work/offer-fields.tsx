@@ -5,7 +5,8 @@ import { Controller, useFormContext, type FieldPath } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import type { OfferInput, OfferRules } from '@/contracts';
-import { formatHours, formatMoney, formatMoneyInput, formatTime, marketLocalToUtc, parseMoneyInput } from '@/shared/format';
+import { formatHours, formatMoney, formatTime, marketLocalToUtc } from '@/shared/format';
+import { MoneyInput } from '@/ui/components/forms/money-input';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Input } from '@/ui/primitives/input';
 import { Textarea } from '@/ui/primitives/textarea';
@@ -27,11 +28,9 @@ function OfferField({ name, label, hint, children }: { name: FieldPath<OfferInpu
 
 function OfferMoneyField({ name, label, hint }: { name: 'pricing.priceCents' | 'pricing.rateCents'; label: string; hint: string }) {
   const { control } = useFormContext<OfferInput>();
-  const [editing, setEditing] = useState<{ cents: number; raw: string }>();
-  return <OfferField name={name} label={label} hint={hint}>{(id, invalid) => <Controller control={control} name={name} render={({ field }) => <Input
+  return <OfferField name={name} label={label} hint={hint}>{(id, invalid) => <Controller control={control} name={name} render={({ field }) => <MoneyInput
     id={id} name={field.name} ref={field.ref} onBlur={field.onBlur} inputMode="decimal" aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="max-w-sm scroll-mb-40 tabular-nums"
-    value={editing && Object.is(editing.cents, field.value) ? editing.raw : Number.isInteger(field.value) && field.value >= 0 ? formatMoneyInput(field.value) : ''}
-    onChange={(event) => { const raw = event.target.value; const cents = parseMoneyInput(raw) ?? -1; setEditing({ raw, cents }); field.onChange(cents); }}
+    value={field.value} onValueChange={field.onChange}
   />} />}</OfferField>;
 }
 

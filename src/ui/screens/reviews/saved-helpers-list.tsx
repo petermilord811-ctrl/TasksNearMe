@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bookmark, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -8,7 +9,7 @@ import { routes, type ActionResult, type HelperSummary, type SavedHelperHandlers
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { HelperCard } from '@/ui/components/people/helper-card';
-import { Button } from '@/ui/primitives/button';
+import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 
 export interface SavedHelpersPreviewState {
@@ -50,6 +51,7 @@ function SavedHelperItem({ helper, handlers, onRemoved, preview }: {
 
   return <li className="flex min-w-0 flex-col gap-3">
     <div className="flex-1"><HelperCard helper={helper} /></div>
+    <Link href={routes.app.requestHelper(helper.handle)} className={buttonVariants({ variant: 'secondary' })}>{t('request', { name: helper.displayName })}</Link>
     <Button type="button" variant="outline" className="self-start" disabled={pending || removed} aria-busy={pending} aria-label={t(pending ? 'removingLabel' : removed ? 'removedLabel' : 'removeLabel', { name: helper.displayName })} onClick={() => void remove()}>
       {pending ? <Spinner aria-hidden="true" /> : removed ? <Check aria-hidden="true" /> : null}
       {t(pending ? 'removing' : removed ? 'removedButton' : 'remove')}

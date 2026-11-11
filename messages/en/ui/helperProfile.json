@@ -1,7 +1,7 @@
 {
   "travelRadius": "Travels up to about {miles, plural, one {# mile} other {# miles}} from {area}",
   "remoteOk": "Remote OK",
-  "requestBooking": "Request a booking",
+  "requestBooking": "Request {name}",
   "memberSince": "Member since {date}",
   "completed": "{count, plural, one {# task completed} other {# tasks completed}}",
   "responseTime": "Usually responds in about {minutes, number} min",

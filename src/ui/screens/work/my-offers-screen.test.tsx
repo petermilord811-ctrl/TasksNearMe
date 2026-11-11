@@ -1,14 +1,16 @@
 /** @vitest-environment jsdom */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { routes, type MyOffersPageData } from '@/contracts';
-import { myOffersEmptyData, myOffersPageData } from '@/fixtures';
+import { fakeInviteHandlers, myOffersEmptyData, myOffersPageData, myOffersWithInviteData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import myOffers from '../../../../messages/en/ui/myOffers.json';
+import inviteCard from '../../../../messages/en/ui/inviteCard.json';
 import { MyOffersScreen } from './my-offers-screen';
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 afterEach(cleanup);
 const now = '2026-11-17T15:00:00.000Z';
 function renderOffers(data: MyOffersPageData = myOffersPageData, initialTab: 'active' | 'booked' | 'closed' = 'active') {
@@ -16,6 +18,23 @@ function renderOffers(data: MyOffersPageData = myOffersPageData, initialTab: 'ac
 }
 
 describe('MyOffersScreen', () => {
+  it('opens the requested invite in a sheet, retains supplied order, and restores focus', async () => {
+    const user = userEvent.setup();
+    const data = { ...myOffersWithInviteData, invites: myOffersWithInviteData.invites?.map((invite, index) => index ? { ...invite, id: `${invite.id}-expired` } : invite) };
+    render(<NextIntlClientProvider locale="en" messages={{ ...messages, myOffers, inviteCard }}><MyOffersScreen data={data} now={now} inviteHandlers={fakeInviteHandlers} /></NextIntlClientProvider>);
+    const dialog = screen.getByRole('dialog', { name: 'Task invite' });
+    expect(within(dialog).getByText('New request')).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const section = screen.getByRole('region', { name: 'Invites' });
+    const rows = within(section).getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('New request');
+    expect(rows[1]).toHaveTextContent('Expired');
+    expect(within(rows[0]).getByRole('button')).toHaveFocus();
+    await user.click(within(rows[1]).getByRole('button'));
+    expect(within(screen.getByRole('dialog')).getByText('Expired')).toBeVisible();
+  });
+
   it('shows tab counts, helper status, supplied earnings, expiry, and helper links', () => {
     renderOffers();
     expect(screen.getByRole('tab', { name: 'Active (2)' })).toHaveAttribute('aria-selected', 'true');
