@@ -43,4 +43,11 @@ describe('PricingScreen', () => {
     expect(within(lateRow).getByText('$12.00')).toBeInTheDocument();
     expect(within(table).getAllByText('Full refund: $66.00')).toHaveLength(2);
   });
+
+  it('takes full refunds from the cancellation payment rather than an unrelated price example', () => {
+    show({ ...pricingPageData, fixedExample: pricingPageData.minimumFeeExample });
+    const table = screen.getByRole('table', { name: 'Cancellation example for a $60.00 task' });
+    expect(within(table).getAllByText('Full refund: $66.00')).toHaveLength(2);
+    expect(within(table).queryByText('Full refund: $28.00')).not.toBeInTheDocument();
+  });
 });

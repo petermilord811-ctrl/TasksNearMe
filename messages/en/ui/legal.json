@@ -1,0 +1,14 @@
+{
+  "updated": "Updated {date}",
+  "effective": "Effective {date}",
+  "draftTitle": "Draft — not in effect yet",
+  "draftDescription": "This document is being reviewed. It is not in effect yet and may change before publication.",
+  "contentsTitle": "On this page",
+  "otherPoliciesTitle": "Other policies",
+  "previews": {
+    "group": "Legal pages",
+    "draft": "Terms of service: draft",
+    "published": "Terms of service: published",
+    "publishedVersion": "Version 1.0"
+  }
+}

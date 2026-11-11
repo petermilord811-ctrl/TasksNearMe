@@ -1,0 +1,26 @@
+{
+  "title": "Help center",
+  "description": "Find answers about tasks, bookings, payments, and getting started.",
+  "searchLabel": "Search help articles",
+  "searchHint": "Search by a word in the article title or summary.",
+  "searchPlaceholder": "What do you need help with?",
+  "results": "{count, plural, =0 {No articles found} one {# article found} other {# articles found}}",
+  "emptyTitle": "No matching articles",
+  "emptyDescription": "Try a different word, or contact support for help with your question.",
+  "updated": "Updated {date}",
+  "relatedTitle": "Related articles",
+  "supportTitle": "Still need help?",
+  "supportDescription": "Tell us what happened. Our support team can help you find the next step.",
+  "supportLink": "Contact support",
+  "externalLink": "(opens another site)",
+  "calloutInfo": "Good to know",
+  "calloutWarning": "Please note",
+  "previews": {
+    "group": "Help and content",
+    "center": "Help center",
+    "empty": "Help center with no articles",
+    "article": "Help article: payment timing",
+    "blocks": "Every content block",
+    "support": "Support card"
+  }
+}

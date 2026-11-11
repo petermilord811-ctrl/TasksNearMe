@@ -45,4 +45,17 @@ describe('BecomeHelperScreen', () => {
       expect(link).toHaveAttribute('href', routes.signIn(routes.app.helperOnboarding()));
     }
   });
+
+  it('shows each reward program\'s supplied minimum and redemption timing', () => {
+    show({
+      ...becomeHelperPageData,
+      welcomeReward: { ...becomeHelperPageData.welcomeReward!, unlockDays: 2, redeemWithinDays: 30 },
+      repeatReward: { ...becomeHelperPageData.repeatReward!, unlockDays: 5, redeemWithinDays: 45 },
+    });
+    const welcome = screen.getByRole('region', { name: 'Welcome gift card reward' });
+    expect(within(welcome).getByText(/Unlocks 2 days/)).toHaveTextContent('Redeem within 30 days of unlocking.');
+    const repeat = screen.getByRole('region', { name: 'Repeat-client gift card reward' });
+    expect(within(repeat).getByText(/3rd paid booking of \$25\.00 or more/)).toHaveTextContent('within 90 days');
+    expect(within(repeat).getByText(/unlocks 5 days/)).toHaveTextContent('Redeem within 45 days of unlocking.');
+  });
 });

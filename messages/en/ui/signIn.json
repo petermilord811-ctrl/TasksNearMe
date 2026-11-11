@@ -1,0 +1,55 @@
+{
+  "oneAccount": "Sign in and sign up happen here, with the same steps.",
+  "email": { "title": "Sign in or create an account", "description": "We'll email you a code to continue. No password to remember." },
+  "emailCode": { "title": "Check your email", "description": "We sent a 6-digit code to <strong>{email}</strong>." },
+  "phoneCode": { "title": "Enter the code we texted to {phone}" },
+  "codeLifetime": "The code works for {minutes, plural, one {# minute} other {# minutes}}.",
+  "codeSent": "Code sent. Check your messages to continue.",
+  "newCodeSent": "New code sent.",
+  "resend": "Send a new code",
+  "resendCountdown": "You can send a new code in {seconds, plural, one {# second} other {# seconds}}.",
+  "resendAt": "You can send a new code after {at} (Central time).",
+  "resendReady": "You can send a new code now.",
+  "changeEmail": "Use a different email",
+  "changePhone": "Use a different number",
+  "profile": {
+    "title": "Tell us your name",
+    "privacy": "Others see your first name and last initial.",
+    "firstNameHint": "This is the name others will see.",
+    "lastNameHint": "Only your last initial is shown to others.",
+    "adultAttested": "I'm 18 or older",
+    "ageHint": "You must be 18 or older to use TasksNearMe.",
+    "termsAccepted": "I agree to the Terms of service and Privacy policy",
+    "policies": "Read the <terms>Terms of service</terms> and <privacy>Privacy policy</privacy>."
+  },
+  "phone": {
+    "title": "Add your phone number",
+    "privacy": "We text a code. We never share your number.",
+    "reasons": {
+      "post": "You need a verified phone to post a task.",
+      "offer": "You need a verified phone to send an offer.",
+      "book": "You need a verified phone to book a helper.",
+      "account": "Verify your phone number for your account."
+    }
+  },
+  "previews": {
+    "group": "Sign in",
+    "email": "Email",
+    "email-code": "Email code",
+    "profile": "New profile",
+    "profile-prefilled": "Profile with saved names",
+    "phone-post": "Phone for posting",
+    "phone-offer": "Phone for offering",
+    "phone-book": "Phone for booking",
+    "phone-account": "Phone for account",
+    "phone-code": "Phone code",
+    "code-incorrect": "Incorrect code",
+    "code-expired": "Expired code",
+    "too-many-tries": "Too many attempts",
+    "phone-not-supported": "Unsupported phone number",
+    "phone-in-use": "Phone number in use",
+    "profile-incomplete": "Incomplete profile",
+    "account-not-allowed": "Account unavailable",
+    "resend-countdown": "Resend countdown"
+  }
+}

@@ -16,6 +16,9 @@ import { primitivePreviews } from './primitives.preview';
 import { shellPreviews } from './shell.preview';
 import { publicCardPreviews } from './public-cards.preview';
 import { publicPagePreviews } from './public-pages.preview';
+import { authPreviews } from './auth.preview';
+import { waitlistPreviews } from './waitlist.preview';
+import { contentPreviews } from './content.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -32,4 +35,7 @@ export const previews: PreviewEntry[] = [
   ...shellPreviews,
   ...publicCardPreviews,
   ...publicPagePreviews,
+  ...authPreviews,
+  ...waitlistPreviews,
+  ...contentPreviews,
 ];

@@ -15,7 +15,12 @@ import shell from './shell.json';
 import publicPages from './publicPages.json';
 import taskCard from './taskCard.json';
 import helperCard from './helperCard.json';
+import forms from './forms.json';
+import signIn from './signIn.json';
+import waitlist from './waitlist.json';
+import help from './help.json';
+import legal from './legal.json';
 
-const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard };
+const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal };
 
 export default uiMessages;

@@ -1,0 +1,19 @@
+{
+  "title": "We're not in your city yet.",
+  "description": "Tell us where you'd like local help. We'll email you when TasksNearMe opens near you.",
+  "join": "Join the waitlist",
+  "interests": {
+    "need_help": "I need help",
+    "give_help": "I want to help",
+    "both": "Both"
+  },
+  "joinedTitle": "You're on the list.",
+  "joinedDescription": "We'll email {email} when TasksNearMe opens near {zip}.",
+  "marketsTitle": "Already in Austin?",
+  "marketLink": "See local help in {market}",
+  "previews": {
+    "group": "Waitlist",
+    "default": "Join the waitlist",
+    "joined": "Waitlist confirmation"
+  }
+}
