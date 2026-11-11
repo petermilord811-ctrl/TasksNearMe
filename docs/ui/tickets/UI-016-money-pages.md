@@ -1,6 +1,6 @@
 # UI-016 — Money pages: receipts and cards, earnings and payouts
 
-**Status:** ready for Codex · **Branch:** `ui/UI-016-money-pages` · **Plan first:** no (unattended) · **Depends on:** UI-012 (merged)
+**Status:** wired · **Branch:** `ui/UI-016-money-pages` · **Plan first:** no (unattended) · **Depends on:** UI-012 (merged)
 
 ## Goal
 Both people can see where the money went (blueprint 02 J7, 04 §5–6):
@@ -74,6 +74,6 @@ Copy namespaces: `paymentsPage`, `receipt`, `earnings`. The `payments` namespace
 - Rewards and gift cards (a later ticket), tax forms, instant payouts, and real card entry (the Stripe Payment Element comes with the Stripe integration).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app/payments`, `/app/payments/[bookingId]`, `/app/earnings`.
+- Queries / actions: `getPaymentsPage`, `getReceiptPage`, `getEarningsPage` (settles development payouts), `addCard`, `removeCard`, `makeDefaultCard` (`src/modules/earnings/service.ts`); Server Actions in `src/modules/earnings/actions.ts`; the ledger is written by `recordCompletionMoney` and `recordCompensation`.
+- e2e: `tests/e2e/money.spec.ts`.

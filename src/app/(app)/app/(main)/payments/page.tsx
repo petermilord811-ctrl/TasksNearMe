@@ -1,0 +1,35 @@
+import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import { routes } from '@/contracts';
+import { addCardAction, makeDefaultCardAction, removeCardAction } from '@/modules/earnings/actions';
+import { getPaymentsPage } from '@/modules/earnings/service';
+import { getViewer } from '@/platform/auth/viewer';
+import { db } from '@/platform/db/client';
+import { PageSkeleton } from '@/ui/components';
+import { PaymentsScreen } from '@/ui/screens/money';
+
+export const metadata: Metadata = { title: 'Payments', robots: { index: false } };
+
+/** The client's receipts and saved cards. */
+export default function PaymentsPage() {
+  return (
+    <Suspense fallback={<PageSkeleton variant="list" />}>
+      <Payments />
+    </Suspense>
+  );
+}
+
+async function Payments() {
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.payments()));
+  const now = new Date();
+  const data = await getPaymentsPage(db, viewer.user.id);
+  return (
+    <PaymentsScreen
+      data={data}
+      now={now.toISOString()}
+      handlers={{ onAddCard: addCardAction, onRemoveCard: removeCardAction, onMakeDefault: makeDefaultCardAction }}
+    />
+  );
+}
