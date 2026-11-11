@@ -7,9 +7,11 @@ import { useForm } from 'react-hook-form';
 import type { ActionResult, AdminCaseActionId, AdminCaseHandlers, AdminCasePageData } from '@/contracts';
 import { useFormAction } from '@/ui/lib/use-form-action';
 import { Button } from '@/ui/primitives/button';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/ui/primitives/dialog';
 import { Spinner } from '@/ui/primitives/spinner';
-import { AdminCaseFeedback, AdminNoteForm, AdminReplyForm, AdminResolutionForm, AdminStatusForm, type AdminReplyState } from './admin-case-forms';
+import { AdminCaseFeedback, AdminNoteForm, AdminReplyForm, AdminStatusForm, type AdminReplyState } from './admin-case-forms';
+import { AdminResolutionForm, type AdminResolutionState } from './admin-resolution-form';
 
 export interface AdminCaseControlsProps {
   data: AdminCasePageData;
@@ -17,9 +19,10 @@ export interface AdminCaseControlsProps {
   children: ReactNode;
   initialDialog?: 'resolve';
   replyState?: AdminReplyState;
+  resolutionState?: AdminResolutionState;
 }
 
-export function AdminCaseControls({ data, handlers, children, initialDialog, replyState }: AdminCaseControlsProps) {
+export function AdminCaseControls({ data, handlers, children, initialDialog, replyState, resolutionState }: AdminCaseControlsProps) {
   const t = useTranslations('adminCase');
   const id = useId();
   const router = useRouter();
@@ -63,11 +66,17 @@ export function AdminCaseControls({ data, handlers, children, initialDialog, rep
       {data.actions.includes('reply') && <AdminReplyForm key={`${data.case.id}-reply`} data={data} handlers={handlers} focusId={`${id}-reply`} {...replyState} />}
       {data.actions.includes('add_note') && <AdminNoteForm key={`${data.case.id}-note`} handlers={handlers} focusId={`${id}-add_note`} />}
     </div>}
-    <Dialog open={dialogAllowed} onOpenChange={(open) => { if (!open && !dialogBusy) setDialog(undefined); }}>
+    <Dialog open={dialogAllowed && dialog === 'set_status'} onOpenChange={(open) => { if (!open && !dialogBusy) setDialog(undefined); }}>
       <DialogContent showCloseButton={!dialogBusy} onEscapeKeyDown={(event) => { if (dialogBusy) event.preventDefault(); }} onInteractOutside={(event) => { if (dialogBusy) event.preventDefault(); }} onCloseAutoFocus={(event) => { event.preventDefault(); trigger.current?.focus(); }} className="max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
-        <DialogHeader><DialogTitle>{t(dialog === 'resolve' ? 'resolve.title' : 'status.title')}</DialogTitle><DialogDescription>{t(dialog === 'resolve' ? 'resolve.description' : 'status.description')}</DialogDescription></DialogHeader>
-        {dialog === 'resolve' ? <AdminResolutionForm data={data} handlers={handlers} onSuccess={dialogSuccess} onBusy={setDialogBusy} onCancel={() => setDialog(undefined)} /> : <AdminStatusForm data={data} handlers={handlers} onSuccess={dialogSuccess} onBusy={setDialogBusy} onCancel={() => setDialog(undefined)} />}
+        <DialogHeader><DialogTitle>{t('status.title')}</DialogTitle><DialogDescription>{t('status.description')}</DialogDescription></DialogHeader>
+        <AdminStatusForm data={data} handlers={handlers} onSuccess={dialogSuccess} onBusy={setDialogBusy} onCancel={() => setDialog(undefined)} />
       </DialogContent>
     </Dialog>
+    <AlertDialog open={dialogAllowed && dialog === 'resolve'} onOpenChange={(open) => { if (!open && !dialogBusy) setDialog(undefined); }}>
+      <AlertDialogContent onEscapeKeyDown={(event) => { if (dialogBusy) event.preventDefault(); }} onCloseAutoFocus={(event) => { event.preventDefault(); trigger.current?.focus(); }} className="max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
+        <AlertDialogHeader><AlertDialogTitle>{t('resolve.title')}</AlertDialogTitle><AlertDialogDescription>{t('resolve.description')}</AlertDialogDescription></AlertDialogHeader>
+        <AdminResolutionForm data={data} handlers={handlers} onSuccess={dialogSuccess} onBusy={setDialogBusy} onCancel={() => setDialog(undefined)} {...resolutionState} />
+      </AlertDialogContent>
+    </AlertDialog>
   </div>;
 }
