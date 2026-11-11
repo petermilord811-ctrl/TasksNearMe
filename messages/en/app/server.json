@@ -1,5 +1,35 @@
 {
   "calendar": {
     "eventTitle": "TasksNearMe: {title}"
+  },
+  "meta": {
+    "home": {
+      "title": "TasksNearMe: everyday help from people near you in {market}",
+      "description": "Book trusted local help in {market} for furniture assembly, moving, yard work, light cleaning, and computer help. See the full price before you book."
+    },
+    "market": {
+      "title": "Local help in {market}",
+      "description": "Verified helpers in {market} for furniture assembly, moving help, yard cleanup, light cleaning, and computer help."
+    },
+    "category": {
+      "title": "{category} in {market}",
+      "description": "{category} in {market}: typical prices, what's included, and verified local helpers."
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "description": "Post a task, choose a helper, and approve the work. Or set up your profile and make offers on tasks near you."
+    },
+    "becomeHelper": {
+      "title": "Become a helper",
+      "description": "Earn with your everyday skills. See what you'll earn before you accept a task."
+    },
+    "pricing": {
+      "title": "Pricing and fees",
+      "description": "What you pay and what helpers earn: service fees, hourly tasks, expenses, and cancellations, with worked examples."
+    },
+    "trustSafety": {
+      "title": "Trust and safety",
+      "description": "What our badges mean, how we protect your address and payment, and how to report a problem."
+    }
   }
 }

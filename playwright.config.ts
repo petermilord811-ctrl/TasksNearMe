@@ -14,6 +14,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   reporter: [['list']],
   timeout: 120_000,
+  // One dev server compiles routes on demand; more workers only queue behind it and time out.
+  workers: process.env.CI ? 2 : 4,
+  expect: { timeout: 15_000 },
   use: {
     baseURL,
     trace: 'retain-on-failure',

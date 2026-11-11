@@ -1,11 +1,18 @@
-// Temporary until the home screen (UI-003) is wired here. The shell provides <main>.
-import { EmptyState, PageHeader } from '@/ui/components';
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
+import { getHomePageData } from '@/modules/marketing/queries';
+import { HomeScreen } from '@/ui/screens/public';
 
-export default function HomePlaceholderPage() {
-  return (
-    <div className="space-y-6">
-      <PageHeader title="TasksNearMe" description="Book trusted local help for everyday tasks in Austin." />
-      <EmptyState title="The public site is on its way" body="UI previews are at /dev/ui; sample sign-ins at /dev/sign-in." />
-    </div>
-  );
+export async function generateMetadata(): Promise<Metadata> {
+  const [page, t] = await Promise.all([getHomePageData(), getTranslations('server.meta.home')]);
+  const market = page?.data.market.name ?? '';
+  return { title: { absolute: t('title', { market }) }, description: t('description', { market }) };
+}
+
+/** Home for the default market. Data is cached, so the page prerenders. */
+export default async function HomePage() {
+  const page = await getHomePageData();
+  if (!page) notFound();
+  return <HomeScreen data={page.data} now={page.now} />;
 }
