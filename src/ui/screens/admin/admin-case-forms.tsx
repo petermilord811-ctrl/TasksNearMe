@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import { useForm, type FieldValues, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  caseResolutionInputSchema, caseStatusInputSchema, staffNoteInputSchema, staffReplyInputSchema,
-  type ActionResult, type AdminCaseHandlers, type AdminCasePageData, type CaseResolutionInput,
+  caseStatusInputSchema, staffNoteInputSchema, staffReplyInputSchema,
+  type ActionResult, type AdminCaseHandlers, type AdminCasePageData,
   type CaseStatusInput, type StaffNoteInput, type StaffReplyInput,
 } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
@@ -132,40 +132,5 @@ export function AdminStatusForm({ data, handlers, onSuccess, onBusy, onCancel }:
     </CaseField>
     <AdminCaseFeedback result={action.result} />
     <div className="flex flex-wrap justify-end gap-2"><Button type="button" variant="outline" disabled={pending} onClick={onCancel}>{t('cancel')}</Button><Button type="submit" disabled={pending} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'working' : 'status.save')}</Button></div>
-  </form>;
-}
-
-export function AdminResolutionForm({ data, handlers, onSuccess, onBusy, onCancel }: DialogFormProps) {
-  const t = useTranslations('adminCase');
-  const fieldCopy = useFieldCopy();
-  const id = useId();
-  const form = useForm<CaseResolutionInput>({ resolver: zodResolver(caseResolutionInputSchema), defaultValues: { summary: '' } });
-  const action = useCaseForm(form, { onSuccess });
-  const pending = action.pending || form.formState.isSubmitting;
-  const resolutionCode = form.formState.errors.resolution?.message;
-  const summaryCode = form.formState.errors.summary?.message;
-  const resolutionError = resolutionCode === 'required' ? t('resolve.required') : fieldCopy(resolutionCode);
-  const summaryError = summaryCode === 'too_short' ? t('resolve.summaryTooShort') : summaryCode === 'too_long' ? t('resolve.summaryTooLong') : fieldCopy(summaryCode);
-  return <form noValidate aria-label={t('resolve.title')} aria-busy={pending} className="space-y-4" onSubmit={(event) => {
-    if (pending) { event.preventDefault(); return; }
-    void form.handleSubmit(async (input) => { onBusy(true); try { await action.run(handlers.onResolve, input); } finally { onBusy(false); } })(event);
-  }}>
-    <fieldset disabled={pending} className="space-y-4">
-      <legend className="sr-only">{t('resolve.title')}</legend>
-      <fieldset className="space-y-2" aria-describedby={`${id}-resolution-hint${resolutionError ? ` ${id}-resolution-error` : ''}`}>
-        <legend className="text-sm font-medium">{t('resolve.resolution')}</legend>
-        <p id={`${id}-resolution-hint`} className="text-sm text-muted-foreground">{t('resolve.resolutionHint')}</p>
-        <div className="grid gap-2">{data.resolutions.map((resolution) => <label key={resolution} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm has-checked:border-primary has-checked:bg-secondary has-checked:text-secondary-foreground">
-          <input {...form.register('resolution')} type="radio" value={resolution} required aria-describedby={`${id}-resolution-hint${resolutionError ? ` ${id}-resolution-error` : ''}`} className="size-5 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" />
-          {t(`resolutions.${resolution}`)}
-        </label>)}</div>
-        {resolutionError && <FieldError id={`${id}-resolution-error`}>{resolutionError}</FieldError>}
-      </fieldset>
-      <CaseField id={`${id}-summary`} label={t('resolve.summary')} hint={t('resolve.summaryHint')} error={summaryError}>
-        <Textarea {...form.register('summary')} id={`${id}-summary`} required rows={5} maxLength={1000} aria-invalid={Boolean(summaryError)} aria-describedby={`${id}-summary-hint${summaryError ? ` ${id}-summary-error` : ''}`} />
-      </CaseField>
-    </fieldset>
-    <AdminCaseFeedback result={action.result} />
-    <div className="flex flex-wrap justify-end gap-2"><Button type="button" variant="outline" disabled={pending} onClick={onCancel}>{t('cancel')}</Button><Button type="submit" disabled={pending} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'working' : 'resolve.save')}</Button></div>
   </form>;
 }

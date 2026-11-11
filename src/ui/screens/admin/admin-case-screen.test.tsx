@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AdminCaseHandlers, AdminCasePageData } from '@/contracts';
+import { routes, type AdminCaseHandlers, type AdminCasePageData } from '@/contracts';
 import { ADMIN_NOW, disputeAdminCaseData, fakeAdminCaseHandlers, reportAdminCaseData, reportedConversation, resolvedAdminCaseData } from '@/fixtures';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
@@ -21,7 +21,7 @@ function content(data: AdminCasePageData, handlers: AdminCaseHandlers = fakeAdmi
 function section(title: string) { return within(screen.getByRole('heading', { name: title, level: 2 }).closest('section')!); }
 
 describe('AdminCaseScreen', () => {
-  it('shows one title, supplied case metadata, people, opening and formatted booking without a booking link', () => {
+  it('shows one title, supplied case metadata, people, opening and formatted booking linked to its staff page', () => {
     render(content(disputeAdminCaseData));
     const data = disputeAdminCaseData;
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
@@ -43,7 +43,7 @@ describe('AdminCaseScreen', () => {
     expect(booking.getByText(formatDateTime(data.booking!.start))).toBeVisible();
     expect(booking.getByText(formatMoney(data.booking!.priceCents))).toBeVisible();
     expect(booking.getByText(messages.status.booking.staff.disputed)).toBeVisible();
-    expect(booking.queryByRole('link')).not.toBeInTheDocument();
+    expect(booking.getByRole('link', { name: data.booking!.title })).toHaveAttribute('href', routes.admin.booking(data.booking!.id));
   });
 
   it('keeps the supplied timeline order and distinguishes each person’s messages, assignments and internal notes', () => {

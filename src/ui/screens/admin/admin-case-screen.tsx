@@ -1,7 +1,9 @@
 import type { ComponentProps } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { LockKeyhole, MessageSquare, UserRound } from 'lucide-react';
 import type { AdminCaseActor, AdminCaseBookingSummary, AdminCaseEventView, AdminCaseHandlers, AdminCasePageData, CaseStatus, ISODateTime, Photo } from '@/contracts';
+import { routes } from '@/contracts';
 import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -34,7 +36,7 @@ function Booking({ booking }: { booking: AdminCaseBookingSummary }) {
   const status = useBookingStatus(booking.status, 'staff');
   return <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
     <h2 className="text-xl font-semibold">{t('booking')}</h2>
-    <p className="font-medium">{booking.title}</p>
+    <Link href={routes.admin.booking(booking.id)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{booking.title}</Link>
     <StatusBadge {...status} />
     <dl className="space-y-2 text-sm">
       <div className="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt className="text-muted-foreground">{t('start')}</dt><dd className="tabular-nums"><time dateTime={booking.start}>{formatDateTime(booking.start)}</time></dd></div>
@@ -75,9 +77,10 @@ export function AdminCaseScreen(props: AdminCaseScreenProps) {
 }
 
 /** Preview seeds are kept separate from the screen's application-facing props. */
-export function AdminCaseContent({ data, handlers, now, initialDialog, replyState, conversationState }: AdminCaseScreenProps & {
+export function AdminCaseContent({ data, handlers, now, initialDialog, replyState, resolutionState, conversationState }: AdminCaseScreenProps & {
   initialDialog?: ComponentProps<typeof AdminCaseControls>['initialDialog'];
   replyState?: ComponentProps<typeof AdminCaseControls>['replyState'];
+  resolutionState?: ComponentProps<typeof AdminCaseControls>['resolutionState'];
   conversationState?: Pick<ComponentProps<typeof AdminConversationGate>, 'initialConversation' | 'initialOpen' | 'initialResult'>;
 }) {
   const t = useTranslations('adminCase');
@@ -96,7 +99,7 @@ export function AdminCaseContent({ data, handlers, now, initialDialog, replyStat
         <AdminResponseTarget slaDueAt={row.slaDueAt} slaBreached={row.slaBreached} now={now} />
       </div>
     </div>
-    <AdminCaseControls key={row.id} data={data} handlers={handlers} initialDialog={initialDialog} replyState={replyState}>
+    <AdminCaseControls key={row.id} data={data} handlers={handlers} initialDialog={initialDialog} replyState={replyState} resolutionState={resolutionState}>
       <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-5">
           <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
