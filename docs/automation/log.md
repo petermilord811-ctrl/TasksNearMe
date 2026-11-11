@@ -79,3 +79,19 @@ One entry per iteration, newest last.
   - UI-010: bookings and payments (migration 0008), the development payment stand-in, the confirmation route, the booking redirect placeholder.
 - e2e infrastructure: `POST /dev/cache` clears cached public pages after the reseed; the seed clears bookings on seeded tasks; reserved tasks for the offer and booking flows.
 - A stale Turbopack module ("is not a function" for a new export) needed a dev server restart; stopping the shell doesn't end `next dev` on Windows (AUTOPILOT gotchas).
+
+## 2026-11-11 — iteration 8 (completion, messaging, sheets, money)
+- Codex:
+  - UI-013 (23 min). The runner's check failed on an untouched test under load; merged.
+  - UI-014 (42 min), merged.
+  - UI-012 (24 min). The check failed on flaky UI-013 focus tests; merged, and the fix was requested.
+  - UI-016 (28 min), merged; the focus tests are now deterministic.
+  - UI-030 launched (a phone bug found by e2e).
+- Backends:
+  - completion and problem reports (migration 0010);
+  - messaging (0011);
+  - cancellations, refunds, strikes, no-shows, safety (0012);
+  - earnings ledger and payouts (0013);
+  - the home.
+- Each ticket was wired with e2e: completion, messaging, booking sheets (desktop; phones wait for UI-030), and money.
+- Tooling: unit tests got a 15 s timeout and testing-library waits 3 s, because checks share the machine.
