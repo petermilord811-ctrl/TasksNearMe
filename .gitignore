@@ -33,3 +33,8 @@ npm-debug.log*
 
 # build output
 /build
+
+# autopilot runtime files
+automation/runs/
+automation/logs/
+.npm-cache/

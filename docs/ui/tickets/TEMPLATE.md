@@ -6,7 +6,7 @@
 One or two sentences: what exists when this is done, and who uses it.
 
 ## You may edit
-`src/ui/**`, `messages/en/ui/**`, `public/ui/**`, `components.json`, `package.json`/`package-lock.json` (only by `npm install`), and this ticket's row in `docs/ui/progress.md`.
+`src/ui/**`, `messages/en/ui/**`, `public/ui/**`, `components.json`, `package.json`/`package-lock.json` (only by `npm install`), and `docs/ui/handoffs/UI-xxx.md` (last step).
 
 ## Read first
 - `AGENTS.md`
@@ -38,8 +38,7 @@ Copy namespace(s): `…` (in `messages/en/ui/<namespace>.json`).
 - Every item in **Build** exists, with every **State to preview** registered.
 - `npm run check:ui` passes (previews at 360 and 1280, axe clean, no runtime errors).
 - No imports outside the allowed areas (lint).
-- This ticket's row in `docs/ui/progress.md` says **UI done**.
-- Summary in the AGENTS.md format, including contract requests.
+- **Last step:** the summary (AGENTS.md format, including contract requests) is written to `docs/ui/handoffs/UI-xxx.md`. That file tells Claude you're done.
 
 ## Out of scope
 - …

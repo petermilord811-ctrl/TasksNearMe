@@ -10,6 +10,14 @@ TasksNearMe is a person-to-person marketplace for booking local help with everyd
   - **Claude gives you:** TypeScript contracts (`src/contracts`), canonical fixtures (`src/fixtures`), formatters (`src/shared`), and a ticket.
   - **You give back:** components, screens, and previews in `src/ui`, plus copy in `messages/en/ui`.
 
+## Unattended runs (the normal case)
+
+Claude starts most tickets automatically with `scripts/codex-run.mjs`. That runs you in a separate copy of the repo (a git worktree) on the ticket's branch. When your prompt says you're running unattended:
+- **Don't ask questions and don't wait for plan approval.** Decide within the ticket, this file, and the design system, and list your decisions in the handoff summary.
+- **Don't run git commands that change state** (commit, branch, stash, reset, checkout). The pipeline commits your work.
+- **Use the port in `PORT`** for the dev server and Playwright. Never use 3000, which belongs to Claude's copy.
+- If npm fails with a permission error on its cache, retry with `npm_config_cache=.npm-cache`.
+
 ## Paths
 
 **You may create and edit:**
@@ -18,12 +26,12 @@ TasksNearMe is a person-to-person marketplace for booking local help with everyd
 - `public/ui/**`: UI images and illustrations.
 - `components.json`: shadcn configuration.
 - `package.json` / `package-lock.json`: **only** by running `npm install <ui-package>`. Never edit scripts or other fields.
-- `docs/ui/progress.md`: only the row for your ticket.
+- `docs/ui/handoffs/UI-xxx.md`: your ticket's handoff summary, written **last** (see Definition of done).
 
 **Read-only for you:**
 - Code and copy: `src/app/**`, `src/contracts/**`, `src/fixtures/**`, `src/shared/**`, `src/modules/**`, `src/platform/**`, `src/integrations/**`, `src/i18n/**`, `messages/en/app/**`, `tests/**`.
 - Config: `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `vitest.config.mts`, `playwright.config.ts`.
-- Docs and instructions: `docs/**` (except your progress row), `CLAUDE.md`, `AGENTS.md`.
+- Docs and instructions: `docs/**` (except your handoff file; Claude updates `docs/ui/progress.md` from it), `CLAUDE.md`, `AGENTS.md`, `scripts/**`, `automation/**`.
 
 If a ticket seems to need a change in a read-only path (a new prop, a missing fixture, a type change), **don't make it**. Add a **Contract request** to your summary saying what you need, why, and the shape you propose. Claude handles it.
 
@@ -111,8 +119,11 @@ Anything else needs a contract request first.
 
 - Everything in the ticket's **Build** and **Acceptance** sections.
 - `npm run check:ui` passes.
-- Your ticket's row in `docs/ui/progress.md` says **UI done**.
-- Finish with this summary:
+- **Last step: hand off.**
+  - When everything above is done and `npm run check:ui` passes, write your summary to `docs/ui/handoffs/UI-xxx.md` (the ticket's id) in the format below. Show the same summary in your final message.
+  - **Creating this file tells Claude you're finished.** Claude watches for it and starts the review automatically. Never create it early, and don't change any other file after writing it.
+  - Follow-up fixes in the same conversation: make the fixes, run the checks again, then append a `## Follow-up N` section to the same file as your last step.
+- Summary format:
   1. **Built:** components and screens (paths) and preview ids.
   2. **Contracts used:** props and handlers, and from which files.
   3. **Message namespaces** added or changed.

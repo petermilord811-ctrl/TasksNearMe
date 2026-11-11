@@ -8,9 +8,33 @@
 
 The two meet at **contracts** (`src/contracts`): the exact data each screen receives and the actions it can call. Claude writes a contract and a ticket. Codex builds screens that take that data as props. Claude then plugs real data into those same props. Neither side has to guess.
 
-## The loop for each UI ticket
+## Autopilot: fully automatic (the default)
 
-1. **Claude** prepares the ticket: contracts, sample data, and the ticket file. Tell Claude: *"Prepare UI-003."*
+Claude runs the whole build on its own for hours: it builds the app, writes UI tickets, starts Codex on them through the Codex CLI (`scripts/codex-run.mjs`), reviews and merges Codex's work, connects it, and moves on. Nobody is asked anything. The operating rules are in [docs/automation/AUTOPILOT.md](automation/AUTOPILOT.md).
+
+| Command / place | What it's for |
+|---|---|
+| `/loop Continue the TasksNearMe autopilot …` (in Claude Code) | Starts or resumes it (see "Start or resume" below) |
+| "Stop the autopilot" (to Claude) | Claude writes a final report and stops |
+| [docs/automation/state.md](automation/state.md) | Where things stand right now |
+| [docs/automation/log.md](automation/log.md) | What happened, iteration by iteration |
+| [docs/automation/decisions.md](automation/decisions.md) | Choices Claude made on its own |
+| [docs/automation/blocked.md](automation/blocked.md) | Things only you can provide (keys, legal text, deployment) |
+| `D:\4. Application\TasksNearMe-ui` | Codex's working copy (don't edit it by hand) |
+
+**For a long run:** keep VS Code and this Claude Code session open, and stop Windows from sleeping. Both Claude and Codex use your plan's usage limits; when Codex is rate-limited, Claude keeps building and retries later.
+
+### Start or resume
+
+```
+/loop Continue the TasksNearMe autopilot: follow docs/automation/AUTOPILOT.md exactly. Read docs/automation/state.md first, do the next most valuable step, keep Codex busy with UI tickets via scripts/codex-run.mjs, never ask me questions, record decisions, commit after green checks, and schedule the next wake-up.
+```
+
+## Manual mode: you run Codex yourself
+
+### The loop for each UI ticket
+
+1. **Claude** prepares the ticket: contracts, sample data, and the ticket file. Tell Claude: *"Prepare UI-003."* Claude then **starts watching** for Codex's handoff.
 2. **You** start Codex on a branch:
    ```
    git switch -c ui/UI-003-public-pages
@@ -21,13 +45,12 @@ The two meet at **contracts** (`src/contracts`): the exact data each screen rece
    Work only inside the paths the ticket allows. Reply with your plan first and wait for my approval before changing any files.
    ```
    Reply `Approved, go ahead.` once the plan looks right.
-3. **You** review: `npm run dev`, open **http://localhost:3000/dev/ui**, and look at the screenshots in `artifacts/ui-previews/`. Then commit:
-   ```
-   git add -A
-   git commit -m "UI-003: public pages (Codex)"
-   ```
-4. **Claude** reviews and wires. Tell Claude: *"UI-003 is done"*, and paste Codex's final summary, especially any **contract requests**. Claude checks the work, connects the screens to routes and data, adds tests, and updates `docs/ui/progress.md`.
-5. Merge to `main` and move on to the next ticket.
+3. **Codex finishes and Claude takes over on its own.**
+   - Codex's last step writes `docs/ui/handoffs/UI-003.md`.
+   - Claude notices within about 20 seconds. It reviews the work, handles any contract requests, connects the screens to routes and data, adds tests, and updates `docs/ui/progress.md`.
+   - Claude then sends you a desktop notification.
+   - This works only while the Claude Code session is open in VS Code. If you closed it, tell Claude *"UI-003 done"*.
+4. **You** look at the screens (`npm run dev`, then **http://localhost:3000/dev/ui**), then commit and merge with the commands Claude gives you. Move on to the next ticket.
 
 While Codex builds one ticket, Claude can build the backend for the next ones. Two tickets can be open at once as long as they don't depend on each other (see "Depends on" in each ticket).
 

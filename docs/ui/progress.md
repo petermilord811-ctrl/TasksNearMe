@@ -4,7 +4,7 @@ One row per UI ticket. **Claude** prepares the contracts and the ticket, **Codex
 
 Status flow: `planned` → `ready for Codex` → `UI done` (Codex) → `wired` (Claude) → `verified` (e2e green)
 
-Codex updates only its own ticket's row (Status and Codex notes). Claude updates the rest.
+Claude updates this file, including the Codex notes column, from each handoff (`docs/ui/handoffs/`).
 
 | Ticket | Scope | Status | Contracts (Claude) | Codex notes | Wiring (Claude) |
 |---|---|---|---|---|---|

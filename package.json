@@ -16,7 +16,9 @@
     "test:ui": "playwright test --project=ui-mobile --project=ui-desktop",
     "e2e": "playwright test --project=app-mobile --project=app-desktop",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "check:ui": "npm run check && npm run test:ui"
+    "check:ui": "npm run check && npm run test:ui",
+    "wait:handoff": "node scripts/wait-for-handoff.mjs",
+    "codex:run": "node scripts/codex-run.mjs"
   },
   "dependencies": {
     "class-variance-authority": "0.7.1",

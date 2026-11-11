@@ -2,6 +2,13 @@
 
 Person-to-person marketplace for booking local help, launching in Austin, TX. Product source of truth: `docs/blueprint/` (01 brief → 11 backlog).
 
+## Autopilot (long unattended runs)
+
+When the user starts the `/loop` autopilot, or asks you to keep building on your own, follow **`docs/automation/AUTOPILOT.md`** exactly. Its key points:
+- Never ask the user questions; record decisions in `docs/automation/decisions.md`.
+- Start Codex yourself with `node scripts/codex-run.mjs UI-xxx` (Bash, background). It runs in the worktree `../TasksNearMe-ui` on port 3100.
+- Keep `docs/automation/state.md` current every iteration. Commit locally after green checks. Never push.
+
 ## Working model: Claude builds the app, Codex builds the UI
 
 - **Claude (you):** architecture, routes, data, domain logic (state machines, fees, visibility, permissions), server actions, integrations, tests, and **wiring Codex's screens to real data**.
@@ -24,7 +31,7 @@ Person-to-person marketplace for booking local help, launching in Austin, TX. Pr
 | `messages/en/app/**` | Claude | Top-level namespace `server` only |
 | `tests/**` | Claude | e2e (`tests/e2e`), preview harness (`tests/ui-previews`) |
 | `src/ui/**`, `messages/en/ui/**`, `public/ui/**`, `components.json` | **Codex** | Don't restyle or rewrite. Write a fix list for the user to send to Codex instead |
-| `docs/ui/**` | Claude | Tickets and contract docs. Codex only updates its row in `progress.md` |
+| `docs/ui/**` | Claude | Tickets, contract docs, `progress.md`. Codex only writes its handoff file in `docs/ui/handoffs/` |
 
 The only Codex-path files you created are setup stubs: `src/ui/theme/*`, `src/ui/previews/registry.ts` and `harness.preview.tsx`, `src/ui/README.md`, and `messages/en/ui/*`.
 
@@ -81,6 +88,16 @@ Before handing a ticket off, `npm run check` must pass, with the contracts compi
 4. Contracts are used as-is, and contract requests are handled.
 5. Privacy: an `ExactAddress` appears only in `ExactAddressPanel`. Masked segments render masked.
 6. Then wire it, add e2e tests (`tests/e2e`, projects `app-mobile` and `app-desktop`), and update `docs/ui/progress.md`.
+
+## Waiting for Codex (automatic hand-off)
+
+- Codex's last step on a ticket is writing `docs/ui/handoffs/UI-xxx.md` (AGENTS.md, Definition of done).
+- As soon as a ticket is ready for Codex, or the user says Codex started, run `node scripts/wait-for-handoff.mjs UI-xxx` with Bash `run_in_background: true` (default timeout 8 h). You're re-invoked when it exits:
+  - **`HANDOFF`**: read the summary, run the review checklist above, wire the ticket, and update the docs. Then send a one-line `PushNotification` with the outcome, since the user has probably stepped away.
+  - **`FALLBACK`** (no handoff file; the progress row says "UI done" and the UI folders went quiet): same steps, using the diff and the progress notes instead of a summary.
+  - **`TIMEOUT`** (exit code 2): re-arm if the user is still working with Codex.
+- The watcher lives only as long as this session. In a new session, re-arm it for any ticket that's in progress, or wait for the user to say "UI-xxx done".
+- Follow-up fixes on a ticket that was already handed off: re-arm with `--updated-after now`.
 
 ## Commands
 

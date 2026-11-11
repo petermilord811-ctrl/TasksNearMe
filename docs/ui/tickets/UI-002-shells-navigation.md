@@ -16,7 +16,7 @@ Then update the "App handoff and contract requests" notes in `src/ui/README.md` 
 The four page frames every route sits in: public site, signed-in app tab pages, detail/flow pages, and admin. They include the mode switch, bottom nav, sidebar, and account menus, all driven by props.
 
 ## You may edit
-`src/ui/**`, `messages/en/ui/**`, `public/ui/**`, `components.json`, `package.json`/`package-lock.json` (only by `npm install`), and the UI-002 row in `docs/ui/progress.md`.
+`src/ui/**`, `messages/en/ui/**`, `public/ui/**`, `components.json`, `package.json`/`package-lock.json` (only by `npm install`), and `docs/ui/handoffs/UI-002.md` (last step).
 
 ## Read first
 - `AGENTS.md`
@@ -106,8 +106,7 @@ Copy namespace: `shell`.
 - Every item in **Build** exists, and every **State to preview** is registered.
 - `npm run check:ui` passes.
 - No imports outside the allowed areas (lint).
-- The UI-002 row in `docs/ui/progress.md` says **UI done**.
-- Summary in the AGENTS.md format, including contract requests.
+- **Last step:** the summary (AGENTS.md format, including contract requests) is written to `docs/ui/handoffs/UI-002.md`. That file tells Claude you're done.
 
 ## Out of scope
 Page content; the notifications list; auth logic; redirects for staff who haven't passed the two-step check (Claude handles those on the server).

@@ -1,0 +1,176 @@
+# AUTOPILOT — autonomous build of TasksNearMe (Claude × Codex)
+
+The operating manual for long unattended runs. Claude follows it on every wake-up of the `/loop`. If context was compacted, re-read this file and `docs/automation/state.md` before doing anything else.
+
+## Mission
+
+Build the complete TasksNearMe web app described in `docs/blueprint/`, running locally with demo (fake) providers, **without asking the user anything**.
+- **Claude** builds the app (data, domain, server actions, wiring, tests).
+- **Codex** builds the UI through tickets that `scripts/codex-run.mjs` runs unattended in the sibling worktree `../TasksNearMe-ui`.
+
+Keep going until the Build plan below is done, then stop.
+
+**Done means:**
+- Every route in `docs/blueprint/02-sitemap-and-journeys.md` §1 exists and works end to end, against the local database with fake providers.
+- The e2e scenarios from `docs/blueprint/10-build-plan-and-launch.md` §3.2 that don't need real provider accounts pass.
+- `npm run check`, `npm run test:ui`, `npm run e2e` and `npm run build` all pass on `main`.
+
+**Out of reach without the user** (log in `blocked.md`, never wait): real provider accounts and keys, final legal text, deployment, real money, domains.
+
+## Ground rules
+
+1. **Never ask the user a question.** Decide from, in order:
+   1. `docs/blueprint/`
+   2. `CLAUDE.md` / `AGENTS.md`
+   3. `docs/ui/`
+   4. sensible defaults.
+
+   Record every non-obvious decision in `docs/automation/decisions.md`: date, decision, why, alternative.
+2. **Never idle-wait.** If something truly needs the user, write it to `docs/automation/blocked.md` with the workaround you used, and continue with other work.
+3. **Safety:**
+   - **Local only.** Never `git push`, deploy, create accounts, spend money, or use live credentials. If keys appear in `.env.local`, use test mode only.
+   - **No destructive git.** No `reset --hard` on `main`, no force pushes, no history rewrites. Delete only fully merged `ui/*` branches.
+   - **Stay in this repo, the worktree `../TasksNearMe-ui`, and normal dev tooling** (npm packages, Docker containers for the database).
+   - **Never commit secrets.** `.env*` stays ignored.
+4. **Keep `main` green.**
+   - Commit to `main` only when `npm run check` passes, plus `npm run build` when routes or config change.
+   - Make small commits with clear messages, one after every finished increment.
+   - Local commits are authorized for the autopilot. Pushing is not.
+5. **Codex owns `src/ui`.**
+   - Never restyle or rewrite Codex's UI.
+   - A tiny unblocking fix during wiring (a missing export, a typo) is allowed. Log it, and list it at the top of the next ticket as a follow-up.
+6. **Contracts first.** Before a ticket goes to Codex, its contract types, fixtures for every state, and ticket file are committed (`CLAUDE.md`, "Writing a UI ticket").
+7. **Never weaken tests, lint rules, privacy rules, or the blueprint's money values** to get green.
+
+## Files Claude maintains
+
+| File | Purpose | When |
+|---|---|---|
+| `docs/automation/state.md` | Where we are: phase, active Codex run, next 5 steps, open issues | Rewrite at the end of **every** iteration |
+| `docs/automation/log.md` | One dated entry per iteration: what changed, commits, checks | Append every iteration |
+| `docs/automation/decisions.md` | Non-obvious decisions | When made |
+| `docs/automation/blocked.md` | Needs-the-user items, with workarounds | When found |
+| `docs/ui/progress.md` | UI ticket status (Claude fills Codex notes from handoffs) | After each Codex run |
+
+`automation/runs/*.json` and `automation/logs/` are runtime files (git-ignored) written by `codex-run.mjs`.
+
+## Every iteration
+
+1. **Orient.** Read `docs/automation/state.md`. Run `git status`. Read every `automation/runs/*.json`.
+2. **P0: process a finished Codex run.** If a run file says `handed_off` or `failed` and has no `"processed": true`, follow "Processing a Codex run" below. Then add `"processed": true` to that JSON.
+3. **P1: keep Codex busy.**
+   - If no run file is `running`, take the next UI ticket in the Build plan whose dependencies are merged.
+   - If its contracts, fixtures, or ticket aren't ready, prepare them now (top priority), run `npm run check`, and commit to `main`.
+   - Then launch it with Bash `run_in_background: true` from the repo root: `node scripts/codex-run.mjs UI-xxx`.
+   - Only one Codex run at a time. Its exit re-invokes you.
+4. **P2: build the next app increment** from the Build plan: backend, domain, wiring, tests. Work in increments of about 30–90 minutes, each ending with green checks and a commit.
+5. **Close.** Update `state.md` and `log.md` (and `progress.md` if a ticket moved), commit, then call `ScheduleWakeup` with the same `/loop` prompt:
+   - Work remains and nothing to wait for: **60 s**.
+   - Only waiting for Codex (nothing else unblocked): **1800 s**. The run's exit notification usually arrives first.
+   - Everything done: see "Stopping".
+
+## Processing a Codex run
+
+**`handed_off`** (handoff written and the independent `check:ui` passed):
+1. Make the main worktree clean: commit your own finished work first. Don't merge onto half-done work.
+2. Run `git merge --no-ff <branch> -m "Merge UI-xxx (Codex)"`. Resolving conflicts:
+   - `package-lock.json`: keep `main`'s, merge `package.json` dependencies by hand, then `npm install` to regenerate the lock.
+   - `src/contracts`, `src/fixtures`, `docs/`: keep `main`.
+   - Anything else: keep both intents.
+3. If `package.json` changed, run `npm install`.
+4. Review using the `CLAUDE.md` checklist:
+   - The diff stays in Codex paths. `npm run check:ui` passes.
+   - Read `automation/runs/UI-xxx.handoff.md`.
+   - Look at 3–6 phone screenshots of the new previews in `artifacts/ui-previews/ui-mobile/`.
+   - Check privacy and that no business logic landed in the UI.
+5. Handle contract requests. Implement the accepted ones, with tests. Write the rejected ones into the next ticket's notes, with the reason.
+6. Wire the screens into routes (`CLAUDE.md` wiring pattern). Add e2e tests for the flows. Run `npm run e2e` for them.
+7. Update `progress.md` (status, Codex notes, wiring), the ticket's "Claude wiring notes", and `log.md`. Commit. Delete the merged branch with `git branch -d`.
+8. Codex follow-ups go at the top of the next ticket: "First: follow-ups from UI-xxx".
+
+**`failed`:** read the run JSON (`reason`), `UI-xxx.last-message.md`, and the end of the log (and the check log, if any).
+- **Usage limit, rate limit, network, or auth errors:** keep doing P2 work and retry in 30–60 minutes. Up to 4 retries, then log it in `blocked.md`.
+- **Timeout, or no handoff after partial work:** retry once with `--note "<what remains, plus decisions to keep>"`. The branch is reset to `main` on each run.
+- **`check:ui` failed:** read the check log and retry with `--note` listing the exact failures.
+- **Two failed attempts for non-capacity reasons:**
+  - First choice: split the ticket (UI-0xxa/b).
+  - Last resort: build that UI yourself in `src/ui`, following the ticket and `AGENTS.md`, and record it in `decisions.md`.
+
+## Build plan
+
+Order matters. A UI ticket starts once its contracts are ready and the tickets it depends on are merged. **Prepare the next ticket while Codex works on the current one.**
+
+**Phase 1 — Foundation**
+- **UI-002 shells:** Codex's first unattended run.
+- **Database:**
+  - Try Docker first. Start `"C:\Program Files\Docker\Docker\Docker Desktop.exe"` if the daemon is down, and wait up to 3 minutes for `docker info`. Then run `postgis/postgis` from a `docker-compose.yml`.
+  - Otherwise use PGlite for dev and tests: no PostGIS, so geo math runs in SQL or TS on lat/lng.
+  - Record the choice in `decisions.md`.
+  - Drizzle schema for the core tables (blueprint 08 §3), committed SQL migrations, and a seed script built from `src/fixtures` (people, the desk / moving / remote tasks, staff).
+- **Auth and session:**
+  - Better Auth with email one-time codes, delivered to a dev mail outbox page.
+  - Dev-only "sign in as" for seeded people.
+  - `getViewer()` / `getShellViewer()`.
+- **Route groups** `(public)`, `(app)/app`, `admin` with the UI-002 shells. Server Actions `setMode` and `signOut`. The admin two-step check (dev code `123456`).
+- **Platform:**
+  - An injectable clock with dev time travel.
+  - Outbox and jobs: graphile-worker on Postgres, or an in-process runner on PGlite.
+  - The audit log and feature flags.
+  - A **fake-provider registry** behind interfaces: payments (Stripe-shaped), identity, background checks, gift cards, email, SMS, maps, AI drafting.
+
+**Phase 2 — Public site and sign-in.** UI-003, UI-004, UI-005. Markets and categories config, public task and helper profile queries, waitlist.
+
+**Phase 3 — Posting and offers.** UI-006, UI-007, UI-009.
+- Tasks with location privacy: encrypted exact address, deterministic fuzzed public point.
+- Offers, invites, availability.
+- The fee domain, reproducing ui-contract §3 exactly.
+- Contact masking.
+
+**Phase 4 — Helper onboarding.** UI-008. The verification module with fake identity, payout, and background providers, and bookable gating.
+
+**Phase 5 — Booking and money.** UI-010, UI-011, UI-012, UI-013.
+- The booking state machine (blueprint 03) and cancellation policy.
+- Change requests; completion, approval, and auto-approve timers; disputes.
+- A fake payment provider implementing the payments port: charges, authorizations, captures, refunds, transfers.
+- Ledger and reconciliation, and idempotency (blueprint 09 §4).
+
+**Phase 6 — Messaging and notifications.** UI-014, UI-017. Threads with masking, in-app notifications, the email/SMS dev outbox, a push placeholder.
+
+**Phase 7 — Repeat business, money pages, rewards.** UI-015, UI-016. Double-blind reviews, saved helpers, rebooking, earnings and receipts, and the rewards engine (blueprint 05) with a fake gift-card provider.
+
+**Phase 8 — Admin.** UI-018, UI-019, UI-020. Staff roles and limits, queues, cases and resolutions, refunds with approvals, moderation, config, audit.
+
+**Phase 9 — Quality.**
+- UI-021.
+- The e2e suite for every blueprint 10 §3.2 scenario possible without real providers.
+- Authorization and privacy tests, accessibility and performance passes.
+- `README.md` and `docs/integration-points.md`, which explain how to swap fakes for real providers.
+
+**Phase 10 (optional) — Real provider adapters in test mode,** only if keys exist in `.env.local`. Otherwise document what's needed in `blocked.md`.
+
+Ticket scopes are listed in `docs/ui/progress.md`. Keep each ticket small enough for Codex to finish in about 2 hours (≤ ~8 screens or components). Split larger ones.
+
+## Preparing a UI ticket
+
+1. Contract types and zod schemas in `src/contracts`.
+2. Fixtures for every state in `src/fixtures`.
+3. The ticket from `docs/ui/tickets/TEMPLATE.md`, starting with any "First: follow-ups".
+4. A row in `docs/ui/progress.md`.
+5. `npm run check`, commit to `main`, launch `codex-run`.
+
+## Notifications
+
+Call `PushNotification` only when a phase completes, when a hard blocker needs the user, or for the final report. One line, under 200 characters.
+
+## Resuming after a restart
+
+1. Read `state.md`.
+2. If a run file says `running` but its log hasn't changed for 10+ minutes and no run is active, mark it `failed` (reason: interrupted) and retry.
+3. If the worktree `../TasksNearMe-ui` is in a bad state, `codex-run.mjs` stashes and resets it on the next run.
+
+## Stopping
+
+When everything is done, or the user says stop:
+1. Write `docs/automation/final-report.md`: what was built, test status, blocked items, how to run.
+2. Send a `PushNotification`.
+3. End the loop with `ScheduleWakeup` (`stop: true`).
