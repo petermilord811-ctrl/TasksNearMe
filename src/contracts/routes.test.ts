@@ -20,6 +20,11 @@ describe('routes', () => {
       routes.taskBoard('austin', { category: 'moving-help', when: 'this_weekend', remoteOnly: true, sort: 'newest', page: 3 }),
     ).toBe('/austin/tasks?category=moving-help&when=this_weekend&remote=1&sort=newest&page=3');
     expect(routes.app.findWorkTask('tsk_desk')).toBe('/app/find-work/tsk_desk');
+    expect(routes.app.findWork()).toBe('/app/find-work');
+    expect(routes.app.findWork({ distance: 'any', when: 'any', page: 1 })).toBe('/app/find-work');
+    expect(routes.app.findWork({ category: 'yard-cleanup', remoteOnly: true, page: 2, distance: 'within_5_mi' })).toBe(
+      '/app/find-work?category=yard-cleanup&remote=1&page=2&distance=within_5_mi',
+    );
   });
 
   it('keeps preview ids as path segments', () => {

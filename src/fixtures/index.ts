@@ -18,3 +18,4 @@ export * from './posting';
 export * from './offers';
 export * from './onboarding';
 export * from './helper-work';
+export * from './bookings';

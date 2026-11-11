@@ -1,4 +1,4 @@
-import type { Cents, PriceBreakdown, PricingInput } from '@/contracts';
+import type { CancellationPolicySummary, Cents, ISODateTime, PriceBreakdown, PricingInput } from '@/contracts';
 import type { CancellationPolicy, FeeSchedule } from '@/modules/markets/schema';
 
 /**
@@ -129,6 +129,20 @@ export function lateCancellation(
   );
   const charged = funded.posterChargedCents ?? funded.posterTotalCents;
   return { helperCompensationCents: compensation, posterRefundCents: charged - compensation };
+}
+
+/** The cancellation terms shown before booking: free until `freeUntilHours` before the start, then the late terms. */
+export function cancellationSummary(
+  cancellation: CancellationPolicy,
+  funded: PriceBreakdown,
+  start: ISODateTime,
+): CancellationPolicySummary {
+  const late = lateCancellation(cancellation, funded);
+  return {
+    freeUntil: new Date(Date.parse(start) - cancellation.freeUntilHours * 3_600_000).toISOString(),
+    lateRefundCents: late.posterRefundCents,
+    lateHelperCompensationCents: late.helperCompensationCents,
+  };
 }
 
 /** What the poster pays more (positive) or gets back (negative) when a change is accepted. */

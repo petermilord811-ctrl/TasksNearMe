@@ -4,6 +4,7 @@ import {
   bookshelfCounterBreakdown,
   deskBreakdown,
   deskChairChangeDeltaCents,
+  deskConfirmData,
   deskOfferLeeBreakdown,
   deskOfferSamBreakdown,
   deskLateCancellation,
@@ -13,12 +14,15 @@ import {
   deskWithExpensesFinalBreakdown,
   movingExtraHourDeltaCents,
   movingFinalBreakdown,
+  movingConfirmHourlyData,
   movingFundedBreakdown,
   remoteComputerBreakdown,
+  remoteConfirmData,
   smallTaskBreakdown,
 } from '@/fixtures';
 import { DEFAULT_CANCELLATION, DEFAULT_FEES } from '@/modules/markets/policy-defaults';
 import {
+  cancellationSummary,
   changeDeltaCents,
   finalBreakdown,
   helperFeeCents,
@@ -80,6 +84,13 @@ describe('canonical examples (blueprint 04 §3, ui-contract §3)', () => {
 
   it('dispute settled at $45: refund $16.50, earnings $40.50', () => {
     expect(finalBreakdown(fees, deskBreakdown, { settledPriceCents: 4500 })).toEqual(deskSettledBreakdown);
+  });
+
+  it('booking confirmation fixtures match the fee engine and the cancellation policy', () => {
+    for (const data of [deskConfirmData, movingConfirmHourlyData, remoteConfirmData]) {
+      expect(data.breakdown).toEqual(quoteBreakdown(fees, data.offer.pricing));
+      expect(data.cancellation).toEqual(cancellationSummary(DEFAULT_CANCELLATION, data.breakdown, data.offer.proposedStart));
+    }
   });
 
   it('late cancellation: helper receives $12.00, poster gets $54.00 back', () => {

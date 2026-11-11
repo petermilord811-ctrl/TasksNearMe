@@ -1,4 +1,5 @@
 import type { CategorySlug } from './common';
+import type { FindWorkQuery } from './helper-work';
 import type { ExactAddress } from './location';
 import type { TaskBoardQuery } from './tasks';
 
@@ -24,6 +25,17 @@ export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 const DEFAULT_MARKET = 'austin';
 const enc = encodeURIComponent;
 
+/** Task board filters as URL parameters. Defaults (`when: any`, `sort: soonest`, page 1) are left out. */
+function boardQuery(query: TaskBoardQuery): Record<string, string | undefined> {
+  return {
+    category: query.category,
+    when: query.when && query.when !== 'any' ? query.when : undefined,
+    remote: query.remoteOnly ? '1' : undefined,
+    sort: query.sort && query.sort !== 'soonest' ? query.sort : undefined,
+    page: query.page && query.page > 1 ? String(query.page) : undefined,
+  };
+}
+
 function withQuery(path: string, query: Record<string, string | undefined>): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
@@ -38,14 +50,7 @@ export const routes = {
   market: (market = DEFAULT_MARKET) => `/${enc(market)}`,
   category: (slug: CategorySlug, market = DEFAULT_MARKET) => `/${enc(market)}/${slug}`,
   /** Defaults (`when: any`, `sort: soonest`, page 1) are left out of the URL. */
-  taskBoard: (market = DEFAULT_MARKET, query: TaskBoardQuery = {}) =>
-    withQuery(`/${enc(market)}/tasks`, {
-      category: query.category,
-      when: query.when && query.when !== 'any' ? query.when : undefined,
-      remote: query.remoteOnly ? '1' : undefined,
-      sort: query.sort && query.sort !== 'soonest' ? query.sort : undefined,
-      page: query.page && query.page > 1 ? String(query.page) : undefined,
-    }),
+  taskBoard: (market = DEFAULT_MARKET, query: TaskBoardQuery = {}) => withQuery(`/${enc(market)}/tasks`, boardQuery(query)),
   publicTask: (taskSlug: string) => `/tasks/${enc(taskSlug)}`,
   helperProfile: (handle: string) => `/helpers/${enc(handle)}`,
   howItWorks: () => '/how-it-works',
@@ -71,7 +76,12 @@ export const routes = {
         slot: opts.slotId,
       }),
     saved: () => '/app/saved',
-    findWork: () => '/app/find-work',
+    /** The helper feed. Same parameters as the task board, plus `distance` (default `any`, left out). */
+    findWork: (query: FindWorkQuery = {}) =>
+      withQuery('/app/find-work', {
+        ...boardQuery(query),
+        distance: query.distance && query.distance !== 'any' ? query.distance : undefined,
+      }),
     /** A task from the helper's side: full details, offer form, or "finish setup to make offers". */
     findWorkTask: (taskId: string) => `/app/find-work/${enc(taskId)}`,
     offers: (inviteId?: string) => withQuery('/app/offers', { invite: inviteId }),

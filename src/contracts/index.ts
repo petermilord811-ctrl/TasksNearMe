@@ -17,6 +17,8 @@ export * from './posting';
 export * from './offers';
 export * from './onboarding';
 export * from './helper-work';
+export * from './payments';
+export * from './bookings';
 export * from './shell';
 export * from './routes';
 export type { PreviewEntry } from './preview';
