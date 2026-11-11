@@ -29,28 +29,22 @@
 - Tooling: the heavy-work lock (`scripts/gate.mjs`, the runner's check), the shared e2e sign-in, and seed resets that clear leftovers.
 
 ## Next steps
-1. **When UI-027 hands off:**
+1. **When UI-025 (direct invites) hands off:**
    - Review and merge.
-   - Add the pages from the scratchpad drafts:
-     - `ui027/new-page.tsx` → `src/app/(app)/app/(flow)/bookings/[bookingId]/changes/new/page.tsx`;
-     - `ui027/review-page.tsx` → `.../changes/[changeId]/page.tsx`.
-   - Set `CHANGE_PAGES_READY = true` and update the booking action unit tests.
-   - e2e: on `bkg_tv` (desktop), Ben proposes and Jordan accepts. Then gate and commit.
-2. **Launch UI-025** right after the UI-027 merge.
-   - The backend is ready: `src/modules/invites/{service,actions}.ts`.
-   - When it hands off, wire:
-     - the request page `src/app/(app)/app/(main)/helpers/[handle]/request/page.tsx` (`getRequestHelperPage`; the `from=booking:<id>` query);
-     - My offers: `invites: invitesForHelper(...)`, `openInviteId` from `?invite=`, and `inviteHandlers`;
+   - Wire:
+     - the request page `src/app/(app)/app/(main)/helpers/[handle]/request/page.tsx` (`getRequestHelperPage`; `fromBookingId` from `?from=booking:<id>`), with `requestHelperAction` / `quoteInviteAction` / `finishRequestVerificationAction`;
+     - My offers: `invites: invitesForHelper(...)`, `openInviteId` from `?invite=`, `inviteHandlers`;
      - the task owner page: `invites: invitesForTask(...)` and `inviteHandlers`;
-     - the `book_again` action link;
-     - e2e.
-3. **Seed a disputed booking** for dispute and staff-money e2e.
-4. **Later:**
-   - UI-020: reward reviews, users and moderation, config.
-   - UI-021: quality pass.
-   - My clients and availability posts.
-   - Staff TOTP, clock and time travel.
-   - Notifications for `change.*` and `invite.*` events (new notification types need a contract addition).
+     - the `book_again` link.
+   - e2e, gate, commit.
+   - Then **launch UI-020** (ready; page drafts in `scratchpad/ui020/wire.py`).
+2. **Seed a disputed booking** for dispute and staff-money e2e.
+3. **Later:**
+   - notifications for `change.*` and `invite.*` events (new types need placeholders, as with UI-026);
+   - content moderation (hide tasks, photos, reviews), staff roles and config, the audit page;
+   - My clients and availability posts;
+   - UI-021 quality pass;
+   - staff TOTP, clock and time travel.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB).

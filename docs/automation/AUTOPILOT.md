@@ -97,6 +97,7 @@ Keep going until the Build plan below is done, then stop.
   - Last resort: build that UI yourself in `src/ui`, following the ticket and `AGENTS.md`, and record it in `decisions.md`.
 
 ## Environment gotchas (Windows)
+- **Read the gate's `<step> exit <code>` lines** before committing. A command that pipes the gate into `tail` exits 0 even when a step failed. Under heavy load, vitest workers can fail to start ("Failed to start forks worker"): rerun the step when the machine is quieter.
 - **One heavy job at a time.** Run the full gate with `node scripts/gate.mjs --logs <dir>` (check, test:db, e2e, build). It takes `automation/heavy.lock`, and so does the runner's independent `check:ui`, which also retries once. Running both together starved the machine: vitest workers timed out and Playwright navigations failed.
 - Never run `npm ci` in the main checkout while `next dev` (or a Playwright-started server) is running. Native binaries are locked and `npm ci` leaves `node_modules` half-deleted. Stop the server first, or use `npm install`.
 - The Codex worktree needs `.env.local`. `scripts/codex-run.mjs` copies it; copy it by hand after recreating the worktree.
