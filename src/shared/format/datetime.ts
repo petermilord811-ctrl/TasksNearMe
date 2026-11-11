@@ -113,3 +113,48 @@ export function formatHours(hours: number): string {
   const rounded = Math.round(hours * 100) / 100;
   return `${rounded} h`;
 }
+
+const offsetFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: MARKET_TIME_ZONE,
+  hourCycle: 'h23',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+
+/** Minutes the market time zone is ahead of UTC at `instant` (Austin: -360 in winter, -300 in summer). */
+function marketOffsetMinutes(instant: Date): number {
+  const parts = Object.fromEntries(offsetFormatter.formatToParts(instant).map((p) => [p.type, p.value]));
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return Math.round((asUtc - instant.getTime()) / 60_000);
+}
+
+/**
+ * A wall-clock date and time in the market ("2026-11-21", "10:00") → UTC ISO string.
+ * Times that don't exist (the spring-forward gap) move forward by the gap; repeated times
+ * (fall back) resolve to the first occurrence.
+ */
+export function marketLocalToUtc(date: string, time: string): ISODateTime {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  const clock = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!match || !clock) throw new RangeError(`Invalid market date or time: ${date} ${time}`);
+  const wallAsUtc = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(clock[1]), Number(clock[2]));
+  // Candidate instants from the offsets on either side of a daylight-saving change.
+  const first = wallAsUtc - marketOffsetMinutes(new Date(wallAsUtc)) * 60_000;
+  const second = wallAsUtc - marketOffsetMinutes(new Date(first)) * 60_000;
+  const wallOf = (instant: number) => instant + marketOffsetMinutes(new Date(instant)) * 60_000;
+  const exact = [first, second].filter((instant) => wallOf(instant) === wallAsUtc);
+  // A repeated time takes its first occurrence; a skipped time moves forward past the gap.
+  const instant = exact.length > 0 ? Math.min(...exact) : Math.max(first, second);
+  return new Date(instant).toISOString();
+}

@@ -10,7 +10,7 @@ const KNOWN_CODES = new Set<string>(FIELD_ERROR_CODES);
 export function validationFailed(error: z.ZodError): ActionResult {
   const fieldErrors: Partial<Record<string, FieldErrorCode[]>> = {};
   for (const issue of error.issues) {
-    const field = String(issue.path[0] ?? 'form');
+    const field = issue.path.length > 0 ? issue.path.map(String).join('.') : 'form';
     const code = (KNOWN_CODES.has(issue.message) ? issue.message : 'invalid') as FieldErrorCode;
     (fieldErrors[field] ??= []).push(code);
   }

@@ -85,3 +85,27 @@ describe('date and time in America/Chicago', () => {
     expect(formatHours(0.25)).toBe('0.25 h');
   });
 });
+
+describe('marketLocalToUtc', () => {
+  it('converts Austin wall-clock times to UTC across daylight saving', async () => {
+    const { marketLocalToUtc } = await import('./index');
+    expect(marketLocalToUtc('2026-11-21', '10:00')).toBe('2026-11-21T16:00:00.000Z'); // CST, UTC-6
+    expect(marketLocalToUtc('2026-07-04', '10:00')).toBe('2026-07-04T15:00:00.000Z'); // CDT, UTC-5
+    expect(marketLocalToUtc('2026-11-01', '01:30')).toBe('2026-11-01T06:30:00.000Z'); // repeated hour: first
+    expect(marketLocalToUtc('2026-03-08', '02:30')).toBe('2026-03-08T08:30:00.000Z'); // skipped hour: moves forward
+    expect(() => marketLocalToUtc('2026-11-21', '10am')).toThrow(RangeError);
+  });
+});
+
+describe('money inputs', () => {
+  it('parses typed amounts into cents', async () => {
+    const { parseMoneyInput, formatMoneyInput } = await import('./index');
+    expect(parseMoneyInput('60')).toBe(6000);
+    expect(parseMoneyInput(' $1,234.5 ')).toBe(123450);
+    expect(parseMoneyInput('0.05')).toBe(5);
+    for (const bad of ['', 'abc', '12.345', '-5', '1e3', '$']) expect(parseMoneyInput(bad)).toBeNull();
+    expect(formatMoneyInput(6000)).toBe('60');
+    expect(formatMoneyInput(12350)).toBe('123.50');
+    expect(formatMoneyInput(5)).toBe('0.05');
+  });
+});

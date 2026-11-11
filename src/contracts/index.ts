@@ -13,6 +13,7 @@ export * from './forms';
 export * from './auth';
 export * from './content';
 export * from './profiles';
+export * from './posting';
 export * from './shell';
 export * from './routes';
 export type { PreviewEntry } from './preview';

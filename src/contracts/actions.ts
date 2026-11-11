@@ -64,6 +64,8 @@ export const ACTION_ERROR_CODES = [
   'not_found',
   'expired',
   'rate_limited',
+  /** A limit on the account was reached (e.g. 3 open tasks in the first week). */
+  'limit_reached',
   'unknown',
 ] as const;
 export type ActionErrorCode = (typeof ACTION_ERROR_CODES)[number];
@@ -85,6 +87,10 @@ export const FIELD_ERROR_CODES = [
   'not_supported',
   /** Already used by another account (e.g. a phone number). */
   'in_use',
+  /** Text describing something on the prohibited-tasks list. */
+  'prohibited',
+  /** A date or time outside what the policy allows (too soon, too far out, end before start). */
+  'out_of_range',
   /** A checkbox that must be ticked (age, terms). */
   'must_accept',
 ] as const;
@@ -107,3 +113,9 @@ export type ActionResult =
  * plain async functions. UI code must treat them as slow, possibly failing calls (pending states).
  */
 export type ActionHandler<TInput = void> = (input: TInput) => Promise<ActionResult>;
+
+/**
+ * A read the UI triggers (search, quote, upload). Unlike ActionHandler it resolves with data.
+ * In the app these are Server Actions; in previews and tests, plain async functions.
+ */
+export type QueryHandler<TInput, TOutput> = (input: TInput) => Promise<TOutput>;

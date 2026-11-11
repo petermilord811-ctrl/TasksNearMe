@@ -27,3 +27,23 @@ export function formatMoney(cents: Cents, options: FormatMoneyOptions = {}): str
   if (cents > 0 && options.signDisplay === 'always') return `+${formatted}`;
   return formatted;
 }
+
+/**
+ * What someone typed into a money field → integer cents, or null when it isn't an amount.
+ * "60" → 6000, "$1,234.5" → 123450, "12.345" → null (more than two decimals), "-5" → null.
+ */
+export function parseMoneyInput(input: string): Cents | null {
+  const cleaned = input.trim().replace(/^\$\s*/, '').replace(/,/g, '');
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  const [whole, fraction = ''] = cleaned.split('.');
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
+/** Integer cents → the plain number a money input shows: 6000 → "60", 12350 → "123.50". */
+export function formatMoneyInput(cents: Cents): string {
+  if (!Number.isInteger(cents) || cents < 0) throw new TypeError(`formatMoneyInput expects cents >= 0, received ${cents}`);
+  const whole = Math.floor(cents / 100);
+  const rest = cents % 100;
+  return rest === 0 ? String(whole) : `${whole}.${String(rest).padStart(2, '0')}`;
+}

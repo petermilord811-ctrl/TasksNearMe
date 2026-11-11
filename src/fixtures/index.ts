@@ -14,3 +14,4 @@ export * from './auth';
 export * from './content';
 export * from './board';
 export * from './profiles';
+export * from './posting';

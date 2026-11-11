@@ -51,6 +51,7 @@
     "not_found": "This item is no longer available. Return to your list and try again.",
     "expired": "The deadline has passed. Refresh the page to see your available actions.",
     "rate_limited": "There have been too many attempts. Wait a moment and try again.",
+    "limit_reached": "You've reached a limit on your account for now. Check the help center for details.",
     "unknown": "We couldn't complete that action. Try again, or contact support if it keeps happening."
   }
 }

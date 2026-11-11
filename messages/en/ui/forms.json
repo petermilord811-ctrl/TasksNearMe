@@ -8,21 +8,47 @@
     "expired": "That code has expired. Send a new code to continue.",
     "not_supported": "Use a US phone number. Other countries aren't supported yet.",
     "in_use": "That number is already used by another account. Try a different number or contact support.",
-    "must_accept": "Select this checkbox to continue."
+    "must_accept": "Select this checkbox to continue.",
+    "prohibited": "This isn't allowed on TasksNearMe. See the list of prohibited tasks.",
+    "out_of_range": "Choose a value within the allowed range."
   },
   "fields": {
-    "email": { "label": "Email", "hint": "Use an email address you can access.", "invalid": "Enter a valid email address." },
-    "code": { "label": "6-digit code", "hint": "Enter all 6 digits.", "invalid": "Enter the 6-digit code." },
-    "firstName": { "label": "First name" },
-    "lastName": { "label": "Last name" },
-    "phone": { "label": "Phone number", "hint": "US numbers only.", "invalid": "Enter a valid US phone number." },
-    "zip": { "label": "ZIP code", "hint": "The 5-digit ZIP code where you need or offer help.", "invalid": "Enter a 5-digit ZIP code." },
-    "interest": { "label": "I'm interested in", "hint": "Choose how you'd like to use TasksNearMe." }
+    "email": {
+      "label": "Email",
+      "hint": "Use an email address you can access.",
+      "invalid": "Enter a valid email address."
+    },
+    "code": {
+      "label": "6-digit code",
+      "hint": "Enter all 6 digits.",
+      "invalid": "Enter the 6-digit code."
+    },
+    "firstName": {
+      "label": "First name"
+    },
+    "lastName": {
+      "label": "Last name"
+    },
+    "phone": {
+      "label": "Phone number",
+      "hint": "US numbers only.",
+      "invalid": "Enter a valid US phone number."
+    },
+    "zip": {
+      "label": "ZIP code",
+      "hint": "The 5-digit ZIP code where you need or offer help.",
+      "invalid": "Enter a 5-digit ZIP code."
+    },
+    "interest": {
+      "label": "I'm interested in",
+      "hint": "Choose how you'd like to use TasksNearMe."
+    }
   },
   "actionErrors": {
     "expired": "That code has expired. Send a new code to continue.",
     "not_allowed": "This account can't continue. Visit the help center for support.",
-    "rate_limited": "There have been too many attempts. Wait before trying again."
+    "rate_limited": "There have been too many attempts. Wait before trying again.",
+    "limit_reached": "You've reached a limit on your account for now. Check the help center for details."
   },
   "retryAt": "Try again after {at} (Central time).",
   "getHelp": "Visit the help center",
