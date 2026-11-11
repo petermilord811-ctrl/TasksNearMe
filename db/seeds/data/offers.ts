@@ -78,4 +78,16 @@ export const SEED_OFFERS: SeedOffer[] = [
     submittedHoursAgo: 6,
     seenByPoster: false,
   },
+  {
+    id: 'off_moving_jordan',
+    taskId: 'tsk_moving',
+    helperUserId: 'usr_jordan',
+    pricing: { type: 'hourly', rateCents: 3500, estimatedHours: 3.5, hoursCap: 4 },
+    startOffsetMinutes: 0,
+    message: 'I can lift and load. I bring straps and a dolly.',
+    brings: ['Moving straps', 'Dolly'],
+    revision: 1,
+    submittedHoursAgo: 20,
+    seenByPoster: true,
+  },
 ];

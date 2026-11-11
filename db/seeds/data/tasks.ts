@@ -90,6 +90,23 @@ export const SEED_TASKS: SeedTask[] = [
     postedHoursAgo: 30,
   },
   {
+    // Chris books Jordan's hourly offer in the booking e2e (the e2e setup removes its bookings each run).
+    id: 'tsk_moving',
+    slug: 'help-loading-a-moving-truck-crestview-9d2a',
+    posterId: 'usr_chris',
+    categoryId: 'cat_moving_help',
+    title: 'Help loading a moving truck',
+    description: 'Two-bedroom apartment, boxes are packed. Couch, dresser, and a queen bed. Truck is rented.',
+    details: { moveType: 'load_truck', rooms: 2, heavyItems: 'Couch, dresser, queen bed', stairFlights: 1, elevator: false },
+    placeId: 'plc_crestview_88',
+    daysFromToday: 7,
+    start: '09:00',
+    end: '13:00',
+    budget: { type: 'hourly', rateCents: 3500, estimatedHours: 3.5, hoursCap: 4 },
+    offerCount: 1,
+    postedHoursAgo: 40,
+  },
+  {
     id: 'tsk_computer',
     slug: 'set-up-a-new-laptop-remote-4k7w',
     posterId: 'usr_ruth',

@@ -67,3 +67,15 @@ One entry per iteration, newest last.
   - a run that overlapped Codex's check on the same machine failed broadly; re-runs were clean.
 - Prepared UI-008 and UI-009 contracts: onboarding (form schemas, provider statuses, handlers) and helper work (feed, blocked reasons, offer schema factory).
 - Checks: `check` 540, `test:db` 29, `e2e` 60 (3 skips by design), `check:ui` pass.
+
+## 2026-11-11 — iteration 6 (helper onboarding, find work, booking and paying)
+- Codex:
+  - UI-009 (26 min) merged: find work, the helper task view, the offer form, my offers.
+  - UI-010 (24 min) merged: the confirmation page, payment picker, bank dialog, cancellation summary.
+  - UI-011 launched: the bookings list and the booking page.
+- Wired:
+  - UI-008: verification module and migration 0007, development provider stand-ins, onboarding and editor routes.
+  - UI-009: helper offers service (feed with distance bands, task view projection, send, revise, withdraw, re-confirm, limits, lazy expiry).
+  - UI-010: bookings and payments (migration 0008), the development payment stand-in, the confirmation route, the booking redirect placeholder.
+- e2e infrastructure: `POST /dev/cache` clears cached public pages after the reseed; the seed clears bookings on seeded tasks; reserved tasks for the offer and booking flows.
+- A stale Turbopack module ("is not a function" for a new export) needed a dev server restart; stopping the shell doesn't end `next dev` on Windows (AUTOPILOT gotchas).

@@ -11,3 +11,5 @@ export * from '../../modules/tasks/schema';
 export * from '../../modules/reviews/schema';
 export * from '../../modules/offers/schema';
 export * from '../../modules/verification/schema';
+export * from '../../modules/payments/schema';
+export * from '../../modules/bookings/schema';

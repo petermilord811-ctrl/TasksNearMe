@@ -2,7 +2,7 @@
  * Idempotent seed: Austin market, areas, categories, policy v1 (published) and v2 (draft),
  * feature flags. People and tasks are added by later phases (from src/fixtures).
  */
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { createDb } from '../../src/platform/db/connect';
 import {
   areas,
@@ -36,6 +36,9 @@ import { HELPER_LANGUAGES, SEED_REVIEWS, SERVICE_DESCRIPTIONS, WORK_SAMPLES } fr
 import { reviews } from '../../src/modules/reviews/schema';
 import { helperWorkSamples } from '../../src/modules/profiles/schema';
 import { files } from '../../src/modules/tasks/schema';
+import { bookingTerms, bookings } from '../../src/modules/bookings/schema';
+import { paymentMethods, payments } from '../../src/modules/payments/schema';
+import { devCardRef } from '../../src/integrations/payments';
 
 export async function seedDatabase(url: string): Promise<void> {
   const { db, pool } = createDb(url, { max: 2 });
@@ -168,10 +171,12 @@ export async function seedDatabase(url: string): Promise<void> {
         }
       }
 
+      await clearSeedBookings(tx);
       await seedTasks(tx);
       await seedProfileExtras(tx);
       await seedOffers(tx);
       await seedVerification(tx);
+      await seedPaymentMethods(tx);
     });
     await db.execute(sql`select 1`);
   } finally {
@@ -354,6 +359,32 @@ async function seedOffers(tx: Tx): Promise<void> {
   await tx.execute(sql`
     update tasks t set offer_count = coalesce(
       (select count(*)::int from offers o where o.task_id = t.id and o.status in ('pending', 'stale')), 0)`);
+}
+
+/**
+ * Bookings on the seeded tasks are removed before the tasks are reset to open, so the seed always
+ * leaves them bookable (with their payments and terms).
+ */
+async function clearSeedBookings(tx: Tx): Promise<void> {
+  const taskIds = SEED_TASKS.map((task) => task.id);
+  const rows = await tx.select({ id: bookings.id }).from(bookings).where(inArray(bookings.taskId, taskIds));
+  if (rows.length === 0) return;
+  const ids = rows.map((row) => row.id);
+  await tx.delete(payments).where(inArray(payments.bookingId, ids));
+  await tx.delete(bookingTerms).where(inArray(bookingTerms.bookingId, ids));
+  await tx.delete(bookings).where(inArray(bookings.id, ids));
+}
+
+/** Maya's saved cards (development provider): the Visa is her default. Both pay successfully. */
+async function seedPaymentMethods(tx: Tx): Promise<void> {
+  const cards = [
+    { id: 'pm_maya_visa', userId: 'usr_maya', brand: 'visa', last4: '1881', expMonth: 8, expYear: 2028, isDefault: true },
+    { id: 'pm_maya_mc', userId: 'usr_maya', brand: 'mastercard', last4: '4444', expMonth: 3, expYear: 2027, isDefault: false },
+  ];
+  for (const card of cards) {
+    const row = { ...card, provider: 'dev', providerRef: devCardRef('success'), detachedAt: null, createdAt: new Date('2026-10-20T15:00:00.000Z') };
+    await tx.insert(paymentMethods).values(row).onConflictDoUpdate({ target: paymentMethods.id, set: row });
+  }
 }
 
 /**

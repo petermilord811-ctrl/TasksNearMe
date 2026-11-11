@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, notInArray } from 'drizzle-orm';
 import type {
   ActionResult,
   ExactAddress,
@@ -11,6 +11,7 @@ import type {
   TaskCancelReason,
   TaskOwnerView,
 } from '@/contracts';
+import { bookings } from '@/modules/bookings/schema';
 import { photoFromFile } from '@/modules/files/uploads';
 import { categories, type FeeSchedule } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
@@ -45,6 +46,16 @@ export interface OwnerDeps {
   fees: FeeSchedule;
 }
 
+/** The booking behind each booked task (confirmed or later; a hold waiting for payment doesn't count). */
+async function bookingIdsOf(db: Db, taskIds: string[]): Promise<Map<string, string>> {
+  if (taskIds.length === 0) return new Map();
+  const rows = await db
+    .select({ id: bookings.id, taskId: bookings.taskId })
+    .from(bookings)
+    .where(and(inArray(bookings.taskId, taskIds), notInArray(bookings.status, ['canceled', 'pending_funding'])));
+  return new Map(rows.map((row) => [row.taskId, row.id]));
+}
+
 async function ownedTask(db: Db, userId: string, taskId: string) {
   const [task] = await db.select().from(tasks).where(and(eq(tasks.id, taskId), eq(tasks.posterUserId, userId))).limit(1);
   return task ?? null;
@@ -66,6 +77,7 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
         .groupBy(offers.taskId)
     : [];
   const unseenByTask = new Map(unseen.map((row) => [row.taskId, row.value]));
+  const bookingByTask = await bookingIdsOf(db, ids);
   const categoryRows = await db.select({ id: categories.id, slug: categories.slug }).from(categories);
   const slugOf = new Map(categoryRows.map((row) => [row.id, row.slug]));
 
@@ -80,6 +92,7 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
     offerCount: row.offerCount,
     newOfferCount: unseenByTask.get(row.id) ?? 0,
     postedAt: (row.publishedAt ?? row.createdAt).toISOString(),
+    ...(bookingByTask.has(row.id) ? { bookingId: bookingByTask.get(row.id)! } : {}),
   });
   const all = visible.map(toRow);
   return {
@@ -136,6 +149,7 @@ export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: 
     task.locationId ? deps.db.select().from(taskLocations).where(eq(taskLocations.id, task.locationId)).limit(1) : Promise.resolve([]),
   ]);
   const exactAddress = location[0] ? (JSON.parse(deps.cipher.decrypt(location[0].addressEnc)) as ExactAddress) : undefined;
+  const bookingId = (await bookingIdsOf(deps.db, [taskId])).get(taskId);
 
   return {
     task: found.view,
@@ -148,6 +162,7 @@ export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: 
       : {}),
     offers: await offerViews(deps, task, offerRows, now),
     actions: taskOwnerActions(task),
+    ...(bookingId ? { bookingId } : {}),
   };
 }
 

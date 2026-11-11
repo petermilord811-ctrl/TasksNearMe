@@ -1,6 +1,6 @@
 # UI-010 — Booking confirmation and payment
 
-**Status:** ready for Codex · **Branch:** `ui/UI-010-booking-confirmation` · **Plan first:** no (unattended) · **Depends on:** UI-007, UI-009 (merged)
+**Status:** wired · **Branch:** `ui/UI-010-booking-confirmation` · **Plan first:** no (unattended) · **Depends on:** UI-007, UI-009 (merged)
 
 ## Goal
 The poster books an offer and pays (blueprint 02 **J4**): `/app/tasks/[taskId]/offers/[offerId]/confirm`. The page shows the terms, the price breakdown, the cancellation terms, and the payment choice. It handles every payment outcome, including declines and a bank verification step. Claude wires it inside `AppShell` (poster mode).
@@ -94,6 +94,6 @@ Copy namespaces: `bookingConfirm` (the screen) and `payments` (picker, labels, b
 - Real card fields, Apple Pay, and Google Pay (the Stripe Payment Element comes with the Stripe integration).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app/tasks/[taskId]/offers/[offerId]/confirm` (flow layout). A booked offer redirects to `routes.app.booking(id)`.
+- Queries / actions: `getBookingConfirmPage`, `confirmBooking`, `finishBankVerification` (`src/modules/bookings/confirm.ts`); Server Actions `confirmBookingAction` (bound to the task and offer) and `finishBankVerificationAction`.
+- e2e: `tests/e2e/booking.spec.ts` (decline, then the bank step approved; someone else's page is not found).
