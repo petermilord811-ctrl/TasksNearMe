@@ -11,6 +11,7 @@ import { createDb } from '../../src/platform/db/connect';
  * Before the app e2e projects run:
  * - removes tasks that earlier posting runs created (their titles start with "Assemble a bookshelf (app-"),
  *   so lists of recent tasks don't fill up with test data;
+ * - removes offers on the shelves task, where the helper e2e sends one each run;
  * - resets Priya's onboarding (services, work samples, verification), since e2e onboards her;
  * - resets the seeded data (open tasks, offers, people), so tests that decline offers or cancel tasks
  *   can run again. The seed is idempotent; new accounts created by tests are left alone;
@@ -40,6 +41,8 @@ setup('reset seeded data', async ({ request }) => {
         if (locationIds.length > 0) await tx.delete(taskLocations).where(inArray(taskLocations.id, locationIds));
       });
     }
+    // The helper e2e sends a fresh offer on the shelves task each run.
+    await db.delete(offers).where(eq(offers.taskId, 'tsk_shelves'));
     // Priya (a draft helper in the seed) goes through onboarding in e2e: start her from scratch.
     const priya = 'usr_priya';
     await db.transaction(async (tx) => {

@@ -99,6 +99,7 @@ Keep going until the Build plan below is done, then stop.
 ## Environment gotchas (Windows)
 - Never run `npm ci` in the main checkout while `next dev` (or a Playwright-started server) is running. Native binaries are locked and `npm ci` leaves `node_modules` half-deleted. Stop the server first, or use `npm install`.
 - The Codex worktree needs `.env.local`. `scripts/codex-run.mjs` copies it; copy it by hand after recreating the worktree.
+- If the dev server throws "X is not a function" for an export that typecheck sees, its module graph is stale (seen after `sed -i` edits). Restart it: stopping the background shell doesn't end `next dev` on Windows, so also stop the `node.exe` listening on port 3000 (`netstat -ano`, then `Stop-Process`), and start the logged server again.
 
 ## Build plan
 

@@ -1,5 +1,5 @@
-import { and, asc, count, desc, eq, gt, lt, ne, type SQL } from 'drizzle-orm';
-import type { CategorySlug, TaskBoardPageData, TaskPublicView } from '@/contracts';
+import { and, asc, count, desc, eq, gt, lt, ne, or, sql, type SQL } from 'drizzle-orm';
+import type { CategorySlug, FindWorkPageData, TaskBoardPageData, TaskPublicView } from '@/contracts';
 import type { Db } from '@/platform/db/connect';
 import { users } from '../accounts/schema';
 import { areas, categories, markets } from '../markets/schema';
@@ -92,6 +92,73 @@ export async function listBoardTasks(
     .limit(BOARD_PAGE_SIZE)
     .offset((query.page - 1) * BOARD_PAGE_SIZE);
   return { tasks: rows.map((row) => toTaskPublicView(toRow(row))), totalCount: total?.value ?? 0 };
+}
+
+/** Great-circle miles from a point to a task's public point (null for tasks without one). */
+function milesFrom(center: { lat: number; lng: number }): SQL<number | null> {
+  const lat = sql`${center.lat}::double precision`;
+  const lng = sql`${center.lng}::double precision`;
+  return sql<number | null>`(3958.8 * 2 * asin(sqrt(
+    power(sin(radians(${tasks.publicLat} - ${lat}) / 2), 2)
+    + cos(radians(${lat})) * cos(radians(${tasks.publicLat})) * power(sin(radians(${tasks.publicLng} - ${lng}) / 2), 2)
+  )))`;
+}
+
+/**
+ * The helper feed: the board's filters, without the helper's own tasks, plus a distance limit from the
+ * helper's area. Remote tasks have no distance and stay in at every limit.
+ */
+export async function listFeedTasks(
+  db: Db,
+  options: {
+    marketId: string;
+    query: FindWorkPageData['query'];
+    now: Date;
+    excludePosterId: string;
+    /** The helper's area center; without one, distances are unknown and the limit is ignored. */
+    center: { lat: number; lng: number } | null;
+    maxMiles: number | null;
+  },
+): Promise<{ tasks: { view: TaskPublicView; distanceMiles: number | null; posterUserId: string; status: string; windowEnd: Date }[]; totalCount: number }> {
+  const { query, now, center } = options;
+  const conditions = openIn(options.marketId, now);
+  conditions.push(ne(tasks.posterUserId, options.excludePosterId));
+  if (query.category) conditions.push(eq(categories.slug, query.category));
+  if (query.remoteOnly) conditions.push(eq(tasks.mode, 'remote'));
+  const range = whenRange(query.when, now);
+  if (range) conditions.push(lt(tasks.windowStart, range.to), gt(tasks.windowEnd, range.from));
+  const miles = center ? milesFrom(center) : sql<number | null>`null`;
+  if (center && options.maxMiles !== null) {
+    conditions.push(or(eq(tasks.mode, 'remote'), sql`${miles} <= ${options.maxMiles}`)!);
+  }
+  const where = and(...conditions);
+
+  const [total] = await db
+    .select({ value: count() })
+    .from(tasks)
+    .innerJoin(categories, eq(categories.id, tasks.categoryId))
+    .where(where);
+  const rows = await db
+    .select({ ...columns, distanceMiles: miles, posterUserId: tasks.posterUserId })
+    .from(tasks)
+    .innerJoin(categories, eq(categories.id, tasks.categoryId))
+    .innerJoin(markets, eq(markets.id, tasks.marketId))
+    .innerJoin(users, eq(users.id, tasks.posterUserId))
+    .leftJoin(areas, eq(areas.id, tasks.publicAreaId))
+    .where(where)
+    .orderBy(...(query.sort === 'newest' ? [desc(tasks.publishedAt), asc(tasks.id)] : [asc(tasks.windowStart), asc(tasks.id)]))
+    .limit(BOARD_PAGE_SIZE)
+    .offset((query.page - 1) * BOARD_PAGE_SIZE);
+  return {
+    tasks: rows.map(({ distanceMiles, posterUserId, ...row }) => ({
+      view: toTaskPublicView(toRow(row)),
+      distanceMiles: distanceMiles === null || distanceMiles === undefined ? null : Number(distanceMiles),
+      posterUserId,
+      status: row.status,
+      windowEnd: row.windowEnd,
+    })),
+    totalCount: total?.value ?? 0,
+  };
 }
 
 /** Newest open tasks, for the home, market, and category pages. */

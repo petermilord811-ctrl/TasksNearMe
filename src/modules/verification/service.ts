@@ -459,7 +459,8 @@ export async function reorderWorkSamples(db: Db, userId: string, ids: string[]):
 
 // ---- Page data ------------------------------------------------------------------------------------
 
-function nearestRadius(km: number): (typeof SERVICE_RADIUS_MILES)[number] {
+/** The radius option (miles) a stored kilometre radius came from. */
+export function nearestRadius(km: number): (typeof SERVICE_RADIUS_MILES)[number] {
   const miles = km / KM_PER_MILE;
   return SERVICE_RADIUS_MILES.reduce((best, option) => (Math.abs(option - miles) < Math.abs(best - miles) ? option : best));
 }

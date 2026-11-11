@@ -75,6 +75,18 @@ export function formatDateTime(value: ISODateTime | Date): string {
   return `${formatDate(value)} · ${formatTime(value)}`;
 }
 
+const clockFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: MARKET_TIME_ZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** Wall-clock time in the market time zone, 24-hour, e.g. "10:30" (the inverse of `marketLocalToUtc`). */
+export function marketClockTime(value: ISODateTime | Date): string {
+  return clockFormatter.format(toDate(value));
+}
+
 /** Calendar day in the market time zone, e.g. "2026-11-21". */
 export function marketDayKey(value: ISODateTime | Date): string {
   return dayKeyFormatter.format(toDate(value));

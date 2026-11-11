@@ -73,6 +73,23 @@ export const SEED_TASKS: SeedTask[] = [
     postedHoursAgo: 21,
   },
   {
+    // Kept free of offers for the helper e2e (a fresh offer is sent and withdrawn each run).
+    id: 'tsk_shelves',
+    slug: 'mount-two-floating-shelves-windsor-park-5p2c',
+    posterId: 'usr_ana',
+    categoryId: 'cat_furniture_assembly',
+    title: 'Mount two floating shelves',
+    description: 'Two 36-inch floating shelves for the living room wall. Brackets and screws are in the box; the wall is drywall.',
+    details: { itemType: 'other', itemCount: 2, wallAnchoring: true, toolsOnSite: false },
+    placeId: 'plc_windsor_300',
+    daysFromToday: 5,
+    start: '13:00',
+    end: '16:00',
+    budget: { type: 'fixed', priceCents: 5000 },
+    offerCount: 0,
+    postedHoursAgo: 30,
+  },
+  {
     id: 'tsk_computer',
     slug: 'set-up-a-new-laptop-remote-4k7w',
     posterId: 'usr_ruth',
