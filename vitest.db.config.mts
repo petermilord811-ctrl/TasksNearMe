@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -6,7 +7,10 @@ import { defineConfig } from 'vitest/config';
  * Codex's worktree and machines without Docker can still run the unit tests.
  */
 export default defineConfig({
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    tsconfigPaths: true,
+    alias: { 'server-only': fileURLToPath(new URL('./tests/support/server-only.ts', import.meta.url)) },
+  },
   test: {
     include: ['tests/integration/**/*.test.ts'],
     environment: 'node',

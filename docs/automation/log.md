@@ -14,3 +14,11 @@ One entry per iteration, newest last.
 - Added Drizzle: `drizzle.config.ts`, `src/platform/db/{connect,client,schema,columns,ids}.ts`, and the schemas for markets, areas, categories, market categories, policies, feature flags, `audit_log`, `outbox_events`. Migrations `0000_postgis`, `0001_markets_audit_outbox`.
 - Seeds: Austin market, 12 areas, 5 categories with price guidance, policy v1 (published) and v2 (draft), flags. Scripts: `db:up/down/generate/migrate/seed/reset`, `test:db`.
 - Checks: `npm run check` (55 tests) and `npm run test:db` (4 tests) pass.
+
+## 2026-11-11 — iteration 2 (Phase 1: auth, people, shells)
+- Codex: UI-002 handed off (22 min) and merged; UI-003 launched at 06:17 UTC and handed off at 06:33 UTC.
+- Auth: Better Auth (email one-time codes, Drizzle adapter, prefixed ids), dev email outbox (`/dev/outbox`), `getViewer()`, `setMode`, `signOut`, staff two-step dev check, `/dev/sign-in`, optimistic `/app` redirect in `src/proxy.ts`. Migration `0002_accounts_profiles_dev_outbox`.
+- People: users, staff roles, helper profiles, and services seeded from the canonical fixtures (Maya, Chris, Ruth, Ben, Ana, Jordan, Sam, Lee, Priya, five staff).
+- UI-002 wired: route groups `(public)`, `(app)/app`, `admin/(gated)` render the Codex shells with the viewer.
+- Fixed: parallel e2e sign-ins replaced each other's codes (now serialized per email); placeholder pages no longer nest `<main>`; `typecheck` runs `next typegen` first.
+- Checks: `check` 126 tests, `test:db` 9, `e2e` 8 (mobile and desktop), `build` pass.

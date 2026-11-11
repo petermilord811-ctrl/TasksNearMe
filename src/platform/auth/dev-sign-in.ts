@@ -1,0 +1,34 @@
+'use server';
+
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { routes } from '@/contracts';
+import { auth } from './auth';
+
+/** One email code exists per person at a time, so sign-ins for the same email run one after another. */
+const queues = new Map<string, Promise<unknown>>();
+
+function serialize<T>(key: string, task: () => Promise<T>): Promise<T> {
+  const run = (queues.get(key) ?? Promise.resolve()).catch(() => undefined).then(task);
+  queues.set(key, run);
+  return run;
+}
+
+/**
+ * Development only: signs in as a seeded person through the real email-code verification
+ * (the code is created server-side instead of emailed). Refuses to run in production.
+ */
+export async function devSignInAs(formData: FormData): Promise<void> {
+  if (process.env.NODE_ENV === 'production') throw new Error('Not available in production.');
+
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const target = String(formData.get('target') ?? routes.app.home());
+  const requestHeaders = await headers();
+
+  await serialize(email, async () => {
+    const otp = await auth.api.createVerificationOTP({ body: { email, type: 'sign-in' } });
+    await auth.api.signInEmailOTP({ body: { email, otp }, headers: requestHeaders });
+  });
+
+  redirect(target.startsWith('/') ? target : routes.app.home());
+}

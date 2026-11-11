@@ -1,0 +1,102 @@
+import 'server-only';
+import { eq } from 'drizzle-orm';
+import { headers } from 'next/headers';
+import { cache } from 'react';
+import { STAFF_ROLES, type Mode, type ShellViewer, type SignedInViewer, type StaffRole, type StaffViewer } from '@/contracts';
+import { staffRoles, staffSessionChecks } from '@/modules/accounts/schema';
+import { helperProfiles } from '@/modules/profiles/schema';
+import { db } from '@/platform/db/client';
+import { auth } from './auth';
+
+export interface ViewerUser {
+  id: string;
+  sessionId: string;
+  email: string;
+  firstName: string;
+  displayName: string;
+  initials: string;
+  mode: Mode;
+  status: string;
+  staffRoles: StaffRole[];
+  staffTwoStepVerified: boolean;
+  helperStatus: 'none' | 'draft' | 'active' | 'paused' | 'suspended';
+}
+
+export type Viewer = { kind: 'public' } | { kind: 'user'; user: ViewerUser };
+
+function initialsOf(firstName: string, lastName: string, fallback: string): string {
+  const letters = `${firstName.charAt(0)}${lastName.charAt(0)}`.trim();
+  return (letters || fallback.slice(0, 2)).toUpperCase();
+}
+
+/** The signed-in person for this request (deduplicated per request). */
+export const getViewer = cache(async (): Promise<Viewer> => {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { kind: 'public' };
+
+  const u = session.user as typeof session.user & {
+    firstName?: string;
+    lastName?: string;
+    mode?: string;
+    status?: string;
+  };
+
+  const [roleRows, profileRows, checkRows] = await Promise.all([
+    db.select({ role: staffRoles.role }).from(staffRoles).where(eq(staffRoles.userId, u.id)),
+    db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, u.id)),
+    db.select({ verifiedAt: staffSessionChecks.verifiedAt }).from(staffSessionChecks).where(eq(staffSessionChecks.sessionId, session.session.id)),
+  ]);
+
+  const firstName = u.firstName ?? '';
+  const lastName = u.lastName ?? '';
+  const roles = roleRows.map((r) => r.role).filter((r): r is StaffRole => (STAFF_ROLES as readonly string[]).includes(r));
+
+  return {
+    kind: 'user',
+    user: {
+      id: u.id,
+      sessionId: session.session.id,
+      email: u.email,
+      firstName,
+      displayName: u.name || [firstName, lastName ? `${lastName.charAt(0)}.` : ''].filter(Boolean).join(' ') || u.email,
+      initials: initialsOf(firstName, lastName, u.email),
+      mode: u.mode === 'helper' ? 'helper' : 'poster',
+      status: u.status ?? 'active',
+      staffRoles: roles,
+      staffTwoStepVerified: checkRows.length > 0,
+      helperStatus: (profileRows[0]?.status as ViewerUser['helperStatus'] | undefined) ?? 'none',
+    },
+  };
+});
+
+export function toSignedInViewer(user: ViewerUser): SignedInViewer {
+  return {
+    kind: 'user',
+    id: user.id,
+    displayName: user.displayName,
+    initials: user.initials,
+    mode: user.mode,
+    helperReady: user.helperStatus === 'active',
+    // TODO(messaging, notifications): real unread counts in Phase 6.
+    unreadMessages: 0,
+    unreadNotifications: 0,
+  };
+}
+
+export function toStaffViewer(user: ViewerUser): StaffViewer {
+  return {
+    kind: 'staff',
+    id: user.id,
+    displayName: user.displayName,
+    initials: user.initials,
+    roles: user.staffRoles,
+    twoStepVerified: user.staffTwoStepVerified,
+  };
+}
+
+/** What the public header should show: signed out, a signed-in member, or staff. */
+export async function getPublicShellViewer(): Promise<ShellViewer> {
+  const viewer = await getViewer();
+  if (viewer.kind === 'public') return { kind: 'public' };
+  return viewer.user.staffRoles.length > 0 ? toStaffViewer(viewer.user) : toSignedInViewer(viewer.user);
+}

@@ -18,7 +18,10 @@ import {
   DEFAULT_FLAGS,
   DEFAULT_TIMERS,
 } from '../../src/modules/markets/policy-defaults';
+import { staffRoles, users } from '../../src/modules/accounts/schema';
+import { helperProfiles, helperServices } from '../../src/modules/profiles/schema';
 import { AUSTIN, AUSTIN_AREAS, CATEGORIES } from './data/austin';
+import { PEOPLE, displayNameOf } from './data/people';
 
 export async function seedDatabase(url: string): Promise<void> {
   const { db, pool } = createDb(url, { max: 2 });
@@ -86,6 +89,65 @@ export async function seedDatabase(url: string): Promise<void> {
           .insert(featureFlags)
           .values({ key, marketId: 'global', enabled: flag.enabled, description: flag.description })
           .onConflictDoNothing();
+      }
+
+      for (const person of PEOPLE) {
+        const user = {
+          id: person.id,
+          email: person.email,
+          name: displayNameOf(person),
+          emailVerified: true,
+          firstName: person.firstName,
+          lastName: person.lastName,
+          phone: person.phone ?? null,
+          phoneVerifiedAt: person.phone ? new Date(person.createdAt) : null,
+          mode: person.mode,
+          createdAt: new Date(person.createdAt),
+        };
+        await tx.insert(users).values(user).onConflictDoUpdate({ target: users.id, set: { ...user, createdAt: undefined } });
+
+        if (person.staffRole) {
+          await tx.insert(staffRoles).values({ userId: person.id, role: person.staffRole, grantedBy: 'seed' }).onConflictDoNothing();
+        }
+
+        if (person.helper) {
+          const { services, ...helper } = person.helper;
+          const profile = {
+            userId: person.id,
+            handle: helper.handle,
+            headline: helper.headline,
+            bio: helper.bio,
+            status: helper.status,
+            areaId: helper.areaId,
+            remoteOk: helper.remoteOk,
+            tools: helper.tools,
+            foundingNumber: helper.foundingNumber ?? null,
+            idVerifiedAt: helper.idVerifiedAt ?? null,
+            backgroundCheckedAt: helper.backgroundCheckedAt ?? null,
+            payoutsReadyAt: helper.payoutsReadyAt ?? null,
+            completedCount: helper.completedCount,
+            ratingAverage: helper.ratingAverage ?? null,
+            ratingCount: helper.ratingCount,
+            responseTimeMinutes: helper.responseTimeMinutes ?? null,
+          };
+          await tx.insert(helperProfiles).values(profile).onConflictDoUpdate({ target: helperProfiles.userId, set: profile });
+
+          for (const service of services) {
+            const row = {
+              id: `svc_${person.id.slice(4)}_${service.categoryId.slice(4)}`,
+              userId: person.id,
+              categoryId: service.categoryId,
+              pricingType: service.pricingType,
+              fromPriceCents: service.fromPriceCents ?? null,
+              hourlyRateCents: service.hourlyRateCents ?? null,
+              minHours: service.minHours ?? null,
+            };
+            await tx
+              .insert(helperServices)
+              .values(row)
+              .onConflictDoUpdate({ target: [helperServices.userId, helperServices.categoryId], set: row });
+          }
+        }
       }
     });
     await db.execute(sql`select 1`);
