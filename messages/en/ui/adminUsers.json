@@ -1,0 +1,36 @@
+{
+  "title": "People",
+  "intro": "Find a person to review their bookings, cases, and account history.",
+  "search": "Search by name or email",
+  "searchHint": "Enter all or part of a name or email address.",
+  "submitSearch": "Search people",
+  "clearSearch": "Clear search",
+  "results": "People results",
+  "count": "{count, plural, one {# person} other {# people}}",
+  "caption": "People matching your search, newest members first",
+  "emptyTitle": "No one matches",
+  "emptyBody": "Try another name or email address to find the person you need.",
+  "noStaffRoles": "No staff roles",
+  "memberSince": "Member since {date}",
+  "columns": {
+    "person": "Person",
+    "email": "Email",
+    "roles": "Staff roles",
+    "helperStatus": "Helper status",
+    "openCases": "Open cases",
+    "strikes": "Strikes"
+  },
+  "helperStatuses": {
+    "none": "No helper profile",
+    "draft": "Setting up",
+    "active": "Active helper",
+    "paused": "Paused",
+    "suspended": "Suspended"
+  },
+  "previews": {
+    "group": "Admin · people search",
+    "default": "People · all",
+    "search": "People · search results",
+    "empty": "People · no matches"
+  }
+}
