@@ -1,4 +1,4 @@
-import { boolean, index, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 /**
  * Better Auth tables (user, session, account, verification) plus TasksNearMe's own account data.
@@ -12,24 +12,34 @@ const authTimestamps = {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 };
 
-export const users = pgTable('users', {
-  id: text('id').primaryKey(),
-  /** Display name, e.g. "Maya R." (first name + last initial). */
-  name: text('name').notNull().default(''),
-  email: text('email').notNull().unique(),
-  emailVerified: boolean('email_verified').notNull().default(false),
-  image: text('image'),
-  ...authTimestamps,
-  // TasksNearMe fields (Better Auth additionalFields).
-  firstName: text('first_name').notNull().default(''),
-  /** Private. Never sent to public screens. */
-  lastName: text('last_name').notNull().default(''),
-  phone: text('phone'),
-  phoneVerifiedAt: timestamp('phone_verified_at', { withTimezone: true }),
-  mode: text('mode').notNull().default('poster'), // poster | helper
-  status: text('status').notNull().default('active'), // active | restricted | suspended | banned | deleted
-  homeMarketId: text('home_market_id').notNull().default('mkt_austin'),
-});
+export const users = pgTable(
+  'users',
+  {
+    id: text('id').primaryKey(),
+    /** Display name, e.g. "Maya R." (first name + last initial). */
+    name: text('name').notNull().default(''),
+    email: text('email').notNull().unique(),
+    emailVerified: boolean('email_verified').notNull().default(false),
+    image: text('image'),
+    ...authTimestamps,
+    // TasksNearMe fields (Better Auth additionalFields).
+    firstName: text('first_name').notNull().default(''),
+    /** Private. Never sent to public screens. */
+    lastName: text('last_name').notNull().default(''),
+    phone: text('phone'),
+    phoneVerifiedAt: timestamp('phone_verified_at', { withTimezone: true }),
+    mode: text('mode').notNull().default('poster'), // poster | helper
+    status: text('status').notNull().default('active'), // active | restricted | suspended | banned | deleted
+    homeMarketId: text('home_market_id').notNull().default('mkt_austin'),
+    /** "I'm 18 or older", ticked during sign-up. */
+    adultAttestedAt: timestamp('adult_attested_at', { withTimezone: true }),
+    termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
+    /** The terms version accepted, e.g. "draft-0.1". */
+    termsVersion: text('terms_version'),
+  },
+  // One account per verified phone number (NULLs don't collide).
+  (t) => [uniqueIndex('users_phone_idx').on(t.phone)],
+);
 
 export const sessions = pgTable(
   'sessions',
@@ -101,3 +111,29 @@ export const staffSessionChecks = pgTable('staff_session_checks', {
     .references(() => sessions.id, { onDelete: 'cascade' }),
   verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Phone verification attempts (blueprint 06 §1, backlog B-011). One pending row per user at a
+ * time. Three wrong codes lock the number for 10 minutes. With Twilio Verify the provider keeps
+ * the code; the fake provider (development) stores a hash of it here.
+ */
+export const phoneVerifications = pgTable(
+  'phone_verifications',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    phone: text('phone').notNull(), // E.164
+    status: text('status').notNull(), // pending | approved | locked | canceled
+    attempts: integer('attempts').notNull().default(0),
+    codeHash: text('code_hash'),
+    providerRef: text('provider_ref'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    resendAvailableAt: timestamp('resend_available_at', { withTimezone: true }).notNull(),
+    lockedUntil: timestamp('locked_until', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('phone_verifications_user_idx').on(t.userId, t.createdAt)],
+);

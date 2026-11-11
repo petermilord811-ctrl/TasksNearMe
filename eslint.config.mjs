@@ -47,6 +47,12 @@ const eslintConfig = defineConfig([
     '.scaffold-tmp/**',
   ]),
   {
+    // `_`-prefixed parameters are intentionally unused (e.g. a bound Server Action argument).
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
+  {
     files: ['src/ui/**/*.{ts,tsx}'],
     ignores: ['src/ui/previews/**', 'src/ui/**/*.test.{ts,tsx}'],
     rules: {
