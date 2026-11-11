@@ -121,6 +121,13 @@ describe('PublicShell', () => {
 });
 
 describe('AppShell', () => {
+  it('keeps the flow page clear of mobile tab navigation', () => {
+    show(<AppShell viewer={mayaShell} handlers={handlers} layout="flow"><h1>Post a task</h1></AppShell>);
+    expect(screen.queryByRole('navigation', { name: 'App navigation' })).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toContainElement(screen.getByRole('heading', { name: 'Post a task' }));
+  });
+
   it('marks Bookings active in both navigation layouts for a nested booking path', () => {
     show(<AppShell viewer={mayaShell} handlers={handlers} currentPath={routes.app.booking('abc')}><h1>Bookings</h1></AppShell>);
     for (const label of ['Main navigation', 'App navigation']) {

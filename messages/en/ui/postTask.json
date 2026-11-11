@@ -1,0 +1,372 @@
+{
+  "title": "Post a task",
+  "intro": "Tell nearby helpers what you need. You can check everything before you post.",
+  "progress": "Step {current} of {total} · {step}",
+  "navigation": "Posting steps",
+  "back": "Back",
+  "next": "Next",
+  "post": "Post task",
+  "posting": "Posting…",
+  "checking": "Checking…",
+  "saved": "Your draft stays in this tab until you post.",
+  "storageUnavailable": "Your browser couldn't save this draft. Keep this tab open until you post.",
+  "restored": "Your draft is ready to continue.",
+  "checkFields": "Check the highlighted details to continue.",
+  "unsupportedOption": "Choose an available option for this task.",
+  "prohibitedLink": "See prohibited tasks",
+  "steps": {
+    "category": "Category",
+    "describe": "Describe",
+    "details": "Details",
+    "photos": "Photos",
+    "where": "Where",
+    "when": "When",
+    "budget": "Budget",
+    "review": "Review and post"
+  },
+  "fields": {
+    "optional": "{label} (optional)",
+    "choose": "Choose an option",
+    "yes": "Yes",
+    "no": "No",
+    "decrease": "Decrease {label}",
+    "increase": "Increase {label}"
+  },
+  "category": {
+    "label": "What do you need help with?",
+    "hint": "Choose a category for your task.",
+    "scope": {
+      "furniture-assembly": "Desks, beds, shelves, and other flat-pack furniture.",
+      "moving-help": "Loading, unloading, and moving things around your home.",
+      "yard-cleanup": "Leaves, weeding, and light yard tidying.",
+      "light-cleaning": "Everyday cleaning for rooms, kitchens, and bathrooms.",
+      "computer-help": "Device setup, troubleshooting, and a patient how-to."
+    }
+  },
+  "details": {
+    "furniture-assembly": {
+      "itemType": {
+        "label": "What needs assembling?",
+        "hint": "Choose the main item. Add other items in your description.",
+        "options": {
+          "desk": "Desk",
+          "bed": "Bed",
+          "bookshelf": "Bookshelf",
+          "wardrobe": "Wardrobe",
+          "dresser": "Dresser",
+          "table": "Table",
+          "chairs": "Chairs",
+          "other": "Something else"
+        }
+      },
+      "itemCount": {
+        "label": "Number of items",
+        "hint": "Count each separate piece of furniture."
+      },
+      "brand": {
+        "label": "Brand or model",
+        "hint": "A name or model number helps the helper prepare."
+      },
+      "floor": {
+        "label": "Floor",
+        "hint": "Use 0 for the ground floor."
+      },
+      "elevator": {
+        "label": "Is there an elevator?",
+        "hint": "Let the helper know how to reach the room."
+      },
+      "wallAnchoring": {
+        "label": "Does it need wall anchoring?",
+        "hint": "Check the furniture instructions for anchoring requirements."
+      },
+      "toolsOnSite": {
+        "label": "Do you have tools available?",
+        "hint": "If not, the helper can plan to bring their own."
+      }
+    },
+    "moving-help": {
+      "moveType": {
+        "label": "What moving help do you need?",
+        "hint": "You arrange the vehicle. Helpers provide the loading and moving help.",
+        "options": {
+          "within_home": "Move things within my home",
+          "load_truck": "Load a truck",
+          "unload_truck": "Unload a truck",
+          "load_and_unload": "Load and unload"
+        }
+      },
+      "rooms": {
+        "label": "Number of rooms",
+        "hint": "Count the rooms with items that need moving."
+      },
+      "heavyItems": {
+        "label": "Heavy or bulky items",
+        "hint": "For example, a couch, dresser, or queen bed."
+      },
+      "stairFlights": {
+        "label": "Flights of stairs",
+        "hint": "Use 0 if there are no stairs."
+      },
+      "elevator": {
+        "label": "Is there an elevator?",
+        "hint": "This helps the helper plan for larger items."
+      }
+    },
+    "yard-cleanup": {
+      "yardSize": {
+        "label": "Yard size",
+        "hint": "Choose the closest size for the area that needs work.",
+        "options": {
+          "small": "Small",
+          "medium": "Medium",
+          "large": "Large"
+        }
+      },
+      "work": {
+        "label": "What needs doing?",
+        "hint": "Choose the main task and add specifics in your description.",
+        "options": {
+          "leaves": "Rake and bag leaves",
+          "weeding": "Hand weeding",
+          "pruning": "Light hand pruning",
+          "hauling": "Gather yard debris",
+          "mixed": "A mix of yard tasks"
+        }
+      },
+      "haulAway": {
+        "label": "Does debris need moving to a collection spot?",
+        "hint": "Describe your green-waste plan. Arrange any off-site transport yourself."
+      },
+      "toolsOnSite": {
+        "label": "Do you have yard tools available?",
+        "hint": "List available tools and bags in your description."
+      }
+    },
+    "light-cleaning": {
+      "bedrooms": {
+        "label": "Number of bedrooms",
+        "hint": "Count only bedrooms included in this task."
+      },
+      "bathrooms": {
+        "label": "Number of bathrooms",
+        "hint": "Count only bathrooms included in this task."
+      },
+      "suppliesOnSite": {
+        "label": "Do you have cleaning supplies?",
+        "hint": "Mention any products you prefer in your description."
+      },
+      "pets": {
+        "label": "Will pets be at home?",
+        "hint": "Let the helper know what to expect when they arrive."
+      }
+    },
+    "computer-help": {
+      "device": {
+        "label": "Which device needs help?",
+        "hint": "Choose the main device and describe any others.",
+        "options": {
+          "phone": "Phone",
+          "tablet": "Tablet",
+          "laptop": "Laptop",
+          "desktop": "Desktop computer",
+          "printer": "Printer",
+          "wifi_router": "Wi-Fi router",
+          "tv": "TV",
+          "other": "Another device"
+        }
+      },
+      "need": {
+        "label": "What kind of help?",
+        "hint": "No technical terms needed. Choose the closest option.",
+        "options": {
+          "setup": "Set it up",
+          "fix": "Fix a problem",
+          "how_to": "Show me how",
+          "backup": "Back up files",
+          "other": "Something else"
+        }
+      },
+      "deviceBrand": {
+        "label": "Device brand or model",
+        "hint": "Add it if you know it. You can leave this blank."
+      }
+    }
+  },
+  "schedule": {
+    "policy": "Choose a start at least {hours, plural, one {# hour} other {# hours}} from now and no more than {days, plural, one {# day} other {# days}} ahead. All times are in {market}.",
+    "date": "Date",
+    "dateHint": "Pick a day for the task.",
+    "timing": "Time preference",
+    "timingHint": "Give a time window or leave the day flexible.",
+    "window": "Choose a time window",
+    "flexible": "Any time that day",
+    "startTime": "Window starts",
+    "endTime": "Window ends",
+    "timeHint": "Choose a time in 30-minute steps.",
+    "startTooSoon": "Pick a start at least {hours, plural, one {# hour} other {# hours}} from now.",
+    "endAfterStart": "Pick an end time after the start time."
+  },
+  "budget": {
+    "guidance": "Typical in {market}: {low}–{high} {unit}",
+    "units": {
+      "item": "per item",
+      "hour": "per hour",
+      "task": "per task"
+    },
+    "type": "How would you like to price this?",
+    "typeHint": "Helpers can respond with offers. You review the full price before booking.",
+    "fixed": "Fixed price",
+    "hourly": "Hourly",
+    "price": "Task price ($)",
+    "priceHint": "Enter dollars. The minimum for this category is {minimum}.",
+    "rate": "Hourly rate ($)",
+    "rateHint": "Enter the amount in dollars for each hour.",
+    "minimumHours": "This category has a minimum of {hours, plural, one {# hour} other {# hours}}.",
+    "estimatedHours": "Estimated hours",
+    "estimatedHoursHint": "Your estimate, in half-hour steps.",
+    "hoursCap": "Hour cap",
+    "hoursCapHint": "The maximum hours you agree to, in half-hour steps.",
+    "addExpense": "Add an expense allowance (optional)",
+    "expenseHint": "Set aside an amount for agreed supplies or materials. The helper provides receipts.",
+    "expenseAmount": "Expense allowance ($)",
+    "expenseAmountHint": "Enter dollars, up to {maximum}.",
+    "expenseDescription": "What is the allowance for?",
+    "expenseDescriptionHint": "Name the supplies or materials the helper may need."
+  },
+  "describe": {
+    "title": "Task title",
+    "titleHint": "A short summary, such as assembling a desk.",
+    "description": "What do you need help with?",
+    "descriptionHint": "Include what needs doing, what is ready, and what the helper should bring.",
+    "counter": "{count}/{max}",
+    "aiTitle": "Help me describe this",
+    "aiHint": "Start with your own words. You can review and edit the suggestion. Nothing is posted automatically.",
+    "aiInput": "Say it your way",
+    "aiInputHint": "A few notes are enough. Leave out contact details and your exact address.",
+    "draft": "Help me describe this",
+    "drafting": "Writing a suggestion…",
+    "suggestion": "Your suggested description",
+    "questions": "Things to check before you post",
+    "use": "Use this",
+    "keep": "Keep mine",
+    "used": "Suggestion added. You can still edit the title, description, and details.",
+    "kept": "Your original description is unchanged.",
+    "yes": "Yes",
+    "no": "No",
+    "prohibitedLink": "See tasks we cannot help with",
+    "errors": {
+      "unavailable": "Suggestions are unavailable right now. Try again or continue with your own description.",
+      "rate_limited": "You've requested several suggestions. Wait a little and try again, or write your own description.",
+      "prohibited": "We cannot help with something in these notes. Check the tasks we cannot help with and update your description."
+    }
+  },
+  "photos": {
+    "label": "Add photos (optional)",
+    "hint": "Add up to {count} photos, up to {megabytes} MB each. JPEG, PNG, WebP, and HEIC are accepted.",
+    "privacy": "Keep house numbers, mail, and faces out of the frame.",
+    "count": "{count, plural, =0 {No photos added} one {# photo added} other {# photos added}}",
+    "uploaded": "Photo uploaded.",
+    "uploading": "Uploading photo…",
+    "preview": "Photo preview: {name}",
+    "remove": "Remove photo {number}",
+    "removed": "Photo removed.",
+    "restored": "Uploaded photo {number}",
+    "restoredHint": "This photo is saved with your draft. Its preview will be available after posting.",
+    "errors": {
+      "too_large": "This photo is too large. Choose a photo under {megabytes} MB.",
+      "unsupported_type": "Choose a JPEG, PNG, WebP, or HEIC photo.",
+      "too_many": "You can add up to {count} photos. Remove one before adding another.",
+      "rate_limited": "Photos are uploading too quickly. Wait a little and try again.",
+      "unknown": "This photo did not upload. Try again."
+    }
+  },
+  "location": {
+    "mode": "Where will this happen?",
+    "modeHint": "Choose in-person help or, when available for this category, remote help.",
+    "errors": {
+      "not_supported": "This category needs in-person help. Choose In person to continue."
+    },
+    "local": "In person",
+    "remote": "Remote",
+    "remoteHint": "Meet online. Share meeting details with your booked helper.",
+    "search": "Search your address",
+    "searchHint": "Type at least 3 characters, then choose your address.",
+    "results": "Matching addresses",
+    "loading": "Finding addresses…",
+    "empty": "No matching addresses. Try a street name or ZIP code.",
+    "failed": "Address search is unavailable. Try again in a moment.",
+    "outOfArea": "We're not in that area yet.",
+    "waitlist": "Join the waitlist",
+    "publicPreview": "Helpers see: {area}, {market}.",
+    "privateHint": "Your exact address goes only to the helper you book.",
+    "selected": "Address selected.",
+    "unit": "Apartment or unit (optional)",
+    "unitHint": "Only your booked helper sees this.",
+    "accessNotes": "Access notes (optional)",
+    "accessHint": "Only your booked helper sees this. Include entry instructions, parking, or stairs.",
+    "restoreHint": "Your address choice is saved. Search again if you need to change it."
+  },
+  "review": {
+    "intro": "Check your task and who can see each part. You can go back to change anything before posting.",
+    "everyone": "Everyone sees",
+    "helpers": "Signed-in helpers also see",
+    "bookedHelper": "Only your booked helper sees",
+    "category": "Category",
+    "area": "Area",
+    "areaValue": "{area}, {market}",
+    "areaUnavailable": "General area of your selected address",
+    "remote": "Remote",
+    "when": "When",
+    "flexible": "Any time that day",
+    "notSet": "Not set yet",
+    "budget": "Budget",
+    "fixedPrice": "{price} fixed price",
+    "hourlyRate": "{rate} per hour",
+    "hourlyHours": "Estimated {estimate} · Cap {cap}",
+    "yes": "Yes",
+    "no": "No",
+    "allowance": "Expense allowance",
+    "photoAlt": "Task photo {number} of {total}",
+    "savedPhoto": "Photo {number} is saved. Its preview will appear after posting.",
+    "noPhotos": "No photos added.",
+    "privacy": "Helpers see only the general area. Your exact address is shared with your helper after you book.",
+    "address": "Address",
+    "addressSaved": "Your selected address is saved. Go back to Where to view or change it.",
+    "unit": "Unit or apartment",
+    "accessNotes": "Access notes",
+    "remotePrivacy": "This is a remote task. No address is shared.",
+    "priceTitle": "If you book at this price",
+    "priceLoading": "Getting your price breakdown…",
+    "priceError": "We couldn't load the price breakdown. Try again to see what you'll pay when you book.",
+    "retryPrice": "Try price breakdown again",
+    "payment": "You pay when you book. Your helper is paid after the task is done."
+  },
+  "previews": {
+    "group": "Post a task",
+    "category": "Choose a category",
+    "describe-ai": "Describe with optional drafting help",
+    "describe-no-ai": "Describe without drafting help",
+    "ai-suggestion": "Review a suggested description",
+    "details-furniture": "Furniture assembly details",
+    "details-moving": "Moving help details",
+    "details-computer": "Computer help details",
+    "details-yard": "Yard cleanup details",
+    "details-cleaning": "Light cleaning details",
+    "photos": "Two uploaded photos",
+    "photos-empty": "Add the first photo",
+    "where-local": "Local address and privacy",
+    "where-remote": "Remote task",
+    "where-out-of-area": "Address outside the service area",
+    "when-window": "Date and time window",
+    "when-flexible": "Any time on the selected day",
+    "budget-fixed": "Fixed price and guidance",
+    "budget-hourly": "Hourly rate, cap, and allowance",
+    "review-desk": "Review a desk task",
+    "review-moving": "Review moving help",
+    "review-remote": "Review remote computer help",
+    "review-loading": "Loading the price breakdown",
+    "review-error": "Price breakdown unavailable",
+    "error-prohibited": "Task description needs changes",
+    "error-limit": "Posting limit reached"
+  }
+}
