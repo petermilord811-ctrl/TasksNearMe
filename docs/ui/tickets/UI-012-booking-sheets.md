@@ -31,6 +31,9 @@ Change requests (new price, time or scope) are a later ticket.
   - handlers: `fakeBookingSheetHandlers`.
 - Reuse: `BookingHubScreen` and `BookingHubActions` (UI-011), `Sheet`/`Drawer` (bottom sheet on phones, dialog on desktop), `RadioGroup`, `FormFeedback`, `Money`.
 
+## Follow-ups from UI-014 (contract request accepted)
+1. `ThreadSummary.lastMessage` now has `kind` and, for status and system lines, `event`. In `InboxScreen`, word those previews with the `timeline.<type>` copy, as the thread already does, instead of the empty segments. `deskBookingThread` has a status preview (`on_my_way`).
+
 ## Build
 
 **`BookingHubScreen` gets a new prop `sheets: BookingSheetHandlers`.** These action ids open a sheet instead of calling `handlers.onAction`: `cancel`, `running_late`, `report_no_show`, `cant_access`, `safety_report`. All other actions, including `im_here`, stay single taps.

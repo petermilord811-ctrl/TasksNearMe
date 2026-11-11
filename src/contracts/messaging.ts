@@ -57,7 +57,14 @@ export interface ThreadSummary {
   title: string;
   otherParty: PersonSummary;
   subject: ThreadSubject;
-  lastMessage?: { sender: MessageView['sender']; preview: MessageSegment[]; createdAt: ISODateTime };
+  /** The latest message: text as segments, status and system lines as their event (word it with `timeline.<type>`). */
+  lastMessage?: {
+    sender: MessageView['sender'];
+    kind: MessageView['kind'];
+    preview: MessageSegment[];
+    event?: Pick<TimelineEvent, 'type' | 'params'>;
+    createdAt: ISODateTime;
+  };
   unreadCount: number;
   /** Contact details are hidden until a booking is confirmed (blueprint 06). */
   contactMasking: boolean;

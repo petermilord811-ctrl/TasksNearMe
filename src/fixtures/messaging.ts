@@ -41,7 +41,7 @@ export const deskBookingThread: ThreadSummary = {
   title: 'Assemble a desk (flat-pack, 1 item)',
   otherParty: jordan,
   subject: { kind: 'booking', bookingId: 'bkg_desk' },
-  lastMessage: { sender: 'system', preview: text('Jordan is on the way'), createdAt: '2026-11-21T15:58:00.000Z' },
+  lastMessage: { sender: 'system', kind: 'status', preview: [], event: { type: 'on_my_way' }, createdAt: '2026-11-21T15:58:00.000Z' },
   unreadCount: 1,
   contactMasking: false,
 };
@@ -81,7 +81,7 @@ export const deskOfferLeeThread: ThreadSummary = {
   title: 'Assemble a desk (flat-pack, 1 item)',
   otherParty: lee,
   subject: { kind: 'offer_for_client', taskId: 'tsk_desk', offerId: 'off_lee' },
-  lastMessage: { sender: 'them', preview: maskedPhoneMessage, createdAt: '2026-11-17T13:40:00.000Z' },
+  lastMessage: { sender: 'them', kind: 'text', preview: maskedPhoneMessage, createdAt: '2026-11-17T13:40:00.000Z' },
   unreadCount: 0,
   contactMasking: true,
 };
@@ -104,7 +104,7 @@ export const movingOfferThreadForHelper: ThreadSummary = {
   title: 'Help loading a moving truck',
   otherParty: { id: 'usr_chris', displayName: 'Chris D.', initials: 'CD', memberSince: '2026-10-12T15:00:00.000Z', phoneVerified: true },
   subject: { kind: 'task_for_helper', taskId: 'tsk_moving' },
-  lastMessage: { sender: 'me', preview: text('Is there an elevator, or stairs only?'), createdAt: '2026-11-17T12:30:00.000Z' },
+  lastMessage: { sender: 'me', kind: 'text', preview: text('Is there an elevator, or stairs only?'), createdAt: '2026-11-17T12:30:00.000Z' },
   unreadCount: 0,
   contactMasking: true,
 };

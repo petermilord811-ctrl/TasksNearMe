@@ -193,7 +193,17 @@ async function summaryOf(db: Db, thread: ThreadRow, viewerId: string, now: Date)
       title: context.title,
       otherParty: personOf(other),
       subject: context.subject,
-      ...(latestView ? { lastMessage: { sender: latestView.sender, preview: latestView.segments, createdAt: latestView.createdAt } } : {}),
+      ...(latestView
+        ? {
+            lastMessage: {
+              sender: latestView.sender,
+              kind: latestView.kind,
+              preview: latestView.segments,
+              ...(latestView.event ? { event: latestView.event } : {}),
+              createdAt: latestView.createdAt,
+            },
+          }
+        : {}),
       unreadCount: unread[0]?.value ?? 0,
       contactMasking: context.masking,
     },
