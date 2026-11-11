@@ -15,7 +15,7 @@ export function NotificationsScreen({ data, handlers, now }: {
 
   return <div className="mx-auto w-full max-w-[1120px] space-y-6">
     <PageHeader title={t('title')} description={t('description')} />
-    {data.unreadCount > 0 && <MarkAllRead onMarkAllRead={handlers.onMarkAllRead} />}
+    <MarkAllRead onMarkAllRead={handlers.onMarkAllRead} hasUnread={data.unreadCount > 0} />
     {notifications.length > 0
       ? <NotificationList notifications={notifications} onOpen={handlers.onOpen} now={now} />
       : <EmptyState title={t('empty.title')} body={t('empty.body')} icon={<Bell className="size-6" />} action={{ label: t('empty.action'), href: routes.app.home() }} />}

@@ -9,6 +9,8 @@ import {
   deskBookingHelperConfirmed, deskBookingHelperDayOf, deskBookingHelperInProgress,
   deskBookingHelperPendingFunding, deskBookingHelperRunningLate, deskBookingPosterCanceledByHelper, deskBookingPosterCanceledLate,
   deskBookingPosterCompleted, deskBookingPosterCompletionSubmitted, deskBookingPosterConfirmed,
+  deskBookingPosterDisputed, deskBookingHelperDisputed, deskBookingHelperDisputedContacted,
+  deskBookingPosterSettled, deskBookingHelperSettled,
   deskReviewPublishedData, deskReviewSubmittedData,
   deskBookingPosterPendingFunding, deskCancelPreviewHelperLate, fakeBookingHubHandlers, fakeBookingSheetHandlers, fakeHandler, jordanBookingsPageData,
   jordanShell, mayaBookingsNeedsActionData, mayaBookingsPageData, mayaShell,
@@ -98,14 +100,12 @@ export const bookingsPreviews: PreviewEntry[] = [
     ...deskBookingPosterCompletionSubmitted, viewerRole: 'helper', payments: undefined,
     actions: [{ id: 'message', kind: 'primary', enabled: true }],
   }, { now: afterSubmission }),
-  hubPreview('client-disputed', copy.previews.clientDisputed, {
-    ...deskBookingPosterCompletionSubmitted, status: 'disputed', deadlines: {},
-    actions: [{ id: 'contact_support', kind: 'primary', enabled: true }],
-  }, { now: afterSubmission }),
-  hubPreview('helper-disputed', copy.previews.helperDisputed, {
-    ...deskBookingHelperInProgress, status: 'disputed', deadlines: {},
-    actions: [{ id: 'contact_support', kind: 'primary', enabled: true }],
-  }, { now: afterSubmission }),
+  hubPreview('client-disputed', copy.previews.clientDisputed, deskBookingPosterDisputed, { now: '2026-11-22T15:00:00.000Z' }),
+  hubPreview('poster-disputed', copy.previews.clientDisputed, deskBookingPosterDisputed, { now: '2026-11-22T15:00:00.000Z' }),
+  hubPreview('helper-disputed', copy.previews.helperDisputed, deskBookingHelperDisputed, { now: '2026-11-22T15:00:00.000Z' }),
+  hubPreview('helper-disputed-contacted', copy.previews.helperDisputedContacted, deskBookingHelperDisputedContacted, { now: '2026-11-22T16:00:00.000Z' }),
+  hubPreview('poster-settled', copy.previews.posterSettled, deskBookingPosterSettled, { now: '2026-11-24T17:00:00.000Z' }),
+  hubPreview('helper-settled', copy.previews.helperSettled, deskBookingHelperSettled, { now: '2026-11-24T17:00:00.000Z' }),
   hubPreview('helper-running-late', copy.previews.runningLate, deskBookingHelperRunningLate, { now: '2026-11-21T16:25:00.000Z' }),
   // Dedicated reason variants omit payment/event histories whose amounts or actors would imply a different cancellation.
   ...CANCEL_REASONS.filter((reason) => reason !== 'poster_late' && reason !== 'helper').map((reason) => hubPreview(

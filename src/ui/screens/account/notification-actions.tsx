@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarCheck, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleDollarSign, ClipboardCheck, Clock, DoorOpen, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, Star, X, type LucideIcon } from 'lucide-react';
+import { CalendarCheck, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, Clock, DoorOpen, Headset, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
@@ -30,9 +30,8 @@ const icons: Record<NotificationType, LucideIcon> = {
   payout_paid: CircleDollarSign,
   review_published: Star,
   message_received: MessageCircle,
-  // Placeholders added by Claude with the UI-026 contract; Codex reviews them in UI-026.
-  support_replied: MessageCircle,
-  case_resolved: CheckCheck,
+  support_replied: Headset,
+  case_resolved: CircleCheck,
 };
 
 function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
@@ -106,7 +105,7 @@ export function NotificationList({ notifications, onOpen, now }: {
   </ul>;
 }
 
-export function MarkAllRead({ onMarkAllRead }: Pick<NotificationHandlers, 'onMarkAllRead'>) {
+export function MarkAllRead({ onMarkAllRead, hasUnread }: Pick<NotificationHandlers, 'onMarkAllRead'> & { hasUnread: boolean }) {
   const t = useTranslations('notifications');
   const router = useRouter();
   const locked = useRef(false);
@@ -129,10 +128,12 @@ export function MarkAllRead({ onMarkAllRead }: Pick<NotificationHandlers, 'onMar
     }
   }
 
+  if (!hasUnread && !pending && !result) return null;
+
   return <div className="space-y-3">
-    <Button type="button" variant="outline" disabled={pending} aria-busy={pending} onClick={markAllRead}>
+    {(hasUnread || pending) && <Button type="button" variant="outline" disabled={pending} aria-busy={pending} onClick={markAllRead}>
       {pending ? <Spinner aria-hidden="true" /> : <CheckCheck aria-hidden="true" />}{t(pending ? 'markingRead' : 'markAllRead')}
-    </Button>
+    </Button>}
     <FormFeedback result={result} successMessage={t('markedRead')} errorMessage={result && !result.ok && result.code === 'unknown' ? t('markError') : undefined} />
   </div>;
 }

@@ -26,6 +26,9 @@
     "helperCompletionSubmitted": "Helper · waiting for approval",
     "clientDisputed": "Client · problem reported",
     "helperDisputed": "Helper · problem reported",
+    "helperDisputedContacted": "Helper · support needs a reply",
+    "posterSettled": "Client · settlement and refund",
+    "helperSettled": "Helper · settlement and earnings",
     "runningLate": "Helper · running late",
     "submitting": "Saving check-in",
     "updated": "Check-in saved",
@@ -40,7 +43,7 @@
     "completedVia": {
       "auto": "Approved automatically",
       "support": "Approved by support",
-      "settlement": "Completed by agreement"
+      "settlement": "Completed through a settlement"
     },
     "results": {
       "validation_failed": "Check the details",
@@ -57,6 +60,25 @@
     }
   },
   "back": "All bookings",
+  "dispute": {
+    "title": "Problem reported",
+    "resolvedTitle": "Problem resolved",
+    "opened": "Opened {date}",
+    "viewCase": "View the case",
+    "helperReview": "Support is reviewing a problem report about this booking. They'll contact you here if they need anything.",
+    "refund": "{amount} was refunded to your card",
+    "receives": "You receive {amount} for this booking",
+    "resolutions": {
+      "no_action": "No further action needed",
+      "release_full": "Full payment released",
+      "settle": "Settled at a lower price",
+      "refund_full": "Refunded in full",
+      "rework": "Follow-up work arranged",
+      "goodwill_refund": "Goodwill refund issued",
+      "account_action": "Account action taken",
+      "reward_action": "Reward updated"
+    }
+  },
   "helper": "Your helper",
   "client": "Your client",
   "saved": "Saved",
@@ -119,7 +141,7 @@
       "confirmed": "Starts {date} at {time}",
       "in_progress": "{hasTime, select, yes {Started at {time}} other {You started the task.}}",
       "completion_submitted": "Waiting for {name} to approve.",
-      "disputed": "A problem was reported. Follow the updates in your support case.",
+      "disputed": "Support is reviewing a problem report about this booking.",
       "completed": "The task was completed.",
       "canceled": "The booking was canceled."
     }
@@ -151,13 +173,13 @@
       "poster": "You approved the completed task.",
       "auto": "The completed task was approved automatically.",
       "support": "Support approved the completed task.",
-      "settlement": "The task was completed with the agreed settlement."
+      "settlement": "Completed through a settlement"
     },
     "helper": {
       "poster": "{name} approved your completed task.",
       "auto": "Your completed task was approved automatically.",
       "support": "Support approved your completed task.",
-      "settlement": "The task was completed with the agreed settlement."
+      "settlement": "Completed through a settlement"
     }
   }
 }

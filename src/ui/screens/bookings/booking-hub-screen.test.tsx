@@ -14,6 +14,8 @@ import {
   deskBookingPosterCantAccessReported, deskBookingPosterPendingFunding, deskExactAddress, fakeBookingSheetHandlers, fakeHandler, movingBookingPosterConfirmed,
   remoteBookingHelperConfirmed,
   deskReviewPublishedData, deskReviewSubmittedData,
+  deskBookingHelperDisputed, deskBookingHelperDisputedContacted, deskBookingHelperSettled,
+  deskBookingPosterDisputed, deskBookingPosterSettled,
 } from '@/fixtures';
 import { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
@@ -50,6 +52,32 @@ function mount(data: BookingView = deskBookingPosterConfirmed, now = '2026-11-17
 }
 
 const roles: BookingViewerRole[] = ['poster', 'helper'];
+
+describe('BookingHubScreen dispute integration', () => {
+  it('omits the dispute card when no dispute is projected', () => {
+    mount();
+    expect(screen.queryByRole('region', { name: messages.bookingHub.dispute.title })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: messages.bookingHub.dispute.resolvedTitle })).not.toBeInTheDocument();
+  });
+
+  it.each([deskBookingPosterDisputed, deskBookingHelperDisputed, deskBookingHelperDisputedContacted])('shows the supplied $viewerRole dispute near the top without changing actions', (data) => {
+    const { container } = mount(data);
+    const dispute = screen.getByRole('region', { name: messages.bookingHub.dispute.title });
+    expect(dispute).toBeVisible();
+    const sections = Array.from(container.querySelectorAll('section'));
+    expect(sections[0]).toBe(dispute);
+    expect(Array.from(container.querySelectorAll('[data-action-id]'), (node) => node.getAttribute('data-action-id'))).toEqual(data.actions.map(({ id }) => id));
+    expect(within(dispute).queryByRole('link', { name: messages.bookingHub.dispute.viewCase }) !== null).toBe(data.dispute!.canOpenCase);
+  });
+
+  it.each([deskBookingPosterSettled, deskBookingHelperSettled])('shows a $viewerRole settlement with the completion method and decision', (data) => {
+    mount(data);
+    expect(screen.getByText('Completed through a settlement')).toBeVisible();
+    const dispute = screen.getByRole('region', { name: messages.bookingHub.dispute.resolvedTitle });
+    expect(dispute).toHaveTextContent(data.dispute!.resolution!.summary);
+    expect(dispute).toHaveTextContent(data.viewerRole === 'poster' ? '$16.50 was refunded to your card' : 'You receive $40.50 for this booking');
+  });
+});
 
 describe('BookingHubScreen privacy and supplied data', () => {
   it('keeps the existing app caller compatible while failing closed until sheet handlers are supplied', async () => {

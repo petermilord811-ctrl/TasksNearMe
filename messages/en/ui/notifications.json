@@ -1,6 +1,6 @@
 {
   "title": "Notifications",
-  "description": "Updates on your offers, bookings, payments, and messages.",
+  "description": "Updates on your offers, bookings, payments, messages, and support cases.",
   "markAllRead": "Mark all as read",
   "markingRead": "Marking as read…",
   "markedRead": "All notifications marked as read.",
@@ -39,6 +39,7 @@
     "group": "Notifications",
     "client": "Client notifications",
     "helper": "Helper notifications",
+    "support": "Support replies and case decisions",
     "empty": "No notifications",
     "allTypes": "Every notification type",
     "markAllError": "Mark all as read error",

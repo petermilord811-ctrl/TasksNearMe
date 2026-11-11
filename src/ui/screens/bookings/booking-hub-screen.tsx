@@ -20,6 +20,7 @@ import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus, usePaymentStatus } from '@/ui/components/status/use-status';
 import { Timeline } from '@/ui/components/timeline/timeline';
 import { BookingHubActions } from './booking-hub-actions';
+import { BookingDisputeCard } from './booking-dispute-card';
 import { BookingHubWithoutSheetHandlers } from './booking-hub-with-sheets';
 
 export interface BookingHubScreenProps {
@@ -101,6 +102,8 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
       <PageHeader title={data.task.title} description={categories(data.task.categorySlug)}><StatusBadge {...status} /></PageHeader>
       <BookingState data={data} now={now} />
     </div>
+
+    {data.dispute && <BookingDisputeCard dispute={data.dispute} viewerRole={data.viewerRole} />}
 
     <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} />
 
