@@ -20,6 +20,49 @@ function mount(props: Partial<PostTaskScreenProps> = {}) {
 }
 
 describe('posting wizard', () => {
+  it('takes the complete desk draft through every step without posting until Post task is pressed', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount({ initialStep: 'category' });
+    const steps = ['Describe', 'Details', 'Photos', 'Where', 'When', 'Budget', 'Review and post'];
+    for (const [index, step] of steps.entries()) {
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+      expect(await screen.findByText(`Step ${index + 2} of 8 · ${step}`)).toBeInTheDocument();
+      expect(handlers.onPost).not.toHaveBeenCalled();
+    }
+    await user.click(screen.getByRole('button', { name: 'Post task' }));
+    await waitFor(() => expect(handlers.onPost).toHaveBeenCalledExactlyOnceWith(deskDraft));
+  });
+
+  it('advances from the budget price field with Enter without posting', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount({ initialStep: 'budget' });
+    await user.click(screen.getByRole('textbox', { name: 'Task price ($)' }));
+    await user.keyboard('{Enter}');
+    // user-event counts the radio/checkbox inputs too, so emulate the browser's implicit submit.
+    fireEvent.submit(screen.getByRole('form', { name: messages.postTask.title }));
+    expect(await screen.findByText('Step 8 of 8 · Review and post')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Post task' })).toBeEnabled();
+    expect(handlers.onPost).not.toHaveBeenCalled();
+  });
+
+  it.each(['{Enter}', ' '])('ignores stray review submits and allows keyboard activation of Post task with %s', async (key) => {
+    const user = userEvent.setup();
+    const { handlers } = mount({ initialStep: 'budget' });
+    const next = screen.getByRole('button', { name: 'Next' });
+    await user.click(next);
+    expect(await screen.findByText('Step 8 of 8 · Review and post')).toBeInTheDocument();
+    const form = screen.getByRole('form', { name: messages.postTask.title });
+    await act(async () => {
+      fireEvent.submit(form);
+      fireEvent(form, new SubmitEvent('submit', { bubbles: true, cancelable: true, submitter: next }));
+      fireEvent(form, new SubmitEvent('submit', { bubbles: true, cancelable: true, submitter: screen.getByRole('button', { name: 'Back' }) }));
+    });
+    expect(handlers.onPost).not.toHaveBeenCalled();
+    screen.getByRole('button', { name: 'Post task' }).focus();
+    await user.keyboard(key);
+    await waitFor(() => expect(handlers.onPost).toHaveBeenCalledExactlyOnceWith(deskDraft));
+  });
+
   it('validates only describe on Next, focuses its empty title, and Back never validates', async () => {
     const user = userEvent.setup();
     mount({ initialStep: 'describe', initialValues: { ...deskDraft, title: '', location: { mode: 'local', placeId: '' } } });

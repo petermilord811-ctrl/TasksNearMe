@@ -102,6 +102,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   const [invalid, setInvalid] = useState(!!initialResult && !initialResult.ok && initialResult.code === 'validation_failed');
   const [focusField, setFocusField] = useState<string | undefined>(resultFields(initialResult).find((name) => stepForField(name) === step));
   const heading = useRef<HTMLHeadingElement>(null);
+  const postButton = useRef<HTMLButtonElement>(null);
   const lock = useRef(false);
   const posted = useRef(false);
   const stepRef = useRef(step);
@@ -234,7 +235,10 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   const unknownFieldFailure = result && !result.ok && result.code === 'validation_failed' && !resultFields(result).some((name) => stepForField(name));
   return <FormProvider {...form}>
     <form noValidate aria-label={t('title')} aria-busy={pending} className="mx-auto flex min-h-[70dvh] w-full max-w-reading flex-col gap-6" onSubmit={(event) => {
-      if (step !== 'review') { event.preventDefault(); void nextStep(); return; }
+      event.preventDefault();
+      if (step !== 'review') { void nextStep(); return; }
+      // A late Next click or a submit without the review button must never post.
+      if (!postButton.current || (event.nativeEvent as SubmitEvent).submitter !== postButton.current) return;
       void form.handleSubmit(post, (errors) => showErrors(errorNames(errors)))(event);
     }}>
       <header className="space-y-3">
@@ -269,7 +273,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
       <footer className="sticky bottom-0 z-20 -mx-4 mt-2 flex items-center gap-3 border-t bg-background px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <Button type="button" variant="outline" disabled={index === 0 || pending || checking || uploading || !!result?.ok} onClick={() => { setInvalid(false); setResult(undefined); setFocusField(undefined); setStep(POST_TASK_STEPS[index - 1]!); heading.current?.focus(); }}><ArrowLeft aria-hidden="true" />{t('back')}</Button>
         <span className="hidden flex-1 items-center gap-2 text-sm text-muted-foreground sm:flex"><Lock aria-hidden="true" className="size-4" />{t('steps.review')}</span>
-        {step === 'review' ? <Button type="submit" className="ml-auto" disabled={pending || !!result?.ok} aria-busy={pending}>{pending ? <Spinner /> : <Check aria-hidden="true" />}{t(pending ? 'posting' : 'post')}</Button> : <Button type="button" className="ml-auto" onClick={() => void nextStep()} disabled={checking || uploading} aria-busy={checking}>{checking ? <Spinner /> : <ArrowRight aria-hidden="true" />}{t(checking ? 'checking' : 'next')}</Button>}
+        {step === 'review' ? <Button key="post" ref={postButton} type="submit" className="ml-auto" disabled={pending || !!result?.ok} aria-busy={pending}>{pending ? <Spinner /> : <Check aria-hidden="true" />}{t(pending ? 'posting' : 'post')}</Button> : <Button key="next" type="button" className="ml-auto" onClick={(event) => { event.preventDefault(); void nextStep(); }} disabled={checking || uploading} aria-busy={checking}>{checking ? <Spinner /> : <ArrowRight aria-hidden="true" />}{t(checking ? 'checking' : 'next')}</Button>}
       </footer>
     </form>
   </FormProvider>;
