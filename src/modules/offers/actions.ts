@@ -8,6 +8,7 @@ import { categories } from '@/modules/markets/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
+import { offerThreadId } from '@/modules/messaging/service';
 import { posterOfferActions } from './domain';
 import { cancelTask, declineOffer } from './owner';
 import { offers } from './schema';
@@ -42,9 +43,10 @@ export async function posterOfferAction(input: { offerId: string; action: OfferA
   switch (input.action) {
     case 'book_offer':
       return { ok: true, code: 'updated', redirectTo: routes.app.confirmOffer(row.task.id, row.offer.id) };
-    case 'message_helper':
-      // Offer threads arrive with messaging (UI-014); until then, the inbox.
-      return { ok: true, code: 'updated', redirectTo: routes.app.messages() };
+    case 'message_helper': {
+      const threadId = await offerThreadId(db, row.offer.id, new Date());
+      return threadId ? { ok: true, code: 'updated', redirectTo: routes.app.thread(threadId) } : { ok: false, code: 'not_found' };
+    }
     case 'decline_offer': {
       const result = await declineOffer(db, userId, row.offer.id, new Date());
       if (result.ok) refreshTaskPages(row.task.slug);

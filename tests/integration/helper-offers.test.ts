@@ -94,7 +94,7 @@ describe("the helper's side of offers", () => {
     const view = await getHelperTaskView(db, 'usr_jordan', TASK, now());
     expect(view?.myOffer).toMatchObject({ status: 'pending', revision: 1, pricing: { type: 'fixed', priceCents: 6000 } });
     expect(view?.myOffer?.breakdown.helperEarningsCents).toBe(5400);
-    expect(view?.myOffer?.actions.map((a) => a.id)).toEqual(['revise_offer', 'withdraw_offer']);
+    expect(view?.myOffer?.actions.map((a) => a.id)).toEqual(['revise_offer', 'message_poster', 'withdraw_offer']);
     // The helper sees their own words; the start is the market-local time they picked.
     expect(view?.myOffer?.message).toContain('512-555-0199');
     expect(view?.myOffer?.proposedStart).toBe(marketLocalToUtc(date, startTimes[0]!));

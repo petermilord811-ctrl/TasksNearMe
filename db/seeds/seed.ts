@@ -371,10 +371,24 @@ async function seedOffers(tx: Tx): Promise<void> {
  */
 async function clearSeedBookings(tx: Tx): Promise<void> {
   const taskIds = SEED_TASKS.map((task) => task.id);
+  // Conversations on the seeded offers start empty each time.
+  const offerThreads = await tx
+    .select({ id: threads.id })
+    .from(threads)
+    .where(and(eq(threads.kind, 'offer'), inArray(threads.linkedId, SEED_OFFERS.map((offer) => offer.id))));
+  if (offerThreads.length > 0) {
+    const offerThreadIds = offerThreads.map((row) => row.id);
+    await tx.delete(messages).where(inArray(messages.threadId, offerThreadIds));
+    await tx.delete(threadParticipants).where(inArray(threadParticipants.threadId, offerThreadIds));
+    await tx.delete(threads).where(inArray(threads.id, offerThreadIds));
+  }
   const rows = await tx.select({ id: bookings.id }).from(bookings).where(inArray(bookings.taskId, taskIds));
   if (rows.length === 0) return;
   const ids = rows.map((row) => row.id);
-  const bookingThreads = await tx.select({ id: threads.id }).from(threads).where(and(eq(threads.kind, 'booking'), inArray(threads.linkedId, ids)));
+  const bookingThreads = await tx
+    .select({ id: threads.id })
+    .from(threads)
+    .where(and(eq(threads.kind, 'booking'), inArray(threads.linkedId, ids.length > 0 ? ids : ['-'])));
   const threadIds = bookingThreads.map((row) => row.id);
   if (threadIds.length > 0) {
     await tx.delete(messages).where(inArray(messages.threadId, threadIds));

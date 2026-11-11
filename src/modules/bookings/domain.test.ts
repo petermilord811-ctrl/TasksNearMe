@@ -18,32 +18,33 @@ const ids = (actions: ReturnType<typeof bookingActions>) => actions.map((a) => `
 
 describe('booking actions', () => {
   it('opens "On my way" 2 h and "Arrived" 30 min before the start', () => {
-    expect(ids(bookingActions(confirmed, 'helper', at('2026-11-21T14:00:00.000Z')))).toEqual(['on_my_way (off)', 'arrived (off)', 'add_to_calendar']);
+    expect(ids(bookingActions(confirmed, 'helper', at('2026-11-21T14:00:00.000Z')))).toEqual(['on_my_way (off)', 'arrived (off)', 'message', 'add_to_calendar']);
     const early = bookingActions(confirmed, 'helper', at('2026-11-21T14:00:00.000Z'))[0];
     expect(early?.disabledReason).toEqual({ code: 'available_at', at: '2026-11-21T14:30:00.000Z' });
-    expect(ids(bookingActions(confirmed, 'helper', at('2026-11-21T15:00:00.000Z')))).toEqual(['on_my_way', 'arrived (off)', 'add_to_calendar']);
+    expect(ids(bookingActions(confirmed, 'helper', at('2026-11-21T15:00:00.000Z')))).toEqual(['on_my_way', 'arrived (off)', 'message', 'add_to_calendar']);
     const onTheWay = { ...confirmed, onMyWayAt: at('2026-11-21T15:58:00.000Z') };
     const arrive = bookingActions(onTheWay, 'helper', at('2026-11-21T16:05:00.000Z'));
-    expect(ids(arrive)).toEqual(['arrived', 'add_to_calendar']);
+    expect(ids(arrive)).toEqual(['arrived', 'message', 'add_to_calendar']);
     expect(arrive[0]?.kind).toBe('primary');
   });
 
   it('gives the client pay, the calendar, and approve (asking first)', () => {
     expect(ids(bookingActions({ ...confirmed, status: 'pending_funding' }, 'poster', start))).toEqual(['pay']);
-    expect(ids(bookingActions(confirmed, 'poster', start))).toEqual(['add_to_calendar']);
+    expect(ids(bookingActions(confirmed, 'poster', start))).toEqual(['message', 'add_to_calendar']);
     const submitted = { ...confirmed, status: 'completion_submitted', approvalDueAt: at('2026-11-24T17:48:00.000Z') };
     expect(bookingActions(submitted, 'poster', start)).toEqual([
       { id: 'approve', kind: 'primary', enabled: true, confirm: true },
       { id: 'report_problem', kind: 'secondary', enabled: true },
+      { id: 'message', kind: 'secondary', enabled: true },
     ]);
     // After the window, only approving is left (it's approved automatically anyway).
-    expect(ids(bookingActions(submitted, 'poster', at('2026-11-24T17:48:00.000Z')))).toEqual(['approve']);
-    expect(bookingActions({ ...confirmed, status: 'completion_submitted' }, 'helper', start)).toEqual([]);
+    expect(ids(bookingActions(submitted, 'poster', at('2026-11-24T17:48:00.000Z')))).toEqual(['approve', 'message']);
+    expect(ids(bookingActions({ ...confirmed, status: 'completion_submitted' }, 'helper', start))).toEqual(['message']);
   });
 
   it('skips check-in for remote work, and asks for the work once started', () => {
-    expect(ids(bookingActions({ ...confirmed, remote: true }, 'helper', start))).toEqual(['submit_completion', 'add_to_calendar']);
-    expect(ids(bookingActions({ ...confirmed, status: 'in_progress' }, 'helper', start))).toEqual(['submit_completion']);
+    expect(ids(bookingActions({ ...confirmed, remote: true }, 'helper', start))).toEqual(['submit_completion', 'message', 'add_to_calendar']);
+    expect(ids(bookingActions({ ...confirmed, status: 'in_progress' }, 'helper', start))).toEqual(['submit_completion', 'message']);
   });
 });
 

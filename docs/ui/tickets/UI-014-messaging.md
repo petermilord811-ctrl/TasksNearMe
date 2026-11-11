@@ -1,6 +1,6 @@
 # UI-014 — Messages: the inbox and a conversation
 
-**Status:** ready for Codex · **Branch:** `ui/UI-014-messaging` · **Plan first:** no (unattended) · **Depends on:** UI-013 (merged)
+**Status:** wired · **Branch:** `ui/UI-014-messaging` · **Plan first:** no (unattended) · **Depends on:** UI-013 (merged)
 
 ## Goal
 The two people on an offer or a booking can talk in one thread (blueprint 02 J2 step 6 and J5):
@@ -83,6 +83,6 @@ Copy namespaces: `inbox` and `thread`.
 - Reporting a message or blocking someone (UI-017), push notifications, and typing indicators.
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app/messages`, `/app/messages/[threadId]`.
+- Queries / actions: `getInbox`, `getThreadPage` (marks read), `sendMessage` (`src/modules/messaging/service.ts`); Server Actions `sendMessageAction` (bound to the thread) and `uploadMessagePhoto`. Threads open from `message` (bookings), `message_helper` and `message_poster` (offers).
+- e2e: `tests/e2e/messaging.spec.ts`.

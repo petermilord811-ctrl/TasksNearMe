@@ -46,6 +46,15 @@ function opensAt(id: BookingActionId, kind: ActionDescriptor['kind'], at: Date, 
 }
 
 export function bookingActions(booking: BookingFacts, role: BookingViewerRole, now: Date): ActionDescriptor<BookingActionId>[] {
+  const actions = baseActions(booking, role, now);
+  if (booking.status === 'pending_funding') return actions;
+  // The booking thread: after the primary action, before the calendar.
+  const at = actions.findIndex((item) => item.id === 'add_to_calendar');
+  const message = make('message', 'secondary');
+  return at === -1 ? [...actions, message] : [...actions.slice(0, at), message, ...actions.slice(at)];
+}
+
+function baseActions(booking: BookingFacts, role: BookingViewerRole, now: Date): ActionDescriptor<BookingActionId>[] {
   const calendar = make('add_to_calendar', 'secondary');
   if (role === 'poster') {
     switch (booking.status) {

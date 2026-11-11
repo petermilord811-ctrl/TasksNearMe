@@ -66,6 +66,6 @@ export async function helperOfferActionHandler(input: { offerId: string; action:
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   const result = await helperOfferAction(db, userId, String(input.offerId), input.action, new Date());
-  if (result.ok) afterOfferChange();
+  if (result.ok && !result.redirectTo) afterOfferChange();
   return result;
 }

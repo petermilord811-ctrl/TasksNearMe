@@ -75,9 +75,10 @@ describe('offer rules', () => {
 
   it('offers revise and withdraw on a pending offer, and re-confirm first on a stale one', () => {
     const task = { status: 'open', windowEnd: desk.windowEnd };
-    expect(helperOfferActions({ status: 'pending' }, task, now).map((a) => a.id)).toEqual(['revise_offer', 'withdraw_offer']);
-    expect(helperOfferActions({ status: 'stale' }, task, now).map((a) => a.id)).toEqual(['reconfirm_offer', 'revise_offer', 'withdraw_offer']);
+    expect(helperOfferActions({ status: 'pending' }, task, now).map((a) => a.id)).toEqual(['revise_offer', 'message_poster', 'withdraw_offer']);
+    expect(helperOfferActions({ status: 'stale' }, task, now).map((a) => a.id)).toEqual(['reconfirm_offer', 'revise_offer', 'message_poster', 'withdraw_offer']);
     expect(helperOfferActions({ status: 'declined' }, task, now)).toEqual([]);
+    expect(helperOfferActions({ status: 'accepted' }, { ...task, status: 'assigned' }, now).map((a) => a.id)).toEqual(['message_poster']);
     expect(helperOfferActions({ status: 'pending' }, { ...task, status: 'assigned' }, now)).toEqual([]);
   });
 });

@@ -30,7 +30,7 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
-import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
+import { bookingThreadLink, ensureThread, postEvent } from '@/modules/messaging/service';
 import { autoApproveDue, completionViewOf } from './completion-view';
 import { addressVisibility, bookingActions, bookingDeadlines, needsAction, type BookingFacts, type BookingPolicy } from './domain';
 import { bookingTerms, bookings } from './schema';
@@ -314,6 +314,10 @@ export async function runBookingAction(db: Db, userId: string, bookingId: string
         : { ok: false, code: 'not_allowed' };
     case 'add_to_calendar':
       return { ok: true, code: 'updated', redirectTo: routes.app.bookingCalendar(booking.id) };
+    case 'message': {
+      const threadId = await ensureThread(db, bookingThreadLink(booking), now);
+      return { ok: true, code: 'updated', redirectTo: routes.app.thread(threadId) };
+    }
     case 'submit_completion':
       return { ok: true, code: 'updated', redirectTo: routes.app.bookingComplete(booking.id) };
     case 'report_problem':

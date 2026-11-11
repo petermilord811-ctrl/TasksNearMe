@@ -1,0 +1,28 @@
+import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import { routes } from '@/contracts';
+import { getInbox } from '@/modules/messaging/service';
+import { getViewer } from '@/platform/auth/viewer';
+import { db } from '@/platform/db/client';
+import { PageSkeleton } from '@/ui/components';
+import { InboxScreen } from '@/ui/screens/messages';
+
+export const metadata: Metadata = { title: 'Messages', robots: { index: false } };
+
+/** The viewer's conversations, latest activity first. */
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<PageSkeleton variant="list" />}>
+      <Inbox />
+    </Suspense>
+  );
+}
+
+async function Inbox() {
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.messages()));
+  const now = new Date();
+  const data = await getInbox(db, viewer.user.id, now);
+  return <InboxScreen data={data} now={now.toISOString()} />;
+}

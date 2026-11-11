@@ -125,10 +125,12 @@ export function helperOfferActions(
   task: { status: TaskStatus | string; windowEnd: Date },
   now: Date,
 ): ActionDescriptor<OfferActionId>[] {
+  const message: ActionDescriptor<OfferActionId> = { id: 'message_poster', kind: 'secondary', enabled: true };
+  if (offer.status === 'accepted') return [message];
   if (task.status !== 'open' || task.windowEnd <= now) return [];
   const revise: ActionDescriptor<OfferActionId> = { id: 'revise_offer', kind: 'secondary', enabled: true };
   const withdraw: ActionDescriptor<OfferActionId> = { id: 'withdraw_offer', kind: 'destructive', enabled: true, confirm: true };
-  if (offer.status === 'pending') return [revise, withdraw];
-  if (offer.status === 'stale') return [{ id: 'reconfirm_offer', kind: 'primary', enabled: true }, revise, withdraw];
+  if (offer.status === 'pending') return [revise, message, withdraw];
+  if (offer.status === 'stale') return [{ id: 'reconfirm_offer', kind: 'primary', enabled: true }, revise, message, withdraw];
   return [];
 }

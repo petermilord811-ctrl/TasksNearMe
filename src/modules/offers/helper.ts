@@ -15,10 +15,11 @@ import type {
   PriceBreakdown,
   PricingInput,
 } from '@/contracts';
-import { createOfferInputSchema, FIND_WORK_DISTANCES } from '@/contracts';
+import { createOfferInputSchema, FIND_WORK_DISTANCES, routes } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { photoFromFile } from '@/modules/files/uploads';
 import { getPublishedPolicy, listCategoryViews } from '@/modules/markets/queries';
+import { offerThreadId } from '@/modules/messaging/service';
 import { areas, categories, type FeeSchedule } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { BOARD_PAGE_SIZE, parseTaskBoardQuery } from '@/modules/tasks/projections';
@@ -446,7 +447,12 @@ export async function helperOfferAction(db: Db, userId: string, offerId: string,
   if (!found) return { ok: false, code: 'not_found' };
   if (ACTIVE.includes(found.offer.status as OfferStatus) && found.offer.expiresAt <= now) return { ok: false, code: 'expired' };
   const allowed = helperOfferActions(found.offer, found.task, now).find((item) => item.id === action);
-  if (!allowed?.enabled || (action !== 'withdraw_offer' && action !== 'reconfirm_offer')) return { ok: false, code: 'not_allowed' };
+  if (!allowed?.enabled) return { ok: false, code: 'not_allowed' };
+  if (action === 'message_poster') {
+    const threadId = await offerThreadId(db, found.offer.id, now);
+    return threadId ? { ok: true, code: 'updated', redirectTo: routes.app.thread(threadId) } : { ok: false, code: 'not_found' };
+  }
+  if (action !== 'withdraw_offer' && action !== 'reconfirm_offer') return { ok: false, code: 'not_allowed' };
 
   await db.transaction(async (tx) => {
     if (action === 'withdraw_offer') {
