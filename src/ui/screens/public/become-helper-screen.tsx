@@ -60,14 +60,14 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
           <p className="mt-3 text-lg font-semibold tabular-nums">{t('welcomeOffer', { amount: formatMoney(welcome.amountCents), limit: welcome.cohortLimit })}</p>
           <p className="mt-2 font-semibold tabular-nums">{t('spotsLeft', { count: welcome.cohortLimit - welcome.spotsClaimed })}</p>
           <p className="mt-4 text-sm">{t('welcomeTerms', { minimum: formatMoney(welcome.minTaskPriceCents), days: welcome.windowDays })}</p>
-          <p className="mt-3 text-sm">{t('welcomeUnlock', { days: welcome.unlockDays })}</p>
+          <p className="mt-3 text-sm">{t('welcomeUnlock', { days: welcome.unlockDays, redeemDays: welcome.redeemWithinDays })}</p>
         </section>}
         {repeat && <section aria-label={t('repeatTitle')} className="rounded-xl border border-border bg-badge-reward p-4 text-badge-reward-foreground sm:p-6">
           <Gift aria-hidden="true" className="mb-3 size-6" />
           <h3 className="text-[17px] leading-6 font-semibold lg:text-lg">{t('repeatTitle')}</h3>
           <p className="mt-3 text-lg font-semibold tabular-nums">{t('repeatOffer', { amount: formatMoney(repeat.amountCents) })}</p>
-          <p className="mt-4 text-sm">{t('repeatTerms', { bookings: repeat.bookingsNeeded, days: repeat.withinDays })}</p>
-          <p className="mt-3 text-sm">{t('repeatUnlock')}</p>
+          <p className="mt-4 text-sm">{t('repeatTerms', { bookings: repeat.bookingsNeeded, days: repeat.withinDays, minimum: formatMoney(repeat.minTaskPriceCents) })}</p>
+          <p className="mt-3 text-sm">{t('repeatUnlock', { days: repeat.unlockDays, redeemDays: repeat.redeemWithinDays })}</p>
         </section>}
       </div>
       <p className="max-w-reading text-sm text-muted-foreground">{t('rewardConditions')}</p>

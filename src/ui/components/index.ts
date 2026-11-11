@@ -22,3 +22,5 @@ export { Timeline } from './timeline/timeline';
 export { ActionBar, type ActionBarProps } from './actions/action-bar';
 export { PublicTaskCard, type PublicTaskCardProps } from './tasks/public-task-card';
 export { HelperCard, type HelperCardProps } from './people/helper-card';
+export { ContentBlocks } from './content/content-blocks';
+export { SupportCard } from './content/support-card';

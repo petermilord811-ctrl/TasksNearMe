@@ -79,7 +79,7 @@ export function PricingScreen({ data }: PricingScreenProps) {
           <tbody>
             <tr className="border-b">
               <th scope="row" className="py-4 pr-3 align-top font-normal">{t('cancellationEarly', { hours: data.cancellation.freeUntilHours })}</th>
-              <td className="px-1 py-4 align-top tabular-nums">{t('fullRefund', { amount: formatMoney(data.fixedExample.posterTotalCents) })}</td>
+              <td className="px-1 py-4 align-top tabular-nums">{t('fullRefund', { amount: formatMoney(data.lateCancellationExample.posterPaidCents) })}</td>
               <td className="py-4 pl-3 align-top">{t('noPayment')}</td>
             </tr>
             <tr className="border-b">
@@ -89,7 +89,7 @@ export function PricingScreen({ data }: PricingScreenProps) {
             </tr>
             <tr>
               <th scope="row" className="py-4 pr-3 align-top font-normal">{t('cancellationHelperCancels')}</th>
-              <td className="px-1 py-4 align-top tabular-nums">{t('fullRefund', { amount: formatMoney(data.fixedExample.posterTotalCents) })}</td>
+              <td className="px-1 py-4 align-top tabular-nums">{t('fullRefund', { amount: formatMoney(data.lateCancellationExample.posterPaidCents) })}</td>
               <td className="py-4 pl-3 align-top">{t('noPayment')}</td>
             </tr>
           </tbody>
