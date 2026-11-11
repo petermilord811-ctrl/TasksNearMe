@@ -60,5 +60,9 @@
   "reject_review": "Reject reward",
   "void": "Void reward",
   "reissue": "Reissue gift card",
-  "reinstate": "Reinstate reward"
+  "reinstate": "Reinstate reward",
+  "cancel_task": "Cancel task",
+  "edit_task": "Edit task",
+  "invite_helpers": "Invite helpers",
+  "post_again": "Post again"
 }

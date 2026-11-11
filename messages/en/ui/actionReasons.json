@@ -7,5 +7,6 @@
   "not_bookable": "Finish helper setup before continuing.",
   "needs_background_check": "A background check is needed for this category.",
   "already_done": "You've already completed this action.",
-  "not_allowed": "This action isn't available to you."
+  "not_allowed": "This action isn't available to you.",
+  "awaiting_other_party": "Waiting for the other person to respond"
 }

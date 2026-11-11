@@ -4,6 +4,8 @@ import {
   bookshelfCounterBreakdown,
   deskBreakdown,
   deskChairChangeDeltaCents,
+  deskOfferLeeBreakdown,
+  deskOfferSamBreakdown,
   deskLateCancellation,
   deskSettledBreakdown,
   deskWithAllowanceFundedBreakdown,
@@ -42,6 +44,11 @@ describe('canonical examples (blueprint 04 §3, ui-contract §3)', () => {
   it('bookshelf at $45, then countered at $50', () => {
     expect(quoteBreakdown(fees, fixed(4500))).toEqual(bookshelfBreakdown);
     expect(quoteBreakdown(fees, fixed(5000))).toEqual(bookshelfCounterBreakdown);
+  });
+
+  it('offer fixtures: $55 (Sam) and $50 (Lee) on the desk', () => {
+    expect(quoteBreakdown(fees, fixed(5500))).toEqual(deskOfferSamBreakdown);
+    expect(quoteBreakdown(fees, fixed(5000))).toEqual(deskOfferLeeBreakdown);
   });
 
   it('remote computer help at $40', () => {

@@ -23,6 +23,8 @@ export const DISABLED_REASON_CODES = [
   'already_done',
   /** The viewer's role doesn't allow it (staff limits, ownership). */
   'not_allowed',
+  /** Waiting for the other person first (e.g. a helper re-confirming a stale offer). */
+  'awaiting_other_party',
 ] as const;
 export type DisabledReasonCode = (typeof DISABLED_REASON_CODES)[number];
 

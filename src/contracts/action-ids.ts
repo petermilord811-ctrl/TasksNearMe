@@ -65,6 +65,10 @@ export const OFFER_ACTION_IDS = [
 ] as const;
 export type OfferActionId = (typeof OFFER_ACTION_IDS)[number];
 
+/** What a poster can do with their own task (blueprint 03 §2). */
+export const TASK_ACTION_IDS = ['cancel_task', 'edit_task', 'invite_helpers', 'post_again'] as const;
+export type TaskActionId = (typeof TASK_ACTION_IDS)[number];
+
 export const INVITE_ACTION_IDS = [
   'accept_invite',
   'decline_invite',
@@ -90,6 +94,7 @@ export const ALL_ACTION_IDS = [
   ...BOOKING_ACTION_IDS,
   ...STAFF_BOOKING_ACTION_IDS,
   ...OFFER_ACTION_IDS,
+  ...TASK_ACTION_IDS,
   ...INVITE_ACTION_IDS,
   ...REWARD_ACTION_IDS,
 ] as const;

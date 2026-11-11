@@ -15,3 +15,4 @@ export * from './content';
 export * from './board';
 export * from './profiles';
 export * from './posting';
+export * from './offers';
