@@ -66,6 +66,6 @@ Copy namespaces: `notifications`, `account`.
 - Support cases, reporting and blocking (a later ticket), push notifications, changing the email address, and adding a phone from here (phone verification already lives in posting).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app/notifications` and `/app/account` in the `(main)` group (`src/app/(app)/app/(main)/notifications/page.tsx`, `.../account/page.tsx`). The signed-in shell now passes real `unreadMessages` and `unreadNotifications`.
+- Queries / actions: `src/modules/notifications/service.ts` (`dispatchNotifications` turns outbox events into notifications, idempotent per event and person; unread messages in one thread make one notification; `getNotificationsPage`, `getAccountPage`, profile, preferences with bookings and payments email locked on, export and deletion requests; deletion waits while either side has an open booking) and `actions.ts`. `sendMessage` now writes a `message.sent` outbox event. `unreadMessageCount` in messaging feeds the badge.
+- e2e: `tests/e2e/account.spec.ts` (notifications link to their booking; mark all as read and the bell's count; the phone stays masked; locked receipts; a preference saves across reloads). Integration: `tests/integration/notifications.test.ts`.

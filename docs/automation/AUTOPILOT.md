@@ -171,7 +171,10 @@ Call `PushNotification` only when a phase completes, when a hard blocker needs t
 ## Resuming after a restart
 
 1. Read `state.md`.
-2. If a run file says `running` but its log hasn't changed for 10+ minutes and no run is active, mark it `failed` (reason: interrupted) and retry.
+2. If a run file says `running` but its log hasn't changed for 10+ minutes and no run is active:
+   - Codex already wrote `docs/ui/handoffs/UI-xxx.md` in the worktree (the session ended during the independent check): run `node scripts/codex-run.mjs UI-xxx --finish` (background). It reruns the check, commits Codex's work and records the result.
+   - Otherwise mark it `failed` (reason: interrupted) and retry.
+   - A stale `automation/heavy.lock` from a dead process is taken over automatically.
 3. If the worktree `../TasksNearMe-ui` is in a bad state, `codex-run.mjs` stashes and resets it on the next run.
 
 ## Stopping

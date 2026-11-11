@@ -14,6 +14,9 @@
  *   automation/runs/UI-003.last-message.md   Codex's final message
  *   automation/logs/UI-003-<time>.jsonl      Codex event log;  ...-check.log  independent check:ui output
  *
+ *   node scripts/codex-run.mjs UI-003 --finish   finish a run cut off after Codex wrote its handoff (the
+ *                                                  session ended): the independent check, commit and record
+ *
  * Exit codes: 0 handed off (handoff written and check:ui passes) · 1 failed · 2 bad usage or preconditions
  */
 import { execFileSync, execSync, spawn } from 'node:child_process';
@@ -35,6 +38,7 @@ const port = option('port', '3100');
 const timeoutMs = Number(option('timeout-minutes', '150')) * 60_000;
 const worktree = path.resolve(option('worktree', path.join(path.dirname(root), `${path.basename(root)}-ui`)));
 const note = option('note', '');
+const finishOnly = args.includes('--finish');
 
 const runsDir = path.join(root, 'automation', 'runs');
 const logsDir = path.join(root, 'automation', 'logs');
@@ -90,14 +94,19 @@ try {
 }
 
 const statusPath = path.join(runsDir, `${ticket}.json`);
-const attempt = (readJson(statusPath)?.attempt ?? 0) + 1;
-const startedAt = Date.now();
+const previousRun = readJson(statusPath);
+if (finishOnly && previousRun?.status !== 'running') {
+  console.error(`CODEX_RUN ${ticket}: --finish needs a run that is still marked running`);
+  process.exit(2);
+}
+const attempt = finishOnly ? previousRun.attempt : (previousRun?.attempt ?? 0) + 1;
+const startedAt = finishOnly ? Date.parse(previousRun.startedAt) : Date.now();
 const stamp = new Date(startedAt).toISOString().replace(/[:.]/g, '-');
 const logPath = path.join(logsDir, `${ticket}-${stamp}.jsonl`);
 const checkLogPath = path.join(logsDir, `${ticket}-${stamp}-check.log`);
 const lastMessagePath = path.join(runsDir, `${ticket}.last-message.md`);
 
-writeJson(statusPath, {
+if (!finishOnly) writeJson(statusPath, {
   ticket,
   status: 'running',
   attempt,
@@ -109,6 +118,11 @@ writeJson(statusPath, {
   log: path.relative(root, logPath),
 });
 
+const runEnv = { ...process.env, PORT: port, NEXT_TELEMETRY_DISABLED: '1' };
+let exitCode = finishOnly ? 'interrupted' : -1;
+let timedOut = false;
+
+if (!finishOnly) {
 // ---- Worktree ---------------------------------------------------------------------------------
 try {
   if (!fs.existsSync(worktree)) {
@@ -188,12 +202,10 @@ const codexArgs = [
   '-',
 ];
 
-const runEnv = { ...process.env, PORT: port, NEXT_TELEMETRY_DISABLED: '1' };
 const logFd = fs.openSync(logPath, 'a');
 const child = spawn(process.execPath, codexArgs, { cwd: worktree, env: runEnv, stdio: ['pipe', logFd, logFd] });
 child.stdin.end(prompt);
 
-let timedOut = false;
 const killTimer = setTimeout(() => {
   timedOut = true;
   try {
@@ -204,9 +216,10 @@ const killTimer = setTimeout(() => {
   }
 }, timeoutMs);
 
-const exitCode = await new Promise((resolve) => child.on('exit', (code) => resolve(code ?? -1)));
+exitCode = await new Promise((resolve) => child.on('exit', (code) => resolve(code ?? -1)));
 clearTimeout(killTimer);
 fs.closeSync(logFd);
+}
 
 // ---- Verify, commit, record -------------------------------------------------------------------
 const handoffAbs = path.join(worktree, handoffRel);

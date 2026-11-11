@@ -23,6 +23,7 @@ import { toMessageSegments } from '@/modules/trust/message-segments';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { blocks, messages, threadParticipants, threads } from './schema';
 
@@ -212,6 +213,21 @@ async function summaryOf(db: Db, thread: ThreadRow, viewerId: string, now: Date)
   };
 }
 
+/** Messages (and booking updates) in the viewer's threads that they haven't read yet: the shell's badge. */
+export async function unreadMessageCount(db: Db, userId: string): Promise<number> {
+  const [row] = await db
+    .select({ value: sql<number>`count(*)::int` })
+    .from(messages)
+    .innerJoin(threadParticipants, and(eq(threadParticipants.threadId, messages.threadId), eq(threadParticipants.userId, userId)))
+    .where(
+      and(
+        or(isNull(messages.senderUserId), ne(messages.senderUserId, userId)),
+        or(isNull(threadParticipants.lastReadAt), gt(messages.createdAt, threadParticipants.lastReadAt)),
+      ),
+    );
+  return row?.value ?? 0;
+}
+
 /** `/app/messages`: the viewer's threads with any messages, latest activity first. */
 export async function getInbox(db: Db, userId: string, now: Date): Promise<InboxPageData> {
   const rows = await db
@@ -270,6 +286,17 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
     if (owned.length !== attachmentIds.length) return { ok: false, code: 'validation_failed', fieldErrors: { attachmentIds: ['invalid'] } };
   }
   await db.insert(messages).values({ id: newId('msg'), threadId: thread.id, senderUserId: userId, kind: 'text', body: parsed.data.body, attachmentFileIds: attachmentIds, createdAt: now });
+  const others = await db
+    .select({ userId: threadParticipants.userId })
+    .from(threadParticipants)
+    .where(and(eq(threadParticipants.threadId, thread.id), ne(threadParticipants.userId, userId)));
+  await db.insert(outboxEvents).values({
+    id: newId('evt'),
+    type: 'message.sent',
+    aggregateType: 'thread',
+    aggregateId: thread.id,
+    payload: { threadId: thread.id, taskId: thread.taskId, senderUserId: userId, recipientIds: others.map((row) => row.userId) },
+  });
   await db.update(threads).set({ lastMessageAt: now }).where(eq(threads.id, thread.id));
   await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
   return { ok: true, code: 'sent' };

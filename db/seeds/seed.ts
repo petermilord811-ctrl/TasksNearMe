@@ -41,6 +41,7 @@ import { earnings, payouts } from '../../src/modules/earnings/schema';
 import { savedHelpers } from '../../src/modules/reviews/schema';
 import { messages, threadParticipants, threads } from '../../src/modules/messaging/schema';
 import { supportCases } from '../../src/modules/support/schema';
+import { notificationPreferences, notifications, privacyRequests } from '../../src/modules/notifications/schema';
 import { paymentMethods, payments, refunds } from '../../src/modules/payments/schema';
 import { devCardRef } from '../../src/integrations/payments';
 import { quoteBreakdown } from '../../src/modules/payments/fees';
@@ -183,6 +184,7 @@ export async function seedDatabase(url: string): Promise<void> {
       await seedVerification(tx);
       await seedPaymentMethods(tx);
       await seedBookings(tx);
+      await seedNotifications(tx);
     });
     await db.execute(sql`select 1`);
   } finally {
@@ -373,7 +375,12 @@ async function seedOffers(tx: Tx): Promise<void> {
  */
 async function clearSeedBookings(tx: Tx): Promise<void> {
   const taskIds = SEED_TASKS.map((task) => task.id);
-  await tx.delete(savedHelpers).where(inArray(savedHelpers.userId, PEOPLE.map((person) => person.id)));
+  const people = PEOPLE.map((person) => person.id);
+  await tx.delete(savedHelpers).where(inArray(savedHelpers.userId, people));
+  // Notifications, preferences and privacy requests start over too (the e2e changes them).
+  await tx.delete(notifications).where(inArray(notifications.userId, people));
+  await tx.delete(notificationPreferences).where(inArray(notificationPreferences.userId, people));
+  await tx.delete(privacyRequests).where(inArray(privacyRequests.userId, people));
   // Conversations on the seeded offers start empty each time.
   const offerThreads = await tx
     .select({ id: threads.id })
@@ -482,6 +489,21 @@ async function seedBookings(tx: Tx): Promise<void> {
 }
 
 /** Maya's saved cards (development provider): the Visa is her default. Both pay successfully. */
+/**
+ * A few notifications that match the seeded bookings: Ruth hears that Jordan arrived (unread), Ben and
+ * Jordan heard that the TV booking was confirmed (read).
+ */
+async function seedNotifications(tx: Tx): Promise<void> {
+  const now = Date.now();
+  const at = (minutesAgo: number) => new Date(now - minutesAgo * 60_000);
+  await tx.insert(notifications).values([
+    { id: 'ntf_seed_ruth_arrived', userId: 'usr_ruth', type: 'helper_arrived', title: 'Assemble a bookcase', actorName: 'Jordan T.', target: { kind: 'booking', bookingId: 'bkg_bookcase' }, sourceEventId: 'seed:ruth_arrived', createdAt: at(50) },
+    { id: 'ntf_seed_ruth_on_way', userId: 'usr_ruth', type: 'helper_on_the_way', title: 'Assemble a bookcase', actorName: 'Jordan T.', target: { kind: 'booking', bookingId: 'bkg_bookcase' }, sourceEventId: 'seed:ruth_on_way', createdAt: at(75), readAt: at(70) },
+    { id: 'ntf_seed_ben_tv', userId: 'usr_ben', type: 'booking_confirmed', title: 'Mount a TV on the wall', target: { kind: 'booking', bookingId: 'bkg_tv' }, sourceEventId: 'seed:ben_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
+    { id: 'ntf_seed_jordan_tv', userId: 'usr_jordan', type: 'booking_confirmed', title: 'Mount a TV on the wall', actorName: 'Ben W.', target: { kind: 'booking', bookingId: 'bkg_tv' }, sourceEventId: 'seed:jordan_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
+  ]);
+}
+
 async function seedPaymentMethods(tx: Tx): Promise<void> {
   const cards = [
     { id: 'pm_maya_visa', userId: 'usr_maya', brand: 'visa', last4: '1881', expMonth: 8, expYear: 2028, isDefault: true },

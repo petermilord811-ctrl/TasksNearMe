@@ -95,3 +95,18 @@ One entry per iteration, newest last.
   - the home.
 - Each ticket was wired with e2e: completion, messaging, booking sheets (desktop; phones wait for UI-030), and money.
 - Tooling: unit tests got a 15 s timeout and testing-library waits 3 s, because checks share the machine.
+
+## 2026-11-11 — iteration 9 (home, reviews, notifications, support)
+- Codex:
+  - UI-030 (phones: the tab bar covered the action bar), merged; the phone e2e is back on.
+  - UI-023 (home dashboards, 29 min) and UI-015 (reviews and saved helpers, 25 min), merged and wired.
+  - UI-017 (notifications and the account page, 33 min), merged and wired.
+  - UI-031 (support, report and block). The session ended during the runner's independent check; `codex-run.mjs --finish` reran the check (pass) and committed Codex's work.
+- Backends:
+  - reviews (double-blind), saved helpers, the home;
+  - notifications from the outbox (lazy dispatcher), preferences, privacy requests (migration 0015);
+  - real unread badges in the signed-in shell.
+- Tooling:
+  - a machine-wide heavy-work lock shared by Claude's gate (`scripts/gate.mjs`) and the runner's independent check;
+  - the shared e2e sign-in helper; the seed reset clears everything that points at seeded bookings.
+- Flaky under load: a full gate run had 8 e2e failures while Codex ran its own checks. The failed specs passed when rerun alone. A helper form focus test also failed once; its fix goes to Codex with UI-018.

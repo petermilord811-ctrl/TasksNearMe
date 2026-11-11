@@ -78,7 +78,7 @@ export function toSignedInViewer(user: ViewerUser): SignedInViewer {
     mode: user.mode,
     // Paused helpers still use helper mode; they're just hidden from search.
     helperReady: user.helperStatus === 'active' || user.helperStatus === 'paused',
-    // TODO(messaging, notifications): real unread counts in Phase 6.
+    // The signed-in app shell fills in the real counts (src/app/(app)/app/signed-in-shell.tsx).
     unreadMessages: 0,
     unreadNotifications: 0,
   };

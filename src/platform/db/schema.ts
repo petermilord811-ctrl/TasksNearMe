@@ -16,3 +16,4 @@ export * from '../../modules/bookings/schema';
 export * from '../../modules/support/schema';
 export * from '../../modules/messaging/schema';
 export * from '../../modules/earnings/schema';
+export * from '../../modules/notifications/schema';
