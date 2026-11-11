@@ -23,7 +23,7 @@ export async function setMode(input: { mode: 'poster' | 'helper' }): Promise<Act
   await db.update(users).set({ mode: parsed.data.mode }).where(eq(users.id, viewer.user.id));
   revalidatePath('/app', 'layout');
 
-  if (parsed.data.mode === 'helper' && viewer.user.helperStatus !== 'active') {
+  if (parsed.data.mode === 'helper' && viewer.user.helperStatus !== 'active' && viewer.user.helperStatus !== 'paused') {
     return { ok: true, code: 'updated', redirectTo: routes.app.helperOnboarding() };
   }
   return { ok: true, code: 'updated' };

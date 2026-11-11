@@ -31,6 +31,7 @@ import { marketDayKey, marketLocalToUtc } from '../../src/shared/format';
 import { SEED_TASKS } from './data/tasks';
 import { SEED_OFFERS } from './data/offers';
 import { offers } from '../../src/modules/offers/schema';
+import { backgroundChecks, identityVerifications, payoutAccounts } from '../../src/modules/verification/schema';
 import { HELPER_LANGUAGES, SEED_REVIEWS, SERVICE_DESCRIPTIONS, WORK_SAMPLES } from './data/profile-extras';
 import { reviews } from '../../src/modules/reviews/schema';
 import { helperWorkSamples } from '../../src/modules/profiles/schema';
@@ -170,6 +171,7 @@ export async function seedDatabase(url: string): Promise<void> {
       await seedTasks(tx);
       await seedProfileExtras(tx);
       await seedOffers(tx);
+      await seedVerification(tx);
     });
     await db.execute(sql`select 1`);
   } finally {
@@ -352,4 +354,59 @@ async function seedOffers(tx: Tx): Promise<void> {
   await tx.execute(sql`
     update tasks t set offer_count = coalesce(
       (select count(*)::int from offers o where o.task_id = t.id and o.status in ('pending', 'stale')), 0)`);
+}
+
+/**
+ * Verification rows that match the seeded helpers' badges, so recomputing a profile keeps them
+ * where the seed put them (dev provider; nothing personal is stored).
+ */
+async function seedVerification(tx: Tx): Promise<void> {
+  for (const person of PEOPLE) {
+    const helper = person.helper;
+    if (!helper) continue;
+    if (helper.idVerifiedAt) {
+      const at = new Date(helper.idVerifiedAt);
+      const row = {
+        id: `idv_seed_${person.id.slice(4)}`,
+        userId: person.id,
+        provider: 'dev',
+        providerSessionId: `vs_seed_${person.id.slice(4)}`,
+        status: 'verified',
+        failureReason: null,
+        isAdult: true,
+        verifiedAt: at,
+        createdAt: at,
+        updatedAt: at,
+      };
+      await tx.insert(identityVerifications).values(row).onConflictDoUpdate({ target: identityVerifications.id, set: row });
+    }
+    if (helper.payoutsReadyAt) {
+      const at = new Date(helper.payoutsReadyAt);
+      const row = {
+        userId: person.id,
+        provider: 'dev',
+        providerAccountId: `acct_seed_${person.id.slice(4)}`,
+        status: 'active',
+        activatedAt: at,
+        createdAt: at,
+        updatedAt: at,
+      };
+      await tx.insert(payoutAccounts).values(row).onConflictDoUpdate({ target: payoutAccounts.userId, set: row });
+    }
+    if (helper.backgroundCheckedAt) {
+      const at = new Date(helper.backgroundCheckedAt);
+      const row = {
+        id: `bgc_seed_${person.id.slice(4)}`,
+        userId: person.id,
+        provider: 'dev',
+        providerRef: `chk_seed_${person.id.slice(4)}`,
+        status: 'clear',
+        completedAt: at,
+        expiresAt: new Date(at.getTime() + 365 * 86_400_000),
+        createdAt: at,
+        updatedAt: at,
+      };
+      await tx.insert(backgroundChecks).values(row).onConflictDoUpdate({ target: backgroundChecks.id, set: row });
+    }
+  }
 }

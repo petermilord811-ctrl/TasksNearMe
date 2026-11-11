@@ -1,18 +1,22 @@
 import { test as setup } from '@playwright/test';
-import { inArray, like } from 'drizzle-orm';
+import { eq, inArray, like } from 'drizzle-orm';
 import { seedDatabase } from '../../db/seeds/seed';
 import { offers } from '../../src/modules/offers/schema';
 import { taskLocations, tasks } from '../../src/modules/tasks/schema';
+import { helperServices, helperWorkSamples } from '../../src/modules/profiles/schema';
+import { backgroundChecks, identityVerifications, payoutAccounts } from '../../src/modules/verification/schema';
 import { createDb } from '../../src/platform/db/connect';
 
 /**
  * Before the app e2e projects run:
  * - removes tasks that earlier posting runs created (their titles start with "Assemble a bookshelf (app-"),
  *   so lists of recent tasks don't fill up with test data;
+ * - resets Priya's onboarding (services, work samples, verification), since e2e onboards her;
  * - resets the seeded data (open tasks, offers, people), so tests that decline offers or cancel tasks
- *   can run again. The seed is idempotent; new accounts created by tests are left alone.
+ *   can run again. The seed is idempotent; new accounts created by tests are left alone;
+ * - clears the app's cached public pages (`POST /dev/cache`), which would still show the old data.
  */
-setup('reset seeded data', async () => {
+setup('reset seeded data', async ({ request }) => {
   try {
     process.loadEnvFile('.env.local');
   } catch {
@@ -36,9 +40,22 @@ setup('reset seeded data', async () => {
         if (locationIds.length > 0) await tx.delete(taskLocations).where(inArray(taskLocations.id, locationIds));
       });
     }
+    // Priya (a draft helper in the seed) goes through onboarding in e2e: start her from scratch.
+    const priya = 'usr_priya';
+    await db.transaction(async (tx) => {
+      await tx.delete(helperServices).where(eq(helperServices.userId, priya));
+      await tx.delete(helperWorkSamples).where(eq(helperWorkSamples.userId, priya));
+      await tx.delete(identityVerifications).where(eq(identityVerifications.userId, priya));
+      await tx.delete(payoutAccounts).where(eq(payoutAccounts.userId, priya));
+      await tx.delete(backgroundChecks).where(eq(backgroundChecks.userId, priya));
+    });
   } finally {
     await pool.end();
   }
 
   await seedDatabase(url);
+
+  // The dev server may outlive many runs: drop its cached public pages so they show the reseeded data.
+  const cleared = await request.post('/dev/cache');
+  if (!cleared.ok()) throw new Error(`Clearing the app cache failed: ${cleared.status()}`);
 });

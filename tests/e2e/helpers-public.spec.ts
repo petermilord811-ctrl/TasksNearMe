@@ -21,8 +21,8 @@ test.describe('helper profiles', () => {
     await expect(page.getByText('No reviews yet')).toBeVisible();
   });
 
-  test('draft and unknown profiles are not found', async ({ page }) => {
-    expect((await page.goto('/helpers/priya-s'))?.status()).toBe(404);
+  test('unknown profiles are not found', async ({ page }) => {
+    // Draft profiles are checked in helper-onboarding.spec.ts, before Priya is onboarded.
     expect((await page.goto('/helpers/nobody'))?.status()).toBe(404);
   });
 });

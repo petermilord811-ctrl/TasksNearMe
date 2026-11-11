@@ -127,8 +127,8 @@ export async function listPublicHelpers(options: {
 }
 
 /** Founding-cohort spots already taken in the market (helpers given a founding number). */
-export async function countFoundingHelpers(marketId: string): Promise<number> {
-  const [row] = await db
+export async function countFoundingHelpers(marketId: string, database: Db = db): Promise<number> {
+  const [row] = await database
     .select({ value: count() })
     .from(helperProfiles)
     .innerJoin(areas, eq(areas.id, helperProfiles.areaId))

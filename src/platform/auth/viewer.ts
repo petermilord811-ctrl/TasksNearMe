@@ -76,7 +76,8 @@ export function toSignedInViewer(user: ViewerUser): SignedInViewer {
     displayName: user.displayName,
     initials: user.initials,
     mode: user.mode,
-    helperReady: user.helperStatus === 'active',
+    // Paused helpers still use helper mode; they're just hidden from search.
+    helperReady: user.helperStatus === 'active' || user.helperStatus === 'paused',
     // TODO(messaging, notifications): real unread counts in Phase 6.
     unreadMessages: 0,
     unreadNotifications: 0,
