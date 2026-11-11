@@ -1,10 +1,24 @@
 'use server';
 
 import { refresh } from 'next/cache';
-import type { ActionResult, CaseResolutionInput, CaseStatusInput, ResolutionPreviewResult, RestrictedAccessInput, RevealConversationResult, StaffNoteInput, StaffReplyInput } from '@/contracts';
+import type {
+  ActionResult,
+  CaseResolutionInput,
+  CaseStatusInput,
+  ResolutionPreviewResult,
+  RestrictedAccessInput,
+  RevealAddressResult,
+  RevealConversationResult,
+  StaffNoteInput,
+  StaffRefundInput,
+  StaffReplyInput,
+} from '@/contracts';
+import { createPaymentProvider } from '@/integrations/payments';
 import { getViewer } from '@/platform/auth/viewer';
+import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { db } from '@/platform/db/client';
-import { addCaseNote, assignCase, closeCase, previewResolution, reopenCase, resolveCase, revealCaseConversation, setCaseStatus, staffActorOf, staffReply, type StaffActor } from './staff';
+import { addCaseNote, assignCase, closeCase, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffReply, type StaffActor } from './staff';
+import { resolveCaseWithMoney, revealBookingAddress, revealBookingConversation, staffRefund } from './staff-money';
 
 /**
  * Server Actions behind the staff case page (src/contracts/admin.ts). Each checks for a staff member who
@@ -49,7 +63,7 @@ export async function addCaseNoteAction(caseId: string, input: StaffNoteInput): 
 export async function resolveCaseAction(caseId: string, version: number, input: CaseResolutionInput): Promise<ActionResult> {
   const actor = await staff();
   if (!actor) return { ok: false, code: 'not_allowed' };
-  return refreshed(await resolveCase(db, actor, String(caseId), Number(version), input, new Date()));
+  return refreshed(await resolveCaseWithMoney(db, createPaymentProvider(), actor, String(caseId), Number(version), input, new Date()));
 }
 
 export async function closeCaseAction(caseId: string, version: number): Promise<ActionResult> {
@@ -74,4 +88,24 @@ export async function previewResolutionAction(caseId: string, input: CaseResolut
   const actor = await staff();
   if (!actor) return { ok: false, code: 'not_allowed' };
   return previewResolution(db, actor, String(caseId), input);
+}
+
+// ---- The staff booking page ---------------------------------------------------------------------------
+
+export async function staffRefundAction(bookingId: string, input: StaffRefundInput): Promise<ActionResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return refreshed(await staffRefund(db, createPaymentProvider(), actor, String(bookingId), input, new Date()));
+}
+
+export async function revealBookingAddressAction(bookingId: string, input: RestrictedAccessInput): Promise<RevealAddressResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return revealBookingAddress(db, fieldCipherFromEnv(), actor, String(bookingId), input, new Date());
+}
+
+export async function revealBookingConversationAction(bookingId: string, input: RestrictedAccessInput): Promise<RevealConversationResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return revealBookingConversation(db, actor, String(bookingId), input, new Date());
 }

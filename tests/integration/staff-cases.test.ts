@@ -55,7 +55,8 @@ describe('working a case', () => {
     ]);
     expect(found?.data.booking).toMatchObject({ id: 'bkg_tv', priceCents: 8000 });
     expect(found?.data.actions).toEqual(['assign_to_me', 'set_status', 'reply', 'add_note', 'resolve']);
-    expect(found?.data.resolutions).toEqual(['no_action', 'rework', 'account_action']);
+    // A dispute before the work was sent: no action, or a refund in full (money resolutions are in staff-money.test.ts).
+    expect(found?.data.resolutions).toEqual(['no_action', 'refund_full', 'account_action']);
     // Finance reads and writes notes only.
     expect((await getAdminCase(db, casey, caseId, new Date()))?.data.actions).toEqual(['add_note']);
     expect(await setCaseStatus(db, casey, caseId, found!.version, { status: 'escalated' }, new Date())).toEqual({ ok: false, code: 'not_allowed' });
@@ -91,8 +92,9 @@ describe('working a case', () => {
     const afterReply = await getAdminCase(db, alex, caseId, new Date(Date.now() + 50));
     expect(afterReply?.data.case).toMatchObject({ status: 'awaiting_support', awaitingReply: true });
 
+    // Money resolutions go through resolveCaseWithMoney.
     expect(await resolveCase(db, alex, caseId, await versionOf(), { resolution: 'refund_full', summary: 'Refunding everything.' }, new Date())).toEqual({ ok: false, code: 'not_allowed' });
-    expect(await resolveCase(db, alex, caseId, await versionOf(), { resolution: 'rework', summary: 'Jordan will come back on Sunday to tidy the cables.' }, new Date(Date.now() + 60))).toEqual({ ok: true, code: 'saved' });
+    expect(await resolveCase(db, alex, caseId, await versionOf(), { resolution: 'no_action', summary: 'Jordan will come back on Sunday to tidy the cables.' }, new Date(Date.now() + 60))).toEqual({ ok: true, code: 'saved' });
     const forBen = await getSupportCasePage(db, 'usr_ben', caseId, new Date(Date.now() + 70));
     expect(forBen?.case.status).toBe('resolved');
     expect(forBen?.events.some((event) => event.body === 'Jordan will come back on Sunday to tidy the cables.')).toBe(true);

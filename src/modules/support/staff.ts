@@ -56,6 +56,7 @@ import { supportCaseEvents, supportCases } from './schema';
 import {
   QUEUE_TYPES,
   STATUS_FILTERS,
+  MONEY_RESOLUTIONS,
   caseResolutions,
   isFinishedStatus,
   nextCaseStatuses,
@@ -91,7 +92,7 @@ type EventRow = typeof supportCaseEvents.$inferSelect;
 
 const REPLY_RULE = { limit: 60, windowSeconds: 10 * 60 };
 
-function personOf(user: UserRow): PersonSummary {
+export function personSummaryOf(user: UserRow): PersonSummary {
   return {
     id: user.id,
     displayName: user.name,
@@ -145,7 +146,8 @@ function awaitingReplyOf(row: CaseRow, events: Pick<EventRow, 'kind' | 'authorUs
   return !lastStaff || lastMember > lastStaff;
 }
 
-async function caseRows(db: Db, rows: CaseRow[], now: Date): Promise<AdminCaseRow[]> {
+/** Case rows as the lists show them. */
+export async function caseRowsFor(db: Db, rows: CaseRow[], now: Date): Promise<AdminCaseRow[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((row) => row.id);
   const [labels, openers, assignees, messageEvents] = await Promise.all([
@@ -172,7 +174,7 @@ async function caseRows(db: Db, rows: CaseRow[], now: Date): Promise<AdminCaseRo
         status,
         priority: priorityOf(row.priority),
         subject: labels.get(row.id)?.subject ?? 'Support',
-        openedBy: personOf(opener),
+        openedBy: personSummaryOf(opener),
         openedAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
         ...(due ? { slaDueAt: due.toISOString() } : {}),
@@ -233,7 +235,7 @@ export async function getAdminCases(db: Db, staff: StaffActor, filters: AdminCas
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(supportCases.updatedAt))
     .limit(500);
-  const rows = await caseRows(db, found, now);
+  const rows = await caseRowsFor(db, found, now);
   rows.sort((a, b) => {
     if (a.slaDueAt && b.slaDueAt) return a.slaDueAt.localeCompare(b.slaDueAt);
     if (a.slaDueAt) return -1;
@@ -263,19 +265,24 @@ async function loadCase(db: Db, staff: StaffActor, caseId: string): Promise<Case
         .where(eq(bookings.id, row.bookingId))
         .limit(1)
     : [];
-  const people = await usersById(db, [row.openedByUserId, ...(row.subjectUserId ? [row.subjectUserId] : []), ...(booking ? [booking.posterUserId, booking.helperUserId] : [])]);
+  const [people, paidRows] = await Promise.all([
+    usersById(db, [row.openedByUserId, ...(row.subjectUserId ? [row.subjectUserId] : []), ...(booking ? [booking.posterUserId, booking.helperUserId] : [])]),
+    booking
+      ? db.select({ id: payments.id }).from(payments).where(and(eq(payments.bookingId, booking.id), inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded']))).limit(1)
+      : Promise.resolve([]),
+  ]);
   const sideOf = (userId: string): 'poster' | 'helper' | undefined => (booking?.posterUserId === userId ? 'poster' : booking?.helperUserId === userId ? 'helper' : undefined);
 
   const parties: AdminCaseParty[] = [];
   const opener = people.get(row.openedByUserId);
-  if (opener) parties.push({ person: personOf(opener), role: sideOf(opener.id) ?? 'opener', canMessage: true });
+  if (opener) parties.push({ person: personSummaryOf(opener), role: sideOf(opener.id) ?? 'opener', canMessage: true });
   const reported = row.subjectUserId ? people.get(row.subjectUserId) : undefined;
-  if (reported) parties.push({ person: personOf(reported), role: 'reported', canMessage: false });
+  if (reported) parties.push({ person: personSummaryOf(reported), role: 'reported', canMessage: false });
   if (booking) {
     for (const id of [booking.posterUserId, booking.helperUserId]) {
       const person = people.get(id);
       if (!person || parties.some((party) => party.person.id === id)) continue;
-      parties.push({ person: personOf(person), role: sideOf(id)!, canMessage: true });
+      parties.push({ person: personSummaryOf(person), role: sideOf(id)!, canMessage: true });
     }
   }
   // Waiting on someone: by their side of the booking; without a booking, by how the opener uses the app.
@@ -286,7 +293,15 @@ async function loadCase(db: Db, staff: StaffActor, caseId: string): Promise<Case
   return {
     row,
     parties,
-    facts: { roles: staff.roles, viewerId: staff.id, type: row.type, status: caseStatusOf(row.status), assigneeId: row.assigneeUserId, waitingOn },
+    facts: {
+      roles: staff.roles,
+      viewerId: staff.id,
+      type: row.type,
+      status: caseStatusOf(row.status),
+      assigneeId: row.assigneeUserId,
+      waitingOn,
+      ...(booking ? { booking: { status: booking.status, paid: paidRows.length > 0 } } : {}),
+    },
     ...(booking ? { booking } : {}),
   };
 }
@@ -303,7 +318,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
   const { row, facts } = ctx;
   const events = await db.select().from(supportCaseEvents).where(eq(supportCaseEvents.caseId, row.id)).orderBy(asc(supportCaseEvents.createdAt));
   const [[summary], staffPeople, members, terms] = await Promise.all([
-    caseRows(db, [row], now),
+    caseRowsFor(db, [row], now),
     staffById(db, [
       ...events.flatMap((event) => (event.authorUserId && event.authorUserId !== event.partyUserId ? [event.authorUserId] : [])),
       ...events.flatMap((event) => (event.meta?.assigneeUserId ? [event.meta.assigneeUserId] : [])),
@@ -335,7 +350,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
           {
             id: event.id,
             kind: 'message',
-            actor: member ? { kind: 'member', person: personOf(member) } : actor,
+            actor: member ? { kind: 'member', person: personSummaryOf(member) } : actor,
             ...(event.partyUserId ? { partyId: event.partyUserId } : {}),
             body: event.body ?? '',
             ...photosOf(event.fileIds, photoOf),
@@ -416,7 +431,7 @@ export async function previewResolution(db: Db, staff: StaffActor, caseId: strin
   // validationFailed always returns the failure shape.
   if (!parsed.success) return validationFailed(parsed.error) as Extract<ActionResult, { ok: false }>;
   const ctx = await loadCase(db, staff, caseId);
-  if (!ctx?.booking || !staffCaseActions(ctx.facts).includes('resolve')) return { ok: false, code: 'not_allowed' };
+  if (!ctx?.booking || !caseResolutions(ctx.facts).includes(parsed.data.resolution)) return { ok: false, code: 'not_allowed' };
   const money = await bookingMoneyFacts(db, ctx.booking.id);
   if (!money) return { ok: false, code: 'not_allowed' };
   const moved = resolutionMoney(parsed.data.resolution, money, parsed.data);
@@ -528,11 +543,24 @@ export async function addCaseNote(db: Db, staff: StaffActor, caseId: string, inp
 }
 
 /** Resolve without money effects: the summary goes to everyone staff can write to on the case. */
-export async function resolveCase(db: Db, staff: StaffActor, caseId: string, version: number, input: CaseResolutionInput, now: Date): Promise<ActionResult> {
+export async function resolveCase(
+  db: Db,
+  staff: StaffActor,
+  caseId: string,
+  version: number,
+  input: CaseResolutionInput,
+  now: Date,
+  options: { moneyApplied?: boolean } = {},
+): Promise<ActionResult> {
   const parsed = caseResolutionInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const ctx = await loadCase(db, staff, caseId);
-  if (!ctx || !caseResolutions(ctx.facts).includes(parsed.data.resolution)) return { ok: false, code: 'not_allowed' };
+  if (!ctx) return { ok: false, code: 'not_allowed' };
+  // Money resolutions go through resolveCaseWithMoney (staff-money.ts): it checked the resolution before the
+  // money moved (which changes the booking, and so what's offered), so only the right to resolve is left.
+  if (MONEY_RESOLUTIONS.includes(parsed.data.resolution) && !options.moneyApplied) return { ok: false, code: 'not_allowed' };
+  const allowed = options.moneyApplied ? staffCaseActions(ctx.facts).includes('resolve') : caseResolutions(ctx.facts).includes(parsed.data.resolution);
+  if (!allowed) return { ok: false, code: 'not_allowed' };
   const later = (ms: number) => new Date(now.getTime() + ms);
   const failed = await moveCase(db, staff, ctx, version, now, {
     set: {
@@ -589,6 +617,11 @@ export async function revealCaseConversation(db: Db, staff: StaffActor, caseId: 
   if (!thread) return { ok: false, code: 'not_allowed' };
   await audit(db, staff, 'case.view_conversation', ctx.row.id, now, { reason: parsed.data.reason, targetType: 'thread', targetId: thread.id });
 
+  return { ok: true, conversation: await conversationView(db, thread) };
+}
+
+/** A conversation as written (staff see what was masked for the other person), oldest first. */
+export async function conversationView(db: Db, thread: typeof threads.$inferSelect): Promise<AdminConversationView> {
   const [participants, rows, [task]] = await Promise.all([
     db.select({ userId: threadParticipants.userId }).from(threadParticipants).where(eq(threadParticipants.threadId, thread.id)),
     db.select().from(messages).where(eq(messages.threadId, thread.id)).orderBy(asc(messages.createdAt)),
@@ -598,14 +631,14 @@ export async function revealCaseConversation(db: Db, staff: StaffActor, caseId: 
   const fileIds = [...new Set(rows.flatMap((row) => row.attachmentFileIds))];
   const fileRows = fileIds.length > 0 ? await db.select().from(files).where(inArray(files.id, fileIds)) : [];
   const photoOf = new Map(fileRows.map((file) => [file.id, photoFromFile(file)]));
-  const conversation: AdminConversationView = {
+  return {
     title: task?.title ?? 'Conversation',
-    people: [...people.values()].map(personOf),
+    people: [...people.values()].map(personSummaryOf),
     messages: rows.map((row) => {
       const sender = row.senderUserId ? people.get(row.senderUserId) : undefined;
       return {
         id: row.id,
-        ...(sender ? { sender: personOf(sender) } : {}),
+        ...(sender ? { sender: personSummaryOf(sender) } : {}),
         kind: row.kind === 'text' ? 'text' : row.kind === 'status' ? 'status' : 'system',
         body: row.body || (row.event ? row.event.type : ''),
         ...photosOf(row.attachmentFileIds, photoOf),
@@ -613,5 +646,4 @@ export async function revealCaseConversation(db: Db, staff: StaffActor, caseId: 
       };
     }),
   };
-  return { ok: true, conversation };
 }

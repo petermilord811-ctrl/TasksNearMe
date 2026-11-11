@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getThreadPage, offerThreadId, sendMessage } from '@/modules/messaging/service';
 import { getFindWorkPageData, getHelperTaskView, submitOffer } from '@/modules/offers/helper';
@@ -104,9 +104,9 @@ describe('reporting and blocking in a conversation', () => {
     expect(await reportFromThread(db, 'usr_priya', threadId, { reason: 'harassment', details: 'Short' }, new Date())).toMatchObject({ ok: false, code: 'validation_failed' });
     expect(await reportFromThread(db, 'usr_ruth', threadId, { reason: 'harassment', details: 'Not my conversation at all.' }, new Date())).toEqual({ ok: false, code: 'unknown' });
     expect(await reportFromThread(db, 'usr_priya', threadId, { reason: 'off_platform_payment', details: 'Asked me to pay in cash instead.' }, new Date())).toEqual({ ok: true, code: 'submitted' });
-    const [row] = await db.select().from(supportCases).where(eq(supportCases.openedByUserId, 'usr_priya'));
+    const [row] = await db.select().from(supportCases).where(and(eq(supportCases.openedByUserId, 'usr_priya'), eq(supportCases.type, 'report_user')));
     expect(row).toMatchObject({ type: 'report_user', subjectUserId: 'usr_sam', priority: 'high', context: { threadId, taskId: 'tsk_blk' } });
-    expect((await getSupportPage(db, 'usr_priya')).cases[0]).toMatchObject({ kind: 'report', subject: 'Sam K.' });
+    expect((await getSupportPage(db, 'usr_priya')).cases.find((row) => row.kind === 'report')).toMatchObject({ subject: 'Sam K.' });
   });
 
   it('stops messages, offers and the task for both people until unblocked', async () => {

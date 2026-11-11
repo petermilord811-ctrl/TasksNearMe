@@ -66,8 +66,11 @@ describe('what staff can do on a case', () => {
     expect(nextCaseStatuses(facts({ status: 'awaiting_support', waitingOn: { poster: true, helper: false } }))).toEqual(['awaiting_poster', 'escalated']);
   });
 
-  it('offers resolutions without money; rework only for disputes', () => {
-    expect(caseResolutions(facts())).toEqual(['no_action', 'rework', 'account_action']);
+  it('offers money resolutions only for cases about a paid booking', () => {
+    expect(caseResolutions(facts({ booking: { status: 'disputed', paid: true } }))).toEqual(['release_full', 'settle', 'refund_full', 'account_action']);
+    expect(caseResolutions(facts({ booking: { status: 'confirmed', paid: true } }))).toEqual(['no_action', 'refund_full', 'account_action']);
+    expect(caseResolutions(facts())).toEqual(['no_action', 'account_action']);
+    expect(caseResolutions(facts({ type: 'payment_issue', booking: { status: 'completed', paid: true } }))).toEqual(['no_action', 'goodwill_refund', 'account_action']);
     expect(caseResolutions(facts({ type: 'report_user' }))).toEqual(['no_action', 'account_action']);
     expect(caseResolutions(facts({ type: 'reward_issue' }))).toEqual(['no_action', 'account_action', 'reward_action']);
   });

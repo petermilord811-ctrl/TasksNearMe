@@ -114,7 +114,12 @@ export async function recordCompletionMoney(db: Db, bookingId: string, now: Date
           paymentId: charge.id,
           bookingId,
           amountCents: refundCents,
-          reason: row.terms.pricingType === 'hourly' && (final.approvedExpensesCents ?? 0) === 0 ? 'unused_cap' : 'unused_allowance',
+          reason:
+            row.booking.completedVia === 'settlement'
+              ? 'dispute_settlement'
+              : row.terms.pricingType === 'hourly' && (final.approvedExpensesCents ?? 0) === 0
+                ? 'unused_cap'
+                : 'unused_allowance',
           status: result.status,
           providerRef: result.refundRef,
           idempotencyKey,

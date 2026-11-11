@@ -60,6 +60,8 @@ export interface StaffCaseFacts {
   assigneeId: string | null;
   /** Which "waiting on" statuses fit: the people staff can write to on this case. */
   waitingOn: { poster: boolean; helper: boolean };
+  /** The booking the case is about, if any: its status and whether it was paid. */
+  booking?: { status: string; paid: boolean };
 }
 
 export function staffCaseActions(facts: StaffCaseFacts): AdminCaseActionId[] {
@@ -88,16 +90,30 @@ export function nextCaseStatuses(facts: StaffCaseFacts): CaseStatus[] {
   return options.filter((status) => status !== facts.status);
 }
 
-/** Resolutions without money effects (money resolutions come with the payments tools, UI-019). */
+/**
+ * What a case can be resolved with. Money resolutions need a paid booking: a dispute over submitted work
+ * can be released in full, settled at a lower price, or refunded in full; a dispute before the work was
+ * submitted can only be refunded in full; requests about a paid booking can get a goodwill refund.
+ * (Rework needs the revisit flow, UI-026.)
+ */
 export function caseResolutions(facts: StaffCaseFacts): CaseResolution[] {
   if (!staffCaseActions(facts).includes('resolve')) return [];
   const queue = queueOf(facts.type);
-  const options: CaseResolution[] = ['no_action'];
-  if (queue === 'disputes') options.push('rework');
+  const paid = facts.booking?.paid === true;
+  const submitted = facts.booking?.status === 'disputed' || facts.booking?.status === 'completion_submitted';
+  const live = paid && ['confirmed', 'in_progress', 'completion_submitted', 'disputed'].includes(facts.booking?.status ?? '');
+  const options: CaseResolution[] = [];
+  if (queue === 'disputes' && paid && submitted) options.push('release_full', 'settle', 'refund_full');
+  else if (queue === 'disputes' && live) options.push('no_action', 'refund_full');
+  else options.push('no_action');
+  if (queue === 'requests' && paid) options.push('goodwill_refund');
   options.push('account_action');
   if (facts.type === 'reward_issue') options.push('reward_action');
   return options;
 }
+
+/** Resolutions that move money (they need the booking's charge). */
+export const MONEY_RESOLUTIONS: readonly CaseResolution[] = ['release_full', 'settle', 'refund_full', 'goodwill_refund'];
 
 // ---- Money ------------------------------------------------------------------------------------------
 
