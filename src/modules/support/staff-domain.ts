@@ -1,4 +1,6 @@
 import type { AdminCaseActionId, AdminCaseStatusFilter, AdminQueue, CaseResolution, CaseStatus, StaffRole } from '@/contracts';
+import type { FeeSchedule } from '@/modules/markets/schema';
+import { quoteBreakdown } from '@/modules/payments/fees';
 
 /**
  * Pure rules for staff working support cases (blueprint 03 §9, 08 staff access). The UI shows what
@@ -95,4 +97,56 @@ export function caseResolutions(facts: StaffCaseFacts): CaseResolution[] {
   options.push('account_action');
   if (facts.type === 'reward_issue') options.push('reward_action');
   return options;
+}
+
+// ---- Money ------------------------------------------------------------------------------------------
+
+/** Refunds a staff member can give per booking without approval (blueprint 08: agents $100, leads $500; finance above $500 needs a second approval). */
+const REFUND_LIMITS: Partial<Record<StaffRole, number>> = { support_agent: 10_000, support_lead: 50_000, finance: 50_000 };
+export const refundLimitOf = (roles: readonly StaffRole[]) => Math.max(0, ...roles.map((role) => REFUND_LIMITS[role] ?? 0));
+
+export interface BookingMoneyFacts {
+  fees: FeeSchedule;
+  /** The agreed task price. */
+  priceCents: number;
+  /** Captured from the client, and refunded so far. */
+  chargedCents: number;
+  refundedCents: number;
+}
+
+export type ResolutionMoney = { posterRefundCents: number; helperReceivesCents: number; platformKeepsCents: number };
+
+/**
+ * What a money resolution does (blueprint 04 §6; the $60 desk charged $66 settled at $45: client refund $16.50,
+ * helper $40.50, platform $9.00). `out_of_range`: a settle price not below the agreed price, or a refund
+ * larger than what's left. Null: the resolution moves no money.
+ */
+export function resolutionMoney(
+  resolution: CaseResolution,
+  money: BookingMoneyFacts,
+  input: { settlePriceCents?: number; goodwillCents?: number },
+): ResolutionMoney | 'out_of_range' | null {
+  const left = money.chargedCents - money.refundedCents;
+  const agreed = quoteBreakdown(money.fees, { type: 'fixed', priceCents: money.priceCents });
+  switch (resolution) {
+    case 'release_full':
+      return { posterRefundCents: 0, helperReceivesCents: agreed.helperEarningsCents, platformKeepsCents: agreed.platformRevenueCents };
+    case 'settle': {
+      const price = input.settlePriceCents ?? 0;
+      if (price <= 0 || price >= money.priceCents) return 'out_of_range';
+      const settled = quoteBreakdown(money.fees, { type: 'fixed', priceCents: price });
+      const refund = agreed.posterTotalCents - settled.posterTotalCents;
+      if (refund > left) return 'out_of_range';
+      return { posterRefundCents: refund, helperReceivesCents: settled.helperEarningsCents, platformKeepsCents: settled.platformRevenueCents };
+    }
+    case 'refund_full':
+      return { posterRefundCents: left, helperReceivesCents: 0, platformKeepsCents: 0 };
+    case 'goodwill_refund': {
+      const amount = input.goodwillCents ?? 0;
+      if (amount <= 0 || amount > left) return 'out_of_range';
+      return { posterRefundCents: amount, helperReceivesCents: agreed.helperEarningsCents, platformKeepsCents: agreed.platformRevenueCents - amount };
+    }
+    default:
+      return null;
+  }
 }

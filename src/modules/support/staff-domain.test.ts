@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { caseResolutions, nextCaseStatuses, queueOf, slaDueAt, staffCaseActions, type StaffCaseFacts } from './staff-domain';
+import { caseResolutions, nextCaseStatuses, queueOf, refundLimitOf, resolutionMoney, slaDueAt, staffCaseActions, type BookingMoneyFacts, type StaffCaseFacts } from './staff-domain';
 
 const facts = (over: Partial<StaffCaseFacts> = {}): StaffCaseFacts => ({
   roles: ['support_agent'],
@@ -70,5 +70,29 @@ describe('what staff can do on a case', () => {
     expect(caseResolutions(facts())).toEqual(['no_action', 'rework', 'account_action']);
     expect(caseResolutions(facts({ type: 'report_user' }))).toEqual(['no_action', 'account_action']);
     expect(caseResolutions(facts({ type: 'reward_issue' }))).toEqual(['no_action', 'account_action', 'reward_action']);
+  });
+});
+
+describe('the money a resolution moves', () => {
+  // The $60 desk charged $66 (blueprint 04 §6).
+  const desk: BookingMoneyFacts = { fees: { posterBps: 1000, posterMinCents: 300, helperBps: 1000 }, priceCents: 6000, chargedCents: 6600, refundedCents: 0 };
+
+  it('settles at $45: $16.50 back to the client, $40.50 to the helper, $9.00 kept', () => {
+    expect(resolutionMoney('settle', desk, { settlePriceCents: 4500 })).toEqual({ posterRefundCents: 1650, helperReceivesCents: 4050, platformKeepsCents: 900 });
+    expect(resolutionMoney('settle', desk, { settlePriceCents: 6000 })).toBe('out_of_range');
+  });
+
+  it('releases in full, refunds in full, or refunds goodwill from platform funds', () => {
+    expect(resolutionMoney('release_full', desk, {})).toEqual({ posterRefundCents: 0, helperReceivesCents: 5400, platformKeepsCents: 1200 });
+    expect(resolutionMoney('refund_full', { ...desk, refundedCents: 600 }, {})).toEqual({ posterRefundCents: 6000, helperReceivesCents: 0, platformKeepsCents: 0 });
+    expect(resolutionMoney('goodwill_refund', desk, { goodwillCents: 2000 })).toEqual({ posterRefundCents: 2000, helperReceivesCents: 5400, platformKeepsCents: -800 });
+    expect(resolutionMoney('goodwill_refund', desk, { goodwillCents: 7000 })).toBe('out_of_range');
+    expect(resolutionMoney('no_action', desk, {})).toBeNull();
+  });
+
+  it('limits refunds per booking by role', () => {
+    expect(refundLimitOf(['support_agent'])).toBe(10_000);
+    expect(refundLimitOf(['support_agent', 'support_lead'])).toBe(50_000);
+    expect(refundLimitOf(['trust_safety'])).toBe(0);
   });
 });

@@ -19,6 +19,7 @@ import type {
   CaseType,
   PersonSummary,
   Photo,
+  ResolutionPreviewResult,
   RestrictedAccessInput,
   RevealConversationResult,
   StaffNoteInput,
@@ -38,6 +39,8 @@ import {
   staffReplyInputSchema,
 } from '@/contracts';
 import { staffRoles, users } from '@/modules/accounts/schema';
+import { getPublishedPolicy } from '@/modules/markets/queries';
+import { payments, refunds } from '@/modules/payments/schema';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { photoFromFile } from '@/modules/files/uploads';
 import { messages, threadParticipants, threads } from '@/modules/messaging/schema';
@@ -58,7 +61,10 @@ import {
   nextCaseStatuses,
   queueOf,
   slaDueAt,
+  refundLimitOf,
+  resolutionMoney,
   staffCaseActions,
+  type BookingMoneyFacts,
   type StaffCaseFacts,
 } from './staff-domain';
 
@@ -316,6 +322,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
   const fileIds = [...new Set([...row.fileIds, ...events.flatMap((event) => event.fileIds)])];
   const fileRows = fileIds.length > 0 ? await db.select().from(files).where(inArray(files.id, fileIds)) : [];
   const photoOf = new Map(fileRows.map((file) => [file.id, photoFromFile(file)]));
+  const money = ctx.booking ? await bookingMoneyFacts(db, ctx.booking.id) : null;
 
   const timeline = events.flatMap((event): AdminCaseEventView[] => {
     const at = event.createdAt.toISOString();
@@ -378,8 +385,46 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
     actions: staffCaseActions(facts),
     nextStatuses: nextCaseStatuses(facts),
     resolutions: caseResolutions(facts),
+    ...(money ? { money: { priceCents: money.priceCents, chargedCents: money.chargedCents, refundedCents: money.refundedCents } } : {}),
   };
   return { data, version: row.version };
+}
+
+/** A booking's price, what was charged and refunded, and the market's fees (null without a paid booking). */
+export async function bookingMoneyFacts(db: Db, bookingId: string): Promise<BookingMoneyFacts | null> {
+  const [row] = await db
+    .select({ termsVersion: bookings.termsVersion, marketId: tasks.marketId })
+    .from(bookings)
+    .innerJoin(tasks, eq(tasks.id, bookings.taskId))
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  if (!row) return null;
+  const [[terms], paid, refunded, policy] = await Promise.all([
+    db.select({ breakdown: bookingTerms.breakdown }).from(bookingTerms).where(and(eq(bookingTerms.bookingId, bookingId), eq(bookingTerms.version, row.termsVersion))).limit(1),
+    db.select({ amountCents: payments.amountCents }).from(payments).where(and(eq(payments.bookingId, bookingId), inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded']))),
+    db.select({ amountCents: refunds.amountCents }).from(refunds).where(and(eq(refunds.bookingId, bookingId), inArray(refunds.status, ['pending', 'succeeded']))),
+    getPublishedPolicy(row.marketId, db),
+  ]);
+  const chargedCents = paid.reduce((sum, item) => sum + item.amountCents, 0);
+  if (!terms || !policy || chargedCents === 0) return null;
+  return { fees: policy.fees, priceCents: terms.breakdown.taskPriceCents, chargedCents, refundedCents: refunded.reduce((sum, item) => sum + item.amountCents, 0) };
+}
+
+/** The money a resolution would move on this case's booking, and whether it is within the viewer's refund limit. */
+export async function previewResolution(db: Db, staff: StaffActor, caseId: string, input: CaseResolutionInput): Promise<ResolutionPreviewResult> {
+  const parsed = caseResolutionInputSchema.safeParse(input);
+  // validationFailed always returns the failure shape.
+  if (!parsed.success) return validationFailed(parsed.error) as Extract<ActionResult, { ok: false }>;
+  const ctx = await loadCase(db, staff, caseId);
+  if (!ctx?.booking || !staffCaseActions(ctx.facts).includes('resolve')) return { ok: false, code: 'not_allowed' };
+  const money = await bookingMoneyFacts(db, ctx.booking.id);
+  if (!money) return { ok: false, code: 'not_allowed' };
+  const moved = resolutionMoney(parsed.data.resolution, money, parsed.data);
+  if (moved === null) return { ok: false, code: 'validation_failed', fieldErrors: { resolution: ['invalid'] } };
+  if (moved === 'out_of_range') {
+    return { ok: false, code: 'validation_failed', fieldErrors: { [parsed.data.resolution === 'settle' ? 'settlePriceCents' : 'goodwillCents']: ['invalid'] } };
+  }
+  return { ok: true, preview: { ...moved, withinLimit: moved.posterRefundCents <= refundLimitOf(staff.roles) } };
 }
 
 // ---- Commands ---------------------------------------------------------------------------------------

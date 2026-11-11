@@ -1,4 +1,6 @@
 import type {
+  AdminBookingHandlers,
+  AdminBookingPageData,
   AdminCaseHandlers,
   AdminCasePageData,
   AdminCaseRow,
@@ -6,9 +8,12 @@ import type {
   AdminConversationView,
   AdminHomeData,
   PersonSummary,
+  ResolutionPreview,
   StaffSummary,
   StaffViewer,
 } from '@/contracts';
+import { deskExactAddress } from './locations';
+import { deskBreakdown, deskSettledBreakdown } from './money';
 import { jordan, maya, priya, ruth, sam } from './people';
 import { uploadedTaskPhotos } from './posting';
 import { alexStaff, morganStaff } from './shell';
@@ -224,5 +229,68 @@ export const fakeAdminCaseHandlers: AdminCaseHandlers = {
   onResolve: () => wait({ ok: true, code: 'saved' }),
   onClose: () => wait({ ok: true, code: 'updated' }),
   onReopen: () => wait({ ok: true, code: 'updated' }),
+  onRevealConversation: () => wait({ ok: true, conversation: reportedConversation }),
+  onPreviewResolution: () => wait({ ok: true, preview: settleAt45Preview }),
+};
+
+// ---- Money resolutions and the staff booking page (UI-019) --------------------------------------------
+
+/** Maya's problem report with the money resolutions open to Alex (refunds up to $100 a booking). */
+export const disputeMoneyCaseData: AdminCasePageData = {
+  ...disputeAdminCaseData,
+  resolutions: ['release_full', 'settle', 'refund_full', 'rework', 'account_action'],
+  money: { priceCents: 6000, chargedCents: 6600, refundedCents: 0 },
+};
+
+/** Settling the $60 desk at $45 (blueprint 04 §6). */
+export const settleAt45Preview: ResolutionPreview = { posterRefundCents: 1650, helperReceivesCents: 4050, platformKeepsCents: 900, withinLimit: true };
+export const releaseFullPreview: ResolutionPreview = { posterRefundCents: 0, helperReceivesCents: 5400, platformKeepsCents: 1200, withinLimit: true };
+/** A refund above Alex's $100 limit: a lead or finance records it. */
+export const overLimitPreview: ResolutionPreview = { posterRefundCents: 15400, helperReceivesCents: 0, platformKeepsCents: 0, withinLimit: false };
+
+const deskBookingSummary: AdminBookingPageData['booking'] = {
+  id: 'bkg_desk',
+  title: 'Assemble a desk (flat-pack, 1 item)',
+  status: 'disputed',
+  start: '2026-11-21T16:30:00.000Z',
+  areaName: 'Mueller',
+  pricingType: 'fixed',
+};
+
+/** The disputed desk: charged $66.00, nothing refunded, earnings on hold. */
+export const adminBookingDisputedData: AdminBookingPageData = {
+  booking: deskBookingSummary,
+  poster: person(maya),
+  helper: person(jordan),
+  money: { breakdown: deskBreakdown, chargedCents: 6600, refundedCents: 0, refunds: [], earnings: [{ kind: 'earnings', amountCents: 5400, status: 'on_hold' }] },
+  cases: [disputeRow],
+  refund: { maxCents: 6600, limitCents: 10000 },
+  actions: ['refund', 'reveal_address', 'reveal_conversation'],
+};
+
+/** After settling at $45: $16.50 back to Maya, $40.50 to Jordan. */
+export const adminBookingSettledData: AdminBookingPageData = {
+  booking: { ...deskBookingSummary, status: 'completed' },
+  poster: person(maya),
+  helper: person(jordan),
+  money: {
+    breakdown: deskBreakdown,
+    finalBreakdown: deskSettledBreakdown,
+    chargedCents: 6600,
+    refundedCents: 1650,
+    refunds: [{ id: 'ref_settle', amountCents: 1650, reason: 'dispute_settlement', status: 'succeeded', createdAt: '2026-11-24T17:00:00.000Z' }],
+    earnings: [{ kind: 'earnings', amountCents: 4050, status: 'transferred', transferredAt: '2026-11-24T17:00:00.000Z' }],
+  },
+  cases: [{ ...disputeRow, status: 'resolved', slaBreached: false, awaitingReply: false }],
+  refund: { maxCents: 4950, limitCents: 10000 },
+  actions: ['refund', 'reveal_address', 'reveal_conversation'],
+};
+
+/** A viewer without refund or restricted-data rights (for example, an admin): read-only. */
+export const adminBookingReadOnlyData: AdminBookingPageData = { ...adminBookingDisputedData, refund: undefined, actions: [] };
+
+export const fakeAdminBookingHandlers: AdminBookingHandlers = {
+  onRefund: () => wait({ ok: true, code: 'submitted' }),
+  onRevealAddress: () => wait({ ok: true, address: deskExactAddress }),
   onRevealConversation: () => wait({ ok: true, conversation: reportedConversation }),
 };

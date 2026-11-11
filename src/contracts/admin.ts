@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
 import type { Cents, ISODateTime, Photo, StaffRole } from './common';
+import type { ExactAddress } from './location';
+import type { PriceBreakdown } from './money';
 import type { PersonSummary } from './people';
 import { CASE_RESOLUTIONS, CASE_STATUSES } from './status';
-import type { BookingStatus, CaseResolution, CaseStatus, CaseType } from './status';
+import type { BookingStatus, CaseResolution, CaseStatus, CaseType, EarningsStatus } from './status';
 
 /**
  * Staff tools, part 1 (blueprint 02 §1.3, 03 §9; backlog B-052, B-054): the queues, the case list, and
@@ -147,9 +149,23 @@ export interface AdminCasePageData {
   actions: AdminCaseActionId[];
   /** Where `set_status` can move the case. */
   nextStatuses: CaseStatus[];
-  /** Resolutions the viewer can record now (money resolutions come with UI-019). */
+  /** Resolutions the viewer can record now. */
   resolutions: CaseResolution[];
+  /** The booking's money, for the settle and goodwill inputs (cases about a paid booking). */
+  money?: { priceCents: Cents; chargedCents: Cents; refundedCents: Cents };
 }
+
+/**
+ * What a resolution would do with the money (computed on the server; the UI only shows it):
+ * `withinLimit` is false when the refund is above the viewer's limit, so a lead or finance must record it.
+ */
+export interface ResolutionPreview {
+  posterRefundCents: Cents;
+  helperReceivesCents: Cents;
+  platformKeepsCents: Cents;
+  withinLimit: boolean;
+}
+export type ResolutionPreviewResult = { ok: true; preview: ResolutionPreview } | Extract<ActionResult, { ok: false }>;
 
 const body = (max: number) => z.string(code('required')).trim().min(1, code('required')).max(max, code('too_long'));
 
@@ -166,11 +182,20 @@ export type StaffNoteInput = z.input<typeof staffNoteInputSchema>;
 export const caseStatusInputSchema = z.object({ status: z.enum(CASE_STATUSES, code('required')) });
 export type CaseStatusInput = z.input<typeof caseStatusInputSchema>;
 
-export const caseResolutionInputSchema = z.object({
-  resolution: z.enum(CASE_RESOLUTIONS, code('required')),
-  /** Shown to the people on the case. */
-  summary: z.string(code('required')).trim().min(10, code('too_short')).max(1000, code('too_long')),
-});
+export const caseResolutionInputSchema = z
+  .object({
+    resolution: z.enum(CASE_RESOLUTIONS, code('required')),
+    /** Shown to the people on the case. */
+    summary: z.string(code('required')).trim().min(10, code('too_short')).max(1000, code('too_long')),
+    /** `settle`: the new task price (below the agreed price). */
+    settlePriceCents: z.number(code('invalid')).int(code('invalid')).positive(code('invalid')).optional(),
+    /** `goodwill_refund`: the amount the platform refunds the client. */
+    goodwillCents: z.number(code('invalid')).int(code('invalid')).positive(code('invalid')).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.resolution === 'settle' && value.settlePriceCents === undefined) ctx.addIssue({ code: 'custom', path: ['settlePriceCents'], message: 'required' });
+    if (value.resolution === 'goodwill_refund' && value.goodwillCents === undefined) ctx.addIssue({ code: 'custom', path: ['goodwillCents'], message: 'required' });
+  });
 export type CaseResolutionInput = z.input<typeof caseResolutionInputSchema>;
 
 /** Why a staff member opens restricted data (logged with their name). */
@@ -214,5 +239,61 @@ export interface AdminCaseHandlers {
   onResolve: ActionHandler<CaseResolutionInput>;
   onClose: ActionHandler;
   onReopen: ActionHandler;
+  onRevealConversation: QueryHandler<RestrictedAccessInput, RevealConversationResult>;
+  /** The money a resolution would move (validation_failed for a missing or out-of-range amount). */
+  onPreviewResolution: QueryHandler<CaseResolutionInput, ResolutionPreviewResult>;
+}
+
+// ---- The staff booking page (UI-019) -------------------------------------------------------------------
+
+/** Refunds staff can give from a booking's page (cancellations, settlements and unused amounts come from their flows). */
+export const STAFF_REFUND_REASONS = ['goodwill', 'fraud'] as const;
+export type StaffRefundReason = (typeof STAFF_REFUND_REASONS)[number];
+
+export interface AdminBookingMoney {
+  /** The agreed numbers (current terms). */
+  breakdown: PriceBreakdown;
+  /** The final numbers once completed. */
+  finalBreakdown?: PriceBreakdown;
+  chargedCents: Cents;
+  refundedCents: Cents;
+  refunds: { id: string; amountCents: Cents; reason: string; status: 'pending' | 'succeeded' | 'failed'; createdAt: ISODateTime }[];
+  earnings: { kind: 'earnings' | 'reimbursement' | 'cancellation_compensation'; amountCents: Cents; status: EarningsStatus; transferredAt?: ISODateTime }[];
+}
+
+export const ADMIN_BOOKING_ACTIONS = ['refund', 'reveal_address', 'reveal_conversation'] as const;
+export type AdminBookingActionId = (typeof ADMIN_BOOKING_ACTIONS)[number];
+
+/** `/admin/bookings/[bookingId]`. */
+export interface AdminBookingPageData {
+  booking: { id: string; title: string; status: BookingStatus; start: ISODateTime; areaName: string; pricingType: 'fixed' | 'hourly' };
+  poster: PersonSummary;
+  helper: PersonSummary;
+  money: AdminBookingMoney;
+  /** Cases about this booking, newest first. */
+  cases: AdminCaseRow[];
+  /** What the viewer can refund now: the amount left, and their limit per booking. */
+  refund?: { maxCents: Cents; limitCents: Cents };
+  actions: AdminBookingActionId[];
+}
+
+export const staffRefundInputSchema = z.object({
+  amountCents: z.number(code('required')).int(code('invalid')).positive(code('invalid')),
+  reason: z.enum(STAFF_REFUND_REASONS, code('required')),
+  /** Why (kept with the refund and in the audit log). */
+  note: z.string(code('required')).trim().min(10, code('too_short')).max(1000, code('too_long')),
+});
+export type StaffRefundInput = z.input<typeof staffRefundInputSchema>;
+
+export type RevealAddressResult = { ok: true; address: ExactAddress } | Extract<ActionResult, { ok: false }>;
+
+/**
+ * - `onRefund`: ok `submitted` (refresh). Errors: `validation_failed`, `not_allowed` (above your limit or more
+ *   than is left), `rate_limited`, `unknown`.
+ * - `onRevealAddress`, `onRevealConversation`: need a reason (logged); `validation_failed`, `not_allowed`.
+ */
+export interface AdminBookingHandlers {
+  onRefund: ActionHandler<StaffRefundInput>;
+  onRevealAddress: QueryHandler<RestrictedAccessInput, RevealAddressResult>;
   onRevealConversation: QueryHandler<RestrictedAccessInput, RevealConversationResult>;
 }

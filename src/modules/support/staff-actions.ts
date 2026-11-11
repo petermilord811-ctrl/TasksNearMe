@@ -1,10 +1,10 @@
 'use server';
 
 import { refresh } from 'next/cache';
-import type { ActionResult, CaseResolutionInput, CaseStatusInput, RestrictedAccessInput, RevealConversationResult, StaffNoteInput, StaffReplyInput } from '@/contracts';
+import type { ActionResult, CaseResolutionInput, CaseStatusInput, ResolutionPreviewResult, RestrictedAccessInput, RevealConversationResult, StaffNoteInput, StaffReplyInput } from '@/contracts';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { addCaseNote, assignCase, closeCase, reopenCase, resolveCase, revealCaseConversation, setCaseStatus, staffActorOf, staffReply, type StaffActor } from './staff';
+import { addCaseNote, assignCase, closeCase, previewResolution, reopenCase, resolveCase, revealCaseConversation, setCaseStatus, staffActorOf, staffReply, type StaffActor } from './staff';
 
 /**
  * Server Actions behind the staff case page (src/contracts/admin.ts). Each checks for a staff member who
@@ -68,4 +68,10 @@ export async function revealCaseConversationAction(caseId: string, input: Restri
   const actor = await staff();
   if (!actor) return { ok: false, code: 'not_allowed' };
   return revealCaseConversation(db, actor, String(caseId), input, new Date());
+}
+
+export async function previewResolutionAction(caseId: string, input: CaseResolutionInput): Promise<ResolutionPreviewResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return previewResolution(db, actor, String(caseId), input);
 }
