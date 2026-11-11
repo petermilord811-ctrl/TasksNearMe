@@ -1,0 +1,196 @@
+/** @vitest-environment jsdom */
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { NextIntlClientProvider } from 'next-intl';
+import type { ReactElement } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { routes, type ActionResult, type HelperOnboardingPageData, type HelperProfileEditorHandlers } from '@/contracts';
+import { fakeOnboardingHandlers, fakeProfileEditorHandlers, onboardingAreaStep, onboardingDone, onboardingIdentityStep, onboardingProfileStep, onboardingServicesStep, samProfileEditorData } from '@/fixtures';
+import uiMessages from '../../../../messages/en/ui';
+import { HelperOnboardingScreen } from './helper-onboarding-screen';
+import { HelperProfileEditorScreen } from './helper-profile-editor-screen';
+
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+let desktop = false;
+
+beforeEach(() => {
+  desktop = false;
+  vi.stubGlobal('matchMedia', vi.fn((query: string) => ({
+    matches: desktop,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })));
+  vi.stubGlobal('ResizeObserver', class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
+});
+afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
+
+function show(children: ReactElement) {
+  return render(<NextIntlClientProvider locale="en" messages={uiMessages}>{children}</NextIntlClientProvider>);
+}
+
+function showEditor(overrides: Partial<HelperProfileEditorHandlers> = {}, paused = false) {
+  return show(<HelperProfileEditorScreen data={{ ...samProfileEditorData, paused }} handlers={{ ...fakeProfileEditorHandlers, ...overrides }} />);
+}
+
+const privateProviderLabels = /\bID number\b|\bSSN\b|\bDOB\b|social security|date of birth|bank (account|details)/i;
+
+function copyValues(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') return Object.values(value).map(copyValues).join('\n');
+  return '';
+}
+
+describe('helper onboarding screen', () => {
+  it('links completed steps and keeps locked steps out of the link path', () => {
+    show(<HelperOnboardingScreen data={onboardingIdentityStep} handlers={fakeOnboardingHandlers} />);
+    const navigation = within(screen.getByRole('navigation', { name: 'Helper setup progress' }));
+    for (const { step, state } of onboardingIdentityStep.progress.steps) {
+      const label = uiMessages.helperOnboarding.screen.steps[step];
+      if (state === 'done') {
+        expect(navigation.getByRole('link', { name: new RegExp(`${label}\\s*Done`) })).toHaveAttribute('href', routes.app.helperOnboarding(step));
+      } else {
+        expect(navigation.queryByRole('link', { name: new RegExp(label) })).not.toBeInTheDocument();
+      }
+    }
+    expect(navigation.getByText('Current step').closest('li')).toHaveAttribute('aria-current', 'step');
+    expect(screen.queryByRole('link', { name: 'Continue to Payout setup' })).not.toBeInTheDocument();
+  });
+
+  it('uses explicit bookability even when all verification statuses are complete', () => {
+    const data: HelperOnboardingPageData = {
+      ...onboardingDone,
+      progress: {
+        ...onboardingDone.progress,
+        bookable: false,
+        bookableCategories: [],
+        steps: [
+          { step: 'profile', state: 'done' },
+          { step: 'services', state: 'done' },
+          { step: 'area', state: 'done' },
+          { step: 'identity', state: 'todo' },
+          { step: 'payout', state: 'locked' },
+          { step: 'background', state: 'skipped' },
+          { step: 'done', state: 'current' },
+        ],
+      },
+    };
+    show(<HelperOnboardingScreen data={data} handlers={fakeOnboardingHandlers} />);
+    expect(screen.getByRole('heading', { name: 'A few steps left' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Find work' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Finish ID check' })).toHaveAttribute('href', routes.app.helperOnboarding('identity'));
+    expect(screen.queryByRole('link', { name: /Payout setup/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Finish Background check/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+  });
+
+  it('shows the canonical welcome reward and find-work link only when supplied and bookable', () => {
+    show(<HelperOnboardingScreen data={onboardingDone} handlers={fakeOnboardingHandlers} />);
+    expect(screen.getByRole('heading', { name: 'You can make offers now' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Find work' })).toHaveAttribute('href', routes.app.findWork());
+    const reward = screen.getByRole('complementary');
+    expect(reward).toHaveTextContent('$50.00');
+    expect(reward).toHaveTextContent('$40.00');
+    expect(reward).toHaveTextContent('60 days');
+    expect(reward).not.toHaveTextContent(/reviews?|ratings?/i);
+  });
+
+  it('omits the welcome reward when the app does not supply one', () => {
+    show(<HelperOnboardingScreen data={{ ...onboardingDone, welcomeReward: undefined }} handlers={fakeOnboardingHandlers} />);
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Find work' })).toBeVisible();
+  });
+
+  it.each([onboardingProfileStep, onboardingServicesStep, onboardingAreaStep])('does not collect private provider details in the $step form', (data) => {
+    show(<HelperOnboardingScreen data={data} handlers={fakeOnboardingHandlers} />);
+    expect(screen.queryByLabelText(privateProviderLabels)).not.toBeInTheDocument();
+  });
+
+  it.each(['helperOnboarding', 'helperProfileEditor'] as const)('keeps %s copy within the product glossary', (namespace) => {
+    expect(copyValues(uiMessages[namespace])).not.toMatch(/\b(job|gig|bid|quote|contract|order|worker|employee|contractor|tasker|customer|employer|commission|wages|escrow|wallet|guaranteed|hire|best|cheapest|bonus pay|cash)\b/i);
+  });
+});
+
+describe('helper profile editor screen', () => {
+  it('pauses through the handler, waits for confirmation, and announces Saved', async () => {
+    let finish: (result: ActionResult) => void = () => {};
+    const onSetPaused = vi.fn(() => new Promise<ActionResult>((resolve) => { finish = resolve; }));
+    showEditor({ onSetPaused });
+    const visibility = within(screen.getByRole('region', { name: 'Visibility' }));
+    const button = visibility.getByRole('button', { name: 'Pause profile' });
+    await userEvent.click(button);
+    expect(onSetPaused).toHaveBeenCalledExactlyOnceWith({ paused: true });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(visibility.getByText('Your profile is visible')).toBeVisible();
+    expect(visibility.queryByText('Saved')).not.toBeInTheDocument();
+    await act(async () => finish({ ok: true, code: 'updated' }));
+    expect(await visibility.findByText('Your profile is paused')).toBeVisible();
+    expect(visibility.getByRole('button', { name: 'Resume profile' })).toBeEnabled();
+    expect(visibility.getByRole('status')).toHaveTextContent('Saved');
+  });
+
+  it('keeps the visible state when pausing fails and offers a retry', async () => {
+    const onSetPaused = vi.fn(async (): Promise<ActionResult> => ({ ok: false, code: 'unknown' }));
+    showEditor({ onSetPaused });
+    const visibility = within(screen.getByRole('region', { name: 'Visibility' }));
+    await userEvent.click(visibility.getByRole('button', { name: 'Pause profile' }));
+    expect(await visibility.findByText(uiMessages.feedback.error.unknown)).toBeVisible();
+    expect(visibility.getByText('Your profile is visible')).toBeVisible();
+    expect(visibility.getByRole('button', { name: 'Pause profile' })).toBeEnabled();
+    expect(visibility.queryByRole('button', { name: 'Resume profile' })).not.toBeInTheDocument();
+    expect(visibility.queryByText('Saved')).not.toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('resumes a paused profile using the matching handler value', async () => {
+    const onSetPaused = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    showEditor({ onSetPaused }, true);
+    const visibility = within(screen.getByRole('region', { name: 'Visibility' }));
+    expect(visibility.getByText('Your profile is paused')).toBeVisible();
+    await userEvent.click(visibility.getByRole('button', { name: 'Resume profile' }));
+    expect(onSetPaused).toHaveBeenCalledExactlyOnceWith({ paused: false });
+    expect(await visibility.findByText('Your profile is visible')).toBeVisible();
+    expect(visibility.getByRole('status')).toHaveTextContent('Saved');
+  });
+
+  it('builds the public profile link from the handle and offers all phone sections', () => {
+    showEditor();
+    expect(screen.getByRole('link', { name: 'View public profile' })).toHaveAttribute('href', routes.helperProfile(samProfileEditorData.handle));
+    const navigation = within(screen.getByRole('navigation', { name: 'Edit profile sections' }));
+    for (const [section, label] of Object.entries(uiMessages.helperProfileEditor.screen.sections)) {
+      expect(navigation.getByRole('link', { name: label })).toHaveAttribute('href', `${routes.app.helperProfile()}#helper-section-${section}`);
+      expect(screen.getByRole('region', { name: label })).toBeInTheDocument();
+    }
+    expect(screen.queryByLabelText(privateProviderLabels)).not.toBeInTheDocument();
+  });
+
+  it('connects desktop tabs to their panels and preserves a profile draft while switching', async () => {
+    desktop = true;
+    showEditor();
+    for (const tab of screen.getAllByRole('tab')) {
+      const controlledId = tab.getAttribute('aria-controls');
+      expect(controlledId).toBeTruthy();
+      const panel = document.getElementById(controlledId!);
+      expect(panel).toHaveAttribute('role', 'tabpanel');
+      expect(panel).toHaveAccessibleName(tab.textContent!);
+    }
+    const user = userEvent.setup();
+    const headline = screen.getByRole('textbox', { name: 'Headline' });
+    await user.clear(headline);
+    await user.type(headline, 'Careful help around Hyde Park');
+    await user.click(screen.getByRole('tab', { name: 'Services' }));
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Services' })).toHaveAttribute('aria-selected', 'true'));
+    await user.click(screen.getByRole('tab', { name: 'Profile' }));
+    expect(screen.getByRole('textbox', { name: 'Headline' })).toHaveValue('Careful help around Hyde Park');
+  });
+});

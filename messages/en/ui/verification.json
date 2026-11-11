@@ -12,6 +12,85 @@
   "phone": "Phone verified",
   "phoneMeaning": "This person confirmed access to their phone number. This does not verify their identity or work quality.",
   "none": "No verification badges yet",
+  "statuses": {
+    "identity": {
+      "not_started": "Not started",
+      "processing": "We're checking",
+      "requires_input": "Try again",
+      "verified": "ID verified",
+      "canceled": "Check canceled"
+    },
+    "payout": {
+      "not_started": "Not started",
+      "pending": "Setup in progress",
+      "requirements_due": "More information needed",
+      "active": "Payouts ready",
+      "restricted": "Action needed"
+    },
+    "background": {
+      "not_required": "Not needed",
+      "not_started": "Not started",
+      "invited": "Invitation sent",
+      "pending": "Check in progress",
+      "clear": "Background checked",
+      "consider": "Under review",
+      "suspended": "Action needed",
+      "canceled": "Check canceled",
+      "expired": "Check expired"
+    }
+  },
+  "identityFailureReasons": {
+    "document_unreadable": "We couldn't read your ID photo. Try again in good light with all edges visible.",
+    "selfie_mismatch": "The selfie didn't match your ID photo. Try again with your face clearly visible.",
+    "under_18": "You need to be 18 or older to help. If this result is incorrect, try the ID check again or contact support.",
+    "other": "The ID check couldn't be completed. Try again or contact support if this keeps happening."
+  },
+  "setup": {
+    "titles": {
+      "identity": "ID check",
+      "payout": "Payout setup",
+      "background": "Background check"
+    },
+    "identityExplanation": "Our ID partner will ask for a photo of your ID and a selfie. It takes about 2 minutes.",
+    "identityPublic": "Clients see an “ID verified” badge with the month and year of your check. Your ID photo and selfie stay private.",
+    "payoutExplanation": "Set up where your earnings go with Stripe, our payment partner. Stripe handles your payout details.",
+    "firstPayout": "Your first payout can take about {days} days.",
+    "payoutRequirements": "Stripe needs a bit more information.",
+    "payoutRestricted": "Contact support for help with your payout account.",
+    "backgroundExplanation": "Our screening partner runs this check for the in-home services you offer. It usually takes a few days.",
+    "backgroundWaiting": {
+      "invited": "Check your invitation from our screening partner to finish their steps.",
+      "pending": "Your check is in progress. Check the status here when you're ready."
+    },
+    "backgroundSuspended": "Contact support for help with your background check.",
+    "requiredCategories": "These services need a background check",
+    "bookableCategories": "You can already make offers for",
+    "categoryNames": {
+      "furniture-assembly": "Furniture assembly",
+      "moving-help": "Moving help",
+      "yard-cleanup": "Yard cleanup",
+      "light-cleaning": "Light cleaning",
+      "computer-help": "Computer help"
+    },
+    "privacy": {
+      "identity": "You'll finish this check with our ID partner.",
+      "payout": "Your payout details are entered on Stripe's page.",
+      "background": "Your personal details and check report stay with our screening partner."
+    },
+    "startIdentity": "Start ID check",
+    "tryAgain": "Try again",
+    "checkStatus": "Check status",
+    "startPayout": "Set up payouts",
+    "continuePayout": "Continue setup",
+    "startBackground": "Start background check",
+    "restartBackground": "Start background check again",
+    "contactSupport": "Contact support",
+    "open": {
+      "identity": "Open ID check",
+      "payout": "Open payout setup",
+      "background": "Open background check"
+    }
+  },
   "preview": {
     "group": "People",
     "avatars": "Initials avatars",
