@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { CalendarCheck, CheckCheck, ChevronRight, CircleAlert, ClipboardCheck, CreditCard, DoorOpen, MessageCircle, MessagesSquare, RefreshCw, UserRoundPlus, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type AttentionItem, type AttentionKind, type AttentionTarget } from '@/contracts';
+import type { AttentionItem, AttentionKind } from '@/contracts';
 import { formatDate, formatDateTime, formatTime } from '@/shared/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { cn } from '@/ui/lib/utils';
+import { attentionHref } from '@/ui/lib/attention-href';
 
 const icons: Record<AttentionKind, LucideIcon> = {
   approve_work: ClipboardCheck,
@@ -17,18 +18,6 @@ const icons: Record<AttentionKind, LucideIcon> = {
   finish_setup: UserRoundPlus,
   payout_action_needed: CircleAlert,
 };
-
-function attentionHref(target: AttentionTarget): string {
-  switch (target.kind) {
-    case 'booking': return routes.app.booking(target.bookingId);
-    case 'task': return routes.app.task(target.taskId);
-    case 'thread': return routes.app.thread(target.threadId);
-    case 'messages': return routes.app.messages();
-    case 'find_work_task': return routes.app.findWorkTask(target.taskId);
-    case 'onboarding': return routes.app.helperOnboarding(target.step);
-    case 'earnings': return routes.app.earnings();
-  }
-}
 
 function AttentionRow({ item }: { item: AttentionItem }) {
   const t = useTranslations('home');

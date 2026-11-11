@@ -1,0 +1,135 @@
+'use client';
+
+import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { CalendarCheck, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleDollarSign, ClipboardCheck, Clock, DoorOpen, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, Star, X, type LucideIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
+import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
+import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { attentionHref } from '@/ui/lib/attention-href';
+import { cn } from '@/ui/lib/utils';
+import { Button } from '@/ui/primitives/button';
+import { Spinner } from '@/ui/primitives/spinner';
+
+const icons: Record<NotificationType, LucideIcon> = {
+  offer_received: MessageSquarePlus,
+  offer_updated: RefreshCw,
+  offer_declined: X,
+  booking_confirmed: CalendarCheck,
+  booking_canceled: CalendarX,
+  helper_on_the_way: Navigation,
+  helper_running_late: Clock,
+  helper_arrived: MapPin,
+  cant_access: DoorOpen,
+  work_submitted: ClipboardCheck,
+  work_approved: CheckCheck,
+  problem_reported: CircleAlert,
+  earnings_transferred: CircleDollarSign,
+  payout_paid: CircleDollarSign,
+  review_published: Star,
+  message_received: MessageCircle,
+};
+
+function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
+  notification: NotificationView;
+  onOpen: NotificationHandlers['onOpen'];
+  now: ISODateTime;
+  navigationRequestRef: RefObject<number>;
+}) {
+  const t = useTranslations('notifications');
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const locked = useRef(false);
+  const Icon = icons[notification.type];
+  const href = attentionHref(notification.target);
+  const unread = !notification.readAt;
+
+  async function open(event: MouseEvent<HTMLAnchorElement>) {
+    const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+    if (!modified) event.preventDefault();
+    if (locked.current) return;
+    const request = modified ? undefined : ++navigationRequestRef.current;
+    locked.current = true;
+    setPending(true);
+    let result: ActionResult | undefined;
+    try {
+      result = await onOpen({ notificationId: notification.id });
+    } catch {
+      // Reading a notification must never prevent opening its destination.
+    } finally {
+      locked.current = false;
+      setPending(false);
+      if (request !== undefined && request === navigationRequestRef.current) router.push(result?.ok && result.redirectTo ? result.redirectTo : href);
+    }
+  }
+
+  return <li>
+    <Link href={href} onClick={open} aria-busy={pending} aria-disabled={pending || undefined} className={cn(
+      'group flex min-h-11 items-start gap-3 p-4 transition-colors hover:bg-accent focus-visible:relative focus-visible:z-10 focus-visible:outline-offset-[-2px] md:gap-4 md:p-5',
+      unread && 'bg-secondary/40',
+    )}>
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground"><Icon aria-hidden="true" className="size-5" /></span>
+      <span className="min-w-0 flex-1 space-y-2 break-words">
+        <span className={cn('block leading-6 group-hover:underline underline-offset-4', unread && 'font-semibold')}>
+          {t(`types.${notification.type}`, {
+            title: notification.title ?? t('taskFallback'),
+            actorName: notification.actorName ?? t('actorFallback'),
+            hasAmount: notification.params?.amountCents === undefined ? 'no' : 'yes',
+            amount: notification.params?.amountCents === undefined ? '' : formatMoney(notification.params.amountCents),
+            hasMinutes: notification.params?.minutes === undefined ? 'no' : 'yes',
+            minutes: notification.params?.minutes ?? 0,
+          })}
+        </span>
+        <time dateTime={notification.createdAt} className="block text-sm leading-5 tabular-nums text-muted-foreground">{t('time', { absolute: formatDateTime(notification.createdAt), relative: formatRelative(notification.createdAt, now) })}</time>
+        {unread && <span className="inline-flex items-center gap-2 text-sm font-medium text-secondary-foreground"><span aria-hidden="true" className="size-2 rounded-full bg-primary" />{t('unread')}</span>}
+        <span aria-live="polite" className={pending ? 'block text-sm text-muted-foreground' : 'sr-only'}>{pending ? t('opening') : ''}</span>
+      </span>
+      {pending ? <Spinner aria-hidden="true" className="mt-2.5 size-5 shrink-0" /> : <ChevronRight aria-hidden="true" className="mt-2.5 size-5 shrink-0 text-muted-foreground" />}
+    </Link>
+  </li>;
+}
+
+export function NotificationList({ notifications, onOpen, now }: {
+  notifications: NotificationView[];
+  onOpen: NotificationHandlers['onOpen'];
+  now: ISODateTime;
+}) {
+  const navigationRequestRef = useRef(0);
+  useEffect(() => () => { navigationRequestRef.current += 1; }, []);
+  return <ul className="overflow-hidden rounded-xl border border-border bg-card shadow-card [&>li+li]:border-t">
+    {notifications.map((notification) => <NotificationRow key={notification.id} notification={notification} onOpen={onOpen} now={now} navigationRequestRef={navigationRequestRef} />)}
+  </ul>;
+}
+
+export function MarkAllRead({ onMarkAllRead }: Pick<NotificationHandlers, 'onMarkAllRead'>) {
+  const t = useTranslations('notifications');
+  const router = useRouter();
+  const locked = useRef(false);
+  const [pending, setPending] = useState(false);
+  const [result, setResult] = useState<ActionResult>();
+
+  async function markAllRead() {
+    if (locked.current) return;
+    locked.current = true;
+    setPending(true);
+    setResult(undefined);
+    let next: ActionResult;
+    try { next = await onMarkAllRead(); } catch { next = { ok: false, code: 'unknown' }; }
+    locked.current = false;
+    setPending(false);
+    setResult(next);
+    if (next.ok) {
+      if (next.redirectTo) router.push(next.redirectTo);
+      else router.refresh();
+    }
+  }
+
+  return <div className="space-y-3">
+    <Button type="button" variant="outline" disabled={pending} aria-busy={pending} onClick={markAllRead}>
+      {pending ? <Spinner aria-hidden="true" /> : <CheckCheck aria-hidden="true" />}{t(pending ? 'markingRead' : 'markAllRead')}
+    </Button>
+    <FormFeedback result={result} successMessage={t('markedRead')} errorMessage={result && !result.ok && result.code === 'unknown' ? t('markError') : undefined} />
+  </div>;
+}
