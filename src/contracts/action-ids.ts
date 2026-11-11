@@ -81,6 +81,10 @@ export const INVITE_ACTION_IDS = [
 ] as const;
 export type InviteActionId = (typeof INVITE_ACTION_IDS)[number];
 
+/** A helper's own availability post (UI-029). */
+export const AVAILABILITY_ACTION_IDS = ['cancel_post'] as const;
+export type AvailabilityActionId = (typeof AVAILABILITY_ACTION_IDS)[number];
+
 export const REWARD_ACTION_IDS = [
   'redeem',
   'open_gift_card',
@@ -98,6 +102,7 @@ export const ALL_ACTION_IDS = [
   ...OFFER_ACTION_IDS,
   ...TASK_ACTION_IDS,
   ...INVITE_ACTION_IDS,
+  ...AVAILABILITY_ACTION_IDS,
   ...REWARD_ACTION_IDS,
 ] as const;
 export type AnyActionId = (typeof ALL_ACTION_IDS)[number];

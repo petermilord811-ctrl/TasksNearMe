@@ -15,6 +15,7 @@ export * from '../../modules/payments/schema';
 export * from '../../modules/bookings/schema';
 export * from '../../modules/support/schema';
 export * from '../../modules/rewards/schema';
+export * from '../../modules/availability/schema';
 export * from '../../modules/invites/schema';
 export * from '../../modules/messaging/schema';
 export * from '../../modules/earnings/schema';

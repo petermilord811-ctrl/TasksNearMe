@@ -21,6 +21,10 @@ export const INVITE_STATUSES = [
 ] as const;
 export type InviteStatus = (typeof INVITE_STATUSES)[number];
 
+/** A helper's availability post (UI-029): held while a request for it waits, booked when accepted. */
+export const AVAILABILITY_STATUSES = ['active', 'held', 'booked', 'expired', 'canceled'] as const;
+export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
+
 export const BOOKING_STATUSES = [
   'pending_funding',
   'confirmed',

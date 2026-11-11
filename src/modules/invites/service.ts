@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, lte, ne, sql } from 'drizzle-orm';
 import type {
   ActionResult,
+  AvailabilitySlotView,
   CategorySlug,
   CounterInviteInput,
   InvitableTask,
@@ -16,6 +17,8 @@ import type {
 import { counterInviteInputSchema, requestHelperInputSchema, routes } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
+import { availabilityPosts } from '@/modules/availability/schema';
+import { bookSlot, holdSlot, openSlotOf, releaseSlot, slotViewOf } from '@/modules/availability/slots';
 import { confirmFundedBooking, methodForChoice, paymentPanel, type BookingDeps } from '@/modules/bookings/confirm';
 import { clientSummary } from '@/modules/bookings/hub';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
@@ -47,6 +50,15 @@ type InviteRow = typeof invites.$inferSelect;
 const OPEN: InviteStatus[] = ['authorizing', 'sent', 'countered'];
 const HOUR = 3_600_000;
 const REQUEST_RULE = { limit: 10, windowSeconds: 60 * 60 };
+/** An invite still waiting for its first authorization (a bank check left open) expires after 30 min. */
+const AUTHORIZING_MS = 30 * 60_000;
+
+/** Someone else requested the slot between the page and the request. */
+class SlotTaken extends Error {}
+
+/** A task fits a slot when it's in the slot's category and its window overlaps the slot. */
+const fitsSlot = (task: Pick<InvitableTask, 'categorySlug' | 'windowStart' | 'windowEnd'>, slot: AvailabilitySlotView) =>
+  task.categorySlug === slot.categorySlug && new Date(task.windowStart) < new Date(slot.end) && new Date(task.windowEnd) > new Date(slot.start);
 
 /** 48 h after it's sent, or 2 h before the start, whichever is sooner; a counter waits 24 h. */
 export function inviteExpiresAt(kind: 'sent' | 'countered', start: Date, now: Date): Date {
@@ -95,8 +107,11 @@ export async function expireDueInvites(db: Db, payments_: PaymentProvider | null
     .update(invites)
     .set({ status: 'expired', decidedAt: now, updatedAt: now })
     .where(and(inArray(invites.status, OPEN), lte(invites.expiresAt, now)))
-    .returning({ paymentId: invites.paymentId });
-  for (const row of due) await release(db, payments_, row.paymentId, now);
+    .returning({ paymentId: invites.paymentId, slotId: invites.slotId });
+  for (const row of due) {
+    await release(db, payments_, row.paymentId, now);
+    await releaseSlot(db, row.slotId, now);
+  }
 }
 
 // ---- Requesting ---------------------------------------------------------------------------------------
@@ -115,36 +130,42 @@ async function invitableTasks(db: Db, posterId: string, helperId: string, now: D
     .map((row) => ({ id: row.id, title: row.title, categorySlug: row.slug as CategorySlug, windowStart: row.windowStart.toISOString(), windowEnd: row.windowEnd.toISOString(), marketId: row.marketId }));
 }
 
+/** The helper's listed price per category: the fixed price, or the hourly rate with their minimum hours. */
+export async function listedPricingOf(db: Db, helperId: string): Promise<Partial<Record<CategorySlug, PricingInput>>> {
+  const services = await db
+    .select({ slug: categories.slug, pricingType: helperServices.pricingType, fromPriceCents: helperServices.fromPriceCents, hourlyRateCents: helperServices.hourlyRateCents, minHours: helperServices.minHours })
+    .from(helperServices)
+    .innerJoin(categories, eq(categories.id, helperServices.categoryId))
+    .where(eq(helperServices.userId, helperId));
+  const listed: Partial<Record<CategorySlug, PricingInput>> = {};
+  for (const service of services) {
+    listed[service.slug as CategorySlug] =
+      service.pricingType === 'hourly'
+        ? { type: 'hourly', rateCents: service.hourlyRateCents ?? 0, estimatedHours: service.minHours ?? 2, hoursCap: Math.max(service.minHours ?? 2, 2) }
+        : { type: 'fixed', priceCents: service.fromPriceCents ?? 0 };
+  }
+  return listed;
+}
+
 /** `routes.app.requestHelper(handle, { fromBookingId })` (null: no such helper, or the client blocked/was blocked). */
 export async function getRequestHelperPage(
   db: Db,
   payments_: PaymentProvider,
   posterId: string,
   handle: string,
-  options: { fromBookingId?: string },
+  options: { fromBookingId?: string; slotId?: string },
   now: Date,
 ): Promise<RequestHelperPageData | null> {
   const helperId = await helperIdOf(db, handle);
   if (!helperId || helperId === posterId || (await isBlockedBetween(db, posterId, helperId))) return null;
-  const [summaries, tasksFound, services, panel] = await Promise.all([
+  const [summaries, tasksFound, listedPricing, panel] = await Promise.all([
     getHelperSummaries([helperId], db),
     invitableTasks(db, posterId, helperId, now),
-    db
-      .select({ slug: categories.slug, pricingType: helperServices.pricingType, fromPriceCents: helperServices.fromPriceCents, hourlyRateCents: helperServices.hourlyRateCents, minHours: helperServices.minHours })
-      .from(helperServices)
-      .innerJoin(categories, eq(categories.id, helperServices.categoryId))
-      .where(eq(helperServices.userId, helperId)),
+    listedPricingOf(db, helperId),
     paymentPanel(db, posterId, payments_),
   ]);
   const helper = summaries.get(helperId);
   if (!helper) return null;
-  const listedPricing: RequestHelperPageData['listedPricing'] = {};
-  for (const service of services) {
-    listedPricing[service.slug as CategorySlug] =
-      service.pricingType === 'hourly'
-        ? { type: 'hourly', rateCents: service.hourlyRateCents ?? 0, estimatedHours: service.minHours ?? 2, hoursCap: Math.max(service.minHours ?? 2, 2) }
-        : { type: 'fixed', priceCents: service.fromPriceCents ?? 0 };
-  }
   let suggestion: RequestHelperPageData['suggestion'];
   if (options.fromBookingId) {
     const [past] = await db
@@ -163,11 +184,21 @@ export async function getRequestHelperPage(
       };
     }
   }
+  // A slot (UI-029): only the tasks that fit it, with the slot's price.
+  let slot: AvailabilitySlotView | undefined;
+  if (options.slotId) {
+    const open = await openSlotOf(db, options.slotId, helperId, now);
+    if (open) slot = slotViewOf(open.row, open.categorySlug);
+  }
+  const offered = slot ? tasksFound.filter((task) => fitsSlot(task, slot)) : tasksFound;
+  if (slot) suggestion = { ...(offered[0] ? { taskId: offered[0].id } : {}), pricing: slot.pricing };
   return {
     helper,
-    tasks: tasksFound.map(({ marketId: _market, ...task }) => task),
+    tasks: offered.map(({ marketId: _market, ...task }) => task),
     listedPricing,
     ...(suggestion ? { suggestion } : {}),
+    ...(slot ? { slot } : {}),
+    ...(options.slotId && !slot ? { slotUnavailable: true } : {}),
     payment: panel,
   };
 }
@@ -191,6 +222,15 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
   const start = new Date(parsed.data.start);
   if (start < new Date(task.windowStart) || start > new Date(task.windowEnd) || start.getTime() - now.getTime() < 2 * HOUR) {
     return { ok: false, code: 'validation_failed', fieldErrors: { start: ['invalid'] } };
+  }
+  // A slot request: the slot must still be open, in the task's category, and the start inside it.
+  let slotId: string | null = null;
+  if (parsed.data.slotId) {
+    const open = await openSlotOf(db, parsed.data.slotId, helperId, now);
+    if (!open) return { ok: false, code: 'not_allowed' };
+    if (!fitsSlot(task, slotViewOf(open.row, open.categorySlug))) return { ok: false, code: 'validation_failed', fieldErrors: { taskId: ['invalid'] } };
+    if (start < open.row.startAt || start >= open.row.endAt) return { ok: false, code: 'validation_failed', fieldErrors: { start: ['out_of_range'] } };
+    slotId = open.row.id;
   }
   const fees = await feesOf(db, task.marketId);
   if (!fees) return { ok: false, code: 'unknown' };
@@ -228,17 +268,21 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
         posterUserId: posterId,
         helperUserId: helperId,
         status: 'authorizing',
+        source: slotId ? 'availability' : 'profile',
         ...pricingColumns(parsed.data.pricing),
         startAt: start,
         message: parsed.data.message?.trim() || null,
         breakdown,
         paymentId,
+        slotId,
+        expiresAt: new Date(now.getTime() + AUTHORIZING_MS),
         createdAt: now,
         updatedAt: now,
       });
+      if (slotId && !(await holdSlot(tx, slotId, now))) throw new SlotTaken();
     });
   } catch (error) {
-    if (isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
+    if (error instanceof SlotTaken || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
     throw error;
   }
   const result = await deps.payments.authorize({ amountCents: breakdown.posterTotalCents, method: { providerRef: method.providerRef }, idempotencyKey: `invite:${inviteId}:${paymentId}`, description: `TasksNearMe invite ${inviteId}` });
@@ -254,7 +298,8 @@ async function settleRequest(
 ): Promise<PaymentAttemptResult> {
   if (result.status === 'failed') {
     await db.update(payments).set({ status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
-    await db.update(invites).set({ status: 'auth_failed', decidedAt: now, updatedAt: now }).where(eq(invites.id, inviteId));
+    const [failed] = await db.update(invites).set({ status: 'auth_failed', decidedAt: now, updatedAt: now }).where(eq(invites.id, inviteId)).returning({ slotId: invites.slotId });
+    await releaseSlot(db, failed?.slotId ?? null, now);
     return { ok: false, code: result.failureCode };
   }
   if (result.status === 'requires_action') {
@@ -347,6 +392,7 @@ async function book(deps: BookingDeps, invite: InviteRow, pricing: PricingInput,
   const result = await confirmFundedBooking(deps, invite.posterUserId, payment.id, payment.providerRef, now);
   if (!result.ok) return result;
   await db.update(invites).set({ status: 'accepted', bookingId, decidedAt: now, updatedAt: now }).where(eq(invites.id, invite.id));
+  await bookSlot(db, invite.slotId, now);
   await db.insert(outboxEvents).values({ id: newId('evt'), type: 'invite.accepted', aggregateType: 'invite', aggregateId: invite.id, payload: { inviteId: invite.id, bookingId, posterUserId: invite.posterUserId, helperUserId: invite.helperUserId } });
   return { ok: true, code: 'booked', redirectTo: routes.app.booking(bookingId) };
 }
@@ -374,7 +420,18 @@ async function closeInvite(db: Db, payments_: PaymentProvider | null, invite: In
     .returning({ id: invites.id });
   if (!closed) return { ok: false, code: 'not_allowed' };
   await release(db, payments_, invite.paymentId, now);
+  await releaseSlot(db, invite.slotId, now);
   return { ok: true, code: 'updated' };
+}
+
+/** The helper canceled a requested slot: its waiting request is declined and the client's hold released. */
+export async function closeSlotRequests(db: Db, payments_: PaymentProvider | null, slotId: string, now: Date): Promise<void> {
+  const closed = await db
+    .update(invites)
+    .set({ status: 'declined', decidedAt: now, updatedAt: now })
+    .where(and(eq(invites.slotId, slotId), inArray(invites.status, OPEN)))
+    .returning({ id: invites.id, paymentId: invites.paymentId, posterUserId: invites.posterUserId, helperUserId: invites.helperUserId });
+  for (const invite of closed) await release(db, payments_, invite.paymentId, now);
 }
 
 export async function declineInvite(db: Db, payments_: PaymentProvider | null, helperId: string, inviteId: string, now: Date): Promise<ActionResult> {
@@ -494,6 +551,10 @@ async function viewsOf(db: Db, rows: InviteRow[], viewerRole: 'poster' | 'helper
       : Promise.resolve([]),
   ]);
   const clients = new Map(await Promise.all([...new Set(rows.map((row) => row.posterUserId))].map(async (id) => [id, await clientSummary(db, id)] as const)));
+  const slotIds = rows.flatMap((row) => (row.slotId ? [row.slotId] : []));
+  const slots = slotIds.length
+    ? await db.select({ id: availabilityPosts.id, startAt: availabilityPosts.startAt, endAt: availabilityPosts.endAt }).from(availabilityPosts).where(inArray(availabilityPosts.id, slotIds))
+    : [];
   return rows.flatMap((row): InviteView[] => {
     const task = taskRows.find((item) => item.id === row.taskId);
     const client = clients.get(row.posterUserId);
@@ -521,11 +582,17 @@ async function viewsOf(db: Db, rows: InviteRow[], viewerRole: 'poster' | 'helper
         ...(hold ? { authorizedCents: hold.amountCents } : {}),
         ...(row.expiresAt && OPEN.includes(status) ? { expiresAt: row.expiresAt.toISOString() } : {}),
         ...(row.bookingId ? { bookingId: row.bookingId } : {}),
+        ...slotOf(slots, row.slotId),
         sentAt: row.createdAt.toISOString(),
         actions,
       },
     ];
   });
+}
+
+function slotOf(slots: { id: string; startAt: Date; endAt: Date }[], slotId: string | null): Pick<InviteView, 'slot'> {
+  const slot = slotId ? slots.find((item) => item.id === slotId) : undefined;
+  return slot ? { slot: { id: slot.id, start: slot.startAt.toISOString(), end: slot.endAt.toISOString() } } : {};
 }
 
 const openFirst = (a: InviteView, b: InviteView) => Number(!OPEN.includes(a.status)) - Number(!OPEN.includes(b.status));

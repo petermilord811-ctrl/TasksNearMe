@@ -1,6 +1,6 @@
 'use server';
 
-import { refresh } from 'next/cache';
+import { refresh, updateTag } from 'next/cache';
 import type { ActionResult, CounterInviteInput, PaymentAttemptResult, PriceBreakdown, PricingInput, RequestHelperInput } from '@/contracts';
 import { createPaymentProvider } from '@/integrations/payments';
 import { bookingDeps } from '@/modules/bookings/server';
@@ -42,7 +42,10 @@ export async function requestHelperAction(handle: string, input: RequestHelperIn
   const userId = await signedInUserId();
   const deps = bookingDeps();
   if (!userId || !deps) return { ok: false, code: 'not_allowed' };
-  return requestHelper(deps, userId, String(handle), input, new Date());
+  const result = await requestHelper(deps, userId, String(handle), input, new Date());
+  // A requested slot leaves the helper's public profile.
+  if (input.slotId && (result.ok || ('code' in result && result.code === 'requires_bank_verification'))) updateTag(`helper:${handle}`);
+  return result;
 }
 
 export async function finishRequestVerificationAction(input: { paymentId: string; outcome: 'approved' | 'failed' }): Promise<PaymentAttemptResult> {

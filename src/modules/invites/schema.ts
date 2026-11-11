@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { doublePrecision, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { PriceBreakdown } from '@/contracts';
 import { users } from '../accounts/schema';
+import { availabilityPosts } from '../availability/schema';
 import { tasks } from '../tasks/schema';
 
 /**
@@ -46,6 +47,8 @@ export const invites = pgTable(
     paymentId: text('payment_id'),
     /** Accepted: the booking. */
     bookingId: text('booking_id'),
+    /** Requested from one of the helper's open slots (UI-029): the slot is held while this waits. */
+    slotId: text('slot_id').references(() => availabilityPosts.id),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     decidedAt: timestamp('decided_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -53,6 +56,8 @@ export const invites = pgTable(
   },
   (t) => [
     uniqueIndex('invites_open_idx').on(t.taskId, t.helperUserId).where(sql`status in ('authorizing', 'sent', 'countered')`),
+    // One waiting request per slot.
+    uniqueIndex('invites_open_slot_idx').on(t.slotId).where(sql`status in ('authorizing', 'sent', 'countered')`),
     index('invites_helper_idx').on(t.helperUserId, t.createdAt),
     index('invites_task_idx').on(t.taskId, t.createdAt),
   ],

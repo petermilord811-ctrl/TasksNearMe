@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { InviteActionId } from './action-ids';
+import type { AvailabilitySlotView } from './availability';
 import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
 import type { CategorySlug, Cents, ISODateTime } from './common';
 import { mustAcceptField } from './forms';
@@ -51,6 +52,14 @@ export interface RequestHelperPageData {
   listedPricing: Partial<Record<CategorySlug, PricingInput>>;
   /** Book again: the past booking's task and last price as suggestions. */
   suggestion?: { taskId?: string; pricing: PricingInput };
+  /**
+   * `?slot=<id>` (UI-029): the helper's open slot. `tasks` are then the client's tasks in the slot's category
+   * whose window overlaps it; the start must fall inside both the slot and the task's window; the slot's
+   * price is the suggestion.
+   */
+  slot?: AvailabilitySlotView;
+  /** `?slot=<id>` named a slot that's no longer open (requested, booked, past, or canceled). */
+  slotUnavailable?: boolean;
   payment: PaymentPanelData;
 }
 
@@ -61,6 +70,8 @@ export const requestHelperInputSchema = z.object({
   message: z.string(code('invalid')).trim().max(1000, code('too_long')).optional(),
   payment: paymentChoiceSchema,
   acceptTerms: mustAcceptField,
+  /** Requesting an open slot (UI-029). */
+  slotId: z.string().min(1).optional(),
 });
 export type RequestHelperInput = z.input<typeof requestHelperInputSchema>;
 
@@ -94,6 +105,8 @@ export interface InviteView {
   expiresAt?: ISODateTime;
   /** Accepted: the booking. */
   bookingId?: string;
+  /** Requested from one of the helper's open slots (UI-029). */
+  slot?: { id: string; start: ISODateTime; end: ISODateTime };
   sentAt: ISODateTime;
   actions: InviteActionId[];
 }

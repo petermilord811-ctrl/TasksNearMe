@@ -1,4 +1,5 @@
 import type { CategorySlug, ISODateTime, Photo } from './common';
+import type { AvailabilitySlotView } from './availability';
 import type { HelperSummary, ServiceSummary } from './people';
 
 /** Tags a client can give a helper in a review. The UI maps each to copy ("On time"). */
@@ -54,4 +55,6 @@ export interface HelperProfilePageData {
   /** Newest first, at most 10. The total is `helper.rating.count`. */
   reviews: PublicReviewView[];
   workSamples: WorkSampleView[];
+  /** Open slots, soonest first (at most 6). Each links to `routes.app.requestHelper(handle, { slotId })` (UI-029). */
+  slots?: AvailabilitySlotView[];
 }

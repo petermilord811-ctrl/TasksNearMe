@@ -65,5 +65,6 @@
   "cancel_task": "Cancel task",
   "edit_task": "Edit task",
   "invite_helpers": "Invite helpers",
-  "post_again": "Post again"
+  "post_again": "Post again",
+  "cancel_post": "Cancel"
 }

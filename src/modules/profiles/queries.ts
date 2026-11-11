@@ -1,4 +1,5 @@
 import 'server-only';
+import { openSlotsOf } from '@/modules/availability/slots';
 import { and, asc, count, desc, eq, exists, inArray, isNotNull, sql } from 'drizzle-orm';
 import type {
   CategorySlug,
@@ -207,6 +208,7 @@ export async function getHelperProfile(handle: string, database: Db = db): Promi
       categorySlug: categorySlug as CategorySlug,
       publishedAt: (review.publishedAt ?? review.createdAt).toISOString(),
     })),
+    slots: await openSlotsOf(database, userId),
     workSamples: sampleRows.map(({ sample, file, categorySlug }) => ({
       id: sample.id,
       photo: { id: file.id, src: fileUrl(file), alt: file.alt, width: file.width, height: file.height },
