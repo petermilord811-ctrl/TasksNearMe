@@ -15,6 +15,7 @@ import {
   deskBookingPosterPendingFunding, deskCancelPreviewHelperLate, fakeBookingHubHandlers, fakeBookingSheetHandlers, fakeHandler, jordanBookingsPageData,
   jordanShell, mayaBookingsNeedsActionData, mayaBookingsPageData, mayaShell,
   movingBookingPosterConfirmed, remoteBookingHelperConfirmed,
+  deskBookingPosterWithOpenChange, deskBookingHelperWithOpenChange,
 } from '@/fixtures';
 import { BookingHubContent } from '@/ui/screens/bookings/booking-hub-screen';
 import { BookingsScreen } from '@/ui/screens/bookings/bookings-screen';
@@ -64,6 +65,8 @@ export const bookingsPreviews: PreviewEntry[] = [
   listPreview('empty', copy.previews.listEmpty, bookingsEmptyData),
   hubPreview('client-confirmed', copy.previews.clientConfirmed, deskBookingPosterConfirmed),
   hubPreview('helper-confirmed', copy.previews.helperConfirmed, deskBookingHelperConfirmed),
+  hubPreview('poster-open-change', copy.previews.posterOpenChange, deskBookingPosterWithOpenChange),
+  hubPreview('helper-open-change', copy.previews.helperOpenChange, deskBookingHelperWithOpenChange),
   hubPreview('helper-day-of', copy.previews.helperDayOf, deskBookingHelperDayOf, { now: dayOf }),
   hubPreview('helper-in-progress', copy.previews.helperInProgress, deskBookingHelperInProgress, { now: '2026-11-21T16:30:00.000Z' }),
   hubPreview('client-pending-funding', copy.previews.clientPendingFunding, deskBookingPosterPendingFunding, { now: '2026-11-17T15:02:00.000Z' }),

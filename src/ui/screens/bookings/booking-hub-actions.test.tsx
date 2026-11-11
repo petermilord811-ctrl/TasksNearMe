@@ -21,6 +21,23 @@ function mount(data: BookingView = deskBookingHelperDayOf, onAction = vi.fn(fake
 }
 
 describe('BookingHubActions', () => {
+  it('links the supplied propose-change action to the form without calling a mutation', () => {
+    const { onAction } = mount({ ...deskBookingPosterConfirmed, actions: [{ id: 'propose_change', kind: 'secondary', enabled: true }] });
+    const link = screen.getByRole('link', { name: messages.actions.propose_change });
+    expect(link).toHaveAttribute('href', routes.app.bookingProposeChange(deskBookingPosterConfirmed.id));
+    link.addEventListener('click', (event) => event.preventDefault(), { once: true });
+    fireEvent.click(link);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('preserves a disabled proposal and its reason without enabling navigation', () => {
+    mount({ ...deskBookingPosterConfirmed, actions: [{ id: 'propose_change', kind: 'secondary', enabled: false, disabledReason: { code: 'not_allowed' } }] });
+    const link = screen.getByRole('link', { name: messages.actions.propose_change });
+    expect(link).toHaveAttribute('aria-disabled', 'true');
+    expect(link).not.toHaveAttribute('href');
+    expect(link).toHaveAccessibleDescription(messages.actionReasons.not_allowed);
+  });
+
   it.each(['cancel', 'running_late', 'report_no_show', 'cant_access', 'safety_report'] as const)('opens %s as a sheet without calling the single-tap handler', async (id) => {
     const { onAction } = mount({ ...deskBookingPosterWithSheets, actions: [{ id, kind: 'secondary', enabled: true }] });
     await userEvent.click(screen.getByRole('button', { name: messages.actions[id] }));

@@ -16,6 +16,7 @@ import {
   deskReviewPublishedData, deskReviewSubmittedData,
   deskBookingHelperDisputed, deskBookingHelperDisputedContacted, deskBookingHelperSettled,
   deskBookingPosterDisputed, deskBookingPosterSettled,
+  deskBookingPosterWithOpenChange, deskBookingHelperWithOpenChange,
 } from '@/fixtures';
 import { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
@@ -52,6 +53,34 @@ function mount(data: BookingView = deskBookingPosterConfirmed, now = '2026-11-17
 }
 
 const roles: BookingViewerRole[] = ['poster', 'helper'];
+
+describe('BookingHubScreen change requests', () => {
+  it('omits the change banner when no open change is supplied', () => {
+    mount();
+    expect(screen.queryByRole('region', { name: messages.bookingHub.change.title })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [deskBookingPosterWithOpenChange, 'You proposed a change: waiting for Jordan T.'],
+    [deskBookingHelperWithOpenChange, 'Maya R. proposed a change: review it.'],
+  ] as const)('shows the supplied proposal for $0.viewerRole without removing actions', (data, text) => {
+    const { container } = mount(data);
+    const banner = screen.getByRole('region', { name: messages.bookingHub.change.title });
+    expect(banner).toHaveTextContent(text);
+    expect(within(banner).getByRole('link', { name: messages.bookingHub.change.view })).toHaveAttribute('href', routes.app.bookingChange(data.id, data.openChange!.id));
+    expect(Array.from(container.querySelectorAll('[data-action-id]'), (node) => node.getAttribute('data-action-id'))).toEqual(data.actions.map(({ id }) => id));
+  });
+
+  it('shows the supplied payment difference to the client after acceptance', () => {
+    mount({ ...deskBookingPosterWithOpenChange, openChange: { ...deskBookingPosterWithOpenChange.openChange!, status: 'accepted_pending_funding' } });
+    expect(screen.getByRole('region', { name: messages.bookingHub.change.title })).toHaveTextContent('Accepted: pay $22.00 to apply it.');
+  });
+
+  it('shows the payment wait to the helper after acceptance', () => {
+    mount({ ...deskBookingHelperWithOpenChange, openChange: { ...deskBookingHelperWithOpenChange.openChange!, status: 'accepted_pending_funding' } });
+    expect(screen.getByRole('region', { name: messages.bookingHub.change.title })).toHaveTextContent('Accepted: waiting for Maya R. to pay the difference.');
+  });
+});
 
 describe('BookingHubScreen dispute integration', () => {
   it('omits the dispute card when no dispute is projected', () => {

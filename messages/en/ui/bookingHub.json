@@ -7,6 +7,8 @@
     "listEmpty": "No bookings yet",
     "clientConfirmed": "Client · booked",
     "helperConfirmed": "Helper · booked",
+    "posterOpenChange": "Client · change waiting for a reply",
+    "helperOpenChange": "Helper · change to review",
     "helperDayOf": "Helper · day of the task",
     "helperInProgress": "Helper · in progress",
     "clientPendingFunding": "Client · finish payment",
@@ -60,6 +62,15 @@
     }
   },
   "back": "All bookings",
+  "change": {
+    "title": "Change request",
+    "proposedByYou": "You proposed a change: waiting for {name}.",
+    "proposedByOther": "{name} proposed a change: review it.",
+    "payDifference": "Accepted: pay {amount} to apply it.",
+    "finishPayment": "Accepted: finish payment to apply it.",
+    "waitingForPayment": "Accepted: waiting for {name} to pay the difference.",
+    "view": "View change"
+  },
   "dispute": {
     "title": "Problem reported",
     "resolvedTitle": "Problem resolved",
