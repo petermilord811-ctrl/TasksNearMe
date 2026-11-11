@@ -32,6 +32,7 @@ import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { isUniqueViolation } from '@/platform/db/errors';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { marketLocalToUtc } from '@/shared/format';
@@ -406,7 +407,7 @@ export async function submitOffer(db: Db, userId: string, taskId: string, input:
     });
   } catch (error) {
     // The partial unique index: another request created the active offer first.
-    if (String((error as { code?: string }).code) === '23505') return { ok: false, code: 'not_allowed' };
+    if (isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
     throw error;
   }
   await refreshOfferCount(db, row.task.id);

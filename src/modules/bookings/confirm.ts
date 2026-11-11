@@ -31,6 +31,7 @@ import { fieldError, validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { isUniqueViolation } from '@/platform/db/errors';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { bookingTerms, bookings } from './schema';
@@ -370,7 +371,7 @@ export async function confirmBooking(
       return { bookingId, paymentId, idempotencyKey };
     });
   } catch (error) {
-    if (error instanceof HoldConflict || String((error as { code?: string }).code) === '23505') return { ok: false, code: 'not_allowed' };
+    if (error instanceof HoldConflict || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
     throw error;
   }
 

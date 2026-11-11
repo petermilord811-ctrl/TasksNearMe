@@ -14,6 +14,8 @@ export const ARRIVED_LEAD_MS = 30 * MINUTE;
 /** "Can't get in" opens 20 min after arriving; the client then has 30 min to answer. */
 export const CANT_ACCESS_AFTER_ARRIVAL_MS = 20 * MINUTE;
 export const CANT_ACCESS_ANSWER_MS = 30 * MINUTE;
+/** The review page arrives with UI-015; until it's wired, "Review" stays off the booking page. */
+export const REVIEW_PAGE_READY = false;
 
 export interface BookingFacts {
   status: BookingStatus | string;
@@ -27,6 +29,10 @@ export interface BookingFacts {
   lateByMinutes?: number | null;
   cantAccessAt?: Date | null;
   posterResponseDueAt?: Date | null;
+  /** Completed bookings: the viewer already reviewed, the review window is open, the client saved the helper. */
+  reviewed?: boolean;
+  reviewWindowOpen?: boolean;
+  helperSaved?: boolean;
 }
 
 export interface BookingPolicy {
@@ -63,6 +69,12 @@ function baseActions(booking: BookingFacts, role: BookingViewerRole, now: Date):
       case 'confirmed':
       case 'in_progress':
         return [calendar];
+      case 'completed': {
+        const actions: ActionDescriptor<BookingActionId>[] = [];
+        if (REVIEW_PAGE_READY && !booking.reviewed && booking.reviewWindowOpen) actions.push(make('review', 'primary'));
+        if (!booking.helperSaved) actions.push(make('save_helper', 'secondary'));
+        return actions;
+      }
       case 'completion_submitted': {
         const approve = make('approve', 'primary', { confirm: true });
         // Problems can be reported until the window ends; then it's approved automatically.
@@ -83,6 +95,8 @@ function baseActions(booking: BookingFacts, role: BookingViewerRole, now: Date):
     }
     case 'in_progress':
       return [make('submit_completion', 'primary')];
+    case 'completed':
+      return REVIEW_PAGE_READY && !booking.reviewed && booking.reviewWindowOpen ? [make('review', 'primary')] : [];
     default:
       return [];
   }

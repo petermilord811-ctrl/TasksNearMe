@@ -31,6 +31,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { recordCompletionMoney } from '@/modules/earnings/service';
+import { isHelperSaved, myReviewOf, setHelperSaved } from '@/modules/reviews/service';
 import { bookingThreadLink, ensureThread, postEvent } from '@/modules/messaging/service';
 import { autoApproveDue, completionViewOf } from './completion-view';
 import { addressVisibility, allBookingActions, bookingDeadlines, needsAction, type BookingFacts, type BookingPolicy } from './domain';
@@ -55,6 +56,25 @@ function roleOf(booking: BookingRow, userId: string): BookingViewerRole | null {
   if (booking.posterUserId === userId) return 'poster';
   if (booking.helperUserId === userId) return 'helper';
   return null;
+}
+
+const REVIEW_WINDOW_MS = 14 * 86_400_000;
+
+/** Facts for completed bookings: reviews and saved helpers. */
+async function reviewFacts(db: Db, booking: BookingRow, role: BookingViewerRole, now: Date) {
+  if (booking.status !== 'completed') return {};
+  const [mine, saved] = await Promise.all([
+    myReviewOf(db, role === 'poster' ? booking.posterUserId : booking.helperUserId, booking.id),
+    role === 'poster' ? isHelperSaved(db, booking.posterUserId, booking.helperUserId) : Promise.resolve(false),
+  ]);
+  return {
+    mine,
+    facts: {
+      reviewed: Boolean(mine),
+      reviewWindowOpen: booking.completedAt !== null && now.getTime() < booking.completedAt.getTime() + REVIEW_WINDOW_MS,
+      helperSaved: saved,
+    },
+  };
 }
 
 function factsOf(booking: BookingRow, remote: boolean): BookingFacts {
@@ -155,7 +175,8 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
   const completion = ['completion_submitted', 'disputed', 'completed'].includes(booking.status) ? await completionViewOf(db, booking.id) : null;
 
   const remote = found.view.location.kind === 'remote';
-  const facts = factsOf(booking, remote);
+  const review = await reviewFacts(db, booking, role, now);
+  const facts = { ...factsOf(booking, remote), ...review.facts };
   const visibility = addressVisibility(facts, role, policy, now);
   let exactAddress: ExactAddress | undefined;
   if (visibility === 'visible' && task.locationId) {
@@ -213,6 +234,8 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     }),
     ...(role === 'poster' ? { payments: paymentLines } : {}),
     ...(completion ? { completion } : {}),
+    ...(role === 'poster' && review.facts?.helperSaved ? { helperSaved: true } : {}),
+    ...(review.mine ? { myReview: review.mine } : {}),
     actions: allBookingActions(facts, role, policy, now),
   };
 }
@@ -293,7 +316,7 @@ export async function runBookingAction(db: Db, userId: string, bookingId: string
   const role = booking ? roleOf(booking, userId) : null;
   if (!booking || !role) return { ok: false, code: 'not_found' };
   const found = await findTaskWithPublicView(db, booking.taskId);
-  const facts = factsOf(booking, found?.view.location.kind === 'remote');
+  const facts = { ...factsOf(booking, found?.view.location.kind === 'remote'), ...(await reviewFacts(db, booking, role, now)).facts };
   const allowed = allBookingActions(facts, role, await policyOf(db, booking.policyVersionId), now).find((item) => item.id === action);
   if (!allowed?.enabled) return { ok: false, code: 'not_allowed' };
 
@@ -338,6 +361,10 @@ export async function runBookingAction(db: Db, userId: string, bookingId: string
     }
     case 'submit_completion':
       return { ok: true, code: 'updated', redirectTo: routes.app.bookingComplete(booking.id) };
+    case 'review':
+      return { ok: true, code: 'updated', redirectTo: routes.app.bookingReview(booking.id) };
+    case 'save_helper':
+      return setHelperSaved(db, booking.posterUserId, booking.helperUserId, true, now);
     case 'report_problem':
       return { ok: true, code: 'updated', redirectTo: routes.app.bookingProblem(booking.id) };
     case 'on_my_way':
