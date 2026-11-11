@@ -59,9 +59,28 @@ describe('SupportCaseScreen', () => {
   });
 
   it.each(CASE_STATUSES)('shows neutral %s labels without inferring who the viewer is', (status) => {
-    mount({ ...disputeCasePageData, case: { ...disputeCasePageData.case, status }, events: [{ id: status, from: 'system', kind: 'status', status, at: now }] });
+    mount({ ...disputeCasePageData, case: { ...disputeCasePageData.case, status, viewerRole: undefined }, events: [{ id: status, from: 'system', kind: 'status', status, at: now }] });
     const label = messages.status.case[status];
     expect(label).toBeTruthy();
     expect(screen.getAllByText(label)).toHaveLength(2);
+  });
+
+  it.each(['poster', 'helper'] as const)('uses the %s role for the header and timeline status labels', (viewerRole) => {
+    const status = viewerRole === 'poster' ? 'awaiting_poster' : 'awaiting_helper';
+    const otherStatus = viewerRole === 'poster' ? 'awaiting_helper' : 'awaiting_poster';
+    mount({ ...disputeCasePageData, case: { ...disputeCasePageData.case, status, viewerRole }, events: [
+      { id: 'other', from: 'system', kind: 'status', status: otherStatus, at: now },
+      { id: 'viewer', from: 'system', kind: 'status', status, at: now },
+    ] });
+    expect(screen.getAllByText(messages.status.case.awaiting_you)).toHaveLength(2);
+    expect(within(screen.getByRole('log')).getByText(messages.status.case[otherStatus])).toBeVisible();
+  });
+
+  it('hides an empty opening description for the other person while keeping their conversation and reply', () => {
+    mount({ ...disputeCasePageData, case: { ...disputeCasePageData.case, description: '', viewerRole: 'helper' }, events: [disputeCasePageData.events[2]!] });
+    expect(screen.queryByRole('heading', { name: supportCase.description })).not.toBeInTheDocument();
+    expect(screen.queryByText(disputeCasePageData.case.description)).not.toBeInTheDocument();
+    expect(screen.getByRole('log')).toHaveTextContent(disputeCasePageData.events[2]!.body!);
+    expect(screen.getByRole('form', { name: supportCase.reply })).toBeVisible();
   });
 });

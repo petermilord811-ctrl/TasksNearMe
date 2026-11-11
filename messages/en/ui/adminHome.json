@@ -1,0 +1,13 @@
+{
+  "title": "Queues",
+  "intro": "Open cases and the next response needed from support.",
+  "myCases": "My cases ({count, number})",
+  "openCount": "{count, plural, one {# open case} other {# open cases}}",
+  "pastDue": "{count, number} past due",
+  "onTime": "No responses past due",
+  "oldest": "Oldest: {relative}",
+  "noCases": "No open cases",
+  "quietTitle": "Nothing waiting",
+  "quietBody": "New reports and requests will appear in these queues.",
+  "viewCases": "View all cases"
+}

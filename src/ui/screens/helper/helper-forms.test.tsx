@@ -32,7 +32,7 @@ describe('helper profile and service forms', () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getAllByText(messages.forms.fieldErrors.too_short)).toHaveLength(2);
     expect(screen.getByText(messages.forms.fieldErrors.required)).toBeInTheDocument();
-    expect(screen.getByLabelText('Headline')).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText('Headline')).toHaveFocus());
     await user.type(screen.getByLabelText('Headline'), samProfileEditorData.values.profile.headline);
     await user.type(screen.getByLabelText('About you'), samProfileEditorData.values.profile.bio);
     await user.click(screen.getByRole('checkbox', { name: 'English' }));
@@ -91,7 +91,7 @@ describe('helper profile and service forms', () => {
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findByText(messages.forms.fieldErrors.out_of_range)).toBeInTheDocument();
     expect(screen.getByLabelText('From price ($)')).toHaveValue('25');
-    expect(screen.getByLabelText('From price ($)')).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText('From price ($)')).toHaveFocus());
     expect(push).not.toHaveBeenCalled();
   });
 });

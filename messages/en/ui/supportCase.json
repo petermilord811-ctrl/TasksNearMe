@@ -26,6 +26,8 @@
   "previews": {
     "group": "Support cases",
     "open": "Open case with a conversation",
+    "helper": "Helper conversation without the opening request",
+    "neutral": "Waiting status without a booking role",
     "closed": "Closed case",
     "empty": "Waiting for the first reply",
     "sending": "Sending a reply",

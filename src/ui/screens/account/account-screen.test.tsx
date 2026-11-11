@@ -175,7 +175,7 @@ describe('AccountScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(onSaveProfile).not.toHaveBeenCalled();
     expect(screen.getAllByText(messages.forms.fieldErrors.required)).toHaveLength(2);
-    expect(screen.getByLabelText('First name')).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText('First name')).toHaveFocus());
   });
 
   it('disables profile edits while saving and updates the display name only after success', async () => {
@@ -206,7 +206,7 @@ describe('AccountScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findByText(messages.forms.fieldErrors.invalid)).toBeVisible();
     expect(screen.getByText(messages.forms.fieldErrors.too_long)).toBeVisible();
-    expect(screen.getByLabelText('First name')).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText('First name')).toHaveFocus());
     expect(screen.getByText(/Maya R\./)).toBeVisible();
     expect(navigation.push).not.toHaveBeenCalled();
   });

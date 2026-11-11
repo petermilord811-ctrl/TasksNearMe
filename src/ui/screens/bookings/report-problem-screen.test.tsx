@@ -56,7 +56,7 @@ describe('ReportProblemScreen', () => {
     await fillReport(user, 'Drawer stuck.');
     await user.click(screen.getByRole('button', { name: messages.reportProblem.submit }));
     expect(await screen.findByText(messages.forms.fieldErrors.too_short)).toBeVisible();
-    expect(screen.getByRole('textbox')).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveFocus());
     expect(handlers.onSubmit).not.toHaveBeenCalled();
   });
 

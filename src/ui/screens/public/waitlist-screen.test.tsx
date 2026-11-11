@@ -51,7 +51,7 @@ describe('waitlist form', () => {
     await user.click(screen.getByRole('button', { name: 'Join the waitlist' }));
     expect(onJoin).not.toHaveBeenCalled();
     expect(await screen.findAllByText(messages.forms.fieldErrors.required)).toHaveLength(3);
-    expect(screen.getByRole('textbox', { name: 'Email' })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Email' })).toHaveFocus());
     const radios = screen.getByRole('radiogroup', { name: "I'm interested in" });
     expect(radios).toHaveAttribute('aria-invalid', 'true');
     expect(radios).toHaveAccessibleDescription(/Choose how you'd like to use TasksNearMe.*Fill in this field/);
@@ -72,7 +72,7 @@ describe('waitlist form', () => {
     resolve({ ok: false, code: 'validation_failed', fieldErrors: { zip: ['invalid'] } });
     expect(await screen.findByText(messages.forms.fields.zip.invalid)).toBeInTheDocument();
     await waitFor(() => expect(submit).toBeEnabled());
-    expect(screen.getByRole('textbox', { name: 'ZIP code' })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'ZIP code' })).toHaveFocus());
     expect(screen.queryByRole('heading', { name: "You're on the list." })).not.toBeInTheDocument();
   });
 

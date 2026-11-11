@@ -81,7 +81,7 @@ describe('posting address combobox', () => {
     expect(modeGroup).toHaveAttribute('aria-invalid', 'true');
     expect(modeGroup).toHaveAccessibleDescription(`${messages.postTask.location.modeHint} ${messages.postTask.location.errors.not_supported}`);
     expect(screen.getByRole('alert')).toHaveTextContent(messages.postTask.location.errors.not_supported);
-    expect(screen.getByRole('radio', { name: 'In person' })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'In person' })).toHaveFocus());
   });
 
   it('preserves the saved address, unit, and notes when the selected mode is clicked again', async () => {
