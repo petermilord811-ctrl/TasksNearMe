@@ -31,6 +31,7 @@ Claude updates this file, including the Codex notes column, from each handoff (`
 | UI-021 | Quality pass: accessibility, responsiveness, copy | planned | — | | |
 | UI-022 | *(phase 2)* Recurring visits | planned | `series` | | |
 | UI-023 | Home dashboards (poster and helper), browse and saved helpers (moved from UI-007) | planned | `home`, `profiles` (search) | | |
+| [UI-024](tickets/UI-024-wizard-post-guard.md) | Fix: the posting wizard posts when pressing Next on the budget step | **ready for Codex** | none | | |
 
 ## Notes
 
