@@ -42,6 +42,7 @@ import { savedHelpers } from '../../src/modules/reviews/schema';
 import { blocks, messages, threadParticipants, threads } from '../../src/modules/messaging/schema';
 import { supportCaseEvents, supportCaseReads, supportCases } from '../../src/modules/support/schema';
 import { notificationPreferences, notifications, privacyRequests } from '../../src/modules/notifications/schema';
+import { rewardGrants } from '../../src/modules/rewards/schema';
 import { paymentMethods, payments, refunds } from '../../src/modules/payments/schema';
 import { devCardRef } from '../../src/integrations/payments';
 import { quoteBreakdown } from '../../src/modules/payments/fees';
@@ -382,6 +383,8 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   await tx.delete(notifications).where(inArray(notifications.userId, people));
   await tx.delete(notificationPreferences).where(inArray(notificationPreferences.userId, people));
   await tx.delete(privacyRequests).where(inArray(privacyRequests.userId, people));
+  // Rewards are derived from bookings again after the reset.
+  await tx.delete(rewardGrants).where(inArray(rewardGrants.helperUserId, people));
   await tx.delete(blocks).where(or(inArray(blocks.blockerId, people), inArray(blocks.blockedId, people)));
   const peopleCases = (await tx.select({ id: supportCases.id }).from(supportCases).where(inArray(supportCases.openedByUserId, people))).map((row) => row.id);
   if (peopleCases.length > 0) {
