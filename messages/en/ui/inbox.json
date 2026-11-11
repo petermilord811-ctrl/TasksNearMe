@@ -1,0 +1,13 @@
+{
+  "title": "Messages",
+  "description": "Keep the details of each task together.",
+  "conversations": "Conversations",
+  "kinds": { "offer": "Offer", "booking": "Booking", "invite": "Request", "case": "Support" },
+  "unread": "{count, plural, one {# unread} other {# unread}}",
+  "youPrefix": "You: ",
+  "noMessage": "Start the conversation.",
+  "empty": { "title": "No messages yet", "body": "Conversations about your offers and bookings will appear here. View your tasks or find a task to help with." },
+  "viewTasks": "View your tasks",
+  "findWork": "Find work",
+  "previews": { "group": "Messages", "client": "Client inbox", "helper": "Helper inbox", "empty": "Empty inbox", "kinds": "Requests, support, and a new conversation" }
+}

@@ -69,11 +69,17 @@ describe('CompletionSummary', () => {
     expect(screen.queryByText('$12.00')).not.toBeInTheDocument();
   });
 
-  it('shows supplied hours and hourly refund without inventing a cap absent from the contract', () => {
+  it('shows supplied hours against the cap with the hourly refund', () => {
     show(movingCompletionView);
-    expect(screen.getByText('Hours worked: 3.5 h')).toBeInTheDocument();
+    expect(screen.getByText('Hours worked: 3.5 of up to 4')).toBeInTheDocument();
     expect(screen.getByText('$19.25')).toBeInTheDocument();
     expect(screen.getByText('$35.00 × 3.5 h')).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Photos of the work' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the existing hours wording when no cap is supplied', () => {
+    show({ ...movingCompletionView, hoursCap: undefined });
+    expect(screen.getByText('Hours worked: 3.5 h')).toBeInTheDocument();
+    expect(screen.queryByText(/of up to/)).not.toBeInTheDocument();
   });
 });
