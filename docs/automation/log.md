@@ -50,3 +50,20 @@ One entry per iteration, newest last.
   - The wizard posts when "Next" is pressed on the budget step (Codex UI bug). Sent as UI-024; that e2e test is fixme until it lands.
 - Contract requests accepted: a yard green-waste plan instead of haul-away (also noticed independently), `onResolvePhotos`, and a per-person draft key.
 - Checks: `check` 457, `test:db` 23, `e2e` 50 (posting fixme), `build` pass.
+
+## 2026-11-11 — iteration 5 (offers, helper onboarding)
+- Codex:
+  - UI-024 (11 min): the wizard posted on Next. Fixed, merged, and the posting e2e test re-enabled. Its independent check had failed only on a transient `ERR_NETWORK_CHANGED`, which the harness now ignores.
+  - UI-008 (21 min) merged.
+  - UI-009 launched.
+- Wired UI-007:
+  - offers module: schema, migration 0006, domain actions, masked message segments, owner projections with fee-engine breakdowns, decline, cancel with a reason, seen markers;
+  - seeded offers;
+  - three poster pages;
+  - integration tests (6) and e2e poster flows.
+- e2e infrastructure:
+  - the `e2e-setup` project reseeds and removes posting leftovers;
+  - one retry, after a dev-server manifest race returned a single 500;
+  - a run that overlapped Codex's check on the same machine failed broadly; re-runs were clean.
+- Prepared UI-008 and UI-009 contracts: onboarding (form schemas, provider statuses, handlers) and helper work (feed, blocked reasons, offer schema factory).
+- Checks: `check` 540, `test:db` 29, `e2e` 60 (3 skips by design), `check:ui` pass.
