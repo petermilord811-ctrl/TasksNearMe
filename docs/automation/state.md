@@ -8,7 +8,7 @@
 - the home dashboards; notifications, the account page, real unread badges;
 - support for members (cases, requests, replies), reporting and blocking from a conversation.
 
-**Codex:** idle after UI-026; the next ticket is being prepared (UI-027 change requests or UI-025 direct invites).
+**Codex:** UI-027 (change requests) is running (`node scripts/codex-run.mjs UI-027`, attempt 2 after adding `onFinishVerification` to the contract; log `scratchpad/codex-UI-027.log`).
 **Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0016). `npm run e2e` reseeds the dev database itself.
 
 ## Done in iteration 9
@@ -29,15 +29,29 @@
 - Tooling: the heavy-work lock (`scripts/gate.mjs`, the runner's check), the shared e2e sign-in, and seed resets that clear leftovers.
 
 ## Next steps
-1. **Keep Codex busy:** prepare the next ticket now.
-   - **UI-027 change requests** (blueprint 03 §4, 04: new price, time, scope or hours cap; accept, decline, withdraw; pay the difference with the payment panel).
-   - Or **UI-025 direct invites** (J3: from a helper profile, saved helpers and Book again; a funded authorization; accept, decline, counter). It needs a task: reuse the posting wizard with a target helper, or a short inline form.
-2. **Seed a disputed booking** (Ana's cleaning task with Jordan, work submitted, problem reported) to back e2e for the dispute card and the staff money flow.
-3. **Later:**
-   - UI-020: reward reviews, users and moderation, config.
-   - UI-021: quality pass.
-   - My clients and availability posts.
-   - Staff TOTP, clock and time travel.
+1. **Build the change request backend while UI-027 runs:**
+   - Schema: a `booking_change_requests` table (migration 0018), with one open change per booking.
+   - Pure rules:
+     - allowed types: before the start, everything; during the work, no schedule; the hours cap only for hourly work;
+     - expiry: at the start before work, 24 h during work, 24 h while pending funding;
+     - the quote: `quoteBreakdown` on the new pricing.
+   - Service:
+     - propose, with the quote and the page;
+     - review: accept, decline, withdraw;
+     - accept and pay the difference: charge a `change_funding` payment with the confirmation's card choice and bank verification;
+     - apply: a new `booking_terms` version, the start moves, a decrease is refunded;
+     - lazy expiry.
+   - `BookingView.openChange`, and the `propose_change` booking action.
+   - Notifications: `change.proposed` / `change.applied`, after a contract addition.
+   - Integration tests with the ui-contract numbers: desk + chair is $22.00 more; one more hour on the move is $38.50 more.
+2. **When UI-027 hands off:** review, merge, wire `/app/bookings/[bookingId]/changes/new` and `/changes/[changeId]` in `(flow)`, e2e.
+3. **Seed a disputed booking** for dispute and staff-money e2e.
+4. **Later:**
+   - UI-025 direct invites;
+   - UI-020: reward reviews, users and moderation, config;
+   - UI-021: quality pass;
+   - My clients and availability posts;
+   - staff TOTP, clock and time travel.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB).
