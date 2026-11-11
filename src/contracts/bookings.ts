@@ -1,11 +1,16 @@
 import { z } from 'zod';
-import type { Cents, ISODateTime } from './common';
+import type { ActionDescriptor, ActionResult } from './actions';
+import type { BookingActionId } from './action-ids';
+import type { CategorySlug, Cents, ISODateTime } from './common';
 import { mustAcceptField } from './forms';
+import type { ExactAddress, TaskLocation } from './location';
 import type { MessageSegment } from './messaging';
 import type { PriceBreakdown, PricingInput } from './money';
 import { paymentChoiceSchema, type PaymentAttemptResult, type PaymentMethodLabel, type PaymentPanelData } from './payments';
-import type { HelperSummary } from './people';
-import type { TaskPublicView } from './tasks';
+import type { ClientSummary, HelperSummary, PersonSummary } from './people';
+import type { BookingStatus, CancelReason, CompletedVia, PaymentStatus } from './status';
+import type { TaskPublicView, TaskSchedule } from './tasks';
+import type { TimelineEvent } from './timeline';
 
 /**
  * Bookings. This file starts with booking an offer: the confirmation and payment page
@@ -98,4 +103,127 @@ export type ConfirmBookingInput = z.input<typeof confirmBookingInputSchema>;
 export interface BookingConfirmHandlers {
   onConfirm: (input: ConfirmBookingInput) => Promise<PaymentAttemptResult>;
   onFinishVerification: (input: { paymentId: string; outcome: 'approved' | 'failed' }) => Promise<PaymentAttemptResult>;
+}
+
+// ---- The booking page and the bookings list (UI-011) ---------------------------------------------
+
+/** When the viewer sees the exact address (ui-contract §5). */
+export const ADDRESS_VISIBILITY = [
+  /** Shown now (in `ExactAddressPanel` only). */
+  'visible',
+  /** The helper sees it once the booking is confirmed. */
+  'after_confirmation',
+  /** The helper saw it until 48 h after completion. */
+  'hidden_after_completion',
+  /** Remote task: there's no address. */
+  'not_applicable',
+] as const;
+export type AddressVisibility = (typeof ADDRESS_VISIBILITY)[number];
+
+export type BookingViewerRole = 'poster' | 'helper';
+
+/** The agreed terms (the current version). */
+export interface BookingTermsView {
+  version: number;
+  pricing: PricingInput;
+  /** One breakdown; the UI shows the viewer's variant (poster: charges; helper: earnings). */
+  breakdown: PriceBreakdown;
+  /** What was agreed: the task description at booking time. */
+  scopeText: string;
+  start: ISODateTime;
+  expenseAllowance?: { amountCents: Cents; description: string };
+}
+
+/** The helper's day-of updates. */
+export interface BookingCheckIn {
+  onMyWayAt?: ISODateTime;
+  /** The latest "running late" update, in minutes. */
+  lateByMinutes?: 10 | 20 | 30;
+  arrivedAt?: ISODateTime;
+}
+
+/** The times that matter in the current state (each only when it applies). */
+export interface BookingDeadlines {
+  /** `pending_funding`: unpaid after this, the booking is canceled. */
+  pendingFundingExpiresAt?: ISODateTime;
+  /** `confirmed`: the poster may report a no-show from this time. */
+  noShowReportableAt?: ISODateTime;
+  /** `completion_submitted`: approved automatically at this time. */
+  approvalDueAt?: ISODateTime;
+  /** `completed`: the helper stops seeing the address at this time. */
+  addressHiddenAt?: ISODateTime;
+}
+
+/** A charge or a refund on the booking. Posters only. */
+export interface BookingPaymentLine {
+  id: string;
+  kind: 'charge' | 'refund';
+  amountCents: Cents;
+  status: PaymentStatus;
+  method?: PaymentMethodLabel;
+  at: ISODateTime;
+}
+
+/** `/app/bookings/[bookingId]`: one booking, projected for its poster or its helper (anyone else: 404). */
+export interface BookingView {
+  id: string;
+  task: { id: string; title: string; categorySlug: CategorySlug; schedule: TaskSchedule };
+  status: BookingStatus;
+  cancelReason?: CancelReason;
+  completedVia?: CompletedVia;
+  viewerRole: BookingViewerRole;
+  poster: ClientSummary;
+  helper: HelperSummary;
+  /** The general area, or remote. */
+  location: TaskLocation;
+  /** Only when `addressVisibility` is `visible`. Render it in `ExactAddressPanel` and nowhere else. */
+  exactAddress?: ExactAddress;
+  addressVisibility: AddressVisibility;
+  terms: BookingTermsView;
+  checkIn?: BookingCheckIn;
+  deadlines: BookingDeadlines;
+  /** Oldest first. */
+  timeline: TimelineEvent[];
+  /** Posters only: charges and refunds, oldest first. */
+  payments?: BookingPaymentLine[];
+  /** From the domain (ui-contract §6): only actions that work today are included. */
+  actions: ActionDescriptor<BookingActionId>[];
+}
+
+/** A row on `/app/bookings`. */
+export interface BookingListRow {
+  id: string;
+  title: string;
+  categorySlug: CategorySlug;
+  status: BookingStatus;
+  cancelReason?: CancelReason;
+  viewerRole: BookingViewerRole;
+  /** The helper (for posters) or the client (for helpers). */
+  otherParty: PersonSummary;
+  start: ISODateTime;
+  location: TaskLocation;
+  /** Posters: the total charged. Helpers: what they'll earn. */
+  amountCents: Cents;
+  /** The viewer has something to do now (pay, check in, approve…). */
+  needsAction: boolean;
+}
+
+/** `/app/bookings`: every booking as poster or helper. */
+export interface BookingsPageData {
+  /** Bookings waiting on the viewer, most urgent first. They also appear in `upcoming`. */
+  needsAction: BookingListRow[];
+  /** Not finished yet (`pending_funding` to `disputed`), soonest first. */
+  upcoming: BookingListRow[];
+  /** `completed` and `canceled`, newest first. */
+  past: BookingListRow[];
+}
+
+/**
+ * Handlers on the booking page.
+ * - `onAction`: any action in `actions` (ask first when `confirm` is set). ok `updated` (the page
+ *   refreshes) or `redirectTo` (actions with their own page: `pay`, `message`, `add_to_calendar`).
+ *   Errors: `not_allowed` (the booking changed: reload), `version_conflict`, `rate_limited`, `unknown`.
+ */
+export interface BookingHubHandlers {
+  onAction: (input: { action: BookingActionId }) => Promise<ActionResult>;
 }
