@@ -6,6 +6,7 @@ import {
   type BookingPaymentLine, type BookingView, type ISODateTime,
 } from '@/contracts';
 import { formatDate, formatDateTime, formatHours, formatMoney, formatMonthYear, formatRelative, formatTime, formatTimeRange } from '@/shared/format';
+import { CompletionSummary } from '@/ui/components/bookings/completion-summary';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { ExactAddressPanel } from '@/ui/components/location/exact-address-panel';
 import { GeneralArea } from '@/ui/components/location/general-area';
@@ -96,6 +97,11 @@ export function BookingHubContent({ data, handlers, now, initialResult, initialP
     </div>
 
     <BookingHubActions key={data.id} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />
+
+    {data.completion && <section aria-label={t('work')} className="space-y-4">
+      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('work')}</h2>
+      <CompletionSummary completion={data.completion} variant={data.viewerRole} />
+    </section>}
 
     <section aria-label={t(data.viewerRole === 'poster' ? 'helper' : 'client')} className="space-y-3">
       <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t(data.viewerRole === 'poster' ? 'helper' : 'client')}</h2>

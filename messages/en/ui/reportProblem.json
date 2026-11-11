@@ -1,0 +1,43 @@
+{
+  "title": "Report a problem",
+  "intro": "Tell us what happened so support can help resolve it.",
+  "backToBooking": "Back to booking",
+  "work": "The work",
+  "deadline": "Report before {date} at {time}; after that, the booking is approved automatically.",
+  "deadlineRelative": "Approval deadline: {relative} (Central time).",
+  "reason": "What is the problem?",
+  "reasonHint": "Choose the reason that describes what happened.",
+  "reasons": {
+    "not_done": "The work isn't finished",
+    "not_as_agreed": "The work isn't as agreed",
+    "damage": "Something was damaged",
+    "hours_wrong": "The hours aren't right",
+    "expenses_wrong": "The expenses aren't right",
+    "other": "Something else"
+  },
+  "description": "What happened?",
+  "descriptionHint": "Use 20 to 2,000 characters. Include what needs to be put right.",
+  "descriptionCount": "{count, number} of {max, number} characters",
+  "photos": "Photos of the problem (optional)",
+  "photosHint": "Add up to 6 photos, up to {megabytes} MB each. Avoid house numbers, mail, and faces.",
+  "supportNote": "Support will look at what happened. The payment stays on hold until it's resolved.",
+  "submit": "Report the problem",
+  "submitting": "Sending report…",
+  "confirmTitle": "Send this report?",
+  "confirmDescription": "Support and your helper will receive your report. The payment stays on hold until the problem is resolved.",
+  "confirmSubmit": "Send report",
+  "cancel": "Keep editing",
+  "success": "Your problem was reported. Support will review what happened.",
+  "reload": "Reload booking details",
+  "getHelp": "Contact support",
+  "errors": {
+    "expired": "The approval window ended. Contact support for help with this booking.",
+    "not_allowed": "This booking has changed. Reload the booking details before continuing."
+  },
+  "unavailable": {
+    "title": "This report can't be sent now",
+    "not_submitted": "Your helper hasn't submitted the work yet. Return to the booking to see the latest update.",
+    "window_passed": "The approval window ended and the booking was approved. Contact support if you still need help.",
+    "closed": "This booking is already completed, canceled, or has a problem reported. Return to the booking to see what happens next."
+  }
+}

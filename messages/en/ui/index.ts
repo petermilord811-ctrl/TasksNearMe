@@ -37,7 +37,10 @@ import bookingConfirm from './bookingConfirm.json';
 import payments from './payments.json';
 import bookings from './bookings.json';
 import bookingHub from './bookingHub.json';
+import bookingComplete from './bookingComplete.json';
+import reportProblem from './reportProblem.json';
+import completion from './completion.json';
 
-const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, publicTask, helperProfile, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub };
+const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, publicTask, helperProfile, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion };
 
 export default uiMessages;
