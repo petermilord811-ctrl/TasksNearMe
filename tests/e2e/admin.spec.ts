@@ -29,8 +29,12 @@ test('an agent takes the case and writes to Maya, who sees the reply', async ({ 
   test.setTimeout(150_000);
   await staffSignIn(page, 'alex@example.test');
   await page.goto('/admin/cases/case_seed_maya_payment');
-  await page.getByRole('button', { name: 'Assign to me' }).click();
-  await expect(page.getByRole('button', { name: 'Unassign' })).toBeVisible();
+  // A click before the page hydrates does nothing on a cold dev server: retry until the case is assigned.
+  await expect(async () => {
+    if (await page.getByRole('button', { name: 'Unassign' }).isVisible()) return;
+    await page.getByRole('button', { name: 'Assign to me' }).click({ timeout: 5_000 });
+    await expect(page.getByRole('button', { name: 'Unassign' })).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 60_000 });
   await page.getByLabel('Send to').selectOption({ label: 'Maya R.' });
   await page.getByLabel('Reply message').fill('The pending charge was released this morning.');
   await page.getByRole('button', { name: 'Send reply' }).click();
@@ -48,4 +52,18 @@ test('members never see the staff area', async ({ page }, testInfo) => {
   await page.goto('/admin/cases/case_seed_maya_payment');
   await expect(page.getByText(/could not be found/i)).toBeVisible();
   await expect(page.getByText('I see a pending charge on my card')).toHaveCount(0);
+});
+
+test("staff read a booking's money and open the address with a logged reason", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-desktop', 'read-only apart from the audit log; one project is enough');
+  test.setTimeout(150_000);
+  await staffSignIn(page, 'alex@example.test');
+  await page.goto('/admin/bookings/bkg_tv');
+  await expect(page.getByRole('heading', { level: 1, name: 'Mount a TV on the wall' })).toBeVisible();
+  await expect(page.getByText('$88.00').first()).toBeVisible();
+  await expect(page.getByText('88 Sample Street')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Show the address' }).click();
+  await page.getByLabel(/Reason for access/).fill('Checking where the TV was mounted for a support question.');
+  await page.getByRole('button', { name: /Log access/ }).click();
+  await expect(page.getByText('88 Sample Street').first()).toBeVisible();
 });

@@ -71,6 +71,10 @@ All previews use `now = ADMIN_NOW` inside `AdminShell` with Alex as the viewer.
 - Dual approval for refunds above $500, transfer reversals, chargebacks (finance tools), users and moderation, reward administration (UI-020).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/admin/bookings/[bookingId]` (new); the case page's resolve dialog now resolves with money.
+- Queries / actions:
+  - `src/modules/support/staff-money.ts`:
+    - `resolveCaseWithMoney`: the money moves first, guarded and keyed per case, then the case resolves;
+    - `getAdminBooking`, `staffRefund`, `revealBookingAddress`, `revealBookingConversation`.
+  - `previewResolution` and `bookingMoneyFacts` live in `staff.ts`. The actions are in `staff-actions.ts`.
+- e2e: `tests/e2e/admin.spec.ts` (a booking's money, and the address after a logged reason). The settle, refund and release flows are covered by `tests/integration/staff-money.test.ts`.

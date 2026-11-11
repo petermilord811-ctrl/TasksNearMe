@@ -8,7 +8,7 @@
 - the home dashboards; notifications, the account page, real unread badges;
 - support for members (cases, requests, replies), reporting and blocking from a conversation.
 
-**Codex:** UI-019 (money resolutions and the staff booking page) is running (`node scripts/codex-run.mjs UI-019`, background; log `scratchpad/codex-UI-019.log`). The resolution preview is built; resolving with money, the refund tool and the booking page query come with its wiring.
+**Codex:** UI-026 (disputes on the booking page, support notifications) is running (`node scripts/codex-run.mjs UI-026`, background; log `scratchpad/codex-UI-026.log`). Its backend comes with the wiring: `BookingView.dispute` in the booking hub, and `support.replied` / `support.resolved` outbox events that the dispatcher turns into notifications.
 **Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0016). `npm run e2e` reseeds the dev database itself.
 
 ## Done in iteration 9
@@ -23,15 +23,16 @@
 - **UI-018** merged and wired: `/admin`, `/admin/cases`, `/admin/cases/[caseId]` (staff backend: queues, response targets, assignment, private replies, notes, resolutions, the reason-gated conversation, audit).
 - **UI-028** merged and wired: `/app/rewards` (rewards backend: welcome and repeat grants from booking facts, hold, review, redeem to a development gift card).
 - **Job runner** (`src/instrumentation.ts`): expiries, auto-approval, review publishing and notifications every minute.
-- **UI-019** prepared (contract, fixtures, ticket, the resolution preview) and launched.
+- **UI-019** merged and wired: money resolutions (release, settle, refund in full, goodwill) and `/admin/bookings/[bookingId]` with refunds and the address and conversation behind a logged reason.
+- **UI-026** prepared and launched (placeholders for the new notification codes are listed in its ticket).
 - Tooling: the heavy-work lock (`scripts/gate.mjs`, the runner's check), the shared e2e sign-in, and seed resets that clear leftovers.
 
 ## Next steps
-1. **When UI-019 hands off:** review, merge, then build and wire:
-   - `resolveCase` with money (release in full → completion money; settle → partial refund and earnings on the new price; refund in full → refund and cancel; goodwill → platform-funded refund), within `refundLimitOf`; let `caseResolutions` offer them for cases about a paid booking;
-   - `/admin/bookings/[bookingId]` (`getAdminBooking`), the staff refund tool, and the address and conversation behind a reason (audit log).
-   - e2e: settle the seeded dispute from the case page; refund from the booking page.
-2. **Prepare the next Codex ticket while UI-019 runs:** UI-025 direct invites (from a helper profile, saved helpers and Book again; accept, decline, counter), probably reusing the posting wizard for new tasks. Or UI-026 (disputes on the booking page for both people), UI-027 (change requests).
+1. **When UI-026 hands off:** review, merge, then wire:
+   - `getBookingView` gains `dispute` (the case on the booking, role-projected money: the client's dispute refunds, the helper's earnings; `canOpenCase` from the support visibility rule);
+   - staff replies and resolutions write `support.replied` / `support.resolved` outbox events; `dispatchNotifications` maps them to `support_replied` / `case_resolved` with the `support_case` target;
+   - e2e: Maya's disputed booking card (needs a seeded disputed booking, or reuse the staff-money flow).
+2. **Prepare the next Codex ticket while UI-026 runs:** UI-025 direct invites (from a helper profile, saved helpers and Book again; accept, decline, counter). Decide how a new task is described (reuse the posting wizard with an `invite` handle, or a short inline form). Or UI-027 change requests.
 3. **Later:** UI-020 (reward reviews, users and moderation, config), UI-021 (quality pass), My clients and availability posts, staff TOTP, clock and time travel.
 
 ## Open issues
