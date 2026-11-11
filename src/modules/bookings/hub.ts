@@ -30,6 +30,7 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
+import { recordCompletionMoney } from '@/modules/earnings/service';
 import { bookingThreadLink, ensureThread, postEvent } from '@/modules/messaging/service';
 import { autoApproveDue, completionViewOf } from './completion-view';
 import { addressVisibility, bookingActions, bookingDeadlines, needsAction, type BookingFacts, type BookingPolicy } from './domain';
@@ -326,8 +327,11 @@ export async function runBookingAction(db: Db, userId: string, bookingId: string
       return transition('confirmed', { onMyWayAt: now }, 'booking.on_my_way');
     case 'arrived':
       return transition('confirmed', { status: 'in_progress', arrivedAt: now }, 'booking.arrived');
-    case 'approve':
-      return transition('completion_submitted', { status: 'completed', completedVia: 'poster', completedAt: now, approvalDueAt: null }, 'booking.completed');
+    case 'approve': {
+      const result = await transition('completion_submitted', { status: 'completed', completedVia: 'poster', completedAt: now, approvalDueAt: null }, 'booking.completed');
+      if (result.ok) await recordCompletionMoney(db, booking.id, now);
+      return result;
+    }
     default:
       return { ok: false, code: 'not_allowed' };
   }

@@ -15,3 +15,4 @@ export * from '../../modules/payments/schema';
 export * from '../../modules/bookings/schema';
 export * from '../../modules/support/schema';
 export * from '../../modules/messaging/schema';
+export * from '../../modules/earnings/schema';

@@ -11,6 +11,7 @@ import type {
 } from '@/contracts';
 import { bookingNoteInputSchema, cancelBookingInputSchema, HELPER_CANCEL_REASONS, LATE_BY_MINUTES, POSTER_CANCEL_REASONS, safetyReportInputSchema } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
+import { recordCompensation } from '@/modules/earnings/service';
 import { marketPolicies } from '@/modules/markets/schema';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { cancellationSummary, lateCancellation } from '@/modules/payments/fees';
@@ -177,6 +178,7 @@ async function cancelWith(
   });
   if (!done) return { ok: false, code: 'not_allowed' };
   await refundCharge(deps, booking, outcome.refund, now);
+  if (outcome.compensation > 0) await recordCompensation(deps.db, booking, outcome.compensation, now);
   return { ok: true, code: 'canceled' };
 }
 
