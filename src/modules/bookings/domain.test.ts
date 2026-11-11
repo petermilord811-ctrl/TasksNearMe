@@ -31,13 +31,19 @@ describe('booking actions', () => {
   it('gives the client pay, the calendar, and approve (asking first)', () => {
     expect(ids(bookingActions({ ...confirmed, status: 'pending_funding' }, 'poster', start))).toEqual(['pay']);
     expect(ids(bookingActions(confirmed, 'poster', start))).toEqual(['add_to_calendar']);
-    const approve = bookingActions({ ...confirmed, status: 'completion_submitted' }, 'poster', start);
-    expect(approve).toEqual([{ id: 'approve', kind: 'primary', enabled: true, confirm: true }]);
+    const submitted = { ...confirmed, status: 'completion_submitted', approvalDueAt: at('2026-11-24T17:48:00.000Z') };
+    expect(bookingActions(submitted, 'poster', start)).toEqual([
+      { id: 'approve', kind: 'primary', enabled: true, confirm: true },
+      { id: 'report_problem', kind: 'secondary', enabled: true },
+    ]);
+    // After the window, only approving is left (it's approved automatically anyway).
+    expect(ids(bookingActions(submitted, 'poster', at('2026-11-24T17:48:00.000Z')))).toEqual(['approve']);
     expect(bookingActions({ ...confirmed, status: 'completion_submitted' }, 'helper', start)).toEqual([]);
   });
 
-  it('skips check-in for remote work', () => {
-    expect(ids(bookingActions({ ...confirmed, remote: true }, 'helper', start))).toEqual(['add_to_calendar']);
+  it('skips check-in for remote work, and asks for the work once started', () => {
+    expect(ids(bookingActions({ ...confirmed, remote: true }, 'helper', start))).toEqual(['submit_completion', 'add_to_calendar']);
+    expect(ids(bookingActions({ ...confirmed, status: 'in_progress' }, 'helper', start))).toEqual(['submit_completion']);
   });
 });
 

@@ -314,6 +314,10 @@ export async function runBookingAction(db: Db, userId: string, bookingId: string
         : { ok: false, code: 'not_allowed' };
     case 'add_to_calendar':
       return { ok: true, code: 'updated', redirectTo: routes.app.bookingCalendar(booking.id) };
+    case 'submit_completion':
+      return { ok: true, code: 'updated', redirectTo: routes.app.bookingComplete(booking.id) };
+    case 'report_problem':
+      return { ok: true, code: 'updated', redirectTo: routes.app.bookingProblem(booking.id) };
     case 'on_my_way':
       return transition('confirmed', { onMyWayAt: now }, 'booking.on_my_way');
     case 'arrived':

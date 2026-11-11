@@ -102,4 +102,16 @@ export const SEED_OFFERS: SeedOffer[] = [
     submittedHoursAgo: 50,
     seenByPoster: true,
   },
+  {
+    id: 'off_bookcase_jordan',
+    taskId: 'tsk_bookcase',
+    helperUserId: 'usr_jordan',
+    pricing: { type: 'fixed', priceCents: 7000 },
+    startOffsetMinutes: 0,
+    message: 'I can anchor it to the studs. I bring a stud finder.',
+    brings: ['Drill', 'Stud finder'],
+    revision: 1,
+    submittedHoursAgo: 60,
+    seenByPoster: true,
+  },
 ];

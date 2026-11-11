@@ -36,7 +36,9 @@ import { HELPER_LANGUAGES, SEED_REVIEWS, SERVICE_DESCRIPTIONS, WORK_SAMPLES } fr
 import { reviews } from '../../src/modules/reviews/schema';
 import { helperWorkSamples } from '../../src/modules/profiles/schema';
 import { files } from '../../src/modules/tasks/schema';
-import { bookingTerms, bookings } from '../../src/modules/bookings/schema';
+import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookingTerms, bookings } from '../../src/modules/bookings/schema';
+import { messages, threadParticipants, threads } from '../../src/modules/messaging/schema';
+import { supportCases } from '../../src/modules/support/schema';
 import { paymentMethods, payments } from '../../src/modules/payments/schema';
 import { devCardRef } from '../../src/integrations/payments';
 import { quoteBreakdown } from '../../src/modules/payments/fees';
@@ -372,64 +374,86 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   const rows = await tx.select({ id: bookings.id }).from(bookings).where(inArray(bookings.taskId, taskIds));
   if (rows.length === 0) return;
   const ids = rows.map((row) => row.id);
+  const bookingThreads = await tx.select({ id: threads.id }).from(threads).where(and(eq(threads.kind, 'booking'), inArray(threads.linkedId, ids)));
+  const threadIds = bookingThreads.map((row) => row.id);
+  if (threadIds.length > 0) {
+    await tx.delete(messages).where(inArray(messages.threadId, threadIds));
+    await tx.delete(threadParticipants).where(inArray(threadParticipants.threadId, threadIds));
+    await tx.delete(threads).where(inArray(threads.id, threadIds));
+  }
+  await tx.delete(supportCases).where(inArray(supportCases.bookingId, ids));
+  await tx.delete(bookingCompletionPhotos).where(inArray(bookingCompletionPhotos.bookingId, ids));
+  await tx.delete(bookingExpenses).where(inArray(bookingExpenses.bookingId, ids));
+  await tx.delete(bookingCompletions).where(inArray(bookingCompletions.bookingId, ids));
   await tx.delete(payments).where(inArray(payments.bookingId, ids));
   await tx.delete(bookingTerms).where(inArray(bookingTerms.bookingId, ids));
   await tx.delete(bookings).where(inArray(bookings.id, ids));
 }
 
-/** Confirmed bookings on seeded tasks: Ben's TV with Jordan ($80; $88.00 charged). */
+/**
+ * Bookings on seeded tasks: Ben's TV with Jordan, confirmed ($80; $88.00 charged), and Ruth's bookcase
+ * with Jordan, in progress since an hour ago ($70; $77.00 charged).
+ */
 async function seedBookings(tx: Tx): Promise<void> {
   const [policy] = await tx.select().from(marketPolicies).where(and(eq(marketPolicies.marketId, AUSTIN.id), eq(marketPolicies.status, 'published')));
-  const [task] = await tx.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
-  const [offer] = await tx.select().from(offers).where(eq(offers.id, 'off_tv_jordan'));
-  if (!policy || !task || !offer) throw new Error('Seed booking: the policy, task or offer is missing');
-  const breakdown = quoteBreakdown(policy.fees, { type: 'fixed', priceCents: 8000 });
-  const bookedAt = new Date(offer.createdAt.getTime() + 2 * 3_600_000);
-  await tx.update(offers).set({ status: 'accepted', closedAt: bookedAt }).where(eq(offers.id, offer.id));
-  await tx.update(tasks).set({ status: 'assigned', offerCount: 0 }).where(eq(tasks.id, task.id));
-  await tx.insert(bookings).values({
-    id: 'bkg_tv',
-    taskId: task.id,
-    offerId: offer.id,
-    posterUserId: task.posterUserId,
-    helperUserId: offer.helperUserId,
-    marketId: task.marketId,
-    policyVersionId: policy.id,
-    status: 'confirmed',
-    startAt: offer.proposedStart,
-    confirmedAt: bookedAt,
-    createdAt: bookedAt,
-    updatedAt: bookedAt,
-  });
-  await tx.insert(bookingTerms).values({
-    id: 'btm_tv_1',
-    bookingId: 'bkg_tv',
-    version: 1,
-    pricingType: 'fixed',
-    priceCents: 8000,
-    breakdown,
-    scopeText: task.description,
-    startAt: offer.proposedStart,
-    createdAt: bookedAt,
-  });
-  await tx.insert(payments).values({
-    id: 'pay_tv',
-    bookingId: 'bkg_tv',
-    purpose: 'booking_funding',
-    payerUserId: task.posterUserId,
-    amountCents: breakdown.posterTotalCents,
-    status: 'succeeded',
-    provider: 'dev',
-    providerRef: 'devpi_seed_tv',
-    methodRef: devCardRef('success'),
-    methodBrand: 'visa',
-    methodLast4: '4242',
-    methodExpMonth: 12,
-    methodExpYear: 2030,
-    idempotencyKey: 'seed:bkg_tv',
-    createdAt: bookedAt,
-    updatedAt: bookedAt,
-  });
+  if (!policy) throw new Error('Seed booking: no published policy');
+  const now = new Date();
+  const seedOne = async (input: { id: string; taskId: string; offerId: string; priceCents: number; status: 'confirmed' | 'in_progress' }) => {
+    const [task] = await tx.select().from(tasks).where(eq(tasks.id, input.taskId));
+    const [offer] = await tx.select().from(offers).where(eq(offers.id, input.offerId));
+    if (!task || !offer) throw new Error(`Seed booking ${input.id}: the task or offer is missing`);
+    const breakdown = quoteBreakdown(policy.fees, { type: 'fixed', priceCents: input.priceCents });
+    const bookedAt = new Date(offer.createdAt.getTime() + 2 * 3_600_000);
+    const started = input.status === 'in_progress';
+    await tx.update(offers).set({ status: 'accepted', closedAt: bookedAt }).where(eq(offers.id, offer.id));
+    await tx.update(tasks).set({ status: 'assigned', offerCount: 0 }).where(eq(tasks.id, task.id));
+    await tx.insert(bookings).values({
+      id: input.id,
+      taskId: task.id,
+      offerId: offer.id,
+      posterUserId: task.posterUserId,
+      helperUserId: offer.helperUserId,
+      marketId: task.marketId,
+      policyVersionId: policy.id,
+      status: input.status,
+      startAt: offer.proposedStart,
+      confirmedAt: bookedAt,
+      ...(started ? { onMyWayAt: new Date(now.getTime() - 90 * 60_000), arrivedAt: new Date(now.getTime() - 60 * 60_000) } : {}),
+      createdAt: bookedAt,
+      updatedAt: bookedAt,
+    });
+    await tx.insert(bookingTerms).values({
+      id: `btm_${input.id.slice(4)}_1`,
+      bookingId: input.id,
+      version: 1,
+      pricingType: 'fixed',
+      priceCents: input.priceCents,
+      breakdown,
+      scopeText: task.description,
+      startAt: offer.proposedStart,
+      createdAt: bookedAt,
+    });
+    await tx.insert(payments).values({
+      id: `pay_${input.id.slice(4)}`,
+      bookingId: input.id,
+      purpose: 'booking_funding',
+      payerUserId: task.posterUserId,
+      amountCents: breakdown.posterTotalCents,
+      status: 'succeeded',
+      provider: 'dev',
+      providerRef: `devpi_seed_${input.id.slice(4)}`,
+      methodRef: devCardRef('success'),
+      methodBrand: 'visa',
+      methodLast4: '4242',
+      methodExpMonth: 12,
+      methodExpYear: 2030,
+      idempotencyKey: `seed:${input.id}`,
+      createdAt: bookedAt,
+      updatedAt: bookedAt,
+    });
+  };
+  await seedOne({ id: 'bkg_tv', taskId: 'tsk_tv', offerId: 'off_tv_jordan', priceCents: 8000, status: 'confirmed' });
+  await seedOne({ id: 'bkg_bookcase', taskId: 'tsk_bookcase', offerId: 'off_bookcase_jordan', priceCents: 7000, status: 'in_progress' });
 }
 
 /** Maya's saved cards (development provider): the Visa is her default. Both pay successfully. */

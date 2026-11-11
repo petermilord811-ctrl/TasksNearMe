@@ -126,6 +126,23 @@ export const SEED_TASKS: SeedTask[] = [
     postedHoursAgo: 60,
   },
   {
+    // In progress with Jordan (seeded): the completion e2e sends the work, then Ruth approves.
+    id: 'tsk_bookcase',
+    slug: 'assemble-a-bookcase-windsor-park-3k8b',
+    posterId: 'usr_ruth',
+    categoryId: 'cat_furniture_assembly',
+    title: 'Assemble a bookcase',
+    description: 'A tall flat-pack bookcase with five shelves. It needs to be anchored to the wall.',
+    details: { itemType: 'bookshelf', itemCount: 1, wallAnchoring: true, toolsOnSite: false },
+    placeId: 'plc_windsor_300',
+    daysFromToday: 1,
+    start: '09:00',
+    end: '12:00',
+    budget: { type: 'fixed', priceCents: 7000 },
+    offerCount: 0,
+    postedHoursAgo: 70,
+  },
+  {
     id: 'tsk_computer',
     slug: 'set-up-a-new-laptop-remote-4k7w',
     posterId: 'usr_ruth',

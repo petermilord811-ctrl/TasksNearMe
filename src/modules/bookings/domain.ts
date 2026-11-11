@@ -48,19 +48,26 @@ export function bookingActions(booking: BookingFacts, role: BookingViewerRole, n
       case 'confirmed':
       case 'in_progress':
         return [calendar];
-      case 'completion_submitted':
-        return [make('approve', 'primary', { confirm: true })];
+      case 'completion_submitted': {
+        const approve = make('approve', 'primary', { confirm: true });
+        // Problems can be reported until the window ends; then it's approved automatically.
+        const open = !booking.approvalDueAt || now < booking.approvalDueAt;
+        return open ? [approve, make('report_problem', 'secondary')] : [approve];
+      }
       default:
         return [];
     }
   }
   switch (booking.status) {
     case 'confirmed': {
-      if (booking.remote) return [calendar];
+      // Remote work has no check-in: the helper submits when done.
+      if (booking.remote) return [make('submit_completion', 'primary'), calendar];
       const arrived = opensAt('arrived', booking.onMyWayAt ? 'primary' : 'secondary', new Date(booking.startAt.getTime() - ARRIVED_LEAD_MS), now);
       if (booking.onMyWayAt) return [arrived, calendar];
       return [opensAt('on_my_way', 'primary', new Date(booking.startAt.getTime() - ON_MY_WAY_LEAD_MS), now), arrived, calendar];
     }
+    case 'in_progress':
+      return [make('submit_completion', 'primary')];
     default:
       return [];
   }

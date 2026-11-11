@@ -83,7 +83,7 @@ describe('completing the work', () => {
     const view = await getBookingView(hub, 'usr_ana', first, now());
     expect(view?.status).toBe('completion_submitted');
     expect(view?.completion).toMatchObject({ note: 'All done.', photos: [{ id: 'fil_done_1' }], expenses: [] });
-    expect(view?.actions.map((a) => a.id)).toEqual(['approve']);
+    expect(view?.actions.map((a) => a.id)).toEqual(['approve', 'report_problem']);
     // The client can open the helper's photo; other people can't.
     expect(await canViewRelatedFile(db, { id: 'fil_done_1', kind: 'evidence' }, 'usr_ana', now())).toBe(true);
     expect(await canViewRelatedFile(db, { id: 'fil_done_1', kind: 'evidence' }, 'usr_chris', now())).toBe(false);

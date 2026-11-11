@@ -1,6 +1,6 @@
 # UI-013 — Mark the work complete, and report a problem
 
-**Status:** ready for Codex · **Branch:** `ui/UI-013-completion-and-problems` · **Plan first:** no (unattended) · **Depends on:** UI-011 (merged)
+**Status:** wired · **Branch:** `ui/UI-013-completion-and-problems` · **Plan first:** no (unattended) · **Depends on:** UI-011 (merged)
 
 ## Goal
 These pages close the core loop (blueprint 02 **J6**):
@@ -99,6 +99,6 @@ Copy namespaces: `bookingComplete`, `reportProblem`, `completion` (the summary c
 - Reviews (UI-015) and payouts (UI-016).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app/bookings/[bookingId]/complete`, `/app/bookings/[bookingId]/problem` (flow layout).
+- Queries / actions: `getCompletionPage`, `quoteFinal`, `submitCompletion`, `getReportProblemPage`, `reportProblem` (`src/modules/bookings/completion.ts`); Server Actions in `completion-actions.ts`; the work on the booking page from `completion-view.ts`.
+- e2e: `tests/e2e/completion.spec.ts` (seeded `bkg_bookcase`).
