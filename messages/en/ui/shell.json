@@ -100,6 +100,7 @@
     "group": "Page shells",
     "publicSignedOut": "Public · signed out",
     "publicSignedIn": "Public · signed in",
+    "publicViewerPromise": "Public · signed-in viewer promise",
     "publicStaff": "Public · staff",
     "appPoster": "App · I need help",
     "appHelper": "App · I can help",

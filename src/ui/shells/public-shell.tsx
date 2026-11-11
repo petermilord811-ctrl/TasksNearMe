@@ -1,24 +1,19 @@
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import Link from 'next/link';
 import { MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { CATEGORY_SLUGS, LEGAL_DOCS, routes, type ShellViewer } from '@/contracts';
-import { buttonVariants } from '@/ui/primitives/button';
-import { cn } from '@/ui/lib/utils';
 import { Logo } from './logo';
 import { SkipLink } from './skip-link';
 import { MobileMenu } from './mobile-menu';
 import { getPublicNav } from './nav';
 import { NavLink } from './nav-link';
+import { PublicAccountLinks } from './public-account-links';
 
-export interface PublicShellProps { viewer: ShellViewer; children: ReactNode; currentPath?: string }
+export interface PublicShellProps { viewer: ShellViewer | Promise<ShellViewer>; children: ReactNode; currentPath?: string }
 
 export function PublicShell({ viewer, children, currentPath }: PublicShellProps) {
   const t = useTranslations('shell');
-  const account = viewer.kind === 'public' ? { href: routes.signIn(), label: t('signIn') }
-    : viewer.kind === 'staff' ? { href: routes.admin.home(), label: t('staffArea') }
-      : { href: routes.app.home(), label: t('goToApp') };
-  const postHref = viewer.kind === 'public' ? routes.signIn(routes.app.newTask()) : routes.app.newTask();
   const nav = <nav aria-label={t('primaryNavigation')}><ul className="flex flex-col gap-1 lg:flex-row lg:gap-2">
     {getPublicNav().map((item) => <li key={item.id}><NavLink item={item} currentPath={currentPath} className="flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent" activeClassName="bg-secondary text-secondary-foreground underline decoration-2 underline-offset-4">{t(`nav.${item.id}`)}</NavLink></li>)}
   </ul></nav>;
@@ -28,10 +23,15 @@ export function PublicShell({ viewer, children, currentPath }: PublicShellProps)
       <div className="mx-auto flex max-w-content items-center gap-2 px-gutter py-4 lg:gap-4">
         <div className="sm:hidden"><Logo variant="mark" /></div><div className="hidden sm:block"><Logo /></div>
         <div className="ml-auto hidden lg:block">{nav}</div>
-        <Link href={postHref} className={cn(buttonVariants(), 'ml-auto lg:ml-0')}>{t('postTask')}</Link>
-        <Link href={account.href} className={cn(buttonVariants({ variant: 'ghost' }), 'hidden lg:inline-flex')}>{account.label}</Link>
+        <Suspense fallback={<PublicAccountLinks viewer={{ kind: 'public' }} placement="header" />}>
+          <PublicAccountLinks viewer={viewer} placement="header" />
+        </Suspense>
         <MobileMenu title={t('menuTitle')} description={t('menuDescription')}>
-          {nav}<div className="mt-4 border-t pt-4"><Link href={account.href} className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}>{account.label}</Link></div>
+          {nav}<div className="mt-4 border-t pt-4">
+            <Suspense fallback={<PublicAccountLinks viewer={{ kind: 'public' }} placement="menu" />}>
+              <PublicAccountLinks viewer={viewer} placement="menu" />
+            </Suspense>
+          </div>
         </MobileMenu>
       </div>
     </header>

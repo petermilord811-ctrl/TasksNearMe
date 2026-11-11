@@ -1,0 +1,41 @@
+import Image from 'next/image';
+import { Expand } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { WorkSampleView } from '@/contracts';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
+
+export interface WorkSampleGalleryProps {
+  samples: WorkSampleView[];
+}
+
+export function WorkSampleGallery({ samples }: WorkSampleGalleryProps) {
+  const t = useTranslations('reviews');
+
+  return (
+    <ul className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {samples.map((sample, index) => (
+        <li key={sample.id} className="min-w-0">
+          <Dialog>
+            <DialogTrigger asChild>
+              <button type="button" aria-label={t('workSamples.open', { description: sample.caption || sample.photo.alt })} className="group flex h-full w-full min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-left shadow-card transition-colors hover:bg-accent">
+                <Image src={sample.photo.src} alt={sample.photo.alt} width={sample.photo.width} height={sample.photo.height} unoptimized className="aspect-4/3 h-auto w-full object-cover" />
+                <span className="flex min-h-11 w-full flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                  <span className="break-words font-medium">{sample.caption || t('workSamples.view')}</span>
+                  <Expand aria-hidden="true" className="size-4 shrink-0 text-primary" />
+                </span>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:max-w-reading max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
+              <DialogHeader>
+                <DialogTitle>{t('workSamples.title', { number: index + 1, count: samples.length })}</DialogTitle>
+                <DialogDescription className="break-words">{sample.caption || sample.photo.alt}</DialogDescription>
+              </DialogHeader>
+              <Image src={sample.photo.src} alt={sample.photo.alt} width={sample.photo.width} height={sample.photo.height} unoptimized className="h-auto max-h-[60dvh] w-full rounded-lg object-contain" />
+              {sample.categorySlug && <p className="text-sm text-muted-foreground">{t(`categories.${sample.categorySlug}`)}</p>}
+            </DialogContent>
+          </Dialog>
+        </li>
+      ))}
+    </ul>
+  );
+}
