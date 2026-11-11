@@ -11,7 +11,8 @@ import verification from './verification.json';
 import location from './location.json';
 import layout from './layout.json';
 import primitives from './primitives.json';
+import shell from './shell.json';
 
-const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives };
+const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell };
 
 export default uiMessages;

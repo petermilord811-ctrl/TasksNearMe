@@ -1,0 +1,93 @@
+/** @vitest-environment jsdom */
+import { act, cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { NextIntlClientProvider } from 'next-intl';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { routes, type ActionHandler, type ActionResult, type SignedInViewer, type StaffViewer } from '@/contracts';
+import { alexStaff, jordanShell, mayaShell } from '@/fixtures';
+import uiMessages from '../../../messages/en/ui';
+import feedback from '../../../messages/en/ui/feedback.json';
+import { AccountMenu } from './account-menu';
+
+const { push, toastSuccess, toastError } = vi.hoisted(() => ({ push: vi.fn(), toastSuccess: vi.fn(), toastError: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+vi.mock('sonner', () => ({ toast: { success: toastSuccess, error: toastError } }));
+afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+function show(viewer: SignedInViewer | StaffViewer, onSignOut: ActionHandler = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }))) {
+  return render(<NextIntlClientProvider locale="en" messages={uiMessages}><AccountMenu viewer={viewer} onSignOut={onSignOut} /></NextIntlClientProvider>);
+}
+
+async function openMenu() {
+  // Radix keyboard opening also verifies the complete keyboard path.
+  await userEvent.tab();
+  await userEvent.keyboard('{Enter}');
+  return screen.findByRole('menu');
+}
+
+describe('AccountMenu', () => {
+  it.each([
+    { viewer: mayaShell, extra: 'Saved helpers', extraHref: routes.app.saved(), absent: 'Rewards' },
+    { viewer: jordanShell, extra: 'Rewards', extraHref: routes.app.rewards(), absent: 'Saved helpers' },
+  ])('shows the $viewer.mode account destinations', async ({ viewer, extra, extraHref, absent }) => {
+    show(viewer);
+    const menu = await openMenu();
+    expect(within(menu).getByRole('menuitem', { name: 'Account' })).toHaveAttribute('href', routes.app.account());
+    expect(within(menu).getByRole('menuitem', { name: extra })).toHaveAttribute('href', extraHref);
+    expect(within(menu).queryByRole('menuitem', { name: absent })).not.toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Payments' })).toHaveAttribute('href', routes.app.payments());
+    expect(within(menu).getByRole('menuitem', { name: 'Support' })).toHaveAttribute('href', routes.app.support());
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Account', extra, 'Payments', 'Support', 'Sign out']);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `${viewer.initials}, account menu for ${viewer.displayName}` })).toHaveFocus();
+  });
+
+  it('keeps the staff menu limited to sign out', async () => {
+    show(alexStaff);
+    const menu = await openMenu();
+    expect(within(menu).getAllByRole('menuitem')).toHaveLength(1);
+    expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
+  });
+
+  it('waits for sign-out success before going home and prevents duplicate submissions', async () => {
+    let finish: (result: ActionResult) => void = () => {};
+    const handler = vi.fn(() => new Promise<ActionResult>((resolve) => { finish = resolve; }));
+    show(mayaShell, handler);
+    const menu = await openMenu();
+    await userEvent.dblClick(within(menu).getByRole('menuitem', { name: 'Sign out' }));
+    expect(handler).toHaveBeenCalledExactlyOnceWith();
+    expect(within(menu).getByRole('menuitem', { name: 'Signing out…' })).toHaveAttribute('aria-disabled', 'true');
+    expect(within(menu).getByRole('menuitem', { name: 'Signing out…' })).toHaveAttribute('aria-busy', 'true');
+    expect(push).not.toHaveBeenCalled();
+    await act(async () => finish({ ok: true, code: 'updated' }));
+    expect(push).toHaveBeenCalledExactlyOnceWith(routes.home());
+    expect(toastSuccess).toHaveBeenCalledWith(feedback.success.updated);
+  });
+
+  it('preserves error feedback outside the closed menu and does not navigate', async () => {
+    show(alexStaff, vi.fn(async (): Promise<ActionResult> => ({ ok: false, code: 'unknown' })));
+    const menu = await openMenu();
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Sign out' }));
+    expect(await screen.findByText(feedback.error.unknown)).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent(feedback.error.unknown);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(toastError).toHaveBeenCalledWith(feedback.error.unknown);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('handles a rejected sign-out promise', async () => {
+    show(mayaShell, vi.fn(async () => { throw new Error('Offline'); }));
+    const menu = await openMenu();
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Sign out' }));
+    expect(await screen.findByText(feedback.error.unknown)).toBeVisible();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('honors an explicit success redirect', async () => {
+    show(alexStaff, vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated', redirectTo: routes.signIn() })));
+    const menu = await openMenu();
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Sign out' }));
+    expect(push).toHaveBeenCalledExactlyOnceWith(routes.signIn());
+  });
+});

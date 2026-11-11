@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import type { PreviewEntry, TaskLocation } from '@/contracts';
+import { routes, type PreviewEntry, type TaskLocation } from '@/contracts';
 import { DESK_TIMES, deskExactAddress, muellerArea, muellerAreaForJordan, remoteLocation } from '@/fixtures';
 import { ExactAddressPanel } from '@/ui/components/location/exact-address-panel';
 import { GeneralArea } from '@/ui/components/location/general-area';
@@ -42,11 +42,15 @@ function RemotePreview() {
   );
 }
 
-function ExactAddressPreview() {
+function ExactAddressPreview({ mapsAvailable = true }: { mapsAvailable?: boolean }) {
   const t = useTranslations('location');
   return (
     <LocationPreviewFrame title={t('previews.exactTitle')}>
-      <ExactAddressPanel address={deskExactAddress} visibleUntil={DESK_TIMES.addressHidden} />
+      <ExactAddressPanel
+        address={deskExactAddress}
+        visibleUntil={DESK_TIMES.addressHidden}
+        mapsHref={mapsAvailable ? routes.external.googleMapsSearch(deskExactAddress) : undefined}
+      />
     </LocationPreviewFrame>
   );
 }
@@ -76,5 +80,12 @@ export const locationPreviews: PreviewEntry[] = [
     title: locationMessages.previews.exactTitle,
     notes: locationMessages.previews.exactNote,
     render: () => <ExactAddressPreview />,
+  },
+  {
+    id: 'location/exact-address-no-maps',
+    group: locationMessages.previews.locationGroup,
+    title: locationMessages.previews.exactNoMapsTitle,
+    notes: locationMessages.previews.exactNoMapsNote,
+    render: () => <ExactAddressPreview mapsAvailable={false} />,
   },
 ];
