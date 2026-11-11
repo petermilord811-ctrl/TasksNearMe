@@ -1,5 +1,6 @@
 import type { CategorySlug } from './common';
 import type { ExactAddress } from './location';
+import type { TaskBoardQuery } from './tasks';
 
 /**
  * Typed route builders for every page (docs/blueprint/02 §1 + docs/ui/ui-contract.md §13).
@@ -36,7 +37,15 @@ export const routes = {
   home: () => '/',
   market: (market = DEFAULT_MARKET) => `/${enc(market)}`,
   category: (slug: CategorySlug, market = DEFAULT_MARKET) => `/${enc(market)}/${slug}`,
-  taskBoard: (market = DEFAULT_MARKET) => `/${enc(market)}/tasks`,
+  /** Defaults (`when: any`, `sort: soonest`, page 1) are left out of the URL. */
+  taskBoard: (market = DEFAULT_MARKET, query: TaskBoardQuery = {}) =>
+    withQuery(`/${enc(market)}/tasks`, {
+      category: query.category,
+      when: query.when && query.when !== 'any' ? query.when : undefined,
+      remote: query.remoteOnly ? '1' : undefined,
+      sort: query.sort && query.sort !== 'soonest' ? query.sort : undefined,
+      page: query.page && query.page > 1 ? String(query.page) : undefined,
+    }),
   publicTask: (taskSlug: string) => `/tasks/${enc(taskSlug)}`,
   helperProfile: (handle: string) => `/helpers/${enc(handle)}`,
   howItWorks: () => '/how-it-works',
@@ -63,6 +72,8 @@ export const routes = {
       }),
     saved: () => '/app/saved',
     findWork: () => '/app/find-work',
+    /** A task from the helper's side: full details, offer form, or "finish setup to make offers". */
+    findWorkTask: (taskId: string) => `/app/find-work/${enc(taskId)}`,
     offers: (inviteId?: string) => withQuery('/app/offers', { invite: inviteId }),
     availability: () => '/app/availability',
     clients: () => '/app/clients',

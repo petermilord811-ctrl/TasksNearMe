@@ -13,6 +13,15 @@ describe('routes', () => {
     expect(routes.signIn('/app/tasks/new')).toBe('/sign-in?next=%2Fapp%2Ftasks%2Fnew');
   });
 
+  it('puts task board filters in the URL and leaves defaults out', () => {
+    expect(routes.taskBoard()).toBe('/austin/tasks');
+    expect(routes.taskBoard('austin', { when: 'any', sort: 'soonest', page: 1, remoteOnly: false })).toBe('/austin/tasks');
+    expect(
+      routes.taskBoard('austin', { category: 'moving-help', when: 'this_weekend', remoteOnly: true, sort: 'newest', page: 3 }),
+    ).toBe('/austin/tasks?category=moving-help&when=this_weekend&remote=1&sort=newest&page=3');
+    expect(routes.app.findWorkTask('tsk_desk')).toBe('/app/find-work/tsk_desk');
+  });
+
   it('keeps preview ids as path segments', () => {
     expect(routes.dev.preview('price-breakdown/desk-poster')).toBe('/dev/ui/price-breakdown/desk-poster');
   });

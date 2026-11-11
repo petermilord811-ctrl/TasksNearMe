@@ -29,6 +29,7 @@ When the user starts the `/loop` autopilot, or asks you to keep building on your
 | `src/contracts/**`, `src/shared/**`, `src/fixtures/**` | Claude | Isomorphic only: no server code, no React components |
 | `src/modules/**`, `src/platform/**`, `src/integrations/**`, `src/i18n/**` | Claude | Server and domain code |
 | `messages/en/app/**` | Claude | Top-level namespace `server` only |
+| `public/samples/**` | Claude | Placeholder images for fixtures and seeds |
 | `tests/**` | Claude | e2e (`tests/e2e`), preview harness (`tests/ui-previews`) |
 | `src/ui/**`, `messages/en/ui/**`, `public/ui/**`, `components.json` | **Codex** | Don't restyle or rewrite. Write a fix list for the user to send to Codex instead |
 | `docs/ui/**` | Claude | Tickets, contract docs, `progress.md`. Codex only writes its handoff file in `docs/ui/handoffs/` |
