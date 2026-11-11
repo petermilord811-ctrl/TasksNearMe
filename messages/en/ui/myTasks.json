@@ -1,0 +1,25 @@
+{
+  "title": "My tasks",
+  "description": "Keep track of your tasks and find the right help.",
+  "tabsLabel": "Your tasks by status",
+  "tabs": { "open": "Open", "booked": "Booked", "past": "Past" },
+  "tabCount": "{label} ({count, number})",
+  "postTask": "Post a task",
+  "budget": "Budget",
+  "newOffers": "{count, number} new",
+  "empty": {
+    "open": { "title": "No open tasks yet", "body": "Post what you need help with. Offers from helpers will appear here." },
+    "booked": { "title": "No booked tasks yet", "body": "Once you book a helper, your task will appear here with a link to the booking." },
+    "past": { "title": "No past tasks yet", "body": "Completed, canceled, and expired tasks will appear here. Post a task when you need a hand." }
+  },
+  "previews": {
+    "group": "My tasks",
+    "default": "Open tasks and new offers",
+    "empty": "No open tasks",
+    "booked": "Booked tasks",
+    "past": "Past tasks",
+    "emptyBooked": "No booked tasks",
+    "emptyPast": "No past tasks",
+    "pastStatuses": "Completed, canceled, and expired tasks"
+  }
+}

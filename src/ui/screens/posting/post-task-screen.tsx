@@ -65,7 +65,12 @@ function errorNames(errors: FieldErrors<TaskDraftInput>): string[] {
   return names;
 }
 
-export function PostTaskScreen({ data, handlers, initialStep, initialValues, initialPhotos = [], initialAddress, initialSuggestion, initialSuggestions, initialResult, persistDraft = true }: PostTaskScreenProps) {
+export function PostTaskScreen(props: PostTaskScreenProps) {
+  // A different person or market starts a separate in-memory draft as well as a separate storage entry.
+  return <PostTaskDraftScreen key={props.data.draftStorageKey ?? draftStorageKey(props.data.market.slug)} {...props} />;
+}
+
+function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initialPhotos = [], initialAddress, initialSuggestion, initialSuggestions, initialResult, persistDraft = true }: PostTaskScreenProps) {
   const t = useTranslations('postTask');
   const router = useRouter();
   const schema = useMemo(() => createTaskDraftSchema(data), [data]);
@@ -92,6 +97,8 @@ export function PostTaskScreen({ data, handlers, initialStep, initialValues, ini
   const [ready, setReady] = useState(false);
   const [storageFailed, setStorageFailed] = useState(false);
   const [restored, setRestored] = useState(false);
+  const [restoringPhotos, setRestoringPhotos] = useState(false);
+  const [photoRestoreFailed, setPhotoRestoreFailed] = useState(false);
   const [invalid, setInvalid] = useState(!!initialResult && !initialResult.ok && initialResult.code === 'validation_failed');
   const [focusField, setFocusField] = useState<string | undefined>(resultFields(initialResult).find((name) => stepForField(name) === step));
   const heading = useRef<HTMLHeadingElement>(null);
@@ -99,14 +106,18 @@ export function PostTaskScreen({ data, handlers, initialStep, initialValues, ini
   const posted = useRef(false);
   const stepRef = useRef(step);
   const addressRef = useRef(address);
-  const key = draftStorageKey(data.market.slug);
+  const resolvePhotos = useRef(handlers.onResolvePhotos);
+  const key = data.draftStorageKey ?? draftStorageKey(data.market.slug);
   const index = POST_TASK_STEPS.indexOf(step);
+
+  useEffect(() => { resolvePhotos.current = handlers.onResolvePhotos; }, [handlers.onResolvePhotos]);
 
   useEffect(() => {
     let active = true;
     // Hydrate browser-only storage after the server and client have rendered the same defaults.
     void Promise.resolve().then(() => {
       if (!active) return;
+      setRestoringPhotos(false); setPhotoRestoreFailed(false);
       if (persistDraft) {
         try {
           const raw = sessionStorage.getItem(key);
@@ -115,13 +126,28 @@ export function PostTaskScreen({ data, handlers, initialStep, initialValues, ini
             const savedStep = saved.step === 'review' && !schema.safeParse(saved.values).success ? 'category' : saved.step;
             reset(saved.values); setStep(savedStep); setAddress(saved.address); setRestored(true);
             stepRef.current = savedStep; addressRef.current = saved.address;
+            setPhotos((current) => current.filter((photo) => saved.values.photoIds.includes(photo.id)));
+            const resolve = resolvePhotos.current;
+            if (resolve && saved.values.photoIds.length) {
+              setRestoringPhotos(true); setPhotoRestoreFailed(false);
+              void Promise.resolve().then(() => resolve({ photoIds: saved.values.photoIds })).then(
+                (resolved) => {
+                  if (!active) return;
+                  // Keep uploads added while the query was pending, and don't restore photos the person removed.
+                  const currentIds = getValues('photoIds');
+                  setPhotos((current) => [...current, ...resolved.filter((photo) => !current.some((item) => item.id === photo.id))].filter((photo) => currentIds.includes(photo.id)));
+                  setRestoringPhotos(false);
+                },
+                () => { if (active) { setRestoringPhotos(false); setPhotoRestoreFailed(true); } },
+              );
+            }
           }
         } catch { setStorageFailed(true); }
       }
       setReady(true);
     });
     return () => { active = false; };
-  }, [key, persistDraft, reset, schema]);
+  }, [getValues, key, persistDraft, reset, schema]);
 
   const saveDraft = useCallback(() => {
     if (!persistDraft || posted.current) return;
@@ -223,6 +249,9 @@ export function PostTaskScreen({ data, handlers, initialStep, initialValues, ini
         </ol>
       </header>
       <div aria-live="polite" className="text-sm text-muted-foreground">{storageFailed ? t('storageUnavailable') : restored ? t('restored') : t('saved')}</div>
+      <div role="status" aria-live="polite" className={restoringPhotos || photoRestoreFailed ? 'flex items-center gap-2 text-sm text-muted-foreground' : 'sr-only'}>
+        {restoringPhotos ? <><Spinner />{t('photos.loadingSaved')}</> : photoRestoreFailed ? t('photos.restoreFailed') : ''}
+      </div>
       <FormFeedback result={unknownFieldFailure ? { ...result, fieldErrors: undefined } : result} />
       {invalid && !unknownFieldFailure && <p role="alert" className="text-sm text-destructive">{t('checkFields')}</p>}
       {hasProhibited && <Link href={routes.legal('prohibited-tasks')} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">{t('prohibitedLink')}</Link>}

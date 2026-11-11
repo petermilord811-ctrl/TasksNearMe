@@ -25,7 +25,10 @@ import publicTask from './publicTask.json';
 import helperProfile from './helperProfile.json';
 import reviews from './reviews.json';
 import postTask from './postTask.json';
+import myTasks from './myTasks.json';
+import taskManage from './taskManage.json';
+import offers from './offers.json';
 
-const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, publicTask, helperProfile, reviews, postTask };
+const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, publicTask, helperProfile, reviews, postTask, myTasks, taskManage, offers };
 
 export default uiMessages;

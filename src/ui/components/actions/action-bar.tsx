@@ -16,9 +16,11 @@ export interface ActionBarProps {
   actions: ActionDescriptor[];
   onAction: (id: string) => Promise<ActionResult>;
   sticky?: boolean;
+  /** Return true when a screen opens its own confirmation flow (for example, a required reason). */
+  onRequestAction?: (id: string, trigger: HTMLButtonElement) => boolean;
 }
 
-export function ActionBar({ actions, onAction, sticky = false }: ActionBarProps) {
+export function ActionBar({ actions, onAction, sticky = false, onRequestAction }: ActionBarProps) {
   const t = useTranslations('actions');
   const reason = useTranslations('actionReasons');
   const feedback = useTranslations('feedback');
@@ -27,6 +29,9 @@ export function ActionBar({ actions, onAction, sticky = false }: ActionBarProps)
   const [pendingId, setPendingId] = useState<string | null>(null);
   const pendingRef = useRef(false);
   const [confirmation, setConfirmation] = useState<ActionDescriptor | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreTrigger = useRef<HTMLButtonElement | null>(null);
+  const customFlowRequested = useRef(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const confirmationTrigger = useRef<HTMLButtonElement | null>(null);
   const restoreAfterPending = useRef(false);
@@ -81,6 +86,11 @@ export function ActionBar({ actions, onAction, sticky = false }: ActionBarProps)
           data-action-id={action.id}
           className="min-h-11 w-full whitespace-normal px-4 py-2 text-center lg:w-auto"
           onClick={(event) => {
+            if (onRequestAction?.(action.id, context === 'more' ? moreTrigger.current ?? event.currentTarget : event.currentTarget)) {
+              customFlowRequested.current = context === 'more';
+              setMoreOpen(false);
+              return;
+            }
             if (action.confirm) {
               confirmationTrigger.current = event.currentTarget;
               setConfirmation(action);
@@ -107,9 +117,11 @@ export function ActionBar({ actions, onAction, sticky = false }: ActionBarProps)
           <div className="hidden flex-wrap items-start gap-3 lg:contents">
             {actions.slice(1).map((action) => renderAction(action, 'desktop'))}
           </div>
-          <Sheet>
-            <SheetTrigger asChild><Button variant="outline" className="min-h-11 min-w-11 lg:hidden"><Ellipsis aria-hidden="true" className="size-4" />{feedback('more')}</Button></SheetTrigger>
-            <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-xl pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+            <SheetTrigger asChild><Button ref={moreTrigger} variant="outline" className="min-h-11 min-w-11 lg:hidden"><Ellipsis aria-hidden="true" className="size-4" />{feedback('more')}</Button></SheetTrigger>
+            <SheetContent side="bottom" onCloseAutoFocus={(event) => {
+              if (customFlowRequested.current) { event.preventDefault(); customFlowRequested.current = false; }
+            }} className="max-h-[85dvh] overflow-y-auto rounded-t-xl pb-[max(1rem,env(safe-area-inset-bottom))]">
               <SheetHeader><SheetTitle>{feedback('moreTitle')}</SheetTitle><SheetDescription>{feedback('moreDescription')}</SheetDescription></SheetHeader>
               <div className="grid gap-4 px-4 pb-4">{actions.slice(1).map((action) => renderAction(action, 'more'))}</div>
               <div aria-live="polite" aria-atomic="true" className="px-4 pb-4">
