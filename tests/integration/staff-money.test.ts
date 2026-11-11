@@ -2,13 +2,15 @@ import { and, eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { reportProblem, submitCompletion } from '@/modules/bookings/completion';
+import { getBookingView } from '@/modules/bookings/hub';
+import { getNotificationsPage } from '@/modules/notifications/service';
 import { confirmBooking } from '@/modules/bookings/confirm';
 import { bookings } from '@/modules/bookings/schema';
 import { earnings } from '@/modules/earnings/schema';
 import { offers } from '@/modules/offers/schema';
 import { payments, refunds } from '@/modules/payments/schema';
 import { supportCases } from '@/modules/support/schema';
-import { getAdminCase, previewResolution, type StaffActor } from '@/modules/support/staff';
+import { getAdminCase, previewResolution, staffReply, type StaffActor } from '@/modules/support/staff';
 import { getAdminBooking, resolveCaseWithMoney, revealBookingAddress, staffRefund } from '@/modules/support/staff-money';
 import { files, tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
@@ -100,5 +102,26 @@ describe('the staff booking page', () => {
     expect(revealed.ok && revealed.address.line1).toBeTruthy();
     const [logged] = await db.select().from(auditLog).where(and(eq(auditLog.action, 'booking.view_address'), eq(auditLog.targetId, settled!.id)));
     expect(logged).toMatchObject({ actorId: 'usr_alex', reason: 'Checking the reported damage location.' });
+  });
+});
+
+describe('the dispute on the booking page (UI-026)', () => {
+  it('shows each person the case, support’s replies as notifications, and their own money once settled', async () => {
+    const { bookingId, caseId } = await disputedDesk('tsk_dispute_view');
+    const hub = { db, cipher: fieldCipherFromEnv() };
+    expect((await getBookingView(hub, 'usr_priya', bookingId, now()))?.dispute).toMatchObject({ caseId, status: 'open', reason: 'not_done', canOpenCase: true });
+    expect((await getBookingView(hub, 'usr_jordan', bookingId, now()))?.dispute).toMatchObject({ caseId, canOpenCase: false });
+
+    expect(await staffReply(db, alex, caseId, { partyId: 'usr_jordan', body: 'Jordan, what happened with the drawers?' }, now())).toEqual({ ok: true, code: 'sent' });
+    expect((await getBookingView(hub, 'usr_jordan', bookingId, now()))?.dispute?.canOpenCase).toBe(true);
+    const jordanNotes = await getNotificationsPage(db, 'usr_jordan', now());
+    expect(jordanNotes.notifications.find((note) => note.type === 'support_replied')).toMatchObject({ target: { kind: 'support_case', caseId } });
+
+    const settle = { resolution: 'settle' as const, settlePriceCents: 4500, summary: 'Settled at $45 for the unfinished drawers.' };
+    expect(await resolveCaseWithMoney(db, pay, alex, caseId, await versionOf(caseId), settle, now())).toEqual({ ok: true, code: 'saved' });
+    expect((await getBookingView(hub, 'usr_priya', bookingId, now()))?.dispute?.resolution).toMatchObject({ type: 'settle', refundCents: 1650 });
+    expect((await getBookingView(hub, 'usr_jordan', bookingId, now()))?.dispute?.resolution).toMatchObject({ type: 'settle', receivesCents: 4050 });
+    const priyaNotes = await getNotificationsPage(db, 'usr_priya', now());
+    expect(priyaNotes.notifications.find((note) => note.type === 'case_resolved')).toMatchObject({ target: { kind: 'support_case', caseId } });
   });
 });

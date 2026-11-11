@@ -130,6 +130,18 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
           return [forPoster('review_published'), forHelper('review_published')];
       }
     }
+    case 'support.replied': {
+      const caseId = text(p.caseId);
+      const userId = text(p.partyUserId);
+      if (!caseId || !userId) return [];
+      return [{ userId, type: 'support_replied' as const, target: { kind: 'support_case', caseId } as AttentionTarget, title: text(p.subject) }];
+    }
+    case 'support.resolved': {
+      const caseId = text(p.caseId);
+      const recipients = Array.isArray(p.recipientIds) ? (p.recipientIds as string[]) : [];
+      if (!caseId) return [];
+      return recipients.map((userId) => ({ userId, type: 'case_resolved' as const, target: { kind: 'support_case', caseId } as AttentionTarget, title: text(p.subject) }));
+    }
     case 'message.sent': {
       const threadId = text(p.threadId);
       const recipients = Array.isArray(p.recipientIds) ? (p.recipientIds as string[]) : [];

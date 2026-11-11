@@ -1,7 +1,10 @@
 import { and, asc, desc, eq, inArray, isNull, ne, or } from 'drizzle-orm';
 import type {
   ActionResult,
+  BookingDisputeView,
   CaseEventView,
+  CaseResolution,
+  ProblemReason,
   CaseStatus,
   MemberCaseKind,
   NewSupportRequestInput,
@@ -18,6 +21,8 @@ import type {
 import { CASE_STATUSES, newSupportRequestInputSchema, reportInputSchema, routes, supportReplyInputSchema } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
+import { earnings } from '@/modules/earnings/schema';
+import { refunds } from '@/modules/payments/schema';
 import { MAX_PHOTO_BYTES, photoFromFile } from '@/modules/files/uploads';
 import { threadParticipants, threads } from '@/modules/messaging/schema';
 import { files, tasks } from '@/modules/tasks/schema';
@@ -305,6 +310,49 @@ export async function replyToSupportCase(db: Db, userId: string, caseId: string,
     await markCaseRead(tx, row.id, userId, now);
   });
   return { ok: true, code: 'sent' };
+}
+
+// ---- Disputes on the booking page (UI-026) -----------------------------------------------------------
+
+/**
+ * The latest problem report on a booking, as one of its two people sees it: the client always can open
+ * the case; the helper once support wrote to them. Money is projected per role: the client's dispute
+ * refunds, or what the helper receives.
+ */
+export async function getBookingDispute(db: Db, bookingId: string, viewerId: string, role: 'poster' | 'helper'): Promise<BookingDisputeView | undefined> {
+  const [row] = await db
+    .select()
+    .from(supportCases)
+    .where(and(eq(supportCases.bookingId, bookingId), eq(supportCases.type, 'dispute')))
+    .orderBy(desc(supportCases.createdAt))
+    .limit(1);
+  if (!row) return undefined;
+  const canOpenCase = row.openedByUserId === viewerId || (await visibleCase(db, viewerId, row.id)) !== null;
+  let resolution: BookingDisputeView['resolution'];
+  if (row.resolution && row.resolvedAt) {
+    const money =
+      role === 'poster'
+        ? (await db.select({ amountCents: refunds.amountCents }).from(refunds).where(and(eq(refunds.bookingId, bookingId), eq(refunds.status, 'succeeded'), eq(refunds.reason, 'dispute_settlement')))).reduce(
+            (sum, item) => sum + item.amountCents,
+            0,
+          )
+        : (await db.select({ amountCents: earnings.amountCents }).from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'earnings')))).reduce((sum, item) => sum + item.amountCents, 0);
+    resolution = {
+      type: row.resolution as CaseResolution,
+      summary: row.resolutionSummary ?? '',
+      at: row.resolvedAt.toISOString(),
+      ...(role === 'poster' && money > 0 ? { refundCents: money } : {}),
+      ...(role === 'helper' && money > 0 ? { receivesCents: money } : {}),
+    };
+  }
+  return {
+    caseId: row.id,
+    status: caseStatusOf(row.status),
+    reason: (row.reason ?? 'other') as ProblemReason,
+    openedAt: row.createdAt.toISOString(),
+    canOpenCase,
+    ...(resolution ? { resolution } : {}),
+  };
 }
 
 // ---- Reporting and blocking from a conversation -------------------------------------------------------

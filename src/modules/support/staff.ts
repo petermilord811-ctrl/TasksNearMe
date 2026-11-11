@@ -50,6 +50,7 @@ import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { caseLabelsOf, caseStatusOf } from './service';
 import { supportCaseEvents, supportCases } from './schema';
@@ -521,6 +522,7 @@ export async function staffReply(db: Db, staff: StaffActor, caseId: string, inpu
   }
   const limited = await consumeRateLimit(db, `staff-reply:${staff.id}`, REPLY_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
+  const subject = (await caseLabelsOf(db, [ctx.row])).get(ctx.row.id)?.subject ?? 'Support';
   await db.transaction(async (tx) => {
     await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'message', authorUserId: staff.id, partyUserId: parsed.data.partyId, body: parsed.data.body, createdAt: now });
     await tx
@@ -528,6 +530,13 @@ export async function staffReply(db: Db, staff: StaffActor, caseId: string, inpu
       .set({ updatedAt: now, ...(ctx.row.firstResponseAt ? {} : { firstResponseAt: now }) })
       .where(eq(supportCases.id, ctx.row.id));
     await audit(tx, staff, 'case.reply', ctx.row.id, now, { metadata: { to: parsed.data.partyId } });
+    await tx.insert(outboxEvents).values({
+      id: newId('evt'),
+      type: 'support.replied',
+      aggregateType: 'support_case',
+      aggregateId: ctx.row.id,
+      payload: { caseId: ctx.row.id, partyUserId: parsed.data.partyId, subject },
+    });
   });
   return { ok: true, code: 'sent' };
 }
@@ -580,7 +589,19 @@ export async function resolveCase(
     action: 'case.resolve',
     metadata: { resolution: parsed.data.resolution },
   });
-  return failed ?? { ok: true, code: 'saved' };
+  if (failed) return failed;
+  await db.insert(outboxEvents).values({
+    id: newId('evt'),
+    type: 'support.resolved',
+    aggregateType: 'support_case',
+    aggregateId: ctx.row.id,
+    payload: {
+      caseId: ctx.row.id,
+      recipientIds: ctx.parties.filter((party) => party.canMessage).map((party) => party.person.id),
+      subject: (await caseLabelsOf(db, [ctx.row])).get(ctx.row.id)?.subject ?? 'Support',
+    },
+  });
+  return { ok: true, code: 'saved' };
 }
 
 export async function closeCase(db: Db, staff: StaffActor, caseId: string, version: number, now: Date): Promise<ActionResult> {

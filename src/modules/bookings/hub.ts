@@ -32,6 +32,7 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { recordCompletionMoney } from '@/modules/earnings/service';
 import { isHelperSaved, myReviewOf, setHelperSaved } from '@/modules/reviews/service';
+import { getBookingDispute } from '@/modules/support/service';
 import { bookingThreadLink, ensureThread, postEvent } from '@/modules/messaging/service';
 import { autoApproveDue, completionViewOf } from './completion-view';
 import { addressVisibility, allBookingActions, bookingDeadlines, needsAction, type BookingFacts, type BookingPolicy } from './domain';
@@ -195,9 +196,12 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
       at: row.updatedAt.toISOString(),
     }));
 
+  const dispute = await getBookingDispute(db, booking.id, userId, role);
+
   return {
     id: booking.id,
     task: { id: task.id, title: found.view.title, categorySlug: found.view.categorySlug, schedule: found.view.schedule },
+    ...(dispute ? { dispute } : {}),
     status: booking.status as BookingStatus,
     ...(booking.cancelReason ? { cancelReason: booking.cancelReason as CancelReason } : {}),
     ...(booking.completedVia ? { completedVia: booking.completedVia as CompletedVia } : {}),
