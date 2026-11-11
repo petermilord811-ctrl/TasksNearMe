@@ -1,6 +1,7 @@
 {
   "back": "My tasks",
   "budget": "Your budget",
+  "invites": "Invites you sent",
   "offers": "{count, plural, one {# offer} other {# offers}}",
   "sort": "Sort offers",
   "sortOptions": { "given": "As received", "newest": "Newest", "lowest": "Lowest price" },
@@ -42,7 +43,7 @@
     }
   },
   "previews": {
-    "group": "Task management",
+    "withInvite": "Direct invite", "group": "Task management",
     "offers": "Task with three offers",
     "no-offers": "Waiting for offers",
     "stale-offer": "Offer needs re-confirmation",

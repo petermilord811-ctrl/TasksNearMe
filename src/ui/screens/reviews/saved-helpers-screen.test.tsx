@@ -27,6 +27,7 @@ describe('SavedHelpersScreen', () => {
     expect(screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual(mayaSavedHelpersData.helpers.map((helper) => helper.displayName));
     for (const helper of mayaSavedHelpersData.helpers) {
       expect(screen.getByRole('link', { name: helper.displayName })).toHaveAttribute('href', routes.helperProfile(helper.handle));
+      expect(screen.getByRole('link', { name: `Request ${helper.displayName}` })).toHaveAttribute('href', routes.app.requestHelper(helper.handle));
       expect(screen.getByRole('button', { name: `Remove ${helper.displayName} from saved helpers` })).toBeEnabled();
     }
   });

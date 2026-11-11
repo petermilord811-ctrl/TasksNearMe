@@ -85,12 +85,10 @@
     "proposal": "About this change",
     "proposedBy": {
       "you": "You proposed this change",
-      "helper": "Your helper proposed this change",
-      "client": "Your client proposed this change"
+      "person": "{name} proposed a change"
     },
     "waiting": {
-      "helper": "Waiting for your helper",
-      "client": "Waiting for your client",
+      "person": "Waiting for {name}",
       "you": "Waiting for your response"
     },
     "statuses": {

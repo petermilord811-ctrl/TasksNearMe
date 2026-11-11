@@ -3,6 +3,7 @@
   "description": "Find the helpers you'd like to work with again.",
   "listTitle": "{count, plural, =0 {Your saved helpers} one {# saved helper} other {# saved helpers}}",
   "remove": "Remove",
+  "request": "Request {name}",
   "removeLabel": "Remove {name} from saved helpers",
   "removing": "Removing…",
   "removingLabel": "Removing {name} from saved helpers",

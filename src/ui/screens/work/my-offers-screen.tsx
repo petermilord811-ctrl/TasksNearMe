@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { CalendarDays, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type ISODateTime, type MyOfferRow, type MyOffersPageData } from '@/contracts';
+import { routes, type ISODateTime, type InviteHandlers, type MyOfferRow, type MyOffersPageData } from '@/contracts';
 import { formatDateTime, formatHours, formatMoney, formatRelative } from '@/shared/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useOfferStatus } from '@/ui/components/status/use-status';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/primitives/tabs';
+import { MyInvites } from './my-invites';
 
 const tabs = ['active', 'booked', 'closed'] as const;
 type OfferTab = (typeof tabs)[number];
@@ -15,6 +16,8 @@ type OfferTab = (typeof tabs)[number];
 export interface MyOffersScreenProps {
   data: MyOffersPageData;
   now: ISODateTime;
+  /** Supplied by routes that include direct invites. */
+  inviteHandlers?: InviteHandlers;
   /** Lets the preview gallery show each tab directly. */
   initialTab?: OfferTab;
 }
@@ -51,10 +54,11 @@ export function OfferRow({ row, now, headingLevel = 2 }: { row: MyOfferRow; now:
   </article>;
 }
 
-export function MyOffersScreen({ data, now, initialTab = 'active' }: MyOffersScreenProps) {
+export function MyOffersScreen({ data, now, inviteHandlers, initialTab = 'active' }: MyOffersScreenProps) {
   const t = useTranslations('myOffers');
   return <div className="mx-auto w-full max-w-content space-y-6">
     <PageHeader title={t('title')} description={t('description')} />
+    {data.invites && inviteHandlers && <MyInvites key={data.openInviteId ?? 'list'} invites={data.invites} openInviteId={data.openInviteId} handlers={inviteHandlers} now={now} />}
     <Tabs defaultValue={initialTab} className="gap-6">
       <TabsList aria-label={t('tabsLabel')} className="w-full sm:w-fit">
         {tabs.map((tab) => <TabsTrigger key={tab} value={tab} className="tabular-nums sm:min-w-28">{t('tabCount', { label: t(`tabs.${tab}`), count: data[tab].length })}</TabsTrigger>)}

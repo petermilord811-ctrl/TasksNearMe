@@ -81,7 +81,7 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
               {helper.responseTimeMinutes !== undefined && <p className="flex items-start gap-2"><Clock3 aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{t('responseTime', { minutes: helper.responseTimeMinutes })}</span></p>}
               <p>{t('memberSince', { date: formatMonthYear(helper.memberSince) })}</p>
             </div>
-            <Link href={routes.app.requestHelper(helper.handle)} className={cn(buttonVariants(), 'w-full lg:mt-auto')}>{t('requestBooking')}</Link>
+            <Link href={routes.app.requestHelper(helper.handle)} className={cn(buttonVariants(), 'w-full lg:mt-auto')}>{t('requestBooking', { name: helper.displayName })}</Link>
           </div>
         </div>
       </header>

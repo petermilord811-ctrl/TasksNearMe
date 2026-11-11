@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { ArrowLeft, CalendarDays, CheckCircle2, Hammer, Laptop, Leaf, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type ActionResult, type CategorySlug, type ISODateTime, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
+import { routes, type ActionResult, type CategorySlug, type InviteHandlers, type ISODateTime, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
 import { formatDate, formatDateTime, formatHours, formatMoney, formatRelative, formatTimeRange, marketDayKey } from '@/shared/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
+import { InviteCard } from '@/ui/components/invites/invite-card';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useTaskStatus } from '@/ui/components/status/use-status';
 import { buttonVariants } from '@/ui/primitives/button';
@@ -15,6 +16,8 @@ export interface TaskManageScreenProps {
   data: TaskOwnerView;
   handlers: TaskOwnerHandlers;
   now: ISODateTime;
+  /** Supplied by routes that include direct invites. */
+  inviteHandlers?: InviteHandlers;
   /** Preview-only starting state. */
   initialSelectedOfferIds?: string[];
   initialCancelOpen?: boolean;
@@ -23,7 +26,7 @@ export interface TaskManageScreenProps {
 
 const categoryIcons: Record<CategorySlug, LucideIcon> = { 'furniture-assembly': Hammer, 'moving-help': Package, 'yard-cleanup': Leaf, 'light-cleaning': Sparkles, 'computer-help': Laptop };
 
-export function TaskManageScreen({ data, handlers, now, initialSelectedOfferIds, initialCancelOpen, initialCancelResult }: TaskManageScreenProps) {
+export function TaskManageScreen({ data, handlers, inviteHandlers, now, initialSelectedOfferIds, initialCancelOpen, initialCancelResult }: TaskManageScreenProps) {
   const t = useTranslations('taskManage');
   const card = useTranslations('taskCard');
   const status = useTaskStatus(data.task.status);
@@ -46,6 +49,10 @@ export function TaskManageScreen({ data, handlers, now, initialSelectedOfferIds,
       <TaskActions actions={data.actions} handlers={handlers} initialCancelOpen={initialCancelOpen} initialCancelResult={initialCancelResult} />
     </header>
     {data.bookingId && <section className="space-y-3 rounded-xl border bg-secondary p-4 text-secondary-foreground sm:p-5"><h2 className="flex items-center gap-2 font-heading text-xl font-semibold"><CheckCircle2 aria-hidden="true" className="size-5 shrink-0" />{t('bookedTitle')}</h2><p className="text-sm">{t('bookedBody')}</p><Link href={routes.app.booking(data.bookingId)} className={buttonVariants({ variant: 'outline' })}>{t('viewBooking')}</Link></section>}
+    {data.invites && data.invites.length > 0 && inviteHandlers && <section aria-labelledby="task-invites-title" className="space-y-4">
+      <h2 id="task-invites-title" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('invites')}</h2>
+      <ul className="grid gap-4 lg:grid-cols-2">{data.invites.map((invite) => <li key={invite.id} className="min-w-0"><InviteCard invite={invite} handlers={inviteHandlers} now={now} headingLevel={3} /></li>)}</ul>
+    </section>}
     <section aria-labelledby="task-offers-title" className="space-y-4">
       <h2 id="task-offers-title" className="font-heading text-xl font-semibold tabular-nums md:text-[22px]/7.5">{t('offers', { count: data.offers.length })}</h2>
       {data.offers.length ? <TaskOffers offers={data.offers} now={now} onAction={handlers.onOfferAction} initialSelectedOfferIds={initialSelectedOfferIds} /> : <EmptyState title={t('noOffersTitle')} body={task.location.kind === 'local' ? t('noOffersLocal', { area: task.location.areaName }) : t('noOffersRemote')} />}

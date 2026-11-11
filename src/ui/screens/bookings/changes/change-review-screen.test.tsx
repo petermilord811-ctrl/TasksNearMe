@@ -39,11 +39,16 @@ async function confirmAction(user: ReturnType<typeof userEvent.setup>, name: str
 }
 
 describe('ChangeReviewScreen', () => {
+  it('names the person who is being asked to respond', () => {
+    mount(deskChairChangeProposerData);
+    expect(screen.getByText(`Waiting for ${deskChairChangeProposerData.booking.helperDisplayName}`)).toBeVisible();
+  });
+
   it('shows the supplied terms, marks changed lines, and renders only the received actions in order', () => {
     mount(deskChairChangeCounterpartyData);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Change to Assemble a desk');
-    expect(screen.getByText(changes.review.proposedBy.client)).toBeVisible();
+    expect(screen.getByText(`${deskChairChangeCounterpartyData.booking.posterDisplayName} proposed a change`)).toBeVisible();
     expect(screen.getByText(deskChairChangeCounterpartyData.change.message)).toBeVisible();
     expect(screen.getAllByText('Changed')).toHaveLength(4);
     expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Accept change', 'Decline change']);
