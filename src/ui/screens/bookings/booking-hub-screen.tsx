@@ -14,6 +14,7 @@ import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { PaymentMethodLabel } from '@/ui/components/payments';
 import { HelperCard } from '@/ui/components/people/helper-card';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
+import { RatingStars } from '@/ui/components/people/rating-stars';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus, usePaymentStatus } from '@/ui/components/status/use-status';
@@ -102,6 +103,15 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
     </div>
 
     <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} />
+
+    {data.myReview && <section aria-label={t('review.title')} className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('review.title')}</h2>
+      <p className="font-medium tabular-nums">{t('review.rating', { rating: data.myReview.rating })}</p>
+      <RatingStars rating={{ average: data.myReview.rating, count: 1 }} />
+      <p className="text-sm text-muted-foreground">{data.myReview.publishedAt
+        ? <time dateTime={data.myReview.publishedAt}>{t('review.visible', { date: formatDate(data.myReview.publishedAt) })}</time>
+        : t('review.hidden')}</p>
+    </section>}
 
     {data.completion && <section aria-label={t('work')} className="space-y-4">
       <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('work')}</h2>

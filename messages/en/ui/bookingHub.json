@@ -13,6 +13,8 @@
     "helperPendingFunding": "Helper · client is booking",
     "clientCompletionSubmitted": "Client · needs approval",
     "clientCompleted": "Client · done",
+    "clientSavedReviewed": "Client · helper saved and review sent",
+    "clientReviewPublished": "Client · review visible",
     "helperCompleted": "Helper · address still visible",
     "helperAddressHidden": "Helper · address hidden",
     "clientCanceledLate": "Client · late cancellation",
@@ -57,6 +59,13 @@
   "back": "All bookings",
   "helper": "Your helper",
   "client": "Your client",
+  "saved": "Saved",
+  "review": {
+    "title": "Your review",
+    "rating": "You rated this {rating, plural, one {# star} other {# stars}}",
+    "visible": "Visible since {date}",
+    "hidden": "Hidden until they review too"
+  },
   "work": "The work",
   "memberSince": "Member since {date}",
   "whenWhere": "When and where",

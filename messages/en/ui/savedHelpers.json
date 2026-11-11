@@ -1,0 +1,28 @@
+{
+  "title": "Saved helpers",
+  "description": "Find the helpers you'd like to work with again.",
+  "listTitle": "{count, plural, =0 {Your saved helpers} one {# saved helper} other {# saved helpers}}",
+  "remove": "Remove",
+  "removeLabel": "Remove {name} from saved helpers",
+  "removing": "Removing…",
+  "removingLabel": "Removing {name} from saved helpers",
+  "removedButton": "Removed",
+  "removedLabel": "{name} removed from saved helpers",
+  "removed": "{name} was removed from saved helpers.",
+  "emptyTitle": "Save helpers you'd like to book again",
+  "emptyBody": "Save a helper from a booking. You'll find them here when you need help again.",
+  "viewBookings": "View bookings",
+  "errors": {
+    "not_found": "This helper could not be found. Refresh the page and try again.",
+    "unknown": "We couldn't remove this helper. Try again. If it keeps happening, get help."
+  },
+  "previews": {
+    "group": "Reviews and saved helpers",
+    "default": "Saved helpers",
+    "empty": "No saved helpers yet",
+    "pending": "Removing a saved helper",
+    "updated": "Helper removed",
+    "notFound": "Saved helper not found",
+    "unknown": "Saved helper removal failed"
+  }
+}

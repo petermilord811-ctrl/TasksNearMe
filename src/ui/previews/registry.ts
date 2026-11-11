@@ -38,6 +38,8 @@ import { messagesScreenPreviews } from './messages-screens.preview';
 import { bookingSheetsPreviews } from './booking-sheets.preview';
 import { moneyPagePreviews } from './money-pages.preview';
 import { homePreviews } from './home.preview';
+import { reviewPreviews } from './reviews.preview';
+import { savedHelpersPreviews } from './saved-helpers.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -76,4 +78,6 @@ export const previews: PreviewEntry[] = [
   ...bookingSheetsPreviews,
   ...moneyPagePreviews,
   ...homePreviews,
+  ...reviewPreviews,
+  ...savedHelpersPreviews,
 ];
