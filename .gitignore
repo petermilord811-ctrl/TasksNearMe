@@ -38,3 +38,6 @@ npm-debug.log*
 automation/runs/
 automation/logs/
 .npm-cache/
+
+# Local file storage (uploads in development)
+/.data/

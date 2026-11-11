@@ -47,5 +47,10 @@
       "title": "Open tasks in {market}",
       "description": "Local tasks people need help with in {market}: furniture assembly, moving, yard work, cleaning, and computer help."
     }
+  },
+  "taskPosted": {
+    "title": "Your task is posted",
+    "body": "Helpers in your area can see it now and send offers. We'll let you know when one arrives.",
+    "viewPublic": "See it as helpers do"
   }
 }
