@@ -1,0 +1,67 @@
+/** @vitest-environment jsdom */
+import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { NextIntlClientProvider } from 'next-intl';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { CASE_STATUSES, routes, type SupportCasePageData } from '@/contracts';
+import { closedCasePageData, disputeCasePageData, fakeSupportCaseHandlers } from '@/fixtures';
+import { formatDate } from '@/shared/format';
+import uiMessages from '../../../../messages/en/ui';
+import supportCase from '../../../../messages/en/ui/supportCase.json';
+import support from '../../../../messages/en/ui/support.json';
+import { SupportCaseScreen } from './support-case-screen';
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+afterEach(cleanup);
+const now = '2026-11-23T18:30:00.000Z';
+const messages = { ...uiMessages, supportCase, support };
+
+function mount(data: SupportCasePageData = disputeCasePageData) {
+  return render(<NextIntlClientProvider locale="en" messages={messages}><SupportCaseScreen data={data} handlers={fakeSupportCaseHandlers} now={now} /></NextIntlClientProvider>);
+}
+
+describe('SupportCaseScreen', () => {
+  it('shows one title, supplied case context, Central opening date and booking link', () => {
+    mount();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(disputeCasePageData.case.subject);
+    expect(screen.getByText(support.kinds.dispute)).toBeInTheDocument();
+    expect(screen.getByText(`Opened ${formatDate(disputeCasePageData.case.openedAt, { withYear: true })}`)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: supportCase.booking })).toHaveAttribute('href', routes.app.booking(disputeCasePageData.case.bookingId!));
+    expect(screen.getByRole('form', { name: supportCase.reply })).toBeInTheDocument();
+  });
+
+  it('uses canReply as supplied and omits the reply box and booking link on a closed case', () => {
+    mount(closedCasePageData);
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: supportCase.send })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: supportCase.booking })).not.toBeInTheDocument();
+    expect(screen.getByText(supportCase.closed)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: supportCase.newRequest })).toHaveAttribute('href', routes.app.support());
+  });
+
+  it('renders supplied oldest-first events, authors and photos that open larger', async () => {
+    const user = userEvent.setup();
+    mount();
+    const log = screen.getByRole('log', { name: supportCase.conversation });
+    const articles = within(log).getAllByRole('article');
+    expect(articles).toHaveLength(disputeCasePageData.events.length);
+    expect(articles[0]).toHaveTextContent(disputeCasePageData.events[0]!.body!);
+    expect(articles[0]).toHaveTextContent(supportCase.sender.me);
+    expect(articles[2]).toHaveTextContent(supportCase.sender.support);
+    expect(articles[2]).toHaveTextContent(disputeCasePageData.events[2]!.body!);
+    await user.click(within(log).getByRole('button', { name: /View photo:/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Photo 1 of 1' });
+    expect(within(dialog).getByRole('img')).toHaveAttribute('src', disputeCasePageData.events[0]!.photos![0]!.src);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(within(log).getByRole('button', { name: /View photo:/ })).toHaveFocus();
+  });
+
+  it.each(CASE_STATUSES)('shows neutral %s labels without inferring who the viewer is', (status) => {
+    mount({ ...disputeCasePageData, case: { ...disputeCasePageData.case, status }, events: [{ id: status, from: 'system', kind: 'status', status, at: now }] });
+    const label = messages.status.case[status];
+    expect(label).toBeTruthy();
+    expect(screen.getAllByText(label)).toHaveLength(2);
+  });
+});
