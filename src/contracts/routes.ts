@@ -1,4 +1,5 @@
 import type { AdminCaseStatusFilter, AdminQueue } from './admin';
+import type { AdminRewardFilter } from './admin-people';
 import type { CategorySlug } from './common';
 import type { FindWorkQuery } from './helper-work';
 import type { ExactAddress } from './location';
@@ -117,7 +118,7 @@ export const routes = {
     home: () => '/admin',
     verify: (next?: string) => withQuery('/admin/verify', { next }),
     search: (q: string) => withQuery('/admin/search', { q }),
-    users: () => '/admin/users',
+    users: (query?: string) => withQuery('/admin/users', { q: query }),
     user: (userId: string) => `/admin/users/${enc(userId)}`,
     task: (taskId: string) => `/admin/tasks/${enc(taskId)}`,
     reports: () => '/admin/reports',
@@ -127,7 +128,7 @@ export const routes = {
       withQuery('/admin/cases', { queue: filters.queue, status: filters.status, mine: filters.mine ? '1' : undefined }),
     case: (caseId: string) => `/admin/cases/${enc(caseId)}`,
     payments: () => '/admin/payments',
-    rewards: () => '/admin/rewards',
+    rewards: (filter?: AdminRewardFilter) => withQuery('/admin/rewards', { status: filter }),
     config: () => '/admin/config',
     audit: () => '/admin/audit',
     staff: () => '/admin/staff',

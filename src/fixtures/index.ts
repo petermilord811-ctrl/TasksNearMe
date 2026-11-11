@@ -28,3 +28,4 @@ export * from './admin';
 export * from './rewards';
 export * from './changes';
 export * from './invites';
+export * from './admin-people';
