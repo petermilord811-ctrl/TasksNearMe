@@ -1,6 +1,7 @@
-import { boolean, doublePrecision, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { boolean, doublePrecision, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { users } from '../accounts/schema';
 import { areas, categories } from '../markets/schema';
+import { files } from '../tasks/schema';
 import { createdAt, updatedAt } from '../../platform/db/columns';
 
 /**
@@ -51,4 +52,23 @@ export const helperServices = pgTable(
     status: text('status').notNull().default('active'),
   },
   (t) => [uniqueIndex('helper_services_user_category_idx').on(t.userId, t.categoryId)],
+);
+
+/** Photos of past work on a helper's profile, in display order. */
+export const helperWorkSamples = pgTable(
+  'helper_work_samples',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    fileId: text('file_id')
+      .notNull()
+      .references(() => files.id),
+    categoryId: text('category_id').references(() => categories.id),
+    caption: text('caption'),
+    position: integer('position').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('helper_work_samples_user_idx').on(t.userId, t.position)],
 );

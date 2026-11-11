@@ -21,7 +21,7 @@ import {
   listCategoryViews,
   listPublicMarketSlugs,
 } from '@/modules/markets/queries';
-import { countFoundingHelpers, listPublicHelpers } from '@/modules/profiles/queries';
+import { countFoundingHelpers, getHelperProfile, listActiveHelperHandles, listPublicHelpers } from '@/modules/profiles/queries';
 import { BOARD_PAGE_SIZE } from '@/modules/tasks/projections';
 import { findPublicTask, listBoardTasks, listRecentOpenTasks } from '@/modules/tasks/queries';
 import { db } from '@/platform/db/client';
@@ -205,4 +205,20 @@ export async function listRecentTaskSlugs(limit = 20): Promise<string[]> {
   if (!market) return [];
   const recent = await listRecentOpenTasks(db, { marketId: market.id, limit, now: new Date() });
   return recent.map((task) => task.slug);
+}
+
+/** `/helpers/[handle]`: an active helper's public profile. */
+export async function getHelperProfilePageData(handle: string) {
+  'use cache';
+  cacheLife('minutes');
+  cacheTag('helpers', `helper:${handle}`);
+  return getHelperProfile(handle);
+}
+
+/** Active helper handles, for generateStaticParams. */
+export async function listHelperHandles(): Promise<string[]> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('helpers');
+  return listActiveHelperHandles();
 }

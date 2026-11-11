@@ -2,7 +2,7 @@
  * Idempotent seed: Austin market, areas, categories, policy v1 (published) and v2 (draft),
  * feature flags. People and tasks are added by later phases (from src/fixtures).
  */
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { createDb } from '../../src/platform/db/connect';
 import {
   areas,
@@ -29,6 +29,10 @@ import { taskLocations, tasks } from '../../src/modules/tasks/schema';
 import { createFieldCipher } from '../../src/platform/crypto/field-encryption';
 import { marketDayKey, marketLocalToUtc } from '../../src/shared/format';
 import { SEED_TASKS } from './data/tasks';
+import { HELPER_LANGUAGES, SEED_REVIEWS, SERVICE_DESCRIPTIONS, WORK_SAMPLES } from './data/profile-extras';
+import { reviews } from '../../src/modules/reviews/schema';
+import { helperWorkSamples } from '../../src/modules/profiles/schema';
+import { files } from '../../src/modules/tasks/schema';
 
 export async function seedDatabase(url: string): Promise<void> {
   const { db, pool } = createDb(url, { max: 2 });
@@ -162,6 +166,7 @@ export async function seedDatabase(url: string): Promise<void> {
       }
 
       await seedTasks(tx);
+      await seedProfileExtras(tx);
     });
     await db.execute(sql`select 1`);
   } finally {
@@ -247,4 +252,66 @@ async function seedTasks(tx: Tx): Promise<void> {
     };
     await tx.insert(tasks).values(row).onConflictDoUpdate({ target: tasks.id, set: row });
   }
+}
+
+/** Service descriptions, languages, work samples, and reviews; ratings recomputed from reviews. */
+async function seedProfileExtras(tx: Tx): Promise<void> {
+  for (const [key, description] of Object.entries(SERVICE_DESCRIPTIONS)) {
+    const [userId, categoryId] = key.split(':') as [string, string];
+    await tx
+      .update(helperServices)
+      .set({ description })
+      .where(and(eq(helperServices.userId, userId), eq(helperServices.categoryId, categoryId)));
+  }
+  for (const [userId, languages] of Object.entries(HELPER_LANGUAGES)) {
+    await tx.update(helperProfiles).set({ languages }).where(eq(helperProfiles.userId, userId));
+  }
+
+  for (const [position, sample] of WORK_SAMPLES.entries()) {
+    const file = {
+      id: sample.fileId,
+      ownerUserId: sample.userId,
+      kind: 'work_sample',
+      storageKey: `public/${sample.src}`,
+      contentType: 'image/svg+xml',
+      width: 800,
+      height: 600,
+      bytes: 1000,
+      alt: sample.alt,
+    };
+    await tx.insert(files).values(file).onConflictDoUpdate({ target: files.id, set: file });
+    const row = {
+      id: sample.id,
+      userId: sample.userId,
+      fileId: sample.fileId,
+      categoryId: sample.categoryId,
+      caption: sample.caption,
+      position,
+    };
+    await tx.insert(helperWorkSamples).values(row).onConflictDoUpdate({ target: helperWorkSamples.id, set: row });
+  }
+
+  for (const review of SEED_REVIEWS) {
+    const row = {
+      ...review,
+      tags: [...review.tags],
+      direction: 'client_to_helper',
+      status: 'published',
+      publishedAt: new Date(review.publishedAt),
+      createdAt: new Date(review.publishedAt),
+    };
+    await tx.insert(reviews).values(row).onConflictDoUpdate({ target: reviews.id, set: row });
+  }
+
+  // Ratings shown on cards and profiles come from published reviews.
+  await tx.execute(sql`
+    update helper_profiles hp set
+      rating_count = coalesce(r.count, 0),
+      rating_average = r.average
+    from (select u.id as user_id, s.count, s.average
+          from users u
+          left join (select subject_user_id, count(*)::int as count, avg(rating)::float8 as average
+                     from reviews where status = 'published' and direction = 'client_to_helper'
+                     group by subject_user_id) s on s.subject_user_id = u.id) r
+    where r.user_id = hp.user_id`);
 }
