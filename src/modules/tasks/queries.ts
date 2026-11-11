@@ -126,3 +126,9 @@ export async function findPublicTask(
     acceptingOffers: row.status === 'open' && row.windowEnd > now,
   };
 }
+
+/** A task by id with its public view (any status), for the poster's own pages. */
+export async function findTaskWithPublicView(db: Db, taskId: string) {
+  const [row] = await selectPublic(db).where(eq(tasks.id, taskId)).limit(1);
+  return row ? { row, view: toTaskPublicView(toRow(row)) } : null;
+}

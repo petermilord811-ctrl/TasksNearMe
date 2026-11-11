@@ -46,7 +46,10 @@ for (let shard = 0; shard < SHARDS; shard += 1) {
     let errors: string[] = [];
     page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
     page.on('console', (message) => {
-      if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
+      // The machine's network changing mid-run is not an app error.
+      if (message.type() === 'error' && !message.text().includes('net::ERR_NETWORK_CHANGED')) {
+        errors.push(`console.error: ${message.text()}`);
+      }
     });
 
     for (const id of mine) {

@@ -9,3 +9,4 @@ export * from '../../modules/marketing/schema';
 export * from '../rate-limit/schema';
 export * from '../../modules/tasks/schema';
 export * from '../../modules/reviews/schema';
+export * from '../../modules/offers/schema';

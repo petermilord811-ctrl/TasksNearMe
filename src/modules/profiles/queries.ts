@@ -230,3 +230,34 @@ export async function listActiveHelperHandles(database: Db = db): Promise<string
     .where(and(eq(helperProfiles.status, 'active'), eq(users.status, 'active')));
   return rows.map((r) => r.handle);
 }
+
+/** Helper cards for specific helpers (e.g. the people who made offers), whatever their profile status. */
+export async function getHelperSummaries(userIds: string[], database: Db = db): Promise<Map<string, HelperSummary>> {
+  const ids = [...new Set(userIds)];
+  if (ids.length === 0) return new Map();
+  const rows = await database
+    .select({ profile: helperProfiles, user: users, areaName: areas.name })
+    .from(helperProfiles)
+    .innerJoin(users, eq(users.id, helperProfiles.userId))
+    .innerJoin(areas, eq(areas.id, helperProfiles.areaId))
+    .where(inArray(helperProfiles.userId, ids));
+  const serviceRows = await database
+    .select({ service: helperServices, slug: categories.slug })
+    .from(helperServices)
+    .innerJoin(categories, eq(categories.id, helperServices.categoryId))
+    .where(and(inArray(helperServices.userId, ids), eq(helperServices.status, 'active')))
+    .orderBy(asc(categories.sortOrder));
+  const services = new Map<string, ServiceSummary[]>();
+  for (const { service, slug } of serviceRows) {
+    const list = services.get(service.userId) ?? [];
+    list.push({
+      categorySlug: slug as CategorySlug,
+      pricingType: service.pricingType as ServiceSummary['pricingType'],
+      ...(service.fromPriceCents !== null ? { fromPriceCents: service.fromPriceCents } : {}),
+      ...(service.hourlyRateCents !== null ? { hourlyRateCents: service.hourlyRateCents } : {}),
+      ...(service.minHours !== null ? { minHours: service.minHours } : {}),
+    });
+    services.set(service.userId, list);
+  }
+  return new Map(rows.map(({ profile, user, areaName }) => [user.id, toHelperSummary(profile, user, areaName, services.get(user.id) ?? [])]));
+}
