@@ -16,7 +16,7 @@ export const CANT_ACCESS_AFTER_ARRIVAL_MS = 20 * MINUTE;
 export const CANT_ACCESS_ANSWER_MS = 30 * MINUTE;
 /** The review page is wired (UI-015). */
 /** Change requests (UI-027): on once their pages are wired. */
-export const CHANGE_PAGES_READY = false;
+export const CHANGE_PAGES_READY = true;
 
 export const REVIEW_PAGE_READY = true;
 

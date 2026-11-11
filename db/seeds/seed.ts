@@ -36,7 +36,9 @@ import { HELPER_LANGUAGES, SEED_REVIEWS, SERVICE_DESCRIPTIONS, WORK_SAMPLES } fr
 import { reviews } from '../../src/modules/reviews/schema';
 import { helperWorkSamples } from '../../src/modules/profiles/schema';
 import { files } from '../../src/modules/tasks/schema';
-import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookingTerms, bookings, helperStrikes } from '../../src/modules/bookings/schema';
+import { bookingChangeRequests, bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookingTerms, bookings, helperStrikes } from '../../src/modules/bookings/schema';
+import { invites } from '../../src/modules/invites/schema';
+import { rateLimits } from '../../src/platform/rate-limit/schema';
 import { earnings, payouts } from '../../src/modules/earnings/schema';
 import { savedHelpers } from '../../src/modules/reviews/schema';
 import { blocks, messages, threadParticipants, threads } from '../../src/modules/messaging/schema';
@@ -385,6 +387,10 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   await tx.delete(privacyRequests).where(inArray(privacyRequests.userId, people));
   // Rewards are derived from bookings again after the reset.
   await tx.delete(rewardGrants).where(inArray(rewardGrants.helperUserId, people));
+  await tx.delete(invites).where(inArray(invites.posterUserId, people));
+  // Rate-limit counters start over too (the seed is for development and tests only): repeated e2e runs on
+  // one day would otherwise hit the daily limits (reports are 10 a day).
+  await tx.delete(rateLimits);
   await tx.delete(blocks).where(or(inArray(blocks.blockerId, people), inArray(blocks.blockedId, people)));
   const peopleCases = (await tx.select({ id: supportCases.id }).from(supportCases).where(inArray(supportCases.openedByUserId, people))).map((row) => row.id);
   if (peopleCases.length > 0) {
@@ -433,6 +439,7 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   await tx.delete(bookingCompletionPhotos).where(inArray(bookingCompletionPhotos.bookingId, ids));
   await tx.delete(bookingExpenses).where(inArray(bookingExpenses.bookingId, ids));
   await tx.delete(bookingCompletions).where(inArray(bookingCompletions.bookingId, ids));
+  await tx.delete(bookingChangeRequests).where(inArray(bookingChangeRequests.bookingId, ids));
   await tx.delete(payments).where(inArray(payments.bookingId, ids));
   await tx.delete(bookingTerms).where(inArray(bookingTerms.bookingId, ids));
   await tx.delete(bookings).where(inArray(bookings.id, ids));

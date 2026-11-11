@@ -77,6 +77,12 @@ Copy namespace: `changes` (plus booking page additions).
 - Settlement offers between the two people during a dispute (support settles in UI-019), and recurring series changes (phase 2).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app/bookings/[bookingId]/changes/new` and `/app/bookings/[bookingId]/changes/[changeId]` in the `(flow)` group. `propose_change` is on for confirmed and in-progress bookings (`CHANGE_PAGES_READY`).
+- Queries / actions:
+  - `src/modules/bookings/changes.ts`:
+    - quote, propose, review per viewer;
+    - accept, pay the difference, finish the bank check, decline, withdraw;
+    - apply as a new terms version, with a refund when the total goes down.
+  - Actions: `change-actions.ts`.
+  - The booking view carries `openChange`.
+- e2e: `tests/e2e/changes.spec.ts` (Ben proposes with the quote; Jordan declines). Integration: `tests/integration/changes.test.ts` (+$22.00 for the chair, refunds, bank check).
