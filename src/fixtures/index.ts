@@ -20,3 +20,4 @@ export * from './onboarding';
 export * from './helper-work';
 export * from './bookings';
 export * from './earnings';
+export * from './home';

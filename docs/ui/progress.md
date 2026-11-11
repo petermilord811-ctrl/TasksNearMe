@@ -30,7 +30,7 @@ Claude updates this file, including the Codex notes column, from each handoff (`
 | UI-020 | Admin: rewards, config, audit, staff | planned | `admin` (config) | | |
 | UI-021 | Quality pass: accessibility, responsiveness, copy | planned | — | | |
 | UI-022 | *(phase 2)* Recurring visits | planned | `series` | | |
-| UI-023 | Home dashboards (poster and helper), browse and saved helpers (moved from UI-007) | planned | `home`, `profiles` (search) | | |
+| [UI-023](tickets/UI-023-home-dashboards.md) | Home dashboards (client and helper): needs your attention, upcoming, offers, nearby tasks (browse and saved helpers move to UI-015) | **ready for Codex** (after UI-030) | `home` (attention items and targets, client and helper dashboards) | | |
 | [UI-024](tickets/UI-024-wizard-post-guard.md) | Fix: the posting wizard posts when pressing Next on the budget step | **verified** | none | Unattended run, 11 min. Next can't submit; posting needs an explicit Post task; 4 regression tests | Merged 2026-11-11 (the independent check failed only on a transient `ERR_NETWORK_CHANGED`; the harness now ignores it). Posting e2e re-enabled and passing |
 | UI-025 | Direct requests and funded invites (poster request form; helper accept, decline, counter; counters), availability posts | planned | `bookings` (invites, slots), `payments` | | |
 | UI-026 | Disputes: the case on the booking page, rework visits, settlement offers, accept and decline | planned | `bookings` (dispute view, proposals) | | |
