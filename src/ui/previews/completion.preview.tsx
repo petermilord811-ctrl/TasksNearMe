@@ -38,14 +38,14 @@ type ProblemOptions = Pick<ComponentProps<typeof ReportProblemContent>, 'initial
   handlers?: ReportProblemHandlers;
 };
 
-function completionPreview(id: string, title: string, data: CompletionPageData, options?: CompletionOptions): PreviewEntry {
+function completionPreview(id: string, title: string, data: CompletionPageData, options?: CompletionOptions, shellLayout: 'flow' | 'tabs' = 'flow'): PreviewEntry {
   const handlers: CompletionHandlers = {
     ...fakeCompletionHandlers,
     onSubmit: fakeHandler({ ok: true, code: 'submitted', redirectTo: routes.app.booking(data.booking.id) }),
   };
   return {
     id: `screen-booking-complete/${id}`, title, group: copy.previews.group, layout: 'fullscreen',
-    render: () => <AppShell viewer={jordanShell} handlers={shellHandlers} currentPath={routes.app.bookingComplete(data.booking.id)} layout="flow">
+    render: () => <AppShell viewer={jordanShell} handlers={shellHandlers} currentPath={routes.app.bookingComplete(data.booking.id)} layout={shellLayout}>
       {options
         ? <CompletionContent data={data} handlers={handlers} now={now} {...options} />
         : <CompletionScreen data={data} handlers={handlers} now={now} />}
@@ -53,14 +53,14 @@ function completionPreview(id: string, title: string, data: CompletionPageData, 
   };
 }
 
-function problemPreview(id: string, title: string, data: ReportProblemPageData, options?: ProblemOptions): PreviewEntry {
+function problemPreview(id: string, title: string, data: ReportProblemPageData, options?: ProblemOptions, shellLayout: 'flow' | 'tabs' = 'flow'): PreviewEntry {
   const handlers: ReportProblemHandlers = {
     ...fakeReportProblemHandlers,
     onSubmit: fakeHandler({ ok: true, code: 'submitted', redirectTo: routes.app.booking(data.booking.id) }),
   };
   return {
     id: `screen-report-problem/${id}`, title, group: copy.previews.group, layout: 'fullscreen',
-    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.bookingProblem(data.booking.id)} layout="flow">
+    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.bookingProblem(data.booking.id)} layout={shellLayout}>
       {options
         ? <ReportProblemContent data={data} handlers={handlers} now={now} {...options} />
         : <ReportProblemScreen data={data} handlers={handlers} now={now} />}
@@ -84,6 +84,7 @@ function bookingPreview(id: string, title: string, data: BookingView, at = now):
 
 export const completionPreviews: PreviewEntry[] = [
   completionPreview('fixed', copy.previews.fixed, deskCompletionPageData),
+  completionPreview('fixed-with-tabs', copy.previews.fixed, deskCompletionPageData, undefined, 'tabs'),
   completionPreview('with-expenses', copy.previews.withExpenses, deskAllowanceCompletionPageData),
   completionPreview('hourly', copy.previews.hourly, movingCompletionPageData),
   completionPreview('remote', copy.previews.remote, remoteCompletionPageData, {
@@ -119,6 +120,7 @@ export const completionPreviews: PreviewEntry[] = [
   }),
 
   problemPreview('default', reportCopy.title, deskReportProblemPageData),
+  problemPreview('default-with-tabs', reportCopy.title, deskReportProblemPageData, undefined, 'tabs'),
   ...PROBLEM_UNAVAILABLE_REASONS.map((reason) => problemPreview(
     `unavailable-${reason.replaceAll('_', '-')}`, reportCopy.unavailable[reason], reportProblemUnavailableData[reason],
   )),

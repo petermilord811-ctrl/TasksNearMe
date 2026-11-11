@@ -72,6 +72,6 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
     <CompletionEarnings hoursWorked={values.hoursWorked} expensesCents={expensesCents} valid={validQuote} onQuote={handlers.onQuoteFinal} onBusyChange={setQuoting} disabled={pending || uploading} initialError={initialQuoteError} />
     {result && !result.ok && result.code === 'not_allowed' ? <div role="status" className="space-y-3 rounded-xl border border-warning/40 p-4"><p>{t('changed')}</p><Button type="button" variant="outline" disabled={busy} onClick={() => router.refresh()}>{t('reload')}</Button></div> : <FormFeedback result={feedback} successMessage={t('submitted')} />}
     <p id={`${id}-approval`} className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('approval')}</p>
-    <div ref={submitBar} className="sticky bottom-0 z-10 border-t bg-card pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"><Button type="submit" disabled={disabled} aria-busy={busy} aria-describedby={`${id}-approval`} className="w-full sm:w-auto">{busy && <Spinner aria-hidden="true" />}{t(pending ? 'sending' : 'send')}</Button></div>
+    <div ref={submitBar} className="sticky bottom-app-navigation z-10 border-t bg-card pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"><Button type="submit" disabled={disabled} aria-busy={busy} aria-describedby={`${id}-approval`} className="w-full sm:w-auto">{busy && <Spinner aria-hidden="true" />}{t(pending ? 'sending' : 'send')}</Button></div>
   </form></FormProvider>;
 }

@@ -16,10 +16,10 @@ function card(variant: 'new' | 'stale' | 'declined' | 'accepted' | 'withdrawn' |
   return { id: `offer-card/${variant}`, title: copy.previews[variant], group: copy.previews.group, render: () => <OfferCard offer={offer} now={now} onAction={onAction} /> };
 }
 
-function detail(variant: string, title: string, data: OfferDetailPageData, action = onAction): PreviewEntry {
+function detail(variant: string, title: string, data: OfferDetailPageData, action = onAction, shellLayout: 'flow' | 'tabs' = 'flow'): PreviewEntry {
   return {
     id: `screen-offer-detail/${variant}`, title, group: copy.previews.group, layout: 'fullscreen',
-    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.offer(data.task.id, data.offer.id)} layout="flow"><OfferDetailScreen data={data} handlers={{ onOfferAction: action }} now={now} /></AppShell>,
+    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.offer(data.task.id, data.offer.id)} layout={shellLayout}><OfferDetailScreen data={data} handlers={{ onOfferAction: action }} now={now} /></AppShell>,
   };
 }
 
@@ -33,6 +33,7 @@ export const offerPreviews: PreviewEntry[] = [
   { id: 'offer-card/selected', title: copy.previews.selected, group: copy.previews.group, render: () => <SelectableOfferPreview /> },
   { id: 'offer-comparison/three-offers', title: copy.previews.comparison, group: copy.previews.group, render: () => <OfferComparison offers={deskOwnerView.offers} now={now} /> },
   detail('default', copy.previews.detail, deskOfferDetailData),
+  detail('default-with-tabs', copy.previews.detail, deskOfferDetailData, onAction, 'tabs'),
   detail('masked-message', copy.previews.masked, { ...deskOfferDetailData, offer: deskOfferLee }),
   detail('updated', copy.previews.updated, { ...deskOfferDetailData, offer: deskOfferSam }),
   detail('stale', copy.previews.stale, { ...deskOfferDetailData, offer: deskOfferSamStale }),

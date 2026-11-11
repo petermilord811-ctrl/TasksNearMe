@@ -55,7 +55,7 @@ function useHelperFormAction<T extends FieldValues>(form: UseFormReturn<T>) {
 
 function SaveButton({ pending, label }: { pending: boolean; label?: string }) {
   const t = useTranslations('helperOnboarding');
-  return <div className={label ? 'fixed inset-x-0 bottom-0 z-20 border-t bg-card px-gutter pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:p-0' : undefined}><div className="mx-auto max-w-reading"><Button type="submit" disabled={pending} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{pending ? t('forms.saving') : label ?? t('forms.save')}</Button></div></div>;
+  return <div className={label ? 'fixed inset-x-0 bottom-app-navigation z-20 border-t bg-card px-gutter pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:p-0' : undefined}><div className="mx-auto max-w-reading"><Button type="submit" disabled={pending} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{pending ? t('forms.saving') : label ?? t('forms.save')}</Button></div></div>;
 }
 
 export function HelperProfileForm({ values, languageOptions, onSave, submitLabel }: {

@@ -144,7 +144,7 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
         </AlertDescription></Alert>
       </div> : !paymentFailure && <FormFeedback result={feedback} />}
       </div>
-      <div ref={submitBar} className="sticky bottom-0 z-10 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div ref={submitBar} className="sticky bottom-app-navigation z-10 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <Button type="submit" disabled={disabled} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{t(pending ? 'booking' : 'submit', { amount: formatMoney(data.breakdown.posterTotalCents) })}</Button>
       </div>
     </form>

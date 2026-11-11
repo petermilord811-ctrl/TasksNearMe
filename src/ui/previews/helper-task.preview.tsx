@@ -14,15 +14,16 @@ const handlers: HelperWorkHandlers = {
 };
 const shellHandlers: AppShellHandlers = { onModeChange: fakeHandler({ ok: true, code: 'updated' }), onSignOut: fakeHandler({ ok: true, code: 'updated' }) };
 
-function preview(variant: Exclude<keyof typeof copy.previews, 'group'>, data: HelperTaskView, options: Partial<ComponentProps<typeof HelperTaskScreen>> = {}): PreviewEntry {
+function preview(variant: Exclude<keyof typeof copy.previews, 'group'>, data: HelperTaskView, options: Partial<ComponentProps<typeof HelperTaskScreen>> = {}, shellLayout: 'flow' | 'tabs' = 'flow'): PreviewEntry {
   return {
-    id: `screen-helper-task/${variant}`, group: copy.previews.group, title: copy.previews[variant], layout: 'fullscreen',
-    render: () => <AppShell viewer={data.setup.bookable ? jordanShell : priyaShell} handlers={shellHandlers} currentPath={routes.app.findWorkTask(data.task.id)} layout="flow"><HelperTaskScreen data={data} handlers={handlers} now={now} {...options} /></AppShell>,
+    id: `screen-helper-task/${variant}${shellLayout === 'tabs' ? '-with-tabs' : ''}`, group: copy.previews.group, title: copy.previews[variant], layout: 'fullscreen',
+    render: () => <AppShell viewer={data.setup.bookable ? jordanShell : priyaShell} handlers={shellHandlers} currentPath={routes.app.findWorkTask(data.task.id)} layout={shellLayout}><HelperTaskScreen data={data} handlers={handlers} now={now} {...options} /></AppShell>,
   };
 }
 
 export const helperTaskPreviews: PreviewEntry[] = [
   preview('with-offer', helperDeskWithOffer),
+  preview('with-offer', helperDeskWithOffer, {}, 'tabs'),
   preview('with-message-action', {
     ...helperDeskWithOffer,
     myOffer: {
@@ -31,6 +32,7 @@ export const helperTaskPreviews: PreviewEntry[] = [
     },
   }, { handlers: { ...handlers, onOfferAction: fakeHandler({ ok: true, code: 'updated', redirectTo: routes.app.thread('thr_off_jordan') }) } }),
   preview('offer-form', helperYardNoOffer),
+  preview('offer-form', helperYardNoOffer, {}, 'tabs'),
   preview('hourly-form', helperMovingHourly),
   preview('blocked', helperComputerBlocked),
   preview('stale-offer', helperDeskStaleOffer),
