@@ -13,9 +13,7 @@ function marketDate(days: number): string {
   return format.format(new Date(Date.now() + days * 86_400_000));
 }
 
-// UI-024: the wizard posts when "Next" is pressed on the budget step (the button turns into the submit
-// button before the click's default action runs). Re-enable once the fix lands.
-test.fixme('a poster posts a task with the wizard and finds it on the board', async ({ page }, testInfo) => {
+test('a poster posts a task with the wizard and finds it on the board', async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   await devSignIn(page, 'maya@example.test');
   await expect(page).toHaveURL(/\/app$/);
@@ -60,7 +58,9 @@ test.fixme('a poster posts a task with the wizard and finds it on the board', as
   await page.getByLabel('Task price ($)').fill('60');
   await next();
 
-  // Review: the quote comes from the fee engine ($60 + $6 fee)
+  // Review: nothing is posted until "Post task" (UI-024); the quote comes from the fee engine ($60 + $6 fee)
+  await expect(page.getByText('Step 8 of 8', { exact: false })).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/tasks\/new$/);
   await expect(page.getByText('$66.00').first()).toBeVisible();
   await page.getByRole('button', { name: 'Post task' }).click();
   await expect(page).toHaveURL(/\/app\/tasks\/tsk_[0-9a-f]+$/);
