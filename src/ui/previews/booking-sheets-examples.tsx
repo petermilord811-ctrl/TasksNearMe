@@ -31,7 +31,8 @@ function sheetHandlers(data: BookingView, preview?: CancellationPreview): Bookin
 }
 
 export function BookingHubSheetExample({ data, at = now, unavailable = false }: { data: BookingView; at?: string; unavailable?: boolean }) {
-  return <AppShell viewer={data.viewerRole === 'helper' ? jordanShell : mayaShell} handlers={shellHandlers} currentPath={routes.app.booking(data.id)} layout="flow">
+  // Include the tabs here to exercise fixed booking actions above the mobile navigation.
+  return <AppShell viewer={data.viewerRole === 'helper' ? jordanShell : mayaShell} handlers={shellHandlers} currentPath={routes.app.booking(data.id)} layout="tabs">
     <BookingHubScreen data={data} handlers={fakeBookingHubHandlers} sheets={unavailable ? undefined : sheetHandlers(data)} now={at} />
   </AppShell>;
 }
@@ -53,7 +54,7 @@ export function SheetExample({ SheetComponent, data, options }: { SheetComponent
     handlers.onCantAccess = fakeHandler(options.initialResult);
     handlers.onSafetyReport = fakeHandler(options.initialResult);
   }
-  return <AppShell viewer={data.viewerRole === 'helper' ? jordanShell : mayaShell} handlers={shellHandlers} currentPath={routes.app.booking(data.id)} layout="flow">
+  return <AppShell viewer={data.viewerRole === 'helper' ? jordanShell : mayaShell} handlers={shellHandlers} currentPath={routes.app.booking(data.id)} layout="tabs">
     <BookingHubScreen data={data} handlers={fakeBookingHubHandlers} sheets={handlers} now={now} />
     <div className="mx-auto mt-6 max-w-reading space-y-3">
       <Button ref={trigger} variant="outline" onClick={() => setOpen(true)}>{t('previews.open')}</Button>

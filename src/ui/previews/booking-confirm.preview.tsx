@@ -25,13 +25,13 @@ const shellHandlers: AppShellHandlers = {
 
 type ContentOptions = Pick<ComponentProps<typeof BookingConfirmContent>, 'initialResult' | 'initialPending'> & { handlers?: BookingConfirmHandlers };
 
-function screenPreview(id: string, title: string, data: BookingConfirmPageData, options?: ContentOptions): PreviewEntry {
+function screenPreview(id: string, title: string, data: BookingConfirmPageData, options?: ContentOptions, shellLayout: 'flow' | 'tabs' = 'flow'): PreviewEntry {
   return {
     id: `screen-booking-confirm/${id}`,
     title,
     group: copy.previews.group,
     layout: 'fullscreen',
-    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.confirmOffer(data.task.id, data.offer.id)} layout="flow">
+    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.confirmOffer(data.task.id, data.offer.id)} layout={shellLayout}>
       {options
         ? <BookingConfirmContent data={data} handlers={fakeBookingConfirmHandlers} now={now} {...options} />
         : <BookingConfirmScreen data={data} handlers={fakeBookingConfirmHandlers} now={now} />}
@@ -47,6 +47,7 @@ const verification: PaymentAttemptResult = {
 
 export const bookingConfirmPreviews: PreviewEntry[] = [
   screenPreview('default', copy.previews.default, deskConfirmData),
+  screenPreview('default-with-tabs', copy.previews.default, deskConfirmData, undefined, 'tabs'),
   screenPreview('new-card', copy.previews['new-card'], deskConfirmNewCardData),
   screenPreview('declined', copy.previews.declined, deskConfirmDeclinedData),
   screenPreview('insufficient-funds', copy.previews['insufficient-funds'], deskConfirmInsufficientFundsData),

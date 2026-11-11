@@ -129,7 +129,7 @@ export function ReportProblemForm({ data, handlers, initialResult, initialPendin
           {specificError === 'expired' ? <Link href={routes.help()} className="inline-flex min-h-11 items-center rounded-md text-primary underline underline-offset-4">{t('getHelp')}</Link> : <Button type="button" variant="outline" disabled={disabled} onClick={() => router.refresh()}>{t('reload')}</Button>}
         </AlertDescription></Alert></div> : <FormFeedback result={genericFeedback} successMessage={t('success')} />}
       </div>
-      <div ref={submitBar} className="sticky bottom-0 z-10 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div ref={submitBar} className="sticky bottom-app-navigation z-10 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <Button ref={submitButton} type="submit" disabled={disabled} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner aria-hidden="true" />}{t(pending ? 'submitting' : 'submit')}</Button>
       </div>
     </form>

@@ -86,7 +86,7 @@ export function OfferForm({ data, handlers, revising = false, onCancel, initialR
       }}><legend className="sr-only">{t('details')}</legend><OfferFields rules={data.offerRules} /></fieldset>
       <OfferEarnings pricing={pricing} valid={validPricing} onQuote={handlers.onQuote} />
       <FormFeedback result={feedback} />
-      <div ref={submitBar} className="sticky bottom-0 z-10 flex flex-wrap gap-3 border-t bg-card pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div ref={submitBar} className="sticky bottom-app-navigation z-10 flex flex-wrap gap-3 border-t bg-card pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <Button type="submit" disabled={pending} aria-busy={pending} className="min-w-0 flex-1 sm:flex-none">{pending && <Spinner />}{t(pending ? 'sending' : revising ? 'save' : 'send')}</Button>
         {onCancel && <Button type="button" variant="outline" disabled={pending} onClick={onCancel}>{t('cancel')}</Button>}
       </div>

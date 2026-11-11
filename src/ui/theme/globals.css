@@ -49,6 +49,8 @@
   --page-gutter: 1rem;
   --card-padding: 1rem;
   --section-gap: 1.5rem;
+  /* Reserve tabs before hydration; MobileBottomNav then measures the full border box. */
+  --app-bottom-nav-height: calc(6rem + env(safe-area-inset-bottom));
   --layer-action: 20;
   --layer-navigation: 30;
   --layer-dev: 40;
@@ -176,6 +178,10 @@
 }
 
 @utility tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* AppShell supplies this only when mobile tabs are present. Portaled sheets
+   and standalone flow pages keep their actions at the viewport bottom. */
+@utility bottom-app-navigation { bottom: var(--app-bottom-offset, 0px); }
 
 @media (min-width: 768px) { :root { --page-gutter: 1.5rem; --card-padding: 1.25rem; --section-gap: 2rem; } }
 @media (min-width: 1024px) { :root { --page-gutter: 2rem; --card-padding: 1.5rem; } }

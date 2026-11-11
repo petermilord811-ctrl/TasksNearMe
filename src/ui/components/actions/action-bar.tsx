@@ -150,7 +150,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
   if (actions.length === 0) return null;
 
   return (
-    <div ref={barRef} className={cn('min-w-0 border-t border-border bg-background pt-4', sticky && 'sticky bottom-0 z-10 pb-[max(1rem,env(safe-area-inset-bottom))]', mobileFixed && 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-10 max-lg:mx-auto max-lg:my-0! max-lg:max-h-[60dvh] max-lg:max-w-[calc(45rem+2*var(--page-gutter))] max-lg:overflow-y-auto max-lg:px-gutter max-lg:pb-[max(1rem,env(safe-area-inset-bottom))]')}>
+    <div ref={barRef} className={cn('min-w-0 border-t border-border bg-background pt-4', sticky && 'sticky bottom-app-navigation z-10 pb-[max(1rem,env(safe-area-inset-bottom))]', mobileFixed && 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-app-navigation max-lg:z-10 max-lg:mx-auto max-lg:my-0! max-lg:max-h-[60dvh] max-lg:max-w-[calc(45rem+2*var(--page-gutter))] max-lg:overflow-y-auto max-lg:px-gutter max-lg:pb-[max(1rem,env(safe-area-inset-bottom))]')}>
       {description && <div className="mb-3 text-sm">{description}</div>}
       <div role="group" aria-label={feedback('actionBar')} aria-busy={pendingId !== null} className="flex flex-wrap items-start gap-3">
         {renderAction(actions[0], 'first')}

@@ -10,6 +10,7 @@ import { SkipLink } from './skip-link';
 import { ModeSwitch } from './mode-switch';
 import { AccountMenu } from './account-menu';
 import { Navigation } from './navigation';
+import { MobileBottomNav } from './mobile-bottom-nav';
 import { getAppNav } from './nav';
 
 export interface AppShellProps { viewer: SignedInViewer; handlers: AppShellHandlers; children: ReactNode; currentPath?: string; layout?: 'tabs' | 'flow' }
@@ -17,7 +18,7 @@ export interface AppShellProps { viewer: SignedInViewer; handlers: AppShellHandl
 export function AppShell({ viewer, handlers, children, currentPath, layout = 'tabs' }: AppShellProps) {
   const t = useTranslations('shell');
   const nav = getAppNav(viewer.mode);
-  return <div className={cn('flex min-h-dvh flex-col bg-background', layout === 'tabs' && 'pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0')}>
+  return <div data-app-shell={layout} className={cn('flex min-h-dvh flex-col bg-background [--app-bottom-offset:0px]', layout === 'tabs' && 'pb-[var(--app-bottom-offset)] max-lg:[--app-bottom-offset:var(--app-bottom-nav-height)]')}>
     <SkipLink />
     <header className="border-b bg-card">
       <div className="mx-auto flex max-w-admin flex-wrap items-center gap-3 px-gutter py-4 sm:flex-nowrap sm:gap-6">
@@ -44,8 +45,8 @@ export function AppShell({ viewer, handlers, children, currentPath, layout = 'ta
         {children}
       </main>
     </div>
-    {layout === 'tabs' && <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-card px-2 pt-1 pb-[max(.5rem,env(safe-area-inset-bottom))] lg:hidden">
+    {layout === 'tabs' && <MobileBottomNav>
       <Navigation items={nav.primary} label={t('mobileNavigation')} currentPath={currentPath} unreadMessages={viewer.unreadMessages} variant="bottom" />
-    </div>}
+    </MobileBottomNav>}
   </div>;
 }

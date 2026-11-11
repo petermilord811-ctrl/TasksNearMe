@@ -115,7 +115,7 @@ export function VerificationPanel({ track, verification, categories, bookableCat
       {(badges.idVerifiedAt || badges.backgroundCheckedAt) && <VerificationBadges badges={badges} />}
       {!complete && !supportNeeded && <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(`setup.privacy.${track}`)}</p>}
       <FormFeedback result={action.result && !action.result.ok ? { ...action.result, fieldErrors: undefined } : action.result} />
-      {providerAction && <div className={stickyAction ? 'fixed inset-x-0 bottom-0 z-20 border-t bg-card px-gutter pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:p-0' : undefined}><div className="mx-auto max-w-reading"><Button className="w-full whitespace-normal sm:w-auto" type="button" disabled={action.pending} aria-busy={action.pending} onClick={() => void action.run(providerAction.handler, undefined)}>
+      {providerAction && <div className={stickyAction ? 'fixed inset-x-0 bottom-app-navigation z-20 border-t bg-card px-gutter pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:p-0' : undefined}><div className="mx-auto max-w-reading"><Button className="w-full whitespace-normal sm:w-auto" type="button" disabled={action.pending} aria-busy={action.pending} onClick={() => void action.run(providerAction.handler, undefined)}>
         {action.pending && <Spinner />}{providerAction.label}
       </Button></div></div>}
       {supportNeeded && <Button asChild variant="outline" className="w-full sm:w-auto"><Link href={routes.app.support()}>{t('setup.contactSupport')}</Link></Button>}
