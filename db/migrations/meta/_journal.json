@@ -64,6 +64,20 @@
       "when": 1794393874365,
       "tag": "0008_bookings_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794394552162,
+      "tag": "0009_booking_check_in",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794395444487,
+      "tag": "0010_completions_support",
+      "breakpoints": true
     }
   ]
 }

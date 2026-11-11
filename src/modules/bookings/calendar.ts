@@ -1,0 +1,61 @@
+import type { BookingView } from '@/contracts';
+
+/**
+ * A calendar file (RFC 5545) for a booking. It names the general area, never the exact address:
+ * calendar entries sync to other services and outlive the booking's address window.
+ */
+
+const HOUR = 3_600_000;
+
+function stamp(date: Date): string {
+  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
+/** Escapes text per RFC 5545 §3.3.11. */
+function text(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+}
+
+/** Folds lines longer than 75 octets (RFC 5545 §3.1). */
+function fold(line: string): string {
+  const parts: string[] = [];
+  let rest = line;
+  while (rest.length > 74) {
+    parts.push(rest.slice(0, 74));
+    rest = ` ${rest.slice(74)}`;
+  }
+  parts.push(rest);
+  return parts.join('\r\n');
+}
+
+/** How long to block: the hourly cap, or until the task window ends (at least an hour). */
+function endOf(view: BookingView): Date {
+  const start = Date.parse(view.terms.start);
+  if (view.terms.pricing.type === 'hourly') return new Date(start + view.terms.pricing.hoursCap * HOUR);
+  const windowEnd = Date.parse(view.task.schedule.windowEnd);
+  return new Date(windowEnd > start + HOUR ? windowEnd : start + 2 * HOUR);
+}
+
+export function bookingCalendarFile(view: BookingView, bookingUrl: string, now: Date): string {
+  const where = view.location.kind === 'remote' ? 'Remote' : `${view.location.areaName}, ${view.location.marketName}`;
+  const other = view.viewerRole === 'poster' ? view.helper.displayName : view.poster.displayName;
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//TasksNearMe//Bookings//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${view.id}@tasksnearme`,
+    `DTSTAMP:${stamp(now)}`,
+    `DTSTART:${stamp(new Date(view.terms.start))}`,
+    `DTEND:${stamp(endOf(view))}`,
+    `SUMMARY:${text(`TasksNearMe: ${view.task.title}`)}`,
+    `LOCATION:${text(where)}`,
+    `DESCRIPTION:${text(`With ${other}. Details and the address: ${bookingUrl}`)}`,
+    `URL:${bookingUrl}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ];
+  return `${lines.map(fold).join('\r\n')}\r\n`;
+}

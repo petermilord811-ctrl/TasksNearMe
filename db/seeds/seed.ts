@@ -39,6 +39,7 @@ import { files } from '../../src/modules/tasks/schema';
 import { bookingTerms, bookings } from '../../src/modules/bookings/schema';
 import { paymentMethods, payments } from '../../src/modules/payments/schema';
 import { devCardRef } from '../../src/integrations/payments';
+import { quoteBreakdown } from '../../src/modules/payments/fees';
 
 export async function seedDatabase(url: string): Promise<void> {
   const { db, pool } = createDb(url, { max: 2 });
@@ -177,6 +178,7 @@ export async function seedDatabase(url: string): Promise<void> {
       await seedOffers(tx);
       await seedVerification(tx);
       await seedPaymentMethods(tx);
+      await seedBookings(tx);
     });
     await db.execute(sql`select 1`);
   } finally {
@@ -373,6 +375,61 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   await tx.delete(payments).where(inArray(payments.bookingId, ids));
   await tx.delete(bookingTerms).where(inArray(bookingTerms.bookingId, ids));
   await tx.delete(bookings).where(inArray(bookings.id, ids));
+}
+
+/** Confirmed bookings on seeded tasks: Ben's TV with Jordan ($80; $88.00 charged). */
+async function seedBookings(tx: Tx): Promise<void> {
+  const [policy] = await tx.select().from(marketPolicies).where(and(eq(marketPolicies.marketId, AUSTIN.id), eq(marketPolicies.status, 'published')));
+  const [task] = await tx.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
+  const [offer] = await tx.select().from(offers).where(eq(offers.id, 'off_tv_jordan'));
+  if (!policy || !task || !offer) throw new Error('Seed booking: the policy, task or offer is missing');
+  const breakdown = quoteBreakdown(policy.fees, { type: 'fixed', priceCents: 8000 });
+  const bookedAt = new Date(offer.createdAt.getTime() + 2 * 3_600_000);
+  await tx.update(offers).set({ status: 'accepted', closedAt: bookedAt }).where(eq(offers.id, offer.id));
+  await tx.update(tasks).set({ status: 'assigned', offerCount: 0 }).where(eq(tasks.id, task.id));
+  await tx.insert(bookings).values({
+    id: 'bkg_tv',
+    taskId: task.id,
+    offerId: offer.id,
+    posterUserId: task.posterUserId,
+    helperUserId: offer.helperUserId,
+    marketId: task.marketId,
+    policyVersionId: policy.id,
+    status: 'confirmed',
+    startAt: offer.proposedStart,
+    confirmedAt: bookedAt,
+    createdAt: bookedAt,
+    updatedAt: bookedAt,
+  });
+  await tx.insert(bookingTerms).values({
+    id: 'btm_tv_1',
+    bookingId: 'bkg_tv',
+    version: 1,
+    pricingType: 'fixed',
+    priceCents: 8000,
+    breakdown,
+    scopeText: task.description,
+    startAt: offer.proposedStart,
+    createdAt: bookedAt,
+  });
+  await tx.insert(payments).values({
+    id: 'pay_tv',
+    bookingId: 'bkg_tv',
+    purpose: 'booking_funding',
+    payerUserId: task.posterUserId,
+    amountCents: breakdown.posterTotalCents,
+    status: 'succeeded',
+    provider: 'dev',
+    providerRef: 'devpi_seed_tv',
+    methodRef: devCardRef('success'),
+    methodBrand: 'visa',
+    methodLast4: '4242',
+    methodExpMonth: 12,
+    methodExpYear: 2030,
+    idempotencyKey: 'seed:bkg_tv',
+    createdAt: bookedAt,
+    updatedAt: bookedAt,
+  });
 }
 
 /** Maya's saved cards (development provider): the Visa is her default. Both pay successfully. */

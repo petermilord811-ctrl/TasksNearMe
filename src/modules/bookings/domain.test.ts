@@ -1,0 +1,70 @@
+import { describe, expect, it } from 'vitest';
+import { addressVisibility, bookingActions, bookingDeadlines, needsAction, type BookingFacts } from './domain';
+
+const start = new Date('2026-11-21T16:30:00.000Z'); // Sat 10:30 am in Austin
+const policy = { noShowMinutes: 30, addressHideAfterHours: 48 };
+const confirmed: BookingFacts = {
+  status: 'confirmed',
+  startAt: start,
+  remote: false,
+  onMyWayAt: null,
+  arrivedAt: null,
+  fundingExpiresAt: null,
+  approvalDueAt: null,
+  completedAt: null,
+};
+const at = (iso: string) => new Date(iso);
+const ids = (actions: ReturnType<typeof bookingActions>) => actions.map((a) => `${a.id}${a.enabled ? '' : ' (off)'}`);
+
+describe('booking actions', () => {
+  it('opens "On my way" 2 h and "Arrived" 30 min before the start', () => {
+    expect(ids(bookingActions(confirmed, 'helper', at('2026-11-21T14:00:00.000Z')))).toEqual(['on_my_way (off)', 'arrived (off)', 'add_to_calendar']);
+    const early = bookingActions(confirmed, 'helper', at('2026-11-21T14:00:00.000Z'))[0];
+    expect(early?.disabledReason).toEqual({ code: 'available_at', at: '2026-11-21T14:30:00.000Z' });
+    expect(ids(bookingActions(confirmed, 'helper', at('2026-11-21T15:00:00.000Z')))).toEqual(['on_my_way', 'arrived (off)', 'add_to_calendar']);
+    const onTheWay = { ...confirmed, onMyWayAt: at('2026-11-21T15:58:00.000Z') };
+    const arrive = bookingActions(onTheWay, 'helper', at('2026-11-21T16:05:00.000Z'));
+    expect(ids(arrive)).toEqual(['arrived', 'add_to_calendar']);
+    expect(arrive[0]?.kind).toBe('primary');
+  });
+
+  it('gives the client pay, the calendar, and approve (asking first)', () => {
+    expect(ids(bookingActions({ ...confirmed, status: 'pending_funding' }, 'poster', start))).toEqual(['pay']);
+    expect(ids(bookingActions(confirmed, 'poster', start))).toEqual(['add_to_calendar']);
+    const approve = bookingActions({ ...confirmed, status: 'completion_submitted' }, 'poster', start);
+    expect(approve).toEqual([{ id: 'approve', kind: 'primary', enabled: true, confirm: true }]);
+    expect(bookingActions({ ...confirmed, status: 'completion_submitted' }, 'helper', start)).toEqual([]);
+  });
+
+  it('skips check-in for remote work', () => {
+    expect(ids(bookingActions({ ...confirmed, remote: true }, 'helper', start))).toEqual(['add_to_calendar']);
+  });
+});
+
+describe('address visibility', () => {
+  it('shows the helper the address from confirmation until 48 h after completion', () => {
+    expect(addressVisibility({ ...confirmed, status: 'pending_funding' }, 'helper', policy, start)).toBe('after_confirmation');
+    expect(addressVisibility(confirmed, 'helper', policy, start)).toBe('visible');
+    const completed = { ...confirmed, status: 'completed', completedAt: at('2026-11-21T19:05:00.000Z') };
+    expect(addressVisibility(completed, 'helper', policy, at('2026-11-23T19:04:00.000Z'))).toBe('visible');
+    expect(addressVisibility(completed, 'helper', policy, at('2026-11-23T19:05:00.000Z'))).toBe('hidden_after_completion');
+    expect(addressVisibility({ ...confirmed, status: 'canceled' }, 'helper', policy, start)).toBe('hidden_after_completion');
+    expect(addressVisibility(completed, 'poster', policy, at('2026-12-30T00:00:00.000Z'))).toBe('visible');
+    expect(addressVisibility({ ...confirmed, remote: true }, 'poster', policy, start)).toBe('not_applicable');
+  });
+});
+
+describe('deadlines and needing action', () => {
+  it('names the deadline that matters now', () => {
+    expect(bookingDeadlines(confirmed, 'poster', policy, start)).toEqual({ noShowReportableAt: '2026-11-21T17:00:00.000Z' });
+    const completed = { ...confirmed, status: 'completed', completedAt: at('2026-11-21T19:05:00.000Z') };
+    expect(bookingDeadlines(completed, 'helper', policy, at('2026-11-22T00:00:00.000Z'))).toEqual({ addressHiddenAt: '2026-11-23T19:05:00.000Z' });
+    expect(bookingDeadlines(completed, 'poster', policy, at('2026-11-22T00:00:00.000Z'))).toEqual({});
+  });
+
+  it('flags paying and approving for the client, and checking in for the helper on the day', () => {
+    expect(needsAction({ ...confirmed, status: 'completion_submitted' }, 'poster', start)).toBe(true);
+    expect(needsAction(confirmed, 'helper', at('2026-11-20T12:00:00.000Z'))).toBe(false);
+    expect(needsAction(confirmed, 'helper', at('2026-11-21T15:00:00.000Z'))).toBe(true);
+  });
+});

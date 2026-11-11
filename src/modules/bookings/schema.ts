@@ -1,9 +1,9 @@
 import { sql } from 'drizzle-orm';
-import { doublePrecision, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { PriceBreakdown } from '@/contracts';
 import { users } from '../accounts/schema';
 import { offers } from '../offers/schema';
-import { tasks } from '../tasks/schema';
+import { files, tasks } from '../tasks/schema';
 
 /**
  * Bookings (docs/blueprint/03 §4). A booking starts `pending_funding` when the poster pays and becomes
@@ -38,6 +38,13 @@ export const bookings = pgTable(
     /** While `pending_funding`: unpaid after this, the booking is canceled and the offer is open again. */
     fundingExpiresAt: timestamp('funding_expires_at', { withTimezone: true }),
     confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    /** Day-of updates from the helper. */
+    onMyWayAt: timestamp('on_my_way_at', { withTimezone: true }),
+    lateByMinutes: integer('late_by_minutes'),
+    arrivedAt: timestamp('arrived_at', { withTimezone: true }),
+    /** `completion_submitted`: approved automatically at this time. */
+    completionSubmittedAt: timestamp('completion_submitted_at', { withTimezone: true }),
+    approvalDueAt: timestamp('approval_due_at', { withTimezone: true }),
     canceledAt: timestamp('canceled_at', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -72,4 +79,52 @@ export const bookingTerms = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('booking_terms_version_idx').on(t.bookingId, t.version)],
+);
+
+/** The helper's submitted work (blueprint 02 J6): one row per booking, frozen at submission. */
+export const bookingCompletions = pgTable('booking_completions', {
+  bookingId: text('booking_id')
+    .primaryKey()
+    .references(() => bookings.id),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull(),
+  note: text('note').notNull().default(''),
+  /** Hourly bookings. */
+  hoursWorked: doublePrecision('hours_worked'),
+  /** The final numbers with these hours and expenses. */
+  finalBreakdown: jsonb('final_breakdown').$type<PriceBreakdown>().notNull(),
+});
+
+/** Photos of the finished work (files of kind `evidence`, owned by the helper). */
+export const bookingCompletionPhotos = pgTable(
+  'booking_completion_photos',
+  {
+    bookingId: text('booking_id')
+      .notNull()
+      .references(() => bookings.id),
+    fileId: text('file_id')
+      .notNull()
+      .references(() => files.id),
+    position: integer('position').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.bookingId, t.fileId] })],
+);
+
+/** Receipts against the expense allowance (files of kind `receipt`). */
+export const bookingExpenses = pgTable(
+  'booking_expenses',
+  {
+    id: text('id').primaryKey(),
+    bookingId: text('booking_id')
+      .notNull()
+      .references(() => bookings.id),
+    description: text('description').notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    receiptFileId: text('receipt_file_id')
+      .notNull()
+      .references(() => files.id),
+    status: text('status').notNull().default('submitted'), // submitted | approved | rejected
+    position: integer('position').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('booking_expenses_booking_idx').on(t.bookingId)],
 );

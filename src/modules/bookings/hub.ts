@@ -1,0 +1,322 @@
+import { and, asc, desc, eq, isNull, ne, or } from 'drizzle-orm';
+import type {
+  ActionResult,
+  BookingActionId,
+  BookingListRow,
+  BookingPaymentLine,
+  BookingsPageData,
+  BookingStatus,
+  BookingView,
+  BookingViewerRole,
+  CancelReason,
+  CardBrand,
+  ClientSummary,
+  CompletedVia,
+  ExactAddress,
+  PaymentStatus,
+  PricingInput,
+  TimelineEvent,
+} from '@/contracts';
+import { routes } from '@/contracts';
+import { users } from '@/modules/accounts/schema';
+import { marketPolicies } from '@/modules/markets/schema';
+import { offers } from '@/modules/offers/schema';
+import { payments } from '@/modules/payments/schema';
+import { getHelperSummaries, initialsOf } from '@/modules/profiles/queries';
+import { findTaskWithPublicView } from '@/modules/tasks/queries';
+import { taskLocations, tasks } from '@/modules/tasks/schema';
+import { auditLog } from '@/platform/audit/schema';
+import type { FieldCipher } from '@/platform/crypto/field-encryption';
+import type { Db } from '@/platform/db/connect';
+import { newId } from '@/platform/db/ids';
+import { outboxEvents } from '@/platform/outbox/schema';
+import { autoApproveDue, completionViewOf } from './completion-view';
+import { addressVisibility, bookingActions, bookingDeadlines, needsAction, type BookingFacts, type BookingPolicy } from './domain';
+import { bookingTerms, bookings } from './schema';
+
+/**
+ * The booking page and the bookings list (blueprint 03 §4; ui-contract §5–6), projected for the
+ * booking's client or helper. Anyone else gets nothing (404). Also the single-tap actions.
+ */
+
+export interface HubDeps {
+  db: Db;
+  cipher: FieldCipher;
+}
+
+type BookingRow = typeof bookings.$inferSelect;
+type TermsRow = typeof bookingTerms.$inferSelect;
+const DEFAULT_POLICY: BookingPolicy = { noShowMinutes: 30, addressHideAfterHours: 48 };
+
+function roleOf(booking: BookingRow, userId: string): BookingViewerRole | null {
+  if (booking.posterUserId === userId) return 'poster';
+  if (booking.helperUserId === userId) return 'helper';
+  return null;
+}
+
+function factsOf(booking: BookingRow, remote: boolean): BookingFacts {
+  return {
+    status: booking.status,
+    startAt: booking.startAt,
+    remote,
+    onMyWayAt: booking.onMyWayAt,
+    arrivedAt: booking.arrivedAt,
+    fundingExpiresAt: booking.fundingExpiresAt,
+    approvalDueAt: booking.approvalDueAt,
+    completedAt: booking.completedAt,
+  };
+}
+
+function pricingOf(terms: TermsRow): PricingInput {
+  return terms.pricingType === 'hourly'
+    ? { type: 'hourly', rateCents: terms.hourlyRateCents ?? 0, estimatedHours: terms.estimatedHours ?? 0, hoursCap: terms.hoursCap ?? 0 }
+    : { type: 'fixed', priceCents: terms.priceCents ?? 0 };
+}
+
+async function policyOf(db: Db, policyVersionId: string): Promise<BookingPolicy> {
+  const [row] = await db.select({ timers: marketPolicies.timers }).from(marketPolicies).where(eq(marketPolicies.id, policyVersionId)).limit(1);
+  return row ? { noShowMinutes: row.timers.noShowMinutes, addressHideAfterHours: row.timers.addressHideAfterHours } : DEFAULT_POLICY;
+}
+
+async function clientSummary(db: Db, userId: string): Promise<ClientSummary | null> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) return null;
+  return {
+    id: user.id,
+    displayName: user.name,
+    initials: initialsOf(user.firstName, user.lastName),
+    memberSince: user.createdAt.toISOString(),
+    phoneVerified: user.phoneVerifiedAt !== null,
+  };
+}
+
+function timelineOf(
+  booking: BookingRow,
+  task: { publishedAt: Date | null; createdAt: Date },
+  offer: { createdAt: Date } | null,
+  paymentRows: (typeof payments.$inferSelect)[],
+  priceCents: number,
+  names: { poster: string; helper: string },
+): TimelineEvent[] {
+  const events: TimelineEvent[] = [];
+  const add = (at: Date | null, actor: TimelineEvent['actor'], type: TimelineEvent['type'], params?: TimelineEvent['params']) => {
+    if (!at) return;
+    const actorName = actor === 'poster' ? names.poster : actor === 'helper' ? names.helper : undefined;
+    events.push({ id: `evt_${type}_${events.length + 1}`, at: at.toISOString(), actor, ...(actorName ? { actorName } : {}), type, ...(params ? { params } : {}) });
+  };
+  add(task.publishedAt ?? task.createdAt, 'poster', 'task_posted');
+  if (offer) add(offer.createdAt, 'helper', 'offer_received', { amountCents: priceCents });
+  for (const payment of paymentRows) {
+    if (payment.status === 'failed') add(payment.updatedAt, 'system', 'payment_failed', { amountCents: payment.amountCents });
+  }
+  add(booking.confirmedAt, 'poster', 'booked');
+  for (const payment of paymentRows) {
+    if (payment.status === 'succeeded') add(payment.updatedAt, 'system', 'payment_succeeded', { amountCents: payment.amountCents });
+  }
+  add(booking.onMyWayAt, 'helper', 'on_my_way');
+  add(booking.arrivedAt, 'helper', 'arrived');
+  add(booking.completionSubmittedAt, 'helper', 'completion_submitted');
+  if (booking.status === 'completed') add(booking.completedAt, booking.completedVia === 'auto' ? 'system' : 'poster', booking.completedVia === 'auto' ? 'auto_approved' : 'approved');
+  if (booking.status === 'canceled' && booking.cancelReason !== 'funding_failed') {
+    const reason = booking.cancelReason ?? '';
+    add(booking.canceledAt, reason.startsWith('poster') ? 'poster' : reason.startsWith('helper') ? 'helper' : 'support', 'canceled');
+  }
+  return events.sort((a, b) => a.at.localeCompare(b.at));
+}
+
+/** One booking for its client or its helper; null for anyone else (and for unpaid holds that ran out). */
+export async function getBookingView(deps: HubDeps, userId: string, bookingId: string, now: Date): Promise<BookingView | null> {
+  const { db } = deps;
+  await autoApproveDue(db, now, { bookingId });
+  const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+  if (!booking) return null;
+  const role = roleOf(booking, userId);
+  if (!role || (booking.status === 'canceled' && booking.cancelReason === 'funding_failed')) return null;
+
+  const [[terms], [task], found, helpers, client, policy, paymentRows, offerRows] = await Promise.all([
+    db.select().from(bookingTerms).where(and(eq(bookingTerms.bookingId, booking.id), eq(bookingTerms.version, booking.termsVersion))).limit(1),
+    db.select().from(tasks).where(eq(tasks.id, booking.taskId)).limit(1),
+    findTaskWithPublicView(db, booking.taskId),
+    getHelperSummaries([booking.helperUserId], db),
+    clientSummary(db, booking.posterUserId),
+    policyOf(db, booking.policyVersionId),
+    db.select().from(payments).where(eq(payments.bookingId, booking.id)).orderBy(asc(payments.createdAt)),
+    booking.offerId ? db.select({ createdAt: offers.createdAt }).from(offers).where(eq(offers.id, booking.offerId)).limit(1) : Promise.resolve([]),
+  ]);
+  const helper = helpers.get(booking.helperUserId);
+  if (!terms || !task || !found || !helper || !client) return null;
+  const completion = ['completion_submitted', 'disputed', 'completed'].includes(booking.status) ? await completionViewOf(db, booking.id) : null;
+
+  const remote = found.view.location.kind === 'remote';
+  const facts = factsOf(booking, remote);
+  const visibility = addressVisibility(facts, role, policy, now);
+  let exactAddress: ExactAddress | undefined;
+  if (visibility === 'visible' && task.locationId) {
+    const [location] = await db.select().from(taskLocations).where(eq(taskLocations.id, task.locationId)).limit(1);
+    if (location) exactAddress = JSON.parse(deps.cipher.decrypt(location.addressEnc)) as ExactAddress;
+  }
+
+  const paymentLines: BookingPaymentLine[] = paymentRows
+    .filter((row) => ['succeeded', 'failed', 'refunded', 'partially_refunded'].includes(row.status))
+    .map((row) => ({
+      id: row.id,
+      kind: 'charge' as const,
+      amountCents: row.amountCents,
+      status: row.status as PaymentStatus,
+      ...(row.methodBrand ? { method: { brand: row.methodBrand as CardBrand, ...(row.methodLast4 ? { last4: row.methodLast4 } : {}) } } : {}),
+      at: row.updatedAt.toISOString(),
+    }));
+
+  return {
+    id: booking.id,
+    task: { id: task.id, title: found.view.title, categorySlug: found.view.categorySlug, schedule: found.view.schedule },
+    status: booking.status as BookingStatus,
+    ...(booking.cancelReason ? { cancelReason: booking.cancelReason as CancelReason } : {}),
+    ...(booking.completedVia ? { completedVia: booking.completedVia as CompletedVia } : {}),
+    viewerRole: role,
+    poster: client,
+    helper,
+    location: found.view.location,
+    ...(exactAddress ? { exactAddress } : {}),
+    addressVisibility: exactAddress || visibility !== 'visible' ? visibility : 'after_confirmation',
+    terms: {
+      version: terms.version,
+      pricing: pricingOf(terms),
+      breakdown: terms.breakdown,
+      scopeText: terms.scopeText,
+      start: terms.startAt.toISOString(),
+      ...(terms.expenseAllowanceCents > 0
+        ? { expenseAllowance: { amountCents: terms.expenseAllowanceCents, description: task.expenseAllowanceNote ?? '' } }
+        : {}),
+    },
+    ...(booking.onMyWayAt || booking.arrivedAt || booking.lateByMinutes
+      ? {
+          checkIn: {
+            ...(booking.onMyWayAt ? { onMyWayAt: booking.onMyWayAt.toISOString() } : {}),
+            ...(booking.lateByMinutes === 10 || booking.lateByMinutes === 20 || booking.lateByMinutes === 30 ? { lateByMinutes: booking.lateByMinutes } : {}),
+            ...(booking.arrivedAt ? { arrivedAt: booking.arrivedAt.toISOString() } : {}),
+          },
+        }
+      : {}),
+    deadlines: bookingDeadlines(facts, role, policy, now),
+    timeline: timelineOf(booking, task, offerRows[0] ?? null, paymentRows, terms.breakdown.taskPriceCents, {
+      poster: client.displayName,
+      helper: helper.displayName,
+    }),
+    ...(role === 'poster' ? { payments: paymentLines } : {}),
+    ...(completion ? { completion } : {}),
+    actions: bookingActions(facts, role, now),
+  };
+}
+
+const FINAL: string[] = ['completed', 'canceled'];
+
+/** `/app/bookings`: the viewer's bookings as client and helper. Holds that ran out are left out. */
+export async function getBookingsPage(db: Db, userId: string, now: Date): Promise<BookingsPageData> {
+  await autoApproveDue(db, now);
+  const rows = await db
+    .select({ booking: bookings, terms: bookingTerms })
+    .from(bookings)
+    .innerJoin(bookingTerms, and(eq(bookingTerms.bookingId, bookings.id), eq(bookingTerms.version, bookings.termsVersion)))
+    .where(
+      and(
+        or(eq(bookings.posterUserId, userId), eq(bookings.helperUserId, userId)),
+        or(ne(bookings.status, 'canceled'), isNull(bookings.cancelReason), ne(bookings.cancelReason, 'funding_failed')),
+      ),
+    )
+    .orderBy(desc(bookings.startAt));
+  if (rows.length === 0) return { needsAction: [], upcoming: [], past: [] };
+
+  const taskIds = [...new Set(rows.map((row) => row.booking.taskId))];
+  const views = new Map((await Promise.all(taskIds.map((id) => findTaskWithPublicView(db, id)))).flatMap((f) => (f ? [[f.view.id, f.view] as const] : [])));
+  const helpers = await getHelperSummaries(rows.map((row) => row.booking.helperUserId), db);
+  const clientIds = [...new Set(rows.map((row) => row.booking.posterUserId))];
+  const clients = new Map((await Promise.all(clientIds.map((id) => clientSummary(db, id)))).flatMap((c) => (c ? [[c.id, c] as const] : [])));
+
+  const list = rows.flatMap(({ booking, terms }): BookingListRow[] => {
+    const role = roleOf(booking, userId);
+    const view = views.get(booking.taskId);
+    const other = role === 'poster' ? helpers.get(booking.helperUserId) : clients.get(booking.posterUserId);
+    if (!role || !view || !other) return [];
+    const remote = view.location.kind === 'remote';
+    return [
+      {
+        id: booking.id,
+        title: view.title,
+        categorySlug: view.categorySlug,
+        status: booking.status as BookingStatus,
+        ...(booking.cancelReason ? { cancelReason: booking.cancelReason as CancelReason } : {}),
+        viewerRole: role,
+        otherParty: { id: other.id, displayName: other.displayName, initials: other.initials, memberSince: other.memberSince, phoneVerified: other.phoneVerified },
+        start: terms.startAt.toISOString(),
+        location: view.location,
+        amountCents: role === 'poster' ? (terms.breakdown.posterChargedCents ?? terms.breakdown.posterTotalCents) : terms.breakdown.helperEarningsCents,
+        needsAction: needsAction(factsOf(booking, remote), role, now),
+      },
+    ];
+  });
+  const byStart = (a: BookingListRow, b: BookingListRow) => a.start.localeCompare(b.start);
+  const upcoming = list.filter((row) => !FINAL.includes(row.status)).sort(byStart);
+  return {
+    needsAction: upcoming.filter((row) => row.needsAction),
+    upcoming,
+    past: list.filter((row) => FINAL.includes(row.status)).sort((a, b) => b.start.localeCompare(a.start)),
+  };
+}
+
+// ---- Single-tap actions ---------------------------------------------------------------------------
+
+async function recordEvent(db: Pick<Db, 'insert'>, type: string, actorId: string, booking: BookingRow) {
+  await db.insert(outboxEvents).values({
+    id: newId('evt'),
+    type,
+    aggregateType: 'booking',
+    aggregateId: booking.id,
+    payload: { bookingId: booking.id, taskId: booking.taskId, posterUserId: booking.posterUserId, helperUserId: booking.helperUserId },
+  });
+  await db.insert(auditLog).values({ id: newId('aud'), actorId, actorRole: 'user', action: type, targetType: 'booking', targetId: booking.id });
+}
+
+/** The booking page's actions: only those the domain offers right now. */
+export async function runBookingAction(db: Db, userId: string, bookingId: string, action: BookingActionId, now: Date): Promise<ActionResult> {
+  await autoApproveDue(db, now, { bookingId: String(bookingId) });
+  const [booking] = await db.select().from(bookings).where(eq(bookings.id, String(bookingId))).limit(1);
+  const role = booking ? roleOf(booking, userId) : null;
+  if (!booking || !role) return { ok: false, code: 'not_found' };
+  const found = await findTaskWithPublicView(db, booking.taskId);
+  const facts = factsOf(booking, found?.view.location.kind === 'remote');
+  const allowed = bookingActions(facts, role, now).find((item) => item.id === action);
+  if (!allowed?.enabled) return { ok: false, code: 'not_allowed' };
+
+  const transition = async (expected: string, set: Partial<BookingRow>, event: string): Promise<ActionResult> => {
+    const updated = await db.transaction(async (tx) => {
+      const rows = await tx
+        .update(bookings)
+        .set({ ...set, updatedAt: now })
+        .where(and(eq(bookings.id, booking.id), eq(bookings.status, expected)))
+        .returning({ id: bookings.id });
+      if (rows.length === 0) return false;
+      if (set.status === 'completed') await tx.update(tasks).set({ status: 'completed', updatedAt: now }).where(eq(tasks.id, booking.taskId));
+      await recordEvent(tx, event, userId, booking);
+      return true;
+    });
+    return updated ? { ok: true, code: 'updated' } : { ok: false, code: 'version_conflict' };
+  };
+
+  switch (action) {
+    case 'pay':
+      return booking.offerId
+        ? { ok: true, code: 'updated', redirectTo: routes.app.confirmOffer(booking.taskId, booking.offerId) }
+        : { ok: false, code: 'not_allowed' };
+    case 'add_to_calendar':
+      return { ok: true, code: 'updated', redirectTo: routes.app.bookingCalendar(booking.id) };
+    case 'on_my_way':
+      return transition('confirmed', { onMyWayAt: now }, 'booking.on_my_way');
+    case 'arrived':
+      return transition('confirmed', { status: 'in_progress', arrivedAt: now }, 'booking.arrived');
+    case 'approve':
+      return transition('completion_submitted', { status: 'completed', completedVia: 'poster', completedAt: now, approvalDueAt: null }, 'booking.completed');
+    default:
+      return { ok: false, code: 'not_allowed' };
+  }
+}

@@ -1,7 +1,7 @@
 /**
- * Who may see an uploaded file (blueprint 08 §4). Work samples are public profile content. Task
- * photos are for the poster and staff now; bookable helpers and booking participants get access
- * when offers and bookings exist. Evidence and receipts: owner and staff (participants later).
+ * Who may see an uploaded file (blueprint 08 §4), from the file alone: work samples are public
+ * profile content; everything else is for its owner and staff. Access through what a file belongs
+ * to (task photos for bookable helpers and the booked helper) is in `related-access.ts`.
  */
 export interface FileAccessViewer {
   userId: string | null;

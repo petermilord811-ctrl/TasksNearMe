@@ -90,4 +90,16 @@ export const SEED_OFFERS: SeedOffer[] = [
     submittedHoursAgo: 20,
     seenByPoster: true,
   },
+  {
+    id: 'off_tv_jordan',
+    taskId: 'tsk_tv',
+    helperUserId: 'usr_jordan',
+    pricing: { type: 'fixed', priceCents: 8000 },
+    startOffsetMinutes: 0,
+    message: 'I mount TVs often and bring a level and my own drill bits.',
+    brings: ['Drill', 'Level'],
+    revision: 1,
+    submittedHoursAgo: 50,
+    seenByPoster: true,
+  },
 ];
