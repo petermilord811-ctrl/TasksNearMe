@@ -23,3 +23,4 @@ export * from './earnings';
 export * from './home';
 export * from './reviews';
 export * from './account';
+export * from './support';
