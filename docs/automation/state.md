@@ -8,7 +8,7 @@
 - the home dashboards; notifications, the account page, real unread badges;
 - support for members (cases, requests, replies), reporting and blocking from a conversation.
 
-**Codex:** UI-026 (disputes on the booking page, support notifications) is running (`node scripts/codex-run.mjs UI-026`, background; log `scratchpad/codex-UI-026.log`). Its backend comes with the wiring: `BookingView.dispute` in the booking hub, and `support.replied` / `support.resolved` outbox events that the dispatcher turns into notifications.
+**Codex:** idle after UI-026; the next ticket is being prepared (UI-027 change requests or UI-025 direct invites).
 **Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0016). `npm run e2e` reseeds the dev database itself.
 
 ## Done in iteration 9
@@ -24,16 +24,20 @@
 - **UI-028** merged and wired: `/app/rewards` (rewards backend: welcome and repeat grants from booking facts, hold, review, redeem to a development gift card).
 - **Job runner** (`src/instrumentation.ts`): expiries, auto-approval, review publishing and notifications every minute.
 - **UI-019** merged and wired: money resolutions (release, settle, refund in full, goodwill) and `/admin/bookings/[bookingId]` with refunds and the address and conversation behind a logged reason.
-- **UI-026** prepared and launched (placeholders for the new notification codes are listed in its ticket).
+- **UI-026** merged and wired: the dispute card on both people's booking page, support notifications, refunds in the client's payment history.
+- Sessions ended twice mid-run: the Codex runner and the gate are separate processes and kept going; wait on their PIDs (`Wait-Process`) or use `codex-run.mjs --finish`.
 - Tooling: the heavy-work lock (`scripts/gate.mjs`, the runner's check), the shared e2e sign-in, and seed resets that clear leftovers.
 
 ## Next steps
-1. **When UI-026 hands off:** review, merge, then wire:
-   - `getBookingView` gains `dispute` (the case on the booking, role-projected money: the client's dispute refunds, the helper's earnings; `canOpenCase` from the support visibility rule);
-   - staff replies and resolutions write `support.replied` / `support.resolved` outbox events; `dispatchNotifications` maps them to `support_replied` / `case_resolved` with the `support_case` target;
-   - e2e: Maya's disputed booking card (needs a seeded disputed booking, or reuse the staff-money flow).
-2. **Prepare the next Codex ticket while UI-026 runs:** UI-025 direct invites (from a helper profile, saved helpers and Book again; accept, decline, counter). Decide how a new task is described (reuse the posting wizard with an `invite` handle, or a short inline form). Or UI-027 change requests.
-3. **Later:** UI-020 (reward reviews, users and moderation, config), UI-021 (quality pass), My clients and availability posts, staff TOTP, clock and time travel.
+1. **Keep Codex busy:** prepare the next ticket now.
+   - **UI-027 change requests** (blueprint 03 §4, 04: new price, time, scope or hours cap; accept, decline, withdraw; pay the difference with the payment panel).
+   - Or **UI-025 direct invites** (J3: from a helper profile, saved helpers and Book again; a funded authorization; accept, decline, counter). It needs a task: reuse the posting wizard with a target helper, or a short inline form.
+2. **Seed a disputed booking** (Ana's cleaning task with Jordan, work submitted, problem reported) to back e2e for the dispute card and the staff money flow.
+3. **Later:**
+   - UI-020: reward reviews, users and moderation, config.
+   - UI-021: quality pass.
+   - My clients and availability posts.
+   - Staff TOTP, clock and time travel.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB).

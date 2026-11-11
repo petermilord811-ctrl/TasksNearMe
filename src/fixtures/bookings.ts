@@ -772,3 +772,17 @@ export const deskBookingHelperSettled: BookingView = {
   completion: { ...deskCompletionView, finalBreakdown: deskSettledBreakdown },
   dispute: { ...deskDispute, status: 'resolved', canOpenCase: true, resolution: { ...settled, receivesCents: 4050 } },
 };
+
+// ---- Change requests on the booking page (UI-027) -----------------------------------------------------
+
+/** Maya proposed adding the chair: the page points to it (she'd pay $22.00 more). */
+export const deskBookingPosterWithOpenChange: BookingView = {
+  ...deskBookingPosterConfirmed,
+  openChange: { id: 'chg_desk_chair', status: 'proposed', fromMe: true, differenceCents: 2200 },
+};
+
+/** Jordan sees Maya's proposal waiting for an answer. */
+export const deskBookingHelperWithOpenChange: BookingView = {
+  ...deskBookingHelperConfirmed,
+  openChange: { id: 'chg_desk_chair', status: 'proposed', fromMe: false },
+};

@@ -65,6 +65,9 @@ Copy namespaces: `bookingHub` (or the booking page's namespace) for the card, pl
 - Rework visits and settlement offers between the two people (later), change requests (UI-027).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): none (the booking page and notifications).
+- Queries / actions:
+  - `getBookingDispute` in `src/modules/support/service.ts`, called by `getBookingView`;
+  - staff replies and resolutions write `support.replied` and `support.resolved`, which `dispatchNotifications` maps;
+  - the client's payment history now lists refunds.
+- Tests: `tests/integration/staff-money.test.ts`, "the dispute on the booking page". No e2e yet: a seeded disputed booking would back one.

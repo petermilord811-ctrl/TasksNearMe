@@ -26,3 +26,4 @@ export * from './account';
 export * from './support';
 export * from './admin';
 export * from './rewards';
+export * from './changes';

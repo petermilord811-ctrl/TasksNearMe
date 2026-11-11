@@ -201,6 +201,8 @@ export interface BookingView {
   myReview?: { rating: number; submittedAt: ISODateTime; publishedAt?: ISODateTime };
   /** A problem report on this booking and how support resolved it (UI-026). */
   dispute?: BookingDisputeView;
+  /** The open change request, if any (UI-027): the page links to `routes.app.bookingChange`. */
+  openChange?: { id: string; status: 'proposed' | 'accepted_pending_funding'; fromMe: boolean; differenceCents?: Cents };
   /** From the domain (ui-contract §6): only actions that work today are included. */
   actions: ActionDescriptor<BookingActionId>[];
 }

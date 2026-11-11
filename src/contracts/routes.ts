@@ -90,6 +90,7 @@ export const routes = {
     clients: () => '/app/clients',
     bookings: () => '/app/bookings',
     booking: (bookingId: string) => `/app/bookings/${enc(bookingId)}`,
+    bookingProposeChange: (bookingId: string) => `/app/bookings/${enc(bookingId)}/changes/new`,
     bookingChange: (bookingId: string, changeId: string) =>
       `/app/bookings/${enc(bookingId)}/changes/${enc(changeId)}`,
     bookingComplete: (bookingId: string) => `/app/bookings/${enc(bookingId)}/complete`,
