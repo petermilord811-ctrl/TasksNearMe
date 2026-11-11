@@ -103,6 +103,18 @@ export const SEED_OFFERS: SeedOffer[] = [
     seenByPoster: true,
   },
   {
+    id: 'off_dresser_jordan',
+    taskId: 'tsk_dresser',
+    helperUserId: 'usr_jordan',
+    pricing: { type: 'fixed', priceCents: 6000 },
+    startOffsetMinutes: 0,
+    message: 'Dressers are my favorite. I bring a drill.',
+    brings: ['Drill'],
+    revision: 1,
+    submittedHoursAgo: 70,
+    seenByPoster: true,
+  },
+  {
     id: 'off_bookcase_jordan',
     taskId: 'tsk_bookcase',
     helperUserId: 'usr_jordan',

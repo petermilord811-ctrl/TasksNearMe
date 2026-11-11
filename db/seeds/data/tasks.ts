@@ -126,6 +126,23 @@ export const SEED_TASKS: SeedTask[] = [
     postedHoursAgo: 60,
   },
   {
+    // Disputed with Jordan (seeded): Jordan sent the work, Ana reported a problem; the staff e2e settles it.
+    id: 'tsk_dresser',
+    slug: 'fix-a-dresser-hyde-park-8m2q',
+    posterId: 'usr_ana',
+    categoryId: 'cat_furniture_assembly',
+    title: 'Assemble a dresser',
+    description: 'A six-drawer flat-pack dresser. The drawers need their runners fitted.',
+    details: { itemType: 'dresser', itemCount: 1, toolsOnSite: false },
+    placeId: 'plc_hydepark_402',
+    daysFromToday: 0,
+    start: '08:00',
+    end: '11:00',
+    budget: { type: 'fixed', priceCents: 6000 },
+    offerCount: 0,
+    postedHoursAgo: 80,
+  },
+  {
     // In progress with Jordan (seeded): the completion e2e sends the work, then Ruth approves.
     id: 'tsk_bookcase',
     slug: 'assemble-a-bookcase-windsor-park-3k8b',

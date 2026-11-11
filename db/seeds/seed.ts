@@ -509,6 +509,25 @@ async function seedBookings(tx: Tx): Promise<void> {
   };
   await seedOne({ id: 'bkg_tv', taskId: 'tsk_tv', offerId: 'off_tv_jordan', priceCents: 8000, status: 'confirmed' });
   await seedOne({ id: 'bkg_bookcase', taskId: 'tsk_bookcase', offerId: 'off_bookcase_jordan', priceCents: 7000, status: 'in_progress' });
+
+  // Ana's dresser: Jordan sent the work an hour ago, Ana reported a problem (a dispute case waits for support).
+  await seedOne({ id: 'bkg_dresser', taskId: 'tsk_dresser', offerId: 'off_dresser_jordan', priceCents: 6000, status: 'in_progress' });
+  const [dresserTerms] = await tx.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_dresser'));
+  const sent = new Date(Date.now() - 60 * 60_000);
+  await tx.insert(bookingCompletions).values({ bookingId: 'bkg_dresser', submittedAt: sent, note: 'All six drawers fitted.', finalBreakdown: dresserTerms!.breakdown });
+  await tx.update(bookings).set({ status: 'disputed', completionSubmittedAt: sent }).where(eq(bookings.id, 'bkg_dresser'));
+  await tx.insert(supportCases).values({
+    id: 'case_seed_dresser',
+    type: 'dispute',
+    status: 'open',
+    priority: 'high',
+    bookingId: 'bkg_dresser',
+    openedByUserId: 'usr_ana',
+    reason: 'not_done',
+    description: 'Two of the drawers still stick and one runner is missing.',
+    createdAt: new Date(Date.now() - 30 * 60_000),
+    updatedAt: new Date(Date.now() - 30 * 60_000),
+  });
 }
 
 /** Maya's saved cards (development provider): the Visa is her default. Both pay successfully. */

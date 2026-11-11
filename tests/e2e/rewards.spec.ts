@@ -9,8 +9,8 @@ test("a founding helper's welcome reward is pending after a paid booking", async
   await page.goto('/app/rewards');
   await expect(page.getByRole('heading', { level: 1, name: 'Rewards' })).toBeVisible();
   await expect(page.getByText('$50.00').first()).toBeVisible();
-  // The welcome reward goes to Jordan's earliest paid booking (the seeded bookcase or TV booking).
-  await expect(page.getByRole('link', { name: /Assemble a bookcase|Mount a TV on the wall/ }).first()).toHaveAttribute('href', /\/app\/bookings\/bkg_(bookcase|tv)$/);
+  // The welcome reward goes to Jordan's earliest paid booking (one of the seeded ones).
+  await expect(page.getByRole('link', { name: /Assemble a (bookcase|dresser)|Mount a TV on the wall/ }).first()).toHaveAttribute('href', /\/app\/bookings\/bkg_(bookcase|dresser|tv)$/);
 });
 
 test('people who are not set up as helpers are pointed to helper setup', async ({ page }, testInfo) => {
