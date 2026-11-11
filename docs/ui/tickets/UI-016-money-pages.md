@@ -24,6 +24,9 @@ Rewards and gift cards are a later ticket. Claude wires the three pages inside `
   - handlers: `fakePaymentMethodHandlers`, `fakeEarningsHandlers`.
 - Reuse: `PaymentMethodLabel`, `PriceBreakdown`, `useEarningsStatus` / `usePaymentStatus` + `StatusBadge`, `Money`, `EmptyState`, `PageHeader`, `AlertDialog`.
 
+## Follow-ups (fix first)
+1. **Flaky focus tests in `src/ui/screens/bookings/completion-screen.test.tsx`.** On a busy machine, one of the focus assertions fails in about every other run, even alone: "focuses a dotted server receipt error…" and "focuses a rejected receipt photo…". That failed the independent check for UI-012. Make them deterministic: wait for focus with `waitFor`/`findBy*`, or move focus without timers in the form. Then run the file five times in a row; all runs must pass.
+
 ## Build
 
 **Screens** (`src/ui/screens/money/`, exported from `src/ui/screens/money/index.ts`). One H1 each.
