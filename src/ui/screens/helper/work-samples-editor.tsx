@@ -4,7 +4,7 @@ import { useId, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ArrowDown, ArrowUp, ImagePlus, LoaderCircle, Lock, Trash2 } from 'lucide-react';
-import type { ActionResult, CategorySlug, CategoryView, HelperProfileEditorHandlers, PhotoUploadResult, WorkSampleView } from '@/contracts';
+import type { ActionResult, CategorySlug, CategoryView, HelperProfileEditorHandlers, WorkSampleUploadResult, WorkSampleView } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { WorkSampleGallery } from '@/ui/components/people/work-sample-gallery';
 import { Button } from '@/ui/primitives/button';
@@ -13,11 +13,12 @@ import { Input } from '@/ui/primitives/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/ui/primitives/alert-dialog';
 
 type SampleHandlers = Pick<HelperProfileEditorHandlers, 'onUploadWorkSample' | 'onUpdateWorkSample' | 'onRemoveWorkSample' | 'onReorderWorkSamples'>;
-type UploadError = Extract<PhotoUploadResult, { ok: false }>['code'];
+type UploadError = Extract<WorkSampleUploadResult, { ok: false }>['code'];
 export interface WorkSamplesEditorProps {
   samples: WorkSampleView[];
   categories: CategoryView[];
   maxWorkSamples: number;
+  maxPhotoMegabytes: number;
   handlers: SampleHandlers;
 }
 
@@ -43,14 +44,14 @@ function SampleFields({ sample, categories, disabled }: { sample?: WorkSampleVie
   </div>;
 }
 
-export function WorkSamplesEditor({ samples, categories, maxWorkSamples, handlers }: WorkSamplesEditorProps) {
+export function WorkSamplesEditor({ samples, categories, maxWorkSamples, maxPhotoMegabytes, handlers }: WorkSamplesEditorProps) {
   const t = useTranslations('helperProfileEditor.samples');
   const router = useRouter();
   const id = useId();
   const [source, setSource] = useState(samples);
   const [items, setItems] = useState(samples);
-  // Upload currently returns a Photo, not a WorkSampleView. Keep the saved photo separate until
-  // the app returns its authoritative work-sample id; never send a photo id to sample mutations.
+  // Older handlers may omit the optional sample. Keep only those photos separate until the
+  // authoritative work-sample id arrives; never send a photo id to sample mutations.
   const [uploaded, setUploaded] = useState<WorkSampleView[]>([]);
   const [pending, setPending] = useState<string>();
   const [result, setResult] = useState<ActionResult>();
@@ -107,31 +108,41 @@ export function WorkSamplesEditor({ samples, categories, maxWorkSamples, handler
     void mutate(`move-${offset}-${items[index]!.id}`, () => handlers.onReorderWorkSamples({ ids: next.map((sample) => sample.id) }), () => setItems(next));
   }
 
+  function rejectUpload(code: UploadError) {
+    setUploadError(code);
+    fileInput.current?.focus();
+  }
+
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (locked.current) return;
     setResult(undefined);
     setUploadError(undefined);
     setUploadedNotice(false);
-    if (count >= maxWorkSamples) { setUploadError('too_many'); return; }
+    if (count >= maxWorkSamples) { rejectUpload('too_many'); return; }
     const form = event.currentTarget;
     const data = new FormData(form);
     const file = fileInput.current?.files?.[0];
-    if (!(file instanceof File) || !file.size) { setUploadError('unsupported_type'); return; }
+    if (!(file instanceof File) || !file.size) { rejectUpload('unsupported_type'); return; }
+    if (file.size > maxPhotoMegabytes * 1024 * 1024) { rejectUpload('too_large'); return; }
     data.set('file', file);
     const accepted = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
     if (!accepted.includes(file.type) && !(file.type === '' && /\.(jpe?g|png|webp|heic)$/i.test(file.name))) {
-      setUploadError('unsupported_type');
+      rejectUpload('unsupported_type');
       return;
     }
     locked.current = true;
     setPending('upload');
-    let next: PhotoUploadResult;
+    let next: WorkSampleUploadResult;
     try { next = await handlers.onUploadWorkSample(data); }
     catch { next = { ok: false, code: 'unknown' }; }
     if (next.ok) {
       const photo = next.photo;
-      if (!items.some((sample) => sample.photo.id === photo.id)) {
+      if (next.sample) {
+        const sample = next.sample;
+        // A prop refresh can beat the upload response. Add the authoritative sample once.
+        setItems((current) => current.some((item) => item.id === sample.id) ? current : [...current, sample]);
+      } else if (!items.some((sample) => sample.photo.id === photo.id)) {
         setUploaded((current) => [...current.filter((sample) => sample.photo.id !== photo.id), {
           id: `uploaded-${photo.id}`, photo,
           caption: String(data.get('caption') ?? '').trim(),
@@ -140,7 +151,7 @@ export function WorkSamplesEditor({ samples, categories, maxWorkSamples, handler
       }
       setUploadedNotice(true);
       form.reset();
-      router.refresh();
+      if (!next.sample) router.refresh();
     } else setUploadError(next.code);
     locked.current = false;
     setPending(undefined);
@@ -187,8 +198,8 @@ export function WorkSamplesEditor({ samples, categories, maxWorkSamples, handler
       <Field className="gap-2">
         <FieldLabel htmlFor={`${id}-file`}>{t('file')}</FieldLabel>
         <Input ref={fileInput} id={`${id}-file`} name="file" type="file" required accept="image/jpeg,image/png,image/webp,image/heic" disabled={busy || count >= maxWorkSamples} aria-describedby={`${id}-file-hint${uploadError ? ` ${id}-file-error` : ''}`} aria-invalid={!!uploadError} className="min-h-14 py-3" />
-        <FieldDescription id={`${id}-file-hint`}>{t('fileHint')}</FieldDescription>
-        {uploadError && <p id={`${id}-file-error`} role="alert" className="text-sm text-destructive">{t(`errors.${uploadError}`, { max: maxWorkSamples })}</p>}
+        <FieldDescription id={`${id}-file-hint`}>{t('fileHint', { megabytes: maxPhotoMegabytes })}</FieldDescription>
+        {uploadError && <p id={`${id}-file-error`} role="alert" className="text-sm text-destructive">{t(`errors.${uploadError}`, { max: maxWorkSamples, megabytes: maxPhotoMegabytes })}</p>}
       </Field>
       <SampleFields categories={categories} disabled={busy || count >= maxWorkSamples} />
       {count >= maxWorkSamples && <p className="text-sm text-muted-foreground">{t('limit', { max: maxWorkSamples })}</p>}

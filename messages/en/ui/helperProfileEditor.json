@@ -8,7 +8,7 @@
     "emptyHint": "Add a photo of a completed task to show clients what you can help with.",
     "add": "Add a work sample",
     "file": "Photo",
-    "fileHint": "Choose a JPEG, PNG, WebP, or HEIC photo.",
+    "fileHint": "Choose a JPEG, PNG, WebP, or HEIC photo, up to {megabytes, number} MB.",
     "caption": "Caption (optional)",
     "captionHint": "Describe the work shown in this photo.",
     "category": "Service (optional)",
@@ -33,7 +33,7 @@
     "working": "Saving changes",
     "saved": "Saved",
     "errors": {
-      "too_large": "This photo is too large. Choose a smaller photo and try again.",
+      "too_large": "This photo is too large. Choose a photo up to {megabytes, number} MB and try again.",
       "unsupported_type": "Choose a JPEG, PNG, WebP, or HEIC photo.",
       "too_many": "You can add up to {max, plural, one {# work sample} other {# work samples}}. Remove one and try again.",
       "rate_limited": "You have uploaded several photos recently. Wait a moment and try again.",

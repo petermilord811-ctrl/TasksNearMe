@@ -1,0 +1,21 @@
+{
+  "title": "My offers",
+  "description": "Keep track of the offers you've sent and the tasks you're booked for.",
+  "tabsLabel": "Offer status",
+  "tabs": { "active": "Active", "booked": "Booked", "closed": "Closed" },
+  "tabCount": "{label} ({count})",
+  "yourPrice": "Your price",
+  "earnings": "What you'll earn",
+  "hourlyPrice": "{rate}/h · {hours} estimated · {cap} cap",
+  "proposedStart": "Proposed start: {date}",
+  "expiry": "Offer expiry",
+  "expires": "Expires {relative}",
+  "updatedOffer": "Updated offer",
+  "findWork": "Find work",
+  "empty": {
+    "active": { "title": "No active offers", "body": "Offers you've sent appear here while you wait for the client. Find a task to send your first offer." },
+    "booked": { "title": "No booked offers yet", "body": "When a client books your offer, you'll see it here. Browse open tasks to find your next one." },
+    "closed": { "title": "No closed offers", "body": "Offers that are not selected, withdrawn, or expired appear here. Find an open task to send another offer." }
+  },
+  "previews": { "group": "My offers", "default": "My offers · active", "empty": "My offers · empty", "booked": "My offers · booked", "closed": "My offers · closed statuses", "updated": "My offers · updated offer", "emptyBooked": "My offers · no booked offers", "emptyClosed": "My offers · no closed offers" }
+}

@@ -53,7 +53,7 @@ export function HelperProfileEditorScreen({ data, handlers, initialSection = 'pr
     services: <HelperServicesForm values={data.values.services} categories={data.categories} onSave={handlers.onSaveServices} />,
     area: <HelperAreaForm values={data.values.area} areas={data.areas} remoteAllowed={remoteAllowed} onSave={handlers.onSaveArea} />,
     tools: <HelperToolsForm values={data.values.tools} onSave={handlers.onSaveTools} />,
-    'work-samples': <WorkSamplesEditor samples={data.workSamples} categories={data.categories} maxWorkSamples={data.maxWorkSamples} handlers={handlers} />,
+    'work-samples': <WorkSamplesEditor samples={data.workSamples} categories={data.categories} maxWorkSamples={data.maxWorkSamples} maxPhotoMegabytes={data.maxPhotoMegabytes} handlers={handlers} />,
     verification: <div className="space-y-6"><VerificationBadges badges={data.badges} />{(['identity', 'payout', 'background'] as const).map((track) => <VerificationPanel key={track} track={track} verification={data.verification} categories={data.categories} bookableCategories={data.progress.bookableCategories} headingLevel={3} />)}</div>,
     visibility: <VisibilityEditor paused={data.paused} onSetPaused={handlers.onSetPaused} />,
   };
