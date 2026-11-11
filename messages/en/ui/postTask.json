@@ -135,7 +135,7 @@
       },
       "greenWastePlan": {
         "label": "What happens to the bagged leaves and debris?",
-        "hint": "Helpers bag everything on site. They can’t take it away.",
+        "hint": "Helpers gather and bag yard waste on site. Arrange disposal yourself; helpers can't take it away.",
         "options": {
           "curbside": "Leave it at the curb for city pickup",
           "poster_handles": "Leave it in my yard; I’ll handle it"
@@ -275,7 +275,9 @@
     "remove": "Remove photo {number}",
     "removed": "Photo removed.",
     "restored": "Uploaded photo {number}",
-    "restoredHint": "This photo is saved with your draft. Its preview will be available after posting.",
+    "restoredHint": "This photo is saved with your draft. Its preview isn't available right now.",
+    "loadingSaved": "Loading saved photo previews…",
+    "restoreFailed": "Photo previews couldn't load. Refresh to try again; your photos are still saved.",
     "errors": {
       "too_large": "This photo is too large. Choose a photo under {megabytes} MB.",
       "unsupported_type": "Choose a JPEG, PNG, WebP, or HEIC photo.",

@@ -36,7 +36,7 @@ export const postingPreviews: PreviewEntry[] = [
   preview('details-furniture', { initialStep: 'details', ...desk }),
   preview('details-moving', { initialStep: 'details', ...moving }),
   preview('details-computer', { initialStep: 'details', initialValues: remoteHelpDraft }),
-  preview('details-yard', { initialStep: 'details', initialValues: { ...deskDraft, categorySlug: 'yard-cleanup', details: { yardSize: 'small', work: 'leaves', haulAway: false, toolsOnSite: true } } }),
+  preview('details-yard', { initialStep: 'details', initialValues: { ...deskDraft, categorySlug: 'yard-cleanup', details: { yardSize: 'small', work: 'leaves', greenWastePlan: 'curbside', toolsOnSite: true } } }),
   preview('details-cleaning', { initialStep: 'details', initialValues: { ...deskDraft, categorySlug: 'light-cleaning', details: { bedrooms: 2, bathrooms: 1, suppliesOnSite: true, pets: false } } }),
   preview('photos', { initialStep: 'photos', ...desk, initialValues: { ...deskDraft, photoIds: uploadedTaskPhotos.map((photo) => photo.id) } }),
   preview('photos-empty', { initialStep: 'photos', ...desk, initialValues: { ...deskDraft, photoIds: [] } }),

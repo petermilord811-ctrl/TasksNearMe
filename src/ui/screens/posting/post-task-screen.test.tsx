@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
-import type { ActionResult, PostTaskHandlers, TaskDraftInput } from '@/contracts';
-import { addressSuggestions, aiDeskDraft, deskBreakdown, deskDraft, fakeHandler, fakePostTaskHandlers, postTaskPageData, postTaskResults } from '@/fixtures';
+import type { ActionResult, Photo, PostTaskHandlers, TaskDraftInput } from '@/contracts';
+import { addressSuggestions, aiDeskDraft, deskBreakdown, deskDraft, fakeHandler, fakePostTaskHandlers, postTaskPageData, postTaskResults, uploadedTaskPhotos } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { PostTaskScreen, type PostTaskScreenProps } from './post-task-screen';
 import { draftStorageKey } from './draft-storage';
@@ -153,5 +153,78 @@ describe('posting wizard', () => {
     mount({ persistDraft: true });
     expect(await screen.findByText('Your draft is ready to continue.')).toBeInTheDocument();
     expect(screen.getByText('Step 1 of 8 · Category')).toBeInTheDocument();
+  });
+
+  it('uses the supplied storage key and resolves restored photo ids without storing image URLs', async () => {
+    const scopedKey = 'tasksnearme:post-task:maya:austin:v1';
+    const legacyDraft = JSON.stringify({ values: { ...deskDraft, title: 'A different saved draft' }, step: 'describe' });
+    sessionStorage.setItem(draftStorageKey('austin'), legacyDraft);
+    sessionStorage.setItem(scopedKey, JSON.stringify({ values: deskDraft, step: 'photos' }));
+    const onResolvePhotos = vi.fn(async () => [uploadedTaskPhotos[0]!]);
+    const view = mount({ data: { ...postTaskPageData, draftStorageKey: scopedKey }, handlers: { ...fakePostTaskHandlers, onResolvePhotos }, persistDraft: true });
+    expect(await screen.findByRole('img', { name: uploadedTaskPhotos[0]!.alt })).toHaveAttribute('src', uploadedTaskPhotos[0]!.src);
+    expect(onResolvePhotos).toHaveBeenCalledExactlyOnceWith({ photoIds: deskDraft.photoIds });
+    const raw = sessionStorage.getItem(scopedKey)!;
+    expect(JSON.parse(raw).values.photoIds).toEqual(deskDraft.photoIds);
+    expect(raw).not.toContain('src');
+    expect(sessionStorage.getItem(draftStorageKey('austin'))).toBe(legacyDraft);
+    view.unmount();
+
+    sessionStorage.setItem(scopedKey, JSON.stringify({ values: deskDraft, step: 'review', address: addressSuggestions[0] }));
+    mount({ data: { ...postTaskPageData, draftStorageKey: scopedKey }, persistDraft: true });
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Post task' }));
+    await waitFor(() => expect(sessionStorage.getItem(scopedKey)).toBeNull());
+    expect(sessionStorage.getItem(draftStorageKey('austin'))).toBe(legacyDraft);
+  });
+
+  it('does not restore a photo removed while thumbnails are loading', async () => {
+    sessionStorage.setItem(draftStorageKey('austin'), JSON.stringify({ values: deskDraft, step: 'photos' }));
+    let finish!: (photos: Photo[]) => void;
+    const onResolvePhotos = vi.fn(() => new Promise<Photo[]>((resolve) => { finish = resolve; }));
+    mount({ handlers: { ...fakePostTaskHandlers, onResolvePhotos }, persistDraft: true });
+    expect(await screen.findByText(messages.postTask.photos.loadingSaved)).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Remove photo 1' }));
+    await act(async () => finish([uploadedTaskPhotos[0]!]));
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(JSON.parse(sessionStorage.getItem(draftStorageKey('austin'))!).values.photoIds).toEqual([]);
+  });
+
+  it('keeps saved photo ids and announces when thumbnail resolution fails', async () => {
+    sessionStorage.setItem(draftStorageKey('austin'), JSON.stringify({ values: deskDraft, step: 'photos' }));
+    mount({ handlers: { ...fakePostTaskHandlers, onResolvePhotos: async () => { throw new Error('Unavailable'); } }, persistDraft: true });
+    expect(await screen.findByText(messages.postTask.photos.restoreFailed)).toBeInTheDocument();
+    expect(screen.getByText(messages.postTask.photos.restoredHint)).toBeInTheDocument();
+    expect(JSON.parse(sessionStorage.getItem(draftStorageKey('austin'))!).values.photoIds).toEqual(deskDraft.photoIds);
+  });
+
+  it('clears obsolete thumbnail loading when same-scope data refreshes after removing the saved photo', async () => {
+    sessionStorage.setItem(draftStorageKey('austin'), JSON.stringify({ values: deskDraft, step: 'photos' }));
+    let finish!: (photos: Photo[]) => void;
+    const onResolvePhotos = vi.fn(() => new Promise<Photo[]>((resolve) => { finish = resolve; }));
+    const handlers = { ...fakePostTaskHandlers, onResolvePhotos };
+    const tree = () => <NextIntlClientProvider locale="en" messages={messages}><PostTaskScreen data={{ ...postTaskPageData }} handlers={handlers} /></NextIntlClientProvider>;
+    const view = render(tree());
+    expect(await screen.findByText(messages.postTask.photos.loadingSaved)).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Remove photo 1' }));
+    view.rerender(tree());
+    await waitFor(() => expect(screen.queryByText(messages.postTask.photos.loadingSaved)).not.toBeInTheDocument());
+    await act(async () => finish([uploadedTaskPhotos[0]!]));
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(onResolvePhotos).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(sessionStorage.getItem(draftStorageKey('austin'))!).values.photoIds).toEqual([]);
+  });
+
+  it('starts a separate in-memory draft when the person-scoped key changes', async () => {
+    const firstKey = 'tasksnearme:post-task:maya:austin:v1';
+    const secondKey = 'tasksnearme:post-task:ruth:austin:v1';
+    sessionStorage.setItem(firstKey, JSON.stringify({ values: deskDraft, step: 'describe' }));
+    const tree = (key: string) => <NextIntlClientProvider locale="en" messages={messages}><PostTaskScreen data={{ ...postTaskPageData, draftStorageKey: key }} handlers={fakePostTaskHandlers} initialStep="describe" /></NextIntlClientProvider>;
+    const view = render(tree(firstKey));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveValue(deskDraft.title));
+    view.rerender(tree(secondKey));
+    await waitFor(() => expect(sessionStorage.getItem(secondKey)).not.toBeNull());
+    expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveValue('');
+    expect(JSON.parse(sessionStorage.getItem(secondKey)!).values.title).toBe('');
+    expect(JSON.parse(sessionStorage.getItem(firstKey)!).values.title).toBe(deskDraft.title);
   });
 });

@@ -1,9 +1,10 @@
 import { useTranslations } from 'next-intl';
-import type { BadgeTone, BookingStatus, OfferStatus, InviteStatus, PaymentStatus, EarningsStatus, RewardStatus, CaseStatus, ViewerRole, ISODateTime } from '@/contracts';
+import type { BadgeTone, TaskStatus, BookingStatus, OfferStatus, InviteStatus, PaymentStatus, EarningsStatus, RewardStatus, CaseStatus, ViewerRole, ISODateTime } from '@/contracts';
 import { formatDateTime } from '@/shared/format';
 
 export interface StatusLabel { label: string; tone: BadgeTone }
 
+const taskTones: Record<TaskStatus, BadgeTone> = { draft: 'neutral', open: 'brand', assigned: 'info', completed: 'success', canceled: 'neutral', expired: 'neutral' };
 const bookingTones: Record<BookingStatus, BadgeTone> = {
   pending_funding: 'warning', confirmed: 'info', in_progress: 'info', completion_submitted: 'warning', disputed: 'danger', completed: 'success', canceled: 'neutral',
 };
@@ -13,6 +14,11 @@ const paymentTones: Record<PaymentStatus, BadgeTone> = { requires_confirmation: 
 const earningsTones: Record<EarningsStatus, BadgeTone> = { not_due: 'neutral', on_hold: 'warning', scheduled: 'info', transferred: 'info', paid_out: 'success', reversed: 'neutral', partially_reversed: 'neutral', failed: 'danger' };
 const rewardTones: Record<RewardStatus, BadgeTone> = { pending: 'reward', qualified: 'reward', in_review: 'warning', redeemable: 'reward', issuing: 'info', delivered: 'success', failed: 'danger', voided: 'neutral', expired: 'neutral' };
 const caseTones: Record<CaseStatus, BadgeTone> = { open: 'info', awaiting_poster: 'warning', awaiting_helper: 'warning', awaiting_support: 'info', escalated: 'warning', resolved: 'success', closed: 'neutral' };
+
+export function useTaskStatus(status: TaskStatus): StatusLabel {
+  const t = useTranslations('status');
+  return { label: t(`task.${status}`), tone: taskTones[status] };
+}
 
 export function useBookingStatus(status: BookingStatus, viewer: ViewerRole): StatusLabel {
   const t = useTranslations('status');

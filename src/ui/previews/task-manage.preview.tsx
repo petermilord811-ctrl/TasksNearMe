@@ -1,0 +1,33 @@
+import type { ComponentProps } from 'react';
+import { routes, type AppShellHandlers, type PreviewEntry, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
+import { deskOwnerView, deskOwnerNoOffersView, deskOwnerStaleView, deskOwnerBookedView, remoteOwnerView, fakeHandler, mayaShell, movingDraft } from '@/fixtures';
+import { TaskManageScreen } from '@/ui/screens/tasks/task-manage-screen';
+import { AppShell } from '@/ui/shells/app-shell';
+import copy from '../../../messages/en/ui/taskManage.json';
+
+const now = '2026-11-17T15:00:00.000Z';
+const handlers: TaskOwnerHandlers = {
+  onOfferAction: fakeHandler({ ok: true, code: 'updated' }),
+  onTaskAction: fakeHandler({ ok: true, code: 'updated' }),
+  onCancelTask: fakeHandler({ ok: true, code: 'canceled' }),
+};
+const shellHandlers: AppShellHandlers = { onModeChange: fakeHandler({ ok: true, code: 'updated' }), onSignOut: fakeHandler({ ok: true, code: 'updated' }) };
+
+function preview(variant: Exclude<keyof typeof copy.previews, 'group'>, data: TaskOwnerView, options: Partial<ComponentProps<typeof TaskManageScreen>> = {}): PreviewEntry {
+  return {
+    id: `screen-task-manage/${variant}`, group: copy.previews.group, title: copy.previews[variant], layout: 'fullscreen',
+    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.task(data.task.id)} layout="flow"><TaskManageScreen data={data} handlers={handlers} now={now} {...options} /></AppShell>,
+  };
+}
+
+export const taskManagePreviews: PreviewEntry[] = [
+  preview('offers', deskOwnerView),
+  preview('no-offers', deskOwnerNoOffersView),
+  preview('stale-offer', deskOwnerStaleView),
+  preview('booked', deskOwnerBookedView),
+  preview('remote', remoteOwnerView),
+  preview('compare', deskOwnerView, { initialSelectedOfferIds: deskOwnerView.offers.map((offer) => offer.id) }),
+  preview('cancel-sheet', deskOwnerView, { initialCancelOpen: true }),
+  preview('cancel-error', deskOwnerView, { initialCancelOpen: true, initialCancelResult: { ok: false, code: 'not_allowed' }, handlers: { ...handlers, onCancelTask: fakeHandler({ ok: false, code: 'not_allowed' }) } }),
+  preview('allowance', { ...deskOwnerView, expenseAllowance: movingDraft.expenseAllowance }),
+];
