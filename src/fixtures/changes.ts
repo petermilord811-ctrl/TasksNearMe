@@ -139,6 +139,7 @@ export const fakeProposeChangeHandlers: ProposeChangeHandlers = {
 export const fakeChangeReviewHandlers: ChangeReviewHandlers = {
   onAccept: () => wait({ ok: true, code: 'updated', redirectTo: routes.app.booking('bkg_desk') }),
   onPayDifference: () => wait({ ok: true, code: 'paid', redirectTo: routes.app.booking('bkg_desk') }),
+  onFinishVerification: () => wait({ ok: true, code: 'paid', redirectTo: routes.app.booking('bkg_desk') }),
   onDecline: () => wait({ ok: true, code: 'updated', redirectTo: routes.app.booking('bkg_desk') }),
   onWithdraw: () => wait({ ok: true, code: 'updated', redirectTo: routes.app.booking('bkg_desk') }),
 };

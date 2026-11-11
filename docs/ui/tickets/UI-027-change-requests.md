@@ -48,6 +48,7 @@ Handlers this ticket receives and the result codes to handle:
 | `onQuote` | `ProposeChangeInput` | `{ ok: true, before, after, differenceCents }` | `validation_failed`, `not_allowed`, `unknown` |
 | `onPropose` | `ProposeChangeInput` | `sent` + `redirectTo` | `validation_failed`, `not_allowed`, `rate_limited`, `unknown` |
 | `onAccept`, `onPayDifference` | `AcceptChangeInput` | `updated` / `paid` + `redirectTo` | `requires_bank_verification` (with `verification`), `payment_declined`, `insufficient_funds`, `expired`, `not_allowed`, `version_conflict`, `unknown` |
+| `onFinishVerification` | `{ paymentId, outcome }` (from the dev bank dialog) | `paid` + `redirectTo` | `payment_declined`, `insufficient_funds`, `expired`, `not_allowed`, `unknown` |
 | `onDecline`, `onWithdraw` | none | `updated` + `redirectTo` | `not_allowed`, `unknown` |
 
 Copy namespace: `changes` (plus booking page additions).

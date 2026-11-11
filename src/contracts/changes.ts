@@ -112,11 +112,13 @@ export type AcceptChangeInput = z.input<typeof acceptChangeInputSchema>;
  *   a payment may need bank verification (`PaymentAttemptResult`). Errors: `payment_declined`,
  *   `insufficient_funds`, `expired`, `not_allowed`, `version_conflict`, `unknown`.
  * - `onPayDifference`: for `accepted_pending_funding`; same results as `onAccept`.
+ * - `onFinishVerification`: after the dev bank dialog (as on the confirmation page); same results.
  * - `onDecline`, `onWithdraw`: ok `updated` with `redirectTo`. Errors: `not_allowed`, `unknown`.
  */
 export interface ChangeReviewHandlers {
   onAccept: QueryHandler<AcceptChangeInput, PaymentAttemptResult>;
   onPayDifference: QueryHandler<AcceptChangeInput, PaymentAttemptResult>;
+  onFinishVerification: QueryHandler<{ paymentId: string; outcome: 'approved' | 'failed' }, PaymentAttemptResult>;
   onDecline: ActionHandler;
   onWithdraw: ActionHandler;
 }
