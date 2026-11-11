@@ -6,6 +6,7 @@ import type {
   MarketView,
   PricingPageData,
   TaskPublicView,
+  WaitlistPageData,
 } from '@/contracts';
 import { crestviewArea, hydeParkArea, muellerArea, remoteLocation } from './locations';
 import {
@@ -187,14 +188,14 @@ export const pricingPageData: PricingPageData = {
   minimumFeeExample: smallTaskBreakdown,
   hourlyExample: { funded: movingFundedBreakdown, final: movingFinalBreakdown },
   expensesExample: deskWithExpensesFinalBreakdown,
-  lateCancellationExample: { taskPriceCents: 6000, feeCents: 1200, posterRefundCents: 5400, helperReceivesCents: 1200 },
+  lateCancellationExample: { taskPriceCents: 6000, posterPaidCents: 6600, feeCents: 1200, posterRefundCents: 5400, helperReceivesCents: 1200 },
 };
 
 export const becomeHelperPageData: BecomeHelperPageData = {
   exampleEarnings: deskBreakdown,
   firstPayoutDays: 7,
-  welcomeReward: { amountCents: 5000, cohortLimit: 100, spotsClaimed: 63, minTaskPriceCents: 4000, windowDays: 60, unlockDays: 7 },
-  repeatReward: { amountCents: 1000, bookingsNeeded: 3, withinDays: 90 },
+  welcomeReward: { amountCents: 5000, cohortLimit: 100, spotsClaimed: 63, minTaskPriceCents: 4000, windowDays: 60, unlockDays: 7, redeemWithinDays: 90 },
+  repeatReward: { amountCents: 1000, bookingsNeeded: 3, withinDays: 90, minTaskPriceCents: 2500, unlockDays: 7, redeemWithinDays: 90 },
   inHomeCategoriesRequireBackgroundCheck: true,
 };
 
@@ -204,3 +205,5 @@ export const becomeHelperNoRewardsData: BecomeHelperPageData = {
   welcomeReward: undefined,
   repeatReward: undefined,
 };
+
+export const waitlistPageData: WaitlistPageData = { markets: [austinMarket] };

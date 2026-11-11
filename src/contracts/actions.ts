@@ -68,10 +68,39 @@ export const ACTION_ERROR_CODES = [
 ] as const;
 export type ActionErrorCode = (typeof ACTION_ERROR_CODES)[number];
 
+/**
+ * Why a form field is invalid. Contract zod schemas use these codes as their messages, and server
+ * results return them in `fieldErrors`, so the UI maps one set of codes to copy (`forms.fieldErrors`).
+ */
+export const FIELD_ERROR_CODES = [
+  'required',
+  'invalid',
+  'too_short',
+  'too_long',
+  /** A one-time code that doesn't match. */
+  'incorrect',
+  /** A one-time code that has expired; the person needs a new one. */
+  'expired',
+  /** A value we can't serve yet, e.g. a phone number outside the US. */
+  'not_supported',
+  /** Already used by another account (e.g. a phone number). */
+  'in_use',
+  /** A checkbox that must be ticked (age, terms). */
+  'must_accept',
+] as const;
+export type FieldErrorCode = (typeof FIELD_ERROR_CODES)[number];
+
 /** What every mutation handler resolves to. The UI maps codes to toasts or inline messages. */
 export type ActionResult =
   | { ok: true; code: ActionSuccessCode; redirectTo?: string }
-  | { ok: false; code: ActionErrorCode; fieldErrors?: Record<string, string[]> };
+  | {
+      ok: false;
+      code: ActionErrorCode;
+      /** Field name → error codes. Show them on the fields (first code wins). */
+      fieldErrors?: Partial<Record<string, FieldErrorCode[]>>;
+      /** For `rate_limited`: when trying again is allowed ("Try again after 3:40 pm"). */
+      retryAt?: ISODateTime;
+    };
 
 /**
  * A mutation the UI can call. In the app these are Server Actions; in previews and tests they are

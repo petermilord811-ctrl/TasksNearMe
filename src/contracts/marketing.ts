@@ -1,4 +1,7 @@
+import { z } from 'zod';
+import type { ActionHandler } from './actions';
 import type { CategorySlug, Cents } from './common';
+import { emailField, zipField } from './forms';
 import type { PriceBreakdown } from './money';
 import type { HelperSummary } from './people';
 import type { TaskPublicView } from './tasks';
@@ -68,6 +71,8 @@ export interface PricingPageData {
   expensesExample: PriceBreakdown;
   lateCancellationExample: {
     taskPriceCents: Cents;
+    /** What the poster paid for this task (the full refund when canceling in time). */
+    posterPaidCents: Cents;
     feeCents: Cents;
     posterRefundCents: Cents;
     helperReceivesCents: Cents;
@@ -84,10 +89,49 @@ export interface BecomeHelperPageData {
     amountCents: Cents;
     cohortLimit: number;
     spotsClaimed: number;
+    /** The first paid task must be at least this much… */
     minTaskPriceCents: Cents;
+    /** …and happen within this many days of verification. */
     windowDays: number;
+    /** Days after the task is paid before the reward can be redeemed. */
     unlockDays: number;
+    /** Days to redeem once it's redeemable. */
+    redeemWithinDays: number;
   };
-  repeatReward?: { amountCents: Cents; bookingsNeeded: number; withinDays: number };
+  repeatReward?: {
+    amountCents: Cents;
+    /** The Nth paid booking with the same client… */
+    bookingsNeeded: number;
+    /** …within this many days of the first. */
+    withinDays: number;
+    /** Each booking counts when its task price is at least this much. */
+    minTaskPriceCents: Cents;
+    unlockDays: number;
+    redeemWithinDays: number;
+  };
   inHomeCategoriesRequireBackgroundCheck: boolean;
+}
+
+/** `/waitlist`: people outside the service area leave their email and ZIP for their city. */
+export interface WaitlistPageData {
+  /** Markets we serve or are about to open ("Already in Austin? See local help"). */
+  markets: MarketView[];
+}
+
+export const WAITLIST_INTERESTS = ['need_help', 'give_help', 'both'] as const;
+export type WaitlistInterest = (typeof WAITLIST_INTERESTS)[number];
+
+export const waitlistInputSchema = z.object({
+  email: emailField,
+  zip: zipField,
+  interest: z.enum(WAITLIST_INTERESTS, 'required'),
+});
+export type WaitlistInput = z.input<typeof waitlistInputSchema>;
+
+export interface WaitlistHandlers {
+  /**
+   * ok `submitted`: replace the form with the confirmation ("We'll email you when TasksNearMe
+   * opens near 10001"). `validation_failed` + `fieldErrors`; `rate_limited` + `retryAt`.
+   */
+  onJoin: ActionHandler<WaitlistInput>;
 }
