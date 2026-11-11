@@ -1,0 +1,13 @@
+{
+  "sent": "Sent {date}",
+  "photos": "Photos of the work",
+  "viewPhoto": "View photo",
+  "viewReceipt": "View receipt",
+  "openPhoto": "{label}: {description}",
+  "photoTitle": "Photo {number} of {count}",
+  "hoursWorked": "Hours worked: {hours}",
+  "receipts": "Receipts",
+  "receiptTitle": "Receipt: {description}",
+  "finalCost": "Final cost",
+  "earnings": "What you'll earn"
+}
