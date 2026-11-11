@@ -29,29 +29,27 @@
 - Tooling: the heavy-work lock (`scripts/gate.mjs`, the runner's check), the shared e2e sign-in, and seed resets that clear leftovers.
 
 ## Next steps
-1. **Build the change request backend while UI-027 runs:**
-   - Schema: a `booking_change_requests` table (migration 0018), with one open change per booking.
-   - Pure rules:
-     - allowed types: before the start, everything; during the work, no schedule; the hours cap only for hourly work;
-     - expiry: at the start before work, 24 h during work, 24 h while pending funding;
-     - the quote: `quoteBreakdown` on the new pricing.
+1. **When UI-027 hands off:**
+   - Review and merge.
+   - Copy the page drafts from the scratchpad (`ui027/new-page.tsx` → `src/app/(app)/app/(flow)/bookings/[bookingId]/changes/new/page.tsx`, `ui027/review-page.tsx` → `.../changes/[changeId]/page.tsx`).
+   - Set `CHANGE_PAGES_READY = true` in `src/modules/bookings/domain.ts`, then update the booking action unit tests.
+   - e2e on `bkg_tv`, desktop only: Ben proposes, Jordan accepts, Ben pays.
+   - Then launch **UI-025** (ready).
+2. **Build the invites backend while Codex works:**
+   - The dev payment stand-in gains `authorize` / `capture` / `cancelAuthorization`.
+   - An `invites` table.
    - Service:
-     - propose, with the quote and the page;
-     - review: accept, decline, withdraw;
-     - accept and pay the difference: charge a `change_funding` payment with the confirmation's card choice and bank verification;
-     - apply: a new `booking_terms` version, the start moves, a decrease is refunded;
-     - lazy expiry.
-   - `BookingView.openChange`, and the `propose_change` booking action.
-   - Notifications: `change.proposed` / `change.applied`, after a contract addition.
-   - Integration tests with the ui-contract numbers: desk + chair is $22.00 more; one more hour on the move is $38.50 more.
-2. **When UI-027 hands off:** review, merge, wire `/app/bookings/[bookingId]/changes/new` and `/changes/[changeId]` in `(flow)`, e2e.
+     - the request page, quote, request (authorize, bank check);
+     - accept (capture → a confirmed booking, as `confirmBooking` does);
+     - decline, cancel, counter, accept counter (authorize again when higher);
+     - expiry (lazy and in the job runner);
+     - invites for My offers and the task page.
 3. **Seed a disputed booking** for dispute and staff-money e2e.
 4. **Later:**
-   - UI-025 direct invites;
-   - UI-020: reward reviews, users and moderation, config;
-   - UI-021: quality pass;
-   - My clients and availability posts;
-   - staff TOTP, clock and time travel.
+   - UI-020: reward reviews, users and moderation, config.
+   - UI-021: quality pass.
+   - My clients and availability posts.
+   - Staff TOTP, clock and time travel.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB).
