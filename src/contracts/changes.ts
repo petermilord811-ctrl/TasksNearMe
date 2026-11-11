@@ -95,7 +95,8 @@ export interface ProposeChangeHandlers {
 
 /** `/app/bookings/[bookingId]/changes/[changeId]`. */
 export interface ChangeReviewPageData {
-  booking: { id: string; title: string; viewerRole: 'poster' | 'helper' };
+  /** The two people by display name (Codex's UI-027 request: "Waiting for Jordan T."). */
+  booking: { id: string; title: string; viewerRole: 'poster' | 'helper'; posterDisplayName: string; helperDisplayName: string };
   change: ChangeRequestView;
   /** Clients paying a difference: their cards. */
   payment?: PaymentPanelData;

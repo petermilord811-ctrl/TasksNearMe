@@ -40,26 +40,26 @@ const deskChair: ChangeRequestView = {
 
 /** Maya proposed the chair and waits for Jordan. */
 export const deskChairChangeProposerData: ChangeReviewPageData = {
-  booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', viewerRole: 'poster' },
+  booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', viewerRole: 'poster', posterDisplayName: 'Maya R.', helperDisplayName: 'Jordan T.' },
   change: deskChair,
 };
 
 /** Jordan sees Maya's proposal (helpers see their earnings, not the client's difference). */
 export const deskChairChangeCounterpartyData: ChangeReviewPageData = {
-  booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', viewerRole: 'helper' },
+  booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', viewerRole: 'helper', posterDisplayName: 'Maya R.', helperDisplayName: 'Jordan T.' },
   change: { ...deskChair, fromMe: false, differenceCents: undefined, actions: ['accept_change', 'decline_change'] },
 };
 
 /** Jordan accepted: Maya pays the $22.00 difference before the new terms apply. */
 export const deskChairChangePayData: ChangeReviewPageData = {
-  booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', viewerRole: 'poster' },
+  booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', viewerRole: 'poster', posterDisplayName: 'Maya R.', helperDisplayName: 'Jordan T.' },
   change: { ...deskChair, status: 'accepted_pending_funding', expiresAt: '2026-11-20T18:00:00.000Z', actions: ['pay_change_difference'] },
   payment: mayaPaymentPanel,
 };
 
 /** Applied: the new terms are in force. */
 export const deskChairChangeAppliedData: ChangeReviewPageData = {
-  booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', viewerRole: 'poster' },
+  booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', viewerRole: 'poster', posterDisplayName: 'Maya R.', helperDisplayName: 'Jordan T.' },
   change: { ...deskChair, status: 'applied', expiresAt: undefined, actions: [] },
 };
 
@@ -89,7 +89,7 @@ const movingTerms: ChangeTermsView = {
 
 /** During the move, Jordan asks Chris for one more hour: Chris would pay $38.50 more. */
 export const movingCapChangeData: ChangeReviewPageData = {
-  booking: { id: 'bkg_moving', title: 'Help loading a moving truck', viewerRole: 'poster' },
+  booking: { id: 'bkg_moving', title: 'Help loading a moving truck', viewerRole: 'poster', posterDisplayName: 'Chris D.', helperDisplayName: 'Jordan T.' },
   change: {
     id: 'chg_moving_cap',
     bookingId: 'bkg_moving',

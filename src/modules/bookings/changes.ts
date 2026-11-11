@@ -17,6 +17,7 @@ import type {
 } from '@/contracts';
 import { acceptChangeInputSchema, proposeChangeInputSchema, routes } from '@/contracts';
 import type { ChargeResult, PaymentProvider } from '@/integrations/payments';
+import { users } from '@/modules/accounts/schema';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { payments, refunds } from '@/modules/payments/schema';
@@ -260,9 +261,17 @@ export async function getChangeReviewPage(db: Db, payments_: PaymentProvider | n
   const found = await loadChange(db, userId, bookingId, changeId, now);
   if (!found) return null;
   const view = changeView(found.row, found.loaded, userId);
+  const people = await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, [found.loaded.booking.posterUserId, found.loaded.booking.helperUserId]));
+  const nameOf = (id: string) => people.find((person) => person.id === id)?.name ?? '';
   const paying = found.loaded.role === 'poster' && found.row.differenceCents > 0 && (view.actions.includes('accept_change') || view.actions.includes('pay_change_difference'));
   return {
-    booking: { id: found.loaded.booking.id, title: found.loaded.title, viewerRole: found.loaded.role },
+    booking: {
+      id: found.loaded.booking.id,
+      title: found.loaded.title,
+      viewerRole: found.loaded.role,
+      posterDisplayName: nameOf(found.loaded.booking.posterUserId),
+      helperDisplayName: nameOf(found.loaded.booking.helperUserId),
+    },
     change: view,
     ...(paying && payments_ ? { payment: await paymentPanel(db, userId, payments_) } : {}),
   };

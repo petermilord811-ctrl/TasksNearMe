@@ -57,6 +57,8 @@ Handlers this ticket receives and the result codes to handle:
 
 Copy namespaces: `invites` (plus additions to the screens you update).
 
+**Also (your UI-027 contract request, accepted):** `ChangeReviewPageData.booking` now has `posterDisplayName` and `helperDisplayName`. Use them on `ChangeReviewScreen` instead of "your helper" / "your client" (e.g. "Waiting for Jordan T.", "Maya R. proposed a change").
+
 ## States to preview
 | Preview id | Fixture(s) | What it shows |
 |---|---|---|
