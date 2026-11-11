@@ -20,12 +20,13 @@ export interface BookingsScreenProps {
   now: ISODateTime;
 }
 
-function BookingRow({ row, tab, now }: { row: BookingListRow; tab: BookingTab; now: ISODateTime }) {
+export function BookingRow({ row, tab, now, headingLevel = 2 }: { row: BookingListRow; tab: BookingTab; now: ISODateTime; headingLevel?: 2 | 3 }) {
   const t = useTranslations('bookings');
   const card = useTranslations('taskCard');
   const status = useBookingStatus(row.status, row.viewerRole);
   const titleId = `booking-${tab}-${row.id}`;
   const LocationIcon = row.location.kind === 'remote' ? Monitor : MapPin;
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
 
   return <article aria-labelledby={titleId} className={cn('group relative min-w-0 rounded-xl border border-border bg-card p-4 shadow-card transition-colors hover:border-primary hover:bg-accent focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background md:p-6', row.needsAction && 'border-warning')}>
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -33,7 +34,7 @@ function BookingRow({ row, tab, now }: { row: BookingListRow; tab: BookingTab; n
       <StatusBadge {...status} />
     </div>
     <div className="mt-4 flex items-start justify-between gap-3">
-      <h2 id={titleId} className="text-[17px]/6 font-semibold group-hover:text-primary md:text-lg/6.5"><Link href={routes.app.booking(row.id)} className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">{row.title}</Link></h2>
+      <Heading id={titleId} className="text-[17px]/6 font-semibold group-hover:text-primary md:text-lg/6.5"><Link href={routes.app.booking(row.id)} className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">{row.title}</Link></Heading>
       <ChevronRight aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
     </div>
     <div className="mt-3 flex flex-wrap items-center gap-2">

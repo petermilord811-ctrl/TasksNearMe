@@ -27,7 +27,7 @@ export interface MyTasksScreenProps {
   initialTab?: TaskTab;
 }
 
-function TaskRow({ task, tab, now }: { task: OwnerTaskRow; tab: TaskTab; now: ISODateTime }) {
+export function TaskRow({ task, tab, now, headingLevel = 2 }: { task: OwnerTaskRow; tab: TaskTab; now: ISODateTime; headingLevel?: 2 | 3 }) {
   const t = useTranslations('myTasks');
   const card = useTranslations('taskCard');
   const status = useTaskStatus(task.status);
@@ -42,6 +42,7 @@ function TaskRow({ task, tab, now }: { task: OwnerTaskRow; tab: TaskTab; now: IS
     : card('hourlyBudget', { rate: formatMoney(task.budget.rateCents), cap: formatHours(task.budget.hoursCap) });
   const href = tab === 'booked' && task.bookingId ? routes.app.booking(task.bookingId) : routes.app.task(task.id);
   const titleId = `task-${tab}-${task.id}`;
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
 
   return <article aria-labelledby={titleId} className="group relative min-w-0 rounded-xl border border-border bg-card p-4 shadow-card transition-colors hover:border-primary hover:bg-accent focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -52,7 +53,7 @@ function TaskRow({ task, tab, now }: { task: OwnerTaskRow; tab: TaskTab; now: IS
         <StatusBadge {...status} />
       </div>
       <div className="mt-4 flex items-start justify-between gap-3">
-        <h2 id={titleId} className="text-[17px]/6 font-semibold group-hover:text-primary md:text-lg/6.5"><Link href={href} className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">{task.title}</Link></h2>
+        <Heading id={titleId} className="text-[17px]/6 font-semibold group-hover:text-primary md:text-lg/6.5"><Link href={href} className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">{task.title}</Link></Heading>
         <ChevronRight aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
       </div>
       <p className="mt-3 flex items-start gap-2 text-sm tabular-nums text-muted-foreground"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{schedule}</span></p>

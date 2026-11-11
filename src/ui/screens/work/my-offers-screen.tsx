@@ -19,12 +19,13 @@ export interface MyOffersScreenProps {
   initialTab?: OfferTab;
 }
 
-function OfferRow({ row, now }: { row: MyOfferRow; now: ISODateTime }) {
+export function OfferRow({ row, now, headingLevel = 2 }: { row: MyOfferRow; now: ISODateTime; headingLevel?: 2 | 3 }) {
   const t = useTranslations('myOffers');
   const taskCopy = useTranslations('taskCard');
   const { offer, task } = row;
   const status = useOfferStatus(offer.status, 'helper');
   const titleId = `my-offer-${offer.id}`;
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const price = offer.pricing.type === 'fixed' ? formatMoney(offer.pricing.priceCents) : t('hourlyPrice', {
     rate: formatMoney(offer.pricing.rateCents), hours: formatHours(offer.pricing.estimatedHours), cap: formatHours(offer.pricing.hoursCap),
   });
@@ -35,7 +36,7 @@ function OfferRow({ row, now }: { row: MyOfferRow; now: ISODateTime }) {
       <StatusBadge {...status} />
     </div>
     <div className="mt-4 flex items-start justify-between gap-3">
-      <h2 id={titleId} className="text-[17px]/6 font-semibold group-hover:text-primary md:text-lg/6.5"><Link href={routes.app.findWorkTask(task.id)} className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">{task.title}</Link></h2>
+      <Heading id={titleId} className="text-[17px]/6 font-semibold group-hover:text-primary md:text-lg/6.5"><Link href={routes.app.findWorkTask(task.id)} className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">{task.title}</Link></Heading>
       <ChevronRight aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
     </div>
     <p className="mt-3 flex items-start gap-2 text-sm tabular-nums text-muted-foreground"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><time dateTime={offer.proposedStart}>{t('proposedStart', { date: formatDateTime(offer.proposedStart) })}</time></p>
