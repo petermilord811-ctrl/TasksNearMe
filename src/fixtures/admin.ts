@@ -170,7 +170,7 @@ export const disputeAdminCaseData: AdminCasePageData = {
 
 /** Priya reported Sam from their conversation; unassigned, nobody has opened the conversation yet. */
 export const reportAdminCaseData: AdminCasePageData = {
-  case: { ...reportRow, description: 'Asked me to pay in cash and to text him instead.', photos: [], reason: 'off_platform_payment' },
+  case: { ...reportRow, description: 'Asked me to pay in cash and to text them instead.', photos: [], reason: 'off_platform_payment' },
   parties: [
     { person: person(priya), role: 'opener', canMessage: true },
     { person: person(sam), role: 'reported', canMessage: false },

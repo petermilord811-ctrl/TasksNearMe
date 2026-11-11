@@ -40,25 +40,25 @@ describe('the welcome reward', () => {
 
 describe('the repeat reward', () => {
   it('comes with the third paid booking with the same client, and is voided if that booking is canceled', async () => {
-    // Chris books Lee three times (copies of the seeded TV booking on copies of its task).
+    // Priya books Lee three times (no other test pairs them), with copies of the seeded TV booking and its task.
     const [tv] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
     const [task] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
     const [terms] = await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_tv'));
     for (const n of [1, 2, 3]) {
       const confirmedAt = new Date(Date.now() - (4 - n) * 86_400_000);
-      await db.insert(tasks).values({ ...task!, id: `tsk_rw${n}`, slug: `rw-${n}`, posterUserId: 'usr_chris', status: 'assigned' });
-      await db.insert(bookings).values({ ...tv!, id: `bkg_rw${n}`, taskId: `tsk_rw${n}`, offerId: null, posterUserId: 'usr_chris', helperUserId: 'usr_lee', status: 'confirmed', confirmedAt, createdAt: confirmedAt });
+      await db.insert(tasks).values({ ...task!, id: `tsk_rw${n}`, slug: `rw-${n}`, posterUserId: 'usr_priya', status: 'assigned' });
+      await db.insert(bookings).values({ ...tv!, id: `bkg_rw${n}`, taskId: `tsk_rw${n}`, offerId: null, posterUserId: 'usr_priya', helperUserId: 'usr_lee', status: 'confirmed', confirmedAt, createdAt: confirmedAt });
       await db.insert(bookingTerms).values({ ...terms!, id: `btm_rw${n}`, bookingId: `bkg_rw${n}` });
     }
     const page = await getRewardsPage(db, { id: 'usr_lee', helperReady: true }, new Date());
-    expect(page.grants.find((grant) => grant.program === 'repeat')).toMatchObject({ amountCents: 1000, status: 'pending', clientDisplayName: 'Chris D.', booking: { id: 'bkg_rw3' } });
-    // Other clients may show progress; Chris's reward is earned, so no progress row for him.
-    expect(page.repeatProgress.map((row) => row.clientDisplayName)).not.toContain('Chris D.');
+    expect(page.grants.find((grant) => grant.program === 'repeat')).toMatchObject({ amountCents: 1000, status: 'pending', clientDisplayName: 'Priya S.', booking: { id: 'bkg_rw3' } });
+    // Other clients may show progress; Priya's reward is earned, so there's no progress row for that pair.
+    expect(page.repeatProgress.map((row) => row.clientDisplayName)).not.toContain('Priya S.');
 
     await db.update(bookings).set({ status: 'canceled', canceledAt: new Date() }).where(eq(bookings.id, 'bkg_rw3'));
     const after = await getRewardsPage(db, { id: 'usr_lee', helperReady: true }, new Date());
     expect(after.grants.find((grant) => grant.program === 'repeat')).toMatchObject({ status: 'voided', voidReason: 'booking_canceled' });
-    expect(after.repeatProgress).toContainEqual(expect.objectContaining({ clientDisplayName: 'Chris D.', paidBookings: 2, needed: 3 }));
+    expect(after.repeatProgress).toContainEqual(expect.objectContaining({ clientDisplayName: 'Priya S.', paidBookings: 2, needed: 3 }));
     const live = await db.select().from(rewardGrants).where(and(eq(rewardGrants.helperUserId, 'usr_lee'), eq(rewardGrants.program, 'repeat')));
     expect(live).toHaveLength(1);
   });

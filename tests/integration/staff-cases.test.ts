@@ -85,7 +85,7 @@ describe('working a case', () => {
     expect(staffView?.data.case.awaitingReply).toBe(false);
   });
 
-  it('waits on the helper until he replies, then resolves, closes, and only a lead reopens', async () => {
+  it('waits on the helper until they reply, then resolves, closes, and only a lead reopens', async () => {
     expect(await setCaseStatus(db, alex, caseId, await versionOf(), { status: 'awaiting_helper' }, new Date())).toEqual({ ok: true, code: 'updated' });
     expect(await replyToSupportCase(db, 'usr_jordan', caseId, { body: 'Yes, I can come back on Sunday.' }, new Date(Date.now() + 40))).toEqual({ ok: true, code: 'sent' });
     const afterReply = await getAdminCase(db, alex, caseId, new Date(Date.now() + 50));

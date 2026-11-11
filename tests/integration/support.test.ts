@@ -57,7 +57,7 @@ describe('support requests', () => {
     ]);
     await db.update(supportCases).set({ status: 'awaiting_poster', updatedAt: asked }).where(eq(supportCases.id, caseId));
     expect((await getSupportPage(db, 'usr_ben')).cases.find((c) => c.id === caseId)?.unread).toBe(true);
-    // Jordan (the other person on the booking) sees only his own conversation with support, never Ben's description.
+    // Jordan (the other person on the booking) sees only their own conversation with support, never Ben's description.
     const forJordan = await getSupportCasePage(db, 'usr_jordan', caseId, new Date(Date.now() + 2000));
     expect(forJordan?.case).toMatchObject({ description: '', viewerRole: 'helper' });
     expect(forJordan?.events.map((event) => event.from)).toEqual(['support', 'system']);
@@ -113,7 +113,7 @@ describe('reporting and blocking in a conversation', () => {
     expect(await getReportSubject(db, 'usr_priya', threadId)).toMatchObject({ userId: 'usr_sam', blocked: false });
     expect(await setThreadBlock(db, 'usr_priya', threadId, true, new Date())).toEqual({ ok: true, code: 'updated' });
     expect(await getReportSubject(db, 'usr_priya', threadId)).toMatchObject({ blocked: true });
-    // Sam didn't block Priya: his menu still says Block.
+    // Sam didn't block Priya: Sam's menu still says Block.
     expect(await getReportSubject(db, 'usr_sam', threadId)).toMatchObject({ userId: 'usr_priya', blocked: false });
 
     const hello = { body: 'Hello there', attachmentIds: [] };
