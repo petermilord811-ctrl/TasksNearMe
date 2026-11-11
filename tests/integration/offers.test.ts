@@ -34,7 +34,7 @@ describe("the poster's tasks and offers", () => {
     expect(JSON.stringify(lee)).not.toContain('512-555');
     expect(jordan!.actions.map((a) => a.id)).toEqual(['book_offer', 'message_helper', 'decline_offer']);
     expect(view!.exactAddress).toMatchObject({ line1: '1234 Example Lane', line2: 'Apt 2B', zip: '78723' });
-    expect(view!.actions.map((a) => a.id)).toEqual(['cancel_task']);
+    expect(view!.actions.map((a) => a.id)).toEqual(['invite_helpers', 'cancel_task']);
   });
 
   it('is only for the poster', async () => {

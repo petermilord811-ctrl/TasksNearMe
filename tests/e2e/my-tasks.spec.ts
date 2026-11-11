@@ -53,6 +53,9 @@ test('the poster cancels a task with a reason', async ({ page }, testInfo) => {
   await devSignIn(page, 'ana@example.test');
   await page.goto('/app/tasks/tsk_cleaning');
   await expect(page.getByRole('heading', { level: 1, name: 'Light cleaning for a 2-bedroom apartment' })).toBeVisible();
+  // Phones show the first action ("Invite helpers") and keep the rest under "More".
+  const more = page.getByRole('button', { name: 'More' });
+  if (await more.isVisible()) await more.click();
   await page.getByRole('button', { name: 'Cancel task' }).first().click();
   await page.getByRole('radio', { name: 'I found help elsewhere' }).check();
   await page.getByRole('button', { name: 'Cancel task' }).last().click();
