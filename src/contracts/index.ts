@@ -7,6 +7,8 @@ export * from './actions';
 export * from './action-ids';
 export * from './timeline';
 export * from './messaging';
+export * from './tasks';
+export * from './marketing';
 export * from './shell';
 export * from './routes';
 export type { PreviewEntry } from './preview';

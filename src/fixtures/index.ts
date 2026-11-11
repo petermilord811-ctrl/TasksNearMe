@@ -9,3 +9,4 @@ export * from './timeline';
 export * from './actions';
 export * from './shell';
 export * from './messaging';
+export * from './marketing';

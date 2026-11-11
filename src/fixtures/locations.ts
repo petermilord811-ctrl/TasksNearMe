@@ -24,3 +24,21 @@ export const deskExactAddress: ExactAddress = {
 };
 
 export const remoteLocation: RemoteLocation = { kind: 'remote' };
+
+export const crestviewArea: PublicLocation = {
+  kind: 'local',
+  marketSlug: 'austin',
+  marketName: 'Austin',
+  areaName: 'Crestview',
+  publicPoint: { lat: 30.3479, lng: -97.7254 },
+  radiusMeters: 1609,
+};
+
+export const hydeParkArea: PublicLocation = {
+  kind: 'local',
+  marketSlug: 'austin',
+  marketName: 'Austin',
+  areaName: 'Hyde Park',
+  publicPoint: { lat: 30.3072, lng: -97.7291 },
+  radiusMeters: 1609,
+};
