@@ -9,9 +9,9 @@ Claude updates this file, including the Codex notes column, from each handoff (`
 | Ticket | Scope | Status | Contracts (Claude) | Codex notes | Wiring (Claude) |
 |---|---|---|---|---|---|
 | [UI-001](tickets/UI-001-design-foundation.md) | Theme, primitives, core components | **wired** | `common`, `status`, `money`, `people`, `location`, `actions`, `action-ids`, `timeline`, `messaging` | 53 previews; 51 tests; `npm run check:ui` passes at 360/1280. Contract requests: `formatMonthYear` (full-date fallback) and `routes.external.googleMapsSearch` (Maps disabled until supplied). See `src/ui/README.md`. | Reviewed 2026-11-10. `AppToaster` mounted in the root layout; `PageSkeleton` is the preview route's Suspense fallback. Both contract requests added (with tests). Removed unused deps `cn`, `next-themes`, `date-fns`. Codex follow-ups moved into UI-002 |
-| [UI-002](tickets/UI-002-shells-navigation.md) | Public / app / detail / admin shells, mode switch, navs, plus 2 UI-001 follow-ups | ready for Codex | `shell`, `routes` (incl. `routes.external`), `formatMonthYear` | | Route-group layouts, mode and sign-out actions |
-| UI-003 | Public marketing and info pages (home, market, categories, how it works, become a helper, pricing, trust, help, legal drafts, waitlist) | planned | `marketing`, `categories` | | |
-| UI-004 | Sign-in and phone verification screens | planned | `auth` | | |
+| [UI-002](tickets/UI-002-shells-navigation.md) | Public / app / detail / admin shells, mode switch, navs, plus 2 UI-001 follow-ups | **UI done (merged)** | `shell`, `routes` (incl. `routes.external`), `formatMonthYear` | Unattended run, 22 min. 15 shell previews (69 total), 126 tests. No new deps, no contract requests. UI-001 follow-ups done | Reviewed 2026-11-11 (check:ui green on `main`, screenshots OK). Route-group layouts, `setMode`/`signOut` pending until auth lands (Phase 1) |
+| UI-003 | Public marketing pages: home, market, category, how it works, become a helper, pricing, trust and safety | planned | `marketing`, `tasks` (public card) | | |
+| UI-004 | Sign-in and phone verification, waitlist, help center, legal drafts | planned | `auth`, `help` | | |
 | UI-005 | Public task board, public task page, helper profile | planned | `tasks` (public), `profiles` | | |
 | UI-006 | Posting wizard (with AI-draft placeholder) | planned | `tasks` (forms, zod schemas) | | |
 | UI-007 | Poster home, my tasks, task manage, offers and compare, browse/saved helpers | planned | `tasks` (owner), `offers` | | |
