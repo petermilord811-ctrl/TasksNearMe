@@ -12,7 +12,10 @@ import location from './location.json';
 import layout from './layout.json';
 import primitives from './primitives.json';
 import shell from './shell.json';
+import publicPages from './publicPages.json';
+import taskCard from './taskCard.json';
+import helperCard from './helperCard.json';
 
-const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell };
+const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard };
 
 export default uiMessages;

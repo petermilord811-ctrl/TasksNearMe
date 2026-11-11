@@ -1,0 +1,351 @@
+{
+  "pricing": {
+    "title": "Know what you'll pay. Know what you'll earn.",
+    "description": "Agree on the task price before booking. See each service fee and any expense allowance before you confirm.",
+    "paymentTiming": "You pay when you book. Your helper is paid after the task is done.",
+    "feesTitle": "How service fees work",
+    "posterFeeTitle": "When you book help",
+    "posterFeeAmount": "{percent}% service fee",
+    "posterFeeDescription": "Added to the task price, with a minimum of {minimum} per booking.",
+    "helperFeeTitle": "When you help",
+    "helperFeeAmount": "{percent}% service fee",
+    "helperFeeDescription": "Deducted from the task price. You'll see your earnings before you agree.",
+    "fixedIntro": "For a fixed-price task, you and your helper agree on the price for the whole task. Here is a {price} example.",
+    "fixedPosterTitle": "Fixed price: what you pay",
+    "fixedHelperTitle": "Fixed price: what your helper earns",
+    "minimumTitle": "When the minimum fee applies",
+    "minimumDescription": "On this {price} task, the {minimum} minimum service fee applies. The total is shown below.",
+    "minimumBreakdownTitle": "A smaller task",
+    "hourlyTitle": "Hourly help, with an agreed cap",
+    "hourlyDescription": "You pay for the agreed hours cap and service fee when you book. After the task, you approve the hours worked. Unused hours and their fee share are refunded. Extra hours need your agreement and payment first.",
+    "hourlyFundedTitle": "Hourly: paid when you book",
+    "hourlyFinalTitle": "Hourly: after the task",
+    "expensesTitle": "Expenses stay separate",
+    "expensesDescription": "Agree on an expense allowance before your helper buys supplies. You approve receipts after the task. Unused allowance is refunded, and neither person pays a service fee on reimbursed expenses.",
+    "expensesPosterTitle": "With an expense allowance",
+    "expensesHelperTitle": "Earnings and reimbursement",
+    "cancellationTitle": "If plans change",
+    "cancellationDescription": "Cancel free at least {hours} hours before the task starts. Later cancellations cost {percent}% of the task price or {minimum}, whichever is greater, up to the task price. Your helper receives all of that fee.",
+    "cancellationCaption": "Cancellation example for a {price} task",
+    "cancellationScenario": "When it happens",
+    "cancellationRefund": "You get back",
+    "cancellationHelper": "Helper receives",
+    "cancellationEarly": "You cancel at least {hours} hours before the start",
+    "cancellationLate": "You cancel less than {hours} hours before the start",
+    "cancellationHelperCancels": "Your helper cancels",
+    "fullRefund": "Full refund: {amount}",
+    "noPayment": "No payment",
+    "lateFeeExample": "In this example, the late cancellation fee is {fee}. Your helper receives {received}, and you get {refund} back.",
+    "cancellationPolicy": "Read the cancellation policy",
+    "approvalTitle": "Time to check the finished task",
+    "approvalDescription": "After your helper submits completion, you have {hours} hours to approve it or report a problem. After that, the task is approved automatically. Reporting a problem pauses payment while it is reviewed.",
+    "inviteTitle": "Inviting a helper directly",
+    "inviteDescription": "An invite places a hold on your card for up to {hours} hours. You're charged only if the helper accepts. The hold is released if they decline or don't answer in time.",
+    "postTask": "Post a task"
+  },
+  "becomeHelper": {
+    "title": "Put your everyday skills to work nearby",
+    "description": "Choose the tasks that fit your skills and schedule. Agree on the details with your client, and see what you'll earn before you accept.",
+    "cta": "Become a helper",
+    "requirementsTitle": "A few checks before your first booking",
+    "identityTitle": "Verify your identity",
+    "identityDescription": "Complete an ID and selfie check so clients can see your ID-verified badge.",
+    "payoutTitle": "Set up your payouts",
+    "payoutDescription": "Add your payout details so payments can reach your bank after completed tasks.",
+    "backgroundTitle": "Complete a background check for in-home help",
+    "backgroundDescription": "In-home categories require a background check before you can accept bookings in those categories.",
+    "earningsTitle": "An example of what you'll earn",
+    "earningsDescription": "Your task price and service fee are shown separately. Approved expenses are reimbursed separately from earnings.",
+    "earningsBreakdownTitle": "Your earnings on a task",
+    "timingTitle": "When payment reaches you",
+    "timingDescription": "Your payment is sent after the task is completed and approved, or approved automatically. It usually reaches your bank in about 2 business days.",
+    "firstPayout": "Your first payout can take about {days, plural, one {# day} other {# days}}.",
+    "rewardsTitle": "Gift card rewards for helping locally",
+    "rewardsDescription": "Gift cards are separate from your task earnings. Available programs and their terms are shown here.",
+    "welcomeTitle": "Welcome gift card reward",
+    "welcomeOffer": "{amount} gift card for our first {limit, number} verified helpers",
+    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
+    "welcomeTerms": "Complete and be paid for your first qualifying task of {minimum} or more within {days, plural, one {# day} other {# days}} of verification. Complete your ID check, payout setup, and any required background check.",
+    "welcomeUnlock": "Unlocks {days, plural, one {# day} other {# days}} after the task is paid, following a review. One welcome reward per person.",
+    "repeatTitle": "Repeat-client gift card reward",
+    "repeatOffer": "A {amount} gift card for helping the same client again",
+    "repeatTerms": "Complete {bookings, plural, one {# paid booking} other {# paid bookings}} with the same client within {days, plural, one {# day} other {# days}}. Available once per helper and client pair. Qualifying-task rules and minimum task prices apply; see the reward terms.",
+    "repeatUnlock": "The reward unlocks 7 days after the qualifying task is paid.",
+    "rewardConditions": "Redeem within 90 days of unlocking. Refunds, disputes, or safety reviews can delay or change eligibility. Gift cards may be taxable income. Programs have limited availability.",
+    "rewardPolicy": "Rewards never depend on reviews or ratings.",
+    "rewardTermsLink": "Read the reward terms",
+    "closingTitle": "Ready to help your neighbors?",
+    "closingDescription": "Start with your profile, services, and the areas you cover."
+  },
+  "shared": {
+    "postTask": "Post a task",
+    "categoriesTitle": "What could you use a hand with?",
+    "categoriesDescription": "Everyday tasks, with a clear scope and a price agreed up front.",
+    "recentTasks": "Recent tasks",
+    "recentTasksDescription": "See what people nearby need a hand with. Only general areas are shown.",
+    "noTasksTitle": "No open tasks here yet",
+    "noTasksBody": "Tasks appear here when someone posts. Describe what you need and helpers can send offers.",
+    "featuredHelpers": "Meet local helpers",
+    "helpersDescription": "Compare services, verification details, and feedback from completed bookings.",
+    "noHelpersTitle": "Helpers will appear here",
+    "noHelpersBody": "Post a task to let helpers know what you need.",
+    "coverageTitle": "Around {market}",
+    "coverageNote": "{market} and nearby, within about {miles} miles",
+    "outsideArea": "Outside the service area?",
+    "joinWaitlist": "Join the waitlist",
+    "trustTitle": "Clear from the first step",
+    "paymentTitle": "Know when you pay",
+    "payment": "You pay when you book. Your helper is paid after the task is done.",
+    "privacyTitle": "Your address stays private",
+    "privacy": "Helpers see only the general area. Your exact address is shared with your helper after you book.",
+    "identityTitle": "ID-verified helpers",
+    "identity": "Helpers complete an ID check before sending offers. A badge explains what was checked and when."
+  },
+  "home": {
+    "eyebrow": "Local help in {market}, {state}",
+    "title": "A little help. A lighter to-do list.",
+    "description": "From the desk still in its box to leaves in the yard, find a local helper for the everyday things you need done.",
+    "browseTasks": "Browse tasks",
+    "stepsTitle": "From to-do to done",
+    "steps": {
+      "post": {
+        "title": "Tell us what you need",
+        "body": "Describe the task, choose a time, and set your budget."
+      },
+      "choose": {
+        "title": "Choose your helper",
+        "body": "Compare offers and profiles. See the full total before you book."
+      },
+      "done": {
+        "title": "Approve the finished task",
+        "body": "Review the work, approve it, and save your helper for next time."
+      }
+    },
+    "howLink": "See how it works",
+    "helperTitle": "Put your skills to work nearby",
+    "helperBody": "Choose tasks that fit your skills and schedule. Set your prices, see your earnings up front, and build repeat clients.",
+    "helperAction": "Become a helper",
+    "faqTitle": "A few things to know",
+    "faq": {
+      "payment": {
+        "question": "When do I pay?",
+        "answer": "You pay when you book. Your helper is paid after the task is done."
+      },
+      "address": {
+        "question": "Who can see my address?",
+        "answer": "Helpers see only the general area. Your exact address is shared with your helper after you book."
+      },
+      "account": {
+        "question": "Can I post tasks and help others?",
+        "answer": "Yes. One account has two modes: “I need help” and “I can help.” Complete your helper setup before sending offers."
+      },
+      "rebook": {
+        "question": "Can I book the same helper again?",
+        "answer": "Yes. Save your helper or choose Book again from a completed booking. Check the task details, time, and price before sending an invite."
+      }
+    }
+  },
+  "market": {
+    "title": "Everyday help in {market}",
+    "description": "Find a hand with assembly, moving, yard cleanup, cleaning, or computer help. Start with a task and choose the offer that fits."
+  },
+  "category": {
+    "title": "{category} in {market}",
+    "pricingTitle": "Typical prices",
+    "typical": {
+      "item": "Typical in {market}: {low}–{high} per item",
+      "hour": "Typical in {market}: {low}–{high} per hour",
+      "task": "Typical in {market}: {low}–{high} per task"
+    },
+    "minimumHours": "{hours, plural, one {# hour minimum} other {# hours minimum}}",
+    "guidanceNote": "These are typical task prices. Your agreed price and service fee appear before you book.",
+    "feesLink": "See fees and examples",
+    "includedTitle": "What’s included",
+    "excludedTitle": "What isn’t included",
+    "backgroundNote": "Helpers taking in-home tasks must complete a background check. The badge shows the date of the check; it is not a promise of work quality or safety.",
+    "remoteNote": "Remote computer help uses screen sharing. You keep control of your device and enter your own passwords. No unattended remote-access tools.",
+    "helpersTitle": "Helpers for this category",
+    "ctaTitle": "Ready to get it done?",
+    "ctaBody": "Describe the work, choose your time, and compare offers before you book."
+  },
+  "categories": {
+    "furniture-assembly": {
+      "scope": "Desks, beds, shelves",
+      "intro": "Turn a flat-pack box into furniture you can use. Share the item details so your helper can plan the work.",
+      "pricing": "Agree on a fixed price per item before booking. Include the item count, model, access details, and any anti-tip anchoring in the scope.",
+      "included": {
+        "one": "Flat-pack furniture, including beds, desks, and shelves",
+        "two": "Anti-tip anchoring agreed as part of the task"
+      },
+      "excluded": {
+        "one": "Electrical, gas, or plumbing work",
+        "two": "TV mounting"
+      }
+    },
+    "moving-help": {
+      "scope": "Packing, lifting, loading",
+      "intro": "A hand with the lifting, loading, and packing. Moving help covers the physical work; arrange your own transport.",
+      "pricing": "Agree on an hourly rate and a maximum number of hours. You pay for the cap when you book. Unused time is refunded after the final hours are approved.",
+      "included": {
+        "one": "Loading and unloading",
+        "two": "Moving furniture within or between rooms",
+        "three": "Packing"
+      },
+      "excluded": {
+        "one": "Transport in the helper’s vehicle",
+        "two": "Pianos, safes, or hazardous materials"
+      }
+    },
+    "yard-cleanup": {
+      "scope": "Leaves, weeds, light pruning",
+      "intro": "Tidy the outdoor spaces you use every day, with work that stays safely at ground level.",
+      "pricing": "Agree on a fixed price for the cleanup, or an hourly rate with a cap. For hourly tasks, unused time is refunded after the final hours are approved.",
+      "included": {
+        "one": "Raking and bagging leaves",
+        "two": "Weeding and ground-level debris pickup",
+        "three": "Light hand pruning"
+      },
+      "excluded": {
+        "one": "Pesticides, herbicides, or irrigation repair",
+        "two": "Ladders, chainsaws, or tree work",
+        "three": "Hauling debris away"
+      }
+    },
+    "light-cleaning": {
+      "scope": "Kitchens, bathrooms, a tidy home",
+      "intro": "Help with the usual cleaning and a light tidy. Describe the rooms, supplies, and any pets before booking.",
+      "pricing": "Agree on a fixed price based on home size and scope, or an hourly rate with a cap. Any extra work needs an agreed change before it starts.",
+      "included": {
+        "one": "Standard home cleaning",
+        "two": "Kitchen and bathroom cleaning",
+        "three": "A light tidy"
+      },
+      "excluded": {
+        "one": "Biohazards or mold removal",
+        "two": "Post-construction cleaning",
+        "three": "Exterior windows above the ground floor"
+      }
+    },
+    "computer-help": {
+      "scope": "Devices, Wi-Fi, patient guidance",
+      "intro": "Get comfortable with your computer or phone, at home or through a guided screen-sharing session.",
+      "pricing": "Choose a fixed package, including a 30- or 60-minute remote session, or agree on an hourly rate with a cap. Review the full price before booking.",
+      "included": {
+        "one": "Device setup, Wi-Fi, and printers",
+        "two": "Backups and basic device cleanup",
+        "three": "Patient how-to guidance"
+      },
+      "excluded": {
+        "one": "Unattended remote access or remote-control tools",
+        "two": "A helper handling passwords or financial accounts",
+        "three": "Cryptocurrency account access or transactions"
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "A clear plan, from start to finish",
+    "description": "One account, two ways to take part. Choose the side that fits what you need today.",
+    "tabLabel": "Choose how you use TasksNearMe",
+    "posterTab": "I need help",
+    "helperTab": "I can help",
+    "helperAction": "Set up your helper profile",
+    "poster": {
+      "title": "Get help with your task",
+      "one": {
+        "title": "Describe your task",
+        "body": "Choose a category, add the details, and set a date, time window, and budget. You can post without adding a payment method."
+      },
+      "two": {
+        "title": "Compare offers or invite a helper",
+        "body": "Check profiles, verification badges, and reviews. Ask questions in the app, or request a time from a helper’s availability."
+      },
+      "three": {
+        "title": "Confirm the details and book",
+        "body": "Review the scope, schedule, total, and cancellation terms. Pay to confirm an offer. Direct invites place a hold on your card; you’re charged when the helper accepts."
+      },
+      "four": {
+        "title": "Keep the work on track",
+        "body": "Use booking messages to coordinate. Agree to changes in scope, price, time, or hours before the extra work starts."
+      },
+      "five": {
+        "title": "Approve, review, and book again",
+        "body": "Check the completion details and approve or report a problem by the deadline shown. Save your helper and use Book again next time."
+      }
+    },
+    "helper": {
+      "title": "Help people nearby",
+      "one": {
+        "title": "Complete your setup",
+        "body": "Add your services and area, complete an ID check, and set up payouts. In-home tasks also require a background check."
+      },
+      "two": {
+        "title": "Find tasks and send offers",
+        "body": "Choose tasks that fit your skills and schedule. Include your price, proposed time, and what you’ll bring. You can also respond to direct invites."
+      },
+      "three": {
+        "title": "Confirm the booking",
+        "body": "Check the agreed scope and your earnings. You’ll see the exact address after the booking is confirmed. Begin once payment is confirmed in the app."
+      },
+      "four": {
+        "title": "Do the task and share the result",
+        "body": "Check in and keep the client updated. Submit completion details, photos when needed, hours for hourly tasks, and receipts for approved expenses."
+      },
+      "five": {
+        "title": "Get paid and build repeat clients",
+        "body": "After approval, earnings go to your payout account. Reimbursed expenses are shown separately. Leave an honest review and arrange the next booking through the app."
+      }
+    }
+  },
+  "trustSafety": {
+    "title": "Trust starts with clear information",
+    "description": "Know what was checked, what stays private, and where to turn if something goes wrong.",
+    "badgesTitle": "What the badges mean",
+    "badges": {
+      "identity": {
+        "title": "ID verified",
+        "body": "A government ID and a selfie matched on the date shown. This checks identity, not skills or work quality."
+      },
+      "background": {
+        "title": "Background checked",
+        "body": "The background check returned clear on the date shown. In-home categories require a current check. Yard cleanup and remote computer help do not."
+      },
+      "phone": {
+        "title": "Phone verified",
+        "body": "The person confirmed access to their phone number. This is separate from an ID check or a background check."
+      }
+    },
+    "badgesLimit": "Checks describe information at a point in time. They do not promise safety or work quality. Read the profile and discuss your task before booking.",
+    "privacyTitle": "Your address is private",
+    "privacyBody": "Only your confirmed helper gets your exact address for the booking. Their access ends 48 hours after the task is completed.",
+    "contactMasking": "Phone numbers and emails are hidden until the booking is confirmed.",
+    "paymentTitle": "Payment stays with your booking",
+    "paymentBody": "See the full total before confirming. Keep messages, changes, and payments in the app so support can review the booking if there is a problem. Platform support and payment protection apply only to bookings made and paid here.",
+    "pricingLink": "Read about fees and refunds",
+    "reviewsTitle": "Feedback goes both ways",
+    "reviewsBody": "After a completed booking, you and your helper can review each other. Reviews appear when both are submitted or after 14 days. Reviews can be reported, and low ratings are not hidden just because they are low.",
+    "reviewRewards": "Reviews are optional and are not rewarded. Rewards never depend on reviews or ratings.",
+    "safetyTitle": "Reporting and immediate safety",
+    "emergency": "If you are in immediate danger, call 911 first.",
+    "reporting": "Use the safety option in your booking to contact support about an urgent concern. You can also report a task, profile, message, or review. For a problem with completed work, report it from the booking before the approval deadline.",
+    "helpLink": "Find help",
+    "prohibitedTitle": "Some tasks don’t belong here",
+    "prohibitedBody": "TasksNearMe covers everyday help. Licensed trades, childcare, personal care, and driving people are outside the service. Check the full list before you post.",
+    "prohibitedLink": "Read the prohibited tasks policy"
+  },
+  "previews": {
+    "group": "Public marketing pages",
+    "home": "Home",
+    "homeEmpty": "Home without recent tasks",
+    "market": "Austin market",
+    "furniture": "Furniture assembly",
+    "moving": "Moving help without tasks",
+    "computer": "Remote computer help",
+    "yard": "Yard cleanup",
+    "cleaning": "Light cleaning",
+    "how": "How it works",
+    "rewards": "Become a helper with rewards",
+    "noRewards": "Become a helper without rewards",
+    "pricing": "Pricing examples",
+    "trust": "Trust and safety"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "categories": {
+    "furniture-assembly": "Furniture assembly",
+    "moving-help": "Moving help",
+    "yard-cleanup": "Yard cleanup",
+    "light-cleaning": "Light cleaning",
+    "computer-help": "Computer and phone help"
+  },
+  "completed": "{count, plural, one {# task completed} other {# tasks completed}}",
+  "responseTime": "Usually responds in about {minutes, number} min",
+  "fixedPrice": "from {amount}",
+  "hourlyPrice": "{amount}/h",
+  "priceInOffer": "Price shared in an offer",
+  "minimumHours": "{hours} minimum",
+  "foundingHelper": "Founding helper #{number, number}",
+  "services": "Services",
+  "preview": {
+    "group": "Helper cards",
+    "samFull": "Sam · full helper card",
+    "jordanFounding": "Jordan · founding helper",
+    "leeCompact": "Lee · compact helper card",
+    "profile": "Helper profile"
+  }
+}
