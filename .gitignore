@@ -16,6 +16,9 @@ playwright/.cache/
 # review artifacts (screenshots, galleries)
 artifacts/
 
+# temporary scaffold folder (prompt 01)
+.scaffold-tmp/
+
 # env files
 .env*
 !.env.example
@@ -27,3 +30,6 @@ Thumbs.db
 npm-debug.log*
 *.pem
 .vercel
+
+# build output
+/build

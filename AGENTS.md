@@ -1,116 +1,140 @@
-# AGENTS.md — TasksNearMe
+# AGENTS.md — TasksNearMe (Codex builds the UI)
 
-Standing instructions for coding agents (Codex) working in this repository. Task prompts live in `docs/codex/prompts/`. Each one says which documents to read.
+TasksNearMe is a person-to-person marketplace for booking local help with everyday tasks, launching first in Austin, Texas. One account has two modes: **"I need help"** (poster) and **"I can help"** (helper). Product source of truth: `docs/blueprint/`.
 
-## What this product is
+## Your role
 
-TasksNearMe is a person-to-person marketplace for booking local help with specific everyday tasks, launching first in Austin, Texas. One account has two modes: **"I need help"** (poster) and **"I can help"** (helper). The product source of truth is `docs/blueprint/`.
+- **You (Codex) build the user interface only:** the design system, components, page shells, and screens, one **UI ticket** at a time (`docs/ui/tickets/UI-xxx-*.md`).
+- **Claude (Claude Code) builds everything else:** routes, data, business rules, server actions, integrations, and app-flow tests. Claude also connects your screens to real data.
+- The handshake:
+  - **Claude gives you:** TypeScript contracts (`src/contracts`), canonical fixtures (`src/fixtures`), formatters (`src/shared`), and a ticket.
+  - **You give back:** components, screens, and previews in `src/ui`, plus copy in `messages/en/ui`.
 
-## Current phase: the complete UI on mock data
+## Paths
 
-- Build every screen (public site, signed-in app, admin workspace) against **typed mock data** that already has the final shapes.
-- **No real backend** in this phase: no database, no auth provider, no payment, identity, background-check, maps, email, SMS, push, or AI provider calls. Each provider is a clearly marked placeholder component with its final props.
-- Clicking through the app must work. Mock actions move the dev scenario forward (see `docs/codex/ui-contract.md` §8).
+**You may create and edit:**
+- `src/ui/**`: theme, primitives, components, shells, screens, previews, lib. This includes UI tests (`src/ui/**/*.test.tsx`).
+- `messages/en/ui/**`: UI copy. One JSON file per namespace, registered in `messages/en/ui/index.ts`. Never use the top-level namespace `server`.
+- `public/ui/**`: UI images and illustrations.
+- `components.json`: shadcn configuration.
+- `package.json` / `package-lock.json`: **only** by running `npm install <ui-package>`. Never edit scripts or other fields.
+- `docs/ui/progress.md`: only the row for your ticket.
 
-## Read before any task
+**Read-only for you:**
+- Code and copy: `src/app/**`, `src/contracts/**`, `src/fixtures/**`, `src/shared/**`, `src/modules/**`, `src/platform/**`, `src/integrations/**`, `src/i18n/**`, `messages/en/app/**`, `tests/**`.
+- Config: `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `vitest.config.mts`, `playwright.config.ts`.
+- Docs and instructions: `docs/**` (except your progress row), `CLAUDE.md`, `AGENTS.md`.
 
-1. `docs/codex/ui-contract.md`: data shapes, fixtures, scenarios, actions. **Binding.**
-2. `docs/codex/design-system.md`: visual rules, tokens, components, copy. **Binding.**
-3. `docs/ui-progress.md`: what's done. **Update it at the end of every task.**
-4. Only the `docs/blueprint/` sections your task names. Don't read the whole blueprint every time.
+If a ticket seems to need a change in a read-only path (a new prop, a missing fixture, a type change), **don't make it**. Add a **Contract request** to your summary saying what you need, why, and the shape you propose. Claude handles it.
 
-If a task prompt conflicts with these documents, follow the documents, then explain the conflict in your summary.
+## Read before every ticket
 
-## Stack (pin exact versions in package.json)
+1. The ticket: scope, contracts, states, acceptance.
+2. `docs/ui/design-system.md`: tokens, layouts, components, status labels, voice, accessibility. **Binding.**
+3. The contract and fixture files the ticket lists.
+4. `docs/ui/ui-contract.md` for background (people, canonical money values, scenarios). If it disagrees with `src/contracts`, the code wins.
+5. The Next.js block at the end of this file: this version differs from your training data.
 
-- **Node.js 26 LTS** (installed on the dev machine; keep `"engines": { "node": ">=24" }`).
-- **npm** is the package manager (pnpm isn't installed and isn't needed).
-- **Next.js 16** (App Router, React Server Components, Server Actions), **React 19**, **TypeScript strict**. In Next 16, request middleware lives in `src/proxy.ts`.
-- **Tailwind CSS v4 + shadcn/ui** (Radix primitives), `lucide-react` icons, `sonner` toasts.
-- **react-hook-form + zod** for forms and validation.
-- **next-intl**: single locale `en`, no locale prefix in URLs; all strings in `messages/en.json`.
-- **Vitest + Testing Library** for unit and component tests; **Playwright + @axe-core/playwright** for end-to-end, accessibility, and screenshots.
+## Stack (installed; don't change versions)
 
-Don't add other runtime dependencies without naming each one and why in your summary. **Never add backend or provider SDKs** (Stripe, Twilio, database clients, auth libraries, map SDKs, AI SDKs) in this phase.
+- Next.js 16.4 (App Router, **Cache Components on**), React 19.3, TypeScript strict.
+- Tailwind CSS 4.3 through the Turbopack loader (no PostCSS config); global CSS is `src/ui/theme/globals.css`.
+- next-intl 4 (`useTranslations`) and zod 4.
+
+You add the UI libraries a ticket needs:
+- shadcn/ui and its Radix packages
+- lucide-react, sonner
+- class-variance-authority, clsx, tailwind-merge
+- react-hook-form and @hookform/resolvers (when a ticket has forms)
+- whatever shadcn pulls in itself (vaul, cmdk, react-day-picker)
+
+Anything else needs a contract request first.
+
+## How UI code is written
+
+1. **Presentational only.** Data comes in as typed props from `@/contracts`. Components never fetch, read cookies or headers, call server code, or compute business rules: no fees, permissions, visibility, or deciding which actions are available.
+2. **Synchronous and isomorphic.**
+   - No `async` components, no `next/headers`, `next/cache`, `server-only`, or `'use server'`.
+   - Add `'use client'` only where you need state, effects, event handlers, or browser APIs, and keep those client components small.
+3. **Mutations are handler props:** `ActionHandler<TInput>` → `Promise<ActionResult>`.
+   - While pending: disable the control, show a spinner, set `aria-busy`.
+   - Map **every** `ActionErrorCode` to friendly copy, and success codes to a toast or inline confirmation.
+   - Follow `redirectTo` with `router.push`.
+   - Never assume success.
+4. **Actions:** render `ActionDescriptor[]` exactly as received: order, kind, enabled, disabled reason, confirm. Never add, hide, or reorder actions yourself.
+5. **Links:** build every href with `routes` from `@/contracts`. No hard-coded paths.
+6. **Money and time:**
+   - Money: `formatMoney` (integer cents). Never compute an amount.
+   - Dates and times: the `@/shared/format` helpers (America/Chicago).
+   - Distance bands: map to copy.
+7. **Privacy.** Only `ExactAddressPanel` renders an `ExactAddress`. Never render last names, emails, or phone numbers unless a contract field gives them to that screen. Message text arrives as `MessageSegment[]`; render masked segments, and never try to detect contact details yourself.
+8. **Copy.**
+   - Every user-facing string goes in `messages/en/ui/<namespace>.json` and is read with `useTranslations`.
+   - Use ICU syntax for plurals and parameters.
+   - Follow the voice, glossary, and banned words in design-system §6.
+   - Content such as names, titles, and task text arrives in props.
+9. **Accessibility: WCAG 2.2 AA** (design-system §7).
+   - Semantic HTML, labelled controls, visible focus, full keyboard paths.
+   - `aria-live` for async results; touch targets ≥ 44 px; never color alone; respect reduced motion.
+10. **Mobile first:** design at 360 px, then 768, 1024, and 1280. No horizontal scrolling.
+11. **Styling:**
+    - Tailwind utilities on the design tokens (CSS variables), merged with `cn()`.
+    - No CSS-in-JS. No inline style objects except for truly dynamic values.
+12. **Rewards never reference reviews or ratings.**
+
+## Previews (required)
+
+- Every component, shell, or screen in a ticket gets previews in `src/ui/previews/<area>.preview.tsx`. Export them as `PreviewEntry[]` and register them in `src/ui/previews/registry.ts`.
+- Cover **every state the ticket lists**: loading, empty, error, and each status and role variant.
+  - Use fixtures from `@/fixtures`. You may derive variants, but never change canonical numbers.
+  - Use `fakeHandler()` for handler props, covering success and the error codes you handle.
+- Ids are `"<group>/<variant>"` in kebab-case. Use `layout: 'fullscreen'` for shells and screens.
+- Browse them at **http://localhost:3000/dev/ui** (`npm run dev`).
+
+## Tests
+
+- Component tests with Testing Library go next to the component (`*.test.tsx`). Put `/** @vitest-environment jsdom */` on the first line, and wrap renders in `NextIntlClientProvider` with `messages/en/ui`.
+- Test the UI's own logic: label maps, disabled reasons, pending and error handling, and that every action id has a label.
+- **`npm run check:ui` must pass.** It runs typecheck, lint (including the import boundaries), and unit tests, then the preview harness. The harness renders every preview at 360×800 and 1280×800 and requires no runtime errors and no serious or critical axe violations. Screenshots go to `artifacts/ui-previews/`.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Dev server with the dev toolbar |
-| `npm run build` / `npm start` | Production build and serve (the dev toolbar and `/dev` routes must not exist here) |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run lint` | ESLint |
-| `npm test` | Vitest |
-| `npm run e2e` | Playwright smoke, flow, privacy, and axe tests |
-| `npm run shots` | Saves review screenshots to `artifacts/screenshots/` (360×800 and 1280×800) |
-| `npm run check` | typecheck + lint + test (run before finishing any task) |
+| `npm run dev` | Dev server; previews at `/dev/ui` |
+| `npm run check` | typecheck + lint + unit tests |
+| `npm run test:ui` | Preview harness (Playwright) |
+| `npm run check:ui` | Both; run before you finish |
+| `npx shadcn@latest add <name>` | Adds primitives into `src/ui/primitives` (per `components.json`) |
 
-## Folder layout (UI phase; matches `docs/blueprint/07-architecture.md` §4)
+## Definition of done
 
-```
-src/app/(public)/…          public routes
-src/app/(app)/app/…         signed-in routes
-src/app/admin/…             staff routes
-src/app/dev/…               dev-only routes (component gallery); 404 in production
-src/components/ui/          shadcn primitives (generated; edit sparingly)
-src/components/…            shared components: layout/, money/, forms/, maps/, feedback/, data/
-src/modules/<module>/
-  types.ts                  view models and enums from the UI contract
-  queries.ts                data access with the final signatures (mock-backed now)
-  actions.ts                server actions (mock: validate → transition → result)
-  domain/                   pure logic + co-located *.test.ts (actions, fees, visibility)
-  ui/                       components specific to the module
-src/mocks/                  the ONLY place fake data lives: fixtures, scenarios, transitions
-src/platform/               viewer.ts (mock session), clock.ts, flags.ts, format/, i18n/
-src/dev/                    dev toolbar (never rendered in production)
-messages/en.json            all user-facing strings
-tests/e2e/                  Playwright specs, routes.ts (route × scenario matrix), shots.ts
-```
-
-Modules: `accounts`, `profiles`, `verification`, `markets`, `tasks`, `offers`, `bookings`, `payments`, `rewards`, `messaging`, `notifications`, `reviews`, `support`, `admin`.
-
-## UI rules
-
-1. **Mobile first.** Build and check at 360×800 first, then 768 and 1280. No horizontal scrolling. Touch targets at least 44×44 px. The signed-in app uses a bottom nav on phones and a sidebar from 1024 px.
-2. **Thin pages.** Route files fetch through module `queries.ts` and render components. **Route files never import from `src/mocks`** (an ESLint rule enforces this).
-3. **Every screen** has a loading state (`loading.tsx` or skeletons), an empty state, and an error state (`error.tsx` with retry). The dev toolbar can force each one.
-4. **Actions come from domain functions.** Which buttons a booking, offer, invite, or reward shows comes from `getBookingActions` (and its siblings) in `domain/`, mirroring `docs/blueprint/03-state-machines.md`. Never hard-code button visibility in a page.
-5. **Address privacy.** `PublicLocation` and `ExactAddress` are different types. Only `ExactAddressPanel` renders an `ExactAddress`, and only on the booking hub when the query layer allows it.
-   - Never put exact addresses, phone numbers, emails, or last names in public pages, page metadata, JSON-LD, URLs, or console logs.
-6. **Money.** Data holds integer cents. Display with `<Money>` and breakdowns with `<PriceBreakdown variant="poster" | "helper" | "admin">`. Fee math lives only in `src/modules/payments/domain/fees.ts`, never inside components.
-7. **Strings.** All user-facing text goes in `messages/en.json` through next-intl; tests and fixtures are the only exceptions. Spanish comes later, so don't concatenate translated fragments.
-8. **Accessibility: WCAG 2.2 AA.**
-   - Semantic HTML, labelled controls, visible focus, complete keyboard paths.
-   - `aria-live` for async results; color is never the only signal.
-   - Respect `prefers-reduced-motion`.
-   - axe must pass on every route.
-9. **Placeholders for providers.** Payment form, Apple Pay / Google Pay, ID check, payout onboarding, background check, maps, address autocomplete, photo upload, AI drafting, push, and realtime each get one placeholder component with the final props.
-   - Each shows a small "Demo" marker and simulates outcomes through the dev toolbar.
-   - Mark each with `// TODO(integration): <provider> — see docs/blueprint/<doc> §<n>`.
-10. **Copy.** Follow the voice and glossary in `design-system.md` §6. Never say "escrow", "wallet", "wages", "employer", "employee", or "hire" when referring to helpers.
-11. **Rewards** never reference reviews or ratings, in the UI or in code (`src/modules/rewards` must not import from `src/modules/reviews`).
-12. **Time.** Show dates and times in `America/Chicago` using `src/platform/format`, with explicit day, date, and time ("Sat, Nov 21 · 10:30 am"). Deadlines always say what happens when they pass.
-
-## Mock data rules
-
-- Canonical people, tasks, scenario IDs, and **money values** come from `docs/codex/ui-contract.md`. Don't change those numbers.
-- Everyone and everything is fictional. Addresses use "Example Lane". Avatars use initials, with no photos of real people.
-- Mock server actions validate input with zod, apply the transition table (or show a success toast if no transition exists), call `revalidatePath`, and return `{ ok, message }`. **No in-memory databases.**
-- Query functions apply the **real visibility rules** (role-aware projections), so later wiring to the backend can't leak data.
-
-## Definition of done (every task)
-
-- `npm run check` and `npm run build` pass.
-- Every new or changed route is in `tests/e2e/routes.ts`, passes the smoke + axe test at both viewports, and appears in `npm run shots`.
-- Flows named in the task have Playwright tests. Domain functions have unit tests.
-- `docs/ui-progress.md` is updated.
-- End with a summary: what you built; files changed; decisions and assumptions; anything not done; new dependencies and why; which scenarios a reviewer should open.
+- Everything in the ticket's **Build** and **Acceptance** sections.
+- `npm run check:ui` passes.
+- Your ticket's row in `docs/ui/progress.md` says **UI done**.
+- Finish with this summary:
+  1. **Built:** components and screens (paths) and preview ids.
+  2. **Contracts used:** props and handlers, and from which files.
+  3. **Message namespaces** added or changed.
+  4. **Dependencies added**, and why.
+  5. **Contract requests**, or "none".
+  6. **Known gaps or follow-ups.**
+  7. **Previews to review first.**
 
 ## Don'ts
 
-- Don't edit `docs/blueprint/`. Report gaps in your summary instead.
-- Don't delete, skip, or weaken tests to make them pass.
-- Don't build outside the task's scope. List ideas in your summary.
+- Don't touch files outside your paths, not even to "fix" something. Report it instead.
+- Don't edit contracts or fixtures, and don't change canonical values.
+- Don't add data fetching, API routes, server actions, or business rules.
+- Don't delete or weaken tests or lint rules.
 - Don't add global state libraries, CSS-in-JS, or other component libraries.
-- Don't commit secrets or real personal data. There are no API keys in this phase.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

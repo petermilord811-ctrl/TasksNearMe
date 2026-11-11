@@ -8,7 +8,7 @@
 
 | ID | Item | Size | Pri | Depends | Acceptance criteria |
 |---|---|---|---|---|---|
-| B-001 | Repo scaffold: Next.js 16, TS strict, npm, ESLint with module-boundary rules, Vitest, Playwright, `.nvmrc` (the UI phase in `docs/codex/` already delivers most of this) | S | P0 | — | `npm run check` runs typecheck, lint, and unit tests locally and in CI; a deliberate boundary violation fails lint |
+| B-001 | Repo scaffold: Next.js 16, TS strict, npm, ESLint with module-boundary rules, Vitest, Playwright, `.nvmrc` (done during setup: see `CLAUDE.md`) | S | P0 | — | `npm run check` runs typecheck, lint, and unit tests locally and in CI; a deliberate boundary violation fails lint |
 | B-002 | `render.yaml`: web, worker, Postgres (PostGIS), env groups, staging, PR previews | M | P0 | B-001 | Opening a PR creates a preview with a seeded database; merging to `main` deploys staging |
 | B-003 | DB platform: Drizzle config, migration pre-deploy step, PostGIS migration, `tx()`, advisory-lock helper | M | P0 | B-002 | Empty → latest migration passes in CI; schema drift check fails on mismatch |
 | B-004 | Jobs and outbox: graphile-worker, `addJob(tx)`, outbox write and dispatch, crontab | M | P0 | B-003 | Integration test: a job enqueued in a rolled-back transaction never runs; a job with the same `job_key` is replaced |

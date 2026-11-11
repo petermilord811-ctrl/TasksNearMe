@@ -1,0 +1,14 @@
+/*
+ * Owned by Codex (UI). Initial stub created by Claude.
+ * UI-001 replaces this with the design-system tokens (docs/ui/design-system.md §2).
+ * The root layout imports this file; keep it the single global stylesheet.
+ */
+@import "tailwindcss";
+
+:root {
+  --font-sans-fallback: ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans), var(--font-sans-fallback);
+}
