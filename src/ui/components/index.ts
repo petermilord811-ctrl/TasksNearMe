@@ -24,3 +24,5 @@ export { PublicTaskCard, type PublicTaskCardProps } from './tasks/public-task-ca
 export { HelperCard, type HelperCardProps } from './people/helper-card';
 export { ContentBlocks } from './content/content-blocks';
 export { SupportCard } from './content/support-card';
+export { ReviewCard } from './reviews/review-card';
+export { WorkSampleGallery } from './people/work-sample-gallery';

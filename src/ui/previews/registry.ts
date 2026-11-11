@@ -19,6 +19,9 @@ import { publicPagePreviews } from './public-pages.preview';
 import { authPreviews } from './auth.preview';
 import { waitlistPreviews } from './waitlist.preview';
 import { contentPreviews } from './content.preview';
+import { taskPagePreviews } from './task-pages.preview';
+import { helperProfilePreviews } from './helper-profile.preview';
+import { reviewsWorkSamplesPreviews } from './reviews-work-samples.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -38,4 +41,7 @@ export const previews: PreviewEntry[] = [
   ...authPreviews,
   ...waitlistPreviews,
   ...contentPreviews,
+  ...taskPagePreviews,
+  ...helperProfilePreviews,
+  ...reviewsWorkSamplesPreviews,
 ];

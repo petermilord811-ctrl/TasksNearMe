@@ -6,3 +6,6 @@ export { BecomeHelperScreen } from './become-helper-screen';
 export { PricingScreen } from './pricing-screen';
 export { TrustSafetyScreen } from './trust-safety-screen';
 export { WaitlistScreen } from './waitlist-screen';
+export { TaskBoardScreen } from './task-board-screen';
+export { PublicTaskScreen } from './public-task-screen';
+export { HelperProfileScreen } from './helper-profile-screen';

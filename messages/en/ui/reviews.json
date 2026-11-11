@@ -1,0 +1,31 @@
+{
+  "reviewBy": "Review by {name}",
+  "tags": {
+    "on_time": "On time",
+    "friendly": "Friendly",
+    "careful": "Careful",
+    "clear_communication": "Clear communication",
+    "skilled": "Skilled",
+    "tidy": "Tidy",
+    "good_value": "Good value"
+  },
+  "categories": {
+    "furniture-assembly": "Furniture assembly",
+    "moving-help": "Moving help",
+    "yard-cleanup": "Yard cleanup",
+    "light-cleaning": "Light cleaning",
+    "computer-help": "Computer and phone help"
+  },
+  "workSamples": {
+    "open": "View sample: {description}",
+    "title": "Work sample {number} of {count}",
+    "view": "View sample"
+  },
+  "preview": {
+    "reviewsGroup": "Reviews",
+    "full": "Review with tags and a note",
+    "tagsOnly": "Review with tags only",
+    "samplesGroup": "Work samples",
+    "three": "Three work samples"
+  }
+}

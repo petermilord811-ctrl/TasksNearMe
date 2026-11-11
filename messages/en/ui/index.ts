@@ -20,7 +20,11 @@ import signIn from './signIn.json';
 import waitlist from './waitlist.json';
 import help from './help.json';
 import legal from './legal.json';
+import taskBoard from './taskBoard.json';
+import publicTask from './publicTask.json';
+import helperProfile from './helperProfile.json';
+import reviews from './reviews.json';
 
-const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal };
+const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, publicTask, helperProfile, reviews };
 
 export default uiMessages;

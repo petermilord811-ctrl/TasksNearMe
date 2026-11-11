@@ -8,7 +8,7 @@ import { DetailPageShell, Logo, PublicShell } from '@/ui/shells';
 import { AdminShellExample, AppShellExample, ModeResultsExample } from './shell-examples';
 import shellCopy from '../../../messages/en/ui/shell.json';
 
-function PublicShellExample({ viewer }: { viewer: ShellViewer }) {
+function PublicShellExample({ viewer }: { viewer: ShellViewer | Promise<ShellViewer> }) {
   const t = useTranslations('shell');
   return (
     <PublicShell viewer={viewer} currentPath={routes.home()}>
@@ -48,10 +48,12 @@ function AdminAgentExample() {
 }
 
 const preview = shellCopy.preview;
+const signedInViewerPromise = Promise.resolve<ShellViewer>(mayaShell);
 
 export const shellPreviews: PreviewEntry[] = [
   { id: 'shell/public-signed-out', group: preview.group, title: preview.publicSignedOut, layout: 'fullscreen', render: () => <PublicShellExample viewer={publicViewer} /> },
   { id: 'shell/public-signed-in', group: preview.group, title: preview.publicSignedIn, layout: 'fullscreen', render: () => <PublicShellExample viewer={mayaShell} /> },
+  { id: 'shell/public-viewer-promise', group: preview.group, title: preview.publicViewerPromise, layout: 'fullscreen', render: () => <PublicShellExample viewer={signedInViewerPromise} /> },
   { id: 'shell/public-staff', group: preview.group, title: preview.publicStaff, layout: 'fullscreen', render: () => <PublicShellExample viewer={rileyStaff} /> },
   { id: 'shell/app-poster', group: preview.group, title: preview.appPoster, layout: 'fullscreen', render: () => <AppShellExample initialViewer={mayaShell} currentPath={routes.app.bookings()} /> },
   { id: 'shell/app-helper', group: preview.group, title: preview.appHelper, layout: 'fullscreen', render: () => <AppShellExample initialViewer={jordanShell} currentPath={routes.app.findWork()} /> },

@@ -1,10 +1,10 @@
 /** @vitest-environment jsdom */
 import type { ReactNode } from 'react';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CATEGORY_SLUGS, LEGAL_DOCS, routes, type AppShellHandlers, type Breadcrumb, type StaffViewer } from '@/contracts';
+import { CATEGORY_SLUGS, LEGAL_DOCS, routes, type AppShellHandlers, type Breadcrumb, type ShellViewer, type StaffViewer } from '@/contracts';
 import { alexStaff, fakeHandler, jordanShell, mayaShell, morganStaff, priyaShell, publicViewer, rileyStaff } from '@/fixtures';
 import uiMessages from '../../../messages/en/ui';
 import { AdminShell } from './admin-shell';
@@ -45,6 +45,33 @@ describe('shell landmarks', () => {
 });
 
 describe('PublicShell', () => {
+  it('renders page content and signed-out account fallbacks while the viewer never resolves', async () => {
+    const viewer = new Promise<ShellViewer>(() => {});
+    show(<PublicShell viewer={viewer}><h1>Local help</h1></PublicShell>);
+    expect(within(screen.getByRole('main')).getByRole('heading', { name: 'Local help' })).toBeInTheDocument();
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', routes.signIn());
+    expect(screen.getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', routes.signIn(routes.app.newTask()));
+    await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    const menu = within(screen.getByRole('dialog', { name: 'Explore TasksNearMe' }));
+    expect(menu.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', routes.signIn());
+    expect(menu.getByRole('link', { name: 'Become a helper' })).toBeInTheDocument();
+  });
+
+  it('updates only the account links when the viewer resolves', async () => {
+    let resolveViewer!: (viewer: ShellViewer) => void;
+    const viewer = new Promise<ShellViewer>((resolve) => { resolveViewer = resolve; });
+    show(<PublicShell viewer={viewer}><h1>Local help</h1></PublicShell>);
+    const content = screen.getByRole('heading', { name: 'Local help' });
+    await act(async () => { resolveViewer(mayaShell); await viewer; });
+    expect(screen.getByRole('heading', { name: 'Local help' })).toBe(content);
+    expect(screen.getByRole('link', { name: 'Go to the app' })).toHaveAttribute('href', routes.app.home());
+    expect(screen.getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', routes.app.newTask());
+    await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    const menu = within(screen.getByRole('dialog', { name: 'Explore TasksNearMe' }));
+    expect(menu.getByRole('link', { name: 'Go to the app' })).toHaveAttribute('href', routes.app.home());
+  });
+
   it.each([
     [publicViewer, 'Sign in', routes.signIn(), routes.signIn(routes.app.newTask())],
     [mayaShell, 'Go to the app', routes.app.home(), routes.app.newTask()],

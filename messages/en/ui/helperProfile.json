@@ -1,0 +1,35 @@
+{
+  "travelRadius": "Travels up to about {miles, plural, one {# mile} other {# miles}} from {area}",
+  "remoteOk": "Remote OK",
+  "requestBooking": "Request a booking",
+  "memberSince": "Member since {date}",
+  "completed": "{count, plural, one {# task completed} other {# tasks completed}}",
+  "responseTime": "Usually responds in about {minutes, number} min",
+  "foundingHelper": "Founding helper #{number, number}",
+  "about": "About {name}",
+  "services": "Services",
+  "fixedPrice": "from {amount}",
+  "hourlyPrice": "{amount}/h",
+  "hourlyMinimum": "{amount}/h, {hours} minimum",
+  "priceInOffer": "Price shared in an offer",
+  "tools": "Tools",
+  "languages": "Languages",
+  "workSamples": "Work samples",
+  "reviews": "Reviews",
+  "recentReviews": "Showing the {shown, number} most recent of {total, plural, one {# review} other {# reviews}}",
+  "noReviews": "No reviews yet",
+  "noReviewsDescription": "Reviews from clients appear here after completed tasks.",
+  "categories": {
+    "furniture-assembly": "Furniture assembly",
+    "moving-help": "Moving help",
+    "yard-cleanup": "Yard cleanup",
+    "light-cleaning": "Light cleaning",
+    "computer-help": "Computer and phone help"
+  },
+  "preview": {
+    "group": "Helper profiles",
+    "sam": "Sam · full helper profile",
+    "jordanNew": "Jordan · new founding helper",
+    "leeRemote": "Lee · remote help available"
+  }
+}
