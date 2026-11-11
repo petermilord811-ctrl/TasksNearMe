@@ -14,6 +14,8 @@ import { actionPreviews } from './actions.preview';
 import { layoutPreviews } from './layout.preview';
 import { primitivePreviews } from './primitives.preview';
 import { shellPreviews } from './shell.preview';
+import { publicCardPreviews } from './public-cards.preview';
+import { publicPagePreviews } from './public-pages.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -28,4 +30,6 @@ export const previews: PreviewEntry[] = [
   ...layoutPreviews,
   ...primitivePreviews,
   ...shellPreviews,
+  ...publicCardPreviews,
+  ...publicPagePreviews,
 ];
