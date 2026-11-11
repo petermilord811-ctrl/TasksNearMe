@@ -9,6 +9,8 @@ export interface PriceBreakdownProps {
   breakdown: PriceBreakdownData;
   variant: BreakdownVariant;
   title?: string;
+  /** Context-specific label for a poster's total, for example a booking already charged. */
+  posterTotalLabel?: string;
 }
 
 function Line({
@@ -31,7 +33,7 @@ function Line({
 }
 
 /** Every amount is supplied by the app. This component formats values; it never derives totals. */
-export function PriceBreakdown({ breakdown, variant, title }: PriceBreakdownProps) {
+export function PriceBreakdown({ breakdown, variant, title, posterTotalLabel }: PriceBreakdownProps) {
   const t = useTranslations('money');
   const showPoster = variant === 'poster' || variant === 'admin';
   const showHelper = variant === 'helper' || variant === 'admin';
@@ -71,7 +73,7 @@ export function PriceBreakdown({ breakdown, variant, title }: PriceBreakdownProp
             {breakdown.posterRefundCents !== undefined && (
               <Line label={t('refund')}><Money cents={breakdown.posterRefundCents} /></Line>
             )}
-            <Line label={variant === 'admin' ? t('posterTotal') : breakdown.posterChargedCents !== undefined ? t('finalTotal') : t('total')} total>
+            <Line label={variant === 'admin' ? t('posterTotal') : breakdown.posterChargedCents !== undefined ? t('finalTotal') : posterTotalLabel ?? t('total')} total>
               <Money cents={breakdown.posterTotalCents} size="lg" />
             </Line>
           </>
