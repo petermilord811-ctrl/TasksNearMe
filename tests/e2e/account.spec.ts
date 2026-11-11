@@ -21,10 +21,12 @@ test('notifications: mark all as read', async ({ page }, testInfo) => {
   // The bell counts the unread ones (other tests may add more while this runs).
   await expect(page.getByRole('link', { name: /^Notifications, \d+ unread notifications?$/ })).toBeVisible();
   // Seeded: Jordan arrived (unread) and was on the way (read).
-  await expect(page.getByText('Jordan T. has arrived for Assemble a bookcase')).toBeVisible();
+  const arrived = page.getByRole('link', { name: /Jordan T\. has arrived for Assemble a bookcase/ });
+  await expect(arrived).toContainText('Unread');
   await expect(page.getByText('Jordan T. is on the way for Assemble a bookcase')).toBeVisible();
   await page.getByRole('button', { name: 'Mark all as read' }).click();
-  await expect(page.getByText('All notifications marked as read.').first()).toBeVisible();
+  // The list refreshes (other tests may add new notifications meanwhile): the seeded one is read now.
+  await expect(arrived).not.toContainText('Unread');
 });
 
 test('account: the phone stays masked and the receipts stay on', async ({ page }, testInfo) => {

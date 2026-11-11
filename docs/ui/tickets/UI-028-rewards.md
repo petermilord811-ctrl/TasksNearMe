@@ -71,6 +71,6 @@ All previews use `now = REWARDS_NOW`.
 - Reward chips on bookings and the helper home, the acceptance and completion programs (off at launch), and the staff reward tools (UI-020).
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Route(s): `/app/rewards` in the `(main)` group.
+- Queries / actions: `src/modules/rewards/service.ts` (`getRewardsPage` brings grants up to date with the helper's bookings first; `redeemReward` orders the gift card through the development stand-in) and `actions.ts`.
+- e2e: `tests/e2e/rewards.spec.ts` (Jordan's welcome reward is pending after the first paid booking; people who aren't helpers are pointed to helper setup). Integration: `tests/integration/rewards.test.ts`.
