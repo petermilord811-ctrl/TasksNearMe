@@ -21,7 +21,7 @@ import { routes } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { marketPolicies } from '@/modules/markets/schema';
 import { offers } from '@/modules/offers/schema';
-import { payments } from '@/modules/payments/schema';
+import { payments, refunds } from '@/modules/payments/schema';
 import { getHelperSummaries, initialsOf } from '@/modules/profiles/queries';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { taskLocations, tasks } from '@/modules/tasks/schema';
@@ -195,6 +195,20 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
       ...(row.methodBrand ? { method: { brand: row.methodBrand as CardBrand, ...(row.methodLast4 ? { last4: row.methodLast4 } : {}) } } : {}),
       at: row.updatedAt.toISOString(),
     }));
+  // Refunds (cancellations, unused amounts, settlements, goodwill) follow the charges in the client's history.
+  if (role === 'poster') {
+    const refundRows = await db.select().from(refunds).where(eq(refunds.bookingId, booking.id));
+    for (const row of refundRows) {
+      paymentLines.push({
+        id: row.id,
+        kind: 'refund',
+        amountCents: row.amountCents,
+        status: row.status === 'succeeded' ? 'succeeded' : row.status === 'failed' ? 'failed' : 'processing',
+        at: row.createdAt.toISOString(),
+      });
+    }
+    paymentLines.sort((a, b) => a.at.localeCompare(b.at));
+  }
 
   const dispute = await getBookingDispute(db, booking.id, userId, role);
 

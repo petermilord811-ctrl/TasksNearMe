@@ -32,6 +32,7 @@ import { deskPublicTask, remoteComputerPublicTask } from './marketing';
 import { movingPublicTask } from './helper-work';
 import {
   deskBreakdown,
+  deskSettledBreakdown,
   deskWithAllowanceFundedBreakdown,
   deskWithExpensesFinalBreakdown,
   movingFinalBreakdown,
@@ -755,16 +756,19 @@ export const deskBookingHelperDisputedContacted: BookingView = {
 
 const settled = { type: 'settle' as const, summary: 'Settled at $45 because the drawers were left unfinished.', at: '2026-11-24T17:00:00.000Z' };
 
-/** Settled at $45: Maya got $16.50 back. */
+/** Settled at $45: Maya got $16.50 back (the refund shows in her payment history; the final numbers on the work). */
 export const deskBookingPosterSettled: BookingView = {
   ...deskBookingPosterCompleted,
   completedVia: 'settlement',
+  completion: { ...deskCompletionView, finalBreakdown: deskSettledBreakdown },
+  payments: [deskCharge, { id: 'ref_desk_settle', kind: 'refund', amountCents: 1650, status: 'succeeded', at: '2026-11-24T17:00:00.000Z' }],
   dispute: { ...deskDispute, status: 'resolved', canOpenCase: true, resolution: { ...settled, refundCents: 1650 } },
 };
 
-/** Settled at $45: Jordan receives $40.50. */
+/** Settled at $45: Jordan receives $40.50 (the final numbers on the work). */
 export const deskBookingHelperSettled: BookingView = {
   ...deskBookingHelperCompleted,
   completedVia: 'settlement',
+  completion: { ...deskCompletionView, finalBreakdown: deskSettledBreakdown },
   dispute: { ...deskDispute, status: 'resolved', canOpenCase: true, resolution: { ...settled, receivesCents: 4050 } },
 };
