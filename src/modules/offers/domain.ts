@@ -34,11 +34,8 @@ export function posterOfferActions(
 export function taskOwnerActions(task: { status: TaskStatus | string }): ActionDescriptor<TaskActionId>[] {
   switch (task.status) {
     case 'open':
-      return [
-        { id: 'invite_helpers', kind: 'secondary', enabled: true },
-        { id: 'edit_task', kind: 'secondary', enabled: true },
-        { id: 'cancel_task', kind: 'destructive', enabled: true, confirm: true },
-      ];
+      // Editing a task and inviting helpers directly arrive with UI-023 and UI-010.
+      return [{ id: 'cancel_task', kind: 'destructive', enabled: true, confirm: true }];
     case 'completed':
     case 'canceled':
     case 'expired':

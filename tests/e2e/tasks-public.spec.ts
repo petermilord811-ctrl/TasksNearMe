@@ -31,8 +31,9 @@ test.describe('public tasks', () => {
   test('home and category pages show recent tasks', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('link', { name: 'Assemble a desk (flat-pack, 1 item)' })).toBeVisible();
-    await page.goto('/austin/light-cleaning');
-    await expect(page.getByRole('link', { name: 'Light cleaning for a 2-bedroom apartment' })).toBeVisible();
+    // Yard cleanup: no other e2e test posts or cancels yard tasks.
+    await page.goto('/austin/yard-cleanup');
+    await expect(page.getByRole('link', { name: 'Rake and bag front-yard leaves' })).toBeVisible();
   });
 
   test('unknown tasks are not found', async ({ page }) => {

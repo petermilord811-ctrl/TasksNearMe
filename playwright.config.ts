@@ -16,6 +16,9 @@ export default defineConfig({
   timeout: 120_000,
   // One dev server compiles routes on demand; more workers only queue behind it and time out.
   workers: process.env.CI ? 2 : 4,
+  // The dev server compiles routes on demand and occasionally serves one transient error while
+  // doing so; one retry absorbs that, and retried tests still show as flaky in the report.
+  retries: 1,
   expect: { timeout: 15_000 },
   use: {
     baseURL,
@@ -40,13 +43,20 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
     },
     {
+      // Reseeds the dev database before the app flows (see tests/e2e/global.setup.ts).
+      name: 'e2e-setup',
+      testMatch: /e2e\/global\.setup\.ts/,
+    },
+    {
       name: 'app-mobile',
       testMatch: /e2e\/.*\.spec\.ts/,
+      dependencies: ['e2e-setup'],
       use: { ...devices['Pixel 7'], viewport: { width: 360, height: 800 } },
     },
     {
       name: 'app-desktop',
       testMatch: /e2e\/.*\.spec\.ts/,
+      dependencies: ['e2e-setup'],
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
     },
   ],

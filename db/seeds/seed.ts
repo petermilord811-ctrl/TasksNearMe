@@ -29,6 +29,8 @@ import { taskLocations, tasks } from '../../src/modules/tasks/schema';
 import { createFieldCipher } from '../../src/platform/crypto/field-encryption';
 import { marketDayKey, marketLocalToUtc } from '../../src/shared/format';
 import { SEED_TASKS } from './data/tasks';
+import { SEED_OFFERS } from './data/offers';
+import { offers } from '../../src/modules/offers/schema';
 import { HELPER_LANGUAGES, SEED_REVIEWS, SERVICE_DESCRIPTIONS, WORK_SAMPLES } from './data/profile-extras';
 import { reviews } from '../../src/modules/reviews/schema';
 import { helperWorkSamples } from '../../src/modules/profiles/schema';
@@ -167,6 +169,7 @@ export async function seedDatabase(url: string): Promise<void> {
 
       await seedTasks(tx);
       await seedProfileExtras(tx);
+      await seedOffers(tx);
     });
     await db.execute(sql`select 1`);
   } finally {
@@ -314,4 +317,39 @@ async function seedProfileExtras(tx: Tx): Promise<void> {
                      from reviews where status = 'published' and direction = 'client_to_helper'
                      group by subject_user_id) s on s.subject_user_id = u.id) r
     where r.user_id = hp.user_id`);
+}
+
+/** Offers on the seeded tasks, relative to each task's window; offer counts follow the offers in play. */
+async function seedOffers(tx: Tx): Promise<void> {
+  const now = new Date();
+  for (const seed of SEED_OFFERS) {
+    const [task] = await tx.select({ windowStart: tasks.windowStart }).from(tasks).where(eq(tasks.id, seed.taskId));
+    if (!task) throw new Error(`Seed offer ${seed.id} points at unknown task ${seed.taskId}`);
+    const submittedAt = new Date(now.getTime() - seed.submittedHoursAgo * 3_600_000);
+    const expiresAt = new Date(Math.min(task.windowStart.getTime(), submittedAt.getTime() + 72 * 3_600_000));
+    const row = {
+      id: seed.id,
+      taskId: seed.taskId,
+      helperUserId: seed.helperUserId,
+      status: 'pending',
+      pricingType: seed.pricing.type,
+      priceCents: seed.pricing.type === 'fixed' ? seed.pricing.priceCents : null,
+      hourlyRateCents: seed.pricing.type === 'hourly' ? seed.pricing.rateCents : null,
+      estimatedHours: seed.pricing.type === 'hourly' ? seed.pricing.estimatedHours : null,
+      hoursCap: seed.pricing.type === 'hourly' ? seed.pricing.hoursCap : null,
+      proposedStart: new Date(task.windowStart.getTime() + seed.startOffsetMinutes * 60_000),
+      message: seed.message,
+      brings: seed.brings,
+      expiresAt,
+      revision: seed.revision,
+      posterSeenAt: seed.seenByPoster ? submittedAt : null,
+      closedAt: null,
+      createdAt: submittedAt,
+      updatedAt: submittedAt,
+    };
+    await tx.insert(offers).values(row).onConflictDoUpdate({ target: offers.id, set: row });
+  }
+  await tx.execute(sql`
+    update tasks t set offer_count = coalesce(
+      (select count(*)::int from offers o where o.task_id = t.id and o.status in ('pending', 'stale')), 0)`);
 }

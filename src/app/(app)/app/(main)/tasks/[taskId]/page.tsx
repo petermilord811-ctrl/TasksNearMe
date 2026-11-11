@@ -1,40 +1,40 @@
-import { and, eq } from 'drizzle-orm';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
-import { routes } from '@/contracts';
-import { tasks } from '@/modules/tasks/schema';
+import { cancelTaskAction, posterOfferAction, taskOwnerAction } from '@/modules/offers/actions';
+import { getTaskOwnerView } from '@/modules/offers/owner';
+import { ownerDepsFor } from '@/modules/offers/server';
 import { getViewer } from '@/platform/auth/viewer';
-import { db } from '@/platform/db/client';
-import { EmptyState, PageHeader, PageSkeleton } from '@/ui/components';
+import { PageSkeleton } from '@/ui/components';
+import { TaskManageScreen } from '@/ui/screens/tasks';
 
-/**
- * Temporary until the task management screen (UI-007): confirms a posted task to its poster and
- * links to the public view. Other people get a 404.
- */
+export const metadata: Metadata = { title: 'Your task' };
+
+/** The poster's own task: offers, compare, cancel. Anyone else gets a 404. */
 export default function ManageTaskPage({ params }: PageProps<'/app/tasks/[taskId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
-      <PostedTask params={params} />
+      <ManageTask params={params} />
     </Suspense>
   );
 }
 
-async function PostedTask({ params }: Pick<PageProps<'/app/tasks/[taskId]'>, 'params'>) {
-  const { taskId } = await params;
-  const viewer = await getViewer();
+async function ManageTask({ params }: Pick<PageProps<'/app/tasks/[taskId]'>, 'params'>) {
+  const [{ taskId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') notFound();
-  const [task] = await db
-    .select({ title: tasks.title, slug: tasks.slug })
-    .from(tasks)
-    .where(and(eq(tasks.id, taskId), eq(tasks.posterUserId, viewer.user.id)))
-    .limit(1);
-  if (!task) notFound();
-  const t = await getTranslations('server.taskPosted');
+  const deps = await ownerDepsFor(viewer.user.id);
+  const now = new Date();
+  const data = deps ? await getTaskOwnerView(deps, viewer.user.id, taskId, now) : null;
+  if (!data) notFound();
   return (
-    <div className="space-y-6">
-      <PageHeader title={task.title} />
-      <EmptyState title={t('title')} body={t('body')} action={{ href: routes.publicTask(task.slug), label: t('viewPublic') }} />
-    </div>
+    <TaskManageScreen
+      data={data}
+      now={now.toISOString()}
+      handlers={{
+        onOfferAction: posterOfferAction,
+        onTaskAction: taskOwnerAction.bind(null, taskId),
+        onCancelTask: cancelTaskAction.bind(null, taskId),
+      }}
+    />
   );
 }

@@ -63,8 +63,10 @@ test('a poster posts a task with the wizard and finds it on the board', async ({
   await expect(page).toHaveURL(/\/app\/tasks\/new$/);
   await expect(page.getByText('$66.00').first()).toBeVisible();
   await page.getByRole('button', { name: 'Post task' }).click();
+  // The new task's management page: no offers yet.
   await expect(page).toHaveURL(/\/app\/tasks\/tsk_[0-9a-f]+$/);
-  await expect(page.getByText('Your task is posted')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+  await expect(page.getByText('No offers yet')).toBeVisible();
 
   await page.goto('/austin/tasks?sort=newest');
   await expect(page.getByRole('link', { name: title })).toBeVisible();
