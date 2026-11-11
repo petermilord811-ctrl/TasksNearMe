@@ -35,6 +35,11 @@ describe('task draft schema', () => {
     });
   });
 
+  it('treats unanswered optional details (empty, null, NaN) as not provided', () => {
+    expect(errorsOf({ ...deskDraft, details: { itemType: 'desk', itemCount: 1, floor: Number.NaN, elevator: null, brand: '', toolsOnSite: undefined } })).toEqual({});
+    expect(errorsOf({ ...deskDraft, details: { itemType: 'desk', itemCount: Number.NaN } })).toMatchObject({ 'details.itemCount': 'required' });
+  });
+
   it('allows remote only where the category does', () => {
     expect(errorsOf({ ...deskDraft, location: { mode: 'remote' } })).toMatchObject({ 'location.mode': 'not_supported' });
   });

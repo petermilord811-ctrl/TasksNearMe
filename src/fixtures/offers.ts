@@ -9,7 +9,7 @@ import type {
   TaskOwnerHandlers,
   TaskOwnerView,
 } from '@/contracts';
-import { routes } from '@/contracts';
+import { compactTaskDetails, routes } from '@/contracts';
 import { deskExactAddress } from './locations';
 import { cleaningPublicTask, deskPublicTask, remoteComputerPublicTask, yardPublicTask } from './marketing';
 import { deskBreakdown, bookshelfCounterBreakdown } from './money';
@@ -118,7 +118,7 @@ const openTaskActions: ActionDescriptor<TaskActionId>[] = [
 export const deskOwnerView: TaskOwnerView = {
   task: deskPublicTask,
   description: deskDraft.description,
-  details: deskDraft.details,
+  details: compactTaskDetails(deskDraft.details),
   photos: uploadedTaskPhotos,
   exactAddress: deskExactAddress,
   offers: [deskOfferJordan, deskOfferSam, deskOfferLee],

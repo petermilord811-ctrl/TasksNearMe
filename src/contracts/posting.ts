@@ -65,12 +65,22 @@ export const CATEGORY_DETAIL_FIELDS: Record<CategorySlug, readonly DetailFieldDe
 
 export type TaskDetailsValue = Record<string, string | number | boolean>;
 
+/** Unanswered optional fields: forms may hold them as undefined, '', null, or NaN (an empty number input). */
+export function isEmptyDetail(value: unknown): boolean {
+  return value === undefined || value === null || value === '' || (typeof value === 'number' && Number.isNaN(value));
+}
+
+/** The details without unanswered fields, as stored. */
+export function compactTaskDetails(details: Record<string, unknown>): TaskDetailsValue {
+  return Object.fromEntries(Object.entries(details).filter(([, value]) => !isEmptyDetail(value))) as TaskDetailsValue;
+}
+
 /** Field key → error code for one category's details. Empty when valid. */
-export function validateTaskDetails(category: CategorySlug, details: TaskDetailsValue): Record<string, FieldErrorCode> {
+export function validateTaskDetails(category: CategorySlug, details: Record<string, unknown>): Record<string, FieldErrorCode> {
   const errors: Record<string, FieldErrorCode> = {};
   for (const field of CATEGORY_DETAIL_FIELDS[category]) {
     const value = details[field.key];
-    if (value === undefined || value === '') {
+    if (isEmptyDetail(value)) {
       if (field.required) errors[field.key] = 'required';
       continue;
     }
@@ -171,7 +181,8 @@ export function createTaskDraftSchema(context: Pick<PostTaskPageData, 'rules' | 
         .trim()
         .min(20, FIELD('too_short'))
         .max(TASK_DESCRIPTION_MAX, FIELD('too_long')),
-      details: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+      // Unanswered optional fields may arrive as undefined, null, or NaN; they're dropped when stored.
+      details: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null(), z.nan(), z.undefined()])),
       photoIds: z.array(z.string()).max(rules.maxPhotos, FIELD('too_long')),
       location: z.discriminatedUnion('mode', [
         z.object({ mode: z.literal('remote') }),

@@ -17,3 +17,9 @@ export async function homeMarketIdOf(userId: string): Promise<string | null> {
   const [row] = await db.select({ marketId: users.homeMarketId }).from(users).where(eq(users.id, userId)).limit(1);
   return row?.marketId ?? null;
 }
+
+/** Posting needs a verified phone (blueprint 06 §1); the sign-in flow asks for one when needed. */
+export async function hasVerifiedPhone(userId: string): Promise<boolean> {
+  const [row] = await db.select({ at: users.phoneVerifiedAt }).from(users).where(eq(users.id, userId)).limit(1);
+  return Boolean(row?.at);
+}

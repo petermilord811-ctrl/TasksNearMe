@@ -51,7 +51,8 @@ describe('field encryption', () => {
   it('detects tampering and wrong keys', () => {
     const value = cipher.encrypt('hello');
     const [v, iv, tag, ct] = value.split('.');
-    const flipped = `${ct!.slice(0, -1)}${ct!.endsWith('A') ? 'B' : 'A'}`;
+    // The first base64url character carries only data bits (the last one may be padding).
+    const flipped = `${ct!.startsWith('A') ? 'B' : 'A'}${ct!.slice(1)}`;
     expect(() => cipher.decrypt([v, iv, tag, flipped].join('.'))).toThrow();
     expect(() => createFieldCipher(Buffer.alloc(32, 9).toString('base64')).decrypt(value)).toThrow();
     expect(() => createFieldCipher('short')).toThrow(/32 bytes/);

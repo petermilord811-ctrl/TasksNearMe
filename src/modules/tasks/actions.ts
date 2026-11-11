@@ -1,6 +1,6 @@
 'use server';
 
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { updateTag } from 'next/cache';
 import type {
   ActionResult,
@@ -8,13 +8,15 @@ import type {
   AiDraftResult,
   CategorySlug,
   Cents,
+  Photo,
   PhotoUploadResult,
   PriceBreakdown,
   PricingInput,
   TaskDraftInput,
 } from '@/contracts';
 import { CATEGORY_SLUGS, routes } from '@/contracts';
-import { storePhoto } from '@/modules/files/uploads';
+import { photoFromFile, storePhoto } from '@/modules/files/uploads';
+import { files } from '@/modules/tasks/schema';
 import { marketTag } from '@/modules/marketing/queries';
 import { getFlags, getPublishedPolicy } from '@/modules/markets/queries';
 import { categories, markets } from '@/modules/markets/schema';
@@ -112,4 +114,17 @@ export async function postTaskAction(input: TaskDraftInput): Promise<ActionResul
   updateTag('tasks');
   if (market) updateTag(marketTag(market.slug));
   return { ok: true, code: 'submitted', redirectTo: routes.app.task(outcome.taskId) };
+}
+
+/** Thumbnails for photo ids restored from a saved draft: only the person's own task photos. */
+export async function resolveTaskPhotos(input: { photoIds: string[] }): Promise<Photo[]> {
+  const userId = await signedInUserId();
+  const ids = Array.isArray(input.photoIds) ? input.photoIds.filter((id) => typeof id === 'string').slice(0, 8) : [];
+  if (!userId || ids.length === 0) return [];
+  const rows = await db
+    .select()
+    .from(files)
+    .where(and(inArray(files.id, ids), eq(files.ownerUserId, userId), eq(files.kind, 'task_photo')));
+  const byId = new Map(rows.map((row) => [row.id, photoFromFile(row)]));
+  return ids.flatMap((id) => byId.get(id) ?? []);
 }

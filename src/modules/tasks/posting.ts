@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { and, count, eq, inArray } from 'drizzle-orm';
 import type { ActionResult, AddressSuggestion, PostTaskPageData, TaskPostingRules } from '@/contracts';
-import { createTaskDraftSchema } from '@/contracts';
+import { compactTaskDetails, createTaskDraftSchema } from '@/contracts';
 import type { Geocoder } from '@/integrations/geocoding';
 import { fieldError, validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -112,7 +112,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
 
     const parsed = createTaskDraftSchema({ ...data, now: at.toISOString() }).safeParse(input);
     if (!parsed.success) return fail(validationFailed(parsed.error));
-    const draft = parsed.data;
+    const draft = { ...parsed.data, details: compactTaskDetails(parsed.data.details) };
 
     const [category] = await db.select().from(categories).where(eq(categories.slug, draft.categorySlug)).limit(1);
     if (!category) return fail(fieldError('categorySlug', 'not_supported'));
