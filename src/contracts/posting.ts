@@ -45,8 +45,9 @@ export const CATEGORY_DETAIL_FIELDS: Record<CategorySlug, readonly DetailFieldDe
   ],
   'yard-cleanup': [
     { key: 'yardSize', kind: 'choice', options: ['small', 'medium', 'large'], required: true },
-    { key: 'work', kind: 'choice', options: ['leaves', 'weeding', 'pruning', 'hauling', 'mixed'], required: true },
-    { key: 'haulAway', kind: 'yes_no', required: false },
+    { key: 'work', kind: 'choice', options: ['leaves', 'weeding', 'pruning', 'debris', 'mixed'], required: true },
+    // Helpers don't haul anything away (blueprint 01 §6.1): green waste goes to the curb or stays with the poster.
+    { key: 'greenWastePlan', kind: 'choice', options: ['curbside', 'poster_handles'], required: true },
     { key: 'toolsOnSite', kind: 'yes_no', required: false },
   ],
   'light-cleaning': [
@@ -138,6 +139,11 @@ export interface PostTaskPageData {
   aiDraftingEnabled: boolean;
   /** For validating the schedule on the client. The app checks again on "Post". */
   now: ISODateTime;
+  /**
+   * The sessionStorage key for the in-progress draft, scoped to the signed-in person, so a draft
+   * never shows up for someone else on a shared device. Use it instead of a fixed key.
+   */
+  draftStorageKey?: string;
 }
 
 export const TASK_TITLE_MAX = 80;
@@ -254,4 +260,6 @@ export interface PostTaskHandlers {
   onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
   onQuote: QueryHandler<{ budget: PricingInput; expenseAllowanceCents: Cents }, PriceBreakdown>;
   onPost: ActionHandler<TaskDraftInput>;
+  /** Thumbnails for photo ids restored from a saved draft (only the person's own uploads). */
+  onResolvePhotos?: QueryHandler<{ photoIds: string[] }, Photo[]>;
 }

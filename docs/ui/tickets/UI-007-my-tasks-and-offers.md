@@ -28,6 +28,11 @@ Claude wires them inside `AppShell`. The booking confirmation page that "Book he
 - New disabled reason `awaiting_other_party`. Placeholder copy is in `actionReasons.json`.
 - Pending from the UI-004 review, if not already done in UI-006: `waitlist.marketsTitle` names Austin; derive it from `data.markets`.
 
+## Follow-ups from UI-006 (contract requests accepted)
+1. **Yard details:** `work` replaces `hauling` with `debris`; `haulAway` is gone; new required `greenWastePlan` (`curbside` / `poster_handles`). Placeholder copy is in `postTask.json`; please review it.
+2. **`PostTaskHandlers.onResolvePhotos`** (optional): when a draft is restored from storage, call it with the saved `photoIds` to show real thumbnails instead of placeholders.
+3. **`PostTaskPageData.draftStorageKey`** (optional): use it as the sessionStorage key when present (it's scoped to the signed-in person), instead of the fixed `tasksnearme:post-task:<market>:v1`.
+
 ## Build
 
 **Screens** (`src/ui/screens/tasks/`). Each has one H1 and takes `now: ISODateTime` where it shows relative times.

@@ -87,8 +87,10 @@ function extractDetails(category: CategorySlug, text: string): TaskDetailsValue 
     case 'yard-cleanup': {
       const size = firstOption(text, { small: /\bsmall\b/, large: /\b(large|big)\b/, medium: /\bmedium\b/ });
       if (size) details.yardSize = size;
-      const work = firstOption(text, { leaves: /\bleaves|\brak/, weeding: /\bweed/, pruning: /\bprun|\btrim/, mixed: /\bdebris|\bmixed/ });
+      const work = firstOption(text, { leaves: /\bleaves|\brak/, weeding: /\bweed/, pruning: /\bprun|\btrim/, debris: /\bdebris|\bbranches|\bsticks/, mixed: /\bmixed/ });
       if (work) details.work = work;
+      const plan = firstOption(text, { curbside: /\bcurb|\bcity (picks|pickup|collects)/, poster_handles: /\bi('ll| will) (handle|take care)|\bleave (it|them) (in|at) (my|the) yard/ });
+      if (plan) details.greenWastePlan = plan;
       if (has(/\bi have (a )?(rake|tools)|\btools (are )?(on site|here)/)) details.toolsOnSite = true;
       break;
     }
@@ -163,6 +165,7 @@ const QUESTION_FOR: Record<string, string> = {
   stairFlights: 'How many flights of stairs are there?',
   yardSize: 'How big is the yard?',
   work: 'What needs doing: leaves, weeding, pruning, or a mix?',
+  greenWastePlan: 'Should the bags go to the curb for city pickup, or stay in the yard?',
   bedrooms: 'How many bedrooms?',
   bathrooms: 'How many bathrooms?',
   suppliesOnSite: 'Are cleaning supplies there?',

@@ -49,7 +49,7 @@ export const SEED_TASKS: SeedTask[] = [
     categoryId: 'cat_yard_cleanup',
     title: 'Rake and bag front-yard leaves',
     description: 'Medium front yard, mostly oak leaves. Bags provided; the city picks them up at the curb.',
-    details: { yardSize: 'medium', work: 'leaves', toolsOnSite: true },
+    details: { yardSize: 'medium', work: 'leaves', greenWastePlan: 'curbside', toolsOnSite: true },
     placeId: 'plc_crestview_88',
     daysFromToday: 6,
     start: '09:00',

@@ -129,13 +129,17 @@
           "leaves": "Rake and bag leaves",
           "weeding": "Hand weeding",
           "pruning": "Light hand pruning",
-          "hauling": "Gather yard debris",
+          "debris": "Gather yard debris",
           "mixed": "A mix of yard tasks"
         }
       },
-      "haulAway": {
-        "label": "Does debris need moving to a collection spot?",
-        "hint": "Describe your green-waste plan. Arrange any off-site transport yourself."
+      "greenWastePlan": {
+        "label": "What happens to the bagged leaves and debris?",
+        "hint": "Helpers bag everything on site. They can’t take it away.",
+        "options": {
+          "curbside": "Leave it at the curb for city pickup",
+          "poster_handles": "Leave it in my yard; I’ll handle it"
+        }
       },
       "toolsOnSite": {
         "label": "Do you have yard tools available?",
