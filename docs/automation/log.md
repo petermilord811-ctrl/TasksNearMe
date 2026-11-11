@@ -33,3 +33,20 @@ One entry per iteration, newest last.
 - Mistake: `npm ci` in the main checkout while the dev server ran. Windows file locks left `node_modules` half-deleted. Recovered by stopping the server and reinstalling; added a runbook rule.
 - UI-005 (board, public task, helper profile, `PublicShell` promise fix) launched at 07:20 UTC.
 - Checks: `check` 277, `test:db` 15, `e2e` 36, `build` pass.
+
+## 2026-11-11 — iteration 4 (tasks, posting, profiles)
+- Codex:
+  - UI-005 (19 min) and UI-006 (24 min) were handed off and merged.
+  - UI-007 (16 min) failed its independent check only because of a flaky test of mine (encryption tamper test flipping a base64 padding bit). Fixed, then merged.
+  - UI-024 launched.
+- Wired:
+  - the board, the public task page, and helper profiles (reviews and work samples);
+  - recent tasks on public pages;
+  - the posting wizard backend: uploads, files route, AI drafter, quote, post;
+  - `/app/tasks/new`.
+- Performance: Partial Prefetching moved to the `/app` and `/admin` segments; public pages render once (home 390 KB → 197 KB).
+- Bugs found by e2e:
+  - The details schema rejected unanswered optional fields (undefined, null, NaN). Fixed in the contract.
+  - The wizard posts when "Next" is pressed on the budget step (Codex UI bug). Sent as UI-024; that e2e test is fixme until it lands.
+- Contract requests accepted: a yard green-waste plan instead of haul-away (also noticed independently), `onResolvePhotos`, and a per-person draft key.
+- Checks: `check` 457, `test:db` 23, `e2e` 50 (posting fixme), `build` pass.
