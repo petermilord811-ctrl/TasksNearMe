@@ -1,0 +1,88 @@
+{
+  "title": "Confirm and pay",
+  "intro": "Review the details, choose a card, and book your helper.",
+  "backToOffer": "Back to the offer",
+  "backToTask": "Back to the task",
+  "summary": "Your task",
+  "agreedStart": "Agreed start (Central time)",
+  "helper": "Your helper",
+  "message": "Your helper's message",
+  "brings": "Brings: {items}",
+  "localAddress": "{helper} will see your exact address after you book.",
+  "remoteAddress": "No address needed. You'll share a meeting link in chat.",
+  "totalToday": "Total charged today",
+  "paymentNote": "You pay when you book. Your helper is paid after the task is done.",
+  "hourlyNote": "You pay for up to {hours, plural, one {# hour} other {# hours}} now. Unused hours are refunded after you approve.",
+  "payment": "Payment",
+  "terms": "I agree to the <terms>Terms of Service</terms> and the <cancellation>Cancellation policy</cancellation>.",
+  "submit": "Book and pay {amount}",
+  "booking": "Booking…",
+  "reload": "Reload",
+  "pending": {
+    "title": "Finish payment to book your helper",
+    "failed": "Your payment didn't go through.",
+    "payment_declined": "<method></method> was declined at {time}.",
+    "insufficient_funds": "<method></method> was declined for insufficient funds at {time}.",
+    "retry": "Try again or use another card. We'll hold this booking until {time} ({relative}).",
+    "hold": "Choose a card to finish payment. We'll hold this booking until {time} ({relative})."
+  },
+  "errors": {
+    "version_conflict": "{helper} changed this offer. Reload to see the new terms.",
+    "not_allowed": "This offer can't be booked any more. Reload to see what's available.",
+    "expired": "Your booking hold ran out. Start again by reloading."
+  },
+  "unavailable": {
+    "title": "This offer is no longer available",
+    "offer_withdrawn": "{helper} withdrew this offer. Go back to your task to see other offers.",
+    "offer_expired": "This offer has expired. Go back to your task to see other offers.",
+    "offer_declined": "You declined this offer. Go back to your task to see other offers.",
+    "offer_stale": "Your task changed. {helper} needs to confirm the updated details before you can book.",
+    "task_booked": "This task is already booked. Go back to your task to see your booking.",
+    "task_closed": "This task is closed. Go back to your task to see its details."
+  },
+  "cancellation": {
+    "title": "Cancellation",
+    "freeUntil": "Free cancellation until {date}.",
+    "late": "After that, you get {refund} back and {helperName} receives {compensation}.",
+    "fullPolicy": "Read the cancellation policy"
+  },
+  "previews": {
+    "group": "Booking confirmation",
+    "default": "Saved card",
+    "new-card": "New test card",
+    "declined": "Previous payment declined",
+    "insufficient-funds": "Previous payment: insufficient funds",
+    "hourly": "Hourly booking",
+    "remote": "Remote booking",
+    "bank-verification": "Bank verification",
+    "submitting": "Booking in progress",
+    "pending-no-failure": "Booking held for payment",
+    "payment-picker-saved": "Saved payment methods",
+    "payment-picker-new-card": "New test card picker",
+    "payment-labels": "Card and wallet labels",
+    "cancellation-fixed": "Fixed-price cancellation",
+    "cancellation-hourly": "Hourly cancellation",
+    "bank-dialog": "Development bank verification",
+    "unavailable": {
+      "offer_withdrawn": "Offer withdrawn",
+      "offer_expired": "Offer expired",
+      "offer_declined": "Offer declined",
+      "offer_stale": "Offer needs confirmation",
+      "task_booked": "Task already booked",
+      "task_closed": "Task closed"
+    },
+    "results": {
+      "payment_declined": "Payment declined",
+      "insufficient_funds": "Insufficient funds",
+      "requires_bank_verification": "Bank verification unavailable",
+      "version_conflict": "Offer changed",
+      "not_allowed": "Booking no longer allowed",
+      "not_found": "Offer not found",
+      "expired": "Booking hold expired",
+      "rate_limited": "Try again later",
+      "validation_failed": "Accept the terms",
+      "limit_reached": "Account limit reached",
+      "unknown": "Payment outcome unknown"
+    }
+  }
+}
