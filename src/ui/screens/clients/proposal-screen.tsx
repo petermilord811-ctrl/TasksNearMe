@@ -1,0 +1,73 @@
+import Link from 'next/link';
+import { ArrowLeft, CalendarDays, MapPin } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { routes, type BadgeTone, type ISODateTime, type PaymentAttemptResult, type ProposalHandlers, type ProposalPageData, type RebookProposalStatus } from '@/contracts';
+import { formatDateTime, formatHours, formatMoney } from '@/shared/format';
+import { ExactAddressPanel } from '@/ui/components/location/exact-address-panel';
+import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
+import { StatusBadge } from '@/ui/components/status/status-badge';
+import { Deadline } from '@/ui/components/time/deadline';
+import { ProposalActions } from './proposal-actions';
+
+export interface ProposalScreenProps {
+  data: ProposalPageData;
+  handlers: ProposalHandlers;
+  now: ISODateTime;
+}
+
+const tones: Record<RebookProposalStatus, BadgeTone> = { sent: 'info', accepted: 'success', declined: 'neutral', expired: 'neutral', withdrawn: 'neutral' };
+
+export function ProposalScreen(props: ProposalScreenProps) {
+  return <ProposalContent {...props} />;
+}
+
+/** Seeded action states belong to the preview gallery; app pages use ProposalScreen. */
+export function ProposalContent({ data, handlers, now, initialResult, initialPending }: ProposalScreenProps & {
+  initialResult?: PaymentAttemptResult;
+  initialPending?: boolean;
+}) {
+  const t = useTranslations('proposal');
+  const categories = useTranslations('helperCard.categories');
+  const { proposal } = data;
+  const { viewerRole, task, helper, client } = proposal;
+  const poster = viewerRole === 'poster';
+
+  return <div className="mx-auto max-w-reading space-y-6">
+    <Link href={poster ? routes.app.home() : routes.app.clients()} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
+      <ArrowLeft aria-hidden="true" className="size-4" />{t(poster ? 'backHome' : 'backClients')}
+    </Link>
+    <header className="space-y-3">
+      <StatusBadge tone={tones[proposal.status]} label={t(`status.${proposal.status}`)} />
+      <h1 className="font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t(`title.${viewerRole}`, { helper: helper.displayName, client: client.displayName })}</h1>
+      <p className="text-muted-foreground">{t(`statusDescription.${proposal.status === 'sent' ? `sent_${viewerRole}` : proposal.status}`, { client: client.displayName })}</p>
+      {proposal.expiresAt && <Deadline at={proposal.expiresAt} now={now} label={t('expires')} />}
+      {proposal.bookingId && <Link href={routes.app.booking(proposal.bookingId)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('viewBooking')}</Link>}
+    </header>
+    <section aria-label={t('task')} className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-muted-foreground">{categories(task.categorySlug)}</p>
+        <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{task.title}</h2>
+      </div>
+      <div className="flex items-start gap-2">
+        <CalendarDays aria-hidden="true" className="mt-1 size-5 shrink-0 text-primary" />
+        <div><p className="text-sm text-muted-foreground">{t('start')}</p><time dateTime={proposal.start} className="font-medium tabular-nums">{formatDateTime(proposal.start)}</time></div>
+      </div>
+      <p className="flex items-center gap-2"><MapPin aria-hidden="true" className="size-5 shrink-0 text-primary" /><span>{task.areaName}</span></p>
+      {proposal.pricing.type === 'hourly' && <p className="text-sm tabular-nums">{t('hourlyTerms', { rate: formatMoney(proposal.pricing.rateCents), estimate: formatHours(proposal.pricing.estimatedHours), cap: formatHours(proposal.pricing.hoursCap) })}</p>}
+      {proposal.status === 'sent' && <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{t(poster ? 'addressPoster' : 'addressHelper')}</p>}
+    </section>
+    {poster && proposal.exactAddress && <ExactAddressPanel address={proposal.exactAddress} />}
+    {proposal.message && <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+      <h2 className="font-heading text-xl/7 font-semibold">{t('message', { helper: helper.displayName })}</h2>
+      <p className="whitespace-pre-wrap break-words">{proposal.message}</p>
+    </section>}
+    <div className="space-y-3">
+      <PriceBreakdown breakdown={proposal.breakdown} variant={viewerRole} title={t(poster ? 'total' : 'earnings')} />
+      {poster && proposal.status === 'sent' && <>
+        <p className="text-sm text-muted-foreground">{t('paymentNote')}</p>
+        {proposal.pricing.type === 'hourly' && <p className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('hourly', { hours: proposal.pricing.hoursCap })}</p>}
+      </>}
+    </div>
+    <ProposalActions key={proposal.id} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />
+  </div>;
+}

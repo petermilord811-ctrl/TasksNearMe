@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type ISODateTime, type PaymentAttemptResult, type RequestHelperHandlers, type RequestHelperPageData } from '@/contracts';
+import { routes, type ISODateTime, type PaymentAttemptResult, type PriceBreakdown, type RequestHelperHandlers, type RequestHelperPageData } from '@/contracts';
 import { AvailabilitySlotSummary } from '@/ui/components/availability/availability-slot-summary';
 import { RequestHelperForm } from './request-helper-form';
 
@@ -16,9 +16,10 @@ export function RequestHelperScreen(props: RequestHelperScreenProps) {
 }
 
 /** Initial results are for previews; app pages use RequestHelperScreen. */
-export function RequestHelperContent({ data, handlers, initialResult, initialPending }: RequestHelperScreenProps & {
+export function RequestHelperContent({ data, handlers, initialResult, initialPending, initialBreakdown }: RequestHelperScreenProps & {
   initialResult?: PaymentAttemptResult;
   initialPending?: boolean;
+  initialBreakdown?: PriceBreakdown;
 }) {
   const t = useTranslations('invites');
   return <div className="mx-auto max-w-reading space-y-6">
@@ -37,6 +38,6 @@ export function RequestHelperContent({ data, handlers, initialResult, initialPen
       <h2 className="font-heading text-xl/7 font-semibold">{t(data.slot && !data.slotUnavailable ? 'noSlotTasksTitle' : 'noTasksTitle')}</h2>
       <p className="text-muted-foreground">{t(data.slot && !data.slotUnavailable ? 'noSlotTasksDescription' : 'noTasksDescription')}</p>
       <Link href={routes.app.newTask()} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('postTask')}</Link>
-    </section> : <RequestHelperForm key={`${data.helper.id}-${data.slotUnavailable ? 'regular' : data.slot?.id ?? 'regular'}`} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />}
+    </section> : <RequestHelperForm key={`${data.helper.id}-${data.slotUnavailable ? 'regular' : data.slot?.id ?? 'regular'}`} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} initialBreakdown={initialBreakdown} />}
   </div>;
 }

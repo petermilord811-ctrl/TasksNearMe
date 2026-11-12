@@ -66,7 +66,9 @@ import changes from './changes.json';
 import invites from './invites.json';
 import inviteCard from './inviteCard.json';
 import availability from './availability.json';
+import clients from './clients.json';
+import proposal from './proposal.json';
 
-const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, bookingSheets, paymentsPage, receipt, earnings, home, review, savedHelpers, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase, adminBooking, adminRewards, adminUsers, adminUser, rewards, changes, invites, inviteCard, availability };
+const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, bookingSheets, paymentsPage, receipt, earnings, home, review, savedHelpers, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase, adminBooking, adminRewards, adminUsers, adminUser, rewards, changes, invites, inviteCard, availability, clients, proposal };
 
 export default uiMessages;

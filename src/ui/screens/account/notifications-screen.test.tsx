@@ -4,7 +4,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { NOTIFICATION_TYPES, routes, type ActionResult, type AttentionTarget, type NotificationHandlers, type NotificationsPageData, type NotificationType } from '@/contracts';
-import { bookshelfInviteCounteredPoster, bookshelfInviteSentHelper, jordanNotificationsData, mayaNotificationsData, notificationsEmptyData, supportNotificationsData } from '@/fixtures';
+import { bookshelfInviteCounteredPoster, bookshelfInviteSentHelper, jordanNotificationsData, jordanRebookNotificationsData, mayaNotificationsData, mayaRebookNotificationsData, notificationsEmptyData, supportNotificationsData } from '@/fixtures';
 import { attentionHref } from '@/ui/lib/attention-href';
 import messages from '../../../../messages/en/ui';
 import { NotificationsScreen } from './notifications-screen';
@@ -51,8 +51,8 @@ const copy: Record<NotificationType, RegExp> = {
   invite_countered: /sent a counter-offer/,
   invite_accepted: /accepted your booking request.*You're booked/,
   rebook_proposed: /proposed a booking/,
-  rebook_accepted: /accepted your proposal/,
-  rebook_declined: /declined your proposal/,
+  rebook_accepted: /accepted your proposal.*You're booked/,
+  rebook_declined: /declined your proposal.*No booking was made/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -88,6 +88,9 @@ describe('NotificationsScreen', () => {
     { type: 'invite_received', target: targets.invite },
     { type: 'invite_countered', target: targets.task },
     { type: 'invite_accepted', target: targets.booking },
+    { type: 'rebook_proposed', target: targets.proposal },
+    { type: 'rebook_accepted', target: targets.booking },
+    { type: 'rebook_declined', target: targets.proposal },
   ] as const)('opens the supplied destination for $type', async ({ type, target }) => {
     const actions = handlers();
     const notification = { ...mayaNotificationsData.notifications[0], id: type, type, target: target.target };
@@ -152,7 +155,7 @@ describe('NotificationsScreen', () => {
     expect(screen.getByRole('link', { name: /You were paid \$62\.00/ })).toBeVisible();
   });
 
-  it.each(['helper_running_late', 'payout_paid', 'offer_received', 'change_proposed', 'change_applied', 'invite_received', 'invite_countered', 'invite_accepted'] as const)('does not invent optional details for %s', (type) => {
+  it.each(['helper_running_late', 'payout_paid', 'offer_received', 'change_proposed', 'change_applied', 'invite_received', 'invite_countered', 'invite_accepted', 'rebook_proposed', 'rebook_accepted', 'rebook_declined'] as const)('does not invent optional details for %s', (type) => {
     show({ notifications: [{ id: type, type, target: { kind: 'messages' }, createdAt: now }], unreadCount: 1 });
     expect(screen.getByRole('link').textContent).not.toMatch(/undefined|NaN|\$0\.00|0 minutes/);
   });
@@ -207,6 +210,21 @@ describe('NotificationsScreen', () => {
     expect(screen.getAllByText('Unread')).toHaveLength(mayaNotificationsData.unreadCount);
     expect(screen.getByRole('button', { name: 'Mark all as read' })).toBeEnabled();
     expect(navigation.refresh).not.toHaveBeenCalled();
+  });
+
+  it.each([mayaRebookNotificationsData, jordanRebookNotificationsData])('renders rebooking actors and keeps confirmation across an empty refresh', async (data) => {
+    const actions = handlers();
+    const view = show(data, actions);
+    for (const notification of data.notifications) {
+      const link = screen.getByRole('link', { name: copy[notification.type] });
+      expect(link).toHaveTextContent(notification.actorName!);
+      expect(link).toHaveAttribute('href', attentionHref(notification.target));
+    }
+    await userEvent.click(screen.getByRole('button', { name: 'Mark all as read' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(messages.notifications.markedRead);
+    view.rerender(<NextIntlClientProvider locale="en" messages={messages}><NotificationsScreen data={notificationsEmptyData} handlers={actions} now={now} /></NextIntlClientProvider>);
+    expect(screen.getByRole('status')).toHaveTextContent(messages.notifications.markedRead);
+    expect(screen.getByRole('heading', { name: messages.notifications.empty.title })).toBeVisible();
   });
 
   it.each(['success', 'error', 'throw'] as const)('opens the destination after an onOpen %s', async (outcome) => {

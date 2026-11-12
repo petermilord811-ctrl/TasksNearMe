@@ -37,7 +37,6 @@ const icons: Record<NotificationType, LucideIcon> = {
   invite_received: CalendarPlus,
   invite_countered: ArrowLeftRight,
   invite_accepted: CalendarCheck,
-  // Placeholders added by Claude with rebooking proposals; Codex reviews them in UI-032.
   rebook_proposed: CalendarPlus,
   rebook_accepted: CalendarCheck,
   rebook_declined: CalendarX,

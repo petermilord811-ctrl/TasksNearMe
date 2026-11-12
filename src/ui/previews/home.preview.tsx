@@ -1,5 +1,5 @@
 import { routes, type AppHomePageData, type AppShellHandlers, type ISODateTime, type PreviewEntry, type SignedInViewer } from '@/contracts';
-import { DESK_TIMES, deskBookingPosterCantAccessReported, deskBookingPosterPendingFunding, fakeHandler, jordanHomeData, jordanHomePayoutActionData, jordanShell, mayaHomeData, mayaShell, posterHomeEmptyData, priyaHomeData, priyaShell, ruth } from '@/fixtures';
+import { DESK_TIMES, deskBookingPosterCantAccessReported, deskBookingPosterPendingFunding, fakeHandler, jordanHomeData, jordanHomeInviteData, jordanHomePayoutActionData, jordanShell, mayaHomeCounterData, mayaHomeData, mayaHomeProposalData, mayaShell, posterHomeEmptyData, priyaHomeData, priyaShell, ruth } from '@/fixtures';
 import { HomeScreen } from '@/ui/screens/home';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/home.json';
@@ -33,4 +33,7 @@ export const homePreviews: PreviewEntry[] = [
     ],
   }, mayaShell),
   preview('helper-empty', copy.previews.helperEmpty, { ...jordanHomeData, attention: [], upcoming: [], activeOffers: [], suggestions: [] }, jordanShell, DESK_TIMES.approved),
+  preview('helper-invite', copy.previews.helperInvite, jordanHomeInviteData, jordanShell, '2026-12-08T17:00:00.000Z'),
+  preview('client-counter', copy.previews.clientCounter, mayaHomeCounterData, mayaShell, '2026-12-08T17:00:00.000Z'),
+  preview('client-proposal', copy.previews.clientProposal, mayaHomeProposalData, mayaShell, '2026-12-08T17:00:00.000Z'),
 ];

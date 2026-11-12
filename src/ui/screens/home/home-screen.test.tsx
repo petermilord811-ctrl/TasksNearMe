@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { ATTENTION_KINDS, routes, type AppHomePageData, type AttentionKind, type AttentionTarget } from '@/contracts';
-import { DESK_TIMES, jordanHomeData, jordanHomePayoutActionData, mayaHomeData, posterHomeEmptyData, priyaHomeData } from '@/fixtures';
+import { DESK_TIMES, jordanHomeData, jordanHomeInviteData, jordanHomePayoutActionData, mayaHomeCounterData, mayaHomeData, mayaHomeProposalData, posterHomeEmptyData, priyaHomeData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { HomeScreen } from './home-screen';
 
@@ -48,6 +48,18 @@ const targetCases: Record<AttentionTarget['kind'], { target: AttentionTarget; hr
 };
 
 describe('HomeScreen attention', () => {
+  it.each([
+    { data: jordanHomeInviteData, name: /invited you/, href: routes.app.offers('inv_bookshelf'), deadline: 'Thu, Dec 10 · 10:00 am' },
+    { data: mayaHomeCounterData, name: /counter-offer/, href: routes.app.task('tsk_bookshelf'), deadline: 'Wed, Dec 9 · 10:00 am' },
+    { data: mayaHomeProposalData, name: /proposed a booking/, href: routes.app.proposal('prp_desk'), deadline: 'Thu, Dec 10 · 11:00 am' },
+  ])('shows the answer deadline and supplied destination for $name', ({ data, name, href, deadline }) => {
+    renderHome(data, '2026-12-08T17:00:00.000Z');
+    const link = section('Needs your attention').getByRole('link', { name });
+    expect(link).toHaveAttribute('href', href);
+    expect(link).toHaveTextContent(data.attention[0].title!);
+    expect(link).toHaveTextContent(`Answer by ${deadline}.`);
+  });
+
   it.each(ATTENTION_KINDS)('provides readable copy for %s', (kind) => {
     renderHome({
       ...posterHomeEmptyData,

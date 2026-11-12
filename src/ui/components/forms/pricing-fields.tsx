@@ -31,7 +31,7 @@ function PricingField({ name, label, hint, children }: {
 /** Shared fixed/hourly fields for forms whose schema contains `pricing: PricingInput`. */
 export function PricingFields({ disabled = false, namespace = 'invites' }: {
   disabled?: boolean;
-  namespace?: 'invites' | 'availability';
+  namespace?: 'invites' | 'availability' | 'clients.form';
 }) {
   const t = useTranslations(namespace);
   const { control, register, watch, setValue, clearErrors } = useFormContext<PricingForm>();

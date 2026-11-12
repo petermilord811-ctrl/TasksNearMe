@@ -21,6 +21,23 @@ function mount(data: BookingView = deskBookingHelperDayOf, onAction = vi.fn(fake
 }
 
 describe('BookingHubActions', () => {
+  it('links the supplied rebooking action to the proposal form without calling a mutation', () => {
+    const { onAction } = mount({ ...deskBookingHelperConfirmed, actions: [{ id: 'offer_rebook', kind: 'secondary', enabled: true }] });
+    const link = screen.getByRole('link', { name: messages.actions.offer_rebook });
+    expect(link).toHaveAttribute('href', routes.app.bookingRebook(deskBookingHelperConfirmed.id));
+    link.addEventListener('click', (event) => event.preventDefault(), { once: true });
+    fireEvent.click(link);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('keeps disabled rebooking visible with its reason and no destination', () => {
+    mount({ ...deskBookingHelperConfirmed, actions: [{ id: 'offer_rebook', kind: 'secondary', enabled: false, disabledReason: { code: 'not_allowed' } }] });
+    const link = screen.getByRole('link', { name: messages.actions.offer_rebook });
+    expect(link).toHaveAttribute('aria-disabled', 'true');
+    expect(link).not.toHaveAttribute('href');
+    expect(link).toHaveAccessibleDescription(messages.actionReasons.not_allowed);
+  });
+
   it('links the supplied book-again action with the helper and past booking id', () => {
     const { onAction } = mount({ ...deskBookingPosterConfirmed, actions: [{ id: 'book_again', kind: 'secondary', enabled: true }] });
     const link = screen.getByRole('link', { name: messages.actions.book_again });

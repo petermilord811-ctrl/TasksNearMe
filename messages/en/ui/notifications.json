@@ -39,9 +39,9 @@
     "invite_received": "{actorName} sent you a booking request for {title}",
     "invite_countered": "{actorName} sent a counter-offer{hasAmount, select, yes { of {amount}} other {}} for {title}",
     "invite_accepted": "{actorName} accepted your booking request for {title}. You're booked",
-    "rebook_proposed": "{actorName} proposed a booking: {title}",
-    "rebook_accepted": "{actorName} accepted your proposal for {title}",
-    "rebook_declined": "{actorName} declined your proposal for {title}"
+    "rebook_proposed": "{actorName} proposed a booking: {title}. Review the details",
+    "rebook_accepted": "{actorName} accepted your proposal for {title}. You're booked",
+    "rebook_declined": "{actorName} declined your proposal for {title}. No booking was made"
   },
   "previews": {
     "group": "Notifications",
@@ -55,6 +55,8 @@
     "missingParams": "Optional notification details omitted",
     "changes": "Booking change notifications",
     "inviteReceived": "A booking request for the helper",
-    "inviteUpdates": "Counter-offer and accepted request"
+    "inviteUpdates": "Counter-offer and accepted request",
+    "rebookClient": "Client · review a booking proposal",
+    "rebookHelper": "Helper · accepted and declined proposals"
   }
 }

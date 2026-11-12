@@ -87,6 +87,10 @@ export const bookingsPreviews: PreviewEntry[] = [
     actions: deskBookingPosterCompleted.actions.filter(({ id }) => id !== 'review' && id !== 'save_helper'),
   }, { now: deskReviewPublishedData.mine!.publishedAt! }),
   hubPreview('helper-completed', copy.previews.helperCompleted, deskBookingHelperCompleted, { now: afterApproval }),
+  hubPreview('helper-offer-rebook', copy.previews.helperOfferRebook, {
+    ...deskBookingHelperCompleted,
+    actions: [{ id: 'offer_rebook', kind: 'primary', enabled: true }, ...deskBookingHelperCompleted.actions.map((action) => ({ ...action, kind: 'secondary' as const }))],
+  }, { now: afterApproval }),
   hubPreview('helper-completed-address-hidden', copy.previews.helperAddressHidden, deskBookingHelperCompletedAddressHidden, { now: '2026-11-24T19:10:00.000Z' }),
   hubPreview('client-canceled-late', copy.previews.clientCanceledLate, deskBookingPosterCanceledLate, { now: '2026-11-20T23:00:00.000Z' }),
   hubPreview('client-canceled-by-helper', copy.previews.clientCanceledByHelper, deskBookingPosterCanceledByHelper),
