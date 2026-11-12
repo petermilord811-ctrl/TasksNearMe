@@ -7,6 +7,7 @@ import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus } from '@/ui/components/status/use-status';
 import { AdminCaseRows } from './admin-case-rows';
+import { AdminStrikeReversal } from './admin-strike-controls';
 import { AdminRewardList } from './admin-reward-list';
 import { AdminUserControls, type AdminUserPreviewState } from './admin-user-controls';
 import { AdminHelperBadge, AdminUserRoles } from './admin-user-summary';
@@ -86,10 +87,20 @@ export function AdminUserContent({ data, handlers, now, ...previewState }: Admin
     </section>
     <section aria-label={t('strikes')} className="space-y-3">
       <h2 className="font-heading text-xl font-semibold">{t('strikes')}</h2>
-      {data.strikes.length === 0 ? <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">{t('noStrikes')}</p> : <ul className="divide-y rounded-xl border bg-card px-4 shadow-card sm:px-5">{data.strikes.map((strike) => <li key={strike.id} className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <div><p className="text-sm font-medium">{t.has(`strikeReasons.${strike.reason}`) ? t(`strikeReasons.${strike.reason}`) : strike.reason}</p><Link href={routes.admin.booking(strike.bookingId)} className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4">{t('strikeBooking', { id: strike.bookingId })}</Link></div>
-        <time dateTime={strike.at} title={formatRelative(strike.at, now)} className="text-sm tabular-nums text-muted-foreground">{formatDateTime(strike.at)}</time>
-      </li>)}</ul>}
+      {data.strikes.length === 0 ? <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">{t('noStrikes')}</p> : <ul className="divide-y rounded-xl border bg-card px-4 shadow-card sm:px-5">{data.strikes.map((strike) => {
+        const label = t.has(`strikeReasons.${strike.reason}`) ? t(`strikeReasons.${strike.reason}`) : strike.reason;
+        return <li key={strike.id} className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="min-w-0 space-y-1">
+            <p className={strike.reversedAt ? 'text-sm font-medium text-muted-foreground line-through' : 'text-sm font-medium'}>{label}</p>
+            {strike.reversedAt && <p className="text-sm text-muted-foreground"><time dateTime={strike.reversedAt}>{t('strikeReversed', { date: formatDateTime(strike.reversedAt) })}</time></p>}
+            <Link href={routes.admin.booking(strike.bookingId)} className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4">{t('strikeBooking', { id: strike.bookingId })}</Link>
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <time dateTime={strike.at} title={formatRelative(strike.at, now)} className="text-sm tabular-nums text-muted-foreground">{formatDateTime(strike.at)}</time>
+            {data.canReverseStrikes && !strike.reversedAt && <AdminStrikeReversal strikeId={strike.id} label={label} handlers={handlers} initialOpen={previewState.initialStrikeDialog === strike.id} />}
+          </div>
+        </li>;
+      })}</ul>}
     </section>
     <section aria-label={t('deliveries')} className="space-y-3">
       <div><h2 className="font-heading text-xl font-semibold">{t('deliveries')}</h2><p className="mt-2 text-sm text-muted-foreground">{t('deliveriesHint')}</p></div>

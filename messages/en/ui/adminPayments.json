@@ -27,7 +27,7 @@
     "canceled_not_refunded": "Canceled, not refunded"
   },
   "exceptionHelp": {
-    "refund_failed": "The provider didn't complete this refund. Retry it from the provider's dashboard.",
+    "refund_failed": "The payment provider didn't complete this refund. Retry it from the payment provider's dashboard.",
     "payout_failed": "The helper's bank refused this payout. They need to update their bank in the payout dashboard.",
     "transfer_missing": "The booking finished more than 2 days ago, and the helper's earnings haven't gone out.",
     "canceled_not_refunded": "The booking was canceled, but nothing went back to the client or to the helper."

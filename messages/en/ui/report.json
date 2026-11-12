@@ -1,0 +1,34 @@
+{
+  "title": {
+    "task": "Report a task",
+    "helper": "Report a helper",
+    "review": "Report a review"
+  },
+  "subject": {
+    "task": "{name}",
+    "helper": "{name}",
+    "review": "A review by {name}"
+  },
+  "back": {
+    "task": "Back to the task",
+    "helper": "Back to the profile",
+    "review": "Back to the profile"
+  },
+  "intro": "Tell support what's wrong. The person you report isn't told who reported them.",
+  "formTitle": "Your report",
+  "urgent": "If someone is in danger, call 911 first.",
+  "links": {
+    "task": "Report this task",
+    "helper": "Report this profile",
+    "review": "Report this review",
+    "reviewBy": "Report the review by {name}"
+  },
+  "previews": {
+    "group": "Report",
+    "task": "Report a task",
+    "helper": "Report a helper",
+    "review": "Report a review",
+    "submitted": "Report sent",
+    "errors": "Report needs a reason and details"
+  }
+}

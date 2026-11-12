@@ -82,7 +82,7 @@ describe('BookingConfirmScreen', () => {
     await waitFor(() => expect(terms()).toHaveFocus());
     expect(terms()).toHaveAttribute('aria-invalid', 'true');
     expect(handlers.onConfirm).not.toHaveBeenCalled();
-    expect(screen.getByRole('link', { name: 'Terms of Service' })).toHaveAttribute('href', routes.legal('terms'));
+    expect(screen.getByRole('link', { name: 'Terms of service' })).toHaveAttribute('href', routes.legal('terms'));
     expect(screen.getAllByRole('link', { name: /Cancellation policy/i }).every((link) => link.getAttribute('href') === routes.legal('cancellation-policy'))).toBe(true);
   });
 

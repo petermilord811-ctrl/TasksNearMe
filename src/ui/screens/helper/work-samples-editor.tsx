@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, ImagePlus, LoaderCircle, Lock, Trash2 } from 'lucid
 import type { ActionResult, CategorySlug, CategoryView, HelperProfileEditorHandlers, WorkSampleUploadResult, WorkSampleView } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { WorkSampleGallery } from '@/ui/components/people/work-sample-gallery';
+import { FileChooser } from '@/ui/components/forms/file-chooser';
 import { Button } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldLabel } from '@/ui/primitives/field';
 import { Input } from '@/ui/primitives/input';
@@ -196,8 +197,8 @@ export function WorkSamplesEditor({ samples, categories, maxWorkSamples, maxPhot
     <form noValidate onSubmit={(event) => void upload(event)} className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
       <h3 className="font-heading text-lg font-semibold">{t('add')}</h3>
       <Field className="gap-2">
-        <FieldLabel htmlFor={`${id}-file`}>{t('file')}</FieldLabel>
-        <Input ref={fileInput} id={`${id}-file`} name="file" type="file" required accept="image/jpeg,image/png,image/webp,image/heic" disabled={busy || count >= maxWorkSamples} aria-describedby={`${id}-file-hint${uploadError ? ` ${id}-file-error` : ''}`} aria-invalid={!!uploadError} className="min-h-14 py-3" />
+        <FieldLabel id={`${id}-file-label`} htmlFor={`${id}-file`}>{t('file')}</FieldLabel>
+        <FileChooser inputRef={fileInput} id={`${id}-file`} labelledBy={`${id}-file-label`} name="file" required keepSelection accept="image/jpeg,image/png,image/webp,image/heic" disabled={busy || count >= maxWorkSamples} invalid={!!uploadError} describedBy={`${id}-file-hint${uploadError ? ` ${id}-file-error` : ''}`} />
         <FieldDescription id={`${id}-file-hint`}>{t('fileHint', { megabytes: maxPhotoMegabytes })}</FieldDescription>
         {uploadError && <p id={`${id}-file-error`} role="alert" className="text-sm text-destructive">{t(`errors.${uploadError}`, { max: maxWorkSamples, megabytes: maxPhotoMegabytes })}</p>}
       </Field>

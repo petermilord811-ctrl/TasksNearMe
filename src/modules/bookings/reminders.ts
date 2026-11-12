@@ -1,4 +1,4 @@
-import { and, eq, gt, lte } from 'drizzle-orm';
+import { and, eq, gt, lte, or } from 'drizzle-orm';
 import type { Db } from '@/platform/db/connect';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { bookings } from './schema';
@@ -60,6 +60,57 @@ export async function remindApprovalsDue(db: Db, now: Date, scope: { bookingId?:
         aggregateType: 'booking',
         aggregateId: row.id,
         payload: { bookingId: row.id, taskId: row.taskId, posterUserId: row.posterUserId, hours: reminder.hoursLeft, approvalDueAt: row.approvalDueAt.toISOString() },
+      })
+      .onConflictDoNothing({ target: outboxEvents.id })
+      .returning({ id: outboxEvents.id });
+    sent += inserted.length;
+  }
+  return sent;
+}
+
+/** Reminders to both people before a confirmed booking starts (blueprint 03 §4: T-24 h and T-2 h). */
+export const START_REMINDER_HOURS = [24, 2] as const;
+export type StartReminderHours = (typeof START_REMINDER_HOURS)[number];
+
+/**
+ * The start reminder due at `now`: the closest threshold reached, and only thresholds shorter than the
+ * time between booking and start (a booking made 3 h before gets only the 2 h reminder). None once started.
+ */
+export function startReminderDue(startAt: Date, confirmedAt: Date | null, now: Date): { threshold: StartReminderHours; hoursLeft: number } | null {
+  const left = startAt.getTime() - now.getTime();
+  if (left <= 0) return null;
+  const lead = confirmedAt ? startAt.getTime() - confirmedAt.getTime() : Number.POSITIVE_INFINITY;
+  const reached = START_REMINDER_HOURS.filter((hours) => left <= hours * HOUR && lead > hours * HOUR);
+  if (reached.length === 0) return null;
+  return { threshold: Math.min(...reached) as StartReminderHours, hoursLeft: Math.max(1, Math.round(left / HOUR)) };
+}
+
+/**
+ * Reminds the client and the helper 24 h and 2 h before a confirmed booking starts. The outbox event's id
+ * names the booking, the start and the threshold, so each reminder goes once, and a new start time (a
+ * change request) reminds again.
+ */
+export async function remindUpcomingBookings(db: Db, now: Date, scope: { userId?: string; bookingId?: string } = {}): Promise<number> {
+  const window = new Date(now.getTime() + Math.max(...START_REMINDER_HOURS) * HOUR);
+  const conditions = [eq(bookings.status, 'confirmed'), gt(bookings.startAt, now), lte(bookings.startAt, window)];
+  if (scope.userId) conditions.push(or(eq(bookings.posterUserId, scope.userId), eq(bookings.helperUserId, scope.userId))!);
+  if (scope.bookingId) conditions.push(eq(bookings.id, scope.bookingId));
+  const due = await db
+    .select({ id: bookings.id, taskId: bookings.taskId, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, startAt: bookings.startAt, confirmedAt: bookings.confirmedAt })
+    .from(bookings)
+    .where(and(...conditions));
+  let sent = 0;
+  for (const row of due) {
+    const reminder = startReminderDue(row.startAt, row.confirmedAt, now);
+    if (!reminder) continue;
+    const inserted = await db
+      .insert(outboxEvents)
+      .values({
+        id: `evt_start_${row.id}_${row.startAt.getTime()}_${reminder.threshold}`,
+        type: 'booking.start_reminder',
+        aggregateType: 'booking',
+        aggregateId: row.id,
+        payload: { bookingId: row.id, taskId: row.taskId, posterUserId: row.posterUserId, helperUserId: row.helperUserId, hours: reminder.hoursLeft, startAt: row.startAt.toISOString() },
       })
       .onConflictDoNothing({ target: outboxEvents.id })
       .returning({ id: outboxEvents.id });

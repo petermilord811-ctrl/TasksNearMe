@@ -166,6 +166,13 @@ describe('ThreadScreen', () => {
     expect(times.filter((value) => entries.some((entry) => entry.createdAt === value))).toEqual(entries.map((entry) => entry.createdAt));
   });
 
+  it('separates days with headings that stay in place, so they never cover a photo while scrolling (UI-021)', () => {
+    thread();
+    for (const heading of within(screen.getByRole('log')).getAllByRole('heading', { level: 2 })) {
+      expect(heading.className).not.toMatch(/\b(sticky|fixed|absolute)\b/);
+    }
+  });
+
   it('refreshes every 15 seconds only while visible and on focus, then cleans up', () => {
     vi.useFakeTimers();
     let visibility: DocumentVisibilityState = 'visible';

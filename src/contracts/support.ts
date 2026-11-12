@@ -126,3 +126,20 @@ export interface ReportHandlers {
   onReport: ActionHandler<ReportInput>;
   onBlock: ActionHandler<{ blocked: boolean }>;
 }
+
+/** What a member reports from a page (backlog B-059): a task, a helper's profile, or a review. */
+export const REPORT_TARGET_KINDS = ['task', 'helper', 'review'] as const;
+export type ReportTargetKind = (typeof REPORT_TARGET_KINDS)[number];
+
+/** `routes.app.report(kind, id)`: the report form for one task, helper or review. */
+export interface ReportPageData {
+  /** `name`: the task's title, the helper's display name, or the review author's display name. */
+  target: { kind: ReportTargetKind; id: string; name: string };
+  /** Where the page goes back to (Cancel and Done). */
+  backHref: string;
+}
+
+/** `onReport`: ok `submitted`. Errors: `validation_failed`, `rate_limited`, `not_found`. */
+export interface ReportPageHandlers {
+  onReport: ActionHandler<ReportInput>;
+}

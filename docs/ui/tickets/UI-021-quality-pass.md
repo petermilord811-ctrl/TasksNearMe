@@ -1,6 +1,6 @@
 # UI-021 — Quality pass: accessibility, phones, copy, and known issues
 
-**Status:** ready for Codex · **Branch:** `ui/UI-021-quality-pass` · **Plan first:** no (unattended) · **Depends on:** every merged UI ticket
+**Status:** done (built by Claude; Codex at its usage limit) · **Branch:** `ui/UI-021-quality-pass` · **Plan first:** no (unattended) · **Depends on:** every merged UI ticket
 
 ## Goal
 Before the private beta, make the member and staff screens consistent and solid (backlog B-062: core journeys pass with a screen reader and keyboard only). This ticket fixes known issues and runs a structured pass over the screens you built. It doesn't add features, and it changes no contracts.

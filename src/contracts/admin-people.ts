@@ -115,7 +115,10 @@ export interface AdminUserPageData {
   bookings: { id: string; title: string; role: 'poster' | 'helper'; status: BookingStatus; start: ISODateTime; amountCents: Cents }[];
   cases: AdminCaseRow[];
   rewards: AdminRewardRow[];
-  strikes: { id: string; bookingId: string; reason: string; at: ISODateTime }[];
+  /** Newest first; a reversed strike stays listed and no longer counts. */
+  strikes: { id: string; bookingId: string; reason: string; at: ISODateTime; reversedAt?: ISODateTime }[];
+  /** Trust and safety, support leads and admins reverse strikes on appeal (a contested no-show, for example). */
+  canReverseStrikes: boolean;
   /** Emails and texts for this person's notifications, newest first (up to 20). */
   deliveries: AdminDeliveryRow[];
   /** The latest suspension, while it lasts. */
@@ -129,10 +132,19 @@ export const helperSuspensionInputSchema = z.object({
 });
 export type HelperSuspensionInput = z.input<typeof helperSuspensionInputSchema>;
 
+/** Reversing a strike on appeal; the reason goes to the audit log. */
+export const strikeReversalInputSchema = z.object({
+  strikeId: z.string(code('required')).min(1, code('required')),
+  reason: z.string(code('required')).trim().min(10, code('too_short')).max(1000, code('too_long')),
+});
+export type StrikeReversalInput = z.input<typeof strikeReversalInputSchema>;
+
 /**
  * `onSuspension`: suspends a helper (their active offers are withdrawn and they leave search) or reinstates
  * them. ok `updated`. Errors: `validation_failed`, `not_allowed` (trust and safety, leads and admins only), `unknown`.
  */
 export interface AdminUserHandlers {
   onSuspension: ActionHandler<HelperSuspensionInput>;
+  /** ok `updated` (refresh). Errors: `validation_failed`, `not_allowed` (your role, or already reversed). */
+  onReverseStrike: ActionHandler<StrikeReversalInput>;
 }

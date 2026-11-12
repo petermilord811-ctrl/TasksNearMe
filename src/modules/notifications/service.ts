@@ -10,7 +10,7 @@ import type {
 } from '@/contracts';
 import { accountProfileInputSchema, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
-import { remindApprovalsDue } from '@/modules/bookings/reminders';
+import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { bookings } from '@/modules/bookings/schema';
 import { offers } from '@/modules/offers/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
@@ -108,6 +108,7 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
     case 'booking.completed':
     case 'booking.disputed':
     case 'booking.approval_reminder':
+    case 'booking.start_reminder':
     case 'booking.canceled':
     case 'earnings.transferred':
     case 'reviews.published': {
@@ -131,6 +132,10 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
           return [forHelper('work_approved')];
         case 'booking.disputed':
           return [forHelper('problem_reported')];
+        case 'booking.start_reminder': {
+          const extra: Partial<Planned> = typeof p.hours === 'number' ? { params: { hours: p.hours } } : {};
+          return [forPoster('booking_reminder', extra), forHelper('booking_reminder', extra)];
+        }
         case 'booking.approval_reminder': {
           const hours = typeof p.hours === 'number' ? p.hours : undefined;
           return [forPoster('approval_reminder', hours ? { params: { hours } } : {})];
@@ -271,6 +276,7 @@ export async function unreadNotificationCount(db: Db, userId: string): Promise<n
  */
 export async function getNotificationsPage(db: Db, userId: string, now: Date): Promise<NotificationsPageData> {
   await remindApprovalsDue(db, now, { posterUserId: userId });
+  await remindUpcomingBookings(db, now, { userId });
   await dispatchNotifications(db, now);
   const rows = await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(50);
   return {

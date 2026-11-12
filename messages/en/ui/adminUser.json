@@ -61,6 +61,21 @@
     "late_cancellation": "Late cancellation",
     "no_show": "No-show"
   },
+  "strikeReverse": "Reverse strike",
+  "strikeReverseLabel": "Reverse strike: {strike}",
+  "strikeReversed": "Reversed {date}",
+  "strikeDialog": {
+    "title": "Reverse this strike",
+    "description": "{strike}. The strike stays on record and stops counting against the helper. Your reason goes to the audit log.",
+    "reason": "Reason",
+    "hint": "Explain the outcome of the appeal in 10 to 1,000 characters.",
+    "submit": "Reverse strike",
+    "pending": "Reversing…",
+    "cancel": "Cancel",
+    "required": "Give a reason of at least 10 characters.",
+    "tooLong": "Keep the reason under 1,000 characters.",
+    "notAllowed": "This strike can't be reversed. Refresh to see its current state."
+  },
   "deliveries": "Emails and texts",
   "deliveriesHint": "The latest messages for this person's notifications. Failed sends are tried 3 more times.",
   "noDeliveries": "No emails or texts yet.",
@@ -112,7 +127,8 @@
     "rebook_accepted": "Proposal accepted",
     "rebook_declined": "Proposal declined",
     "task_reopened": "Task open again",
-    "approval_reminder": "Approval reminder"
+    "approval_reminder": "Approval reminder",
+    "booking_reminder": "Booking reminder"
   },
   "previews": {
     "group": "Admin · person details",
@@ -126,6 +142,7 @@
     "validationFailed": "Person · reason needs attention",
     "notAllowed": "Person · status change unavailable",
     "unknown": "Person · unexpected error",
-    "previewReason": "Review the linked account activity before restoring this helper."
+    "previewReason": "Review the linked account activity before restoring this helper.",
+    "strikeDialog": "Person · reverse a strike"
   }
 }

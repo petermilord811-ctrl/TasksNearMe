@@ -83,7 +83,8 @@ export function MessageLog({ messages, otherParty, now, className }: { messages:
     className={cn('h-[min(60dvh,36rem)] min-h-64 space-y-6 overflow-y-auto overscroll-contain rounded-xl border bg-card p-3 shadow-card [overflow-anchor:none] sm:p-5', className)}>
     {messages.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">{t('empty')}</p>}
     {Array.from(days, ([day, entries]) => <section key={day} aria-label={formatDate(entries[0]!.createdAt, { withYear: true })} className="space-y-4">
-      <h2 className="sticky top-0 z-10 mx-auto w-fit rounded-full border bg-card px-3 py-1 text-center text-sm font-medium text-muted-foreground"><time dateTime={day}>{formatDate(entries[0]!.createdAt, { withYear: true })}</time></h2>
+      {/* A day separator, not a sticky chip: a sticky one covered photos while scrolling (UI-021). */}
+      <h2 className="mx-auto w-fit rounded-full border bg-card px-3 py-1 text-center text-sm font-medium text-muted-foreground"><time dateTime={day}>{formatDate(entries[0]!.createdAt, { withYear: true })}</time></h2>
       <ol className="space-y-4">
         {entries.map((message) => {
           const sender = message.sender === 'me' ? t('you') : message.sender === 'them' ? otherParty.displayName : t('system');

@@ -9,16 +9,18 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 export interface CompletionSummaryProps {
   completion: CompletionView;
   variant: 'poster' | 'helper';
+  /** The summary leads the page (the problem report): its first photo is above the fold, so it loads at once. */
+  leadsPage?: boolean;
 }
 
-function EvidencePhoto({ photo, title, receipt = false }: { photo: Photo; title: string; receipt?: boolean }) {
+function EvidencePhoto({ photo, title, receipt = false, eager = false }: { photo: Photo; title: string; receipt?: boolean; eager?: boolean }) {
   const t = useTranslations('completion');
   const label = t(receipt ? 'viewReceipt' : 'viewPhoto');
 
   return <Dialog>
     <DialogTrigger asChild>
       <button type="button" aria-label={t('openPhoto', { label, description: photo.alt })} className="group flex w-full min-w-0 flex-col overflow-hidden rounded-lg border bg-card text-left transition-colors hover:bg-accent">
-        <Image src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} unoptimized className="aspect-4/3 h-auto w-full object-cover" />
+        <Image src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} unoptimized loading={eager ? 'eager' : 'lazy'} className="aspect-4/3 h-auto w-full object-cover" />
         <span className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2 text-sm font-medium">
           {label}<Expand aria-hidden="true" className="size-4 shrink-0 text-primary" />
         </span>
@@ -35,14 +37,14 @@ function EvidencePhoto({ photo, title, receipt = false }: { photo: Photo; title:
 }
 
 /** Displays supplied evidence and final amounts without deriving payment totals. */
-export function CompletionSummary({ completion, variant }: CompletionSummaryProps) {
+export function CompletionSummary({ completion, variant, leadsPage = false }: CompletionSummaryProps) {
   const t = useTranslations('completion');
 
   return <div className="min-w-0 space-y-4">
     <div className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
       <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={completion.submittedAt}>{t('sent', { date: formatDateTime(completion.submittedAt) })}</time></p>
       {completion.photos.length > 0 && <ul aria-label={t('photos')} className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
-        {completion.photos.map((photo, index) => <li key={photo.id} className="min-w-0"><EvidencePhoto photo={photo} title={t('photoTitle', { number: index + 1, count: completion.photos.length })} /></li>)}
+        {completion.photos.map((photo, index) => <li key={photo.id} className="min-w-0"><EvidencePhoto photo={photo} title={t('photoTitle', { number: index + 1, count: completion.photos.length })} eager={leadsPage && index === 0} /></li>)}
       </ul>}
       {completion.note && <p className="whitespace-pre-wrap break-words">{completion.note}</p>}
       {completion.hoursWorked !== undefined && <p className="font-medium tabular-nums">{completion.hoursCap !== undefined

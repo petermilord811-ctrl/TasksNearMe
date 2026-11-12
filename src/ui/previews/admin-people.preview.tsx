@@ -79,7 +79,7 @@ function usersPreview(id: string, title: string, data: AdminUsersPageData): Prev
   };
 }
 
-type UserSeeds = Pick<ComponentProps<typeof AdminUserContent>, 'initialDialog' | 'suspensionState'>;
+type UserSeeds = Pick<ComponentProps<typeof AdminUserContent>, 'initialDialog' | 'suspensionState' | 'initialStrikeDialog'>;
 function userPreview(id: string, title: string, data: AdminUserPageData = adminUserJordanData, seeds: UserSeeds = {}, viewer: StaffViewer = morganStaff): PreviewEntry {
   const result = seeds.suspensionState?.initialResult;
   return {
@@ -133,6 +133,7 @@ export const adminPeoplePreviews: PreviewEntry[] = [
   userPreview('suspended', u.suspended, adminUserSuspendedData),
   userPreview('read-only', u.readOnly, adminUserReadOnlyData, {}, alexStaff),
   userPreview('suspend-dialog', u.suspendDialog, adminUserJordanData, { initialDialog: 'suspend_helper' }),
+  userPreview('strike-dialog', u.strikeDialog, adminUserJordanData, { initialStrikeDialog: 'stk_jordan_noshow' }),
   userPreview('reinstate-dialog', u.reinstateDialog, adminUserSuspendedData, { initialDialog: 'reinstate_helper' }),
   userPreview('suspension-pending', u.pending, adminUserJordanData, {
     initialDialog: 'suspend_helper', suspensionState: { initialReason: u.previewReason, initialPending: true },

@@ -15,7 +15,7 @@ import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
 
 export interface AdminSuspensionState { initialReason?: string; initialResult?: ActionResult; initialPending?: boolean }
-export interface AdminUserPreviewState { initialDialog?: AdminUserActionId; suspensionState?: AdminSuspensionState }
+export interface AdminUserPreviewState { initialDialog?: AdminUserActionId; suspensionState?: AdminSuspensionState; /** Previews: the strike whose reversal dialog starts open. */ initialStrikeDialog?: string }
 
 function SuspensionForm({ actionId, handlers, onBusy, onCancel, onSuccess, initialReason = '', initialResult, initialPending = false }: {
   actionId: AdminUserActionId; handlers: AdminUserHandlers; onBusy: (busy: boolean) => void; onCancel: () => void; onSuccess: (result: ActionResult) => void;

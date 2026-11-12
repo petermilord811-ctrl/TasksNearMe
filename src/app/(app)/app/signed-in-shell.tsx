@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { setMode, signOut } from '@/modules/accounts/actions';
-import { remindApprovalsDue } from '@/modules/bookings/reminders';
+import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { unreadMessageCount } from '@/modules/messaging/service';
 import { dispatchNotifications, unreadNotificationCount } from '@/modules/notifications/service';
 import { getViewer, toSignedInViewer } from '@/platform/auth/viewer';
@@ -32,6 +32,7 @@ async function ViewerShell({ layout, children }: { layout: ShellLayout; children
   // time-travel test (the test clock moves this request's "now") see its reminders and notifications.
   const now = await requestNow();
   await remindApprovalsDue(db, now, { posterUserId: viewer.user.id });
+  await remindUpcomingBookings(db, now, { userId: viewer.user.id });
   await dispatchNotifications(db, now, 50);
   const [unreadMessages, unreadNotifications] = await Promise.all([unreadMessageCount(db, viewer.user.id), unreadNotificationCount(db, viewer.user.id)]);
   return (

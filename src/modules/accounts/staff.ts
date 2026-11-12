@@ -1,6 +1,6 @@
-import { and, desc, eq, ilike, inArray, notInArray, or } from 'drizzle-orm';
-import type { ActionResult, AdminDeliveryRow, AdminHelperStatus, AdminUserPageData, AdminUserRow, AdminUsersPageData, BookingStatus, DeliveryStatus, HelperSuspensionInput, NotificationChannel, NotificationType, StaffRole } from '@/contracts';
-import { helperSuspensionInputSchema } from '@/contracts';
+import { and, desc, eq, ilike, inArray, isNull, notInArray, or } from 'drizzle-orm';
+import type { ActionResult, StrikeReversalInput, AdminDeliveryRow, AdminHelperStatus, AdminUserPageData, AdminUserRow, AdminUsersPageData, BookingStatus, DeliveryStatus, HelperSuspensionInput, NotificationChannel, NotificationType, StaffRole } from '@/contracts';
+import { helperSuspensionInputSchema, strikeReversalInputSchema } from '@/contracts';
 import { bookingTerms, bookings, helperStrikes } from '@/modules/bookings/schema';
 import { notificationDeliveries, notifications } from '@/modules/notifications/schema';
 import { offers } from '@/modules/offers/schema';
@@ -34,7 +34,8 @@ async function rowsOf(db: Db, people: UserRow[]): Promise<AdminUserRow[]> {
     db.select().from(staffRoles).where(inArray(staffRoles.userId, ids)),
     db.select({ userId: helperProfiles.userId, status: helperProfiles.status }).from(helperProfiles).where(inArray(helperProfiles.userId, ids)),
     db.select({ openedBy: supportCases.openedByUserId }).from(supportCases).where(and(inArray(supportCases.openedByUserId, ids), notInArray(supportCases.status, FINISHED_CASES))),
-    db.select({ helperUserId: helperStrikes.helperUserId }).from(helperStrikes).where(inArray(helperStrikes.helperUserId, ids)),
+    // Reversed strikes don't count.
+    db.select({ helperUserId: helperStrikes.helperUserId }).from(helperStrikes).where(and(inArray(helperStrikes.helperUserId, ids), isNull(helperStrikes.reversedAt))),
   ]);
   return people.map((user) => ({
     id: user.id,
@@ -108,7 +109,8 @@ export async function getAdminUser(db: Db, staff: StaffActor, userId: string, no
     }),
     cases: await caseRowsFor(db, caseRows, now),
     rewards: (await getAdminRewardRows(db, { id: staff.id, roles: [] }, grants)).map((reward) => ({ ...reward, actions: [] })),
-    strikes: strikeRows.map((strike) => ({ id: strike.id, bookingId: strike.bookingId, reason: strike.reason, at: strike.createdAt.toISOString() })),
+    strikes: strikeRows.map((strike) => ({ id: strike.id, bookingId: strike.bookingId, reason: strike.reason, at: strike.createdAt.toISOString(), ...(strike.reversedAt ? { reversedAt: strike.reversedAt.toISOString() } : {}) })),
+    canReverseStrikes: canModerate(staff),
     deliveries: deliveryRows.map(({ delivery, type }): AdminDeliveryRow => ({
       id: delivery.id,
       channel: delivery.channel as NotificationChannel,
@@ -158,4 +160,31 @@ export async function setHelperSuspension(db: Db, staff: StaffActor, userId: str
     });
   });
   return { ok: true, code: 'updated' };
+}
+
+/** Reverses a strike on appeal (a contested no-show, for example): it stays listed and stops counting. */
+export async function reverseStrike(db: Db, staff: StaffActor, userId: string, input: StrikeReversalInput, now: Date): Promise<ActionResult> {
+  const parsed = strikeReversalInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  if (!canModerate(staff)) return { ok: false, code: 'not_allowed' };
+  return db.transaction(async (tx): Promise<ActionResult> => {
+    const [strike] = await tx
+      .update(helperStrikes)
+      .set({ reversedAt: now })
+      .where(and(eq(helperStrikes.id, parsed.data.strikeId), eq(helperStrikes.helperUserId, String(userId)), isNull(helperStrikes.reversedAt)))
+      .returning({ id: helperStrikes.id, bookingId: helperStrikes.bookingId });
+    if (!strike) return { ok: false, code: 'not_allowed' };
+    await tx.insert(auditLog).values({
+      id: newId('aud'),
+      at: now.toISOString(),
+      actorId: staff.id,
+      actorRole: staff.roles[0] ?? 'staff',
+      action: 'helper.strike_reversed',
+      targetType: 'user',
+      targetId: String(userId),
+      reason: parsed.data.reason,
+      metadata: { strikeId: strike.id, bookingId: strike.bookingId },
+    });
+    return { ok: true, code: 'updated' };
+  });
 }

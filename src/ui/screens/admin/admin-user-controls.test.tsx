@@ -15,7 +15,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 function mount(data: AdminUserPageData = adminUserJordanData, handler: AdminUserHandlers['onSuspension'] = fakeHandler({ ok: true, code: 'updated' }, 0)) {
   const onSuspension = vi.fn(handler);
-  render(<NextIntlClientProvider locale="en" messages={{ ...uiMessages, adminUser }}><AdminUserControls data={data} handlers={{ onSuspension }} /></NextIntlClientProvider>);
+  render(<NextIntlClientProvider locale="en" messages={{ ...uiMessages, adminUser }}><AdminUserControls data={data} handlers={{ onSuspension, onReverseStrike: fakeHandler({ ok: true, code: 'updated' }, 0) }} /></NextIntlClientProvider>);
   return onSuspension;
 }
 
@@ -62,7 +62,7 @@ describe('AdminUserControls', () => {
   it('keeps success focused when refreshed data removes the action that opened the dialog', async () => {
     const user = userEvent.setup();
     let settle!: (result: ActionResult) => void;
-    const handlers: AdminUserHandlers = { onSuspension: () => new Promise((resolve) => { settle = resolve; }) };
+    const handlers: AdminUserHandlers = { onSuspension: () => new Promise((resolve) => { settle = resolve; }), onReverseStrike: fakeHandler({ ok: true, code: 'updated' }, 0) };
     const view = (data: AdminUserPageData) => <NextIntlClientProvider locale="en" messages={{ ...uiMessages, adminUser }}><AdminUserControls data={data} handlers={handlers} /></NextIntlClientProvider>;
     const { rerender } = render(view(adminUserJordanData));
     await user.click(screen.getByRole('button', { name: 'Suspend helper' }));

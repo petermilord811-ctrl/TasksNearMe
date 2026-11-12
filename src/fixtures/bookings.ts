@@ -400,7 +400,6 @@ export const movingBookingPosterConfirmed: BookingView = {
     breakdown: movingFundedBreakdown,
     scopeText: 'Two-bedroom apartment, boxes are packed. Couch, dresser, and a queen bed. Truck is rented.',
     start: '2026-11-22T15:00:00.000Z',
-    expenseAllowance: { amountCents: 2000, description: 'Up to $20 for moving blankets or tape' },
   },
   deadlines: { noShowReportableAt: '2026-11-22T15:30:00.000Z' },
   timeline: [

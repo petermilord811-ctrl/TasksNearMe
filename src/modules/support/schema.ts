@@ -24,7 +24,7 @@ export const supportCases = pgTable(
     /** Reports: the person reported. */
     subjectUserId: text('subject_user_id').references(() => users.id),
     /** Where a report came from (the conversation and its task), for support's review. */
-    context: jsonb('context').$type<{ threadId?: string; taskId?: string }>(),
+    context: jsonb('context').$type<{ threadId?: string; taskId?: string; reviewId?: string }>(),
     reason: text('reason'),
     description: text('description').notNull().default(''),
     /** Photos sent with the case (files of kind `evidence`). */

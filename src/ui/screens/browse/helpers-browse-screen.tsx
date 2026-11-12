@@ -30,7 +30,7 @@ export function HelpersBrowseScreen({ data, handlers }: HelpersBrowseScreenProps
         <div className="space-y-2"><Label htmlFor={`${id}-category`}>{t('category')}</Label><select id={`${id}-category`} name="category" defaultValue={query.category ?? ''} className={selectClass}><option value="">{t('anyCategory')}</option>{CATEGORY_SLUGS.map((slug) => <option key={slug} value={slug}>{categories(slug)}</option>)}</select></div>
         <div className="space-y-2"><Label htmlFor={`${id}-area`}>{t('area')}</Label><select id={`${id}-area`} name="area" defaultValue={query.area ?? ''} className={selectClass}><option value="">{t('anyArea')}</option>{data.areas.map((area) => <option key={area.slug} value={area.slug}>{area.name}</option>)}</select></div>
       </div>
-      <div className="flex min-h-11 items-center gap-3"><Checkbox id={`${id}-open`} name="open" value="1" defaultChecked={Boolean(query.openTimes)} /><Label htmlFor={`${id}-open`}>{t('openTimes')}</Label></div>
+      <div className="flex min-h-11 items-center gap-3"><Checkbox id={`${id}-open`} name="open" value="1" defaultChecked={Boolean(query.openTimes)} /><Label htmlFor={`${id}-open`} className="min-h-11 flex-1 cursor-pointer">{t('openTimes')}</Label></div>
       <div className="flex flex-wrap items-center gap-3"><Button type="submit"><SlidersHorizontal aria-hidden="true" className="size-4" />{t('apply')}</Button>{filtered && <Link href={routes.app.helpers()} className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4">{t('clear')}</Link>}</div>
     </form>
     <section aria-labelledby={`${id}-results`} className="space-y-4">

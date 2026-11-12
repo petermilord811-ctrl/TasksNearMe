@@ -8,7 +8,7 @@ import { ImagePlus, LoaderCircle, Lock, X } from 'lucide-react';
 import type { Photo, PhotoUploadResult, PostTaskHandlers, PostTaskPageData, TaskDraftInput } from '@/contracts';
 import { Button } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
-import { Input } from '@/ui/primitives/input';
+import { FileChooser } from '@/ui/components/forms/file-chooser';
 
 type UploadError = Extract<PhotoUploadResult, { ok: false }>['code'];
 interface PendingPhoto { key: number; src: string; name: string }
@@ -68,11 +68,10 @@ export function PhotosStep({ data, handlers, photos, onPhotosChange, onBusyChang
     busyCallback.current?.(queue.current.size > 0);
   }
 
-  function chooseFiles(files: FileList | null) {
-    if (!files) return;
+  function chooseFiles(files: File[]) {
     setFailure(undefined);
     setNotice(undefined);
-    for (const file of Array.from(files)) {
+    for (const file of files) {
       if (getValues('photoIds').length + queue.current.size >= data.rules.maxPhotos) {
         setFailure('too_many');
         break;
@@ -105,8 +104,8 @@ export function PhotosStep({ data, handlers, photos, onPhotosChange, onBusyChang
   return <div className="space-y-5">
     <p className="flex items-start gap-2 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('photos.privacy')}</p>
     <Field className="gap-2" data-invalid={!!formState.errors.photoIds}>
-      <FieldLabel htmlFor={`${id}-files`}>{t('photos.label')}</FieldLabel>
-      <Input id={`${id}-files`} type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic" disabled={photoIds.length + pending.length >= data.rules.maxPhotos} className="min-h-14 py-3" aria-busy={pending.length > 0} aria-invalid={!!formState.errors.photoIds} aria-describedby={`${id}-hint${formState.errors.photoIds ? ` ${id}-error` : ''}`} onChange={(event) => { chooseFiles(event.target.files); event.target.value = ''; }} />
+      <FieldLabel id={`${id}-label`} htmlFor={`${id}-files`}>{t('photos.label')}</FieldLabel>
+      <FileChooser id={`${id}-files`} labelledBy={`${id}-label`} multiple accept="image/jpeg,image/png,image/webp,image/heic" disabled={photoIds.length + pending.length >= data.rules.maxPhotos} busy={pending.length > 0} invalid={!!formState.errors.photoIds} describedBy={`${id}-hint${formState.errors.photoIds ? ` ${id}-error` : ''}`} onFiles={chooseFiles} />
       <FieldDescription id={`${id}-hint`}>{t('photos.hint', { count: data.rules.maxPhotos, megabytes: data.rules.maxPhotoMegabytes })}</FieldDescription>
       {formState.errors.photoIds && <FieldError id={`${id}-error`}>{errors('fieldErrors.too_long')}</FieldError>}
     </Field>

@@ -37,15 +37,17 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   rebook_declined: 'offers',
   task_reopened: 'offers',
   approval_reminder: 'bookings',
+  booking_reminder: 'bookings',
 };
 
-/** Day-of updates that can't wait until morning: texted even in quiet hours. */
+/** Day-of updates that can't wait until morning (a 7 am start's 2 h reminder comes at 5 am): texted even in quiet hours. */
 export const URGENT_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>([
   'helper_on_the_way',
   'helper_running_late',
   'helper_arrived',
   'cant_access',
   'booking_canceled',
+  'booking_reminder',
 ]);
 
 /** Receipts and safety messages always go by email. */

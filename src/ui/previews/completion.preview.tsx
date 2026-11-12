@@ -148,19 +148,19 @@ export const completionPreviews: PreviewEntry[] = [
 
   {
     id: 'component-completion-summary/fixed', title: copy.previews.summaryFixed, group: copy.previews.group,
-    render: () => <CompletionSummary completion={deskCompletionView} variant="poster" />,
+    render: () => <CompletionSummary completion={deskCompletionView} variant="poster" leadsPage />,
   },
   {
     id: 'component-completion-summary/expenses', title: copy.previews.summaryExpenses, group: copy.previews.group,
-    render: () => <CompletionSummary completion={deskWithExpensesCompletionView} variant="poster" />,
+    render: () => <CompletionSummary completion={deskWithExpensesCompletionView} variant="poster" leadsPage />,
   },
   {
     id: 'component-completion-summary/hourly', title: copy.previews.summaryHourly, group: copy.previews.group,
-    render: () => <CompletionSummary completion={movingCompletionView} variant="poster" />,
+    render: () => <CompletionSummary completion={movingCompletionView} variant="poster" leadsPage />,
   },
   {
     id: 'component-completion-summary/helper-expenses', title: copy.previews.summaryHelperExpenses, group: copy.previews.group,
-    render: () => <CompletionSummary completion={deskWithExpensesCompletionView} variant="helper" />,
+    render: () => <CompletionSummary completion={deskWithExpensesCompletionView} variant="helper" leadsPage />,
   },
   {
     id: 'component-evidence-photo-picker/populated', title: copy.previews.uploader, group: copy.previews.group,

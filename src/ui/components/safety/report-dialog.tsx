@@ -42,7 +42,8 @@ export function ReportDialog({ subject, onReport, open, onOpenChange, returnFocu
   </Dialog>;
 }
 
-function ReportForm({ onReport, onClose, onPendingChange, initialResult, initialPending = false, initialValues }: Pick<ReportDialogProps, 'onReport' | 'initialResult' | 'initialPending' | 'initialValues'> & { onClose: () => void; onPendingChange: (pending: boolean) => void }) {
+/** The report fields and buttons: in the conversation's dialog, and on the report page (B-059). */
+export function ReportForm({ onReport, onClose, onPendingChange, initialResult, initialPending = false, initialValues }: Pick<ReportDialogProps, 'onReport' | 'initialResult' | 'initialPending' | 'initialValues'> & { onClose: () => void; onPendingChange: (pending: boolean) => void }) {
   const t = useTranslations('safety');
   const fields = useTranslations('forms.fieldErrors');
   const id = useId();

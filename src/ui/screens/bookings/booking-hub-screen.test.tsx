@@ -10,7 +10,7 @@ import {
 import {
   deskBookingHelperCompleted, deskBookingHelperCompletedAddressHidden, deskBookingHelperConfirmed,
   deskBookingHelperInProgress, deskBookingHelperPendingFunding, deskBookingPosterCanceledLate,
-  deskBookingPosterCompleted, deskBookingPosterCompletionSubmitted, deskBookingPosterConfirmed,
+  deskBookingPosterCompleted, deskBookingPosterCompletionSubmitted, deskBookingPosterCompletionWithExpenses, deskBookingPosterConfirmed,
   deskBookingPosterCantAccessReported, deskBookingPosterPendingFunding, deskExactAddress, fakeBookingSheetHandlers, fakeHandler, movingBookingPosterConfirmed,
   remoteBookingHelperConfirmed,
   deskReviewPublishedData, deskReviewSubmittedData,
@@ -18,7 +18,7 @@ import {
   deskBookingPosterDisputed, deskBookingPosterSettled,
   deskBookingPosterWithOpenChange, deskBookingHelperWithOpenChange,
 } from '@/fixtures';
-import { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
+import { formatDate, formatDateTime, formatMoney, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import { BookingHubScreen } from './booking-hub-screen';
 
@@ -292,15 +292,24 @@ describe('BookingHubScreen privacy and supplied data', () => {
     expect(screen.queryByText('Answer by 11:20 am or the booking is canceled')).not.toBeInTheDocument();
   });
 
-  it('shows the hourly estimate, cap and allowance without adding the allowance to the canonical charge', () => {
+  it('shows the hourly estimate and cap, charging for the cap', () => {
     const { container } = mount(movingBookingPosterConfirmed);
     expect(container.textContent).toContain(movingBookingPosterConfirmed.terms.scopeText);
     expect(container.textContent).toContain('$35.00');
     expect(container.textContent).toContain('3.5 h');
     expect(container.textContent).toContain('4 h');
-    expect(container.textContent).toContain('$20.00');
     expect(screen.getByText('Total charged').closest('div')).toHaveTextContent('$154.00');
     expect(screen.getByText(/You paid for up to 4 hours.*Unused hours are refunded after you approve/)).toBeVisible();
+  });
+
+  it('shows an expense allowance the charge funds, inside the canonical total', () => {
+    const { container } = mount(deskBookingPosterCompletionWithExpenses);
+    const allowance = deskBookingPosterCompletionWithExpenses.terms.expenseAllowance!;
+    expect(container.textContent).toContain(formatMoney(allowance.amountCents));
+    expect(container.textContent).toContain(allowance.description);
+    // $60.00 + $6.00 fee + the $20.00 allowance, as funded.
+    expect(screen.getByText('Total charged').closest('div')).toHaveTextContent(formatMoney(deskBookingPosterCompletionWithExpenses.terms.breakdown.posterTotalCents));
+    expect(deskBookingPosterCompletionWithExpenses.terms.breakdown.posterTotalCents).toBe(8600);
   });
 
   it('shows absolute and relative funding and approval deadlines', () => {

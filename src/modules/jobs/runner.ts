@@ -2,7 +2,7 @@ import { expireDuePosts } from '@/modules/availability/service';
 import { expireDueProposals } from '@/modules/rebook/service';
 import { sql } from 'drizzle-orm';
 import { autoApproveDue } from '@/modules/bookings/completion-view';
-import { remindApprovalsDue } from '@/modules/bookings/reminders';
+import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { expireUnfundedBookings } from '@/modules/bookings/confirm';
 import { expireCantAccess } from '@/modules/bookings/sheets';
 import { deliverNotifications } from '@/modules/notifications/delivery';
@@ -16,7 +16,7 @@ import type { Db } from '@/platform/db/connect';
 /**
  * The in-process job runner (blueprint 07: jobs). Every minute it runs the due-work functions that
  * pages also call lazily, so timers fire even when nobody looks: offer and unpaid-hold expiry,
- * can't-access expiry, auto-approval and its reminders, review publishing, notifications, and their
+ * can't-access expiry, start and approval reminders, auto-approval, review publishing, notifications, and their
  * email and text messages. Each job is idempotent; a
  * Postgres advisory lock lets only one server instance run them at a time. Payouts and rewards stay
  * lazy per person for now.
@@ -37,6 +37,7 @@ export const JOBS: Job[] = [
   { name: 'bookings.expire_cant_access', run: (db, now) => expireCantAccess(db, now) },
   { name: 'bookings.auto_approve', run: (db, now) => autoApproveDue(db, now) },
   { name: 'bookings.approval_reminders', run: (db, now) => remindApprovalsDue(db, now) },
+  { name: 'bookings.start_reminders', run: (db, now) => remindUpcomingBookings(db, now) },
   { name: 'reviews.publish', run: (db, now) => publishDueReviews(db, now) },
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
   { name: 'notifications.deliver', run: (db, now) => deliverNotifications(db, now) },

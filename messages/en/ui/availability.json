@@ -11,7 +11,7 @@
   "startTime": "Start time",
   "endTime": "End time",
   "chooseTime": "Choose a time",
-  "timeHint": "Austin time (Central Time).",
+  "timeHint": "Austin time (Central time).",
   "timePolicy": "Start at least {leadHours} h from now. Each opening can be up to {maxHours} h long.",
   "currentTime": "Current time in Austin: {now}",
   "areaLabel": "Your service area",
@@ -41,7 +41,13 @@
   "requestLink": "View {name}'s request",
   "bookingLink": "View booking with {name}",
   "bookingLinkWithoutClient": "View booking",
-  "status": { "active": "Open", "held": "Requested", "booked": "Booked", "expired": "Past", "canceled": "Canceled" },
+  "status": {
+    "active": "Open",
+    "held": "Requested",
+    "booked": "Booked",
+    "expired": "Past",
+    "canceled": "Canceled"
+  },
   "cancelTitle": "Cancel this open time?",
   "cancelBody": "This opening will be removed from your profile. You can post another time later.",
   "cancelHeldBody": "{name}'s request will be declined and the hold on their card will be released. This opening will be removed from your profile.",
@@ -58,7 +64,7 @@
     "endTime": "Choose an end after the start, no more than {maxHours} h later."
   },
   "openTimes": "Open times",
-  "marketTime": "Times shown in Austin (Central Time).",
+  "marketTime": "Times shown in Austin (Central time).",
   "requestTime": "Request this time",
   "hourlyPrice": "{rate}/h · about {estimated}, up to {cap}",
   "slotWindow": "{date} · {times}",

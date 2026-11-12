@@ -41,7 +41,7 @@
   "quoteError": "Couldn't update the total. Try again before sending your request.",
   "retryQuote": "Update total",
   "payment": "Choose a card",
-  "terms": "I agree to the <terms>Terms of service</terms> and <cancellation>Cancellation policy</cancellation>.",
+  "terms": "I agree to the <terms>Terms of service</terms> and the <cancellation>Cancellation policy</cancellation>.",
   "send": "Send request",
   "sending": "Sending request…",
   "sent": "Request sent. You'll hear back when your helper responds.",

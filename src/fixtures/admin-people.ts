@@ -86,7 +86,11 @@ export const adminUserJordanData: AdminUserPageData = {
   ],
   cases: adminCasesPageData.cases.slice(0, 1),
   rewards: [jordanWelcome],
-  strikes: [],
+  strikes: [
+    { id: 'stk_jordan_noshow', bookingId: 'bkg_bench', reason: 'no_show', at: '2026-11-18T16:35:00.000Z' },
+    { id: 'stk_jordan_late', bookingId: 'bkg_shelf', reason: 'late_cancellation', at: '2026-11-02T15:00:00.000Z', reversedAt: '2026-11-03T18:20:00.000Z' },
+  ],
+  canReverseStrikes: true,
   deliveries: [
     { id: 'dlv_jordan_sms', channel: 'sms', type: 'problem_reported', status: 'held', reason: 'quiet_hours', attempts: 0, at: '2026-11-22T04:10:00.000Z', nextTryAt: '2026-11-22T14:00:00.000Z' },
     { id: 'dlv_jordan_email', channel: 'email', type: 'problem_reported', status: 'failed', reason: 'Mailbox unavailable (550)', attempts: 2, at: '2026-11-22T04:40:00.000Z', nextTryAt: '2026-11-22T06:40:00.000Z' },
@@ -103,15 +107,16 @@ export const adminUserSuspendedData: AdminUserPageData = {
   cases: [],
   rewards: [{ ...devonWelcome, status: 'voided', actions: [] }],
   strikes: [{ id: 'stk_devon', bookingId: 'bkg_dana', reason: 'linked_accounts', at: '2026-11-27T16:00:00.000Z' }],
+  canReverseStrikes: true,
   deliveries: [],
   suspension: { reason: 'Shares a card with the client on their only booking.', at: '2026-11-27T16:00:00.000Z', byDisplayName: 'Taylor B.' },
   actions: ['reinstate_helper'],
 };
 
 /** A support agent sees the page but can't suspend. */
-export const adminUserReadOnlyData: AdminUserPageData = { ...adminUserJordanData, actions: [] };
+export const adminUserReadOnlyData: AdminUserPageData = { ...adminUserJordanData, actions: [], canReverseStrikes: false };
 
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 
 export const fakeAdminRewardsHandlers: AdminRewardsHandlers = { onDecide: () => wait({ ok: true, code: 'updated' }) };
-export const fakeAdminUserHandlers: AdminUserHandlers = { onSuspension: () => wait({ ok: true, code: 'updated' }) };
+export const fakeAdminUserHandlers: AdminUserHandlers = { onSuspension: () => wait({ ok: true, code: 'updated' }), onReverseStrike: () => wait({ ok: true, code: 'updated' }) };

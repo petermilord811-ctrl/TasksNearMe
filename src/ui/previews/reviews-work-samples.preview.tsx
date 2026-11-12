@@ -12,7 +12,7 @@ function ReviewPreview({ review, variant }: { review: PublicReviewView; variant:
 
 function WorkSamplesPreview() {
   const t = useTranslations('reviews');
-  return <main className="mx-auto max-w-content space-y-6"><h1 className="text-2xl font-bold">{t('preview.three')}</h1><WorkSampleGallery samples={samProfilePageData.workSamples} /></main>;
+  return <main className="mx-auto max-w-content space-y-6"><h1 className="text-2xl font-bold">{t('preview.three')}</h1><WorkSampleGallery samples={samProfilePageData.workSamples} eagerFirst /></main>;
 }
 
 export const reviewsWorkSamplesPreviews: PreviewEntry[] = [

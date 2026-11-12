@@ -55,6 +55,7 @@ const copy: Record<NotificationType, RegExp> = {
   rebook_declined: /declined your proposal.*No booking was made/,
   task_reopened: /looking for a new helper.*Make an offer/,
   approval_reminder: /Approve .* or report a problem\. It's approved automatically/,
+  booking_reminder: /starts (in \d+ hours?|soon)\. Check the details/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -95,6 +96,7 @@ describe('NotificationsScreen', () => {
     { type: 'rebook_declined', target: targets.proposal },
     { type: 'task_reopened', target: targets.find_work_task },
     { type: 'approval_reminder', target: targets.booking },
+    { type: 'booking_reminder', target: targets.booking },
   ] as const)('opens the supplied destination for $type', async ({ type, target }) => {
     const actions = handlers();
     const notification = { ...mayaNotificationsData.notifications[0], id: type, type, target: target.target };
@@ -171,7 +173,7 @@ describe('NotificationsScreen', () => {
     expect(screen.getByRole('link', { name: /You were paid \$62\.00/ })).toBeVisible();
   });
 
-  it.each(['helper_running_late', 'payout_paid', 'offer_received', 'change_proposed', 'change_applied', 'invite_received', 'invite_countered', 'invite_accepted', 'rebook_proposed', 'rebook_accepted', 'rebook_declined', 'task_reopened', 'approval_reminder'] as const)('does not invent optional details for %s', (type) => {
+  it.each(['helper_running_late', 'payout_paid', 'offer_received', 'change_proposed', 'change_applied', 'invite_received', 'invite_countered', 'invite_accepted', 'rebook_proposed', 'rebook_accepted', 'rebook_declined', 'task_reopened', 'approval_reminder', 'booking_reminder'] as const)('does not invent optional details for %s', (type) => {
     show({ notifications: [{ id: type, type, target: { kind: 'messages' }, createdAt: now }], unreadCount: 1 });
     expect(screen.getByRole('link').textContent).not.toMatch(/undefined|NaN|\$0\.00|0 minutes/);
   });

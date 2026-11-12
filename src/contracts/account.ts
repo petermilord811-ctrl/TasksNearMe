@@ -51,6 +51,8 @@ export const NOTIFICATION_TYPES = [
   'task_reopened',
   /** The client hasn't approved submitted work: it's approved automatically in `params.hours` (24 h and 4 h before). */
   'approval_reminder',
+  /** A confirmed booking starts in `params.hours` (24 h and 2 h before; both people). */
+  'booking_reminder',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

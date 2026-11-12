@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Expand, Lock } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Expand, Flag, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { CATEGORY_DETAIL_FIELDS, routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers, type ISODateTime } from '@/contracts';
 import { formatDate, formatDateTime, formatHours, formatMoney, formatMonthYear, formatRelative, formatTimeRange, marketDayKey } from '@/shared/format';
@@ -22,6 +22,7 @@ export interface HelperTaskScreenProps {
 
 export function HelperTaskScreen({ data, handlers, now, initialRevising, initialResult }: HelperTaskScreenProps) {
   const t = useTranslations('helperTask');
+  const report = useTranslations('report');
   const card = useTranslations('taskCard');
   const details = useTranslations('postTask');
   const blocked = useTranslations('findWork');
@@ -74,5 +75,6 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
     </section>
     {data.blockedReason ? <section aria-labelledby="helper-task-blocked" className="space-y-3 rounded-xl border bg-secondary p-card text-secondary-foreground"><h2 id="helper-task-blocked" className="font-heading text-xl font-semibold">{t('blockedTitle')}</h2><p>{blocked(`blockedReasons.${data.blockedReason}`)}</p>{data.blockedReason === 'not_bookable' && <Link href={routes.app.helperOnboarding(data.setup.nextOnboardingStep)} className={buttonVariants({ variant: 'outline' })}>{t('finishSetup')}</Link>}</section>
       : <HelperOffer key={`${task.id}-${data.myOffer?.id ?? 'new'}`} data={data} handlers={handlers} now={now} initialRevising={initialRevising} initialResult={initialResult} />}
+    <p><Link href={routes.app.report('task', task.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.task')}</Link></p>
   </div>;
 }

@@ -7,7 +7,7 @@ import { X } from 'lucide-react';
 import type { Photo, PhotoUploadResult, QueryHandler } from '@/contracts';
 import { Button } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
-import { Input } from '@/ui/primitives/input';
+import { FileChooser } from '@/ui/components/forms/file-chooser';
 import { Spinner } from '@/ui/primitives/spinner';
 
 export interface EvidencePhotoPickerProps {
@@ -58,8 +58,8 @@ export function EvidencePhotoPicker({ id, label, hint, photos, onChange, onUploa
 
   return <div className="space-y-3" aria-busy={busy}>
     <Field className="gap-2" data-invalid={!!error || !!failure}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Input ref={inputRef} id={id} type="file" accept="image/jpeg,image/png,image/webp,image/heic" multiple={maxPhotos > 1} disabled={disabled || busy} className="min-h-14 scroll-mb-40 py-3" aria-invalid={!!error || !!failure} aria-describedby={`${id}-hint ${id}-error`} onChange={(event) => { const files = Array.from(event.target.files ?? []); event.target.value = ''; void upload(files); }} />
+      <FieldLabel id={`${id}-label`} htmlFor={id}>{label}</FieldLabel>
+      <FileChooser inputRef={inputRef} id={id} labelledBy={`${id}-label`} accept="image/jpeg,image/png,image/webp,image/heic" multiple={maxPhotos > 1} disabled={disabled || busy} busy={busy} invalid={!!error || !!failure} describedBy={`${id}-hint ${id}-error`} className="scroll-mb-40" onFiles={(files) => void upload(files)} />
       <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription>
       <div id={`${id}-error`} aria-live="polite">{error && <FieldError>{error}</FieldError>}{failure && <FieldError>{t(`errors.${failure}`, { maximum: maxPhotos, megabytes: maxPhotoMegabytes })}</FieldError>}</div>
     </Field>

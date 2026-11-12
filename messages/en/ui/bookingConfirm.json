@@ -14,7 +14,7 @@
   "paymentNote": "You pay when you book. Your helper is paid after the task is done.",
   "hourlyNote": "You pay for up to {hours, plural, one {# hour} other {# hours}} now. Unused hours are refunded after you approve.",
   "payment": "Payment",
-  "terms": "I agree to the <terms>Terms of Service</terms> and the <cancellation>Cancellation policy</cancellation>.",
+  "terms": "I agree to the <terms>Terms of service</terms> and the <cancellation>Cancellation policy</cancellation>.",
   "submit": "Book and pay {amount}",
   "booking": "Booking…",
   "reload": "Reload",

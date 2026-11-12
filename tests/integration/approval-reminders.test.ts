@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { autoApproveDue } from '@/modules/bookings/completion-view';
 import { confirmBooking } from '@/modules/bookings/confirm';
-import { remindApprovalsDue } from '@/modules/bookings/reminders';
+import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { bookings } from '@/modules/bookings/schema';
 import { notifications } from '@/modules/notifications/schema';
 import { dispatchNotifications, getNotificationsPage } from '@/modules/notifications/service';
@@ -93,3 +93,31 @@ describe('approval reminders', () => {
     expect(await remindApprovalsDue(db, new Date(extended.getTime() - 2 * HOUR), { bookingId })).toBe(0);
   });
 });
+
+describe('start reminders', () => {
+  it('reminds the client and the helper 24 h and 2 h before a confirmed booking, once each', async () => {
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
+    const start = new Date(Date.now() + 3 * 24 * HOUR);
+    await db.insert(tasks).values({ ...desk!, id: 'tsk_rem_start', slug: 'tsk-rem-start-slug', posterUserId: 'usr_ana', status: 'open', offerCount: 1, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 3 * HOUR) });
+    await db.insert(offers).values({ ...offer!, id: 'off_tsk_rem_start', taskId: 'tsk_rem_start', status: 'pending', revision: 1, proposedStart: start, expiresAt: start });
+    const booked = await confirmBooking(deps, 'usr_ana', 'tsk_rem_start', 'off_tsk_rem_start', { offerRevision: 1, payment: { kind: 'dev_card', card: 'success', save: false }, acceptTerms: true }, new Date());
+    const bookingId = booked.ok && booked.redirectTo ? booked.redirectTo.split('/').pop()! : '';
+    const before = (hours: number) => new Date(start.getTime() - hours * HOUR);
+
+    expect(await remindUpcomingBookings(db, before(30), { bookingId })).toBe(0);
+    expect(await remindUpcomingBookings(db, before(24), { bookingId })).toBe(1);
+    // The job runs every minute (and pages run it for their viewer): still one.
+    expect(await remindUpcomingBookings(db, before(23), { bookingId })).toBe(0);
+    expect(await remindUpcomingBookings(db, before(2), { bookingId })).toBe(1);
+    // A viewer's pages run it for their bookings as client or helper: nothing new for this one.
+    await remindUpcomingBookings(db, before(1.5), { userId: 'usr_jordan' });
+    expect(await db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'booking.start_reminder'), eq(outboxEvents.aggregateId, bookingId)))).toHaveLength(2);
+
+    await dispatchNotifications(db, before(1), 10_000);
+    const told = await db.select().from(notifications).where(eq(notifications.type, 'booking_reminder'));
+    const mine = told.filter((row) => row.target.kind === 'booking' && row.target.bookingId === bookingId);
+    expect(mine.map((row) => `${row.userId}:${row.params?.hours}`).sort()).toEqual(['usr_ana:2', 'usr_ana:24', 'usr_jordan:2', 'usr_jordan:24']);
+  });
+});
+

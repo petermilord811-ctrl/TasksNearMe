@@ -1,5 +1,8 @@
 {
-  "title": { "poster": "{helper} proposed a booking", "helper": "Your proposal to {client}" },
+  "title": {
+    "poster": "{helper} proposed a booking",
+    "helper": "Your proposal to {client}"
+  },
   "backHome": "Back to Home",
   "backClients": "Back to My clients",
   "task": "The proposed task",
@@ -7,7 +10,13 @@
   "hourlyTerms": "{rate}/h · about {estimate} · up to {cap}",
   "message": "Message from {helper}",
   "expires": "Proposal expires",
-  "status": { "sent": "Waiting for an answer", "accepted": "Booked", "declined": "Declined", "expired": "Expired", "withdrawn": "Withdrawn" },
+  "status": {
+    "sent": "Waiting for an answer",
+    "accepted": "Booked",
+    "declined": "Declined",
+    "expired": "Expired",
+    "withdrawn": "Withdrawn"
+  },
   "statusDescription": {
     "sent_poster": "Accept and pay to book this task, or decline the proposal.",
     "sent_helper": "{client} pays only if they accept. The proposal expires in 48 hours or 2 hours before the start.",
@@ -25,7 +34,7 @@
   "paymentNote": "You pay when you book. Your helper is paid after the task is done.",
   "chargeNow": "Accepting charges {amount} to your selected payment method now.",
   "hourly": "This covers up to {hours} hours. Unused hours are refunded after completion.",
-  "terms": "I agree to the <terms>Terms of Service</terms> and <cancellation>Cancellation Policy</cancellation>.",
+  "terms": "I agree to the <terms>Terms of service</terms> and <cancellation>Cancellation policy</cancellation>.",
   "actionsLabel": "Proposal actions",
   "accepting": "Accepting and paying…",
   "updating": "Updating proposal…",
@@ -34,7 +43,10 @@
     "withdraw_proposal": "Withdraw your proposal to {client}? They will no longer be able to accept it."
   },
   "keepProposal": "Keep proposal",
-  "success": { "decline_proposal": "Proposal declined. No booking was made.", "withdraw_proposal": "Proposal withdrawn. No booking was made." },
+  "success": {
+    "decline_proposal": "Proposal declined. No booking was made.",
+    "withdraw_proposal": "Proposal withdrawn. No booking was made."
+  },
   "reload": "Refresh proposal",
   "errors": {
     "not_allowed": "This proposal can no longer be answered. Refresh to see its latest status.",

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftRight, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowLeftRight, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
@@ -42,6 +42,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   rebook_declined: CalendarX,
   task_reopened: RotateCcw,
   approval_reminder: Hourglass,
+  booking_reminder: AlarmClock,
 };
 
 function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {

@@ -47,7 +47,7 @@
     "hoursCap": "Maximum hours",
     "hoursCapHint": "The most hours the client agrees to, up to 24.",
     "start": "New start · Austin time",
-    "startHint": "Choose a date and time in Austin (Central Time).",
+    "startHint": "Choose a date and time in Austin (Central time).",
     "message": "Message to the client",
     "messageHint": "Use 10 to 1,000 characters. Phone numbers and emails are hidden until the booking is confirmed.",
     "changeRequired": "Choose a new price or start before sending your counter.",

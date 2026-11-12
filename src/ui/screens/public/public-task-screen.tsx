@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CalendarDays, CircleDollarSign, Laptop, Lock, MapPin } from 'lucide-react';
+import { CalendarDays, CircleDollarSign, Flag, Laptop, Lock, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type PublicTaskPageData } from '@/contracts';
 import { formatDate, formatDateTime, formatHours, formatMoney, formatMonthYear, formatRelative, formatTimeRange, marketDayKey } from '@/shared/format';
@@ -17,6 +17,7 @@ export interface PublicTaskScreenProps { data: PublicTaskPageData; now: ISODateT
 
 export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
   const t = useTranslations('publicTask');
+  const report = useTranslations('report');
   const { task, category, market } = data;
   const CategoryIcon = categoryIcons[task.categorySlug];
   const LocationIcon = task.location.kind === 'remote' ? Laptop : MapPin;
@@ -65,5 +66,6 @@ export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
     </div>
     {data.similarTasks.length > 0 && <Section title={t('similarTasks')}><ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{data.similarTasks.map((similar) => <li key={similar.id} className="min-w-0"><PublicTaskCard task={similar} now={now} /></li>)}</ul></Section>}
     <div className="border-t pt-4 text-center"><Link href={routes.app.newTask()} className={buttonVariants({ variant: 'link', className: 'h-auto min-h-11 max-w-full whitespace-normal' })}>{t('postSimilar')}</Link></div>
+    <p className="text-center"><Link href={routes.app.report('task', task.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.task')}</Link></p>
   </div>;
 }

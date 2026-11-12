@@ -53,5 +53,12 @@
   "retryAt": "Try again after {at} (Central time).",
   "getHelp": "Visit the help center",
   "continue": "Continue",
-  "pending": "Working…"
+  "pending": "Working…",
+  "upload": {
+    "choosePhotos": "Choose photos",
+    "choosePhoto": "Choose a photo",
+    "dropPhotos": "Or drag photos here",
+    "dropPhoto": "Or drag a photo here",
+    "chosen": "Chosen: {name}"
+  }
 }

@@ -6,9 +6,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 
 export interface WorkSampleGalleryProps {
   samples: WorkSampleView[];
+  /** The gallery is above the fold: its first photo loads at once (the Largest Contentful Paint). */
+  eagerFirst?: boolean;
 }
 
-export function WorkSampleGallery({ samples }: WorkSampleGalleryProps) {
+export function WorkSampleGallery({ samples, eagerFirst = false }: WorkSampleGalleryProps) {
   const t = useTranslations('reviews');
 
   return (
@@ -18,7 +20,7 @@ export function WorkSampleGallery({ samples }: WorkSampleGalleryProps) {
           <Dialog>
             <DialogTrigger asChild>
               <button type="button" aria-label={t('workSamples.open', { description: sample.caption || sample.photo.alt })} className="group flex h-full w-full min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-left shadow-card transition-colors hover:bg-accent">
-                <Image src={sample.photo.src} alt={sample.photo.alt} width={sample.photo.width} height={sample.photo.height} unoptimized className="aspect-4/3 h-auto w-full object-cover" />
+                <Image src={sample.photo.src} alt={sample.photo.alt} width={sample.photo.width} height={sample.photo.height} unoptimized loading={eagerFirst && index === 0 ? 'eager' : 'lazy'} className="aspect-4/3 h-auto w-full object-cover" />
                 <span className="flex min-h-11 w-full flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                   <span className="break-words font-medium">{sample.caption || t('workSamples.view')}</span>
                   <Expand aria-hidden="true" className="size-4 shrink-0 text-primary" />

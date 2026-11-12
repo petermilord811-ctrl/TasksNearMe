@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Check, Clock3, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
+import { Check, Clock3, Flag, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CategorySlug, type HelperProfilePageData, type HelperServiceDetail } from '@/contracts';
 import { formatHours, formatMoney, formatMonthYear } from '@/shared/format';
@@ -51,6 +51,7 @@ function ServiceCard({ service }: { service: HelperServiceDetail }) {
 
 export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
   const t = useTranslations('helperProfile');
+  const report = useTranslations('report');
   const { helper } = data;
 
   return (
@@ -121,9 +122,10 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
         <h2 id="helper-reviews-heading" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('reviews')}</h2>
         {helper.rating && data.reviews.length < helper.rating.count && <p className="text-sm tabular-nums text-muted-foreground">{t('recentReviews', { shown: data.reviews.length, total: helper.rating.count })}</p>}
         {data.reviews.length > 0
-          ? <ul className="grid gap-4 md:grid-cols-2">{data.reviews.map((review) => <li key={review.id} className="min-w-0"><ReviewCard review={review} /></li>)}</ul>
+          ? <ul className="grid gap-4 md:grid-cols-2">{data.reviews.map((review) => <li key={review.id} className="min-w-0"><ReviewCard review={review} reportHref={routes.app.report('review', review.id)} /></li>)}</ul>
           : <div className="space-y-2 rounded-xl border border-border bg-card p-card"><p className="font-medium">{t('noReviews')}</p><p className="text-sm text-muted-foreground">{t('noReviewsDescription')}</p></div>}
       </section>
+      <p><Link href={routes.app.report('helper', helper.handle)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.helper')}</Link></p>
     </div>
   );
 }

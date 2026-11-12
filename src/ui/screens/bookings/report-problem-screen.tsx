@@ -45,7 +45,7 @@ export function ReportProblemContent({ data, handlers, now, initialResult, initi
     </section>}
     {data.completion && <section aria-label={t('work')} className="space-y-3">
       <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('work')}</h2>
-      <CompletionSummary completion={data.completion} variant="poster" />
+      <CompletionSummary completion={data.completion} variant="poster" leadsPage />
     </section>}
     {!data.unavailable && <ReportProblemForm key={data.booking.id} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />}
   </div>;

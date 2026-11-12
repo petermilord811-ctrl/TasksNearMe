@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import { Flag } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PublicReviewView } from '@/contracts';
 import { formatDate } from '@/shared/format';
@@ -7,10 +9,13 @@ import { Badge } from '@/ui/primitives/badge';
 
 export interface ReviewCardProps {
   review: PublicReviewView;
+  /** Where "Report this review" goes (the public profile); none: no link. */
+  reportHref?: string;
 }
 
-export function ReviewCard({ review }: ReviewCardProps) {
+export function ReviewCard({ review, reportHref }: ReviewCardProps) {
   const t = useTranslations('reviews');
+  const report = useTranslations('report');
 
   return (
     <article aria-label={t('reviewBy', { name: review.author.displayName })} className="min-w-0 space-y-4 rounded-xl border border-border bg-card p-4 shadow-card md:p-6">
@@ -33,6 +38,7 @@ export function ReviewCard({ review }: ReviewCardProps) {
           <p className="text-sm text-muted-foreground">{t(`categories.${review.categorySlug}`)}</p>
         </div>
       </div>
+      {reportHref && <Link href={reportHref} aria-label={report('links.reviewBy', { name: review.author.displayName })} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.review')}</Link>}
     </article>
   );
 }
