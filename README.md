@@ -34,6 +34,7 @@ Every provider runs as a stand-in in development: payments, ID checks, payouts, 
 | `/admin` | Staff tools. Sign in from `/dev/sign-in` as Alex (support agent), Morgan (support lead), Taylor (trust and safety), Casey (finance) or Riley (admin); the two-step code is `123456` in development |
 | `/dev/ui` | Every UI screen and state with fixture data (the preview gallery) |
 | `/dev/outbox` | Emails and texts the app sent (sign-in codes, notifications); `?to=` shows one recipient's |
+| `/dev/oauth/google`, `/dev/oauth/microsoft` | The stand-in account chooser behind "Continue with Google / Microsoft" when their keys aren't set (sample people, or anyone you type). Better Auth's real sign-in flow runs around it |
 | `/dev/providers/identity` · `payout` · `background` | Stand-ins for Stripe Identity, Stripe Connect and Checkr: pick the outcome |
 | `/dev/gift-cards/<id>` | A redeemed reward's stand-in gift card |
 | `/dev/clock` | The test clock (time travel for tests): `POST { offsetMs }` with `x-test-clock-secret` moves "now" for your browser only |

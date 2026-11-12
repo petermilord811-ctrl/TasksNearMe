@@ -8,6 +8,18 @@ const next = routes.app.newTask();
 
 export const signInEmailStep: SignInPageData = { step: 'email', next };
 
+/** Google and Microsoft are offered (production with keys; development and tests use the stand-in). */
+export const signInEmailStepWithProviders: SignInPageData = { step: 'email', next, socialProviders: ['google', 'microsoft'] };
+
+/** Back from Google or Microsoft without signing in, one per reason. */
+export const signInSocialErrors = {
+  cancelled: { ...signInEmailStepWithProviders, socialError: { provider: 'google', reason: 'cancelled' } },
+  emailUnconfirmed: { ...signInEmailStepWithProviders, socialError: { provider: 'microsoft', reason: 'email_unconfirmed' } },
+  useEmailCode: { ...signInEmailStepWithProviders, socialError: { provider: 'google', reason: 'use_email_code' } },
+  notAllowed: { ...signInEmailStepWithProviders, socialError: { provider: 'google', reason: 'not_allowed' } },
+  failed: { ...signInEmailStepWithProviders, socialError: { provider: 'microsoft', reason: 'failed' } },
+} satisfies Record<string, SignInPageData>;
+
 export const signInEmailCodeStep: SignInPageData = {
   step: 'email_code',
   next,
@@ -66,6 +78,8 @@ export const signInResults = {
 /** Handlers for previews: every call succeeds after a short delay. */
 export const fakeSignInHandlers: SignInHandlers = {
   onRequestEmailCode: fakeHandler(signInResults.codeSent),
+  // The real one returns the provider's page; previews stay put (only the hash changes).
+  onContinueWith: fakeHandler({ ok: true, code: 'sent', redirectTo: '#continue-with-provider' }),
   onVerifyEmailCode: fakeHandler(signInResults.done),
   onResendEmailCode: fakeHandler(signInResults.codeSent),
   onChangeEmail: fakeHandler({ ok: true, code: 'updated' }),

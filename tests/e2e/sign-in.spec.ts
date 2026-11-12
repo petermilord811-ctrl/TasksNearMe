@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { setAccountStatus } from './support/scenarios';
 
 /** The real sign-in flow: codes are read from the dev outbox (/dev/outbox). */
 
@@ -23,7 +24,7 @@ function freshEmail(project: string): string {
 
 async function requestCode(page: Page, email: string) {
   await page.getByLabel('Email').fill(email);
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Check your email' })).toBeVisible();
 }
 
@@ -33,7 +34,7 @@ async function completeProfile(page: Page, first: string, last: string) {
   await page.getByLabel('Last name').fill(last);
   await page.getByLabel(/18 or older/).check();
   await page.getByLabel(/I agree to the Terms of service/).check();
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
 }
 
 test.describe('sign-in and sign-up', () => {
@@ -44,11 +45,11 @@ test.describe('sign-in and sign-up', () => {
 
     // A wrong code shows on the field; the right one signs in.
     await page.getByLabel('6-digit code').fill('000000');
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
     const code = await latestCode(context, email);
     if (code !== '000000') await expect(page.getByText("That code isn't right")).toBeVisible();
     await page.getByLabel('6-digit code').fill(code);
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
 
     await completeProfile(page, 'Robin', 'Lopez');
     await expect(page).toHaveURL(/\/app$/);
@@ -62,16 +63,37 @@ test.describe('sign-in and sign-up', () => {
     await page.goto(`/sign-in?next=${encodeURIComponent('/app/find-work/tsk_desk')}`);
     await requestCode(page, email);
     await page.getByLabel('6-digit code').fill(await latestCode(context, email));
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await completeProfile(page, 'Sky', 'Nguyen');
 
     await expect(page.getByRole('heading', { level: 1, name: 'Add your phone number' })).toBeVisible();
     await page.getByLabel('Phone number').fill(`(737) ${exchange}-${line}`);
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: /Enter the code we texted to \(737\)/ })).toBeVisible();
     await page.getByLabel('6-digit code').fill(await latestCode(context, `+1737${exchange}${line}`));
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page).toHaveURL(/\/app\/find-work\/tsk_desk$/);
+  });
+
+  test('a code sent before the account was suspended no longer signs in', async ({ page, context }, testInfo) => {
+    const email = freshEmail(testInfo.project.name);
+    await page.goto('/sign-in');
+    await requestCode(page, email);
+    await page.getByLabel('6-digit code').fill(await latestCode(context, email));
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await completeProfile(page, 'Casey', 'Mills');
+    await expect(page).toHaveURL(/\/app$/);
+    await context.clearCookies();
+
+    // A new code, then staff suspend the account before it's used.
+    await page.goto('/sign-in');
+    await requestCode(page, email);
+    const code = await latestCode(context, email);
+    await setAccountStatus(email, 'suspended');
+    await page.getByLabel('6-digit code').fill(code);
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(page.getByText("This account can't continue.")).toBeVisible();
+    await expect(page).toHaveURL(/\/sign-in/);
   });
 
   test('the 4th code request in a row is rate-limited', async ({ page }, testInfo) => {
@@ -83,7 +105,7 @@ test.describe('sign-in and sign-up', () => {
       await expect(page.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();
     }
     await page.getByLabel('Email').fill(email);
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.getByText('There have been too many attempts')).toBeVisible();
     await expect(page.getByText(/Try again after .* \(Central time\)/)).toBeVisible();
   });

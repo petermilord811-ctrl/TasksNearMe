@@ -4,11 +4,14 @@ import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { routes, type ActionResult } from '@/contracts';
+import { routes, socialSignInInputSchema, type ActionResult, type SocialSignInInput } from '@/contracts';
+import { offeredSocialProviders } from '@/integrations/oauth';
+import { validationFailed } from '@/platform/actions/results';
 import { auth } from '@/platform/auth/auth';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { staffSessionChecks, users } from './schema';
+import { disconnectSignIn } from './sign-in-methods';
 
 const modeInput = z.object({ mode: z.enum(['poster', 'helper']) });
 
@@ -33,6 +36,38 @@ export async function setMode(input: { mode: 'poster' | 'helper' }): Promise<Act
 export async function signOut(): Promise<ActionResult> {
   await auth.api.signOut({ headers: await headers() });
   return { ok: true, code: 'updated', redirectTo: routes.home() };
+}
+
+/**
+ * AccountHandlers.onConnectSignIn: Better Auth starts connecting Google or Microsoft to the signed-in
+ * account and returns the provider's page. It comes back to the account page with `connect` (and `error`
+ * when it didn't work).
+ */
+export async function connectSignInAction(input: SocialSignInInput): Promise<ActionResult> {
+  const parsed = socialSignInInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const { provider } = parsed.data;
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user' || !offeredSocialProviders().includes(provider)) return { ok: false, code: 'not_allowed' };
+  const back = `${routes.app.account()}?connect=${provider}`;
+  const { url } = await auth.api.linkSocialAccount({
+    body: { provider, callbackURL: back, errorCallbackURL: back, disableRedirect: true },
+    headers: await headers(),
+  });
+  if (!url) return { ok: false, code: 'unknown' };
+  return { ok: true, code: 'sent', redirectTo: url };
+}
+
+/** AccountHandlers.onDisconnectSignIn. The email code keeps working. */
+export async function disconnectSignInAction(input: SocialSignInInput): Promise<ActionResult> {
+  const parsed = socialSignInInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user') return { ok: false, code: 'not_allowed' };
+  const removed = await disconnectSignIn(db, viewer.user.id, parsed.data.provider);
+  if (!removed) return { ok: false, code: 'not_found' };
+  revalidatePath(routes.app.account());
+  return { ok: true, code: 'updated' };
 }
 
 const staffCodeInput = z.object({ code: z.string().regex(/^\d{6}$/) });

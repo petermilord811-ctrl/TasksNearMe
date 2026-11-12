@@ -16,6 +16,7 @@ import { offers } from '@/modules/offers/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
+import { getSignInMethods } from '@/modules/accounts/sign-in-methods';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { invites } from '@/modules/invites/schema';
@@ -308,13 +309,15 @@ export async function markAllNotificationsRead(db: Db, userId: string, now: Date
 
 const isLocked = isLockedPreference;
 
-export async function getAccountPage(db: Db, userId: string): Promise<AccountPageData | null> {
+/** `returned`: what Better Auth adds after connecting Google or Microsoft (see getSignInMethods). */
+export async function getAccountPage(db: Db, userId: string, returned: { connect?: unknown; error?: unknown } = {}): Promise<AccountPageData | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return null;
-  const [prefRows, [profile], requests] = await Promise.all([
+  const [prefRows, [profile], requests, signIn] = await Promise.all([
     db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, userId)),
     db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1),
     db.select().from(privacyRequests).where(and(eq(privacyRequests.userId, userId), eq(privacyRequests.status, 'requested'))).orderBy(desc(privacyRequests.createdAt)),
+    getSignInMethods(db, { id: user.id, email: user.email }, returned),
   ]);
   const stored = new Map(prefRows.map((row) => [`${row.topic}:${row.channel}`, row.enabled === 'true']));
   const exportRequest = requests.find((r) => r.kind === 'export');
@@ -322,6 +325,7 @@ export async function getAccountPage(db: Db, userId: string): Promise<AccountPag
   return {
     profile: { firstName: user.firstName, lastName: user.lastName, displayName: user.name, email: user.email },
     ...(user.phone ? { phone: { last4: user.phone.slice(-4), verified: user.phoneVerifiedAt !== null } } : {}),
+    signIn,
     preferences: NOTIFICATION_TOPICS.flatMap((topic) =>
       NOTIFICATION_CHANNELS.map((channel) => {
         const locked = isLocked(topic, channel);

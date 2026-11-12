@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ActionResult, PreviewEntry, SignInPageData } from '@/contracts';
 import { routes } from '@/contracts';
-import { fakeSignInHandlers, publicViewer, signInEmailStep, signInEmailCodeStep, signInProfileStep, signInProfileStepPrefilled, signInPhoneStep, signInPhoneStepOffer, signInPhoneCodeStep, signInResults } from '@/fixtures';
+import { fakeSignInHandlers, publicViewer, signInEmailStep, signInEmailStepWithProviders, signInSocialErrors, signInEmailCodeStep, signInProfileStep, signInProfileStepPrefilled, signInPhoneStep, signInPhoneStepOffer, signInPhoneCodeStep, signInResults } from '@/fixtures';
 import { PublicShell } from '@/ui/shells/public-shell';
 import { SignInScreen, EmailCodeStep, PhoneStep, ProfileStep, EmailStep } from '@/ui/screens/auth';
 import { SignInFrame } from '@/ui/screens/auth/sign-in-screen';
@@ -13,7 +13,10 @@ function page(id: string, variant: keyof typeof copy.previews, render: () => Rea
 }
 
 const screens: [keyof typeof copy.previews, SignInPageData][] = [
-  ['email', signInEmailStep], ['email-code', signInEmailCodeStep], ['profile', signInProfileStep], ['profile-prefilled', signInProfileStepPrefilled],
+  ['email', signInEmailStep], ['email-with-providers', signInEmailStepWithProviders],
+  ['social-cancelled', signInSocialErrors.cancelled], ['social-unconfirmed', signInSocialErrors.emailUnconfirmed], ['social-use-email-code', signInSocialErrors.useEmailCode],
+  ['social-not-allowed', signInSocialErrors.notAllowed], ['social-failed', signInSocialErrors.failed],
+  ['email-code', signInEmailCodeStep], ['profile', signInProfileStep], ['profile-prefilled', signInProfileStepPrefilled],
   ['phone-post', signInPhoneStep], ['phone-offer', signInPhoneStepOffer], ['phone-book', { ...signInPhoneStep, phoneReason: 'book' }], ['phone-account', { ...signInPhoneStep, phoneReason: 'account' }], ['phone-code', signInPhoneCodeStep],
 ];
 

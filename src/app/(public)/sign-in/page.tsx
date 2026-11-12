@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import {
   changeEmail,
   changePhone,
+  continueWith,
   requestEmailCode,
   resendEmailCode,
   resendPhoneCode,
@@ -22,7 +23,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('title'), description: t('description'), robots: { index: false, follow: false } };
 }
 
-/** One flow for sign-in and sign-up. The step comes from the session and pending codes. */
+/**
+ * One flow for sign-in and sign-up. The step comes from the session and pending codes. A Google or
+ * Microsoft sign-in comes back here: signed in (the next step), or with `via` and `error`.
+ */
 export default function SignInPage({ searchParams }: PageProps<'/sign-in'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
@@ -32,8 +36,8 @@ export default function SignInPage({ searchParams }: PageProps<'/sign-in'>) {
 }
 
 async function SignIn({ searchParams }: Pick<PageProps<'/sign-in'>, 'searchParams'>) {
-  const { next } = await searchParams;
-  const resolution = await resolveCurrentSignIn(typeof next === 'string' ? next : undefined);
+  const { next, via, error } = await searchParams;
+  const resolution = await resolveCurrentSignIn(typeof next === 'string' ? next : undefined, { via, error });
   if (resolution.kind === 'done') redirect(resolution.redirectTo);
 
   const { data } = resolution;
@@ -42,6 +46,7 @@ async function SignIn({ searchParams }: Pick<PageProps<'/sign-in'>, 'searchParam
       data={data}
       handlers={{
         onRequestEmailCode: requestEmailCode.bind(null, data.next),
+        onContinueWith: continueWith.bind(null, data.next),
         onVerifyEmailCode: verifyEmailCode.bind(null, data.next),
         onResendEmailCode: resendEmailCode.bind(null, data.next),
         onChangeEmail: changeEmail,

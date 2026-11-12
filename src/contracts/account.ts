@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ActionHandler, ActionResult } from './actions';
+import type { SocialProvider, SocialSignInInput } from './auth';
 import type { Cents, ISODateTime } from './common';
 import { personNameField } from './forms';
 import type { AttentionTarget } from './home';
@@ -90,10 +91,32 @@ export type NotificationTopic = (typeof NOTIFICATION_TOPICS)[number];
 export const NOTIFICATION_CHANNELS = ['email', 'sms'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
+/**
+ * How it went, back on the account page after connecting Google or Microsoft:
+ * - `connected`: done; the next sign-in can use it.
+ * - `cancelled`: the person stopped on the provider's page.
+ * - `already_used`: that Google or Microsoft account already signs in to another TasksNearMe account.
+ * - `email_unconfirmed`: the provider didn't confirm the account's email address (some work accounts).
+ * - `failed`: anything else; try again.
+ */
+export const SIGN_IN_CONNECT_RESULTS = ['connected', 'cancelled', 'already_used', 'email_unconfirmed', 'failed'] as const;
+export type SignInConnectResult = (typeof SIGN_IN_CONNECT_RESULTS)[number];
+
+/** Ways to sign in. The email code always works; Google and Microsoft are optional extras. */
+export interface AccountSignInMethods {
+  /** The account's email: the email code goes there. */
+  email: string;
+  /** The providers on offer, each connected or not. Empty: only the email code is offered. */
+  providers: { provider: SocialProvider; connectedAt?: ISODateTime }[];
+  /** After coming back from connecting one. */
+  notice?: { provider: SocialProvider; result: SignInConnectResult };
+}
+
 export interface AccountPageData {
   profile: { firstName: string; lastName: string; displayName: string; email: string };
   /** Never the full number. */
   phone?: { last4: string; verified: boolean };
+  signIn: AccountSignInMethods;
   /** Each topic by channel. Booking and payment emails can't be turned off (they're receipts and safety). */
   preferences: { topic: NotificationTopic; channel: NotificationChannel; enabled: boolean; locked: boolean }[];
   helper: { status: 'none' | 'draft' | 'active' | 'paused' | 'suspended' };
@@ -112,6 +135,9 @@ export type AccountProfileInput = z.input<typeof accountProfileInputSchema>;
  * - `onRequestExport`: ok `submitted` (a copy of the data by email within 30 days).
  * - `onRequestDeletion`: asks first; ok `submitted`. Errors: `not_allowed` (open bookings or money owed).
  * - `onSignOut`: ok with `redirectTo` (the public home).
+ * - `onConnectSignIn`: ok `sent` with `redirectTo`, the provider's page on another site (navigate with a full
+ *   page load). It sends the person back to the account page with `signIn.notice`. Errors: `not_allowed`.
+ * - `onDisconnectSignIn`: ok `updated` (the email code still works). Errors: `not_found` (not connected).
  */
 export interface AccountHandlers {
   onSaveProfile: ActionHandler<AccountProfileInput>;
@@ -119,4 +145,6 @@ export interface AccountHandlers {
   onRequestExport: () => Promise<ActionResult>;
   onRequestDeletion: () => Promise<ActionResult>;
   onSignOut: () => Promise<ActionResult>;
+  onConnectSignIn: ActionHandler<SocialSignInInput>;
+  onDisconnectSignIn: ActionHandler<SocialSignInInput>;
 }

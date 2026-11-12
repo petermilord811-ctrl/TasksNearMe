@@ -1,5 +1,5 @@
 import { routes, type AccountHandlers, type AccountPageData, type AppShellHandlers, type PreviewEntry, type SignedInViewer } from '@/contracts';
-import { fakeAccountHandlers, fakeHandler, jordanAccountData, jordanShell, mayaAccountData, mayaShell, newAccountData } from '@/fixtures';
+import { accountSignInNotices, fakeAccountHandlers, fakeHandler, jordanAccountData, jordanShell, mayaAccountData, mayaShell, newAccountData } from '@/fixtures';
 import { AccountScreen } from '@/ui/screens/account/account-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import { AccountInteractionPreview, type AccountPreviewInteraction } from './account-examples';
@@ -34,6 +34,9 @@ export const accountPreviews: PreviewEntry[] = [
   preview('deletion-blocked', copy.previews.deletionBlocked, mayaAccountData, mayaShell, {
     ...fakeAccountHandlers, onRequestDeletion: fakeHandler({ ok: false, code: 'not_allowed' }, 0),
   }, 'deletion'),
+  preview('sign-in-already-used', copy.previews.signInAlreadyUsed, accountSignInNotices.alreadyUsed),
+  preview('sign-in-email-unconfirmed', copy.previews.signInEmailUnconfirmed, accountSignInNotices.emailUnconfirmed),
+  preview('sign-in-cancelled', copy.previews.signInCancelled, accountSignInNotices.cancelled),
   preview('paused', copy.previews.paused, { ...jordanAccountData, helper: { status: 'paused' } }, jordanShell),
   preview('suspended', copy.previews.suspended, { ...jordanAccountData, helper: { status: 'suspended' } }, jordanShell),
   preview('preference-blocked', copy.previews.preferenceBlocked, mayaAccountData, mayaShell, {

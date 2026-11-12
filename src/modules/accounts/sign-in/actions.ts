@@ -4,8 +4,9 @@ import { isAPIError } from 'better-auth/api';
 import { eq, sql } from 'drizzle-orm';
 import { refresh } from 'next/cache';
 import { headers } from 'next/headers';
-import type { ActionResult, EmailInput, OneTimeCodeInput, PhoneInput, ProfileInput } from '@/contracts';
-import { emailInputSchema, oneTimeCodeInputSchema, phoneInputSchema, profileInputSchema } from '@/contracts';
+import type { ActionResult, EmailInput, OneTimeCodeInput, PhoneInput, ProfileInput, SocialSignInInput } from '@/contracts';
+import { emailInputSchema, oneTimeCodeInputSchema, phoneInputSchema, profileInputSchema, routes, socialSignInInputSchema } from '@/contracts';
+import { offeredSocialProviders } from '@/integrations/oauth';
 import { fieldError, rateLimited, validationFailed } from '@/platform/actions/results';
 import { auth } from '@/platform/auth/auth';
 import { db } from '@/platform/db/client';
@@ -33,6 +34,9 @@ const EMAIL_SEND_RULES = {
   perEmail: { limit: 3, windowSeconds: 10 * 60 },
   perIp: { limit: 10, windowSeconds: 10 * 60 },
 };
+
+/** Starting a Google or Microsoft sign-in: plenty for a person, little for a script. */
+const SOCIAL_START_RULE = { limit: 20, windowSeconds: 10 * 60 };
 
 /** Where the person goes next, now that they're signed in. */
 async function continueAfterSignIn(rawNext: string, userId: string, code: 'updated' | 'saved'): Promise<ActionResult> {
@@ -69,6 +73,39 @@ async function sendEmailCode(email: string): Promise<ActionResult> {
   return { ok: true, code: 'sent' };
 }
 
+/**
+ * "Continue with Google / Microsoft": Better Auth stores the state (with PKCE) and returns the provider's
+ * page. The provider sends the person back to `/sign-in`, signed in (the page shows the next step), or with
+ * `via` and `error` when it didn't work out.
+ */
+export async function continueWith(rawNext: string, input: SocialSignInInput): Promise<ActionResult> {
+  const parsed = socialSignInInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const { provider } = parsed.data;
+  if (!offeredSocialProviders().includes(provider)) return { ok: false, code: 'not_allowed' };
+
+  const ip = await clientIp();
+  if (ip) {
+    const limited = await consumeRateLimits(db, [{ key: `social-sign-in:ip:${ip}`, rule: SOCIAL_START_RULE }]);
+    if (!limited.ok) return rateLimited(limited.retryAt);
+  }
+
+  const next = safeNextPath(rawNext);
+  const back = routes.signIn(next);
+  const { url } = await auth.api.signInSocial({
+    body: {
+      provider,
+      callbackURL: back,
+      newUserCallbackURL: back,
+      errorCallbackURL: `${back}&via=${provider}`,
+      disableRedirect: true,
+    },
+    headers: await headers(),
+  });
+  if (!url) return { ok: false, code: 'unknown' };
+  return { ok: true, code: 'sent', redirectTo: url };
+}
+
 export async function requestEmailCode(_next: string, input: EmailInput): Promise<ActionResult> {
   const parsed = emailInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
@@ -93,6 +130,10 @@ export async function verifyEmailCode(next: string, input: OneTimeCodeInput): Pr
   }
   const parsed = oneTimeCodeInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
+  // Suspended (or closed) since the code was sent: the code no longer signs in. The step stays put so the
+  // person sees why (changing the pending-email cookie here would re-render the page back to the email step).
+  const [existing] = await db.select({ status: users.status }).from(users).where(eq(users.email, pending.email)).limit(1);
+  if (existing && BLOCKED_STATUSES.has(existing.status)) return { ok: false, code: 'not_allowed' };
 
   try {
     const result = await auth.api.signInEmailOTP({

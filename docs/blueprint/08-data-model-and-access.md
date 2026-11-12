@@ -35,7 +35,7 @@ ledger_journals ─1:N─ ledger_entries ─N:1─ ledger_accounts   (journals r
 | Table | Key fields | Constraints and notes |
 |---|---|---|
 | `users` | id, email (citext), email_verified_at, phone_e164, phone_verified_at, first_name, last_name (private), avatar_file_id, default_mode (`poster`/`helper`), home_market_id, status (`active`/`restricted`/`suspended`/`banned`/`deleted`), adult_attested_at | Unique email; unique phone when not null. Public display name = first name + last initial |
-| Auth tables (Better Auth) | sessions, accounts, verifications, two-factor | Managed by the library's Drizzle adapter; staff sessions are shorter and require TOTP |
+| Auth tables (Better Auth) | sessions, accounts, verifications, two-factor | Managed by the library's Drizzle adapter; staff sessions are shorter and require TOTP. `accounts` holds connected Google and Microsoft sign-ins (provider tokens encrypted at rest). An email from a provider creates or joins an account only when the provider confirms it |
 | `staff_roles` | user_id, role (`support_agent`/`support_lead`/`trust_safety`/`finance`/`admin`), granted_by, granted_at | PK (user_id, role); every change is audited |
 | `agreements` | user_id, doc (`terms`, `privacy`, `helper_agreement`, `rewards_terms`, `bg_check_disclosure`, `biometric_consent`), version, accepted_at, ip, user_agent | Unique (user_id, doc, version) |
 | `blocks` | blocker_id, blocked_id | Blocked users can't message, offer, or invite each other |

@@ -19,7 +19,7 @@
 /trust-and-safety                   Verification, address privacy, payment protection, reporting
 /help, /help/[article]              Help center
 /legal/[doc]                        terms, privacy, helper-agreement, cancellation-policy, rewards-terms, community-guidelines, prohibited-tasks
-/sign-in                            One flow for sign-in and sign-up (email code → phone verification when needed) — noindex
+/sign-in                            One flow for sign-in and sign-up (email code, or Continue with Google or Microsoft → name and age for new accounts → phone verification when needed) — noindex
 /waitlist                           Outside the service area: join the waitlist for your city — noindex
 ```
 

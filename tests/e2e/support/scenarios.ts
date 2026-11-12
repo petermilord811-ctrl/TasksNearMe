@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { devCardRef } from '../../../src/integrations/payments';
+import { users } from '../../../src/modules/accounts/schema';
 import { bookingCompletions, bookingTerms, bookings } from '../../../src/modules/bookings/schema';
 import type { NotificationType } from '../../../src/contracts';
 import { marketPolicies } from '../../../src/modules/markets/schema';
@@ -191,3 +192,14 @@ export async function notifyNow(userId: string, type: NotificationType, title: s
     await pool.end();
   }
 }
+
+/** Suspends (or reinstates) the account with this email, as staff would. */
+export async function setAccountStatus(email: string, status: 'active' | 'suspended'): Promise<void> {
+  const { db, pool } = database();
+  try {
+    await db.update(users).set({ status }).where(eq(users.email, email));
+  } finally {
+    await pool.end();
+  }
+}
+

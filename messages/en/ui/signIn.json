@@ -2,7 +2,28 @@
   "oneAccount": "Sign in and sign up happen here, with the same steps.",
   "email": {
     "title": "Sign in or create an account",
-    "description": "We'll email you a code to continue. No password to remember."
+    "description": "We'll email you a code to continue. No password to remember.",
+    "descriptionWithProviders": "Continue with Google or Microsoft, or get a code by email. No password to remember."
+  },
+  "social": {
+    "or": "or",
+    "names": {
+      "google": "Google",
+      "microsoft": "Microsoft"
+    },
+    "continue": {
+      "google": "Continue with Google",
+      "microsoft": "Continue with Microsoft"
+    },
+    "microsoftHint": "Microsoft works with Outlook.com, Hotmail and Live addresses, and with work or school accounts.",
+    "getHelp": "Get help",
+    "errors": {
+      "cancelled": "Signing in with {provider} was cancelled. Try again, or use your email below.",
+      "email_unconfirmed": "{provider} didn't confirm the email address on that account, so it can't sign you in. Use your email below and we'll send you a code.",
+      "use_email_code": "You already have an account with that email. Sign in with an email code below, then connect {provider} from your account page.",
+      "not_allowed": "This account can't sign in right now.",
+      "failed": "Something went wrong signing in with {provider}. Try again, or use your email below."
+    }
   },
   "emailCode": {
     "title": "Check your email",
@@ -58,6 +79,12 @@
     "phone-in-use": "Phone number in use",
     "profile-incomplete": "Incomplete profile",
     "account-not-allowed": "Account unavailable",
-    "resend-countdown": "Resend countdown"
+    "resend-countdown": "Resend countdown",
+    "email-with-providers": "Email, with Google and Microsoft",
+    "social-cancelled": "Google sign-in cancelled",
+    "social-unconfirmed": "Microsoft email not confirmed",
+    "social-use-email-code": "Account exists: use an email code",
+    "social-not-allowed": "Account unavailable (Google)",
+    "social-failed": "Microsoft sign-in failed"
   }
 }

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
-import { signOut } from '@/modules/accounts/actions';
+import { connectSignInAction, disconnectSignInAction, signOut } from '@/modules/accounts/actions';
 import {
   requestAccountDeletionAction,
   requestDataExportAction,
@@ -17,19 +17,23 @@ import { AccountScreen } from '@/ui/screens/account';
 
 export const metadata: Metadata = { title: 'Account', robots: { index: false } };
 
-/** Profile, contact details, notification preferences, helper status, privacy, sign out. */
-export default function AccountPage() {
+/**
+ * Profile, contact details, ways to sign in, notification preferences, helper status, privacy, sign out.
+ * Connecting Google or Microsoft comes back here with `connect` (and `error` when it didn't work).
+ */
+export default function AccountPage({ searchParams }: PageProps<'/app/account'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
-      <Account />
+      <Account searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function Account() {
+async function Account({ searchParams }: Pick<PageProps<'/app/account'>, 'searchParams'>) {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.account()));
-  const data = await getAccountPage(db, viewer.user.id);
+  const { connect, error } = await searchParams;
+  const data = await getAccountPage(db, viewer.user.id, { connect, error });
   if (!data) notFound();
   return (
     <AccountScreen
@@ -40,6 +44,8 @@ async function Account() {
         onRequestExport: requestDataExportAction,
         onRequestDeletion: requestAccountDeletionAction,
         onSignOut: signOut,
+        onConnectSignIn: connectSignInAction,
+        onDisconnectSignIn: disconnectSignInAction,
       }}
     />
   );

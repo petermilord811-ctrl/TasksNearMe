@@ -1,4 +1,4 @@
-import type { PhoneReason, SignInPageData } from '@/contracts';
+import type { PhoneReason, SignInPageData, SocialProvider, SocialSignInError } from '@/contracts';
 import { routes } from '@/contracts';
 
 /**
@@ -8,6 +8,9 @@ import { routes } from '@/contracts';
 
 export const EMAIL_CODE_LIFETIME_MINUTES = 10;
 export const RESEND_AFTER_SECONDS = 30;
+
+/** Accounts that may not sign in (blueprint 08: users.status). */
+export const BLOCKED_STATUSES = new Set(['suspended', 'banned', 'deleted']);
 
 /**
  * Where to go after signing in. Only same-site paths are allowed: anything else (other hosts,
@@ -56,6 +59,10 @@ export interface SignInState {
   pendingEmail?: { email: string; resendAvailableAt?: Date };
   /** A code was texted and not yet confirmed. */
   pendingPhone?: { maskedPhone: string; resendAvailableAt?: Date };
+  /** Google and Microsoft, when offered (shown on the email step). */
+  socialProviders?: SocialProvider[];
+  /** A Google or Microsoft sign-in that came back without signing in. */
+  socialError?: { provider: SocialProvider; reason: SocialSignInError };
   now: Date;
 }
 
@@ -91,7 +98,16 @@ export function resolveSignInStep(state: SignInState): SignInResolution {
         },
       };
     }
-    return { kind: 'step', data: { step: 'email', next } };
+    const { socialProviders, socialError } = state;
+    return {
+      kind: 'step',
+      data: {
+        step: 'email',
+        next,
+        ...(socialProviders && socialProviders.length > 0 ? { socialProviders } : {}),
+        ...(socialError ? { socialError } : {}),
+      },
+    };
   }
 
   if (!profileComplete(user)) {

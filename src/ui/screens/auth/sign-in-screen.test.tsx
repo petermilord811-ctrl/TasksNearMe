@@ -9,6 +9,8 @@ import {
   fakeSignInHandlers,
   signInEmailCodeStep,
   signInEmailStep,
+  signInEmailStepWithProviders,
+  signInSocialErrors,
   signInPhoneCodeStep,
   signInPhoneStep,
   signInProfileStep,
@@ -198,3 +200,40 @@ describe('sign-in forms', () => {
     expect(screen.getByLabelText('6-digit code')).toHaveValue('');
   });
 });
+
+describe('Continue with Google or Microsoft', () => {
+  it('shows no provider buttons when none is offered', () => {
+    show(<EmailStep data={signInEmailStep} handlers={handlers()} />);
+    expect(screen.queryByRole('button', { name: /Continue with/ })).toBeNull();
+    expect(screen.getByText(signIn.email.description)).toBeVisible();
+  });
+
+  it('leaves for the provider with a full page load, and stays busy meanwhile', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    const onContinueWith = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'sent', redirectTo: 'https://accounts.example/authorize?state=1' }));
+    show(<EmailStep data={signInEmailStepWithProviders} handlers={handlers({ onContinueWith })} />);
+    expect(screen.getByText(signIn.social.microsoftHint)).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    expect(onContinueWith).toHaveBeenCalledExactlyOnceWith({ provider: 'google' });
+    expect(assign).toHaveBeenCalledExactlyOnceWith('https://accounts.example/authorize?state=1');
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Continue with Microsoft' })).toBeDisabled();
+  });
+
+  it('shows why a provider sign-in came back, and a refused start', async () => {
+    const onContinueWith = vi.fn(async (): Promise<ActionResult> => ({ ok: false, code: 'rate_limited', retryAt: '2026-11-17T15:10:00.000Z' }));
+    show(<EmailStep data={signInSocialErrors.emailUnconfirmed} handlers={handlers({ onContinueWith })} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(signIn.social.errors.email_unconfirmed.replace('{provider}', 'Microsoft'));
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Microsoft' }));
+    expect(await screen.findByText(forms.actionErrors.rate_limited)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Continue with Microsoft' })).toBeEnabled();
+  });
+
+  it('points a blocked account to help', () => {
+    show(<EmailStep data={signInSocialErrors.notAllowed} handlers={handlers()} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(signIn.social.errors.not_allowed);
+    expect(screen.getByRole('link', { name: signIn.social.getHelp })).toHaveAttribute('href', routes.help());
+  });
+});
+

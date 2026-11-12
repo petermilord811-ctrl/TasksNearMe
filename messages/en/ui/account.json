@@ -22,6 +22,27 @@
     "noPhone": "Add a phone number",
     "noPhoneHint": "You can add and verify your phone number when you post a task."
   },
+  "signIn": {
+    "title": "Ways to sign in",
+    "description": "We email you a code each time you sign in. You can also connect Google or Microsoft and sign in with them.",
+    "emailCode": "Email code",
+    "alwaysOn": "Always on",
+    "connectedOn": "Connected {date}",
+    "notConnected": "Not connected",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "connectLabel": "Connect {provider}",
+    "disconnectLabel": "Disconnect {provider}",
+    "hint": "Disconnecting doesn't close your account. You can always sign in with an email code.",
+    "disconnected": "{provider} is disconnected. You can still sign in with an email code.",
+    "notice": {
+      "connected": "{provider} is connected. Next time you can continue with {provider} to sign in.",
+      "cancelled": "Connecting {provider} was cancelled.",
+      "already_used": "That {provider} account already signs in to another TasksNearMe account.",
+      "email_unconfirmed": "{provider} didn't confirm the email address on that account, so it can't be connected.",
+      "failed": "Something went wrong connecting {provider}. Try again."
+    }
+  },
   "preferences": {
     "title": "Notifications",
     "description": "Choose how you hear about your tasks and bookings. Changes save as you make them.",
@@ -94,6 +115,9 @@
     "suspended": "Suspended helper",
     "preferenceBlocked": "Preference change not allowed",
     "rateLimited": "Too many requests",
-    "unknown": "Request could not be completed"
+    "unknown": "Request could not be completed",
+    "signInAlreadyUsed": "Microsoft account already used",
+    "signInEmailUnconfirmed": "Microsoft email not confirmed",
+    "signInCancelled": "Connecting Microsoft cancelled"
   }
 }

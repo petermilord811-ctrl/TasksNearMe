@@ -55,6 +55,19 @@ describe('resolveSignInStep', () => {
     expect(resolveSignInStep({ next: '/app', now })).toEqual({ kind: 'step', data: { step: 'email', next: '/app' } });
   });
 
+  it('offers Google and Microsoft on the email step, with what went wrong when one came back', () => {
+    const socialError = { provider: 'microsoft', reason: 'email_unconfirmed' } as const;
+    expect(resolveSignInStep({ next: '/app', now, socialProviders: ['google', 'microsoft'], socialError })).toEqual({
+      kind: 'step',
+      data: { step: 'email', next: '/app', socialProviders: ['google', 'microsoft'], socialError },
+    });
+    // None offered (production without keys): just the email code.
+    expect(resolveSignInStep({ next: '/app', now, socialProviders: [] })).toEqual({ kind: 'step', data: { step: 'email', next: '/app' } });
+    // Only the email step shows them.
+    expect(resolveSignInStep({ next: '/app', now, socialProviders: ['google'], pendingEmail: { email: 'maya@example.test' } })).toMatchObject({ data: { step: 'email_code' } });
+    expect(resolveSignInStep({ next: '/app', now, socialProviders: ['google'], user: complete })).toEqual({ kind: 'done', redirectTo: '/app' });
+  });
+
   it('asks for the emailed code, with the resend time while it is in the future', () => {
     const resolution = resolveSignInStep({
       next: '/app',

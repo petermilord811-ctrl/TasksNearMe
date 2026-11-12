@@ -15,6 +15,30 @@ export type SignInStep = (typeof SIGN_IN_STEPS)[number];
 export const PHONE_REASONS = ['post', 'offer', 'book', 'account'] as const;
 export type PhoneReason = (typeof PHONE_REASONS)[number];
 
+/**
+ * Other ways to sign in besides the email code: a Google account, or a Microsoft account (Outlook.com,
+ * Hotmail and Live addresses, and work or school accounts). The steps after it are the same: name and age
+ * for a new account, then the phone when the destination needs it.
+ */
+export const SOCIAL_PROVIDERS = ['google', 'microsoft'] as const;
+export type SocialProvider = (typeof SOCIAL_PROVIDERS)[number];
+
+/**
+ * Why a sign-in with Google or Microsoft came back without signing in (shown on the `email` step):
+ * - `cancelled`: the person stopped on the provider's page.
+ * - `email_unconfirmed`: the provider didn't confirm the account's email address (some work and school
+ *   accounts). Use an email code instead.
+ * - `use_email_code`: an account with this email already exists and can't be joined automatically. Sign in
+ *   with an email code, then connect the provider from the account page.
+ * - `not_allowed`: this account can't sign in (suspended or closed). Point to the help center.
+ * - `failed`: anything else. Try again, or use an email code.
+ */
+export const SOCIAL_SIGN_IN_ERRORS = ['cancelled', 'email_unconfirmed', 'use_email_code', 'not_allowed', 'failed'] as const;
+export type SocialSignInError = (typeof SOCIAL_SIGN_IN_ERRORS)[number];
+
+export const socialSignInInputSchema = z.object({ provider: z.enum(SOCIAL_PROVIDERS) });
+export type SocialSignInInput = z.input<typeof socialSignInInputSchema>;
+
 export interface SignInPageData {
   step: SignInStep;
   /** The same-site path the flow ends at (already validated by the app). */
@@ -32,8 +56,12 @@ export interface SignInPageData {
    * device clock). Absent: available now.
    */
   resendAvailableAt?: ISODateTime;
-  /** `profile`: names already on the account, e.g. from an earlier attempt. */
+  /** `profile`: names already on the account, e.g. from an earlier attempt or from Google or Microsoft. */
   profileDefaults?: { firstName: string; lastName: string };
+  /** `email`: the other ways to sign in, in this order. Empty or absent: only the email code. */
+  socialProviders?: SocialProvider[];
+  /** `email`: a sign-in with Google or Microsoft that came back without signing in. */
+  socialError?: { provider: SocialProvider; reason: SocialSignInError };
 }
 
 export const emailInputSchema = z.object({ email: emailField });
@@ -68,6 +96,13 @@ export type PhoneInput = z.input<typeof phoneInputSchema>;
 export interface SignInHandlers {
   /** `email` step. ok `sent`. */
   onRequestEmailCode: ActionHandler<EmailInput>;
+  /**
+   * `email` step: "Continue with Google" or "Continue with Microsoft". ok `sent` with `redirectTo`: the
+   * provider's sign-in page, on another site, so navigate with a full page load. Errors: `not_allowed`
+   * (that provider isn't offered), `rate_limited` + `retryAt`. The provider sends the person back to
+   * `/sign-in`, which shows the next step or `socialError`.
+   */
+  onContinueWith: ActionHandler<SocialSignInInput>;
   /** `email_code` step. */
   onVerifyEmailCode: ActionHandler<OneTimeCodeInput>;
   /** ok `sent`. */

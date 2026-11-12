@@ -2,6 +2,7 @@ import 'server-only';
 import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { connection } from 'next/server';
+import { offeredSocialProviders } from '@/integrations/oauth';
 import { createSmsSender } from '@/integrations/sms';
 import { auth } from '@/platform/auth/auth';
 import { authRequestHeaders } from '@/platform/auth/request-headers';
@@ -9,6 +10,7 @@ import { db } from '@/platform/db/client';
 import { createPhoneVerification } from '../phone-verification';
 import { users } from '../schema';
 import { readPendingEmail } from './pending-email';
+import { isSocialProvider, socialSignInErrorFrom } from './providers';
 import { resolveSignInStep, safeNextPath, type SignInResolution, type SignInUserState } from './steps';
 
 /** Server-side pieces shared by the /sign-in page and its actions. */
@@ -40,8 +42,11 @@ export async function loadSignInUser(userId: string): Promise<(SignInUserState &
   return row ?? null;
 }
 
-/** Everything `/sign-in` needs to decide what to show. */
-export async function resolveCurrentSignIn(rawNext: string | null | undefined): Promise<SignInResolution> {
+/**
+ * Everything `/sign-in` needs to decide what to show. `returned` is what Better Auth adds when a Google or
+ * Microsoft sign-in comes back without signing in: `via` (the provider) and `error` (its code).
+ */
+export async function resolveCurrentSignIn(rawNext: string | null | undefined, returned: { via?: unknown; error?: unknown } = {}): Promise<SignInResolution> {
   // Per-request: the session, pending codes, and the clock.
   await connection();
   const next = safeNextPath(rawNext);
@@ -49,7 +54,17 @@ export async function resolveCurrentSignIn(rawNext: string | null | undefined): 
   const userId = await currentSessionUserId();
   if (!userId) {
     const pendingEmail = await readPendingEmail();
-    return resolveSignInStep({ next, now, ...(pendingEmail ? { pendingEmail } : {}) });
+    const socialError =
+      isSocialProvider(returned.via) && typeof returned.error === 'string' && returned.error !== ''
+        ? { provider: returned.via, reason: socialSignInErrorFrom(returned.error) }
+        : undefined;
+    return resolveSignInStep({
+      next,
+      now,
+      socialProviders: offeredSocialProviders(),
+      ...(socialError ? { socialError } : {}),
+      ...(pendingEmail ? { pendingEmail } : {}),
+    });
   }
   const user = await loadSignInUser(userId);
   if (!user) return resolveSignInStep({ next, now });
@@ -77,5 +92,4 @@ export async function clientIp(): Promise<string | null> {
   return ip && !LOOPBACK.has(ip) ? ip : null;
 }
 
-/** Accounts that may not sign in (blueprint 08: users.status). */
-export const BLOCKED_STATUSES = new Set(['suspended', 'banned', 'deleted']);
+export { BLOCKED_STATUSES } from './steps';

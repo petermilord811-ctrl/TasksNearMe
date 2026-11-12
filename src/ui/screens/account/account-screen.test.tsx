@@ -37,7 +37,10 @@ describe('AccountScreen', () => {
       expect(email).toHaveValue(mayaAccountData.profile.email);
       expect(email).toHaveAttribute('readonly');
     } else {
-      expect(screen.getByText(mayaAccountData.profile.email)).toBeVisible();
+      // The profile shows it read-only (the ways to sign in show it again, for the email code).
+      const shown = screen.getAllByText(mayaAccountData.profile.email);
+      expect(shown.length).toBeGreaterThan(0);
+      expect(screen.getByText(account.profile.emailHint)).toBeVisible();
     }
     expect(screen.getByText('•••• 0101 · Verified')).toBeVisible();
     expect(screen.queryByRole('textbox', { name: /phone/i })).not.toBeInTheDocument();
@@ -237,3 +240,45 @@ describe('AccountScreen', () => {
     expect(navigation.push).not.toHaveBeenCalled();
   });
 });
+
+describe('Ways to sign in', () => {
+  it('lists the email code and each provider, connected or not', () => {
+    mount();
+    const section = screen.getByRole('heading', { name: account.signIn.title }).closest('section') ?? document.body;
+    expect(within(section as HTMLElement).getByText(account.signIn.alwaysOn)).toBeVisible();
+    expect(within(section as HTMLElement).getByRole('button', { name: 'Disconnect Google' })).toBeEnabled();
+    expect(within(section as HTMLElement).getByRole('button', { name: 'Connect Microsoft' })).toBeEnabled();
+  });
+
+  it('leaves for the provider to connect one', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    const onConnectSignIn = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'sent', redirectTo: 'https://login.example/authorize' }));
+    mount(mayaAccountData, { onConnectSignIn });
+    await userEvent.click(screen.getByRole('button', { name: 'Connect Microsoft' }));
+    expect(onConnectSignIn).toHaveBeenCalledExactlyOnceWith({ provider: 'microsoft' });
+    expect(assign).toHaveBeenCalledExactlyOnceWith('https://login.example/authorize');
+    vi.unstubAllGlobals();
+  });
+
+  it('disconnects in place and refreshes', async () => {
+    const onDisconnectSignIn = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    mount(mayaAccountData, { onDisconnectSignIn });
+    await userEvent.click(screen.getByRole('button', { name: 'Disconnect Google' }));
+    expect(onDisconnectSignIn).toHaveBeenCalledExactlyOnceWith({ provider: 'google' });
+    expect(await screen.findByText(account.signIn.disconnected.replace('{provider}', 'Google'))).toBeVisible();
+    expect(navigation.refresh).toHaveBeenCalled();
+  });
+
+  it('says how connecting went', () => {
+    mount(jordanAccountData);
+    expect(screen.getByText(account.signIn.notice.connected.replaceAll('{provider}', 'Microsoft'))).toBeVisible();
+  });
+
+  it('offers only the email code when no provider is set up', () => {
+    mount(newAccountData);
+    expect(screen.queryByRole('button', { name: /Connect|Disconnect/ })).toBeNull();
+    expect(screen.getByText(account.signIn.emailCode)).toBeVisible();
+  });
+});
+

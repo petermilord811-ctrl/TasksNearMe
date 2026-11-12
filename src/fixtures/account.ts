@@ -45,6 +45,8 @@ const preferences: AccountPageData['preferences'] = [
 export const mayaAccountData: AccountPageData = {
   profile: { firstName: 'Maya', lastName: 'Rivera', displayName: 'Maya R.', email: 'maya@example.test' },
   phone: { last4: '0101', verified: true },
+  // Maya connected Google; Microsoft is offered too.
+  signIn: { email: 'maya@example.test', providers: [{ provider: 'google', connectedAt: '2026-11-02T16:20:00.000Z' }, { provider: 'microsoft' }] },
   preferences,
   helper: { status: 'none' },
   privacy: {},
@@ -54,6 +56,8 @@ export const mayaAccountData: AccountPageData = {
 export const jordanAccountData: AccountPageData = {
   profile: { firstName: 'Jordan', lastName: 'Thompson', displayName: 'Jordan T.', email: 'jordan@example.test' },
   phone: { last4: '0201', verified: true },
+  // Back from connecting Microsoft.
+  signIn: { email: 'jordan@example.test', providers: [{ provider: 'google' }, { provider: 'microsoft', connectedAt: '2026-11-20T17:55:00.000Z' }], notice: { provider: 'microsoft', result: 'connected' } },
   preferences,
   helper: { status: 'active' },
   privacy: { exportRequestedAt: '2026-11-20T18:00:00.000Z' },
@@ -62,6 +66,8 @@ export const jordanAccountData: AccountPageData = {
 /** A new account: no phone yet; deletion requested. */
 export const newAccountData: AccountPageData = {
   profile: { firstName: 'Ana', lastName: 'Patel', displayName: 'Ana P.', email: 'ana@example.test' },
+  // Only the email code is offered (production without Google or Microsoft keys).
+  signIn: { email: 'ana@example.test', providers: [] },
   preferences,
   helper: { status: 'draft' },
   privacy: { deletionRequestedAt: '2026-11-21T10:00:00.000Z' },
@@ -81,7 +87,17 @@ export const fakeAccountHandlers: AccountHandlers = {
   onRequestExport: () => wait({ ok: true, code: 'submitted' }),
   onRequestDeletion: () => wait({ ok: true, code: 'submitted' }),
   onSignOut: () => wait({ ok: true, code: 'updated', redirectTo: routes.home() }),
+  // The real one returns the provider's page; previews stay put (only the hash changes).
+  onConnectSignIn: () => wait({ ok: true, code: 'sent', redirectTo: '#connect-provider' }),
+  onDisconnectSignIn: () => wait({ ok: true, code: 'updated' }),
 };
+
+/** Back on the account page after each way connecting can end (UI previews). */
+export const accountSignInNotices = {
+  alreadyUsed: { ...mayaAccountData, signIn: { ...mayaAccountData.signIn, notice: { provider: 'microsoft', result: 'already_used' } } },
+  emailUnconfirmed: { ...mayaAccountData, signIn: { ...mayaAccountData.signIn, notice: { provider: 'microsoft', result: 'email_unconfirmed' } } },
+  cancelled: { ...mayaAccountData, signIn: { ...mayaAccountData.signIn, notice: { provider: 'microsoft', result: 'cancelled' } } },
+} satisfies Record<string, AccountPageData>;
 
 /** Support wrote to Maya about the problem report, then resolved it (UI-026). */
 export const supportNotificationsData: NotificationsPageData = {
