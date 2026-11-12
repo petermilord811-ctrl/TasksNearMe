@@ -25,6 +25,10 @@ export type InviteStatus = (typeof INVITE_STATUSES)[number];
 export const AVAILABILITY_STATUSES = ['active', 'held', 'booked', 'expired', 'canceled'] as const;
 export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
 
+/** A helper's rebooking proposal to a past client (UI-032). */
+export const REBOOK_PROPOSAL_STATUSES = ['sent', 'accepted', 'declined', 'expired', 'withdrawn'] as const;
+export type RebookProposalStatus = (typeof REBOOK_PROPOSAL_STATUSES)[number];
+
 export const BOOKING_STATUSES = [
   'pending_funding',
   'confirmed',

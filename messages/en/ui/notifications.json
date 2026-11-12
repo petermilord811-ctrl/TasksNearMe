@@ -38,7 +38,10 @@
     "change_applied": "Your booking details for {title} were updated",
     "invite_received": "{actorName} sent you a booking request for {title}",
     "invite_countered": "{actorName} sent a counter-offer{hasAmount, select, yes { of {amount}} other {}} for {title}",
-    "invite_accepted": "{actorName} accepted your booking request for {title}. You're booked"
+    "invite_accepted": "{actorName} accepted your booking request for {title}. You're booked",
+    "rebook_proposed": "{actorName} proposed a booking: {title}",
+    "rebook_accepted": "{actorName} accepted your proposal for {title}",
+    "rebook_declined": "{actorName} declined your proposal for {title}"
   },
   "previews": {
     "group": "Notifications",

@@ -56,3 +56,21 @@ export const priyaHomeData: HelperHomeData = {
   earnings: { upcomingCents: 0, onTheWayCents: 0 },
   setup: findWorkNotBookableData.setup,
 };
+
+/** Maya invited Jordan to the bookshelf (UI-025): his answer is due Thu Dec 10, 10:00 am. */
+export const jordanHomeInviteData: HelperHomeData = {
+  ...jordanHomeData,
+  attention: [{ id: 'att_invite_inv_bookshelf', kind: 'answer_invite', title: 'Assemble a bookshelf', dueAt: '2026-12-10T16:00:00.000Z', target: { kind: 'invite', inviteId: 'inv_bookshelf' } }, ...jordanHomeData.attention],
+};
+
+/** Jordan countered Maya's invite: her answer is due within 24 h. */
+export const mayaHomeCounterData: PosterHomeData = {
+  ...mayaHomeData,
+  attention: [{ id: 'att_counter_inv_bookshelf', kind: 'answer_counter', title: 'Assemble a bookshelf', dueAt: '2026-12-09T16:00:00.000Z', target: { kind: 'task', taskId: 'tsk_bookshelf' } }, ...mayaHomeData.attention],
+};
+
+/** Jordan proposed the desk again (UI-032): Maya pays to accept, or declines. */
+export const mayaHomeProposalData: PosterHomeData = {
+  ...mayaHomeData,
+  attention: [{ id: 'att_proposal_prp_desk', kind: 'answer_proposal', title: 'Assemble a desk (flat-pack, 1 item)', dueAt: '2026-12-10T17:00:00.000Z', target: { kind: 'proposal', proposalId: 'prp_desk' } }, ...mayaHomeData.attention],
+};

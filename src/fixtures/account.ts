@@ -91,3 +91,20 @@ export const supportNotificationsData: NotificationsPageData = {
   ],
   unreadCount: 1,
 };
+
+/** Rebooking proposals (UI-032), Maya's side: Jordan proposed the desk again. */
+export const mayaRebookNotificationsData: NotificationsPageData = {
+  notifications: [
+    { id: 'ntf_rebook_proposed', type: 'rebook_proposed', title: 'Assemble a desk (flat-pack, 1 item)', actorName: 'Jordan T.', target: { kind: 'proposal', proposalId: 'prp_desk' }, createdAt: '2026-12-08T17:00:00.000Z' },
+  ],
+  unreadCount: 1,
+};
+
+/** Jordan's side: Maya accepted and paid; Chris declined the moving proposal. */
+export const jordanRebookNotificationsData: NotificationsPageData = {
+  notifications: [
+    { id: 'ntf_rebook_accepted', type: 'rebook_accepted', title: 'Assemble a desk (flat-pack, 1 item)', actorName: 'Maya R.', target: { kind: 'booking', bookingId: 'bkg_desk_again' }, createdAt: '2026-12-08T18:00:00.000Z' },
+    { id: 'ntf_rebook_declined', type: 'rebook_declined', title: 'Help loading a moving truck', actorName: 'Chris D.', target: { kind: 'proposal', proposalId: 'prp_moving' }, createdAt: '2026-12-08T17:30:00.000Z', readAt: '2026-12-08T17:45:00.000Z' },
+  ],
+  unreadCount: 1,
+};

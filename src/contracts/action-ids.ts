@@ -85,6 +85,14 @@ export type InviteActionId = (typeof INVITE_ACTION_IDS)[number];
 export const AVAILABILITY_ACTION_IDS = ['cancel_post'] as const;
 export type AvailabilityActionId = (typeof AVAILABILITY_ACTION_IDS)[number];
 
+/** A row on the helper's My clients (UI-032). */
+export const CLIENT_ACTION_IDS = ['propose_rebook'] as const;
+export type ClientActionId = (typeof CLIENT_ACTION_IDS)[number];
+
+/** A rebooking proposal: the client accepts (pays) or declines; the helper withdraws (UI-032). */
+export const REBOOK_ACTION_IDS = ['accept_proposal', 'decline_proposal', 'withdraw_proposal'] as const;
+export type RebookActionId = (typeof REBOOK_ACTION_IDS)[number];
+
 export const REWARD_ACTION_IDS = [
   'redeem',
   'open_gift_card',
@@ -103,6 +111,8 @@ export const ALL_ACTION_IDS = [
   ...TASK_ACTION_IDS,
   ...INVITE_ACTION_IDS,
   ...AVAILABILITY_ACTION_IDS,
+  ...CLIENT_ACTION_IDS,
+  ...REBOOK_ACTION_IDS,
   ...REWARD_ACTION_IDS,
 ] as const;
 export type AnyActionId = (typeof ALL_ACTION_IDS)[number];

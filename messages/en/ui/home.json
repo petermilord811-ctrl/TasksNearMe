@@ -44,26 +44,47 @@
       "check_in_today": "Open the booking to check in when you’re on your way.",
       "reconfirm_offer": "The task changed. Review the details and confirm your offer again.",
       "finish_setup": "Finish your next setup step so you can send offers.",
-      "payout_action_needed": "Update your bank details in Earnings to resolve the payout problem."
+      "payout_action_needed": "Update your bank details in Earnings to resolve the payout problem.",
+      "answer_invite": "Accept, decline, or counter before the request expires.",
+      "answer_counter": "Accept or decline the new terms before they expire.",
+      "answer_proposal": "Pay to book it, or decline."
     },
     "deadline": "Due {deadline}",
     "approvalDeadline": "Approve or report a problem by {deadline}. After that, the task is approved automatically.",
     "paymentDeadline": "Finish payment by {deadline}.",
     "answerDeadline": "Answer by {deadline}.",
-    "startTime": "Starts at {time} · {date}"
+    "startTime": "Starts at {time} · {date}",
+    "answer_invite": "A client invited you to {title}",
+    "answer_counter": "Your helper sent a counter-offer for {title}",
+    "answer_proposal": "Your helper proposed a booking: {title}"
   },
   "empty": {
-    "attention": { "title": "You're all caught up", "body": "Anything that needs your attention will appear here." },
+    "attention": {
+      "title": "You're all caught up",
+      "body": "Anything that needs your attention will appear here."
+    },
     "upcoming": {
       "title": "No upcoming bookings",
       "posterBody": "When you book a helper, your next task will appear here.",
       "helperBody": "When a client books you, your next task will appear here."
     },
-    "openTasks": { "title": "What could you use a hand with?", "body": "Post a task to tell nearby helpers what you need. Your open tasks and new offers will appear here." },
-    "activeOffers": { "title": "No active offers yet", "body": "Find a task you can help with. The offers you send will appear here." },
-    "nearby": { "title": "No nearby tasks to show", "body": "Check Find work for more tasks and different search options." }
+    "openTasks": {
+      "title": "What could you use a hand with?",
+      "body": "Post a task to tell nearby helpers what you need. Your open tasks and new offers will appear here."
+    },
+    "activeOffers": {
+      "title": "No active offers yet",
+      "body": "Find a task you can help with. The offers you send will appear here."
+    },
+    "nearby": {
+      "title": "No nearby tasks to show",
+      "body": "Check Find work for more tasks and different search options."
+    }
   },
-  "earnings": { "upcoming": "Upcoming", "onTheWay": "On the way" },
+  "earnings": {
+    "upcoming": "Upcoming",
+    "onTheWay": "On the way"
+  },
   "setup": {
     "title": "Get ready to send offers",
     "body": "You can browse tasks while you finish setting up your helper profile.",

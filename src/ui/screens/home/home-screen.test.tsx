@@ -29,6 +29,9 @@ const attentionCopy: Record<AttentionKind, RegExp> = {
   reconfirm_offer: /re-confirm/i,
   finish_setup: /finish.*setup|finish setting up/i,
   payout_action_needed: /payout/i,
+  answer_invite: /invited you/i,
+  answer_counter: /counter/i,
+  answer_proposal: /proposed a booking/i,
 };
 
 const targetCases: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
@@ -41,6 +44,7 @@ const targetCases: Record<AttentionTarget['kind'], { target: AttentionTarget; hr
   earnings: { target: { kind: 'earnings' }, href: routes.app.earnings() },
   support_case: { target: { kind: 'support_case', caseId: 'case / one' }, href: routes.app.supportCase('case / one') },
   invite: { target: { kind: 'invite', inviteId: 'invite / one' }, href: routes.app.offers('invite / one') },
+  proposal: { target: { kind: 'proposal', proposalId: 'proposal / one' }, href: routes.app.proposal('proposal / one') },
 };
 
 describe('HomeScreen attention', () => {

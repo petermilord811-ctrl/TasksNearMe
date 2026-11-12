@@ -20,6 +20,7 @@ import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { invites } from '@/modules/invites/schema';
+import { rebookProposals } from '@/modules/rebook/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { notificationPreferences, notifications, privacyRequests } from './schema';
 
@@ -144,6 +145,25 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
       const ctx = await bookingContext(db, bookingId);
       if (!ctx || !bookingId) return [];
       return [ctx.posterUserId, ctx.helperUserId].map((userId) => ({ userId, type: 'change_applied' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title: ctx.title }));
+    }
+    case 'rebook.proposed':
+    case 'rebook.accepted':
+    case 'rebook.declined': {
+      const proposalId = text(p.proposalId);
+      const helperId = text(p.helperUserId);
+      const posterId = text(p.posterUserId);
+      if (!proposalId || !helperId || !posterId) return [];
+      const [proposal] = await db.select({ fromBookingId: rebookProposals.fromBookingId, bookingId: rebookProposals.bookingId }).from(rebookProposals).where(eq(rebookProposals.id, proposalId)).limit(1);
+      const title = (await bookingContext(db, proposal?.fromBookingId))?.title;
+      if (event.type === 'rebook.proposed') {
+        return [{ userId: posterId, type: 'rebook_proposed' as const, target: { kind: 'proposal', proposalId } as AttentionTarget, title, actorName: await nameOf(db, helperId) }];
+      }
+      const actorName = await nameOf(db, posterId);
+      const bookingId = text(p.bookingId) ?? proposal?.bookingId ?? undefined;
+      if (event.type === 'rebook.accepted') {
+        return bookingId ? [{ userId: helperId, type: 'rebook_accepted' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title, actorName }] : [];
+      }
+      return [{ userId: helperId, type: 'rebook_declined' as const, target: { kind: 'proposal', proposalId } as AttentionTarget, title, actorName }];
     }
     case 'invite.sent':
     case 'invite.countered':

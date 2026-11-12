@@ -430,7 +430,7 @@ export async function confirmFundedBooking(deps: BookingDeps, posterId: string, 
 }
 
 /** Records the provider's answer. Success confirms the booking in one transaction. */
-async function settle(deps: BookingDeps, posterId: string, paymentId: string, result: ChargeResult, now: Date): Promise<PaymentAttemptResult> {
+export async function settle(deps: BookingDeps, posterId: string, paymentId: string, result: ChargeResult, now: Date): Promise<PaymentAttemptResult> {
   const { db } = deps;
   if (result.status === 'failed') {
     await db

@@ -50,6 +50,9 @@ const copy: Record<NotificationType, RegExp> = {
   invite_received: /sent you a booking request/,
   invite_countered: /sent a counter-offer/,
   invite_accepted: /accepted your booking request.*You're booked/,
+  rebook_proposed: /proposed a booking/,
+  rebook_accepted: /accepted your proposal/,
+  rebook_declined: /declined your proposal/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -61,6 +64,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   earnings: { target: { kind: 'earnings' }, href: routes.app.earnings() },
   support_case: { target: { kind: 'support_case', caseId: 'case / one' }, href: routes.app.supportCase('case / one') },
   invite: { target: { kind: 'invite', inviteId: 'invite / one' }, href: routes.app.offers('invite / one') },
+  proposal: { target: { kind: 'proposal', proposalId: 'proposal / one' }, href: routes.app.proposal('proposal / one') },
 };
 
 describe('NotificationsScreen', () => {

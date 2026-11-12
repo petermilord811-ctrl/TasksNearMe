@@ -41,6 +41,12 @@ export const NOTIFICATION_TYPES = [
   'invite_countered',
   /** The helper accepted the client's invite: booked (UI-025). */
   'invite_accepted',
+  /** A helper proposed a booking to a past client (UI-032). */
+  'rebook_proposed',
+  /** The client accepted (and paid for) the helper's proposal (UI-032). */
+  'rebook_accepted',
+  /** The client declined the helper's proposal (UI-032). */
+  'rebook_declined',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

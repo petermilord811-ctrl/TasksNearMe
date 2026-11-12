@@ -1,6 +1,8 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, gt, inArray } from 'drizzle-orm';
 import type { AppHomePageData, AttentionItem, HelperHomeData, Mode, PosterHomeData } from '@/contracts';
 import { getBookingsPage } from '@/modules/bookings/hub';
+import { invites } from '@/modules/invites/schema';
+import { rebookProposals } from '@/modules/rebook/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { getEarningsPage } from '@/modules/earnings/service';
 import { getInbox } from '@/modules/messaging/service';
@@ -49,6 +51,25 @@ async function bookingRows(db: Db, userId: string, role: 'poster' | 'helper') {
     .where(and(eq(role === 'poster' ? bookings.posterUserId : bookings.helperUserId, userId), inArray(bookings.status, ['pending_funding', 'confirmed', 'in_progress', 'completion_submitted'])));
 }
 
+/** Invites waiting on this person: sent ones for helpers, countered ones for clients. */
+async function waitingInvites(db: Db, side: 'poster' | 'helper', userId: string, now: Date) {
+  return db
+    .select({ id: invites.id, taskId: invites.taskId, title: tasks.title, expiresAt: invites.expiresAt })
+    .from(invites)
+    .innerJoin(tasks, eq(tasks.id, invites.taskId))
+    .where(and(eq(side === 'poster' ? invites.posterUserId : invites.helperUserId, userId), eq(invites.status, side === 'poster' ? 'countered' : 'sent'), gt(invites.expiresAt, now)));
+}
+
+/** Rebooking proposals waiting on the client. */
+async function waitingProposals(db: Db, userId: string, now: Date) {
+  return db
+    .select({ id: rebookProposals.id, title: tasks.title, expiresAt: rebookProposals.expiresAt })
+    .from(rebookProposals)
+    .innerJoin(bookings, eq(bookings.id, rebookProposals.fromBookingId))
+    .innerJoin(tasks, eq(tasks.id, bookings.taskId))
+    .where(and(eq(rebookProposals.posterUserId, userId), eq(rebookProposals.status, 'sent'), gt(rebookProposals.expiresAt, now)));
+}
+
 async function posterHome(db: Db, user: { id: string; firstName: string }, now: Date): Promise<PosterHomeData> {
   const [rows, mine, page, unread] = await Promise.all([
     bookingRows(db, user.id, 'poster'),
@@ -68,6 +89,12 @@ async function posterHome(db: Db, user: { id: string; firstName: string }, now: 
   }
   for (const task of mine.open) {
     if (task.newOfferCount > 0) attention.push({ id: `att_offers_${task.id}`, kind: 'review_offers', title: task.title, count: task.newOfferCount, target: { kind: 'task', taskId: task.id } });
+  }
+  for (const counter of await waitingInvites(db, 'poster', user.id, now)) {
+    attention.push({ id: `att_counter_${counter.id}`, kind: 'answer_counter', title: counter.title, ...(counter.expiresAt ? { dueAt: counter.expiresAt.toISOString() } : {}), target: { kind: 'task', taskId: counter.taskId } });
+  }
+  for (const proposal of await waitingProposals(db, user.id, now)) {
+    attention.push({ id: `att_proposal_${proposal.id}`, kind: 'answer_proposal', title: proposal.title, dueAt: proposal.expiresAt.toISOString(), target: { kind: 'proposal', proposalId: proposal.id } });
   }
   if (unread) attention.push(unread);
   return {
@@ -102,6 +129,9 @@ async function helperHome(db: Db, user: { id: string; firstName: string }, now: 
   }
   for (const row of offers.active) {
     if (row.offer.status === 'stale') attention.push({ id: `att_reconfirm_${row.offer.id}`, kind: 'reconfirm_offer', title: row.task.title, target: { kind: 'find_work_task', taskId: row.task.id } });
+  }
+  for (const invite of await waitingInvites(db, 'helper', user.id, now)) {
+    attention.push({ id: `att_invite_${invite.id}`, kind: 'answer_invite', title: invite.title, ...(invite.expiresAt ? { dueAt: invite.expiresAt.toISOString() } : {}), target: { kind: 'invite', inviteId: invite.id } });
   }
   if (unread) attention.push(unread);
   const open = feed?.cards.filter((card) => !card.blockedReason && !card.myOffer) ?? [];

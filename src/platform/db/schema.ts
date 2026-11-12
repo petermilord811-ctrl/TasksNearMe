@@ -17,6 +17,7 @@ export * from '../../modules/support/schema';
 export * from '../../modules/rewards/schema';
 export * from '../../modules/availability/schema';
 export * from '../../modules/invites/schema';
+export * from '../../modules/rebook/schema';
 export * from '../../modules/messaging/schema';
 export * from '../../modules/earnings/schema';
 export * from '../../modules/notifications/schema';

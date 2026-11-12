@@ -21,6 +21,8 @@ export const CHANGE_PAGES_READY = true;
 export const REVIEW_PAGE_READY = true;
 /** Direct invites (UI-025): Book again opens the request page. */
 export const REQUEST_PAGE_READY = true;
+/** Rebooking proposals (UI-032): on once their pages are wired. */
+export const REBOOK_PAGES_READY = false;
 
 export interface BookingFacts {
   status: BookingStatus | string;
@@ -103,8 +105,11 @@ function baseActions(booking: BookingFacts, role: BookingViewerRole, now: Date):
     }
     case 'in_progress':
       return [make('submit_completion', 'primary')];
-    case 'completed':
-      return REVIEW_PAGE_READY && !booking.reviewed && booking.reviewWindowOpen ? [make('review', 'primary')] : [];
+    case 'completed': {
+      const actions: ActionDescriptor<BookingActionId>[] = REVIEW_PAGE_READY && !booking.reviewed && booking.reviewWindowOpen ? [make('review', 'primary')] : [];
+      if (REBOOK_PAGES_READY) actions.push(make('offer_rebook', 'secondary'));
+      return actions;
+    }
     default:
       return [];
   }

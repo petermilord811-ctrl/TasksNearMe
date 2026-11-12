@@ -44,6 +44,7 @@ import { savedHelpers } from '../../src/modules/reviews/schema';
 import { blocks, messages, threadParticipants, threads } from '../../src/modules/messaging/schema';
 import { supportCaseEvents, supportCaseReads, supportCases } from '../../src/modules/support/schema';
 import { notificationPreferences, notifications, privacyRequests } from '../../src/modules/notifications/schema';
+import { rebookProposals } from '../../src/modules/rebook/schema';
 import { rewardGrants } from '../../src/modules/rewards/schema';
 import { paymentMethods, payments, refunds } from '../../src/modules/payments/schema';
 import { devCardRef } from '../../src/integrations/payments';
@@ -389,6 +390,7 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   // Rewards are derived from bookings again after the reset.
   await tx.delete(rewardGrants).where(inArray(rewardGrants.helperUserId, people));
   await tx.delete(invites).where(inArray(invites.posterUserId, people));
+  await tx.delete(rebookProposals).where(or(inArray(rebookProposals.posterUserId, people), inArray(rebookProposals.helperUserId, people)));
   // Rate-limit counters start over too (the seed is for development and tests only): repeated e2e runs on
   // one day would otherwise hit the daily limits (reports are 10 a day).
   await tx.delete(rateLimits);

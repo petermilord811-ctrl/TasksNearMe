@@ -1,4 +1,5 @@
 import { expireDuePosts } from '@/modules/availability/service';
+import { expireDueProposals } from '@/modules/rebook/service';
 import { sql } from 'drizzle-orm';
 import { autoApproveDue } from '@/modules/bookings/completion-view';
 import { expireUnfundedBookings } from '@/modules/bookings/confirm';
@@ -28,6 +29,7 @@ export const JOBS: Job[] = [
   { name: 'offers.expire', run: (db, now) => expireDueOffers(db, now, {}) },
   { name: 'invites.expire', run: (db, now) => expireDueInvites(db, createPaymentProvider(), now) },
   { name: 'availability.expire', run: (db, now) => expireDuePosts(db, now) },
+  { name: 'rebook.expire', run: (db, now) => expireDueProposals(db, now) },
   { name: 'bookings.expire_unfunded', run: (db, now) => expireUnfundedBookings(db, now) },
   { name: 'bookings.expire_cant_access', run: (db, now) => expireCantAccess(db, now) },
   { name: 'bookings.auto_approve', run: (db, now) => autoApproveDue(db, now) },

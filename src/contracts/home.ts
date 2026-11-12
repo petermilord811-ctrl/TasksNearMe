@@ -21,7 +21,9 @@ export type AttentionTarget =
   /** A support case on `/app/support/[caseId]` (UI-026). */
   | { kind: 'support_case'; caseId: string }
   /** An invite in the helper's offers (`routes.app.offers(inviteId)`, UI-025). */
-  | { kind: 'invite'; inviteId: string };
+  | { kind: 'invite'; inviteId: string }
+  /** A rebooking proposal (`routes.app.proposal(proposalId)`, UI-032). */
+  | { kind: 'proposal'; proposalId: string };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */
@@ -42,6 +44,12 @@ export const ATTENTION_KINDS = [
   'finish_setup',
   /** Helper: a payout failed; update the bank. */
   'payout_action_needed',
+  /** Helper: a client's invite waits for an answer (UI-032). */
+  'answer_invite',
+  /** Client: the helper countered an invite; accept or decline (UI-032). */
+  'answer_counter',
+  /** Client: a helper proposed a booking; pay or decline (UI-032). */
+  'answer_proposal',
 ] as const;
 export type AttentionKind = (typeof ATTENTION_KINDS)[number];
 

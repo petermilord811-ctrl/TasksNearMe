@@ -92,6 +92,10 @@ export const routes = {
     bookings: () => '/app/bookings',
     booking: (bookingId: string) => `/app/bookings/${enc(bookingId)}`,
     bookingProposeChange: (bookingId: string) => `/app/bookings/${enc(bookingId)}/changes/new`,
+    /** The helper proposes a completed booking again (UI-032). */
+    bookingRebook: (bookingId: string) => `/app/bookings/${enc(bookingId)}/rebook`,
+    /** A rebooking proposal, for either person (UI-032). */
+    proposal: (proposalId: string) => `/app/proposals/${enc(proposalId)}`,
     bookingChange: (bookingId: string, changeId: string) =>
       `/app/bookings/${enc(bookingId)}/changes/${enc(changeId)}`,
     bookingComplete: (bookingId: string) => `/app/bookings/${enc(bookingId)}/complete`,

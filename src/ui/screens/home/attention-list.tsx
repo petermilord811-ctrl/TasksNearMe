@@ -17,6 +17,10 @@ const icons: Record<AttentionKind, LucideIcon> = {
   reconfirm_offer: RefreshCw,
   finish_setup: UserRoundPlus,
   payout_action_needed: CircleAlert,
+  // Placeholders added by Claude (UI-032 reviews them).
+  answer_invite: MessagesSquare,
+  answer_counter: RefreshCw,
+  answer_proposal: CalendarCheck,
 };
 
 function AttentionRow({ item }: { item: AttentionItem }) {
