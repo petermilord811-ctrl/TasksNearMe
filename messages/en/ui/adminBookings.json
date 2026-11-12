@@ -17,7 +17,8 @@
     "open_case": "Open case",
     "approval_overdue": "Approval overdue",
     "funds_held": "Funds held over 21 days",
-    "payment_failed": "Payment failed"
+    "payment_failed": "Payment failed",
+    "refund_approval": "Refund waiting for approval"
   },
   "flagsLabel": "Needs attention for",
   "results": "Bookings",

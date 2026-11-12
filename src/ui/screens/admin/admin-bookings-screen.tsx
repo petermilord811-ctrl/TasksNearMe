@@ -14,7 +14,7 @@ import { Label } from '@/ui/primitives/label';
 
 export interface AdminBookingsScreenProps { data: AdminBookingsPageData; now: ISODateTime }
 
-const flagTones: Record<AdminBookingFlag, BadgeTone> = { disputed: 'danger', open_case: 'warning', approval_overdue: 'warning', funds_held: 'warning', payment_failed: 'danger' };
+const flagTones: Record<AdminBookingFlag, BadgeTone> = { disputed: 'danger', open_case: 'warning', approval_overdue: 'warning', funds_held: 'warning', payment_failed: 'danger', refund_approval: 'warning' };
 
 function Flags({ flags }: { flags: AdminBookingFlag[] }) {
   const t = useTranslations('adminBookings');

@@ -32,7 +32,7 @@ export type AdminBookingFilter = (typeof ADMIN_BOOKING_FILTERS)[number];
  * ago, not canceled, and the helper's money not sent yet); `payment_failed` (waiting for money after a
  * failed charge).
  */
-export const ADMIN_BOOKING_FLAGS = ['disputed', 'open_case', 'approval_overdue', 'funds_held', 'payment_failed'] as const;
+export const ADMIN_BOOKING_FLAGS = ['disputed', 'open_case', 'approval_overdue', 'funds_held', 'payment_failed', 'refund_approval'] as const;
 export type AdminBookingFlag = (typeof ADMIN_BOOKING_FLAGS)[number];
 
 export interface AdminBookingRow {

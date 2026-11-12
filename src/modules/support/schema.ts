@@ -94,3 +94,28 @@ export const supportCaseReads = pgTable(
   },
   (t) => [primaryKey({ columns: [t.caseId, t.userId] })],
 );
+
+/**
+ * A refund staff asked for above their own limit (blueprint 08: agents $100, leads $500, finance with a
+ * second approval above that), waiting for someone allowed to approve it. Approving refunds the charge.
+ */
+export const refundRequests = pgTable(
+  'refund_requests',
+  {
+    id: text('id').primaryKey(),
+    bookingId: text('booking_id').notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    reason: text('reason').notNull(), // goodwill | fraud
+    note: text('note').notNull(),
+    requestedByUserId: text('requested_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    status: text('status').notNull(), // pending | approved | declined
+    decidedByUserId: text('decided_by_user_id').references(() => users.id),
+    decisionNote: text('decision_note'),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('refund_requests_booking_idx').on(t.bookingId, t.status)],
+);
+

@@ -9,23 +9,7 @@ import {
   type PreviewEntry,
   type ResolutionPreviewResult,
 } from '@/contracts';
-import {
-  ADMIN_NOW,
-  adminBookingDisputedData,
-  adminBookingReadOnlyData,
-  adminBookingSettledData,
-  alexStaff,
-  deskExactAddress,
-  deskSettledBreakdown,
-  disputeMoneyCaseData,
-  fakeAdminBookingHandlers,
-  fakeAdminCaseHandlers,
-  fakeHandler,
-  overLimitPreview,
-  releaseFullPreview,
-  reportedConversation,
-  settleAt45Preview,
-} from '@/fixtures';
+import { ADMIN_NOW, adminBookingDisputedData, adminBookingReadOnlyData, adminBookingSettledData, alexStaff, deskExactAddress, deskSettledBreakdown, disputeMoneyCaseData, fakeAdminBookingHandlers, fakeAdminCaseHandlers, fakeHandler, overLimitPreview, releaseFullPreview, reportedConversation, settleAt45Preview, adminBookingRefundRequestData } from '@/fixtures';
 import { AdminBookingContent } from '@/ui/screens/admin/admin-booking-screen';
 import { AdminCaseContent } from '@/ui/screens/admin/admin-case-screen';
 import { AdminShell } from '@/ui/shells/admin-shell';
@@ -70,7 +54,7 @@ function moneyCasePreview(id: string, title: string, resolutionState: Resolution
   };
 }
 
-type BookingSeeds = Pick<ComponentProps<typeof AdminBookingContent>, 'initialDialog' | 'initialAddress' | 'initialConversation' | 'refundState' | 'reasonState'>;
+type BookingSeeds = Pick<ComponentProps<typeof AdminBookingContent>, 'initialDialog' | 'initialAddress' | 'initialConversation' | 'refundState' | 'reasonState' | 'initialDecision'>;
 function bookingPreview(id: string, title: string, data: AdminBookingPageData = adminBookingDisputedData, seeds: BookingSeeds = {}): PreviewEntry {
   const refundResult = seeds.refundState?.initialResult;
   const reasonResult = seeds.reasonState?.initialResult;
@@ -123,6 +107,9 @@ export const adminMoneyPreviews: PreviewEntry[] = [
     initialDialog: 'refund', refundState: { initialValues: { ...refundValues, amountCents: overLimitPreview.posterRefundCents }, initialResult: { ok: false, code: 'not_allowed' } },
   }),
   bookingPreview('refund-pending', b['refund-pending'], adminBookingDisputedData, { initialDialog: 'refund', refundState: { initialValues: refundValues, initialPending: true } }),
+  bookingPreview('refund-request', b['refund-request'], adminBookingRefundRequestData),
+  bookingPreview('refund-request-dialog', b['refund-request-dialog'], adminBookingRefundRequestData, { initialDecision: { requestId: 'rrq_moving', decision: 'approve' } }),
+  bookingPreview('refund-ask-approval', b['refund-ask-approval'], adminBookingRefundRequestData, { initialDialog: 'refund', refundState: { initialValues: { ...refundValues, amountCents: 12000 } } }),
   bookingPreview('refund-submitted', b['refund-submitted'], adminBookingDisputedData, { initialDialog: 'refund', refundState: { initialResult: { ok: true, code: 'submitted' } } }),
   bookingPreview('refund-validation-failed', b['refund-validation-failed'], adminBookingDisputedData, { initialDialog: 'refund', refundState: { initialValues: refundValues, initialResult: refundValidation } }),
   ...(['not_allowed', 'rate_limited', 'unknown'] as const).map((code) => {

@@ -4,7 +4,6 @@ import { ADMIN_REWARD_FILTERS, rewardDecisionInputSchema } from '@/contracts';
 import type { GiftCardProvider } from '@/integrations/gift-cards';
 import { users } from '@/modules/accounts/schema';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
-import { payments, paymentMethods } from '@/modules/payments/schema';
 import { personSummaryOf, type StaffActor } from '@/modules/support/staff';
 import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
@@ -12,6 +11,7 @@ import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { REWARD_RULES } from './domain';
+import { riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
 
 /**
@@ -53,33 +53,14 @@ async function rowsOf(db: Db, staff: StaffActor, grants: GrantRow[]): Promise<Ad
         .where(inArray(bookings.id, bookingIds))
     : [];
   const peopleIds = [...new Set([...grants.map((grant) => grant.helperUserId), ...bookingRows.map((row) => row.booking.posterUserId)])];
-  const [people, charges, cards, pairBookings] = await Promise.all([
-    db.select().from(users).where(inArray(users.id, peopleIds)),
-    bookingIds.length ? db.select({ bookingId: payments.bookingId, methodRef: payments.methodRef }).from(payments).where(inArray(payments.bookingId, bookingIds)) : Promise.resolve([]),
-    db.select({ userId: paymentMethods.userId, providerRef: paymentMethods.providerRef }).from(paymentMethods).where(inArray(paymentMethods.userId, peopleIds)),
-    bookingRows.length
-      ? db
-          .select({ posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, confirmedAt: bookings.confirmedAt })
-          .from(bookings)
-          .where(inArray(bookings.helperUserId, [...new Set(bookingRows.map((row) => row.booking.helperUserId))]))
-      : Promise.resolve([]),
-  ]);
+  const [people, signalsOf] = await Promise.all([db.select().from(users).where(inArray(users.id, peopleIds)), riskSignalsOf(db, grants)]);
   const personOf = new Map(people.map((user) => [user.id, user]));
   return grants.flatMap((grant): AdminRewardRow[] => {
     const helper = personOf.get(grant.helperUserId);
     if (!helper) return [];
     const row = grant.bookingId ? bookingRows.find((item) => item.booking.id === grant.bookingId) : undefined;
     const client = row ? personOf.get(row.booking.posterUserId) : undefined;
-    const signals: RewardRiskSignal[] = [];
-    if (row && client) {
-      const fundedAt = row.booking.confirmedAt ?? row.booking.createdAt;
-      if (fundedAt.getTime() - client.createdAt.getTime() < 14 * DAY) signals.push('new_client_account');
-      if (fundedAt.getTime() - helper.createdAt.getTime() < 14 * DAY) signals.push('new_helper_account');
-      const paidWith = charges.filter((charge) => charge.bookingId === row.booking.id).map((charge) => charge.methodRef);
-      if (cards.some((card) => card.userId === helper.id && paidWith.includes(card.providerRef))) signals.push('shared_card');
-      const pair = pairBookings.filter((item) => item.posterUserId === client.id && item.helperUserId === helper.id && item.confirmedAt && Math.abs(item.confirmedAt.getTime() - fundedAt.getTime()) < 30 * DAY);
-      if (pair.length >= 3) signals.push('repeat_pair');
-    }
+    const signals: RewardRiskSignal[] = signalsOf.get(grant.id) ?? [];
     const status = grant.status as RewardStatus;
     return [
       {

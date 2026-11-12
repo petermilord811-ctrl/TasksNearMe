@@ -17,7 +17,7 @@ import { categories } from '@/modules/markets/schema';
 import { payments } from '@/modules/payments/schema';
 import { tasks } from '@/modules/tasks/schema';
 import type { Db } from '@/platform/db/connect';
-import { supportCases } from './schema';
+import { refundRequests, supportCases } from './schema';
 import { personSummaryOf } from './staff';
 
 /**
@@ -61,6 +61,7 @@ export async function getAdminBookings(db: Db, input: { filter: AdminBookingFilt
   const paymentFailed = sql<boolean>`(${bookings.status} = 'pending_funding' and exists (select 1 from ${payments} p where p.booking_id = ${bookings.id} and p.purpose = 'booking_funding' and p.status = 'failed'))`;
   const fundsHeld = sql<boolean>`(${bookings.confirmedAt} < ${fundsCutoff} and ${bookings.status} <> 'canceled' and not exists (select 1 from ${earnings} e where e.booking_id = ${bookings.id} and e.kind = 'earnings' and e.status in ('transferred', 'paid_out')))`;
   const approvalOverdue = sql<boolean>`(${bookings.status} = 'completion_submitted' and ${bookings.approvalDueAt} < ${now})`;
+  const refundApproval = sql<boolean>`exists (select 1 from ${refundRequests} r where r.booking_id = ${bookings.id} and r.status = 'pending')`;
 
   const conditions: SQL[] = [];
   if (query) {
@@ -77,6 +78,7 @@ export async function getAdminBookings(db: Db, input: { filter: AdminBookingFilt
       paymentFailed,
       fundsHeld,
       approvalOverdue,
+      refundApproval,
     })
     .from(bookings)
     .innerJoin(tasks, eq(tasks.id, bookings.taskId))
@@ -93,6 +95,7 @@ export async function getAdminBookings(db: Db, input: { filter: AdminBookingFilt
     if (row.approvalOverdue) flags.push('approval_overdue');
     if (row.fundsHeld) flags.push('funds_held');
     if (row.paymentFailed) flags.push('payment_failed');
+    if (row.refundApproval) flags.push('refund_approval');
     facts.set(row.id, { status: row.status as BookingStatus, flags });
   }
   const counts = Object.fromEntries(ADMIN_BOOKING_FILTERS.map((filter) => [filter, all.filter((row) => inFilter(filter, facts.get(row.id)!)).length])) as Record<AdminBookingFilter, number>;

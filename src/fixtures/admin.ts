@@ -265,7 +265,8 @@ export const adminBookingDisputedData: AdminBookingPageData = {
   helper: person(jordan),
   money: { breakdown: deskBreakdown, chargedCents: 6600, refundedCents: 0, refunds: [], earnings: [{ kind: 'earnings', amountCents: 5400, status: 'on_hold' }] },
   cases: [disputeRow],
-  refund: { maxCents: 6600, limitCents: 10000 },
+  refund: { maxCents: 6600, limitCents: 10000, leftCents: 6600 },
+  refundRequests: [],
   actions: ['refund', 'reveal_address', 'reveal_conversation'],
 };
 
@@ -283,8 +284,20 @@ export const adminBookingSettledData: AdminBookingPageData = {
     earnings: [{ kind: 'earnings', amountCents: 4050, status: 'transferred', transferredAt: '2026-11-24T17:00:00.000Z' }],
   },
   cases: [{ ...disputeRow, status: 'resolved', slaBreached: false, awaitingReply: false }],
-  refund: { maxCents: 4950, limitCents: 10000 },
+  refund: { maxCents: 4950, limitCents: 10000, leftCents: 4950 },
+  refundRequests: [],
   actions: ['refund', 'reveal_address', 'reveal_conversation'],
+};
+
+/** A $154 move: an agent (limit $100) asked a lead to approve a $120 refund; Morgan can decide. */
+export const adminBookingRefundRequestData: AdminBookingPageData = {
+  ...adminBookingDisputedData,
+  money: { ...adminBookingDisputedData.money, chargedCents: 15400 },
+  refund: { maxCents: 10000, limitCents: 10000, leftCents: 15400 },
+  refundRequests: [
+    { id: 'rrq_moving', amountCents: 12000, reason: 'goodwill', note: 'The helper left two hours early; the client asked for most of it back.', requestedBy: 'Alex P.', requestedAt: '2026-11-22T18:00:00.000Z', status: 'pending', canDecide: true },
+    { id: 'rrq_old', amountCents: 2000, reason: 'goodwill', note: 'A smaller refund asked for before the limits changed.', requestedBy: 'Alex P.', requestedAt: '2026-11-21T15:00:00.000Z', status: 'declined', decidedBy: 'Morgan L.', decidedAt: '2026-11-21T16:00:00.000Z', canDecide: false },
+  ],
 };
 
 /** A viewer without refund or restricted-data rights (for example, an admin): read-only. */
@@ -292,6 +305,7 @@ export const adminBookingReadOnlyData: AdminBookingPageData = { ...adminBookingD
 
 export const fakeAdminBookingHandlers: AdminBookingHandlers = {
   onRefund: () => wait({ ok: true, code: 'submitted' }),
+  onDecideRefund: () => wait({ ok: true, code: 'updated' }),
   onRevealAddress: () => wait({ ok: true, address: deskExactAddress }),
   onRevealConversation: () => wait({ ok: true, conversation: reportedConversation }),
 };

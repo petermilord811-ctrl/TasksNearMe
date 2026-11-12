@@ -274,10 +274,36 @@ export interface AdminBookingPageData {
   money: AdminBookingMoney;
   /** Cases about this booking, newest first. */
   cases: AdminCaseRow[];
-  /** What the viewer can refund now: the amount left, and their limit per booking. */
-  refund?: { maxCents: Cents; limitCents: Cents };
+  /**
+   * What the viewer can refund now (`maxCents`: the amount left within their limit) and their limit; up to
+   * `leftCents` (what's left of the charge) they can ask for an approval instead.
+   */
+  refund?: { maxCents: Cents; limitCents: Cents; leftCents: Cents };
+  /** Refunds asked for above someone's limit, newest first; `canDecide` when the viewer may approve. */
+  refundRequests: AdminRefundRequestRow[];
   actions: AdminBookingActionId[];
 }
+
+export interface AdminRefundRequestRow {
+  id: string;
+  amountCents: Cents;
+  reason: (typeof STAFF_REFUND_REASONS)[number];
+  note: string;
+  requestedBy: string;
+  requestedAt: ISODateTime;
+  status: 'pending' | 'approved' | 'declined';
+  decidedBy?: string;
+  decidedAt?: ISODateTime;
+  canDecide: boolean;
+}
+
+export const refundDecisionInputSchema = z.object({
+  requestId: z.string(code('required')).min(1, code('required')),
+  decision: z.enum(['approve', 'decline'], code('required')),
+  /** Why (kept in the audit log). */
+  note: z.string(code('required')).trim().min(10, code('too_short')).max(1000, code('too_long')),
+});
+export type RefundDecisionInput = z.input<typeof refundDecisionInputSchema>;
 
 export const staffRefundInputSchema = z.object({
   amountCents: z.number(code('required')).int(code('invalid')).positive(code('invalid')),
@@ -290,12 +316,15 @@ export type StaffRefundInput = z.input<typeof staffRefundInputSchema>;
 export type RevealAddressResult = { ok: true; address: ExactAddress } | Extract<ActionResult, { ok: false }>;
 
 /**
- * - `onRefund`: ok `submitted` (refresh). Errors: `validation_failed`, `not_allowed` (above your limit or more
- *   than is left), `rate_limited`, `unknown`.
+ * - `onRefund`: ok `submitted` (refunded; refresh), or ok `sent` (above your limit: sent for approval). Errors:
+ *   `validation_failed`, `not_allowed` (more than is left), `rate_limited`, `unknown`.
+ * - `onDecideRefund`: ok `updated` (refresh). Errors: `validation_failed`, `not_allowed` (your role, your own
+ *   request, or already decided), `unknown`.
  * - `onRevealAddress`, `onRevealConversation`: need a reason (logged); `validation_failed`, `not_allowed`.
  */
 export interface AdminBookingHandlers {
   onRefund: ActionHandler<StaffRefundInput>;
+  onDecideRefund: ActionHandler<RefundDecisionInput>;
   onRevealAddress: QueryHandler<RestrictedAccessInput, RevealAddressResult>;
   onRevealConversation: QueryHandler<RestrictedAccessInput, RevealConversationResult>;
 }

@@ -1,5 +1,5 @@
 import { and, asc, eq, gte, inArray, isNotNull, lte, ne } from 'drizzle-orm';
-import type { ActionResult, RewardGrantView, RewardStatus, RewardVoidReason, RewardsPageData } from '@/contracts';
+import type { ActionResult, RewardGrantView, RewardRiskSignal, RewardStatus, RewardVoidReason, RewardsPageData } from '@/contracts';
 import type { GiftCardProvider } from '@/integrations/gift-cards';
 import { users } from '@/modules/accounts/schema';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
@@ -11,6 +11,7 @@ import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { LAUNCH_PROGRAMS, REWARD_RULES, nextGrantState, repeatProgress, repeatTrigger, rewardOrder, welcomeCandidate, type BookingFact } from './domain';
+import { REVIEW_SIGNALS, riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
 
 /**
@@ -80,6 +81,8 @@ async function cohortFacts(db: Db, helperUserId: string): Promise<{ verifiedAt: 
 
 const monthStart = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 const live = (grant: GrantRow) => grant.status !== 'voided';
+/** Staff rejected it after a risk review: that program is over for the helper (welcome) or the pair (repeat). */
+const rejected = (grant: GrantRow) => grant.status === 'voided' && grant.voidReason === 'risk_review';
 
 async function createGrant(db: Db, grants: GrantRow[], values: typeof rewardGrants.$inferInsert, now: Date): Promise<void> {
   // At most $75 a calendar month across programs (the grant waits for a later month otherwise).
@@ -103,9 +106,14 @@ export async function syncRewards(db: Db, helperUserId: string, now: Date): Prom
   ]);
   const bookingOf = new Map(facts.map((fact) => [fact.id, fact]));
 
+  // Grants whose hold ended: risk signals decide between review and redeemable.
+  const leaving = grants.filter((grant) => grant.status === 'qualified' && grant.holdUntil && grant.holdUntil <= now);
+  const signalsOf = leaving.length > 0 ? await riskSignalsOf(db, leaving) : new Map<string, RewardRiskSignal[]>();
+  const needsReview = (id: string) => (signalsOf.get(id) ?? []).some((signal) => REVIEW_SIGNALS.includes(signal));
+
   // Move existing grants along.
   for (const grant of grants) {
-    const change = nextGrantState({ program: grant.program, status: grant.status as RewardStatus, holdUntil: grant.holdUntil, expiresAt: grant.expiresAt }, grant.bookingId ? bookingOf.get(grant.bookingId) : undefined, now);
+    const change = nextGrantState({ program: grant.program, status: grant.status as RewardStatus, holdUntil: grant.holdUntil, expiresAt: grant.expiresAt, needsReview: needsReview(grant.id) }, grant.bookingId ? bookingOf.get(grant.bookingId) : undefined, now);
     if (!change) continue;
     const [updated] = await db
       .update(rewardGrants)
@@ -116,7 +124,7 @@ export async function syncRewards(db: Db, helperUserId: string, now: Date): Prom
   }
 
   // Welcome: the founding cohort's first qualifying booking within 60 days of the ID check.
-  if (cohort && cohort.rank <= REWARD_RULES.welcome.cohortSize && !grants.some((grant) => grant.program === 'welcome' && live(grant))) {
+  if (cohort && cohort.rank <= REWARD_RULES.welcome.cohortSize && !grants.some((grant) => grant.program === 'welcome' && (live(grant) || rejected(grant)))) {
     const used = new Set(grants.filter((grant) => grant.program === 'welcome').map((grant) => grant.bookingId));
     const candidate = welcomeCandidate(facts.filter((fact) => !used.has(fact.id)), cohort.verifiedAt);
     if (candidate) {
@@ -126,7 +134,7 @@ export async function syncRewards(db: Db, helperUserId: string, now: Date): Prom
 
   // Repeat: the third paid booking with the same client within 90 days, once per pair.
   for (const posterUserId of new Set(facts.map((fact) => fact.posterUserId))) {
-    if (grants.some((grant) => grant.program === 'repeat' && grant.posterUserId === posterUserId && live(grant))) continue;
+    if (grants.some((grant) => grant.program === 'repeat' && grant.posterUserId === posterUserId && (live(grant) || rejected(grant)))) continue;
     const trigger = repeatTrigger(facts, posterUserId);
     if (trigger) {
       await createGrant(db, grants, { id: newId('rwd'), helperUserId, program: 'repeat', amountCents: REWARD_RULES.repeat.amountCents, status: 'pending', bookingId: trigger.id, posterUserId, createdAt: now, updatedAt: now }, now);

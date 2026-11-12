@@ -88,7 +88,7 @@ describe('the staff booking page', () => {
     expect(page?.money).toMatchObject({ chargedCents: 6600, refundedCents: 1650 });
     expect(page?.money.finalBreakdown?.taskPriceCents).toBe(4500);
     expect(page?.cases[0]).toMatchObject({ type: 'dispute', status: 'resolved' });
-    expect(page?.refund).toEqual({ maxCents: 4950, limitCents: 10_000 });
+    expect(page?.refund).toEqual({ maxCents: 4950, limitCents: 10_000, leftCents: 4950 });
     expect(page?.actions).toEqual(['refund', 'reveal_address', 'reveal_conversation']);
     // Finance reads the page but doesn't work cases here.
     expect(await getAdminBooking(db, casey, settled!.id, now())).toMatchObject({ actions: [] });

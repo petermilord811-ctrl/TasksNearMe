@@ -48,6 +48,16 @@ describe('a grant over time', () => {
     expect(nextGrantState(pending, booking({ status: 'completion_submitted' }), day(10))).toBeNull();
   });
 
+  it('T-13: still qualifies after a dispute settled at $45 (at least the $40 threshold)', () => {
+    const settled = booking({ status: 'completed', transferredAt: day(10), finalPriceCents: 4500 });
+    expect(nextGrantState(pending, settled, day(10))).toEqual({ status: 'qualified', holdUntil: day(17) });
+  });
+
+  it('after the hold, a repeat reward with a risk signal goes to review instead of redeemable (T-25)', () => {
+    const qualified = { program: 'repeat', status: 'qualified' as const, holdUntil: day(17), expiresAt: null };
+    expect(nextGrantState({ ...qualified, needsReview: true }, booking({ status: 'completed', transferredAt: day(10) }), day(18))).toEqual({ status: 'in_review' });
+  });
+
   it('after the hold: welcome rewards go to review, repeat rewards become redeemable for 90 days', () => {
     const qualified = { program: 'welcome', status: 'qualified' as const, holdUntil: day(17), expiresAt: null };
     const completed = booking({ status: 'completed', transferredAt: day(10) });

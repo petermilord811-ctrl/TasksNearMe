@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ADMIN_BOOKING_ACTIONS, EARNINGS_STATUSES, STAFF_REFUND_REASONS, routes, type ActionResult, type AdminBookingHandlers, type AdminBookingPageData } from '@/contracts';
-import { ADMIN_NOW, adminBookingDisputedData, adminBookingReadOnlyData, adminBookingSettledData, deskExactAddress, reportedConversation } from '@/fixtures';
+import { ADMIN_NOW, adminBookingDisputedData, adminBookingReadOnlyData, adminBookingRefundRequestData, adminBookingSettledData, deskExactAddress, reportedConversation } from '@/fixtures';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import adminBooking from '../../../../messages/en/ui/adminBooking.json';
@@ -20,6 +20,7 @@ const reason = 'Review the reported booking problem.';
 function mount(data: AdminBookingPageData = adminBookingDisputedData, overrides: Partial<AdminBookingHandlers> = {}) {
   const handlers: AdminBookingHandlers = {
     onRefund: vi.fn().mockResolvedValue({ ok: true, code: 'submitted' }),
+    onDecideRefund: vi.fn().mockResolvedValue({ ok: true, code: 'updated' }),
     onRevealAddress: vi.fn().mockResolvedValue({ ok: true, address: deskExactAddress }),
     onRevealConversation: vi.fn().mockResolvedValue({ ok: true, conversation: reportedConversation }),
     ...overrides,
@@ -197,4 +198,40 @@ describe('AdminBookingScreen', () => {
     expect(screen.getByRole('textbox', { name: copy.refund.note })).toHaveValue(note);
     expect(navigation.refresh).not.toHaveBeenCalled();
   });
+
+  it('lists refund requests, and an approver approves one with a note (focus back on the button)', async () => {
+    const user = userEvent.setup();
+    const onDecideRefund = vi.fn().mockResolvedValue({ ok: true, code: 'updated' });
+    mount(adminBookingRefundRequestData, { onDecideRefund });
+    const requests = within(screen.getByRole('region', { name: copy.requests.title }));
+    expect(requests.getByText('Waiting for approval')).toBeVisible();
+    expect(requests.getByText('Declined')).toBeVisible();
+    const approve = requests.getByRole('button', { name: 'Approve the $120.00 refund' });
+    await user.click(approve);
+    const dialog = screen.getByRole('alertdialog', { name: 'Approve a $120.00 refund' });
+    await user.click(within(dialog).getByRole('button', { name: copy.requests.dialog.confirmApprove }));
+    expect(await within(dialog).findByText(copy.requests.dialog.noteTooShort)).toBeVisible();
+    await user.type(within(dialog).getByRole('textbox', { name: copy.requests.dialog.note }), 'Checked the timeline: the helper left early.');
+    await user.click(within(dialog).getByRole('button', { name: copy.requests.dialog.confirmApprove }));
+    await waitFor(() => expect(onDecideRefund).toHaveBeenCalledWith({ requestId: 'rrq_moving', decision: 'approve', note: 'Checked the timeline: the helper left early.' }));
+    await waitFor(() => expect(approve).toHaveFocus());
+  });
+
+  it('asks for approval above the limit, up to what is left of the charge', async () => {
+    const user = userEvent.setup();
+    const onRefund = vi.fn().mockResolvedValue({ ok: true, code: 'sent' });
+    mount(adminBookingRefundRequestData, { onRefund });
+    await user.click(screen.getByRole('button', { name: copy.actions.refund }));
+    const dialog = screen.getByRole('alertdialog');
+    await user.type(within(dialog).getByLabelText(copy.refund.amount), '120');
+    expect(within(dialog).getByRole('button', { name: copy.refund.askApproval })).toBeVisible();
+    expect(within(dialog).getByText(/Above your \$100\.00 limit/)).toBeVisible();
+    await user.selectOptions(within(dialog).getByLabelText(copy.refund.reason), 'goodwill');
+    await user.type(within(dialog).getByLabelText(copy.refund.note), 'The helper left two hours early.');
+    await user.click(within(dialog).getByRole('button', { name: copy.refund.askApproval }));
+    await waitFor(() => expect(onRefund).toHaveBeenCalledWith({ amountCents: 12000, reason: 'goodwill', note: 'The helper left two hours early.' }));
+    // The dialog closes and the page says where it went.
+    expect(await screen.findByText(copy.refund.sent)).toBeVisible();
+  });
 });
+

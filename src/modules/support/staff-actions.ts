@@ -1,24 +1,13 @@
 'use server';
 
 import { refresh } from 'next/cache';
-import type {
-  ActionResult,
-  CaseResolutionInput,
-  CaseStatusInput,
-  ResolutionPreviewResult,
-  RestrictedAccessInput,
-  RevealAddressResult,
-  RevealConversationResult,
-  StaffNoteInput,
-  StaffRefundInput,
-  StaffReplyInput,
-} from '@/contracts';
+import type { ActionResult, CaseResolutionInput, CaseStatusInput, RefundDecisionInput, ResolutionPreviewResult, RestrictedAccessInput, RevealAddressResult, RevealConversationResult, StaffNoteInput, StaffRefundInput, StaffReplyInput } from '@/contracts';
 import { createPaymentProvider } from '@/integrations/payments';
 import { getViewer } from '@/platform/auth/viewer';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { db } from '@/platform/db/client';
 import { addCaseNote, assignCase, closeCase, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffReply, type StaffActor } from './staff';
-import { resolveCaseWithMoney, revealBookingAddress, revealBookingConversation, staffRefund } from './staff-money';
+import { decideRefundRequest, resolveCaseWithMoney, revealBookingAddress, revealBookingConversation, staffRefund } from './staff-money';
 import { requestNow } from '@/platform/clock';
 
 /**
@@ -97,6 +86,13 @@ export async function staffRefundAction(bookingId: string, input: StaffRefundInp
   const actor = await staff();
   if (!actor) return { ok: false, code: 'not_allowed' };
   return refreshed(await staffRefund(db, createPaymentProvider(), actor, String(bookingId), input, await requestNow()));
+}
+
+/** Approve or decline a refund asked for above someone's limit. */
+export async function decideRefundAction(bookingId: string, input: RefundDecisionInput): Promise<ActionResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return refreshed(await decideRefundRequest(db, createPaymentProvider(), actor, String(bookingId), input, await requestNow()));
 }
 
 export async function revealBookingAddressAction(bookingId: string, input: RestrictedAccessInput): Promise<RevealAddressResult> {

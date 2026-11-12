@@ -122,19 +122,22 @@ describe('task moderation', () => {
 
 describe('the bookings list', () => {
   it('flags what needs attention and counts each tab for the same search', async () => {
-    const all = await getAdminBookings(db, { filter: 'all', query: '' }, now());
-    const flagsOf = (id: string) => all.rows.find((row) => row.id === id)?.flags;
-    expect(flagsOf('bkg_dresser')).toEqual(['disputed', 'open_case']);
-    expect(flagsOf('bkg_mod_late')).toEqual(['approval_overdue']);
-    expect(flagsOf('bkg_mod_unpaid')).toEqual(['payment_failed']);
-    expect(flagsOf('bkg_mod_held')).toEqual(['funds_held']);
+    // Each booking by its id: the unfiltered list shows only the newest 50, and other files add bookings.
+    const flagsOf = async (id: string) => (await getAdminBookings(db, { filter: 'all', query: id }, now())).rows.find((row) => row.id === id)?.flags;
+    expect(await flagsOf('bkg_dresser')).toEqual(['disputed', 'open_case']);
+    expect(await flagsOf('bkg_mod_late')).toEqual(['approval_overdue']);
+    expect(await flagsOf('bkg_mod_unpaid')).toEqual(['payment_failed']);
+    expect(await flagsOf('bkg_mod_held')).toEqual(['funds_held']);
     // Paid out three weeks ago: nothing to look at.
-    expect(flagsOf('bkg_wardrobe')).toEqual([]);
+    expect(await flagsOf('bkg_wardrobe')).toEqual([]);
 
     const attention = await getAdminBookings(db, { filter: 'attention', query: '' }, now());
     expect(attention.rows.every((row) => row.flags.length > 0)).toBe(true);
-    expect(attention.rows.map((row) => row.id)).toEqual(expect.arrayContaining(['bkg_dresser', 'bkg_mod_late', 'bkg_mod_unpaid', 'bkg_mod_held']));
-    expect(attention.counts.attention).toBe(attention.rows.length);
+    for (const id of ['bkg_dresser', 'bkg_mod_late', 'bkg_mod_unpaid', 'bkg_mod_held']) {
+      expect((await getAdminBookings(db, { filter: 'attention', query: id }, now())).rows.map((row) => row.id)).toEqual([id]);
+    }
+    // The page shows up to 50; the count is every booking that needs attention.
+    expect(attention.rows.length).toBe(Math.min(attention.counts.attention, 50));
     const upcoming = await getAdminBookings(db, { filter: 'upcoming', query: '' }, now());
     expect(upcoming.rows.map((row) => row.status).every((status) => ['pending_funding', 'confirmed', 'in_progress', 'completion_submitted'].includes(status))).toBe(true);
   });

@@ -121,6 +121,15 @@ export const MONEY_RESOLUTIONS: readonly CaseResolution[] = ['release_full', 'se
 const REFUND_LIMITS: Partial<Record<StaffRole, number>> = { support_agent: 10_000, support_lead: 50_000, finance: 50_000 };
 export const refundLimitOf = (roles: readonly StaffRole[]) => Math.max(0, ...roles.map((role) => REFUND_LIMITS[role] ?? 0));
 
+/**
+ * Who approves a refund someone asked for above their own limit (blueprint 08): a support lead up to $500;
+ * above $500 finance (the requester and the approver make the dual approval). Never the requester.
+ */
+export function canApproveRefund(roles: readonly StaffRole[], amountCents: number): boolean {
+  if (roles.includes('finance')) return true;
+  return roles.includes('support_lead') && amountCents <= (REFUND_LIMITS.support_lead ?? 0);
+}
+
 export interface BookingMoneyFacts {
   fees: FeeSchedule;
   /** The agreed task price. */

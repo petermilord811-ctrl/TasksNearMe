@@ -82,6 +82,8 @@ export interface GrantFacts {
   status: RewardStatus;
   holdUntil: Date | null;
   expiresAt: Date | null;
+  /** A risk signal that needs staff (a shared card, a new client account: T-25). */
+  needsReview?: boolean;
 }
 
 export type GrantChange =
@@ -109,7 +111,8 @@ export function nextGrantState(grant: GrantFacts, booking: BookingFact | undefin
     return { status: 'qualified', holdUntil: new Date(booking.transferredAt.getTime() + REWARD_RULES.holdDays * DAY) };
   }
   if (grant.status === 'qualified' && grant.holdUntil && grant.holdUntil <= now && booking?.status !== 'disputed') {
-    if (grant.program === 'welcome') return { status: 'in_review' };
+    // Welcome rewards are always reviewed; others when a risk signal says so (a self-dealing pair).
+    if (grant.program === 'welcome' || grant.needsReview) return { status: 'in_review' };
     return { status: 'redeemable', redeemableAt: grant.holdUntil, expiresAt: new Date(grant.holdUntil.getTime() + REWARD_RULES.redeemDays * DAY) };
   }
   if (grant.status === 'redeemable' && grant.expiresAt && grant.expiresAt <= now) return { status: 'expired' };

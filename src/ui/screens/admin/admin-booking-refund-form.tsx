@@ -29,19 +29,23 @@ export function AdminBookingRefundForm({ refund, onRefund, onCancel, onBusy, onS
   const form = useForm<StaffRefundInput>({ resolver: zodResolver(staffRefundInputSchema), defaultValues: { amountCents: 0, note: '', ...initialValues } });
   const [editing, setEditing] = useState<{ raw: string; cents: number }>();
   const amount = useWatch({ control: form.control, name: 'amountCents' });
-  const aboveMax = amount > refund.maxCents;
+  // Above the viewer's limit (but within what's left of the charge): asked for approval instead.
+  const aboveMax = amount > refund.leftCents;
+  const needsApproval = !aboveMax && amount > refund.maxCents;
   const action = useFormAction(form, { initialResult, onResult: (result) => { if (result.ok) { onSuccess(result); router.refresh(); } } });
   const pending = action.pending || form.formState.isSubmitting || initialPending;
   const fieldCopy = (code?: string) => code ? fields(fields.has(code) ? code : 'invalid') : undefined;
   const errors = form.formState.errors;
-  const amountError = aboveMax || errors.amountCents?.message === 'out_of_range' ? t('amountTooHigh', { amount: formatMoney(refund.maxCents) }) : errors.amountCents ? t('amountInvalid') : undefined;
+  const amountError = aboveMax || errors.amountCents?.message === 'out_of_range'
+    ? (refund.leftCents > refund.maxCents ? t('amountTooHighLeft', { amount: formatMoney(refund.leftCents) }) : t('amountTooHigh', { amount: formatMoney(refund.maxCents) }))
+    : errors.amountCents ? t('amountInvalid') : undefined;
   const reasonError = errors.reason ? t('reasonRequired') : undefined;
   const noteError = errors.note?.message === 'too_short' || errors.note?.message === 'required' ? t('noteTooShort') : fieldCopy(errors.note?.message);
   const feedback = action.result && !action.result.ok ? { ...action.result, fieldErrors: undefined } : action.result;
   return <form noValidate aria-label={t('title')} aria-busy={pending} className="space-y-4" onSubmit={(event) => {
     if (pending || aboveMax) { event.preventDefault(); if (aboveMax) form.setFocus('amountCents'); return; }
     void form.handleSubmit(async (input) => {
-      if (input.amountCents > refund.maxCents) { form.setError('amountCents', { type: 'max', message: 'invalid' }, { shouldFocus: true }); return; }
+      if (input.amountCents > refund.leftCents) { form.setError('amountCents', { type: 'max', message: 'invalid' }, { shouldFocus: true }); return; }
       onBusy(true); try { await action.run(onRefund, input); } finally { onBusy(false); }
     })(event);
   }}>
@@ -53,6 +57,7 @@ export function AdminBookingRefundForm({ refund, onRefund, onCancel, onBusy, onS
         <FieldDescription id={`${id}-amount-hint`}>{t('amountHint', { amount: formatMoney(refund.maxCents) })}</FieldDescription>
         <Controller control={form.control} name="amountCents" render={({ field }) => <Input ref={field.ref} name={field.name} onBlur={field.onBlur} id={`${id}-amount`} inputMode="decimal" required aria-invalid={Boolean(amountError)} aria-describedby={`${id}-amount-hint${amountError ? ` ${id}-amount-error` : ''}`} className="tabular-nums" value={editing && Object.is(editing.cents, field.value) ? editing.raw : field.value > 0 ? formatMoneyInput(field.value) : ''} onChange={(event) => { const raw = event.target.value; const cents = parseMoneyInput(raw) ?? -1; setEditing({ raw, cents }); field.onChange(cents); }} />} />
         {amountError && <FieldError id={`${id}-amount-error`}>{amountError}</FieldError>}
+        {needsApproval && <p role="status" className="rounded-lg border border-warning/40 bg-badge-warning p-3 text-sm text-badge-warning-foreground">{t('needsApproval', { limit: formatMoney(refund.limitCents) })}</p>}
       </Field>
       <Field data-invalid={Boolean(reasonError)} className="gap-2">
         <FieldLabel htmlFor={`${id}-reason`}>{t('reason')}</FieldLabel>
@@ -69,7 +74,7 @@ export function AdminBookingRefundForm({ refund, onRefund, onCancel, onBusy, onS
         {noteError && <FieldError id={`${id}-note-error`}>{noteError}</FieldError>}
       </Field>
     </fieldset>
-    <FormFeedback result={feedback} successMessage={t('submitted')} errorMessage={feedback && !feedback.ok && feedback.code === 'not_allowed' ? t('notAllowed') : undefined} />
-    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><AlertDialogCancel type="button" disabled={pending} onClick={onCancel}>{t('cancel')}</AlertDialogCancel><Button type="submit" disabled={pending || aboveMax} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'submitting' : 'submit')}</Button></div>
+    <FormFeedback result={feedback} successMessage={feedback?.ok && feedback.code === 'sent' ? t('sent') : t('submitted')} errorMessage={feedback && !feedback.ok && feedback.code === 'not_allowed' ? t('notAllowed') : undefined} />
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><AlertDialogCancel type="button" disabled={pending} onClick={onCancel}>{t('cancel')}</AlertDialogCancel><Button type="submit" disabled={pending || aboveMax} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'submitting' : needsApproval ? 'askApproval' : 'submit')}</Button></div>
   </form>;
 }

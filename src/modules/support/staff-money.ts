@@ -11,9 +11,10 @@ import type {
   RestrictedAccessInput,
   RevealAddressResult,
   RevealConversationResult,
+  RefundDecisionInput,
   StaffRefundInput,
 } from '@/contracts';
-import { caseResolutionInputSchema, restrictedAccessInputSchema, staffRefundInputSchema } from '@/contracts';
+import { caseResolutionInputSchema, refundDecisionInputSchema, restrictedAccessInputSchema, staffRefundInputSchema } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
@@ -30,9 +31,9 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { supportCases } from './schema';
+import { refundRequests, supportCases } from './schema';
 import { bookingMoneyFacts, caseRowsFor, conversationView, personSummaryOf, previewResolution, resolveCase, type StaffActor } from './staff';
-import { MONEY_RESOLUTIONS, canWorkCases, refundLimitOf, type ResolutionMoney } from './staff-domain';
+import { MONEY_RESOLUTIONS, canApproveRefund, canWorkCases, refundLimitOf, type ResolutionMoney } from './staff-domain';
 
 /**
  * Money for staff (UI-019; blueprint 04 §6, 08 staff limits): the money effects of case resolutions, the
@@ -209,7 +210,7 @@ export async function resolveCaseWithMoney(
 export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: string, now: Date): Promise<AdminBookingPageData | null> {
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, String(bookingId))).limit(1);
   if (!booking) return null;
-  const [found, [terms], [completion], people, refundRows, earningRows, caseRows, money] = await Promise.all([
+  const [found, [terms], [completion], people, refundRows, earningRows, caseRows, money, requestRows] = await Promise.all([
     findTaskWithPublicView(db, booking.taskId),
     db.select().from(bookingTerms).where(and(eq(bookingTerms.bookingId, booking.id), eq(bookingTerms.version, booking.termsVersion))).limit(1),
     db.select().from(bookingCompletions).where(eq(bookingCompletions.bookingId, booking.id)).limit(1),
@@ -218,6 +219,7 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
     db.select().from(earnings).where(eq(earnings.bookingId, booking.id)).orderBy(asc(earnings.createdAt)),
     db.select().from(supportCases).where(eq(supportCases.bookingId, booking.id)).orderBy(desc(supportCases.updatedAt)),
     bookingMoneyFacts(db, booking.id),
+    db.select().from(refundRequests).where(eq(refundRequests.bookingId, booking.id)).orderBy(desc(refundRequests.createdAt)),
   ]);
   const poster = people.find((user) => user.id === booking.posterUserId);
   const helper = people.find((user) => user.id === booking.helperUserId);
@@ -254,9 +256,28 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
       })),
     },
     cases: await caseRowsFor(db, caseRows, now),
-    ...(canRefund ? { refund: { maxCents: Math.min(left, limit), limitCents: limit } } : {}),
+    ...(canRefund ? { refund: { maxCents: Math.min(left, limit), limitCents: limit, leftCents: left } } : {}),
+    refundRequests: await refundRequestRows(db, staff, requestRows),
     actions,
   };
+}
+
+async function refundRequestRows(db: Db, staff: StaffActor, rows: (typeof refundRequests.$inferSelect)[]): Promise<AdminBookingPageData['refundRequests']> {
+  if (rows.length === 0) return [];
+  const ids = [...new Set(rows.flatMap((row) => [row.requestedByUserId, ...(row.decidedByUserId ? [row.decidedByUserId] : [])]))];
+  const names = new Map((await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids))).map((row) => [row.id, row.name]));
+  return rows.map((row) => ({
+    id: row.id,
+    amountCents: row.amountCents,
+    reason: row.reason as AdminBookingPageData['refundRequests'][number]['reason'],
+    note: row.note,
+    requestedBy: names.get(row.requestedByUserId) ?? 'Staff',
+    requestedAt: row.createdAt.toISOString(),
+    status: row.status as 'pending' | 'approved' | 'declined',
+    ...(row.decidedByUserId ? { decidedBy: names.get(row.decidedByUserId) ?? 'Staff' } : {}),
+    ...(row.decidedAt ? { decidedAt: row.decidedAt.toISOString() } : {}),
+    canDecide: row.status === 'pending' && row.requestedByUserId !== staff.id && canApproveRefund(staff.roles, row.amountCents),
+  }));
 }
 
 /** A staff refund from the booking page: goodwill (platform funds) or fraud, within the viewer's limit. */
@@ -267,9 +288,16 @@ export async function staffRefund(db: Db, payments_: PaymentProvider | null, sta
   const money = await bookingMoneyFacts(db, String(bookingId));
   if (!money) return { ok: false, code: 'not_allowed' };
   const left = money.chargedCents - money.refundedCents;
-  if (parsed.data.amountCents > Math.min(left, refundLimitOf(staff.roles))) return { ok: false, code: 'not_allowed' };
+  if (parsed.data.amountCents > left) return { ok: false, code: 'not_allowed' };
   const limited = await consumeRateLimit(db, `staff-refund:${staff.id}`, REFUND_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
+  // Above the viewer's own limit: someone allowed approves it (blueprint 08).
+  if (parsed.data.amountCents > refundLimitOf(staff.roles)) {
+    const id = newId('rrq');
+    await db.insert(refundRequests).values({ id, bookingId: String(bookingId), amountCents: parsed.data.amountCents, reason: parsed.data.reason, note: parsed.data.note, requestedByUserId: staff.id, status: 'pending', createdAt: now });
+    await audit(db, staff, 'booking.refund_requested', 'booking', String(bookingId), now, { metadata: { requestId: id, amountCents: parsed.data.amountCents, reason: parsed.data.reason, note: parsed.data.note } });
+    return { ok: true, code: 'sent' };
+  }
   const ok = await refundCharge(db, payments_, {
     bookingId: String(bookingId),
     amountCents: parsed.data.amountCents,
@@ -310,3 +338,36 @@ export async function revealBookingConversation(db: Db, staff: StaffActor, booki
   await audit(db, staff, 'booking.view_conversation', 'thread', thread.id, now, { reason: parsed.data.reason, metadata: { bookingId } });
   return { ok: true, conversation: await conversationView(db, thread) };
 }
+
+/**
+ * Approve or decline a refund asked for above someone's limit. Approving refunds the charge (what's left
+ * then), as the approver; both decisions go to the audit log with the note.
+ */
+export async function decideRefundRequest(db: Db, payments_: PaymentProvider | null, staff: StaffActor, bookingId: string, input: RefundDecisionInput, now: Date): Promise<ActionResult> {
+  const parsed = refundDecisionInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  if (!payments_) return { ok: false, code: 'not_allowed' };
+  const [request] = await db.select().from(refundRequests).where(and(eq(refundRequests.id, parsed.data.requestId), eq(refundRequests.bookingId, String(bookingId)))).limit(1);
+  if (!request || request.status !== 'pending' || request.requestedByUserId === staff.id || !canApproveRefund(staff.roles, request.amountCents)) return { ok: false, code: 'not_allowed' };
+  const approve = parsed.data.decision === 'approve';
+  if (approve) {
+    const money = await bookingMoneyFacts(db, String(bookingId));
+    if (!money || request.amountCents > money.chargedCents - money.refundedCents) return { ok: false, code: 'not_allowed' };
+  }
+  const [claimed] = await db
+    .update(refundRequests)
+    .set({ status: approve ? 'approved' : 'declined', decidedByUserId: staff.id, decisionNote: parsed.data.note, decidedAt: now })
+    .where(and(eq(refundRequests.id, request.id), eq(refundRequests.status, 'pending')))
+    .returning({ id: refundRequests.id });
+  if (!claimed) return { ok: false, code: 'not_allowed' };
+  let ok = true;
+  if (approve) {
+    ok = await refundCharge(db, payments_, { bookingId: String(bookingId), amountCents: request.amountCents, reason: request.reason, idempotencyKey: `refund:${bookingId}:approved:${request.id}`, now });
+  }
+  await audit(db, staff, approve ? 'booking.refund_approved' : 'booking.refund_declined', 'booking', String(bookingId), now, {
+    reason: parsed.data.note,
+    metadata: { requestId: request.id, amountCents: request.amountCents, requestedBy: request.requestedByUserId, ok },
+  });
+  return ok ? { ok: true, code: 'updated' } : { ok: false, code: 'unknown' };
+}
+

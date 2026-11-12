@@ -5,7 +5,10 @@
   "start": "Start",
   "area": "Area",
   "pricing": "Pricing",
-  "pricingTypes": { "fixed": "Fixed price", "hourly": "Hourly" },
+  "pricingTypes": {
+    "fixed": "Fixed price",
+    "hourly": "Hourly"
+  },
   "people": "People",
   "poster": "Client",
   "helper": "Helper",
@@ -17,17 +20,40 @@
   "refunds": "Refund history",
   "noRefunds": "No refunds have been recorded for this booking.",
   "refundDate": "Recorded",
-  "refundStatuses": { "pending": "Pending", "succeeded": "Refunded", "failed": "Failed" },
-  "refundReasons": { "goodwill": "Goodwill", "fraud": "Fraud", "dispute_settlement": "Problem report settlement", "dispute_refund": "Problem report refund", "dispute_full_refund": "Problem report refund", "cancellation": "Cancellation", "unused_cap": "Unused hourly cap", "unused_allowance": "Unused expense allowance", "change_decrease": "Agreed price decrease", "other": "Other refund" },
+  "refundStatuses": {
+    "pending": "Pending",
+    "succeeded": "Refunded",
+    "failed": "Failed"
+  },
+  "refundReasons": {
+    "goodwill": "Goodwill",
+    "fraud": "Fraud",
+    "dispute_settlement": "Problem report settlement",
+    "dispute_refund": "Problem report refund",
+    "dispute_full_refund": "Problem report refund",
+    "cancellation": "Cancellation",
+    "unused_cap": "Unused hourly cap",
+    "unused_allowance": "Unused expense allowance",
+    "change_decrease": "Agreed price decrease",
+    "other": "Other refund"
+  },
   "earnings": "Helper earnings",
   "noEarnings": "No earnings have been recorded for this booking.",
-  "earningsKinds": { "earnings": "Task earnings", "reimbursement": "Reimbursed expenses", "cancellation_compensation": "Cancellation compensation" },
+  "earningsKinds": {
+    "earnings": "Task earnings",
+    "reimbursement": "Reimbursed expenses",
+    "cancellation_compensation": "Cancellation compensation"
+  },
   "transferred": "Transferred {at}",
   "cases": "Cases about this booking",
   "noCases": "No cases have been opened about this booking.",
   "caseOpened": "Opened {at}",
   "actionsLabel": "Booking actions",
-  "actions": { "refund": "Refund", "reveal_address": "Show the address", "reveal_conversation": "Open the conversation" },
+  "actions": {
+    "refund": "Refund",
+    "reveal_address": "Show the address",
+    "reveal_conversation": "Open the conversation"
+  },
   "restricted": "Restricted details",
   "restrictedHint": "Give a reason before opening the address or conversation. Access is logged with your name.",
   "loggedHint": "Access is logged with your name and the reason you give.",
@@ -47,7 +73,10 @@
     "reasonHint": "Choose the reason recorded with this refund.",
     "chooseReason": "Choose a reason",
     "reasonRequired": "Choose a refund reason.",
-    "reasons": { "goodwill": "Goodwill", "fraud": "Fraud" },
+    "reasons": {
+      "goodwill": "Goodwill",
+      "fraud": "Fraud"
+    },
     "note": "Refund note",
     "noteHint": "Explain the refund in 10–1,000 characters. This note is kept in the audit log.",
     "noteTooShort": "Write a note of at least 10 characters.",
@@ -56,7 +85,11 @@
     "submitted": "Refund submitted. The booking will show the updated refund status.",
     "notAllowed": "This refund is above your limit or more than is left to refund. Check the amount or ask a lead or finance.",
     "unavailable": "Refund details are unavailable. Refresh the booking before trying again.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "needsApproval": "Above your {limit} limit: a lead or finance approves it before the client is refunded.",
+    "askApproval": "Ask for approval",
+    "sent": "Sent for approval. A lead or finance will review it.",
+    "amountTooHighLeft": "You can refund up to {amount}, what is left of the charge."
   },
   "previews": {
     "group": "Admin bookings",
@@ -78,6 +111,40 @@
     "reason-not-allowed": "Restricted access not allowed",
     "reason-unknown": "Restricted access unavailable",
     "previewNote": "Goodwill refund after checking the booking report.",
-    "previewReason": "Review the booking details for the reported problem."
+    "previewReason": "Review the booking details for the reported problem.",
+    "refund-request": "Booking · refund waiting for approval",
+    "refund-ask-approval": "Booking · refund above the limit",
+    "refund-request-dialog": "Booking · approving a refund request"
+  },
+  "requests": {
+    "title": "Refund requests",
+    "hint": "Refunds asked for above someone’s limit. Approving refunds the client at once.",
+    "amount": "{amount} · {reason}",
+    "by": "Asked by {name} · {time}",
+    "decided": "{status, select, approved {Approved} declined {Declined} other {Decided}} by {name} · {time}",
+    "statuses": {
+      "pending": "Waiting for approval",
+      "approved": "Approved",
+      "declined": "Declined"
+    },
+    "approve": "Approve",
+    "decline": "Decline",
+    "approveLabel": "Approve the {amount} refund",
+    "declineLabel": "Decline the {amount} refund",
+    "waiting": "Someone else approves this one (not the person who asked).",
+    "dialog": {
+      "approveTitle": "Approve a {amount} refund",
+      "declineTitle": "Decline a {amount} refund",
+      "description": "Your note goes to the audit log with your name.",
+      "note": "Note",
+      "noteHint": "Explain your decision in 10 to 1,000 characters.",
+      "noteTooShort": "Add at least 10 characters.",
+      "confirmApprove": "Approve and refund",
+      "confirmDecline": "Decline the request",
+      "pending": "Saving…",
+      "cancel": "Cancel",
+      "notAllowed": "You can't decide this request. Refresh to see its current state.",
+      "done": "Saved."
+    }
   }
 }

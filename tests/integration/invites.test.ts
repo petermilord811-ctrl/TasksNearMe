@@ -62,6 +62,7 @@ describe('direct invites', () => {
     expect(helperSide).toMatchObject({ actions: ['accept_invite', 'decline_invite', 'counter_invite'] });
     expect(helperSide?.authorizedCents).toBeUndefined();
 
+    const [firstHold] = await db.select({ paymentId: invites.paymentId }).from(invites).where(eq(invites.id, poster!.id));
     expect(await counterInvite(db, pay, 'usr_jordan', poster!.id, { pricing: { type: 'fixed', priceCents: 5000 }, message: 'This one has a glass door.' }, now())).toEqual({ ok: true, code: 'sent' });
     const [countered] = await invitesForTask(db, pay, 'usr_chris', 'tsk_inv1', now());
     expect(countered).toMatchObject({ status: 'countered', counter: { breakdown: { posterTotalCents: 5500 } }, actions: ['accept_counter', 'decline_counter', 'cancel_invite'] });
@@ -75,6 +76,9 @@ describe('direct invites', () => {
     const charges = await db.select().from(payments).where(eq(payments.bookingId, bookingId));
     expect(charges.map((row) => [row.purpose, row.status, row.amountCents])).toEqual([['booking_funding', 'succeeded', 5500]]);
     expect((await db.select().from(invites).where(eq(invites.id, poster!.id)))[0]).toMatchObject({ status: 'accepted', bookingId });
+    // T-07: the first $49.50 hold was released when the counter was authorized for the new total.
+    const [released] = await db.select().from(payments).where(eq(payments.id, firstHold!.paymentId!));
+    expect(released?.status).toBe('canceled');
   });
 
   it('finishes a bank check, then the helper declines and the hold is released', async () => {
@@ -99,6 +103,8 @@ describe('direct invites', () => {
     const [toCancel] = await db.select().from(invites).where(eq(invites.taskId, 'tsk_inv4'));
     expect(await acceptInvite(deps, 'usr_sam', toCancel!.id, now())).toEqual({ ok: false, code: 'not_allowed' });
     expect(await cancelInvite(db, pay, 'usr_chris', toCancel!.id, now())).toEqual({ ok: true, code: 'updated' });
+    // The client's hold is released with it.
+    expect((await db.select().from(payments).where(eq(payments.id, toCancel!.paymentId!)))[0]?.status).toBe('canceled');
 
     const old = await openTask('tsk_inv5');
     await requestHelper(deps, 'usr_chris', 'jordan-t', request(old), now());

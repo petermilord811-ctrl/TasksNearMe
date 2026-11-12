@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { staffActorOf } from '@/modules/support/staff';
-import { revealBookingAddressAction, revealBookingConversationAction, staffRefundAction } from '@/modules/support/staff-actions';
+import { decideRefundAction, revealBookingAddressAction, revealBookingConversationAction, staffRefundAction } from '@/modules/support/staff-actions';
 import { getAdminBooking } from '@/modules/support/staff-money';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -34,6 +34,7 @@ async function AdminBooking({ params }: Pick<PageProps<'/admin/bookings/[booking
       now={now.toISOString()}
       handlers={{
         onRefund: staffRefundAction.bind(null, bookingId),
+        onDecideRefund: decideRefundAction.bind(null, bookingId),
         onRevealAddress: revealBookingAddressAction.bind(null, bookingId),
         onRevealConversation: revealBookingConversationAction.bind(null, bookingId),
       }}

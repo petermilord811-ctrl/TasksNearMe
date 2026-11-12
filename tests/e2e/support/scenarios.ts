@@ -37,13 +37,14 @@ export interface BookingScenario {
 type ScenarioState =
   | { kind: 'canceled'; reason: 'helper' | 'helper_no_show' }
   /** Jordan sent the work now; Chris has 72 h to approve. */
-  | { kind: 'completion_submitted' };
+  | { kind: 'completion_submitted' }
+  | { kind: 'confirmed' };
 
 /**
  * A copy of the desk posted by Chris, booked with Jordan ($60; Sam's offer declined at booking), in
  * `state`. `startsInMs` places the start (negative: past).
  */
-async function scenario(name: string, state: ScenarioState, startsInMs: number): Promise<BookingScenario> {
+async function scenario(name: string, state: ScenarioState, startsInMs: number, priceCents = 6000): Promise<BookingScenario> {
   const { db, pool } = database();
   try {
     const run = Date.now().toString(36);
@@ -61,7 +62,7 @@ async function scenario(name: string, state: ScenarioState, startsInMs: number):
     const bookedAt = new Date(Math.min(now.getTime(), start.getTime()) - 2 * HOUR);
     const canceled = state.kind === 'canceled';
     const changedAt = canceled && state.reason === 'helper' ? new Date(now.getTime() - HOUR) : now;
-    const breakdown = quoteBreakdown(policy.fees, { type: 'fixed', priceCents: 6000 });
+    const breakdown = quoteBreakdown(policy.fees, { type: 'fixed', priceCents });
 
     await db.transaction(async (tx) => {
       await tx.insert(tasks).values({
@@ -71,6 +72,7 @@ async function scenario(name: string, state: ScenarioState, startsInMs: number):
         title,
         posterUserId: 'usr_chris',
         status: canceled ? 'canceled' : 'assigned',
+        budgetCents: priceCents,
         offerCount: 0,
         version: 1,
         windowStart: start,
@@ -80,7 +82,7 @@ async function scenario(name: string, state: ScenarioState, startsInMs: number):
         createdAt: bookedAt,
         updatedAt: changedAt,
       });
-      const common = { ...offer, taskId, revision: 1, proposedStart: start, expiresAt: start, closedAt: bookedAt, createdAt: bookedAt, updatedAt: bookedAt };
+      const common = { ...offer, taskId, priceCents, revision: 1, proposedStart: start, expiresAt: start, closedAt: bookedAt, createdAt: bookedAt, updatedAt: bookedAt };
       await tx.insert(offers).values([
         { ...common, id: `off_e2e_${name}_${run}`, status: 'accepted' },
         { ...common, id: `off_e2e_${name}_${run}_sam`, helperUserId: 'usr_sam', status: 'declined' },
@@ -99,20 +101,22 @@ async function scenario(name: string, state: ScenarioState, startsInMs: number):
         updatedAt: changedAt,
         ...(canceled
           ? { status: 'canceled', cancelReason: state.reason, canceledBy: state.reason === 'helper' ? 'helper' : 'poster', canceledAt: changedAt }
-          : { status: 'completion_submitted', arrivedAt: start, completionSubmittedAt: now, approvalDueAt: new Date(now.getTime() + 72 * HOUR) }),
+          : state.kind === 'confirmed'
+            ? { status: 'confirmed' }
+            : { status: 'completion_submitted', arrivedAt: start, completionSubmittedAt: now, approvalDueAt: new Date(now.getTime() + 72 * HOUR) }),
       });
       await tx.insert(bookingTerms).values({
         id: `btm_e2e_${name}_${run}`,
         bookingId,
         version: 1,
         pricingType: 'fixed',
-        priceCents: 6000,
+        priceCents,
         breakdown,
         scopeText: desk.description,
         startAt: start,
         createdAt: bookedAt,
       });
-      if (!canceled) await tx.insert(bookingCompletions).values({ bookingId, submittedAt: now, note: 'Desk assembled and leveled.', finalBreakdown: breakdown });
+      if (state.kind === 'completion_submitted') await tx.insert(bookingCompletions).values({ bookingId, submittedAt: now, note: 'Desk assembled and leveled.', finalBreakdown: breakdown });
       const paymentId = `pay_e2e_${name}_${run}`;
       await tx.insert(payments).values({
         id: paymentId,
@@ -160,6 +164,11 @@ export function canceledBooking(name: string, reason: 'helper' | 'helper_no_show
 /** The work was sent for approval just now: approved automatically in 72 h. Started 3 h ago. */
 export function submittedBooking(name: string): Promise<BookingScenario> {
   return scenario(name, { kind: 'completion_submitted' }, -3 * HOUR);
+}
+
+/** Confirmed for `priceCents`, starting in 3 days (a bigger job for staff refunds). */
+export function confirmedBooking(name: string, priceCents: number): Promise<BookingScenario> {
+  return scenario(name, { kind: 'confirmed' }, 3 * 24 * HOUR, priceCents);
 }
 
 /** Takes a scenario's task off the board again (a replacement search reopened it). */

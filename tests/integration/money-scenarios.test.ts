@@ -5,16 +5,17 @@ import { acceptChange, proposeChange } from '@/modules/bookings/changes';
 import { submitCompletion } from '@/modules/bookings/completion';
 import { confirmBooking } from '@/modules/bookings/confirm';
 import { runBookingAction } from '@/modules/bookings/hub';
-import { bookings } from '@/modules/bookings/schema';
+import { bookingCompletions, bookings } from '@/modules/bookings/schema';
 import { earnings } from '@/modules/earnings/schema';
 import { offers } from '@/modules/offers/schema';
 import { payments, refunds } from '@/modules/payments/schema';
 import { files, tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
+import { throwawayClient } from '../support/people';
 
 /**
  * Money to the cent through the whole booking (blueprint 10 §3.2): T-16, hourly with a cap, and T-17, an
- * expense allowance. Chris books Sam on copies of the seeded tasks (Jordan's offers, sent by Sam, so this file
+ * expense allowance. A client made for this file books Sam on copies of the seeded tasks (Jordan's offers, sent by Sam, so this file
  * shares no rate limits with the other completion tests); the job runner isn't involved.
  */
 
@@ -26,16 +27,18 @@ const HOUR = 3_600_000;
 const now = () => new Date();
 const card = { kind: 'dev_card', card: 'success', save: false } as const;
 const HELPER = 'usr_sam';
+const CLIENT = 'usr_money_client';
 
 /** A copy of `source` with Jordan's offer `offerId` made by Sam, booked by Chris and checked in. */
 async function bookedCopy(id: string, source: string, offerId: string, task: { expenseAllowanceCents?: number } = {}): Promise<string> {
+  await throwawayClient(db, CLIENT, 'usr_chris');
   const [original] = await db.select().from(tasks).where(eq(tasks.id, source));
   const [offer] = await db.select().from(offers).where(eq(offers.id, offerId));
   if (!original || !offer) throw new Error(`Seeded ${source} is missing`);
   const start = new Date(Date.now() + 2 * HOUR);
-  await db.insert(tasks).values({ ...original, ...task, id, slug: `${id}-slug`, posterUserId: 'usr_chris', status: 'open', offerCount: 1, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 6 * HOUR) });
+  await db.insert(tasks).values({ ...original, ...task, id, slug: `${id}-slug`, posterUserId: CLIENT, status: 'open', offerCount: 1, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 6 * HOUR) });
   await db.insert(offers).values({ ...offer, id: `off_${id}`, taskId: id, helperUserId: HELPER, status: 'pending', revision: 1, proposedStart: start, expiresAt: start });
-  const booked = await confirmBooking(deps, 'usr_chris', id, `off_${id}`, { offerRevision: 1, payment: card, acceptTerms: true }, now());
+  const booked = await confirmBooking(deps, CLIENT, id, `off_${id}`, { offerRevision: 1, payment: card, acceptTerms: true }, now());
   if (!booked.ok || !booked.redirectTo) throw new Error(`Booking failed: ${JSON.stringify(booked)}`);
   const bookingId = booked.redirectTo.split('/').pop()!;
   await db.update(bookings).set({ status: 'in_progress', arrivedAt: now() }).where(eq(bookings.id, bookingId));
@@ -62,6 +65,16 @@ async function moneyOf(bookingId: string) {
   };
 }
 
+/** Every cent the client paid is refunded, sent to the helper, or the platform's fees (T-01: the ledger balances). */
+async function expectBalanced(bookingId: string) {
+  const money = await moneyOf(bookingId);
+  const [completion] = await db.select({ final: bookingCompletions.finalBreakdown }).from(bookingCompletions).where(eq(bookingCompletions.bookingId, bookingId));
+  const charged = money.charged.reduce((sum, row) => sum + row.amountCents, 0);
+  const refunded = money.refunds.filter((row) => row.status === 'succeeded').reduce((sum, row) => sum + row.amountCents, 0);
+  const sent = Object.values(money.transfers).reduce((sum, cents) => sum + cents, 0);
+  expect(charged - refunded).toBe(sent + completion!.final.platformRevenueCents);
+}
+
 let workPhoto = '';
 beforeAll(async () => {
   workPhoto = await photo('fil_money_work');
@@ -74,10 +87,11 @@ describe('T-16: hourly with a cap', () => {
 
     const result = await submitCompletion(db, HELPER, bookingId, { hoursWorked: 3.5, photoIds: [workPhoto], note: 'Loaded and strapped.', expenses: [] }, now());
     expect(result).toMatchObject({ ok: true, code: 'submitted' });
-    expect(await runBookingAction(db, 'usr_chris', bookingId, 'approve', now())).toMatchObject({ ok: true });
+    expect(await runBookingAction(db, CLIENT, bookingId, 'approve', now())).toMatchObject({ ok: true });
     const money = await moneyOf(bookingId);
     expect(money.refunds).toEqual([{ amountCents: 1925, reason: 'unused_cap', status: 'succeeded' }]);
     expect(money.transfers).toEqual({ earnings: 11025 });
+    await expectBalanced(bookingId);
   });
 
   it('blocks 4.5 h until a bigger cap is accepted and funded, then pays for the hours worked', async () => {
@@ -91,7 +105,7 @@ describe('T-16: hourly with a cap', () => {
     // Proposed is not enough.
     expect(await submitCompletion(db, HELPER, bookingId, over, now())).toMatchObject({ ok: false, code: 'validation_failed' });
     // Chris accepts the higher total and pays the difference: 5 h at $35 plus the fee is $192.50, $38.50 more.
-    expect(await acceptChange(deps, 'usr_chris', bookingId, changeId, { payment: card }, now())).toMatchObject({ ok: true, code: 'paid' });
+    expect(await acceptChange(deps, CLIENT, bookingId, changeId, { payment: card }, now())).toMatchObject({ ok: true, code: 'paid' });
     expect((await moneyOf(bookingId)).charged).toEqual(
       expect.arrayContaining([
         { purpose: 'booking_funding', amountCents: 15400 },
@@ -100,11 +114,12 @@ describe('T-16: hourly with a cap', () => {
     );
 
     expect(await submitCompletion(db, HELPER, bookingId, over, now())).toMatchObject({ ok: true, code: 'submitted' });
-    expect(await runBookingAction(db, 'usr_chris', bookingId, 'approve', now())).toMatchObject({ ok: true });
+    expect(await runBookingAction(db, CLIENT, bookingId, 'approve', now())).toMatchObject({ ok: true });
     // 4.5 h: $157.50 plus $15.75 = $173.25 of the $192.50 charged, so $19.25 back; the helper gets $141.75.
     const money = await moneyOf(bookingId);
     expect(money.refunds).toEqual([{ amountCents: 1925, reason: 'unused_cap', status: 'succeeded' }]);
     expect(money.transfers).toEqual({ earnings: 14175 });
+    await expectBalanced(bookingId);
   });
 });
 
@@ -122,9 +137,10 @@ describe('T-17: an expense allowance', () => {
       now(),
     );
     expect(result).toMatchObject({ ok: true, code: 'submitted' });
-    expect(await runBookingAction(db, 'usr_chris', bookingId, 'approve', now())).toMatchObject({ ok: true });
+    expect(await runBookingAction(db, CLIENT, bookingId, 'approve', now())).toMatchObject({ ok: true });
     const money = await moneyOf(bookingId);
     expect(money.transfers).toEqual({ earnings: 5400, reimbursement: 800 });
     expect(money.refunds).toEqual([{ amountCents: 1200, reason: 'unused_allowance', status: 'succeeded' }]);
+    await expectBalanced(bookingId);
   });
 });

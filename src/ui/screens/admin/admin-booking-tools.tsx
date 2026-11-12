@@ -14,6 +14,8 @@ import { AdminConversationReader, AdminReasonForm, type AdminReasonState } from 
 
 export interface AdminBookingPreviewState {
   initialDialog?: AdminBookingActionId;
+  /** Previews: a refund request decision that starts open. */
+  initialDecision?: { requestId: string; decision: 'approve' | 'decline' };
   initialAddress?: ExactAddress;
   initialConversation?: AdminConversationView;
   refundState?: AdminRefundState;
@@ -57,7 +59,7 @@ export function AdminBookingTools({ data, handlers, now, children, initialDialog
           {actionId !== 'refund' && <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />}{t(`actions.${actionId}`)}
         </Button>)}
       </div> : <p className="text-sm text-muted-foreground">{t('readOnly')}</p>}
-      <FormFeedback result={result} successMessage={t('refund.submitted')} />
+      <FormFeedback result={result} successMessage={result?.ok && result.code === 'sent' ? t('refund.sent') : t('refund.submitted')} />
     </div>
     {children}
     {(data.actions.includes('reveal_address') || data.actions.includes('reveal_conversation')) && <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
