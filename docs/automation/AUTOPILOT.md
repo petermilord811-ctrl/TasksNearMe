@@ -101,6 +101,9 @@ Keep going until the Build plan below is done, then stop.
 - **One heavy job at a time.** Run the full gate with `node scripts/gate.mjs --logs <dir>` (check, test:db, e2e, build). It takes `automation/heavy.lock`, and so does the runner's independent `check:ui`, which also retries once. Running both together starved the machine: vitest workers timed out and Playwright navigations failed.
 - Never run `npm ci` in the main checkout while `next dev` (or a Playwright-started server) is running. Native binaries are locked and `npm ci` leaves `node_modules` half-deleted. Stop the server first, or use `npm install`.
 - The Codex worktree needs `.env.local`. `scripts/codex-run.mjs` copies it; copy it by hand after recreating the worktree.
+- If many pages answer 500 with `SyntaxError: Unexpected non-whitespace character after JSON` in the dev log, two parallel compiles corrupted a dev manifest (seen: `.next/dev/prerender-manifest.json`). Stop the server (and its `node.exe` on port 3000), delete `.next/dev`, restart, and request the main pages one at a time before running e2e.
+- Server Actions added to an existing file while `next dev` runs may not reach the client (the action fails before any POST shows in the log): restart the dev server.
+- Never run `vitest --config vitest.db.config.mts` while a gate's `test:db` runs: each run resets the shared test database.
 - If the dev server throws "X is not a function" for an export that typecheck sees, its module graph is stale (seen after `sed -i` edits). Restart it: stopping the background shell doesn't end `next dev` on Windows, so also stop the `node.exe` listening on port 3000 (`netstat -ano`, then `Stop-Process`), and start the logged server again.
 
 ## Build plan

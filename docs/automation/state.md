@@ -1,7 +1,7 @@
 # Autopilot state
 
-**Updated:** 2026-11-12 04:10 UTC (iteration 11, owner-directed)
-**Autopilot:** stopped at the owner's request on 2026-11-11. The owner is directing the work; resume the `/loop` only when they ask.
+**Updated:** 2026-11-12 05:30 UTC (iteration 12, owner said "build all")
+**Autopilot:** the owner said "go ahead, build all" (2026-11-12): build everything left, Claude doing the UI too while Codex is at its limit (decisions.md).
 **Phase:** 5–6 (repeat bookings, trust, support and staff tools). Wired end to end:
 - the landing page (UI-036): the new brand, the motion system, the hero canvas, the map of open tasks with "Use my location";
 - posting a task, offers, find work, and booking with payment (development stand-in);
@@ -15,6 +15,13 @@
 **Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0021). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
 **New dependencies (UI-036):** `motion`, `maplibre-gl`. Run `npm install` after pulling (never while a dev server runs in that checkout).
 
+## Done in iteration 12
+- **UI-032 wired** (`/app/clients`, rebook and proposal pages; `AttentionItem.actorName`); seed `bkg_wardrobe` (Maya's wardrobe with Sam, completed); e2e `rebook.spec`.
+- **Server rules fixed:** no-show after the late minutes; can't access only 20 minutes after arriving.
+- **Admin pages, built by Claude:** UI-033 (bookings list, task moderation with migration 0022 hidden tasks, audit log, `/admin/reports` redirect), UI-034 (payments and reconciliation), UI-037 (staff roles), UI-038 (config: policy versions, flags). Integration `staff-ops`, `staff-payments`, `staff-roles`, `admin-config`; e2e `admin-ops.spec`.
+- Theme script through `next/script` `beforeInteractive`.
+- Launch-scenario coverage was mapped (T-01–T-30): 3 full, 21 partial, 3 none, 3 need a real provider; the gaps are in "Next steps".
+
 ## Done in iteration 11
 - **UI-036 (landing page v2)** built by Claude at the owner's choice (Codex at its limit), merged and wired; the handoff is `docs/ui/handoffs/UI-036.md`.
   - The new brand: ember, warm paper and iridescent light, light and dark with a switch; Bricolage Grotesque, Instrument Serif and DM Sans; the pin-and-check logo; the glass top bar.
@@ -26,19 +33,11 @@
 - The design system (§1–2.3) describes the new brand.
 
 ## Next steps
-1. **Wire UI-032** (merged in e677ed5, not wired):
-   - Routes: `/app/clients` (`getMyClientsPage`), `/app/bookings/[bookingId]/rebook` (`getProposeRebookPage`, `quoteRebookAction`, `proposeRebookAction`), and `/app/proposals/[proposalId]` (`getProposalPage` with the field cipher; accept, verify, decline and withdraw actions).
-   - Flip `REBOOK_PAGES_READY`.
-   - Seed a completed booking (for example Ana's kitchen with Sam) for the e2e: Sam proposes, Ana pays.
-   - Codex's contract request: `actorName?: string` on `AttentionItem`.
-2. **UI-021** (quality pass; ticket ready) when Codex is available again. After it, drop the stray $20 allowance from `movingBookingPosterConfirmed`.
-3. **UI-033** (admin bookings list, task moderation, audit log): drafts are in `scratchpad/ui033/` (contract `admin-ops.ts`, fixtures, ticket). Still to build:
-   - `tasks.hidden_*` columns and the hidden filter on public surfaces;
-   - the moderation service, the bookings list and the audit queries;
-   - routes `admin.bookings({ filter, q })` and `admin.audit(filters)`.
-   `/admin/reports` can redirect to `routes.admin.cases({ queue: 'reports' })`.
-4. **UI-034** later: payments, config, staff roles.
-5. **Later:** staff TOTP, clock and time travel; a production map tile provider (OpenFreeMap has no SLA; `MAP_STYLE_URL` switches it).
+1. **`/app/helpers`** (browse and search helpers: category, area, open times, name), the last missing sitemap route. `/app/series/[seriesId]` is phase 2 (recurring, flag off).
+2. **Launch-scenario features:** find a replacement after a helper cancels (T-10); contesting a no-show or can't-access as a case (T-11, T-12); reminders 24 h and 4 h before automatic approval (T-02); email and SMS notifications by preference with quiet hours through the dev outbox (T-29); a test-only clock override for e2e (blueprint 10 §3.1).
+3. **Launch-scenario tests:** double submit (T-05), hourly cap and expenses to the cent (T-16, T-17), auto-approval through the job runner (T-02), the welcome reward lifecycle (T-22), the second helper never sees the address (T-20), DST timers (T-30).
+4. **UI-021** quality pass (Claude builds it while Codex is out), then drop the stray $20 allowance from `movingBookingPosterConfirmed`.
+5. **Docs and close:** `README.md` and `docs/integration-points.md` (swapping fakes for real providers), `docs/automation/final-report.md`.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB plus the landing copy).
@@ -49,4 +48,5 @@
 - Featured helpers show on the landing page only on wide screens (floating cards). A helper strip on phones is possible later.
 - Checks are sensitive to machine load while Codex runs its own checks: rerun the failed specs alone before calling them real.
 - Fix for Codex (in the UI-032 ticket): on `NotificationsScreen`, "All notifications marked as read." disappears when the list refreshes.
-- Last full gate (UI-036 merge): `check` 1763, `test:db` 121, `e2e` 111 (37 skips by design; `sign-in.spec` help center flaked once on phones and passed on retry), `build` pass. UI-036's own `check:ui` passed (every preview at 360 and 1280, axe).
+- Last full gate (admin pages): `check` 1784, `test:db` 142, `e2e` 119 (44 skips by design), `build` pass. New previews were swept with axe at 360 and 1280; the full `test:ui` runs again before the final report.
+- No "Report this task" for members yet: task reports come from conversation reports only.
