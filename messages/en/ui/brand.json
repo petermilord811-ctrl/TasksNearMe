@@ -3,30 +3,63 @@
   "titles": {
     "logo": "Logo · light and dark",
     "mark": "Mark · 16, 32 and 64 px",
-    "palette": "Palette · warm paper and evergreen",
-    "type": "Type · Newsreader and DM Sans"
+    "palette": "Palette · warm paper and iridescent light",
+    "type": "Type · Bricolage Grotesque, Instrument Serif and DM Sans",
+    "motion": "Motion · durations, easing and springs"
   },
   "light": "Light palette",
   "dark": "Dark palette",
-  "identity": "A good neighbor with a toolbox.",
-  "logoDescription": "A checked location pin and a clear, compact wordmark.",
+  "identity": "Help, right where you are.",
+  "logoDescription": "A map pin holding a check, on a tile of iridescent light. In the wordmark, “near” carries the color.",
   "markSize": "{size} px",
-  "paletteDescription": "Evergreen for action, warm paper for breathing room, terracotta and sun gold for character.",
-  "typeDescription": "Newsreader gives headings a human rhythm. DM Sans keeps the details clear.",
-  "display": "A little help. A lot more day.",
-  "pageHeading": "Good help, close to home.",
-  "sectionHeading": "From your list to done.",
-  "cardHeading": "Help around the house",
-  "body": "Tell a local helper what you need, agree on a price, and make room for the rest of your day.",
-  "small": "The details stay clear, right down to the last line.",
+  "paletteDescription": "Warm paper and ink keep the page calm. Ember orange is for action, violet marks the one vivid word, and the iridescent light runs from ember to periwinkle. Each category has its own color on the map.",
+  "groups": {
+    "surface": "Surfaces",
+    "action": "Action and accent",
+    "light": "Iridescent light",
+    "categories": "Categories",
+    "status": "Status"
+  },
+  "typeDescription": "Bricolage Grotesque gives headlines a confident, friendly shape. Instrument Serif italic marks the one vivid word. DM Sans keeps the details clear.",
+  "display": "Everyday tasks, done by people",
+  "accent": "nearby",
+  "pageHeading": "Tasks near you, right now",
+  "sectionHeading": "One price. Both sides.",
+  "cardHeading": "Furniture assembly",
+  "body": "Post what you need, agree on a price up front, and book a verified local helper.",
+  "small": "Areas are approximate. A helper sees the exact address only after you book.",
   "caption": "Everyday help in Austin, Texas.",
   "scale": {
-    "display": "Display · 44–76 px",
-    "page": "Page heading · 24–30 px",
-    "section": "Section heading · 20–22 px",
+    "display": "Display · Bricolage Grotesque 44–102 px",
+    "accent": "Accent · Instrument Serif italic",
+    "page": "Section title · Bricolage Grotesque 36–48 px",
+    "section": "Heading · Bricolage Grotesque 24–30 px",
     "card": "Card heading · 17–18 px",
-    "body": "Body · 16 / 24 px",
-    "small": "Small · 14 / 20 px",
-    "caption": "Caption · 12 / 16 px"
+    "body": "Body · DM Sans 16–20 px",
+    "small": "Small · DM Sans 14 px",
+    "caption": "Caption · DM Sans 12 px"
+  },
+  "motionDescription": "Calm and quick. Text rises out of a mask line by line, cards bloom out of what you pressed, and sections arrive as you reach them. Only transform and opacity move, and with reduced motion everything shows in its final place.",
+  "durations": "Durations",
+  "easings": "Easing",
+  "springs": "Springs",
+  "stagger": "Stagger",
+  "durationValue": "{ms} ms",
+  "staggerValue": "{ms} ms between siblings",
+  "springValue": "Stiffness {stiffness} · damping {damping} · mass {mass}",
+  "durationNames": {
+    "instant": "Instant: presses and toggles",
+    "fast": "Fast: hovers and small state changes",
+    "base": "Base: chips, cards and menus",
+    "slow": "Slow: entrances and reveals",
+    "slower": "Slower: the headline and big moments"
+  },
+  "easingNames": {
+    "out": "Out: things arriving",
+    "inOut": "In and out: things moving across"
+  },
+  "springNames": {
+    "bloom": "Bloom: panels and cards growing out of their trigger",
+    "follow": "Follow: small things following the pointer"
   }
 }

@@ -67,7 +67,8 @@ export const routes = {
   app: {
     home: () => '/app',
     tasks: () => '/app/tasks',
-    newTask: () => '/app/tasks/new',
+    /** The posting wizard; `category` starts it in that category. */
+    newTask: (query: { category?: CategorySlug } = {}) => withQuery('/app/tasks/new', { category: query.category }),
     task: (taskId: string) => `/app/tasks/${enc(taskId)}`,
     offer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}`,
     confirmOffer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}/confirm`,
@@ -116,6 +117,12 @@ export const routes = {
     helperOnboarding: (step: OnboardingStep = 'profile') => `/app/helper/onboarding/${step}`,
     helperProfile: () => '/app/helper/profile',
     series: (seriesId: string) => `/app/series/${enc(seriesId)}`,
+  },
+
+  /** Static assets the app serves itself. */
+  assets: {
+    /** MapLibre's web worker (the landing map). The package version in the URL keeps a long cache safe across upgrades. */
+    mapWorker: (version?: string) => withQuery('/vendor/maplibre-gl-worker.mjs', { v: version }),
   },
 
   admin: {

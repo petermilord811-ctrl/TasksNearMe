@@ -2,7 +2,7 @@
 
 import { and, eq } from 'drizzle-orm';
 import { updateTag } from 'next/cache';
-import type { ActionResult, OfferActionId, TaskActionId, TaskCancelReason } from '@/contracts';
+import type { ActionResult, CategorySlug, OfferActionId, TaskActionId, TaskCancelReason } from '@/contracts';
 import { routes, TASK_CANCEL_REASONS } from '@/contracts';
 import { categories } from '@/modules/markets/schema';
 import { tasks } from '@/modules/tasks/schema';
@@ -68,7 +68,7 @@ export async function taskOwnerAction(taskId: string, input: { action: Exclude<T
     .limit(1);
   if (!task) return { ok: false, code: 'not_found' };
   if (input.action === 'post_again' && ['completed', 'canceled', 'expired'].includes(task.status)) {
-    return { ok: true, code: 'updated', redirectTo: `${routes.app.newTask()}?category=${task.categorySlug}` };
+    return { ok: true, code: 'updated', redirectTo: routes.app.newTask({ category: task.categorySlug as CategorySlug }) };
   }
   if (input.action === 'invite_helpers' && task.status === 'open') return { ok: true, code: 'updated', redirectTo: routes.app.saved() };
   return { ok: false, code: 'not_allowed' };

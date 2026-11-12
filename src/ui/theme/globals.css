@@ -7,66 +7,92 @@
   }
 }
 
-/* The OS selects the product theme; data-theme is for isolated brand previews. */
+/* The OS picks light or dark; `data-theme` on <html> (the top bar's switch, remembered by theme-script.ts)
+   or on any element (previews) overrides it. */
 :root, [data-theme="light"] {
   color-scheme: light;
-  --background: #fbf8f1;
-  --foreground: #20332d;
-  --card: #fffdf8;
-  --card-foreground: #20332d;
-  --popover: #fffdf8;
-  --popover-foreground: #20332d;
-  --primary: #155e52;
+  --background: #fbf7f2;
+  --foreground: #17120e;
+  --card: #ffffff;
+  --card-foreground: #17120e;
+  --popover: #ffffff;
+  --popover-foreground: #17120e;
+  --primary: #c13f12;
   --primary-foreground: #ffffff;
-  --secondary: #e6eee2;
-  --secondary-foreground: #254a39;
-  --muted: #f0ebe0;
-  --muted-foreground: #62665b;
-  --accent: #eee5d7;
-  --accent-foreground: #20332d;
-  --destructive: #b3352f;
+  --primary-hover: #ab3510;
+  --primary-glow: rgb(255 122 69 / 0.45);
+  --secondary: #ffebdd;
+  --secondary-foreground: #8a3410;
+  --muted: #f3ede5;
+  --muted-foreground: #6a6158;
+  --accent: #f1ecff;
+  --accent-foreground: #17120e;
+  --destructive: #b42318;
   --destructive-foreground: #ffffff;
-  --border: #dcd8ca;
-  --input: #898c7d;
-  --ring: #155e52;
-  --success: #267043;
-  --warning: #98520c;
-  --info: #315f9b;
-  --reward: #edbd62;
-  --reward-foreground: #48300c;
-  --brand-soft: #e6eee2;
-  --brand-paper: #f2ebdd;
-  --brand-ink: #203f34;
-  --sun: #edbd62;
-  --sun-foreground: #48300c;
-  --clay: #ad472f;
-  --clay-soft: #f5e6dd;
-  --art-paper: #f2ebdd;
-  --art-ink: #203f34;
-  --art-clay: #c26d4e;
-  --art-sun: #edbd62;
-  --art-sage: #9aaa7d;
-  --art-line: #203f34;
-  --badge-neutral: #f0ebe0;
-  --badge-neutral-foreground: #464d40;
-  --badge-brand: #e6eee2;
-  --badge-brand-foreground: #254a39;
-  --badge-info: #e7eef7;
-  --badge-info-foreground: #27538b;
-  --badge-success: #e6efdf;
-  --badge-success-foreground: #2e6137;
-  --badge-warning: #faf0da;
-  --badge-warning-foreground: #865015;
-  --badge-danger: #f8e6e1;
-  --badge-danger-foreground: #a3322c;
-  --badge-reward: #f8ecd2;
-  --badge-reward-foreground: #78510d;
+  --border: #e9e0d4;
+  --input: #8f8577;
+  --ring: #7c5cff;
+  --success: #217a46;
+  --warning: #9a4f05;
+  --info: #3a55c4;
+  --reward: #f5b544;
+  --reward-foreground: #3d2604;
+  --violet: #6d4ef5;
+  --violet-soft: #efeaff;
+  --iri-1: #ff8a5b;
+  --iri-2: #ff5fa2;
+  --iri-3: #8b5cf6;
+  --iri-4: #6c8cff;
+  --cat-furniture-assembly: #f07a2b;
+  --cat-moving-help: #8b5cf6;
+  --cat-yard-cleanup: #2e9e68;
+  --cat-light-cleaning: #e5508a;
+  --cat-computer-help: #3b7bf6;
+  --glass: rgb(255 255 255 / 0.66);
+  --glass-strong: rgb(255 255 255 / 0.84);
+  --glass-border: rgb(255 255 255 / 0.75);
+  --glass-edge: rgb(23 18 14 / 0.07);
+  --glass-shadow: 0 1px 1px rgb(23 18 14 / 0.04), 0 12px 32px -12px rgb(60 30 10 / 0.18);
+  --map-land: #f6efe6;
+  --map-water: #dfe6ff;
+  --map-park: #e3f1e6;
+  --map-road: #ffffff;
+  --map-road-major: #fde3d2;
+  --map-label: #8b8178;
+  --map-building: #efe6da;
+  --brand-soft: #ffebdd;
+  --brand-paper: #f6efe6;
+  --brand-ink: #17120e;
+  --sun: #f5b544;
+  --sun-foreground: #3d2604;
+  --clay: #c13f12;
+  --clay-soft: #ffe4d4;
+  --art-paper: #f6efe6;
+  --art-ink: #2b2140;
+  --art-clay: #ff7a45;
+  --art-sun: #f5b544;
+  --art-sage: #67c9a7;
+  --art-line: #2b2140;
+  --badge-neutral: #f1ebe3;
+  --badge-neutral-foreground: #4a423a;
+  --badge-brand: #ffe7d6;
+  --badge-brand-foreground: #8a3410;
+  --badge-info: #e9edff;
+  --badge-info-foreground: #2f49b3;
+  --badge-success: #e2f3e8;
+  --badge-success-foreground: #1f6a3d;
+  --badge-warning: #fdf0d9;
+  --badge-warning-foreground: #844506;
+  --badge-danger: #fde6e3;
+  --badge-danger-foreground: #a02a1f;
+  --badge-reward: #fff0d4;
+  --badge-reward-foreground: #704605;
 }
 
 :root {
-  --radius: 0.875rem;
-  --card-shadow: 0 2px 5px rgb(32 51 45 / 0.045);
-  --overlay-shadow: 0 16px 48px rgb(20 35 30 / 0.2);
+  --radius: 1rem;
+  --card-shadow: 0 1px 2px rgb(23 18 14 / 0.04), 0 8px 24px -14px rgb(60 30 10 / 0.16);
+  --overlay-shadow: 0 24px 64px -16px rgb(30 15 5 / 0.28);
   --page-gutter: 1rem;
   --card-padding: 1rem;
   --section-gap: 1.5rem;
@@ -76,118 +102,178 @@
   --layer-dev: 40;
   --layer-overlay: 50;
   --layer-toast: 60;
+  /* Motion tokens (mirrored in src/ui/motion/tokens.ts). */
+  --dur-instant: 120ms;
+  --dur-fast: 200ms;
+  --dur-base: 320ms;
+  --dur-slow: 560ms;
+  --dur-slower: 800ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1);
+  --iridescent: linear-gradient(115deg, var(--iri-1) 0%, var(--iri-2) 34%, var(--iri-3) 68%, var(--iri-4) 100%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    color-scheme: dark;
-  --background: #14231e;
-  --foreground: #f5f0e5;
-  --card: #1b2e25;
-  --card-foreground: #f5f0e5;
-  --popover: #1b2e25;
-  --popover-foreground: #f5f0e5;
-  --primary: #95d4b4;
-  --primary-foreground: #142b22;
-  --secondary: #253b30;
-  --secondary-foreground: #d8e6d1;
-  --muted: #29382d;
-  --muted-foreground: #b7c0af;
-  --accent: #344337;
-  --accent-foreground: #f5f0e5;
-  --destructive: #f1a19a;
-  --destructive-foreground: #321a15;
-  --border: #405044;
-  --input: #85937f;
-  --ring: #95d4b4;
-  --success: #a8d99d;
-  --warning: #eac070;
-  --info: #abc6e8;
-  --reward: #e8b968;
-  --reward-foreground: #35260e;
-  --brand-soft: #253b30;
-  --brand-paper: #28372c;
-  --brand-ink: #ddebdd;
-  --sun: #e8b968;
-  --sun-foreground: #35260e;
-  --clay: #efab8e;
-  --clay-soft: #443329;
-  --art-paper: #34483a;
-  --art-ink: #b4d0b6;
-  --art-clay: #d68c6b;
-  --art-sun: #e8b968;
-  --art-sage: #65846b;
-  --art-line: #142b22;
-  --badge-neutral: #303f33;
-  --badge-neutral-foreground: #dce2d3;
-  --badge-brand: #253b30;
-  --badge-brand-foreground: #b5ddbe;
-  --badge-info: #22394d;
-  --badge-info-foreground: #bad6f0;
-  --badge-success: #273f2b;
-  --badge-success-foreground: #bbdfac;
-  --badge-warning: #443c23;
-  --badge-warning-foreground: #edd18b;
-  --badge-danger: #492e28;
-  --badge-danger-foreground: #f5b4a9;
-  --badge-reward: #443a22;
-  --badge-reward-foreground: #efd08e;
+  color-scheme: dark;
+  --background: #0f0d0b;
+  --foreground: #f7f1ea;
+  --card: #181511;
+  --card-foreground: #f7f1ea;
+  --popover: #1d1914;
+  --popover-foreground: #f7f1ea;
+  --primary: #ff8b5c;
+  --primary-foreground: #1a0b04;
+  --primary-hover: #ffa47e;
+  --primary-glow: rgb(255 139 92 / 0.35);
+  --secondary: #2c1e16;
+  --secondary-foreground: #ffd3b8;
+  --muted: #1f1b16;
+  --muted-foreground: #b8aea2;
+  --accent: #231e35;
+  --accent-foreground: #f7f1ea;
+  --destructive: #ff8a80;
+  --destructive-foreground: #2a0f0c;
+  --border: #2e2822;
+  --input: #8a8075;
+  --ring: #a48bff;
+  --success: #7fd39c;
+  --warning: #f2b866;
+  --info: #9db4ff;
+  --reward: #f5b544;
+  --reward-foreground: #2a1a03;
+  --violet: #b4a0ff;
+  --violet-soft: #231e35;
+  --iri-1: #ff9a6e;
+  --iri-2: #ff79b4;
+  --iri-3: #a585ff;
+  --iri-4: #85a2ff;
+  --cat-furniture-assembly: #ff9a55;
+  --cat-moving-help: #a48bff;
+  --cat-yard-cleanup: #4fc28a;
+  --cat-light-cleaning: #ff77a9;
+  --cat-computer-help: #6b9dff;
+  --glass: rgb(30 26 22 / 0.62);
+  --glass-strong: rgb(30 26 22 / 0.86);
+  --glass-border: rgb(255 255 255 / 0.1);
+  --glass-edge: rgb(255 255 255 / 0.06);
+  --glass-shadow: 0 1px 1px rgb(0 0 0 / 0.3), 0 16px 40px -16px rgb(0 0 0 / 0.6);
+  --map-land: #191612;
+  --map-water: #1b2236;
+  --map-park: #16241c;
+  --map-road: #2a251f;
+  --map-road-major: #3a2a20;
+  --map-label: #8f857a;
+  --map-building: #211d18;
+  --brand-soft: #2c1e16;
+  --brand-paper: #17130f;
+  --brand-ink: #f7f1ea;
+  --sun: #f5b544;
+  --sun-foreground: #2a1a03;
+  --clay: #ff8b5c;
+  --clay-soft: #3a2418;
+  --art-paper: #1d1914;
+  --art-ink: #e9e3ff;
+  --art-clay: #ff8b5c;
+  --art-sun: #f5b544;
+  --art-sage: #5fbf98;
+  --art-line: #e9e3ff;
+  --badge-neutral: #2a251f;
+  --badge-neutral-foreground: #e3dbd1;
+  --badge-brand: #3a2418;
+  --badge-brand-foreground: #ffc7a6;
+  --badge-info: #1f2747;
+  --badge-info-foreground: #b9c7ff;
+  --badge-success: #17301f;
+  --badge-success-foreground: #a8e2bb;
+  --badge-warning: #3a2a12;
+  --badge-warning-foreground: #f5cf8f;
+  --badge-danger: #3d1a16;
+  --badge-danger-foreground: #ffb4aa;
+  --badge-reward: #3a2d10;
+  --badge-reward-foreground: #f5d48f;
   }
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --background: #14231e;
-  --foreground: #f5f0e5;
-  --card: #1b2e25;
-  --card-foreground: #f5f0e5;
-  --popover: #1b2e25;
-  --popover-foreground: #f5f0e5;
-  --primary: #95d4b4;
-  --primary-foreground: #142b22;
-  --secondary: #253b30;
-  --secondary-foreground: #d8e6d1;
-  --muted: #29382d;
-  --muted-foreground: #b7c0af;
-  --accent: #344337;
-  --accent-foreground: #f5f0e5;
-  --destructive: #f1a19a;
-  --destructive-foreground: #321a15;
-  --border: #405044;
-  --input: #85937f;
-  --ring: #95d4b4;
-  --success: #a8d99d;
-  --warning: #eac070;
-  --info: #abc6e8;
-  --reward: #e8b968;
-  --reward-foreground: #35260e;
-  --brand-soft: #253b30;
-  --brand-paper: #28372c;
-  --brand-ink: #ddebdd;
-  --sun: #e8b968;
-  --sun-foreground: #35260e;
-  --clay: #efab8e;
-  --clay-soft: #443329;
-  --art-paper: #34483a;
-  --art-ink: #b4d0b6;
-  --art-clay: #d68c6b;
-  --art-sun: #e8b968;
-  --art-sage: #65846b;
-  --art-line: #142b22;
-  --badge-neutral: #303f33;
-  --badge-neutral-foreground: #dce2d3;
-  --badge-brand: #253b30;
-  --badge-brand-foreground: #b5ddbe;
-  --badge-info: #22394d;
-  --badge-info-foreground: #bad6f0;
-  --badge-success: #273f2b;
-  --badge-success-foreground: #bbdfac;
-  --badge-warning: #443c23;
-  --badge-warning-foreground: #edd18b;
-  --badge-danger: #492e28;
-  --badge-danger-foreground: #f5b4a9;
-  --badge-reward: #443a22;
-  --badge-reward-foreground: #efd08e;
+  --background: #0f0d0b;
+  --foreground: #f7f1ea;
+  --card: #181511;
+  --card-foreground: #f7f1ea;
+  --popover: #1d1914;
+  --popover-foreground: #f7f1ea;
+  --primary: #ff8b5c;
+  --primary-foreground: #1a0b04;
+  --primary-hover: #ffa47e;
+  --primary-glow: rgb(255 139 92 / 0.35);
+  --secondary: #2c1e16;
+  --secondary-foreground: #ffd3b8;
+  --muted: #1f1b16;
+  --muted-foreground: #b8aea2;
+  --accent: #231e35;
+  --accent-foreground: #f7f1ea;
+  --destructive: #ff8a80;
+  --destructive-foreground: #2a0f0c;
+  --border: #2e2822;
+  --input: #8a8075;
+  --ring: #a48bff;
+  --success: #7fd39c;
+  --warning: #f2b866;
+  --info: #9db4ff;
+  --reward: #f5b544;
+  --reward-foreground: #2a1a03;
+  --violet: #b4a0ff;
+  --violet-soft: #231e35;
+  --iri-1: #ff9a6e;
+  --iri-2: #ff79b4;
+  --iri-3: #a585ff;
+  --iri-4: #85a2ff;
+  --cat-furniture-assembly: #ff9a55;
+  --cat-moving-help: #a48bff;
+  --cat-yard-cleanup: #4fc28a;
+  --cat-light-cleaning: #ff77a9;
+  --cat-computer-help: #6b9dff;
+  --glass: rgb(30 26 22 / 0.62);
+  --glass-strong: rgb(30 26 22 / 0.86);
+  --glass-border: rgb(255 255 255 / 0.1);
+  --glass-edge: rgb(255 255 255 / 0.06);
+  --glass-shadow: 0 1px 1px rgb(0 0 0 / 0.3), 0 16px 40px -16px rgb(0 0 0 / 0.6);
+  --map-land: #191612;
+  --map-water: #1b2236;
+  --map-park: #16241c;
+  --map-road: #2a251f;
+  --map-road-major: #3a2a20;
+  --map-label: #8f857a;
+  --map-building: #211d18;
+  --brand-soft: #2c1e16;
+  --brand-paper: #17130f;
+  --brand-ink: #f7f1ea;
+  --sun: #f5b544;
+  --sun-foreground: #2a1a03;
+  --clay: #ff8b5c;
+  --clay-soft: #3a2418;
+  --art-paper: #1d1914;
+  --art-ink: #e9e3ff;
+  --art-clay: #ff8b5c;
+  --art-sun: #f5b544;
+  --art-sage: #5fbf98;
+  --art-line: #e9e3ff;
+  --badge-neutral: #2a251f;
+  --badge-neutral-foreground: #e3dbd1;
+  --badge-brand: #3a2418;
+  --badge-brand-foreground: #ffc7a6;
+  --badge-info: #1f2747;
+  --badge-info-foreground: #b9c7ff;
+  --badge-success: #17301f;
+  --badge-success-foreground: #a8e2bb;
+  --badge-warning: #3a2a12;
+  --badge-warning-foreground: #f5cf8f;
+  --badge-danger: #3d1a16;
+  --badge-danger-foreground: #ffb4aa;
+  --badge-reward: #3a2d10;
+  --badge-reward-foreground: #f5d48f;
 }
 
 @theme inline {
@@ -215,6 +301,16 @@
   --color-info: var(--info);
   --color-reward: var(--reward);
   --color-reward-foreground: var(--reward-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-iri-1: var(--iri-1);
+  --color-iri-2: var(--iri-2);
+  --color-iri-3: var(--iri-3);
+  --color-iri-4: var(--iri-4);
+  --color-glass: var(--glass);
+  --color-glass-strong: var(--glass-strong);
+  --color-glass-border: var(--glass-border);
   --color-brand-soft: var(--brand-soft);
   --color-brand-paper: var(--brand-paper);
   --color-brand-ink: var(--brand-ink);
@@ -245,19 +341,23 @@
   --text-display: clamp(2.75rem, 5.6vw, 4.75rem);
   --text-display--line-height: 1.02;
   --text-display--letter-spacing: -0.04em;
-  --text-display--font-weight: 500;
+  --text-display--font-weight: 650;
   --text-marketing-title: clamp(2rem, 3.7vw, 3rem);
   --text-marketing-title--line-height: 1.08;
   --text-marketing-title--letter-spacing: -0.025em;
   --font-sans: var(--font-dm-sans);
-  --font-heading: var(--font-newsreader);
+  --font-heading: var(--font-bricolage);
+  --font-display: var(--font-bricolage);
+  --font-accent: var(--font-instrument);
   --radius-sm: 0.5rem;
   --radius-md: 0.625rem;
   --radius-lg: var(--radius);
   --radius-xl: var(--radius);
   --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
   --shadow-card: var(--card-shadow);
   --shadow-overlay: var(--overlay-shadow);
+  --shadow-glass: var(--glass-shadow);
   --spacing-gutter: var(--page-gutter);
   --spacing-card: var(--card-padding);
   --spacing-section: var(--section-gap);
@@ -269,14 +369,14 @@
   --z-index-dev: var(--layer-dev);
   --z-index-overlay: var(--layer-overlay);
   --z-index-toast: var(--layer-toast);
-  --default-transition-duration: 175ms;
-  --default-transition-timing-function: ease-out;
+  --default-transition-duration: 200ms;
+  --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
   * { border-color: var(--border); }
   body { background: var(--background); color: var(--foreground); font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif; font-size: 1rem; line-height: 1.5; }
-  h1, h2, h3, h4, h5, h6 { font-family: var(--font-newsreader), Georgia, serif; overflow-wrap: anywhere; }
+  h1, h2, h3, h4, h5, h6 { font-family: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif; overflow-wrap: anywhere; letter-spacing: -0.02em; }
   :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   input, select, textarea { font-size: 1rem; }
   button, input, select, textarea { font: inherit; }
@@ -285,6 +385,68 @@
 }
 
 @utility tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ---- Motion (src/ui/motion) -------------------------------------------------------------------
+   Content is visible without JavaScript. `data-motion="on"` on <html> (set after hydration, never under
+   reduced motion) lets [data-reveal] elements start hidden until they scroll into view. */
+[data-reveal] {
+  transition:
+    opacity var(--dur-slow) var(--ease-out) var(--reveal-delay, 0ms),
+    transform var(--dur-slower) var(--ease-out) var(--reveal-delay, 0ms),
+    filter var(--dur-slow) var(--ease-out) var(--reveal-delay, 0ms);
+}
+html[data-motion="on"] [data-reveal]:not([data-revealed]) {
+  opacity: 0;
+  transform: translate3d(0, var(--reveal-rise, 18px), 0) scale(var(--reveal-scale, 1));
+  filter: blur(var(--reveal-blur, 8px));
+}
+html[data-motion="on"] [data-reveal="bloom"]:not([data-revealed]) {
+  --reveal-scale: 0.92;
+  --reveal-rise: 10px;
+  transform-origin: var(--bloom-origin, 50% 100%);
+}
+
+/* Lines that slide up through a mask on first paint (CSS only, so no JavaScript delays the hero). */
+.mask-line { display: block; overflow: hidden; padding-block: 0.08em; margin-block: -0.08em; }
+.mask-line > span { display: inline-block; animation: mask-rise var(--dur-slower) var(--ease-out) both; animation-delay: var(--line-delay, 0ms); }
+@keyframes mask-rise { from { transform: translate3d(0, 110%, 0); } to { transform: translate3d(0, 0, 0); } }
+
+.enter { animation: enter-up var(--dur-slow) var(--ease-out) both; animation-delay: var(--enter-delay, 0ms); }
+@keyframes enter-up { from { opacity: 0; transform: translate3d(0, 14px, 0); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+.bloom-in { animation: bloom-in var(--dur-slower) var(--ease-out) both; animation-delay: var(--enter-delay, 0ms); transform-origin: var(--bloom-origin, 50% 100%); }
+@keyframes bloom-in { from { opacity: 0; transform: scale(0.86) translate3d(0, 12px, 0); filter: blur(10px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes drift { 0%, 100% { translate: 0 0; } 50% { translate: 0 -7px; } }
+@keyframes pulse-ring { 0% { transform: scale(0.6); opacity: 0.55; } 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes sheen { from { transform: translateX(-130%) skewX(-18deg); } to { transform: translateX(230%) skewX(-18deg); } }
+@keyframes draw { from { stroke-dashoffset: var(--draw-length, 200); } to { stroke-dashoffset: 0; } }
+@keyframes hue-drift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+/* A line that draws itself when its [data-reveal] ancestor is revealed (always drawn without motion). */
+.draw-on-reveal { --draw-length: 900; stroke-dasharray: 900; }
+html[data-motion="on"] [data-reveal]:not([data-revealed]) .draw-on-reveal { stroke-dashoffset: var(--draw-length); }
+[data-reveal][data-revealed] .draw-on-reveal { animation: draw 1.4s var(--ease-out) 150ms both; }
+
+@utility text-iridescent {
+  background-image: var(--iridescent);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* The landing map's soft edges: it melts into the page instead of sitting in a box. */
+@utility map-fade {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent), linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent), linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  mask-composite: intersect;
+}
+@utility glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(18px) saturate(1.6);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgb(255 255 255 / 0.3);
+}
 
 /* AppShell supplies this only when mobile tabs are present. Portaled sheets
    and standalone flow pages keep their actions at the viewport bottom. */

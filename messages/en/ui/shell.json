@@ -132,5 +132,10 @@
     "modeResult": "Mode change outcome",
     "signOutHint": "Open the account menu and choose Sign out to see the error state.",
     "redirectHint": "Choose “I can help” to see the pending state, then continue to helper setup."
+  },
+  "theme": {
+    "label": "Color theme",
+    "toLight": "Switch to light mode",
+    "toDark": "Switch to dark mode"
   }
 }

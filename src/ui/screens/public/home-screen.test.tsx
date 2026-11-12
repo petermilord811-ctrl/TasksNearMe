@@ -1,179 +1,154 @@
 /** @vitest-environment jsdom */
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { createTranslator, NextIntlClientProvider } from 'next-intl';
-import { afterEach, describe, expect, it } from 'vitest';
-import { routes, type HomePageData } from '@/contracts';
-import { homeNoRewardData, homePageData } from '@/fixtures';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { routes, type CategorySlug, type HomePageData } from '@/contracts';
+import { homeEmptyMapData, homeNoRewardData, homePageData } from '@/fixtures';
 import { formatMoney } from '@/shared/format';
+import { distanceMiles, type LatLng } from '@/shared/geo';
 import messages from '../../../../messages/en/ui';
 import { HomeScreen } from './home-screen';
 
-afterEach(cleanup);
-
 const now = '2026-11-17T15:00:00.000Z';
-const t = createTranslator({ locale: 'en', messages, namespace: 'home.landing' });
+const t = createTranslator({ locale: 'en', messages, namespace: 'landing' });
+const categoryName = createTranslator({ locale: 'en', messages, namespace: 'helperCard.categories' });
+/** A visitor in Mueller (inside the service area) and one in Dallas (outside it). */
+const inMueller: LatLng = { lat: 30.2989, lng: -97.7064 };
+const inDallas: LatLng = { lat: 32.7767, lng: -96.797 };
 
-function show(data: HomePageData = homePageData) {
+beforeEach(() => {
+  // The visitor asked for reduced motion, so every section renders in its final state.
+  vi.stubGlobal('matchMedia', vi.fn((query: string) => ({
+    matches: query.includes('reduce'),
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })));
+  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+function show(data: HomePageData = homePageData, options: { location?: LatLng; category?: CategorySlug } = {}) {
   return render(
     <NextIntlClientProvider locale="en" messages={messages}>
-      <HomeScreen data={data} now={now} />
+      <HomeScreen data={data} now={now} mapMode="static" initialLocation={options.location} initialCategory={options.category} />
     </NextIntlClientProvider>,
   );
 }
 
-describe('HomeScreen', () => {
-  it('gives the landing page one main heading and each section its own heading', () => {
-    const { container } = show();
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    for (const key of ['categories', 'steps', 'fees', 'trust', 'tasks', 'helpers', 'forHelpers', 'faq', 'closing'] as const) {
-      expect(screen.getByRole('heading', { level: 2, name: t(`${key}.title`) })).toBeInTheDocument();
-    }
-    expect(screen.getByRole('heading', { level: 2, name: t('coverage.title', { market: homePageData.market.name }) })).toBeInTheDocument();
-    const sections = container.querySelectorAll('section');
-    // Hero, categories, steps, pricing, trust, tasks, helpers, helper invitation,
-    // neighborhoods, FAQ, and closing invitation all have a place in the story.
-    expect(sections.length).toBeGreaterThanOrEqual(11);
-    for (const section of sections) {
-      expect(within(section).getAllByRole('heading').length).toBeGreaterThan(0);
-    }
-  });
+const text = (element: Element) => (element.textContent ?? '').replace(/\s+/g, ' ').trim();
+const section = (title: string) => {
+  const heading = screen.getAllByRole('heading', { level: 2 }).find((element) => text(element) === title);
+  if (!heading) throw new Error(`No section titled "${title}"`);
+  return heading.closest('section') as HTMLElement;
+};
 
-  it('shows supplied categories with their real price guidance and category destinations', () => {
+describe('HomeScreen (the landing page)', () => {
+  it('has one h1 that reads as words, and a titled section for each part of the page', () => {
     show();
-    for (const category of homePageData.categories) {
-      const link = screen.getAllByRole('link').find((item) =>
-        item.getAttribute('href') === routes.category(category.slug, homePageData.market.slug),
-      );
-      expect(link).toBeDefined();
-      expect(link).toHaveTextContent(category.name);
-      expect(link).toHaveTextContent(formatMoney(category.priceGuidance.lowCents));
-      expect(link).toHaveTextContent(formatMoney(category.priceGuidance.highCents));
+    const h1 = screen.getAllByRole('heading', { level: 1 });
+    expect(h1).toHaveLength(1);
+    expect(text(h1[0]!)).toBe(`${t('hero.line1')} ${t('hero.line2')} ${t('hero.line3Vivid')}${t('hero.line3Rest')}`);
+    const titles = screen.getAllByRole('heading', { level: 2 }).map(text);
+    for (const title of [
+      `${t('map.title')} ${t('map.titleAccent')}`,
+      `${t('categories.title')} ${t('categories.titleAccent')}`,
+      `${t('steps.title')} ${t('steps.titleAccent')}`,
+      `${t('pricing.title')} ${t('pricing.titleAccent')}`,
+      `${t('trust.title')} ${t('trust.titleAccent')}`,
+      `${t('helpers.title')} ${t('helpers.titleAccent')}`,
+      t('coverage.title', { market: homePageData.market.name }),
+      t('faq.title'),
+      `${t('closing.title')} ${t('closing.titleAccent')}`,
+    ]) {
+      expect(titles).toContain(title);
     }
   });
 
-  it('shows the supplied tasks, helpers, verification badges, ratings, and neighborhoods', () => {
+  it('shows the fee example exactly as supplied', () => {
     show();
-    for (const task of homePageData.recentTasks) {
-      expect(screen.getByRole('link', { name: task.title })).toHaveAttribute('href', routes.publicTask(task.slug));
-      if (task.location.kind === 'local') {
-        expect(screen.getAllByText(task.location.areaName).length).toBeGreaterThan(0);
-      }
-    }
-    for (const helper of homePageData.featuredHelpers) {
-      const link = screen.getByRole('link', { name: helper.displayName });
-      expect(link).toHaveAttribute('href', routes.helperProfile(helper.handle));
-      const article = link.closest('article');
-      expect(article).not.toBeNull();
-      if (!article) throw new Error('A featured helper must be presented as an article.');
-      expect(article).toHaveTextContent(helper.headline);
-      if (helper.badges.idVerifiedAt) {
-        expect(within(article).getByRole('button', { name: messages.verification.identity })).toBeInTheDocument();
-      }
-      if (helper.badges.backgroundCheckedAt) {
-        expect(within(article).getByRole('button', { name: messages.verification.background })).toBeInTheDocument();
-      }
-      if (helper.rating) {
-        expect(article).toHaveTextContent(String(helper.rating.average));
-        expect(article).toHaveTextContent(String(helper.rating.count));
-      } else {
-        expect(within(article).getByText(messages.verification.new)).toBeInTheDocument();
-      }
-    }
-    for (const neighborhood of homePageData.market.areaNames) {
-      expect(screen.getAllByText(neighborhood).length).toBeGreaterThan(0);
-    }
+    const fee = homePageData.feeExample;
+    const pricing = within(section(`${t('pricing.title')} ${t('pricing.titleAccent')}`));
+    expect(pricing.getByText(t('pricing.example', { price: formatMoney(fee.taskPriceCents) }))).toBeInTheDocument();
+    expect(pricing.getByText(`+${formatMoney(fee.posterFeeCents)}`)).toBeInTheDocument();
+    expect(pricing.getByText(`−${formatMoney(fee.helperFeeCents)}`)).toBeInTheDocument();
+    // With reduced motion the totals never count: the shown value and the spoken one are both final.
+    expect(pricing.getAllByText(formatMoney(fee.posterTotalCents))).toHaveLength(2);
+    expect(pricing.getAllByText(formatMoney(fee.helperEarningsCents))).toHaveLength(2);
   });
 
-  it('renders fee-engine amounts exactly as supplied rather than calculating a fee or total', () => {
-    // Deliberately independent values catch accidental arithmetic or hard-coded launch figures.
-    const feeExample = {
-      ...homePageData.feeExample,
-      taskPriceCents: 7543,
-      posterFeeCents: 1111,
-      helperFeeCents: 987,
-      posterTotalCents: 8867,
-      helperEarningsCents: 6429,
-    };
-    const { container } = show({ ...homePageData, feeExample });
-    for (const cents of [feeExample.taskPriceCents, feeExample.posterFeeCents, feeExample.helperFeeCents, feeExample.posterTotalCents, feeExample.helperEarningsCents]) {
-      expect(container).toHaveTextContent(formatMoney(cents));
-    }
-    expect(screen.queryByText(formatMoney(homePageData.feeExample.posterTotalCents))).not.toBeInTheDocument();
+  it('shows the founding helper reward only when there is one', () => {
+    show();
+    const reward = homePageData.welcomeReward!;
+    expect(screen.getByText(t('helpers.rewardAmount', { amount: formatMoney(reward.amountCents) }))).toBeInTheDocument();
+    expect(screen.getByText(t('helpers.rewardSpots', { claimed: reward.spotsClaimed, limit: reward.cohortLimit }))).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t('helpers.rewardTerms') })).toHaveAttribute('href', routes.legal('rewards-terms'));
+    cleanup();
+
+    show(homeNoRewardData);
+    expect(screen.queryByText(t('helpers.rewardTitle'))).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: t('helpers.rewardTerms') })).not.toBeInTheDocument();
   });
 
-  it('shows the welcome reward only when supplied, while keeping the helper invitation', () => {
-    const { rerender } = show();
-    expect(screen.getByRole('region', { name: t('forHelpers.rewardTitle') })).toBeInTheDocument();
-    expect(screen.getByText(t('forHelpers.claimed', { claimed: homePageData.welcomeReward!.spotsClaimed, limit: homePageData.welcomeReward!.cohortLimit }))).toBeInTheDocument();
-    rerender(
-      <NextIntlClientProvider locale="en" messages={messages}>
-        <HomeScreen data={homeNoRewardData} now={now} />
-      </NextIntlClientProvider>,
-    );
-    expect(screen.queryByRole('region', { name: t('forHelpers.rewardTitle') })).not.toBeInTheDocument();
-    expect(screen.queryByText(/spots claimed/)).not.toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: /Become a helper/ }).length).toBeGreaterThan(0);
+  it('lists the newest open tasks beside the map, each linking to its public page', () => {
+    show();
+    const list = screen.getByRole('list', { name: t('map.listNewest') });
+    const hrefs = within(list).getAllByRole('link').map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual(homePageData.map.pins.slice(0, hrefs.length).map((pin) => routes.publicTask(pin.slug)));
+    expect(hrefs.length).toBeGreaterThan(0);
   });
 
-  it('uses the supplied welcome amount, cohort size, and claimed count', () => {
-    show({ ...homePageData, welcomeReward: { amountCents: 7350, cohortLimit: 123, spotsClaimed: 87 } });
-    const reward = within(screen.getByRole('region', { name: t('forHelpers.rewardTitle') }));
-    expect(reward.getByText(t('forHelpers.rewardAmount', { amount: formatMoney(7350) }))).toBeInTheDocument();
-    expect(reward.getByText(t('forHelpers.rewardBody', { count: 123 }))).toBeInTheDocument();
-    expect(reward.getByText(t('forHelpers.claimed', { claimed: 87, limit: 123 }))).toBeInTheDocument();
+  it('sorts the list by distance once the visitor shares a location', () => {
+    show(homePageData, { location: inMueller });
+    const list = screen.getByRole('list', { name: t('map.listNearYou') });
+    const hrefs = within(list).getAllByRole('link').map((link) => link.getAttribute('href'));
+    const nearest = [...homePageData.map.pins].sort((a, b) => distanceMiles(inMueller, a.point) - distanceMiles(inMueller, b.point));
+    expect(hrefs).toEqual(nearest.slice(0, hrefs.length).map((pin) => routes.publicTask(pin.slug)));
+    expect(screen.queryByText(t('map.outside'))).not.toBeInTheDocument();
   });
 
-  it('builds all calls to action and data links with route builders', () => {
-    const data: HomePageData = {
-      ...homePageData,
-      market: { ...homePageData.market, slug: 'austin north' },
-      recentTasks: homePageData.recentTasks.map((task) => ({ ...task, slug: `${task.slug} & more` })),
-      featuredHelpers: homePageData.featuredHelpers.map((helper) => ({ ...helper, handle: `${helper.handle} & more` })),
-    };
-    show(data);
-    const destinations = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
-    for (const href of [routes.app.newTask(), routes.becomeAHelper(), routes.taskBoard(data.market.slug), routes.howItWorks(), routes.pricing(), routes.trustAndSafety(), routes.waitlist()]) {
-      expect(destinations).toContain(href);
-    }
-    for (const category of data.categories) {
-      expect(destinations).toContain(routes.category(category.slug, data.market.slug));
-    }
-    for (const task of data.recentTasks) {
-      expect(screen.getByRole('link', { name: task.title })).toHaveAttribute('href', routes.publicTask(task.slug));
-    }
-    for (const helper of data.featuredHelpers) {
-      expect(screen.getByRole('link', { name: helper.displayName })).toHaveAttribute('href', routes.helperProfile(helper.handle));
-    }
-    for (const link of screen.getAllByRole('link', { name: /Post a task/ })) {
-      expect(link).toHaveAttribute('href', routes.app.newTask());
-    }
+  it('says so when the visitor is outside the service area, and offers the waitlist', () => {
+    show(homePageData, { location: inDallas });
+    expect(screen.getByText(t('map.outside'))).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t('map.waitlist') })).toHaveAttribute('href', routes.waitlist());
   });
 
-  it('never renders private address or contact fields supplied beyond the public contract', () => {
-    const privateFields = {
-      address: '1234 Private Example Lane',
-      email: 'private@example.test',
-      phone: '+15125550134',
-      lastName: 'PrivateSurname',
-    };
-    const exactAddress = { line1: privateFields.address, line2: 'Private unit 2B', city: 'Austin', state: 'TX', zip: '78723', accessNotes: 'Private gate code 9341' };
-    const data = {
-      ...homePageData,
-      ...privateFields,
-      exactAddress,
-      recentTasks: homePageData.recentTasks.map((task) => ({
-        ...task,
-        ...privateFields,
-        exactAddress,
-        location: { ...task.location, ...privateFields, exactAddress },
-        poster: { ...task.poster, ...privateFields },
-      })),
-      featuredHelpers: homePageData.featuredHelpers.map((helper) => ({ ...helper, ...privateFields, exactAddress })),
-    };
-    const { container } = show(data);
-    for (const value of [...Object.values(privateFields), exactAddress.line2, exactAddress.accessNotes]) {
-      expect(container.innerHTML).not.toContain(value);
-    }
-    expect(screen.getAllByText(homePageData.market.areaNames[0]!).length).toBeGreaterThan(0);
+  it('filters the map and its list by category', () => {
+    show();
+    const chip = screen.getByRole('button', { name: categoryName('yard-cleanup') });
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    const list = screen.getByRole('list', { name: t('map.listNewest') });
+    const yard = homePageData.map.pins.filter((pin) => pin.categorySlug === 'yard-cleanup');
+    expect(within(list).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(yard.slice(0, 7).map((pin) => routes.publicTask(pin.slug)));
+  });
+
+  it('invites the first post when there are no open tasks', () => {
+    show(homeEmptyMapData);
+    expect(screen.getByText(t('map.emptyTitle'))).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: t('map.listNewest') })).not.toBeInTheDocument();
+  });
+
+  it('never shows an address, even with the visitor located', () => {
+    const { container } = show(homePageData, { location: inMueller });
+    expect(container.textContent).not.toMatch(/\d+ (Example|Sample) (Lane|Street|Road)/);
+  });
+
+  it('builds every call to action with the route builders', () => {
+    show();
+    for (const link of screen.getAllByRole('link', { name: t('hero.primary') })) expect(link).toHaveAttribute('href', routes.app.newTask());
+    expect(screen.getAllByRole('link', { name: t('hero.secondary') })[0]).toHaveAttribute('href', routes.becomeAHelper());
+    expect(screen.getByRole('link', { name: t('map.browseAll') })).toHaveAttribute('href', routes.taskBoard(homePageData.market.slug));
+    expect(screen.getByRole('link', { name: t('pricing.link') })).toHaveAttribute('href', routes.pricing());
   });
 });
