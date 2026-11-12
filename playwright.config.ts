@@ -35,12 +35,13 @@ export default defineConfig({
     {
       name: 'ui-mobile',
       testMatch: /ui-previews\/.*\.spec\.ts/,
-      use: { ...devices['Pixel 7'], viewport: { width: 360, height: 800 } },
+      // Settled states: screenshots and axe see final frames, not animations in flight.
+      use: { ...devices['Pixel 7'], viewport: { width: 360, height: 800 }, reducedMotion: 'reduce' },
     },
     {
       name: 'ui-desktop',
       testMatch: /ui-previews\/.*\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' },
     },
     {
       // Reseeds the dev database before the app flows (see tests/e2e/global.setup.ts).

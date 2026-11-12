@@ -11,6 +11,8 @@ import type {
   PublicTaskPageData,
   TaskBoardPageData,
   WaitlistPageData,
+  LandingMapData,
+  TaskMapPin,
 } from '@/contracts';
 import {
   DEFAULT_MARKET_SLUG,
@@ -73,7 +75,42 @@ export async function getHomePageData(): Promise<WithNow<HomePageData> | null> {
       ...page.data,
       feeExample: buildPricingPageData(policy).fixedExample,
       ...(reward ? { welcomeReward: { amountCents: reward.amountCents, cohortLimit: reward.cohortLimit, spotsClaimed: reward.spotsClaimed } } : {}),
+      map: await landingMap(market),
     },
+  };
+}
+
+/** Up to 60 open in-person tasks for the landing page's map (public points only). */
+const MAP_PINS = 60;
+const KM_PER_MILE = 1.609344;
+
+async function landingMap(market: { id: string; centerLat: number; centerLng: number; serviceRadiusKm: number }): Promise<LandingMapData> {
+  const open = await listRecentOpenTasks(db, { marketId: market.id, limit: MAP_PINS, now: new Date() });
+  const pins: TaskMapPin[] = open.flatMap((task) =>
+    task.location.kind === 'local'
+      ? [
+          {
+            id: task.id,
+            slug: task.slug,
+            title: task.title,
+            categorySlug: task.categorySlug,
+            areaName: task.location.areaName,
+            point: task.location.publicPoint,
+            radiusMeters: task.location.radiusMeters,
+            budget: task.budget,
+            windowStart: task.schedule.windowStart,
+            offerCount: task.offerCount,
+          },
+        ]
+      : [],
+  );
+  return {
+    center: { lat: market.centerLat, lng: market.centerLng },
+    serviceRadiusMiles: Math.round(market.serviceRadiusKm / KM_PER_MILE),
+    // Any MapLibre style; OpenFreeMap needs no key or account (development default).
+    styleUrl: process.env.MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/positron',
+    attribution: process.env.MAP_ATTRIBUTION || 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
+    pins,
   };
 }
 
