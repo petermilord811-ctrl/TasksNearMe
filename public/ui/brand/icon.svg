@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <style>.tile{fill:#fbf8f1}.pin{fill:#155e52}.check{stroke:#fff}@media(prefers-color-scheme:dark){.tile{fill:#14231e}.pin{fill:#95d4b4}.check{stroke:#142b22}}</style>
+  <rect class="tile" width="32" height="32" rx="7"/>
+  <path class="pin" d="M16 3C9.5 3 5 7.7 5 13.7 5 20.7 16 29 16 29s11-8.3 11-15.3C27 7.7 22.5 3 16 3Z"/>
+  <path class="check" d="m10 13 4.3 4.3L22 9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

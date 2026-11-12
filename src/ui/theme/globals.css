@@ -1,55 +1,75 @@
 @import "tailwindcss";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) { @slot; }
+  @media (prefers-color-scheme: dark) {
+    &:not(:where([data-theme="light"], [data-theme="light"] *)) { @slot; }
+  }
+}
+
+/* The OS selects the product theme; data-theme is for isolated brand previews. */
+:root, [data-theme="light"] {
+  color-scheme: light;
+  --background: #fbf8f1;
+  --foreground: #20332d;
+  --card: #fffdf8;
+  --card-foreground: #20332d;
+  --popover: #fffdf8;
+  --popover-foreground: #20332d;
+  --primary: #155e52;
+  --primary-foreground: #ffffff;
+  --secondary: #e6eee2;
+  --secondary-foreground: #254a39;
+  --muted: #f0ebe0;
+  --muted-foreground: #62665b;
+  --accent: #eee5d7;
+  --accent-foreground: #20332d;
+  --destructive: #b3352f;
+  --destructive-foreground: #ffffff;
+  --border: #dcd8ca;
+  --input: #898c7d;
+  --ring: #155e52;
+  --success: #267043;
+  --warning: #98520c;
+  --info: #315f9b;
+  --reward: #edbd62;
+  --reward-foreground: #48300c;
+  --brand-soft: #e6eee2;
+  --brand-paper: #f2ebdd;
+  --brand-ink: #203f34;
+  --sun: #edbd62;
+  --sun-foreground: #48300c;
+  --clay: #ad472f;
+  --clay-soft: #f5e6dd;
+  --art-paper: #f2ebdd;
+  --art-ink: #203f34;
+  --art-clay: #c26d4e;
+  --art-sun: #edbd62;
+  --art-sage: #9aaa7d;
+  --art-line: #203f34;
+  --badge-neutral: #f0ebe0;
+  --badge-neutral-foreground: #464d40;
+  --badge-brand: #e6eee2;
+  --badge-brand-foreground: #254a39;
+  --badge-info: #e7eef7;
+  --badge-info-foreground: #27538b;
+  --badge-success: #e6efdf;
+  --badge-success-foreground: #2e6137;
+  --badge-warning: #faf0da;
+  --badge-warning-foreground: #865015;
+  --badge-danger: #f8e6e1;
+  --badge-danger-foreground: #a3322c;
+  --badge-reward: #f8ecd2;
+  --badge-reward-foreground: #78510d;
+}
 
 :root {
-  color-scheme: light dark;
-  --background: #fafaf7;
-  --foreground: #1c1b18;
-  --card: #ffffff;
-  --card-foreground: #1c1b18;
-  --popover: #ffffff;
-  --popover-foreground: #1c1b18;
-  --primary: #0e7c66;
-  --primary-foreground: #ffffff;
-  --secondary: #e9f4f0;
-  --secondary-foreground: #0b4f42;
-  --muted: #f1f0eb;
-  --muted-foreground: #5f5c54;
-  --accent: #eef5f2;
-  --accent-foreground: #1c1b18;
-  --destructive: #b91c1c;
-  --destructive-foreground: #ffffff;
-  --border: #e4e2da;
-  --input: #d9d6cc;
-  --ring: #0e7c66;
-  --success: #15803d;
-  --warning: #b45309;
-  --info: #1d4ed8;
-  --reward: #f2a93b;
-  --reward-foreground: #3b2a06;
-  --brand-soft: #e9f4f0;
-  --badge-neutral: #f1f0eb;
-  --badge-neutral-foreground: #3f3d37;
-  --badge-brand: #e9f4f0;
-  --badge-brand-foreground: #0b4f42;
-  --badge-info: #e8eefc;
-  --badge-info-foreground: #1d4ed8;
-  --badge-success: #e7f5ec;
-  --badge-success-foreground: #166534;
-  --badge-warning: #fdf3e1;
-  --badge-warning-foreground: #92400e;
-  --badge-danger: #fbeaea;
-  --badge-danger-foreground: #b91c1c;
-  --badge-reward: #fdf1dc;
-  --badge-reward-foreground: #7a4e05;
-  --radius: 0.75rem;
-  --card-shadow: 0 1px 2px rgb(28 27 24 / 0.06);
-  --overlay-shadow: 0 12px 40px rgb(28 27 24 / 0.16);
+  --radius: 0.875rem;
+  --card-shadow: 0 2px 5px rgb(32 51 45 / 0.045);
+  --overlay-shadow: 0 16px 48px rgb(20 35 30 / 0.2);
   --page-gutter: 1rem;
   --card-padding: 1rem;
   --section-gap: 1.5rem;
-  /* Reserve tabs before hydration; MobileBottomNav then measures the full border box. */
   --app-bottom-nav-height: calc(6rem + env(safe-area-inset-bottom));
   --layer-action: 20;
   --layer-navigation: 30;
@@ -59,47 +79,115 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #121311;
-    --foreground: #f2f1ec;
-    --card: #1a1b19;
-    --card-foreground: #f2f1ec;
-    --popover: #1a1b19;
-    --popover-foreground: #f2f1ec;
-    --primary: #34b89a;
-    --primary-foreground: #06231c;
-    --secondary: #1f2e2a;
-    --secondary-foreground: #cfede4;
-    --muted: #24251f;
-    --muted-foreground: #a8a59c;
-    --accent: #232b28;
-    --accent-foreground: #f2f1ec;
-    --destructive: #f87171;
-    --destructive-foreground: #121311;
-    --border: #33342e;
-    --input: #3a3b35;
-    --ring: #34b89a;
-    --success: #4ade80;
-    --warning: #fbbf24;
-    --info: #93b4ff;
-    --reward: #f5b85a;
-    --reward-foreground: #2e2004;
-    --brand-soft: #1f2e2a;
-    --badge-neutral: #2a2b26;
-    --badge-neutral-foreground: #d9d7cf;
-    --badge-brand: #1f2e2a;
-    --badge-brand-foreground: #8fe0c9;
-    --badge-info: #1b2540;
-    --badge-info-foreground: #a9c1ff;
-    --badge-success: #16301f;
-    --badge-success-foreground: #86efac;
-    --badge-warning: #33260f;
-    --badge-warning-foreground: #fcd34d;
-    --badge-danger: #3a1616;
-    --badge-danger-foreground: #fca5a5;
-    --badge-reward: #33270f;
-    --badge-reward-foreground: #f5c77a;
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+  --background: #14231e;
+  --foreground: #f5f0e5;
+  --card: #1b2e25;
+  --card-foreground: #f5f0e5;
+  --popover: #1b2e25;
+  --popover-foreground: #f5f0e5;
+  --primary: #95d4b4;
+  --primary-foreground: #142b22;
+  --secondary: #253b30;
+  --secondary-foreground: #d8e6d1;
+  --muted: #29382d;
+  --muted-foreground: #b7c0af;
+  --accent: #344337;
+  --accent-foreground: #f5f0e5;
+  --destructive: #f1a19a;
+  --destructive-foreground: #321a15;
+  --border: #405044;
+  --input: #85937f;
+  --ring: #95d4b4;
+  --success: #a8d99d;
+  --warning: #eac070;
+  --info: #abc6e8;
+  --reward: #e8b968;
+  --reward-foreground: #35260e;
+  --brand-soft: #253b30;
+  --brand-paper: #28372c;
+  --brand-ink: #ddebdd;
+  --sun: #e8b968;
+  --sun-foreground: #35260e;
+  --clay: #efab8e;
+  --clay-soft: #443329;
+  --art-paper: #34483a;
+  --art-ink: #b4d0b6;
+  --art-clay: #d68c6b;
+  --art-sun: #e8b968;
+  --art-sage: #65846b;
+  --art-line: #142b22;
+  --badge-neutral: #303f33;
+  --badge-neutral-foreground: #dce2d3;
+  --badge-brand: #253b30;
+  --badge-brand-foreground: #b5ddbe;
+  --badge-info: #22394d;
+  --badge-info-foreground: #bad6f0;
+  --badge-success: #273f2b;
+  --badge-success-foreground: #bbdfac;
+  --badge-warning: #443c23;
+  --badge-warning-foreground: #edd18b;
+  --badge-danger: #492e28;
+  --badge-danger-foreground: #f5b4a9;
+  --badge-reward: #443a22;
+  --badge-reward-foreground: #efd08e;
   }
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #14231e;
+  --foreground: #f5f0e5;
+  --card: #1b2e25;
+  --card-foreground: #f5f0e5;
+  --popover: #1b2e25;
+  --popover-foreground: #f5f0e5;
+  --primary: #95d4b4;
+  --primary-foreground: #142b22;
+  --secondary: #253b30;
+  --secondary-foreground: #d8e6d1;
+  --muted: #29382d;
+  --muted-foreground: #b7c0af;
+  --accent: #344337;
+  --accent-foreground: #f5f0e5;
+  --destructive: #f1a19a;
+  --destructive-foreground: #321a15;
+  --border: #405044;
+  --input: #85937f;
+  --ring: #95d4b4;
+  --success: #a8d99d;
+  --warning: #eac070;
+  --info: #abc6e8;
+  --reward: #e8b968;
+  --reward-foreground: #35260e;
+  --brand-soft: #253b30;
+  --brand-paper: #28372c;
+  --brand-ink: #ddebdd;
+  --sun: #e8b968;
+  --sun-foreground: #35260e;
+  --clay: #efab8e;
+  --clay-soft: #443329;
+  --art-paper: #34483a;
+  --art-ink: #b4d0b6;
+  --art-clay: #d68c6b;
+  --art-sun: #e8b968;
+  --art-sage: #65846b;
+  --art-line: #142b22;
+  --badge-neutral: #303f33;
+  --badge-neutral-foreground: #dce2d3;
+  --badge-brand: #253b30;
+  --badge-brand-foreground: #b5ddbe;
+  --badge-info: #22394d;
+  --badge-info-foreground: #bad6f0;
+  --badge-success: #273f2b;
+  --badge-success-foreground: #bbdfac;
+  --badge-warning: #443c23;
+  --badge-warning-foreground: #edd18b;
+  --badge-danger: #492e28;
+  --badge-danger-foreground: #f5b4a9;
+  --badge-reward: #443a22;
+  --badge-reward-foreground: #efd08e;
 }
 
 @theme inline {
@@ -128,6 +216,18 @@
   --color-reward: var(--reward);
   --color-reward-foreground: var(--reward-foreground);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-paper: var(--brand-paper);
+  --color-brand-ink: var(--brand-ink);
+  --color-sun: var(--sun);
+  --color-sun-foreground: var(--sun-foreground);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
+  --color-art-paper: var(--art-paper);
+  --color-art-ink: var(--art-ink);
+  --color-art-clay: var(--art-clay);
+  --color-art-sun: var(--art-sun);
+  --color-art-sage: var(--art-sage);
+  --color-art-line: var(--art-line);
   --color-badge-neutral: var(--badge-neutral);
   --color-badge-neutral-foreground: var(--badge-neutral-foreground);
   --color-badge-brand: var(--badge-brand);
@@ -142,13 +242,20 @@
   --color-badge-danger-foreground: var(--badge-danger-foreground);
   --color-badge-reward: var(--badge-reward);
   --color-badge-reward-foreground: var(--badge-reward-foreground);
-  --font-sans: var(--font-inter);
-  --font-heading: var(--font-jakarta);
+  --text-display: clamp(2.75rem, 5.6vw, 4.75rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.04em;
+  --text-display--font-weight: 500;
+  --text-marketing-title: clamp(2rem, 3.7vw, 3rem);
+  --text-marketing-title--line-height: 1.08;
+  --text-marketing-title--letter-spacing: -0.025em;
+  --font-sans: var(--font-dm-sans);
+  --font-heading: var(--font-newsreader);
   --radius-sm: 0.5rem;
   --radius-md: 0.625rem;
   --radius-lg: var(--radius);
   --radius-xl: var(--radius);
-  --radius-2xl: 1rem;
+  --radius-2xl: 1.5rem;
   --shadow-card: var(--card-shadow);
   --shadow-overlay: var(--overlay-shadow);
   --spacing-gutter: var(--page-gutter);
@@ -168,8 +275,8 @@
 
 @layer base {
   * { border-color: var(--border); }
-  body { background: var(--background); color: var(--foreground); font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif; font-size: 1rem; line-height: 1.5; }
-  h1, h2, h3, h4, h5, h6 { font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif; overflow-wrap: anywhere; }
+  body { background: var(--background); color: var(--foreground); font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif; font-size: 1rem; line-height: 1.5; }
+  h1, h2, h3, h4, h5, h6 { font-family: var(--font-newsreader), Georgia, serif; overflow-wrap: anywhere; }
   :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   input, select, textarea { font-size: 1rem; }
   button, input, select, textarea { font: inherit; }

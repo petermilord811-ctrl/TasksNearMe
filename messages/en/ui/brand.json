@@ -1,0 +1,32 @@
+{
+  "group": "Brand identity",
+  "titles": {
+    "logo": "Logo · light and dark",
+    "mark": "Mark · 16, 32 and 64 px",
+    "palette": "Palette · warm paper and evergreen",
+    "type": "Type · Newsreader and DM Sans"
+  },
+  "light": "Light palette",
+  "dark": "Dark palette",
+  "identity": "A good neighbor with a toolbox.",
+  "logoDescription": "A checked location pin and a clear, compact wordmark.",
+  "markSize": "{size} px",
+  "paletteDescription": "Evergreen for action, warm paper for breathing room, terracotta and sun gold for character.",
+  "typeDescription": "Newsreader gives headings a human rhythm. DM Sans keeps the details clear.",
+  "display": "A little help. A lot more day.",
+  "pageHeading": "Good help, close to home.",
+  "sectionHeading": "From your list to done.",
+  "cardHeading": "Help around the house",
+  "body": "Tell a local helper what you need, agree on a price, and make room for the rest of your day.",
+  "small": "The details stay clear, right down to the last line.",
+  "caption": "Everyday help in Austin, Texas.",
+  "scale": {
+    "display": "Display · 44–76 px",
+    "page": "Page heading · 24–30 px",
+    "section": "Section heading · 20–22 px",
+    "card": "Card heading · 17–18 px",
+    "body": "Body · 16 / 24 px",
+    "small": "Small · 14 / 20 px",
+    "caption": "Caption · 12 / 16 px"
+  }
+}

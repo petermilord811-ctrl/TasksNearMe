@@ -1,17 +1,16 @@
-// Owned by Codex (UI). Initial version created by Claude from docs/ui/design-system.md §2.2.
-// The root layout applies `fontVariables` to <html>; CSS uses var(--font-sans) and var(--font-heading).
-import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
+// The root layout applies these variables; next/font self-hosts both families.
+import { DM_Sans, Newsreader } from 'next/font/google';
 
-export const fontSans = Inter({
+export const fontSans = DM_Sans({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-dm-sans',
   display: 'swap',
 });
 
-export const fontHeading = Plus_Jakarta_Sans({
+export const fontHeading = Newsreader({
   subsets: ['latin'],
-  weight: ['600', '700'],
-  variable: '--font-jakarta',
+  style: ['normal', 'italic'],
+  variable: '--font-newsreader',
   display: 'swap',
 });
 
