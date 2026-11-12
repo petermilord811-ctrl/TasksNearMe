@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import type { ActionHandler } from './actions';
-import type { CategorySlug, Cents } from './common';
+import type { CategorySlug, Cents, ISODateTime } from './common';
 import { emailField, zipField } from './forms';
-import type { PriceBreakdown } from './money';
+import type { PriceBreakdown, PricingInput } from './money';
 import type { HelperSummary } from './people';
 import type { TaskPublicView } from './tasks';
 
@@ -46,6 +46,40 @@ export interface HomePageData {
   feeExample: PriceBreakdown;
   /** The founding helpers' welcome reward; absent when the program is off or the cohort is full. */
   welcomeReward?: { amountCents: Cents; cohortLimit: number; spotsClaimed: number };
+  /** The landing page's map of open tasks (UI-036). */
+  map: LandingMapData;
+}
+
+/**
+ * An open task on the landing page's map. `point` is the task's public point, already moved 300–800 m from
+ * the real place: draw it as a soft area (`radiusMeters`), never as an exact spot, and never show an address.
+ */
+export interface TaskMapPin {
+  id: string;
+  /** `routes.publicTask(slug)`. */
+  slug: string;
+  title: string;
+  categorySlug: CategorySlug;
+  areaName: string;
+  point: { lat: number; lng: number };
+  radiusMeters: number;
+  budget: PricingInput;
+  windowStart: ISODateTime;
+  offerCount: number;
+}
+
+/**
+ * The map on the landing page: the market's center and service radius (the first view, and what counts as
+ * "near you"), the tile style the app chose (`styleUrl`, a MapLibre style; the tiles' attribution must stay
+ * visible), and up to 60 open in-person tasks, newest first. The visitor's own location, when they share it,
+ * stays in the browser: compare it with `distanceMiles` from `@/shared/geo`.
+ */
+export interface LandingMapData {
+  center: { lat: number; lng: number };
+  serviceRadiusMiles: number;
+  styleUrl: string;
+  attribution: string;
+  pins: TaskMapPin[];
 }
 
 export interface MarketPageData {
