@@ -24,7 +24,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { CANT_ACCESS_ANSWER_MS } from './domain';
+import { CANT_ACCESS_AFTER_ARRIVAL_MS, CANT_ACCESS_ANSWER_MS } from './domain';
 import { bookings, bookingTerms, helperStrikes } from './schema';
 
 /**
@@ -221,7 +221,8 @@ export async function reportNoShow(deps: SheetDeps, userId: string, bookingId: s
   if (!row || row.booking.posterUserId !== userId) return { ok: false, code: 'not_found' };
   const parsed = bookingNoteInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
-  const reportableAt = row.booking.startAt.getTime() + row.policy.timers.noShowMinutes * 60_000;
+  // Like the booking page (domain.ts sheetActions): a late update moves the no-show time by its minutes.
+  const reportableAt = row.booking.startAt.getTime() + (row.policy.timers.noShowMinutes + (row.booking.lateByMinutes ?? 0)) * 60_000;
   if (row.booking.status !== 'confirmed' || row.booking.arrivedAt || now.getTime() < reportableAt) return { ok: false, code: 'not_allowed' };
   return cancelWith(deps, row, userId, outcomeOf(row, 'no_show', now), { by: 'poster', note: parsed.data.note, expected: ['confirmed'] }, now);
 }
@@ -233,6 +234,8 @@ export async function reportCantAccess(db: Db, userId: string, bookingId: string
   const parsed = bookingNoteInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   if (booking.status !== 'in_progress' || booking.cantAccessAt) return { ok: false, code: 'not_allowed' };
+  // The helper waits 20 minutes after arriving first (blueprint 03; the booking page opens the action then).
+  if (!booking.arrivedAt || now.getTime() < booking.arrivedAt.getTime() + CANT_ACCESS_AFTER_ARRIVAL_MS) return { ok: false, code: 'not_allowed' };
   await db.transaction(async (tx) => {
     await tx
       .update(bookings)

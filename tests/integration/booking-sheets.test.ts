@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { confirmBooking } from '@/modules/bookings/confirm';
@@ -12,6 +12,7 @@ import {
   reportRunningLate,
   submitSafetyReport,
 } from '@/modules/bookings/sheets';
+import { earnings } from '@/modules/earnings/schema';
 import { offers } from '@/modules/offers/schema';
 import { payments, refunds } from '@/modules/payments/schema';
 import { supportCases } from '@/modules/support/schema';
@@ -79,21 +80,31 @@ describe('cancelling', () => {
 describe('the day of the task', () => {
   it('reports running late, then a no-show 30 minutes past the start (moved by the late minutes)', async () => {
     const { bookingId, start } = await booked('tsk_sh_noshow', 2 * HOUR);
+    expect(await reportNoShow(deps, 'usr_ben', bookingId, { note: '' }, new Date(start.getTime() + 29 * 60_000))).toEqual({ ok: false, code: 'not_allowed' });
     expect(await reportRunningLate(db, 'usr_jordan', bookingId, 10, new Date())).toEqual({ ok: true, code: 'updated' });
-    expect(await reportNoShow(deps, 'usr_ben', bookingId, { note: '' }, new Date(start.getTime() + 35 * 60_000))).toEqual({ ok: true, code: 'canceled' });
+    // 30 minutes plus the 10 the helper gave.
+    expect(await reportNoShow(deps, 'usr_ben', bookingId, { note: '' }, new Date(start.getTime() + 35 * 60_000))).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await reportNoShow(deps, 'usr_ben', bookingId, { note: '' }, new Date(start.getTime() + 40 * 60_000))).toEqual({ ok: true, code: 'canceled' });
     const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     expect(row?.cancelReason).toBe('helper_no_show');
     expect(await refundsOf(bookingId)).toEqual([{ amount: 6600, status: 'succeeded' }]);
   });
 
-  it("cancels as a client no-show when nobody answers a can't-access report", async () => {
+  it("cancels as a client no-show when nobody answers a can't-access report; the helper gets $12.00", async () => {
     const { bookingId } = await booked('tsk_sh_access', 2 * HOUR);
-    await db.update(bookings).set({ status: 'in_progress', arrivedAt: new Date() }).where(eq(bookings.id, bookingId));
-    expect(await reportCantAccess(db, 'usr_jordan', bookingId, { note: 'Nobody at the door.' }, new Date())).toEqual({ ok: true, code: 'updated' });
-    await expireCantAccess(db, new Date(Date.now() + 31 * 60_000), { bookingId }, deps.payments);
+    const arrived = new Date();
+    await db.update(bookings).set({ status: 'in_progress', arrivedAt: arrived }).where(eq(bookings.id, bookingId));
+    // The helper waits 20 minutes after arriving.
+    const at = (minutes: number) => new Date(arrived.getTime() + minutes * 60_000);
+    expect(await reportCantAccess(db, 'usr_jordan', bookingId, { note: 'Nobody at the door.' }, at(19))).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await reportCantAccess(db, 'usr_jordan', bookingId, { note: 'Nobody at the door.' }, at(20))).toEqual({ ok: true, code: 'updated' });
+    // Nobody answered within 30 minutes.
+    await expireCantAccess(db, at(51), { bookingId }, deps.payments);
     const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     expect(row).toMatchObject({ status: 'canceled', cancelReason: 'poster_no_show' });
     expect(await refundsOf(bookingId)).toEqual([{ amount: 5400, status: 'succeeded' }]);
+    const compensation = await db.select().from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'cancellation_compensation')));
+    expect(compensation.map((transfer) => transfer.amountCents)).toEqual([1200]);
   });
 
   it('turns a safety report into an urgent support case', async () => {
