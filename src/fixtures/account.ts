@@ -43,7 +43,8 @@ const preferences: AccountPageData['preferences'] = [
 ];
 
 export const mayaAccountData: AccountPageData = {
-  profile: { firstName: 'Maya', lastName: 'Rivera', displayName: 'Maya R.', email: 'maya@example.test' },
+  profile: { firstName: 'Maya', lastName: 'Rivera', displayName: 'Maya R.', initials: 'MR', email: 'maya@example.test' },
+  maxPhotoMegabytes: 10,
   phone: { last4: '0101', verified: true },
   // Maya connected Google; Microsoft is offered too.
   signIn: { email: 'maya@example.test', providers: [{ provider: 'google', connectedAt: '2026-11-02T16:20:00.000Z' }, { provider: 'microsoft' }] },
@@ -52,9 +53,13 @@ export const mayaAccountData: AccountPageData = {
   privacy: {},
 };
 
-/** Jordan is an active helper; he asked for a copy of his data. */
+/** The profile photo Jordan added (a square, like every profile photo). */
+export const jordanProfilePhoto = { id: 'fil_avatar_jordan', src: '/samples/avatar-jordan.svg', alt: 'Jordan T.', width: 512, height: 512 };
+
+/** Jordan is an active helper with a profile photo; they asked for a copy of their data. */
 export const jordanAccountData: AccountPageData = {
-  profile: { firstName: 'Jordan', lastName: 'Thompson', displayName: 'Jordan T.', email: 'jordan@example.test' },
+  profile: { firstName: 'Jordan', lastName: 'Thompson', displayName: 'Jordan T.', initials: 'JT', email: 'jordan@example.test', photo: jordanProfilePhoto },
+  maxPhotoMegabytes: 10,
   phone: { last4: '0201', verified: true },
   // Back from connecting Microsoft.
   signIn: { email: 'jordan@example.test', providers: [{ provider: 'google' }, { provider: 'microsoft', connectedAt: '2026-11-20T17:55:00.000Z' }], notice: { provider: 'microsoft', result: 'connected' } },
@@ -65,7 +70,8 @@ export const jordanAccountData: AccountPageData = {
 
 /** A new account: no phone yet; deletion requested. */
 export const newAccountData: AccountPageData = {
-  profile: { firstName: 'Ana', lastName: 'Patel', displayName: 'Ana P.', email: 'ana@example.test' },
+  profile: { firstName: 'Ana', lastName: 'Patel', displayName: 'Ana P.', initials: 'AP', email: 'ana@example.test' },
+  maxPhotoMegabytes: 10,
   // Only the email code is offered (production without Google or Microsoft keys).
   signIn: { email: 'ana@example.test', providers: [] },
   preferences,
@@ -74,6 +80,9 @@ export const newAccountData: AccountPageData = {
 };
 
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
+
+/** The code that works in previews' email and phone dialogs. */
+export const CHANGE_CODE = '123456';
 
 export const fakeNotificationHandlers: NotificationHandlers = {
   onMarkAllRead: () => wait({ ok: true, code: 'updated' }),
@@ -90,6 +99,20 @@ export const fakeAccountHandlers: AccountHandlers = {
   // The real one returns the provider's page; previews stay put (only the hash changes).
   onConnectSignIn: () => wait({ ok: true, code: 'sent', redirectTo: '#connect-provider' }),
   onDisconnectSignIn: () => wait({ ok: true, code: 'updated' }),
+  onUploadPhoto: () => wait({ ok: true, photo: jordanProfilePhoto }, 700),
+  onRemovePhoto: () => wait({ ok: true, code: 'updated' }),
+  // Previews: `taken@example.test` is another account's; the code is always 123456.
+  onStartEmailChange: ({ email }) =>
+    wait(
+      email.trim().toLowerCase() === 'taken@example.test'
+        ? { ok: false, code: 'validation_failed', fieldErrors: { email: ['in_use'] } }
+        : { ok: true, code: 'sent' },
+    ),
+  onConfirmEmailChange: ({ code }) =>
+    wait(code === CHANGE_CODE ? { ok: true, code: 'updated' } : { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } }),
+  onStartPhoneChange: () => wait({ ok: true, code: 'sent' }),
+  onConfirmPhoneChange: ({ code }) =>
+    wait(code === CHANGE_CODE ? { ok: true, code: 'updated' } : { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } }),
 };
 
 /** Back on the account page after each way connecting can end (UI previews). */

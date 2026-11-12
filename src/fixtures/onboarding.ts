@@ -215,9 +215,14 @@ export const onboardingDone: HelperOnboardingPageData = {
   },
 };
 
+/** The profile photo Sam can add in the editor (previews). */
+export const samProfilePhoto = { id: 'fil_avatar_sam', src: '/samples/avatar-sam.svg', alt: 'Sam K.', width: 512, height: 512 };
+
 /** Sam's profile editor. */
 export const samProfileEditorData: HelperProfileEditorData = {
   handle: sam.handle,
+  // No profile photo yet (the editor offers to add one).
+  person: { displayName: sam.displayName, initials: sam.initials },
   progress: progress('done', { bookableCategories: sam.services.map((s) => s.categorySlug) }),
   categories: categoryViews,
   areas: austinAreaOptions,
@@ -273,4 +278,6 @@ export const fakeProfileEditorHandlers: HelperProfileEditorHandlers = {
   onRemoveWorkSample: () => wait({ ok: true, code: 'updated' }),
   onReorderWorkSamples: () => wait({ ok: true, code: 'updated' }),
   onSetPaused: () => wait({ ok: true, code: 'updated' }),
+  onUploadPhoto: () => wait({ ok: true, photo: samProfilePhoto }, 700),
+  onRemovePhoto: () => wait({ ok: true, code: 'updated' }),
 };

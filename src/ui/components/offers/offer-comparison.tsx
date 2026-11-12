@@ -40,7 +40,7 @@ export function OfferComparison({ offers, now }: OfferComparisonProps) {
       </table>
     </div>
     <div className="space-y-4 md:hidden">{offers.map((offer) => <article key={offer.id} className="rounded-xl border border-border bg-card p-4 shadow-card">
-      <div className="mb-4 flex items-center gap-3"><InitialsAvatar initials={offer.helper.initials} /><h3 className="text-[17px]/6 font-semibold"><Link href={routes.app.offer(offer.taskId, offer.id)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">{offer.helper.displayName}</Link></h3></div>
+      <div className="mb-4 flex items-center gap-3"><InitialsAvatar initials={offer.helper.initials} photo={offer.helper.photo} /><h3 className="text-[17px]/6 font-semibold"><Link href={routes.app.offer(offer.taskId, offer.id)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">{offer.helper.displayName}</Link></h3></div>
       <dl className="divide-y divide-border">{rows.map((row) => <div key={row.key} className="space-y-2 py-3"><dt className="text-sm text-muted-foreground">{row.label}</dt><dd className="text-sm">{row.render(offer)}</dd></div>)}</dl>
     </article>)}</div>
   </div>;

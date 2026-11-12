@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createEmailProvider } from './index';
 import { createPostmarkEmailProvider } from './postmark';
+import { createResendEmailProvider } from './resend';
 
 const message = { to: 'robin@example.test', subject: 'Welcome', text: 'Hi Robin', html: '<p>Hi Robin</p>', tag: 'welcome' };
 
@@ -35,3 +36,34 @@ describe('Postmark', () => {
     expect(() => createEmailProvider(db, { POSTMARK_SERVER_TOKEN: 't' })).toThrow(/EMAIL_FROM/);
   });
 });
+
+describe('Resend', () => {
+  it('sends one email with both versions and the kind as a tag', async () => {
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ id: 'email_1' }), { status: 200 }));
+    await createResendEmailProvider({ apiKey: 're_key', from: 'TasksNearMe <onboarding@resend.dev>', fetch }).send(message);
+    const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.resend.com/emails');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer re_key');
+    expect(JSON.parse(String(init.body))).toEqual({
+      from: 'TasksNearMe <onboarding@resend.dev>',
+      to: ['robin@example.test'],
+      subject: 'Welcome',
+      text: 'Hi Robin',
+      html: '<p>Hi Robin</p>',
+      tags: [{ name: 'kind', value: 'welcome' }],
+    });
+  });
+
+  it("throws Resend's reason when it refuses", async () => {
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ name: 'validation_error', message: 'You can only send testing emails to your own email address.' }), { status: 403 }));
+    await expect(createResendEmailProvider({ apiKey: 'k', from: 'onboarding@resend.dev', fetch }).send(message)).rejects.toThrow(/HTTP 403, validation_error.*own email/);
+  });
+
+  it('is used when its key is set, and never together with Postmark', () => {
+    const db = {} as never;
+    expect(createEmailProvider(db, { RESEND_API_KEY: 'k', EMAIL_FROM: 'onboarding@resend.dev' }).name).toBe('resend');
+    expect(() => createEmailProvider(db, { RESEND_API_KEY: 'k' })).toThrow(/EMAIL_FROM/);
+    expect(() => createEmailProvider(db, { RESEND_API_KEY: 'k', POSTMARK_SERVER_TOKEN: 't', EMAIL_FROM: 'x@example.test' })).toThrow(/Both/);
+  });
+});
+

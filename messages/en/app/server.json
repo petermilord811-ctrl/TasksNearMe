@@ -162,6 +162,36 @@
       "expires": "It works for {minutes} minutes, once.",
       "ignore": "Didn't ask for a code? You can ignore this email: nobody can sign in without it.",
       "text": "Your sign-in code is {code}. It expires in {minutes} minutes. If you didn't ask for it, ignore this email."
+    },
+    "emailChangeCode": {
+      "subject": "Confirm your new email for TasksNearMe: {code}",
+      "preheader": "Enter this code on your account page. It works for {minutes} minutes.",
+      "title": "Confirm your new email",
+      "heading": "Confirm your new email",
+      "body": "Enter this code on your account page to start using {email} for TasksNearMe.",
+      "expires": "It works for {minutes} minutes, once.",
+      "ignore": "Didn't ask for this? Ignore this email: nothing changes without the code.",
+      "text": "Your TasksNearMe code is {code}. Enter it on your account page to confirm {email}; it expires in {minutes} minutes. If you didn't ask for it, ignore this email."
+    },
+    "emailChanged": {
+      "subject": "Your TasksNearMe email was changed",
+      "preheader": "From now on we write to {newEmail}.",
+      "title": "Your email was changed",
+      "heading": "Your email was changed",
+      "body": "Your TasksNearMe account now uses {newEmail} instead of this address. Sign-in codes and updates go there from now on.",
+      "notYou": "Didn't change it? Contact support right away so we can secure your account.",
+      "help": "Contact support",
+      "text": "Your TasksNearMe account now uses {newEmail} instead of this address. Didn't change it? Contact support right away: {helpUrl}"
+    },
+    "phoneChanged": {
+      "subject": "Your TasksNearMe phone number was changed",
+      "preheader": "Your account now uses the number ending in {last4}.",
+      "title": "Your phone number was changed",
+      "heading": "Your phone number was changed",
+      "body": "Your TasksNearMe account now uses the number ending in {last4}. Booking texts and sign-in checks go there from now on.",
+      "notYou": "Didn't change it? Contact support right away so we can secure your account.",
+      "help": "Contact support",
+      "text": "Your TasksNearMe account now uses the number ending in {last4}. Didn't change it? Contact support right away: {helpUrl}"
     }
   }
 }

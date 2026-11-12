@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useForm, useWatch } from 'react-hook-form';
 import { routes, type HelperProfileEditorData, type HelperProfileEditorHandlers } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { ProfilePhotoField } from '@/ui/components/forms/profile-photo-field';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { useFormAction } from '@/ui/lib/use-form-action';
@@ -49,7 +50,10 @@ export function HelperProfileEditorScreen({ data, handlers, initialSection = 'pr
   const desktop = useSyncExternalStore(subscribeDesktop, () => window.matchMedia(desktopQuery).matches, () => false);
   const remoteAllowed = data.values.services.services.some((service) => data.categories.some((category) => category.slug === service.categorySlug && category.remoteAllowed));
   const content: Record<HelperEditorSection, ReactNode> = {
-    profile: <HelperProfileForm values={data.values.profile} languageOptions={data.languageOptions} onSave={handlers.onSaveProfile} />,
+    profile: <div className="space-y-6">
+      <ProfilePhotoField initials={data.person.initials} photo={data.person.photo} maxPhotoMegabytes={data.maxPhotoMegabytes} note="helperEditor" onUpload={handlers.onUploadPhoto} onRemove={handlers.onRemovePhoto} />
+      <div className="border-t pt-6"><HelperProfileForm values={data.values.profile} languageOptions={data.languageOptions} onSave={handlers.onSaveProfile} /></div>
+    </div>,
     services: <HelperServicesForm values={data.values.services} categories={data.categories} onSave={handlers.onSaveServices} />,
     area: <HelperAreaForm values={data.values.area} areas={data.areas} remoteAllowed={remoteAllowed} onSave={handlers.onSaveArea} />,
     tools: <HelperToolsForm values={data.values.tools} onSave={handlers.onSaveTools} />,

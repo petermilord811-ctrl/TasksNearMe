@@ -1,18 +1,17 @@
 import sharp, { type OutputInfo } from 'sharp';
-import type { Photo, PhotoUploadResult } from '@/contracts';
+import type { PhotoUploadResult } from '@/contracts';
 import type { FileStorage } from '@/integrations/storage';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { files } from '../tasks/schema';
+import { ACCEPTED_IMAGE_TYPES, AVATAR_PX, MAX_PHOTO_BYTES, photoFromFile } from './photos';
 
 /**
  * Photo uploads (blueprint 02 J1 step 4): every image is decoded and re-encoded, which drops all
  * metadata (EXIF, including GPS) before anyone else can see it. Originals are never stored.
  */
 
-export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'] as const;
-export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 const MAX_EDGE_PX = 2000;
 const UPLOAD_RULE = { limit: 40, windowSeconds: 60 * 60 };
 
@@ -22,13 +21,11 @@ export interface UploadDeps {
   now?: () => Date;
 }
 
-export function photoFromFile(file: { id: string; width: number; height: number; alt: string }): Photo {
-  return { id: file.id, src: `/api/files/${file.id}`, alt: file.alt, width: file.width, height: file.height };
-}
+export { ACCEPTED_IMAGE_TYPES, AVATAR_PX, avatarPhoto, MAX_PHOTO_BYTES, photoFromFile } from './photos';
 
 export async function storePhoto(
   { db, storage, now = () => new Date() }: UploadDeps,
-  input: { userId: string; kind: 'task_photo' | 'work_sample' | 'evidence' | 'receipt' | 'message'; file: File; alt?: string },
+  input: { userId: string; kind: 'task_photo' | 'work_sample' | 'evidence' | 'receipt' | 'message' | 'avatar'; file: File; alt?: string },
 ): Promise<PhotoUploadResult> {
   const { file } = input;
   if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) return { ok: false, code: 'unsupported_type' };
@@ -41,7 +38,11 @@ export async function storePhoto(
   try {
     encoded = await sharp(Buffer.from(await file.arrayBuffer()), { failOn: 'error' })
       .rotate() // apply the camera orientation before the metadata is dropped
-      .resize({ width: MAX_EDGE_PX, height: MAX_EDGE_PX, fit: 'inside', withoutEnlargement: true })
+      .resize(
+        input.kind === 'avatar'
+          ? { width: AVATAR_PX, height: AVATAR_PX, fit: 'cover', position: 'attention' }
+          : { width: MAX_EDGE_PX, height: MAX_EDGE_PX, fit: 'inside', withoutEnlargement: true },
+      )
       .webp({ quality: 82 })
       .toBuffer({ resolveWithObject: true });
   } catch {

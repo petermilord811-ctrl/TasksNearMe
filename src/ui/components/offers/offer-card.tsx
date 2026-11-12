@@ -31,7 +31,7 @@ export function OfferCard({ offer, now, selectable, onAction }: OfferCardProps) 
   return <article aria-labelledby={`${id}-title`} className={cn('min-w-0 space-y-4 rounded-xl border bg-card p-4 shadow-card md:p-5', selectable?.selected ? 'border-primary ring-1 ring-primary' : 'border-border')}>
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
-        <InitialsAvatar initials={offer.helper.initials} />
+        <InitialsAvatar initials={offer.helper.initials} photo={offer.helper.photo} />
         <div className="min-w-0">
           <h3 id={`${id}-title`} className="text-[17px]/6 font-semibold md:text-lg/6.5">
             <Link href={routes.app.offer(offer.taskId, offer.id)} aria-label={t('viewOffer', { helper: offer.helper.displayName })} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">{offer.helper.displayName}</Link>

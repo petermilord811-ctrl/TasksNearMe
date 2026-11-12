@@ -27,10 +27,11 @@ import {
 } from '@/contracts';
 import type { FileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
+import { avatarPhoto, MAX_PHOTO_BYTES } from '@/modules/files/photos';
 import { storePhoto } from '@/modules/files/uploads';
 import { getFlags, getMarketView, listCategoryViews } from '@/modules/markets/queries';
 import { areas, categories, markets } from '@/modules/markets/schema';
-import { countFoundingHelpers, fileUrl } from '@/modules/profiles/queries';
+import { countFoundingHelpers, fileUrl, initialsOf } from '@/modules/profiles/queries';
 import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/profiles/schema';
 import { FIRST_PAYOUT_DAYS, WELCOME_PROGRAM } from '@/modules/rewards/programs';
 import { files } from '@/modules/tasks/schema';
@@ -557,11 +558,20 @@ export async function onboardingRedirect(db: Db, userId: string, step: Onboardin
 }
 
 export async function getProfileEditorData(db: Db, userId: string, now: Date): Promise<HelperProfileEditorData | null> {
-  const [state, shared] = await Promise.all([loadOnboardingState(db, userId, now), sharedPageData(db, userId)]);
-  if (!shared || !state.profile) return null;
+  const [state, shared, [person]] = await Promise.all([
+    loadOnboardingState(db, userId, now),
+    sharedPageData(db, userId),
+    db.select({ name: users.name, firstName: users.firstName, lastName: users.lastName, avatarFileId: users.avatarFileId }).from(users).where(eq(users.id, userId)).limit(1),
+  ]);
+  if (!shared || !state.profile || !person) return null;
   const result = computeOnboarding(state.facts);
   return {
     handle: state.profile.handle,
+    person: {
+      displayName: person.name,
+      initials: initialsOf(person.firstName, person.lastName),
+      ...(person.avatarFileId ? { photo: avatarPhoto(person.avatarFileId, person.name) } : {}),
+    },
     progress: result.progress,
     categories: shared.categories,
     areas: shared.areas,
@@ -569,7 +579,7 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
     values: { ...formValues(state), tools: { tools: state.profile.tools } },
     workSamples: await workSampleViews(db, userId),
     maxWorkSamples: MAX_WORK_SAMPLES,
-    maxPhotoMegabytes: 10,
+    maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)),
     badges: {
       ...(state.profile.idVerifiedAt ? { idVerifiedAt: new Date(state.profile.idVerifiedAt).toISOString() } : {}),
       ...(state.profile.backgroundCheckedAt ? { backgroundCheckedAt: new Date(state.profile.backgroundCheckedAt).toISOString() } : {}),

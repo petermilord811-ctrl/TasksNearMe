@@ -38,6 +38,8 @@ export const users = pgTable(
     termsVersion: text('terms_version'),
     /** When the welcome email went out (once, when sign-up finished). */
     welcomedAt: timestamp('welcomed_at', { withTimezone: true }),
+    /** The profile photo (`files.id`, kind `avatar`, a 512 px square). No foreign key: files reference users. */
+    avatarFileId: text('avatar_file_id'),
   },
   // One account per verified phone number (NULLs don't collide).
   (t) => [uniqueIndex('users_phone_idx').on(t.phone)],

@@ -1,5 +1,6 @@
 {
   "avatar": "Avatar with initials {initials}",
+  "photo": "Profile photo of {name}",
   "new": "New",
   "ratingSummary": "{average, number} out of 5, {count, plural, one {# review} other {# reviews}}",
   "badges": "Verification badges",

@@ -1,8 +1,9 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
 import { cache } from 'react';
-import { STAFF_ROLES, type Mode, type ShellViewer, type SignedInViewer, type StaffRole, type StaffViewer } from '@/contracts';
+import { STAFF_ROLES, type Mode, type Photo, type ShellViewer, type SignedInViewer, type StaffRole, type StaffViewer } from '@/contracts';
 import { staffRoles, staffSessionChecks } from '@/modules/accounts/schema';
+import { avatarPhoto } from '@/modules/files/photos';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { db } from '@/platform/db/client';
 import { auth } from './auth';
@@ -15,6 +16,8 @@ export interface ViewerUser {
   firstName: string;
   displayName: string;
   initials: string;
+  /** The profile photo, when they added one. */
+  photo?: Photo;
   mode: Mode;
   status: string;
   staffRoles: StaffRole[];
@@ -39,6 +42,7 @@ export const getViewer = cache(async (): Promise<Viewer> => {
     lastName?: string;
     mode?: string;
     status?: string;
+    avatarFileId?: string | null;
   };
 
   const [roleRows, profileRows, checkRows] = await Promise.all([
@@ -60,6 +64,7 @@ export const getViewer = cache(async (): Promise<Viewer> => {
       firstName,
       displayName: u.name || [firstName, lastName ? `${lastName.charAt(0)}.` : ''].filter(Boolean).join(' ') || u.email,
       initials: initialsOf(firstName, lastName, u.email),
+      ...(u.avatarFileId ? { photo: avatarPhoto(u.avatarFileId, u.name) } : {}),
       mode: u.mode === 'helper' ? 'helper' : 'poster',
       status: u.status ?? 'active',
       staffRoles: roles,
@@ -75,6 +80,7 @@ export function toSignedInViewer(user: ViewerUser): SignedInViewer {
     id: user.id,
     displayName: user.displayName,
     initials: user.initials,
+    ...(user.photo ? { photo: user.photo } : {}),
     mode: user.mode,
     // Paused helpers still use helper mode; they're just hidden from search.
     helperReady: user.helperStatus === 'active' || user.helperStatus === 'paused',
@@ -90,6 +96,7 @@ export function toStaffViewer(user: ViewerUser): StaffViewer {
     id: user.id,
     displayName: user.displayName,
     initials: user.initials,
+    ...(user.photo ? { photo: user.photo } : {}),
     roles: user.staffRoles,
     twoStepVerified: user.staffTwoStepVerified,
   };

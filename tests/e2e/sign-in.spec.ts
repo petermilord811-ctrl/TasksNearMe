@@ -45,11 +45,11 @@ test.describe('sign-in and sign-up', () => {
 
     // A wrong code shows on the field; the right one signs in.
     await page.getByLabel('6-digit code').fill('000000');
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    // The sixth digit sends the code (no Continue click).
     const code = await latestCode(context, email);
     if (code !== '000000') await expect(page.getByText("That code isn't right")).toBeVisible();
     await page.getByLabel('6-digit code').fill(code);
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    // The sixth digit sends the code (no Continue click).
 
     await completeProfile(page, 'Robin', 'Lopez');
     await expect(page).toHaveURL(/\/app$/);
@@ -74,7 +74,7 @@ test.describe('sign-in and sign-up', () => {
     await page.goto(`/sign-in?next=${encodeURIComponent('/app/find-work/tsk_desk')}`);
     await requestCode(page, email);
     await page.getByLabel('6-digit code').fill(await latestCode(context, email));
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    // The sixth digit sends the code (no Continue click).
     await completeProfile(page, 'Sky', 'Nguyen');
 
     await expect(page.getByRole('heading', { level: 1, name: 'Add your phone number' })).toBeVisible();
@@ -82,7 +82,7 @@ test.describe('sign-in and sign-up', () => {
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: /Enter the code we texted to \(737\)/ })).toBeVisible();
     await page.getByLabel('6-digit code').fill(await latestCode(context, `+1737${exchange}${line}`));
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    // The sixth digit sends the code (no Continue click).
     await expect(page).toHaveURL(/\/app\/find-work\/tsk_desk$/);
   });
 
@@ -91,7 +91,7 @@ test.describe('sign-in and sign-up', () => {
     await page.goto('/sign-in');
     await requestCode(page, email);
     await page.getByLabel('6-digit code').fill(await latestCode(context, email));
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    // The sixth digit sends the code (no Continue click).
     await completeProfile(page, 'Casey', 'Mills');
     await expect(page).toHaveURL(/\/app$/);
     await context.clearCookies();
@@ -102,7 +102,7 @@ test.describe('sign-in and sign-up', () => {
     const code = await latestCode(context, email);
     await setAccountStatus(email, 'suspended');
     await page.getByLabel('6-digit code').fill(code);
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    // The sixth digit sends the code (no Continue click).
     await expect(page.getByText("This account can't continue.")).toBeVisible();
     await expect(page).toHaveURL(/\/sign-in/);
   });

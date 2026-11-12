@@ -15,7 +15,7 @@ export const files = pgTable(
     ownerUserId: text('owner_user_id')
       .notNull()
       .references(() => users.id),
-    kind: text('kind').notNull(), // task_photo | work_sample | evidence | receipt
+    kind: text('kind').notNull(), // task_photo | work_sample | evidence | receipt | message | avatar
     storageKey: text('storage_key').notNull(),
     contentType: text('content_type').notNull(),
     width: integer('width').notNull(),

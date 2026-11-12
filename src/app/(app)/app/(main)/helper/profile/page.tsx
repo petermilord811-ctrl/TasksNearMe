@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
+import { removeProfilePhotoAction, uploadProfilePhotoAction } from '@/modules/accounts/account-actions';
 import {
   editorRemoveWorkSample,
   editorReorderWorkSamples,
@@ -49,6 +50,8 @@ async function Editor() {
         onRemoveWorkSample: editorRemoveWorkSample,
         onReorderWorkSamples: editorReorderWorkSamples,
         onSetPaused: editorSetPaused,
+        onUploadPhoto: uploadProfilePhotoAction,
+        onRemovePhoto: removeProfilePhotoAction,
       }}
     />
   );

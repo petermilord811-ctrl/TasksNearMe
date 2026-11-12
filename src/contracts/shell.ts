@@ -1,4 +1,4 @@
-import type { Mode, StaffRole } from './common';
+import type { Mode, Photo, StaffRole } from './common';
 import type { ActionHandler } from './actions';
 
 /** Who is using the app, as far as the page shells need to know. */
@@ -9,6 +9,8 @@ export type ShellViewer =
       id: string;
       displayName: string;
       initials: string;
+      /** The profile photo, when they added one (shown in the account menu). */
+      photo?: Photo;
       mode: Mode;
       /** Helper onboarding is complete enough to use helper mode. */
       helperReady: boolean;
@@ -20,6 +22,7 @@ export type ShellViewer =
       id: string;
       displayName: string;
       initials: string;
+      photo?: Photo;
       roles: StaffRole[];
       /** Staff must pass the two-step check before admin pages render (see /admin/verify). */
       twoStepVerified: boolean;

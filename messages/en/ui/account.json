@@ -3,7 +3,7 @@
   "description": "Your details, notifications, and privacy choices.",
   "profile": {
     "title": "Profile",
-    "description": "Keep your name up to date.",
+    "description": "Your photo and name, as people see them on TasksNearMe.",
     "nameLegend": "Your name",
     "displayName": "Your display name: {name}",
     "displayNameFormat": "{firstName} {initial}.",
@@ -13,14 +13,48 @@
     "lastNameHint": "Only your initial appears in your display name.",
     "save": "Save changes",
     "saving": "Saving…",
-    "saved": "Your profile was saved.",
+    "saved": "Your profile was saved."
+  },
+  "contact": {
+    "title": "Contact details",
+    "description": "Where we send sign-in codes, receipts and booking updates. Each change is confirmed with a 6-digit code.",
     "email": "Email",
-    "emailHint": "Your email address is read-only here.",
     "phone": "Phone number",
     "phoneVerified": "•••• {last4} · Verified",
     "phoneUnverified": "•••• {last4} · Not verified",
-    "noPhone": "Add a phone number",
-    "noPhoneHint": "You can add and verify your phone number when you post a task."
+    "noPhone": "No phone number yet",
+    "noPhoneHint": "Helpers and people who book need one. You can add it now or when you need it.",
+    "change": "Change",
+    "add": "Add",
+    "changeEmailLabel": "Change your email",
+    "changePhoneLabel": "Change your phone number",
+    "addPhoneLabel": "Add a phone number",
+    "emailChanged": "Your email is now {email}. Use it the next time you sign in.",
+    "phoneChanged": "Your new phone number is verified.",
+    "emailDialog": {
+      "title": "Change your email",
+      "description": "We'll send a 6-digit code to the new address. Your email stays the same until you enter it.",
+      "label": "New email",
+      "hint": "Sign-in codes, receipts and updates will go here.",
+      "send": "Send code",
+      "codeTitle": "Check your new inbox",
+      "codeDescription": "Enter the 6-digit code we sent to <strong>{email}</strong>. It works for {minutes, number} minutes.",
+      "different": "Use a different email"
+    },
+    "phoneDialog": {
+      "addTitle": "Add a phone number",
+      "changeTitle": "Change your phone number",
+      "description": "We'll text a 6-digit code to confirm the number. Your current number stays until you enter it.",
+      "addDescription": "We'll text a 6-digit code to confirm the number. Message and data rates may apply.",
+      "send": "Text me a code",
+      "codeTitle": "Check your texts",
+      "codeDescription": "Enter the 6-digit code we texted to <strong>{phone}</strong>. It works for {minutes, number} minutes.",
+      "different": "Use a different number"
+    },
+    "confirm": "Confirm",
+    "resend": "Send a new code",
+    "newCodeSent": "A new code is on its way.",
+    "cancel": "Cancel"
   },
   "signIn": {
     "title": "Ways to sign in",
@@ -118,6 +152,12 @@
     "unknown": "Request could not be completed",
     "signInAlreadyUsed": "Microsoft account already used",
     "signInEmailUnconfirmed": "Microsoft email not confirmed",
-    "signInCancelled": "Connecting Microsoft cancelled"
+    "signInCancelled": "Connecting Microsoft cancelled",
+    "photoUploading": "Uploading a profile photo",
+    "photoError": "Profile photo too large",
+    "emailChange": "Changing the email: the code step",
+    "emailInUse": "Changing the email: address already used",
+    "phoneAdd": "Adding a phone number",
+    "phoneCodeWrong": "Changing the phone: wrong code"
   }
 }

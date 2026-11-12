@@ -68,7 +68,8 @@
       "sampleLimit": "Work sample limit reached",
       "verificationMissing": "Verification to finish",
       "saveError": "Save error",
-      "uploadError": "Upload error"
+      "uploadError": "Upload error",
+      "withPhoto": "With a profile photo"
     }
   }
 }

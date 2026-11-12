@@ -13,6 +13,8 @@ import { users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { bookings } from '@/modules/bookings/schema';
 import { offers } from '@/modules/offers/schema';
+import { avatarPhoto, MAX_PHOTO_BYTES } from '@/modules/files/photos';
+import { initialsOf } from '@/modules/profiles/queries';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
@@ -323,7 +325,15 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
   const exportRequest = requests.find((r) => r.kind === 'export');
   const deletionRequest = requests.find((r) => r.kind === 'deletion');
   return {
-    profile: { firstName: user.firstName, lastName: user.lastName, displayName: user.name, email: user.email },
+    profile: {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      displayName: user.name,
+      initials: initialsOf(user.firstName, user.lastName) || user.email.charAt(0).toUpperCase(),
+      email: user.email,
+      ...(user.avatarFileId ? { photo: avatarPhoto(user.avatarFileId, user.name) } : {}),
+    },
+    maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)),
     ...(user.phone ? { phone: { last4: user.phone.slice(-4), verified: user.phoneVerifiedAt !== null } } : {}),
     signIn,
     preferences: NOTIFICATION_TOPICS.flatMap((topic) =>

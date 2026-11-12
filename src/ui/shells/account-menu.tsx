@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -64,7 +65,7 @@ export function AccountMenu({ viewer, onSignOut }: AccountMenuProps) {
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="ghost" size="icon" className="rounded-full" aria-label={t('accountMenu', { name: viewer.displayName, initials: viewer.initials })} aria-describedby={statusId} aria-busy={pending} disabled={pending}>
-            {pending ? <LoaderCircle aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" /> : <span aria-hidden="true" className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">{viewer.initials}</span>}
+            {pending ? <LoaderCircle aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" /> : viewer.photo ? <Image src={viewer.photo.src} alt="" width={44} height={44} unoptimized className="size-11 shrink-0 rounded-full bg-secondary object-cover" /> : <span aria-hidden="true" className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">{viewer.initials}</span>}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-60 max-w-[calc(100vw-2rem)]">

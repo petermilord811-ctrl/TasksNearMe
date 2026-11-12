@@ -14,6 +14,7 @@ import { HELPER_REVIEW_TAGS } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { areas, categories } from '@/modules/markets/schema';
 import { reviews } from '@/modules/reviews/schema';
+import { avatarPhoto } from '@/modules/files/photos';
 import { files } from '@/modules/tasks/schema';
 import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
@@ -37,6 +38,7 @@ export function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: st
     id: user.id,
     displayName: user.name,
     initials: initialsOf(user.firstName, user.lastName),
+    ...(user.avatarFileId ? { photo: avatarPhoto(user.avatarFileId, user.name) } : {}),
     memberSince: user.createdAt.toISOString(),
     phoneVerified,
     handle: profile.handle,

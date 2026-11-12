@@ -2,6 +2,7 @@
 
 import { refresh } from 'next/cache';
 import type { AccountProfileInput, ActionResult, NotificationChannel, NotificationTopic } from '@/contracts';
+import { refreshPublicProfile } from '@/modules/accounts/profile-photo';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { consumeRateLimit } from '@/platform/rate-limit';
@@ -44,7 +45,10 @@ export async function saveAccountProfileAction(input: AccountProfileInput): Prom
   if (!userId) return { ok: false, code: 'not_allowed' };
   const limited = await consumeRateLimit(db, `account:${userId}`, { limit: 20, windowSeconds: 600 });
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
-  return refreshed(await saveAccountProfile(db, userId, input, await requestNow()));
+  const result = await saveAccountProfile(db, userId, input, await requestNow());
+  // The name shows on a helper's public profile.
+  if (result.ok) await refreshPublicProfile(db, userId);
+  return refreshed(result);
 }
 
 export async function saveNotificationPreferenceAction(input: { topic: NotificationTopic; channel: NotificationChannel; enabled: boolean }): Promise<ActionResult> {

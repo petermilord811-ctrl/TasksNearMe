@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import type { ActionHandler, ActionResult } from './actions';
-import type { SocialProvider, SocialSignInInput } from './auth';
-import type { Cents, ISODateTime } from './common';
-import { personNameField } from './forms';
+import type { ActionHandler, ActionResult, QueryHandler } from './actions';
+import type { EmailInput, OneTimeCodeInput, PhoneInput, SocialProvider, SocialSignInInput } from './auth';
+import type { Cents, ISODateTime, Photo } from './common';
+import { emailField, oneTimeCodeField, personNameField } from './forms';
+import type { PhotoUploadResult } from './posting';
 import type { AttentionTarget } from './home';
 
 /**
@@ -113,7 +114,10 @@ export interface AccountSignInMethods {
 }
 
 export interface AccountPageData {
-  profile: { firstName: string; lastName: string; displayName: string; email: string };
+  /** `photo`: the profile photo, when they added one (a square; helpers' shows on their public profile). */
+  profile: { firstName: string; lastName: string; displayName: string; initials: string; email: string; photo?: Photo };
+  /** The largest photo the profile photo upload takes. */
+  maxPhotoMegabytes: number;
   /** Never the full number. */
   phone?: { last4: string; verified: boolean };
   signIn: AccountSignInMethods;
@@ -122,6 +126,13 @@ export interface AccountPageData {
   helper: { status: 'none' | 'draft' | 'active' | 'paused' | 'suspended' };
   privacy: { exportRequestedAt?: ISODateTime; deletionRequestedAt?: ISODateTime };
 }
+
+/** Changing the account's email: the code went to the new address; entering it switches the account to it. */
+export const emailChangeConfirmInputSchema = z.object({ email: emailField, code: oneTimeCodeField });
+export type EmailChangeConfirmInput = z.input<typeof emailChangeConfirmInputSchema>;
+
+/** How long a change code works, and how soon a new one can be sent (shown in the dialogs). */
+export const CONTACT_CODE_MINUTES = 10;
 
 export const accountProfileInputSchema = z.object({
   firstName: personNameField(40),
@@ -147,4 +158,25 @@ export interface AccountHandlers {
   onSignOut: () => Promise<ActionResult>;
   onConnectSignIn: ActionHandler<SocialSignInInput>;
   onDisconnectSignIn: ActionHandler<SocialSignInInput>;
+  /** FormData with one `file`: the new profile photo (cropped to a square). Resolves with the photo. */
+  onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
+  /** ok `updated`. */
+  onRemovePhoto: () => Promise<ActionResult>;
+  /**
+   * A 6-digit code to the new address. ok `sent`. `fieldErrors.email`: `invalid`, `unchanged`, `in_use`.
+   * `rate_limited` + `retryAt`. Calling it again with the same address sends a new code.
+   */
+  onStartEmailChange: ActionHandler<EmailInput>;
+  /**
+   * Switches the account to the new address (the old one gets a notice). ok `updated`.
+   * `fieldErrors.code`: `incorrect`, `expired`.
+   */
+  onConfirmEmailChange: ActionHandler<EmailChangeConfirmInput>;
+  /**
+   * A 6-digit code by text to the new number. ok `sent`. `fieldErrors.phone`: `invalid`, `not_supported`,
+   * `in_use`, `unchanged`. `rate_limited` + `retryAt` (also when a new code is asked for too soon).
+   */
+  onStartPhoneChange: ActionHandler<PhoneInput>;
+  /** Verifies the new number. ok `updated`. `fieldErrors.code`: `incorrect`, `expired`; `rate_limited` after 3 wrong codes. */
+  onConfirmPhoneChange: ActionHandler<OneTimeCodeInput>;
 }

@@ -89,6 +89,8 @@ export const FIELD_ERROR_CODES = [
   'not_supported',
   /** Already used by another account (e.g. a phone number). */
   'in_use',
+  /** The same as what's already there (e.g. changing your email to the one you have). */
+  'unchanged',
   /** Text describing something on the prohibited-tasks list. */
   'prohibited',
   /** A date or time outside what the policy allows (too soon, too far out, end before start). */

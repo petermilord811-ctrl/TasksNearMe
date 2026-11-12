@@ -19,7 +19,7 @@ export function HelperCard({ helper, variant = 'full' }: HelperCardProps) {
   return (
     <article className={cn('h-full min-w-0 space-y-4 rounded-xl border border-border bg-card p-4 shadow-card', variant === 'full' && 'md:p-5')}>
       <div className="flex items-start gap-3">
-        <InitialsAvatar initials={helper.initials} size={variant === 'full' ? 'lg' : 'md'} />
+        <InitialsAvatar initials={helper.initials} photo={helper.photo} size={variant === 'full' ? 'lg' : 'md'} />
         <div className="min-w-0 flex-1">
           <h3 className="text-[17px]/6 font-semibold md:text-lg/6.5">
             <Link href={routes.helperProfile(helper.handle)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">

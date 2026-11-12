@@ -56,18 +56,22 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
 
   return (
     <div className="space-y-section">
-      <header className="rounded-xl border border-border bg-card p-card shadow-card">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8">
+      <header className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        {/* A soft brand band; the photo sits across its lower edge. */}
+        <div aria-hidden="true" className="h-24 bg-[linear-gradient(115deg,var(--color-brand-soft),var(--color-clay-soft)_55%,var(--color-violet-soft))] md:h-32" />
+        <div className="grid gap-6 px-card pb-card lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8">
           <div className="min-w-0 space-y-5">
-            <div className="flex items-start gap-4">
-              <InitialsAvatar initials={helper.initials} size="lg" />
-              <div className="min-w-0 space-y-2">
-                <h1 className="text-2xl/8 font-bold md:text-[30px]/9.5">{helper.displayName}</h1>
+            <div className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end md:-mt-14">
+              <span className="w-fit shrink-0 rounded-full bg-card p-1 shadow-card">
+                <InitialsAvatar initials={helper.initials} photo={helper.photo} size="xl" />
+              </span>
+              <div className="min-w-0 space-y-1 sm:pb-1">
+                <h1 className="text-2xl/8 font-bold break-words md:text-[30px]/9.5">{helper.displayName}</h1>
                 {helper.headline && <p className="text-base leading-6">{helper.headline}</p>}
               </div>
             </div>
-            <div className="space-y-3 text-sm">
-              <p className="flex items-start gap-2 text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <p className="inline-flex items-start gap-2 text-muted-foreground">
                 <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
                 <span>{t('travelRadius', { miles: data.serviceRadiusMiles, area: helper.areaName })}</span>
               </p>
@@ -76,14 +80,20 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
             </div>
             <VerificationBadges badges={helper.badges} />
           </div>
-          <div className="flex min-w-0 flex-col gap-5 border-t border-border pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
+          <div className="flex min-w-0 flex-col gap-4 border-t border-border pt-5 lg:mt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
             <RatingStars rating={helper.rating} />
-            <div className="space-y-3 text-sm tabular-nums text-muted-foreground">
-              <p className="flex items-start gap-2"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{t('completed', { count: helper.completedCount })}</span></p>
-              {helper.responseTimeMinutes !== undefined && <p className="flex items-start gap-2"><Clock3 aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{t('responseTime', { minutes: helper.responseTimeMinutes })}</span></p>}
-              <p>{t('memberSince', { date: formatMonthYear(helper.memberSince) })}</p>
-            </div>
-            <Link href={routes.app.requestHelper(helper.handle)} className={cn(buttonVariants(), 'w-full lg:mt-auto')}>{t('requestBooking', { name: helper.displayName })}</Link>
+            <ul className="grid grid-cols-2 gap-2 text-sm tabular-nums">
+              <li className="rounded-xl bg-muted/60 p-3">
+                <Check aria-hidden="true" className="mb-1 size-4 text-success" />
+                <span>{t('completed', { count: helper.completedCount })}</span>
+              </li>
+              {helper.responseTimeMinutes !== undefined && <li className="rounded-xl bg-muted/60 p-3">
+                <Clock3 aria-hidden="true" className="mb-1 size-4 text-muted-foreground" />
+                <span>{t('responseTime', { minutes: helper.responseTimeMinutes })}</span>
+              </li>}
+            </ul>
+            <p className="text-sm text-muted-foreground">{t('memberSince', { date: formatMonthYear(helper.memberSince) })}</p>
+            <Link href={routes.app.requestHelper(helper.handle)} className={cn(buttonVariants({ size: 'lg' }), 'h-auto min-h-11 w-full whitespace-normal py-2.5 lg:mt-auto')}>{t('requestBooking', { name: helper.displayName })}</Link>
           </div>
         </div>
       </header>

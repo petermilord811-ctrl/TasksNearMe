@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
-import type { CategorySlug, Cents, ISODateTime } from './common';
+import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
+import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
 import { CATEGORY_SLUGS } from './common';
 import type { CategoryView } from './marketing';
 import type { VerificationBadges } from './people';
@@ -163,6 +163,8 @@ export type WorkSampleUploadResult =
 /** `/app/helper/profile`: everything a helper can change after onboarding. */
 export interface HelperProfileEditorData {
   handle: string;
+  /** How people see the helper: the display name, initials and profile photo (the same as on the account page). */
+  person: { displayName: string; initials: string; photo?: Photo };
   progress: OnboardingProgress;
   categories: CategoryView[];
   areas: AreaOption[];
@@ -199,4 +201,8 @@ export interface HelperProfileEditorHandlers {
   onRemoveWorkSample: ActionHandler<{ id: string }>;
   onReorderWorkSamples: ActionHandler<{ ids: string[] }>;
   onSetPaused: ActionHandler<{ paused: boolean }>;
+  /** The profile photo, as on the account page: FormData with one `file`; resolves with the photo. */
+  onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
+  /** Back to initials; ok `updated`. */
+  onRemovePhoto: () => Promise<ActionResult>;
 }

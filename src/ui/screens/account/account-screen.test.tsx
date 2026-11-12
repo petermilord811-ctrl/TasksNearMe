@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes, type AccountHandlers, type AccountPageData, type AccountProfileInput, type ActionResult } from '@/contracts';
-import { fakeAccountHandlers, fakeHandler, jordanAccountData, mayaAccountData, newAccountData } from '@/fixtures';
+import { fakeAccountHandlers, fakeHandler, jordanAccountData, jordanProfilePhoto, mayaAccountData, newAccountData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import account from '../../../../messages/en/ui/account.json';
 import { AccountScreen } from './account-screen';
@@ -25,31 +25,25 @@ function expectUnavailableButton(name: string) {
 }
 
 describe('AccountScreen', () => {
-  it('shows the profile, read-only email, and only the masked phone suffix', () => {
+  it('shows the profile, the email, and only the masked phone suffix', () => {
     mount();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible();
     expect(screen.getByLabelText('First name')).toHaveValue('Maya');
     expect(screen.getByLabelText('Last name')).toHaveValue('Rivera');
     expect(screen.getByText(/Maya R\./)).toBeVisible();
-    const email = screen.queryByRole('textbox', { name: /^Email$/i });
-    if (email) {
-      expect(email).toHaveValue(mayaAccountData.profile.email);
-      expect(email).toHaveAttribute('readonly');
-    } else {
-      // The profile shows it read-only (the ways to sign in show it again, for the email code).
-      const shown = screen.getAllByText(mayaAccountData.profile.email);
-      expect(shown.length).toBeGreaterThan(0);
-      expect(screen.getByText(account.profile.emailHint)).toBeVisible();
-    }
+    // Shown in contact details, and again under the ways to sign in (for the email code).
+    expect(screen.getAllByText(mayaAccountData.profile.email).length).toBeGreaterThan(0);
     expect(screen.getByText('•••• 0101 · Verified')).toBeVisible();
     expect(screen.queryByRole('textbox', { name: /phone/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change your email' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Change your phone number' })).toBeEnabled();
   });
 
-  it('handles an absent phone without an unimplemented phone action', () => {
+  it('offers to add a phone when there is none', () => {
     mount(newAccountData);
-    expect(screen.getByText('Add a phone number')).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Add a phone number' })).not.toBeInTheDocument();
+    expect(screen.getByText(account.contact.noPhone)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Add a phone number' })).toBeEnabled();
     expect(screen.queryByText(/••••/)).not.toBeInTheDocument();
   });
 
@@ -279,6 +273,147 @@ describe('Ways to sign in', () => {
     mount(newAccountData);
     expect(screen.queryByRole('button', { name: /Connect|Disconnect/ })).toBeNull();
     expect(screen.getByText(account.signIn.emailCode)).toBeVisible();
+  });
+
+  describe('profile photo', () => {
+    const photo = (name = 'me.jpg', type = 'image/jpeg', bytes = 2048) => new File([new Uint8Array(bytes)], name, { type });
+
+    it('uploads a chosen photo, shows it at once, and refreshes', async () => {
+      const onUploadPhoto = vi.fn(async (_form: FormData) => ({ ok: true as const, photo: jordanProfilePhoto }));
+      mount(mayaAccountData, { onUploadPhoto });
+      expect(screen.getByRole('img', { name: 'Avatar with initials MR' })).toBeVisible();
+      await userEvent.upload(screen.getByLabelText(messages.forms.profilePhoto.add), photo());
+      expect(onUploadPhoto).toHaveBeenCalledOnce();
+      expect(onUploadPhoto.mock.calls[0]![0].get('file')).toBeInstanceOf(File);
+      expect(await screen.findByText(messages.forms.profilePhoto.uploaded)).toBeVisible();
+      expect(screen.getByRole('img', { name: 'Profile photo of Jordan T.' })).toBeVisible();
+      expect(screen.getByLabelText(messages.forms.profilePhoto.change)).toBeEnabled();
+      expect(navigation.refresh).toHaveBeenCalled();
+    });
+
+    it('refuses a photo over the limit without uploading it', async () => {
+      const onUploadPhoto = vi.fn(fakeAccountHandlers.onUploadPhoto);
+      mount(mayaAccountData, { onUploadPhoto });
+      await userEvent.upload(screen.getByLabelText(messages.forms.profilePhoto.add), photo('huge.jpg', 'image/jpeg', 11 * 1024 * 1024));
+      expect(onUploadPhoto).not.toHaveBeenCalled();
+      expect(screen.getByText(messages.forms.profilePhoto.errors.too_large.replace('{megabytes, number}', '10'))).toBeVisible();
+    });
+
+    it("explains a photo the server can't use", async () => {
+      mount(mayaAccountData, { onUploadPhoto: async () => ({ ok: false, code: 'unsupported_type' }) });
+      await userEvent.upload(screen.getByLabelText(messages.forms.profilePhoto.add), photo());
+      expect(await screen.findByText(messages.forms.profilePhoto.errors.unsupported_type)).toBeVisible();
+      expect(screen.getByRole('img', { name: 'Avatar with initials MR' })).toBeVisible();
+    });
+
+    it('removes the photo and goes back to the initials', async () => {
+      const onRemovePhoto = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+      mount(jordanAccountData, { onRemovePhoto });
+      expect(screen.getByRole('img', { name: 'Profile photo of Jordan T.' })).toBeVisible();
+      expect(screen.getByText(messages.forms.profilePhoto.notes.publicProfile, { exact: false })).toBeVisible();
+      await userEvent.click(screen.getByRole('button', { name: messages.forms.profilePhoto.remove }));
+      expect(onRemovePhoto).toHaveBeenCalledOnce();
+      expect(await screen.findByText(messages.forms.profilePhoto.removed)).toBeVisible();
+      expect(screen.getByRole('img', { name: 'Avatar with initials JT' })).toBeVisible();
+      expect(screen.queryByRole('button', { name: messages.forms.profilePhoto.remove })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('changing the email', () => {
+    it('sends a code to the new address, and the sixth digit confirms it', async () => {
+      const onStartEmailChange = vi.fn(fakeAccountHandlers.onStartEmailChange);
+      const onConfirmEmailChange = vi.fn(fakeAccountHandlers.onConfirmEmailChange);
+      mount(mayaAccountData, { onStartEmailChange, onConfirmEmailChange });
+      await userEvent.click(screen.getByRole('button', { name: 'Change your email' }));
+      const dialog = await screen.findByRole('dialog', { name: account.contact.emailDialog.title });
+      await userEvent.type(within(dialog).getByLabelText(account.contact.emailDialog.label), '  Maya.New@Example.test ');
+      await userEvent.click(within(dialog).getByRole('button', { name: account.contact.emailDialog.send }));
+      expect(onStartEmailChange).toHaveBeenCalledExactlyOnceWith({ email: 'maya.new@example.test' });
+      expect(await within(dialog).findByText('maya.new@example.test')).toBeVisible();
+      await userEvent.type(within(dialog).getByLabelText('6-digit code'), '123456');
+      await waitFor(() => expect(onConfirmEmailChange).toHaveBeenCalledExactlyOnceWith({ email: 'maya.new@example.test', code: '123456' }));
+      expect(await screen.findByText(account.contact.emailChanged.replace('{email}', 'maya.new@example.test'))).toBeVisible();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(navigation.refresh).toHaveBeenCalled();
+    });
+
+    it("says when the address is another account's", async () => {
+      mount();
+      await userEvent.click(screen.getByRole('button', { name: 'Change your email' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.type(within(dialog).getByLabelText(account.contact.emailDialog.label), 'taken@example.test');
+      await userEvent.click(within(dialog).getByRole('button', { name: account.contact.emailDialog.send }));
+      expect(await within(dialog).findByText(messages.forms.fields.email.in_use)).toBeVisible();
+      expect(within(dialog).getByLabelText(account.contact.emailDialog.label)).toHaveFocus();
+      expect(within(dialog).queryByLabelText('6-digit code')).not.toBeInTheDocument();
+    });
+
+    it('keeps the dialog open on a wrong code, and a new code can be sent', async () => {
+      const onStartEmailChange = vi.fn(fakeAccountHandlers.onStartEmailChange);
+      mount(mayaAccountData, { onStartEmailChange });
+      await userEvent.click(screen.getByRole('button', { name: 'Change your email' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.type(within(dialog).getByLabelText(account.contact.emailDialog.label), 'maya.new@example.test');
+      await userEvent.click(within(dialog).getByRole('button', { name: account.contact.emailDialog.send }));
+      await userEvent.type(await within(dialog).findByLabelText('6-digit code'), '000000');
+      expect(await within(dialog).findByText(messages.forms.fieldErrors.incorrect)).toBeVisible();
+      await userEvent.click(within(dialog).getByRole('button', { name: account.contact.resend }));
+      expect(onStartEmailChange).toHaveBeenLastCalledWith({ email: 'maya.new@example.test' });
+      expect(await within(dialog).findByText(account.contact.newCodeSent)).toBeVisible();
+      expect(within(dialog).getByLabelText('6-digit code')).toHaveValue('');
+    });
+
+    it('goes back to the address when it was taken before the code was entered', async () => {
+      const onConfirmEmailChange = vi.fn(async (): Promise<ActionResult> => ({ ok: false, code: 'validation_failed', fieldErrors: { email: ['in_use'] } }));
+      mount(mayaAccountData, { onConfirmEmailChange });
+      await userEvent.click(screen.getByRole('button', { name: 'Change your email' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.type(within(dialog).getByLabelText(account.contact.emailDialog.label), 'maya.new@example.test');
+      await userEvent.click(within(dialog).getByRole('button', { name: account.contact.emailDialog.send }));
+      await userEvent.type(await within(dialog).findByLabelText('6-digit code'), '123456');
+      expect(await within(dialog).findByText(messages.forms.fields.email.in_use)).toBeVisible();
+      expect(within(dialog).getByLabelText(account.contact.emailDialog.label)).toHaveValue('maya.new@example.test');
+    });
+  });
+
+  describe('changing the phone', () => {
+    it('adds a number with a texted code', async () => {
+      const onStartPhoneChange = vi.fn(fakeAccountHandlers.onStartPhoneChange);
+      const onConfirmPhoneChange = vi.fn(fakeAccountHandlers.onConfirmPhoneChange);
+      mount(newAccountData, { onStartPhoneChange, onConfirmPhoneChange });
+      await userEvent.click(screen.getByRole('button', { name: 'Add a phone number' }));
+      const dialog = await screen.findByRole('dialog', { name: account.contact.phoneDialog.addTitle });
+      await userEvent.type(within(dialog).getByLabelText('Phone number'), '(512) 555-0199');
+      await userEvent.click(within(dialog).getByRole('button', { name: account.contact.phoneDialog.send }));
+      expect(onStartPhoneChange).toHaveBeenCalledExactlyOnceWith({ phone: '(512) 555-0199' });
+      await userEvent.type(await within(dialog).findByLabelText('6-digit code'), '123456');
+      await waitFor(() => expect(onConfirmPhoneChange).toHaveBeenCalledExactlyOnceWith({ code: '123456' }));
+      expect(await screen.findByText(account.contact.phoneChanged)).toBeVisible();
+    });
+
+    it('shows when to try again after too many codes', async () => {
+      mount(mayaAccountData, { onStartPhoneChange: async () => ({ ok: false, code: 'rate_limited', retryAt: '2026-11-21T18:30:00.000Z' }) });
+      await userEvent.click(screen.getByRole('button', { name: 'Change your phone number' }));
+      const dialog = await screen.findByRole('dialog', { name: account.contact.phoneDialog.changeTitle });
+      await userEvent.type(within(dialog).getByLabelText('Phone number'), '512 555 0199');
+      await userEvent.click(within(dialog).getByRole('button', { name: account.contact.phoneDialog.send }));
+      expect(await within(dialog).findByText(messages.forms.actionErrors.rate_limited)).toBeVisible();
+      expect(within(dialog).queryByLabelText('6-digit code')).not.toBeInTheDocument();
+    });
+
+    it('starts over each time the dialog opens', async () => {
+      mount();
+      await userEvent.click(screen.getByRole('button', { name: 'Change your phone number' }));
+      let dialog = await screen.findByRole('dialog');
+      await userEvent.type(within(dialog).getByLabelText('Phone number'), '512 555 0199');
+      await userEvent.click(within(dialog).getByRole('button', { name: account.contact.phoneDialog.send }));
+      await within(dialog).findByLabelText('6-digit code');
+      await userEvent.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      await userEvent.click(screen.getByRole('button', { name: 'Change your phone number' }));
+      dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByLabelText('Phone number')).toHaveValue('');
+    });
   });
 });
 

@@ -1,10 +1,12 @@
 import Link from 'next/link';
-import { ArrowRight, BadgeCheck, Phone } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type AccountHandlers, type AccountPageData } from '@/contracts';
+import { ProfilePhotoField } from '@/ui/components/forms/profile-photo-field';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
 import { Button } from '@/ui/primitives/button';
+import { AccountContact } from './account-contact';
 import { AccountProfileForm } from './account-profile-form';
 import { AccountPreferences } from './account-preferences';
 import { AccountPrivacy, AccountSignOut } from './account-privacy';
@@ -12,20 +14,25 @@ import { AccountSignIn } from './account-sign-in';
 
 const cardClass = 'rounded-xl border bg-card p-4 shadow-card sm:p-6';
 
-export function AccountScreen({ data, handlers }: { data: AccountPageData; handlers: AccountHandlers }) {
+export function AccountScreen({ data, handlers, initialDialog }: {
+  data: AccountPageData;
+  handlers: AccountHandlers;
+  /** Previews only: an email or phone dialog open at its code step. */
+  initialDialog?: { channel: 'email' | 'phone'; sentTo?: string };
+}) {
   const t = useTranslations('account');
   const helperStatus = data.helper.status;
   return <div className="mx-auto w-full max-w-[720px] space-y-6 lg:space-y-8">
     <PageHeader title={t('title')} description={t('description')} />
     <div className={cardClass}>
       <Section title={t('profile.title')} description={t('profile.description')}>
-        <AccountProfileForm key={`${data.profile.firstName}-${data.profile.lastName}-${data.profile.displayName}`} profile={data.profile} onSave={handlers.onSaveProfile} />
-        <dl className="mt-6 space-y-4 border-t pt-6 text-sm">
-          <div><dt className="font-medium">{t('profile.email')}</dt><dd className="mt-1 break-all text-muted-foreground">{data.profile.email}</dd><dd className="mt-1 text-muted-foreground">{t('profile.emailHint')}</dd></div>
-          <div><dt className="font-medium">{t('profile.phone')}</dt><dd className="mt-1 flex items-center gap-2 text-muted-foreground">{data.phone?.verified ? <BadgeCheck aria-hidden="true" className="size-4 shrink-0 text-success" /> : <Phone aria-hidden="true" className="size-4 shrink-0" />}<span className="tabular-nums">{data.phone ? t(data.phone.verified ? 'profile.phoneVerified' : 'profile.phoneUnverified', { last4: data.phone.last4 }) : t('profile.noPhone')}</span></dd>{!data.phone && <dd className="mt-1 text-muted-foreground">{t('profile.noPhoneHint')}</dd>}</div>
-        </dl>
+        <ProfilePhotoField initials={data.profile.initials} photo={data.profile.photo} maxPhotoMegabytes={data.maxPhotoMegabytes} note={helperStatus === 'active' || helperStatus === 'paused' ? 'publicProfile' : undefined} onUpload={handlers.onUploadPhoto} onRemove={handlers.onRemovePhoto} />
+        <div className="mt-6 border-t pt-6">
+          <AccountProfileForm key={`${data.profile.firstName}-${data.profile.lastName}-${data.profile.displayName}`} profile={data.profile} onSave={handlers.onSaveProfile} />
+        </div>
       </Section>
     </div>
+    <div className={cardClass}><Section title={t('contact.title')} description={t('contact.description')}><AccountContact email={data.profile.email} phone={data.phone} handlers={handlers} initialDialog={initialDialog} /></Section></div>
     <div className={cardClass}><Section title={t('signIn.title')} description={t('signIn.description')}><AccountSignIn methods={data.signIn} onConnect={handlers.onConnectSignIn} onDisconnect={handlers.onDisconnectSignIn} /></Section></div>
     <div className={cardClass}><Section title={t('preferences.title')} description={t('preferences.description')}><AccountPreferences preferences={data.preferences} onSave={handlers.onSavePreference} /></Section></div>
     <div className={cardClass}><Section title={t('helper.title')} description={t(`helper.descriptions.${helperStatus}`)}>

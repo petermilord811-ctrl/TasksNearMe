@@ -1,10 +1,12 @@
-import type { CategorySlug, Cents, ISODateTime } from './common';
+import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
 
 export interface PersonSummary {
   id: string;
   /** First name + last initial, e.g. "Maya R.". Never the full last name. */
   displayName: string;
   initials: string;
+  /** Their profile photo, when they added one (helpers' show publicly; clients' only inside the app). */
+  photo?: Photo;
   memberSince: ISODateTime;
   phoneVerified: boolean;
 }

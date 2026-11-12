@@ -1,5 +1,5 @@
 import { routes, type AppShellHandlers, type HelperProfileEditorData, type HelperProfileEditorHandlers, type PreviewEntry } from '@/contracts';
-import { fakeHandler, fakeProfileEditorHandlers, onboardingIdentityStep, sam, samProfileEditorData } from '@/fixtures';
+import { fakeHandler, fakeProfileEditorHandlers, onboardingIdentityStep, sam, samProfileEditorData, samProfilePhoto } from '@/fixtures';
 import { HelperProfileEditorScreen, type HelperEditorSection } from '@/ui/screens/helper/helper-profile-editor-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/helperProfileEditor.json';
@@ -13,6 +13,7 @@ const fullSamples: HelperProfileEditorData = { ...samProfileEditorData, workSamp
 
 export const helperProfileEditorPreviews: PreviewEntry[] = [
   preview('default', copy.screen.previews.default),
+  preview('with-photo', copy.screen.previews.withPhoto, { ...samProfileEditorData, person: { ...samProfileEditorData.person, photo: samProfilePhoto } }),
   preview('paused', copy.screen.previews.paused, { ...samProfileEditorData, paused: true }, 'visibility'),
   ...(['services', 'area', 'tools', 'work-samples', 'verification', 'visibility'] as const).map((section) => preview(section, copy.screen.sections[section], samProfileEditorData, section)),
   preview('empty-work-samples', copy.screen.previews.emptySamples, { ...samProfileEditorData, workSamples: [] }, 'work-samples'),

@@ -10,13 +10,16 @@
     "in_use": "That number is already used by another account. Try a different number or contact support.",
     "must_accept": "Select this checkbox to continue.",
     "prohibited": "This isn't allowed on TasksNearMe. See the list of prohibited tasks.",
-    "out_of_range": "Choose a value within the allowed range."
+    "out_of_range": "Choose a value within the allowed range.",
+    "unchanged": "That's what you have now."
   },
   "fields": {
     "email": {
       "label": "Email",
       "hint": "Use an email address you can access.",
-      "invalid": "Enter a valid email address."
+      "invalid": "Enter a valid email address.",
+      "in_use": "That email is already used by another account. Use a different one or contact support.",
+      "unchanged": "That's already your email."
     },
     "code": {
       "label": "6-digit code",
@@ -32,7 +35,8 @@
     "phone": {
       "label": "Phone number",
       "hint": "US numbers only.",
-      "invalid": "Enter a valid US phone number."
+      "invalid": "Enter a valid US phone number.",
+      "unchanged": "That's already your number."
     },
     "zip": {
       "label": "ZIP code",
@@ -60,5 +64,27 @@
     "dropPhotos": "Or drag photos here",
     "dropPhoto": "Or drag a photo here",
     "chosen": "Chosen: {name}"
+  },
+  "profilePhoto": {
+    "label": "Profile photo",
+    "hint": "A clear photo of your face helps people recognize you. JPG, PNG, WebP or HEIC, up to {megabytes, number} MB. We crop it to a square.",
+    "add": "Add a photo",
+    "change": "Change photo",
+    "remove": "Remove photo",
+    "uploading": "Uploading your photo…",
+    "removing": "Removing your photo…",
+    "uploaded": "Your new photo is saved.",
+    "removed": "Your photo was removed. People see your initials instead.",
+    "errors": {
+      "too_large": "This photo is too large. Choose one up to {megabytes, number} MB.",
+      "unsupported_type": "This file can't be used. Choose a JPG, PNG, WebP or HEIC photo.",
+      "too_many": "You can't add another photo right now. Try again later.",
+      "rate_limited": "You've uploaded a lot of photos. Wait a little and try again.",
+      "unknown": "Your photo couldn't be saved. Try again."
+    },
+    "notes": {
+      "publicProfile": "It also shows on your public helper profile.",
+      "helperEditor": "It shows on your public profile, in search, and on your offers."
+    }
   }
 }

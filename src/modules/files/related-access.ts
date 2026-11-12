@@ -1,4 +1,5 @@
 import { and, eq, ne, or, sql } from 'drizzle-orm';
+import { users } from '@/modules/accounts/schema';
 import { bookingCompletionPhotos, bookingExpenses, bookings } from '@/modules/bookings/schema';
 import { canViewMessageFile } from '@/modules/messaging/service';
 import { supportCases } from '@/modules/support/schema';
@@ -15,6 +16,16 @@ import type { Db } from '@/platform/db/connect';
  *   receipts, photos in a problem report);
  * - message photos: the people in the thread.
  */
+/**
+ * A profile photo is public (anyone, signed in or not) while it's its owner's current photo: helpers' show on
+ * their public profile. A replaced or removed photo goes back to owner and staff only.
+ */
+export async function isCurrentProfilePhoto(db: Db, file: { id: string; kind: string; ownerUserId: string }): Promise<boolean> {
+  if (file.kind !== 'avatar') return false;
+  const [owner] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, file.ownerUserId), eq(users.avatarFileId, file.id))).limit(1);
+  return owner !== undefined;
+}
+
 export async function canViewRelatedFile(db: Db, file: { id: string; kind: string }, userId: string, now: Date): Promise<boolean> {
   if (file.kind === 'evidence' || file.kind === 'receipt') return isBookingParticipantFor(db, file.id, userId);
   if (file.kind === 'message') return canViewMessageFile(db, file.id, userId);

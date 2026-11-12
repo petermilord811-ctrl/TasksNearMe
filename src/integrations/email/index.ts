@@ -2,11 +2,12 @@ import { newId } from '@/platform/db/ids';
 import type { Db } from '@/platform/db/connect';
 import { devOutboxMessages } from '@/platform/dev-outbox/schema';
 import { createPostmarkEmailProvider } from './postmark';
+import { createResendEmailProvider } from './resend';
 
 /**
  * Email provider port. Development and tests use the dev outbox (rows shown at /dev/outbox, with the HTML
- * version in a frame); with POSTMARK_SERVER_TOKEN set, every email goes out through Postmark from
- * EMAIL_FROM (docs/integration-points.md).
+ * version in a frame). With a provider key, every email goes out for real from EMAIL_FROM: Postmark
+ * (POSTMARK_SERVER_TOKEN) or Resend (RESEND_API_KEY); docs/integration-points.md.
  */
 export interface EmailMessage {
   to: string;
@@ -42,11 +43,11 @@ export function createDevOutboxEmailProvider(db: Db): EmailProvider {
 }
 
 export function createEmailProvider(db: Db, env: Record<string, string | undefined> = process.env): EmailProvider {
-  const token = env.POSTMARK_SERVER_TOKEN;
-  if (token) {
-    const from = env.EMAIL_FROM;
-    if (!from) throw new Error('POSTMARK_SERVER_TOKEN is set but EMAIL_FROM is empty: set a sender Postmark has verified.');
-    return createPostmarkEmailProvider({ token, from });
-  }
-  return createDevOutboxEmailProvider(db);
+  const postmark = env.POSTMARK_SERVER_TOKEN;
+  const resend = env.RESEND_API_KEY;
+  if (postmark && resend) throw new Error('Both POSTMARK_SERVER_TOKEN and RESEND_API_KEY are set: keep the one email provider you use.');
+  if (!postmark && !resend) return createDevOutboxEmailProvider(db);
+  const from = env.EMAIL_FROM;
+  if (!from) throw new Error(`${postmark ? 'POSTMARK_SERVER_TOKEN' : 'RESEND_API_KEY'} is set but EMAIL_FROM is empty: set a sender the provider has verified.`);
+  return postmark ? createPostmarkEmailProvider({ token: postmark, from }) : createResendEmailProvider({ apiKey: resend!, from });
 }

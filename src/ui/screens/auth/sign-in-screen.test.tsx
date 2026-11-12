@@ -77,8 +77,9 @@ describe('sign-in forms', () => {
     }));
     show(<EmailCodeStep data={signInEmailCodeStep} handlers={handlers({ onVerifyEmailCode })} />);
     const code = screen.getByLabelText('6-digit code');
+    // The sixth digit sends the code.
     await userEvent.type(code, '123456');
-    await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(onVerifyEmailCode).toHaveBeenCalledExactlyOnceWith({ code: '123456' });
     expect(await screen.findByText(forms.fieldErrors.incorrect)).toBeVisible();
     await waitFor(() => expect(code).toHaveFocus());
     expect(code).toHaveAttribute('aria-invalid', 'true');
@@ -173,8 +174,8 @@ describe('sign-in forms', () => {
     expect(code).toHaveAttribute('inputmode', 'numeric');
     expect(code).toHaveAttribute('maxlength', '6');
     await userEvent.type(code, '123456');
-    await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
     await waitFor(() => expect(replace).toHaveBeenCalledExactlyOnceWith(signInResults.done.redirectTo));
+    expect(onVerifyPhoneCode).toHaveBeenCalledOnce();
     expect(push).not.toHaveBeenCalled();
   });
 

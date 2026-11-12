@@ -3,6 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
 import { emailOTP } from 'better-auth/plugins';
 import { accounts, sessions, users, verifications } from '@/modules/accounts/schema';
+import { renderEmailChangeCodeEmail } from '@/modules/accounts/emails/contact-change';
 import { renderSignInCodeEmail } from '@/modules/accounts/emails/sign-in-code';
 import { createProviderConnectedHook, createProviderGate } from '@/modules/accounts/sign-in/provider-gate';
 import { userFromProviderProfile } from '@/modules/accounts/sign-in/providers';
@@ -15,9 +16,10 @@ import { newId } from '@/platform/db/ids';
 const ID_PREFIX: Record<string, string> = { user: 'usr', session: 'ses', account: 'acc', verification: 'ver' };
 
 /**
- * Better Auth for TasksNearMe: email one-time codes (6 digits, 10 minutes, 3 attempts), Google and
- * Microsoft sign-in, sessions in Postgres, prefixed text ids. Built by a factory so the app
- * (src/platform/auth/auth.ts) and the integration tests can each pass their own database.
+ * Better Auth for TasksNearMe: email one-time codes (6 digits, 10 minutes, 3 attempts) to sign in and to
+ * change the account's email, Google and Microsoft sign-in, sessions in Postgres, prefixed text ids. Built
+ * by a factory so the app (src/platform/auth/auth.ts) and the integration tests can each pass their own
+ * database.
  *
  * Google and Microsoft are real when their keys are set (docs/integration-points.md). Without keys,
  * development and tests use the stand-in (src/integrations/oauth/stand-in.ts) and production doesn't
@@ -98,6 +100,8 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
         mode: { type: 'string', required: false, defaultValue: 'poster', input: false },
         status: { type: 'string', required: false, defaultValue: 'active', input: false },
         homeMarketId: { type: 'string', required: false, defaultValue: 'mkt_austin', input: false },
+        // The profile photo (a file id); set from the account page, never by sign-in.
+        avatarFileId: { type: 'string', required: false, input: false },
       },
     },
     plugins: [
@@ -105,7 +109,15 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
         otpLength: 6,
         expiresIn: 600,
         allowedAttempts: 3,
-        async sendVerificationOTP({ email: to, otp }) {
+        // Changing the account's email from the account page: the code goes to the new address
+        // (src/modules/accounts/contact-change.ts).
+        changeEmail: { enabled: true },
+        async sendVerificationOTP({ email: to, otp, type }) {
+          if (type === 'change-email') {
+            const { subject, text, html } = renderEmailChangeCodeEmail({ code: otp, minutes: 10, email: to, appUrl: appUrl() });
+            await email.send({ to, subject, text, html, tag: 'email-change-code' });
+            return;
+          }
           const { subject, text, html } = renderSignInCodeEmail({ code: otp, minutes: 10, appUrl: appUrl() });
           await email.send({ to, subject, text, html, tag: 'sign-in-code' });
         },

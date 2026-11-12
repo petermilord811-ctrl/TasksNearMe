@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { oneTimeCodeInputSchema, type OneTimeCodeInput } from '@/contracts';
 import { formatDateTime } from '@/shared/format';
-import { TextFormField } from '@/ui/components/forms/text-form-field';
+import { CodeFormField } from '@/ui/components/forms/code-input';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -37,12 +37,14 @@ export function CodeStep({ data, handlers, initialResult, onResult, channel }: S
   const verify = channel === 'email' ? handlers.onVerifyEmailCode : handlers.onVerifyPhoneCode;
   const resend = channel === 'email' ? handlers.onResendEmailCode : handlers.onResendPhoneCode;
   const change = channel === 'email' ? handlers.onChangeEmail : handlers.onChangePhone;
-  return <form noValidate onSubmit={form.handleSubmit(async (input) => { setPendingAction('verify'); await action.run(verify, input); })} aria-busy={pending} className="space-y-6">
+  const submit = form.handleSubmit(async (input) => { setPendingAction('verify'); await action.run(verify, input); });
+  return <form noValidate onSubmit={submit} aria-busy={pending} className="space-y-6">
     <StepHeading title={channel === 'email' ? t('emailCode.title') : t('phoneCode.title', { phone: data.maskedPhone ?? '' })}>
       {channel === 'email' && <p className="break-words">{t.rich('emailCode.description', { email: data.email ?? '', strong: (chunks) => <strong className="font-medium text-foreground">{chunks}</strong> })}</p>}
       {data.codeLifetimeMinutes !== undefined && <p>{t('codeLifetime', { minutes: data.codeLifetimeMinutes })}</p>}
     </StepHeading>
-    <TextFormField control={form.control} name="code" label={fields('code.label')} hint={fields('code.hint')} autoComplete="one-time-code" inputMode="numeric" maxLength={6} className="tabular-nums tracking-widest" />
+    {/* The sixth digit sends the code, as other apps do (Continue stays for anyone who prefers it). */}
+    <CodeFormField control={form.control} name="code" label={fields('code.label')} hint={fields('code.hint')} autoFocus disabled={pending} onComplete={() => { if (!pending) void submit(); }} />
     <FormFeedback result={action.result} successMessage={action.result?.ok && action.result.code === 'sent' ? t(pendingAction === 'resend' ? 'newCodeSent' : 'codeSent') : undefined} />
     <ContinueButton pending={pending} />
     <div className="space-y-2 border-t border-border pt-4">
