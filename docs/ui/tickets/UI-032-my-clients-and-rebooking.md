@@ -62,6 +62,8 @@ Copy namespaces: `clients`, `proposal` (plus additions to the screens you update
 - the three attention kinds in the home copy and its tests.
 Please review them and replace them properly.
 
+**Also (flaky previews from UI-029):** in the runner's independent check, `screen-request-helper/slot` (360) and `screen-request-helper/slot-not-allowed` (1280) each failed axe once with a `color-contrast` violation on 1 node, then passed on retry. It's likely an element captured mid-transition or while a quote is pending. Please make those previews deterministic.
+
 **Also (a fix from an earlier review):** on `NotificationsScreen`, "All notifications marked as read." disappears when the list refreshes, because `MarkAllRead` (which holds the feedback) only renders while `unreadCount > 0`. Keep the feedback visible after the refresh.
 
 ## States to preview
