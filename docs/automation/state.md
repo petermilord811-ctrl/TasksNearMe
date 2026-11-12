@@ -1,6 +1,6 @@
 # Autopilot state
 
-**Updated:** 2026-11-12 05:30 UTC (iteration 12, owner said "build all")
+**Updated:** 2026-11-12 08:40 UTC (iteration 13, owner said "build all")
 **Autopilot:** the owner said "go ahead, build all" (2026-11-12): build everything left, Claude doing the UI too while Codex is at its limit (decisions.md).
 **Phase:** 5–6 (repeat bookings, trust, support and staff tools). Wired end to end:
 - the landing page (UI-036): the new brand, the motion system, the hero canvas, the map of open tasks with "Use my location";
@@ -12,8 +12,15 @@
 - support for members, reporting and blocking; staff queues, cases, money resolutions, the staff booking page, rewards review, users.
 
 **Codex:** at its ChatGPT usage limit until 2026-11-17 12:32 (local). Buying credits is the owner's call. Tickets run with `node scripts/codex-run.mjs UI-xxx` (logs in `scratchpad/codex-UI-xxx.log`).
-**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0021). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
+**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0023). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
 **New dependencies (UI-036):** `motion`, `maplibre-gl`. Run `npm install` after pulling (never while a dev server runs in that checkout).
+
+## Done in iteration 13
+- **`/app/helpers`** (UI-039, Find helpers): browse and search the market's helpers (cc6b314).
+- **After a cancellation (T-10–T-12):** Find a replacement reopens the task (`tasks.reopened_at`, migration 0023; earlier offers stay with the canceled booking; earlier offerers get `task_reopened`); Contest no-show report opens a `no_show` case (24 h, once); Book again after a helper cancellation.
+- **Approval reminders (T-02):** 24 h and 4 h before auto-approval (`approval_reminder`), from the job runner and for the viewer.
+- **Test clock (blueprint 10 §3.1):** `requestNow()` in pages, route handlers and Server Actions; `/dev/clock` (signed, per browser); e2e `time-travel.spec` runs T-02. E2e scenario rows (`tests/e2e/support/scenarios.ts`, `tsk_e2e_*`) are removed by the next seed.
+- Gate (a3cbb92): `check` 1803, `test:db` 153, `e2e` 124 (50 skips by design; 1 flaky: the phone map's waitlist), `build` pass.
 
 ## Done in iteration 12
 - **UI-032 wired** (`/app/clients`, rebook and proposal pages; `AttentionItem.actorName`); seed `bkg_wardrobe` (Maya's wardrobe with Sam, completed); e2e `rebook.spec`.
@@ -33,11 +40,10 @@
 - The design system (§1–2.3) describes the new brand.
 
 ## Next steps
-1. **`/app/helpers`** (browse and search helpers: category, area, open times, name), the last missing sitemap route. `/app/series/[seriesId]` is phase 2 (recurring, flag off).
-2. **Launch-scenario features:** find a replacement after a helper cancels (T-10); contesting a no-show or can't-access as a case (T-11, T-12); reminders 24 h and 4 h before automatic approval (T-02); email and SMS notifications by preference with quiet hours through the dev outbox (T-29); a test-only clock override for e2e (blueprint 10 §3.1).
-3. **Launch-scenario tests:** double submit (T-05), hourly cap and expenses to the cent (T-16, T-17), auto-approval through the job runner (T-02), the welcome reward lifecycle (T-22), the second helper never sees the address (T-20), DST timers (T-30).
-4. **UI-021** quality pass (Claude builds it while Codex is out), then drop the stray $20 allowance from `movingBookingPosterConfirmed`.
-5. **Docs and close:** `README.md` and `docs/integration-points.md` (swapping fakes for real providers), `docs/automation/final-report.md`.
+1. **T-29 notifications by channel:** email and SMS per preferences with quiet hours for texts that can wait, through the dev outbox (`notification_deliveries`, a delivery job, retries visible to support). Push needs a service worker and keys: decide.
+2. **Launch-scenario tests:** double submit (T-05), hourly cap and expenses to the cent (T-16, T-17), the welcome reward lifecycle (T-22), the second helper never sees the address (T-20), DST timers (T-30).
+3. **UI-021** quality pass (Claude builds it while Codex is out), then drop the stray $20 allowance from `movingBookingPosterConfirmed`.
+4. **Docs and close:** `README.md` and `docs/integration-points.md` (swapping fakes for real providers), the full `test:ui`, `docs/automation/final-report.md`.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB plus the landing copy).
