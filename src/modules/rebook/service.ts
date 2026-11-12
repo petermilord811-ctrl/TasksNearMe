@@ -384,6 +384,15 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
     }
     let bookingId = current.bookingId;
     const [live] = bookingId ? await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1) : [];
+    // An attempt still being charged (a double tap, a second tab): never charge twice.
+    if (live && live.status === 'pending_funding') {
+      const [inFlight] = await tx
+        .select({ id: payments.id })
+        .from(payments)
+        .where(and(eq(payments.bookingId, live.id), eq(payments.status, 'processing')))
+        .limit(1);
+      if (inFlight) return null;
+    }
     if (!live || live.status !== 'pending_funding') {
       bookingId = newId('bkg');
       await tx.insert(bookings).values({

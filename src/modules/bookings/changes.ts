@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lte } from 'drizzle-orm';
+import { and, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import type {
   AcceptChangeInput,
   ActionResult,
@@ -331,26 +331,39 @@ async function chargeDifference(deps: BookingDeps, posterId: string, row: Change
   if (!('providerRef' in method)) return method;
   const paymentId = newId('pay');
   const idempotencyKey = `change:${row.id}:${paymentId}`;
-  await deps.db.insert(payments).values({
-    id: paymentId,
-    bookingId: row.bookingId,
-    purpose: 'change_funding',
-    payerUserId: posterId,
-    amountCents: row.differenceCents,
-    status: 'processing',
-    provider: deps.payments.name,
-    paymentMethodId: method.paymentMethodId,
-    methodRef: method.providerRef,
-    methodBrand: method.brand,
-    methodLast4: method.last4,
-    methodExpMonth: method.expMonth,
-    methodExpYear: method.expYear,
-    saveMethod: false,
-    idempotencyKey,
-    createdAt: now,
-    updatedAt: now,
+  // One charge at a time per change (a double tap, a second tab): the change row is locked, and an attempt
+  // still being charged, or a change that moved on, refuses this one.
+  const started = await deps.db.transaction(async (tx) => {
+    await tx.execute(sql`select id from booking_change_requests where id = ${row.id} for update`);
+    const [current] = await tx.select().from(bookingChangeRequests).where(eq(bookingChangeRequests.id, row.id)).limit(1);
+    if (!current || !['proposed', 'accepted_pending_funding'].includes(current.status)) return false;
+    if (current.paymentId) {
+      const [previous] = await tx.select({ status: payments.status }).from(payments).where(eq(payments.id, current.paymentId)).limit(1);
+      if (previous?.status === 'processing' || previous?.status === 'succeeded') return false;
+    }
+    await tx.insert(payments).values({
+      id: paymentId,
+      bookingId: row.bookingId,
+      purpose: 'change_funding',
+      payerUserId: posterId,
+      amountCents: row.differenceCents,
+      status: 'processing',
+      provider: deps.payments.name,
+      paymentMethodId: method.paymentMethodId,
+      methodRef: method.providerRef,
+      methodBrand: method.brand,
+      methodLast4: method.last4,
+      methodExpMonth: method.expMonth,
+      methodExpYear: method.expYear,
+      saveMethod: false,
+      idempotencyKey,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await tx.update(bookingChangeRequests).set({ paymentId, updatedAt: now }).where(eq(bookingChangeRequests.id, row.id));
+    return true;
   });
-  await deps.db.update(bookingChangeRequests).set({ paymentId, updatedAt: now }).where(eq(bookingChangeRequests.id, row.id));
+  if (!started) return { ok: false, code: 'not_allowed' };
   const result = await deps.payments.charge({ amountCents: row.differenceCents, method: { providerRef: method.providerRef }, idempotencyKey, description: `TasksNearMe change ${row.id}` });
   return settleDifference(deps, row.id, paymentId, result, now);
 }

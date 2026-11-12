@@ -317,6 +317,16 @@ export async function confirmBooking(
           .where(eq(bookings.id, booking.id));
         booking = null;
       }
+      // Another attempt on this hold is being charged (a double tap, a second tab): never charge twice.
+      // The task lock above orders the attempts; the second one sees the first's payment in flight.
+      if (booking) {
+        const [inFlight] = await tx
+          .select({ id: payments.id })
+          .from(payments)
+          .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'processing')))
+          .limit(1);
+        if (inFlight) throw new HoldConflict();
+      }
       const bookingId = booking?.id ?? newId('bkg');
       if (!booking) {
         await tx.insert(bookings).values({

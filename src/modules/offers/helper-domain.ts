@@ -92,7 +92,9 @@ export function offerBlockedReason(helper: HelperOfferFacts, task: TaskOfferFact
 
 /**
  * The offer form's rules: start times every 30 minutes from the window start until 30 minutes before
- * its end, on the window's market day (a window shorter than 30 minutes offers its start only).
+ * its end, on the window's market day (a window shorter than 30 minutes offers its start only). Each
+ * wall-clock time once: when the clocks fall back, 1:00 and 1:30 happen twice, and the form's time means
+ * the first (`marketLocalToUtc`).
  */
 export function offerRulesFor(
   task: { windowStart: Date; windowEnd: Date; pricingType: string; estimatedHours: number | null },
@@ -102,7 +104,8 @@ export function offerRulesFor(
   const startTimes: string[] = [];
   for (let at = task.windowStart.getTime(); at + STEP_MS <= task.windowEnd.getTime(); at += STEP_MS) {
     if (marketDayKey(new Date(at)) !== date) break;
-    startTimes.push(marketClockTime(new Date(at)));
+    const time = marketClockTime(new Date(at));
+    if (!startTimes.includes(time)) startTimes.push(time);
   }
   if (startTimes.length === 0) startTimes.push(marketClockTime(task.windowStart));
   const hourly = task.pricingType === 'hourly';
