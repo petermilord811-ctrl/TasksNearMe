@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Controller, FormProvider, useForm, useWatch, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Lock } from 'lucide-react';
-import { invitePricingSchema, needsBankVerification, requestHelperInputSchema, routes, type ActionResult, type PaymentAttemptResult, type PaymentVerification, type RequestHelperInput } from '@/contracts';
+import { invitePricingSchema, needsBankVerification, requestHelperInputSchema, routes, type ActionResult, type PaymentAttemptResult, type PaymentVerification, type PriceBreakdown as PriceBreakdownData, type RequestHelperInput } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
@@ -19,9 +19,10 @@ import { usePriceQuote } from '@/ui/lib/use-price-quote';
 import { RequestHelperFields, requestStartWindow, suggestedPricing } from './request-helper-fields';
 import type { RequestHelperScreenProps } from './request-helper-screen';
 
-export function RequestHelperForm({ data, handlers, initialResult, initialPending = false }: Omit<RequestHelperScreenProps, 'now'> & {
+export function RequestHelperForm({ data, handlers, initialResult, initialPending = false, initialBreakdown }: Omit<RequestHelperScreenProps, 'now'> & {
   initialResult?: PaymentAttemptResult;
   initialPending?: boolean;
+  initialBreakdown?: PriceBreakdownData;
 }) {
   const t = useTranslations('invites');
   const fields = useTranslations('forms.fieldErrors');
@@ -56,7 +57,7 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
   const { setError, setFocus } = form;
   const pricing = useWatch({ control: form.control, name: 'pricing' });
   const validPricing = invitePricingSchema.safeParse(pricing).success;
-  const quote = usePriceQuote({ pricing, valid: validPricing, onQuote: handlers.onQuote });
+  const quote = usePriceQuote({ pricing, valid: validPricing, onQuote: handlers.onQuote, initialBreakdown });
   const disabled = pending || Boolean(verification) || Boolean(result?.ok);
 
   useEffect(() => {
@@ -136,7 +137,7 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
         {slotRequestUnavailable && <Link href={routes.app.requestHelper(data.helper.handle)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('regularRequest')}</Link>}
       </div>
       <div ref={submitBar} className="sticky bottom-app-navigation z-10 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <Button type="submit" disabled={disabled || !quote.breakdown} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{t(pending ? 'sending' : 'send')}</Button>
+        <Button type="submit" disabled={disabled || !quote.breakdown} aria-busy={pending} className="w-full transition-colors sm:w-auto">{pending && <Spinner />}{t(pending ? 'sending' : 'send')}</Button>
       </div>
     </form></FormProvider>
     {verification && <BankVerificationDialog verification={verification} pending={pending} onDone={(outcome) => { void run(() => handlers.onFinishVerification({ paymentId: verification.paymentId, outcome })); }} />}

@@ -96,6 +96,7 @@ export function BookingHubActions({ data, handlers, sheets, initialResult, initi
       if (action === 'add_to_calendar') return { href: routes.app.bookingCalendar(data.id), download: true };
       if (action === 'propose_change') return { href: routes.app.bookingProposeChange(data.id) };
       if (action === 'book_again') return { href: routes.app.requestHelper(data.helper.handle, { fromBookingId: data.id }) };
+      if (action === 'offer_rebook') return { href: routes.app.bookingRebook(data.id) };
       return undefined;
     }}
     onAction={(action) => handlers.onAction({ action: action as BookingActionId })}

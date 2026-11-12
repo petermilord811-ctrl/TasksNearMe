@@ -18,6 +18,7 @@
     "clientSavedReviewed": "Client · helper saved and review sent",
     "clientReviewPublished": "Client · review visible",
     "helperCompleted": "Helper · address still visible",
+    "helperOfferRebook": "Helper · propose a booking to this client",
     "helperAddressHidden": "Helper · address hidden",
     "clientCanceledLate": "Client · late cancellation",
     "clientCanceledByHelper": "Client · helper canceled",

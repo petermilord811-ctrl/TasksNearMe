@@ -5,8 +5,8 @@ import {
 import {
   bookshelfInviteAcceptedPoster, bookshelfInviteCounteredPoster, bookshelfInviteSentHelper,
   deskChairChangeAppliedData, deskChairChangeCounterpartyData,
-  fakeHandler, fakeNotificationHandlers, jordanNotificationsData, jordanShell,
-  mayaNotificationsData, mayaShell, notificationsEmptyData, supportNotificationsData,
+  fakeHandler, fakeNotificationHandlers, jordanNotificationsData, jordanRebookNotificationsData, jordanShell,
+  mayaNotificationsData, mayaRebookNotificationsData, mayaShell, notificationsEmptyData, supportNotificationsData,
 } from '@/fixtures';
 import { NotificationsScreen } from '@/ui/screens/account/notifications-screen';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -97,6 +97,8 @@ export const notificationPreviews: PreviewEntry[] = [
   preview('changes', copy.previews.changes, changes, jordanShell, updatedNotificationHandlers),
   preview('invite-received', copy.previews.inviteReceived, inviteReceived, jordanShell, updatedNotificationHandlers, false, bookshelfInviteSentHelper.sentAt),
   preview('invite-updates', copy.previews.inviteUpdates, inviteUpdates, mayaShell, updatedNotificationHandlers, false, bookshelfInviteAcceptedPoster.sentAt),
+  preview('rebook-client', copy.previews.rebookClient, mayaRebookNotificationsData, mayaShell, updatedNotificationHandlers, false, '2026-12-08T18:00:00.000Z'),
+  preview('rebook-helper', copy.previews.rebookHelper, jordanRebookNotificationsData, jordanShell, updatedNotificationHandlers, false, '2026-12-08T18:00:00.000Z'),
   preview('all-read', copy.previews.readOnly, {
     notifications: mayaNotificationsData.notifications.map((notification) => ({ ...notification, readAt: notification.readAt ?? notification.createdAt })),
     unreadCount: 0,

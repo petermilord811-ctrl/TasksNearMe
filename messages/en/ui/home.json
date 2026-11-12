@@ -45,9 +45,9 @@
       "reconfirm_offer": "The task changed. Review the details and confirm your offer again.",
       "finish_setup": "Finish your next setup step so you can send offers.",
       "payout_action_needed": "Update your bank details in Earnings to resolve the payout problem.",
-      "answer_invite": "Accept, decline, or counter before the request expires.",
+      "answer_invite": "Accept, decline, or suggest different terms before the request expires.",
       "answer_counter": "Accept or decline the new terms before they expire.",
-      "answer_proposal": "Pay to book it, or decline."
+      "answer_proposal": "Review the details, then accept and pay or decline."
     },
     "deadline": "Due {deadline}",
     "approvalDeadline": "Approve or report a problem by {deadline}. After that, the task is approved automatically.",
@@ -98,6 +98,9 @@
     "helperPayoutAction": "Helper · payout action needed",
     "helperNotSetUp": "Helper · finish setting up",
     "clientPaymentAccess": "Client · payment and access deadlines",
-    "helperEmpty": "Helper · empty sections"
+    "helperEmpty": "Helper · empty sections",
+    "helperInvite": "Helper · answer a booking request",
+    "clientCounter": "Client · answer a counter-offer",
+    "clientProposal": "Client · answer a booking proposal"
   }
 }

@@ -1,0 +1,57 @@
+{
+  "title": { "poster": "{helper} proposed a booking", "helper": "Your proposal to {client}" },
+  "backHome": "Back to Home",
+  "backClients": "Back to My clients",
+  "task": "The proposed task",
+  "start": "Proposed start · Austin time",
+  "hourlyTerms": "{rate}/h · about {estimate} · up to {cap}",
+  "message": "Message from {helper}",
+  "expires": "Proposal expires",
+  "status": { "sent": "Waiting for an answer", "accepted": "Booked", "declined": "Declined", "expired": "Expired", "withdrawn": "Withdrawn" },
+  "statusDescription": {
+    "sent_poster": "Accept and pay to book this task, or decline the proposal.",
+    "sent_helper": "{client} pays only if they accept. The proposal expires in 48 hours or 2 hours before the start.",
+    "accepted": "This proposal became a booking. Open it for the latest details.",
+    "declined": "The client declined this proposal. No booking was made.",
+    "expired": "The time to answer this proposal has passed. No booking was made.",
+    "withdrawn": "The helper withdrew this proposal. No booking was made."
+  },
+  "viewBooking": "View booking",
+  "addressPoster": "Helpers see only the general area. Your exact address is shared with your helper after you book.",
+  "addressHelper": "You'll see the exact address after the booking is confirmed.",
+  "total": "Your total",
+  "earnings": "Your earnings",
+  "payment": "Payment method",
+  "paymentNote": "You pay when you book. Your helper is paid after the task is done.",
+  "chargeNow": "Accepting charges {amount} to your selected payment method now.",
+  "hourly": "This covers up to {hours} hours. Unused hours are refunded after completion.",
+  "terms": "I agree to the <terms>Terms of Service</terms> and <cancellation>Cancellation Policy</cancellation>.",
+  "actionsLabel": "Proposal actions",
+  "accepting": "Accepting and paying…",
+  "updating": "Updating proposal…",
+  "confirm": {
+    "decline_proposal": "Decline this proposal from {helper}? No payment will be taken and no booking will be made.",
+    "withdraw_proposal": "Withdraw your proposal to {client}? They will no longer be able to accept it."
+  },
+  "keepProposal": "Keep proposal",
+  "success": { "decline_proposal": "Proposal declined. No booking was made.", "withdraw_proposal": "Proposal withdrawn. No booking was made." },
+  "reload": "Refresh proposal",
+  "errors": {
+    "not_allowed": "This proposal can no longer be answered. Refresh to see its latest status.",
+    "expired": "This proposal has expired. Refresh to see its latest status."
+  },
+  "previews": {
+    "group": "Rebooking proposals",
+    "client-sent": "Client · accept and pay",
+    "client-bank-verification": "Client · bank verification",
+    "client-declined-card": "Client · declined card",
+    "helper-sent": "Helper · waiting for client",
+    "helper-hourly": "Helper · hourly proposal",
+    "accepted": "Booked proposal",
+    "declined": "Declined proposal",
+    "expired": "Expired proposal",
+    "withdrawn": "Withdrawn proposal",
+    "submitting": "Client · accepting proposal",
+    "result": "Proposal feedback · {code}"
+  }
+}

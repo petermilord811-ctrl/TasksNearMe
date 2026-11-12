@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CalendarCheck, CheckCheck, ChevronRight, CircleAlert, ClipboardCheck, CreditCard, DoorOpen, MessageCircle, MessagesSquare, RefreshCw, UserRoundPlus, type LucideIcon } from 'lucide-react';
+import { ArrowLeftRight, CalendarCheck, CalendarPlus, CheckCheck, ChevronRight, CircleAlert, ClipboardCheck, CreditCard, DoorOpen, MessageCircle, MessagesSquare, RefreshCw, UserRoundPlus, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { AttentionItem, AttentionKind } from '@/contracts';
 import { formatDate, formatDateTime, formatTime } from '@/shared/format';
@@ -17,10 +17,9 @@ const icons: Record<AttentionKind, LucideIcon> = {
   reconfirm_offer: RefreshCw,
   finish_setup: UserRoundPlus,
   payout_action_needed: CircleAlert,
-  // Placeholders added by Claude (UI-032 reviews them).
-  answer_invite: MessagesSquare,
-  answer_counter: RefreshCw,
-  answer_proposal: CalendarCheck,
+  answer_invite: CalendarPlus,
+  answer_counter: ArrowLeftRight,
+  answer_proposal: CalendarPlus,
 };
 
 function AttentionRow({ item }: { item: AttentionItem }) {
@@ -35,7 +34,7 @@ function AttentionRow({ item }: { item: AttentionItem }) {
       : item.kind;
   const deadlineKey = item.kind === 'approve_work' ? 'approvalDeadline'
     : item.kind === 'finish_payment' ? 'paymentDeadline'
-      : item.kind === 'answer_cant_access' ? 'answerDeadline' : 'deadline';
+      : item.kind === 'answer_cant_access' || item.kind === 'answer_invite' || item.kind === 'answer_counter' || item.kind === 'answer_proposal' ? 'answerDeadline' : 'deadline';
 
   return <li>
     <Link href={attentionHref(item.target)} className={cn(
