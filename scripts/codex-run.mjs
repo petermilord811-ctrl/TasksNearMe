@@ -239,7 +239,8 @@ if (handoffOk) {
           env: runEnv,
           stdio: ['ignore', checkFd, checkFd],
           shell: true,
-          timeout: 25 * 60_000,
+          // About 780 previews at two widths take ~20 min under load, plus the unit tests.
+          timeout: 45 * 60_000,
         });
         checkUi = 'pass';
       } catch {
