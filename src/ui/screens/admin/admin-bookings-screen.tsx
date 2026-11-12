@@ -75,7 +75,7 @@ export function AdminBookingsScreen({ data, now }: AdminBookingsScreenProps) {
       <ul className="flex flex-wrap gap-2">{ADMIN_BOOKING_FILTERS.map((filter) => {
         const current = filter === data.filter;
         return <li key={filter}><Link href={routes.admin.bookings({ filter, q: data.query || undefined })} aria-current={current ? 'page' : undefined} className={cn('inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors', current ? 'border-primary bg-primary text-primary-foreground' : 'bg-card hover:bg-accent')}>
-          {t(`filters.${filter}`)}<span className={cn('rounded-full px-2 py-0.5 text-xs tabular-nums', current ? 'bg-primary-foreground/20' : 'bg-muted')}>{data.counts[filter]}</span>
+          {t(`filters.${filter}`)}<span className={cn('rounded-full px-2 py-0.5 text-xs tabular-nums', current ? 'bg-primary-foreground text-primary' : 'bg-muted')}>{data.counts[filter]}</span>
         </Link></li>;
       })}</ul>
     </nav>

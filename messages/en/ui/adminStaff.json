@@ -1,0 +1,46 @@
+{
+  "title": "Staff",
+  "intro": "Who works on TasksNearMe, and in which roles. Every change needs a reason and goes to the audit log.",
+  "rules": "There must always be at least two admins, and nobody can remove their own admin role.",
+  "grantTitle": "Add a role",
+  "email": "Email",
+  "emailHint": "The email of an existing account.",
+  "role": "Role",
+  "chooseRole": "Choose a role",
+  "reason": "Reason",
+  "reasonHint": "10 to 1,000 characters. It's kept in the audit log.",
+  "grant": "Add the role",
+  "granting": "Adding…",
+  "granted": "Role added.",
+  "removed": "Role removed.",
+  "errors": {
+    "emailInvalid": "No account uses this email.",
+    "roleRequired": "Choose a role.",
+    "roleInUse": "They already have this role.",
+    "reasonRequired": "Enter a reason of at least 10 characters.",
+    "reasonTooLong": "Keep the reason under 1,000 characters.",
+    "notAllowed": "That change isn't possible now. Refresh the page to see the current roles."
+  },
+  "membersTitle": "Staff members",
+  "count": "{count, plural, one {# person} other {# people}} · {admins, plural, one {# admin} other {# admins}}",
+  "caption": "Staff members and their roles",
+  "columns": {
+    "person": "Person",
+    "roles": "Roles"
+  },
+  "grantedBy": "Added {date} by {name}",
+  "grantedOn": "Added {date}",
+  "remove": "Remove {role}",
+  "removeTitle": "Remove a role",
+  "removeDescription": "{name} loses the {role} role at once. Their account stays as it is.",
+  "removing": "Removing…",
+  "cancel": "Cancel",
+  "previews": {
+    "group": "Admin: staff",
+    "default": "Staff",
+    "grantErrors": "Staff · email and role errors",
+    "removeDialog": "Staff · remove a role",
+    "granted": "Staff · role added",
+    "notAllowed": "Staff · not allowed"
+  }
+}

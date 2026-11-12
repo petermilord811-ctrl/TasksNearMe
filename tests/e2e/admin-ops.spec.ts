@@ -73,3 +73,67 @@ test('trust and safety hide a task from the public pages and restore it; the aud
   await expect(page.getByText('task.hide').first()).toBeVisible();
   await expect(page.getByText('Checking the planters for anything unsafe before it goes back up.').first()).toBeVisible();
 });
+
+test('finance sees the money: totals, what needs a look, and charges searched by email', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-mobile', 'read-only; one project is enough');
+  test.setTimeout(150_000);
+  await staffSignIn(page, 'casey@example.test');
+  await page.goto('/admin/payments');
+  await expect(page.getByRole('heading', { level: 1, name: 'Payments' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Last 30 days' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Needs a look/ })).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('link', { name: /^Charges/ }).click();
+  await expect(page).toHaveURL(/\/admin\/payments\?tab=charges$/, { timeout: 30_000 });
+  const search = page.getByRole('search', { name: 'Search payments' });
+  await search.getByRole('searchbox').fill('ben@example.test');
+  await search.getByRole('button', { name: 'Search' }).click();
+  await expect(page).toHaveURL(/tab=charges&q=ben%40example\.test$/, { timeout: 30_000 });
+  // Ben paid $88.00 for the TV (seeded).
+  await expect(page.getByRole('listitem').filter({ hasText: 'Mount a TV on the wall' }).first().getByText('$88.00')).toBeVisible();
+});
+
+test('an admin adds a role and removes it; the audit log keeps both', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');
+  test.setTimeout(180_000);
+  await staffSignIn(page, 'riley@example.test');
+  await page.goto('/admin/staff');
+  await expect(page.getByRole('heading', { level: 1, name: 'Staff' })).toBeVisible();
+  const grant = page.getByRole('form', { name: 'Add a role' });
+  await grant.getByLabel('Email').fill('taylor@example.test');
+  await grant.getByLabel('Role').selectOption('finance');
+  await grant.getByLabel('Reason').fill('Covering the finance queue this week.');
+  await grant.getByRole('button', { name: 'Add the role' }).click();
+  await expect(grant.getByText('Role added.')).toBeVisible({ timeout: 30_000 });
+
+  const taylor = page.getByRole('listitem').filter({ hasText: 'taylor@example.test' });
+  await taylor.getByRole('button', { name: 'Remove Finance' }).click();
+  await page.getByRole('alertdialog').getByLabel('Reason').fill('The finance queue is covered again.');
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Remove Finance' }).click();
+  await expect(page.getByText('Role removed.')).toBeVisible({ timeout: 30_000 });
+  await expect(taylor.getByRole('button', { name: 'Remove Finance' })).toHaveCount(0);
+
+  await page.goto('/admin/audit?action=staff');
+  await expect(page.getByText('staff.remove_role').first()).toBeVisible();
+  await expect(page.getByText('Covering the finance queue this week.').first()).toBeVisible();
+});
+
+test('an admin sees the policy in use and turns a flag on and off', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');
+  test.setTimeout(180_000);
+  await staffSignIn(page, 'riley@example.test');
+  await page.goto('/admin/config');
+  await expect(page.getByRole('heading', { level: 1, name: 'Config' })).toBeVisible();
+  await expect(page.getByText('Version 1, in use')).toBeVisible();
+  const form = page.getByRole('form', { name: 'Publish a new version' });
+  await expect(form.getByLabel('Client fee (%)')).toHaveValue('10');
+
+  // `recurring` is off at launch (phase 2) and nothing reads it yet.
+  await page.getByRole('button', { name: 'Turn on recurring' }).click();
+  await page.getByRole('alertdialog').getByLabel('Reason').fill('Checking the flag tools work.');
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Turn on recurring' }).click();
+  await expect(page.getByText('Saved. The flag is updated.')).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Turn off recurring' }).click();
+  await page.getByRole('alertdialog').getByLabel('Reason').fill('Back off until phase 2.');
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Turn off recurring' }).click();
+  await expect(page.getByRole('button', { name: 'Turn on recurring' })).toBeVisible({ timeout: 30_000 });
+});

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import { NextIntlClientProvider } from 'next-intl';
 import { AppToaster } from '@/ui/components/feedback/app-toaster';
 import { fontVariables } from '@/ui/theme/fonts';
@@ -25,10 +26,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     // The theme script sets data-theme and data-motion before paint, so React sees different attributes.
     <html lang="en" className={fontVariables} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
       <body>
+        {/* In the initial HTML before any app code (Next places it in <head>): the saved theme, before paint. */}
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <NextIntlClientProvider>
           {children}
           <AppToaster />
