@@ -1,0 +1,48 @@
+{
+  "title": "Bookings",
+  "intro": "Every booking, with what needs attention first.",
+  "search": "Search bookings",
+  "searchHint": "A booking id, a task title, or a person's name or email.",
+  "submitSearch": "Search",
+  "clearSearch": "Clear the search",
+  "filtersLabel": "Which bookings",
+  "filters": {
+    "attention": "Needs attention",
+    "upcoming": "Upcoming",
+    "finished": "Finished",
+    "all": "All"
+  },
+  "flags": {
+    "disputed": "Disputed",
+    "open_case": "Open case",
+    "approval_overdue": "Approval overdue",
+    "funds_held": "Funds held over 21 days",
+    "payment_failed": "Payment failed"
+  },
+  "flagsLabel": "Needs attention for",
+  "results": "Bookings",
+  "searching": "Results for “{query}”",
+  "count": "{count, plural, one {# booking} other {# bookings}}",
+  "limited": "Showing the first {shown} of {count}. Search to narrow it down.",
+  "caption": "Bookings, latest start first",
+  "columns": {
+    "task": "Task",
+    "people": "Client and helper",
+    "status": "Status",
+    "start": "Start",
+    "total": "Client paid",
+    "flags": "Needs attention for"
+  },
+  "client": "Client",
+  "helper": "Helper",
+  "emptyTitle": "No bookings here",
+  "emptyBody": "Try another tab or a different search.",
+  "emptyAttention": "Nothing needs attention right now.",
+  "previews": {
+    "group": "Admin: bookings",
+    "attention": "Bookings · needs attention",
+    "upcoming": "Bookings · upcoming",
+    "search": "Bookings · a search",
+    "empty": "Bookings · nothing found"
+  }
+}

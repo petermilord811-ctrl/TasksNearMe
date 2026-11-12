@@ -236,6 +236,7 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
       start: booking.startAt.toISOString(),
       areaName: found.view.location.kind === 'local' ? found.view.location.areaName : 'Remote',
       pricingType: terms.pricingType as 'fixed' | 'hourly',
+      taskId: booking.taskId,
     },
     poster: personSummaryOf(poster),
     helper: personSummaryOf(helper),

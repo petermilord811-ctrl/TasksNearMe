@@ -210,6 +210,23 @@ export const SEED_TASKS: SeedTask[] = [
     postedHoursAgo: 3,
   },
   {
+    // The staff moderation e2e (admin-ops.spec) hides and restores it; no other spec uses it.
+    id: 'tsk_patio',
+    slug: 'sweep-and-tidy-a-patio-windsor-park-7h3w',
+    posterId: 'usr_chris',
+    categoryId: 'cat_light_cleaning',
+    title: 'Sweep and tidy a patio',
+    description: 'A small back patio: sweep, wipe the table and chairs, and clear dead leaves from the planters.',
+    details: { bedrooms: 0, bathrooms: 0, suppliesOnSite: true, pets: false },
+    placeId: 'plc_windsor_300',
+    daysFromToday: 6,
+    start: '09:00',
+    end: '12:00',
+    budget: { type: 'fixed', priceCents: 4500 },
+    offerCount: 0,
+    postedHoursAgo: 120,
+  },
+  {
     // Done with Sam three weeks ago (a seeded completed booking): My clients, and the rebook e2e, where Sam
     // proposes doing it again and Maya pays.
     id: 'tsk_wardrobe',

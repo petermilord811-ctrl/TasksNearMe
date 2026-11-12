@@ -226,6 +226,7 @@ function taskFacts(row: { task: TaskRow; category: typeof categories.$inferSelec
   return {
     posterUserId: row.task.posterUserId,
     status: row.task.status,
+    hidden: row.task.hiddenAt !== null,
     windowEnd: row.task.windowEnd,
     categorySlug: row.category.slug as CategorySlug,
     requiresBackgroundCheck: row.category.requiresBackgroundCheck,
@@ -277,8 +278,8 @@ export async function getHelperTaskView(db: Db, userId: string, taskId: string, 
     .where(and(eq(offers.taskId, taskId), eq(offers.helperUserId, userId)))
     .orderBy(desc(offers.createdAt))
     .limit(1);
-  // A task that no longer takes offers is shown only to helpers who offered on it.
-  if (row.task.status !== 'open' && !latest) return null;
+  // A task that no longer takes offers (or that staff hid) is shown only to helpers who offered on it.
+  if ((row.task.status !== 'open' || row.task.hiddenAt) && !latest) return null;
   // The offer shows while it's in play or booked; after a decline, withdrawal or expiry the helper may offer again.
   const offerRow = latest && [...ACTIVE, 'accepted'].includes(latest.status as OfferStatus) ? latest : undefined;
 

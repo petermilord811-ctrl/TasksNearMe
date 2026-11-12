@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import type {
   ActionResult,
   AvailabilitySlotView,
@@ -123,7 +123,8 @@ async function invitableTasks(db: Db, posterId: string, helperId: string, now: D
     .select({ id: tasks.id, title: tasks.title, slug: categories.slug, windowStart: tasks.windowStart, windowEnd: tasks.windowEnd, marketId: tasks.marketId })
     .from(tasks)
     .innerJoin(categories, eq(categories.id, tasks.categoryId))
-    .where(and(eq(tasks.posterUserId, posterId), eq(tasks.status, 'open')))
+    // Hidden tasks can't be shown to a helper through an invite either.
+    .where(and(eq(tasks.posterUserId, posterId), eq(tasks.status, 'open'), isNull(tasks.hiddenAt)))
     .orderBy(desc(tasks.createdAt));
   return rows
     .filter((row) => state.facts.bookableCategories.includes(row.slug as CategorySlug))

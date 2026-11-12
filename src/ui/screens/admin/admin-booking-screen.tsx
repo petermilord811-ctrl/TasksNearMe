@@ -43,6 +43,7 @@ export function AdminBookingContent({ data, handlers, now, ...previewState }: Ad
         <div><dt className="flex items-center gap-2 text-muted-foreground"><MapPin aria-hidden="true" className="size-4 shrink-0" />{t('area')}</dt><dd className="pl-6">{data.booking.areaName}</dd></div>
         <div><dt className="text-muted-foreground">{t('pricing')}</dt><dd>{t(`pricingTypes.${data.booking.pricingType}`)}</dd></div>
       </dl>
+      <Link href={routes.admin.task(data.booking.taskId)} className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4">{t('openTask')}</Link>
     </div>
     <AdminBookingTools key={data.booking.id} data={data} handlers={handlers} now={now} {...previewState}>
       <section className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-5">

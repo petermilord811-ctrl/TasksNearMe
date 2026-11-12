@@ -1,0 +1,51 @@
+{
+  "title": "Audit log",
+  "intro": "Staff actions and access to restricted data, newest first. Entries can't be changed or deleted.",
+  "filters": "Filter the log",
+  "actor": "Who",
+  "actorHint": "A name, an email or an id.",
+  "action": "Action",
+  "anyAction": "Any action",
+  "targetType": "Target type",
+  "anyTarget": "Any type",
+  "targetId": "Target id",
+  "from": "From",
+  "to": "To",
+  "apply": "Apply filters",
+  "clear": "Clear filters",
+  "results": "Entries",
+  "count": "{count, plural, one {# entry} other {# entries}} on this page",
+  "caption": "Audit log entries, newest first",
+  "columns": {
+    "when": "When",
+    "who": "Who",
+    "action": "Action",
+    "target": "Target",
+    "reason": "Reason"
+  },
+  "system": "System",
+  "member": "Member",
+  "staff": "{name}, {role}",
+  "noReason": "No reason recorded",
+  "details": "Details",
+  "detailsCount": "{count, plural, one {# detail} other {# details}}",
+  "targetTypes": {
+    "booking": "Booking",
+    "task": "Task",
+    "support_case": "Case",
+    "user": "Person",
+    "reward_grant": "Reward",
+    "offer": "Offer",
+    "invite": "Invite",
+    "payment": "Payment"
+  },
+  "older": "Older entries",
+  "emptyTitle": "No entries match",
+  "emptyBody": "Try fewer filters or a wider date range.",
+  "previews": {
+    "group": "Admin: audit log",
+    "default": "Audit log",
+    "filtered": "Audit log · one task",
+    "empty": "Audit log · nothing found"
+  }
+}

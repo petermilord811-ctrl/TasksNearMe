@@ -25,6 +25,8 @@ export * from './reviews';
 export * from './account';
 export * from './support';
 export * from './admin';
+export * from './admin-ops';
+export * from './admin-money';
 export * from './rewards';
 export * from './changes';
 export * from './invites';

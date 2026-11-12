@@ -33,14 +33,17 @@ describe('app navigation', () => {
 });
 
 describe('admin navigation', () => {
-  const standard = ['queues', 'cases', 'reports', 'users', 'bookings', 'payments', 'rewards', 'audit'];
+  const standard = ['queues', 'cases', 'reports', 'users', 'bookings', 'payments', 'rewards'];
+  // The audit log is for admins and support leads (UI-033).
+  const withAudit = [...standard, 'audit'];
 
-  it.each([alexStaff, morganStaff])('shows the staff navigation for $displayName', (viewer) => {
-    expect(ids(getAdminNav(viewer.roles))).toEqual(standard);
+  it('shows the staff navigation for Alex P. (an agent) and Morgan L. (a lead, with the audit log)', () => {
+    expect(ids(getAdminNav(alexStaff.roles))).toEqual(standard);
+    expect(ids(getAdminNav(morganStaff.roles))).toEqual(withAudit);
   });
 
   it.each(STAFF_ROLES.filter((role) => role !== 'admin'))('omits Config and Staff for %s', (role) => {
-    expect(ids(getAdminNav([role]))).toEqual(standard);
+    expect(ids(getAdminNav([role]))).toEqual(role === 'support_lead' ? withAudit : standard);
   });
 
   it('shows Config and Staff in their specified positions for an admin', () => {

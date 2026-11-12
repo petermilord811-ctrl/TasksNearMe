@@ -1,0 +1,105 @@
+{
+  "title": "Payments",
+  "intro": "Money in and out of the platform, and anything that doesn't add up.",
+  "search": "Search payments",
+  "searchHint": "A booking id, or a person's name or email.",
+  "submitSearch": "Search",
+  "clearSearch": "Clear the search",
+  "tabsLabel": "Which money",
+  "tabs": {
+    "exceptions": "Needs a look",
+    "charges": "Charges",
+    "refunds": "Refunds",
+    "transfers": "Transfers",
+    "payouts": "Payouts"
+  },
+  "totalsTitle": "Last 30 days",
+  "totals": {
+    "charged": "Charged",
+    "refunded": "Refunded",
+    "transferred": "Sent to helpers",
+    "paidOut": "Paid out to banks"
+  },
+  "exceptions": {
+    "refund_failed": "Refund failed",
+    "payout_failed": "Payout failed",
+    "transfer_missing": "Earnings not sent",
+    "canceled_not_refunded": "Canceled, not refunded"
+  },
+  "exceptionHelp": {
+    "refund_failed": "The provider didn't complete this refund. Retry it from the provider's dashboard.",
+    "payout_failed": "The helper's bank refused this payout. They need to update their bank in the payout dashboard.",
+    "transfer_missing": "The booking finished more than 2 days ago, and the helper's earnings haven't gone out.",
+    "canceled_not_refunded": "The booking was canceled, but nothing went back to the client or to the helper."
+  },
+  "kinds": {
+    "charge": "Charge",
+    "refund": "Refund",
+    "transfer": "Transfer",
+    "payout": "Payout"
+  },
+  "statuses": {
+    "requires_confirmation": "Needs confirmation",
+    "processing": "Processing",
+    "authorized": "Authorized",
+    "succeeded": "Succeeded",
+    "failed": "Failed",
+    "canceled": "Canceled",
+    "partially_refunded": "Partly refunded",
+    "refunded": "Refunded",
+    "chargeback_open": "Chargeback open",
+    "chargeback_won": "Chargeback won",
+    "chargeback_lost": "Chargeback lost",
+    "pending": "Pending",
+    "in_transit": "In transit",
+    "paid": "Paid",
+    "not_due": "Not due yet",
+    "on_hold": "On hold",
+    "scheduled": "Scheduled",
+    "transferred": "Transferred",
+    "paid_out": "Paid out",
+    "reversed": "Reversed",
+    "partially_reversed": "Partly reversed"
+  },
+  "details": {
+    "booking_funding": "Booking payment",
+    "change_funding": "Change to a booking",
+    "invite_authorization": "Invite hold",
+    "earnings": "Earnings",
+    "reimbursement": "Expense reimbursement",
+    "cancellation_compensation": "Cancellation compensation",
+    "unused_cap": "Unused hours",
+    "unused_allowance": "Unused allowance",
+    "dispute_settlement": "Dispute settlement",
+    "cancellation": "Cancellation",
+    "change_decrease": "Lower price after a change",
+    "goodwill": "Goodwill",
+    "fraud": "Fraud",
+    "refunded_in_dispute": "Refunded in a dispute"
+  },
+  "bank": "Bank ending {last4}",
+  "columns": {
+    "what": "What",
+    "person": "Person",
+    "amount": "Amount",
+    "status": "Status",
+    "when": "When",
+    "reference": "Reference"
+  },
+  "results": "Money",
+  "caption": "Money, newest first",
+  "count": "{count, plural, one {# item} other {# items}}",
+  "limited": "Showing the newest {shown} of {count}. Search to narrow it down.",
+  "searching": "Results for “{query}”",
+  "emptyTitle": "Nothing here",
+  "emptyBody": "Try another tab or a different search.",
+  "emptyExceptions": "Nothing needs a look. Every charge, refund and transfer adds up.",
+  "previews": {
+    "group": "Admin: payments",
+    "exceptions": "Payments · needs a look",
+    "charges": "Payments · charges",
+    "payouts": "Payments · payouts",
+    "search": "Payments · a search",
+    "empty": "Payments · nothing to look at"
+  }
+}

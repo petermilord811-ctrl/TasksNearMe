@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, lt, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, gt, isNull, lt, ne, notInArray, or, eq, sql, type SQL } from 'drizzle-orm';
 import type { CategorySlug, FindWorkPageData, TaskBoardPageData, TaskPublicView } from '@/contracts';
 import type { Db } from '@/platform/db/connect';
 import { users } from '../accounts/schema';
@@ -65,8 +65,9 @@ function toRow(row: Row): PublicTaskRow {
   };
 }
 
+/** Open, not past, and not hidden by staff: what the board, the feeds and the public pages list. */
 function openIn(marketId: string, now: Date): SQL[] {
-  return [eq(tasks.marketId, marketId), eq(tasks.status, 'open'), gt(tasks.windowEnd, now)];
+  return [eq(tasks.marketId, marketId), eq(tasks.status, 'open'), gt(tasks.windowEnd, now), isNull(tasks.hiddenAt)];
 }
 
 export async function listBoardTasks(
@@ -184,7 +185,7 @@ export async function findPublicTask(
   now: Date,
 ): Promise<{ task: TaskPublicView; marketId: string; marketSlug: string; acceptingOffers: boolean } | null> {
   const [row] = await selectPublic(db)
-    .where(and(eq(tasks.slug, slug), ne(tasks.status, 'draft')))
+    .where(and(eq(tasks.slug, slug), ne(tasks.status, 'draft'), isNull(tasks.hiddenAt)))
     .limit(1);
   if (!row) return null;
   return {

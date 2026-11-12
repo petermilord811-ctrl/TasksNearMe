@@ -1,4 +1,6 @@
 import type { AdminCaseStatusFilter, AdminQueue } from './admin';
+import type { AdminAuditFilters, AdminBookingFilter } from './admin-ops';
+import type { AdminMoneyTab } from './admin-money';
 import type { AdminRewardFilter } from './admin-people';
 import type { CategorySlug } from './common';
 import type { FindWorkQuery } from './helper-work';
@@ -133,15 +135,19 @@ export const routes = {
     user: (userId: string) => `/admin/users/${enc(userId)}`,
     task: (taskId: string) => `/admin/tasks/${enc(taskId)}`,
     reports: () => '/admin/reports',
-    bookings: () => '/admin/bookings',
+    /** The bookings list (UI-033): a filter tab and a search (a booking id, a task title, a name or an email). */
+    bookings: (query: { filter?: AdminBookingFilter; q?: string } = {}) => withQuery('/admin/bookings', { filter: query.filter, q: query.q }),
     booking: (bookingId: string) => `/admin/bookings/${enc(bookingId)}`,
     cases: (filters: { queue?: AdminQueue; status?: AdminCaseStatusFilter; mine?: boolean } = {}) =>
       withQuery('/admin/cases', { queue: filters.queue, status: filters.status, mine: filters.mine ? '1' : undefined }),
     case: (caseId: string) => `/admin/cases/${enc(caseId)}`,
-    payments: () => '/admin/payments',
+    /** Money in and out (UI-034): a tab and a search (a booking id, a name or an email). */
+    payments: (query: { tab?: AdminMoneyTab; q?: string } = {}) => withQuery('/admin/payments', { tab: query.tab, q: query.q }),
     rewards: (filter?: AdminRewardFilter) => withQuery('/admin/rewards', { status: filter }),
     config: () => '/admin/config',
-    audit: () => '/admin/audit',
+    /** The audit log (UI-033); `before` is the cursor for older entries. */
+    audit: (filters: AdminAuditFilters & { before?: string } = {}) =>
+      withQuery('/admin/audit', { actor: filters.actor, action: filters.action, targetType: filters.targetType, targetId: filters.targetId, from: filters.from, to: filters.to, before: filters.before }),
     staff: () => '/admin/staff',
   },
 

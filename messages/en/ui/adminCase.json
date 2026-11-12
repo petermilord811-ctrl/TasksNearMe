@@ -118,7 +118,8 @@
     "assignedTo": "Assigned to {name}",
     "unassigned": "Unassigned",
     "opened": "Opened {at}",
-    "newReply": "New reply"
+    "newReply": "New reply",
+    "openTask": "Open the task"
   },
   "conversation": {
     "title": "Reported conversation",

@@ -129,6 +129,7 @@ export function AdminCaseContent({ data, handlers, now, initialDialog, replyStat
             </li>)}</ul>
           </section>
           {data.booking && <Booking booking={data.booking} />}
+          {data.taskId && <Link href={routes.admin.task(data.taskId)} className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4">{t('details.openTask')}</Link>}
         </div>
       </div>
     </AdminCaseControls>

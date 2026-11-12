@@ -251,6 +251,7 @@ export const overLimitPreview: ResolutionPreview = { posterRefundCents: 15400, h
 const deskBookingSummary: AdminBookingPageData['booking'] = {
   id: 'bkg_desk',
   title: 'Assemble a desk (flat-pack, 1 item)',
+  taskId: 'tsk_desk',
   status: 'disputed',
   start: '2026-11-21T16:30:00.000Z',
   areaName: 'Mueller',

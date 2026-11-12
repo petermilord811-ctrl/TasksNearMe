@@ -141,6 +141,8 @@ export interface AdminCasePageData {
   };
   parties: AdminCaseParty[];
   booking?: AdminCaseBookingSummary;
+  /** The task the case is about (its booking's, or a reported conversation's): `routes.admin.task` (UI-033). */
+  taskId?: string;
   /** Oldest first: messages with each party, notes, and changes. */
   events: AdminCaseEventView[];
   /** Restricted context the viewer can open by giving a reason (the access is logged). */
@@ -266,7 +268,7 @@ export type AdminBookingActionId = (typeof ADMIN_BOOKING_ACTIONS)[number];
 
 /** `/admin/bookings/[bookingId]`. */
 export interface AdminBookingPageData {
-  booking: { id: string; title: string; status: BookingStatus; start: ISODateTime; areaName: string; pricingType: 'fixed' | 'hourly' };
+  booking: { id: string; title: string; status: BookingStatus; start: ISODateTime; areaName: string; pricingType: 'fixed' | 'hourly'; /** `routes.admin.task` (UI-033). */ taskId: string };
   poster: PersonSummary;
   helper: PersonSummary;
   money: AdminBookingMoney;

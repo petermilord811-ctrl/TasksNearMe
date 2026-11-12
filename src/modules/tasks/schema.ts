@@ -81,6 +81,13 @@ export const tasks = pgTable(
     publishedAt: timestamp('published_at', { withTimezone: true }),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     version: integer('version').notNull().default(1),
+    /**
+     * Hidden by staff (UI-033): off the board, the feeds, the public page and offers; the poster still sees
+     * it. The reason (and every change) is in the audit log too.
+     */
+    hiddenAt: timestamp('hidden_at', { withTimezone: true }),
+    hiddenByUserId: text('hidden_by_user_id').references(() => users.id),
+    hiddenReason: text('hidden_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

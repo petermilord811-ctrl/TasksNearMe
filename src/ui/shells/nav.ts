@@ -73,6 +73,8 @@ export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[
 /** The app still owns route authorization; these are the ticket's role-specific links. */
 export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
   const isAdmin = roles.includes('admin');
+  // The audit log is for admins and support leads (the route says not found to others).
+  const readsAudit = isAdmin || roles.includes('support_lead');
   return [
     { id: 'queues', href: routes.admin.home(), exact: true },
     { id: 'cases', href: routes.admin.cases() },
@@ -82,7 +84,7 @@ export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
     { id: 'payments', href: routes.admin.payments() },
     { id: 'rewards', href: routes.admin.rewards() },
     ...(isAdmin ? [{ id: 'config' as const, href: routes.admin.config() }] : []),
-    { id: 'audit', href: routes.admin.audit() },
+    ...(readsAudit ? [{ id: 'audit' as const, href: routes.admin.audit() }] : []),
     ...(isAdmin ? [{ id: 'staff' as const, href: routes.admin.staff() }] : []),
   ];
 }

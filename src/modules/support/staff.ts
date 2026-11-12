@@ -110,7 +110,8 @@ async function usersById(db: Db, ids: string[]): Promise<Map<string, UserRow>> {
   return new Map(rows.map((row) => [row.id, row]));
 }
 
-async function staffById(db: Db, ids: string[]): Promise<Map<string, StaffSummary>> {
+/** Staff summaries (name, initials, roles) by user id. */
+export async function staffById(db: Db, ids: string[]): Promise<Map<string, StaffSummary>> {
   const unique = [...new Set(ids)];
   if (unique.length === 0) return new Map();
   const [people, roles] = await Promise.all([
@@ -252,7 +253,7 @@ interface CaseContext {
   row: CaseRow;
   parties: AdminCaseParty[];
   facts: StaffCaseFacts;
-  booking?: { id: string; title: string; status: string; startAt: Date; termsVersion: number; posterUserId: string; helperUserId: string };
+  booking?: { id: string; taskId: string; title: string; status: string; startAt: Date; termsVersion: number; posterUserId: string; helperUserId: string };
 }
 
 async function loadCase(db: Db, staff: StaffActor, caseId: string): Promise<CaseContext | null> {
@@ -260,7 +261,7 @@ async function loadCase(db: Db, staff: StaffActor, caseId: string): Promise<Case
   if (!row) return null;
   const [booking] = row.bookingId
     ? await db
-        .select({ id: bookings.id, title: tasks.title, status: bookings.status, startAt: bookings.startAt, termsVersion: bookings.termsVersion, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId })
+        .select({ id: bookings.id, taskId: bookings.taskId, title: tasks.title, status: bookings.status, startAt: bookings.startAt, termsVersion: bookings.termsVersion, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId })
         .from(bookings)
         .innerJoin(tasks, eq(tasks.id, bookings.taskId))
         .where(eq(bookings.id, row.bookingId))
@@ -385,6 +386,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
         : {}),
     },
     parties: ctx.parties,
+    ...((ctx.booking?.taskId ?? row.context?.taskId) ? { taskId: ctx.booking?.taskId ?? row.context?.taskId } : {}),
     ...(ctx.booking
       ? {
           booking: {
