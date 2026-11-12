@@ -8,6 +8,7 @@ export type NavId =
   | 'account'
   | 'findWork'
   | 'earnings'
+  | 'helpers'
   | 'saved'
   | 'payments'
   | 'support'
@@ -56,6 +57,7 @@ export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[
     ],
     secondary: mode === 'poster'
       ? [
+          { id: 'helpers', href: routes.app.helpers() },
           { id: 'saved', href: routes.app.saved() },
           { id: 'payments', href: routes.app.payments() },
           { id: 'support', href: routes.app.support() },

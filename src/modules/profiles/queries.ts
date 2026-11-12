@@ -31,7 +31,7 @@ export function initialsOf(firstName: string, lastName: string): string {
 type ProfileRow = typeof helperProfiles.$inferSelect;
 type UserRow = typeof users.$inferSelect;
 
-function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: string, services: ServiceSummary[]): HelperSummary {
+export function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: string, services: ServiceSummary[]): HelperSummary {
   const phoneVerified = user.phoneVerifiedAt !== null;
   return {
     id: user.id,

@@ -54,6 +54,7 @@ import { adminOpsPreviews } from './admin-ops.preview';
 import { adminPaymentsPreviews } from './admin-payments.preview';
 import { adminStaffPreviews } from './admin-staff.preview';
 import { adminConfigPreviews } from './admin-config.preview';
+import { helpersBrowsePreviews } from './helpers-browse.preview';
 import { rewardsPreviews } from './rewards.preview';
 import { changesPreviews } from './changes.preview';
 import { inviteCardPreviews } from './invite-card.preview';
@@ -117,6 +118,7 @@ export const previews: PreviewEntry[] = [
   ...adminPaymentsPreviews,
   ...adminStaffPreviews,
   ...adminConfigPreviews,
+  ...helpersBrowsePreviews,
   ...rewardsPreviews,
   ...changesPreviews,
   ...inviteCardPreviews,

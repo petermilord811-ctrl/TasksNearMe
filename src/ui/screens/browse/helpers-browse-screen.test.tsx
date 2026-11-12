@@ -1,0 +1,60 @@
+/** @vitest-environment jsdom */
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { NextIntlClientProvider } from 'next-intl';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { routes, type HelpersBrowsePageData, type SavedHelperHandlers } from '@/contracts';
+import { fakeHandler, helpersBrowseData, helpersBrowseEmptyData, helpersBrowseFilteredData } from '@/fixtures';
+import uiMessages from '../../../../messages/en/ui';
+import copy from '../../../../messages/en/ui/helpersBrowse.json';
+import { HelpersBrowseScreen } from './helpers-browse-screen';
+
+const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
+beforeEach(() => {
+  vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn(); });
+});
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  vi.unstubAllGlobals();
+});
+
+function mount(data: HelpersBrowsePageData = helpersBrowseData) {
+  const onToggleSaved = vi.fn<SavedHelperHandlers['onToggleSaved']>(fakeHandler({ ok: true, code: 'updated' }, 0));
+  render(<NextIntlClientProvider locale="en" messages={uiMessages}><HelpersBrowseScreen data={data} handlers={{ onToggleSaved }} /></NextIntlClientProvider>);
+  return onToggleSaved;
+}
+
+describe('HelpersBrowseScreen', () => {
+  it('filters with a GET form on the route builder, keeping the current filters', () => {
+    mount(helpersBrowseFilteredData);
+    const form = screen.getByRole('form', { name: copy.filtersTitle });
+    expect(form).toHaveAttribute('method', 'get');
+    expect(form).toHaveAttribute('action', routes.app.helpers());
+    expect(within(form).getByLabelText(copy.category)).toHaveValue('furniture-assembly');
+    expect(within(form).getByLabelText(copy.area)).toHaveValue('mueller');
+    expect(screen.getByRole('link', { name: copy.clear })).toHaveAttribute('href', routes.app.helpers());
+  });
+
+  it('shows each helper with their next open time, a request link and a save toggle', async () => {
+    const user = userEvent.setup();
+    const onToggleSaved = mount();
+    const [jordan, sam] = helpersBrowseData.rows;
+    expect(screen.getByRole('link', { name: `Ask ${sam!.helper.displayName}` })).toHaveAttribute('href', routes.app.requestHelper(sam!.helper.handle));
+    expect(screen.getAllByText(/^Open /).length).toBe(helpersBrowseData.rows.filter((row) => row.nextOpenTime).length);
+    expect(screen.getByRole('button', { name: `Remove ${jordan!.helper.displayName} from saved helpers` })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: `Save ${sam!.helper.displayName}` }));
+    await waitFor(() => expect(onToggleSaved).toHaveBeenCalledWith({ helperId: sam!.helper.id, saved: true }));
+    expect(await screen.findByText(`${sam!.helper.displayName} is in your saved helpers.`)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Remove ${sam!.helper.displayName} from saved helpers` })).toHaveAttribute('aria-pressed', 'true');
+    expect(navigation.refresh).toHaveBeenCalled();
+  });
+
+  it('offers to post a task when no helper matches', () => {
+    mount(helpersBrowseEmptyData);
+    expect(screen.getByText(copy.emptyTitle)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: copy.postTask })).toHaveAttribute('href', routes.app.newTask());
+  });
+});

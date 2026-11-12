@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { OfferInput } from '@/contracts';
 import {
@@ -107,7 +107,8 @@ describe("the helper's side of offers", () => {
     });
     const [row] = await db.select().from(offers).where(and(eq(offers.taskId, TASK), eq(offers.helperUserId, 'usr_jordan')));
     expect(row).toMatchObject({ revision: 2, priceCents: 6500, status: 'pending', posterSeenAt: null });
-    const events = await db.select({ type: outboxEvents.type }).from(outboxEvents).where(eq(outboxEvents.aggregateId, row!.id));
+    // In the order they were written (without ORDER BY, Postgres may return them either way).
+    const events = await db.select({ type: outboxEvents.type }).from(outboxEvents).where(eq(outboxEvents.aggregateId, row!.id)).orderBy(asc(outboxEvents.createdAt));
     expect(events.map((e) => e.type)).toEqual(['offer.submitted', 'offer.revised']);
   });
 

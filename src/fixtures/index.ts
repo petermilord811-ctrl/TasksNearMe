@@ -29,6 +29,7 @@ export * from './admin-ops';
 export * from './admin-money';
 export * from './admin-staff';
 export * from './admin-config';
+export * from './helpers-browse';
 export * from './rewards';
 export * from './changes';
 export * from './invites';

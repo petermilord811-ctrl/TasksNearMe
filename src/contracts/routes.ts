@@ -1,6 +1,7 @@
 import type { AdminCaseStatusFilter, AdminQueue } from './admin';
 import type { AdminAuditFilters, AdminBookingFilter } from './admin-ops';
 import type { AdminMoneyTab } from './admin-money';
+import type { HelperBrowseQuery } from './helpers-browse';
 import type { AdminRewardFilter } from './admin-people';
 import type { CategorySlug } from './common';
 import type { FindWorkQuery } from './helper-work';
@@ -74,7 +75,8 @@ export const routes = {
     task: (taskId: string) => `/app/tasks/${enc(taskId)}`,
     offer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}`,
     confirmOffer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}/confirm`,
-    helpers: () => '/app/helpers',
+    /** Browse and search helpers: category, the area they serve, open times this week, name. */
+    helpers: (query: HelperBrowseQuery = {}) => withQuery('/app/helpers', { category: query.category, area: query.area, q: query.q, open: query.openTimes ? '1' : undefined }),
     requestHelper: (handle: string, opts: { fromBookingId?: string; slotId?: string } = {}) =>
       withQuery(`/app/helpers/${enc(handle)}/request`, {
         from: opts.fromBookingId ? `booking:${opts.fromBookingId}` : undefined,

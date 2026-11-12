@@ -10,12 +10,12 @@ describe('app navigation', () => {
   it('keeps the poster tabs and secondary links in the specified order', () => {
     const nav = getAppNav(mayaShell.mode);
     expect(ids(nav.primary)).toEqual(['home', 'tasks', 'bookings', 'messages', 'account']);
-    expect(ids(nav.secondary)).toEqual(['saved', 'payments', 'support']);
+    expect(ids(nav.secondary)).toEqual(['helpers', 'saved', 'payments', 'support']);
     expect(nav.primary.map((item) => item.href)).toEqual([
       routes.app.home(), routes.app.tasks(), routes.app.bookings(), routes.app.messages(), routes.app.account(),
     ]);
     expect(nav.secondary.map((item) => item.href)).toEqual([
-      routes.app.saved(), routes.app.payments(), routes.app.support(),
+      routes.app.helpers(), routes.app.saved(), routes.app.payments(), routes.app.support(),
     ]);
   });
 
