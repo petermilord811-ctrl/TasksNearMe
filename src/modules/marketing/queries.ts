@@ -60,7 +60,21 @@ export async function getHomePageData(): Promise<WithNow<HomePageData> | null> {
   'use cache';
   cacheLife('minutes');
   cacheTag(marketTag(DEFAULT_MARKET_SLUG));
-  return loadMarketPage(DEFAULT_MARKET_SLUG);
+  const page = await loadMarketPage(DEFAULT_MARKET_SLUG);
+  if (!page) return null;
+  // Pricing transparency and the founding reward, from the same sources as /pricing and /become-a-helper.
+  const { market, policy } = await defaultMarketPolicy();
+  const [flags, foundingSpotsClaimed] = await Promise.all([getFlags(market.id), countFoundingHelpers(market.id)]);
+  const helper = buildBecomeHelperPageData({ fees: policy.fees, flags, foundingSpotsClaimed });
+  const reward = helper.welcomeReward;
+  return {
+    ...page,
+    data: {
+      ...page.data,
+      feeExample: buildPricingPageData(policy).fixedExample,
+      ...(reward ? { welcomeReward: { amountCents: reward.amountCents, cohortLimit: reward.cohortLimit, spotsClaimed: reward.spotsClaimed } } : {}),
+    },
+  };
 }
 
 export async function getMarketPageData(slug: string): Promise<WithNow<MarketPageData> | null> {

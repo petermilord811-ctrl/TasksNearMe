@@ -39,6 +39,13 @@ export interface HomePageData {
   categories: CategoryView[];
   recentTasks: TaskPublicView[];
   featuredHelpers: HelperSummary[];
+  /**
+   * The $60 desk at the market's published fees (the fee engine's numbers): what the client pays and what
+   * the helper earns. The landing page shows it as-is (UI-035); the UI never computes money.
+   */
+  feeExample: PriceBreakdown;
+  /** The founding helpers' welcome reward; absent when the program is off or the cohort is full. */
+  welcomeReward?: { amountCents: Cents; cohortLimit: number; spotsClaimed: number };
 }
 
 export interface MarketPageData {

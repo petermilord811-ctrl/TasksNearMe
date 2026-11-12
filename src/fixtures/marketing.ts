@@ -163,7 +163,12 @@ export const homePageData: HomePageData = {
   categories: categoryViews,
   recentTasks: recentPublicTasks,
   featuredHelpers: [sam, lee, jordan],
+  feeExample: deskBreakdown,
+  welcomeReward: { amountCents: 5000, cohortLimit: 100, spotsClaimed: 63 },
 };
+
+/** The founding cohort is full (or the program is off): no reward on the landing page. */
+export const homeNoRewardData: HomePageData = { ...homePageData, welcomeReward: undefined };
 
 export const furnitureCategoryPageData: CategoryPageData = {
   market: austinMarket,
