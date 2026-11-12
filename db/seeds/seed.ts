@@ -189,6 +189,7 @@ export async function seedDatabase(url: string): Promise<void> {
       await seedBookings(tx);
       await seedNotifications(tx);
       await seedSupport(tx);
+      await seedRewards(tx);
     });
     await db.execute(sql`select 1`);
   } finally {
@@ -566,6 +567,13 @@ async function seedSupport(tx: Tx): Promise<void> {
   ]);
   // Maya last looked before support answered: the reply shows as new.
   await tx.insert(supportCaseReads).values({ caseId: 'case_seed_maya_payment', userId: 'usr_maya', readAt: at(30) });
+}
+
+/** Sam's welcome reward waits for a lead's review (the admin e2e approves it). */
+async function seedRewards(tx: Tx): Promise<void> {
+  const now = Date.now();
+  const at = (hoursAgo: number) => new Date(now - hoursAgo * 3_600_000);
+  await tx.insert(rewardGrants).values({ id: 'rwd_seed_sam_review', helperUserId: 'usr_sam', program: 'welcome', amountCents: 5000, status: 'in_review', holdUntil: at(20), createdAt: at(24 * 15), updatedAt: at(20) });
 }
 
 async function seedPaymentMethods(tx: Tx): Promise<void> {

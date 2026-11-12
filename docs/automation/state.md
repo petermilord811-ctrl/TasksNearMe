@@ -1,58 +1,39 @@
 # Autopilot state
 
-**Updated:** 2026-11-11 22:00 UTC (iteration 9)
-**Phase:** 5–6 (trust, support and staff tools). Wired end to end:
+**Updated:** 2026-11-11 23:50 UTC (iteration 10)
+**Phase:** 5–6 (repeat bookings, trust, support and staff tools). Wired end to end:
 - posting a task, offers, find work, and booking with payment (development stand-in);
-- the booking page for both people: check-in, sheets, completion with evidence, approval, problem reports;
-- messages with masking, double-blind reviews, saved helpers, receipts and cards, earnings and payouts;
-- the home dashboards; notifications, the account page, real unread badges;
-- support for members (cases, requests, replies), reporting and blocking from a conversation.
+- the booking page for both people: check-in, sheets, completion with evidence, approval, problem reports, disputes, change requests;
+- direct invites (request a helper, accept, decline, counter, cancel; Book again; Invite helpers);
+- messages with masking, double-blind reviews, saved helpers, receipts and cards, earnings and payouts, rewards;
+- the home dashboards; notifications (incl. change and invite events), the account page, real unread badges;
+- support for members, reporting and blocking; staff queues, cases, money resolutions, the staff booking page.
 
-**Codex:** UI-027 (change requests) is running (`node scripts/codex-run.mjs UI-027`, attempt 2 after adding `onFinishVerification` to the contract; log `scratchpad/codex-UI-027.log`).
-**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0016). `npm run e2e` reseeds the dev database itself.
+**Codex:** see "Next steps" for the ticket in flight (`node scripts/codex-run.mjs UI-xxx`; logs in `scratchpad/codex-UI-xxx.log`).
+**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0020). `npm run e2e` reseeds the dev database itself.
 
-## Done in iteration 9
-- **UI-030** merged; the phone e2e under More is back on.
-- **UI-023** and **UI-015** merged and wired: `/app` (both modes), reviews, saved helpers.
-- **UI-017** merged and wired:
-  - `/app/notifications`: a lazy dispatcher turns outbox events into notifications;
-  - `/app/account`: profile, preferences (receipts locked on), export and deletion requests;
-  - real unread badges in the shell.
-- **UI-031** merged and wired: `/app/support`, `/app/support/[caseId]`, Report and Block in conversations. Blocking is enforced in messages, offers, find work and booking. Migration 0016.
-  - The run was cut off by the session ending; `node scripts/codex-run.mjs UI-031 --finish` completed it.
-- **UI-018** merged and wired: `/admin`, `/admin/cases`, `/admin/cases/[caseId]` (staff backend: queues, response targets, assignment, private replies, notes, resolutions, the reason-gated conversation, audit).
-- **UI-028** merged and wired: `/app/rewards` (rewards backend: welcome and repeat grants from booking facts, hold, review, redeem to a development gift card).
-- **Job runner** (`src/instrumentation.ts`): expiries, auto-approval, review publishing and notifications every minute.
-- **UI-019** merged and wired: money resolutions (release, settle, refund in full, goodwill) and `/admin/bookings/[bookingId]` with refunds and the address and conversation behind a logged reason.
-- **UI-026** merged and wired: the dispute card on both people's booking page, support notifications, refunds in the client's payment history.
-- Sessions ended twice mid-run: the Codex runner and the gate are separate processes and kept going; wait on their PIDs (`Wait-Process`) or use `codex-run.mjs --finish`.
-- Tooling: the heavy-work lock (`scripts/gate.mjs`, the runner's check), the shared e2e sign-in, and seed resets that clear leftovers.
+## Done in iteration 10
+- **Seeded dispute** (Ana's dresser with Jordan) and `disputes.spec` (support settles at $45; Ana sees the $16.50 refund).
+- **UI-025** merged and wired: `/app/helpers/[handle]/request` (flow layout), invites on `/app/offers` (`?invite=`) and the task page, Book again, Invite helpers (→ saved helpers). Only live helper profiles can be requested. e2e `invites.spec` on the seeded `tsk_nightstands`.
+- **Notifications** for `change.*` and `invite.*` events (placeholders reviewed by Codex in UI-020).
+- **UI-029 ready** (availability posts): contracts, fixtures, ticket, and the backend (migration 0020, slot holds through invites, expiry job). Invites waiting for a first authorization now expire after 30 min.
 
 ## Next steps
-1. **When UI-025 (direct invites) hands off:**
-   - Review and merge.
-   - Wire:
-     - the request page `src/app/(app)/app/(main)/helpers/[handle]/request/page.tsx` (`getRequestHelperPage`; `fromBookingId` from `?from=booking:<id>`), with `requestHelperAction` / `quoteInviteAction` / `finishRequestVerificationAction`;
-     - My offers: `invites: invitesForHelper(...)`, `openInviteId` from `?invite=`, `inviteHandlers`;
-     - the task owner page: `invites: invitesForTask(...)` and `inviteHandlers`;
-     - the `book_again` link.
-   - e2e, gate, commit.
-   - Then **launch UI-020** (ready; page drafts in `scratchpad/ui020/wire.py`).
-2. **Seed a disputed booking** for dispute and staff-money e2e.
-3. **Later:**
-   - notifications for `change.*` and `invite.*` events (new types need placeholders, as with UI-026);
-   - content moderation (hide tasks, photos, reviews), staff roles and config, the audit page;
-   - My clients and availability posts;
+1. **UI-020** (reward reviews, people): handed off; merge, then `scratchpad/ui020/wire.py`, e2e, gate, commit.
+2. **Launch UI-029** right after the UI-020 merge. When it hands off: wire `/app/availability` (`getMyAvailabilityPage`, `createAvailabilityPostAction`, `cancelAvailabilityPostAction`), seed an open slot for Jordan and an overlapping yard task for Ben, e2e (post and cancel a slot; Ben requests the seeded slot from the profile).
+3. **UI-032** (My clients and rebooking proposals): drafts in `scratchpad/ui032/` (contract `rebook.ts`, fixtures, ticket, schema, service, actions, integration test). Apply after UI-029 launches: contract edits + UI placeholders (actions, notification types, attention kinds, the `proposal` target), migration 0021, home attention items (`answer_invite`, `answer_counter`, `answer_proposal`), the `offer_rebook` booking action behind `REBOOK_PAGES_READY`.
+4. **Later:**
+   - admin pages the nav already links to: reports, bookings search, payments, config, audit, staff roles;
+   - content moderation (hide tasks, photos, reviews);
    - UI-021 quality pass;
    - staff TOTP, clock and time travel.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB).
-- UI-021 quality pass: the native file input in the posting wizard.
+- UI-021 quality pass: the native file input in the posting wizard; the support photo field; the message log's sticky date chip can cover a photo card.
 - `taskOwnerAction` builds the "post again" URL by hand; move it into `routes.app.newTask(query)`.
 - The moving booking fixture shows a $20 allowance while its breakdown has none (UI-011 previews).
+- The `screen-my-offers/with-invite` preview shows December invites next to November offers ("Expires 18 days ago").
 - Checks are sensitive to machine load while Codex runs its own checks: rerun the failed specs alone before calling them real.
-- `src/ui/screens/helper/helper-forms.test.tsx` checks focus synchronously (failed once under load); the fix is in the UI-018 ticket.
-- Checks at the last green gate (UI-028 wiring): `check` 1372, `test:db` 96, `e2e` 99 (+ skips by design), `build` pass.
-- UI-021 notes: the support photo field is a native file input too; the message log's sticky date chip can cover a photo card.
-- Fix for Codex (next ticket): on `NotificationsScreen`, "All notifications marked as read." disappears when the list refreshes, because `MarkAllRead` (which holds the feedback) only renders while `unreadCount > 0`. Keep the feedback visible after the refresh.
+- Fix for Codex (in the UI-032 ticket): on `NotificationsScreen`, "All notifications marked as read." disappears when the list refreshes.
+- Last full gate (UI-020 wiring): `check` 1631, `test:db` 117, `e2e` 102 (+4 flaky on retry under load, 35 skips by design), `build` pass.

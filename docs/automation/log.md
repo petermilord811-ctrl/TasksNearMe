@@ -110,3 +110,15 @@ One entry per iteration, newest last.
   - a machine-wide heavy-work lock shared by Claude's gate (`scripts/gate.mjs`) and the runner's independent check;
   - the shared e2e sign-in helper; the seed reset clears everything that points at seeded bookings.
 - Flaky under load: a full gate run had 8 e2e failures while Codex ran its own checks. The failed specs passed when rerun alone. A helper form focus test also failed once; its fix goes to Codex with UI-018.
+
+## 2026-11-11 — iteration 10 (disputes, invites, staff people, availability)
+- Codex runs:
+  - UI-025 (direct invites, 50 min), merged and wired: the request page, invites on My offers and on the task page, Book again, Invite helpers. Two contract requests declined (see decisions).
+  - UI-020 (reward reviews and people, 42 min), merged and wired: `/admin/rewards`, `/admin/users`, `/admin/users/[userId]`. No contract requests; Codex replaced the notification placeholders.
+  - UI-029 (availability posts) launched right after the UI-020 merge.
+- Backends:
+  - notifications for change requests and invites;
+  - availability posts (migration 0020): slot holds through invites, the expiry job, open slots on the public profile;
+  - invites waiting for a first authorization expire after 30 minutes; only live helper profiles can be requested.
+- Seeds: the disputed dresser (support settles it in e2e), `tsk_nightstands` for the invite e2e, a welcome reward in review for Sam.
+- Real failures the gate caught after UI-025: tests still expected the old profile link text and only `cancel_task` on open tasks; on phones, Cancel task moved under More.
