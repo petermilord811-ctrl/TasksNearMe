@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, INVITE_ACTION_IDS, INVITE_STATUSES, routes, type ActionResult, type InviteHandlers, type InviteView } from '@/contracts';
-import { bookshelfInviteAcceptedPoster, bookshelfInviteCounteredPoster, bookshelfInviteSentHelper, bookshelfInviteSentPoster, fakeHandler, helperMovingHourly, movingFundedBreakdown } from '@/fixtures';
+import { bookshelfInviteAcceptedPoster, bookshelfInviteCounteredPoster, bookshelfInviteSentHelper, bookshelfInviteSentPoster, fakeHandler, helperMovingHourly, movingFundedBreakdown, slotInviteSentHelper } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import inviteCard from '../../../../messages/en/ui/inviteCard.json';
 import { InviteCard } from './invite-card';
@@ -32,6 +32,13 @@ async function confirm(user: ReturnType<typeof userEvent.setup>, label: string) 
 }
 
 describe('InviteCard', () => {
+  it.each(['helper', 'poster'] as const)('names the original opening for the %s role', (viewerRole) => {
+    mount(viewerRole === 'helper' ? slotInviteSentHelper : { ...bookshelfInviteSentPoster, slot: slotInviteSentHelper.slot });
+    expect(screen.getByText(viewerRole === 'helper'
+      ? 'For your Sun, Dec 13 · 1:00 pm–5:00 pm opening'
+      : "For Jordan T.'s Sun, Dec 13 · 1:00 pm–5:00 pm opening")).toBeVisible();
+  });
+
   it('renders exactly the supplied actions in order, plus the helper earnings and market time', () => {
     mount({ ...bookshelfInviteSentHelper, actions: ['counter_invite', 'accept_invite'] });
     expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Counter', 'Accept']);

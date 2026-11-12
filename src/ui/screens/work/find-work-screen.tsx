@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check, Info, Lock, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { FIND_WORK_DISTANCES, routes, TASK_BOARD_SORTS, TASK_BOARD_WHEN, type FindWorkCard, type FindWorkPageData, type FindWorkQuery, type ISODateTime, type OfferStatus } from '@/contracts';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
+import { FinishSetupPanel } from '@/ui/components/helper/finish-setup-panel';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useOfferStatus } from '@/ui/components/status/use-status';
@@ -42,10 +43,7 @@ export function FindWorkScreen({ data, now }: FindWorkScreenProps) {
 
   return <div className="mx-auto w-full max-w-content space-y-section">
     <PageHeader title={t('title')} description={t('description')} />
-    {!data.setup.bookable && <section aria-label={t('setupTitle')} className="flex flex-col gap-4 rounded-xl border border-border bg-secondary p-card sm:flex-row sm:items-center sm:justify-between">
-      <div><h2 className="text-xl font-semibold text-secondary-foreground">{t('setupTitle')}</h2><p className="mt-2 text-sm text-secondary-foreground">{t('setupBody')}</p></div>
-      <Link href={routes.app.helperOnboarding(data.setup.nextOnboardingStep)} className={buttonVariants({ className: 'shrink-0' })}>{t('finishSetup')}<ArrowRight aria-hidden="true" /></Link>
-    </section>}
+    {!data.setup.bookable && <FinishSetupPanel setup={data.setup} />}
     <section aria-label={t('filters')} className="space-y-5 rounded-xl border bg-card p-card shadow-card">
       <nav aria-label={t('category')} className="space-y-2">
         <p className="text-sm font-semibold">{t('category')}</p>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { CalendarDays } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type InviteHandlers, type InviteView, type ISODateTime, type PaymentAttemptResult } from '@/contracts';
-import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
+import { formatDate, formatDateTime, formatMoney, formatRelative, formatTimeRange } from '@/shared/format';
 import { PriceBreakdown as PriceBreakdownTable } from '@/ui/components/money/price-breakdown';
 import { OfferPrice } from '@/ui/components/offers/offer-parts';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
@@ -53,6 +53,7 @@ export function InviteCardContent({ invite, handlers, now, headingLevel = 2, ini
       </div>
       <StatusBadge {...status} />
     </div>
+    {invite.slot && <p className="rounded-lg bg-secondary p-3 text-sm tabular-nums text-secondary-foreground">{t(invite.viewerRole === 'helper' ? 'slotHelper' : 'slotClient', { date: formatDate(invite.slot.start), times: formatTimeRange(invite.slot.start, invite.slot.end), helper: invite.helper.displayName })}</p>}
     <div className="space-y-3"><p className="font-semibold">{t('terms')}</p>{terms(invite.terms)}</div>
     <PriceBreakdownTable breakdown={invite.breakdown} variant={invite.viewerRole} title={t('originalMoney')} headingLevel={detailHeadingLevel} />
     {counter && <section aria-label={t('counterTitle', { helper: invite.helper.displayName })} className="space-y-4 rounded-xl border border-warning/40 bg-badge-warning/30 p-4">

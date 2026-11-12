@@ -16,7 +16,7 @@ import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
 import { Spinner } from '@/ui/primitives/spinner';
 import { usePriceQuote } from '@/ui/lib/use-price-quote';
-import { RequestHelperFields, suggestedPricing } from './request-helper-fields';
+import { RequestHelperFields, requestStartWindow, suggestedPricing } from './request-helper-fields';
 import type { RequestHelperScreenProps } from './request-helper-screen';
 
 export function RequestHelperForm({ data, handlers, initialResult, initialPending = false }: Omit<RequestHelperScreenProps, 'now'> & {
@@ -36,16 +36,20 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
   const schema = useMemo(() => requestHelperInputSchema.superRefine((input, context) => {
     const task = data.tasks.find((candidate) => candidate.id === input.taskId);
     if (!task) context.addIssue({ code: 'custom', path: ['taskId'], message: 'invalid' });
-    else if (Date.parse(input.start) < Date.parse(task.windowStart) || Date.parse(input.start) > Date.parse(task.windowEnd)) {
-      context.addIssue({ code: 'custom', path: ['start'], message: 'out_of_range' });
+    else {
+      const window = requestStartWindow(data, task);
+      if (Date.parse(input.start) < Date.parse(window.start) || Date.parse(input.start) > Date.parse(window.end)) {
+        context.addIssue({ code: 'custom', path: ['start'], message: 'out_of_range' });
+      }
     }
-  }), [data.tasks]);
+  }), [data]);
   const task = data.tasks.find((candidate) => candidate.id === data.suggestion?.taskId) ?? data.tasks[0];
   const form = useForm<RequestHelperInput>({
     resolver: zodResolver(schema),
     mode: 'onTouched',
     defaultValues: {
-      taskId: task.id, start: task.windowStart, pricing: suggestedPricing(data, task), message: '',
+      taskId: task.id, start: requestStartWindow(data, task).start, pricing: suggestedPricing(data, task), message: '',
+      ...(data.slot && !data.slotUnavailable ? { slotId: data.slot.id } : {}),
       payment: getDefaultPaymentChoice(data.payment), acceptTerms: initialPending || Boolean(initialResult && (initialResult.ok || initialResult.code !== 'validation_failed')),
     },
   });
@@ -86,6 +90,7 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
   }
 
   const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
+  const slotRequestUnavailable = !!data.slot && !data.slotUnavailable && result && !result.ok && result.code === 'not_allowed';
   const fieldError = (code: string) => fields(fields.has(code) ? code : 'invalid');
   return <>
     <FormProvider {...form}><form noValidate aria-label={t('title', { helper: data.helper.displayName })} aria-busy={pending} className="space-y-6" onFocusCapture={(event) => {
@@ -126,7 +131,10 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
           <div id={`${id}-terms-error`} aria-live="polite">{fieldState.error?.message && <p className="text-sm text-destructive">{fieldError(fieldState.error.message)}</p>}</div>
         </div>} />
       </fieldset>
-      <div ref={feedbackSection} tabIndex={-1} className="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><FormFeedback result={feedback} successMessage={result?.ok && result.code === 'sent' ? t('sent') : undefined} /></div>
+      <div ref={feedbackSection} tabIndex={-1} className="space-y-2 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+        <FormFeedback result={feedback} successMessage={result?.ok && result.code === 'sent' ? t('sent') : undefined} errorMessage={slotRequestUnavailable ? t('slotRequestUnavailable') : undefined} />
+        {slotRequestUnavailable && <Link href={routes.app.requestHelper(data.helper.handle)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('regularRequest')}</Link>}
+      </div>
       <div ref={submitBar} className="sticky bottom-app-navigation z-10 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <Button type="submit" disabled={disabled || !quote.breakdown} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{t(pending ? 'sending' : 'send')}</Button>
       </div>
