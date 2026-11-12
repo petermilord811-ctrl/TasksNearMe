@@ -38,7 +38,7 @@ test('other people cannot open a conversation', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-mobile', 'read-only; one project is enough');
   await devSignIn(page, 'chris@example.test');
   await page.goto('/app/messages/thr_does_not_exist');
-  await expect(page.getByText(/could not be found/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
   await page.goto('/app/messages');
   await expect(page.getByRole('heading', { level: 1, name: 'Messages' })).toBeVisible();
 });

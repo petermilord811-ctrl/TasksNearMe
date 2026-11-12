@@ -50,7 +50,7 @@ test('members never see the staff area', async ({ page }, testInfo) => {
   await devSignIn(page, 'maya@example.test');
   // The page streams, so the not-found screen arrives after the status line.
   await page.goto('/admin/cases/case_seed_maya_payment');
-  await expect(page.getByText(/could not be found/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
   await expect(page.getByText('I see a pending charge on my card')).toHaveCount(0);
 });
 

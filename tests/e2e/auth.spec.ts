@@ -19,7 +19,7 @@ test.describe('sign-in and page shells', () => {
     await devSignIn(page, 'maya@example.test');
     await expect(page).toHaveURL(/\/app$/);
     await page.goto('/admin');
-    await expect(page.getByText(/could not be found/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
     await expect(page.getByText('Staff area')).toHaveCount(0);
   });
 

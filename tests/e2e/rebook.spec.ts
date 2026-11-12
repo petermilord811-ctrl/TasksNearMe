@@ -46,7 +46,7 @@ test('only the helper of a completed booking can propose it again', async ({ pag
   test.skip(testInfo.project.name !== 'app-mobile', 'read-only; one project is enough');
   await devSignIn(page, 'jordan@example.test');
   await page.goto('/app/bookings/bkg_wardrobe/rebook');
-  await expect(page.getByText(/could not be found/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
   await page.goto('/app/clients');
   await expect(page.getByRole('heading', { level: 1, name: 'My clients' })).toBeVisible();
   await expect(page.getByText('Maya R.')).toHaveCount(0);

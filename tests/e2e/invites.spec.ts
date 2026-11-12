@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { clearOpenInvites } from './support/scenarios';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -10,6 +11,8 @@ import { devSignIn } from './support/sign-in';
 test('a client requests a helper, who accepts: the booking is confirmed', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');
   test.setTimeout(180_000);
+  // A retry starts clean: an earlier attempt may have sent the invite before failing.
+  await clearOpenInvites('tsk_nightstands');
 
   await devSignIn(page, 'maya@example.test');
   await page.goto('/helpers/jordan-t');
@@ -40,7 +43,7 @@ test("helpers can't request their own help; an unknown invite link still opens t
   await devSignIn(page, 'jordan@example.test');
   // A helper can't request their own help.
   await page.goto('/app/helpers/jordan-t/request');
-  await expect(page.getByText(/could not be found/i)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible({ timeout: 30_000 });
   await page.goto('/app/offers?invite=inv_unknown');
   await expect(page.getByRole('heading', { level: 1, name: 'My offers' })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('heading', { name: 'Invites' })).toBeVisible();

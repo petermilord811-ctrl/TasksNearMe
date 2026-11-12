@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { devCardRef } from '../../../src/integrations/payments';
 import { users } from '../../../src/modules/accounts/schema';
+import { invites } from '../../../src/modules/invites/schema';
 import { bookingCompletions, bookingTerms, bookings } from '../../../src/modules/bookings/schema';
 import type { NotificationType } from '../../../src/contracts';
 import { marketPolicies } from '../../../src/modules/markets/schema';
@@ -198,6 +199,16 @@ export async function setAccountStatus(email: string, status: 'active' | 'suspen
   const { db, pool } = database();
   try {
     await db.update(users).set({ status }).where(eq(users.email, email));
+  } finally {
+    await pool.end();
+  }
+}
+
+/** Removes open invites on a task, so a retried test that sends one starts clean. */
+export async function clearOpenInvites(taskId: string): Promise<void> {
+  const { db, pool } = database();
+  try {
+    await db.delete(invites).where(and(eq(invites.taskId, taskId), eq(invites.status, 'sent')));
   } finally {
     await pool.end();
   }

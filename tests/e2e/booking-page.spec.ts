@@ -36,7 +36,7 @@ test('the helper sees the address and earnings; check-in opens on the day', asyn
 test('other people get not found', async ({ page }) => {
   await devSignIn(page, 'maya@example.test');
   await page.goto('/app/bookings/bkg_tv');
-  await expect(page.getByText(/could not be found/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
   expect(await page.content()).not.toContain('88 Sample Street');
   expect((await page.request.get('/app/bookings/bkg_tv/calendar.ics')).status()).toBe(404);
 });

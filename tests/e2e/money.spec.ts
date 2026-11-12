@@ -13,7 +13,7 @@ test('the client sees the receipt for the booking, and only theirs', async ({ pa
 
   await devSignIn(page, 'maya@example.test');
   await page.goto('/app/payments/bkg_tv');
-  await expect(page.getByText(/could not be found/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
 });
 
 test('the helper sees earnings and the payout account', async ({ page }) => {

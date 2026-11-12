@@ -57,5 +57,5 @@ test('the problem and completion pages are only for the right person and state',
   await expect(page.getByText("This report can't be sent now")).toBeVisible();
   // The completion form is the helper's.
   await page.goto('/app/bookings/bkg_tv/complete');
-  await expect(page.getByText(/could not be found/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
 });

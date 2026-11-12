@@ -87,8 +87,8 @@ test.describe('public pages', () => {
 
   test('unknown markets and categories are not found', async ({ page }) => {
     await page.goto('/nowhere');
-    await expect(page.getByText(/could not be found/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
     await page.goto('/austin/underwater-welding');
-    await expect(page.getByText(/could not be found/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
   });
 });

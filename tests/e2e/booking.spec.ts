@@ -45,6 +45,6 @@ test("other people can't open someone's confirmation page", async ({ page }, tes
   test.skip(testInfo.project.name !== 'app-mobile', 'read-only; one project is enough');
   await devSignIn(page, 'maya@example.test');
   await page.goto('/app/tasks/tsk_moving/offers/off_moving_jordan/confirm');
-  await expect(page.getByText(/could not be found/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /Book and pay/ })).toHaveCount(0);
 });

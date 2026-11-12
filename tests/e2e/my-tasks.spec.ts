@@ -69,6 +69,6 @@ test('other people cannot open someone else’s task', async ({ page }) => {
   await devSignIn(page, 'chris@example.test');
   // The page streams, so the not-found screen arrives after the status line.
   await page.goto('/app/tasks/tsk_desk');
-  await expect(page.getByText(/could not be found/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
   await expect(page.getByText('1234 Example Lane')).toHaveCount(0);
 });

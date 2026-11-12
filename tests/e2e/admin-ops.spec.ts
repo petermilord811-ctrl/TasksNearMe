@@ -36,7 +36,7 @@ test('staff find a booking that needs attention and open its task', async ({ pag
   // An agent reads; moderation is for trust and safety, leads and admins.
   await expect(page.getByText('You can view this task.')).toBeVisible();
   await page.goto('/admin/audit');
-  await expect(page.getByText(/could not be found/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
 });
 
 test('trust and safety hide a task from the public pages and restore it; the audit log shows both', async ({ page }, testInfo) => {
@@ -56,7 +56,7 @@ test('trust and safety hide a task from the public pages and restore it; the aud
   await expect(page.getByRole('heading', { name: 'Hidden from the public' })).toBeVisible();
 
   await page.goto('/tasks/sweep-and-tidy-a-patio-windsor-park-7h3w');
-  await expect(page.getByText(/could not be found/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
 
   await page.goto('/admin/tasks/tsk_patio');
   await page.getByRole('button', { name: 'Restore task' }).click();
