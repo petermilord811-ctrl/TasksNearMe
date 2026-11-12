@@ -45,6 +45,7 @@ import { blocks, messages, threadParticipants, threads } from '../../src/modules
 import { supportCaseEvents, supportCaseReads, supportCases } from '../../src/modules/support/schema';
 import { notificationPreferences, notifications, privacyRequests } from '../../src/modules/notifications/schema';
 import { rebookProposals } from '../../src/modules/rebook/schema';
+import { availabilityPosts } from '../../src/modules/availability/schema';
 import { rewardGrants } from '../../src/modules/rewards/schema';
 import { paymentMethods, payments, refunds } from '../../src/modules/payments/schema';
 import { devCardRef } from '../../src/integrations/payments';
@@ -191,6 +192,7 @@ export async function seedDatabase(url: string): Promise<void> {
       await seedNotifications(tx);
       await seedSupport(tx);
       await seedRewards(tx);
+      await seedAvailability(tx);
     });
     await db.execute(sql`select 1`);
   } finally {
@@ -390,6 +392,8 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   // Rewards are derived from bookings again after the reset.
   await tx.delete(rewardGrants).where(inArray(rewardGrants.helperUserId, people));
   await tx.delete(invites).where(inArray(invites.posterUserId, people));
+  // After the invites that hold them.
+  await tx.delete(availabilityPosts).where(inArray(availabilityPosts.helperUserId, people));
   await tx.delete(rebookProposals).where(or(inArray(rebookProposals.posterUserId, people), inArray(rebookProposals.helperUserId, people)));
   // Rate-limit counters start over too (the seed is for development and tests only): repeated e2e runs on
   // one day would otherwise hit the daily limits (reports are 10 a day).
@@ -569,6 +573,24 @@ async function seedSupport(tx: Tx): Promise<void> {
   ]);
   // Maya last looked before support answered: the reply shows as new.
   await tx.insert(supportCaseReads).values({ caseId: 'case_seed_maya_payment', userId: 'usr_maya', readAt: at(30) });
+}
+
+/** Jordan's open Saturday-style yard slot, 10 days out (the availability e2e requests it for Ben's leaves). */
+async function seedAvailability(tx: Tx): Promise<void> {
+  const date = addDays(marketDayKey(new Date()), 10);
+  await tx.insert(availabilityPosts).values({
+    id: 'avl_seed_yard',
+    helperUserId: 'usr_jordan',
+    marketId: 'mkt_austin',
+    categoryId: 'cat_yard_cleanup',
+    startAt: new Date(marketLocalToUtc(date, '09:00')),
+    endAt: new Date(marketLocalToUtc(date, '13:00')),
+    pricingType: 'hourly',
+    hourlyRateCents: 3000,
+    estimatedHours: 3,
+    hoursCap: 4,
+    status: 'active',
+  });
 }
 
 /** Sam's welcome reward waits for a lead's review (the admin e2e approves it). */

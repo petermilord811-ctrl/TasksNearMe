@@ -192,4 +192,21 @@ export const SEED_TASKS: SeedTask[] = [
     offerCount: 0,
     postedHoursAgo: 5,
   },
+  {
+    // Open with no offers: the availability e2e requests Jordan's seeded yard slot for it (UI-029).
+    id: 'tsk_leaves',
+    slug: 'clear-backyard-leaves-crestview-6t4w',
+    posterId: 'usr_ben',
+    categoryId: 'cat_yard_cleanup',
+    title: 'Clear leaves from the backyard',
+    description: 'Small backyard under two big oaks. Rake, bag, and leave the bags by the gate. Bags provided.',
+    details: { yardSize: 'small', work: 'leaves', greenWastePlan: 'curbside', toolsOnSite: true },
+    placeId: 'plc_crestview_88',
+    daysFromToday: 10,
+    start: '08:00',
+    end: '12:00',
+    budget: { type: 'hourly', rateCents: 3000, estimatedHours: 3, hoursCap: 4 },
+    offerCount: 0,
+    postedHoursAgo: 3,
+  },
 ];

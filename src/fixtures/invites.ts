@@ -55,8 +55,8 @@ export const bookshelfInviteDeclinedPoster: InviteView = { ...sent, status: 'dec
 /** An earlier invite for the same task that Jordan didn't answer in time. */
 export const bookshelfInviteExpiredHelper: InviteView = { ...bookshelfInviteSentHelper, id: 'inv_bookshelf_first', status: 'expired', sentAt: '2026-12-05T16:00:00.000Z', expiresAt: undefined, actions: [] };
 
-/** Jordan's offers page with Maya's invite open in the sheet. */
-export const myOffersWithInviteData: MyOffersPageData = { ...myOffersPageData, invites: [bookshelfInviteSentHelper, bookshelfInviteExpiredHelper], openInviteId: 'inv_bookshelf' };
+/** Jordan's offers page on Tue Dec 8 with Maya's invite open in the sheet (his November offers are long closed). */
+export const myOffersWithInviteData: MyOffersPageData = { ...myOffersPageData, active: [], invites: [bookshelfInviteSentHelper, bookshelfInviteExpiredHelper], openInviteId: 'inv_bookshelf' };
 
 /** Maya's bookshelf task, posted for the invite (no public offers), with Jordan's counter waiting. */
 export const bookshelfOwnerWithInviteView: TaskOwnerView = {

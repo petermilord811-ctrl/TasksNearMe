@@ -1,6 +1,6 @@
 # Autopilot state
 
-**Updated:** 2026-11-11 23:50 UTC (iteration 10)
+**Updated:** 2026-11-12 01:10 UTC (iteration 10)
 **Phase:** 5–6 (repeat bookings, trust, support and staff tools). Wired end to end:
 - posting a task, offers, find work, and booking with payment (development stand-in);
 - the booking page for both people: check-in, sheets, completion with evidence, approval, problem reports, disputes, change requests;
@@ -16,17 +16,16 @@
 - **Seeded dispute** (Ana's dresser with Jordan) and `disputes.spec` (support settles at $45; Ana sees the $16.50 refund).
 - **UI-025** merged and wired: `/app/helpers/[handle]/request` (flow layout), invites on `/app/offers` (`?invite=`) and the task page, Book again, Invite helpers (→ saved helpers). Only live helper profiles can be requested. e2e `invites.spec` on the seeded `tsk_nightstands`.
 - **Notifications** for `change.*` and `invite.*` events (placeholders reviewed by Codex in UI-020).
-- **UI-029 ready** (availability posts): contracts, fixtures, ticket, and the backend (migration 0020, slot holds through invites, expiry job). Invites waiting for a first authorization now expire after 30 min.
+- **UI-029** merged and wired: `/app/availability`, open times on the profile, slot requests (migration 0020; slot holds through invites; the expiry job). Invites waiting for a first authorization expire after 30 min.
+- **UI-020** merged and wired: `/admin/rewards`, `/admin/users`, `/admin/users/[userId]`.
+- **UI-032 ready** and launched: contracts, fixtures, ticket, the backend (migration 0021: proposals, accepting by paying, home attention for invites, counters and proposals).
 
 ## Next steps
-1. **UI-020** (reward reviews, people): handed off; merge, then `scratchpad/ui020/wire.py`, e2e, gate, commit.
-2. **Launch UI-029** right after the UI-020 merge. When it hands off: wire `/app/availability` (`getMyAvailabilityPage`, `createAvailabilityPostAction`, `cancelAvailabilityPostAction`), seed an open slot for Jordan and an overlapping yard task for Ben, e2e (post and cancel a slot; Ben requests the seeded slot from the profile).
-3. **UI-032** (My clients and rebooking proposals): drafts in `scratchpad/ui032/` (contract `rebook.ts`, fixtures, ticket, schema, service, actions, integration test). Apply after UI-029 launches: contract edits + UI placeholders (actions, notification types, attention kinds, the `proposal` target), migration 0021, home attention items (`answer_invite`, `answer_counter`, `answer_proposal`), the `offer_rebook` booking action behind `REBOOK_PAGES_READY`.
-4. **Later:**
-   - admin pages the nav already links to: reports, bookings search, payments, config, audit, staff roles;
-   - content moderation (hide tasks, photos, reviews);
-   - UI-021 quality pass;
-   - staff TOTP, clock and time travel.
+1. **UI-032** (My clients and rebooking proposals) is with Codex (`scratchpad/codex-UI-032.log`). When it hands off: review, merge, wire `/app/clients` (`getMyClientsPage`), `/app/bookings/[bookingId]/rebook` (`getProposeRebookPage`, `quoteRebookAction`, `proposeRebookAction`), `/app/proposals/[proposalId]` (`getProposalPage` with the field cipher; accept, verify, decline, withdraw actions); flip `REBOOK_PAGES_READY`; seed a completed booking (e.g. Ana's kitchen with Sam) for the e2e: Sam proposes, Ana pays.
+2. **Then launch UI-021** (quality pass; ticket ready, no contract changes). After it: drop the stray $20 allowance from `movingBookingPosterConfirmed` (UI-021 moves the test off it).
+3. **UI-033** (admin bookings list, task moderation, audit log): drafts in `scratchpad/ui033/` (contract `admin-ops.ts`, fixtures, ticket). Still to build: `tasks.hidden_*` columns and the hidden filter on public surfaces, the moderation service, the bookings list and audit queries, routes `admin.bookings({ filter, q })` / `admin.audit(filters)`. `/admin/reports` can redirect to `routes.admin.cases({ queue: 'reports' })`.
+4. **UI-034** later: payments, config, staff roles.
+5. **Later:** staff TOTP, clock and time travel.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB).
@@ -36,4 +35,4 @@
 - The `screen-my-offers/with-invite` preview shows December invites next to November offers ("Expires 18 days ago").
 - Checks are sensitive to machine load while Codex runs its own checks: rerun the failed specs alone before calling them real.
 - Fix for Codex (in the UI-032 ticket): on `NotificationsScreen`, "All notifications marked as read." disappears when the list refreshes.
-- Last full gate (UI-020 wiring): `check` 1631, `test:db` 117, `e2e` 102 (+4 flaky on retry under load, 35 skips by design), `build` pass.
+- Last full gate (UI-029 wiring): `check` 1665, `test:db` 121, `e2e` 108 (37 skips by design), `build` pass.
