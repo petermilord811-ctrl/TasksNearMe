@@ -44,9 +44,9 @@ describe('ReviewCard', () => {
   it('links to reporting the review only where the page offers it', () => {
     const review = samProfilePageData.reviews[0]!;
     renderReview(review);
-    expect(screen.queryByRole('link', { name: /Report the review/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Report this review/ })).not.toBeInTheDocument();
     cleanup();
     renderReview(review, routes.app.report('review', review.id));
-    expect(screen.getByRole('link', { name: `Report the review by ${review.author.displayName}` })).toHaveAttribute('href', routes.app.report('review', review.id));
+    expect(screen.getByRole('link', { name: `Report this review by ${review.author.displayName}` })).toHaveAttribute('href', routes.app.report('review', review.id));
   });
 });

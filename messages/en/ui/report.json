@@ -21,7 +21,7 @@
     "task": "Report this task",
     "helper": "Report this profile",
     "review": "Report this review",
-    "reviewBy": "Report the review by {name}"
+    "reviewBy": "Report this review by {name}"
   },
   "previews": {
     "group": "Report",

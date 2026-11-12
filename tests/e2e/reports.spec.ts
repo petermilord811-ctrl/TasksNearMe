@@ -26,5 +26,5 @@ test('a helper reports a profile from the public page and goes back to it', asyn
   await expect(page).toHaveURL(/\/helpers\/sam-k$/, { timeout: 30_000 });
 
   // Reviews have their own link.
-  await expect(page.getByRole('link', { name: /^Report the review by / }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Report this review by / }).first()).toBeVisible();
 });

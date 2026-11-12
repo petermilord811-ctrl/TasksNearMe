@@ -100,7 +100,6 @@ export function FileChooser({
       'flex flex-col items-start gap-2 rounded-xl border border-dashed bg-card p-3 transition-colors sm:items-center sm:p-5 sm:text-center',
       dragging && 'border-primary bg-accent',
       invalid && 'border-destructive',
-      disabled && 'opacity-70',
       className,
     )}
   >
@@ -126,6 +125,8 @@ export function FileChooser({
     />
     <label
       htmlFor={id}
+      // Inactive with the input (exempt from contrast rules, and announced as such).
+      aria-disabled={disabled || undefined}
       className={cn(
         buttonVariants({ variant: 'outline' }),
         'min-h-11 cursor-pointer peer-focus-visible:border-ring peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50 peer-disabled:pointer-events-none peer-disabled:opacity-50',
@@ -134,7 +135,7 @@ export function FileChooser({
       <ImagePlus aria-hidden="true" className="size-4" />
       {multiple ? t('choosePhotos') : t('choosePhoto')}
     </label>
-    <p aria-hidden="true" className="hidden text-sm text-muted-foreground sm:block">{multiple ? t('dropPhotos') : t('dropPhoto')}</p>
+    {!disabled && <p aria-hidden="true" className="hidden text-sm text-muted-foreground sm:block">{multiple ? t('dropPhotos') : t('dropPhoto')}</p>}
     {keepSelection && chosen && <p className="max-w-full break-words text-sm font-medium">{t('chosen', { name: chosen })}</p>}
   </div>;
 }
