@@ -3,7 +3,8 @@ import { expect, test } from '@playwright/test';
 /** Public helper profiles, wired to the seeded helpers, reviews, and work samples. */
 test.describe('helper profiles', () => {
   test('a featured helper opens to a full profile with reviews and work samples', async ({ page }) => {
-    await page.goto('/');
+    // Category pages list their top helpers (the landing page shows helpers only as decoration on wide screens).
+    await page.goto('/austin/furniture-assembly');
     await page.getByRole('link', { name: 'Sam K.' }).first().click();
     await expect(page).toHaveURL(/\/helpers\/sam-k$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Sam K.' })).toBeVisible();

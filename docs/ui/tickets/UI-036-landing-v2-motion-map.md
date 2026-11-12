@@ -114,4 +114,10 @@ The preview harness runs with **reduced motion** (Claude set it in `playwright.c
 - New routes or data beyond `HomePageData` (ask in contract requests), photos of people, a CMS, the signed-in app's layouts (they change only through tokens).
 
 ## Claude wiring notes (filled in by Claude after review)
+- Built by Claude, not Codex (usage limit; the owner's choice). Handoff: `docs/ui/handoffs/UI-036.md`.
+- `/` moved into the `(landing)` route group so the landing page gets `PublicShell variant="landing"` (full-width sections under the floating top bar); the other public pages keep the default shell.
+- `getHomePageData` (cached for minutes, tagged with the market) adds the map: open in-person tasks' public points and radii; `MAP_STYLE_URL` / `MAP_ATTRIBUTION` choose the tiles (OpenFreeMap by default).
+- MapLibre's worker: `src/app/vendor/maplibre-gl-worker.mjs/route.ts`, versioned through `routes.assets.mapWorker(getVersion())`.
+- Page titles keep "TasksNearMe"; the light primary became `#C13F12` for contrast (decisions.md).
+- e2e: `public-pages.spec` covers the landing page, "Use my location" with a category, and the waitlist outside Austin.
 - `/` already passes `getHomePageData()` (with `map`). Claude adds the theme script to the root layout and the favicon from `public/ui/brand/icon.svg`, and updates the public-pages e2e.
