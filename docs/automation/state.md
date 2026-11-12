@@ -1,6 +1,6 @@
 # Autopilot state
 
-**Updated:** 2026-11-12 (iteration 13, finished: see `final-report.md`)
+**Updated:** 2026-11-12 (after the finish: Google and Microsoft sign-in, landing interactions, bug fixes)
 **Autopilot:** the owner said "go ahead, build all" (2026-11-12): build everything left, Claude doing the UI too while Codex is at its limit (decisions.md).
 **Phase:** 5–6 (repeat bookings, trust, support and staff tools). Wired end to end:
 - the landing page (UI-036): the new brand, the motion system, the hero canvas, the map of open tasks with "Use my location";
@@ -14,6 +14,11 @@
 **Codex:** at its ChatGPT usage limit until 2026-11-17 12:32 (local). Buying credits is the owner's call. Tickets run with `node scripts/codex-run.mjs UI-xxx` (logs in `scratchpad/codex-UI-xxx.log`).
 **Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0025). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
 **New dependencies (UI-036):** `motion`, `maplibre-gl`. Run `npm install` after pulling (never while a dev server runs in that checkout).
+
+## Done after the finish (2026-11-12, owner requests)
+- **Continue with Google / Microsoft** (UI-040): Better Auth providers; real with keys, a stand-in at `/dev/oauth/<provider>` without; a provider email creates or joins an account only when the provider confirms it; suspended accounts refused; "Ways to sign in" on the account page. Integration `social-sign-in`, e2e `social-sign-in.spec`.
+- **Landing interactions** (UI-041): a click moves the page together (filter pill, count, rows, map flight, hero tint; hero card → map; price chips; theme reveal; category icon into the category page).
+- **Bug fixes:** hovering a category cleared the map's filter; MapLibre "Style is not done loading" after Fast Refresh; the pin card covering the filter; review reports had no review on the staff case and no way to hide it (UI-042, integration `review-moderation`); e2e data left on the landing page (an e2e teardown reseeds); a code sent before a suspension still signed in.
 
 ## Done in iteration 13 (the finish)
 - **`/app/helpers`** (UI-039): browse and search the market's helpers.
@@ -49,10 +54,8 @@ The autopilot is finished (`final-report.md`). What's left needs you: real provi
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB plus the landing copy).
-- The `screen-my-offers/with-invite` preview shows December invites next to November offers ("Expires 18 days ago").
-- After an e2e run, the landing page's floating cards and map show e2e-posted tasks until the next e2e setup (development data only).
 - Featured helpers show on the landing page only on wide screens (floating cards). A helper strip on phones is possible later.
 - Checks are sensitive to machine load (two e2e checks flake under load and pass on retry): rerun failed specs alone before calling them real.
-- On `NotificationsScreen`, "All notifications marked as read." disappears when the list refreshes (a fix for Codex).
-- The staff case page doesn't show which review a review report points at (the case keeps `context.reviewId`).
 - Web push isn't built (email and texts are); T-26 has no parallel test (the cohort cap can't be exceeded by design).
+- Google and Microsoft sign-in need real keys before launch (docs/integration-points.md); until then production hides the buttons.
+- Resolved 2026-11-12: the landing filter cleared by hovering, MapLibre's "Style is not done loading", e2e data left on the landing page, the staff case page for review reports, a suspended account's pending email code. Checked and no longer reproducible: the notifications "marked as read" message; the my-offers invite preview dates.
