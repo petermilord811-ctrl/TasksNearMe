@@ -57,14 +57,21 @@
     "emptyBody": "Post the first one and nearby helpers will see it.",
     "postFirst": "Post a task",
     "browseAll": "See all open tasks",
-    "mapLabel": "Map of open tasks around {market}"
+    "mapLabel": "Map of open tasks around {market}",
+    "countAll": "{count, plural, =0 {No open tasks yet} one {# open task} other {# open tasks}} around {market}",
+    "countCategory": "{category}: {count, plural, =0 {no open tasks right now} one {# open task} other {# open tasks}}",
+    "showOnMap": "Show on the map"
   },
   "categories": {
     "eyebrow": "What people book",
     "title": "Help for the",
     "titleAccent": "everyday",
     "body": "Five kinds of tasks to start with, each with a clear scope and a typical price.",
-    "unit": { "item": "per item", "hour": "per hour", "task": "per task" },
+    "unit": {
+      "item": "per item",
+      "hour": "per hour",
+      "task": "per task"
+    },
     "range": "{low}–{high}",
     "inHome": "In-home: background-checked helpers",
     "remote": "Can be done remotely",
@@ -81,9 +88,18 @@
     "eyebrow": "How it works",
     "title": "Three steps,",
     "titleAccent": "no guesswork",
-    "post": { "title": "Post what you need", "body": "Say what, where and when, and set your budget. It takes a few minutes." },
-    "choose": { "title": "Pick your helper", "body": "Compare offers and profiles, or ask someone you know. See the full total before you book." },
-    "done": { "title": "Approve and rebook", "body": "Approve the work and your helper is paid. Save them and book again in two taps." },
+    "post": {
+      "title": "Post what you need",
+      "body": "Say what, where and when, and set your budget. It takes a few minutes."
+    },
+    "choose": {
+      "title": "Pick your helper",
+      "body": "Compare offers and profiles, or ask someone you know. See the full total before you book."
+    },
+    "done": {
+      "title": "Approve and rebook",
+      "body": "Approve the work and your helper is paid. Save them and book again in two taps."
+    },
     "link": "See how it works"
   },
   "pricing": {
@@ -98,16 +114,33 @@
     "clientPays": "You pay",
     "helperEarns": "Your helper earns",
     "note": "You pay when you book. Your helper is paid after you approve the work.",
-    "link": "See full pricing"
+    "link": "See full pricing",
+    "pickPrice": "See the split for a task price",
+    "priceOption": "{price} task",
+    "splitLabel": "Where {total} goes",
+    "splitHelper": "Helper {amount}",
+    "splitFees": "Service fees {amount}"
   },
   "trust": {
     "eyebrow": "Built-in trust",
     "title": "Feel good about",
     "titleAccent": "opening the door",
-    "verified": { "title": "Verified helpers", "body": "Every helper passes an ID check. In-home tasks also need a background check." },
-    "address": { "title": "Your address stays private", "body": "Helpers see the general area. Only the helper you book gets your exact address." },
-    "payment": { "title": "Pay through the platform", "body": "Your payment is held safely and your helper is paid after you approve the work." },
-    "reviews": { "title": "Reviews from both sides", "body": "Double-blind reviews help everyone choose well, and keep it fair." },
+    "verified": {
+      "title": "Verified helpers",
+      "body": "Every helper passes an ID check. In-home tasks also need a background check."
+    },
+    "address": {
+      "title": "Your address stays private",
+      "body": "Helpers see the general area. Only the helper you book gets your exact address."
+    },
+    "payment": {
+      "title": "Pay through the platform",
+      "body": "Your payment is held safely and your helper is paid after you approve the work."
+    },
+    "reviews": {
+      "title": "Reviews from both sides",
+      "body": "Double-blind reviews help everyone choose well, and keep it fair."
+    },
     "link": "Our approach to trust and safety"
   },
   "helpers": {
@@ -134,11 +167,26 @@
   "faq": {
     "eyebrow": "Good to know",
     "title": "Questions, answered",
-    "pay": { "question": "When do I pay?", "answer": "When you book. The total, with the service fee, is shown before you pay. Your helper is paid after you approve the work." },
-    "address": { "question": "Who can see my address?", "answer": "Only the helper you book, once the booking is confirmed. Everyone else sees the general area." },
-    "verified": { "question": "How are helpers checked?", "answer": "Every helper passes an ID check before sending offers. In-home tasks, like cleaning and assembly, also need a background check." },
-    "rebook": { "question": "Can I book the same helper again?", "answer": "Yes. Save a helper after a booking and use Book again to send them a new request." },
-    "helper": { "question": "Can I post tasks and help others too?", "answer": "Yes. One account can do both: switch between asking for help and helping." }
+    "pay": {
+      "question": "When do I pay?",
+      "answer": "When you book. The total, with the service fee, is shown before you pay. Your helper is paid after you approve the work."
+    },
+    "address": {
+      "question": "Who can see my address?",
+      "answer": "Only the helper you book, once the booking is confirmed. Everyone else sees the general area."
+    },
+    "verified": {
+      "question": "How are helpers checked?",
+      "answer": "Every helper passes an ID check before sending offers. In-home tasks, like cleaning and assembly, also need a background check."
+    },
+    "rebook": {
+      "question": "Can I book the same helper again?",
+      "answer": "Yes. Save a helper after a booking and use Book again to send them a new request."
+    },
+    "helper": {
+      "question": "Can I post tasks and help others too?",
+      "answer": "Yes. One account can do both: switch between asking for help and helping."
+    }
   },
   "closing": {
     "title": "What could you",

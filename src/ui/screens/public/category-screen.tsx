@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ViewTransition } from 'react';
 import { BadgeCheck, Check, Laptop, Minus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CategoryPageData, type ISODateTime } from '@/contracts';
@@ -15,7 +16,7 @@ export function CategoryScreen({ data, now }: { data: CategoryPageData; now: ISO
   const included = Object.keys(t.raw(`categories.${category.slug}.included`) as Record<string, string>);
   const excluded = Object.keys(t.raw(`categories.${category.slug}.excluded`) as Record<string, string>);
   return <div className="space-y-section">
-    <div className="space-y-4"><Icon aria-hidden="true" className="size-10 rounded-lg bg-secondary p-2 text-secondary-foreground" /><PageHeader title={t('category.title', { category: category.name, market: market.name })} description={t(`categories.${category.slug}.intro`)} /></div>
+    <div className="space-y-4"><ViewTransition name={`category-icon-${category.slug}`} share="category-morph" default="none"><span className="grid size-10 place-items-center rounded-lg" style={{ background: `color-mix(in oklab, var(--cat-${category.slug}) 15%, transparent)`, color: `var(--cat-${category.slug})` }}><Icon aria-hidden="true" className="size-6" /></span></ViewTransition><PageHeader title={t('category.title', { category: category.name, market: market.name })} description={t(`categories.${category.slug}.intro`)} /></div>
     <section aria-label={t('category.pricingTitle')} className="space-y-3 rounded-xl border bg-secondary p-card text-secondary-foreground">
       <p className="text-lg font-semibold tabular-nums">{t(`category.typical.${category.priceGuidance.unit}`, { market: market.name, low: formatMoney(category.priceGuidance.lowCents), high: formatMoney(category.priceGuidance.highCents) })}</p>
       <p>{t(`categories.${category.slug}.pricing`)}</p>

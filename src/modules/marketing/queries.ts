@@ -27,7 +27,7 @@ import { countFoundingHelpers, getHelperProfile, listActiveHelperHandles, listPu
 import { BOARD_PAGE_SIZE } from '@/modules/tasks/projections';
 import { findPublicTask, listBoardTasks, listRecentOpenTasks } from '@/modules/tasks/queries';
 import { db } from '@/platform/db/client';
-import { buildBecomeHelperPageData, buildPricingPageData } from './page-data';
+import { buildBecomeHelperPageData, buildPricingPageData, landingFeeExamples } from './page-data';
 
 /**
  * Public marketing page data. Cached (Cache Components) so the pages prerender and stay fast;
@@ -74,6 +74,7 @@ export async function getHomePageData(): Promise<WithNow<HomePageData> | null> {
     data: {
       ...page.data,
       feeExample: buildPricingPageData(policy).fixedExample,
+      feeExamples: landingFeeExamples(policy.fees),
       ...(reward ? { welcomeReward: { amountCents: reward.amountCents, cohortLimit: reward.cohortLimit, spotsClaimed: reward.spotsClaimed } } : {}),
       map: await landingMap(market),
     },

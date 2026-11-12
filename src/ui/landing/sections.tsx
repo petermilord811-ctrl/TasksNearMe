@@ -5,9 +5,10 @@ import { ArrowRight, BadgeCheck, CalendarClock, Gift, LockKeyhole, MapPin, Messa
 import { routes, type HomePageData } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/ui/primitives/accordion';
-import { CountUpMoney, Magnetic, Reveal, Spotlight } from '@/ui/motion';
+import { Magnetic, Reveal, Spotlight } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { CategoryCards } from './category-cards';
+import { FeeExplorer } from './fee-explorer';
 
 /** A section heading: eyebrow, a title with an accent word (italic serif, violet), and a short line. */
 function Heading({ id, eyebrow, title, accent, body, align = 'left' }: { id: string; eyebrow: string; title: string; accent?: string; body?: ReactNode; align?: 'left' | 'center' }) {
@@ -100,25 +101,7 @@ export function PricingSection({ data }: { data: HomePageData }) {
         <Reveal variant="bloom" origin="50% 50%">
           <div className="relative">
             <div aria-hidden="true" className="absolute -inset-6 -z-10 rounded-[2.5rem] opacity-60 blur-2xl" style={{ background: 'var(--iridescent)' }} />
-            <div className="glass rounded-[2rem] p-6 sm:p-8">
-              <p className="text-sm font-medium text-muted-foreground">{t('example', { price: formatMoney(fee.taskPriceCents) })}</p>
-              <dl className="mt-5 space-y-3 text-sm">
-                <div className="flex justify-between gap-4"><dt className="text-muted-foreground">{t('taskPrice')}</dt><dd className="font-medium tabular-nums">{formatMoney(fee.taskPriceCents)}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-muted-foreground">{t('clientFee')}</dt><dd className="font-medium tabular-nums">+{formatMoney(fee.posterFeeCents)}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-muted-foreground">{t('helperFee')}</dt><dd className="font-medium tabular-nums">−{formatMoney(fee.helperFeeCents)}</dd></div>
-              </dl>
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl bg-card/80 p-5">
-                  <p className="text-sm text-muted-foreground">{t('clientPays')}</p>
-                  <p className="mt-1 font-display text-4xl font-semibold tracking-[-0.03em]"><CountUpMoney cents={fee.posterTotalCents} /></p>
-                </div>
-                <div className="rounded-2xl p-5 text-white" style={{ backgroundImage: 'linear-gradient(135deg, var(--violet), #3a2a8a)' }}>
-                  <p className="text-sm text-white/80">{t('helperEarns')}</p>
-                  <p className="mt-1 font-display text-4xl font-semibold tracking-[-0.03em]"><CountUpMoney cents={fee.helperEarningsCents} /></p>
-                </div>
-              </div>
-              <p className="mt-5 flex items-start gap-2 text-sm text-muted-foreground"><WalletCards aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('note')}</p>
-            </div>
+            <FeeExplorer examples={data.feeExamples} initial={fee} />
           </div>
         </Reveal>
       </div>

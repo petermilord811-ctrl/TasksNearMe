@@ -44,6 +44,11 @@ export interface HomePageData {
    * the helper earns. The landing page shows it as-is (UI-035); the UI never computes money.
    */
   feeExample: PriceBreakdown;
+  /**
+   * A few task prices at the same published fees, lowest first; one of them is `feeExample`. The pricing card
+   * lets the visitor switch between them (the UI picks, the fee engine computed every number).
+   */
+  feeExamples: PriceBreakdown[];
   /** The founding helpers' welcome reward; absent when the program is off or the cohort is full. */
   welcomeReward?: { amountCents: Cents; cohortLimit: number; spotsClaimed: number };
   /** The landing page's map of open tasks (UI-036). */

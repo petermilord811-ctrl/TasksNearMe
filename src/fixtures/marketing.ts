@@ -14,6 +14,7 @@ import { crestviewArea, hydeParkArea, muellerArea, remoteLocation } from './loca
 import {
   deskBreakdown,
   deskWithExpensesFinalBreakdown,
+  largeTaskBreakdown,
   movingFinalBreakdown,
   movingFundedBreakdown,
   smallTaskBreakdown,
@@ -204,6 +205,7 @@ export const homePageData: HomePageData = {
   recentTasks: recentPublicTasks,
   featuredHelpers: [sam, lee, jordan],
   feeExample: deskBreakdown,
+  feeExamples: [smallTaskBreakdown, deskBreakdown, largeTaskBreakdown],
   welcomeReward: { amountCents: 5000, cohortLimit: 100, spotsClaimed: 63 },
   map: austinLandingMap,
 };

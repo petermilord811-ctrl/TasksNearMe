@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createTranslator, NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes, type CategorySlug, type HomePageData } from '@/contracts';
@@ -80,8 +80,9 @@ describe('HomeScreen (the landing page)', () => {
     const fee = homePageData.feeExample;
     const pricing = within(section(`${t('pricing.title')} ${t('pricing.titleAccent')}`));
     expect(pricing.getByText(t('pricing.example', { price: formatMoney(fee.taskPriceCents) }))).toBeInTheDocument();
-    expect(pricing.getByText(`+${formatMoney(fee.posterFeeCents)}`)).toBeInTheDocument();
-    expect(pricing.getByText(`−${formatMoney(fee.helperFeeCents)}`)).toBeInTheDocument();
+    // Shown (it runs to new amounts when another price is picked) and spoken, each final.
+    expect(pricing.getAllByText(`+${formatMoney(fee.posterFeeCents)}`)).toHaveLength(2);
+    expect(pricing.getAllByText(`−${formatMoney(fee.helperFeeCents)}`)).toHaveLength(2);
     // With reduced motion the totals never count: the shown value and the spoken one are both final.
     expect(pricing.getAllByText(formatMoney(fee.posterTotalCents))).toHaveLength(2);
     expect(pricing.getAllByText(formatMoney(fee.helperEarningsCents))).toHaveLength(2);
@@ -123,14 +124,26 @@ describe('HomeScreen (the landing page)', () => {
     expect(screen.getByRole('link', { name: t('map.waitlist') })).toHaveAttribute('href', routes.waitlist());
   });
 
-  it('filters the map and its list by category', () => {
+  it('filters the map and its list by category', async () => {
     show();
     const chip = screen.getByRole('button', { name: categoryName('yard-cleanup') });
     fireEvent.click(chip);
     expect(chip).toHaveAttribute('aria-pressed', 'true');
     const list = screen.getByRole('list', { name: t('map.listNewest') });
     const yard = homePageData.map.pins.filter((pin) => pin.categorySlug === 'yard-cleanup');
-    expect(within(list).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(yard.slice(0, 7).map((pin) => routes.publicTask(pin.slug)));
+    // Rows of other categories fade out first.
+    await waitFor(() => expect(within(list).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(yard.slice(0, 7).map((pin) => routes.publicTask(pin.slug))));
+    expect(screen.getByText(t('map.countCategory', { category: categoryName('yard-cleanup'), count: yard.length }))).toBeInTheDocument();
+  });
+
+  it("keeps a clicked filter while another category is only pointed at", () => {
+    show();
+    const filter = screen.getByRole('group', { name: t('map.filterLabel') });
+    fireEvent.click(within(filter).getByRole('button', { name: categoryName('yard-cleanup') }));
+    const card = screen.getAllByRole('link').find((link) => link.getAttribute('href') === routes.category('light-cleaning'))!;
+    fireEvent.pointerEnter(card);
+    fireEvent.pointerLeave(card);
+    expect(within(filter).getByRole('button', { name: categoryName('yard-cleanup') })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('invites the first post when there are no open tasks', () => {

@@ -17,6 +17,18 @@ export const deskBreakdown: PriceBreakdown = {
   platformRevenueCents: 1200,
 };
 
+/** $150 task at the launch fees (10% each side). */
+export const largeTaskBreakdown: PriceBreakdown = {
+  pricingType: 'fixed',
+  taskPriceCents: 15000,
+  posterFeeCents: 1500,
+  helperFeeCents: 1500,
+  expenseAllowanceCents: 0,
+  posterTotalCents: 16500,
+  helperEarningsCents: 13500,
+  platformRevenueCents: 3000,
+};
+
 /** $25 task: the $3.00 minimum poster fee applies. */
 export const smallTaskBreakdown: PriceBreakdown = {
   pricingType: 'fixed',

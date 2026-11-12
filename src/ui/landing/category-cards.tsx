@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ViewTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { ArrowUpRight, Globe, ShieldCheck } from 'lucide-react';
 import { routes, type CategoryView } from '@/contracts';
@@ -10,7 +11,10 @@ import { cn } from '@/ui/lib/utils';
 import { CATEGORY_ICONS } from './ask-pill';
 import { useOptionalLanding } from './landing-state';
 
-/** What people book: one card per category with its real price guidance; hovering one tints the page. */
+/**
+ * What people book: one card per category with its real price guidance; hovering one tints the page.
+ * Opening one carries its icon into the category page's header (a shared View Transition).
+ */
 export function CategoryCards({ categories }: { categories: CategoryView[] }) {
   const t = useTranslations('landing.categories');
   const landing = useOptionalLanding();
@@ -25,16 +29,18 @@ export function CategoryCards({ categories }: { categories: CategoryView[] }) {
               <Spotlight glow={`var(--cat-${category.slug})`} className="h-full rounded-3xl">
                 <Link
                   href={routes.category(category.slug)}
-                  onPointerEnter={() => landing?.setActiveCategory(category.slug)}
-                  onPointerLeave={() => landing?.setActiveCategory(null)}
-                  onFocus={() => landing?.setActiveCategory(category.slug)}
-                  onBlur={() => landing?.setActiveCategory(null)}
+                  onPointerEnter={() => landing?.setPreviewCategory(category.slug)}
+                  onPointerLeave={() => landing?.setPreviewCategory(null)}
+                  onFocus={() => landing?.setPreviewCategory(category.slug)}
+                  onBlur={() => landing?.setPreviewCategory(null)}
                   className="group/cat flex h-full min-h-52 flex-col rounded-3xl border border-foreground/[0.07] bg-card/70 p-6 shadow-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-foreground/15 hover:shadow-overlay"
                 >
                   <span className="flex items-start justify-between">
-                    <span className="grid size-12 place-items-center rounded-2xl transition-transform duration-500 group-hover/cat:scale-110 group-hover/cat:-rotate-6" style={{ background: `color-mix(in oklab, var(--cat-${category.slug}) 15%, transparent)`, color: `var(--cat-${category.slug})` }}>
-                      <Icon aria-hidden="true" className="size-6" />
-                    </span>
+                    <ViewTransition name={`category-icon-${category.slug}`} share="category-morph" default="none">
+                      <span className="grid size-12 place-items-center rounded-2xl transition-transform duration-500 group-hover/cat:scale-110 group-hover/cat:-rotate-6" style={{ background: `color-mix(in oklab, var(--cat-${category.slug}) 15%, transparent)`, color: `var(--cat-${category.slug})` }}>
+                        <Icon aria-hidden="true" className="size-6" />
+                      </span>
+                    </ViewTransition>
                     <ArrowUpRight aria-hidden="true" className="size-5 text-muted-foreground transition-transform duration-300 group-hover/cat:translate-x-0.5 group-hover/cat:-translate-y-0.5 group-hover/cat:text-foreground" />
                   </span>
                   <span className="mt-auto pt-8">

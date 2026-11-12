@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { BadgeCheck, MapPin, Star } from 'lucide-react';
 import { routes, type HelperSummary, type TaskPublicView } from '@/contracts';
@@ -31,8 +31,9 @@ const HELPER_SLOTS: Slot[] = [
 /**
  * Real open tasks and helpers floating around the hero at different depths (wide screens only). They
  * drift gently on their own, lean toward the cursor (nearer cards move more), lift on hover, and quiet down
- * when a category is picked elsewhere on the page. Decorative copies of content that's on the page anyway,
- * so they're out of the tab order.
+ * when a category is picked elsewhere on the page. Clicking a task card shows it on the map: the page glides
+ * down to the map, its pin opens and its row lights up (a modified click still opens the task). Decorative
+ * copies of content that's on the page anyway, so they're out of the tab order.
  */
 export function FloatingCards({ tasks, helpers }: { tasks: TaskPublicView[]; helpers: HelperSummary[] }) {
   const t = useTranslations('landing.hero');
@@ -41,10 +42,21 @@ export function FloatingCards({ tasks, helpers }: { tasks: TaskPublicView[]; hel
   const reduced = usePrefersReducedMotion();
   const fine = useFinePointer();
   const layerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [onScreen, setOnScreen] = useState(true);
   const pointer = landing?.pointer;
 
+  // The lean-toward-the-cursor loop runs only while the hero is on screen.
   useEffect(() => {
-    if (reduced || !fine || !pointer) return;
+    const root = rootRef.current;
+    if (!root || !('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver(([entry]) => setOnScreen(Boolean(entry?.isIntersecting)));
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (reduced || !fine || !pointer || !onScreen) return;
     let frame = 0;
     const current = { x: 0, y: 0 };
     const tick = () => {
@@ -63,7 +75,7 @@ export function FloatingCards({ tasks, helpers }: { tasks: TaskPublicView[]; hel
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [reduced, fine, pointer]);
+  }, [reduced, fine, pointer, onScreen]);
 
   const focus = landing?.activeCategory ?? null;
   const cards = [
@@ -71,8 +83,14 @@ export function FloatingCards({ tasks, helpers }: { tasks: TaskPublicView[]; hel
     ...helpers.slice(0, HELPER_SLOTS.length).map((helper, i) => ({ kind: 'helper' as const, helper, slot: HELPER_SLOTS[i]! })),
   ];
 
+  const showOnMap = (event: MouseEvent, task: TaskPublicView) => {
+    if (!landing || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    landing.focusTask({ id: task.id, categorySlug: task.categorySlug });
+  };
+
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden [perspective:1200px] xl:block">
+    <div ref={rootRef} aria-hidden="true" className="pointer-events-none absolute inset-0 hidden [perspective:1200px] xl:block">
       {cards.map((card, i) => {
         const dim = focus !== null && (card.kind === 'helper' ? !card.helper.services.some((service) => service.categorySlug === focus) : card.task.categorySlug !== focus);
         return (
@@ -91,7 +109,9 @@ export function FloatingCards({ tasks, helpers }: { tasks: TaskPublicView[]; hel
                   <Link
                     href={routes.publicTask(card.task.slug)}
                     tabIndex={-1}
-                    className={cn('glass pointer-events-auto block w-60 rounded-3xl p-4 transition-[opacity,transform,filter] duration-500 hover:-translate-y-1', dim && 'opacity-30 blur-[1px]')}
+                    title={tMap('showOnMap')}
+                    onClick={(event) => showOnMap(event, card.task)}
+                    className={cn('glass pointer-events-auto block w-60 rounded-3xl p-4 transition-[opacity,transform,filter,box-shadow] duration-500 hover:-translate-y-1 hover:shadow-[0_24px_50px_-26px_var(--violet)] active:scale-[0.97] active:duration-150', dim && 'opacity-30 blur-[1px]')}
                   >
                     <span className="flex items-center justify-between text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1.5 font-medium">

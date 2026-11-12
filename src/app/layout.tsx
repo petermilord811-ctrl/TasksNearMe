@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     // The theme script sets data-theme and data-motion before paint, so React sees different attributes.
-    <html lang="en" className={fontVariables} suppressHydrationWarning>
+    <html lang="en" className={fontVariables} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body>
         {/* In the initial HTML before any app code (Next places it in <head>): the saved theme, before paint. */}
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInitScript }} />

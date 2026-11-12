@@ -130,7 +130,7 @@ export function StaticMap({
         )}
       </svg>
       {active && activeAt && (
-        <PinCard pin={active} x={`${(activeAt.x / W) * 100}%`} y={`${(activeAt.y / H) * 100}%`} miles={milesById?.get(active.id)} />
+        <PinCard pin={active} x={`${(activeAt.x / W) * 100}%`} y={`${(activeAt.y / H) * 100}%`} placement={activeAt.y / H < 0.42 ? 'below' : 'above'} miles={milesById?.get(active.id)} />
       )}
     </div>
   );

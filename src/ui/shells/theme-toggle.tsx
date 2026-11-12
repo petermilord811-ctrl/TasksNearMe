@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useSyncExternalStore, type MouseEvent } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/ui/lib/utils';
@@ -31,22 +31,47 @@ function subscribe(onChange: () => void) {
   };
 }
 
+/** Reduced motion asked for, or no View Transitions in this browser: switch at once. */
+function instantSwitch(): boolean {
+  const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return reduce || typeof document.startViewTransition !== 'function';
+}
+
 /**
- * The light/dark switch from the top bar: a small pill with a sliding knob. The choice is saved for next
- * time (theme-script.ts applies it before paint); until someone picks, the system decides.
+ * The light/dark switch from the top bar: a small pill with a sliding knob. The new theme spreads over the
+ * page as a circle growing from the switch (a View Transition), so the whole page changes together. The
+ * choice is saved for next time (theme-script.ts applies it before paint); until someone picks, the system
+ * decides.
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const t = useTranslations('shell.theme');
   const theme = useSyncExternalStore<Theme | null>(subscribe, currentTheme, () => null);
   const next: Theme = theme === 'dark' ? 'light' : 'dark';
 
-  const toggle = () => {
+  const apply = () => {
     document.documentElement.setAttribute('data-theme', next);
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, next);
     } catch {
       /* storage blocked: it lasts for this page */
     }
+  };
+
+  const toggle = (event: MouseEvent<HTMLButtonElement>) => {
+    if (instantSwitch()) {
+      apply();
+      return;
+    }
+    const root = document.documentElement;
+    const box = event.currentTarget.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    root.style.setProperty('--theme-x', `${x}px`);
+    root.style.setProperty('--theme-y', `${y}px`);
+    root.style.setProperty('--theme-r', `${Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y))}px`);
+    root.setAttribute('data-theme-switch', '');
+    const transition = document.startViewTransition(apply);
+    void transition.finished.finally(() => root.removeAttribute('data-theme-switch'));
   };
 
   return (

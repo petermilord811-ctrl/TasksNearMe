@@ -452,10 +452,38 @@ html[data-motion="on"] [data-reveal]:not([data-revealed]) .draw-on-reveal { stro
    and standalone flow pages keep their actions at the viewport bottom. */
 @utility bottom-app-navigation { bottom: var(--app-bottom-offset, 0px); }
 
+/* The theme switch: the new theme grows as a circle from the switch over the old one (ThemeToggle sets
+   the centre and radius). Scoped to that one View Transition so page transitions keep their own. */
+html[data-theme-switch]::view-transition-old(root),
+html[data-theme-switch]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-theme-switch]::view-transition-new(root) {
+  animation: theme-reveal 620ms var(--ease-out) both;
+}
+@keyframes theme-reveal {
+  from { clip-path: circle(0 at var(--theme-x, 50%) var(--theme-y, 0)); }
+  to { clip-path: circle(var(--theme-r, 150vmax) at var(--theme-x, 50%) var(--theme-y, 0)); }
+}
+
+/* A landing category card's icon flies into the category page's header (React <ViewTransition share="category-morph">). */
+::view-transition-group(.category-morph) {
+  animation-duration: 520ms;
+  animation-timing-function: var(--ease-out);
+}
+
+/* In-page links (the hero's "scroll" hint, "skip to content") glide instead of jumping. Next.js turns this
+   off during route changes because <html> has data-scroll-behavior="smooth". */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
 @media (min-width: 768px) { :root { --page-gutter: 1.5rem; --card-padding: 1.25rem; --section-gap: 2rem; } }
 @media (min-width: 1024px) { :root { --page-gutter: 2rem; --card-padding: 1.5rem; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
 
 /* A receipt prints in normal document flow, without app or preview navigation. */

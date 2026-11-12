@@ -5,4 +5,4 @@ export { Reveal, type RevealProps } from './reveal';
 export { MaskLines } from './mask-text';
 export { Magnetic } from './magnetic';
 export { Spotlight } from './spotlight';
-export { CountUpMoney } from './count-up';
+export { CountUpMoney, TweenMoney } from './count-up';

@@ -98,10 +98,10 @@ export function AskPill({ className }: { className?: string }) {
                     <m.li key={category} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduced ? 0 : 0.04 * position, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}>
                       <Link
                         href={routes.app.newTask({ category })}
-                        onPointerEnter={() => landing?.setActiveCategory(category)}
-                        onPointerLeave={() => landing?.setActiveCategory(null)}
-                        onFocus={() => landing?.setActiveCategory(category)}
-                        onBlur={() => landing?.setActiveCategory(null)}
+                        onPointerEnter={() => landing?.setPreviewCategory(category)}
+                        onPointerLeave={() => landing?.setPreviewCategory(null)}
+                        onFocus={() => landing?.setPreviewCategory(category)}
+                        onBlur={() => landing?.setPreviewCategory(null)}
                         className="group/ask flex min-h-12 items-center gap-3 rounded-2xl px-3 py-2 transition-colors hover:bg-card"
                       >
                         <span className="grid size-8 shrink-0 place-items-center rounded-xl" style={{ background: `color-mix(in oklab, var(--cat-${category}) 16%, transparent)`, color: `var(--cat-${category})` }}>

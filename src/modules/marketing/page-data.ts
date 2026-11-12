@@ -21,6 +21,15 @@ const MOVING_APPROVED_HOURS = 3.5;
 const ALLOWANCE_CENTS = 2000;
 const RECEIPT_CENTS = 800;
 
+/**
+ * The landing page's price picker (`HomePageData.feeExamples`): a small job where the minimum fee shows, the
+ * $60 desk, and a bigger job, all at the published fees, lowest first.
+ */
+export function landingFeeExamples(fees: FeeSchedule) {
+  const prices = [...new Set([minimumFeeExamplePrice(fees), DESK_CENTS, 15_000])].sort((a, b) => a - b);
+  return prices.map((priceCents) => quoteBreakdown(fees, { type: 'fixed', priceCents }));
+}
+
 /** A round price where the minimum poster fee applies: $25 by default, lower if the policy needs it. */
 function minimumFeeExamplePrice(fees: FeeSchedule): number {
   const preferred = 2500;

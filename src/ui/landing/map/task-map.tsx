@@ -16,7 +16,8 @@ export type MapMode = 'interactive' | 'static';
  * the tiles fail, the drawn map simply stays. Mid-size, soft edges, a faint glow behind it.
  */
 export function TaskMap({ map, mode = 'interactive', className }: { map: LandingMapData; mode?: MapMode; className?: string }) {
-  const { activeCategory, highlightedTaskId, setHighlightedTaskId, location } = useLanding();
+  // Pointing at a category quiets the other pins; picking one also flies the map to its tasks.
+  const { activeCategory, selectedCategory, litTaskId, setHighlightedTaskId, location } = useLanding();
   const userPoint = location.status === 'granted' ? location.point : undefined;
   const frameRef = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
@@ -75,7 +76,7 @@ export function TaskMap({ map, mode = 'interactive', className }: { map: Landing
           map={map}
           pins={map.pins}
           activeCategory={activeCategory}
-          highlightedTaskId={liveReady ? null : highlightedTaskId}
+          highlightedTaskId={liveReady ? null : litTaskId}
           onHighlight={setHighlightedTaskId}
           userPoint={userPoint}
           milesById={milesById}
@@ -87,7 +88,8 @@ export function TaskMap({ map, mode = 'interactive', className }: { map: Landing
             map={map}
             pins={map.pins}
             activeCategory={activeCategory}
-            highlightedTaskId={highlightedTaskId}
+            selectedCategory={selectedCategory}
+            highlightedTaskId={litTaskId}
             onHighlight={setHighlightedTaskId}
             userPoint={userPoint}
             milesById={milesById}

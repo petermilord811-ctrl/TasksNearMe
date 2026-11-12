@@ -13,16 +13,18 @@ export function pinPrice(pin: TaskMapPin, perHour: (rate: string) => string): st
 
 /**
  * The small glass card that grows out of a pin (positioned by the map view, in px from the map's top-left).
- * It names the task, its category, the area, the price and the day, and links to the public task page.
+ * It names the task, its category, the area, the price and the day, and links to the public task page. It
+ * opens above the pin, or below it when the pin is near the map's top edge (`placement`).
  */
-export function PinCard({ pin, x, y, miles, onClose }: { pin: TaskMapPin; x: number | string; y: number | string; miles?: number; onClose?: () => void }) {
+export function PinCard({ pin, x, y, miles, onClose, placement = 'above' }: { pin: TaskMapPin; x: number | string; y: number | string; miles?: number; onClose?: () => void; placement?: 'above' | 'below' }) {
+  const below = placement === 'below';
   const t = useTranslations('landing.map');
   const categories = useTranslations('helperCard.categories');
   return (
     <div
       key={pin.id}
-      className="bloom-in pointer-events-auto absolute z-10 w-60 -translate-x-1/2 -translate-y-[calc(100%+18px)]"
-      style={{ left: x, top: y, ['--bloom-origin' as string]: '50% 100%' }}
+      className={cn('bloom-in pointer-events-auto absolute z-10 w-60 -translate-x-1/2', below ? 'translate-y-[18px]' : '-translate-y-[calc(100%+18px)]')}
+      style={{ left: x, top: y, ['--bloom-origin' as string]: below ? '50% 0%' : '50% 100%' }}
       onPointerLeave={onClose}
     >
       {/* The list beside the map is the keyboard path to these tasks; the card is for pointer and touch. */}
@@ -45,7 +47,7 @@ export function PinCard({ pin, x, y, miles, onClose }: { pin: TaskMapPin; x: num
           <span className={cn('text-xs font-medium text-primary')}>{t('viewTask')}</span>
         </span>
       </Link>
-      <span aria-hidden="true" className="glass absolute left-1/2 -bottom-1.5 size-3 -translate-x-1/2 rotate-45 rounded-[3px] border-t-0 border-l-0" />
+      <span aria-hidden="true" className={cn('glass absolute left-1/2 size-3 -translate-x-1/2 rotate-45 rounded-[3px]', below ? '-top-1.5 border-r-0 border-b-0' : '-bottom-1.5 border-t-0 border-l-0')} />
     </div>
   );
 }

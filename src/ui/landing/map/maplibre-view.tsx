@@ -2,7 +2,7 @@
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useRef, useState } from 'react';
-import { Map as MapLibreMap, getVersion, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl';
+import { LngLatBounds, Map as MapLibreMap, getVersion, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl';
 import { routes, type LandingMapData, type TaskMapPin } from '@/contracts';
 import type { LatLng } from '@/shared/geo';
 import { usePrefersReducedMotion } from '@/ui/motion';
@@ -12,7 +12,10 @@ import { readMapColors, restylePlan, styleFont } from './restyle';
 export interface MapViewProps {
   map: LandingMapData;
   pins: TaskMapPin[];
+  /** Quiets the other categories' pins (a pick, or a category being pointed at). */
   activeCategory: string | null;
+  /** The picked category: the map flies to its tasks (and back out when the pick is cleared). */
+  selectedCategory?: string | null;
   highlightedTaskId: string | null;
   onHighlight: (id: string | null) => void;
   userPoint?: LatLng;
@@ -27,6 +30,14 @@ export interface MapViewProps {
 setWorkerUrl(routes.assets.mapWorker(getVersion()));
 
 const SOURCE = 'tasks';
+/** The pin card needs about this much room above its pin; nearer the top edge it opens below. */
+const CARD_ROOM_PX = 176;
+const CARD_HALF_WIDTH_PX = 124;
+/**
+ * How close a pick may zoom: past the last clustered zoom (`clusterMaxZoom` 11), so the picked tasks show as
+ * their own pins, but far enough that their areas don't fill the map.
+ */
+const FIT_MAX_ZOOM = 12.2;
 const YOU = 'you';
 
 function categoryColors(element: Element, pins: TaskMapPin[]): Record<string, string> {
@@ -58,10 +69,13 @@ function metersToPixels(meters: number, latitude: number, zoom: number): number 
  * circles; clusters when zoomed out; hover (or tap) shows a card that grows out of the pin. Scrolling the
  * page never zooms the map (Ctrl/⌘ + scroll, or two fingers).
  */
-export function MapLibreView({ map, pins, activeCategory, highlightedTaskId, onHighlight, userPoint, milesById, onReady, onFailed }: MapViewProps) {
+export function MapLibreView({ map, pins, activeCategory, selectedCategory = null, highlightedTaskId, onHighlight, userPoint, milesById, onReady, onFailed }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  // The map instance whose style and layers are loaded. Effects only touch that one: a map being re-created
+  // (Fast Refresh keeps state while it re-runs effects) isn't ready until its own `load`.
+  const [ready, setReady] = useState<MapLibreMap | null>(null);
+  const firstFit = useRef(true);
   const [cardAt, setCardAt] = useState<{ id: string; x: number; y: number } | null>(null);
   const reduced = usePrefersReducedMotion();
   const indexById = useRef(new Map<string, number>());
@@ -141,6 +155,8 @@ export function MapLibreView({ map, pins, activeCategory, highlightedTaskId, onH
         paint: {
           'circle-radius': ['case', ['boolean', ['feature-state', 'active'], false], 9, 6.5],
           'circle-radius-transition': { duration: 250 },
+          'circle-opacity-transition': { duration: 320 },
+          'circle-stroke-opacity-transition': { duration: 320 },
           'circle-color': ['get', 'color'],
           'circle-stroke-color': '#ffffff',
           'circle-stroke-width': 2.4,
@@ -216,7 +232,7 @@ export function MapLibreView({ map, pins, activeCategory, highlightedTaskId, onH
       themeWatch = new MutationObserver(repaint);
       themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
-      setLoaded(true);
+      setReady(instance);
       latest.current.onReady();
     });
     instance.on('error', () => {
@@ -239,26 +255,49 @@ export function MapLibreView({ map, pins, activeCategory, highlightedTaskId, onH
 
   // Pins changed (a new category's colors, new data): replace the source data.
   useEffect(() => {
-    const instance = mapRef.current;
+    const instance = ready;
     const container = containerRef.current;
-    if (!loaded || !instance || !container) return;
+    if (!instance || instance !== mapRef.current || !container) return;
     indexById.current = new Map(pins.map((pin, index) => [pin.id, index]));
     (instance.getSource(SOURCE) as GeoJSONSource | undefined)?.setData(featureCollection(pins, categoryColors(container, pins)));
-  }, [loaded, pins]);
+  }, [ready, pins]);
 
-  // A picked category quiets the others.
+  // A picked (or pointed-at) category quiets the others.
   useEffect(() => {
-    const instance = mapRef.current;
-    if (!loaded || !instance) return;
+    const instance = ready;
+    if (!instance || instance !== mapRef.current || !instance.getLayer('task-dot')) return;
     const quiet = activeCategory ? ['case', ['==', ['get', 'category'], activeCategory], 1, 0.22] : 1;
     instance.setPaintProperty('task-dot', 'circle-opacity', quiet as never);
     instance.setPaintProperty('task-dot', 'circle-stroke-opacity', quiet as never);
-  }, [loaded, activeCategory]);
+  }, [ready, activeCategory]);
+
+  // A pick flies the map to that category's tasks; clearing it flies back out to the whole area.
+  useEffect(() => {
+    const instance = ready;
+    if (!instance || instance !== mapRef.current) return;
+    if (firstFit.current) {
+      firstFit.current = false;
+      if (!selectedCategory) return;
+    }
+    const duration = reduced ? 0 : 900;
+    const chosen = selectedCategory ? pins.filter((pin) => pin.categorySlug === selectedCategory) : [];
+    if (!selectedCategory || chosen.length === 0) {
+      instance.easeTo({ center: [map.center.lng, map.center.lat], zoom: 10.3, duration });
+      return;
+    }
+    if (chosen.length === 1) {
+      instance.easeTo({ center: [chosen[0]!.point.lng, chosen[0]!.point.lat], zoom: Math.max(instance.getZoom(), FIT_MAX_ZOOM), duration });
+      return;
+    }
+    const bounds = new LngLatBounds();
+    for (const pin of chosen) bounds.extend([pin.point.lng, pin.point.lat]);
+    instance.fitBounds(bounds, { padding: 72, maxZoom: FIT_MAX_ZOOM, duration });
+  }, [ready, selectedCategory, pins, map.center.lat, map.center.lng, reduced]);
 
   // The highlighted pin (from the map or the list): lift it, keep it in view, and place the card.
   useEffect(() => {
-    const instance = mapRef.current;
-    if (!loaded || !instance) return;
+    const instance = ready;
+    if (!instance || instance !== mapRef.current) return;
     if (activeIndex.current !== null) instance.setFeatureState({ source: SOURCE, id: activeIndex.current }, { active: false });
     activeIndex.current = null;
     const pin = pins.find((item) => item.id === highlightedTaskId);
@@ -272,7 +311,9 @@ export function MapLibreView({ map, pins, activeCategory, highlightedTaskId, onH
     if (!instance.getBounds().contains(lngLat)) instance.easeTo({ center: lngLat, zoom: Math.max(instance.getZoom(), 11.5), duration: reduced ? 0 : 700 });
     const place = () => {
       const at = instance.project(lngLat);
-      setCardAt({ id: pin.id, x: at.x, y: at.y });
+      // Keep the card inside the map's width (it's 240 px wide, centred on the pin).
+      const width = instance.getContainer().clientWidth;
+      setCardAt({ id: pin.id, x: Math.min(Math.max(at.x, CARD_HALF_WIDTH_PX), Math.max(CARD_HALF_WIDTH_PX, width - CARD_HALF_WIDTH_PX)), y: at.y });
     };
     const first = requestAnimationFrame(place);
     instance.on('move', place);
@@ -280,12 +321,12 @@ export function MapLibreView({ map, pins, activeCategory, highlightedTaskId, onH
       cancelAnimationFrame(first);
       instance.off('move', place);
     };
-  }, [loaded, highlightedTaskId, pins, reduced]);
+  }, [ready, highlightedTaskId, pins, reduced]);
 
   // The visitor shared their location: show it and frame what's near.
   useEffect(() => {
-    const instance = mapRef.current;
-    if (!loaded || !instance) return;
+    const instance = ready;
+    if (!instance || instance !== mapRef.current) return;
     const source = instance.getSource(YOU) as GeoJSONSource | undefined;
     if (!userPoint) {
       source?.setData({ type: 'FeatureCollection', features: [] });
@@ -293,7 +334,7 @@ export function MapLibreView({ map, pins, activeCategory, highlightedTaskId, onH
     }
     source?.setData({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [userPoint.lng, userPoint.lat] } }] });
     instance.easeTo({ center: [userPoint.lng, userPoint.lat], zoom: 11.6, duration: reduced ? 0 : 1100 });
-  }, [loaded, userPoint, reduced]);
+  }, [ready, userPoint, reduced]);
 
   const pin = pins.find((item) => item.id === highlightedTaskId);
   return (
@@ -304,7 +345,7 @@ export function MapLibreView({ map, pins, activeCategory, highlightedTaskId, onH
       </div>
       {pin && cardAt?.id === pin.id && (
         <div onPointerEnter={() => window.clearTimeout(clearTimer.current)}>
-          <PinCard pin={pin} x={cardAt.x} y={cardAt.y} miles={milesById?.get(pin.id)} onClose={() => onHighlight(null)} />
+          <PinCard pin={pin} x={cardAt.x} y={cardAt.y} placement={cardAt.y < CARD_ROOM_PX ? 'below' : 'above'} miles={milesById?.get(pin.id)} onClose={() => onHighlight(null)} />
         </div>
       )}
     </div>
