@@ -3,7 +3,7 @@ import type { CategoryPageData, PreviewEntry } from '@/contracts';
 import { routes } from '@/contracts';
 import { becomeHelperNoRewardsData, becomeHelperPageData, categoryViews, cleaningPublicTask, furnitureCategoryPageData, homePageData, lee, movingCategoryPageData, pricingPageData, publicViewer, remoteComputerPublicTask, sam, yardPublicTask } from '@/fixtures';
 import { PublicShell } from '@/ui/shells/public-shell';
-import { BecomeHelperScreen, CategoryScreen, HomeScreen, HowItWorksScreen, MarketScreen, PricingScreen, TrustSafetyScreen } from '@/ui/screens/public';
+import { BecomeHelperScreen, CategoryScreen, HowItWorksScreen, MarketScreen, PricingScreen, TrustSafetyScreen } from '@/ui/screens/public';
 import copy from '../../../messages/en/ui/publicPages.json';
 
 const now = '2026-11-17T15:00:00.000Z';
@@ -12,12 +12,10 @@ const yardData: CategoryPageData = { market: homePageData.market, category: cate
 const cleaningData: CategoryPageData = { market: homePageData.market, category: categoryViews[3]!, recentTasks: [cleaningPublicTask], topHelpers: [sam] };
 
 function page(id: string, title: string, path: string, render: () => ReactNode): PreviewEntry {
-  return { id, group: copy.previews.group, title, layout: 'fullscreen', render: () => <PublicShell viewer={publicViewer} currentPath={path}>{render()}</PublicShell> };
+  return { id, group: copy.previews.group, title, layout: 'fullscreen', render: () => <div className="bg-background text-foreground"><PublicShell viewer={publicViewer} currentPath={path}>{render()}</PublicShell></div> };
 }
 
 export const publicPagePreviews: PreviewEntry[] = [
-  page('screen-home/default', copy.previews.home, routes.home(), () => <HomeScreen data={homePageData} now={now} />),
-  page('screen-home/no-tasks', copy.previews.homeEmpty, routes.home(), () => <HomeScreen data={{ ...homePageData, recentTasks: [] }} now={now} />),
   page('screen-market/default', copy.previews.market, routes.market(), () => <MarketScreen data={homePageData} now={now} />),
   page('screen-category/furniture', copy.previews.furniture, routes.category('furniture-assembly'), () => <CategoryScreen data={furnitureCategoryPageData} now={now} />),
   page('screen-category/moving-empty', copy.previews.moving, routes.category('moving-help'), () => <CategoryScreen data={movingCategoryPageData} now={now} />),

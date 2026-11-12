@@ -1,6 +1,7 @@
 // Owned by Codex: every UI namespace. Add one JSON file per namespace and register it here.
 // Never use the top-level namespace "server" (reserved for app copy).
 import common from './common.json';
+import brand from './brand.json';
 import money from './money.json';
 import status from './status.json';
 import actions from './actions.json';
@@ -47,6 +48,7 @@ import paymentsPage from './paymentsPage.json';
 import receipt from './receipt.json';
 import earnings from './earnings.json';
 import home from './home.json';
+import landing from './landing.json';
 import review from './review.json';
 import savedHelpers from './savedHelpers.json';
 import account from './account.json';
@@ -69,6 +71,6 @@ import availability from './availability.json';
 import clients from './clients.json';
 import proposal from './proposal.json';
 
-const uiMessages = { common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, bookingSheets, paymentsPage, receipt, earnings, home, review, savedHelpers, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase, adminBooking, adminRewards, adminUsers, adminUser, rewards, changes, invites, inviteCard, availability, clients, proposal };
+const uiMessages = { brand, common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, bookingSheets, paymentsPage, receipt, earnings, home, landing, review, savedHelpers, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase, adminBooking, adminRewards, adminUsers, adminUser, rewards, changes, invites, inviteCard, availability, clients, proposal };
 
 export default uiMessages;

@@ -5,7 +5,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { CATEGORY_SLUGS, routes } from '@/contracts';
-import { categoryViews, furnitureCategoryPageData, homePageData } from '@/fixtures';
+import { categoryViews, furnitureCategoryPageData, homeEmptyMapData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { HomeScreen } from './home-screen';
 import { CategoryScreen } from './category-screen';
@@ -51,8 +51,8 @@ describe('public screen interactions', () => {
 
   it('opens the FAQ and gives the empty task list a posting action', async () => {
     const user = userEvent.setup();
-    renderScreen(<HomeScreen data={{ ...homePageData, recentTasks: [] }} now={now} />);
-    expect(screen.getByRole('heading', { name: 'No open tasks here yet' })).toBeDefined();
+    renderScreen(<HomeScreen data={homeEmptyMapData} now={now} mapMode="static" />);
+    expect(screen.getByText(messages.landing.map.emptyTitle)).toBeDefined();
     const question = screen.getByRole('button', { name: 'Who can see my address?' });
     question.focus();
     await user.keyboard('{Enter}');
