@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ReviewScreen } from '@/ui/screens/reviews';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Leave a review', robots: { index: false } };
 
@@ -23,7 +24,7 @@ export default function ReviewPage({ params }: PageProps<'/app/bookings/[booking
 async function Review({ params }: Pick<PageProps<'/app/bookings/[bookingId]/review'>, 'params'>) {
   const [{ bookingId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.bookingReview(bookingId)));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getReviewPage(db, viewer.user.id, bookingId, now);
   if (!data) notFound();
   return <ReviewScreen data={data} now={now.toISOString()} handlers={{ onSubmit: submitReviewAction.bind(null, bookingId) }} />;

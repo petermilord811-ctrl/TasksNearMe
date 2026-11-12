@@ -6,6 +6,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminCasesScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Cases', robots: { index: false } };
 
@@ -22,7 +23,7 @@ async function AdminCases({ searchParams }: Pick<PageProps<'/admin/cases'>, 'sea
   const [params, viewer] = await Promise.all([searchParams, getViewer()]);
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
-  const now = new Date();
+  const now = await requestNow();
   const data = await getAdminCases(db, staff, parseAdminCaseFilters(params), now);
   return <AdminCasesScreen data={data} now={now.toISOString()} />;
 }

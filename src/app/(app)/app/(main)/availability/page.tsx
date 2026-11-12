@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { MyAvailabilityScreen } from '@/ui/screens/availability';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'My availability', robots: { index: false } };
 
@@ -23,7 +24,7 @@ export default function MyAvailabilityPage() {
 async function Availability() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.availability()));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getMyAvailabilityPage(db, viewer.user.id, now);
   return <MyAvailabilityScreen data={data} now={now.toISOString()} handlers={{ onCreate: createAvailabilityPostAction, onCancel: cancelAvailabilityPostAction }} />;
 }

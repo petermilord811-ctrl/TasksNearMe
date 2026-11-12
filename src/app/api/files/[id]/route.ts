@@ -5,6 +5,7 @@ import { canViewRelatedFile } from '@/modules/files/related-access';
 import { files } from '@/modules/tasks/schema';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
+import { requestNow } from '@/platform/clock';
 
 const storage = createFileStorage();
 
@@ -17,7 +18,7 @@ export async function GET(_request: Request, ctx: RouteContext<'/api/files/[id]'
   const allowed =
     file &&
     (canViewFile(file, { userId, isStaff: viewer.kind === 'user' && viewer.user.staffRoles.length > 0 }) ||
-      (userId !== null && (await canViewRelatedFile(db, file, userId, new Date()))));
+      (userId !== null && (await canViewRelatedFile(db, file, userId, await requestNow()))));
   const body = allowed && !file.storageKey.startsWith('public/') ? await storage.get(file.storageKey) : null;
   if (!file || !allowed || !body) return new Response('Not found', { status: 404 });
 

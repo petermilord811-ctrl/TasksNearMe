@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminBookingScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Booking', robots: { index: false } };
 
@@ -24,7 +25,7 @@ async function AdminBooking({ params }: Pick<PageProps<'/admin/bookings/[booking
   const [{ bookingId }, viewer] = await Promise.all([params, getViewer()]);
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
-  const now = new Date();
+  const now = await requestNow();
   const data = await getAdminBooking(db, staff, bookingId, now);
   if (!data) notFound();
   return (

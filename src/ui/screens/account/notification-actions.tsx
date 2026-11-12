@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftRight, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Headset, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, Star, X, type LucideIcon } from 'lucide-react';
+import { ArrowLeftRight, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
@@ -40,6 +40,8 @@ const icons: Record<NotificationType, LucideIcon> = {
   rebook_proposed: CalendarPlus,
   rebook_accepted: CalendarCheck,
   rebook_declined: CalendarX,
+  task_reopened: RotateCcw,
+  approval_reminder: Hourglass,
 };
 
 function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
@@ -90,6 +92,8 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
             amount: notification.params?.amountCents === undefined ? '' : formatMoney(notification.params.amountCents),
             hasMinutes: notification.params?.minutes === undefined ? 'no' : 'yes',
             minutes: notification.params?.minutes ?? 0,
+            hasHours: notification.params?.hours === undefined ? 'no' : 'yes',
+            hours: notification.params?.hours ?? 0,
           })}
         </span>
         <time dateTime={notification.createdAt} className="block text-sm leading-5 tabular-nums text-muted-foreground">{t('time', { absolute: formatDateTime(notification.createdAt), relative: formatRelative(notification.createdAt, now) })}</time>

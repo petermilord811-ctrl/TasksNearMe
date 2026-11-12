@@ -2,7 +2,7 @@
  * Idempotent seed: Austin market, areas, categories, policy v1 (published) and v2 (draft),
  * feature flags. People and tasks are added by later phases (from src/fixtures).
  */
-import { and, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, like, or, sql } from 'drizzle-orm';
 import { createDb } from '../../src/platform/db/connect';
 import {
   areas,
@@ -391,10 +391,26 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
       .from(rebookProposals)
       .where(and(or(inArray(rebookProposals.posterUserId, people), inArray(rebookProposals.helperUserId, people)), isNotNull(rebookProposals.taskId)))
   ).flatMap((row) => (row.taskId ? [row.taskId] : []));
+  // Tasks an e2e run writes for itself (ids start with `tsk_e2e_`, tests/e2e/support/scenarios.ts) go with
+  // their offers and everything on their bookings.
+  const scratch = (await tx.select({ id: tasks.id }).from(tasks).where(like(tasks.id, String.raw`tsk\_e2e\_%`))).map((row) => row.id);
   const dropCopies = async () => {
-    if (copied.length > 0) await tx.delete(tasks).where(inArray(tasks.id, copied));
+    if (scratch.length > 0) {
+      const scratchOffers = (await tx.select({ id: offers.id }).from(offers).where(inArray(offers.taskId, scratch))).map((row) => row.id);
+      if (scratchOffers.length > 0) {
+        const offerThreads = (await tx.select({ id: threads.id }).from(threads).where(and(eq(threads.kind, 'offer'), inArray(threads.linkedId, scratchOffers)))).map((row) => row.id);
+        if (offerThreads.length > 0) {
+          await tx.delete(messages).where(inArray(messages.threadId, offerThreads));
+          await tx.delete(threadParticipants).where(inArray(threadParticipants.threadId, offerThreads));
+          await tx.delete(threads).where(inArray(threads.id, offerThreads));
+        }
+        await tx.delete(offers).where(inArray(offers.id, scratchOffers));
+      }
+    }
+    const drop = [...copied, ...scratch];
+    if (drop.length > 0) await tx.delete(tasks).where(inArray(tasks.id, drop));
   };
-  const taskIds = [...SEED_TASKS.map((task) => task.id), ...copied];
+  const taskIds = [...SEED_TASKS.map((task) => task.id), ...copied, ...scratch];
   await tx.delete(savedHelpers).where(inArray(savedHelpers.userId, people));
   // Notifications, preferences and privacy requests start over too (the e2e changes them).
   await tx.delete(notifications).where(inArray(notifications.userId, people));

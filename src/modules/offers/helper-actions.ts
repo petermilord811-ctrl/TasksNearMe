@@ -6,6 +6,7 @@ import type { ActionResult, OfferActionId, OfferInput, PriceBreakdown, PricingIn
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { helperOfferAction, quoteForHelper, reviseOffer, submitOffer } from './helper';
+import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind the helper work screens (src/contracts/helper-work.ts, HelperWorkHandlers). */
 
@@ -38,7 +39,7 @@ export async function quoteOfferAction(input: { pricing: PricingInput }): Promis
   if (!userId) throw new Error('Not signed in');
   const parsed = quoteInput.safeParse(input);
   if (!parsed.success) throw new Error('Invalid price');
-  const quote = await quoteForHelper(db, userId, parsed.data.pricing, new Date());
+  const quote = await quoteForHelper(db, userId, parsed.data.pricing, await requestNow());
   if (!quote) throw new Error('No fee schedule for this market');
   return quote;
 }
@@ -47,7 +48,7 @@ export async function quoteOfferAction(input: { pricing: PricingInput }): Promis
 export async function submitOfferAction(taskId: string, input: OfferInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await submitOffer(db, userId, String(taskId), input, new Date());
+  const result = await submitOffer(db, userId, String(taskId), input, await requestNow());
   if (result.ok) afterOfferChange();
   return result;
 }
@@ -56,7 +57,7 @@ export async function submitOfferAction(taskId: string, input: OfferInput): Prom
 export async function reviseOfferAction(taskId: string, input: OfferInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await reviseOffer(db, userId, String(taskId), input, new Date());
+  const result = await reviseOffer(db, userId, String(taskId), input, await requestNow());
   if (result.ok) afterOfferChange();
   return result;
 }
@@ -65,7 +66,7 @@ export async function reviseOfferAction(taskId: string, input: OfferInput): Prom
 export async function helperOfferActionHandler(input: { offerId: string; action: OfferActionId }): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await helperOfferAction(db, userId, String(input.offerId), input.action, new Date());
+  const result = await helperOfferAction(db, userId, String(input.offerId), input.action, await requestNow());
   if (result.ok && !result.redirectTo) afterOfferChange();
   return result;
 }

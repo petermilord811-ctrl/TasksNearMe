@@ -6,6 +6,7 @@ import { createPaymentProvider } from '@/integrations/payments';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { cancelAvailabilityPost, createAvailabilityPost, helperAreaOf } from './service';
+import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind `/app/availability` (src/contracts/availability.ts). */
 
@@ -24,7 +25,7 @@ async function changed(userId: string): Promise<void> {
 export async function createAvailabilityPostAction(input: AvailabilityPostInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await createAvailabilityPost(db, userId, input, new Date());
+  const result = await createAvailabilityPost(db, userId, input, await requestNow());
   if (result.ok) await changed(userId);
   return result;
 }
@@ -32,7 +33,7 @@ export async function createAvailabilityPostAction(input: AvailabilityPostInput)
 export async function cancelAvailabilityPostAction(input: { postId: string }): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await cancelAvailabilityPost(db, createPaymentProvider(), userId, String(input.postId), new Date());
+  const result = await cancelAvailabilityPost(db, createPaymentProvider(), userId, String(input.postId), await requestNow());
   if (result.ok) await changed(userId);
   return result;
 }

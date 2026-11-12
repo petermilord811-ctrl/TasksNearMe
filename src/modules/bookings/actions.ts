@@ -5,6 +5,7 @@ import type { ConfirmBookingInput, PaymentAttemptResult } from '@/contracts';
 import { getViewer } from '@/platform/auth/viewer';
 import { confirmBooking, finishBankVerification } from './confirm';
 import { bookingDeps } from './server';
+import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind the confirmation page (src/contracts/bookings.ts, BookingConfirmHandlers). */
 
@@ -29,7 +30,7 @@ export async function confirmBookingAction(taskId: string, offerId: string, inpu
   const userId = await signedInUserId();
   const deps = bookingDeps();
   if (!userId || !deps) return { ok: false, code: 'not_allowed' };
-  return afterAttempt(await confirmBooking(deps, userId, String(taskId), String(offerId), input, new Date()));
+  return afterAttempt(await confirmBooking(deps, userId, String(taskId), String(offerId), input, await requestNow()));
 }
 
 export async function finishBankVerificationAction(input: { paymentId: string; outcome: 'approved' | 'failed' }): Promise<PaymentAttemptResult> {
@@ -37,5 +38,5 @@ export async function finishBankVerificationAction(input: { paymentId: string; o
   const deps = bookingDeps();
   if (!userId || !deps) return { ok: false, code: 'not_allowed' };
   const outcome = input.outcome === 'approved' ? 'approved' : 'failed';
-  return afterAttempt(await finishBankVerification(deps, userId, String(input.paymentId), outcome, new Date()));
+  return afterAttempt(await finishBankVerification(deps, userId, String(input.paymentId), outcome, await requestNow()));
 }

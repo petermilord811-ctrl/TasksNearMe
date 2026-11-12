@@ -21,6 +21,7 @@ import {
   phoneVerification,
 } from './server';
 import { displayNameOf, RESEND_AFTER_SECONDS, resolveSignInStep, safeNextPath } from './steps';
+import { requestNow } from '@/platform/clock';
 
 /**
  * Server Actions behind SignInScreen (src/contracts/auth.ts). The page binds `next` into each
@@ -41,7 +42,7 @@ async function continueAfterSignIn(rawNext: string, userId: string, code: 'updat
     const pending = await phoneVerification.pending(userId);
     const resolution = resolveSignInStep({
       next,
-      now: new Date(),
+      now: await requestNow(),
       user,
       ...(pending ? { pendingPhone: { maskedPhone: pending.maskedPhone, resendAvailableAt: pending.resendAvailableAt } } : {}),
     });
@@ -80,7 +81,7 @@ export async function resendEmailCode(_next: string): Promise<ActionResult> {
     refresh();
     return { ok: false, code: 'expired' };
   }
-  if (pending.resendAvailableAt > new Date()) return rateLimited(pending.resendAvailableAt);
+  if (pending.resendAvailableAt > await requestNow()) return rateLimited(pending.resendAvailableAt);
   return sendEmailCode(pending.email);
 }
 
@@ -131,7 +132,7 @@ export async function saveProfile(next: string, input: ProfileInput): Promise<Ac
   const parsed = profileInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
 
-  const now = new Date();
+  const now = await requestNow();
   const { firstName, lastName } = parsed.data;
   await db
     .update(users)

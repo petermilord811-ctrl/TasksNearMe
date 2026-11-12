@@ -23,6 +23,8 @@ export const REVIEW_PAGE_READY = true;
 export const REQUEST_PAGE_READY = true;
 /** Rebooking proposals (UI-032): on once their pages are wired. */
 export const REBOOK_PAGES_READY = true;
+/** The person reported as a no-show can contest it this long after the cancellation (blueprint 02 §4). */
+export const CONTEST_WINDOW_MS = 24 * HOUR;
 
 export interface BookingFacts {
   status: BookingStatus | string;
@@ -40,6 +42,14 @@ export interface BookingFacts {
   reviewed?: boolean;
   reviewWindowOpen?: boolean;
   helperSaved?: boolean;
+  /**
+   * Canceled bookings: why and when, the task as it is now (a replacement reopens it), and whether the
+   * viewer already contested the no-show report.
+   */
+  cancelReason?: string | null;
+  canceledAt?: Date | null;
+  task?: { status: string; windowEnd: Date; hidden: boolean };
+  contested?: boolean;
 }
 
 export interface BookingPolicy {
@@ -69,8 +79,30 @@ export function bookingActions(booking: BookingFacts, role: BookingViewerRole, n
   return at === -1 ? [...actions, ...extra] : [...actions.slice(0, at), ...extra, ...actions.slice(at)];
 }
 
+/**
+ * After a cancellation (blueprint 03 §4, ui-contract §6): when the helper canceled or didn't show, the
+ * client can reopen the task while its window is ahead (**Find a replacement**), and after a helper
+ * cancellation ask the same helper again (Book again); the person reported as a no-show can contest it for
+ * 24 h, which opens a support case.
+ */
+function canceledActions(booking: BookingFacts, role: BookingViewerRole, now: Date): ActionDescriptor<BookingActionId>[] {
+  const actions: ActionDescriptor<BookingActionId>[] = [];
+  const byHelper = booking.cancelReason === 'helper' || booking.cancelReason === 'helper_no_show';
+  const task = booking.task;
+  if (role === 'poster' && byHelper && task && task.status === 'canceled' && !task.hidden && now < task.windowEnd) {
+    actions.push(make('find_replacement', 'primary'));
+  }
+  // The helper canceled (not a no-show): the client can still ask them for another time.
+  if (role === 'poster' && booking.cancelReason === 'helper' && REQUEST_PAGE_READY) actions.push(make('book_again', 'secondary'));
+  const reported = booking.cancelReason === 'helper_no_show' ? 'helper' : booking.cancelReason === 'poster_no_show' ? 'poster' : null;
+  const contestOpen = booking.canceledAt && now.getTime() < booking.canceledAt.getTime() + CONTEST_WINDOW_MS;
+  if (reported === role && !booking.contested && contestOpen) actions.push(make('contest_no_show', 'secondary'));
+  return actions;
+}
+
 function baseActions(booking: BookingFacts, role: BookingViewerRole, now: Date): ActionDescriptor<BookingActionId>[] {
   const calendar = make('add_to_calendar', 'secondary');
+  if (booking.status === 'canceled') return canceledActions(booking, role, now);
   if (role === 'poster') {
     switch (booking.status) {
       case 'pending_funding':

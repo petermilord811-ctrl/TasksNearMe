@@ -9,6 +9,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { SupportScreen } from '@/ui/screens/support';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Support', robots: { index: false } };
 
@@ -25,5 +26,5 @@ async function Support() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.support()));
   const data = await getSupportPage(db, viewer.user.id);
-  return <SupportScreen data={data} now={new Date().toISOString()} handlers={{ onCreate: createSupportRequestAction, onUploadPhoto: uploadEvidencePhoto }} />;
+  return <SupportScreen data={data} now={(await requestNow()).toISOString()} handlers={{ onCreate: createSupportRequestAction, onUploadPhoto: uploadEvidencePhoto }} />;
 }

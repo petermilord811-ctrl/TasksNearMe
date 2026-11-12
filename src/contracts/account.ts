@@ -47,6 +47,10 @@ export const NOTIFICATION_TYPES = [
   'rebook_accepted',
   /** The client declined the helper's proposal (UI-032). */
   'rebook_declined',
+  /** A task the helper offered on is open again: its helper canceled and the client is finding a replacement. */
+  'task_reopened',
+  /** The client hasn't approved submitted work: it's approved automatically in `params.hours` (24 h and 4 h before). */
+  'approval_reminder',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -57,7 +61,7 @@ export interface NotificationView {
   title?: string;
   /** Who did it ("Jordan T."). */
   actorName?: string;
-  params?: { amountCents?: Cents; minutes?: number };
+  params?: { amountCents?: Cents; minutes?: number; hours?: number };
   /** Where it leads (same targets as the home's attention items). */
   target: AttentionTarget;
   createdAt: ISODateTime;

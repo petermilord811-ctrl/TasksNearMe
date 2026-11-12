@@ -6,6 +6,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { bookingDeps } from './server';
 import { cancelBookingBy, previewCancellation, reportCantAccess, reportNoShow, reportRunningLate, submitSafetyReport } from './sheets';
+import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind the booking sheets (BookingSheetHandlers). Each is bound to the booking by the page. */
 
@@ -21,7 +22,7 @@ function refreshed(result: ActionResult): ActionResult {
 
 export async function previewCancelAction(bookingId: string, _input: Record<string, never>): Promise<CancellationPreview> {
   const userId = await signedInUserId();
-  const preview = userId ? await previewCancellation(db, userId, String(bookingId), new Date()) : null;
+  const preview = userId ? await previewCancellation(db, userId, String(bookingId), await requestNow()) : null;
   if (!preview) throw new Error('No cancellation preview for this booking');
   return preview;
 }
@@ -30,7 +31,7 @@ export async function cancelBookingAction(bookingId: string, input: CancelBookin
   const userId = await signedInUserId();
   const deps = bookingDeps();
   if (!userId || !deps) return { ok: false, code: 'not_allowed' };
-  const result = await cancelBookingBy(deps, userId, String(bookingId), input, new Date());
+  const result = await cancelBookingBy(deps, userId, String(bookingId), input, await requestNow());
   if (result.ok) updateTag('tasks');
   return refreshed(result);
 }
@@ -38,24 +39,24 @@ export async function cancelBookingAction(bookingId: string, input: CancelBookin
 export async function runningLateAction(bookingId: string, input: { minutes: LateByMinutes }): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  return refreshed(await reportRunningLate(db, userId, String(bookingId), input.minutes, new Date()));
+  return refreshed(await reportRunningLate(db, userId, String(bookingId), input.minutes, await requestNow()));
 }
 
 export async function reportNoShowAction(bookingId: string, input: BookingNoteInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   const deps = bookingDeps();
   if (!userId || !deps) return { ok: false, code: 'not_allowed' };
-  return refreshed(await reportNoShow(deps, userId, String(bookingId), input, new Date()));
+  return refreshed(await reportNoShow(deps, userId, String(bookingId), input, await requestNow()));
 }
 
 export async function cantAccessAction(bookingId: string, input: BookingNoteInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  return refreshed(await reportCantAccess(db, userId, String(bookingId), input, new Date()));
+  return refreshed(await reportCantAccess(db, userId, String(bookingId), input, await requestNow()));
 }
 
 export async function safetyReportAction(bookingId: string, input: SafetyReportInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  return submitSafetyReport(db, userId, String(bookingId), input, new Date());
+  return submitSafetyReport(db, userId, String(bookingId), input, await requestNow());
 }

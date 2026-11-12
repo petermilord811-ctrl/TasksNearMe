@@ -41,7 +41,9 @@
     "invite_accepted": "{actorName} accepted your booking request for {title}. You're booked",
     "rebook_proposed": "{actorName} proposed a booking: {title}. Review the details",
     "rebook_accepted": "{actorName} accepted your proposal for {title}. You're booked",
-    "rebook_declined": "{actorName} declined your proposal for {title}. No booking was made"
+    "rebook_declined": "{actorName} declined your proposal for {title}. No booking was made",
+    "task_reopened": "The client is looking for a new helper for {title}. Make an offer if you can still help",
+    "approval_reminder": "Approve {title} or report a problem. It's approved automatically {hasHours, select, yes {in {hours, plural, one {# hour} other {# hours}}} other {soon}}"
   },
   "previews": {
     "group": "Notifications",

@@ -7,13 +7,14 @@ import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { moderateTask } from './moderation';
+import { requestNow } from '@/platform/clock';
 
 /** Staff moderate a task (UI-033); the public pages that list it are refreshed. */
 export async function moderateTaskAction(taskId: string, input: TaskModerationInput): Promise<ActionResult> {
   const viewer = await getViewer();
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) return { ok: false, code: 'not_allowed' };
-  const outcome = await moderateTask(db, staff, String(taskId), input, new Date());
+  const outcome = await moderateTask(db, staff, String(taskId), input, await requestNow());
   if (outcome.result.ok) {
     updateTag('tasks');
     if (outcome.slug) updateTag(`task:${outcome.slug}`);

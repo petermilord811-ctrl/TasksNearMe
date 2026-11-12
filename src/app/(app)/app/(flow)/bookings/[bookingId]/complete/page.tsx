@@ -8,6 +8,7 @@ import { hubDeps } from '@/modules/bookings/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { CompletionScreen } from '@/ui/screens/bookings';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Mark the work complete', robots: { index: false } };
 
@@ -23,7 +24,7 @@ export default function CompletePage({ params }: PageProps<'/app/bookings/[booki
 async function Complete({ params }: Pick<PageProps<'/app/bookings/[bookingId]/complete'>, 'params'>) {
   const [{ bookingId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.bookingComplete(bookingId)));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getCompletionPage(hubDeps(), viewer.user.id, bookingId, now);
   if (!data) notFound();
   return (

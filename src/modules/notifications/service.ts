@@ -12,6 +12,7 @@ import type {
 } from '@/contracts';
 import { accountProfileInputSchema, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
+import { remindApprovalsDue } from '@/modules/bookings/reminders';
 import { bookings } from '@/modules/bookings/schema';
 import { offers } from '@/modules/offers/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
@@ -88,6 +89,14 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
         },
       ];
     }
+    case 'task.reopened': {
+      // Find a replacement: earlier offerers (never the helper who canceled) can offer again.
+      const taskId = text(p.taskId);
+      const helpers = Array.isArray(p.helperUserIds) ? p.helperUserIds.filter((id): id is string => typeof id === 'string') : [];
+      if (!taskId || helpers.length === 0) return [];
+      const title = await taskTitle(db, taskId);
+      return helpers.map((userId) => ({ userId, type: 'task_reopened' as const, target: { kind: 'find_work_task', taskId } as AttentionTarget, title }));
+    }
     case 'offer.declined': {
       const helper = text(p.helperUserId);
       const taskId = text(p.taskId);
@@ -99,6 +108,7 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
     case 'booking.completion_submitted':
     case 'booking.completed':
     case 'booking.disputed':
+    case 'booking.approval_reminder':
     case 'booking.canceled':
     case 'earnings.transferred':
     case 'reviews.published': {
@@ -122,6 +132,10 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
           return [forHelper('work_approved')];
         case 'booking.disputed':
           return [forHelper('problem_reported')];
+        case 'booking.approval_reminder': {
+          const hours = typeof p.hours === 'number' ? p.hours : undefined;
+          return [forPoster('approval_reminder', hours ? { params: { hours } } : {})];
+        }
         case 'booking.canceled':
           return [forPoster('booking_canceled'), forHelper('booking_canceled')];
         case 'earnings.transferred': {
@@ -252,8 +266,12 @@ export async function unreadNotificationCount(db: Db, userId: string): Promise<n
   return row?.value ?? 0;
 }
 
-/** `/app/notifications`: the latest 50, newest first. */
+/**
+ * `/app/notifications`: the latest 50, newest first. The viewer's approval reminders due now are made first
+ * (the job runner makes everyone's every minute), so the page never waits for the next run.
+ */
 export async function getNotificationsPage(db: Db, userId: string, now: Date): Promise<NotificationsPageData> {
+  await remindApprovalsDue(db, now, { posterUserId: userId });
   await dispatchNotifications(db, now);
   const rows = await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(50);
   return {

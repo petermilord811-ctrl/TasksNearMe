@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { HelperTaskScreen } from '@/ui/screens/work';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Task', robots: { index: false } };
 
@@ -23,7 +24,7 @@ export default function HelperTaskPage({ params }: PageProps<'/app/find-work/[ta
 async function HelperTask({ params }: Pick<PageProps<'/app/find-work/[taskId]'>, 'params'>) {
   const [{ taskId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.findWorkTask(taskId)));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getHelperTaskView(db, viewer.user.id, taskId, now);
   if (!data) notFound();
   return (

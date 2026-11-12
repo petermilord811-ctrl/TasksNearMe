@@ -7,6 +7,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminAuditScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Audit log', robots: { index: false } };
 
@@ -26,5 +27,5 @@ async function AdminAudit({ searchParams }: Pick<PageProps<'/admin/audit'>, 'sea
   const { filters, before } = parseAuditQuery(params);
   const data = await getAdminAuditPage(db, staff, filters, before);
   if (!data) notFound();
-  return <AdminAuditScreen data={data} now={new Date().toISOString()} />;
+  return <AdminAuditScreen data={data} now={(await requestNow()).toISOString()} />;
 }

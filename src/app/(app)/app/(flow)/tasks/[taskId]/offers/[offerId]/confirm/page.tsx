@@ -8,6 +8,7 @@ import { bookingDeps } from '@/modules/bookings/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { BookingConfirmScreen } from '@/ui/screens/bookings';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Confirm and pay', robots: { index: false } };
 
@@ -25,7 +26,7 @@ async function Confirm({ params }: Pick<PageProps<'/app/tasks/[taskId]/offers/[o
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.confirmOffer(taskId, offerId)));
   const deps = bookingDeps();
   if (!deps) notFound();
-  const now = new Date();
+  const now = await requestNow();
   const page = await getBookingConfirmPage(deps, viewer.user.id, taskId, offerId, now);
   if (!page) notFound();
   if (page.kind === 'booked') redirect(routes.app.booking(page.bookingId));

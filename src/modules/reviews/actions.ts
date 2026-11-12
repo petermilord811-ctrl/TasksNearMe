@@ -7,6 +7,7 @@ import { helperProfiles } from '@/modules/profiles/schema';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { setHelperSaved, submitReview } from './service';
+import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind the review and saved-helpers pages (src/contracts/reviews.ts). */
 
@@ -19,7 +20,7 @@ async function signedInUserId(): Promise<string | null> {
 export async function submitReviewAction(bookingId: string, input: ReviewInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const { result, ratedHelperId } = await submitReview(db, userId, String(bookingId), input, new Date());
+  const { result, ratedHelperId } = await submitReview(db, userId, String(bookingId), input, await requestNow());
   if (ratedHelperId) {
     const [profile] = await db.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, ratedHelperId)).limit(1);
     updateTag('helpers');
@@ -31,7 +32,7 @@ export async function submitReviewAction(bookingId: string, input: ReviewInput):
 export async function toggleSavedHelperAction(input: { helperId: string; saved: boolean }): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await setHelperSaved(db, userId, String(input.helperId), Boolean(input.saved), new Date());
+  const result = await setHelperSaved(db, userId, String(input.helperId), Boolean(input.saved), await requestNow());
   if (result.ok) refresh();
   return result;
 }

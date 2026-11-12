@@ -9,6 +9,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { HelpersBrowseScreen } from '@/ui/screens/browse';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Find helpers', robots: { index: false } };
 
@@ -26,6 +27,6 @@ async function Helpers({ searchParams }: Pick<PageProps<'/app/helpers'>, 'search
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.helpers()));
   const market = await findPublicMarket(DEFAULT_MARKET_SLUG);
   if (!market) notFound();
-  const data = await getHelpersBrowse(db, viewer.user.id, market.id, parseHelperBrowseQuery(params), new Date());
+  const data = await getHelpersBrowse(db, viewer.user.id, market.id, parseHelperBrowseQuery(params), await requestNow());
   return <HelpersBrowseScreen data={data} handlers={{ onToggleSaved: toggleSavedHelperAction }} />;
 }

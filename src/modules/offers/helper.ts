@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, lte, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNull, lte, or, type SQL } from 'drizzle-orm';
 import type {
   ActionResult,
   CategorySlug,
@@ -170,7 +170,9 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
     ? await db
         .select({ id: offers.id, taskId: offers.taskId, status: offers.status, expiresAt: offers.expiresAt })
         .from(offers)
-        .where(and(eq(offers.helperUserId, userId), inArray(offers.taskId, taskIds)))
+        .innerJoin(tasks, eq(tasks.id, offers.taskId))
+        // Offers made before Find a replacement reopened a task belong to the canceled booking.
+        .where(and(eq(offers.helperUserId, userId), inArray(offers.taskId, taskIds), or(isNull(tasks.reopenedAt), gte(offers.createdAt, tasks.reopenedAt))))
         .orderBy(desc(offers.createdAt))
     : [];
   const latestOffer = new Map<string, { id: string; status: OfferStatus }>();
@@ -280,8 +282,10 @@ export async function getHelperTaskView(db: Db, userId: string, taskId: string, 
     .limit(1);
   // A task that no longer takes offers (or that staff hid) is shown only to helpers who offered on it.
   if ((row.task.status !== 'open' || row.task.hiddenAt) && !latest) return null;
-  // The offer shows while it's in play or booked; after a decline, withdrawal or expiry the helper may offer again.
-  const offerRow = latest && [...ACTIVE, 'accepted'].includes(latest.status as OfferStatus) ? latest : undefined;
+  // The offer shows while it's in play or booked; after a decline, withdrawal or expiry the helper may offer
+  // again, and so after Find a replacement reopened the task (earlier offers belong to the canceled booking).
+  const thisRound = latest && (!row.task.reopenedAt || latest.createdAt >= row.task.reopenedAt) ? latest : undefined;
+  const offerRow = thisRound && [...ACTIVE, 'accepted'].includes(thisRound.status as OfferStatus) ? thisRound : undefined;
 
   const point = row.task.publicLat !== null && row.task.publicLng !== null ? { lat: row.task.publicLat, lng: row.task.publicLng } : null;
   const distanceMiles = state.center && point && row.task.mode !== 'remote' ? milesBetween(state.center, point) : null;

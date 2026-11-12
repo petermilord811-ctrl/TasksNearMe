@@ -7,6 +7,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminPaymentsScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Payments', robots: { index: false } };
 
@@ -24,7 +25,7 @@ async function AdminPayments({ searchParams }: Pick<PageProps<'/admin/payments'>
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? '';
-  const now = new Date();
+  const now = await requestNow();
   const data = await getAdminPayments(db, { tab: parseAdminMoneyTab(first(params.tab)), query: first(params.q) }, now);
   return <AdminPaymentsScreen data={data} now={now.toISOString()} />;
 }

@@ -5,6 +5,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { MyTasksScreen } from '@/ui/screens/tasks';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'My tasks' };
 
@@ -20,6 +21,6 @@ export default function MyTasksPage() {
 async function MyTasks() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') return null; // the layout sends visitors to sign-in
-  const now = new Date();
+  const now = await requestNow();
   return <MyTasksScreen data={await getMyTasks(db, viewer.user.id, now)} now={now.toISOString()} />;
 }

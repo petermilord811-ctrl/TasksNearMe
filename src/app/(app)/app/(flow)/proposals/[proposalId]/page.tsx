@@ -9,6 +9,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ProposalScreen } from '@/ui/screens/clients';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Booking proposal', robots: { index: false } };
 
@@ -27,7 +28,7 @@ export default function ProposalPage({ params }: PageProps<'/app/proposals/[prop
 async function Proposal({ params }: Pick<PageProps<'/app/proposals/[proposalId]'>, 'params'>) {
   const [{ proposalId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.proposal(proposalId)));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getProposalPage(db, bookingDeps()?.payments ?? null, hubDeps().cipher, viewer.user.id, proposalId, now);
   if (!data) notFound();
   return (

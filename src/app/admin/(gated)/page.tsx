@@ -6,6 +6,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminHomeScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Queues', robots: { index: false } };
 
@@ -22,6 +23,6 @@ async function AdminHome() {
   const viewer = await getViewer();
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
-  const now = new Date();
+  const now = await requestNow();
   return <AdminHomeScreen data={await getAdminHome(db, staff, now)} now={now.toISOString()} />;
 }

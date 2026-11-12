@@ -365,7 +365,22 @@ export const deskBookingPosterCanceledByHelper: BookingView = {
     { id: 'evt_rh', at: '2026-11-19T18:00:00.000Z', actor: 'system', type: 'refund_issued', params: { amountCents: 6600 } },
   ],
   payments: [deskCharge, { id: 'ref_desk_h', kind: 'refund', amountCents: 6600, status: 'succeeded', at: '2026-11-19T18:00:00.000Z' }],
-  actions: [action('find_replacement', 'primary')],
+  actions: [action('find_replacement', 'primary'), action('book_again', 'secondary'), action('message', 'secondary')],
+};
+
+/** Maya reported Jordan as a no-show 31 minutes after the start: Jordan can contest it for 24 h. */
+export const deskBookingHelperNoShowReported: BookingView = {
+  ...deskBookingPosterCanceledByHelper,
+  viewerRole: 'helper',
+  cancelReason: 'helper_no_show',
+  exactAddress: undefined,
+  addressVisibility: 'hidden_after_completion',
+  payments: undefined,
+  timeline: [
+    ...deskTimelineCompleted.slice(0, 4),
+    { id: 'evt_ns', at: '2026-11-21T17:01:00.000Z', actor: 'helper', actorName: 'Jordan T.', type: 'canceled' },
+  ],
+  actions: [action('contest_no_show', 'secondary'), action('message', 'secondary')],
 };
 
 /** `moving.confirmed` from Chris's side: $35/h, 4 h cap, $154.00 charged; unused hours come back. */

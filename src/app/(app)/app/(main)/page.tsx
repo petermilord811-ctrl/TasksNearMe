@@ -7,6 +7,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { HomeScreen } from '@/ui/screens/home';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Home', robots: { index: false } };
 
@@ -22,7 +23,7 @@ export default function AppHomePage() {
 async function Home() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.home()));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getAppHome(db, { id: viewer.user.id, firstName: viewer.user.firstName, mode: viewer.user.mode }, now);
   return <HomeScreen data={data} now={now.toISOString()} />;
 }

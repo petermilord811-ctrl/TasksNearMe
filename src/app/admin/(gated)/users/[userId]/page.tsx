@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminUserScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Person', robots: { index: false } };
 
@@ -24,7 +25,7 @@ async function AdminUser({ params }: Pick<PageProps<'/admin/users/[userId]'>, 'p
   const [{ userId }, viewer] = await Promise.all([params, getViewer()]);
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
-  const now = new Date();
+  const now = await requestNow();
   const data = await getAdminUser(db, staff, userId, now);
   if (!data) notFound();
   return <AdminUserScreen data={data} now={now.toISOString()} handlers={{ onSuspension: setHelperSuspensionAction.bind(null, userId) }} />;

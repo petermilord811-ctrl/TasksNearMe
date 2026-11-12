@@ -9,6 +9,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminConfigScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Config', robots: { index: false } };
 
@@ -30,7 +31,7 @@ async function AdminConfig() {
   return (
     <AdminConfigScreen
       data={data}
-      now={new Date().toISOString()}
+      now={(await requestNow()).toISOString()}
       handlers={{ onPublishPolicy: publishPolicyAction.bind(null, data.market.id, data.market.slug), onSetFlag: setFeatureFlagAction.bind(null, data.market.slug) }}
     />
   );

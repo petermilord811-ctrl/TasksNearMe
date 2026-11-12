@@ -7,7 +7,7 @@ import {
 import {
   bookingsEmptyData, deskBookingHelperCompleted, deskBookingHelperCompletedAddressHidden,
   deskBookingHelperConfirmed, deskBookingHelperDayOf, deskBookingHelperInProgress,
-  deskBookingHelperPendingFunding, deskBookingHelperRunningLate, deskBookingPosterCanceledByHelper, deskBookingPosterCanceledLate,
+  deskBookingHelperNoShowReported, deskBookingHelperPendingFunding, deskBookingHelperRunningLate, deskBookingPosterCanceledByHelper, deskBookingPosterCanceledLate,
   deskBookingPosterCompleted, deskBookingPosterCompletionSubmitted, deskBookingPosterConfirmed,
   deskBookingPosterDisputed, deskBookingHelperDisputed, deskBookingHelperDisputedContacted,
   deskBookingPosterSettled, deskBookingHelperSettled,
@@ -97,6 +97,7 @@ export const bookingsPreviews: PreviewEntry[] = [
   hubPreview('helper-canceled', copy.previews.helperCanceled, {
     ...deskBookingPosterCanceledByHelper, viewerRole: 'helper', exactAddress: undefined, payments: undefined, actions: [],
   }),
+  hubPreview('helper-no-show-contest', copy.previews.helperNoShowContest, deskBookingHelperNoShowReported, { now: '2026-11-21T18:00:00.000Z' }),
   hubPreview('client-hourly', copy.previews.clientHourly, movingBookingPosterConfirmed),
   hubPreview('helper-remote', copy.previews.helperRemote, remoteBookingHelperConfirmed),
   hubPreview('client-in-progress', copy.previews.clientInProgress, {

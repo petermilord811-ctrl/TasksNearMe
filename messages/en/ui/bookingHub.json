@@ -23,6 +23,7 @@
     "clientCanceledLate": "Client · late cancellation",
     "clientCanceledByHelper": "Client · helper canceled",
     "helperCanceled": "Helper · canceled",
+    "helperNoShowContest": "Helper · reported as a no-show, can contest",
     "clientHourly": "Client · hourly task and allowance",
     "helperRemote": "Helper · remote task",
     "clientInProgress": "Client · in progress",

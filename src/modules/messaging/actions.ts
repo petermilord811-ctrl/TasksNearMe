@@ -7,6 +7,7 @@ import { fileStorage } from '@/modules/tasks/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { sendMessage } from './service';
+import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind the conversation page (src/contracts/messaging.ts, ThreadHandlers). */
 
@@ -19,7 +20,7 @@ async function signedInUserId(): Promise<string | null> {
 export async function sendMessageAction(threadId: string, input: SendMessageInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await sendMessage(db, userId, String(threadId), input, new Date());
+  const result = await sendMessage(db, userId, String(threadId), input, await requestNow());
   if (result.ok) refresh();
   return result;
 }

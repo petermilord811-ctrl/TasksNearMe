@@ -8,6 +8,7 @@ import { hubDeps } from '@/modules/bookings/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { ReportProblemScreen } from '@/ui/screens/bookings';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Report a problem', robots: { index: false } };
 
@@ -23,7 +24,7 @@ export default function ProblemPage({ params }: PageProps<'/app/bookings/[bookin
 async function Problem({ params }: Pick<PageProps<'/app/bookings/[bookingId]/problem'>, 'params'>) {
   const [{ bookingId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.bookingProblem(bookingId)));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getReportProblemPage(hubDeps(), viewer.user.id, bookingId, now);
   if (!data) notFound();
   return (

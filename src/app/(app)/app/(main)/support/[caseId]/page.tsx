@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { SupportCaseScreen } from '@/ui/screens/support';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Support case', robots: { index: false } };
 
@@ -23,7 +24,7 @@ export default function SupportCasePage({ params }: PageProps<'/app/support/[cas
 async function SupportCase({ params }: Pick<PageProps<'/app/support/[caseId]'>, 'params'>) {
   const [{ caseId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.supportCase(caseId)));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getSupportCasePage(db, viewer.user.id, caseId, now);
   if (!data) notFound();
   return <SupportCaseScreen data={data} now={now.toISOString()} handlers={{ onReply: replyToSupportCaseAction.bind(null, caseId) }} />;

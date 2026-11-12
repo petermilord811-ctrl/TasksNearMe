@@ -12,6 +12,7 @@ import { offerThreadId } from '@/modules/messaging/service';
 import { posterOfferActions } from './domain';
 import { cancelTask, declineOffer } from './owner';
 import { offers } from './schema';
+import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind the owner screens (src/contracts/offers.ts, TaskOwnerHandlers). */
 
@@ -37,18 +38,18 @@ export async function posterOfferAction(input: { offerId: string; action: OfferA
   if (!row) return { ok: false, code: 'not_found' };
 
   // Only actions the domain offers right now are allowed.
-  const allowed = posterOfferActions(row.offer, row.task, new Date()).find((action) => action.id === input.action);
+  const allowed = posterOfferActions(row.offer, row.task, await requestNow()).find((action) => action.id === input.action);
   if (!allowed?.enabled) return { ok: false, code: 'not_allowed' };
 
   switch (input.action) {
     case 'book_offer':
       return { ok: true, code: 'updated', redirectTo: routes.app.confirmOffer(row.task.id, row.offer.id) };
     case 'message_helper': {
-      const threadId = await offerThreadId(db, row.offer.id, new Date());
+      const threadId = await offerThreadId(db, row.offer.id, await requestNow());
       return threadId ? { ok: true, code: 'updated', redirectTo: routes.app.thread(threadId) } : { ok: false, code: 'not_found' };
     }
     case 'decline_offer': {
-      const result = await declineOffer(db, userId, row.offer.id, new Date());
+      const result = await declineOffer(db, userId, row.offer.id, await requestNow());
       if (result.ok) refreshTaskPages(row.task.slug);
       return result;
     }
@@ -81,7 +82,7 @@ export async function cancelTaskAction(taskId: string, input: { reason: TaskCanc
     return { ok: false, code: 'validation_failed', fieldErrors: { reason: ['required'] } };
   }
   const [task] = await db.select({ slug: tasks.slug }).from(tasks).where(eq(tasks.id, String(taskId))).limit(1);
-  const result = await cancelTask(db, userId, String(taskId), input.reason, new Date());
+  const result = await cancelTask(db, userId, String(taskId), input.reason, await requestNow());
   if (result.ok) refreshTaskPages(task?.slug);
   return result;
 }

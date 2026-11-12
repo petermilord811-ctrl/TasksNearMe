@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminStaffScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Staff', robots: { index: false } };
 
@@ -26,5 +27,5 @@ async function AdminStaff() {
   if (!staff) notFound();
   const data = await getAdminStaff(db, staff);
   if (!data) notFound();
-  return <AdminStaffScreen data={data} now={new Date().toISOString()} handlers={{ onGrant: grantStaffRoleAction, onRemove: removeStaffRoleAction }} />;
+  return <AdminStaffScreen data={data} now={(await requestNow()).toISOString()} handlers={{ onGrant: grantStaffRoleAction, onRemove: removeStaffRoleAction }} />;
 }

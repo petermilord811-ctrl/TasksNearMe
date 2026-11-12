@@ -16,6 +16,7 @@ import { hubDeps } from '@/modules/bookings/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { BookingHubScreen } from '@/ui/screens/bookings';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Booking', robots: { index: false } };
 
@@ -31,7 +32,7 @@ export default function BookingPage({ params }: PageProps<'/app/bookings/[bookin
 async function Booking({ params }: Pick<PageProps<'/app/bookings/[bookingId]'>, 'params'>) {
   const [{ bookingId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.booking(bookingId)));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getBookingView(hubDeps(), viewer.user.id, bookingId, now);
   if (!data) notFound();
   return (

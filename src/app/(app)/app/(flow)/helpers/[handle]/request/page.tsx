@@ -8,6 +8,7 @@ import { getRequestHelperPage } from '@/modules/invites/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { RequestHelperScreen } from '@/ui/screens/invites';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Request a helper', robots: { index: false } };
 
@@ -30,7 +31,7 @@ async function RequestHelper({ params, searchParams }: Pick<PageProps<'/app/help
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.requestHelper(handle, { fromBookingId: from, slotId })));
   const deps = bookingDeps();
   if (!deps) notFound();
-  const now = new Date();
+  const now = await requestNow();
   const data = await getRequestHelperPage(deps.db, deps.payments, viewer.user.id, handle, { fromBookingId: from, slotId }, now);
   if (!data) notFound();
   return (

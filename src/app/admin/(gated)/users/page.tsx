@@ -7,6 +7,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminUsersScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'People', robots: { index: false } };
 
@@ -24,5 +25,5 @@ async function AdminUsers({ searchParams }: Pick<PageProps<'/admin/users'>, 'sea
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
   const query = Array.isArray(params.q) ? (params.q[0] ?? '') : (params.q ?? '');
-  return <AdminUsersScreen data={await getAdminUsers(db, query)} now={new Date().toISOString()} />;
+  return <AdminUsersScreen data={await getAdminUsers(db, query)} now={(await requestNow()).toISOString()} />;
 }

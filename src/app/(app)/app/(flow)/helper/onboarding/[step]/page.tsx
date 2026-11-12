@@ -16,6 +16,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { HelperOnboardingScreen } from '@/ui/screens/helper';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Become a helper', robots: { index: false } };
 
@@ -33,7 +34,7 @@ async function Onboarding({ params }: Pick<PageProps<'/app/helper/onboarding/[st
   if (!(ONBOARDING_STEPS as readonly string[]).includes(raw)) notFound();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.helperOnboarding()));
   const step = raw as OnboardingStep;
-  const now = new Date();
+  const now = await requestNow();
 
   const goTo = await onboardingRedirect(db, viewer.user.id, step, now);
   if (goTo && goTo !== step) redirect(routes.app.helperOnboarding(goTo));

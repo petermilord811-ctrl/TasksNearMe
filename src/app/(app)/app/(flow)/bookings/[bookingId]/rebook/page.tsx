@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ProposeRebookScreen } from '@/ui/screens/clients';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Propose a booking', robots: { index: false } };
 
@@ -26,7 +27,7 @@ export default function RebookPage({ params }: PageProps<'/app/bookings/[booking
 async function Rebook({ params }: Pick<PageProps<'/app/bookings/[bookingId]/rebook'>, 'params'>) {
   const [{ bookingId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.bookingRebook(bookingId)));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getProposeRebookPage(db, viewer.user.id, bookingId, now);
   if (!data) notFound();
   return (

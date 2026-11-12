@@ -10,6 +10,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { MyOffersScreen } from '@/ui/screens/work';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'My offers', robots: { index: false } };
 
@@ -26,7 +27,7 @@ async function Offers({ searchParams }: Pick<PageProps<'/app/offers'>, 'searchPa
   const [viewer, query] = await Promise.all([getViewer(), searchParams]);
   const inviteId = typeof query.invite === 'string' ? query.invite : undefined;
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.offers(inviteId)));
-  const now = new Date();
+  const now = await requestNow();
   const [data, invites] = await Promise.all([getMyOffers(db, viewer.user.id, now), invitesForHelper(db, bookingDeps()?.payments ?? null, viewer.user.id, now)]);
   const openInviteId = inviteId && invites.some((invite) => invite.id === inviteId) ? inviteId : undefined;
   return <MyOffersScreen data={{ ...data, invites, ...(openInviteId ? { openInviteId } : {}) }} now={now.toISOString()} inviteHandlers={inviteHandlers} />;

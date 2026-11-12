@@ -7,6 +7,7 @@ import { ownerDepsFor } from '@/modules/offers/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { OfferDetailScreen } from '@/ui/screens/tasks';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Offer' };
 
@@ -23,7 +24,7 @@ async function OfferDetail({ params }: Pick<PageProps<'/app/tasks/[taskId]/offer
   const [{ taskId, offerId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') notFound();
   const deps = await ownerDepsFor(viewer.user.id);
-  const now = new Date();
+  const now = await requestNow();
   const data = deps ? await getOfferDetail(deps, viewer.user.id, taskId, offerId, now) : null;
   if (!data) notFound();
   return <OfferDetailScreen data={data} now={now.toISOString()} handlers={{ onOfferAction: posterOfferAction }} />;

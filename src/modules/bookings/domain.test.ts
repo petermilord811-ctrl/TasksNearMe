@@ -54,6 +54,35 @@ describe('booking actions', () => {
     expect(ids(bookingActions({ ...confirmed, remote: true }, 'helper', start))).toEqual(['submit_completion', 'message', 'propose_change', 'add_to_calendar']);
     expect(ids(bookingActions({ ...confirmed, status: 'in_progress' }, 'helper', start))).toEqual(['submit_completion', 'message', 'propose_change']);
   });
+
+  describe('after a cancellation', () => {
+    const canceledAt = at('2026-11-21T17:01:00.000Z');
+    const task = { status: 'canceled', windowEnd: at('2026-11-21T19:30:00.000Z'), hidden: false };
+    const canceled = (cancelReason: string, extra: Partial<BookingFacts> = {}): BookingFacts => ({ ...confirmed, status: 'canceled', cancelReason, canceledAt, task, contested: false, ...extra });
+
+    it('lets the client find a replacement when the helper canceled or did not show, while the window is ahead, and book the helper again after a cancellation', () => {
+      expect(ids(bookingActions(canceled('helper'), 'poster', canceledAt))).toEqual(['find_replacement', 'book_again', 'message']);
+      expect(bookingActions(canceled('helper'), 'poster', canceledAt)[0]?.kind).toBe('primary');
+      // After a no-show, a replacement but not the same helper again.
+      expect(ids(bookingActions(canceled('helper_no_show'), 'poster', canceledAt))).toEqual(['find_replacement', 'message']);
+      // Their own cancellation, a task already reopened, hidden by staff, or a window that's over: nothing to reopen.
+      expect(ids(bookingActions(canceled('poster_late'), 'poster', canceledAt))).toEqual(['message']);
+      expect(ids(bookingActions(canceled('helper', { task: { ...task, status: 'open' } }), 'poster', canceledAt))).toEqual(['book_again', 'message']);
+      expect(ids(bookingActions(canceled('helper', { task: { ...task, hidden: true } }), 'poster', canceledAt))).toEqual(['book_again', 'message']);
+      expect(ids(bookingActions(canceled('helper'), 'poster', task.windowEnd))).toEqual(['book_again', 'message']);
+      expect(ids(bookingActions(canceled('helper'), 'helper', canceledAt))).toEqual(['message']);
+    });
+
+    it('lets the person reported as a no-show contest it once, for 24 h', () => {
+      expect(ids(bookingActions(canceled('helper_no_show'), 'helper', canceledAt))).toEqual(['contest_no_show', 'message']);
+      expect(ids(bookingActions(canceled('poster_no_show'), 'poster', canceledAt))).toEqual(['contest_no_show', 'message']);
+      expect(ids(bookingActions(canceled('poster_no_show'), 'helper', canceledAt))).toEqual(['message']);
+      expect(ids(bookingActions(canceled('helper_no_show', { contested: true }), 'helper', canceledAt))).toEqual(['message']);
+      const dayLater = new Date(canceledAt.getTime() + 24 * 3_600_000);
+      expect(ids(bookingActions(canceled('helper_no_show'), 'helper', new Date(dayLater.getTime() - 1)))).toEqual(['contest_no_show', 'message']);
+      expect(ids(bookingActions(canceled('helper_no_show'), 'helper', dayLater))).toEqual(['message']);
+    });
+  });
 });
 
 describe('address visibility', () => {

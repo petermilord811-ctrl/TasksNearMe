@@ -5,6 +5,7 @@ import { routes, type IdentityFailureReason } from '@/contracts';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { recordBackgroundResult, recordIdentityResult, recordPayoutStatus } from './service';
+import { requestNow } from '@/platform/clock';
 
 /** Development only: the /dev/providers pages simulate each provider's hosted flow and webhook. */
 
@@ -24,7 +25,7 @@ export async function devIdentityOutcome(form: FormData): Promise<void> {
       : outcome === 'processing'
         ? ({ status: 'processing' } as const)
         : ({ status: 'requires_input', reason: FAILURES.includes(outcome as IdentityFailureReason) ? (outcome as IdentityFailureReason) : 'other' } as const);
-  await recordIdentityResult(db, session, result, new Date());
+  await recordIdentityResult(db, session, result, await requestNow());
   redirect(routes.app.helperOnboarding('identity'));
 }
 
@@ -34,7 +35,7 @@ export async function devPayoutOutcome(form: FormData): Promise<void> {
   if (viewer.kind !== 'user') redirect(routes.signIn());
   const outcome = String(form.get('outcome') ?? '');
   const status = outcome === 'active' || outcome === 'requirements_due' || outcome === 'restricted' ? outcome : 'pending';
-  await recordPayoutStatus(db, viewer.user.id, status, new Date());
+  await recordPayoutStatus(db, viewer.user.id, status, await requestNow());
   redirect(routes.app.helperOnboarding('payout'));
 }
 
@@ -43,6 +44,6 @@ export async function devBackgroundOutcome(form: FormData): Promise<void> {
   const check = String(form.get('check') ?? '');
   const outcome = String(form.get('outcome') ?? '');
   const status = outcome === 'clear' || outcome === 'consider' ? outcome : 'pending';
-  await recordBackgroundResult(db, check, status, new Date());
+  await recordBackgroundResult(db, check, status, await requestNow());
   redirect(routes.app.helperOnboarding('background'));
 }

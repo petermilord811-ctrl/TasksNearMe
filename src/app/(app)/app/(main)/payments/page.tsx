@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { PaymentsScreen } from '@/ui/screens/money';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Payments', robots: { index: false } };
 
@@ -23,7 +24,7 @@ export default function PaymentsPage() {
 async function Payments() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.payments()));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getPaymentsPage(db, viewer.user.id);
   return (
     <PaymentsScreen

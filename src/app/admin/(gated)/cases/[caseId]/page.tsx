@@ -17,6 +17,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminCaseScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Case', robots: { index: false } };
 
@@ -33,7 +34,7 @@ async function AdminCase({ params }: Pick<PageProps<'/admin/cases/[caseId]'>, 'p
   const [{ caseId }, viewer] = await Promise.all([params, getViewer()]);
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
-  const now = new Date();
+  const now = await requestNow();
   const found = await getAdminCase(db, staff, caseId, now);
   if (!found) notFound();
   const { data, version } = found;

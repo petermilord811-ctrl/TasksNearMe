@@ -2,12 +2,14 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { setMode, signOut } from '@/modules/accounts/actions';
+import { remindApprovalsDue } from '@/modules/bookings/reminders';
 import { unreadMessageCount } from '@/modules/messaging/service';
 import { dispatchNotifications, unreadNotificationCount } from '@/modules/notifications/service';
 import { getViewer, toSignedInViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AppShell, type AppShellProps } from '@/ui/shells';
+import { requestNow } from '@/platform/clock';
 
 type ShellLayout = NonNullable<AppShellProps['layout']>;
 
@@ -26,8 +28,11 @@ export function SignedInShell({ layout, children }: { layout: ShellLayout; child
 async function ViewerShell({ layout, children }: { layout: ShellLayout; children: React.ReactNode }) {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.home()));
-  // Notifications are made lazily from the outbox until a job runner does it (decisions.md).
-  await dispatchNotifications(db, new Date(), 50);
+  // The job runner does this every minute; doing it for the viewer too keeps pages current, and lets a
+  // time-travel test (the test clock moves this request's "now") see its reminders and notifications.
+  const now = await requestNow();
+  await remindApprovalsDue(db, now, { posterUserId: viewer.user.id });
+  await dispatchNotifications(db, now, 50);
   const [unreadMessages, unreadNotifications] = await Promise.all([unreadMessageCount(db, viewer.user.id), unreadNotificationCount(db, viewer.user.id)]);
   return (
     <AppShell viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications }} handlers={{ onModeChange: setMode, onSignOut: signOut }} layout={layout}>

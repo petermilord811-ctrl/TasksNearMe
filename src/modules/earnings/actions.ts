@@ -6,6 +6,7 @@ import { routes } from '@/contracts';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { addCard, makeDefaultCard, removeCard } from './service';
+import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind the money pages (src/contracts/earnings.ts). */
 
@@ -22,13 +23,13 @@ function refreshed(result: ActionResult): ActionResult {
 export async function addCardAction(input: AddCardInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  return refreshed(await addCard(db, userId, input, new Date()));
+  return refreshed(await addCard(db, userId, input, await requestNow()));
 }
 
 export async function removeCardAction(input: { methodId: string }): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  return refreshed(await removeCard(db, userId, String(input.methodId), new Date()));
+  return refreshed(await removeCard(db, userId, String(input.methodId), await requestNow()));
 }
 
 export async function makeDefaultCardAction(input: { methodId: string }): Promise<ActionResult> {

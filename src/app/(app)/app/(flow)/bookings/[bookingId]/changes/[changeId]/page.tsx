@@ -15,6 +15,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ChangeReviewScreen } from '@/ui/screens/bookings';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Change request', robots: { index: false } };
 
@@ -30,7 +31,7 @@ export default function ChangeReviewPage({ params }: PageProps<'/app/bookings/[b
 async function ChangeReview({ params }: Pick<PageProps<'/app/bookings/[bookingId]/changes/[changeId]'>, 'params'>) {
   const [{ bookingId, changeId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.bookingChange(bookingId, changeId)));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getChangeReviewPage(db, createPaymentProvider(), viewer.user.id, bookingId, changeId, now);
   if (!data) notFound();
   return (

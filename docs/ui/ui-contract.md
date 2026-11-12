@@ -289,7 +289,8 @@ interface MarketPolicyView { version: number; status: 'draft' | 'published' | 'r
 | `save_helper` | Poster | `completed` | Toggles saved |
 | `book_again` | Poster | `completed`, or `canceled` by the helper | Request page pre-filled |
 | `offer_rebook` | Helper | `completed` | Client proposal form |
-| `find_replacement` | Poster | `canceled` with reason `helper` or `helper_no_show` | Reopens the task |
+| `find_replacement` | Poster | `canceled` with reason `helper` or `helper_no_show`, the task's window still ahead, not yet reopened | Reopens the task (earlier offers stay with the canceled booking; earlier offerers are notified) and goes to it |
+| `contest_no_show` | The person reported | `canceled` with `helper_no_show` (helper) or `poster_no_show` (poster), within 24 h, once | Opens a `no_show` support case and goes to it |
 | `report_damage` | Poster | `completed`, within 14 days | New support case |
 | `safety_report` | Both | `confirmed`, `in_progress` | Safety sheet (911 first) |
 

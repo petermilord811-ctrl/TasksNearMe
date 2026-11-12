@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminTaskScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Task', robots: { index: false } };
 
@@ -24,7 +25,7 @@ async function AdminTask({ params }: Pick<PageProps<'/admin/tasks/[taskId]'>, 'p
   const [{ taskId }, viewer] = await Promise.all([params, getViewer()]);
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
-  const now = new Date();
+  const now = await requestNow();
   const data = await getAdminTaskPage(db, staff, taskId, now);
   if (!data) notFound();
   return <AdminTaskScreen data={data} now={now.toISOString()} handlers={{ onModerate: moderateTaskAction.bind(null, taskId) }} />;

@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { EarningsScreen } from '@/ui/screens/money';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Earnings', robots: { index: false } };
 
@@ -23,7 +24,7 @@ export default function EarningsPage() {
 async function Earnings() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.earnings()));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getEarningsPage(db, viewer.user.id, now);
   return <EarningsScreen data={data} now={now.toISOString()} handlers={{ onOpenPayoutDashboard: openPayoutDashboardAction }} />;
 }

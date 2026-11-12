@@ -79,6 +79,11 @@ export const tasks = pgTable(
     offerCount: integer('offer_count').notNull().default(0),
     aiGenerationId: text('ai_generation_id'),
     publishedAt: timestamp('published_at', { withTimezone: true }),
+    /**
+     * Find a replacement reopened the task after its helper canceled: offers from before this belong to the
+     * canceled booking, so the poster's list and the helpers' "my offer" only count offers made since.
+     */
+    reopenedAt: timestamp('reopened_at', { withTimezone: true }),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     version: integer('version').notNull().default(1),
     /**

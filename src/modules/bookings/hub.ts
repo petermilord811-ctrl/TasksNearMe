@@ -35,6 +35,7 @@ import { isHelperSaved, myReviewOf, setHelperSaved } from '@/modules/reviews/ser
 import { getBookingDispute } from '@/modules/support/service';
 import { bookingOpenChange } from './changes';
 import { bookingThreadLink, ensureThread, postEvent } from '@/modules/messaging/service';
+import { canceledFacts, contestNoShow, reopenForReplacement, type ReopenedTask } from './after-cancel';
 import { autoApproveDue, completionViewOf } from './completion-view';
 import { addressVisibility, allBookingActions, bookingDeadlines, needsAction, type BookingFacts, type BookingPolicy } from './domain';
 import { expireCantAccess } from './sheets';
@@ -177,8 +178,8 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
   const completion = ['completion_submitted', 'disputed', 'completed'].includes(booking.status) ? await completionViewOf(db, booking.id) : null;
 
   const remote = found.view.location.kind === 'remote';
-  const review = await reviewFacts(db, booking, role, now);
-  const facts = { ...factsOf(booking, remote), ...review.facts };
+  const [review, afterCancel] = await Promise.all([reviewFacts(db, booking, role, now), canceledFacts(db, booking, userId)]);
+  const facts = { ...factsOf(booking, remote), ...review.facts, ...afterCancel };
   const visibility = addressVisibility(facts, role, policy, now);
   let exactAddress: ExactAddress | undefined;
   if (visibility === 'visible' && task.locationId) {
@@ -328,15 +329,30 @@ async function recordEvent(db: Pick<Db, 'insert'>, type: string, actorId: string
   await db.insert(auditLog).values({ id: newId('aud'), actorId, actorRole: 'user', action: type, targetType: 'booking', targetId: booking.id });
 }
 
+export interface BookingActionOptions {
+  /** The contester's first message on a no-show case (server copy). */
+  contestOpening?: string;
+  /** Called when Find a replacement reopened the task, to refresh the pages that list it. */
+  onTaskReopened?: (task: ReopenedTask) => void;
+}
+
 /** The booking page's actions: only those the domain offers right now. */
-export async function runBookingAction(db: Db, userId: string, bookingId: string, action: BookingActionId, now: Date): Promise<ActionResult> {
+export async function runBookingAction(
+  db: Db,
+  userId: string,
+  bookingId: string,
+  action: BookingActionId,
+  now: Date,
+  options: BookingActionOptions = {},
+): Promise<ActionResult> {
   await autoApproveDue(db, now, { bookingId: String(bookingId) });
   await expireCantAccess(db, now, { bookingId: String(bookingId) });
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, String(bookingId))).limit(1);
   const role = booking ? roleOf(booking, userId) : null;
   if (!booking || !role) return { ok: false, code: 'not_found' };
   const found = await findTaskWithPublicView(db, booking.taskId);
-  const facts = { ...factsOf(booking, found?.view.location.kind === 'remote'), ...(await reviewFacts(db, booking, role, now)).facts };
+  const [review, afterCancel] = await Promise.all([reviewFacts(db, booking, role, now), canceledFacts(db, booking, userId)]);
+  const facts = { ...factsOf(booking, found?.view.location.kind === 'remote'), ...review.facts, ...afterCancel };
   const allowed = allBookingActions(facts, role, await policyOf(db, booking.policyVersionId), now).find((item) => item.id === action);
   if (!allowed?.enabled) return { ok: false, code: 'not_allowed' };
 
@@ -396,6 +412,13 @@ export async function runBookingAction(db: Db, userId: string, bookingId: string
       if (result.ok) await recordCompletionMoney(db, booking.id, now);
       return result;
     }
+    case 'find_replacement': {
+      const reopened = await reopenForReplacement(db, userId, booking, now);
+      if (reopened.task) options.onTaskReopened?.(reopened.task);
+      return reopened.result;
+    }
+    case 'contest_no_show':
+      return contestNoShow(db, userId, booking, options.contestOpening ?? '', now);
     default:
       return { ok: false, code: 'not_allowed' };
   }

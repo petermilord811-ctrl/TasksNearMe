@@ -7,6 +7,7 @@ import { fileStorage } from '@/modules/tasks/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { quoteFinal, reportProblem, submitCompletion } from './completion';
+import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind the completion and problem pages (CompletionHandlers, ReportProblemHandlers). */
 
@@ -39,7 +40,7 @@ export async function quoteFinalAction(bookingId: string, input: { hoursWorked?:
 export async function submitCompletionAction(bookingId: string, input: CompletionInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await submitCompletion(db, userId, String(bookingId), input, new Date());
+  const result = await submitCompletion(db, userId, String(bookingId), input, await requestNow());
   if (!result.ok) refresh();
   return result;
 }
@@ -48,7 +49,7 @@ export async function submitCompletionAction(bookingId: string, input: Completio
 export async function reportProblemAction(bookingId: string, input: ReportProblemInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await reportProblem(db, userId, String(bookingId), input, new Date());
+  const result = await reportProblem(db, userId, String(bookingId), input, await requestNow());
   if (!result.ok) refresh();
   return result;
 }

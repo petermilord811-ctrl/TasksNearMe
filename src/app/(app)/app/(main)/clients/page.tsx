@@ -7,6 +7,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { MyClientsScreen } from '@/ui/screens/clients';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'My clients', robots: { index: false } };
 
@@ -22,7 +23,7 @@ export default function ClientsPage() {
 async function Clients() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.clients()));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getMyClientsPage(db, viewer.user.id, now);
   return <MyClientsScreen data={data} now={now.toISOString()} />;
 }

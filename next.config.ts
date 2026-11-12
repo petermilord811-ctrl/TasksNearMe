@@ -5,6 +5,11 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  env: {
+    // The test clock (blueprint 10 §3.1, src/platform/clock): built into development and into builds made
+    // with TEST_CLOCK=1 (preview, staging). Inlined at build time, so other production builds compile it out.
+    TEST_CLOCK_BUILD: process.env.NODE_ENV === 'development' || process.env.TEST_CLOCK === '1' ? '1' : '0',
+  },
   experimental: {
     // Task photos (up to 10 MB) are uploaded through a Server Action in development.
     // Before launch: presigned direct uploads to storage (decisions.md).

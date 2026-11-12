@@ -150,7 +150,9 @@ export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: 
     task.locationId ? deps.db.select().from(taskLocations).where(eq(taskLocations.id, task.locationId)).limit(1) : Promise.resolve([]),
     blockedPeopleOf(deps.db, userId),
   ]);
-  const offerRows = allOffers.filter((offer) => !blocked.includes(offer.helperUserId));
+  // After Find a replacement, earlier offers belong to the canceled booking.
+  const current = allOffers.filter((offer) => !task.reopenedAt || offer.createdAt >= task.reopenedAt);
+  const offerRows = current.filter((offer) => !blocked.includes(offer.helperUserId));
   const exactAddress = location[0] ? (JSON.parse(deps.cipher.decrypt(location[0].addressEnc)) as ExactAddress) : undefined;
   const bookingId = (await bookingIdsOf(deps.db, [taskId])).get(taskId);
 

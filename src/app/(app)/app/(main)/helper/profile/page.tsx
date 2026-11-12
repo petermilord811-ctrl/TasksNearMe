@@ -18,6 +18,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { HelperProfileEditorScreen } from '@/ui/screens/helper';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Your helper profile', robots: { index: false } };
 
@@ -33,7 +34,7 @@ export default function HelperProfilePage() {
 async function Editor() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.helperProfile()));
-  const data = await getProfileEditorData(db, viewer.user.id, new Date());
+  const data = await getProfileEditorData(db, viewer.user.id, await requestNow());
   if (!data) redirect(routes.app.helperOnboarding());
   return (
     <HelperProfileEditorScreen

@@ -53,6 +53,8 @@ const copy: Record<NotificationType, RegExp> = {
   rebook_proposed: /proposed a booking/,
   rebook_accepted: /accepted your proposal.*You're booked/,
   rebook_declined: /declined your proposal.*No booking was made/,
+  task_reopened: /looking for a new helper.*Make an offer/,
+  approval_reminder: /Approve .* or report a problem\. It's approved automatically/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -69,7 +71,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
 
 describe('NotificationsScreen', () => {
   it.each(NOTIFICATION_TYPES)('renders friendly copy and an icon for %s', (type) => {
-    show({ notifications: [{ ...mayaNotificationsData.notifications[0], type, params: { amountCents: 5400, minutes: 10 } }], unreadCount: 1 });
+    show({ notifications: [{ ...mayaNotificationsData.notifications[0], type, params: { amountCents: 5400, minutes: 10, hours: 24 } }], unreadCount: 1 });
     const link = screen.getByRole('link');
     expect(link).toHaveAccessibleName(copy[type]);
     expect(link.querySelector('svg')).not.toBeNull();
@@ -91,6 +93,8 @@ describe('NotificationsScreen', () => {
     { type: 'rebook_proposed', target: targets.proposal },
     { type: 'rebook_accepted', target: targets.booking },
     { type: 'rebook_declined', target: targets.proposal },
+    { type: 'task_reopened', target: targets.find_work_task },
+    { type: 'approval_reminder', target: targets.booking },
   ] as const)('opens the supplied destination for $type', async ({ type, target }) => {
     const actions = handlers();
     const notification = { ...mayaNotificationsData.notifications[0], id: type, type, target: target.target };
@@ -150,12 +154,24 @@ describe('NotificationsScreen', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
+  it('shows the hours left on an approval reminder, or "soon" without them', () => {
+    const reminder = { ...mayaNotificationsData.notifications[0], type: 'approval_reminder' as const };
+    show({ notifications: [{ ...reminder, params: { hours: 4 } }], unreadCount: 1 });
+    expect(screen.getByRole('link')).toHaveTextContent("It's approved automatically in 4 hours");
+    cleanup();
+    show({ notifications: [{ ...reminder, params: { hours: 1 } }], unreadCount: 1 });
+    expect(screen.getByRole('link')).toHaveTextContent("It's approved automatically in 1 hour");
+    cleanup();
+    show({ notifications: [{ ...reminder, params: undefined }], unreadCount: 1 });
+    expect(screen.getByRole('link')).toHaveTextContent("It's approved automatically soon");
+  });
+
   it('shows the canonical payout amount', () => {
     show(jordanNotificationsData);
     expect(screen.getByRole('link', { name: /You were paid \$62\.00/ })).toBeVisible();
   });
 
-  it.each(['helper_running_late', 'payout_paid', 'offer_received', 'change_proposed', 'change_applied', 'invite_received', 'invite_countered', 'invite_accepted', 'rebook_proposed', 'rebook_accepted', 'rebook_declined'] as const)('does not invent optional details for %s', (type) => {
+  it.each(['helper_running_late', 'payout_paid', 'offer_received', 'change_proposed', 'change_applied', 'invite_received', 'invite_countered', 'invite_accepted', 'rebook_proposed', 'rebook_accepted', 'rebook_declined', 'task_reopened', 'approval_reminder'] as const)('does not invent optional details for %s', (type) => {
     show({ notifications: [{ id: type, type, target: { kind: 'messages' }, createdAt: now }], unreadCount: 1 });
     expect(screen.getByRole('link').textContent).not.toMatch(/undefined|NaN|\$0\.00|0 minutes/);
   });

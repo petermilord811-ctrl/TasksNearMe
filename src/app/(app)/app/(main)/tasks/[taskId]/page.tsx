@@ -11,6 +11,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { TaskManageScreen } from '@/ui/screens/tasks';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Your task' };
 
@@ -27,7 +28,7 @@ async function ManageTask({ params }: Pick<PageProps<'/app/tasks/[taskId]'>, 'pa
   const [{ taskId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') notFound();
   const deps = await ownerDepsFor(viewer.user.id);
-  const now = new Date();
+  const now = await requestNow();
   const [data, invites] = deps
     ? await Promise.all([getTaskOwnerView(deps, viewer.user.id, taskId, now), invitesForTask(db, bookingDeps()?.payments ?? null, viewer.user.id, taskId, now)])
     : [null, []];

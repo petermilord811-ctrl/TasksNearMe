@@ -8,6 +8,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminRewardsScreen } from '@/ui/screens/admin';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Rewards', robots: { index: false } };
 
@@ -25,5 +26,5 @@ async function AdminRewards({ searchParams }: Pick<PageProps<'/admin/rewards'>, 
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
   const data = await getAdminRewards(db, staff, parseRewardFilter(params.status));
-  return <AdminRewardsScreen data={data} now={new Date().toISOString()} handlers={{ onDecide: decideRewardAction }} />;
+  return <AdminRewardsScreen data={data} now={(await requestNow()).toISOString()} handlers={{ onDecide: decideRewardAction }} />;
 }

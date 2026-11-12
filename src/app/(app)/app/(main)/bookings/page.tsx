@@ -7,6 +7,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { BookingsScreen } from '@/ui/screens/bookings';
+import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Bookings', robots: { index: false } };
 
@@ -22,7 +23,7 @@ export default function BookingsPage() {
 async function Bookings() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.bookings()));
-  const now = new Date();
+  const now = await requestNow();
   const data = await getBookingsPage(db, viewer.user.id, now);
   return <BookingsScreen data={data} now={now.toISOString()} />;
 }
