@@ -2,7 +2,7 @@
  * Idempotent seed: Austin market, areas, categories, policy v1 (published) and v2 (draft),
  * feature flags. People and tasks are added by later phases (from src/fixtures).
  */
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { createDb } from '../../src/platform/db/connect';
 import {
   areas,
@@ -382,8 +382,19 @@ async function seedOffers(tx: Tx): Promise<void> {
  * leaves them bookable (with their payments and terms).
  */
 async function clearSeedBookings(tx: Tx): Promise<void> {
-  const taskIds = SEED_TASKS.map((task) => task.id);
   const people = PEOPLE.map((person) => person.id);
+  // Accepting a rebooking proposal copies its task (and books the copy): those go too, before the proposals
+  // that point at them, so repeated e2e runs don't pile up bookings.
+  const copied = (
+    await tx
+      .select({ taskId: rebookProposals.taskId })
+      .from(rebookProposals)
+      .where(and(or(inArray(rebookProposals.posterUserId, people), inArray(rebookProposals.helperUserId, people)), isNotNull(rebookProposals.taskId)))
+  ).flatMap((row) => (row.taskId ? [row.taskId] : []));
+  const dropCopies = async () => {
+    if (copied.length > 0) await tx.delete(tasks).where(inArray(tasks.id, copied));
+  };
+  const taskIds = [...SEED_TASKS.map((task) => task.id), ...copied];
   await tx.delete(savedHelpers).where(inArray(savedHelpers.userId, people));
   // Notifications, preferences and privacy requests start over too (the e2e changes them).
   await tx.delete(notifications).where(inArray(notifications.userId, people));
@@ -417,7 +428,7 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
     await tx.delete(threads).where(inArray(threads.id, offerThreadIds));
   }
   const rows = await tx.select({ id: bookings.id }).from(bookings).where(inArray(bookings.taskId, taskIds));
-  if (rows.length === 0) return;
+  if (rows.length === 0) return dropCopies();
   const ids = rows.map((row) => row.id);
   const bookingThreads = await tx
     .select({ id: threads.id })
@@ -450,6 +461,7 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   await tx.delete(payments).where(inArray(payments.bookingId, ids));
   await tx.delete(bookingTerms).where(inArray(bookingTerms.bookingId, ids));
   await tx.delete(bookings).where(inArray(bookings.id, ids));
+  await dropCopies();
 }
 
 /**
@@ -534,6 +546,42 @@ async function seedBookings(tx: Tx): Promise<void> {
     description: 'Two of the drawers still stick and one runner is missing.',
     createdAt: new Date(Date.now() - 30 * 60_000),
     updatedAt: new Date(Date.now() - 30 * 60_000),
+  });
+
+  // Maya's wardrobe with Sam, three weeks ago: done, approved and paid out ($90; Sam earned $81.00). Past
+  // the review window, so it only shows up in the lists and in Sam's My clients.
+  await seedOne({ id: 'bkg_wardrobe', taskId: 'tsk_wardrobe', offerId: 'off_wardrobe_sam', priceCents: 9000, status: 'confirmed' });
+  const [wardrobe] = await tx.select().from(bookings).where(eq(bookings.id, 'bkg_wardrobe'));
+  const [wardrobeTerms] = await tx.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_wardrobe'));
+  if (!wardrobe || !wardrobeTerms) throw new Error('Seed booking bkg_wardrobe: missing after insert');
+  const wardrobeArrived = wardrobe.startAt;
+  const wardrobeSent = new Date(wardrobeArrived.getTime() + 2 * 3_600_000);
+  const wardrobeDone = new Date(wardrobeSent.getTime() + 3 * 3_600_000);
+  await tx.insert(bookingCompletions).values({ bookingId: 'bkg_wardrobe', submittedAt: wardrobeSent, note: 'Wardrobe up, doors aligned, both shelves in.', finalBreakdown: wardrobeTerms.breakdown });
+  await tx
+    .update(bookings)
+    .set({
+      status: 'completed',
+      onMyWayAt: new Date(wardrobeArrived.getTime() - 20 * 60_000),
+      arrivedAt: wardrobeArrived,
+      completionSubmittedAt: wardrobeSent,
+      completedVia: 'poster',
+      completedAt: wardrobeDone,
+      updatedAt: wardrobeDone,
+    })
+    .where(eq(bookings.id, 'bkg_wardrobe'));
+  await tx.update(tasks).set({ status: 'completed', updatedAt: wardrobeDone }).where(eq(tasks.id, 'tsk_wardrobe'));
+  await tx.insert(earnings).values({
+    id: 'ern_seed_wardrobe',
+    bookingId: 'bkg_wardrobe',
+    helperUserId: 'usr_sam',
+    kind: 'earnings',
+    amountCents: wardrobeTerms.breakdown.helperEarningsCents,
+    status: 'transferred',
+    transferRef: 'devtr_seed_wardrobe',
+    transferredAt: wardrobeDone,
+    createdAt: wardrobeDone,
+    updatedAt: wardrobeDone,
   });
 }
 

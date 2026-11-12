@@ -42,11 +42,12 @@ describe('booking actions', () => {
     expect(ids(bookingActions({ ...confirmed, status: 'completion_submitted' }, 'helper', start))).toEqual(['message']);
   });
 
-  it('offers the client a review, saving the helper, and Book again once completed', () => {
+  it('offers the client a review, saving the helper, and Book again once completed; the helper a review and a new booking', () => {
     const completed = { ...confirmed, status: 'completed', completedAt: at('2026-11-21T19:05:00.000Z'), reviewWindowOpen: true };
     expect(ids(bookingActions(completed, 'poster', start))).toEqual(['review', 'save_helper', 'book_again', 'message']);
     expect(ids(bookingActions({ ...completed, reviewed: true, helperSaved: true }, 'poster', start))).toEqual(['book_again', 'message']);
-    expect(ids(bookingActions(completed, 'helper', start))).toEqual(['review', 'message']);
+    expect(ids(bookingActions(completed, 'helper', start))).toEqual(['review', 'offer_rebook', 'message']);
+    expect(ids(bookingActions({ ...completed, reviewed: true }, 'helper', start))).toEqual(['offer_rebook', 'message']);
   });
 
   it('skips check-in for remote work, and asks for the work once started', () => {

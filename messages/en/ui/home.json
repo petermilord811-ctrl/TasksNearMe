@@ -56,7 +56,12 @@
     "startTime": "Starts at {time} · {date}",
     "answer_invite": "A client invited you to {title}",
     "answer_counter": "Your helper sent a counter-offer for {title}",
-    "answer_proposal": "Your helper proposed a booking: {title}"
+    "answer_proposal": "Your helper proposed a booking: {title}",
+    "named": {
+      "answer_invite": "{name} invited you to {title}",
+      "answer_counter": "{name} sent a counter-offer for {title}",
+      "answer_proposal": "{name} proposed a booking: {title}"
+    }
   },
   "empty": {
     "attention": {

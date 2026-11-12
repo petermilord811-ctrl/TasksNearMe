@@ -91,6 +91,8 @@ Please review them and replace them properly.
 - Editing the task in a proposal (title, details, place), proposals to people who were never clients, recurring bookings.
 
 ## Claude wiring notes (filled in by Claude after review)
-- Route(s): …
-- Queries / actions: …
-- e2e: …
+- Routes: `/app/clients` (main layout), `/app/bookings/[bookingId]/rebook` and `/app/proposals/[proposalId]` (flow layout).
+- Queries and actions: `getMyClientsPage`, `getProposeRebookPage`, `getProposalPage` (payments provider and field cipher); `quoteRebookAction`, `proposeRebookAction`, `acceptProposalAction`, `finishProposalVerificationAction`, `declineProposalAction`, `withdrawProposalAction`. `REBOOK_PAGES_READY` is on.
+- Contract request accepted: `AttentionItem.actorName` (the other person's display name) for invites, counters and proposals; the home headlines use it.
+- Seed: `bkg_wardrobe` (Maya's wardrobe with Sam, completed three weeks ago, $90). The seed reset also removes tasks that accepted proposals copied.
+- e2e: `rebook.spec` (Sam proposes from My clients, Maya accepts and pays $99.00 and it's booked; Jordan can't propose Sam's booking).

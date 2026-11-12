@@ -63,6 +63,8 @@ export interface AttentionItem {
   count?: number;
   /** When it's due (approve by, answer by, starts at). */
   dueAt?: ISODateTime;
+  /** The other person, when one person is waiting on you ("Maya R." for an invite, a counter or a proposal). */
+  actorName?: string;
   target: AttentionTarget;
 }
 

@@ -49,9 +49,9 @@ const targetCases: Record<AttentionTarget['kind'], { target: AttentionTarget; hr
 
 describe('HomeScreen attention', () => {
   it.each([
-    { data: jordanHomeInviteData, name: /invited you/, href: routes.app.offers('inv_bookshelf'), deadline: 'Thu, Dec 10 · 10:00 am' },
-    { data: mayaHomeCounterData, name: /counter-offer/, href: routes.app.task('tsk_bookshelf'), deadline: 'Wed, Dec 9 · 10:00 am' },
-    { data: mayaHomeProposalData, name: /proposed a booking/, href: routes.app.proposal('prp_desk'), deadline: 'Thu, Dec 10 · 11:00 am' },
+    { data: jordanHomeInviteData, name: /^Maya R\. invited you/, href: routes.app.offers('inv_bookshelf'), deadline: 'Thu, Dec 10 · 10:00 am' },
+    { data: mayaHomeCounterData, name: /^Jordan T\. sent a counter-offer/, href: routes.app.task('tsk_bookshelf'), deadline: 'Wed, Dec 9 · 10:00 am' },
+    { data: mayaHomeProposalData, name: /^Jordan T\. proposed a booking/, href: routes.app.proposal('prp_desk'), deadline: 'Thu, Dec 10 · 11:00 am' },
   ])('shows the answer deadline and supplied destination for $name', ({ data, name, href, deadline }) => {
     renderHome(data, '2026-12-08T17:00:00.000Z');
     const link = section('Needs your attention').getByRole('link', { name });

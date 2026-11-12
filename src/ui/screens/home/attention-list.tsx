@@ -27,11 +27,14 @@ function AttentionRow({ item }: { item: AttentionItem }) {
   const Icon = icons[item.kind];
   const payout = item.kind === 'payout_action_needed';
   const setup = item.kind === 'finish_setup';
-  const headline = item.kind === 'review_offers' && item.count === undefined
-    ? 'reviewOffersWithoutCount'
-    : item.kind === 'unread_messages' && item.count === undefined
-      ? 'messagesWithoutCount'
-      : item.kind;
+  const named = item.actorName !== undefined && (item.kind === 'answer_invite' || item.kind === 'answer_counter' || item.kind === 'answer_proposal');
+  const headline = named
+    ? `named.${item.kind}`
+    : item.kind === 'review_offers' && item.count === undefined
+      ? 'reviewOffersWithoutCount'
+      : item.kind === 'unread_messages' && item.count === undefined
+        ? 'messagesWithoutCount'
+        : item.kind;
   const deadlineKey = item.kind === 'approve_work' ? 'approvalDeadline'
     : item.kind === 'finish_payment' ? 'paymentDeadline'
       : item.kind === 'answer_cant_access' || item.kind === 'answer_invite' || item.kind === 'answer_counter' || item.kind === 'answer_proposal' ? 'answerDeadline' : 'deadline';
@@ -47,7 +50,7 @@ function AttentionRow({ item }: { item: AttentionItem }) {
       </span>
       <span className="min-w-0 flex-1 space-y-1 break-words">
         <span className={cn('block font-semibold tabular-nums group-hover:underline underline-offset-4', payout && 'text-badge-danger-foreground', setup && 'text-badge-warning-foreground')}>
-          {t(`attention.${headline}`, { title: item.title ?? t('attention.taskFallback'), count: item.count ?? 0 })}
+          {t(`attention.${headline}`, { title: item.title ?? t('attention.taskFallback'), count: item.count ?? 0, name: item.actorName ?? '' })}
         </span>
         <span className="block text-sm leading-6 text-muted-foreground">{t(`attention.body.${item.kind}`)}</span>
         {item.dueAt && <span className="block text-sm font-medium tabular-nums">

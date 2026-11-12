@@ -209,4 +209,22 @@ export const SEED_TASKS: SeedTask[] = [
     offerCount: 0,
     postedHoursAgo: 3,
   },
+  {
+    // Done with Sam three weeks ago (a seeded completed booking): My clients, and the rebook e2e, where Sam
+    // proposes doing it again and Maya pays.
+    id: 'tsk_wardrobe',
+    slug: 'assemble-a-wardrobe-mueller-3k7d',
+    posterId: 'usr_maya',
+    categoryId: 'cat_furniture_assembly',
+    title: 'Assemble a wardrobe',
+    description: 'A two-door flat-pack wardrobe with a hanging rail and two shelves.',
+    details: { itemType: 'wardrobe', itemCount: 1, toolsOnSite: false },
+    placeId: 'plc_mueller_1234',
+    daysFromToday: -21,
+    start: '10:00',
+    end: '13:00',
+    budget: { type: 'fixed', priceCents: 9000 },
+    offerCount: 0,
+    postedHoursAgo: 24 * 23,
+  },
 ];

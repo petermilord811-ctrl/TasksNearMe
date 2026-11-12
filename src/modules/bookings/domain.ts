@@ -22,7 +22,7 @@ export const REVIEW_PAGE_READY = true;
 /** Direct invites (UI-025): Book again opens the request page. */
 export const REQUEST_PAGE_READY = true;
 /** Rebooking proposals (UI-032): on once their pages are wired. */
-export const REBOOK_PAGES_READY = false;
+export const REBOOK_PAGES_READY = true;
 
 export interface BookingFacts {
   status: BookingStatus | string;

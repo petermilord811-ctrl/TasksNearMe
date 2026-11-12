@@ -126,4 +126,17 @@ export const SEED_OFFERS: SeedOffer[] = [
     submittedHoursAgo: 60,
     seenByPoster: true,
   },
+  {
+    // Accepted and completed (seeded): Maya's wardrobe, three weeks ago.
+    id: 'off_wardrobe_sam',
+    taskId: 'tsk_wardrobe',
+    helperUserId: 'usr_sam',
+    pricing: { type: 'fixed', priceCents: 9000 },
+    startOffsetMinutes: 0,
+    message: 'Wardrobes take me about two hours. I bring my own tools.',
+    brings: ['Drill', 'Level'],
+    revision: 1,
+    submittedHoursAgo: 24 * 22,
+    seenByPoster: true,
+  },
 ];
