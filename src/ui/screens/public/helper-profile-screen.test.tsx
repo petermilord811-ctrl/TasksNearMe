@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it } from 'vitest';
 import { routes, type HelperProfilePageData } from '@/contracts';
-import { jordanProfilePageData, leeProfilePageData, samProfilePageData } from '@/fixtures';
+import { jordanProfilePageData, jordanProfileWithSlotsData, leeProfilePageData, samProfilePageData } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import helperProfile from '../../../../messages/en/ui/helperProfile.json';
 import { HelperProfileScreen } from './helper-profile-screen';
@@ -15,6 +15,14 @@ function show(data: HelperProfilePageData = samProfilePageData) {
 }
 
 describe('HelperProfileScreen', () => {
+  it('shows supplied openings and omits the section when no slots are supplied', () => {
+    const view = show(jordanProfileWithSlotsData);
+    expect(within(screen.getByRole('region', { name: 'Open times' })).getAllByRole('link', { name: 'Request this time' })).toHaveLength(2);
+    view.unmount();
+    show(jordanProfilePageData);
+    expect(screen.queryByRole('region', { name: 'Open times' })).not.toBeInTheDocument();
+  });
+
   it('links the booking request to the supplied helper and shows the recent review count', () => {
     show();
     expect(screen.getByRole('link', { name: 'Request Sam K.' })).toHaveAttribute('href', routes.app.requestHelper(samProfilePageData.helper.handle));

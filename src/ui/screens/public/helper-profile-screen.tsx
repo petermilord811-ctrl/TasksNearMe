@@ -3,6 +3,7 @@ import { Check, Clock3, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type Lu
 import { useTranslations } from 'next-intl';
 import { routes, type CategorySlug, type HelperProfilePageData, type HelperServiceDetail } from '@/contracts';
 import { formatHours, formatMoney, formatMonthYear } from '@/shared/format';
+import { AvailabilitySlotList } from '@/ui/components/availability/availability-slot-list';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
@@ -85,6 +86,8 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
           </div>
         </div>
       </header>
+
+      {data.slots && data.slots.length > 0 && <AvailabilitySlotList slots={data.slots} handle={helper.handle} />}
 
       <section aria-labelledby="helper-about-heading" className="max-w-reading space-y-3">
         <h2 id="helper-about-heading" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('about', { name: helper.displayName })}</h2>

@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import { ACTION_ERROR_CODES, type InviteHandlers, type InviteView, type PaymentAttemptResult, type PreviewEntry } from '@/contracts';
-import { bookshelfInviteAcceptedPoster, bookshelfInviteCounteredHelper, bookshelfInviteCounteredPoster, bookshelfInviteDeclinedPoster, bookshelfInviteExpiredHelper, bookshelfInviteSentHelper, bookshelfInviteSentPoster, chris, fakeHandler, fakeInviteHandlers, helperMovingHourly, movingFundedBreakdown } from '@/fixtures';
+import { bookshelfInviteAcceptedPoster, bookshelfInviteCounteredHelper, bookshelfInviteCounteredPoster, bookshelfInviteDeclinedPoster, bookshelfInviteExpiredHelper, bookshelfInviteSentHelper, bookshelfInviteSentPoster, chris, fakeHandler, fakeInviteHandlers, helperMovingHourly, movingFundedBreakdown, slotInviteSentHelper } from '@/fixtures';
 import { InviteCardContent } from '@/ui/components/invites/invite-card';
 import copy from '../../../messages/en/ui/inviteCard.json';
 import feedback from '../../../messages/en/ui/feedback.json';
@@ -25,6 +25,8 @@ function preview(variant: keyof typeof copy.previews, invite: InviteView, option
 const verification: PaymentAttemptResult = { ok: false, code: 'requires_bank_verification', verification: { kind: 'dev', paymentId: 'pay_bookshelf_counter' } };
 
 export const inviteCardPreviews: PreviewEntry[] = [
+  preview('slot-helper', slotInviteSentHelper),
+  preview('slot-client', { ...bookshelfInviteSentPoster, id: slotInviteSentHelper.id, terms: slotInviteSentHelper.terms, slot: slotInviteSentHelper.slot }),
   preview('sent-client', bookshelfInviteSentPoster),
   preview('sent-helper', bookshelfInviteSentHelper),
   preview('countered-client', bookshelfInviteCounteredPoster),

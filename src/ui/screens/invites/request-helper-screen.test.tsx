@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, routes, type PaymentAttemptResult, type RequestHelperHandlers, type RequestHelperInput, type RequestHelperPageData } from '@/contracts';
-import { bookshelfBreakdown, fakeHandler, movingFundedBreakdown, movingPublicTask, requestJordanData, requestNoTasksData } from '@/fixtures';
+import { bookshelfBreakdown, fakeHandler, jordanYardSlot, movingFundedBreakdown, movingPublicTask, requestJordanData, requestJordanSlotData, requestJordanSlotTakenData, requestNoTasksData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { RequestHelperContent, RequestHelperScreen } from './request-helper-screen';
 
@@ -51,6 +51,71 @@ async function send(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('RequestHelperScreen', () => {
+  it('prefills the slot price and sends its id with a start inside both windows', async () => {
+    const user = userEvent.setup();
+    const data: RequestHelperPageData = { ...requestJordanSlotData, tasks: [{ ...requestJordanSlotData.tasks[0], windowStart: '2026-12-12T16:00:00.000Z' }] };
+    const { handlers } = mount(data);
+    expect(screen.getByRole('heading', { name: messages.invites.slotTitle })).toBeVisible();
+    expect(start()).toHaveValue('2026-12-12T10:00');
+    expect(start()).toHaveAttribute('min', '2026-12-12T10:00');
+    expect(start()).toHaveAttribute('max', '2026-12-12T12:59');
+    expect(screen.getByRole('textbox', { name: 'Hourly rate ($)' })).toHaveValue('30');
+    expect(screen.getByRole('spinbutton', { name: 'Estimated hours' })).toHaveValue(3);
+    expect(screen.getByRole('spinbutton', { name: 'Hours cap' })).toHaveValue(4);
+    await send(user);
+    await waitFor(() => expect(handlers.onRequest).toHaveBeenCalledWith(expect.objectContaining({
+      slotId: jordanYardSlot.id, start: data.tasks[0].windowStart, pricing: jordanYardSlot.pricing,
+    })));
+  });
+
+  it('uses the slot start when it is later, and updates the intersection on task selection', async () => {
+    const user = userEvent.setup();
+    const data: RequestHelperPageData = { ...requestJordanSlotData, tasks: [
+      { ...requestJordanSlotData.tasks[0], windowStart: '2026-12-12T14:00:00.000Z' },
+      { ...requestJordanSlotData.tasks[0], id: 'tsk_second', title: 'Bag the front-yard leaves', windowStart: '2026-12-12T17:00:00.000Z', windowEnd: '2026-12-12T18:00:00.000Z' },
+    ] };
+    const { handlers } = mount(data);
+    expect(start()).toHaveValue('2026-12-12T09:00');
+    await user.click(screen.getByRole('radio', { name: /Bag the front-yard leaves/ }));
+    expect(start()).toHaveValue('2026-12-12T11:00');
+    expect(start()).toHaveAttribute('max', '2026-12-12T12:00');
+    await send(user);
+    await waitFor(() => expect(handlers.onRequest).toHaveBeenCalledWith(expect.objectContaining({
+      taskId: 'tsk_second', slotId: jordanYardSlot.id, start: data.tasks[1].windowStart, pricing: jordanYardSlot.pricing,
+    })));
+  });
+
+  it.each(['2026-12-12T08:59', '2026-12-12T13:00'])('rejects a start outside the opening even when the task allows it: %s', async (value) => {
+    const user = userEvent.setup();
+    const { handlers } = mount({ ...requestJordanSlotData, tasks: [{ ...requestJordanSlotData.tasks[0], windowStart: '2026-12-12T14:00:00.000Z' }] });
+    fireEvent.change(start(), { target: { value } });
+    await send(user);
+    expect(await screen.findByText(messages.forms.fieldErrors.out_of_range)).toBeVisible();
+    await waitFor(() => expect(start()).toHaveFocus());
+    expect(handlers.onRequest).not.toHaveBeenCalled();
+  });
+
+  it('shows the unavailable notice and submits a regular request without a slot id', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount(requestJordanSlotTakenData);
+    expect(screen.getByText(messages.invites.slotUnavailable)).toBeVisible();
+    expect(screen.queryByRole('heading', { name: messages.invites.slotTitle })).not.toBeInTheDocument();
+    expect(price()).toHaveValue('45');
+    expect(start()).toHaveAttribute('max', '2026-12-12T15:00');
+    await send(user);
+    await waitFor(() => expect(handlers.onRequest).toHaveBeenCalledOnce());
+    expect(vi.mocked(handlers.onRequest).mock.calls[0][0]).not.toHaveProperty('slotId');
+  });
+
+  it('offers a regular request route when the slot request becomes unavailable during submission', async () => {
+    const user = userEvent.setup();
+    mount(requestJordanSlotData, { onRequest: fakeHandler({ ok: false, code: 'not_allowed' }, 0) });
+    await send(user);
+    expect(await screen.findByText(messages.invites.slotRequestUnavailable)).toBeVisible();
+    expect(screen.getByRole('link', { name: messages.invites.regularRequest })).toHaveAttribute('href', routes.app.requestHelper(requestJordanSlotData.helper.handle));
+    expect(navigation.push).not.toHaveBeenCalled();
+  });
+
   it('sends cents, an Austin-to-ISO start, trimmed message and card choice; shows only the server total', async () => {
     const user = userEvent.setup();
     const { handlers } = mount();

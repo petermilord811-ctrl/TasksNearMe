@@ -14,6 +14,8 @@
   "holdReleased": "The hold on your card has been released.",
   "holdFailed": "The card hold couldn't be completed. Try sending a new request with another card.",
   "viewBooking": "View booking",
+  "slotHelper": "For your {date} · {times} opening",
+  "slotClient": "For {helper}'s {date} · {times} opening",
   "actionsLabel": "Request actions",
   "actions": {
     "accept_invite": "Accept",
@@ -68,6 +70,8 @@
     "counter-form": "Suggest a new price or start",
     "bank-verification": "Accept counter · bank verification",
     "pending": "Accepting request",
-    "hourly": "Hourly request"
+    "hourly": "Hourly request",
+    "slot-helper": "Request for an opening · helper",
+    "slot-client": "Request for an opening · client"
   }
 }

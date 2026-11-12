@@ -52,6 +52,8 @@ import { rewardsPreviews } from './rewards.preview';
 import { changesPreviews } from './changes.preview';
 import { inviteCardPreviews } from './invite-card.preview';
 import { requestHelperPreviews } from './request-helper.preview';
+import { availabilityPreviews } from './availability.preview';
+import { availabilitySlotPreviews } from './availability-slots.preview';
 
 export const previews: PreviewEntry[] = [
   ...moneyPreviews,
@@ -104,4 +106,6 @@ export const previews: PreviewEntry[] = [
   ...changesPreviews,
   ...inviteCardPreviews,
   ...requestHelperPreviews,
+  ...availabilityPreviews,
+  ...availabilitySlotPreviews,
 ];
