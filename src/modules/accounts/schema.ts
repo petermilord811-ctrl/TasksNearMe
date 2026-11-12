@@ -36,6 +36,8 @@ export const users = pgTable(
     termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
     /** The terms version accepted, e.g. "draft-0.1". */
     termsVersion: text('terms_version'),
+    /** When the welcome email went out (once, when sign-up finished). */
+    welcomedAt: timestamp('welcomed_at', { withTimezone: true }),
   },
   // One account per verified phone number (NULLs don't collide).
   (t) => [uniqueIndex('users_phone_idx').on(t.phone)],

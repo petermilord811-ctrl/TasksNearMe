@@ -183,6 +183,13 @@
       "when": 1794476722864,
       "tag": "0025_refund_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794513600091,
+      "tag": "0026_welcome_email",
+      "breakpoints": true
     }
   ]
 }

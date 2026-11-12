@@ -2,8 +2,11 @@ import type { SocialProvider } from '@/contracts';
 import { SOCIAL_PROVIDERS } from '@/contracts';
 
 /**
- * Google and Microsoft sign-in (docs/integration-points.md). Each provider is real when its keys are set;
- * without keys, development and tests use the stand-in (./stand-in.ts) and production doesn't offer it.
+ * Google and Microsoft sign-in (docs/integration-points.md). Each provider is real when its keys are set.
+ * Outside production builds the stand-in (./stand-in.ts) serves every provider: on its own when the
+ * provider has no keys, and next to the real one when a request asks for it (the `tnm_oauth_stand_in`
+ * cookie, which the e2e tests set), so tests never reach the real Google or Microsoft. Production builds
+ * have no stand-in and don't offer a provider without keys.
  */
 
 export interface GoogleKeys {
@@ -19,6 +22,11 @@ export interface MicrosoftKeys {
 }
 
 type Env = Record<string, string | undefined>;
+
+/** The cookie a development or test browser sets to use the stand-in even where real keys are set. */
+export const STAND_IN_COOKIE = 'tnm_oauth_stand_in';
+/** The authorization parameter that carries that choice from the sign-in action to the provider. */
+export const STAND_IN_PARAM = 'tnm_stand_in';
 
 /** The app's own address (Better Auth's `baseURL`): provider callbacks come back here. */
 export function appUrl(env: Env = process.env): string {
@@ -39,16 +47,26 @@ export function socialProviderKeys(env: Env = process.env): { google: GoogleKeys
   return { google, microsoft };
 }
 
-/** Providers the stand-in serves: those without keys, and never in a production build. */
+/** The stand-in exists outside production builds only. */
+export function standInAllowed(env: Env = process.env): boolean {
+  return env.NODE_ENV !== 'production';
+}
+
+/** Providers the stand-in serves: all of them outside production (those with keys only on request). */
 export function standInSocialProviders(env: Env = process.env): SocialProvider[] {
-  if (env.NODE_ENV === 'production') return [];
-  const keys = socialProviderKeys(env);
-  return SOCIAL_PROVIDERS.filter((provider) => !keys[provider]);
+  return standInAllowed(env) ? [...SOCIAL_PROVIDERS] : [];
 }
 
 /** What `/sign-in` and the account page offer, in order. */
 export function offeredSocialProviders(env: Env = process.env): SocialProvider[] {
   const keys = socialProviderKeys(env);
-  const standIn = standInSocialProviders(env);
-  return SOCIAL_PROVIDERS.filter((provider) => keys[provider] !== null || standIn.includes(provider));
+  return SOCIAL_PROVIDERS.filter((provider) => keys[provider] !== null || standInAllowed(env));
+}
+
+/**
+ * The authorization parameters for a sign-in or link: the stand-in flag when this browser asked for it
+ * (never in production). `cookieValue` is the request's `tnm_oauth_stand_in` cookie.
+ */
+export function standInParams(cookieValue: string | undefined, env: Env = process.env): Record<string, string> | undefined {
+  return standInAllowed(env) && cookieValue === '1' ? { [STAND_IN_PARAM]: '1' } : undefined;
 }

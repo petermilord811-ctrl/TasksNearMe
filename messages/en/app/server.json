@@ -90,5 +90,78 @@
       "approval_reminder": "Approve {title} or report a problem. It's approved automatically {hasHours, select, yes {in {hours, plural, one {# hour} other {# hours}}} other {soon}}.",
       "booking_reminder": "{title} starts {hasHours, select, yes {in {hours, plural, one {# hour} other {# hours}}} other {soon}}. Check the details."
     }
+  },
+  "emails": {
+    "footer": {
+      "why": "You're getting this because you have a TasksNearMe account with {email}.",
+      "preferences": "Email preferences",
+      "help": "Help center",
+      "rewardsTerms": "Rewards terms",
+      "place": "TasksNearMe · Starting close to home in {market}."
+    },
+    "welcome": {
+      "subjectOffer": "Welcome, {firstName}! Earn a {amount} gift card as a founding helper",
+      "subject": "Welcome to TasksNearMe, {firstName}",
+      "preheaderOffer": "{left, plural, one {Only # spot is} other {# spots are}} left for our first {limit, number} helpers in {market}. Here is how to claim yours.",
+      "preheader": "Your account is ready: book local help, or earn on your own schedule.",
+      "title": "Welcome to TasksNearMe",
+      "greeting": "Welcome, {firstName}!",
+      "intro": "Your account is ready. Book trusted local help in {market}, or earn on your own schedule as a helper.",
+      "gift": {
+        "eyebrow": "Founding helper reward",
+        "label": "gift card",
+        "for": "For our first {limit, number} verified helpers in {market}",
+        "claimed": "{claimed, number} of {limit, number} spots claimed",
+        "left": "{left, plural, one {Only # spot left} other {# spots left}}",
+        "cta": "Claim your spot",
+        "learn": "How earning works"
+      },
+      "steps": {
+        "title": "Your path to {amount}",
+        "done": "Done",
+        "account": {
+          "title": "Create your account",
+          "body": "All set. Welcome aboard."
+        },
+        "profile": {
+          "title": "Set up your helper profile",
+          "body": "Your services, your rates, and the area you cover."
+        },
+        "verify": {
+          "title": "Get verified",
+          "body": "Your ID check, payout setup, and any required background check."
+        },
+        "task": {
+          "title": "Finish your first task of {minimum} or more",
+          "body": "Complete it and be paid within {days, plural, one {# day} other {# days}} of verification."
+        },
+        "reward": {
+          "title": "Your {amount} gift card unlocks",
+          "body": "{days, plural, one {# day} other {# days}} after the task is paid, following a review. Redeem within {redeemDays, plural, one {# day} other {# days}} of unlocking. One welcome reward per person."
+        }
+      },
+      "client": {
+        "title": "Need a hand instead?",
+        "body": "Post what you need, agree on a price up front, and pay only when you book. Pick a kind of task to start:",
+        "cta": "Post a task"
+      },
+      "helper": {
+        "title": "Earn on your schedule",
+        "body": "Choose the tasks you want, set your rates, and get paid after the client approves the work.",
+        "cta": "Become a helper"
+      },
+      "signoff": "See you around the neighborhood,",
+      "team": "The TasksNearMe team"
+    },
+    "signInCode": {
+      "subject": "Your TasksNearMe code: {code}",
+      "preheader": "Enter it to continue. It works for {minutes} minutes.",
+      "title": "Your sign-in code",
+      "heading": "Here is your code",
+      "body": "Enter it on the sign-in page to continue.",
+      "expires": "It works for {minutes} minutes, once.",
+      "ignore": "Didn't ask for a code? You can ignore this email: nobody can sign in without it.",
+      "text": "Your sign-in code is {code}. It expires in {minutes} minutes. If you didn't ask for it, ignore this email."
+    }
   }
 }

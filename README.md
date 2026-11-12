@@ -33,7 +33,7 @@ Every provider runs as a stand-in in development: payments, ID checks, payouts, 
 | `/dev/sign-in` | Sign in as any seeded person in one click (it runs the real email-code flow). Maya and Chris are clients, Jordan, Sam and Lee are helpers, Priya is a helper still onboarding |
 | `/admin` | Staff tools. Sign in from `/dev/sign-in` as Alex (support agent), Morgan (support lead), Taylor (trust and safety), Casey (finance) or Riley (admin); the two-step code is `123456` in development |
 | `/dev/ui` | Every UI screen and state with fixture data (the preview gallery) |
-| `/dev/outbox` | Emails and texts the app sent (sign-in codes, notifications); `?to=` shows one recipient's |
+| `/dev/outbox` | Emails and texts the app sent (sign-in codes, the welcome email, notifications); `?to=` shows one recipient's. Designed emails show in a frame, and "open full size" shows one as an inbox would |
 | `/dev/oauth/google`, `/dev/oauth/microsoft` | The stand-in account chooser behind "Continue with Google / Microsoft" when their keys aren't set (sample people, or anyone you type). Better Auth's real sign-in flow runs around it |
 | `/dev/providers/identity` · `payout` · `background` | Stand-ins for Stripe Identity, Stripe Connect and Checkr: pick the outcome |
 | `/dev/gift-cards/<id>` | A redeemed reward's stand-in gift card |

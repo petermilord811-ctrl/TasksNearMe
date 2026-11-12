@@ -54,9 +54,11 @@ const NEXT = '/sign-in?next=%2Fapp';
 
 /** Starts a sign-in (or a link from the account page) and answers on the provider's page. */
 async function signInWith(browser: Browser, provider: Provider, answer: { claims: StandInClaims } | { cancel: true } | { forged: StandInClaims }, link = false) {
+  // Always the stand-in, even if real keys are set where the tests run.
+  const additionalParams = { tnm_stand_in: '1' };
   const start = link
-    ? await browser.post('/link-social', { provider, callbackURL: `/app/account?connect=${provider}`, errorCallbackURL: `/app/account?connect=${provider}`, disableRedirect: true })
-    : await browser.post('/sign-in/social', { provider, callbackURL: NEXT, newUserCallbackURL: `${NEXT}&new=1`, errorCallbackURL: `${NEXT}&via=${provider}`, disableRedirect: true });
+    ? await browser.post('/link-social', { provider, callbackURL: `/app/account?connect=${provider}`, errorCallbackURL: `/app/account?connect=${provider}`, disableRedirect: true, additionalParams })
+    : await browser.post('/sign-in/social', { provider, callbackURL: NEXT, newUserCallbackURL: `${NEXT}&new=1`, errorCallbackURL: `${NEXT}&via=${provider}`, disableRedirect: true, additionalParams });
   expect(start.status).toBe(200);
   const { url } = (await start.json()) as { url: string };
   const chooser = new URL(url);

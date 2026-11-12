@@ -20,6 +20,8 @@
 - **Landing interactions** (UI-041): a click moves the page together (filter pill, count, rows, map flight, hero tint; hero card → map; price chips; theme reveal; category icon into the category page).
 - **Bug fixes:** hovering a category cleared the map's filter; MapLibre "Style is not done loading" after Fast Refresh; the pin card covering the filter; review reports had no review on the staff case and no way to hide it (UI-042, integration `review-moderation`); e2e data left on the landing page (an e2e teardown reseeds); a code sent before a suspension still signed in.
 
+- **Real Google sign-in and the welcome email** (owner request): `.env` regenerated (documented; the owner's Google keys kept); real Google in development, the stand-in beside it for tests; the welcome email after sign-up (founding helper $50 gift card first, live spots), the designed sign-in code email, Postmark built (`POSTMARK_SERVER_TOKEN`, `EMAIL_FROM`). Google's page answers `redirect_uri_mismatch` until the OAuth client lists `http://localhost:3000/api/auth/callback/google`.
+
 ## Done in iteration 13 (the finish)
 - **`/app/helpers`** (UI-039): browse and search the market's helpers.
 - **After a cancellation (T-10–T-12):** Find a replacement (`tasks.reopened_at`, migration 0023), Contest no-show report, Book again after a helper cancellation; staff reverse strikes on appeal.

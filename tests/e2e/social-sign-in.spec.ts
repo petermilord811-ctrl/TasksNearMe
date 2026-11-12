@@ -24,6 +24,11 @@ async function completeProfile(page: Page) {
 }
 
 test.describe('sign-in with Google or Microsoft', () => {
+  // The stand-in, even where real Google or Microsoft keys are set (development only).
+  test.beforeEach(async ({ context, baseURL }) => {
+    await context.addCookies([{ name: 'tnm_oauth_stand_in', value: '1', url: baseURL! }]);
+  });
+
   test('a new person continues with Google, finds their name filled in, and lands in the app', async ({ page }, testInfo) => {
     await page.goto('/sign-in?next=%2Fapp');
     await expect(page.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();

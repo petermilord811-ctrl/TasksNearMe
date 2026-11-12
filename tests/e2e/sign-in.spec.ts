@@ -8,7 +8,7 @@ async function latestCode(context: BrowserContext, to: string): Promise<string> 
   try {
     // Only this address's messages: notification emails from other tests never push the code off the page.
     await outbox.goto(`/dev/outbox?to=${encodeURIComponent(to)}`);
-    const body = await outbox.locator(`[data-testid="outbox-message"][data-to="${to}"] pre`).first().textContent();
+    const body = await outbox.locator(`[data-testid="outbox-message"][data-to="${to}"]:not([data-tag="welcome"]) pre`).first().textContent();
     const code = body?.match(/\b(\d{6})\b/)?.[1];
     if (!code) throw new Error(`no code sent to ${to}`);
     return code;
@@ -54,6 +54,17 @@ test.describe('sign-in and sign-up', () => {
     await completeProfile(page, 'Robin', 'Lopez');
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByText('RL', { exact: true }).first()).toBeVisible();
+
+    // Sign-up done: the welcome email arrives (once), leading with the founding helper gift card.
+    const outbox = await context.newPage();
+    const welcome = outbox.locator(`[data-testid="outbox-message"][data-to="${email}"][data-tag="welcome"]`);
+    await expect(async () => {
+      await outbox.goto(`/dev/outbox?to=${encodeURIComponent(email)}`);
+      await expect(welcome).toHaveCount(1, { timeout: 1_000 });
+    }).toPass({ timeout: 20_000 });
+    await expect(welcome).toContainText('Welcome, Robin! Earn a $50 gift card as a founding helper');
+    await expect(outbox.frameLocator('iframe').first().getByRole('link', { name: /Claim your spot/ }).first()).toHaveAttribute('href', /\/app\/helper\/onboarding\/profile$/);
+    await outbox.close();
   });
 
   test('making an offer asks for a verified phone first', async ({ page, context }, testInfo) => {

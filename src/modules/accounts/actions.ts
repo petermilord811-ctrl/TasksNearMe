@@ -1,11 +1,11 @@
 'use server';
 
 import { eq } from 'drizzle-orm';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { routes, socialSignInInputSchema, type ActionResult, type SocialSignInInput } from '@/contracts';
-import { offeredSocialProviders } from '@/integrations/oauth';
+import { offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
 import { validationFailed } from '@/platform/actions/results';
 import { auth } from '@/platform/auth/auth';
 import { getViewer } from '@/platform/auth/viewer';
@@ -50,8 +50,10 @@ export async function connectSignInAction(input: SocialSignInInput): Promise<Act
   const viewer = await getViewer();
   if (viewer.kind !== 'user' || !offeredSocialProviders().includes(provider)) return { ok: false, code: 'not_allowed' };
   const back = `${routes.app.account()}?connect=${provider}`;
+  // Development and tests only: this browser asked for the stand-in instead of the real provider.
+  const additionalParams = standInParams((await cookies()).get(STAND_IN_COOKIE)?.value);
   const { url } = await auth.api.linkSocialAccount({
-    body: { provider, callbackURL: back, errorCallbackURL: back, disableRedirect: true },
+    body: { provider, callbackURL: back, errorCallbackURL: back, disableRedirect: true, ...(additionalParams ? { additionalParams } : {}) },
     headers: await headers(),
   });
   if (!url) return { ok: false, code: 'unknown' };

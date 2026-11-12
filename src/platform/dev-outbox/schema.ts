@@ -13,6 +13,10 @@ export const devOutboxMessages = pgTable(
     to: text('to').notNull(),
     subject: text('subject').notNull().default(''),
     body: text('body').notNull(),
+    /** The HTML version of an email, when it has one (shown in a frame at /dev/outbox). */
+    html: text('html'),
+    /** What kind of email it is (Postmark's tag), e.g. `welcome` or `sign-in-code`. */
+    tag: text('tag'),
     createdAt: createdAt(),
   },
   (t) => [index('dev_outbox_to_idx').on(t.to, t.createdAt)],

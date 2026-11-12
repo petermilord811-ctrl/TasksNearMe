@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { offeredSocialProviders, socialProviderKeys, standInSocialProviders } from './index';
+import { offeredSocialProviders, socialProviderKeys, standInParams, standInSocialProviders } from './index';
 import { issueStandInCode, pkceChallenge, readStandInCode, socialStandIn, standInCallbackUrl } from './stand-in';
 import { customStandInClaims, STAND_IN_PEOPLE } from './stand-in-people';
 
@@ -67,10 +67,58 @@ describe('which providers are offered', () => {
   it('uses real keys when set, the stand-in otherwise, and nothing in production without keys', () => {
     expect(socialProviderKeys({ GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret' })).toEqual({ google: { clientId: 'id', clientSecret: 'secret' }, microsoft: null });
     expect(socialProviderKeys({ MICROSOFT_CLIENT_ID: 'id', MICROSOFT_CLIENT_SECRET: 's' }).microsoft).toEqual({ clientId: 'id', clientSecret: 's', tenantId: 'common' });
-    expect(standInSocialProviders({ NODE_ENV: 'development', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 's' })).toEqual(['microsoft']);
+    // Outside production the stand-in serves every provider (beside the real one where keys are set).
+    expect(standInSocialProviders({ NODE_ENV: 'development', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 's' })).toEqual(['google', 'microsoft']);
+    expect(standInSocialProviders({ NODE_ENV: 'production' })).toEqual([]);
     expect(offeredSocialProviders({ NODE_ENV: 'development' })).toEqual(['google', 'microsoft']);
     expect(offeredSocialProviders({ NODE_ENV: 'production' })).toEqual([]);
     expect(offeredSocialProviders({ NODE_ENV: 'production', MICROSOFT_CLIENT_ID: 'id', MICROSOFT_CLIENT_SECRET: 's' })).toEqual(['microsoft']);
+  });
+});
+
+describe('asking for the stand-in', () => {
+  it('only outside production, and only when the browser asked', () => {
+    expect(standInParams('1', { NODE_ENV: 'development' })).toEqual({ tnm_stand_in: '1' });
+    expect(standInParams(undefined, { NODE_ENV: 'development' })).toBeUndefined();
+    expect(standInParams('1', { NODE_ENV: 'production' })).toBeUndefined();
+  });
+});
+
+describe('the stand-in beside a real provider', () => {
+  const calls: string[] = [];
+  const real = {
+    id: 'google',
+    name: 'Google',
+    accountSubject: () => 'real-subject',
+    createAuthorizationURL: () => { calls.push('real-url'); return new URL('https://accounts.google.example/auth'); },
+    validateAuthorizationCode: async () => { calls.push('real-code'); return { accessToken: 'real-token' }; },
+    getUserInfo: async () => { calls.push('real-user'); return { user: { email: 'real@example.test', emailVerified: true }, data: {} }; },
+  };
+  const plugin = socialStandIn({ providers: ['google'], appUrl: 'http://localhost:3000', secret: SECRET, mapProfile: () => ({ name: 'Robin A.', emailVerified: true, image: undefined }) });
+  const init = plugin.init as unknown as (ctx: { socialProviders: unknown[] }) => { context: { socialProviders: Record<string, (...args: never[]) => unknown>[] } };
+  const google = init({ socialProviders: [real] }).context.socialProviders[0] as unknown as {
+    accountSubject: (context: object) => string;
+    createAuthorizationURL: (data: object) => URL;
+    validateAuthorizationCode: (data: object) => Promise<{ accessToken: string } | null>;
+    getUserInfo: (tokens: object) => Promise<{ user: { email?: string } } | null>;
+  };
+
+  it('stays the real provider unless the sign-in asked for the stand-in', async () => {
+    expect(google.createAuthorizationURL({ state: 'st', codeVerifier: VERIFIER, redirectURI: CALLBACK }).host).toBe('accounts.google.example');
+    expect(await google.validateAuthorizationCode({ code: 'a-real-google-code', codeVerifier: VERIFIER, redirectURI: CALLBACK })).toEqual({ accessToken: 'real-token' });
+    expect(await google.getUserInfo({ accessToken: 'real-token' })).toMatchObject({ user: { email: 'real@example.test' } });
+    expect(google.accountSubject({ tokens: { accessToken: 'real-token' }, profile: {} })).toBe('real-subject');
+    expect(calls).toEqual(['real-url', 'real-code', 'real-user']);
+  });
+
+  it('answers the sign-ins that asked for it, and the codes it signed', async () => {
+    calls.length = 0;
+    expect(google.createAuthorizationURL({ state: 'st', codeVerifier: VERIFIER, redirectURI: CALLBACK, additionalParams: { tnm_stand_in: '1' } }).pathname).toBe('/dev/oauth/google');
+    const code = issueStandInCode(SECRET, { provider: 'google', claims, challenge: pkceChallenge(VERIFIER), redirectUri: CALLBACK });
+    const tokens = await google.validateAuthorizationCode({ code, codeVerifier: VERIFIER, redirectURI: CALLBACK });
+    expect(await google.getUserInfo(tokens!)).toMatchObject({ user: { email: 'robin@example.test' } });
+    expect(google.accountSubject({ tokens: tokens!, profile: claims })).toBe('stand-in-google-1');
+    expect(calls).toEqual([]);
   });
 });
 

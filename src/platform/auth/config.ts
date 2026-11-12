@@ -3,6 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
 import { emailOTP } from 'better-auth/plugins';
 import { accounts, sessions, users, verifications } from '@/modules/accounts/schema';
+import { renderSignInCodeEmail } from '@/modules/accounts/emails/sign-in-code';
 import { createProviderConnectedHook, createProviderGate } from '@/modules/accounts/sign-in/provider-gate';
 import { userFromProviderProfile } from '@/modules/accounts/sign-in/providers';
 import { createEmailProvider } from '@/integrations/email';
@@ -105,11 +106,8 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
         expiresIn: 600,
         allowedAttempts: 3,
         async sendVerificationOTP({ email: to, otp }) {
-          await email.send({
-            to,
-            subject: `Your TasksNearMe code: ${otp}`,
-            text: `Your sign-in code is ${otp}. It expires in 10 minutes. If you didn't ask for it, ignore this email.`,
-          });
+          const { subject, text, html } = renderSignInCodeEmail({ code: otp, minutes: 10, appUrl: appUrl() });
+          await email.send({ to, subject, text, html, tag: 'sign-in-code' });
         },
       }),
       ...(standIn.length > 0 ? [socialStandIn({ providers: standIn, appUrl: appUrl(), secret: standInSecret(), mapProfile: userFromProviderProfile })] : []),

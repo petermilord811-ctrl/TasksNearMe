@@ -2,6 +2,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type { BetterAuthPlugin } from 'better-auth';
 import type { OAuth2Tokens, OAuthProvider } from 'better-auth/oauth2';
 import type { SocialProvider } from '@/contracts';
+import { STAND_IN_PARAM } from './index';
 
 /**
  * A stand-in for Google and Microsoft sign-in (development and tests only; see ./index.ts). Better Auth runs
@@ -9,6 +10,9 @@ import type { SocialProvider } from '@/contracts';
  * page is replaced, by an account chooser at `/dev/oauth/<provider>`, which sends the browser back to
  * Better Auth's callback with a code. The code is signed, expires in 5 minutes, and carries the chosen
  * person's claims, the PKCE challenge and the callback address.
+ *
+ * A provider with real keys keeps working as itself: the stand-in only answers the sign-ins that asked for
+ * it (`tnm_stand_in=1` among the authorization parameters) and the codes it signed itself.
  */
 
 export type StandInClaims = Record<string, unknown>;
@@ -119,17 +123,40 @@ function standInProvider(provider: SocialProvider, options: StandInOptions): OAu
   };
 }
 
-/** A Better Auth plugin that adds the stand-in providers (replacing any real one with the same id). */
+/**
+ * The real provider, with the stand-in beside it: a sign-in that asked for the stand-in goes to the account
+ * chooser, and a code the stand-in signed is exchanged by the stand-in. Everything else is the real provider.
+ */
+function besideReal(real: OAuthProvider, standIn: OAuthProvider<StandInClaims>, secret: string): OAuthProvider {
+  const ours = (token: string | undefined) => (token ? readStandInCode(secret, token) !== null : false);
+  return {
+    ...real,
+    accountSubject: (context) => (ours(context.tokens.accessToken) ? standIn.accountSubject(context as never) : real.accountSubject(context)),
+    createAuthorizationURL: (data) => (data.additionalParams?.[STAND_IN_PARAM] === '1' ? standIn.createAuthorizationURL(data) : real.createAuthorizationURL(data)),
+    validateAuthorizationCode: (data) => (ours(data.code) ? standIn.validateAuthorizationCode(data) : real.validateAuthorizationCode(data)),
+    getUserInfo: (tokens) => (ours(tokens.accessToken) ? standIn.getUserInfo(tokens) : real.getUserInfo(tokens)),
+  };
+}
+
+/**
+ * A Better Auth plugin that adds the stand-in: it serves the listed providers that have no real provider,
+ * and sits beside the real ones (see `besideReal`).
+ */
 export function socialStandIn(options: StandInOptions): BetterAuthPlugin {
   return {
     id: 'tnm-social-stand-in',
-    init: (ctx) => ({
-      context: {
-        socialProviders: [
-          ...options.providers.map((provider) => standInProvider(provider, options)),
-          ...ctx.socialProviders.filter((existing) => !(options.providers as string[]).includes(existing.id)),
-        ],
-      },
-    }),
+    init: (ctx) => {
+      const real = new Map(ctx.socialProviders.map((provider) => [provider.id, provider]));
+      const served = options.providers.map((provider) => {
+        const standIn = standInProvider(provider, options);
+        const existing = real.get(provider);
+        return existing ? besideReal(existing, standIn, options.secret) : standIn;
+      });
+      return {
+        context: {
+          socialProviders: [...served, ...ctx.socialProviders.filter((existing) => !(options.providers as string[]).includes(existing.id))],
+        },
+      };
+    },
   };
 }

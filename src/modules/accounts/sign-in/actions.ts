@@ -3,16 +3,19 @@
 import { isAPIError } from 'better-auth/api';
 import { eq, sql } from 'drizzle-orm';
 import { refresh } from 'next/cache';
-import { headers } from 'next/headers';
+import { after } from 'next/server';
+import { cookies, headers } from 'next/headers';
 import type { ActionResult, EmailInput, OneTimeCodeInput, PhoneInput, ProfileInput, SocialSignInInput } from '@/contracts';
 import { emailInputSchema, oneTimeCodeInputSchema, phoneInputSchema, profileInputSchema, routes, socialSignInInputSchema } from '@/contracts';
-import { offeredSocialProviders } from '@/integrations/oauth';
+import { createEmailProvider } from '@/integrations/email';
+import { offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
 import { fieldError, rateLimited, validationFailed } from '@/platform/actions/results';
 import { auth } from '@/platform/auth/auth';
 import { db } from '@/platform/db/client';
 import { consumeRateLimits } from '@/platform/rate-limit';
 import { users } from '../schema';
 import { CURRENT_TERMS_VERSION } from '../terms';
+import { sendWelcomeEmail } from '../welcome';
 import { clearPendingEmail, readPendingEmail, writePendingEmail } from './pending-email';
 import {
   BLOCKED_STATUSES,
@@ -92,6 +95,8 @@ export async function continueWith(rawNext: string, input: SocialSignInInput): P
 
   const next = safeNextPath(rawNext);
   const back = routes.signIn(next);
+  // Development and tests only: this browser asked for the stand-in instead of the real provider.
+  const additionalParams = standInParams((await cookies()).get(STAND_IN_COOKIE)?.value);
   const { url } = await auth.api.signInSocial({
     body: {
       provider,
@@ -99,6 +104,7 @@ export async function continueWith(rawNext: string, input: SocialSignInInput): P
       newUserCallbackURL: back,
       errorCallbackURL: `${back}&via=${provider}`,
       disableRedirect: true,
+      ...(additionalParams ? { additionalParams } : {}),
     },
     headers: await headers(),
   });
@@ -187,6 +193,8 @@ export async function saveProfile(next: string, input: ProfileInput): Promise<Ac
       updatedAt: now,
     })
     .where(eq(users.id, userId));
+  // Sign-up is done: the welcome email goes out after the response (once per account).
+  after(() => sendWelcomeEmail(db, createEmailProvider(db), userId, now).catch((error: unknown) => console.error('[welcome]', error)));
   return continueAfterSignIn(next, userId, 'saved');
 }
 

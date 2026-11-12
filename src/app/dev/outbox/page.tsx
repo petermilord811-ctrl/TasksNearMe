@@ -5,7 +5,10 @@ import { devOutboxMessages } from '@/platform/dev-outbox/schema';
 
 export const metadata = { title: 'Dev outbox' };
 
-/** Development only: emails and SMS "sent" by the fake providers. `?to=` shows one recipient's. */
+/**
+ * Development only: emails and SMS "sent" by the fake providers. `?to=` shows one recipient's. An email with
+ * a designed version shows it in a frame (links open in a new tab), with a link to open it full size.
+ */
 export default function DevOutboxPage({ searchParams }: { searchParams: Promise<{ to?: string | string[] }> }) {
   return (
     <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif', maxWidth: 900 }}>
@@ -35,13 +38,31 @@ async function Messages({ searchParams }: { searchParams: Promise<{ to?: string 
           data-testid="outbox-message"
           data-channel={m.channel}
           data-to={m.to}
+          data-tag={m.tag ?? ''}
           style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12 }}
         >
           <div>
             <strong>{m.channel.toUpperCase()}</strong> to {m.to} · {m.createdAt}
+            {m.tag ? <span style={{ marginLeft: 8, padding: '1px 8px', borderRadius: 999, background: '#f1ebe3', fontSize: 12 }}>{m.tag}</span> : null}
           </div>
           {m.subject ? <div>{m.subject}</div> : null}
-          <pre style={{ whiteSpace: 'pre-wrap', margin: '8px 0 0' }}>{m.body}</pre>
+          {m.html ? (
+            <details open={m.tag === 'welcome'} style={{ marginTop: 8 }}>
+              <summary style={{ cursor: 'pointer' }}>
+                Designed version · <a href={`/dev/outbox/${m.id}`} target="_blank" rel="noreferrer">open full size</a>
+              </summary>
+              <iframe
+                title={`Designed version of "${m.subject}"`}
+                srcDoc={m.html}
+                sandbox="allow-popups allow-popups-to-escape-sandbox"
+                style={{ display: 'block', width: '100%', height: 760, marginTop: 8, border: '1px solid #ddd', borderRadius: 8, background: '#fbf7f2' }}
+              />
+            </details>
+          ) : null}
+          <details open={!m.html} style={{ marginTop: 8 }}>
+            <summary style={{ cursor: 'pointer' }}>Plain text</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', margin: '8px 0 0' }}>{m.body}</pre>
+          </details>
         </li>
       ))}
     </ol>
