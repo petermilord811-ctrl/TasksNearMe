@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { AttentionTarget, NotificationView } from '@/contracts';
 import { users } from '../accounts/schema';
 
@@ -23,6 +23,38 @@ export const notifications = pgTable(
     readAt: timestamp('read_at', { withTimezone: true }),
   },
   (t) => [index('notifications_user_idx').on(t.userId, t.createdAt), uniqueIndex('notifications_event_user_idx').on(t.sourceEventId, t.userId)],
+);
+
+/**
+ * Email and text messages for each notification (blueprint 08 `notification_deliveries`, backlog B-028):
+ * one row per notification and channel. `sending` while a send is in flight; `held` through quiet hours
+ * until `send_after`; `failed` with the error and the next try in `send_after` (none after the last);
+ * `skipped` with why (preference off, no email, no verified phone); `sent`.
+ */
+export const notificationDeliveries = pgTable(
+  'notification_deliveries',
+  {
+    id: text('id').primaryKey(),
+    notificationId: text('notification_id')
+      .notNull()
+      .references(() => notifications.id),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    channel: text('channel').notNull(), // email | sms
+    status: text('status').notNull(), // sending | sent | held | failed | skipped
+    reason: text('reason'),
+    sendAfter: timestamp('send_after', { withTimezone: true }),
+    attempts: integer('attempts').notNull().default(0),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('notification_deliveries_channel_idx').on(t.notificationId, t.channel),
+    index('notification_deliveries_due_idx').on(t.status, t.sendAfter),
+    index('notification_deliveries_user_idx').on(t.userId, t.createdAt),
+  ],
 );
 
 /** Notification preferences by topic and channel; a missing row means the default. */

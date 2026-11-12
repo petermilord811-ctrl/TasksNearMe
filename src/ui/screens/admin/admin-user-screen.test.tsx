@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BOOKING_STATUSES, routes, type AdminUserPageData } from '@/contracts';
+import { BOOKING_STATUSES, NOTIFICATION_TYPES, routes, type AdminUserPageData } from '@/contracts';
 import { ADMIN_NOW, adminUserJordanData, adminUserReadOnlyData, adminUserSuspendedData, fakeAdminUserHandlers } from '@/fixtures';
 import { formatDateTime, formatMoney, formatMonthYear } from '@/shared/format';
 import uiMessages from '../../../../messages/en/ui';
@@ -51,10 +51,33 @@ describe('AdminUserScreen', () => {
     expect(screen.getByRole('button', { name: 'Reinstate helper' })).toBeInTheDocument();
   });
 
+  it('lists emails and texts with what happened: waiting, failed with the error and the next try, sent, not sent', () => {
+    mount();
+    const list = within(screen.getByRole('region', { name: adminUser.deliveries }));
+    const items = list.getAllByRole('listitem');
+    expect(items).toHaveLength(adminUserJordanData.deliveries.length);
+    expect(items[0]).toHaveTextContent('Text: Problem reported');
+    expect(items[0]).toHaveTextContent('Waiting');
+    expect(items[0]).toHaveTextContent(adminUser.deliveryReasons.quiet_hours);
+    expect(items[0]).toHaveTextContent(`Next try ${formatDateTime('2026-11-22T14:00:00.000Z')}`);
+    expect(items[1]).toHaveTextContent('Email: Problem reported');
+    expect(items[1]).toHaveTextContent('Failed');
+    expect(items[1]).toHaveTextContent('2 tries');
+    expect(items[1]).toHaveTextContent('Mailbox unavailable (550)');
+    expect(items[2]).toHaveTextContent('Sent');
+    expect(items[2]).not.toHaveTextContent(/tries|Next try/);
+    expect(items[3]).toHaveTextContent(adminUser.deliveryReasons.preference_off);
+  });
+
+  it('names every strike reason and notification type', () => {
+    for (const reason of ['linked_accounts', 'late_cancellation', 'no_show'] as const) expect(adminUser.strikeReasons[reason]).toMatch(/\S/);
+    for (const type of NOTIFICATION_TYPES) expect(adminUser.deliveryTypes[type]).toMatch(/\S/);
+  });
+
   it('honors read-only actions and displays empty histories without inventing records', () => {
-    mount({ ...adminUserReadOnlyData, bookings: [], cases: [], rewards: [], strikes: [], user: { ...adminUserReadOnlyData.user, phone: { last4: '0201', verified: false } } });
+    mount({ ...adminUserReadOnlyData, bookings: [], cases: [], rewards: [], strikes: [], deliveries: [], user: { ...adminUserReadOnlyData.user, phone: { last4: '0201', verified: false } } });
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    for (const copy of [adminUser.noBookings, adminUser.noCases, adminUser.noRewards, adminUser.noStrikes]) expect(screen.getByText(copy)).toBeInTheDocument();
+    for (const copy of [adminUser.noBookings, adminUser.noCases, adminUser.noRewards, adminUser.noStrikes, adminUser.noDeliveries]) expect(screen.getByText(copy)).toBeInTheDocument();
     expect(screen.getByText('•••• 0201 · Not verified')).toBeInTheDocument();
     for (const status of BOOKING_STATUSES) expect(uiMessages.status.booking.staff[status]).toMatch(/\S/);
   });

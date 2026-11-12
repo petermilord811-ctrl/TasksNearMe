@@ -38,7 +38,10 @@
   "bookingsCaption": "This person's bookings as client and helper, newest first",
   "booking": "Booking",
   "role": "Role",
-  "bookingRoles": { "poster": "Client", "helper": "Helper" },
+  "bookingRoles": {
+    "poster": "Client",
+    "helper": "Helper"
+  },
   "status": "Status",
   "start": "Start",
   "amount": "Amount",
@@ -53,7 +56,64 @@
   "strikes": "Strikes",
   "noStrikes": "No strikes recorded.",
   "strikeBooking": "Open booking {id}",
-  "strikeReasons": { "linked_accounts": "Linked accounts" },
+  "strikeReasons": {
+    "linked_accounts": "Linked accounts",
+    "late_cancellation": "Late cancellation",
+    "no_show": "No-show"
+  },
+  "deliveries": "Emails and texts",
+  "deliveriesHint": "The latest messages for this person's notifications. Failed sends are tried 3 more times.",
+  "noDeliveries": "No emails or texts yet.",
+  "deliveryLine": "{channel}: {type}",
+  "deliveryChannels": {
+    "email": "Email",
+    "sms": "Text"
+  },
+  "deliveryStatuses": {
+    "sending": "Sending",
+    "sent": "Sent",
+    "held": "Waiting",
+    "failed": "Failed",
+    "skipped": "Not sent"
+  },
+  "deliveryReasons": {
+    "preference_off": "Turned off in their settings",
+    "no_email": "No email address",
+    "no_verified_phone": "No verified phone",
+    "quiet_hours": "Quiet hours (9 pm to 8 am)"
+  },
+  "deliveryAttempts": "{count, plural, one {# try} other {# tries}}",
+  "deliveryNextTry": "Next try {time}",
+  "deliveryTypes": {
+    "offer_received": "New offer",
+    "offer_updated": "Offer updated",
+    "offer_declined": "Offer not selected",
+    "booking_confirmed": "Booking confirmed",
+    "booking_canceled": "Booking canceled",
+    "helper_on_the_way": "Helper on the way",
+    "helper_running_late": "Helper running late",
+    "helper_arrived": "Helper arrived",
+    "cant_access": "Helper can't get in",
+    "work_submitted": "Work sent for approval",
+    "work_approved": "Work approved",
+    "problem_reported": "Problem reported",
+    "earnings_transferred": "Earnings transferred",
+    "payout_paid": "Payout paid",
+    "review_published": "Review published",
+    "message_received": "New message",
+    "support_replied": "Support replied",
+    "case_resolved": "Case resolved",
+    "change_proposed": "Change proposed",
+    "change_applied": "Change applied",
+    "invite_received": "Booking request",
+    "invite_countered": "Counter-offer",
+    "invite_accepted": "Request accepted",
+    "rebook_proposed": "Booking proposed",
+    "rebook_accepted": "Proposal accepted",
+    "rebook_declined": "Proposal declined",
+    "task_reopened": "Task open again",
+    "approval_reminder": "Approval reminder"
+  },
   "previews": {
     "group": "Admin · person details",
     "helper": "Person · active helper",

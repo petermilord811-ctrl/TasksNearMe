@@ -27,10 +27,20 @@
     "description": "Choose how you hear about your tasks and bookings. Changes save as you make them.",
     "caption": "Notification preferences by topic and channel",
     "topic": "Topic",
-    "channels": { "email": "Email", "sms": "Text message (SMS)" },
-    "topics": { "bookings": "Bookings", "messages": "Messages", "offers": "Offers", "payments": "Payments", "tips_and_news": "Tips and news" },
+    "channels": {
+      "email": "Email",
+      "sms": "Text message (SMS)"
+    },
+    "topics": {
+      "bookings": "Bookings",
+      "messages": "Messages",
+      "offers": "Offers",
+      "payments": "Payments",
+      "tips_and_news": "Tips and news"
+    },
     "switchLabel": "{topic} by {channel}",
     "locked": "Receipts and safety messages can't be turned off.",
+    "quietHours": "Texts that can wait arrive after 8 am. Day-of booking updates, like a helper on the way or a cancellation, come right away.",
     "saved": "{preference}: your preference was saved.",
     "notAllowed": "This preference can't be changed. Your previous setting has been restored.",
     "unavailable": "Unavailable"

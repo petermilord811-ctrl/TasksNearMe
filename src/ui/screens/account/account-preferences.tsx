@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { LockKeyhole } from 'lucide-react';
+import { LockKeyhole, MoonStar } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, type AccountHandlers, type AccountPageData, type ActionResult } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
@@ -62,6 +62,7 @@ export function AccountPreferences({ preferences, onSave }: {
       </tr>)}</tbody>
     </table>
     <p id={hintId} className="flex items-start gap-2 text-sm text-muted-foreground"><LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{t('preferences.locked')}</span></p>
+    <p className="flex items-start gap-2 text-sm text-muted-foreground"><MoonStar aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{t('preferences.quietHours')}</span></p>
     <FormFeedback result={feedback?.result} successMessage={feedback ? t('preferences.saved', { preference: feedback.label }) : undefined} errorMessage={feedback?.result && !feedback.result.ok && feedback.result.code === 'not_allowed' ? t('preferences.notAllowed') : undefined} />
   </div>;
 }

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { RewardActionId } from './action-ids';
 import type { ActionHandler, FieldErrorCode } from './actions';
 import type { AdminCaseRow } from './admin';
+import type { NotificationChannel, NotificationType } from './account';
 import type { Cents, ISODateTime, StaffRole } from './common';
 import type { PersonSummary } from './people';
 import type { BookingStatus, RewardProgramCode, RewardStatus } from './status';
@@ -86,6 +87,27 @@ export interface AdminUsersPageData {
 export const ADMIN_USER_ACTIONS = ['suspend_helper', 'reinstate_helper'] as const;
 export type AdminUserActionId = (typeof ADMIN_USER_ACTIONS)[number];
 
+export const DELIVERY_STATUSES = ['sending', 'sent', 'held', 'failed', 'skipped'] as const;
+export type DeliveryStatus = (typeof DELIVERY_STATUSES)[number];
+/** Why an email or text wasn't sent (yet). A failed send carries the provider's error instead. */
+export const DELIVERY_REASONS = ['preference_off', 'no_email', 'no_verified_phone', 'quiet_hours'] as const;
+export type DeliveryReason = (typeof DELIVERY_REASONS)[number];
+
+/** One email or text message for a notification (T-29), as support sees it. */
+export interface AdminDeliveryRow {
+  id: string;
+  channel: NotificationChannel;
+  type: NotificationType;
+  status: DeliveryStatus;
+  /** A `DeliveryReason`, or the provider's error when it failed. */
+  reason?: string;
+  attempts: number;
+  /** When it was last sent, tried or decided. */
+  at: ISODateTime;
+  /** Held through quiet hours, or failed and tried again: the next try. */
+  nextTryAt?: ISODateTime;
+}
+
 /** `routes.admin.user(userId)`. */
 export interface AdminUserPageData {
   user: AdminUserRow & { phone?: { last4: string; verified: boolean } };
@@ -94,6 +116,8 @@ export interface AdminUserPageData {
   cases: AdminCaseRow[];
   rewards: AdminRewardRow[];
   strikes: { id: string; bookingId: string; reason: string; at: ISODateTime }[];
+  /** Emails and texts for this person's notifications, newest first (up to 20). */
+  deliveries: AdminDeliveryRow[];
   /** The latest suspension, while it lasts. */
   suspension?: { reason: string; at: ISODateTime; byDisplayName: string };
   actions: AdminUserActionId[];

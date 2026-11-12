@@ -1,7 +1,8 @@
 import { and, desc, eq, ilike, inArray, notInArray, or } from 'drizzle-orm';
-import type { ActionResult, AdminHelperStatus, AdminUserPageData, AdminUserRow, AdminUsersPageData, BookingStatus, HelperSuspensionInput, StaffRole } from '@/contracts';
+import type { ActionResult, AdminDeliveryRow, AdminHelperStatus, AdminUserPageData, AdminUserRow, AdminUsersPageData, BookingStatus, DeliveryStatus, HelperSuspensionInput, NotificationChannel, NotificationType, StaffRole } from '@/contracts';
 import { helperSuspensionInputSchema } from '@/contracts';
 import { bookingTerms, bookings, helperStrikes } from '@/modules/bookings/schema';
+import { notificationDeliveries, notifications } from '@/modules/notifications/schema';
 import { offers } from '@/modules/offers/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { rewardGrants } from '@/modules/rewards/schema';
@@ -73,7 +74,7 @@ async function suspensionOf(db: Db, userId: string) {
 export async function getAdminUser(db: Db, staff: StaffActor, userId: string, now: Date): Promise<AdminUserPageData | null> {
   const [user] = await db.select().from(users).where(eq(users.id, String(userId))).limit(1);
   if (!user) return null;
-  const [[row], bookingRows, caseRows, grants, strikeRows, suspension] = await Promise.all([
+  const [[row], bookingRows, caseRows, grants, strikeRows, suspension, deliveryRows] = await Promise.all([
     rowsOf(db, [user]),
     db
       .select({ booking: bookings, title: tasks.title, breakdown: bookingTerms.breakdown })
@@ -87,6 +88,13 @@ export async function getAdminUser(db: Db, staff: StaffActor, userId: string, no
     db.select().from(rewardGrants).where(eq(rewardGrants.helperUserId, user.id)).orderBy(desc(rewardGrants.createdAt)).limit(20),
     db.select().from(helperStrikes).where(eq(helperStrikes.helperUserId, user.id)).orderBy(desc(helperStrikes.createdAt)),
     suspensionOf(db, user.id),
+    db
+      .select({ delivery: notificationDeliveries, type: notifications.type })
+      .from(notificationDeliveries)
+      .innerJoin(notifications, eq(notifications.id, notificationDeliveries.notificationId))
+      .where(eq(notificationDeliveries.userId, user.id))
+      .orderBy(desc(notificationDeliveries.updatedAt))
+      .limit(20),
   ]);
   if (!row) return null;
   const actions: AdminUserPageData['actions'] = [];
@@ -101,6 +109,16 @@ export async function getAdminUser(db: Db, staff: StaffActor, userId: string, no
     cases: await caseRowsFor(db, caseRows, now),
     rewards: (await getAdminRewardRows(db, { id: staff.id, roles: [] }, grants)).map((reward) => ({ ...reward, actions: [] })),
     strikes: strikeRows.map((strike) => ({ id: strike.id, bookingId: strike.bookingId, reason: strike.reason, at: strike.createdAt.toISOString() })),
+    deliveries: deliveryRows.map(({ delivery, type }): AdminDeliveryRow => ({
+      id: delivery.id,
+      channel: delivery.channel as NotificationChannel,
+      type: type as NotificationType,
+      status: delivery.status as DeliveryStatus,
+      ...(delivery.reason ? { reason: delivery.reason } : {}),
+      attempts: delivery.attempts,
+      at: (delivery.sentAt ?? delivery.updatedAt).toISOString(),
+      ...(delivery.sendAfter && (delivery.status === 'held' || delivery.status === 'failed') ? { nextTryAt: delivery.sendAfter.toISOString() } : {}),
+    })),
     ...(suspension && row.helperStatus === 'suspended' ? { suspension } : {}),
     actions,
   };

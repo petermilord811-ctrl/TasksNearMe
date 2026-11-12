@@ -1,24 +1,31 @@
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { Suspense } from 'react';
 import { db } from '@/platform/db/client';
 import { devOutboxMessages } from '@/platform/dev-outbox/schema';
 
 export const metadata = { title: 'Dev outbox' };
 
-/** Development only: emails and SMS "sent" by the fake providers. */
-export default function DevOutboxPage() {
+/** Development only: emails and SMS "sent" by the fake providers. `?to=` shows one recipient's. */
+export default function DevOutboxPage({ searchParams }: { searchParams: Promise<{ to?: string | string[] }> }) {
   return (
     <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif', maxWidth: 900 }}>
       <h1 style={{ fontSize: 24, fontWeight: 700 }}>Dev outbox</h1>
       <Suspense fallback={<p>Loading messages…</p>}>
-        <Messages />
+        <Messages searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
-async function Messages() {
-  const rows = await db.select().from(devOutboxMessages).orderBy(desc(devOutboxMessages.createdAt)).limit(50);
+async function Messages({ searchParams }: { searchParams: Promise<{ to?: string | string[] }> }) {
+  const { to } = await searchParams;
+  const recipient = typeof to === 'string' && to.trim() ? to.trim().toLowerCase() : undefined;
+  const rows = await db
+    .select()
+    .from(devOutboxMessages)
+    .where(recipient ? eq(devOutboxMessages.to, recipient) : undefined)
+    .orderBy(desc(devOutboxMessages.createdAt))
+    .limit(50);
   if (rows.length === 0) return <p>No messages yet.</p>;
   return (
     <ol style={{ display: 'grid', gap: 12, marginTop: 16 }}>

@@ -5,7 +5,8 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 async function latestCode(context: BrowserContext, to: string): Promise<string> {
   const outbox = await context.newPage();
   try {
-    await outbox.goto('/dev/outbox');
+    // Only this address's messages: notification emails from other tests never push the code off the page.
+    await outbox.goto(`/dev/outbox?to=${encodeURIComponent(to)}`);
     const body = await outbox.locator(`[data-testid="outbox-message"][data-to="${to}"] pre`).first().textContent();
     const code = body?.match(/\b(\d{6})\b/)?.[1];
     if (!code) throw new Error(`no code sent to ${to}`);

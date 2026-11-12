@@ -1,7 +1,9 @@
 import { and, eq } from 'drizzle-orm';
 import { devCardRef } from '../../../src/integrations/payments';
 import { bookingCompletions, bookingTerms, bookings } from '../../../src/modules/bookings/schema';
+import type { NotificationType } from '../../../src/contracts';
 import { marketPolicies } from '../../../src/modules/markets/schema';
+import { notifications } from '../../../src/modules/notifications/schema';
 import { offers } from '../../../src/modules/offers/schema';
 import { quoteBreakdown } from '../../../src/modules/payments/fees';
 import { payments, refunds } from '../../../src/modules/payments/schema';
@@ -165,6 +167,17 @@ export async function closeTask(taskId: string): Promise<void> {
   const { db, pool } = database();
   try {
     await db.update(tasks).set({ status: 'canceled', updatedAt: new Date() }).where(eq(tasks.id, taskId));
+  } finally {
+    await pool.end();
+  }
+}
+
+/** An in-app notification made now, as the dispatcher would; the job runner then emails or texts it. */
+export async function notifyNow(userId: string, type: NotificationType, title: string): Promise<void> {
+  const { db, pool } = database();
+  try {
+    const run = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
+    await db.insert(notifications).values({ id: `ntf_e2e_${run}`, userId, type, title, actorName: 'Jordan T.', target: { kind: 'messages' }, sourceEventId: `e2e:${run}` });
   } finally {
     await pool.end();
   }

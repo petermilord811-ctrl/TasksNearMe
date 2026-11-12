@@ -43,7 +43,7 @@ import { earnings, payouts } from '../../src/modules/earnings/schema';
 import { savedHelpers } from '../../src/modules/reviews/schema';
 import { blocks, messages, threadParticipants, threads } from '../../src/modules/messaging/schema';
 import { supportCaseEvents, supportCaseReads, supportCases } from '../../src/modules/support/schema';
-import { notificationPreferences, notifications, privacyRequests } from '../../src/modules/notifications/schema';
+import { notificationDeliveries, notificationPreferences, notifications, privacyRequests } from '../../src/modules/notifications/schema';
 import { rebookProposals } from '../../src/modules/rebook/schema';
 import { availabilityPosts } from '../../src/modules/availability/schema';
 import { rewardGrants } from '../../src/modules/rewards/schema';
@@ -413,6 +413,7 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   const taskIds = [...SEED_TASKS.map((task) => task.id), ...copied, ...scratch];
   await tx.delete(savedHelpers).where(inArray(savedHelpers.userId, people));
   // Notifications, preferences and privacy requests start over too (the e2e changes them).
+  await tx.delete(notificationDeliveries).where(inArray(notificationDeliveries.userId, people));
   await tx.delete(notifications).where(inArray(notifications.userId, people));
   await tx.delete(notificationPreferences).where(inArray(notificationPreferences.userId, people));
   await tx.delete(privacyRequests).where(inArray(privacyRequests.userId, people));

@@ -4,9 +4,7 @@ import type {
   AccountProfileInput,
   ActionResult,
   AttentionTarget,
-  NotificationChannel,
   NotificationsPageData,
-  NotificationTopic,
   NotificationType,
   NotificationView,
 } from '@/contracts';
@@ -23,6 +21,7 @@ import { newId } from '@/platform/db/ids';
 import { invites } from '@/modules/invites/schema';
 import { rebookProposals } from '@/modules/rebook/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
+import { isLockedPreference, preferenceOn } from './delivery-domain';
 import { notificationPreferences, notifications, privacyRequests } from './schema';
 
 /**
@@ -301,19 +300,7 @@ export async function markAllNotificationsRead(db: Db, userId: string, now: Date
 
 // ---- The account page -------------------------------------------------------------------------------
 
-/** Receipts and safety messages always go by email. */
-const LOCKED: { topic: NotificationTopic; channel: NotificationChannel }[] = [
-  { topic: 'bookings', channel: 'email' },
-  { topic: 'payments', channel: 'email' },
-];
-const DEFAULT_ON: Record<NotificationTopic, NotificationChannel[]> = {
-  bookings: ['email', 'sms'],
-  messages: ['email'],
-  offers: ['email'],
-  payments: ['email'],
-  tips_and_news: [],
-};
-const isLocked = (topic: string, channel: string) => LOCKED.some((item) => item.topic === topic && item.channel === channel);
+const isLocked = isLockedPreference;
 
 export async function getAccountPage(db: Db, userId: string): Promise<AccountPageData | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -332,7 +319,7 @@ export async function getAccountPage(db: Db, userId: string): Promise<AccountPag
     preferences: NOTIFICATION_TOPICS.flatMap((topic) =>
       NOTIFICATION_CHANNELS.map((channel) => {
         const locked = isLocked(topic, channel);
-        const enabled = locked || (stored.get(`${topic}:${channel}`) ?? DEFAULT_ON[topic].includes(channel));
+        const enabled = preferenceOn(stored, topic, channel);
         return { topic, channel, enabled, locked };
       }),
     ),

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ShieldAlert } from 'lucide-react';
-import { routes, type AdminUserHandlers, type AdminUserPageData, type ISODateTime } from '@/contracts';
+import { routes, type AdminUserHandlers, type AdminUserPageData, type BadgeTone, type DeliveryStatus, type ISODateTime } from '@/contracts';
 import { formatDateTime, formatMoney, formatMonthYear, formatRelative } from '@/shared/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -23,6 +23,26 @@ function BookingRow({ booking, now, mobile = false }: { booking: AdminUserPageDa
     <dl className="grid grid-cols-2 gap-3 text-sm"><div><dt className="text-muted-foreground">{t('role')}</dt><dd>{t(`bookingRoles.${booking.role}`)}</dd></div><div><dt className="text-muted-foreground">{t('amount')}</dt><dd className="font-semibold tabular-nums">{formatMoney(booking.amountCents)}</dd></div><div className="col-span-2"><dt className="text-muted-foreground">{t('start')}</dt><dd className="tabular-nums">{time}</dd></div></dl>
   </li>;
   return <tr className="border-t align-top hover:bg-accent/50"><th scope="row" className="p-3 text-left font-normal">{title}</th><td className="p-3">{t(`bookingRoles.${booking.role}`)}</td><td className="p-3"><StatusBadge {...status} /></td><td className="p-3 tabular-nums">{time}</td><td className="p-3 font-semibold tabular-nums">{formatMoney(booking.amountCents)}</td></tr>;
+}
+
+const deliveryTones: Record<DeliveryStatus, BadgeTone> = { sending: 'info', sent: 'success', held: 'warning', failed: 'danger', skipped: 'neutral' };
+
+/** One email or text: what it was about, what happened, and when it's tried next. */
+function DeliveryRow({ delivery, now }: { delivery: AdminUserPageData['deliveries'][number]; now: ISODateTime }) {
+  const t = useTranslations('adminUser');
+  const reason = delivery.reason ? (t.has(`deliveryReasons.${delivery.reason}`) ? t(`deliveryReasons.${delivery.reason}`) : delivery.reason) : undefined;
+  return <li className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+    <div className="min-w-0 space-y-2">
+      <p className="break-words text-sm font-medium">{t('deliveryLine', { channel: t(`deliveryChannels.${delivery.channel}`), type: t(`deliveryTypes.${delivery.type}`) })}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge tone={deliveryTones[delivery.status]} label={t(`deliveryStatuses.${delivery.status}`)} />
+        {delivery.attempts > 1 && <span className="text-sm text-muted-foreground">{t('deliveryAttempts', { count: delivery.attempts })}</span>}
+      </div>
+      {reason && <p className="break-words text-sm text-muted-foreground">{reason}</p>}
+      {delivery.nextTryAt && <p className="text-sm text-muted-foreground"><time dateTime={delivery.nextTryAt}>{t('deliveryNextTry', { time: formatDateTime(delivery.nextTryAt) })}</time></p>}
+    </div>
+    <time dateTime={delivery.at} title={formatRelative(delivery.at, now)} className="text-sm tabular-nums text-muted-foreground">{formatDateTime(delivery.at)}</time>
+  </li>;
 }
 
 export function AdminUserScreen(props: AdminUserScreenProps) { return <AdminUserContent {...props} />; }
@@ -70,6 +90,10 @@ export function AdminUserContent({ data, handlers, now, ...previewState }: Admin
         <div><p className="text-sm font-medium">{t.has(`strikeReasons.${strike.reason}`) ? t(`strikeReasons.${strike.reason}`) : strike.reason}</p><Link href={routes.admin.booking(strike.bookingId)} className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4">{t('strikeBooking', { id: strike.bookingId })}</Link></div>
         <time dateTime={strike.at} title={formatRelative(strike.at, now)} className="text-sm tabular-nums text-muted-foreground">{formatDateTime(strike.at)}</time>
       </li>)}</ul>}
+    </section>
+    <section aria-label={t('deliveries')} className="space-y-3">
+      <div><h2 className="font-heading text-xl font-semibold">{t('deliveries')}</h2><p className="mt-2 text-sm text-muted-foreground">{t('deliveriesHint')}</p></div>
+      {data.deliveries.length === 0 ? <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">{t('noDeliveries')}</p> : <ul className="divide-y rounded-xl border bg-card px-4 shadow-card sm:px-5">{data.deliveries.map((delivery) => <DeliveryRow key={delivery.id} delivery={delivery} now={now} />)}</ul>}
     </section>
   </div>;
 }

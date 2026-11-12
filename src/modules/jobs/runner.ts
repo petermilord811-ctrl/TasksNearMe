@@ -5,6 +5,7 @@ import { autoApproveDue } from '@/modules/bookings/completion-view';
 import { remindApprovalsDue } from '@/modules/bookings/reminders';
 import { expireUnfundedBookings } from '@/modules/bookings/confirm';
 import { expireCantAccess } from '@/modules/bookings/sheets';
+import { deliverNotifications } from '@/modules/notifications/delivery';
 import { dispatchNotifications } from '@/modules/notifications/service';
 import { createPaymentProvider } from '@/integrations/payments';
 import { expireDueInvites } from '@/modules/invites/service';
@@ -15,7 +16,8 @@ import type { Db } from '@/platform/db/connect';
 /**
  * The in-process job runner (blueprint 07: jobs). Every minute it runs the due-work functions that
  * pages also call lazily, so timers fire even when nobody looks: offer and unpaid-hold expiry,
- * can't-access expiry, auto-approval and its reminders, review publishing, and notifications. Each job is idempotent; a
+ * can't-access expiry, auto-approval and its reminders, review publishing, notifications, and their
+ * email and text messages. Each job is idempotent; a
  * Postgres advisory lock lets only one server instance run them at a time. Payouts and rewards stay
  * lazy per person for now.
  */
@@ -37,6 +39,7 @@ export const JOBS: Job[] = [
   { name: 'bookings.approval_reminders', run: (db, now) => remindApprovalsDue(db, now) },
   { name: 'reviews.publish', run: (db, now) => publishDueReviews(db, now) },
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
+  { name: 'notifications.deliver', run: (db, now) => deliverNotifications(db, now) },
 ];
 
 const LOCK_KEY = 72_200_001;

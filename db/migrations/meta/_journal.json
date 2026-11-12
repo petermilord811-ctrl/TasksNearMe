@@ -169,6 +169,13 @@
       "when": 1794470011291,
       "tag": "0023_task_reopened_at",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794471548769,
+      "tag": "0024_notification_deliveries",
+      "breakpoints": true
     }
   ]
 }

@@ -50,5 +50,44 @@
   },
   "support": {
     "contestNoShowOpening": "I'm contesting the no-show report on this booking."
+  },
+  "notifications": {
+    "taskFallback": "your task",
+    "actorFallback": "Someone",
+    "email": {
+      "open": "Open it in TasksNearMe: {url}",
+      "footer": "You're getting this email because of your notification settings. Change them here: {settingsUrl}"
+    },
+    "sms": "TasksNearMe: {sentence} {url}",
+    "types": {
+      "offer_received": "{actorName} sent an offer{hasAmount, select, yes { of {amount}} other {}} for {title}.",
+      "offer_updated": "{actorName} updated their offer{hasAmount, select, yes { to {amount}} other {}} for {title}.",
+      "offer_declined": "Your offer for {title} wasn't selected.",
+      "booking_confirmed": "Your booking for {title} is confirmed.",
+      "booking_canceled": "Your booking for {title} was canceled.",
+      "helper_on_the_way": "{actorName} is on the way for {title}.",
+      "helper_running_late": "{actorName} is running {hasMinutes, select, yes {{minutes, plural, one {# minute} other {# minutes}} } other {}}late for {title}.",
+      "helper_arrived": "{actorName} has arrived for {title}.",
+      "cant_access": "{actorName} can't get in for {title}. Please reply.",
+      "work_submitted": "{actorName} submitted {title} for your approval.",
+      "work_approved": "The work on {title} was approved.",
+      "problem_reported": "A problem was reported with {title}.",
+      "earnings_transferred": "{hasAmount, select, yes {{amount} was transferred} other {Your earnings were transferred}} to your payout account.",
+      "payout_paid": "You were paid{hasAmount, select, yes { {amount}} other {}}.",
+      "review_published": "{actorName}'s review for {title} was published.",
+      "message_received": "{actorName} sent you a message about {title}.",
+      "support_replied": "Support replied about {title}.",
+      "case_resolved": "Support resolved your case about {title}.",
+      "change_proposed": "{actorName} proposed a change to {title}. Review the details.",
+      "change_applied": "Your booking details for {title} were updated.",
+      "invite_received": "{actorName} sent you a booking request for {title}.",
+      "invite_countered": "{actorName} sent a counter-offer{hasAmount, select, yes { of {amount}} other {}} for {title}.",
+      "invite_accepted": "{actorName} accepted your booking request for {title}. You're booked.",
+      "rebook_proposed": "{actorName} proposed a booking: {title}. Review the details.",
+      "rebook_accepted": "{actorName} accepted your proposal for {title}. You're booked.",
+      "rebook_declined": "{actorName} declined your proposal for {title}. No booking was made.",
+      "task_reopened": "The client is looking for a new helper for {title}. Make an offer if you can still help.",
+      "approval_reminder": "Approve {title} or report a problem. It's approved automatically {hasHours, select, yes {in {hours, plural, one {# hour} other {# hours}}} other {soon}}."
+    }
   }
 }

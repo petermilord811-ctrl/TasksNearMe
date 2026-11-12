@@ -87,6 +87,12 @@ export const adminUserJordanData: AdminUserPageData = {
   cases: adminCasesPageData.cases.slice(0, 1),
   rewards: [jordanWelcome],
   strikes: [],
+  deliveries: [
+    { id: 'dlv_jordan_sms', channel: 'sms', type: 'problem_reported', status: 'held', reason: 'quiet_hours', attempts: 0, at: '2026-11-22T04:10:00.000Z', nextTryAt: '2026-11-22T14:00:00.000Z' },
+    { id: 'dlv_jordan_email', channel: 'email', type: 'problem_reported', status: 'failed', reason: 'Mailbox unavailable (550)', attempts: 2, at: '2026-11-22T04:40:00.000Z', nextTryAt: '2026-11-22T06:40:00.000Z' },
+    { id: 'dlv_jordan_offer', channel: 'email', type: 'booking_confirmed', status: 'sent', attempts: 1, at: '2026-11-20T15:02:00.000Z' },
+    { id: 'dlv_jordan_offer_sms', channel: 'sms', type: 'offer_declined', status: 'skipped', reason: 'preference_off', attempts: 0, at: '2026-11-19T18:00:00.000Z' },
+  ],
   actions: ['suspend_helper'],
 };
 
@@ -97,6 +103,7 @@ export const adminUserSuspendedData: AdminUserPageData = {
   cases: [],
   rewards: [{ ...devonWelcome, status: 'voided', actions: [] }],
   strikes: [{ id: 'stk_devon', bookingId: 'bkg_dana', reason: 'linked_accounts', at: '2026-11-27T16:00:00.000Z' }],
+  deliveries: [],
   suspension: { reason: 'Shares a card with the client on their only booking.', at: '2026-11-27T16:00:00.000Z', byDisplayName: 'Taylor B.' },
   actions: ['reinstate_helper'],
 };
