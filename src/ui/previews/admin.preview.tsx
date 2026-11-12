@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { ACTION_ERROR_CODES, routes, type ActionResult, type AdminCaseHandlers, type AdminCasePageData, type PreviewEntry } from '@/contracts';
-import { ADMIN_NOW, adminHomeData, adminHomeQuietData, adminCasesPageData, adminCasesFilteredData, adminCasesEmptyData, alexStaff, disputeAdminCaseData, reportAdminCaseData, resolvedAdminCaseData, reportedConversation, fakeAdminCaseHandlers, fakeHandler } from '@/fixtures';
+import { ADMIN_NOW, adminHomeData, adminHomeQuietData, adminCasesPageData, adminCasesFilteredData, adminCasesEmptyData, alexStaff, disputeAdminCaseData, reportAdminCaseData, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData, reportedConversation, fakeAdminCaseHandlers, fakeHandler } from '@/fixtures';
 import { AdminHomeScreen, AdminCasesScreen } from '@/ui/screens/admin';
 import { AdminCaseContent } from '@/ui/screens/admin/admin-case-screen';
 import { AdminShell } from '@/ui/shells/admin-shell';
@@ -49,6 +49,9 @@ export const adminPreviews: PreviewEntry[] = [
   casePreview('dispute', p.dispute, disputeAdminCaseData),
   casePreview('report', p.report, reportAdminCaseData),
   casePreview('resolved', p.resolved, resolvedAdminCaseData),
+  casePreview('review-report', p['review-report'], reviewReportAdminCaseData),
+  casePreview('review-hidden', p['review-hidden'], reviewHiddenAdminCaseData),
+  casePreview('review-agent', p['review-agent'], reviewReportAgentCaseData),
   casePreview('conversation-revealed', p['conversation-revealed'], reportAdminCaseData, { conversationState: { initialConversation: reportedConversation } }),
   casePreview('conversation-reason', p['conversation-reason'], reportAdminCaseData, { conversationState: { initialOpen: true, initialResult: { ok: false, code: 'validation_failed', fieldErrors: { reason: ['too_short'] } } } }),
   casePreview('reply-validation-failed', p['reply-validation-failed'], disputeAdminCaseData, { replyState: { initialResult: replyValidation } }),

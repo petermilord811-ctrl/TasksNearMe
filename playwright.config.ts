@@ -44,9 +44,14 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' },
     },
     {
-      // Reseeds the dev database before the app flows (see tests/e2e/global.setup.ts).
+      // Reseeds the dev database before the app flows, and again after them (tests/e2e/support/reset.ts).
       name: 'e2e-setup',
       testMatch: /e2e\/global\.setup\.ts/,
+      teardown: 'e2e-teardown',
+    },
+    {
+      name: 'e2e-teardown',
+      testMatch: /e2e\/global\.teardown\.ts/,
     },
     {
       name: 'app-mobile',

@@ -187,6 +187,51 @@ export const reportAdminCaseData: AdminCasePageData = {
   resolutions: ['no_action', 'account_action'],
 };
 
+/** Sam reported a review on his profile as abusive (B-059). Morgan (support lead) can hide it. */
+export const reviewReportAdminCaseData: AdminCasePageData = {
+  case: {
+    ...reportRow,
+    id: 'case_review_report',
+    type: 'report_content',
+    subject: 'A review of Sam K.',
+    description: 'This review is about my accent, not the work. It breaks the community guidelines.',
+    photos: [],
+    reason: 'harassment',
+  },
+  parties: [{ person: person(sam), role: 'opener', canMessage: true }],
+  events: [{ id: 'aev_rr1', kind: 'status', actor: { kind: 'system' }, status: 'open', at: '2026-11-23T09:30:00.000Z' }],
+  review: {
+    review: {
+      id: 'rev_reported',
+      rating: 1,
+      tags: [],
+      body: "Couldn't understand a word he said. Find someone local.",
+      author: { displayName: 'Ruth A.', initials: 'RA' },
+      categorySlug: 'furniture-assembly',
+      publishedAt: '2026-11-21T18:00:00.000Z',
+    },
+    subject: { displayName: 'Sam K.' },
+    status: 'published',
+    canModerate: true,
+  },
+  actions: ['assign_to_me', 'set_status', 'reply', 'add_note', 'resolve'],
+  nextStatuses: ['awaiting_poster', 'awaiting_support', 'escalated'],
+  resolutions: ['no_action', 'account_action'],
+};
+
+/** After Morgan hid it: the reason shows, and the case timeline has the step. */
+export const reviewHiddenAdminCaseData: AdminCasePageData = {
+  ...reviewReportAdminCaseData,
+  review: { ...reviewReportAdminCaseData.review!, status: 'hidden', hiddenReason: 'Comments on accent, not the work: community guidelines §2.' },
+  events: [
+    ...reviewReportAdminCaseData.events,
+    { id: 'aev_rr2', kind: 'review', reviewAction: 'hidden', actor: { kind: 'staff', staff: morganStaffSummary }, body: 'Comments on accent, not the work: community guidelines §2.', at: '2026-11-23T10:05:00.000Z' },
+  ],
+};
+
+/** An agent sees the review but can't hide it. */
+export const reviewReportAgentCaseData: AdminCasePageData = { ...reviewReportAdminCaseData, review: { ...reviewReportAdminCaseData.review!, canModerate: false } };
+
 /** A resolved request: it can be closed or reopened; notes still work. */
 export const resolvedAdminCaseData: AdminCasePageData = {
   case: {
@@ -231,6 +276,7 @@ export const fakeAdminCaseHandlers: AdminCaseHandlers = {
   onReopen: () => wait({ ok: true, code: 'updated' }),
   onRevealConversation: () => wait({ ok: true, conversation: reportedConversation }),
   onPreviewResolution: () => wait({ ok: true, preview: settleAt45Preview }),
+  onModerateReview: () => wait({ ok: true, code: 'updated' }),
 };
 
 // ---- Money resolutions and the staff booking page (UI-019) --------------------------------------------

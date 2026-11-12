@@ -23,8 +23,8 @@ import { reviews, savedHelpers } from './schema';
 const WINDOW_MS = 14 * 86_400_000;
 const REVIEW_RATE_LIMIT = { limit: 10, windowSeconds: 600 };
 
-/** Ratings on cards and profiles come from published client reviews. */
-async function recomputeRating(db: Pick<Db, 'execute'>, helperUserId: string): Promise<void> {
+/** Ratings on cards and profiles come from published client reviews (also after staff hide or show one). */
+export async function recomputeRating(db: Pick<Db, 'execute'>, helperUserId: string): Promise<void> {
   await db.execute(sql`
     update helper_profiles hp set
       rating_count = coalesce(s.count, 0),

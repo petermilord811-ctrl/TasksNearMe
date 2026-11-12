@@ -130,6 +130,11 @@ export function canApproveRefund(roles: readonly StaffRole[], amountCents: numbe
   return roles.includes('support_lead') && amountCents <= (REFUND_LIMITS.support_lead ?? 0);
 }
 
+/** Who hides a review per policy, or shows it again (blueprint 08: leads and trust & safety; admins too). */
+export function canModerateReviews(roles: readonly StaffRole[]): boolean {
+  return roles.some((role) => role === 'support_lead' || role === 'trust_safety' || role === 'admin');
+}
+
 export interface BookingMoneyFacts {
   fees: FeeSchedule;
   /** The agreed task price. */

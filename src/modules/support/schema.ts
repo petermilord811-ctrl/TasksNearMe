@@ -74,7 +74,7 @@ export const supportCaseEvents = pgTable(
     /** Status changes: the new status. */
     status: text('status'),
     /** Assignment and resolution changes: the new assignee (null when unassigned) or the resolution. */
-    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string }>(),
+    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown' }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('support_case_events_case_idx').on(t.caseId, t.createdAt)],

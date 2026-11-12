@@ -66,7 +66,7 @@
   "back": "All bookings",
   "change": {
     "title": "Change request",
-    "proposedByYou": "You proposed a change: waiting for {name}.",
+    "proposedByYou": "You proposed a change: waiting for {name}",
     "proposedByOther": "{name} proposed a change: review it.",
     "payDifference": "Accepted: pay {amount} to apply it.",
     "finishPayment": "Accepted: finish payment to apply it.",

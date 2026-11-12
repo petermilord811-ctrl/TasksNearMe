@@ -13,6 +13,7 @@ import { cn } from '@/ui/lib/utils';
 import { AdminResponseTarget } from './admin-response-target';
 import { AdminCaseControls } from './admin-case-controls';
 import { AdminConversationGate } from './admin-conversation-gate';
+import { AdminReportedReview } from './admin-reported-review';
 
 export interface AdminCaseScreenProps {
   data: AdminCasePageData;
@@ -55,11 +56,11 @@ function CaseEvent({ event, parties, now }: { event: AdminCaseEventView; parties
   const actor = useActorName(event.actor);
   const party = parties.find(({ person }) => person.id === event.partyId)?.person;
   const personName = party?.displayName ?? (event.actor.kind === 'member' ? event.actor.person.displayName : t('details.caseMember'));
-  const note = event.kind === 'note';
+  const note = event.kind === 'note' || event.kind === 'review';
   return <li className="relative min-w-0 pl-6 before:absolute before:top-3 before:left-0 before:size-2 before:rounded-full before:bg-border">
     <article className={cn('space-y-2 rounded-lg border p-3 sm:p-4', note ? 'border-warning/30 bg-badge-warning' : 'bg-card')}>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <p className="flex items-center gap-2 font-semibold">{note && <LockKeyhole aria-hidden="true" className="size-4 text-badge-warning-foreground" />}{event.kind === 'message' && <MessageSquare aria-hidden="true" className="size-4 text-primary" />}{note ? t('details.internalNote') : event.kind === 'message' ? t(event.actor.kind === 'member' ? 'details.from' : 'details.to', { name: personName }) : t(`details.events.${event.kind}`)}</p>
+        <p className="flex items-center gap-2 font-semibold">{note && <LockKeyhole aria-hidden="true" className="size-4 text-badge-warning-foreground" />}{event.kind === 'message' && <MessageSquare aria-hidden="true" className="size-4 text-primary" />}{event.kind === 'review' ? t(event.reviewAction === 'shown' ? 'details.events.reviewShown' : 'details.events.reviewHidden') : note ? t('details.internalNote') : event.kind === 'message' ? t(event.actor.kind === 'member' ? 'details.from' : 'details.to', { name: personName }) : t(`details.events.${event.kind}`)}</p>
         <time dateTime={event.at} title={formatRelative(event.at, now)} className="tabular-nums text-muted-foreground">{formatDateTime(event.at)}</time>
       </div>
       <p className="text-sm text-muted-foreground">{actor}</p>
@@ -115,6 +116,7 @@ export function AdminCaseContent({ data, handlers, now, initialDialog, replyStat
             <time dateTime={row.resolution.at} className="block text-sm tabular-nums text-muted-foreground">{formatDateTime(row.resolution.at)}</time>
           </section>}
           {data.context && <AdminConversationGate key={row.id} context={data.context} onRevealConversation={handlers.onRevealConversation} now={now} {...conversationState} />}
+          {data.review && <AdminReportedReview key={`${row.id}:${data.review.status}`} data={data.review} onModerate={handlers.onModerateReview} />}
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">{t('details.timeline')}</h2>
             {data.events.length ? <ol aria-label={t('details.timeline')} className="space-y-3">{data.events.map((event) => <CaseEvent key={event.id} event={event} parties={data.parties} now={now} />)}</ol> : <p className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">{t('details.emptyTimeline')}</p>}

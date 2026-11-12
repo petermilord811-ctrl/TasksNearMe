@@ -6,6 +6,7 @@ import {
   addCaseNoteAction,
   assignCaseAction,
   closeCaseAction,
+  moderateReviewAction,
   previewResolutionAction,
   reopenCaseAction,
   resolveCaseAction,
@@ -52,6 +53,7 @@ async function AdminCase({ params }: Pick<PageProps<'/admin/cases/[caseId]'>, 'p
         onReopen: reopenCaseAction.bind(null, caseId, version),
         onRevealConversation: revealCaseConversationAction.bind(null, caseId),
         onPreviewResolution: previewResolutionAction.bind(null, caseId),
+        onModerateReview: moderateReviewAction.bind(null, caseId),
       }}
     />
   );

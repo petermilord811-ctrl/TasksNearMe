@@ -3,8 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { routes, type AdminCaseHandlers, type AdminCasePageData } from '@/contracts';
-import { ADMIN_NOW, disputeAdminCaseData, fakeAdminCaseHandlers, reportAdminCaseData, reportedConversation, resolvedAdminCaseData } from '@/fixtures';
+import { routes, type ActionResult, type AdminCaseHandlers, type AdminCasePageData } from '@/contracts';
+import { ADMIN_NOW, disputeAdminCaseData, fakeAdminCaseHandlers, reportAdminCaseData, reportedConversation, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData } from '@/fixtures';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import adminCase from '../../../../messages/en/ui/adminCase.json';
@@ -113,3 +113,41 @@ describe('AdminCaseScreen', () => {
     expect(onRevealConversation).toHaveBeenCalledOnce();
   });
 });
+
+describe('a review report', () => {
+  it('shows the reported review and who it is about', () => {
+    render(content(reviewReportAdminCaseData));
+    const panel = section(adminCase.review.title);
+    expect(panel.getByText(reviewReportAdminCaseData.review!.review.body!)).toBeVisible();
+    expect(panel.getByText(adminCase.review.statuses.published)).toBeVisible();
+    expect(panel.getByText(adminCase.review.about.replace('{name}', 'Sam K.'))).toBeVisible();
+  });
+
+  it('hides it with a reason, after asking', async () => {
+    const onModerateReview = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    render(content(reviewReportAdminCaseData, { ...fakeAdminCaseHandlers, onModerateReview }));
+    await userEvent.click(screen.getByRole('button', { name: adminCase.review.hide }));
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: adminCase.review.dialog.hideSubmit }));
+    expect(await within(dialog).findByText(adminCase.review.dialog.required)).toBeVisible();
+    expect(onModerateReview).not.toHaveBeenCalled();
+    await userEvent.type(within(dialog).getByLabelText(adminCase.review.dialog.reason), 'Comments on the person, not the work.');
+    await userEvent.click(within(dialog).getByRole('button', { name: adminCase.review.dialog.hideSubmit }));
+    expect(onModerateReview).toHaveBeenCalledExactlyOnceWith({ visible: false, reason: 'Comments on the person, not the work.' });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
+
+  it('offers to show a hidden review again, with the step on the timeline', () => {
+    render(content(reviewHiddenAdminCaseData));
+    expect(screen.getByRole('button', { name: adminCase.review.show })).toBeVisible();
+    expect(screen.getByText(adminCase.review.statuses.hidden)).toBeVisible();
+    expect(screen.getByText(adminCase.details.events.reviewHidden)).toBeVisible();
+  });
+
+  it("tells an agent who can hide it instead of offering the button", () => {
+    render(content(reviewReportAgentCaseData));
+    expect(screen.queryByRole('button', { name: adminCase.review.hide })).toBeNull();
+    expect(screen.getByText(adminCase.review.whoCan)).toBeVisible();
+  });
+});
+

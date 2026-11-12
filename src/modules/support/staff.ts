@@ -5,6 +5,7 @@ import type {
   AdminCaseFilters,
   AdminCasePageData,
   AdminCaseParty,
+  AdminCaseReview,
   AdminCaseRow,
   AdminCasesPageData,
   AdminConversationView,
@@ -21,6 +22,7 @@ import type {
   Photo,
   ResolutionPreviewResult,
   RestrictedAccessInput,
+  ReviewModerationInput,
   RevealConversationResult,
   StaffNoteInput,
   StaffReplyInput,
@@ -35,6 +37,8 @@ import {
   caseResolutionInputSchema,
   caseStatusInputSchema,
   restrictedAccessInputSchema,
+  reviewModerationInputSchema,
+  HELPER_REVIEW_TAGS,
   staffNoteInputSchema,
   staffReplyInputSchema,
 } from '@/contracts';
@@ -45,6 +49,10 @@ import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { photoFromFile } from '@/modules/files/uploads';
 import { messages, threadParticipants, threads } from '@/modules/messaging/schema';
 import { initialsOf } from '@/modules/profiles/queries';
+import { helperProfiles } from '@/modules/profiles/schema';
+import { recomputeRating } from '@/modules/reviews/service';
+import { reviews } from '@/modules/reviews/schema';
+import { categories } from '@/modules/markets/schema';
 import { files, tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -64,6 +72,7 @@ import {
   queueOf,
   slaDueAt,
   refundLimitOf,
+  canModerateReviews,
   resolutionMoney,
   staffCaseActions,
   type BookingMoneyFacts,
@@ -340,6 +349,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
   const fileRows = fileIds.length > 0 ? await db.select().from(files).where(inArray(files.id, fileIds)) : [];
   const photoOf = new Map(fileRows.map((file) => [file.id, photoFromFile(file)]));
   const money = ctx.booking ? await bookingMoneyFacts(db, ctx.booking.id) : null;
+  const reportedReview = row.context?.reviewId ? await reportedReviewOf(db, staff, row.context.reviewId) : null;
 
   const timeline = events.flatMap((event): AdminCaseEventView[] => {
     const at = event.createdAt.toISOString();
@@ -361,7 +371,9 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
         ];
       }
       case 'note':
-        return [{ id: event.id, kind: 'note', actor, body: event.body ?? '', at }];
+        return event.meta?.reviewAction
+          ? [{ id: event.id, kind: 'review', actor, reviewAction: event.meta.reviewAction, body: event.body ?? '', at }]
+          : [{ id: event.id, kind: 'note', actor, body: event.body ?? '', at }];
       case 'status':
         return [{ id: event.id, kind: 'status', actor, status: caseStatusOf(event.status), at }];
       case 'assignment': {
@@ -400,12 +412,84 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
       : {}),
     events: timeline,
     ...(contextTitle !== undefined ? { context: { kind: 'conversation' as const, title: contextTitle } } : {}),
+    ...(reportedReview ? { review: reportedReview } : {}),
     actions: staffCaseActions(facts),
     nextStatuses: nextCaseStatuses(facts),
     resolutions: caseResolutions(facts),
     ...(money ? { money: { priceCents: money.priceCents, chargedCents: money.chargedCents, refundedCents: money.refundedCents } } : {}),
   };
   return { data, version: row.version };
+}
+
+// ---- A reported review (blueprint 08: hidden per policy by leads and trust & safety, audited) ----------
+
+const HELPER_TAGS = new Set<string>(HELPER_REVIEW_TAGS);
+
+/** The review a report points at, as staff see it on the case. */
+async function reportedReviewOf(db: Db, staff: StaffActor, reviewId: string): Promise<AdminCaseReview | null> {
+  const [row] = await db
+    .select({ review: reviews, slug: categories.slug })
+    .from(reviews)
+    .innerJoin(categories, eq(categories.id, reviews.categoryId))
+    .where(eq(reviews.id, reviewId))
+    .limit(1);
+  if (!row) return null;
+  const people = await usersById(db, [row.review.authorUserId, row.review.subjectUserId]);
+  const author = people.get(row.review.authorUserId);
+  const subject = people.get(row.review.subjectUserId);
+  const status = row.review.status === 'hidden' ? 'hidden' : row.review.status === 'published' ? 'published' : 'submitted';
+  return {
+    review: {
+      id: row.review.id,
+      rating: Math.min(5, Math.max(1, row.review.rating)) as 1 | 2 | 3 | 4 | 5,
+      tags: row.review.tags.filter((tag) => HELPER_TAGS.has(tag)) as AdminCaseReview['review']['tags'],
+      ...(row.review.body ? { body: row.review.body } : {}),
+      author: { displayName: author?.name ?? '', initials: author ? initialsOf(author.firstName, author.lastName) : '' },
+      categorySlug: row.slug as AdminCaseReview['review']['categorySlug'],
+      publishedAt: (row.review.publishedAt ?? row.review.createdAt).toISOString(),
+    },
+    subject: { displayName: subject?.name ?? '' },
+    status,
+    ...(status === 'hidden' && row.review.hiddenReason ? { hiddenReason: row.review.hiddenReason } : {}),
+    canModerate: canModerateReviews(staff.roles),
+  };
+}
+
+/**
+ * Hides the case's reported review (off the profile and out of the helper's rating), or shows it again. The
+ * reason goes in the audit log and, as an internal note, on the case. Returns the helper's handle when their
+ * public profile changed, so the caller can refresh its cache.
+ */
+export async function moderateReportedReview(
+  db: Db,
+  staff: StaffActor,
+  caseId: string,
+  input: ReviewModerationInput,
+  now: Date,
+): Promise<ActionResult & { helperHandle?: string }> {
+  const parsed = reviewModerationInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const ctx = await loadCase(db, staff, caseId);
+  const reviewId = ctx?.row.context?.reviewId;
+  if (!ctx || !reviewId || !canModerateReviews(staff.roles)) return { ok: false, code: 'not_allowed' };
+  const { visible, reason } = parsed.data;
+
+  return db.transaction(async (tx) => {
+    const [review] = await tx.select().from(reviews).where(eq(reviews.id, reviewId)).for('update');
+    if (!review) return { ok: false, code: 'not_found' } as const;
+    const hidden = review.status === 'hidden';
+    if (visible !== hidden) return { ok: true, code: 'updated' } as const;
+    await tx
+      .update(reviews)
+      .set(visible ? { status: review.publishedAt ? 'published' : 'submitted', hiddenReason: null } : { status: 'hidden', hiddenReason: reason })
+      .where(eq(reviews.id, review.id));
+    await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'note', authorUserId: staff.id, visibility: 'internal', body: reason, meta: { reviewAction: visible ? 'shown' : 'hidden' }, createdAt: now });
+    await audit(tx, staff, visible ? 'review.shown' : 'review.hidden', ctx.row.id, now, { reason, targetType: 'review', targetId: review.id });
+    if (review.direction !== 'client_to_helper') return { ok: true, code: 'updated' } as const;
+    await recomputeRating(tx, review.subjectUserId);
+    const [profile] = await tx.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, review.subjectUserId)).limit(1);
+    return { ok: true, code: 'updated', ...(profile?.handle ? { helperHandle: profile.handle } : {}) } as const;
+  });
 }
 
 /** A booking's price, what was charged and refunded, and the market's fees (null without a paid booking). */

@@ -1,12 +1,12 @@
 'use server';
 
-import { refresh } from 'next/cache';
-import type { ActionResult, CaseResolutionInput, CaseStatusInput, RefundDecisionInput, ResolutionPreviewResult, RestrictedAccessInput, RevealAddressResult, RevealConversationResult, StaffNoteInput, StaffRefundInput, StaffReplyInput } from '@/contracts';
+import { refresh, updateTag } from 'next/cache';
+import type { ActionResult, CaseResolutionInput, CaseStatusInput, RefundDecisionInput, ResolutionPreviewResult, RestrictedAccessInput, RevealAddressResult, RevealConversationResult, ReviewModerationInput, StaffNoteInput, StaffRefundInput, StaffReplyInput } from '@/contracts';
 import { createPaymentProvider } from '@/integrations/payments';
 import { getViewer } from '@/platform/auth/viewer';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { db } from '@/platform/db/client';
-import { addCaseNote, assignCase, closeCase, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffReply, type StaffActor } from './staff';
+import { addCaseNote, assignCase, closeCase, moderateReportedReview, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffReply, type StaffActor } from './staff';
 import { decideRefundRequest, resolveCaseWithMoney, revealBookingAddress, revealBookingConversation, staffRefund } from './staff-money';
 import { requestNow } from '@/platform/clock';
 
@@ -54,6 +54,18 @@ export async function resolveCaseAction(caseId: string, version: number, input: 
   const actor = await staff();
   if (!actor) return { ok: false, code: 'not_allowed' };
   return refreshed(await resolveCaseWithMoney(db, createPaymentProvider(), actor, String(caseId), Number(version), input, await requestNow()));
+}
+
+/** Hides the case's reported review, or shows it again; the helper's public profile and cards refresh. */
+export async function moderateReviewAction(caseId: string, input: ReviewModerationInput): Promise<ActionResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  const { helperHandle, ...result } = await moderateReportedReview(db, actor, String(caseId), input, await requestNow());
+  if (result.ok) {
+    updateTag('helpers');
+    if (helperHandle) updateTag(`helper:${helperHandle}`);
+  }
+  return refreshed(result);
 }
 
 export async function closeCaseAction(caseId: string, version: number): Promise<ActionResult> {

@@ -4,6 +4,7 @@ import type { Cents, ISODateTime, Photo, StaffRole } from './common';
 import type { ExactAddress } from './location';
 import type { PriceBreakdown } from './money';
 import type { PersonSummary } from './people';
+import type { PublicReviewView } from './profiles';
 import { CASE_RESOLUTIONS, CASE_STATUSES } from './status';
 import type { BookingStatus, CaseResolution, CaseStatus, CaseType, EarningsStatus } from './status';
 
@@ -103,8 +104,8 @@ export type AdminCaseActor = { kind: 'member'; person: PersonSummary } | { kind:
 
 export interface AdminCaseEventView {
   id: string;
-  /** `message`: between support and one party. `note`: staff only. */
-  kind: 'message' | 'note' | 'status' | 'assignment' | 'resolution';
+  /** `message`: between support and one party. `note`: staff only. `review`: the reported review was hidden or shown (staff only; `body` is the reason). */
+  kind: 'message' | 'note' | 'status' | 'assignment' | 'resolution' | 'review';
   actor: AdminCaseActor;
   /** Messages: whose conversation with support (an `AdminCaseParty` person id). */
   partyId?: string;
@@ -116,6 +117,8 @@ export interface AdminCaseEventView {
   assignee?: StaffSummary;
   /** Resolutions. */
   resolution?: CaseResolution;
+  /** `review` events: what staff did with the reported review. */
+  reviewAction?: 'hidden' | 'shown';
   at: ISODateTime;
 }
 
@@ -147,6 +150,8 @@ export interface AdminCasePageData {
   events: AdminCaseEventView[];
   /** Restricted context the viewer can open by giving a reason (the access is logged). */
   context?: { kind: 'conversation'; title: string };
+  /** A review report's review: public content, so it shows without a reason. */
+  review?: AdminCaseReview;
   /** What the viewer can do now (pure domain rules; the UI never decides). */
   actions: AdminCaseActionId[];
   /** Where `set_status` can move the case. */
@@ -156,6 +161,26 @@ export interface AdminCasePageData {
   /** The booking's money, for the settle and goodwill inputs (cases about a paid booking). */
   money?: { priceCents: Cents; chargedCents: Cents; refundedCents: Cents };
 }
+
+/** The review a report is about, with what staff can do about it. */
+export interface AdminCaseReview {
+  /** As it shows (or showed) on the public profile; `publishedAt` is when it was written if never published. */
+  review: PublicReviewView;
+  /** Who it's about (first name + last initial). */
+  subject: { displayName: string };
+  status: 'submitted' | 'published' | 'hidden';
+  /** Why staff hid it (staff only). */
+  hiddenReason?: string;
+  /** Hide it from public pages, or show it again: support leads, trust & safety and admins (audited). */
+  canModerate: boolean;
+}
+
+/** Hide a reported review (it leaves the profile and the rating), or show it again; the reason goes in the audit log. */
+export const reviewModerationInputSchema = z.object({
+  visible: z.boolean(code('required')),
+  reason: z.string(code('required')).trim().min(10, code('too_short')).max(1000, code('too_long')),
+});
+export type ReviewModerationInput = z.input<typeof reviewModerationInputSchema>;
 
 /**
  * What a resolution would do with the money (computed on the server; the UI only shows it):
@@ -244,6 +269,8 @@ export interface AdminCaseHandlers {
   onRevealConversation: QueryHandler<RestrictedAccessInput, RevealConversationResult>;
   /** The money a resolution would move (validation_failed for a missing or out-of-range amount). */
   onPreviewResolution: QueryHandler<CaseResolutionInput, ResolutionPreviewResult>;
+  /** Hide or show the reported review (`review.canModerate`). ok `updated`; `not_allowed` otherwise. */
+  onModerateReview: ActionHandler<ReviewModerationInput>;
 }
 
 // ---- The staff booking page (UI-019) -------------------------------------------------------------------

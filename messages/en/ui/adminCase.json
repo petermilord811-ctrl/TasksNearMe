@@ -113,7 +113,9 @@
     "events": {
       "status": "Status changed",
       "assignment": "Assignment changed",
-      "resolution": "Resolution recorded"
+      "resolution": "Resolution recorded",
+      "reviewHidden": "Review hidden",
+      "reviewShown": "Review shown again"
     },
     "assignedTo": "Assigned to {name}",
     "unassigned": "Unassigned",
@@ -168,6 +170,37 @@
     "sending": "Reply sending",
     "sent": "Reply sent",
     "draft": "Thanks for the details. We are checking the next steps.",
-    "breadcrumb": "Case details"
+    "breadcrumb": "Case details",
+    "review-report": "Review report: the reported review",
+    "review-hidden": "Review report: review hidden",
+    "review-agent": "Review report: an agent can't hide it"
+  },
+  "review": {
+    "title": "Reported review",
+    "about": "A review of {name}",
+    "statuses": {
+      "published": "Visible on the profile",
+      "submitted": "Not published yet",
+      "hidden": "Hidden"
+    },
+    "hiddenReason": "Why it was hidden:",
+    "hide": "Hide review",
+    "show": "Show review again",
+    "whoCan": "Support leads, trust and safety, and admins can hide a review.",
+    "dialog": {
+      "hideTitle": "Hide this review?",
+      "hideDescription": "It comes off {name}'s profile and out of their rating. The reason goes in the audit log and on this case.",
+      "showTitle": "Show this review again?",
+      "showDescription": "It goes back on {name}'s profile and into their rating. The reason goes in the audit log and on this case.",
+      "reason": "Reason",
+      "hint": "10 to 1,000 characters, for example which guideline it breaks.",
+      "required": "Enter a reason of at least 10 characters.",
+      "tooLong": "Keep the reason under 1,000 characters.",
+      "notAllowed": "You can't change this review. Ask a support lead or trust and safety.",
+      "cancel": "Cancel",
+      "pending": "Saving…",
+      "hideSubmit": "Hide review",
+      "showSubmit": "Show review"
+    }
   }
 }
