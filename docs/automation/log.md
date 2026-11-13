@@ -147,3 +147,8 @@ One entry per iteration, newest last.
 - Automated replacement matching (e05ec82), ranking by reliability (ab63b0c).
 - From the other session: the Spanish UI (pages under `src/app/[locale]`, every namespace translated, emails and texts in the recipient's language, a catalog check), the account language, passkeys.
 - Gate at dd7fa73: check and build green; test:db and e2e red from shared test data. A webhook test left outbox events for a deleted user, and the dispatcher threw on them (it now skips a gone recipient). My new tests reopened tasks into other tests' feeds and boards, and "Post again" e2e left open tasks behind. Fixed in 0744c19 (test:db 74/334, check 2,558, the affected e2e green). Before the move, a stale public task page after a decline ("3 offers"); it didn't reproduce on a fresh server, and the other session is checking.
+
+## 2026-11-13 — Final gate before the move to a VPS
+- The owner asked to finish before moving the project. A temporary dev server ran for one last full gate at 99b57a2: test:db 74 files / 334 tests and the build green; e2e 164 passed, 2 flaky, 1 failed. The check had one failure, `helper-forms` focus under load, which passes alone 9/9; the check rerun is green, 2,558.
+- The e2e failure: admin-ops's hide-and-restore test lost a navigation (net::ERR_ABORTED) right after the public page's reload loop, and its retry found the task still hidden by the first try. The test now restores the patio task and clears the page cache at the start, and it opens staff pages again if a navigation is cut short. The spec passes on both projects.
+- The dev server was stopped again afterwards, as the move needs.

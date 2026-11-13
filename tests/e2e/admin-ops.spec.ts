@@ -1,4 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { eq } from 'drizzle-orm';
+import { tasks } from '../../src/modules/tasks/schema';
+import { createDb } from '../../src/platform/db/connect';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -47,6 +50,30 @@ test('staff find a booking that needs attention and open its task', async ({ pag
  * which doesn't touch the cache) one reload may still serve the previous state while it refreshes in the
  * background (measured: half a second after a restore it still said "not found", two seconds later the task).
  */
+/** The patio task back in public, as the seed has it: a retry starts there even when an earlier try hid it. */
+async function patioPublic() {
+  try {
+    process.loadEnvFile('.env.local');
+  } catch {
+    // Environment provided by the shell (CI).
+  }
+  const { db, pool } = createDb(process.env.DATABASE_URL ?? '', { max: 1 });
+  try {
+    await db.update(tasks).set({ hiddenAt: null, hiddenByUserId: null, hiddenReason: null }).where(eq(tasks.id, 'tsk_patio'));
+  } finally {
+    await pool.end();
+  }
+  // Changed behind the app's back: the cached public pages read the database again (as after a reseed).
+  await fetch(`http://localhost:${process.env.PORT ?? 3000}/dev/cache`, { method: 'POST' }).catch(() => undefined);
+}
+
+/** Opens a staff page, again if the navigation was cut short (a public page's reload still settling). */
+async function openStaffPage(page: Page, path: string) {
+  await expect(async () => {
+    await page.goto(path);
+  }).toPass({ timeout: 30_000 });
+}
+
 async function publicPageShows(page: Page, state: 'task' | 'not found') {
   await expect(async () => {
     await page.goto('/tasks/sweep-and-tidy-a-patio-windsor-park-7h3w');
@@ -60,10 +87,11 @@ test('trust and safety hide a task from the public pages and restore it; the aud
   test.setTimeout(240_000);
   // The public page is cached and a reseed doesn't touch that cache, so one reload may show the state a previous
   // run left (refreshed in the background); each public check reloads until it settles (see `publicPageShows`).
+  await patioPublic();
   await publicPageShows(page, 'task');
 
   await staffSignIn(page, 'taylor@example.test');
-  await page.goto('/admin/tasks/tsk_patio');
+  await openStaffPage(page, '/admin/tasks/tsk_patio');
   await expect(page.getByRole('heading', { level: 1, name: 'Sweep and tidy a patio' })).toBeVisible();
   await page.getByRole('button', { name: 'Hide task' }).click();
   const dialog = page.getByRole('alertdialog');
@@ -74,7 +102,7 @@ test('trust and safety hide a task from the public pages and restore it; the aud
 
   await publicPageShows(page, 'not found');
 
-  await page.goto('/admin/tasks/tsk_patio');
+  await openStaffPage(page, '/admin/tasks/tsk_patio');
   await page.getByRole('button', { name: 'Restore task' }).click();
   await page.getByRole('alertdialog').getByLabel('Reason').fill('Nothing unsafe; the poster confirmed the details.');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Restore task' }).click();

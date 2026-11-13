@@ -94,7 +94,7 @@
 - The design system (§1–2.3) describes the new brand.
 
 ## Next steps
-1. **Run the full gate on the new machine first** (`node scripts/gate.mjs`, after `npm install`, `npm run db:migrate` (0000–0042) and a dev server on :3000). The owner is moving the project to a VPS, and the local dev server was stopped for the move (2026-11-13), so the last full gate here (dd7fa73) ran before the gate fixes. Since then, test:db (74 files, 334 tests) and `npm run check` (2,558) pass at 0744c19, and so do the e2e specs that failed (series, post-again, tasks-public, after-cancel, find-work, my-tasks, and the other session's sign-in, account and notification specs).
+1. **On the new machine:** `npm install`, `npm run db:migrate` (0000–0042) and `npm run db:seed`, a dev server on :3000, then `node scripts/gate.mjs`. The last full gate here (2026-11-13, before the move) had test:db and the build green and e2e at 164 passed. Its two failures (an admin-ops test that wasn't retry-safe, and a focus test that flakes under load) were fixed or confirmed afterwards, and the check is green at 2,558.
 2. Phase 2 is done here except multi-helper bookings (two posts for now, decisions.md) and errands (blocked on F17).
 3. Before launch: a shared cache store for `"use cache"` across web instances (see the other session's note), real provider keys, legal text, deployment (blocked.md).
 4. When Codex is back (2026-11-17), it can take UI polish tickets again.
