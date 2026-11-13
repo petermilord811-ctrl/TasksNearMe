@@ -1,5 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { setAccountStatus } from './support/scenarios';
+import { submitEmailStep, untilShown } from './support/sign-in';
 
 /** The real sign-in flow: codes are read from the dev outbox (/dev/outbox). */
 
@@ -23,9 +24,7 @@ function freshEmail(project: string): string {
 }
 
 async function requestCode(page: Page, email: string) {
-  await page.getByLabel('Email').fill(email);
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Check your email' })).toBeVisible();
+  await submitEmailStep(page, email);
 }
 
 async function completeProfile(page: Page, first: string, last: string) {
@@ -115,9 +114,10 @@ test.describe('sign-in and sign-up', () => {
       await page.getByRole('button', { name: 'Use a different email' }).click();
       await expect(page.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();
     }
-    await page.getByLabel('Email').fill(email);
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    await expect(page.getByText('There have been too many attempts')).toBeVisible();
+    await untilShown(page.getByText('There have been too many attempts'), async () => {
+      await page.getByLabel('Email').fill(email, { timeout: 5_000 });
+      await page.getByRole('button', { name: 'Continue', exact: true }).click({ timeout: 5_000 });
+    });
     await expect(page.getByText(/Try again after .* \(Central time\)/)).toBeVisible();
   });
 
@@ -141,11 +141,13 @@ test.describe('sign-in and sign-up', () => {
 test.describe('waitlist, help, and legal', () => {
   test('joining the waitlist confirms the ZIP', async ({ page }, testInfo) => {
     await page.goto('/waitlist');
-    await page.getByLabel('Email').fill(freshEmail(testInfo.project.name));
-    await page.getByLabel('ZIP code').fill('10001');
-    await page.getByLabel('I want to help').check();
-    await page.getByRole('button', { name: 'Join the waitlist' }).click();
-    await expect(page.getByText("You're on the list.")).toBeVisible();
+    const email = freshEmail(testInfo.project.name);
+    await untilShown(page.getByText("You're on the list."), async () => {
+      await page.getByLabel('Email').fill(email, { timeout: 5_000 });
+      await page.getByLabel('ZIP code').fill('10001', { timeout: 5_000 });
+      await page.getByLabel('I want to help').check({ timeout: 5_000 });
+      await page.getByRole('button', { name: 'Join the waitlist' }).click({ timeout: 5_000 });
+    });
     await expect(page.getByText(/opens near 10001/)).toBeVisible();
   });
 

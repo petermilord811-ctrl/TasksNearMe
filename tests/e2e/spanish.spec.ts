@@ -4,6 +4,7 @@ import formsEs from '../../messages/es/ui/forms.json';
 import shellEn from '../../messages/en/ui/shell.json';
 import shellEs from '../../messages/es/ui/shell.json';
 import signInEs from '../../messages/es/ui/signIn.json';
+import { submitEmailStep } from './support/sign-in';
 
 /**
  * Spanish (blueprint 01, P2): a browser in Spanish gets the site in Spanish; the footer switches this
@@ -54,9 +55,7 @@ test('someone who signs up in Spanish gets a Spanish account, and can switch it 
   const email = `e2e-es-${testInfo.project.name}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.test`;
   await page.goto('/sign-in');
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
-  await page.getByLabel(formsEs.fields.email.label).fill(email);
-  await page.getByRole('button', { name: formsEs.continue, exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: signInEs.emailCode.title })).toBeVisible();
+  await submitEmailStep(page, email, { email: formsEs.fields.email.label, submit: formsEs.continue, next: signInEs.emailCode.title });
   await page.getByLabel(formsEs.fields.code.label).fill(await latestCode(context, email));
   await expect(page.getByRole('heading', { level: 1, name: signInEs.profile.title })).toBeVisible();
   await page.getByLabel(formsEs.fields.firstName.label).fill('Rosa');

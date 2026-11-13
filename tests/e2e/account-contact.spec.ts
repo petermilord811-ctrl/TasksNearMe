@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { submitEmailStep } from './support/sign-in';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
 /**
@@ -48,9 +49,7 @@ const codeIn = (body: string) => body.match(/\b(\d{6})\b/)?.[1] ?? '';
 /** Signs up through /sign-in and lands on the account page. */
 async function signUp(page: Page, context: BrowserContext, email: string) {
   await page.goto('/sign-in');
-  await page.getByLabel('Email').fill(email);
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Check your email' })).toBeVisible();
+  await submitEmailStep(page, email);
   // The sixth digit sends the code.
   await page.getByLabel('6-digit code').fill(codeIn(await outboxMessage(context, email, 'sign-in-code')));
   await expect(page.getByRole('heading', { level: 1, name: 'Tell us your name' })).toBeVisible();
@@ -91,8 +90,7 @@ test('account: the email changes with a code sent to the new address', async ({ 
   // Signed out, the new address signs in to the same account.
   await context.clearCookies();
   await page.goto('/sign-in');
-  await page.getByLabel('Email').fill(next);
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await submitEmailStep(page, next);
   await page.getByLabel('6-digit code').fill(codeIn(await outboxMessage(context, next, 'sign-in-code')));
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/account');

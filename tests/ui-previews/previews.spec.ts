@@ -12,8 +12,16 @@ const PER_PREVIEW_MS = 15_000;
 
 const fileFor = (id: string) => `${id.replaceAll('/', '__')}.png`;
 
+/**
+ * `UI_PREVIEW_LOCALE=es` renders every preview in Spanish (from /es/dev/ui; screenshots in
+ * artifacts/ui-previews/<project>-es). Spanish runs longer than English, so that pass also fails on a
+ * page that scrolls sideways at the viewport's width.
+ */
+const LOCALE = process.env.UI_PREVIEW_LOCALE === 'es' ? 'es' : null;
+const BASE = LOCALE ? `/${LOCALE}` : '';
+
 async function listPreviewIds(page: Page): Promise<string[]> {
-  await page.goto('/dev/ui');
+  await page.goto(`${BASE}/dev/ui`);
   return page
     .locator('[data-preview-id]')
     .evaluateAll((links) => links.map((link) => link.getAttribute('data-preview-id') ?? ''));
@@ -40,7 +48,7 @@ for (let shard = 0; shard < SHARDS; shard += 1) {
     const mine = ids.filter((_, index) => index % SHARDS === shard);
     test.setTimeout(30_000 + mine.length * PER_PREVIEW_MS);
 
-    const outDir = `artifacts/ui-previews/${testInfo.project.name}`;
+    const outDir = `artifacts/ui-previews/${testInfo.project.name}${LOCALE ? `-${LOCALE}` : ''}`;
     removeStaleScreenshots(outDir, ids);
 
     let errors: string[] = [];
@@ -55,7 +63,7 @@ for (let shard = 0; shard < SHARDS; shard += 1) {
     for (const id of mine) {
       await test.step(id, async () => {
         errors = [];
-        await page.goto(`/dev/ui/${id.split('/').map(encodeURIComponent).join('/')}`);
+        await page.goto(`${BASE}/dev/ui/${id.split('/').map(encodeURIComponent).join('/')}`);
         const root = page.locator(`[data-preview-root="${id}"]`);
         await expect(root, `preview ${id} should render`).toBeVisible();
 
@@ -64,6 +72,11 @@ for (let shard = 0; shard < SHARDS; shard += 1) {
           .filter((v) => v.impact === 'serious' || v.impact === 'critical')
           .map((v) => `${v.id}: ${v.help} (${v.nodes.length} nodes)`);
         expect(serious, `axe violations in ${id}`).toEqual([]);
+
+        if (LOCALE) {
+          const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+          expect(overflow, `${id} scrolls sideways in ${LOCALE}`).toBeLessThanOrEqual(1);
+        }
 
         await page.addStyleTag({ content: HIDE_DEV_OVERLAY });
         await page.screenshot({ path: `${outDir}/${fileFor(id)}`, fullPage: true });

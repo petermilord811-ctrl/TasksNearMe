@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, or, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { outboxEvents } from '@/platform/outbox/schema';
 import { users } from '@/modules/accounts/schema';
 import { backgroundChecks, identityVerifications } from '@/modules/verification/schema';
 import { handleCheckrWebhook, handleStripeIdentityWebhook } from '@/modules/verification/webhooks';
@@ -31,6 +32,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // Their verification events too: a later dispatch would try to notify an account that no longer exists.
+  await db.delete(outboxEvents).where(or(eq(outboxEvents.aggregateId, PERSON), sql`${outboxEvents.payload}::text like ${`%${PERSON}%`}`));
   await db.delete(identityVerifications).where(eq(identityVerifications.userId, PERSON));
   await db.delete(backgroundChecks).where(eq(backgroundChecks.userId, PERSON));
   await db.delete(users).where(inArray(users.id, [PERSON]));
