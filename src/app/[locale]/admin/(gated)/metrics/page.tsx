@@ -21,8 +21,11 @@ export default function AdminMetricsPage({ searchParams }: PageProps<'/[locale]/
 }
 
 async function AdminMetrics({ searchParams }: Pick<PageProps<'/[locale]/admin/metrics'>, 'searchParams'>) {
-  const [params, viewer, now] = await Promise.all([searchParams, getViewer(), requestNow()]);
+  // The viewer (cookies) first: `requestNow` must come after a request read, or a production build stops at
+  // `new Date()` while prerendering.
+  const [params, viewer] = await Promise.all([searchParams, getViewer()]);
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
+  const now = await requestNow();
   return <AdminMetricsScreen data={await getAdminMetrics(db, staff, parseMetricsDays(params.days), now)} />;
 }
