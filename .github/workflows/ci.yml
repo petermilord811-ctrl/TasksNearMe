@@ -1,0 +1,96 @@
+# Every push: typecheck, lint, unit tests, DB integration tests and a production build.
+# Pushes to main (and manual runs with "deploy" ticked) also ship that build to the preview site on the VPS
+# (deploy/preview/README.md). The e2e suite isn't here yet: about 22 minutes, run locally (`npm run e2e`).
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy this branch to the preview site
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # A deploy that has started finishes; superseded runs on other branches stop.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check-build-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      db:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: tnm
+          POSTGRES_PASSWORD: tnm_dev_password
+          POSTGRES_DB: tasksnearme
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U tnm -d tasksnearme"
+          --health-interval 3s --health-timeout 3s --health-retries 40
+    env:
+      # The CI database above, with the public dev-only credentials of docker-compose.yml.
+      DATABASE_URL: postgres://tnm:tnm_dev_password@localhost:5432/tasksnearme
+      TEST_DATABASE_URL: postgres://tnm:tnm_dev_password@localhost:5432/tasksnearme_test
+      # Pages are prerendered against this address; the preview's own settings live on the VPS.
+      APP_URL: https://preview.40-160-239-201.sslip.io
+      NEXT_TELEMETRY_DISABLED: '1'
+      DEPLOY: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Throwaway secrets for this run
+        run: |
+          echo "BETTER_AUTH_SECRET=$(openssl rand -base64 48 | tr -d '\n')" >> "$GITHUB_ENV"
+          echo "FIELD_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr -d '\n')" >> "$GITHUB_ENV"
+
+      - run: npm ci
+
+      - name: Test database
+        run: docker exec ${{ job.services.db.id }} psql -U tnm -d tasksnearme -c 'CREATE DATABASE tasksnearme_test'
+
+      - name: Typecheck, lint, unit tests
+        run: npm run check
+
+      - name: DB integration tests
+        run: npm run test:db
+
+      - name: Production build (standalone)
+        run: |
+          npm run db:migrate
+          npm run db:seed
+          npm run build
+        env:
+          NEXT_OUTPUT: standalone
+
+      - name: Bundle for the preview
+        if: env.DEPLOY == 'true'
+        run: bash scripts/preview/bundle.sh preview-bundle "$GITHUB_SHA"
+
+      - name: Deploy to the preview
+        if: env.DEPLOY == 'true'
+        env:
+          SSH_KEY: ${{ secrets.PREVIEW_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PREVIEW_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.PREVIEW_SSH_HOST }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/preview_deploy
+          chmod 600 ~/.ssh/preview_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/preview_deploy -o BatchMode=yes -o ServerAliveInterval=30 \
+            "tnm-preview@$SSH_HOST" "deploy $GITHUB_SHA" < preview-bundle.tgz
+          echo "Live: $APP_URL" >> "$GITHUB_STEP_SUMMARY"

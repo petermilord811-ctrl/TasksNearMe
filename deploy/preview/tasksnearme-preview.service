@@ -1,0 +1,32 @@
+# The preview site: the latest production build of main (deploy/preview/README.md).
+# Installed as /etc/systemd/system/tasksnearme-preview.service.
+[Unit]
+Description=TasksNearMe preview (production build of main)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tnm-preview
+Group=tnm-preview
+WorkingDirectory=/srv/tasksnearme-preview/current
+EnvironmentFile=/srv/tasksnearme-preview/preview.env
+Environment=NODE_ENV=production
+# Loopback only: this server has no firewall, and Caddy is the only way in. `localhost`, not 127.0.0.1: Next
+# compares the proxy's rewrites (built on localhost) with this name, and a mismatch makes every page a 500.
+Environment=HOSTNAME=localhost
+Environment=PORT=3200
+Environment=NODE_OPTIONS=--max-old-space-size=768
+ExecStart=/usr/local/lib/tasksnearme-preview/node server.js
+Restart=on-failure
+RestartSec=5
+MemoryHigh=900M
+MemoryMax=1200M
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/tasksnearme-preview/releases /srv/tasksnearme-preview/uploads
+
+[Install]
+WantedBy=multi-user.target

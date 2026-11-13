@@ -49,8 +49,9 @@ function readTopics(locale: AppLocale = DEFAULT_LOCALE): HelpTopicFile[] {
   const english = JSON.parse(fs.readFileSync(path.join(CONTENT_DIR, 'help', 'topics.json'), 'utf8')) as HelpTopicFile[];
   const dir = translationDir(locale);
   const file = dir && path.join(dir, 'topics.json');
-  if (!file || !fs.existsSync(file)) return english;
-  const translated = JSON.parse(fs.readFileSync(file, 'utf8')) as HelpTopicFile[];
+  // content/ ships whole (scripts/preview/bundle.sh); without the ignore, Next's file tracer copies the whole project.
+  if (!file || !fs.existsSync(/*turbopackIgnore: true*/ file)) return english;
+  const translated = JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ file, 'utf8')) as HelpTopicFile[];
   return english.map((topic) => {
     const words = translated.find((candidate) => candidate.slug === topic.slug);
     return words ? { ...topic, title: words.title || topic.title, description: words.description || topic.description } : topic;

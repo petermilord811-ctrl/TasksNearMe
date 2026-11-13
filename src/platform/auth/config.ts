@@ -46,6 +46,8 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
   return betterAuth({
     appName: 'TasksNearMe',
     baseURL: appUrl(),
+    // The dev server's public address behind a reverse proxy (DEV_PUBLIC_HOST, next.config.ts).
+    ...(process.env.DEV_PUBLIC_HOST?.trim() ? { trustedOrigins: [`https://${process.env.DEV_PUBLIC_HOST.trim()}`] } : {}),
     secret: process.env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db, {
       provider: 'pg',

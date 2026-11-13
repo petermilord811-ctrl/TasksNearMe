@@ -17,7 +17,8 @@ export interface FileStorage {
 export function createLocalFileStorage(root = path.join(process.cwd(), '.data', 'uploads')): FileStorage {
   const resolve = (key: string) => {
     if (!/^[a-z0-9_./-]+$/i.test(key) || key.includes('..')) throw new Error(`Invalid storage key: ${key}`);
-    return path.join(root, key);
+    // Files written at runtime: without the ignore, Next's file tracer copies the whole project into builds.
+    return path.join(/*turbopackIgnore: true*/ root, key);
   };
   return {
     name: 'local',
@@ -28,7 +29,7 @@ export function createLocalFileStorage(root = path.join(process.cwd(), '.data', 
     },
     async get(key) {
       try {
-        return await fs.readFile(resolve(key));
+        return await fs.readFile(/*turbopackIgnore: true*/ resolve(key));
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
         throw error;
