@@ -1,4 +1,5 @@
 export * from './common';
+export * from './locale';
 export * from './status';
 export * from './money';
 export * from './people';
