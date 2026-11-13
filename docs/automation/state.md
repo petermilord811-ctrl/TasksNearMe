@@ -1,6 +1,6 @@
 # Autopilot state
 
-**Updated:** 2026-11-13 (the completion plan is done: verification, find work with a map, task alerts, maps, staff TOTP, data export and deletion, retention, web push, the provider adapters, the installable app, the one-tap offer; landing seventh pass)
+**Updated:** 2026-11-13 (the completion plan is done: verification, find work with a map, task alerts, maps, staff TOTP, data export and deletion, retention, web push, the provider adapters, the installable app, the one-tap offer; landing seventh pass; P2: ID checks for clients when risk asks, saved replies and response times for staff)
 **Autopilot:** the owner said "go ahead, build all" (2026-11-12): build everything left, Claude doing the UI too while Codex is at its limit (decisions.md). On 2026-11-13 the owner added: "refine all uis and elements and implement new features that are left without asking me". Two Claude sessions share the work (see the memory note and the split below).
 **Phase:** 5–6 (repeat bookings, trust, support and staff tools). Wired end to end:
 - the landing page (UI-036): the new brand, the motion system, the hero canvas, the map of open tasks with "Use my location";
@@ -12,10 +12,13 @@
 - support for members, reporting and blocking; staff queues, cases, money resolutions, the staff booking page, rewards review, users.
 
 **Codex:** at its ChatGPT usage limit until 2026-11-17 12:32 (local). Buying credits is the owner's call. Tickets run with `node scripts/codex-run.mjs UI-xxx` (logs in `scratchpad/codex-UI-xxx.log`).
-**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0035). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
+**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0037). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
 **New dependencies (UI-036):** `motion`, `maplibre-gl`. Run `npm install` after pulling (never while a dev server runs in that checkout).
 
 ## Done on 2026-11-13 (owner requests)
+- **ID checks for clients when risk asks** (P2): our team asked, 2+ reports in 30 days, 5+ failed card payments in 24 h, or a $500+ booking from an account under 7 days old. Posting, requesting and paying go to `/app/verify-identity?next=…` (the helper's hosted check, limits and Texas notice) and come back; actions refuse with `identity_required` (`src/modules/trust/poster-risk.ts`, integration `poster-identity`).
+- **Saved replies and response times for staff** (P2): `/admin/saved-replies` (leads write them; migration 0037 `support_macros`), "Start from a saved reply" on a case with `{first_name}` / `{staff_name}` filled on sending; `/admin/response-times` (each queue against its targets, past due, due within the hour, the week's on-time rate, who has what). e2e `support-tools.spec.ts`.
+- **Waiting:** private feedback to support with a review (P2 item 4) goes on `src/ui/screens/reviews/review-form.tsx` once the other session commits its refinement there.
 - **Landing, seventh pass** (UI-053): the skeleton town that grows into the 3D one; the 2D map's setup made lighter and started after the build-up; the page's floating scrollbar (no white strip).
 - **Installable app** (plan 3.6): `src/app/manifest.ts`, icons in `public/icons` (including the push badge).
 - **One-tap offer** (plan 4.3, UI-054): on find work, fixed-price tasks; Undo withdraws.
