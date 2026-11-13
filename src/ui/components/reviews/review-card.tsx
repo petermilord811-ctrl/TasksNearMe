@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Flag } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PublicReviewView } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { Badge } from '@/ui/primitives/badge';
@@ -14,6 +14,7 @@ export interface ReviewCardProps {
 }
 
 export function ReviewCard({ review, reportHref }: ReviewCardProps) {
+  const { formatDate } = useFormat();
   const t = useTranslations('reviews');
   const report = useTranslations('report');
 

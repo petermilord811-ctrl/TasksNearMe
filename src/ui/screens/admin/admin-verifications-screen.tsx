@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ADMIN_VERIFICATION_QUEUES, routes, type AdminVerificationsPageData, type ISODateTime } from '@/contracts';
-import { formatDateTime, formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { cn } from '@/ui/lib/utils';
 
@@ -11,6 +11,7 @@ import { cn } from '@/ui/lib/utils';
  * to adjudicate. Each row opens the person's page, where the decisions are.
  */
 export function AdminVerificationsScreen({ data, now }: { data: AdminVerificationsPageData; now: ISODateTime }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminVerification');
   const home = useTranslations('verification.homeAddress');
   const rows = data.queue === 'address' ? data.address.length : data.queue === 'identity' ? data.identity.length : data.background.length;

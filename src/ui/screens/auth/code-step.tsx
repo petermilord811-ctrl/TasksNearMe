@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { oneTimeCodeInputSchema, type OneTimeCodeInput } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { CodeFormField } from '@/ui/components/forms/code-input';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
@@ -26,6 +26,7 @@ function useResendCountdown(at?: string) {
 }
 
 export function CodeStep({ data, handlers, initialResult, onResult, channel }: SignInStepProps & { channel: 'email' | 'phone' }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('signIn');
   const fields = useTranslations('forms.fields');
   const id = useId();

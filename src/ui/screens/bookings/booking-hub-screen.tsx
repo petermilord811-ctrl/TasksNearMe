@@ -5,7 +5,8 @@ import {
   routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
   type BookingPaymentLine, type BookingSheetHandlers, type BookingTipHandlers, type BookingView, type ISODateTime,
 } from '@/contracts';
-import { formatDate, formatDateTime, formatHours, formatMoney, formatMonthYear, formatRelative, formatTime, formatTimeRange } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { CompletionSummary } from '@/ui/components/bookings/completion-summary';
 import { backArrow, backLink, note, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { PageHeader } from '@/ui/components/layout/page-header';
@@ -52,6 +53,7 @@ const stateTones: Record<BadgeTone, string> = {
 };
 
 function BookingState({ data, now, tone }: { data: BookingView; now: ISODateTime; tone: BadgeTone }) {
+  const { formatDate, formatDateTime, formatRelative, formatTime } = useFormat();
   const t = useTranslations('bookingHub');
   const role = data.viewerRole;
   const fundingDeadline = data.deadlines.pendingFundingExpiresAt;
@@ -80,6 +82,7 @@ function BookingState({ data, now, tone }: { data: BookingView; now: ISODateTime
 }
 
 function BookingPayment({ payment }: { payment: BookingPaymentLine }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('bookingHub');
   const status = usePaymentStatus(payment.status);
   return <li className="space-y-3 py-4 first:pt-0 last:pb-0">
@@ -104,6 +107,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, now, initialRes
   initialPending?: BookingActionId;
   tipPreview?: TipCardPreviewState;
 }) {
+  const { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } = useFormat();
   const t = useTranslations('bookingHub');
   const sheetCopy = useTranslations('bookingSheets');
   const categories = useTranslations('helperCard.categories');

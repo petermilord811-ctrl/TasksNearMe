@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ArrowRight, CalendarDays, MapPin, MessageSquareText, X } from 'lucide-react';
 import { routes, type TaskMapPin } from '@/contracts';
-import { formatDate, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 import { CATEGORY_ICONS } from '../category-icons';
 
@@ -74,6 +75,7 @@ export function PinCardBody({
   placement?: 'above' | 'below';
   picked?: boolean;
 }) {
+  const { formatDate } = useFormat();
   const below = placement === 'below';
   const t = useTranslations('landing.map');
   const categories = useTranslations('helperCard.categories');

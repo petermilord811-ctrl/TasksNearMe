@@ -1,11 +1,12 @@
 import { useTranslations } from 'next-intl';
 import type { ISODateTime, PreviewEntry } from '@/contracts';
 import { DESK_TIMES } from '@/fixtures';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { Deadline } from '@/ui/components/time/deadline';
 import moneyCopy from '../../../messages/en/ui/money.json';
 
 function DeadlinePreview({ now, variant, tone }: { now: ISODateTime; variant: 'upcoming' | 'soon' | 'passed'; tone: 'neutral' | 'warning' | 'danger' }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('money');
   return (
     <main className="mx-auto max-w-2xl space-y-6">

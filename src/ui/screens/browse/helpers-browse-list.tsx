@@ -6,12 +6,13 @@ import { useRouter } from 'next/navigation';
 import { Bookmark, BookmarkCheck, CalendarClock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type HelperBrowseRow, type SavedHelperHandlers } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { HelperCard } from '@/ui/components/people/helper-card';
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 
 function Row({ row, handlers, onMessage }: { row: HelperBrowseRow; handlers: SavedHelperHandlers; onMessage: (message: string) => void }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('helpersBrowse');
   const categories = useTranslations('helperCard.categories');
   const router = useRouter();

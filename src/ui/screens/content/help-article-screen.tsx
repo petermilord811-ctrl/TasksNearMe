@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { routes, type HelpArticleData } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { ContentBlocks } from '@/ui/components/content/content-blocks';
 import { SupportCard } from '@/ui/components/content/support-card';
 import { PageHeader } from '@/ui/components/layout/page-header';
@@ -9,6 +9,7 @@ import { Section } from '@/ui/components/layout/section';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/ui/primitives/breadcrumb';
 
 export function HelpArticleScreen({ data }: { data: HelpArticleData }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('help');
   return <div className="mx-auto max-w-reading space-y-section">
     <Breadcrumb><BreadcrumbList>

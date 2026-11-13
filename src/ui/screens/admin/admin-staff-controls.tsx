@@ -20,7 +20,7 @@ import {
   type StaffRoleGrantInput,
   type StaffRoleRemoveInput,
 } from '@/contracts';
-import { formatDate, formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { useFormAction } from '@/ui/lib/use-form-action';
@@ -153,6 +153,7 @@ function MemberAuthenticator({ member, handlers, code, onCode, onReset, busy }: 
   member: AdminStaffMember; handlers: AdminStaffHandlers; code?: SetupCode;
   onCode: (code: SetupCode) => void; onReset: (trigger: HTMLButtonElement) => void; busy: boolean;
 }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('adminStaff.authenticator');
   const [giving, setGiving] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -187,6 +188,7 @@ function MemberAuthenticator({ member, handlers, code, onCode, onReset, busy }: 
 }
 
 function MemberRoles({ member, onRemove, busy }: { member: AdminStaffMember; onRemove: (role: StaffRole, trigger: HTMLButtonElement) => void; busy: boolean }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('adminStaff');
   const roles = useTranslations('shell.roles');
   return <ul className="space-y-2">{member.roles.map((item) => <li key={item.role} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-foreground/[0.08] bg-foreground/[0.015] px-3 py-2 dark:border-white/[0.08] dark:bg-white/[0.02]">

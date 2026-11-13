@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { CalendarDays } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type InviteHandlers, type InviteView, type ISODateTime, type PaymentAttemptResult } from '@/contracts';
-import { formatDate, formatDateTime, formatMoney, formatRelative, formatTimeRange } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { PriceBreakdown as PriceBreakdownTable } from '@/ui/components/money/price-breakdown';
 import { OfferPrice } from '@/ui/components/offers/offer-parts';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
@@ -24,6 +25,7 @@ export function InviteCardContent({ invite, handlers, now, headingLevel = 2, ini
   initialResult?: PaymentAttemptResult;
   initialPending?: boolean;
 }) {
+  const { formatDate, formatDateTime, formatRelative, formatTimeRange } = useFormat();
   const t = useTranslations('inviteCard');
   const id = useId();
   const status = useInviteStatus(invite.status, invite.viewerRole, invite.helper.displayName);

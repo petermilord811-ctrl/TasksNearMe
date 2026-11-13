@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, CheckCircle2, Hammer, Laptop, Leaf, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type CategorySlug, type InviteHandlers, type ISODateTime, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
-import { formatDate, formatDateTime, formatHours, formatMoney, formatRelative, formatTimeRange, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { InviteCard } from '@/ui/components/invites/invite-card';
 import { PushPrompt } from '@/ui/components/push/push-device';
@@ -28,6 +29,7 @@ export interface TaskManageScreenProps {
 const categoryIcons: Record<CategorySlug, LucideIcon> = { 'furniture-assembly': Hammer, 'moving-help': Package, 'yard-cleanup': Leaf, 'light-cleaning': Sparkles, 'computer-help': Laptop };
 
 export function TaskManageScreen({ data, handlers, inviteHandlers, now, initialSelectedOfferIds, initialCancelOpen, initialCancelResult }: TaskManageScreenProps) {
+  const { formatDate, formatDateTime, formatRelative, formatTimeRange } = useFormat();
   const t = useTranslations('taskManage');
   const card = useTranslations('taskCard');
   const status = useTaskStatus(data.task.status);

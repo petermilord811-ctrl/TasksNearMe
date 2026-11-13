@@ -1,7 +1,8 @@
 import { CircleCheck, CircleUserRound, Headphones, Settings2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { TimelineActor, TimelineEvent } from '@/contracts';
-import { formatDateTime, formatHours, formatMoney, formatTime } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 
 const actorIcons = { poster: CircleUserRound, helper: CircleCheck, support: Headphones, system: Settings2 } satisfies Record<TimelineActor, typeof CircleCheck>;
@@ -15,6 +16,7 @@ const actorTints: Record<TimelineActor, string> = {
 };
 
 export function Timeline({ events }: { events: TimelineEvent[] }) {
+  const { formatDateTime, formatTime } = useFormat();
   const t = useTranslations('timeline');
   return (
     <section aria-label={t('title')} className="min-w-0">

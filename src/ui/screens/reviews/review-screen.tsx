@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, CircleAlert, CircleCheck, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type ISODateTime, type ReviewHandlers, type ReviewPageData } from '@/contracts';
-import { formatDate, formatDateTime, formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { Badge } from '@/ui/primitives/badge';
@@ -23,6 +23,7 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
   initialResult?: ActionResult;
   initialPending?: boolean;
 }) {
+  const { formatDate, formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('review');
   const mine = data.mine;
   return <div className="mx-auto max-w-reading space-y-6">

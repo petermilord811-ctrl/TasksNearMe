@@ -16,7 +16,7 @@ import {
   type HelperOnboardingHandlers,
   type VerificationSummary,
 } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { AddressSearchField } from '@/ui/components/forms/address-search-field';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { cn } from '@/ui/lib/utils';
@@ -71,6 +71,7 @@ export function AddressStep({ verification, handlers, initialSuggestions, initia
 }
 
 function AddressStanding({ verification }: { verification: VerificationSummary }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('verification.homeAddress');
   const { status, label, verifiedAt, submittedAt, rejectionReason, update } = verification.address;
   return <div className="space-y-3 text-sm leading-6">

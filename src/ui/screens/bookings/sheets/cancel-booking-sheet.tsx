@@ -7,7 +7,8 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CircleAlert } from 'lucide-react';
 import { HELPER_CANCEL_REASONS, POSTER_CANCEL_REASONS, cancelBookingInputSchema, routes, type CancelBookingInput, type CancellationPreview } from '@/contracts';
-import { formatDateTime, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { Money } from '@/ui/components/money/money';
 import { Button } from '@/ui/primitives/button';
 import { Skeleton } from '@/ui/primitives/skeleton';
@@ -27,6 +28,7 @@ export function CancelBookingSheet(props: CancelBookingSheetProps) {
 }
 
 function CancelBookingContent(props: CancelBookingSheetProps) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('bookingSheets');
   const [preview, setPreview] = useState(props.initialPreview);
   const [loadError, setLoadError] = useState(props.initialPreviewState === 'error');

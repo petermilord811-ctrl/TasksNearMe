@@ -1,44 +1,47 @@
 import { MARKET_TIME_ZONE, type ISODateTime } from '@/contracts/common';
+import { DEFAULT_LOCALE, INTL_LOCALES, type AppLocale } from '@/contracts/locale';
 
 /**
  * Date and time formatting for the Austin market. Always formats in America/Chicago,
- * whatever the server's or browser's own time zone is.
- *   formatDate        → "Sat, Nov 21"
- *   formatMonthYear   → "Nov 2026"
- *   formatTime        → "10:30 am"
- *   formatDateTime    → "Sat, Nov 21 · 10:30 am"
+ * whatever the server's or browser's own time zone is. Display helpers take the reader's language
+ * (English when left out); components get them bound to the page's language from `useFormat()`
+ * (src/ui/lib/format.ts).
+ *   formatDate        → "Sat, Nov 21"                      es: "sáb, 21 de nov"
+ *   formatMonthYear   → "Nov 2026"                         es: "nov 2026"
+ *   formatTime        → "10:30 am"                         es: "10:30 a.m."
+ *   formatDateTime    → "Sat, Nov 21 · 10:30 am"           es: "sáb, 21 de nov · 10:30 a.m."
  *   formatTimeRange   → "10:00 am–1:00 pm" (same day) or "Sat, Nov 21 · 10:00 pm–Sun, Nov 22 · 1:00 am"
- *   formatRelative    → "in 3 days", "2 hours ago", "now"
+ *   formatRelative    → "in 3 days", "2 hours ago", "now"  es: "dentro de 3 días", "hace 2 horas", "ahora"
  *   formatHours       → "3.5 h"
  */
 
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: MARKET_TIME_ZONE,
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-});
+const FORMATTERS = new Map<AppLocale, {
+  date: Intl.DateTimeFormat;
+  dateWithYear: Intl.DateTimeFormat;
+  monthYear: Intl.DateTimeFormat;
+  time: Intl.DateTimeFormat;
+  relative: Intl.RelativeTimeFormat;
+}>();
 
-const dateWithYearFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: MARKET_TIME_ZONE,
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-});
+/** One set of formatters per language, made on first use. */
+function formattersOf(locale: AppLocale) {
+  let set = FORMATTERS.get(locale);
+  if (!set) {
+    const tag = INTL_LOCALES[locale];
+    set = {
+      date: new Intl.DateTimeFormat(tag, { timeZone: MARKET_TIME_ZONE, weekday: 'short', month: 'short', day: 'numeric' }),
+      dateWithYear: new Intl.DateTimeFormat(tag, { timeZone: MARKET_TIME_ZONE, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+      monthYear: new Intl.DateTimeFormat(tag, { timeZone: MARKET_TIME_ZONE, month: 'short', year: 'numeric' }),
+      time: new Intl.DateTimeFormat(tag, { timeZone: MARKET_TIME_ZONE, hour: 'numeric', minute: '2-digit', hour12: true }),
+      relative: new Intl.RelativeTimeFormat(tag, { numeric: 'auto' }),
+    };
+    FORMATTERS.set(locale, set);
+  }
+  return set;
+}
 
-const monthYearFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: MARKET_TIME_ZONE,
-  month: 'short',
-  year: 'numeric',
-});
-
-const timeFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: MARKET_TIME_ZONE,
-  hour: 'numeric',
-  minute: '2-digit',
-  hour12: true,
-});
+/** "now" in each language (under a minute either way). */
+const NOW: Record<AppLocale, string> = { en: 'now', es: 'ahora' };
 
 const dayKeyFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: MARKET_TIME_ZONE,
@@ -53,26 +56,26 @@ function toDate(value: ISODateTime | Date): Date {
   return date;
 }
 
-export function formatDate(value: ISODateTime | Date, options: { withYear?: boolean } = {}): string {
-  const date = toDate(value);
-  return (options.withYear ? dateWithYearFormatter : dateFormatter).format(date);
+export function formatDate(value: ISODateTime | Date, options: { withYear?: boolean; locale?: AppLocale } = {}): string {
+  const set = formattersOf(options.locale ?? DEFAULT_LOCALE);
+  return (options.withYear ? set.dateWithYear : set.date).format(toDate(value));
 }
 
 /** Month and year in the market time zone, e.g. "Nov 2026" (verification badges, member-since). */
-export function formatMonthYear(value: ISODateTime | Date): string {
-  return monthYearFormatter.format(toDate(value));
+export function formatMonthYear(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE): string {
+  return formattersOf(locale).monthYear.format(toDate(value));
 }
 
-export function formatTime(value: ISODateTime | Date): string {
-  const parts = timeFormatter.formatToParts(toDate(value));
+export function formatTime(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE): string {
+  const parts = formattersOf(locale).time.formatToParts(toDate(value));
   const hour = parts.find((p) => p.type === 'hour')?.value ?? '';
   const minute = parts.find((p) => p.type === 'minute')?.value ?? '00';
   const dayPeriod = (parts.find((p) => p.type === 'dayPeriod')?.value ?? '').toLowerCase();
   return `${hour}:${minute} ${dayPeriod}`;
 }
 
-export function formatDateTime(value: ISODateTime | Date): string {
-  return `${formatDate(value)} · ${formatTime(value)}`;
+export function formatDateTime(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE): string {
+  return `${formatDate(value, { locale })} · ${formatTime(value, locale)}`;
 }
 
 const clockFormatter = new Intl.DateTimeFormat('en-GB', {
@@ -92,14 +95,12 @@ export function marketDayKey(value: ISODateTime | Date): string {
   return dayKeyFormatter.format(toDate(value));
 }
 
-export function formatTimeRange(start: ISODateTime | Date, end: ISODateTime | Date): string {
+export function formatTimeRange(start: ISODateTime | Date, end: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE): string {
   if (marketDayKey(start) === marketDayKey(end)) {
-    return `${formatTime(start)}–${formatTime(end)}`;
+    return `${formatTime(start, locale)}–${formatTime(end, locale)}`;
   }
-  return `${formatDateTime(start)}–${formatDateTime(end)}`;
+  return `${formatDateTime(start, locale)}–${formatDateTime(end, locale)}`;
 }
-
-const relativeFormatter = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' });
 
 const UNITS: Array<{ unit: Intl.RelativeTimeFormatUnit; ms: number }> = [
   { unit: 'day', ms: 86_400_000 },
@@ -108,16 +109,16 @@ const UNITS: Array<{ unit: Intl.RelativeTimeFormatUnit; ms: number }> = [
 ];
 
 /** Relative time between `value` and `now`. Under a minute is "now". */
-export function formatRelative(value: ISODateTime | Date, now: ISODateTime | Date): string {
+export function formatRelative(value: ISODateTime | Date, now: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE): string {
   const diff = toDate(value).getTime() - toDate(now).getTime();
   const abs = Math.abs(diff);
-  if (abs < 60_000) return 'now';
+  if (abs < 60_000) return NOW[locale];
   for (const { unit, ms } of UNITS) {
     if (abs >= ms) {
-      return relativeFormatter.format(Math.round(diff / ms), unit);
+      return formattersOf(locale).relative.format(Math.round(diff / ms), unit);
     }
   }
-  return 'now';
+  return NOW[locale];
 }
 
 /** 3.5 → "3.5 h", 2 → "2 h", 0.25 → "0.25 h". */

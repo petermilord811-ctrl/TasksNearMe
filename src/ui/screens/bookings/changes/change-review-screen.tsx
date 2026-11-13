@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BadgeTone, type ChangeReviewHandlers, type ChangeReviewPageData, type ChangeStatus, type ChangeTermsView, type ISODateTime, type PaymentAttemptResult, type ProposableChangeType } from '@/contracts';
-import { formatDateTime, formatHours, formatMoney } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { backArrow, backLink, cardTitle, pageTitle, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { Deadline } from '@/ui/components/time/deadline';
@@ -29,6 +30,7 @@ export function ChangeReviewContent({ data, handlers, now, initialResult, initia
   initialResult?: PaymentAttemptResult;
   initialPending?: boolean;
 }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('changes.review');
   const { booking, change } = data;
   const otherName = booking.viewerRole === 'poster' ? booking.helperDisplayName : booking.posterDisplayName;
@@ -66,6 +68,7 @@ export function ChangeReviewContent({ data, handlers, now, initialResult, initia
 }
 
 function Terms({ terms, types, proposed }: { terms: ChangeTermsView; types: ProposableChangeType[]; proposed: boolean }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('changes.review');
   const rows: { type: ProposableChangeType; value: string }[] = [
     { type: 'price', value: terms.pricing.type === 'fixed' ? formatMoney(terms.pricing.priceCents) : t('hourlyRate', { amount: formatMoney(terms.pricing.rateCents) }) },

@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BadgeTone, type ISODateTime, type PaymentAttemptResult, type ProposalHandlers, type ProposalPageData, type RebookProposalStatus } from '@/contracts';
-import { formatDateTime, formatHours, formatMoney } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { ExactAddressPanel } from '@/ui/components/location/exact-address-panel';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -26,6 +27,7 @@ export function ProposalContent({ data, handlers, now, initialResult, initialPen
   initialResult?: PaymentAttemptResult;
   initialPending?: boolean;
 }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('proposal');
   const categories = useTranslations('helperCard.categories');
   const { proposal } = data;

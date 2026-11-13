@@ -1,6 +1,7 @@
 import { useTranslations } from 'next-intl';
 import { percentText, type AdminConfigHandlers, type AdminConfigPageData, type BadgeTone, type ISODateTime, type PolicyVersionStatus } from '@/contracts';
-import { formatDate, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { cn } from '@/ui/lib/utils';
@@ -15,6 +16,7 @@ export function AdminConfigScreen(props: AdminConfigScreenProps) { return <Admin
 
 /** Admins: the market's policy versions and the feature flags (UI-038). */
 export function AdminConfigContent({ data, handlers, ...preview }: AdminConfigScreenProps & AdminConfigPreviewState) {
+  const { formatDate } = useFormat();
   const t = useTranslations('adminConfig');
   const { current } = data;
   const summary = (values: AdminConfigPageData['current']['values']) => t('feesSummary', { poster: percentText(values.posterBps), minimum: formatMoney(values.posterMinCents), helper: percentText(values.helperBps) });

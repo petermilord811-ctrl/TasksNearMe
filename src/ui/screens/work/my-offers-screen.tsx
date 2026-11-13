@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { CalendarDays, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type InviteHandlers, type MyOfferRow, type MyOffersPageData } from '@/contracts';
-import { formatDateTime, formatHours, formatMoney, formatRelative } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -23,6 +24,7 @@ export interface MyOffersScreenProps {
 }
 
 export function OfferRow({ row, now, headingLevel = 2 }: { row: MyOfferRow; now: ISODateTime; headingLevel?: 2 | 3 }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('myOffers');
   const taskCopy = useTranslations('taskCard');
   const { offer, task } = row;

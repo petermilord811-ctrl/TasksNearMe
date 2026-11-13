@@ -6,7 +6,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Lock, Star } from 'lucide-react';
 import { createReviewInputSchema, reviewTagsFor, type ActionResult, type ReviewHandlers, type ReviewInput, type ReviewPageData } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { useFormAction } from '@/ui/lib/use-form-action';
 import { cn } from '@/ui/lib/utils';
@@ -21,6 +21,7 @@ export function ReviewForm({ data, handlers, initialResult, initialPending = fal
   initialResult?: ActionResult;
   initialPending?: boolean;
 }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('review');
   const fieldCopy = useTranslations('forms.fieldErrors');
   const id = useId();

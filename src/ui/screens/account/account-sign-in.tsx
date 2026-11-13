@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { CircleAlert, CircleCheck, Mail } from 'lucide-react';
 import type { ActionHandler, ActionResult, AccountSignInMethods, SocialProvider, SocialSignInInput } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { ProviderLogo } from '@/ui/components/brand/provider-logo';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
@@ -27,6 +27,7 @@ export function AccountSignIn({
   onConnect: ActionHandler<SocialSignInInput>;
   onDisconnect: ActionHandler<SocialSignInInput>;
 }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('account.signIn');
   const names = useTranslations('signIn.social.names');
   const router = useRouter();

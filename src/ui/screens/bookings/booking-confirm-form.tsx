@@ -11,7 +11,8 @@ import {
   confirmBookingInputSchema, needsBankVerification, routes,
   type ActionResult, type ConfirmBookingInput, type PaymentAttemptResult, type PaymentVerification,
 } from '@/contracts';
-import { formatMoney, formatRelative, formatTime } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { actionTray, sectionTitle, surface, surfacePad, warningPanel } from '@/ui/components/bookings/surface';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { BankVerificationDialog, getDefaultPaymentChoice, PaymentMethodLabel, PaymentMethodPicker } from '@/ui/components/payments';
@@ -27,6 +28,7 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
   initialPending?: boolean;
   children: ReactNode;
 }) {
+  const { formatRelative, formatTime } = useFormat();
   const t = useTranslations('bookingConfirm');
   const fieldCopy = useTranslations('forms.fieldErrors');
   const router = useRouter();

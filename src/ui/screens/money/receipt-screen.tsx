@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { routes, type ReceiptLine, type ReceiptPageData } from '@/contracts';
-import { formatDate, formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Money } from '@/ui/components/money/money';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
@@ -11,6 +11,7 @@ import { PrintReceiptButton } from './print-receipt-button';
 const refundReasons = ['cancellation', 'unused_cap', 'unused_allowance', 'change_decrease', 'dispute_settlement', 'goodwill', 'poster_credit'] as const;
 
 function ReceiptActivity({ line }: { line: ReceiptLine }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('receipt');
   const reason = refundReasons.find((value) => value === line.reason) ?? 'other';
   return <li className="flex min-w-0 flex-wrap items-start justify-between gap-3 py-4 first:pt-0 last:pb-0">
@@ -25,6 +26,7 @@ function ReceiptActivity({ line }: { line: ReceiptLine }) {
 }
 
 export function ReceiptScreen({ data }: { data: ReceiptPageData }) {
+  const { formatDate, formatDateTime } = useFormat();
   const t = useTranslations('receipt');
   return <article data-print-receipt className="mx-auto w-full max-w-reading space-y-6">
     <div className="space-y-3">

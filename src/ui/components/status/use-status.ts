@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 import type { BadgeTone, TaskStatus, BookingStatus, OfferStatus, InviteStatus, PaymentStatus, EarningsStatus, RewardStatus, CaseStatus, ViewerRole, ISODateTime } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 
 export interface StatusLabel { label: string; tone: BadgeTone }
 
@@ -49,6 +49,7 @@ export function useEarningsStatus(status: EarningsStatus): StatusLabel {
 }
 
 export function useRewardStatus(status: RewardStatus, unlocksAt?: ISODateTime): StatusLabel {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('status');
   return { label: status === 'qualified' && unlocksAt ? t('reward.qualified_at', { date: formatDateTime(unlocksAt) }) : t(`reward.${status}`), tone: rewardTones[status] };
 }

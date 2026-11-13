@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { ArrowLeft, ArrowUpRight, LockKeyhole } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CaseEventView, type CaseStatus, type ISODateTime, type SupportCaseHandlers, type SupportCasePageData } from '@/contracts';
-import { formatDate, formatDateTime, formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useCaseStatus } from '@/ui/components/status/use-status';
@@ -24,6 +24,7 @@ function CaseStatusLine({ status, viewerRole }: { status: CaseStatus; viewerRole
 }
 
 function CaseEvent({ event, now, viewerRole }: { event: CaseEventView; now: ISODateTime; viewerRole?: SupportCasePageData['case']['viewerRole'] }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('supportCase');
   const sender = t(`sender.${event.from}`);
   const notice = event.kind === 'status';
@@ -56,6 +57,7 @@ export function SupportCaseScreen(props: SupportCaseScreenProps) {
 export function SupportCaseContent({ data, handlers, now, replyState }: SupportCaseScreenProps & {
   replyState?: Pick<ComponentProps<typeof SupportReplyForm>, 'initialResult' | 'initialPending' | 'initialBody'>;
 }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('supportCase');
   const support = useTranslations('support');
   const status = useCaseStatus(data.case.status, data.case.viewerRole);

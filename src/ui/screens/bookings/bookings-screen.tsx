@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { CalendarDays, ChevronRight, CircleAlert, MapPin, Monitor } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BookingListRow, type BookingsPageData, type ISODateTime } from '@/contracts';
-import { formatDateTime, formatMoney, formatRelative, formatTime, marketDayKey } from '@/shared/format';
+import { formatMoney, marketDayKey } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
@@ -22,6 +23,7 @@ export interface BookingsScreenProps {
 }
 
 export function BookingRow({ row, tab, now, headingLevel = 2 }: { row: BookingListRow; tab: BookingTab; now: ISODateTime; headingLevel?: 2 | 3 }) {
+  const { formatDateTime, formatRelative, formatTime } = useFormat();
   const t = useTranslations('bookings');
   const card = useTranslations('taskCard');
   const status = useBookingStatus(row.status, row.viewerRole);

@@ -1,7 +1,7 @@
 import { Clock3 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ISODateTime } from '@/contracts';
-import { formatDateTime, formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 
 export interface DeadlineProps {
@@ -18,6 +18,7 @@ const tones = {
 } as const;
 
 export function Deadline({ at, now, label, tone = 'neutral' }: DeadlineProps) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('money');
 
   return (

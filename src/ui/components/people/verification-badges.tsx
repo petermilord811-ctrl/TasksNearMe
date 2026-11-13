@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { BadgeCheck, House, Phone, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { VerificationBadges as VerificationBadgeData } from '@/contracts';
-import { formatMonthYear } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/ui/primitives/tooltip';
 
 export interface VerificationBadgesProps {
@@ -35,6 +35,7 @@ function VerificationTooltip({ Icon, label, meaning }: { Icon: LucideIcon; label
 }
 
 export function VerificationBadges({ badges, compact = false }: VerificationBadgesProps) {
+  const { formatMonthYear } = useFormat();
   const t = useTranslations('verification');
   const items = [
     ...(badges.idVerifiedAt ? [{

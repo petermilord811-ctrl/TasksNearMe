@@ -6,7 +6,7 @@ import { AnimatePresence, LazyMotion, domMax, m, useIsPresent } from 'motion/rea
 import { useTranslations } from 'next-intl';
 import { LocateFixed } from 'lucide-react';
 import { routes, type LandingMapData } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { spring, usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { CATEGORY_ICONS } from '../category-icons';
@@ -35,6 +35,7 @@ const LEAVE_GRACE_MS = 120;
  * new size instead of jumping.
  */
 export function NearbyList({ map, limit = 7, fill = false, className }: { map: LandingMapData; limit?: number; fill?: boolean; className?: string }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('landing.map');
   const categories = useTranslations('helperCard.categories');
   const { selectedCategory, litTaskId, highlightedTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location } = useLanding();

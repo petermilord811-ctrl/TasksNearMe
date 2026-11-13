@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { CalendarDays } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type MessageSegment, type OfferActionId, type OfferView, type TaskOwnerHandlers } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 import { ActionBar } from '@/ui/components/actions/action-bar';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
@@ -32,6 +32,7 @@ export const hasMessage = (segments: MessageSegment[]) => segments.some((segment
  * hover; a card picked for comparison keeps a ring.
  */
 export function OfferCard({ offer, now, selectable, onAction }: OfferCardProps) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('offers');
   const status = useOfferStatus(offer.status, 'poster');
   const id = useId();

@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { CalendarDays, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CategorySlug, type ISODateTime, type TaskPublicView } from '@/contracts';
-import { formatDate, formatDateTime, formatHours, formatMoney, formatMonthYear, formatRelative, formatTimeRange, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 
 export interface PublicTaskCardProps {
@@ -23,6 +24,7 @@ const categoryIcons: Record<CategorySlug, LucideIcon> = {
 };
 
 export function PublicTaskCard({ task, now, headingLevel = 3, href = routes.publicTask(task.slug), footer }: PublicTaskCardProps) {
+  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange } = useFormat();
   const t = useTranslations('taskCard');
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const CategoryIcon = categoryIcons[task.categorySlug];

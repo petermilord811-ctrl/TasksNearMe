@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { TriangleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type AdminRewardRow, type AdminRewardsHandlers, type ISODateTime } from '@/contracts';
-import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useRewardStatus } from '@/ui/components/status/use-status';
 import { Deadline } from '@/ui/components/time/deadline';
@@ -14,6 +15,7 @@ import { adminCard, adminTableFrame, adminTd, adminTh, adminTr } from './admin-u
 const linkClass = 'inline-flex min-h-11 max-w-full items-center rounded-md py-2 font-medium text-primary underline-offset-4 [overflow-wrap:anywhere] hover:underline';
 
 function RewardSummary({ row, now }: { row: AdminRewardRow; now: ISODateTime }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminRewards');
   return <div className="space-y-2">
     <p className="font-semibold">{t(`programs.${row.program}`)}</p>
@@ -24,6 +26,7 @@ function RewardSummary({ row, now }: { row: AdminRewardRow; now: ISODateTime }) 
 }
 
 function RewardPeople({ row }: { row: AdminRewardRow }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('adminRewards');
   return <div className="min-w-0 space-y-2">
     <div><p className="text-sm text-muted-foreground">{t('helper')}</p><Link href={routes.admin.user(row.helper.id)} className={linkClass}>{row.helper.displayName}</Link></div>

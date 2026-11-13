@@ -16,7 +16,7 @@ import {
   type AdminVerificationHandlers,
   type ISODateTime,
 } from '@/contracts';
-import { formatDate, formatDateTime, formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { Button } from '@/ui/primitives/button';
@@ -53,6 +53,7 @@ export function AdminVerificationSection({ userId, verification, handlers, now, 
   /** Previews: a proof already opened. */
   initialRevealed?: { proofId: string; result: Extract<AddressProofRevealResult, { ok: true }> };
 }) {
+  const { formatDate, formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminVerification');
   const status = useTranslations('verification.statuses');
   const home = useTranslations('verification.homeAddress');

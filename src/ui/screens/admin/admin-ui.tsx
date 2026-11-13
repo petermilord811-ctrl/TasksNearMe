@@ -2,7 +2,7 @@ import { Fragment, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import type { ISODateTime } from '@/contracts';
-import { formatDate, formatTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 
 /**
@@ -86,6 +86,7 @@ export function AdminFilterChip({ href, current, currentValue = 'page', count, i
  * breaks at the dot, never inside the day or the time ("9:20" / "am").
  */
 export function AdminWhen({ at, title }: { at: ISODateTime; title?: string }) {
+  const { formatDate, formatTime } = useFormat();
   return <time dateTime={at} title={title}><span className="whitespace-nowrap">{formatDate(at)}</span>{' · '}<span className="whitespace-nowrap">{formatTime(at)}</span></time>;
 }
 

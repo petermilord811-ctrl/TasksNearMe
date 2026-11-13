@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, CircleAlert, Clock3 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type ISODateTime, type ReportProblemHandlers, type ReportProblemPageData } from '@/contracts';
-import { formatDate, formatRelative, formatTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { CompletionSummary } from '@/ui/components/bookings/completion-summary';
 import { backArrow, backLink, pageTitle, sectionTitle, surface, surfacePad, warningPanel } from '@/ui/components/bookings/surface';
 import { cn } from '@/ui/lib/utils';
@@ -23,6 +23,7 @@ export function ReportProblemContent({ data, handlers, now, initialResult, initi
   initialResult?: ActionResult;
   initialPending?: boolean;
 }) {
+  const { formatDate, formatRelative, formatTime } = useFormat();
   const t = useTranslations('reportProblem');
   return <div className="mx-auto max-w-reading space-y-6">
     <Link href={routes.app.booking(data.booking.id)} className={backLink}>

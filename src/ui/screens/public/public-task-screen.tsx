@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { CalendarDays, CircleDollarSign, Flag, Laptop, Lock, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type PublicTaskPageData } from '@/contracts';
-import { formatDate, formatDateTime, formatHours, formatMoney, formatMonthYear, formatRelative, formatTimeRange, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
@@ -16,6 +17,7 @@ import { categoryIcons } from './marketing-sections';
 export interface PublicTaskScreenProps { data: PublicTaskPageData; now: ISODateTime }
 
 export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
+  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange } = useFormat();
   const t = useTranslations('publicTask');
   const report = useTranslations('report');
   const { task, category, market } = data;

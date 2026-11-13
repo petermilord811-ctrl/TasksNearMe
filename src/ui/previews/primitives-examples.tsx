@@ -7,7 +7,7 @@ import { Check, Grid2X2, Info, List, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { MARKET_TIME_ZONE, routes } from '@/contracts';
 import { DESK_TIMES, jordan, sam } from '@/fixtures';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/ui/primitives/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/primitives/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/ui/primitives/alert-dialog';
@@ -149,6 +149,7 @@ export function FormsPreview() {
 }
 
 export function CalendarPreview() {
+  const { formatDate } = useFormat();
   const t = useTranslations('primitives');
   const [date, setDate] = useState<Date | undefined>(new Date(DESK_TIMES.agreedStart));
   const [view, setView] = useState('list');

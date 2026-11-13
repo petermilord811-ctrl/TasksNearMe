@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { CATEGORY_DETAIL_FIELDS, routes, type AdminTaskHandlers, type AdminTaskPageData, type ISODateTime, type PricingInput } from '@/contracts';
-import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useTaskStatus } from '@/ui/components/status/use-status';
@@ -38,6 +39,7 @@ export function AdminTaskScreen(props: AdminTaskScreenProps) { return <AdminTask
 
 /** Staff: one task, its reports, and moderation (UI-033). Never the exact address (the data has none). */
 export function AdminTaskContent({ data, handlers, now, ...preview }: AdminTaskScreenProps & AdminTaskPreviewState) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminTask');
   const categories = useTranslations('helperCard.categories');
   const { task } = data;

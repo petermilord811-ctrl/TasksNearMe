@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ReceiptText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type PaymentMethodHandlers, type PaymentsPageData, type ReceiptRow } from '@/contracts';
-import { formatDate, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -16,6 +17,7 @@ export interface PaymentsScreenProps {
 }
 
 function PaymentReceiptRow({ receipt }: { receipt: ReceiptRow }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('paymentsPage');
   const status = usePaymentStatus(receipt.status);
   // The whole row opens the receipt (the title's link covers it); the status sits on the right.

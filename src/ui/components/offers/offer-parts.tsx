@@ -1,7 +1,8 @@
 import { Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ISODateTime, OfferView, PricingInput } from '@/contracts';
-import { formatDateTime, formatHours, formatMoney, formatRelative } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 
 export function OfferPrice({ pricing }: { pricing: PricingInput }) {
   const t = useTranslations('offers');
@@ -12,6 +13,7 @@ export function OfferPrice({ pricing }: { pricing: PricingInput }) {
 
 /** When the offer runs out: "Expires in 3 days", then the exact time. */
 export function OfferExpiry({ offer, now }: { offer: OfferView; now: ISODateTime }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('offers');
   return <time dateTime={offer.expiresAt} className="flex items-start gap-2 text-sm tabular-nums text-muted-foreground">
     <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />

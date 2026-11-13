@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SUPPORT_TOPICS, newSupportRequestInputSchema, type ActionResult, type NewSupportRequestInput, type Photo } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EvidencePhotoPicker } from '@/ui/components/bookings/evidence-photo-picker';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
@@ -20,6 +20,7 @@ export function NewSupportRequestForm({ data, handlers, initialResult, initialPe
   initialResult?: ActionResult;
   initialPending?: boolean;
 }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('support');
   const fieldCopy = useTranslations('forms.fieldErrors');
   const router = useRouter();

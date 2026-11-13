@@ -7,7 +7,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CircleAlert, Lock, Paperclip, Send } from 'lucide-react';
 import { sendMessageInputSchema, type ActionResult, type ComposerRules, type Photo, type SendMessageInput, type ThreadHandlers } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EvidencePhotoPicker } from '@/ui/components/bookings/evidence-photo-picker';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
@@ -31,6 +31,7 @@ export function MessageComposerContent({ rules, handlers, initialResult, initial
   initialPending?: boolean;
   initialBody?: string;
 }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('thread.composer');
   const fields = useTranslations('forms.fieldErrors');
   const id = useId();

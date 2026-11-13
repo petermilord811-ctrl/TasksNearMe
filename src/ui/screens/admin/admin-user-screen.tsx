@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ShieldAlert } from 'lucide-react';
 import { routes, type AdminUserHandlers, type AdminUserPageData, type BadgeTone, type DeliveryStatus, type ISODateTime } from '@/contracts';
-import { formatDateTime, formatMoney, formatMonthYear, formatRelative } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus } from '@/ui/components/status/use-status';
@@ -18,6 +19,7 @@ import { cn } from '@/ui/lib/utils';
 export interface AdminUserScreenProps { data: AdminUserPageData; handlers: AdminUserHandlers; now: ISODateTime }
 
 function BookingRow({ booking, now, mobile = false }: { booking: AdminUserPageData['bookings'][number]; now: ISODateTime; mobile?: boolean }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminUser');
   const status = useBookingStatus(booking.status, 'staff');
   const title = <Link href={routes.admin.booking(booking.id)} className="inline-flex min-h-11 max-w-full items-center rounded-md py-2 font-semibold text-foreground underline-offset-4 [overflow-wrap:anywhere] hover:text-primary hover:underline">{booking.title}</Link>;
@@ -33,6 +35,7 @@ const deliveryTones: Record<DeliveryStatus, BadgeTone> = { sending: 'info', sent
 
 /** One email or text: what it was about, what happened, and when it's tried next. */
 function DeliveryRow({ delivery, now }: { delivery: AdminUserPageData['deliveries'][number]; now: ISODateTime }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminUser');
   const reason = delivery.reason ? (t.has(`deliveryReasons.${delivery.reason}`) ? t(`deliveryReasons.${delivery.reason}`) : delivery.reason) : undefined;
   return <li className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
@@ -53,6 +56,7 @@ export function AdminUserScreen(props: AdminUserScreenProps) { return <AdminUser
 
 /** Preview seeds are separate from the application screen's contract. */
 export function AdminUserContent({ data, handlers, now, ...previewState }: AdminUserScreenProps & AdminUserPreviewState) {
+  const { formatDateTime, formatMonthYear, formatRelative } = useFormat();
   const t = useTranslations('adminUser');
   const { user } = data;
   return <div className="min-w-0 space-y-6 [overflow-wrap:anywhere]">

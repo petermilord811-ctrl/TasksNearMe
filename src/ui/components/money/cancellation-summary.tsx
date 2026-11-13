@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { routes, type CancellationPolicySummary } from '@/contracts';
-import { formatDateTime, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { surface, surfacePad } from '@/ui/components/bookings/surface';
 import { cn } from '@/ui/lib/utils';
 
@@ -12,6 +13,7 @@ export interface CancellationSummaryProps {
 
 /** Refunds and compensation are supplied by the app, including for hourly offers. */
 export function CancellationSummary({ policy, helperName }: CancellationSummaryProps) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('bookingConfirm.cancellation');
 
   return <section aria-label={t('title')} className={cn(surface, surfacePad, 'space-y-3')}>

@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ArrowRight, CalendarDays, Clock3, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type MyClientRow, type MyClientsPageData } from '@/contracts';
-import { formatDate, formatDateTime, formatHours, formatMoney, formatRelative } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { FinishSetupPanel } from '@/ui/components/helper/finish-setup-panel';
 import { PageHeader } from '@/ui/components/layout/page-header';
@@ -13,6 +14,7 @@ import { buttonVariants } from '@/ui/primitives/button';
 export interface MyClientsScreenProps { data: MyClientsPageData; now: ISODateTime }
 
 function ClientRow({ row, now }: { row: MyClientRow; now: ISODateTime }) {
+  const { formatDate, formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('clients.list');
   const actions = useTranslations('actions');
   const categories = useTranslations('taskCard.categories');

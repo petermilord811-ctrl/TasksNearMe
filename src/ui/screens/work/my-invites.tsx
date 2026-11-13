@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { type InviteHandlers, type InviteView, type ISODateTime } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { InviteCard } from '@/ui/components/invites/invite-card';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -21,6 +21,7 @@ export function MyInvites({ invites, openInviteId, handlers, now }: {
   handlers: InviteHandlers;
   now: ISODateTime;
 }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('myOffers');
   const [selectedId, setSelectedId] = useState(openInviteId);
   const returnFocus = useRef<HTMLButtonElement | null>(null);

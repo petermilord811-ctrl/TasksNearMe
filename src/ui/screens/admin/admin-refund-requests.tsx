@@ -6,7 +6,8 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { refundDecisionInputSchema, type AdminBookingHandlers, type AdminRefundRequestRow, type ISODateTime, type RefundDecisionInput } from '@/contracts';
-import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { useFormAction } from '@/ui/lib/use-form-action';
@@ -64,6 +65,7 @@ export function AdminRefundRequests({ requests, onDecide, now, initialDecision }
   /** Previews: a decision dialog that starts open. */
   initialDecision?: { requestId: string; decision: Decision };
 }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminBooking.requests');
   const reasons = useTranslations('adminBooking.refund.reasons');
   const [open, setOpen] = useState(initialDecision);

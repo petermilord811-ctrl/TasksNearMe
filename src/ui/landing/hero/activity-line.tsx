@@ -6,7 +6,7 @@ import { AnimatePresence, LazyMotion, domMax, m } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { Pause, Play } from 'lucide-react';
 import { routes, type HomePageData, type ISODateTime, type MapArea } from '@/contracts';
-import { formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { pinPrice } from '../map/pin-card';
@@ -24,6 +24,7 @@ const ROUNDS = 3;
  * under reduced motion. Not announced as it changes (that would be noise); the map's list is the full version.
  */
 export function ActivityLine({ data, now, area, onShowAll, className }: { data: HomePageData; now: ISODateTime; area: MapArea | null; onShowAll: () => void; className?: string }) {
+  const { formatRelative } = useFormat();
   const t = useTranslations('landing.hero.activity');
   const tMap = useTranslations('landing.map');
   const reduced = usePrefersReducedMotion();

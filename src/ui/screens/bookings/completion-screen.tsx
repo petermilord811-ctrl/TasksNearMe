@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, CircleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type CompletionHandlers, type CompletionPageData, type ISODateTime } from '@/contracts';
-import { formatDateTime, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { backArrow, backLink, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { cn } from '@/ui/lib/utils';
@@ -24,6 +25,7 @@ export function CompletionContent({ data, handlers, initialResult, initialPendin
   initialPending?: boolean;
   initialQuoteError?: boolean;
 }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('bookingComplete');
   const { booking } = data;
   return <div className="mx-auto max-w-reading space-y-6">

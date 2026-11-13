@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { CalendarDays, ChevronRight, ClipboardCheck, Clock, CreditCard, Hammer, Inbox, Laptop, Leaf, Package, Plus, Sparkles, UserPlus, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CategorySlug, type ISODateTime, type MyTasksPageData, type OwnerTaskAttention, type OwnerTaskRow, type PricingInput } from '@/contracts';
-import { formatDate, formatDateTime, formatHours, formatMoney, formatRelative, formatTimeRange, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
@@ -43,6 +44,7 @@ function usePriceLabel() {
 }
 
 export function TaskRow({ task, tab, now, headingLevel = 2 }: { task: OwnerTaskRow; tab: TaskTab; now: ISODateTime; headingLevel?: 2 | 3 }) {
+  const { formatDate, formatDateTime, formatRelative, formatTimeRange } = useFormat();
   const t = useTranslations('myTasks');
   const card = useTranslations('taskCard');
   const status = useTaskStatus(task.status);
@@ -101,6 +103,7 @@ function attentionHref(row: OwnerTaskRow): string {
 
 /** What needs the poster first: one line each, with the step that resolves it. */
 function NeedsYou({ rows, now }: { rows: OwnerTaskRow[]; now: ISODateTime }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('myTasks.needsYou');
   return <section aria-labelledby="needs-you-title" className="space-y-2 rounded-xl border border-warning/40 bg-card p-4 shadow-card md:p-5">
     <h2 id="needs-you-title" className="font-heading text-lg font-semibold">{t('title', { count: rows.length })}</h2>

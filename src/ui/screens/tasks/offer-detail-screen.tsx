@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type OfferActionId, type OfferDetailPageData, type TaskOwnerHandlers } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { ActionBar } from '@/ui/components/actions/action-bar';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
@@ -21,6 +21,7 @@ export interface OfferDetailScreenProps {
 }
 
 export function OfferDetailScreen({ data, handlers, now }: OfferDetailScreenProps) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('offers');
   const { offer, task } = data;
   const status = useOfferStatus(offer.status, 'poster');

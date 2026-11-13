@@ -4,7 +4,8 @@ import { useTranslations } from 'next-intl';
 import { LockKeyhole, MessageSquare, UserRound } from 'lucide-react';
 import type { AdminCaseActor, AdminCaseBookingSummary, AdminCaseEventView, AdminCaseHandlers, AdminCasePageData, CaseStatus, ISODateTime, Photo } from '@/contracts';
 import { routes } from '@/contracts';
-import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus, useCaseStatus } from '@/ui/components/status/use-status';
@@ -33,6 +34,7 @@ function CaseBadge({ status }: { status: CaseStatus }) {
 }
 
 function Booking({ booking }: { booking: AdminCaseBookingSummary }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('adminCase.details');
   const status = useBookingStatus(booking.status, 'staff');
   return <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
@@ -52,6 +54,7 @@ function useActorName(actor: AdminCaseActor) {
 }
 
 function CaseEvent({ event, parties, now }: { event: AdminCaseEventView; parties: AdminCasePageData['parties']; now: ISODateTime }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminCase');
   const actor = useActorName(event.actor);
   const party = parties.find(({ person }) => person.id === event.partyId)?.person;
@@ -84,6 +87,7 @@ export function AdminCaseContent({ data, handlers, now, initialDialog, replyStat
   resolutionState?: ComponentProps<typeof AdminCaseControls>['resolutionState'];
   conversationState?: Pick<ComponentProps<typeof AdminConversationGate>, 'initialConversation' | 'initialOpen' | 'initialResult'>;
 }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('adminCase');
   const list = useTranslations('adminCases');
   const problem = useTranslations('reportProblem');

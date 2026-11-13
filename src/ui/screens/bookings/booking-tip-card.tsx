@@ -9,7 +9,8 @@ import {
   type ActionResult, type BookingTipHandlers, type BookingTipView, type BookingView, type FieldErrorCode,
   type PaymentAttemptResult, type PaymentChoice, type PaymentVerification,
 } from '@/contracts';
-import { formatDate, formatDateTime, formatMoney, parseMoneyInput } from '@/shared/format';
+import { formatMoney, parseMoneyInput } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { BankVerificationDialog, getDefaultPaymentChoice, PaymentMethodPicker } from '@/ui/components/payments';
@@ -51,6 +52,7 @@ export function BookingTipCard({ data, handlers, preview }: {
 }
 
 function TipGiven({ tip, client, otherName }: { tip: Given; client: boolean; otherName: string }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('bookingHub.tipCard');
   const id = useId();
   return <section aria-labelledby={`${id}-title`} className={cn(surface, surfacePad, 'flex items-start gap-4')}>
@@ -65,6 +67,7 @@ function TipGiven({ tip, client, otherName }: { tip: Given; client: boolean; oth
 }
 
 function TipForm({ tip, helperName, handlers, preview }: { tip: Available; helperName: string; handlers: BookingTipHandlers; preview?: TipCardPreviewState }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('bookingHub.tipCard');
   const hub = useTranslations('bookingHub');
   const fields = useTranslations('forms.fieldErrors');

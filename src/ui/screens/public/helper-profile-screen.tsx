@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { Check, Clock3, Flag, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CategorySlug, type HelperProfilePageData, type HelperServiceDetail } from '@/contracts';
-import { formatHours, formatMoney, formatMonthYear } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { AvailabilitySlotList } from '@/ui/components/availability/availability-slot-list';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
@@ -50,6 +51,7 @@ function ServiceCard({ service }: { service: HelperServiceDetail }) {
 }
 
 export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
+  const { formatMonthYear } = useFormat();
   const t = useTranslations('helperProfile');
   const report = useTranslations('report');
   const { helper } = data;

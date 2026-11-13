@@ -1,7 +1,8 @@
 import { CalendarDays } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { AvailabilitySlotView, PricingInput } from '@/contracts';
-import { formatDate, formatHours, formatMoney, formatTimeRange } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 
 export function AvailabilityPrice({ pricing }: { pricing: PricingInput }) {
   const t = useTranslations('availability');
@@ -12,6 +13,7 @@ export function AvailabilityPrice({ pricing }: { pricing: PricingInput }) {
 
 /** The supplied slot's terms, always displayed in the market's time zone. */
 export function AvailabilitySlotSummary({ slot }: { slot: AvailabilitySlotView }) {
+  const { formatDate, formatTimeRange } = useFormat();
   const t = useTranslations('availability');
   const category = useTranslations('helperProfile.categories');
   return <div className="min-w-0 space-y-2">

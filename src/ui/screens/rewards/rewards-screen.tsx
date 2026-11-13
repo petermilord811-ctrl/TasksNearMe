@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { Gift } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type RewardProgramView, type RewardsHandlers, type RewardsPageData } from '@/contracts';
-import { formatDate, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Money } from '@/ui/components/money/money';
@@ -34,6 +35,7 @@ function ProgramSummary({ program }: { program: RewardProgramView }) {
 }
 
 export function RewardsScreen({ data, handlers, now }: RewardsScreenProps) {
+  const { formatDate } = useFormat();
   const t = useTranslations('rewards');
   const totals = [
     { label: 'ready', cents: data.totals.redeemableCents },

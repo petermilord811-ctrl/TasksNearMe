@@ -1,12 +1,14 @@
 import { Clock3 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { AdminCaseRow, ISODateTime } from '@/contracts';
-import { formatDateTime, formatHours } from '@/shared/format';
+import { formatHours } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 
 export type AdminResponseTargetProps = Pick<AdminCaseRow, 'slaDueAt' | 'slaBreached'> & { now: ISODateTime };
 
 export function AdminResponseTarget({ slaDueAt, slaBreached, now }: AdminResponseTargetProps) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('adminCases');
   if (!slaDueAt) return <span className="text-sm text-muted-foreground">{t('noTarget')}</span>;
 

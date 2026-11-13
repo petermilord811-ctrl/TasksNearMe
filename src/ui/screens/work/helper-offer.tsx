@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, HelperOfferView, HelperTaskView, HelperWorkHandlers, ISODateTime } from '@/contracts';
-import { formatDateTime, formatHours, formatMoney } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { ActionBar } from '@/ui/components/actions/action-bar';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -13,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { OfferForm } from './offer-form';
 
 function OfferSummary({ offer, now }: { offer: HelperOfferView; now: ISODateTime }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('helperTask');
   const status = useOfferStatus(offer.status, 'helper');
   return <div className="space-y-5">

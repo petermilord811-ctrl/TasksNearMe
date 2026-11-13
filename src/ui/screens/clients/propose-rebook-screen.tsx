@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type ISODateTime, type PriceBreakdown, type ProposeRebookHandlers, type ProposeRebookPageData, type RebookProposalInput } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { ProposeRebookForm } from './propose-rebook-form';
 
@@ -26,6 +26,7 @@ export function ProposeRebookScreen(props: ProposeRebookScreenProps) {
 
 /** Initial state is for previews. App pages use ProposeRebookScreen. */
 export function ProposeRebookContent({ data, handlers, now, ...previewState }: ProposeRebookScreenProps & ProposeRebookPreviewState) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('clients.form');
   const categories = useTranslations('helperCard.categories');
   return <div className="mx-auto max-w-reading space-y-6">

@@ -13,7 +13,8 @@ import {
   type PriceBreakdown as PriceBreakdownData,
   type TaskDraftInput,
 } from '@/contracts';
-import { formatDate, formatHours, formatMoney, formatTimeRange, marketLocalToUtc } from '@/shared/format';
+import { formatHours, formatMoney, marketLocalToUtc } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -35,6 +36,7 @@ function ReviewLine({ label, children }: { label: string; children: ReactNode })
 
 /** The three visibility groups mirror the supplied posting contract. Amounts come from onQuote. */
 export function ReviewStep({ data, handlers, values, photos, selectedAddress }: ReviewStepProps) {
+  const { formatDate, formatTimeRange } = useFormat();
   const t = useTranslations('postTask');
   const id = useId();
   const [attempt, setAttempt] = useState(0);

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ChevronRight, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type AdminUserRow, type AdminUsersPageData, type ISODateTime } from '@/contracts';
-import { formatMonthYear, formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
@@ -17,6 +17,7 @@ import { adminCardLink, adminSection, adminTableFrame, adminTd, adminTh, adminTr
 export interface AdminUsersScreenProps { data: AdminUsersPageData; now: ISODateTime }
 
 function PersonName({ row, now }: { row: AdminUserRow; now: ISODateTime }) {
+  const { formatMonthYear, formatRelative } = useFormat();
   const t = useTranslations('adminUsers');
   return <div className="flex min-w-0 items-center gap-3">
     <InitialsAvatar initials={row.person.initials} size="sm" />

@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BookingDisputeView, type BookingViewerRole } from '@/contracts';
-import { formatDate, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { cardTitle, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { cn } from '@/ui/lib/utils';
@@ -14,6 +15,7 @@ export interface BookingDisputeCardProps {
 }
 
 export function BookingDisputeCard({ dispute, viewerRole }: BookingDisputeCardProps) {
+  const { formatDate } = useFormat();
   const t = useTranslations('bookingHub.dispute');
   const reasons = useTranslations('reportProblem.reasons');
   const status = useCaseStatus(dispute.status, viewerRole);

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { routes, type PreviewEntry } from '@/contracts';
 import { jordan, muellerArea, DESK_TIMES } from '@/fixtures';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
 import { KeyValueList } from '@/ui/components/layout/key-value-list';
@@ -10,6 +10,7 @@ import { buttonVariants } from '@/ui/primitives/button';
 import copy from '../../../messages/en/ui/layout.json';
 
 function LayoutPreview({ variant }: { variant: 'page-header' | 'section' | 'key-value-list' }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('layout');
   return <main className="mx-auto max-w-reading space-y-8">
     <PageHeader title={t('title')} description={t('description')}>

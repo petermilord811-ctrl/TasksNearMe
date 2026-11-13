@@ -2,7 +2,8 @@ import Image from 'next/image';
 import { Check, Expand, Minus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CompletionChecklistView, CompletionView, Photo } from '@/contracts';
-import { formatDateTime, formatHours, formatMoney } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { cn } from '@/ui/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
@@ -67,6 +68,7 @@ function ChecklistSummary({ checklist }: { checklist: CompletionChecklistView })
 
 /** Displays supplied evidence and final amounts without deriving payment totals. */
 export function CompletionSummary({ completion, variant, leadsPage = false }: CompletionSummaryProps) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('completion');
 
   return <div className="min-w-0 space-y-4">

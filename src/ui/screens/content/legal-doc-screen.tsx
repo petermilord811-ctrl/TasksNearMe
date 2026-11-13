@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { TriangleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type LegalDocData } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { ContentBlocks } from '@/ui/components/content/content-blocks';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/primitives/alert';
 
 export function LegalDocScreen({ data }: { data: LegalDocData }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('legal');
   return <article className="mx-auto max-w-reading space-y-section">
     <div className="space-y-3"><PageHeader title={data.title} /><p className="flex flex-wrap gap-x-2 text-sm text-muted-foreground tabular-nums"><span>{data.version}</span><span aria-hidden="true">·</span><time dateTime={data.updatedAt}>{t('updated', { date: formatDate(data.updatedAt, { withYear: true }) })}</time>{data.status === 'published' && data.effectiveAt && <><span aria-hidden="true">·</span><time dateTime={data.effectiveAt}>{t('effective', { date: formatDate(data.effectiveAt, { withYear: true }) })}</time></>}</p></div>

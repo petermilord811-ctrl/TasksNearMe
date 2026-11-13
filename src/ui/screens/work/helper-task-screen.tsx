@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, Expand, Flag, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { CATEGORY_DETAIL_FIELDS, routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers, type ISODateTime } from '@/contracts';
-import { formatDate, formatDateTime, formatHours, formatMoney, formatMonthYear, formatRelative, formatTimeRange, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { GeneralArea } from '@/ui/components/location/general-area';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
@@ -23,6 +24,7 @@ export interface HelperTaskScreenProps {
 }
 
 export function HelperTaskScreen({ data, handlers, now, initialRevising, initialResult, liveMap = true }: HelperTaskScreenProps) {
+  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange } = useFormat();
   const t = useTranslations('helperTask');
   const report = useTranslations('report');
   const card = useTranslations('taskCard');

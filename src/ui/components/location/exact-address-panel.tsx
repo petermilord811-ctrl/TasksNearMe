@@ -4,7 +4,7 @@ import { useId, useRef, useState } from 'react';
 import { Check, Copy, ExternalLink, LoaderCircle, Lock, Navigation } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ExactAddress, ISODateTime } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 
@@ -20,6 +20,7 @@ export interface ExactAddressPanelProps {
 
 /** The sole renderer of ExactAddress. Access decisions belong to the app, before these props arrive. */
 export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions, className }: ExactAddressPanelProps) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('location');
   const titleId = useId();
   const mapsHintId = useId();

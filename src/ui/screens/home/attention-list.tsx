@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeftRight, CalendarCheck, CalendarPlus, CheckCheck, ChevronRight, CircleAlert, ClipboardCheck, Clock, CreditCard, DoorOpen, MessageCircle, MessagesSquare, RefreshCw, UserRoundPlus, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { AttentionItem, AttentionKind } from '@/contracts';
-import { formatDate, formatDateTime, formatTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { cn } from '@/ui/lib/utils';
 import { attentionHref } from '@/ui/lib/attention-href';
@@ -23,6 +23,7 @@ const icons: Record<AttentionKind, LucideIcon> = {
 };
 
 function AttentionRow({ item }: { item: AttentionItem }) {
+  const { formatDate, formatDateTime, formatTime } = useFormat();
   const t = useTranslations('home');
   const Icon = icons[item.kind];
   const payout = item.kind === 'payout_action_needed';

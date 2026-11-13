@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Download, LogOut, RotateCcw, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { DELETION_GRACE_DAYS, routes, type AccountHandlers, type AccountPageData } from '@/contracts';
-import { formatDate, formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { cn } from '@/ui/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/ui/primitives/alert-dialog';
@@ -21,6 +21,7 @@ export function AccountPrivacy({ privacy, handlers }: {
   privacy: AccountPageData['privacy'];
   handlers: Pick<AccountHandlers, 'onRequestExport' | 'onRequestDeletion' | 'onCancelDeletion'>;
 }) {
+  const { formatDate, formatDateTime } = useFormat();
   const t = useTranslations('account');
   const exportAction = useAccountAction({ refresh: true });
   const deletionAction = useAccountAction({ refresh: true });

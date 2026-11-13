@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { BookmarkCheck, CircleAlert, CircleCheck } from 'lucide-react';
 import { routes, type ActionResult, type BookingActionId, type BookingHubHandlers, type BookingSheetHandlers, type BookingView } from '@/contracts';
-import { formatDateTime, formatTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { ActionBar } from '@/ui/components/actions/action-bar';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { Button } from '@/ui/primitives/button';
@@ -35,6 +35,7 @@ export interface BookingHubActionsProps {
 }
 
 export function BookingHubActions({ data, handlers, sheets, initialResult, initialPending }: BookingHubActionsProps) {
+  const { formatDateTime, formatTime } = useFormat();
   const t = useTranslations('bookingHub');
   const feedback = useTranslations('feedback');
   const forms = useTranslations('forms');

@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Lock, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type FindWorkCard, type FindWorkHandlers, type FindWorkPageData, type ISODateTime } from '@/contracts';
-import { formatDate, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { FinishSetupPanel } from '@/ui/components/helper/finish-setup-panel';
 import { PageHeader } from '@/ui/components/layout/page-header';
@@ -66,6 +67,7 @@ class LatestChoice {
 const dayAt = (day: string) => `${day}T18:00:00.000Z`;
 
 function useDayLabel(today: string) {
+  const { formatDate } = useFormat();
   const t = useTranslations('findWork');
   const tomorrow = new Date(Date.parse(dayAt(today)) + 86_400_000).toISOString().slice(0, 10);
   return (day: string) => (day === today ? t('days.today') : day === tomorrow ? t('days.tomorrow') : formatDate(dayAt(day)));

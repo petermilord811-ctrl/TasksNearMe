@@ -109,3 +109,28 @@ describe('money inputs', () => {
     expect(formatMoneyInput(5)).toBe('0.05');
   });
 });
+
+describe('dates and times in Spanish', () => {
+  const start = '2026-11-21T16:30:00.000Z'; // Sat, Nov 21, 10:30 am in Austin
+
+  it('formats days, months and times in the market time zone', () => {
+    expect(formatDate(start, { locale: 'es' })).toBe('sáb, 21 de nov');
+    expect(formatDate(start, { locale: 'es', withYear: true })).toBe('sáb, 21 de nov de 2026');
+    expect(formatMonthYear(start, 'es')).toBe('nov 2026');
+    expect(formatTime(start, 'es')).toBe('10:30 a.m.');
+    expect(formatDateTime(start, 'es')).toBe('sáb, 21 de nov · 10:30 a.m.');
+    expect(formatTimeRange(start, '2026-11-21T19:00:00.000Z', 'es')).toBe('10:30 a.m.–1:00 p.m.');
+  });
+
+  it('formats relative times', () => {
+    const now = '2026-11-21T18:10:00.000Z';
+    expect(formatRelative('2026-11-24T17:48:00.000Z', now, 'es')).toBe('dentro de 3 días');
+    expect(formatRelative('2026-11-21T16:10:00.000Z', now, 'es')).toBe('hace 2 horas');
+    expect(formatRelative('2026-11-21T18:10:20.000Z', now, 'es')).toBe('ahora');
+  });
+
+  it('leaves English as the default', () => {
+    expect(formatDateTime(start)).toBe('Sat, Nov 21 · 10:30 am');
+    expect(formatDateTime(start, 'en')).toBe('Sat, Nov 21 · 10:30 am');
+  });
+});

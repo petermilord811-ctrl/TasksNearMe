@@ -4,7 +4,8 @@ import { useId, type ReactNode } from 'react';
 import { Controller, useFormContext, type FieldPath } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import type { InvitableTask, PricingInput, RequestHelperInput, RequestHelperPageData } from '@/contracts';
-import { formatDateTime, marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
+import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { PricingFields } from '@/ui/components/forms/pricing-fields';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Input } from '@/ui/primitives/input';
@@ -45,6 +46,7 @@ function RequestField({ name, label, hint, children }: { name: FieldPath<Request
 }
 
 export function RequestHelperFields({ data, disabled }: { data: RequestHelperPageData; disabled: boolean }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('invites');
   const categories = useTranslations('helperCard.categories');
   const { control, register, watch, setValue, clearErrors } = useFormContext<RequestHelperInput>();

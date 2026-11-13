@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ChevronDown, Filter, History, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type AdminAuditEntry, type AdminAuditPageData, type ISODateTime } from '@/contracts';
-import { formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { cn } from '@/ui/lib/utils';
@@ -51,6 +51,7 @@ function Details({ entry }: { entry: AdminAuditEntry }) {
 }
 
 function EntryRow({ entry, now, mobile = false }: { entry: AdminAuditEntry; now: ISODateTime; mobile?: boolean }) {
+  const { formatRelative } = useFormat();
   const t = useTranslations('adminAudit');
   const when = <AdminWhen at={entry.at} title={formatRelative(entry.at, now)} />;
   const action = <AdminCode>{entry.action}</AdminCode>;

@@ -17,7 +17,7 @@ import {
   type SavedReplyInput,
   type SavedReplyView,
 } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { useFormAction } from '@/ui/lib/use-form-action';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/ui/primitives/alert-dialog';
@@ -91,6 +91,7 @@ function SavedReplyForm({ reply, handlers, onDone, onCancel, initialResult }: {
 }
 
 function SavedReplyCard({ reply, canManage, handlers }: { reply: SavedReplyView; canManage: boolean; handlers: AdminSavedRepliesHandlers }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('adminSavedReplies');
   const router = useRouter();
   const [editing, setEditing] = useState(false);

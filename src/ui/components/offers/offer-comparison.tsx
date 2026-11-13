@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type OfferView } from '@/contracts';
-import { formatDateTime, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
@@ -11,6 +12,7 @@ import { OfferBrings, OfferExpiry, OfferPrice } from './offer-parts';
 export interface OfferComparisonProps { offers: OfferView[]; now: ISODateTime }
 
 export function OfferComparison({ offers, now }: OfferComparisonProps) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('offers');
   const rows: { key: string; label: string; render: (offer: OfferView) => ReactNode }[] = [
     { key: 'price', label: t('price'), render: (offer) => <OfferPrice pricing={offer.pricing} /> },

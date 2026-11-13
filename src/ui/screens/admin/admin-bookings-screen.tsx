@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ADMIN_BOOKING_FILTERS, routes, type AdminBookingFlag, type AdminBookingRow, type AdminBookingsPageData, type BadgeTone, type ISODateTime } from '@/contracts';
-import { formatMoney, formatRelative } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -31,6 +32,7 @@ function People({ row }: { row: AdminBookingRow }) {
 }
 
 function BookingRow({ row, now, mobile = false }: { row: AdminBookingRow; now: ISODateTime; mobile?: boolean }) {
+  const { formatRelative } = useFormat();
   const t = useTranslations('adminBookings');
   const categories = useTranslations('helperCard.categories');
   const status = useBookingStatus(row.status, 'staff');

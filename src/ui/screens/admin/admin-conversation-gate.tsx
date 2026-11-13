@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LockKeyhole } from 'lucide-react';
 import { restrictedAccessInputSchema, type ActionHandler, type ActionResult, type AdminCaseHandlers, type AdminCasePageData, type AdminConversationView, type ISODateTime, type RestrictedAccessInput } from '@/contracts';
-import { formatDateTime, formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { CasePhoto } from '@/ui/components/support/case-photo';
 import { useFormAction } from '@/ui/lib/use-form-action';
@@ -47,6 +47,7 @@ export function AdminReasonForm({ title, hint, onSubmit, onCancel, onBusy, initi
 }
 
 export function AdminConversationReader({ conversation, now }: { conversation: AdminConversationView; now: ISODateTime }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminCase.conversation');
   return <>
     <p role="status" className="flex items-center gap-2 text-sm font-medium text-success"><LockKeyhole aria-hidden="true" className="size-4" />{t('logged')}</p>

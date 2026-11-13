@@ -4,7 +4,8 @@ import { useId, useState, type ReactNode } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import type { ProposeChangeInput, ProposeChangePageData } from '@/contracts';
-import { formatDateTime, formatMoneyInput, marketClockTime, marketDayKey, marketLocalToUtc, parseMoneyInput } from '@/shared/format';
+import { formatMoneyInput, marketClockTime, marketDayKey, marketLocalToUtc, parseMoneyInput } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Input } from '@/ui/primitives/input';
 import { Textarea } from '@/ui/primitives/textarea';
@@ -37,6 +38,7 @@ function localStart(iso?: string) {
 }
 
 export function ProposeChangeFields({ data }: { data: ProposeChangePageData }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('changes.propose');
   const { register, control } = useFormContext<ProposeChangeInput>();
   return <div className="space-y-5">

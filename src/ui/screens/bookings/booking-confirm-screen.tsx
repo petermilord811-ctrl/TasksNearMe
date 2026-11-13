@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, CircleAlert, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BookingConfirmHandlers, type BookingConfirmPageData, type ISODateTime, type PaymentAttemptResult } from '@/contracts';
-import { formatDate, formatDateTime, formatMoney } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { backArrow, backLink, cardTitle, note, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { GeneralArea } from '@/ui/components/location/general-area';
@@ -28,6 +29,7 @@ export function BookingConfirmContent({ data, handlers, now, initialResult, init
   initialResult?: PaymentAttemptResult;
   initialPending?: boolean;
 }) {
+  const { formatDate, formatDateTime } = useFormat();
   const t = useTranslations('bookingConfirm');
   const categories = useTranslations('helperCard.categories');
   const { task, offer } = data;

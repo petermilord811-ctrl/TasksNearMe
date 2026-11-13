@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { ActionDescriptor, ActionResult } from '@/contracts';
-import { formatTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { actionTray, trayGap } from '@/ui/components/bookings/surface';
 import { cn } from '@/ui/lib/utils';
 import { Button, buttonVariants } from '@/ui/primitives/button';
@@ -34,6 +34,7 @@ export interface ActionBarProps {
 }
 
 export function ActionBar({ actions, onAction, sticky = false, mobileFixed = false, barRef, onRequestAction, getActionLink, onResult, renderResult, description, initialResult, initialPending }: ActionBarProps) {
+  const { formatTime } = useFormat();
   const t = useTranslations('actions');
   const reason = useTranslations('actionReasons');
   const feedback = useTranslations('feedback');

@@ -3,11 +3,12 @@ import { CircleAlert, CircleCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult } from '@/contracts';
 import { routes } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { VerifyIdentityLink } from './verify-identity-link';
 
 export function FormFeedback({ result, successMessage, errorMessage }: { result?: ActionResult; successMessage?: string; errorMessage?: string }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('forms');
   const feedback = useTranslations('feedback');
   const onlyFields = result && !result.ok && result.code === 'validation_failed' && Object.values(result.fieldErrors ?? {}).some((codes) => codes?.length);

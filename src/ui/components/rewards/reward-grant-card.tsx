@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Gift } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type RewardGrantView, type RewardsHandlers } from '@/contracts';
-import { formatDate, formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { Money } from '@/ui/components/money/money';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useRewardStatus } from '@/ui/components/status/use-status';
@@ -15,6 +15,7 @@ export interface RewardGrantCardProps {
 }
 
 function RewardStatusDetail({ grant, now }: Pick<RewardGrantCardProps, 'grant' | 'now'>) {
+  const { formatDate, formatRelative } = useFormat();
   const t = useTranslations('rewards');
   if (grant.status === 'voided' && grant.voidReason) return t(`voidReasons.${grant.voidReason}`);
   if (grant.status === 'qualified' || grant.status === 'redeemable' || grant.status === 'expired') {

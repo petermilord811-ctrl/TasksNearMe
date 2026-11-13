@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ADMIN_MONEY_TABS, routes, type AdminMoneyRow, type AdminPaymentsPageData, type BadgeTone, type ISODateTime } from '@/contracts';
-import { formatMoney, formatRelative } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -23,6 +24,7 @@ type StatusKey = keyof typeof messages.statuses;
 type DetailKey = keyof typeof messages.details;
 
 function Row({ row, now, mobile = false }: { row: AdminMoneyRow; now: ISODateTime; mobile?: boolean }) {
+  const { formatRelative } = useFormat();
   const t = useTranslations('adminPayments');
   const status = row.status in messages.statuses ? t(`statuses.${row.status as StatusKey}`) : row.status;
   const detail = row.kind === 'payout' && row.detail ? t('bank', { last4: row.detail }) : row.detail && row.detail in messages.details ? t(`details.${row.detail as DetailKey}`) : row.detail;

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowUpRight, CheckCheck, CircleAlert, CircleCheck, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ADMIN_QUEUES, routes, type AdminHomeData, type ISODateTime } from '@/contracts';
-import { formatDateTime, formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { cn } from '@/ui/lib/utils';
@@ -13,6 +13,7 @@ export interface AdminHomeScreenProps { data: AdminHomeData; now: ISODateTime }
 
 /** Staff home: each queue's open cases, what's past its response target, and the oldest; then verifications. */
 export function AdminHomeScreen({ data, now }: AdminHomeScreenProps) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminHome');
   const labels = useTranslations('adminCases');
   return <div className="min-w-0 space-y-6 [overflow-wrap:anywhere]">

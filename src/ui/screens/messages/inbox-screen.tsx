@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ChevronRight, MessagesSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type InboxPageData, type ISODateTime, type ThreadSummary } from '@/contracts';
-import { formatDateTime, formatHours, formatMoney, formatRelative, formatTime } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
@@ -17,6 +18,7 @@ export interface InboxScreenProps {
 }
 
 function InboxMessage({ message }: { message: NonNullable<ThreadSummary['lastMessage']> }) {
+  const { formatTime } = useFormat();
   const t = useTranslations('inbox');
   const timeline = useTranslations('timeline');
   if (message.kind === 'text' || !message.event) {
@@ -37,6 +39,7 @@ function InboxMessage({ message }: { message: NonNullable<ThreadSummary['lastMes
  * a little stronger.
  */
 export function InboxScreen({ data, now }: InboxScreenProps) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('inbox');
 
   return <div className="mx-auto w-full max-w-content space-y-6">

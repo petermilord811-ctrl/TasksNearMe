@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import type { ActionHandler, ActionResult, BackgroundCheckStatus, BadgeTone, CategorySlug, CategoryView, HelperOnboardingHandlers, IdentityStatus, PayoutAccountStatus, VerificationSummary } from '@/contracts';
 import { routes } from '@/contracts';
-import { formatDate, formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -53,6 +53,7 @@ function Note({ tone, children }: { tone: 'info' | 'warning' | 'success'; childr
 
 /** Displays provider status supplied by the app; provider forms stay with the providers. */
 export function VerificationPanel({ track, verification, categories, bookableCategories, firstPayoutDays, handlers, headingLevel = 2, initialResult, stickyAction = false }: VerificationPanelProps) {
+  const { formatDate, formatDateTime } = useFormat();
   const t = useTranslations('verification');
   const id = useId();
   const form = useForm();

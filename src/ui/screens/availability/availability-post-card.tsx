@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { CalendarDays, MapPin } from 'lucide-react';
 import { routes, type ActionResult, type AvailabilityHandlers, type AvailabilityPostView, type AvailabilityStatus, type BadgeTone } from '@/contracts';
-import { formatDate, formatTimeRange } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { AvailabilityPrice } from '@/ui/components/availability/availability-slot-summary';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -22,6 +22,7 @@ export function AvailabilityPostCard({ post, onCancel, initialConfirm = false, i
   initialConfirm?: boolean;
   initialResult?: ActionResult;
 }) {
+  const { formatDate, formatTimeRange } = useFormat();
   const t = useTranslations('availability');
   const categories = useTranslations('helperProfile.categories');
   const actions = useTranslations('actions');

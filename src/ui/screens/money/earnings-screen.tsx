@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { CircleDollarSign, Info, Landmark } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BadgeTone, type EarningsHandlers, type EarningsPageData, type EarningsRowView, type ISODateTime, type PayoutAccountStatus, type PayoutStatus } from '@/contracts';
-import { formatDate, formatRelative, marketLocalToUtc } from '@/shared/format';
+import { marketLocalToUtc } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Money } from '@/ui/components/money/money';
@@ -22,6 +23,7 @@ export interface EarningsScreenProps {
 }
 
 function EarningsRow({ row, now }: { row: EarningsRowView; now: ISODateTime }) {
+  const { formatDate, formatRelative } = useFormat();
   const t = useTranslations('earnings');
   const status = useEarningsStatus(row.status);
   const titleId = `earnings-${row.id}`;

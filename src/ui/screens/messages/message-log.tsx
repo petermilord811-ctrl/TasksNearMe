@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Expand } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ISODateTime, MessageView, PersonSummary, Photo } from '@/contracts';
-import { formatDate, formatDateTime, formatHours, formatMoney, formatRelative, formatTime, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
 import { cn } from '@/ui/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
@@ -29,6 +30,7 @@ function MessagePhoto({ photo, number, count, sender }: { photo: Photo; number: 
 }
 
 function MessageContent({ message }: { message: MessageView }) {
+  const { formatTime } = useFormat();
   const timeline = useTranslations('timeline');
   if (message.kind === 'text' || !message.event) return <MaskedText segments={message.segments} />;
   const params = message.event.params;
@@ -42,6 +44,7 @@ function MessageContent({ message }: { message: MessageView }) {
 
 /** Refresh preserves draft state; only readers already at the bottom follow incoming messages. */
 export function MessageLog({ messages, otherParty, now, className }: { messages: MessageView[]; otherParty: PersonSummary; now: ISODateTime; className?: string }) {
+  const { formatDate, formatDateTime, formatRelative, formatTime } = useFormat();
   const t = useTranslations('thread');
   const router = useRouter();
   const logRef = useRef<HTMLDivElement>(null);

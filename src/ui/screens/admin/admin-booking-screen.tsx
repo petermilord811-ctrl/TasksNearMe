@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { CalendarDays, MapPin } from 'lucide-react';
 import { routes, type AdminBookingHandlers, type AdminBookingMoney, type AdminBookingPageData, type AdminCaseRow, type ISODateTime } from '@/contracts';
-import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { ChecklistItems } from '@/ui/components/bookings/completion-summary';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
@@ -14,6 +15,7 @@ import { AdminRefundRequests } from './admin-refund-requests';
 export interface AdminBookingScreenProps { data: AdminBookingPageData; handlers: AdminBookingHandlers; now: ISODateTime }
 
 function EarningsLine({ line }: { line: AdminBookingMoney['earnings'][number] }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('adminBooking');
   return <li className="grid gap-2 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto]">
     <div className="space-y-2"><p className="text-sm font-semibold">{t(`earningsKinds.${line.kind}`)}</p><StatusBadge {...useEarningsStatus(line.status)} />{line.transferredAt && <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={line.transferredAt}>{t('transferred', { at: formatDateTime(line.transferredAt) })}</time></p>}</div>
@@ -37,6 +39,7 @@ function HelperChecklist({ checklist }: { checklist: NonNullable<AdminBookingPag
 }
 
 function BookingCase({ row, now }: { row: AdminCaseRow; now: ISODateTime }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminBooking');
   const cases = useTranslations('adminCases');
   return <li className="grid gap-2 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -49,6 +52,7 @@ export function AdminBookingScreen(props: AdminBookingScreenProps) { return <Adm
 
 /** Seeds support the preview harness; application screens receive only the ticket's props. */
 export function AdminBookingContent({ data, handlers, now, ...previewState }: AdminBookingScreenProps & AdminBookingPreviewState) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('adminBooking');
   const status = useBookingStatus(data.booking.status, 'staff');
   return <div className="min-w-0 space-y-5 [overflow-wrap:anywhere]">

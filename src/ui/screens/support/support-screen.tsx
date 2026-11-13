@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ChevronRight, CircleAlert, LifeBuoy } from 'lucide-react';
 import { routes, type ActionResult, type ISODateTime, type SupportCaseRow, type SupportHandlers, type SupportPageData } from '@/contracts';
-import { formatDateTime, formatRelative } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useCaseStatus } from '@/ui/components/status/use-status';
@@ -15,6 +15,7 @@ export interface SupportScreenProps {
 }
 
 function CaseRow({ item, now }: { item: SupportCaseRow; now: ISODateTime }) {
+  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('support');
   const status = useCaseStatus(item.status, item.viewerRole);
   return <li>

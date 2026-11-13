@@ -3,7 +3,8 @@
 import * as React from "react"
 import { useTranslations } from "next-intl"
 import { MARKET_TIME_ZONE } from "@/contracts"
-import { formatDate, marketDayKey } from "@/shared/format"
+import { marketDayKey } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { cn } from "@/ui/lib/utils"
 import {
   ChevronDownIcon,
@@ -31,6 +32,7 @@ function Calendar({
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
+  const { formatDate } = useFormat();
   const defaultClassNames = getDefaultClassNames()
   const t = useTranslations('common')
 

@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import type { BadgeTone, PosterIdentityHandlers, PosterIdentityPageData } from '@/contracts';
 import { routes } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -30,6 +30,7 @@ function Note({ tone, children }: { tone: 'info' | 'warning' | 'success'; childr
  * it opens, and "Continue" back to what they were doing once it passes. The check itself is the provider's.
  */
 export function PosterIdentityScreen({ data, handlers }: { data: PosterIdentityPageData; handlers: PosterIdentityHandlers }) {
+  const { formatDateTime } = useFormat();
   const t = useTranslations('posterIdentity');
   const v = useTranslations('verification');
   const id = useId();

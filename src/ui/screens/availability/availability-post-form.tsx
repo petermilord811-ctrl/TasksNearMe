@@ -6,7 +6,8 @@ import { useTranslations } from 'next-intl';
 import { FormProvider, useForm, useWatch, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { availabilityPostInputSchema, type ActionResult, type AvailabilityHandlers, type AvailabilityPostInput, type ISODateTime, type MyAvailabilityPageData } from '@/contracts';
-import { formatDate, formatDateTime, marketLocalToUtc } from '@/shared/format';
+import { marketLocalToUtc } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { MarketDateInput, MarketTimeSelect } from '@/ui/components/forms/market-schedule-fields';
 import { PricingFields } from '@/ui/components/forms/pricing-fields';
@@ -25,6 +26,7 @@ export function AvailabilityPostForm({ data, onCreate, now, initialResult, initi
   onCreate: AvailabilityHandlers['onCreate'];
   now: ISODateTime;
 } & AvailabilityFormPreviewState) {
+  const { formatDate, formatDateTime } = useFormat();
   const t = useTranslations('availability');
   const categories = useTranslations('helperProfile.categories');
   const fieldCopy = useTranslations('forms.fieldErrors');

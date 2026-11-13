@@ -6,7 +6,8 @@ import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import type { OfferInput, OfferMessageDraftInput, OfferMessageDraftResult, OfferRules, QueryHandler } from '@/contracts';
 import { AiDraftButton, AiDraftStatus, type AiDraftOutcome } from '@/ui/components/forms/ai-draft';
-import { formatHours, formatMoney, formatTime, marketLocalToUtc } from '@/shared/format';
+import { formatHours, formatMoney, marketLocalToUtc } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { MoneyInput } from '@/ui/components/forms/money-input';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Input } from '@/ui/primitives/input';
@@ -86,6 +87,7 @@ export function OfferFields({ rules, onDraftMessage }: {
   /** "Write it for me" on the message, when drafting is on for this helper. */
   onDraftMessage?: QueryHandler<OfferMessageDraftInput, OfferMessageDraftResult>;
 }) {
+  const { formatTime } = useFormat();
   const t = useTranslations('helperTask.form');
   const fields = useTranslations('forms');
   const { register, watch, control, setValue, setError, clearErrors } = useFormContext<OfferInput>();

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Fingerprint } from 'lucide-react';
 import { browserSupportsWebAuthn, startRegistration } from '@simplewebauthn/browser';
 import type { AccountHandlers, AccountSignInMethods, ActionResult } from '@/contracts';
-import { formatDate } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
@@ -22,6 +22,7 @@ export function AccountPasskeys({ passkeys, handlers }: {
   passkeys: AccountSignInMethods['passkeys'];
   handlers: Required<Pick<AccountHandlers, 'onPasskeyRegistrationOptions' | 'onAddPasskey' | 'onRemovePasskey'>>;
 }) {
+  const { formatDate } = useFormat();
   const t = useTranslations('account.passkeys');
   const id = useId();
   const router = useRouter();

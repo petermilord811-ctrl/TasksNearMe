@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import { AlarmClock, ArrowLeftRight, BadgeCheck, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, Repeat, SkipForward, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
-import { formatDate, formatDateTime, formatMoney, formatRelative, marketLocalToUtc } from '@/shared/format';
+import { formatMoney, marketLocalToUtc } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { attentionHref } from '@/ui/lib/attention-href';
+import { useFormat, type Formatters } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -59,7 +60,7 @@ const icons: Record<NotificationType, LucideIcon> = {
 };
 
 /** A notification's moment ("Tue, Dec 1, 9:00 am") or day ("Dec 8"), for its words. */
-function notificationDate(params: NotificationView['params']): string {
+function notificationDate(params: NotificationView['params'], { formatDate, formatDateTime }: Formatters): string {
   if (params?.at) return formatDateTime(params.at);
   return params?.day ? formatDate(marketLocalToUtc(params.day, '12:00')) : '';
 }
@@ -71,6 +72,8 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
   navigationRequestRef: RefObject<number>;
 }) {
   const t = useTranslations('notifications');
+  const format = useFormat();
+  const { formatDateTime, formatRelative } = format;
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const locked = useRef(false);
@@ -117,7 +120,7 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
             days: notification.params?.days ?? 0,
             track: notification.params?.track ?? 'other',
             hasDate: notification.params?.at === undefined && notification.params?.day === undefined ? 'no' : 'yes',
-            date: notificationDate(notification.params),
+            date: notificationDate(notification.params, format),
             by: notification.params?.by ?? 'other',
           })}
         </span>
