@@ -46,6 +46,13 @@
     "interest": {
       "label": "Me interesa",
       "hint": "Elige cómo quieres usar TasksNearMe."
+    },
+    "inviteCode": {
+      "required": "Ingresa tu código de invitación.",
+      "incorrect": "No reconocemos ese código. Revísalo y vuelve a intentarlo.",
+      "expired": "Esta invitación ya no se puede usar. Pide una nueva o únete a la lista de espera.",
+      "not_supported": "Esta invitación es para una cuenta de cliente. Para configurar tu perfil de ayudante necesitas una invitación de ayudante.",
+      "too_long": "Es más largo que un código de invitación. Revísalo y vuelve a intentarlo."
     }
   },
   "actionErrors": {

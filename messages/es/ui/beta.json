@@ -1,0 +1,35 @@
+{
+  "code": {
+    "label": "Código de invitación",
+    "hint": "Está en el correo o mensaje con el que te llegó la invitación, por ejemplo K7QP-M4XD.",
+    "accepted": "Invitación aceptada."
+  },
+  "waitlist": {
+    "title": "¿Todavía no tienes invitación?",
+    "body": "Únete a la lista de espera y te avisaremos por correo cuando haya un lugar.",
+    "link": "Unirme a la lista de espera"
+  },
+  "signUp": {
+    "title": "Ingresa tu código de invitación",
+    "description": "Por ahora, TasksNearMe en {market} es solo con invitación. Tu cuenta estará lista en cuanto ingreses tu código.",
+    "submit": "Continuar",
+    "otherEmail": "Usar otro correo"
+  },
+  "helper": {
+    "description": "Por ahora, ayudar en TasksNearMe en {market} es solo con invitación.",
+    "title": "Ingresa tu invitación de ayudante",
+    "body": "Estamos abriendo lugares para ayudantes poco a poco. Tu código está en el correo o mensaje con el que te llegó la invitación.",
+    "submit": "Empezar a configurar mi perfil de ayudante"
+  },
+  "previews": {
+    "group": "Beta privada",
+    "helper": "Invitación de ayudante",
+    "helper-prefilled": "Invitación de ayudante desde un enlace",
+    "helper-incorrect": "Invitación de ayudante: código desconocido",
+    "helper-expired": "Invitación de ayudante: ya no se puede usar",
+    "helper-client-code": "Invitación de ayudante: código de cliente",
+    "sign-up": "Paso de invitación al registrarte",
+    "sign-up-prefilled": "Paso de invitación desde un enlace",
+    "sign-up-rate-limited": "Paso de invitación: demasiados intentos"
+  }
+}

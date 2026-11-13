@@ -1,0 +1,35 @@
+{
+  "code": {
+    "label": "Invite code",
+    "hint": "It's in the email or message your invite came in, for example K7QP-M4XD.",
+    "accepted": "Invite accepted."
+  },
+  "waitlist": {
+    "title": "No invite yet?",
+    "body": "Join the waitlist and we'll email you when there's a spot.",
+    "link": "Join the waitlist"
+  },
+  "signUp": {
+    "title": "Enter your invite code",
+    "description": "TasksNearMe is invite-only in {market} for now. Your account is ready as soon as you enter your code.",
+    "submit": "Continue",
+    "otherEmail": "Use a different email"
+  },
+  "helper": {
+    "description": "Helping on TasksNearMe in {market} is invite-only for now.",
+    "title": "Enter your helper invite",
+    "body": "We're opening helper spots a few at a time. Your code is in the email or message your invite came in.",
+    "submit": "Start helper setup"
+  },
+  "previews": {
+    "group": "Private beta",
+    "helper": "Helper invite",
+    "helper-prefilled": "Helper invite from a link",
+    "helper-incorrect": "Helper invite: unknown code",
+    "helper-expired": "Helper invite: can't be used anymore",
+    "helper-client-code": "Helper invite: a client code",
+    "sign-up": "Sign-up invite step",
+    "sign-up-prefilled": "Sign-up invite step from a link",
+    "sign-up-rate-limited": "Sign-up invite step: too many tries"
+  }
+}

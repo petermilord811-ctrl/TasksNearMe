@@ -23,6 +23,9 @@ import { PageSkeleton } from '@/ui/components';
 import { savePushSubscriptionAction } from '@/modules/notifications/actions';
 import { HelperOnboardingScreen } from '@/ui/screens/helper';
 import { requestNow } from '@/platform/clock';
+import { redeemHelperInvite } from '@/modules/beta/actions';
+import { helperInviteFor } from '@/modules/beta/server';
+import { HelperInviteScreen } from '@/ui/screens/beta';
 
 export const metadata: Metadata = { title: 'Become a helper', robots: { index: false } };
 
@@ -39,6 +42,9 @@ async function Onboarding({ params }: Pick<PageProps<'/[locale]/app/helper/onboa
   const [{ step: raw }, viewer] = await Promise.all([params, getViewer()]);
   if (!(ONBOARDING_STEPS as readonly string[]).includes(raw)) notFound();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.helperOnboarding()));
+  // Private beta: starting helper setup can wait for a helper invite (src/modules/beta).
+  const helperInvite = await helperInviteFor(db, viewer.user.id);
+  if (helperInvite) return <HelperInviteScreen data={helperInvite} handlers={{ onRedeem: redeemHelperInvite }} />;
   const step = raw as OnboardingStep;
   const now = await requestNow();
 

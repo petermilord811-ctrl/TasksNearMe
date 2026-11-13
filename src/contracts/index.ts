@@ -42,6 +42,8 @@ export * from './admin-verification';
 export * from './admin-support-tools';
 export * from './staff-auth';
 export * from './poster-identity';
+export * from './beta';
+export * from './bot-check';
 export * from './shell';
 export * from './routes';
 export type { PreviewEntry } from './preview';

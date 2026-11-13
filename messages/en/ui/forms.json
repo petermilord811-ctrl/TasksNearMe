@@ -46,6 +46,13 @@
     "interest": {
       "label": "I'm interested in",
       "hint": "Choose how you'd like to use TasksNearMe."
+    },
+    "inviteCode": {
+      "required": "Enter your invite code.",
+      "incorrect": "We don't recognize that code. Check it and try again.",
+      "expired": "This invite can't be used anymore. Ask for a new one, or join the waitlist.",
+      "not_supported": "This invite is for a client account. Helper setup needs a helper invite.",
+      "too_long": "That's longer than an invite code. Check it and try again."
     }
   },
   "actionErrors": {

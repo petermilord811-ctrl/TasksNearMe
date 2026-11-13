@@ -48,6 +48,7 @@ import {
 import { homeGeocoder, sampleHomeGeocoder, verificationCipher, verificationProviders } from './server';
 import { startPosterIdentity } from './poster-identity';
 import { requestNow } from '@/platform/clock';
+import { helperInviteFor } from '@/modules/beta/server';
 
 /** Server Actions for helper onboarding and the profile editor (src/contracts/onboarding.ts). */
 
@@ -90,6 +91,8 @@ async function saved(userId: string, result: ActionResult, step?: OnboardingStep
 export async function onboardingSaveProfile(input: HelperProfileInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
+  // Private beta: starting helper setup can wait for a helper invite (src/modules/beta).
+  if (await helperInviteFor(db, userId)) return { ok: false, code: 'not_allowed' };
   const origin = originFromHeaders(await headers());
   return saved(userId, await saveHelperProfile(db, userId, input, await requestNow(), { requireAgreement: true, origin }), 'profile');
 }

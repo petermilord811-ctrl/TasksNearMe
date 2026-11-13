@@ -5,6 +5,7 @@ import account from './account.json';
 import actionReasons from './actionReasons.json';
 import actions from './actions.json';
 import availability from './availability.json';
+import beta from './beta.json';
 import bookingComplete from './bookingComplete.json';
 import bookingConfirm from './bookingConfirm.json';
 import bookingHub from './bookingHub.json';
@@ -70,6 +71,6 @@ import timeline from './timeline.json';
 import verification from './verification.json';
 import waitlist from './waitlist.json';
 
-const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helperCard, helperOnboarding, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, taskCard, taskManage, thread, timeline, verification, waitlist };
+const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helperCard, helperOnboarding, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, taskCard, taskManage, thread, timeline, verification, waitlist, beta };
 
 export default uiMessages;
