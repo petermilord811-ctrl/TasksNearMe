@@ -1,15 +1,18 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
 import { createTaskDrafter } from '@/integrations/ai/task-drafter';
-import { createGeocoder } from '@/integrations/geocoding';
+import { createFakeGeocoder, createGeocoder } from '@/integrations/geocoding';
 import { createFileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { db } from '@/platform/db/client';
-import { createTaskPosting } from './posting';
+import { createTaskPosting, type TaskPosting } from './posting';
 
 /** App-wide instances of the task services (the app's database, providers, and keys). */
 export const taskPosting = createTaskPosting({ db, geocoder: createGeocoder(), cipher: fieldCipherFromEnv() });
+/** Posting with the sample addresses, for tests (the `tnm_geo_stand_in` cookie). Never in production. */
+export const sampleAddressTaskPosting: TaskPosting | null =
+  process.env.NODE_ENV === 'production' ? null : createTaskPosting({ db, geocoder: createFakeGeocoder(), cipher: fieldCipherFromEnv() });
 export const fileStorage = createFileStorage();
 export const taskDrafter = createTaskDrafter();
 

@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { and, count, eq, inArray } from 'drizzle-orm';
 import type { ActionResult, AddressSuggestion, PostTaskPageData, TaskPostingRules } from '@/contracts';
 import { compactTaskDetails, createTaskDraftSchema } from '@/contracts';
-import type { Geocoder } from '@/integrations/geocoding';
+import { GeocoderUnavailableError, type GeoPlace, type Geocoder } from '@/integrations/geocoding';
 import { fieldError, validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
@@ -79,14 +79,17 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
     return { market: marketView, categories: categoryViews, rules, aiDraftingEnabled: false, now: now().toISOString() };
   }
 
-  /** Address search for the "where" step: only the place and its public area, never stored. */
+  /**
+   * Address search for the "where" step: only the place and its public area, never stored. Places near the
+   * market come first, and nothing beyond twice its radius (closer ones outside it offer the waitlist).
+   */
   async function searchAddresses(userId: string, query: string): Promise<AddressSuggestion[]> {
     if (query.trim().length < 3) return [];
     const poster = await loadPoster(userId);
     const market = poster ? await marketFor(poster.homeMarketId) : null;
     if (!market) return [];
     const marketAreas = await db.select().from(areas).where(eq(areas.marketId, market.id));
-    const places = await geocoder.search(query);
+    const places = await geocoder.search(query, { near: { lat: market.centerLat, lng: market.centerLng }, withinKm: market.serviceRadiusKm * 2 });
     return places.map((place) => {
       const inside = inServiceArea(market, place);
       const area = inside ? nearestArea(marketAreas, place) : null;
@@ -130,10 +133,18 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
       if ((open?.value ?? 0) >= NEW_ACCOUNT.maxOpenTasks) return fail({ ok: false, code: 'limit_reached' });
     }
 
-    // Where: resolve and check the address; store it encrypted and keep only the area public.
+    // Where: resolve and check the address (the provider confirms it again); store it encrypted and keep only
+    // the area public. The provider's coordinates only pick the area: they're never stored.
     let location: { addressEnc: string; zip: string; areaId: string; areaSlug: string; center: { lat: number; lng: number } } | null = null;
     if (draft.location.mode === 'local') {
-      const place = await geocoder.resolve(draft.location.placeId);
+      let place: GeoPlace | null;
+      try {
+        place = await geocoder.resolve(draft.location.placeId);
+      } catch (error) {
+        if (!(error instanceof GeocoderUnavailableError)) throw error;
+        console.error('[geocoding]', error.message);
+        return fail({ ok: false, code: 'unknown' });
+      }
       if (!place) return fail(fieldError('location.placeId', 'invalid'));
       const marketAreas = await db.select().from(areas).where(eq(areas.marketId, market.id));
       const area = inServiceArea(market, place) ? nearestArea(marketAreas, place) : null;

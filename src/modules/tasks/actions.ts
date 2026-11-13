@@ -24,12 +24,13 @@ import { categories, markets } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { AI_STAND_IN_COOKIE, AiRefusedError, AiUnavailableError, wantsAiStandIn } from '@/integrations/ai';
 import { createFakeTaskDrafter } from '@/integrations/ai/task-drafter';
+import { GEO_STAND_IN_COOKIE, wantsGeoStandIn } from '@/integrations/geocoding';
 import { findProhibitedPhrase, maskContactDetails } from '@/modules/trust/contact-masking';
 import { GLOBAL_PROHIBITED_PHRASES } from '@/modules/trust/prohibited';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { fileStorage, homeMarketIdOf, taskDrafter, taskPosting } from './server';
+import { fileStorage, homeMarketIdOf, sampleAddressTaskPosting, taskDrafter, taskPosting } from './server';
 
 /** Server Actions behind PostTaskScreen (src/contracts/posting.ts, PostTaskHandlers). */
 
@@ -73,10 +74,24 @@ export async function draftTaskWithAi(input: { categorySlug: CategorySlug; text:
   }
 }
 
+/** Tests ask for the sample addresses, so they never reach Mapbox where a token is set. */
+async function postingForRequest() {
+  const standIn = wantsGeoStandIn((await cookies()).get(GEO_STAND_IN_COOKIE)?.value);
+  return standIn && sampleAddressTaskPosting ? sampleAddressTaskPosting : taskPosting;
+}
+
+/** Each search is one Mapbox request (free up to 100,000 a month): plenty for typing, not for a script. */
+const ADDRESS_SEARCH_RULE = { limit: 120, windowSeconds: 10 * 60 };
+
 export async function searchTaskAddresses(input: { query: string }): Promise<AddressSuggestion[]> {
   const userId = await signedInUserId();
   if (!userId) return [];
-  return taskPosting.searchAddresses(userId, String(input.query ?? '').slice(0, 120));
+  const query = String(input.query ?? '').slice(0, 120);
+  if (query.trim().length < 3) return [];
+  const limited = await consumeRateLimit(db, `address-search:user:${userId}`, ADDRESS_SEARCH_RULE);
+  // A failed search reads as "Address search is unavailable. Try again in a moment."
+  if (!limited.ok) throw new Error('Too many address searches; try again in a few minutes.');
+  return (await postingForRequest()).searchAddresses(userId, query);
 }
 
 export async function uploadTaskPhoto(formData: FormData): Promise<PhotoUploadResult> {
@@ -114,7 +129,7 @@ export async function quoteTaskPrice(input: { budget: PricingInput; expenseAllow
 export async function postTaskAction(input: TaskDraftInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const outcome = await taskPosting.post(userId, input);
+  const outcome = await (await postingForRequest()).post(userId, input);
   if (!outcome.ok) return outcome.result;
 
   // Boards, market pages, and the new task page show it right away.

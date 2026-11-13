@@ -28,6 +28,8 @@
 
 - **Email** (owner request, UI-049): real delivery through Resend (`RESEND_API_KEY` in `.env`; the dev outbox keeps a copy of everything outside production); designed notification emails with signed unsubscribe links and one-click headers; `/email/unsubscribe`; bounces and complaints from a signed Resend webhook suppress notification email (`email_suppressions`, migration 0028); the gift card email. Restart the dev server after changing job or email code (the job runner keeps the code it started with).
 
+- **Address search with Mapbox** (owner request): with `MAPBOX_TOKEN` in `.env`, posting suggests real Austin addresses (known address points only) and confirms the chosen one again on "Post" (`src/integrations/geocoding/mapbox.ts`); coordinates are never stored (Mapbox's terms). Tests use the sample addresses (`tnm_geo_stand_in`). No UPS/USPS check: their terms allow it only for their own shipments.
+
 ## Done in iteration 13 (the finish)
 - **`/app/helpers`** (UI-039): browse and search the market's helpers.
 - **After a cancellation (T-10–T-12):** Find a replacement (`tasks.reopened_at`, migration 0023), Contest no-show report, Book again after a helper cancellation; staff reverse strikes on appeal.

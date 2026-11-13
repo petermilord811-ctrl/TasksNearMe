@@ -30,7 +30,7 @@ When to reconsider: separate worker queues once job volume competes with webhook
 | Identity verification | **Stripe Identity** (hosted document + selfie) | Same vendor and webhook pipeline as payments | See [06-verification-trust-compliance.md](06-verification-trust-compliance.md) |
 | Background checks | **Checkr** (invitation flow; the candidate enters details on Checkr's page) | Sensitive data stays with Checkr; adverse-action tooling | Needs account credentialing before staging access (**F9**) |
 | Gift cards | **Tremendous** API | Idempotent orders via `external_id`; no fee on bank-funded gift cards; fraud review tools | Sandbox: Testflight. Webhooks signed with HMAC-SHA256 |
-| Maps and addresses | Google Maps Platform: Places Autocomplete (New), Geocoding, Maps JavaScript | US address quality | Budget alerts; keys restricted by referrer. Alternative: Mapbox |
+| Maps and addresses | **Mapbox** Geocoding API v6 (address suggestions; the chosen address is confirmed again on "Post"); map tiles from OpenFreeMap through MapLibre | Free up to 100,000 searches a month; known address points only | Temporary results: coordinates never stored or shown (Mapbox terms). Changed 2026-11-12 from Google Maps Platform (needs a billing account). Alternative: Google Places |
 | AI drafting | Anthropic Claude API (`@anthropic-ai/sdk`) | Structured outputs; see §8 | Behind a feature flag |
 | Observability | Sentry (errors, tracing), pino structured logs, uptime checks, PostHog (product analytics) | Small-team friendly | Replay is off on sensitive pages; logs redact PII |
 | Edge and abuse | Cloudflare DNS, TLS, WAF, rate-limit rules, Turnstile on sign-up, post, and offer forms | Cheap protection | — |

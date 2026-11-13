@@ -64,6 +64,13 @@
         "payments": "Payments",
         "tips_and_news": "Tips and news"
       },
+      "topicEmails": {
+        "bookings": "booking",
+        "messages": "message",
+        "offers": "offer",
+        "payments": "payment",
+        "tips_and_news": "tips and news"
+      },
       "cta": {
         "booking": "View the booking",
         "task": "View your task",

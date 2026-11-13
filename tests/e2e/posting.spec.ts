@@ -1,7 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { devSignIn } from './support/sign-in';
 
-/** Posting a task end to end: the wizard, the quote from the fee engine, and the public board. */
+/**
+ * Posting a task end to end: the wizard, the quote from the fee engine, and the public board. The
+ * `tnm_geo_stand_in` cookie gets the fictional sample addresses, so this never calls Mapbox where a token is set.
+ */
+
+test.beforeEach(async ({ context, baseURL }) => {
+  await context.addCookies([{ name: 'tnm_geo_stand_in', value: '1', url: baseURL! }]);
+});
 
 /** A calendar date in Austin, `days` from today. */
 function marketDate(days: number): string {

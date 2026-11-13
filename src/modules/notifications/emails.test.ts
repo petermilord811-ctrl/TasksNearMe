@@ -35,7 +35,7 @@ describe('notification emails', () => {
   it('gives optional topics a signed unsubscribe link and one-click headers', () => {
     const offer = deliveryContent(row('offer_received', { kind: 'task', taskId: 'tsk_desk' }));
     expect(offer.html).toContain('View your task');
-    expect(offer.text).toContain("You're getting this because offers emails are on.");
+    expect(offer.text).toContain("You're getting this because offer emails are on.");
     const header = offer.headers?.['List-Unsubscribe'] ?? '';
     expect(header).toMatch(/^<http:\/\/localhost:3000\/api\/email\/unsubscribe\?token=.+>$/);
     expect(offer.headers?.['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');

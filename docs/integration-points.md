@@ -14,7 +14,7 @@ Every outside service sits behind a small interface in `src/integrations/*` (or,
 | Email | `EmailProvider` (`src/integrations/email`) | The dev outbox (`/dev/outbox`, with each designed email in a frame) | Postmark or Resend (**both built**: `src/integrations/email/postmark.ts`, `resend.ts`) | `POSTMARK_SERVER_TOKEN` or `RESEND_API_KEY` (one, never both), and `EMAIL_FROM` |
 | Text messages and phone codes | `SmsSender` (`src/integrations/sms`) | The dev outbox | Twilio Verify (codes) and Programmable Messaging (alerts; needs A2P 10DLC or toll-free registration) | `TWILIO_ACCOUNT_SID` (and token, sender) |
 | Gift cards (rewards) | `GiftCardProvider` (`src/integrations/gift-cards`) | `/dev/gift-cards/<id>` | Tremendous (sandbox first) | `TREMENDOUS_API_KEY` |
-| Address search | `Geocoder` (`src/integrations/geocoding`) | Fixed sample places in Austin (`FAKE_PLACES`) | Google Places or Mapbox | `GOOGLE_MAPS_API_KEY` or `MAPBOX_TOKEN` |
+| Address search | `Geocoder` (`src/integrations/geocoding`) | Fixed sample places in Austin (`FAKE_PLACES`) | Mapbox Geocoding v6 (**built**: `mapbox.ts`) | `MAPBOX_TOKEN` |
 | Photo storage | `FileStorage` (`src/integrations/storage`) | Local disk (`.data/uploads`) | Cloudflare R2 with presigned uploads | `R2_BUCKET` (and keys) |
 | Writing help (Claude) | `TaskDrafter`, `ProfileWriter`, `OfferMessageWriter` (`src/integrations/ai`) | Rule-based stand-ins | Claude through `@anthropic-ai/sdk` (**built**: `claude.ts`) | `ANTHROPIC_API_KEY` (optional `ANTHROPIC_MODEL`) |
 | Map tiles | `MAP_STYLE_URL` | OpenFreeMap (free, no key) | Any MapLibre style (the same, or a paid one) | `MAP_STYLE_URL`, `MAP_ATTRIBUTION` |
@@ -62,8 +62,14 @@ There's no adapter to write: Better Auth has both providers built in. With keys 
 ### Gift cards (Tremendous)
 - `order` places one reward order; the grant id travels as `externalId` (Tremendous's external id), so a retry never issues twice. The result's link replaces `/dev/gift-cards/<id>`.
 
-### Address search (Google Places or Mapbox)
-- `search` returns up to 5 places for typed text, `resolve` the full address for a place id. Only the public point (fuzzed 300–800 m) and the area are ever shown to anyone but the client and the booked helper.
+### Address search (Mapbox)
+- **Built.** With `MAPBOX_TOKEN` (a public `pk.` token; don't add URL restrictions to it, since the app calls Mapbox from its server), the posting wizard's "Search your address" uses Mapbox's Geocoding API v6: US addresses, nearest the market first, within twice its radius. Temporary results are free up to 100,000 requests a month; each search is one request, and people are limited to 120 searches per 10 minutes.
+- **Only real addresses:** suggestions are known address points (Mapbox's `rooftop`, `parcel` or `point` accuracy). Results Mapbox only guesses along a street (`interpolated`) aren't offered, since their house number may not exist. A new home Mapbox doesn't know yet can't be chosen until Mapbox adds it.
+- **Confirmed on "Post":** `resolve` looks the chosen address up again as a full address. The same house number and street, in the same city or ZIP, must come back as a known address point with exact or high confidence. The address is saved as Mapbox has it, so a wrong ZIP or a variant spelling ("W. Second St") is corrected. If Mapbox can't be reached, posting fails with a "try again" message and nothing is saved.
+- **Mapbox's terms** (Product Terms 2.7.2): temporary results may not be stored or cached, and their coordinates may not be shown. The coordinates are used once on the server to find the service area and neighborhood, then dropped. The browser never gets them. The place id it holds is the address itself, signed with `BETTER_AUTH_SECRET`, so `resolve` takes only addresses this app suggested. What's stored is the address (encrypted), its ZIP and its area; the public point is fuzzed from the area's center, as before.
+- **Not UPS or USPS:** their address validation may be used only for parcels shipped or mail sent with them (UPS: "solely for the purpose of validating an address in connection with tendering a package"), so neither can check addresses here. If a second opinion is ever wanted, Geocodio's free tier (2,500 lookups a day, results may be stored) is allowed.
+- **Tests never call Mapbox:** a browser with the `tnm_geo_stand_in=1` cookie gets the fictional sample addresses (never in production), as `tests/e2e/posting.spec.ts` does. Outside production the sample place ids (`plc_…`) still resolve beside Mapbox. A production build without a token has no address search rather than fictional addresses.
+- Only the public point (fuzzed 300–800 m) and the area are ever shown to anyone but the client and the booked helper.
 
 ### Photo storage (R2)
 - `put` and `get` by key. Uploads already strip metadata (EXIF, GPS) and re-encode before storing; with R2, switch to presigned direct uploads so photos don't pass through Server Actions (decisions.md).

@@ -1,23 +1,24 @@
-/**
- * Geocoding port (address autocomplete and lookup). Development and tests use a fixed list of
- * fictional addresses; production plugs in a real provider (Google Places or Mapbox) here once a
- * key exists (see blocked.md). Addresses never leave the server except to their owner.
- */
-export interface GeoPlace {
-  placeId: string;
-  line1: string;
-  city: string;
-  state: string;
-  zip: string;
-  lat: number;
-  lng: number;
-}
+import { createMapboxGeocoder } from './mapbox';
+import { GeocoderUnavailableError, type GeoPlace, type Geocoder } from './types';
 
-export interface Geocoder {
-  readonly name: string;
-  /** Up to 5 matches for what someone has typed. */
-  search(query: string): Promise<GeoPlace[]>;
-  resolve(placeId: string): Promise<GeoPlace | null>;
+/**
+ * Geocoding port (address autocomplete and lookup). With `MAPBOX_TOKEN`, Mapbox suggests real addresses and
+ * confirms the chosen one on "Post" (`mapbox.ts`). Without it, development and tests use a fixed list of
+ * fictional addresses, and production has no address search. Addresses never leave the server except to their
+ * owner.
+ *
+ * Tests must never reach Mapbox, even where a token is set: a browser with the `tnm_geo_stand_in=1` cookie gets
+ * the sample addresses (never in production), like the AI and sign-in stand-ins.
+ */
+
+export { GeocoderUnavailableError } from './types';
+export type { GeoPlace, GeoSearchOptions, Geocoder } from './types';
+
+export const GEO_STAND_IN_COOKIE = 'tnm_geo_stand_in';
+
+/** Whether this request asked for the sample addresses. `cookieValue` is its `tnm_geo_stand_in` cookie. */
+export function wantsGeoStandIn(cookieValue: string | undefined, env: Record<string, string | undefined> = process.env): boolean {
+  return env.NODE_ENV !== 'production' && cookieValue === '1';
 }
 
 /** Fictional streets placed near Austin neighborhoods, plus two places outside the service area. */
@@ -34,6 +35,8 @@ export const FAKE_PLACES: readonly GeoPlace[] = [
   { placeId: 'plc_roundrock_44', line1: '44 Sample Way', city: 'Round Rock', state: 'TX', zip: '78664', lat: 30.5083, lng: -97.6789 },
   { placeId: 'plc_waco_100', line1: '100 Example Road', city: 'Waco', state: 'TX', zip: '76701', lat: 31.5493, lng: -97.1467 },
 ];
+
+const SAMPLE_PLACE_PREFIX = 'plc_';
 
 export function createFakeGeocoder(places: readonly GeoPlace[] = FAKE_PLACES): Geocoder {
   return {
@@ -54,10 +57,37 @@ export function createFakeGeocoder(places: readonly GeoPlace[] = FAKE_PLACES): G
   };
 }
 
-export function createGeocoder(): Geocoder {
-  if (process.env.GOOGLE_MAPS_API_KEY || process.env.MAPBOX_TOKEN) {
-    // TODO(integration): real geocoder adapter (Phase 10). Refuse to silently use fake data.
-    throw new Error('A maps key is set but the geocoder adapter is not implemented yet.');
+/** Outside production the sample places still resolve beside Mapbox, so seeded tasks and saved test drafts work. */
+function withSamplePlaces(real: Geocoder, samples: Geocoder = createFakeGeocoder()): Geocoder {
+  return {
+    name: real.name,
+    search: (query, options) => real.search(query, options),
+    resolve: (placeId) => (placeId.startsWith(SAMPLE_PLACE_PREFIX) ? samples.resolve(placeId) : real.resolve(placeId)),
+  };
+}
+
+/** Production without a token: no address search, rather than fictional addresses. */
+const noAddressSearch: Geocoder = {
+  name: 'none',
+  async search() {
+    throw new GeocoderUnavailableError('Address search is not set up: add MAPBOX_TOKEN.');
+  },
+  async resolve() {
+    throw new GeocoderUnavailableError('Address search is not set up: add MAPBOX_TOKEN.');
+  },
+};
+
+export function createGeocoder(env: Record<string, string | undefined> = process.env): Geocoder {
+  const token = env.MAPBOX_TOKEN?.trim();
+  if (token) {
+    const secret = env.BETTER_AUTH_SECRET;
+    if (!secret) throw new Error('MAPBOX_TOKEN needs BETTER_AUTH_SECRET, which signs the addresses people choose.');
+    const mapbox = createMapboxGeocoder({ token, secret });
+    return env.NODE_ENV === 'production' ? mapbox : withSamplePlaces(mapbox);
   }
-  return createFakeGeocoder();
+  if (env.GOOGLE_MAPS_API_KEY?.trim()) {
+    // TODO(integration): a Google Places adapter. Refuse to silently use fake data.
+    throw new Error('GOOGLE_MAPS_API_KEY is set, but only the Mapbox adapter is built: use MAPBOX_TOKEN, or leave both empty.');
+  }
+  return env.NODE_ENV === 'production' ? noAddressSearch : createFakeGeocoder();
 }

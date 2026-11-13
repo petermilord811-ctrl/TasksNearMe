@@ -51,14 +51,14 @@ ${next ? `<p class="muted" style="margin:12px 0 0;font-family:${EMAIL_FONT};font
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;"><tr><td>${emailButton({ href: url, label: cta })}</td></tr></table>
 </td></tr>`;
   const link = (href: string, label: string) => `<a class="link" href="${esc(href)}" target="_blank" style="color:${EMAIL_COLORS.muted};text-decoration:underline;">${esc(label)}</a>`;
-  const footer = `<p style="margin:0;">${esc(locked ? t('lockedFooter') : t('optionalFooter', { topic: topicName.toLowerCase() }))}</p>
+  const footer = `<p style="margin:0;">${esc(locked ? t('lockedFooter') : t('optionalFooter', { topic: t(`topicEmails.${topic}`) }))}</p>
 <p style="margin:8px 0 0;">${link(settingsUrl, t('manage'))}${unsubscribeUrl ? ` &nbsp;·&nbsp; ${link(unsubscribeUrl, t('unsubscribe'))}` : ''}</p>`;
 
   const text = [
     sentence,
     ...(next ? [next] : []),
     t('open', { url }),
-    unsubscribeUrl ? t('textOptionalFooter', { topic: topicName.toLowerCase(), settingsUrl, unsubscribeUrl }) : t('textLockedFooter', { settingsUrl }),
+    unsubscribeUrl ? t('textOptionalFooter', { topic: t(`topicEmails.${topic}`), settingsUrl, unsubscribeUrl }) : t('textLockedFooter', { settingsUrl }),
   ].join('\n\n');
 
   return {
