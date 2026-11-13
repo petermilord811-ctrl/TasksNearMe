@@ -86,7 +86,7 @@ export function AdminRewardControls({ rows, handlers, children, initialDialog, d
       <AlertDialogContent onEscapeKeyDown={(event) => { if (pending) event.preventDefault(); }} onCloseAutoFocus={(event) => { event.preventDefault(); if (result?.ok) confirmation.current?.focus(); else trigger.current?.focus(); }} className="max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
         {allowed && <>
           <AlertDialogHeader><AlertDialogTitle>{t(`decision.titles.${dialog.action}`)}</AlertDialogTitle><AlertDialogDescription>{t(`decision.descriptions.${dialog.action}`)}</AlertDialogDescription></AlertDialogHeader>
-          <p className="rounded-lg bg-muted p-3 text-sm font-medium tabular-nums [overflow-wrap:anywhere]">{t('decision.context', { program: t(`programs.${selected.program}`), amount: formatMoney(selected.amountCents), name: selected.helper.displayName })}</p>
+          <p className="rounded-xl bg-foreground/[0.04] p-3 text-sm dark:bg-white/[0.05] font-medium tabular-nums [overflow-wrap:anywhere]">{t('decision.context', { program: t(`programs.${selected.program}`), amount: formatMoney(selected.amountCents), name: selected.helper.displayName })}</p>
           <RewardDecisionForm key={`${selected.id}-${dialog.action}`} row={selected} actionId={dialog.action} handlers={handlers} onBusy={setBusy} onCancel={() => setDialog(undefined)} onSuccess={(next) => { setResult(next); setDialog(undefined); }} {...decisionState} />
         </>}
       </AlertDialogContent>

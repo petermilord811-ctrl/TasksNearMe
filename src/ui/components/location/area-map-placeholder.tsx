@@ -14,7 +14,7 @@ export function AreaMapPlaceholder({ location, className }: AreaMapPlaceholderPr
 
   if (location.kind === 'remote') {
     return (
-      <div className={cn('flex items-center gap-3 rounded-xl bg-secondary p-5 text-secondary-foreground', className)}>
+      <div className={cn('flex items-center gap-3 rounded-[1.375rem] bg-secondary p-5 text-secondary-foreground', className)}>
         <Laptop aria-hidden="true" className="size-5 shrink-0" />
         <p>{t('remote')}</p>
       </div>

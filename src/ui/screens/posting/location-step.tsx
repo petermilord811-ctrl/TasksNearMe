@@ -116,7 +116,7 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
       </div>
       {modeError && <FieldError id={`${id}-mode-error`}>{modeError === 'not_supported' ? t('location.errors.not_supported') : errors(`fieldErrors.${errors.has(`fieldErrors.${modeError}`) ? modeError : 'invalid'}`)}</FieldError>}
     </fieldset>} />
-    {location.mode === 'remote' ? <p className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('location.remoteHint')}</p> : <>
+    {location.mode === 'remote' ? <p className="rounded-2xl bg-secondary/70 p-4 text-sm text-foreground dark:bg-secondary/40">{t('location.remoteHint')}</p> : <>
       <Field className="gap-2" data-invalid={!!placeError}>
         <FieldLabel htmlFor={`${id}-search`}>{t('location.search')}</FieldLabel>
         <div className="relative">
@@ -126,7 +126,7 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
             if (event.key === 'Escape') { event.preventDefault(); setOpen(false); }
             if (event.key === 'Enter') { event.preventDefault(); if (open && active >= 0 && suggestions[active]) chooseAddress(suggestions[active]); }
           }} />} />
-          {open && !!suggestions.length && <ul id={`${id}-results`} role="listbox" aria-label={t('location.results')} className="absolute z-20 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border bg-popover p-1 text-popover-foreground shadow-md">
+          {open && !!suggestions.length && <ul id={`${id}-results`} role="listbox" aria-label={t('location.results')} className="motion-safe:animate-in fade-in-0 zoom-in-95 absolute z-20 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-foreground/[0.08] bg-popover p-1.5 text-popover-foreground shadow-overlay dark:border-white/[0.08]">
             {suggestions.map((address, index) => <li key={address.placeId} id={`${id}-result-${index}`} role="option" aria-selected={active === index} aria-disabled={!address.inServiceArea} className={cn('min-h-14 cursor-pointer rounded-lg p-3 text-sm', active === index && 'bg-accent', !address.inServiceArea && 'text-muted-foreground')} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseAddress(address)}>
               <span className="block break-words font-medium">{address.line1}</span>
               <span className="block break-words">{address.line2}</span>
@@ -143,12 +143,12 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
         {status === 'loaded' && suggestions.length === 0 && <p>{t('location.empty')}</p>}
         {selectedAddress?.inServiceArea && <span className="sr-only">{t('location.selected')}</span>}
       </div>
-      {outOfArea && <div className="rounded-lg border border-warning p-4 text-sm"><p className="font-medium">{t('location.outOfArea')}</p><a href={routes.waitlist()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('location.waitlist')}</a></div>}
-      {selectedAddress?.inServiceArea ? <div className="space-y-3 rounded-xl bg-secondary p-4 text-secondary-foreground">
+      {outOfArea && <div className="rounded-2xl border border-warning/50 bg-warning/[0.06] p-4 text-sm"><p className="font-medium">{t('location.outOfArea')}</p><a href={routes.waitlist()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('location.waitlist')}</a></div>}
+      {selectedAddress?.inServiceArea ? <div className="space-y-3 rounded-2xl bg-secondary/70 p-4 text-foreground dark:bg-secondary/40">
         {selectedAddress.areaName && <p className="flex items-start gap-2 font-medium"><MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('location.publicPreview', { area: selectedAddress.areaName, market: data.market.name })}</p>}
         {selectedAddress.areaName && selectedAddress.areaPoint && <GeneralAreaMap location={{ kind: 'local', marketSlug: data.market.slug, marketName: data.market.name, areaName: selectedAddress.areaName, publicPoint: selectedAddress.areaPoint, radiusMeters: 1609 }} live={liveMap} className="h-44" />}
         <p className="flex items-start gap-2 text-sm"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('location.privateHint')}</p>
-      </div> : location.placeId && <p className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('location.restoreHint')}</p>}
+      </div> : location.placeId && <p className="rounded-2xl bg-secondary/70 p-4 text-sm text-foreground dark:bg-secondary/40">{t('location.restoreHint')}</p>}
       <TextFormField control={control} name="location.unit" label={t('location.unit')} hint={t('location.unitHint')} maxLength={20} />
       <Field className="gap-2" data-invalid={!!notesError}>
         <FieldLabel htmlFor={`${id}-notes`}>{t('location.accessNotes')}</FieldLabel>

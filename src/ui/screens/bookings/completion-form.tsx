@@ -6,7 +6,9 @@ import { useTranslations } from 'next-intl';
 import { FormProvider, useForm, useWatch, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createCompletionInputSchema, type ActionResult, type CompletionHandlers, type CompletionInput, type CompletionPageData } from '@/contracts';
+import { actionTray, note, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { CompletionFields } from './completion-fields';
@@ -67,11 +69,11 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
     if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
   const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
-  return <FormProvider {...form}><form ref={formRef} noValidate aria-label={t('form')} aria-busy={busy} className="space-y-6 rounded-xl border bg-card p-4 shadow-card sm:p-6" onSubmit={(event) => { if (disabled) { event.preventDefault(); return; } void form.handleSubmit(submit, () => { focusInvalid.current = true; })(event); }}>
+  return <FormProvider {...form}><form ref={formRef} noValidate aria-label={t('form')} aria-busy={busy} className={cn(surface, surfacePad, 'space-y-6')} onSubmit={(event) => { if (disabled) { event.preventDefault(); return; } void form.handleSubmit(submit, () => { focusInvalid.current = true; })(event); }}>
     <fieldset disabled={disabled} className="min-w-0" onFocusCapture={(event) => { const bar = submitBar.current; if (bar && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' }); }}><legend className="sr-only">{t('form')}</legend><CompletionFields rules={data.rules} onUploadPhoto={handlers.onUploadPhoto} onBusyChange={setUploading} expensesCents={expensesCents} /></fieldset>
     <CompletionEarnings hoursWorked={values.hoursWorked} expensesCents={expensesCents} valid={validQuote} onQuote={handlers.onQuoteFinal} onBusyChange={setQuoting} disabled={pending || uploading} initialError={initialQuoteError} />
-    {result && !result.ok && result.code === 'not_allowed' ? <div role="status" className="space-y-3 rounded-xl border border-warning/40 p-4"><p>{t('changed')}</p><Button type="button" variant="outline" disabled={busy} onClick={() => router.refresh()}>{t('reload')}</Button></div> : <FormFeedback result={feedback} successMessage={t('submitted')} />}
-    <p id={`${id}-approval`} className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('approval')}</p>
-    <div ref={submitBar} className="sticky bottom-app-navigation z-10 border-t bg-card pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"><Button type="submit" disabled={disabled} aria-busy={busy} aria-describedby={`${id}-approval`} className="w-full sm:w-auto">{busy && <Spinner aria-hidden="true" />}{t(pending ? 'sending' : 'send')}</Button></div>
+    {result && !result.ok && result.code === 'not_allowed' ? <div role="status" className="space-y-3 rounded-2xl border border-warning/40 bg-badge-warning/60 p-4"><p>{t('changed')}</p><Button type="button" variant="outline" disabled={busy} onClick={() => router.refresh()}>{t('reload')}</Button></div> : <FormFeedback result={feedback} successMessage={t('submitted')} />}
+    <p id={`${id}-approval`} className={note}>{t('approval')}</p>
+    <div ref={submitBar} className={actionTray}><Button type="submit" disabled={disabled} aria-busy={busy} aria-describedby={`${id}-approval`} className="w-full sm:w-auto">{busy && <Spinner aria-hidden="true" />}{t(pending ? 'sending' : 'send')}</Button></div>
   </form></FormProvider>;
 }

@@ -12,8 +12,10 @@ import {
   type ActionResult, type ConfirmBookingInput, type PaymentAttemptResult, type PaymentVerification,
 } from '@/contracts';
 import { formatMoney, formatRelative, formatTime } from '@/shared/format';
+import { actionTray, sectionTitle, surface, surfacePad, warningPanel } from '@/ui/components/bookings/surface';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { BankVerificationDialog, getDefaultPaymentChoice, PaymentMethodLabel, PaymentMethodPicker } from '@/ui/components/payments';
+import { cn } from '@/ui/lib/utils';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
@@ -113,30 +115,37 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
       )(event);
     }}>
       {children}
-      {data.pending && <aside aria-label={t('pending.title')} className="space-y-2 rounded-xl border border-warning/40 bg-badge-warning p-4 text-badge-warning-foreground sm:p-6">
-        <h2 className="flex items-start gap-2 font-heading text-xl/7 font-semibold"><CircleAlert aria-hidden="true" className="mt-1 size-5 shrink-0" />{t(lastFailure ? 'pending.failed' : 'pending.title')}</h2>
+      {data.pending && <aside aria-label={t('pending.title')} className={cn(warningPanel, surfacePad, 'space-y-2')}>
+        <h2 className={cn(sectionTitle, 'flex items-start gap-2')}><CircleAlert aria-hidden="true" className="mt-1 size-5 shrink-0" />{t(lastFailure ? 'pending.failed' : 'pending.title')}</h2>
         {lastFailure && <p>{t.rich(`pending.${lastFailure.code}`, { method: () => <PaymentMethodLabel method={lastFailure.method} />, time: formatTime(lastFailure.at) })}</p>}
         <p className="tabular-nums">{t(lastFailure ? 'pending.retry' : 'pending.hold', { time: formatTime(data.pending.expiresAt), relative: formatRelative(data.pending.expiresAt, now) })}</p>
       </aside>}
       <fieldset disabled={disabled} className="min-w-0 space-y-6">
         <legend className="sr-only">{t('payment')}</legend>
-        <section ref={paymentSection} tabIndex={-1} aria-labelledby={`${id}-payment-title`} className="space-y-4 rounded-xl border bg-card p-4 shadow-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-6">
-          <h2 id={`${id}-payment-title`} className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('payment')}</h2>
+        <section ref={paymentSection} tabIndex={-1} aria-labelledby={`${id}-payment-title`} className={cn(surface, surfacePad, 'space-y-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}>
+          <h2 id={`${id}-payment-title`} className={sectionTitle}>{t('payment')}</h2>
           <Controller control={form.control} name="payment" render={({ field }) => <PaymentMethodPicker panel={data.payment} id={paymentId} disabled={disabled} field={{ ...field, onChange: (choice) => { form.clearErrors('payment'); field.onChange(choice); } }} error={paymentError ? errorText(paymentError) : undefined} />} />
           {paymentFailure && <FormFeedback result={feedback} />}
         </section>
         <div className="space-y-2">
-          <Controller control={form.control} name="acceptTerms" render={({ field, fieldState }) => <div className="flex items-start gap-3">
-            <Checkbox id={`${id}-terms`} ref={field.ref} name={field.name} checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} onBlur={field.onBlur} disabled={disabled} aria-required="true" aria-invalid={fieldState.invalid} aria-describedby={fieldState.error ? `${id}-terms-error` : undefined} className="size-11" />
-            <label htmlFor={`${id}-terms`} className="min-h-11 flex-1 text-sm leading-6">{t.rich('terms', {
-              terms: (chunks) => <Link href={routes.legal('terms')} className="inline-flex min-h-11 items-center rounded-sm text-primary underline underline-offset-4">{chunks}</Link>,
-              cancellation: (chunks) => <Link href={routes.legal('cancellation-policy')} className="inline-flex min-h-11 items-center rounded-sm text-primary underline underline-offset-4">{chunks}</Link>,
-            })}</label>
-          </div>} />
+          {/* The whole row is the checkbox's label (and its tap target); the links inside still open on their own. */}
+          <Controller control={form.control} name="acceptTerms" render={({ field, fieldState }) => <label htmlFor={`${id}-terms`} className={cn(
+            'flex min-h-14 items-start gap-3 rounded-2xl border px-4 py-3.5 text-sm leading-6 transition-[border-color,background-color,box-shadow] duration-200 ease-[var(--ease-out)] motion-reduce:transition-none',
+            disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+            field.value ? 'border-primary/60 bg-primary/[0.045] shadow-[0_0_0_1px_var(--primary)]' : 'border-foreground/[0.09] bg-card',
+            !field.value && !disabled && 'hover:border-foreground/20',
+            fieldState.invalid && 'border-destructive/60',
+          )}>
+            <Checkbox id={`${id}-terms`} ref={field.ref} name={field.name} checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} onBlur={field.onBlur} disabled={disabled} aria-required="true" aria-invalid={fieldState.invalid} aria-describedby={fieldState.error ? `${id}-terms-error` : undefined} className="mt-0.5 size-5" />
+            <span className="min-w-0 flex-1 text-pretty">{t.rich('terms', {
+              terms: (chunks) => <Link href={routes.legal('terms')} className="rounded-sm font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors duration-200 hover:decoration-primary">{chunks}</Link>,
+              cancellation: (chunks) => <Link href={routes.legal('cancellation-policy')} className="rounded-sm font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors duration-200 hover:decoration-primary">{chunks}</Link>,
+            })}</span>
+          </label>} />
           <div aria-live="polite">{form.formState.errors.acceptTerms?.message && <p id={`${id}-terms-error`} className="text-sm text-destructive">{errorText(form.formState.errors.acceptTerms.message)}</p>}</div>
         </div>
       </fieldset>
-      <div ref={feedbackSection} tabIndex={-1} className="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+      <div ref={feedbackSection} tabIndex={-1} className="rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
       {reloadCode ? <div aria-live="polite" aria-atomic="true">
         <Alert role="status" className="border-destructive/30"><CircleAlert aria-hidden="true" className="text-destructive" /><AlertDescription className="space-y-3 text-foreground">
           <p>{t(`errors.${reloadCode}`, { helper: data.offer.helper.displayName })}</p>
@@ -144,7 +153,7 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
         </AlertDescription></Alert>
       </div> : !paymentFailure && <FormFeedback result={feedback} />}
       </div>
-      <div ref={submitBar} className="sticky bottom-app-navigation z-10 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div ref={submitBar} className={actionTray}>
         <Button type="submit" disabled={disabled} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{t(pending ? 'booking' : 'submit', { amount: formatMoney(data.breakdown.posterTotalCents) })}</Button>
       </div>
     </form>

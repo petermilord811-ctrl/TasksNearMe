@@ -16,7 +16,7 @@ export function ChangeMoneyComparison({ before, after, viewerRole, differenceCen
       <PriceBreakdownTable breakdown={before} variant={viewerRole} title={t('before')} />
       <PriceBreakdownTable breakdown={after} variant={viewerRole} title={t('after')} />
     </div>
-    {viewerRole === 'poster' && differenceCents !== undefined && <p className="rounded-xl border border-primary/20 bg-secondary p-4 font-medium text-secondary-foreground tabular-nums">
+    {viewerRole === 'poster' && differenceCents !== undefined && <p className="rounded-2xl border border-primary/20 bg-secondary px-4 py-3.5 font-medium text-pretty text-secondary-foreground tabular-nums">
       {t(differenceCents > 0 ? 'increase' : differenceCents < 0 ? 'refund' : 'unchanged', { amount: formatMoney(Math.abs(differenceCents)) })}
     </p>}
   </div>;

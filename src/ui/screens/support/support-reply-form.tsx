@@ -34,7 +34,7 @@ export function SupportReplyForm({ handlers, initialResult, initialPending = fal
   const error = code === 'required' ? t('bodyRequired') : code === 'too_long' ? t('bodyTooLong') : code ? fields(fields.has(code) ? code : 'invalid') : undefined;
   const feedback = action.result && !action.result.ok ? { ...action.result, fieldErrors: undefined } : action.result;
 
-  return <form noValidate aria-label={t('reply')} aria-busy={pending} className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-6" onSubmit={(event) => {
+  return <form noValidate aria-label={t('reply')} aria-busy={pending} className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6" onSubmit={(event) => {
     if (pending) { event.preventDefault(); return; }
     void form.handleSubmit((input) => action.run(handlers.onReply, input))(event);
   }}>

@@ -54,12 +54,12 @@ export function CounterInviteForm({ invite, headingLevel, pending, result, onSub
     </Field>;
   }
 
-  return <form noValidate onSubmit={(event) => { void form.handleSubmit(onSubmit)(event); }} aria-busy={pending} aria-labelledby={`${id}-title`} className="space-y-4 rounded-xl border bg-background p-4">
+  return <form noValidate onSubmit={(event) => { void form.handleSubmit(onSubmit)(event); }} aria-busy={pending} aria-labelledby={`${id}-title`} className="space-y-4 rounded-2xl border border-foreground/[0.08] bg-background/70 p-4 dark:border-white/[0.08]">
     <Heading id={`${id}-title`} ref={heading} tabIndex={-1} className="rounded-sm font-heading text-lg font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{t('title')}</Heading>
     <p className="text-sm text-muted-foreground">{t('intro')}</p>
     <fieldset disabled={pending} className="min-w-0 space-y-4">
       <legend className="sr-only">{t('title')}</legend>
-      <Controller control={control} name="pricing" render={({ field: value }) => <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border bg-card px-3 py-2 text-sm font-medium">
+      <Controller control={control} name="pricing" render={({ field: value }) => <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-input bg-card px-3.5 py-2 text-sm font-medium transition-[background-color,border-color] duration-200 ease-[var(--ease-out)] hover:border-foreground/40 has-[:checked]:border-primary has-[:checked]:bg-primary/[0.06]">
         <input ref={value.ref} type="checkbox" checked={pricing !== undefined} aria-invalid={Boolean(formState.errors.pricing)} aria-describedby={`${id}-change-error`} className="size-5 shrink-0 accent-primary" onBlur={value.onBlur} onChange={(event) => { setValue('pricing', event.target.checked ? invite.terms.pricing : undefined, { shouldDirty: true }); form.clearErrors('pricing'); }} />
         {t('changePrice')}
       </label>} />
@@ -67,7 +67,7 @@ export function CounterInviteForm({ invite, headingLevel, pending, result, onSub
         {field(pricing.type === 'fixed' ? 'pricing.priceCents' : 'pricing.rateCents', t(pricing.type === 'fixed' ? 'price' : 'rate'), t(pricing.type === 'fixed' ? 'priceHint' : 'rateHint'), (fieldId, invalid) => <Controller name={pricing.type === 'fixed' ? 'pricing.priceCents' : 'pricing.rateCents'} control={control} render={({ field: value }) => <MoneyInput name={value.name} ref={value.ref} value={value.value ?? -1} onValueChange={value.onChange} onBlur={value.onBlur} id={fieldId} aria-invalid={invalid} aria-describedby={`${fieldId}-hint ${fieldId}-error`} />} />)}
         {pricing.type === 'hourly' && <div className="grid gap-4 sm:grid-cols-2">{(['estimatedHours', 'hoursCap'] as const).map((name) => <div key={name}>{field(`pricing.${name}`, t(name), t(`${name}Hint`), (fieldId, invalid) => <Input {...register(`pricing.${name}`, { setValueAs: (value: string) => value === '' ? -1 : Number(value) })} id={fieldId} type="number" min={0} step="any" inputMode="decimal" aria-invalid={invalid} aria-describedby={`${fieldId}-hint ${fieldId}-error`} />)}</div>)}</div>}
       </div>}
-      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border bg-card px-3 py-2 text-sm font-medium">
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-input bg-card px-3.5 py-2 text-sm font-medium transition-[background-color,border-color] duration-200 ease-[var(--ease-out)] hover:border-foreground/40 has-[:checked]:border-primary has-[:checked]:bg-primary/[0.06]">
         <input type="checkbox" checked={start !== undefined} className="size-5 shrink-0 accent-primary" onChange={(event) => { setValue('start', event.target.checked ? invite.terms.start : undefined, { shouldDirty: true }); form.clearErrors('start'); form.clearErrors('pricing'); }} />
         {t('changeStart')}
       </label>

@@ -129,11 +129,11 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
     {!data.setup.bookable && <FinishSetupPanel setup={data.setup} />}
     <FindWorkFilters data={data} />
     <div aria-live="polite" className="empty:hidden">
-      {undo && <p className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3 text-sm shadow-card">
+      {undo && <p className="flex flex-wrap items-center justify-between gap-2 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-3 text-sm shadow-card dark:border-white/[0.06]">
         <span>{t('hiddenNotice', { title: undo.task.title })}</span>
         <button type="button" onClick={() => void hide(undo, false)} className="inline-flex min-h-11 items-center rounded-md px-2 font-medium text-primary underline underline-offset-4">{t('undoHide')}</button>
       </p>}
-      {offered && <p className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3 text-sm shadow-card">
+      {offered && <p className="flex flex-wrap items-center justify-between gap-2 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-3 text-sm shadow-card dark:border-white/[0.06]">
         <span>{offered.undone ? t('quickOfferUndone', { title: offered.card.task.title }) : t('quickOfferNotice', { price: offered.card.quickOffer ? formatMoney(offered.card.quickOffer.priceCents) : '', title: offered.card.task.title })}</span>
         {!offered.undone && handlers?.onUndoQuickOffer && <button type="button" onClick={() => void undoQuickOffer(offered.card)} className="inline-flex min-h-11 items-center rounded-md px-2 font-medium text-primary underline underline-offset-4">{t('quickOfferUndo')}</button>}
       </p>}
@@ -173,7 +173,7 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
             className="h-[62vh] min-h-80 lg:h-[calc(100vh-var(--app-header-offset,0px)-10rem)]"
           />
           <p className="text-xs text-muted-foreground">{mapArea ? t('mapLegend', { area: mapArea.name, miles: mapArea.serviceRadiusMiles }) : t('mapLegendNoArea')}{remoteCount > 0 ? ` ${t('mapRemote', { count: remoteCount })}` : ''}</p>
-          {selectedCard && <div className="relative rounded-xl border bg-card p-3 pr-12 shadow-card">
+          {selectedCard && <div className="relative rounded-[1.375rem] border border-foreground/[0.07] bg-card p-3 pr-12 shadow-card dark:border-white/[0.06]">
             <p className="font-semibold"><Link href={routes.app.findWorkTask(selectedCard.task.id)} className="underline-offset-4 hover:underline">{selectedCard.task.title}</Link></p>
             <p className="text-sm text-muted-foreground tabular-nums">{selectedCard.task.location.kind === 'local' ? selectedCard.task.location.areaName : ''} · {budgetLabel(selectedCard)}{selectedCard.earnings.type === 'fixed' ? ` · ${t('earn', { amount: formatMoney(selectedCard.earnings.amountCents) })}` : ''}</p>
             <button type="button" onClick={() => setSelected(null)} aria-label={t('closeSelected')} className="absolute top-1.5 right-1.5 inline-flex size-11 items-center justify-center rounded-md hover:bg-accent"><X aria-hidden="true" className="size-4" /></button>

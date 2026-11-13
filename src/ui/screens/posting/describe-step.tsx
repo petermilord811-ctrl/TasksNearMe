@@ -106,7 +106,7 @@ export function DescribeStep({ data, handlers, initialSuggestion, autoDraft = fa
         {formState.errors.description.message === 'prohibited' && <a href={routes.legal('prohibited-tasks')} className="mt-2 flex min-h-11 items-center font-medium underline underline-offset-4">{t('describe.prohibitedLink')}</a>}
       </FieldError>}
     </Field>
-    {data.aiDraftingEnabled && <section aria-labelledby={`${id}-ai-title`} className="space-y-4 rounded-xl border bg-secondary/40 p-4 sm:p-5">
+    {data.aiDraftingEnabled && <section aria-labelledby={`${id}-ai-title`} className="space-y-4 rounded-[1.375rem] border border-primary/15 bg-primary/[0.04] p-4 sm:p-5 dark:border-primary/25 dark:bg-primary/[0.08]">
       <div className="space-y-2">
         <h2 id={`${id}-ai-title`} className="flex items-center gap-2 text-lg font-semibold"><Sparkles aria-hidden="true" className="size-5 text-primary" />{t('describe.aiTitle')}</h2>
         <p className="text-sm text-muted-foreground">{t('describe.aiHint')}</p>
@@ -121,7 +121,7 @@ export function DescribeStep({ data, handlers, initialSuggestion, autoDraft = fa
         {t(pending ? 'describe.drafting' : 'describe.draft')}
       </Button>
       {failure && <div role="alert" className="text-sm text-destructive"><p>{t(`describe.errors.${failure}`)}</p>{failure === 'prohibited' && <a href={routes.legal('prohibited-tasks')} className="flex min-h-11 items-center font-medium underline underline-offset-4">{t('describe.prohibitedLink')}</a>}</div>}
-      {suggestion && <section aria-labelledby={`${id}-suggestion-title`} className="space-y-4 rounded-lg border bg-card p-4">
+      {suggestion && <section aria-labelledby={`${id}-suggestion-title`} className="motion-safe:animate-in fade-in-0 slide-in-from-bottom-2 space-y-4 rounded-2xl border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card">
         <h3 id={`${id}-suggestion-title`} className="font-semibold">{t('describe.suggestion')}</h3>
         <p className="break-words font-semibold">{suggestion.title}</p>
         <p className="whitespace-pre-wrap break-words text-sm leading-6">{suggestion.description}</p>

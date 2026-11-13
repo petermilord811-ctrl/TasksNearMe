@@ -16,8 +16,8 @@ export function SheetChoice({ label, options, value, onChange, onBlur, inputRef,
   return <Field data-invalid={Boolean(error)} className="gap-2">
     <p id={`${id}-label`} className="font-medium">{label}</p>
     <FieldDescription id={`${id}-hint`}>{t('choose')}</FieldDescription>
-    <RadioGroup name={name} value={value} onValueChange={onChange} onBlur={onBlur} disabled={disabled} aria-labelledby={`${id}-label`} aria-describedby={`${id}-hint${error ? ` ${id}-error` : ''}`} aria-invalid={Boolean(error)} aria-required="true" className="gap-1">
-      {options.map((option, index) => <label htmlFor={`${id}-${option.value}`} key={option.value} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-secondary">
+    <RadioGroup name={name} value={value} onValueChange={onChange} onBlur={onBlur} disabled={disabled} aria-labelledby={`${id}-label`} aria-describedby={`${id}-hint${error ? ` ${id}-error` : ''}`} aria-invalid={Boolean(error)} aria-required="true" className="gap-2">
+      {options.map((option, index) => <label htmlFor={`${id}-${option.value}`} key={option.value} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-2xl border border-foreground/[0.09] px-3.5 py-2 transition-[border-color,background-color] duration-200 ease-[var(--ease-out)] hover:not-has-[[data-state=checked]]:not-has-disabled:border-foreground/20 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring has-disabled:cursor-not-allowed has-[[data-state=checked]]:border-primary/60 has-[[data-state=checked]]:bg-primary/[0.045]">
         <RadioGroupItem value={option.value} id={`${id}-${option.value}`} ref={index === 0 ? inputRef : undefined} className="size-5 shrink-0" />
         <span className="min-w-0 flex-1 text-sm">{option.label}</span>
       </label>)}

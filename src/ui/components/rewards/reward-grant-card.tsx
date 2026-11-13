@@ -31,7 +31,7 @@ export function RewardGrantCard({ grant, now, onRedeem }: RewardGrantCardProps) 
   const status = useRewardStatus(grant.status, grant.holdUntil);
   const titleId = `reward-grant-${grant.id}`;
 
-  return <article aria-labelledby={titleId} className="min-w-0 space-y-4 rounded-xl border border-border bg-card p-4 shadow-card md:p-6">
+  return <article aria-labelledby={titleId} className="min-w-0 space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card md:p-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="flex items-center gap-2 text-sm font-medium text-badge-reward-foreground"><Gift aria-hidden="true" className="size-4 shrink-0" />{t('card.giftCard')}</p>
       <StatusBadge {...status} />

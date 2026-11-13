@@ -33,7 +33,7 @@ export function OfferRow({ row, now, headingLevel = 2 }: { row: MyOfferRow; now:
     rate: formatMoney(offer.pricing.rateCents), hours: formatHours(offer.pricing.estimatedHours), cap: formatHours(offer.pricing.hoursCap),
   });
 
-  return <article aria-labelledby={titleId} className="group relative min-w-0 rounded-xl border border-border bg-card p-4 shadow-card transition-colors hover:border-primary hover:bg-accent focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background md:p-6">
+  return <article aria-labelledby={titleId} className="group relative min-w-0 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card transition-[transform,box-shadow,border-color] duration-300 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:border-foreground/[0.12] hover:shadow-[0_1px_2px_rgb(23_18_14/0.04),0_18px_36px_-22px_rgb(60_30_10/0.34)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background md:p-6 dark:border-white/[0.06]">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm font-medium text-secondary-foreground">{taskCopy(`categories.${task.categorySlug}`)}</p>
       <StatusBadge {...status} />

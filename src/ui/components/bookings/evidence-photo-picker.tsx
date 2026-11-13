@@ -63,7 +63,7 @@ export function EvidencePhotoPicker({ id, label, hint, photos, onChange, onUploa
       <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription>
       <div id={`${id}-error`} aria-live="polite">{error && <FieldError>{error}</FieldError>}{failure && <FieldError>{t(`errors.${failure}`, { maximum: maxPhotos, megabytes: maxPhotoMegabytes })}</FieldError>}</div>
     </Field>
-    {photos.length > 0 && <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">{photos.map((photo, index) => <li key={photo.id} className="min-w-0 overflow-hidden rounded-xl border bg-card">
+    {photos.length > 0 && <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">{photos.map((photo, index) => <li key={photo.id} className="min-w-0 overflow-hidden rounded-2xl border border-foreground/[0.07] bg-card shadow-[0_1px_2px_rgb(23_18_14/0.05)] animate-in fade-in-0 zoom-in-95 duration-300 dark:border-white/[0.06]">
       <Image src={photo.src} alt={photo.alt || t('alt', { number: index + 1 })} width={photo.width} height={photo.height} unoptimized className="aspect-[4/3] w-full object-cover" />
       <Button type="button" variant="ghost" disabled={disabled || busy} className="h-auto w-full min-w-0 whitespace-normal" onClick={() => { onChange(photos.filter((item) => item.id !== photo.id)); setFailure(undefined); setNotice('removed'); }}><X aria-hidden="true" className="size-4 shrink-0" />{t('remove', { number: index + 1 })}</Button>
     </li>)}</ul>}

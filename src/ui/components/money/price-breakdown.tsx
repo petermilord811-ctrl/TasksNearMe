@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { BreakdownVariant, PriceBreakdown as PriceBreakdownData } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
+import { surface, surfacePad } from '@/ui/components/bookings/surface';
 import { cn } from '@/ui/lib/utils';
 import { Money } from './money';
 
@@ -12,6 +13,10 @@ export interface PriceBreakdownProps {
   /** Context-specific label for a poster's total, for example a booking already charged. */
   posterTotalLabel?: string;
   headingLevel?: 2 | 3 | 4;
+  /** Without a card of its own, for a breakdown inside another card (its heading steps down to a card title). */
+  flat?: boolean;
+  /** Classes for the outer section, such as spacing in a parent's layout. */
+  className?: string;
 }
 
 function Line({
@@ -25,8 +30,13 @@ function Line({
   total?: boolean;
   secondary?: boolean;
 }) {
+  // A total stands on a soft band of its own, so the figure that matters reads first.
   return (
-    <div className={cn('flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2', total && 'mt-2 border-t border-border pt-4 font-semibold', secondary && 'text-sm text-muted-foreground')}>
+    <div className={cn(
+      'flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2',
+      total && 'mt-3 -mx-3 rounded-2xl bg-secondary/70 px-3 py-3 font-semibold text-secondary-foreground',
+      secondary && 'text-sm text-muted-foreground',
+    )}>
       <dt className="min-w-0 flex-1">{label}</dt>
       <dd className="m-0 shrink-0 text-right tabular-nums">{children}</dd>
     </div>
@@ -34,7 +44,7 @@ function Line({
 }
 
 /** Every amount is supplied by the app. This component formats values; it never derives totals. */
-export function PriceBreakdown({ breakdown, variant, title, posterTotalLabel, headingLevel = 2 }: PriceBreakdownProps) {
+export function PriceBreakdown({ breakdown, variant, title, posterTotalLabel, headingLevel = 2, flat = false, className }: PriceBreakdownProps) {
   const t = useTranslations('money');
   const showPoster = variant === 'poster' || variant === 'admin';
   const showHelper = variant === 'helper' || variant === 'admin';
@@ -44,8 +54,8 @@ export function PriceBreakdown({ breakdown, variant, title, posterTotalLabel, he
   const Heading = headingLevel === 4 ? 'h4' : headingLevel === 3 ? 'h3' : 'h2';
 
   return (
-    <section aria-label={titleText} className="w-full min-w-0 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-6">
-      <Heading className="mb-4 text-xl font-semibold leading-7">{titleText}</Heading>
+    <section aria-label={titleText} className={cn(!flat && [surface, surfacePad], 'w-full min-w-0', className)}>
+      <Heading className={cn('font-heading font-semibold', flat ? 'mb-2 text-[1.0625rem]/6 tracking-[-0.01em]' : 'mb-3 text-xl/7 tracking-[-0.015em]')}>{titleText}</Heading>
       <dl className="text-base">
         <Line label={t('taskPrice')}><Money cents={breakdown.taskPriceCents} /></Line>
         {hourly && (

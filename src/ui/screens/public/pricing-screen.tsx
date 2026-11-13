@@ -15,21 +15,21 @@ export function PricingScreen({ data }: PricingScreenProps) {
 
   return <div className="space-y-8">
     <PageHeader title={t('title')} description={t('description')} />
-    <p className="flex items-start gap-3 rounded-xl bg-secondary p-4 text-secondary-foreground sm:p-6">
-      <CircleDollarSign aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+    <p className="flex items-start gap-3 rounded-[1.375rem] bg-secondary p-4 text-secondary-foreground sm:p-6">
+      <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-card/70 text-primary"><CircleDollarSign className="size-5" /></span>
       <span>{t('paymentTiming')}</span>
     </p>
 
     <Section title={t('feesTitle')}>
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border bg-card p-4 shadow-card sm:p-6">
-          <h3 className="text-[17px] leading-6 font-semibold lg:text-lg">{t('posterFeeTitle')}</h3>
-          <p className="mt-3 text-2xl font-bold tabular-nums">{t('posterFeeAmount', { percent: data.fees.posterFeePercent })}</p>
+        <div className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
+          <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('posterFeeTitle')}</h3>
+          <p className="mt-3 font-display text-3xl font-semibold tracking-[-0.025em] tabular-nums">{t('posterFeeAmount', { percent: data.fees.posterFeePercent })}</p>
           <p className="mt-2 text-sm text-muted-foreground">{t('posterFeeDescription', { minimum: formatMoney(data.fees.posterMinimumCents) })}</p>
         </div>
-        <div className="rounded-xl border bg-card p-4 shadow-card sm:p-6">
-          <h3 className="text-[17px] leading-6 font-semibold lg:text-lg">{t('helperFeeTitle')}</h3>
-          <p className="mt-3 text-2xl font-bold tabular-nums">{t('helperFeeAmount', { percent: data.fees.helperFeePercent })}</p>
+        <div className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
+          <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('helperFeeTitle')}</h3>
+          <p className="mt-3 font-display text-3xl font-semibold tracking-[-0.025em] tabular-nums">{t('helperFeeAmount', { percent: data.fees.helperFeePercent })}</p>
           <p className="mt-2 text-sm text-muted-foreground">{t('helperFeeDescription')}</p>
         </div>
       </div>
@@ -68,7 +68,7 @@ export function PricingScreen({ data }: PricingScreenProps) {
 
     <Section title={t('cancellationTitle')}>
       <p className="max-w-reading text-muted-foreground">{t('cancellationDescription', { hours: data.cancellation.freeUntilHours, percent: data.cancellation.lateFeePercent, minimum: formatMoney(data.cancellation.lateFeeMinimumCents) })}</p>
-      <div className="rounded-xl border bg-card p-3 shadow-card sm:p-6">
+      <div className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-3 shadow-card sm:p-6 dark:border-white/[0.06]">
         <table className="w-full table-fixed text-left text-sm">
           <caption className="pb-4 text-left font-semibold">{t('cancellationCaption', { price: formatMoney(data.lateCancellationExample.taskPriceCents) })}</caption>
           <thead><tr className="border-b">
@@ -101,11 +101,11 @@ export function PricingScreen({ data }: PricingScreenProps) {
 
     <div className="grid gap-6 border-t pt-8 md:grid-cols-2">
       <Section title={t('approvalTitle')}>
-        <Clock aria-hidden="true" className="size-5 text-primary" />
+        <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><Clock className="size-5" /></span>
         <p className="text-muted-foreground">{t('approvalDescription', { hours: data.timers.autoApproveHours })}</p>
       </Section>
       <Section title={t('inviteTitle')}>
-        <CreditCard aria-hidden="true" className="size-5 text-primary" />
+        <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><CreditCard className="size-5" /></span>
         <p className="text-muted-foreground">{t('inviteDescription', { hours: data.timers.inviteHoldHours })}</p>
       </Section>
     </div>

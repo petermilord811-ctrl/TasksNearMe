@@ -39,27 +39,27 @@ export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
         <BreadcrumbItem><BreadcrumbLink asChild><Link href={routes.category(category.slug, market.slug)}>{category.name}</Link></BreadcrumbLink></BreadcrumbItem>
       </BreadcrumbList></Breadcrumb>
       <div className="space-y-4">
-        <p className="flex items-center gap-2 text-sm font-medium text-secondary-foreground"><CategoryIcon aria-hidden="true" className="size-9 rounded-lg bg-secondary p-2" />{category.name}</p>
+        <p className="flex items-center gap-2.5 text-sm font-medium text-foreground"><span aria-hidden="true" className="grid size-10 place-items-center rounded-2xl" style={{ background: `color-mix(in oklab, var(--cat-${task.categorySlug}) 15%, transparent)`, color: `var(--cat-${task.categorySlug})` }}><CategoryIcon className="size-5" /></span>{category.name}</p>
         <PageHeader title={task.title} />
         <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={task.postedAt} title={formatDateTime(task.postedAt)}>{t('posted', { relative: formatRelative(task.postedAt, now) })}</time></p>
       </div>
-      <div className="space-y-4 rounded-xl border bg-card p-card shadow-card">
+      <div className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
         <p className="flex items-start gap-3"><LocationIcon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><span>{task.location.kind === 'remote' ? t('remote') : t('area', { area: task.location.areaName, market: task.location.marketName })}</span></p>
         <p className="flex items-start gap-3 tabular-nums"><CalendarDays aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><span>{schedule}</span></p>
         <div className="flex flex-wrap items-end justify-between gap-3 border-t pt-4">
-          <div><p className="mb-1 text-sm text-muted-foreground">{t('budget')}</p><p className="flex items-center gap-2 text-xl font-semibold tabular-nums"><CircleDollarSign aria-hidden="true" className="size-5 shrink-0 text-primary" />{budget}</p></div>
+          <div><p className="mb-1 text-sm text-muted-foreground">{t('budget')}</p><p className="flex items-center gap-2 font-display text-2xl font-semibold tracking-[-0.02em] tabular-nums"><CircleDollarSign aria-hidden="true" className="size-5 shrink-0 text-primary" />{budget}</p></div>
           <p className="text-sm tabular-nums text-muted-foreground">{t('offers', { count: task.offerCount })}</p>
         </div>
       </div>
       <Section title={t('about')}><p className="whitespace-pre-line leading-7 break-words">{task.excerpt}</p></Section>
-      <section aria-label={t('posterTitle')} className="space-y-4 rounded-xl border bg-card p-card shadow-card">
-        <h2 className="text-xl font-semibold">{t('posterTitle')}</h2>
-        <div className="flex items-center gap-3"><InitialsAvatar initials={task.poster.initials} /><div><p className="font-semibold">{task.poster.displayName}</p><p className="text-sm tabular-nums text-muted-foreground">{t('memberSince', { date: formatMonthYear(task.poster.memberSince) })}</p></div></div>
+      <section aria-label={t('posterTitle')} className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
+        <h2 className="font-display text-xl font-semibold tracking-[-0.015em]">{t('posterTitle')}</h2>
+        <div className="flex items-center gap-3"><span className="rounded-full p-0.5 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_14%,transparent)]"><InitialsAvatar initials={task.poster.initials} /></span><div><p className="font-semibold">{task.poster.displayName}</p><p className="text-sm tabular-nums text-muted-foreground">{t('memberSince', { date: formatMonthYear(task.poster.memberSince) })}</p></div></div>
         {task.poster.phoneVerified && <VerificationBadges badges={{ phoneVerified: task.poster.phoneVerified }} />}
         {task.poster.ratingAsClient && <div className="space-y-2"><p className="text-sm text-muted-foreground">{t('clientRating')}</p><RatingStars rating={task.poster.ratingAsClient} /></div>}
       </section>
       <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(task.location.kind === 'remote' ? 'remotePrivacy' : 'privacy')}</p>
-      <div className="space-y-3 rounded-xl border bg-secondary p-card text-secondary-foreground">
+      <div className="relative isolate space-y-3 overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]"><span aria-hidden="true" className="pointer-events-none absolute -top-20 -right-12 -z-10 size-56 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--primary)_14%,transparent),transparent)]" />
         {data.acceptingOffers ? <><Link href={routes.app.findWorkTask(task.id)} className={buttonVariants({ className: 'w-full sm:w-auto' })}>{t('makeOffer')}</Link><p className="text-sm">{t('offerHint')}</p></>
           : <><p className="font-semibold">{t('closed')}</p><Link href={routes.taskBoard(market.slug)} className={buttonVariants({ variant: 'outline' })}>{t('backToBoard')}</Link></>}
       </div>

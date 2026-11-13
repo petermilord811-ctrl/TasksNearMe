@@ -35,7 +35,7 @@ export function ReportContent({ data, handlers, initialResult, initialPending, i
       <p className="break-words font-medium">{t(`subject.${kind}`, { name })}</p>
       <p className="text-muted-foreground">{t('intro')}</p>
     </header>
-    <section aria-labelledby="report-form-title" className="rounded-xl border bg-card p-4 shadow-card sm:p-6">
+    <section aria-labelledby="report-form-title" className="rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6">
       <h2 id="report-form-title" className="sr-only">{t('formTitle')}</h2>
       <ReportForm onReport={handlers.onReport} onClose={() => router.push(data.backHref)} onPendingChange={() => {}} initialResult={initialResult} initialPending={initialPending} initialValues={initialValues} />
     </section>

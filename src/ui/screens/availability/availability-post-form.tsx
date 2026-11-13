@@ -92,8 +92,8 @@ export function AvailabilityPostForm({ data, onCreate, now, initialResult, initi
 
   const errorMessage = result && !result.ok ? result.code === 'limit_reached' ? t('atLimit', { count: data.limits.maxActive })
     : result.code === 'not_allowed' ? t('errors.createNotAllowed') : undefined : undefined;
-  return <section className="space-y-5 rounded-xl border bg-card p-card shadow-card" aria-labelledby={`${id}-title`}>
-    <div><h2 id={`${id}-title`} className="font-heading text-xl/7 font-semibold">{t('newSlot')}</h2><p className="mt-2 text-sm text-muted-foreground">{t('newSlotHint')}</p></div>
+  return <section className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]" aria-labelledby={`${id}-title`}>
+    <div><h2 id={`${id}-title`} className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{t('newSlot')}</h2><p className="mt-2 text-sm text-muted-foreground">{t('newSlotHint')}</p></div>
     <FormProvider {...form}><form noValidate aria-label={t('newSlot')} aria-busy={pending} className="space-y-5" onSubmit={(event) => { void form.handleSubmit(submit)(event); }}>
       <fieldset disabled={pending} className="min-w-0 space-y-5">
         <legend className="sr-only">{t('newSlot')}</legend>
@@ -101,13 +101,13 @@ export function AvailabilityPostForm({ data, onCreate, now, initialResult, initi
           const next = data.setup.bookableCategories.find((value) => value === event.target.value);
           if (next) setValue('pricing', data.listedPricing[next] ?? { type: 'fixed', priceCents: 0 });
           clearErrors('pricing');
-        } })} {...props} className="min-h-11 w-full rounded-[10px] border border-input bg-background px-3 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+        } })} {...props} className="min-h-11 w-full min-w-0 rounded-xl border border-input bg-card px-3.5 py-2 text-base shadow-[inset_0_1px_2px_rgb(23_18_14/0.05)] transition-[border-color,box-shadow] duration-200 ease-[var(--ease-out)] outline-none hover:border-foreground/60 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 dark:bg-white/[0.035] dark:shadow-none">
           <option value="">{t('chooseCategory')}</option>
           {data.setup.bookableCategories.map((value) => <option key={value} value={value}>{categories(value)}</option>)}
         </select>)}
         {field('date', t('date'), t('dateHint', { first: formatDate(marketLocalToUtc(data.limits.firstDate, '12:00')), last: formatDate(marketLocalToUtc(data.limits.lastDate, '12:00')) }), (props) => <MarketDateInput {...register('date')} {...props} min={data.limits.firstDate} max={data.limits.lastDate} className="max-w-sm" />)}
         <div className="grid gap-5 sm:grid-cols-2">{(['startTime', 'endTime'] as const).map((name) => <div key={name}>{field(name, t(name), t('timeHint'), (props) => <MarketTimeSelect {...register(name)} {...props} date={date || data.limits.firstDate} placeholder={t('chooseTime')} />)}</div>)}</div>
-        <div className="space-y-2 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">
+        <div className="space-y-2 rounded-2xl bg-secondary p-4 text-sm text-secondary-foreground">
           <p>{t('timePolicy', data.limits)}</p><p className="tabular-nums">{t('currentTime', { now: formatDateTime(now) })}</p>
         </div>
         <div className="space-y-5 border-t pt-5"><PricingFields namespace="availability" disabled={pending} /></div>

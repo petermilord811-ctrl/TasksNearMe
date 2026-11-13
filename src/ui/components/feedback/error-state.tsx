@@ -9,12 +9,14 @@ export interface ErrorStateProps { title?: string; body?: string; onRetry?: () =
 export function ErrorState({ title, body, onRetry }: ErrorStateProps) {
   const t = useTranslations('feedback');
   return (
-    <div className="rounded-xl border border-badge-danger/60 bg-card p-6">
-      <div role="alert" className="flex items-start gap-3">
-        <AlertCircle aria-hidden="true" className="mt-1 size-5 shrink-0 text-destructive" />
-        <div>
-          <h2 className="text-lg font-semibold">{title ?? t('errorTitle')}</h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">{body ?? t('errorBody')}</p>
+    <div className="rounded-[1.375rem] border border-badge-danger/70 bg-card p-6 shadow-card">
+      <div role="alert" className="flex items-start gap-4">
+        <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-badge-danger text-destructive">
+          <AlertCircle className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-display text-lg leading-tight font-semibold tracking-[-0.015em]">{title ?? t('errorTitle')}</h2>
+          <p className="mt-2 text-sm leading-6 text-pretty text-muted-foreground">{body ?? t('errorBody')}</p>
         </div>
       </div>
       {onRetry && <Button variant="outline" onClick={onRetry} className="mt-5">{t('retry')}</Button>}

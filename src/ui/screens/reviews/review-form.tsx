@@ -41,7 +41,7 @@ export function ReviewForm({ data, handlers, initialResult, initialPending = fal
     if (disabled) { event.preventDefault(); return; }
     void form.handleSubmit((input) => action.run(handlers.onSubmit, input))(event);
   }}>
-    <fieldset disabled={disabled} className="min-w-0 space-y-6 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+    <fieldset disabled={disabled} className="min-w-0 space-y-6 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6">
       <legend className="sr-only">{t('yourReview')}</legend>
       <Controller control={form.control} name="rating" render={({ field, fieldState }) => <Field data-invalid={fieldState.invalid} className="gap-2">
         <p id={`${id}-rating-label`} className="font-medium">{t('rating')}</p>

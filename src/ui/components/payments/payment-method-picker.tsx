@@ -10,6 +10,10 @@ import { RadioGroup, RadioGroupItem } from '@/ui/primitives/radio-group';
 import { cn } from '@/ui/lib/utils';
 import { PaymentMethodLabel } from './payment-method-label';
 
+/** A payment choice: a soft card that lifts on hover; chosen, it takes the brand's ring. */
+const optionCard = 'flex min-w-0 cursor-pointer items-center gap-3 rounded-2xl border border-foreground/[0.09] bg-card px-4 py-3 transition-[border-color,box-shadow,background-color] duration-200 ease-[var(--ease-out)] hover:border-foreground/20 hover:shadow-[0_8px_22px_-16px_rgb(60_30_10/0.45)] has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring motion-reduce:transition-none';
+const optionSelected = 'border-primary/60 bg-primary/[0.045] shadow-[0_0_0_1px_var(--primary)] hover:border-primary/60 hover:shadow-[0_0_0_1px_var(--primary)]';
+
 /** Defaults are selection behavior only; payment availability comes from the supplied panel. */
 export function getDefaultPaymentChoice(panel: PaymentPanelData): PaymentChoice {
   const method = panel.methods.find((candidate) => candidate.isDefault) ?? panel.methods[0];
@@ -61,7 +65,7 @@ export function PaymentMethodPicker({ panel, field, disabled = false, error, id:
       {panel.methods.map((method, index) => <label
         key={method.id}
         htmlFor={`${id}-saved-${index}`}
-        className={cn('flex min-h-16 min-w-0 cursor-pointer items-center gap-3 rounded-lg border bg-card px-4 py-3', selected === `saved:${method.id}` && 'border-primary bg-secondary/40', disabledControl && 'cursor-not-allowed opacity-60')}
+        className={cn(optionCard, selected === `saved:${method.id}` && optionSelected, 'min-h-16', disabledControl && 'cursor-not-allowed opacity-60')}
       >
         <RadioGroupItem id={`${id}-saved-${index}`} value={`saved:${method.id}`} ref={selected === `saved:${method.id}` ? field.ref : undefined} className="scroll-mb-40" />
         <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -72,13 +76,13 @@ export function PaymentMethodPicker({ panel, field, disabled = false, error, id:
           {method.isDefault && <Badge variant="secondary">{t('picker.default')}</Badge>}
         </span>
       </label>)}
-      <label htmlFor={`${id}-new`} className={cn('flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border bg-card px-4 py-3', selected === 'new' && 'border-primary bg-secondary/40', disabledControl && 'cursor-not-allowed opacity-60')}>
+      <label htmlFor={`${id}-new`} className={cn(optionCard, selected === 'new' && optionSelected, 'min-h-14', disabledControl && 'cursor-not-allowed opacity-60')}>
         <RadioGroupItem id={`${id}-new`} value="new" ref={selected === 'new' ? field.ref : undefined} className="scroll-mb-40" />
         <span className="font-medium">{t('picker.newCard')}</span>
       </label>
     </RadioGroup>
     <p id={`${id}-hint`} className="text-sm text-muted-foreground">{t('picker.hint')}</p>
-    {choice.kind === 'dev_card' && panel.newCard.kind === 'dev' && <div className="space-y-3 rounded-lg border border-dashed bg-muted/50 p-4">
+    {choice.kind === 'dev_card' && panel.newCard.kind === 'dev' && <div className="space-y-3 rounded-2xl border border-dashed border-foreground/15 bg-muted/40 p-4 animate-in fade-in-0 slide-in-from-top-2 duration-300">
       <p id={`${id}-development`} className="font-medium">{t('picker.development')}</p>
       <p id={`${id}-development-hint`} className="text-sm text-muted-foreground">{t('picker.developmentHint')}</p>
       <RadioGroup

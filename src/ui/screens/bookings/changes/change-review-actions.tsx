@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { acceptChangeInputSchema, needsBankVerification, type ActionResult, type ChangeActionId, type ChangeReviewHandlers, type ChangeReviewPageData, type PaymentAttemptResult, type PaymentChoice, type PaymentVerification } from '@/contracts';
 import { formatMoney } from '@/shared/format';
+import { actionTray, sectionTitle, surface, surfacePad, warningPanel } from '@/ui/components/bookings/surface';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { cn } from '@/ui/lib/utils';
 import { BankVerificationDialog, getDefaultPaymentChoice, PaymentMethodPicker } from '@/ui/components/payments';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { Button } from '@/ui/primitives/button';
@@ -92,17 +94,17 @@ export function ChangeReviewActions({ data, handlers, initialResult, initialPend
   }
 
   return <>
-    {data.payment && choice && paymentActions && <section ref={paymentSection} tabIndex={-1} aria-labelledby={`${id}-payment-heading`} className="space-y-4 rounded-xl border bg-card p-4 shadow-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-6">
-      <h2 id={`${id}-payment-heading`} className="font-heading text-xl/7 font-semibold">{t('payment')}</h2>
+    {data.payment && choice && paymentActions && <section ref={paymentSection} tabIndex={-1} aria-labelledby={`${id}-payment-heading`} className={cn(surface, surfacePad, 'space-y-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}>
+      <h2 id={`${id}-payment-heading`} className={sectionTitle}>{t('payment')}</h2>
       <p className="text-sm text-muted-foreground">{t('paymentHint')}</p>
       <PaymentMethodPicker panel={data.payment} id={`${id}-payment`} disabled={disabled} field={{ name: 'payment', value: choice, onChange: (value: PaymentChoice) => { setChoice(value); setResult(undefined); }, onBlur: () => {}, ref: (node: HTMLElement | null) => { paymentControl.current = node; } }} error={paymentErrorCode ? fields(paymentErrorCode) : undefined} />
     </section>}
-    {paymentMissing && <p role="status" className="rounded-xl border border-warning/40 bg-badge-warning p-4 text-sm text-badge-warning-foreground">{t('paymentMissing')}</p>}
-    <div ref={feedbackSection} tabIndex={-1} className="space-y-3 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+    {paymentMissing && <p role="status" className={cn(warningPanel, 'px-4 py-3.5 text-sm')}>{t('paymentMissing')}</p>}
+    <div ref={feedbackSection} tabIndex={-1} className="space-y-3 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
       <FormFeedback result={feedback} errorMessage={errorMessage} />
       {reload && <Button type="button" variant="outline" onClick={() => router.refresh()}>{t('reload')}</Button>}
     </div>
-    {data.change.actions.length > 0 && <div aria-label={t('actionGroup')} className="sticky bottom-app-navigation z-10 flex flex-col gap-3 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row">
+    {data.change.actions.length > 0 && <div aria-label={t('actionGroup')} className={cn(actionTray, 'flex flex-col gap-3 sm:flex-row')}>
       {data.change.actions.map((action) => <Button key={action} type="button" variant={action === 'accept_change' || action === 'pay_change_difference' ? 'default' : 'outline'} disabled={disabled || (paymentMissing && (action === 'accept_change' || action === 'pay_change_difference'))} aria-busy={pending && active === action} onClick={(event) => { confirmationOpener.current = event.currentTarget; setConfirm(action); }}>
         {pending && active === action && <Spinner aria-hidden="true" />}{label(action)}
       </Button>)}

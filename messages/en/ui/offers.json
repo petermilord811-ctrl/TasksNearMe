@@ -1,5 +1,5 @@
 {
-  "new": "New",
+  "new": "New offer",
   "offerFrom": "Offer from {helper}",
   "viewOffer": "View {helper}'s offer",
   "select": "Compare {helper}'s offer",
@@ -10,6 +10,7 @@
   "expiry": "Offer expiry",
   "updated": "Updated offer",
   "message": "Message from your helper",
+  "noMessage": "They didn’t add a message. Their profile is above.",
   "maskedNote": "Contact details are shared after you book",
   "brings": "What they bring",
   "nothingListed": "Nothing listed",

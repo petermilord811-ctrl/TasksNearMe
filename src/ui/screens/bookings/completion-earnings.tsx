@@ -30,9 +30,9 @@ export function CompletionEarnings({ hoursWorked, expensesCents, valid, onQuote,
   }, [key, valid, attempt, onQuote, onBusyChange, initialError]);
   const current = result.key === key && result.attempt === attempt ? result : undefined;
   return <section aria-label={t('earnings')} aria-live="polite" aria-busy={valid && !current}>
-    {!valid ? <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">{t('earningsHint')}</p>
+    {!valid ? <p className="rounded-2xl bg-muted/60 px-4 py-3.5 text-sm text-muted-foreground">{t('earningsHint')}</p>
       : current?.breakdown ? <PriceBreakdown breakdown={current.breakdown} variant="helper" title={t('earnings')} />
-        : current?.failed ? <div className="space-y-3 rounded-xl border border-destructive p-4"><p>{t('earningsError')}</p><Button type="button" variant="outline" disabled={disabled} onClick={() => setAttempt((value) => value + 1)}>{t('retryEarnings')}</Button></div>
-          : <p className="flex items-center gap-3 rounded-xl border bg-card p-5"><Spinner />{t('earningsLoading')}</p>}
+        : current?.failed ? <div className="space-y-3 rounded-2xl border border-destructive/40 p-4"><p>{t('earningsError')}</p><Button type="button" variant="outline" disabled={disabled} onClick={() => setAttempt((value) => value + 1)}>{t('retryEarnings')}</Button></div>
+          : <p className="flex items-center gap-3 rounded-2xl border border-foreground/[0.07] bg-card p-5 dark:border-white/[0.06]"><Spinner />{t('earningsLoading')}</p>}
   </section>;
 }

@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { routes, type CancellationPolicySummary } from '@/contracts';
 import { formatDateTime, formatMoney } from '@/shared/format';
+import { surface, surfacePad } from '@/ui/components/bookings/surface';
+import { cn } from '@/ui/lib/utils';
 
 export interface CancellationSummaryProps {
   policy: CancellationPolicySummary;
@@ -12,8 +14,8 @@ export interface CancellationSummaryProps {
 export function CancellationSummary({ policy, helperName }: CancellationSummaryProps) {
   const t = useTranslations('bookingConfirm.cancellation');
 
-  return <section aria-label={t('title')} className="space-y-3 rounded-xl border border-border bg-card p-card shadow-card">
-    <h2 className="text-xl font-semibold leading-7">{t('title')}</h2>
+  return <section aria-label={t('title')} className={cn(surface, surfacePad, 'space-y-3')}>
+    <h2 className="font-heading text-xl/7 font-semibold tracking-[-0.015em]">{t('title')}</h2>
     <p className="tabular-nums">{t('freeUntil', { date: formatDateTime(policy.freeUntil) })}</p>
     <p className="tabular-nums">{t('late', {
       refund: formatMoney(policy.lateRefundCents),

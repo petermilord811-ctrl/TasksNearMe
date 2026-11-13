@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bookmark, Check, List, Map as MapIcon, SlidersHorizontal, X } from 'lucide-react';
@@ -9,9 +9,17 @@ import { FIND_WORK_DISTANCES, FIND_WORK_SORTS, routes, TASK_BOARD_WHEN, type Fin
 import { cn } from '@/ui/lib/utils';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/ui/primitives/sheet';
 
-const chip = 'inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
-const on = 'border-primary bg-secondary text-secondary-foreground';
-const off = 'border-border bg-card text-foreground';
+// Pills as everywhere in the app: the picked one in the brand tint with an inner ring, the rest quiet until hovered.
+const chip = 'inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-sm font-medium transition-[background-color,border-color,color,box-shadow] duration-200 ease-[var(--ease-out)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+const on = 'border-primary/40 bg-brand-soft text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_22%,transparent)] [&>svg:first-child]:text-primary';
+const off = 'border-foreground/[0.1] bg-card text-foreground hover:border-foreground/25 hover:bg-background dark:border-white/[0.1]';
+
+// A row that scrolls sideways when it doesn't fit (a phone): no scrollbar, room above and below for the focus ring,
+// and ends that fade over the page gutter, so a chip cut at the edge reads as "more this way". Where everything
+// fits, the fade only covers the empty gutter.
+const sideScroll = '-mx-gutter -my-1 overflow-x-auto px-gutter py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+const EDGE_FADE = 'linear-gradient(to right, transparent, #000 var(--spacing-gutter, 1rem), #000 calc(100% - var(--spacing-gutter, 1rem)), transparent)';
+const edgeFade: CSSProperties = { maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE };
 
 function Option({ href, selected, children }: { href: string; selected: boolean; children: ReactNode }) {
   return <Link href={href} aria-current={selected ? 'true' : undefined} className={cn(chip, selected ? on : off)}>{selected && <Check aria-hidden="true" className="size-4" />}{children}</Link>;
@@ -36,8 +44,8 @@ export function FindWorkFilters({ data }: { data: FindWorkPageData }) {
   const filterCount = active.length;
   const sorts = FIND_WORK_SORTS.filter((sort) => sort !== 'nearest' || data.map.area);
 
-  return <div className="sticky top-[var(--app-header-offset,0px)] z-20 -mx-gutter space-y-2 border-b bg-background/90 px-gutter py-2.5 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-    <div className="flex items-center gap-2">
+  return <div className="app-glass sticky top-[var(--app-header-offset,0px)] z-20 -mx-gutter flex flex-col gap-2 border-b border-foreground/[0.06] px-gutter py-2.5 transition-[top] duration-300 ease-[var(--ease-out)] dark:border-white/[0.06]">
+    <div className={sideScroll} style={edgeFade}><div className="flex w-max items-center gap-2">
       <div role="group" aria-label={t('views.label')} className="flex shrink-0 rounded-full border bg-card p-0.5 lg:hidden">
         {(['list', 'map'] as const).map((view) => <Link key={view} href={href({ view })} aria-current={query.view === view ? 'true' : undefined} className={cn('inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium', query.view === view ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent')}>
           {view === 'list' ? <List aria-hidden="true" className="size-4" /> : <MapIcon aria-hidden="true" className="size-4" />}{t(`views.${view}`)}
@@ -79,9 +87,9 @@ export function FindWorkFilters({ data }: { data: FindWorkPageData }) {
       <Link href={href({ saved: !query.saved })} aria-current={query.saved ? 'true' : undefined} className={cn(chip, query.saved ? on : off)}>
         <Bookmark aria-hidden="true" className="size-4" />{t('savedFilter')}{data.savedCount > 0 && <span className="tabular-nums text-muted-foreground">{data.savedCount}</span>}
       </Link>
-    </div>
-    <nav aria-label={t('category')} className="-mx-gutter overflow-x-auto px-gutter [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <ul className="flex w-max gap-2 pb-0.5">
+    </div></div>
+    <nav aria-label={t('category')} className={sideScroll} style={edgeFade}>
+      <ul className="flex w-max gap-2">
         <li><Option href={href({ category: undefined })} selected={query.category === undefined}>{t('allCategories')}</Option></li>
         {data.categories.map((category) => <li key={category.slug}><Option href={href({ category: category.slug })} selected={query.category === category.slug}>{category.name}</Option></li>)}
       </ul>

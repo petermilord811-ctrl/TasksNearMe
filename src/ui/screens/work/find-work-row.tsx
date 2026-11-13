@@ -71,16 +71,17 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
     onMouseLeave={() => onActiveChange(null)}
     onFocus={() => onActiveChange(task.id)}
     onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onActiveChange(null); }}
-    className={cn('flex min-w-0 gap-3 rounded-xl border bg-card p-3 shadow-card transition-[border-color,box-shadow] sm:gap-4 sm:p-4', active && 'border-primary ring-2 ring-primary/20')}
+    className={cn('flex min-w-0 gap-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-3 shadow-card transition-[border-color,box-shadow] duration-300 ease-[var(--ease-out)] hover:shadow-[0_1px_2px_rgb(23_18_14/0.04),0_16px_32px_-20px_rgb(60_30_10/0.32)] sm:gap-4 sm:p-4 dark:border-white/[0.06]', active && 'border-primary ring-2 ring-primary/20')}
   >
-    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground sm:size-11"><Icon aria-hidden="true" className="size-5" /></span>
+    <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl sm:size-11" style={{ background: `color-mix(in oklab, var(--cat-${task.categorySlug}) 15%, transparent)`, color: `var(--cat-${task.categorySlug})` }}><Icon aria-hidden="true" className="size-5" /></span>
     <div className="min-w-0 flex-1 space-y-2">
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+      {/* The pay sits right under the title at every width: beside a long title it wrapped under it, right-aligned. */}
+      <div className="space-y-0.5">
         <h3 id={titleId} className="min-w-0 text-base/6 font-semibold">
           <Link href={routes.app.findWorkTask(task.id)} className="rounded-sm underline-offset-4 hover:text-primary hover:underline">{task.title}</Link>
           {card.isNew && <span className="ml-2 inline-flex translate-y-[-1px] items-center rounded-full bg-badge-brand px-2 py-0.5 align-middle text-xs font-semibold text-badge-brand-foreground">{t('new')}</span>}
         </h3>
-        <p className="text-right tabular-nums"><span className="block text-base font-semibold">{budget}</span><span className="block text-xs text-muted-foreground">{earn}</span></p>
+        <p className="flex flex-wrap items-baseline gap-x-2 tabular-nums"><span className="text-base font-semibold">{budget}</span><span className="text-xs text-muted-foreground">{earn}</span></p>
       </div>
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">{task.location.kind === 'remote' ? <Laptop aria-hidden="true" className="size-4" /> : <MapPin aria-hidden="true" className="size-4" />}{task.location.kind === 'remote' ? card_('remote') : task.location.areaName}{task.location.kind === 'local' && task.location.distanceBand ? ` · ${location(`distance.${task.location.distanceBand}`)}` : ''}</span>
@@ -89,12 +90,13 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
       </p>
       {task.excerpt && <p className="line-clamp-2 text-sm text-foreground/80">{task.excerpt}</p>}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-        <div className="min-w-0 text-sm">
-          {card.myOffer ? <span className="inline-flex items-center gap-2"><span className="font-medium">{t('myOffer')}</span><OwnOffer status={card.myOffer.status} /></span>
+        {/* On a phone the note keeps the line beside save and hide: "You made an offer" over its status, never split. */}
+        <div className="min-w-0 flex-1 basis-36 text-sm">
+          {card.myOffer ? <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1"><span className="font-medium whitespace-nowrap">{t('myOffer')}</span><OwnOffer status={card.myOffer.status} /></span>
             : card.blockedReason ? <span className="inline-flex items-start gap-1.5 text-muted-foreground"><Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(`blockedReasons.${card.blockedReason}`)}</span>
               : <time dateTime={task.postedAt} title={formatDateTime(task.postedAt)} className="text-muted-foreground tabular-nums">{card_('posted', { relative: formatRelative(task.postedAt, now) })}</time>}
         </div>
-        {(onToggleSave || onHide || (card.quickOffer && onQuickOffer)) && <div className="flex items-center gap-1">
+        {(onToggleSave || onHide || (card.quickOffer && onQuickOffer)) && <div className="ml-auto flex shrink-0 items-center gap-1">
           {card.quickOffer && onQuickOffer && !card.myOffer && (offerState === 'sent'
             ? <span className="mr-1 inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-success"><Check aria-hidden="true" className="size-4" />{t('quickOfferSent')}</span>
             : <button

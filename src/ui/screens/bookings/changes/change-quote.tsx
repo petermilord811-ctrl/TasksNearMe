@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { ChangeQuoteResult, ProposeChangeHandlers, ProposeChangeInput } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
+import { Skeleton } from '@/ui/primitives/skeleton';
 import { Spinner } from '@/ui/primitives/spinner';
 import { ChangeMoneyComparison } from './change-money-comparison';
 
@@ -25,9 +26,11 @@ export function ChangeQuote({ input, viewerRole, onQuote }: { input?: ProposeCha
   }, [key, attempt, onQuote]);
   const current = response?.key === key && response.attempt === attempt ? response.result : undefined;
   return <div aria-live="polite" aria-busy={!!key && !current}>
-    {!key ? <p className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">{t('quoteHint')}</p>
-      : current?.ok ? <ChangeMoneyComparison before={current.before} after={current.after} differenceCents={current.differenceCents} viewerRole={viewerRole} />
-        : current ? <div className="space-y-3"><FormFeedback result={current} errorMessage={current.code === 'not_allowed' ? t('notAllowed') : undefined} /><Button type="button" variant="outline" onClick={() => setAttempt((value) => value + 1)}>{t('retry')}</Button></div>
-          : <p className="flex items-center gap-3 rounded-xl border bg-card p-5"><Spinner />{t('quotePending')}</p>}
+    {!key ? <p className="rounded-2xl bg-muted/70 px-4 py-3.5 text-sm text-pretty text-muted-foreground">{t('quoteHint')}</p>
+      : current?.ok ? <div className="animate-in fade-in-0 duration-300"><ChangeMoneyComparison before={current.before} after={current.after} differenceCents={current.differenceCents} viewerRole={viewerRole} /></div>
+        : current ? <div className="space-y-3 animate-in fade-in-0 duration-300"><FormFeedback result={current} errorMessage={current.code === 'not_allowed' ? t('notAllowed') : undefined} /><Button type="button" variant="outline" onClick={() => setAttempt((value) => value + 1)}>{t('retry')}</Button></div>
+          : <div className="space-y-4"><p className="flex min-h-6 items-center gap-3 text-sm text-muted-foreground"><Spinner />{t('quotePending')}</p>
+            {/* Holds the comparison's place, so the form doesn't jump when the totals arrive. */}
+            <div aria-hidden="true" className="grid min-w-0 gap-4 sm:grid-cols-2"><Skeleton className="h-56 rounded-[1.375rem]" /><Skeleton className="h-56 rounded-[1.375rem]" /></div></div>}
   </div>;
 }

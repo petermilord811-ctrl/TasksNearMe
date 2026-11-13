@@ -16,8 +16,9 @@ import { Button } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
+import { adminSelect } from './admin-ui';
 
-const selectClass = 'min-h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-invalid:border-destructive';
+const selectClass = adminSelect;
 
 function CaseField({ id, label, hint, error, children }: { id: string; label: string; hint: string; error?: string; children: ReactNode }) {
   return <Field data-invalid={Boolean(error)} className="gap-2">
@@ -65,7 +66,7 @@ export function AdminReplyForm({ data, handlers, focusId, initialResult, initial
   const bodyCode = form.formState.errors.body?.message;
   const personError = personCode === 'required' ? t('reply.personRequired') : fieldCopy(personCode);
   const bodyError = bodyCode === 'required' ? t('reply.bodyRequired') : bodyCode === 'too_long' ? t('reply.bodyTooLong') : fieldCopy(bodyCode);
-  return <form noValidate aria-label={t('reply.title')} aria-busy={pending} className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-5" onSubmit={(event) => {
+  return <form noValidate aria-label={t('reply.title')} aria-busy={pending} className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]" onSubmit={(event) => {
     if (pending) { event.preventDefault(); return; }
     void form.handleSubmit(async (input) => { await action.run(handlers.onReply, input); })(event);
   }}>

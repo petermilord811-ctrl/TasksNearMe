@@ -43,7 +43,7 @@ export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions,
   }
 
   return (
-    <section aria-labelledby={titleId} className={cn('space-y-5 rounded-xl border bg-card p-4 text-card-foreground shadow-sm sm:p-6', className)}>
+    <section aria-labelledby={titleId} className={cn('space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 text-card-foreground shadow-sm sm:p-6 dark:border-white/[0.06]', className)}>
       <div className="space-y-3">
         <h2 id={titleId} className="flex items-center gap-2 text-lg font-semibold">
           <Lock aria-hidden="true" className="size-5 shrink-0 text-primary" />

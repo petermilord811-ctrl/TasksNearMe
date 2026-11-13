@@ -42,7 +42,7 @@ export function InviteCardContent({ invite, handlers, now, headingLevel = 2, ini
     </div>;
   }
 
-  return <article aria-labelledby={`${id}-title`} className="min-w-0 space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+  return <article aria-labelledby={`${id}-title`} className="min-w-0 space-y-5 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
         <InitialsAvatar initials={other.initials} />
@@ -53,16 +53,16 @@ export function InviteCardContent({ invite, handlers, now, headingLevel = 2, ini
       </div>
       <StatusBadge {...status} />
     </div>
-    {invite.slot && <p className="rounded-lg bg-secondary p-3 text-sm tabular-nums text-secondary-foreground">{t(invite.viewerRole === 'helper' ? 'slotHelper' : 'slotClient', { date: formatDate(invite.slot.start), times: formatTimeRange(invite.slot.start, invite.slot.end), helper: invite.helper.displayName })}</p>}
+    {invite.slot && <p className="rounded-2xl bg-secondary/70 p-3 text-sm tabular-nums text-foreground dark:bg-secondary/40">{t(invite.viewerRole === 'helper' ? 'slotHelper' : 'slotClient', { date: formatDate(invite.slot.start), times: formatTimeRange(invite.slot.start, invite.slot.end), helper: invite.helper.displayName })}</p>}
     <div className="space-y-3"><p className="font-semibold">{t('terms')}</p>{terms(invite.terms)}</div>
-    <PriceBreakdownTable breakdown={invite.breakdown} variant={invite.viewerRole} title={t('originalMoney')} headingLevel={detailHeadingLevel} />
-    {counter && <section aria-label={t('counterTitle', { helper: invite.helper.displayName })} className="space-y-4 rounded-xl border border-warning/40 bg-badge-warning/30 p-4">
+    <PriceBreakdownTable flat breakdown={invite.breakdown} variant={invite.viewerRole} title={t('originalMoney')} headingLevel={detailHeadingLevel} />
+    {counter && <section aria-label={t('counterTitle', { helper: invite.helper.displayName })} className="space-y-4 rounded-2xl border border-warning/40 bg-badge-warning/30 p-4">
       <p className="font-semibold">{t('counterTitle', { helper: invite.helper.displayName })}</p>
       {terms(counter)}
-      <PriceBreakdownTable breakdown={counter.breakdown} variant={invite.viewerRole} title={t('counterMoney')} headingLevel={detailHeadingLevel} />
+      <PriceBreakdownTable flat breakdown={counter.breakdown} variant={invite.viewerRole} title={t('counterMoney')} headingLevel={detailHeadingLevel} />
       {invite.viewerRole === 'poster' && <p className="text-sm leading-6">{t('counterTiming')}</p>}
     </section>}
-    {invite.viewerRole === 'poster' && open && invite.authorizedCents !== undefined && <div className="space-y-2 rounded-lg bg-secondary p-4 text-secondary-foreground">
+    {invite.viewerRole === 'poster' && open && invite.authorizedCents !== undefined && <div className="space-y-2 rounded-2xl bg-secondary/70 p-4 text-foreground dark:bg-secondary/40">
       <p className="font-semibold tabular-nums">{t('held', { amount: formatMoney(invite.authorizedCents) })}</p>
       {invite.status === 'sent' && <p className="text-sm leading-6">{t('holdTiming', { helper: invite.helper.displayName })}</p>}
     </div>}

@@ -102,8 +102,8 @@ export function ProposalActions({ data, handlers, initialResult, initialPending 
     }}>
       {canAccept && payment && <fieldset disabled={disabled} className="min-w-0 space-y-6">
         <legend className="sr-only">{t('payment')}</legend>
-        <section ref={paymentRef} aria-labelledby={`${id}-payment-title`} className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-6">
-          <h2 id={`${id}-payment-title`} className="font-heading text-xl/7 font-semibold">{t('payment')}</h2>
+        <section ref={paymentRef} aria-labelledby={`${id}-payment-title`} className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
+          <h2 id={`${id}-payment-title`} className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{t('payment')}</h2>
           <Controller control={form.control} name="payment" render={({ field }) => <PaymentMethodPicker panel={payment} id={`${id}-payment`} disabled={disabled} field={{ ...field, onChange: (choice) => { form.clearErrors('payment'); field.onChange(choice); } }} error={paymentError ? errorText(paymentError) : undefined} />} />
           <p className="text-sm tabular-nums">{t('chargeNow', { amount: formatMoney(proposal.breakdown.posterTotalCents) })}</p>
         </section>

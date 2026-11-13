@@ -5,7 +5,9 @@ import { useTranslations } from 'next-intl';
 import type { ISODateTime, OfferView, TaskOwnerHandlers } from '@/contracts';
 import { OfferCard } from '@/ui/components/offers/offer-card';
 import { OfferComparison } from '@/ui/components/offers/offer-comparison';
+import { nativeSelectClassName } from '@/ui/components/forms/native-select';
 import { Button } from '@/ui/primitives/button';
+import { cn } from '@/ui/lib/utils';
 
 export function TaskOffers({ offers, now, onAction, initialSelectedOfferIds = [] }: {
   offers: OfferView[];
@@ -34,17 +36,17 @@ export function TaskOffers({ offers, now, onAction, initialSelectedOfferIds = []
   }
 
   return <div className="space-y-6">
-    <div id="compare" className="scroll-mt-6 space-y-4 rounded-xl border bg-secondary p-4 text-secondary-foreground sm:p-5">
+    <div id="compare" className="scroll-mt-[calc(var(--app-header-offset,0px)+1.5rem)] space-y-3 rounded-[1.375rem] border border-primary/15 bg-primary/[0.045] p-4 sm:p-5 dark:border-primary/25 dark:bg-primary/[0.08]">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1"><h3 className="font-heading text-lg font-semibold">{t('compareTitle')}</h3><p className="text-sm">{t('compareHint')}</p></div>
+        <div className="space-y-1"><h3 className="font-heading text-lg font-semibold">{t('compareTitle')}</h3><p className="text-sm text-muted-foreground">{t('compareHint')}</p></div>
         {selected.length > 0 && <Button type="button" variant="outline" onClick={() => { setSelectedIds([]); setLimitReached(false); }}>{t('clearSelection')}</Button>}
       </div>
-      <p aria-live="polite" aria-atomic="true" className="text-sm tabular-nums">{limitReached ? t('compareLimit') : t('compareCount', { count: selected.length })}</p>
+      <p aria-live="polite" aria-atomic="true" className="inline-flex rounded-full bg-card px-3 py-1 text-sm font-medium tabular-nums shadow-[0_1px_2px_rgb(23_18_14/0.06)] dark:bg-white/[0.06]">{limitReached ? t('compareLimit') : t('compareCount', { count: selected.length })}</p>
     </div>
     {selected.length >= 2 && <OfferComparison offers={selected} now={now} />}
     <div className="flex flex-wrap items-center gap-3 sm:justify-end">
       <label htmlFor={`${id}-sort`} className="text-sm font-medium">{t('sort')}</label>
-      <select id={`${id}-sort`} value={sort} onChange={(event) => setSort(event.target.value)} className="min-h-11 max-w-full rounded-lg border border-input bg-card px-3 text-base">
+      <select id={`${id}-sort`} value={sort} onChange={(event) => setSort(event.target.value)} className={cn(nativeSelectClassName, 'w-auto max-w-full')}>
         {(['given', 'newest', 'lowest'] as const).map((value) => <option key={value} value={value}>{t(`sortOptions.${value}`)}</option>)}
       </select>
     </div>

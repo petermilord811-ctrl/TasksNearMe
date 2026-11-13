@@ -18,7 +18,7 @@ export function ReviewCard({ review, reportHref }: ReviewCardProps) {
   const report = useTranslations('report');
 
   return (
-    <article aria-label={t('reviewBy', { name: review.author.displayName })} className="min-w-0 space-y-4 rounded-xl border border-border bg-card p-4 shadow-card md:p-6">
+    <article aria-label={t('reviewBy', { name: review.author.displayName })} className="min-w-0 space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <RatingStars rating={{ average: review.rating, count: 1 }} />
         <time dateTime={review.publishedAt} className="text-sm tabular-nums text-muted-foreground">

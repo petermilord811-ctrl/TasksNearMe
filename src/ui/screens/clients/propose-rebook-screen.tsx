@@ -33,14 +33,14 @@ export function ProposeRebookContent({ data, handlers, now, ...previewState }: P
       <ArrowLeft aria-hidden="true" className="size-4" />{t('back')}
     </Link>
     <header className="space-y-2">
-      <h1 className="font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t('title')}</h1>
+      <h1 className="font-display text-2xl/8 font-semibold md:text-3xl/9.5 tracking-[-0.025em]">{t('title')}</h1>
       <p className="text-muted-foreground">{t('intro')}</p>
     </header>
-    <section className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+    <section className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
       <div className="flex items-center gap-3"><InitialsAvatar initials={data.client.initials} /><div className="min-w-0"><p className="text-sm text-muted-foreground">{t('client')}</p><p className="font-semibold break-words">{data.client.displayName}</p></div></div>
       <div className="space-y-2 border-t pt-4">
         <p className="text-sm text-muted-foreground">{t('pastTask')}</p>
-        <h2 className="font-heading text-xl/7 font-semibold break-words">{data.booking.title}</h2>
+        <h2 className="font-display text-xl/7 font-semibold break-words tracking-[-0.015em]">{data.booking.title}</h2>
         <p className="text-sm text-muted-foreground">{categories(data.booking.categorySlug)}</p>
         <p className="flex items-center gap-2 text-sm"><MapPin aria-hidden="true" className="size-4 shrink-0 text-primary" />{data.booking.areaName}</p>
         <p className="text-sm tabular-nums text-muted-foreground">{t('lastStart', { date: formatDateTime(data.booking.lastStart) })}</p>

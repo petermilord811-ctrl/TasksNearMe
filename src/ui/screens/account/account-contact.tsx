@@ -73,20 +73,21 @@ export function AccountContact({ email, phone, handlers, initialDialog }: {
           </Alert>
         )}
       </div>
-      <ul className="divide-y rounded-xl border">
-        <li className="flex min-h-16 flex-wrap items-center gap-3 p-4">
-          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground"><Mail className="size-4" /></span>
-          <span className="min-w-0 flex-1">
+      <ul className="divide-y divide-foreground/[0.07] rounded-2xl border border-foreground/[0.08] dark:divide-white/[0.06] dark:border-white/[0.07]">
+        {/* The icon, what it is, and its button on one line: the text takes the room left, the button never wraps under it. */}
+        <li className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-4">
+          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground"><Mail className="size-4" /></span>
+          <span className="min-w-0">
             <span className="block font-medium">{t('email')}</span>
-            <span className="block break-all text-sm text-muted-foreground">{email}</span>
+            <span className="block text-sm text-muted-foreground [overflow-wrap:anywhere]">{email}</span>
           </span>
           <Button type="button" variant="outline" aria-label={t('changeEmailLabel')} onClick={() => show('email')}>{t('change')}</Button>
         </li>
-        <li className="flex min-h-16 flex-wrap items-center gap-3 p-4">
-          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+        <li className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-4">
+          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
             {phone?.verified ? <BadgeCheck className="size-4 text-success" /> : <Phone className="size-4" />}
           </span>
-          <span className="min-w-0 flex-1">
+          <span className="min-w-0">
             <span className="block font-medium">{t('phone')}</span>
             <span className="block text-sm tabular-nums text-muted-foreground">{phone ? t(phone.verified ? 'phoneVerified' : 'phoneUnverified', { last4: phone.last4 }) : t('noPhone')}</span>
           </span>

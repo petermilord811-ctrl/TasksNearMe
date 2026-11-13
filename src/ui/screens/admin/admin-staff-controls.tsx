@@ -31,8 +31,9 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives
 import { Input } from '@/ui/primitives/input';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
+import { adminCard, adminH2, adminSection, adminSelect } from './admin-ui';
 
-const selectClass = 'min-h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-invalid:border-destructive';
+const selectClass = adminSelect;
 
 export interface AdminStaffPreviewState {
   initialGrantValues?: Partial<StaffRoleGrantInput>;
@@ -63,8 +64,8 @@ function GrantForm({ data, handlers, initialValues, initialResult }: { data: Adm
   const roleError = errors.role?.message ? t(errors.role.message === 'in_use' ? 'errors.roleInUse' : 'errors.roleRequired') : undefined;
   const reasonError = useReasonError(errors.reason?.message);
   const feedback = action.result && (action.result.ok || !action.result.fieldErrors) ? action.result : undefined;
-  return <form noValidate aria-labelledby={`${id}-title`} aria-busy={pending} className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-5" onSubmit={form.handleSubmit((input) => action.run(handlers.onGrant, input))}>
-    <h2 id={`${id}-title`} className="font-heading text-xl font-semibold">{t('grantTitle')}</h2>
+  return <form noValidate aria-labelledby={`${id}-title`} aria-busy={pending} className={cn(adminSection, 'space-y-4')} onSubmit={form.handleSubmit((input) => action.run(handlers.onGrant, input))}>
+    <h2 id={`${id}-title`} className={adminH2}>{t('grantTitle')}</h2>
     <div className="grid gap-4 md:grid-cols-2">
       <Field data-invalid={Boolean(emailError)} className="gap-2">
         <FieldLabel htmlFor={`${id}-email`}>{t('email')}</FieldLabel>
@@ -170,9 +171,9 @@ function MemberAuthenticator({ member, handlers, code, onCode, onReset, busy }: 
       setGiving(false);
     }
   };
-  return <div className="space-y-3 border-t pt-3">
+  return <div className="space-y-3 border-t border-foreground/[0.07] pt-3 dark:border-white/[0.07]">
     <p className="flex items-center gap-2 text-sm"><Icon aria-hidden="true" className={cn('size-4 shrink-0', active ? 'text-success' : 'text-muted-foreground')} />{t(member.authenticator)}</p>
-    {code && <div className="space-y-1 rounded-lg border bg-muted/40 p-3">
+    {code && <div className="space-y-1 rounded-xl border border-primary/20 bg-primary/[0.05] p-3.5 dark:bg-primary/[0.08]">
       <p className="flex items-center gap-2 text-sm font-medium"><KeyRound aria-hidden="true" className="size-4 shrink-0" />{t('codeFor', { name: member.person.displayName })}</p>
       <p className="font-mono text-xl font-semibold tracking-widest tabular-nums select-all">{code.setupCode}</p>
       <p className="text-sm text-muted-foreground">{t('codeHint', { time: formatDateTime(code.expiresAt) })}</p>
@@ -188,7 +189,7 @@ function MemberAuthenticator({ member, handlers, code, onCode, onReset, busy }: 
 function MemberRoles({ member, onRemove, busy }: { member: AdminStaffMember; onRemove: (role: StaffRole, trigger: HTMLButtonElement) => void; busy: boolean }) {
   const t = useTranslations('adminStaff');
   const roles = useTranslations('shell.roles');
-  return <ul className="space-y-2">{member.roles.map((item) => <li key={item.role} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2">
+  return <ul className="space-y-2">{member.roles.map((item) => <li key={item.role} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-foreground/[0.08] bg-foreground/[0.015] px-3 py-2 dark:border-white/[0.08] dark:bg-white/[0.02]">
     <div className="min-w-0"><p className="font-medium">{roles(item.role)}</p><p className="text-sm text-muted-foreground"><time dateTime={item.grantedAt}>{item.grantedBy ? t('grantedBy', { date: formatDate(item.grantedAt), name: item.grantedBy }) : t('grantedOn', { date: formatDate(item.grantedAt) })}</time></p></div>
     {member.removable.includes(item.role) && <Button type="button" variant="outline" size="sm" disabled={busy} onClick={(event) => onRemove(item.role, event.currentTarget)}>{t('remove', { role: roles(item.role) })}</Button>}
   </li>)}</ul>;
@@ -217,10 +218,10 @@ export function AdminStaffControls({ data, handlers, initialGrantValues, initial
   return <div className="space-y-6">
     <GrantForm data={data} handlers={handlers} initialValues={initialGrantValues} initialResult={initialGrantResult} />
     <section aria-labelledby="staff-members" className="space-y-3">
-      <h2 id="staff-members" className="font-heading text-xl font-semibold">{t('membersTitle')}</h2>
+      <h2 id="staff-members" className={adminH2}>{t('membersTitle')}</h2>
       <p className="text-sm tabular-nums text-muted-foreground">{t('count', { count: data.members.length, admins: data.adminCount })}</p>
       <div ref={resultRegion} tabIndex={-1} className={result ? 'rounded-lg outline-offset-4' : 'sr-only'}><FormFeedback result={result?.result} successMessage={result?.message} /></div>
-      <ul className="grid gap-3 lg:grid-cols-2">{data.members.map((item) => <li key={item.person.id} className="min-w-0 space-y-3 rounded-xl border bg-card p-4 shadow-card">
+      <ul className="grid gap-3 lg:grid-cols-2">{data.members.map((item) => <li key={item.person.id} className={cn(adminCard, 'space-y-3 sm:p-5')}>
         <div className="flex items-center gap-3"><InitialsAvatar initials={item.person.initials} size="sm" /><div className="min-w-0"><p className="font-semibold">{item.person.displayName}</p><p className="text-sm break-all text-muted-foreground">{item.person.email}</p></div></div>
         <MemberRoles member={item} busy={busy} onRemove={(role, button) => { trigger.current = button; setResult(undefined); setRemoving({ userId: item.person.id, role }); }} />
         <MemberAuthenticator member={item} handlers={handlers} code={codes[item.person.id]} busy={busy} onCode={(code) => setCodes((all) => ({ ...all, [item.person.id]: code }))} onReset={(button) => { trigger.current = button; setResult(undefined); setResetting(item.person.id); }} />

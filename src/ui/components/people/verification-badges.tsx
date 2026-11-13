@@ -5,7 +5,6 @@ import { BadgeCheck, House, Phone, ShieldCheck, type LucideIcon } from 'lucide-r
 import { useTranslations } from 'next-intl';
 import type { VerificationBadges as VerificationBadgeData } from '@/contracts';
 import { formatMonthYear } from '@/shared/format';
-import { cn } from '@/ui/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/ui/primitives/tooltip';
 
 export interface VerificationBadgesProps {
@@ -19,8 +18,14 @@ function VerificationTooltip({ Icon, label, meaning }: { Icon: LucideIcon; label
   return (
     <Tooltip open={open} onOpenChange={setOpen}>
       <TooltipTrigger asChild>
-        <button type="button" onClick={() => setOpen(true)} className="flex min-h-11 max-w-full items-center gap-2 rounded-full bg-secondary px-3 py-2 text-left text-sm font-medium text-secondary-foreground">
-          <Icon aria-hidden="true" className="size-4 shrink-0" />
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          // A slim chip that wraps inline with the others (two fit a 360 px card row) and still answers a full 44 px
+          // tap: the area reaches 6 px above and below it.
+          className="relative flex min-h-8 max-w-full items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-left text-xs leading-4 font-medium text-secondary-foreground transition-[box-shadow] duration-200 ease-[var(--ease-out)] after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] hover:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_12%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <Icon aria-hidden="true" className="size-3.5 shrink-0" />
           <span>{label}</span>
         </button>
       </TooltipTrigger>
@@ -59,7 +64,7 @@ export function VerificationBadges({ badges, compact = false }: VerificationBadg
 
   return (
     <TooltipProvider delayDuration={200}>
-      <ul aria-label={t('badges')} className={cn('flex list-none flex-wrap gap-2', !compact && 'flex-col items-start')}>
+      <ul aria-label={t('badges')} className="flex list-none flex-wrap gap-x-1.5 gap-y-2">
         {items.map(({ key, Icon, label, meaning }) => (
           <li key={key} className="max-w-full">
             <VerificationTooltip Icon={Icon} label={label} meaning={meaning} />

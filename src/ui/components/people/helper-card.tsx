@@ -17,11 +17,13 @@ export function HelperCard({ helper, variant = 'full' }: HelperCardProps) {
   const t = useTranslations('helperCard');
 
   return (
-    <article className={cn('h-full min-w-0 space-y-4 rounded-xl border border-border bg-card p-4 shadow-card', variant === 'full' && 'md:p-5')}>
+    <article className={cn('h-full min-w-0 space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card dark:border-white/[0.06]', variant === 'full' && 'md:p-5')}>
       <div className="flex items-start gap-3">
-        <InitialsAvatar initials={helper.initials} photo={helper.photo} size={variant === 'full' ? 'lg' : 'md'} />
+        <span className="shrink-0 rounded-full p-0.5 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_14%,transparent)]">
+          <InitialsAvatar initials={helper.initials} photo={helper.photo} size={variant === 'full' ? 'lg' : 'md'} />
+        </span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-[17px]/6 font-semibold md:text-lg/6.5">
+          <h3 className="font-display text-[17px]/6 font-semibold tracking-[-0.01em] md:text-lg/6.5">
             <Link href={routes.helperProfile(helper.handle)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">
               {helper.displayName}
             </Link>

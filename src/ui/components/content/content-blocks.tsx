@@ -25,7 +25,7 @@ export function ContentBlocks({ blocks, headingLevel = 2 }: { blocks: ContentBlo
         case 'paragraph':
           return <p key={index}><InlineContent content={block.content} /></p>;
         case 'heading':
-          return <Heading key={index} className={cn('pt-3 font-semibold', headingLevel === 2 ? 'text-xl leading-7 lg:text-[22px] lg:leading-[30px]' : 'text-[17px] leading-6 lg:text-lg lg:leading-[26px]')}>{block.text}</Heading>;
+          return <Heading key={index} className={cn('pt-3 font-display font-semibold tracking-[-0.015em]', headingLevel === 2 ? 'text-xl leading-7 lg:text-[22px] lg:leading-[30px]' : 'text-[17px] leading-6 lg:text-lg lg:leading-[26px]')}>{block.text}</Heading>;
         case 'list': {
           const List = block.ordered ? 'ol' : 'ul';
           return <List key={index} className={cn('space-y-2 pl-6 marker:text-muted-foreground', block.ordered ? 'list-decimal' : 'list-disc')}>

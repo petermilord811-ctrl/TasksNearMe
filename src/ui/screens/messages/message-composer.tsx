@@ -100,17 +100,18 @@ export function MessageComposerContent({ rules, handlers, initialResult, initial
   return <form noValidate aria-label={t('label')} aria-busy={pending || uploading} onSubmit={(event) => {
     if (locked.current || uploadLocked.current) { event.preventDefault(); return; }
     void form.handleSubmit(submit)(event);
-  }} className="space-y-3 rounded-xl border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
-    <Field className="gap-2" data-invalid={!!bodyError}>
-      <FieldLabel htmlFor={`${id}-body`}>{t('label')}</FieldLabel>
-      <Textarea {...form.register('body')} id={`${id}-body`} rows={2} maxLength={rules.maxLength} disabled={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} className="max-h-40 min-h-20 resize-y" onKeyDown={(event) => {
+  }} className="space-y-2.5 border-t border-foreground/[0.07] bg-card px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pt-4 sm:pb-4 dark:border-white/[0.06]">
+    <Field className="gap-1.5" data-invalid={!!bodyError}>
+      {/* The panel above already says what this is: the label is for screen readers. */}
+      <FieldLabel htmlFor={`${id}-body`} className="sr-only">{t('label')}</FieldLabel>
+      <Textarea {...form.register('body')} id={`${id}-body`} rows={1} maxLength={rules.maxLength} disabled={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className="max-h-40 min-h-12 resize-none field-sizing-content" onKeyDown={(event) => {
         if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || !window.matchMedia('(min-width: 1024px)').matches) return;
         event.preventDefault();
         if (!empty && !overLimit && !locked.current && !uploadLocked.current) void form.handleSubmit(submit)();
       }} />
-      <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
-        <FieldDescription id={`${id}-hint`}>{t('hint')}</FieldDescription>
-        <p id={`${id}-counter`} className="text-sm text-muted-foreground tabular-nums">{t('counter', { count: body.length, maximum: rules.maxLength })}</p>
+      <div className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 px-1">
+        <FieldDescription id={`${id}-hint`} className="text-xs">{t('hint')}</FieldDescription>
+        <p id={`${id}-counter`} className="text-xs text-muted-foreground tabular-nums">{t('counter', { count: body.length, maximum: rules.maxLength })}</p>
       </div>
       <div id={`${id}-body-error`} aria-live="polite">{bodyError && <FieldError>{bodyError}</FieldError>}</div>
     </Field>
@@ -124,8 +125,8 @@ export function MessageComposerContent({ rules, handlers, initialResult, initial
       {result.code === 'not_allowed' && <Button type="button" variant="outline" className="mt-2" onClick={() => router.refresh()}>{t('reload')}</Button>}
     </AlertDescription></Alert></div> : <FormFeedback result={feedback} successMessage={result?.ok && result.code === 'sent' ? t('sent') : undefined} />}
     <div className="flex items-center justify-end gap-3">
-      <p className="hidden text-sm text-muted-foreground lg:block">{t('keyboardHint')}</p>
-      <Button type="submit" disabled={pending || uploading || empty || overLimit} aria-busy={pending} className="min-w-24">{pending ? <Spinner aria-hidden="true" /> : <Send aria-hidden="true" className="size-4" />}{t(pending ? 'sending' : 'send')}</Button>
+      <p className="hidden text-xs text-muted-foreground lg:block">{t('keyboardHint')}</p>
+      <Button type="submit" disabled={pending || uploading || empty || overLimit} aria-busy={pending} className="min-w-24 transition-[transform,box-shadow,background-color,opacity] duration-200">{pending ? <Spinner aria-hidden="true" /> : <Send aria-hidden="true" className="size-4" />}{t(pending ? 'sending' : 'send')}</Button>
     </div>
   </form>;
 }

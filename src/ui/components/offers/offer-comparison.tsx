@@ -22,26 +22,26 @@ export function OfferComparison({ offers, now }: OfferComparisonProps) {
     { key: 'brings', label: t('brings'), render: (offer) => <OfferBrings brings={offer.brings} /> },
     { key: 'expires', label: t('expiry'), render: (offer) => <OfferExpiry offer={offer} now={now} /> },
   ];
-  return <div className="min-w-0 space-y-4">
+  return <div className="motion-safe:animate-in fade-in-0 slide-in-from-bottom-2 min-w-0 space-y-4">
     <p className="text-sm text-muted-foreground">{t('comparisonDescription')}</p>
-    <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-card md:block">
+    <div className="hidden overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card md:block dark:border-white/[0.06]">
       <table className="w-full table-fixed text-left text-sm">
         <caption className="sr-only">{t('comparison')}</caption>
-        <thead className="bg-secondary">
+        <thead className="bg-foreground/[0.03] dark:bg-white/[0.04]">
           <tr>
             <th scope="col" className="w-36 p-4 font-semibold">{t('comparisonFeature')}</th>
             {offers.map((offer) => <th key={offer.id} scope="col" className="p-4 align-top font-semibold"><Link href={routes.app.offer(offer.taskId, offer.id)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">{offer.helper.displayName}</Link></th>)}
           </tr>
         </thead>
-        <tbody>{rows.map((row) => <tr key={row.key} className="border-t border-border">
+        <tbody>{rows.map((row) => <tr key={row.key} className="border-t border-foreground/[0.07] transition-colors duration-200 hover:bg-foreground/[0.02] dark:border-white/[0.06]">
           <th scope="row" className="break-words p-4 align-top font-medium text-muted-foreground">{row.label}</th>
           {offers.map((offer) => <td key={offer.id} className="break-words p-4 align-top">{row.render(offer)}</td>)}
         </tr>)}</tbody>
       </table>
     </div>
-    <div className="space-y-4 md:hidden">{offers.map((offer) => <article key={offer.id} className="rounded-xl border border-border bg-card p-4 shadow-card">
+    <div className="space-y-4 md:hidden">{offers.map((offer) => <article key={offer.id} className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card dark:border-white/[0.06]">
       <div className="mb-4 flex items-center gap-3"><InitialsAvatar initials={offer.helper.initials} photo={offer.helper.photo} /><h3 className="text-[17px]/6 font-semibold"><Link href={routes.app.offer(offer.taskId, offer.id)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">{offer.helper.displayName}</Link></h3></div>
-      <dl className="divide-y divide-border">{rows.map((row) => <div key={row.key} className="space-y-2 py-3"><dt className="text-sm text-muted-foreground">{row.label}</dt><dd className="text-sm">{row.render(offer)}</dd></div>)}</dl>
+      <dl className="divide-y divide-foreground/[0.07] dark:divide-white/[0.06]">{rows.map((row) => <div key={row.key} className="space-y-2 py-3"><dt className="text-sm text-muted-foreground">{row.label}</dt><dd className="text-sm">{row.render(offer)}</dd></div>)}</dl>
     </article>)}</div>
   </div>;
 }

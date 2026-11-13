@@ -38,15 +38,15 @@ export function ProposalContent({ data, handlers, now, initialResult, initialPen
     </Link>
     <header className="space-y-3">
       <StatusBadge tone={tones[proposal.status]} label={t(`status.${proposal.status}`)} />
-      <h1 className="font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t(`title.${viewerRole}`, { helper: helper.displayName, client: client.displayName })}</h1>
+      <h1 className="font-display text-2xl/8 font-semibold md:text-3xl/9.5 tracking-[-0.025em]">{t(`title.${viewerRole}`, { helper: helper.displayName, client: client.displayName })}</h1>
       <p className="text-muted-foreground">{t(`statusDescription.${proposal.status === 'sent' ? `sent_${viewerRole}` : proposal.status}`, { client: client.displayName })}</p>
       {proposal.expiresAt && <Deadline at={proposal.expiresAt} now={now} label={t('expires')} />}
       {proposal.bookingId && <Link href={routes.app.booking(proposal.bookingId)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('viewBooking')}</Link>}
     </header>
-    <section aria-label={t('task')} className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+    <section aria-label={t('task')} className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
       <div className="space-y-2">
         <p className="text-sm font-medium text-muted-foreground">{categories(task.categorySlug)}</p>
-        <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{task.title}</h2>
+        <h2 className="font-display text-xl/7 font-semibold md:text-[22px]/7.5 tracking-[-0.015em]">{task.title}</h2>
       </div>
       <div className="flex items-start gap-2">
         <CalendarDays aria-hidden="true" className="mt-1 size-5 shrink-0 text-primary" />
@@ -57,15 +57,15 @@ export function ProposalContent({ data, handlers, now, initialResult, initialPen
       {proposal.status === 'sent' && <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{t(poster ? 'addressPoster' : 'addressHelper')}</p>}
     </section>
     {poster && proposal.exactAddress && <ExactAddressPanel address={proposal.exactAddress} />}
-    {proposal.message && <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-6">
-      <h2 className="font-heading text-xl/7 font-semibold">{t('message', { helper: helper.displayName })}</h2>
+    {proposal.message && <section className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
+      <h2 className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{t('message', { helper: helper.displayName })}</h2>
       <p className="whitespace-pre-wrap break-words">{proposal.message}</p>
     </section>}
     <div className="space-y-3">
       <PriceBreakdown breakdown={proposal.breakdown} variant={viewerRole} title={t(poster ? 'total' : 'earnings')} />
       {poster && proposal.status === 'sent' && <>
         <p className="text-sm text-muted-foreground">{t('paymentNote')}</p>
-        {proposal.pricing.type === 'hourly' && <p className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('hourly', { hours: proposal.pricing.hoursCap })}</p>}
+        {proposal.pricing.type === 'hourly' && <p className="rounded-2xl bg-secondary p-4 text-sm text-secondary-foreground">{t('hourly', { hours: proposal.pricing.hoursCap })}</p>}
       </>}
     </div>
     <ProposalActions key={proposal.id} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />

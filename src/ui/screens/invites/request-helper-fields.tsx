@@ -53,7 +53,7 @@ export function RequestHelperFields({ data, disabled }: { data: RequestHelperPag
   const window = selected ? requestStartWindow(data, selected) : undefined;
   const hasSlot = !!data.slot && !data.slotUnavailable;
   return <div className="space-y-6">
-    <section className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+    <section className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
       <h2 className="font-heading text-xl/7 font-semibold">{t('task')}</h2>
       <RequestField name="taskId" label={t('task')} hint={t(hasSlot ? 'slotTaskHint' : 'taskHint', { helper: data.helper.displayName })}>{(id, invalid) => <Controller name="taskId" control={control} render={({ field }) => <RadioGroup id={id} name={field.name} value={field.value} onBlur={field.onBlur} disabled={disabled} aria-label={t('task')} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} onValueChange={(value) => {
         const task = data.tasks.find((candidate) => candidate.id === value);
@@ -70,7 +70,7 @@ export function RequestHelperFields({ data, disabled }: { data: RequestHelperPag
         </label>)}
       </RadioGroup>} />}</RequestField>
     </section>
-    <section className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+    <section className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
       <h2 className="font-heading text-xl/7 font-semibold">{t('details')}</h2>
       <RequestField name="start" label={t('start')} hint={t(hasSlot ? 'slotStartHint' : 'startHint')}>{(id, invalid) => <Controller name="start" control={control} render={({ field }) => <Input id={id} name={field.name} ref={field.ref} onBlur={field.onBlur} type="datetime-local" value={localStart(field.value)} min={window ? localStart(window.start) : undefined} max={window ? localStart(window.end) : undefined} step={60} onChange={(event) => {
         const [date, time] = event.target.value.split('T');

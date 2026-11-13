@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import type { AdminStaffHandlers, AdminStaffPageData, ISODateTime } from '@/contracts';
+import { PageHeader } from '@/ui/components/layout/page-header';
 import { AdminStaffControls, type AdminStaffPreviewState } from './admin-staff-controls';
 
 export interface AdminStaffScreenProps { data: AdminStaffPageData; handlers: AdminStaffHandlers; now: ISODateTime }
@@ -10,11 +11,10 @@ export function AdminStaffScreen(props: AdminStaffScreenProps) { return <AdminSt
 export function AdminStaffContent({ data, handlers, now, ...preview }: AdminStaffScreenProps & AdminStaffPreviewState) {
   const t = useTranslations('adminStaff');
   return <div className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
-    <header className="space-y-2">
-      <h1 className="font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t('title')}</h1>
-      <p className="text-muted-foreground">{t('intro')}</p>
-      <p className="text-sm text-muted-foreground">{t('rules')}</p>
-    </header>
+    <div className="space-y-3">
+      <PageHeader title={t('title')} description={t('intro')} />
+      <p className="max-w-2xl rounded-xl bg-foreground/[0.035] px-3.5 py-2.5 text-sm text-muted-foreground dark:bg-white/[0.04]">{t('rules')}</p>
+    </div>
     <AdminStaffControls data={data} handlers={handlers} now={now} {...preview} />
   </div>;
 }

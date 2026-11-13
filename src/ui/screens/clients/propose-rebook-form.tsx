@@ -68,8 +68,8 @@ export function ProposeRebookForm({ data, handlers, now, initialResult, initialP
   }
 
   return <FormProvider {...form}><form noValidate aria-labelledby={`${id}-title`} aria-busy={pending} onSubmit={(event) => { void form.handleSubmit(submit)(event); }} className="space-y-6">
-    <section className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
-      <h2 id={`${id}-title`} className="font-heading text-xl/7 font-semibold">{t('details')}</h2>
+    <section className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
+      <h2 id={`${id}-title`} className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{t('details')}</h2>
       <fieldset disabled={disabled} className="min-w-0" onFocusCapture={(event) => {
         if (submitBar.current && event.target.getBoundingClientRect().bottom > submitBar.current.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
       }}><legend className="sr-only">{t('details')}</legend><ProposeRebookFields data={data} disabled={disabled} earliest={earliest} /></fieldset>
@@ -77,8 +77,8 @@ export function ProposeRebookForm({ data, handlers, now, initialResult, initialP
     <div aria-live="polite" aria-busy={quote.pending}>
       {quote.breakdown ? <PriceBreakdown breakdown={quote.breakdown} variant="helper" title={t('earnings')} />
         : quote.failed ? <div className="space-y-3 rounded-xl border border-destructive bg-card p-4"><p>{t('earningsError')}</p><Button type="button" variant="outline" disabled={disabled} onClick={quote.retry}>{t('retryEarnings')}</Button></div>
-          : quote.pending ? <p className="flex items-center gap-3 rounded-xl border bg-card p-5"><Spinner />{t('earningsPending')}</p>
-            : <p className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">{t('earningsHint')}</p>}
+          : quote.pending ? <p className="flex items-center gap-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-5 dark:border-white/[0.06]"><Spinner />{t('earningsPending')}</p>
+            : <p className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">{t('earningsHint')}</p>}
     </div>
     <div className="space-y-2 text-sm text-muted-foreground"><p>{t('payment', { client: data.client.displayName })}</p><p>{t('expiry')}</p></div>
     <div ref={feedbackSection} tabIndex={-1} className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><FormFeedback result={result && !result.ok ? { ...result, fieldErrors: undefined } : result} successMessage={result?.ok && result.code === 'sent' ? t('sent') : undefined} /></div>

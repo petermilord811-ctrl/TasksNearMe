@@ -75,7 +75,7 @@ export function TaskActions({ actions, handlers, initialCancelOpen = false, init
         <form onSubmit={cancelTask} className="space-y-5" aria-busy={pending}>
           <fieldset disabled={pending} aria-describedby={`${id}-reason-hint`} aria-invalid={!!fieldError} className="space-y-2">
             <legend className="mb-2 font-semibold">{t('cancel.reason')}</legend>
-            {TASK_CANCEL_REASONS.map((value, index) => <label key={value} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-accent">
+            {TASK_CANCEL_REASONS.map((value, index) => <label key={value} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-input p-3 transition-[background-color,border-color] duration-200 ease-[var(--ease-out)] hover:border-foreground/40 has-[:checked]:border-primary has-[:checked]:bg-primary/[0.06] dark:has-[:checked]:bg-primary/[0.12]">
               <input ref={index === 0 ? firstReason : undefined} type="radio" name={`${id}-reason`} value={value} checked={reason === value} onChange={() => { setReason(value); setResult(undefined); }} className="size-5 shrink-0 accent-primary" />
               <span className="text-sm">{t(`cancel.reasons.${value}`)}</span>
             </label>)}

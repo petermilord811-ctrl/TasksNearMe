@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { CreditCard } from 'lucide-react';
 import type { ActionResult, PaymentMethodHandlers, PaymentsPageData, SavedPaymentMethod } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { PaymentMethodLabel } from '@/ui/components/payments';
@@ -61,11 +62,14 @@ function SavedCard({ method, handlers, onRemoved, onRemovalFocus, initialOpen = 
   const feedback = <FormFeedback result={result && !result.ok ? { ...result, fieldErrors: undefined } : result} successMessage={t(operation === 'remove' ? 'removed' : 'defaultUpdated')} errorMessage={result && !result.ok && result.code === 'not_allowed' && operation === 'remove' ? t('removeNotAllowed') : undefined} />;
   return <li aria-labelledby={`${id}-label`} className="space-y-3 py-4 first:pt-0 last:pb-0">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="space-y-1">
-        <div className="flex flex-wrap items-center gap-2"><p id={`${id}-label`} className="font-medium"><PaymentMethodLabel method={method} /></p>{method.isDefault && <Badge variant="secondary">{payments('picker.default')}</Badge>}</div>
-        <p className="text-sm tabular-nums text-muted-foreground">{payments('picker.expires', { month: String(method.expMonth).padStart(2, '0'), year: String(method.expYear).slice(-2) })}</p>
+      <div className="flex min-w-0 items-start gap-3">
+        <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground"><CreditCard className="size-5" /></span>
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-2"><p id={`${id}-label`} className="font-medium"><PaymentMethodLabel method={method} /></p>{method.isDefault && <Badge variant="secondary">{payments('picker.default')}</Badge>}</div>
+          <p className="text-sm tabular-nums text-muted-foreground">{payments('picker.expires', { month: String(method.expMonth).padStart(2, '0'), year: String(method.expYear).slice(-2) })}</p>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 pl-13 sm:pl-0">
         <Button type="button" variant="outline" disabled={pending || method.isDefault} aria-describedby={`${id}-label`} aria-busy={pending && operation === 'default'} onClick={() => void run('default')}>{pending && operation === 'default' && <Spinner aria-hidden="true" />}{t(pending && operation === 'default' ? 'makingDefault' : 'makeDefault')}</Button>
         <AlertDialog open={open} onOpenChange={(value) => { if (!pending) setOpen(value); }}>
           <AlertDialogTrigger asChild><Button type="button" variant="ghost" disabled={pending} aria-describedby={`${id}-label`} onClick={() => setResult(undefined)}>{t('remove')}</Button></AlertDialogTrigger>
@@ -94,11 +98,11 @@ export function PaymentCards({ methods, newCard, handlers, preview }: Pick<Payme
   // This confirmation survives when refreshed data removes the saved-card row.
   const [removalResult, setRemovalResult] = useState<ActionResult>();
   return <section aria-labelledby={`${id}-cards`} className="space-y-4">
-    <div><h2 ref={heading} tabIndex={-1} id={`${id}-cards`} className="text-xl font-semibold lg:text-[22px]">{t('cards')}</h2><p className="mt-1 text-sm text-muted-foreground">{t('cardsHint')}</p></div>
+    <div><h2 ref={heading} tabIndex={-1} id={`${id}-cards`} className="font-display text-xl font-semibold tracking-[-0.015em] lg:text-[22px]">{t('cards')}</h2><p className="mt-1 text-sm text-muted-foreground">{t('cardsHint')}</p></div>
     <FormFeedback result={removalResult} successMessage={t('removed')} />
-    <div className="space-y-6 rounded-xl border bg-card p-4 shadow-card sm:p-6">
-      {methods.length ? <ul className="divide-y">{methods.map((method) => <SavedCard key={method.id} method={method} handlers={handlers} onRemoved={setRemovalResult} onRemovalFocus={() => heading.current?.focus()} initialOpen={preview?.removeMethodId === method.id} initialResult={preview?.removeMethodId === method.id ? preview.removeResult : undefined} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noCards')}</p>}
-      <div className="space-y-4 border-t pt-6"><h3 className="text-lg font-semibold">{t('addTitle')}</h3><AddCardForm collection={newCard} onAddCard={handlers.onAddCard} initialResult={preview?.addResult} initialPending={preview?.adding} /></div>
+    <div className="space-y-6 rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] p-4 sm:p-6">
+      {methods.length ? <ul className="divide-y divide-foreground/[0.07] dark:divide-white/[0.06]">{methods.map((method) => <SavedCard key={method.id} method={method} handlers={handlers} onRemoved={setRemovalResult} onRemovalFocus={() => heading.current?.focus()} initialOpen={preview?.removeMethodId === method.id} initialResult={preview?.removeMethodId === method.id ? preview.removeResult : undefined} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noCards')}</p>}
+      <div className="space-y-4 border-t border-foreground/[0.07] pt-6 dark:border-white/[0.06]"><h3 className="font-display text-lg font-semibold tracking-[-0.01em]">{t('addTitle')}</h3><AddCardForm collection={newCard} onAddCard={handlers.onAddCard} initialResult={preview?.addResult} initialPending={preview?.adding} /></div>
     </div>
   </section>;
 }

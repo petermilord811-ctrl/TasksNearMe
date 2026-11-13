@@ -32,6 +32,7 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives
 import { Input } from '@/ui/primitives/input';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
+import { AdminCode, adminPanel, adminSection } from './admin-ui';
 
 type PolicyKey = keyof AdminPolicyValues;
 type PolicyForm = Record<PolicyKey, string> & { reason: string };
@@ -102,10 +103,10 @@ function PublishForm({ data, handlers, initialValues, initialResult }: { data: A
     await action.run(handlers.onPublishPolicy, input);
   });
 
-  return <form noValidate aria-labelledby={`${id}-title`} aria-busy={pending} className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-5" onSubmit={(event) => { if (pending) { event.preventDefault(); return; } void submit(event); }}>
-    <h3 id={`${id}-title`} className="font-heading text-lg font-semibold">{t('publishTitle')}</h3>
+  return <form noValidate aria-labelledby={`${id}-title`} aria-busy={pending} className={cn(adminSection, 'space-y-5')} onSubmit={(event) => { if (pending) { event.preventDefault(); return; } void submit(event); }}>
+    <h3 id={`${id}-title`} className="font-display text-lg leading-6 font-semibold tracking-[-0.01em]">{t('publishTitle')}</h3>
     {GROUPS.map((group) => <fieldset key={group.id} className="space-y-3">
-      <legend className="font-semibold">{t(`groups.${group.id}`)}</legend>
+      <legend className="text-xs font-semibold tracking-[0.04em] text-muted-foreground uppercase">{t(`groups.${group.id}`)}</legend>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{group.fields.map((key) => {
         const error = errorOf(key);
         return <Field key={key} data-invalid={Boolean(error)} className="gap-2">
@@ -170,10 +171,10 @@ export function AdminConfigControls({ data, handlers, part, initialPolicyValues,
   const flag = data.flags.find((item) => item.key === flagKey);
   return <div className="space-y-3">
     <div ref={resultRegion} tabIndex={-1} className={result ? 'rounded-lg outline-offset-4' : 'sr-only'}><FormFeedback result={result} successMessage={t('flagSaved')} /></div>
-    <ul className="divide-y rounded-xl border bg-card shadow-card">{data.flags.map((item) => <li key={item.key} className="flex flex-wrap items-center justify-between gap-3 p-4">
-      <div className="min-w-0 space-y-1"><code className="text-sm font-semibold break-all">{item.key}</code><p className="text-sm text-muted-foreground">{item.description}</p></div>
+    <ul className={cn(adminPanel, 'divide-y divide-foreground/[0.07] dark:divide-white/[0.07]')}>{data.flags.map((item) => <li key={item.key} className="flex flex-wrap items-center justify-between gap-3 p-4 transition-colors duration-200 hover:bg-foreground/[0.02] dark:hover:bg-white/[0.02]">
+      <div className="min-w-0 space-y-1"><AdminCode className="font-semibold">{item.key}</AdminCode><p className="text-sm text-muted-foreground">{item.description}</p></div>
       <div className="flex items-center gap-3">
-        <span className={cn('rounded-full px-3 py-1 text-sm font-medium', item.enabled ? 'bg-badge-success text-badge-success-foreground' : 'bg-badge-neutral text-badge-neutral-foreground')}>{item.enabled ? t('on') : t('off')}</span>
+        <span className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium', item.enabled ? 'bg-badge-success text-badge-success-foreground' : 'bg-badge-neutral text-badge-neutral-foreground')}><span aria-hidden="true" className={cn('size-1.5 rounded-full', item.enabled ? 'bg-current' : 'bg-current opacity-50')} />{item.enabled ? t('on') : t('off')}</span>
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={(event) => { trigger.current = event.currentTarget; setResult(undefined); setFlagKey(item.key); }}>{item.enabled ? t('turnOff', { key: item.key }) : t('turnOn', { key: item.key })}</Button>
       </div>
     </li>)}</ul>

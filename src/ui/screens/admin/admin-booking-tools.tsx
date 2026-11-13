@@ -62,7 +62,7 @@ export function AdminBookingTools({ data, handlers, now, children, initialDialog
       <FormFeedback result={result} successMessage={result?.ok && result.code === 'sent' ? t('refund.sent') : t('refund.submitted')} />
     </div>
     {children}
-    {(data.actions.includes('reveal_address') || data.actions.includes('reveal_conversation')) && <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
+    {(data.actions.includes('reveal_address') || data.actions.includes('reveal_conversation')) && <section className="space-y-3 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]">
       <h2 className="flex items-center gap-2 text-xl font-semibold"><LockKeyhole aria-hidden="true" className="size-5 text-primary" />{t('restricted')}</h2>
       <p className="max-w-2xl text-sm text-muted-foreground">{t('restrictedHint')}</p>
     </section>}
@@ -70,7 +70,7 @@ export function AdminBookingTools({ data, handlers, now, children, initialDialog
       <p role="status" className="text-sm font-medium text-success">{t('accessLogged')}</p>
       <ExactAddressPanel address={address} mapsHref={routes.external.googleMapsSearch(address)} />
     </div>}
-    {conversation && <section ref={conversationReader} tabIndex={-1} className="space-y-4 rounded-xl border bg-card p-4 shadow-card outline-offset-4 sm:p-5">
+    {conversation && <section ref={conversationReader} tabIndex={-1} className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card outline-offset-4 sm:p-5 dark:border-white/[0.07]">
       <h2 className="text-xl font-semibold">{t('conversation')}</h2><AdminConversationReader conversation={conversation} now={now} />
     </section>}
     <AlertDialog open={allowed && dialog === 'refund'} onOpenChange={(open) => { if (!open && !pending) setDialog(undefined); }}>

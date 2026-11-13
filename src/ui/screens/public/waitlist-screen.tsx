@@ -22,9 +22,9 @@ export interface WaitlistScreenProps {
 
 export function WaitlistConfirmation({ email, zip }: Pick<WaitlistInput, 'email' | 'zip'>) {
   const t = useTranslations('waitlist');
-  return <div className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+  return <div className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
     <CheckCircle2 aria-hidden="true" className="size-8 text-success" />
-    <h2 className="text-xl font-semibold leading-7 lg:text-[22px] lg:leading-[30px]">{t('joinedTitle')}</h2>
+    <h2 className="font-display text-xl font-semibold leading-7 tracking-[-0.015em] lg:text-[22px] lg:leading-[30px]">{t('joinedTitle')}</h2>
     <p className="break-words text-muted-foreground">{t('joinedDescription', { email, zip })}</p>
   </div>;
 }
@@ -48,8 +48,8 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
 
   return <section aria-labelledby={`${id}-title`} className="mx-auto max-w-reading space-y-6 py-4 sm:py-8">
     <header className="space-y-3">
-      <MapPin aria-hidden="true" className="size-8 text-primary" />
-      <h1 id={`${id}-title`} className="text-2xl font-bold leading-8 lg:text-3xl lg:leading-[38px]">{t('title')}</h1>
+      <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary size-12"><MapPin className="size-6" /></span>
+      <h1 id={`${id}-title`} className="font-display text-2xl font-semibold leading-8 tracking-[-0.025em] lg:text-3xl lg:leading-[38px]">{t('title')}</h1>
       <p className="text-muted-foreground">{t('description')}</p>
     </header>
 
@@ -57,7 +57,7 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
       {joined && <WaitlistConfirmation email={joined.email} zip={joined.zip} />}
     </div>
 
-    {!joined && <form noValidate aria-busy={pending} className="space-y-6 rounded-xl border bg-card p-4 shadow-card sm:p-6" onSubmit={form.handleSubmit(async (values) => {
+    {!joined && <form noValidate aria-busy={pending} className="space-y-6 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]" onSubmit={form.handleSubmit(async (values) => {
       const result = await action.run(handlers.onJoin, values);
       if (result?.ok && result.code === 'submitted') setJoined(values);
     })}>
@@ -79,7 +79,7 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
             aria-invalid={fieldState.invalid}
             className="gap-2"
           >
-            {WAITLIST_INTERESTS.map((interest, index) => <Field key={interest} orientation="horizontal" className="gap-3 rounded-lg border px-3 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-secondary">
+            {WAITLIST_INTERESTS.map((interest, index) => <Field key={interest} orientation="horizontal" className="gap-3 rounded-2xl border border-foreground/[0.1] px-3 transition-[background-color,border-color] duration-200 hover:border-foreground/25 has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-brand-soft dark:border-white/[0.1]">
               <RadioGroupItem id={`${id}-${interest}`} value={interest} ref={index === 0 ? field.ref : undefined} />
               <FieldLabel htmlFor={`${id}-${interest}`} className="min-h-11 flex-1 py-3 text-base font-normal">{t(`interests.${interest}`)}</FieldLabel>
             </Field>)}
@@ -94,7 +94,7 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
       </Button>
     </form>}
 
-    {data.markets.length > 0 && <section aria-labelledby={`${id}-markets`} className="space-y-2 rounded-xl bg-secondary p-4 text-secondary-foreground sm:p-6">
+    {data.markets.length > 0 && <section aria-labelledby={`${id}-markets`} className="space-y-2 rounded-[1.375rem] bg-secondary p-4 text-secondary-foreground sm:p-6">
       <h2 id={`${id}-markets`} className="text-[17px] font-semibold leading-6 lg:text-lg">{t('marketsTitle')}</h2>
       <ul>
         {data.markets.map((market) => <li key={market.slug}><Link href={routes.market(market.slug)} className="inline-flex min-h-11 items-center py-2 underline underline-offset-4">{t('marketLink', { market: market.name })}</Link></li>)}

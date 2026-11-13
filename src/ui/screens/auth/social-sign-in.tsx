@@ -81,7 +81,7 @@ export function SocialSignIn({
             onClick={() => start(provider)}
             disabled={pending !== null}
             aria-busy={pending === provider}
-            className="group/social relative inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 text-[15px] font-semibold text-foreground shadow-xs transition-[background-color,border-color,box-shadow,transform] duration-200 outline-none hover:border-foreground/25 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60"
+            className="group/social relative inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-full border border-foreground/[0.12] bg-card px-5 text-[15px] font-semibold text-foreground shadow-xs transition-[background-color,border-color,box-shadow,transform] duration-200 outline-none hover:border-foreground/25 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.06]"
           >
             <span className="absolute left-4 grid size-6 place-items-center">
               {pending === provider ? <Spinner aria-hidden="true" className="size-4" /> : <ProviderLogo provider={provider} className="transition-transform duration-300 group-hover/social:scale-110" />}

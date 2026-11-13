@@ -27,20 +27,20 @@ export function MyInvites({ invites, openInviteId, handlers, now }: {
   const selected = invites.find((invite) => invite.id === selectedId);
 
   return <section aria-labelledby="my-invites-title" className="space-y-4">
-    <h2 id="my-invites-title" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('invites.title')}</h2>
+    <h2 id="my-invites-title" className="font-display text-xl font-semibold md:text-[22px]/7.5 tracking-[-0.015em]">{t('invites.title')}</h2>
     {invites.length ? <ul className="space-y-3">
       {/* The contract supplies open invites first; retain its ordering. */}
-      {invites.map((invite) => <li key={`${invite.id}-${invite.status}`} className="flex min-w-0 flex-wrap items-center gap-4 rounded-xl border bg-card p-4 shadow-card sm:p-5">
+      {invites.map((invite) => <li key={`${invite.id}-${invite.status}`} className="flex min-w-0 flex-wrap items-center gap-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.06]">
         <InitialsAvatar initials={invite.client.initials} />
         <div className="min-w-0 flex-1 basis-40 space-y-1">
-          <h3 className="break-words font-heading text-[17px]/6 font-semibold">{invite.task.title}</h3>
+          <h3 className="break-words font-display text-[17px]/6 font-semibold tracking-[-0.015em]">{invite.task.title}</h3>
           <p className="text-sm text-muted-foreground">{t('invites.from', { name: invite.client.displayName })}</p>
           <p className="text-sm tabular-nums"><time dateTime={invite.counter?.start ?? invite.terms.start}>{formatDateTime(invite.counter?.start ?? invite.terms.start)}</time></p>
           <InviteStatus invite={invite} />
         </div>
         <Button type="button" variant="outline" aria-label={t('invites.openLabel', { title: invite.task.title })} ref={invite.id === openInviteId ? returnFocus : undefined} onClick={(event) => { returnFocus.current = event.currentTarget; setSelectedId(invite.id); }}>{t('invites.open')}</Button>
       </li>)}
-    </ul> : <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">{t('invites.empty')}</p>}
+    </ul> : <p className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 text-sm text-muted-foreground dark:border-white/[0.06]">{t('invites.empty')}</p>}
     <Sheet open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelectedId(undefined); }}>
       <SheetContent side="bottom" className="max-h-[90dvh] rounded-t-xl sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:max-h-dvh sm:w-full sm:max-w-xl sm:rounded-none sm:border-l" onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}>
         <SheetHeader><SheetTitle>{t('invites.sheetTitle')}</SheetTitle><SheetDescription>{t('invites.sheetDescription')}</SheetDescription></SheetHeader>

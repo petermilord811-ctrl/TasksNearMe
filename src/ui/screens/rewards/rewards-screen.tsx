@@ -51,7 +51,7 @@ export function RewardsScreen({ data, handlers, now }: RewardsScreenProps) {
     /> : <>
       <dl aria-label={t('page.totals.label')} className="grid gap-3 sm:grid-cols-3 md:gap-4">
         {totals.map(({ label, cents }) => <div key={label} className={cn(
-          'flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 shadow-card sm:block md:p-6',
+          'flex items-center justify-between gap-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:block md:p-6',
           label === 'ready' && 'border-reward/60',
         )}>
           <dt className="text-sm text-muted-foreground">{t(`page.totals.${label}`)}</dt>
@@ -61,7 +61,7 @@ export function RewardsScreen({ data, handlers, now }: RewardsScreenProps) {
       <div className="grid items-start gap-6 md:gap-8 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-6 md:space-y-8">
           <section aria-labelledby="rewards-grants" className="space-y-4">
-            <h2 id="rewards-grants" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('page.grants')}</h2>
+            <h2 id="rewards-grants" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('page.grants')}</h2>
             {data.grants.length ? <ul className="space-y-4">
               {data.grants.map((grant) => <li key={grant.id}><RewardGrantCard grant={grant} now={now} onRedeem={handlers.onRedeem} /></li>)}
             </ul> : <EmptyState
@@ -72,8 +72,8 @@ export function RewardsScreen({ data, handlers, now }: RewardsScreenProps) {
               action={{ label: t('page.empty.action'), href: routes.app.findWork() }}
             />}
           </section>
-          <section aria-labelledby="rewards-repeat" className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-card md:p-6">
-            <h2 id="rewards-repeat" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('page.repeat.title')}</h2>
+          <section aria-labelledby="rewards-repeat" className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card md:p-6">
+            <h2 id="rewards-repeat" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('page.repeat.title')}</h2>
             {data.repeatProgress.length ? <ul className="space-y-6">
               {data.repeatProgress.map((progress, index) => {
                 const label = t('page.repeat.progress', { count: progress.paidBookings, needed: progress.needed, name: progress.clientDisplayName, date: formatDate(progress.windowEndsAt) });
@@ -91,15 +91,15 @@ export function RewardsScreen({ data, handlers, now }: RewardsScreenProps) {
           </section>
         </div>
         <div className="min-w-0 space-y-6 md:space-y-8">
-          <section aria-labelledby="rewards-monthly" className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-card md:p-6">
-            <h2 id="rewards-monthly" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('page.monthly.title')}</h2>
+          <section aria-labelledby="rewards-monthly" className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card md:p-6">
+            <h2 id="rewards-monthly" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('page.monthly.title')}</h2>
             <p className="text-lg font-semibold tabular-nums">{t('page.monthly.used', { used: formatMoney(data.monthly.usedCents), cap: formatMoney(data.monthly.capCents) })}</p>
             <p className="text-sm leading-6 text-muted-foreground">{t('page.monthly.description')}</p>
           </section>
-          <section aria-labelledby="rewards-rules" className="space-y-5 rounded-xl border border-border bg-card p-4 shadow-card md:p-6">
+          <section aria-labelledby="rewards-rules" className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card md:p-6">
             <div className="flex items-start gap-3">
               <Gift aria-hidden="true" className="mt-1 size-5 shrink-0 text-muted-foreground" />
-              <h2 id="rewards-rules" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('page.rules.title')}</h2>
+              <h2 id="rewards-rules" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('page.rules.title')}</h2>
             </div>
             <ul className="space-y-5">{data.programs.map((program) => <ProgramSummary key={program.program} program={program} />)}</ul>
             <div className="space-y-3 border-t border-border pt-4 text-sm leading-6 text-muted-foreground">

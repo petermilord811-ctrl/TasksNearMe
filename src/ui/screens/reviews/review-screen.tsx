@@ -39,7 +39,7 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
         <p className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays aria-hidden="true" className="size-4 shrink-0" /><time dateTime={data.booking.start} className="tabular-nums">{formatDate(data.booking.start, { withYear: true })}</time></p>
       </div>
     </header>
-    {mine ? <section aria-label={t('yourReview')} className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+    {mine ? <section aria-label={t('yourReview')} className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6">
       <div className="space-y-2">
         <h2 className="font-heading text-xl/7 font-semibold">{t('yourReview')}</h2>
         <p className="text-sm tabular-nums text-muted-foreground">{t('submittedAt', { date: formatDateTime(mine.submittedAt), relative: formatRelative(mine.submittedAt, now) })}</p>
@@ -51,7 +51,7 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
         {mine.publishedAt ? <CircleCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-success" /> : <Lock aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" />}
         <span>{mine.publishedAt ? t('published', { date: formatDate(mine.publishedAt) }) : t('hidden', { name: data.subject.displayName, date: formatDate(data.publishesBy) })}</span>
       </p>
-    </section> : data.unavailable ? <section aria-label={t('unavailable.title')} className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+    </section> : data.unavailable ? <section aria-label={t('unavailable.title')} className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6">
       <h2 className="flex items-start gap-2 font-heading text-xl/7 font-semibold"><CircleAlert aria-hidden="true" className="mt-1 size-5 shrink-0 text-warning" />{t('unavailable.title')}</h2>
       <p>{t(`unavailable.${data.unavailable}`)}</p>
     </section> : <ReviewForm key={`${data.booking.id}-${data.direction}`} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />}

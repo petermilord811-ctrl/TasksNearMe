@@ -16,25 +16,25 @@ export function CategoryScreen({ data, now }: { data: CategoryPageData; now: ISO
   const included = Object.keys(t.raw(`categories.${category.slug}.included`) as Record<string, string>);
   const excluded = Object.keys(t.raw(`categories.${category.slug}.excluded`) as Record<string, string>);
   return <div className="space-y-section">
-    <div className="space-y-4"><ViewTransition name={`category-icon-${category.slug}`} share="category-morph" default="none"><span className="grid size-10 place-items-center rounded-lg" style={{ background: `color-mix(in oklab, var(--cat-${category.slug}) 15%, transparent)`, color: `var(--cat-${category.slug})` }}><Icon aria-hidden="true" className="size-6" /></span></ViewTransition><PageHeader title={t('category.title', { category: category.name, market: market.name })} description={t(`categories.${category.slug}.intro`)} /></div>
-    <section aria-label={t('category.pricingTitle')} className="space-y-3 rounded-xl border bg-secondary p-card text-secondary-foreground">
-      <p className="text-lg font-semibold tabular-nums">{t(`category.typical.${category.priceGuidance.unit}`, { market: market.name, low: formatMoney(category.priceGuidance.lowCents), high: formatMoney(category.priceGuidance.highCents) })}</p>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5"><ViewTransition name={`category-icon-${category.slug}`} share="category-morph" default="none"><span className="grid size-14 shrink-0 place-items-center rounded-2xl shadow-[inset_0_0_0_1px_color-mix(in_oklab,currentColor_18%,transparent)]" style={{ background: `color-mix(in oklab, var(--cat-${category.slug}) 15%, transparent)`, color: `var(--cat-${category.slug})` }}><Icon aria-hidden="true" className="size-7" /></span></ViewTransition><div className="min-w-0 flex-1"><PageHeader title={t('category.title', { category: category.name, market: market.name })} description={t(`categories.${category.slug}.intro`)} /></div></div>
+    <section aria-label={t('category.pricingTitle')} className="space-y-3 rounded-[1.375rem] border border-foreground/[0.05] bg-secondary p-card text-secondary-foreground">
+      <p className="font-display text-xl font-semibold tracking-[-0.015em] tabular-nums md:text-2xl">{t(`category.typical.${category.priceGuidance.unit}`, { market: market.name, low: formatMoney(category.priceGuidance.lowCents), high: formatMoney(category.priceGuidance.highCents) })}</p>
       <p>{t(`categories.${category.slug}.pricing`)}</p>
       {category.defaultPricingType === 'hourly' && category.minHours !== undefined && <p className="text-sm tabular-nums">{t('category.minimumHours', { hours: category.minHours })}</p>}
       <p className="text-sm">{t('category.guidanceNote')}</p>
       <Link href={routes.pricing()} className={buttonVariants({ variant: 'outline' })}>{t('category.feesLink')}</Link>
     </section>
     <div className="grid gap-6 md:grid-cols-2">
-      <Section title={t('category.includedTitle')}><ul className="space-y-3">{included.map((item) => <li key={item} className="flex gap-3"><Check aria-hidden="true" className="mt-1 size-5 shrink-0 text-primary" /><span>{t(`categories.${category.slug}.included.${item}`)}</span></li>)}</ul></Section>
-      <Section title={t('category.excludedTitle')}><ul className="space-y-3">{excluded.map((item) => <li key={item} className="flex gap-3"><Minus aria-hidden="true" className="mt-1 size-5 shrink-0 text-muted-foreground" /><span>{t(`categories.${category.slug}.excluded.${item}`)}</span></li>)}</ul></Section>
+      <Section title={t('category.includedTitle')}><ul className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] p-5">{included.map((item) => <li key={item} className="flex gap-3"><Check aria-hidden="true" className="mt-0.5 size-5 shrink-0 rounded-full bg-badge-success p-0.5 text-badge-success-foreground" /><span>{t(`categories.${category.slug}.included.${item}`)}</span></li>)}</ul></Section>
+      <Section title={t('category.excludedTitle')}><ul className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] p-5">{excluded.map((item) => <li key={item} className="flex gap-3"><Minus aria-hidden="true" className="mt-0.5 size-5 shrink-0 rounded-full bg-muted p-0.5 text-muted-foreground" /><span>{t(`categories.${category.slug}.excluded.${item}`)}</span></li>)}</ul></Section>
     </div>
-    <div className="space-y-4 rounded-xl border bg-card p-card">
+    <div className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card dark:border-white/[0.06]">
       {category.inHome && category.requiresBackgroundCheck && <p className="flex items-start gap-3"><BadgeCheck aria-hidden="true" className="mt-1 size-5 shrink-0 text-primary" />{t('category.backgroundNote')}</p>}
       {category.remoteAllowed && <p className="flex items-start gap-3"><Laptop aria-hidden="true" className="mt-1 size-5 shrink-0 text-primary" />{t('category.remoteNote')}</p>}
       <p className="text-sm text-muted-foreground">{t('shared.privacy')}</p>
     </div>
     <RecentTasks tasks={data.recentTasks} now={now} />
     <FeaturedHelpers helpers={data.topHelpers} title={t('category.helpersTitle')} />
-    <section className="space-y-4 rounded-xl bg-secondary p-card text-secondary-foreground"><h2 className="text-xl font-semibold">{t('category.ctaTitle')}</h2><p>{t('category.ctaBody')}</p><Link href={routes.app.newTask()} className={buttonVariants()}>{t('shared.postTask')}</Link></section>
+    <section className="relative isolate space-y-4 overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] p-card md:p-10"><span aria-hidden="true" className="pointer-events-none absolute -top-24 -right-16 -z-10 size-72 rounded-full" style={{ background: `radial-gradient(closest-side, color-mix(in oklab, var(--cat-${category.slug}) 22%, transparent), transparent)` }} /><h2 className="font-display text-2xl font-semibold tracking-[-0.02em] md:text-3xl">{t('category.ctaTitle')}</h2><p className="max-w-reading text-muted-foreground">{t('category.ctaBody')}</p><Link href={routes.app.newTask()} className={buttonVariants({ size: 'lg' })}>{t('shared.postTask')}</Link></section>
   </div>;
 }

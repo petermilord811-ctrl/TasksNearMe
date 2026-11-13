@@ -106,7 +106,7 @@ export function AddressSearchField({
           if (event.key === 'Escape') { event.preventDefault(); setOpen(false); }
           if (event.key === 'Enter') { event.preventDefault(); if (open && active >= 0 && suggestions[active]) choose(suggestions[active]); }
         }} />
-        {open && !!suggestions.length && <ul id={`${id}-results`} role="listbox" aria-label={t('results')} className="absolute z-20 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border bg-popover p-1 text-popover-foreground shadow-md">
+        {open && !!suggestions.length && <ul id={`${id}-results`} role="listbox" aria-label={t('results')} className="motion-safe:animate-in fade-in-0 zoom-in-95 absolute z-20 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-foreground/[0.08] bg-popover p-1.5 text-popover-foreground shadow-overlay dark:border-white/[0.08]">
           {suggestions.map((address, index) => <li key={address.placeId} id={`${id}-result-${index}`} role="option" aria-selected={active === index} aria-disabled={!address.inServiceArea} className={cn('min-h-14 cursor-pointer rounded-lg p-3 text-sm', active === index && 'bg-accent', !address.inServiceArea && 'text-muted-foreground')} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(address)}>
             <span className="block break-words font-medium">{address.line1}</span>
             <span className="block break-words">{address.line2}</span>
@@ -123,6 +123,6 @@ export function AddressSearchField({
       {status === 'loaded' && suggestions.length === 0 && <p>{t('empty')}</p>}
       {selected && <span className="sr-only">{t('selected', { address: `${selected.line1}, ${selected.line2}` })}</span>}
     </div>
-    {outOfArea && <p className="rounded-lg border border-warning p-4 text-sm font-medium">{outOfAreaMessage}</p>}
+    {outOfArea && <p className="rounded-2xl border border-warning/50 bg-warning/[0.06] p-4 text-sm font-medium">{outOfAreaMessage}</p>}
   </div>;
 }

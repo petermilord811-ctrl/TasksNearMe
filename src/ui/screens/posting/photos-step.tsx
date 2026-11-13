@@ -102,7 +102,7 @@ export function PhotosStep({ data, handlers, photos, onPhotosChange, onBusyChang
   }
 
   return <div className="space-y-5">
-    <p className="flex items-start gap-2 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('photos.privacy')}</p>
+    <p className="flex items-start gap-2 rounded-2xl bg-secondary/70 p-4 text-sm text-foreground dark:bg-secondary/40"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('photos.privacy')}</p>
     <Field className="gap-2" data-invalid={!!formState.errors.photoIds}>
       <FieldLabel id={`${id}-label`} htmlFor={`${id}-files`}>{t('photos.label')}</FieldLabel>
       <FileChooser id={`${id}-files`} labelledBy={`${id}-label`} multiple accept="image/jpeg,image/png,image/webp,image/heic" disabled={photoIds.length + pending.length >= data.rules.maxPhotos} busy={pending.length > 0} invalid={!!formState.errors.photoIds} describedBy={`${id}-hint${formState.errors.photoIds ? ` ${id}-error` : ''}`} onFiles={chooseFiles} />
@@ -113,13 +113,13 @@ export function PhotosStep({ data, handlers, photos, onPhotosChange, onBusyChang
     {!!(photoIds.length + pending.length) && <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {photoIds.map((photoId, index) => {
         const photo = photos.find((candidate) => candidate.id === photoId);
-        return <li key={photoId} className="min-w-0 overflow-hidden rounded-xl border bg-card">
+        return <li key={photoId} className="min-w-0 overflow-hidden rounded-2xl border border-foreground/[0.07] dark:border-white/[0.06] bg-card shadow-card">
           {photo ? <Image src={photo.src} alt={photo.alt || t('photos.restored', { number: index + 1 })} width={photo.width} height={photo.height} unoptimized className="aspect-[4/3] w-full object-cover" /> : <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 bg-muted p-3 text-center text-sm"><ImagePlus aria-hidden="true" className="size-6 text-muted-foreground" /><p>{t('photos.restored', { number: index + 1 })}</p></div>}
           {!photo && <p className="p-3 text-xs text-muted-foreground">{t('photos.restoredHint')}</p>}
           <Button type="button" variant="ghost" className="h-auto w-full min-w-0 whitespace-normal" onClick={() => removePhoto(photoId)} aria-label={t('photos.remove', { number: index + 1 })}><X aria-hidden="true" className="size-4" />{t('photos.remove', { number: index + 1 })}</Button>
         </li>;
       })}
-      {pending.map((photo, index) => <li key={photo.key} className="min-w-0 overflow-hidden rounded-xl border bg-card" aria-busy="true">
+      {pending.map((photo, index) => <li key={photo.key} className="min-w-0 overflow-hidden rounded-2xl border border-foreground/[0.07] dark:border-white/[0.06] bg-card shadow-card" aria-busy="true">
         <Image src={photo.src} alt={t('photos.preview', { name: photo.name })} width={400} height={300} unoptimized className="aspect-[4/3] w-full object-cover opacity-60" />
         <p className="flex items-center justify-center gap-2 px-2 pt-3 text-sm"><LoaderCircle aria-hidden="true" className="size-4 shrink-0 animate-spin motion-reduce:animate-none" />{t('photos.uploading')}</p>
         <Button type="button" variant="ghost" className="h-auto w-full min-w-0 whitespace-normal" onClick={() => removePending(photo.key)} aria-label={t('photos.remove', { number: photoIds.length + index + 1 })}><X aria-hidden="true" className="size-4" />{t('photos.remove', { number: photoIds.length + index + 1 })}</Button>

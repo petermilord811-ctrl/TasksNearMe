@@ -260,7 +260,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         <p className="text-muted-foreground">{t('intro')}</p>
         <ol aria-label={t('navigation')} className="grid grid-cols-8 gap-1.5">
           {POST_TASK_STEPS.map((item, itemIndex) => <li key={item} aria-current={item === step ? 'step' : undefined} className="min-w-0">
-            <span className={cn('block h-1.5 rounded-full bg-muted', itemIndex <= index && 'bg-primary')} />
+            <span className={cn('block h-1.5 rounded-full bg-foreground/[0.08] transition-colors duration-500 ease-[var(--ease-out)] dark:bg-white/[0.1]', itemIndex < index && 'bg-primary/70', itemIndex === index && 'bg-primary')} />
             <span className="sr-only">{t(`steps.${item}`)}</span>
           </li>)}
         </ol>
@@ -287,7 +287,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         {step === 'budget' && <BudgetStep data={data} />}
         {step === 'review' && <ReviewStep data={data} handlers={handlers} values={values} photos={photos} selectedAddress={address} />}
       </fieldset>
-      <footer className="sticky bottom-app-navigation z-20 -mx-4 mt-2 flex items-center gap-3 border-t bg-background px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <footer className="app-glass sticky bottom-app-navigation z-20 -mx-4 mt-2 flex items-center gap-3 border-t border-foreground/[0.07] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/[0.06]">
         <Button type="button" variant="outline" disabled={index === 0 || pending || checking || uploading || !!result?.ok} onClick={() => { setInvalid(false); setResult(undefined); setFocusField(undefined); setStep(POST_TASK_STEPS[index - 1]!); heading.current?.focus(); }}><ArrowLeft aria-hidden="true" />{t('back')}</Button>
         <span className="hidden flex-1 items-center gap-2 text-sm text-muted-foreground sm:flex"><Lock aria-hidden="true" className="size-4" />{t('steps.review')}</span>
         {step === 'review' ? <Button key="post" ref={postButton} type="submit" className="ml-auto" disabled={pending || !!result?.ok} aria-busy={pending}>{pending ? <Spinner /> : <Check aria-hidden="true" />}{t(pending ? 'posting' : 'post')}</Button> : <Button key="next" type="button" className="ml-auto" onClick={(event) => { event.preventDefault(); void nextStep(); }} disabled={checking || uploading} aria-busy={checking}>{checking ? <Spinner /> : <ArrowRight aria-hidden="true" />}{t(checking ? 'checking' : 'next')}</Button>}

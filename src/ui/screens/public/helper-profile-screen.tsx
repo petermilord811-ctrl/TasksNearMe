@@ -36,14 +36,14 @@ function ServiceCard({ service }: { service: HelperServiceDetail }) {
       : t('priceInOffer');
 
   return (
-    <li className="min-w-0 space-y-3 rounded-xl border border-border bg-card p-4 shadow-card md:p-5">
+    <li className="min-w-0 space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card md:p-5 dark:border-white/[0.06]">
       <div className="flex items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl" style={{ background: `color-mix(in oklab, var(--cat-${service.categorySlug}) 15%, transparent)`, color: `var(--cat-${service.categorySlug})` }}>
           <Icon aria-hidden="true" className="size-5" />
         </span>
-        <h3 className="text-[17px]/6 font-semibold md:text-lg/6.5">{t(`categories.${service.categorySlug}`)}</h3>
+        <h3 className="font-display text-[17px]/6 font-semibold tracking-[-0.01em] md:text-lg/6.5">{t(`categories.${service.categorySlug}`)}</h3>
       </div>
-      <p className="font-semibold tabular-nums">{price}</p>
+      <p className="font-display text-lg font-semibold tracking-[-0.01em] tabular-nums">{price}</p>
       {service.description && <p className="text-sm leading-6 text-muted-foreground">{service.description}</p>}
     </li>
   );
@@ -66,7 +66,7 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
                 <InitialsAvatar initials={helper.initials} photo={helper.photo} size="xl" />
               </span>
               <div className="min-w-0 space-y-1 sm:pb-1">
-                <h1 className="text-2xl/8 font-bold break-words md:text-[30px]/9.5">{helper.displayName}</h1>
+                <h1 className="font-display text-2xl/8 font-semibold tracking-[-0.025em] break-words md:text-[32px]/10">{helper.displayName}</h1>
                 {helper.headline && <p className="text-base leading-6">{helper.headline}</p>}
               </div>
             </div>
@@ -101,39 +101,39 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
       {data.slots && data.slots.length > 0 && <AvailabilitySlotList slots={data.slots} handle={helper.handle} />}
 
       <section aria-labelledby="helper-about-heading" className="max-w-reading space-y-3">
-        <h2 id="helper-about-heading" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('about', { name: helper.displayName })}</h2>
+        <h2 id="helper-about-heading" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('about', { name: helper.displayName })}</h2>
         <p className="whitespace-pre-line break-words leading-7">{data.bio}</p>
       </section>
 
       <section aria-labelledby="helper-services-heading" className="space-y-4">
-        <h2 id="helper-services-heading" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('services')}</h2>
+        <h2 id="helper-services-heading" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('services')}</h2>
         <ul className="grid gap-4 md:grid-cols-2">{data.services.map((service) => <ServiceCard key={service.categorySlug} service={service} />)}</ul>
       </section>
 
       {(data.tools.length > 0 || data.languages.length > 0) && (
         <div className="grid gap-6 md:grid-cols-2">
           {data.tools.length > 0 && <section aria-labelledby="helper-tools-heading" className="space-y-3">
-            <h2 id="helper-tools-heading" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('tools')}</h2>
-            <ul className="flex flex-wrap gap-2">{data.tools.map((tool) => <li key={tool} className="rounded-full bg-muted px-3 py-1.5 text-sm">{tool}</li>)}</ul>
+            <h2 id="helper-tools-heading" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('tools')}</h2>
+            <ul className="flex flex-wrap gap-2">{data.tools.map((tool) => <li key={tool} className="rounded-full border border-foreground/[0.08] bg-card px-3 py-1.5 text-sm dark:border-white/[0.08]">{tool}</li>)}</ul>
           </section>}
           {data.languages.length > 0 && <section aria-labelledby="helper-languages-heading" className="space-y-3">
-            <h2 id="helper-languages-heading" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('languages')}</h2>
-            <ul className="flex flex-wrap gap-2">{data.languages.map((language) => <li key={language} className="rounded-full bg-muted px-3 py-1.5 text-sm">{language}</li>)}</ul>
+            <h2 id="helper-languages-heading" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('languages')}</h2>
+            <ul className="flex flex-wrap gap-2">{data.languages.map((language) => <li key={language} className="rounded-full border border-foreground/[0.08] bg-card px-3 py-1.5 text-sm dark:border-white/[0.08]">{language}</li>)}</ul>
           </section>}
         </div>
       )}
 
       {data.workSamples.length > 0 && <section aria-labelledby="helper-work-heading" className="space-y-4">
-        <h2 id="helper-work-heading" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('workSamples')}</h2>
+        <h2 id="helper-work-heading" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('workSamples')}</h2>
         <WorkSampleGallery samples={data.workSamples} />
       </section>}
 
       <section aria-labelledby="helper-reviews-heading" className="space-y-4">
-        <h2 id="helper-reviews-heading" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('reviews')}</h2>
+        <h2 id="helper-reviews-heading" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('reviews')}</h2>
         {helper.rating && data.reviews.length < helper.rating.count && <p className="text-sm tabular-nums text-muted-foreground">{t('recentReviews', { shown: data.reviews.length, total: helper.rating.count })}</p>}
         {data.reviews.length > 0
           ? <ul className="grid gap-4 md:grid-cols-2">{data.reviews.map((review) => <li key={review.id} className="min-w-0"><ReviewCard review={review} reportHref={routes.app.report('review', review.id)} /></li>)}</ul>
-          : <div className="space-y-2 rounded-xl border border-border bg-card p-card"><p className="font-medium">{t('noReviews')}</p><p className="text-sm text-muted-foreground">{t('noReviewsDescription')}</p></div>}
+          : <div className="space-y-2 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card dark:border-white/[0.06]"><p className="font-medium">{t('noReviews')}</p><p className="text-sm text-muted-foreground">{t('noReviewsDescription')}</p></div>}
       </section>
       <p><Link href={routes.app.report('helper', helper.handle)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.helper')}</Link></p>
     </div>

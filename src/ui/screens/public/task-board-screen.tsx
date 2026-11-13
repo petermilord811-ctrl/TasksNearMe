@@ -13,9 +13,9 @@ export interface TaskBoardScreenProps { data: TaskBoardPageData; now: ISODateTim
 
 function FilterLink({ href, selected, children }: { href: string; selected: boolean; children: ReactNode }) {
   return <Link href={href} aria-current={selected ? 'true' : undefined} className={cn(
-    'inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-accent',
-    selected ? 'border-primary bg-secondary text-secondary-foreground' : 'border-border bg-card text-foreground',
-  )}>{selected && <Check aria-hidden="true" className="size-4 shrink-0" />}{children}</Link>;
+    'inline-flex min-h-11 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-[background-color,border-color,color,box-shadow] duration-200 ease-[var(--ease-out)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+    selected ? 'border-primary/40 bg-brand-soft text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_22%,transparent)]' : 'border-foreground/[0.1] bg-card text-foreground hover:border-foreground/25 hover:bg-background dark:border-white/[0.1]',
+  )}>{selected && <Check aria-hidden="true" className="size-4 shrink-0 text-primary" />}{children}</Link>;
 }
 
 export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
@@ -26,7 +26,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
 
   return <div className="space-y-section">
     <PageHeader title={t('title', { market: market.name })} description={t('description')} />
-    <section aria-label={t('filters')} className="space-y-5 rounded-xl border bg-card p-card shadow-card">
+    <section aria-label={t('filters')} className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
       <nav aria-label={t('category')} className="space-y-2">
         <p className="text-sm font-semibold">{t('category')}</p>
         <ul className="flex flex-wrap gap-2">
@@ -40,7 +40,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
           <ul className="flex flex-wrap gap-2">{TASK_BOARD_WHEN.map((when) => <li key={when}><FilterLink href={filterHref({ when })} selected={query.when === when}>{t(`whenOptions.${when}`)}</FilterLink></li>)}</ul>
         </nav>
         <div>
-          <Link href={filterHref({ remoteOnly: !query.remoteOnly })} aria-current={query.remoteOnly ? 'true' : undefined} className={cn('inline-flex min-h-11 items-center gap-3 rounded-md border px-3 py-2 text-sm font-medium hover:bg-accent', query.remoteOnly ? 'border-primary bg-secondary text-secondary-foreground' : 'border-border')}>
+          <Link href={filterHref({ remoteOnly: !query.remoteOnly })} aria-current={query.remoteOnly ? 'true' : undefined} className={cn('inline-flex min-h-11 items-center gap-3 rounded-full border px-4 py-2 text-sm font-medium transition-[background-color,border-color,box-shadow] duration-200 ease-[var(--ease-out)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring', query.remoteOnly ? 'border-primary/40 bg-brand-soft text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_22%,transparent)]' : 'border-foreground/[0.1] bg-card hover:border-foreground/25 hover:bg-background dark:border-white/[0.1]')}>
             <span>{t('remoteOnly')}</span>{' '}<span className={cn('rounded-full px-2 py-0.5 text-xs', query.remoteOnly ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>{query.remoteOnly ? t('remoteOn') : t('remoteOff')}</span>
           </Link>
         </div>

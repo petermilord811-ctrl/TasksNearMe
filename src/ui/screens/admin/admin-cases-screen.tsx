@@ -1,45 +1,43 @@
-import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Check, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ADMIN_CASE_STATUS_FILTERS, ADMIN_QUEUES, routes, type AdminCaseRow, type AdminCasesPageData, type ISODateTime } from '@/contracts';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
+import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useCaseStatus } from '@/ui/components/status/use-status';
 import { cn } from '@/ui/lib/utils';
 import { AdminResponseTarget } from './admin-response-target';
+import { AdminFilterChip, adminCardLink, adminSection, adminTableFrame, adminTd, adminTh, adminTr } from './admin-ui';
 
 export interface AdminCasesScreenProps { data: AdminCasesPageData; now: ISODateTime }
-
-function FilterLink({ href, selected, children }: { href: string; selected: boolean; children: ReactNode }) {
-  return <Link href={href} aria-current={selected ? 'true' : undefined} className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-accent', selected ? 'border-primary bg-secondary text-secondary-foreground' : 'bg-card text-muted-foreground')}>
-    {selected && <Check aria-hidden="true" className="size-4 shrink-0" />}{children}
-  </Link>;
-}
 
 function CaseSummary({ item, linked = false }: { item: AdminCaseRow; linked?: boolean }) {
   const t = useTranslations('adminCases');
   return <div className="min-w-0 space-y-1">
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-      <span className={cn('font-medium', item.priority === 'urgent' ? 'text-destructive' : item.priority === 'high' ? 'text-warning' : 'text-muted-foreground')}>{t('priority', { priority: t(`priorities.${item.priority}`) })}</span>{' '}
+      <span className={cn('inline-flex items-center gap-1.5 font-medium', item.priority === 'urgent' ? 'text-destructive' : item.priority === 'high' ? 'text-warning' : 'text-muted-foreground')}>
+        <span aria-hidden="true" className={cn('size-1.5 shrink-0 rounded-full', item.priority === 'urgent' ? 'bg-destructive' : item.priority === 'high' ? 'bg-warning' : 'bg-muted-foreground/50')} />
+        {t('priority', { priority: t(`priorities.${item.priority}`) })}
+      </span>{' '}
       <span className="text-muted-foreground">{t(`types.${item.type}`)}</span>
     </div>
     {linked
-      ? <Link href={routes.admin.case(item.id)} className="inline-flex min-h-11 max-w-full items-center rounded-md py-2 font-semibold text-primary underline-offset-4 [overflow-wrap:anywhere] hover:underline">{item.subject}</Link>
-      : <h2 className="break-words font-heading text-[17px]/6 font-semibold">{item.subject}</h2>}
-    {item.awaitingReply && <p className="flex items-center gap-1.5 text-sm font-medium text-primary"><span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-primary" />{t('newReply')}</p>}
+      ? <Link href={routes.admin.case(item.id)} className="inline-flex min-h-11 max-w-full items-center rounded-md py-2 font-semibold text-foreground underline-offset-4 [overflow-wrap:anywhere] hover:text-primary hover:underline">{item.subject}</Link>
+      : <h2 className="font-display text-[17px]/6 font-semibold tracking-[-0.01em] break-words">{item.subject}</h2>}
+    {item.awaitingReply && <p className="flex items-center gap-1.5 text-sm font-medium text-primary"><span aria-hidden="true" className="size-2 shrink-0 animate-pulse rounded-full bg-primary motion-reduce:animate-none" />{t('newReply')}</p>}
   </div>;
 }
 
 function DesktopCaseRow({ item, now }: { item: AdminCaseRow; now: ISODateTime }) {
   const t = useTranslations('adminCases');
   const status = useCaseStatus(item.status);
-  return <tr className="border-t align-top hover:bg-accent/50">
-    <th scope="row" className="p-3 text-left font-normal"><CaseSummary item={item} linked /></th>
-    <td className="break-words p-3">{item.openedBy.displayName}</td>
-    <td className="p-3"><StatusBadge {...status} /></td>
-    <td className="p-3"><AdminResponseTarget slaDueAt={item.slaDueAt} slaBreached={item.slaBreached} now={now} /></td>
-    <td className="break-words p-3">{item.assignee?.displayName ?? t('unassigned')}</td>
+  return <tr className={adminTr}>
+    <th scope="row" className={cn(adminTd, 'text-left font-normal')}><CaseSummary item={item} linked /></th>
+    <td className={cn(adminTd, 'break-words')}>{item.openedBy.displayName}</td>
+    <td className={adminTd}><StatusBadge {...status} /></td>
+    <td className={adminTd}><AdminResponseTarget slaDueAt={item.slaDueAt} slaBreached={item.slaBreached} now={now} /></td>
+    <td className={cn(adminTd, 'break-words', !item.assignee && 'text-muted-foreground')}>{item.assignee?.displayName ?? t('unassigned')}</td>
   </tr>;
 }
 
@@ -47,10 +45,10 @@ function MobileCaseRow({ item, now }: { item: AdminCaseRow; now: ISODateTime }) 
   const t = useTranslations('adminCases');
   const status = useCaseStatus(item.status);
   return <li>
-    <Link href={routes.admin.case(item.id)} className="block min-w-0 space-y-3 rounded-xl border bg-card p-4 shadow-card transition-colors hover:bg-accent">
-      <div className="flex items-start gap-2"><div className="min-w-0 flex-1"><CaseSummary item={item} /></div><ChevronRight aria-hidden="true" className="mt-1 size-5 shrink-0 text-muted-foreground" /></div>
+    <Link href={routes.admin.case(item.id)} className={cn(adminCardLink, 'group space-y-3')}>
+      <div className="flex items-start gap-2"><div className="min-w-0 flex-1"><CaseSummary item={item} /></div><ChevronRight aria-hidden="true" className="mt-1 size-5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5" /></div>
       <StatusBadge {...status} />
-      <dl className="grid grid-cols-2 gap-3 border-t pt-3 text-sm">
+      <dl className="grid grid-cols-2 gap-3 border-t border-foreground/[0.07] pt-3 text-sm dark:border-white/[0.07]">
         <div className="min-w-0 space-y-1"><dt className="text-muted-foreground">{t('columns.openedBy')}</dt><dd className="break-words">{item.openedBy.displayName}</dd></div>
         <div className="min-w-0 space-y-1"><dt className="text-muted-foreground">{t('columns.assignee')}</dt><dd className="break-words">{item.assignee?.displayName ?? t('unassigned')}</dd></div>
         <div className="col-span-2 space-y-1"><dt className="text-muted-foreground">{t('columns.response')}</dt><dd><AdminResponseTarget slaDueAt={item.slaDueAt} slaBreached={item.slaBreached} now={now} /></dd></div>
@@ -59,28 +57,28 @@ function MobileCaseRow({ item, now }: { item: AdminCaseRow; now: ISODateTime }) 
   </li>;
 }
 
+/** Support's queues: filter by queue, status and "mine"; a table on wide screens, cards on phones. */
 export function AdminCasesScreen({ data, now }: AdminCasesScreenProps) {
   const t = useTranslations('adminCases');
   const { filters } = data;
-  return <div className="space-y-6">
-    <header className="space-y-2">
-      <h1 className="font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t('title')}</h1>
-      <p className="text-muted-foreground">{t('intro')}</p>
-    </header>
-    <div className="space-y-4 rounded-xl border bg-card p-4">
+  return <div className="min-w-0 space-y-6">
+    <PageHeader title={t('title')} description={t('intro')} />
+    <div className={cn(adminSection, 'space-y-4')}>
       <nav aria-label={t('queueFilter')} className="space-y-2">
-        <p className="text-sm font-semibold">{t('queueFilter')}</p>
+        <p className="text-xs font-semibold tracking-[0.04em] text-muted-foreground uppercase">{t('queueFilter')}</p>
         <div className="flex flex-wrap gap-2">
-          <FilterLink href={routes.admin.cases({ ...filters, queue: undefined })} selected={!filters.queue}>{t('allQueues')}</FilterLink>
-          {ADMIN_QUEUES.map((queue) => <FilterLink key={queue} href={routes.admin.cases({ ...filters, queue })} selected={filters.queue === queue}>{t(`queues.${queue}`)}</FilterLink>)}
+          <AdminFilterChip href={routes.admin.cases({ ...filters, queue: undefined })} current={!filters.queue} currentValue="true">{t('allQueues')}</AdminFilterChip>
+          {ADMIN_QUEUES.map((queue) => <AdminFilterChip key={queue} href={routes.admin.cases({ ...filters, queue })} current={filters.queue === queue} currentValue="true">{t(`queues.${queue}`)}</AdminFilterChip>)}
         </div>
       </nav>
-      <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-4 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.07]">
         <nav aria-label={t('statusFilter')} className="space-y-2">
-          <p className="text-sm font-semibold">{t('statusFilter')}</p>
-          <div className="flex flex-wrap gap-2">{ADMIN_CASE_STATUS_FILTERS.map((status) => <FilterLink key={status} href={routes.admin.cases({ ...filters, status })} selected={filters.status === status}>{t(`filters.${status}`)}</FilterLink>)}</div>
+          <p className="text-xs font-semibold tracking-[0.04em] text-muted-foreground uppercase">{t('statusFilter')}</p>
+          <div className="flex flex-wrap gap-2">{ADMIN_CASE_STATUS_FILTERS.map((status) => <AdminFilterChip key={status} href={routes.admin.cases({ ...filters, status })} current={filters.status === status} currentValue="true">{t(`filters.${status}`)}</AdminFilterChip>)}</div>
         </nav>
-        <nav aria-label={t('assignmentFilter')}><FilterLink href={routes.admin.cases({ ...filters, mine: !filters.mine })} selected={filters.mine}>{t('assignedToMe')}{' '}<span className="font-normal">{t(filters.mine ? 'filterOn' : 'filterOff')}</span></FilterLink></nav>
+        <nav aria-label={t('assignmentFilter')}>
+          <AdminFilterChip href={routes.admin.cases({ ...filters, mine: !filters.mine })} current={filters.mine} currentValue="true">{t('assignedToMe')}{' '}<span className={cn('font-normal', filters.mine ? 'text-background/80' : 'text-muted-foreground')}>{t(filters.mine ? 'filterOn' : 'filterOff')}</span></AdminFilterChip>
+        </nav>
       </div>
     </div>
     <section aria-label={t('results')} className="space-y-3">
@@ -88,15 +86,15 @@ export function AdminCasesScreen({ data, now }: AdminCasesScreenProps) {
       {data.cases.length === 0
         ? <EmptyState title={t('emptyTitle')} body={t('emptyBody')} action={{ label: t('clearFilters'), href: routes.admin.cases({ status: 'all' }) }} />
         : <>
-          <div className="hidden rounded-xl border bg-card shadow-card lg:block">
+          <div className={adminTableFrame}>
             <table className="w-full table-fixed text-sm">
               <caption className="sr-only">{t('tableCaption')}</caption>
-              <thead className="text-left text-muted-foreground"><tr>
-                <th scope="col" className="w-[30%] p-3 font-medium">{t('columns.case')}</th>
-                <th scope="col" className="w-[14%] p-3 font-medium">{t('columns.openedBy')}</th>
-                <th scope="col" className="w-[19%] p-3 font-medium">{t('columns.status')}</th>
-                <th scope="col" className="w-[23%] p-3 font-medium">{t('columns.response')}</th>
-                <th scope="col" className="w-[14%] p-3 font-medium">{t('columns.assignee')}</th>
+              <thead><tr>
+                <th scope="col" className={cn(adminTh, 'w-[30%]')}>{t('columns.case')}</th>
+                <th scope="col" className={cn(adminTh, 'w-[14%]')}>{t('columns.openedBy')}</th>
+                <th scope="col" className={cn(adminTh, 'w-[19%]')}>{t('columns.status')}</th>
+                <th scope="col" className={cn(adminTh, 'w-[23%]')}>{t('columns.response')}</th>
+                <th scope="col" className={cn(adminTh, 'w-[14%]')}>{t('columns.assignee')}</th>
               </tr></thead>
               <tbody>{data.cases.map((item) => <DesktopCaseRow key={item.id} item={item} now={now} />)}</tbody>
             </table>

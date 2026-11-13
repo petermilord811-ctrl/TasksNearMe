@@ -101,7 +101,7 @@ export function AdminResolutionForm({ data, handlers, onSuccess, onBusy, onCance
       <fieldset className="space-y-2" aria-describedby={`${id}-resolution-hint${resolutionError ? ` ${id}-resolution-error` : ''}`}>
         <legend className="text-sm font-medium">{t('resolve.resolution')}</legend>
         <p id={`${id}-resolution-hint`} className="text-sm text-muted-foreground">{t('resolve.resolutionHint')}</p>
-        <div className="grid gap-2">{data.resolutions.map((choice) => <label key={choice} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm has-checked:border-primary has-checked:bg-secondary has-checked:text-secondary-foreground">
+        <div className="grid gap-2">{data.resolutions.map((choice) => <label key={choice} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-foreground/[0.1] px-3 py-2 text-sm transition-colors duration-200 hover:border-foreground/[0.25] has-checked:border-primary has-checked:bg-secondary has-checked:text-secondary-foreground">
           <input {...form.register('resolution')} type="radio" value={choice} required aria-describedby={`${id}-resolution-hint${resolutionError ? ` ${id}-resolution-error` : ''}`} className="size-5 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" />
           {t(`resolutions.${choice}`)}
         </label>)}</div>
@@ -126,7 +126,7 @@ export function AdminResolutionForm({ data, handlers, onSuccess, onBusy, onCance
           <div className="flex flex-wrap justify-between gap-2"><dt>{t('resolve.platformKeeps')}</dt><dd className="font-semibold tabular-nums">{formatMoney(preview.platformKeepsCents)}</dd></div>
         </dl> : <AdminCaseFeedback result={previewError} />}
       </div>
-      {preview && !preview.withinLimit && <p role="alert" className="rounded-lg border border-warning/30 bg-badge-warning p-3 text-sm text-badge-warning-foreground">{t('resolve.overLimit')}</p>}
+      {preview && !preview.withinLimit && <p role="alert" className="rounded-xl border border-warning/30 bg-badge-warning p-3 text-sm text-badge-warning-foreground">{t('resolve.overLimit')}</p>}
       {previewError && previewError.code !== 'validation_failed' && <Button type="button" variant="outline" disabled={pending} onClick={() => setAttempt((value) => value + 1)}>{t('resolve.retryPreview')}</Button>}
     </section>}
     <AdminCaseFeedback result={action.result} />

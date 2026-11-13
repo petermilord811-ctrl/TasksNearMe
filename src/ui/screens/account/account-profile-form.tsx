@@ -34,7 +34,7 @@ export function AccountProfileForm({ profile, onSave }: {
       if (!result.redirectTo) router.refresh();
     }
   })}>
-    <p aria-live="polite" className="rounded-lg bg-secondary px-4 py-3 text-sm text-secondary-foreground">{t('profile.displayName', { name: displayName })}</p>
+    <p aria-live="polite" className="rounded-2xl bg-secondary px-4 py-3 text-sm text-secondary-foreground">{t('profile.displayName', { name: displayName })}</p>
     <fieldset disabled={pending} className="grid min-w-0 gap-5 sm:grid-cols-2">
       <legend className="sr-only">{t('profile.nameLegend')}</legend>
       <TextFormField control={form.control} name="firstName" label={t('profile.firstName')} hint={t('profile.firstNameHint')} autoComplete="given-name" required maxLength={40} />

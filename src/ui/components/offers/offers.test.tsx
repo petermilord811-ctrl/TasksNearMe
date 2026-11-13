@@ -23,7 +23,9 @@ function card(offer: OfferView = deskOfferJordan) {
 describe('OfferCard and OfferComparison', () => {
   it('keeps action order, canonical price, and new state without showing an address', () => {
     const { container } = card();
-    expect(screen.getAllByText('New')).toHaveLength(2);
+    // The offer is new to the poster, and Jordan is new on TasksNearMe (no reviews yet): two different labels.
+    expect(screen.getByText('New offer')).toBeVisible();
+    expect(screen.getByText('New')).toBeVisible();
     expect(screen.getByText('$60.00')).toBeVisible();
     expect(screen.getByRole('link', { name: `View ${deskOfferJordan.helper.displayName}'s offer` })).toHaveAttribute('href', '/app/tasks/tsk_desk/offers/off_jordan');
     expect(Array.from(container.querySelectorAll('[data-action-id]'), (item) => item.getAttribute('data-action-id'))).toEqual(deskOfferJordan.actions.map((action) => action.id));

@@ -46,7 +46,7 @@ export function AdminReportedReview({ data, onModerate, initialOpen = false }: {
   const verb = hidden ? 'show' : 'hide';
 
   return (
-    <section aria-labelledby={`${id}-title`} className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
+    <section aria-labelledby={`${id}-title`} className="space-y-3 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id={`${id}-title`} className="text-xl font-semibold">{t('title')}</h2>
         <Badge variant={hidden ? 'destructive' : 'secondary'}>{t(`statuses.${data.status}`)}</Badge>

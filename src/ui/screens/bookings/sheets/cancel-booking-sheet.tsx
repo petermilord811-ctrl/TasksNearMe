@@ -10,6 +10,7 @@ import { HELPER_CANCEL_REASONS, POSTER_CANCEL_REASONS, cancelBookingInputSchema,
 import { formatDateTime, formatMoney } from '@/shared/format';
 import { Money } from '@/ui/components/money/money';
 import { Button } from '@/ui/primitives/button';
+import { Skeleton } from '@/ui/primitives/skeleton';
 import { Spinner } from '@/ui/primitives/spinner';
 import { SheetChoice, SheetText } from './sheet-fields';
 import { BookingSheetFrame, SheetFeedback, SheetSubmit, useSheetMutation, type BookingSheetProps } from './sheet-shared';
@@ -47,16 +48,16 @@ function CancelBookingContent(props: CancelBookingSheetProps) {
   const reasonOptions = preview?.by === 'helper' ? HELPER_CANCEL_REASONS : POSTER_CANCEL_REASONS;
   return <BookingSheetFrame {...props} alert title={t('cancel.title')} description={t('cancel.intro')} locked={mutation.pending}>
     {!preview ? <div aria-live="polite" className="space-y-4 py-4">
-      {loadError ? <><p className="flex items-start gap-2"><CircleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />{t('cancel.loadError')}</p><Button type="button" variant="outline" onClick={() => { request.current = undefined; setLoadError(false); setAttempt((value) => value + 1); }}>{t('cancel.retry')}</Button></> : <p role="status" className="flex items-center gap-2"><Spinner aria-hidden="true" />{t('cancel.loading')}</p>}
+      {loadError ? <><p className="flex items-start gap-2"><CircleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />{t('cancel.loadError')}</p><Button type="button" variant="outline" onClick={() => { request.current = undefined; setLoadError(false); setAttempt((value) => value + 1); }}>{t('cancel.retry')}</Button></> : <><p role="status" className="flex items-center gap-2"><Spinner aria-hidden="true" />{t('cancel.loading')}</p><Skeleton aria-hidden="true" className="h-28 rounded-2xl" /></>}
     </div> : <form noValidate aria-label={t('cancel.title')} aria-busy={mutation.pending} className="space-y-5" onSubmit={form.handleSubmit(mutation.submit, mutation.onInvalid)}>
-      <div className="space-y-3 rounded-xl border bg-secondary p-4 text-secondary-foreground">
+      <div className="space-y-3 rounded-2xl border border-foreground/[0.06] bg-secondary p-4 text-secondary-foreground">
         {preview.by === 'poster' ? <>
-          <p className="font-heading text-xl/7 font-semibold">{t.rich('cancel.posterRefund', { amount: () => <Money cents={preview.posterRefundCents} size="lg" /> })}</p>
+          <p className="font-heading text-xl/7 font-semibold tracking-[-0.015em] tabular-nums">{t.rich('cancel.posterRefund', { amount: () => <Money cents={preview.posterRefundCents} size="lg" /> })}</p>
           {preview.late && <p className="text-sm tabular-nums">{t('cancel.posterLate', { fee: formatMoney(preview.helperCompensationCents), helper: props.data.helper.displayName, refund: formatMoney(preview.posterRefundCents) })}</p>}
-        </> : <><p className="font-heading text-xl/7 font-semibold">{t('cancel.helperRefund', { client: props.data.poster.displayName })}</p><p>{t.rich('cancel.refundAmount', { client: props.data.poster.displayName, amount: () => <Money cents={preview.posterRefundCents} /> })}</p></>}
+        </> : <><p className="font-heading text-xl/7 font-semibold tracking-[-0.015em] tabular-nums">{t('cancel.helperRefund', { client: props.data.poster.displayName })}</p><p>{t.rich('cancel.refundAmount', { client: props.data.poster.displayName, amount: () => <Money cents={preview.posterRefundCents} /> })}</p></>}
         {preview.late && <p className="text-sm tabular-nums"><time dateTime={preview.freeUntil}>{t('cancel.freeEnded', { at: formatDateTime(preview.freeUntil) })}</time></p>}
       </div>
-      {preview.helperStrike && <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-badge-warning p-3 text-sm text-badge-warning-foreground"><CircleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('cancel.strike')}</p>}
+      {preview.helperStrike && <p className="flex items-start gap-2 rounded-2xl border border-warning/35 bg-badge-warning px-3.5 py-3 text-sm text-badge-warning-foreground"><CircleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('cancel.strike')}</p>}
       <Link href={routes.legal('cancellation-policy')} aria-disabled={mutation.pending || undefined} tabIndex={mutation.pending ? -1 : undefined} onClick={(event) => { if (mutation.pending) event.preventDefault(); }} className="inline-flex min-h-11 items-center rounded-md text-sm text-primary underline underline-offset-4 aria-disabled:pointer-events-none aria-disabled:opacity-50">{t('cancel.policy')}</Link>
       <fieldset disabled={mutation.disabled} className="min-w-0 space-y-5">
         <legend className="sr-only">{t('cancel.reason')}</legend>

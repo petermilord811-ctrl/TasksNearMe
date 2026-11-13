@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { proposeChangeInputSchema, type ActionResult, type ProposeChangeHandlers, type ProposeChangeInput, type ProposeChangePageData } from '@/contracts';
+import { actionTray, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
@@ -87,17 +89,19 @@ export function ProposeChangeForm({ data, handlers, initialInput, initialResult 
 
   return <FormProvider {...form}>
     <form noValidate onSubmit={(event) => { void form.handleSubmit(review)(event); }} aria-busy={pending} className="space-y-6">
-      <fieldset disabled={pending} className="min-w-0 space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6" onFocusCapture={(event) => {
+      <fieldset disabled={pending} className={cn(surface, surfacePad, 'min-w-0 space-y-5')} onFocusCapture={(event) => {
         if (bar.current && event.target.getBoundingClientRect().bottom > bar.current.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
       }}>
         <legend className="sr-only">{t('fields')}</legend>
-        <h2 className="font-heading text-xl font-semibold">{t('fields')}</h2>
-        <p className="text-sm text-muted-foreground">{t('fieldsHint')}</p>
+        <div className="space-y-1.5">
+          <h2 className={sectionTitle}>{t('fields')}</h2>
+          <p className="text-sm text-pretty text-muted-foreground">{t('fieldsHint')}</p>
+        </div>
         <ProposeChangeFields data={data} />
       </fieldset>
       <ChangeQuote input={validInput} viewerRole={data.booking.viewerRole} onQuote={handlers.onQuote} />
       <FormFeedback result={result && !result.ok ? { ...result, fieldErrors: undefined } : result} errorMessage={noChanges ? t('noChanges') : result && !result.ok && result.code === 'not_allowed' ? t('notAllowed') : undefined} />
-      <div ref={bar} className="sticky bottom-app-navigation z-10 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div ref={bar} className={actionTray}>
         <Button ref={submitButton} type="submit" disabled={pending} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{t(pending ? 'sending' : 'send')}</Button>
       </div>
     </form>

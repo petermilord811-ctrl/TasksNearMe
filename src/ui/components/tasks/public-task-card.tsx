@@ -40,15 +40,15 @@ export function PublicTaskCard({ task, now, headingLevel = 3, href = routes.publ
     : t('hourlyBudget', { rate: formatMoney(task.budget.rateCents), cap: formatHours(task.budget.hoursCap) });
 
   return (
-    <article className="flex h-full min-w-0 flex-col rounded-xl border border-border bg-card p-4 shadow-card md:p-5">
+    <article className="group/task flex h-full min-w-0 flex-col rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card transition-[transform,box-shadow] duration-300 ease-[var(--ease-out)] hover:shadow-[0_1px_2px_rgb(23_18_14/0.04),0_22px_44px_-26px_rgb(60_30_10/0.34)] motion-safe:hover:-translate-y-0.5 md:p-5 dark:border-white/[0.06] dark:hover:shadow-[0_1px_2px_rgb(0_0_0/0.4),0_22px_44px_-24px_rgb(0_0_0/0.75)]">
       <p className="flex items-center gap-2 text-sm font-medium text-secondary-foreground">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary transition-transform duration-300 ease-[var(--ease-out)] group-hover/task:scale-105">
           <CategoryIcon aria-hidden="true" className="size-5" />
         </span>
         {t(`categories.${task.categorySlug}`)}
       </p>
-      <Heading className="mt-3 text-[17px]/6 font-semibold md:text-lg/6.5">
-        <Link href={href} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">
+      <Heading className="mt-3 font-display text-[17px]/6 font-semibold tracking-[-0.01em] md:text-lg/6.5">
+        <Link href={href} className="inline-flex min-h-11 items-center rounded-md underline-offset-4 transition-colors hover:text-primary hover:underline">
           {task.title}
         </Link>
       </Heading>
@@ -62,21 +62,21 @@ export function PublicTaskCard({ task, now, headingLevel = 3, href = routes.publ
           <span>{schedule}</span>
         </p>
       </div>
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border pt-4">
-        <p className="text-lg font-semibold tabular-nums">{budget}</p>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.06]">
+        <p className="font-display text-xl font-semibold tracking-[-0.01em] tabular-nums">{budget}</p>
         <p className="text-sm tabular-nums text-muted-foreground">{t('offers', { count: task.offerCount })}</p>
       </div>
       <div className="mt-auto pt-4">
         <p className="text-sm tabular-nums text-muted-foreground">
           <time dateTime={task.postedAt} title={formatDateTime(task.postedAt)}>{t('posted', { relative: formatRelative(task.postedAt, now) })}</time>
         </p>
-        <div className="mt-4 space-y-2 border-t border-border pt-4">
+        <div className="mt-4 space-y-2 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.06]">
           <p className="text-sm font-semibold">{task.poster.displayName}</p>
           <p className="text-sm tabular-nums text-muted-foreground">{t('memberSince', { date: formatMonthYear(task.poster.memberSince) })}</p>
           {task.poster.phoneVerified && <VerificationBadges badges={{ phoneVerified: task.poster.phoneVerified }} compact />}
         </div>
       </div>
-      {footer && <div className="mt-4 border-t pt-4">{footer}</div>}
+      {footer && <div className="mt-4 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.06]">{footer}</div>}
     </article>
   );
 }

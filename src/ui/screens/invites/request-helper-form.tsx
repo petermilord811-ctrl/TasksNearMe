@@ -105,19 +105,19 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
       <div aria-live="polite" aria-busy={quote.pending} className="space-y-3">
         {quote.breakdown ? <>
           <PriceBreakdown breakdown={quote.breakdown} variant="poster" title={t('total')} posterTotalLabel={t('total')} />
-          <div className="flex items-start gap-3 rounded-xl bg-secondary p-4 text-secondary-foreground">
+          <div className="flex items-start gap-3 rounded-2xl bg-secondary/70 p-4 text-foreground dark:bg-secondary/40">
             <Lock aria-hidden="true" className="mt-0.5 size-5 shrink-0" /><div className="space-y-2">
               <p>{t('hold', { amount: formatMoney(quote.breakdown.posterTotalCents), helper: data.helper.displayName })}</p>
               <p className="text-sm">{t('release', { helper: data.helper.displayName })}</p>
             </div>
           </div>
-        </> : quote.failed ? <div className="space-y-3 rounded-xl border border-destructive bg-card p-4">
+        </> : quote.failed ? <div className="space-y-3 rounded-[1.375rem] border border-destructive/60 bg-destructive/[0.04] p-4">
           <p>{t('quoteError')}</p><Button type="button" variant="outline" disabled={disabled} onClick={quote.retry}>{t('retryQuote')}</Button>
-        </div> : <p className="flex items-center gap-3 rounded-xl border bg-card p-4 text-sm">{quote.pending && <Spinner />}{t(quote.pending ? 'quotePending' : 'quoteHint')}</p>}
+        </div> : <p className="flex items-center gap-3 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 text-sm shadow-card">{quote.pending && <Spinner />}{t(quote.pending ? 'quotePending' : 'quoteHint')}</p>}
       </div>
       <fieldset disabled={disabled} className="min-w-0 space-y-6">
         <legend className="sr-only">{t('payment')}</legend>
-        <section aria-labelledby={`${id}-payment-title`} className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+        <section aria-labelledby={`${id}-payment-title`} className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
           <h2 id={`${id}-payment-title`} className="font-heading text-xl/7 font-semibold">{t('payment')}</h2>
           <Controller control={form.control} name="payment" render={({ field, fieldState }) => <PaymentMethodPicker id={`${id}-payment`} panel={data.payment} disabled={disabled} field={{ ...field, onChange: (choice) => { form.clearErrors('payment'); field.onChange(choice); } }} error={fieldState.error?.message ? fieldError(fieldState.error.message) : undefined} />} />
         </section>
@@ -136,7 +136,7 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
         <FormFeedback result={feedback} successMessage={result?.ok && result.code === 'sent' ? t('sent') : undefined} errorMessage={slotRequestUnavailable ? t('slotRequestUnavailable') : undefined} />
         {slotRequestUnavailable && <Link href={routes.app.requestHelper(data.helper.handle)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('regularRequest')}</Link>}
       </div>
-      <div ref={submitBar} className="sticky bottom-app-navigation z-10 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div ref={submitBar} className="app-glass sticky bottom-app-navigation z-10 border-t border-foreground/[0.07] pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/[0.06]">
         <Button type="submit" disabled={disabled || !quote.breakdown} aria-busy={pending} className="w-full transition-colors sm:w-auto">{pending && <Spinner />}{t(pending ? 'sending' : 'send')}</Button>
       </div>
     </form></FormProvider>

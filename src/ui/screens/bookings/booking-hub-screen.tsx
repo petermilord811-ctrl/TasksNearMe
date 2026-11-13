@@ -2,11 +2,12 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, Check, Clock3, HelpCircle, Lock, Navigation } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  routes, type ActionResult, type BookingActionId, type BookingHubHandlers,
+  routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
   type BookingPaymentLine, type BookingSheetHandlers, type BookingView, type ISODateTime,
 } from '@/contracts';
 import { formatDate, formatDateTime, formatHours, formatMoney, formatMonthYear, formatRelative, formatTime, formatTimeRange } from '@/shared/format';
 import { CompletionSummary } from '@/ui/components/bookings/completion-summary';
+import { backArrow, backLink, note, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { ExactAddressPanel } from '@/ui/components/location/exact-address-panel';
 import { GeneralArea } from '@/ui/components/location/general-area';
@@ -19,6 +20,7 @@ import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus, usePaymentStatus } from '@/ui/components/status/use-status';
 import { Timeline } from '@/ui/components/timeline/timeline';
+import { cn } from '@/ui/lib/utils';
 import { BookingHubActions } from './booking-hub-actions';
 import { BookingDisputeCard } from './booking-dispute-card';
 import { BookingHubWithoutSheetHandlers } from './booking-hub-with-sheets';
@@ -35,7 +37,18 @@ export function BookingHubScreen({ sheets, ...props }: BookingHubScreenProps) {
   return sheets ? <BookingHubContent {...props} sheets={sheets} /> : <BookingHubWithoutSheetHandlers {...props} />;
 }
 
-function BookingState({ data, now }: { data: BookingView; now: ISODateTime }) {
+/** Where the booking stands, tinted like its status badge (the same tone, softer). */
+const stateTones: Record<BadgeTone, string> = {
+  neutral: 'border-foreground/[0.07] bg-secondary/80 text-secondary-foreground',
+  brand: 'border-primary/15 bg-badge-brand text-badge-brand-foreground',
+  info: 'border-info/20 bg-badge-info text-badge-info-foreground',
+  success: 'border-success/20 bg-badge-success text-badge-success-foreground',
+  warning: 'border-warning/30 bg-badge-warning text-badge-warning-foreground',
+  danger: 'border-destructive/25 bg-badge-danger text-badge-danger-foreground',
+  reward: 'border-reward/25 bg-badge-reward text-badge-reward-foreground',
+};
+
+function BookingState({ data, now, tone }: { data: BookingView; now: ISODateTime; tone: BadgeTone }) {
   const t = useTranslations('bookingHub');
   const role = data.viewerRole;
   const fundingDeadline = data.deadlines.pendingFundingExpiresAt;
@@ -57,9 +70,9 @@ function BookingState({ data, now }: { data: BookingView; now: ISODateTime }) {
     : data.status === 'pending_funding' && role === 'poster' ? fundingDeadline
       : data.status === 'completion_submitted' && role === 'poster' ? approvalDeadline : undefined;
 
-  return <div className="space-y-1 rounded-xl border bg-secondary p-4 text-secondary-foreground">
-    <p className="font-medium tabular-nums">{text}</p>
-    {relativeAt && <time dateTime={relativeAt} className="block text-sm tabular-nums">{formatRelative(relativeAt, now)}</time>}
+  return <div className={cn('space-y-1 rounded-2xl border px-4 py-3.5', stateTones[tone])}>
+    <p className="font-medium text-pretty tabular-nums">{text}</p>
+    {relativeAt && <time dateTime={relativeAt} className="block text-sm tabular-nums opacity-90">{formatRelative(relativeAt, now)}</time>}
   </div>;
 }
 
@@ -94,17 +107,18 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
   const { terms, checkIn, openChange } = data;
   const schedule = data.task.schedule;
 
-  return <div data-booking-hub className="mx-auto max-w-reading space-y-6 pb-[var(--booking-actions-height,0px)] lg:pb-0">
+  // On phones the actions float in a tray above the dock: the page keeps room for it (and the gap under it).
+  return <div data-booking-hub className="mx-auto max-w-reading space-y-6 pb-[calc(var(--booking-actions-height,0px)+1rem)] lg:pb-0">
     <div className="space-y-3">
-      <Link href={routes.app.bookings()} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
-        <ArrowLeft aria-hidden="true" className="size-4" />{t('back')}
+      <Link href={routes.app.bookings()} className={backLink}>
+        <ArrowLeft aria-hidden="true" className={backArrow} />{t('back')}
       </Link>
       <PageHeader title={data.task.title} description={categories(data.task.categorySlug)}><StatusBadge {...status} /></PageHeader>
-      <BookingState data={data} now={now} />
+      <BookingState data={data} now={now} tone={status.tone} />
     </div>
 
-    {openChange && <section aria-label={t('change.title')} className="space-y-2 rounded-xl border border-info/30 bg-card p-4 shadow-card sm:p-6">
-      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('change.title')}</h2>
+    {openChange && <section aria-label={t('change.title')} className={cn(surface, surfacePad, 'space-y-2 border-info/30 dark:border-info/35')}>
+      <h2 className={sectionTitle}>{t('change.title')}</h2>
       <p className="tabular-nums">{openChange.status === 'proposed'
         ? t(openChange.fromMe ? 'change.proposedByYou' : 'change.proposedByOther', { name: data.viewerRole === 'poster' ? data.helper.displayName : data.poster.displayName })
         : data.viewerRole === 'helper'
@@ -119,8 +133,8 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
 
     <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} />
 
-    {data.myReview && <section aria-label={t('review.title')} className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-6">
-      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('review.title')}</h2>
+    {data.myReview && <section aria-label={t('review.title')} className={cn(surface, surfacePad, 'space-y-3')}>
+      <h2 className={sectionTitle}>{t('review.title')}</h2>
       <p className="font-medium tabular-nums">{t('review.rating', { rating: data.myReview.rating })}</p>
       <RatingStars rating={{ average: data.myReview.rating, count: 1 }} />
       <p className="text-sm text-muted-foreground">{data.myReview.publishedAt
@@ -129,13 +143,13 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
     </section>}
 
     {data.completion && <section aria-label={t('work')} className="space-y-4">
-      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('work')}</h2>
+      <h2 className={sectionTitle}>{t('work')}</h2>
       <CompletionSummary completion={data.completion} variant={data.viewerRole} />
     </section>}
 
     <section aria-label={t(data.viewerRole === 'poster' ? 'helper' : 'client')} className="space-y-3">
-      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t(data.viewerRole === 'poster' ? 'helper' : 'client')}</h2>
-      {data.viewerRole === 'poster' ? <HelperCard helper={data.helper} variant="compact" /> : <div className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+      <h2 className={sectionTitle}>{t(data.viewerRole === 'poster' ? 'helper' : 'client')}</h2>
+      {data.viewerRole === 'poster' ? <HelperCard helper={data.helper} variant="compact" /> : <div className={cn(surface, surfacePad, 'space-y-4')}>
         <div className="flex items-center gap-3">
           <InitialsAvatar initials={data.poster.initials} />
           <div className="min-w-0 space-y-1">
@@ -148,8 +162,8 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
     </section>
 
     <section aria-label={t('whenWhere')} className="space-y-4">
-      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('whenWhere')}</h2>
-      <div className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+      <h2 className={sectionTitle}>{t('whenWhere')}</h2>
+      <div className={cn(surface, surfacePad, 'space-y-5')}>
         <dl className="space-y-4">
           <div className="space-y-1">
             <dt className="flex items-center gap-3 text-sm text-muted-foreground"><CalendarDays aria-hidden="true" className="size-5 shrink-0 text-primary" />{t('agreedStart')}</dt>
@@ -162,8 +176,8 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
               : t('window', { date: formatDate(schedule.windowStart), time: formatTimeRange(schedule.windowStart, schedule.windowEnd) })}</dd>
           </div>
         </dl>
-        <div className="border-t pt-5"><GeneralArea location={data.location} /></div>
-        {data.addressVisibility !== 'visible' && <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-sm">
+        <div className="border-t border-foreground/[0.07] pt-5 dark:border-white/[0.07]"><GeneralArea location={data.location} /></div>
+        {data.addressVisibility !== 'visible' && <p className="flex items-start gap-2 rounded-2xl bg-muted/70 px-3.5 py-3 text-sm">
           <Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span>{t(`address.${data.addressVisibility}`)}</span>
         </p>}
       </div>
@@ -179,8 +193,8 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
       </>}
     </section>
 
-    {checkIn && <section aria-label={t('checkIn')} className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-6">
-      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('checkIn')}</h2>
+    {checkIn && <section aria-label={t('checkIn')} className={cn(surface, surfacePad, 'space-y-4')}>
+      <h2 className={sectionTitle}>{t('checkIn')}</h2>
       <ul className="space-y-3">
         {checkIn.onMyWayAt && <li className="flex items-start gap-3"><Navigation aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><time dateTime={checkIn.onMyWayAt} className="tabular-nums">{t('onMyWay', { time: formatTime(checkIn.onMyWayAt) })}</time></li>}
         {checkIn.lateByMinutes !== undefined && <li className="flex items-start gap-3"><Clock3 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-warning" /><span className="tabular-nums">{t('runningLate', { minutes: checkIn.lateByMinutes })}</span></li>}
@@ -191,8 +205,8 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
     </section>}
 
     <section aria-label={t('terms')} className="space-y-4">
-      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('terms')}</h2>
-      <div className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+      <h2 className={sectionTitle}>{t('terms')}</h2>
+      <div className={cn(surface, surfacePad, 'space-y-5')}>
         <div className="space-y-2"><h3 className="font-semibold">{t('scope')}</h3><p className="whitespace-pre-wrap break-words">{terms.scopeText}</p></div>
         <div className="space-y-2"><h3 className="font-semibold">{t('pricing')}</h3><p className="tabular-nums">{terms.pricing.type === 'fixed'
           ? t('fixedPrice', { amount: formatMoney(terms.pricing.priceCents) })
@@ -203,15 +217,15 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
         </> : <p className="text-sm text-muted-foreground">{t('noAllowance')}</p>}</div>
       </div>
       <PriceBreakdown breakdown={terms.breakdown} variant={data.viewerRole} posterTotalLabel={t(data.status === 'pending_funding' ? 'totalDue' : 'totalCharged')} />
-      {data.viewerRole === 'poster' && terms.pricing.type === 'hourly' && <p className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('hourlyNote', { hours: terms.pricing.hoursCap })}</p>}
+      {data.viewerRole === 'poster' && terms.pricing.type === 'hourly' && <p className={note}>{t('hourlyNote', { hours: terms.pricing.hoursCap })}</p>}
     </section>
 
-    {data.viewerRole === 'poster' && data.payments && <section aria-label={t('payments')} className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-6">
-      <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('payments')}</h2>
-      {data.payments.length > 0 ? <ul className="divide-y">{data.payments.map((payment) => <BookingPayment key={payment.id} payment={payment} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noPayments')}</p>}
+    {data.viewerRole === 'poster' && data.payments && <section aria-label={t('payments')} className={cn(surface, surfacePad, 'space-y-4')}>
+      <h2 className={sectionTitle}>{t('payments')}</h2>
+      {data.payments.length > 0 ? <ul className="divide-y divide-foreground/[0.07] dark:divide-white/[0.07]">{data.payments.map((payment) => <BookingPayment key={payment.id} payment={payment} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noPayments')}</p>}
     </section>}
 
-    <div className="rounded-xl border bg-card p-4 shadow-card sm:p-6"><Timeline events={data.timeline} /></div>
+    <div className={cn(surface, surfacePad)}><Timeline events={data.timeline} /></div>
 
     <div className="flex items-start gap-2 text-sm text-muted-foreground">
       <HelpCircle aria-hidden="true" className="mt-1 size-5 shrink-0" />

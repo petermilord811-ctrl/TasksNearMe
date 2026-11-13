@@ -15,6 +15,7 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives
 import { Input } from '@/ui/primitives/input';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
+import { adminSelect } from './admin-ui';
 
 export interface AdminRefundState { initialValues?: Partial<StaffRefundInput>; initialResult?: ActionResult; initialPending?: boolean }
 
@@ -49,7 +50,7 @@ export function AdminBookingRefundForm({ refund, onRefund, onCancel, onBusy, onS
       onBusy(true); try { await action.run(onRefund, input); } finally { onBusy(false); }
     })(event);
   }}>
-    <p className="rounded-lg bg-secondary p-3 text-sm font-medium tabular-nums text-secondary-foreground">{t('limit', { amount: formatMoney(refund.limitCents) })}</p>
+    <p className="rounded-xl bg-secondary p-3 text-sm font-medium tabular-nums text-secondary-foreground">{t('limit', { amount: formatMoney(refund.limitCents) })}</p>
     <fieldset disabled={pending} className="space-y-4">
       <legend className="sr-only">{t('title')}</legend>
       <Field data-invalid={Boolean(amountError)} className="gap-2">
@@ -57,12 +58,12 @@ export function AdminBookingRefundForm({ refund, onRefund, onCancel, onBusy, onS
         <FieldDescription id={`${id}-amount-hint`}>{t('amountHint', { amount: formatMoney(refund.maxCents) })}</FieldDescription>
         <Controller control={form.control} name="amountCents" render={({ field }) => <Input ref={field.ref} name={field.name} onBlur={field.onBlur} id={`${id}-amount`} inputMode="decimal" required aria-invalid={Boolean(amountError)} aria-describedby={`${id}-amount-hint${amountError ? ` ${id}-amount-error` : ''}`} className="tabular-nums" value={editing && Object.is(editing.cents, field.value) ? editing.raw : field.value > 0 ? formatMoneyInput(field.value) : ''} onChange={(event) => { const raw = event.target.value; const cents = parseMoneyInput(raw) ?? -1; setEditing({ raw, cents }); field.onChange(cents); }} />} />
         {amountError && <FieldError id={`${id}-amount-error`}>{amountError}</FieldError>}
-        {needsApproval && <p role="status" className="rounded-lg border border-warning/40 bg-badge-warning p-3 text-sm text-badge-warning-foreground">{t('needsApproval', { limit: formatMoney(refund.limitCents) })}</p>}
+        {needsApproval && <p role="status" className="rounded-xl border border-warning/40 bg-badge-warning p-3 text-sm text-badge-warning-foreground">{t('needsApproval', { limit: formatMoney(refund.limitCents) })}</p>}
       </Field>
       <Field data-invalid={Boolean(reasonError)} className="gap-2">
         <FieldLabel htmlFor={`${id}-reason`}>{t('reason')}</FieldLabel>
         <FieldDescription id={`${id}-reason-hint`}>{t('reasonHint')}</FieldDescription>
-        <select {...form.register('reason')} id={`${id}-reason`} defaultValue={initialValues?.reason ?? ''} required aria-invalid={Boolean(reasonError)} aria-describedby={`${id}-reason-hint${reasonError ? ` ${id}-reason-error` : ''}`} className="min-h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-invalid:border-destructive">
+        <select {...form.register('reason')} id={`${id}-reason`} defaultValue={initialValues?.reason ?? ''} required aria-invalid={Boolean(reasonError)} aria-describedby={`${id}-reason-hint${reasonError ? ` ${id}-reason-error` : ''}`} className={adminSelect}>
           <option value="">{t('chooseReason')}</option>{STAFF_REFUND_REASONS.map((reason) => <option key={reason} value={reason}>{t(`reasons.${reason}`)}</option>)}
         </select>
         {reasonError && <FieldError id={`${id}-reason-error`}>{reasonError}</FieldError>}

@@ -50,4 +50,16 @@ describe('PriceBreakdown', () => {
     expect(screen.getByText('Platform revenue')).toBeInTheDocument();
     expect(screen.getByText('$12.00')).toBeInTheDocument();
   });
+
+  it('is a card of its own by default, and flat inside another card with the same lines and name', () => {
+    const { rerender } = render(<NextIntlClientProvider locale="en" messages={uiMessages}><PriceBreakdown breakdown={deskBreakdown} variant="poster" /></NextIntlClientProvider>);
+    expect(screen.getByRole('region', { name: 'Price breakdown' })).toHaveClass('shadow-card');
+
+    rerender(<NextIntlClientProvider locale="en" messages={uiMessages}><PriceBreakdown breakdown={deskBreakdown} variant="poster" flat className="mt-4" /></NextIntlClientProvider>);
+    const section = screen.getByRole('region', { name: 'Price breakdown' });
+    expect(section).not.toHaveClass('shadow-card');
+    expect(section).toHaveClass('mt-4');
+    expect(screen.getByRole('heading', { name: 'Price breakdown' })).toBeInTheDocument();
+    expect(screen.getByText('$66.00')).toBeInTheDocument();
+  });
 });

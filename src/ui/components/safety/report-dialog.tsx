@@ -68,8 +68,8 @@ export function ReportForm({ onReport, onClose, onPendingChange, initialResult, 
       <Controller control={form.control} name="reason" render={({ field, fieldState }) => <Field data-invalid={fieldState.invalid} className="gap-2">
         <p id={`${id}-reason-label`} className="font-medium">{t('reason')}</p>
         <FieldDescription id={`${id}-reason-hint`}>{t('reasonHint')}</FieldDescription>
-        <div role="radiogroup" aria-required="true" aria-labelledby={`${id}-reason-label`} aria-invalid={fieldState.invalid} aria-describedby={`${id}-reason-hint${fieldState.error ? ` ${id}-reason-error` : ''}`} className="grid gap-1">
-          {REPORT_REASONS.map((reason, index) => <label key={reason} className={cn('flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2', field.value === reason ? 'border-primary bg-secondary text-secondary-foreground' : 'border-input')}>
+        <div role="radiogroup" aria-required="true" aria-labelledby={`${id}-reason-label`} aria-invalid={fieldState.invalid} aria-describedby={`${id}-reason-hint${fieldState.error ? ` ${id}-reason-error` : ''}`} className="grid gap-2">
+          {REPORT_REASONS.map((reason, index) => <label key={reason} className={cn('flex min-h-11 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2 text-sm transition-[border-color,background-color] duration-200 ease-[var(--ease-out)] has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2 motion-reduce:transition-none', field.value === reason ? 'border-primary/60 bg-primary/[0.045]' : 'border-foreground/[0.09] hover:border-foreground/20')}>
             <input type="radio" name={field.name} value={reason} checked={field.value === reason} onChange={() => field.onChange(reason)} onBlur={field.onBlur} ref={index === 0 ? field.ref : undefined} required disabled={pending} aria-describedby={`${id}-reason-hint${fieldState.error ? ` ${id}-reason-error` : ''}`} className="size-4 shrink-0 accent-primary" />
             <span>{t(`reasons.${reason}`)}</span>
           </label>)}

@@ -4,7 +4,7 @@ import { useId } from 'react';
 import Link from 'next/link';
 import { CalendarDays } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type ISODateTime, type OfferActionId, type OfferView, type TaskOwnerHandlers } from '@/contracts';
+import { routes, type ISODateTime, type MessageSegment, type OfferActionId, type OfferView, type TaskOwnerHandlers } from '@/contracts';
 import { formatDateTime } from '@/shared/format';
 import { cn } from '@/ui/lib/utils';
 import { ActionBar } from '@/ui/components/actions/action-bar';
@@ -23,18 +23,33 @@ export interface OfferCardProps {
   onAction: TaskOwnerHandlers['onOfferAction'];
 }
 
+/** Whether a helper wrote anything (a one-tap offer has no message). */
+export const hasMessage = (segments: MessageSegment[]) => segments.some((segment) => segment.kind === 'masked' || segment.text.trim().length > 0);
+
+/**
+ * One helper's offer on the poster's task: who (rating, verifications), the price and the proposed start, their
+ * message (contact details masked), when it expires, "Compare", and the actions. The card lifts a little on
+ * hover; a card picked for comparison keeps a ring.
+ */
 export function OfferCard({ offer, now, selectable, onAction }: OfferCardProps) {
   const t = useTranslations('offers');
   const status = useOfferStatus(offer.status, 'poster');
   const id = useId();
+  const selected = Boolean(selectable?.selected);
 
-  return <article aria-labelledby={`${id}-title`} className={cn('min-w-0 space-y-4 rounded-xl border bg-card p-4 shadow-card md:p-5', selectable?.selected ? 'border-primary ring-1 ring-primary' : 'border-border')}>
+  return <article
+    aria-labelledby={`${id}-title`}
+    className={cn(
+      'min-w-0 space-y-4 rounded-[1.375rem] border bg-card p-4 shadow-card transition-[transform,box-shadow,border-color] duration-300 ease-[var(--ease-out)] hover:shadow-[0_1px_2px_rgb(23_18_14/0.04),0_22px_44px_-26px_rgb(60_30_10/0.34)] motion-safe:hover:-translate-y-0.5 md:p-5 dark:hover:shadow-[0_1px_2px_rgb(0_0_0/0.4),0_22px_44px_-24px_rgb(0_0_0/0.75)]',
+      selected ? 'border-primary/60 ring-2 ring-primary/20' : 'border-foreground/[0.07] dark:border-white/[0.06]',
+    )}
+  >
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
         <InitialsAvatar initials={offer.helper.initials} photo={offer.helper.photo} />
         <div className="min-w-0">
-          <h3 id={`${id}-title`} className="text-[17px]/6 font-semibold md:text-lg/6.5">
-            <Link href={routes.app.offer(offer.taskId, offer.id)} aria-label={t('viewOffer', { helper: offer.helper.displayName })} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">{offer.helper.displayName}</Link>
+          <h3 id={`${id}-title`} className="font-display text-[17px]/6 font-semibold tracking-[-0.01em] md:text-lg/6.5">
+            <Link href={routes.app.offer(offer.taskId, offer.id)} aria-label={t('viewOffer', { helper: offer.helper.displayName })} className="inline-flex min-h-11 items-center rounded-md underline-offset-4 transition-colors hover:text-primary hover:underline">{offer.helper.displayName}</Link>
           </h3>
           <RatingStars rating={offer.helper.rating} />
         </div>
@@ -45,16 +60,17 @@ export function OfferCard({ offer, now, selectable, onAction }: OfferCardProps) 
       </div>
     </div>
     <VerificationBadges badges={offer.helper.badges} compact />
-    <div className="space-y-2">
-      <p className="text-xl font-semibold"><OfferPrice pricing={offer.pricing} /></p>
+    <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-2">
+      <p className="font-display text-2xl/8 font-semibold tracking-[-0.015em]"><OfferPrice pricing={offer.pricing} /></p>
       <p className="flex items-start gap-2 text-sm tabular-nums"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span><span className="block text-muted-foreground">{t('proposedStart')}</span><time dateTime={offer.proposedStart}>{formatDateTime(offer.proposedStart)}</time></span></p>
     </div>
-    <p className="line-clamp-2 text-sm leading-5"><MaskedText segments={offer.message} /></p>
+    {/* The clamp sits inside the padding, so a third line never peeks into it. */}
+    {hasMessage(offer.message) && <p className="rounded-2xl bg-foreground/[0.035] px-3.5 py-2.5 text-sm leading-6 dark:bg-white/[0.045]"><span className="line-clamp-2"><MaskedText segments={offer.message} /></span></p>}
     {offer.revision > 1 && <p className="text-sm font-medium text-muted-foreground">{t('updated')}</p>}
     <OfferExpiry offer={offer} now={now} />
-    {selectable && <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-input px-3 py-2 text-sm font-medium">
-      <input type="checkbox" checked={selectable.selected} onChange={selectable.onToggle} className="size-5 shrink-0 accent-primary" />
-      <span>{t('select', { helper: offer.helper.displayName })}</span>
+    {selectable && <label className="inline-flex min-h-11 max-w-full cursor-pointer items-center gap-2.5 rounded-full border border-input px-4 py-2 text-sm font-medium transition-[background-color,border-color] duration-200 ease-[var(--ease-out)] hover:border-foreground/40 has-[:checked]:border-primary/60 has-[:checked]:bg-primary/[0.07] has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/30">
+      <input type="checkbox" checked={selectable.selected} onChange={selectable.onToggle} className="size-[1.125rem] shrink-0 cursor-pointer accent-primary focus-visible:outline-none" />
+      <span className="min-w-0">{t('select', { helper: offer.helper.displayName })}</span>
     </label>}
     <ActionBar actions={offer.actions} onAction={(action) => onAction({ offerId: offer.id, action: action as OfferActionId })} />
   </article>;

@@ -70,7 +70,7 @@ export function AdminRefundRequests({ requests, onDecide, now, initialDecision }
   const triggers = useRef(new Map<string, HTMLButtonElement | null>());
   if (requests.length === 0) return null;
   const openRequest = open ? requests.find((request) => request.id === open.requestId) : undefined;
-  return <section aria-labelledby="refund-requests-title" className="space-y-4 rounded-xl border bg-card p-4 shadow-card sm:p-5">
+  return <section aria-labelledby="refund-requests-title" className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]">
     <div className="space-y-1"><h2 id="refund-requests-title" className="text-xl font-semibold">{t('title')}</h2><p className="text-sm text-muted-foreground">{t('hint')}</p></div>
     <ul className="divide-y">{requests.map((request) => {
       const amount = formatMoney(request.amountCents);

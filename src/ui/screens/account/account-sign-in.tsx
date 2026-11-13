@@ -69,10 +69,10 @@ export function AccountSignIn({
           <AlertDescription className="text-foreground">{t(`notice.${notice.result}`, { provider: names(notice.provider) })}</AlertDescription>
         </Alert>
       )}
-      <ul className="divide-y rounded-xl border">
-        <li className="flex min-h-16 items-center gap-3 p-4">
-          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground"><Mail className="size-4" /></span>
-          <span className="min-w-0 flex-1">
+      <ul className="divide-y divide-foreground/[0.07] rounded-2xl border border-foreground/[0.08] dark:divide-white/[0.06] dark:border-white/[0.07]">
+        <li className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-4">
+          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground"><Mail className="size-4" /></span>
+          <span className="min-w-0">
             <span className="block font-medium">{t('emailCode')}</span>
             <span className="block truncate text-sm text-muted-foreground">{methods.email}</span>
           </span>
@@ -81,9 +81,9 @@ export function AccountSignIn({
         {methods.providers.map(({ provider, connectedAt }) => {
           const name = names(provider);
           return (
-            <li key={provider} className="flex min-h-16 flex-wrap items-center gap-3 p-4">
-              <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full border bg-card"><ProviderLogo provider={provider} className="size-4" /></span>
-              <span className="min-w-0 flex-1">
+            <li key={provider} className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-4">
+              <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl border border-foreground/[0.08] bg-card dark:border-white/[0.08]"><ProviderLogo provider={provider} className="size-4" /></span>
+              <span className="min-w-0">
                 <span className="block font-medium">{name}</span>
                 <span className="block text-sm text-muted-foreground">{connectedAt ? t('connectedOn', { date: formatDate(connectedAt) }) : t('notConnected')}</span>
               </span>

@@ -35,10 +35,10 @@ export function BudgetStep({ data }: { data: PostTaskPageData }) {
   const typeId = postingFieldId('budget.type');
   if (!category) return null;
   return <div className="space-y-6">
-    <p className="rounded-lg bg-secondary p-4 text-secondary-foreground">{t('budget.guidance', { market: data.market.name, low: formatMoney(category.priceGuidance.lowCents), high: formatMoney(category.priceGuidance.highCents), unit: t(`budget.units.${category.priceGuidance.unit}`) })}</p>
+    <p className="rounded-2xl bg-secondary/70 p-4 text-foreground dark:bg-secondary/40">{t('budget.guidance', { market: data.market.name, low: formatMoney(category.priceGuidance.lowCents), high: formatMoney(category.priceGuidance.highCents), unit: t(`budget.units.${category.priceGuidance.unit}`) })}</p>
     <PostingField name="budget.type" label={t('budget.type')} hint={t('budget.typeHint')}>
       <div role="radiogroup" aria-label={t('budget.type')} aria-describedby={`${typeId}-hint`} className="grid grid-cols-2 gap-3">
-        {(['fixed', 'hourly'] as const).map((type, index) => <label key={type} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border border-input px-4 has-[:checked]:border-primary has-[:checked]:bg-secondary has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2">
+        {(['fixed', 'hourly'] as const).map((type, index) => <label key={type} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border border-input px-4 transition-[background-color,border-color,box-shadow] duration-200 ease-[var(--ease-out)] hover:border-foreground/40 has-[:checked]:border-primary has-[:checked]:bg-primary/[0.06] has-[:checked]:shadow-[inset_0_0_0_1px_var(--primary)] dark:has-[:checked]:bg-primary/[0.12] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2">
           <input id={index === 0 ? typeId : `${typeId}-hourly`} name="budget.type" type="radio" checked={budget.type === type} onChange={() => { if (budget.type === type) return; setValue('budget', type === 'fixed' ? { type: 'fixed', priceCents: 0 } : { type: 'hourly', rateCents: 0, estimatedHours: category.minHours ?? 1, hoursCap: category.minHours ?? 1 }, { shouldDirty: true }); clearErrors('budget'); }} className="size-5 accent-primary" />{t(`budget.${type}`)}
         </label>)}
       </div>
@@ -56,7 +56,7 @@ export function BudgetStep({ data }: { data: PostTaskPageData }) {
           </PostingField>;
         })}</div>
       </div>}
-    <div className="space-y-5 rounded-xl border bg-card p-4 sm:p-6">
+    <div className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
       <label className="flex min-h-11 cursor-pointer items-center gap-3 font-medium"><input type="checkbox" checked={expense !== undefined} onChange={(event) => { setValue('expenseAllowance', event.target.checked ? { amountCents: 0, description: '' } : undefined, { shouldDirty: true }); clearErrors('expenseAllowance'); }} className="size-5 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" />{t('budget.addExpense')}</label>
       <p className="text-sm text-muted-foreground">{t('budget.expenseHint')}</p>
       {expense !== undefined && <>

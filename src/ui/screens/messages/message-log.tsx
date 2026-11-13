@@ -80,23 +80,41 @@ export function MessageLog({ messages, otherParty, now, className }: { messages:
       atBottom.current = log.scrollHeight - log.scrollTop - log.clientHeight <= 40;
       scrollTop.current = log.scrollTop;
     }}
-    className={cn('h-[min(60dvh,36rem)] min-h-64 space-y-6 overflow-y-auto overscroll-contain rounded-xl border bg-card p-3 shadow-card [overflow-anchor:none] sm:p-5', className)}>
+    className={cn('space-y-6 overflow-y-auto overscroll-contain px-3 py-4 [overflow-anchor:none] sm:px-5 sm:py-5', className)}>
     {messages.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">{t('empty')}</p>}
-    {Array.from(days, ([day, entries]) => <section key={day} aria-label={formatDate(entries[0]!.createdAt, { withYear: true })} className="space-y-4">
+    {Array.from(days, ([day, entries]) => <section key={day} aria-label={formatDate(entries[0]!.createdAt, { withYear: true })} className="space-y-3">
       {/* A day separator, not a sticky chip: a sticky one covered photos while scrolling (UI-021). */}
-      <h2 className="mx-auto w-fit rounded-full border bg-card px-3 py-1 text-center text-sm font-medium text-muted-foreground"><time dateTime={day}>{formatDate(entries[0]!.createdAt, { withYear: true })}</time></h2>
-      <ol className="space-y-4">
+      <h2 className="mx-auto w-fit rounded-full bg-foreground/[0.05] px-3 py-1 text-center text-xs font-semibold text-muted-foreground dark:bg-white/[0.07]"><time dateTime={day}>{formatDate(entries[0]!.createdAt, { withYear: true })}</time></h2>
+      <ol className="space-y-2.5">
         {entries.map((message) => {
           const sender = message.sender === 'me' ? t('you') : message.sender === 'them' ? otherParty.displayName : t('system');
           const isNotice = message.kind !== 'text';
-          return <li key={message.id} className={cn('flex min-w-0', isNotice ? 'justify-center' : message.sender === 'me' ? 'justify-end' : 'justify-start')}>
-            <article className={cn('min-w-0 space-y-2 [overflow-wrap:anywhere]', isNotice ? 'max-w-full px-2 py-2 text-center text-sm text-muted-foreground' : 'max-w-[90%] rounded-xl border p-3 sm:max-w-[80%] sm:p-4', !isNotice && (message.sender === 'me' ? 'border-secondary bg-secondary text-secondary-foreground' : 'bg-background'))}>
-              <p className={cn('text-sm font-semibold', isNotice && 'sr-only')}>{sender}</p>
-              <p className={cn(isNotice ? 'text-sm' : 'text-base leading-6')}><MessageContent message={message} /></p>
-              {message.attachments.length > 0 && <ul aria-label={t('photos')} className="grid max-w-96 grid-cols-1 gap-3 sm:grid-cols-2">
+          const mine = message.sender === 'me';
+          const time = <time dateTime={message.createdAt} title={formatRelative(message.createdAt, now)} className={cn('text-xs tabular-nums', isNotice ? 'text-muted-foreground' : 'block', !isNotice && (mine ? 'text-right' : 'text-muted-foreground'))}>
+            <span aria-hidden="true">{formatTime(message.createdAt)}</span><span className="sr-only">{formatDateTime(message.createdAt)}</span>
+          </time>;
+          // Updates ("On the way", an offer received…) are small notes between the bubbles.
+          if (isNotice) return <li key={message.id} className="flex min-w-0 justify-center">
+            <article className="inline-flex max-w-full flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 rounded-full bg-foreground/[0.045] px-3.5 py-1.5 text-center text-sm text-muted-foreground [overflow-wrap:anywhere] dark:bg-white/[0.06]">
+              <p className="sr-only">{sender}</p>
+              <p className="text-sm font-medium text-foreground/80"><MessageContent message={message} /></p>
+              {time}
+            </article>
+          </li>;
+          return <li key={message.id} className={cn('flex min-w-0', mine ? 'justify-end' : 'justify-start')}>
+            <article className={cn(
+              'min-w-0 max-w-[86%] space-y-1.5 rounded-[1.25rem] px-3.5 py-2.5 [overflow-wrap:anywhere] sm:max-w-[75%] sm:px-4 sm:py-3',
+              mine
+                ? 'rounded-br-md bg-secondary text-secondary-foreground'
+                : 'rounded-bl-md border border-foreground/[0.07] bg-background shadow-[0_1px_2px_rgb(23_18_14/0.05)] dark:border-white/[0.07]',
+            )}>
+              {/* Your own bubbles don't need your name on them; it's still read out. */}
+              <p className={cn('text-xs font-semibold text-muted-foreground', mine && 'sr-only')}>{sender}</p>
+              <p className="text-[15px] leading-6"><MessageContent message={message} /></p>
+              {message.attachments.length > 0 && <ul aria-label={t('photos')} className="grid max-w-96 grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
                 {message.attachments.map((photo, index) => <li key={photo.id} className="min-w-0"><MessagePhoto photo={photo} number={index + 1} count={message.attachments.length} sender={sender} /></li>)}
               </ul>}
-              <time dateTime={message.createdAt} title={formatRelative(message.createdAt, now)} className="block text-sm text-muted-foreground tabular-nums"><span aria-hidden="true">{formatTime(message.createdAt)}</span><span className="sr-only">{formatDateTime(message.createdAt)}</span></time>
+              {time}
             </article>
           </li>;
         })}

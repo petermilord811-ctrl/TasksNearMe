@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { ActionDescriptor, ActionResult } from '@/contracts';
 import { formatTime } from '@/shared/format';
+import { actionTray, trayGap } from '@/ui/components/bookings/surface';
 import { cn } from '@/ui/lib/utils';
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
@@ -149,8 +150,15 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
 
   if (actions.length === 0) return null;
 
+  // In the page: a hairline above the actions. Sticky, and fixed on phones: a glass tray kept above the tab dock by
+  // `bottom-app-navigation` (`--app-bottom-offset`), floating `--action-tray-gap` higher, so the next step is always
+  // in reach. A fixed tray floats by its bottom margin; a sticky one by a small lift (see `actionTray`).
   return (
-    <div ref={barRef} className={cn('min-w-0 border-t border-border bg-background pt-4', sticky && 'sticky bottom-app-navigation z-10 pb-[max(1rem,env(safe-area-inset-bottom))]', mobileFixed && 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-app-navigation max-lg:z-10 max-lg:mx-auto max-lg:my-0! max-lg:max-h-[60dvh] max-lg:max-w-[calc(45rem+2*var(--page-gutter))] max-lg:overflow-y-auto max-lg:px-gutter max-lg:pb-[max(1rem,env(safe-area-inset-bottom))]')}>
+    <div ref={barRef} className={cn(
+      'min-w-0',
+      sticky ? actionTray : 'border-t border-foreground/[0.08] pt-4 dark:border-white/[0.08]',
+      mobileFixed && `${trayGap} max-lg:fixed max-lg:inset-x-2.5 max-lg:bottom-app-navigation max-lg:z-10 max-lg:mx-auto max-lg:mt-0! max-lg:mb-(--action-tray-gap)! max-lg:translate-y-0 max-lg:max-h-[60dvh] max-lg:max-w-[45rem] max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:rounded-[1.375rem] max-lg:border max-lg:border-foreground/[0.07] max-lg:app-glass max-lg:p-3 max-lg:shadow-[0_18px_40px_-24px_rgb(40_20_5/0.45)] dark:max-lg:border-white/[0.08] dark:max-lg:shadow-[0_18px_40px_-20px_rgb(0_0_0/0.75)]`,
+    )}>
       {description && <div className="mb-3 text-sm">{description}</div>}
       <div role="group" aria-label={feedback('actionBar')} aria-busy={pendingId !== null} className="flex flex-wrap items-start gap-3">
         {renderAction(actions[0], 'first')}
@@ -162,7 +170,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
             <SheetTrigger asChild><Button ref={moreTrigger} data-action-more variant="outline" disabled={pendingId !== null} className="min-h-11 min-w-11 lg:hidden"><Ellipsis aria-hidden="true" className="size-4" />{feedback('more')}</Button></SheetTrigger>
             <SheetContent side="bottom" onCloseAutoFocus={(event) => {
               if (customFlowRequested.current) { event.preventDefault(); customFlowRequested.current = false; }
-            }} className="max-h-[85dvh] overflow-y-auto rounded-t-xl pb-[max(1rem,env(safe-area-inset-bottom))]">
+            }} className="max-h-[85dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
               <SheetHeader><SheetTitle>{feedback('moreTitle')}</SheetTitle><SheetDescription>{feedback('moreDescription')}</SheetDescription></SheetHeader>
               <div className="grid gap-4 px-4 pb-4">{actions.slice(1).map((action) => renderAction(action, 'more'))}</div>
               <div aria-live="polite" aria-atomic="true" className="px-4 pb-4">

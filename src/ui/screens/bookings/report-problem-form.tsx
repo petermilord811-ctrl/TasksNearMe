@@ -9,6 +9,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CircleAlert, ShieldCheck } from 'lucide-react';
 import { PROBLEM_REASONS, reportProblemInputSchema, routes, type ActionResult, type Photo, type ReportProblemInput } from '@/contracts';
 import { EvidencePhotoPicker } from '@/ui/components/bookings/evidence-photo-picker';
+import { actionTray, note, surface, surfacePad } from '@/ui/components/bookings/surface';
+import { cn } from '@/ui/lib/utils';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
@@ -97,13 +99,13 @@ export function ReportProblemForm({ data, handlers, initialResult, initialPendin
       if (disabled || locked.current || confirmation) { event.preventDefault(); return; }
       void form.handleSubmit((input) => { setResult(undefined); setConfirmation(input); }, focusInvalid)(event);
     }}>
-      <fieldset disabled={disabled} className="min-w-0 space-y-6 rounded-xl border bg-card p-4 shadow-card sm:p-6">
+      <fieldset disabled={disabled} className={cn(surface, surfacePad, 'min-w-0 space-y-6')}>
         <legend className="sr-only">{t('title')}</legend>
         <Controller control={form.control} name="reason" render={({ field, fieldState }) => <Field data-invalid={fieldState.invalid} className="gap-2">
           <p id={`${id}-reason-label`} className="font-medium">{t('reason')}</p>
           <FieldDescription id={`${id}-reason-hint`}>{t('reasonHint')}</FieldDescription>
-          <RadioGroup name={field.name} value={field.value ?? ''} onValueChange={field.onChange} onBlur={field.onBlur} disabled={disabled} aria-labelledby={`${id}-reason-label`} aria-describedby={`${id}-reason-hint${fieldState.error ? ` ${id}-reason-error` : ''}`} aria-invalid={fieldState.invalid} aria-required="true" className="gap-1">
-            {PROBLEM_REASONS.map((reason, index) => <div key={reason} className="flex min-h-11 items-center gap-2">
+          <RadioGroup name={field.name} value={field.value ?? ''} onValueChange={field.onChange} onBlur={field.onBlur} disabled={disabled} aria-labelledby={`${id}-reason-label`} aria-describedby={`${id}-reason-hint${fieldState.error ? ` ${id}-reason-error` : ''}`} aria-invalid={fieldState.invalid} aria-required="true" className="gap-2">
+            {PROBLEM_REASONS.map((reason, index) => <div key={reason} className={cn('flex min-h-12 items-center gap-2 rounded-2xl border border-foreground/[0.08] pl-1 pr-3 transition-[border-color,background-color] duration-200 hover:border-foreground/20 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring motion-reduce:transition-none', field.value === reason && 'border-primary/60 bg-primary/[0.045] hover:border-primary/60')}>
               <RadioGroupItem id={`${id}-${reason}`} value={reason} ref={index === 0 ? (node) => { reasonInput.current = node; field.ref(node); } : undefined} className="size-11 shrink-0" />
               <label htmlFor={`${id}-${reason}`} className="flex min-h-11 flex-1 cursor-pointer items-center text-sm">{t(`reasons.${reason}`)}</label>
             </div>)}
@@ -122,14 +124,14 @@ export function ReportProblemForm({ data, handlers, initialResult, initialPendin
           form.setValue('photoIds', next.map((photo) => photo.id), { shouldDirty: true, shouldValidate: true });
         }} onUploadPhoto={handlers.onUploadPhoto} maxPhotos={6} maxPhotoMegabytes={data.maxPhotoMegabytes} disabled={disabled} onBusyChange={setUploading} inputRef={photoInput} error={form.formState.errors.photoIds?.message ? errorText(form.formState.errors.photoIds.message) : undefined} />
       </fieldset>
-      <p className="flex items-start gap-2 rounded-lg bg-secondary p-4 text-sm text-secondary-foreground"><ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('supportNote')}</p>
-      <div ref={feedback} tabIndex={-1} className="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+      <p className={cn(note, 'flex items-start gap-2')}><ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('supportNote')}</p>
+      <div ref={feedback} tabIndex={-1} className="rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
         {specificError ? <div aria-live="polite" aria-atomic="true"><Alert role="status" className="border-destructive/30"><CircleAlert aria-hidden="true" className="text-destructive" /><AlertDescription className="space-y-3 text-foreground">
           <p>{t(`errors.${specificError}`)}</p>
           {specificError === 'expired' ? <Link href={routes.help()} className="inline-flex min-h-11 items-center rounded-md text-primary underline underline-offset-4">{t('getHelp')}</Link> : <Button type="button" variant="outline" disabled={disabled} onClick={() => router.refresh()}>{t('reload')}</Button>}
         </AlertDescription></Alert></div> : <FormFeedback result={genericFeedback} successMessage={t('success')} />}
       </div>
-      <div ref={submitBar} className="sticky bottom-app-navigation z-10 border-t bg-background pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div ref={submitBar} className={actionTray}>
         <Button ref={submitButton} type="submit" disabled={disabled} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner aria-hidden="true" />}{t(pending ? 'submitting' : 'submit')}</Button>
       </div>
     </form>

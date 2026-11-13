@@ -1,7 +1,9 @@
 import Link from 'next/link';
-import { ArrowLeft, MessageSquareText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, MessageSquareText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type ProposeChangeHandlers, type ProposeChangePageData } from '@/contracts';
+import { backArrow, backLink, pageTitle, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
+import { cn } from '@/ui/lib/utils';
 import { ProposeChangeForm, type ProposeChangeFormProps } from './propose-change-form';
 
 export interface ProposeChangeScreenProps {
@@ -18,12 +20,12 @@ export function ProposeChangeScreen(props: ProposeChangeScreenProps) {
 export function ProposeChangeContent({ data, handlers, initialInput, initialResult }: ProposeChangeScreenProps & Pick<ProposeChangeFormProps, 'initialInput' | 'initialResult'>) {
   const t = useTranslations('changes.propose');
   return <div className="mx-auto max-w-reading space-y-6">
-    <Link href={routes.app.booking(data.booking.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary hover:underline"><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
-    <header className="space-y-2"><h1 className="font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t('title')}</h1><p className="break-words text-muted-foreground">{data.booking.title}</p></header>
-    {data.openChangeId ? <section className="space-y-3 rounded-xl border border-info/30 bg-card p-4 shadow-card sm:p-6">
-      <h2 className="flex items-center gap-2 font-heading text-xl font-semibold"><MessageSquareText aria-hidden="true" className="size-5 shrink-0 text-info" />{t('blockedTitle')}</h2>
-      <p>{t('blockedDescription')}</p>
-      <Link href={routes.app.bookingChange(data.booking.id, data.openChangeId)} className="inline-flex min-h-11 items-center rounded-md text-primary underline underline-offset-4">{t('viewChange')}</Link>
+    <Link href={routes.app.booking(data.booking.id)} className={backLink}><ArrowLeft aria-hidden="true" className={backArrow} />{t('back')}</Link>
+    <header className="space-y-2"><h1 className={pageTitle}>{t('title')}</h1><p className="break-words text-muted-foreground">{data.booking.title}</p></header>
+    {data.openChangeId ? <section className={cn(surface, surfacePad, 'space-y-3 border-info/30 dark:border-info/35')}>
+      <h2 className={cn(sectionTitle, 'flex items-center gap-3')}><span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-info/12 text-info"><MessageSquareText className="size-4.5" /></span>{t('blockedTitle')}</h2>
+      <p className="text-pretty">{t('blockedDescription')}</p>
+      <Link href={routes.app.bookingChange(data.booking.id, data.openChangeId)} className="group/view inline-flex min-h-11 items-center gap-2 rounded-md font-medium text-primary underline underline-offset-4">{t('viewChange')}<ArrowRight aria-hidden="true" className="size-4 shrink-0 transition-transform duration-200 ease-[var(--ease-out)] group-hover/view:translate-x-0.5 motion-reduce:transition-none" /></Link>
     </section> : <ProposeChangeForm key={data.booking.id} data={data} handlers={handlers} initialInput={initialInput} initialResult={initialResult} />}
   </div>;
 }

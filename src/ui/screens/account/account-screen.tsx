@@ -13,7 +13,7 @@ import { AccountPreferences } from './account-preferences';
 import { AccountPrivacy, AccountSignOut } from './account-privacy';
 import { AccountSignIn } from './account-sign-in';
 
-const cardClass = 'rounded-xl border bg-card p-4 shadow-card sm:p-6';
+const cardClass = 'rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6';
 
 export function AccountScreen({ data, handlers, initialDialog }: {
   data: AccountPageData;

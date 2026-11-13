@@ -18,7 +18,7 @@ function CaseRow({ item, now }: { item: SupportCaseRow; now: ISODateTime }) {
   const t = useTranslations('support');
   const status = useCaseStatus(item.status, item.viewerRole);
   return <li>
-    <Link href={routes.app.supportCase(item.id)} className="flex min-w-0 items-center gap-3 rounded-xl border bg-card p-4 shadow-card transition-colors hover:bg-accent sm:p-5">
+    <Link href={routes.app.supportCase(item.id)} className="flex min-w-0 items-center gap-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card transition-colors hover:bg-accent sm:p-5">
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted-foreground">{t(`kinds.${item.kind}`)}</span>

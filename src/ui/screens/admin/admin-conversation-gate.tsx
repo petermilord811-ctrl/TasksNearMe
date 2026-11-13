@@ -52,7 +52,7 @@ export function AdminConversationReader({ conversation, now }: { conversation: A
     <p role="status" className="flex items-center gap-2 text-sm font-medium text-success"><LockKeyhole aria-hidden="true" className="size-4" />{t('logged')}</p>
     <h3 className="text-lg font-semibold">{conversation.title}</h3>
     <p className="text-sm text-muted-foreground">{t('people', { names: conversation.people.map(({ displayName }) => displayName).join(', ') })}</p>
-    <ol aria-label={t('messages')} className="space-y-3">{conversation.messages.map((message) => <li key={message.id} className="space-y-2 rounded-lg border bg-background p-3">
+    <ol aria-label={t('messages')} className="space-y-3">{conversation.messages.map((message) => <li key={message.id} className="space-y-2 rounded-xl border border-foreground/[0.08] bg-foreground/[0.02] p-3 dark:border-white/[0.08] dark:bg-white/[0.02]">
       <p className="text-sm font-semibold">{message.sender?.displayName ?? t(message.kind === 'status' ? 'bookingUpdate' : 'system')}</p>
       <p className="whitespace-pre-wrap text-sm leading-6 [overflow-wrap:anywhere]">{message.body}</p>
       {Boolean(message.photos?.length) && <ul aria-label={t('photos')} className="grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">{message.photos!.map((photo, index) => <li key={photo.id}><CasePhoto photo={photo} number={index + 1} count={message.photos!.length} sender={message.sender?.displayName ?? t('system')} /></li>)}</ul>}
@@ -74,7 +74,7 @@ export function AdminConversationGate({ context, onRevealConversation, now, init
   const [busy, setBusy] = useState(false);
   const [conversation, setConversation] = useState(initialConversation);
   const reader = useRef<HTMLDivElement>(null);
-  return <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
+  return <section className="space-y-3 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]">
     <h2 className="text-xl font-semibold">{t('title')}</h2>
     <p className="text-sm font-medium">{context.title}</p>
     <Dialog open={open} onOpenChange={(next) => { if (!busy) setOpen(next); }}>

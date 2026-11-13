@@ -50,19 +50,19 @@ export function BookingSheetFrame({ title, description, children, emergency, ale
   };
   const body = <div className="min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 sm:px-6">{children}</div>;
   if (alert) return <AlertDialog open={open} onOpenChange={changeOpen}>
-    <AlertDialogContent className="inset-x-0 top-auto bottom-0 flex max-h-[92dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-b-none rounded-t-xl p-0 pb-[env(safe-area-inset-bottom)] sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl" onEscapeKeyDown={(event) => { if (locked) event.preventDefault(); }} onCloseAutoFocus={restoreFocus}>
+    <AlertDialogContent className="inset-x-0 top-auto bottom-0 flex max-h-[92dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-b-none rounded-t-[1.75rem] p-0 pb-[env(safe-area-inset-bottom)] sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem]" onEscapeKeyDown={(event) => { if (locked) event.preventDefault(); }} onCloseAutoFocus={restoreFocus}>
       {emergency}
       <AlertDialogHeader className="shrink-0 place-items-start p-4 text-left sm:p-6"><AlertDialogTitle>{title}</AlertDialogTitle><AlertDialogDescription>{description}</AlertDialogDescription></AlertDialogHeader>
       {body}
-      <div className="shrink-0 border-t p-4 sm:px-6"><AlertDialogCancel disabled={locked} className="w-full">{t('back')}</AlertDialogCancel></div>
+      <div className="shrink-0 border-t border-foreground/[0.07] p-4 sm:px-6"><AlertDialogCancel disabled={locked} className="w-full">{t('back')}</AlertDialogCancel></div>
     </AlertDialogContent>
   </AlertDialog>;
   return <Sheet open={open} onOpenChange={changeOpen}>
-    <SheetContent side="bottom" showCloseButton={false} className="max-h-[92dvh] gap-0 rounded-t-xl pb-[env(safe-area-inset-bottom)] sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl" onEscapeKeyDown={(event) => { if (locked) event.preventDefault(); }} onInteractOutside={(event) => { if (locked) event.preventDefault(); }} onCloseAutoFocus={restoreFocus}>
+    <SheetContent side="bottom" showCloseButton={false} className="max-h-[92dvh] gap-0 pb-[env(safe-area-inset-bottom)] sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem] sm:border" onEscapeKeyDown={(event) => { if (locked) event.preventDefault(); }} onInteractOutside={(event) => { if (locked) event.preventDefault(); }} onCloseAutoFocus={restoreFocus}>
       {emergency}
       <SheetHeader className="shrink-0 p-4 sm:p-6"><SheetTitle>{title}</SheetTitle><SheetDescription>{description}</SheetDescription></SheetHeader>
       {body}
-      <div className="shrink-0 border-t p-4 sm:px-6"><Button type="button" variant="outline" disabled={locked} className="w-full" onClick={() => changeOpen(false)}>{t('back')}</Button></div>
+      <div className="shrink-0 border-t border-foreground/[0.07] p-4 sm:px-6"><Button type="button" variant="outline" disabled={locked} className="w-full" onClick={() => changeOpen(false)}>{t('back')}</Button></div>
     </SheetContent>
   </Sheet>;
 }
@@ -120,7 +120,7 @@ export function SheetFeedback({ result, successMessage, feedbackRef }: { result?
   const router = useRouter();
   // Keep a summary even when field errors are also shown (including unrecognized server fields).
   const genericResult = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
-  return <div ref={feedbackRef} tabIndex={-1} className="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+  return <div ref={feedbackRef} tabIndex={-1} className="rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
     {result && !result.ok && (result.code === 'not_allowed' || result.code === 'version_conflict') ? <div aria-live="polite"><Alert role="status" className="border-destructive/30"><AlertDescription className="space-y-2 text-foreground"><p>{t('changed')}</p><Button type="button" variant="outline" onClick={() => router.refresh()}>{t('reload')}</Button></AlertDescription></Alert></div> : <FormFeedback result={genericResult} successMessage={successMessage} errorMessage={result && !result.ok ? feedback(`error.${result.code}`) : undefined} />}
   </div>;
 }

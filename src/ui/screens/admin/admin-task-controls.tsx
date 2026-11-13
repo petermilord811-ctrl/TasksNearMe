@@ -22,6 +22,7 @@ import { Button } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
+import { adminSelect } from './admin-ui';
 
 interface ModerationValues {
   reason: string;
@@ -36,7 +37,7 @@ export interface AdminTaskPreviewState {
   initialPending?: boolean;
 }
 
-const selectClass = 'min-h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-invalid:border-destructive';
+const selectClass = adminSelect;
 
 function ModerationForm({ actionId, data, handlers, onBusy, onCancel, onSuccess, initialValues, initialResult, initialPending = false }: {
   actionId: TaskModerationActionId;
@@ -89,7 +90,7 @@ function ModerationForm({ actionId, data, handlers, onBusy, onCancel, onSuccess,
     {actionId === 'remove_photo' && <fieldset className="space-y-2" aria-describedby={photoError ? `${id}-photo-error` : undefined}>
       <legend className="text-sm font-medium">{t('dialog.photo')}</legend>
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">{data.photos.map((photo, index) => <li key={photo.id}>
-        <label className="block cursor-pointer space-y-1 rounded-lg border p-1.5 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-ring">
+        <label className="block cursor-pointer space-y-1 rounded-xl border border-foreground/[0.1] p-1.5 transition-[border-color,box-shadow] duration-200 hover:border-foreground/[0.25] has-[:checked]:border-primary has-[:checked]:ring-[3px] has-[:checked]:ring-ring/30">
           {/* The visible "Photo N" names the choice; the thumbnail is decoration inside the label. */}
           <Image src={photo.src} alt="" width={photo.width ?? 400} height={photo.height ?? 300} className="aspect-4/3 w-full rounded-md object-cover" />
           <span className="flex min-h-11 items-center gap-2 px-1 text-sm"><input type="radio" value={photo.id} disabled={pending} {...form.register('photoId')} className="size-4 accent-primary" />{t('dialog.photoOption', { number: index + 1 })}</span>

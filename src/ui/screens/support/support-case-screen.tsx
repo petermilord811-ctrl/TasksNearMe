@@ -28,14 +28,22 @@ function CaseEvent({ event, now, viewerRole }: { event: CaseEventView; now: ISOD
   const sender = t(`sender.${event.from}`);
   const notice = event.kind === 'status';
   return <li className={cn('flex min-w-0', notice ? 'justify-center' : event.from === 'me' ? 'justify-end' : 'justify-start')}>
-    <article className={cn('min-w-0 space-y-2 [overflow-wrap:anywhere]', notice ? 'max-w-full px-2 py-2 text-center text-sm text-muted-foreground' : 'max-w-[90%] rounded-xl border p-3 sm:max-w-[80%] sm:p-4', !notice && (event.from === 'me' ? 'border-secondary bg-secondary text-secondary-foreground' : 'bg-background'))}>
-      {!notice && <p className="text-sm font-semibold">{sender}</p>}
+    {/* The same bubbles as messages: yours on the right, support's on the left, status changes as small notes. */}
+    <article className={cn(
+      'min-w-0 [overflow-wrap:anywhere]',
+      notice
+        ? 'max-w-full space-y-1 rounded-2xl bg-foreground/[0.045] px-4 py-2 text-center text-sm text-muted-foreground dark:bg-white/[0.06]'
+        : cn('max-w-[86%] space-y-1.5 rounded-[1.25rem] px-3.5 py-2.5 sm:max-w-[75%] sm:px-4 sm:py-3', event.from === 'me'
+          ? 'rounded-br-md bg-secondary text-secondary-foreground'
+          : 'rounded-bl-md border border-foreground/[0.07] bg-background shadow-[0_1px_2px_rgb(23_18_14/0.05)] dark:border-white/[0.07]'),
+    )}>
+      {!notice && <p className="text-xs font-semibold">{sender}</p>}
       {notice && event.status && <CaseStatusLine status={event.status} viewerRole={viewerRole} />}
       {event.body && <p className="whitespace-pre-wrap leading-6">{event.body}</p>}
       {Boolean(event.photos?.length) && <ul aria-label={t('photos')} className="grid max-w-96 grid-cols-1 gap-3 sm:grid-cols-2">
         {event.photos!.map((photo, index) => <li key={photo.id} className="min-w-0"><CasePhoto photo={photo} number={index + 1} count={event.photos!.length} sender={sender} /></li>)}
       </ul>}
-      <time dateTime={event.at} title={formatRelative(event.at, now)} className="block text-sm tabular-nums text-muted-foreground">{formatDateTime(event.at)}</time>
+      <time dateTime={event.at} title={formatRelative(event.at, now)} className={cn('block text-xs tabular-nums', event.from === 'me' && !notice ? 'text-right' : 'text-muted-foreground')}>{formatDateTime(event.at)}</time>
     </article>
   </li>;
 }
@@ -59,17 +67,17 @@ export function SupportCaseContent({ data, handlers, now, replyState }: SupportC
       <p className="text-sm tabular-nums text-muted-foreground">{t('opened', { date: formatDate(data.case.openedAt, { withYear: true }) })}</p>
       {data.case.bookingId && <Link href={routes.app.booking(data.case.bookingId)} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary underline underline-offset-4">{t('booking')}<ArrowUpRight aria-hidden="true" className="size-4" /></Link>}
     </div>
-    {data.case.description && <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-6">
-      <h2 className="text-xl font-semibold">{t('description')}</h2>
+    {data.case.description && <section className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6">
+      <h2 className="font-display text-xl font-semibold tracking-[-0.015em]">{t('description')}</h2>
       <p className="whitespace-pre-wrap leading-7">{data.case.description}</p>
     </section>}
     <section className="space-y-4">
-      <h2 className="text-xl font-semibold">{t('conversation')}</h2>
-      <div role="log" aria-label={t('conversation')} aria-live="polite" aria-relevant="additions text" className="rounded-xl border bg-card p-3 shadow-card sm:p-5">
-        {data.events.length ? <ol className="space-y-4">{data.events.map((event) => <CaseEvent key={event.id} event={event} now={now} viewerRole={data.case.viewerRole} />)}</ol> : <p className="py-8 text-center text-sm text-muted-foreground">{t('emptyConversation')}</p>}
+      <h2 className="font-display text-xl font-semibold tracking-[-0.015em]">{t('conversation')}</h2>
+      <div role="log" aria-label={t('conversation')} aria-live="polite" aria-relevant="additions text" className="rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-3 shadow-card sm:p-5">
+        {data.events.length ? <ol className="space-y-2.5">{data.events.map((event) => <CaseEvent key={event.id} event={event} now={now} viewerRole={data.case.viewerRole} />)}</ol> : <p className="py-8 text-center text-sm text-muted-foreground">{t('emptyConversation')}</p>}
       </div>
     </section>
-    {data.canReply ? <section className="space-y-4"><h2 className="text-xl font-semibold">{t('reply')}</h2><SupportReplyForm key={data.case.id} handlers={handlers} {...replyState} /></section> : <div className="space-y-3 rounded-xl border bg-muted p-4 sm:p-6">
+    {data.canReply ? <section className="space-y-4"><h2 className="font-display text-xl font-semibold tracking-[-0.015em]">{t('reply')}</h2><SupportReplyForm key={data.case.id} handlers={handlers} {...replyState} /></section> : <div className="space-y-3 rounded-[1.375rem] bg-muted p-4 sm:p-6">
       <p className="flex items-start gap-3"><LockKeyhole aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" /><span>{t('closed')}</span></p>
       <Link href={routes.app.support()} className={buttonVariants({ variant: 'outline' })}>{t('newRequest')}</Link>
     </div>}

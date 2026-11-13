@@ -43,8 +43,9 @@ export function PublicShell({ viewer, children, currentPath, variant = 'default'
   );
   const linkClass = 'flex min-h-11 items-center rounded-md py-2 text-sm text-muted-foreground transition-colors hover:text-foreground';
 
+  // The landing page lays its own paper under its sections; every other public page sits on the same paper.
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className={variant === 'landing' ? 'flex min-h-dvh flex-col bg-background' : 'paper flex min-h-dvh flex-col'}>
       <SkipLink />
       <ScrollbarActivity />
       <TopBar

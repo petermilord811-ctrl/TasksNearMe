@@ -71,7 +71,7 @@ export function SavedHelpersList({ data, handlers, preview }: { data: SavedHelpe
   const [removedName, setRemovedName] = useState(preview?.result?.ok && preview.result.code === 'updated' ? data.helpers.find((helper) => helper.id === preview.helperId)?.displayName : undefined);
 
   return <section aria-labelledby={id} className="space-y-4">
-    <h2 id={id} ref={heading} tabIndex={-1} className="text-xl font-semibold lg:text-[22px]">{t('listTitle', { count: data.helpers.length })}</h2>
+    <h2 id={id} ref={heading} tabIndex={-1} className="font-display text-xl font-semibold tracking-[-0.015em] lg:text-[22px]">{t('listTitle', { count: data.helpers.length })}</h2>
     <FormFeedback result={removedName ? { ok: true, code: 'updated' } : undefined} successMessage={removedName ? t('removed', { name: removedName }) : undefined} />
     {data.helpers.length ? <ul className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
       {data.helpers.map((helper) => <SavedHelperItem key={helper.id} helper={helper} handlers={handlers} preview={preview?.helperId === helper.id ? preview : undefined} onRemoved={(name) => {
