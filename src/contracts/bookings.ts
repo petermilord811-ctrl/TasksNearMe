@@ -85,6 +85,12 @@ export interface BookingConfirmPageData {
   /** Set when the offer can't be booked. The page explains why and links back to the task; no payment form. */
   unavailable?: BookingUnavailableReason;
   /**
+   * The start is more than 14 days away (blueprint 04): nothing is charged now. The card is kept and charged on
+   * `chargeAt` (72 h before; a retry at 48 h); still unpaid at `payBy` (24 h before), the booking is canceled and
+   * the task opens for offers again. A new card is always kept.
+   */
+  paysLater?: { chargeAt: ISODateTime; payBy: ISODateTime };
+  /**
    * The client's TasksNearMe credit: it comes back to their card when the job is done, up to what the
    * platform earns on it (so it never costs the helper anything). Expiring soonest first.
    */

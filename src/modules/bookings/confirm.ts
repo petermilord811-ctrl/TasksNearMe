@@ -42,6 +42,7 @@ import { isUniqueViolation } from '@/platform/db/errors';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { bookingTerms, bookings } from './schema';
+import { ONE_TIME_CHARGE_PLAN, chargeSchedule, firstChargeAt, paysLater } from './series-domain';
 
 /**
  * Booking an offer (blueprint 02 J4, 03 §4 and §6.1, 04 §4): the confirmation page, paying, the bank
@@ -169,6 +170,14 @@ function breakdownFor(fees: Parameters<typeof quoteBreakdown>[0], task: TaskRow,
  * The confirmation page for the poster's own task and one of its offers (null: not theirs, or gone).
  * Once that offer is booked, the page sends the poster to the booking instead.
  */
+/** A booking far ahead is paid later: when its card is charged, and the deadline (blueprint 04). */
+export function paysLaterOf(start: Date, now: Date): BookingConfirmPageData['paysLater'] {
+  if (!paysLater(start, now)) return undefined;
+  const { deadline } = chargeSchedule(ONE_TIME_CHARGE_PLAN, start);
+  const chargeAt = firstChargeAt(ONE_TIME_CHARGE_PLAN, start, now);
+  return chargeAt ? { chargeAt: chargeAt.toISOString(), payBy: deadline.toISOString() } : undefined;
+}
+
 export async function getBookingConfirmPage(
   deps: BookingDeps,
   posterId: string,
@@ -203,6 +212,7 @@ export async function getBookingConfirmPage(
       ? { bookingId: live.id, expiresAt: live.fundingExpiresAt.toISOString(), failure: await lastFailure(db, live.id) }
       : null;
   const unavailable = unavailableReason(ctx.task, ctx.offer, live, now);
+  const later = paysLaterOf(ctx.offer.proposedStart, now);
   const { id, title, categorySlug, location, schedule } = found.view;
 
   return {
@@ -222,6 +232,7 @@ export async function getBookingConfirmPage(
       cancellation: cancellationSummary(policy.cancellation, breakdown, proposedStart),
       payment: await paymentPanel(db, posterId, deps.payments),
       ...(credit ? { credit } : {}),
+      ...(later ? { paysLater: later } : {}),
       ...(pending
         ? { pending: { bookingId: pending.bookingId, expiresAt: pending.expiresAt, ...(pending.failure ? { lastFailure: pending.failure } : {}) } }
         : {}),
@@ -327,6 +338,8 @@ export async function confirmBooking(
   if ('ok' in method) return method;
 
   const pricing = offerPricing(ctx.offer);
+  // More than 14 days ahead: booked now, paid later (the card is kept and charged 72 h before).
+  if (paysLater(ctx.offer.proposedStart, now)) return scheduleBooking(deps, posterId, ctx, method, pricing, breakdown, policy.id, now);
 
   let hold: { bookingId: string; paymentId: string; idempotencyKey: string };
   try {
@@ -427,6 +440,102 @@ export async function confirmBooking(
 }
 
 class HoldConflict extends Error {}
+
+/** The client's saved card for this method: the one they picked, or the new one, kept now (a booking paid later needs it). */
+async function keptCard(tx: Tx, posterId: string, provider: string, method: ChosenMethod, now: Date): Promise<string> {
+  if (method.paymentMethodId) return method.paymentMethodId;
+  const [same] = await tx
+    .select({ id: paymentMethods.id })
+    .from(paymentMethods)
+    .where(and(eq(paymentMethods.userId, posterId), eq(paymentMethods.providerRef, method.providerRef), isNull(paymentMethods.detachedAt)))
+    .limit(1);
+  if (same) return same.id;
+  const [anyMethod] = await tx.select({ id: paymentMethods.id }).from(paymentMethods).where(and(eq(paymentMethods.userId, posterId), isNull(paymentMethods.detachedAt))).limit(1);
+  const id = newId('pm');
+  await tx.insert(paymentMethods).values({ id, userId: posterId, provider, providerRef: method.providerRef, brand: method.brand, last4: method.last4, expMonth: method.expMonth, expYear: method.expYear, isDefault: !anyMethod, createdAt: now });
+  return id;
+}
+
+/**
+ * A booking made more than 14 days ahead (blueprint 04, "Phase 2: save the card at booking, charge 72 h before"):
+ * booked like a paid offer (the offer accepted, the others declined, the task assigned, the helper told) but
+ * `scheduled`, with the card kept and charged by the job 72 h before (`scheduled.ts`).
+ */
+async function scheduleBooking(
+  deps: BookingDeps,
+  posterId: string,
+  ctx: NonNullable<Awaited<ReturnType<typeof loadContext>>>,
+  method: ChosenMethod,
+  pricing: ReturnType<typeof offerPricing>,
+  breakdown: PriceBreakdown,
+  policyId: string,
+  now: Date,
+): Promise<PaymentAttemptResult> {
+  const start = ctx.offer.proposedStart;
+  const chargeAt = firstChargeAt(ONE_TIME_CHARGE_PLAN, start, now);
+  if (!chargeAt) return { ok: false, code: 'not_allowed' };
+  let bookingId: string;
+  try {
+    bookingId = await deps.db.transaction(async (tx) => {
+      await tx.execute(sql`select id from tasks where id = ${ctx.task.id} for update`);
+      const live = await liveBooking(tx, ctx.task.id);
+      if (live && live.status !== 'pending_funding') throw new HoldConflict();
+      // A hold opened earlier for this task (the poster paid now, then changed their mind): released.
+      if (live) await tx.update(bookings).set({ status: 'canceled', cancelReason: 'funding_failed', canceledAt: now, fundingExpiresAt: null, updatedAt: now }).where(eq(bookings.id, live.id));
+      const cardId = await keptCard(tx, posterId, deps.payments.name, method, now);
+      const id = newId('bkg');
+      await tx.insert(bookings).values({
+        id,
+        taskId: ctx.task.id,
+        offerId: ctx.offer.id,
+        posterUserId: posterId,
+        helperUserId: ctx.offer.helperUserId,
+        marketId: ctx.task.marketId,
+        policyVersionId: policyId,
+        status: 'scheduled',
+        startAt: start,
+        fundingDueAt: chargeAt,
+        fundingExpiresAt: chargeSchedule(ONE_TIME_CHARGE_PLAN, start).deadline,
+        fundingMethodId: cardId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await tx.insert(bookingTerms).values({
+        id: newId('btm'),
+        bookingId: id,
+        version: 1,
+        pricingType: pricing.type,
+        priceCents: pricing.type === 'fixed' ? pricing.priceCents : null,
+        hourlyRateCents: pricing.type === 'hourly' ? pricing.rateCents : null,
+        estimatedHours: pricing.type === 'hourly' ? pricing.estimatedHours : null,
+        hoursCap: pricing.type === 'hourly' ? pricing.hoursCap : null,
+        expenseAllowanceCents: ctx.task.expenseAllowanceCents,
+        breakdown,
+        scopeText: ctx.task.description,
+        startAt: start,
+        createdAt: now,
+      });
+      await tx.update(offers).set({ status: 'accepted', closedAt: now, updatedAt: now }).where(eq(offers.id, ctx.offer.id));
+      const others = await tx
+        .update(offers)
+        .set({ status: 'declined', closedAt: now, updatedAt: now })
+        .where(and(eq(offers.taskId, ctx.task.id), inArray(offers.status, ACTIVE_OFFER)))
+        .returning({ id: offers.id, helperUserId: offers.helperUserId });
+      await tx.update(tasks).set({ status: 'assigned', offerCount: 0, updatedAt: now, version: sql`${tasks.version} + 1` }).where(eq(tasks.id, ctx.task.id));
+      await tx.insert(outboxEvents).values([
+        { id: newId('evt'), type: 'booking.confirmed', aggregateType: 'booking', aggregateId: id, payload: { bookingId: id, taskId: ctx.task.id, posterUserId: posterId, helperUserId: ctx.offer.helperUserId } },
+        ...others.map((offer) => ({ id: newId('evt'), type: 'offer.declined', aggregateType: 'offer', aggregateId: offer.id, payload: { offerId: offer.id, taskId: ctx.task.id, helperUserId: offer.helperUserId, reason: 'task_booked' } })),
+      ]);
+      await tx.insert(auditLog).values({ id: newId('aud'), actorId: posterId, actorRole: 'user', action: 'booking.scheduled', targetType: 'booking', targetId: id });
+      await postEvent(tx, bookingThreadLink({ id, taskId: ctx.task.id, posterUserId: posterId, helperUserId: ctx.offer.helperUserId }), 'system', { type: 'booked' }, now);
+      return id;
+    });
+  } catch (error) {
+    if (error instanceof HoldConflict || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
+    throw error;
+  }
+  return { ok: true, code: 'booked', redirectTo: routes.app.booking(bookingId) };
+}
 
 /** After the bank step (3-D Secure). */
 export async function finishBankVerification(
