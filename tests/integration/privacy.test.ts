@@ -14,6 +14,7 @@ import {
   requestAccountDeletion,
   requestDataExport,
 } from '@/modules/privacy/requests';
+import { bookings } from '@/modules/bookings/schema';
 import { supportCases } from '@/modules/support/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
@@ -113,8 +114,14 @@ describe('deleting an account', () => {
   });
 
   it('is refused while a booking is open', async () => {
-    // Chris has a booking in progress (seed).
+    // Chris's own booking in progress, on a copy of the desk (the seed gives him none, and other files' bookings come and go).
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [booked] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
+    await db.insert(tasks).values({ ...desk!, id: 'tsk_tmp_privacy_open', slug: 'tmp-privacy-open', posterUserId: 'usr_chris', status: 'assigned', version: 1 });
+    await db.insert(bookings).values({ ...booked!, id: 'bkg_tmp_privacy_open', taskId: 'tsk_tmp_privacy_open', posterUserId: 'usr_chris', status: 'in_progress' });
     expect(await requestAccountDeletion(db, 'usr_chris', asked)).toEqual({ ok: false, code: 'not_allowed' });
+    await db.delete(bookings).where(eq(bookings.id, 'bkg_tmp_privacy_open'));
+    await db.delete(tasks).where(eq(tasks.id, 'tsk_tmp_privacy_open'));
   });
 
   it('waits for an open case, then anonymizes the account', async () => {

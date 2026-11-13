@@ -1,4 +1,6 @@
+import { routes, type PayoutAccountStatus } from '@/contracts';
 import { checkrFromEnv } from '@/integrations/checkr';
+import { stripeConnectFromEnv, type StripeConnect } from '@/integrations/payments/stripe-connect';
 import { stripeIdentityFromEnv } from '@/integrations/stripe-identity';
 import { newId } from '@/platform/db/ids';
 
@@ -7,8 +9,8 @@ import { newId } from '@/platform/db/ids';
  * for payouts, Checkr for background checks. Stripe Identity (`STRIPE_SECRET_KEY`) and Checkr
  * (`CHECKR_API_KEY`, `CHECKR_PACKAGE`) are built (src/integrations) and replace their stand-ins as soon as
  * their keys are set; without keys, development uses pages under /dev/providers that simulate each
- * provider's flow and webhook. Production needs all three, so until the Connect adapter exists those
- * steps can't start there (docs/integration-points.md).
+ * provider's flow and webhook. Stripe Connect (payouts) is on with the Stripe payment keys
+ * (`STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY`). Production needs all three (docs/integration-points.md).
  */
 export interface VerificationProviders {
   identity: {
@@ -21,7 +23,10 @@ export interface VerificationProviders {
   };
   payout: {
     readonly provider: string;
-    start(userId: string): Promise<{ accountId: string; url: string }>;
+    /** Opens the provider's onboarding: a new account for the helper, or the one they started (`accountId`). */
+    start(person: { userId: string; email: string; accountId?: string }): Promise<{ accountId: string; url: string }>;
+    /** The account's state, read again from the provider (dev: none; its page records it). */
+    status?(accountId: string): Promise<PayoutAccountStatus>;
   };
   background: {
     readonly provider: string;
@@ -43,9 +48,25 @@ export interface VerificationProviders {
 export function verificationProvidersFor(env: Record<string, string | undefined>): VerificationProviders | null {
   const identity = stripeIdentityFromEnv(env);
   const background = checkrFromEnv(env);
-  if (env.NODE_ENV === 'production') return null;
+  const connect = stripeConnectFromEnv(env);
+  const appUrl = (env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+  const payout = connect ? connectPayouts(connect, appUrl) : null;
+  if (env.NODE_ENV === 'production') return identity && background && payout ? { identity, payout, background } : null;
   const dev = createDevVerificationProviders();
-  return { identity: identity ?? dev.identity, payout: dev.payout, background: background ?? dev.background };
+  return { identity: identity ?? dev.identity, payout: payout ?? dev.payout, background: background ?? dev.background };
+}
+
+/** Payout accounts on Stripe Connect Express: Stripe's onboarding, coming back to the payout step. */
+export function connectPayouts(connect: StripeConnect, appUrl: string): VerificationProviders['payout'] {
+  const back = `${appUrl}${routes.app.helperOnboarding('payout')}`;
+  return {
+    provider: 'stripe',
+    async start({ userId, email, accountId }) {
+      const account = accountId ?? (await connect.createAccount({ userId, email }));
+      return { accountId: account, url: await connect.onboardingLink({ accountId: account, returnUrl: back, refreshUrl: back }) };
+    },
+    status: (accountId) => connect.accountStatus(accountId),
+  };
 }
 
 /** Development stand-ins: pages under /dev/providers simulate the provider and its webhook. */
@@ -62,7 +83,7 @@ export function createDevVerificationProviders(): VerificationProviders {
     },
     payout: {
       provider: 'dev',
-      async start(userId) {
+      async start({ userId }) {
         const accountId = `acct_dev_${userId.slice(4)}`;
         return { accountId, url: '/dev/providers/payout' };
       },

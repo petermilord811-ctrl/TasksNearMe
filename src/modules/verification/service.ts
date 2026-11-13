@@ -53,10 +53,12 @@ export { loadOnboardingState, syncHelperProfile } from './state';
 export {
   recordBackgroundResult,
   recordIdentityResult,
+  recordPayoutAccountStatus,
   recordPayoutStatus,
   startBackgroundCheck,
   startIdentity,
   startPayout,
+  syncPayoutStatus,
   type BackgroundResult,
   type IdentityResult,
 } from './tracks';

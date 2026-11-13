@@ -1,3 +1,5 @@
+import { stripeConnectFromEnv } from '@/integrations/payments/stripe-connect';
+import { runScheduledTransfers } from '@/modules/payments/connect';
 import { expireDuePosts } from '@/modules/availability/service';
 import { expireDueProposals } from '@/modules/rebook/service';
 import { sql } from 'drizzle-orm';
@@ -55,6 +57,7 @@ export const JOBS: Job[] = [
   { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
   { name: 'retention.sweep', run: (db, now) => (retentionDue(now) ? runRetention(db, { storage: createFileStorage() }, now) : Promise.resolve()) },
   // Last: it waits on Claude (a few seconds a document).
+  { name: 'earnings.transfers', run: async (db, now) => { const connect = stripeConnectFromEnv(); if (connect) await runScheduledTransfers(db, connect, now); } },
   { name: 'verification.read_documents', run: (db, now) => readPendingDocuments(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), reader: documentReaderFromEnv() }, now) },
 ];
 

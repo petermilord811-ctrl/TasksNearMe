@@ -55,9 +55,20 @@ function provider(): PaymentProvider | null {
 
 type Writer = Pick<Db, 'insert' | 'update' | 'select'>;
 
+/**
+ * Money to a helper for a booking, one row per kind (earnings, reimbursement, cancellation compensation, and
+ * tips), once. With Stripe it's `scheduled` here and moved by the transfers job; in development it's
+ * `transferred` at once. Safe inside a transaction (no network).
+ */
+export async function recordEarning(db: Writer, input: { bookingId: string; helperUserId: string; kind: EarningsKind; amountCents: number }, now: Date): Promise<void> {
+  return transfer(db, input, now);
+}
+
 async function transfer(db: Writer, input: { bookingId: string; helperUserId: string; kind: EarningsKind; amountCents: number }, now: Date): Promise<void> {
   if (input.amountCents <= 0) return;
-  // Development: the transfer succeeds at once (Stripe: a Transfer with source_transaction = the charge).
+  // Stripe: scheduled here, moved by the transfers job (src/modules/payments/connect.ts) outside this
+  // transaction. Development: the transfer succeeds at once.
+  const scheduled = provider()?.name === 'stripe';
   await db
     .insert(earnings)
     .values({
@@ -66,9 +77,9 @@ async function transfer(db: Writer, input: { bookingId: string; helperUserId: st
       helperUserId: input.helperUserId,
       kind: input.kind,
       amountCents: input.amountCents,
-      status: 'transferred',
-      transferRef: `devtr_${newId('x').slice(2)}`,
-      transferredAt: now,
+      status: scheduled ? 'scheduled' : 'transferred',
+      transferRef: scheduled ? null : `devtr_${newId('x').slice(2)}`,
+      transferredAt: scheduled ? null : now,
       createdAt: now,
       updatedAt: now,
     })
@@ -182,7 +193,8 @@ async function people(db: Db, ids: string[]): Promise<Map<string, PersonSummary>
 
 /** `/app/earnings`: transfers (plus work waiting for approval or held by a problem report) and payouts. */
 export async function getEarningsPage(db: Db, helperUserId: string, now: Date): Promise<EarningsPageData> {
-  await settleDevPayouts(db, helperUserId, now);
+  // Stripe pays out on its own schedule (its payout events record them); development simulates it here.
+  if (provider()?.name !== 'stripe') await settleDevPayouts(db, helperUserId, now);
   const [rows, waiting, payoutRows, [account]] = await Promise.all([
     db
       .select({ earning: earnings, title: tasks.title, posterUserId: bookings.posterUserId })

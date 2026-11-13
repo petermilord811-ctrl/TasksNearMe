@@ -108,11 +108,33 @@ export async function startPayout(db: Db, providers: VerificationProviders, user
   const state = await loadOnboardingState(db, userId, now);
   const step = computeOnboarding(state.facts).progress.steps.find((s) => s.step === 'payout');
   if (!step || step.state === 'locked') return { ok: false, code: 'not_allowed' };
-  const { accountId, url } = await providers.payout.start(userId);
+  // The account they started with this provider continues; otherwise a new one.
+  const existing = state.payout?.provider === providers.payout.provider ? state.payout.providerAccountId : undefined;
+  const [person] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+  const { accountId, url } = await providers.payout.start({ userId, email: person?.email ?? '', ...(existing ? { accountId: existing } : {}) });
   if (!state.payout) {
     await db.insert(payoutAccounts).values({ userId, provider: providers.payout.provider, providerAccountId: accountId, status: 'pending', createdAt: now, updatedAt: now });
+  } else if (!existing) {
+    // A development account replaced by a real one (the keys were added): start over with the provider.
+    await db.update(payoutAccounts).set({ provider: providers.payout.provider, providerAccountId: accountId, status: 'pending', activatedAt: null, updatedAt: now }).where(eq(payoutAccounts.userId, userId));
   }
   return { ok: true, code: 'updated', redirectTo: url };
+}
+
+/** After the provider's onboarding (or "Check status"): its account state, read again. Webhooks do the same. */
+export async function syncPayoutStatus(db: Db, providers: VerificationProviders, userId: string, now: Date): Promise<void> {
+  const [account] = await db.select().from(payoutAccounts).where(eq(payoutAccounts.userId, userId)).limit(1);
+  if (!account || account.provider !== providers.payout.provider || !providers.payout.status) return;
+  const status = await providers.payout.status(account.providerAccountId);
+  if (status !== account.status) await recordPayoutStatus(db, userId, status, now);
+}
+
+/** A Connect `account.updated` event: the account's state for its helper. */
+export async function recordPayoutAccountStatus(db: Db, providerAccountId: string, status: PayoutAccountStatus, now: Date): Promise<string | null> {
+  const [account] = await db.select({ userId: payoutAccounts.userId, status: payoutAccounts.status }).from(payoutAccounts).where(eq(payoutAccounts.providerAccountId, providerAccountId)).limit(1);
+  if (!account) return null;
+  if (account.status !== status) await recordPayoutStatus(db, account.userId, status, now);
+  return account.userId;
 }
 
 export async function recordPayoutStatus(db: Db, userId: string, status: PayoutAccountStatus, now: Date): Promise<void> {

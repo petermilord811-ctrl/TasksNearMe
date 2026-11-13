@@ -41,6 +41,7 @@ import {
   startBackgroundCheck,
   startIdentity,
   startPayout,
+  syncPayoutStatus,
   syncHelperProfile,
   updateWorkSample,
 } from './service';
@@ -171,6 +172,9 @@ export async function onboardingStartBackgroundCheck(input: { acknowledged?: boo
 
 /** Provider statuses arrive by webhook; this just re-renders with the latest. */
 export async function onboardingRefreshStatus(): Promise<ActionResult> {
+  // The payout account's state from Stripe (webhooks can lag a return from its onboarding).
+  const userId = await signedInUserId();
+  if (userId && verificationProviders) await syncPayoutStatus(db, verificationProviders, userId, await requestNow());
   refresh();
   return { ok: true, code: 'updated' };
 }

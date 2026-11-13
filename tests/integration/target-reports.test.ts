@@ -1,8 +1,8 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, gte, inArray } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { routes } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
-import { supportCaseReads, supportCases } from '@/modules/support/schema';
+import { supportCaseEvents, supportCaseReads, supportCases } from '@/modules/support/schema';
 import { getReportPage, reportTarget } from '@/modules/support/target-reports';
 import { createDb } from '@/platform/db/connect';
 
@@ -11,10 +11,15 @@ import { createDb } from '@/platform/db/connect';
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 /** A member made for the limit test, so no other file's reports are affected. */
 const REPORTER = 'usr_report_limit';
+const started = new Date();
 afterAll(async () => {
-  const mine = (await db.select({ id: supportCases.id }).from(supportCases).where(eq(supportCases.openedByUserId, REPORTER))).map((row) => row.id);
+  // Lee's reports from this file go too: left open, they'd count against Maya's and Sam's standing in later
+  // files (two reports in 30 days ask a client to verify their ID).
+  const lees = await db.select({ id: supportCases.id }).from(supportCases).where(and(eq(supportCases.openedByUserId, 'usr_lee'), gte(supportCases.createdAt, started)));
+  const mine = [...lees.map((row) => row.id), ...(await db.select({ id: supportCases.id }).from(supportCases).where(eq(supportCases.openedByUserId, REPORTER))).map((row) => row.id)];
   if (mine.length > 0) {
     await db.delete(supportCaseReads).where(inArray(supportCaseReads.caseId, mine));
+    await db.delete(supportCaseEvents).where(inArray(supportCaseEvents.caseId, mine));
     await db.delete(supportCases).where(inArray(supportCases.id, mine));
   }
   await db.delete(users).where(eq(users.id, REPORTER));
