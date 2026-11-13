@@ -99,6 +99,11 @@ export const bookingCompletions = pgTable('booking_completions', {
   hoursWorked: doublePrecision('hours_worked'),
   /** The final numbers with these hours and expenses. */
   finalBreakdown: jsonb('final_breakdown').$type<PriceBreakdown>().notNull(),
+  /**
+   * The category's evidence checklist as the helper answered it (blueprint 01, P2 "structured evidence checklists
+   * per category"): item key → done. Empty for categories without one and for work submitted before it.
+   */
+  checklist: jsonb('checklist').$type<Record<string, boolean>>().notNull().default({}),
 });
 
 /** Photos of the finished work (files of kind `evidence`, owned by the helper). */
