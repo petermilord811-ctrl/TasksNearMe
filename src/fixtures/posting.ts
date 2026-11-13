@@ -25,6 +25,42 @@ export const postTaskPageData: PostTaskPageData = {
   now: POSTING_NOW,
 };
 
+/**
+ * "Post again" on Maya's finished desk (plan 4.2): everything but photos, the same window next Saturday, and her
+ * saved Mueller address (the draft's place id points at it). Opens on the review step.
+ */
+export const postTaskRepeatData: PostTaskPageData = {
+  market: austinMarket,
+  categories: categoryViews,
+  rules: { minLeadHours: 3, maxLeadDays: 14, maxPhotos: 8, maxPhotoMegabytes: 10, maxExpenseAllowanceCents: 50000 },
+  aiDraftingEnabled: true,
+  now: POSTING_NOW,
+  repeat: {
+    fromTitle: 'Assemble a desk (flat-pack, 1 item)',
+    draft: {
+      categorySlug: 'furniture-assembly',
+      title: 'Assemble a desk (flat-pack, 1 item)',
+      description: 'Flat-pack desk, about 40 parts, still in the box in my living room. 2nd floor with an elevator.',
+      details: { itemType: 'desk', itemCount: 1, brand: 'IKEA', floor: 2, elevator: true, toolsOnSite: false },
+      photoIds: [],
+      location: { mode: 'local', placeId: 'again:tsk_desk', unit: 'Apt 2B', accessNotes: 'Buzz 2B at the side gate.' },
+      schedule: { date: '2026-11-21', flexible: false, startTime: '10:00', endTime: '13:00' },
+      budget: { type: 'fixed', priceCents: 6000 },
+    },
+    address: { placeId: 'again:tsk_desk', line1: '1234 Example Lane', line2: 'Austin, TX 78723', areaName: 'Mueller', inServiceArea: true },
+  },
+};
+
+/** The same, after the retention timer deleted the address: it opens on the Where step to search again. */
+export const postTaskRepeatAddressDeletedData: PostTaskPageData = {
+  ...postTaskRepeatData,
+  repeat: {
+    fromTitle: postTaskRepeatData.repeat!.fromTitle,
+    draft: { ...postTaskRepeatData.repeat!.draft, location: { mode: 'local', placeId: '' } },
+    addressDeleted: true,
+  },
+};
+
 /** Started from a category page (`?category=computer-help`), with AI drafting turned off. */
 export const postTaskComputerHelpNoAiData: PostTaskPageData = {
   ...postTaskPageData,

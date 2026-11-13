@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { and, count, eq, inArray } from 'drizzle-orm';
-import type { ActionResult, AddressSuggestion, PostTaskPageData, TaskPostingRules } from '@/contracts';
-import { compactTaskDetails, createTaskDraftSchema } from '@/contracts';
+import type { ActionResult, AddressSuggestion, CategorySlug, PostTaskPageData, PostTaskRepeat, TaskDraftInput, TaskPostingRules } from '@/contracts';
+import { compactTaskDetails, createTaskDraftSchema, REPEAT_PLACE_PREFIX } from '@/contracts';
 import { GeocoderUnavailableError, type GeoPlace, type Geocoder } from '@/integrations/geocoding';
 import { fieldError, validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -9,13 +9,14 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
-import { marketLocalToUtc } from '@/shared/format';
+import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { users } from '../accounts/schema';
 import { fuzzedPublicPoint, inServiceArea, nearestArea } from '../markets/geo';
 import { getMarketView, getPublishedPolicy, listCategoryViews } from '../markets/queries';
 import { areas, categories, markets } from '../markets/schema';
 import { findProhibitedPhrase } from '../trust/contact-masking';
 import { GLOBAL_PROHIBITED_PHRASES } from '../trust/prohibited';
+import { readExactAddress } from './locations';
 import { files, taskLocations, taskPhotos, tasks } from './schema';
 
 /** Posting a task (blueprint 02 J1, 06 §3): validation, safety checks, and creation in one place. */
@@ -42,6 +43,38 @@ function slugPart(text: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 48)
     .replace(/-+$/g, '');
+}
+
+/** "Post again" works from the poster's finished tasks (the task page offers it for these). */
+const REPEATABLE = new Set(['completed', 'canceled', 'expired']);
+
+/** The weekday of a market-local day ("2026-11-21"), 0 = Sunday. */
+const weekdayOf = (day: string) => new Date(`${day}T12:00:00.000Z`).getUTCDay();
+
+/**
+ * The same window (or a flexible day) on the next date the posting rules allow: the same weekday as before when
+ * one fits (people repeat weekly chores), otherwise the soonest allowed date.
+ */
+export function nextRepeatSchedule(
+  task: { windowStart: Date; windowEnd: Date; flexible: boolean },
+  rules: Pick<TaskPostingRules, 'minLeadHours' | 'maxLeadDays'>,
+  at: Date,
+): TaskDraftInput['schedule'] {
+  const window = task.flexible ? {} : { startTime: marketClockTime(task.windowStart), endTime: marketClockTime(task.windowEnd) };
+  const weekday = weekdayOf(marketDayKey(task.windowStart));
+  const earliest = at.getTime() + rules.minLeadHours * 3_600_000;
+  const latest = at.getTime() + rules.maxLeadDays * 86_400_000;
+  let soonest: string | undefined;
+  for (let offset = 0; offset <= rules.maxLeadDays + 1; offset += 1) {
+    const day = marketDayKey(new Date(at.getTime() + offset * 86_400_000));
+    // As the draft schema checks it: the window's start, or (flexible) some of the day left after the lead time.
+    const opens = new Date(marketLocalToUtc(day, window.startTime ?? '23:30')).getTime();
+    const begins = new Date(marketLocalToUtc(day, window.startTime ?? '00:00')).getTime();
+    if (opens < earliest || begins > latest) continue;
+    soonest ??= day;
+    if (weekdayOf(day) === weekday) return { date: day, flexible: task.flexible, ...window };
+  }
+  return { date: soonest ?? '', flexible: task.flexible, ...window };
 }
 
 export function createTaskPosting({ db, geocoder, cipher, now = () => new Date() }: TaskPostingDeps) {
@@ -103,6 +136,80 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
     });
   }
 
+  /** A saved address reused by "Post again": the poster's own task's address, while it's still kept. */
+  async function savedPlace(userId: string, taskId: string, marketId: string) {
+    const [row] = await db
+      .select({ addressEnc: taskLocations.addressEnc, area: areas })
+      .from(tasks)
+      .innerJoin(taskLocations, eq(taskLocations.id, tasks.locationId))
+      .innerJoin(areas, eq(areas.id, taskLocations.areaId))
+      .where(and(eq(tasks.id, String(taskId)), eq(tasks.posterUserId, userId)))
+      .limit(1);
+    const address = row ? readExactAddress(cipher, row.addressEnc) : undefined;
+    if (!row || !address || row.area.marketId !== marketId) return null;
+    return { address, area: row.area };
+  }
+
+  /**
+   * "Post again" (plan 4.2): one of the poster's own finished tasks as a new draft (`PostTaskRepeat`): everything
+   * but photos, the same window on the next date that fits, and the saved address while it's kept.
+   */
+  async function repeat(userId: string, taskId: string): Promise<PostTaskRepeat | null> {
+    const [row] = await db
+      .select({ task: tasks, categorySlug: categories.slug })
+      .from(tasks)
+      .innerJoin(categories, eq(categories.id, tasks.categoryId))
+      .where(and(eq(tasks.id, String(taskId)), eq(tasks.posterUserId, userId)))
+      .limit(1);
+    if (!row || !REPEATABLE.has(row.task.status)) return null;
+    const data = await pageData(userId);
+    if (!data || !data.categories.some((category) => category.slug === row.categorySlug)) return null;
+    const { task } = row;
+
+    let location: TaskDraftInput['location'] = { mode: 'remote' };
+    let address: AddressSuggestion | undefined;
+    if (task.mode === 'local') {
+      const saved = await savedPlace(userId, task.id, task.marketId);
+      if (saved) {
+        const placeId = `${REPEAT_PLACE_PREFIX}${task.id}`;
+        location = {
+          mode: 'local',
+          placeId,
+          ...(saved.address.line2 ? { unit: saved.address.line2 } : {}),
+          ...(saved.address.accessNotes ? { accessNotes: saved.address.accessNotes } : {}),
+        };
+        address = {
+          placeId,
+          line1: saved.address.line1,
+          line2: `${saved.address.city}, ${saved.address.state} ${saved.address.zip}`,
+          areaName: saved.area.name,
+          areaPoint: { lat: saved.area.centerLat, lng: saved.area.centerLng },
+          inServiceArea: true,
+        };
+      } else {
+        location = { mode: 'local', placeId: '' };
+      }
+    }
+
+    const draft: TaskDraftInput = {
+      categorySlug: row.categorySlug as CategorySlug,
+      title: task.title,
+      description: task.description,
+      details: task.details,
+      photoIds: [],
+      location,
+      schedule: nextRepeatSchedule(task, data.rules, now()),
+      budget:
+        task.pricingType === 'hourly'
+          ? { type: 'hourly', rateCents: task.hourlyRateCents ?? 0, estimatedHours: task.estimatedHours ?? 0, hoursCap: task.hoursCap ?? 0 }
+          : { type: 'fixed', priceCents: task.budgetCents ?? 0 },
+      ...(task.expenseAllowanceCents > 0 && task.expenseAllowanceNote
+        ? { expenseAllowance: { amountCents: task.expenseAllowanceCents, description: task.expenseAllowanceNote } }
+        : {}),
+    };
+    return { fromTitle: task.title, draft, ...(address ? { address } : {}), ...(task.mode === 'local' && !address ? { addressDeleted: true } : {}) };
+  }
+
   async function post(userId: string, input: unknown): Promise<PostTaskOutcome> {
     const at = now();
     const fail = (result: ActionResult): PostTaskOutcome => ({ ok: false, result });
@@ -136,7 +243,27 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
     // Where: resolve and check the address (the provider confirms it again); store it encrypted and keep only
     // the area public. The provider's coordinates only pick the area: they're never stored.
     let location: { addressEnc: string; zip: string; areaId: string; areaSlug: string; center: { lat: number; lng: number } } | null = null;
-    if (draft.location.mode === 'local') {
+    if (draft.location.mode === 'local' && draft.location.placeId.startsWith(REPEAT_PLACE_PREFIX)) {
+      // "Post again": the poster's own saved address, read again now (gone once the retention timer deleted it).
+      const saved = await savedPlace(userId, draft.location.placeId.slice(REPEAT_PLACE_PREFIX.length), market.id);
+      if (!saved) return fail(fieldError('location.placeId', 'invalid'));
+      location = {
+        addressEnc: cipher.encrypt(
+          JSON.stringify({
+            line1: saved.address.line1,
+            ...(draft.location.unit ? { line2: draft.location.unit } : {}),
+            city: saved.address.city,
+            state: saved.address.state,
+            zip: saved.address.zip,
+            ...(draft.location.accessNotes ? { accessNotes: draft.location.accessNotes } : {}),
+          }),
+        ),
+        zip: saved.address.zip,
+        areaId: saved.area.id,
+        areaSlug: saved.area.slug,
+        center: { lat: saved.area.centerLat, lng: saved.area.centerLng },
+      };
+    } else if (draft.location.mode === 'local') {
       let place: GeoPlace | null;
       try {
         place = await geocoder.resolve(draft.location.placeId);
@@ -251,7 +378,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
     return { ok: true, taskId, slug };
   }
 
-  return { pageData, searchAddresses, post };
+  return { pageData, searchAddresses, post, repeat };
 }
 
 export type TaskPosting = ReturnType<typeof createTaskPosting>;

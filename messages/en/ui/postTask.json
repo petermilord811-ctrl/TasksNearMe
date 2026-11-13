@@ -373,6 +373,12 @@
     "review-loading": "Loading the price breakdown",
     "review-error": "Price breakdown unavailable",
     "error-prohibited": "Task description needs changes",
-    "error-limit": "Posting limit reached"
+    "error-limit": "Posting limit reached",
+    "post-again": "Post again: review",
+    "post-again-address-deleted": "Post again: address deleted"
+  },
+  "repeat": {
+    "ready": "Posting “{title}” again. Everything from last time is filled in except photos, on the next date that fits. Check it, then post.",
+    "addressDeleted": "Posting “{title}” again. The old address was deleted 180 days after your last booking there, so search for it again."
   }
 }

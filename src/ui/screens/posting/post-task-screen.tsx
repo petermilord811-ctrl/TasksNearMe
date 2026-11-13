@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { FormProvider, useForm, useWatch, type FieldErrors, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, Check, Lock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Lock, Repeat } from 'lucide-react';
 import { createTaskDraftSchema, POST_TASK_STEPS, routes, type ActionResult, type AddressSuggestion, type AiTaskDraft, type Photo, type PostTaskHandlers, type PostTaskPageData, type PostTaskStep, type TaskDraftInput } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
@@ -77,7 +77,8 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   const category = data.categories.find((item) => item.slug === data.initialCategory);
   const form = useForm<TaskDraftInput>({
     resolver: zodResolver(schema),
-    defaultValues: initialValues ?? {
+    // "Post again" starts from the earlier task's draft (plan 4.2).
+    defaultValues: initialValues ?? data.repeat?.draft ?? {
       categorySlug: data.initialCategory,
       title: data.initialTitle ?? '', description: data.initialDescription ?? '', details: {}, photoIds: [],
       location: { mode: 'local', placeId: '' }, schedule: { date: '', flexible: false },
@@ -87,9 +88,11 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   });
   const { control, reset, getValues, setError, setFocus, clearErrors, trigger, subscribe } = form;
   const values = useWatch({ control }) as TaskDraftInput;
-  const [step, setStep] = useState<PostTaskStep>(firstErrorStep(resultFields(initialResult)) ?? initialStep ?? (data.initialCategory ? 'describe' : 'category'));
+  const [step, setStep] = useState<PostTaskStep>(
+    firstErrorStep(resultFields(initialResult)) ?? initialStep ?? (data.repeat ? (data.repeat.addressDeleted ? 'where' : 'review') : data.initialCategory ? 'describe' : 'category'),
+  );
   const [photos, setPhotos] = useState(initialPhotos);
-  const [address, setAddress] = useState(initialAddress);
+  const [address, setAddress] = useState(initialAddress ?? data.repeat?.address);
   const [result, setResult] = useState(initialResult);
   const [pending, setPending] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -262,6 +265,10 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
           </li>)}
         </ol>
       </header>
+      {data.repeat && <p className="flex items-start gap-2.5 rounded-2xl border border-primary/20 bg-primary/[0.06] p-3.5 text-sm">
+        <Repeat aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+        <span>{t(data.repeat.addressDeleted ? 'repeat.addressDeleted' : 'repeat.ready', { title: data.repeat.fromTitle })}</span>
+      </p>}
       <div aria-live="polite" className="text-sm text-muted-foreground">{storageFailed ? t('storageUnavailable') : restored ? t('restored') : t('saved')}</div>
       <div role="status" aria-live="polite" className={restoringPhotos || photoRestoreFailed ? 'flex items-center gap-2 text-sm text-muted-foreground' : 'sr-only'}>
         {restoringPhotos ? <><Spinner />{t('photos.loadingSaved')}</> : photoRestoreFailed ? t('photos.restoreFailed') : ''}

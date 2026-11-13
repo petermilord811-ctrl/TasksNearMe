@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ActionResult, Photo, PostTaskHandlers, TaskDraftInput } from '@/contracts';
-import { addressSuggestions, aiDeskDraft, deskBreakdown, deskDraft, fakeHandler, fakePostTaskHandlers, postTaskPageData, postTaskResults, uploadedTaskPhotos } from '@/fixtures';
+import { addressSuggestions, aiDeskDraft, deskBreakdown, deskDraft, fakeHandler, fakePostTaskHandlers, postTaskPageData, postTaskRepeatAddressDeletedData, postTaskRepeatData, postTaskResults, uploadedTaskPhotos } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { PostTaskScreen, type PostTaskScreenProps } from './post-task-screen';
 import { draftStorageKey } from './draft-storage';
@@ -98,6 +98,22 @@ describe('posting wizard', () => {
     mount({ data: { ...postTaskPageData, initialCategory: 'furniture-assembly', initialTitle: 'Mount a 55" TV on drywall', initialDescription: 'The bracket is here.' }, initialValues: undefined, persistDraft: false });
     expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveValue('Mount a 55" TV on drywall');
     expect(screen.getByRole('textbox', { name: messages.postTask.describe.description })).toHaveValue('The bracket is here.');
+  });
+
+  it('posts a finished task again in two taps: the review with its draft and saved address, then Post task', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount({ data: postTaskRepeatData, initialValues: undefined, initialAddress: undefined });
+    expect(screen.getByText('Step 8 of 8 · Review and post')).toBeInTheDocument();
+    expect(screen.getByText(/^Posting “Assemble a desk \(flat-pack, 1 item\)” again\. Everything from last time is filled in except photos/)).toBeVisible();
+    expect(screen.getAllByText(/1234 Example Lane/).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: 'Post task' }));
+    await waitFor(() => expect(handlers.onPost).toHaveBeenCalledExactlyOnceWith(postTaskRepeatData.repeat!.draft));
+  });
+
+  it('opens Post again on Where to search again when the old address was deleted', () => {
+    mount({ data: postTaskRepeatAddressDeletedData, initialValues: undefined, initialAddress: undefined });
+    expect(screen.getByText('Step 5 of 8 · Where')).toBeInTheDocument();
+    expect(screen.getByText(/The old address was deleted 180 days after your last booking there, so search for it again\./)).toBeVisible();
   });
 
   it("drafts with AI by itself, once, when the landing page asked for it (and only if the market allows it)", async () => {

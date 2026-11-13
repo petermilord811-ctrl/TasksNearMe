@@ -79,8 +79,9 @@ export const routes = {
     /** The posting wizard; `category` starts it in that category. */
     /** The posting wizard; `describe` carries someone's own words in (the landing page's assistant). */
     /** `ai`: the wizard drafts the task with AI from `describe` as it opens (when the market allows it). */
-    newTask: (query: { category?: CategorySlug; title?: string; describe?: string; ai?: boolean } = {}) =>
-      withQuery('/app/tasks/new', { category: query.category, title: query.title, describe: query.describe, ai: query.ai ? '1' : undefined }),
+    /** `again`: "Post again" (plan 4.2): one of the poster's own finished tasks, repeated (`PostTaskPageData.repeat`). */
+    newTask: (query: { category?: CategorySlug; title?: string; describe?: string; ai?: boolean; again?: string } = {}) =>
+      withQuery('/app/tasks/new', { category: query.category, title: query.title, describe: query.describe, ai: query.ai ? '1' : undefined, again: query.again }),
     task: (taskId: string) => `/app/tasks/${enc(taskId)}`,
     offer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}`,
     confirmOffer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}/confirm`,

@@ -129,3 +129,7 @@ One entry per iteration, newest last.
 - Plan 4.3 (UI-054): the one-tap offer on find work, with Undo; integration `quick-offer`, e2e `find-work`.
 - The peer session finished its plan items (3.3, 3.4, 3.5, 4.4); one gate covered both (`scripts/gate.mjs`).
 - Environment: the dev server grew to 31.8 GB over hours of tests (navigations timed out) and later served a stale SSR graph for edited client components (hydration failures); both fixed by a clean restart.
+
+## 2026-11-13 — Post again (plan 4.2)
+- A finished task opens the wizard on its review step with everything from last time (UI-055); the saved address is read again on "Post", and a deleted one (retention) is searched again. Integration `post-again`, e2e `post-again`.
+- The completion plan is done (every item ☑). Next: the refinement pass across the screens, split with the other session.

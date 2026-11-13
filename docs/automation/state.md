@@ -19,6 +19,7 @@
 - **Landing, seventh pass** (UI-053): the skeleton town that grows into the 3D one; the 2D map's setup made lighter and started after the build-up; the page's floating scrollbar (no white strip).
 - **Installable app** (plan 3.6): `src/app/manifest.ts`, icons in `public/icons` (including the push badge).
 - **One-tap offer** (plan 4.3, UI-054): on find work, fixed-price tasks; Undo withdraws.
+- **Post again** (plan 4.2, UI-055): a finished task in two taps, its saved address read again on "Post".
 - From the other session: data export and deletion (3.3), retention timers (3.4, `readExactAddress()`), web push (3.5, `public/sw.js`), Stripe Identity and Checkr adapters with signed webhooks (4.4).
 
 ## Done for the completion plan (2026-11-12 – 13, owner request "complete the whole project", without asking)
@@ -80,7 +81,7 @@
 - The design system (§1–2.3) describes the new brand.
 
 ## Next steps
-1. "Post again" (plan 4.2, this session): repeat a past task in two taps; ask for the address again when retention deleted it (`readExactAddress()` returns undefined).
+1. Done: "Post again" (plan 4.2, UI-055).
 2. The refinement pass across every screen (this session), folder by folder; the other session's areas only after it says they're free.
 3. Keep the gate green after each increment (`scripts/gate.mjs`, one heavy run at a time between the two sessions).
 

@@ -162,6 +162,12 @@ export interface PostTaskPageData {
    * this" on `initialDescription` by itself, once. Only set when `aiDraftingEnabled` and there are words.
    */
   autoDraft?: boolean;
+  /**
+   * "Post again" (plan 4.2), from `?again=<taskId>`: one of the poster's own finished tasks (completed, canceled
+   * or expired), repeated. The wizard starts from `draft` and opens on the review step; with `addressDeleted`
+   * it opens on the Where step instead.
+   */
+  repeat?: PostTaskRepeat;
   rules: TaskPostingRules;
   /** The `ai_drafting` flag: show "Help me describe this". */
   aiDraftingEnabled: boolean;
@@ -173,6 +179,23 @@ export interface PostTaskPageData {
    */
   draftStorageKey?: string;
 }
+
+/**
+ * A finished task as a new draft: everything but photos, with the same time window on the next date that fits
+ * the posting rules (the same weekday when it can be). `address` is the saved address, shown as already chosen:
+ * the draft's place id is `REPEAT_PLACE_PREFIX` + the task's id, and the app reads the stored address again on
+ * "Post". When the retention timer deleted it (180 days after the last booking there), `addressDeleted` is set,
+ * the draft has no place, and the poster searches for the address again.
+ */
+export interface PostTaskRepeat {
+  fromTitle: string;
+  draft: TaskDraftInput;
+  address?: AddressSuggestion;
+  addressDeleted?: boolean;
+}
+
+/** The place id of a saved address being reused by "Post again" (`again:<taskId>`). */
+export const REPEAT_PLACE_PREFIX = 'again:';
 
 export const TASK_TITLE_MAX = 80;
 export const TASK_DESCRIPTION_MAX = 2000;
