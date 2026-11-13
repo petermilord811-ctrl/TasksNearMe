@@ -142,7 +142,9 @@
     "series_paused": "Regular visits paused",
     "series_resumed": "Regular visits resumed",
     "series_stopped": "Regular visits stopped",
-    "scheduled_payment_failed": "Scheduled payment failed"
+    "scheduled_payment_failed": "Scheduled payment failed",
+    "replacement_needed": "Replacement needed",
+    "replacement_search_started": "Task reopened for a replacement"
   },
   "previews": {
     "group": "Admin · person details",

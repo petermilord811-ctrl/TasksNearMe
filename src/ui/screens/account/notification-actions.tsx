@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, ArrowLeftRight, BadgeCheck, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, Repeat, SkipForward, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowLeftRight, BadgeCheck, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, LifeBuoy, Repeat, SkipForward, UserSearch, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatMoney, marketLocalToUtc } from '@/shared/format';
@@ -57,6 +57,8 @@ const icons: Record<NotificationType, LucideIcon> = {
   series_resumed: CirclePlay,
   series_stopped: CalendarOff,
   scheduled_payment_failed: CreditCard,
+  replacement_needed: LifeBuoy,
+  replacement_search_started: UserSearch,
 };
 
 /** A notification's moment ("Tue, Dec 1, 9:00 am") or day ("Dec 8"), for its words. */

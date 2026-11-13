@@ -29,7 +29,7 @@ import { privacyViewOf } from '@/modules/privacy/requests';
 import { pushSetup } from './push';
 import { notificationPreferences, notifications } from './schema';
 import { verificationNotificationFor } from './verification-plan';
-import { helpersToAlert } from '@/modules/offers/task-alerts';
+import { helpersToAlert, replacementHelpers } from '@/modules/offers/task-alerts';
 
 /**
  * Notifications from outbox events (the dispatcher), the notifications page, and the account page
@@ -96,12 +96,22 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
       ];
     }
     case 'task.reopened': {
-      // Find a replacement: earlier offerers (never the helper who canceled) can offer again.
+      // Find a replacement: earlier offerers (never the helper who canceled) can offer again, and the most reliable
+      // helpers the task suits hear a client needs someone (automated replacement matching, blueprint 01 P2).
       const taskId = text(p.taskId);
+      if (!taskId) return [];
       const helpers = Array.isArray(p.helperUserIds) ? p.helperUserIds.filter((id): id is string => typeof id === 'string') : [];
-      if (!taskId || helpers.length === 0) return [];
+      const canceled = text(p.canceledHelperUserId);
       const title = await taskTitle(db, taskId);
-      return helpers.map((userId) => ({ userId, type: 'task_reopened' as const, target: { kind: 'find_work_task', taskId } as AttentionTarget, title }));
+      const target = { kind: 'find_work_task', taskId } as AttentionTarget;
+      const others = await replacementHelpers(db, taskId, [...helpers, ...(canceled ? [canceled] : [])], new Date(event.createdAt));
+      const poster = text(p.posterUserId);
+      return [
+        ...helpers.map((userId) => ({ userId, type: 'task_reopened' as const, target, title })),
+        ...others.map((userId) => ({ userId, type: 'replacement_needed' as const, target, title })),
+        // When it happened on its own (the helper canceled), the client hears their task is open again.
+        ...(p.automatic === true && poster ? [{ userId: poster, type: 'replacement_search_started' as const, target: { kind: 'task', taskId } as AttentionTarget, title, actorName: await nameOf(db, canceled) }] : []),
+      ];
     }
     case 'offer.declined': {
       const helper = text(p.helperUserId);

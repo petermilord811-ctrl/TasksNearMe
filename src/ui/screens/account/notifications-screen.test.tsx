@@ -69,6 +69,8 @@ const copy: Record<NotificationType, RegExp> = {
   series_resumed: /regular visits for .* are back on/i,
   series_stopped: /regular visits/i,
   scheduled_payment_failed: /couldn't charge your card/,
+  replacement_needed: /needs a new helper/,
+  replacement_search_started: /open for offers again/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },

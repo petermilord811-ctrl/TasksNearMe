@@ -83,6 +83,10 @@ export const NOTIFICATION_TYPES = [
   'series_stopped',
   /** A scheduled charge (a regular visit, a booking far ahead) didn't go through: pay by `params.at` to keep it. */
   'scheduled_payment_failed',
+  /** A client's booked helper canceled and the task is open again: a helper it suits could take it (replacement matching). */
+  'replacement_needed',
+  /** The client's helper canceled: their task is open for offers again on its own, and nearby helpers were told. */
+  'replacement_search_started',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

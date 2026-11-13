@@ -49,40 +49,36 @@ async function booked(id: string, startsInMs: number): Promise<{ bookingId: stri
 const actionIds = async (userId: string, bookingId: string, now = new Date()) => (await getBookingView(hub, userId, bookingId, now))?.actions.map((action) => action.id) ?? [];
 
 describe('find a replacement', () => {
-  it('reopens the task after the helper cancels; an earlier offerer hears about it and offers again', async () => {
+  it('reopens the task on its own when the helper cancels with time to spare; an earlier offerer hears it and offers again', async () => {
     const { bookingId } = await booked('tsk_ac_replace', 5 * 24 * HOUR);
     expect(await actionIds('usr_ruth', bookingId)).not.toContain('find_replacement');
     expect(await cancelBookingBy(deps, 'usr_jordan', bookingId, { reason: 'illness', note: '' }, new Date())).toEqual({ ok: true, code: 'canceled' });
 
-    // Only the client gets it, and Jordan has nothing to contest after cancelling.
-    expect(await actionIds('usr_ruth', bookingId)).toContain('find_replacement');
-    expect(await actionIds('usr_jordan', bookingId)).not.toContain('find_replacement');
-    expect(await actionIds('usr_jordan', bookingId)).not.toContain('contest_no_show');
-    expect(await runBookingAction(db, 'usr_jordan', bookingId, 'find_replacement', new Date())).toEqual({ ok: false, code: 'not_allowed' });
-
-    let reopened: unknown;
-    const result = await runBookingAction(db, 'usr_ruth', bookingId, 'find_replacement', new Date(), { onTaskReopened: (task) => (reopened = task) });
-    expect(result).toEqual({ ok: true, code: 'updated', redirectTo: routes.app.task('tsk_ac_replace') });
-    expect(reopened).toEqual({ id: 'tsk_ac_replace', slug: 'tsk_ac_replace-slug', marketSlug: 'austin' });
+    // Automated replacement matching: the task is open again without Ruth doing anything.
     const [task] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_ac_replace'));
     expect(task).toMatchObject({ status: 'open', offerCount: 0 });
     expect(task?.reopenedAt).toBeInstanceOf(Date);
+    const [audit] = await db.select().from(auditLog).where(and(eq(auditLog.targetId, 'tsk_ac_replace'), eq(auditLog.action, 'task.reopened')));
+    expect(audit).toMatchObject({ actorId: 'system', reason: 'replacement_automatic' });
+    // Nothing left to do by hand, and Jordan has nothing to contest after cancelling.
+    expect(await actionIds('usr_ruth', bookingId)).not.toContain('find_replacement');
+    expect(await actionIds('usr_jordan', bookingId)).not.toContain('contest_no_show');
+    expect(await runBookingAction(db, 'usr_ruth', bookingId, 'find_replacement', new Date())).toEqual({ ok: false, code: 'not_allowed' });
     // The earlier offers stay with the canceled booking: Ruth's list starts empty.
     const owner = await getTaskOwnerView({ db, cipher: hub.cipher, fees: DEFAULT_FEES }, 'usr_ruth', 'tsk_ac_replace', new Date());
     expect(owner?.offers).toEqual([]);
-    const [audit] = await db.select().from(auditLog).where(and(eq(auditLog.targetId, 'tsk_ac_replace'), eq(auditLog.action, 'task.reopened')));
-    expect(audit).toMatchObject({ actorId: 'usr_ruth', reason: 'find_replacement' });
 
-    // Once is enough: the old booking no longer offers it.
-    expect(await actionIds('usr_ruth', bookingId)).not.toContain('find_replacement');
-    expect(await runBookingAction(db, 'usr_ruth', bookingId, 'find_replacement', new Date())).toEqual({ ok: false, code: 'not_allowed' });
-
-    // Sam (declined when Jordan was booked) is told; Jordan isn't.
+    // Sam (declined when Jordan was booked) is told; Jordan isn't; Ruth hears her task is open again; other helpers the
+    // task suits (never Jordan or Sam) may hear a client needs someone.
     await dispatchNotifications(db, new Date(), 10_000);
-    const told = await db.select().from(notifications).where(eq(notifications.type, 'task_reopened'));
-    const aboutThis = told.filter((row) => row.target.kind === 'find_work_task' && row.target.taskId === 'tsk_ac_replace');
-    expect(aboutThis.map((row) => row.userId)).toEqual(['usr_sam']);
-    expect(aboutThis[0]).toMatchObject({ title: task!.title });
+    const aboutTask = async (type: 'task_reopened' | 'replacement_needed' | 'replacement_search_started') =>
+      (await db.select().from(notifications).where(eq(notifications.type, type))).filter((row) => (row.target.kind === 'find_work_task' || row.target.kind === 'task') && row.target.taskId === 'tsk_ac_replace');
+    const reopenedFor = await aboutTask('task_reopened');
+    expect(reopenedFor.map((row) => row.userId)).toEqual(['usr_sam']);
+    expect(reopenedFor[0]).toMatchObject({ title: task!.title });
+    expect((await aboutTask('replacement_search_started')).map((row) => row.userId)).toEqual(['usr_ruth']);
+    expect((await aboutTask('replacement_needed')).map((row) => row.userId)).not.toEqual(expect.arrayContaining(['usr_jordan']));
+    expect((await aboutTask('replacement_needed')).map((row) => row.userId)).not.toEqual(expect.arrayContaining(['usr_sam']));
 
     // Sam can offer again: the task is in his feed without his old offer, and its page has the form.
     const feed = await getFindWorkPageData(db, 'usr_sam', {}, new Date());
@@ -105,6 +101,31 @@ describe('find a replacement', () => {
     // Jordan's booked offer was for the canceled booking: it isn't shown as his offer on the reopened task.
     const jordanView = await getHelperTaskView(db, 'usr_jordan', 'tsk_ac_replace', new Date());
     expect(jordanView?.myOffer).toBeUndefined();
+  });
+
+  it('leaves it to the client when the helper cancels close to the start: Find a replacement, once', async () => {
+    const { bookingId } = await booked('tsk_ac_replace_late', 2 * HOUR);
+    expect(await cancelBookingBy(deps, 'usr_jordan', bookingId, { reason: 'illness', note: '' }, new Date())).toEqual({ ok: true, code: 'canceled' });
+    const [before] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_ac_replace_late'));
+    expect(before?.status).toBe('canceled');
+
+    // Only the client gets it.
+    expect(await actionIds('usr_ruth', bookingId)).toContain('find_replacement');
+    expect(await actionIds('usr_jordan', bookingId)).not.toContain('find_replacement');
+    expect(await runBookingAction(db, 'usr_jordan', bookingId, 'find_replacement', new Date())).toEqual({ ok: false, code: 'not_allowed' });
+
+    let reopened: unknown;
+    const result = await runBookingAction(db, 'usr_ruth', bookingId, 'find_replacement', new Date(), { onTaskReopened: (task) => (reopened = task) });
+    expect(result).toEqual({ ok: true, code: 'updated', redirectTo: routes.app.task('tsk_ac_replace_late') });
+    expect(reopened).toEqual({ id: 'tsk_ac_replace_late', slug: 'tsk_ac_replace_late-slug', marketSlug: 'austin' });
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_ac_replace_late'));
+    expect(task).toMatchObject({ status: 'open', offerCount: 0 });
+    const [audit] = await db.select().from(auditLog).where(and(eq(auditLog.targetId, 'tsk_ac_replace_late'), eq(auditLog.action, 'task.reopened')));
+    expect(audit).toMatchObject({ actorId: 'usr_ruth', reason: 'find_replacement' });
+
+    // Once is enough: the old booking no longer offers it.
+    expect(await actionIds('usr_ruth', bookingId)).not.toContain('find_replacement');
+    expect(await runBookingAction(db, 'usr_ruth', bookingId, 'find_replacement', new Date())).toEqual({ ok: false, code: 'not_allowed' });
   });
 
   it('is not offered after a client cancellation, or once the task window has passed', async () => {

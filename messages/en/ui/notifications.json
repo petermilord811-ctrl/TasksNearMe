@@ -57,7 +57,9 @@
     "series_paused": "{actorName} paused regular visits for {title}{hasDate, select, yes { until {date}} other {}}",
     "series_resumed": "Regular visits for {title} are back on",
     "series_stopped": "{by, select, helper {{actorName} is ending regular visits for {title}{hasDate, select, yes {. The last visit can be on {date}} other {}}} poster {{actorName} stopped regular visits for {title}} other {Regular visits for {title} stopped}}",
-    "scheduled_payment_failed": "We couldn't charge your card for {title}{hasDate, select, yes {. Pay by {date} to keep it} other {}}"
+    "scheduled_payment_failed": "We couldn't charge your card for {title}{hasDate, select, yes {. Pay by {date} to keep it} other {}}",
+    "replacement_needed": "A client needs a new helper for {title}. Send an offer if you can help",
+    "replacement_search_started": "{actorName} canceled {title}. Your task is open for offers again, and we told helpers nearby"
   },
   "previews": {
     "group": "Notifications",

@@ -55,7 +55,7 @@ export interface ReopenedTask {
  * canceled booking). Earlier offerers (not the helper who canceled) hear about it. Only the client, only
  * while the window is ahead.
  */
-export async function reopenForReplacement(db: Db, userId: string, booking: BookingRow, now: Date): Promise<{ result: ActionResult; task?: ReopenedTask }> {
+export async function reopenForReplacement(db: Db, userId: string, booking: BookingRow, now: Date, options: { automatic?: boolean } = {}): Promise<{ result: ActionResult; task?: ReopenedTask }> {
   const reopened = await db.transaction(async (tx) => {
     const [task] = await tx
       .update(tasks)
@@ -78,14 +78,28 @@ export async function reopenForReplacement(db: Db, userId: string, booking: Book
         posterUserId: userId,
         canceledHelperUserId: booking.helperUserId,
         helperUserIds: earlier.map((row) => row.helperUserId),
+        ...(options.automatic ? { automatic: true } : {}),
       },
     });
-    await tx.insert(auditLog).values({ id: newId('aud'), actorId: userId, actorRole: 'user', action: 'task.reopened', targetType: 'task', targetId: task.id, reason: 'find_replacement' });
+    await tx.insert(auditLog).values({ id: newId('aud'), actorId: options.automatic ? 'system' : userId, actorRole: options.automatic ? 'system' : 'user', action: 'task.reopened', targetType: 'task', targetId: task.id, reason: options.automatic ? 'replacement_automatic' : 'find_replacement' });
     const [market] = await tx.select({ slug: markets.slug }).from(markets).where(eq(markets.id, task.marketId)).limit(1);
     return { id: task.id, slug: task.slug, ...(market ? { marketSlug: market.slug } : {}) };
   });
   if (!reopened) return { result: { ok: false, code: 'version_conflict' } };
   return { result: { ok: true, code: 'updated', redirectTo: routes.app.task(reopened.id) }, task: reopened };
+}
+
+/** Automated replacement matching needs this much time before the start for someone new to come. */
+export const AUTO_REPLACEMENT_LEAD_MS = 3 * 3_600_000;
+
+/**
+ * Automated replacement matching (blueprint 01 P2): when the helper cancels with at least 3 hours to spare, the
+ * client's task opens for offers again on its own (they were refunded in full and can still cancel the task), the
+ * earlier offerers hear it, and so do the most reliable helpers it suits. Not for a visit of regular visits.
+ */
+export async function reopenAfterHelperCancel(db: Db, booking: BookingRow, now: Date): Promise<void> {
+  if (booking.seriesId || booking.startAt.getTime() - now.getTime() < AUTO_REPLACEMENT_LEAD_MS) return;
+  await reopenForReplacement(db, booking.posterUserId, booking, now, { automatic: true });
 }
 
 /**

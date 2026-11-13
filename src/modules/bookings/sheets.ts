@@ -24,6 +24,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { reopenAfterHelperCancel } from './after-cancel';
 import { CANT_ACCESS_AFTER_ARRIVAL_MS, CANT_ACCESS_ANSWER_MS } from './domain';
 import { bookings, bookingTerms, helperStrikes } from './schema';
 
@@ -189,6 +190,8 @@ async function cancelWith(
   if (!done) return { ok: false, code: 'not_allowed' };
   await refundCharge(deps, booking, outcome.refund, now);
   if (outcome.compensation > 0) await recordCompensation(deps.db, booking, outcome.compensation, now);
+  // The helper canceled: the task opens for offers again on its own when there's time (replacement matching).
+  if (outcome.reason === 'helper') await reopenAfterHelperCancel(deps.db, booking, now);
   return { ok: true, code: 'canceled' };
 }
 
