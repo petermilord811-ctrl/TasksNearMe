@@ -94,9 +94,10 @@
 - The design system (§1–2.3) describes the new brand.
 
 ## Next steps
-1. Phase 2 is done here except multi-helper bookings (two separate bookings at launch, by design) and errands (blocked on F17). Keep refining the screens and run the gate after each increment (`scripts/gate.mjs`, one heavy run at a time between the two sessions).
-2. The other session: emails and texts in the recipient's language, then the Spanish translation of the namespaces this session settled (series, bookingHub, bookings, bookingConfirm, bookingSheets, helperCard, clients, proposal, rewards, actions, status, thread, notifications, server).
-3. When Codex is back (2026-11-17), it can take UI polish tickets again.
+1. **Run the full gate on the new machine first** (`node scripts/gate.mjs`, after `npm install`, `npm run db:migrate` (0000–0042) and a dev server on :3000). The owner is moving the project to a VPS, and the local dev server was stopped for the move (2026-11-13), so the last full gate here (dd7fa73) ran before the gate fixes. Since then, test:db (74 files, 334 tests) and `npm run check` (2,558) pass at 0744c19, and so do the e2e specs that failed (series, post-again, tasks-public, after-cancel, find-work, my-tasks, and the other session's sign-in, account and notification specs).
+2. Phase 2 is done here except multi-helper bookings (two posts for now, decisions.md) and errands (blocked on F17).
+3. Before launch: a shared cache store for `"use cache"` across web instances (see the other session's note), real provider keys, legal text, deployment (blocked.md).
+4. When Codex is back (2026-11-17), it can take UI polish tickets again.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB plus the landing copy).
