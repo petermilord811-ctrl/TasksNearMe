@@ -1,0 +1,62 @@
+# Runbooks and on-call
+
+What staff and the on-call engineer do when something goes wrong in production (blueprint 11, B-066). Each runbook names the staff pages, jobs, tables and code paths involved, so you can check what the app did before you act.
+
+| Runbook | Use it when |
+|---|---|
+| [Payments incident](payments-incident.md) | Charges, scheduled charges, transfers or payouts fail, or Stripe is down. Includes the tabletop exercise for a payments outage. |
+| [Webhook backlog](webhook-backlog.md) | Stripe, Checkr or Resend events arrive late, fail, or stop. |
+| [Dispute handling](dispute-handling.md) | A client reports a problem with a booking, or a bank opens a chargeback. |
+| [Reward fraud review](reward-review.md) | Gift-card rewards are under review, show risk signals, or fail to deliver. |
+| [Safety escalation](safety-escalation.md) | Someone reports a safety problem, or an exact address or message may have reached the wrong person. |
+
+## Who is on call
+
+Blueprint 10 §5 asks for these before launch. Fill in the names before the beta starts.
+
+| Duty | Hours | Who | Authority |
+|---|---|---|---|
+| Support | Published support hours (for example 8 am–8 pm Central, daily) | Support agents, with a support lead | Refunds up to $100 per booking (agents) or $500 (leads) without approval |
+| Safety escalation | 24/7 | Trust & safety on-call | Suspend helpers, read restricted data with a reason, call emergency services |
+| Money | Business hours, plus paging for a SEV1 | Finance | Any refund; approves refunds above $500 (never their own) |
+| Engineering | 24/7 for SEV1 | On-call engineer | Production logs, the database (read first), provider dashboards, deploys |
+
+## Severity
+
+| Level | Examples | Response |
+|---|---|---|
+| **SEV1** | Someone is unsafe now. Money moves wrongly: double charges, a transfer to the wrong person, refunds failing in bulk. An exact address or private messages reached the wrong person. Every payment is failing. | Start at once, any hour. Page the on-call engineer and the duty lead, and open an incident channel. |
+| **SEV2** | Part of the service is degraded: some charges failing, a webhook backlog over 15 minutes, payouts delayed, the jobs runner stopped. | Within 1 hour in support hours. Page the engineer if money is piling up. |
+| **SEV3** | A single booking or person is affected, and a workaround exists. | Work it through the normal queues (`/admin/cases`). |
+
+## Where to look
+
+| What | Where |
+|---|---|
+| Cases by queue, and response targets | `/admin` (queues), `/admin/cases`, `/admin/response-times` (first reply 4 h for disputes and safety, 24 h otherwise; resolution 72 h) |
+| Money exceptions | `/admin/payments` (tabs: exceptions, charges, refunds, transfers, payouts), `/admin/bookings/[bookingId]` |
+| Rewards | `/admin/rewards?status=in_review`, `failed` or `all` |
+| A person | `/admin/users/[userId]` (verification, strikes, suspension, emails and texts) |
+| Who did what | `/admin/audit` (admins and support leads only) |
+| Market health | `/admin/metrics` (the launch targets, the funnel, liquidity, reward spend) |
+| Feature flags and policies | `/admin/config` (admins only) |
+| Background jobs | Server logs only: lines starting `[jobs] <name> failed` ([src/modules/jobs/runner.ts](../../src/modules/jobs/runner.ts)) |
+| Provider events | Each provider's dashboard (Stripe, Checkr, Resend); the app doesn't store raw webhook events |
+
+## Built-in gaps
+
+These aren't built yet, so the runbooks handle them by hand. Close them before the gaps cost more than the manual steps.
+
+- **No webhook inbox.** Blueprint 09 §4.2 specifies a `webhook_events` table with a dead-letter queue; it doesn't exist. Delivery history and replays live in each provider's dashboard ([webhook backlog](webhook-backlog.md)).
+- **No paging.** The outbox events `support.safety_report`, `support.case_opened` and `payment.refund_needed` have no consumer. Nobody is paged for an urgent safety case, and a "refund needed" event creates no case. Until paging exists, the safety on-call watches the safety queue ([safety escalation](safety-escalation.md)), and finance checks for those events daily ([payments incident](payments-incident.md)).
+- **No transfer reversals.** Nothing reverses a helper's transfer. A refund after the helper was paid comes from platform funds; claw back in the Stripe Dashboard ([dispute handling](dispute-handling.md)).
+- **Chargeback status isn't recorded.** A chargeback opens an urgent case, but the payment's status stays as it was (`chargeback_open`, `won` and `lost` exist in the contracts and are never set). Evidence goes in through the Stripe Dashboard.
+- **No account ban tool.** Staff can suspend a *helper profile*. Blocking a whole account (`users.status` `suspended` or `banned`) is a database change, and it doesn't end sessions that are already signed in ([safety escalation](safety-escalation.md)).
+- **No booking or payment kill switch.** No feature flag pauses new bookings during an outage; payment errors show friendly copy and unpaid bookings expire on their own.
+- **Jobs have no dashboard.** The runner logs failures and retries every minute; there's no jobs table to inspect.
+
+## After every SEV1 or SEV2
+
+1. Write a short incident note: timeline, impact (people, bookings, money), what fixed it, and what would have caught it sooner.
+2. Store it with the team's incident notes (`docs/runbooks/incidents/YYYY-MM-DD-<slug>.md` until there's a better home).
+3. Turn each "would have caught it" into a backlog item. Most of them are the gaps above.

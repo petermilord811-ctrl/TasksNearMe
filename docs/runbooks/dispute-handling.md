@@ -1,0 +1,64 @@
+# Dispute handling
+
+Use this for the disputes queue: a client reports a problem with finished work, a no-show report, or a cancellation review. It also covers bank chargebacks, which open in the requests queue. A single dispute is **SEV3** and goes through the normal queue. A rise in disputes (more than 3% of bookings on `/admin/metrics`) or a chargeback deadline under 48 hours is worth a lead's attention the same day.
+
+**Who:** support agents work the cases. Support leads, trust & safety and admins take escalated cases, reopen them, and take cases from others. Finance reads cases and adds notes, and approves refunds above $500.
+
+## How a dispute starts
+
+- **A problem with the work.** The client reports it from the booking page (`/app/bookings/[bookingId]/problem`). This is allowed only while the booking is `completion_submitted`, before `approval_due_at` ([src/modules/bookings/completion.ts](../../src/modules/bookings/completion.ts)). The booking becomes `disputed`, and a case opens with `type='dispute'`, `priority='high'` and the client's photos as evidence (`file_ids`).
+- **A disputed booking is never approved automatically.** The `bookings.auto_approve` job only touches `completion_submitted` bookings, so the helper's money waits until the case is resolved.
+- **Its rewards wait too.** While its booking is `disputed`, a reward can't move to review or become redeemable.
+- **No-show reports and cancellation reviews** open in the same queue (`no_show`, `cancellation_review`).
+- **Chargebacks** come from Stripe (`charge.dispute.created`). They open a `payment_issue` case in the requests queue with `priority='urgent'`, plus an internal note with the Stripe dispute id and the evidence deadline ([src/modules/payments/stripe-webhooks.ts](../../src/modules/payments/stripe-webhooks.ts)).
+
+## Targets
+
+| | Disputes | Requests (chargebacks) |
+|---|---|---|
+| First staff reply | 4 h | 24 h, but treat chargebacks as urgent |
+| Resolution | 72 h from opening | Before Stripe's evidence deadline |
+
+The clock pauses while the case waits on the client or the helper (`awaiting_poster`, `awaiting_helper`). `/admin/response-times` shows what's past due and what's due within the hour ([src/modules/support/staff-domain.ts](../../src/modules/support/staff-domain.ts)).
+
+## Working a dispute
+
+1. **Take it.** On `/admin/cases?queue=disputes`, open the oldest past-due case and choose "Assign to me".
+2. **Read before you write.**
+   - The booking (`/admin/bookings/[bookingId]`): its terms, timeline, check-in, completion photos and checklist, change requests and payments.
+   - The client's photos on the case.
+   - The conversation: open it with a written reason (10 to 500 characters), which is logged as `case.view_conversation`. Read messages only for this case.
+3. **Hear both sides.** Reply to the client and the helper (start from a saved reply if one fits). Set "Waiting on {name}" while you wait for an answer; that pauses the clock. Give each person a clear deadline, for example 48 hours.
+4. **Escalate** to a lead when the amount is over your refund limit, when there's a safety element (switch to the [safety runbook](safety-escalation.md)), or when either side disputes your reading of the evidence.
+5. **Resolve** with the outcome that matches the evidence. The options depend on the booking:
+
+| Resolution | When | What happens |
+|---|---|---|
+| **Release in full** (`release_full`) | The work was done as agreed | The booking completes and the helper's earnings are scheduled for transfer |
+| **Settle** (`settle`) | Part of the work was done | A lower final price: the difference is refunded to the client (`dispute_settlement`) and the helper is paid on the new price |
+| **Refund in full** (`refund_full`) | The work wasn't done, or can't be used | The booking is canceled (`cancel_reason='refunded_in_dispute'`) and the client gets the full charge back |
+| No action, account action | A dispute raised before the work was submitted; or a person needs action on their account | Nothing moves; record why |
+
+Release, settle and refund are offered only on a paid booking whose work was submitted. Before submission, the options are a full refund or no action ([caseResolutions](../../src/modules/support/staff-domain.ts)). Rework isn't offered yet.
+
+6. **Write the resolution note** for both people: what you decided, what happens to the money, and when. Example: "We've refunded $30.00 for the shelves that weren't installed. It usually reaches your card in 5–10 business days. Jordan is paid for the rest."
+
+## Money and limits
+
+- You can refund up to your limit per booking without approval: agents $100, leads and finance $500. Above that, your refund becomes a request; a lead approves up to $500, finance approves any amount, and nobody approves their own.
+- **If a resolution's refund fails,** resolving again won't retry it: the attempt's key is fixed per case. Use the booking's refund tool for the same amount, put the case id in the reason, and note it on the case ([payments incident](payments-incident.md#fixes-by-symptom)).
+- **If the helper was already paid** (a late chargeback, or a reopened case), the app can't take the transfer back. Finance decides whether to reverse it in the Stripe Dashboard (Connect → the account → Transfers → Reverse) and records the case id. The refund to the client comes from platform funds either way.
+
+## Chargebacks
+
+1. Open the urgent `payment_issue` case. The internal note has the Stripe dispute id and the date evidence is due.
+2. Gather the evidence from the booking: the agreed terms and price, the timeline (check-in, arrival, completion), completion photos, the conversation (with a logged reason), and the client's approval if there was one.
+3. Finance submits it in the Stripe Dashboard (Payments → Disputes → the dispute). The app doesn't send evidence, and it doesn't change the payment's status: `chargeback_open`, `won` and `lost` aren't recorded yet.
+4. When Stripe closes the dispute (`charge.dispute.closed`), a note is added to the case. Resolve the case with the outcome, and decide with finance whether a lost chargeback needs a transfer reversal (see above) or an account action.
+5. Each lost chargeback costs a $15 fee, plus $15 if countered (returned on a win; blueprint 04 §8). Two or more from one client is a pattern worth a trust & safety look.
+
+## Patterns to watch
+
+- **Repeated disputes from one client or against one helper.** Check the person page's cases and strikes. Three no-show or late-cancel strikes in 90 days call for a suspension review ([safety escalation](safety-escalation.md)).
+- **A dispute rate above the 3% target** on `/admin/metrics`, or a category or area with many more disputes than others. Raise it with the product lead: unclear scope in a category's task form is a common cause.
+- **Strike appeals.** A support lead, trust & safety or an admin can reverse a strike from the person page; it's logged as `helper.strike_reversed`, and `/admin/metrics` stops counting it.
