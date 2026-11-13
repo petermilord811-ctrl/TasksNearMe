@@ -82,6 +82,7 @@
       "rate_limited": "Try again later",
       "validation_failed": "Accept the terms",
       "limit_reached": "Account limit reached",
+      "identity_required": "ID check needed",
       "unknown": "Payment outcome unknown"
     }
   }

@@ -300,7 +300,7 @@ export async function verificationAction(db: Db, providers: VerificationProvider
       break;
     case 'confirm_name':
       await db.update(identityVerifications).set({ nameConfirmedAt: now, nameConfirmedByUserId: staff.id, updatedAt: now }).where(eq(identityVerifications.id, latestIdentity!.id));
-      await emitVerificationEvent(db, userId, 'identity', 'passed');
+      await emitVerificationEvent(db, userId, state.profile ? 'identity' : 'poster_identity', 'passed');
       break;
     case 'allow_identity_retry':
     case 'request_identity':
@@ -315,7 +315,8 @@ export async function verificationAction(db: Db, providers: VerificationProvider
         createdAt: now,
         updatedAt: now,
       });
-      await emitVerificationEvent(db, userId, 'identity', 'action_needed');
+      // A client (no helper profile) is sent to their own ID page.
+      await emitVerificationEvent(db, userId, state.profile ? 'identity' : 'poster_identity', 'action_needed');
       break;
     case 'engage_background': {
       // After a pre-adverse notice, the provider's scheduled final notice must not go.

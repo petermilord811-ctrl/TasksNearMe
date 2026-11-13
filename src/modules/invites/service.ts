@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type {
   ActionResult,
   AvailabilitySlotView,
@@ -235,6 +236,8 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
   }
   const fees = await feesOf(db, task.marketId);
   if (!fees) return { ok: false, code: 'unknown' };
+  // Risk asked this client to verify their ID first; the amount counts for new accounts.
+  if (await posterIdentityRequirement(db, posterId, now, quoteBreakdown(fees, parsed.data.pricing).posterTotalCents)) return { ok: false, code: 'identity_required' };
   const limited = await consumeRateLimit(db, `invites:${posterId}`, REQUEST_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const method = await methodForChoice(deps, posterId, parsed.data.payment);

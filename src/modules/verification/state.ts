@@ -22,7 +22,7 @@ import { addressStanding, backgroundStanding, identityStanding } from './standin
  * (status and badges). Functions take the database so tests can use their own.
  */
 
-export type VerificationTrack = 'phone' | 'identity' | 'address' | 'payout' | 'background' | 'helper';
+export type VerificationTrack = 'phone' | 'identity' | 'address' | 'payout' | 'background' | 'helper' | 'poster_identity';
 export type VerificationOutcome = 'passed' | 'action_needed' | 'expiring' | 'expired' | 'ready';
 
 /** `verification.updated` in the outbox: the dispatcher turns it into the person's notification. */

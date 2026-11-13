@@ -39,3 +39,4 @@ export * from './admin-people';
 export * from './admin-verification';
 export * from './report';
 export * from './staff-verify';
+export * from './poster-identity';

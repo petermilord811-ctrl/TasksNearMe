@@ -7,7 +7,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 describe('Stripe Identity', () => {
   it('opens a hosted document-and-selfie session for the person, once a minute at most', async () => {
     const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => json({ id: 'vs_123', url: 'https://verify.stripe.com/start/abc', status: 'requires_input' }));
-    const identity = createStripeIdentity({ secretKey: 'sk_test_x', returnUrl: 'https://app.example/app/helper/onboarding/identity', fetch: fetcher as unknown as typeof fetch, now: () => new Date('2026-11-17T15:00:30.000Z') });
+    const identity = createStripeIdentity({ secretKey: 'sk_test_x', appUrl: 'https://app.example', fetch: fetcher as unknown as typeof fetch, now: () => new Date('2026-11-17T15:00:30.000Z') });
     expect(await identity.start('usr_jordan')).toEqual({ sessionId: 'vs_123', url: 'https://verify.stripe.com/start/abc' });
     const [url, init] = fetcher.mock.calls[0]!;
     expect(url).toBe('https://api.stripe.com/v1/identity/verification_sessions');
@@ -19,18 +19,21 @@ describe('Stripe Identity', () => {
     expect(body.getAll('options[document][allowed_types][]')).toEqual(['driving_license', 'id_card', 'passport']);
     expect(body.get('return_url')).toBe('https://app.example/app/helper/onboarding/identity');
     expect(body.get('client_reference_id')).toBe('usr_jordan');
+    // A client's check comes back to their own page.
+    await identity.start('usr_maya', { returnPath: '/app/verify-identity' });
+    expect(new URLSearchParams(String(fetcher.mock.calls[1]![1]?.body)).get('return_url')).toBe('https://app.example/app/verify-identity');
   });
 
   it('reads the verified name and date of birth once, and redacts on request', async () => {
     const fetcher = vi.fn(async (url: string) =>
       url.includes('/redact') ? json({ id: 'vs_123' }) : json({ id: 'vs_123', status: 'verified', verified_outputs: { first_name: 'Jordan', last_name: 'Thompson', dob: { day: 4, month: 7, year: 1994 } } }),
     );
-    const identity = createStripeIdentity({ secretKey: 'sk_test_x', returnUrl: 'https://app.example/x', fetch: fetcher as unknown as typeof fetch });
+    const identity = createStripeIdentity({ secretKey: 'sk_test_x', appUrl: 'https://app.example', fetch: fetcher as unknown as typeof fetch });
     expect(await identity.verifiedOutputs('vs_123')).toEqual({ firstName: 'Jordan', lastName: 'Thompson', dob: { day: 4, month: 7, year: 1994 } });
     expect(fetcher.mock.calls[0]![0]).toBe('https://api.stripe.com/v1/identity/verification_sessions/vs_123?expand%5B%5D=verified_outputs&expand%5B%5D=verified_outputs.dob');
     await identity.redact('vs_123');
     expect(fetcher.mock.calls[1]![0]).toBe('https://api.stripe.com/v1/identity/verification_sessions/vs_123/redact');
-    await expect(createStripeIdentity({ secretKey: 'k', returnUrl: 'r', fetch: (async () => json({}, 402)) as unknown as typeof fetch }).start('u')).rejects.toThrow(/402/);
+    await expect(createStripeIdentity({ secretKey: 'k', appUrl: 'https://app.example', fetch: (async () => json({}, 402)) as unknown as typeof fetch }).start('u')).rejects.toThrow(/402/);
   });
 
   it('accepts only webhooks Stripe signed, recently', () => {

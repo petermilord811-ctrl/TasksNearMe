@@ -86,7 +86,8 @@
         "support_case": "View the case",
         "invite": "View the invite",
         "proposal": "View the proposal",
-        "account": "Open your account"
+        "account": "Open your account",
+        "verify_identity": "Verify your ID"
       },
       "next": {
         "offer_received": "Compare the offers on your task and book the one that fits. You're only charged when you book.",

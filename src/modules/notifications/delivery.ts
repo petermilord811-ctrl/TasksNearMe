@@ -67,6 +67,8 @@ function pathOf(target: AttentionTarget): string {
       return routes.app.proposal(target.proposalId);
     case 'account':
       return routes.app.account();
+    case 'verify_identity':
+      return routes.app.verifyIdentity();
   }
 }
 

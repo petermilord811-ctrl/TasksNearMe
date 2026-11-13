@@ -25,7 +25,9 @@ export type AttentionTarget =
   /** A rebooking proposal (`routes.app.proposal(proposalId)`, UI-032). */
   | { kind: 'proposal'; proposalId: string }
   /** The account page (privacy requests, sign-in, notifications). */
-  | { kind: 'account' };
+  | { kind: 'account' }
+  /** A client's ID check (`routes.app.verifyIdentity()`). */
+  | { kind: 'verify_identity' };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */

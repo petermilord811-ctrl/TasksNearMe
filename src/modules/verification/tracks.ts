@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { ActionResult, BackgroundCheckStatus, IdentityFailureReason, PayoutAccountStatus } from '@/contracts';
 import { recordAgreement, type RequestOrigin } from '@/modules/accounts/agreements';
 import { users } from '@/modules/accounts/schema';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { fieldError } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
@@ -92,8 +93,11 @@ export async function recordIdentityResult(db: Db, sessionId: string, result: Id
     })
     .where(eq(identityVerifications.id, row.id));
   await audit(db, `identity.${result.status}`, row.userId, nameMatches === false ? { nameMatches: false } : {});
-  if (result.status === 'verified') await emitVerificationEvent(db, row.userId, 'identity', nameMatches === false ? 'action_needed' : 'passed');
-  if (result.status === 'requires_input') await emitVerificationEvent(db, row.userId, 'identity', 'action_needed');
+  // Helpers hear about it in setup; clients (asked by risk) on their own ID page.
+  const [helper] = await db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.userId, row.userId)).limit(1);
+  const track = helper ? 'identity' : 'poster_identity';
+  if (result.status === 'verified') await emitVerificationEvent(db, row.userId, track, nameMatches === false ? 'action_needed' : 'passed');
+  if (result.status === 'requires_input') await emitVerificationEvent(db, row.userId, track, 'action_needed');
   await syncHelperProfile(db, row.userId, now);
   return row.userId;
 }

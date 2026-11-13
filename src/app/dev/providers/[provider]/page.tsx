@@ -62,6 +62,8 @@ async function Provider({ params, searchParams }: Pick<PageProps<'/dev/providers
   const config = PROVIDERS[provider as keyof typeof PROVIDERS];
   if (!config) notFound();
   const ref = config.field ? String(search[config.field] ?? '') : '';
+  // Where the real provider would send the person back (a client's ID check comes back to its own page).
+  const next = typeof search.next === 'string' ? search.next : '';
   return (
     <>
       <h1 style={{ fontSize: 24, fontWeight: 700 }}>{config.title}</h1>
@@ -70,6 +72,7 @@ async function Provider({ params, searchParams }: Pick<PageProps<'/dev/providers
         {config.outcomes.map(([value, label]) => (
           <form key={value} action={config.action}>
             {config.field ? <input type="hidden" name={config.field} value={ref} /> : null}
+            {next ? <input type="hidden" name="next" value={next} /> : null}
             <input type="hidden" name="outcome" value={value} />
             <button type="submit" style={{ padding: '10px 14px', border: '1px solid #ccc', borderRadius: 8, width: '100%', textAlign: 'left' }}>
               {label}

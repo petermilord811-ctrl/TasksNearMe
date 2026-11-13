@@ -13,13 +13,13 @@ const API = 'https://api.stripe.com/v1';
 
 export interface StripeIdentity {
   readonly provider: 'stripe_identity';
-  start(userId: string): Promise<{ sessionId: string; url: string }>;
+  start(userId: string, options?: { returnPath?: string }): Promise<{ sessionId: string; url: string }>;
   redact(sessionId: string): Promise<void>;
   /** The verified name and date of birth, read once to finish a verified session. */
   verifiedOutputs(sessionId: string): Promise<{ firstName: string; lastName: string; dob: { day: number; month: number; year: number } | null }>;
 }
 
-export function createStripeIdentity(config: { secretKey: string; returnUrl: string; fetch?: typeof fetch; now?: () => Date }): StripeIdentity {
+export function createStripeIdentity(config: { secretKey: string; appUrl: string; fetch?: typeof fetch; now?: () => Date }): StripeIdentity {
   const doFetch = config.fetch ?? fetch;
   async function call(method: 'GET' | 'POST', path: string, body?: URLSearchParams, idempotencyKey?: string) {
     const response = await doFetch(`${API}${path}`, {
@@ -37,13 +37,13 @@ export function createStripeIdentity(config: { secretKey: string; returnUrl: str
   }
   return {
     provider: 'stripe_identity',
-    async start(userId) {
+    async start(userId, options = {}) {
       const body = new URLSearchParams();
       body.set('type', 'document');
       body.set('options[document][require_matching_selfie]', 'true');
       body.set('options[document][require_live_capture]', 'true');
       for (const type of ['driving_license', 'id_card', 'passport']) body.append('options[document][allowed_types][]', type);
-      body.set('return_url', config.returnUrl);
+      body.set('return_url', `${config.appUrl}${options.returnPath ?? '/app/helper/onboarding/identity'}`);
       body.set('client_reference_id', userId);
       body.set('metadata[user_id]', userId);
       // A double tap within the same minute opens one session.
@@ -119,5 +119,5 @@ export function stripeIdentityFromEnv(env: Record<string, string | undefined> = 
   const secretKey = env.STRIPE_SECRET_KEY?.trim();
   if (!secretKey) return null;
   const appUrl = (env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
-  return createStripeIdentity({ secretKey, returnUrl: `${appUrl}/app/helper/onboarding/identity` });
+  return createStripeIdentity({ secretKey, appUrl });
 }

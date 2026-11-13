@@ -5,6 +5,7 @@ import { routes } from '@/contracts';
 import { bookingDeps } from '@/modules/bookings/server';
 import { finishRequestVerificationAction, quoteInviteAction, requestHelperAction } from '@/modules/invites/actions';
 import { getRequestHelperPage } from '@/modules/invites/service';
+import { requirePosterIdentity } from '@/modules/verification/poster-identity';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { RequestHelperScreen } from '@/ui/screens/invites';
@@ -32,6 +33,8 @@ async function RequestHelper({ params, searchParams }: Pick<PageProps<'/app/help
   const deps = bookingDeps();
   if (!deps) notFound();
   const now = await requestNow();
+  // Risk may ask for an ID check before booking (the amount is checked again on sending).
+  await requirePosterIdentity(deps.db, viewer.user.id, now, routes.app.requestHelper(handle, { fromBookingId: from, slotId }));
   const data = await getRequestHelperPage(deps.db, deps.payments, viewer.user.id, handle, { fromBookingId: from, slotId }, now);
   if (!data) notFound();
   return (

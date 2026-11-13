@@ -70,6 +70,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   messages: { target: { kind: 'messages' }, href: routes.app.messages() },
   find_work_task: { target: { kind: 'find_work_task', taskId: 'task / one' }, href: routes.app.findWorkTask('task / one') },
   account: { target: { kind: 'account' }, href: routes.app.account() },
+  verify_identity: { target: { kind: 'verify_identity' }, href: routes.app.verifyIdentity() },
   onboarding: { target: { kind: 'onboarding', step: 'payout' }, href: routes.app.helperOnboarding('payout') },
   earnings: { target: { kind: 'earnings' }, href: routes.app.earnings() },
   support_case: { target: { kind: 'support_case', caseId: 'case / one' }, href: routes.app.supportCase('case / one') },

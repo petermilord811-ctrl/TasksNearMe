@@ -28,7 +28,8 @@ export async function devIdentityOutcome(form: FormData): Promise<void> {
   assertDev();
   const session = String(form.get('session') ?? '');
   await recordIdentityResult(db, session, identityResult(String(form.get('outcome') ?? '')), await requestNow());
-  redirect(routes.app.helperOnboarding('identity'));
+  const next = String(form.get('next') ?? '');
+  redirect(next.startsWith('/app/') && !next.includes('//') ? next : routes.app.helperOnboarding('identity'));
 }
 
 export async function devPayoutOutcome(form: FormData): Promise<void> {

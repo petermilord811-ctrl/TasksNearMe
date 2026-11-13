@@ -13,7 +13,10 @@ import {
   uploadTaskPhoto,
 } from '@/modules/tasks/actions';
 import { hasVerifiedPhone, homeMarketIdOf, taskDrafter, taskPosting } from '@/modules/tasks/server';
+import { requirePosterIdentity } from '@/modules/verification/poster-identity';
 import { getViewer } from '@/platform/auth/viewer';
+import { requestNow } from '@/platform/clock';
+import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { PostTaskScreen } from '@/ui/screens/posting';
 
@@ -56,6 +59,8 @@ async function PostTask({ searchParams }: Pick<PageProps<'/app/tasks/new'>, 'sea
   const userId = viewer.user.id;
   // The sign-in flow asks for (and verifies) a phone when the destination needs one.
   if (!(await hasVerifiedPhone(userId))) redirect(routes.signIn(here));
+  // Risk may ask for an ID check before posting (blueprint 01 P2); it comes back here once it passes.
+  await requirePosterIdentity(db, userId, await requestNow(), here);
 
   const [data, marketId, repeat] = await Promise.all([taskPosting.pageData(userId), homeMarketIdOf(userId), again ? taskPosting.repeat(userId, again) : null]);
   if (!data || !marketId) redirect(routes.app.home());

@@ -35,7 +35,8 @@
       "version_conflict": "Updated details feedback",
       "not_found": "Conversation not found feedback",
       "expired": "Expired action feedback",
-      "limit_reached": "Account limit feedback"
+      "limit_reached": "Account limit feedback",
+      "identity_required": "ID check needed feedback"
     }
   },
   "composer": {

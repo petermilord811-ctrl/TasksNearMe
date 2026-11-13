@@ -14,8 +14,8 @@ export interface VerificationProviders {
   identity: {
     /** Stored on each row (`dev`, `stripe_identity`). */
     readonly provider: string;
-    /** Starts a hosted session (document and live selfie) and returns where to send the person. */
-    start(userId: string): Promise<{ sessionId: string; url: string }>;
+    /** Starts a hosted session (document and live selfie) and returns where to send the person; it comes back to `returnPath` (helper setup by default). */
+    start(userId: string, options?: { returnPath?: string }): Promise<{ sessionId: string; url: string }>;
     /** Asks the provider to delete the session's images and personal data (Texas biometric limits, blueprint 06 §3). */
     redact(sessionId: string): Promise<void>;
   };
@@ -53,9 +53,10 @@ export function createDevVerificationProviders(): VerificationProviders {
   return {
     identity: {
       provider: 'dev',
-      async start() {
+      async start(_userId, options = {}) {
         const sessionId = newId('vs_dev');
-        return { sessionId, url: `/dev/providers/identity?session=${sessionId}` };
+        const next = options.returnPath ? `&next=${encodeURIComponent(options.returnPath)}` : '';
+        return { sessionId, url: `/dev/providers/identity?session=${sessionId}${next}` };
       },
       async redact() {},
     },

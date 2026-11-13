@@ -95,6 +95,8 @@ export const routes = {
         slot: opts.slotId,
       }),
     saved: () => '/app/saved',
+    /** A client's ID check, when risk asks for one; `next` is where to go once verified (an app path). */
+    verifyIdentity: (next?: string) => withQuery('/app/verify-identity', { next }),
     /** The helper feed. Same parameters as the task board, plus `distance` (default `any`, left out). */
     /** Defaults (`when: any`, `sort: soonest`, `distance: any`, the list, page 1) are left out of the URL. */
     findWork: (query: FindWorkQuery = {}) =>

@@ -5,6 +5,7 @@ import type { ActionResult } from '@/contracts';
 import { routes } from '@/contracts';
 import { formatDateTime } from '@/shared/format';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
+import { VerifyIdentityLink } from './verify-identity-link';
 
 export function FormFeedback({ result, successMessage, errorMessage }: { result?: ActionResult; successMessage?: string; errorMessage?: string }) {
   const t = useTranslations('forms');
@@ -16,6 +17,7 @@ export function FormFeedback({ result, successMessage, errorMessage }: { result?
       <AlertDescription className="text-foreground">
         <p>{result.ok ? successMessage ?? feedback(`success.${result.code}`) : errorMessage ?? (t.has(`actionErrors.${result.code}`) ? t(`actionErrors.${result.code}`) : feedback(`error.${result.code}`))}</p>
         {!result.ok && result.code === 'rate_limited' && result.retryAt && <p className="tabular-nums">{t('retryAt', { at: formatDateTime(result.retryAt) })}</p>}
+        {!result.ok && result.code === 'identity_required' && <VerifyIdentityLink label={t('verifyIdentity')} />}
         {!result.ok && <Link href={routes.help()} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">{t('getHelp')}</Link>}
       </AlertDescription>
     </Alert>}

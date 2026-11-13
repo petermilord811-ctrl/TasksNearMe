@@ -21,6 +21,11 @@ export function verificationNotificationFor(payload: Record<string, unknown>): P
   const outcome = text(payload.outcome);
   if (!userId || !track || !outcome) return null;
   if (track === 'helper') return outcome === 'ready' ? { userId, type: 'helper_ready', target: { kind: 'onboarding', step: 'done' } } : null;
+  // A client's ID check (asked for by risk): its results lead to their own ID page.
+  if (track === 'poster_identity') {
+    if (outcome !== 'passed' && outcome !== 'action_needed') return null;
+    return { userId, type: outcome === 'passed' ? 'verification_passed' : 'verification_action_needed', target: { kind: 'verify_identity' }, params: { track: 'identity' } };
+  }
   if (!(VERIFICATION_TRACKS as readonly string[]).includes(track)) return null;
   const step = track as VerificationTrack;
   if (outcome === 'expiring' || outcome === 'expired') {

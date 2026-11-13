@@ -104,5 +104,6 @@
     "failed": "Address search is unavailable. Try again in a moment.",
     "empty": "No matching addresses. Check the street number and name.",
     "selected": "Chosen: {address}"
-  }
+  },
+  "verifyIdentity": "Verify your ID"
 }

@@ -45,6 +45,7 @@ import {
   updateWorkSample,
 } from './service';
 import { homeGeocoder, sampleHomeGeocoder, verificationCipher, verificationProviders } from './server';
+import { startPosterIdentity } from './poster-identity';
 import { requestNow } from '@/platform/clock';
 
 /** Server Actions for helper onboarding and the profile editor (src/contracts/onboarding.ts). */
@@ -230,4 +231,12 @@ export async function editorSetPaused(input: { paused: boolean }): Promise<Actio
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   return saved(userId, await setHelperPaused(db, userId, Boolean(input.paused), await requestNow()));
+}
+
+/** A client's ID check (asked for by risk): opens the hosted check, coming back to their ID page. */
+export async function startPosterIdentityAction(input: { consent?: boolean; next?: string } = {}): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId || !verificationProviders) return { ok: false, code: 'not_allowed' };
+  const origin = originFromHeaders(await headers());
+  return startPosterIdentity(db, verificationProviders, userId, await requestNow(), { consent: input?.consent === true, origin, ...(typeof input?.next === 'string' ? { next: input.next } : {}) });
 }

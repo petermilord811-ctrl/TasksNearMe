@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type {
   ActionResult,
   BookingConfirmPageData,
@@ -296,11 +297,13 @@ export async function confirmBooking(
 
   const policy = await getPublishedPolicy(ctx.task.marketId, db);
   if (!policy) return { ok: false, code: 'unknown' };
+  const breakdown = breakdownFor(policy.fees, ctx.task, ctx.offer);
+  const amountCents = breakdown.posterChargedCents ?? breakdown.posterTotalCents;
+  // Risk asked this client to verify their ID first; the amount counts for new accounts.
+  if (await posterIdentityRequirement(db, posterId, now, amountCents)) return { ok: false, code: 'identity_required' };
   const method = await chosenMethod(deps, posterId, parsed.data);
   if ('ok' in method) return method;
 
-  const breakdown = breakdownFor(policy.fees, ctx.task, ctx.offer);
-  const amountCents = breakdown.posterChargedCents ?? breakdown.posterTotalCents;
   const pricing = offerPricing(ctx.offer);
 
   let hold: { bookingId: string; paymentId: string; idempotencyKey: string };

@@ -46,6 +46,7 @@ const targetCases: Record<AttentionTarget['kind'], { target: AttentionTarget; hr
   invite: { target: { kind: 'invite', inviteId: 'invite / one' }, href: routes.app.offers('invite / one') },
   proposal: { target: { kind: 'proposal', proposalId: 'proposal / one' }, href: routes.app.proposal('proposal / one') },
   account: { target: { kind: 'account' }, href: routes.app.account() },
+  verify_identity: { target: { kind: 'verify_identity' }, href: routes.app.verifyIdentity() },
 };
 
 describe('HomeScreen attention', () => {

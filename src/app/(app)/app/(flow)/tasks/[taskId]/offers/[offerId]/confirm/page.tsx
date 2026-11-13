@@ -5,6 +5,7 @@ import { routes } from '@/contracts';
 import { confirmBookingAction, finishBankVerificationAction } from '@/modules/bookings/actions';
 import { getBookingConfirmPage } from '@/modules/bookings/confirm';
 import { bookingDeps } from '@/modules/bookings/server';
+import { requirePosterIdentity } from '@/modules/verification/poster-identity';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { BookingConfirmScreen } from '@/ui/screens/bookings';
@@ -30,6 +31,9 @@ async function Confirm({ params }: Pick<PageProps<'/app/tasks/[taskId]/offers/[o
   const page = await getBookingConfirmPage(deps, viewer.user.id, taskId, offerId, now);
   if (!page) notFound();
   if (page.kind === 'booked') redirect(routes.app.booking(page.bookingId));
+  // Risk may ask for an ID check before paying; the amount counts for new accounts (blueprint 01 P2).
+  const { breakdown } = page.data;
+  await requirePosterIdentity(deps.db, viewer.user.id, now, routes.app.confirmOffer(taskId, offerId), breakdown.posterChargedCents ?? breakdown.posterTotalCents);
   return (
     <BookingConfirmScreen
       data={page.data}

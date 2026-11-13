@@ -38,6 +38,7 @@ export * from './rebook';
 export * from './admin-people';
 export * from './admin-verification';
 export * from './staff-auth';
+export * from './poster-identity';
 export * from './shell';
 export * from './routes';
 export type { PreviewEntry } from './preview';

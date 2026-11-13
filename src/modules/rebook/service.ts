@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { and, desc, eq, lte, sql } from 'drizzle-orm';
+import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type {
   AcceptProposalInput,
   ActionResult,
@@ -364,6 +365,8 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
   if (!helper.facts.bookableCategories.includes(past.slug as CategorySlug)) return { ok: false, code: 'not_allowed' };
   const policy = await getPublishedPolicy(past.task.marketId, db);
   if (!policy) return { ok: false, code: 'unknown' };
+  // Risk asked this client to verify their ID first; the amount counts for new accounts.
+  if (await posterIdentityRequirement(db, posterId, now, quoteBreakdown(policy.fees, pricingOf(row)).posterTotalCents)) return { ok: false, code: 'identity_required' };
   const method = await methodForChoice(deps, posterId, parsed.data.payment);
   if (!('providerRef' in method)) return method;
 

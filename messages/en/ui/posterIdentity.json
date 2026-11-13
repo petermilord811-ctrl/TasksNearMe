@@ -1,0 +1,37 @@
+{
+  "title": "Verify your ID",
+  "reasons": {
+    "staff_request": "Our team asked for an ID check on your account. Posting and booking wait until it passes.",
+    "reports": "We've had reports about this account, so we need to check your ID before you post or book again.",
+    "failed_payments": "Several card payments didn't go through today, so we need to check your ID before you pay again.",
+    "new_account_large_booking": "Your account is new, so bookings of $500 or more need an ID check first.",
+    "none": "Clients only need an ID check when we ask for one."
+  },
+  "cardTitle": "ID check",
+  "explanation": "Our ID partner asks for a photo of your ID and a selfie. It takes about 2 minutes.",
+  "privacy": "Helpers never see your ID. We keep only that it passed, and when.",
+  "processing": "We're checking your ID. It usually takes a few minutes, and we'll let you know when it's done.",
+  "nameCheck": "Your ID passed, but the name on it is different from your account's. Our team is checking, and we'll let you know.",
+  "verified": "Your ID is verified. You can carry on.",
+  "notNeeded": "You don't need an ID check right now.",
+  "start": "Start ID check",
+  "tryAgain": "Try again",
+  "checkStatus": "Check status",
+  "continueCheck": "Continue the ID check",
+  "continue": "Continue",
+  "contactSupport": "Contact support",
+  "previews": {
+    "group": "Client ID check",
+    "reports": "Reports: before the first check",
+    "largeBooking": "New account, $500+ booking",
+    "failedPayments": "Declined cards",
+    "staffRequest": "Staff asked",
+    "retry": "Try again",
+    "processing": "Checking",
+    "tryLater": "Tries used for today",
+    "tooMany": "Too many tries",
+    "nameCheck": "Name check",
+    "verified": "Verified: continue",
+    "notNeeded": "Not needed"
+  }
+}

@@ -80,6 +80,7 @@
       "expired": "Proposal — expired",
       "rate_limited": "Proposal — try later",
       "limit_reached": "Proposal — account limit",
+      "identity_required": "ID check needed",
       "unknown": "Proposal — couldn't send"
     }
   }

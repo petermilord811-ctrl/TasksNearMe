@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { routes, type AdminUserPageData, type AdminVerificationsPageData, type AppShellHandlers, type HelperOnboardingPageData, type PreviewEntry, type StaffViewer } from '@/contracts';
+import { routes, type AdminUserPageData, type AdminVerificationsPageData, type AppShellHandlers, type HelperOnboardingPageData, type PosterIdentityPageData, type PreviewEntry, type StaffViewer } from '@/contracts';
 import {
   ADMIN_NOW,
   adminUserJordanData,
@@ -14,8 +14,10 @@ import {
   fakeAdminUserHandlers,
   fakeHandler,
   fakeOnboardingHandlers,
+  fakePosterIdentityHandlers,
   homeAddressSuggestions,
   leeVerification,
+  mayaShell,
   morganStaff,
   onboardingAddressInReview,
   onboardingAddressRejected,
@@ -39,6 +41,17 @@ import {
   onboardingPhoneStep,
   onboardingPhoneVerified,
   onboardingProfileStep,
+  posterIdentityFailedPayments,
+  posterIdentityLargeBooking,
+  posterIdentityNameCheck,
+  posterIdentityNotNeeded,
+  posterIdentityProcessing,
+  posterIdentityReports,
+  posterIdentityRetry,
+  posterIdentityStaffRequest,
+  posterIdentityTooMany,
+  posterIdentityTryLater,
+  posterIdentityVerified,
   posterVerification,
   priyaShell,
   priyaVerification,
@@ -50,14 +63,17 @@ import { AddressStep } from '@/ui/screens/helper/address-step';
 import { HelperOnboardingScreen } from '@/ui/screens/helper/helper-onboarding-screen';
 import { PhoneStep } from '@/ui/screens/helper/phone-step';
 import { AdminShell } from '@/ui/shells/admin-shell';
+import { PosterIdentityScreen } from '@/ui/screens/verify';
 import { AppShell } from '@/ui/shells/app-shell';
 import onboardingCopy from '../../../messages/en/ui/helperOnboarding.json';
 import adminCopy from '../../../messages/en/ui/adminVerification.json';
+import posterCopy from '../../../messages/en/ui/posterIdentity.json';
 
 /** Verification (added 2026-11-12): the new onboarding states, the staff queues and the person page's section. */
 
 const o = onboardingCopy.screen.previews;
 const a = adminCopy.previews;
+const c = posterCopy.previews;
 const shellHandlers: AppShellHandlers = { onModeChange: fakeHandler({ ok: true, code: 'updated' }), onSignOut: fakeHandler({ ok: true, code: 'updated' }) };
 const adminShellHandlers = { onSignOut: fakeHandler({ ok: true, code: 'updated' }) };
 
@@ -72,6 +88,13 @@ function step(variant: string, title: string, path: string, children: ReactNode)
   return {
     id: `screen-helper-onboarding/${variant}`, title, group: o.group, layout: 'fullscreen',
     render: () => <AppShell viewer={priyaShell} handlers={shellHandlers} currentPath={path} layout="flow"><div className="mx-auto max-w-reading space-y-6 pb-24 sm:pb-0">{children}</div></AppShell>,
+  };
+}
+
+function posterId(variant: string, title: string, data: PosterIdentityPageData): PreviewEntry {
+  return {
+    id: `screen-verify-identity/${variant}`, title, group: c.group, layout: 'fullscreen',
+    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.verifyIdentity()} layout="flow"><PosterIdentityScreen data={data} handlers={fakePosterIdentityHandlers} /></AppShell>,
   };
 }
 
@@ -134,4 +157,16 @@ export const verificationPreviews: PreviewEntry[] = [
   person('verification-name-check', a.sectionNameCheck, { ...adminUserJordanData, verification: devonVerification }),
   person('verification-background', a.sectionBackground, { ...adminUserJordanData, verification: leeVerification }),
   person('verification-poster', a.sectionPoster, { ...adminUserJordanData, verification: posterVerification }),
+
+  posterId('reports', c.reports, posterIdentityReports),
+  posterId('large-booking', c.largeBooking, posterIdentityLargeBooking),
+  posterId('failed-payments', c.failedPayments, posterIdentityFailedPayments),
+  posterId('staff-request', c.staffRequest, posterIdentityStaffRequest),
+  posterId('retry', c.retry, posterIdentityRetry),
+  posterId('processing', c.processing, posterIdentityProcessing),
+  posterId('try-later', c.tryLater, posterIdentityTryLater),
+  posterId('too-many', c.tooMany, posterIdentityTooMany),
+  posterId('name-check', c.nameCheck, posterIdentityNameCheck),
+  posterId('verified', c.verified, posterIdentityVerified),
+  posterId('not-needed', c.notNeeded, posterIdentityNotNeeded),
 ];

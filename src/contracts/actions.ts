@@ -68,6 +68,8 @@ export const ACTION_ERROR_CODES = [
   'rate_limited',
   /** A limit on the account was reached (e.g. 3 open tasks in the first week). */
   'limit_reached',
+  /** The client has to verify their ID first (`routes.app.verifyIdentity()`; contracts/poster-identity.ts). */
+  'identity_required',
   'unknown',
 ] as const;
 export type ActionErrorCode = (typeof ACTION_ERROR_CODES)[number];

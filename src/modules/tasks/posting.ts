@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { and, count, eq, inArray } from 'drizzle-orm';
+import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type { ActionResult, AddressSuggestion, CategorySlug, PostTaskPageData, PostTaskRepeat, TaskDraftInput, TaskPostingRules } from '@/contracts';
 import { compactTaskDetails, createTaskDraftSchema, REPEAT_PLACE_PREFIX } from '@/contracts';
 import { GeocoderUnavailableError, type GeoPlace, type Geocoder } from '@/integrations/geocoding';
@@ -216,6 +217,8 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
 
     const poster = await loadPoster(userId);
     if (!poster || !POSTING_STATUSES.has(poster.status) || !poster.phoneVerifiedAt) return fail({ ok: false, code: 'not_allowed' });
+    // Risk asked this client to verify their ID first (src/modules/trust/poster-risk.ts).
+    if (await posterIdentityRequirement(db, userId, at)) return fail({ ok: false, code: 'identity_required' });
     const data = await pageData(userId);
     const market = await marketFor(poster.homeMarketId);
     if (!data || !market) return fail({ ok: false, code: 'not_allowed' });
