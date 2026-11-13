@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { needsBankVerification, type ConfirmBookingInput } from '@/contracts';
 import { createStripePayments } from '@/integrations/payments/stripe';
 import { users } from '@/modules/accounts/schema';
@@ -9,6 +9,9 @@ import { bookings } from '@/modules/bookings/schema';
 import { offers } from '@/modules/offers/schema';
 import { paymentCustomers, paymentMethods, payments } from '@/modules/payments/schema';
 import { handleStripePaymentWebhook } from '@/modules/payments/stripe-webhooks';
+import { anonymizeAccount } from '@/modules/privacy/requests';
+import { supportCaseEvents, supportCases } from '@/modules/support/schema';
+import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
 
@@ -131,5 +134,35 @@ describe('Stripe payments', () => {
     expect(stripe.calls.filter((call) => call.path === '/customers')).toHaveLength(1);
     const ids = (await db.select({ id: bookings.id }).from(bookings).where(inArray(bookings.taskId, ['tsk_stripe_1', 'tsk_stripe_2']))).map((row) => row.id);
     expect(ids).toHaveLength(2);
+  });
+});
+
+describe('chargebacks and leaving', () => {
+  const dispute = (type: string, status = 'needs_response') => signed({ id: `evt_${type}`, type, data: { object: { id: 'dp_test_1', object: 'dispute', amount: 6600, payment_intent: 'pi_test_1', reason: 'product_not_received', status, evidence_details: { due_by: Math.floor(Date.parse('2026-12-01T00:00:00Z') / 1000) } } } });
+
+  it('opens an urgent payment case on the booking when the client’s bank disputes the charge, once', async () => {
+    expect(await handleStripePaymentWebhook(deps, dispute('charge.dispute.created'), new Date())).toEqual({ status: 200, body: { ok: true } });
+    const [booking] = await db.select({ id: bookings.id }).from(bookings).where(eq(bookings.taskId, 'tsk_stripe_1'));
+    const [opened] = await db.select().from(supportCases).where(and(eq(supportCases.bookingId, booking!.id), eq(supportCases.type, 'payment_issue')));
+    expect(opened).toMatchObject({ priority: 'urgent', status: 'open', openedByUserId: POSTER, description: expect.stringContaining('$66.00 (reason: product not received)') });
+    const notes = await db.select({ body: supportCaseEvents.body }).from(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id));
+    expect(notes[0]?.body).toContain('by 2026-12-01');
+    expect(await handleStripePaymentWebhook(deps, dispute('charge.dispute.created'), new Date())).toEqual({ status: 200, body: { ok: true, ignored: true } });
+
+    // The outcome lands on the same case.
+    expect(await handleStripePaymentWebhook(deps, dispute('charge.dispute.closed', 'won'), new Date())).toEqual({ status: 200, body: { ok: true } });
+    const after = await db.select({ body: supportCaseEvents.body }).from(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id));
+    expect(after.map((row) => row.body)).toContain('Stripe dispute dp_test_1 closed: won.');
+    await db.delete(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id));
+    await db.delete(supportCases).where(eq(supportCases.id, opened!.id));
+  });
+
+  it('deletes the person’s Stripe customer (and every card on it) with their account', async () => {
+    const forgetCustomer = vi.fn(async () => {});
+    const storage = { name: 'memory', put: vi.fn(), get: vi.fn(async () => null), delete: vi.fn() };
+    const email = { name: 'memory', send: vi.fn() };
+    await anonymizeAccount(db, { storage, cipher: fieldCipherFromEnv(), email: email as never, appUrl: 'http://localhost:3000', payments: { ...deps.payments, forgetCustomer } }, POSTER, new Date());
+    expect(forgetCustomer).toHaveBeenCalledExactlyOnceWith('cus_test_stella');
+    expect(await db.select().from(paymentCustomers).where(eq(paymentCustomers.userId, POSTER))).toEqual([]);
   });
 });

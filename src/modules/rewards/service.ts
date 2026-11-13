@@ -207,6 +207,12 @@ export async function getRewardsPage(db: Db, user: { id: string; helperReady: bo
   };
 }
 
+/** Who a gift card is for: the helper's name and email (the provider's page greets them). */
+export async function giftCardRecipient(db: Db, helperUserId: string): Promise<{ name: string; email: string } | undefined> {
+  const [person] = await db.select({ firstName: users.firstName, lastName: users.lastName, email: users.email }).from(users).where(eq(users.id, helperUserId)).limit(1);
+  return person ? { name: [person.firstName, person.lastName].filter(Boolean).join(' '), email: person.email } : undefined;
+}
+
 /** Redeems a redeemable grant: the gift card is ordered (the grant id is the idempotency key) and delivered as a link. */
 export async function redeemReward(
   deps: { db: Db; giftCards: GiftCardProvider | null; email?: { provider: EmailProvider; appUrl: string } },
@@ -225,7 +231,8 @@ export async function redeemReward(
     .where(and(eq(rewardGrants.id, String(grantId)), eq(rewardGrants.helperUserId, helperUserId), eq(rewardGrants.status, 'redeemable'), gte(rewardGrants.expiresAt, now)))
     .returning();
   if (!claimed) return { ok: false, code: 'not_allowed' };
-  const result = await giftCards.order({ externalId: claimed.id, amountCents: claimed.amountCents });
+  const recipient = await giftCardRecipient(db, helperUserId);
+  const result = await giftCards.order({ externalId: claimed.id, amountCents: claimed.amountCents, ...(recipient ? { recipient } : {}) });
   await db
     .update(rewardGrants)
     .set(result.ok ? { status: 'delivered', providerOrderId: result.orderId, deliveryUrl: result.deliveryUrl, deliveredAt: now, updatedAt: now } : { status: 'failed', updatedAt: now })

@@ -11,7 +11,8 @@ import { notificationPreferences, notifications, privacyRequests, pushSubscripti
 import { offers } from '@/modules/offers/schema';
 import { helperOfferAction } from '@/modules/offers/helper';
 import { cancelTask } from '@/modules/offers/owner';
-import { paymentMethods } from '@/modules/payments/schema';
+import type { PaymentProvider } from '@/integrations/payments';
+import { paymentCustomers, paymentMethods } from '@/modules/payments/schema';
 import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/profiles/schema';
 import { savedHelpers } from '@/modules/reviews/schema';
 import { supportCases } from '@/modules/support/schema';
@@ -49,6 +50,8 @@ export interface PrivacyJobDeps {
   cipher: FieldCipher;
   email: EmailProvider;
   appUrl: string;
+  /** Deletes the person's customer at the payment provider (Stripe) with the account. */
+  payments?: PaymentProvider | null;
 }
 
 async function hasOpenBookings(db: Db, userId: string): Promise<boolean> {
@@ -293,6 +296,13 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
   });
 
   for (const file of photoFiles) await deps.storage.delete(file.storageKey);
+  // Their customer at the payment provider goes too, with every card on it (payments themselves stay on the
+  // provider's records, as the law requires). Connected payout accounts stay for tax reporting.
+  const [customer] = await db.select().from(paymentCustomers).where(eq(paymentCustomers.userId, userId)).limit(1);
+  if (customer && deps.payments?.name === customer.provider && deps.payments.forgetCustomer) {
+    await deps.payments.forgetCustomer(customer.customerRef);
+    await db.delete(paymentCustomers).where(eq(paymentCustomers.userId, userId));
+  }
   // Unfinished exports of a deleted account go too.
   for (const row of await db.select({ id: privacyRequests.id, fileKey: privacyRequests.fileKey }).from(privacyRequests).where(and(eq(privacyRequests.userId, userId), eq(privacyRequests.kind, 'export'), inArray(privacyRequests.status, ['requested', 'ready'])))) {
     if (row.fileKey) await deps.storage.delete(row.fileKey);

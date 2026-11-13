@@ -86,6 +86,7 @@ export interface StripePayments extends PaymentProvider {
   readonly name: 'stripe';
   clientSecretOf(intentRef: string): Promise<string | null>;
   detachCard(methodRef: string): Promise<void>;
+  forgetCustomer(customerRef: string): Promise<void>;
 }
 
 export function createStripePayments(config: { secretKey: string; fetch?: typeof fetch }): StripePayments {
@@ -204,6 +205,15 @@ export function createStripePayments(config: { secretKey: string; fetch?: typeof
       } catch (error) {
         // Already detached: nothing to do.
         if (!(error instanceof StripeError && error.status === 400)) throw error;
+      }
+    },
+
+    async forgetCustomer(customerRef) {
+      try {
+        await stripe.request('DELETE', `/customers/${encodeURIComponent(customerRef)}`);
+      } catch (error) {
+        // Already gone.
+        if (!(error instanceof StripeError && error.status === 404)) throw error;
       }
     },
 

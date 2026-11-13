@@ -54,7 +54,7 @@ export const JOBS: Job[] = [
   { name: 'verification.timers', run: (db, now) => runVerificationTimers(db, { storage: createFileStorage(), providers: verificationProvidersFor(process.env) }, now) },
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
   { name: 'notifications.deliver', run: (db, now) => deliverNotifications(db, now) },
-  { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
+  { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), payments: createPaymentProvider(), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
   { name: 'retention.sweep', run: (db, now) => (retentionDue(now) ? runRetention(db, { storage: createFileStorage() }, now) : Promise.resolve()) },
   // Last: it waits on Claude (a few seconds a document).
   { name: 'earnings.transfers', run: async (db, now) => { const connect = stripeConnectFromEnv(); if (connect) await runScheduledTransfers(db, connect, now); } },

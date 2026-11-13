@@ -70,6 +70,8 @@ export interface PaymentProvider {
   clientSecretOf?(intentRef: string): Promise<string | null>;
   /** Stripe: takes a saved card off the person's customer when they remove it. */
   detachCard?(methodRef: string): Promise<void>;
+  /** Stripe: deletes the person's customer (and every card on it) when their account is deleted. */
+  forgetCustomer?(customerRef: string): Promise<void>;
 }
 
 /** The last four digits of Stripe's test cards with the same outcomes. */

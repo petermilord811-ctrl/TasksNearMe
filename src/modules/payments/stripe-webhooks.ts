@@ -5,6 +5,10 @@ import { finishBankVerification, settle, type BookingDeps } from '@/modules/book
 import { bookingChangeRequests } from '@/modules/bookings/schema';
 import { finishCounterVerification, finishRequestVerification } from '@/modules/invites/service';
 import { invites } from '@/modules/invites/schema';
+import { supportCaseEvents, supportCases } from '@/modules/support/schema';
+import { auditLog } from '@/platform/audit/schema';
+import { newId } from '@/platform/db/ids';
+import { outboxEvents } from '@/platform/outbox/schema';
 import { payments } from './schema';
 
 /**
@@ -35,6 +39,7 @@ export async function handleStripePaymentWebhook(deps: BookingDeps, input: { pay
   } catch {
     return { status: 400, body: { ok: false } };
   }
+  if (event.type === 'charge.dispute.created' || event.type === 'charge.dispute.closed') return recordChargeback(deps, event.type, (event.data?.object ?? {}) as Record<string, unknown>, now);
   const intentId = event.data?.object?.id;
   if (typeof event.type !== 'string' || !EVENTS.has(event.type) || typeof intentId !== 'string') return { status: 200, body: { ok: true, ignored: true } };
   const [payment] = await deps.db.select().from(payments).where(and(eq(payments.providerRef, intentId), eq(payments.provider, 'stripe'))).limit(1);
@@ -60,5 +65,66 @@ export async function handleStripePaymentWebhook(deps: BookingDeps, input: { pay
     if (invite?.status === 'authorizing') await finishRequestVerification(deps, payer, payment.id, 'approved', now);
     else if (invite?.status === 'countered') await finishCounterVerification(deps, payer, invite.id, payment.id, 'approved', now);
   }
+  return { status: 200, body: { ok: true } };
+}
+
+/**
+ * A chargeback (the client's bank disputes a charge): an urgent payment case on the booking for staff, who
+ * answer it in the Stripe Dashboard before the evidence deadline; its outcome arrives as a note. Once per
+ * dispute and outcome (the audit log remembers).
+ */
+async function recordChargeback(deps: BookingDeps, type: 'charge.dispute.created' | 'charge.dispute.closed', dispute: Record<string, unknown>, now: Date): Promise<StripeWebhookOutcome> {
+  const disputeId = typeof dispute.id === 'string' ? dispute.id : null;
+  const intentId = typeof dispute.payment_intent === 'string' ? dispute.payment_intent : null;
+  if (!disputeId || !intentId) return { status: 200, body: { ok: true, ignored: true } };
+  const action = type === 'charge.dispute.created' ? 'payment.chargeback_opened' : 'payment.chargeback_closed';
+  const [seen] = await deps.db.select({ id: auditLog.id }).from(auditLog).where(and(eq(auditLog.action, action), eq(auditLog.targetId, disputeId))).limit(1);
+  if (seen) return { status: 200, body: { ok: true, ignored: true } };
+  const [payment] = await deps.db.select().from(payments).where(and(eq(payments.providerRef, intentId), eq(payments.provider, 'stripe'))).limit(1);
+  if (!payment) return { status: 200, body: { ok: true, ignored: true } };
+  const cents = typeof dispute.amount === 'number' ? dispute.amount : 0;
+  const amount = '$' + (cents / 100).toFixed(2);
+  const reason = typeof dispute.reason === 'string' ? dispute.reason.replaceAll('_', ' ') : 'not given';
+  const dueBy = (dispute.evidence_details as { due_by?: unknown } | undefined)?.due_by;
+  const due = typeof dueBy === 'number' ? new Date(dueBy * 1000).toISOString().slice(0, 10) : null;
+
+  await deps.db.transaction(async (tx) => {
+    let caseId: string | undefined;
+    if (type === 'charge.dispute.created') {
+      caseId = newId('case');
+      await tx.insert(supportCases).values({
+        id: caseId,
+        type: 'payment_issue',
+        status: 'open',
+        priority: 'urgent',
+        bookingId: payment.bookingId,
+        openedByUserId: payment.payerUserId,
+        topic: 'payment',
+        description: "The client's bank opened a chargeback for " + amount + ' (reason: ' + reason + ').',
+        createdAt: now,
+        updatedAt: now,
+      });
+      await tx.insert(supportCaseEvents).values({
+        id: newId('cev'),
+        caseId,
+        kind: 'note',
+        authorUserId: null,
+        visibility: 'internal',
+        body: 'Stripe dispute ' + disputeId + ' on payment ' + payment.id + '. Answer it with evidence in the Stripe Dashboard' + (due ? ' by ' + due : '') + "; the bank holds the money until it's decided.",
+        createdAt: now,
+      });
+      await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'support.case_opened', aggregateType: 'support_case', aggregateId: caseId, payload: { caseId, type: 'payment_issue', openedByUserId: payment.payerUserId } });
+    } else {
+      // The outcome goes on the case the dispute opened.
+      const [opened] = await tx.select({ metadata: auditLog.metadata }).from(auditLog).where(and(eq(auditLog.action, 'payment.chargeback_opened'), eq(auditLog.targetId, disputeId))).limit(1);
+      const openedCase = (opened?.metadata as { caseId?: unknown } | null)?.caseId;
+      if (typeof openedCase === 'string') {
+        caseId = openedCase;
+        const status = typeof dispute.status === 'string' ? dispute.status.replaceAll('_', ' ') : 'closed';
+        await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId, kind: 'note', authorUserId: null, visibility: 'internal', body: 'Stripe dispute ' + disputeId + ' closed: ' + status + '.', createdAt: now });
+      }
+    }
+    await tx.insert(auditLog).values({ id: newId('aud'), actorId: null, actorRole: 'system', action, targetType: 'payment', targetId: disputeId, metadata: { paymentId: payment.id, ...(caseId ? { caseId } : {}) } });
+  });
   return { status: 200, body: { ok: true } };
 }

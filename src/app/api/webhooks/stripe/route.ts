@@ -11,7 +11,7 @@ import { db } from '@/platform/db/client';
  * STRIPE_SECRET_KEY the endpoint doesn't exist. Subscribe it to:
  * - identity.verification_session.processing, .verified, .requires_input and .canceled (ID checks);
  * - payment_intent.succeeded, .amount_capturable_updated, .payment_failed and .canceled (a bank step
- *   finished after the browser closed);
+ *   finished after the browser closed); charge.dispute.created and .closed (chargebacks: a case for staff);
  * - Connect: account.updated and payout.created, .paid, .failed and .canceled, from a Connect endpoint (events
  *   on connected accounts) pointed at this URL and signed with STRIPE_CONNECT_WEBHOOK_SECRET.
  */
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const outcome = await handleConnectWebhook(db, { payload, signature, secrets }, now);
     return Response.json(outcome.body, { status: outcome.status });
   }
-  if (type?.startsWith('payment_intent.')) {
+  if (type?.startsWith('payment_intent.') || type?.startsWith('charge.dispute.')) {
     const deps = bookingDeps();
     if (!deps) return Response.json({ ok: true, ignored: true });
     const outcome = await handleStripePaymentWebhook(deps, { payload, signature, secret }, now);

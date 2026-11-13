@@ -12,6 +12,7 @@ import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { REWARD_RULES } from './domain';
+import { giftCardRecipient } from './service';
 import { riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
 import { sendGiftCardEmail } from './emails';
@@ -152,7 +153,8 @@ export async function decideReward(
       moved = await guarded({ status: 'issuing' });
       if (moved.length > 0) {
         // The grant id stays the order's key (the provider dedupes; a real reissue gets a new order there).
-        const result = await giftCards.order({ externalId: grant.id, amountCents: grant.amountCents });
+        const recipient = await giftCardRecipient(db, grant.helperUserId);
+        const result = await giftCards.order({ externalId: grant.id, amountCents: grant.amountCents, ...(recipient ? { recipient } : {}) });
         await db
           .update(rewardGrants)
           .set(result.ok ? { status: 'delivered', providerOrderId: result.orderId, deliveryUrl: result.deliveryUrl, deliveredAt: now, updatedAt: now } : { status: 'failed', updatedAt: now })

@@ -1,3 +1,5 @@
+import { tremendousFromEnv } from './tremendous';
+
 /**
  * Gift cards for rewards (blueprint 05: Tremendous, LINK delivery). Until Tremendous is connected, a
  * development stand-in delivers every order at once to a page under `/dev/gift-cards` (404 in
@@ -7,6 +9,8 @@
 export interface GiftCardOrder {
   externalId: string;
   amountCents: number;
+  /** Who it's for (the provider's page greets them by name). */
+  recipient?: { name: string; email: string };
 }
 
 export type GiftCardOrderResult = { ok: true; orderId: string; deliveryUrl: string } | { ok: false; reason: 'failed' };
@@ -23,10 +27,9 @@ export function createDevGiftCardProvider(): GiftCardProvider {
   };
 }
 
-export function createGiftCardProvider(): GiftCardProvider | null {
-  if (process.env.TREMENDOUS_API_KEY) {
-    // TODO(integration): Tremendous adapter (Phase 10). Refuse to fake gift cards when real keys are set.
-    throw new Error('TREMENDOUS_API_KEY is set but the Tremendous adapter is not implemented yet.');
-  }
-  return process.env.NODE_ENV === 'production' ? null : createDevGiftCardProvider();
+/** Tremendous with its key (`./tremendous.ts`); the stand-in otherwise, outside production. */
+export function createGiftCardProvider(env: Record<string, string | undefined> = process.env): GiftCardProvider | null {
+  const tremendous = tremendousFromEnv(env);
+  if (tremendous) return tremendous;
+  return env.NODE_ENV === 'production' ? null : createDevGiftCardProvider();
 }
