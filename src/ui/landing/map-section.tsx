@@ -13,7 +13,7 @@ import { CATEGORY_ICONS } from './category-icons';
 import { MAP_SECTION_ID, useLanding } from './landing-state';
 import { MapExplorerProvider, useMapExplorer } from './map/explorer-state';
 import { effectiveSort, insideServiceArea, nearbyPins, type ListSort } from './map/map-math';
-import { NearbyList } from './map/nearby-list';
+import { LIST_VIEWPORT_ATTRIBUTE, NearbyList } from './map/nearby-list';
 import { TaskMap, type MapMode } from './map/task-map';
 
 /** Room the panels take over the full-width map on wide screens (fractions of the map): the camera stays clear. */
@@ -69,10 +69,12 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
     const pin = (fromHero ? onMap.get(fromHero.id) : undefined) ?? data.map.pins[0];
     return pin ? { taskId: pin.id, point: pin.point } : null;
   }, [data.map.pins, data.recentTasks]);
+  const sheetRef = useAlignedPaper();
 
   return (
     <LazyMotion features={domMax}>
       <section
+        ref={sheetRef}
         id={MAP_SECTION_ID}
         aria-labelledby="map-title"
         className="relative grid scroll-mt-20 grid-cols-1 lg:z-[2] lg:min-h-[max(60rem,108svh)] lg:grid-cols-[minmax(var(--page-gutter),1fr)_minmax(0,40rem)_minmax(0,28.5rem)_minmax(var(--page-gutter),1fr)] lg:gap-x-10 lg:overflow-hidden lg:rounded-t-[2.75rem] lg:paper lg:shadow-[0_-34px_70px_-44px_rgb(0_0_0/0.42)]"
@@ -140,8 +142,10 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
           </Reveal>
         </div>
 
-        {/* The explorer: find, pick a category, order and narrow, see how many, and the tasks themselves (the map's accessible twin). */}
-        <div className="relative order-3 px-gutter pt-6 pb-16 sm:pb-20 lg:order-none lg:col-start-3 lg:row-start-1 lg:self-center lg:px-0 lg:pt-[max(7rem,9vw)] lg:pb-[max(6rem,8vw)]">
+        {/* The explorer: find, pick a category, order and narrow, see how many, and the tasks themselves (the map's
+            accessible twin). On wide screens it keeps one size whatever the list holds (its rows scroll in a
+            fixed viewport), anchored at its top, so moving the map never moves the panel or the page. */}
+        <div className="relative order-3 px-gutter pt-6 pb-16 sm:pb-20 lg:order-none lg:col-start-3 lg:row-start-1 lg:self-start lg:px-0 lg:pt-[max(7rem,9vw)] lg:pb-[max(6rem,8vw)]">
           <Reveal variant="bloom" origin="100% 50%" className="lg:glass lg:rounded-[2rem] lg:p-3">
             <SmartSearch />
             <div className="-mx-gutter mt-3 overflow-x-auto px-gutter pb-1 [scrollbar-width:none] lg:mx-0 lg:overflow-visible lg:px-1.5">
@@ -149,8 +153,8 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
             </div>
             <ExplorerTools data={data} />
             <div className="lg:px-2"><OpenCount data={data} /></div>
-            <div className="mt-3 lg:max-h-[min(27rem,46svh)] lg:overflow-y-auto lg:[scrollbar-width:thin]">
-              <NearbyList map={data.map} />
+            <div {...{ [LIST_VIEWPORT_ATTRIBUTE]: '' }} className="mt-1 lg:h-[min(27rem,46svh)] lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin]">
+              <NearbyList map={data.map} fill={wide} />
             </div>
             {data.map.pins.length > 0 && (
               <div className="mt-2 px-3.5 lg:pb-1">
@@ -162,6 +166,39 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
       </section>
     </LazyMotion>
   );
+}
+
+/**
+ * Wide screens: the map's sheet has its own paper (it must hide the pinned hero it slides over), so its marble
+ * is lined up with the page's: where the sheet ends, the veins carry on into the sections below with no seam.
+ */
+function useAlignedPaper() {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const sheet = ref.current;
+    const page = sheet?.parentElement?.closest<HTMLElement>('.paper');
+    if (!sheet || !page) return;
+    let frame = 0;
+    const align = () => {
+      frame = 0;
+      // Both boxes move together as the page scrolls, so their difference is the sheet's place on the page.
+      const offset = Math.round(sheet.getBoundingClientRect().top - page.getBoundingClientRect().top);
+      sheet.style.backgroundPosition = `50% ${-offset}px`;
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(align);
+    };
+    align();
+    const sized = typeof ResizeObserver === 'function' ? new ResizeObserver(schedule) : null;
+    sized?.observe(page);
+    if (sheet.previousElementSibling) sized?.observe(sheet.previousElementSibling);
+    return () => {
+      cancelAnimationFrame(frame);
+      sized?.disconnect();
+      sheet.style.removeProperty('background-position');
+    };
+  }, []);
+  return ref;
 }
 
 /** Whether a media query matches (false on the server and before hydration). */
@@ -326,7 +363,8 @@ function ExplorerTools({ data }: { data: HomePageData }) {
           </select>
           <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 size-3.5 text-muted-foreground" />
         </label>
-        {explorer.liveReady && data.map.areas.length > 0 && <NeighborhoodPicker areas={data.map.areas} current={area} onPick={pickArea} />}
+        {/* There from the start (a pick before the live map is up waits for it), so nothing shifts when it comes. */}
+        {data.map.areas.length > 0 && <NeighborhoodPicker areas={data.map.areas} current={area} onPick={pickArea} />}
       </div>
       {from && (
         <div role="group" aria-label={t('withinLabel')} className="flex flex-wrap items-center gap-1.5">
@@ -423,7 +461,10 @@ function NeighborhoodPicker({ areas, current, onPick }: { areas: MapArea[]; curr
   );
 }
 
-/** How many open tasks the pick shows, rolling to the new number; announced politely. Then how many are on the map. */
+/**
+ * How many open tasks the pick shows, rolling to the new number; announced politely. Then how many the list shows
+ * (on the map, or within the distance), on a line that always keeps its room, so the panel never changes size.
+ */
 function OpenCount({ data }: { data: HomePageData }) {
   const t = useTranslations('landing.map');
   const categories = useTranslations('helperCard.categories');
@@ -453,21 +494,38 @@ function OpenCount({ data }: { data: HomePageData }) {
           </m.span>
         </AnimatePresence>
       </p>
-      {explorer.liveReady && (
-        <button
-          type="button"
-          role="switch"
-          aria-checked={explorer.followMap}
-          onClick={() => explorer.setFollowMap(!explorer.followMap)}
-          className="-mr-1 inline-flex min-h-11 items-center gap-2 rounded-full px-1.5 text-xs font-medium text-foreground/80 transition-colors hover:text-foreground"
-        >
-          <span aria-hidden="true" className={cn('relative h-5 w-8 shrink-0 rounded-full transition-colors', explorer.followMap ? 'bg-violet' : 'bg-foreground/15')}>
-            <span className={cn('absolute top-0.5 size-4 rounded-full bg-white shadow transition-[left]', explorer.followMap ? 'left-3.5' : 'left-0.5')} />
-          </span>
-          {t('followMap')}
-        </button>
-      )}
-      {shown < count && <p className="w-full text-xs font-medium text-violet tabular-nums">{t('inView', { shown, total: count })}</p>}
+      {/* Only meaningful with the live map; it keeps its room before then (hidden), so nothing shifts when it comes. */}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={explorer.followMap}
+        onClick={() => explorer.setFollowMap(!explorer.followMap)}
+        className={cn(
+          '-mr-1 inline-flex min-h-11 items-center gap-2 rounded-full px-1.5 text-xs font-medium text-foreground/80 transition-[color,opacity] duration-500 hover:text-foreground',
+          !explorer.liveReady && 'invisible opacity-0',
+        )}
+      >
+        <span aria-hidden="true" className={cn('relative h-5 w-8 shrink-0 rounded-full transition-colors duration-300', explorer.followMap ? 'bg-violet' : 'bg-foreground/15')}>
+          <span className={cn('absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform duration-300 ease-[var(--ease-out)]', explorer.followMap && 'translate-x-3')} />
+        </span>
+        {t('followMap')}
+      </button>
+      <p className="relative h-5 w-full overflow-hidden text-xs font-medium text-violet tabular-nums">
+        <AnimatePresence initial={false}>
+          {shown < count && (
+            <m.span
+              key={`${shown}-${count}`}
+              className="absolute inset-x-0 top-0 block truncate"
+              initial={reduced ? false : { y: '70%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { y: '-70%', opacity: 0 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {t('inView', { shown, total: count })}
+            </m.span>
+          )}
+        </AnimatePresence>
+      </p>
     </div>
   );
 }

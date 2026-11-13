@@ -150,15 +150,17 @@ export function StaticMap({
 
         {active && activeAt && (
           <circle
+            key={active.id}
             cx={activeAt.x}
             cy={activeAt.y}
             r={(active.radiusMeters / 1609.34) * perMile}
             fill={`var(--cat-${active.categorySlug})`}
-            fillOpacity="0.13"
+            fillOpacity="0.16"
             stroke={`var(--cat-${active.categorySlug})`}
             strokeOpacity="0.75"
-            strokeWidth="1.8"
-            strokeDasharray="6 5"
+            strokeWidth="1.6"
+            className="motion-safe:[animation:tnm-area-in_280ms_var(--ease-out)_both]"
+            style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
           />
         )}
 

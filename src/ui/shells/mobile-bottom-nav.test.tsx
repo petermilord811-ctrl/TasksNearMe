@@ -20,13 +20,23 @@ let navigationHeight = 96;
 let notifyResize = () => {};
 const observe = vi.fn();
 const disconnect = vi.fn();
+/** Which observer watches which element (the shell has others: the top bar, the nav pills). */
+const watchers = new Map<Element, { disconnected: boolean }>();
 
 beforeEach(() => {
   navigationHeight = 96;
+  watchers.clear();
   vi.stubGlobal('ResizeObserver', class {
+    private state = { disconnected: false };
     constructor(callback: () => void) { notifyResize = callback; }
-    observe = observe;
-    disconnect = disconnect;
+    observe = (target: Element, options?: ResizeObserverOptions) => {
+      watchers.set(target, this.state);
+      observe(target, options);
+    };
+    disconnect = () => {
+      this.state.disconnected = true;
+      disconnect();
+    };
   });
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
     return { height: this.hasAttribute('data-mobile-bottom-nav') ? navigationHeight : 0 } as DOMRect;
@@ -65,6 +75,7 @@ describe('mobile navigation clearance', () => {
   it('updates on viewport resizing and releases the measurement when tabs disappear', () => {
     const { container, rerender } = render(example());
     const shell = container.querySelector<HTMLElement>('[data-app-shell]')!;
+    const nav = container.querySelector<HTMLElement>('[data-mobile-bottom-nav]')!;
     navigationHeight = 116;
     fireEvent(window, new Event('resize'));
     expect(shell.style.getPropertyValue('--app-bottom-nav-height')).toBe('116px');
@@ -74,7 +85,7 @@ describe('mobile navigation clearance', () => {
     expect(shell.style.getPropertyValue('--app-bottom-nav-height')).toBe('');
     expect(shell).toHaveClass('[--app-bottom-offset:0px]');
     expect(shell).not.toHaveClass('max-lg:[--app-bottom-offset:var(--app-bottom-nav-height)]');
-    expect(disconnect).toHaveBeenCalledOnce();
+    expect(watchers.get(nav)?.disconnected).toBe(true);
   });
 
   it('keeps More sheets outside the shell offset and restores focus on close', async () => {

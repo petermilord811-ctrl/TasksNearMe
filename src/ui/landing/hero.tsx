@@ -1,6 +1,7 @@
 import type { HomePageData, ISODateTime } from '@/contracts';
 import { cn } from '@/ui/lib/utils';
 import { HeroCopy } from './hero-copy';
+import { TownSkeleton } from './minimap/town-skeleton';
 import { TownStage, type TownMode } from './minimap/town-stage';
 
 /**
@@ -44,6 +45,7 @@ export function Hero({ data, mode, now }: { data: HomePageData; mode: TownMode; 
         tasks={localTasks}
         helper={data.featuredHelpers[0]}
         mode={mode}
+        skeleton={<TownSkeleton />}
         className={cn(
           'relative mt-6 h-[calc(var(--stage-w)*0.74)] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,#000_9%,#000_84%,transparent)] sm:mt-4 sm:h-[calc(var(--stage-w)*0.7)]',
           'lg:absolute lg:inset-0 lg:mt-0 lg:h-auto lg:[container-type:size] lg:[mask-image:none]',

@@ -5,4 +5,6 @@ export { Reveal, type RevealProps } from './reveal';
 export { MaskLines } from './mask-text';
 export { Magnetic } from './magnetic';
 export { Spotlight } from './spotlight';
+export { HoverLift, type HoverLiftProps } from './hover-lift';
 export { CountUpMoney, TweenMoney } from './count-up';
+export { ScrollbarActivity } from './scrollbar-activity';

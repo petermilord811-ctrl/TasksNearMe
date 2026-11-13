@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatMoney } from '@/shared/format';
-import { CountUpMoney, Magnetic, MaskLines, MotionRoot, Reveal } from '.';
+import { CountUpMoney, HoverLift, Magnetic, MaskLines, MotionRoot, Reveal } from '.';
 
 const observe = vi.fn();
 
@@ -46,6 +46,22 @@ describe('motion primitives under reduced motion', () => {
     const { container } = render(<h1><MaskLines lines={['Everyday tasks,', 'done by people', 'nearby.']} /></h1>);
     expect(container.textContent).toBe('Everyday tasks, done by people nearby.');
     expect(container.querySelector('[style*="transform"]')).toBeNull();
+  });
+
+  it('HoverLift shows its light at once on hover but never moves the surface, and lets go on leave', () => {
+    const { container } = render(<HoverLift surfaceClassName="card"><a href="https://example.test/x">Card</a></HoverLift>);
+    const outer = container.firstElementChild as HTMLElement;
+    const surface = outer.querySelector<HTMLElement>('.lift-surface')!;
+    fireEvent.pointerEnter(outer, { pointerType: 'mouse' });
+    fireEvent.pointerMove(outer, { pointerType: 'mouse', clientX: 10, clientY: 10 });
+    expect(outer).toHaveAttribute('data-hovered');
+    expect(outer.style.getPropertyValue('--hover')).toBe('1.0000');
+    expect(surface.style.transform).toBe('');
+    fireEvent.pointerLeave(outer, { pointerType: 'mouse' });
+    expect(outer).not.toHaveAttribute('data-hovered');
+    expect(outer.style.getPropertyValue('--hover')).toBe('0.0000');
+    // The link inside is untouched and still the thing you reach.
+    expect(screen.getByRole('link', { name: 'Card' })).toHaveAttribute('href', 'https://example.test/x');
   });
 
   it('Reveal only marks its content, and MotionRoot leaves the page as it is', () => {

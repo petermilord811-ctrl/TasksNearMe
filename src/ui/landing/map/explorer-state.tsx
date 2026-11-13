@@ -1,14 +1,26 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { LatLng } from '@/shared/geo';
 import type { ListSort, ViewBounds } from './map-math';
 
 /** Marks the map frame on the page (the list's "show on the map" buttons bring it into view on phones). */
 export const MAP_FRAME_ATTRIBUTE = 'data-task-map';
 
-/** Something the explorer asks the live map to show: a neighborhood, or one task (its card opens). */
-export type MapFocusRequest = { kind: 'area'; point: LatLng; nonce: number } | { kind: 'task'; id: string; nonce: number };
+/**
+ * How long the map must rest after a move before the list follows it: a fling, a zoom with the wheel or a fly
+ * reports several stops in a row, and the list should change once, after the last.
+ */
+export const VIEW_SETTLE_MS = 220;
+
+/**
+ * Something the explorer asks the live map to show: a neighborhood, one task (its card opens), or a peek at a
+ * task (keyboard focus in the list: the map moves only if the task is out of sight, and nothing opens).
+ */
+export type MapFocusRequest =
+  | { kind: 'area'; point: LatLng; nonce: number }
+  | { kind: 'task'; id: string; nonce: number }
+  | { kind: 'peek'; id: string; nonce: number };
 
 /** What the map shows besides the pins. */
 export interface MapLayers {
@@ -35,7 +47,7 @@ interface ExplorerState {
   liveReady: boolean;
   setLiveReady: (ready: boolean) => void;
   request: MapFocusRequest | null;
-  requestFocus: (request: { kind: 'area'; point: LatLng } | { kind: 'task'; id: string }) => void;
+  requestFocus: (request: { kind: 'area'; point: LatLng } | { kind: 'task'; id: string } | { kind: 'peek'; id: string }) => void;
   layers: MapLayers;
   setLayers: (layers: MapLayers) => void;
 }
@@ -56,16 +68,26 @@ export function MapExplorerProvider({ children }: { children: ReactNode }) {
   const [request, setRequest] = useState<MapFocusRequest | null>(null);
   const [layers, setLayers] = useState<MapLayers>({ mode: 'pins', buildings: false, serviceArea: true });
   const nonce = useRef(0);
+  const settling = useRef<number | undefined>(undefined);
 
+  // The map reports where it stopped; the list follows once it has rested (`VIEW_SETTLE_MS`), and only when it
+  // really moved (sub-pixel jitter is ignored).
   const setView = useCallback((bounds: ViewBounds | null) => {
-    setViewState((current) => {
-      if (!bounds || !current) return bounds;
-      // Ignore sub-pixel jitter: only a real move changes what the list shows.
-      const same = Math.abs(current.west - bounds.west) < 1e-5 && Math.abs(current.east - bounds.east) < 1e-5 && Math.abs(current.south - bounds.south) < 1e-5 && Math.abs(current.north - bounds.north) < 1e-5;
-      return same ? current : bounds;
-    });
+    window.clearTimeout(settling.current);
+    if (!bounds) {
+      setViewState(null);
+      return;
+    }
+    settling.current = window.setTimeout(() => {
+      setViewState((current) => {
+        if (!current) return bounds;
+        const same = Math.abs(current.west - bounds.west) < 1e-5 && Math.abs(current.east - bounds.east) < 1e-5 && Math.abs(current.south - bounds.south) < 1e-5 && Math.abs(current.north - bounds.north) < 1e-5;
+        return same ? current : bounds;
+      });
+    }, VIEW_SETTLE_MS);
   }, []);
-  const requestFocus = useCallback((next: { kind: 'area'; point: LatLng } | { kind: 'task'; id: string }) => {
+  useEffect(() => () => window.clearTimeout(settling.current), []);
+  const requestFocus = useCallback((next: { kind: 'area'; point: LatLng } | { kind: 'task'; id: string } | { kind: 'peek'; id: string }) => {
     nonce.current += 1;
     setRequest({ ...next, nonce: nonce.current } as MapFocusRequest);
   }, []);

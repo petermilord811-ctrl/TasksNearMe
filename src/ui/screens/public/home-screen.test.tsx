@@ -101,6 +101,61 @@ describe('HomeScreen (the landing page)', () => {
     expect(screen.queryByRole('link', { name: t('helpers.rewardTerms') })).not.toBeInTheDocument();
   });
 
+  it("shows helpers what they keep (the fee engine's own example) and how many verified helpers are here", () => {
+    show();
+    const helpers = within(section(`${t('helpers.title')} ${t('helpers.titleAccent')}`));
+    const fee = homePageData.feeExample;
+    expect(helpers.getByText(formatMoney(fee.helperEarningsCents))).toBeInTheDocument();
+    expect(helpers.getByText(t('helpers.earnBody', { price: formatMoney(fee.taskPriceCents) }))).toBeInTheDocument();
+    expect(helpers.getByText(t('helpers.joinCount', { count: homePageData.helpers.verified, market: homePageData.market.name }))).toBeInTheDocument();
+    cleanup();
+
+    show(homePrelaunchData);
+    expect(screen.queryByText(/ID-verified helpers? in/)).not.toBeInTheDocument();
+  });
+
+  it('counts what each category has open on the map', () => {
+    show();
+    const categories = within(section(`${t('categories.title')} ${t('categories.titleAccent')}`));
+    for (const category of homePageData.categories) {
+      const open = homePageData.map.pins.filter((pin) => pin.categorySlug === category.slug).length;
+      const card = categories.getAllByRole('link').find((link) => link.getAttribute('href') === routes.category(category.slug))!;
+      if (open > 0) expect(within(card).getByText(t('categories.openOnMap', { count: open }))).toBeInTheDocument();
+      else expect(within(card).queryByText(/open on the map/)).not.toBeInTheDocument();
+    }
+  });
+
+  it("explains how it works for both sides; picking a side here is the hero's pick too", () => {
+    show();
+    const steps = within(section(`${t('steps.title')} ${t('steps.titleAccent')}`));
+    expect(steps.getByRole('heading', { level: 3, name: t('steps.post.title') })).toBeInTheDocument();
+    expect(steps.getByRole('link', { name: t('steps.link') })).toHaveAttribute('href', routes.howItWorks());
+
+    fireEvent.click(steps.getByRole('button', { name: t('hero.audience.helper') }));
+    expect(steps.getByRole('button', { name: t('hero.audience.helper') })).toHaveAttribute('aria-pressed', 'true');
+    for (const key of ['verify', 'offer', 'paid'] as const) expect(steps.getByRole('heading', { level: 3, name: t(`steps.helper.${key}.title`) })).toBeInTheDocument();
+    expect(steps.getByRole('link', { name: t('steps.helperLink') })).toHaveAttribute('href', routes.becomeAHelper());
+    expect(text(screen.getByRole('heading', { level: 1 }))).toBe(`${t('hero.helperMode.line1')} ${t('hero.helperMode.line2')} ${t('hero.helperMode.line3Vivid')}${t('hero.helperMode.line3Rest')}`);
+  });
+
+  it('takes a neighborhood from "where we work" to the map: the same pick as the hero\'s market line', () => {
+    const original = Element.prototype.scrollIntoView;
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    try {
+      show();
+      const coverage = within(section(t('coverage.title', { market: homePageData.market.name })));
+      const open = homePageData.map.pins.filter((pin) => pin.areaName === 'Hyde Park').length;
+      const chip = coverage.getByRole('button', { name: open > 0 ? `Hyde Park ${open} ${t('coverage.openTasks', { count: open })}` : 'Hyde Park' });
+      expect(chip).toHaveAccessibleDescription(t('coverage.mapHint'));
+      fireEvent.click(chip);
+      expect(within(hero()).getByRole('button', { name: new RegExp(t('hero.area.button', { area: 'Hyde Park' })) })).toBeInTheDocument();
+      expect(scroll).toHaveBeenCalled();
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
   it('lists the newest open tasks beside the map, each linking to its public page', () => {
     show();
     const list = screen.getByRole('list', { name: t('map.listNewest') });

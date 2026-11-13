@@ -1,18 +1,21 @@
 'use client';
 
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, LazyMotion, domMax, m } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { LngLat, LngLatBounds, Map as MapLibreMap, Marker, getVersion, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl';
 import { CATEGORY_SLUGS, routes, type LandingMapData, type TaskMapPin } from '@/contracts';
 import type { LatLng } from '@/shared/geo';
 import { usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
+import { addAreaGlowLayers, createAreaGlow, type AreaGlow } from './area-glow';
+import { applyRestyle, preparedBaseStyle } from './base-style';
 import { createWheelGate, type WheelGate } from './engage';
 import type { MapFocusRequest, MapLayers } from './explorer-state';
 import { arrivalCamera, arrivalProgress, circleBounds, circleRing, METERS_PER_MILE, outsideCircle, type MapCamera, type ViewBounds } from './map-math';
-import { PinCard, pinPrice } from './pin-card';
+import { PinCardBody, pinPrice } from './pin-card';
 import { CHIP_ZOOM, ClusterMarker, PinMarker } from './pin-markers';
 import { extrusionLayers, firstSymbolLayer, readMapColors, restylePlan } from './restyle';
 import { FADE_VERTICAL } from './static-map';
@@ -78,7 +81,6 @@ setWorkerUrl(routes.assets.mapWorker(getVersion()));
 
 const TASKS = 'tasks';
 const HEAT = 'tasks-heat';
-const LIT = 'lit-area';
 const YOU = 'you';
 const RADIUS = 'you-radius';
 const SERVICE = 'service-area';
@@ -86,6 +88,9 @@ const OUTSIDE = 'service-outside';
 /** The pin card needs about this much room above its pin; nearer the top edge it opens below. */
 const CARD_ROOM_PX = 236;
 const CARD_HALF_WIDTH_PX = 132;
+/** Moving from one pin to the next, the open card glides there (ms, ease-out). */
+const CARD_GLIDE_MS = 280;
+const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)';
 /** How close a pick may zoom: the picked tasks come apart, but their areas don't fill the map. */
 const FIT_MAX_ZOOM = 13;
 /** The arrival's first view: close over the task's area, tilted like the town (seen from the south-east). */
@@ -120,6 +125,18 @@ function paddingFor(room: Padding | undefined, width: number, height: number) {
   return { top: room.top * visible, right: room.right * width, bottom: height - visible + room.bottom * visible, left: room.left * width };
 }
 
+/**
+ * The canvas's pixel ratio: the screen's, up to 2, but a big canvas stays under about 5 million pixels (a
+ * full-width map on a 4K screen would otherwise draw four times that every frame).
+ */
+function mapPixelRatio(width: number, height: number): number {
+  const screen = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
+  return Math.max(1, Math.min(screen, 2, Math.sqrt(5_000_000 / Math.max(1, width * height))));
+}
+
+/** How often the markers are matched to the task source while the zoom changes (clusters split and merge). */
+const MARKER_SYNC_MS = 120;
+
 function css(element: Element, name: string, fallback: string): string {
   return getComputedStyle(element).getPropertyValue(name).trim() || fallback;
 }
@@ -144,10 +161,11 @@ const polygon = (coordinates: [number, number][][], properties: Record<string, u
 /**
  * The live map (MapLibre GL), loaded lazily by `TaskMap`: a detailed base map in the page's palette, each
  * open task as a price chip with its category's icon (a dot far out), close ones gathered into donuts of
- * their categories, the lit task's approximate area as a dashed ring, the visitor and their chosen distance,
- * the service area, and on request a glow of where help is needed and 3D buildings. Pointing at a task (here
- * or in the list) shows its card; a click keeps it open. The scroll wheel scrolls the page until the visitor
- * engages the map (see `engage.ts`); on touch, two fingers move it.
+ * their categories, the lit task's approximate area as a soft glow with a ring (it fades in and out, and
+ * cross-fades from task to task: `area-glow.ts`), the visitor and their chosen distance, the service area, and
+ * on request a glow of where help is needed and 3D buildings. Pointing at a task (here or in the list) shows
+ * its card, which glides from pin to pin; a click keeps it open. Pointing never moves the map. The scroll wheel
+ * scrolls the page until the visitor engages the map (see `engage.ts`); on touch, two fingers move it.
  */
 export function MapLibreView({
   map,
@@ -187,22 +205,36 @@ export function MapLibreView({
   // Which pins have room for their price chip (the rest show as dots until there's room).
   const [chips, setChips] = useState<ReadonlySet<string>>(() => new Set());
   const relayout = useRef<() => void>(() => {});
-  const [cardAt, setCardAt] = useState<{ id: string; x: number; y: number } | null>(null);
+  // The open card's element: the map moves it with its pin directly (no re-render per frame).
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardPlacement, setCardPlacement] = useState<'above' | 'below'>('above');
+  const glow = useRef<AreaGlow | null>(null);
   const [arrivalLit, setArrivalLit] = useState<string | null>(null);
   const reduced = usePrefersReducedMotion();
   const records = useRef(new Map<string, MarkerRecord>());
   const gate = useRef<WheelGate | null>(null);
   const stopArrival = useRef<() => void>(() => {});
-  const firstFit = useRef(true);
+  /** The pick the map last flew to (undefined: none yet, the map just came up). */
+  const flownCategory = useRef<string | null | undefined>(undefined);
   const clearTimer = useRef<number | undefined>(undefined);
   const lastBuildings = useRef(false);
   const homeView = useRef<MapCamera | null>(null);
   const labels = { map: label ?? t('layerTasks'), twoFingers: t('twoFingers'), ctrlZoom: t('ctrlZoom'), cmdZoom: t('cmdZoom') };
   const perHour = (rate: string) => t('perHour', { rate });
-  const latest = useRef({ onHighlight, onPick, onReady, onFailed, onControls, onView, onEngagedChange, onBlockedWheel, pins, padding, reduced, arrival, homeZoom, labels, perHour, first: [] as string[] });
+  const latest = useRef({ onHighlight, onPick, onReady, onFailed, onControls, onView, onEngagedChange, onBlockedWheel, pins, padding, reduced, arrival, homeZoom, labels, perHour, lit: litTaskId, first: [] as string[] });
   useEffect(() => {
-    latest.current = { onHighlight, onPick, onReady, onFailed, onControls, onView, onEngagedChange, onBlockedWheel, pins, padding, reduced, arrival, homeZoom, labels, perHour, first: [litTaskId, pickedTaskId, arrivalLit].filter((id): id is string => Boolean(id)) };
+    latest.current = { onHighlight, onPick, onReady, onFailed, onControls, onView, onEngagedChange, onBlockedWheel, pins, padding, reduced, arrival, homeZoom, labels, perHour, lit: litTaskId, first: [litTaskId, pickedTaskId, arrivalLit].filter((id): id is string => Boolean(id)) };
   });
+  /**
+   * Leaving a pin or its card: after a short grace (time to reach the card, or the next pin), let go of that task,
+   * unless something else lit another one meanwhile (the list, another pin).
+   */
+  const letGoSoon = (id: string) => {
+    window.clearTimeout(clearTimer.current);
+    clearTimer.current = window.setTimeout(() => {
+      if (latest.current.lit === id) latest.current.onHighlight(null);
+    }, 260);
+  };
   const pinsById = useMemo(() => new Map(pins.map((pin) => [pin.id, pin])), [pins]);
 
   // Create the map once.
@@ -217,12 +249,20 @@ export function MapLibreView({
     const arrived = (camera: MapCamera) => ({ center: [camera.center.lng, camera.center.lat] as [number, number], zoom: camera.zoom, pitch: camera.pitch, bearing: camera.bearing });
     const progressNow = () => arrivalProgress(container.getBoundingClientRect().top, window.innerHeight);
     let first = opening ? arrivalCamera(progressNow(), opening, home) : home;
+    // The base style arrives already in the page's palette (prefetched, or restyled as it's committed), so the
+    // tiles are parsed, the labels placed and the shaders compiled once, for the look the map keeps.
+    const colors = readMapColors(container);
+    const prepared = preparedBaseStyle(map.styleUrl, colors);
 
     let instance: MapLibreMap;
     try {
       instance = new MapLibreMap({
         container,
-        style: map.styleUrl,
+        style: prepared ?? map.styleUrl,
+        ...(prepared ? {} : { transformStyle: (_previous, next) => applyRestyle(next, colors) }),
+        pixelRatio: mapPixelRatio(container.clientWidth, container.clientHeight),
+        validateStyle: process.env.NODE_ENV !== 'production',
+        refreshExpiredTiles: false,
         ...arrived(first),
         minZoom: 8.5,
         maxZoom: 17,
@@ -337,6 +377,8 @@ export function MapLibreView({
     first = opening ? arrivalCamera(progressNow(), opening, home) : home;
     instance.jumpTo(arrived(first));
     const sized = new ResizeObserver(() => {
+      const ratio = mapPixelRatio(container.clientWidth, container.clientHeight);
+      if (Math.abs(ratio - instance.getPixelRatio()) > 0.01) instance.setPixelRatio(ratio);
       instance.resize();
       applyPadding();
       home = frameHome();
@@ -348,30 +390,32 @@ export function MapLibreView({
       if (!instance.loaded()) latest.current.onFailed();
     }, 12_000);
 
+    /**
+     * A theme change repaints the base: colors only. The style already has its layout, filters and zoom ranges (a
+     * layout change would re-parse every tile), and the 3D buildings' opacity follows the tilt (`syncExtrusions`).
+     */
     const paintBase = () => {
       const styleLayers = (instance.getStyle().layers ?? []) as never;
       for (const step of restylePlan(styleLayers, readMapColors(container))) {
+        if (step.kind !== 'paint' || step.property === 'fill-extrusion-opacity') continue;
         try {
-          if (step.kind === 'paint') instance.setPaintProperty(step.layer, step.property as never, step.value as never);
-          else if (step.kind === 'layout') instance.setLayoutProperty(step.layer, step.property as never, step.value as never);
-          else if (step.kind === 'filter') instance.setFilter(step.layer, step.value as never);
-          else {
-            const [min, max] = step.value as [number, number];
-            instance.setLayerZoomRange(step.layer, min, max);
-          }
+          instance.setPaintProperty(step.layer, step.property as never, step.value as never);
         } catch {
           /* this style doesn't have that layer or property */
         }
       }
     };
-    /** 3D buildings only while the map is tilted, fading in with the tilt (flat, they'd cost GPU for nothing). */
+    /**
+     * 3D buildings only while the map is tilted, fading in with the tilt. Opacity only (a paint change): at 0
+     * MapLibre doesn't draw them, and switching their visibility instead would re-parse every tile mid-scroll.
+     */
+    let extrusionOpacity = -1;
     const syncExtrusions = () => {
       const pitch = instance.getPitch();
-      for (const id of extrusions) {
-        if (!instance.getLayer(id)) continue;
-        instance.setLayoutProperty(id, 'visibility', pitch > 4 ? 'visible' : 'none');
-        if (pitch > 4) instance.setPaintProperty(id, 'fill-extrusion-opacity', Math.min(0.88, (pitch - 4) / 26));
-      }
+      const opacity = pitch > 4 ? Math.round(Math.min(0.88, (pitch - 4) / 26) * 100) / 100 : 0;
+      if (opacity === extrusionOpacity) return;
+      extrusionOpacity = opacity;
+      for (const id of extrusions) if (instance.getLayer(id)) instance.setPaintProperty(id, 'fill-extrusion-opacity', opacity);
     };
     /** The map's own overlays take their colors from the page (and again when the theme changes). */
     const paintOverlays = () => {
@@ -501,13 +545,11 @@ export function MapLibreView({
       const styleLayers = (instance.getStyle().layers ?? []) as never;
       extrusions = extrusionLayers(styleLayers);
       const before = firstSymbolLayer(styleLayers);
-      paintBase();
 
       instance.addSource(SERVICE, { type: 'geojson', data: EMPTY });
       instance.addSource(OUTSIDE, { type: 'geojson', data: EMPTY });
       instance.addSource(HEAT, { type: 'geojson', data: EMPTY });
       instance.addSource(RADIUS, { type: 'geojson', data: EMPTY });
-      instance.addSource(LIT, { type: 'geojson', data: EMPTY });
       instance.addSource(YOU, { type: 'geojson', data: EMPTY });
       instance.addSource(TASKS, {
         type: 'geojson',
@@ -537,8 +579,12 @@ export function MapLibreView({
       );
       instance.addLayer({ id: 'you-radius-fill', type: 'fill', source: RADIUS, paint: { 'fill-color': '#6d4ef5', 'fill-opacity': 0.06 } }, before);
       instance.addLayer({ id: 'you-radius-line', type: 'line', source: RADIUS, paint: { 'line-color': '#6d4ef5', 'line-opacity': 0.6, 'line-width': 1.5, 'line-dasharray': [2, 2] } }, before);
-      instance.addLayer({ id: 'lit-area-fill', type: 'fill', source: LIT, paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.13 } }, before);
-      instance.addLayer({ id: 'lit-area-line', type: 'line', source: LIT, paint: { 'line-color': ['get', 'color'], 'line-opacity': 0.75, 'line-width': 1.8, 'line-dasharray': [2, 1.6] } }, before);
+      // The lit task's area: two slots that fade, grow and cross-fade (see `area-glow.ts`).
+      addAreaGlowLayers(instance, before);
+      glow.current = createAreaGlow(instance, {
+        colorOf: (category) => css(container, `--cat-${category}`, '#8b5cf6'),
+        reduced: () => latest.current.reduced,
+      });
       // An invisible layer keeps the task source loaded (the pins themselves are HTML markers).
       instance.addLayer({ id: 'tasks-anchor', type: 'circle', source: TASKS, paint: { 'circle-radius': 1, 'circle-opacity': 0 } });
       instance.addLayer({ id: 'you-halo', type: 'circle', source: YOU, paint: { 'circle-radius': 22, 'circle-color': '#7c5cff', 'circle-opacity': 0.16 } });
@@ -548,7 +594,20 @@ export function MapLibreView({
 
       instance.on('pitch', syncExtrusions);
       instance.on('zoom', () => setBand(instance.getZoom() >= CHIP_ZOOM ? 'near' : 'far'));
-      instance.on('render', syncMarkers);
+      // The markers follow the task source when it changes: its tiles load (panning in, a new zoom level), a move
+      // ends, and every so often while the zoom changes (clusters split and merge). Not on every frame.
+      let lastSync = 0;
+      instance.on('sourcedata', (event) => {
+        if (event.sourceId === TASKS && event.isSourceLoaded) syncMarkers();
+      });
+      instance.on('zoom', () => {
+        const at = performance.now();
+        if (at - lastSync < MARKER_SYNC_MS) return;
+        lastSync = at;
+        syncMarkers();
+      });
+      instance.on('moveend', syncMarkers);
+      instance.once('idle', syncMarkers);
       instance.on('moveend', () => {
         reportView();
         scheduleLayout();
@@ -569,6 +628,7 @@ export function MapLibreView({
         paintBase();
         syncExtrusions();
         paintOverlays();
+        glow.current?.recolor();
       };
       themeWatch = new MutationObserver(repaint);
       themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
@@ -612,6 +672,8 @@ export function MapLibreView({
       gate.current = null;
       for (const record of recordsNow.values()) record.marker.remove();
       recordsNow.clear();
+      glow.current?.destroy();
+      glow.current = null;
       latest.current.onControls?.(null);
       latest.current.onView?.(null);
       instance.remove();
@@ -671,13 +733,14 @@ export function MapLibreView({
     live.setPadding(paddingFor(fullscreen ? undefined : padding, container.clientWidth, container.clientHeight));
   }, [live, fullscreen, padding]);
 
-  // A picked category flies the map to its tasks; clearing it flies back out to the whole area.
+  // A picked category flies the map to its tasks; clearing it flies back out to the whole area. Only a change of
+  // pick does: the map coming up (or anything else re-running this) must not undo where the visitor moved it.
   useEffect(() => {
     if (!live || live !== mapRef.current) return;
-    if (firstFit.current) {
-      firstFit.current = false;
-      if (!selectedCategory) return;
-    }
+    const first = flownCategory.current === undefined;
+    if (flownCategory.current === selectedCategory) return;
+    flownCategory.current = selectedCategory;
+    if (first && !selectedCategory) return;
     stopArrival.current();
     const duration = reduced ? 0 : 900;
     const chosen = selectedCategory ? pins.filter((pin) => pin.categorySlug === selectedCategory) : [];
@@ -711,9 +774,22 @@ export function MapLibreView({
     } else live.easeTo({ center: [userPoint.lng, userPoint.lat], zoom: 11.6, ...(lastBuildings.current ? {} : { pitch: 0, bearing: 0 }), duration });
   }, [live, userPoint, withinMiles, reduced]);
 
-  // The explorer asked to show a neighborhood, or one task (its card opens).
+  // The explorer asked to show a neighborhood, or one task (its card opens), or to peek at a task (keyboard
+  // focus in the list): the map glides to it only if it's out of sight (behind the panels counts as out).
   useEffect(() => {
     if (!live || live !== mapRef.current || !request) return;
+    if (request.kind === 'peek') {
+      const pin = pins.find((item) => item.id === request.id);
+      if (!pin) return;
+      const at = live.project([pin.point.lng, pin.point.lat]);
+      const room = live.getPadding();
+      const box = live.getContainer();
+      const inSight = at.x >= (room.left ?? 0) && at.x <= box.clientWidth - (room.right ?? 0) && at.y >= (room.top ?? 0) && at.y <= box.clientHeight - (room.bottom ?? 0);
+      if (inSight) return;
+      stopArrival.current();
+      live.easeTo({ center: [pin.point.lng, pin.point.lat], duration: reduced ? 0 : 700 });
+      return;
+    }
     stopArrival.current();
     const duration = reduced ? 0 : 1000;
     if (request.kind === 'area') {
@@ -737,34 +813,47 @@ export function MapLibreView({
     return () => document.removeEventListener('keydown', onKey);
   }, [pickedTaskId]);
 
-  // The lit task (or the hero's task while the map arrives): its area as a dashed ring, its card placed.
+  // The lit task (or the hero's task while the map arrives): its area glows in (and the last one out). Pointing
+  // never moves the map; showing a task (a pick, or "show on the map") does, through a request.
   const shownId = litTaskId ?? arrivalLit;
   const shown = shownId ? pinsById.get(shownId) : undefined;
   useEffect(() => {
     if (!live || live !== mapRef.current) return;
-    const container = containerRef.current;
-    (live.getSource(LIT) as GeoJSONSource | undefined)?.setData(
-      shown && container ? polygon([circleRing(shown.point, shown.radiusMeters, 96)], { color: css(container, `--cat-${shown.categorySlug}`, '#8b5cf6') }) : EMPTY,
-    );
-    if (!shown) return;
-    const lngLat: [number, number] = [shown.point.lng, shown.point.lat];
-    if (shown.id === litTaskId && !live.getBounds().contains(lngLat)) {
-      stopArrival.current();
-      live.easeTo({ center: lngLat, zoom: Math.max(live.getZoom(), 11.5), duration: reduced ? 0 : 700 });
-    }
-    const place = () => {
+    glow.current?.show(shown ? { id: shown.id, lat: shown.point.lat, lng: shown.point.lng, radiusMeters: shown.radiusMeters, category: shown.categorySlug } : null);
+  }, [live, shown]);
+
+  // The card of the task pointed at (or picked): it follows its pin as the map moves, and glides from one pin to
+  // the next instead of closing and opening again.
+  const cardPin = shown && shown.id === litTaskId ? shown : undefined;
+  const cardPinId = cardPin?.id;
+  useLayoutEffect(() => {
+    const element = cardRef.current;
+    if (!live || live !== mapRef.current || !cardPin || !element) return;
+    const lngLat: [number, number] = [cardPin.point.lng, cardPin.point.lat];
+    const place = (glide: boolean) => {
       const at = live.project(lngLat);
       // Keep the card inside the map's width (it's 256 px wide, centered on the pin).
       const width = live.getContainer().clientWidth;
-      setCardAt({ id: shown.id, x: Math.min(Math.max(at.x, CARD_HALF_WIDTH_PX), Math.max(CARD_HALF_WIDTH_PX, width - CARD_HALF_WIDTH_PX)), y: at.y });
+      const x = Math.min(Math.max(at.x, CARD_HALF_WIDTH_PX), Math.max(CARD_HALF_WIDTH_PX, width - CARD_HALF_WIDTH_PX));
+      const fromX = Number.parseFloat(element.style.left);
+      const fromY = Number.parseFloat(element.style.top);
+      element.style.left = `${x}px`;
+      element.style.top = `${at.y}px`;
+      const placement = at.y < CARD_ROOM_PX ? 'below' : 'above';
+      setCardPlacement((current) => (current === placement ? current : placement));
+      if (glide && !latest.current.reduced && Number.isFinite(fromX) && Number.isFinite(fromY) && (fromX !== x || fromY !== at.y)) {
+        element.animate([{ transform: `translate(${fromX - x}px, ${fromY - at.y}px)` }, { transform: 'translate(0, 0)' }], { duration: CARD_GLIDE_MS, easing: EASE_OUT });
+      }
     };
-    const first = requestAnimationFrame(place);
-    live.on('move', place);
+    place(true);
+    const follow = () => place(false);
+    live.on('move', follow);
     return () => {
-      cancelAnimationFrame(first);
-      live.off('move', place);
+      live.off('move', follow);
     };
-  }, [live, shown, litTaskId, reduced]);
+    // The card moves when its task changes; `cardPin` is looked up from the same pins.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, cardPinId]);
 
   useEffect(() => {
     relayout.current();
@@ -826,9 +915,7 @@ export function MapLibreView({
               window.clearTimeout(clearTimer.current);
               onHighlight(pin.id);
             }}
-            onLeave={() => {
-              clearTimer.current = window.setTimeout(() => latest.current.onHighlight(null), 260);
-            }}
+            onLeave={() => letGoSoon(pin.id)}
             onPick={() => {
               stopArrival.current();
               onPick?.(pin.id);
@@ -838,24 +925,49 @@ export function MapLibreView({
           view.key,
         );
       })}
-      {shown && shown.id === litTaskId && cardAt?.id === shown.id && (
-        <PinCard
-          pin={shown}
-          x={cardAt.x}
-          y={cardAt.y}
-          placement={cardAt.y < CARD_ROOM_PX ? 'below' : 'above'}
-          miles={milesById?.get(shown.id)}
-          picked={shown.id === pickedTaskId}
-          onPointerEnter={() => window.clearTimeout(clearTimer.current)}
-          onPointerLeave={() => {
-            if (shown.id !== pickedTaskId) onHighlight(null);
-          }}
-          onClose={() => {
-            onHighlight(null);
-            onPick?.(null);
-          }}
-        />
-      )}
+      <LazyMotion features={domMax}>
+        <AnimatePresence>
+          {cardPin && (
+            // Sits at the pin (moved by the map); the card hangs above or below it. Decorative: the list beside
+            // the map is the accessible way to the same task.
+            <div key="card" ref={cardRef} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 z-10 size-0">
+              <m.div
+                className={cn('pointer-events-auto absolute left-0 w-64 -translate-x-1/2', cardPlacement === 'below' ? 'top-[26px]' : 'bottom-[26px]')}
+                style={{ transformOrigin: cardPlacement === 'below' ? '50% 0%' : '50% 100%' }}
+                initial={reduced ? false : { opacity: 0, scale: 0.93, y: cardPlacement === 'below' ? -8 : 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0, transition: reduced ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32, mass: 0.75 } }}
+                exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, scale: 0.97, y: cardPlacement === 'below' ? -4 : 4, transition: { duration: 0.16, ease: [0.4, 0, 1, 1] } }}
+                onPointerEnter={() => window.clearTimeout(clearTimer.current)}
+                onPointerLeave={() => {
+                  if (cardPin.id !== pickedTaskId) letGoSoon(cardPin.id);
+                }}
+              >
+                {/* From one task to the next, the card's face cross-fades while the card glides. */}
+                <AnimatePresence initial={false} mode="popLayout">
+                  <m.div
+                    key={cardPin.id}
+                    className="relative"
+                    initial={reduced ? false : { opacity: 0 }}
+                    animate={{ opacity: 1, transition: { duration: reduced ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] } }}
+                    exit={{ opacity: 0, transition: { duration: reduced ? 0 : 0.14 } }}
+                  >
+                    <PinCardBody
+                      pin={cardPin}
+                      placement={cardPlacement}
+                      miles={milesById?.get(cardPin.id)}
+                      picked={cardPin.id === pickedTaskId}
+                      onClose={() => {
+                        onHighlight(null);
+                        onPick?.(null);
+                      }}
+                    />
+                  </m.div>
+                </AnimatePresence>
+              </m.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </LazyMotion>
     </div>
   );
 }

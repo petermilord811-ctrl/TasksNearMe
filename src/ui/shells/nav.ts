@@ -20,6 +20,7 @@ export type NavId =
   | 'cases'
   | 'reports'
   | 'users'
+  | 'verifications'
   | 'config'
   | 'audit'
   | 'staff'
@@ -82,6 +83,8 @@ export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
     { id: 'cases', href: routes.admin.cases() },
     { id: 'reports', href: routes.admin.reports() },
     { id: 'users', href: routes.admin.users() },
+    // Address proofs, name checks, ID and background reviews: every staff role works this queue.
+    { id: 'verifications', href: routes.admin.verifications() },
     { id: 'bookings', href: routes.admin.bookings() },
     { id: 'payments', href: routes.admin.payments() },
     { id: 'rewards', href: routes.admin.rewards() },

@@ -4,6 +4,7 @@ import { MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { CATEGORY_SLUGS, LEGAL_DOCS, routes, type ShellViewer } from '@/contracts';
 import { Logo } from './logo';
+import { ScrollbarActivity } from '@/ui/motion';
 import { SkipLink } from './skip-link';
 import { MobileMenu } from './mobile-menu';
 import { getPublicNav } from './nav';
@@ -45,6 +46,7 @@ export function PublicShell({ viewer, children, currentPath, variant = 'default'
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <SkipLink />
+      <ScrollbarActivity />
       <TopBar
         logo={<><span className="min-[380px]:hidden"><Logo variant="mark" animated /></span><span className="hidden min-[380px]:inline-flex"><Logo animated /></span></>}
         nav={links('bar')}

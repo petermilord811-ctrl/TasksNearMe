@@ -4,7 +4,7 @@ import { Hero } from '@/ui/landing/hero';
 import { LandingProvider } from '@/ui/landing/landing-state';
 import { MapSection } from '@/ui/landing/map-section';
 import type { MapMode } from '@/ui/landing/map/task-map';
-import { CategoriesSection, ClosingSection, CoverageStrip, FaqSection, HelpersSection, PricingSection, StepsSection, TrustSection } from '@/ui/landing/sections';
+import { CategoriesSection, ClosingSection, CoverageSection, FaqSection, HelpersSection, PricingSection, StepsSection, TrustSection } from '@/ui/landing/sections';
 import { MotionRoot } from '@/ui/motion';
 
 export interface HomeScreenProps {
@@ -37,7 +37,7 @@ export function HomeScreen({ data, now, mapMode = 'interactive', initialLocation
         <PricingSection data={data} />
         <TrustSection />
         <HelpersSection data={data} />
-        <CoverageStrip data={data} />
+        <CoverageSection data={data} />
         <FaqSection />
         <ClosingSection data={data} />
       </div>

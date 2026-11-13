@@ -155,4 +155,27 @@ describe.each(TOWN_LAYOUTS)('what the town is made of (%s)', (layout) => {
     expect(town().balloons.length).toBeGreaterThan(0);
     for (const balloon of town().balloons) expect(balloon.height).toBeGreaterThan(GROUND + 200);
   });
+
+  it('can be built in a worker: all the 3D town draws is plain data (posting it clones it)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- the fields' functions stay in the worker
+    const { fields, ...model } = town();
+    const posted = structuredClone(model);
+    expect(posted.houses).toEqual(model.houses);
+    expect(posted.waterGrid.water).toEqual(model.waterGrid.water);
+  });
+
+  it("samples the water's grid once, as the fields say (drawing and repainting it never evaluates them)", () => {
+    const { waterGrid: grid, fields } = town();
+    expect(grid.cols).toBeGreaterThan(10);
+    expect(grid.water.length).toBe(grid.cols * grid.rows);
+    expect(grid.land.length).toBe(grid.cols * grid.rows);
+    for (const k of [0, grid.cols + 3, Math.floor(grid.water.length / 2), grid.water.length - 1]) {
+      const at = { x: grid.x0 + (k % grid.cols) * grid.step, y: grid.y0 + Math.floor(k / grid.cols) * grid.step };
+      expect(Math.abs(grid.water[k]! - fields.water(at))).toBeLessThan(0.01);
+      expect(Math.abs(grid.land[k]! - fields.land(at))).toBeLessThan(0.01);
+    }
+    // Some cells are water (negative), some aren't.
+    expect(grid.water.some((value) => value < 0)).toBe(true);
+    expect(grid.water.some((value) => value > 0)).toBe(true);
+  });
 });

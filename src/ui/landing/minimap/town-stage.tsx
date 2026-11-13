@@ -1,15 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { BadgeCheck, MapPin, Pause, Play, Star } from 'lucide-react';
 import { routes, type HelperSummary, type TaskPublicView } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
+import { clearHeroReady, markHeroReady } from '../hero-ready';
 import { MAP_SECTION_ID, useOptionalLanding } from '../landing-state';
-import type { TownLayout } from './scene';
+import { BUILD_UP } from './build-up';
+import type { TownLayout, TownModel } from './scene';
+import type { SceneReply, SceneRequest } from './scene-worker';
 import { CARD_PLACEMENTS, SLOT_ANCHORS, SLOT_IDS, type SlotId } from './slots';
 import type { TownController, TownView } from './town';
 
@@ -22,11 +25,19 @@ const PAUSE_EVENT = 'tnm-town-paused';
 const CARD = { width: 240, height: 98 };
 /** Wide screens get the town beside the headline; narrower ones get the band under it (the hero's `lg`). */
 const WIDE_QUERY = '(min-width: 1024px)';
-/** Both layouts' stills, pins and cards are rendered; CSS shows the one for the screen's width. */
+/** Both layouts' skeletons, stills, pins and cards are rendered; CSS shows the one for the screen's width. */
 const LAYOUTS: { layout: TownLayout; shown: string }[] = [
   { layout: 'band', shown: 'lg:hidden' },
   { layout: 'wide', shown: 'hidden lg:block' },
 ];
+/** The skeleton fades off the live town that's drawn under it, then goes (ms, matching the classes below). */
+const SKELETON_FADE = 650;
+/** Without a live town, the still picture fades in over the skeleton, which then goes. */
+const STILL_FADE = 750;
+/** The cards bloom in one after another as their pins land. */
+const CARD_STAGGER = 90;
+/** A card stays pointed at for a moment after the pointer slips off it (no flicker at its edges). */
+const HOVER_GRACE = 140;
 
 /** The visitor's pause choice for this visit (sessionStorage), as an external store. */
 function readPaused(): boolean {
@@ -63,9 +74,12 @@ function useTownLayout(): TownLayout {
   );
 }
 
+/** A software renderer (no GPU acceleration) would draw the town slowly and drain the battery. */
+const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render/i;
+
 /**
- * Whether the 3D town will run well here: WebGL 2 on a real GPU. A software renderer (no GPU acceleration)
- * would draw it slowly and drain the battery, so those browsers get the still picture instead.
+ * Whether the 3D town will run well here: WebGL 2 on a real GPU (asked on the page, when the worker couldn't
+ * tell). Without one, the still picture stays.
  */
 function webglWorthIt(): boolean {
   try {
@@ -75,10 +89,45 @@ function webglWorthIt(): boolean {
     const info = gl.getExtension('WEBGL_debug_renderer_info');
     const renderer = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
     gl.getExtension('WEBGL_lose_context')?.loseContext();
-    return !/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer);
+    return !SOFTWARE_RENDERER.test(renderer);
   } catch {
     return false;
   }
+}
+
+/**
+ * The town's worker (see `scene-worker.ts`): which GPU draws WebGL here (null when it can't tell), then the
+ * layout's town. Null when workers aren't available: then both are done on the page (the town in steps).
+ */
+function startTownWorker(layout: TownLayout, signal: AbortSignal): { gpu: Promise<string | null>; scene: Promise<TownModel | null>; stop: () => void } | null {
+  let worker: Worker;
+  try {
+    worker = new Worker(new URL('./scene-worker.ts', import.meta.url), { type: 'module' });
+  } catch {
+    return null;
+  }
+  let answerGpu: (name: string | null) => void = () => {};
+  let answerScene: (model: TownModel | null) => void = () => {};
+  const gpu = new Promise<string | null>((resolve) => (answerGpu = resolve));
+  const scene = new Promise<TownModel | null>((resolve) => (answerScene = resolve));
+  const stop = () => {
+    worker.terminate();
+    signal.removeEventListener('abort', stop);
+    answerGpu(null);
+    answerScene(null);
+  };
+  signal.addEventListener('abort', stop, { once: true });
+  worker.onmessage = (event: MessageEvent<SceneReply>) => {
+    const reply = event.data;
+    if (reply.kind === 'gpu') answerGpu(reply.renderer);
+    else {
+      answerScene(reply.layout === layout ? reply.model : null);
+      stop();
+    }
+  };
+  worker.onerror = stop;
+  worker.postMessage({ layout } satisfies SceneRequest);
+  return { gpu, scene, stop };
 }
 
 /** The canvas's pixel ratio: sharp enough, but light on the GPU (at most 1.5, and about 4 million pixels). */
@@ -118,14 +167,23 @@ const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2,
 /**
  * The hero's mini-map: a window (`className`, placed and sized by the hero) onto a stage of fixed shape
  * (`stageClassName` places it): 16:10 beside the headline on wide screens, a 10:8 band under it on narrower
- * ones, each with its own town. In `interactive` mode it loads the 3D town (three.js) for the current layout
- * once the browser is idle (again if the screen crosses into the other layout); the town builds itself up, then
- * runs only while it's on screen, the tab is visible, motion is allowed and the visitor hasn't paused it (a
- * still frame otherwise; the pause button stays inside the window, in view). As the town scrolls away, the
- * camera tilts toward a view from above and pulls back, handing over to the real map below. The pins carry
- * real open tasks, colored by category; the cards above them follow their pins every frame, quiet down when
- * another category is pointed at, and a click shows the task on the real map. In `static` mode (previews,
- * tests) and without a GPU it shows a still picture of the town with the same pins and cards.
+ * ones, each with its own town. In `interactive` mode it shows the town's skeleton from the first paint (its land,
+ * drawn on the server from the same scene and camera: `skeleton`) while it gets the 3D town (three.js) ready
+ * without holding up the page: the scene is built in a worker while the 3D code downloads, the town is put
+ * together in short steps, its shaders compile in the background, and its first frame is drawn while it's
+ * hidden. Then the skeleton fades off the live land under it and the town builds itself up (`BUILD_UP`): the
+ * houses grow, the trees pop up, the pins drop in and their cards bloom in as they land (again if the screen
+ * crosses into the other layout). It runs only while it's on screen, the
+ * tab is visible, motion is allowed and the visitor hasn't paused it (a still frame otherwise; the pause button
+ * stays inside the window, in view). As the town scrolls away, the camera tilts toward a view from above and
+ * pulls back, handing over to the real map below. The pins carry real open tasks, colored by category; the
+ * cards hang from their pins' resting places (a lifting pin never moves its card from under the pointer),
+ * quiet down when another category is pointed at, and a click shows the task on the real map. In `static` mode
+ * (previews, tests) it shows the still picture, with the same pins and cards; without a GPU (or if the town
+ * can't start) the still fades in over the skeleton. Reduced motion or a paused town: no build-up and no shimmer.
+ *
+ * It tells the page when it's done (`markHeroReady`: built up, or the still is in), so the map below starts
+ * loading after it rather than during it.
  *
  * The town is decorative (`aria-hidden`); the cards copy tasks the map's list already offers, so they're out
  * of the tab order.
@@ -134,6 +192,7 @@ export function TownStage({
   tasks,
   helper,
   mode,
+  skeleton,
   className,
   stageClassName,
   controlsClassName,
@@ -141,6 +200,8 @@ export function TownStage({
   tasks: TaskPublicView[];
   helper?: HelperSummary;
   mode: TownMode;
+  /** The town's skeleton (`TownSkeleton`, rendered on the server), shown until the live town takes over. */
+  skeleton?: ReactNode;
   className?: string;
   stageClassName?: string;
   controlsClassName?: string;
@@ -155,9 +216,24 @@ export function TownStage({
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  const lineRefs = useRef(new Map<string, SVGPathElement>());
   const viewRef = useRef<TownView | null>(null);
-  const [town, setTown] = useState<TownController | null>(null);
+  const hoveredRef = useRef<string | null>(null);
+  const leaveTimer = useRef(0);
+  // Each of these belongs to a layout, so the moment the screen crosses into the other one, everything below
+  // sees no town (the old one is let go), its skeleton is back, and nothing is drawn with a town that's gone.
+  const [built, setBuilt] = useState<{ town: TownController; layout: TownLayout } | null>(null);
+  /** No live town: previews and tests (static), no GPU, or it couldn't start. The still picture shows instead. */
   const [failed, setFailed] = useState(mode === 'static');
+  /** The layout whose live town has drawn (it's shown, under the skeleton, which fades off it). */
+  const [shownIn, setShownIn] = useState<TownLayout | null>(null);
+  /** The layout whose skeleton has faded off its live town (and is gone). */
+  const [revealedIn, setRevealedIn] = useState<TownLayout | null>(null);
+  /** The layout whose cards are in (its pins have landed). */
+  const [cardsIn, setCardsIn] = useState<TownLayout | null>(null);
+  /** The still picture has loaded (it fades in over the skeleton), and then the skeleton is gone. */
+  const [stillReady, setStillReady] = useState(mode === 'static');
+  const [stillDone, setStillDone] = useState(mode === 'static');
   const [onScreen, setOnScreen] = useState(true);
   const [hidden, setHidden] = useState(false);
   const [covered, setCovered] = useState(false);
@@ -166,50 +242,101 @@ export function TownStage({
   const pins = tasks.slice(0, SLOT_IDS.length).map((task, index) => ({ slotId: SLOT_IDS[index]!, task }));
   const focus = landing?.activeCategory ?? null;
   const lit = hovered ?? landing?.litTaskId ?? null;
-  const live = town !== null;
+  const town = built !== null && built.layout === layout ? built.town : null;
+  const shown = town !== null && shownIn === layout;
+  const live = shown;
+  const skeletonFading = shown || (failed && stillReady);
+  const skeletonGone = failed ? stillDone : shown && revealedIn === layout;
+  const cardsShown = (drawn: TownLayout) => (failed ? stillReady : cardsIn === drawn);
   const pinsKey = pins.map((pin) => `${pin.slotId}:${pin.task.id}:${pin.task.categorySlug}`).join('|');
 
-  // Build the layout's town once the browser has a moment (and only on a real GPU).
+  // Get the layout's town ready (only on a real GPU), without long pauses on the main thread.
   useEffect(() => {
     if (mode === 'static') return;
     const canvas = canvasRef.current;
     const stage = stageRef.current;
     const view = windowRef.current;
     if (!canvas || !stage || !view) return;
-    let cancelled = false;
-    let built: TownController | null = null;
+    const controller = new AbortController();
+    let made: TownController | null = null;
     const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+    // Off the main thread, right away: the worker (which GPU, then the scene) and the 3D code's download.
+    // Putting the town together waits until the page has settled after its first paint (the still is up).
+    const worker = startTownWorker(layout, controller.signal);
+    const code = import('./town');
+    code.catch(() => {}); // a failed download is handled where it's awaited
     const build = async () => {
-      if (!webglWorthIt()) {
-        if (!cancelled) setFailed(true);
+      const gpu = worker ? await worker.gpu : null;
+      if (controller.signal.aborted) return;
+      if (!(typeof gpu === 'string' ? !SOFTWARE_RENDERER.test(gpu) : webglWorthIt())) {
+        worker?.stop();
+        setFailed(true);
         return;
       }
       try {
-        const { createTown, DARK_PALETTE, LIGHT_PALETTE } = await import('./town');
-        if (cancelled) return;
-        built = createTown(canvas, { palette: darkAt(stage) ? DARK_PALETTE : LIGHT_PALETTE, shadowSize: coarse ? 1024 : 2048, layout });
+        const [model, { createTown, DARK_PALETTE, LIGHT_PALETTE }] = await Promise.all([worker ? worker.scene : Promise.resolve(null), code]);
+        if (controller.signal.aborted) return;
         const measured = measureView(view, stage);
         viewRef.current = measured;
-        built.setSize(measured.width, measured.height, pixelRatio(measured.width, measured.height, coarse));
-        built.setView(measured);
-        setTown(built);
+        const dark = darkAt(stage);
+        const next = await createTown(canvas, {
+          palette: dark ? DARK_PALETTE : LIGHT_PALETTE,
+          shadowSize: coarse ? 1024 : 2048,
+          layout,
+          // It grows out of its skeleton (unless motion is reduced or it's paused: then it's simply there).
+          buildUp: true,
+          scene: model ?? undefined,
+          size: { width: measured.width, height: measured.height, pixelRatio: pixelRatio(measured.width, measured.height, coarse), view: measured },
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) {
+          next.dispose();
+          return;
+        }
+        // The theme may have changed while it was being built.
+        if (darkAt(stage) !== dark) next.setPalette(dark ? LIGHT_PALETTE : DARK_PALETTE);
+        made = next;
+        setBuilt({ town: next, layout });
       } catch (error) {
-        // The still picture takes over; in development, say why.
+        if (controller.signal.aborted) return;
+        // The still picture stays; in development, say why.
         if (process.env.NODE_ENV !== 'production') console.error('The 3D town could not start:', error);
-        if (!cancelled) setFailed(true);
+        setFailed(true);
       }
     };
     // Safari has no requestIdleCallback: a short timeout instead.
     const hasIdle = typeof window.requestIdleCallback === 'function';
-    const handle = hasIdle ? window.requestIdleCallback(() => void build(), { timeout: 900 }) : window.setTimeout(() => void build(), 120);
+    const handle = hasIdle ? window.requestIdleCallback(() => void build(), { timeout: 300 }) : window.setTimeout(() => void build(), 60);
     return () => {
-      cancelled = true;
+      controller.abort();
       if (hasIdle) window.cancelIdleCallback(handle);
       else window.clearTimeout(handle);
-      built?.dispose();
-      setTown(null);
+      made?.dispose();
+      setBuilt((current) => (current?.town === made ? null : current));
     };
   }, [mode, layout]);
+
+  // The skeleton fades off the live town drawn under it, then goes.
+  useEffect(() => {
+    if (!shown) return;
+    const timer = window.setTimeout(() => setRevealedIn(layout), reduced ? 0 : SKELETON_FADE);
+    return () => window.clearTimeout(timer);
+  }, [shown, reduced, layout]);
+
+  // No live town: the still picture fades in over the skeleton (once it has loaded), then the skeleton goes.
+  useEffect(() => {
+    if (!failed || !stillReady || stillDone) return;
+    const timer = window.setTimeout(() => setStillDone(true), reduced ? 0 : STILL_FADE);
+    return () => window.clearTimeout(timer);
+  }, [failed, stillReady, stillDone, reduced]);
+
+  // The page below waits for the hero: ready when the town has built up (see the frame callback), or once the
+  // still picture is in.
+  useEffect(() => {
+    if (failed && stillReady) markHeroReady();
+  }, [failed, stillReady]);
+  useEffect(() => () => clearHeroReady(), []);
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), []);
 
   // Keep the canvas sharp at the window's size, showing the stage's part of it; follow the theme.
   useEffect(() => {
@@ -263,7 +390,8 @@ export function TownStage({
 
   useEffect(() => {
     if (!town) return;
-    if (reduced) town.finishIntro();
+    // Reduced motion, or paused: no build-up, the town is simply there.
+    if (reduced || paused) town.finishIntro();
     if (onScreen && !hidden && !covered && !reduced && !paused) town.start();
     else {
       town.stop();
@@ -333,25 +461,56 @@ export function TownStage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [town, pinsKey, focus, lit]);
 
-  // Every frame: the camera leans toward the pointer, and this layout's cards follow their pins.
+  // Every frame: the camera leans toward the pointer (held still while a card is pointed at, so the card stays
+  // under it), this layout's cards follow their pins' resting places, and their leader lines reach the pins
+  // themselves (which bob, and lift while lit). The first frame drawn here shows the town (the skeleton fades
+  // off it); the build-up's progress brings the cards in as the pins land, and says when the hero is done.
   useEffect(() => {
     if (!town) return;
     const pointer = landing?.pointer;
+    let drawn = false;
+    let cards = false;
+    let done = false;
     town.onFrame(() => {
-      const sample = pointer?.current;
-      town.setPointer(sample?.active ? sample.x * 2 - 1 : 0, sample?.active ? sample.y * 2 - 1 : 0, Boolean(sample?.active));
-      for (const slotId of SLOT_IDS) {
-        const element = cardRefs.current.get(`${layout}:${slotId}`);
-        if (!element) continue;
-        const at = town.pinAt(slotId);
-        const view = viewRef.current;
-        if (!at || !view) continue;
-        const x = (at.x * view.width - view.stage.left) / view.stage.width;
-        const y = (at.y * view.height - view.stage.top) / view.stage.height;
-        element.style.left = `${(x * 100).toFixed(3)}%`;
-        element.style.top = `${(y * 100).toFixed(3)}%`;
+      if (!hoveredRef.current) {
+        const sample = pointer?.current;
+        town.setPointer(sample?.active ? sample.x * 2 - 1 : 0, sample?.active ? sample.y * 2 - 1 : 0, Boolean(sample?.active));
+      }
+      const view = viewRef.current;
+      if (view) {
+        for (const slotId of SLOT_IDS) {
+          const key = `${layout}:${slotId}`;
+          const element = cardRefs.current.get(key);
+          if (!element) continue;
+          const rest = town.pinAt(slotId, true);
+          if (!rest) continue;
+          element.style.left = `${(((rest.x * view.width - view.stage.left) / view.stage.width) * 100).toFixed(3)}%`;
+          element.style.top = `${(((rest.y * view.height - view.stage.top) / view.stage.height) * 100).toFixed(3)}%`;
+          const line = lineRefs.current.get(key);
+          const now = town.pinAt(slotId);
+          const placement = CARD_PLACEMENTS[layout][slotId];
+          if (line && now && placement) {
+            const attach = attachPoint(placement.dx, placement.dy);
+            line.setAttribute('d', `M${((now.x - rest.x) * view.width).toFixed(1)} ${((now.y - rest.y) * view.height).toFixed(1)}L${attach.x} ${attach.y}`);
+          }
+        }
+      }
+      if (!drawn) {
+        drawn = true;
+        setShownIn(layout);
+      }
+      const progress = town.buildProgress();
+      if (!cards && progress >= BUILD_UP.cards) {
+        cards = true;
+        setCardsIn(layout);
+      }
+      if (!done && progress >= 1) {
+        done = true;
+        markHeroReady();
       }
     });
+    // A stopped town (reduced motion, paused, off screen) draws this frame now; a running one draws it next.
+    town.renderOnce();
     return () => town.onFrame(null);
   }, [town, layout, landing?.pointer]);
 
@@ -393,27 +552,67 @@ export function TownStage({
     event.preventDefault();
     landing.focusTask({ id: task.id, categorySlug: task.categorySlug });
   };
+  const pointAt = (id: string) => {
+    window.clearTimeout(leaveTimer.current);
+    hoveredRef.current = id;
+    setHovered(id);
+  };
+  const pointAway = (id: string) => {
+    window.clearTimeout(leaveTimer.current);
+    leaveTimer.current = window.setTimeout(() => {
+      if (hoveredRef.current !== id) return;
+      hoveredRef.current = null;
+      setHovered(null);
+    }, HOVER_GRACE);
+  };
 
   return (
     <div ref={windowRef} className={cn('pointer-events-none', className)}>
       {/* The live town draws the whole window: the stage's part, or more of the land around it. */}
-      <canvas ref={canvasRef} aria-hidden="true" className={cn('absolute inset-0 size-full transition-opacity duration-700', live ? 'opacity-100' : 'opacity-0', failed && 'hidden')} />
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        className={cn('absolute inset-0 size-full transition-opacity duration-[250ms] motion-reduce:transition-none', live ? 'opacity-100' : 'opacity-0', failed && 'hidden')}
+      />
 
       <div ref={stageRef} className={cn('absolute aspect-[10/8] lg:aspect-[16/10]', stageClassName)}>
-        {/* The still picture: previews, tests, and browsers without a GPU (each layout's own). */}
+        {/* The skeleton: from the first paint until the live town is drawn under it (or the still is in). */}
+        {mode !== 'static' && skeleton && !skeletonGone && (
+          <div aria-hidden="true" className={cn('absolute inset-0 transition-opacity duration-[650ms] ease-out motion-reduce:transition-none', skeletonFading && 'opacity-0')}>
+            {skeleton}
+          </div>
+        )}
+
+        {/* The still picture: previews and tests, and browsers without a GPU (it fades in over the skeleton
+            once it has loaded). Each layout its own. */}
         {failed && (
-          <div aria-hidden="true" className="absolute inset-0">
+          <div aria-hidden="true" className={cn('absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none', stillReady ? 'opacity-100' : 'opacity-0')}>
             {/* The wide still also shows the land left of the stage (it's 2600 × 1000 units; the stage starts at 1000). */}
             <picture className="dark:hidden">
               <source media={WIDE_QUERY} srcSet="/ui/landing/town-wide-light.webp" />
-              <img src="/ui/landing/town-band-light.webp" alt="" loading="lazy" decoding="async" className="absolute top-0 left-0 size-full max-w-none lg:left-[-62.5%] lg:w-[162.5%]" />
+              <img
+                src="/ui/landing/town-band-light.webp"
+                alt=""
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                onLoad={() => setStillReady(true)}
+                className="absolute top-0 left-0 size-full max-w-none lg:left-[-62.5%] lg:w-[162.5%]"
+              />
             </picture>
             <picture className="hidden dark:block">
               <source media={WIDE_QUERY} srcSet="/ui/landing/town-wide-dark.webp" />
-              <img src="/ui/landing/town-band-dark.webp" alt="" loading="lazy" decoding="async" className="absolute top-0 left-0 size-full max-w-none lg:left-[-62.5%] lg:w-[162.5%]" />
+              <img
+                src="/ui/landing/town-band-dark.webp"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                onLoad={() => setStillReady(true)}
+                className="absolute top-0 left-0 size-full max-w-none lg:left-[-62.5%] lg:w-[162.5%]"
+              />
             </picture>
-            {LAYOUTS.map(({ layout: drawn, shown }) => (
-              <div key={drawn} className={cn('absolute inset-0', shown)}>
+            {LAYOUTS.map(({ layout: drawn, shown: shownAt }) => (
+              <div key={drawn} className={cn('absolute inset-0', shownAt)}>
                 {pins.map(({ slotId, task }) => {
                   const anchor = SLOT_ANCHORS[drawn][slotId];
                   const dim = focus !== null && task.categorySlug !== focus;
@@ -430,21 +629,24 @@ export function TownStage({
           </div>
         )}
 
-        {/* Cards that hang from the pins (each layout its own; none on the smallest phones). */}
-        <div aria-hidden="true" className={cn('absolute inset-0 transition-opacity duration-700', live || failed ? 'opacity-100' : 'opacity-0')}>
-          {LAYOUTS.map(({ layout: drawn, shown }) => (
-            <div key={drawn} className={cn('absolute inset-0', shown)}>
-              {pins.map(({ slotId, task }) => {
+        {/* Cards that hang from the pins (each layout its own; none on the smallest phones), in as the pins land.
+            Nothing above them fades (that would switch their frosted glass off mid-fade): each card makes its own
+            entrance, one after another. */}
+        <div aria-hidden="true" className="absolute inset-0">
+          {LAYOUTS.map(({ layout: drawn, shown: shownAt }) => cardsShown(drawn) && (
+            <div key={drawn} className={cn('absolute inset-0', shownAt)}>
+              {pins.map(({ slotId, task }, index) => {
                 const placement = CARD_PLACEMENTS[drawn][slotId as SlotId];
                 if (!placement) return null;
                 const anchor = SLOT_ANCHORS[drawn][slotId].top;
                 const dim = focus !== null && task.categorySlug !== focus;
+                const on = lit === task.id;
                 const attach = attachPoint(placement.dx, placement.dy);
+                const key = `${drawn}:${slotId}`;
                 return (
                   <div
                     key={slotId}
                     ref={(element) => {
-                      const key = `${drawn}:${slotId}`;
                       if (element) cardRefs.current.set(key, element);
                       else cardRefs.current.delete(key);
                     }}
@@ -452,22 +654,38 @@ export function TownStage({
                     style={{ left: `${anchor.x * 100}%`, top: `${anchor.y * 100}%` }}
                   >
                     <svg className="absolute top-0 left-0 overflow-visible" width="1" height="1" aria-hidden="true" focusable="false">
-                      <path d={`M0 0L${attach.x} ${attach.y}`} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className={cn('text-foreground/45 transition-opacity duration-500', dim && 'opacity-20')} />
-                      <circle r="3" cx={attach.x} cy={attach.y} className="fill-foreground/60" />
+                      <path
+                        ref={(element) => {
+                          if (element) lineRefs.current.set(key, element);
+                          else lineRefs.current.delete(key);
+                        }}
+                        d={`M0 0L${attach.x} ${attach.y}`}
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        className={cn('transition-[opacity,color] duration-500', on ? 'text-foreground/70' : 'text-foreground/45', dim && !on && 'opacity-25')}
+                      />
+                      <circle r="3" cx={attach.x} cy={attach.y} className={cn('fill-foreground/60 transition-opacity duration-500', dim && !on && 'opacity-30')} />
                     </svg>
-                    <div className="absolute top-0 left-0" style={{ transform: `translate(${placement.dx}px, ${placement.dy}px)` }}>
+                    {/* The pointer is followed on this still box, not on the card that rises from it: a card
+                        rising away from a pointer near its bottom edge would otherwise flicker. */}
+                    <div
+                      className="pointer-events-auto absolute top-0 left-0"
+                      style={{ transform: `translate(${placement.dx}px, ${placement.dy}px)` }}
+                      onPointerEnter={() => pointAt(task.id)}
+                      onPointerLeave={() => pointAway(task.id)}
+                    >
                       <Link
                         href={routes.publicTask(task.slug)}
                         tabIndex={-1}
                         title={tMap('showOnMap')}
                         onClick={(event) => showOnMap(event, task)}
-                        onPointerEnter={() => setHovered(task.id)}
-                        onPointerLeave={() => setHovered(null)}
                         className={cn(
-                          'bloom-in glass pointer-events-auto block rounded-3xl p-4 transition-[opacity,translate,filter,box-shadow] duration-500 hover:-translate-y-1 hover:shadow-[0_24px_50px_-26px_var(--violet)] active:scale-[0.97] active:duration-150',
-                          dim && 'opacity-30 blur-[1px]',
+                          'town-card glass pointer-events-auto block rounded-3xl p-4',
+                          on && 'is-lit',
+                          dim && !on && 'is-quiet',
                         )}
-                        style={{ width: CARD.width, minHeight: CARD.height, ['--enter-delay' as string]: '1600ms' }}
+                        style={{ width: CARD.width, minHeight: CARD.height, ['--enter-delay' as string]: `${index * CARD_STAGGER}ms` }}
                       >
                         <span className="flex items-center justify-between text-xs text-muted-foreground">
                           <span className="inline-flex items-center gap-1.5 font-medium">
@@ -489,14 +707,14 @@ export function TownStage({
             </div>
           ))}
 
-          {helper && (
+          {helper && cardsShown('wide') && (
             // Only when the town is tall enough: on short screens it would crowd the top bar and the first card.
-            <div className="absolute hidden xl:[@container(min-height:700px)]:block" style={{ left: '53%', top: '11%' }}>
+            <div className="town-card-hit pointer-events-auto absolute hidden xl:[@container(min-height:700px)]:block" style={{ left: '53%', top: '11%' }}>
               <Link
                 href={routes.helperProfile(helper.handle)}
                 tabIndex={-1}
-                className="bloom-in glass pointer-events-auto flex w-60 items-center gap-3 rounded-3xl p-3.5 transition-transform duration-500 hover:-translate-y-1"
-                style={{ ['--enter-delay' as string]: '1900ms' }}
+                className="town-card glass flex w-60 items-center gap-3 rounded-3xl p-3.5"
+                style={{ ['--enter-delay' as string]: `${pins.length * CARD_STAGGER + 120}ms` }}
               >
                 <span className="grid size-11 shrink-0 place-items-center rounded-2xl text-sm font-semibold text-white" style={{ backgroundImage: 'var(--iridescent)' }}>{helper.initials}</span>
                 <span className="min-w-0">

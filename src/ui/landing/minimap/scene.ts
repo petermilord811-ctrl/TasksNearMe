@@ -491,11 +491,27 @@ export interface Yard {
   d: number;
 }
 
+/**
+ * The water's grid, sampled once with the scene (so drawing it, and repainting it for the other theme, never
+ * evaluates the fields again): per cell, the water field (negative in the water) and the land field (negative
+ * on the land), row by row from (`x0`, `y0`) in steps of `step`.
+ */
+export interface WaterGrid {
+  x0: number;
+  y0: number;
+  step: number;
+  cols: number;
+  rows: number;
+  water: Float32Array;
+  land: Float32Array;
+}
+
 export interface TownScene {
   composition: Composition;
   fields: Fields;
   slabs: Slab[];
   water: Pt[][];
+  waterGrid: WaterGrid;
   grass: Pt[][];
   roads: Pt[][];
   bridges: Bridge[];
@@ -526,6 +542,44 @@ export interface TownScene {
   balloons: Balloon[];
   /** The helper's way to the first pin (dotted). */
   route: Pt[];
+}
+
+/**
+ * What the 3D town draws from a scene: all of it but the fields' functions, so it can be built in a worker and
+ * posted to the page (functions can't be).
+ */
+export type TownModel = Omit<TownScene, 'fields'>;
+
+/** Samples the water's grid over the water's outlines (see `WaterGrid`). */
+function sampleWater(outlines: Pt[][], fields: Fields, step = 20): WaterGrid {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const outline of outlines) {
+    for (const point of outline) {
+      minX = Math.min(minX, point.x);
+      minY = Math.min(minY, point.y);
+      maxX = Math.max(maxX, point.x);
+      maxY = Math.max(maxY, point.y);
+    }
+  }
+  if (!Number.isFinite(minX)) return { x0: 0, y0: 0, step, cols: 0, rows: 0, water: new Float32Array(0), land: new Float32Array(0) };
+  const cols = Math.ceil((maxX - minX) / step) + 1;
+  const rows = Math.ceil((maxY - minY) / step) + 1;
+  const water = new Float32Array(cols * rows);
+  const land = new Float32Array(cols * rows);
+  const at = { x: 0, y: 0 };
+  for (let j = 0; j < rows; j += 1) {
+    for (let i = 0; i < cols; i += 1) {
+      at.x = minX + i * step;
+      at.y = minY + j * step;
+      const k = j * cols + i;
+      water[k] = fields.water(at);
+      land[k] = fields.land(at);
+    }
+  }
+  return { x0: minX, y0: minY, step, cols, rows, water, land };
 }
 
 function smoothOutline(lens: Lens, outline: Pt[]): Pt[] {
@@ -1202,6 +1256,7 @@ export function buildTown(layout: TownLayout = 'wide', seed = 11): TownScene {
     fields,
     slabs,
     water,
+    waterGrid: sampleWater(water, fields),
     grass,
     roads: onLand,
     bridges,

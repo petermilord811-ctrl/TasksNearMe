@@ -3,19 +3,22 @@
 import Link from 'next/link';
 import { ViewTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowUpRight, Globe, ShieldCheck } from 'lucide-react';
-import { routes, type CategoryView } from '@/contracts';
+import { ArrowRight, Globe, ShieldCheck } from 'lucide-react';
+import { routes, type CategorySlug, type CategoryView } from '@/contracts';
 import { formatMoney } from '@/shared/format';
-import { Reveal, Spotlight } from '@/ui/motion';
+import { HoverLift, Reveal } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { CATEGORY_ICONS } from './category-icons';
 import { useOptionalLanding } from './landing-state';
 
 /**
- * What people book: one card per category with its real price guidance; hovering one tints the page.
- * Opening one carries its icon into the category page's header (a shared View Transition).
+ * What people book: one card per category with its real price guidance and how many of its tasks are open on
+ * the map right now. Each card answers the pointer like a card on a table (it rises, tilts a little, and a
+ * light in the category's color follows the cursor, with the icon and the arrow moving along); pointing at
+ * one tints the page (the map's pins and the town's quiet down to it). Opening one carries its icon into the
+ * category page's header (a shared View Transition).
  */
-export function CategoryCards({ categories }: { categories: CategoryView[] }) {
+export function CategoryCards({ categories, openCounts }: { categories: CategoryView[]; openCounts?: Partial<Record<CategorySlug, number>> }) {
   const t = useTranslations('landing.categories');
   const landing = useOptionalLanding();
   return (
@@ -23,25 +26,32 @@ export function CategoryCards({ categories }: { categories: CategoryView[] }) {
       {categories.map((category, index) => {
         const Icon = CATEGORY_ICONS[category.slug];
         const wide = index < 2;
+        const color = `var(--cat-${category.slug})`;
+        const open = openCounts?.[category.slug] ?? 0;
         return (
-          <li key={category.slug} className={cn(wide ? 'lg:col-span-3' : 'lg:col-span-2')}>
+          <li key={category.slug} className={cn(wide ? 'lg:col-span-3' : 'lg:col-span-2', !wide && index === categories.length - 1 && categories.length % 2 === 1 && 'sm:col-span-2 lg:col-span-2')}>
             <Reveal index={index} className="h-full">
-              <Spotlight glow={`var(--cat-${category.slug})`} className="h-full rounded-3xl">
+              <HoverLift className="h-full" surfaceClassName="lift-shadow rounded-3xl border border-foreground/[0.07] bg-card/75" glow={color} tilt={wide ? 3 : 4}>
                 <Link
                   href={routes.category(category.slug)}
                   onPointerEnter={() => landing?.setPreviewCategory(category.slug)}
                   onPointerLeave={() => landing?.setPreviewCategory(null)}
                   onFocus={() => landing?.setPreviewCategory(category.slug)}
                   onBlur={() => landing?.setPreviewCategory(null)}
-                  className="group/cat flex h-full min-h-52 flex-col rounded-3xl border border-foreground/[0.07] bg-card/70 p-6 shadow-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-foreground/15 hover:shadow-overlay"
+                  className="flex h-full min-h-60 flex-col rounded-3xl p-6 outline-offset-4"
                 >
-                  <span className="flex items-start justify-between">
+                  <span className="flex items-start justify-between gap-3">
                     <ViewTransition name={`category-icon-${category.slug}`} share="category-morph" default="none">
-                      <span className="grid size-12 place-items-center rounded-2xl transition-transform duration-500 group-hover/cat:scale-110 group-hover/cat:-rotate-6" style={{ background: `color-mix(in oklab, var(--cat-${category.slug}) 15%, transparent)`, color: `var(--cat-${category.slug})` }}>
+                      <span className="lift-icon grid size-12 place-items-center rounded-2xl" style={{ background: `color-mix(in oklab, ${color} 15%, transparent)`, color }}>
                         <Icon aria-hidden="true" className="size-6" />
                       </span>
                     </ViewTransition>
-                    <ArrowUpRight aria-hidden="true" className="size-5 text-muted-foreground transition-transform duration-300 group-hover/cat:translate-x-0.5 group-hover/cat:-translate-y-0.5 group-hover/cat:text-foreground" />
+                    {open > 0 && (
+                      <span className="inline-flex items-center gap-2 rounded-full bg-foreground/[0.045] px-2.5 py-1 text-xs font-medium text-foreground/80 tabular-nums">
+                        <span aria-hidden="true" className="live-dot" style={{ background: color }} />
+                        {t('openOnMap', { count: open })}
+                      </span>
+                    )}
                   </span>
                   <span className="mt-auto pt-8">
                     <span className="block font-display text-2xl font-semibold tracking-[-0.025em]">{category.name}</span>
@@ -52,9 +62,15 @@ export function CategoryCards({ categories }: { categories: CategoryView[] }) {
                       {category.requiresBackgroundCheck && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><ShieldCheck aria-hidden="true" className="size-3.5" />{t('inHome')}</span>}
                       {category.remoteAllowed && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Globe aria-hidden="true" className="size-3.5" />{t('remote')}</span>}
                     </span>
+                    <span className="mt-5 flex items-center justify-between gap-3 border-t border-foreground/[0.06] pt-4 text-sm font-semibold">
+                      <span className="lift-fade">{t('explore', { category: category.name })}</span>
+                      <span aria-hidden="true" className="lift-arrow-x grid size-9 shrink-0 place-items-center rounded-full" style={{ background: `color-mix(in oklab, ${color} 13%, transparent)`, color }}>
+                        <ArrowRight className="size-4" />
+                      </span>
+                    </span>
                   </span>
                 </Link>
-              </Spotlight>
+              </HoverLift>
             </Reveal>
           </li>
         );

@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 
-/** Share the actual tab height, including wrapped labels and safe-area padding. */
+/**
+ * The phone's tab dock: a glass bar floating just above the bottom edge (and the safe area). It shares its real
+ * height, gap included, so pages and their sticky action bars stay clear of it.
+ */
 export function MobileBottomNav({ children }: { children: ReactNode }) {
   const navRef = useRef<HTMLDivElement>(null);
 
@@ -23,7 +26,9 @@ export function MobileBottomNav({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return <div ref={navRef} data-mobile-bottom-nav className="fixed inset-x-0 bottom-0 z-30 border-t bg-card px-2 pt-1 pb-[max(.5rem,env(safe-area-inset-bottom))] lg:hidden">
-    {children}
+  return <div ref={navRef} data-mobile-bottom-nav className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-2.5 pb-[max(.625rem,env(safe-area-inset-bottom))] lg:hidden">
+    <div className="app-glass pointer-events-auto mx-auto max-w-md rounded-[1.75rem] border border-foreground/[0.07] p-1.5 shadow-[0_1px_2px_rgb(23_18_14/0.05),0_18px_40px_-18px_rgb(40_20_5/0.45)] dark:border-white/[0.08] dark:shadow-[0_18px_40px_-16px_rgb(0_0_0/0.8)]">
+      {children}
+    </div>
   </div>;
 }

@@ -11,7 +11,7 @@ export function MobileMenu({ title, description, children }: { title: string; de
   const [open, setOpen] = useState(false);
   return <Sheet open={open} onOpenChange={setOpen}>
     <SheetTrigger asChild><Button type="button" variant="ghost" size="icon" className="lg:hidden" aria-label={t('openMenu')}><Menu aria-hidden="true" className="size-5" /></Button></SheetTrigger>
-    <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-xl pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-[1.75rem] pb-[max(1rem,env(safe-area-inset-bottom))]">
       <SheetHeader><SheetTitle>{title}</SheetTitle><SheetDescription>{description}</SheetDescription></SheetHeader>
       <div className="px-4" onClick={(event) => { if (event.target instanceof Element && event.target.closest('a')) setOpen(false); }}>{children}</div>
     </SheetContent>

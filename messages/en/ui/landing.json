@@ -192,6 +192,10 @@
     "inHome": "In-home: background-checked helpers",
     "remote": "Can be done remotely",
     "explore": "Explore {category}",
+    "openOnMap": "{count, plural, one {# open on the map} other {# open on the map}}",
+    "unsure": "Not sure which one fits?",
+    "unsureBody": "Describe your task in your own words and pick the closest kind of help as you post.",
+    "unsureLink": "Post a task",
     "descriptions": {
       "furniture-assembly": "Flat-pack furniture, beds, desks, shelves, anti-tip anchors.",
       "moving-help": "Packing, lifting and loading.",
@@ -216,7 +220,23 @@
       "title": "Approve and rebook",
       "body": "Approve the work and your helper is paid. Save them and book again in two taps."
     },
-    "link": "See how it works"
+    "helper": {
+      "verify": {
+        "title": "Set up and get verified",
+        "body": "Build your profile, pass an ID check and set up payouts. In-home tasks also need a background check."
+      },
+      "offer": {
+        "title": "Offer on tasks that fit",
+        "body": "Pick tasks near you, set your price, and see what you'll earn before you send an offer."
+      },
+      "paid": {
+        "title": "Do the work, get paid",
+        "body": "You're paid after the client approves the work. Clients who liked it can book you again."
+      }
+    },
+    "sidesLabel": "How it works for",
+    "link": "See how it works",
+    "helperLink": "See how helping works"
   },
   "pricing": {
     "eyebrow": "Pricing you can see",
@@ -251,11 +271,23 @@
     },
     "payment": {
       "title": "Pay through the platform",
-      "body": "Your payment is held safely and your helper is paid after you approve the work."
+      "body": "You pay through TasksNearMe when you book, and your helper is paid after you approve the work."
     },
     "reviews": {
       "title": "Reviews from both sides",
       "body": "Double-blind reviews help everyone choose well, and keep it fair."
+    },
+    "art": {
+      "idCheck": "ID check",
+      "backgroundCheck": "Background check for in-home",
+      "generalArea": "General area",
+      "exactAddress": "Exact address after booking",
+      "pay": "You book and pay",
+      "approve": "You approve the work",
+      "paid": "Your helper is paid",
+      "client": "Client’s review",
+      "helper": "Helper’s review",
+      "reviewsRule": "Both show once both are in, or after 14 days"
     },
     "link": "Our approach to trust and safety"
   },
@@ -272,17 +304,24 @@
     "rewardAmount": "{amount} gift card",
     "rewardBody": "For each of the first {limit} verified helpers who complete a qualifying task.",
     "rewardSpots": "{claimed} of {limit} spots claimed",
-    "rewardTerms": "Reward terms"
+    "rewardTerms": "Reward terms",
+    "earnTitle": "What you keep",
+    "earnBody": "From {price} of agreed work, after the helper service fee.",
+    "earnLink": "How fees work",
+    "joinCount": "{count, plural, one {Join # ID-verified helper in {market}} other {Join # ID-verified helpers in {market}}}"
   },
   "coverage": {
     "eyebrow": "Where we work",
     "title": "Starting in {market}",
     "body": "Neighborhoods within about {radius} miles, including:",
+    "mapHint": "Pick a neighborhood to see its open tasks on the map.",
+    "openTasks": "{count, plural, one {open task} other {open tasks}}",
     "waitlist": "Somewhere else? Join the waitlist"
   },
   "faq": {
     "eyebrow": "Good to know",
     "title": "Questions, answered",
+    "body": "The short answers to what people ask first.",
     "pay": {
       "question": "When do I pay?",
       "answer": "When you book. The total, with the service fee, is shown before you pay. Your helper is paid after you approve the work."

@@ -1,0 +1,81 @@
+'use client';
+
+import { useId } from 'react';
+import { useTranslations } from 'next-intl';
+import { MapPin } from 'lucide-react';
+import { routes, type HomePageData, type MapArea } from '@/contracts';
+import { HoverLift, Reveal, usePrefersReducedMotion } from '@/ui/motion';
+import { MAP_SECTION_ID, useOptionalLanding } from '../landing-state';
+import { ArrowLink } from './heading';
+
+/**
+ * Where we work: the market, its radius and its neighborhoods, each with how many of its tasks are open on the
+ * map. A neighborhood is a shortcut: it flies the map above to that neighborhood (the same pick as the hero's
+ * market line) and brings the map into view. Somewhere else: the waitlist.
+ */
+export function CoverageSection({ data }: { data: HomePageData }) {
+  const t = useTranslations('landing.coverage');
+  const landing = useOptionalLanding();
+  const reduced = usePrefersReducedMotion();
+  const areas = new Map(data.map.areas.map((area) => [area.name, area]));
+  const open = new Map<string, number>();
+  for (const pin of data.map.pins) open.set(pin.areaName, (open.get(pin.areaName) ?? 0) + 1);
+
+  const hintId = useId();
+
+  const show = (area: MapArea) => {
+    landing?.pickArea(area);
+    document.getElementById(MAP_SECTION_ID)?.scrollIntoView?.({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  };
+
+  return (
+    <section aria-labelledby="coverage-title" className="py-16 sm:py-20">
+      <div className="mx-auto max-w-content px-gutter">
+        <Reveal>
+          <HoverLift surfaceClassName="rounded-[2rem] border border-dashed border-foreground/15 bg-card/45" glow="var(--violet)" tilt={0} lift={0} grow={0}>
+            <div className="grid gap-7 p-6 sm:p-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center lg:gap-12 lg:p-10">
+              <div>
+                <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">{t('eyebrow')}</p>
+                <h2 id="coverage-title" className="mt-2 font-display text-3xl font-semibold tracking-[-0.03em] text-balance">{t('title', { market: data.market.name })}</h2>
+                <p className="mt-2 text-muted-foreground">{t('body', { radius: data.market.serviceRadiusMiles })}</p>
+                {landing && <p id={hintId} className="mt-1 text-sm text-muted-foreground">{t('mapHint')}</p>}
+                <ArrowLink href={routes.waitlist()} className="mt-3">{t('waitlist')}</ArrowLink>
+              </div>
+              <ul className="flex flex-wrap gap-2">
+                {data.market.areaNames.map((name) => {
+                  const area = areas.get(name);
+                  const count = open.get(name) ?? 0;
+                  const inside = (
+                    <>
+                      <MapPin aria-hidden="true" className="area-chip-pin size-3.5 text-muted-foreground" />
+                      {name}
+                      {count > 0 && ' '}
+                      {count > 0 && (
+                        <span className="ml-0.5 grid min-w-5 place-items-center rounded-full bg-violet-soft px-1.5 text-[11px] leading-5 font-semibold text-violet tabular-nums">
+                          {count}
+                          {' '}
+                          <span className="sr-only">{t('openTasks', { count })}</span>
+                        </span>
+                      )}
+                    </>
+                  );
+                  return (
+                    <li key={name}>
+                      {area && landing ? (
+                        <button type="button" onClick={() => show(area)} aria-describedby={hintId} className="area-chip inline-flex min-h-10 items-center gap-1.5 rounded-full border border-foreground/[0.07] bg-card/80 px-3.5 text-sm font-medium">
+                          {inside}
+                        </button>
+                      ) : (
+                        <span className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3.5 text-sm">{inside}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </HoverLift>
+        </Reveal>
+      </div>
+    </section>
+  );
+}

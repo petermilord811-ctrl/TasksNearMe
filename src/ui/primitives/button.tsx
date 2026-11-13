@@ -3,29 +3,34 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/ui/lib/utils"
 import { Slot } from "radix-ui"
 
+/**
+ * Pill buttons, as on the landing page: a 44 px touch target, a soft lift on hover (the filled ones glow in their
+ * color), a quick press, and a clear focus ring. Multi-line buttons keep the same corners.
+ */
 const buttonVariants = cva(
-  "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "relative inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-[1.375rem] text-sm font-medium whitespace-nowrap select-none transition-[color,background-color,border-color,box-shadow,translate,scale,opacity] duration-200 ease-[var(--ease-out)] outline-none active:scale-[0.97] active:duration-75 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/25 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default:
+          "bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.16),0_1px_2px_rgb(90_30_5/0.16),0_8px_18px_-10px_var(--primary-glow)] hover:-translate-y-px hover:bg-primary-hover hover:shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_2px_4px_rgb(90_30_5/0.14),0_14px_26px_-12px_var(--primary-glow)]",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive",
+          "bg-destructive font-semibold text-destructive-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.14),0_1px_2px_rgb(80_10_5/0.18),0_8px_18px_-10px_rgb(180_35_24/0.45)] hover:-translate-y-px hover:bg-destructive/90 focus-visible:ring-destructive",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border border-foreground/[0.14] bg-card text-foreground shadow-[0_1px_2px_rgb(23_18_14/0.05)] hover:-translate-y-px hover:border-foreground/25 hover:shadow-[0_1px_2px_rgb(23_18_14/0.05),0_10px_20px_-14px_rgb(60_30_10/0.45)] dark:border-white/[0.12] dark:bg-white/[0.04] dark:hover:border-white/[0.2] dark:hover:bg-white/[0.07]",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklab,var(--secondary),var(--primary)_10%)]",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
+          "hover:bg-foreground/[0.06] hover:text-foreground dark:hover:bg-white/[0.08]",
+        link: "text-primary underline-offset-4 hover:underline active:scale-100",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        default: "h-9 px-5 py-2 has-[>svg]:px-4",
+        xs: "h-6 gap-1 px-2.5 text-xs has-[>svg]:px-2 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-8 gap-1.5 px-4 has-[>svg]:px-3",
+        lg: "h-10 px-6 text-[0.9375rem] has-[>svg]:px-5",
         icon: "size-9",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
+        "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8",
         "icon-lg": "size-10",
       },

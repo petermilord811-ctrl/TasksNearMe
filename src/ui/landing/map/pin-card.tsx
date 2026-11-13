@@ -43,10 +43,6 @@ export function PinCard({
   picked?: boolean;
 }) {
   const below = placement === 'below';
-  const t = useTranslations('landing.map');
-  const categories = useTranslations('helperCard.categories');
-  const Icon = CATEGORY_ICONS[pin.categorySlug];
-  const color = `var(--cat-${pin.categorySlug})`;
   return (
     <div
       key={pin.id}
@@ -56,6 +52,35 @@ export function PinCard({
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
     >
+      <PinCardBody pin={pin} miles={miles} onClose={onClose} placement={placement} picked={picked} />
+    </div>
+  );
+}
+
+/**
+ * The card itself, without its placement: the live map positions it (and glides it from pin to pin), the drawn
+ * map uses `PinCard`. Its little pointer sits on the side facing the pin.
+ */
+export function PinCardBody({
+  pin,
+  miles,
+  onClose,
+  placement = 'above',
+  picked = false,
+}: {
+  pin: TaskMapPin;
+  miles?: number;
+  onClose?: () => void;
+  placement?: 'above' | 'below';
+  picked?: boolean;
+}) {
+  const below = placement === 'below';
+  const t = useTranslations('landing.map');
+  const categories = useTranslations('helperCard.categories');
+  const Icon = CATEGORY_ICONS[pin.categorySlug];
+  const color = `var(--cat-${pin.categorySlug})`;
+  return (
+    <>
       <div className="group/pin relative rounded-2xl border border-foreground/[0.08] bg-card p-3.5 text-left text-foreground shadow-overlay">
         <div className="flex items-center gap-2 pr-7 text-xs font-medium text-muted-foreground">
           <span className="grid size-6 shrink-0 place-items-center rounded-full" style={{ background: `color-mix(in oklab, ${color} 16%, transparent)`, color }}>
@@ -95,6 +120,6 @@ export function PinCard({
         </div>
       </div>
       <span aria-hidden="true" className={cn('absolute left-1/2 size-3 -translate-x-1/2 rotate-45 rounded-[3px] border border-foreground/[0.08] bg-card', below ? '-top-1.5 border-r-0 border-b-0' : '-bottom-1.5 border-t-0 border-l-0')} />
-    </div>
+    </>
   );
 }

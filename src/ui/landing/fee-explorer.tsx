@@ -15,7 +15,7 @@ import { cn } from '@/ui/lib/utils';
  * new amounts, and the bar re-splits between what the helper earns and the service fees. Every number is the
  * fee engine's (`HomePageData.feeExamples`); the card only chooses which example to show.
  */
-export function FeeExplorer({ examples, initial }: { examples: PriceBreakdown[]; initial: PriceBreakdown }) {
+export function FeeExplorer({ examples, initial, className = 'glass rounded-[2rem] p-6 sm:p-8' }: { examples: PriceBreakdown[]; initial: PriceBreakdown; className?: string }) {
   const t = useTranslations('landing.pricing');
   const reduced = usePrefersReducedMotion();
   const pillId = useId();
@@ -27,7 +27,7 @@ export function FeeExplorer({ examples, initial }: { examples: PriceBreakdown[];
 
   return (
     <LazyMotion features={domMax}>
-      <div className="glass rounded-[2rem] p-6 sm:p-8">
+      <div className={className}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-medium text-muted-foreground" aria-live="polite">{t('example', { price: formatMoney(fee.taskPriceCents) })}</p>
           {options.length > 1 && (

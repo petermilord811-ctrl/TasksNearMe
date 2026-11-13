@@ -1,5 +1,6 @@
 import {
   AdditiveBlending,
+  BackSide,
   BoxGeometry,
   BufferAttribute,
   BufferGeometry,
@@ -12,6 +13,7 @@ import {
   DirectionalLight,
   DoubleSide,
   Euler,
+  FrontSide,
   Group,
   HemisphereLight,
   InstancedBufferAttribute,
@@ -19,6 +21,7 @@ import {
   Matrix4,
   Mesh,
   MeshBasicMaterial,
+  MeshDepthMaterial,
   MeshStandardMaterial,
   NeutralToneMapping,
   Object3D,
@@ -37,13 +40,16 @@ import {
   Vector2,
   Vector3,
   WebGLRenderer,
+  WebGLRenderTarget,
   type Material,
+  type Side,
 } from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { BUILD_UP } from './build-up';
 import { cameraPose } from './camera';
-import { GROUND, PIN_HEAD, PIN_LIFT, PIN_SCALE, UNIT, WATER_LEVEL, townScene, type TownLayout, type TownScene } from './scene';
+import { GROUND, PIN_HEAD, PIN_LIFT, PIN_SCALE, UNIT, WATER_LEVEL, townScene, type TownLayout, type TownModel, type WaterGrid } from './scene';
 import {
   addBench,
   addBlanket,
@@ -92,10 +98,10 @@ export { DARK_PALETTE, LIGHT_PALETTE, type TownPalette };
  * cars, a boat, a sailboat, kayaks, people on the pavements, at café tables and around the plaza's food trucks,
  * birds, slow hot-air balloons, a windmill whose wheel turns, a fountain. Each pin's house has a yard where its
  * task is happening (a moving truck being unloaded, leaves being raked, laundry on the line, furniture being
- * put together, someone getting help with a laptop). It builds itself up on first sight (the plates rise, the
- * houses grow, the trees pop up in a wave, the pins drop in), and as the hero scrolls away the camera tilts
- * toward a view from straight above and pulls back, handing over to the real map below. The canvas is
- * transparent: the page shows through.
+ * put together, someone getting help with a laptop). It builds itself up (`buildUp`, timed by `BUILD_UP`) out of
+ * the skeleton the hero draws first: the land is in place, then the houses grow, the trees pop up in a wave, the
+ * pins drop in and the things that move appear. As the hero scrolls away the camera tilts toward a view from straight above and pulls back,
+ * handing over to the real map below. The canvas is transparent: the page shows through.
  *
  * Light on the GPU: everything that stands still is merged into a few meshes (one per kind of surface, colored
  * per vertex), and everything that repeats or moves is instanced, so the whole town is a few dozen draw calls.
@@ -103,6 +109,10 @@ export { DARK_PALETTE, LIGHT_PALETTE, type TownPalette };
  * theme changes, never per frame (so nothing that moves casts one); it draws about 30 frames a second, 60 only
  * while the camera moves or the intro plays; the stage caps the pixel ratio; and it asks for the low-power GPU.
  * Every color comes from the palette, so switching the theme repaints all of it.
+ *
+ * Light on the page: `createTown` builds in steps that give the main thread back between them, compiles every
+ * shader without blocking (the driver compiles them in parallel), and draws its first frame (shadows included)
+ * before it resolves, so the town is ready to show the moment it's handed over.
  */
 
 export interface TownPin {
@@ -130,10 +140,15 @@ export interface TownController {
   /** Starts the frame loop (and the build-up the first time). */
   start(): void;
   stop(): void;
-  /** Draws one still frame (reduced motion, paused, or after a change while stopped). */
+  /**
+   * Draws a frame now: stopped (reduced motion, paused, off screen), the town settles into its current state
+   * first; running, it redraws the current frame as is (after a resize, say) and the loop goes on animating.
+   */
   renderOnce(): void;
   /** Skips the build-up (reduced motion: the town is simply there). */
   finishIntro(): void;
+  /** How far the build-up has come (0–1; 1 without one, or once it's over). */
+  buildProgress(): number;
   setSize(width: number, height: number, pixelRatio: number): void;
   /** Which part of the stage (and of the land around it) the canvas shows. */
   setView(view: TownView): void;
@@ -145,8 +160,12 @@ export interface TownController {
   setTilt(tilt: number): void;
   /** Whether the frame loop has something to show: the build-up, a tilt or a lean still settling. */
   isSettling(): boolean;
-  /** Where a slot's pin is in the canvas (fractions of its width and height), this frame. */
-  pinAt(slotId: string): { x: number; y: number } | null;
+  /**
+   * Where the top of a slot's pin is in the canvas (fractions of its width and height), this frame. `resting`:
+   * where it is without its bob and its lift (the cards hang from there, so a lifting pin never moves its card
+   * out from under the pointer).
+   */
+  pinAt(slotId: string, resting?: boolean): { x: number; y: number } | null;
   /** Called after every frame (to move the HTML cards with the pins). */
   onFrame(callback: (() => void) | null): void;
   dispose(): void;
@@ -167,7 +186,9 @@ const easeOutBack = (t: number) => {
 };
 
 /** How long the build-up takes (seconds). */
-const INTRO = 2.6;
+const INTRO = BUILD_UP.seconds;
+/** A phase of the build-up (`[from, length]`, fractions of it) at overall progress `t`, 0–1. */
+const phase = ([from, length]: readonly [number, number], t: number) => clamp01((t - from) / length);
 
 /** A part's geometry made mergeable and given a (to be painted) color attribute. */
 interface TintRange {
@@ -200,11 +221,34 @@ function withInstanceAlpha(material: Material, glow = 0) {
   material.customProgramCacheKey = () => `instance-alpha-${glow}`;
 }
 
-export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPalette; shadowSize?: number; layout?: TownLayout; scene?: TownScene }): TownController {
-  const data = options.scene ?? townScene(options.layout ?? 'wide');
+export interface TownOptions {
+  palette: TownPalette;
+  shadowSize?: number;
+  layout?: TownLayout;
+  /** The town to draw, built ahead (in a worker); without it, it's built here. */
+  scene?: TownModel;
+  /** Play the build-up the first time it starts (off: the town is complete from its first frame). */
+  buildUp?: boolean;
+  /** The canvas's first size and view, so the warm-up frame is the real first frame. */
+  size?: { width: number; height: number; pixelRatio: number; view: TownView };
+  /** Stops a build that's no longer wanted (checked between its steps; what it made so far is released). */
+  signal?: AbortSignal;
+}
+
+/** Gives the main thread back for a moment (input, paint, other work) between the build's steps. */
+function nextTask(): Promise<void> {
+  const scheduler = (globalThis as { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+  if (typeof scheduler?.yield === 'function') return scheduler.yield();
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+export async function createTown(canvas: HTMLCanvasElement, options: TownOptions): Promise<TownController> {
+  const data: TownModel = options.scene ?? townScene(options.layout ?? 'wide');
   const { view, stage } = data.composition;
   let palette = options.palette;
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' });
+  // Reading every shader's log back is a stall per program; development keeps it (to see shader errors).
+  renderer.debug.checkShaderErrors = process.env.NODE_ENV !== 'production';
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = NeutralToneMapping;
@@ -214,15 +258,46 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
   renderer.shadowMap.needsUpdate = true;
 
   const scene = new Scene();
-  const pmrem = new PMREMGenerator(renderer);
-  const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environment = environment;
-  scene.environmentIntensity = palette.environment;
-
   const camera = new PerspectiveCamera(view.fov, stage.width / stage.height, view.distance * 0.23, view.distance * 2.5);
   const materials: Material[] = [];
   const geometries: BufferGeometry[] = [];
   const textures: CanvasTexture[] = [];
+  const pmrem = new PMREMGenerator(renderer);
+  let environment: { dispose(): void } | null = null;
+  /** Lets go of everything made so far (the GPU's buffers, programs and textures, and the context's renderer). */
+  const release = () => {
+    scene.traverse((child) => {
+      if (child instanceof Mesh || child instanceof InstancedMesh || child instanceof Points) child.geometry.dispose();
+    });
+    for (const geometry of geometries) geometry.dispose();
+    for (const material of materials) material.dispose();
+    for (const texture of textures) texture.dispose();
+    environment?.dispose();
+    pmrem.dispose();
+    renderer.dispose();
+  };
+  /** Between steps: the page gets the main thread back, and a build that's no longer wanted stops (and lets go). */
+  const step = async () => {
+    await nextTask();
+    if (!options.signal?.aborted) return;
+    release();
+    throw new DOMException('The town is no longer needed.', 'AbortError');
+  };
+
+  // The room's soft reflections (image-based light for the glossy surfaces): its shaders compile first,
+  // without blocking, then it's drawn.
+  await step();
+  const room = new RoomEnvironment();
+  await warmRoom(renderer, room);
+  await step();
+  await warmEnvironment(renderer, pmrem);
+  await step();
+  const environmentTexture = pmrem.fromScene(room, 0.04).texture;
+  room.dispose();
+  environment = environmentTexture;
+  scene.environment = environmentTexture;
+  scene.environmentIntensity = palette.environment;
+  await step();
   const painted: { material: MeshStandardMaterial; key: ColorKey; emissive: boolean }[] = [];
   const tinted: { geometry: BufferGeometry; ranges: TintRange[] }[] = [];
   const color = new Color();
@@ -333,13 +408,14 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
     parts.forEach((part) => part.dispose());
     addMesh(geometry && track(geometry), paint(plateKeys[level]!, { vertexColors: true }), land);
   });
+  await step();
 
   // Water: a grid over the rivers, colored by depth, glossy, with ripples that drift.
   const ripples = rippleTexture();
   textures.push(ripples);
   const waterMaterial = new MeshStandardMaterial({ vertexColors: true, transparent: true, roughness: 0.1, metalness: 0.05, normalMap: ripples, normalScale: new Vector2(0.42, 0.42) });
   materials.push(waterMaterial);
-  const water = new Mesh(track(waterGeometry(data, palette)), waterMaterial);
+  const water = new Mesh(track(waterGeometry(data.waterGrid, palette)), waterMaterial);
   water.receiveShadow = true;
   land.add(water);
 
@@ -348,11 +424,13 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
   addMesh(grassGeometry && track(grassGeometry), paint('grass', { roughness: 1, polygonOffset: true, polygonOffsetFactor: -1 }), land, false);
   const roadGeometry = merge(data.roads.map((road) => ribbon(road, 6.5 * UNIT, GROUND + 0.35)));
   addMesh(roadGeometry && track(roadGeometry), paint('road', { roughness: 0.95, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }), land, false);
+  await step();
 
   // The still town, in a few batches: every building and place, bridges, the garden, benches, pools, docks, tables.
   const batches = emptyBatches();
   const { fountainTop } = addGarden(data.garden, batches);
   for (const house of data.houses) addBuilding(house, batches);
+  await step();
   for (const bridge of data.bridges) addBridge(bridge.from, bridge.to, batches);
   for (const bench of data.benches) addBench(bench, batches);
   for (const blanket of data.blankets) addBlanket(blanket, batches);
@@ -360,8 +438,11 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
   for (const dock of data.docks) addDock(dock, batches);
   for (const table of data.tables) addTable(table, batches);
   for (const meadow of data.meadows) batches.flats.push({ geometry: flat(meadow, GROUND + 0.32), paint: 'meadow' });
+  await step();
   addMesh(tint(batches.walls), plain({ vertexColors: true, roughness: 0.82 }), town);
+  await step();
   addMesh(tint(batches.roofs), plain({ vertexColors: true, roughness: 0.72 }), town);
+  await step();
   addMesh(tint(batches.props), plain({ vertexColors: true, roughness: 0.62 }), town);
   addMesh(tint(batches.shiny), plain({ vertexColors: true, roughness: 0.28, metalness: 0.25 }), town);
   addMesh(tint(batches.flats), plain({ vertexColors: true, roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -1 }), land, false);
@@ -379,6 +460,7 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
     wheel.rotation.order = 'YXZ';
     wheel.rotation.y = windmillFacing();
   }
+  await step();
 
   const matrix = new Matrix4();
   const local = new Matrix4();
@@ -420,6 +502,7 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
   const halos = new Points(track(haloGeometry), haloMaterial);
   halos.visible = palette.lampGlow > 0;
   town.add(halos);
+  await step();
 
   // Trees (instanced): round crowns, trunks, conifers' tiers, palms' fronds, agaves and cacti. They grow in a
   // wave from the middle of the town during the build-up; the leaves sway a little (in the shader).
@@ -544,6 +627,7 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
   };
   tintCrowns();
   placeTrees(1);
+  await step();
 
   // Flowers in the beds and the garden, and bluebonnets on the lawns.
   const flowerSpots: { at: { x: number; y: number }; tone: number; size: number }[] = data.flowers.map((flower) => ({ ...flower, size: 1 }));
@@ -599,10 +683,26 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
   materials.push(ringMaterial);
   const rings = instancedMesh(ringGeometry, ringMaterial, slotCount * 2, scene);
   rings.renderOrder = 2;
+  // Colored per instance from the start, so their shaders are the ones compiled ahead (a color added later
+  // would ask for another shader on the next frame).
+  for (let i = 0; i < slotCount; i += 1) {
+    pinBodies.setColorAt(i, whiten);
+    pinDots.setColorAt(i, whiten);
+    rings.setColorAt(i * 2, whiten);
+    rings.setColorAt(i * 2 + 1, whiten);
+  }
   const pinState: (TownPin | null)[] = data.slots.map(() => null);
+  /** How lit each pin is (0–1), on a spring, and its speed: it eases in and out, never jumps. */
   const pinLift = data.slots.map(() => 0);
+  const pinLiftSpeed = data.slots.map(() => 0);
+  /** How present each pin is (1, or about a third when another category is picked), eased. */
+  const pinPresence = data.slots.map(() => 1);
+  /** Each pin's rings' own clock: it runs a little faster while lit, without the rings jumping. */
+  const ringPhase = data.slots.map((_, index) => (index * 0.37) % 1);
   const pinY = data.slots.map((slot) => slot.height + PIN_LIFT);
+  const pinTop = new Vector3();
   const hidden = new Matrix4().makeScale(0, 0, 0);
+  await step();
 
   // ---- Things that move -------------------------------------------------------------------------------
 
@@ -667,6 +767,7 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
   const balloonSize = 46;
   const balloonMaterial = plain({ vertexColors: true, roughness: 0.55 });
   const balloons = data.balloons.map((balloon) => addMesh(tint(balloonParts(balloon.tone)), balloonMaterial, scene, false, false)!);
+  await step();
 
   // The vignettes: one merged mesh each, placed into the pins' yards (by the pins' categories when known).
   const vignettes = VIGNETTE_KINDS.map((kind) => {
@@ -717,6 +818,7 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
     if (moved) renderer.shadowMap.needsUpdate = true;
   };
   placeVignettes(pinState);
+  await step();
 
   // People (instanced: one draw call for bodies, one for heads): walkers, people at tables and stalls, riders,
   // kayakers and the vignettes' crews. Handheld things (a carried box, a rake) are one more.
@@ -761,6 +863,7 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
     if (handheldMesh.instanceColor) handheldMesh.instanceColor.needsUpdate = true;
   };
   tintInstances();
+  await step();
 
   // ---- Frame loop ------------------------------------------------------------------------------------------
 
@@ -768,36 +871,41 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
   let running = false;
   let last = 0;
   let clock = 0;
-  let intro = 0;
-  let introDone = false;
+  // Without the build-up the town is complete from its first frame.
+  let intro = options.buildUp ? 0 : INTRO;
+  let introDone = !options.buildUp;
   let shadowAge = 0;
   const pointer = { x: 0, y: 0, active: false };
   const look = { yaw: 0, pitch: 0, tilt: 0, goalTilt: 0 };
   let afterFrame: (() => void) | null = null;
 
   const placeCamera = () => {
-    const entrance = introDone ? 0 : 1 - easeOut(intro / INTRO);
     // Scrolling away tilts the camera toward a view from above and pulls it back: the town becomes a map.
-    const pose = cameraPose(look.yaw + entrance * 7, look.pitch + entrance * 5, look.tilt, 1 + entrance * 0.12 + look.tilt * 0.5, view);
+    const pose = cameraPose(look.yaw, look.pitch, look.tilt, 1 + look.tilt * 0.5, view);
     camera.position.set(pose.position.x, pose.position.y, pose.position.z);
     camera.lookAt(pose.target.x, pose.target.y, pose.target.z);
     camera.updateMatrixWorld();
   };
 
-  /** The build-up: the plates rise, the houses grow, the trees pop up, then the things that move appear. */
+  /**
+   * The build-up (`BUILD_UP`), from the skeleton's state: the land is already in place under the resting camera
+   * (the skeleton drawn on the page is that land), then the houses grow, the trees pop up in a wave from the
+   * middle, the pins drop in, and the things that move fade in.
+   */
   const applyIntro = () => {
     const t = introDone ? 1 : clamp01(intro / INTRO);
-    land.position.y = (1 - easeOut(t / 0.42)) * -60;
-    const grow = easeOutBack((t - 0.2) / 0.45);
+    const grow = t >= 1 ? 1 : easeOutBack(phase(BUILD_UP.houses, t));
     town.scale.y = Math.max(0.0001, Math.min(1.08, grow));
     town.position.y = GROUND * (1 - town.scale.y);
-    placeTrees(t >= 1 ? 1 : clamp01((t - 0.3) / 0.6));
+    placeTrees(t >= 1 ? 1 : phase(BUILD_UP.trees, t));
   };
 
   const isSettling = () =>
     !introDone ||
     Math.abs(look.goalTilt - look.tilt) > 0.002 ||
-    (pointer.active && (Math.abs(pointer.x * 2.4 - look.yaw) > 0.05 || Math.abs(-pointer.y * 1.4 - look.pitch) > 0.05));
+    (pointer.active && (Math.abs(pointer.x * 2.4 - look.yaw) > 0.05 || Math.abs(-pointer.y * 1.4 - look.pitch) > 0.05)) ||
+    // A pin lifting or settling (its spring), or fading with a category pick: drawn at 60 frames a second.
+    pinState.some((state, index) => Math.abs((state?.lit ? 1 : 0) - pinLift[index]!) > 0.004 || Math.abs(pinLiftSpeed[index]!) > 0.02 || Math.abs((state?.dim ? 0.35 : 1) - pinPresence[index]!) > 0.01);
 
   /** Where a mover is along its path (with a fade at either end), as a matrix. */
   const moverAt = (item: (typeof moving)[number], level: number, size: number, appear: number, out: Matrix4, bob = 0) => {
@@ -831,8 +939,11 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
       }
     }
     swayTime.value = clock;
-    const goalYaw = (pointer.active ? pointer.x * 2.4 : 0) + Math.sin(clock * 0.09) * 0.6;
-    const goalPitch = (pointer.active ? -pointer.y * 1.4 : 0) + Math.sin(clock * 0.07 + 1) * 0.3;
+    // The camera holds still while the town builds up (it grows out of the skeleton drawn from this very view),
+    // then leans toward the pointer and drifts a little.
+    const lean = pointer.active && introDone;
+    const goalYaw = (lean ? pointer.x * 2.4 : 0) + (introDone ? Math.sin(clock * 0.09) * 0.6 : 0);
+    const goalPitch = (lean ? -pointer.y * 1.4 : 0) + (introDone ? Math.sin(clock * 0.07 + 1) * 0.3 : 0);
     const ease = 1 - Math.exp(-dt * 2.4);
     look.yaw += (goalYaw - look.yaw) * ease;
     look.pitch += (goalPitch - look.pitch) * ease;
@@ -840,7 +951,7 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
     placeCamera();
 
     ripples.offset.set((clock * 0.011) % 1, (clock * 0.017) % 1);
-    const appear = introDone ? 1 : smooth(0.62, 0.95, intro / INTRO);
+    const appear = introDone ? 1 : smooth(0, 1, phase(BUILD_UP.movers, intro / INTRO));
 
     // Cars and bikes on the roads, boats and kayaks on the river.
     cars.forEach((item, i) => placeCar(i, moverAt(item, GROUND + 0.4, 1.1 * UNIT, appear, moverMatrix).matrix));
@@ -970,7 +1081,7 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
     });
     routeMesh.instanceMatrix.needsUpdate = true;
 
-    const drop = introDone ? 1 : clamp01((intro / INTRO - 0.58) / 0.3);
+    const drop = introDone ? 1 : phase(BUILD_UP.pins, intro / INTRO);
     data.slots.forEach((slot, index) => {
       const state = pinState[index];
       if (!state) {
@@ -980,28 +1091,48 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
         rings.setMatrixAt(index * 2 + 1, hidden);
         return;
       }
+      // Lit (its card or row is pointed at): a gentle lift and a little growth on a critically damped spring,
+      // so it starts and settles softly; quieted (another category): it fades back, eased.
       const goal = state.lit ? 1 : 0;
-      pinLift[index]! += (goal - pinLift[index]!) * (dt === 0 ? 1 : 1 - Math.exp(-dt * 8));
-      const lift = pinLift[index]!;
+      const presenceGoal = state.dim ? 0.35 : 1;
+      if (dt === 0) {
+        pinLift[index] = goal;
+        pinLiftSpeed[index] = 0;
+        pinPresence[index] = presenceGoal;
+      } else {
+        const stiffness = 70;
+        pinLiftSpeed[index]! += ((goal - pinLift[index]!) * stiffness - pinLiftSpeed[index]! * 2 * Math.sqrt(stiffness)) * dt;
+        pinLift[index]! += pinLiftSpeed[index]! * dt;
+        pinPresence[index]! += (presenceGoal - pinPresence[index]!) * (1 - Math.exp(-dt * 7));
+      }
+      const lift = clamp01(pinLift[index]!);
+      const presence = pinPresence[index]!;
+      pinAlpha.setX(index, presence);
+      dotAlpha.setX(index, presence);
       const bob = Math.sin(clock * 2 + slot.at.x * 0.01) * 3;
       const fall = (1 - easeOutBack(clamp01(drop * 1.2 - index * 0.08))) * 220;
-      pinY[index] = slot.height + PIN_LIFT + bob + lift * 12 + fall;
-      const s = (1 + lift * 0.22) * Math.max(0.0001, Math.min(1, drop * 3));
+      pinY[index] = slot.height + PIN_LIFT + bob + lift * 7 + fall;
+      const s = (1 + lift * 0.12) * Math.max(0.0001, Math.min(1, drop * 3));
       matrix.compose(scratch.set(slot.at.x, pinY[index]!, slot.at.y), quaternion.identity(), scaleVector.setScalar(s));
       pinBodies.setMatrixAt(index, matrix);
       pinDots.setMatrixAt(index, matrix);
-      const speed = state.lit ? 1.25 : 0.62;
+      // The rings pulse on their own clock (a little quicker, tighter and brighter while lit), so a change of
+      // pace never makes them jump.
+      ringPhase[index] = (ringPhase[index]! + dt * (0.62 + lift * 0.23)) % 1;
+      const strength = (0.14 + ((presence - 0.35) / 0.65) * 0.41) * (1 + lift * 0.35);
       for (let k = 0; k < 2; k += 1) {
-        const t = (clock * speed + k * 0.5) % 1;
-        const radius = (30 + t * 52) * UNIT;
+        const t = (ringPhase[index]! + k * 0.5) % 1;
+        const radius = (30 - lift * 3 + t * (52 - lift * 22)) * UNIT;
         rings.setMatrixAt(index * 2 + k, matrix.compose(scratch.set(slot.at.x, GROUND + 0.6, slot.at.y), quaternion.identity(), scaleVector.set(radius, 1, radius)));
-        ringAlpha.setX(index * 2 + k, (1 - t) * (state.dim ? 0.14 : 0.55) * drop);
+        ringAlpha.setX(index * 2 + k, (1 - t) * (1 - t) * strength * 1.25 * drop);
       }
     });
     pinBodies.instanceMatrix.needsUpdate = true;
     pinDots.instanceMatrix.needsUpdate = true;
     rings.instanceMatrix.needsUpdate = true;
     ringAlpha.needsUpdate = true;
+    pinAlpha.needsUpdate = true;
+    dotAlpha.needsUpdate = true;
   };
 
   const draw = () => {
@@ -1039,7 +1170,7 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
     lampHeadMaterial.emissiveIntensity = palette.lampGlow;
     haloMaterial.color.set(palette.lampHead);
     halos.visible = palette.lampGlow > 0;
-    water.geometry.setAttribute('color', waterGeometry(data, palette).getAttribute('color'));
+    paintWater(water.geometry, data.waterGrid, palette);
     tintCrowns();
     tintInstances();
     renderer.shadowMap.needsUpdate = true;
@@ -1048,6 +1179,46 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
   applyIntro();
   placeCamera();
   update(0);
+  // Resizing the canvas reallocates its buffers (a stall), so only a real change does, in one go.
+  let sizedAs = '';
+  const resize = (width: number, height: number, pixelRatio: number) => {
+    const key = `${width}x${height}@${pixelRatio}`;
+    if (key === sizedAs) return;
+    sizedAs = key;
+    renderer.setDrawingBufferSize(width, height, pixelRatio);
+  };
+  if (options.size) {
+    resize(options.size.width, options.size.height, options.size.pixelRatio);
+    setCameraView(options.size.view);
+  }
+  await step();
+
+  // Every shader, compiled before the first frame without blocking the page (the driver compiles them in
+  // parallel and three waits without stalling, through KHR_parallel_shader_compile), a part at a time (building
+  // each shader's source takes a moment too) and waited for together; then the shadow pass's (`warmShadows`).
+  const compiling: Promise<unknown>[] = [];
+  for (const part of scene.children) {
+    compiling.push(renderer.compileAsync(part, camera, scene));
+    await step();
+  }
+  await Promise.all(compiling);
+  await step();
+  const releaseStandIns = await warmShadows(renderer, scene, camera);
+  await step();
+  // The first frame, shadows and all, while the canvas is still hidden: the town is ready the moment it's shown.
+  renderer.render(scene, camera);
+  releaseStandIns();
+  await step();
+
+  function setCameraView({ width, height, stage: box }: TownView) {
+    // The camera's picture is the stage; a view offset (in stage units) moves and sizes the canvas's window
+    // onto it, so a crop costs nothing and the land around the stage draws in the same projection.
+    const scale = box.width / stage.width;
+    if (!(scale > 0) || !(width > 0) || !(height > 0)) return;
+    camera.aspect = stage.width / stage.height;
+    camera.setViewOffset(stage.width, stage.height, -box.left / scale, -box.top / scale, width / scale, height / scale);
+    camera.updateProjectionMatrix();
+  }
 
   return {
     start() {
@@ -1061,7 +1232,8 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
       cancelAnimationFrame(frame);
     },
     renderOnce() {
-      update(0);
+      // Running, the loop animates the change; this only redraws the current frame (a resize clears it).
+      if (!running) update(0);
       draw();
     },
     finishIntro() {
@@ -1071,18 +1243,14 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
       applyIntro();
       renderer.shadowMap.needsUpdate = true;
     },
-    setSize(width, height, pixelRatio) {
-      renderer.setPixelRatio(pixelRatio);
-      renderer.setSize(width, height, false);
+    buildProgress() {
+      return introDone ? 1 : clamp01(intro / INTRO);
     },
-    setView({ width, height, stage: box }) {
-      // The camera's picture is the stage; a view offset (in stage units) moves and sizes the canvas's window
-      // onto it, so a crop costs nothing and the land around the stage draws in the same projection.
-      const scale = box.width / stage.width;
-      if (!(scale > 0) || !(width > 0) || !(height > 0)) return;
-      camera.aspect = stage.width / stage.height;
-      camera.setViewOffset(stage.width, stage.height, -box.left / scale, -box.top / scale, width / scale, height / scale);
-      camera.updateProjectionMatrix();
+    setSize(width, height, pixelRatio) {
+      resize(width, height, pixelRatio);
+    },
+    setView(next) {
+      setCameraView(next);
     },
     setPalette(next) {
       palette = next;
@@ -1098,12 +1266,8 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
         pinDots.setColorAt(index, whiten);
         rings.setColorAt(index * 2, color);
         rings.setColorAt(index * 2 + 1, color);
-        pinAlpha.setX(index, state.dim ? 0.35 : 1);
-        dotAlpha.setX(index, state.dim ? 0.35 : 1);
       });
       for (const mesh of [pinBodies, pinDots, rings]) if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      pinAlpha.needsUpdate = true;
-      dotAlpha.needsUpdate = true;
       placeVignettes(pinState);
     },
     setPointer(x, y, active) {
@@ -1115,13 +1279,14 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
       look.goalTilt = clamp01(tilt);
     },
     isSettling,
-    pinAt(slotId) {
+    pinAt(slotId, resting = false) {
       const index = data.slots.findIndex((slot) => slot.id === slotId);
       if (index < 0) return null;
       const slot = data.slots[index]!;
-      const lift = 1 + pinLift[index]! * 0.22;
-      const projected = new Vector3(slot.at.x, pinY[index]! + (PIN_HEAD + 8) * PIN * lift, slot.at.y).project(camera);
-      return { x: (projected.x + 1) / 2, y: (1 - projected.y) / 2 };
+      const grown = resting ? 1 : 1 + clamp01(pinLift[index]!) * 0.12;
+      const y = resting ? slot.height + PIN_LIFT : pinY[index]!;
+      pinTop.set(slot.at.x, y + (PIN_HEAD + 8) * PIN * grown, slot.at.y).project(camera);
+      return { x: (pinTop.x + 1) / 2, y: (1 - pinTop.y) / 2 };
     },
     onFrame(callback) {
       afterFrame = callback;
@@ -1129,57 +1294,128 @@ export function createTown(canvas: HTMLCanvasElement, options: { palette: TownPa
     dispose() {
       running = false;
       cancelAnimationFrame(frame);
-      scene.traverse((child) => {
-        if (child instanceof Mesh || child instanceof InstancedMesh || child instanceof Points) child.geometry.dispose();
-      });
-      for (const geometry of geometries) geometry.dispose();
-      for (const material of materials) material.dispose();
-      for (const texture of textures) texture.dispose();
-      environment.dispose();
-      pmrem.dispose();
-      renderer.dispose();
+      release();
     },
   };
 }
 
-/** The water's grid: only cells in (or just under the banks of) the water, with depth colors and a soft end. */
-function waterGeometry(data: TownScene, palette: TownPalette): BufferGeometry {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const outline of data.water) {
-    for (const point of outline) {
-      minX = Math.min(minX, point.x);
-      minY = Math.min(minY, point.y);
-      maxX = Math.max(maxX, point.x);
-      maxY = Math.max(maxY, point.y);
-    }
+/**
+ * Compiles the room's materials (the environment's reflections) the way its cube camera draws them, into a
+ * render target (linear, no tone mapping), without blocking: drawing the room then doesn't stall on them.
+ */
+async function warmRoom(renderer: WebGLRenderer, room: Scene): Promise<void> {
+  const target = new WebGLRenderTarget(1, 1);
+  const previous = renderer.getRenderTarget();
+  renderer.setRenderTarget(target);
+  const ready = renderer.compileAsync(room, new PerspectiveCamera(90, 1, 0.1, 100));
+  renderer.setRenderTarget(previous);
+  await ready;
+  target.dispose();
+}
+
+/**
+ * Compiles the environment's filters (three's PMREM: a blur and the GGX filters) without blocking. three makes
+ * those materials as it first draws with them, so a dry run with its drawing switched off makes them, and they're
+ * compiled here, into a render target, as they'll be drawn. It reaches into the generator's private parts
+ * (three is pinned); if they aren't there, it does nothing and the filters compile as they're first used.
+ */
+async function warmEnvironment(renderer: WebGLRenderer, pmrem: PMREMGenerator): Promise<void> {
+  type Generator = { _renderCube?: (target: unknown, lod: number, material: Material) => void; _boxMesh?: Mesh; _cubeCamera?: { children: PerspectiveCamera[] } };
+  const generator = pmrem as unknown as Generator;
+  const renderCube = generator._renderCube;
+  const box = generator._boxMesh;
+  const eye = generator._cubeCamera?.children[0];
+  if (typeof renderCube !== 'function' || !box || !eye) return;
+  const filters = new Set<Material>();
+  try {
+    generator._renderCube = (_target, _lod, material) => {
+      filters.add(material);
+    };
+    pmrem.fromScene(new Scene(), 0.04).dispose();
+  } catch {
+    return;
+  } finally {
+    generator._renderCube = renderCube;
   }
-  const step = 20;
-  const cols = Math.ceil((maxX - minX) / step) + 1;
-  const rows = Math.ceil((maxY - minY) / step) + 1;
-  const shallow = new Color(palette.waterShallow);
-  const deep = new Color(palette.waterDeep);
-  const color = new Color();
-  const positions = new Float32Array(cols * rows * 3);
-  const colors = new Float32Array(cols * rows * 4);
-  const uvs = new Float32Array(cols * rows * 2);
-  const normals = new Float32Array(cols * rows * 3);
-  const inside = new Uint8Array(cols * rows);
+  const standIns = new Group();
+  for (const material of filters) standIns.add(new Mesh(box.geometry, material));
+  const target = new WebGLRenderTarget(1, 1);
+  const previous = renderer.getRenderTarget();
+  renderer.setRenderTarget(target);
+  const ready = renderer.compileAsync(standIns, eye);
+  renderer.setRenderTarget(previous);
+  await ready;
+  target.dispose();
+}
+
+/**
+ * Compiles the shadow pass's shaders without blocking. That pass draws each shadow caster with three's own depth
+ * material (one, its side flipped from the caster's), into the shadow map (a render target), so stand-ins with
+ * the same make-up (a mesh or an instanced one, colored per instance or not, the depth material's side) are
+ * compiled into a render target here; the pass then finds its shaders ready. Resolves to a function that lets
+ * the stand-ins go: call it after the first real frame (letting go sooner would free the shaders with them).
+ */
+async function warmShadows(renderer: WebGLRenderer, scene: Scene, camera: PerspectiveCamera): Promise<() => void> {
+  const flip: Record<number, Side> = { [FrontSide]: BackSide, [BackSide]: FrontSide, [DoubleSide]: DoubleSide };
+  const standIns = new Group();
+  const made = new Set<string>();
+  const geometry = new BoxGeometry(1, 1, 1);
+  const depthMaterials: MeshDepthMaterial[] = [];
+  scene.traverse((object) => {
+    if (!(object instanceof Mesh) || !object.castShadow) return;
+    const material = object.material as Material;
+    const side = material.shadowSide ?? flip[material.side] ?? BackSide;
+    const instanced = object instanceof InstancedMesh;
+    const colored = instanced && object.instanceColor !== null;
+    const key = `${instanced}-${colored}-${side}`;
+    if (made.has(key)) return;
+    made.add(key);
+    const depth = new MeshDepthMaterial({ side });
+    depthMaterials.push(depth);
+    if (instanced) {
+      const standIn = new InstancedMesh(geometry, depth, 1);
+      if (colored) standIn.setColorAt(0, new Color('#ffffff'));
+      standIns.add(standIn);
+    } else {
+      standIns.add(new Mesh(geometry, depth));
+    }
+  });
+  const target = new WebGLRenderTarget(1, 1);
+  const previous = renderer.getRenderTarget();
+  renderer.setRenderTarget(target);
+  const ready = renderer.compileAsync(standIns, camera, scene);
+  renderer.setRenderTarget(previous);
+  await ready;
+  target.dispose();
+  return () => {
+    geometry.dispose();
+    for (const material of depthMaterials) material.dispose();
+  };
+}
+
+/**
+ * The water's grid (sampled with the scene): only cells in (or just under the banks of) the water, with depth
+ * colors and a soft end.
+ */
+function waterGeometry(grid: WaterGrid, palette: TownPalette): BufferGeometry {
+  const { x0, y0, step, cols, rows } = grid;
+  const count = cols * rows;
+  const positions = new Float32Array(count * 3);
+  const uvs = new Float32Array(count * 2);
+  const normals = new Float32Array(count * 3);
+  const inside = new Uint8Array(count);
   for (let j = 0; j < rows; j += 1) {
     for (let i = 0; i < cols; i += 1) {
       const k = j * cols + i;
-      const x = minX + i * step;
-      const y = minY + j * step;
-      const w = data.fields.water({ x, y });
-      const l = data.fields.land({ x, y });
-      inside[k] = Math.max(w - 14, l - 36) < 0 ? 1 : 0;
-      color.copy(shallow).lerp(deep, smooth(0, 40, -w));
-      positions.set([x, WATER_LEVEL, y], k * 3);
-      normals.set([0, 1, 0], k * 3);
-      colors.set([color.r, color.g, color.b, 1 - smooth(-4, 32, l)], k * 4);
-      uvs.set([x / 220, y / 220], k * 2);
+      const x = x0 + i * step;
+      const y = y0 + j * step;
+      inside[k] = Math.max(grid.water[k]! - 14, grid.land[k]! - 36) < 0 ? 1 : 0;
+      positions[k * 3] = x;
+      positions[k * 3 + 1] = WATER_LEVEL;
+      positions[k * 3 + 2] = y;
+      normals[k * 3 + 1] = 1;
+      uvs[k * 2] = x / 220;
+      uvs[k * 2 + 1] = y / 220;
     }
   }
   const index: number[] = [];
@@ -1196,8 +1432,22 @@ function waterGeometry(data: TownScene, palette: TownPalette): BufferGeometry {
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new BufferAttribute(normals, 3));
-  geometry.setAttribute('color', new BufferAttribute(colors, 4));
+  geometry.setAttribute('color', new BufferAttribute(new Float32Array(count * 4), 4));
   geometry.setAttribute('uv', new BufferAttribute(uvs, 2));
   geometry.setIndex(index);
+  paintWater(geometry, grid, palette);
   return geometry;
+}
+
+/** The water's colors: shallow at the banks to deep in the middle, fading out under the banks (per theme). */
+function paintWater(geometry: BufferGeometry, grid: WaterGrid, palette: TownPalette) {
+  const attribute = geometry.getAttribute('color') as BufferAttribute;
+  const shallow = new Color(palette.waterShallow);
+  const deep = new Color(palette.waterDeep);
+  const color = new Color();
+  for (let k = 0; k < grid.cols * grid.rows; k += 1) {
+    color.copy(shallow).lerp(deep, smooth(0, 40, -grid.water[k]!));
+    attribute.setXYZW(k, color.r, color.g, color.b, 1 - smooth(-4, 32, grid.land[k]!));
+  }
+  attribute.needsUpdate = true;
 }

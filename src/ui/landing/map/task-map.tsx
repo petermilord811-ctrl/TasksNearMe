@@ -7,7 +7,9 @@ import type { LandingMapData } from '@/contracts';
 import { distanceMiles, roundMiles } from '@/shared/geo';
 import { usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
+import { whenHeroReady } from '../hero-ready';
 import { useLanding } from '../landing-state';
+import { prefetchBaseStyle } from './base-style';
 import { MAP_FRAME_ATTRIBUTE, useOptionalMapExplorer, type MapLayers } from './explorer-state';
 import type { MapControls, MapViewProps } from './maplibre-view';
 import { StaticMap } from './static-map';
@@ -15,11 +17,20 @@ import { StaticMap } from './static-map';
 export type MapMode = 'interactive' | 'static';
 
 const DEFAULT_LAYERS: MapLayers = { mode: 'pins', buildings: false, serviceArea: true };
+/** The longest the live map waits for the hero's town to say it's drawn. */
+const HERO_WAIT_MS = 6000;
+/**
+ * The town reports ready once its build-up has finished (`markHeroReady`), so the map's engine starts a moment
+ * after (its first frames compile shaders, which would make the growth stutter). Its style is fetched at once.
+ */
+const HERO_SETTLE_MS = 400;
 
 /**
- * The map frame: the drawn map right away, then (in `interactive` mode, once the section is near the
- * viewport) the live MapLibre map, which fades in over it when its tiles and pins are drawn. If WebGL or
- * the tiles fail, the drawn map simply stays.
+ * The map frame: the drawn map right away, then (in `interactive` mode) the live MapLibre map, which fades in
+ * over it when its tiles and pins are drawn. The live map's engine starts loading once the hero's 3D town has
+ * drawn (they'd compete for the main thread and the GPU), or as soon as the visitor comes to the map (it's
+ * scrolled into view, pointed at, or asked to show something), whichever is first, in an idle moment. If WebGL
+ * or the tiles fail, the drawn map simply stays.
  *
  * `card`: mid-size, soft on every side, a faint glow behind it. `fill`: it fills its parent (the landing
  * page's full-width map), soft at the top and bottom, keeps its camera clear of the panels over it
@@ -77,24 +88,55 @@ export function TaskMap({
     [userPoint, map.pins],
   );
 
+  // When to load the live map: after the hero's town (or its timeout), or once the visitor scrolls the map in
+  // (a little past the fold: the map's section starts right under a full-screen hero), then when the browser is idle.
   useEffect(() => {
     if (mode === 'static') return;
     const frame = frameRef.current;
-    if (!frame || !('IntersectionObserver' in window)) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) return;
-        setNear(true);
-        observer.disconnect();
-      },
-      { rootMargin: '700px 0px' },
-    );
-    observer.observe(frame);
-    return () => observer.disconnect();
+    if (!frame) return;
+    let started = false;
+    let idle = 0;
+    let settle = 0;
+    const hasIdle = typeof window.requestIdleCallback === 'function';
+    let cancelHero = () => {};
+    let seen: IntersectionObserver | null = null;
+    const stopWatching = () => {
+      cancelHero();
+      seen?.disconnect();
+      window.clearTimeout(settle);
+    };
+    // The style (and its tiles' description, sprite and first glyphs) is only network: fetched at once.
+    const warmUp = () => void prefetchBaseStyle(map.styleUrl);
+    const start = () => {
+      if (started) return;
+      started = true;
+      stopWatching();
+      warmUp();
+      idle = hasIdle ? window.requestIdleCallback(() => setNear(true), { timeout: 1500 }) : window.setTimeout(() => setNear(true), 80);
+    };
+    cancelHero = whenHeroReady(() => {
+      warmUp();
+      settle = window.setTimeout(start, HERO_SETTLE_MS);
+    }, HERO_WAIT_MS);
+    if (!started && 'IntersectionObserver' in window) {
+      seen = new IntersectionObserver(([entry]) => entry?.isIntersecting && start(), { rootMargin: '0px 0px -12% 0px' });
+      seen.observe(frame);
+    }
+    return () => {
+      started = true;
+      stopWatching();
+      if (hasIdle) window.cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
+    };
+    // The style's address doesn't change while the page is open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
+  // Asked to show something (a neighborhood, a task) before it's up: load it now.
+  const load = near || (mode !== 'static' && Boolean(explorer?.request));
+
   useEffect(() => {
-    if (!near || failed || Live) return;
+    if (!load || failed || Live) return;
     let cancelled = false;
     import('./maplibre-view')
       .then((module) => {
@@ -106,10 +148,18 @@ export function TaskMap({
     return () => {
       cancelled = true;
     };
-  }, [near, failed, Live]);
+  }, [load, failed, Live]);
 
   const showLive = Boolean(Live) && !failed;
   const liveReady = showLive && ready;
+  // Once the live map has faded in over the drawn one, the drawn one goes (it would keep re-rendering, and be drawn,
+  // under it); it's back if the live map fails.
+  const [drawnGone, setDrawnGone] = useState(false);
+  useEffect(() => {
+    if (!liveReady) return;
+    const timer = window.setTimeout(() => setDrawnGone(true), 900);
+    return () => window.clearTimeout(timer);
+  }, [liveReady]);
   const setLiveReady = explorer?.setLiveReady;
   useEffect(() => {
     setLiveReady?.(liveReady);
@@ -161,6 +211,8 @@ export function TaskMap({
     <div
       ref={frameRef}
       {...{ [MAP_FRAME_ATTRIBUTE]: '' }}
+      // The visitor reaches for the map: no more waiting.
+      onPointerEnter={mode === 'static' || load ? undefined : () => setNear(true)}
       role={fullscreen ? 'dialog' : undefined}
       aria-modal={fullscreen ? true : undefined}
       aria-label={fullscreen && market ? t('fullscreenLabel', { market }) : undefined}
@@ -173,7 +225,7 @@ export function TaskMap({
           style={{ background: 'radial-gradient(60% 55% at 30% 35%, color-mix(in oklab, var(--iri-1) 22%, transparent), transparent 70%), radial-gradient(55% 50% at 75% 70%, color-mix(in oklab, var(--iri-3) 20%, transparent), transparent 70%)' }}
         />
       )}
-      <div className={cn('absolute inset-0 transition-opacity duration-700', liveReady ? 'pointer-events-none opacity-0' : 'opacity-100')}>
+      {!(liveReady && drawnGone) && <div className={cn('absolute inset-0 transition-opacity duration-700', liveReady ? 'pointer-events-none opacity-0' : 'opacity-100')}>
         <StaticMap
           map={map}
           pins={map.pins}
@@ -187,7 +239,7 @@ export function TaskMap({
           frame={fill ? 'wide' : 'card'}
           padding={padding}
         />
-      </div>
+      </div>}
       {showLive && Live && (
         <div className={cn('absolute inset-0 transition-opacity duration-700', liveReady ? 'opacity-100' : 'pointer-events-none opacity-0')}>
           <Live
