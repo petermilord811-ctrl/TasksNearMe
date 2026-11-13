@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { refresh } from 'next/cache';
 import { after } from 'next/server';
 import { cookies, headers } from 'next/headers';
-import type { ActionResult, EmailInput, OneTimeCodeInput, PasskeyOptionsResult, PhoneInput, ProfileInput, SocialSignInInput } from '@/contracts';
+import type { ActionResult, BotCheckInput, EmailInput, OneTimeCodeInput, PasskeyOptionsResult, PhoneInput, ProfileInput, SocialSignInInput } from '@/contracts';
 import { emailInputSchema, oneTimeCodeInputSchema, phoneInputSchema, profileInputSchema, routes, socialSignInInputSchema } from '@/contracts';
 import { createEmailProvider } from '@/integrations/email';
 import { offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
@@ -13,6 +13,8 @@ import { fieldError, rateLimited, validationFailed } from '@/platform/actions/re
 import { auth } from '@/platform/auth/auth';
 import { db } from '@/platform/db/client';
 import { consumeRateLimits } from '@/platform/rate-limit';
+import { signUpInviteFor } from '@/modules/beta/server';
+import { checkBot } from '../bot-check';
 import { users } from '../schema';
 import { CURRENT_TERMS_VERSION } from '../terms';
 import { sendWelcomeEmail } from '../welcome';
@@ -112,9 +114,12 @@ export async function continueWith(rawNext: string, input: SocialSignInInput): P
   return { ok: true, code: 'sent', redirectTo: url };
 }
 
-export async function requestEmailCode(_next: string, input: EmailInput): Promise<ActionResult> {
+export async function requestEmailCode(_next: string, input: EmailInput & BotCheckInput): Promise<ActionResult> {
   const parsed = emailInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
+  // Bots asking for codes (to sign up in bulk, or to flood an inbox): Turnstile first (blueprint 06 §4).
+  const refused = await checkBot('sign_in', input?.botCheck);
+  if (refused) return refused;
   return sendEmailCode(parsed.data.email);
 }
 
@@ -161,6 +166,14 @@ export async function verifyEmailCode(next: string, input: OneTimeCodeInput): Pr
   }
 }
 
+/** The `invite_code` step's "Use a different email": signs out, and the page shows the email step. */
+export async function signOutOfSignUp(): Promise<ActionResult> {
+  await auth.api.signOut({ headers: await headers() });
+  await clearPendingEmail();
+  refresh();
+  return { ok: true, code: 'updated' };
+}
+
 export async function changeEmail(): Promise<ActionResult> {
   await clearPendingEmail();
   refresh();
@@ -173,11 +186,19 @@ async function requireUserId(): Promise<string | null> {
   return userId;
 }
 
-export async function saveProfile(next: string, input: ProfileInput): Promise<ActionResult> {
+export async function saveProfile(next: string, input: ProfileInput & BotCheckInput): Promise<ActionResult> {
   const userId = await requireUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   const parsed = profileInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
+  // Finishing sign-up (also with Google or Microsoft, which skip the email code): Turnstile first.
+  const refused = await checkBot('sign_up', input?.botCheck);
+  if (refused) return refused;
+  // Private beta: finishing sign-up waits for an invite (the page shows the invite step again).
+  if (await signUpInviteFor(db, userId)) {
+    refresh();
+    return { ok: false, code: 'not_allowed' };
+  }
 
   const now = await requestNow();
   const { firstName, lastName } = parsed.data;

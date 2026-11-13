@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import type { ActionHandler, ActionResult } from './actions';
+import type { RedeemInviteHandler, SignInInvite } from './beta';
+import type { BotCheckConfig, BotCheckInput } from './bot-check';
 import type { ISODateTime } from './common';
 import { emailField, mustAcceptField, oneTimeCodeField, personNameField, usPhoneField } from './forms';
 
@@ -7,8 +9,9 @@ import { emailField, mustAcceptField, oneTimeCodeField, personNameField, usPhone
  * Sign-in and sign-up are one flow on `/sign-in` (blueprint 02 §1): email → code → (new accounts)
  * name and age → (when the destination needs it) phone → phone code. The app decides the step
  * from the session and the pending codes; the UI renders `data.step` and never keeps its own step.
+ * During a private beta, a new account that has no invite yet gets `invite_code` before the name and age.
  */
-export const SIGN_IN_STEPS = ['email', 'email_code', 'profile', 'phone', 'phone_code'] as const;
+export const SIGN_IN_STEPS = ['email', 'email_code', 'invite_code', 'profile', 'phone', 'phone_code'] as const;
 export type SignInStep = (typeof SIGN_IN_STEPS)[number];
 
 /** Why we ask for a phone number. Posting, offering, and booking need a verified phone. */
@@ -62,6 +65,13 @@ export interface SignInPageData {
   socialProviders?: SocialProvider[];
   /** `email`: a sign-in with Google or Microsoft that came back without signing in. */
   socialError?: { provider: SocialProvider; reason: SocialSignInError };
+  /** `invite_code`: the market that's invite-only, and the code from an invite link the person opened. */
+  invite?: SignInInvite;
+  /**
+   * `email` (action `sign_in`) and `profile` (action `sign_up`): the bot check to run before Continue
+   * (contracts/bot-check.ts). Absent: none is set up.
+   */
+  botCheck?: BotCheckConfig;
 }
 
 export const emailInputSchema = z.object({ email: emailField });
@@ -105,8 +115,8 @@ export interface SignInHandlers {
    */
   onPasskeyOptions?: () => Promise<PasskeyOptionsResult>;
   onPasskeySignIn?: ActionHandler<{ response: Record<string, unknown> }>;
-  /** `email` step. ok `sent`. */
-  onRequestEmailCode: ActionHandler<EmailInput>;
+  /** `email` step, with the bot check's answer. ok `sent`. `fieldErrors.botCheck`: the check was turned down. */
+  onRequestEmailCode: ActionHandler<EmailInput & BotCheckInput>;
   /**
    * `email` step: "Continue with Google" or "Continue with Microsoft". ok `sent` with `redirectTo`: the
    * provider's sign-in page, on another site, so navigate with a full page load. Errors: `not_allowed`
@@ -120,8 +130,15 @@ export interface SignInHandlers {
   onResendEmailCode: ActionHandler;
   /** "Use a different email": back to the `email` step. */
   onChangeEmail: ActionHandler;
-  /** `profile` step. ok `saved`. */
-  onSaveProfile: ActionHandler<ProfileInput>;
+  /**
+   * `invite_code` step: the invite (contracts/beta.ts). ok `redeemed`: the page shows the next step. Errors on
+   * `fieldErrors.inviteCode`: `required`, `incorrect`, `expired`; `rate_limited` + `retryAt`.
+   */
+  onRedeemInvite: RedeemInviteHandler;
+  /** `invite_code` step: "Use a different email" signs out and goes back to the `email` step. ok `updated`. */
+  onSignOut: ActionHandler;
+  /** `profile` step. ok `saved`. `not_allowed`: an invite is needed first (the page goes back to `invite_code`). */
+  onSaveProfile: ActionHandler<ProfileInput & BotCheckInput>;
   /** `phone` step. ok `sent`. `fieldErrors.phone`: `invalid`, `not_supported`, `in_use`. */
   onSendPhoneCode: ActionHandler<PhoneInput>;
   /** `phone_code` step. After 3 wrong codes: `rate_limited` with `retryAt` (10 minutes). */

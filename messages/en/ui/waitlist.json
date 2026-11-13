@@ -14,6 +14,11 @@
   "previews": {
     "group": "Waitlist",
     "default": "Join the waitlist",
-    "joined": "Waitlist confirmation"
+    "joined": "Waitlist confirmation",
+    "beta": "Join the waitlist from an invite step"
+  },
+  "beta": {
+    "title": "TasksNearMe is invite-only for now.",
+    "description": "We're letting people in a few at a time while we start. Leave your email and ZIP, and we'll email you when there's a spot."
   }
 }

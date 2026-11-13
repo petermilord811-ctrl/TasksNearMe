@@ -30,6 +30,7 @@
     "helper-client-code": "Helper invite: a client code",
     "sign-up": "Sign-up invite step",
     "sign-up-prefilled": "Sign-up invite step from a link",
-    "sign-up-rate-limited": "Sign-up invite step: too many tries"
+    "sign-up-rate-limited": "Sign-up invite step: too many tries",
+    "sign-up-incorrect": "Sign-up invite step: unknown code"
   }
 }

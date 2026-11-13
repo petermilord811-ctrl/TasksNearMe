@@ -1,0 +1,109 @@
+{
+  "title": "Private beta",
+  "intro": "Decide who can join in each market while the beta is invite-only. Each invite is for clients or for helpers, works a set number of times, and can be withdrawn. People who already joined keep their access.",
+  "readOnly": "Support leads and admins manage invites and the switches. You can see them here.",
+  "noMarkets": "No markets yet.",
+  "joinedSummary": "{posters, plural, =0 {No clients} one {# client} other {# clients}} and {helpers, plural, =0 {no helpers} one {# helper} other {# helpers}} joined with an invite.",
+  "gates": {
+    "sign_up": {
+      "title": "Invite-only sign-up",
+      "on": "New accounts in {market} need an invite code (for clients or helpers) to finish signing up. Accounts that already signed up aren't affected.",
+      "off": "Anyone in {market} can sign up. Turn this on to make new accounts need an invite."
+    },
+    "helpers": {
+      "title": "Invite-only helpers",
+      "on": "Becoming a helper in {market} needs a helper invite. Helpers who already started setup keep going.",
+      "off": "Anyone with an account in {market} can start helper setup. Turn this on to make it need a helper invite."
+    },
+    "savedOn": "Switched on.",
+    "savedOff": "Switched off."
+  },
+  "roles": {
+    "poster": {
+      "title": "Clients",
+      "hint": "Finishes sign-up. Helper setup still needs a helper invite while that switch is on."
+    },
+    "helper": {
+      "title": "Helpers",
+      "hint": "Finishes sign-up and opens helper setup."
+    }
+  },
+  "status": {
+    "active": "Active",
+    "used_up": "Used up",
+    "expired": "Expired",
+    "revoked": "Withdrawn"
+  },
+  "form": {
+    "title": "New invite",
+    "role": "Who it's for",
+    "label": "Name",
+    "labelHint": "Only staff see this, for example \"Mueller neighborhood group\" or \"Jordan's referrals\".",
+    "maxUses": "How many people",
+    "maxUsesHint": "Each person uses it once. Up to {max}.",
+    "expires": "Works for",
+    "expiresHint": "After that, the code stops working.",
+    "expiresIn": "{days} days",
+    "never": "Until withdrawn",
+    "customCode": "Your own code (optional)",
+    "customCodeHint": "6 to 24 letters and digits, for example MUELLER. Leave it empty for a generated code like K7QP-M4XD.",
+    "created": "Invite created. Copy its link or code to share it.",
+    "submit": "Create invite",
+    "errors": {
+      "label": {
+        "required": "Give the invite a name.",
+        "too_short": "Use at least 3 characters.",
+        "too_long": "Use {max} characters or fewer."
+      },
+      "maxUses": {
+        "required": "Enter how many people can use it.",
+        "invalid": "Enter a whole number.",
+        "out_of_range": "Enter a number from 1 to {max}."
+      },
+      "expiresInDays": {
+        "invalid": "Choose how long it works."
+      },
+      "customCode": {
+        "invalid": "Use only letters, digits and dashes.",
+        "too_short": "Use at least 6 letters or digits.",
+        "too_long": "Use 24 letters or digits or fewer.",
+        "in_use": "That code exists already. Choose another one."
+      }
+    }
+  },
+  "codes": {
+    "liveTitle": "Active invites ({count})",
+    "pastTitle": "Used up, expired and withdrawn ({count})",
+    "empty": "No active invites in this market.",
+    "emptyManage": "No active invites in this market. Create one above to start letting people in.",
+    "used": "Used",
+    "usedValue": "{uses} of {max}",
+    "expires": "Expires",
+    "never": "Until withdrawn",
+    "created": "Created",
+    "createdValue": "By {name} on {date}",
+    "revoked": "Withdrawn",
+    "copyLink": "Copy link",
+    "copyCode": "Copy code",
+    "copied": "Copied",
+    "copyFailed": "Couldn't copy. Select the code and copy it yourself.",
+    "revoke": "Withdraw",
+    "revokeLabel": "Withdraw invite {code}",
+    "revokeTitle": "Withdraw {code}?",
+    "revokeBody": "Nobody new can use it. People who already joined with it keep their access.",
+    "keep": "Keep it",
+    "revokeConfirm": "Withdraw invite",
+    "joined": "{count, plural, =0 {Nobody joined yet} one {# person joined} other {# people joined}}",
+    "nobody": "Nobody has used this invite yet.",
+    "noName": "Name not given yet",
+    "joinedOn": "Joined {date}",
+    "stillSigningUp": "Entered the code {date}, still signing up"
+  },
+  "previews": {
+    "group": "Admin: private beta",
+    "lead": "Private beta (support lead)",
+    "agent": "Private beta (read only)",
+    "invite-only": "Private beta: both switches on",
+    "empty": "Private beta: no invites yet"
+  }
+}

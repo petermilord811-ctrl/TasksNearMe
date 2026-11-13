@@ -3,7 +3,7 @@ import { routes, type AppShellHandlers, type PreviewEntry, type TaskDraftInput }
 import {
   addressSuggestions, aiDeskDraft, deskDraft, fakeHandler, fakePostTaskHandlers, mayaShell,
   movingDraft, outOfAreaSuggestion, postTaskComputerHelpNoAiData, postTaskFromTemplateData, postTaskPageData, postTaskRepeatAddressDeletedData, postTaskRepeatData,
-  postTaskResults, remoteHelpDraft, uploadedTaskPhotos,
+  botCheckResults, postTaskResults, remoteHelpDraft, standInBotCheck, uploadedTaskPhotos,
 } from '@/fixtures';
 import { PostTaskScreen } from '@/ui/screens/posting/post-task-screen';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -54,6 +54,7 @@ export const postingPreviews: PreviewEntry[] = [
   preview('review-error', { initialStep: 'review', ...desk, handlers: { ...handlers, onQuote: async () => { throw new Error('Preview: unavailable'); } } }),
   preview('error-prohibited', { initialStep: 'describe', ...desk, initialResult: postTaskResults.prohibited, handlers: { ...handlers, onPost: fakeHandler(postTaskResults.prohibited) } }),
   preview('error-limit', { initialStep: 'review', ...desk, initialResult: postTaskResults.limitReached, handlers: { ...handlers, onPost: fakeHandler(postTaskResults.limitReached) } }),
+  preview('error-bot-check', { initialStep: 'review', ...desk, data: { ...postTaskPageData, botCheck: standInBotCheck }, initialResult: botCheckResults.refused, handlers: { ...handlers, onPost: fakeHandler(botCheckResults.refused) } }),
   preview('describe-templates', { initialStep: 'describe', initialValues: { ...deskDraft, title: '', description: '', details: {}, photoIds: [] } }),
   preview('describe-from-template', { data: postTaskFromTemplateData }),
   preview('post-again', { data: postTaskRepeatData }),

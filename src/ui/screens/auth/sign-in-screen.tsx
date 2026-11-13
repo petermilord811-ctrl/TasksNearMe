@@ -6,11 +6,12 @@ import { LockKeyhole } from 'lucide-react';
 import type { ActionResult, SignInHandlers, SignInPageData } from '@/contracts';
 import { EmailStep } from './email-step';
 import { EmailCodeStep } from './email-code-step';
+import { InviteCodeStep } from './invite-code-step';
 import { ProfileStep } from './profile-step';
 import { PhoneStep } from './phone-step';
 import { PhoneCodeStep } from './phone-code-step';
 
-const steps = { email: EmailStep, email_code: EmailCodeStep, profile: ProfileStep, phone: PhoneStep, phone_code: PhoneCodeStep };
+const steps = { email: EmailStep, email_code: EmailCodeStep, invite_code: InviteCodeStep, profile: ProfileStep, phone: PhoneStep, phone_code: PhoneCodeStep };
 
 export function SignInFrame({ children }: { children: ReactNode }) {
   const t = useTranslations('signIn');

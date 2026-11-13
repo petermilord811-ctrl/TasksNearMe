@@ -112,5 +112,11 @@
     "empty": "No matching addresses. Check the street number and name.",
     "selected": "Chosen: {address}"
   },
-  "verifyIdentity": "Verify your ID"
+  "verifyIdentity": "Verify your ID",
+  "botCheck": {
+    "required": "Finish the check above, then try again.",
+    "failed": "We couldn't confirm you're a person. Try again.",
+    "expired": "The check timed out. Try again.",
+    "unavailable": "The security check didn't load. Check your connection or turn off content blockers for this site, then reload the page."
+  }
 }

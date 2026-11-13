@@ -8,6 +8,7 @@ import { FormProvider, useForm, useWatch, type FieldErrors, type FieldPath } fro
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check, Lock, Repeat } from 'lucide-react';
 import { createTaskDraftSchema, findTaskTemplate, POST_TASK_STEPS, routes, type ActionResult, type AddressSuggestion, type AiTaskDraft, type Photo, type PostTaskHandlers, type PostTaskPageData, type PostTaskStep, type TaskDraftInput } from '@/contracts';
+import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -233,23 +234,27 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     lock.current = false; setChecking(false);
   }
 
+  // The bot check before "Post": its answer goes with the task, and a turned-down check shows by the widget.
+  const check = useBotCheck(data.botCheck, 'post_task');
+
   async function post(valuesToPost: TaskDraftInput) {
     if (lock.current || posted.current) return;
     lock.current = true; setPending(true); setResult(undefined); setInvalid(false); clearErrors();
     let next: ActionResult;
-    try { next = await handlers.onPost(valuesToPost); }
+    try { next = await handlers.onPost({ ...valuesToPost, ...(check.token ? { botCheck: check.token } : {}) }); }
     catch { next = { ok: false, code: 'unknown' }; }
     if (next.ok) {
       posted.current = true;
       if (persistDraft) { try { sessionStorage.removeItem(key); } catch { setStorageFailed(true); } }
-    }
+    } else check.reset();
     setResult(next); setPending(false); lock.current = false;
-    if (!next.ok && next.code === 'validation_failed') showErrors(resultFields(next));
+    if (!next.ok && next.code === 'validation_failed' && !next.fieldErrors?.botCheck) showErrors(resultFields(next));
     if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
 
   const hasProhibited = !result?.ok && Object.values(result?.fieldErrors ?? {}).some((codes) => codes?.includes('prohibited'));
-  const unknownFieldFailure = result && !result.ok && result.code === 'validation_failed' && !resultFields(result).some((name) => stepForField(name));
+  const botCheckRefused = Boolean(result && !result.ok && result.fieldErrors?.botCheck);
+  const unknownFieldFailure = !botCheckRefused && result && !result.ok && result.code === 'validation_failed' && !resultFields(result).some((name) => stepForField(name));
   return <FormProvider {...form}>
     <form noValidate aria-label={t('title')} aria-busy={pending} className="mx-auto flex min-h-[70dvh] w-full max-w-reading flex-col gap-6" onSubmit={(event) => {
       event.preventDefault();
@@ -277,7 +282,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
       <div role="status" aria-live="polite" className={restoringPhotos || photoRestoreFailed ? 'flex items-center gap-2 text-sm text-muted-foreground' : 'sr-only'}>
         {restoringPhotos ? <><Spinner />{t('photos.loadingSaved')}</> : photoRestoreFailed ? t('photos.restoreFailed') : ''}
       </div>
-      <FormFeedback result={unknownFieldFailure ? { ...result, fieldErrors: undefined } : result} />
+      {!botCheckRefused && <FormFeedback result={unknownFieldFailure ? { ...result, fieldErrors: undefined } : result} />}
       {invalid && !unknownFieldFailure && <p role="alert" className="text-sm text-destructive">{t('checkFields')}</p>}
       {hasProhibited && <Link href={routes.legal('prohibited-tasks')} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">{t('prohibitedLink')}</Link>}
       <fieldset disabled={pending || !!result?.ok} className="min-w-0 flex-1 space-y-6">
@@ -290,6 +295,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         {step === 'when' && <ScheduleStep data={data} />}
         {step === 'budget' && <BudgetStep data={data} />}
         {step === 'review' && <ReviewStep data={data} handlers={handlers} values={values} photos={photos} selectedAddress={address} />}
+        {step === 'review' && data.botCheck && <BotCheckField check={check} result={result} />}
       </fieldset>
       <footer className="app-glass sticky bottom-app-navigation z-20 -mx-4 mt-2 flex items-center gap-3 border-t border-foreground/[0.07] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/[0.06]">
         <Button type="button" variant="outline" disabled={index === 0 || pending || checking || uploading || !!result?.ok} onClick={() => { setInvalid(false); setResult(undefined); setFocusField(undefined); setStep(POST_TASK_STEPS[index - 1]!); heading.current?.focus(); }}><ArrowLeft aria-hidden="true" />{t('back')}</Button>

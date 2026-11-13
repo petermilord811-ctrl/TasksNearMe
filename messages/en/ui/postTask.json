@@ -390,7 +390,8 @@
     "post-again": "Post again: review",
     "post-again-address-deleted": "Post again: address deleted",
     "describe-templates": "Describe: start from an example",
-    "describe-from-template": "Describe: started from an example"
+    "describe-from-template": "Describe: started from an example",
+    "error-bot-check": "Review: bot check turned down"
   },
   "repeat": {
     "ready": "Posting “{title}” again. Everything from last time is filled in except photos, on the next date that fits. Check it, then post.",

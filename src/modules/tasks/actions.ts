@@ -4,6 +4,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { updateTag } from 'next/cache';
 import { cookies } from 'next/headers';
 import type {
+  BotCheckInput,
   ActionResult,
   AddressSuggestion,
   AiDraftResult,
@@ -27,6 +28,7 @@ import { createFakeTaskDrafter } from '@/integrations/ai/task-drafter';
 import { GEO_STAND_IN_COOKIE, wantsGeoStandIn } from '@/integrations/geocoding';
 import { findProhibitedPhrase, maskContactDetails } from '@/modules/trust/contact-masking';
 import { GLOBAL_PROHIBITED_PHRASES } from '@/modules/trust/prohibited';
+import { checkBot } from '@/modules/accounts/bot-check';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { consumeRateLimit } from '@/platform/rate-limit';
@@ -126,9 +128,12 @@ export async function quoteTaskPrice(input: { budget: PricingInput; expenseAllow
   return quoteBreakdown(policy.fees, input.budget, { expenseAllowanceCents: allowance });
 }
 
-export async function postTaskAction(input: TaskDraftInput): Promise<ActionResult> {
+export async function postTaskAction(input: TaskDraftInput & BotCheckInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
+  // Turnstile before anything is saved (blueprint 06 §4: posting).
+  const refused = await checkBot('post_task', input?.botCheck);
+  if (refused) return refused;
   const outcome = await (await postingForRequest()).post(userId, input);
   if (!outcome.ok) return outcome.result;
 

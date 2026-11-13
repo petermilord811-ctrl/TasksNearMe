@@ -33,4 +33,7 @@ export const DEFAULT_FLAGS: Record<string, { enabled: boolean; description: stri
   'reward.recurring_month': { enabled: true, description: '$15 gift card after a calendar month of regular visits all completed and paid (once per series)' },
   recurring: { enabled: true, description: 'Regular visits for cleaning and yard work: helpers propose a schedule, each visit is charged 2 days before' },
   'credit.poster_welcome': { enabled: false, description: "$10 back on a client's first completed booking (platform-funded, up to the booking's fees)" },
+  // Private beta (blueprint 11 B-068): off by default; staff switch them on per market at /admin/beta.
+  'beta.sign_up': { enabled: false, description: 'Private beta: new accounts need an invite code (set per market on the Private beta page)' },
+  'beta.helpers': { enabled: false, description: 'Private beta: becoming a helper needs a helper invite code (set per market on the Private beta page)' },
 };

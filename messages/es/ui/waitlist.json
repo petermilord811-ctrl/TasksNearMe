@@ -14,6 +14,11 @@
   "previews": {
     "group": "Lista de espera",
     "default": "Unirme a la lista de espera",
-    "joined": "Confirmación de lista de espera"
+    "joined": "Confirmación de lista de espera",
+    "beta": "Unirse a la lista de espera desde un paso de invitación"
+  },
+  "beta": {
+    "title": "Por ahora, TasksNearMe es solo con invitación.",
+    "description": "Estamos dejando entrar a la gente poco a poco mientras empezamos. Deja tu correo y tu código postal, y te avisaremos por correo cuando haya un lugar."
   }
 }

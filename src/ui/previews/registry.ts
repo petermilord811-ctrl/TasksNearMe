@@ -19,6 +19,7 @@ import { publicCardPreviews } from './public-cards.preview';
 import { publicPagePreviews } from './public-pages.preview';
 import { landingPreviews } from './landing.preview';
 import { authPreviews } from './auth.preview';
+import { betaPreviews } from './beta.preview';
 import { waitlistPreviews } from './waitlist.preview';
 import { contentPreviews } from './content.preview';
 import { taskPagePreviews } from './task-pages.preview';
@@ -89,6 +90,7 @@ export const previews: PreviewEntry[] = [
   ...landingPreviews,
   ...publicPagePreviews,
   ...authPreviews,
+  ...betaPreviews,
   ...waitlistPreviews,
   ...contentPreviews,
   ...taskPagePreviews,

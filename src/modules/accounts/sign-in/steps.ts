@@ -1,4 +1,4 @@
-import type { PhoneReason, SignInPageData, SocialProvider, SocialSignInError } from '@/contracts';
+import type { PhoneReason, SignInInvite, SignInPageData, SocialProvider, SocialSignInError } from '@/contracts';
 import { routes } from '@/contracts';
 
 /**
@@ -63,6 +63,8 @@ export interface SignInState {
   socialProviders?: SocialProvider[];
   /** A Google or Microsoft sign-in that came back without signing in. */
   socialError?: { provider: SocialProvider; reason: SocialSignInError };
+  /** Private beta: finishing sign-up waits for an invite in this market (src/modules/beta). */
+  invite?: SignInInvite;
   now: Date;
 }
 
@@ -108,6 +110,10 @@ export function resolveSignInStep(state: SignInState): SignInResolution {
         ...(socialError ? { socialError } : {}),
       },
     };
+  }
+
+  if (!profileComplete(user) && state.invite) {
+    return { kind: 'step', data: { step: 'invite_code', next, invite: state.invite } };
   }
 
   if (!profileComplete(user)) {

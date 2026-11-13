@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ActionResult, PreviewEntry, SignInPageData } from '@/contracts';
 import { routes } from '@/contracts';
-import { fakeSignInHandlers, publicViewer, signInEmailStep, signInEmailStepWithProviders, signInSocialErrors, signInEmailCodeStep, signInProfileStep, signInProfileStepPrefilled, signInPhoneStep, signInPhoneStepOffer, signInPhoneCodeStep, signInResults } from '@/fixtures';
+import { botCheckResults, fakeSignInHandlers, publicViewer, standInBotCheck, signInEmailStep, signInEmailStepWithProviders, signInSocialErrors, signInEmailCodeStep, signInProfileStep, signInProfileStepPrefilled, signInPhoneStep, signInPhoneStepOffer, signInPhoneCodeStep, signInResults } from '@/fixtures';
 import { PublicShell } from '@/ui/shells/public-shell';
 import { SignInScreen, EmailCodeStep, PhoneStep, ProfileStep, EmailStep } from '@/ui/screens/auth';
 import { SignInFrame } from '@/ui/screens/auth/sign-in-screen';
@@ -23,6 +23,7 @@ const screens: [keyof typeof copy.previews, SignInPageData][] = [
 const errors: [keyof typeof copy.previews, SignInPageData, ActionResult][] = [
   ['code-incorrect', signInEmailCodeStep, signInResults.codeIncorrect], ['code-expired', signInEmailCodeStep, signInResults.codeExpired], ['too-many-tries', signInEmailCodeStep, signInResults.tooManyTries],
   ['phone-not-supported', signInPhoneStep, signInResults.phoneNotSupported], ['phone-in-use', signInPhoneStep, signInResults.phoneInUse], ['profile-incomplete', signInProfileStep, signInResults.profileIncomplete], ['account-not-allowed', signInEmailStep, signInResults.accountNotAllowed],
+  ['bot-check-refused', { ...signInEmailStep, botCheck: standInBotCheck }, botCheckResults.refused], ['bot-check-expired', { ...signInProfileStep, botCheck: standInBotCheck }, botCheckResults.expired],
 ];
 
 export const authPreviews: PreviewEntry[] = [

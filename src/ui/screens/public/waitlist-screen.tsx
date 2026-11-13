@@ -49,8 +49,8 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
   return <section aria-labelledby={`${id}-title`} className="mx-auto max-w-reading space-y-6 py-4 sm:py-8">
     <header className="space-y-3">
       <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary size-12"><MapPin className="size-6" /></span>
-      <h1 id={`${id}-title`} className="font-display text-2xl font-semibold leading-8 tracking-[-0.025em] lg:text-3xl lg:leading-[38px]">{t('title')}</h1>
-      <p className="text-muted-foreground">{t('description')}</p>
+      <h1 id={`${id}-title`} className="font-display text-2xl font-semibold leading-8 tracking-[-0.025em] lg:text-3xl lg:leading-[38px]">{t(data.from === 'beta' ? 'beta.title' : 'title')}</h1>
+      <p className="text-muted-foreground">{t(data.from === 'beta' ? 'beta.description' : 'description')}</p>
     </header>
 
     <div aria-live="polite" aria-atomic="true" ref={confirmationRef} tabIndex={joined ? -1 : undefined} className={joined ? undefined : 'sr-only'}>

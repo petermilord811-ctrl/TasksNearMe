@@ -112,5 +112,11 @@
     "empty": "No hay direcciones que coincidan. Revisa el número y el nombre de la calle.",
     "selected": "Elegida: {address}"
   },
-  "verifyIdentity": "Verifica tu identidad"
+  "verifyIdentity": "Verifica tu identidad",
+  "botCheck": {
+    "required": "Completa la verificación de arriba y vuelve a intentarlo.",
+    "failed": "No pudimos confirmar que eres una persona. Vuelve a intentarlo.",
+    "expired": "Se acabó el tiempo de la verificación. Vuelve a intentarlo.",
+    "unavailable": "La verificación de seguridad no cargó. Revisa tu conexión o desactiva los bloqueadores de contenido para este sitio y vuelve a cargar la página."
+  }
 }

@@ -103,6 +103,16 @@ describe('resolveSignInStep', () => {
     expect(resolution.kind === 'step' && resolution.data.profileDefaults).toEqual({ firstName: 'Maya', lastName: 'Rivera' });
   });
 
+  it('asks a new account for an invite first while sign-up is invite-only (private beta)', () => {
+    const fresh: SignInUserState = { firstName: '', lastName: '', adultAttestedAt: null, termsAcceptedAt: null, phoneVerifiedAt: null };
+    const invite = { marketName: 'Austin', code: 'K7QPM4XD' };
+    expect(resolveSignInStep({ next: '/app', now, user: fresh, invite })).toEqual({ kind: 'step', data: { step: 'invite_code', next: '/app', invite } });
+    // No invite needed (switch off, or already in): the name and age as usual.
+    expect(resolveSignInStep({ next: '/app', now, user: fresh })).toMatchObject({ kind: 'step', data: { step: 'profile' } });
+    // An account that finished signing up is never held back.
+    expect(resolveSignInStep({ next: '/app', now, user: complete, invite })).toEqual({ kind: 'done', redirectTo: '/app' });
+  });
+
   it('asks for a phone only when the destination needs one', () => {
     expect(resolveSignInStep({ next: '/app', now, user: complete })).toEqual({ kind: 'done', redirectTo: '/app' });
     expect(resolveSignInStep({ next: '/app/tasks/new', now, user: complete })).toEqual({

@@ -283,6 +283,8 @@ export const becomeHelperNoRewardsData: BecomeHelperPageData = {
 };
 
 export const waitlistPageData: WaitlistPageData = { markets: [austinMarket] };
+/** From an invite-only step (private beta): the same form, with the invite-only heading. */
+export const waitlistPageDataBeta: WaitlistPageData = { ...waitlistPageData, from: 'beta' };
 
 /**
  * Previews: "Write it with AI" answering the way the app's rule-based stand-in does (a tidy title from the words,

@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { connection } from 'next/server';
 import { offeredSocialProviders } from '@/integrations/oauth';
+import { signUpInviteFor } from '@/modules/beta/server';
 import { createSmsSender } from '@/integrations/sms';
 import { auth } from '@/platform/auth/auth';
 import { authRequestHeaders } from '@/platform/auth/request-headers';
@@ -11,7 +12,7 @@ import { createPhoneVerification } from '../phone-verification';
 import { users } from '../schema';
 import { readPendingEmail } from './pending-email';
 import { isSocialProvider, socialSignInErrorFrom } from './providers';
-import { resolveSignInStep, safeNextPath, type SignInResolution, type SignInUserState } from './steps';
+import { profileComplete, resolveSignInStep, safeNextPath, type SignInResolution, type SignInUserState } from './steps';
 
 /** Server-side pieces shared by the /sign-in page and its actions. */
 
@@ -69,10 +70,13 @@ export async function resolveCurrentSignIn(rawNext: string | null | undefined, r
   const user = await loadSignInUser(userId);
   if (!user) return resolveSignInStep({ next, now });
   const pendingPhone = await phoneVerification.pending(userId);
+  // Private beta: an account that hasn't finished signing up may need an invite first.
+  const invite = profileComplete(user) ? null : await signUpInviteFor(db, userId);
   return resolveSignInStep({
     next,
     now,
     user,
+    ...(invite ? { invite } : {}),
     ...(pendingPhone
       ? { pendingPhone: { maskedPhone: pendingPhone.maskedPhone, resendAvailableAt: pendingPhone.resendAvailableAt } }
       : {}),

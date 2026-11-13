@@ -85,7 +85,9 @@
     "social-unconfirmed": "Microsoft email not confirmed",
     "social-use-email-code": "Account exists: use an email code",
     "social-not-allowed": "Account unavailable (Google)",
-    "social-failed": "Microsoft sign-in failed"
+    "social-failed": "Microsoft sign-in failed",
+    "bot-check-refused": "Email step: bot check turned down",
+    "bot-check-expired": "Name step: bot check timed out"
   },
   "passkey": {
     "action": "Sign in with a passkey",

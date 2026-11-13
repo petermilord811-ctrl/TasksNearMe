@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { profileInputSchema, routes, type ProfileInput } from '@/contracts';
 import { TextFormField } from '@/ui/components/forms/text-form-field';
+import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Checkbox } from '@/ui/primitives/checkbox';
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
@@ -19,7 +20,11 @@ export function ProfileStep({ data, handlers, initialResult, onResult }: SignInS
   const forms = useTranslations('forms');
   const form = useForm<ProfileInput>({ resolver: zodResolver(profileInputSchema), defaultValues: { firstName: data.profileDefaults?.firstName ?? '', lastName: data.profileDefaults?.lastName ?? '', adultAttested: false, termsAccepted: false } });
   const action = useFormAction(form, { initialResult, onResult, navigation: 'replace' });
-  return <form noValidate onSubmit={form.handleSubmit(async (input) => { await action.run(handlers.onSaveProfile, input); })} aria-busy={action.pending} className="space-y-6">
+  const check = useBotCheck(data.botCheck, 'sign_up');
+  return <form noValidate onSubmit={form.handleSubmit(async (input) => {
+    await action.run(handlers.onSaveProfile, { ...input, ...(check.token ? { botCheck: check.token } : {}) });
+    check.reset();
+  })} aria-busy={action.pending} className="space-y-6">
     <StepHeading title={t('profile.title')}><p>{t('profile.privacy')}</p></StepHeading>
     <TextFormField control={form.control} name="firstName" label={forms('fields.firstName.label')} hint={t('profile.firstNameHint')} autoComplete="given-name" />
     <TextFormField control={form.control} name="lastName" label={forms('fields.lastName.label')} hint={t('profile.lastNameHint')} autoComplete="family-name" />
@@ -36,6 +41,7 @@ export function ProfileStep({ data, handlers, initialResult, onResult }: SignInS
         {fieldState.error && <FieldError id={`${id}-${name}-error`}>{forms(`fieldErrors.${fieldState.error.message ?? 'must_accept'}`)}</FieldError>}
       </FieldContent>
     </Field>} />)}
+    {data.botCheck && <BotCheckField check={check} result={action.result} />}
     <FormFeedback result={action.result} />
     <ContinueButton pending={action.pending || form.formState.isSubmitting} />
   </form>;

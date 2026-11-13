@@ -30,6 +30,7 @@
     "helper-client-code": "Invitación de ayudante: código de cliente",
     "sign-up": "Paso de invitación al registrarte",
     "sign-up-prefilled": "Paso de invitación desde un enlace",
-    "sign-up-rate-limited": "Paso de invitación: demasiados intentos"
+    "sign-up-rate-limited": "Paso de invitación: demasiados intentos",
+    "sign-up-incorrect": "Paso de invitación: código desconocido"
   }
 }

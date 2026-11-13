@@ -207,6 +207,11 @@ export interface BecomeHelperPageData {
 export interface WaitlistPageData {
   /** Markets we serve or are about to open ("Already in Austin? See local help"). */
   markets: MarketView[];
+  /**
+   * `beta`: sent here from an invite-only step (private beta, `routes.waitlist({ from: 'beta' })`), so the
+   * page says the market is invite-only for now instead of "We're not in your city yet".
+   */
+  from?: 'beta';
 }
 
 export const WAITLIST_INTERESTS = ['need_help', 'give_help', 'both'] as const;

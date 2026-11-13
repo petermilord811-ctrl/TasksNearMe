@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Ticket } from 'lucide-react';
-import type { HelperInviteHandlers, HelperInvitePageData } from '@/contracts';
+import type { ActionResult, HelperInviteHandlers, HelperInvitePageData } from '@/contracts';
 import { PageHeader } from '@/ui/components';
 import { InviteCodeForm } from './invite-code-form';
 
@@ -10,7 +10,7 @@ import { InviteCodeForm } from './invite-code-form';
  * Helper setup while it's invite-only in the market (private beta): a helper invite code opens setup; without
  * one, the waitlist. Shown instead of the first setup step.
  */
-export function HelperInviteScreen({ data, handlers }: { data: HelperInvitePageData; handlers: HelperInviteHandlers }) {
+export function HelperInviteScreen({ data, handlers, initialResult }: { data: HelperInvitePageData; handlers: HelperInviteHandlers; initialResult?: ActionResult }) {
   const t = useTranslations('beta');
   const onboarding = useTranslations('helperOnboarding');
   return <div className="mx-auto max-w-reading space-y-6 pb-24 sm:pb-0">
@@ -23,7 +23,7 @@ export function HelperInviteScreen({ data, handlers }: { data: HelperInvitePageD
           <p className="text-muted-foreground">{t('helper.body')}</p>
         </div>
       </div>
-      <InviteCodeForm {...(data.code ? { code: data.code } : {})} onRedeem={handlers.onRedeem} submitLabel={t('helper.submit')} />
+      <InviteCodeForm {...(data.code ? { code: data.code } : {})} onRedeem={handlers.onRedeem} submitLabel={t('helper.submit')} {...(initialResult ? { initialResult } : {})} />
     </section>
   </div>;
 }

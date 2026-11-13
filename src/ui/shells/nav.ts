@@ -24,6 +24,7 @@ export type NavId =
   | 'responseTimes'
   | 'savedReplies'
   | 'metrics'
+  | 'beta'
   | 'config'
   | 'audit'
   | 'staff'
@@ -96,6 +97,8 @@ export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
     { id: 'rewards', href: routes.admin.rewards() },
     // Every staff role reads the market metrics; money figures only reach finance and admins.
     { id: 'metrics', href: routes.admin.metrics() },
+    // Every staff role sees the private beta; leads and admins manage it (others read).
+    { id: 'beta', href: routes.admin.beta() },
     ...(isAdmin ? [{ id: 'config' as const, href: routes.admin.config() }] : []),
     ...(readsAudit ? [{ id: 'audit' as const, href: routes.admin.audit() }] : []),
     ...(isAdmin ? [{ id: 'staff' as const, href: routes.admin.staff() }] : []),

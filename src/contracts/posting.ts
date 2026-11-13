@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { marketLocalToUtc } from '@/shared/format';
 import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
+import type { BotCheckConfig, BotCheckInput } from './bot-check';
 import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
 import { CATEGORY_SLUGS } from './common';
 import type { CategoryView, MarketView } from './marketing';
@@ -242,6 +243,8 @@ export interface PostTaskPageData {
   rules: TaskPostingRules;
   /** The `ai_drafting` flag: show "Help me describe this". */
   aiDraftingEnabled: boolean;
+  /** The bot check before "Post" (contracts/bot-check.ts; action `post_task`). Absent: none is set up. */
+  botCheck?: BotCheckConfig;
   /** For validating the schedule on the client. The app checks again on "Post". */
   now: ISODateTime;
   /**
@@ -382,7 +385,8 @@ export interface PostTaskHandlers {
   /** FormData with one `file` (JPEG, PNG, WebP, or HEIC). */
   onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
   onQuote: QueryHandler<{ budget: PricingInput; expenseAllowanceCents: Cents }, PriceBreakdown>;
-  onPost: ActionHandler<TaskDraftInput>;
+  /** Sends the bot check's answer as `botCheck` (`fieldErrors.botCheck` when it's turned down). */
+  onPost: ActionHandler<TaskDraftInput & BotCheckInput>;
   /** Thumbnails for photo ids restored from a saved draft (only the person's own uploads). */
   onResolvePhotos?: QueryHandler<{ photoIds: string[] }, Photo[]>;
 }

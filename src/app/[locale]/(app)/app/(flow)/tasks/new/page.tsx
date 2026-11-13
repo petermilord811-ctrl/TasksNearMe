@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { botCheckForPage } from '@/modules/accounts/bot-check';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -73,6 +74,7 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
   const draftStorageKey = `tasksnearme:post-task:${data.market.slug}:${createHash('sha256').update(userId).digest('hex').slice(0, 16)}${repeat && again ? `:again:${again}` : ''}:v1`;
 
   const aiDraftingEnabled = Boolean(flags.ai_drafting) && taskDrafter !== null;
+  const botCheck = await botCheckForPage();
   // The example must be one this market offers (its category is in the market).
   const fromTemplate = templateId && data.templates?.some((template) => template.id === templateId) ? findTaskTemplate(templateId) : undefined;
   // Like "Post again", a start from an example keeps its own tab draft (an unrelated draft in progress never
@@ -84,6 +86,7 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
       data={{
         ...data,
         aiDraftingEnabled,
+        ...(botCheck ? { botCheck } : {}),
         ...(wantsAiDraft && aiDraftingEnabled ? { autoDraft: true } : {}),
         draftStorageKey: storageKey,
         ...(repeat ? { repeat } : {}),

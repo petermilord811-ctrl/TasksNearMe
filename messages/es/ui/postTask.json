@@ -390,7 +390,8 @@
     "post-again": "Publicar de nuevo: revisar",
     "post-again-address-deleted": "Publicar de nuevo: dirección eliminada",
     "describe-templates": "Descripción: empezar con un ejemplo",
-    "describe-from-template": "Descripción: empezó con un ejemplo"
+    "describe-from-template": "Descripción: empezó con un ejemplo",
+    "error-bot-check": "Revisión: verificación rechazada"
   },
   "repeat": {
     "ready": "Publicando “{title}” de nuevo. Todo lo de la vez anterior está completo, excepto las fotos, para la próxima fecha disponible. Revísalo y publica.",

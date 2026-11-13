@@ -28,6 +28,12 @@ export const signInEmailCodeStep: SignInPageData = {
 };
 
 /** A new account: no names yet. */
+/** Private beta: a new account in Austin needs an invite before the name and age. */
+export const signInInviteStep: SignInPageData = { step: 'invite_code', next: routes.app.home(), invite: { marketName: 'Austin' } };
+
+/** The same, after opening an invite link (the code is filled in). */
+export const signInInviteStepPrefilled: SignInPageData = { ...signInInviteStep, invite: { marketName: 'Austin', code: 'K7QPM4XD' } };
+
 export const signInProfileStep: SignInPageData = { step: 'profile', next };
 
 /** Came back to finish: names already saved. */
@@ -73,6 +79,13 @@ export const signInResults = {
     fieldErrors: { lastName: ['required'], adultAttested: ['must_accept'] },
   },
   accountNotAllowed: { ok: false, code: 'not_allowed' },
+  inviteRedeemed: { ok: true, code: 'redeemed' },
+  inviteIncorrect: { ok: false, code: 'validation_failed', fieldErrors: { inviteCode: ['incorrect'] } },
+  inviteExpired: { ok: false, code: 'validation_failed', fieldErrors: { inviteCode: ['expired'] } },
+  /** On the helper screen: a client invite doesn't start helper setup. */
+  inviteForClients: { ok: false, code: 'validation_failed', fieldErrors: { inviteCode: ['not_supported'] } },
+  /** Ten tries in ten minutes, until 9:10 am Central on Nov 17. */
+  inviteRateLimited: { ok: false, code: 'rate_limited', retryAt: '2026-11-17T15:10:00.000Z' },
 } satisfies Record<string, ActionResult>;
 
 /** Handlers for previews: every call succeeds after a short delay. */
@@ -83,6 +96,8 @@ export const fakeSignInHandlers: SignInHandlers = {
   onVerifyEmailCode: fakeHandler(signInResults.done),
   onResendEmailCode: fakeHandler(signInResults.codeSent),
   onChangeEmail: fakeHandler({ ok: true, code: 'updated' }),
+  onRedeemInvite: fakeHandler(signInResults.inviteRedeemed),
+  onSignOut: fakeHandler({ ok: true, code: 'updated' }),
   onSaveProfile: fakeHandler({ ok: true, code: 'saved' }),
   onSendPhoneCode: fakeHandler(signInResults.codeSent),
   onVerifyPhoneCode: fakeHandler(signInResults.done),

@@ -13,10 +13,13 @@ import {
   resendPhoneCode,
   saveProfile,
   sendPhoneCode,
+  signOutOfSignUp,
   verifyEmailCode,
   verifyPhoneCode,
 } from '@/modules/accounts/sign-in/actions';
+import { botCheckForPage } from '@/modules/accounts/bot-check';
 import { resolveCurrentSignIn } from '@/modules/accounts/sign-in/server';
+import { redeemSignUpInvite } from '@/modules/beta/actions';
 import { PageSkeleton } from '@/ui/components';
 import { SignInScreen } from '@/ui/screens/auth';
 
@@ -42,7 +45,9 @@ async function SignIn({ searchParams }: Pick<PageProps<'/[locale]/sign-in'>, 'se
   const resolution = await resolveCurrentSignIn(typeof next === 'string' ? next : undefined, { via, error });
   if (resolution.kind === 'done') redirect(resolution.redirectTo);
 
-  const { data } = resolution;
+  // The email and name steps run a bot check before Continue (Turnstile, or the stand-in outside production).
+  const botCheck = resolution.data.step === 'email' || resolution.data.step === 'profile' ? await botCheckForPage() : undefined;
+  const data = botCheck ? { ...resolution.data, botCheck } : resolution.data;
   return (
     <SignInScreen
       data={data}
@@ -52,6 +57,8 @@ async function SignIn({ searchParams }: Pick<PageProps<'/[locale]/sign-in'>, 'se
         onVerifyEmailCode: verifyEmailCode.bind(null, data.next),
         onResendEmailCode: resendEmailCode.bind(null, data.next),
         onChangeEmail: changeEmail,
+        onRedeemInvite: redeemSignUpInvite.bind(null, data.next),
+        onSignOut: signOutOfSignUp,
         onSaveProfile: saveProfile.bind(null, data.next),
         onSendPhoneCode: sendPhoneCode.bind(null, data.next),
         onVerifyPhoneCode: verifyPhoneCode.bind(null, data.next),

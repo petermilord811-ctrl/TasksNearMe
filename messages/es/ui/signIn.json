@@ -85,7 +85,9 @@
     "social-unconfirmed": "Correo de Microsoft sin confirmar",
     "social-use-email-code": "La cuenta existe: usar un código por correo",
     "social-not-allowed": "Cuenta no disponible (Google)",
-    "social-failed": "Falló el inicio de sesión con Microsoft"
+    "social-failed": "Falló el inicio de sesión con Microsoft",
+    "bot-check-refused": "Paso del correo: verificación rechazada",
+    "bot-check-expired": "Paso del nombre: se acabó el tiempo de la verificación"
   },
   "passkey": {
     "action": "Iniciar sesión con una llave de acceso",
