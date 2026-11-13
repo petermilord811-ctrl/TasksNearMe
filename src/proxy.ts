@@ -4,6 +4,7 @@ import { routes } from '@/contracts';
 import { DEFAULT_LOCALE } from '@/contracts/locale';
 import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS, pickLocale, splitLocalePath } from '@/shared/locale';
 import { isLocalRequest } from '@/shared/local-request';
+import { contentSecurityPolicy, cspHeaderName } from '@/shared/csp';
 
 /**
  * Every page request passes here (API routes, Next's own files and anything with a file extension don't).
@@ -45,6 +46,9 @@ export function proxy(request: NextRequest) {
   if (explicit && request.cookies.get(LOCALE_COOKIE)?.value !== explicit.locale) {
     response.cookies.set(LOCALE_COOKIE, explicit.locale, LOCALE_COOKIE_OPTIONS);
   }
+  // The Content Security Policy for every page (src/shared/csp.ts): enforced in production, reported in development.
+  const development = process.env.NODE_ENV !== 'production';
+  response.headers.set(cspHeaderName(development), contentSecurityPolicy({ development, mapStyleUrl: process.env.MAP_STYLE_URL }));
   return response;
 }
 
