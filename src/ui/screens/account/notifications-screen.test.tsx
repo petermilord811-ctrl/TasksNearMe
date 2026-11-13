@@ -60,6 +60,7 @@ const copy: Record<NotificationType, RegExp> = {
   verification_action_needed: /verification step needs your attention/,
   background_check_expiring: /background check has run out/,
   helper_ready: /you can send offers now/,
+  task_match: /New task near you: .*\$54\.00/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },

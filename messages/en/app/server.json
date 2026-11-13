@@ -63,7 +63,8 @@
         "offers": "Offers",
         "payments": "Payments",
         "tips_and_news": "Tips and news",
-        "account": "Account and verification"
+        "account": "Account and verification",
+        "task_alerts": "New tasks near you"
       },
       "topicEmails": {
         "bookings": "booking",
@@ -71,7 +72,8 @@
         "offers": "offer",
         "payments": "payment",
         "tips_and_news": "tips and news",
-        "account": "account"
+        "account": "account",
+        "task_alerts": "new-task"
       },
       "cta": {
         "booking": "View the booking",
@@ -115,7 +117,8 @@
         "verification_passed": "Your setup page shows what is left before you can send offers.",
         "verification_action_needed": "Open your setup page to see what is needed. It only takes a few minutes.",
         "background_check_expiring": "Renewing keeps your in-home categories open without a gap.",
-        "helper_ready": "Find work shows open tasks near you. Your first offer is a tap away."
+        "helper_ready": "Find work shows open tasks near you. Your first offer is a tap away.",
+        "task_match": "Have a look and send an offer if it suits you. Turn these emails off on your account page any time."
       },
       "lockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates.",
       "optionalFooter": "You're getting this because {topic} emails are on.",
@@ -158,7 +161,8 @@
       "verification_passed": "{track, select, phone {Your phone number is verified.} identity {Your ID is verified.} address {Your home address is verified.} payout {Your payout account is ready.} background {Your background check is complete.} other {A verification step is complete.}}",
       "verification_action_needed": "{track, select, identity {Your ID check needs your attention.} address {We need another proof of your home address.} payout {Your payout setup needs more information.} background {Your background check needs your attention. Check your email from Checkr.} other {A verification step needs your attention.}}",
       "background_check_expiring": "{days, plural, =0 {Your background check has run out. Start a new one to take in-home tasks again.} one {Your background check runs out tomorrow. Start the renewal to keep your in-home categories.} other {Your background check runs out in # days. Start the renewal to keep your in-home categories.}}",
-      "helper_ready": "You're all set: you can send offers now. Find work near you."
+      "helper_ready": "You're all set: you can send offers now. Find work near you.",
+      "task_match": "New task near you: {title}{hasAmount, select, yes {, {amount}} other {}}."
     }
   },
   "emails": {

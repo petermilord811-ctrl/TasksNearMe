@@ -27,6 +27,7 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { isLockedPreference, preferenceOn } from './delivery-domain';
 import { notificationPreferences, notifications, privacyRequests } from './schema';
 import { verificationNotificationFor } from './verification-plan';
+import { helpersToAlert } from '@/modules/offers/task-alerts';
 
 /**
  * Notifications from outbox events (the dispatcher), the notifications page, and the account page
@@ -217,6 +218,21 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
       const recipients = Array.isArray(p.recipientIds) ? (p.recipientIds as string[]) : [];
       if (!caseId) return [];
       return recipients.map((userId) => ({ userId, type: 'case_resolved' as const, target: { kind: 'support_case', caseId } as AttentionTarget, title: text(p.subject) }));
+    }
+    case 'task.posted': {
+      // Helpers the new task suits (src/modules/offers/task-alerts.ts).
+      const taskId = text(p.taskId);
+      if (!taskId) return [];
+      const [task] = await db.select({ title: tasks.title, budgetCents: tasks.budgetCents }).from(tasks).where(eq(tasks.id, taskId)).limit(1);
+      if (!task) return [];
+      const helpers = await helpersToAlert(db, taskId, new Date(event.createdAt));
+      return helpers.map((userId) => ({
+        userId,
+        type: 'task_match' as const,
+        target: { kind: 'find_work_task', taskId } as AttentionTarget,
+        title: task.title,
+        ...(task.budgetCents ? { params: { amountCents: task.budgetCents } } : {}),
+      }));
     }
     case 'verification.updated': {
       const planned = verificationNotificationFor(p);

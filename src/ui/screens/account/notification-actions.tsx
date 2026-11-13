@@ -47,6 +47,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   verification_action_needed: ShieldAlert,
   background_check_expiring: CalendarClock,
   helper_ready: BadgeCheck,
+  task_match: MapPin,
 };
 
 function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {

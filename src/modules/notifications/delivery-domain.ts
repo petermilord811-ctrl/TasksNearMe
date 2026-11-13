@@ -42,6 +42,7 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   verification_action_needed: 'account',
   background_check_expiring: 'account',
   helper_ready: 'account',
+  task_match: 'task_alerts',
 };
 
 /** Day-of updates that can't wait until morning (a 7 am start's 2 h reminder comes at 5 am): texted even in quiet hours. */
@@ -68,6 +69,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationTopic, readonly Notificatio
   offers: ['email'],
   payments: ['email'],
   account: ['email'],
+  task_alerts: ['email'],
   tips_and_news: [],
 };
 

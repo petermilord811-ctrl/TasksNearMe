@@ -64,6 +64,8 @@ export const NOTIFICATION_TYPES = [
   'background_check_expiring',
   /** Onboarding is done: the helper can send offers. */
   'helper_ready',
+  /** A new task the helper could take, in their area and categories (blueprint 02 J1; at most 3 an hour). */
+  'task_match',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -97,7 +99,7 @@ export interface NotificationHandlers {
 }
 
 /** `account`: verification and account notices (email always on, like receipts). */
-export const NOTIFICATION_TOPICS = ['bookings', 'messages', 'offers', 'payments', 'account', 'tips_and_news'] as const;
+export const NOTIFICATION_TOPICS = ['bookings', 'messages', 'offers', 'task_alerts', 'payments', 'account', 'tips_and_news'] as const;
 export type NotificationTopic = (typeof NOTIFICATION_TOPICS)[number];
 export const NOTIFICATION_CHANNELS = ['email', 'sms'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];

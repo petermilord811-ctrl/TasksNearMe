@@ -133,7 +133,8 @@
     "verification_passed": "Verification step passed",
     "verification_action_needed": "Verification needs action",
     "background_check_expiring": "Background check expiring",
-    "helper_ready": "Ready to send offers"
+    "helper_ready": "Ready to send offers",
+    "task_match": "New task near you"
   },
   "previews": {
     "group": "Admin · person details",
