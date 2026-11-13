@@ -144,6 +144,22 @@ export interface PostTaskPageData {
   categories: CategoryView[];
   /** From `?category=`; start on the describe step when set. */
   initialCategory?: CategorySlug;
+  /**
+   * From `?title=`: a title from the landing page's assistant ("Write it with AI", then "Use this draft"), at most
+   * `TASK_TITLE_MAX` characters. Prefills the title; the person checks it like anything else.
+   */
+  initialTitle?: string;
+  /**
+   * From `?describe=`: the person's own words from the landing page's assistant, or the AI draft's description
+   * they chose to use (spaces tidied, line breaks kept, at most `TASK_DESCRIPTION_MAX` characters). Prefills the
+   * description and the "Help me describe this" box; nothing more is assumed.
+   */
+  initialDescription?: string;
+  /**
+   * From `?ai=1` (the landing page's "Draft it with AI"): once the describe step shows, run "Help me describe
+   * this" on `initialDescription` by itself, once. Only set when `aiDraftingEnabled` and there are words.
+   */
+  autoDraft?: boolean;
   rules: TaskPostingRules;
   /** The `ai_drafting` flag: show "Help me describe this". */
   aiDraftingEnabled: boolean;

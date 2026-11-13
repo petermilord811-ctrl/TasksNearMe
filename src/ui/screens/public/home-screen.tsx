@@ -21,20 +21,26 @@ export interface HomeScreenProps {
  * The landing page (UI-036): one shared state so the hero canvas, the floating cards, the categories, the
  * map and its list respond to each other; scroll reveals switched on by `MotionRoot`.
  */
-export function HomeScreen({ data, mapMode = 'interactive', initialLocation, initialCategory }: HomeScreenProps) {
+export function HomeScreen({ data, now, mapMode = 'interactive', initialLocation, initialCategory }: HomeScreenProps) {
   return (
     <LandingProvider initialLocation={initialLocation} initialCategory={initialCategory}>
       <MotionRoot />
-      <Hero data={data} />
-      <MapSection data={data} mapMode={mapMode} />
-      <CategoriesSection data={data} />
-      <StepsSection />
-      <PricingSection data={data} />
-      <TrustSection />
-      <HelpersSection data={data} />
-      <CoverageStrip data={data} />
-      <FaqSection />
-      <ClosingSection data={data} />
+      {/* One paper under the whole page (a faint marble), so no section starts or stops a background. */}
+      <div className="paper">
+        {/* On wide screens the hero stays pinned while the map slides up over it like a sheet. */}
+        <div className="relative">
+          <Hero data={data} mode={mapMode} now={now} />
+          <MapSection data={data} mapMode={mapMode} />
+        </div>
+        <CategoriesSection data={data} />
+        <StepsSection />
+        <PricingSection data={data} />
+        <TrustSection />
+        <HelpersSection data={data} />
+        <CoverageStrip data={data} />
+        <FaqSection />
+        <ClosingSection data={data} />
+      </div>
     </LandingProvider>
   );
 }

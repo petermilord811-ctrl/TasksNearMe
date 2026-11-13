@@ -10,7 +10,7 @@ const person = (p: PersonSummary): PersonSummary => ({ id: p.id, displayName: p.
 const ben: PersonSummary = { id: 'usr_ben', displayName: 'Ben W.', initials: 'BW', memberSince: '2026-10-01T15:00:00.000Z', phoneVerified: true };
 const desk = { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)' };
 const bookcase = { id: 'bkg_bookcase', title: 'Assemble a bookcase' };
-const tv = { id: 'bkg_tv', title: 'Mount a TV on the wall' };
+const tv = { id: 'bkg_tv', title: 'Anchor a tall bookshelf to the wall' };
 
 const exceptionRows: AdminMoneyRow[] = [
   { id: 'ref_failed_desk', kind: 'refund', amountCents: 1650, status: 'failed', at: '2026-11-23T14:40:00.000Z', person: person(maya), booking: desk, reference: 'devre_7f3a', detail: 'dispute_settlement', exception: 'refund_failed' },

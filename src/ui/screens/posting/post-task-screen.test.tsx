@@ -87,6 +87,46 @@ describe('posting wizard', () => {
     expect(screen.queryByText(messages.forms.fieldErrors.required)).not.toBeInTheDocument();
   });
 
+  it("carries someone's own words in from the landing page: the description and the AI helper's box", () => {
+    mount({ data: { ...postTaskPageData, initialCategory: 'furniture-assembly', initialDescription: 'Assemble an IKEA desk' }, initialValues: undefined, persistDraft: false });
+    expect(screen.getByText('Step 2 of 8 · Describe')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: messages.postTask.describe.description })).toHaveValue('Assemble an IKEA desk');
+    expect(screen.getByRole('textbox', { name: messages.postTask.describe.aiInput })).toHaveValue('Assemble an IKEA desk');
+  });
+
+  it('carries in an AI draft chosen on the landing page: its title and its description', () => {
+    mount({ data: { ...postTaskPageData, initialCategory: 'furniture-assembly', initialTitle: 'Mount a 55" TV on drywall', initialDescription: 'The bracket is here.' }, initialValues: undefined, persistDraft: false });
+    expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveValue('Mount a 55" TV on drywall');
+    expect(screen.getByRole('textbox', { name: messages.postTask.describe.description })).toHaveValue('The bracket is here.');
+  });
+
+  it("drafts with AI by itself, once, when the landing page asked for it (and only if the market allows it)", async () => {
+    const user = userEvent.setup();
+    const onDraftWithAi = vi.fn(async () => ({ ok: true as const, draft: aiDeskDraft }));
+    const words = 'Assemble an IKEA desk';
+    mount({
+      data: { ...postTaskPageData, aiDraftingEnabled: true, initialCategory: 'furniture-assembly', initialDescription: words, autoDraft: true },
+      handlers: { ...fakePostTaskHandlers, onDraftWithAi },
+      initialValues: undefined,
+    });
+    await waitFor(() => expect(onDraftWithAi).toHaveBeenCalledWith({ categorySlug: 'furniture-assembly', text: words }));
+    expect(await screen.findByText(aiDeskDraft.title)).toBeInTheDocument();
+    // Going back and forth doesn't draft again.
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(onDraftWithAi).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    const notAllowed = vi.fn(async () => ({ ok: true as const, draft: aiDeskDraft }));
+    mount({
+      data: { ...postTaskPageData, aiDraftingEnabled: false, initialCategory: 'furniture-assembly', initialDescription: words, autoDraft: true },
+      handlers: { ...fakePostTaskHandlers, onDraftWithAi: notAllowed },
+      initialValues: undefined,
+    });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(notAllowed).not.toHaveBeenCalled();
+  });
+
   it('applies the AI suggestion to editable fields and details without posting', async () => {
     const user = userEvent.setup();
     const { handlers } = mount({ initialStep: 'describe', initialSuggestion: aiDeskDraft });

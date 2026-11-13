@@ -11,6 +11,11 @@ describe('routes', () => {
     expect(routes.app.offers()).toBe('/app/offers');
     expect(routes.app.offers('inv_9')).toBe('/app/offers?invite=inv_9');
     expect(routes.signIn('/app/tasks/new')).toBe('/sign-in?next=%2Fapp%2Ftasks%2Fnew');
+    // The landing page's assistant: the words, the kind of help, and "Draft it with AI".
+    expect(routes.app.newTask({ category: 'moving-help', describe: 'load a truck', ai: true })).toBe('/app/tasks/new?category=moving-help&describe=load+a+truck&ai=1');
+    expect(routes.app.newTask({ describe: 'load a truck', ai: false })).toBe('/app/tasks/new?describe=load+a+truck');
+    // "Use this draft" after "Write it with AI": the title too.
+    expect(routes.app.newTask({ category: 'moving-help', title: 'Load a 10 ft truck', describe: 'Two hours.' })).toBe('/app/tasks/new?category=moving-help&title=Load+a+10+ft+truck&describe=Two+hours.');
   });
 
   it('puts task board filters in the URL and leaves defaults out', () => {

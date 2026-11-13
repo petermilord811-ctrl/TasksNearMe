@@ -7,7 +7,7 @@ test('the client sees the receipt for the booking, and only theirs', async ({ pa
   await devSignIn(page, 'ben@example.test');
   await page.goto('/app/payments');
   await expect(page.getByRole('heading', { level: 1, name: 'Payments' })).toBeVisible();
-  await page.getByRole('link', { name: 'Mount a TV on the wall' }).first().click();
+  await page.getByRole('link', { name: 'Anchor a tall bookshelf to the wall' }).first().click();
   await expect(page).toHaveURL(/\/app\/payments\/bkg_tv$/);
   await expect(page.getByText('$88.00').first()).toBeVisible();
 

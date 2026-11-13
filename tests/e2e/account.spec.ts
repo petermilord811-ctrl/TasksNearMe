@@ -8,7 +8,7 @@ test('notifications lead to what they are about', async ({ page }, testInfo) => 
   await devSignIn(page, 'ben@example.test');
   await page.goto('/app/notifications');
   await expect(page.getByRole('heading', { level: 1, name: 'Notifications' })).toBeVisible();
-  const confirmed = page.getByRole('link', { name: /Your booking for Mount a TV on the wall is confirmed/ });
+  const confirmed = page.getByRole('link', { name: /Your booking for Anchor a tall bookshelf to the wall is confirmed/ });
   await expect(confirmed).toHaveAttribute('href', '/app/bookings/bkg_tv');
   await confirmed.click();
   await expect(page).toHaveURL(/\/app\/bookings\/bkg_tv$/);

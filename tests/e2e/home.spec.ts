@@ -8,7 +8,7 @@ test("the client's home: attention, upcoming bookings, open tasks", async ({ pag
   await expect(page.getByRole('heading', { level: 1, name: /Good (morning|afternoon|evening), Ben/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Needs your attention' })).toBeVisible();
   // Ben's TV booking is coming up.
-  await expect(page.getByRole('link', { name: /Mount a TV on the wall/ }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /Anchor a tall bookshelf to the wall/ }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: 'Post a task' }).first()).toHaveAttribute('href', '/app/tasks/new');
 });
 
@@ -17,5 +17,5 @@ test("the helper's home: earnings, upcoming bookings, offers", async ({ page }) 
   await expect(page.getByRole('heading', { level: 1, name: /Good (morning|afternoon|evening), Jordan/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Earnings at a glance' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Active offers' })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Mount a TV on the wall/ }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /Anchor a tall bookshelf to the wall/ }).first()).toBeVisible();
 });

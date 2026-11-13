@@ -41,7 +41,7 @@ test('the booked helper sees the address once the booking is confirmed', async (
   test.skip(testInfo.project.name !== 'app-mobile', 'read-only; one project is enough');
   await devSignIn(page, 'jordan@example.test');
   await page.goto('/app/bookings/bkg_tv');
-  await expect(page.getByRole('heading', { level: 1, name: 'Mount a TV on the wall' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'Anchor a tall bookshelf to the wall' })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(TV_ADDRESS).first()).toBeVisible();
 });
 
@@ -51,7 +51,7 @@ test('staff see the address only after giving a reason, and the access is logged
   const reason = `Checking the access notes for a support call (${Date.now().toString(36)}).`;
   await staffSignIn(page, 'alex@example.test');
   await page.goto('/admin/bookings/bkg_tv');
-  await expect(page.getByRole('heading', { level: 1, name: 'Mount a TV on the wall' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'Anchor a tall bookshelf to the wall' })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(TV_ADDRESS)).toHaveCount(0);
   await page.getByRole('button', { name: 'Show the address' }).click();
   const dialog = page.getByRole('dialog', { name: 'Show the address' });

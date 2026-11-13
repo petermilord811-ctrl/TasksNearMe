@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ActionHandler } from './actions';
+import type { ActionHandler, QueryHandler } from './actions';
 import type { CategorySlug, Cents, ISODateTime } from './common';
 import { emailField, zipField } from './forms';
 import type { PriceBreakdown, PricingInput } from './money';
@@ -53,6 +53,41 @@ export interface HomePageData {
   welcomeReward?: { amountCents: Cents; cohortLimit: number; spotsClaimed: number };
   /** The landing page's map of open tasks (UI-036). */
   map: LandingMapData;
+  /**
+   * The market's `ai_drafting` flag, and the app can draft (a writer is set up): the hero's assistant may offer
+   * "Draft it with AI", which carries the words to the posting wizard where the draft runs (signed in only).
+   */
+  aiDraftingEnabled: boolean;
+  /**
+   * Helpers in the market: active helpers with a verified ID, and how many of them have open time posted in the
+   * next 7 days. Counts only (no names); the hero shows them when they aren't 0.
+   */
+  helpers: { verified: number; openThisWeek: number };
+}
+
+/** "Write it with AI" in the landing page's assistant: a title and a description written from the visitor's words. */
+export interface LandingAiDraft {
+  title: string;
+  description: string;
+}
+
+/**
+ * - `too_short`: fewer than 3 characters.
+ * - `prohibited`: the words (or the request) are something that can't be posted.
+ * - `rate_limited`: this visitor, or everyone today, has used up the free drafts.
+ * - `unavailable`: AI drafting is off in this market, not set up, or failed.
+ */
+export type LandingAiSuggestResult =
+  | { ok: true; draft: LandingAiDraft }
+  | { ok: false; code: 'unavailable' | 'rate_limited' | 'prohibited' | 'too_short' };
+
+/**
+ * Handlers the landing page receives from its route (signed-out visitors). `onSuggestWithAi` runs only on an
+ * explicit click (never per keystroke), is rate-limited per visitor and per day, and stores nothing it's given.
+ * Absent (previews without a stand-in, tests): the assistant offers the wizard's "Draft it with AI" instead.
+ */
+export interface LandingHandlers {
+  onSuggestWithAi?: QueryHandler<{ text: string; category: CategorySlug }, LandingAiSuggestResult>;
 }
 
 /**
@@ -71,19 +106,29 @@ export interface TaskMapPin {
   budget: PricingInput;
   windowStart: ISODateTime;
   offerCount: number;
+  /** When it was posted (the hero's line of new tasks says "12 min ago"). */
+  postedAt: ISODateTime;
+}
+
+/** A neighborhood of the market, by its approximate center (for "go to a neighborhood" on the map). */
+export interface MapArea {
+  name: string;
+  point: { lat: number; lng: number };
 }
 
 /**
  * The map on the landing page: the market's center and service radius (the first view, and what counts as
  * "near you"), the tile style the app chose (`styleUrl`, a MapLibre style; the tiles' attribution must stay
- * visible), and up to 60 open in-person tasks, newest first. The visitor's own location, when they share it,
- * stays in the browser: compare it with `distanceMiles` from `@/shared/geo`.
+ * visible), the market's neighborhoods (alphabetical), and up to 60 open in-person tasks, newest first. The
+ * visitor's own location, when they share it, stays in the browser: compare it with `distanceMiles` from
+ * `@/shared/geo`.
  */
 export interface LandingMapData {
   center: { lat: number; lng: number };
   serviceRadiusMiles: number;
   styleUrl: string;
   attribution: string;
+  areas: MapArea[];
   pins: TaskMapPin[];
 }
 

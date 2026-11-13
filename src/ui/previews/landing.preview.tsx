@@ -1,7 +1,8 @@
 import type { CategorySlug, HomePageData, PreviewEntry } from '@/contracts';
 import { routes } from '@/contracts';
-import { homeEmptyMapData, homeNoRewardData, homePageData, publicViewer } from '@/fixtures';
+import { homeEmptyMapData, homeNoRewardData, homePageData, previewSuggestTaskWithAi, publicViewer } from '@/fixtures';
 import type { LatLng } from '@/shared/geo';
+import { LandingHandlersProvider } from '@/ui/landing/landing-handlers';
 import { LandingProvider } from '@/ui/landing/landing-state';
 import { MapSection } from '@/ui/landing/map-section';
 import { HomeScreen } from '@/ui/screens/public';
@@ -22,7 +23,9 @@ function landing(id: string, title: string, data: HomePageData, theme: 'light' |
     render: () => (
       <div data-theme={theme} className="bg-background text-foreground">
         <PublicShell viewer={publicViewer} currentPath={routes.home()} variant="landing">
-          <HomeScreen data={data} now={now} mapMode="static" />
+          <LandingHandlersProvider handlers={{ onSuggestWithAi: previewSuggestTaskWithAi }}>
+            <HomeScreen data={data} now={now} mapMode="static" />
+          </LandingHandlersProvider>
         </PublicShell>
       </div>
     ),

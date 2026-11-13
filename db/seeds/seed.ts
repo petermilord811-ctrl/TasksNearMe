@@ -275,6 +275,10 @@ async function seedTasks(tx: Tx): Promise<void> {
       expiresAt: windowEnd,
       createdAt: publishedAt,
       updatedAt: now,
+      // A reseed brings a task back as seeded: visible (a test that hid it and failed must not leave it hidden).
+      hiddenAt: null,
+      hiddenByUserId: null,
+      hiddenReason: null,
     };
     await tx.insert(tasks).values(row).onConflictDoUpdate({ target: tasks.id, set: row });
   }
@@ -482,7 +486,7 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
 }
 
 /**
- * Bookings on seeded tasks: Ben's TV with Jordan, confirmed ($80; $88.00 charged), and Ruth's bookcase
+ * Bookings on seeded tasks: Ben's bookshelf anchoring with Jordan, confirmed ($80; $88.00 charged), and Ruth's bookcase
  * with Jordan, in progress since an hour ago ($70; $77.00 charged).
  */
 async function seedBookings(tx: Tx): Promise<void> {
@@ -605,7 +609,7 @@ async function seedBookings(tx: Tx): Promise<void> {
 /** Maya's saved cards (development provider): the Visa is her default. Both pay successfully. */
 /**
  * A few notifications that match the seeded bookings: Ruth hears that Jordan arrived (unread), Ben and
- * Jordan heard that the TV booking was confirmed (read).
+ * Jordan heard that the bookshelf booking was confirmed (read).
  */
 async function seedNotifications(tx: Tx): Promise<void> {
   const now = Date.now();
@@ -613,8 +617,8 @@ async function seedNotifications(tx: Tx): Promise<void> {
   await tx.insert(notifications).values([
     { id: 'ntf_seed_ruth_arrived', userId: 'usr_ruth', type: 'helper_arrived', title: 'Assemble a bookcase', actorName: 'Jordan T.', target: { kind: 'booking', bookingId: 'bkg_bookcase' }, sourceEventId: 'seed:ruth_arrived', createdAt: at(50) },
     { id: 'ntf_seed_ruth_on_way', userId: 'usr_ruth', type: 'helper_on_the_way', title: 'Assemble a bookcase', actorName: 'Jordan T.', target: { kind: 'booking', bookingId: 'bkg_bookcase' }, sourceEventId: 'seed:ruth_on_way', createdAt: at(75), readAt: at(70) },
-    { id: 'ntf_seed_ben_tv', userId: 'usr_ben', type: 'booking_confirmed', title: 'Mount a TV on the wall', target: { kind: 'booking', bookingId: 'bkg_tv' }, sourceEventId: 'seed:ben_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
-    { id: 'ntf_seed_jordan_tv', userId: 'usr_jordan', type: 'booking_confirmed', title: 'Mount a TV on the wall', actorName: 'Ben W.', target: { kind: 'booking', bookingId: 'bkg_tv' }, sourceEventId: 'seed:jordan_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
+    { id: 'ntf_seed_ben_tv', userId: 'usr_ben', type: 'booking_confirmed', title: 'Anchor a tall bookshelf to the wall', target: { kind: 'booking', bookingId: 'bkg_tv' }, sourceEventId: 'seed:ben_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
+    { id: 'ntf_seed_jordan_tv', userId: 'usr_jordan', type: 'booking_confirmed', title: 'Anchor a tall bookshelf to the wall', actorName: 'Ben W.', target: { kind: 'booking', bookingId: 'bkg_tv' }, sourceEventId: 'seed:jordan_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
   ]);
 }
 

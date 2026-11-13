@@ -82,7 +82,7 @@ export const adminUserJordanData: AdminUserPageData = {
   user: { ...jordanRow, phone: { last4: '0201', verified: true } },
   bookings: [
     { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', role: 'helper', status: 'disputed', start: '2026-11-21T16:30:00.000Z', amountCents: 5400 },
-    { id: 'bkg_tv', title: 'Mount a TV on the wall', role: 'helper', status: 'confirmed', start: '2026-11-25T18:00:00.000Z', amountCents: 7200 },
+    { id: 'bkg_tv', title: 'Anchor a tall bookshelf to the wall', role: 'helper', status: 'confirmed', start: '2026-11-25T18:00:00.000Z', amountCents: 7200 },
   ],
   cases: adminCasesPageData.cases.slice(0, 1),
   rewards: [jordanWelcome],

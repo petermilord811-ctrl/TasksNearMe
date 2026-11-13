@@ -8,7 +8,7 @@ import { devSignIn } from './support/sign-in';
  */
 
 async function openAction(page: Page, name: string) {
-  await expect(page.getByRole('heading', { level: 1, name: 'Mount a TV on the wall' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'Anchor a tall bookshelf to the wall' })).toBeVisible({ timeout: 30_000 });
   const more = page.getByRole('button', { name: 'More' });
   if (await more.isVisible()) await more.click();
   // Phones keep the rest of the actions under "More" (a menu).
@@ -23,7 +23,7 @@ test('the cancel sheet shows the refund from the policy', async ({ page }, testI
   // Days before the start: everything back.
   await expect(page.getByText('$88.00').last()).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Go back' }).first().click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Mount a TV on the wall' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Anchor a tall bookshelf to the wall' })).toBeVisible();
 });
 
 test('a safety report puts 911 first and reaches support', async ({ page }, testInfo) => {

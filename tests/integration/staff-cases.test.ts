@@ -42,7 +42,7 @@ describe('the queues and the case list', () => {
     expect(home.queues.find((queue) => queue.queue === 'disputes')).toMatchObject({ openCount: expect.any(Number) });
     expect(home.queues.find((queue) => queue.queue === 'disputes')!.slaBreaches).toBeGreaterThanOrEqual(1);
     const list = await getAdminCases(db, alex, { queue: 'disputes', status: 'active', mine: false }, new Date());
-    expect(list.cases.find((row) => row.id === caseId)).toMatchObject({ subject: 'Mount a TV on the wall', slaBreached: true, awaitingReply: true, priority: 'high' });
+    expect(list.cases.find((row) => row.id === caseId)).toMatchObject({ subject: 'Anchor a tall bookshelf to the wall', slaBreached: true, awaitingReply: true, priority: 'high' });
   });
 });
 

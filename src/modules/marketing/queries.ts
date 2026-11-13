@@ -1,4 +1,5 @@
 import 'server-only';
+import { and, asc, count, countDistinct, eq, gt, isNotNull, lt } from 'drizzle-orm';
 import { cacheLife, cacheTag } from 'next/cache';
 import type {
   BecomeHelperPageData,
@@ -23,9 +24,14 @@ import {
   listCategoryViews,
   listPublicMarketSlugs,
 } from '@/modules/markets/queries';
+import { users } from '@/modules/accounts/schema';
+import { availabilityPosts } from '@/modules/availability/schema';
+import { areas as areaTable } from '@/modules/markets/schema';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { countFoundingHelpers, getHelperProfile, listActiveHelperHandles, listPublicHelpers } from '@/modules/profiles/queries';
 import { BOARD_PAGE_SIZE } from '@/modules/tasks/projections';
 import { findPublicTask, listBoardTasks, listRecentOpenTasks } from '@/modules/tasks/queries';
+import { taskDrafter } from '@/modules/tasks/server';
 import { db } from '@/platform/db/client';
 import { buildBecomeHelperPageData, buildPricingPageData, landingFeeExamples } from './page-data';
 
@@ -66,7 +72,7 @@ export async function getHomePageData(): Promise<WithNow<HomePageData> | null> {
   if (!page) return null;
   // Pricing transparency and the founding reward, from the same sources as /pricing and /become-a-helper.
   const { market, policy } = await defaultMarketPolicy();
-  const [flags, foundingSpotsClaimed] = await Promise.all([getFlags(market.id), countFoundingHelpers(market.id)]);
+  const [flags, foundingSpotsClaimed, helpers] = await Promise.all([getFlags(market.id), countFoundingHelpers(market.id), countLandingHelpers(market.id, new Date(page.now))]);
   const helper = buildBecomeHelperPageData({ fees: policy.fees, flags, foundingSpotsClaimed });
   const reward = helper.welcomeReward;
   return {
@@ -77,8 +83,45 @@ export async function getHomePageData(): Promise<WithNow<HomePageData> | null> {
       feeExamples: landingFeeExamples(policy.fees),
       ...(reward ? { welcomeReward: { amountCents: reward.amountCents, cohortLimit: reward.cohortLimit, spotsClaimed: reward.spotsClaimed } } : {}),
       map: await landingMap(market),
+      // The wizard drafts with AI only when the market allows it and a writer is set up (as on /app/tasks/new).
+      aiDraftingEnabled: Boolean(flags.ai_drafting) && taskDrafter !== null,
+      helpers,
     },
   };
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The hero's helper counts: active helpers (and active accounts) in the market with a verified ID, and how many
+ * of those have open time posted that runs into the next 7 days. Counts only.
+ */
+async function countLandingHelpers(marketId: string, now: Date): Promise<HomePageData['helpers']> {
+  const verifiedHelper = and(eq(helperProfiles.status, 'active'), isNotNull(helperProfiles.idVerifiedAt));
+  const [verified, open] = await Promise.all([
+    db
+      .select({ value: count() })
+      .from(helperProfiles)
+      .innerJoin(users, eq(users.id, helperProfiles.userId))
+      .innerJoin(areaTable, eq(areaTable.id, helperProfiles.areaId))
+      .where(and(eq(areaTable.marketId, marketId), verifiedHelper, eq(users.status, 'active'))),
+    db
+      .select({ value: countDistinct(availabilityPosts.helperUserId) })
+      .from(availabilityPosts)
+      .innerJoin(helperProfiles, eq(helperProfiles.userId, availabilityPosts.helperUserId))
+      .innerJoin(users, eq(users.id, helperProfiles.userId))
+      .where(
+        and(
+          eq(availabilityPosts.marketId, marketId),
+          eq(availabilityPosts.status, 'active'),
+          gt(availabilityPosts.endAt, now),
+          lt(availabilityPosts.startAt, new Date(now.getTime() + WEEK_MS)),
+          verifiedHelper,
+          eq(users.status, 'active'),
+        ),
+      ),
+  ]);
+  return { verified: verified[0]?.value ?? 0, openThisWeek: open[0]?.value ?? 0 };
 }
 
 /** Up to 60 open in-person tasks for the landing page's map (public points only). */
@@ -86,7 +129,14 @@ const MAP_PINS = 60;
 const KM_PER_MILE = 1.609344;
 
 async function landingMap(market: { id: string; centerLat: number; centerLng: number; serviceRadiusKm: number }): Promise<LandingMapData> {
-  const open = await listRecentOpenTasks(db, { marketId: market.id, limit: MAP_PINS, now: new Date() });
+  const [open, areaRows] = await Promise.all([
+    listRecentOpenTasks(db, { marketId: market.id, limit: MAP_PINS, now: new Date() }),
+    db
+      .select({ name: areaTable.name, lat: areaTable.centerLat, lng: areaTable.centerLng })
+      .from(areaTable)
+      .where(eq(areaTable.marketId, market.id))
+      .orderBy(asc(areaTable.name)),
+  ]);
   const pins: TaskMapPin[] = open.flatMap((task) =>
     task.location.kind === 'local'
       ? [
@@ -101,6 +151,7 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
             budget: task.budget,
             windowStart: task.schedule.windowStart,
             offerCount: task.offerCount,
+            postedAt: task.postedAt,
           },
         ]
       : [],
@@ -108,9 +159,11 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
   return {
     center: { lat: market.centerLat, lng: market.centerLng },
     serviceRadiusMiles: Math.round(market.serviceRadiusKm / KM_PER_MILE),
-    // Any MapLibre style; OpenFreeMap needs no key or account (development default).
-    styleUrl: process.env.MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/positron',
+    // Any MapLibre style; OpenFreeMap needs no key or account (development default). "liberty" carries the
+    // detail the map shows close in (street names, neighborhoods, footprints, 3D buildings, a few places).
+    styleUrl: process.env.MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/liberty',
     attribution: process.env.MAP_ATTRIBUTION || 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
+    areas: areaRows.map((row) => ({ name: row.name, point: { lat: row.lat, lng: row.lng } })),
     pins,
   };
 }

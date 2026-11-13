@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { createTranslator, NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes, type CategorySlug, type HomePageData } from '@/contracts';
-import { homeEmptyMapData, homeNoRewardData, homePageData } from '@/fixtures';
+import { austinMapAreas, austinMapPins, cleaningPublicTask, homeEmptyMapData, homeNoRewardData, homePageData, homePrelaunchData } from '@/fixtures';
 import { formatMoney } from '@/shared/format';
 import { distanceMiles, type LatLng } from '@/shared/geo';
 import messages from '../../../../messages/en/ui';
@@ -157,11 +157,127 @@ describe('HomeScreen (the landing page)', () => {
     expect(container.textContent).not.toMatch(/\d+ (Example|Sample) (Lane|Street|Road)/);
   });
 
+  it('reads a request in the assistant: the kind of help, a title, the typical price, then on to posting with those words', () => {
+    show();
+    const input = screen.getByRole('textbox', { name: t('hero.askPrompt') });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'I need help to assemble an IKEA desk' } });
+    const panel = screen.getByRole('region', { name: t('assistant.panelLabel') });
+    expect(within(panel).getByRole('button', { name: t('assistant.changeCategory', { category: categoryName('furniture-assembly') }) })).toBeInTheDocument();
+    expect(within(panel).getByText('“Assemble an IKEA desk”')).toBeInTheDocument();
+    const furniture = homePageData.categories.find((category) => category.slug === 'furniture-assembly')!;
+    expect(within(panel).getByText(t('categories.range', { low: formatMoney(furniture.priceGuidance.lowCents), high: formatMoney(furniture.priceGuidance.highCents) }), { exact: false })).toBeInTheDocument();
+    expect(within(panel).getByRole('link', { name: t('assistant.continue') })).toHaveAttribute('href', routes.app.newTask({ category: 'furniture-assembly', describe: 'I need help to assemble an IKEA desk' }));
+  });
+
+  it('lets the visitor pick another kind of help when the assistant guesses wrong, or when nothing matches', () => {
+    show();
+    const input = screen.getByRole('textbox', { name: t('hero.askPrompt') });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'something for my grandmother' } });
+    const panel = screen.getByRole('region', { name: t('assistant.panelLabel') });
+    expect(within(panel).getByText(t('assistant.pick'))).toBeInTheDocument();
+    fireEvent.click(within(panel).getByRole('button', { name: categoryName('computer-help') }));
+    expect(within(panel).getByRole('link', { name: t('assistant.continue') })).toHaveAttribute('href', routes.app.newTask({ category: 'computer-help', describe: 'something for my grandmother' }));
+  });
+
+  it('finds tasks in your own words on the map: "I have a truck" shows moving help', async () => {
+    show();
+    const map = section(`${t('map.title')} ${t('map.titleAccent')}`);
+    fireEvent.change(within(map).getByPlaceholderText(t('map.smartPlaceholder')), { target: { value: 'I have a truck' } });
+    const filter = within(map).getByRole('group', { name: t('map.filterLabel') });
+    await waitFor(() => expect(within(filter).getByRole('button', { name: categoryName('moving-help') })).toHaveAttribute('aria-pressed', 'true'));
+    expect(within(map).getByText(t('map.smartShowing', { category: categoryName('moving-help') }), { exact: false })).toBeInTheDocument();
+  });
+
   it('builds every call to action with the route builders', () => {
     show();
     for (const link of screen.getAllByRole('link', { name: t('hero.primary') })) expect(link).toHaveAttribute('href', routes.app.newTask());
+    // The hero's main call to action is the assistant's own button: it posts with whatever's typed.
+    const assistant = screen.getByRole('search', { name: t('assistant.label') });
+    expect(assistant).toHaveAttribute('action', routes.app.newTask());
+    expect(within(assistant).getByRole('button', { name: t('hero.primary') })).toHaveAttribute('type', 'submit');
     expect(screen.getAllByRole('link', { name: t('hero.secondary') })[0]).toHaveAttribute('href', routes.becomeAHelper());
     expect(screen.getByRole('link', { name: t('map.browseAll') })).toHaveAttribute('href', routes.taskBoard(homePageData.market.slug));
     expect(screen.getByRole('link', { name: t('pricing.link') })).toHaveAttribute('href', routes.pricing());
+  });
+
+  const hero = () => document.querySelector<HTMLElement>('section[aria-labelledby="hero-title"]')!;
+
+  it('shows the newest open task in the hero, linking to its page, and narrows it to a picked neighborhood', async () => {
+    show();
+    const newest = austinMapPins[0]!;
+    const newestName = new RegExp(newest.title.replace(/[()]/g, '\\$&'));
+    expect(within(hero()).getByRole('link', { name: newestName })).toHaveAttribute('href', routes.publicTask(newest.slug));
+
+    // The market line is the neighborhood picker; a pick names the neighborhood and narrows the line.
+    const everywhere = t('hero.area.everywhere', { market: homePageData.market.name });
+    fireEvent.click(within(hero()).getByRole('button', { name: new RegExp(t('hero.area.button', { area: everywhere })) }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hyde Park' }));
+    expect(within(hero()).getByRole('button', { name: new RegExp(t('hero.area.button', { area: 'Hyde Park' })) })).toBeInTheDocument();
+    expect(within(hero()).getByRole('link', { name: new RegExp(cleaningPublicTask.title) })).toHaveAttribute('href', routes.publicTask(cleaningPublicTask.slug));
+    // The line that leaves slides out first.
+    await waitFor(() => expect(within(hero()).queryByRole('link', { name: newestName })).not.toBeInTheDocument());
+    expect(austinMapAreas.some((area) => area.name === 'Hyde Park')).toBe(true);
+  });
+
+  it('switches to helpers: their headline, "I can…", matching open tasks, the reward, and See these tasks', () => {
+    show();
+    fireEvent.click(within(hero()).getByRole('button', { name: new RegExp(`^${t('hero.audience.helper')}`) }));
+    expect(text(screen.getByRole('heading', { level: 1 }))).toBe(`${t('hero.helperMode.line1')} ${t('hero.helperMode.line2')} ${t('hero.helperMode.line3Vivid')}${t('hero.helperMode.line3Rest')}`);
+    const input = within(hero()).getByRole('textbox', { name: new RegExp(t('assistant.helperPrompt')) });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'I have a truck' } });
+    const panel = screen.getByRole('region', { name: t('assistant.helperPanelLabel') });
+    const moving = austinMapPins.filter((pin) => pin.categorySlug === 'moving-help').length;
+    // Shown in the panel, and said once for screen readers (the status stays mounted beside the panel).
+    const open = t('assistant.helperOpen', { count: moving, place: homePageData.market.name });
+    expect(within(panel).getByText(open)).toBeInTheDocument();
+    expect(within(hero()).getAllByText(open)).toHaveLength(2);
+    const reward = homePageData.welcomeReward!;
+    expect(within(panel).getByText(t('hero.reward.badge', { amount: formatMoney(reward.amountCents), limit: reward.cohortLimit }))).toBeInTheDocument();
+    expect(within(panel).getByRole('link', { name: t('assistant.helperBecome') })).toHaveAttribute('href', routes.becomeAHelper());
+    fireEvent.click(within(panel).getByRole('button', { name: t('assistant.helperSee') }));
+    const filter = screen.getByRole('group', { name: t('map.filterLabel') });
+    expect(within(filter).getByRole('button', { name: categoryName('moving-help') })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('explains each promise, and counts the verified helpers when there are some', () => {
+    show();
+    const chips = within(hero()).getByRole('list', { name: t('hero.trustChips.label') });
+    fireEvent.click(within(chips).getByRole('button', { name: t('hero.trustChips.verifiedCount', { count: homePageData.helpers.verified }) }));
+    // The same promise is spelled out further down the page; this is the chip's own explanation.
+    const popover = screen.getByRole('dialog');
+    expect(within(popover).getByText(t('hero.trustChips.verifiedBody'))).toBeInTheDocument();
+    expect(within(popover).getByText(t('hero.trustChips.openThisWeek', { count: homePageData.helpers.openThisWeek }))).toBeInTheDocument();
+    expect(within(popover).getByRole('link', { name: t('hero.trustChips.learnTrust') })).toHaveAttribute('href', routes.trustAndSafety());
+    cleanup();
+
+    show(homePrelaunchData);
+    expect(within(hero()).getByRole('button', { name: t('hero.trustChips.verified') })).toBeInTheDocument();
+  });
+
+  it('offers "Draft it with AI" only when the market allows it, carrying the words and the kind of help', () => {
+    show();
+    const ask = () => {
+      const input = screen.getByRole('textbox', { name: t('hero.askPrompt') });
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: 'I need help to assemble an IKEA desk' } });
+      return screen.getByRole('region', { name: t('assistant.panelLabel') });
+    };
+    expect(within(ask()).getByRole('link', { name: t('assistant.aiDraft') })).toHaveAttribute(
+      'href',
+      routes.app.newTask({ category: 'furniture-assembly', describe: 'I need help to assemble an IKEA desk', ai: true }),
+    );
+    cleanup();
+
+    show(homePrelaunchData);
+    expect(within(ask()).queryByRole('link', { name: t('assistant.aiDraft') })).not.toBeInTheDocument();
+  });
+
+  it("suggests examples for the season (it's fall in the fixture)", () => {
+    show();
+    const input = screen.getByRole('textbox', { name: t('hero.askPrompt') });
+    expect(input).toHaveAttribute('placeholder', expect.stringMatching(new RegExp(Object.values(messages.landing.hero.seasons.fall).join('|'))));
   });
 });

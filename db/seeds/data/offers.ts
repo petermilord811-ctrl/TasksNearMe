@@ -96,7 +96,7 @@ export const SEED_OFFERS: SeedOffer[] = [
     helperUserId: 'usr_jordan',
     pricing: { type: 'fixed', priceCents: 8000 },
     startOffsetMinutes: 0,
-    message: 'I mount TVs often and bring a level and my own drill bits.',
+    message: 'I anchor furniture often and bring a level, a stud finder and my own drill bits.',
     brings: ['Drill', 'Level'],
     revision: 1,
     submittedHoursAgo: 50,

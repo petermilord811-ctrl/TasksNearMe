@@ -36,7 +36,7 @@ export const adminBookingRows: AdminBookingRow[] = [
 ];
 
 const upcomingRows: AdminBookingRow[] = [
-  row({ id: 'bkg_tv', title: 'Mount a TV on the wall', categorySlug: 'furniture-assembly', status: 'confirmed', start: '2026-11-25T20:00:00.000Z', client: ben, helper: jordan, totalCents: 8800, flags: [] }),
+  row({ id: 'bkg_tv', title: 'Anchor a tall bookshelf to the wall', categorySlug: 'furniture-assembly', status: 'confirmed', start: '2026-11-25T20:00:00.000Z', client: ben, helper: jordan, totalCents: 8800, flags: [] }),
   row({ id: 'bkg_moving', title: 'Help loading a moving truck', categorySlug: 'moving-help', status: 'in_progress', start: '2026-11-22T15:00:00.000Z', client: chris, helper: jordan, totalCents: 15400, flags: [] }),
 ];
 

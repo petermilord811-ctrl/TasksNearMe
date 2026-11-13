@@ -79,7 +79,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     resolver: zodResolver(schema),
     defaultValues: initialValues ?? {
       categorySlug: data.initialCategory,
-      title: '', description: '', details: {}, photoIds: [],
+      title: data.initialTitle ?? '', description: data.initialDescription ?? '', details: {}, photoIds: [],
       location: { mode: 'local', placeId: '' }, schedule: { date: '', flexible: false },
       budget: category?.defaultPricingType === 'hourly' ? { type: 'hourly', rateCents: 0, estimatedHours: category.minHours ?? 1, hoursCap: category.minHours ?? 1 } : { type: 'fixed', priceCents: 0 },
     },
@@ -99,6 +99,16 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   const [restored, setRestored] = useState(false);
   const [restoringPhotos, setRestoringPhotos] = useState(false);
   const [photoRestoreFailed, setPhotoRestoreFailed] = useState(false);
+  // "Draft it with AI" from the landing page: the describe step drafts once, the first time it shows.
+  const [autoDraft, setAutoDraft] = useState(Boolean(data.autoDraft && data.aiDraftingEnabled && data.initialDescription));
+  const autoDraftStarted = useCallback(() => {
+    setAutoDraft(false);
+    // A reload or Back must not start another draft (each one is a paid AI call and counts toward the hourly limit).
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('ai')) return;
+    url.searchParams.delete('ai');
+    window.history.replaceState(window.history.state, '', url);
+  }, []);
   const [invalid, setInvalid] = useState(!!initialResult && !initialResult.ok && initialResult.code === 'validation_failed');
   const [focusField, setFocusField] = useState<string | undefined>(resultFields(initialResult).find((name) => stepForField(name) === step));
   const heading = useRef<HTMLHeadingElement>(null);
@@ -262,7 +272,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
       <fieldset disabled={pending || !!result?.ok} className="min-w-0 flex-1 space-y-6">
         <legend className="mb-5 font-heading text-xl font-semibold">{t(`steps.${step}`)}</legend>
         {step === 'category' && <CategoryStep data={data} />}
-        {step === 'describe' && <DescribeStep data={data} handlers={handlers} initialSuggestion={initialSuggestion} />}
+        {step === 'describe' && <DescribeStep data={data} handlers={handlers} initialSuggestion={initialSuggestion} autoDraft={autoDraft} onAutoDraftStarted={autoDraftStarted} />}
         {step === 'details' && values.categorySlug && <DetailsStep category={values.categorySlug} />}
         {step === 'photos' && <PhotosStep data={data} handlers={handlers} photos={photos} onPhotosChange={setPhotos} onBusyChange={setUploading} />}
         {step === 'where' && <LocationStep data={data} handlers={handlers} selectedAddress={address} onAddressChange={setAddress} initialSuggestions={initialSuggestions} />}

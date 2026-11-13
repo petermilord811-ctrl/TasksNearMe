@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
-import type { CategorySlug } from '@/contracts';
+import type { CategorySlug, MapArea } from '@/contracts';
 import type { LatLng } from '@/shared/geo';
 
 export type VisitorLocation =
@@ -21,6 +21,9 @@ export interface PointerSample {
 /** Where the task list and map live on the page (the hero's cards scroll here). */
 export const MAP_SECTION_ID = 'tasks-near-you';
 
+/** Who the hero speaks to: someone who needs help (posts tasks), or someone who can help (a helper). */
+export type Audience = 'poster' | 'helper';
+
 interface LandingState {
   /** The category picked with a click (the map's filter): it stays until another click. */
   selectedCategory: CategorySlug | null;
@@ -37,11 +40,21 @@ interface LandingState {
   focusedTaskId: string | null;
   /** Scrolls to the map and lights the task there; shows every category if the filter hides it. */
   focusTask: (task: { id: string; categorySlug: CategorySlug }) => void;
+  /** Picks a task on the map itself (its card stays open), or clears the pick; no scrolling. */
+  pickTask: (id: string | null) => void;
   /** The task to light up: the one under the pointer, otherwise the picked one. */
   litTaskId: string | null;
   location: VisitorLocation;
   requestLocation: () => void;
   pointer: MutableRefObject<PointerSample>;
+  /** The hero's switch: "I need help" or "I can help". */
+  audience: Audience;
+  setAudience: (audience: Audience) => void;
+  /** A neighborhood picked in the hero or the map's explorer (null: the whole market). */
+  area: MapArea | null;
+  /** Counts picks, so picking the same neighborhood again still flies the map there. */
+  areaPicks: number;
+  pickArea: (area: MapArea | null) => void;
 }
 
 const LandingContext = createContext<LandingState | null>(null);
@@ -55,7 +68,9 @@ function prefersReducedMotion(): boolean {
  * map's filter narrows the list, flies the map to those tasks, and tints the hero; a task card in the hero
  * scrolls to the map and lights its pin and row. Pointing previews: hovering a category anywhere tints the
  * page and quiets other pins without touching the filter. The visitor's location is asked for only when they
- * press the button, and it never leaves the browser.
+ * press the button, and it never leaves the browser. The hero's switch says who the page speaks to (someone who
+ * needs help, or a helper), and a neighborhood picked in the hero or the map's explorer is the same pick: the
+ * map flies there and the hero's counts narrow to it.
  */
 export function LandingProvider({ children, initialLocation, initialCategory = null }: { children: ReactNode; initialLocation?: LatLng; initialCategory?: CategorySlug | null }) {
   const [selectedCategory, setSelectedCategory] = useState<CategorySlug | null>(initialCategory);
@@ -63,6 +78,8 @@ export function LandingProvider({ children, initialLocation, initialCategory = n
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [location, setLocation] = useState<VisitorLocation>(initialLocation ? { status: 'granted', point: initialLocation } : { status: 'idle' });
+  const [audience, setAudience] = useState<Audience>('poster');
+  const [area, setArea] = useState<{ value: MapArea | null; picks: number }>({ value: null, picks: 0 });
   const pointer = useRef<PointerSample>({ x: 0.5, y: 0.35, active: false });
 
   useEffect(() => {
@@ -95,6 +112,9 @@ export function LandingProvider({ children, initialLocation, initialCategory = n
     document.getElementById(MAP_SECTION_ID)?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
   }, []);
 
+  const pickTask = useCallback((id: string | null) => setFocusedTaskId(id), []);
+  const pickArea = useCallback((value: MapArea | null) => setArea((current) => ({ value, picks: current.picks + 1 })), []);
+
   const requestLocation = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setLocation({ status: 'unavailable' });
@@ -119,12 +139,18 @@ export function LandingProvider({ children, initialLocation, initialCategory = n
       setHighlightedTaskId,
       focusedTaskId,
       focusTask,
+      pickTask,
       litTaskId: highlightedTaskId ?? focusedTaskId,
       location,
       requestLocation,
       pointer,
+      audience,
+      setAudience,
+      area: area.value,
+      areaPicks: area.picks,
+      pickArea,
     }),
-    [selectedCategory, selectCategory, previewCategory, highlightedTaskId, focusedTaskId, focusTask, location, requestLocation],
+    [selectedCategory, selectCategory, previewCategory, highlightedTaskId, focusedTaskId, focusTask, pickTask, location, requestLocation, audience, area, pickArea],
   );
   return <LandingContext.Provider value={value}>{children}</LandingContext.Provider>;
 }

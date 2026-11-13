@@ -40,7 +40,7 @@ Tokens live in `src/ui/theme/globals.css` (the single global stylesheet, importe
 
 **Category colors** (map dots, category icons): `--cat-furniture-assembly` `#F07A2B`, `--cat-moving-help` `#8B5CF6`, `--cat-yard-cleanup` `#2E9E68`, `--cat-light-cleaning` `#E5508A`, `--cat-computer-help` `#3B7BF6` (lighter in dark mode). They're decoration: always show the category's name too.
 
-**Glass** (`--glass`, `--glass-strong`, `--glass-border`, `--glass-edge`, `--glass-shadow`, and the `glass` utility): the floating top bar, pin cards, the ask pill. **Map** (`--map-land`, `--map-water`, `--map-park`, `--map-road`, `--map-road-major`, `--map-label`, `--map-building`): the base map is recolored with these so it sits in the page.
+**Glass** (`--glass`, `--glass-strong`, `--glass-border`, `--glass-edge`, `--glass-shadow`, and the `glass` utility): the floating top bar, the hero's task cards, the map's explorer panel. The map's pin card is solid (`bg-card`), so nothing behind it shows through. **Map** (`--map-land`, `--map-water`, `--map-park`, `--map-road`, `--map-road-major`, `--map-road-casing`, `--map-label`, `--map-label-strong`, `--map-water-label`, `--map-civic`, `--map-building`): the base map is recolored with these so it sits in the page. **Paper** (`--paper` and the `paper` utility): the landing page's faint warm marble, one tile under every section, light and dark.
 
 **Badge tones** (soft background + strong text; light-mode pairs checked for ≥ 4.5:1 contrast):
 

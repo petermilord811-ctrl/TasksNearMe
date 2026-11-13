@@ -39,11 +39,25 @@ test('staff find a booking that needs attention and open its task', async ({ pag
   await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
 });
 
+/**
+ * The patio task's public page shows the task, or "not found". It's cached: right after a change (or a reseed,
+ * which doesn't touch the cache) one reload may still serve the previous state while it refreshes in the
+ * background (measured: half a second after a restore it still said "not found", two seconds later the task).
+ */
+async function publicPageShows(page: Page, state: 'task' | 'not found') {
+  await expect(async () => {
+    await page.goto('/tasks/sweep-and-tidy-a-patio-windsor-park-7h3w');
+    const heading = state === 'task' ? page.getByRole('heading', { level: 1, name: 'Sweep and tidy a patio' }) : page.getByRole('heading', { name: /could not be found/i });
+    await expect(heading).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
 test('trust and safety hide a task from the public pages and restore it; the audit log shows both', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');
   test.setTimeout(240_000);
-  await page.goto('/tasks/sweep-and-tidy-a-patio-windsor-park-7h3w');
-  await expect(page.getByRole('heading', { level: 1, name: 'Sweep and tidy a patio' })).toBeVisible();
+  // The public page is cached and a reseed doesn't touch that cache, so one reload may show the state a previous
+  // run left (refreshed in the background); each public check reloads until it settles (see `publicPageShows`).
+  await publicPageShows(page, 'task');
 
   await staffSignIn(page, 'taylor@example.test');
   await page.goto('/admin/tasks/tsk_patio');
@@ -55,16 +69,14 @@ test('trust and safety hide a task from the public pages and restore it; the aud
   await expect(page.getByText('Saved. The task is updated.')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('heading', { name: 'Hidden from the public' })).toBeVisible();
 
-  await page.goto('/tasks/sweep-and-tidy-a-patio-windsor-park-7h3w');
-  await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
+  await publicPageShows(page, 'not found');
 
   await page.goto('/admin/tasks/tsk_patio');
   await page.getByRole('button', { name: 'Restore task' }).click();
   await page.getByRole('alertdialog').getByLabel('Reason').fill('Nothing unsafe; the poster confirmed the details.');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Restore task' }).click();
   await expect(page.getByText('Saved. The task is updated.')).toBeVisible({ timeout: 30_000 });
-  await page.goto('/tasks/sweep-and-tidy-a-patio-windsor-park-7h3w');
-  await expect(page.getByRole('heading', { level: 1, name: 'Sweep and tidy a patio' })).toBeVisible();
+  await publicPageShows(page, 'task');
 
   await staffSignIn(page, 'morgan@example.test');
   await page.goto('/admin/audit?targetType=task&targetId=tsk_patio');
@@ -89,7 +101,7 @@ test('finance sees the money: totals, what needs a look, and charges searched by
   await search.getByRole('button', { name: 'Search' }).click();
   await expect(page).toHaveURL(/tab=charges&q=ben%40example\.test$/, { timeout: 30_000 });
   // Ben paid $88.00 for the TV (seeded).
-  await expect(page.getByRole('listitem').filter({ hasText: 'Mount a TV on the wall' }).first().getByText('$88.00')).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Anchor a tall bookshelf to the wall' }).first().getByText('$88.00')).toBeVisible();
 });
 
 test('an admin adds a role and removes it; the audit log keeps both', async ({ page }, testInfo) => {

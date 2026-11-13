@@ -109,12 +109,12 @@ export const SEED_TASKS: SeedTask[] = [
   {
     // Booked with Jordan by the seed (a confirmed booking for the booking-page e2e; read-only there).
     id: 'tsk_tv',
-    slug: 'mount-a-tv-on-the-wall-crestview-6t1v',
+    slug: 'anchor-a-tall-bookshelf-to-the-wall-crestview-6t1v',
     posterId: 'usr_ben',
     categoryId: 'cat_furniture_assembly',
-    title: 'Mount a TV on the wall',
-    description: 'A 55-inch TV and its wall bracket, already unboxed. Drywall with studs; I have a stud finder.',
-    details: { itemType: 'other', itemCount: 1, wallAnchoring: true, toolsOnSite: true },
+    title: 'Anchor a tall bookshelf to the wall',
+    description: 'A tall bookshelf, already put together, that needs anti-tip anchoring into the studs. Drywall; I have a stud finder.',
+    details: { itemType: 'bookshelf', itemCount: 1, wallAnchoring: true, toolsOnSite: true },
     placeId: 'plc_crestview_88',
     unit: 'Unit 4',
     accessNotes: 'Side gate is unlocked.',

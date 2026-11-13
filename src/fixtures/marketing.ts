@@ -1,8 +1,10 @@
 import type {
   BecomeHelperPageData,
   CategoryPageData,
+  CategorySlug,
   CategoryView,
   HomePageData,
+  LandingAiSuggestResult,
   LandingMapData,
   MarketView,
   PricingPageData,
@@ -171,31 +173,49 @@ const pin = (
   budget: TaskMapPin['budget'],
   windowStart: string,
   offerCount: number,
-): TaskMapPin => ({ id, slug: `${id.slice(4).replaceAll('_', '-')}-${areaName.toLowerCase().replaceAll(' ', '-')}`, title, categorySlug, areaName, point, radiusMeters: 1609, budget, windowStart, offerCount });
+  postedAt: string,
+): TaskMapPin => ({ id, slug: `${id.slice(4).replaceAll('_', '-')}-${areaName.toLowerCase().replaceAll(' ', '-')}`, title, categorySlug, areaName, point, radiusMeters: 1609, budget, windowStart, offerCount, postedAt });
 
 export const austinMapPins: TaskMapPin[] = [
-  { ...pin('tsk_desk', deskPublicTask.title, 'furniture-assembly', 'Mueller', { lat: 30.2993, lng: -97.7036 }, { type: 'fixed', priceCents: 6000 }, '2026-11-21T16:00:00.000Z', 3), slug: deskPublicTask.slug },
-  { ...pin('tsk_cleaning', cleaningPublicTask.title, 'light-cleaning', 'Hyde Park', { lat: 30.3072, lng: -97.7291 }, { type: 'fixed', priceCents: 11000 }, '2026-11-25T15:00:00.000Z', 0), slug: cleaningPublicTask.slug },
-  { ...pin('tsk_yard', yardPublicTask.title, 'yard-cleanup', 'Crestview', { lat: 30.3479, lng: -97.7254 }, { type: 'fixed', priceCents: 12000 }, '2026-11-28T15:00:00.000Z', 1), slug: yardPublicTask.slug },
-  pin('tsk_shelves_map', 'Mount two floating shelves', 'furniture-assembly', 'Windsor Park', { lat: 30.3131, lng: -97.6934 }, { type: 'fixed', priceCents: 5500 }, '2026-11-24T19:00:00.000Z', 2),
-  pin('tsk_tv_map', 'Mount a TV on the wall', 'furniture-assembly', 'East Austin', { lat: 30.2641, lng: -97.7187 }, { type: 'fixed', priceCents: 8000 }, '2026-11-25T20:00:00.000Z', 1),
-  pin('tsk_moving_map', 'Help loading a moving truck', 'moving-help', 'North Loop', { lat: 30.3188, lng: -97.7228 }, { type: 'hourly', rateCents: 3500, estimatedHours: 3.5, hoursCap: 4 }, '2026-11-22T15:00:00.000Z', 2),
-  pin('tsk_couch_map', 'Carry a couch up two flights', 'moving-help', 'Travis Heights', { lat: 30.2476, lng: -97.7442 }, { type: 'hourly', rateCents: 4000, estimatedHours: 1.5, hoursCap: 2 }, '2026-11-23T22:00:00.000Z', 0),
-  pin('tsk_leaves_map', 'Rake leaves under two big oaks', 'yard-cleanup', 'Allandale', { lat: 30.3382, lng: -97.7468 }, { type: 'hourly', rateCents: 3000, estimatedHours: 3, hoursCap: 4 }, '2026-11-28T15:00:00.000Z', 1),
-  pin('tsk_garden_map', 'Weed and edge a small front garden', 'yard-cleanup', 'Bouldin Creek', { lat: 30.2521, lng: -97.7589 }, { type: 'fixed', priceCents: 7500 }, '2026-11-26T16:00:00.000Z', 0),
-  pin('tsk_kitchen_map', 'Deep clean a small kitchen', 'light-cleaning', 'Cherrywood', { lat: 30.2906, lng: -97.7124 }, { type: 'fixed', priceCents: 9000 }, '2026-11-24T15:00:00.000Z', 2),
-  pin('tsk_studio_map', 'Tidy a studio before guests arrive', 'light-cleaning', 'Zilker', { lat: 30.2619, lng: -97.7712 }, { type: 'fixed', priceCents: 7000 }, '2026-11-27T17:00:00.000Z', 0),
-  pin('tsk_printer_map', 'Set up a printer and Wi-Fi', 'computer-help', 'Downtown', { lat: 30.2689, lng: -97.7428 }, { type: 'fixed', priceCents: 4500 }, '2026-11-24T23:00:00.000Z', 1),
-  pin('tsk_bed_map', 'Assemble a bed frame', 'furniture-assembly', 'South Lamar', { lat: 30.2478, lng: -97.7699 }, { type: 'fixed', priceCents: 6500 }, '2026-11-29T16:00:00.000Z', 0),
-  pin('tsk_boxes_map', 'Unload boxes from a small trailer', 'moving-help', 'Circle C', { lat: 30.1862, lng: -97.8839 }, { type: 'hourly', rateCents: 3500, estimatedHours: 2, hoursCap: 3 }, '2026-11-30T15:00:00.000Z', 0),
+  { ...pin('tsk_desk', deskPublicTask.title, 'furniture-assembly', 'Mueller', { lat: 30.2993, lng: -97.7036 }, { type: 'fixed', priceCents: 6000 }, '2026-11-21T16:00:00.000Z', 3, deskPublicTask.postedAt), slug: deskPublicTask.slug },
+  { ...pin('tsk_cleaning', cleaningPublicTask.title, 'light-cleaning', 'Hyde Park', { lat: 30.3072, lng: -97.7291 }, { type: 'fixed', priceCents: 11000 }, '2026-11-25T15:00:00.000Z', 0, cleaningPublicTask.postedAt), slug: cleaningPublicTask.slug },
+  { ...pin('tsk_yard', yardPublicTask.title, 'yard-cleanup', 'Crestview', { lat: 30.3479, lng: -97.7254 }, { type: 'fixed', priceCents: 12000 }, '2026-11-28T15:00:00.000Z', 1, yardPublicTask.postedAt), slug: yardPublicTask.slug },
+  pin('tsk_shelves_map', 'Mount two floating shelves', 'furniture-assembly', 'Windsor Park', { lat: 30.3131, lng: -97.6934 }, { type: 'fixed', priceCents: 5500 }, '2026-11-24T19:00:00.000Z', 2, '2026-11-17T14:48:00.000Z'),
+  pin('tsk_anchor_map', 'Anchor a bookshelf to the wall', 'furniture-assembly', 'East Austin', { lat: 30.2641, lng: -97.7187 }, { type: 'fixed', priceCents: 8000 }, '2026-11-25T20:00:00.000Z', 1, '2026-11-17T13:20:00.000Z'),
+  pin('tsk_moving_map', 'Help loading a moving truck', 'moving-help', 'North Loop', { lat: 30.3188, lng: -97.7228 }, { type: 'hourly', rateCents: 3500, estimatedHours: 3.5, hoursCap: 4 }, '2026-11-22T15:00:00.000Z', 2, '2026-11-17T11:05:00.000Z'),
+  pin('tsk_couch_map', 'Carry a couch up two flights', 'moving-help', 'Travis Heights', { lat: 30.2476, lng: -97.7442 }, { type: 'hourly', rateCents: 4000, estimatedHours: 1.5, hoursCap: 2 }, '2026-11-23T22:00:00.000Z', 0, '2026-11-17T09:40:00.000Z'),
+  pin('tsk_leaves_map', 'Rake leaves under two big oaks', 'yard-cleanup', 'Allandale', { lat: 30.3382, lng: -97.7468 }, { type: 'hourly', rateCents: 3000, estimatedHours: 3, hoursCap: 4 }, '2026-11-28T15:00:00.000Z', 1, '2026-11-16T22:15:00.000Z'),
+  pin('tsk_garden_map', 'Weed and edge a small front garden', 'yard-cleanup', 'Bouldin Creek', { lat: 30.2521, lng: -97.7589 }, { type: 'fixed', priceCents: 7500 }, '2026-11-26T16:00:00.000Z', 0, '2026-11-16T20:30:00.000Z'),
+  pin('tsk_kitchen_map', 'Deep clean a small kitchen', 'light-cleaning', 'Cherrywood', { lat: 30.2906, lng: -97.7124 }, { type: 'fixed', priceCents: 9000 }, '2026-11-24T15:00:00.000Z', 2, '2026-11-16T16:10:00.000Z'),
+  pin('tsk_studio_map', 'Tidy a studio before guests arrive', 'light-cleaning', 'Zilker', { lat: 30.2619, lng: -97.7712 }, { type: 'fixed', priceCents: 7000 }, '2026-11-27T17:00:00.000Z', 0, '2026-11-16T12:00:00.000Z'),
+  pin('tsk_printer_map', 'Set up a printer and Wi-Fi', 'computer-help', 'Downtown', { lat: 30.2689, lng: -97.7428 }, { type: 'fixed', priceCents: 4500 }, '2026-11-24T23:00:00.000Z', 1, '2026-11-15T21:45:00.000Z'),
+  pin('tsk_bed_map', 'Assemble a bed frame', 'furniture-assembly', 'South Lamar', { lat: 30.2478, lng: -97.7699 }, { type: 'fixed', priceCents: 6500 }, '2026-11-29T16:00:00.000Z', 0, '2026-11-15T17:30:00.000Z'),
+  pin('tsk_boxes_map', 'Unload boxes from a small trailer', 'moving-help', 'Circle C', { lat: 30.1862, lng: -97.8839 }, { type: 'hourly', rateCents: 3500, estimatedHours: 2, hoursCap: 3 }, '2026-11-30T15:00:00.000Z', 0, '2026-11-15T10:00:00.000Z'),
 ];
 
-/** The map the landing page gets in development: OpenFreeMap's light style (no key), centered on Austin. */
+/** Austin's neighborhoods by their approximate centers (the seeded areas), alphabetical. */
+export const austinMapAreas: LandingMapData['areas'] = [
+  { name: 'Allandale', point: { lat: 30.339, lng: -97.748 } },
+  { name: 'Cherrywood', point: { lat: 30.287, lng: -97.713 } },
+  { name: 'Circle C', point: { lat: 30.186, lng: -97.885 } },
+  { name: 'Crestview', point: { lat: 30.346, lng: -97.723 } },
+  { name: 'Downtown', point: { lat: 30.2672, lng: -97.7431 } },
+  { name: 'East Austin', point: { lat: 30.262, lng: -97.721 } },
+  { name: 'Hyde Park', point: { lat: 30.306, lng: -97.727 } },
+  { name: 'Mueller', point: { lat: 30.2993, lng: -97.7036 } },
+  { name: 'North Loop', point: { lat: 30.318, lng: -97.72 } },
+  { name: 'Travis Heights', point: { lat: 30.247, lng: -97.746 } },
+  { name: 'Windsor Park', point: { lat: 30.311, lng: -97.693 } },
+  { name: 'Zilker', point: { lat: 30.26, lng: -97.769 } },
+];
+
+/** The map the landing page gets in development: OpenFreeMap's detailed style (no key), centered on Austin. */
 export const austinLandingMap: LandingMapData = {
   center: { lat: 30.2672, lng: -97.7431 },
   serviceRadiusMiles: 15,
-  styleUrl: 'https://tiles.openfreemap.org/styles/positron',
+  styleUrl: 'https://tiles.openfreemap.org/styles/liberty',
   attribution: 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
+  areas: austinMapAreas,
   pins: austinMapPins,
 };
 
@@ -208,6 +228,8 @@ export const homePageData: HomePageData = {
   feeExamples: [smallTaskBreakdown, deskBreakdown, largeTaskBreakdown],
   welcomeReward: { amountCents: 5000, cohortLimit: 100, spotsClaimed: 63 },
   map: austinLandingMap,
+  aiDraftingEnabled: true,
+  helpers: { verified: 23, openThisWeek: 9 },
 };
 
 /** No open in-person tasks yet: the map shows the service area and invites the first post. */
@@ -215,6 +237,9 @@ export const homeEmptyMapData: HomePageData = { ...homePageData, recentTasks: []
 
 /** The founding cohort is full (or the program is off): no reward on the landing page. */
 export const homeNoRewardData: HomePageData = { ...homePageData, welcomeReward: undefined };
+
+/** Before launch: no helpers verified yet, and no AI drafting (the hero hides both). */
+export const homePrelaunchData: HomePageData = { ...homePageData, aiDraftingEnabled: false, helpers: { verified: 0, openThisWeek: 0 } };
 
 export const furnitureCategoryPageData: CategoryPageData = {
   market: austinMarket,
@@ -258,3 +283,21 @@ export const becomeHelperNoRewardsData: BecomeHelperPageData = {
 };
 
 export const waitlistPageData: WaitlistPageData = { markets: [austinMarket] };
+
+/**
+ * Previews: "Write it with AI" answering the way the app's rule-based stand-in does (a tidy title from the words,
+ * a short description), after a short wait, so the landing previews show the whole flow with no network call.
+ */
+export async function previewSuggestTaskWithAi({ text }: { text: string; category: CategorySlug }): Promise<LandingAiSuggestResult> {
+  await new Promise((resolve) => setTimeout(resolve, 900));
+  const words = text.trim().replace(/^i (?:need|want) (?:help|someone) (?:to|with)\s+/i, '');
+  if (words.length < 3) return { ok: false, code: 'too_short' };
+  const title = `${words.charAt(0).toUpperCase()}${words.slice(1)}`.slice(0, 80);
+  return {
+    ok: true,
+    draft: {
+      title,
+      description: `${title}. I'd like it done carefully, and I'm happy to show you around first. Tools and parking are easy; tell me if you need anything from me.`,
+    },
+  };
+}

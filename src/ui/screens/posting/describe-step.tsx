@@ -14,9 +14,13 @@ export interface DescribeStepProps {
   data: PostTaskPageData;
   handlers: PostTaskHandlers;
   initialSuggestion?: AiTaskDraft;
+  /** Draft with AI from the person's words as soon as this step shows (the landing page asked for it). */
+  autoDraft?: boolean;
+  /** Called when that draft starts, so it runs only once. */
+  onAutoDraftStarted?: () => void;
 }
 
-export function DescribeStep({ data, handlers, initialSuggestion }: DescribeStepProps) {
+export function DescribeStep({ data, handlers, initialSuggestion, autoDraft = false, onAutoDraftStarted }: DescribeStepProps) {
   const t = useTranslations('postTask');
   const errors = useTranslations('forms');
   const id = useId();
@@ -24,7 +28,7 @@ export function DescribeStep({ data, handlers, initialSuggestion }: DescribeStep
   const category = useWatch({ control, name: 'categorySlug' });
   const title = useWatch({ control, name: 'title' }) ?? '';
   const description = useWatch({ control, name: 'description' }) ?? '';
-  const [text, setText] = useState('');
+  const [text, setText] = useState(data.initialDescription ?? '');
   const [suggestion, setSuggestion] = useState(initialSuggestion);
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<'unavailable' | 'rate_limited' | 'prohibited'>();
@@ -32,6 +36,7 @@ export function DescribeStep({ data, handlers, initialSuggestion }: DescribeStep
   const inFlight = useRef(false);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const latestDraft = useRef<() => Promise<void>>(async () => {});
 
   async function draftWithAi() {
     if (inFlight.current || !text.trim() || !category) return;
@@ -51,6 +56,24 @@ export function DescribeStep({ data, handlers, initialSuggestion }: DescribeStep
       if (mounted.current) setPending(false);
     }
   }
+
+  useEffect(() => {
+    latestDraft.current = draftWithAi;
+  });
+  // The landing page's "Draft it with AI": draft once, as soon as there's a category and words (after paint, so
+  // the step shows first; a timer, so a double-run effect in development doesn't draft twice).
+  const canAutoDraft = autoDraft && data.aiDraftingEnabled && Boolean(category) && Boolean(text.trim());
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!canAutoDraft || autoStarted.current) return;
+    const timer = window.setTimeout(() => {
+      if (autoStarted.current) return;
+      autoStarted.current = true;
+      onAutoDraftStarted?.();
+      void latestDraft.current();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [canAutoDraft, onAutoDraftStarted]);
 
   function useSuggestion() {
     if (!suggestion) return;

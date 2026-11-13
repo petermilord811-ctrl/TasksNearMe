@@ -39,7 +39,7 @@ describe('support requests', () => {
 
     const page = await getSupportPage(db, 'usr_ben');
     caseId = created.ok ? created.redirectTo!.split('/').pop()! : '';
-    expect(page.cases[0]).toMatchObject({ id: caseId, kind: 'request', status: 'open', topic: 'payment', subject: 'Mount a TV on the wall', bookingId: 'bkg_tv', viewerRole: 'poster', unread: false });
+    expect(page.cases[0]).toMatchObject({ id: caseId, kind: 'request', status: 'open', topic: 'payment', subject: 'Anchor a tall bookshelf to the wall', bookingId: 'bkg_tv', viewerRole: 'poster', unread: false });
     expect(page.bookings.map((booking) => booking.id)).toContain('bkg_tv');
     // Nobody else sees it.
     expect(await getSupportCasePage(db, 'usr_jordan', caseId, new Date())).toBeNull();

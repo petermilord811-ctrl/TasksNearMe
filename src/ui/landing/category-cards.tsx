@@ -8,7 +8,7 @@ import { routes, type CategoryView } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { Reveal, Spotlight } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
-import { CATEGORY_ICONS } from './ask-pill';
+import { CATEGORY_ICONS } from './category-icons';
 import { useOptionalLanding } from './landing-state';
 
 /**

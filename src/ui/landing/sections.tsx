@@ -26,7 +26,7 @@ function Heading({ id, eyebrow, title, accent, body, align = 'left' }: { id: str
 export function CategoriesSection({ data }: { data: HomePageData }) {
   const t = useTranslations('landing.categories');
   return (
-    <section aria-labelledby="categories-title" className="py-16 sm:py-24">
+    <section aria-labelledby="categories-title" className="py-20 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-content px-gutter">
         <Heading id="categories-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} body={t('body')} />
         <div className="mt-10"><CategoryCards categories={data.categories} /></div>
@@ -43,7 +43,7 @@ export function StepsSection() {
     { key: 'done', Icon: Repeat },
   ] as const;
   return (
-    <section aria-labelledby="steps-title" className="py-16 sm:py-24">
+    <section aria-labelledby="steps-title" className="py-20 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-content px-gutter">
         <Heading id="steps-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} />
         <Reveal className="relative mt-12">
@@ -90,7 +90,7 @@ export function PricingSection({ data }: { data: HomePageData }) {
   const t = useTranslations('landing.pricing');
   const fee = data.feeExample;
   return (
-    <section aria-labelledby="pricing-title" className="py-16 sm:py-24">
+    <section aria-labelledby="pricing-title" className="py-20 sm:py-28 lg:py-32">
       <div className="mx-auto grid max-w-content items-center gap-10 px-gutter lg:grid-cols-2 lg:gap-16">
         <div>
           <Heading id="pricing-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} body={t('body')} />
@@ -118,7 +118,7 @@ export function TrustSection() {
     { key: 'reviews', Icon: Star },
   ] as const;
   return (
-    <section aria-labelledby="trust-title" className="py-16 sm:py-24">
+    <section aria-labelledby="trust-title" className="py-20 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-content px-gutter">
         <Heading id="trust-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} />
         <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -153,7 +153,7 @@ export function HelpersSection({ data }: { data: HomePageData }) {
     { key: 'repeat', Icon: Repeat },
   ] as const;
   return (
-    <section aria-labelledby="helpers-title" className="py-16 sm:py-24">
+    <section aria-labelledby="helpers-title" className="py-20 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-content px-gutter">
         <Reveal variant="bloom" origin="50% 100%">
           <div className="relative overflow-hidden rounded-[2.25rem] border border-foreground/[0.07] bg-card/70 p-6 shadow-card sm:p-10 lg:p-14">
@@ -204,7 +204,7 @@ export function HelpersSection({ data }: { data: HomePageData }) {
 export function CoverageStrip({ data }: { data: HomePageData }) {
   const t = useTranslations('landing.coverage');
   return (
-    <section aria-labelledby="coverage-title" className="py-10">
+    <section aria-labelledby="coverage-title" className="py-14">
       <div className="mx-auto max-w-content px-gutter">
         <Reveal className="flex flex-col gap-4 rounded-3xl border border-dashed border-foreground/15 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -228,7 +228,7 @@ export function FaqSection() {
   const t = useTranslations('landing.faq');
   const keys = ['pay', 'address', 'verified', 'rebook', 'helper'] as const;
   return (
-    <section aria-labelledby="faq-title" className="py-16 sm:py-24">
+    <section aria-labelledby="faq-title" className="py-20 sm:py-28 lg:py-32">
       <div className="mx-auto grid max-w-content gap-10 px-gutter lg:grid-cols-[1fr_1.4fr]">
         <Heading id="faq-title" eyebrow={t('eyebrow')} title={t('title')} />
         <Reveal index={1}>
@@ -249,7 +249,7 @@ export function FaqSection() {
 export function ClosingSection({ data }: { data: HomePageData }) {
   const t = useTranslations('landing.closing');
   return (
-    <section aria-labelledby="closing-title" className="px-gutter pt-8 pb-20 sm:pb-28">
+    <section aria-labelledby="closing-title" className="px-gutter pt-12 pb-24 sm:pb-32">
       <Reveal variant="bloom" origin="50% 100%" className="mx-auto max-w-content">
         <div className="relative isolate overflow-hidden rounded-[2.5rem] px-6 py-16 text-center text-white sm:px-12 sm:py-24">
           <div aria-hidden="true" className="absolute inset-0 -z-10 [animation:hue-drift_14s_ease-in-out_infinite]" style={{ backgroundImage: 'linear-gradient(120deg, #3b1d8f, #7a2bd1 30%, #d2357a 62%, #ff7a45)', backgroundSize: '220% 220%' }} />

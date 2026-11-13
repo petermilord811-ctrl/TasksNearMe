@@ -132,7 +132,7 @@ const movingEarnings: EarningsRowView = {
 const lateCancellationEarnings: EarningsRowView = {
   id: 'ern_tv_comp',
   bookingId: 'bkg_tv_old',
-  title: 'Mount a TV on the wall',
+  title: 'Anchor a tall bookshelf to the wall',
   client: person(chris),
   kind: 'cancellation_compensation',
   amountCents: 1200,
