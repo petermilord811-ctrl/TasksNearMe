@@ -22,3 +22,4 @@ export * from '../../modules/messaging/schema';
 export * from '../../modules/earnings/schema';
 export * from '../../modules/notifications/schema';
 export * from '../../modules/badges/schema';
+export * from '../../modules/webhooks/schema';
