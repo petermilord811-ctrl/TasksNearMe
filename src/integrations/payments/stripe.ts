@@ -1,5 +1,5 @@
 import { CARD_BRANDS, type CardBrand } from '@/contracts';
-import type { AuthorizeResult, ChargeMethod, ChargeResult, CollectedCard, PaymentFailureCode, PaymentProvider, PreparedCardResult } from './index';
+import type { AuthorizeResult, ChargeResult, CollectedCard, PaymentFailureCode, PaymentProvider, PaymentRequest, PreparedCardResult } from './index';
 
 /**
  * Stripe payments (docs/integration-points.md, blueprint 04 §1, §4), written against Stripe's REST API
@@ -59,6 +59,12 @@ export function failureCodeOf(error: { code?: string; decline_code?: string } | 
   return error?.decline_code === 'insufficient_funds' || error?.code === 'insufficient_funds' ? 'insufficient_funds' : 'payment_declined';
 }
 
+/** Off the person's session, the bank wants them (3-D Secure): the intent it stopped on, for an in-app payment. */
+function needsPerson(error: unknown): string | null {
+  if (error instanceof StripeError && error.status === 402 && error.body.code === 'authentication_required') return str(error.body.payment_intent?.id) ?? '';
+  return null;
+}
+
 /** A card error carries the intent it failed on; anything else isn't the card's fault and is rethrown. */
 function declined(error: unknown): { providerRef: string; failureCode: PaymentFailureCode } {
   if (error instanceof StripeError && error.status === 402 && error.body.type === 'card_error') {
@@ -92,7 +98,8 @@ export interface StripePayments extends PaymentProvider {
 export function createStripePayments(config: { secretKey: string; fetch?: typeof fetch }): StripePayments {
   const stripe = createStripeClient(config);
 
-  async function createIntent(input: { amountCents: number; method: ChargeMethod; idempotencyKey: string; description: string }, capture: 'automatic' | 'manual') {
+  async function createIntent(input: PaymentRequest, capture: 'automatic' | 'manual') {
+    if (input.offSession && !input.method.customerRef) throw new Error('An off-session charge needs the card on the person\'s customer (method.customerRef).');
     const params = new URLSearchParams({
       amount: String(input.amountCents),
       currency: 'usd',
@@ -103,6 +110,7 @@ export function createStripePayments(config: { secretKey: string; fetch?: typeof
       description: input.description,
     });
     if (input.method.customerRef) params.set('customer', input.method.customerRef);
+    if (input.offSession) params.set('off_session', 'true');
     return stripe.request('POST', '/payment_intents', params, input.idempotencyKey);
   }
 
@@ -118,6 +126,8 @@ export function createStripePayments(config: { secretKey: string; fetch?: typeof
         if (outcome.status === 'requires_action') return { status: 'requires_action', providerRef };
         return { status: 'failed', providerRef, failureCode: outcome.failureCode ?? 'payment_declined' };
       } catch (error) {
+        const intent = needsPerson(error);
+        if (intent !== null) return { status: 'requires_action', providerRef: intent };
         return { status: 'failed', ...declined(error) };
       }
     },
@@ -131,6 +141,8 @@ export function createStripePayments(config: { secretKey: string; fetch?: typeof
         if (outcome.status === 'requires_action') return { status: 'requires_action', providerRef };
         return { status: 'failed', providerRef, failureCode: outcome.failureCode ?? 'payment_declined' };
       } catch (error) {
+        const intent = needsPerson(error);
+        if (intent !== null) return { status: 'requires_action', providerRef: intent };
         return { status: 'failed', ...declined(error) };
       }
     },

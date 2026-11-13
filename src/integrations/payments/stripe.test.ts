@@ -47,6 +47,21 @@ describe('Stripe payments', () => {
     await expect(down.payments.charge({ amountCents: 100, method: { providerRef: 'pm_1' }, idempotencyKey: 'k', description: 'd' })).rejects.toThrow('Stripe answered 500');
   });
 
+  it('charges a saved card while the person is away, and asks for them when the bank insists', async () => {
+    const away = fakeStripe(() => json({ id: 'pi_off', status: 'succeeded' }));
+    expect(await away.payments.charge({ amountCents: 9000, method: { providerRef: 'pm_saved', customerRef: 'cus_maya' }, idempotencyKey: 'series:srs_1:visit_3', description: 'd', offSession: true })).toEqual({ status: 'succeeded', providerRef: 'pi_off' });
+    expect(Object.fromEntries(paramsOf(away.calls[0]!))).toMatchObject({ off_session: 'true', confirm: 'true', customer: 'cus_maya', payment_method: 'pm_saved' });
+    // On the person's session (the default), no off_session.
+    await away.payments.charge({ amountCents: 1, method: { providerRef: 'pm_saved', customerRef: 'cus_maya' }, idempotencyKey: 'k', description: 'd' });
+    expect(paramsOf(away.calls[1]!).has('off_session')).toBe(false);
+
+    const bank = fakeStripe(() => json({ error: { type: 'card_error', code: 'authentication_required', payment_intent: { id: 'pi_needs_you', status: 'requires_payment_method' } } }, 402));
+    expect(await bank.payments.charge({ amountCents: 9000, method: { providerRef: 'pm_saved', customerRef: 'cus_maya' }, idempotencyKey: 'k', description: 'd', offSession: true })).toEqual({ status: 'requires_action', providerRef: 'pi_needs_you' });
+    expect(await bank.payments.authorize({ amountCents: 9000, method: { providerRef: 'pm_saved', customerRef: 'cus_maya' }, idempotencyKey: 'k', description: 'd', offSession: true })).toEqual({ status: 'requires_action', providerRef: 'pi_needs_you' });
+    // Without the person's customer there's no saved card to use.
+    await expect(away.payments.charge({ amountCents: 1, method: { providerRef: 'pm_x' }, idempotencyKey: 'k', description: 'd', offSession: true })).rejects.toThrow(/customerRef/);
+  });
+
   it('holds an amount for a direct invite, captures part of it, or releases it', async () => {
     const { payments, calls } = fakeStripe((method, path) => {
       if (path === '/payment_intents') return json({ id: 'pi_hold', status: 'requires_capture' });

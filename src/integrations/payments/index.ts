@@ -40,10 +40,24 @@ export type AuthorizeResult =
   | { status: 'failed'; providerRef: string; failureCode: PaymentFailureCode }
   | { status: 'requires_action'; providerRef: string };
 
+/**
+ * `offSession`: the person isn't here (a scheduled charge: a recurring visit, funding a booking made weeks
+ * ahead). The card must be on their customer (`method.customerRef`). A bank that insists on the person
+ * answers `requires_action`: ask them to pay in the app, where an ordinary (on-session) charge of the same
+ * card runs the bank's step. The development stand-in ignores it.
+ */
+export interface PaymentRequest {
+  amountCents: number;
+  method: ChargeMethod;
+  idempotencyKey: string;
+  description: string;
+  offSession?: boolean;
+}
+
 export interface PaymentProvider {
   readonly name: 'dev' | 'stripe';
   /** A charge captured right away (booking an offer). Same key, same result. */
-  charge(input: { amountCents: number; method: ChargeMethod; idempotencyKey: string; description: string }): Promise<ChargeResult>;
+  charge(input: PaymentRequest): Promise<ChargeResult>;
   /** After the customer's bank step. */
   completeAction(input: { providerRef: string; outcome: 'approved' | 'failed' }): Promise<
     { status: 'succeeded' } | { status: 'failed'; failureCode: PaymentFailureCode }
@@ -52,7 +66,7 @@ export interface PaymentProvider {
    * Holds the amount on the card without charging it (direct invites), captured later or released. Same
    * outcomes as `charge`, with `authorized` for success; a bank step finishes with `completeAction`.
    */
-  authorize(input: { amountCents: number; method: ChargeMethod; idempotencyKey: string; description: string }): Promise<AuthorizeResult>;
+  authorize(input: PaymentRequest): Promise<AuthorizeResult>;
   /** Charges a held authorization (up to the held amount). */
   capture(input: { authorizationRef: string; amountCents: number; idempotencyKey: string }): Promise<{ status: 'succeeded' } | { status: 'failed'; failureCode: PaymentFailureCode }>;
   /** Releases a held authorization. */
