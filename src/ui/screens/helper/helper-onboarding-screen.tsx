@@ -1,32 +1,16 @@
 import Link from 'next/link';
-import { Check, CircleCheck, Clock, Gift, Hourglass, Lock } from 'lucide-react';
+import { CircleCheck, Clock, Gift, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type HelperOnboardingHandlers, type HelperOnboardingPageData, type OnboardingProgress } from '@/contracts';
+import { routes, type HelperOnboardingHandlers, type HelperOnboardingPageData } from '@/contracts';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Money } from '@/ui/components/money/money';
 import { PushPrompt } from '@/ui/components/push/push-device';
 import { buttonVariants } from '@/ui/primitives/button';
-import { cn } from '@/ui/lib/utils';
 import { AddressStep } from './address-step';
 import { HelperAreaForm, HelperProfileForm, HelperServicesForm } from './helper-forms';
 import { PhoneStep } from './phone-step';
+import { OnboardingStepper } from './onboarding-stepper';
 import { VerificationPanel } from './verification-panel';
-
-function OnboardingStepper({ progress }: { progress: OnboardingProgress }) {
-  const t = useTranslations('helperOnboarding');
-  return <nav aria-label={t('screen.progressLabel')}>
-    <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-      {progress.steps.map(({ step, state }, index) => {
-        const content = <><span aria-hidden="true" className={cn('flex size-7 shrink-0 items-center justify-center rounded-full border text-sm tabular-nums', state === 'current' && 'border-primary bg-primary text-primary-foreground', state === 'done' && 'border-primary/20 bg-secondary text-secondary-foreground')}>
-          {state === 'done' ? <Check className="size-4" /> : state === 'locked' ? <Lock className="size-3.5" /> : state === 'in_review' ? <Hourglass className="size-3.5" /> : index + 1}
-        </span><span className="min-w-0"><span className="block text-sm font-medium">{t(`screen.steps.${step}`)}</span><span className="block text-xs text-muted-foreground">{t(`screen.states.${state}`)}</span></span></>;
-        return <li key={step} aria-current={state === 'current' ? 'step' : undefined}>
-          {state === 'done' ? <Link href={routes.app.helperOnboarding(step)} className="flex min-h-14 items-center gap-2 rounded-lg p-2 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{content}</Link> : <div className={cn('flex min-h-14 items-center gap-2 rounded-lg p-2', state === 'current' && 'bg-secondary/60')}>{content}</div>}
-        </li>;
-      })}
-    </ol>
-  </nav>;
-}
 
 function OnboardingDone({ data, onSavePushSubscription }: { data: HelperOnboardingPageData; onSavePushSubscription?: HelperOnboardingHandlers['onSavePushSubscription'] }) {
   const t = useTranslations('helperOnboarding');
@@ -50,7 +34,7 @@ export function HelperOnboardingScreen({ data, handlers }: { data: HelperOnboard
   const provider = step === 'identity' || step === 'payout' || step === 'background';
   return <div className="mx-auto max-w-reading space-y-6 pb-24 sm:pb-0">
     <PageHeader title={t('screen.title')} description={t('screen.description')} />
-    <OnboardingStepper progress={data.progress} />
+    <OnboardingStepper progress={data.progress} step={step} />
     {(step === 'profile' || step === 'services' || step === 'area') && <section className="space-y-5 rounded-xl border bg-card p-card shadow-card">
       <div className="space-y-2"><h2 className="text-xl font-semibold">{t(`screen.titles.${step}`)}</h2><p className="text-muted-foreground">{t(`screen.descriptions.${step}`)}</p></div>
       {step === 'profile' && <HelperProfileForm key={step} values={data.values.profile} languageOptions={data.languageOptions} onSave={handlers.onSaveProfile} onDraft={data.aiDraftingEnabled ? handlers.onDraftProfile : undefined} submitLabel={t('screen.saveContinue')} agreementNeeded={data.agreementNeeded} />}

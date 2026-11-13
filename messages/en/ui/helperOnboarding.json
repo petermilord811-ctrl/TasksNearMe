@@ -156,6 +156,9 @@
       "backgroundRenewal": "Background check: renewal open",
       "agreement": "Profile: helper agreement",
       "backgroundSuspended": "Background check: Checkr needs more information"
-    }
+    },
+    "stepOf": "Step {number} of {total}: {step}",
+    "allSteps": "All steps",
+    "fewerSteps": "Fewer steps"
   }
 }
