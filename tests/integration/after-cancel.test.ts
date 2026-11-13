@@ -60,7 +60,9 @@ describe('find a replacement', () => {
     expect(task?.reopenedAt).toBeInstanceOf(Date);
     const [audit] = await db.select().from(auditLog).where(and(eq(auditLog.targetId, 'tsk_ac_replace'), eq(auditLog.action, 'task.reopened')));
     expect(audit).toMatchObject({ actorId: 'system', reason: 'replacement_automatic' });
-    // Nothing left to do by hand, and Jordan has nothing to contest after cancelling.
+    // Nothing left to do by hand (the page links to the open task), and Jordan has nothing to contest after cancelling.
+    expect((await getBookingView(hub, 'usr_ruth', bookingId, new Date()))?.taskReopened).toBe(true);
+    expect((await getBookingView(hub, 'usr_jordan', bookingId, new Date()))?.taskReopened).toBeUndefined();
     expect(await actionIds('usr_ruth', bookingId)).not.toContain('find_replacement');
     expect(await actionIds('usr_jordan', bookingId)).not.toContain('contest_no_show');
     expect(await runBookingAction(db, 'usr_ruth', bookingId, 'find_replacement', new Date())).toEqual({ ok: false, code: 'not_allowed' });
@@ -126,6 +128,8 @@ describe('find a replacement', () => {
     // Once is enough: the old booking no longer offers it.
     expect(await actionIds('usr_ruth', bookingId)).not.toContain('find_replacement');
     expect(await runBookingAction(db, 'usr_ruth', bookingId, 'find_replacement', new Date())).toEqual({ ok: false, code: 'not_allowed' });
+    // Close it again: an open task starting in 2 hours would lead other tests' feeds.
+    await db.update(tasks).set({ status: 'canceled' }).where(eq(tasks.id, 'tsk_ac_replace_late'));
   });
 
   it('is not offered after a client cancellation, or once the task window has passed', async () => {
@@ -138,6 +142,8 @@ describe('find a replacement', () => {
     const afterWindow = new Date(late.start.getTime() + 4 * HOUR);
     expect(await actionIds('usr_ruth', late.bookingId, afterWindow)).not.toContain('find_replacement');
     expect(await runBookingAction(db, 'usr_ruth', late.bookingId, 'find_replacement', afterWindow)).toEqual({ ok: false, code: 'not_allowed' });
+    // It reopened on its own (5 days ahead); close it so it doesn't sit on other tests' boards.
+    await db.update(tasks).set({ status: 'canceled' }).where(eq(tasks.id, 'tsk_ac_window'));
   });
 });
 

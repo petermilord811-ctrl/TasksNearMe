@@ -20,6 +20,7 @@ import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
 import { getSignInMethods } from '@/modules/accounts/sign-in-methods';
 import type { Db } from '@/platform/db/connect';
+import { isForeignKeyViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { invites } from '@/modules/invites/schema';
 import { rebookProposals } from '@/modules/rebook/schema';
@@ -339,22 +340,27 @@ export async function dispatchNotifications(db: Db, now: Date, limit = 200): Pro
           .where(and(eq(notifications.userId, item.userId), eq(notifications.type, 'message_received'), isNull(notifications.readAt)));
         if (unread.some((row) => row.target.kind === 'thread' && row.target.threadId === threadId)) continue;
       }
-      const inserted = await db
-        .insert(notifications)
-        .values({
-          id: newId('ntf'),
-          userId: item.userId,
-          type: item.type,
-          title: item.title ?? null,
-          actorName: item.actorName ?? null,
-          params: item.params ?? null,
-          target: item.target,
-          sourceEventId: event.id,
-          createdAt: new Date(event.createdAt),
-        })
-        .onConflictDoNothing({ target: [notifications.sourceEventId, notifications.userId] })
-        .returning({ id: notifications.id });
-      made += inserted.length;
+      // Someone who is gone (a deleted account) can't get a notification; one bad event never blocks the rest.
+      try {
+        const inserted = await db
+          .insert(notifications)
+          .values({
+            id: newId('ntf'),
+            userId: item.userId,
+            type: item.type,
+            title: item.title ?? null,
+            actorName: item.actorName ?? null,
+            params: item.params ?? null,
+            target: item.target,
+            sourceEventId: event.id,
+            createdAt: new Date(event.createdAt),
+          })
+          .onConflictDoNothing({ target: [notifications.sourceEventId, notifications.userId] })
+          .returning({ id: notifications.id });
+        made += inserted.length;
+      } catch (error) {
+        if (!isForeignKeyViolation(error)) throw error;
+      }
     }
     await db.update(outboxEvents).set({ dispatchedAt: now.toISOString() }).where(eq(outboxEvents.id, event.id));
   }

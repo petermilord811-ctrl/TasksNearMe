@@ -111,8 +111,14 @@ describe('posting a task', () => {
 
   it('lists open tasks on the board with filters', async () => {
     const [market] = await db.select({ id: areas.marketId }).from(areas).limit(1);
-    const all = await listBoardTasks(db, { marketId: market!.id, query: defaultQuery, now: NOW });
-    expect(all.tasks.map((t) => t.id)).toEqual(expect.arrayContaining([posted.desk, posted.moving]));
+    // Every page (other tests leave open tasks of their own): the posted tasks are on the board.
+    const ids: string[] = [];
+    for (let page = 1; page < 20; page += 1) {
+      const result = await listBoardTasks(db, { marketId: market!.id, query: { ...defaultQuery, page }, now: NOW });
+      ids.push(...result.tasks.map((t) => t.id));
+      if (result.tasks.length === 0 || ids.length >= result.totalCount) break;
+    }
+    expect(ids).toEqual(expect.arrayContaining([posted.desk, posted.moving]));
 
     const moving = await listBoardTasks(db, { marketId: market!.id, query: { ...defaultQuery, category: 'moving-help' }, now: NOW });
     expect(moving.tasks.every((t) => t.categorySlug === 'moving-help')).toBe(true);

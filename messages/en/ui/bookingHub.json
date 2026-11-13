@@ -264,5 +264,9 @@
     "helperScheduled": "{name}'s card is charged on {date}. You'll see the address once it's paid.",
     "helperWaiting": "Waiting for {name} to pay, by {date}. If it isn't paid by then, this {kind, select, visit {visit is skipped} other {booking is canceled}}."
   },
-  "seriesLink": "Visit {index} · Regular visits {cadence, select, weekly {every week} biweekly {every 2 weeks} other {every month}}"
+  "seriesLink": "Visit {index} · Regular visits {cadence, select, weekly {every week} biweekly {every 2 weeks} other {every month}}",
+  "taskReopened": {
+    "body": "Your task is open for offers again, and helpers nearby were told.",
+    "link": "See offers on your task"
+  }
 }

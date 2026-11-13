@@ -218,6 +218,12 @@ describe('BookingHubScreen privacy and supplied data', () => {
     expect(screen.getByRole('region', { name: 'Payments' })).toHaveTextContent('$54.00');
   });
 
+  it('links the client to their task when it is open for offers again after the helper canceled', () => {
+    mount({ ...deskBookingPosterCanceledLate, cancelReason: 'helper', taskReopened: true });
+    expect(screen.getByText(messages.bookingHub.taskReopened.body)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: messages.bookingHub.taskReopened.link })).toHaveAttribute('href', routes.app.task(deskBookingPosterCanceledLate.task.id));
+  });
+
   it('uses a compact helper card for the client', () => {
     mount();
     expect(screen.getByRole('link', { name: deskBookingPosterConfirmed.helper.displayName })).toHaveAttribute('href', routes.helperProfile(deskBookingPosterConfirmed.helper.handle));

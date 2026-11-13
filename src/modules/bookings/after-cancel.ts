@@ -24,13 +24,13 @@ type BookingRow = typeof bookings.$inferSelect;
 export async function canceledFacts(db: Db, booking: BookingRow, userId: string): Promise<Partial<BookingFacts>> {
   if (booking.status !== 'canceled') return {};
   const [[task], [contest]] = await Promise.all([
-    db.select({ status: tasks.status, windowEnd: tasks.windowEnd, hiddenAt: tasks.hiddenAt }).from(tasks).where(eq(tasks.id, booking.taskId)).limit(1),
+    db.select({ status: tasks.status, windowEnd: tasks.windowEnd, hiddenAt: tasks.hiddenAt, reopenedAt: tasks.reopenedAt }).from(tasks).where(eq(tasks.id, booking.taskId)).limit(1),
     contestOf(db, booking.id, userId),
   ]);
   return {
     cancelReason: booking.cancelReason,
     canceledAt: booking.canceledAt,
-    ...(task ? { task: { status: task.status, windowEnd: task.windowEnd, hidden: task.hiddenAt !== null } } : {}),
+    ...(task ? { task: { status: task.status, windowEnd: task.windowEnd, hidden: task.hiddenAt !== null, reopened: task.reopenedAt !== null && booking.canceledAt !== null && task.reopenedAt >= booking.canceledAt } } : {}),
     contested: Boolean(contest),
   };
 }

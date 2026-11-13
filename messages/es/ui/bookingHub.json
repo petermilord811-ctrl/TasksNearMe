@@ -264,5 +264,9 @@
     "helperScheduled": "La tarjeta de {name} se cobra el {date}. Verás la dirección cuando se pague.",
     "helperWaiting": "Esperando que {name} pague, antes del {date}. Si no se paga para entonces, {kind, select, visit {esta visita se omite} other {esta reserva se cancela}}."
   },
-  "seriesLink": "Visita {index} · Visitas regulares {cadence, select, weekly {cada semana} biweekly {cada 2 semanas} other {cada mes}}"
+  "seriesLink": "Visita {index} · Visitas regulares {cadence, select, weekly {cada semana} biweekly {cada 2 semanas} other {cada mes}}",
+  "taskReopened": {
+    "body": "Tu tarea vuelve a recibir ofertas, y avisamos a personas cercanas que pueden ayudar.",
+    "link": "Ver las ofertas de tu tarea"
+  }
 }

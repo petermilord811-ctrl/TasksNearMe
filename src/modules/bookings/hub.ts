@@ -268,6 +268,8 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     ...(review.mine ? { myReview: review.mine } : {}),
     ...(tip ? { tip } : {}),
     ...(series ? { series } : {}),
+    // The helper canceled and the task is open for offers again: the client's page links to it.
+    ...(role === 'poster' && booking.status === 'canceled' && facts.task?.reopened && facts.task.status === 'open' ? { taskReopened: true } : {}),
     ...(scheduledPayment ? { scheduledPayment } : {}),
     actions: allBookingActions(facts, role, policy, now),
   };

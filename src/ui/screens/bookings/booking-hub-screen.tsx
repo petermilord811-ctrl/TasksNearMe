@@ -82,6 +82,11 @@ function BookingState({ data, now, tone }: { data: BookingView; now: ISODateTime
   return <div className={cn('space-y-1 rounded-2xl border px-4 py-3.5', stateTones[tone])}>
     <p className="font-medium text-pretty tabular-nums">{text}</p>
     {relativeAt && <time dateTime={relativeAt} className="block text-sm tabular-nums opacity-90">{formatRelative(relativeAt, now)}</time>}
+    {/* The helper canceled and the task is open for offers again (on its own, or by Find a replacement). */}
+    {data.taskReopened && <p className="flex flex-wrap items-baseline gap-x-2 pt-1 text-sm">
+      <span>{t('taskReopened.body')}</span>
+      <Link href={routes.app.task(data.task.id)} className="inline-flex min-h-11 items-center font-medium underline underline-offset-4">{t('taskReopened.link')}</Link>
+    </p>}
   </div>;
 }
 

@@ -3,8 +3,17 @@
  * A unique violation (23505) means another request created the row first.
  */
 export function isUniqueViolation(error: unknown): boolean {
+  return hasCode(error, '23505');
+}
+
+/** A foreign key violation (23503): the row it points to is gone (a deleted person, say). */
+export function isForeignKeyViolation(error: unknown): boolean {
+  return hasCode(error, '23503');
+}
+
+function hasCode(error: unknown, code: string): boolean {
   for (let current: unknown = error, depth = 0; current && depth < 4; depth += 1) {
-    if ((current as { code?: unknown }).code === '23505') return true;
+    if ((current as { code?: unknown }).code === code) return true;
     current = (current as { cause?: unknown }).cause;
   }
   return false;

@@ -213,6 +213,11 @@ export interface BookingView {
   myReview?: { rating: number; submittedAt: ISODateTime; publishedAt?: ISODateTime };
   /** Completed bookings (UI-057): the client's tip card (`available`), or the tip once given (both people). */
   tip?: BookingTipView;
+  /**
+   * Clients, on a booking the helper canceled: the task is open for offers again (on its own, or by "Find a
+   * replacement"), so the page links to it (`routes.app.task(task.id)`).
+   */
+  taskReopened?: boolean;
   /** A visit of regular visits (`routes.app.series(id)`): how it repeats and which visit this is. */
   series?: { id: string; cadence: SeriesCadence; index: number };
   /** `scheduled`: when the card is charged, or why it wasn't and until when the client can pay (with their cards). */

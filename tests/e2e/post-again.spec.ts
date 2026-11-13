@@ -1,11 +1,38 @@
 import { expect, test } from '@playwright/test';
+import { and, eq, ne } from 'drizzle-orm';
+import { tasks } from '../../src/modules/tasks/schema';
+import { createDb } from '../../src/platform/db/connect';
 import { devSignIn } from './support/sign-in';
 
 /**
  * "Post again" (completion plan 4.2): Maya's finished wardrobe task opens the posting wizard on its review
  * step, with everything from last time (her saved address too) on the next date that fits, and one more tap
- * posts it as a new open task.
+ * posts it as a new open task. The tasks it posts are closed again (before and after), so they don't fill the
+ * public "newest open tasks" lists other tests read.
  */
+
+/** Closes Maya's open wardrobe tasks posted by this test (every one but the seeded, finished `tsk_wardrobe`). */
+async function closePostedAgain() {
+  try {
+    process.loadEnvFile('.env.local');
+  } catch {
+    // Environment provided by the shell (CI).
+  }
+  const { db, pool } = createDb(process.env.DATABASE_URL ?? '', { max: 1 });
+  try {
+    await db
+      .update(tasks)
+      .set({ status: 'canceled', updatedAt: new Date() })
+      .where(and(eq(tasks.posterUserId, 'usr_maya'), eq(tasks.title, 'Assemble a wardrobe'), eq(tasks.status, 'open'), ne(tasks.id, 'tsk_wardrobe')));
+  } finally {
+    await pool.end();
+  }
+  // Changed behind the app's back: the cached public pages read the database again (as after a reseed).
+  await fetch(`http://localhost:${process.env.PORT ?? 3000}/dev/cache`, { method: 'POST' }).catch(() => undefined);
+}
+
+test.beforeAll(closePostedAgain);
+test.afterAll(closePostedAgain);
 test('a poster posts a finished task again in two taps', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'posts a task (shared data); desktop only');
   test.setTimeout(150_000);

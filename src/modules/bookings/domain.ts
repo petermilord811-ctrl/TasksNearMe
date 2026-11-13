@@ -48,7 +48,7 @@ export interface BookingFacts {
    */
   cancelReason?: string | null;
   canceledAt?: Date | null;
-  task?: { status: string; windowEnd: Date; hidden: boolean };
+  task?: { status: string; windowEnd: Date; hidden: boolean; reopened?: boolean };
   contested?: boolean;
   /** Regular visits: the visit's series. A `scheduled` booking's charge failed (the client pays on the page). */
   seriesId?: string | null;

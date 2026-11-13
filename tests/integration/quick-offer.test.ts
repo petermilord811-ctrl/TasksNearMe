@@ -21,14 +21,23 @@ afterAll(async () => {
 });
 
 const now = () => new Date();
-const feed = () => getFindWorkPageData(db, JORDAN, {}, now());
+/** Every page of Jordan's feed (other test files leave open tasks that can lead it). */
+async function allCards() {
+  const cards = [];
+  for (let page = 1; page < 20; page += 1) {
+    const data = await getFindWorkPageData(db, JORDAN, { page: String(page) }, now());
+    cards.push(...(data?.cards ?? []));
+    if (!data || page >= data.pageCount) break;
+  }
+  return cards;
+}
 
 describe('the one-tap offer', () => {
   it('shows only on fixed-price tasks Jordan can offer on and has no offer on, at the poster\'s price', async () => {
-    const data = await feed();
-    const withQuick = data!.cards.filter((card) => card.quickOffer);
+    const cards = await allCards();
+    const withQuick = cards.filter((card) => card.quickOffer);
     expect(withQuick.length).toBeGreaterThan(0);
-    for (const card of data!.cards) {
+    for (const card of cards) {
       if (!card.quickOffer) continue;
       expect(card.task.budget.type).toBe('fixed');
       expect(card.myOffer).toBeUndefined();
@@ -37,7 +46,7 @@ describe('the one-tap offer', () => {
         expect(card.quickOffer).toEqual({ priceCents: card.task.budget.priceCents, earningsCents: card.earnings.amountCents, proposedStart: card.task.schedule.windowStart });
       }
     }
-    for (const card of data!.cards) {
+    for (const card of cards) {
       if (card.task.budget.type === 'hourly' || card.myOffer || card.blockedReason) expect(card.quickOffer).toBeUndefined();
     }
     expect(withQuick.map((card) => card.task.id)).toContain(SHELVES);
@@ -52,7 +61,7 @@ describe('the one-tap offer', () => {
     expect(offer!.createdAt.getTime()).toBeGreaterThanOrEqual(startedAt.getTime() - 1000);
 
     // Now it's his offer on the list, and no second one-tap offer.
-    const shelves = (await feed())!.cards.find((card) => card.task.id === SHELVES);
+    const shelves = (await allCards()).find((card) => card.task.id === SHELVES);
     expect(shelves?.myOffer?.status).toBe('pending');
     expect(shelves?.quickOffer).toBeUndefined();
     expect(await submitQuickOffer(db, JORDAN, SHELVES, now())).toEqual({ ok: false, code: 'not_allowed' });
