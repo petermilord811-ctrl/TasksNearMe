@@ -94,13 +94,15 @@ const austin: AdminBetaMarket = {
 };
 
 /** A support lead: helpers are invite-only, sign-up is open. */
-export const adminBetaPage: AdminBetaPageData = { markets: [austin], canManage: true };
+export const adminBetaPage: AdminBetaPageData = { markets: [austin], canManage: true, canSwitch: false };
+/** An admin also flips the switches. */
+export const adminBetaAdmin: AdminBetaPageData = { ...adminBetaPage, canSwitch: true };
 /** Other staff read the same page. */
 export const adminBetaReadOnly: AdminBetaPageData = { ...adminBetaPage, canManage: false };
 /** Both switches on (the private beta proper). */
-export const adminBetaInviteOnly: AdminBetaPageData = { ...adminBetaPage, markets: [{ ...austin, gates: { sign_up: true, helpers: true } }] };
+export const adminBetaInviteOnly: AdminBetaPageData = { ...adminBetaAdmin, markets: [{ ...austin, gates: { sign_up: true, helpers: true } }] };
 /** Before the first invite. */
-export const adminBetaEmpty: AdminBetaPageData = { canManage: true, markets: [{ ...austin, gates: { sign_up: false, helpers: false }, joined: { poster: 0, helper: 0 }, codes: [] }] };
+export const adminBetaEmpty: AdminBetaPageData = { canManage: true, canSwitch: true, markets: [{ ...austin, gates: { sign_up: false, helpers: false }, joined: { poster: 0, helper: 0 }, codes: [] }] };
 
 export const adminBetaResults = {
   created: { ok: true, code: 'saved' },

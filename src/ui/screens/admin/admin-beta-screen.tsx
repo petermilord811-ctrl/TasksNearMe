@@ -46,7 +46,7 @@ const STATUS_TONE: Record<InviteCodeStatus, string> = {
 };
 
 /** One switch: on means new people in this market need an invite for it. */
-function GateSwitch({ market, gate, canManage, onSetGate }: { market: AdminBetaMarket; gate: BetaGate; canManage: boolean; onSetGate: AdminBetaHandlers['onSetGate'] }) {
+function GateSwitch({ market, gate, canSwitch, onSetGate }: { market: AdminBetaMarket; gate: BetaGate; canSwitch: boolean; onSetGate: AdminBetaHandlers['onSetGate'] }) {
   const t = useTranslations('adminBeta');
   const id = useId();
   const router = useRouter();
@@ -74,7 +74,7 @@ function GateSwitch({ market, gate, canManage, onSetGate }: { market: AdminBetaM
       </div>
       <div className="flex min-h-11 items-center gap-2">
         {pending && <Spinner aria-hidden="true" />}
-        <Switch id={`${id}-switch`} checked={on} disabled={!canManage || pending} aria-describedby={`${id}-hint`} aria-busy={pending} onCheckedChange={(checked) => void flip(checked)} />
+        <Switch id={`${id}-switch`} checked={on} disabled={!canSwitch || pending} aria-describedby={`${id}-hint`} aria-busy={pending} onCheckedChange={(checked) => void flip(checked)} />
       </div>
     </div>
     {result && !result.ok && <FormFeedback result={result} />}
@@ -239,7 +239,7 @@ function InviteCard({ invite, canManage, onRevoke }: { invite: AdminInviteCodeVi
   </li>;
 }
 
-function MarketSection({ market, canManage, handlers }: { market: AdminBetaMarket; canManage: boolean; handlers: AdminBetaHandlers }) {
+function MarketSection({ market, canManage, canSwitch, handlers }: { market: AdminBetaMarket; canManage: boolean; canSwitch: boolean; handlers: AdminBetaHandlers }) {
   const t = useTranslations('adminBeta');
   const id = useId();
   const live = market.codes.filter((code) => code.status === 'active');
@@ -249,7 +249,7 @@ function MarketSection({ market, canManage, handlers }: { market: AdminBetaMarke
       <h2 id={`${id}-market`} className="font-display text-xl font-semibold">{market.name}</h2>
       <p className="text-muted-foreground">{t('joinedSummary', { posters: market.joined.poster, helpers: market.joined.helper })}</p>
     </header>
-    <div className="grid gap-3 lg:grid-cols-2">{BETA_GATES.map((gate) => <GateSwitch key={gate} market={market} gate={gate} canManage={canManage} onSetGate={handlers.onSetGate} />)}</div>
+    <div className="grid gap-3 lg:grid-cols-2">{BETA_GATES.map((gate) => <GateSwitch key={gate} market={market} gate={gate} canSwitch={canSwitch} onSetGate={handlers.onSetGate} />)}</div>
     {canManage && <NewInviteForm market={market} onCreate={handlers.onCreateCode} />}
     <div className="space-y-3">
       <h3 className="text-lg font-semibold">{t('codes.liveTitle', { count: live.length })}</h3>
@@ -273,7 +273,8 @@ export function AdminBetaScreen({ data, handlers }: { data: AdminBetaPageData; h
       <h1 className="font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t('title')}</h1>
       <p className="max-w-3xl text-muted-foreground">{t('intro')}</p>
       {!data.canManage && <p className="text-sm text-muted-foreground">{t('readOnly')}</p>}
+      {data.canManage && !data.canSwitch && <p className="text-sm text-muted-foreground">{t('switchesAdminOnly')}</p>}
     </header>
-    {data.markets.length === 0 ? <p className="rounded-xl border bg-card p-5 text-muted-foreground">{t('noMarkets')}</p> : data.markets.map((market) => <MarketSection key={market.id} market={market} canManage={data.canManage} handlers={handlers} />)}
+    {data.markets.length === 0 ? <p className="rounded-xl border bg-card p-5 text-muted-foreground">{t('noMarkets')}</p> : data.markets.map((market) => <MarketSection key={market.id} market={market} canManage={data.canManage} canSwitch={data.canSwitch} handlers={handlers} />)}
   </div>;
 }

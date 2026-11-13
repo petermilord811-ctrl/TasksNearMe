@@ -112,8 +112,10 @@ export interface AdminBetaMarket {
 
 export interface AdminBetaPageData {
   markets: AdminBetaMarket[];
-  /** Support leads and admins create and withdraw invites and flip the switches; other staff read. */
+  /** Support leads and admins create and withdraw invites; other staff read. */
   canManage: boolean;
+  /** Admins flip the invite-only switches (they're feature flags); everyone else sees them. */
+  canSwitch: boolean;
 }
 
 export const INVITE_LABEL_MAX = 80;

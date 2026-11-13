@@ -3,6 +3,7 @@ import {
   BETA_FLAGS,
   betaGatesFrom,
   canManageBeta,
+  canSwitchBeta,
   codeFitsUse,
   displayInviteCode,
   generateInviteCode,
@@ -89,5 +90,10 @@ describe('who manages the beta', () => {
     expect(canManageBeta(['support_lead'])).toBe(true);
     expect(canManageBeta(['support_agent', 'finance'])).toBe(false);
     expect(canManageBeta(['trust_safety'])).toBe(false);
+  });
+
+  it('leaves the switches (feature flags) to admins', () => {
+    expect(canSwitchBeta(['admin'])).toBe(true);
+    expect(canSwitchBeta(['support_lead'])).toBe(false);
   });
 });

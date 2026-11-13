@@ -495,6 +495,19 @@ export async function moderateReportedReview(
 }
 
 /** A booking's price, what was charged and refunded, and the market's fees (null without a paid booking). */
+/**
+ * What staff have chosen to refund on this booking so far (goodwill, fraud and dispute settlements, pending or
+ * done). Blueprint 08's refund limits are per booking, so each new refund counts on top of these: five $100
+ * goodwill refunds are a $500 decision, not five $100 ones.
+ */
+export async function discretionaryRefundedCents(db: Db, bookingId: string): Promise<number> {
+  const rows = await db
+    .select({ amountCents: refunds.amountCents })
+    .from(refunds)
+    .where(and(eq(refunds.bookingId, bookingId), inArray(refunds.reason, ['goodwill', 'fraud', 'dispute_settlement']), inArray(refunds.status, ['pending', 'succeeded'])));
+  return rows.reduce((sum, row) => sum + row.amountCents, 0);
+}
+
 export async function bookingMoneyFacts(db: Db, bookingId: string): Promise<BookingMoneyFacts | null> {
   const [row] = await db
     .select({ termsVersion: bookings.termsVersion, marketId: tasks.marketId })
@@ -532,7 +545,9 @@ export async function previewResolution(db: Db, staff: StaffActor, caseId: strin
   if (moved === 'out_of_range') {
     return { ok: false, code: 'validation_failed', fieldErrors: { [parsed.data.resolution === 'settle' ? 'settlePriceCents' : 'goodwillCents']: ['invalid'] } };
   }
-  return { ok: true, preview: { ...moved, withinLimit: moved.posterRefundCents <= refundLimitOf(staff.roles) } };
+  // The limit is per booking: earlier discretionary refunds count too.
+  const prior = moved.posterRefundCents > 0 ? await discretionaryRefundedCents(db, ctx.booking.id) : 0;
+  return { ok: true, preview: { ...moved, withinLimit: moved.posterRefundCents === 0 || prior + moved.posterRefundCents <= refundLimitOf(staff.roles) } };
 }
 
 // ---- Commands ---------------------------------------------------------------------------------------

@@ -77,7 +77,12 @@ export function generateInviteCode(bytes: Uint8Array): string {
   throw new Error('Not enough random bytes for an invite code');
 }
 
-/** Staff manage invites and the switches (support leads and admins); every other staff role reads. */
+/** Staff who make and withdraw invites (support leads and admins); every other staff role reads. */
 export function canManageBeta(roles: readonly string[]): boolean {
   return roles.includes('admin') || roles.includes('support_lead');
+}
+
+/** The invite-only switches are feature flags, which only admins change (blueprint 08's access matrix). */
+export function canSwitchBeta(roles: readonly string[]): boolean {
+  return roles.includes('admin');
 }

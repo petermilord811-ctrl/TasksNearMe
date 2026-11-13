@@ -1,7 +1,7 @@
 {
   "title": "Private beta",
   "intro": "Decide who can join in each market while the beta is invite-only. Each invite is for clients or for helpers, works a set number of times, and can be withdrawn. People who already joined keep their access.",
-  "readOnly": "Support leads and admins manage invites and the switches. You can see them here.",
+  "readOnly": "Support leads and admins manage invites, and admins flip the switches. You can see them here.",
   "noMarkets": "No markets yet.",
   "joinedSummary": "{posters, plural, =0 {No clients} one {# client} other {# clients}} and {helpers, plural, =0 {no helpers} one {# helper} other {# helpers}} joined with an invite.",
   "gates": {
@@ -105,5 +105,6 @@
     "agent": "Private beta (read only)",
     "invite-only": "Private beta: both switches on",
     "empty": "Private beta: no invites yet"
-  }
+  },
+  "switchesAdminOnly": "Only admins can flip the invite-only switches."
 }

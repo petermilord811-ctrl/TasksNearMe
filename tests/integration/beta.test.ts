@@ -18,6 +18,7 @@ const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 5 });
 const MARKET = 'mkt_austin';
 const lead: StaffActor = { id: 'usr_morgan', roles: ['support_lead'] };
 const agent: StaffActor = { id: 'usr_alex', roles: ['support_agent'] };
+const admin: StaffActor = { id: 'usr_riley', roles: ['admin'] };
 const PEOPLE = ['usr_tmp_beta_a', 'usr_tmp_beta_b', 'usr_tmp_beta_c', 'usr_tmp_beta_d'];
 const LABEL = 'tmp-beta';
 const now = new Date('2026-11-20T18:00:00.000Z');
@@ -131,31 +132,34 @@ describe('invite codes', () => {
 });
 
 describe('the switches', () => {
-  it('are off by default, set per market by leads and admins, and audited', async () => {
+  it('are off by default, set per market by admins only (they are feature flags), and audited', async () => {
     expect(await betaGatesFor(db, MARKET)).toEqual({ signUp: false, helpers: false });
     expect(await betaGatesFor(db, MARKET, true)).toEqual({ signUp: true, helpers: true });
     expect(await setBetaGate(db, agent, { marketId: MARKET, gate: 'sign_up', enabled: true })).toEqual({ ok: false, code: 'not_allowed' });
-    expect(await setBetaGate(db, lead, { marketId: 'mkt_nowhere', gate: 'sign_up', enabled: true })).toEqual({ ok: false, code: 'not_found' });
+    // Leads manage invites, but the switches are flags: admins only (blueprint 08).
+    expect(await setBetaGate(db, lead, { marketId: MARKET, gate: 'sign_up', enabled: true })).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await setBetaGate(db, admin, { marketId: 'mkt_nowhere', gate: 'sign_up', enabled: true })).toEqual({ ok: false, code: 'not_found' });
 
-    expect(await setBetaGate(db, lead, { marketId: MARKET, gate: 'sign_up', enabled: true })).toEqual({ ok: true, code: 'updated' });
+    expect(await setBetaGate(db, admin, { marketId: MARKET, gate: 'sign_up', enabled: true })).toEqual({ ok: true, code: 'updated' });
     expect(await betaGatesFor(db, MARKET)).toEqual({ signUp: true, helpers: false });
-    expect(await setBetaGate(db, lead, { marketId: MARKET, gate: 'helpers', enabled: true })).toEqual({ ok: true, code: 'updated' });
-    expect(await setBetaGate(db, lead, { marketId: MARKET, gate: 'sign_up', enabled: false })).toEqual({ ok: true, code: 'updated' });
+    expect(await setBetaGate(db, admin, { marketId: MARKET, gate: 'helpers', enabled: true })).toEqual({ ok: true, code: 'updated' });
+    expect(await setBetaGate(db, admin, { marketId: MARKET, gate: 'sign_up', enabled: false })).toEqual({ ok: true, code: 'updated' });
     expect(await betaGatesFor(db, MARKET)).toEqual({ signUp: false, helpers: true });
     // The global rows (seeded off) are untouched: other markets keep the default.
     expect(await betaGatesFor(db, 'mkt_elsewhere')).toEqual({ signUp: false, helpers: false });
 
     const audited = await db.select({ actorId: auditLog.actorId, metadata: auditLog.metadata }).from(auditLog).where(and(eq(auditLog.action, 'beta.set_gate'), like(auditLog.targetId, `%:${MARKET}`)));
     expect(audited).toHaveLength(3);
-    expect(audited.every((row) => row.actorId === lead.id)).toBe(true);
-    await setBetaGate(db, lead, { marketId: MARKET, gate: 'helpers', enabled: false });
+    expect(audited.every((row) => row.actorId === admin.id)).toBe(true);
+    await setBetaGate(db, admin, { marketId: MARKET, gate: 'helpers', enabled: false });
   });
 });
 
 describe('the staff page', () => {
   it('shows the switches, each invite with its uses and who joined, and who may manage', async () => {
     const page = await getAdminBetaPage(db, lead, now, 'http://localhost:3000');
-    expect(page.canManage).toBe(true);
+    expect(page).toMatchObject({ canManage: true, canSwitch: false });
+    expect(await getAdminBetaPage(db, admin, now, 'http://localhost:3000')).toMatchObject({ canManage: true, canSwitch: true });
     expect((await getAdminBetaPage(db, agent, now, 'http://localhost:3000')).canManage).toBe(false);
     const austin = page.markets.find((market) => market.id === MARKET)!;
     expect(austin.gates).toEqual({ sign_up: false, helpers: false });

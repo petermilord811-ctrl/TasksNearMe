@@ -85,6 +85,25 @@ describe('refund approvals', () => {
     expect((await db.select().from(refundRequests).where(eq(refundRequests.id, declined!.id)))[0]).toMatchObject({ status: 'declined', decidedByUserId: 'usr_morgan' });
   });
 
+  it('counts earlier refunds toward the limit for the booking, for agents and approvers alike', async () => {
+    const bookingId = await bigBooking('tsk_rra_stack');
+    // An agent's $80 goes through; a second $80 would make $160 on this booking, over the $100 limit.
+    expect(await staffRefund(db, pay, alex, bookingId, { amountCents: 8_000, reason: 'goodwill', note }, new Date())).toEqual({ ok: true, code: 'submitted' });
+    expect(await staffRefund(db, pay, alex, bookingId, { amountCents: 8_000, reason: 'goodwill', note }, new Date())).toEqual({ ok: true, code: 'sent' });
+    expect((await db.select().from(refunds).where(eq(refunds.bookingId, bookingId))).map((row) => row.amountCents)).toEqual([8_000]);
+
+    // A lead approves up to $500 for the booking in all: $80 already refunded + $400 is fine, another $400 isn't.
+    const [first] = await pendingOf(bookingId);
+    await db.update(refundRequests).set({ amountCents: 40_000 }).where(eq(refundRequests.id, first!.id));
+    expect(await decideRefundRequest(db, pay, morgan, bookingId, { requestId: first!.id, decision: 'approve', note: 'Most of the job was missed.' }, new Date())).toEqual({ ok: true, code: 'updated' });
+    expect(await staffRefund(db, pay, alex, bookingId, { amountCents: 4_000, reason: 'goodwill', note }, new Date())).toEqual({ ok: true, code: 'sent' });
+    const [second] = await pendingOf(bookingId);
+    await db.update(refundRequests).set({ amountCents: 10_000 }).where(eq(refundRequests.id, second!.id));
+    expect(await decideRefundRequest(db, pay, morgan, bookingId, { requestId: second!.id, decision: 'approve', note: 'And the rest.' }, new Date())).toEqual({ ok: false, code: 'not_allowed' });
+    // Finance has no limit.
+    expect(await decideRefundRequest(db, pay, casey, bookingId, { requestId: second!.id, decision: 'approve', note: 'Approved after review.' }, new Date())).toEqual({ ok: true, code: 'updated' });
+  });
+
   it('never asks for more than is left of the charge', async () => {
     const bookingId = await bigBooking('tsk_rra_left');
     expect(await staffRefund(db, pay, alex, bookingId, { amountCents: 70_000, reason: 'goodwill', note }, new Date())).toEqual({ ok: false, code: 'not_allowed' });

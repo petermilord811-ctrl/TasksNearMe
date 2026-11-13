@@ -47,6 +47,12 @@ describe('what staff can do on a case', () => {
 
   it('lets only leads take a case from someone else, decide escalated cases, and reopen', () => {
     expect(staffCaseActions(facts({ assigneeId: 'usr_morgan' }))).not.toContain('unassign');
+    expect(staffCaseActions(facts({ assigneeId: 'usr_morgan' }))).not.toContain('assign_to_me');
+    expect(staffCaseActions(facts({ roles: ['support_lead'], assigneeId: 'usr_alex', viewerId: 'usr_morgan' }))).toContain('assign_to_me');
+    // An agent can't move an escalated case back to support and then resolve it.
+    expect(staffCaseActions(facts({ status: 'escalated' }))).not.toContain('set_status');
+    expect(nextCaseStatuses(facts({ status: 'escalated' }))).toEqual([]);
+    expect(nextCaseStatuses(facts({ roles: ['support_lead'], status: 'escalated' }))).toEqual(['awaiting_poster', 'awaiting_helper', 'awaiting_support']);
     expect(staffCaseActions(facts({ roles: ['support_lead'], assigneeId: 'usr_alex' }))).toContain('unassign');
     expect(staffCaseActions(facts({ status: 'escalated' }))).not.toContain('resolve');
     expect(staffCaseActions(facts({ roles: ['trust_safety'], status: 'escalated' }))).toContain('resolve');

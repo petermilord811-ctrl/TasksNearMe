@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, notInArray, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
   AdminBookingPageData,
@@ -33,7 +33,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { refundRequests, supportCases } from './schema';
-import { bookingMoneyFacts, caseRowsFor, conversationView, personSummaryOf, previewResolution, resolveCase, type StaffActor } from './staff';
+import { bookingMoneyFacts, caseRowsFor, conversationView, discretionaryRefundedCents, personSummaryOf, previewResolution, resolveCase, type StaffActor } from './staff';
 import { MONEY_RESOLUTIONS, canApproveRefund, canWorkCases, refundLimitOf, type ResolutionMoney } from './staff-domain';
 
 /**
@@ -231,7 +231,9 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
   const canRefund = canWorkCases(staff.roles) && limit > 0 && left > 0;
   const actions: AdminBookingPageData['actions'] = [];
   if (canRefund) actions.push('refund');
-  if (canWorkCases(staff.roles)) actions.push('reveal_address', 'reveal_conversation');
+  if (canWorkCases(staff.roles)) actions.push('reveal_address');
+  // The conversation only while handling a case about this booking (blueprint 08; checked again on reading).
+  if (canWorkCases(staff.roles) && caseRows.some((row) => row.status !== 'closed')) actions.push('reveal_conversation');
   return {
     booking: {
       id: booking.id,
@@ -294,8 +296,9 @@ export async function staffRefund(db: Db, payments_: PaymentProvider | null, sta
   if (parsed.data.amountCents > left) return { ok: false, code: 'not_allowed' };
   const limited = await consumeRateLimit(db, `staff-refund:${staff.id}`, REFUND_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
-  // Above the viewer's own limit: someone allowed approves it (blueprint 08).
-  if (parsed.data.amountCents > refundLimitOf(staff.roles)) {
+  // Above the viewer's own limit for this booking (earlier refunds count): someone allowed approves it (blueprint 08).
+  const prior = await discretionaryRefundedCents(db, String(bookingId));
+  if (prior + parsed.data.amountCents > refundLimitOf(staff.roles)) {
     const id = newId('rrq');
     await db.insert(refundRequests).values({ id, bookingId: String(bookingId), amountCents: parsed.data.amountCents, reason: parsed.data.reason, note: parsed.data.note, requestedByUserId: staff.id, status: 'pending', createdAt: now });
     await audit(db, staff, 'booking.refund_requested', 'booking', String(bookingId), now, { metadata: { requestId: id, amountCents: parsed.data.amountCents, reason: parsed.data.reason, note: parsed.data.note } });
@@ -333,7 +336,11 @@ export async function revealBookingAddress(db: Db, cipher: FieldCipher, staff: S
   return { ok: true, address };
 }
 
-/** The booking's conversation as written, after a reason that goes to the audit log. */
+/**
+ * The booking's conversation as written, after a reason that goes to the audit log, and only while a case is open
+ * about the booking or a report about its thread (blueprint 08: "read only when handling a case or report on
+ * that thread").
+ */
 export async function revealBookingConversation(db: Db, staff: StaffActor, bookingId: string, input: RestrictedAccessInput, now: Date): Promise<RevealConversationResult> {
   const parsed = restrictedAccessInputSchema.safeParse(input);
   // validationFailed always returns the failure shape.
@@ -341,6 +348,17 @@ export async function revealBookingConversation(db: Db, staff: StaffActor, booki
   if (!canWorkCases(staff.roles)) return { ok: false, code: 'not_allowed' };
   const [thread] = await db.select().from(threads).where(and(eq(threads.kind, 'booking'), eq(threads.linkedId, String(bookingId)))).limit(1);
   if (!thread) return { ok: false, code: 'not_allowed' };
+  const [handling] = await db
+    .select({ id: supportCases.id })
+    .from(supportCases)
+    .where(
+      and(
+        or(eq(supportCases.bookingId, String(bookingId)), sql`${supportCases.context}->>'threadId' = ${thread.id}`),
+        notInArray(supportCases.status, ['closed']),
+      ),
+    )
+    .limit(1);
+  if (!handling) return { ok: false, code: 'not_allowed' };
   await audit(db, staff, 'booking.view_conversation', 'thread', thread.id, now, { reason: parsed.data.reason, metadata: { bookingId } });
   return { ok: true, conversation: await conversationView(db, thread) };
 }
@@ -354,7 +372,9 @@ export async function decideRefundRequest(db: Db, payments_: PaymentProvider | n
   if (!parsed.success) return validationFailed(parsed.error);
   if (!payments_) return { ok: false, code: 'not_allowed' };
   const [request] = await db.select().from(refundRequests).where(and(eq(refundRequests.id, parsed.data.requestId), eq(refundRequests.bookingId, String(bookingId)))).limit(1);
-  if (!request || request.status !== 'pending' || request.requestedByUserId === staff.id || !canApproveRefund(staff.roles, request.amountCents)) return { ok: false, code: 'not_allowed' };
+  if (!request || request.status !== 'pending' || request.requestedByUserId === staff.id) return { ok: false, code: 'not_allowed' };
+  // An approver's limit is per booking too: what was already refunded counts.
+  if (!canApproveRefund(staff.roles, (await discretionaryRefundedCents(db, String(bookingId))) + request.amountCents)) return { ok: false, code: 'not_allowed' };
   const approve = parsed.data.decision === 'approve';
   if (approve) {
     const money = await bookingMoneyFacts(db, String(bookingId));

@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import { ensureThread } from '@/modules/messaging/service';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { reportProblem, submitCompletion } from '@/modules/bookings/completion';
@@ -11,7 +12,7 @@ import { offers } from '@/modules/offers/schema';
 import { payments, refunds } from '@/modules/payments/schema';
 import { supportCases } from '@/modules/support/schema';
 import { getAdminCase, previewResolution, staffReply, type StaffActor } from '@/modules/support/staff';
-import { getAdminBooking, resolveCaseWithMoney, revealBookingAddress, staffRefund } from '@/modules/support/staff-money';
+import { getAdminBooking, resolveCaseWithMoney, revealBookingAddress, revealBookingConversation, staffRefund } from '@/modules/support/staff-money';
 import { files, tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
@@ -102,6 +103,15 @@ describe('the staff booking page', () => {
     expect(revealed.ok && revealed.address.line1).toBeTruthy();
     const [logged] = await db.select().from(auditLog).where(and(eq(auditLog.action, 'booking.view_address'), eq(auditLog.targetId, settled!.id)));
     expect(logged).toMatchObject({ actorId: 'usr_alex', reason: 'Checking the reported damage location.' });
+
+    // The conversation opens only while a case about the booking is being handled (blueprint 08).
+    const reason = { reason: 'Checking what was agreed about the drawer.' };
+    expect(await revealBookingConversation(db, alex, settled!.id, reason, now())).toMatchObject({ ok: true });
+    const [quiet] = await db.select({ id: bookings.id, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId }).from(bookings).where(eq(bookings.taskId, 'tsk_wardrobe'));
+    // A booking with a conversation but no case.
+    await ensureThread(db, { kind: 'booking', linkedId: quiet!.id, taskId: 'tsk_wardrobe', participantIds: [quiet!.posterUserId, quiet!.helperUserId] }, now());
+    expect((await getAdminBooking(db, alex, quiet!.id, now()))?.actions).not.toContain('reveal_conversation');
+    expect(await revealBookingConversation(db, alex, quiet!.id, reason, now())).toEqual({ ok: false, code: 'not_allowed' });
   });
 });
 

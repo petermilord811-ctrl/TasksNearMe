@@ -23,6 +23,7 @@ import {
   BETA_FLAGS,
   betaGatesFrom,
   canManageBeta,
+  canSwitchBeta,
   codeFitsUse,
   displayInviteCode,
   generateInviteCode,
@@ -174,7 +175,7 @@ export async function getAdminBetaPage(db: Db, staff: StaffActor, now: Date, app
       codes: [...codes.filter((c) => c.status === 'active'), ...codes.filter((c) => c.status !== 'active')],
     });
   }
-  return { markets: result, canManage: canManageBeta(staff.roles) };
+  return { markets: result, canManage: canManageBeta(staff.roles), canSwitch: canSwitchBeta(staff.roles) };
 }
 
 async function audit(db: Db, staff: StaffActor, action: string, targetType: string, targetId: string, metadata: Record<string, unknown>) {
@@ -234,7 +235,7 @@ const GATE_DESCRIPTION = {
 
 /** One market's switch (a market row in `feature_flags`, over the global default). */
 export async function setBetaGate(db: Db, staff: StaffActor, input: BetaGateInput): Promise<ActionResult> {
-  if (!canManageBeta(staff.roles)) return { ok: false, code: 'not_allowed' };
+  if (!canSwitchBeta(staff.roles)) return { ok: false, code: 'not_allowed' };
   const parsed = betaGateInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const { marketId, gate, enabled } = parsed.data;

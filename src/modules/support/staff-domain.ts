@@ -69,9 +69,11 @@ export function staffCaseActions(facts: StaffCaseFacts): AdminCaseActionId[] {
   const lead = isCaseLead(facts.roles);
   const finished = isFinishedStatus(facts.status);
   const actions: AdminCaseActionId[] = [];
-  if (work && !finished && facts.assigneeId !== facts.viewerId) actions.push('assign_to_me');
+  // Taking a case someone else holds is for leads (blueprint 03 §9); anyone who works cases takes a free one.
+  if (work && !finished && facts.assigneeId !== facts.viewerId && (facts.assigneeId === null || lead)) actions.push('assign_to_me');
   if (work && !finished && facts.assigneeId && (facts.assigneeId === facts.viewerId || lead)) actions.push('unassign');
-  if (work && !finished) actions.push('set_status');
+  // An escalated case is a lead's to decide: others can't move it back (and then resolve it themselves).
+  if (work && !finished && (facts.status !== 'escalated' || lead)) actions.push('set_status');
   if (work && facts.status !== 'closed') actions.push('reply');
   actions.push('add_note');
   if (work && !finished && (facts.status !== 'escalated' || lead)) actions.push('resolve');
@@ -83,6 +85,8 @@ export function staffCaseActions(facts: StaffCaseFacts): AdminCaseActionId[] {
 /** Where a case can move by hand: wait on a person, back to support, or up to a lead. */
 export function nextCaseStatuses(facts: StaffCaseFacts): CaseStatus[] {
   if (!canWorkCases(facts.roles) || isFinishedStatus(facts.status)) return [];
+  // Only a lead moves an escalated case on (blueprint 03 §9).
+  if (facts.status === 'escalated' && !isCaseLead(facts.roles)) return [];
   const options: CaseStatus[] = [];
   if (facts.waitingOn.poster) options.push('awaiting_poster');
   if (facts.waitingOn.helper) options.push('awaiting_helper');
