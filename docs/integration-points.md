@@ -17,6 +17,8 @@ Every outside service sits behind a small interface in `src/integrations/*` (or,
 | Address search | `Geocoder` (`src/integrations/geocoding`) | Fixed sample places in Austin (`FAKE_PLACES`) | Mapbox Geocoding v6 (**built**: `mapbox.ts`) | `MAPBOX_TOKEN` |
 | Photo storage | `FileStorage` (`src/integrations/storage`) | Local disk (`.data/uploads`) | Cloudflare R2 with presigned uploads | `R2_BUCKET` (and keys) |
 | Writing help (Claude) | `TaskDrafter`, `ProfileWriter`, `OfferMessageWriter` (`src/integrations/ai`) | Rule-based stand-ins | Claude through `@anthropic-ai/sdk` (**built**: `claude.ts`) | `ANTHROPIC_API_KEY` (optional `ANTHROPIC_MODEL`) |
+| Reading proofs of address (Claude) | `AddressDocumentReader` (`src/integrations/ai/document-reader.ts`), run by the job runner (`verification.read_documents`) | A stand-in that reads nothing (staff see "not sure") | Claude through `@anthropic-ai/sdk` (**built**) | `ANTHROPIC_API_KEY` (the same key) |
+| Staff two-step sign-in | Built in: TOTP (`src/platform/auth/totp.ts`, `src/modules/accounts/staff-authenticator.ts`) | The code 123456 still works outside production | Any authenticator app; nothing to buy | `BETTER_AUTH_SECRET` (hashes setup codes), `FIELD_ENCRYPTION_KEY` (keys) |
 | Map tiles | `MAP_STYLE_URL` | OpenFreeMap (free, no key) | Any MapLibre style (the same, or a paid one) | `MAP_STYLE_URL`, `MAP_ATTRIBUTION` |
 | Web push | Not built yet (decisions.md) | — | Service worker, VAPID keys, `push_subscriptions` | — |
 
@@ -87,6 +89,12 @@ There's no adapter to write: Better Auth has both providers built in. With keys 
 - **Rules around every call:** the market's `ai_drafting` flag (one switch for all three), an hourly limit per person (10 task drafts, 10 profile drafts, 20 offer messages), prohibited phrases checked before calling, and a refusal from Claude reads as `prohibited`. Drafts save nothing.
 - **Tests never call Claude:** without a key, development and tests use the stand-ins; where a key is set, a browser with the `tnm_ai_stand_in=1` cookie gets the stand-ins (never in production), as the e2e tests do.
 - Before launch: list Anthropic as a subprocessor in the privacy policy, and watch the per-person limits against real use.
+
+### Reading proofs of address (Claude)
+- **Built.** Each proof of address waiting for review is read once by the job runner (two a minute, after every other job, since it waits on the network): the photo (stored as WebP) or PDF goes to Claude with the account's name and the address typed in, and Claude answers five questions in a fixed shape (`messages.parse`): readable, name matches, address matches, dated within 90 days, and the kind of document. Only those answers are stored, in `address_verifications.auto_check`, with the reader's name; never the document's text. Staff see them beside the proof and still decide.
+- **Who gets the stand-in:** accounts on reserved domains (seeded people and tests, such as `example.test`), and development without a key. In production without a key nothing is read, and staff review as before.
+- **Failures:** a refusal or an error stores "unreadable" with `(unavailable)` beside the reader's name, and the proof is never retried, so a bad document can't loop. The address step tells people that an automated reader checks their document first.
+- Before launch: the same subprocessor listing as writing help, and a look at a sample of readings against staff decisions.
 
 ## Switching a provider on
 

@@ -177,7 +177,7 @@
     "submit": "Send for review",
     "sending": "Sending…",
     "sent": "Sent. We'll review it and let you know.",
-    "privacy": "Only our trust and safety team opens the document, and every view is logged. We delete it 30 days after we review it.",
+    "privacy": "Only our trust and safety team opens the document, and every view is logged. First, an automated reader (Claude, by Anthropic) checks the name, address and date for them; we keep only its yes-or-no answers. We delete the document 30 days after we review it.",
     "moving": "Moved? Send a new proof",
     "requested": "Our team asked for a new proof of your home address. Send one below; offers are paused until it is approved.",
     "inReview": "We're reviewing your document. It usually takes a day or two, and you can set up payouts meanwhile.",
