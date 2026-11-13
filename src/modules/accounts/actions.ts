@@ -2,7 +2,7 @@
 
 import { eq } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { routes, socialSignInInputSchema, type ActionResult, type SocialSignInInput } from '@/contracts';
 import { offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
@@ -10,7 +10,10 @@ import { validationFailed } from '@/platform/actions/results';
 import { auth } from '@/platform/auth/auth';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { staffSessionChecks, users } from './schema';
+import { requestNow } from '@/platform/clock';
+import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
+import { confirmEnrollment, redeemSetupCode, verifyStaffTotp } from './staff-authenticator';
+import { users } from './schema';
 import { disconnectSignIn } from './sign-in-methods';
 
 const modeInput = z.object({ mode: z.enum(['poster', 'helper']) });
@@ -72,25 +75,38 @@ export async function disconnectSignInAction(input: SocialSignInInput): Promise<
   return { ok: true, code: 'updated' };
 }
 
-const staffCodeInput = z.object({ code: z.string().regex(/^\d{6}$/) });
+/** The authenticator's dependencies: the field cipher keeps the keys, the auth secret hashes setup codes. */
+function staffAuthDeps() {
+  return { db, cipher: fieldCipherFromEnv(), secret: process.env.BETTER_AUTH_SECRET ?? '', production: process.env.NODE_ENV === 'production' };
+}
 
-/**
- * Staff two-step check for this session (/admin/verify).
- * TODO(integration): replace the development code with TOTP (Better Auth two-factor plugin)
- * before launch — docs/blueprint/07 §2. Production refuses the development code.
- */
-export async function verifyStaffCode(input: { code: string }): Promise<ActionResult> {
-  const parsed = staffCodeInput.safeParse(input);
-  if (!parsed.success) return { ok: false, code: 'validation_failed', fieldErrors: { code: ['invalid'] } };
-
+async function signedInStaffSession() {
   const viewer = await getViewer();
-  if (viewer.kind !== 'user' || viewer.user.staffRoles.length === 0) return { ok: false, code: 'not_allowed' };
+  if (viewer.kind !== 'user' || viewer.user.staffRoles.length === 0) return null;
+  return { id: viewer.user.id, sessionId: viewer.user.sessionId };
+}
 
-  const devCodeAllowed = process.env.NODE_ENV !== 'production';
-  if (!devCodeAllowed || parsed.data.code !== '123456') {
-    return { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } };
-  }
+/** Staff two-step check for this session (/admin/verify): the authenticator's code (or, outside production, 123456). */
+export async function verifyStaffCode(input: { code: string }): Promise<ActionResult> {
+  const staff = await signedInStaffSession();
+  if (!staff) return { ok: false, code: 'not_allowed' };
+  const result = await verifyStaffTotp(staffAuthDeps(), staff, String(input?.code ?? ''), await requestNow());
+  return result.ok ? { ...result, redirectTo: routes.admin.home() } : result;
+}
 
-  await db.insert(staffSessionChecks).values({ sessionId: viewer.user.sessionId }).onConflictDoNothing();
-  return { ok: true, code: 'updated', redirectTo: routes.admin.home() };
+/** A setup code from an admin starts enrolling an authenticator. */
+export async function redeemStaffSetupCode(input: { setupCode: string }): Promise<ActionResult> {
+  const staff = await signedInStaffSession();
+  if (!staff) return { ok: false, code: 'not_allowed' };
+  const result = await redeemSetupCode(staffAuthDeps(), staff, String(input?.setupCode ?? ''), await requestNow());
+  if (result.ok) refresh();
+  return result;
+}
+
+/** The authenticator's first code confirms it and passes this session. */
+export async function confirmStaffAuthenticator(input: { code: string }): Promise<ActionResult> {
+  const staff = await signedInStaffSession();
+  if (!staff) return { ok: false, code: 'not_allowed' };
+  const result = await confirmEnrollment(staffAuthDeps(), staff, String(input?.code ?? ''), await requestNow());
+  return result.ok ? { ...result, redirectTo: routes.admin.home() } : result;
 }

@@ -38,3 +38,4 @@ export * from './rebook';
 export * from './admin-people';
 export * from './admin-verification';
 export * from './report';
+export * from './staff-verify';

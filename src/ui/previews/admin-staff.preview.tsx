@@ -1,5 +1,5 @@
 import { routes, type PreviewEntry } from '@/contracts';
-import { ADMIN_NOW, adminStaffData, fakeAdminStaffHandlers, fakeHandler, rileyStaff } from '@/fixtures';
+import { ADMIN_NOW, adminStaffData, adminStaffSetupCode, fakeAdminStaffHandlers, fakeHandler, rileyStaff } from '@/fixtures';
 import type { AdminStaffPreviewState } from '@/ui/screens/admin/admin-staff-controls';
 import { AdminStaffContent } from '@/ui/screens/admin/admin-staff-screen';
 import { AdminShell } from '@/ui/shells/admin-shell';
@@ -28,4 +28,6 @@ export const adminStaffPreviews: PreviewEntry[] = [
   staff('granted', p.granted, { initialGrantResult: { ok: true, code: 'updated' } }),
   staff('remove-dialog', p.removeDialog, { initialRemove: { userId: 'usr_alex', role: 'support_agent', reason } }),
   staff('not-allowed', p.notAllowed, { initialRemove: { userId: 'usr_sky', role: 'support_lead', reason, result: { ok: false, code: 'not_allowed' } } }),
+  staff('setup-code', p.setupCode, { initialSetupCode: { userId: 'usr_alex', ...adminStaffSetupCode } }),
+  staff('reset-dialog', p.resetDialog, { initialReset: { userId: 'usr_morgan', reason: 'Lost their phone on Friday; setting up a new one today.' } }),
 ];

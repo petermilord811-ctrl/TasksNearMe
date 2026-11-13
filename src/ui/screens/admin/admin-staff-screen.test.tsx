@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminStaffHandlers } from '@/contracts';
-import { ADMIN_NOW, adminStaffData, fakeHandler } from '@/fixtures';
+import { ADMIN_NOW, adminStaffData, adminStaffSetupCode, fakeHandler } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import copy from '../../../../messages/en/ui/adminStaff.json';
 import { AdminStaffScreen } from './admin-staff-screen';
@@ -17,12 +17,46 @@ afterEach(() => {
 });
 
 function mount(onGrant: AdminStaffHandlers['onGrant'] = fakeHandler({ ok: true, code: 'updated' }, 0)) {
-  const handlers = { onGrant: vi.fn(onGrant), onRemove: vi.fn<AdminStaffHandlers['onRemove']>(fakeHandler({ ok: true, code: 'updated' }, 0)) };
+  const handlers = {
+    onGrant: vi.fn(onGrant),
+    onRemove: vi.fn<AdminStaffHandlers['onRemove']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
+    onCreateSetupCode: vi.fn<AdminStaffHandlers['onCreateSetupCode']>(async () => ({ ok: true, ...adminStaffSetupCode })),
+    onResetAuthenticator: vi.fn<AdminStaffHandlers['onResetAuthenticator']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
+  };
   render(<NextIntlClientProvider locale="en" messages={uiMessages}><AdminStaffScreen data={adminStaffData} handlers={handlers} now={ADMIN_NOW} /></NextIntlClientProvider>);
   return handlers;
 }
 
 describe('AdminStaffScreen', () => {
+  it('gives a setup code only where the server allows it, and shows it once', async () => {
+    const user = userEvent.setup();
+    const handlers = mount();
+    const offered = adminStaffData.members.filter((member) => member.authenticatorActions.includes('setup_code'));
+    expect(screen.getAllByRole('button', { name: copy.authenticator.giveCode })).toHaveLength(offered.length);
+    const alex = within(screen.getByText('Alex P.').closest('li')!);
+    await user.click(alex.getByRole('button', { name: copy.authenticator.giveCode }));
+    expect(handlers.onCreateSetupCode).toHaveBeenCalledWith({ userId: 'usr_alex' });
+    expect(await alex.findByText(adminStaffSetupCode.setupCode)).toBeInTheDocument();
+    // Nothing for the viewer's own authenticator.
+    const riley = within(screen.getByText('Riley N.').closest('li')!);
+    expect(riley.queryByRole('button', { name: copy.authenticator.reset })).not.toBeInTheDocument();
+  });
+
+  it('resets an authenticator only with a reason', async () => {
+    const user = userEvent.setup();
+    const handlers = mount();
+    const morgan = within(screen.getByText('Morgan L.').closest('li')!);
+    await user.click(morgan.getByRole('button', { name: copy.authenticator.reset }));
+    const dialog = within(await screen.findByRole('alertdialog'));
+    await user.click(dialog.getByRole('button', { name: copy.authenticator.resetConfirm }));
+    expect(await dialog.findByText(copy.errors.reasonRequired)).toBeInTheDocument();
+    expect(handlers.onResetAuthenticator).not.toHaveBeenCalled();
+    await user.type(dialog.getByLabelText(copy.reason), 'Lost their phone; setting up a new one.');
+    await user.click(dialog.getByRole('button', { name: copy.authenticator.resetConfirm }));
+    await waitFor(() => expect(handlers.onResetAuthenticator).toHaveBeenCalledWith({ userId: 'usr_morgan', reason: 'Lost their phone; setting up a new one.' }));
+    expect(await screen.findByText(copy.authenticator.resetDone)).toBeInTheDocument();
+  });
+
   it('offers to remove only the removable roles', () => {
     mount();
     const removable = adminStaffData.members.flatMap((member) => member.removable).length;

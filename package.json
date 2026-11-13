@@ -25,6 +25,7 @@
     "db:migrate": "tsx db/scripts/cli.ts migrate",
     "db:seed": "tsx db/scripts/cli.ts seed",
     "db:reset": "tsx db/scripts/cli.ts reset",
+    "staff:setup-code": "tsx db/scripts/cli.ts staff-setup-code",
     "test:db": "vitest run --config vitest.db.config.mts"
   },
   "dependencies": {

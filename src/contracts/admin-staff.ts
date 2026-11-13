@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ActionHandler, FieldErrorCode } from './actions';
+import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
 import { STAFF_ROLES, type ISODateTime, type StaffRole } from './common';
 import type { PersonSummary } from './people';
 
@@ -29,6 +29,39 @@ export interface AdminStaffMember {
    * fewer than `MIN_ADMINS`).
    */
   removable: StaffRole[];
+  /** Their authenticator app for the two-step check: none yet, set up but not confirmed, or in use. */
+  authenticator: StaffAuthenticatorStatus;
+  /** What the viewer may do about it (never for themselves; see `STAFF_AUTHENTICATOR_ACTIONS`). */
+  authenticatorActions: StaffAuthenticatorAction[];
+}
+
+export const STAFF_AUTHENTICATOR_STATUSES = ['none', 'pending', 'active'] as const;
+export type StaffAuthenticatorStatus = (typeof STAFF_AUTHENTICATOR_STATUSES)[number];
+
+/**
+ * `setup_code`: a one-time code (24 hours) that lets them set up an authenticator; only before one is in
+ * use. `reset`: remove a lost authenticator, with a reason; their sessions are asked for a code again.
+ */
+export const STAFF_AUTHENTICATOR_ACTIONS = ['setup_code', 'reset'] as const;
+export type StaffAuthenticatorAction = (typeof STAFF_AUTHENTICATOR_ACTIONS)[number];
+
+export const staffAuthenticatorResetInputSchema = z.object({
+  userId: z.string(code('required')).min(1, code('required')),
+  reason: reason(),
+});
+export type StaffAuthenticatorResetInput = z.input<typeof staffAuthenticatorResetInputSchema>;
+
+/** The setup code is shown once, to the admin who asked for it. */
+export type StaffSetupCodeResult = { ok: true; setupCode: string; expiresAt: ISODateTime } | { ok: false; code: 'not_allowed' | 'not_found' | 'unknown' };
+
+/**
+ * `onCreateSetupCode`: the code, or `not_allowed` (not an admin, their own, or an authenticator already in
+ * use) / `not_found` (not staff). `onResetAuthenticator`: ok `updated`; `validation_failed`
+ * (`fieldErrors.reason`), `not_allowed`.
+ */
+export interface StaffAuthenticatorHandlers {
+  onCreateSetupCode: QueryHandler<{ userId: string }, StaffSetupCodeResult>;
+  onResetAuthenticator: ActionHandler<StaffAuthenticatorResetInput>;
 }
 
 /** `routes.admin.staff()`: everyone with a staff role, by name. */
@@ -58,7 +91,7 @@ export const staffRoleRemoveInputSchema = z.object({
 export type StaffRoleRemoveInput = z.input<typeof staffRoleRemoveInputSchema>;
 
 /** Both ok `updated`. Errors: `validation_failed`, `not_allowed` (role or the admin minimum), `unknown`. */
-export interface AdminStaffHandlers {
+export interface AdminStaffHandlers extends StaffAuthenticatorHandlers {
   onGrant: ActionHandler<StaffRoleGrantInput>;
   onRemove: ActionHandler<StaffRoleRemoveInput>;
 }

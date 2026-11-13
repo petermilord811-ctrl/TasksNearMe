@@ -41,6 +41,24 @@
     "grantErrors": "Staff · email and role errors",
     "removeDialog": "Staff · remove a role",
     "granted": "Staff · role added",
-    "notAllowed": "Staff · not allowed"
+    "notAllowed": "Staff · not allowed",
+    "setupCode": "Staff · a setup code, shown once",
+    "resetDialog": "Staff · reset an authenticator"
+  },
+  "authenticator": {
+    "none": "Authenticator app: not set up yet",
+    "pending": "Authenticator app: added, waiting for its first code",
+    "active": "Authenticator app: in use",
+    "giveCode": "Give a setup code",
+    "giving": "Making a code…",
+    "codeFor": "Setup code for {name}",
+    "codeHint": "Tell them in person or by phone, never by email. It works once, until {time}, and replaces any earlier code.",
+    "reset": "Reset authenticator",
+    "resetTitle": "Reset the authenticator?",
+    "resetDescription": "{name}'s authenticator app stops working and they're asked for a code again everywhere they're signed in. Give them a new setup code afterwards.",
+    "resetConfirm": "Reset authenticator",
+    "resetting": "Resetting…",
+    "resetDone": "Authenticator reset. Give them a new setup code.",
+    "failed": "That didn't work. Refresh the page and try again."
   }
 }

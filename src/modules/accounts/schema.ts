@@ -162,3 +162,33 @@ export const agreements = pgTable(
   },
   (t) => [uniqueIndex('agreements_user_doc_version_idx').on(t.userId, t.doc, t.version)],
 );
+
+/** A staff member's authenticator app (TOTP): the key, encrypted, and the last code step used (no replays). Unconfirmed until its first code. */
+export const staffAuthenticators = pgTable('staff_authenticators', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  secretCiphertext: text('secret_ciphertext').notNull(),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  lastStep: integer('last_step'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** One-time setup codes admins give new staff (hashed; 24 hours; used once). */
+export const staffSetupCodes = pgTable(
+  'staff_setup_codes',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    codeHash: text('code_hash').notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('staff_setup_codes_user_idx').on(t.userId, t.createdAt)],
+);
+

@@ -13,15 +13,20 @@ const person = (id: string, displayName: string, initials: string, email: string
 const granted = { grantedAt: '2026-08-01T15:00:00.000Z', grantedBy: 'Riley N.' };
 
 const members: AdminStaffMember[] = [
-  { person: person('usr_alex', 'Alex P.', 'AP', 'alex@example.test'), roles: [{ role: 'support_agent', ...granted }], removable: ['support_agent'] },
-  { person: person('usr_casey', 'Casey W.', 'CW', 'casey@example.test'), roles: [{ role: 'finance', ...granted }], removable: ['finance'] },
-  { person: person('usr_morgan', 'Morgan L.', 'ML', 'morgan@example.test'), roles: [{ role: 'support_lead', ...granted }], removable: ['support_lead'] },
-  // The viewer: their own admin role can't be removed.
-  { person: person('usr_riley', 'Riley N.', 'RN', 'riley@example.test'), roles: [{ role: 'admin', grantedAt: '2026-08-01T15:00:00.000Z' }], removable: [] },
+  // New to staff: no authenticator yet (an admin gives them a setup code).
+  { person: person('usr_alex', 'Alex P.', 'AP', 'alex@example.test'), roles: [{ role: 'support_agent', ...granted }], removable: ['support_agent'], authenticator: 'none', authenticatorActions: ['setup_code'] },
+  // Has a setup code in progress: the key is added but not confirmed yet.
+  { person: person('usr_casey', 'Casey W.', 'CW', 'casey@example.test'), roles: [{ role: 'finance', ...granted }], removable: ['finance'], authenticator: 'pending', authenticatorActions: ['setup_code', 'reset'] },
+  { person: person('usr_morgan', 'Morgan L.', 'ML', 'morgan@example.test'), roles: [{ role: 'support_lead', ...granted }], removable: ['support_lead'], authenticator: 'active', authenticatorActions: ['reset'] },
+  // The viewer: their own admin role can't be removed, nor their own authenticator reset.
+  { person: person('usr_riley', 'Riley N.', 'RN', 'riley@example.test'), roles: [{ role: 'admin', grantedAt: '2026-08-01T15:00:00.000Z' }], removable: [], authenticator: 'active', authenticatorActions: [] },
   // A second admin who also leads support: with only two admins, only the lead role can go.
-  { person: person('usr_sky', 'Sky D.', 'SD', 'sky@example.test'), roles: [{ role: 'admin', ...granted }, { role: 'support_lead', ...granted }], removable: ['support_lead'] },
-  { person: person('usr_taylor', 'Taylor B.', 'TB', 'taylor@example.test'), roles: [{ role: 'trust_safety', ...granted }], removable: ['trust_safety'] },
+  { person: person('usr_sky', 'Sky D.', 'SD', 'sky@example.test'), roles: [{ role: 'admin', ...granted }, { role: 'support_lead', ...granted }], removable: ['support_lead'], authenticator: 'active', authenticatorActions: ['reset'] },
+  { person: person('usr_taylor', 'Taylor B.', 'TB', 'taylor@example.test'), roles: [{ role: 'trust_safety', ...granted }], removable: ['trust_safety'], authenticator: 'active', authenticatorActions: ['reset'] },
 ];
+
+/** A setup code as shown once to the admin who asked for it (until Tuesday Nov 24, 3:00 PM in Austin). */
+export const adminStaffSetupCode = { setupCode: 'K7QD-29XM-PR', expiresAt: '2026-11-24T21:00:00.000Z' };
 
 /** `/admin/staff` for Riley (an admin). */
 export const adminStaffData: AdminStaffPageData = { members, adminCount: 2, grantable: ['support_agent', 'support_lead', 'trust_safety', 'finance', 'admin'] };
@@ -31,4 +36,6 @@ const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(
 export const fakeAdminStaffHandlers: AdminStaffHandlers = {
   onGrant: () => wait({ ok: true as const, code: 'updated' as const }),
   onRemove: () => wait({ ok: true as const, code: 'updated' as const }),
+  onCreateSetupCode: () => wait({ ok: true as const, ...adminStaffSetupCode }),
+  onResetAuthenticator: () => wait({ ok: true as const, code: 'updated' as const }),
 };

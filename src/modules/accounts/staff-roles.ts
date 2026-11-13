@@ -13,10 +13,11 @@ import {
 } from '@/contracts';
 import { personSummaryOf, type StaffActor } from '@/modules/support/staff';
 import { validationFailed } from '@/platform/actions/results';
+import { authenticatorActionsFor, authenticatorStatusOf } from './staff-authenticator';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { staffRoles, users } from './schema';
+import { staffRoles, users, staffAuthenticators } from './schema';
 
 /**
  * Staff roles (UI-037; blueprint 08 §4): admins grant and remove roles, each with a reason that goes to the
@@ -53,10 +54,14 @@ export async function getAdminStaff(db: Db, staff: StaffActor): Promise<AdminSta
     byUser.set(user.id, entry);
   }
   const adminCount = [...byUser.values()].filter((entry) => entry.roles.some((item) => item.role === 'admin')).length;
+  const authenticators = byUser.size ? await db.select({ userId: staffAuthenticators.userId, confirmedAt: staffAuthenticators.confirmedAt }).from(staffAuthenticators).where(inArray(staffAuthenticators.userId, [...byUser.keys()])) : [];
+  const authenticatorOf = (userId: string) => authenticatorStatusOf(authenticators.find((item) => item.userId === userId));
   const members: AdminStaffMember[] = [...byUser.values()].map(({ user, roles }) => ({
     person: { ...personSummaryOf(user), email: user.email },
     roles,
     removable: removableRoles(staff.id, { id: user.id, roles: roles.map((item) => item.role) }, adminCount),
+    authenticator: authenticatorOf(user.id),
+    authenticatorActions: authenticatorActionsFor(staff.id, user.id, authenticatorOf(user.id)),
   }));
   return { members, adminCount, grantable: [...STAFF_ROLES] };
 }

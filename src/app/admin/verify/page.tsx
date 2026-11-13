@@ -1,41 +1,33 @@
-// Temporary staff two-step page until the admin verify screen (UI-018) replaces it.
+import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { verifyStaffCode } from '@/modules/accounts/actions';
+import { routes } from '@/contracts';
+import { confirmStaffAuthenticator, redeemStaffSetupCode, verifyStaffCode } from '@/modules/accounts/actions';
+import { getStaffVerifyPage } from '@/modules/accounts/staff-authenticator';
 import { getViewer } from '@/platform/auth/viewer';
-import { PageHeader, PageSkeleton } from '@/ui/components';
+import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
+import { db } from '@/platform/db/client';
+import { PageSkeleton } from '@/ui/components';
+import { StaffVerifyScreen } from '@/ui/screens/admin/staff-verify-screen';
 
-export const metadata = { title: 'Staff verification' };
+export const metadata: Metadata = { title: 'Staff sign-in', robots: { index: false } };
 
-async function submit(formData: FormData) {
-  'use server';
-  const result = await verifyStaffCode({ code: String(formData.get('code') ?? '') });
-  if (result.ok && result.redirectTo) redirect(result.redirectTo);
-}
-
+/** The staff two-step check: the authenticator's code, or setting the authenticator up (blueprint 08). */
 export default function StaffVerifyPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
-      <StaffVerifyForm />
+      <StaffVerify />
     </Suspense>
   );
 }
 
-async function StaffVerifyForm() {
+async function StaffVerify() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user' || viewer.user.staffRoles.length === 0) notFound();
-  return (
-    <main id="main" className="mx-auto max-w-reading px-gutter py-section">
-      <PageHeader title="Staff verification" description="Enter your 6-digit code. In development the code is 123456." />
-      <form action={submit} className="mt-6 flex gap-3">
-        <label htmlFor="code" className="sr-only">
-          Code
-        </label>
-        <input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" required className="h-11 rounded-md border px-3" />
-        <button type="submit" className="h-11 rounded-md bg-primary px-4 text-primary-foreground">
-          Verify
-        </button>
-      </form>
-    </main>
+  if (viewer.user.staffTwoStepVerified) redirect(routes.admin.home());
+  const data = await getStaffVerifyPage(
+    { db, cipher: fieldCipherFromEnv(), secret: process.env.BETTER_AUTH_SECRET ?? '', production: process.env.NODE_ENV === 'production' },
+    { id: viewer.user.id, displayName: viewer.user.displayName, email: viewer.user.email },
   );
+  return <StaffVerifyScreen data={data} handlers={{ onVerifyCode: verifyStaffCode, onRedeemSetupCode: redeemStaffSetupCode, onConfirmEnrollment: confirmStaffAuthenticator }} />;
 }

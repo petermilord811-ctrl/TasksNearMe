@@ -1,0 +1,37 @@
+{
+  "eyebrow": "Staff sign-in · {name}",
+  "titles": {
+    "code": "Enter your code",
+    "setup_code": "Set up your authenticator",
+    "enroll": "Add TasksNearMe to your authenticator"
+  },
+  "descriptions": {
+    "code": "Open your authenticator app and enter the 6-digit code for TasksNearMe Staff.",
+    "setup_code": "Staff tools need a second step: a code from an authenticator app on your phone. Enter the setup code an admin gave you to start.",
+    "enroll": "Use an app like Google Authenticator, Microsoft Authenticator, 1Password or Authy."
+  },
+  "code": "6-digit code",
+  "codeHint": "The code changes every 30 seconds.",
+  "verify": "Verify",
+  "setupCode": "Setup code",
+  "setupCodeHint": "It looks like K7QD-29XM-PR and works once, for 24 hours. Ask an admin if you don't have one.",
+  "continue": "Continue",
+  "enroll": {
+    "app": "Open your authenticator app.",
+    "add": "Add an account with the key below, or open the link on this phone.",
+    "confirm": "Enter the 6-digit code it shows.",
+    "key": "Your key",
+    "openApp": "Open in my authenticator app",
+    "codeHint": "The first code from your app confirms it.",
+    "submit": "Confirm and continue"
+  },
+  "devCode": "Development only: the code 123456 also works here.",
+  "previews": {
+    "group": "Staff sign-in",
+    "code": "Staff sign-in: code",
+    "setupCode": "Staff sign-in: setup code",
+    "enroll": "Staff sign-in: add the authenticator",
+    "dev": "Staff sign-in: development, set up later"
+  },
+  "enrollInstead": "Set up an authenticator app"
+}

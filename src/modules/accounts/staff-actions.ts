@@ -1,13 +1,15 @@
 'use server';
 
 import { refresh } from 'next/cache';
-import type { ActionResult, HelperSuspensionInput, StaffRoleGrantInput, StaffRoleRemoveInput, StrikeReversalInput } from '@/contracts';
+import type { ActionResult, HelperSuspensionInput, StaffRoleGrantInput, StaffRoleRemoveInput, StaffAuthenticatorResetInput, StaffSetupCodeResult, StrikeReversalInput } from '@/contracts';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { reverseStrike, setHelperSuspension } from './staff';
 import { grantStaffRole, removeStaffRole } from './staff-roles';
 import { requestNow } from '@/platform/clock';
+import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
+import { createSetupCode, resetAuthenticator } from './staff-authenticator';
 
 /** Server Action behind a person's staff page (src/contracts/admin-people.ts). */
 export async function setHelperSuspensionAction(userId: string, input: HelperSuspensionInput): Promise<ActionResult> {
@@ -48,6 +50,26 @@ export async function removeStaffRoleAction(input: StaffRoleRemoveInput): Promis
   const staff = await signedInStaff();
   if (!staff) return { ok: false, code: 'not_allowed' };
   const result = await removeStaffRole(db, staff, input, await requestNow());
+  if (result.ok) refresh();
+  return result;
+}
+
+function authenticatorDeps() {
+  return { db, cipher: fieldCipherFromEnv(), secret: process.env.BETTER_AUTH_SECRET ?? '', production: process.env.NODE_ENV === 'production' };
+}
+
+/** Admins: a one-time setup code for a staff member's authenticator (shown once, 24 hours). */
+export async function createStaffSetupCodeAction(input: { userId: string }): Promise<StaffSetupCodeResult> {
+  const staff = await signedInStaff();
+  if (!staff) return { ok: false, code: 'not_allowed' };
+  return createSetupCode(authenticatorDeps(), staff, String(input?.userId ?? ''), await requestNow());
+}
+
+/** Admins: remove a lost authenticator (the person sets a new one up with a setup code). */
+export async function resetStaffAuthenticatorAction(input: StaffAuthenticatorResetInput): Promise<ActionResult> {
+  const staff = await signedInStaff();
+  if (!staff) return { ok: false, code: 'not_allowed' };
+  const result = await resetAuthenticator(authenticatorDeps(), staff, input, await requestNow());
   if (result.ok) refresh();
   return result;
 }

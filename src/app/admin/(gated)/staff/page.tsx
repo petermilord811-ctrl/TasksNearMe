@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { grantStaffRoleAction, removeStaffRoleAction } from '@/modules/accounts/staff-actions';
+import { createStaffSetupCodeAction, grantStaffRoleAction, removeStaffRoleAction, resetStaffAuthenticatorAction } from '@/modules/accounts/staff-actions';
 import { getAdminStaff } from '@/modules/accounts/staff-roles';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
@@ -27,5 +27,5 @@ async function AdminStaff() {
   if (!staff) notFound();
   const data = await getAdminStaff(db, staff);
   if (!data) notFound();
-  return <AdminStaffScreen data={data} now={(await requestNow()).toISOString()} handlers={{ onGrant: grantStaffRoleAction, onRemove: removeStaffRoleAction }} />;
+  return <AdminStaffScreen data={data} now={(await requestNow()).toISOString()} handlers={{ onGrant: grantStaffRoleAction, onRemove: removeStaffRoleAction, onCreateSetupCode: createStaffSetupCodeAction, onResetAuthenticator: resetStaffAuthenticatorAction }} />;
 }
