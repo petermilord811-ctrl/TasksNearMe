@@ -1,6 +1,8 @@
 # Every push: typecheck, lint, unit tests, DB integration tests and a production build.
-# Pushes to main (and manual runs with "deploy" ticked) also ship that build to the preview site on the VPS
-# (deploy/preview/README.md). The e2e suite isn't here yet: about 22 minutes, run locally (`npm run e2e`).
+# A green feat/* branch is then merged into main (fast-forward only; no review needed: one developer), and
+# main is deployed to the preview site on the VPS (deploy/preview/README.md). Pushes straight to main and
+# manual runs with "deploy" ticked deploy too. Codex's ui/* branches aren't merged here: they go through
+# review into the work branch first (CLAUDE.md). The e2e suite isn't here yet (about 22 minutes locally).
 name: CI
 
 on:
@@ -15,11 +17,11 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  # A deploy that has started finishes; superseded runs on other branches stop.
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  # A run may be merging or deploying, so it always finishes; a newer push to the same branch waits.
+  cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write # the merge step pushes main
 
 jobs:
   check-build-deploy:
@@ -40,12 +42,16 @@ jobs:
       # The CI database above, with the public dev-only credentials of docker-compose.yml.
       DATABASE_URL: postgres://tnm:tnm_dev_password@localhost:5432/tasksnearme
       TEST_DATABASE_URL: postgres://tnm:tnm_dev_password@localhost:5432/tasksnearme_test
-      # Pages are prerendered against this address; the preview's own settings live on the VPS.
-      APP_URL: https://preview.40-160-239-201.sslip.io
+      # The tests expect the local address, as in .env.local. The build uses the preview's (PREVIEW_URL);
+      # the preview's own settings live on the VPS.
+      APP_URL: http://localhost:3000
+      PREVIEW_URL: https://preview.40-160-239-201.sslip.io
       NEXT_TELEMETRY_DISABLED: '1'
       DEPLOY: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy) }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the merge step compares this commit with main
 
       - uses: actions/setup-node@v5
         with:
@@ -75,13 +81,30 @@ jobs:
           npm run build
         env:
           NEXT_OUTPUT: standalone
+          APP_URL: ${{ env.PREVIEW_URL }}
+
+      - name: Merge into main
+        id: merge
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feat/')
+        run: |
+          git fetch --no-tags origin main
+          if [ "$(git rev-parse origin/main)" = "$GITHUB_SHA" ]; then
+            echo "main is already at ${GITHUB_SHA::7}; its own run deploys it."
+          elif ! git merge-base --is-ancestor origin/main "$GITHUB_SHA"; then
+            echo "::warning title=Not merged::main has commits that $GITHUB_REF_NAME doesn't, so it can't fast-forward. Merge by hand."
+          elif git push origin "$GITHUB_SHA:refs/heads/main"; then
+            echo "merged=true" >> "$GITHUB_OUTPUT"
+            echo "Merged $GITHUB_REF_NAME into main at ${GITHUB_SHA::7}." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning title=Not merged::main moved while this run was checking. Push again to retry."
+          fi
 
       - name: Bundle for the preview
-        if: env.DEPLOY == 'true'
+        if: env.DEPLOY == 'true' || steps.merge.outputs.merged == 'true'
         run: bash scripts/preview/bundle.sh preview-bundle "$GITHUB_SHA"
 
       - name: Deploy to the preview
-        if: env.DEPLOY == 'true'
+        if: env.DEPLOY == 'true' || steps.merge.outputs.merged == 'true'
         env:
           SSH_KEY: ${{ secrets.PREVIEW_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.PREVIEW_SSH_KNOWN_HOSTS }}
@@ -93,4 +116,4 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           ssh -i ~/.ssh/preview_deploy -o BatchMode=yes -o ServerAliveInterval=30 \
             "tnm-preview@$SSH_HOST" "deploy $GITHUB_SHA" < preview-bundle.tgz
-          echo "Live: $APP_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Live: $PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"

@@ -7,9 +7,12 @@ stopgap until the Render setup in the blueprint (07-architecture.md "Hosting", b
 
 1. A push to any branch runs `.github/workflows/ci.yml` on GitHub: typecheck, lint, unit tests, DB integration
    tests, and a standalone production build (`NEXT_OUTPUT=standalone`).
-2. On `main` (or a manual run with **deploy** ticked), `scripts/preview/bundle.sh` packs that build, and the
-   workflow sends it over SSH: `ssh tnm-preview@<vps> "deploy <sha>" < preview-bundle.tgz`.
-3. On the VPS, that key can only run `deploy.sh`. The script unpacks the release, runs `prepare-db.cjs`
+2. When all of that passes on a `feat/*` branch, the run fast-forwards `main` to that commit. No review is
+   needed, since one person develops this. If `main` has commits the branch lacks, it doesn't merge; it warns
+   instead. Codex's `ui/*` branches are never merged here: they're reviewed into the work branch first.
+3. A merged run, a push straight to `main`, or a manual run with **deploy** ticked then packs the build with
+   `scripts/preview/bundle.sh` and sends it over SSH: `ssh tnm-preview@<vps> "deploy <sha>" < preview-bundle.tgz`.
+4. On the VPS, that key can only run `deploy.sh`. The script unpacks the release, runs `prepare-db.cjs`
    (migrations, plus the sample data when the database is empty), switches `current`, restarts the service,
    and rolls back if the new release doesn't answer.
 
