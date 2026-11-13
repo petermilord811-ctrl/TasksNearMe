@@ -3,14 +3,15 @@ title: Privacy policy
 summary: What we collect, why, who we share it with, and the choices you have.
 version: Draft 0.1
 status: draft
-updated: 2026-11-11
+updated: 2026-11-13
 ---
 > [!warning] This is a working draft for review. It has not been reviewed by a lawyer and is not in effect.
 
 ## 1. What we collect {#collect}
 - **Account details:** name, email, and phone number.
 - **Task and booking details:** descriptions, photos, messages, addresses, and reviews.
-- **Verification results** for helpers: whether an ID or background check passed, and when. We don't keep ID documents.
+- **Verification results** for helpers: whether an ID or background check passed, and when.
+- **ID photos** for a helper's ID check: photos of the ID and a selfie, which our trust and safety team compares before our ID partner double-checks them. They're kept encrypted until both checks are finished and deleted no later than 30 days after our decision. From the ID itself we keep only yes-or-no answers (the name matches, 18 or older, not expired) and its expiry month and year, never its number or the birth date.
 - **Payment records** from our payment provider. We never see full card or bank numbers.
 - **Device and usage data:** to keep the service secure and working.
 

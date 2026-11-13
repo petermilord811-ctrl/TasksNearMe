@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { BadgeCheck, CircleDollarSign, Clock, Lock, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
-import type { ActionHandler, ActionResult, BackgroundCheckStatus, BadgeTone, CategorySlug, CategoryView, HelperOnboardingHandlers, IdentityStatus, PayoutAccountStatus, VerificationSummary } from '@/contracts';
+import type { ActionHandler, ActionResult, BackgroundCheckStatus, BadgeTone, CategorySlug, CategoryView, HelperOnboardingHandlers, PayoutAccountStatus, VerificationSummary } from '@/contracts';
 import { routes } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
@@ -15,13 +15,15 @@ import { useFormAction } from '@/ui/lib/use-form-action';
 import { Button } from '@/ui/primitives/button';
 import { FieldError } from '@/ui/primitives/field';
 import { Spinner } from '@/ui/primitives/spinner';
+import { identityBadge, IdentityStages } from './identity-stages';
 
-/** The hosted tracks this panel shows (the phone and home address have their own steps). */
+export { identityStatusTones } from './identity-stages';
+
+/**
+ * The hosted tracks this panel shows (the phone and home address have their own steps). For the ID, it's
+ * the provider's double check, once our team approved the photos (`IdentityCaptureStep` takes them).
+ */
 export type ProviderTrack = 'identity' | 'payout' | 'background';
-
-export const identityStatusTones: Record<IdentityStatus, BadgeTone> = {
-  not_started: 'neutral', processing: 'info', requires_input: 'warning', verified: 'success', canceled: 'neutral',
-};
 export const payoutStatusTones: Record<PayoutAccountStatus, BadgeTone> = {
   not_started: 'neutral', pending: 'info', requirements_due: 'warning', active: 'success', restricted: 'danger',
 };
@@ -65,13 +67,17 @@ export function VerificationPanel({ track, verification, bookableCategories, fir
   const { identity, payout, background } = verification;
   const backgroundApproved = background.status === 'clear' || (background.status === 'consider' && background.adjudication === 'engaged');
   const backgroundCounts = backgroundApproved || !!background.validUntil;
+  /** The provider's check opens once our own check (stage 1) is approved; without one (clients), it's the only check. */
+  const capture = identity.capture;
+  const providerOpen = !capture || capture.stage === 'approved';
+  const identityBadgeView = identityBadge(identity);
 
   const tone: BadgeTone = track === 'identity'
-    ? identity.nameCheck ? 'info' : identity.blocked ? 'warning' : identityStatusTones[identity.status]
+    ? identityBadgeView.tone
     : track === 'payout' ? payoutStatusTones[payout.status]
       : background.adjudication === 'engaged' ? 'success' : background.adjudication === 'post_adverse' ? 'danger' : backgroundStatusTones[background.status];
   const label = track === 'identity'
-    ? identity.nameCheck ? t('statuses.identityNameCheck') : identity.blocked ? t('statuses.identityBlocked') : t(`statuses.identity.${identity.status}`)
+    ? t(identityBadgeView.key)
     : track === 'payout' ? t(`statuses.payout.${payout.status}`)
       : background.adjudication ? t(`statuses.backgroundAdjudication.${background.adjudication}`) : t(`statuses.background.${background.status}`);
   const Icon = track === 'identity' ? ShieldCheck : track === 'payout' ? CircleDollarSign : BadgeCheck;
@@ -79,17 +85,20 @@ export function VerificationPanel({ track, verification, bookableCategories, fir
   const supportNeeded = (track === 'payout' && payout.status === 'restricted') || (track === 'background' && (background.status === 'suspended' || background.adjudication === 'post_adverse')) || (track === 'identity' && (identity.blocked === 'under_18' || identity.blocked === 'too_many_attempts'));
   /** Consent (identity) or the disclosure (background) is needed before the provider opens. */
   const needsAgreement = track === 'identity' ? identity.consentNeeded : track === 'background' ? background.disclosureNeeded : false;
+  /** A helper's notice covers both stages of the ID check; a client's, the provider's check alone. */
+  const notice = track === 'identity' ? (capture ? 'capture.notice' : 'setup.biometric') : 'setup.disclosure';
 
   let providerAction: { label: string; run: () => Promise<ActionResult | undefined> } | undefined;
   let secondaryAction: { label: string; run: () => Promise<ActionResult | undefined> } | undefined;
   const run = <I,>(handler: ActionHandler<I>, input: I) => () => action.run(handler, input);
   if (handlers && !supportNeeded) {
-    if (track === 'identity' && identity.status !== 'verified' && !identity.blocked) {
+    if (track === 'identity' && identity.status !== 'verified' && !identity.blocked && providerOpen) {
       if (identity.status === 'processing') {
         providerAction = { label: t('setup.checkStatus'), run: run(handlers.onRefreshStatus, undefined) };
         secondaryAction = { label: t('setup.continueIdentity'), run: run(handlers.onStartIdentity, { consent: agreed }) };
       } else {
-        providerAction = { label: t(identity.status === 'requires_input' || identity.status === 'canceled' ? 'setup.tryAgain' : 'setup.startIdentity'), run: run(handlers.onStartIdentity, { consent: agreed }) };
+        const start = capture ? 'setup.startDoubleCheck' : 'setup.startIdentity';
+        providerAction = { label: t(identity.status === 'requires_input' || identity.status === 'canceled' ? 'setup.tryAgain' : start), run: run(handlers.onStartIdentity, { consent: agreed }) };
       }
     } else if (track === 'identity' && identity.nameCheck) {
       providerAction = { label: t('setup.checkStatus'), run: run(handlers.onRefreshStatus, undefined) };
@@ -132,7 +141,9 @@ export function VerificationPanel({ track, verification, bookableCategories, fir
 
     <div className="space-y-3 text-sm leading-6 text-muted-foreground">
       {track === 'identity' && <>
-        {!complete && <p>{t('setup.identityExplanation')}</p>}
+        {capture && <IdentityStages identity={identity} />}
+        {!complete && <p>{t(capture?.stage === 'approved' ? 'setup.identityDoubleCheck' : capture?.stage === 'in_review' ? 'capture.inReview' : capture ? 'capture.explanation' : 'setup.identityExplanation')}</p>}
+        {capture?.stage === 'needed' && capture.rejectionReason && !identity.blocked && <Note tone="warning">{t(`capture.rejectionReasons.${capture.rejectionReason}`)}</Note>}
         {identity.requested && <Note tone="warning">{t(`setup.identityRequested.${identity.requested}`)}</Note>}
         {identity.status === 'requires_input' && !identity.blocked && <Note tone="warning">{t(`identityFailureReasons.${identity.failureReason ?? 'other'}`)}</Note>}
         {identity.blocked === 'try_later' && <Note tone="warning">{t('setup.identityBlocked.try_later', { time: identity.retryAt ? formatDateTime(identity.retryAt) : '' })}</Note>}
@@ -175,13 +186,13 @@ export function VerificationPanel({ track, verification, bookableCategories, fir
     {handlers && startsProvider && needsAgreement && <div className="space-y-2">
       <div className="space-y-2 rounded-xl border bg-background p-4 text-sm leading-6">
         <p className="font-medium">{t(track === 'identity' ? 'setup.biometric.title' : 'setup.disclosure.title')}</p>
-        <p className="text-muted-foreground">{t(track === 'identity' ? 'setup.biometric.body' : 'setup.disclosure.body')}</p>
+        <p className="text-muted-foreground">{t(`${notice}.body`)}</p>
         <label className="flex min-h-11 cursor-pointer items-start gap-3">
           <input type="checkbox" checked={agreed} onChange={(event) => { setAgreed(event.target.checked); setAgreeError(false); }} aria-invalid={agreeError || undefined} aria-describedby={agreeError ? `${id}-agree-error` : undefined} className={checkboxClass} />
-          <span>{t(track === 'identity' ? 'setup.biometric.checkbox' : 'setup.disclosure.checkbox')}</span>
+          <span>{t(`${notice}.checkbox`)}</span>
         </label>
       </div>
-      {agreeError && <FieldError id={`${id}-agree-error`}>{t(track === 'identity' ? 'setup.biometric.required' : 'setup.disclosure.required')}</FieldError>}
+      {agreeError && <FieldError id={`${id}-agree-error`}>{t(`${notice}.required`)}</FieldError>}
     </div>}
 
     {!complete && !supportNeeded && <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(`setup.privacy.${track}`)}</p>}

@@ -2,6 +2,9 @@ import { and, asc, eq } from 'drizzle-orm';
 import type {
   AddressRejectionReason,
   CategorySlug,
+  IdentityCaptureRejectionReason,
+  IdentityCaptureSummary,
+  IdentityDocumentType,
   PayoutAccountStatus,
   VerificationSummary,
 } from '@/contracts';
@@ -14,8 +17,8 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { computeOnboarding, type OnboardingFacts } from './progress';
-import { addressVerifications, backgroundChecks, identityVerifications, payoutAccounts } from './schema';
-import { addressStanding, backgroundStanding, identityStanding } from './standing';
+import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications, payoutAccounts } from './schema';
+import { addressStanding, backgroundStanding, identityStanding, livenessPromptFor } from './standing';
 
 /**
  * A helper's onboarding state from every track (blueprint 06 §1), and the profile fields cached from it
@@ -43,7 +46,7 @@ export async function emitVerificationEvent(
 }
 
 export async function loadOnboardingState(db: Db, userId: string, now: Date) {
-  const [[user], [profile], serviceRows, identityRows, addressRows, backgroundRows, [payout], agreements] = await Promise.all([
+  const [[user], [profile], serviceRows, identityRows, addressRows, backgroundRows, [payout], agreements, captureRows] = await Promise.all([
     db
       .select({ firstName: users.firstName, lastName: users.lastName, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt, homeMarketId: users.homeMarketId })
       .from(users)
@@ -61,8 +64,9 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
     db.select().from(backgroundChecks).where(eq(backgroundChecks.userId, userId)).orderBy(asc(backgroundChecks.createdAt)),
     db.select().from(payoutAccounts).where(eq(payoutAccounts.userId, userId)).limit(1),
     currentAgreements(db, userId),
+    db.select().from(identityCaptures).where(eq(identityCaptures.userId, userId)).orderBy(asc(identityCaptures.createdAt)),
   ]);
-  const identity = identityStanding(identityRows, now);
+  const identity = identityStanding(identityRows, now, captureRows);
   const address = addressStanding(addressRows);
   const background = backgroundStanding(backgroundRows, now);
 
@@ -75,16 +79,19 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
     })),
     areaSet: Boolean(profile?.areaId),
     phoneVerified: Boolean(user?.phone && user.phoneVerifiedAt),
-    identity: { status: identity.status, cleared: identity.cleared },
+    identity: { status: identity.status, cleared: identity.cleared, captureInReview: identity.capture?.status === 'submitted' },
     address: { status: address.status, verified: address.verified },
     payout: (payout?.status as PayoutAccountStatus | undefined) ?? 'not_started',
     background: { status: background.status, eligible: background.eligible },
   };
   return {
+    userId,
     user: user ?? null,
     profile: profile ?? null,
     serviceRows,
     identityRows,
+    /** Our own ID check's tries (stage 1), oldest first. */
+    captureRows,
     addressRows,
     backgroundRows,
     identity,
@@ -133,8 +140,25 @@ export function addressLabel(ciphertext: string | null, cipher: FieldCipher | nu
   }
 }
 
-/** What the helper's screens show of each track. */
-export function verificationSummary(state: OnboardingState, backgroundRequired: boolean, cipher: FieldCipher | null): VerificationSummary {
+/**
+ * Our own ID check (stage 1) as the helper sees it. `secret` keys the selfie's prompt (BETTER_AUTH_SECRET),
+ * so the prompt for the next try can't be predicted or changed by reloading.
+ */
+export function captureSummary(state: OnboardingState, secret: string): IdentityCaptureSummary {
+  const { identity } = state;
+  const latest = identity.capture;
+  const stage: IdentityCaptureSummary['stage'] = identity.verified ? 'done' : identity.captureApproved ? 'approved' : latest?.status === 'submitted' ? 'in_review' : 'needed';
+  return {
+    stage,
+    canSubmit: identity.canCapture,
+    ...(latest ? { documentType: latest.documentType as IdentityDocumentType, submittedAt: latest.submittedAt.toISOString() } : {}),
+    ...(stage === 'needed' && latest?.status === 'rejected' && latest.rejectionReason ? { rejectionReason: latest.rejectionReason as IdentityCaptureRejectionReason } : {}),
+    prompt: livenessPromptFor(state.userId, state.captureRows.length, secret),
+  };
+}
+
+/** What the helper's screens show of each track. `promptSecret` picks the selfie's prompt (helpers' own ID check). */
+export function verificationSummary(state: OnboardingState, backgroundRequired: boolean, cipher: FieldCipher | null, options: { promptSecret?: string } = {}): VerificationSummary {
   const { identity, address, background } = state;
   const reason = (value: string | null | undefined) => (value ? (value as AddressRejectionReason) : undefined);
   // The label is the address the status describes (the verified one while a newer proof waits).
@@ -153,6 +177,8 @@ export function verificationSummary(state: OnboardingState, backgroundRequired: 
       ...(identity.retryAt ? { retryAt: identity.retryAt.toISOString() } : {}),
       ...(identity.nameCheck ? { nameCheck: identity.nameCheck } : {}),
       ...(identity.requested ? { requested: identity.requested } : {}),
+      // Helpers take our own check first; a client's ID check is the provider's alone.
+      ...(state.profile ? { capture: captureSummary(state, options.promptSecret ?? '') } : {}),
     },
     address: {
       status: address.status,

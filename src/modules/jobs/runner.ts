@@ -23,7 +23,8 @@ import { runPrivacyRequests } from '@/modules/privacy/requests';
 import { retentionDue, runRetention } from '@/modules/privacy/retention';
 import { createEmailProvider } from '@/integrations/email';
 import { documentReaderFromEnv } from '@/integrations/ai/document-reader';
-import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
+import { idReaderFromEnv } from '@/integrations/ai/id-document-reader';
+import { byteCipherFromEnv, fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 
 /**
@@ -32,7 +33,7 @@ import type { Db } from '@/platform/db/connect';
  * calendars and the scheduled charges (with their deadlines),
  * can't-access expiry, start and approval reminders, auto-approval, review publishing, verification timers,
  * notifications and their email and text messages, privacy requests (data copies, deletions), retention
- * timers (hourly), and the reading of proofs of address. Each job is idempotent; a
+ * timers (hourly), and the reading of proofs of address and IDs. Each job is idempotent; a
  * Postgres advisory lock lets only one server instance run them at a time. Payouts and rewards stay
  * lazy per person for now.
  */
@@ -65,7 +66,13 @@ export const JOBS: Job[] = [
   { name: 'retention.sweep', run: (db, now) => (retentionDue(now) ? runRetention(db, { storage: createFileStorage() }, now) : Promise.resolve()) },
   // Last: it waits on Claude (a few seconds a document).
   { name: 'earnings.transfers', run: async (db, now) => { const connect = stripeConnectFromEnv(); if (connect) await runScheduledTransfers(db, connect, now); } },
-  { name: 'verification.read_documents', run: (db, now) => readPendingDocuments(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), reader: documentReaderFromEnv() }, now) },
+  {
+    name: 'verification.read_documents',
+    run: (db, now) => {
+      const storage = createFileStorage();
+      return readPendingDocuments(db, { storage, cipher: fieldCipherFromEnv(), reader: documentReaderFromEnv(), identity: { storage, files: byteCipherFromEnv(), reader: idReaderFromEnv() } }, now);
+    },
+  },
 ];
 
 const LOCK_KEY = 72_200_001;

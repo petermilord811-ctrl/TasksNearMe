@@ -10,16 +10,35 @@ import type {
   AddressRejectionReason,
   AddressVerificationStatus,
   AdminAddressProofView,
+  AdminIdentityCaptureView,
+  AdminIdentityReviewRow,
   AdminPersonVerification,
   AdminVerificationActionId,
   AdminVerificationQueue,
   AdminVerificationsPageData,
   BackgroundAdjudication,
   CategorySlug,
+  IdentityAutoCheck,
+  IdentityCaptureDecisionInput,
+  IdentityCapturePhoto,
+  IdentityCaptureRejectionReason,
+  IdentityCaptureRevealInput,
+  IdentityCaptureRevealResult,
+  IdentityCaptureStatus,
+  IdentityDocumentType,
+  LivenessPrompt,
   StaffRole,
   VerificationActionInput,
 } from '@/contracts';
-import { ADMIN_VERIFICATION_QUEUES, addressDecisionInputSchema, addressProofRevealInputSchema, verificationActionInputSchema } from '@/contracts';
+import {
+  ADMIN_VERIFICATION_QUEUES,
+  addressDecisionInputSchema,
+  addressProofRevealInputSchema,
+  IDENTITY_CAPTURE_PHOTOS,
+  identityCaptureDecisionInputSchema,
+  identityCaptureRevealInputSchema,
+  verificationActionInputSchema,
+} from '@/contracts';
 import type { FileStorage } from '@/integrations/storage';
 import { AGREEMENT_VERSIONS } from '@/modules/accounts/agreements';
 import { users } from '@/modules/accounts/schema';
@@ -28,18 +47,20 @@ import { personSummaryOf, type StaffActor } from '@/modules/support/staff';
 import { files } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
-import type { FieldCipher } from '@/platform/crypto/field-encryption';
+import type { ByteCipher, FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { captureFileIds, IDENTITY_FILE_KINDS } from './capture';
 import type { VerificationProviders } from './providers';
-import { addressVerifications, backgroundChecks, identityVerifications, type StoredAddressAutoCheck } from './schema';
-import { ADDRESS_RULES, BACKGROUND_RULES, identityStanding, type IdentityRow } from './standing';
+import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications, type StoredAddressAutoCheck, type StoredIdentityAutoCheck } from './schema';
+import { ADDRESS_RULES, BACKGROUND_RULES, IDENTITY_CAPTURE_RULES, identityStanding, type IdentityRow } from './standing';
 import { addressLabel, emitVerificationEvent, loadOnboardingState, syncHelperProfile } from './state';
 
 /**
  * Staff verification reviews (src/contracts/admin-verification.ts): the queues, a person's Verification
- * section, decisions, and opening a proof of address. Trust and safety, support leads and admins decide;
- * every decision and every opened document goes to the audit log with the staff member's note or reason.
+ * section, decisions, and opening a proof of address or the ID photos of our own check (stage 1). Trust
+ * and safety, support leads and admins decide; every decision and every opened document goes to the
+ * audit log with the staff member's note or reason.
  */
 
 const DAY_MS = 86_400_000;
@@ -62,6 +83,21 @@ function autoCheckView(stored: StoredAddressAutoCheck | null): AddressAutoCheck 
     ...(stored.documentType ? { documentType: stored.documentType as AddressDocumentType | 'other' } : {}),
   };
 }
+
+function identityAutoCheckView(stored: StoredIdentityAutoCheck | null): IdentityAutoCheck | undefined {
+  if (!stored) return undefined;
+  return {
+    readable: stored.readable,
+    ...(stored.nameMatches !== undefined ? { nameMatches: stored.nameMatches } : {}),
+    ...(stored.isAdult !== undefined ? { isAdult: stored.isAdult } : {}),
+    ...(stored.notExpired !== undefined ? { notExpired: stored.notExpired } : {}),
+    ...(stored.expiresMonth && stored.expiresYear ? { expires: { month: stored.expiresMonth, year: stored.expiresYear } } : {}),
+    ...(stored.documentType ? { documentType: stored.documentType as IdentityDocumentType | 'other' } : {}),
+  };
+}
+
+const PHOTO_COLUMN: Record<IdentityCapturePhoto, 'frontFileId' | 'backFileId' | 'selfieFileId'> = { front: 'frontFileId', back: 'backFileId', selfie: 'selfieFileId' };
+const photosOf = (row: Record<'frontFileId' | 'backFileId' | 'selfieFileId', string | null>) => IDENTITY_CAPTURE_PHOTOS.filter((kind) => row[PHOTO_COLUMN[kind]] !== null);
 
 async function areaNames(db: Db, ids: (string | null)[]): Promise<Map<string, string>> {
   const wanted = [...new Set(ids.filter((id): id is string => id !== null))];
@@ -97,24 +133,42 @@ async function addressQueue(db: Db, now: Date) {
   });
 }
 
-async function identityQueue(db: Db, now: Date) {
-  // People with a check that could need staff: a verified one whose name didn't match, or failed tries.
-  const candidates = await db
-    .selectDistinct({ userId: identityVerifications.userId })
-    .from(identityVerifications)
-    .where(or(and(eq(identityVerifications.status, 'verified'), eq(identityVerifications.nameMatches, false)), inArray(identityVerifications.status, ['requires_input', 'canceled'])));
-  if (candidates.length === 0) return [];
-  const ids = candidates.map((row) => row.userId);
-  const [rows, people] = await Promise.all([
+async function identityQueue(db: Db, now: Date): Promise<AdminIdentityReviewRow[]> {
+  // People who could need staff: photos waiting for review, a verified ID whose name didn't match, or failed tries.
+  const [fromChecks, fromCaptures] = await Promise.all([
+    db
+      .selectDistinct({ userId: identityVerifications.userId })
+      .from(identityVerifications)
+      .where(or(and(eq(identityVerifications.status, 'verified'), eq(identityVerifications.nameMatches, false)), inArray(identityVerifications.status, ['requires_input', 'canceled']))),
+    db.selectDistinct({ userId: identityCaptures.userId }).from(identityCaptures).where(inArray(identityCaptures.status, ['submitted', 'rejected', 'canceled'])),
+  ]);
+  const ids = [...new Set([...fromChecks, ...fromCaptures].map((row) => row.userId))];
+  if (ids.length === 0) return [];
+  const [rows, captures, people] = await Promise.all([
     db.select().from(identityVerifications).where(inArray(identityVerifications.userId, ids)),
+    db.select().from(identityCaptures).where(inArray(identityCaptures.userId, ids)),
     db.select().from(users).where(inArray(users.id, ids)),
   ]);
-  const out = [];
+  const out: AdminIdentityReviewRow[] = [];
   for (const person of people) {
-    const standing = identityStanding(rows.filter((row) => row.userId === person.id), now);
+    const theirs = captures.filter((row) => row.userId === person.id);
+    const standing = identityStanding(rows.filter((row) => row.userId === person.id), now, theirs);
+    const waiting = standing.capture?.status === 'submitted' ? theirs.find((row) => row.id === standing.capture!.id) : undefined;
+    if (waiting) {
+      const autoCheck = identityAutoCheckView(waiting.autoCheck);
+      out.push({
+        id: waiting.id,
+        person: personSummaryOf(person),
+        kind: 'capture',
+        at: waiting.submittedAt.toISOString(),
+        attempts: standing.attempts,
+        capture: { documentType: waiting.documentType as IdentityDocumentType, ...(autoCheck ? { autoCheck } : {}), overdue: now.getTime() - waiting.submittedAt.getTime() > IDENTITY_CAPTURE_RULES.responseTargetHours * HOUR_MS },
+      });
+      continue;
+    }
     const kind = standing.nameCheck ? ('name_check' as const) : standing.blocked === 'too_many_attempts' ? ('too_many_attempts' as const) : null;
     if (!kind || !standing.reviewSince) continue;
-    out.push({ id: standing.latest!.id, person: personSummaryOf(person), kind, at: standing.reviewSince.toISOString(), attempts: standing.attempts });
+    out.push({ id: standing.latest?.id ?? standing.capture?.id ?? person.id, person: personSummaryOf(person), kind, at: standing.reviewSince.toISOString(), attempts: standing.attempts });
   }
   return out.sort((a, b) => a.at.localeCompare(b.at)).slice(0, QUEUE_LIMIT);
 }
@@ -165,13 +219,32 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
   const state = await loadOnboardingState(db, userId, now);
   const { identity, address, background } = state;
   const proofRows = state.addressRows.filter((row) => row.status !== 'withdrawn').reverse().slice(0, 5);
+  const captureRows = [...state.captureRows].reverse().slice(0, 5);
   const [names, deciders] = await Promise.all([
     areaNames(db, proofRows.map((row) => row.areaId)),
     (async () => {
-      const ids = [...new Set(proofRows.map((row) => row.decidedByUserId).filter((id): id is string => id !== null))];
+      const ids = [...new Set([...proofRows, ...captureRows].map((row) => row.decidedByUserId).filter((id): id is string => id !== null))];
       return ids.length ? db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids)) : [];
     })(),
   ]);
+  const captures: AdminIdentityCaptureView[] = captureRows.map((row) => {
+    const autoCheck = identityAutoCheckView(row.autoCheck);
+    const decidedBy = deciders.find((person) => person.id === row.decidedByUserId)?.name;
+    return {
+      id: row.id,
+      status: row.status as IdentityCaptureStatus,
+      documentType: row.documentType as IdentityDocumentType,
+      submittedAt: row.submittedAt.toISOString(),
+      prompt: row.promptKey as LivenessPrompt,
+      ...(autoCheck ? { autoCheck } : {}),
+      photos: photosOf(row),
+      ...(row.filesDeletedAt ? { photosDeletedAt: row.filesDeletedAt.toISOString() } : {}),
+      ...(row.decidedAt ? { decidedAt: row.decidedAt.toISOString() } : {}),
+      ...(decidedBy ? { decidedBy } : {}),
+      ...(row.rejectionReason ? { rejectionReason: row.rejectionReason as IdentityCaptureRejectionReason } : {}),
+      ...(row.staffNote ? { note: row.staffNote } : {}),
+    };
+  });
   const proofs: AdminAddressProofView[] = proofRows.map((row) => {
     const autoCheck = autoCheckView(row.autoCheck);
     const decidedBy = deciders.find((person) => person.id === row.decidedByUserId)?.name;
@@ -198,6 +271,8 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
   if (canDecideVerification(staff)) {
     if (inReviewProof) actions.push('review_address');
     if (address.verified) actions.push('request_address');
+    if (identity.capture?.status === 'submitted') actions.push('review_identity_capture');
+    if (state.captureRows.some((row) => captureFileIds(row).length > 0)) actions.push('view_identity_photos');
     if (identity.nameCheck) actions.push('confirm_name');
     if (identity.blocked) actions.push('allow_identity_retry');
     if (identity.verified) actions.push('request_identity');
@@ -228,6 +303,7 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
       ...(identity.requested ? { requested: identity.requested } : {}),
       ...(state.agreements.biometric_consent ? { consentAt: state.agreements.biometric_consent.toISOString() } : {}),
       ...(latestIdentityRow?.redactionRequestedAt ? { redactionRequestedAt: latestIdentityRow.redactionRequestedAt.toISOString() } : {}),
+      captures,
     },
     address: {
       status: address.status as AddressVerificationStatus,
@@ -281,6 +357,37 @@ export async function decideAddress(db: Db, staff: StaffActor, input: AddressDec
   return { ok: true, code: 'updated' };
 }
 
+/**
+ * Approves or rejects the ID photos in review (our own check, stage 1). Approval opens the provider's
+ * double check for the helper; a rejection gives them the reason (never the note), and they can try
+ * again within the limits (an `under_18` rejection closes helper setup until staff allow new tries).
+ */
+export async function decideIdentityCapture(db: Db, staff: StaffActor, input: IdentityCaptureDecisionInput, now: Date): Promise<ActionResult> {
+  if (!canDecideVerification(staff)) return { ok: false, code: 'not_allowed' };
+  const parsed = identityCaptureDecisionInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const { captureId, decision, reason, note } = parsed.data;
+  const updated = await db
+    .update(identityCaptures)
+    .set({
+      status: decision === 'approve' ? 'approved' : 'rejected',
+      rejectionReason: decision === 'reject' ? (reason ?? 'other') : null,
+      decidedAt: now,
+      decidedByUserId: staff.id,
+      staffNote: note,
+      updatedAt: now,
+    })
+    .where(and(eq(identityCaptures.id, captureId), eq(identityCaptures.status, 'submitted')))
+    .returning({ userId: identityCaptures.userId });
+  const userId = updated[0]?.userId;
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  await audit(db, staff, decision === 'approve' ? 'identity_capture.approved' : 'identity_capture.rejected', userId, note, { captureId, ...(decision === 'reject' && reason ? { reason } : {}) });
+  // Either way the helper has something to do: the double check, or new photos.
+  await emitVerificationEvent(db, userId, 'identity', 'action_needed');
+  await syncHelperProfile(db, userId, now);
+  return { ok: true, code: 'updated' };
+}
+
 /** The other staff actions on a person's verification (src/contracts/admin-verification.ts). */
 export async function verificationAction(db: Db, providers: VerificationProviders | null, staff: StaffActor, input: VerificationActionInput, now: Date): Promise<ActionResult> {
   if (!canDecideVerification(staff)) return { ok: false, code: 'not_allowed' };
@@ -304,6 +411,11 @@ export async function verificationAction(db: Db, providers: VerificationProvider
       break;
     case 'allow_identity_retry':
     case 'request_identity':
+      // Photos still waiting for review belong to the check being replaced (their files are deleted at once).
+      await db
+        .update(identityCaptures)
+        .set({ status: 'canceled', decidedAt: now, decidedByUserId: staff.id, updatedAt: now })
+        .where(and(eq(identityCaptures.userId, userId), eq(identityCaptures.status, 'submitted')));
       await db.insert(identityVerifications).values({
         id: newId('idv'),
         userId,
@@ -415,16 +527,50 @@ export async function revealAddressProof(
   };
 }
 
-/** For the document route: the file a valid token opens, for the staff member it was made for. */
-export async function documentForToken(db: Db, storage: FileStorage, token: string, viewer: StaffActor | null, secret: string, now: Date) {
+/** A 5-minute link to each ID photo still stored (our own check), and the selfie's prompt, after a reason (logged). */
+export async function revealIdentityCapture(db: Db, deps: { secret: string }, staff: StaffActor, input: IdentityCaptureRevealInput, now: Date): Promise<IdentityCaptureRevealResult> {
+  if (!canDecideVerification(staff)) return { ok: false, code: 'not_allowed' };
+  const parsed = identityCaptureRevealInputSchema.safeParse(input);
+  if (!parsed.success) {
+    const result = validationFailed(parsed.error);
+    return { ok: false, code: 'validation_failed', ...(result.ok === false && result.fieldErrors ? { fieldErrors: result.fieldErrors } : {}) };
+  }
+  const [row] = await db.select().from(identityCaptures).where(eq(identityCaptures.id, parsed.data.captureId)).limit(1);
+  if (!row) return { ok: false, code: 'not_found' };
+  const expiresAt = new Date(now.getTime() + DOCUMENT_LINK_MINUTES * 60_000);
+  const photos = photosOf(row).map((kind) => ({ kind, url: `/api/verification-documents/${documentToken({ fileId: row[PHOTO_COLUMN[kind]]!, staffUserId: staff.id, expiresAt }, deps.secret)}` }));
+  await audit(db, staff, 'identity_capture.viewed', row.userId, parsed.data.reason, { captureId: row.id, photos: photos.length });
+  return { ok: true, photos, prompt: row.promptKey as LivenessPrompt, expiresAt: expiresAt.toISOString() };
+}
+
+/**
+ * For the document route: the file a valid token opens, for the staff member it was made for, while it's
+ * still part of its proof or capture. ID photos are decrypted here (`fileCipher`), and only here.
+ */
+export async function documentForToken(db: Db, storage: FileStorage, token: string, viewer: StaffActor | null, secret: string, now: Date, fileCipher: ByteCipher | null = null) {
   const read = readDocumentToken(token, secret, now);
   if (!read || !viewer || viewer.id !== read.staffUserId || !canDecideVerification(viewer)) return null;
-  const [file] = await db.select().from(files).where(and(eq(files.id, read.fileId), eq(files.kind, 'address_proof'))).limit(1);
+  const [file] = await db.select().from(files).where(and(eq(files.id, read.fileId), inArray(files.kind, ['address_proof', ...IDENTITY_FILE_KINDS]))).limit(1);
   if (!file) return null;
-  const [still] = await db.select({ id: addressVerifications.id }).from(addressVerifications).where(and(eq(addressVerifications.documentFileId, file.id), isNotNull(addressVerifications.documentFileId))).limit(1);
-  if (!still) return null;
-  const body = await storage.get(file.storageKey);
-  return body ? { body, contentType: file.contentType } : null;
+  if (file.kind === 'address_proof') {
+    const [still] = await db.select({ id: addressVerifications.id }).from(addressVerifications).where(and(eq(addressVerifications.documentFileId, file.id), isNotNull(addressVerifications.documentFileId))).limit(1);
+    if (!still) return null;
+    const body = await storage.get(file.storageKey);
+    return body ? { body, contentType: file.contentType } : null;
+  }
+  const [still] = await db
+    .select({ id: identityCaptures.id })
+    .from(identityCaptures)
+    .where(or(eq(identityCaptures.frontFileId, file.id), eq(identityCaptures.backFileId, file.id), eq(identityCaptures.selfieFileId, file.id)))
+    .limit(1);
+  if (!still || !fileCipher) return null;
+  const sealed = await storage.get(file.storageKey);
+  if (!sealed) return null;
+  try {
+    return { body: fileCipher.decrypt(sealed), contentType: file.contentType };
+  } catch {
+    return null;
+  }
 }
 
 /** Newest first: a person's decided proofs, for the timers. */

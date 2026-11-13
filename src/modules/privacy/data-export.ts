@@ -15,7 +15,7 @@ import { rewardGrants } from '@/modules/rewards/schema';
 import { supportCases } from '@/modules/support/schema';
 import { taskLocations, taskMarks, tasks } from '@/modules/tasks/schema';
 import { toMessageSegments } from '@/modules/trust/message-segments';
-import { addressVerifications, backgroundChecks, identityVerifications } from '@/modules/verification/schema';
+import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications } from '@/modules/verification/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 
@@ -25,7 +25,7 @@ import type { Db } from '@/platform/db/connect';
  * appear by display name only, and what others wrote passes through the app's own masking, so contact
  * details stay hidden here as they are in the app. Money is in US cents; times are UTC (ISO 8601).
  * Never included: other people's contact details, provider secrets or tokens, internal staff notes,
- * moderation reasons, or verification documents (proof-of-address files are deleted after review).
+ * moderation reasons, or verification documents (proof-of-address files and ID photos are deleted after review).
  */
 
 export const DATA_EXPORT_FORMAT = 'tasksnearme-data-export/1';
@@ -88,6 +88,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
   const identityRows = await db.select().from(identityVerifications).where(eq(identityVerifications.userId, userId)).orderBy(asc(identityVerifications.createdAt));
   const backgroundRows = await db.select().from(backgroundChecks).where(eq(backgroundChecks.userId, userId)).orderBy(asc(backgroundChecks.createdAt));
   const addressRows = await db.select().from(addressVerifications).where(eq(addressVerifications.userId, userId)).orderBy(asc(addressVerifications.createdAt));
+  const captureRows = await db.select().from(identityCaptures).where(eq(identityCaptures.userId, userId)).orderBy(asc(identityCaptures.createdAt));
 
   // ---- Tasks, offers, invites, bookings ----
   const taskRows = await db.select().from(tasks).where(eq(tasks.posterUserId, userId)).orderBy(asc(tasks.createdAt));
@@ -179,6 +180,8 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
     availability: availabilityRows.map((row) => ({ category: categoryOf.get(row.categoryId) ?? row.categoryId, start: iso(row.startAt), end: iso(row.endAt), pricing: pricingOf(row), status: row.status })),
     verification: {
       identity: identityRows.map((row) => ({ provider: row.provider, status: row.status, failureReason: row.failureReason, verifiedAt: iso(row.verifiedAt), startedAt: iso(row.createdAt) })),
+      // Our own ID check (stage 1): what was sent and decided, never the photos or staff notes.
+      identityPhotos: captureRows.map((row) => ({ documentType: row.documentType, status: row.status, rejectionReason: row.rejectionReason, submittedAt: iso(row.submittedAt), decidedAt: iso(row.decidedAt), photosDeletedAt: iso(row.filesDeletedAt) })),
       backgroundChecks: backgroundRows.map((row) => ({ provider: row.provider, status: row.status, completedAt: iso(row.completedAt), validUntil: iso(row.expiresAt), startedAt: iso(row.createdAt) })),
       homeAddress: addressRows.map((row) => ({ status: row.status, address: decrypt(row.addressCiphertext), documentType: row.documentType, submittedAt: iso(row.submittedAt), decidedAt: iso(row.decidedAt), rejectionReason: row.rejectionReason, documentDeletedAt: iso(row.documentDeletedAt) })),
     },

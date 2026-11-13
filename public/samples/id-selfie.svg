@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="960" viewBox="0 0 720 960" role="img" aria-label="Sample selfie (a drawing, no real person)">
+  <rect width="720" height="960" fill="#f3ede5"/>
+  <rect x="0" y="640" width="720" height="320" fill="#e6dccf"/>
+  <path d="M150 960c20-190 110-290 210-290s190 100 210 290z" fill="#c7b8a6"/>
+  <ellipse cx="380" cy="400" rx="150" ry="190" fill="#d9c7b2" transform="rotate(-8 380 400)"/>
+  <path d="M250 330c30-110 230-130 270-10-60-40-200-50-270 10z" fill="#8f7b66"/>
+  <circle cx="330" cy="390" r="12" fill="#5c4b3b"/>
+  <circle cx="430" cy="380" r="12" fill="#5c4b3b"/>
+  <path d="M330 480c30 26 80 24 104-6" stroke="#5c4b3b" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <text x="40" y="920" font-family="Arial, sans-serif" font-size="22" fill="#8a7d6e">Sample selfie for development previews. A drawing, no real person.</text>
+</svg>

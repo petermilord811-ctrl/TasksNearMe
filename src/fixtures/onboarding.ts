@@ -2,6 +2,7 @@ import type {
   AddressSuggestion,
   AreaOption,
   HelperOnboardingHandlers,
+  IdentityCaptureSummary,
   HelperOnboardingPageData,
   HelperProfileEditorData,
   HelperProfileEditorHandlers,
@@ -71,16 +72,24 @@ function progress(
   };
 }
 
+/** Our own ID check (stage 1): the photos still to take. */
+const captureNeeded: IdentityCaptureSummary = { stage: 'needed', canSubmit: true, prompt: 'look_left' };
+/** What Priya sent, and when. */
+const sentPhotos = { documentType: 'drivers_license', submittedAt: '2026-11-17T13:00:00.000Z' } as const;
+/** Our team approved the photos: the double check with the provider is next (or under way). */
+const captureApproved: IdentityCaptureSummary = { stage: 'approved', canSubmit: false, ...sentPhotos, prompt: 'smile' };
+const captureDone: IdentityCaptureSummary = { stage: 'done', canSubmit: false, ...sentPhotos, prompt: 'smile' };
+
 const notStarted: VerificationSummary = {
   phone: { verified: false },
-  identity: { status: 'not_started', consentNeeded: true },
+  identity: { status: 'not_started', consentNeeded: true, capture: captureNeeded },
   address: { status: 'not_started' },
   payout: { status: 'not_started' },
   background: { status: 'not_required', requiredFor: [], disclosureNeeded: true, renewalOpen: false, canStart: false },
 };
 
 const phoneDone: VerificationSummary['phone'] = { verified: true, last4: '0204' };
-const idVerified: VerificationSummary['identity'] = { status: 'verified', verifiedAt: '2026-11-17T14:00:00.000Z', consentNeeded: false };
+const idVerified: VerificationSummary['identity'] = { status: 'verified', verifiedAt: '2026-11-17T14:00:00.000Z', consentNeeded: false, capture: captureDone };
 const addressVerified: VerificationSummary['address'] = {
   status: 'verified',
   verifiedAt: '2026-11-18T15:00:00.000Z',
@@ -164,7 +173,7 @@ export const onboardingPhoneVerified: HelperOnboardingPageData = {
   verification: { ...onboardingPhoneStep.verification, phone: phoneDone },
 };
 
-/** The ID step, before the Texas biometric notice is accepted. */
+/** The ID step, before the Texas biometric notice is accepted (our own check comes first). */
 export const onboardingIdentityStep: HelperOnboardingPageData = {
   ...base,
   step: 'identity',
@@ -173,38 +182,43 @@ export const onboardingIdentityStep: HelperOnboardingPageData = {
   verification: { ...notStarted, phone: phoneDone, background: cleaningNeedsCheck },
 };
 
-/** The ID check needs another try. */
-export const onboardingIdentityRetry: HelperOnboardingPageData = {
+const withIdentity = (identity: VerificationSummary['identity']): HelperOnboardingPageData => ({
   ...onboardingIdentityStep,
-  verification: { ...onboardingIdentityStep.verification, identity: { status: 'requires_input', failureReason: 'document_unreadable', consentNeeded: false } },
-};
+  verification: { ...onboardingIdentityStep.verification, identity },
+});
 
-/** Submitted; Stripe is still processing. */
-export const onboardingIdentityProcessing: HelperOnboardingPageData = {
-  ...onboardingIdentityStep,
-  verification: { ...onboardingIdentityStep.verification, identity: { status: 'processing', consentNeeded: false } },
-};
+/** The notice accepted: the ID's photos and the selfie are next. */
+export const onboardingIdentityCapture = withIdentity({ status: 'not_started', consentNeeded: false, capture: captureNeeded });
 
-/** 3 tries today: the next one opens tomorrow. */
-export const onboardingIdentityTryLater: HelperOnboardingPageData = {
-  ...onboardingIdentityStep,
-  verification: {
-    ...onboardingIdentityStep.verification,
-    identity: { status: 'requires_input', failureReason: 'selfie_mismatch', consentNeeded: false, blocked: 'try_later', retryAt: '2026-11-18T15:30:00.000Z' },
-  },
-};
+/** Our team turned the photos down (the selfie didn't follow its prompt): a new try, with a new prompt. */
+export const onboardingIdentityCaptureRejected = withIdentity({ status: 'not_started', consentNeeded: false, capture: { ...captureNeeded, ...sentPhotos, rejectionReason: 'prompt_not_followed', prompt: 'tilt_head' } });
+
+/** The photos were sent: our team is comparing them. */
+export const onboardingIdentityCaptureInReview = withIdentity({ status: 'not_started', consentNeeded: false, capture: { stage: 'in_review', canSubmit: false, ...sentPhotos, prompt: 'smile' } });
+
+/** Our team approved the photos: the double check with our ID partner is next. */
+export const onboardingIdentityCaptureApproved = withIdentity({ status: 'not_started', consentNeeded: false, capture: captureApproved });
+
+/** The double check needs another try (the photos stay approved). */
+export const onboardingIdentityRetry = withIdentity({ status: 'requires_input', failureReason: 'document_unreadable', consentNeeded: false, capture: captureApproved });
+
+/** The double check was sent; the provider is still processing. */
+export const onboardingIdentityProcessing = withIdentity({ status: 'processing', consentNeeded: false, capture: captureApproved });
+
+/** 3 tries today (photos turned down): the next one opens tomorrow. */
+export const onboardingIdentityTryLater = withIdentity({
+  status: 'not_started',
+  consentNeeded: false,
+  blocked: 'try_later',
+  retryAt: '2026-11-18T15:30:00.000Z',
+  capture: { ...captureNeeded, ...sentPhotos, canSubmit: false, rejectionReason: 'document_unreadable' },
+});
 
 /** 5 tries without a pass: our team looks at it. */
-export const onboardingIdentityTooMany: HelperOnboardingPageData = {
-  ...onboardingIdentityStep,
-  verification: { ...onboardingIdentityStep.verification, identity: { status: 'requires_input', failureReason: 'document_unreadable', consentNeeded: false, blocked: 'too_many_attempts' } },
-};
+export const onboardingIdentityTooMany = withIdentity({ status: 'not_started', consentNeeded: false, blocked: 'too_many_attempts', capture: { ...captureNeeded, ...sentPhotos, canSubmit: false, rejectionReason: 'selfie_mismatch' } });
 
 /** The ID says under 18: helper onboarding is closed. */
-export const onboardingIdentityUnder18: HelperOnboardingPageData = {
-  ...onboardingIdentityStep,
-  verification: { ...onboardingIdentityStep.verification, identity: { status: 'requires_input', failureReason: 'under_18', consentNeeded: false, blocked: 'under_18' } },
-};
+export const onboardingIdentityUnder18 = withIdentity({ status: 'not_started', consentNeeded: false, blocked: 'under_18', capture: { ...captureNeeded, ...sentPhotos, canSubmit: false, rejectionReason: 'under_18' } });
 
 /** Verified, but the ID's name differs from the account's: staff are checking it. */
 export const onboardingIdentityNameCheck: HelperOnboardingPageData = {
@@ -213,10 +227,14 @@ export const onboardingIdentityNameCheck: HelperOnboardingPageData = {
   verification: { ...onboardingIdentityStep.verification, identity: { ...idVerified, nameCheck: 'in_review' } },
 };
 
-/** Staff asked for a new ID check. */
-export const onboardingIdentityRequested: HelperOnboardingPageData = {
+/** Staff asked for a new ID check: new photos first. */
+export const onboardingIdentityRequested = withIdentity({ status: 'not_started', consentNeeded: false, requested: 'staff_request', capture: captureNeeded });
+
+/** Verified: both stages done. */
+export const onboardingIdentityVerified: HelperOnboardingPageData = {
   ...onboardingIdentityStep,
-  verification: { ...onboardingIdentityStep.verification, identity: { status: 'not_started', consentNeeded: false, requested: 'staff_request' } },
+  progress: progress('identity', { locked: ['background', 'done'] }),
+  verification: { ...onboardingIdentityStep.verification, identity: idVerified },
 };
 
 /** The home address step, nothing sent yet. */
@@ -342,7 +360,8 @@ export const onboardingDone: HelperOnboardingPageData = {
   },
   verification: {
     phone: { verified: true, last4: '0201' },
-    identity: { status: 'verified', verifiedAt: '2026-11-10T16:00:00.000Z', consentNeeded: false },
+    // Verified before our own check existed: nothing to capture.
+    identity: { status: 'verified', verifiedAt: '2026-11-10T16:00:00.000Z', consentNeeded: false, capture: { stage: 'done', canSubmit: false, prompt: 'look_up' } },
     address: { ...addressVerified, label: '5678 Example Street, Austin, TX 78702' },
     payout: { status: 'active' },
     background: { status: 'clear', checkedAt: '2026-11-12T16:00:00.000Z', requiredFor: ['furniture-assembly', 'moving-help'], disclosureNeeded: false, validUntil: '2027-11-12T16:00:00.000Z', renewalOpen: false, canStart: false },
@@ -382,7 +401,7 @@ export const samProfileEditorData: HelperProfileEditorData = {
   badges: sam.badges,
   verification: {
     phone: { verified: true, last4: '0202' },
-    identity: { status: 'verified', verifiedAt: sam.badges.idVerifiedAt!, consentNeeded: false },
+    identity: { status: 'verified', verifiedAt: sam.badges.idVerifiedAt!, consentNeeded: false, capture: { stage: 'done', canSubmit: false, prompt: 'look_right' } },
     address: { status: 'verified', verifiedAt: '2026-01-11T16:00:00.000Z', label: '4321 Example Avenue, Austin, TX 78751', documentType: 'lease' },
     payout: { status: 'active' },
     background: { status: 'clear', checkedAt: sam.badges.backgroundCheckedAt!, requiredFor: ['furniture-assembly', 'moving-help', 'light-cleaning'], disclosureNeeded: false, validUntil: '2027-01-12T16:00:00.000Z', renewalOpen: false, canStart: false },
@@ -411,6 +430,8 @@ export const fakeOnboardingHandlers: HelperOnboardingHandlers = {
   onSaveArea: () => wait({ ok: true, code: 'saved', redirectTo: nextStepUrl('phone') }),
   onStartPhone: () => wait({ ok: true, code: 'sent' }),
   onConfirmPhone: () => wait({ ok: true, code: 'updated', redirectTo: nextStepUrl('identity') }),
+  onAcceptIdentityNotice: () => wait({ ok: true, code: 'updated' }),
+  onSubmitIdentityCapture: () => wait({ ok: true, code: 'submitted' }, 900),
   onStartIdentity: () => wait({ ok: true, code: 'updated', redirectTo: '/dev/providers/identity' }),
   onSearchAddresses: () => wait(homeAddressSuggestions, 300),
   onSubmitAddressProof: () => wait({ ok: true, code: 'submitted', redirectTo: nextStepUrl('payout') }, 800),

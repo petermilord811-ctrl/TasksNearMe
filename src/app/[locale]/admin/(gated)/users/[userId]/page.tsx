@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { reverseStrikeAction, setHelperSuspensionAction } from '@/modules/accounts/staff-actions';
-import { decideAddressAction, revealAddressProofAction, verificationStaffAction } from '@/modules/verification/staff-actions';
+import { decideAddressAction, decideIdentityCaptureAction, revealAddressProofAction, revealIdentityCaptureAction, verificationStaffAction } from '@/modules/verification/staff-actions';
 import { getAdminUser } from '@/modules/accounts/staff';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
@@ -38,6 +38,8 @@ async function AdminUser({ params }: Pick<PageProps<'/[locale]/admin/users/[user
         onReverseStrike: reverseStrikeAction.bind(null, userId),
         onRevealAddressProof: revealAddressProofAction,
         onDecideAddress: decideAddressAction,
+        onRevealIdentityCapture: revealIdentityCaptureAction,
+        onDecideIdentityCapture: decideIdentityCaptureAction,
         onVerificationAction: verificationStaffAction,
       }}
     />

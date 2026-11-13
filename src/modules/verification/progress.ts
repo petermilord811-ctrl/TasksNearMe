@@ -15,6 +15,9 @@ import { ONBOARDING_STEPS } from '@/contracts';
  * the helper agreement) → services → area → phone → ID → home address → payout → background check (only
  * when an offered category needs it).
  *
+ * The ID step has two stages (owner, 2026-11-13): our own photos and selfie, which our team compares, then
+ * the provider's double check; the provider's result is what verifies.
+ *
  * Locks: the phone opens once the profile basics are saved; the ID check after the phone; the home
  * address and payouts (side by side) once the ID is verified; the background check once payouts are
  * active. A helper is bookable in a category once the agreement, phone, ID (with its name matched or
@@ -29,7 +32,8 @@ export interface OnboardingFacts {
   services: { categorySlug: CategorySlug; requiresBackgroundCheck: boolean }[];
   areaSet: boolean;
   phoneVerified: boolean;
-  identity: { status: IdentityStatus; cleared: boolean };
+  /** `captureInReview`: our own check's photos wait for our team (stage 1). */
+  identity: { status: IdentityStatus; cleared: boolean; captureInReview?: boolean };
   address: { status: AddressVerificationStatus; verified: boolean };
   payout: PayoutAccountStatus;
   background: { status: BackgroundCheckStatus; eligible: boolean };
@@ -60,7 +64,7 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
   };
   /** Waiting on the provider or our team. */
   const inReview: Partial<Record<OnboardingStep, boolean>> = {
-    identity: facts.identity.status === 'processing' || (identityVerified && !facts.identity.cleared),
+    identity: facts.identity.captureInReview === true || facts.identity.status === 'processing' || (identityVerified && !facts.identity.cleared),
     address: facts.address.status === 'in_review',
     payout: facts.payout === 'pending',
     background: facts.background.status === 'invited' || facts.background.status === 'pending' || facts.background.status === 'consider',

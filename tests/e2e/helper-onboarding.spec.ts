@@ -4,10 +4,15 @@ import { devSignIn } from './support/sign-in';
 
 /**
  * Helper onboarding through the dev provider stand-ins: the profile with the helper agreement, services,
- * area, the phone (already verified for Priya), the ID check with the biometric notice, the home address
- * with a proof of address, and payouts. Trust and safety then review the proof (opened with a logged
- * reason) and approve it, and Priya can send offers. Changes Priya's data: desktop only.
+ * area, the phone (already verified for Priya), the ID check in two stages (our own photos after the
+ * Texas notice: the ID's front and back from files and a live selfie from the camera, which trust and
+ * safety open with a logged reason and approve; then the provider's double check), the home address with
+ * a proof of address, and payouts. Trust and safety then review the proof (opened with a logged reason)
+ * and approve it, and Priya can send offers. Changes Priya's data: desktop only.
  */
+
+// A camera for the live selfie: Chromium's fake device, with the permission granted.
+test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] }, permissions: ['camera'] });
 
 async function staffSignIn(page: Page, email: string) {
   await devSignIn(page, email, { landing: /\/admin\/verify$/ });
@@ -18,15 +23,18 @@ async function staffSignIn(page: Page, email: string) {
 
 /** A plain white page as a PNG, as a photo of a bill would arrive. */
 const bill = () => sharp({ create: { width: 800, height: 1000, channels: 3, background: '#ffffff' } }).png().toBuffer();
+/** A card-shaped photo, as a photo of an ID would arrive. */
+const card = () => sharp({ create: { width: 1000, height: 630, channels: 3, background: '#eef4fb' } }).png().toBuffer();
 
-test('a new helper finishes onboarding, staff verify the home address, and the helper becomes bookable', async ({ page, context, baseURL }, testInfo) => {
+test('a new helper finishes onboarding, staff verify the ID photos and the home address, and the helper becomes bookable', async ({ page, context, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');
-  test.setTimeout(300_000);
+  // Two staff reviews and two provider stand-ins: on a dev server that compiles each page on first use, it's long.
+  test.setTimeout(600_000);
   // Address search uses the sample addresses, never Mapbox.
   await context.addCookies([{ name: 'tnm_geo_stand_in', value: '1', url: baseURL! }]);
   // The dev server compiles routes on first use; warm up the provider stand-ins before the flow needs them.
   for (const provider of ['identity', 'payout', 'background']) await page.request.get(`/dev/providers/${provider}`);
-  for (const path of ['/admin/verifications', '/admin/users/usr_priya', '/app/helper/onboarding/address']) await page.request.get(path);
+  for (const path of ['/admin/verifications', '/admin/users/usr_priya', '/app/helper/onboarding/identity', '/app/helper/onboarding/address']) await page.request.get(path);
   // A draft profile isn't public yet.
   expect((await page.goto('/helpers/priya-s'))?.status()).toBe(404);
   await devSignIn(page, 'priya@example.test');
@@ -57,15 +65,66 @@ test('a new helper finishes onboarding, staff verify the home address, and the h
   await page.getByLabel('Home area').selectOption({ label: 'North Loop' });
   await page.getByRole('button', { name: 'Save and continue' }).click();
 
-  // ID check through the stand-in, after the Texas biometric notice
+  // ID check, stage 1: our own photos, after the Texas biometric notice
   await expect(page).toHaveURL(/\/onboarding\/identity$/);
-  await page.getByRole('button', { name: 'Start ID check' }).click();
-  await expect(page.getByText('Agree to the biometric check to start your ID check.')).toBeVisible();
-  await page.getByRole('checkbox', { name: 'I agree to the biometric check described here.' }).check();
-  await page.getByRole('button', { name: 'Start ID check' }).click();
+  const idCheck = page.getByRole('region', { name: 'ID check' });
+  await idCheck.getByRole('button', { name: 'Continue' }).click();
+  await expect(idCheck.getByText('Agree to the ID and selfie check to take your photos.')).toBeVisible();
+  await idCheck.getByRole('checkbox', { name: 'I agree to the ID and selfie check described here.' }).check();
+  await idCheck.getByRole('button', { name: 'Continue' }).click();
+  await idCheck.getByRole('radio', { name: /Driver's license/ }).check();
+  await idCheck.getByRole('button', { name: 'Continue' }).click();
+  // The front and the back from files (as on a computer); the selfie live from the camera, with its prompt.
+  await expect(idCheck.getByRole('heading', { name: 'The front of your ID' })).toBeVisible();
+  await idCheck.getByLabel('Upload a photo').setInputFiles({ name: 'front.png', mimeType: 'image/png', buffer: await card() });
+  await idCheck.getByRole('button', { name: 'Use this photo' }).click();
+  await expect(idCheck.getByRole('heading', { name: 'The back of your ID' })).toBeVisible();
+  await idCheck.getByLabel('Upload a photo').setInputFiles({ name: 'back.png', mimeType: 'image/png', buffer: await card() });
+  await idCheck.getByRole('button', { name: 'Use this photo' }).click();
+  await expect(idCheck.getByText('For your selfie:')).toBeVisible();
+  await idCheck.getByRole('button', { name: 'Take selfie' }).click();
+  await expect(idCheck.getByRole('img', { name: 'Your selfie' })).toBeVisible();
+  await idCheck.getByRole('button', { name: 'Use this photo' }).click();
+  await expect(idCheck.getByRole('img', { name: 'Your photo of the front of your ID' })).toBeVisible();
+  await idCheck.getByRole('button', { name: 'Send for review' }).click();
+  await expect(idCheck.getByText(/We're comparing your photos/)).toBeVisible({ timeout: 30_000 });
+
+  // Trust and safety open the photos (a logged reason) and approve them
+  await page.context().clearCookies();
+  await staffSignIn(page, 'taylor@example.test');
+  await page.goto('/admin/verifications?queue=identity');
+  await page.getByRole('link', { name: /Priya S\./ }).click();
+  await expect(page).toHaveURL(/\/admin\/users\/usr_priya$/, { timeout: 60_000 });
+  const staffSection = page.getByRole('region', { name: 'Verification' });
+  await staffSection.getByRole('button', { name: 'Open the photos' }).click();
+  const openPhotos = page.getByRole('dialog', { name: 'Open the ID photos' });
+  await openPhotos.getByLabel('Reason').fill('Comparing the ID photos Priya just sent.');
+  await openPhotos.getByRole('button', { name: 'Open' }).click();
+  await expect(staffSection.getByText('Opened and logged')).toBeVisible();
+  for (const photo of ['The front of the ID', 'The back of the ID', 'The selfie']) {
+    await expect(staffSection.getByRole('img', { name: photo })).toBeVisible();
+    // The photo loaded through its 5-minute link (decrypted for this staff member).
+    await expect.poll(() => staffSection.getByRole('img', { name: photo }).evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  }
+  await staffSection.getByRole('button', { name: 'Review' }).click();
+  const reviewPhotos = page.getByRole('dialog', { name: 'Review the ID photos' });
+  await reviewPhotos.getByLabel('Note for the audit log').fill('The selfie matches the ID and follows its prompt.');
+  await reviewPhotos.getByRole('button', { name: 'Approve' }).click();
+  await expect(staffSection.getByText('Updated.')).toBeVisible();
+  await expect(staffSection.getByText('Approved').first()).toBeVisible();
+
+  // ID check, stage 2: the double check through the provider stand-in
+  await page.context().clearCookies();
+  await devSignIn(page, 'priya@example.test');
+  // Signing out dropped every cookie: address search keeps to the sample addresses.
+  await context.addCookies([{ name: 'tnm_geo_stand_in', value: '1', url: baseURL! }]);
+  await page.goto('/app/helper/onboarding/identity');
+  await expect(page.getByText('Our team approved your photos.', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Start the double check' }).click();
   await expect(page).toHaveURL(/\/dev\/providers\/identity\?session=/, { timeout: 60_000 });
   await page.getByRole('button', { name: 'Pass: verified', exact: true }).click();
   await expect(page).toHaveURL(/\/onboarding\/identity$/);
+  await expect(page.getByRole('button', { name: /ID verified/ })).toBeVisible();
 
   // Home address with a proof of address
   await page.goto('/app/helper/onboarding/address');

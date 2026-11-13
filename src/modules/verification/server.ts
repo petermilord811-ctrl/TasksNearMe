@@ -1,6 +1,6 @@
 import 'server-only';
 import { createFakeGeocoder, createGeocoder } from '@/integrations/geocoding';
-import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
+import { byteCipherFromEnv, fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { verificationProvidersFor } from './providers';
 
 /**
@@ -15,3 +15,7 @@ export const homeGeocoder = createGeocoder();
 /** The sample addresses, for tests (the `tnm_geo_stand_in` cookie). Never in production. */
 export const sampleHomeGeocoder = process.env.NODE_ENV === 'production' ? null : createFakeGeocoder();
 export const verificationCipher = fieldCipherFromEnv();
+/** Our own ID check's photos, encrypted at rest (decrypted only for a staff link and the one automatic reading). */
+export const verificationFileCipher = byteCipherFromEnv();
+/** Keys the selfie's prompt (`livenessPromptFor`). */
+export const livenessSecret = process.env.BETTER_AUTH_SECRET ?? '';

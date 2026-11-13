@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import type {
   AddressDocumentType,
   AddressRejectionReason,
@@ -5,10 +6,13 @@ import type {
   BackgroundAdjudication,
   BackgroundCheckStatus,
   IdentityBlockedReason,
+  IdentityDocumentType,
   IdentityFailureReason,
   IdentityRequestReason,
   IdentityStatus,
+  LivenessPrompt,
 } from '@/contracts';
+import { LIVENESS_PROMPTS } from '@/contracts';
 
 /**
  * Where each verification track stands, as pure functions of its rows (blueprint 06 §1, extended
@@ -46,6 +50,16 @@ export const ADDRESS_RULES = {
   responseTargetHours: 48,
 } as const;
 
+/** Our own ID check (stage 1, added 2026-11-13). Its tries count toward `IDENTITY_RULES`. */
+export const IDENTITY_CAPTURE_RULES = {
+  /** The photos are deleted this long after the stage-1 decision (6.2 deletes them sooner once both stages are final). */
+  photoRetentionDays: 30,
+  /** Staff aim to decide within this long. */
+  responseTargetHours: 48,
+  /** The age a helper must be. */
+  adultAge: 18,
+} as const;
+
 // ---- Identity -------------------------------------------------------------------------------------
 
 export interface IdentityRow {
@@ -62,7 +76,20 @@ export interface IdentityRow {
   updatedAt: Date;
 }
 
+/** A try at our own ID check (stage 1). */
+export interface CaptureRow {
+  id: string;
+  status: string; // submitted | approved | rejected | canceled
+  documentType: string;
+  rejectionReason: string | null;
+  submittedAt: Date;
+  decidedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface IdentityStanding {
+  /** The provider's check (not_started while none ran since the last reset). */
   status: IdentityStatus;
   /** The latest check is verified (a name check may still be open). */
   verified: boolean;
@@ -74,13 +101,20 @@ export interface IdentityStanding {
   requested?: IdentityRequestReason;
   blocked?: IdentityBlockedReason;
   retryAt?: Date;
-  /** Provider sessions since the last reset. */
+  /** Tries since the last reset: our own check's photos and the provider's sessions. */
   attempts: number;
+  /** The provider's check may start (or continue) as far as the limits go. Helpers also need `captureApproved`. */
   canStart: boolean;
-  /** For the staff queue: waiting on our team since then. */
+  /** For the staff queue: waiting on our team since then (a name check, or too many tries). */
   reviewSince?: Date;
   /** The row the status describes. */
   latest?: IdentityRow;
+  /** Our own check's latest try since the last reset. */
+  capture?: CaptureRow;
+  /** Our team approved photos since the last reset: the provider's double check can open. */
+  captureApproved: boolean;
+  /** New photos can be sent now (not verified, not paused, nothing in review or approved). */
+  canCapture: boolean;
 }
 
 const byCreated = <T extends { createdAt: Date }>(rows: readonly T[]) => [...rows].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
@@ -89,18 +123,28 @@ function asRequestReason(value: string | null): IdentityRequestReason | undefine
   return value === 'staff_request' || value === 'name_changed' ? value : undefined;
 }
 
-export function identityStanding(rows: readonly IdentityRow[], now: Date): IdentityStanding {
+/**
+ * Where the ID check stands. `captures` are our own check's tries (helpers; clients have none): each one
+ * counts toward the limits like a provider session, a capture in review is in flight like a processing
+ * session, and an approved one isn't a failed try. The provider's verified result is what verifies, so
+ * helpers verified before stage 1 existed stay verified without a capture.
+ */
+export function identityStanding(rows: readonly IdentityRow[], now: Date, captures: readonly CaptureRow[] = []): IdentityStanding {
   const ordered = byCreated(rows);
   const latest = ordered.at(-1);
-  if (!latest) return { status: 'not_started', verified: false, cleared: false, attempts: 0, canStart: true };
-
   const resetIndex = ordered.findLastIndex((row) => row.providerSessionId === null);
+  const resetAt = resetIndex >= 0 ? ordered[resetIndex]!.createdAt.getTime() : Number.NEGATIVE_INFINITY;
   const sessions = ordered.slice(resetIndex + 1);
-  const attempts = sessions.length;
-  const isRequest = latest.providerSessionId === null;
-  const status: IdentityStatus = isRequest ? 'not_started' : (latest.status as IdentityStatus);
+  // A capture sent the moment a new check was asked for belongs to the new check.
+  const currentCaptures = byCreated(captures).filter((row) => row.createdAt.getTime() >= resetAt);
+  const capture = currentCaptures.at(-1);
+  const captureApproved = currentCaptures.some((row) => row.status === 'approved');
+  const captureInReview = capture?.status === 'submitted';
+  const attempts = sessions.length + currentCaptures.length;
+  const isRequest = latest?.providerSessionId === null;
+  const status: IdentityStatus = !latest || isRequest ? 'not_started' : (latest.status as IdentityStatus);
   const verified = status === 'verified';
-  const nameOpen = verified && latest.nameMatches === false && latest.nameConfirmedAt === null;
+  const nameOpen = verified && latest!.nameMatches === false && latest!.nameConfirmedAt === null;
 
   const standing: IdentityStanding = {
     status,
@@ -108,29 +152,40 @@ export function identityStanding(rows: readonly IdentityRow[], now: Date): Ident
     cleared: verified && !nameOpen,
     attempts,
     canStart: false,
-    latest,
-    ...(verified && latest.verifiedAt ? { verifiedAt: latest.verifiedAt } : {}),
-    ...(status === 'requires_input' && latest.failureReason ? { failureReason: latest.failureReason as IdentityFailureReason } : {}),
-    ...(nameOpen ? { nameCheck: 'in_review' as const, reviewSince: latest.verifiedAt ?? latest.updatedAt } : {}),
+    captureApproved,
+    canCapture: false,
+    ...(latest ? { latest } : {}),
+    ...(capture ? { capture } : {}),
+    ...(verified && latest!.verifiedAt ? { verifiedAt: latest!.verifiedAt } : {}),
+    ...(status === 'requires_input' && latest!.failureReason ? { failureReason: latest!.failureReason as IdentityFailureReason } : {}),
+    ...(nameOpen ? { nameCheck: 'in_review' as const, reviewSince: latest!.verifiedAt ?? latest!.updatedAt } : {}),
   };
   if (isRequest) {
-    const requested = asRequestReason(latest.requestedReason);
+    const requested = asRequestReason(latest!.requestedReason);
     if (requested) standing.requested = requested;
   }
   if (verified) return standing;
 
-  const under18 = sessions.some((row) => row.failureReason === 'under_18' || row.isAdult === false);
-  const failed = sessions.filter((row) => row.status === 'requires_input' || row.status === 'canceled');
-  const lastDay = sessions.filter((row) => now.getTime() - row.createdAt.getTime() < DAY_MS);
+  const under18 = sessions.some((row) => row.failureReason === 'under_18' || row.isAdult === false) || currentCaptures.some((row) => row.status === 'rejected' && row.rejectionReason === 'under_18');
+  const failures = [
+    ...sessions.filter((row) => row.status === 'requires_input' || row.status === 'canceled').map((row) => row.updatedAt),
+    ...currentCaptures.filter((row) => row.status === 'rejected' || row.status === 'canceled').map((row) => row.decidedAt ?? row.updatedAt),
+  ].sort((a, b) => a.getTime() - b.getTime());
+  // Tries in the last 24 hours that didn't pass (approved photos aren't one).
+  const lastDay = [...sessions.map((row) => row.createdAt), ...currentCaptures.filter((row) => row.status !== 'approved').map((row) => row.createdAt)]
+    .filter((at) => now.getTime() - at.getTime() < DAY_MS)
+    .sort((a, b) => a.getTime() - b.getTime());
+  const inFlight = status === 'processing' || captureInReview;
   if (under18) standing.blocked = 'under_18';
-  else if (failed.length >= IDENTITY_RULES.total && status !== 'processing') {
+  else if (failures.length >= IDENTITY_RULES.total && !inFlight) {
     standing.blocked = 'too_many_attempts';
-    standing.reviewSince = failed.at(-1)!.updatedAt;
-  } else if (lastDay.length >= IDENTITY_RULES.perDay && status !== 'processing') {
+    standing.reviewSince = failures.at(-1)!;
+  } else if (lastDay.length >= IDENTITY_RULES.perDay && !inFlight) {
     standing.blocked = 'try_later';
-    standing.retryAt = new Date(lastDay[0]!.createdAt.getTime() + DAY_MS);
+    standing.retryAt = new Date(lastDay[0]!.getTime() + DAY_MS);
   }
   standing.canStart = !standing.blocked;
+  standing.canCapture = !standing.blocked && !captureInReview && !captureApproved;
   return standing;
 }
 
@@ -162,6 +217,90 @@ export function namesMatch(account: { firstName: string; lastName: string }, ver
   const verifiedFirst = normalizeName(verified.firstName).split(' ')[0] ?? '';
   if (!accountLast || !accountFirst || accountLast !== verifiedLast) return false;
   return accountFirst === verifiedFirst || (accountFirst.length >= 3 && verifiedFirst.startsWith(accountFirst)) || (verifiedFirst.length >= 3 && accountFirst.startsWith(verifiedFirst));
+}
+
+// ---- Our own ID check (stage 1) -------------------------------------------------------------------
+
+/**
+ * The selfie's prompt for a person's next try: a keyed hash of who and which try, so it can't be
+ * predicted, and reloading the page (or sending the form again) doesn't change it. `tries` counts every
+ * capture the person sent, so each new try gets its own.
+ */
+export function livenessPromptFor(userId: string, tries: number, secret: string): LivenessPrompt {
+  const digest = createHmac('sha256', secret).update(`tnm.liveness.v1.${userId}.${tries}`).digest();
+  return LIVENESS_PROMPTS[digest.readUInt32BE(0) % LIVENESS_PROMPTS.length]!;
+}
+
+/** Whether a capture's photos are due for deletion: 30 days after the decision, or at once when it was canceled. */
+export function capturePhotosDue(row: { status: string; decidedAt: Date | null; filesDeletedAt: Date | null; hasFiles: boolean }, now: Date): boolean {
+  if (!row.hasFiles || row.filesDeletedAt !== null) return false;
+  if (row.status === 'canceled') return true;
+  return row.decidedAt !== null && now.getTime() - row.decidedAt.getTime() >= IDENTITY_CAPTURE_RULES.photoRetentionDays * DAY_MS;
+}
+
+/** What a reader made out of an ID, held only in memory (`deriveIdentityAutoCheck` keeps the answers). */
+export interface IdentityReading {
+  readable: boolean;
+  givenNames?: string;
+  surname?: string;
+  /** YYYY-MM-DD. */
+  dateOfBirth?: string;
+  /** YYYY-MM-DD. */
+  expiryDate?: string;
+  documentType?: IdentityDocumentType | 'other';
+  issuingState?: string;
+}
+
+export interface IdentityAutoCheckAnswers {
+  readable: boolean;
+  nameMatches?: boolean;
+  isAdult?: boolean;
+  notExpired?: boolean;
+  expiresMonth?: number;
+  expiresYear?: number;
+  documentType?: IdentityDocumentType | 'other';
+}
+
+/** A real calendar date from "YYYY-MM-DD" (anything else, or Feb 30, is no date). */
+export function calendarDate(value: string | undefined): { year: number; month: number; day: number } | undefined {
+  const match = value?.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return undefined;
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
+  return { year, month, day };
+}
+
+/** Today's date in Austin (America/Chicago), as the ID's dates are calendar dates there. */
+function austinToday(now: Date): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(now);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+  return { year: get('year'), month: get('month'), day: get('day') };
+}
+
+const dayNumber = (date: { year: number; month: number; day: number }) => date.year * 10_000 + date.month * 100 + date.day;
+
+/**
+ * The answers kept from a reading (stage 1): whether the name matches the account's legal name (the same
+ * rule as the provider's check), 18 or older, not expired, and the expiry month and year. The name, birth
+ * date and document number are never returned, so they're never stored.
+ */
+export function deriveIdentityAutoCheck(reading: IdentityReading, account: { firstName: string; lastName: string }, now: Date): IdentityAutoCheckAnswers {
+  if (!reading.readable) return { readable: false };
+  const today = austinToday(now);
+  const born = calendarDate(reading.dateOfBirth);
+  const expires = calendarDate(reading.expiryDate);
+  const nameMatches = reading.givenNames?.trim() && reading.surname?.trim() ? namesMatch(account, { firstName: reading.givenNames, lastName: reading.surname }) : undefined;
+  // 18 on the 18th birthday (in Austin); someone born on Feb 29 turns 18 on Mar 1 in a common year.
+  const isAdult = born ? dayNumber(today) >= dayNumber({ year: born.year + IDENTITY_CAPTURE_RULES.adultAge, month: born.month, day: born.day }) : undefined;
+  return {
+    readable: true,
+    ...(nameMatches !== undefined ? { nameMatches } : {}),
+    ...(isAdult !== undefined ? { isAdult } : {}),
+    // An ID is good through its expiry date.
+    ...(expires ? { notExpired: dayNumber(today) <= dayNumber(expires), expiresMonth: expires.month, expiresYear: expires.year } : {}),
+    ...(reading.documentType ? { documentType: reading.documentType } : {}),
+  };
 }
 
 // ---- Address --------------------------------------------------------------------------------------

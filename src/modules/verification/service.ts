@@ -43,9 +43,10 @@ import { loadOnboardingState, syncHelperProfile, verificationSummary, type Onboa
 
 /**
  * Helper onboarding and verification (docs/blueprint/06 §1): saving the profile steps, work samples, and
- * the page data. The tracks themselves are in `state.ts` (where each stands), `tracks.ts` (ID, payouts,
- * background checks), `address.ts` (the home address and its proof) and `staff.ts` (reviews). Functions
- * take the database so tests can use their own.
+ * the page data. The tracks themselves are in `state.ts` (where each stands), `capture.ts` (our own ID
+ * check, stage 1), `tracks.ts` (the provider's ID check, payouts, background checks), `address.ts` (the
+ * home address and its proof) and `staff.ts` (reviews). Functions take the database so tests can use
+ * their own.
  */
 
 export { createDevVerificationProviders, type VerificationProviders } from './providers';
@@ -75,6 +76,9 @@ function optionalCipher(): FieldCipher | null {
     return null;
   }
 }
+
+/** Keys the selfie's prompt in our own ID check (the same secret `submitIdentityCapture` gets). */
+const promptSecret = () => ({ promptSecret: process.env.BETTER_AUTH_SECRET ?? '' });
 
 
 // ---- Saving the profile ---------------------------------------------------------------------------
@@ -354,7 +358,9 @@ export async function getOnboardingPageData(db: Db, userId: string, step: Onboar
   const result = computeOnboarding(state.facts, step);
   const flags = await getFlags(shared.market.id, db);
   const spots = await countFoundingHelpers(shared.market.id, db);
-  const welcomeOpen = flags['reward.welcome'] === true && spots < WELCOME_PROGRAM.cohortLimit && !state.profile?.foundingNumber;
+  // Founding numbers are given out when a helper first becomes bookable (0576be3): a helper who holds one
+  // keeps seeing the reward, even once the last spot is taken; others see it while spots are left.
+  const welcomeOpen = flags['reward.welcome'] === true && (Boolean(state.profile?.foundingNumber) || spots < WELCOME_PROGRAM.cohortLimit);
   return {
     step,
     ...(step === 'done' && pushSetup() ? { push: pushSetup()! } : {}),
@@ -363,7 +369,7 @@ export async function getOnboardingPageData(db: Db, userId: string, step: Onboar
     areas: shared.areas,
     languageOptions: shared.languageOptions,
     values: formValues(state),
-    verification: verificationSummary(state, result.backgroundRequired, optionalCipher()),
+    verification: verificationSummary(state, result.backgroundRequired, optionalCipher(), promptSecret()),
     agreementNeeded: !state.facts.agreementAccepted,
     firstPayoutDays: FIRST_PAYOUT_DAYS,
     aiDraftingEnabled: aiWritingSetUp() && flags.ai_drafting === true,
@@ -410,7 +416,7 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
       ...(state.profile.addressVerifiedAt ? { addressVerifiedAt: new Date(state.profile.addressVerifiedAt).toISOString() } : {}),
       phoneVerified: state.facts.phoneVerified,
     },
-    verification: verificationSummary(state, result.backgroundRequired, optionalCipher()),
+    verification: verificationSummary(state, result.backgroundRequired, optionalCipher(), promptSecret()),
     paused: state.profile.status === 'paused',
     aiDraftingEnabled: await aiDraftingEnabledFor(db, userId),
   };

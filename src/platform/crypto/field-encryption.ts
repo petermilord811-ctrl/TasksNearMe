@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto';
 
 /**
  * Field-level encryption for sensitive values at rest (exact addresses, access notes):
@@ -37,4 +37,50 @@ export function fieldCipherFromEnv(): FieldCipher {
   const key = process.env.FIELD_ENCRYPTION_KEY;
   if (!key) throw new Error('FIELD_ENCRYPTION_KEY is not set (see .env.example).');
   return createFieldCipher(key);
+}
+
+/**
+ * Whole files encrypted at rest (the ID photos of our own check, added 2026-11-13): AES-256-GCM with a
+ * random 96-bit IV, under a key derived (HKDF-SHA256) from FIELD_ENCRYPTION_KEY, so one secret covers
+ * both while fields and files never share a key. Format: "TNF1" + IV (12 bytes) + tag (16) + ciphertext.
+ * Decrypting checks the tag, so a changed or truncated file fails instead of yielding garbage.
+ */
+export interface ByteCipher {
+  encrypt(plaintext: Buffer): Buffer;
+  decrypt(value: Buffer): Buffer;
+}
+
+const FILE_MAGIC = Buffer.from('TNF1', 'latin1');
+const IV_BYTES = 12;
+const TAG_BYTES = 16;
+
+export function createByteCipher(keyBase64: string): ByteCipher {
+  const master = Buffer.from(keyBase64, 'base64');
+  if (master.length !== 32) throw new Error('FIELD_ENCRYPTION_KEY must be 32 bytes, base64-encoded.');
+  const key = Buffer.from(hkdfSync('sha256', master, Buffer.alloc(0), 'tasksnearme.files.v1', 32));
+
+  return {
+    encrypt(plaintext) {
+      const iv = randomBytes(IV_BYTES);
+      const cipher = createCipheriv('aes-256-gcm', key, iv);
+      const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+      return Buffer.concat([FILE_MAGIC, iv, cipher.getAuthTag(), ciphertext]);
+    },
+    decrypt(value) {
+      const head = FILE_MAGIC.length;
+      if (value.length < head + IV_BYTES + TAG_BYTES || !value.subarray(0, head).equals(FILE_MAGIC)) throw new Error('Unrecognized encrypted file.');
+      const iv = value.subarray(head, head + IV_BYTES);
+      const tag = value.subarray(head + IV_BYTES, head + IV_BYTES + TAG_BYTES);
+      const decipher = createDecipheriv('aes-256-gcm', key, iv);
+      decipher.setAuthTag(tag);
+      return Buffer.concat([decipher.update(value.subarray(head + IV_BYTES + TAG_BYTES)), decipher.final()]);
+    },
+  };
+}
+
+/** The app's file cipher, from FIELD_ENCRYPTION_KEY. */
+export function byteCipherFromEnv(): ByteCipher {
+  const key = process.env.FIELD_ENCRYPTION_KEY;
+  if (!key) throw new Error('FIELD_ENCRYPTION_KEY is not set (see .env.example).');
+  return createByteCipher(key);
 }

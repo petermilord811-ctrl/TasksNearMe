@@ -20,10 +20,12 @@ import type {
 /**
  * Helper onboarding (`/app/helper/onboarding/[step]`) and the profile editor (`/app/helper/profile`),
  * blueprint 02 §1 and 06 §1. Order: profile → services → area → phone → ID → home address → payout →
- * background check (in-home categories only) → done. Identity, payouts, and background checks are hosted
- * by the providers (Stripe Identity, Stripe Connect, Checkr): the UI starts them and shows their status.
- * The phone is verified with a texted code, and the home address with a proof-of-address document our
- * team reviews. Whether a helper is bookable is decided by the app.
+ * background check (in-home categories only) → done. Payouts and background checks are hosted by the
+ * providers (Stripe Connect, Checkr): the UI starts them and shows their status. The ID check has two
+ * stages (owner, 2026-11-13): our own capture (the ID's photos and a live selfie that our team compares),
+ * then the provider's hosted check as a double check. The phone is verified with a texted code, and the
+ * home address with a proof-of-address document our team reviews. Whether a helper is bookable is decided
+ * by the app.
  */
 
 /** The verification steps a notification can be about. */
@@ -143,6 +145,77 @@ export type IdentityBlockedReason = (typeof IDENTITY_BLOCKED_REASONS)[number];
 export const IDENTITY_REQUEST_REASONS = ['staff_request', 'name_changed'] as const;
 export type IdentityRequestReason = (typeof IDENTITY_REQUEST_REASONS)[number];
 
+/** The IDs our own check takes (stage 1). A passport has no back to photograph. */
+export const IDENTITY_DOCUMENT_TYPES = ['drivers_license', 'state_id', 'passport'] as const;
+export type IdentityDocumentType = (typeof IDENTITY_DOCUMENT_TYPES)[number];
+
+/**
+ * Why our team asked for new ID photos (the helper sees the reason, never the note). `under_18` closes
+ * helper setup until our team reopens it, as an under-18 result from the provider does.
+ */
+export const IDENTITY_CAPTURE_REJECTION_REASONS = ['document_unreadable', 'selfie_mismatch', 'prompt_not_followed', 'under_18', 'expired', 'other'] as const;
+export type IdentityCaptureRejectionReason = (typeof IDENTITY_CAPTURE_REJECTION_REASONS)[number];
+
+/**
+ * What the live selfie must show, so a photo of a photo doesn't pass. The app picks one for each try
+ * (reloading the page doesn't change it); our team checks the selfie follows it.
+ */
+export const LIVENESS_PROMPTS = ['look_left', 'look_right', 'look_up', 'smile', 'tilt_head', 'three_fingers'] as const;
+export type LivenessPrompt = (typeof LIVENESS_PROMPTS)[number];
+
+/**
+ * The ID photos' limits. The UI shrinks each photo to at most `photoEdgePx` on its longer side before
+ * sending it (a phone photo is several MB); the app re-encodes every photo (no location or other
+ * metadata) and stores it encrypted.
+ */
+export const IDENTITY_CAPTURE_RULES = {
+  maxMegabytes: 3,
+  photoEdgePx: 2000,
+  acceptedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
+} as const;
+
+/** The photos the capture takes, in order. Passports skip `back`. */
+export const IDENTITY_CAPTURE_PHOTOS = ['front', 'back', 'selfie'] as const;
+export type IdentityCapturePhoto = (typeof IDENTITY_CAPTURE_PHOTOS)[number];
+
+/** The capture's form field. It's sent as FormData with the photos `front`, `back` (not for passports) and `selfie`. */
+export const identityCaptureInputSchema = z.object({
+  documentType: z.enum(IDENTITY_DOCUMENT_TYPES, code('required')),
+});
+export type IdentityCaptureInput = z.input<typeof identityCaptureInputSchema>;
+
+/**
+ * Sending the ID photos. ok `submitted` (now in review). `validation_failed` with `fieldErrors`:
+ * `documentType` `required`; `front`, `back`, `selfie` `required`, or `invalid` for a file that isn't a
+ * photo; `consent` `must_accept` while the Texas notice isn't accepted. `too_large` (a photo over
+ * `IDENTITY_CAPTURE_RULES.maxMegabytes`), `unsupported_type`, `rate_limited`, `not_allowed` (the step
+ * isn't open, photos are in review or approved, or the check is paused), or `unknown`.
+ */
+export type IdentityCaptureResult =
+  | { ok: true; code: 'submitted'; redirectTo?: string }
+  | { ok: false; code: 'validation_failed'; fieldErrors: Partial<Record<keyof IdentityCaptureInput | IdentityCapturePhoto | 'consent', FieldErrorCode[]>> }
+  | { ok: false; code: 'too_large' | 'unsupported_type' | 'rate_limited' | 'not_allowed' | 'unknown' };
+
+/** Our own ID check (stage 1) as the helper sees it. */
+export interface IdentityCaptureSummary {
+  /**
+   * - `needed`: take the photos (the first time, after our team turned them down, or after a new check was asked for);
+   * - `in_review`: our team is comparing them;
+   * - `approved`: next is the double check with our ID partner (`identity.status` shows how it's going);
+   * - `done`: the ID is verified (helpers verified before stage 1 existed keep their check).
+   */
+  stage: 'needed' | 'in_review' | 'approved' | 'done';
+  /** The photos can be sent now (not while they're in review or approved, or while the check is paused). */
+  canSubmit: boolean;
+  /** What the latest photos were of, and when they were sent. */
+  documentType?: IdentityDocumentType;
+  submittedAt?: ISODateTime;
+  /** With `needed`, after our team turned the latest photos down. */
+  rejectionReason?: IdentityCaptureRejectionReason;
+  /** What the next selfie must show. */
+  prompt: LivenessPrompt;
+}
+
 /** Documents that prove a home address. Each must show the person's name and the address, dated within 90 days. */
 export const ADDRESS_DOCUMENT_TYPES = [
   'utility_bill',
@@ -198,10 +271,14 @@ export interface VerificationSummary {
   /** Never the full number. */
   phone: { verified: boolean; last4?: string };
   identity: {
+    /** The provider's check (for helpers, the double check after our own: see `capture`). */
     status: IdentityStatus;
     verifiedAt?: ISODateTime;
     failureReason?: IdentityFailureReason;
-    /** The Texas biometric notice must be accepted (once per notice version) before the check opens. */
+    /**
+     * The Texas biometric notice must be accepted (once per notice version) first: before the photos
+     * (helpers) or before the provider's check opens (clients).
+     */
     consentNeeded: boolean;
     blocked?: IdentityBlockedReason;
     /** With `blocked: try_later`. */
@@ -210,6 +287,8 @@ export interface VerificationSummary {
     nameCheck?: 'in_review';
     /** A new check was asked for (the earlier one no longer counts). */
     requested?: IdentityRequestReason;
+    /** Helpers only: our own check, the first stage (a client's ID check is the provider's alone). */
+    capture?: IdentityCaptureSummary;
   };
   address: {
     status: AddressVerificationStatus;
@@ -290,8 +369,17 @@ export interface HelperOnboardingHandlers {
   /** Verifies the number. ok `updated` with `redirectTo` (the next step). `fieldErrors.code`: `incorrect`, `expired`. */
   onConfirmPhone: ActionHandler<OneTimeCodeInput>;
   /**
-   * Opens the hosted ID check. `consent`: the Texas biometric notice was accepted just now (needed while
-   * `identity.consentNeeded`, otherwise `fieldErrors.consent: ['must_accept']`). `not_allowed` while blocked.
+   * Accepts the Texas biometric notice before the photos are taken (`consent: true`). ok `updated`;
+   * `fieldErrors.consent: ['must_accept']` without it; `not_allowed` while the step isn't open.
+   */
+  onAcceptIdentityNotice: ActionHandler<{ consent: boolean }>;
+  /** Sends our own check's photos (FormData: `documentType`, `front`, `back` unless a passport, `selfie`). */
+  onSubmitIdentityCapture: QueryHandler<FormData, IdentityCaptureResult>;
+  /**
+   * Opens the provider's hosted check, the double check once our team approved the photos
+   * (`identity.capture.stage` `approved`). `consent`: the Texas biometric notice was accepted just now
+   * (needed while `identity.consentNeeded`, otherwise `fieldErrors.consent: ['must_accept']`).
+   * `not_allowed` while blocked or before the photos are approved.
    */
   onStartIdentity: ActionHandler<{ consent?: boolean }>;
   /** Home address suggestions, in and around the market (`inServiceArea: false` can't be chosen). */

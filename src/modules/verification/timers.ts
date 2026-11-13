@@ -1,18 +1,22 @@
 import { and, eq, inArray, isNotNull, isNull, lte, or } from 'drizzle-orm';
 import type { FileStorage } from '@/integrations/storage';
+import { users } from '@/modules/accounts/schema';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { deleteAddressDocument } from './address';
+import { captureFileIds, deleteIdentityCapturePhotos } from './capture';
 import { computeOnboarding } from './progress';
 import type { VerificationProviders } from './providers';
-import { addressVerifications, backgroundChecks, identityVerifications } from './schema';
-import { addressDocumentDue, ADDRESS_RULES, BACKGROUND_RULES, backgroundNoticeDue, IDENTITY_RULES } from './standing';
+import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications } from './schema';
+import { addressDocumentDue, ADDRESS_RULES, BACKGROUND_RULES, backgroundNoticeDue, capturePhotosDue, IDENTITY_CAPTURE_RULES, IDENTITY_RULES } from './standing';
 import { emitVerificationEvent, loadOnboardingState, syncHelperProfile } from './state';
 
 /**
  * Verification timers (the job runner, every minute; each step is idempotent):
  * - proof-of-address documents are deleted 30 days after the decision (withdrawn ones at once);
+ * - the ID photos of our own check are deleted 30 days after the stage-1 decision, whether approved or
+ *   rejected (canceled ones, and a deleted account's, at once);
  * - hosted ID sessions nobody finished within 48 hours are closed, so a new one can start;
  * - the provider is asked to delete ID images 30 days after a final result (Texas biometric limits);
  * - Checkr invitations nobody used within 7 days expire;
@@ -46,6 +50,34 @@ export async function runVerificationTimers(db: Db, deps: VerificationTimerDeps,
     if (await deleteAddressDocument({ db, storage: deps.storage }, row.id, now)) {
       documentsDeleted += 1;
       await db.insert(auditLog).values({ id: newId('aud'), actorRole: 'system', action: 'address_proof.deleted', targetType: 'user', targetId: row.userId, metadata: { verificationId: row.id } });
+    }
+  }
+
+  // ID photos of our own check (stage 1) past their retention. A deleted account's photos go at once,
+  // and photos still waiting for review are canceled first.
+  const photoRows = await db
+    .select({ capture: identityCaptures, accountStatus: users.status })
+    .from(identityCaptures)
+    .innerJoin(users, eq(users.id, identityCaptures.userId))
+    .where(
+      and(
+        ...only(identityCaptures.userId),
+        isNull(identityCaptures.filesDeletedAt),
+        or(isNotNull(identityCaptures.frontFileId), isNotNull(identityCaptures.backFileId), isNotNull(identityCaptures.selfieFileId)),
+        or(eq(identityCaptures.status, 'canceled'), eq(users.status, 'deleted'), lte(identityCaptures.decidedAt, new Date(now.getTime() - IDENTITY_CAPTURE_RULES.photoRetentionDays * DAY_MS))),
+      ),
+    )
+    .limit(BATCH);
+  let idPhotosDeleted = 0;
+  for (const { capture, accountStatus } of photoRows) {
+    const gone = accountStatus === 'deleted';
+    if (gone && capture.status === 'submitted') {
+      await db.update(identityCaptures).set({ status: 'canceled', decidedAt: now, updatedAt: now }).where(and(eq(identityCaptures.id, capture.id), eq(identityCaptures.status, 'submitted')));
+    }
+    if (!gone && !capturePhotosDue({ ...capture, hasFiles: captureFileIds(capture).length > 0 }, now)) continue;
+    if (await deleteIdentityCapturePhotos({ db, storage: deps.storage }, capture.id, now)) {
+      idPhotosDeleted += 1;
+      await db.insert(auditLog).values({ id: newId('aud'), actorRole: 'system', action: 'identity_capture.deleted', targetType: 'user', targetId: capture.userId, metadata: { captureId: capture.id, status: gone && capture.status === 'submitted' ? 'canceled' : capture.status } });
     }
   }
 
@@ -125,5 +157,5 @@ export async function runVerificationTimers(db: Db, deps: VerificationTimerDeps,
   }
 
   for (const userId of touched) await syncHelperProfile(db, userId, now);
-  return { documentsDeleted, staleSessions: stale.length, redactions, expiredInvites: expiredInvites.length, notices };
+  return { documentsDeleted, idPhotosDeleted, staleSessions: stale.length, redactions, expiredInvites: expiredInvites.length, notices };
 }

@@ -60,6 +60,7 @@
       "background": "Background check"
     },
     "identityExplanation": "Our ID partner will ask for a photo of your ID and a selfie. It takes about 2 minutes.",
+    "identityDoubleCheck": "Our team approved your photos. Last step: a double check with our ID partner, Stripe. It takes about 2 minutes.",
     "identityPublic": "Clients see an “ID verified” badge with the month and year of your check. Your ID photo and selfie stay private.",
     "payoutExplanation": "Set up where your earnings go with Stripe, our payment partner. Stripe handles your payout details.",
     "firstPayout": "Your first payout can take about {days} days.",
@@ -86,6 +87,7 @@
       "background": "Your personal details and check report stay with our screening partner."
     },
     "startIdentity": "Start ID check",
+    "startDoubleCheck": "Start the double check",
     "tryAgain": "Try again",
     "checkStatus": "Check status",
     "startPayout": "Set up payouts",
@@ -233,5 +235,163 @@
     "verified": "Your phone number ending in {last4} is verified.",
     "change": "Use a different number",
     "privacy": "Clients never see your number: calls and messages go through the app."
+  },
+  "capture": {
+    "explanation": "First, take photos of your ID and a selfie. Our team compares them, usually within a day. Then our ID partner double-checks your ID. It takes about 5 minutes in all.",
+    "statuses": {
+      "needed": "Photos needed",
+      "retake": "New photos needed",
+      "in_review": "Photos in review",
+      "approved": "Photos approved"
+    },
+    "stages": {
+      "label": "The two parts of your ID check",
+      "photos": "Your photos",
+      "photosHint": "Our team compares them",
+      "doubleCheck": "Double check",
+      "doubleCheckHint": "With our ID partner",
+      "states": {
+        "done": "Done",
+        "current": "Now",
+        "in_review": "In review",
+        "next": "Next"
+      }
+    },
+    "notice": {
+      "title": "Before you take your photos",
+      "body": "To check that you are the person on your ID, we take photos of your ID and a selfie that follows an instruction, and our trust and safety team compares your face with the photo on the ID. Then our ID partner, Stripe, double-checks your ID and a selfie using face geometry, a biometric identifier. The photos are used only to verify your identity. We keep ours encrypted until both checks are finished and delete them no later than 30 days after our decision; we ask Stripe to delete theirs 30 days after its result. Texas law requires your consent first.",
+      "checkbox": "I agree to the ID and selfie check described here.",
+      "required": "Agree to the ID and selfie check to take your photos.",
+      "continue": "Continue"
+    },
+    "documentType": {
+      "legend": "Which ID will you use?",
+      "hint": "A current ID with your photo and your legal name.",
+      "required": "Choose the kind of ID.",
+      "types": {
+        "drivers_license": "Driver's license",
+        "state_id": "State ID card",
+        "passport": "Passport"
+      },
+      "hints": {
+        "drivers_license": "Front and back",
+        "state_id": "Front and back",
+        "passport": "The photo page"
+      }
+    },
+    "continue": "Continue",
+    "back": "Back",
+    "progress": "Photo {current} of {total}",
+    "steps": {
+      "front": {
+        "title": "The front of your ID",
+        "passportTitle": "Your passport's photo page",
+        "help": "Lay it flat on a dark surface, with all four corners in the frame and no glare."
+      },
+      "back": {
+        "title": "The back of your ID",
+        "help": "Turn the ID over. Keep all four corners in the frame."
+      },
+      "selfie": {
+        "title": "A live selfie",
+        "help": "Face the camera in good light, without sunglasses or a hat, and follow the instruction."
+      }
+    },
+    "prompt": {
+      "label": "For your selfie:",
+      "look_left": "Look to your left",
+      "look_right": "Look to your right",
+      "look_up": "Look up",
+      "smile": "Smile",
+      "tilt_head": "Tilt your head to one side",
+      "three_fingers": "Hold up three fingers next to your face"
+    },
+    "camera": {
+      "open": "Use the camera",
+      "upload": "Upload a photo",
+      "uploadCameraApp": "Take the photo with your camera app",
+      "uploadSelfie": "Take a selfie with your camera app",
+      "take": "Take photo",
+      "takeSelfie": "Take selfie",
+      "starting": "Opening the camera…",
+      "previewLabel": "Camera preview",
+      "unavailable": "We can't open a camera here. Take the photo with your camera app instead.",
+      "denied": "Camera access is off for this site. Allow it in your browser's settings, or take the photo with your camera app.",
+      "taken": "Photo taken. Check it, then use it or retake it."
+    },
+    "photo": {
+      "alt": {
+        "front": "Your photo of the front of your ID",
+        "back": "Your photo of the back of your ID",
+        "selfie": "Your selfie"
+      },
+      "names": {
+        "front": "Front of the ID",
+        "back": "Back of the ID",
+        "selfie": "Selfie"
+      },
+      "use": "Use this photo",
+      "retake": "Retake",
+      "retakeNamed": "Retake {photo}"
+    },
+    "review": {
+      "title": "Check your photos",
+      "body": "Make sure the ID's text is sharp and your face is clear and well lit.",
+      "promptReminder": "Your selfie should show: {prompt}.",
+      "submit": "Send for review",
+      "sending": "Sending…",
+      "sent": "Sent. We'll let you know when our team has looked at your photos."
+    },
+    "inReview": "We're comparing your photos, usually within a day. We'll let you know, and then you'll finish with a quick double check.",
+    "sentAt": "Sent {date}.",
+    "checkStatus": "Check status",
+    "rejectionReasons": {
+      "document_unreadable": "We couldn't read your ID in the photos. Take them again in good light, with all four corners in view and no glare.",
+      "selfie_mismatch": "We couldn't match your selfie to the photo on your ID. Take new photos with your face clearly in view.",
+      "prompt_not_followed": "Your selfie didn't follow its instruction. Take new photos; you'll get a new instruction.",
+      "under_18": "Helpers need to be 18 or older.",
+      "expired": "That ID has expired. Take photos of a current ID.",
+      "other": "We couldn't accept these photos. Take them again, or contact support if this keeps happening."
+    },
+    "privacy": "Only our trust and safety team sees your photos, and every view is logged. An automated reader (Claude, by Anthropic) reads the name and dates on the front of your ID for them; we keep only its yes-or-no answers, never your name, birth date or ID number. Your photos are stored encrypted and deleted no later than 30 days after our decision.",
+    "errors": {
+      "photo": {
+        "required": "Take this photo first.",
+        "invalid": "That file doesn't look like a photo. Take it again.",
+        "too_large": "This photo is over {megabytes} MB. Take it again with the camera."
+      },
+      "too_large": "A photo is over {megabytes} MB. Take it again with the camera.",
+      "unsupported_type": "Use a photo (JPEG, PNG, WebP or HEIC).",
+      "rate_limited": "You've sent photos several times today. Try again tomorrow.",
+      "not_allowed": "Your photos can't be sent right now. Refresh the page to see where your ID check stands.",
+      "unknown": "We couldn't send your photos. Check your connection and try again."
+    },
+    "previews": {
+      "group": "ID check: our photos and the double check",
+      "notice": "Before the photos: the Texas notice",
+      "noticeError": "The notice not accepted",
+      "type": "Which ID",
+      "front": "Front: choose camera or upload",
+      "frontCamera": "Front: camera with the card frame",
+      "frontTaken": "Front: photo taken",
+      "back": "Back of the ID",
+      "selfie": "Selfie: camera with the prompt",
+      "selfieUnavailable": "Selfie: no camera, camera app instead",
+      "selfieDenied": "Selfie: camera blocked",
+      "passport": "Passport: photo page and selfie",
+      "review": "Review before sending",
+      "reviewErrors": "Review: a photo to retake",
+      "reviewFailure": "Review: sending failed",
+      "rejected": "Photos turned down: new try",
+      "inReview": "Photos in review",
+      "approved": "Approved: the double check is next",
+      "doubleCheckProcessing": "Double check: processing",
+      "doubleCheckRetry": "Double check: try again",
+      "verified": "Verified",
+      "tryLater": "Paused: 3 tries today",
+      "tooMany": "Paused: too many tries",
+      "under18": "Paused: under 18",
+      "requested": "New check asked for"
+    }
   }
 }

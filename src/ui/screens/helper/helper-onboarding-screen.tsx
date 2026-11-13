@@ -8,6 +8,7 @@ import { PushPrompt } from '@/ui/components/push/push-device';
 import { buttonVariants } from '@/ui/primitives/button';
 import { AddressStep } from './address-step';
 import { HelperAreaForm, HelperProfileForm, HelperServicesForm } from './helper-forms';
+import { IdentityCaptureStep } from './identity-capture';
 import { PhoneStep } from './phone-step';
 import { OnboardingStepper } from './onboarding-stepper';
 import { VerificationPanel } from './verification-panel';
@@ -32,7 +33,10 @@ export function HelperOnboardingScreen({ data, handlers, standing }: { data: Hel
   const remoteAllowed = data.values.services.services.some((service) => data.categories.some((category) => category.slug === service.categorySlug && category.remoteAllowed));
   const currentIndex = data.progress.steps.findIndex((entry) => entry.step === step);
   const next = currentIndex >= 0 ? data.progress.steps.slice(currentIndex + 1).find((entry) => entry.state !== 'skipped') : undefined;
-  const provider = step === 'identity' || step === 'payout' || step === 'background';
+  // The ID step's first stage is our own capture; the provider's double check follows once it's approved.
+  const capture = data.verification.identity.capture;
+  const capturing = step === 'identity' && capture !== undefined && (capture.stage === 'needed' || capture.stage === 'in_review');
+  const provider = (step === 'identity' && !capturing) || step === 'payout' || step === 'background';
   return <div className="mx-auto max-w-reading space-y-6 pb-24 sm:pb-0">
     <PageHeader title={t('screen.title')} description={t('screen.description')} />
     <OnboardingStepper progress={data.progress} step={step} />
@@ -48,6 +52,7 @@ export function HelperOnboardingScreen({ data, handlers, standing }: { data: Hel
       {step === 'phone' ? <PhoneStep verification={data.verification} handlers={handlers} /> : <AddressStep verification={data.verification} handlers={handlers} />}
       {next && next.state !== 'locked' && <div><Link href={routes.app.helperOnboarding(next.step)} className={buttonVariants({ variant: 'outline', className: 'w-full sm:w-auto' })}>{t('screen.continueStep', { step: t(`screen.steps.${next.step}`) })}</Link></div>}
     </>}
+    {capturing && <IdentityCaptureStep key="identity-capture" verification={data.verification} handlers={handlers} />}
     {provider && <><VerificationPanel key={step} track={step} verification={data.verification} categories={data.categories} bookableCategories={data.progress.bookableCategories} firstPayoutDays={data.firstPayoutDays} handlers={handlers} stickyAction />
       {step === 'background' && data.verification.background.requiredFor.length === 0 && <p className="rounded-xl border bg-card p-card">{t('screen.backgroundSkipped')}</p>}
       {next && next.state !== 'locked' && <div><Link href={routes.app.helperOnboarding(next.step)} className={buttonVariants({ variant: 'outline', className: 'w-full sm:w-auto' })}>{t('screen.continueStep', { step: t(`screen.steps.${next.step}`) })}</Link></div>}

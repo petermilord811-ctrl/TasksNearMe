@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1012" height="638" viewBox="0 0 1012 638" role="img" aria-label="Sample ID card, back (fictional)">
+  <rect width="1012" height="638" rx="36" fill="#eef4fb"/>
+  <rect x="48" y="60" width="916" height="70" rx="8" fill="#2f4f86" opacity="0.15"/>
+  <text x="72" y="106" font-family="Arial, sans-serif" font-size="28" fill="#1d2b44">CLASS C · RESTRICTIONS: NONE · ENDORSEMENTS: NONE</text>
+  <g fill="#1d2b44">
+    <rect x="72" y="190" width="6" height="250"/><rect x="88" y="190" width="12" height="250"/><rect x="110" y="190" width="4" height="250"/>
+    <rect x="124" y="190" width="10" height="250"/><rect x="146" y="190" width="6" height="250"/><rect x="162" y="190" width="14" height="250"/>
+    <rect x="186" y="190" width="4" height="250"/><rect x="200" y="190" width="8" height="250"/><rect x="218" y="190" width="12" height="250"/>
+    <rect x="240" y="190" width="6" height="250"/><rect x="256" y="190" width="4" height="250"/><rect x="270" y="190" width="10" height="250"/>
+    <rect x="290" y="190" width="6" height="250"/><rect x="306" y="190" width="14" height="250"/><rect x="330" y="190" width="4" height="250"/>
+    <rect x="344" y="190" width="8" height="250"/><rect x="362" y="190" width="12" height="250"/><rect x="384" y="190" width="6" height="250"/>
+  </g>
+  <text x="440" y="250" font-family="Arial, sans-serif" font-size="24" fill="#5b6b82">ORGAN DONOR: —</text>
+  <text x="440" y="300" font-family="Arial, sans-serif" font-size="24" fill="#5b6b82">ISSUED 04/02/2021</text>
+  <text x="48" y="590" font-family="Arial, sans-serif" font-size="20" fill="#8a94a6">Sample document for development previews. Fictional: no real person.</text>
+</svg>

@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
+import { LIVENESS_PROMPTS } from '@/contracts';
 import {
   addressDocumentDue,
   addressStanding,
   backgroundNoticeDue,
   backgroundStanding,
+  capturePhotosDue,
+  deriveIdentityAutoCheck,
   identitySessionIsStale,
   identityStanding,
+  livenessPromptFor,
   namesMatch,
   type AddressRow,
   type BackgroundRow,
+  type CaptureRow,
   type IdentityRow,
 } from './standing';
 
@@ -89,6 +94,124 @@ describe('identity standing', () => {
     expect(identitySessionIsStale({ status: 'processing', providerSessionId: 'vs', createdAt: ago(2.1) }, now)).toBe(true);
     expect(identitySessionIsStale({ status: 'processing', providerSessionId: 'vs', createdAt: ago(1) }, now)).toBe(false);
     expect(identitySessionIsStale({ status: 'verified', providerSessionId: 'vs', createdAt: ago(9) }, now)).toBe(false);
+  });
+});
+
+let captureSeq = 0;
+function captureRow(over: Partial<CaptureRow>): CaptureRow {
+  captureSeq += 1;
+  const createdAt = over.createdAt ?? ago(5 - captureSeq * 0.01);
+  return { id: `idc_${captureSeq}`, status: 'submitted', documentType: 'drivers_license', rejectionReason: null, submittedAt: createdAt, decidedAt: null, createdAt, updatedAt: createdAt, ...over };
+}
+const decided = (status: 'approved' | 'rejected' | 'canceled', createdAt: Date, reason: string | null = status === 'rejected' ? 'document_unreadable' : null) => {
+  const at = new Date(createdAt.getTime() + 2 * 3_600_000);
+  return captureRow({ status, rejectionReason: reason, createdAt, decidedAt: at, updatedAt: at });
+};
+
+describe('our own ID check (stage 1)', () => {
+  it('asks for photos first; the provider only opens once they are approved', () => {
+    expect(identityStanding([], now, [])).toMatchObject({ captureApproved: false, canCapture: true, canStart: true, attempts: 0 });
+    const inReview = identityStanding([], now, [captureRow({ createdAt: ago(0.1) })]);
+    expect(inReview).toMatchObject({ captureApproved: false, canCapture: false, attempts: 1, capture: { status: 'submitted' } });
+    expect(inReview.blocked).toBeUndefined();
+    const approved = identityStanding([], now, [decided('approved', ago(0.2))]);
+    expect(approved).toMatchObject({ captureApproved: true, canCapture: false, canStart: true, status: 'not_started', attempts: 1 });
+  });
+
+  it('counts photos and provider sessions as tries; approved photos are not a failed try', () => {
+    const captures = [decided('rejected', ago(0.9)), decided('rejected', ago(0.8)), decided('approved', ago(0.7))];
+    // Two failed tries and an approval today: the double check can start.
+    expect(identityStanding([], now, captures)).toMatchObject({ captureApproved: true, canStart: true, attempts: 3 });
+    expect(identityStanding([], now, captures).blocked).toBeUndefined();
+    // A failed double check makes 3 failed tries today: the next opens 24 hours after the first.
+    const standing = identityStanding([failed(ago(0.3))], now, captures);
+    expect(standing).toMatchObject({ blocked: 'try_later', canStart: false, captureApproved: true, attempts: 4 });
+    expect(standing.retryAt).toEqual(new Date(captures[0]!.createdAt.getTime() + DAY));
+  });
+
+  it('pauses for 24 hours after 3 turned-down tries, and never while photos wait for review', () => {
+    const three = [decided('rejected', ago(0.9)), decided('rejected', ago(0.6)), decided('rejected', ago(0.3))];
+    expect(identityStanding([], now, three)).toMatchObject({ blocked: 'try_later', canCapture: false, canStart: false });
+    const waiting = [decided('rejected', ago(0.9)), decided('rejected', ago(0.6)), captureRow({ createdAt: ago(0.3) })];
+    expect(identityStanding([], now, waiting).blocked).toBeUndefined();
+  });
+
+  it('sends 5 tries without a pass to staff, photos and sessions together', () => {
+    const captures = [decided('rejected', ago(6)), decided('rejected', ago(5)), decided('canceled', ago(4)), decided('approved', ago(3.5))];
+    const sessions = [failed(ago(3)), failed(ago(2))];
+    const standing = identityStanding(sessions, now, captures);
+    expect(standing).toMatchObject({ blocked: 'too_many_attempts', canStart: false, attempts: 6 });
+    expect(standing.reviewSince).toEqual(sessions[1]!.updatedAt);
+  });
+
+  it('closes helper setup when staff find the person is under 18, until they allow new tries', () => {
+    const under = decided('rejected', ago(1), 'under_18');
+    expect(identityStanding([], now, [under])).toMatchObject({ blocked: 'under_18', canCapture: false, canStart: false });
+    const reset = idRow({ status: 'not_started', providerSessionId: null, requestedReason: 'allow_retry', createdAt: ago(0.5) });
+    const after = identityStanding([reset], now, [under]);
+    expect(after).toMatchObject({ canCapture: true, captureApproved: false, attempts: 0 });
+    expect(after.blocked).toBeUndefined();
+    expect(after.capture).toBeUndefined();
+  });
+
+  it('starts over after a staff request: the earlier photos and pass stop counting', () => {
+    const photos = decided('approved', ago(10));
+    const pass = idRow({ status: 'verified', verifiedAt: ago(9), nameMatches: true, createdAt: ago(9) });
+    const request = idRow({ status: 'not_started', providerSessionId: null, requestedReason: 'staff_request', createdAt: ago(1) });
+    expect(identityStanding([pass, request], now, [photos])).toMatchObject({ status: 'not_started', verified: false, captureApproved: false, canCapture: true, requested: 'staff_request', attempts: 0 });
+    // Photos sent the moment the new check was asked for belong to it.
+    expect(identityStanding([pass, request], now, [photos, captureRow({ createdAt: ago(1) })])).toMatchObject({ attempts: 1, capture: { status: 'submitted' } });
+  });
+
+  it('keeps helpers verified before our own check existed verified, with nothing to send', () => {
+    const pass = idRow({ status: 'verified', verifiedAt: ago(30), nameMatches: true, createdAt: ago(30) });
+    expect(identityStanding([pass], now, [])).toMatchObject({ verified: true, cleared: true, canCapture: false, captureApproved: false });
+  });
+
+  it('deletes the photos 30 days after the decision, canceled ones at once', () => {
+    const base = { filesDeletedAt: null, hasFiles: true };
+    expect(capturePhotosDue({ ...base, status: 'approved', decidedAt: ago(29) }, now)).toBe(false);
+    expect(capturePhotosDue({ ...base, status: 'approved', decidedAt: ago(30) }, now)).toBe(true);
+    expect(capturePhotosDue({ ...base, status: 'rejected', decidedAt: ago(31) }, now)).toBe(true);
+    expect(capturePhotosDue({ ...base, status: 'canceled', decidedAt: now }, now)).toBe(true);
+    expect(capturePhotosDue({ ...base, status: 'submitted', decidedAt: null }, now)).toBe(false);
+    expect(capturePhotosDue({ status: 'rejected', decidedAt: ago(40), filesDeletedAt: ago(5), hasFiles: false }, now)).toBe(false);
+  });
+
+  it('picks the selfie prompt from a keyed hash of the person and the try, so reloading never changes it', () => {
+    expect(livenessPromptFor('usr_a', 0, 'secret')).toBe(livenessPromptFor('usr_a', 0, 'secret'));
+    const prompts = new Set(Array.from({ length: 60 }, (_, tries) => livenessPromptFor('usr_a', tries, 'secret')));
+    expect(prompts.size).toBeGreaterThanOrEqual(4);
+    for (const prompt of prompts) expect(LIVENESS_PROMPTS).toContain(prompt);
+    const other = Array.from({ length: 12 }, (_, tries) => livenessPromptFor('usr_a', tries, 'another secret'));
+    expect(other).not.toEqual(Array.from({ length: 12 }, (_, tries) => livenessPromptFor('usr_a', tries, 'secret')));
+  });
+});
+
+describe('the automatic reading of an ID', () => {
+  const vera = { firstName: 'Vera', lastName: 'Tester' };
+  const reading = { readable: true, givenNames: 'VERA LYNN', surname: 'TESTER', dateOfBirth: '1990-04-02', expiryDate: '2029-04-02', documentType: 'drivers_license' as const, issuingState: 'TX' };
+
+  it('keeps yes/no answers and the expiry month and year, never the name, birth date or state', () => {
+    expect(deriveIdentityAutoCheck(reading, vera, now)).toEqual({ readable: true, nameMatches: true, isAdult: true, notExpired: true, expiresMonth: 4, expiresYear: 2029, documentType: 'drivers_license' });
+    expect(deriveIdentityAutoCheck({ ...reading, givenNames: 'Veronica', surname: 'Smith' }, vera, now).nameMatches).toBe(false);
+    expect(deriveIdentityAutoCheck({ readable: false }, vera, now)).toEqual({ readable: false });
+  });
+
+  it('turns 18 on the 18th birthday in Austin, and an ID is good through its expiry date', () => {
+    // 6 pm UTC on Nov 20 is noon in Austin.
+    expect(deriveIdentityAutoCheck({ ...reading, dateOfBirth: '2008-11-20' }, vera, now).isAdult).toBe(true);
+    expect(deriveIdentityAutoCheck({ ...reading, dateOfBirth: '2008-11-21' }, vera, now).isAdult).toBe(false);
+    // 3 am UTC on Nov 21 is still Nov 20 in Austin.
+    const lateEvening = new Date('2026-11-21T03:00:00.000Z');
+    expect(deriveIdentityAutoCheck({ ...reading, dateOfBirth: '2008-11-21' }, vera, lateEvening).isAdult).toBe(false);
+    expect(deriveIdentityAutoCheck({ ...reading, expiryDate: '2026-11-20' }, vera, now).notExpired).toBe(true);
+    expect(deriveIdentityAutoCheck({ ...reading, expiryDate: '2026-11-19' }, vera, now)).toMatchObject({ notExpired: false, expiresMonth: 11, expiresYear: 2026 });
+  });
+
+  it("leaves out what it can't be sure of: missing names and impossible dates", () => {
+    const unsure = deriveIdentityAutoCheck({ readable: true, surname: 'Tester', dateOfBirth: '1990-02-30', expiryDate: 'soon' }, vera, now);
+    expect(unsure).toEqual({ readable: true });
   });
 });
 

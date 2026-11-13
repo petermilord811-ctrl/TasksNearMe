@@ -21,4 +21,11 @@ describe('file access', () => {
     expect(canViewFile(proof, { userId: 'usr_priya', isStaff: false })).toBe(false);
     expect(canViewFile(proof, { userId: 'usr_taylor', isStaff: true })).toBe(false);
   });
+
+  it.each(['id_document', 'id_selfie'])('never serves an ID photo (%s) here, not to its owner or staff', (kind) => {
+    const photo = { kind, ownerUserId: 'usr_priya' };
+    expect(canViewFile(photo, { userId: 'usr_priya', isStaff: false })).toBe(false);
+    expect(canViewFile(photo, { userId: 'usr_taylor', isStaff: true })).toBe(false);
+    expect(canViewFile(photo, { userId: null, isStaff: false })).toBe(false);
+  });
 });

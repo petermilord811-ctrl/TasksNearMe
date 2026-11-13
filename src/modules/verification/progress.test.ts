@@ -39,6 +39,14 @@ describe('helper onboarding', () => {
     expect(canOpenStep(fresh, 'identity')).toBe(false);
   });
 
+  it('shows the ID step in review while our team compares the photos, and keeps what comes after locked', () => {
+    const photosSent = { ...basics, phoneVerified: true, identity: { status: 'not_started' as const, cleared: false, captureInReview: true } };
+    expect(states(photosSent)).toMatchObject({ identity: 'in_review', address: 'locked', payout: 'locked' });
+    expect(computeOnboarding(photosSent).firstIncomplete).toBe('identity');
+    // Approved photos are not yet a verified ID: the provider's double check is what verifies.
+    expect(states({ ...photosSent, identity: { status: 'not_started', cleared: false, captureInReview: false } })).toMatchObject({ identity: 'todo', address: 'locked' });
+  });
+
   it('needs the helper agreement for the profile step to count', () => {
     const noAgreement = { ...basics, agreementAccepted: false };
     expect(states(noAgreement)).toMatchObject({ profile: 'todo', phone: 'locked' });

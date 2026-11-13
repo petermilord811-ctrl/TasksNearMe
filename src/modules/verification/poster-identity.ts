@@ -6,6 +6,7 @@ import { POSTER_ID_RULES, posterIdentityRequirement } from '@/modules/trust/post
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { computeOnboarding } from './progress';
 import type { VerificationProviders } from './providers';
 import { identityVerifications } from './schema';
 import { loadOnboardingState, verificationSummary } from './state';
@@ -51,6 +52,10 @@ export async function startPosterIdentity(
   const state = await loadOnboardingState(db, userId, now);
   // Only when something asks for it (each check costs us); the limits are the helper's.
   if (!state.identity.canStart || !(await offered(db, userId, now))) return { ok: false, code: 'not_allowed' };
+  // A helper who has reached the ID step does it there: it starts with our own photos (stage 1), which
+  // this page never skips. Someone whose helper setup hasn't reached it yet verifies as a client.
+  const helperStep = computeOnboarding(state.facts).progress.steps.find((step) => step.step === 'identity');
+  if (state.profile && helperStep && helperStep.state !== 'locked' && !state.identity.captureApproved) return { ok: true, code: 'updated', redirectTo: routes.app.helperOnboarding('identity') };
   if (state.agreements.biometric_consent === undefined) {
     if (options.consent !== true) return { ok: false, code: 'validation_failed', fieldErrors: { consent: ['must_accept'] } };
     await recordAgreement(db, userId, 'biometric_consent', options.origin ?? {}, now);

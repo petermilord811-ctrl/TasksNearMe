@@ -27,8 +27,9 @@ function audit(db: Db, action: string, userId: string, metadata: Record<string, 
 // ---- Identity -------------------------------------------------------------------------------------
 
 /**
- * Opens a hosted ID check. Needs the phone verified and the Texas biometric notice accepted (now or
- * before). A check in progress can be continued with a new session (it counts as a try); blocked
+ * Opens the provider's hosted ID check: for helpers, the double check after our team approved their
+ * photos (stage 1, `capture.ts`). Needs the phone verified and the Texas biometric notice accepted (now
+ * or before). A check in progress can be continued with a new session (it counts as a try); blocked
  * helpers (3 tries a day, 5 in all, under 18) can't start one.
  */
 export async function startIdentity(
@@ -40,7 +41,7 @@ export async function startIdentity(
 ): Promise<ActionResult> {
   const state = await loadOnboardingState(db, userId, now);
   const step = computeOnboarding(state.facts).progress.steps.find((s) => s.step === 'identity');
-  if (!step || step.state === 'locked' || !state.identity.canStart) return { ok: false, code: 'not_allowed' };
+  if (!step || step.state === 'locked' || !state.identity.canStart || !state.identity.captureApproved) return { ok: false, code: 'not_allowed' };
   if (state.agreements.biometric_consent === undefined) {
     if (options.consent !== true) return fieldError('consent', 'must_accept');
     await recordAgreement(db, userId, 'biometric_consent', options.origin ?? {}, now);

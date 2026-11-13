@@ -72,6 +72,7 @@ import { proposeRebookPreviews } from './propose-rebook.preview';
 import { proposalPreviews } from './proposal.preview';
 import { seriesPreviews } from './series.preview';
 import { verificationPreviews } from './verification.preview';
+import { identityCheckPreviews } from './identity-check.preview';
 
 export const previews: PreviewEntry[] = [
   ...brandPreviews,
@@ -103,6 +104,7 @@ export const previews: PreviewEntry[] = [
   ...offerPreviews,
   ...helperOnboardingPreviews,
   ...verificationPreviews,
+  ...identityCheckPreviews,
   ...helperProfileEditorPreviews,
   ...findWorkPreviews,
   ...helperTaskPreviews,

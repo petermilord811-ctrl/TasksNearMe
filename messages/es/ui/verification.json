@@ -60,6 +60,7 @@
       "background": "Verificación de antecedentes"
     },
     "identityExplanation": "Nuestro socio de verificación de identidad te pedirá una foto de tu documento de identidad y una selfie. Toma unos 2 minutos.",
+    "identityDoubleCheck": "Nuestro equipo aprobó tus fotos. Último paso: una segunda verificación con nuestro socio de identidad, Stripe. Toma unos 2 minutos.",
     "identityPublic": "Los clientes ven una insignia de «Identidad verificada» con el mes y el año de tu verificación. La foto de tu documento y tu selfie se mantienen privadas.",
     "payoutExplanation": "Configura con Stripe, nuestro socio de pagos, dónde se depositan tus ganancias. Stripe se encarga de los datos de tus pagos.",
     "firstPayout": "Tu primer pago puede tardar unos {days} días.",
@@ -86,6 +87,7 @@
       "background": "Tus datos personales y el informe de la verificación se quedan con nuestro socio de verificación."
     },
     "startIdentity": "Iniciar verificación de identidad",
+    "startDoubleCheck": "Empezar la segunda verificación",
     "tryAgain": "Intentar de nuevo",
     "checkStatus": "Ver estado",
     "startPayout": "Configurar pagos",
@@ -233,5 +235,163 @@
     "verified": "Tu número de teléfono que termina en {last4} está verificado.",
     "change": "Usar otro número",
     "privacy": "Los clientes nunca ven tu número: las llamadas y los mensajes pasan por la app."
+  },
+  "capture": {
+    "explanation": "Primero, toma fotos de tu identificación y una selfie. Nuestro equipo las compara, normalmente en un día. Después, nuestro socio de identidad verifica tu identificación por segunda vez. En total toma unos 5 minutos.",
+    "statuses": {
+      "needed": "Faltan las fotos",
+      "retake": "Se necesitan fotos nuevas",
+      "in_review": "Fotos en revisión",
+      "approved": "Fotos aprobadas"
+    },
+    "stages": {
+      "label": "Las dos partes de tu verificación de identidad",
+      "photos": "Tus fotos",
+      "photosHint": "Nuestro equipo las compara",
+      "doubleCheck": "Segunda verificación",
+      "doubleCheckHint": "Con nuestro socio de identidad",
+      "states": {
+        "done": "Listo",
+        "current": "Ahora",
+        "in_review": "En revisión",
+        "next": "Después"
+      }
+    },
+    "notice": {
+      "title": "Antes de tomar tus fotos",
+      "body": "Para comprobar que eres la persona de tu identificación, tomamos fotos de tu identificación y una selfie que sigue una instrucción, y nuestro equipo de confianza y seguridad compara tu cara con la foto de la identificación. Después, nuestro socio de identidad, Stripe, verifica por segunda vez tu identificación y una selfie usando la geometría facial, un identificador biométrico. Las fotos se usan solo para verificar tu identidad. Guardamos las nuestras cifradas hasta que terminen las dos verificaciones y las borramos a más tardar 30 días después de nuestra decisión; le pedimos a Stripe que borre las suyas 30 días después de su resultado. La ley de Texas exige tu consentimiento antes.",
+      "checkbox": "Acepto la verificación de identidad y selfie descrita aquí.",
+      "required": "Acepta la verificación de identidad y selfie para tomar tus fotos.",
+      "continue": "Continuar"
+    },
+    "documentType": {
+      "legend": "¿Qué identificación vas a usar?",
+      "hint": "Una identificación vigente con tu foto y tu nombre legal.",
+      "required": "Elige el tipo de identificación.",
+      "types": {
+        "drivers_license": "Licencia de conducir",
+        "state_id": "Identificación estatal",
+        "passport": "Pasaporte"
+      },
+      "hints": {
+        "drivers_license": "Frente y reverso",
+        "state_id": "Frente y reverso",
+        "passport": "La página de la foto"
+      }
+    },
+    "continue": "Continuar",
+    "back": "Atrás",
+    "progress": "Foto {current} de {total}",
+    "steps": {
+      "front": {
+        "title": "El frente de tu identificación",
+        "passportTitle": "La página de la foto de tu pasaporte",
+        "help": "Ponla plana sobre una superficie oscura, con las cuatro esquinas dentro del marco y sin reflejos."
+      },
+      "back": {
+        "title": "El reverso de tu identificación",
+        "help": "Voltea la identificación. Mantén las cuatro esquinas dentro del marco."
+      },
+      "selfie": {
+        "title": "Una selfie en vivo",
+        "help": "Mira a la cámara con buena luz, sin lentes de sol ni gorra, y sigue la instrucción."
+      }
+    },
+    "prompt": {
+      "label": "Para tu selfie:",
+      "look_left": "Mira a tu izquierda",
+      "look_right": "Mira a tu derecha",
+      "look_up": "Mira hacia arriba",
+      "smile": "Sonríe",
+      "tilt_head": "Inclina la cabeza hacia un lado",
+      "three_fingers": "Levanta tres dedos junto a tu cara"
+    },
+    "camera": {
+      "open": "Usar la cámara",
+      "upload": "Subir una foto",
+      "uploadCameraApp": "Toma la foto con la app de cámara",
+      "uploadSelfie": "Toma una selfie con la app de cámara",
+      "take": "Tomar foto",
+      "takeSelfie": "Tomar selfie",
+      "starting": "Abriendo la cámara…",
+      "previewLabel": "Vista de la cámara",
+      "unavailable": "No podemos abrir una cámara aquí. Toma la foto con la app de cámara.",
+      "denied": "El acceso a la cámara está desactivado para este sitio. Actívalo en la configuración del navegador o toma la foto con la app de cámara.",
+      "taken": "Foto tomada. Revísala y úsala, o tómala de nuevo."
+    },
+    "photo": {
+      "alt": {
+        "front": "Tu foto del frente de tu identificación",
+        "back": "Tu foto del reverso de tu identificación",
+        "selfie": "Tu selfie"
+      },
+      "names": {
+        "front": "Frente de la identificación",
+        "back": "Reverso de la identificación",
+        "selfie": "Selfie"
+      },
+      "use": "Usar esta foto",
+      "retake": "Tomar de nuevo",
+      "retakeNamed": "Tomar de nuevo: {photo}"
+    },
+    "review": {
+      "title": "Revisa tus fotos",
+      "body": "Asegúrate de que el texto de la identificación se lea bien y de que tu cara se vea clara y con buena luz.",
+      "promptReminder": "Tu selfie debe mostrar: {prompt}.",
+      "submit": "Enviar para revisión",
+      "sending": "Enviando…",
+      "sent": "Enviado. Te avisaremos cuando nuestro equipo haya revisado tus fotos."
+    },
+    "inReview": "Estamos comparando tus fotos, normalmente en un día. Te avisaremos y después terminarás con una segunda verificación rápida.",
+    "sentAt": "Enviado el {date}.",
+    "checkStatus": "Ver el estado",
+    "rejectionReasons": {
+      "document_unreadable": "No pudimos leer tu identificación en las fotos. Tómalas de nuevo con buena luz, con las cuatro esquinas a la vista y sin reflejos.",
+      "selfie_mismatch": "No pudimos relacionar tu selfie con la foto de tu identificación. Toma fotos nuevas con tu cara bien a la vista.",
+      "prompt_not_followed": "Tu selfie no siguió su instrucción. Toma fotos nuevas; recibirás una instrucción nueva.",
+      "under_18": "Los ayudantes deben tener 18 años o más.",
+      "expired": "Esa identificación está vencida. Toma fotos de una identificación vigente.",
+      "other": "No pudimos aceptar estas fotos. Tómalas de nuevo o contacta a soporte si sigue pasando."
+    },
+    "privacy": "Solo nuestro equipo de confianza y seguridad ve tus fotos, y cada vista queda registrada. Un lector automático (Claude, de Anthropic) lee para ellos el nombre y las fechas del frente de tu identificación; guardamos solo sus respuestas de sí o no, nunca tu nombre, tu fecha de nacimiento ni tu número de identificación. Tus fotos se guardan cifradas y se borran a más tardar 30 días después de nuestra decisión.",
+    "errors": {
+      "photo": {
+        "required": "Primero toma esta foto.",
+        "invalid": "Ese archivo no parece una foto. Tómala de nuevo.",
+        "too_large": "Esta foto pesa más de {megabytes} MB. Tómala de nuevo con la cámara."
+      },
+      "too_large": "Una foto pesa más de {megabytes} MB. Tómala de nuevo con la cámara.",
+      "unsupported_type": "Usa una foto (JPEG, PNG, WebP o HEIC).",
+      "rate_limited": "Enviaste fotos varias veces hoy. Inténtalo de nuevo mañana.",
+      "not_allowed": "Tus fotos no se pueden enviar ahora. Actualiza la página para ver cómo va tu verificación de identidad.",
+      "unknown": "No pudimos enviar tus fotos. Revisa tu conexión e inténtalo de nuevo."
+    },
+    "previews": {
+      "group": "Verificación de identidad: nuestras fotos y la segunda verificación",
+      "notice": "Antes de las fotos: el aviso de Texas",
+      "noticeError": "El aviso sin aceptar",
+      "type": "Qué identificación",
+      "front": "Frente: elegir cámara o subir",
+      "frontCamera": "Frente: cámara con el marco de la tarjeta",
+      "frontTaken": "Frente: foto tomada",
+      "back": "Reverso de la identificación",
+      "selfie": "Selfie: cámara con la instrucción",
+      "selfieUnavailable": "Selfie: sin cámara, con la app de cámara",
+      "selfieDenied": "Selfie: cámara bloqueada",
+      "passport": "Pasaporte: página de la foto y selfie",
+      "review": "Revisión antes de enviar",
+      "reviewErrors": "Revisión: una foto para tomar de nuevo",
+      "reviewFailure": "Revisión: no se pudo enviar",
+      "rejected": "Fotos rechazadas: nuevo intento",
+      "inReview": "Fotos en revisión",
+      "approved": "Aprobadas: sigue la segunda verificación",
+      "doubleCheckProcessing": "Segunda verificación: en proceso",
+      "doubleCheckRetry": "Segunda verificación: intentar de nuevo",
+      "verified": "Verificada",
+      "tryLater": "En pausa: 3 intentos hoy",
+      "tooMany": "En pausa: demasiados intentos",
+      "under18": "En pausa: menor de 18",
+      "requested": "Se pidió una verificación nueva"
+    }
   }
 }

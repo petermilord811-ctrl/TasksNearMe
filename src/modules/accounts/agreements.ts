@@ -11,8 +11,13 @@ import { agreements } from './schema';
 export const AGREEMENT_VERSIONS = {
   /** Independent-contractor terms and the community guidelines (`/legal/helper-agreement`). */
   helper_agreement: 'draft-0.1',
-  /** The Texas biometric notice (Bus. & Com. Code §503.001) shown before the ID check opens. */
-  biometric_consent: 'draft-0.1',
+  /**
+   * The Texas biometric notice (Bus. & Com. Code §503.001), accepted before the ID check. draft-0.2
+   * (2026-11-13): a helper's check has two stages, our own photos of the ID and a selfie (compared by our
+   * team, kept encrypted until the checks finish and deleted at most 30 days after our decision), then the
+   * provider's double check; a client's check is the provider's alone.
+   */
+  biometric_consent: 'draft-0.2',
   /** Our summary of the background check, before Checkr's own FCRA disclosure and authorization. */
   bg_check_disclosure: 'draft-0.1',
 } as const;

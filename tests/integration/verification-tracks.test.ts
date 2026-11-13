@@ -14,7 +14,7 @@ import { files } from '@/modules/tasks/schema';
 import { canViewFile } from '@/modules/files/access';
 import { submitAddressProof } from '@/modules/verification/address';
 import { createDevVerificationProviders } from '@/modules/verification/providers';
-import { addressVerifications, backgroundChecks, identityVerifications, payoutAccounts } from '@/modules/verification/schema';
+import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications, payoutAccounts } from '@/modules/verification/schema';
 import { decideAddress, documentForToken, getAdminVerificationsPage, getPersonVerification, readDocumentToken, revealAddressProof, verificationAction } from '@/modules/verification/staff';
 import { loadOnboardingState } from '@/modules/verification/state';
 import { runVerificationTimers } from '@/modules/verification/timers';
@@ -57,6 +57,11 @@ async function helper(id: string, options: { identity?: boolean; payout?: boolea
   if (options.payout) {
     await db.insert(payoutAccounts).values({ userId: id, provider: 'dev', providerAccountId: `acct_${id}`, status: 'active', activatedAt: at(-28), createdAt: at(-28), updatedAt: at(-28) });
   }
+}
+
+/** Our own ID check (stage 1) approved, as staff would: the provider's double check can open. It counts as a try. */
+async function photosApproved(id: string, when: Date) {
+  await db.insert(identityCaptures).values({ id: `idc_${id}_${when.getTime()}`, userId: id, documentType: 'drivers_license', promptKey: 'smile', status: 'approved', submittedAt: when, decidedAt: when, decidedByUserId: 'usr_taylor', createdAt: when, updatedAt: when });
 }
 
 async function photoFile(name = 'bill.jpg') {
@@ -211,6 +216,9 @@ describe('ID checks', () => {
 
   it('needs consent, allows 3 tries a day, and sends 5 failed tries to staff', async () => {
     await helper(id);
+    // The provider's check is the double check: it opens once our team approved the photos.
+    expect(await startIdentity(db, providers, id, at(0), { consent: true })).toEqual({ ok: false, code: 'not_allowed' });
+    await photosApproved(id, at(-0.5));
     expect(await startIdentity(db, providers, id, at(0))).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { consent: ['must_accept'] } });
     const fail = async (when: Date) => {
       const start = await startIdentity(db, providers, id, when, { consent: true });
@@ -220,13 +228,14 @@ describe('ID checks', () => {
     };
     for (const hours of [0, 1, 2]) expect((await fail(new Date(at(0).getTime() + hours * 3_600_000))).ok).toBe(true);
     const blocked = (await loadOnboardingState(db, id, new Date(at(0).getTime() + 3 * 3_600_000))).identity;
-    expect(blocked).toMatchObject({ blocked: 'try_later', canStart: false, attempts: 3 });
+    // The approved photos are a try too, but not a failed one: 3 failed sessions today pause the check.
+    expect(blocked).toMatchObject({ blocked: 'try_later', canStart: false, attempts: 4 });
     expect(await startIdentity(db, providers, id, new Date(at(0).getTime() + 3 * 3_600_000), { consent: true })).toEqual({ ok: false, code: 'not_allowed' });
     expect((await fail(at(1.2))).ok).toBe(true);
     expect((await fail(at(1.3))).ok).toBe(true);
-    expect((await loadOnboardingState(db, id, at(3))).identity).toMatchObject({ blocked: 'too_many_attempts', attempts: 5 });
+    expect((await loadOnboardingState(db, id, at(3))).identity).toMatchObject({ blocked: 'too_many_attempts', attempts: 6 });
     const queue = await getAdminVerificationsPage(db, taylor, 'identity', at(3));
-    expect(queue.identity.find((row) => row.person.id === id)).toMatchObject({ kind: 'too_many_attempts', attempts: 5 });
+    expect(queue.identity.find((row) => row.person.id === id)).toMatchObject({ kind: 'too_many_attempts', attempts: 6 });
 
     // Staff allow new tries: the count starts again.
     expect(await verificationAction(db, providers, taylor, { userId: id, action: 'allow_identity_retry', note: 'Glare on the license; told them to try indoors.' }, at(3))).toEqual({ ok: true, code: 'updated' });
@@ -234,6 +243,8 @@ describe('ID checks', () => {
   });
 
   it('holds a verified ID whose name differs until staff confirm it', async () => {
+    // New tries start again from our own photos.
+    await photosApproved(id, at(3.5));
     const start = await startIdentity(db, providers, id, at(4), { consent: true });
     if (!start.ok) throw new Error('start failed');
     await recordIdentityResult(db, param(start.redirectTo!, 'session'), { status: 'verified', verifiedName: { firstName: 'Veronica', lastName: 'Smith' } }, at(4));
@@ -254,7 +265,8 @@ describe('ID checks', () => {
 
     // Staff ask for a new check; it starts, and nobody finishes it.
     expect(await verificationAction(db, providers, taylor, { userId: id, action: 'request_identity', note: 'Report of a shared account; new check.' }, at(41))).toEqual({ ok: true, code: 'updated' });
-    expect((await loadOnboardingState(db, id, at(41))).identity).toMatchObject({ status: 'not_started', requested: 'staff_request', cleared: false });
+    expect((await loadOnboardingState(db, id, at(41))).identity).toMatchObject({ status: 'not_started', requested: 'staff_request', cleared: false, captureApproved: false });
+    await photosApproved(id, at(41));
     expect((await startIdentity(db, providers, id, at(41), { consent: true })).ok).toBe(true);
     await runVerificationTimers(db, { storage, providers }, at(42), { userIds: PEOPLE });
     expect((await loadOnboardingState(db, id, at(41.5))).identity.status).toBe('processing');

@@ -168,6 +168,14 @@ export type CaseResolution = (typeof CASE_RESOLUTIONS)[number];
 export const IDENTITY_STATUSES = ['not_started', 'processing', 'requires_input', 'verified', 'canceled'] as const;
 export type IdentityStatus = (typeof IDENTITY_STATUSES)[number];
 
+/**
+ * Our own ID check, the first of two stages (added 2026-11-13): photos of the ID and a live selfie that
+ * our team compares before the provider's double check. `canceled`: a new check was asked for while it
+ * waited, or the account was deleted.
+ */
+export const IDENTITY_CAPTURE_STATUSES = ['submitted', 'approved', 'rejected', 'canceled'] as const;
+export type IdentityCaptureStatus = (typeof IDENTITY_CAPTURE_STATUSES)[number];
+
 export const BACKGROUND_CHECK_STATUSES = [
   'not_required',
   'not_started',

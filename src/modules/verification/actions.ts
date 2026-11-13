@@ -8,6 +8,7 @@ import type {
   AddressProofResult,
   AddressSuggestion,
   CategorySlug,
+  IdentityCaptureResult,
   HelperAreaInput,
   HelperProfileInput,
   HelperServicesInput,
@@ -27,6 +28,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { searchHomeAddresses, submitAddressProof } from './address';
+import { acceptIdentityNotice, submitIdentityCapture } from './capture';
 import { computeOnboarding } from './progress';
 import {
   addWorkSample,
@@ -45,7 +47,7 @@ import {
   syncHelperProfile,
   updateWorkSample,
 } from './service';
-import { homeGeocoder, sampleHomeGeocoder, verificationCipher, verificationProviders } from './server';
+import { homeGeocoder, livenessSecret, sampleHomeGeocoder, verificationCipher, verificationFileCipher, verificationProviders } from './server';
 import { startPosterIdentity } from './poster-identity';
 import { requestNow } from '@/platform/clock';
 import { helperInviteFor } from '@/modules/beta/server';
@@ -124,6 +126,26 @@ export async function onboardingConfirmPhone(input: OneTimeCodeInput): Promise<A
   return { ...result, redirectTo: await nextStepAfter(userId, 'phone') };
 }
 
+/** The Texas biometric notice, before our own ID check's photos are taken. */
+export async function onboardingAcceptIdentityNotice(input: { consent: boolean }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  const origin = originFromHeaders(await headers());
+  const result = await acceptIdentityNotice(db, userId, { consent: input?.consent }, await requestNow(), origin);
+  if (result.ok) refresh();
+  return result;
+}
+
+/** Our own ID check's photos (FormData: `documentType`, `front`, `back` unless a passport, `selfie`). */
+export async function onboardingSubmitIdentityCapture(form: FormData): Promise<IdentityCaptureResult> {
+  const userId = await signedInUserId();
+  if (!userId || !(form instanceof FormData)) return { ok: false, code: 'not_allowed' };
+  const result = await submitIdentityCapture({ db, storage: fileStorage, files: verificationFileCipher, secret: livenessSecret }, userId, form, await requestNow());
+  if (result.ok) refresh();
+  return result;
+}
+
+/** The provider's hosted check: the double check once our team approved the photos. */
 export async function onboardingStartIdentity(input: { consent?: boolean } = {}): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId || !verificationProviders) return { ok: false, code: 'not_allowed' };

@@ -8,6 +8,7 @@ import { createLocalFileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { submitAddressProof } from '@/modules/verification/address';
+import { acceptIdentityNotice, submitIdentityCapture } from '@/modules/verification/capture';
 import {
   addWorkSample,
   createDevVerificationProviders,
@@ -26,9 +27,9 @@ import {
   startIdentity,
   startPayout,
 } from '@/modules/verification/service';
-import { addressVerifications } from '@/modules/verification/schema';
-import { decideAddress } from '@/modules/verification/staff';
-import { createFieldCipher } from '@/platform/crypto/field-encryption';
+import { addressVerifications, identityCaptures } from '@/modules/verification/schema';
+import { decideAddress, decideIdentityCapture } from '@/modules/verification/staff';
+import { createByteCipher, createFieldCipher } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
@@ -41,10 +42,19 @@ const taylor = { id: 'usr_taylor', roles: ['trust_safety' as const] };
 const param = (url: string, key: string) => new URL(url, 'http://localhost').searchParams.get(key) ?? '';
 const storage = createLocalFileStorage(path.join(os.tmpdir(), `tnm-onboarding-${process.pid}`));
 const cipher = createFieldCipher(process.env.FIELD_ENCRYPTION_KEY ?? '');
+const captureDeps = { db, storage, files: createByteCipher(process.env.FIELD_ENCRYPTION_KEY ?? ''), secret: 'test-secret-for-the-selfie-prompt' };
 
 async function profile() {
   const [row] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, userId));
   return row!;
+}
+
+/** Our own ID check's photos: a passport's photo page and a selfie. */
+async function idPhotos() {
+  const form = new FormData();
+  form.set('documentType', 'passport');
+  for (const kind of ['front', 'selfie']) form.set(kind, new File([new Uint8Array(await sharp({ create: { width: 1000, height: 700, channels: 3, background: '#eef4fb' } }).jpeg().toBuffer())], `${kind}.jpg`, { type: 'image/jpeg' }));
+  return form;
 }
 
 async function bill() {
@@ -93,9 +103,16 @@ describe('helper onboarding', () => {
     await db.update(users).set({ phone: '+15125550391', phoneVerifiedAt: now() }).where(eq(users.id, userId));
     expect((await getOnboardingPageData(db, userId, 'phone', now()))?.verification.phone).toEqual({ verified: true, last4: '0391' });
 
-    // ID check: the Texas biometric notice comes first, then the provider reports verified.
-    expect(await startIdentity(db, providers, userId, now())).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { consent: ['must_accept'] } });
-    const identity = await startIdentity(db, providers, userId, now(), { consent: true });
+    // ID check in two stages: the Texas biometric notice, our own photos (staff approve them), then the
+    // provider's double check reports verified.
+    expect(await submitIdentityCapture(captureDeps, userId, await idPhotos(), now())).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { consent: ['must_accept'] } });
+    expect(await acceptIdentityNotice(db, userId, { consent: true }, now())).toEqual({ ok: true, code: 'updated' });
+    expect(await submitIdentityCapture(captureDeps, userId, await idPhotos(), now())).toEqual({ ok: true, code: 'submitted' });
+    expect(await startIdentity(db, providers, userId, now())).toEqual({ ok: false, code: 'not_allowed' });
+    const [photos] = await db.select({ id: identityCaptures.id }).from(identityCaptures).where(eq(identityCaptures.userId, userId));
+    expect(await decideIdentityCapture(db, taylor, { captureId: photos!.id, decision: 'approve', note: 'The selfie matches the passport photo.' }, now())).toEqual({ ok: true, code: 'updated' });
+    expect((await getOnboardingPageData(db, userId, 'identity', now()))?.verification.identity.capture).toMatchObject({ stage: 'approved', canSubmit: false });
+    const identity = await startIdentity(db, providers, userId, now());
     expect(identity).toMatchObject({ ok: true, redirectTo: expect.stringContaining('/dev/providers/identity?session=') });
     expect(await recordIdentityResult(db, param(identity.ok ? identity.redirectTo! : '', 'session'), { status: 'verified' }, now())).toBe(userId);
     expect((await profile()).idVerifiedAt).not.toBeNull();
@@ -135,6 +152,12 @@ describe('helper onboarding', () => {
     expect(done?.progress.steps.every((s) => s.state === 'done' || s.state === 'current')).toBe(true);
     expect((await profile()).backgroundCheckedAt).not.toBeNull();
     expect(done?.agreementNeeded).toBe(false);
+
+    // The welcome reward stays on the done step once the helper holds a founding number (given out when
+    // they first become bookable), not only while they don't.
+    expect(done?.welcomeReward).toBeDefined();
+    await db.update(helperProfiles).set({ foundingNumber: 98 }).where(eq(helperProfiles.userId, userId));
+    expect((await getOnboardingPageData(db, userId, 'done', now()))?.welcomeReward).toMatchObject({ amountCents: 5000 });
   });
 
   it('pauses and resumes, and manages work samples', async () => {

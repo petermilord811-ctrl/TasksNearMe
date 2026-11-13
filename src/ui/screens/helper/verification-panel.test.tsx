@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, BACKGROUND_CHECK_STATUSES, IDENTITY_FAILURE_REASONS, IDENTITY_STATUSES, PAYOUT_ACCOUNT_STATUSES, routes, type ActionResult, type HelperOnboardingHandlers, type VerificationSummary } from '@/contracts';
-import { fakeOnboardingHandlers, onboardingBackgroundNotStarted, onboardingDone, onboardingIdentityStep, onboardingPayoutStep } from '@/fixtures';
+import { fakeOnboardingHandlers, onboardingBackgroundNotStarted, onboardingDone, onboardingIdentityCaptureApproved, onboardingIdentityStep, onboardingPayoutStep } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import verificationCopy from '../../../../messages/en/ui/verification.json';
 import { backgroundStatusTones, identityStatusTones, payoutStatusTones, VerificationPanel, type VerificationPanelProps } from './verification-panel';
@@ -13,9 +13,12 @@ const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
+/** The provider's check on its own (no capture of ours before it), with the Texas notice still to accept. */
+const providerOnly: VerificationSummary = { ...onboardingIdentityStep.verification, identity: { status: 'not_started', consentNeeded: true } };
+
 function show(props: Partial<VerificationPanelProps> = {}) {
   return render(<NextIntlClientProvider locale="en" messages={{ ...uiMessages, verification: verificationCopy }}><VerificationPanel
-    track="identity" verification={onboardingIdentityStep.verification} categories={onboardingIdentityStep.categories}
+    track="identity" verification={providerOnly} categories={onboardingIdentityStep.categories}
     bookableCategories={[]} handlers={fakeOnboardingHandlers} {...props}
   /></NextIntlClientProvider>);
 }
@@ -28,7 +31,7 @@ describe('helper verification', () => {
   });
 
   it.each([
-    ['identity', 'Start ID check', 'onStartIdentity', onboardingIdentityStep.verification, verificationCopy.setup.biometric.checkbox, { consent: true }],
+    ['identity', 'Start ID check', 'onStartIdentity', providerOnly, verificationCopy.setup.biometric.checkbox, { consent: true }],
     ['payout', 'Set up payouts', 'onStartPayout', onboardingPayoutStep.verification, undefined, undefined],
     ['background', 'Start background check', 'onStartBackgroundCheck', onboardingBackgroundNotStarted.verification, verificationCopy.setup.disclosure.checkbox, { acknowledged: true }],
   ] as const)('starts the %s provider flow and follows its redirect', async (track, label, handlerKey, verification, agreement, input) => {
@@ -43,7 +46,7 @@ describe('helper verification', () => {
   });
 
   it.each([
-    ['identity', 'Start ID check', onboardingIdentityStep.verification, verificationCopy.setup.biometric.required],
+    ['identity', 'Start ID check', providerOnly, verificationCopy.setup.biometric.required],
     ['background', 'Start background check', onboardingBackgroundNotStarted.verification, verificationCopy.setup.disclosure.required],
   ] as const)('asks for the %s consent before opening the provider', async (track, label, verification, required) => {
     const onStartIdentity = vi.fn(fakeOnboardingHandlers.onStartIdentity);
@@ -63,6 +66,31 @@ describe('helper verification', () => {
     show({ verification: { ...onboardingIdentityStep.verification, identity: { status: 'requires_input', failureReason: 'other', consentNeeded: false, blocked, ...(blocked === 'try_later' ? { retryAt: '2026-11-18T15:30:00.000Z' } : {}) } } });
     expect(screen.getByText(new RegExp(copy.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))).toBeVisible();
     expect(screen.queryByRole('button', { name: /Start ID check|Try again/ })).not.toBeInTheDocument();
+  });
+
+  it('opens the double check only once our team approved the photos', async () => {
+    const onStartIdentity = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    show({ verification: onboardingIdentityCaptureApproved.verification, handlers: { ...fakeOnboardingHandlers, onStartIdentity } });
+    expect(screen.getByText(verificationCopy.capture.statuses.approved)).toBeVisible();
+    expect(screen.getByText(verificationCopy.setup.identityDoubleCheck)).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: verificationCopy.setup.startDoubleCheck }));
+    expect(onStartIdentity).toHaveBeenCalledExactlyOnceWith({ consent: false });
+    cleanup();
+    // Before the approval there's nothing to start here (the capture step takes the photos).
+    show({ verification: onboardingIdentityStep.verification });
+    expect(screen.queryByRole('button', { name: /Start/ })).not.toBeInTheDocument();
+  });
+
+  it("shows a helper the two-stage notice when it's asked again before the double check", async () => {
+    const onStartIdentity = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    const verification = { ...onboardingIdentityCaptureApproved.verification, identity: { ...onboardingIdentityCaptureApproved.verification.identity, consentNeeded: true } };
+    show({ verification, handlers: { ...fakeOnboardingHandlers, onStartIdentity } });
+    expect(screen.getByText(verificationCopy.capture.notice.body)).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: verificationCopy.setup.startDoubleCheck }));
+    expect(screen.getByText(verificationCopy.capture.notice.required)).toBeVisible();
+    await userEvent.click(screen.getByRole('checkbox', { name: verificationCopy.capture.notice.checkbox }));
+    await userEvent.click(screen.getByRole('button', { name: verificationCopy.setup.startDoubleCheck }));
+    expect(onStartIdentity).toHaveBeenCalledExactlyOnceWith({ consent: true });
   });
 
   it('waits for the provider result, disables duplicate starts, and announces failures', async () => {

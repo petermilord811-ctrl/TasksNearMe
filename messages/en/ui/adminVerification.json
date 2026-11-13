@@ -1,6 +1,6 @@
 {
   "title": "Verification",
-  "intro": "Statuses only. ID images and background reports stay with the providers; a proof of address opens with a logged reason.",
+  "intro": "Statuses only. The provider's ID images and background reports stay with the providers; a proof of address and our own ID photos open with a logged reason.",
   "phone": "Phone",
   "phoneVerified": "Verified, ending in {last4}",
   "phoneUnverified": "Not verified, ending in {last4}",
@@ -123,7 +123,7 @@
   },
   "queues": {
     "title": "Verifications",
-    "intro": "Proofs of address to review, ID checks waiting on staff, and background checks to adjudicate, oldest first.",
+    "intro": "Proofs of address and ID photos to review, ID checks waiting on staff, and background checks to adjudicate, oldest first.",
     "readOnly": "You can see the queues; trust and safety, support leads and admins decide.",
     "label": "Verification queues",
     "names": {
@@ -141,16 +141,19 @@
     "autoAllMatch": "Automatic reading: name, address and date match.",
     "autoCheckFlag": "Automatic reading: something to check.",
     "identityKinds": {
+      "capture": "ID photos to compare",
       "name_check": "The ID's name differs from the account's",
       "too_many_attempts": "5 tries without a pass"
     },
     "preAdverse": "Pre-adverse notice sent",
-    "toReview": "Came back \"consider\": review the report at Checkr"
+    "toReview": "Came back \"consider\": review the report at Checkr",
+    "idAutoAllMatch": "Automatic reading: name matches, 18 or older, not expired.",
+    "idAutoCheckFlag": "Automatic reading: something to check."
   },
   "previews": {
     "group": "Staff: verifications",
     "address": "Queue: proofs of address",
-    "identity": "Queue: ID checks",
+    "identity": "Queue: ID checks (photos, name checks, tries)",
     "background": "Queue: background checks",
     "empty": "Queues: empty",
     "readOnly": "Queues: read-only",
@@ -159,6 +162,93 @@
     "sectionDone": "Person: everything verified",
     "sectionNameCheck": "Person: name check",
     "sectionBackground": "Person: background check after the notice",
-    "sectionPoster": "Person: a client"
+    "sectionPoster": "Person: a client",
+    "sectionCapture": "Person: ID photos to review",
+    "sectionCaptureOpened": "Person: ID photos opened",
+    "sectionCaptureReadOnly": "Person: ID photos, read-only"
+  },
+  "capture": {
+    "title": "Our ID photos",
+    "statuses": {
+      "submitted": "In review",
+      "approved": "Approved",
+      "rejected": "Turned down",
+      "canceled": "Canceled"
+    },
+    "documentTypes": {
+      "drivers_license": "Driver's license",
+      "state_id": "State ID card",
+      "passport": "Passport"
+    },
+    "sentOn": "Sent {date}",
+    "prompt": "Selfie prompt: {prompt}",
+    "promptHint": "The person's own left and right: the selfie isn't mirrored.",
+    "prompts": {
+      "look_left": "look to their left",
+      "look_right": "look to their right",
+      "look_up": "look up",
+      "smile": "smile",
+      "tilt_head": "tilt their head to one side",
+      "three_fingers": "hold up three fingers next to their face"
+    },
+    "photosKept": "{count, plural, one {# photo stored} other {# photos stored}} (deleted 30 days after the decision).",
+    "photosDeleted": "Photos deleted on {date}.",
+    "photosNone": "No photos stored.",
+    "decided": "Decided {date} by {name}",
+    "rejectedFor": "Turned down: {reason}",
+    "note": "Note: {note}",
+    "autoCheck": {
+      "title": "Automatic reading of the ID",
+      "unreadable": "The automatic reading couldn't read the ID.",
+      "name": "Name matches: {answer}",
+      "adult": "18 or older: {answer}",
+      "notExpired": "Not expired: {answer}",
+      "expires": "Expires {month}/{year}",
+      "documentType": "Looks like: {type}",
+      "other": "something else"
+    },
+    "rejectionReasons": {
+      "document_unreadable": "the ID is unreadable",
+      "selfie_mismatch": "the selfie doesn't match the ID",
+      "prompt_not_followed": "the selfie didn't follow its prompt",
+      "under_18": "under 18",
+      "expired": "the ID has expired",
+      "other": "other"
+    },
+    "reveal": {
+      "open": "Open the photos",
+      "title": "Open the ID photos",
+      "description": "The ID photos and selfie are restricted. Your name, the time and your reason go to the audit log.",
+      "reason": "Reason",
+      "reasonHint": "Why you need to see them, for example: \"Comparing the photos sent on Nov 19.\"",
+      "reasonRequired": "Write at least 10 characters.",
+      "cancel": "Cancel",
+      "submit": "Open",
+      "logged": "Opened and logged",
+      "alt": {
+        "front": "The front of the ID",
+        "back": "The back of the ID",
+        "selfie": "The selfie"
+      },
+      "none": "The photos were deleted.",
+      "expires": "These links work until {time}."
+    },
+    "decide": {
+      "open": "Review",
+      "title": "Review the ID photos",
+      "description": "Compare the face in the selfie with the photo on the ID, check the selfie follows its prompt, and check the ID is current and readable. Approving opens the provider's double check. The helper sees the reason for a rejection, never your note.",
+      "decision": "Decision",
+      "approve": "Approve: on to the double check",
+      "reject": "Ask for new photos",
+      "reason": "What the helper is told",
+      "choose": "Choose a reason",
+      "reasonRequired": "Choose what the helper is told.",
+      "note": "Note for the audit log",
+      "noteHint": "What you compared and why. At least 10 characters.",
+      "noteRequired": "Write at least 10 characters.",
+      "cancel": "Cancel",
+      "submitApprove": "Approve",
+      "submitReject": "Ask for new photos"
+    }
   }
 }

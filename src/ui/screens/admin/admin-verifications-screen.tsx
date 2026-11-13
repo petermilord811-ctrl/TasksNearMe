@@ -7,8 +7,8 @@ import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { cn } from '@/ui/lib/utils';
 
 /**
- * `/admin/verifications`: proofs of address to review, ID checks waiting on staff, and background checks
- * to adjudicate. Each row opens the person's page, where the decisions are.
+ * `/admin/verifications`: proofs of address to review, ID photos to compare and other ID checks waiting
+ * on staff, and background checks to adjudicate. Each row opens the person's page, where the decisions are.
  */
 export function AdminVerificationsScreen({ data, now }: { data: AdminVerificationsPageData; now: ISODateTime }) {
   const { formatDateTime, formatRelative } = useFormat();
@@ -43,9 +43,10 @@ export function AdminVerificationsScreen({ data, now }: { data: AdminVerificatio
       {data.queue === 'identity' && data.identity.map((row) => <li key={row.id}><Link href={routes.admin.user(row.person.id)} className="flex min-w-0 items-start gap-3 rounded-xl border bg-card p-4 shadow-card hover:bg-accent sm:p-5">
         <InitialsAvatar initials={row.person.initials} size="md" />
         <span className="min-w-0 flex-1 space-y-1">
-          <span className="block font-semibold">{row.person.displayName}</span>
-          <span className="block text-sm">{t(`queues.identityKinds.${row.kind}`)}</span>
+          <span className="flex flex-wrap items-center gap-2 font-semibold">{row.person.displayName}{row.capture?.overdue && <span className="inline-flex items-center gap-1 rounded-full bg-badge-warning px-2 py-0.5 text-xs font-medium text-badge-warning-foreground"><Clock aria-hidden="true" className="size-3" />{t('queues.overdue')}</span>}</span>
+          <span className="block text-sm">{t(`queues.identityKinds.${row.kind}`)}{row.capture ? ` · ${t(`capture.documentTypes.${row.capture.documentType}`)}` : ''}</span>
           <span className="block text-sm text-muted-foreground tabular-nums">{t('attempts', { count: row.attempts })} · {when(row.at)}</span>
+          {row.capture?.autoCheck && <span className="block text-sm text-muted-foreground">{row.capture.autoCheck.readable && row.capture.autoCheck.nameMatches && row.capture.autoCheck.isAdult && row.capture.autoCheck.notExpired ? t('queues.idAutoAllMatch') : t('queues.idAutoCheckFlag')}</span>}
         </span>
         <ArrowUpRight aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
       </Link></li>)}

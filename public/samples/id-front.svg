@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1012" height="638" viewBox="0 0 1012 638" role="img" aria-label="Sample ID card, front (fictional)">
+  <rect width="1012" height="638" rx="36" fill="#eef4fb"/>
+  <rect x="0" y="0" width="1012" height="110" rx="36" fill="#2f4f86"/>
+  <rect x="0" y="74" width="1012" height="36" fill="#2f4f86"/>
+  <text x="48" y="72" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#ffffff">SAMPLE STATE · DRIVER LICENSE</text>
+  <rect x="48" y="150" width="280" height="350" rx="16" fill="#cfd9e8"/>
+  <circle cx="188" cy="270" r="70" fill="#9fb1cc"/>
+  <path d="M78 470c18-80 74-120 110-120s92 40 110 120z" fill="#9fb1cc"/>
+  <text x="372" y="190" font-family="Arial, sans-serif" font-size="22" fill="#5b6b82">DL NO.</text>
+  <text x="372" y="226" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#1d2b44">00000000</text>
+  <text x="372" y="282" font-family="Arial, sans-serif" font-size="22" fill="#5b6b82">LN / FN</text>
+  <text x="372" y="318" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#1d2b44">SAMPLE, PERSON</text>
+  <text x="372" y="374" font-family="Arial, sans-serif" font-size="22" fill="#5b6b82">DOB</text>
+  <text x="372" y="410" font-family="Arial, sans-serif" font-size="30" fill="#1d2b44">01/01/1990</text>
+  <text x="640" y="374" font-family="Arial, sans-serif" font-size="22" fill="#5b6b82">EXP</text>
+  <text x="640" y="410" font-family="Arial, sans-serif" font-size="30" fill="#1d2b44">04/02/2029</text>
+  <text x="372" y="470" font-family="Arial, sans-serif" font-size="22" fill="#5b6b82">1234 EXAMPLE LANE, AUSTIN</text>
+  <text x="48" y="590" font-family="Arial, sans-serif" font-size="20" fill="#8a94a6">Sample document for development previews. Fictional: no real person.</text>
+</svg>

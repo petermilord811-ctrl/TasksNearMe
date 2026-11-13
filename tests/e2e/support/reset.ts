@@ -1,10 +1,10 @@
 import type { APIRequestContext } from '@playwright/test';
-import { eq, inArray, like } from 'drizzle-orm';
+import { and, eq, inArray, like } from 'drizzle-orm';
 import { seedDatabase } from '../../../db/seeds/seed';
 import { offers } from '../../../src/modules/offers/schema';
-import { taskLocations, tasks } from '../../../src/modules/tasks/schema';
+import { files, taskLocations, tasks } from '../../../src/modules/tasks/schema';
 import { helperServices, helperWorkSamples } from '../../../src/modules/profiles/schema';
-import { addressVerifications, backgroundChecks, identityVerifications, payoutAccounts } from '../../../src/modules/verification/schema';
+import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications, payoutAccounts } from '../../../src/modules/verification/schema';
 import { agreements } from '../../../src/modules/accounts/schema';
 import { createDb } from '../../../src/platform/db/connect';
 
@@ -14,7 +14,8 @@ import { createDb } from '../../../src/platform/db/connect';
  * - removes tasks that earlier posting runs created (their titles start with "Assemble a bookshelf (app-"),
  *   so lists of recent tasks don't fill up with test data;
  * - removes offers on the shelves task, where the helper e2e sends one each run;
- * - resets Priya's onboarding (services, work samples, verification), since e2e onboards her;
+ * - resets Priya's onboarding (services, work samples, verification, our own ID check's photos), since e2e
+ *   onboards her;
  * - resets the seeded data (open tasks, offers, people), so tests that decline offers or cancel tasks
  *   can run again. The seed is idempotent; new accounts created by tests are left alone;
  * - clears the app's cached public pages (`POST /dev/cache`), which would still show the old data.
@@ -51,6 +52,9 @@ export async function resetE2eData(request: APIRequestContext): Promise<void> {
       await tx.delete(helperServices).where(eq(helperServices.userId, priya));
       await tx.delete(helperWorkSamples).where(eq(helperWorkSamples.userId, priya));
       await tx.delete(identityVerifications).where(eq(identityVerifications.userId, priya));
+      // Our own ID check's photos and their file records (the encrypted files stay on the dev disk).
+      await tx.delete(identityCaptures).where(eq(identityCaptures.userId, priya));
+      await tx.delete(files).where(and(eq(files.ownerUserId, priya), inArray(files.kind, ['id_document', 'id_selfie'])));
       await tx.delete(payoutAccounts).where(eq(payoutAccounts.userId, priya));
       await tx.delete(backgroundChecks).where(eq(backgroundChecks.userId, priya));
       await tx.delete(addressVerifications).where(eq(addressVerifications.userId, priya));
