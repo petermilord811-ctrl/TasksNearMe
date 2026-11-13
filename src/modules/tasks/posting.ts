@@ -18,6 +18,7 @@ import { areas, categories, markets } from '../markets/schema';
 import { findProhibitedPhrase } from '../trust/contact-masking';
 import { GLOBAL_PROHIBITED_PHRASES } from '../trust/prohibited';
 import { readExactAddress } from './locations';
+import { templatesForCategories } from './templates';
 import { files, taskLocations, taskPhotos, tasks } from './schema';
 
 /** Posting a task (blueprint 02 J1, 06 §3): validation, safety checks, and creation in one place. */
@@ -110,7 +111,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
       maxLeadDays: policy.timers.maxLeadDays,
       ...POSTING_LIMITS,
     };
-    return { market: marketView, categories: categoryViews, rules, aiDraftingEnabled: false, now: now().toISOString() };
+    return { market: marketView, categories: categoryViews, rules, aiDraftingEnabled: false, now: now().toISOString(), templates: templatesForCategories(categoryViews) };
   }
 
   /**

@@ -375,10 +375,102 @@
     "error-prohibited": "Task description needs changes",
     "error-limit": "Posting limit reached",
     "post-again": "Post again: review",
-    "post-again-address-deleted": "Post again: address deleted"
+    "post-again-address-deleted": "Post again: address deleted",
+    "describe-templates": "Describe: start from an example",
+    "describe-from-template": "Describe: started from an example"
   },
   "repeat": {
     "ready": "Posting “{title}” again. Everything from last time is filled in except photos, on the next date that fits. Check it, then post.",
     "addressDeleted": "Posting “{title}” again. The old address was deleted 180 days after your last booking there, so search for it again."
+  },
+  "templates": {
+    "heading": "Start from an example",
+    "hint": "It fills in the title, the description and the details. You can change anything.",
+    "replaceQuestion": "Replace your title, description and details with the “{example}” example?",
+    "replace": "Replace",
+    "keep": "Keep what I wrote",
+    "applied": "Filled in from the “{example}” example. Answer the questions in the description and change anything you like.",
+    "undo": "Undo",
+    "undone": "Back to what you had.",
+    "furniture-desk": {
+      "label": "Desk",
+      "title": "Assemble a desk",
+      "description": "Flat-pack desk to assemble.\n- About how many boxes or parts:\n- Drawers, a hutch or a keyboard tray:\n- Which room it goes in, and space to work there:\n- Boxes here already, or the delivery date:"
+    },
+    "furniture-bed": {
+      "label": "Bed frame",
+      "title": "Assemble a bed frame",
+      "description": "Bed frame to assemble.\n- Size (twin, full, queen or king):\n- Headboard, storage drawers or a lift-up base:\n- Which room it goes in:\n- Boxes here already, or the delivery date:"
+    },
+    "furniture-wardrobe": {
+      "label": "Wardrobe",
+      "title": "Assemble a wardrobe",
+      "description": "Flat-pack wardrobe to assemble and anchor to the wall.\n- About how tall it is:\n- Doors (hinged or sliding) and drawers:\n- Wall type if you know it (drywall or brick):\n- Anti-tip kit in the box (yes or no):"
+    },
+    "furniture-anchor": {
+      "label": "Wall anchoring",
+      "title": "Anchor a tall bookshelf to the wall",
+      "description": "Tall furniture to anchor to the wall so it can’t tip over.\n- What it is and about how tall:\n- Wall type if you know it (drywall or brick):\n- Anti-tip kit on hand (yes or no):\n- Empty already, or things to take off first:"
+    },
+    "moving-load-truck": {
+      "label": "Load a truck",
+      "title": "Help loading a moving truck",
+      "description": "Help loading my rental moving truck.\n- Truck size and how far it parks from the door:\n- Boxes packed and taped (yes or no):\n- Dolly or moving blankets on site (yes or no):\n- Anything fragile or awkward to carry:"
+    },
+    "moving-within-home": {
+      "label": "Room to room",
+      "title": "Move furniture between rooms",
+      "description": "Move furniture from one room to another in my home.\n- What moves, and from where to where:\n- Anything to empty first (drawers, shelves):\n- Narrow doorways or tight turns:\n- Floors to protect (wood, tile):"
+    },
+    "moving-carry-in": {
+      "label": "Unload and carry in",
+      "title": "Carry boxes and furniture in",
+      "description": "Unload boxes and a few pieces of furniture from my truck or car and carry them in.\n- About how many boxes:\n- How far the truck or car parks from the door:\n- Which rooms things go in:\n- When the truck or car gets here:"
+    },
+    "yard-leaves": {
+      "label": "Rake leaves",
+      "title": "Rake and bag leaves",
+      "description": "Rake the yard and bag the leaves for curbside pickup.\n- Front yard, back yard or both:\n- Rakes and bags I have here:\n- Anything in the way (toys, furniture):\n- Pets in the yard:"
+    },
+    "yard-weeding": {
+      "label": "Pull weeds",
+      "title": "Pull weeds and tidy the garden beds",
+      "description": "Pull weeds by hand and tidy the garden beds.\n- How many beds and about how big:\n- Plants to keep that look like weeds:\n- Gloves, tools and bags I have here:\n- Weeds in paths or gravel too (yes or no):"
+    },
+    "yard-hedges": {
+      "label": "Trim low hedges",
+      "title": "Trim low hedges and bag the clippings",
+      "description": "Hand-trim low hedges, about waist to shoulder high, and bag the clippings for curbside pickup.\n- How many hedges and about how long:\n- Hand shears and bags I have here:\n- Just tidy, or shaped:\n- Anything fragile nearby (plants, windows):"
+    },
+    "cleaning-apartment": {
+      "label": "Apartment clean",
+      "title": "Clean my apartment",
+      "description": "A regular clean of my apartment: the kitchen, the bathroom, dusting, vacuuming and mopping.\n- Rooms to focus on:\n- Floors (carpet, wood or tile):\n- Products I’d like used, or to avoid:\n- Anything not to touch:"
+    },
+    "cleaning-kitchen": {
+      "label": "Kitchen deep clean",
+      "title": "Deep clean the kitchen",
+      "description": "A thorough kitchen clean: counters, cabinet fronts, the sink, the stovetop and the floor.\n- Inside the oven or the fridge too (yes or no):\n- Surfaces that need care (stone, wood, stainless steel):\n- When it was last cleaned like this:\n- Products I’d like used, or to avoid:"
+    },
+    "cleaning-move-out": {
+      "label": "Move-out clean",
+      "title": "Move-out clean",
+      "description": "A clean of my empty home before I hand back the keys.\n- Inside cabinets, the oven and the fridge (yes or no):\n- Floors (carpet, wood or tile):\n- Anything the landlord asked for:\n- When the keys are due back:"
+    },
+    "computer-new-laptop": {
+      "label": "New laptop",
+      "title": "Set up a new laptop and move my files",
+      "description": "Set up my new laptop and move my files from the old one.\n- The old computer (make and model):\n- What to move (photos, documents, email):\n- Accounts I’ll sign in to myself (helpers never take passwords):\n- Printer or other devices to connect:"
+    },
+    "computer-wifi": {
+      "label": "Slow Wi-Fi",
+      "title": "Fix slow Wi-Fi",
+      "description": "My Wi-Fi is slow or keeps dropping.\n- Internet provider:\n- Where it’s slow (rooms, floors):\n- Devices affected:\n- When it started:"
+    },
+    "computer-printer": {
+      "label": "Printer setup",
+      "title": "Set up a printer",
+      "description": "Set up my printer and connect it to my computers and phones.\n- Devices to connect (computers, phones):\n- Wi-Fi or a cable:\n- Ink or toner installed (yes or no):\n- Anything already tried:"
+    }
   }
 }

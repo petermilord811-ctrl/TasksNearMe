@@ -94,6 +94,69 @@ export function validateTaskDetails(category: CategorySlug, details: Record<stri
   return errors;
 }
 
+// ---- Templates ----------------------------------------------------------------------------------
+
+/**
+ * Starting points for common tasks (blueprint 01, P2 "draft templates per category"), within each category's
+ * allowed scope (no TV mounting, no licensed trades, no pianos or safes, no ladders or tree work, helpers never
+ * handle passwords). Picking one fills the title, a description (a short summary and the questions worth
+ * answering) and details that fit; the poster changes anything. Never a price. The words live in copy
+ * (`postTask.templates.<id>.label` / `.title` / `.description`), so they can be translated.
+ */
+export const TASK_TEMPLATE_IDS = [
+  'furniture-desk',
+  'furniture-bed',
+  'furniture-wardrobe',
+  'furniture-anchor',
+  'moving-load-truck',
+  'moving-within-home',
+  'moving-carry-in',
+  'yard-leaves',
+  'yard-weeding',
+  'yard-hedges',
+  'cleaning-apartment',
+  'cleaning-kitchen',
+  'cleaning-move-out',
+  'computer-new-laptop',
+  'computer-wifi',
+  'computer-printer',
+] as const;
+export type TaskTemplateId = (typeof TASK_TEMPLATE_IDS)[number];
+
+export interface TaskTemplate {
+  id: TaskTemplateId;
+  categorySlug: CategorySlug;
+  /** Details that fit the example (valid for the category's questions); the poster adjusts them. */
+  details: TaskDetailsValue;
+}
+
+export const TASK_TEMPLATES: readonly TaskTemplate[] = [
+  { id: 'furniture-desk', categorySlug: 'furniture-assembly', details: { itemType: 'desk', itemCount: 1 } },
+  { id: 'furniture-bed', categorySlug: 'furniture-assembly', details: { itemType: 'bed', itemCount: 1 } },
+  { id: 'furniture-wardrobe', categorySlug: 'furniture-assembly', details: { itemType: 'wardrobe', itemCount: 1, wallAnchoring: true } },
+  { id: 'furniture-anchor', categorySlug: 'furniture-assembly', details: { itemType: 'bookshelf', itemCount: 1, wallAnchoring: true } },
+  { id: 'moving-load-truck', categorySlug: 'moving-help', details: { moveType: 'load_truck' } },
+  { id: 'moving-within-home', categorySlug: 'moving-help', details: { moveType: 'within_home' } },
+  { id: 'moving-carry-in', categorySlug: 'moving-help', details: { moveType: 'unload_truck' } },
+  { id: 'yard-leaves', categorySlug: 'yard-cleanup', details: { yardSize: 'medium', work: 'leaves', greenWastePlan: 'curbside' } },
+  { id: 'yard-weeding', categorySlug: 'yard-cleanup', details: { yardSize: 'small', work: 'weeding', greenWastePlan: 'curbside' } },
+  { id: 'yard-hedges', categorySlug: 'yard-cleanup', details: { yardSize: 'small', work: 'pruning', greenWastePlan: 'curbside' } },
+  { id: 'cleaning-apartment', categorySlug: 'light-cleaning', details: { bedrooms: 1, bathrooms: 1 } },
+  { id: 'cleaning-kitchen', categorySlug: 'light-cleaning', details: { bedrooms: 1, bathrooms: 1 } },
+  { id: 'cleaning-move-out', categorySlug: 'light-cleaning', details: { bedrooms: 2, bathrooms: 1 } },
+  { id: 'computer-new-laptop', categorySlug: 'computer-help', details: { device: 'laptop', need: 'setup' } },
+  { id: 'computer-wifi', categorySlug: 'computer-help', details: { device: 'wifi_router', need: 'fix' } },
+  { id: 'computer-printer', categorySlug: 'computer-help', details: { device: 'printer', need: 'setup' } },
+];
+
+export function isTaskTemplateId(value: unknown): value is TaskTemplateId {
+  return typeof value === 'string' && (TASK_TEMPLATE_IDS as readonly string[]).includes(value);
+}
+
+export function findTaskTemplate(id: string | undefined): TaskTemplate | undefined {
+  return id ? TASK_TEMPLATES.find((template) => template.id === id) : undefined;
+}
+
 // ---- Location, photos, AI ----------------------------------------------------------------------
 
 export interface AddressSuggestion {
@@ -162,6 +225,14 @@ export interface PostTaskPageData {
    * this" on `initialDescription` by itself, once. Only set when `aiDraftingEnabled` and there are words.
    */
   autoDraft?: boolean;
+  /** Examples to start from ("Start from an example"), for the market's categories; none when absent. */
+  templates?: readonly TaskTemplate[];
+  /**
+   * From `?template=<id>` (a page's "Post a task like this"): start from that example, on the describe step with
+   * its category, title, description and details filled in. Ignored when `repeat` or the landing page's words
+   * (`initialDescription`, `initialTitle`) are given.
+   */
+  initialTemplate?: TaskTemplateId;
   /**
    * "Post again" (plan 4.2), from `?again=<taskId>`: one of the poster's own finished tasks (completed, canceled
    * or expired), repeated. The wizard starts from `draft` and opens on the review step; with `addressDeleted`

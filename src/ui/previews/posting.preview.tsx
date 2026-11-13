@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 import { routes, type AppShellHandlers, type PreviewEntry, type TaskDraftInput } from '@/contracts';
 import {
   addressSuggestions, aiDeskDraft, deskDraft, fakeHandler, fakePostTaskHandlers, mayaShell,
-  movingDraft, outOfAreaSuggestion, postTaskComputerHelpNoAiData, postTaskPageData, postTaskRepeatAddressDeletedData, postTaskRepeatData,
+  movingDraft, outOfAreaSuggestion, postTaskComputerHelpNoAiData, postTaskFromTemplateData, postTaskPageData, postTaskRepeatAddressDeletedData, postTaskRepeatData,
   postTaskResults, remoteHelpDraft, uploadedTaskPhotos,
 } from '@/fixtures';
 import { PostTaskScreen } from '@/ui/screens/posting/post-task-screen';
@@ -54,6 +54,8 @@ export const postingPreviews: PreviewEntry[] = [
   preview('review-error', { initialStep: 'review', ...desk, handlers: { ...handlers, onQuote: async () => { throw new Error('Preview: unavailable'); } } }),
   preview('error-prohibited', { initialStep: 'describe', ...desk, initialResult: postTaskResults.prohibited, handlers: { ...handlers, onPost: fakeHandler(postTaskResults.prohibited) } }),
   preview('error-limit', { initialStep: 'review', ...desk, initialResult: postTaskResults.limitReached, handlers: { ...handlers, onPost: fakeHandler(postTaskResults.limitReached) } }),
+  preview('describe-templates', { initialStep: 'describe', initialValues: { ...deskDraft, title: '', description: '', details: {}, photoIds: [] } }),
+  preview('describe-from-template', { data: postTaskFromTemplateData }),
   preview('post-again', { data: postTaskRepeatData }),
   preview('post-again-address-deleted', { data: postTaskRepeatAddressDeletedData, initialSuggestions: addressSuggestions }),
 ];

@@ -4,11 +4,12 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { LoaderCircle, Sparkles } from 'lucide-react';
-import { CATEGORY_DETAIL_FIELDS, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, routes, type AiTaskDraft, type PostTaskHandlers, type PostTaskPageData, type TaskDraftInput } from '@/contracts';
+import { CATEGORY_DETAIL_FIELDS, findTaskTemplate, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, routes, type AiTaskDraft, type PostTaskHandlers, type PostTaskPageData, type TaskDraftInput } from '@/contracts';
 import { Button } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Input } from '@/ui/primitives/input';
 import { Textarea } from '@/ui/primitives/textarea';
+import { TemplatePicker } from './template-picker';
 
 export interface DescribeStepProps {
   data: PostTaskPageData;
@@ -85,6 +86,8 @@ export function DescribeStep({ data, handlers, initialSuggestion, autoDraft = fa
   }
 
   return <div className="space-y-6">
+    {/* "Post again" already brings a whole task; everywhere else, the category's examples to start from. */}
+    {!data.repeat && <TemplatePicker templates={data.templates ?? []} startedFrom={findTaskTemplate(data.initialTemplate)} />}
     <Field className="gap-2" data-invalid={!!formState.errors.title}>
       <FieldLabel htmlFor={`${id}-title`}>{t('describe.title')}</FieldLabel>
       <Input {...register('title')} id={`${id}-title`} maxLength={TASK_TITLE_MAX} aria-invalid={!!formState.errors.title} aria-describedby={`${id}-title-hint ${id}-title-count${formState.errors.title ? ` ${id}-title-error` : ''}`} />

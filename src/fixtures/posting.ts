@@ -7,7 +7,7 @@ import type {
   PostTaskPageData,
   TaskDraftInput,
 } from '@/contracts';
-import { routes } from '@/contracts';
+import { routes, TASK_TEMPLATES } from '@/contracts';
 import { austinMarket, categoryViews } from './marketing';
 import { deskBreakdown, movingFundedBreakdown } from './money';
 
@@ -23,6 +23,15 @@ export const postTaskPageData: PostTaskPageData = {
   rules: { minLeadHours: 3, maxLeadDays: 14, maxPhotos: 8, maxPhotoMegabytes: 10, maxExpenseAllowanceCents: 50000 },
   aiDraftingEnabled: true,
   now: POSTING_NOW,
+  // Every category is offered in Austin, so every example is.
+  templates: TASK_TEMPLATES,
+};
+
+/** Opened from an example (`?template=furniture-desk`): the describe step, filled in from it. */
+export const postTaskFromTemplateData: PostTaskPageData = {
+  ...postTaskPageData,
+  initialCategory: 'furniture-assembly',
+  initialTemplate: 'furniture-desk',
 };
 
 /**

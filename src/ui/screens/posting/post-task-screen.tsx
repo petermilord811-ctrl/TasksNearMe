@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { FormProvider, useForm, useWatch, type FieldErrors, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check, Lock, Repeat } from 'lucide-react';
-import { createTaskDraftSchema, POST_TASK_STEPS, routes, type ActionResult, type AddressSuggestion, type AiTaskDraft, type Photo, type PostTaskHandlers, type PostTaskPageData, type PostTaskStep, type TaskDraftInput } from '@/contracts';
+import { createTaskDraftSchema, findTaskTemplate, POST_TASK_STEPS, routes, type ActionResult, type AddressSuggestion, type AiTaskDraft, type Photo, type PostTaskHandlers, type PostTaskPageData, type PostTaskStep, type TaskDraftInput } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -74,13 +74,17 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   const t = useTranslations('postTask');
   const router = useRouter();
   const schema = useMemo(() => createTaskDraftSchema(data), [data]);
-  const category = data.categories.find((item) => item.slug === data.initialCategory);
+  // Started from an example (`?template=`): its category, words and details, on the describe step.
+  const template = data.repeat ? undefined : findTaskTemplate(data.initialTemplate);
+  const category = data.categories.find((item) => item.slug === (template?.categorySlug ?? data.initialCategory));
   const form = useForm<TaskDraftInput>({
     resolver: zodResolver(schema),
     // "Post again" starts from the earlier task's draft (plan 4.2).
     defaultValues: initialValues ?? data.repeat?.draft ?? {
-      categorySlug: data.initialCategory,
-      title: data.initialTitle ?? '', description: data.initialDescription ?? '', details: {}, photoIds: [],
+      categorySlug: template?.categorySlug ?? data.initialCategory,
+      title: template ? t(`templates.${template.id}.title`) : data.initialTitle ?? '',
+      description: template ? t(`templates.${template.id}.description`) : data.initialDescription ?? '',
+      details: template ? { ...template.details } : {}, photoIds: [],
       location: { mode: 'local', placeId: '' }, schedule: { date: '', flexible: false },
       budget: category?.defaultPricingType === 'hourly' ? { type: 'hourly', rateCents: 0, estimatedHours: category.minHours ?? 1, hoursCap: category.minHours ?? 1 } : { type: 'fixed', priceCents: 0 },
     },
@@ -89,7 +93,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   const { control, reset, getValues, setError, setFocus, clearErrors, trigger, subscribe } = form;
   const values = useWatch({ control }) as TaskDraftInput;
   const [step, setStep] = useState<PostTaskStep>(
-    firstErrorStep(resultFields(initialResult)) ?? initialStep ?? (data.repeat ? (data.repeat.addressDeleted ? 'where' : 'review') : data.initialCategory ? 'describe' : 'category'),
+    firstErrorStep(resultFields(initialResult)) ?? initialStep ?? (data.repeat ? (data.repeat.addressDeleted ? 'where' : 'review') : template || data.initialCategory ? 'describe' : 'category'),
   );
   const [photos, setPhotos] = useState(initialPhotos);
   const [address, setAddress] = useState(initialAddress ?? data.repeat?.address);
@@ -260,7 +264,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         <p className="text-muted-foreground">{t('intro')}</p>
         <ol aria-label={t('navigation')} className="grid grid-cols-8 gap-1.5">
           {POST_TASK_STEPS.map((item, itemIndex) => <li key={item} aria-current={item === step ? 'step' : undefined} className="min-w-0">
-            <span className={cn('block h-1.5 rounded-full bg-foreground/[0.08] transition-colors duration-500 ease-[var(--ease-out)] dark:bg-white/[0.1]', itemIndex < index && 'bg-primary/70', itemIndex === index && 'bg-primary')} />
+            <span className={cn('block h-1.5 rounded-full transition-colors duration-500 ease-[var(--ease-out)]', itemIndex < index ? 'bg-primary/70' : itemIndex === index ? 'bg-primary' : 'bg-foreground/[0.08] dark:bg-white/[0.1]')} />
             <span className="sr-only">{t(`steps.${item}`)}</span>
           </li>)}
         </ol>

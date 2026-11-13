@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { CATEGORY_SLUGS, routes, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, type CategorySlug } from '@/contracts';
+import { CATEGORY_SLUGS, findTaskTemplate, isTaskTemplateId, routes, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, type CategorySlug } from '@/contracts';
 import { getFlags } from '@/modules/markets/queries';
 import {
   draftTaskWithAi,
@@ -47,6 +47,8 @@ async function PostTask({ searchParams }: Pick<PageProps<'/app/tasks/new'>, 'sea
   const wantsAiDraft = search.ai === '1' && Boolean(describe);
   // "Post again" (plan 4.2): one of the person's own finished tasks.
   const again = typeof search.again === 'string' && /^tsk_[A-Za-z0-9_-]{1,40}$/.test(search.again) ? search.again : undefined;
+  // "Post a task like this" (an example, blueprint 01 P2): only when no repeat or words of their own came along.
+  const templateId = !again && !describe && !title && isTaskTemplateId(search.template) ? search.template : undefined;
   // Signing in (and verifying a phone) comes back here with the same category, words and request.
   const here = routes.app.newTask({
     ...(initialCategory ? { category: initialCategory } : {}),
@@ -54,6 +56,7 @@ async function PostTask({ searchParams }: Pick<PageProps<'/app/tasks/new'>, 'sea
     ...(describe ? { describe } : {}),
     ...(wantsAiDraft ? { ai: true } : {}),
     ...(again ? { again } : {}),
+    ...(templateId ? { template: templateId } : {}),
   });
   if (viewer.kind !== 'user') redirect(routes.signIn(here));
   const userId = viewer.user.id;
@@ -70,6 +73,11 @@ async function PostTask({ searchParams }: Pick<PageProps<'/app/tasks/new'>, 'sea
   const draftStorageKey = `tasksnearme:post-task:${data.market.slug}:${createHash('sha256').update(userId).digest('hex').slice(0, 16)}${repeat && again ? `:again:${again}` : ''}:v1`;
 
   const aiDraftingEnabled = Boolean(flags.ai_drafting) && taskDrafter !== null;
+  // The example must be one this market offers (its category is in the market).
+  const fromTemplate = templateId && data.templates?.some((template) => template.id === templateId) ? findTaskTemplate(templateId) : undefined;
+  // Like "Post again", a start from an example keeps its own tab draft (an unrelated draft in progress never
+  // replaces it, and it never overwrites one).
+  const storageKey = fromTemplate ? draftStorageKey.replace(/:v1$/, `:template:${fromTemplate.id}:v1`) : draftStorageKey;
 
   return (
     <PostTaskScreen
@@ -77,9 +85,9 @@ async function PostTask({ searchParams }: Pick<PageProps<'/app/tasks/new'>, 'sea
         ...data,
         aiDraftingEnabled,
         ...(wantsAiDraft && aiDraftingEnabled ? { autoDraft: true } : {}),
-        draftStorageKey,
+        draftStorageKey: storageKey,
         ...(repeat ? { repeat } : {}),
-        ...(initialCategory ? { initialCategory } : {}),
+        ...(fromTemplate ? { initialTemplate: fromTemplate.id, initialCategory: fromTemplate.categorySlug } : initialCategory ? { initialCategory } : {}),
         ...(title ? { initialTitle: title } : {}),
         ...(describe ? { initialDescription: describe } : {}),
       }}

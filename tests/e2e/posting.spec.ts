@@ -75,6 +75,23 @@ test('a poster posts a task with the wizard and finds it on the board', async ({
   await expect(page.getByRole('link', { name: title })).toBeVisible();
 });
 
+test('a poster starts from an example: its words, its questions and its details, ready to change', async ({ page }) => {
+  await devSignIn(page, 'maya@example.test');
+  await expect(page).toHaveURL(/\/app$/);
+  await page.goto('/app/tasks/new?template=yard-leaves');
+  await expect(page.getByText('Step 2 of 8', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Rake leaves' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Task title')).toHaveValue('Rake and bag leaves');
+  await expect(page.getByRole('textbox', { name: 'What do you need help with?' })).toHaveValue(/^Rake the yard and bag the leaves for curbside pickup\.\n- Front yard, back yard or both:/);
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByLabel('Yard size')).toHaveValue('medium');
+  await expect(page.getByLabel('What needs doing?')).toHaveValue('leaves');
+
+  // An example the market doesn't offer is ignored: the wizard starts at the category step as usual.
+  await page.goto('/app/tasks/new?template=tv-mounting');
+  await expect(page.getByText('Step 1 of 8', { exact: false })).toBeVisible();
+});
+
 test('posting without a verified phone goes through phone verification first', async ({ page }) => {
   await page.goto('/sign-in?next=%2Fapp%2Ftasks%2Fnew');
   await expect(page.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();

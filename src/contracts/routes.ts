@@ -80,8 +80,9 @@ export const routes = {
     /** The posting wizard; `describe` carries someone's own words in (the landing page's assistant). */
     /** `ai`: the wizard drafts the task with AI from `describe` as it opens (when the market allows it). */
     /** `again`: "Post again" (plan 4.2): one of the poster's own finished tasks, repeated (`PostTaskPageData.repeat`). */
-    newTask: (query: { category?: CategorySlug; title?: string; describe?: string; ai?: boolean; again?: string } = {}) =>
-      withQuery('/app/tasks/new', { category: query.category, title: query.title, describe: query.describe, ai: query.ai ? '1' : undefined, again: query.again }),
+    /** `template`: start from one of the examples (`TASK_TEMPLATE_IDS`), as a page's "Post a task like this". */
+    newTask: (query: { category?: CategorySlug; title?: string; describe?: string; ai?: boolean; again?: string; template?: string } = {}) =>
+      withQuery('/app/tasks/new', { category: query.category, title: query.title, describe: query.describe, ai: query.ai ? '1' : undefined, again: query.again, template: query.template }),
     task: (taskId: string) => `/app/tasks/${enc(taskId)}`,
     offer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}`,
     confirmOffer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}/confirm`,

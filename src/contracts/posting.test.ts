@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { deskDraft, movingDraft, postTaskPageData, remoteHelpDraft } from '@/fixtures';
 import { CATEGORY_SLUGS } from './common';
-import { CATEGORY_DETAIL_FIELDS, createTaskDraftSchema, validateTaskDetails } from './posting';
+import { CATEGORY_DETAIL_FIELDS, createTaskDraftSchema, findTaskTemplate, isTaskTemplateId, TASK_TEMPLATE_IDS, TASK_TEMPLATES, validateTaskDetails } from './posting';
 
 const schema = createTaskDraftSchema(postTaskPageData);
 
@@ -93,5 +93,29 @@ describe('category detail fields', () => {
   it('validates value kinds', () => {
     expect(validateTaskDetails('light-cleaning', { bedrooms: 2, bathrooms: 1, pets: 'yes' })).toEqual({ pets: 'invalid' });
     expect(validateTaskDetails('computer-help', { device: 'fax', need: 'fix' })).toEqual({ device: 'invalid' });
+  });
+});
+
+describe('task templates (blueprint 01, P2 "draft templates per category")', () => {
+  it('lists each example once, in the id order, in a real category, with details that pass its questions', () => {
+    expect(TASK_TEMPLATES.map((template) => template.id)).toEqual([...TASK_TEMPLATE_IDS]);
+    for (const template of TASK_TEMPLATES) {
+      expect(CATEGORY_SLUGS).toContain(template.categorySlug);
+      expect(validateTaskDetails(template.categorySlug, template.details), template.id).toEqual({});
+    }
+  });
+
+  it('offers a few examples in every launch category, and none carries a price', () => {
+    for (const slug of CATEGORY_SLUGS) expect(TASK_TEMPLATES.filter((template) => template.categorySlug === slug).length, slug).toBeGreaterThanOrEqual(3);
+    for (const template of TASK_TEMPLATES) expect(Object.keys(template).sort()).toEqual(['categorySlug', 'details', 'id']);
+  });
+
+  it('recognizes its ids and finds a template by id', () => {
+    expect(isTaskTemplateId('yard-leaves')).toBe(true);
+    expect(isTaskTemplateId('tv-mounting')).toBe(false);
+    expect(isTaskTemplateId(undefined)).toBe(false);
+    expect(findTaskTemplate('computer-wifi')).toMatchObject({ categorySlug: 'computer-help', details: { device: 'wifi_router', need: 'fix' } });
+    expect(findTaskTemplate('nope')).toBeUndefined();
+    expect(findTaskTemplate(undefined)).toBeUndefined();
   });
 });
