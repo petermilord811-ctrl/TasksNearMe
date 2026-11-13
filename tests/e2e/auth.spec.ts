@@ -27,7 +27,8 @@ test.describe('sign-in and page shells', () => {
     await devSignIn(page, 'alex@example.test', { landing: /\/admin\/verify$/ });
     await page.getByLabel('Code').fill('123456');
     await page.getByRole('button', { name: 'Verify' }).click();
-    await expect(page).toHaveURL(/\/admin$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Queues' })).toBeVisible();
+    // The admin home may compile on first use (as in admin.spec's staffSignIn).
+    await expect(page).toHaveURL(/\/admin$/, { timeout: 30_000 });
+    await expect(page.getByRole('heading', { level: 1, name: 'Queues' })).toBeVisible({ timeout: 30_000 });
   });
 });

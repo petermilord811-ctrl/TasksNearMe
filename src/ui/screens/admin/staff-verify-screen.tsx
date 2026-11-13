@@ -36,7 +36,8 @@ export function StaffVerifyScreen({ data, handlers }: { data: StaffVerifyPageDat
       </ol>
       <div className="space-y-2">
         <p className="flex items-center gap-2 text-sm font-medium"><KeyRound aria-hidden="true" className="size-4" />{t('enroll.key')}</p>
-        <p className="break-all rounded-lg border bg-background p-3 font-mono text-base tracking-wider tabular-nums">{data.secret.match(/.{1,4}/g)?.join(' ')}</p>
+        {/* Wraps only between the groups of four, so a group is never split across lines. */}
+        <p className="break-words rounded-lg border bg-background p-3 font-mono text-base tracking-wider tabular-nums">{data.secret.match(/.{1,4}/g)?.join(' ')}</p>
         <a href={data.otpauthUri} className="inline-flex min-h-11 items-center gap-2 font-medium text-primary underline underline-offset-4"><Smartphone aria-hidden="true" className="size-4" />{t('enroll.openApp')}</a>
       </div>
       <CodeForm onSubmit={handlers.onConfirmEnrollment} label={t('code')} hint={t('enroll.codeHint')} submit={t('enroll.submit')} />

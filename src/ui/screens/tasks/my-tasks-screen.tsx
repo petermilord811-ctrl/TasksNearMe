@@ -76,9 +76,11 @@ export function TaskRow({ task, tab, now, headingLevel = 2 }: { task: OwnerTaskR
       {newest && <div className="mt-4 flex items-center gap-3 rounded-lg bg-muted/60 px-3 py-2.5">
         <InitialsAvatar initials={newest.helper.initials} size="sm" />
         <p className="min-w-0 text-sm tabular-nums">
-          <span className="font-medium">{t('newestOffer', { name: newest.helper.displayName, price: priceLabel(newest.pricing) })}</span>
-          {newest.helper.rating && <span className="text-muted-foreground"> · {t('rating', { rating: newest.helper.rating.average.toFixed(1) })}</span>}
-          <span className="text-muted-foreground"> · <time dateTime={newest.submittedAt} title={formatDateTime(newest.submittedAt)}>{formatRelative(newest.submittedAt, now)}</time></span>
+          <span className="block font-medium">{t('newestOffer', { name: newest.helper.displayName, price: priceLabel(newest.pricing) })}</span>
+          <span className="block text-muted-foreground">
+            {newest.helper.rating && <>{t('rating', { rating: newest.helper.rating.average.toFixed(1) })} · </>}
+            <time dateTime={newest.submittedAt} title={formatDateTime(newest.submittedAt)}>{formatRelative(newest.submittedAt, now)}</time>
+          </span>
         </p>
       </div>}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4">
