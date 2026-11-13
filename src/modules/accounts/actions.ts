@@ -14,6 +14,7 @@ import { requestNow } from '@/platform/clock';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS } from '@/shared/locale';
 import { confirmEnrollment, redeemSetupCode, verifyStaffTotp } from './staff-authenticator';
+import { staffCheckIsStrict } from './staff-dev-code';
 import { passkeys, users } from './schema';
 import { disconnectSignIn } from './sign-in-methods';
 
@@ -129,9 +130,14 @@ export async function saveLanguageAction(input: LanguageInput): Promise<ActionRe
   return { ok: true, code: 'updated' };
 }
 
-/** The authenticator's dependencies: the field cipher keeps the keys, the auth secret hashes setup codes. */
-function staffAuthDeps() {
-  return { db, cipher: fieldCipherFromEnv(), secret: process.env.BETTER_AUTH_SECRET ?? '', production: process.env.NODE_ENV === 'production' };
+/**
+ * The authenticator's dependencies: the field cipher keeps the keys, the auth secret hashes setup codes. The
+ * development code (123456) works only outside production and only on this machine (staff-dev-code.ts).
+ */
+async function staffAuthDeps() {
+  const requestHeaders = await headers();
+  const production = staffCheckIsStrict(process.env.NODE_ENV, (name) => requestHeaders.get(name));
+  return { db, cipher: fieldCipherFromEnv(), secret: process.env.BETTER_AUTH_SECRET ?? '', production };
 }
 
 async function signedInStaffSession() {
@@ -144,7 +150,7 @@ async function signedInStaffSession() {
 export async function verifyStaffCode(input: { code: string }): Promise<ActionResult> {
   const staff = await signedInStaffSession();
   if (!staff) return { ok: false, code: 'not_allowed' };
-  const result = await verifyStaffTotp(staffAuthDeps(), staff, String(input?.code ?? ''), await requestNow());
+  const result = await verifyStaffTotp(await staffAuthDeps(), staff, String(input?.code ?? ''), await requestNow());
   return result.ok ? { ...result, redirectTo: routes.admin.home() } : result;
 }
 
@@ -152,7 +158,7 @@ export async function verifyStaffCode(input: { code: string }): Promise<ActionRe
 export async function redeemStaffSetupCode(input: { setupCode: string }): Promise<ActionResult> {
   const staff = await signedInStaffSession();
   if (!staff) return { ok: false, code: 'not_allowed' };
-  const result = await redeemSetupCode(staffAuthDeps(), staff, String(input?.setupCode ?? ''), await requestNow());
+  const result = await redeemSetupCode(await staffAuthDeps(), staff, String(input?.setupCode ?? ''), await requestNow());
   if (result.ok) refresh();
   return result;
 }
@@ -161,6 +167,6 @@ export async function redeemStaffSetupCode(input: { setupCode: string }): Promis
 export async function confirmStaffAuthenticator(input: { code: string }): Promise<ActionResult> {
   const staff = await signedInStaffSession();
   if (!staff) return { ok: false, code: 'not_allowed' };
-  const result = await confirmEnrollment(staffAuthDeps(), staff, String(input?.code ?? ''), await requestNow());
+  const result = await confirmEnrollment(await staffAuthDeps(), staff, String(input?.code ?? ''), await requestNow());
   return result.ok ? { ...result, redirectTo: routes.admin.home() } : result;
 }
