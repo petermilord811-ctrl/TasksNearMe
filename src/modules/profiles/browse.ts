@@ -7,6 +7,7 @@ import { savedHelpers } from '@/modules/reviews/schema';
 import { blockedPeopleOf } from '@/modules/trust/blocks';
 import type { Db } from '@/platform/db/connect';
 import { toHelperSummary } from './queries';
+import { byReliability, isReliable, reliabilityFacts } from './reliability';
 import { helperProfiles, helperServices } from './schema';
 
 /**
@@ -86,6 +87,13 @@ export async function getHelpersBrowse(db: Db, viewerId: string, marketId: strin
   for (const slot of slots) if (!nextSlot.has(slot.helperUserId)) nextSlot.set(slot.helperUserId, { start: slot.startAt.toISOString(), categorySlug: slot.slug as CategorySlug });
   if (query.openTimes) candidates = candidates.filter((row) => nextSlot.has(row.user.id));
 
+  // The most reliable first (blueprint 01 P2): kept bookings against cancellations, no-shows and strikes.
+  const facts = await reliabilityFacts(db, candidates.map((row) => row.user.id), now);
+  candidates = candidates
+    .map((row) => ({ row, facts: facts.get(row.user.id)!, completedCount: row.profile.completedCount, ratingAverage: row.profile.ratingAverage, name: row.user.name }))
+    .sort(byReliability)
+    .map(({ row }) => row);
+
   const page = candidates.slice(0, LIMIT);
   const pageIds = page.map((row) => row.user.id);
   const [serviceRows, savedRows] = pageIds.length
@@ -115,7 +123,8 @@ export async function getHelpersBrowse(db: Db, viewerId: string, marketId: strin
   const saved = new Set(savedRows.map((row) => row.helperUserId));
   const result: HelperBrowseRow[] = page.map(({ profile, user, area }) => {
     const next = nextSlot.get(user.id);
-    return { helper: toHelperSummary(profile, user, area.name, services.get(user.id) ?? []), saved: saved.has(user.id), ...(next ? { nextOpenTime: next } : {}) };
+    const summary = toHelperSummary(profile, user, area.name, services.get(user.id) ?? []);
+    return { helper: isReliable(facts.get(user.id)!) ? { ...summary, reliable: true } : summary, saved: saved.has(user.id), ...(next ? { nextOpenTime: next } : {}) };
   });
   return { query, rows: result, areas: areaRows.map(({ slug, name }) => ({ slug, name })), total: candidates.length };
 }

@@ -16,6 +16,7 @@ import { photoFromFile } from '@/modules/files/uploads';
 import { categories, type FeeSchedule } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { getHelperSummaries } from '@/modules/profiles/queries';
+import { isReliable, reliabilityFacts } from '@/modules/profiles/reliability';
 import { pushSetup } from '@/modules/notifications/push';
 import { readExactAddress } from '@/modules/tasks/locations';
 import { budgetOf } from '@/modules/tasks/projections';
@@ -173,10 +174,14 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
 }
 
 async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows: OfferRow[], now: Date): Promise<OfferView[]> {
-  const helpers = await getHelperSummaries(
-    rows.map((row) => row.helperUserId),
-    deps.db,
-  );
+  const [helpers, facts] = await Promise.all([
+    getHelperSummaries(
+      rows.map((row) => row.helperUserId),
+      deps.db,
+    ),
+    // "Reliable" helps the client compare offers (blueprint 01 P2).
+    reliabilityFacts(deps.db, rows.map((row) => row.helperUserId), now),
+  ]);
   const masked = task.status !== 'assigned' && task.status !== 'completed';
   return rows
     .filter((row) => helpers.has(row.helperUserId))
@@ -186,7 +191,7 @@ async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows
       return {
         id: row.id,
         taskId: row.taskId,
-        helper: helpers.get(row.helperUserId)!,
+        helper: isReliable(facts.get(row.helperUserId)!) ? { ...helpers.get(row.helperUserId)!, reliable: true } : helpers.get(row.helperUserId)!,
         status: row.status as OfferStatus,
         pricing,
         proposedStart: row.proposedStart.toISOString(),

@@ -44,6 +44,11 @@ export interface HelperSummary extends PersonSummary {
   services: ServiceSummary[];
   /** Founding-cohort number when the helper is in it, e.g. 63 (of 100). */
   foundingHelperNumber?: number;
+  /**
+   * "Reliable" (blueprint 01 P2): over the last 12 months, at least 5 completed bookings, no no-show or strike, and
+   * at most 1 in 10 canceled. Set where helpers are compared (browsing helpers, offers on a task).
+   */
+  reliable?: boolean;
 }
 
 export interface ClientSummary extends PersonSummary {
