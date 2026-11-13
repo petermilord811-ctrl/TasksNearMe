@@ -45,6 +45,15 @@ export function generateStaticParams() {
   return APP_LOCALES.map((locale) => ({ locale }));
 }
 
+/**
+ * Only those languages exist: any other first segment is not found. Declaring it also tells the client router
+ * that `locale` is a closed parameter, so it asks the server for a route instead of predicting it. Without it,
+ * a visit to /es taught the router "/[locale] is the landing page" and it then read /how-it-works, /pricing and
+ * /become-a-helper (rewritten by src/proxy.ts) as locales, prefetched segments that don't exist (404 in
+ * production) and navigated slowly (completion plan 5.7).
+ */
+export const unstable_paramMatching = { locale: 'not-found' };
+
 export default async function RootLayout({ children }: LayoutProps<'/[locale]'>) {
   const locale = await rootParams.locale();
   if (!isAppLocale(locale)) notFound();
