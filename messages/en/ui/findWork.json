@@ -8,14 +8,29 @@
   "category": "Category",
   "allCategories": "All",
   "when": "When",
-  "whenOptions": { "any": "Any time", "today": "Today", "this_week": "This week", "this_weekend": "This weekend" },
+  "whenOptions": {
+    "any": "Any time",
+    "today": "Today",
+    "this_week": "This week",
+    "this_weekend": "This weekend"
+  },
   "distance": "Distance",
-  "distanceOptions": { "any": "Any distance", "within_2_mi": "Within 2 miles", "within_5_mi": "Within 5 miles", "within_10_mi": "Within 10 miles" },
+  "distanceOptions": {
+    "any": "Any distance",
+    "within_2_mi": "Within 2 miles",
+    "within_5_mi": "Within 5 miles",
+    "within_10_mi": "Within 10 miles"
+  },
   "remoteOnly": "Remote only",
   "remoteOn": "On",
   "remoteOff": "Off",
   "sort": "Sort",
-  "sortOptions": { "soonest": "Soonest", "newest": "Newest" },
+  "sortOptions": {
+    "soonest": "Soonest",
+    "newest": "Newest",
+    "nearest": "Nearest",
+    "pay": "Highest pay"
+  },
   "results": "{count, plural, one {# open task} other {# open tasks}}",
   "pagination": "Task pages",
   "page": "Page {page} of {count}",
@@ -34,5 +49,51 @@
     "task_closed": "This task is no longer open",
     "own_task": "You posted this task"
   },
-  "previews": { "group": "Find work", "default": "Find work · nearby tasks", "notBookable": "Find work · finish setup", "empty": "Find work · no matches", "blockedReasons": "Find work · blocked reasons" }
+  "previews": {
+    "group": "Find work",
+    "default": "Find work · nearby tasks",
+    "notBookable": "Find work · finish setup",
+    "empty": "Find work · no matches",
+    "blockedReasons": "Find work · blocked reasons",
+    "map": "Find work · map (phones)",
+    "saved": "Find work · saved",
+    "byPay": "Find work · highest pay"
+  },
+  "perHour": "{rate}/h",
+  "earn": "You'd earn {amount}",
+  "earnHourly": "You'd earn {rate}/h",
+  "new": "New",
+  "save": "Save {title} for later",
+  "unsave": "Remove {title} from saved",
+  "hide": "Not interested in {title}: hide it",
+  "hiddenNotice": "Hidden: {title}.",
+  "undoHide": "Undo",
+  "markFailed": "That didn't save. Try again.",
+  "days": {
+    "today": "Today",
+    "tomorrow": "Tomorrow"
+  },
+  "views": {
+    "label": "Show",
+    "list": "List",
+    "map": "Map"
+  },
+  "filtersButton": "Filters",
+  "filtersTitle": "Filters",
+  "filtersDescription": "Narrow the list by distance, time, and remote help.",
+  "remoteTitle": "Remote help",
+  "savedFilter": "Saved",
+  "activeFilters": "Filters in use",
+  "removeFilter": "Remove the filter: {filter}",
+  "resultsLabel": "Open tasks",
+  "savedResults": "{count, plural, one {# saved task} other {# saved tasks}}",
+  "savedEmptyTitle": "No saved tasks yet",
+  "savedEmptyBody": "Tap the bookmark on a task to keep it here for later.",
+  "mapLabel": "Map of the tasks' general areas",
+  "mapGroup": "{count} tasks around here",
+  "mapPlace": "{title}, {budget}, {area}",
+  "mapLegend": "Circles show each task's general area, never the address. The dashed ring is your area around {area}, {miles} miles.",
+  "mapLegendNoArea": "Circles show each task's general area, never the address.",
+  "mapRemote": "{count, plural, one {# remote task is} other {# remote tasks are}} in the list only.",
+  "closeSelected": "Close"
 }

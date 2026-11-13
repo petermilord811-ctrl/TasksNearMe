@@ -1,5 +1,6 @@
 import type {
   ActionDescriptor,
+  FindWorkHandlers,
   FindWorkPageData,
   HelperOfferView,
   HelperTaskView,
@@ -49,26 +50,58 @@ export const movingPublicTask: TaskPublicView = {
   poster: { displayName: chris.displayName, initials: chris.initials, memberSince: chris.memberSince, phoneVerified: chris.phoneVerified },
 };
 
+/** The map beside Jordan's list: OpenFreeMap tiles, his East Austin area (5 miles). */
+export const findWorkMap: FindWorkPageData['map'] = {
+  styleUrl: 'https://tiles.openfreemap.org/styles/liberty',
+  attribution: 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
+  area: { name: 'East Austin', center: { lat: 30.2625, lng: -97.7203 }, serviceRadiusMiles: 5 },
+  marketCenter: { lat: 30.2672, lng: -97.7431 },
+};
+
+/** Soonest first: the desk (Sat), the move (Sun), the laptop (Mon), the cleaning (Wed), the yard (next Sat). */
 export const findWorkPageData: FindWorkPageData = {
-  query: { when: 'any', remoteOnly: false, sort: 'soonest', page: 1, distance: 'any' },
+  query: { when: 'any', remoteOnly: false, sort: 'soonest', page: 1, distance: 'any', saved: false, view: 'list' },
   categories: categoryViews,
   cards: [
-    { task: deskForJordan, myOffer: { id: 'off_jordan', status: 'pending' } },
-    { task: movingPublicTask },
-    { task: yardForJordan },
-    { task: cleaningForJordan, blockedReason: 'category_not_offered' },
-    { task: remoteComputerPublicTask, blockedReason: 'category_not_offered' },
+    { task: deskForJordan, myOffer: { id: 'off_jordan', status: 'pending' }, earnings: { type: 'fixed', amountCents: 5400 }, startDay: '2026-11-21', isNew: true, saved: false },
+    { task: movingPublicTask, earnings: { type: 'hourly', rateCents: 3150, capCents: 12600 }, startDay: '2026-11-22', isNew: true, saved: false },
+    { task: remoteComputerPublicTask, blockedReason: 'category_not_offered', earnings: { type: 'fixed', amountCents: 3600 }, startDay: '2026-11-23', isNew: true, saved: false },
+    { task: cleaningForJordan, blockedReason: 'category_not_offered', earnings: { type: 'fixed', amountCents: 9900 }, startDay: '2026-11-25', isNew: true, saved: false },
+    { task: yardForJordan, earnings: { type: 'fixed', amountCents: 10800 }, startDay: '2026-11-28', isNew: false, saved: true },
   ],
   totalCount: 5,
   pageCount: 1,
   setup: jordanSetup,
+  map: findWorkMap,
+  today: '2026-11-17',
+  savedCount: 1,
 };
+
+/** Highest pay first (no day groups). */
+export const findWorkByPayData: FindWorkPageData = {
+  ...findWorkPageData,
+  query: { ...findWorkPageData.query, sort: 'pay' },
+  cards: [...findWorkPageData.cards].sort((a, b) => (b.earnings.type === 'fixed' ? b.earnings.amountCents : b.earnings.capCents) - (a.earnings.type === 'fixed' ? a.earnings.amountCents : a.earnings.capCents)),
+};
+
+/** Only the saved yard task. */
+export const findWorkSavedData: FindWorkPageData = {
+  ...findWorkPageData,
+  query: { ...findWorkPageData.query, saved: true },
+  cards: findWorkPageData.cards.filter((card) => card.saved),
+  totalCount: 1,
+};
+
+/** Phones: the map. */
+export const findWorkMapViewData: FindWorkPageData = { ...findWorkPageData, query: { ...findWorkPageData.query, view: 'map', distance: 'within_10_mi' } };
 
 /** Priya hasn't finished onboarding: she can browse, not offer. */
 export const findWorkNotBookableData: FindWorkPageData = {
   ...findWorkPageData,
-  cards: findWorkPageData.cards.map(({ task }) => ({ task, blockedReason: 'not_bookable' as const })),
+  cards: findWorkPageData.cards.map(({ task, earnings, startDay, isNew }) => ({ task, blockedReason: 'not_bookable' as const, earnings, startDay, isNew, saved: false })),
   setup: { bookable: false, bookableCategories: [], nextOnboardingStep: 'identity' },
+  map: { ...findWorkMap, area: undefined },
+  savedCount: 0,
 };
 
 export const findWorkEmptyData: FindWorkPageData = {
@@ -76,6 +109,12 @@ export const findWorkEmptyData: FindWorkPageData = {
   query: { ...findWorkPageData.query, category: 'moving-help', distance: 'within_2_mi' },
   cards: [],
   totalCount: 0,
+};
+
+const waitFor = <T,>(value: T, ms = 300) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
+export const fakeFindWorkHandlers: FindWorkHandlers = {
+  onSaveTask: () => waitFor({ ok: true, code: 'updated' }),
+  onHideTask: () => waitFor({ ok: true, code: 'updated' }),
 };
 
 const deskRules: OfferRules = {

@@ -115,3 +115,19 @@ export const taskPhotos = pgTable(
   },
   (t) => [primaryKey({ columns: [t.taskId, t.fileId] })],
 );
+
+/** A helper's own marks on open tasks: `saved` (for later) and `hidden` (not interested; left out of find work). */
+export const taskMarks = pgTable(
+  'task_marks',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    taskId: text('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(), // saved | hidden
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.taskId, t.kind] }), index('task_marks_task_idx').on(t.taskId)],
+);

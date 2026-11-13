@@ -95,10 +95,14 @@ export const routes = {
       }),
     saved: () => '/app/saved',
     /** The helper feed. Same parameters as the task board, plus `distance` (default `any`, left out). */
+    /** Defaults (`when: any`, `sort: soonest`, `distance: any`, the list, page 1) are left out of the URL. */
     findWork: (query: FindWorkQuery = {}) =>
       withQuery('/app/find-work', {
-        ...boardQuery(query),
+        ...boardQuery({ category: query.category, when: query.when, remoteOnly: query.remoteOnly, page: query.page }),
+        sort: query.sort && query.sort !== 'soonest' ? query.sort : undefined,
         distance: query.distance && query.distance !== 'any' ? query.distance : undefined,
+        saved: query.saved ? '1' : undefined,
+        view: query.view === 'map' ? 'map' : undefined,
       }),
     /** A task from the helper's side: full details, offer form, or "finish setup to make offers". */
     findWorkTask: (taskId: string) => `/app/find-work/${enc(taskId)}`,

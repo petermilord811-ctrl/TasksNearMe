@@ -5,7 +5,7 @@ import { z } from 'zod';
 import type { ActionResult, OfferActionId, OfferInput, PriceBreakdown, PricingInput } from '@/contracts';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { helperOfferAction, quoteForHelper, reviseOffer, submitOffer } from './helper';
+import { helperOfferAction, quoteForHelper, reviseOffer, setTaskMark, submitOffer } from './helper';
 import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind the helper work screens (src/contracts/helper-work.ts, HelperWorkHandlers). */
@@ -69,4 +69,22 @@ export async function helperOfferActionHandler(input: { offerId: string; action:
   const result = await helperOfferAction(db, userId, String(input.offerId), input.action, await requestNow());
   if (result.ok && !result.redirectTo) afterOfferChange();
   return result;
+}
+
+const markInput = z.object({ taskId: z.string().min(1).max(64), on: z.boolean() });
+
+/** FindWorkHandlers.onSaveTask: save an open task for later (or not). */
+export async function saveTaskAction(input: { taskId: string; saved: boolean }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  const parsed = markInput.safeParse({ taskId: input?.taskId, on: input?.saved });
+  if (!userId || !parsed.success) return { ok: false, code: 'not_allowed' };
+  return setTaskMark(db, userId, { taskId: parsed.data.taskId, kind: 'saved', on: parsed.data.on }, await requestNow());
+}
+
+/** FindWorkHandlers.onHideTask: not interested (the task leaves find work), or Undo. */
+export async function hideTaskAction(input: { taskId: string; hidden: boolean }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  const parsed = markInput.safeParse({ taskId: input?.taskId, on: input?.hidden });
+  if (!userId || !parsed.success) return { ok: false, code: 'not_allowed' };
+  return setTaskMark(db, userId, { taskId: parsed.data.taskId, kind: 'hidden', on: parsed.data.on }, await requestNow());
 }

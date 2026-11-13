@@ -19,9 +19,23 @@ import type { TaskBoardQuery, TaskPublicView } from './tasks';
 export const FIND_WORK_DISTANCES = ['any', 'within_2_mi', 'within_5_mi', 'within_10_mi'] as const;
 export type FindWorkDistance = (typeof FIND_WORK_DISTANCES)[number];
 
-export interface FindWorkQuery extends TaskBoardQuery {
+/** `nearest`: from the helper's area (remote tasks last). `pay`: what the client offers for the whole task, highest first. */
+export const FIND_WORK_SORTS = ['soonest', 'newest', 'nearest', 'pay'] as const;
+export type FindWorkSort = (typeof FIND_WORK_SORTS)[number];
+
+/** Phones show the list or the map; wide screens show both. */
+export const FIND_WORK_VIEWS = ['list', 'map'] as const;
+export type FindWorkView = (typeof FIND_WORK_VIEWS)[number];
+
+export interface FindWorkQuery extends Omit<TaskBoardQuery, 'sort'> {
   /** Default `any`. Measured from the helper's area. */
   distance?: FindWorkDistance;
+  /** Default `soonest`. */
+  sort?: FindWorkSort;
+  /** Only the tasks the helper saved. */
+  saved?: boolean;
+  /** Default `list`. */
+  view?: FindWorkView;
 }
 
 /** Why a helper can't make an offer on a task. */
@@ -41,6 +55,22 @@ export interface FindWorkCard {
   myOffer?: { id: string; status: OfferStatus };
   /** Absent when the helper can offer. */
   blockedReason?: OfferBlockedReason;
+  /** What the helper would earn after the service fee: for the task, or per hour (and for the whole cap). */
+  earnings: { type: 'fixed'; amountCents: Cents } | { type: 'hourly'; rateCents: Cents; capCents: Cents };
+  /** The day it starts, in the market's time ("2026-11-21"), for day groups. */
+  startDay: string;
+  /** Posted in the last 24 hours. */
+  isNew: boolean;
+  /** The helper saved it for later. */
+  saved: boolean;
+}
+
+/** The map beside the list: the tiles, the helper's area (a neighborhood's center, never a home) and the market's center. */
+export interface FindWorkMap {
+  styleUrl: string;
+  attribution: string;
+  area?: { name: string; center: { lat: number; lng: number }; serviceRadiusMiles: number };
+  marketCenter: { lat: number; lng: number };
 }
 
 export interface HelperSetupState {
@@ -57,15 +87,31 @@ export interface FindWorkPageData {
     category?: CategorySlug;
     when: NonNullable<TaskBoardQuery['when']>;
     remoteOnly: boolean;
-    sort: NonNullable<TaskBoardQuery['sort']>;
+    sort: FindWorkSort;
     page: number;
     distance: FindWorkDistance;
+    saved: boolean;
+    view: FindWorkView;
   };
   categories: CategoryView[];
   cards: FindWorkCard[];
   totalCount: number;
   pageCount: number;
   setup: HelperSetupState;
+  map: FindWorkMap;
+  /** Today in the market's time, for "Today" and "Tomorrow". */
+  today: string;
+  /** Open tasks the helper saved. */
+  savedCount: number;
+}
+
+/**
+ * Save for later and Not interested (hidden tasks leave the list; Undo brings them back). Both resolve with
+ * ok `updated`; `not_found` for a task that isn't open any more.
+ */
+export interface FindWorkHandlers {
+  onSaveTask: ActionHandler<{ taskId: string; saved: boolean }>;
+  onHideTask: ActionHandler<{ taskId: string; hidden: boolean }>;
 }
 
 /** The helper's own offer, in the helper's money. */

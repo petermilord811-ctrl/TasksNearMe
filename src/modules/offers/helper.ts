@@ -1,10 +1,12 @@
-import { and, asc, count, desc, eq, gte, inArray, isNull, lte, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lte, or, type SQL } from 'drizzle-orm';
 import { aiDraftingEnabledFor } from '@/modules/assist/availability';
 import type {
   ActionResult,
   CategorySlug,
+  FindWorkCard,
   FindWorkDistance,
   FindWorkPageData,
+  FindWorkSort,
   HelperOfferView,
   HelperSetupState,
   HelperTaskView,
@@ -16,16 +18,17 @@ import type {
   PriceBreakdown,
   PricingInput,
 } from '@/contracts';
-import { createOfferInputSchema, FIND_WORK_DISTANCES, routes } from '@/contracts';
+import { createOfferInputSchema, FIND_WORK_DISTANCES, FIND_WORK_SORTS, routes } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { photoFromFile } from '@/modules/files/uploads';
 import { getPublishedPolicy, listCategoryViews } from '@/modules/markets/queries';
 import { offerThreadId } from '@/modules/messaging/service';
-import { areas, categories, type FeeSchedule } from '@/modules/markets/schema';
+import { areas, categories, markets, type FeeSchedule } from '@/modules/markets/schema';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { BOARD_PAGE_SIZE, parseTaskBoardQuery } from '@/modules/tasks/projections';
 import { findTaskWithPublicView, listFeedTasks } from '@/modules/tasks/queries';
-import { files, taskPhotos, tasks } from '@/modules/tasks/schema';
+import { files, taskMarks, taskPhotos, tasks } from '@/modules/tasks/schema';
 import { blockedPeopleOf, isBlockedBetween } from '@/modules/trust/blocks';
 import { maskContactDetails, publicExcerpt } from '@/modules/trust/contact-masking';
 import { computeOnboarding } from '@/modules/verification/progress';
@@ -37,7 +40,8 @@ import { newId } from '@/platform/db/ids';
 import { isUniqueViolation } from '@/platform/db/errors';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { marketLocalToUtc } from '@/shared/format';
+import { marketDayKey, marketLocalToUtc } from '@/shared/format';
+import { mapTiles } from '@/modules/markets/map-tiles';
 import {
   distanceBandOf,
   helperOfferActions,
@@ -142,9 +146,22 @@ export async function quoteForHelper(db: Db, userId: string, pricing: PricingInp
 type SearchParams = Record<string, string | string[] | undefined>;
 
 export function parseFindWorkQuery(params: SearchParams): FindWorkPageData['query'] {
-  const raw = Array.isArray(params.distance) ? params.distance[0] : params.distance;
+  const one = (key: string) => (Array.isArray(params[key]) ? params[key]![0] : params[key]) as string | undefined;
+  const raw = one('distance');
   const distance = (FIND_WORK_DISTANCES as readonly string[]).includes(raw ?? '') ? (raw as FindWorkDistance) : 'any';
-  return { ...parseTaskBoardQuery(params), distance };
+  const sortRaw = one('sort');
+  const sort = (FIND_WORK_SORTS as readonly string[]).includes(sortRaw ?? '') ? (sortRaw as FindWorkSort) : 'soonest';
+  const { sort: _boardSort, ...board } = parseTaskBoardQuery(params);
+  return { ...board, sort, distance, saved: one('saved') === '1', view: one('view') === 'map' ? 'map' : 'list' };
+}
+
+const NEW_FOR_HOURS = 24;
+
+/** What the helper would earn after the service fee (blueprint 04): for the task, or per hour and for the cap. */
+function earningsFor(fees: FeeSchedule | null, budget: PricingInput): FindWorkCard['earnings'] {
+  if (budget.type === 'fixed') return { type: 'fixed', amountCents: fees ? quoteBreakdown(fees, budget).helperEarningsCents : budget.priceCents };
+  const capCents = fees ? quoteBreakdown(fees, budget).helperEarningsCents : Math.round(budget.rateCents * budget.hoursCap);
+  return { type: 'hourly', rateCents: Math.round(capCents / budget.hoursCap), capCents };
 }
 
 export async function getFindWorkPageData(db: Db, userId: string, params: SearchParams, now: Date): Promise<FindWorkPageData | null> {
@@ -164,7 +181,19 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
     excludePosterIds: [userId, ...blocked],
     center: state.center,
     maxMiles: maxMilesOf(query.distance),
+    viewerId: userId,
   });
+  const [fees, [market], [area], savedRows] = await Promise.all([
+    feesFor(db, state.marketId),
+    db.select({ lat: markets.centerLat, lng: markets.centerLng }).from(markets).where(eq(markets.id, state.marketId)).limit(1),
+    db.select({ name: areas.name }).from(areas).innerJoin(helperProfiles, eq(helperProfiles.areaId, areas.id)).where(eq(helperProfiles.userId, userId)).limit(1),
+    db
+      .select({ taskId: taskMarks.taskId })
+      .from(taskMarks)
+      .innerJoin(tasks, eq(tasks.id, taskMarks.taskId))
+      .where(and(eq(taskMarks.userId, userId), eq(taskMarks.kind, 'saved'), eq(tasks.status, 'open'), gt(tasks.windowEnd, now))),
+  ]);
+  const savedIds = new Set(savedRows.map((row) => row.taskId));
 
   const taskIds = found.map((item) => item.view.id);
   const myOffers = taskIds.length
@@ -205,11 +234,26 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
         },
         now,
       );
-      return { task, ...(myOffer ? { myOffer } : {}), ...(blockedReason && !myOffer ? { blockedReason } : {}) };
+      return {
+        task,
+        ...(myOffer ? { myOffer } : {}),
+        ...(blockedReason && !myOffer ? { blockedReason } : {}),
+        earnings: earningsFor(fees, view.budget),
+        startDay: marketDayKey(view.schedule.windowStart),
+        isNew: now.getTime() - Date.parse(view.postedAt) < NEW_FOR_HOURS * 3_600_000,
+        saved: savedIds.has(view.id),
+      };
     }),
     totalCount,
     pageCount: Math.max(1, Math.ceil(totalCount / BOARD_PAGE_SIZE)),
     setup: state.setup,
+    map: {
+      ...mapTiles(),
+      ...(state.center && area ? { area: { name: area.name, center: state.center, serviceRadiusMiles: state.facts.serviceRadiusMiles } } : {}),
+      marketCenter: market ? { lat: market.lat, lng: market.lng } : (state.center ?? { lat: 30.2672, lng: -97.7431 }),
+    },
+    today: marketDayKey(now),
+    savedCount: savedIds.size,
   };
 }
 
@@ -525,4 +569,16 @@ export async function getMyOffers(db: Db, userId: string, now: Date): Promise<My
     booked: all.filter((row) => row.offer.status === 'accepted'),
     closed: all.filter((row) => ['declined', 'withdrawn', 'expired'].includes(row.offer.status)),
   };
+}
+
+/** Save for later, or Not interested (hidden from find work), on an open task; and back. */
+export async function setTaskMark(db: Db, userId: string, input: { taskId: string; kind: 'saved' | 'hidden'; on: boolean }, now: Date): Promise<ActionResult> {
+  const [task] = await db.select({ id: tasks.id, posterUserId: tasks.posterUserId }).from(tasks).where(and(eq(tasks.id, input.taskId), eq(tasks.status, 'open'), gt(tasks.windowEnd, now))).limit(1);
+  if (!task || task.posterUserId === userId) return { ok: false, code: 'not_found' };
+  if (input.on) {
+    await db.insert(taskMarks).values({ userId, taskId: task.id, kind: input.kind, createdAt: now }).onConflictDoNothing();
+  } else {
+    await db.delete(taskMarks).where(and(eq(taskMarks.userId, userId), eq(taskMarks.taskId, task.id), eq(taskMarks.kind, input.kind)));
+  }
+  return { ok: true, code: 'updated' };
 }

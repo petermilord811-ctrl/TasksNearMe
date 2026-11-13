@@ -1,4 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { eq } from 'drizzle-orm';
+import { taskMarks } from '../../src/modules/tasks/schema';
+import { createDb } from '../../src/platform/db/connect';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -55,4 +58,72 @@ test('people who are not set up as helpers can browse but not offer', async ({ p
   await expect(page.getByRole('button', { name: 'Send offer' })).toHaveCount(0);
   const html = await page.content();
   for (const secret of ['300 Sample Street', 'Patel']) expect(html).not.toContain(secret);
+});
+
+/** Jordan's saved and hidden tasks go back to none (the reseed keeps marks, which belong to people). */
+async function clearJordanMarks() {
+  try {
+    process.loadEnvFile('.env.local');
+  } catch {
+    // Environment provided by the shell (CI).
+  }
+  const { db, pool } = createDb(process.env.DATABASE_URL ?? '', { max: 1 });
+  try {
+    await db.delete(taskMarks).where(eq(taskMarks.userId, 'usr_jordan'));
+  } finally {
+    await pool.end();
+  }
+}
+
+test('a helper saves a task, hides one (Undo brings it back), and sees the areas on the map', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-desktop', "changes Jordan's saved tasks; desktop only");
+  test.setTimeout(120_000);
+  await clearJordanMarks();
+  try {
+    await devSignIn(page, 'jordan@example.test');
+    await page.goto('/app/find-work');
+    const shelves = 'Mount two floating shelves';
+
+    // Save for later: the Saved filter lists it.
+    await card(page, shelves).getByRole('button', { name: `Save ${shelves} for later` }).click();
+    await expect(card(page, shelves).getByRole('button', { name: `Remove ${shelves} from saved` })).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('link', { name: /^Saved/ }).click();
+    await expect(page).toHaveURL(/saved=1/);
+    await expect(page.getByRole('link', { name: shelves })).toBeVisible();
+    await page.goto('/app/find-work');
+
+    // Not interested: it leaves the list; Undo brings it back.
+    await card(page, shelves).getByRole('button', { name: `Not interested in ${shelves}: hide it` }).click();
+    await expect(page.getByText(`Hidden: ${shelves}.`)).toBeVisible();
+    await expect(page.getByRole('link', { name: shelves })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(card(page, shelves)).toBeVisible();
+    // Hidden stays hidden on the next visit, whatever the sort.
+    await card(page, shelves).getByRole('button', { name: `Not interested in ${shelves}: hide it` }).click();
+    await expect(page.getByText(`Hidden: ${shelves}.`)).toBeVisible();
+    await page.goto('/app/find-work?sort=pay');
+    await expect(page.getByRole('link', { name: shelves })).toHaveCount(0);
+
+    // The map beside the list: general areas only, never an address.
+    const map = page.getByRole('complementary', { name: "Map of the tasks' general areas" });
+    await expect(map).toBeVisible();
+    await expect(map.getByText(/never the address/)).toBeVisible();
+    const html = await page.content();
+    for (const secret of ['1234 Example Lane', '300 Sample Street']) expect(html).not.toContain(secret);
+  } finally {
+    await clearJordanMarks();
+  }
+});
+
+test('on phones, find work switches between the list and the map', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-mobile', 'read-only; phones');
+  await devSignIn(page, 'jordan@example.test');
+  await page.goto('/app/find-work');
+  await expect(page.getByRole('region', { name: 'Open tasks' })).toBeVisible();
+  await page.getByRole('link', { name: 'Map' }).click();
+  await expect(page).toHaveURL(/view=map/);
+  await expect(page.getByRole('complementary', { name: "Map of the tasks' general areas" })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Open tasks' })).toBeHidden();
+  await page.getByRole('link', { name: 'List' }).click();
+  await expect(page.getByRole('region', { name: 'Open tasks' })).toBeVisible();
 });

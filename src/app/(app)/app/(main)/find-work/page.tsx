@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { getFindWorkPageData } from '@/modules/offers/helper';
+import { hideTaskAction, saveTaskAction } from '@/modules/offers/helper-actions';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
@@ -26,5 +27,5 @@ async function Feed({ searchParams }: Pick<PageProps<'/app/find-work'>, 'searchP
   const now = await requestNow();
   const data = await getFindWorkPageData(db, viewer.user.id, params, now);
   if (!data) notFound();
-  return <FindWorkScreen data={data} now={now.toISOString()} />;
+  return <FindWorkScreen data={data} now={now.toISOString()} handlers={{ onSaveTask: saveTaskAction, onHideTask: hideTaskAction }} />;
 }

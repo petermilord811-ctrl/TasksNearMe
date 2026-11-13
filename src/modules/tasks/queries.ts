@@ -4,7 +4,7 @@ import type { Db } from '@/platform/db/connect';
 import { users } from '../accounts/schema';
 import { areas, categories, markets } from '../markets/schema';
 import { BOARD_PAGE_SIZE, toTaskPublicView, whenRange, type PublicTaskRow } from './projections';
-import { tasks } from './schema';
+import { taskMarks, tasks } from './schema';
 
 /** Public task reads. Only open tasks whose window hasn't ended are listed. */
 
@@ -120,6 +120,8 @@ export async function listFeedTasks(
     /** The helper's area center; without one, distances are unknown and the limit is ignored. */
     center: { lat: number; lng: number } | null;
     maxMiles: number | null;
+    /** The helper: their hidden tasks stay out, and `query.saved` keeps only the saved ones. */
+    viewerId?: string;
   },
 ): Promise<{ tasks: { view: TaskPublicView; distanceMiles: number | null; posterUserId: string; status: string; windowEnd: Date }[]; totalCount: number }> {
   const { query, now, center } = options;
@@ -133,7 +135,23 @@ export async function listFeedTasks(
   if (center && options.maxMiles !== null) {
     conditions.push(or(eq(tasks.mode, 'remote'), sql`${miles} <= ${options.maxMiles}`)!);
   }
+  if (options.viewerId) {
+    const mark = (kind: 'saved' | 'hidden') =>
+      sql`exists (select 1 from ${taskMarks} where ${taskMarks.userId} = ${options.viewerId} and ${taskMarks.taskId} = ${tasks.id} and ${taskMarks.kind} = ${kind})`;
+    conditions.push(sql`not ${mark('hidden')}`);
+    if (query.saved) conditions.push(mark('saved'));
+  }
   const where = and(...conditions);
+  // What the client offers for the whole task: the fixed price, or the rate times the hours cap.
+  const pay = sql`coalesce(${tasks.budgetCents}, round(${tasks.hourlyRateCents} * ${tasks.hoursCap}))`;
+  const order =
+    query.sort === 'newest'
+      ? [desc(tasks.publishedAt), asc(tasks.id)]
+      : query.sort === 'nearest' && center
+        ? [sql`${miles} asc nulls last`, asc(tasks.windowStart), asc(tasks.id)]
+        : query.sort === 'pay'
+          ? [sql`${pay} desc nulls last`, asc(tasks.windowStart), asc(tasks.id)]
+          : [asc(tasks.windowStart), asc(tasks.id)];
 
   const [total] = await db
     .select({ value: count() })
@@ -148,7 +166,7 @@ export async function listFeedTasks(
     .innerJoin(users, eq(users.id, tasks.posterUserId))
     .leftJoin(areas, eq(areas.id, tasks.publicAreaId))
     .where(where)
-    .orderBy(...(query.sort === 'newest' ? [desc(tasks.publishedAt), asc(tasks.id)] : [asc(tasks.windowStart), asc(tasks.id)]))
+    .orderBy(...order)
     .limit(BOARD_PAGE_SIZE)
     .offset((query.page - 1) * BOARD_PAGE_SIZE);
   return {
