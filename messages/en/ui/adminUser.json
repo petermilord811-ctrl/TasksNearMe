@@ -134,7 +134,8 @@
     "verification_action_needed": "Verification needs action",
     "background_check_expiring": "Background check expiring",
     "helper_ready": "Ready to send offers",
-    "task_match": "New task near you"
+    "task_match": "New task near you",
+    "data_export_ready": "Data copy ready"
   },
   "previews": {
     "group": "Admin · person details",

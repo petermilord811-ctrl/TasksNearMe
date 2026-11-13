@@ -9,12 +9,11 @@ import { consumeRateLimit } from '@/platform/rate-limit';
 import {
   markAllNotificationsRead,
   markNotificationRead,
-  requestAccountDeletion,
-  requestDataExport,
   saveAccountProfile,
   saveNotificationPreference,
 } from './service';
 import { requestNow } from '@/platform/clock';
+import { cancelAccountDeletion, requestAccountDeletion, requestDataExport } from '@/modules/privacy/requests';
 
 /** Server Actions behind the notifications and account pages (src/contracts/account.ts). */
 
@@ -67,4 +66,10 @@ export async function requestAccountDeletionAction(): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   return refreshed(await requestAccountDeletion(db, userId, await requestNow()));
+}
+
+export async function cancelAccountDeletionAction(): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return refreshed(await cancelAccountDeletion(db, userId, await requestNow()));
 }

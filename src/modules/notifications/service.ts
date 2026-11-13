@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNull } from 'drizzle-orm';
 import type {
   AccountPageData,
   AccountProfileInput,
@@ -25,7 +25,8 @@ import { invites } from '@/modules/invites/schema';
 import { rebookProposals } from '@/modules/rebook/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { isLockedPreference, preferenceOn } from './delivery-domain';
-import { notificationPreferences, notifications, privacyRequests } from './schema';
+import { privacyViewOf } from '@/modules/privacy/requests';
+import { notificationPreferences, notifications } from './schema';
 import { verificationNotificationFor } from './verification-plan';
 import { helpersToAlert } from '@/modules/offers/task-alerts';
 
@@ -238,6 +239,10 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
       const planned = verificationNotificationFor(p);
       return planned ? [planned] : [];
     }
+    case 'privacy.export_ready': {
+      const userId = text(p.userId);
+      return userId ? [{ userId, type: 'data_export_ready' as const, target: { kind: 'account' } as AttentionTarget }] : [];
+    }
     case 'message.sent': {
       const threadId = text(p.threadId);
       const recipients = Array.isArray(p.recipientIds) ? (p.recipientIds as string[]) : [];
@@ -333,18 +338,16 @@ export async function markAllNotificationsRead(db: Db, userId: string, now: Date
 const isLocked = isLockedPreference;
 
 /** `returned`: what Better Auth adds after connecting Google or Microsoft (see getSignInMethods). */
-export async function getAccountPage(db: Db, userId: string, returned: { connect?: unknown; error?: unknown } = {}): Promise<AccountPageData | null> {
+export async function getAccountPage(db: Db, userId: string, returned: { connect?: unknown; error?: unknown } = {}, now: Date = new Date()): Promise<AccountPageData | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return null;
-  const [prefRows, [profile], requests, signIn] = await Promise.all([
+  const [prefRows, [profile], privacy, signIn] = await Promise.all([
     db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, userId)),
     db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1),
-    db.select().from(privacyRequests).where(and(eq(privacyRequests.userId, userId), eq(privacyRequests.status, 'requested'))).orderBy(desc(privacyRequests.createdAt)),
+    privacyViewOf(db, userId, now),
     getSignInMethods(db, { id: user.id, email: user.email }, returned),
   ]);
   const stored = new Map(prefRows.map((row) => [`${row.topic}:${row.channel}`, row.enabled === 'true']));
-  const exportRequest = requests.find((r) => r.kind === 'export');
-  const deletionRequest = requests.find((r) => r.kind === 'deletion');
   return {
     profile: {
       firstName: user.firstName,
@@ -365,10 +368,7 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
       }),
     ),
     helper: { status: (profile?.status as AccountPageData['helper']['status'] | undefined) ?? 'none' },
-    privacy: {
-      ...(exportRequest ? { exportRequestedAt: exportRequest.createdAt.toISOString() } : {}),
-      ...(deletionRequest ? { deletionRequestedAt: deletionRequest.createdAt.toISOString() } : {}),
-    },
+    privacy,
   };
 }
 
@@ -391,35 +391,4 @@ export async function saveNotificationPreference(db: Db, userId: string, input: 
     .values(values)
     .onConflictDoUpdate({ target: [notificationPreferences.userId, notificationPreferences.topic, notificationPreferences.channel], set: { enabled: values.enabled, updatedAt: now } });
   return { ok: true, code: 'updated' };
-}
-
-/** A copy of the data (support emails it within 30 days). Asking again while one is open changes nothing. */
-export async function requestDataExport(db: Db, userId: string, now: Date): Promise<ActionResult> {
-  const [open] = await db.select({ id: privacyRequests.id }).from(privacyRequests).where(and(eq(privacyRequests.userId, userId), eq(privacyRequests.kind, 'export'), eq(privacyRequests.status, 'requested'))).limit(1);
-  if (!open) await db.insert(privacyRequests).values({ id: newId('prv'), userId, kind: 'export', status: 'requested', createdAt: now });
-  return { ok: true, code: 'submitted' };
-}
-
-/** Account deletion; not while bookings are open or money is on its way. */
-export async function requestAccountDeletion(db: Db, userId: string, now: Date): Promise<ActionResult> {
-  const [open] = await db
-    .select({ id: bookings.id })
-    .from(bookings)
-    .where(
-      and(
-        inArray(bookings.status, ['pending_funding', 'confirmed', 'in_progress', 'completion_submitted', 'disputed']),
-        // Either side of the booking.
-        eq(bookings.posterUserId, userId),
-      ),
-    )
-    .limit(1);
-  const [helping] = await db
-    .select({ id: bookings.id })
-    .from(bookings)
-    .where(and(inArray(bookings.status, ['pending_funding', 'confirmed', 'in_progress', 'completion_submitted', 'disputed']), eq(bookings.helperUserId, userId)))
-    .limit(1);
-  if (open || helping) return { ok: false, code: 'not_allowed' };
-  const [existing] = await db.select({ id: privacyRequests.id }).from(privacyRequests).where(and(eq(privacyRequests.userId, userId), eq(privacyRequests.kind, 'deletion'), eq(privacyRequests.status, 'requested'))).limit(1);
-  if (!existing) await db.insert(privacyRequests).values({ id: newId('prv'), userId, kind: 'deletion', status: 'requested', createdAt: now });
-  return { ok: true, code: 'submitted' };
 }

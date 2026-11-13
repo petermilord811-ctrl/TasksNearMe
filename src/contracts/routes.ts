@@ -138,6 +138,12 @@ export const routes = {
     series: (seriesId: string) => `/app/series/${enc(seriesId)}`,
   },
 
+  /** Downloads the app serves from route handlers. */
+  api: {
+    /** The signed-in person's prepared copy of their data (a JSON file), while it's ready. */
+    dataExport: () => '/api/account/data-export',
+  },
+
   /** Static assets the app serves itself. */
   assets: {
     /** MapLibre's web worker (the landing map). The package version in the URL keeps a long cache safe across upgrades. */

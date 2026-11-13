@@ -61,6 +61,7 @@ const copy: Record<NotificationType, RegExp> = {
   background_check_expiring: /background check has run out/,
   helper_ready: /you can send offers now/,
   task_match: /New task near you: .*\$54\.00/,
+  data_export_ready: /copy of your data is ready/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -68,6 +69,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   thread: { target: { kind: 'thread', threadId: 'thread / one' }, href: routes.app.thread('thread / one') },
   messages: { target: { kind: 'messages' }, href: routes.app.messages() },
   find_work_task: { target: { kind: 'find_work_task', taskId: 'task / one' }, href: routes.app.findWorkTask('task / one') },
+  account: { target: { kind: 'account' }, href: routes.app.account() },
   onboarding: { target: { kind: 'onboarding', step: 'payout' }, href: routes.app.helperOnboarding('payout') },
   earnings: { target: { kind: 'earnings' }, href: routes.app.earnings() },
   support_case: { target: { kind: 'support_case', caseId: 'case / one' }, href: routes.app.supportCase('case / one') },

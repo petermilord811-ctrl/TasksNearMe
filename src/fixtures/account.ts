@@ -69,10 +69,10 @@ export const jordanAccountData: AccountPageData = {
   signIn: { email: 'jordan@example.test', providers: [{ provider: 'google' }, { provider: 'microsoft', connectedAt: '2026-11-20T17:55:00.000Z' }], notice: { provider: 'microsoft', result: 'connected' } },
   preferences,
   helper: { status: 'active' },
-  privacy: { exportRequestedAt: '2026-11-20T18:00:00.000Z' },
+  privacy: { export: { status: 'preparing', requestedAt: '2026-11-20T18:00:00.000Z' } },
 };
 
-/** A new account: no phone yet; deletion requested. */
+/** A new account: no phone yet; deletion asked for, happening in a week. */
 export const newAccountData: AccountPageData = {
   profile: { firstName: 'Ana', lastName: 'Patel', displayName: 'Ana P.', initials: 'AP', email: 'ana@example.test' },
   maxPhotoMegabytes: 10,
@@ -80,8 +80,13 @@ export const newAccountData: AccountPageData = {
   signIn: { email: 'ana@example.test', providers: [] },
   preferences,
   helper: { status: 'draft' },
-  privacy: { deletionRequestedAt: '2026-11-21T10:00:00.000Z' },
+  privacy: { deletion: { requestedAt: '2026-11-21T10:00:00.000Z', scheduledFor: '2026-11-28T10:00:00.000Z' } },
 };
+
+/** Jordan's copy is ready to download (for a week). */
+export const exportReadyPrivacy: AccountPageData['privacy'] = { export: { status: 'ready', requestedAt: '2026-11-20T18:00:00.000Z', expiresAt: '2026-11-27T18:02:00.000Z' } };
+/** Ana's deletion date has come, but a booking is still open: it waits. */
+export const deletionWaitingPrivacy: AccountPageData['privacy'] = { deletion: { requestedAt: '2026-11-14T10:00:00.000Z', scheduledFor: '2026-11-21T10:00:00.000Z', waitingFor: 'open_bookings' } };
 
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 
@@ -99,6 +104,7 @@ export const fakeAccountHandlers: AccountHandlers = {
     wait((topic === 'bookings' || topic === 'payments') && channel === 'email' ? { ok: false, code: 'not_allowed' } : { ok: true, code: 'updated' }),
   onRequestExport: () => wait({ ok: true, code: 'submitted' }),
   onRequestDeletion: () => wait({ ok: true, code: 'submitted' }),
+  onCancelDeletion: () => wait({ ok: true, code: 'updated' }),
   onSignOut: () => wait({ ok: true, code: 'updated', redirectTo: routes.home() }),
   // The real one returns the provider's page; previews stay put (only the hash changes).
   onConnectSignIn: () => wait({ ok: true, code: 'sent', redirectTo: '#connect-provider' }),

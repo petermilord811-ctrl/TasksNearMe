@@ -11,12 +11,11 @@ import {
   getAccountPage,
   getNotificationsPage,
   markAllNotificationsRead,
-  requestAccountDeletion,
-  requestDataExport,
   saveAccountProfile,
   saveNotificationPreference,
 } from '@/modules/notifications/service';
 import { offers } from '@/modules/offers/schema';
+import { requestAccountDeletion, requestDataExport } from '@/modules/privacy/requests';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
 import { outboxEvents } from '@/platform/outbox/schema';
@@ -130,7 +129,7 @@ describe('the account page', () => {
     expect((await getAccountPage(db, 'usr_chris'))?.preferences.find((p) => p.topic === 'tips_and_news' && p.channel === 'email')?.enabled).toBe(true);
 
     expect(await requestDataExport(db, 'usr_chris', new Date())).toEqual({ ok: true, code: 'submitted' });
-    expect((await getAccountPage(db, 'usr_chris'))?.privacy.exportRequestedAt).toBeDefined();
+    expect((await getAccountPage(db, 'usr_chris'))?.privacy.export).toMatchObject({ status: 'preparing' });
     // Chris has a booking in progress: deletion waits.
     expect(await requestAccountDeletion(db, 'usr_chris', new Date())).toEqual({ ok: false, code: 'not_allowed' });
   });

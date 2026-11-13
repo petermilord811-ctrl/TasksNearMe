@@ -23,7 +23,9 @@ export type AttentionTarget =
   /** An invite in the helper's offers (`routes.app.offers(inviteId)`, UI-025). */
   | { kind: 'invite'; inviteId: string }
   /** A rebooking proposal (`routes.app.proposal(proposalId)`, UI-032). */
-  | { kind: 'proposal'; proposalId: string };
+  | { kind: 'proposal'; proposalId: string }
+  /** The account page (privacy requests, sign-in, notifications). */
+  | { kind: 'account' };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */

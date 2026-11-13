@@ -72,7 +72,11 @@ export const notificationPreferences = pgTable(
   (t) => [uniqueIndex('notification_preferences_idx').on(t.userId, t.topic, t.channel)],
 );
 
-/** Data export and account deletion requests (handled by support within 30 days). */
+/**
+ * Data export and account deletion requests (src/modules/privacy). Exports: `requested` → `ready` (a file
+ * to download until `expiresAt`) → `expired`. Deletions: `requested` → `done` at `scheduledFor` once
+ * nothing is open (`blockedReason` says what it waits for), or `withdrawn` when the person keeps the account.
+ */
 export const privacyRequests = pgTable(
   'privacy_requests',
   {
@@ -81,10 +85,19 @@ export const privacyRequests = pgTable(
       .notNull()
       .references(() => users.id),
     kind: text('kind').notNull(), // export | deletion
-    status: text('status').notNull(), // requested | done | withdrawn
+    status: text('status').notNull(), // requested | ready | expired | done | withdrawn
+    /** Exports: the file in storage while it can be downloaded. */
+    fileKey: text('file_key'),
+    readyAt: timestamp('ready_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    /** Deletions: when it happens (null on older requests: 7 days after `createdAt`). */
+    scheduledFor: timestamp('scheduled_for', { withTimezone: true }),
+    /** Deletions: what it's waiting for (`DeletionBlocker`). */
+    blockedReason: text('blocked_reason'),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('privacy_requests_user_idx').on(t.userId, t.kind)],
+  (t) => [index('privacy_requests_user_idx').on(t.userId, t.kind), index('privacy_requests_status_idx').on(t.kind, t.status)],
 );
 
 /**

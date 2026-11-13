@@ -12,12 +12,14 @@ import {
 } from '@/modules/accounts/account-actions';
 import { connectSignInAction, disconnectSignInAction, signOut } from '@/modules/accounts/actions';
 import {
+  cancelAccountDeletionAction,
   requestAccountDeletionAction,
   requestDataExportAction,
   saveAccountProfileAction,
   saveNotificationPreferenceAction,
 } from '@/modules/notifications/actions';
 import { getAccountPage } from '@/modules/notifications/service';
+import { requestNow } from '@/platform/clock';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
@@ -42,7 +44,7 @@ async function Account({ searchParams }: Pick<PageProps<'/app/account'>, 'search
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.account()));
   const { connect, error } = await searchParams;
-  const data = await getAccountPage(db, viewer.user.id, { connect, error });
+  const data = await getAccountPage(db, viewer.user.id, { connect, error }, await requestNow());
   if (!data) notFound();
   return (
     <AccountScreen
@@ -52,6 +54,7 @@ async function Account({ searchParams }: Pick<PageProps<'/app/account'>, 'search
         onSavePreference: saveNotificationPreferenceAction,
         onRequestExport: requestDataExportAction,
         onRequestDeletion: requestAccountDeletionAction,
+        onCancelDeletion: cancelAccountDeletionAction,
         onSignOut: signOut,
         onConnectSignIn: connectSignInAction,
         onDisconnectSignIn: disconnectSignInAction,

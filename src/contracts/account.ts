@@ -66,6 +66,8 @@ export const NOTIFICATION_TYPES = [
   'helper_ready',
   /** A new task the helper could take, in their area and categories (blueprint 02 J1; at most 3 an hour). */
   'task_match',
+  /** The copy of their data they asked for is ready to download on the account page (for `DATA_EXPORT_DAYS`). */
+  'data_export_ready',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -136,7 +138,30 @@ export interface AccountPageData {
   /** Each topic by channel. Booking and payment emails can't be turned off (they're receipts and safety). */
   preferences: { topic: NotificationTopic; channel: NotificationChannel; enabled: boolean; locked: boolean }[];
   helper: { status: 'none' | 'draft' | 'active' | 'paused' | 'suspended' };
-  privacy: { exportRequestedAt?: ISODateTime; deletionRequestedAt?: ISODateTime };
+  privacy: AccountPrivacyView;
+}
+
+/** How long a prepared copy of someone's data stays downloadable. */
+export const DATA_EXPORT_DAYS = 7;
+/** How long a deletion waits after it's asked for, so a change of mind costs nothing. */
+export const DELETION_GRACE_DAYS = 7;
+
+/**
+ * What keeps a deletion waiting past its date: open bookings (either side), an open support case about the
+ * person, or money still on its way to them (earnings not yet paid out).
+ */
+export const DELETION_BLOCKERS = ['open_bookings', 'open_case', 'money_on_its_way'] as const;
+export type DeletionBlocker = (typeof DELETION_BLOCKERS)[number];
+
+/**
+ * Privacy requests (blueprint 08 §5; src/modules/privacy). A copy of the data is prepared in the background
+ * (usually within minutes), announced by email, and downloadable from `routes.api.dataExport()` until
+ * `expiresAt`. A deletion happens at `scheduledFor` (`DELETION_GRACE_DAYS` after the request) unless the
+ * person keeps the account; `waitingFor` says what still has to close first.
+ */
+export interface AccountPrivacyView {
+  export?: { status: 'preparing'; requestedAt: ISODateTime } | { status: 'ready'; requestedAt: ISODateTime; expiresAt: ISODateTime };
+  deletion?: { requestedAt: ISODateTime; scheduledFor: ISODateTime; waitingFor?: DeletionBlocker };
 }
 
 /**
@@ -171,8 +196,10 @@ export type AccountProfileInput = z.input<typeof accountProfileInputSchema>;
 /**
  * - `onSaveProfile`: ok `saved` (the display name becomes "First L.").
  * - `onSavePreference`: one switch; ok `updated`. Errors: `not_allowed` (a locked one).
- * - `onRequestExport`: ok `submitted` (a copy of the data by email within 30 days).
- * - `onRequestDeletion`: asks first; ok `submitted`. Errors: `not_allowed` (open bookings or money owed).
+ * - `onRequestExport`: ok `submitted` (prepared in the background; the page shows it once ready).
+ * - `onRequestDeletion`: asks first; ok `submitted` (it happens in `DELETION_GRACE_DAYS`). Errors: `not_allowed`
+ *   (open bookings: finish or cancel them first).
+ * - `onCancelDeletion`: keeps the account; ok `updated`.
  * - `onSignOut`: ok with `redirectTo` (the public home).
  * - `onConnectSignIn`: ok `sent` with `redirectTo`, the provider's page on another site (navigate with a full
  *   page load). It sends the person back to the account page with `signIn.notice`. Errors: `not_allowed`.
@@ -183,6 +210,7 @@ export interface AccountHandlers {
   onSavePreference: ActionHandler<{ topic: NotificationTopic; channel: NotificationChannel; enabled: boolean }>;
   onRequestExport: () => Promise<ActionResult>;
   onRequestDeletion: () => Promise<ActionResult>;
+  onCancelDeletion: () => Promise<ActionResult>;
   onSignOut: () => Promise<ActionResult>;
   onConnectSignIn: ActionHandler<SocialSignInInput>;
   onDisconnectSignIn: ActionHandler<SocialSignInInput>;

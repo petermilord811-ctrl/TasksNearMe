@@ -43,6 +43,7 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   background_check_expiring: 'account',
   helper_ready: 'account',
   task_match: 'task_alerts',
+  data_export_ready: 'account',
 };
 
 /** Day-of updates that can't wait until morning (a 7 am start's 2 h reminder comes at 5 am): texted even in quiet hours. */

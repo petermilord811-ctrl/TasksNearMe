@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes, type AccountHandlers, type AccountPageData, type AccountProfileInput, type ActionResult } from '@/contracts';
-import { fakeAccountHandlers, fakeHandler, jordanAccountData, jordanProfilePhoto, mayaAccountData, newAccountData } from '@/fixtures';
+import { deletionWaitingPrivacy, exportReadyPrivacy, fakeAccountHandlers, fakeHandler, jordanAccountData, jordanProfilePhoto, mayaAccountData, newAccountData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import account from '../../../../messages/en/ui/account.json';
 import { AccountScreen } from './account-screen';
@@ -112,7 +112,7 @@ describe('AccountScreen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Request a copy of my data' }));
     await waitFor(() => expect(onRequestExport).toHaveBeenCalledExactlyOnceWith(undefined));
     await waitFor(() => expect(navigation.refresh).toHaveBeenCalled());
-    expect(screen.getByText(/within 30 days/i)).toBeVisible();
+    expect(screen.getByText(account.privacy.exportSubmitted)).toBeVisible();
     expectUnavailableButton('Request a copy of my data');
   });
 
@@ -128,23 +128,39 @@ describe('AccountScreen', () => {
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     const privacy = screen.getByRole('group', { name: 'Privacy' });
     expect(privacy).toHaveFocus();
-    expect(privacy).toHaveTextContent(account.privacy.deletionSubmitted);
+    expect(privacy).toHaveTextContent('Deletion requested. It happens in 7 days unless you keep your account.');
     view.rerender(<NextIntlClientProvider locale="en" messages={{ ...messages, account }}>
       <AccountScreen data={{ ...mayaAccountData, privacy: newAccountData.privacy }} handlers={handlers} />
     </NextIntlClientProvider>);
     expect(privacy).toHaveFocus();
-    expect(privacy).toHaveTextContent(/Deletion requested .*Nov 21/);
+    expect(privacy).toHaveTextContent(/Your account will be deleted on .*Nov 28/);
   });
 
   it('shows supplied privacy dates and links to the privacy policy', () => {
     const { unmount } = mount(jordanAccountData);
-    expect(screen.getByText(/Requested .*Nov 20.*within 30 days/i)).toBeVisible();
+    expect(screen.getByText(/Preparing your copy \(asked for .*Nov 20\)/)).toBeVisible();
     expect(screen.getByRole('link', { name: /privacy/i })).toHaveAttribute('href', routes.legal('privacy'));
     expectUnavailableButton('Request a copy of my data');
     unmount();
     mount(newAccountData);
-    expect(screen.getByText(/Deletion requested .*Nov 21/i)).toBeVisible();
+    expect(screen.getByText(/Your account will be deleted on .*Nov 28/)).toBeVisible();
     expectUnavailableButton('Delete my account');
+  });
+
+  it('offers the ready copy as a download until it expires', () => {
+    mount({ ...jordanAccountData, privacy: exportReadyPrivacy });
+    expect(screen.getByRole('link', { name: 'Download my data (JSON)' })).toHaveAttribute('href', routes.api.dataExport());
+    expect(screen.getByText(/Ready to download until .*Nov 27/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Request a copy of my data' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the account when asked, and says what a waiting deletion waits for', async () => {
+    const onCancelDeletion = vi.fn(fakeHandler<void>({ ok: true, code: 'updated' }, 0));
+    mount({ ...newAccountData, privacy: deletionWaitingPrivacy }, { onCancelDeletion });
+    expect(screen.getByText('It waits until your open bookings are finished or canceled.')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Keep my account' }));
+    await waitFor(() => expect(onCancelDeletion).toHaveBeenCalledExactlyOnceWith(undefined));
+    await waitFor(() => expect(navigation.refresh).toHaveBeenCalled());
   });
 
   it.each([

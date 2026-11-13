@@ -1,5 +1,5 @@
 import { routes, type AccountHandlers, type AccountPageData, type AppShellHandlers, type PreviewEntry, type SignedInViewer } from '@/contracts';
-import { accountSignInNotices, fakeAccountHandlers, fakeHandler, fakeUnsubscribeHandlers, jordanAccountData, jordanShell, mayaAccountData, mayaShell, newAccountData, publicViewer, unsubscribePages } from '@/fixtures';
+import { accountSignInNotices, deletionWaitingPrivacy, exportReadyPrivacy, fakeAccountHandlers, fakeHandler, fakeUnsubscribeHandlers, jordanAccountData, jordanShell, mayaAccountData, mayaShell, newAccountData, publicViewer, unsubscribePages } from '@/fixtures';
 import { AccountScreen } from '@/ui/screens/account/account-screen';
 import { EmailUnsubscribeScreen } from '@/ui/screens/account/email-unsubscribe-screen';
 import { PublicShell } from '@/ui/shells/public-shell';
@@ -39,6 +39,8 @@ const typedValues: Partial<Record<AccountPreviewInteraction, string>> = {
 export const accountPreviews: PreviewEntry[] = [
   preview('client', copy.previews.client),
   preview('helper', copy.previews.helper, jordanAccountData, jordanShell),
+  preview('export-ready', copy.previews.exportReady, { ...jordanAccountData, privacy: exportReadyPrivacy }, jordanShell),
+  preview('deletion-waiting', copy.previews.deletionWaiting, { ...newAccountData, privacy: deletionWaitingPrivacy }, { ...mayaShell, unreadMessages: 0, unreadNotifications: 0 }),
   preview('new', copy.previews.new, newAccountData, { ...mayaShell, unreadMessages: 0, unreadNotifications: 0 }),
   preview('saving', copy.previews.saving, mayaAccountData, mayaShell, {
     ...fakeAccountHandlers, onSaveProfile: fakeHandler({ ok: true, code: 'saved' }, 60_000),

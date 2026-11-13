@@ -49,7 +49,8 @@
     "verification_action_needed": "{track, select, identity {Your ID check needs your attention} address {We need another proof of your home address} payout {Your payout setup needs more information} background {Your background check needs your attention} other {A verification step needs your attention}}",
     "background_check_expiring": "{days, plural, =0 {Your background check has run out. Start a new one to take in-home tasks again} one {Your background check runs out tomorrow. Start the renewal} other {Your background check runs out in # days. Start the renewal}}",
     "helper_ready": "You're all set: you can send offers now",
-    "task_match": "New task near you: {title}{hasAmount, select, yes {, {amount}} other {}}"
+    "task_match": "New task near you: {title}{hasAmount, select, yes {, {amount}} other {}}",
+    "data_export_ready": "The copy of your data is ready to download"
   },
   "previews": {
     "group": "Notifications",
