@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { PriceBreakdown } from '@/contracts';
 import { users } from '../accounts/schema';
 import { offers } from '../offers/schema';
@@ -7,8 +7,10 @@ import { files, tasks } from '../tasks/schema';
 
 /**
  * Bookings (docs/blueprint/03 §4). A booking starts `pending_funding` when the poster pays and becomes
- * `confirmed` once the payment succeeds; unpaid after 30 minutes it's `canceled (funding_failed)`.
- * The agreed terms live in versioned `booking_terms` rows (changes add versions).
+ * `confirmed` once the payment succeeds; unpaid after 30 minutes it's `canceled (funding_failed)`. A booking
+ * paid later is `scheduled` until its saved card is charged (a regular visit 48 h before, a one-time booking
+ * made more than 14 days ahead 72 h before). The agreed terms live in versioned `booking_terms` rows
+ * (changes add versions).
  */
 export const bookings = pgTable(
   'bookings',
@@ -54,6 +56,18 @@ export const bookings = pgTable(
     cancelNote: text('cancel_note'),
     canceledAt: timestamp('canceled_at', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
+    /** Regular visits: the series and the visit's number in it (1: the first visit). */
+    seriesId: text('series_id').references((): AnyPgColumn => bookingSeries.id),
+    visitIndex: integer('visit_index'),
+    /**
+     * `scheduled`: the saved card charged off-session at `funding_due_at`, the attempts so far, and why the
+     * last one failed (payment_declined | insufficient_funds | requires_bank_verification | no_card). Still
+     * unpaid at `funding_expires_at`, a visit is skipped and a one-time booking canceled.
+     */
+    fundingDueAt: timestamp('funding_due_at', { withTimezone: true }),
+    fundingMethodId: text('funding_method_id'),
+    fundingAttempts: integer('funding_attempts').notNull().default(0),
+    fundingFailure: text('funding_failure'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -62,6 +76,65 @@ export const bookings = pgTable(
     index('bookings_helper_idx').on(t.helperUserId, t.status),
     // At most one live booking per task.
     uniqueIndex('bookings_live_task_idx').on(t.taskId).where(sql`status <> 'canceled'`),
+    // One booking per visit of a series.
+    uniqueIndex('bookings_series_visit_idx').on(t.seriesId, t.visitIndex).where(sql`series_id is not null`),
+    // Scheduled payments due.
+    index('bookings_funding_due_idx').on(t.status, t.fundingDueAt),
+  ],
+);
+
+/**
+ * Regular visits (blueprint 03 §7, 08 `booking_series`). A series repeats a task on a grid anchored on its
+ * first visit (`anchor_date` and `start_time` in market time); each visit is its own booking (`series_id`,
+ * `visit_index`), `scheduled` until its card is charged. `status` (SERIES_STATUSES): `active`, `paused` (until
+ * `paused_until`), `canceled` (by the client: visits not paid yet are removed), `ended` (by the helper: visits
+ * until `ends_on` stay).
+ */
+export const bookingSeries = pgTable(
+  'booking_series',
+  {
+    id: text('id').primaryKey(),
+    posterUserId: text('poster_user_id')
+      .notNull()
+      .references(() => users.id),
+    helperUserId: text('helper_user_id')
+      .notNull()
+      .references(() => users.id),
+    marketId: text('market_id').notNull(),
+    /** The task every visit copies (title, description, details, category and place): the first visit's. */
+    templateTaskId: text('template_task_id')
+      .notNull()
+      .references(() => tasks.id),
+    /** The helper's proposal that started it (one series per proposal). */
+    proposalId: text('proposal_id').notNull(),
+    cadence: text('cadence').notNull(), // weekly | biweekly | monthly
+    /** The first visit's market date (`YYYY-MM-DD`) and wall-clock start (`HH:MM`): the grid's anchor. */
+    anchorDate: text('anchor_date').notNull(),
+    startTime: text('start_time').notNull(),
+    durationMinutes: integer('duration_minutes').notNull(),
+    /** Each visit's terms. */
+    pricingType: text('pricing_type').notNull(), // fixed | hourly
+    priceCents: integer('price_cents'),
+    hourlyRateCents: integer('hourly_rate_cents'),
+    estimatedHours: doublePrecision('estimated_hours'),
+    hoursCap: doublePrecision('hours_cap'),
+    scopeText: text('scope_text').notNull(),
+    /** The client's saved card, charged before each visit (none, or removed: each visit waits for the client). */
+    paymentMethodId: text('payment_method_id'),
+    status: text('status').notNull(),
+    /** `paused`: visits start again on this market date. */
+    pausedUntil: text('paused_until'),
+    /** `ended`: the last visit date. */
+    endsOn: text('ends_on'),
+    /** poster | helper | staff | system: who paused, stopped or ended it last. */
+    changedBy: text('changed_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('booking_series_proposal_idx').on(t.proposalId),
+    index('booking_series_poster_idx').on(t.posterUserId, t.status),
+    index('booking_series_helper_idx').on(t.helperUserId, t.status),
   ],
 );
 

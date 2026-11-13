@@ -29,8 +29,14 @@ export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
 export const REBOOK_PROPOSAL_STATUSES = ['sent', 'accepted', 'declined', 'expired', 'withdrawn'] as const;
 export type RebookProposalStatus = (typeof REBOOK_PROPOSAL_STATUSES)[number];
 
+/**
+ * `scheduled`: booked, not paid yet (blueprint 03 §7, 04): a regular visit until its card is charged 48 h
+ * before, or a one-time booking made more than 14 days ahead until 72 h before. Nothing is charged, so either
+ * person cancels it free; the address shows once it's paid.
+ */
 export const BOOKING_STATUSES = [
   'pending_funding',
+  'scheduled',
   'confirmed',
   'in_progress',
   'completion_submitted',
@@ -49,6 +55,12 @@ export const CANCEL_REASONS = [
   'poster_no_show',
   'refunded_in_dispute',
   'admin',
+  /** Regular visits: one visit skipped before it was paid (`canceled_by` says who). */
+  'visit_skipped',
+  /** Regular visits: skipped because the client paused the series. */
+  'series_paused',
+  /** Regular visits: the client stopped the series, or the helper ended it, before this visit was paid. */
+  'series_stopped',
 ] as const;
 export type CancelReason = (typeof CANCEL_REASONS)[number];
 

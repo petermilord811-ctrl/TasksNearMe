@@ -148,6 +148,7 @@
   "state": {
     "poster": {
       "pending_funding": "{hasTime, select, yes {Finish paying by {time}} other {Finish paying to confirm your booking.}}",
+      "scheduled": "Starts {date} at {time}. Your card is charged shortly before, not now.",
       "confirmed": "Starts {date} at {time}",
       "in_progress": "{hasTime, select, yes {Started at {time}} other {Your helper has started the task.}}",
       "completion_submitted": "{hasTime, select, yes {Approve by {deadline}, or it's approved automatically.} other {Your helper submitted the work. Approve it or report a problem.}}",
@@ -157,6 +158,7 @@
     },
     "helper": {
       "pending_funding": "{name} is booking you.",
+      "scheduled": "Starts {date} at {time}. {name}'s card is charged shortly before.",
       "confirmed": "Starts {date} at {time}",
       "in_progress": "{hasTime, select, yes {Started at {time}} other {You started the task.}}",
       "completion_submitted": "Waiting for {name} to approve.",
@@ -174,7 +176,10 @@
       "helper_no_show": "The booking was canceled because your helper didn't arrive.",
       "poster_no_show": "The booking was canceled because your helper couldn't reach you or access the task.",
       "refunded_in_dispute": "The booking was canceled with a full refund after the reported problem was resolved.",
-      "admin": "Support canceled the booking."
+      "admin": "Support canceled the booking.",
+      "visit_skipped": "This visit was skipped. Nothing was charged.",
+      "series_paused": "Skipped while your regular visits are paused. Nothing was charged.",
+      "series_stopped": "Canceled when the regular visits stopped. Nothing was charged."
     },
     "helper": {
       "funding_failed": "The booking was canceled because {name} didn't finish paying in time.",
@@ -184,7 +189,10 @@
       "helper_no_show": "The booking was canceled after you were reported as not arriving.",
       "poster_no_show": "The booking was canceled because you couldn't reach the client or access the task.",
       "refunded_in_dispute": "The booking was canceled with a full refund to {name} after the reported problem was resolved.",
-      "admin": "Support canceled the booking."
+      "admin": "Support canceled the booking.",
+      "visit_skipped": "This visit was skipped.",
+      "series_paused": "Skipped while {name} paused your regular visits.",
+      "series_stopped": "Canceled when the regular visits stopped."
     }
   },
   "completed": {

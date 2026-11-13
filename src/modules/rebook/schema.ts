@@ -33,6 +33,8 @@ export const rebookProposals = pgTable(
     estimatedHours: doublePrecision('estimated_hours'),
     hoursCap: doublePrecision('hours_cap'),
     message: text('message'),
+    /** Regular visits (SERIES_CADENCES): accepting starts a series from this first visit. Null: just once. */
+    cadence: text('cadence'),
     /** The market's numbers when it was sent. */
     breakdown: jsonb('breakdown').$type<PriceBreakdown>().notNull(),
     /** Set on the first accept attempt: the new task (a draft until paid) and its booking. */

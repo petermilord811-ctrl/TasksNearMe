@@ -6,7 +6,7 @@ export interface StatusLabel { label: string; tone: BadgeTone }
 
 const taskTones: Record<TaskStatus, BadgeTone> = { draft: 'neutral', open: 'brand', assigned: 'info', completed: 'success', canceled: 'neutral', expired: 'neutral' };
 const bookingTones: Record<BookingStatus, BadgeTone> = {
-  pending_funding: 'warning', confirmed: 'info', in_progress: 'info', completion_submitted: 'warning', disputed: 'danger', completed: 'success', canceled: 'neutral',
+  pending_funding: 'warning', scheduled: 'info', confirmed: 'info', in_progress: 'info', completion_submitted: 'warning', disputed: 'danger', completed: 'success', canceled: 'neutral',
 };
 const offerTones: Record<OfferStatus, BadgeTone> = { pending: 'info', stale: 'warning', accepted: 'success', declined: 'neutral', withdrawn: 'neutral', expired: 'neutral' };
 const inviteTones: Record<InviteStatus, BadgeTone> = { authorizing: 'info', sent: 'info', countered: 'warning', accepted: 'success', declined: 'neutral', canceled: 'neutral', expired: 'neutral', auth_failed: 'danger' };

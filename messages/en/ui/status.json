@@ -1,9 +1,9 @@
 {
   "task": { "draft": "Draft", "open": "Open", "assigned": "Booked", "completed": "Done", "canceled": "Canceled", "expired": "Expired" },
   "booking": {
-    "poster": { "pending_funding": "Finish payment", "confirmed": "Booked", "in_progress": "In progress", "completion_submitted": "Needs your approval", "disputed": "Problem reported", "completed": "Done", "canceled": "Canceled" },
-    "helper": { "pending_funding": "Client is booking", "confirmed": "Booked", "in_progress": "In progress", "completion_submitted": "Waiting for approval", "disputed": "Problem reported", "completed": "Done", "canceled": "Canceled" },
-    "staff": { "pending_funding": "Waiting for payment", "confirmed": "Booked", "in_progress": "In progress", "completion_submitted": "Waiting for client approval", "disputed": "Problem reported", "completed": "Done", "canceled": "Canceled" }
+    "poster": { "pending_funding": "Finish payment", "scheduled": "Booked · pays later", "confirmed": "Booked", "in_progress": "In progress", "completion_submitted": "Needs your approval", "disputed": "Problem reported", "completed": "Done", "canceled": "Canceled" },
+    "helper": { "pending_funding": "Client is booking", "scheduled": "Booked", "confirmed": "Booked", "in_progress": "In progress", "completion_submitted": "Waiting for approval", "disputed": "Problem reported", "completed": "Done", "canceled": "Canceled" },
+    "staff": { "pending_funding": "Waiting for payment", "scheduled": "Payment scheduled", "confirmed": "Booked", "in_progress": "In progress", "completion_submitted": "Waiting for client approval", "disputed": "Problem reported", "completed": "Done", "canceled": "Canceled" }
   },
   "offer": { "pending_poster": "New offer", "pending_helper": "Waiting for client", "pending_staff": "Awaiting client", "stale": "Needs re-confirmation", "accepted": "Booked", "declined": "Not selected", "withdrawn": "Withdrawn", "expired": "Expired" },
   "invite": { "authorizing": "Placing card hold", "sent_poster": "Waiting for helper", "sent_named": "Waiting for {helper}", "sent_helper": "New request", "sent_staff": "Awaiting helper", "countered": "Counter-offer", "accepted": "Booked", "declined": "Declined", "canceled": "Canceled", "expired": "Expired", "auth_failed": "Payment failed" },

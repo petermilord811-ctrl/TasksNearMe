@@ -281,6 +281,13 @@
       "when": 1794574567477,
       "tag": "0039_credits_and_instant_payouts",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794575537165,
+      "tag": "0040_series",
+      "breakpoints": true
     }
   ]
 }
