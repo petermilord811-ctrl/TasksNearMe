@@ -4,6 +4,7 @@ import type { AdminMoneyTab } from './admin-money';
 import type { HelperBrowseQuery } from './helpers-browse';
 import type { AdminRewardFilter } from './admin-people';
 import type { AdminVerificationQueue } from './admin-verification';
+import { DEFAULT_METRICS_PERIOD, type MetricsPeriodDays } from './analytics';
 import type { CategorySlug } from './common';
 import type { FindWorkQuery } from './helper-work';
 import type { ExactAddress } from './location';
@@ -186,6 +187,8 @@ export const routes = {
     savedReplies: () => '/admin/saved-replies',
     /** Where each queue stands against its response targets. */
     responseTimes: () => '/admin/response-times',
+    /** Market metrics: the launch targets, the funnel, liquidity and reward spend (30 days unless another period). */
+    metrics: (days?: MetricsPeriodDays) => withQuery('/admin/metrics', { days: days && days !== DEFAULT_METRICS_PERIOD ? String(days) : undefined }),
     /** The private beta: invite-only switches per market, invite codes and who joined with them. */
     beta: () => '/admin/beta',
   },

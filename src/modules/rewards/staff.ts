@@ -27,7 +27,7 @@ type GrantRow = typeof rewardGrants.$inferSelect;
 const DAY = 86_400_000;
 
 /** At launch: the welcome reward's founding-cohort budget (100 × $50). */
-const BUDGETS: Partial<Record<RewardProgramCode, number>> = { welcome: REWARD_RULES.welcome.cohortSize * REWARD_RULES.welcome.amountCents };
+export const REWARD_BUDGETS: Partial<Record<RewardProgramCode, number>> = { welcome: REWARD_RULES.welcome.cohortSize * REWARD_RULES.welcome.amountCents };
 const COMMITTED: RewardStatus[] = ['pending', 'qualified', 'in_review', 'redeemable', 'issuing', 'delivered', 'failed'];
 
 const LEADS = ['support_lead', 'admin'] as const;
@@ -111,7 +111,7 @@ export async function getAdminRewards(db: Db, staff: StaffActor, filter: AdminRe
     counts: { in_review: all.filter((grant) => grant.status === 'in_review').length, failed: all.filter((grant) => grant.status === 'failed').length, all: all.length },
     budgets: [...new Set(programs)].map((program) => ({
       program,
-      ...(BUDGETS[program] !== undefined ? { budgetCents: BUDGETS[program] } : {}),
+      ...(REWARD_BUDGETS[program] !== undefined ? { budgetCents: REWARD_BUDGETS[program] } : {}),
       committedCents: all.filter((grant) => grant.program === program && COMMITTED.includes(grant.status as RewardStatus)).reduce((sum, grant) => sum + grant.amountCents, 0),
       deliveredCents: all.filter((grant) => grant.program === program && grant.status === 'delivered').reduce((sum, grant) => sum + grant.amountCents, 0),
     })),

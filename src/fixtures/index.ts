@@ -42,3 +42,4 @@ export * from './staff-verify';
 export * from './poster-identity';
 export * from './admin-support-tools';
 export * from './series';
+export * from './analytics';

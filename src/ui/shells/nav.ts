@@ -23,6 +23,7 @@ export type NavId =
   | 'verifications'
   | 'responseTimes'
   | 'savedReplies'
+  | 'metrics'
   | 'config'
   | 'audit'
   | 'staff'
@@ -93,6 +94,8 @@ export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
     { id: 'bookings', href: routes.admin.bookings() },
     { id: 'payments', href: routes.admin.payments() },
     { id: 'rewards', href: routes.admin.rewards() },
+    // Every staff role reads the market metrics; money figures only reach finance and admins.
+    { id: 'metrics', href: routes.admin.metrics() },
     ...(isAdmin ? [{ id: 'config' as const, href: routes.admin.config() }] : []),
     ...(readsAudit ? [{ id: 'audit' as const, href: routes.admin.audit() }] : []),
     ...(isAdmin ? [{ id: 'staff' as const, href: routes.admin.staff() }] : []),

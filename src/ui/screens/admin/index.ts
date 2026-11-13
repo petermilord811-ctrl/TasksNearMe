@@ -14,4 +14,5 @@ export { AdminConfigScreen, type AdminConfigScreenProps } from './admin-config-s
 export { AdminVerificationsScreen } from './admin-verifications-screen';
 export { AdminVerificationSection } from './admin-verification-section';
 export { AdminResponseTimesScreen } from './admin-response-times-screen';
+export { AdminMetricsScreen } from './admin-metrics-screen';
 export { AdminSavedRepliesScreen } from './admin-saved-replies-screen';

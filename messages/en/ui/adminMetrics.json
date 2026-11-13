@@ -1,0 +1,192 @@
+{
+  "title": "Market metrics",
+  "intro": "How the market is doing against the launch targets, from posting to booking again. Days are counted in Austin time.",
+  "periodsLabel": "Period",
+  "periods": {
+    "7": "7 days",
+    "30": "30 days",
+    "90": "90 days"
+  },
+  "range": "{from} to {to} · updated {time}",
+  "percent": "{percent}%",
+  "none": "—",
+  "duration": {
+    "minutes": "{minutes} min",
+    "hours": "{hours} h {minutes} min",
+    "days": "{days} d {hours} h"
+  },
+  "targets": {
+    "title": "Launch targets",
+    "intro": "The first 90 days' targets from the product brief, for the period above.",
+    "target": {
+      "at_least": "Target: at least {value}",
+      "at_most": "Target: at most {value}"
+    },
+    "status": {
+      "met": "On target",
+      "missed": "Off target",
+      "no_data": "No data yet",
+      "restricted": "Finance and admins",
+      "not_measured": "Not counted here"
+    },
+    "areas": {
+      "liquidity": "Liquidity",
+      "quality": "Quality",
+      "reliability": "Reliability",
+      "retention": "Retention",
+      "economics": "Economics",
+      "trust": "Trust",
+      "privacy": "Privacy"
+    },
+    "items": {
+      "offer_within_2h": {
+        "title": "Tasks with an offer within 2 h",
+        "detail": "{part} of {whole, plural, one {# task} other {# tasks}} posted 7 am–9 pm, at least 2 h ago"
+      },
+      "posted_to_booked": {
+        "title": "Posted tasks that are booked",
+        "detail": "{part} of {whole, plural, one {# task} other {# tasks}} posted",
+        "maturing": "{count, plural, one {# task is} other {# tasks are}} still open"
+      },
+      "bookings_completed": {
+        "title": "Confirmed bookings completed",
+        "detail": "{part} of {whole, plural, one {# finished booking} other {# finished bookings}}",
+        "maturing": "{count, plural, one {# booking is} other {# bookings are}} still under way"
+      },
+      "bookings_disputed": {
+        "title": "Bookings with a dispute",
+        "detail": "{part} of {whole, plural, one {# confirmed booking} other {# confirmed bookings}} that started"
+      },
+      "helper_reliability": {
+        "title": "Helper no-shows and late cancellations",
+        "detail": "{part} of {whole, plural, one {# confirmed booking} other {# confirmed bookings}} that started (strikes not reversed)"
+      },
+      "rebook_60d": {
+        "title": "Clients who book again within 60 days",
+        "detail": "{part} of {whole, plural, one {# client} other {# clients}} with a completed booking",
+        "maturing": "{count, plural, one {# client completed} other {# clients completed}} less than 60 days ago"
+      },
+      "contribution_per_booking": {
+        "title": "Contribution per booking, before rewards",
+        "detail": "Estimated over {bookings, plural, one {# completed booking} other {# completed bookings}}",
+        "restricted": "Money figures are shown to finance and admins."
+      },
+      "helpers_id_verified": {
+        "title": "Booked helpers who are ID-verified",
+        "detail": "{part} of {whole, plural, one {# helper} other {# helpers}} booked, verified before the booking"
+      },
+      "address_incidents": {
+        "title": "Address exposure incidents",
+        "detail": "Counted from incident reports, not by the app. Log each one as the safety escalation runbook describes."
+      }
+    }
+  },
+  "funnel": {
+    "title": "From posting to booking again",
+    "intro": "The tasks posted in the period, followed to where they got.",
+    "steps": {
+      "posted": "Posted",
+      "offered": "Got an offer",
+      "booked": "Booked",
+      "completed": "Completed",
+      "rebooked": "Client booked again"
+    },
+    "ofPosted": "{percent}% of posted",
+    "ofPrevious": "{percent}% of the step before",
+    "rebookMaturing": "{count, plural, one {# task was} other {# tasks were}} completed less than 60 days ago, so the last step can still grow.",
+    "empty": "No tasks were posted in this period."
+  },
+  "daily": {
+    "title": "Day by day",
+    "intro": "What happened on each day of the period.",
+    "series": {
+      "posted": "Tasks posted",
+      "offers": "Offers sent",
+      "booked": "Bookings made",
+      "completed": "Bookings completed",
+      "rewardsDelivered": "Rewards delivered"
+    },
+    "summary": "{series}: {total} in {days} days.",
+    "tableToggle": "Show every day",
+    "tableCaption": "Daily figures, newest first",
+    "columns": {
+      "day": "Day",
+      "posted": "Posted",
+      "offers": "Offers",
+      "booked": "Booked",
+      "repeat": "By repeat clients",
+      "completed": "Completed",
+      "rewardsDelivered": "Rewards delivered"
+    },
+    "repeatNote": "{count, plural, one {# booking was} other {# bookings were}} made by clients who had a completed booking before."
+  },
+  "liquidity": {
+    "title": "Liquidity",
+    "intro": "How quickly posted tasks get offers, and how many are booked.",
+    "figures": {
+      "offerWithin2h": "Offer within 2 h",
+      "offerWithin2hHint": "Tasks posted 7 am–9 pm",
+      "offerWithin24h": "Offer within 24 h",
+      "medianFirstOffer": "Typical time to first offer",
+      "medianFirstOfferHint": "The median",
+      "filled": "Booked"
+    },
+    "byCategory": "By category",
+    "byArea": "By area",
+    "remote": "Remote",
+    "columns": {
+      "category": "Category",
+      "area": "Area",
+      "posted": "Posted",
+      "offerWithin2h": "Offer ≤ 2 h",
+      "offerWithin24h": "Offer ≤ 24 h",
+      "medianFirstOffer": "First offer",
+      "filled": "Booked"
+    },
+    "share": "{percent}% ({part} of {whole})",
+    "empty": "No tasks were posted in this period.",
+    "postedCount": "{count} posted"
+  },
+  "rewards": {
+    "title": "Reward spend",
+    "intro": "Gift-card rewards against each program's budget and the helpers' monthly cap.",
+    "programs": {
+      "welcome": "Welcome",
+      "acceptance": "Offer acceptance",
+      "repeat": "Repeat client",
+      "completion": "Completion bonus",
+      "recurring_month": "Regular visits month"
+    },
+    "noBudget": "No budget (monthly cap only)",
+    "committed": "Committed",
+    "delivered": "Delivered",
+    "remaining": "Left in the budget",
+    "budgetMeter": "{program}: {used}% of the budget committed",
+    "period": "In this period",
+    "periodGranted": "{count, plural, one {# grant} other {# grants}}, {amount}",
+    "periodDelivered": "Delivered",
+    "periodVoided": "Voided",
+    "inReview": "Under review now",
+    "total": "Delivered in this period: {amount}",
+    "cap": "Each helper can earn up to {cap} a calendar month. This month {atCap, plural, =0 {no helper has} one {# helper has} other {# helpers have}} reached it and {nearCap, plural, =0 {none are} one {# is} other {# are}} at 80% or more.",
+    "restricted": "Reward spend is shown to finance and admins.",
+    "budgetAmount": "Budget {amount}",
+    "budgetMeterValue": "{committed} of {budget}"
+  },
+  "notes": {
+    "title": "How these are counted",
+    "items": {
+      "cohort": "The funnel and liquidity follow the tasks posted on the board in the period. Book again and regular visits don't post a task, so they count from the booking.",
+      "booked": "A booking counts once it's paid, or once it's booked and charged later.",
+      "started": "Completion, dispute and reliability rates use the confirmed bookings that were due to start in the period.",
+      "contribution": "Contribution is an estimate from the economics in the payments plan: platform fees, less card processing (2.9% + $0.30 of the charge), the payout fee (0.25% + $0.25), $2 a month per paid helper, $0.10 for notifications and 0.5% for losses."
+    }
+  },
+  "previews": {
+    "group": "Admin: market metrics",
+    "finance": "Metrics: finance, 30 days",
+    "agent": "Metrics: support agent, no money",
+    "week": "Metrics: support lead, 7 days",
+    "empty": "Metrics: a new market's first week"
+  }
+}
