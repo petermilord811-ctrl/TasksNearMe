@@ -71,7 +71,7 @@ Maps stay free: MapLibre with OpenFreeMap tiles, and the static fallback when We
 | 4.1 ☑ | Automatic reading of proof-of-address documents | With `ANTHROPIC_API_KEY`, Claude reads the document once and tells staff whether the name, address and date match. Staff still decide; only the yes/no answers are kept. Stand-in in tests |
 | 4.2 ☐ | "Post again" | Posters repeat a past task in two taps (the same category, details and address) |
 | 4.3 ☐ | One-tap offer at the posted budget | For fixed-price tasks, helpers offer the asked price straight from the list |
-| 4.4 ☐ | Provider adapters for Stripe Identity and Checkr | Written against their APIs with tested webhooks, so adding the keys switches the stand-ins off |
+| 4.4 ☑ | Provider adapters for Stripe Identity and Checkr | Written against their APIs with tested webhooks, so adding the keys switches the stand-ins off |
 
 ## Order of work
 

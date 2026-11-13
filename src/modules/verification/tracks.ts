@@ -145,7 +145,9 @@ export async function startBackgroundCheck(
     if (options.acknowledged !== true) return fieldError('acknowledged', 'must_accept');
     await recordAgreement(db, userId, 'bg_check_disclosure', options.origin ?? {}, now);
   }
-  const { ref, url } = await providers.background.start(userId);
+  const [person] = await db.select({ email: users.email, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!person) return { ok: false, code: 'not_allowed' };
+  const { ref, url } = await providers.background.start({ userId, ...person });
   await db.insert(backgroundChecks).values({
     id: newId('bgc'),
     userId,

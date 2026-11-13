@@ -81,6 +81,8 @@ export const backgroundChecks = pgTable(
     adjudicatedByUserId: text('adjudicated_by_user_id'),
     /** When the pre-adverse notice went out (the final decision waits 7 days for a dispute). */
     preAdverseAt: timestamp('pre_adverse_at', { withTimezone: true }),
+    /** The provider's adverse action (Checkr), to cancel its scheduled final notice. */
+    adverseActionRef: text('adverse_action_ref'),
     /** Renewal reminders sent: 1 at 30 days before expiry, 2 at 7 days, 3 at expiry. */
     expiryNotices: integer('expiry_notices').notNull().default(0),
     requestedByUserId: text('requested_by_user_id'),

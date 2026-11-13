@@ -1,0 +1,1 @@
+ALTER TABLE "background_checks" ADD COLUMN "adverse_action_ref" text;

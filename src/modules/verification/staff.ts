@@ -317,7 +317,10 @@ export async function verificationAction(db: Db, providers: VerificationProvider
       });
       await emitVerificationEvent(db, userId, 'identity', 'action_needed');
       break;
-    case 'engage_background':
+    case 'engage_background': {
+      // After a pre-adverse notice, the provider's scheduled final notice must not go.
+      const [adverse] = await db.select({ adjudication: backgroundChecks.adjudication, ref: backgroundChecks.adverseActionRef }).from(backgroundChecks).where(eq(backgroundChecks.id, latestBackground!.id)).limit(1);
+      if (adverse?.adjudication === 'pre_adverse' && adverse.ref && providers?.background.cancelAdverseAction) await providers.background.cancelAdverseAction(adverse.ref);
       await db
         .update(backgroundChecks)
         .set({
@@ -330,12 +333,13 @@ export async function verificationAction(db: Db, providers: VerificationProvider
         .where(eq(backgroundChecks.id, latestBackground!.id));
       await emitVerificationEvent(db, userId, 'background', 'passed');
       break;
+    }
     case 'pre_adverse_background':
       if (!providers || !latestBackground!.providerRef) return { ok: false, code: 'not_allowed' };
-      await providers.background.preAdverseAction(latestBackground!.providerRef);
+      const adverseActionRef = await providers.background.preAdverseAction(latestBackground!.providerRef);
       await db
         .update(backgroundChecks)
-        .set({ adjudication: 'pre_adverse', preAdverseAt: now, adjudicatedAt: now, adjudicatedByUserId: staff.id, updatedAt: now })
+        .set({ adjudication: 'pre_adverse', preAdverseAt: now, adverseActionRef: adverseActionRef ?? null, adjudicatedAt: now, adjudicatedByUserId: staff.id, updatedAt: now })
         .where(eq(backgroundChecks.id, latestBackground!.id));
       await emitVerificationEvent(db, userId, 'background', 'action_needed');
       break;
