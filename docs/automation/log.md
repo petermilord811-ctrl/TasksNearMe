@@ -141,3 +141,9 @@ One entry per iteration, newest last.
 - The recurring-month reward (94ca9ef), integration `recurring-reward`.
 - Bookings more than 14 days ahead are booked now and charged 72 h before (87b4303), integration `scheduled-booking`.
 - Next: the UI for all of it (once the other session's format codemod lands): Repeat on the proposal form, the schedule on the proposal page, the series page, the booking page's "Pay now" card and series link, the regular visits on the bookings page, the confirmation page's "charged later"; then e2e.
+
+## 2026-11-13 — Phase 2, the rest: UI for regular visits, replacement matching, reliability, a suggested category
+- UI (UI-059, UI-060; built by Claude with two helper agents): Repeat on proposals, `/app/series/[seriesId]`, the booking page's paid-later card and series link, regular visits on the bookings list, checkout for far-ahead bookings, "Reliable" on helper cards and offers, the recurring-month reward on the rewards page, "Describe what you need" on posting. 35 new or changed previews clean at 360 and 1280 (no runtime errors, no serious axe issues); e2e `series.spec`.
+- Automated replacement matching (e05ec82), ranking by reliability (ab63b0c).
+- From the other session: the Spanish UI (pages under `src/app/[locale]`, every namespace translated, emails and texts in the recipient's language, a catalog check), the account language, passkeys.
+- Gate at dd7fa73: check and build green; test:db and e2e red from shared test data. A webhook test left outbox events for a deleted user, and the dispatcher threw on them (it now skips a gone recipient). My new tests reopened tasks into other tests' feeds and boards, and "Post again" e2e left open tasks behind. Fixed in 0744c19 (test:db 74/334, check 2,558, the affected e2e green). Before the move, a stale public task page after a decline ("3 offers"); it didn't reproduce on a fresh server, and the other session is checking.
