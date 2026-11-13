@@ -29,6 +29,7 @@ import {
   saveNotificationPreferenceAction,
 } from '@/modules/notifications/actions';
 import { getAccountPage } from '@/modules/notifications/service';
+import { accountVerificationFor } from '@/modules/badges/standing';
 import { requestNow } from '@/platform/clock';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -54,8 +55,10 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.account()));
   const { connect, error } = await searchParams;
-  const data = await getAccountPage(db, viewer.user.id, { connect, error }, await requestNow());
-  if (!data) notFound();
+  const now = await requestNow();
+  const [page, verification] = await Promise.all([getAccountPage(db, viewer.user.id, { connect, error }, now), accountVerificationFor(db, viewer.user.id, now)]);
+  if (!page) notFound();
+  const data = { ...page, verification };
   return (
     <AccountScreen
       data={data}

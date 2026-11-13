@@ -7,12 +7,13 @@ import { bookingCompletions, bookingSeries, bookingTerms, bookings } from '@/mod
 import { getFlags } from '@/modules/markets/queries';
 import { earnings } from '@/modules/earnings/schema';
 import { tasks } from '@/modules/tasks/schema';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { identityVerifications } from '@/modules/verification/schema';
 import type { Db } from '@/platform/db/connect';
 import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { LAUNCH_PROGRAMS, REWARD_RULES, nextGrantState, recurringMonthTrigger, repeatProgress, repeatTrigger, rewardOrder, welcomeCandidate, type BookingFact } from './domain';
+import { LAUNCH_PROGRAMS, REWARD_RULES, marketMonthStart, nextGrantState, recurringMonthTrigger, repeatProgress, repeatTrigger, rewardOrder, welcomeCandidate, type BookingFact } from './domain';
 import { sendGiftCardEmail } from './emails';
 import { REVIEW_SIGNALS, riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
@@ -66,8 +67,11 @@ async function helperBookingFacts(db: Db, helperUserId: string): Promise<Booking
   });
 }
 
-/** The helper's place among verified helpers (the founding cohort is the first 100). */
-async function cohortFacts(db: Db, helperUserId: string): Promise<{ verifiedAt: Date; rank: number } | null> {
+/**
+ * The helper's place among verified helpers (the founding cohort is the first 100). Only people with a helper
+ * profile count: clients' risk-triggered ID checks don't take founding spots (completion plan 6.6).
+ */
+export async function cohortFacts(db: Db, helperUserId: string): Promise<{ verifiedAt: Date; rank: number } | null> {
   const [mine] = await db
     .select({ verifiedAt: identityVerifications.verifiedAt })
     .from(identityVerifications)
@@ -78,11 +82,13 @@ async function cohortFacts(db: Db, helperUserId: string): Promise<{ verifiedAt: 
   const earlier = await db
     .selectDistinct({ userId: identityVerifications.userId })
     .from(identityVerifications)
+    .innerJoin(helperProfiles, eq(helperProfiles.userId, identityVerifications.userId))
     .where(and(eq(identityVerifications.status, 'verified'), lte(identityVerifications.verifiedAt, mine.verifiedAt), ne(identityVerifications.userId, helperUserId)));
   return { verifiedAt: mine.verifiedAt, rank: earlier.length + 1 };
 }
 
-const monthStart = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+/** The monthly cap's month: the calendar month in market time. */
+const monthStart = marketMonthStart;
 const live = (grant: GrantRow) => grant.status !== 'voided';
 /** Staff rejected it after a risk review: that program is over for the helper (welcome) or the pair (repeat). */
 const rejected = (grant: GrantRow) => grant.status === 'voided' && grant.voidReason === 'risk_review';

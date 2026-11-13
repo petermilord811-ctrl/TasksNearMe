@@ -31,6 +31,7 @@ import { pushSetup } from './push';
 import { notificationPreferences, notifications } from './schema';
 import { verificationNotificationFor } from './verification-plan';
 import { helpersToAlert, replacementHelpers } from '@/modules/offers/task-alerts';
+import { reactToEvent } from '@/modules/badges/reactions';
 
 /**
  * Notifications from outbox events (the dispatcher), the notifications page, and the account page
@@ -361,6 +362,13 @@ export async function dispatchNotifications(db: Db, now: Date, limit = 200): Pro
       } catch (error) {
         if (!isForeignKeyViolation(error)) throw error;
       }
+    }
+    // What else changes with the event: founding numbers, completed counts, badges (src/modules/badges/reactions.ts).
+    // A failure is logged and never holds up the notifications.
+    try {
+      await reactToEvent(db, event, now);
+    } catch (error) {
+      console.error(`[outbox] reacting to ${event.type} ${event.id} failed`, error);
     }
     await db.update(outboxEvents).set({ dispatchedAt: now.toISOString() }).where(eq(outboxEvents.id, event.id));
   }

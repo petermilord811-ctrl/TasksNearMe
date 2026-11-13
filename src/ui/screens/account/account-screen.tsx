@@ -14,6 +14,8 @@ import { AccountPrivacy, AccountSignOut } from './account-privacy';
 import { AccountLanguage } from './account-language';
 import { AccountPasskeys } from './account-passkeys';
 import { AccountSignIn } from './account-sign-in';
+import { VerificationBadges } from '@/ui/components/people/verification-badges';
+import { VerificationChecklist } from '../helper/helper-standing';
 
 const cardClass = 'rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6';
 
@@ -37,6 +39,12 @@ export function AccountScreen({ data, handlers, initialDialog }: {
       </Section>
     </div>
     <div className={cardClass}><Section title={t('contact.title')} description={t('contact.description')}><AccountContact email={data.profile.email} phone={data.phone} handlers={handlers} initialDialog={initialDialog} /></Section></div>
+    {data.verification && <div className={cardClass}><Section title={t('verification.title')} description={t(`verification.descriptions.${data.verification.role}`)}>
+      <div className="space-y-4">
+        <VerificationBadges badges={data.verification.badges} />
+        <VerificationChecklist steps={data.verification.steps} role={data.verification.role} />
+      </div>
+    </Section></div>}
     <div className={cardClass}><Section title={t('signIn.title')} description={t('signIn.description')}><AccountSignIn methods={data.signIn} onConnect={handlers.onConnectSignIn} onDisconnect={handlers.onDisconnectSignIn} />{handlers.onPasskeyRegistrationOptions && handlers.onAddPasskey && handlers.onRemovePasskey && <AccountPasskeys passkeys={data.signIn.passkeys} handlers={{ onPasskeyRegistrationOptions: handlers.onPasskeyRegistrationOptions, onAddPasskey: handlers.onAddPasskey, onRemovePasskey: handlers.onRemovePasskey }} />}</Section></div>
     <div className={cardClass}><Section title={t('preferences.title')} description={t('preferences.description')}><AccountPreferences preferences={data.preferences} onSave={handlers.onSavePreference} /></Section></div>
     <div className={cardClass}><Section title={push('device.title')}><PushDeviceSetting push={data.push} handlers={handlers} /></Section></div>

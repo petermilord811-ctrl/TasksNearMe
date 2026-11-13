@@ -19,6 +19,7 @@ import type {
   RewardStatus,
 } from '@/contracts';
 import { REWARD_PROGRAM_CODES } from '@/contracts';
+import { marketMonthStart } from '@/modules/rewards/domain';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
@@ -236,8 +237,8 @@ function rewardSpendOf(facts: MetricsFacts, period: MetricsPeriod): MetricsRewar
       inReview: grants.filter((grant) => grant.status === 'in_review').length,
     };
   });
-  // The monthly cap as the rewards service applies it: grants not voided, created this calendar month (UTC).
-  const monthStart = new Date(Date.UTC(period.now.getUTCFullYear(), period.now.getUTCMonth(), 1));
+  // The monthly cap as the rewards service applies it: grants not voided, created this calendar month (market time).
+  const monthStart = marketMonthStart(period.now);
   const thisMonth = new Map<string, number>();
   for (const grant of facts.grants) {
     if (grant.status === 'voided' || grant.createdAt < monthStart) continue;

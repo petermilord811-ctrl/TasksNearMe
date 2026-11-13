@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Eye, Pause, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useForm, useWatch } from 'react-hook-form';
-import { routes, type HelperProfileEditorData, type HelperProfileEditorHandlers } from '@/contracts';
+import { routes, type HelperProfileEditorData, type HelperProfileEditorHandlers, type HelperStandingView } from '@/contracts';
+import { HelperStandingPanel } from './helper-standing';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { ProfilePhotoField } from '@/ui/components/forms/profile-photo-field';
 import { PageHeader } from '@/ui/components/layout/page-header';
@@ -45,7 +46,7 @@ function VisibilityEditor({ paused, onSetPaused }: { paused: boolean; onSetPause
   </div>;
 }
 
-export function HelperProfileEditorScreen({ data, handlers, initialSection = 'profile' }: { data: HelperProfileEditorData; handlers: HelperProfileEditorHandlers; initialSection?: HelperEditorSection }) {
+export function HelperProfileEditorScreen({ data, handlers, initialSection = 'profile', standing }: { data: HelperProfileEditorData; handlers: HelperProfileEditorHandlers; initialSection?: HelperEditorSection; standing?: HelperStandingView }) {
   const t = useTranslations('helperProfileEditor');
   const desktop = useSyncExternalStore(subscribeDesktop, () => window.matchMedia(desktopQuery).matches, () => false);
   const remoteAllowed = data.values.services.services.some((service) => data.categories.some((category) => category.slug === service.categorySlug && category.remoteAllowed));
@@ -64,6 +65,7 @@ export function HelperProfileEditorScreen({ data, handlers, initialSection = 'pr
   return <div className="mx-auto max-w-reading space-y-6">
     <PageHeader title={t('screen.title')} description={t('screen.description')} />
     <Link href={routes.helperProfile(data.handle)} className={buttonVariants({ variant: 'outline' })}><Eye aria-hidden="true" />{t('screen.viewPublic')}</Link>
+    {standing && <HelperStandingPanel standing={standing} />}
     <Tabs defaultValue={initialSection} className="gap-6">
       <TabsList aria-label={t('screen.sectionsLabel')} className="hidden w-full flex-wrap md:flex" variant="line">{sections.map((section) => <TabsTrigger key={section} value={section} aria-controls={`helper-section-${section}`}>{t(`screen.sections.${section}`)}</TabsTrigger>)}</TabsList>
       <nav aria-label={t('screen.sectionsLabel')} className="md:hidden"><ul className="grid grid-cols-2 gap-2">{sections.map((section) => <li key={section}><a href={`${routes.app.helperProfile()}#helper-section-${section}`} onClick={(event) => {

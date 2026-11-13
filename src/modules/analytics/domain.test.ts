@@ -220,3 +220,16 @@ describe('ID checks and incidents', () => {
     expect(data.totals).toEqual({ posted: 0, offers: 0, booked: 0, completed: 0, repeat: 0, rewardsDeliveredCents: 0 });
   });
 });
+
+describe('the monthly cap in reward spend', () => {
+  it('counts the calendar month in Austin time, so a grant from Nov 30 still counts at 11:30 pm that night', () => {
+    // Nov 30, 11:30 pm CST (already Dec 1 in UTC); the grant came that afternoon.
+    const night = new Date('2026-12-01T05:30:00.000Z');
+    const grant = { helperUserId: 'usr_helper', program: 'welcome' as const, amountCents: 7500, status: 'qualified' as const, createdAt: at('2026-11-30T20:00:00.000Z'), updatedAt: at('2026-11-30T20:00:00.000Z') };
+    const data = computeMetrics(facts({ grants: [grant] }), metricsPeriod(7, night), true);
+    expect(data.rewards).toMatchObject({ helpersAtCap: 1, helpersNearCap: 0 });
+    // After midnight in Austin it's a new month.
+    const december = computeMetrics(facts({ grants: [grant] }), metricsPeriod(7, new Date('2026-12-01T06:30:00.000Z')), true);
+    expect(december.rewards).toMatchObject({ helpersAtCap: 0 });
+  });
+});

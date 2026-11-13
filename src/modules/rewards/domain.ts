@@ -1,5 +1,5 @@
 import type { RewardProgramView, RewardStatus } from '@/contracts';
-import { marketDayKey } from '@/shared/format';
+import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
  * Pure reward rules (blueprint 05 §1–§2). Launch programs: welcome ($50, founding cohort) and repeat
@@ -18,6 +18,15 @@ export const REWARD_RULES = {
   redeemDays: 90,
   monthlyCapCents: 7500,
 } as const;
+
+/**
+ * The start of the calendar month in market time (America/Chicago) that `now` falls in: the $75 monthly cap
+ * counts grants made since then (blueprint 05 §1). At 11 pm on Nov 30 in Austin it's still November, even
+ * though it's already December in UTC.
+ */
+export function marketMonthStart(now: Date): Date {
+  return new Date(marketLocalToUtc(`${marketDayKey(now).slice(0, 7)}-01`, '00:00'));
+}
 
 export const LAUNCH_PROGRAMS: RewardProgramView[] = [
   { program: 'welcome', amountCents: REWARD_RULES.welcome.amountCents, thresholdCents: REWARD_RULES.welcome.thresholdCents },

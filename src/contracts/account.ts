@@ -8,6 +8,7 @@ import { emailField, oneTimeCodeField, personNameField } from './forms';
 import type { PhotoUploadResult } from './posting';
 import type { AttentionTarget } from './home';
 import type { VerificationTrack } from './onboarding';
+import type { AccountVerification } from './helper-standing';
 
 /**
  * Notifications and the account page (blueprint 02 §1.2: `/app/notifications`, `/app/account`).
@@ -150,6 +151,8 @@ export interface AccountSignInMethods {
 }
 
 export interface AccountPageData {
+  /** Where the person's verification stands (completion plan 6.5): every step for helpers; the phone and any ID check for clients. */
+  verification?: AccountVerification;
   /** `photo`: the profile photo, when they added one (a square; helpers' shows on their public profile). */
   profile: { firstName: string; lastName: string; displayName: string; initials: string; email: string; photo?: Photo };
   /** The largest photo the profile photo upload takes. */

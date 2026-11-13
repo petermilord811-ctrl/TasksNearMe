@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextGrantState, recurringMonthTrigger, repeatProgress, repeatTrigger, welcomeCandidate, type BookingFact, type SeriesVisitFact } from './domain';
+import { marketMonthStart, nextGrantState, recurringMonthTrigger, repeatProgress, repeatTrigger, welcomeCandidate, type BookingFact, type SeriesVisitFact } from './domain';
 
 const day = (n: number) => new Date(Date.UTC(2026, 10, 1) + n * 86_400_000);
 const booking = (over: Partial<BookingFact>): BookingFact => ({ id: 'bkg', title: 'Task', posterUserId: 'usr_maya', status: 'confirmed', fundedAt: day(5), priceCents: 6000, ...over });
@@ -107,5 +107,19 @@ describe('recurring-month reward', () => {
     const grant = { program: 'recurring_month', status: 'pending' as const, holdUntil: null, expiresAt: null };
     const fact = { id: 'b', title: 'Yard', posterUserId: 'usr_ben', status: 'completed', fundedAt: day(1), priceCents: 1500, finalPriceCents: 1500, transferredAt: day(2) };
     expect(nextGrantState(grant, fact, day(3))).toMatchObject({ status: 'qualified' });
+  });
+});
+
+describe('the monthly cap’s month (market time)', () => {
+  it('is still November at 11:30 pm on Nov 30 in Austin, though it is December in UTC', () => {
+    // 2026-12-01T05:30Z is Nov 30, 11:30 pm CST.
+    expect(marketMonthStart(new Date('2026-12-01T05:30:00.000Z')).toISOString()).toBe('2026-11-01T05:00:00.000Z');
+  });
+
+  it('turns at midnight in Austin, across daylight saving', () => {
+    // Dec 1, 12:30 am CST.
+    expect(marketMonthStart(new Date('2026-12-01T06:30:00.000Z')).toISOString()).toBe('2026-12-01T06:00:00.000Z');
+    // Mar 31, 11 pm CDT (DST began Mar 8): still March, which started in CST.
+    expect(marketMonthStart(new Date('2027-04-01T04:00:00.000Z')).toISOString()).toBe('2027-03-01T06:00:00.000Z');
   });
 });

@@ -41,6 +41,7 @@ export * from './admin-people';
 export * from './admin-verification';
 export * from './admin-support-tools';
 export * from './analytics';
+export * from './helper-standing';
 export * from './staff-auth';
 export * from './poster-identity';
 export * from './beta';

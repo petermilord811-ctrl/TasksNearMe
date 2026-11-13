@@ -23,6 +23,7 @@ import { PageSkeleton } from '@/ui/components';
 import { savePushSubscriptionAction } from '@/modules/notifications/actions';
 import { HelperOnboardingScreen } from '@/ui/screens/helper';
 import { requestNow } from '@/platform/clock';
+import { foundingCardFor, verificationSteps } from '@/modules/badges/standing';
 import { redeemHelperInvite } from '@/modules/beta/actions';
 import { helperInviteFor } from '@/modules/beta/server';
 import { HelperInviteScreen } from '@/ui/screens/beta';
@@ -52,10 +53,13 @@ async function Onboarding({ params }: Pick<PageProps<'/[locale]/app/helper/onboa
   if (goTo && goTo !== step) redirect(routes.app.helperOnboarding(goTo));
   const data = await getOnboardingPageData(db, viewer.user.id, step, now);
   if (!data) notFound();
+  // The profile's first page (completion plan 6.5): the founding-helper gift card above the profile step.
+  const founding = step === 'profile' ? await foundingCardFor(db, viewer.user.id, data.progress, now) : undefined;
 
   return (
     <HelperOnboardingScreen
       data={data}
+      standing={{ steps: verificationSteps(data.progress), ...(founding ? { founding } : {}) }}
       handlers={{
         onSaveProfile: onboardingSaveProfile,
         onDraftProfile: draftHelperProfileAction,

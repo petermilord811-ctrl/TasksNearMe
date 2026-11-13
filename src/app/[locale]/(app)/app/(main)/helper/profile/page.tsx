@@ -21,6 +21,7 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { HelperProfileEditorScreen } from '@/ui/screens/helper';
 import { requestNow } from '@/platform/clock';
+import { foundingCardFor, verificationSteps } from '@/modules/badges/standing';
 
 export const metadata: Metadata = { title: 'Your helper profile', robots: { index: false } };
 
@@ -36,11 +37,14 @@ export default function HelperProfilePage() {
 async function Editor() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.helperProfile()));
-  const data = await getProfileEditorData(db, viewer.user.id, await requestNow());
+  const now = await requestNow();
+  const data = await getProfileEditorData(db, viewer.user.id, now);
   if (!data) redirect(routes.app.helperOnboarding());
+  const founding = await foundingCardFor(db, viewer.user.id, data.progress, now);
   return (
     <HelperProfileEditorScreen
       data={data}
+      standing={{ steps: verificationSteps(data.progress), ...(founding ? { founding } : {}) }}
       handlers={{
         onSaveProfile: editorSaveProfile,
         onDraftProfile: draftHelperProfileAction,

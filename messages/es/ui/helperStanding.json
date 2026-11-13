@@ -1,0 +1,51 @@
+{
+  "checklist": {
+    "title": "Tu verificación",
+    "intro": "Cada paso ayuda a que los clientes reserven con confianza. Termínalos todos para enviar ofertas.",
+    "count": "{done} de {total} listos",
+    "steps": {
+      "phone": "Teléfono",
+      "identity": "Verificación de identidad",
+      "address": "Domicilio",
+      "payout": "Configuración de pagos",
+      "background": "Verificación de antecedentes"
+    },
+    "states": {
+      "done": "Listo",
+      "current": "Sigue",
+      "todo": "Pendiente",
+      "in_review": "En revisión. Te avisaremos.",
+      "locked": "Se abre después de los pasos anteriores",
+      "skipped": "No hace falta"
+    },
+    "actions": {
+      "start": "Empezar",
+      "status": "Ver estado",
+      "startLabel": "Empezar: {step}",
+      "statusLabel": "Ver estado: {step}"
+    }
+  },
+  "founding": {
+    "openTitle": "Tarjeta de regalo de <amount></amount> para ayudantes fundadores",
+    "openBody": "Nuestros primeros {cohort} ayudantes verificados reciben una tarjeta de regalo de <amount></amount> con su primera tarea completada y pagada de <minimum></minimum> o más, dentro de {days, plural, one {# día} other {# días}} después de verificar su identidad.",
+    "spotsLeft": "{spots, plural, one {Queda # lugar} other {Quedan # lugares}} de {cohort}",
+    "spotsMeter": "{taken} de {cohort} lugares de fundador ocupados",
+    "stillNeeded": "{done} de {total} pasos de verificación listos. Falta: {steps}.",
+    "almost": "Tus pasos de verificación están listos. Tu número de fundador llega en cuanto tu perfil esté listo.",
+    "yoursTitle": "Eres el ayudante fundador n.º {number}",
+    "yoursBody": "Completa tu primera tarea pagada de <minimum></minimum> o más antes del {date} y la tarjeta de regalo de <amount></amount> es tuya.",
+    "yoursBodyNoDate": "Completa tu primera tarea pagada de <minimum></minimum> o más dentro de {days, plural, one {# día} other {# días}} después de verificar tu identidad y la tarjeta de regalo de <amount></amount> es tuya.",
+    "earnedBody": "Tu tarjeta de regalo de <amount></amount> está en camino. Síguela en <link>Recompensas</link>.",
+    "noReviews": "Las recompensas nunca dependen de reseñas ni calificaciones."
+  },
+  "previews": {
+    "group": "Ayudante: la primera página del perfil",
+    "onboardingOpen": "Paso de perfil: tarjeta de fundador, lugares disponibles",
+    "onboardingLastSpot": "Paso de perfil: el último lugar de fundador",
+    "onboardingNoFounding": "Paso de perfil: sin lugares de fundador",
+    "editorYours": "Editor de perfil: ayudante fundador n.º 12",
+    "editorEarned": "Editor de perfil: tarjeta de regalo en camino",
+    "accountHelper": "Cuenta: verificación de un ayudante",
+    "accountClient": "Cuenta: verificación de un cliente"
+  }
+}

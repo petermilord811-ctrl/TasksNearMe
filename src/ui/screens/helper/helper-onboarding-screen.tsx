@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { CircleCheck, Clock, Gift, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type HelperOnboardingHandlers, type HelperOnboardingPageData } from '@/contracts';
+import { routes, type HelperOnboardingHandlers, type HelperOnboardingPageData, type HelperStandingView } from '@/contracts';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Money } from '@/ui/components/money/money';
 import { PushPrompt } from '@/ui/components/push/push-device';
@@ -11,6 +11,7 @@ import { HelperAreaForm, HelperProfileForm, HelperServicesForm } from './helper-
 import { PhoneStep } from './phone-step';
 import { OnboardingStepper } from './onboarding-stepper';
 import { VerificationPanel } from './verification-panel';
+import { HelperStandingPanel } from './helper-standing';
 
 function OnboardingDone({ data, onSavePushSubscription }: { data: HelperOnboardingPageData; onSavePushSubscription?: HelperOnboardingHandlers['onSavePushSubscription'] }) {
   const t = useTranslations('helperOnboarding');
@@ -25,7 +26,7 @@ function OnboardingDone({ data, onSavePushSubscription }: { data: HelperOnboardi
   </section>;
 }
 
-export function HelperOnboardingScreen({ data, handlers }: { data: HelperOnboardingPageData; handlers: HelperOnboardingHandlers }) {
+export function HelperOnboardingScreen({ data, handlers, standing }: { data: HelperOnboardingPageData; handlers: HelperOnboardingHandlers; standing?: HelperStandingView }) {
   const t = useTranslations('helperOnboarding');
   const { step } = data;
   const remoteAllowed = data.values.services.services.some((service) => data.categories.some((category) => category.slug === service.categorySlug && category.remoteAllowed));
@@ -35,6 +36,8 @@ export function HelperOnboardingScreen({ data, handlers }: { data: HelperOnboard
   return <div className="mx-auto max-w-reading space-y-6 pb-24 sm:pb-0">
     <PageHeader title={t('screen.title')} description={t('screen.description')} />
     <OnboardingStepper progress={data.progress} step={step} />
+    {/* The profile's first page: the founding gift card and every verification step ahead (completion plan 6.5). */}
+    {step === 'profile' && standing && <HelperStandingPanel standing={standing} />}
     {(step === 'profile' || step === 'services' || step === 'area') && <section className="space-y-5 rounded-xl border bg-card p-card shadow-card">
       <div className="space-y-2"><h2 className="text-xl font-semibold">{t(`screen.titles.${step}`)}</h2><p className="text-muted-foreground">{t(`screen.descriptions.${step}`)}</p></div>
       {step === 'profile' && <HelperProfileForm key={step} values={data.values.profile} languageOptions={data.languageOptions} onSave={handlers.onSaveProfile} onDraft={data.aiDraftingEnabled ? handlers.onDraftProfile : undefined} submitLabel={t('screen.saveContinue')} agreementNeeded={data.agreementNeeded} />}

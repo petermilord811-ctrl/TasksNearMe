@@ -223,5 +223,12 @@
     "synced": "Sincronizada en tus dispositivos",
     "cancelled": "No se agregó nada.",
     "unsupported": "Este navegador no admite llaves de acceso."
+  },
+  "verification": {
+    "title": "Verificación",
+    "descriptions": {
+      "helper": "Cada verificación que pasaste y lo que falta para que puedas tomar tareas.",
+      "client": "Tu teléfono verificado y cualquier verificación de identidad que nuestro equipo te pidió."
+    }
   }
 }
