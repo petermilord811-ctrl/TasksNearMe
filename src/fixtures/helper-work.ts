@@ -67,7 +67,8 @@ export const findWorkPageData: FindWorkPageData = {
     { task: movingPublicTask, earnings: { type: 'hourly', rateCents: 3150, capCents: 12600 }, startDay: '2026-11-22', isNew: true, saved: false },
     { task: remoteComputerPublicTask, blockedReason: 'category_not_offered', earnings: { type: 'fixed', amountCents: 3600 }, startDay: '2026-11-23', isNew: true, saved: false },
     { task: cleaningForJordan, blockedReason: 'category_not_offered', earnings: { type: 'fixed', amountCents: 9900 }, startDay: '2026-11-25', isNew: true, saved: false },
-    { task: yardForJordan, earnings: { type: 'fixed', amountCents: 10800 }, startDay: '2026-11-28', isNew: false, saved: true },
+    // Fixed price, open to him, no offer yet: the one-tap offer at Maya's $120.
+    { task: yardForJordan, earnings: { type: 'fixed', amountCents: 10800 }, startDay: '2026-11-28', isNew: false, saved: true, quickOffer: { priceCents: 12000, earningsCents: 10800, proposedStart: '2026-11-28T15:00:00.000Z' } },
   ],
   totalCount: 5,
   pageCount: 1,
@@ -115,6 +116,8 @@ const waitFor = <T,>(value: T, ms = 300) => new Promise<T>((resolve) => setTimeo
 export const fakeFindWorkHandlers: FindWorkHandlers = {
   onSaveTask: () => waitFor({ ok: true, code: 'updated' }),
   onHideTask: () => waitFor({ ok: true, code: 'updated' }),
+  onQuickOffer: () => waitFor({ ok: true, code: 'sent' }),
+  onUndoQuickOffer: () => waitFor({ ok: true, code: 'updated' }),
 };
 
 const deskRules: OfferRules = {

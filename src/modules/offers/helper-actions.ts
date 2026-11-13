@@ -5,7 +5,7 @@ import { z } from 'zod';
 import type { ActionResult, OfferActionId, OfferInput, PriceBreakdown, PricingInput } from '@/contracts';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { helperOfferAction, quoteForHelper, reviseOffer, setTaskMark, submitOffer } from './helper';
+import { helperOfferAction, quoteForHelper, reviseOffer, setTaskMark, submitOffer, submitQuickOffer, withdrawOfferOnTask } from './helper';
 import { requestNow } from '@/platform/clock';
 
 /** Server Actions behind the helper work screens (src/contracts/helper-work.ts, HelperWorkHandlers). */
@@ -68,6 +68,28 @@ export async function helperOfferActionHandler(input: { offerId: string; action:
   if (!userId) return { ok: false, code: 'not_allowed' };
   const result = await helperOfferAction(db, userId, String(input.offerId), input.action, await requestNow());
   if (result.ok && !result.redirectTo) afterOfferChange();
+  return result;
+}
+
+const taskInput = z.object({ taskId: z.string().min(1).max(64) });
+
+/** FindWorkHandlers.onQuickOffer: the one-tap offer at the poster's price (fixed-price tasks only). */
+export async function quickOfferAction(input: { taskId: string }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  const parsed = taskInput.safeParse({ taskId: input?.taskId });
+  if (!userId || !parsed.success) return { ok: false, code: 'not_allowed' };
+  const result = await submitQuickOffer(db, userId, parsed.data.taskId, await requestNow());
+  if (result.ok) afterOfferChange();
+  return result;
+}
+
+/** FindWorkHandlers.onUndoQuickOffer: Undo right after a one-tap offer (withdraws it). */
+export async function undoQuickOfferAction(input: { taskId: string }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  const parsed = taskInput.safeParse({ taskId: input?.taskId });
+  if (!userId || !parsed.success) return { ok: false, code: 'not_allowed' };
+  const result = await withdrawOfferOnTask(db, userId, parsed.data.taskId, await requestNow());
+  if (result.ok) afterOfferChange();
   return result;
 }
 

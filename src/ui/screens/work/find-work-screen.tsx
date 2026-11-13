@@ -24,6 +24,10 @@ export interface FindWorkScreenProps {
   liveMap?: boolean;
 }
 
+/** Why a one-tap offer didn't go through (each has its own words). */
+const QUICK_OFFER_ERRORS = ['not_allowed', 'limit_reached', 'rate_limited', 'not_found', 'unknown', 'undo_failed'] as const;
+type QuickOfferError = (typeof QUICK_OFFER_ERRORS)[number];
+
 /** "2026-11-21" as a date at midday in Austin, for labels. */
 const dayAt = (day: string) => `${day}T18:00:00.000Z`;
 
@@ -50,6 +54,10 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
   const [undo, setUndo] = useState<FindWorkCard | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  // The one-tap offer: per row while it's sent (and "sent" until the list refreshes), then a notice with Undo.
+  const [offerStates, setOfferStates] = useState<Record<string, 'sending' | 'sent'>>({});
+  const [offered, setOffered] = useState<{ card: FindWorkCard; undone?: boolean } | null>(null);
+  const [offerError, setOfferError] = useState<QuickOfferError | null>(null);
 
   const cards = data.cards.filter((card) => !hidden[card.task.id] && !(query.saved && saved[card.task.id] === false));
   const isSaved = (card: FindWorkCard) => saved[card.task.id] ?? card.saved;
@@ -89,6 +97,30 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
     if (!result.ok) { setHidden((current) => ({ ...current, [card.task.id]: !value })); setUndo(null); setFailed(true); }
   }
 
+  async function quickOffer(card: FindWorkCard) {
+    if (!handlers?.onQuickOffer || offerStates[card.task.id]) return;
+    setOfferStates((current) => ({ ...current, [card.task.id]: 'sending' }));
+    setOfferError(null);
+    setOffered(null);
+    const result = await handlers.onQuickOffer({ taskId: card.task.id }).catch(() => ({ ok: false as const, code: 'unknown' as const }));
+    if (result.ok) {
+      setOfferStates((current) => ({ ...current, [card.task.id]: 'sent' }));
+      setOffered({ card });
+      return;
+    }
+    setOfferStates(({ [card.task.id]: _gone, ...rest }) => rest);
+    setOfferError(QUICK_OFFER_ERRORS.includes(result.code as QuickOfferError) ? (result.code as QuickOfferError) : 'unknown');
+  }
+
+  async function undoQuickOffer(card: FindWorkCard) {
+    if (!handlers?.onUndoQuickOffer) return;
+    const result = await handlers.onUndoQuickOffer({ taskId: card.task.id }).catch(() => ({ ok: false as const, code: 'unknown' as const }));
+    if (result.ok) {
+      setOfferStates(({ [card.task.id]: _gone, ...rest }) => rest);
+      setOffered({ card, undone: true });
+    } else setOfferError('undo_failed');
+  }
+
   const selectedCard = selected ? cards.find((card) => card.task.id === selected) : undefined;
   const mapArea = data.map.area;
 
@@ -101,6 +133,11 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
         <span>{t('hiddenNotice', { title: undo.task.title })}</span>
         <button type="button" onClick={() => void hide(undo, false)} className="inline-flex min-h-11 items-center rounded-md px-2 font-medium text-primary underline underline-offset-4">{t('undoHide')}</button>
       </p>}
+      {offered && <p className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3 text-sm shadow-card">
+        <span>{offered.undone ? t('quickOfferUndone', { title: offered.card.task.title }) : t('quickOfferNotice', { price: offered.card.quickOffer ? formatMoney(offered.card.quickOffer.priceCents) : '', title: offered.card.task.title })}</span>
+        {!offered.undone && handlers?.onUndoQuickOffer && <button type="button" onClick={() => void undoQuickOffer(offered.card)} className="inline-flex min-h-11 items-center rounded-md px-2 font-medium text-primary underline underline-offset-4">{t('quickOfferUndo')}</button>}
+      </p>}
+      {offerError && <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{t(`quickOfferErrors.${offerError}`)}</p>}
       {failed && <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{t('markFailed')}</p>}
     </div>
     <div className="gap-6 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
@@ -110,7 +147,7 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
           : groups.map((group, index) => <section key={`${group.day ?? 'all'}-${index}`} aria-labelledby={group.day ? `day-${group.day}` : undefined} className="space-y-2">
             {group.day && <h2 id={`day-${group.day}`} className="text-sm font-semibold text-muted-foreground">{dayLabel(group.day)}</h2>}
             <ul className="space-y-2">{group.cards.map((card) => <li key={card.task.id} className="min-w-0">
-              <FindWorkRow card={card} now={now} active={active === card.task.id || selected === card.task.id} onActiveChange={setActive} saved={isSaved(card)} pending={pending === card.task.id} onToggleSave={handlers ? () => void toggleSave(card) : undefined} onHide={handlers ? () => void hide(card, true) : undefined} />
+              <FindWorkRow card={card} now={now} active={active === card.task.id || selected === card.task.id} onActiveChange={setActive} saved={isSaved(card)} pending={pending === card.task.id} onToggleSave={handlers ? () => void toggleSave(card) : undefined} onHide={handlers ? () => void hide(card, true) : undefined} onQuickOffer={handlers?.onQuickOffer ? () => void quickOffer(card) : undefined} offerState={offerStates[card.task.id]} />
             </li>)}</ul>
           </section>)}
         {data.pageCount > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">

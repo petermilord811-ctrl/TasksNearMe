@@ -1,7 +1,7 @@
 # Autopilot state
 
-**Updated:** 2026-11-12 (after the finish: Google and Microsoft sign-in, landing interactions, bug fixes)
-**Autopilot:** the owner said "go ahead, build all" (2026-11-12): build everything left, Claude doing the UI too while Codex is at its limit (decisions.md).
+**Updated:** 2026-11-13 (the completion plan is done: verification, find work with a map, task alerts, maps, staff TOTP, data export and deletion, retention, web push, the provider adapters, the installable app, the one-tap offer; landing seventh pass)
+**Autopilot:** the owner said "go ahead, build all" (2026-11-12): build everything left, Claude doing the UI too while Codex is at its limit (decisions.md). On 2026-11-13 the owner added: "refine all uis and elements and implement new features that are left without asking me". Two Claude sessions share the work (see the memory note and the split below).
 **Phase:** 5–6 (repeat bookings, trust, support and staff tools). Wired end to end:
 - the landing page (UI-036): the new brand, the motion system, the hero canvas, the map of open tasks with "Use my location";
 - posting a task, offers, find work, and booking with payment (development stand-in);
@@ -14,6 +14,12 @@
 **Codex:** at its ChatGPT usage limit until 2026-11-17 12:32 (local). Buying credits is the owner's call. Tickets run with `node scripts/codex-run.mjs UI-xxx` (logs in `scratchpad/codex-UI-xxx.log`).
 **Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0028). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
 **New dependencies (UI-036):** `motion`, `maplibre-gl`. Run `npm install` after pulling (never while a dev server runs in that checkout).
+
+## Done on 2026-11-13 (owner requests)
+- **Landing, seventh pass** (UI-053): the skeleton town that grows into the 3D one; the 2D map's setup made lighter and started after the build-up; the page's floating scrollbar (no white strip).
+- **Installable app** (plan 3.6): `src/app/manifest.ts`, icons in `public/icons` (including the push badge).
+- **One-tap offer** (plan 4.3, UI-054): on find work, fixed-price tasks; Undo withdraws.
+- From the other session: data export and deletion (3.3), retention timers (3.4, `readExactAddress()`), web push (3.5, `public/sw.js`), Stripe Identity and Checkr adapters with signed webhooks (4.4).
 
 ## Done after the finish (2026-11-12, owner requests)
 - **Continue with Google / Microsoft** (UI-040): Better Auth providers; real with keys, a stand-in at `/dev/oauth/<provider>` without; a provider email creates or joins an account only when the provider confirms it; suspended accounts refused; "Ways to sign in" on the account page. Integration `social-sign-in`, e2e `social-sign-in.spec`.
@@ -62,7 +68,9 @@
 - The design system (§1–2.3) describes the new brand.
 
 ## Next steps
-Working through `docs/automation/completion-plan.md` (owner request, 2026-11-12): Part 1 is done; next the comfortable find-work list with its map, task alerts, maps on the task pages, staff TOTP, data export and deletion, web push.
+1. "Post again" (plan 4.2, this session): repeat a past task in two taps; ask for the address again when retention deleted it (`readExactAddress()` returns undefined).
+2. The refinement pass across every screen (this session), folder by folder; the other session's areas only after it says they're free.
+3. Keep the gate green after each increment (`scripts/gate.mjs`, one heavy run at a time between the two sessions).
 
 Before that: the autopilot finished (`final-report.md`). What's left needs you: real provider accounts (then the adapters in `docs/integration-points.md`), web push (a product choice), legal text, deployment. When Codex is back (2026-11-17), it can take UI polish tickets again.
 

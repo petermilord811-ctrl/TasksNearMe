@@ -63,6 +63,12 @@ export interface FindWorkCard {
   isNew: boolean;
   /** The helper saved it for later. */
   saved: boolean;
+  /**
+   * One tap from the list (completion plan 4.3): only on fixed-price tasks the helper can offer on and hasn't
+   * yet. The offer is the poster's price, from the start of the task's window, with no message (the poster sees
+   * the helper's profile). `earningsCents` is what the helper would earn after the service fee.
+   */
+  quickOffer?: { priceCents: Cents; earningsCents: Cents; proposedStart: ISODateTime };
 }
 
 /** The map beside the list: the tiles, the helper's area (a neighborhood's center, never a home) and the market's center. */
@@ -112,6 +118,13 @@ export interface FindWorkPageData {
 export interface FindWorkHandlers {
   onSaveTask: ActionHandler<{ taskId: string; saved: boolean }>;
   onHideTask: ActionHandler<{ taskId: string; hidden: boolean }>;
+  /**
+   * The one-tap offer (`card.quickOffer`): ok `sent`. Errors: `not_allowed` (the helper can't offer on it, or
+   * already has), `limit_reached` (too many active offers), `rate_limited`, `not_found` (no longer open).
+   */
+  onQuickOffer?: ActionHandler<{ taskId: string }>;
+  /** Undo, right after a one-tap offer: withdraws the helper's active offer on that task (ok `updated`). */
+  onUndoQuickOffer?: ActionHandler<{ taskId: string }>;
 }
 
 /** The helper's own offer, in the helper's money. */

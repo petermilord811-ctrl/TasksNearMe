@@ -22,11 +22,22 @@ test('a helper finds a nearby task, sends an offer, and withdraws it', async ({ 
   await expect(card(page, 'Rake and bag front-yard leaves').getByText('Outside your service area')).toBeVisible();
   await expect(card(page, 'Set up a new laptop and move my photos').getByText("You don't offer this service")).toBeVisible();
   await expect(card(page, 'Assemble a desk (flat-pack, 1 item)').getByText('You made an offer')).toBeVisible();
+  // The desk has his offer and the move is hourly: no one-tap offer on either.
+  await expect(card(page, 'Assemble a desk (flat-pack, 1 item)').getByRole('button', { name: /^Offer \$/ })).toHaveCount(0);
+  await expect(card(page, 'Help loading a moving truck').getByRole('button', { name: /^Offer \$/ })).toHaveCount(0);
+
+  // The one-tap offer at Maya's $50 (completion plan 4.3), then Undo withdraws it.
+  await card(page, 'Mount two floating shelves').getByRole('button', { name: /^Offer \$50\.00 for Mount two floating shelves/ }).click();
+  await expect(card(page, 'Mount two floating shelves').getByText('Offer sent')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('You offered $50.00 for “Mount two floating shelves”.', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByText('Your offer for “Mount two floating shelves” is withdrawn.')).toBeVisible({ timeout: 30_000 });
 
   await card(page, 'Mount two floating shelves').getByRole('link', { name: 'Mount two floating shelves' }).click();
   await expect(page).toHaveURL(/\/app\/find-work\/tsk_shelves$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Mount two floating shelves' })).toBeVisible();
-  await expect(page.getByText('the wall is drywall')).toBeVisible();
+  // Visible text only: Next keeps the list we came from mounted (hidden) for an instant Back.
+  await expect(page.getByText('the wall is drywall').filter({ visible: true })).toBeVisible();
   // The fee engine's numbers for the $50 budget: Jordan earns $45.00.
   await expect(page.getByText('$45.00').first()).toBeVisible();
 

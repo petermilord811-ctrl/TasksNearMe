@@ -170,9 +170,10 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
   const query = parseFindWorkQuery(params);
   const [categoryViews, categoryRows] = await Promise.all([
     listCategoryViews(state.marketId, db),
-    db.select({ slug: categories.slug, requiresBackgroundCheck: categories.requiresBackgroundCheck }).from(categories),
+    db.select({ slug: categories.slug, requiresBackgroundCheck: categories.requiresBackgroundCheck, minPriceCents: categories.minPriceCents }).from(categories),
   ]);
   const needsCheck = new Map(categoryRows.map((row) => [row.slug, row.requiresBackgroundCheck]));
+  const minPrice = new Map(categoryRows.map((row) => [row.slug, row.minPriceCents]));
   const blocked = await blockedPeopleOf(db, userId);
   const { tasks: found, totalCount } = await listFeedTasks(db, {
     marketId: state.marketId,
@@ -234,14 +235,21 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
         },
         now,
       );
+      const earnings = earningsFor(fees, view.budget);
+      // One tap (completion plan 4.3): a fixed-price task the helper can offer on, at the poster's price.
+      const quickOffer =
+        !myOffer && !blockedReason && view.budget.type === 'fixed' && earnings.type === 'fixed' && view.budget.priceCents >= (minPrice.get(view.categorySlug) ?? 0)
+          ? { priceCents: view.budget.priceCents, earningsCents: earnings.amountCents, proposedStart: view.schedule.windowStart }
+          : undefined;
       return {
         task,
         ...(myOffer ? { myOffer } : {}),
         ...(blockedReason && !myOffer ? { blockedReason } : {}),
-        earnings: earningsFor(fees, view.budget),
+        earnings,
         startDay: marketDayKey(view.schedule.windowStart),
         isNew: now.getTime() - Date.parse(view.postedAt) < NEW_FOR_HOURS * 3_600_000,
         saved: savedIds.has(view.id),
+        ...(quickOffer ? { quickOffer } : {}),
       };
     }),
     totalCount,
@@ -467,6 +475,31 @@ export async function submitOffer(db: Db, userId: string, taskId: string, input:
   }
   await refreshOfferCount(db, row.task.id);
   return { ok: true, code: 'sent' };
+}
+
+/**
+ * The one-tap offer from find work (completion plan 4.3): on a fixed-price task, exactly the poster's price,
+ * from the start of the task's window, with no message (the poster sees the helper's profile). Everything else is
+ * an ordinary offer (`submitOffer`): the same eligibility, limits and rate limit. Hourly tasks need the helper's
+ * own hours, so they go through the offer form.
+ */
+export async function submitQuickOffer(db: Db, userId: string, taskId: string, now: Date): Promise<ActionResult> {
+  const row = await taskWithCategory(db, String(taskId));
+  if (!row || row.task.status === 'draft') return { ok: false, code: 'not_found' };
+  const budget = budgetOfTask(row.task);
+  if (budget.type !== 'fixed') return { ok: false, code: 'not_allowed' };
+  return submitOffer(db, userId, row.task.id, offerDefaultsFor(budget, offerRulesFor(row.task, row.category)), now);
+}
+
+/** Undo for a one-tap offer: withdraws the helper's active offer on the task (as "Withdraw" on the offer does). */
+export async function withdrawOfferOnTask(db: Db, userId: string, taskId: string, now: Date): Promise<ActionResult> {
+  const [active] = await db
+    .select({ id: offers.id })
+    .from(offers)
+    .where(and(eq(offers.taskId, String(taskId)), eq(offers.helperUserId, userId), inArray(offers.status, ACTIVE)))
+    .limit(1);
+  if (!active) return { ok: false, code: 'not_found' };
+  return helperOfferAction(db, userId, active.id, 'withdraw_offer', now);
 }
 
 /** A new revision of the helper's active offer: back to pending, shown to the poster as new again. */

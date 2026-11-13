@@ -62,7 +62,7 @@ Maps stay free: MapLibre with OpenFreeMap tiles, and the static fallback when We
 | 3.3 ☑ | Data export and account deletion | The account page records the requests; build the export (a download for the person) and the deletion (anonymize once nothing is open), per blueprint 08 §5 |
 | 3.4 ☑ | Retention timers | Blueprint 08 §5: exact addresses deleted 180 days after the last booking unless saved, and the rest of the table where a timer is missing |
 | 3.5 ☑ | Web push (the third channel) | Finishes T-29: a service worker, VAPID keys generated locally, a subscription per device, asked only after a related action (posting a task; finishing onboarding), and the account page's "Notifications on this device" |
-| 3.6 ☐ | Installable app | A web app manifest and icons, so phones can add TasksNearMe to the home screen (with push) |
+| 3.6 ☑ | Installable app | A web app manifest and icons, so phones can add TasksNearMe to the home screen (with push) |
 
 ## Part 4 — Good features
 
@@ -70,7 +70,7 @@ Maps stay free: MapLibre with OpenFreeMap tiles, and the static fallback when We
 |---|---|---|
 | 4.1 ☑ | Automatic reading of proof-of-address documents | With `ANTHROPIC_API_KEY`, Claude reads the document once and tells staff whether the name, address and date match. Staff still decide; only the yes/no answers are kept. Stand-in in tests |
 | 4.2 ☐ | "Post again" | Posters repeat a past task in two taps (the same category, details and address) |
-| 4.3 ☐ | One-tap offer at the posted budget | For fixed-price tasks, helpers offer the asked price straight from the list |
+| 4.3 ☑ | One-tap offer at the posted budget | For fixed-price tasks, helpers offer the asked price straight from the list |
 | 4.4 ☑ | Provider adapters for Stripe Identity and Checkr | Written against their APIs with tested webhooks, so adding the keys switches the stand-ins off |
 
 ## Order of work

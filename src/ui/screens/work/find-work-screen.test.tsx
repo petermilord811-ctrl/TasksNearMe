@@ -145,6 +145,36 @@ describe('FindWorkScreen', () => {
     renderWork(findWorkPageData, null);
     expect(screen.queryByRole('button', { name: /for later/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Not interested/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Offer \$/ })).toBeNull();
+  });
+
+  it('offers at the poster\'s price in one tap only where the domain allows it, with Undo', async () => {
+    const user = userEvent.setup();
+    const onQuickOffer = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'sent' }));
+    const onUndoQuickOffer = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    renderWork(findWorkPageData, { ...fakeFindWorkHandlers, onQuickOffer, onUndoQuickOffer });
+    const yard = findWorkPageData.cards.find((card) => card.quickOffer)!;
+    // Only the yard task has one: the desk already has his offer, the move is hourly, two are in categories he doesn't offer.
+    const buttons = within(list()).getAllByRole('button', { name: /^Offer \$/ });
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAccessibleName(`Offer $120.00 for ${yard.task.title}, starting at 9:00 am`);
+    await user.click(buttons[0]!);
+    expect(onQuickOffer).toHaveBeenCalledWith({ taskId: yard.task.id });
+    expect(await within(list()).findByText('Offer sent')).toBeVisible();
+    expect(screen.getByText(`You offered $120.00 for “${yard.task.title}”. They see your profile and can book you.`)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(onUndoQuickOffer).toHaveBeenCalledWith({ taskId: yard.task.id });
+    expect(await screen.findByText(`Your offer for “${yard.task.title}” is withdrawn.`)).toBeVisible();
+    expect(within(list()).getByRole('button', { name: /^Offer \$120\.00/ })).toBeEnabled();
+  });
+
+  it('says why a one-tap offer didn\'t go through', async () => {
+    const user = userEvent.setup();
+    const onQuickOffer = vi.fn(async (): Promise<ActionResult> => ({ ok: false, code: 'limit_reached' }));
+    renderWork(findWorkPageData, { ...fakeFindWorkHandlers, onQuickOffer });
+    await user.click(within(list()).getByRole('button', { name: /^Offer \$/ }));
+    expect(await screen.findByText(findWork.quickOfferErrors.limit_reached)).toBeVisible();
+    expect(within(list()).getByRole('button', { name: /^Offer \$/ })).toBeEnabled();
   });
 
   it('keeps marketplace copy within the approved vocabulary', () => {

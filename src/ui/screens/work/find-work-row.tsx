@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Bookmark, BookmarkCheck, CalendarDays, EyeOff, Hammer, Info, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
+import { Bookmark, BookmarkCheck, CalendarDays, Check, EyeOff, Hammer, Info, Laptop, Leaf, Loader2, MapPin, Package, Send, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CategorySlug, type FindWorkCard, type ISODateTime } from '@/contracts';
-import { formatDate, formatDateTime, formatHours, formatMoney, formatRelative, formatTimeRange, marketDayKey } from '@/shared/format';
+import { formatDate, formatDateTime, formatHours, formatMoney, formatRelative, formatTime, formatTimeRange, marketDayKey } from '@/shared/format';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useOfferStatus } from '@/ui/components/status/use-status';
 import { cn } from '@/ui/lib/utils';
@@ -31,9 +31,10 @@ function OwnOffer({ status }: { status: NonNullable<FindWorkCard['myOffer']>['st
 /**
  * One open task in the helper's list: what it is, where (the general area and a distance band), when, the
  * client's budget and what the helper would earn, how many offers it has, whether it's new, and whether
- * the helper can offer. Save and hide sit on the row.
+ * the helper can offer. Save and hide sit on the row, and on fixed-price tasks the helper can take, the
+ * one-tap offer at the poster's price (`quickOffer`: sending, then "Offer sent" until the list refreshes).
  */
-export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggleSave, onHide, pending }: {
+export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggleSave, onHide, pending, onQuickOffer, offerState }: {
   card: FindWorkCard;
   now: ISODateTime;
   active: boolean;
@@ -42,6 +43,9 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
   onToggleSave?: () => void;
   onHide?: () => void;
   pending?: boolean;
+  onQuickOffer?: () => void;
+  /** The one-tap offer on this row: being sent, or sent (until the list refreshes with the offer). */
+  offerState?: 'sending' | 'sent';
 }) {
   const t = useTranslations('findWork');
   const card_ = useTranslations('taskCard');
@@ -90,7 +94,20 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
             : card.blockedReason ? <span className="inline-flex items-start gap-1.5 text-muted-foreground"><Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(`blockedReasons.${card.blockedReason}`)}</span>
               : <time dateTime={task.postedAt} title={formatDateTime(task.postedAt)} className="text-muted-foreground tabular-nums">{card_('posted', { relative: formatRelative(task.postedAt, now) })}</time>}
         </div>
-        {(onToggleSave || onHide) && <div className="flex items-center gap-1">
+        {(onToggleSave || onHide || (card.quickOffer && onQuickOffer)) && <div className="flex items-center gap-1">
+          {card.quickOffer && onQuickOffer && !card.myOffer && (offerState === 'sent'
+            ? <span className="mr-1 inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-success"><Check aria-hidden="true" className="size-4" />{t('quickOfferSent')}</span>
+            : <button
+              type="button"
+              onClick={onQuickOffer}
+              disabled={pending || offerState === 'sending'}
+              aria-label={t('quickOfferLabel', { price: formatMoney(card.quickOffer.priceCents), title: task.title, start: formatTime(card.quickOffer.proposedStart) })}
+              title={t('quickOfferHint', { start: formatTime(card.quickOffer.proposedStart), earn: formatMoney(card.quickOffer.earningsCents) })}
+              className="mr-1 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_6px_16px_-8px_var(--primary-glow)] transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-px hover:bg-primary-hover hover:shadow-[0_10px_22px_-10px_var(--primary-glow)] active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {offerState === 'sending' ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <Send aria-hidden="true" className="size-4" />}
+              {t('quickOffer', { price: formatMoney(card.quickOffer.priceCents) })}
+            </button>)}
           {onToggleSave && <button type="button" onClick={onToggleSave} disabled={pending} aria-pressed={saved} aria-label={saved ? t('unsave', { title: task.title }) : t('save', { title: task.title })} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-pressed:text-primary">
             {saved ? <BookmarkCheck aria-hidden="true" className="size-5" /> : <Bookmark aria-hidden="true" className="size-5" />}
           </button>}

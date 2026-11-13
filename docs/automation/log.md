@@ -122,3 +122,10 @@ One entry per iteration, newest last.
   - invites waiting for a first authorization expire after 30 minutes; only live helper profiles can be requested.
 - Seeds: the disputed dresser (support settles it in e2e), `tsk_nightstands` for the invite e2e, a welcome reward in review for Sam.
 - Real failures the gate caught after UI-025: tests still expected the old profile link text and only `cancel_task` on open tasks; on phones, Cancel task moved under More.
+
+## 2026-11-13 — landing seventh pass, installable app, one-tap offer (Claude, owner requests)
+- Landing (UI-053): the skeleton town that grows into the 3D one; the 2D map's setup restyled before MapLibre and started after the build-up; the page's floating scrollbar (no white strip). Built with two helper agents.
+- Plan 3.6: the web app manifest and icons; Chrome reports no installability errors.
+- Plan 4.3 (UI-054): the one-tap offer on find work, with Undo; integration `quick-offer`, e2e `find-work`.
+- The peer session finished its plan items (3.3, 3.4, 3.5, 4.4); one gate covered both (`scripts/gate.mjs`).
+- Environment: the dev server grew to 31.8 GB over hours of tests (navigations timed out) and later served a stale SSR graph for edited client components (hydration failures); both fixed by a clean restart.

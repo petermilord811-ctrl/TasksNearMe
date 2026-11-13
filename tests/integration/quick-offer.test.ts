@@ -1,0 +1,70 @@
+import { and, eq } from 'drizzle-orm';
+import { afterAll, describe, expect, it } from 'vitest';
+import { getFindWorkPageData, submitQuickOffer, withdrawOfferOnTask } from '@/modules/offers/helper';
+import { offers } from '@/modules/offers/schema';
+import { tasks } from '@/modules/tasks/schema';
+import { createDb } from '@/platform/db/connect';
+
+/**
+ * The one-tap offer from find work (completion plan 4.3): shown only on fixed-price tasks the helper can offer
+ * on and hasn't yet; it sends exactly the poster's price from the start of the window, with no message; Undo
+ * withdraws it; hourly tasks go through the offer form instead.
+ */
+
+const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
+const JORDAN = 'usr_jordan';
+const SHELVES = 'tsk_shelves';
+const startedAt = new Date();
+afterAll(async () => {
+  await db.delete(offers).where(and(eq(offers.helperUserId, JORDAN), eq(offers.taskId, SHELVES)));
+  await pool.end();
+});
+
+const now = () => new Date();
+const feed = () => getFindWorkPageData(db, JORDAN, {}, now());
+
+describe('the one-tap offer', () => {
+  it('shows only on fixed-price tasks Jordan can offer on and has no offer on, at the poster\'s price', async () => {
+    const data = await feed();
+    const withQuick = data!.cards.filter((card) => card.quickOffer);
+    expect(withQuick.length).toBeGreaterThan(0);
+    for (const card of data!.cards) {
+      if (!card.quickOffer) continue;
+      expect(card.task.budget.type).toBe('fixed');
+      expect(card.myOffer).toBeUndefined();
+      expect(card.blockedReason).toBeUndefined();
+      if (card.task.budget.type === 'fixed' && card.earnings.type === 'fixed') {
+        expect(card.quickOffer).toEqual({ priceCents: card.task.budget.priceCents, earningsCents: card.earnings.amountCents, proposedStart: card.task.schedule.windowStart });
+      }
+    }
+    for (const card of data!.cards) {
+      if (card.task.budget.type === 'hourly' || card.myOffer || card.blockedReason) expect(card.quickOffer).toBeUndefined();
+    }
+    expect(withQuick.map((card) => card.task.id)).toContain(SHELVES);
+  });
+
+  it('sends the poster\'s price from the start of the window, once; Undo withdraws it', async () => {
+    expect(await submitQuickOffer(db, JORDAN, SHELVES, now())).toEqual({ ok: true, code: 'sent' });
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, SHELVES));
+    const [offer] = await db.select().from(offers).where(and(eq(offers.helperUserId, JORDAN), eq(offers.taskId, SHELVES)));
+    expect(offer).toMatchObject({ status: 'pending', pricingType: 'fixed', priceCents: 5000, message: '' });
+    expect(offer!.proposedStart.getTime()).toBe(task!.windowStart.getTime());
+    expect(offer!.createdAt.getTime()).toBeGreaterThanOrEqual(startedAt.getTime() - 1000);
+
+    // Now it's his offer on the list, and no second one-tap offer.
+    const shelves = (await feed())!.cards.find((card) => card.task.id === SHELVES);
+    expect(shelves?.myOffer?.status).toBe('pending');
+    expect(shelves?.quickOffer).toBeUndefined();
+    expect(await submitQuickOffer(db, JORDAN, SHELVES, now())).toEqual({ ok: false, code: 'not_allowed' });
+
+    expect(await withdrawOfferOnTask(db, JORDAN, SHELVES, now())).toEqual({ ok: true, code: 'updated' });
+    const [withdrawn] = await db.select({ status: offers.status }).from(offers).where(eq(offers.id, offer!.id));
+    expect(withdrawn?.status).toBe('withdrawn');
+    expect(await withdrawOfferOnTask(db, JORDAN, SHELVES, now())).toEqual({ ok: false, code: 'not_found' });
+  });
+
+  it('leaves hourly tasks to the offer form, and refuses tasks that are not there', async () => {
+    expect(await submitQuickOffer(db, JORDAN, 'tsk_moving', now())).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await submitQuickOffer(db, JORDAN, 'tsk_missing', now())).toEqual({ ok: false, code: 'not_found' });
+  });
+});

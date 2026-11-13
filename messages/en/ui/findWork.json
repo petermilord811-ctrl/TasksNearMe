@@ -95,5 +95,20 @@
   "mapLegend": "Circles show each task's general area, never the address. The dashed ring is your area around {area}, {miles} miles.",
   "mapLegendNoArea": "Circles show each task's general area, never the address.",
   "mapRemote": "{count, plural, one {# remote task is} other {# remote tasks are}} in the list only.",
-  "closeSelected": "Close"
+  "closeSelected": "Close",
+  "quickOffer": "Offer {price}",
+  "quickOfferLabel": "Offer {price} for {title}, starting at {start}",
+  "quickOfferHint": "At their price, starting at {start}. You’d earn {earn}.",
+  "quickOfferSent": "Offer sent",
+  "quickOfferNotice": "You offered {price} for “{title}”. They see your profile and can book you.",
+  "quickOfferUndo": "Undo",
+  "quickOfferUndone": "Your offer for “{title}” is withdrawn.",
+  "quickOfferErrors": {
+    "not_allowed": "You can’t offer on this task right now. Open it to see why.",
+    "limit_reached": "You have as many open offers as you can. Withdraw one to make another.",
+    "rate_limited": "That’s a lot of offers at once. Try again in a few minutes.",
+    "not_found": "This task isn’t open anymore.",
+    "unknown": "Your offer didn’t go through. Try again.",
+    "undo_failed": "Your offer couldn’t be withdrawn here. Open the task to withdraw it."
+  }
 }
