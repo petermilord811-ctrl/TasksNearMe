@@ -67,7 +67,15 @@
     "clientTipDeclined": "Client · tip declined",
     "clientTipBankStep": "Client · tip needs the bank",
     "clientTipped": "Client · tipped",
-    "helperTipped": "Helper · tip received"
+    "helperTipped": "Helper · tip received",
+    "listRegular": "Client with regular visits",
+    "clientVisitScheduled": "Client: a regular visit before its charge",
+    "clientVisitDeclined": "Client: the visit's charge was declined",
+    "clientVisitBankStep": "Client: paying the visit, bank step",
+    "clientVisitNoCard": "Client: no card on file for the visit",
+    "helperVisitScheduled": "Helper: a regular visit before it's paid",
+    "helperVisitWaiting": "Helper: waiting for the client's payment",
+    "clientFarAhead": "Client: a booking far ahead, paid later"
   },
   "back": "All bookings",
   "change": {
@@ -232,5 +240,29 @@
     "received": "Tip: {amount}",
     "receivedBody": "All of it is yours. It goes out with your next payout.",
     "sendAny": "Add your tip"
-  }
+  },
+  "scheduledCard": {
+    "title": "Payment",
+    "scheduled": "We'll charge <card></card> {amount} on {date}.",
+    "nothingYet": "Nothing has been charged yet.",
+    "payNowInstead": "Pay {amount} now instead",
+    "failedTitle": "Your payment didn't go through",
+    "failure": {
+      "payment_declined": "Your card was declined.",
+      "insufficient_funds": "Your card didn't have enough funds.",
+      "requires_bank_verification": "Your bank wants to confirm it's you.",
+      "no_card": "There's no card on file for it."
+    },
+    "payByVisit": "Pay by {date} to keep this visit. Otherwise it's skipped, with no fees.",
+    "payByBooking": "Pay by {date} to keep this booking. Otherwise it's canceled, with no fees.",
+    "retry": "We'll try your card again on {date}.",
+    "payWith": "Pay with",
+    "pay": "Pay {amount}",
+    "paying": "Paying…",
+    "paid": "Paid. You're all set.",
+    "changed": "This booking changed. Reload to see where it stands.",
+    "helperScheduled": "{name}'s card is charged on {date}. You'll see the address once it's paid.",
+    "helperWaiting": "Waiting for {name} to pay, by {date}. If it isn't paid by then, this {kind, select, visit {visit is skipped} other {booking is canceled}}."
+  },
+  "seriesLink": "Visit {index} · Regular visits {cadence, select, weekly {every week} biweekly {every 2 weeks} other {every month}}"
 }

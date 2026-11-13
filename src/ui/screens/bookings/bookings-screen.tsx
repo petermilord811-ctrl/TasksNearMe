@@ -13,6 +13,7 @@ import { groupByDay, useDayLabel } from '@/ui/components/time/day-groups';
 import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/primitives/tabs';
+import { RegularVisitsSection } from './regular-visits-section';
 
 const tabs = ['needsAction', 'upcoming', 'past'] as const;
 type BookingTab = (typeof tabs)[number];
@@ -73,6 +74,7 @@ export function BookingsScreen({ data, now }: BookingsScreenProps) {
 
   return <div className="mx-auto w-full max-w-content space-y-6">
     <PageHeader title={t('title')} description={t('description')} />
+    <RegularVisitsSection regular={data.regular} />
     <Tabs defaultValue={initialTab} className="gap-6">
       <TabsList aria-label={t('tabsLabel')} className="w-full sm:w-fit">
         {tabs.map((tab) => <TabsTrigger key={tab} value={tab} className="min-w-0 whitespace-normal tabular-nums sm:min-w-28">{t('tabCount', { label: t(`tabs.${tab}`), count: data[tab].length })}</TabsTrigger>)}

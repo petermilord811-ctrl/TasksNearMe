@@ -80,11 +80,12 @@ import invites from './invites.json';
 import inviteCard from './inviteCard.json';
 import availability from './availability.json';
 import clients from './clients.json';
+import series from './series.json';
 import proposal from './proposal.json';
 import posterIdentity from './posterIdentity.json';
 import adminResponseTimes from './adminResponseTimes.json';
 import adminSavedReplies from './adminSavedReplies.json';
 
-const uiMessages = { brand, common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, bookingSheets, paymentsPage, receipt, earnings, home, landing, review, savedHelpers, helpersBrowse, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase, adminBooking, adminBookings, adminTask, adminAudit, adminPayments, adminStaff, adminConfig, adminRewards, adminUsers, adminUser, adminVerification, staffVerify, push, rewards, changes, invites, inviteCard, availability, clients, proposal, report, posterIdentity, adminResponseTimes, adminSavedReplies };
+const uiMessages = { brand, common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, legal, taskBoard, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, bookingSheets, paymentsPage, receipt, earnings, home, landing, review, savedHelpers, helpersBrowse, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase, adminBooking, adminBookings, adminTask, adminAudit, adminPayments, adminStaff, adminConfig, adminRewards, adminUsers, adminUser, adminVerification, staffVerify, push, rewards, changes, invites, inviteCard, availability, clients, series, proposal, report, posterIdentity, adminResponseTimes, adminSavedReplies };
 
 export default uiMessages;

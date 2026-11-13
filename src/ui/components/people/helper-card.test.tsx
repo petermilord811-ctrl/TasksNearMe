@@ -19,6 +19,15 @@ function renderHelper(helper: HelperSummary, variant?: 'compact' | 'full') {
 }
 
 describe('HelperCard', () => {
+  it('marks a reliable helper, with the reason in its name, and nobody else', () => {
+    renderHelper({ ...sam, reliable: true });
+    expect(screen.getByText(helperCard.reliableLabel)).toBeInTheDocument();
+    expect(screen.getByText(helperCard.reliable).closest('p')).toHaveAttribute('title', helperCard.reliableHint);
+    cleanup();
+    renderHelper(sam);
+    expect(screen.queryByText(helperCard.reliable)).not.toBeInTheDocument();
+  });
+
   it('shows the helper profile, ratings, response time, and supplied services', () => {
     renderHelper(sam);
     expect(screen.getByRole('link', { name: 'Sam K.' })).toHaveAttribute('href', routes.helperProfile(sam.handle));

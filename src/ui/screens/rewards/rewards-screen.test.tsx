@@ -15,6 +15,12 @@ function mount(data: RewardsPageData) {
 }
 
 describe('RewardsScreen', () => {
+  it('explains the regular visits reward when it is on', () => {
+    mount({ ...rewardsRedeemableData, programs: [{ program: 'recurring_month', amountCents: 1500 }] });
+    expect(screen.getByText(messages.rewards.programs.recurring_month)).toBeVisible();
+    expect(screen.getByText(messages.rewards.page.rules.recurringMonth.replace('{amount}', '$15.00'))).toBeVisible();
+  });
+
   it('shows the supplied totals, grant order, and monthly usage', () => {
     mount(rewardsDeliveredData);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);

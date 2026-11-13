@@ -86,6 +86,26 @@ export const deskProposalDeclinedHelper: RebookProposalView = { ...deskProposalS
 export const deskProposalExpiredPoster: RebookProposalView = { ...sentToMaya, status: 'expired', expiresAt: undefined, actions: [] };
 export const deskProposalWithdrawnPoster: RebookProposalView = { ...sentToMaya, status: 'withdrawn', expiresAt: undefined, actions: [] };
 
+/** Regular visits (blueprint 03 §7): Jordan proposes Maya's yard every 2 weeks on Tuesdays at 9:00 am. */
+export const proposeYardRebookData: ProposeRebookPageData = {
+  client: maya,
+  booking: { id: 'bkg_yard_done', title: 'Rake and bag front-yard leaves', categorySlug: 'yard-cleanup', areaName: 'Crestview', lastPricing: { type: 'fixed', priceCents: 6000 }, lastStart: '2026-11-24T15:00:00.000Z' },
+  limits: { firstDate: '2026-12-08', lastDate: '2026-12-22', leadHours: 3 },
+  canRepeat: true,
+};
+
+const yardStart = '2026-12-15T15:00:00.000Z'; // Tue Dec 15, 9:00 am
+export const yardSeriesProposalPoster: RebookProposalView = {
+  ...sentToMaya,
+  id: 'prp_yard',
+  task: { title: 'Rake and bag front-yard leaves', categorySlug: 'yard-cleanup', areaName: 'Crestview' },
+  start: yardStart,
+  message: 'Leaves keep coming down. Every other Tuesday morning works for me.',
+  schedule: { cadence: 'biweekly', weekday: 2, firstStart: yardStart, durationMinutes: 120 },
+  visitStarts: [yardStart, '2026-12-29T15:00:00.000Z', '2027-01-12T15:00:00.000Z', '2027-01-26T15:00:00.000Z'],
+};
+export const yardSeriesProposalAcceptedPoster: RebookProposalView = { ...yardSeriesProposalPoster, status: 'accepted', bookingId: 'bkg_yard_1', seriesId: 'srs_yard', expiresAt: undefined, actions: [] };
+
 /** Chris's hourly proposal (Jordan's side): $35/h, about 3.5 h, up to 4 h. */
 export const movingProposalSentHelper: RebookProposalView = {
   ...deskProposalSentHelper,
@@ -104,6 +124,9 @@ export const proposalPosterData: ProposalPageData = { proposal: deskProposalSent
 /** Jordan's page: withdraw while it waits. */
 export const proposalHelperData: ProposalPageData = { proposal: deskProposalSentHelper };
 export const proposalAcceptedData: ProposalPageData = { proposal: deskProposalAcceptedPoster };
+/** Maya's page for a repeating proposal: the schedule, the first dates, and the card kept for later visits. */
+export const proposalRepeatPosterData: ProposalPageData = { proposal: yardSeriesProposalPoster, payment: mayaPaymentPanel };
+export const proposalRepeatAcceptedData: ProposalPageData = { proposal: yardSeriesProposalAcceptedPoster };
 
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 

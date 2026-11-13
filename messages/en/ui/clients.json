@@ -59,7 +59,11 @@
     "expiry": "The proposal expires in 48 hours or 2 hours before the start, whichever is sooner.",
     "send": "Send proposal",
     "sending": "Sending proposal…",
-    "sent": "Proposal sent. Your client can accept and pay to book."
+    "sent": "Proposal sent. Your client can accept and pay to book.",
+    "repeat": "Repeat",
+    "repeatOnce": "Just this booking.",
+    "repeatPickDate": "Pick the date and start time to see the schedule.",
+    "repeatHint": "{schedule}. Each visit is charged to {client}’s card 2 days before it. You can skip a visit up to 2 days ahead, or end the visits with a week’s notice."
   },
   "formPreviews": {
     "group": "Propose a booking",
@@ -82,6 +86,8 @@
       "limit_reached": "Proposal — account limit",
       "identity_required": "ID check needed",
       "unknown": "Proposal — couldn't send"
-    }
+    },
+    "repeatChoice": "Yard task: repeat choices",
+    "repeatBiweekly": "Every 2 weeks, with the schedule"
   }
 }

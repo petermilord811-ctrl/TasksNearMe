@@ -85,6 +85,10 @@
       "limit_reached": "Account limit reached",
       "identity_required": "ID check needed",
       "unknown": "Payment outcome unknown"
-    }
-  }
+    },
+    "paysLater": "Booked more than 14 days ahead: paid later"
+  },
+  "totalLater": "Total, charged before the task",
+  "paysLater": "Nothing is charged today. We'll charge your card on {chargeAt}; if that doesn't go through, you can pay on the booking page until {payBy}, or the booking is canceled with no fees.",
+  "submitLater": "Book now, pay {amount} later"
 }

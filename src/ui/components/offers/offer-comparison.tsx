@@ -6,6 +6,7 @@ import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
+import { ReliableBadge } from '@/ui/components/people/reliable-badge';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { OfferBrings, OfferExpiry, OfferPrice } from './offer-parts';
 
@@ -20,7 +21,7 @@ export function OfferComparison({ offers, now }: OfferComparisonProps) {
     { key: 'start', label: t('proposedStart'), render: (offer) => <time dateTime={offer.proposedStart} className="tabular-nums">{formatDateTime(offer.proposedStart)}</time> },
     { key: 'rating', label: t('rating'), render: (offer) => <RatingStars rating={offer.helper.rating} /> },
     { key: 'completed', label: t('completed'), render: (offer) => <span className="tabular-nums">{t('completedCount', { count: offer.helper.completedCount })}</span> },
-    { key: 'badges', label: t('badges'), render: (offer) => <VerificationBadges badges={offer.helper.badges} compact /> },
+    { key: 'badges', label: t('badges'), render: (offer) => <div className="space-y-2"><ReliableBadge reliable={offer.helper.reliable} /><VerificationBadges badges={offer.helper.badges} compact /></div> },
     { key: 'brings', label: t('brings'), render: (offer) => <OfferBrings brings={offer.brings} /> },
     { key: 'expires', label: t('expiry'), render: (offer) => <OfferExpiry offer={offer} now={now} /> },
   ];

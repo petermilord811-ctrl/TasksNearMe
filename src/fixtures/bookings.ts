@@ -27,6 +27,8 @@ import type {
   ReportProblemHandlers,
   ReportProblemPageData,
   SavedPaymentMethod,
+  ScheduledPaymentHandlers,
+  SeriesSummary,
   TimelineEvent,
 } from '@/contracts';
 import { DEV_TEST_CARDS, EVIDENCE_CHECKLISTS, routes } from '@/contracts';
@@ -549,6 +551,129 @@ export const deskBookingHelperTipped: BookingView = {
 export const fakeBookingTipHandlers: BookingTipHandlers = {
   onTip: () => wait({ ok: true, code: 'paid' }),
   onFinishTipVerification: () => wait({ ok: true, code: 'paid' }),
+};
+
+// ---- Booked now, paid later (regular visits; bookings far ahead) ---------------------------------
+// Maya's regular yard visits with Sam, every Tuesday at 9:00 am since Nov 10. Visit 3 is Tue, Nov 24: its card is
+// charged Sun, Nov 22, 9:00 am (48 h before); retried Sun 9:00 pm (36 h) after a decline; unpaid by Mon 9:00 pm
+// (12 h before), the visit is skipped.
+
+export const YARD_VISIT_TIMES = {
+  firstStart: '2026-11-10T15:00:00.000Z',
+  start: '2026-11-24T15:00:00.000Z',
+  end: '2026-11-24T17:00:00.000Z',
+  chargeAt: '2026-11-22T15:00:00.000Z',
+  retryAt: '2026-11-23T03:00:00.000Z',
+  payBy: '2026-11-24T03:00:00.000Z',
+} as const;
+
+const yardVisitTask = {
+  id: 'tsk_yard_visit_3',
+  title: 'Rake the backyard and bag the leaves',
+  categorySlug: 'yard-cleanup' as const,
+  schedule: { windowStart: YARD_VISIT_TIMES.start, windowEnd: YARD_VISIT_TIMES.end, flexible: false },
+};
+
+/** Visit 3 for Maya: not paid yet, her Visa charged on Sunday. Skipping it is free. */
+export const yardVisitScheduledPoster: BookingView = {
+  ...deskBookingPosterConfirmed,
+  id: 'bkg_yard_visit_3',
+  task: yardVisitTask,
+  status: 'scheduled',
+  helper: sam,
+  terms: { ...deskTerms, scopeText: 'Rake the backyard, bag the leaves and leave the bags by the gate.', start: YARD_VISIT_TIMES.start },
+  deadlines: {},
+  timeline: deskTimelineCompleted.slice(0, 2),
+  payments: [],
+  series: { id: 'srs_yard_sam', cadence: 'weekly', index: 3 },
+  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.chargeAt, payBy: YARD_VISIT_TIMES.payBy, amountCents: 6600, card: { brand: 'visa', last4: '1881' }, payment: mayaPaymentPanel },
+  actions: [action('message'), action('add_to_calendar'), action('skip_visit', 'destructive', { confirm: true })],
+};
+
+/** Her card was declined on Sunday: tried again at 9:00 pm, and she can pay until Monday 9:00 pm. */
+export const yardVisitPaymentDuePoster: BookingView = {
+  ...yardVisitScheduledPoster,
+  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.retryAt, payBy: YARD_VISIT_TIMES.payBy, failure: 'payment_declined', amountCents: 6600, card: { brand: 'visa', last4: '1881' }, payment: mayaPaymentPanel },
+};
+
+/** The card on the series was removed, and no try is left: only her own payment keeps the visit. */
+export const yardVisitNoCardPoster: BookingView = {
+  ...yardVisitScheduledPoster,
+  scheduledPayment: { payBy: YARD_VISIT_TIMES.payBy, failure: 'no_card', amountCents: 6600, payment: mayaPaymentPanel },
+};
+
+/** Sam's view of visit 3: no address until it's paid; he can still skip it (more than 48 h ahead). */
+export const yardVisitScheduledHelper: BookingView = {
+  ...yardVisitScheduledPoster,
+  viewerRole: 'helper',
+  exactAddress: undefined,
+  addressVisibility: 'after_confirmation',
+  payments: undefined,
+  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.chargeAt, payBy: YARD_VISIT_TIMES.payBy, amountCents: 6600 },
+};
+
+/** Sam after Maya's card was declined: waiting for her payment. */
+export const yardVisitPaymentDueHelper: BookingView = {
+  ...yardVisitScheduledHelper,
+  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.retryAt, payBy: YARD_VISIT_TIMES.payBy, failure: 'payment_declined', amountCents: 6600 },
+  actions: [action('message'), action('add_to_calendar')],
+};
+
+/** A desk booked three weeks out (more than 14 days): booked now, Maya's Visa charged 72 h before. Canceling is free. */
+export const DESK_FAR_TIMES = { start: '2026-12-12T16:30:00.000Z', chargeAt: '2026-12-09T16:30:00.000Z', payBy: '2026-12-11T16:30:00.000Z' } as const;
+export const deskBookingPosterScheduled: BookingView = {
+  ...deskBookingPosterConfirmed,
+  status: 'scheduled',
+  terms: { ...deskTerms, start: DESK_FAR_TIMES.start },
+  deadlines: {},
+  payments: [],
+  scheduledPayment: { chargeAt: DESK_FAR_TIMES.chargeAt, payBy: DESK_FAR_TIMES.payBy, amountCents: 6600, card: { brand: 'visa', last4: '1881' }, payment: mayaPaymentPanel },
+  actions: [action('message'), action('add_to_calendar'), action('cancel', 'destructive')],
+};
+
+/** Canceling that far-off desk: nothing was charged yet. */
+export const deskCancelPreviewScheduled: CancellationPreview = {
+  by: 'poster',
+  late: false,
+  freeUntil: '2026-12-11T16:30:00.000Z',
+  posterRefundCents: 0,
+  helperCompensationCents: 0,
+  helperStrike: false,
+  nothingCharged: true,
+};
+
+/** The confirmation page for that desk: nothing today; charged on Dec 9. */
+export const deskConfirmPaysLaterData: BookingConfirmPageData = {
+  ...deskConfirmData,
+  offer: { ...deskConfirmData.offer, proposedStart: DESK_FAR_TIMES.start },
+  paysLater: { chargeAt: DESK_FAR_TIMES.chargeAt, payBy: DESK_FAR_TIMES.payBy },
+};
+
+/** Maya's regular visits on her bookings page: Sam's yard every Tuesday, and a paused cleaning that needs a payment. */
+export const mayaYardSeriesSummary: SeriesSummary = {
+  id: 'srs_yard_sam',
+  status: 'active',
+  title: 'Rake the backyard and bag the leaves',
+  categorySlug: 'yard-cleanup',
+  otherName: sam.displayName,
+  schedule: { cadence: 'weekly', weekday: 2, firstStart: YARD_VISIT_TIMES.firstStart, durationMinutes: 120 },
+  nextVisit: { start: YARD_VISIT_TIMES.start, state: 'scheduled' },
+};
+export const mayaCleaningSeriesSummary: SeriesSummary = {
+  id: 'srs_cleaning_lee',
+  status: 'paused',
+  title: 'Light cleaning for a 2-bedroom apartment',
+  categorySlug: 'light-cleaning',
+  otherName: lee.displayName,
+  schedule: { cadence: 'monthly', weekday: 5, monthWeek: 1, firstStart: '2026-11-06T17:00:00.000Z', durationMinutes: 180 },
+  paymentDue: true,
+  pausedUntil: '2026-12-15',
+};
+export const mayaBookingsWithRegularData: BookingsPageData = { ...mayaBookingsPageData, regular: [mayaYardSeriesSummary, mayaCleaningSeriesSummary] };
+
+export const fakeScheduledPaymentHandlers: ScheduledPaymentHandlers = {
+  onPayNow: () => wait({ ok: true, code: 'booked' }),
+  onFinishPayVerification: () => wait({ ok: true, code: 'booked' }),
 };
 
 // ---- Completing the work and reporting a problem (UI-013) ---------------------------------------

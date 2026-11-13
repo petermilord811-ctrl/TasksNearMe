@@ -9,7 +9,7 @@ import type { PriceBreakdown, PricingInput } from './money';
 import { paymentChoiceSchema, type PaymentAttemptResult, type PaymentMethodLabel, type PaymentPanelData } from './payments';
 import type { ClientSummary, HelperSummary, PersonSummary } from './people';
 import type { PhotoUploadResult } from './posting';
-import type { SeriesCadence, SeriesChargeFailure } from './series';
+import type { SeriesCadence, SeriesChargeFailure, SeriesSummary } from './series';
 import type { BookingStatus, CancelReason, CaseResolution, CaseStatus, CompletedVia, PaymentStatus } from './status';
 import type { TaskPublicView, TaskSchedule } from './tasks';
 import type { TimelineEvent } from './timeline';
@@ -284,6 +284,8 @@ export interface BookingsPageData {
   upcoming: BookingListRow[];
   /** `completed` and `canceled`, newest first. */
   past: BookingListRow[];
+  /** Regular visits the viewer has (as client or helper): running ones, and ended ones with visits still ahead. */
+  regular?: SeriesSummary[];
 }
 
 /**

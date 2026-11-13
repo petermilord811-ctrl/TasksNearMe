@@ -39,5 +39,16 @@
     "review_work": "Review the work by {date}, or it's approved automatically.",
     "on_my_way": "Tap \"On my way\" when you leave. It starts at {time}.",
     "check_in": "Tap \"I'm here\" when you arrive. It starts at {time}."
+  },
+  "regular": {
+    "title": "Regular visits",
+    "with": "With {name}",
+    "next": "Next visit: {date}",
+    "noNext": "No visit coming up",
+    "pausedUntil": "Paused until {date}",
+    "endsOn": "Last visit on {date}",
+    "paymentDue": "Payment needed",
+    "paused": "Paused",
+    "ending": "Ending"
   }
 }

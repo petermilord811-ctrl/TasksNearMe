@@ -65,8 +65,10 @@ export function BookingConfirmContent({ data, handlers, now, initialResult, init
       </div>
     </section>
     <div className="space-y-3">
-      <PriceBreakdown breakdown={data.breakdown} variant="poster" title={t('totalToday')} />
-      <p className="text-sm text-muted-foreground">{t('paymentNote')}</p>
+      <PriceBreakdown breakdown={data.breakdown} variant="poster" title={t(data.paysLater ? 'totalLater' : 'totalToday')} />
+      {data.paysLater
+        ? <p className={note}>{t('paysLater', { chargeAt: formatDateTime(data.paysLater.chargeAt), payBy: formatDateTime(data.paysLater.payBy) })}</p>
+        : <p className="text-sm text-muted-foreground">{t('paymentNote')}</p>}
       {data.credit && <p className={note}>{t('credit', { amount: formatMoney(data.credit.amountCents), date: formatDate(data.credit.expiresAt) })}</p>}
       {offer.pricing.type === 'hourly' && <p className={note}>{t('hourlyNote', { hours: offer.pricing.hoursCap })}</p>}
     </div>

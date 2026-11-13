@@ -13,6 +13,7 @@ import {
 } from '@/modules/bookings/sheet-actions';
 import { getBookingView } from '@/modules/bookings/hub';
 import { finishTipVerificationAction, tipAction } from '@/modules/bookings/tip-actions';
+import { finishScheduledVerificationAction, payScheduledAction } from '@/modules/bookings/series-actions';
 import { hubDeps } from '@/modules/bookings/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
@@ -50,6 +51,7 @@ async function Booking({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
         onSafetyReport: safetyReportAction.bind(null, bookingId),
       }}
       tip={{ onTip: tipAction.bind(null, bookingId), onFinishTipVerification: finishTipVerificationAction.bind(null, bookingId) }}
+      scheduledPayment={{ onPayNow: payScheduledAction.bind(null, bookingId), onFinishPayVerification: finishScheduledVerificationAction.bind(null, bookingId) }}
     />
   );
 }

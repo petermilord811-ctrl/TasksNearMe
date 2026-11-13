@@ -95,11 +95,13 @@ export interface SeriesView {
   /** One visit's numbers: clients see what they pay, helpers what they earn. */
   breakdown: PriceBreakdown;
   /** Clients: the card charged before each visit (`null`: it was removed, so visits can't be charged). */
-  card?: { brand: CardBrand; last4: string; expMonth: number; expYear: number } | null;
+  card?: { methodId: string; brand: CardBrand; last4: string; expMonth: number; expYear: number } | null;
   /** `paused`: visits start again on this market date (`YYYY-MM-DD`). */
   pausedUntil?: string;
   /** `ended`: the last visit date. */
   endsOn?: string;
+  /** `canceled` or `ended`: who stopped it (`system`: a block between the two people). */
+  stoppedBy?: 'poster' | 'helper' | 'staff' | 'system';
   startedAt: ISODateTime;
   completedCount: number;
   /** The next visits on the calendar, soonest first. */

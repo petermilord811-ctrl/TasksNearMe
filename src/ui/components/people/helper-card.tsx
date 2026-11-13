@@ -6,6 +6,7 @@ import { formatHours, formatMoney } from '@/shared/format';
 import { cn } from '@/ui/lib/utils';
 import { InitialsAvatar } from './initials-avatar';
 import { RatingStars } from './rating-stars';
+import { ReliableBadge } from './reliable-badge';
 import { VerificationBadges } from './verification-badges';
 
 export interface HelperCardProps {
@@ -37,6 +38,7 @@ export function HelperCard({ helper, variant = 'full' }: HelperCardProps) {
           {t('foundingHelper', { number: helper.foundingHelperNumber })}
         </p>
       )}
+      <ReliableBadge reliable={helper.reliable} />
       <VerificationBadges badges={helper.badges} compact />
       <div className="space-y-2">
         <RatingStars rating={helper.rating} />

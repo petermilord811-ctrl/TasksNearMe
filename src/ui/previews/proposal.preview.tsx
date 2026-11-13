@@ -3,7 +3,7 @@ import { ACTION_ERROR_CODES, routes, type ActionResult, type AppShellHandlers, t
 import {
   deskProposalDeclinedHelper, deskProposalExpiredPoster, deskProposalWithdrawnPoster,
   fakeHandler, fakeProposalHandlers, jordanShell, mayaShell, movingProposalSentHelper,
-  proposalAcceptedData, proposalHelperData, proposalPosterData,
+  proposalAcceptedData, proposalHelperData, proposalPosterData, proposalRepeatAcceptedData, proposalRepeatPosterData,
 } from '@/fixtures';
 import { ProposalContent } from '@/ui/screens/clients/proposal-screen';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -28,6 +28,8 @@ const declined: ActionResult = { ok: false, code: 'payment_declined' };
 
 export const proposalPreviews: PreviewEntry[] = [
   preview('client-sent', copy.previews['client-sent'], proposalPosterData),
+  preview('client-repeat', copy.previews['client-repeat'], proposalRepeatPosterData),
+  preview('client-repeat-accepted', copy.previews['client-repeat-accepted'], proposalRepeatAcceptedData),
   preview('client-bank-verification', copy.previews['client-bank-verification'], proposalPosterData, {
     initialResult: verification,
     handlers: {

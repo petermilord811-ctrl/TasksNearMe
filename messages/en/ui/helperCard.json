@@ -19,6 +19,10 @@
     "samFull": "Sam · full helper card",
     "jordanFounding": "Jordan · founding helper",
     "leeCompact": "Lee · compact helper card",
-    "profile": "Helper profile"
-  }
+    "profile": "Helper profile",
+    "samReliable": "Sam: a reliable helper"
+  },
+  "reliable": "Reliable",
+  "reliableLabel": "Reliable: no no-shows and few cancellations over the last year",
+  "reliableHint": "No no-shows and few cancellations over the last year"
 }

@@ -13,7 +13,7 @@ const hourlyTask: TaskPublicView = {
 };
 
 type TaskTitle = 'desk' | 'yard' | 'cleaningFlexible' | 'remote' | 'hourly';
-type HelperTitle = 'samFull' | 'jordanFounding' | 'leeCompact';
+type HelperTitle = 'samFull' | 'jordanFounding' | 'leeCompact' | 'samReliable';
 
 function TaskPreview({ task, title }: { task: TaskPublicView; title: TaskTitle }) {
   const t = useTranslations('taskCard');
@@ -47,4 +47,5 @@ export const publicCardPreviews: PreviewEntry[] = [
   { id: 'helper-card/sam-full', group: helperCopy.preview.group, title: helperCopy.preview.samFull, render: () => <HelperPreview helper={sam} title="samFull" /> },
   { id: 'helper-card/jordan-founding', group: helperCopy.preview.group, title: helperCopy.preview.jordanFounding, render: () => <HelperPreview helper={jordan} title="jordanFounding" /> },
   { id: 'helper-card/lee-compact', group: helperCopy.preview.group, title: helperCopy.preview.leeCompact, render: () => <HelperPreview helper={lee} title="leeCompact" variant="compact" /> },
+  { id: 'helper-card/sam-reliable', group: helperCopy.preview.group, title: helperCopy.preview.samReliable, render: () => <HelperPreview helper={{ ...sam, reliable: true }} title="samReliable" /> },
 ];

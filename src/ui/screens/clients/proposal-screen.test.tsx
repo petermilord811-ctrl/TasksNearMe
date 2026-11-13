@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, REBOOK_ACTION_IDS, REBOOK_PROPOSAL_STATUSES, routes, type PaymentAttemptResult, type ProposalHandlers, type ProposalPageData } from '@/contracts';
-import { fakeHandler, proposalAcceptedData, proposalHelperData, proposalPosterData } from '@/fixtures';
+import { fakeHandler, proposalAcceptedData, proposalHelperData, proposalPosterData, proposalRepeatAcceptedData, proposalRepeatPosterData } from '@/fixtures';
 import baseMessages from '../../../../messages/en/ui';
 import proposalCopy from '../../../../messages/en/ui/proposal.json';
 import { ProposalScreen } from './proposal-screen';
@@ -169,5 +169,22 @@ describe('ProposalScreen', () => {
     expect(screen.queryByRole('button', { name: 'Accept and pay' })).not.toBeInTheDocument();
     for (const status of REBOOK_PROPOSAL_STATUSES) expect(messages.proposal.status[status]).toBeTruthy();
     for (const action of REBOOK_ACTION_IDS) expect(messages.actions[action]).toBeTruthy();
+  });
+});
+
+describe('a repeating proposal', () => {
+  it('shows the schedule and the first dates, and keeps the card for later visits', () => {
+    mount(proposalRepeatPosterData);
+    expect(screen.getByText(proposalCopy.schedule)).toBeInTheDocument();
+    expect(screen.getByText('Every 2 weeks on Tuesday at 9:00 am')).toBeInTheDocument();
+    expect(screen.getByText(/^Visits on Tue, Dec 15 · Tue, Dec 29/)).toBeInTheDocument();
+    expect(screen.getByText(proposalCopy.paymentNoteRepeat)).toBeInTheDocument();
+    // No "save this card" choice: it's kept.
+    expect(screen.queryByRole('checkbox', { name: /Save this card/ })).not.toBeInTheDocument();
+  });
+
+  it('links to the regular visits once accepted', () => {
+    mount(proposalRepeatAcceptedData);
+    expect(screen.getByRole('link', { name: proposalCopy.viewSeries })).toHaveAttribute('href', routes.app.series('srs_yard'));
   });
 });

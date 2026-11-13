@@ -1,10 +1,14 @@
 'use client';
 
-import { Hammer, Laptop, Leaf, Package, Sparkles } from 'lucide-react';
+import { useId, useState } from 'react';
+import { Hammer, Laptop, Leaf, Lightbulb, Package, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useFormContext } from 'react-hook-form';
 import type { CategorySlug, PostTaskPageData, TaskDraftInput } from '@/contracts';
+import { readTaskIntent } from '@/shared/task-intent';
 import { cn } from '@/ui/lib/utils';
+import { Button } from '@/ui/primitives/button';
+import { Input } from '@/ui/primitives/input';
 import { PostingField, postingFieldId } from './posting-field';
 
 const icons = { 'furniture-assembly': Hammer, 'moving-help': Package, 'yard-cleanup': Leaf, 'light-cleaning': Sparkles, 'computer-help': Laptop };
@@ -25,7 +29,13 @@ export function CategoryStep({ data }: { data: PostTaskPageData }) {
     if (!category.remoteAllowed && watch('location.mode') === 'remote') setValue('location', { mode: 'local', placeId: '' }, { shouldDirty: true });
     clearErrors(['categorySlug', 'details', 'budget', 'location']);
   }
-  return <PostingField name="categorySlug" label={t('category.label')} hint={t('category.hint')}>
+  return <div className="space-y-6">
+    <CategorySuggestion data={data} selected={selected} onUse={(slug, title) => {
+      select(slug);
+      // The words they typed make a first title, unless they already wrote one.
+      if (title && !watch('title')) setValue('title', title, { shouldDirty: true });
+    }} />
+    <PostingField name="categorySlug" label={t('category.label')} hint={t('category.hint')}>
     <div role="radiogroup" aria-label={t('category.label')} aria-describedby={`${id}-hint ${id}-error`} aria-invalid={getFieldState('categorySlug', formState).invalid} className="grid gap-3">
       {data.categories.map((category, index) => {
         const Icon = icons[category.slug];
@@ -36,5 +46,31 @@ export function CategoryStep({ data }: { data: PostTaskPageData }) {
         </label>;
       })}
     </div>
-  </PostingField>;
+  </PostingField>
+  </div>;
+}
+
+/**
+ * Not sure which category? A few words ("rake the leaves out front") and the category they sound like, with "Use"
+ * (blueprint 01 P2, a suggested category): plain word matching, instant and free. It also says when it's work we
+ * don't offer (TV mounting, licensed trades). Nothing is chosen until they tap "Use".
+ */
+function CategorySuggestion({ data, selected, onUse }: { data: PostTaskPageData; selected: CategorySlug | undefined; onUse: (slug: CategorySlug, title: string) => void }) {
+  const t = useTranslations('postTask.category.suggest');
+  const id = useId();
+  const [text, setText] = useState('');
+  const intent = text.trim().length >= 3 ? readTaskIntent(text) : null;
+  const match = intent?.category ? data.categories.find((category) => category.slug === intent.category) : undefined;
+  return <section aria-labelledby={`${id}-label`} className="space-y-3 rounded-[1.375rem] border border-dashed border-foreground/15 p-4">
+    <label id={`${id}-label`} htmlFor={`${id}-text`} className="flex items-center gap-2 font-medium"><Lightbulb aria-hidden="true" className="size-4 text-primary" />{t('label')}</label>
+    <Input id={`${id}-text`} value={text} onChange={(event) => setText(event.target.value)} maxLength={200} autoComplete="off" aria-describedby={`${id}-result`} placeholder={t('placeholder')} />
+    <div id={`${id}-result`} aria-live="polite" className="min-h-6 text-sm">
+      {intent?.notOffered ? <p className="text-pretty text-muted-foreground">{t(`notOffered.${intent.notOffered}`)}</p>
+        : match ? <p className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span>{t('soundsLike', { category: match.name })}</span>
+          {selected === match.slug ? <span className="font-medium text-success">{t('chosen')}</span> : <Button type="button" size="sm" variant="outline" onClick={() => onUse(match.slug, intent?.title ?? '')}>{t('use', { category: match.name })}</Button>}
+        </p>
+          : intent ? <p className="text-muted-foreground">{t('none')}</p> : <p className="text-muted-foreground">{t('hint')}</p>}
+    </div>
+  </section>;
 }

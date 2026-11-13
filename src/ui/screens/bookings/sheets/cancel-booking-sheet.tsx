@@ -53,7 +53,10 @@ function CancelBookingContent(props: CancelBookingSheetProps) {
       {loadError ? <><p className="flex items-start gap-2"><CircleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />{t('cancel.loadError')}</p><Button type="button" variant="outline" onClick={() => { request.current = undefined; setLoadError(false); setAttempt((value) => value + 1); }}>{t('cancel.retry')}</Button></> : <><p role="status" className="flex items-center gap-2"><Spinner aria-hidden="true" />{t('cancel.loading')}</p><Skeleton aria-hidden="true" className="h-28 rounded-2xl" /></>}
     </div> : <form noValidate aria-label={t('cancel.title')} aria-busy={mutation.pending} className="space-y-5" onSubmit={form.handleSubmit(mutation.submit, mutation.onInvalid)}>
       <div className="space-y-3 rounded-2xl border border-foreground/[0.06] bg-secondary p-4 text-secondary-foreground">
-        {preview.by === 'poster' ? <>
+        {preview.nothingCharged ? <>
+          <p className="font-heading text-xl/7 font-semibold tracking-[-0.015em]">{t('cancel.nothingChargedTitle')}</p>
+          <p>{t(preview.by === 'poster' ? 'cancel.nothingCharged' : 'cancel.nothingChargedHelper', { client: props.data.poster.displayName })}</p>
+        </> : preview.by === 'poster' ? <>
           <p className="font-heading text-xl/7 font-semibold tracking-[-0.015em] tabular-nums">{t.rich('cancel.posterRefund', { amount: () => <Money cents={preview.posterRefundCents} size="lg" /> })}</p>
           {preview.late && <p className="text-sm tabular-nums">{t('cancel.posterLate', { fee: formatMoney(preview.helperCompensationCents), helper: props.data.helper.displayName, refund: formatMoney(preview.posterRefundCents) })}</p>}
         </> : <><p className="font-heading text-xl/7 font-semibold tracking-[-0.015em] tabular-nums">{t('cancel.helperRefund', { client: props.data.poster.displayName })}</p><p>{t.rich('cancel.refundAmount', { client: props.data.poster.displayName, amount: () => <Money cents={preview.posterRefundCents} /> })}</p></>}

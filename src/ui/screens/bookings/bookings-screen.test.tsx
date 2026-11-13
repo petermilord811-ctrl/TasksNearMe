@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { routes, type BookingsPageData } from '@/contracts';
-import { bookingsEmptyData, jordanBookingsPageData, mayaBookingsNeedsActionData, mayaBookingsPageData } from '@/fixtures';
+import { bookingsEmptyData, jordanBookingsPageData, mayaBookingsNeedsActionData, mayaBookingsPageData, mayaBookingsWithRegularData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import bookings from '../../../../messages/en/ui/bookings.json';
 import { BookingsScreen } from './bookings-screen';
@@ -17,6 +17,25 @@ function renderBookings(data: BookingsPageData = mayaBookingsPageData) {
 }
 
 describe('BookingsScreen', () => {
+  it('lists regular visits first, each opening its series, with how it repeats and what needs the client', () => {
+    renderBookings(mayaBookingsWithRegularData);
+    const section = within(screen.getByRole('region', { name: bookings.regular.title }));
+    const yard = within(section.getByRole('article', { name: 'Rake the backyard and bag the leaves' }));
+    expect(yard.getByRole('link', { name: 'Rake the backyard and bag the leaves' })).toHaveAttribute('href', routes.app.series('srs_yard_sam'));
+    expect(yard.getByText('With Sam K.')).toBeVisible();
+    expect(yard.getByText('Every week on Tuesday at 9:00 am')).toBeVisible();
+    expect(yard.getByText('Next visit: Tue, Nov 24 · 9:00 am')).toBeVisible();
+    const cleaning = within(section.getByRole('article', { name: 'Light cleaning for a 2-bedroom apartment' }));
+    expect(cleaning.getByText(bookings.regular.paymentDue)).toBeVisible();
+    expect(cleaning.getByText(bookings.regular.paused)).toBeVisible();
+    expect(cleaning.getByText('Paused until Tue, Dec 15')).toBeVisible();
+  });
+
+  it('shows no regular visits section without any', () => {
+    renderBookings();
+    expect(screen.queryByRole('region', { name: bookings.regular.title })).not.toBeInTheDocument();
+  });
+
   it('opens the first populated tab with counts and shows the client row with its supplied total', () => {
     renderBookings();
     expect(screen.getByRole('tab', { name: 'Needs action (0)' })).toHaveAttribute('aria-selected', 'false');

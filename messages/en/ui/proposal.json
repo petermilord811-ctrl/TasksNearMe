@@ -64,6 +64,13 @@
     "expired": "Expired proposal",
     "withdrawn": "Withdrawn proposal",
     "submitting": "Client · accepting proposal",
-    "result": "Proposal feedback · {code}"
-  }
+    "result": "Proposal feedback · {code}",
+    "client-repeat": "Client · regular visits proposed",
+    "client-repeat-accepted": "Client · regular visits started"
+  },
+  "firstVisit": "First visit",
+  "schedule": "Regular visits",
+  "nextVisits": "Visits on {dates}, and on from there",
+  "paymentNoteRepeat": "You pay for the first visit now. Your card is kept, and each later visit is charged to it 2 days before. You can skip a visit, pause or stop the regular visits any time.",
+  "viewSeries": "View regular visits"
 }

@@ -11,6 +11,7 @@ import { ActionBar } from '@/ui/components/actions/action-bar';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
+import { ReliableBadge } from '@/ui/components/people/reliable-badge';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useOfferStatus } from '@/ui/components/status/use-status';
@@ -60,6 +61,7 @@ export function OfferCard({ offer, now, selectable, onAction }: OfferCardProps) 
         {offer.status !== 'pending' && <StatusBadge {...status} />}
       </div>
     </div>
+    <ReliableBadge reliable={offer.helper.reliable} />
     <VerificationBadges badges={offer.helper.badges} compact />
     <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-2">
       <p className="font-display text-2xl/8 font-semibold tracking-[-0.015em]"><OfferPrice pricing={offer.pricing} /></p>

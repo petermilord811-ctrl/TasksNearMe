@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Check, Clock3, HelpCircle, Lock, Navigation } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, Clock3, HelpCircle, Lock, Navigation, Repeat } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
   type BookingPaymentLine, type BookingSheetHandlers, type BookingTipHandlers, type BookingView, type ISODateTime,
+  type ScheduledPaymentHandlers,
 } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
@@ -25,6 +26,7 @@ import { cn } from '@/ui/lib/utils';
 import { BookingHubActions } from './booking-hub-actions';
 import { BookingDisputeCard } from './booking-dispute-card';
 import { BookingTipCard, type TipCardPreviewState } from './booking-tip-card';
+import { ScheduledPaymentCard, type ScheduledPaymentPreviewState } from './scheduled-payment-card';
 import { BookingHubWithoutSheetHandlers } from './booking-hub-with-sheets';
 
 export interface BookingHubScreenProps {
@@ -34,6 +36,8 @@ export interface BookingHubScreenProps {
   sheets?: BookingSheetHandlers;
   /** The client's tip card (UI-057). Without it no tip can be added (a tip already given still shows). */
   tip?: BookingTipHandlers;
+  /** A booking paid later (`scheduled`): the client pays now. Without it the card only says when it's charged. */
+  scheduledPayment?: ScheduledPaymentHandlers;
   now: ISODateTime;
 }
 
@@ -101,11 +105,12 @@ function BookingPayment({ payment }: { payment: BookingPaymentLine }) {
 }
 
 /** Initial result/pending states belong to the preview gallery. App pages use BookingHubScreen. */
-export function BookingHubContent({ data, handlers, sheets, tip, now, initialResult, initialPending, tipPreview }: Omit<BookingHubScreenProps, 'sheets'> & {
+export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, now, initialResult, initialPending, tipPreview, scheduledPreview }: Omit<BookingHubScreenProps, 'sheets'> & {
   sheets: BookingSheetHandlers;
   initialResult?: ActionResult;
   initialPending?: BookingActionId;
   tipPreview?: TipCardPreviewState;
+  scheduledPreview?: ScheduledPaymentPreviewState;
 }) {
   const { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } = useFormat();
   const t = useTranslations('bookingHub');
@@ -122,6 +127,9 @@ export function BookingHubContent({ data, handlers, sheets, tip, now, initialRes
         <ArrowLeft aria-hidden="true" className={backArrow} />{t('back')}
       </Link>
       <PageHeader title={data.task.title} description={categories(data.task.categorySlug)}><StatusBadge {...status} /></PageHeader>
+      {data.series && <Link href={routes.app.series(data.series.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
+        <Repeat aria-hidden="true" className="size-4 shrink-0" />{t('seriesLink', { index: data.series.index, cadence: data.series.cadence })}
+      </Link>}
       <BookingState data={data} now={now} tone={status.tone} />
     </div>
 
@@ -138,6 +146,8 @@ export function BookingHubContent({ data, handlers, sheets, tip, now, initialRes
     </section>}
 
     {data.dispute && <BookingDisputeCard dispute={data.dispute} viewerRole={data.viewerRole} />}
+
+    <ScheduledPaymentCard key={`scheduled-${data.id}`} data={data} handlers={scheduledPayment} preview={scheduledPreview} />
 
     <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} />
 

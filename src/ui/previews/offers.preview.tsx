@@ -30,6 +30,7 @@ export const offerPreviews: PreviewEntry[] = [
   card('accepted', { ...deskOfferJordan, isNew: false, status: 'accepted', actions: [] }),
   card('withdrawn', { ...deskOfferSam, status: 'withdrawn', actions: [] }),
   card('expired', { ...deskOfferSam, status: 'expired', actions: [] }),
+  { id: 'offer-card/reliable', title: copy.previews.reliable, group: copy.previews.group, render: () => <OfferCard offer={{ ...deskOfferJordan, helper: { ...deskOfferJordan.helper, reliable: true } }} now={now} onAction={onAction} /> },
   { id: 'offer-card/selected', title: copy.previews.selected, group: copy.previews.group, render: () => <SelectableOfferPreview /> },
   { id: 'offer-comparison/three-offers', title: copy.previews.comparison, group: copy.previews.group, render: () => <OfferComparison offers={deskOwnerView.offers} now={now} /> },
   detail('default', copy.previews.detail, deskOfferDetailData),

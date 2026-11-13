@@ -1,10 +1,10 @@
 /** @vitest-environment jsdom */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { ACTION_ERROR_CODES, routes, type ActionResult, type ProposeRebookHandlers } from '@/contracts';
-import { deskBreakdown, fakeHandler, fakeProposeRebookHandlers, movingProposalSentHelper, proposeDeskRebookData } from '@/fixtures';
+import { deskBreakdown, fakeHandler, fakeProposeRebookHandlers, movingProposalSentHelper, proposeDeskRebookData, proposeYardRebookData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import clients from '../../../../messages/en/ui/clients.json';
 import { ProposeRebookContent, type ProposeRebookPreviewState, type ProposeRebookScreenProps } from './propose-rebook-screen';
@@ -128,5 +128,27 @@ describe('propose a booking', () => {
     await user.click(screen.getByRole('button', { name: 'Send proposal' }));
     expect(await screen.findByText(messages.feedback.error.unknown)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send proposal' })).toBeEnabled();
+  });
+});
+
+describe('regular visits on a proposal', () => {
+  beforeEach(() => { vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn(); }); });
+  afterEach(() => { vi.unstubAllGlobals(); });
+  it('offers Repeat only where the task can repeat', () => {
+    mount();
+    expect(screen.queryByRole('radiogroup', { name: clients.form.repeat })).not.toBeInTheDocument();
+  });
+
+  it('says the schedule for the chosen start and sends the cadence', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount({ data: proposeYardRebookData });
+    expect(screen.getByRole('radiogroup', { name: clients.form.repeat })).toBeInTheDocument();
+    expect(screen.getByText(clients.form.repeatOnce)).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Every 2 weeks' }));
+    expect(screen.getByText(clients.form.repeatPickDate)).toBeInTheDocument();
+    chooseStart('2026-12-15', '09:00');
+    expect(screen.getByText(/^Every 2 weeks on Tuesday at 9:00 am\. Each visit is charged to Maya/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Send proposal' }));
+    await waitFor(() => expect(handlers.onPropose).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ date: '2026-12-15', startTime: '09:00', repeat: 'biweekly' })));
   });
 });

@@ -1,0 +1,148 @@
+{
+  "schedule": {
+    "weekly": "Every week on {weekday} at {time}",
+    "biweekly": "Every 2 weeks on {weekday} at {time}",
+    "monthly": "Monthly on the {nth} {weekday} at {time}",
+    "weekday": "{day, select, 0 {Sunday} 1 {Monday} 2 {Tuesday} 3 {Wednesday} 4 {Thursday} 5 {Friday} 6 {Saturday} other {}}",
+    "nth": "{n, select, 1 {first} 2 {second} 3 {third} 4 {fourth} other {last}}",
+    "cadence": {
+      "once": "Just once",
+      "weekly": "Every week",
+      "biweekly": "Every 2 weeks",
+      "monthly": "Every month"
+    }
+  },
+  "back": "Bookings",
+  "withHelper": "With {name}",
+  "withClient": "For {name}",
+  "status": {
+    "active": "Regular visits",
+    "paused": "Paused until {date}",
+    "ending": "Ends after {date}",
+    "ended": "Ended",
+    "canceled": "Stopped"
+  },
+  "scheduleTitle": "How it repeats",
+  "place": "{category} · {area}",
+  "length": "{hours} each visit",
+  "since": "Started {date}",
+  "completed": "{count, plural, =0 {No visits done yet} one {# visit done} other {# visits done}}",
+  "payment": {
+    "charged": "Each visit is charged to {card} 2 days before it.",
+    "missing": "There's no card on file, so the next visits can't be charged. Choose a card to keep them.",
+    "helper": "{name}'s card is charged 2 days before each visit. You'll see the address once a visit is paid."
+  },
+  "notes": {
+    "paused": "Paused until {date}. Visits before then are skipped, and nothing is charged for them.",
+    "ending": "These regular visits end after {date}. Visits until then go ahead as booked.",
+    "ended": "These regular visits have ended.",
+    "canceled": "These regular visits stopped. Paid visits stay on their booking pages.",
+    "endingByOther": "{name} is ending these regular visits. Visits until {date} go ahead as booked.",
+    "canceledByOther": "{name} stopped these regular visits. Paid visits stay on their booking pages."
+  },
+  "actions": {
+    "pause_series": "Pause",
+    "resume_series": "Start again now",
+    "change_card": "Change card",
+    "cancel_series": "Stop regular visits",
+    "end_series": "End regular visits",
+    "message": "Message {name}"
+  },
+  "actionsLabel": "Regular visits actions",
+  "pause": {
+    "title": "Pause regular visits",
+    "description": "Visits before the date you pick are skipped, and nothing is charged for them. They start again on that date.",
+    "date": "Start again on",
+    "dateHint": "Any day from {first} to {last}.",
+    "outOfRange": "Pick a day from {first} to {last}.",
+    "submit": "Pause",
+    "pending": "Pausing…",
+    "success": "Regular visits are paused."
+  },
+  "changeCard": {
+    "title": "Change the card",
+    "description": "The next visits are charged to the card you choose. A visit whose charge failed is tried again with it right away.",
+    "pick": "Card",
+    "noCards": "You have no saved card yet.",
+    "addCard": "Add a card",
+    "submit": "Use this card",
+    "pending": "Saving…",
+    "success": "The card is changed."
+  },
+  "stop": {
+    "title": "Stop regular visits?",
+    "description": "Visits not paid yet are removed. Paid visits stay, and you can cancel them on their booking pages.",
+    "confirm": "Stop regular visits",
+    "success": "Regular visits stopped."
+  },
+  "end": {
+    "title": "End regular visits?",
+    "description": "Visits until {date} still happen. Later ones are removed, and {name} is told.",
+    "confirm": "End regular visits",
+    "success": "Regular visits will end after {date}."
+  },
+  "resume": {
+    "success": "Regular visits are back on."
+  },
+  "skip": {
+    "title": "Skip the visit on {date}?",
+    "descriptionPoster": "Nothing is charged for it. The visits after it stay on the calendar.",
+    "descriptionHelper": "{name} is told, and nothing is charged for it. The visits after it stay on the calendar.",
+    "confirm": "Skip visit",
+    "success": "The visit is skipped."
+  },
+  "keep": "Keep it",
+  "goBack": "Go back",
+  "changed": "This changed. Reload the page to see what you can do now.",
+  "reload": "Reload",
+  "upcoming": "Upcoming visits",
+  "noUpcoming": "No visits ahead.",
+  "past": "Past visits",
+  "visit": {
+    "number": "Visit {index}",
+    "chargeAtPoster": "Your card is charged {date}",
+    "chargeAtHelper": "{name}'s card is charged {date}",
+    "payByPoster": "Pay by {date}, or it's skipped",
+    "payByHelper": "Waiting for {name}'s payment until {date}"
+  },
+  "state": {
+    "scheduled": "On the calendar",
+    "payment_due": "Payment needed",
+    "booked": "Booked and paid",
+    "completed": "Done",
+    "skipped": "Skipped",
+    "canceled": "Canceled"
+  },
+  "skippedBy": {
+    "poster": "Skipped by {name}",
+    "helper": "Skipped by {name}",
+    "payment": "Skipped: it wasn't paid in time",
+    "pause": "Skipped while paused"
+  },
+  "skippedByYou": "You skipped it",
+  "failure": {
+    "payment_declined": "The card was declined.",
+    "insufficient_funds": "The card didn't have enough funds.",
+    "requires_bank_verification": "Your bank wants you to confirm the payment.",
+    "no_card": "There's no card on file."
+  },
+  "visitActions": {
+    "skip_visit": "Skip",
+    "pay_visit": "Pay now",
+    "open_booking": "View booking"
+  },
+  "visitActionsLabel": "Visit on {date}",
+  "perVisitTotal": "Each visit: your total",
+  "perVisitEarnings": "Each visit: what you earn",
+  "previews": {
+    "group": "Regular visits",
+    "client-active": "Client · active",
+    "client-payment-due": "Client · a charge failed",
+    "client-no-card": "Client · no card on file",
+    "client-paused": "Client · paused",
+    "client-monthly": "Client · monthly",
+    "helper-active": "Helper · active",
+    "helper-ended": "Helper · ending after notice",
+    "client-stopped": "Client · stopped"
+  }
+}

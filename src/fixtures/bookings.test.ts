@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { BookingView } from '@/contracts';
+import { BOOKING_STATUSES, type BookingView } from '@/contracts';
 import * as fixtures from './bookings';
 
 const views = Object.entries(fixtures).filter(
@@ -10,9 +10,7 @@ const views = Object.entries(fixtures).filter(
 describe('booking fixtures', () => {
   it('covers both roles and every booking state', () => {
     expect(new Set(views.map(([, view]) => view.viewerRole))).toEqual(new Set(['poster', 'helper']));
-    expect(new Set(views.map(([, view]) => view.status))).toEqual(
-      new Set(['pending_funding', 'confirmed', 'in_progress', 'completion_submitted', 'disputed', 'completed', 'canceled']),
-    );
+    expect(new Set(views.map(([, view]) => view.status))).toEqual(new Set(BOOKING_STATUSES));
   });
 
   it.each(views)('%s: an exact address only when visible, payments only for posters', (_name, view) => {

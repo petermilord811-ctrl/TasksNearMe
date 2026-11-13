@@ -17,7 +17,7 @@ export interface ProposeRebookPreviewState {
   initialPending?: boolean;
   initialBreakdown?: PriceBreakdown;
   initialQuoteFailed?: boolean;
-  initialValues?: Pick<RebookProposalInput, 'date' | 'startTime' | 'message'>;
+  initialValues?: Pick<RebookProposalInput, 'date' | 'startTime' | 'message' | 'repeat'>;
 }
 
 export function ProposeRebookScreen(props: ProposeRebookScreenProps) {

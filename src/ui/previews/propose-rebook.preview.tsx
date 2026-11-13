@@ -1,5 +1,5 @@
 import { ACTION_ERROR_CODES, routes, type ActionResult, type AppShellHandlers, type PreviewEntry, type ProposeRebookHandlers, type ProposeRebookPageData } from '@/contracts';
-import { deskBreakdown, fakeHandler, fakeProposeRebookHandlers, jordanShell, movingConfirmHourlyData, movingProposalSentHelper, proposeDeskRebookData } from '@/fixtures';
+import { deskBreakdown, fakeHandler, fakeProposeRebookHandlers, jordanShell, movingConfirmHourlyData, movingProposalSentHelper, proposeDeskRebookData, proposeYardRebookData } from '@/fixtures';
 import { ProposeRebookContent, type ProposeRebookPreviewState } from '@/ui/screens/clients/propose-rebook-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/clients.json';
@@ -25,6 +25,8 @@ const errors: ActionResult = { ok: false, code: 'validation_failed', fieldErrors
 
 export const proposeRebookPreviews: PreviewEntry[] = [
   preview('default', copy.formPreviews.default),
+  preview('repeat-choice', copy.formPreviews.repeatChoice, proposeYardRebookData),
+  preview('repeat-biweekly', copy.formPreviews.repeatBiweekly, proposeYardRebookData, { initialValues: { date: '2026-12-15', startTime: '09:00', repeat: 'biweekly' } }),
   preview('hourly', copy.formPreviews.hourly, hourly, { initialBreakdown: movingProposalSentHelper.breakdown, handlers: { ...handlers, onQuote: async () => movingProposalSentHelper.breakdown } }),
   preview('submitting', copy.formPreviews.submitting, proposeDeskRebookData, { initialValues: values, initialPending: true, handlers: { ...handlers, onPropose: () => new Promise(() => {}) } }),
   preview('errors', copy.formPreviews.errors, proposeDeskRebookData, { initialValues: values, initialResult: errors, handlers: { ...handlers, onPropose: fakeHandler(errors) } }),

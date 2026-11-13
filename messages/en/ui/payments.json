@@ -22,7 +22,8 @@
     "cardLoading": "Loading the secure card field…",
     "cardUnavailable": "The card field didn't load. Check your connection and refresh the page, or choose a saved card.",
     "cardFailed": "We couldn't check this card. Check the details and try again.",
-    "stripeHint": "We take Visa, Mastercard, American Express and Discover. Your card details go straight to Stripe, our payment provider."
+    "stripeHint": "We take Visa, Mastercard, American Express and Discover. Your card details go straight to Stripe, our payment provider.",
+    "kept": "This card is kept on your account for the later charges. You can change it any time."
   },
   "testCards": {
     "success": "Approved",

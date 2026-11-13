@@ -23,7 +23,8 @@
     "safety": "Safety report",
     "sending": "Sending safety report",
     "sent": "Safety report sent",
-    "validationFailed": "Safety report needs details"
+    "validationFailed": "Safety report needs details",
+    "clientNothingCharged": "Client cancels a booking paid later (nothing charged)"
   },
   "back": "Go back",
   "sending": "Sending…",
@@ -59,7 +60,10 @@
       "scope_different": "The task is different from what we agreed",
       "safety_concern": "I have a safety concern",
       "other": "Another reason"
-    }
+    },
+    "nothingChargedTitle": "Canceling is free",
+    "nothingCharged": "Nothing has been charged yet, so there's nothing to refund and no fee.",
+    "nothingChargedHelper": "{client} hasn't been charged yet, so canceling now is free and doesn't count against you."
   },
   "late": {
     "title": "How late will you be?",

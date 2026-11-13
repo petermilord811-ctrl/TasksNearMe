@@ -4,7 +4,7 @@ import {
   deskBookingHelperCantAccessAvailable, deskBookingHelperWithSheets,
   deskBookingPosterCantAccessReported, deskBookingPosterNoShowNotYet, deskBookingPosterNoShowReportable,
   deskBookingPosterWithSheets, deskCancelPreviewHelperEarly, deskCancelPreviewHelperLate,
-  deskCancelPreviewPosterEarly, deskCancelPreviewPosterLate,
+  deskCancelPreviewPosterEarly, deskCancelPreviewPosterLate, deskCancelPreviewScheduled,
 } from '@/fixtures';
 import { CancelBookingSheet, CantAccessSheet, ReportNoShowSheet, RunningLateSheet, SafetyReportSheet } from '@/ui/screens/bookings/sheets';
 import { BookingHubSheetExample, SheetExample, type SheetOptions, type SheetProps } from './booking-sheets-examples';
@@ -41,6 +41,7 @@ export const bookingSheetsPreviews: PreviewEntry[] = [
   hubPreview('client-cant-access-reported', copy.previews.clientCantAccessReported, deskBookingPosterCantAccessReported),
   sheetPreview('sheet-cancel/client-early', copy.previews.clientEarly, CancelBookingSheet, deskBookingPosterWithSheets, { initialPreview: deskCancelPreviewPosterEarly }),
   sheetPreview('sheet-cancel/client-late', copy.previews.clientLate, CancelBookingSheet, deskBookingPosterWithSheets, { initialPreview: deskCancelPreviewPosterLate }),
+  sheetPreview('sheet-cancel/client-nothing-charged', copy.previews.clientNothingCharged, CancelBookingSheet, deskBookingPosterWithSheets, { initialPreview: deskCancelPreviewScheduled }),
   sheetPreview('sheet-cancel/helper-early', copy.previews.helperEarly, CancelBookingSheet, deskBookingHelperWithSheets, { initialPreview: deskCancelPreviewHelperEarly }),
   sheetPreview('sheet-cancel/helper-late', copy.previews.helperLate, CancelBookingSheet, deskBookingHelperWithSheets, { initialPreview: deskCancelPreviewHelperLate }),
   sheetPreview('sheet-cancel/loading', copy.previews.loading, CancelBookingSheet, deskBookingPosterWithSheets, { initialPreviewState: 'loading' }),

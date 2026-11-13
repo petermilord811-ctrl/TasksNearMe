@@ -461,7 +461,7 @@ export async function getSeriesPage(db: Db, viewerId: string, seriesId: string, 
     const rows = await db.select().from(paymentMethods).where(and(eq(paymentMethods.userId, series.posterUserId), isNull(paymentMethods.detachedAt))).orderBy(desc(paymentMethods.isDefault), asc(paymentMethods.createdAt));
     cards = rows.map((row) => ({ id: row.id, brand: row.brand as CardBrand, last4: row.last4, expMonth: row.expMonth, expYear: row.expYear, isDefault: row.isDefault }));
     const current = rows.find((row) => row.id === series.paymentMethodId);
-    card = current ? { brand: current.brand as CardBrand, last4: current.last4, expMonth: current.expMonth, expYear: current.expYear } : null;
+    card = current ? { methodId: current.id, brand: current.brand as CardBrand, last4: current.last4, expMonth: current.expMonth, expYear: current.expYear } : null;
   }
   return {
     series: {
@@ -477,6 +477,7 @@ export async function getSeriesPage(db: Db, viewerId: string, seriesId: string, 
       ...(role === 'poster' ? { card } : {}),
       ...(series.pausedUntil ? { pausedUntil: series.pausedUntil } : {}),
       ...(series.endsOn ? { endsOn: series.endsOn } : {}),
+      ...((status === 'canceled' || status === 'ended') && series.changedBy ? { stoppedBy: series.changedBy as NonNullable<SeriesPageData['series']['stoppedBy']> } : {}),
       startedAt: series.createdAt.toISOString(),
       completedCount: visits.filter((visit) => visit.status === 'completed').length,
       upcoming: ahead.map((visit) => visitView(visit, role, series.durationMinutes, now)),

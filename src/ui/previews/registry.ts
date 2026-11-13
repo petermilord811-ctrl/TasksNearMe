@@ -67,6 +67,7 @@ import { availabilitySlotPreviews } from './availability-slots.preview';
 import { myClientsPreviews } from './my-clients.preview';
 import { proposeRebookPreviews } from './propose-rebook.preview';
 import { proposalPreviews } from './proposal.preview';
+import { seriesPreviews } from './series.preview';
 import { verificationPreviews } from './verification.preview';
 
 export const previews: PreviewEntry[] = [
@@ -135,5 +136,6 @@ export const previews: PreviewEntry[] = [
   ...myClientsPreviews,
   ...proposeRebookPreviews,
   ...proposalPreviews,
+  ...seriesPreviews,
   ...reportPreviews,
 ];

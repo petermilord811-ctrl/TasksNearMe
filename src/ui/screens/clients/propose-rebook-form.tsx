@@ -33,7 +33,7 @@ export function ProposeRebookForm({ data, handlers, now, initialResult, initialP
       context.addIssue({ code: 'custom', path: ['startTime'], message: 'out_of_range' });
     }
   }), [data.limits, now]);
-  const form = useForm<RebookProposalInput>({ resolver: zodResolver(schema), defaultValues: { date: '', startTime: '', pricing: data.booking.lastPricing, message: '', ...initialValues } });
+  const form = useForm<RebookProposalInput>({ resolver: zodResolver(schema), defaultValues: { date: '', startTime: '', pricing: data.booking.lastPricing, message: '', ...(data.canRepeat ? { repeat: 'once' as const } : {}), ...initialValues } });
   const { setError, setFocus } = form;
   const pricing = useWatch({ control: form.control, name: 'pricing' });
   const quote = usePriceQuote({ pricing, valid: invitePricingSchema.safeParse(pricing).success, onQuote: handlers.onQuote, initialBreakdown, initialFailed: initialQuoteFailed });

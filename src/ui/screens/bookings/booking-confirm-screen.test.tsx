@@ -17,11 +17,13 @@ import {
   deskConfirmDeclinedData,
   deskConfirmInsufficientFundsData,
   deskConfirmNewCardData,
+  deskConfirmPaysLaterData,
   deskConfirmUnavailableData,
   fakeHandler,
   movingConfirmHourlyData,
   remoteConfirmData,
 } from '@/fixtures';
+import { formatDateTime } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import { BookingConfirmScreen } from './booking-confirm-screen';
 
@@ -58,6 +60,14 @@ async function acceptAndSubmit(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('BookingConfirmScreen', () => {
+  it('books a far-off task without charging today, says when the card is charged, and keeps the card', () => {
+    mount(deskConfirmPaysLaterData);
+    expect(screen.getByText(messages.bookingConfirm.totalLater)).toBeInTheDocument();
+    expect(screen.getByText(`Nothing is charged today. We'll charge your card on ${formatDateTime(deskConfirmPaysLaterData.paysLater!.chargeAt)}; if that doesn't go through, you can pay on the booking page until ${formatDateTime(deskConfirmPaysLaterData.paysLater!.payBy)}, or the booking is canceled with no fees.`)).toBeInTheDocument();
+    expect(screen.queryByText(messages.bookingConfirm.paymentNote)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Book now, pay $66.00 later' })).toBeInTheDocument();
+  });
+
   it('books the default saved card with the unchanged offer revision and follows redirectTo', async () => {
     const user = userEvent.setup();
     const { handlers } = mount();

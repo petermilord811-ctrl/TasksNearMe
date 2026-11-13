@@ -17,6 +17,8 @@ import {
   movingBookingPosterConfirmed, remoteBookingHelperConfirmed,
   deskBookingPosterWithOpenChange, deskBookingHelperWithOpenChange,
   deskBookingHelperTipped, deskBookingPosterTipAvailable, deskBookingPosterTipped, fakeBookingTipHandlers,
+  deskBookingPosterScheduled, fakeScheduledPaymentHandlers, mayaBookingsWithRegularData, yardVisitNoCardPoster,
+  yardVisitPaymentDueHelper, yardVisitPaymentDuePoster, yardVisitScheduledHelper, yardVisitScheduledPoster,
 } from '@/fixtures';
 import { BookingHubContent } from '@/ui/screens/bookings/booking-hub-screen';
 import { BookingsScreen } from '@/ui/screens/bookings/bookings-screen';
@@ -27,12 +29,16 @@ const beforeTask = '2026-11-20T15:00:00.000Z';
 const dayOf = '2026-11-21T16:00:00.000Z';
 const afterSubmission = '2026-11-21T18:00:00.000Z';
 const afterApproval = '2026-11-21T19:10:00.000Z';
+// Regular visit 3 (Tue, Nov 24): Friday before its charge, Sunday morning after the decline, Monday after the last try.
+const visitFriday = '2026-11-20T15:00:00.000Z';
+const visitSunday = '2026-11-22T16:00:00.000Z';
+const visitMonday = '2026-11-23T16:00:00.000Z';
 const shellHandlers: AppShellHandlers = {
   onModeChange: fakeHandler({ ok: true, code: 'updated' }),
   onSignOut: fakeHandler({ ok: true, code: 'updated' }),
 };
 
-type PreviewOptions = Pick<ComponentProps<typeof BookingHubContent>, 'initialResult' | 'initialPending' | 'handlers' | 'now' | 'tip' | 'tipPreview'>;
+type PreviewOptions = Pick<ComponentProps<typeof BookingHubContent>, 'initialResult' | 'initialPending' | 'handlers' | 'now' | 'tip' | 'tipPreview' | 'scheduledPayment' | 'scheduledPreview'>;
 
 function hubPreview(id: string, title: string, data: BookingView, options: Partial<PreviewOptions> = {}): PreviewEntry {
   const person = data.viewerRole === 'poster' ? data.poster : data.helper;
@@ -64,6 +70,17 @@ export const bookingsPreviews: PreviewEntry[] = [
   listPreview('client-needs-action', copy.previews.listNeedsAction, mayaBookingsNeedsActionData, mayaShell, afterSubmission),
   listPreview('helper', copy.previews.listHelper, jordanBookingsPageData, jordanShell),
   listPreview('empty', copy.previews.listEmpty, bookingsEmptyData),
+  listPreview('client-regular', copy.previews.listRegular, mayaBookingsWithRegularData),
+  hubPreview('client-visit-scheduled', copy.previews.clientVisitScheduled, yardVisitScheduledPoster, { now: visitFriday, scheduledPayment: fakeScheduledPaymentHandlers }),
+  hubPreview('client-visit-declined', copy.previews.clientVisitDeclined, yardVisitPaymentDuePoster, { now: visitSunday, scheduledPayment: fakeScheduledPaymentHandlers }),
+  hubPreview('client-visit-bank-step', copy.previews.clientVisitBankStep, yardVisitPaymentDuePoster, {
+    now: visitSunday, scheduledPayment: fakeScheduledPaymentHandlers,
+    scheduledPreview: { open: true, result: { ok: false, code: 'requires_bank_verification', verification: { paymentId: 'pay_yard_visit_3', kind: 'dev' } } },
+  }),
+  hubPreview('client-visit-no-card', copy.previews.clientVisitNoCard, yardVisitNoCardPoster, { now: visitMonday, scheduledPayment: fakeScheduledPaymentHandlers }),
+  hubPreview('helper-visit-scheduled', copy.previews.helperVisitScheduled, yardVisitScheduledHelper, { now: visitFriday }),
+  hubPreview('helper-visit-waiting', copy.previews.helperVisitWaiting, yardVisitPaymentDueHelper, { now: visitSunday }),
+  hubPreview('client-far-ahead', copy.previews.clientFarAhead, deskBookingPosterScheduled, { now: '2026-11-17T15:05:00.000Z', scheduledPayment: fakeScheduledPaymentHandlers }),
   hubPreview('client-confirmed', copy.previews.clientConfirmed, deskBookingPosterConfirmed),
   hubPreview('helper-confirmed', copy.previews.helperConfirmed, deskBookingHelperConfirmed),
   hubPreview('poster-open-change', copy.previews.posterOpenChange, deskBookingPosterWithOpenChange),

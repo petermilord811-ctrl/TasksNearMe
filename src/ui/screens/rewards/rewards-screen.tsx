@@ -28,7 +28,9 @@ function ProgramSummary({ program }: { program: RewardProgramView }) {
         ? t('page.rules.welcome', { amount, threshold })
         : program.program === 'repeat' && amount
           ? t('page.rules.repeat', { amount })
-          : t('page.rules.detailsInTerms')}
+          : program.program === 'recurring_month' && amount
+            ? t('page.rules.recurringMonth', { amount })
+            : t('page.rules.detailsInTerms')}
     </p>
     {program.program === 'repeat' && threshold && <p className="text-sm leading-6 text-muted-foreground tabular-nums">{t('page.rules.repeatThreshold', { threshold })}</p>}
   </li>;

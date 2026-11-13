@@ -10,7 +10,7 @@ import {
 } from '@/contracts';
 import {
   deskBookingPosterWithSheets, deskCancelPreviewHelperEarly, deskCancelPreviewHelperLate,
-  deskCancelPreviewPosterEarly, deskCancelPreviewPosterLate, fakeBookingSheetHandlers,
+  deskCancelPreviewPosterEarly, deskCancelPreviewPosterLate, deskCancelPreviewScheduled, fakeBookingSheetHandlers,
   movingBookingPosterConfirmed,
 } from '@/fixtures';
 import { formatDateTime, formatMoney } from '@/shared/format';
@@ -98,6 +98,14 @@ describe('CancelBookingSheet', () => {
     else expect(screen.queryByText(copy.cancel.strike)).not.toBeInTheDocument();
     if (preview.late) expect(screen.getByText(t('cancel.freeEnded', { at: formatDateTime(preview.freeUntil) }))).toBeVisible();
     if (preview.by === 'helper') expect(screen.getByText(t('cancel.helperRefund', { client: deskBookingPosterWithSheets.poster.displayName }))).toBeVisible();
+  });
+
+  it('says nothing was charged for a booking paid later, instead of a refund', async () => {
+    mount(CancelBookingSheet, { handlers: sheetHandlers({ onPreviewCancel: vi.fn(async () => deskCancelPreviewScheduled) }) });
+    expect(await screen.findByText(copy.cancel.nothingChargedTitle)).toBeVisible();
+    expect(screen.getByText(copy.cancel.nothingCharged)).toBeVisible();
+    expect(screen.queryByText(formatMoney(0))).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.cancel.strike)).not.toBeInTheDocument();
   });
 
   it('sends the chosen reason and trimmed note, locks during cancellation, then closes and refreshes', async () => {

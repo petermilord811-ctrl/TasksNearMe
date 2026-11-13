@@ -5,7 +5,7 @@ import {
   type BookingConfirmPageData, type PaymentAttemptResult, type PreviewEntry,
 } from '@/contracts';
 import {
-  deskConfirmData, deskConfirmDeclinedData, deskConfirmInsufficientFundsData,
+  deskConfirmData, deskConfirmDeclinedData, deskConfirmInsufficientFundsData, deskConfirmPaysLaterData,
   deskConfirmNewCardData, deskConfirmUnavailableData, fakeBookingConfirmHandlers,
   fakeHandler, mayaPaymentPanel, mayaShell, movingConfirmHourlyData,
   noSavedCardsPaymentPanel, remoteConfirmData,
@@ -53,6 +53,7 @@ export const bookingConfirmPreviews: PreviewEntry[] = [
   screenPreview('insufficient-funds', copy.previews['insufficient-funds'], deskConfirmInsufficientFundsData),
   screenPreview('hourly', copy.previews.hourly, movingConfirmHourlyData),
   screenPreview('remote', copy.previews.remote, remoteConfirmData),
+  screenPreview('pays-later', copy.previews.paysLater, deskConfirmPaysLaterData),
   screenPreview('pending-no-failure', copy.previews['pending-no-failure'], {
     ...deskConfirmData,
     pending: { bookingId: deskConfirmDeclinedData.pending!.bookingId, expiresAt: deskConfirmDeclinedData.pending!.expiresAt },

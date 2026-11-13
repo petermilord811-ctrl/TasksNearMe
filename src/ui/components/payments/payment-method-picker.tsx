@@ -34,9 +34,14 @@ interface PaymentMethodPickerProps {
   disabled?: boolean;
   error?: string;
   id?: string;
+  /**
+   * The card is kept whatever the client picks (regular visits, a booking paid later): no "Save this card"
+   * choice, a note saying so instead (the server keeps a new card).
+   */
+  keepCard?: boolean;
 }
 
-export function PaymentMethodPicker({ panel, field, disabled = false, error, id: suppliedId }: PaymentMethodPickerProps) {
+export function PaymentMethodPicker({ panel, field, disabled = false, error, id: suppliedId, keepCard = false }: PaymentMethodPickerProps) {
   const generatedId = useId();
   const id = suppliedId ?? generatedId;
   const t = useTranslations('payments');
@@ -113,18 +118,18 @@ export function PaymentMethodPicker({ panel, field, disabled = false, error, id:
           <span className="text-sm">{t(`testCards.${card}`)}</span>
         </label>)}
       </RadioGroup>
-      <label htmlFor={`${id}-save`} className={cn('flex min-h-11 cursor-pointer items-center gap-3', disabledControl && 'cursor-not-allowed opacity-60')}>
+      {keepCard ? <p className="text-sm text-muted-foreground">{t('picker.kept')}</p> : <label htmlFor={`${id}-save`} className={cn('flex min-h-11 cursor-pointer items-center gap-3', disabledControl && 'cursor-not-allowed opacity-60')}>
         <Checkbox id={`${id}-save`} name={`${field.name}.save`} checked={choice.save} disabled={disabledControl} onBlur={field.onBlur} onCheckedChange={(checked) => changeChoice({ ...choice, save: checked === true })} className="scroll-mb-40" />
         <span className="text-sm">{t('picker.save')}</span>
-      </label>
+      </label>}
     </div>}
     {choice.kind === 'stripe_card' && panel.newCard.kind === 'stripe' && <div className="space-y-3 rounded-2xl border border-foreground/[0.09] bg-muted/30 p-4 animate-in fade-in-0 slide-in-from-top-2 duration-300">
       <StripeCardField publishableKey={panel.newCard.publishableKey} disabled={disabledControl} describedBy={`${id}-stripe-hint`} onChange={(paymentMethodId) => changeChoice({ ...choice, paymentMethodId })} />
       <p id={`${id}-stripe-hint`} className="text-sm text-muted-foreground">{t('picker.stripeHint')}</p>
-      <label htmlFor={`${id}-save`} className={cn('flex min-h-11 cursor-pointer items-center gap-3', disabledControl && 'cursor-not-allowed opacity-60')}>
+      {keepCard ? <p className="text-sm text-muted-foreground">{t('picker.kept')}</p> : <label htmlFor={`${id}-save`} className={cn('flex min-h-11 cursor-pointer items-center gap-3', disabledControl && 'cursor-not-allowed opacity-60')}>
         <Checkbox id={`${id}-save`} name={`${field.name}.save`} checked={choice.save} disabled={disabledControl} onBlur={field.onBlur} onCheckedChange={(checked) => changeChoice({ ...choice, save: checked === true })} className="scroll-mb-40" />
         <span className="text-sm">{t('picker.save')}</span>
-      </label>
+      </label>}
     </div>}
     <div id={`${id}-error`} aria-live="polite">{error && <p className="text-sm text-destructive">{error}</p>}</div>
   </div>;

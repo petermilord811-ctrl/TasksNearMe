@@ -18,6 +18,7 @@ import {
   deskBookingPosterDisputed, deskBookingPosterSettled,
   deskBookingPosterWithOpenChange, deskBookingHelperWithOpenChange,
   deskBookingPosterTipAvailable, deskBookingPosterTipped, fakeBookingTipHandlers,
+  yardVisitScheduledHelper, yardVisitScheduledPoster,
 } from '@/fixtures';
 import { formatDate, formatDateTime, formatMoney, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
@@ -54,6 +55,26 @@ function mount(data: BookingView = deskBookingPosterConfirmed, now = '2026-11-17
 }
 
 const roles: BookingViewerRole[] = ['poster', 'helper'];
+
+describe('BookingHubScreen regular visits and scheduled payments', () => {
+  it('links a visit to its series and shows when it is charged, with a free skip', async () => {
+    const user = userEvent.setup();
+    const { onAction, onError } = mount(yardVisitScheduledPoster, '2026-11-20T15:00:00.000Z');
+    expect(screen.getByRole('link', { name: 'Visit 3 · Regular visits every week' })).toHaveAttribute('href', routes.app.series('srs_yard_sam'));
+    expect(screen.getByRole('region', { name: messages.bookingHub.scheduledCard.title })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: messages.actions.skip_visit }));
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: messages.feedback.confirm }));
+    expect(onAction).toHaveBeenCalledWith({ action: 'skip_visit' });
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("keeps the address from the helper until it's paid", () => {
+    mount(yardVisitScheduledHelper, '2026-11-20T15:00:00.000Z');
+    expect(screen.getByText(messages.bookingHub.address.after_confirmation)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Pay/ })).not.toBeInTheDocument();
+  });
+});
 
 describe('BookingHubScreen tips (UI-057)', () => {
   it("shows the client's tip: the card, its own payment line and the timeline event", () => {

@@ -327,3 +327,26 @@ describe('posting wizard', () => {
     expect(JSON.parse(sessionStorage.getItem(firstKey)!).values.title).toBe(deskDraft.title);
   });
 });
+
+describe('a suggested category', () => {
+  it('reads a few words, suggests the category, and fills the first title when they use it', async () => {
+    const user = userEvent.setup();
+    mount({ initialStep: 'category', initialValues: { ...deskDraft, title: '', categorySlug: 'furniture-assembly' } });
+    const words = screen.getByRole('textbox', { name: 'Not sure which one? Describe what you need' });
+    await user.type(words, 'I need someone to rake the leaves in my front yard');
+    expect(screen.getByText('Sounds like Yard cleanup.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Use Yard cleanup' }));
+    expect(screen.getByRole('radio', { name: /Yard cleanup/ })).toBeChecked();
+    expect(screen.getByText('Chosen')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByDisplayValue('Rake the leaves in my front yard')).toBeInTheDocument();
+  });
+
+  it('says when it is work we don’t offer', async () => {
+    const user = userEvent.setup();
+    mount({ initialStep: 'category' });
+    await user.type(screen.getByRole('textbox', { name: 'Not sure which one? Describe what you need' }), 'fix a leaking faucet');
+    expect(screen.getByText(/need a licensed pro/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Use / })).not.toBeInTheDocument();
+  });
+});

@@ -42,7 +42,7 @@ import type { PaymentProvider } from '@/integrations/payments';
 import { clientSummary } from './people';
 import { tipViewOf } from './tips';
 import { scheduledPaymentViewOf } from './scheduled';
-import { seriesOfBooking, skipVisit } from './series';
+import { seriesOfBooking, seriesSummaries, skipVisit } from './series';
 import { bookingTerms, bookings } from './schema';
 
 /**
@@ -278,6 +278,8 @@ const FINAL: string[] = ['completed', 'canceled'];
 /** `/app/bookings`: the viewer's bookings as client and helper. Holds that ran out are left out. */
 export async function getBookingsPage(db: Db, userId: string, now: Date): Promise<BookingsPageData> {
   await autoApproveDue(db, now);
+  const regular = await seriesSummaries(db, userId, now);
+  const withRegular = (page: BookingsPageData): BookingsPageData => (regular.length > 0 ? { ...page, regular } : page);
   const rows = await db
     .select({ booking: bookings, terms: bookingTerms })
     .from(bookings)
@@ -289,7 +291,7 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
       ),
     )
     .orderBy(desc(bookings.startAt));
-  if (rows.length === 0) return { needsAction: [], upcoming: [], past: [] };
+  if (rows.length === 0) return withRegular({ needsAction: [], upcoming: [], past: [] });
 
   const taskIds = [...new Set(rows.map((row) => row.booking.taskId))];
   const views = new Map((await Promise.all(taskIds.map((id) => findTaskWithPublicView(db, id)))).flatMap((f) => (f ? [[f.view.id, f.view] as const] : [])));
@@ -323,11 +325,11 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
   });
   const byStart = (a: BookingListRow, b: BookingListRow) => a.start.localeCompare(b.start);
   const upcoming = list.filter((row) => !FINAL.includes(row.status)).sort(byStart);
-  return {
+  return withRegular({
     needsAction: upcoming.filter((row) => row.needsAction).sort((a, b) => (a.nextStep?.dueAt ?? a.start).localeCompare(b.nextStep?.dueAt ?? b.start)),
     upcoming,
     past: list.filter((row) => FINAL.includes(row.status)).sort((a, b) => b.start.localeCompare(a.start)),
-  };
+  });
 }
 
 // ---- Single-tap actions ---------------------------------------------------------------------------

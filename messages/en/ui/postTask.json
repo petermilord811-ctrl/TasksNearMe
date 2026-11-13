@@ -41,6 +41,19 @@
       "yard-cleanup": "Leaves, weeding, and light yard tidying.",
       "light-cleaning": "Everyday cleaning for rooms, kitchens, and bathrooms.",
       "computer-help": "Device setup, troubleshooting, and a patient how-to."
+    },
+    "suggest": {
+      "label": "Not sure which one? Describe what you need",
+      "placeholder": "For example: rake the leaves in my front yard",
+      "hint": "A few words are enough. We suggest a category; you choose.",
+      "soundsLike": "Sounds like {category}.",
+      "use": "Use {category}",
+      "chosen": "Chosen",
+      "none": "We couldn’t tell from that. Pick the closest category below.",
+      "notOffered": {
+        "tv-mounting": "TV mounting isn’t offered yet. Shelves, mirrors and pictures are fine under furniture assembly.",
+        "licensed-trade": "Electrical, plumbing and gas work need a licensed pro, so they aren’t offered here."
+      }
     }
   },
   "details": {
