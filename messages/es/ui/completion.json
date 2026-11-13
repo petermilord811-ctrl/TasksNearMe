@@ -1,0 +1,48 @@
+{
+  "sent": "Enviado {date}",
+  "photos": "Fotos del trabajo",
+  "viewPhoto": "Ver foto",
+  "viewReceipt": "Ver recibo",
+  "openPhoto": "{label}: {description}",
+  "photoTitle": "Foto {number} de {count}",
+  "hoursWorked": "Horas trabajadas: {hours}",
+  "hoursWorkedWithCap": "Horas trabajadas: {hours, number} de hasta {cap, number}",
+  "receipts": "Recibos",
+  "receiptTitle": "Recibo: {description}",
+  "finalCost": "Costo final",
+  "earnings": "Lo que ganarás",
+  "checklist": {
+    "title": "Lista de verificación",
+    "summary": "{done} de {total} confirmados",
+    "done": "Confirmado",
+    "notDone": "Sin marcar",
+    "items": {
+      "furniture-assembly": {
+        "all_parts_used": "Se usaron todas las piezas, o se devolvieron las sobrantes",
+        "level_and_stable": "Queda nivelado y estable",
+        "anchored_if_asked": "Muebles altos anclados a la pared, si se pidió",
+        "packaging_cleared": "Empaques retirados"
+      },
+      "moving-help": {
+        "placed_where_asked": "Todo colocado donde se pidió",
+        "nothing_damaged": "Nada se dañó en el camino",
+        "load_secured": "La carga asegurada para el viaje"
+      },
+      "yard-cleanup": {
+        "debris_bagged": "Hojas y residuos embolsados",
+        "bags_where_agreed": "Bolsas dejadas donde acordamos",
+        "walkways_clear": "Caminos y entrada barridos y despejados"
+      },
+      "light-cleaning": {
+        "listed_rooms_done": "Todos los cuartos de la lista limpios",
+        "supplies_put_away": "Productos devueltos a su lugar",
+        "trash_out": "Basura sacada"
+      },
+      "computer-help": {
+        "backed_up_first": "Sus datos respaldados antes de cualquier cambio",
+        "moved_and_checked": "Archivos pasados y revisados en el dispositivo nuevo",
+        "nothing_kept": "Nada suyo guardado en mis dispositivos"
+      }
+    }
+  }
+}

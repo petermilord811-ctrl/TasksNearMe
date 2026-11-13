@@ -1,0 +1,32 @@
+{
+  "device": {
+    "title": "Notificaciones en este dispositivo",
+    "description": "Recibe una notificación aquí a medida que pasan las cosas: ofertas, reservas, mensajes. Los consejos y las novedades nunca llegan por este medio.",
+    "checking": "Revisando este dispositivo…",
+    "on": "Activadas en este dispositivo.",
+    "off": "Desactivadas en este dispositivo.",
+    "turnOn": "Activar",
+    "turningOn": "Activando…",
+    "turnOff": "Desactivar",
+    "turningOff": "Desactivando…",
+    "blocked": "Las notificaciones de TasksNearMe están bloqueadas en este navegador. Permítelas en la configuración de sitios del navegador y vuelve.",
+    "unsupported": "Este navegador no puede mostrar notificaciones de sitios web. El correo y los mensajes de texto te siguen llegando.",
+    "installFirst": "En iPhone y iPad, primero agrega TasksNearMe a tu pantalla de inicio (Compartir y luego \"Añadir a pantalla de inicio\"), y desde allí activa las notificaciones.",
+    "notSetUp": "Las notificaciones en dispositivos aún no están configuradas aquí. El correo y los mensajes de texto te siguen llegando.",
+    "failed": "No funcionó. Inténtalo de nuevo o revisa la configuración de notificaciones del navegador."
+  },
+  "prompt": {
+    "offersTitle": "Entérate de las ofertas al instante",
+    "offersBody": "Activa las notificaciones en este dispositivo y te avisaremos en cuanto un ayudante haga una oferta.",
+    "tasksTitle": "Entérate de las tareas nuevas cerca de ti",
+    "tasksBody": "Activa las notificaciones en este dispositivo y las tareas nuevas de tu zona te llegarán primero.",
+    "turnOn": "Activar notificaciones",
+    "notNow": "Ahora no",
+    "done": "Listo. Las notificaciones llegarán a este dispositivo."
+  },
+  "previews": {
+    "group": "Notificaciones en este dispositivo",
+    "setting": "La opción de la cuenta",
+    "prompt": "El aviso después de publicar"
+  }
+}

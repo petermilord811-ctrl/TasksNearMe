@@ -20,6 +20,7 @@ import { useOptionalLanding } from './landing-state';
  */
 export function CategoryCards({ categories, openCounts }: { categories: CategoryView[]; openCounts?: Partial<Record<CategorySlug, number>> }) {
   const t = useTranslations('landing.categories');
+  const categoryName = useTranslations('helperCard.categories');
   const landing = useOptionalLanding();
   return (
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
@@ -54,7 +55,7 @@ export function CategoryCards({ categories, openCounts }: { categories: Category
                     )}
                   </span>
                   <span className="mt-auto pt-8">
-                    <span className="block font-display text-2xl font-semibold tracking-[-0.025em]">{category.name}</span>
+                    <span className="block font-display text-2xl font-semibold tracking-[-0.025em]">{categoryName(category.slug)}</span>
                     <span className="mt-1 block text-sm text-muted-foreground">{t(`descriptions.${category.slug}`)}</span>
                     <span className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
                       <span className="font-semibold tabular-nums">{t('range', { low: formatMoney(category.priceGuidance.lowCents), high: formatMoney(category.priceGuidance.highCents) })}</span>
@@ -63,7 +64,7 @@ export function CategoryCards({ categories, openCounts }: { categories: Category
                       {category.remoteAllowed && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Globe aria-hidden="true" className="size-3.5" />{t('remote')}</span>}
                     </span>
                     <span className="mt-5 flex items-center justify-between gap-3 border-t border-foreground/[0.06] pt-4 text-sm font-semibold">
-                      <span className="lift-fade">{t('explore', { category: category.name })}</span>
+                      <span className="lift-fade">{t('explore', { category: categoryName(category.slug) })}</span>
                       <span aria-hidden="true" className="lift-arrow-x grid size-9 shrink-0 place-items-center rounded-full" style={{ background: `color-mix(in oklab, ${color} 13%, transparent)`, color }}>
                         <ArrowRight className="size-4" />
                       </span>

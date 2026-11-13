@@ -1,0 +1,26 @@
+{
+  "title": "Centro de ayuda",
+  "description": "Encuentra respuestas sobre tareas, reservas, pagos y cómo empezar.",
+  "searchLabel": "Buscar artículos de ayuda",
+  "searchHint": "Busca por una palabra del título o del resumen del artículo.",
+  "searchPlaceholder": "¿Con qué necesitas ayuda?",
+  "results": "{count, plural, =0 {No se encontraron artículos} one {# artículo encontrado} other {# artículos encontrados}}",
+  "emptyTitle": "No hay artículos que coincidan",
+  "emptyDescription": "Prueba con otra palabra o contacta a soporte para recibir ayuda con tu pregunta.",
+  "updated": "Actualizado el {date}",
+  "relatedTitle": "Artículos relacionados",
+  "supportTitle": "¿Aún necesitas ayuda?",
+  "supportDescription": "Cuéntanos qué pasó. Nuestro equipo de soporte puede ayudarte a encontrar el siguiente paso.",
+  "supportLink": "Contactar a soporte",
+  "externalLink": "(abre otro sitio)",
+  "calloutInfo": "Bueno saber",
+  "calloutWarning": "Ten en cuenta",
+  "previews": {
+    "group": "Ayuda y contenido",
+    "center": "Centro de ayuda",
+    "empty": "Centro de ayuda sin artículos",
+    "article": "Artículo de ayuda: cuándo se paga",
+    "blocks": "Todos los bloques de contenido",
+    "support": "Tarjeta de soporte"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "title": "Mis tareas",
+  "description": "Sigue tus tareas y encuentra la ayuda adecuada.",
+  "tabsLabel": "Tus tareas por estado",
+  "tabs": {
+    "open": "Abiertas",
+    "booked": "Reservadas",
+    "past": "Anteriores"
+  },
+  "tabCount": "{label} ({count, number})",
+  "postTask": "Publicar una tarea",
+  "budget": "Presupuesto",
+  "newOffers": "{count, number} nuevas",
+  "empty": {
+    "open": {
+      "title": "Aún no hay tareas abiertas",
+      "body": "Publica lo que necesitas. Las ofertas de los ayudantes aparecerán aquí."
+    },
+    "booked": {
+      "title": "Aún no hay tareas reservadas",
+      "body": "Cuando reserves un ayudante, tu tarea aparecerá aquí con un enlace a la reserva."
+    },
+    "past": {
+      "title": "Aún no hay tareas anteriores",
+      "body": "Las tareas completadas, canceladas y vencidas aparecerán aquí. Publica una tarea cuando necesites una mano."
+    }
+  },
+  "previews": {
+    "group": "Mis tareas",
+    "default": "Tareas abiertas y ofertas nuevas",
+    "empty": "Sin tareas abiertas",
+    "booked": "Tareas reservadas",
+    "past": "Tareas anteriores",
+    "emptyBooked": "Sin tareas reservadas",
+    "emptyPast": "Sin tareas anteriores",
+    "pastStatuses": "Tareas completadas, canceladas y vencidas",
+    "allAttention": "Mis tareas · todo lo que puede necesitarte"
+  },
+  "needsYou": {
+    "title": "Te necesitan ({count})",
+    "for": ": {title}",
+    "messages": {
+      "finish_payment": "Termina de pagar para confirmar a {helper}. La retención termina {relative}.",
+      "review_work": "{helper} marcó el trabajo como completo. Apruébalo o reporta un problema antes del {date}; después se aprueba automáticamente.",
+      "choose_soon": "{count, plural, one {# oferta está esperando} other {# ofertas están esperando}}, y la tarea se cierra {relative}.",
+      "new_offers": "{count, plural, one {# oferta nueva} other {# ofertas nuevas}} para revisar.",
+      "no_offers": "Sin ofertas después de un día. Invita a un ayudante que te guste para que envíe una."
+    },
+    "actions": {
+      "finish_payment": "Pagar ahora",
+      "review_work": "Revisar el trabajo",
+      "choose_soon": "Elegir una oferta",
+      "new_offers": "Ver ofertas",
+      "no_offers": "Buscar ayudantes"
+    }
+  },
+  "newestOffer": "Oferta más reciente: {name}, {price}",
+  "rating": "calificado con {rating}",
+  "bookedWith": "{time} con {name}"
+}

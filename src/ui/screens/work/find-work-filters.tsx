@@ -32,6 +32,7 @@ function Option({ href, selected, children }: { href: string; selected: boolean;
  */
 export function FindWorkFilters({ data }: { data: FindWorkPageData }) {
   const t = useTranslations('findWork');
+  const categoryName = useTranslations('helperCard.categories');
   const router = useRouter();
   const { query } = data;
   const base: FindWorkQuery = { category: query.category, when: query.when, remoteOnly: query.remoteOnly, sort: query.sort, distance: query.distance, saved: query.saved, view: query.view };
@@ -91,7 +92,7 @@ export function FindWorkFilters({ data }: { data: FindWorkPageData }) {
     <nav aria-label={t('category')} className={sideScroll} style={edgeFade}>
       <ul className="flex w-max gap-2">
         <li><Option href={href({ category: undefined })} selected={query.category === undefined}>{t('allCategories')}</Option></li>
-        {data.categories.map((category) => <li key={category.slug}><Option href={href({ category: category.slug })} selected={query.category === category.slug}>{category.name}</Option></li>)}
+        {data.categories.map((category) => <li key={category.slug}><Option href={href({ category: category.slug })} selected={query.category === category.slug}>{categoryName(category.slug)}</Option></li>)}
       </ul>
     </nav>
     {active.length > 0 && <ul aria-label={t('activeFilters')} className="flex flex-wrap gap-2">

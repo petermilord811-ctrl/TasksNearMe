@@ -60,6 +60,29 @@ describe('help content', () => {
   });
 });
 
+describe('help content in Spanish', () => {
+  it('has every article and topic, in Spanish, with the same structure as English', () => {
+    const english = getHelpCenterData();
+    const spanish = getHelpCenterData('es');
+    expect(spanish.topics.map((topic) => topic.slug)).toEqual(english.topics.map((topic) => topic.slug));
+    for (const [index, topic] of spanish.topics.entries()) {
+      expect(topic.title).not.toBe(english.topics[index]!.title);
+      expect(topic.articles.map((article) => article.slug).sort()).toEqual(english.topics[index]!.articles.map((article) => article.slug).sort());
+    }
+  });
+
+  it.each(slugs)('%s is translated, and its links resolve', (slug) => {
+    const english = getHelpArticle(slug)!;
+    const article = getHelpArticle(slug, 'es')!;
+    expect(article.title).not.toBe(english.title);
+    expect(article.summary).not.toBe(english.summary);
+    expect(article.topic.slug).toBe(english.topic.slug);
+    expect(article.updatedAt).toBe(english.updatedAt);
+    expect(article.blocks.map((block) => block.type)).toEqual(english.blocks.map((block) => block.type));
+    expect(hrefs(article.blocks)).toEqual(hrefs(english.blocks));
+  });
+});
+
 describe('legal content', () => {
   it.each([...LEGAL_DOCS])('%s is a draft with sections and resolvable links', (doc) => {
     const data = getLegalDoc(doc)!;

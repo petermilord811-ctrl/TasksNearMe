@@ -1,0 +1,43 @@
+{
+  "title": "Reservas",
+  "description": "Lleva el control de la ayuda que reservaste y de las tareas en las que ayudas.",
+  "tabsLabel": "Listas de reservas",
+  "tabs": {
+    "needsAction": "Requieren acción",
+    "upcoming": "Próximas",
+    "past": "Pasadas"
+  },
+  "tabCount": "{label} ({count, number})",
+  "roles": {
+    "poster": "Tú reservaste",
+    "helper": "Tú ayudas"
+  },
+  "needsAction": "Requiere tu acción",
+  "amount": {
+    "poster": "Total {amount}",
+    "helper": "Ganarás {amount}"
+  },
+  "remote": "Remota",
+  "postTask": "Publicar una tarea",
+  "findWork": "Buscar trabajo",
+  "empty": {
+    "needsAction": {
+      "title": "Nada requiere tu acción",
+      "body": "Las reservas que necesiten un pago, un registro de llegada o una aprobación aparecerán aquí."
+    },
+    "upcoming": {
+      "title": "No hay reservas próximas",
+      "body": "Publica una tarea para recibir ayuda, o busca una tarea en la que puedas ayudar. Tus reservas aparecerán aquí."
+    },
+    "past": {
+      "title": "Aún no ha terminado ninguna",
+      "body": "Las reservas completadas y canceladas aparecerán aquí."
+    }
+  },
+  "nextStep": {
+    "pay": "Paga para confirmar. La retención termina {relative}.",
+    "review_work": "Revisa el trabajo antes de {date}, o se aprobará automáticamente.",
+    "on_my_way": "Toca \"En camino\" cuando salgas. Empieza a las {time}.",
+    "check_in": "Toca \"Ya llegué\" cuando llegues. Empieza a las {time}."
+  }
+}

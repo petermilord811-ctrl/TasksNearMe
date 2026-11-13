@@ -52,9 +52,10 @@ function Note({ tone, children }: { tone: 'info' | 'warning' | 'success'; childr
 }
 
 /** Displays provider status supplied by the app; provider forms stay with the providers. */
-export function VerificationPanel({ track, verification, categories, bookableCategories, firstPayoutDays, handlers, headingLevel = 2, initialResult, stickyAction = false }: VerificationPanelProps) {
+export function VerificationPanel({ track, verification, bookableCategories, firstPayoutDays, handlers, headingLevel = 2, initialResult, stickyAction = false }: VerificationPanelProps) {
   const { formatDate, formatDateTime } = useFormat();
   const t = useTranslations('verification');
+  const categoryNames = useTranslations('helperCard.categories');
   const id = useId();
   const form = useForm();
   const action = useFormAction(form, { initialResult });
@@ -118,7 +119,7 @@ export function VerificationPanel({ track, verification, categories, bookableCat
     ...(track === 'identity' && identity.status === 'verified' && !identity.nameCheck && identity.verifiedAt ? { idVerifiedAt: identity.verifiedAt } : {}),
     ...(track === 'background' && background.status === 'clear' && background.checkedAt ? { backgroundCheckedAt: background.checkedAt } : {}),
   };
-  const categoryName = (slug: CategorySlug) => categories.find((category) => category.slug === slug)?.name ?? t(`setup.categoryNames.${slug}`);
+  const categoryName = (slug: CategorySlug) => categoryNames(slug);
 
   return <section aria-labelledby={`${id}-heading`} className="space-y-5 rounded-xl border bg-card p-4 shadow-sm sm:p-6">
     <div className="flex flex-wrap items-start justify-between gap-3">

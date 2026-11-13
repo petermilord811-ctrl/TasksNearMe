@@ -1,0 +1,24 @@
+{
+  "categories": {
+    "furniture-assembly": "Armado de muebles",
+    "moving-help": "Ayuda con mudanzas",
+    "yard-cleanup": "Limpieza de jardín",
+    "light-cleaning": "Limpieza ligera",
+    "computer-help": "Ayuda con computadoras y teléfonos"
+  },
+  "completed": "{count, plural, one {# tarea completada} other {# tareas completadas}}",
+  "responseTime": "Suele responder en unos {minutes, number} min",
+  "fixedPrice": "desde {amount}",
+  "hourlyPrice": "{amount}/h",
+  "priceInOffer": "El precio se comparte en una oferta",
+  "minimumHours": "mínimo {hours}",
+  "foundingHelper": "Ayudante fundador #{number, number}",
+  "services": "Servicios",
+  "preview": {
+    "group": "Tarjetas de ayudante",
+    "samFull": "Sam · tarjeta completa de ayudante",
+    "jordanFounding": "Jordan · ayudante fundador",
+    "leeCompact": "Lee · tarjeta compacta de ayudante",
+    "profile": "Perfil del ayudante"
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "oneAccount": "Inicias sesión o creas tu cuenta aquí, con los mismos pasos.",
+  "email": {
+    "title": "Inicia sesión o crea una cuenta",
+    "description": "Te enviaremos un código por correo para continuar. Sin contraseñas que recordar.",
+    "descriptionWithProviders": "Continúa con Google o Microsoft, o recibe un código por correo. Sin contraseñas que recordar."
+  },
+  "social": {
+    "or": "o",
+    "names": {
+      "google": "Google",
+      "microsoft": "Microsoft"
+    },
+    "continue": {
+      "google": "Continuar con Google",
+      "microsoft": "Continuar con Microsoft"
+    },
+    "microsoftHint": "Microsoft funciona con direcciones de Outlook.com, Hotmail y Live, y con cuentas de trabajo o escuela.",
+    "getHelp": "Obtener ayuda",
+    "errors": {
+      "cancelled": "Se canceló el inicio de sesión con {provider}. Inténtalo de nuevo o usa tu correo abajo.",
+      "email_unconfirmed": "{provider} no confirmó el correo de esa cuenta, así que no puede iniciar tu sesión. Usa tu correo abajo y te enviaremos un código.",
+      "use_email_code": "Ya tienes una cuenta con ese correo. Inicia sesión con un código por correo abajo y luego conecta {provider} desde la página de tu cuenta.",
+      "not_allowed": "Esta cuenta no puede iniciar sesión por ahora.",
+      "failed": "Algo salió mal al iniciar sesión con {provider}. Inténtalo de nuevo o usa tu correo abajo."
+    }
+  },
+  "emailCode": {
+    "title": "Revisa tu correo",
+    "description": "Enviamos un código de 6 dígitos a <strong>{email}</strong>."
+  },
+  "phoneCode": {
+    "title": "Escribe el código que enviamos por mensaje de texto a {phone}"
+  },
+  "codeLifetime": "El código sirve durante {minutes, plural, one {# minuto} other {# minutos}}.",
+  "codeSent": "Código enviado. Revisa tus mensajes para continuar.",
+  "newCodeSent": "Código nuevo enviado.",
+  "resend": "Enviar un código nuevo",
+  "resendCountdown": "Podrás enviar un código nuevo en {seconds, plural, one {# segundo} other {# segundos}}.",
+  "resendAt": "Podrás enviar un código nuevo después de {at} (hora del centro).",
+  "resendReady": "Ya puedes enviar un código nuevo.",
+  "changeEmail": "Usar otro correo",
+  "changePhone": "Usar otro número",
+  "profile": {
+    "title": "Dinos tu nombre",
+    "privacy": "Los demás ven tu nombre y la inicial de tu apellido.",
+    "firstNameHint": "Este es el nombre que verán los demás.",
+    "lastNameHint": "Solo se muestra a los demás la inicial de tu apellido.",
+    "adultAttested": "Tengo 18 años o más",
+    "ageHint": "Debes tener 18 años o más para usar TasksNearMe.",
+    "termsAccepted": "Acepto los Términos del servicio y la Política de privacidad",
+    "policies": "Lee los <terms>Términos del servicio</terms> y la <privacy>Política de privacidad</privacy>."
+  },
+  "phone": {
+    "title": "Agrega tu número de teléfono",
+    "privacy": "Te enviamos un código por mensaje de texto. Nunca compartimos tu número.",
+    "reasons": {
+      "post": "Necesitas un teléfono verificado para publicar una tarea.",
+      "offer": "Necesitas un teléfono verificado para enviar una oferta.",
+      "book": "Necesitas un teléfono verificado para reservar un ayudante.",
+      "account": "Verifica tu número de teléfono para tu cuenta."
+    }
+  },
+  "previews": {
+    "group": "Iniciar sesión",
+    "email": "Correo",
+    "email-code": "Código por correo",
+    "profile": "Perfil nuevo",
+    "profile-prefilled": "Perfil con nombres guardados",
+    "phone-post": "Teléfono para publicar",
+    "phone-offer": "Teléfono para ofertar",
+    "phone-book": "Teléfono para reservar",
+    "phone-account": "Teléfono para la cuenta",
+    "phone-code": "Código por teléfono",
+    "code-incorrect": "Código incorrecto",
+    "code-expired": "Código vencido",
+    "too-many-tries": "Demasiados intentos",
+    "phone-not-supported": "Número de teléfono no compatible",
+    "phone-in-use": "Número de teléfono en uso",
+    "profile-incomplete": "Perfil incompleto",
+    "account-not-allowed": "Cuenta no disponible",
+    "resend-countdown": "Cuenta regresiva para reenviar",
+    "email-with-providers": "Correo, con Google y Microsoft",
+    "social-cancelled": "Inicio de sesión con Google cancelado",
+    "social-unconfirmed": "Correo de Microsoft sin confirmar",
+    "social-use-email-code": "La cuenta existe: usar un código por correo",
+    "social-not-allowed": "Cuenta no disponible (Google)",
+    "social-failed": "Falló el inicio de sesión con Microsoft"
+  },
+  "passkey": {
+    "action": "Iniciar sesión con una llave de acceso",
+    "pending": "Esperando tu dispositivo…",
+    "failed": "Esa llave de acceso no funcionó. Inténtalo de nuevo o inicia sesión con un código por correo.",
+    "unknown": "Este dispositivo aún no tiene una llave de acceso para TasksNearMe. Inicia sesión con un código por correo y luego agrega una en la página de tu cuenta."
+  }
+}

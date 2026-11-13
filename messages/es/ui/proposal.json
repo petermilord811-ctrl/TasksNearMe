@@ -1,0 +1,69 @@
+{
+  "title": {
+    "poster": "{helper} propuso una reserva",
+    "helper": "Tu propuesta para {client}"
+  },
+  "backHome": "Volver al inicio",
+  "backClients": "Volver a Mis clientes",
+  "task": "La tarea propuesta",
+  "start": "Inicio propuesto · hora de Austin",
+  "hourlyTerms": "{rate}/h · unas {estimate} · hasta {cap}",
+  "message": "Mensaje de {helper}",
+  "expires": "La propuesta vence",
+  "status": {
+    "sent": "Esperando respuesta",
+    "accepted": "Reservada",
+    "declined": "Rechazada",
+    "expired": "Vencida",
+    "withdrawn": "Retirada"
+  },
+  "statusDescription": {
+    "sent_poster": "Acepta y paga para reservar esta tarea, o rechaza la propuesta.",
+    "sent_helper": "{client} solo paga si acepta. La propuesta vence en 48 horas o 2 horas antes del inicio.",
+    "accepted": "Esta propuesta se convirtió en una reserva. Ábrela para ver los últimos detalles.",
+    "declined": "Tu cliente rechazó esta propuesta. No se hizo ninguna reserva.",
+    "expired": "Ya pasó el plazo para responder a esta propuesta. No se hizo ninguna reserva.",
+    "withdrawn": "Tu ayudante retiró esta propuesta. No se hizo ninguna reserva."
+  },
+  "viewBooking": "Ver reserva",
+  "addressPoster": "Los ayudantes solo ven la zona general. Tu dirección exacta se comparte con tu ayudante después de reservar.",
+  "addressHelper": "Verás la dirección exacta cuando se confirme la reserva.",
+  "total": "Tu total",
+  "earnings": "Tus ganancias",
+  "payment": "Método de pago",
+  "paymentNote": "Pagas al reservar. Tu ayudante recibe su pago cuando la tarea está terminada.",
+  "chargeNow": "Al aceptar, se cobrarán {amount} ahora a tu método de pago seleccionado.",
+  "hourly": "Esto cubre hasta {hours} horas. Las horas no usadas se reembolsan al finalizar.",
+  "terms": "Acepto los <terms>Términos del servicio</terms> y la <cancellation>Política de cancelación</cancellation>.",
+  "actionsLabel": "Acciones de la propuesta",
+  "accepting": "Aceptando y pagando…",
+  "updating": "Actualizando propuesta…",
+  "confirm": {
+    "decline_proposal": "¿Rechazar esta propuesta de {helper}? No se cobrará nada y no se hará ninguna reserva.",
+    "withdraw_proposal": "¿Retirar tu propuesta para {client}? Ya no podrá aceptarla."
+  },
+  "keepProposal": "Mantener propuesta",
+  "success": {
+    "decline_proposal": "Propuesta rechazada. No se hizo ninguna reserva.",
+    "withdraw_proposal": "Propuesta retirada. No se hizo ninguna reserva."
+  },
+  "reload": "Actualizar propuesta",
+  "errors": {
+    "not_allowed": "Ya no se puede responder a esta propuesta. Actualiza para ver su estado más reciente.",
+    "expired": "Esta propuesta venció. Actualiza para ver su estado más reciente."
+  },
+  "previews": {
+    "group": "Propuestas para volver a reservar",
+    "client-sent": "Cliente · aceptar y pagar",
+    "client-bank-verification": "Cliente · verificación bancaria",
+    "client-declined-card": "Cliente · tarjeta rechazada",
+    "helper-sent": "Ayudante · esperando al cliente",
+    "helper-hourly": "Ayudante · propuesta por hora",
+    "accepted": "Propuesta reservada",
+    "declined": "Propuesta rechazada",
+    "expired": "Propuesta vencida",
+    "withdrawn": "Propuesta retirada",
+    "submitting": "Cliente · aceptando propuesta",
+    "result": "Respuesta de la propuesta · {code}"
+  }
+}

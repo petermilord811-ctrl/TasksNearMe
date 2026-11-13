@@ -1,0 +1,37 @@
+{
+  "travelRadius": "Se desplaza hasta unas {miles, plural, one {# milla} other {# millas}} desde {area}",
+  "remoteOk": "Acepta trabajo remoto",
+  "requestBooking": "Solicitar a {name}",
+  "memberSince": "Miembro desde {date}",
+  "completed": "{count, plural, one {# tarea completada} other {# tareas completadas}}",
+  "responseTime": "Suele responder en unos {minutes, number} min",
+  "foundingHelper": "Ayudante fundador n.º {number, number}",
+  "about": "Acerca de {name}",
+  "services": "Servicios",
+  "fixedPrice": "desde {amount}",
+  "hourlyPrice": "{amount}/h",
+  "hourlyMinimum": "{amount}/h, mínimo {hours}",
+  "priceInOffer": "El precio se indica en una oferta",
+  "tools": "Herramientas",
+  "languages": "Idiomas",
+  "workSamples": "Ejemplos de trabajo",
+  "reviews": "Reseñas",
+  "recentReviews": "Mostrando las {shown, number} más recientes de {total, plural, one {# reseña} other {# reseñas}}",
+  "noReviews": "Aún sin reseñas",
+  "noReviewsDescription": "Las reseñas de los clientes aparecen aquí después de las tareas completadas.",
+  "categories": {
+    "furniture-assembly": "Armado de muebles",
+    "moving-help": "Ayuda con mudanzas",
+    "yard-cleanup": "Limpieza de jardín",
+    "light-cleaning": "Limpieza ligera",
+    "computer-help": "Ayuda con computadoras y teléfonos"
+  },
+  "preview": {
+    "group": "Perfiles de ayudantes",
+    "sam": "Sam · perfil completo de ayudante",
+    "jordanNew": "Jordan · nuevo ayudante fundador",
+    "leeRemote": "Lee · ayuda remota disponible",
+    "withSlots": "Jordan · horarios abiertos",
+    "samPhoto": "Sam, con foto de perfil"
+  }
+}

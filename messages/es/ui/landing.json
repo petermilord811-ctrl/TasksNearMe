@@ -1,0 +1,436 @@
+{
+  "hero": {
+    "eyebrowLive": "Ya disponible en {market}, {state}",
+    "eyebrowSoon": "Pronto en {market}, {state}",
+    "line1": "Tareas cotidianas,",
+    "line2": "hechas por personas",
+    "line3Vivid": "cercanas",
+    "line3Rest": ".",
+    "subtitle": "Publica lo que necesitas, acuerda un precio desde el inicio y reserva a un ayudante local verificado.",
+    "primary": "Publicar una tarea",
+    "secondary": "Ser ayudante",
+    "askLabel": "¿Con qué necesitas ayuda?",
+    "askPrompt": "Necesito ayuda para…",
+    "askGo": "Empezar con esto",
+    "examples": {
+      "furniture-assembly": "armar un librero",
+      "moving-help": "cargar un camión de mudanza",
+      "yard-cleanup": "rastrillar las hojas",
+      "light-cleaning": "ordenar antes de las visitas",
+      "computer-help": "configurar una laptop nueva"
+    },
+    "trust": "Ayudantes con identidad verificada · Precio acordado desde el inicio · Pago a través de la plataforma",
+    "floatingTaskLabel": "Tarea abierta",
+    "floatingOffers": "{count, plural, =0 {Nueva} one {# oferta} other {# ofertas}}",
+    "floatingHelperLabel": "Ayudante cerca",
+    "floatingRating": "{rating} ({count})",
+    "floatingNew": "Ayudante nuevo",
+    "floatingVerified": "Identidad verificada",
+    "scroll": "Desplázate",
+    "pause": "Pausar la animación de fondo",
+    "play": "Reproducir la animación de fondo",
+    "seasons": {
+      "winter": {
+        "furniture-assembly": "colgar luces navideñas",
+        "moving-help": "llevar cajas a un depósito",
+        "yard-cleanup": "podar los árboles antes de primavera",
+        "light-cleaning": "limpiar después de una fiesta",
+        "computer-help": "configurar un teléfono nuevo"
+      },
+      "spring": {
+        "furniture-assembly": "armar sillas de patio",
+        "moving-help": "mover un sofá",
+        "yard-cleanup": "echar mantillo a los canteros",
+        "light-cleaning": "limpiar la cocina a fondo",
+        "computer-help": "arreglar el Wi-Fi lento"
+      },
+      "summer": {
+        "furniture-assembly": "armar una litera",
+        "moving-help": "cargar un camión de mudanza",
+        "yard-cleanup": "cortar el césped",
+        "light-cleaning": "limpiar a fondo el baño",
+        "computer-help": "configurar un Smart TV"
+      },
+      "fall": {
+        "furniture-assembly": "armar un librero",
+        "moving-help": "subir cajas por la escalera",
+        "yard-cleanup": "rastrillar las hojas",
+        "light-cleaning": "ordenar antes de las visitas",
+        "computer-help": "configurar una laptop nueva"
+      }
+    },
+    "audience": {
+      "label": "Qué te trae por aquí",
+      "poster": "Necesito ayuda",
+      "helper": "Puedo ayudar",
+      "rewardSpoken": "Recompensa de {amount} para ayudantes fundadores"
+    },
+    "area": {
+      "button": "Vecindario: {area}. Elegir otro",
+      "everywhere": "Todo {market}",
+      "menuLabel": "Vecindarios de {market}",
+      "picked": "{area} · {market}, {state}"
+    },
+    "helperMode": {
+      "line1": "Echa una mano,",
+      "line2": "cobra de tus",
+      "line3Vivid": "vecinos",
+      "line3Rest": ".",
+      "subtitle": "Elige las tareas que quieres, acuerda el precio desde el inicio y cobra a través de la plataforma."
+    },
+    "activity": {
+      "label": "Nuevas tareas abiertas",
+      "new": "Nueva",
+      "pause": "Pausar las tareas nuevas",
+      "play": "Seguir mostrando tareas nuevas",
+      "none": "Aún no hay tareas abiertas en {area}.",
+      "everywhere": "Ver todo {market}"
+    },
+    "trustChips": {
+      "label": "Por qué es seguro",
+      "verified": "Ayudantes con identidad verificada",
+      "verifiedCount": "{count, plural, one {# ayudante verificado} other {# ayudantes verificados}}",
+      "verifiedBody": "Todos los ayudantes pasan una verificación de identidad. Las tareas dentro del hogar también requieren una verificación de antecedentes.",
+      "openThisWeek": "{count, plural, one {# de ellos tiene} other {# de ellos tienen}} horarios libres esta semana.",
+      "price": "Precios claros",
+      "priceBody": "Tú y tu ayudante acuerdan el precio antes de empezar, y cada tarifa se muestra antes de reservar.",
+      "payment": "Pago seguro",
+      "paymentBody": "Pagas al reservar; tu ayudante cobra cuando apruebas el trabajo.",
+      "learnTrust": "Cómo cuidamos tu seguridad",
+      "learnPricing": "Ver precios"
+    },
+    "reward": {
+      "badge": "{amount} para los primeros {limit} ayudantes",
+      "spots": "{left, plural, one {Queda # lugar} other {Quedan # lugares}}"
+    }
+  },
+  "map": {
+    "eyebrow": "Mapa en vivo",
+    "title": "Tareas cerca de ti,",
+    "titleAccent": "ahora mismo",
+    "body": "Tareas abiertas en {market}, cada una ubicada por su vecindario, nunca por su dirección.",
+    "filterLabel": "Mostrar tareas de una categoría",
+    "all": "Todas",
+    "useLocation": "Usar mi ubicación",
+    "locating": "Buscándote…",
+    "nearYou": "Ordenadas por distancia desde ti",
+    "privacy": "Tu ubicación se queda en este dispositivo.",
+    "denied": "La ubicación está desactivada, así que ves todo {market}.",
+    "unavailable": "No pudimos encontrar tu ubicación, así que ves todo {market}.",
+    "outside": "Aún no llegamos a tu zona.",
+    "waitlist": "Unirme a la lista de espera",
+    "caption": "Las zonas son aproximadas. Un ayudante ve la dirección exacta solo después de que reservas.",
+    "listNearYou": "Tareas abiertas más cercanas",
+    "listNewest": "Tareas abiertas más recientes",
+    "perHour": "{rate}/h",
+    "milesAway": "{miles} mi",
+    "areaAway": "{area} · {miles} mi",
+    "viewTask": "Ver tarea",
+    "emptyTitle": "Aún no hay tareas abiertas",
+    "emptyCategoryTitle": "Ahora no hay tareas de {category}",
+    "emptyBody": "Publica la primera y los ayudantes cercanos la verán.",
+    "postFirst": "Publicar una tarea",
+    "browseAll": "Ver todas las tareas abiertas",
+    "mapLabel": "Mapa de tareas abiertas en {market}",
+    "countAll": "{count, plural, =0 {Aún no hay tareas abiertas} one {# tarea abierta} other {# tareas abiertas}} en {market}",
+    "countCategory": "{category}: {count, plural, =0 {no hay tareas abiertas por ahora} one {# tarea abierta} other {# tareas abiertas}}",
+    "showOnMap": "Mostrar en el mapa",
+    "zoomLabel": "Acercar o alejar el mapa",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "smartLabel": "Encuentra tareas con tus propias palabras",
+    "smartPlaceholder": "Prueba “Tengo una camioneta” o “Soy bueno con las computadoras”",
+    "smartShowing": "Mostrando {category}",
+    "smartClear": "Mostrar todas las categorías",
+    "smartNone": "Aún no hay coincidencias. Prueba con otras palabras.",
+    "twoFingers": "Usa dos dedos para mover el mapa",
+    "ctrlZoom": "Mantén Ctrl y desplázate para acercar el mapa",
+    "cmdZoom": "Mantén ⌘ y desplázate para acercar el mapa",
+    "engaged": "Desplázate para acercar · Esc para mover la página",
+    "engageFirst": "Haz clic en el mapa y luego desplázate para acercar",
+    "fullscreenOpen": "Abrir el mapa en pantalla completa",
+    "fullscreenClose": "Cerrar el mapa en pantalla completa",
+    "fullscreenLabel": "Mapa de tareas abiertas en {market}, en pantalla completa",
+    "layers": "Capas del mapa",
+    "layersShow": "Mostrar",
+    "layerTasks": "Tareas abiertas",
+    "layerHeat": "Dónde se necesita ayuda",
+    "layerBuildings": "Edificios en 3D",
+    "layerService": "Zona de servicio",
+    "sortLabel": "Orden",
+    "sortNewest": "Recientes",
+    "sortNearest": "Cercanas",
+    "sortPrice": "Menor precio",
+    "listByPrice": "Tareas abiertas, de menor a mayor precio",
+    "withinLabel": "Distancia desde ti",
+    "withinMiles": "{miles} mi",
+    "withinAny": "Cualquiera",
+    "followMap": "Solo lo que está en el mapa",
+    "inView": "{shown, plural, =0 {Ninguna} other {#}} de {total} mostradas",
+    "jumpLabel": "Ir a un vecindario",
+    "jumpPlaceholder": "Vecindario",
+    "showTaskOnMap": "Mostrar “{title}” en el mapa",
+    "closeCard": "Cerrar",
+    "offers": "{count, plural, =0 {Aún sin ofertas} one {# oferta} other {# ofertas}}",
+    "emptyWithinTitle": "No hay tareas abiertas a menos de {miles} mi",
+    "emptyInViewTitle": "No hay tareas abiertas en esta parte del mapa",
+    "emptyFilteredBody": "Prueba con una distancia mayor, aleja el mapa o muestra todo.",
+    "showEverything": "Mostrar todo",
+    "approximate": "Zona aproximada"
+  },
+  "categories": {
+    "eyebrow": "Lo que más se reserva",
+    "title": "Ayuda para el",
+    "titleAccent": "día a día",
+    "body": "Cinco tipos de tareas para empezar, cada una con un alcance claro y un precio típico.",
+    "unit": {
+      "item": "por artículo",
+      "hour": "por hora",
+      "task": "por tarea"
+    },
+    "range": "{low}–{high}",
+    "inHome": "Dentro del hogar: ayudantes con antecedentes verificados",
+    "remote": "Se puede hacer de forma remota",
+    "explore": "Explorar {category}",
+    "openOnMap": "{count, plural, one {# abierta en el mapa} other {# abiertas en el mapa}}",
+    "unsure": "¿No sabes cuál te conviene?",
+    "unsureBody": "Describe tu tarea con tus propias palabras y elige el tipo de ayuda más cercano al publicarla.",
+    "unsureLink": "Publicar una tarea",
+    "descriptions": {
+      "furniture-assembly": "Muebles para armar, camas, escritorios, estantes y anclajes antivuelco.",
+      "moving-help": "Empacar, levantar y cargar.",
+      "yard-cleanup": "Hojas, maleza y podas ligeras.",
+      "light-cleaning": "Cocinas, baños y un hogar ordenado.",
+      "computer-help": "Dispositivos, Wi-Fi y guía paciente."
+    }
+  },
+  "steps": {
+    "eyebrow": "Cómo funciona",
+    "title": "Tres pasos,",
+    "titleAccent": "sin adivinar",
+    "post": {
+      "title": "Publica lo que necesitas",
+      "body": "Cuenta qué, dónde y cuándo, y define tu presupuesto. Toma unos minutos."
+    },
+    "choose": {
+      "title": "Elige a tu ayudante",
+      "body": "Compara ofertas y perfiles, o pídeselo a alguien que conozcas. Ve el total completo antes de reservar."
+    },
+    "done": {
+      "title": "Aprueba y vuelve a reservar",
+      "body": "Aprueba el trabajo y tu ayudante cobra. Guárdalo y vuelve a reservar en dos toques."
+    },
+    "helper": {
+      "verify": {
+        "title": "Configura tu perfil y verifícate",
+        "body": "Crea tu perfil, pasa una verificación de identidad y configura tus pagos. Las tareas dentro del hogar también requieren una verificación de antecedentes."
+      },
+      "offer": {
+        "title": "Ofrécete en tareas que te convengan",
+        "body": "Elige tareas cerca de ti, fija tu precio y ve cuánto ganarás antes de enviar una oferta."
+      },
+      "paid": {
+        "title": "Haz el trabajo y cobra",
+        "body": "Cobras cuando el cliente aprueba el trabajo. Los clientes satisfechos pueden volver a reservarte."
+      }
+    },
+    "sidesLabel": "Cómo funciona para",
+    "link": "Ver cómo funciona",
+    "helperLink": "Ver cómo funciona ayudar"
+  },
+  "pricing": {
+    "eyebrow": "Precios a la vista",
+    "title": "Un precio.",
+    "titleAccent": "Para ambas partes.",
+    "body": "El precio que acuerdas es el precio. Las tarifas de servicio se muestran antes de que nadie se comprometa.",
+    "example": "Una tarea de {price}",
+    "taskPrice": "Precio acordado de la tarea",
+    "clientFee": "Tarifa de servicio del cliente",
+    "helperFee": "Tarifa de servicio del ayudante",
+    "clientPays": "Tú pagas",
+    "helperEarns": "Tu ayudante gana",
+    "note": "Pagas al reservar. Tu ayudante cobra después de que apruebas el trabajo.",
+    "link": "Ver todos los precios",
+    "pickPrice": "Ver el desglose para el precio de una tarea",
+    "priceOption": "Tarea de {price}",
+    "splitLabel": "A dónde van {total}",
+    "splitHelper": "Ayudante {amount}",
+    "splitFees": "Tarifas de servicio {amount}"
+  },
+  "trust": {
+    "eyebrow": "Confianza integrada",
+    "title": "Abre la puerta",
+    "titleAccent": "con tranquilidad",
+    "verified": {
+      "title": "Ayudantes verificados",
+      "body": "Todos los ayudantes pasan una verificación de identidad. Las tareas dentro del hogar también requieren una verificación de antecedentes."
+    },
+    "address": {
+      "title": "Tu dirección es privada",
+      "body": "Los ayudantes ven la zona general. Solo el ayudante que reservas recibe tu dirección exacta."
+    },
+    "payment": {
+      "title": "Paga a través de la plataforma",
+      "body": "Pagas a través de TasksNearMe al reservar, y tu ayudante cobra después de que apruebas el trabajo."
+    },
+    "reviews": {
+      "title": "Reseñas de ambas partes",
+      "body": "Las reseñas a ciegas ayudan a todos a elegir bien y mantienen la justicia."
+    },
+    "art": {
+      "idCheck": "Verificación de identidad",
+      "backgroundCheck": "Verificación de antecedentes para tareas en el hogar",
+      "generalArea": "Zona general",
+      "exactAddress": "Dirección exacta tras reservar",
+      "pay": "Reservas y pagas",
+      "approve": "Apruebas el trabajo",
+      "paid": "Tu ayudante cobra",
+      "client": "Reseña del cliente",
+      "helper": "Reseña del ayudante",
+      "reviewsRule": "Ambas se muestran cuando están las dos, o a los 14 días"
+    },
+    "link": "Nuestro enfoque de confianza y seguridad"
+  },
+  "helpers": {
+    "eyebrow": "Para ayudantes",
+    "title": "Tus habilidades,",
+    "titleAccent": "tu horario",
+    "body": "Elige las tareas que te convengan, fija tus propios precios y ve cuánto ganarás antes de ofrecerte.",
+    "prices": "Tus precios, tus ofertas",
+    "schedule": "Trabaja cuando te convenga",
+    "repeat": "Convierte buenas tareas en clientes frecuentes",
+    "cta": "Ser ayudante",
+    "rewardTitle": "Recompensa para ayudantes fundadores",
+    "rewardAmount": "Tarjeta de regalo de {amount}",
+    "rewardBody": "Para cada uno de los primeros {limit} ayudantes verificados que completen una tarea que cumpla los requisitos.",
+    "rewardSpots": "{claimed} de {limit} lugares reclamados",
+    "rewardTerms": "Términos de la recompensa",
+    "earnTitle": "Lo que te quedas",
+    "earnBody": "De {price} de trabajo acordado, después de la tarifa de servicio del ayudante.",
+    "earnLink": "Cómo funcionan las tarifas",
+    "joinCount": "{count, plural, one {Únete a # ayudante con identidad verificada en {market}} other {Únete a # ayudantes con identidad verificada en {market}}}"
+  },
+  "coverage": {
+    "eyebrow": "Dónde trabajamos",
+    "title": "Empezamos en {market}",
+    "body": "Vecindarios a unas {radius} millas a la redonda, entre ellos:",
+    "mapHint": "Elige un vecindario para ver sus tareas abiertas en el mapa.",
+    "openTasks": "{count, plural, one {tarea abierta} other {tareas abiertas}}",
+    "waitlist": "¿En otro lugar? Únete a la lista de espera"
+  },
+  "faq": {
+    "eyebrow": "Bueno saber",
+    "title": "Preguntas, respondidas",
+    "body": "Las respuestas cortas a lo que la gente pregunta primero.",
+    "pay": {
+      "question": "¿Cuándo pago?",
+      "answer": "Al reservar. El total, con la tarifa de servicio, se muestra antes de que pagues. Tu ayudante cobra después de que apruebas el trabajo."
+    },
+    "address": {
+      "question": "¿Quién puede ver mi dirección?",
+      "answer": "Solo el ayudante que reservas, una vez confirmada la reserva. Todos los demás ven la zona general."
+    },
+    "verified": {
+      "question": "¿Cómo se verifica a los ayudantes?",
+      "answer": "Todos los ayudantes pasan una verificación de identidad antes de enviar ofertas. Las tareas dentro del hogar, como limpieza y armado, también requieren una verificación de antecedentes."
+    },
+    "rebook": {
+      "question": "¿Puedo reservar al mismo ayudante otra vez?",
+      "answer": "Sí. Guarda a un ayudante después de una reserva y usa Volver a reservar para enviarle una nueva solicitud."
+    },
+    "helper": {
+      "question": "¿Puedo publicar tareas y también ayudar a otros?",
+      "answer": "Sí. Una sola cuenta sirve para ambas cosas: cambia entre pedir ayuda y ayudar."
+    }
+  },
+  "closing": {
+    "title": "¿Con qué te vendría bien",
+    "titleAccent": "una mano?",
+    "body": "Empieza con una tarea. Recupera un poco de tiempo esta semana.",
+    "primary": "Publicar una tarea",
+    "secondary": "Explorar tareas abiertas"
+  },
+  "previews": {
+    "group": "Página de inicio",
+    "default": "Página de inicio",
+    "noReward": "Página de inicio, sin recompensa de fundadores",
+    "emptyMap": "Página de inicio, sin tareas abiertas",
+    "dark": "Página de inicio, oscura",
+    "map": "Mapa y lista cercana",
+    "mapNearYou": "Mapa, cerca de ti",
+    "mapOutside": "Mapa, fuera de la zona de servicio",
+    "mapCategory": "Mapa, una categoría",
+    "logo": "Marca: logotipo",
+    "mark": "Marca: el isotipo en tamaños pequeños",
+    "palette": "Marca: paleta",
+    "type": "Marca: tipografía",
+    "motion": "Marca: tokens de movimiento"
+  },
+  "assistant": {
+    "label": "Describe la tarea con la que necesitas ayuda",
+    "panelLabel": "Sugerencias para tu tarea",
+    "submit": "Continuar",
+    "clear": "Borrar",
+    "examplesTitle": "Prueba una de estas",
+    "emptyHint": "O dilo a tu manera: te sugeriremos el tipo de ayuda, un rango de precio justo y lo que preguntarán los ayudantes.",
+    "pick": "¿Qué tipo de ayuda es?",
+    "change": "Elige el tipo de ayuda",
+    "soundsLike": "Parece ser",
+    "soundsLikeSpoken": "Parece ser {category}",
+    "changeCategory": "{category}: cambiar el tipo de ayuda",
+    "typical": "Típico en {market}",
+    "helpersAsk": "Los ayudantes preguntarán:",
+    "continue": "Continuar con esto",
+    "reassure": "Revisarás cada detalle antes de que se publique algo.",
+    "aiDraft": "Redactar con IA",
+    "aiDraftHint": "Al iniciar sesión, la IA escribe la tarea completa a partir de tus palabras. Tú la revisas antes de que se publique.",
+    "helperLabel": "Cuéntanos qué sabes hacer",
+    "helperPrompt": "Puedo…",
+    "helperPanelLabel": "Tareas abiertas que podrías tomar",
+    "helperEmptyHint": "Dilo a tu manera: te mostraremos las tareas abiertas que coinciden y su precio típico.",
+    "helperPick": "¿Qué tipo de ayuda puedes dar?",
+    "helperOpen": "{count, plural, =0 {Ahora no hay tareas abiertas como esta} one {# tarea abierta como esta en {place}} other {# tareas abiertas como esta en {place}}}",
+    "helperTypical": "Precio típico de la tarea",
+    "helperSee": "Ver estas tareas",
+    "helperBecome": "Ser ayudante",
+    "helperSubmit": "Ser ayudante",
+    "aiWrite": "Escribirlo con IA",
+    "aiWriteHint": "Gratis para probar. La IA escribe un título y una descripción a partir de tus palabras; puedes cambiar lo que quieras.",
+    "aiThinking": "Escribiendo tu tarea…",
+    "aiDone": "La IA escribió un título y una descripción para tu tarea.",
+    "aiNote": "Escrito por IA · revísalo antes de publicar",
+    "aiUse": "Usar este borrador",
+    "aiAgain": "Escribirlo de nuevo",
+    "aiKeep": "Conservar mis palabras",
+    "aiErrors": {
+      "unavailable": "La IA no puede escribir ahora.",
+      "rate_limited": "Se acabaron los borradores gratis con IA por ahora.",
+      "prohibited": "Eso parece algo que no se puede publicar en TasksNearMe.",
+      "too_short": "Primero agrega unas palabras más."
+    },
+    "aiFallback": "Aún puedes redactarlo con IA después de iniciar sesión.",
+    "confidence": {
+      "label": "Nivel de certeza: {level}",
+      "high": "bastante seguro",
+      "medium": "probable",
+      "low": "una suposición"
+    },
+    "summaryExpand": "Mostrar las sugerencias para “{text}”",
+    "summaryPick": "Elige el tipo de ayuda",
+    "summaryAiReady": "Borrador de IA listo",
+    "summaryContinue": "Continuar",
+    "summaryHelperOpen": "{count, plural, =0 {aún no hay tareas abiertas} one {# tarea abierta} other {# tareas abiertas}}",
+    "charsLeft": "{count, plural, one {# carácter restante} other {# caracteres restantes}}",
+    "shortcut": "Presiona / para escribir aquí",
+    "restoreTitle": "Retoma donde lo dejaste",
+    "restore": "Restaurar",
+    "voiceStart": "Dilo en voz alta",
+    "voiceStop": "Dejar de escuchar",
+    "voiceListening": "Escuchando… El servicio de voz de tu navegador convierte tu voz en texto.",
+    "voiceError": "No te pudimos oír. Revisa el permiso del micrófono o escribe.",
+    "notOffered": {
+      "tvMounting": "Aún no ofrecemos instalación de TV: requiere sus propias verificaciones de seguridad. Estantes, escritorios y anclar muebles a la pared cuentan como armado de muebles.",
+      "licensedTrade": "Los trabajos eléctricos, de plomería y de gas requieren un profesional con licencia, por eso no se ofrecen aquí. Si parte de tu tarea es otra cosa, elige abajo el tipo de ayuda más cercano."
+    }
+  }
+}

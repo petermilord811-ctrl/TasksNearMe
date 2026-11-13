@@ -1,0 +1,25 @@
+{
+  "title": "Recibo",
+  "brand": "TasksNearMe",
+  "number": "Número de recibo",
+  "issued": "Emitido",
+  "helper": "Ayudante",
+  "agreedStart": "Inicio acordado",
+  "breakdown": "Desglose del precio",
+  "activity": "Cobros y reembolsos",
+  "charge": "Cobrado",
+  "refund": "Reembolsado",
+  "net": "Total neto",
+  "print": "Imprimir",
+  "refundReasons": {
+    "cancellation": "Cancelación",
+    "unused_cap": "Límite por hora no usado",
+    "unused_allowance": "Asignación para gastos no usada",
+    "change_decrease": "Precio acordado menor",
+    "dispute_settlement": "Problema resuelto con un reembolso",
+    "goodwill": "Reembolso de cortesía",
+    "other": "Reembolso",
+    "poster_credit": "Crédito de TasksNearMe"
+  },
+  "tip": "Propina"
+}

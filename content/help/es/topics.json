@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "getting-started",
+    "title": "Primeros pasos",
+    "description": "Publicar una tarea y elegir un ayudante."
+  },
+  {
+    "slug": "payments",
+    "title": "Pagos y tarifas",
+    "description": "Cobros, reembolsos y tarifas de servicio."
+  },
+  {
+    "slug": "helpers",
+    "title": "Para ayudantes",
+    "description": "Verificación, ofertas y pagos."
+  },
+  {
+    "slug": "safety",
+    "title": "Seguridad y problemas",
+    "description": "Cómo mantenerte seguro y reportar un problema."
+  }
+]

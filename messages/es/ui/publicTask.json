@@ -1,0 +1,28 @@
+{
+  "taskBoard": "Tareas abiertas",
+  "remote": "Remota",
+  "area": "{area}, {market}",
+  "flexibleSchedule": "A cualquier hora el {date}",
+  "scheduledWindow": "{date} · {window}",
+  "budget": "Presupuesto",
+  "hourlyBudget": "{rate}/h · límite de {cap}",
+  "offers": "{count, plural, one {# oferta} other {# ofertas}}",
+  "posted": "Publicada {relative}",
+  "about": "Acerca de esta tarea",
+  "posterTitle": "Publicada por",
+  "memberSince": "Miembro desde {date}",
+  "clientRating": "Calificación como cliente",
+  "privacy": "Verás la dirección exacta cuando se confirme la reserva.",
+  "remotePrivacy": "Las direcciones exactas solo se comparten con el ayudante reservado. Las tareas remotas no necesitan dirección.",
+  "makeOffer": "Hacer una oferta",
+  "offerHint": "Inicia sesión para ver todos los detalles y hacer una oferta.",
+  "closed": "Esta tarea ya no recibe ofertas",
+  "backToBoard": "Ver tareas abiertas",
+  "similarTasks": "Tareas similares",
+  "postSimilar": "¿Necesitas algo parecido? Publica una tarea",
+  "previews": {
+    "open": "Tarea pública · abierta",
+    "assigned": "Tarea pública · asignada",
+    "remote": "Tarea pública · remota"
+  }
+}

@@ -3,6 +3,8 @@
   "effective": "Effective {date}",
   "draftTitle": "Draft — not in effect yet",
   "draftDescription": "This document is being reviewed. It is not in effect yet and may change before publication.",
+  "englishOnlyTitle": "Available in English only",
+  "englishOnlyDescription": "This document is in English. The English version is the one that applies.",
   "contentsTitle": "On this page",
   "otherPoliciesTitle": "Other policies",
   "previews": {

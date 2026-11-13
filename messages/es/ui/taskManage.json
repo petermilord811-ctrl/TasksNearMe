@@ -1,0 +1,63 @@
+{
+  "back": "Mis tareas",
+  "budget": "Tu presupuesto",
+  "invites": "Invitaciones que enviaste",
+  "offers": "{count, plural, one {# oferta} other {# ofertas}}",
+  "sort": "Ordenar ofertas",
+  "sortOptions": {
+    "given": "En orden de llegada",
+    "newest": "Más recientes",
+    "lowest": "Precio más bajo"
+  },
+  "compareTitle": "Comparar ofertas",
+  "compareHint": "Selecciona 2 o 3 ofertas para verlas juntas.",
+  "compareCount": "{count, plural, one {# oferta seleccionada} other {# ofertas seleccionadas}}",
+  "compareLimit": "Puedes comparar hasta 3 ofertas. Quita una selección para elegir otra.",
+  "clearSelection": "Borrar selección",
+  "noOffersTitle": "Aún no hay ofertas",
+  "noOffersLocal": "Avisamos a los ayudantes cerca de {area}. Las ofertas aparecerán aquí cuando respondan.",
+  "noOffersRemote": "Avisamos a los ayudantes que ofrecen ayuda remota. Las ofertas aparecerán aquí cuando respondan.",
+  "bookedTitle": "Tu ayudante está reservado",
+  "bookedBody": "Consulta tu reserva para ver los próximos pasos, los mensajes y los detalles del pago.",
+  "viewBooking": "Ver reserva",
+  "yourTask": "Tu tarea",
+  "description": "Descripción",
+  "details": "Detalles de la tarea",
+  "photos": "Fotos",
+  "openPhoto": "Abrir foto {number} de {total}",
+  "photoTitle": "Foto {number} de {total}",
+  "photoAlt": "Foto {number} de {total} de {name}",
+  "privacy": "Los ayudantes solo ven la zona general. Tu dirección exacta se comparte con tu ayudante después de reservar.",
+  "remoteAddress": "Esta tarea es remota. No se comparte ninguna dirección.",
+  "allowance": "Asignación para gastos",
+  "noAllowance": "No se agregó una asignación para gastos.",
+  "cancel": {
+    "title": "¿Cancelar esta tarea?",
+    "description": "Elige un motivo antes de cancelar. Los ayudantes ya no podrán hacer ofertas en esta tarea.",
+    "reason": "Motivo de la cancelación",
+    "required": "Elige un motivo para continuar.",
+    "keep": "Mantener tarea",
+    "submit": "Cancelar tarea",
+    "pending": "Cancelando tarea…",
+    "reasons": {
+      "no_longer_needed": "Ya no necesito ayuda",
+      "found_help_elsewhere": "Encontré ayuda en otro lado",
+      "details_wrong": "Los detalles de la tarea son incorrectos",
+      "other": "Otro motivo"
+    }
+  },
+  "previews": {
+    "withInvite": "Invitación directa",
+    "group": "Gestión de tareas",
+    "offers": "Tarea con tres ofertas",
+    "no-offers": "Esperando ofertas",
+    "stale-offer": "La oferta necesita reconfirmación",
+    "booked": "Tarea reservada",
+    "remote": "Tarea remota",
+    "compare": "Comparar tres ofertas",
+    "cancel-sheet": "Cancelar con un motivo",
+    "cancel-error": "Cancelación no disponible",
+    "allowance": "Tarea con asignación para gastos",
+    "push-prompt": "Esperando ofertas, con notificaciones sugeridas"
+  }
+}

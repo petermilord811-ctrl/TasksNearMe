@@ -1,0 +1,65 @@
+{
+  "group": "Identidad de marca",
+  "titles": {
+    "logo": "Logotipo · claro y oscuro",
+    "mark": "Isotipo · 16, 32 y 64 px",
+    "palette": "Paleta · papel cálido y luz iridiscente",
+    "type": "Tipografía · Bricolage Grotesque, Instrument Serif y DM Sans",
+    "motion": "Movimiento · duraciones, curvas y resortes"
+  },
+  "light": "Paleta clara",
+  "dark": "Paleta oscura",
+  "identity": "Ayuda, justo donde estás.",
+  "logoDescription": "Un marcador de mapa con una palomita, sobre un recuadro de luz iridiscente. En el nombre, “near” lleva el color.",
+  "markSize": "{size} px",
+  "paletteDescription": "El papel cálido y la tinta mantienen la página en calma. El naranja brasa es para la acción, el violeta marca la única palabra vívida y la luz iridiscente va del naranja brasa al azul pervinca. Cada categoría tiene su propio color en el mapa.",
+  "groups": {
+    "surface": "Superficies",
+    "action": "Acción y acento",
+    "light": "Luz iridiscente",
+    "categories": "Categorías",
+    "status": "Estado"
+  },
+  "typeDescription": "Bricolage Grotesque da a los titulares una forma segura y amigable. La cursiva de Instrument Serif marca la única palabra vívida. DM Sans mantiene los detalles claros.",
+  "display": "Tareas cotidianas, hechas por personas",
+  "accent": "cercanas",
+  "pageHeading": "Tareas cerca de ti, ahora mismo",
+  "sectionHeading": "Un precio. Para ambas partes.",
+  "cardHeading": "Armado de muebles",
+  "body": "Publica lo que necesitas, acuerda un precio desde el inicio y reserva a un ayudante local verificado.",
+  "small": "Las zonas son aproximadas. Un ayudante ve la dirección exacta solo después de que reservas.",
+  "caption": "Ayuda cotidiana en Austin, Texas.",
+  "scale": {
+    "display": "Display · Bricolage Grotesque 44–102 px",
+    "accent": "Acento · Instrument Serif cursiva",
+    "page": "Título de sección · Bricolage Grotesque 36–48 px",
+    "section": "Encabezado · Bricolage Grotesque 24–30 px",
+    "card": "Encabezado de tarjeta · 17–18 px",
+    "body": "Cuerpo · DM Sans 16–20 px",
+    "small": "Pequeño · DM Sans 14 px",
+    "caption": "Pie de texto · DM Sans 12 px"
+  },
+  "motionDescription": "Tranquilo y ágil. El texto sube desde una línea de máscara, línea por línea; las tarjetas brotan de lo que tocaste y las secciones aparecen al llegar a ellas. Solo se mueven la transformación y la opacidad, y con movimiento reducido todo se muestra en su lugar final.",
+  "durations": "Duraciones",
+  "easings": "Curvas",
+  "springs": "Resortes",
+  "stagger": "Escalonado",
+  "durationValue": "{ms} ms",
+  "staggerValue": "{ms} ms entre elementos hermanos",
+  "springValue": "Rigidez {stiffness} · amortiguación {damping} · masa {mass}",
+  "durationNames": {
+    "instant": "Instantánea: pulsaciones e interruptores",
+    "fast": "Rápida: al pasar el cursor y cambios pequeños",
+    "base": "Base: chips, tarjetas y menús",
+    "slow": "Lenta: entradas y revelados",
+    "slower": "Más lenta: el titular y los momentos importantes"
+  },
+  "easingNames": {
+    "out": "Salida: cosas que llegan",
+    "inOut": "Entrada y salida: cosas que cruzan"
+  },
+  "springNames": {
+    "bloom": "Brote: paneles y tarjetas que crecen desde su disparador",
+    "follow": "Seguimiento: elementos pequeños que siguen al puntero"
+  }
+}

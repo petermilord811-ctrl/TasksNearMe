@@ -1,0 +1,16 @@
+{
+  "updated": "Actualizado el {date}",
+  "effective": "En vigor desde el {date}",
+  "draftTitle": "Borrador — aún no está en vigor",
+  "draftDescription": "Este documento está en revisión. Aún no está en vigor y puede cambiar antes de publicarse.",
+  "englishOnlyTitle": "Disponible solo en inglés",
+  "englishOnlyDescription": "Este documento está en inglés. La versión en inglés es la que rige.",
+  "contentsTitle": "En esta página",
+  "otherPoliciesTitle": "Otras políticas",
+  "previews": {
+    "group": "Páginas legales",
+    "draft": "Términos del servicio: borrador",
+    "published": "Términos del servicio: publicado",
+    "publishedVersion": "Versión 1.0"
+  }
+}

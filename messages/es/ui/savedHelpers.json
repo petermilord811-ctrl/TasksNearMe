@@ -1,0 +1,29 @@
+{
+  "title": "Ayudantes guardados",
+  "description": "Encuentra a los ayudantes con quienes te gustaría trabajar otra vez.",
+  "listTitle": "{count, plural, =0 {Tus ayudantes guardados} one {# ayudante guardado} other {# ayudantes guardados}}",
+  "remove": "Quitar",
+  "request": "Solicitar a {name}",
+  "removeLabel": "Quitar a {name} de los ayudantes guardados",
+  "removing": "Quitando…",
+  "removingLabel": "Quitando a {name} de los ayudantes guardados",
+  "removedButton": "Quitado",
+  "removedLabel": "{name} se quitó de los ayudantes guardados",
+  "removed": "{name} se quitó de los ayudantes guardados.",
+  "emptyTitle": "Guarda a los ayudantes que te gustaría volver a reservar",
+  "emptyBody": "Guarda a un ayudante desde una reserva. Lo encontrarás aquí cuando vuelvas a necesitar ayuda.",
+  "viewBookings": "Ver reservas",
+  "errors": {
+    "not_found": "No se encontró a este ayudante. Actualiza la página e inténtalo de nuevo.",
+    "unknown": "No pudimos quitar a este ayudante. Inténtalo de nuevo. Si sigue pasando, pide ayuda."
+  },
+  "previews": {
+    "group": "Reseñas y ayudantes guardados",
+    "default": "Ayudantes guardados",
+    "empty": "Aún no hay ayudantes guardados",
+    "pending": "Quitando a un ayudante guardado",
+    "updated": "Ayudante quitado",
+    "notFound": "Ayudante guardado no encontrado",
+    "unknown": "No se pudo quitar al ayudante guardado"
+  }
+}

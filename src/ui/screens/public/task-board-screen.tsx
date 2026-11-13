@@ -20,6 +20,7 @@ function FilterLink({ href, selected, children }: { href: string; selected: bool
 
 export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const t = useTranslations('taskBoard');
+  const categoryName = useTranslations('helperCard.categories');
   const { market, query } = data;
   const filterHref = (change: TaskBoardQuery) => routes.taskBoard(market.slug, { ...query, ...change, page: undefined });
   const hasFilters = query.category !== undefined || query.when !== 'any' || query.remoteOnly;
@@ -31,7 +32,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
         <p className="text-sm font-semibold">{t('category')}</p>
         <ul className="flex flex-wrap gap-2">
           <li><FilterLink href={filterHref({ category: undefined })} selected={query.category === undefined}>{t('allCategories')}</FilterLink></li>
-          {data.categories.map((category) => <li key={category.slug}><FilterLink href={filterHref({ category: category.slug })} selected={query.category === category.slug}>{category.name}</FilterLink></li>)}
+          {data.categories.map((category) => <li key={category.slug}><FilterLink href={filterHref({ category: category.slug })} selected={query.category === category.slug}>{categoryName(category.slug)}</FilterLink></li>)}
         </ul>
       </nav>
       <div className="flex flex-wrap items-end gap-x-8 gap-y-5 border-t pt-5">

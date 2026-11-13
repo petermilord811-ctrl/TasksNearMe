@@ -1,0 +1,34 @@
+{
+  "title": {
+    "task": "Reportar una tarea",
+    "helper": "Reportar a un ayudante",
+    "review": "Reportar una reseña"
+  },
+  "subject": {
+    "task": "{name}",
+    "helper": "{name}",
+    "review": "Una reseña de {name}"
+  },
+  "back": {
+    "task": "Volver a la tarea",
+    "helper": "Volver al perfil",
+    "review": "Volver al perfil"
+  },
+  "intro": "Cuéntale a soporte qué pasa. A la persona que reportes no se le dice quién la reportó.",
+  "formTitle": "Tu reporte",
+  "urgent": "Si alguien está en peligro, llama primero al 911.",
+  "links": {
+    "task": "Reportar esta tarea",
+    "helper": "Reportar este perfil",
+    "review": "Reportar esta reseña",
+    "reviewBy": "Reportar esta reseña de {name}"
+  },
+  "previews": {
+    "group": "Reporte",
+    "task": "Reportar una tarea",
+    "helper": "Reportar a un ayudante",
+    "review": "Reportar una reseña",
+    "submitted": "Reporte enviado",
+    "errors": "El reporte necesita un motivo y detalles"
+  }
+}

@@ -10,6 +10,7 @@ import { formatDate } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import help from '../../../../messages/en/ui/help.json';
 import legal from '../../../../messages/en/ui/legal.json';
+import legalEs from '../../../../messages/es/ui/legal.json';
 import { HelpCenterScreen } from './help-center-screen';
 import { HelpArticleScreen } from './help-article-screen';
 import { LegalDocScreen } from './legal-doc-screen';
@@ -63,6 +64,15 @@ describe('Help article', () => {
 });
 
 describe('Legal document', () => {
+  it('says it is in English only on a Spanish page, and marks its text as English', () => {
+    const { container, rerender } = render(<NextIntlClientProvider locale="es" messages={{ ...allMessages, legal: legalEs }}><LegalDocScreen data={legalTermsDraft} /></NextIntlClientProvider>);
+    expect(screen.getByText(legalEs.englishOnlyTitle)).toBeDefined();
+    expect(screen.getByText(legalEs.englishOnlyDescription)).toBeDefined();
+    expect(container.querySelector(`section#${legalTermsDraft.sections[0]!.id}`)?.getAttribute('lang')).toBe('en');
+    rerender(<NextIntlClientProvider locale="en" messages={allMessages}><LegalDocScreen data={legalTermsDraft} /></NextIntlClientProvider>);
+    expect(screen.queryByText(legal.englishOnlyTitle)).toBeNull();
+  });
+
   it('warns only for drafts and renders the published effective date', () => {
     const { rerender } = renderScreen(<LegalDocScreen data={legalTermsDraft} />);
     expect(screen.getByText(legal.draftTitle)).toBeDefined();

@@ -1,0 +1,237 @@
+{
+  "avatar": "Avatar con las iniciales {initials}",
+  "photo": "Foto de perfil de {name}",
+  "new": "Nuevo",
+  "ratingSummary": "{average, number} de 5, {count, plural, one {# reseña} other {# reseñas}}",
+  "badges": "Insignias de verificación",
+  "identity": "Identidad verificada",
+  "identityAt": "Identidad verificada · {date}",
+  "identityMeaningAt": "Un documento de identidad oficial y una selfie coincidieron en {date}. Esto verifica la identidad; no garantiza la calidad del trabajo.",
+  "background": "Antecedentes verificados",
+  "backgroundAt": "Antecedentes verificados · {date}",
+  "backgroundMeaningAt": "La verificación de antecedentes salió sin observaciones en {date}. No garantiza la calidad del trabajo ni cubre todas las posibles inquietudes.",
+  "phone": "Teléfono verificado",
+  "phoneMeaning": "Esta persona confirmó que tiene acceso a su número de teléfono. Esto no verifica su identidad ni la calidad de su trabajo.",
+  "none": "Aún no hay insignias de verificación",
+  "statuses": {
+    "identity": {
+      "not_started": "Sin empezar",
+      "processing": "Estamos verificando",
+      "requires_input": "Inténtalo de nuevo",
+      "verified": "Identidad verificada",
+      "canceled": "Verificación cancelada"
+    },
+    "payout": {
+      "not_started": "Sin empezar",
+      "pending": "Configuración en curso",
+      "requirements_due": "Falta información",
+      "active": "Pagos listos",
+      "restricted": "Requiere acción"
+    },
+    "background": {
+      "not_required": "No necesaria",
+      "not_started": "Sin empezar",
+      "invited": "Invitación enviada",
+      "pending": "Verificación en curso",
+      "clear": "Antecedentes verificados",
+      "consider": "En revisión",
+      "suspended": "Requiere acción",
+      "canceled": "Verificación cancelada",
+      "expired": "Verificación vencida"
+    },
+    "identityNameCheck": "Verificando tu nombre",
+    "identityBlocked": "En pausa",
+    "backgroundAdjudication": {
+      "engaged": "Aprobada",
+      "pre_adverse": "Aviso enviado",
+      "post_adverse": "No aprobada"
+    }
+  },
+  "identityFailureReasons": {
+    "document_unreadable": "No pudimos leer la foto de tu documento. Inténtalo de nuevo con buena luz y los bordes completamente visibles.",
+    "selfie_mismatch": "La selfie no coincidió con la foto de tu documento. Inténtalo de nuevo con el rostro bien visible.",
+    "under_18": "Debes tener 18 años o más para ayudar. Si este resultado es incorrecto, repite la verificación de identidad o contacta a soporte.",
+    "other": "No se pudo completar la verificación de identidad. Inténtalo de nuevo o contacta a soporte si el problema continúa."
+  },
+  "setup": {
+    "titles": {
+      "identity": "Verificación de identidad",
+      "payout": "Configuración de pagos",
+      "background": "Verificación de antecedentes"
+    },
+    "identityExplanation": "Nuestro socio de verificación de identidad te pedirá una foto de tu documento de identidad y una selfie. Toma unos 2 minutos.",
+    "identityPublic": "Los clientes ven una insignia de «Identidad verificada» con el mes y el año de tu verificación. La foto de tu documento y tu selfie se mantienen privadas.",
+    "payoutExplanation": "Configura con Stripe, nuestro socio de pagos, dónde se depositan tus ganancias. Stripe se encarga de los datos de tus pagos.",
+    "firstPayout": "Tu primer pago puede tardar unos {days} días.",
+    "payoutRequirements": "Stripe necesita un poco más de información.",
+    "payoutRestricted": "Contacta a soporte para recibir ayuda con tu cuenta de pagos.",
+    "backgroundExplanation": "Nuestro socio de verificación realiza esta revisión para los servicios a domicilio que ofreces. Suele tardar unos días.",
+    "backgroundWaiting": {
+      "invited": "Revisa la invitación de nuestro socio de verificación para completar sus pasos.",
+      "pending": "Tu verificación está en curso. Consulta aquí el estado cuando quieras."
+    },
+    "backgroundSuspended": "Checkr necesita más información de tu parte. Revisa el correo de Checkr o contacta a soporte.",
+    "requiredCategories": "Estos servicios requieren una verificación de antecedentes",
+    "bookableCategories": "Ya puedes hacer ofertas para",
+    "categoryNames": {
+      "furniture-assembly": "Armado de muebles",
+      "moving-help": "Ayuda con mudanzas",
+      "yard-cleanup": "Limpieza de jardín",
+      "light-cleaning": "Limpieza ligera",
+      "computer-help": "Ayuda con computadoras"
+    },
+    "privacy": {
+      "identity": "Completarás esta verificación con nuestro socio de verificación de identidad.",
+      "payout": "Los datos de tus pagos se ingresan en la página de Stripe.",
+      "background": "Tus datos personales y el informe de la verificación se quedan con nuestro socio de verificación."
+    },
+    "startIdentity": "Iniciar verificación de identidad",
+    "tryAgain": "Intentar de nuevo",
+    "checkStatus": "Ver estado",
+    "startPayout": "Configurar pagos",
+    "continuePayout": "Continuar configuración",
+    "startBackground": "Iniciar verificación de antecedentes",
+    "restartBackground": "Iniciar de nuevo la verificación de antecedentes",
+    "contactSupport": "Contactar a soporte",
+    "open": {
+      "identity": "Abrir verificación de identidad",
+      "payout": "Abrir configuración de pagos",
+      "background": "Abrir verificación de antecedentes"
+    },
+    "identityProcessing": "Actualizaremos esta página en cuanto nuestro socio de verificación de identidad tenga un resultado, normalmente en unos minutos. Si cerraste la verificación antes de terminar, continúala.",
+    "continueIdentity": "Continuar la verificación de identidad",
+    "identityRequested": {
+      "staff_request": "Nuestro equipo pidió una nueva verificación de identidad. Tu verificación anterior ya no cuenta, así que tus ofertas están en pausa hasta que esta se apruebe.",
+      "name_changed": "Cambiaste el nombre legal en tu cuenta, así que necesitamos una nueva verificación de identidad que coincida con él."
+    },
+    "identityBlocked": {
+      "try_later": "Lo has intentado 3 veces en un día. Podrás volver a intentarlo a partir de {time}. Ayuda tener buena luz y los cuatro bordes del documento a la vista.",
+      "too_many_attempts": "No pudimos verificar tu identidad después de varios intentos. Nuestro equipo lo revisará y te responderá por correo. También puedes contactar a soporte.",
+      "under_18": "Los ayudantes deben tener 18 años o más. Si este resultado es incorrecto, contacta a soporte y lo revisaremos."
+    },
+    "identityNameCheck": "Tu identidad está verificada, pero el nombre del documento es distinto al de tu cuenta. Nuestro equipo lo está revisando, normalmente en un día. Si el nombre de tu cuenta no es tu nombre legal, <account>actualízalo en la página de tu cuenta</account>.",
+    "biometric": {
+      "title": "Antes de tu verificación de identidad",
+      "body": "Nuestro socio de verificación de identidad, Stripe, compara una foto de tu documento con una selfie en vivo mediante geometría facial, un identificador biométrico. Se usa únicamente para verificar que eres la persona del documento. Stripe lo conserva, no nosotros, y le pedimos que lo elimine 30 días después de tu resultado. La ley de Texas exige tu consentimiento previo.",
+      "checkbox": "Acepto la verificación biométrica descrita aquí.",
+      "required": "Acepta la verificación biométrica para iniciar tu verificación de identidad."
+    },
+    "disclosure": {
+      "title": "Antes de tu verificación de antecedentes",
+      "body": "Checkr, nuestro socio de verificación, genera un informe del consumidor para los servicios a domicilio que ofreces. En la página de Checkr leerás su divulgación, darás tu consentimiento e ingresarás tu número de Seguro Social y tu fecha de nacimiento. Esos datos nunca llegan a nosotros. Puedes obtener una copia gratuita de tu informe de Checkr y disputar con ellos cualquier dato que contenga.",
+      "checkbox": "Lo entiendo y quiero iniciar mi verificación de antecedentes.",
+      "required": "Confirma que lo entiendes para iniciar la verificación de antecedentes."
+    },
+    "backgroundInvitedUntil": "Revisa tu correo para ver la invitación de Checkr y completa sus pasos antes del {date}. Después, inicia una nueva verificación aquí.",
+    "backgroundReview": "Tu verificación está completa y nuestro equipo la está revisando. Nunca mostramos los detalles aquí; Checkr te envía una copia de tu informe. Tus otros servicios no se ven afectados.",
+    "backgroundPreAdverse": "Te enviamos un aviso a través de Checkr con una copia de tu informe y un resumen de tus derechos. Si algo es incorrecto, dispútalo con Checkr antes del {date}. Esperaremos su respuesta antes de decidir.",
+    "backgroundPostAdverse": "Según tu verificación de antecedentes, no puedes tomar tareas a domicilio. Tus otros servicios no se ven afectados. Checkr te envió el aviso con tus derechos.",
+    "backgroundEngaged": "Nuestro equipo revisó tu verificación y te aprobó para tareas a domicilio.",
+    "backgroundValidUntil": "Tu verificación de antecedentes es válida hasta el {date}.",
+    "backgroundRenewal": "Tu verificación de antecedentes vence el {date}. Inicia la renovación ahora para que tus servicios a domicilio continúen sin interrupciones.",
+    "backgroundExpired": "Tu verificación de antecedentes venció. Inicia una nueva para volver a tomar tareas a domicilio.",
+    "startRenewal": "Iniciar la renovación"
+  },
+  "preview": {
+    "group": "Personas",
+    "avatars": "Avatares con iniciales",
+    "badges": "Insignias de verificación",
+    "ratings": "Calificaciones",
+    "all": "Todas las insignias",
+    "some": "Verificación de teléfono",
+    "none": "Sin insignias",
+    "compact": "Insignias compactas",
+    "small": "Pequeña",
+    "medium": "Mediana",
+    "large": "Grande"
+  },
+  "address": "Domicilio verificado",
+  "addressAt": "Domicilio verificado · {date}",
+  "addressMeaningAt": "En {date} se revisó un documento que muestra el domicilio de esta persona. La dirección en sí nunca se muestra.",
+  "homeAddress": {
+    "title": "Domicilio",
+    "explanation": "Verificamos que vives donde dices, con un documento reciente de una empresa o agencia. Los clientes nunca ven tu dirección, solo tu vecindario.",
+    "formTitle": "Comprobante de domicilio",
+    "rules": "Envía un documento con fecha de los últimos {days} días que muestre tu nombre y esta dirección: una foto o un PDF de hasta {megabytes} MB, con las cuatro esquinas visibles.",
+    "search": "Tu domicilio",
+    "searchHint": "Empieza a escribir tu dirección y elígela de la lista.",
+    "outOfArea": "Solo podemos verificar domicilios en Austin y sus alrededores.",
+    "unit": "Apartamento o unidad (opcional)",
+    "unitHint": "Tal como aparece en tu documento.",
+    "documentType": "Tipo de documento",
+    "documentTypes": {
+      "utility_bill": "Recibo de servicios",
+      "bank_statement": "Estado de cuenta bancario o de tarjeta de crédito",
+      "lease": "Contrato de arrendamiento o estado de cuenta de la hipoteca",
+      "government_letter": "Carta de una agencia gubernamental",
+      "insurance_statement": "Estado de cuenta del seguro",
+      "phone_or_internet_bill": "Recibo de teléfono o internet"
+    },
+    "file": "Documento",
+    "fileHint": "Una foto (JPEG, PNG, WebP o HEIC) o un PDF. Si quieres, tapa los números de cuenta; tu nombre, tu dirección y la fecha deben seguir siendo legibles.",
+    "choose": "Elegir un archivo",
+    "chooseAnother": "Elegir otro archivo",
+    "previewAlt": "Vista previa del documento elegido",
+    "fileSize": "{size, number} MB",
+    "declaration": "Este documento muestra mi nombre y esta dirección, y tiene fecha de los últimos {days} días.",
+    "submit": "Enviar para revisión",
+    "sending": "Enviando…",
+    "sent": "Enviado. Lo revisaremos y te avisaremos.",
+    "privacy": "Solo nuestro equipo de confianza y seguridad abre el documento, y cada vez que lo ve queda registrado. Antes, un lector automatizado (Claude, de Anthropic) revisa por ellos el nombre, la dirección y la fecha; solo conservamos sus respuestas de sí o no. Eliminamos el documento 30 días después de revisarlo.",
+    "moving": "¿Te mudaste? Envía un nuevo comprobante",
+    "requested": "Nuestro equipo pidió un nuevo comprobante de tu domicilio. Envíalo abajo; tus ofertas están en pausa hasta que se apruebe.",
+    "inReview": "Estamos revisando tu documento. Suele tardar uno o dos días, y mientras tanto puedes configurar tus pagos.",
+    "sentAt": "Enviado el {date}.",
+    "verified": "Tu domicilio está verificado.",
+    "verifiedAt": "Tu domicilio se verificó el {date}.",
+    "onFile": "Registrado:",
+    "updateInReview": "Tu nuevo comprobante está en revisión. Mientras tanto, tu verificación anterior sigue vigente.",
+    "updateRejected": "No pudimos aceptar tu documento más reciente: {reason} Tu verificación anterior sigue vigente.",
+    "statuses": {
+      "not_started": "Sin empezar",
+      "in_review": "En revisión",
+      "verified": "Domicilio verificado",
+      "rejected": "Se necesita otro documento",
+      "requested": "Se necesita un nuevo comprobante"
+    },
+    "rejectionReasons": {
+      "unreadable": "No pudimos leer el documento. Envía una foto más nítida con las cuatro esquinas visibles, o el PDF.",
+      "name_mismatch": "El nombre del documento no coincidía con el de tu cuenta.",
+      "address_mismatch": "La dirección del documento no coincidía con la que ingresaste.",
+      "too_old": "El documento tenía más de 90 días. Envía uno más reciente.",
+      "not_accepted": "No podemos aceptar ese tipo de documento. Usa uno de los tipos indicados.",
+      "suspicious": "No pudimos aceptar ese documento. Envía un documento original de la empresa o agencia.",
+      "other": "No pudimos aceptar ese documento. Prueba con otro o contacta a soporte."
+    },
+    "errors": {
+      "placeId": "Elige tu dirección de la lista.",
+      "documentType": "Elige el tipo de documento.",
+      "fileRequired": "Agrega el documento.",
+      "fileInvalid": "Ese archivo no parece una foto ni un PDF.",
+      "declaration": "Confirma que el documento muestra tu nombre y esta dirección.",
+      "too_large": "Ese archivo supera {megabytes} MB. Envía una foto o un PDF más pequeño.",
+      "unsupported_type": "Usa una foto (JPEG, PNG, WebP o HEIC) o un PDF.",
+      "rate_limited": "Has enviado varios documentos hoy. Inténtalo de nuevo mañana.",
+      "not_allowed": "Este paso aún no está abierto. Completa primero los pasos anteriores.",
+      "unknown": "No pudimos enviarlo. Revisa tu conexión e inténtalo de nuevo."
+    }
+  },
+  "phoneStep": {
+    "title": "Número de teléfono",
+    "explanation": "Los clientes y nuestro equipo podrán comunicarse contigo el día de una reserva, y recibirás mensajes de texto sobre nuevas reservas cuando lo quieras. Tu número se mantiene privado.",
+    "numberLabel": "Número de celular",
+    "numberHint": "Solo números de EE. UU. Te enviaremos un código de 6 dígitos por mensaje de texto.",
+    "send": "Enviarme un código",
+    "codeSent": "Enviamos un código de 6 dígitos por mensaje de texto a <strong>{phone}</strong>.",
+    "codeLabel": "Código de 6 dígitos",
+    "codeHint": "Funciona durante 10 minutos.",
+    "verify": "Verificar",
+    "resend": "Enviar un código nuevo",
+    "newCodeSent": "Enviamos un código nuevo.",
+    "different": "Usar otro número",
+    "verifiedNow": "Tu número de teléfono está verificado.",
+    "verified": "Tu número de teléfono que termina en {last4} está verificado.",
+    "change": "Usar otro número",
+    "privacy": "Los clientes nunca ven tu número: las llamadas y los mensajes pasan por la app."
+  }
+}

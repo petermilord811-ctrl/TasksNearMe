@@ -1,0 +1,31 @@
+{
+  "reviewBy": "Reseña de {name}",
+  "tags": {
+    "on_time": "Puntual",
+    "friendly": "Amable",
+    "careful": "Trabajo cuidadoso",
+    "clear_communication": "Comunicación clara",
+    "skilled": "Hábil",
+    "tidy": "Deja todo en orden",
+    "good_value": "Buen precio"
+  },
+  "categories": {
+    "furniture-assembly": "Armado de muebles",
+    "moving-help": "Ayuda con mudanzas",
+    "yard-cleanup": "Limpieza de jardín",
+    "light-cleaning": "Limpieza ligera",
+    "computer-help": "Ayuda con computadoras y teléfonos"
+  },
+  "workSamples": {
+    "open": "Ver muestra: {description}",
+    "title": "Muestra de trabajo {number} de {count}",
+    "view": "Ver muestra"
+  },
+  "preview": {
+    "reviewsGroup": "Reseñas",
+    "full": "Reseña con etiquetas y una nota",
+    "tagsOnly": "Reseña solo con etiquetas",
+    "samplesGroup": "Muestras de trabajo",
+    "three": "Tres muestras de trabajo"
+  }
+}

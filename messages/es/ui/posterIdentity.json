@@ -1,0 +1,37 @@
+{
+  "title": "Verifica tu identidad",
+  "reasons": {
+    "staff_request": "Nuestro equipo pidió una verificación de identidad en tu cuenta. No podrás publicar ni reservar hasta que la apruebes.",
+    "reports": "Recibimos reportes sobre esta cuenta, así que necesitamos verificar tu identidad antes de que vuelvas a publicar o reservar.",
+    "failed_payments": "Varios pagos con tarjeta no se procesaron hoy, así que necesitamos verificar tu identidad antes de que vuelvas a pagar.",
+    "new_account_large_booking": "Tu cuenta es nueva, así que las reservas de $500 o más requieren primero una verificación de identidad.",
+    "none": "A los clientes solo se les pide una verificación de identidad cuando la solicitamos."
+  },
+  "cardTitle": "Verificación de identidad",
+  "explanation": "Nuestro socio de verificación de identidad te pide una foto de tu documento de identidad y una selfie. Toma unos 2 minutos.",
+  "privacy": "Los ayudantes nunca ven tu documento. Solo guardamos que lo aprobaste y cuándo.",
+  "processing": "Estamos verificando tu identidad. Suele tardar unos minutos, y te avisaremos cuando termine.",
+  "nameCheck": "Tu identidad fue aprobada, pero el nombre del documento es distinto al de tu cuenta. Nuestro equipo lo está revisando y te avisaremos.",
+  "verified": "Tu identidad está verificada. Puedes continuar.",
+  "notNeeded": "No necesitas una verificación de identidad por ahora.",
+  "start": "Iniciar verificación de identidad",
+  "tryAgain": "Intentar de nuevo",
+  "checkStatus": "Ver estado",
+  "continueCheck": "Continuar la verificación de identidad",
+  "continue": "Continuar",
+  "contactSupport": "Contactar a soporte",
+  "previews": {
+    "group": "Verificación de identidad del cliente",
+    "reports": "Reportes: antes de la primera verificación",
+    "largeBooking": "Cuenta nueva, reserva de $500 o más",
+    "failedPayments": "Tarjetas rechazadas",
+    "staffRequest": "Solicitada por el equipo",
+    "retry": "Intentar de nuevo",
+    "processing": "Verificando",
+    "tryLater": "Intentos usados hoy",
+    "tooMany": "Demasiados intentos",
+    "nameCheck": "Revisión del nombre",
+    "verified": "Verificada: continuar",
+    "notNeeded": "No necesaria"
+  }
+}

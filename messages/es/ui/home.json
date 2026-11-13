@@ -1,0 +1,111 @@
+{
+  "greeting": {
+    "morning": "Buenos días, {firstName}",
+    "afternoon": "Buenas tardes, {firstName}",
+    "evening": "Buenas noches, {firstName}"
+  },
+  "description": {
+    "poster": "Un poco de ayuda, una tarea a la vez. Esto es lo que está pasando.",
+    "helper": "Tus próximos pasos y las tareas que se acercan."
+  },
+  "postTask": "Publicar una tarea",
+  "findWork": "Buscar trabajo",
+  "allBookings": "Todas las reservas",
+  "myTasks": "Mis tareas",
+  "myOffers": "Mis ofertas",
+  "earningsLink": "Ganancias",
+  "sections": {
+    "attention": "Requiere tu atención",
+    "upcoming": "Próximas",
+    "openTasks": "Tareas abiertas",
+    "activeOffers": "Ofertas activas",
+    "nearby": "Tareas cercanas",
+    "earnings": "Ganancias de un vistazo"
+  },
+  "attention": {
+    "taskFallback": "esta tarea",
+    "approve_work": "Aprobar {title}",
+    "review_offers": "{count, plural, one {# oferta nueva} other {# ofertas nuevas}} en {title}",
+    "reviewOffersWithoutCount": "Revisa las ofertas nuevas en {title}",
+    "finish_payment": "Completa el pago de {title}",
+    "answer_cant_access": "Tu ayudante necesita acceso para {title}",
+    "unread_messages": "{count, plural, one {# mensaje sin leer} other {# mensajes sin leer}}",
+    "messagesWithoutCount": "Lee tus mensajes sin leer",
+    "check_in_today": "{title} empieza hoy",
+    "reconfirm_offer": "Vuelve a confirmar tu oferta en {title}",
+    "finish_setup": "Termina de configurar tu perfil de ayudante",
+    "payout_action_needed": "Tu pago necesita atención",
+    "body": {
+      "approve_work": "Revisa el trabajo y luego apruébalo o reporta un problema.",
+      "review_offers": "Compara las ofertas y elige un ayudante.",
+      "finish_payment": "Completa el pago para confirmar tu reserva.",
+      "answer_cant_access": "Abre la reserva y avísale a tu ayudante cómo entrar.",
+      "unread_messages": "Abre tus mensajes para ponerte al día.",
+      "check_in_today": "Abre la reserva para registrar tu llegada cuando vayas en camino.",
+      "reconfirm_offer": "La tarea cambió. Revisa los detalles y confirma tu oferta de nuevo.",
+      "finish_setup": "Termina el siguiente paso de la configuración para poder enviar ofertas.",
+      "payout_action_needed": "Actualiza tus datos bancarios en Ganancias para resolver el problema con el pago.",
+      "answer_invite": "Acepta, rechaza o sugiere otras condiciones antes de que venza la solicitud.",
+      "answer_counter": "Acepta o rechaza las nuevas condiciones antes de que venzan.",
+      "answer_proposal": "Revisa los detalles y luego acepta y paga, o rechaza."
+    },
+    "deadline": "Vence {deadline}",
+    "approvalDeadline": "Aprueba o reporta un problema antes de {deadline}. Después, la tarea se aprueba automáticamente.",
+    "paymentDeadline": "Completa el pago antes de {deadline}.",
+    "answerDeadline": "Responde antes de {deadline}.",
+    "startTime": "Empieza a las {time} · {date}",
+    "answer_invite": "Un cliente te invitó a {title}",
+    "answer_counter": "Tu ayudante envió una contraoferta para {title}",
+    "answer_proposal": "Tu ayudante propuso una reserva: {title}",
+    "named": {
+      "answer_invite": "{name} te invitó a {title}",
+      "answer_counter": "{name} envió una contraoferta para {title}",
+      "answer_proposal": "{name} propuso una reserva: {title}"
+    }
+  },
+  "empty": {
+    "attention": {
+      "title": "Estás al día",
+      "body": "Lo que necesite tu atención aparecerá aquí."
+    },
+    "upcoming": {
+      "title": "No hay reservas próximas",
+      "posterBody": "Cuando reserves a un ayudante, tu siguiente tarea aparecerá aquí.",
+      "helperBody": "Cuando un cliente te reserve, tu siguiente tarea aparecerá aquí."
+    },
+    "openTasks": {
+      "title": "¿En qué te vendría bien una mano?",
+      "body": "Publica una tarea para contarles a los ayudantes cercanos lo que necesitas. Tus tareas abiertas y las ofertas nuevas aparecerán aquí."
+    },
+    "activeOffers": {
+      "title": "Aún no hay ofertas activas",
+      "body": "Busca una tarea en la que puedas ayudar. Las ofertas que envíes aparecerán aquí."
+    },
+    "nearby": {
+      "title": "No hay tareas cercanas para mostrar",
+      "body": "Mira Buscar trabajo para ver más tareas y otras opciones de búsqueda."
+    }
+  },
+  "earnings": {
+    "upcoming": "Próximas",
+    "onTheWay": "En camino"
+  },
+  "setup": {
+    "title": "Prepárate para enviar ofertas",
+    "body": "Puedes explorar tareas mientras terminas de configurar tu perfil de ayudante.",
+    "action": "Terminar configuración"
+  },
+  "previews": {
+    "group": "Pantallas · Inicio",
+    "client": "Cliente · atención y próximas tareas",
+    "clientEmpty": "Cliente · un nuevo comienzo",
+    "helper": "Ayudante · hoy y tareas cercanas",
+    "helperPayoutAction": "Ayudante · se necesita una acción en el pago",
+    "helperNotSetUp": "Ayudante · terminar la configuración",
+    "clientPaymentAccess": "Cliente · plazos de pago y acceso",
+    "helperEmpty": "Ayudante · secciones vacías",
+    "helperInvite": "Ayudante · responder a una solicitud de reserva",
+    "clientCounter": "Cliente · responder a una contraoferta",
+    "clientProposal": "Cliente · responder a una propuesta de reserva"
+  }
+}

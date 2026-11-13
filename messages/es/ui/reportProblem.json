@@ -1,0 +1,43 @@
+{
+  "title": "Reportar un problema",
+  "intro": "Cuéntanos qué pasó para que soporte pueda ayudar a resolverlo.",
+  "backToBooking": "Volver a la reserva",
+  "work": "El trabajo",
+  "deadline": "Reporta antes del {date} a las {time}; después, la reserva se aprueba automáticamente.",
+  "deadlineRelative": "Plazo de aprobación: {relative} (hora del centro).",
+  "reason": "¿Cuál es el problema?",
+  "reasonHint": "Elige el motivo que describa lo que pasó.",
+  "reasons": {
+    "not_done": "El trabajo no está terminado",
+    "not_as_agreed": "El trabajo no es lo acordado",
+    "damage": "Algo se dañó",
+    "hours_wrong": "Las horas no son correctas",
+    "expenses_wrong": "Los gastos no son correctos",
+    "other": "Otra cosa"
+  },
+  "description": "¿Qué pasó?",
+  "descriptionHint": "Usa de 20 a 2,000 caracteres. Incluye qué se debe corregir.",
+  "descriptionCount": "{count, number} de {max, number} caracteres",
+  "photos": "Fotos del problema (opcional)",
+  "photosHint": "Agrega hasta 6 fotos, de hasta {megabytes} MB cada una. Evita números de casa, correo postal y rostros.",
+  "supportNote": "Soporte revisará lo ocurrido. El pago queda retenido hasta que se resuelva.",
+  "submit": "Reportar el problema",
+  "submitting": "Enviando reporte…",
+  "confirmTitle": "¿Enviar este reporte?",
+  "confirmDescription": "Soporte y tu ayudante recibirán tu reporte. El pago queda retenido hasta que se resuelva el problema.",
+  "confirmSubmit": "Enviar reporte",
+  "cancel": "Seguir editando",
+  "success": "Tu problema fue reportado. Soporte revisará lo ocurrido.",
+  "reload": "Recargar detalles de la reserva",
+  "getHelp": "Contactar a soporte",
+  "errors": {
+    "expired": "El plazo de aprobación terminó. Contacta a soporte para recibir ayuda con esta reserva.",
+    "not_allowed": "Esta reserva cambió. Recarga los detalles de la reserva antes de continuar."
+  },
+  "unavailable": {
+    "title": "Este reporte no se puede enviar ahora",
+    "not_submitted": "Tu ayudante aún no ha entregado el trabajo. Vuelve a la reserva para ver la actualización más reciente.",
+    "window_passed": "El plazo de aprobación terminó y la reserva fue aprobada. Contacta a soporte si aún necesitas ayuda.",
+    "closed": "Esta reserva ya está completada, cancelada o tiene un problema reportado. Vuelve a la reserva para ver qué sigue."
+  }
+}

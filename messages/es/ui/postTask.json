@@ -1,0 +1,476 @@
+{
+  "title": "Publicar una tarea",
+  "intro": "Cuéntales a los ayudantes cercanos qué necesitas. Puedes revisar todo antes de publicar.",
+  "progress": "Paso {current} de {total} · {step}",
+  "navigation": "Pasos para publicar",
+  "back": "Atrás",
+  "next": "Siguiente",
+  "post": "Publicar tarea",
+  "posting": "Publicando…",
+  "checking": "Revisando…",
+  "saved": "Tu borrador se conserva en esta pestaña hasta que publiques.",
+  "storageUnavailable": "Tu navegador no pudo guardar este borrador. Mantén esta pestaña abierta hasta que publiques.",
+  "restored": "Tu borrador está listo para continuar.",
+  "checkFields": "Revisa los datos resaltados para continuar.",
+  "unsupportedOption": "Elige una opción disponible para esta tarea.",
+  "prohibitedLink": "Ver tareas prohibidas",
+  "steps": {
+    "category": "Categoría",
+    "describe": "Descripción",
+    "details": "Detalles",
+    "photos": "Fotos",
+    "where": "Dónde",
+    "when": "Cuándo",
+    "budget": "Presupuesto",
+    "review": "Revisar y publicar"
+  },
+  "fields": {
+    "optional": "{label} (opcional)",
+    "choose": "Elige una opción",
+    "yes": "Sí",
+    "no": "No",
+    "decrease": "Disminuir {label}",
+    "increase": "Aumentar {label}"
+  },
+  "category": {
+    "label": "¿Con qué necesitas ayuda?",
+    "hint": "Elige una categoría para tu tarea.",
+    "scope": {
+      "furniture-assembly": "Escritorios, camas, estantes y otros muebles para armar.",
+      "moving-help": "Cargar, descargar y mover cosas dentro de tu casa.",
+      "yard-cleanup": "Hojas, maleza y orden ligero del jardín.",
+      "light-cleaning": "Limpieza diaria de cuartos, cocinas y baños.",
+      "computer-help": "Configuración de dispositivos, solución de problemas y explicaciones con paciencia."
+    }
+  },
+  "details": {
+    "furniture-assembly": {
+      "itemType": {
+        "label": "¿Qué hay que armar?",
+        "hint": "Elige el artículo principal. Agrega los demás en tu descripción.",
+        "options": {
+          "desk": "Escritorio",
+          "bed": "Cama",
+          "bookshelf": "Librero",
+          "wardrobe": "Clóset",
+          "dresser": "Cómoda",
+          "table": "Mesa",
+          "chairs": "Sillas",
+          "other": "Otra cosa"
+        }
+      },
+      "itemCount": {
+        "label": "Cantidad de artículos",
+        "hint": "Cuenta cada mueble por separado."
+      },
+      "brand": {
+        "label": "Marca o modelo",
+        "hint": "Un nombre o número de modelo ayuda al ayudante a prepararse."
+      },
+      "floor": {
+        "label": "Piso",
+        "hint": "Usa 0 para la planta baja."
+      },
+      "elevator": {
+        "label": "¿Hay elevador?",
+        "hint": "Cuéntale al ayudante cómo llegar al cuarto."
+      },
+      "wallAnchoring": {
+        "label": "¿Necesita anclarse a la pared?",
+        "hint": "Revisa las instrucciones del mueble para ver si requiere anclaje."
+      },
+      "toolsOnSite": {
+        "label": "¿Tienes herramientas disponibles?",
+        "hint": "Si no, el ayudante puede planear traer las suyas."
+      }
+    },
+    "moving-help": {
+      "moveType": {
+        "label": "¿Qué ayuda con la mudanza necesitas?",
+        "hint": "Tú te encargas del vehículo. Los ayudantes se encargan de cargar y mover.",
+        "options": {
+          "within_home": "Mover cosas dentro de mi casa",
+          "load_truck": "Cargar un camión",
+          "unload_truck": "Descargar un camión",
+          "load_and_unload": "Cargar y descargar"
+        }
+      },
+      "rooms": {
+        "label": "Cantidad de cuartos",
+        "hint": "Cuenta los cuartos con cosas que hay que mover."
+      },
+      "heavyItems": {
+        "label": "Artículos pesados o voluminosos",
+        "hint": "Por ejemplo, un sofá, una cómoda o una cama queen."
+      },
+      "stairFlights": {
+        "label": "Tramos de escaleras",
+        "hint": "Usa 0 si no hay escaleras."
+      },
+      "elevator": {
+        "label": "¿Hay elevador?",
+        "hint": "Esto ayuda al ayudante a planear para los artículos más grandes."
+      }
+    },
+    "yard-cleanup": {
+      "yardSize": {
+        "label": "Tamaño del jardín",
+        "hint": "Elige el tamaño más cercano al área que necesita trabajo.",
+        "options": {
+          "small": "Pequeño",
+          "medium": "Mediano",
+          "large": "Grande"
+        }
+      },
+      "work": {
+        "label": "¿Qué hay que hacer?",
+        "hint": "Elige la tarea principal y agrega los detalles en tu descripción.",
+        "options": {
+          "leaves": "Rastrillar y embolsar hojas",
+          "weeding": "Quitar maleza a mano",
+          "pruning": "Poda ligera a mano",
+          "debris": "Juntar residuos del jardín",
+          "mixed": "Una mezcla de tareas de jardín"
+        }
+      },
+      "greenWastePlan": {
+        "label": "¿Qué pasa con las hojas y los residuos embolsados?",
+        "hint": "Los ayudantes juntan y embolsan los residuos del jardín en el lugar. Tú te encargas de desecharlos; los ayudantes no pueden llevárselos.",
+        "options": {
+          "curbside": "Dejarlos en la banqueta para la recolección de la ciudad",
+          "poster_handles": "Dejarlos en mi jardín; yo me encargo"
+        }
+      },
+      "toolsOnSite": {
+        "label": "¿Tienes herramientas de jardín disponibles?",
+        "hint": "Indica en tu descripción las herramientas y bolsas que tienes."
+      }
+    },
+    "light-cleaning": {
+      "bedrooms": {
+        "label": "Cantidad de recámaras",
+        "hint": "Cuenta solo las recámaras incluidas en esta tarea."
+      },
+      "bathrooms": {
+        "label": "Cantidad de baños",
+        "hint": "Cuenta solo los baños incluidos en esta tarea."
+      },
+      "suppliesOnSite": {
+        "label": "¿Tienes productos de limpieza?",
+        "hint": "Menciona en tu descripción los productos que prefieras."
+      },
+      "pets": {
+        "label": "¿Habrá mascotas en casa?",
+        "hint": "Cuéntale al ayudante qué esperar al llegar."
+      }
+    },
+    "computer-help": {
+      "device": {
+        "label": "¿Qué dispositivo necesita ayuda?",
+        "hint": "Elige el dispositivo principal y describe los demás.",
+        "options": {
+          "phone": "Teléfono",
+          "tablet": "Tableta",
+          "laptop": "Laptop",
+          "desktop": "Computadora de escritorio",
+          "printer": "Impresora",
+          "wifi_router": "Router de Wi-Fi",
+          "tv": "TV",
+          "other": "Otro dispositivo"
+        }
+      },
+      "need": {
+        "label": "¿Qué tipo de ayuda?",
+        "hint": "No hacen falta términos técnicos. Elige la opción más cercana.",
+        "options": {
+          "setup": "Configurarlo",
+          "fix": "Arreglar un problema",
+          "how_to": "Enseñarme cómo",
+          "backup": "Respaldar archivos",
+          "other": "Otra cosa"
+        }
+      },
+      "deviceBrand": {
+        "label": "Marca o modelo del dispositivo",
+        "hint": "Agrégalo si lo sabes. Puedes dejarlo en blanco."
+      }
+    }
+  },
+  "schedule": {
+    "policy": "Elige un inicio con al menos {hours, plural, one {# hora} other {# horas}} de anticipación y no más de {days, plural, one {# día} other {# días}} adelante. Todas las horas son de {market}.",
+    "date": "Fecha",
+    "dateHint": "Elige un día para la tarea.",
+    "timing": "Preferencia de horario",
+    "timingHint": "Indica un rango de horas o deja el día flexible.",
+    "window": "Elige un rango de horas",
+    "flexible": "Cualquier hora ese día",
+    "startTime": "El rango empieza",
+    "endTime": "El rango termina",
+    "timeHint": "Elige una hora en intervalos de 30 minutos.",
+    "startTooSoon": "Elige un inicio con al menos {hours, plural, one {# hora} other {# horas}} de anticipación.",
+    "endAfterStart": "Elige una hora de término posterior a la de inicio."
+  },
+  "budget": {
+    "guidance": "Lo habitual en {market}: {low}–{high} {unit}",
+    "units": {
+      "item": "por artículo",
+      "hour": "por hora",
+      "task": "por tarea"
+    },
+    "type": "¿Cómo quieres fijar el precio?",
+    "typeHint": "Los ayudantes pueden responder con ofertas. Revisas el precio completo antes de reservar.",
+    "fixed": "Precio fijo",
+    "hourly": "Por hora",
+    "price": "Precio de la tarea ($)",
+    "priceHint": "Escribe dólares. El mínimo para esta categoría es {minimum}.",
+    "rate": "Tarifa por hora ($)",
+    "rateHint": "Escribe el monto en dólares por cada hora.",
+    "minimumHours": "Esta categoría tiene un mínimo de {hours, plural, one {# hora} other {# horas}}.",
+    "estimatedHours": "Horas estimadas",
+    "estimatedHoursHint": "Tu estimación, en intervalos de media hora.",
+    "hoursCap": "Límite de horas",
+    "hoursCapHint": "El máximo de horas que aceptas, en intervalos de media hora.",
+    "addExpense": "Agregar una asignación para gastos (opcional)",
+    "expenseHint": "Reserva un monto para insumos o materiales acordados. El ayudante entrega los recibos.",
+    "expenseAmount": "Asignación para gastos ($)",
+    "expenseAmountHint": "Escribe dólares, hasta {maximum}.",
+    "expenseDescription": "¿Para qué es la asignación?",
+    "expenseDescriptionHint": "Nombra los insumos o materiales que el ayudante podría necesitar."
+  },
+  "describe": {
+    "title": "Título de la tarea",
+    "titleHint": "Un resumen corto, como armar un escritorio.",
+    "description": "¿Con qué necesitas ayuda?",
+    "descriptionHint": "Incluye qué hay que hacer, qué está listo y qué debe traer el ayudante.",
+    "counter": "{count}/{max}",
+    "aiTitle": "Ayúdame a describirla",
+    "aiHint": "Empieza con tus propias palabras. Puedes revisar y editar la sugerencia. No se publica nada automáticamente.",
+    "aiInput": "Dilo a tu manera",
+    "aiInputHint": "Unas cuantas notas bastan. No incluyas datos de contacto ni tu dirección exacta.",
+    "draft": "Ayúdame a describirla",
+    "drafting": "Escribiendo una sugerencia…",
+    "suggestion": "Tu descripción sugerida",
+    "questions": "Cosas por revisar antes de publicar",
+    "use": "Usar esta",
+    "keep": "Conservar la mía",
+    "used": "Sugerencia agregada. Aún puedes editar el título, la descripción y los detalles.",
+    "kept": "Tu descripción original no cambió.",
+    "yes": "Sí",
+    "no": "No",
+    "prohibitedLink": "Ver tareas con las que no podemos ayudar",
+    "errors": {
+      "unavailable": "Las sugerencias no están disponibles por ahora. Inténtalo de nuevo o continúa con tu propia descripción.",
+      "rate_limited": "Has pedido varias sugerencias. Espera un poco e inténtalo de nuevo, o escribe tu propia descripción.",
+      "prohibited": "No podemos ayudar con algo de estas notas. Revisa las tareas con las que no podemos ayudar y actualiza tu descripción."
+    }
+  },
+  "photos": {
+    "label": "Agregar fotos (opcional)",
+    "hint": "Agrega hasta {count} fotos de hasta {megabytes} MB cada una. Se aceptan JPEG, PNG, WebP y HEIC.",
+    "privacy": "Evita que se vean números de casa, correo postal y rostros.",
+    "count": "{count, plural, =0 {Sin fotos agregadas} one {# foto agregada} other {# fotos agregadas}}",
+    "uploaded": "Foto subida.",
+    "uploading": "Subiendo foto…",
+    "preview": "Vista previa de la foto: {name}",
+    "remove": "Quitar la foto {number}",
+    "removed": "Foto quitada.",
+    "restored": "Foto subida {number}",
+    "restoredHint": "Esta foto está guardada con tu borrador. Su vista previa no está disponible por ahora.",
+    "loadingSaved": "Cargando vistas previas de las fotos guardadas…",
+    "restoreFailed": "No se pudieron cargar las vistas previas. Actualiza la página para intentarlo de nuevo; tus fotos siguen guardadas.",
+    "errors": {
+      "too_large": "Esta foto es demasiado grande. Elige una foto de menos de {megabytes} MB.",
+      "unsupported_type": "Elige una foto JPEG, PNG, WebP o HEIC.",
+      "too_many": "Puedes agregar hasta {count} fotos. Quita una antes de agregar otra.",
+      "rate_limited": "Las fotos se están subiendo demasiado rápido. Espera un poco e inténtalo de nuevo.",
+      "unknown": "Esta foto no se subió. Inténtalo de nuevo."
+    }
+  },
+  "location": {
+    "mode": "¿Dónde será?",
+    "modeHint": "Elige ayuda en persona o, cuando la categoría lo permita, ayuda remota.",
+    "errors": {
+      "not_supported": "Esta categoría necesita ayuda en persona. Elige En persona para continuar."
+    },
+    "local": "En persona",
+    "remote": "Remota",
+    "remoteHint": "Se reúnen en línea. Comparte los datos de la reunión con tu ayudante reservado.",
+    "search": "Busca tu dirección",
+    "searchHint": "Escribe al menos 3 caracteres y luego elige tu dirección.",
+    "results": "Direcciones que coinciden",
+    "loading": "Buscando direcciones…",
+    "empty": "No hay direcciones que coincidan. Prueba con el nombre de una calle o un código postal.",
+    "failed": "La búsqueda de direcciones no está disponible. Inténtalo de nuevo en un momento.",
+    "outOfArea": "Todavía no estamos en esa zona.",
+    "waitlist": "Unirme a la lista de espera",
+    "publicPreview": "Los ayudantes ven: {area}, {market}.",
+    "privateHint": "Tu dirección exacta solo llega al ayudante que reserves.",
+    "selected": "Dirección seleccionada.",
+    "unit": "Apartamento o unidad (opcional)",
+    "unitHint": "Solo lo ve tu ayudante reservado.",
+    "accessNotes": "Notas de acceso (opcional)",
+    "accessHint": "Solo lo ve tu ayudante reservado. Incluye instrucciones de entrada, estacionamiento o escaleras.",
+    "restoreHint": "Tu dirección está guardada. Vuelve a buscar si necesitas cambiarla."
+  },
+  "review": {
+    "intro": "Revisa tu tarea y quién puede ver cada parte. Puedes volver atrás para cambiar lo que quieras antes de publicar.",
+    "everyone": "Todos ven",
+    "helpers": "Los ayudantes con sesión iniciada también ven",
+    "bookedHelper": "Solo tu ayudante reservado ve",
+    "category": "Categoría",
+    "area": "Zona",
+    "areaValue": "{area}, {market}",
+    "areaUnavailable": "Zona general de la dirección que elegiste",
+    "remote": "Remota",
+    "when": "Cuándo",
+    "flexible": "Cualquier hora ese día",
+    "notSet": "Aún sin definir",
+    "budget": "Presupuesto",
+    "fixedPrice": "{price} de precio fijo",
+    "hourlyRate": "{rate} por hora",
+    "hourlyHours": "Estimado {estimate} · Límite {cap}",
+    "yes": "Sí",
+    "no": "No",
+    "allowance": "Asignación para gastos",
+    "photoAlt": "Foto {number} de {total} de la tarea",
+    "savedPhoto": "La foto {number} está guardada. Su vista previa aparecerá después de publicar.",
+    "noPhotos": "Sin fotos agregadas.",
+    "privacy": "Los ayudantes solo ven la zona general. Tu dirección exacta se comparte con tu ayudante después de reservar.",
+    "address": "Dirección",
+    "addressSaved": "La dirección que elegiste está guardada. Vuelve a Dónde para verla o cambiarla.",
+    "unit": "Unidad o apartamento",
+    "accessNotes": "Notas de acceso",
+    "remotePrivacy": "Esta es una tarea remota. No se comparte ninguna dirección.",
+    "priceTitle": "Si reservas a este precio",
+    "priceLoading": "Obteniendo el desglose del precio…",
+    "priceError": "No pudimos cargar el desglose del precio. Inténtalo de nuevo para ver lo que pagarás al reservar.",
+    "retryPrice": "Reintentar el desglose del precio",
+    "payment": "Pagas al reservar. Tu ayudante recibe su pago cuando termina la tarea."
+  },
+  "previews": {
+    "group": "Publicar una tarea",
+    "category": "Elegir una categoría",
+    "describe-ai": "Descripción con ayuda opcional para redactar",
+    "describe-no-ai": "Descripción sin ayuda para redactar",
+    "ai-suggestion": "Revisar una descripción sugerida",
+    "details-furniture": "Detalles de armado de muebles",
+    "details-moving": "Detalles de ayuda con mudanzas",
+    "details-computer": "Detalles de ayuda con computadoras",
+    "details-yard": "Detalles de limpieza de jardín",
+    "details-cleaning": "Detalles de limpieza ligera",
+    "photos": "Dos fotos subidas",
+    "photos-empty": "Agregar la primera foto",
+    "where-local": "Dirección local y privacidad",
+    "where-remote": "Tarea remota",
+    "where-out-of-area": "Dirección fuera del área de servicio",
+    "when-window": "Fecha y rango de horas",
+    "when-flexible": "Cualquier hora del día elegido",
+    "budget-fixed": "Precio fijo y orientación",
+    "budget-hourly": "Tarifa por hora, límite y asignación",
+    "review-desk": "Revisar una tarea de escritorio",
+    "review-moving": "Revisar ayuda con mudanzas",
+    "review-remote": "Revisar ayuda remota con computadoras",
+    "review-loading": "Cargando el desglose del precio",
+    "review-error": "Desglose del precio no disponible",
+    "error-prohibited": "La descripción de la tarea necesita cambios",
+    "error-limit": "Se alcanzó el límite de publicaciones",
+    "post-again": "Publicar de nuevo: revisar",
+    "post-again-address-deleted": "Publicar de nuevo: dirección eliminada",
+    "describe-templates": "Descripción: empezar con un ejemplo",
+    "describe-from-template": "Descripción: empezó con un ejemplo"
+  },
+  "repeat": {
+    "ready": "Publicando “{title}” de nuevo. Todo lo de la vez anterior está completo, excepto las fotos, para la próxima fecha disponible. Revísalo y publica.",
+    "addressDeleted": "Publicando “{title}” de nuevo. La dirección anterior se eliminó 180 días después de tu última reserva allí, así que búscala de nuevo."
+  },
+  "templates": {
+    "heading": "Empezar con un ejemplo",
+    "hint": "Completa el título, la descripción y los detalles. Puedes cambiar lo que quieras.",
+    "replaceQuestion": "¿Reemplazar tu título, descripción y detalles con el ejemplo “{example}”?",
+    "replace": "Reemplazar",
+    "keep": "Conservar lo que escribí",
+    "applied": "Completado con el ejemplo “{example}”. Responde las preguntas de la descripción y cambia lo que quieras.",
+    "undo": "Deshacer",
+    "undone": "De vuelta a lo que tenías.",
+    "furniture-desk": {
+      "label": "Escritorio",
+      "title": "Armar un escritorio",
+      "description": "Escritorio para armar.\n- Más o menos cuántas cajas o piezas:\n- Cajones, repisa superior o bandeja para teclado:\n- En qué cuarto va y qué espacio hay para trabajar:\n- Las cajas ya están aquí, o la fecha de entrega:"
+    },
+    "furniture-bed": {
+      "label": "Base de cama",
+      "title": "Armar una base de cama",
+      "description": "Base de cama para armar.\n- Tamaño (individual, matrimonial, queen o king):\n- Cabecera, cajones de almacenamiento o base elevable:\n- En qué cuarto va:\n- Las cajas ya están aquí, o la fecha de entrega:"
+    },
+    "furniture-wardrobe": {
+      "label": "Clóset",
+      "title": "Armar un clóset",
+      "description": "Clóset para armar y anclar a la pared.\n- Más o menos qué altura tiene:\n- Puertas (con bisagras o corredizas) y cajones:\n- Tipo de pared, si lo sabes (tablaroca o ladrillo):\n- Kit antivuelco en la caja (sí o no):"
+    },
+    "furniture-anchor": {
+      "label": "Anclaje a la pared",
+      "title": "Anclar un librero alto a la pared",
+      "description": "Mueble alto para anclar a la pared y que no se vuelque.\n- Qué es y más o menos qué altura tiene:\n- Tipo de pared, si lo sabes (tablaroca o ladrillo):\n- Kit antivuelco a la mano (sí o no):\n- Ya está vacío, o hay cosas que quitar primero:"
+    },
+    "moving-load-truck": {
+      "label": "Cargar un camión",
+      "title": "Ayuda para cargar un camión de mudanza",
+      "description": "Ayuda para cargar mi camión de mudanza rentado.\n- Tamaño del camión y a qué distancia de la puerta se estaciona:\n- Cajas empacadas y selladas (sí o no):\n- Diablito o cobijas de mudanza en el lugar (sí o no):\n- Algo frágil o difícil de cargar:"
+    },
+    "moving-within-home": {
+      "label": "De cuarto a cuarto",
+      "title": "Mover muebles entre cuartos",
+      "description": "Mover muebles de un cuarto a otro en mi casa.\n- Qué se mueve, y de dónde a dónde:\n- Algo que vaciar primero (cajones, estantes):\n- Puertas angostas o vueltas cerradas:\n- Pisos que proteger (madera, azulejo):"
+    },
+    "moving-carry-in": {
+      "label": "Descargar y meter",
+      "title": "Meter cajas y muebles",
+      "description": "Descargar cajas y algunos muebles de mi camión o auto y meterlos a la casa.\n- Más o menos cuántas cajas:\n- A qué distancia de la puerta se estaciona el camión o auto:\n- En qué cuartos va cada cosa:\n- Cuándo llega el camión o auto:"
+    },
+    "yard-leaves": {
+      "label": "Rastrillar hojas",
+      "title": "Rastrillar y embolsar hojas",
+      "description": "Rastrillar el jardín y embolsar las hojas para la recolección en la banqueta.\n- Jardín del frente, del fondo o ambos:\n- Rastrillos y bolsas que tengo aquí:\n- Algo que estorbe (juguetes, muebles):\n- Mascotas en el jardín:"
+    },
+    "yard-weeding": {
+      "label": "Quitar maleza",
+      "title": "Quitar maleza y arreglar los arriates",
+      "description": "Quitar la maleza a mano y arreglar los arriates.\n- Cuántos arriates y más o menos de qué tamaño:\n- Plantas que hay que conservar y que parecen maleza:\n- Guantes, herramientas y bolsas que tengo aquí:\n- También maleza en caminos o grava (sí o no):"
+    },
+    "yard-hedges": {
+      "label": "Recortar setos bajos",
+      "title": "Recortar setos bajos y embolsar lo recortado",
+      "description": "Recortar a mano setos bajos, de la cintura al hombro, y embolsar lo recortado para la recolección en la banqueta.\n- Cuántos setos y más o menos de qué largo:\n- Tijeras de mano y bolsas que tengo aquí:\n- Solo emparejar, o darles forma:\n- Algo frágil cerca (plantas, ventanas):"
+    },
+    "cleaning-apartment": {
+      "label": "Limpieza de apartamento",
+      "title": "Limpiar mi apartamento",
+      "description": "Una limpieza regular de mi apartamento: la cocina, el baño, sacudir, aspirar y trapear.\n- Cuartos en los que enfocarse:\n- Pisos (alfombra, madera o azulejo):\n- Productos que quiero que se usen, o que se eviten:\n- Algo que no se debe tocar:"
+    },
+    "cleaning-kitchen": {
+      "label": "Limpieza profunda de cocina",
+      "title": "Limpieza profunda de la cocina",
+      "description": "Una limpieza a fondo de la cocina: encimeras, frentes de gabinetes, el fregadero, la estufa y el piso.\n- También por dentro del horno o del refrigerador (sí o no):\n- Superficies que requieren cuidado (piedra, madera, acero inoxidable):\n- Cuándo fue la última vez que se limpió así:\n- Productos que quiero que se usen, o que se eviten:"
+    },
+    "cleaning-move-out": {
+      "label": "Limpieza de salida",
+      "title": "Limpieza de salida",
+      "description": "Una limpieza de mi casa vacía antes de entregar las llaves.\n- Por dentro de los gabinetes, el horno y el refrigerador (sí o no):\n- Pisos (alfombra, madera o azulejo):\n- Algo que pidió el arrendador:\n- Cuándo hay que entregar las llaves:"
+    },
+    "computer-new-laptop": {
+      "label": "Laptop nueva",
+      "title": "Configurar una laptop nueva y pasar mis archivos",
+      "description": "Configurar mi laptop nueva y pasar mis archivos de la anterior.\n- La computadora anterior (marca y modelo):\n- Qué pasar (fotos, documentos, correo):\n- Cuentas en las que inicio sesión yo (los ayudantes nunca piden contraseñas):\n- Impresora u otros dispositivos por conectar:"
+    },
+    "computer-wifi": {
+      "label": "Wi-Fi lento",
+      "title": "Arreglar un Wi-Fi lento",
+      "description": "Mi Wi-Fi está lento o se cae seguido.\n- Proveedor de internet:\n- Dónde está lento (cuartos, pisos):\n- Dispositivos afectados:\n- Cuándo empezó:"
+    },
+    "computer-printer": {
+      "label": "Configurar impresora",
+      "title": "Configurar una impresora",
+      "description": "Configurar mi impresora y conectarla a mis computadoras y teléfonos.\n- Dispositivos por conectar (computadoras, teléfonos):\n- Wi-Fi o cable:\n- Tinta o tóner instalado (sí o no):\n- Algo que ya intenté:"
+    }
+  }
+}

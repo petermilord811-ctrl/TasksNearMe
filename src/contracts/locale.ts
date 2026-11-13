@@ -10,6 +10,11 @@ export function isAppLocale(value: unknown): value is AppLocale {
   return typeof value === 'string' && (APP_LOCALES as readonly string[]).includes(value);
 }
 
+/** A language from anywhere (a page, a saved preference) as one of ours, English when it isn't. */
+export function localeOrDefault(value: unknown): AppLocale {
+  return isAppLocale(value) ? value : DEFAULT_LOCALE;
+}
+
 /** Each language's name in itself, for the language switch. Never translated. */
 export const LOCALE_NAMES: Record<AppLocale, string> = { en: 'English', es: 'Español' };
 

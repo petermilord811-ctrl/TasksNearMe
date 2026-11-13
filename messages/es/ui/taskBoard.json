@@ -1,0 +1,43 @@
+{
+  "title": "Tareas abiertas en {market}",
+  "description": "Encuentra una tarea que se ajuste a tus habilidades y a tu horario.",
+  "filters": "Filtrar tareas abiertas",
+  "category": "Categoría",
+  "allCategories": "Todas",
+  "when": "Cuándo",
+  "whenOptions": {
+    "any": "Cualquier momento",
+    "today": "Hoy",
+    "this_week": "Esta semana",
+    "this_weekend": "Este fin de semana"
+  },
+  "remoteOnly": "Solo remotas",
+  "remoteOn": "Sí",
+  "remoteOff": "No",
+  "sort": "Ordenar",
+  "sortOptions": {
+    "soonest": "Más próximas",
+    "newest": "Más recientes"
+  },
+  "results": "{count, plural, one {# tarea abierta} other {# tareas abiertas}}",
+  "pagination": "Páginas de tareas",
+  "page": "Página {page} de {count}",
+  "previous": "Anterior",
+  "next": "Siguiente",
+  "filteredEmptyTitle": "Ninguna tarea coincide con estos filtros",
+  "filteredEmptyBody": "Prueba otra categoría u otro horario para ver más tareas abiertas.",
+  "clearFilters": "Borrar filtros",
+  "noTasksTitle": "No hay tareas abiertas por ahora",
+  "noTasksBody": "Las tareas locales aparecen aquí cuando alguien necesita ayuda. ¿Tienes algo que resolver? Publica una tarea para empezar.",
+  "postTask": "Publicar una tarea",
+  "privacy": "Las direcciones exactas solo se comparten con el ayudante reservado",
+  "becomeHelper": "Ser ayudante",
+  "helperHint": "¿Listo para echar una mano?",
+  "previews": {
+    "group": "Páginas públicas de tareas",
+    "default": "Tablero de tareas",
+    "paged": "Tablero de tareas · página 2",
+    "filteredEmpty": "Tablero de tareas · sin tareas coincidentes",
+    "noTasks": "Tablero de tareas · sin tareas abiertas"
+  }
+}

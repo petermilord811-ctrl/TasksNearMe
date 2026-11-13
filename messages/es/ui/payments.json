@@ -1,0 +1,42 @@
+{
+  "brands": {
+    "visa": "Visa",
+    "mastercard": "Mastercard",
+    "amex": "American Express",
+    "discover": "Discover",
+    "apple_pay": "Apple Pay",
+    "google_pay": "Google Pay"
+  },
+  "cardLabel": "{brand} •••• {last4}",
+  "picker": {
+    "label": "Método de pago",
+    "hint": "Elige una tarjeta guardada o usa una tarjeta nueva.",
+    "expires": "Vence {month}/{year}",
+    "default": "Predeterminada",
+    "newCard": "Usar una tarjeta nueva",
+    "development": "Tarjeta de prueba (desarrollo): sin cobro real",
+    "developmentHint": "Elige un resultado para probar el flujo de pago.",
+    "outcome": "Resultado de la tarjeta de prueba",
+    "save": "Guardar esta tarjeta para la próxima vez",
+    "cardLabel": "Datos de la tarjeta",
+    "cardLoading": "Cargando el campo seguro de la tarjeta…",
+    "cardUnavailable": "El campo de la tarjeta no se cargó. Revisa tu conexión y actualiza la página, o elige una tarjeta guardada.",
+    "cardFailed": "No pudimos verificar esta tarjeta. Revisa los datos e inténtalo de nuevo.",
+    "stripeHint": "Aceptamos Visa, Mastercard, American Express y Discover. Los datos de tu tarjeta van directamente a Stripe, nuestro proveedor de pagos."
+  },
+  "testCards": {
+    "success": "Aprobada",
+    "declined": "Rechazada",
+    "insufficient_funds": "Fondos insuficientes",
+    "requires_verification": "Verificación del banco"
+  },
+  "verification": {
+    "title": "Tu banco quiere confirmar que eres tú",
+    "description": "Esto es un reemplazo de desarrollo para la verificación del banco. Aprueba para continuar con la reserva, o falla para probar otra tarjeta. No se hace ningún cobro real.",
+    "approve": "Aprobar",
+    "fail": "Fallar",
+    "pending": "Verificando…",
+    "stripeDescription": "La verificación de tu banco se abre sobre esta página. Sigue sus pasos para terminar de pagar.",
+    "waiting": "Esperando a tu banco…"
+  }
+}

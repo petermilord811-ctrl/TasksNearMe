@@ -1,5 +1,68 @@
 // Spanish UI copy: one JSON file per namespace, mirroring messages/en/ui (same keys, same ICU arguments).
-// A key missing here shows in English (src/i18n/catalog.ts); src/i18n/catalog.test.ts checks the files.
-const uiMessages = {};
+// A key or namespace missing here shows in English (src/i18n/catalog.ts). Staff tools (admin*, staff*) stay
+// in English. src/i18n/catalog.test.ts checks every file against English and that each one is registered here.
+import account from './account.json';
+import actionReasons from './actionReasons.json';
+import availability from './availability.json';
+import bookingComplete from './bookingComplete.json';
+import bookingConfirm from './bookingConfirm.json';
+import bookingSheets from './bookingSheets.json';
+import bookings from './bookings.json';
+import brand from './brand.json';
+import changes from './changes.json';
+import clients from './clients.json';
+import common from './common.json';
+import completion from './completion.json';
+import earnings from './earnings.json';
+import feedback from './feedback.json';
+import findWork from './findWork.json';
+import forms from './forms.json';
+import help from './help.json';
+import helperCard from './helperCard.json';
+import helperOnboarding from './helperOnboarding.json';
+import helperProfile from './helperProfile.json';
+import helperProfileEditor from './helperProfileEditor.json';
+import helperTask from './helperTask.json';
+import helpersBrowse from './helpersBrowse.json';
+import home from './home.json';
+import inbox from './inbox.json';
+import inviteCard from './inviteCard.json';
+import invites from './invites.json';
+import landing from './landing.json';
+import layout from './layout.json';
+import legal from './legal.json';
+import location from './location.json';
+import money from './money.json';
+import myOffers from './myOffers.json';
+import myTasks from './myTasks.json';
+import offers from './offers.json';
+import payments from './payments.json';
+import paymentsPage from './paymentsPage.json';
+import postTask from './postTask.json';
+import posterIdentity from './posterIdentity.json';
+import primitives from './primitives.json';
+import proposal from './proposal.json';
+import publicPages from './publicPages.json';
+import publicTask from './publicTask.json';
+import push from './push.json';
+import receipt from './receipt.json';
+import report from './report.json';
+import reportProblem from './reportProblem.json';
+import review from './review.json';
+import reviews from './reviews.json';
+import safety from './safety.json';
+import savedHelpers from './savedHelpers.json';
+import shell from './shell.json';
+import signIn from './signIn.json';
+import support from './support.json';
+import supportCase from './supportCase.json';
+import taskBoard from './taskBoard.json';
+import taskCard from './taskCard.json';
+import taskManage from './taskManage.json';
+import timeline from './timeline.json';
+import verification from './verification.json';
+import waitlist from './waitlist.json';
+
+const uiMessages = { account, actionReasons, availability, bookingComplete, bookingConfirm, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helperCard, helperOnboarding, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, safety, savedHelpers, shell, signIn, support, supportCase, taskBoard, taskCard, taskManage, timeline, verification, waitlist };
 
 export default uiMessages;

@@ -1,0 +1,19 @@
+{
+  "title": "Todavía no estamos en tu ciudad.",
+  "description": "Cuéntanos dónde te gustaría recibir ayuda local. Te escribiremos por correo cuando TasksNearMe abra cerca de ti.",
+  "join": "Unirme a la lista de espera",
+  "interests": {
+    "need_help": "Necesito ayuda",
+    "give_help": "Quiero ayudar",
+    "both": "Ambas"
+  },
+  "joinedTitle": "Ya estás en la lista.",
+  "joinedDescription": "Te escribiremos a {email} cuando TasksNearMe abra cerca de {zip}.",
+  "marketsTitle": "¿Ya estás en una de nuestras zonas de servicio?",
+  "marketLink": "Ver ayuda local en {market}",
+  "previews": {
+    "group": "Lista de espera",
+    "default": "Unirme a la lista de espera",
+    "joined": "Confirmación de lista de espera"
+  }
+}

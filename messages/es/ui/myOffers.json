@@ -1,0 +1,53 @@
+{
+  "title": "Mis ofertas",
+  "description": "Sigue las ofertas que enviaste y las tareas para las que ya te reservaron.",
+  "tabsLabel": "Estado de la oferta",
+  "tabs": {
+    "active": "Activas",
+    "booked": "Reservadas",
+    "closed": "Cerradas"
+  },
+  "tabCount": "{label} ({count})",
+  "yourPrice": "Tu precio",
+  "earnings": "Lo que ganarás",
+  "hourlyPrice": "{rate}/h · {hours} estimadas · límite de {cap}",
+  "proposedStart": "Inicio propuesto: {date}",
+  "expiry": "Vencimiento de la oferta",
+  "expires": "Vence {relative}",
+  "updatedOffer": "Oferta actualizada",
+  "findWork": "Buscar trabajo",
+  "invites": {
+    "title": "Invitaciones",
+    "from": "De {name}",
+    "open": "Ver invitación",
+    "openLabel": "Ver invitación para {title}",
+    "sheetTitle": "Invitación a una tarea",
+    "sheetDescription": "Revisa las condiciones propuestas y responde a tu cliente.",
+    "empty": "Aún no hay invitaciones. Las solicitudes de los clientes aparecerán aquí."
+  },
+  "empty": {
+    "active": {
+      "title": "No hay ofertas activas",
+      "body": "Las ofertas que envíes aparecen aquí mientras esperas al cliente. Busca una tarea para enviar tu primera oferta."
+    },
+    "booked": {
+      "title": "Aún no hay ofertas reservadas",
+      "body": "Cuando un cliente reserve tu oferta, la verás aquí. Explora las tareas abiertas para encontrar la siguiente."
+    },
+    "closed": {
+      "title": "No hay ofertas cerradas",
+      "body": "Las ofertas que no fueron elegidas, retiradas o vencidas aparecen aquí. Busca una tarea abierta para enviar otra oferta."
+    }
+  },
+  "previews": {
+    "withInvite": "Invitación directa",
+    "group": "Mis ofertas",
+    "default": "Mis ofertas · activas",
+    "empty": "Mis ofertas · vacío",
+    "booked": "Mis ofertas · reservadas",
+    "closed": "Mis ofertas · estados cerrados",
+    "updated": "Mis ofertas · oferta actualizada",
+    "emptyBooked": "Mis ofertas · sin ofertas reservadas",
+    "emptyClosed": "Mis ofertas · sin ofertas cerradas"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "generalArea": "Zona general",
+  "areaName": "{area}, {market}",
+  "areaDescription": "Un área de aproximadamente 1 milla. La dirección exacta es privada.",
+  "mapDescription": "Zona general alrededor de {area}, {market}, en un radio de aproximadamente 1 milla. No es una dirección exacta.",
+  "mapAreaLabel": "Zona general",
+  "demo": "Demo",
+  "remote": "Remoto: no se necesita dirección",
+  "remoteDescription": "Puedes ayudar desde donde estés.",
+  "distance": {
+    "under-1-mi": "A menos de 1 milla",
+    "about-1-mi": "A aproximadamente 1 milla",
+    "about-2-mi": "A aproximadamente 2 millas",
+    "about-5-mi": "A aproximadamente 5 millas",
+    "over-5-mi": "A más de 5 millas"
+  },
+  "exactAddress": "Dirección de la tarea",
+  "addressLocality": "{city}, {state} {zip}",
+  "accessNotes": "Cómo entrar",
+  "copyAddress": "Copiar dirección",
+  "copyPending": "Copiando dirección",
+  "copySuccess": "Dirección copiada.",
+  "copyError": "No se pudo copiar la dirección. Selecciónala y cópiala manualmente.",
+  "openMaps": "Abrir en mapas",
+  "opensNewTab": "Se abre en una pestaña nueva",
+  "mapsUnavailable": "Copia la dirección para abrirla en tu app de mapas.",
+  "visibleUntil": "Visible para ti hasta el {date}",
+  "masked": {
+    "phone": "•••-•••-{hint} (oculto hasta la reserva)",
+    "phoneWithoutHint": "•••-•••-•••• (oculto hasta la reserva)",
+    "email": "•••@••• (oculto hasta la reserva)"
+  },
+  "previews": {
+    "locationGroup": "Ubicación",
+    "messagingGroup": "Texto oculto",
+    "posterTitle": "Zona general para el cliente",
+    "helperTitle": "Zona general para un ayudante",
+    "remoteTitle": "Tarea remota",
+    "exactTitle": "Dirección exacta",
+    "exactNote": "Abrir en mapas usa el enlace de dirección que da el contrato de rutas. Copiar dirección está disponible.",
+    "exactNoMapsTitle": "Dirección exacta sin enlace de mapas",
+    "exactNoMapsNote": "Sin un enlace de mapas, Abrir en mapas está deshabilitado. Copiar dirección sigue disponible.",
+    "withMap": "Con mapa",
+    "withoutMap": "Sin mapa",
+    "phoneTitle": "Número de teléfono oculto hasta la reserva",
+    "emailTitle": "Correo electrónico oculto hasta la reserva",
+    "unmaskedTitle": "Mensaje después de la reserva"
+  },
+  "directionsGoogle": "Cómo llegar en Google Maps",
+  "directionsApple": "Cómo llegar en Apple Maps"
+}

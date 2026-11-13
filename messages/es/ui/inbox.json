@@ -1,0 +1,27 @@
+{
+  "title": "Mensajes",
+  "description": "Mantén juntos los detalles de cada tarea.",
+  "conversations": "Conversaciones",
+  "kinds": {
+    "offer": "Oferta",
+    "booking": "Reserva",
+    "invite": "Solicitud",
+    "case": "Soporte"
+  },
+  "unread": "{count, plural, one {# sin leer} other {# sin leer}}",
+  "youPrefix": "Tú: ",
+  "noMessage": "Inicia la conversación.",
+  "empty": {
+    "title": "Aún no hay mensajes",
+    "body": "Las conversaciones sobre tus ofertas y reservas aparecerán aquí. Mira tus tareas o busca una tarea en la que puedas ayudar."
+  },
+  "viewTasks": "Ver tus tareas",
+  "findWork": "Buscar trabajo",
+  "previews": {
+    "group": "Mensajes",
+    "client": "Bandeja de entrada del cliente",
+    "helper": "Bandeja de entrada del ayudante",
+    "empty": "Bandeja de entrada vacía",
+    "kinds": "Solicitudes, soporte y una conversación nueva"
+  }
+}

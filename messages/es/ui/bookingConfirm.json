@@ -1,0 +1,90 @@
+{
+  "title": "Confirmar y pagar",
+  "intro": "Revisa los detalles, elige una tarjeta y reserva a tu ayudante.",
+  "backToOffer": "Volver a la oferta",
+  "backToTask": "Volver a la tarea",
+  "summary": "Tu tarea",
+  "agreedStart": "Inicio acordado (hora del centro)",
+  "helper": "Tu ayudante",
+  "message": "Mensaje de tu ayudante",
+  "brings": "Lleva: {items}",
+  "localAddress": "{helper} verá tu dirección exacta después de que reserves.",
+  "remoteAddress": "No se necesita dirección. Compartirás un enlace de reunión en el chat.",
+  "totalToday": "Total cobrado hoy",
+  "paymentNote": "Pagas al reservar. Tu ayudante recibe su pago cuando termina la tarea.",
+  "credit": "Tu crédito de TasksNearMe: {amount} vuelven a tu tarjeta cuando termine este trabajo (úsalo antes del {date}).",
+  "hourlyNote": "Ahora pagas hasta {hours, plural, one {# hora} other {# horas}}. Las horas sin usar se reembolsan cuando apruebes.",
+  "payment": "Pago",
+  "terms": "Acepto los <terms>Términos del servicio</terms> y la <cancellation>Política de cancelación</cancellation>.",
+  "submit": "Reservar y pagar {amount}",
+  "booking": "Reservando…",
+  "reload": "Recargar",
+  "pending": {
+    "title": "Completa el pago para reservar a tu ayudante",
+    "failed": "Tu pago no se procesó.",
+    "payment_declined": "<method></method> fue rechazada a las {time}.",
+    "insufficient_funds": "<method></method> fue rechazada por fondos insuficientes a las {time}.",
+    "retry": "Inténtalo de nuevo o usa otra tarjeta. Mantendremos esta reserva hasta las {time} ({relative}).",
+    "hold": "Elige una tarjeta para completar el pago. Mantendremos esta reserva hasta las {time} ({relative})."
+  },
+  "errors": {
+    "version_conflict": "{helper} cambió esta oferta. Recarga para ver las nuevas condiciones.",
+    "not_allowed": "Esta oferta ya no se puede reservar. Recarga para ver lo que hay disponible.",
+    "expired": "Se acabó el tiempo de retención de tu reserva. Recarga para empezar de nuevo."
+  },
+  "unavailable": {
+    "title": "Esta oferta ya no está disponible",
+    "offer_withdrawn": "{helper} retiró esta oferta. Vuelve a tu tarea para ver otras ofertas.",
+    "offer_expired": "Esta oferta venció. Vuelve a tu tarea para ver otras ofertas.",
+    "offer_declined": "Rechazaste esta oferta. Vuelve a tu tarea para ver otras ofertas.",
+    "offer_stale": "Tu tarea cambió. {helper} debe confirmar los detalles actualizados antes de que puedas reservar.",
+    "task_booked": "Esta tarea ya está reservada. Vuelve a tu tarea para ver tu reserva.",
+    "task_closed": "Esta tarea está cerrada. Vuelve a tu tarea para ver sus detalles."
+  },
+  "cancellation": {
+    "title": "Cancelación",
+    "freeUntil": "Cancelación gratis hasta el {date}.",
+    "late": "Después, recibes {refund} de reembolso y {helperName} recibe {compensation}.",
+    "fullPolicy": "Leer la política de cancelación"
+  },
+  "previews": {
+    "group": "Confirmación de reserva",
+    "default": "Tarjeta guardada",
+    "new-card": "Nueva tarjeta de prueba",
+    "declined": "Pago anterior rechazado",
+    "insufficient-funds": "Pago anterior: fondos insuficientes",
+    "hourly": "Reserva por hora",
+    "remote": "Reserva a distancia",
+    "bank-verification": "Verificación bancaria",
+    "submitting": "Reserva en curso",
+    "pending-no-failure": "Reserva retenida para el pago",
+    "payment-picker-saved": "Métodos de pago guardados",
+    "payment-picker-new-card": "Selector de nueva tarjeta de prueba",
+    "payment-labels": "Etiquetas de tarjetas y billeteras",
+    "cancellation-fixed": "Cancelación con precio fijo",
+    "cancellation-hourly": "Cancelación por hora",
+    "bank-dialog": "Verificación bancaria de desarrollo",
+    "unavailable": {
+      "offer_withdrawn": "Oferta retirada",
+      "offer_expired": "Oferta vencida",
+      "offer_declined": "Oferta rechazada",
+      "offer_stale": "La oferta necesita confirmación",
+      "task_booked": "Tarea ya reservada",
+      "task_closed": "Tarea cerrada"
+    },
+    "results": {
+      "payment_declined": "Pago rechazado",
+      "insufficient_funds": "Fondos insuficientes",
+      "requires_bank_verification": "Verificación bancaria no disponible",
+      "version_conflict": "La oferta cambió",
+      "not_allowed": "La reserva ya no está permitida",
+      "not_found": "Oferta no encontrada",
+      "expired": "La retención de la reserva venció",
+      "rate_limited": "Inténtalo más tarde",
+      "validation_failed": "Acepta los términos",
+      "limit_reached": "Límite de la cuenta alcanzado",
+      "identity_required": "Se necesita verificación de identidad",
+      "unknown": "Resultado del pago desconocido"
+    }
+  }
+}

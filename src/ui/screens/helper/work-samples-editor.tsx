@@ -27,6 +27,7 @@ const selectClass = 'min-h-11 w-full min-w-0 rounded-[10px] border border-input 
 
 function SampleFields({ sample, categories, disabled }: { sample?: WorkSampleView; categories: CategoryView[]; disabled: boolean }) {
   const t = useTranslations('helperProfileEditor.samples');
+  const categoryName = useTranslations('helperCard.categories');
   const id = useId();
   return <div className="grid gap-4 sm:grid-cols-2">
     <Field className="gap-2">
@@ -38,7 +39,7 @@ function SampleFields({ sample, categories, disabled }: { sample?: WorkSampleVie
       <FieldLabel htmlFor={`${id}-category`}>{t('category')}</FieldLabel>
       <select id={`${id}-category`} name="categorySlug" defaultValue={sample?.categorySlug ?? ''} disabled={disabled} className={selectClass} aria-describedby={`${id}-category-hint`}>
         <option value="">{t('noCategory')}</option>
-        {categories.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}
+        {categories.map((category) => <option key={category.slug} value={category.slug}>{categoryName(category.slug)}</option>)}
       </select>
       <FieldDescription id={`${id}-category-hint`}>{t('categoryHint')}</FieldDescription>
     </Field>

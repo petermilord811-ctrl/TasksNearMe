@@ -1,0 +1,146 @@
+{
+  "money": {
+    "before": "Dinero antes",
+    "after": "Dinero después",
+    "increase": "Pagarías {amount} más",
+    "refund": "{amount} volverían a tu tarjeta",
+    "unchanged": "Tu total seguiría igual"
+  },
+  "propose": {
+    "title": "Proponer un cambio",
+    "back": "Volver a la reserva",
+    "fields": "Nuevas condiciones",
+    "fieldsHint": "Edita lo que haya que cambiar. Deja los demás detalles como están.",
+    "price": "Precio de la tarea (USD)",
+    "rate": "Tarifa por hora (USD)",
+    "moneyHint": "Escribe dólares y centavos. Las tarifas de servicio se muestran abajo.",
+    "hoursCap": "Límite de horas",
+    "hoursHint": "El máximo de horas incluidas en la reserva, hasta 24.",
+    "start": "Nuevo inicio (hora de Austin)",
+    "startHint": "Elige una fecha y una hora en la zona horaria del centro de Austin.",
+    "windowHint": "Elige un inicio entre {earliest} y {latest}, en la zona horaria del centro de Austin.",
+    "scope": "Alcance de la tarea",
+    "scopeHint": "Describe la tarea completa con los cambios propuestos. Usa de 10 a 2,000 caracteres.",
+    "expenses": "Asignación para gastos (USD)",
+    "expensesHint": "El monto reservado para los materiales acordados. Escribe 0 si no hacen falta.",
+    "message": "Mensaje",
+    "messageHint": "Explica por qué propones este cambio. Usa de 10 a 1,000 caracteres.",
+    "quoteHint": "Cambia al menos un detalle y agrega tu mensaje para ver el dinero antes y después.",
+    "quotePending": "Actualizando el dinero…",
+    "retry": "Intentar cargar el dinero otra vez",
+    "send": "Enviar cambio",
+    "sending": "Enviando cambio…",
+    "confirmTitle": "¿Enviar este cambio?",
+    "confirmDescription": "La otra persona revisará tu propuesta. Tus condiciones actuales siguen vigentes hasta que se acepte el cambio y se complete cualquier pago.",
+    "keepEditing": "Seguir editando",
+    "confirmSend": "Enviar propuesta",
+    "blockedTitle": "Ya hay un cambio abierto",
+    "blockedDescription": "Revisa el cambio abierto antes de proponer otro.",
+    "viewChange": "Ver cambio abierto",
+    "notAllowed": "Esta reserva no se puede cambiar ahora. Vuelve a la reserva para ver si hay un cambio abierto.",
+    "noChanges": "Cambia al menos un detalle antes de enviar tu propuesta."
+  },
+  "previews": {
+    "group": "Cambios en reservas",
+    "propose": {
+      "desk": "Propuesta de escritorio y silla",
+      "moving": "Propuesta de límite de horas de mudanza",
+      "blocked": "Ya hay un cambio abierto",
+      "quote-pending": "Actualizando el dinero",
+      "validation-failed": "Error de validación de la propuesta",
+      "not-allowed": "Propuesta ya no permitida",
+      "rate-limited": "Límite de propuestas",
+      "unknown": "Error en la propuesta",
+      "quote-validation-failed": "Error de validación del dinero",
+      "quote-not-allowed": "Dinero no disponible para esta reserva",
+      "quote-unknown": "Error al cargar el dinero"
+    },
+    "review": {
+      "proposer": "Esperando a la otra persona",
+      "counterparty": "Revisar la propuesta de un cliente",
+      "pay-difference": "Pagar la diferencia",
+      "applied": "Cambio aplicado",
+      "declined": "Cambio rechazado",
+      "moving-cap": "Revisar una hora más de mudanza",
+      "bank-verification": "Verificación bancaria",
+      "payment-declined": "Tarjeta rechazada",
+      "insufficient-funds": "Fondos insuficientes",
+      "expired": "Cambio vencido",
+      "withdrawn": "Cambio retirado",
+      "result-expired": "Plazo de pago vencido",
+      "not-allowed": "Acción ya no permitida",
+      "version-conflict": "Las condiciones cambiaron",
+      "unknown": "Error de pago",
+      "pending": "Pago en curso"
+    },
+    "money": {
+      "poster": "Comparación de dinero del cliente",
+      "helper": "Comparación de ganancias del ayudante",
+      "refund": "Dinero devuelto a la tarjeta"
+    }
+  },
+  "review": {
+    "title": "Cambio en {title}",
+    "back": "Volver a la reserva",
+    "proposal": "Sobre este cambio",
+    "proposedBy": {
+      "you": "Propusiste este cambio",
+      "person": "{name} propuso un cambio"
+    },
+    "waiting": {
+      "person": "Esperando a {name}",
+      "you": "Esperando tu respuesta"
+    },
+    "statuses": {
+      "proposed": "Propuesto",
+      "accepted_pending_funding": "Aceptado: esperando el pago",
+      "applied": "Aplicado",
+      "declined": "Rechazado",
+      "withdrawn": "Retirado",
+      "expired": "Vencido"
+    },
+    "payToApply": "Aceptado: paga {amount} para aplicarlo",
+    "currentTermsApply": "Las condiciones actuales siguen vigentes hasta que se aplique este cambio.",
+    "newTermsApply": "Las condiciones propuestas ya se aplican a esta reserva.",
+    "termsUnchanged": "Las condiciones actuales de la reserva siguen vigentes.",
+    "expires": "Responde o termina el pago antes de",
+    "comparison": "Qué cambiaría",
+    "current": "Condiciones actuales",
+    "proposed": "Condiciones propuestas",
+    "changed": "Cambió",
+    "hourlyRate": "{amount} por hora",
+    "types": {
+      "price": "Precio de la tarea",
+      "scope": "Detalles de la tarea",
+      "schedule": "Inicio (hora del centro)",
+      "hours_cap": "Límite de horas",
+      "expense_allowance": "Asignación para gastos"
+    },
+    "payment": "Pago",
+    "paymentHint": "Elige la tarjeta para la diferencia. Las nuevas condiciones se aplican cuando el pago se procesa.",
+    "paymentMissing": "Necesitas un método de pago para continuar. Vuelve a la reserva y abre este cambio otra vez para cargar tus tarjetas.",
+    "actionGroup": "Acciones del cambio",
+    "actions": {
+      "accept_change": "Aceptar cambio",
+      "decline_change": "Rechazar cambio",
+      "withdraw_change": "Retirar cambio",
+      "pay_change_difference": "Pagar la diferencia"
+    },
+    "payAmount": "Pagar {amount}",
+    "confirmation": "Confirmar cambio",
+    "backToReview": "Volver a la revisión",
+    "confirm": {
+      "accept_change": "¿Aceptar estas condiciones propuestas? Cualquier pago indicado se cobra antes de aplicar las nuevas condiciones.",
+      "acceptPayment": "¿Aceptar estas condiciones propuestas y pagar {amount} con la tarjeta elegida? Las nuevas condiciones se aplican cuando el pago se procesa.",
+      "decline_change": "¿Rechazar este cambio? Las condiciones actuales de la reserva siguen vigentes.",
+      "withdraw_change": "¿Retirar tu propuesta? Las condiciones actuales de la reserva siguen vigentes.",
+      "pay_change_difference": "Paga {amount} con la tarjeta elegida para aplicar las condiciones propuestas."
+    },
+    "errors": {
+      "expired": "Este cambio venció. Recarga la página para ver las condiciones más recientes de la reserva.",
+      "not_allowed": "Este cambio no se puede actualizar ahora. Recarga la página para ver qué sigue.",
+      "version_conflict": "La reserva cambió mientras la revisabas. Recarga la página para revisar las condiciones más recientes."
+    },
+    "reload": "Recargar cambio"
+  }
+}

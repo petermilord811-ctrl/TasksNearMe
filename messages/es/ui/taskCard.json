@@ -1,0 +1,24 @@
+{
+  "categories": {
+    "furniture-assembly": "Armado de muebles",
+    "moving-help": "Ayuda con mudanzas",
+    "yard-cleanup": "Limpieza de jardín",
+    "light-cleaning": "Limpieza ligera",
+    "computer-help": "Ayuda con computadoras y teléfonos"
+  },
+  "remote": "Remota",
+  "flexibleSchedule": "Cualquier hora el {date}",
+  "scheduledWindow": "{date} · {window}",
+  "hourlyBudget": "{rate}/h, hasta {cap}",
+  "offers": "{count, plural, =0 {Aún sin ofertas} one {# oferta} other {# ofertas}}",
+  "posted": "Publicada {relative}",
+  "memberSince": "Miembro desde {date}",
+  "preview": {
+    "group": "Tarjetas públicas de tareas",
+    "desk": "Armado de muebles en Mueller",
+    "yard": "Limpieza de jardín en Crestview",
+    "cleaningFlexible": "Limpieza con horario flexible",
+    "remote": "Ayuda remota con computadora",
+    "hourly": "Tarea con presupuesto por hora"
+  }
+}

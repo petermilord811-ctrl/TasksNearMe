@@ -17,6 +17,7 @@
     "e2e": "playwright test --project=app-mobile --project=app-desktop",
     "check": "npm run typecheck && npm run lint && npm run test",
     "check:ui": "npm run check && npm run test:ui",
+    "i18n:check": "node scripts/i18n-check.mjs es",
     "wait:handoff": "node scripts/wait-for-handoff.mjs",
     "codex:run": "node scripts/codex-run.mjs",
     "db:up": "docker compose up -d --wait",

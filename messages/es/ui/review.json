@@ -1,0 +1,58 @@
+{
+  "title": "¿Cómo te fue con {name}?",
+  "backToBooking": "Volver a la reserva",
+  "rating": "Tu calificación (obligatoria)",
+  "ratingHint": "Elige de 1 a 5 estrellas. Cuenta cómo salió la tarea.",
+  "stars": "{count} de 5 estrellas",
+  "ratingRequired": "Elige una calificación en estrellas antes de enviar tu reseña.",
+  "tagsLabel": "¿Qué destacó? (opcional)",
+  "tagsHint": "Elige hasta 5 etiquetas.",
+  "tagsCount": "{count} de 5 etiquetas seleccionadas",
+  "tagsLimit": "Seleccionaste 5 etiquetas. Quita una para elegir otra.",
+  "bodyLabel": "Tu reseña (opcional)",
+  "bodyHint": "Describe tu experiencia con esta tarea. Hasta 1,000 caracteres.",
+  "bodyCount": "{count} / 1,000 caracteres",
+  "privateLabel": "¿Algo para nuestro equipo? (opcional)",
+  "privateHint": "Solo el soporte de TasksNearMe lo lee; {name} nunca lo ve. Te responderemos si lo necesitamos.",
+  "privacyNote": "Las reseñas permanecen ocultas hasta que ambos envíen la suya, o hasta el {date}.",
+  "send": "Enviar reseña",
+  "sending": "Enviando reseña…",
+  "sent": "Reseña enviada. Puedes ver su estado de visibilidad en la reserva.",
+  "yourReview": "Tu reseña",
+  "submittedAt": "Enviada {date} · {relative}",
+  "published": "Visible desde el {date}",
+  "hidden": "Será visible cuando {name} envíe la suya, o el {date}.",
+  "notAllowed": "Esta reseña ya no se puede enviar. Vuelve a la reserva para ver su estado.",
+  "unavailable": {
+    "title": "Reseña no disponible",
+    "not_completed": "Podrás enviar una reseña cuando esta tarea se complete. Revisa la reserva para ver el siguiente paso.",
+    "window_closed": "El plazo de 14 días para reseñar terminó. Aún puedes ver los detalles de la tarea en la reserva."
+  },
+  "tags": {
+    "on_time": "Puntual",
+    "friendly": "Amable",
+    "careful": "Trabajo cuidadoso",
+    "clear_communication": "Comunicación clara",
+    "skilled": "Hábil",
+    "tidy": "Deja todo en orden",
+    "good_value": "Buen precio",
+    "clear_instructions": "Instrucciones claras",
+    "ready_on_time": "Todo listo a tiempo",
+    "easy_access": "Fácil acceso",
+    "respectful": "Trato respetuoso",
+    "quick_to_reply": "Responde rápido"
+  },
+  "previews": {
+    "group": "Reseñar una tarea completada",
+    "byClient": "El cliente reseña al ayudante",
+    "byHelper": "El ayudante reseña al cliente",
+    "submitted": "Reseña enviada y oculta",
+    "published": "Reseña visible",
+    "submitting": "Enviando una reseña",
+    "success": "Confirmación de reseña enviada",
+    "unavailable": {
+      "not_completed": "Tarea no completada",
+      "window_closed": "Plazo para reseñar terminado"
+    }
+  }
+}

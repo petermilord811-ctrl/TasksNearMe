@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, isAppLocale, type AppLocale } from '@/contracts/locale';
+import type { AppLocale } from '@/contracts/locale';
 import enApp from '../../messages/en/app';
 import enUi from '../../messages/en/ui';
 import esApp from '../../messages/es/app';
@@ -36,9 +36,4 @@ const catalogs: Record<AppLocale, Messages> = {
 
 export function messagesFor(locale: AppLocale): Messages {
   return catalogs[locale];
-}
-
-/** A recipient's saved language (users.locale), or English when they have none. */
-export function localeOrDefault(value: unknown): AppLocale {
-  return isAppLocale(value) ? value : DEFAULT_LOCALE;
 }

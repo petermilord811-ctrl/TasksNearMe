@@ -1,0 +1,349 @@
+{
+  "pricing": {
+    "title": "Sabe cuánto vas a pagar. Sabe cuánto vas a ganar.",
+    "description": "Acuerda el precio de la tarea antes de reservar. Verás cada tarifa de servicio y cualquier asignación para gastos antes de confirmar.",
+    "paymentTiming": "Pagas al reservar. Tu ayudante recibe su pago cuando la tarea está terminada.",
+    "feesTitle": "Cómo funcionan las tarifas de servicio",
+    "posterFeeTitle": "Cuando reservas ayuda",
+    "posterFeeAmount": "{percent}% de tarifa de servicio",
+    "posterFeeDescription": "Se suma al precio de la tarea, con un mínimo de {minimum} por reserva.",
+    "helperFeeTitle": "Cuando ayudas",
+    "helperFeeAmount": "{percent}% de tarifa de servicio",
+    "helperFeeDescription": "Se descuenta del precio de la tarea. Verás tus ganancias antes de aceptar.",
+    "fixedIntro": "En una tarea de precio fijo, tú y tu ayudante acuerdan el precio de toda la tarea. Aquí tienes un ejemplo de {price}.",
+    "fixedPosterTitle": "Precio fijo: lo que pagas",
+    "fixedHelperTitle": "Precio fijo: lo que gana tu ayudante",
+    "minimumTitle": "Cuándo se aplica la tarifa mínima",
+    "minimumDescription": "En esta tarea de {price} se aplica la tarifa de servicio mínima de {minimum}. El total aparece abajo.",
+    "minimumBreakdownTitle": "Una tarea más pequeña",
+    "hourlyTitle": "Ayuda por hora, con un límite acordado",
+    "hourlyDescription": "Al reservar, pagas el límite de horas acordado y la tarifa de servicio. Después de la tarea, apruebas las horas trabajadas. Las horas sin usar y su parte de la tarifa se reembolsan. Las horas extra requieren tu acuerdo y tu pago antes.",
+    "hourlyFundedTitle": "Por hora: se paga al reservar",
+    "hourlyFinalTitle": "Por hora: después de la tarea",
+    "expensesTitle": "Los gastos van aparte",
+    "expensesDescription": "Acuerda una asignación para gastos antes de que tu ayudante compre materiales. Tú apruebas los recibos después de la tarea. La asignación sin usar se reembolsa, y ninguna de las dos personas paga tarifa de servicio sobre los gastos reembolsados.",
+    "expensesPosterTitle": "Con una asignación para gastos",
+    "expensesHelperTitle": "Ganancias y reembolso",
+    "cancellationTitle": "Si cambian los planes",
+    "cancellationDescription": "Cancela sin costo al menos {hours} horas antes de que empiece la tarea. Las cancelaciones posteriores cuestan el {percent}% del precio de la tarea o {minimum}, lo que sea mayor, hasta el precio de la tarea. Tu ayudante recibe toda esa tarifa.",
+    "cancellationCaption": "Ejemplo de cancelación para una tarea de {price}",
+    "cancellationScenario": "Cuándo ocurre",
+    "cancellationRefund": "Te devolvemos",
+    "cancellationHelper": "El ayudante recibe",
+    "cancellationEarly": "Cancelas al menos {hours} horas antes del inicio",
+    "cancellationLate": "Cancelas menos de {hours} horas antes del inicio",
+    "cancellationHelperCancels": "Tu ayudante cancela",
+    "fullRefund": "Reembolso completo: {amount}",
+    "noPayment": "Sin pago",
+    "lateFeeExample": "En este ejemplo, la tarifa por cancelación tardía es de {fee}. Tu ayudante recibe {received} y a ti te devolvemos {refund}.",
+    "cancellationPolicy": "Lee la política de cancelación",
+    "approvalTitle": "Tiempo para revisar la tarea terminada",
+    "approvalDescription": "Cuando tu ayudante marque la tarea como terminada, tienes {hours} horas para aprobarla o reportar un problema. Después de ese plazo, la tarea se aprueba automáticamente. Al reportar un problema, el pago queda en pausa mientras se revisa.",
+    "inviteTitle": "Invitar directamente a un ayudante",
+    "inviteDescription": "Una invitación pone una retención en tu tarjeta por hasta {hours} horas. Solo se te cobra si el ayudante acepta. La retención se libera si rechaza o no responde a tiempo.",
+    "postTask": "Publicar una tarea"
+  },
+  "becomeHelper": {
+    "title": "Pon tus habilidades de todos los días a trabajar cerca de ti",
+    "description": "Elige las tareas que van con tus habilidades y tu horario. Acuerda los detalles con tu cliente y mira cuánto ganarás antes de aceptar.",
+    "cta": "Ser ayudante",
+    "requirementsTitle": "Algunas verificaciones antes de tu primera reserva",
+    "identityTitle": "Verifica tu identidad",
+    "identityDescription": "Completa una verificación con identificación y selfie para que los clientes vean tu insignia de identidad verificada.",
+    "payoutTitle": "Configura tus pagos",
+    "payoutDescription": "Agrega los datos para recibir tus pagos y que lleguen a tu banco después de las tareas completadas.",
+    "backgroundTitle": "Completa una verificación de antecedentes para ayuda en casa",
+    "backgroundDescription": "Las categorías en casa requieren una verificación de antecedentes antes de que puedas aceptar reservas en ellas.",
+    "earningsTitle": "Un ejemplo de lo que ganarás",
+    "earningsDescription": "El precio de la tarea y la tarifa de servicio se muestran por separado. Los gastos aprobados se reembolsan aparte de tus ganancias.",
+    "earningsBreakdownTitle": "Tus ganancias en una tarea",
+    "timingTitle": "Cuándo te llega el pago",
+    "timingDescription": "Tu pago se envía cuando la tarea se completa y se aprueba, o se aprueba automáticamente. Normalmente llega a tu banco en unos 2 días hábiles.",
+    "firstPayout": "Tu primer pago puede tardar unos {days, plural, one {# día} other {# días}}.",
+    "rewardsTitle": "Recompensas en tarjetas de regalo por ayudar en tu zona",
+    "rewardsDescription": "Las tarjetas de regalo son aparte de lo que ganas por tus tareas. Aquí se muestran los programas disponibles y sus términos.",
+    "welcomeTitle": "Recompensa de bienvenida en tarjeta de regalo",
+    "welcomeOffer": "Tarjeta de regalo de {amount} para nuestros primeros {limit, number} ayudantes verificados",
+    "spotsLeft": "{count, plural, one {Queda # lugar} other {Quedan # lugares}}",
+    "welcomeTerms": "Completa y cobra tu primera tarea que cumpla los requisitos, de {minimum} o más, dentro de {days, plural, one {# día} other {# días}} después de tu verificación. Completa tu verificación de identidad, la configuración de pagos y cualquier verificación de antecedentes requerida.",
+    "welcomeUnlock": "Se desbloquea {days, plural, one {# día} other {# días}} después de que se pague la tarea, tras una revisión. Canjéala dentro de {redeemDays, plural, one {# día} other {# días}} después de desbloquearla. Una recompensa de bienvenida por persona.",
+    "repeatTitle": "Recompensa en tarjeta de regalo por clientes que repiten",
+    "repeatOffer": "Una tarjeta de regalo de {amount} por volver a ayudar al mismo cliente",
+    "repeatTerms": "Gana tu recompensa con tu {bookings, selectordinal, one {#.ª} two {#.ª} few {#.ª} other {#.ª}} reserva pagada de {minimum} o más con el mismo cliente dentro de {days, plural, one {# día} other {# días}}. Cada reserva debe cumplir este mínimo. Disponible una vez por cada pareja de ayudante y cliente.",
+    "repeatUnlock": "La recompensa se desbloquea {days, plural, one {# día} other {# días}} después de que se pague la tarea que cumple los requisitos. Canjéala dentro de {redeemDays, plural, one {# día} other {# días}} después de desbloquearla.",
+    "rewardConditions": "Los reembolsos, las disputas o las revisiones de seguridad pueden retrasar o cambiar la elegibilidad. Las tarjetas de regalo pueden considerarse ingresos sujetos a impuestos. Los programas tienen disponibilidad limitada.",
+    "rewardPolicy": "Las recompensas nunca dependen de reseñas ni calificaciones.",
+    "rewardTermsLink": "Lee los términos de las recompensas",
+    "closingTitle": "¿Listo para ayudar a tus vecinos?",
+    "closingDescription": "Empieza con tu perfil, tus servicios y las zonas que cubres."
+  },
+  "shared": {
+    "postTask": "Publicar una tarea",
+    "categoriesTitle": "¿En qué te vendría bien una mano?",
+    "categoriesDescription": "Tareas de todos los días, con un alcance claro y un precio acordado desde el principio.",
+    "recentTasks": "Tareas recientes",
+    "recentTasksDescription": "Mira qué necesita la gente cerca de ti. Solo se muestran zonas generales.",
+    "noTasksTitle": "Aún no hay tareas abiertas aquí",
+    "noTasksBody": "Las tareas aparecen aquí cuando alguien las publica. Describe lo que necesitas y los ayudantes podrán enviarte ofertas.",
+    "featuredHelpers": "Conoce a ayudantes de tu zona",
+    "helpersDescription": "Compara servicios, datos de verificación y comentarios de reservas completadas.",
+    "noHelpersTitle": "Aquí aparecerán ayudantes",
+    "noHelpersBody": "Publica una tarea para que los ayudantes sepan qué necesitas.",
+    "coverageTitle": "En los alrededores de {market}",
+    "coverageNote": "{market} y alrededores, en un radio de unas {miles} millas",
+    "outsideArea": "¿Estás fuera del área de servicio?",
+    "joinWaitlist": "Únete a la lista de espera",
+    "trustTitle": "Claridad desde el primer paso",
+    "paymentTitle": "Sabe cuándo pagas",
+    "payment": "Pagas al reservar. Tu ayudante recibe su pago cuando la tarea está terminada.",
+    "privacyTitle": "Tu dirección se mantiene privada",
+    "privacy": "Los ayudantes solo ven la zona general. Tu dirección exacta se comparte con tu ayudante después de reservar.",
+    "identityTitle": "Ayudantes con identidad verificada",
+    "identity": "Los ayudantes completan una verificación de identidad antes de enviar ofertas. Una insignia explica qué se verificó y cuándo."
+  },
+  "home": {
+    "eyebrow": "Ayuda local en {market}, {state}",
+    "title": "Un poco de ayuda. Una lista de pendientes más ligera.",
+    "description": "Desde el escritorio que sigue en su caja hasta las hojas del jardín, encuentra a un ayudante local para esas cosas de todos los días que necesitas resolver.",
+    "browseTasks": "Ver tareas",
+    "stepsTitle": "De pendiente a resuelto",
+    "steps": {
+      "post": {
+        "title": "Cuéntanos qué necesitas",
+        "body": "Describe la tarea, elige un horario y define tu presupuesto."
+      },
+      "choose": {
+        "title": "Elige a tu ayudante",
+        "body": "Compara ofertas y perfiles. Ve el total completo antes de reservar."
+      },
+      "done": {
+        "title": "Aprueba la tarea terminada",
+        "body": "Revisa el trabajo, apruébalo y guarda a tu ayudante para la próxima vez."
+      }
+    },
+    "howLink": "Mira cómo funciona",
+    "helperTitle": "Pon tus habilidades a trabajar cerca de ti",
+    "helperBody": "Elige tareas que van con tus habilidades y tu horario. Define tus precios, mira tus ganancias desde el principio y consigue clientes que vuelvan.",
+    "helperAction": "Ser ayudante",
+    "faqTitle": "Algunas cosas que debes saber",
+    "faq": {
+      "payment": {
+        "question": "¿Cuándo pago?",
+        "answer": "Pagas al reservar. Tu ayudante recibe su pago cuando la tarea está terminada."
+      },
+      "address": {
+        "question": "¿Quién puede ver mi dirección?",
+        "answer": "Los ayudantes solo ven la zona general. Tu dirección exacta se comparte con tu ayudante después de reservar."
+      },
+      "account": {
+        "question": "¿Puedo publicar tareas y también ayudar a otros?",
+        "answer": "Sí. Una sola cuenta tiene dos modos: “Necesito ayuda” y “Puedo ayudar”. Completa la configuración de ayudante antes de enviar ofertas."
+      },
+      "rebook": {
+        "question": "¿Puedo volver a reservar al mismo ayudante?",
+        "answer": "Sí. Guarda a tu ayudante o elige Volver a reservar desde una reserva completada. Revisa los detalles de la tarea, el horario y el precio antes de enviar una invitación."
+      }
+    }
+  },
+  "market": {
+    "title": "Ayuda de todos los días en {market}",
+    "description": "Encuentra una mano para armar muebles, hacer una mudanza, limpiar el jardín, limpiar la casa o resolver un problema con la computadora. Empieza con una tarea y elige la oferta que mejor te convenga."
+  },
+  "category": {
+    "title": "{category} en {market}",
+    "pricingTitle": "Precios habituales",
+    "typical": {
+      "item": "Habitual en {market}: de {low} a {high} por artículo",
+      "hour": "Habitual en {market}: de {low} a {high} por hora",
+      "task": "Habitual en {market}: de {low} a {high} por tarea"
+    },
+    "minimumHours": "{hours, plural, one {Mínimo de # hora} other {Mínimo de # horas}}",
+    "guidanceNote": "Estos son precios habituales de las tareas. Tu precio acordado y la tarifa de servicio aparecen antes de reservar.",
+    "feesLink": "Ver tarifas y ejemplos",
+    "includedTitle": "Qué incluye",
+    "excludedTitle": "Qué no incluye",
+    "backgroundNote": "Los ayudantes que hacen tareas en casa deben completar una verificación de antecedentes. La insignia muestra la fecha de la verificación; no es una garantía de la calidad del trabajo ni de la seguridad.",
+    "remoteNote": "La ayuda remota con computadoras se hace compartiendo la pantalla. Tú mantienes el control de tu dispositivo y escribes tus propias contraseñas. No se usan herramientas de acceso remoto sin supervisión.",
+    "helpersTitle": "Ayudantes de esta categoría",
+    "ctaTitle": "¿Listo para resolverlo?",
+    "ctaBody": "Describe el trabajo, elige tu horario y compara ofertas antes de reservar."
+  },
+  "categories": {
+    "furniture-assembly": {
+      "scope": "Escritorios, camas, estantes",
+      "intro": "Convierte una caja de muebles desarmados en muebles que puedes usar. Comparte los detalles de lo que hay que armar para que tu ayudante planee el trabajo.",
+      "pricing": "Acuerda un precio fijo por artículo antes de reservar. Incluye en el alcance la cantidad de artículos, el modelo, los detalles de acceso y cualquier anclaje antivuelco.",
+      "included": {
+        "one": "Muebles para armar, incluidas camas, escritorios y estantes",
+        "two": "Anclaje antivuelco acordado como parte de la tarea"
+      },
+      "excluded": {
+        "one": "Trabajos eléctricos, de gas o de plomería",
+        "two": "Instalación de televisores en la pared"
+      }
+    },
+    "moving-help": {
+      "scope": "Empacar, cargar, subir y bajar",
+      "intro": "Una mano para cargar, subir y bajar cosas, y empacar. La ayuda con mudanzas cubre el trabajo físico; el transporte lo organizas tú.",
+      "pricing": "Acuerda una tarifa por hora y un máximo de horas. Pagas el límite al reservar. El tiempo sin usar se reembolsa cuando se aprueban las horas finales.",
+      "included": {
+        "one": "Carga y descarga",
+        "two": "Mover muebles dentro de una habitación o entre habitaciones",
+        "three": "Empacar"
+      },
+      "excluded": {
+        "one": "Transporte en el vehículo del ayudante",
+        "two": "Pianos, cajas fuertes o materiales peligrosos"
+      }
+    },
+    "yard-cleanup": {
+      "scope": "Hojas, maleza, poda ligera",
+      "intro": "Deja en orden los espacios al aire libre que usas todos los días, con trabajo que se hace de forma segura a nivel del suelo.",
+      "pricing": "Acuerda un precio fijo por la limpieza, o una tarifa por hora con un límite. En las tareas por hora, el tiempo sin usar se reembolsa cuando se aprueban las horas finales.",
+      "included": {
+        "one": "Rastrillar y embolsar hojas",
+        "two": "Quitar maleza y recoger residuos a nivel del suelo",
+        "three": "Poda ligera a mano"
+      },
+      "excluded": {
+        "one": "Pesticidas, herbicidas o reparación de riego",
+        "two": "Escaleras, motosierras o trabajo en árboles",
+        "three": "Retirar los residuos"
+      }
+    },
+    "light-cleaning": {
+      "scope": "Cocinas, baños, una casa ordenada",
+      "intro": "Ayuda con la limpieza habitual y un orden ligero. Describe las habitaciones, los productos y si hay mascotas antes de reservar.",
+      "pricing": "Acuerda un precio fijo según el tamaño de la casa y el alcance, o una tarifa por hora con un límite. Cualquier trabajo extra requiere un cambio acordado antes de empezar.",
+      "included": {
+        "one": "Limpieza habitual del hogar",
+        "two": "Limpieza de cocina y baños",
+        "three": "Un orden ligero"
+      },
+      "excluded": {
+        "one": "Riesgos biológicos o eliminación de moho",
+        "two": "Limpieza posterior a una obra",
+        "three": "Ventanas exteriores por encima de la planta baja"
+      }
+    },
+    "computer-help": {
+      "scope": "Dispositivos, Wi-Fi, guía paciente",
+      "intro": "Siéntete a gusto con tu computadora o tu teléfono, en casa o en una sesión guiada con pantalla compartida.",
+      "pricing": "Elige un paquete fijo, como una sesión remota de 30 o 60 minutos, o acuerda una tarifa por hora con un límite. Revisa el precio completo antes de reservar.",
+      "included": {
+        "one": "Configuración de dispositivos, Wi-Fi e impresoras",
+        "two": "Copias de seguridad y limpieza básica del dispositivo",
+        "three": "Explicaciones pacientes paso a paso"
+      },
+      "excluded": {
+        "one": "Acceso remoto sin supervisión o herramientas de control remoto",
+        "two": "Que el ayudante maneje contraseñas o cuentas financieras",
+        "three": "Acceso a cuentas de criptomonedas o transacciones con ellas"
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "Un plan claro, de principio a fin",
+    "description": "Una cuenta, dos formas de participar. Elige la que va con lo que necesitas hoy.",
+    "tabLabel": "Elige cómo usas TasksNearMe",
+    "posterTab": "Necesito ayuda",
+    "helperTab": "Puedo ayudar",
+    "helperAction": "Configura tu perfil de ayudante",
+    "poster": {
+      "title": "Consigue ayuda con tu tarea",
+      "one": {
+        "title": "Describe tu tarea",
+        "body": "Elige una categoría, agrega los detalles y define la fecha, el rango de horas y tu presupuesto. Puedes publicar sin agregar un método de pago."
+      },
+      "two": {
+        "title": "Compara ofertas o invita a un ayudante",
+        "body": "Revisa perfiles, insignias de verificación y reseñas. Haz preguntas en la app, o solicita un horario de la disponibilidad de un ayudante."
+      },
+      "three": {
+        "title": "Confirma los detalles y reserva",
+        "body": "Revisa el alcance, el horario, el total y los términos de cancelación. Paga para confirmar una oferta. Las invitaciones directas ponen una retención en tu tarjeta; se te cobra cuando el ayudante acepta."
+      },
+      "four": {
+        "title": "Mantén el trabajo en marcha",
+        "body": "Usa los mensajes de la reserva para coordinarte. Acuerda los cambios de alcance, precio, horario u horas antes de que empiece el trabajo adicional."
+      },
+      "five": {
+        "title": "Aprueba, deja tu reseña y vuelve a reservar",
+        "body": "Revisa los detalles de la tarea terminada y apruébala o reporta un problema antes de la fecha límite indicada. Guarda a tu ayudante y usa Volver a reservar la próxima vez."
+      }
+    },
+    "helper": {
+      "title": "Ayuda a personas cerca de ti",
+      "one": {
+        "title": "Completa tu configuración",
+        "body": "Agrega tus servicios y tu zona, completa la verificación de identidad y configura tus pagos. Las tareas en casa también requieren una verificación de antecedentes."
+      },
+      "two": {
+        "title": "Encuentra tareas y envía ofertas",
+        "body": "Elige tareas que van con tus habilidades y tu horario. Incluye tu precio, el horario que propones y lo que llevarás. También puedes responder a invitaciones directas."
+      },
+      "three": {
+        "title": "Confirma la reserva",
+        "body": "Revisa el alcance acordado y tus ganancias. Verás la dirección exacta cuando la reserva esté confirmada. Empieza cuando el pago esté confirmado en la app."
+      },
+      "four": {
+        "title": "Haz la tarea y comparte el resultado",
+        "body": "Registra tu llegada y mantén informado a tu cliente. Envía los detalles de la tarea terminada, fotos cuando se necesiten, las horas en las tareas por hora y los recibos de los gastos aprobados."
+      },
+      "five": {
+        "title": "Cobra y consigue clientes que vuelvan",
+        "body": "Después de la aprobación, tus ganancias van a tu cuenta de pagos. Los gastos reembolsados se muestran por separado. Deja una reseña honesta y organiza la próxima reserva a través de la app."
+      }
+    }
+  },
+  "trustSafety": {
+    "title": "La confianza empieza con información clara",
+    "description": "Sabe qué se verificó, qué se mantiene privado y a dónde acudir si algo sale mal.",
+    "badgesTitle": "Qué significan las insignias",
+    "badges": {
+      "identity": {
+        "title": "Identidad verificada",
+        "body": "Una identificación oficial y una selfie coincidieron en la fecha indicada. Esto verifica la identidad, no las habilidades ni la calidad del trabajo."
+      },
+      "background": {
+        "title": "Antecedentes verificados",
+        "body": "La verificación de antecedentes salió limpia en la fecha indicada. Las categorías en casa requieren una verificación vigente. La limpieza de jardín y la ayuda remota con computadoras no."
+      },
+      "phone": {
+        "title": "Teléfono verificado",
+        "body": "La persona confirmó que tiene acceso a su número de teléfono. Esto es distinto de una verificación de identidad o de antecedentes."
+      }
+    },
+    "badgesLimit": "Las verificaciones describen la información en un momento determinado. No garantizan la seguridad ni la calidad del trabajo. Lee el perfil y habla de tu tarea antes de reservar.",
+    "privacyTitle": "Tu dirección es privada",
+    "privacyBody": "Solo el ayudante que confirmaste recibe tu dirección exacta para la reserva. Su acceso termina 48 horas después de completada la tarea.",
+    "contactMasking": "Los números de teléfono y los correos se ocultan hasta que la reserva esté confirmada.",
+    "paymentTitle": "El pago se queda con tu reserva",
+    "paymentBody": "Ve el total completo antes de confirmar. Mantén los mensajes, los cambios y los pagos dentro de la app para que soporte pueda revisar la reserva si hay un problema. El soporte de la plataforma y la protección de pagos solo aplican a las reservas hechas y pagadas aquí.",
+    "pricingLink": "Lee sobre tarifas y reembolsos",
+    "reviewsTitle": "Los comentarios van en ambos sentidos",
+    "reviewsBody": "Después de una reserva completada, tú y tu ayudante pueden reseñarse mutuamente. Las reseñas aparecen cuando ambas se envían o después de 14 días. Las reseñas se pueden reportar, y las calificaciones bajas no se ocultan solo por ser bajas.",
+    "reviewRewards": "Las reseñas son opcionales y no se premian. Las recompensas nunca dependen de reseñas ni calificaciones.",
+    "safetyTitle": "Reportes y seguridad inmediata",
+    "emergency": "Si estás en peligro inmediato, llama primero al 911.",
+    "reporting": "Usa la opción de seguridad en tu reserva para contactar a soporte por una preocupación urgente. También puedes reportar una tarea, un perfil, un mensaje o una reseña. Si hay un problema con un trabajo terminado, repórtalo desde la reserva antes de la fecha límite de aprobación.",
+    "helpLink": "Buscar ayuda",
+    "prohibitedTitle": "Algunas tareas no tienen cabida aquí",
+    "prohibitedBody": "TasksNearMe cubre ayuda de todos los días. Los oficios con licencia, el cuidado de niños, el cuidado personal y el transporte de personas quedan fuera del servicio. Revisa la lista completa antes de publicar.",
+    "prohibitedLink": "Lee la política de tareas prohibidas"
+  },
+  "previews": {
+    "group": "Páginas públicas de presentación",
+    "market": "Mercado de Austin",
+    "furniture": "Armado de muebles",
+    "moving": "Ayuda con mudanzas sin tareas",
+    "computer": "Ayuda remota con computadoras",
+    "yard": "Limpieza de jardín",
+    "cleaning": "Limpieza ligera",
+    "how": "Cómo funciona",
+    "rewards": "Ser ayudante con recompensas",
+    "noRewards": "Ser ayudante sin recompensas",
+    "pricing": "Ejemplos de precios",
+    "trust": "Confianza y seguridad"
+  }
+}

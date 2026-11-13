@@ -1,0 +1,70 @@
+{
+  "title": "Ganancias",
+  "description": "Sigue tus pagos por tareas, los gastos reembolsados y los pagos a tu banco.",
+  "totals": {
+    "label": "Tus totales",
+    "upcoming": "Próximos",
+    "onTheWay": "En camino",
+    "paidThisYear": "Pagado este año"
+  },
+  "account": {
+    "title": "Cuenta de pagos",
+    "bank": "Los pagos van a •••• {last4}",
+    "noBank": "Aún no has agregado una cuenta bancaria",
+    "timing": "Los pagos suelen llegar a tu banco unos 2 días hábiles después de la transferencia.",
+    "statuses": {
+      "not_started": "Configurar pagos",
+      "pending": "Configuración de pagos en curso",
+      "requirements_due": "Se necesitan datos bancarios",
+      "active": "Lista para recibir pagos",
+      "restricted": "Pagos restringidos"
+    }
+  },
+  "dashboard": "Panel de pagos",
+  "updateBank": "Actualizar datos bancarios",
+  "actionNeeded": "Un pago falló. Actualiza tus datos bancarios",
+  "openingDashboard": "Abriendo el panel de pagos…",
+  "dashboardReady": "Panel de pagos listo.",
+  "dashboardNotAllowed": "El panel de pagos no está disponible para esta cuenta. Contacta a soporte para recibir ayuda.",
+  "firstPayoutNotice": "Tu primer pago suele llegar unos 7 días después de tu primer cobro.",
+  "transfers": "Transferencias",
+  "client": "Cliente: {name}",
+  "transferred": "Transferido el {date}",
+  "kinds": {
+    "earnings": "Ganancias",
+    "reimbursement": "Reembolso de gastos",
+    "cancellation_compensation": "Cancelación tardía",
+    "tip": "Propina"
+  },
+  "holdReasons": {
+    "dispute": "Se reportó un problema; soporte lo está revisando",
+    "payout_account": "Tu cuenta de pagos necesita atención antes de que se pueda enviar este pago."
+  },
+  "payout": {
+    "pending": "Pago pendiente",
+    "in_transit": "Pago en camino",
+    "paid": "Pago realizado",
+    "failed": "Pago fallido",
+    "canceled": "Pago cancelado",
+    "arrival": "Llega el {date} · •••• {last4}",
+    "paidOn": "Pagado el {date} · •••• {last4}",
+    "bank": "Cuenta bancaria •••• {last4}",
+    "instant": "Pago instantáneo"
+  },
+  "empty": {
+    "title": "Aún no hay ganancias",
+    "body": "Tus pagos por tareas y los gastos reembolsados aparecerán aquí después de que completes una reserva.",
+    "action": "Buscar trabajo"
+  },
+  "instant": {
+    "title": "Cobra ahora",
+    "body": "{amount} pueden llegar a tu tarjeta de débito en minutos, en lugar de seguir el calendario habitual.",
+    "fee": "Tarifa del pago instantáneo: {fee} (1.5%, mínimo $0.50). Recibes {net}.",
+    "action": "Cobrar {net}",
+    "confirmTitle": "¿Cobrar {net} ahora?",
+    "confirmBody": "La tarifa de {fee} se descuenta de los {amount}. Suele llegar en minutos.",
+    "confirm": "Cobrar",
+    "cancel": "Ahora no",
+    "sent": "En camino a tu tarjeta de débito."
+  }
+}

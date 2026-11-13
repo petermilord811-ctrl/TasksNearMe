@@ -198,6 +198,7 @@ function ServiceMoneyField({ form, name, label, hint }: { form: UseFormReturn<He
 export function HelperServicesForm({ values, categories, onSave, submitLabel }: { values: HelperServicesInput; categories: CategoryView[]; onSave: ActionHandler<HelperServicesInput>; submitLabel?: string }) {
   const t = useTranslations('helperOnboarding');
   const fieldsCopy = useTranslations('forms');
+  const categoryName = useTranslations('helperCard.categories');
   const id = useId();
   const addButton = useRef<HTMLButtonElement>(null);
   const form = useForm<HelperServicesInput>({ resolver: zodResolver(createHelperServicesSchema(categories)), defaultValues: values });
@@ -222,7 +223,7 @@ export function HelperServicesForm({ values, categories, onSave, submitLabel }: 
           <legend className="px-1 font-heading text-base font-semibold">{t('forms.services.service', { number: index + 1 })}</legend>
           <HelperField id={categoryId} label={t('forms.services.category')} hint={t('forms.services.categoryHint')} error={errors?.categorySlug?.message} errorText={errors?.categorySlug?.message === 'invalid' ? t('forms.services.duplicate') : undefined}>
             <select {...form.register(`services.${index}.categorySlug`)} id={categoryId} aria-invalid={!!errors?.categorySlug} aria-describedby={`${categoryId}-hint${errors?.categorySlug ? ` ${categoryId}-error` : ''}`} className={selectClass}>
-              {categories.map((item) => <option value={item.slug} key={item.slug}>{item.name}</option>)}
+              {categories.map((item) => <option value={item.slug} key={item.slug}>{categoryName(item.slug)}</option>)}
             </select>
           </HelperField>
           {category && <div className="space-y-2">

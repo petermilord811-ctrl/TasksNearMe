@@ -13,6 +13,7 @@ export const categoryIcons = { 'furniture-assembly': Hammer, 'moving-help': Pack
 
 export function CategoryGrid({ categories, market }: { categories: CategoryView[]; market: MarketView }) {
   const t = useTranslations('publicPages');
+  const categoryName = useTranslations('helperCard.categories');
   return <Section title={t('shared.categoriesTitle')} description={t('shared.categoriesDescription')}>
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {categories.map((category) => {
@@ -23,7 +24,7 @@ export function CategoryGrid({ categories, market }: { categories: CategoryView[
           <HoverLift className="h-full" tilt={2} lift={4} glow={tint} surfaceClassName="h-full rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]">
             <Link href={routes.category(category.slug, market.slug)} className="group flex h-full items-start gap-4 rounded-[1.375rem] p-card outline-offset-4">
               <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl" style={{ background: `color-mix(in oklab, ${tint} 15%, transparent)`, color: tint }}><Icon className="size-5" /></span>
-              <div className="min-w-0"><h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{category.name}</h3><p className="mt-1 text-sm text-muted-foreground">{t(`categories.${category.slug}.scope`)}</p></div>
+              <div className="min-w-0"><h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{categoryName(category.slug)}</h3><p className="mt-1 text-sm text-muted-foreground">{t(`categories.${category.slug}.scope`)}</p></div>
               <ArrowRight aria-hidden="true" className="mt-1 ml-auto size-4 shrink-0 text-muted-foreground transition-[transform,color] duration-300 ease-[var(--ease-out)] group-hover:translate-x-1 group-hover:text-foreground motion-reduce:transform-none" />
             </Link>
           </HoverLift>

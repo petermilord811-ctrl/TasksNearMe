@@ -1,0 +1,109 @@
+{
+  "fieldErrors": {
+    "required": "Completa este campo.",
+    "invalid": "Revisa este dato e inténtalo de nuevo.",
+    "too_short": "Agrega un poco más de detalle.",
+    "too_long": "Es demasiado largo. Usa menos caracteres.",
+    "incorrect": "Ese código no es correcto. Revísalo e inténtalo de nuevo.",
+    "expired": "Ese código venció. Envía un código nuevo para continuar.",
+    "not_supported": "Usa un número de teléfono de EE. UU. Otros países aún no son compatibles.",
+    "in_use": "Otra cuenta ya usa ese número. Prueba con otro número o comunícate con soporte.",
+    "must_accept": "Marca esta casilla para continuar.",
+    "prohibited": "Esto no está permitido en TasksNearMe. Consulta la lista de tareas prohibidas.",
+    "out_of_range": "Elige un valor dentro del rango permitido.",
+    "unchanged": "Eso es lo que tienes ahora."
+  },
+  "fields": {
+    "email": {
+      "label": "Correo electrónico",
+      "hint": "Usa una dirección de correo a la que tengas acceso.",
+      "invalid": "Ingresa una dirección de correo válida.",
+      "in_use": "Otra cuenta ya usa ese correo. Usa uno distinto o comunícate con soporte.",
+      "unchanged": "Ese ya es tu correo."
+    },
+    "code": {
+      "label": "Código de 6 dígitos",
+      "hint": "Ingresa los 6 dígitos.",
+      "invalid": "Ingresa el código de 6 dígitos."
+    },
+    "firstName": {
+      "label": "Nombre"
+    },
+    "lastName": {
+      "label": "Apellido"
+    },
+    "phone": {
+      "label": "Número de teléfono",
+      "hint": "Solo números de EE. UU.",
+      "invalid": "Ingresa un número de teléfono válido de EE. UU.",
+      "unchanged": "Ese ya es tu número."
+    },
+    "zip": {
+      "label": "Código postal",
+      "hint": "El código postal de 5 dígitos donde necesitas u ofreces ayuda.",
+      "invalid": "Ingresa un código postal de 5 dígitos."
+    },
+    "interest": {
+      "label": "Me interesa",
+      "hint": "Elige cómo quieres usar TasksNearMe."
+    }
+  },
+  "actionErrors": {
+    "expired": "Ese código venció. Envía un código nuevo para continuar.",
+    "not_allowed": "Esta cuenta no puede continuar. Visita el centro de ayuda para recibir soporte.",
+    "rate_limited": "Hubo demasiados intentos. Espera antes de volver a intentarlo.",
+    "limit_reached": "Por ahora llegaste a un límite en tu cuenta. Consulta el centro de ayuda para ver los detalles."
+  },
+  "retryAt": "Inténtalo de nuevo después de {at} (hora del centro).",
+  "getHelp": "Visitar el centro de ayuda",
+  "continue": "Continuar",
+  "pending": "Procesando…",
+  "upload": {
+    "choosePhotos": "Elegir fotos",
+    "choosePhoto": "Elegir una foto",
+    "dropPhotos": "O arrastra las fotos aquí",
+    "dropPhoto": "O arrastra una foto aquí",
+    "chosen": "Elegida: {name}"
+  },
+  "profilePhoto": {
+    "label": "Foto de perfil",
+    "hint": "Una foto clara de tu rostro ayuda a que te reconozcan. JPG, PNG, WebP o HEIC, de hasta {megabytes, number} MB. La recortamos en forma cuadrada.",
+    "add": "Agregar una foto",
+    "change": "Cambiar foto",
+    "remove": "Quitar foto",
+    "uploading": "Subiendo tu foto…",
+    "removing": "Quitando tu foto…",
+    "uploaded": "Se guardó tu nueva foto.",
+    "removed": "Se quitó tu foto. La gente verá tus iniciales.",
+    "errors": {
+      "too_large": "Esta foto es demasiado grande. Elige una de hasta {megabytes, number} MB.",
+      "unsupported_type": "No se puede usar este archivo. Elige una foto JPG, PNG, WebP o HEIC.",
+      "too_many": "Por ahora no puedes agregar otra foto. Inténtalo más tarde.",
+      "rate_limited": "Subiste muchas fotos. Espera un poco e inténtalo de nuevo.",
+      "unknown": "No se pudo guardar tu foto. Inténtalo de nuevo."
+    },
+    "notes": {
+      "publicProfile": "También se muestra en tu perfil público de ayudante.",
+      "helperEditor": "Se muestra en tu perfil público, en las búsquedas y en tus ofertas."
+    }
+  },
+  "aiDraft": {
+    "drafting": "Escribiendo…",
+    "drafted": "Redactado para ti. Léelo completo y cambia lo que quieras antes de guardar.",
+    "undo": "Deshacer",
+    "undone": "Volviste a lo que tenías.",
+    "errors": {
+      "unavailable": "La ayuda para escribir no está disponible ahora. Puedes escribirlo tú.",
+      "rate_limited": "Son muchos borradores por ahora. Inténtalo de nuevo en una hora.",
+      "prohibited": "No podemos ayudar a escribir eso. Revisa lo que permite TasksNearMe."
+    }
+  },
+  "addressSearch": {
+    "results": "Sugerencias de direcciones",
+    "loading": "Buscando direcciones…",
+    "failed": "La búsqueda de direcciones no está disponible. Inténtalo de nuevo en un momento.",
+    "empty": "No hay direcciones que coincidan. Revisa el número y el nombre de la calle.",
+    "selected": "Elegida: {address}"
+  },
+  "verifyIdentity": "Verifica tu identidad"
+}

@@ -1,0 +1,100 @@
+{
+  "previews": {
+    "group": "Hojas de reserva",
+    "open": "Abrir hoja",
+    "safetyDescription": "No me sentí a salvo y salí del lugar de la tarea. Por favor, ponte en contacto conmigo.",
+    "clientWithSheets": "Reserva del cliente con hojas",
+    "helperWithSheets": "Reserva del ayudante con hojas",
+    "helperRunningLate": "El ayudante se retrasa",
+    "clientNoShowReportable": "Reporte de ausencia disponible",
+    "clientNoShowNotYet": "Reporte de ausencia aún no disponible",
+    "helperCantAccessAvailable": "El ayudante no puede entrar",
+    "clientCantAccessReported": "Se necesita respuesta del cliente",
+    "clientEarly": "El cliente cancela con anticipación",
+    "clientLate": "El cliente cancela tarde",
+    "helperEarly": "El ayudante cancela con anticipación",
+    "helperLate": "El ayudante cancela tarde",
+    "loading": "Cargando condiciones de cancelación",
+    "previewError": "Condiciones de cancelación no disponibles",
+    "resultNotAllowed": "La reserva cambió",
+    "runningLate": "Se retrasa",
+    "noShow": "Reportar una ausencia",
+    "cantAccess": "No puedo entrar",
+    "safety": "Reporte de seguridad",
+    "sending": "Enviando reporte de seguridad",
+    "sent": "Reporte de seguridad enviado",
+    "validationFailed": "El reporte de seguridad necesita detalles"
+  },
+  "back": "Volver",
+  "sending": "Enviando…",
+  "note": "Nota (opcional)",
+  "noteHint": "Agrega cualquier otra cosa que debamos saber. Hasta 500 caracteres.",
+  "count": "{count} de {max} caracteres",
+  "choose": "Elige una opción.",
+  "changed": "Esta reserva cambió. Recarga para ver los detalles más recientes.",
+  "reload": "Recargar reserva",
+  "cantAccessAt": "{helper} no pudo entrar a las {time}",
+  "answerBy": "Responde antes de {time} o la reserva se cancelará",
+  "cancel": {
+    "title": "Cancelar reserva",
+    "intro": "Revisa lo que pasa antes de cancelar.",
+    "loading": "Cargando condiciones de cancelación…",
+    "loadError": "No pudimos cargar las condiciones de cancelación. Inténtalo de nuevo.",
+    "retry": "Intentar de nuevo",
+    "posterRefund": "Te reembolsaremos <amount></amount>",
+    "posterLate": "Cancelar ahora cuesta {fee}. {helper} recibe todo ese monto. Te reembolsaremos {refund}.",
+    "helperRefund": "{client} recibe un reembolso completo",
+    "refundAmount": "Reembolso para {client}: <amount></amount>",
+    "freeEnded": "La cancelación gratuita terminó {at}",
+    "strike": "Cancelar tan cerca del inicio cuenta en contra de tu cuenta",
+    "policy": "Leer la política de cancelación",
+    "reason": "¿Por qué cancelas?",
+    "submit": "Cancelar reserva",
+    "reasons": {
+      "plans_changed": "Cambiaron mis planes",
+      "found_someone_else": "Encontré a otra persona",
+      "helper_asked": "Mi ayudante me pidió cancelar",
+      "unavailable": "Ya no estoy disponible",
+      "illness": "No me siento bien",
+      "scope_different": "La tarea es distinta de lo acordado",
+      "safety_concern": "Tengo una preocupación de seguridad",
+      "other": "Otro motivo"
+    }
+  },
+  "late": {
+    "title": "¿Cuánto te retrasarás?",
+    "intro": "Avisa a {client} a qué hora llegarás.",
+    "minutes": "{minutes, plural, one {# minuto} other {# minutos}}",
+    "label": "¿Cuántos minutos de retraso?",
+    "submit": "Enviar aviso"
+  },
+  "noShow": {
+    "title": "Reportar una ausencia",
+    "intro": "{helper} no ha llegado.",
+    "terms": "Al reportar una ausencia, esta reserva se cancela. Recibirás un reembolso completo y soporte verá tu reporte.",
+    "submit": "Reportar una ausencia"
+  },
+  "cantAccess": {
+    "title": "¿No puedes entrar?",
+    "intro": "Avisa a {client} que estás esperando para entrar.",
+    "terms": "Tu cliente tiene 30 minutos para responder. Si no responde, la reserva se cancela y recibes el monto por cancelación tardía.",
+    "submit": "Reportar que no puedo entrar"
+  },
+  "safety": {
+    "emergency": "¿Estás en peligro? Llama al 911",
+    "title": "Reportar un problema de seguridad",
+    "intro": "Cuéntale a soporte qué pasó para que pueda ayudarte.",
+    "kind": "¿Qué pasó?",
+    "description": "Describe lo que pasó",
+    "descriptionHint": "Usa de 10 a 2,000 caracteres. Incluye detalles que ayuden a soporte a responder.",
+    "submit": "Enviar reporte de seguridad",
+    "sent": "Soporte se pondrá en contacto contigo pronto",
+    "kinds": {
+      "unsafe_now": "No me siento a salvo ahora mismo",
+      "harassment": "Acoso",
+      "threat": "Una amenaza",
+      "property_damage": "Daños a la propiedad",
+      "other": "Otro problema de seguridad"
+    }
+  }
+}
