@@ -39,6 +39,7 @@ import { canceledFacts, contestNoShow, reopenForReplacement, type ReopenedTask }
 import { autoApproveDue, completionViewOf } from './completion-view';
 import { addressVisibility, allBookingActions, bookingDeadlines, bookingNextStep, type BookingFacts, type BookingPolicy } from './domain';
 import { expireCantAccess } from './sheets';
+import { readExactAddress } from '@/modules/tasks/locations';
 import { bookingTerms, bookings } from './schema';
 
 /**
@@ -184,7 +185,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
   let exactAddress: ExactAddress | undefined;
   if (visibility === 'visible' && task.locationId) {
     const [location] = await db.select().from(taskLocations).where(eq(taskLocations.id, task.locationId)).limit(1);
-    if (location) exactAddress = JSON.parse(deps.cipher.decrypt(location.addressEnc)) as ExactAddress;
+    if (location) exactAddress = readExactAddress(deps.cipher, location.addressEnc);
   }
 
   const paymentLines: BookingPaymentLine[] = paymentRows

@@ -1,0 +1,1 @@
+ALTER TABLE "task_locations" ADD COLUMN "deleted_at" timestamp with time zone;

@@ -4,7 +4,6 @@ import type {
   AcceptProposalInput,
   ActionResult,
   CategorySlug,
-  ExactAddress,
   ClientActionId,
   MyClientRow,
   MyClientsPageData,
@@ -39,6 +38,7 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
+import { readExactAddress } from '@/modules/tasks/locations';
 import { rebookProposals } from './schema';
 
 /**
@@ -104,6 +104,16 @@ async function pastBooking(db: Db, helperId: string, bookingId: string) {
     .where(and(eq(bookings.id, String(bookingId)), eq(bookings.helperUserId, helperId), eq(bookings.status, 'completed')))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * A rebooking copies the past task's place. Once the retention timer deleted that address (180 days after
+ * the last booking there), there's nothing to copy: the client posts the task again instead.
+ */
+async function placeKept(db: Db, task: { locationId: string | null }): Promise<boolean> {
+  if (!task.locationId) return true;
+  const [location] = await db.select({ deletedAt: taskLocations.deletedAt }).from(taskLocations).where(eq(taskLocations.id, task.locationId)).limit(1);
+  return Boolean(location) && !location!.deletedAt;
 }
 
 const termsPricing = (terms: typeof bookingTerms.$inferSelect): PricingInput =>
@@ -194,6 +204,7 @@ export async function proposeRebook(db: Db, helperId: string, bookingId: string,
   if (!parsed.success) return validationFailed(parsed.error);
   const past = await pastBooking(db, helperId, bookingId);
   if (!past) return { ok: false, code: 'not_allowed' };
+  if (!(await placeKept(db, past.task))) return { ok: false, code: 'not_allowed' };
   const posterId = past.booking.posterUserId;
   if (await isBlockedBetween(db, helperId, posterId)) return { ok: false, code: 'not_allowed' };
   const state = await loadHelperState(db, helperId, now);
@@ -253,7 +264,7 @@ async function viewOf(db: Db, cipher: FieldCipher | null, row: ProposalRow, view
   const status = row.status as RebookProposalStatus;
   const actions: RebookActionId[] = status !== 'sent' ? [] : viewerRole === 'poster' ? ['accept_proposal', 'decline_proposal'] : ['withdraw_proposal'];
   const [location] = viewerRole === 'poster' && past.locationId && cipher ? await db.select({ addressEnc: taskLocations.addressEnc }).from(taskLocations).where(eq(taskLocations.id, past.locationId)).limit(1) : [];
-  const exactAddress = location && cipher ? (JSON.parse(cipher.decrypt(location.addressEnc)) as ExactAddress) : null;
+  const exactAddress = location && cipher ? (readExactAddress(cipher, location.addressEnc) ?? null) : null;
   return {
     id: row.id,
     status,
@@ -348,6 +359,7 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
   if (await isBlockedBetween(db, posterId, row.helperUserId)) return { ok: false, code: 'not_allowed' };
   const [past] = await db.select({ task: tasks, slug: categories.slug }).from(bookings).innerJoin(tasks, eq(tasks.id, bookings.taskId)).innerJoin(categories, eq(categories.id, tasks.categoryId)).where(eq(bookings.id, row.fromBookingId)).limit(1);
   if (!past) return { ok: false, code: 'not_allowed' };
+  if (!(await placeKept(db, past.task))) return { ok: false, code: 'not_allowed' };
   const helper = await loadHelperState(db, row.helperUserId, now);
   if (!helper.facts.bookableCategories.includes(past.slug as CategorySlug)) return { ok: false, code: 'not_allowed' };
   const policy = await getPublishedPolicy(past.task.marketId, db);

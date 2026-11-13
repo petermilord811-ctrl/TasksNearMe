@@ -16,6 +16,7 @@ import { verificationProvidersFor } from '@/modules/verification/providers';
 import { runVerificationTimers } from '@/modules/verification/timers';
 import { readPendingDocuments } from '@/modules/verification/auto-check';
 import { runPrivacyRequests } from '@/modules/privacy/requests';
+import { retentionDue, runRetention } from '@/modules/privacy/retention';
 import { createEmailProvider } from '@/integrations/email';
 import { documentReaderFromEnv } from '@/integrations/ai/document-reader';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
@@ -25,8 +26,8 @@ import type { Db } from '@/platform/db/connect';
  * The in-process job runner (blueprint 07: jobs). Every minute it runs the due-work functions that
  * pages also call lazily, so timers fire even when nobody looks: offer and unpaid-hold expiry,
  * can't-access expiry, start and approval reminders, auto-approval, review publishing, verification timers,
- * notifications and their email and text messages, privacy requests (data copies, deletions), and the
- * reading of proofs of address. Each job is idempotent; a
+ * notifications and their email and text messages, privacy requests (data copies, deletions), retention
+ * timers (hourly), and the reading of proofs of address. Each job is idempotent; a
  * Postgres advisory lock lets only one server instance run them at a time. Payouts and rewards stay
  * lazy per person for now.
  */
@@ -52,6 +53,7 @@ export const JOBS: Job[] = [
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
   { name: 'notifications.deliver', run: (db, now) => deliverNotifications(db, now) },
   { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
+  { name: 'retention.sweep', run: (db, now) => (retentionDue(now) ? runRetention(db, { storage: createFileStorage() }, now) : Promise.resolve()) },
   // Last: it waits on Claude (a few seconds a document).
   { name: 'verification.read_documents', run: (db, now) => readPendingDocuments(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), reader: documentReaderFromEnv() }, now) },
 ];

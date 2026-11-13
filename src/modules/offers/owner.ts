@@ -2,7 +2,6 @@ import { and, asc, count, desc, eq, inArray, ne, notInArray } from 'drizzle-orm'
 import type {
   ActionResult,
   BookingStatus,
-  ExactAddress,
   MyTasksPageData,
   OfferDetailPageData,
   OfferStatus,
@@ -17,6 +16,7 @@ import { photoFromFile } from '@/modules/files/uploads';
 import { categories, type FeeSchedule } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { getHelperSummaries } from '@/modules/profiles/queries';
+import { readExactAddress } from '@/modules/tasks/locations';
 import { budgetOf } from '@/modules/tasks/projections';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { files, taskLocations, taskPhotos, tasks } from '@/modules/tasks/schema';
@@ -221,7 +221,7 @@ export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: 
   // After Find a replacement, earlier offers belong to the canceled booking.
   const current = allOffers.filter((offer) => !task.reopenedAt || offer.createdAt >= task.reopenedAt);
   const offerRows = current.filter((offer) => !blocked.includes(offer.helperUserId));
-  const exactAddress = location[0] ? (JSON.parse(deps.cipher.decrypt(location[0].addressEnc)) as ExactAddress) : undefined;
+  const exactAddress = readExactAddress(deps.cipher, location[0]?.addressEnc);
   const bookingId = (await bookingIdsOf(deps.db, [taskId])).get(taskId);
 
   return {

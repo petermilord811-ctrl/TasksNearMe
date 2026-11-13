@@ -232,6 +232,13 @@
       "when": 1794561285341,
       "tag": "0032_privacy_requests_work",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794562302571,
+      "tag": "0033_task_location_deleted",
+      "breakpoints": true
     }
   ]
 }

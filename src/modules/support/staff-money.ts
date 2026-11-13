@@ -6,7 +6,6 @@ import type {
   CaseResolution,
   CaseResolutionInput,
   EarningsStatus,
-  ExactAddress,
   PriceBreakdown,
   RestrictedAccessInput,
   RevealAddressResult,
@@ -25,6 +24,7 @@ import { quoteBreakdown } from '@/modules/payments/fees';
 import { payments, refunds } from '@/modules/payments/schema';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { taskLocations, tasks } from '@/modules/tasks/schema';
+import { readExactAddress } from '@/modules/tasks/locations';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
@@ -323,8 +323,11 @@ export async function revealBookingAddress(db: Db, cipher: FieldCipher, staff: S
     .where(eq(bookings.id, String(bookingId)))
     .limit(1);
   if (!row) return { ok: false, code: 'not_allowed' };
+  const address = readExactAddress(cipher, row.addressEnc);
+  // Deleted by the retention timer: there's nothing left to show.
+  if (!address) return { ok: false, code: 'not_found' };
   await audit(db, staff, 'booking.view_address', 'booking', String(bookingId), now, { reason: parsed.data.reason });
-  return { ok: true, address: JSON.parse(cipher.decrypt(row.addressEnc)) as ExactAddress };
+  return { ok: true, address };
 }
 
 /** The booking's conversation as written, after a reason that goes to the audit log. */

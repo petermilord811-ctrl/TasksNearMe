@@ -33,13 +33,15 @@ export const taskLocations = pgTable('task_locations', {
   ownerUserId: text('owner_user_id')
     .notNull()
     .references(() => users.id),
-  /** Encrypted JSON: { line1, line2?, city, state, zip, accessNotes? }. */
+  /** Encrypted JSON: { line1, line2?, city, state, zip, accessNotes? }. Empty once deleted (`deletedAt`). */
   addressEnc: text('address_enc').notNull(),
   zip: text('zip').notNull(),
   areaId: text('area_id')
     .notNull()
     .references(() => areas.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  /** The retention timer deleted the address: 180 days after the last booking there (blueprint 08 §5). */
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const tasks = pgTable(

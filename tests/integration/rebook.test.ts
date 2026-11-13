@@ -18,7 +18,7 @@ import {
   proposeRebook,
   withdrawProposal,
 } from '@/modules/rebook/service';
-import { tasks } from '@/modules/tasks/schema';
+import { taskLocations, tasks } from '@/modules/tasks/schema';
 import { createFieldCipher } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
 import { marketDayKey } from '@/shared/format';
@@ -100,6 +100,16 @@ describe('my clients and rebooking', () => {
     await expireDueProposals(db, new Date(Date.now() + 3 * DAY));
     expect((await db.select().from(rebookProposals).where(eq(rebookProposals.id, third!.id)))[0]?.status).toBe('expired');
     expect(await acceptProposal(deps, 'usr_ana', third!.id, { payment: { kind: 'dev_card', card: 'success', save: false }, acceptTerms: true }, now())).toEqual({ ok: false, code: 'expired' });
+  });
+
+  it("can't rebook a place whose address the retention timer deleted", async () => {
+    const [past] = await db.select({ locationId: tasks.locationId }).from(tasks).where(eq(tasks.id, 'tsk_rbk'));
+    await db.update(taskLocations).set({ deletedAt: new Date() }).where(eq(taskLocations.id, past!.locationId!));
+    try {
+      expect(await proposeRebook(db, 'usr_sam', 'bkg_rbk', proposal(9), now())).toEqual({ ok: false, code: 'not_allowed' });
+    } finally {
+      await db.update(taskLocations).set({ deletedAt: null }).where(eq(taskLocations.id, past!.locationId!));
+    }
   });
 
   it('tells the client and puts the proposal on their home', async () => {

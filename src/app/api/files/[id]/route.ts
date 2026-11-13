@@ -20,7 +20,8 @@ export async function GET(_request: Request, ctx: RouteContext<'/api/files/[id]'
     (canViewFile(file, { userId, isStaff: viewer.kind === 'user' && viewer.user.staffRoles.length > 0 }) ||
       (await isCurrentProfilePhoto(db, file)) ||
       (userId !== null && (await canViewRelatedFile(db, file, userId, await requestNow()))));
-  const body = allowed && !file.storageKey.startsWith('public/') ? await storage.get(file.storageKey) : null;
+  // An empty key: the retention timer deleted the file itself and kept only the record (a receipt line).
+  const body = allowed && file.storageKey && !file.storageKey.startsWith('public/') ? await storage.get(file.storageKey) : null;
   if (!file || !allowed || !body) return new Response('Not found', { status: 404 });
 
   return new Response(new Uint8Array(body), {
