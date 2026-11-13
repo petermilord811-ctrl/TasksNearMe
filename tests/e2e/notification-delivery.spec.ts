@@ -13,6 +13,8 @@ const CHRIS_PHONE = '+15125550102';
 
 async function outboxText(page: Page, to: string): Promise<string> {
   await page.goto(`/dev/outbox?to=${encodeURIComponent(to)}`);
+  // The list streams in after the page's shell; read it, not its loading line.
+  await expect(page.getByText('Loading messages…')).toHaveCount(0, { timeout: 30_000 });
   return (await page.locator('main').textContent()) ?? '';
 }
 
