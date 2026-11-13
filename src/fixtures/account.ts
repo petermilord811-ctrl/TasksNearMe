@@ -1,4 +1,4 @@
-import type { AccountHandlers, AccountPageData, NotificationHandlers, NotificationsPageData, NotificationView } from '@/contracts';
+import type { AccountHandlers, AccountPageData, EmailUnsubscribeHandlers, EmailUnsubscribePageData, NotificationHandlers, NotificationsPageData, NotificationView } from '@/contracts';
 import { routes } from '@/contracts';
 import { DESK_TIMES } from './timeline';
 
@@ -113,6 +113,19 @@ export const fakeAccountHandlers: AccountHandlers = {
   onStartPhoneChange: () => wait({ ok: true, code: 'sent' }),
   onConfirmPhoneChange: ({ code }) =>
     wait(code === CHANGE_CODE ? { ok: true, code: 'updated' } : { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } }),
+};
+
+/** The unsubscribe link in a notification email (`/email/unsubscribe`), in each state. */
+export const unsubscribePages = {
+  confirm: { state: 'confirm', topic: 'offers' },
+  unsubscribed: { state: 'unsubscribed', topic: 'messages' },
+  locked: { state: 'locked', topic: 'bookings' },
+  invalid: { state: 'invalid' },
+} satisfies Record<string, EmailUnsubscribePageData>;
+
+export const fakeUnsubscribeHandlers: EmailUnsubscribeHandlers = {
+  onUnsubscribe: () => wait({ ok: true, code: 'updated' }),
+  onResubscribe: () => wait({ ok: true, code: 'updated' }),
 };
 
 /** Back on the account page after each way connecting can end (UI previews). */

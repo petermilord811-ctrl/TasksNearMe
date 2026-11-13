@@ -1,6 +1,8 @@
 import { routes, type AccountHandlers, type AccountPageData, type AppShellHandlers, type PreviewEntry, type SignedInViewer } from '@/contracts';
-import { accountSignInNotices, fakeAccountHandlers, fakeHandler, jordanAccountData, jordanShell, mayaAccountData, mayaShell, newAccountData } from '@/fixtures';
+import { accountSignInNotices, fakeAccountHandlers, fakeHandler, fakeUnsubscribeHandlers, jordanAccountData, jordanShell, mayaAccountData, mayaShell, newAccountData, publicViewer, unsubscribePages } from '@/fixtures';
 import { AccountScreen } from '@/ui/screens/account/account-screen';
+import { EmailUnsubscribeScreen } from '@/ui/screens/account/email-unsubscribe-screen';
+import { PublicShell } from '@/ui/shells/public-shell';
 import { AppShell } from '@/ui/shells/app-shell';
 import { AccountInteractionPreview, type AccountPreviewInteraction } from './account-examples';
 import copy from '../../../messages/en/ui/account.json';
@@ -71,4 +73,13 @@ export const accountPreviews: PreviewEntry[] = [
   preview('email-in-use', copy.previews.emailInUse, mayaAccountData, mayaShell, fakeAccountHandlers, 'email-in-use'),
   preview('phone-add', copy.previews.phoneAdd, newAccountData, { ...mayaShell, unreadMessages: 0, unreadNotifications: 0 }, fakeAccountHandlers, undefined, { channel: 'phone' }),
   preview('phone-code-wrong', copy.previews.phoneCodeWrong, mayaAccountData, mayaShell, fakeAccountHandlers, 'code-wrong', { channel: 'phone', sentTo: '(512) 555-0199' }),
+  ...([
+    ['confirm', copy.previews.unsubscribeConfirm],
+    ['unsubscribed', copy.previews.unsubscribeDone],
+    ['locked', copy.previews.unsubscribeLocked],
+    ['invalid', copy.previews.unsubscribeInvalid],
+  ] as const).map(([state, title]): PreviewEntry => ({
+    id: `screen-email-unsubscribe/${state}`, title, group: copy.previews.group, layout: 'fullscreen',
+    render: () => <PublicShell viewer={publicViewer} currentPath="/email/unsubscribe"><EmailUnsubscribeScreen data={unsubscribePages[state]} handlers={fakeUnsubscribeHandlers} /></PublicShell>,
+  })),
 ];

@@ -197,6 +197,13 @@
       "when": 1794520200723,
       "tag": "0027_profile_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794530319479,
+      "tag": "0028_email_suppressions",
+      "breakpoints": true
     }
   ]
 }

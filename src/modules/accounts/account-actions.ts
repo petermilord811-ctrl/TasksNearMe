@@ -24,10 +24,9 @@ async function signedInUserId(): Promise<string | null> {
   return viewer.kind === 'user' ? viewer.user.id : null;
 }
 
-let contactChange: ContactChange | undefined;
+/** Built per request: cheap, and a provider key added to the environment applies at once. */
 function contacts(): ContactChange {
-  contactChange ??= createContactChange({ db, auth, email: createEmailProvider(db), phoneVerification, appUrl: appUrl() });
-  return contactChange;
+  return createContactChange({ db, auth, email: createEmailProvider(db), phoneVerification, appUrl: appUrl() });
 }
 
 function refreshed(result: ActionResult): ActionResult {

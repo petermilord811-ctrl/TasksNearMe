@@ -10,6 +10,7 @@ describe('email and text message content', () => {
       actorName: 'Jordan T.',
       params: { amountCents: 5400, minutes: 10, hours: 4 },
       target: { kind: 'booking', bookingId: 'bkg_desk' },
+      userId: 'usr_maya',
     });
     expect(content.subject.length).toBeGreaterThan(10);
     for (const text of [content.subject, content.text, content.sms]) expect(text).not.toMatch(/undefined|NaN|\{|\}|server\.notifications/);
@@ -19,7 +20,7 @@ describe('email and text message content', () => {
   });
 
   it('fills in the amount, the minutes and the hours, and leaves out missing details', () => {
-    const base = { title: 'Assemble a desk', actorName: 'Jordan T.', target: { kind: 'messages' } as const };
+    const base = { title: 'Assemble a desk', actorName: 'Jordan T.', target: { kind: 'messages' } as const, userId: 'usr_maya' };
     expect(deliveryContent({ ...base, type: 'offer_received', params: { amountCents: 6000 } }).subject).toBe('Jordan T. sent an offer of $60.00 for Assemble a desk.');
     expect(deliveryContent({ ...base, type: 'offer_received', params: null }).subject).toBe('Jordan T. sent an offer for Assemble a desk.');
     expect(deliveryContent({ ...base, type: 'helper_running_late', params: { minutes: 20 } }).subject).toBe('Jordan T. is running 20 minutes late for Assemble a desk.');

@@ -28,7 +28,10 @@ const ID_PREFIX: Record<string, string> = { user: 'usr', session: 'ses', account
  * provider tokens are encrypted at rest.
  */
 export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
-  const email = createEmailProvider(db);
+  // Checked once here (a misconfigured provider fails at startup), then built per email so a key added to
+  // the environment applies without a restart.
+  createEmailProvider(db);
+  const email = { send: (message: Parameters<ReturnType<typeof createEmailProvider>['send']>[0]) => createEmailProvider(db).send(message) };
   // nextCookies() writes cookies through next/headers, which only exists inside a Next request.
   const nextCookiePlugins = options.nextCookies === false ? [] : [nextCookies()];
   const keys = socialProviderKeys();

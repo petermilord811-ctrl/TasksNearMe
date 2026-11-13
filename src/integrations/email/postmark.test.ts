@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createEmailProvider } from './index';
+import { createEmailProvider, isReservedEmailAddress } from './index';
 import { createPostmarkEmailProvider } from './postmark';
 import { createResendEmailProvider } from './resend';
 
@@ -32,8 +32,63 @@ describe('Postmark', () => {
   it('is used when its token is set, and needs a sender', () => {
     const db = {} as never;
     expect(createEmailProvider(db, {}).name).toBe('dev-outbox');
-    expect(createEmailProvider(db, { POSTMARK_SERVER_TOKEN: 't', EMAIL_FROM: 'hello@tasksnearme.example' }).name).toBe('postmark');
+    expect(createEmailProvider(db, { POSTMARK_SERVER_TOKEN: 't', EMAIL_FROM: 'hello@tasksnearme.example', NODE_ENV: 'production' }).name).toBe('postmark');
     expect(() => createEmailProvider(db, { POSTMARK_SERVER_TOKEN: 't' })).toThrow(/EMAIL_FROM/);
+  });
+
+  it('sends the reply-to address and extra headers', async () => {
+    const fetch = vi.fn(async () => new Response('{}', { status: 200 }));
+    await createPostmarkEmailProvider({ token: 't', from: 'a@b.example', replyTo: 'help@tasksnearme.example', fetch }).send({ ...message, headers: { 'List-Unsubscribe': '<https://x.example/u>' } });
+    const body = JSON.parse(String((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+    expect(body.ReplyTo).toBe('help@tasksnearme.example');
+    expect(body.Headers).toEqual([{ Name: 'List-Unsubscribe', Value: '<https://x.example/u>' }]);
+  });
+});
+
+describe('where email goes', () => {
+  it('never sends to reserved test domains', () => {
+    for (const address of ['maya@example.test', 'a@sub.example', 'x@example.com', 'y@mail.example.org', 'z@localhost', 'bad']) expect(isReservedEmailAddress(address)).toBe(true);
+    for (const address of ['someone@gmail.com', 'team@tasksnearme.com', 'a@example.co']) expect(isReservedEmailAddress(address)).toBe(false);
+  });
+
+  it('outside production keeps a copy in the dev outbox and sends real addresses through the provider', async () => {
+    const outbox: unknown[] = [];
+    const db = { insert: () => ({ values: async (row: unknown) => { outbox.push(row); } }) } as never;
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ id: 'email_1' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    try {
+      const provider = createEmailProvider(db, { RESEND_API_KEY: 'k', EMAIL_FROM: 'onboarding@resend.dev' });
+      expect(provider.name).toBe('resend+dev-outbox');
+      await provider.send({ ...message, to: 'maya@example.test' });
+      expect(fetch).not.toHaveBeenCalled();
+      await provider.send({ ...message, to: 'robin@gmail.com', idempotencyKey: 'dlv_1' });
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(new Headers((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].headers).get('Idempotency-Key')).toBe('dlv_1');
+      expect(outbox).toHaveLength(2);
+      // A refusal (e.g. before the domain is verified) is logged, not thrown: the outbox has the copy.
+      fetch.mockResolvedValueOnce(new Response(JSON.stringify({ name: 'validation_error', message: 'You can only send testing emails to your own email address.' }), { status: 403 }));
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      await expect(provider.send({ ...message, to: 'friend@gmail.com' })).resolves.toBeUndefined();
+      expect(warn).toHaveBeenCalledOnce();
+      warn.mockRestore();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('in production sends only through the provider, and skips reserved addresses', async () => {
+    const fetch = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    try {
+      const provider = createEmailProvider({} as never, { RESEND_API_KEY: 'k', EMAIL_FROM: 'hello@tasksnearme.com', NODE_ENV: 'production' });
+      expect(provider.name).toBe('resend');
+      await provider.send({ ...message, to: 'maya@example.test' });
+      expect(fetch).not.toHaveBeenCalled();
+      await provider.send({ ...message, to: 'robin@gmail.com' });
+      expect(fetch).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 
@@ -61,7 +116,7 @@ describe('Resend', () => {
 
   it('is used when its key is set, and never together with Postmark', () => {
     const db = {} as never;
-    expect(createEmailProvider(db, { RESEND_API_KEY: 'k', EMAIL_FROM: 'onboarding@resend.dev' }).name).toBe('resend');
+    expect(createEmailProvider(db, { RESEND_API_KEY: 'k', EMAIL_FROM: 'onboarding@resend.dev', NODE_ENV: 'production' }).name).toBe('resend');
     expect(() => createEmailProvider(db, { RESEND_API_KEY: 'k' })).toThrow(/EMAIL_FROM/);
     expect(() => createEmailProvider(db, { RESEND_API_KEY: 'k', POSTMARK_SERVER_TOKEN: 't', EMAIL_FROM: 'x@example.test' })).toThrow(/Both/);
   });

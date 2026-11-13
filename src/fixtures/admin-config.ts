@@ -27,7 +27,7 @@ export const adminConfigData: AdminConfigPageData = {
     { id: 'pol_austin_1', version: 1, status: 'published', publishedAt: '2026-10-15T15:00:00.000Z', publishedBy: 'Riley N.', values: launch },
   ],
   flags: [
-    { key: 'ai_drafting', description: 'Help me describe this in the posting wizard', enabled: true },
+    { key: 'ai_drafting', description: 'Writing help: Help me describe this when posting, Write it for me on helper profiles and offers', enabled: true },
     { key: 'background_checks', description: 'Require background checks for in-home categories', enabled: true },
     { key: 'recurring', description: 'Recurring visits (phase 2)', enabled: false },
     { key: 'reward.acceptance', description: '5% offer-acceptance reward (off at launch)', enabled: false },

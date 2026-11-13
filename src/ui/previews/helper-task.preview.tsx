@@ -1,8 +1,9 @@
 import type { ComponentProps } from 'react';
 import { ACTION_ERROR_CODES, routes, type AppShellHandlers, type HelperTaskView, type HelperWorkHandlers, type PreviewEntry } from '@/contracts';
-import { fakeHandler, fakeHelperWorkHandlers, helperComputerBlocked, helperDeskStaleOffer, helperDeskWithOffer, helperMovingHourly, helperYardNoOffer, jordanShell, priyaShell } from '@/fixtures';
+import { deskOfferMessageDraft, fakeHandler, fakeHelperWorkHandlers, helperComputerBlocked, helperDeskStaleOffer, helperDeskWithOffer, helperMovingHourly, helperYardNoOffer, jordanShell, priyaShell } from '@/fixtures';
 import { HelperTaskScreen } from '@/ui/screens/work/helper-task-screen';
 import { AppShell } from '@/ui/shells/app-shell';
+import { ClickOnLoad } from './click-on-load';
 import copy from '../../../messages/en/ui/helperTask.json';
 
 const now = '2026-11-17T15:00:00.000Z';
@@ -34,6 +35,14 @@ export const helperTaskPreviews: PreviewEntry[] = [
   preview('offer-form', helperYardNoOffer),
   preview('offer-form', helperYardNoOffer, {}, 'tabs'),
   preview('hourly-form', helperMovingHourly),
+  {
+    id: 'screen-helper-task/offer-drafted', group: copy.previews.group, title: copy.previews.offerDrafted, layout: 'fullscreen',
+    render: () => <AppShell viewer={jordanShell} handlers={shellHandlers} currentPath={routes.app.findWorkTask(helperYardNoOffer.task.id)} layout="flow">
+      <ClickOnLoad label={copy.form.aiDraft}>
+        <HelperTaskScreen data={helperYardNoOffer} handlers={{ ...handlers, onDraftOfferMessage: async () => ({ ok: true, message: deskOfferMessageDraft }) }} now={now} />
+      </ClickOnLoad>
+    </AppShell>,
+  },
   preview('blocked', helperComputerBlocked),
   preview('stale-offer', helperDeskStaleOffer),
   preview('revising', helperDeskWithOffer, { initialRevising: true }),

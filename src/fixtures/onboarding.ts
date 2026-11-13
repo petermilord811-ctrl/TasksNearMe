@@ -103,6 +103,7 @@ const base = {
   languageOptions,
   firstPayoutDays: 7,
   welcomeReward: { amountCents: 5000, minTaskPriceCents: 4000, windowDays: 60 },
+  aiDraftingEnabled: true,
 };
 
 /** A new helper on the first step. */
@@ -252,12 +253,24 @@ export const samProfileEditorData: HelperProfileEditorData = {
     background: { status: 'clear', checkedAt: sam.badges.backgroundCheckedAt!, requiredFor: ['furniture-assembly', 'moving-help', 'light-cleaning'] },
   },
   paused: false,
+  aiDraftingEnabled: true,
+};
+
+/** What "Write it for me" drafts for Sam in previews and tests. */
+export const samProfileDraft = {
+  headline: 'Careful flat-pack assembly and moving help in Hyde Park',
+  bio: [
+    "Hi, I'm Sam. I put together desks, beds and bookshelves, and I help neighbors load and unload moving trucks.",
+    "I bring my own cordless drill, bits and moving straps, and I clean up when I'm done.",
+    'I speak English and Spanish.',
+  ].join('\n\n'),
 };
 
 const wait = <T,>(value: T, ms = 500) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 const nextStepUrl = (step: Parameters<typeof routes.app.helperOnboarding>[0]) => routes.app.helperOnboarding(step);
 
 export const fakeOnboardingHandlers: HelperOnboardingHandlers = {
+  onDraftProfile: () => wait({ ok: true, draft: samProfileDraft }, 900),
   onSaveProfile: () => wait({ ok: true, code: 'saved', redirectTo: nextStepUrl('services') }),
   onSaveServices: () => wait({ ok: true, code: 'saved', redirectTo: nextStepUrl('area') }),
   onSaveArea: () => wait({ ok: true, code: 'saved', redirectTo: nextStepUrl('identity') }),
@@ -269,6 +282,7 @@ export const fakeOnboardingHandlers: HelperOnboardingHandlers = {
 
 export const fakeProfileEditorHandlers: HelperProfileEditorHandlers = {
   onSaveProfile: () => wait({ ok: true, code: 'saved' }),
+  onDraftProfile: () => wait({ ok: true, draft: samProfileDraft }, 900),
   onSaveServices: () => wait({ ok: true, code: 'saved' }),
   onSaveArea: () => wait({ ok: true, code: 'saved' }),
   onSaveTools: () => wait({ ok: true, code: 'saved' }),

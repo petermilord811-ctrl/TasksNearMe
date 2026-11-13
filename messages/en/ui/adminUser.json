@@ -95,7 +95,8 @@
     "preference_off": "Turned off in their settings",
     "no_email": "No email address",
     "no_verified_phone": "No verified phone",
-    "quiet_hours": "Quiet hours (9 pm to 8 am)"
+    "quiet_hours": "Quiet hours (9 pm to 8 am)",
+    "email_suppressed": "Their email bounced or was marked as spam"
   },
   "deliveryAttempts": "{count, plural, one {# try} other {# tries}}",
   "deliveryNextTry": "Next try {time}",

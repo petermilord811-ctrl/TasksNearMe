@@ -31,7 +31,9 @@
     "send": "Send offer",
     "save": "Save updated offer",
     "sending": "Sending…",
-    "cancel": "Keep current offer"
+    "cancel": "Keep current offer",
+    "aiDraft": "Write it for me",
+    "aiDraftHint": "Drafts a message from the task and your profile. Anything you've typed above is used as notes."
   },
   "back": "Find work",
   "budget": "Client's budget",
@@ -83,6 +85,7 @@
     "version-conflict": "Offer changed elsewhere",
     "not-found": "Task no longer found",
     "expired": "Offer expired",
-    "unknown": "Unexpected offer error"
+    "unknown": "Unexpected offer error",
+    "offerDrafted": "Offer message drafted with \"Write it for me\""
   }
 }

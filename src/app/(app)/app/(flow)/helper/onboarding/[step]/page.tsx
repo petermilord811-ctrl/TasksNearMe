@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { ONBOARDING_STEPS, routes, type OnboardingStep } from '@/contracts';
+import { draftHelperProfileAction } from '@/modules/assist/actions';
 import {
   onboardingRefreshStatus,
   onboardingSaveArea,
@@ -46,6 +47,7 @@ async function Onboarding({ params }: Pick<PageProps<'/app/helper/onboarding/[st
       data={data}
       handlers={{
         onSaveProfile: onboardingSaveProfile,
+        onDraftProfile: draftHelperProfileAction,
         onSaveServices: onboardingSaveServices,
         onSaveArea: onboardingSaveArea,
         onStartIdentity: onboardingStartIdentity,

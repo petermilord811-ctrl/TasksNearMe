@@ -10,7 +10,8 @@ import { newId } from '@/platform/db/ids';
 import { formatMoney } from '@/shared/format';
 import appMessages from '../../../messages/en/app';
 import { NOTIFICATION_TOPIC, planDelivery, preferenceOn, RETRY_MINUTES } from './delivery-domain';
-import { notificationDeliveries, notificationPreferences, notifications } from './schema';
+import { renderNotificationEmail } from './emails';
+import { emailSuppressions, notificationDeliveries, notificationPreferences, notifications } from './schema';
 
 /**
  * Email and text messages for in-app notifications (backlog B-028, blueprint 10 §3.2 T-29). The job runner
@@ -66,8 +67,8 @@ function pathOf(target: AttentionTarget): string {
 
 const appUrl = () => (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
-/** The words of one notification, for email (subject and text) and a text message. */
-export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target'>) {
+/** One notification as an email (subject, text, designed version, unsubscribe headers) and a text message. */
+export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'>) {
   const params: NonNullable<NotificationView['params']> = row.params ?? {};
   const sentence = t(`types.${row.type as NotificationType}`, {
     title: row.title ?? t('taskFallback'),
@@ -80,21 +81,32 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     hours: params.hours ?? 0,
   });
   const url = `${appUrl()}${pathOf(row.target)}`;
-  const settingsUrl = `${appUrl()}${routes.app.account()}`;
-  return {
-    subject: sentence,
-    text: [sentence, t('email.open', { url }), t('email.footer', { settingsUrl })].join('\n\n'),
-    sms: t('sms', { sentence, url }),
-  };
+  const type = row.type as NotificationType;
+  const email = renderNotificationEmail({ type, topic: NOTIFICATION_TOPIC[type], sentence, target: row.target, url, userId: row.userId, appUrl: appUrl() });
+  return { ...email, sms: t('sms', { sentence, url }) };
 }
 
-async function sendOne(providers: DeliveryProviders, channel: NotificationChannel, to: string, content: ReturnType<typeof deliveryContent>) {
-  if (channel === 'email') await providers.email.send({ to, subject: content.subject, text: content.text });
-  else await providers.sms.send({ to, text: content.sms });
+async function sendOne(providers: DeliveryProviders, delivery: DeliveryRow, to: string, content: ReturnType<typeof deliveryContent>) {
+  if (delivery.channel === 'email') {
+    await providers.email.send({
+      to,
+      subject: content.subject,
+      text: content.text,
+      html: content.html,
+      tag: 'notification',
+      ...(content.headers ? { headers: content.headers } : {}),
+      // A retry of the same delivery is sent once (Resend keeps the key for 24 hours).
+      idempotencyKey: delivery.id,
+    });
+  } else {
+    await providers.sms.send({ to, text: content.sms });
+  }
 }
 
 interface Person {
   email: string | null;
+  /** The address bounced or complained: no more notification email goes to it. */
+  emailSuppressed: boolean;
   phone: string | null;
   phoneVerified: boolean;
   preferences: Map<string, boolean>;
@@ -106,8 +118,15 @@ async function peopleOf(db: Db, userIds: string[]): Promise<Map<string, Person>>
     db.select({ id: users.id, email: users.email, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt }).from(users).where(inArray(users.id, userIds)),
     db.select().from(notificationPreferences).where(inArray(notificationPreferences.userId, userIds)),
   ]);
+  const emails = rows.map((row) => row.email?.toLowerCase()).filter((email): email is string => Boolean(email));
+  const suppressed = new Set(
+    emails.length > 0 ? (await db.select({ email: emailSuppressions.email }).from(emailSuppressions).where(inArray(emailSuppressions.email, emails))).map((row) => row.email) : [],
+  );
   const people = new Map<string, Person>(
-    rows.map((row) => [row.id, { email: row.email || null, phone: row.phone, phoneVerified: row.phoneVerifiedAt !== null, preferences: new Map() }]),
+    rows.map((row) => [
+      row.id,
+      { email: row.email || null, emailSuppressed: suppressed.has(row.email?.toLowerCase() ?? ''), phone: row.phone, phoneVerified: row.phoneVerifiedAt !== null, preferences: new Map() },
+    ]),
   );
   for (const pref of prefs) people.get(pref.userId)?.preferences.set(`${pref.topic}:${pref.channel}`, pref.enabled === 'true');
   return people;
@@ -118,7 +137,7 @@ const addressOf = (person: Person, channel: NotificationChannel) => (channel ===
 /** Sends a claimed delivery and records the outcome: sent, or failed with the next try. */
 async function attempt(db: Db, providers: DeliveryProviders, delivery: DeliveryRow, row: NotificationRow, to: string, now: Date): Promise<boolean> {
   try {
-    await sendOne(providers, delivery.channel as NotificationChannel, to, deliveryContent(row));
+    await sendOne(providers, delivery, to, deliveryContent(row));
     await db.update(notificationDeliveries).set({ status: 'sent', sentAt: now, attempts: delivery.attempts + 1, reason: null, sendAfter: null, updatedAt: now }).where(eq(notificationDeliveries.id, delivery.id));
     return true;
   } catch (error) {
@@ -157,7 +176,14 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     if (!topic) continue;
     for (const channel of NOTIFICATION_CHANNELS) {
       const to = addressOf(person, channel);
-      const plan = planDelivery({ type: notification.type as NotificationType, channel, enabled: preferenceOn(person.preferences, topic, channel), hasAddress: to !== null, now });
+      const plan = planDelivery({
+        type: notification.type as NotificationType,
+        channel,
+        enabled: preferenceOn(person.preferences, topic, channel),
+        hasAddress: to !== null,
+        suppressed: person.emailSuppressed,
+        now,
+      });
       const [claimed] = await db
         .insert(notificationDeliveries)
         .values({
@@ -197,11 +223,13 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     const channel = delivery.channel as NotificationChannel;
     const to = person ? addressOf(person, channel) : null;
     const topic = NOTIFICATION_TOPIC[notification.type as NotificationType];
-    // The person may have turned the channel off, or lost the address, while it waited.
+    // The person may have turned the channel off, or lost the address (or it bounced), while it waited.
     const stillOn = person && topic ? preferenceOn(person.preferences, topic, channel) : false;
+    const bounced = channel === 'email' && person?.emailSuppressed === true;
+    const skipReason = !to ? (channel === 'sms' ? 'no_verified_phone' : 'no_email') : bounced ? 'email_suppressed' : 'preference_off';
     const [claimed] = await db
       .update(notificationDeliveries)
-      .set(stillOn && to ? { status: 'sending', updatedAt: now } : { status: 'skipped', reason: to ? 'preference_off' : channel === 'sms' ? 'no_verified_phone' : 'no_email', sendAfter: null, updatedAt: now })
+      .set(stillOn && to && !bounced ? { status: 'sending', updatedAt: now } : { status: 'skipped', reason: skipReason, sendAfter: null, updatedAt: now })
       // Claimed only if nobody moved it meanwhile (a stuck send stays stuck until claimed here).
       .where(
         and(

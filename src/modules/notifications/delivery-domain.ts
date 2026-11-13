@@ -93,12 +93,21 @@ export function quietHoursEnd(now: Date): Date | null {
 export type DeliveryPlan =
   | { action: 'send' }
   | { action: 'hold'; until: Date }
-  | { action: 'skip'; reason: 'preference_off' | 'no_email' | 'no_verified_phone' };
+  | { action: 'skip'; reason: 'preference_off' | 'no_email' | 'no_verified_phone' | 'email_suppressed' };
 
 /** What to do with one notification on one channel now. */
-export function planDelivery(input: { type: NotificationType; channel: NotificationChannel; enabled: boolean; hasAddress: boolean; now: Date }): DeliveryPlan {
+export function planDelivery(input: {
+  type: NotificationType;
+  channel: NotificationChannel;
+  enabled: boolean;
+  hasAddress: boolean;
+  /** The email address bounced or complained (email_suppressions): nothing more goes to it. */
+  suppressed?: boolean;
+  now: Date;
+}): DeliveryPlan {
   if (!input.enabled) return { action: 'skip', reason: 'preference_off' };
   if (!input.hasAddress) return { action: 'skip', reason: input.channel === 'sms' ? 'no_verified_phone' : 'no_email' };
+  if (input.channel === 'email' && input.suppressed) return { action: 'skip', reason: 'email_suppressed' };
   if (input.channel === 'sms' && !URGENT_TYPES.has(input.type)) {
     const until = quietHoursEnd(input.now);
     if (until) return { action: 'hold', until };

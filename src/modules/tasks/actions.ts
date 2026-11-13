@@ -2,6 +2,7 @@
 
 import { and, eq, inArray } from 'drizzle-orm';
 import { updateTag } from 'next/cache';
+import { cookies } from 'next/headers';
 import type {
   ActionResult,
   AddressSuggestion,
@@ -21,7 +22,9 @@ import { marketTag } from '@/modules/marketing/queries';
 import { getFlags, getPublishedPolicy } from '@/modules/markets/queries';
 import { categories, markets } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
-import { findProhibitedPhrase } from '@/modules/trust/contact-masking';
+import { AI_STAND_IN_COOKIE, AiRefusedError, AiUnavailableError, wantsAiStandIn } from '@/integrations/ai';
+import { createFakeTaskDrafter } from '@/integrations/ai/task-drafter';
+import { findProhibitedPhrase, maskContactDetails } from '@/modules/trust/contact-masking';
 import { GLOBAL_PROHIBITED_PHRASES } from '@/modules/trust/prohibited';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -57,9 +60,15 @@ export async function draftTaskWithAi(input: { categorySlug: CategorySlug; text:
   if (findProhibitedPhrase(text, [...GLOBAL_PROHIBITED_PHRASES, ...(category?.keywords ?? [])])) {
     return { ok: false, code: 'prohibited' };
   }
+  // Tests ask for the stand-in, so they never reach Claude where a key is set.
+  const drafter = wantsAiStandIn((await cookies()).get(AI_STAND_IN_COOKIE)?.value) ? createFakeTaskDrafter() : taskDrafter;
   try {
-    return { ok: true, draft: await taskDrafter.draft({ categorySlug: input.categorySlug, text }) };
-  } catch {
+    const draft = await drafter.draft({ categorySlug: input.categorySlug, text });
+    // The task board is public: no phone numbers, emails or links, whatever was typed.
+    return { ok: true, draft: { ...draft, title: maskContactDetails(draft.title).text, description: maskContactDetails(draft.description).text } };
+  } catch (error) {
+    if (error instanceof AiRefusedError) return { ok: false, code: 'prohibited' };
+    if (!(error instanceof AiUnavailableError)) console.error('[ai-draft]', error);
     return { ok: false, code: 'unavailable' };
   }
 }

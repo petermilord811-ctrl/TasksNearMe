@@ -83,7 +83,7 @@ export function OfferForm({ data, handlers, revising = false, onCancel, initialR
         if (bar && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) {
           event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
         }
-      }}><legend className="sr-only">{t('details')}</legend><OfferFields rules={data.offerRules} /></fieldset>
+      }}><legend className="sr-only">{t('details')}</legend><OfferFields rules={data.offerRules} onDraftMessage={data.aiDraftingEnabled ? handlers.onDraftOfferMessage : undefined} /></fieldset>
       <OfferEarnings pricing={pricing} valid={validPricing} onQuote={handlers.onQuote} />
       <FormFeedback result={feedback} />
       <div ref={submitBar} className="sticky bottom-app-navigation z-10 flex flex-wrap gap-3 border-t bg-card pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">

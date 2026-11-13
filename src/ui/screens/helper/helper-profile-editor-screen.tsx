@@ -52,7 +52,7 @@ export function HelperProfileEditorScreen({ data, handlers, initialSection = 'pr
   const content: Record<HelperEditorSection, ReactNode> = {
     profile: <div className="space-y-6">
       <ProfilePhotoField initials={data.person.initials} photo={data.person.photo} maxPhotoMegabytes={data.maxPhotoMegabytes} note="helperEditor" onUpload={handlers.onUploadPhoto} onRemove={handlers.onRemovePhoto} />
-      <div className="border-t pt-6"><HelperProfileForm values={data.values.profile} languageOptions={data.languageOptions} onSave={handlers.onSaveProfile} /></div>
+      <div className="border-t pt-6"><HelperProfileForm values={data.values.profile} languageOptions={data.languageOptions} onSave={handlers.onSaveProfile} onDraft={data.aiDraftingEnabled ? handlers.onDraftProfile : undefined} /></div>
     </div>,
     services: <HelperServicesForm values={data.values.services} categories={data.categories} onSave={handlers.onSaveServices} />,
     area: <HelperAreaForm values={data.values.area} areas={data.areas} remoteAllowed={remoteAllowed} onSave={handlers.onSaveArea} />,

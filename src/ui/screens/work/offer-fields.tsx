@@ -4,7 +4,8 @@ import { useId, useState, type ReactNode } from 'react';
 import { Controller, useFormContext, type FieldPath } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
-import type { OfferInput, OfferRules } from '@/contracts';
+import type { OfferInput, OfferMessageDraftInput, OfferMessageDraftResult, OfferRules, QueryHandler } from '@/contracts';
+import { AiDraftButton, AiDraftStatus, type AiDraftOutcome } from '@/ui/components/forms/ai-draft';
 import { formatHours, formatMoney, formatTime, marketLocalToUtc } from '@/shared/format';
 import { MoneyInput } from '@/ui/components/forms/money-input';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
@@ -34,7 +35,57 @@ function OfferMoneyField({ name, label, hint }: { name: 'pricing.priceCents' | '
   />} />}</OfferField>;
 }
 
-export function OfferFields({ rules }: { rules: OfferRules }) {
+/**
+ * "Write it for me" under the message: drafted from the task, the helper's profile, the start time and what
+ * they'll bring; what's typed so far goes along as notes. The draft replaces the message (Undo puts it back).
+ */
+function MessageDraft({ onDraft }: { onDraft: QueryHandler<OfferMessageDraftInput, OfferMessageDraftResult> }) {
+  const t = useTranslations('helperTask.form');
+  const id = useId();
+  const { getValues, setValue } = useFormContext<OfferInput>();
+  const [pending, setPending] = useState(false);
+  const [outcome, setOutcome] = useState<AiDraftOutcome>();
+  const [before, setBefore] = useState<string>();
+
+  async function draft() {
+    if (pending) return;
+    setPending(true);
+    setOutcome(undefined);
+    const typed = getValues('message');
+    let result: OfferMessageDraftResult;
+    try {
+      result = await onDraft({ startTime: getValues('startTime'), brings: getValues('brings'), notes: typed.trim().slice(0, 300) });
+    } catch {
+      result = { ok: false, code: 'unavailable' };
+    }
+    setPending(false);
+    if (!result.ok) {
+      setOutcome({ kind: 'failed', code: result.code });
+      return;
+    }
+    setBefore((kept) => kept ?? typed);
+    setValue('message', result.message, { shouldDirty: true, shouldValidate: true });
+    setOutcome({ kind: 'drafted' });
+  }
+
+  return <div className="space-y-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <AiDraftButton pending={pending} onClick={() => void draft()} className="scroll-mb-40">{t('aiDraft')}</AiDraftButton>
+      <p id={`${id}-hint`} className="min-w-0 flex-1 basis-56 text-sm text-muted-foreground">{t('aiDraftHint')}</p>
+    </div>
+    <AiDraftStatus outcome={outcome} onUndo={() => {
+      setValue('message', before ?? '', { shouldDirty: true, shouldValidate: true });
+      setBefore(undefined);
+      setOutcome({ kind: 'undone' });
+    }} />
+  </div>;
+}
+
+export function OfferFields({ rules, onDraftMessage }: {
+  rules: OfferRules;
+  /** "Write it for me" on the message, when drafting is on for this helper. */
+  onDraftMessage?: QueryHandler<OfferMessageDraftInput, OfferMessageDraftResult>;
+}) {
   const t = useTranslations('helperTask.form');
   const fields = useTranslations('forms');
   const { register, watch, control, setValue, setError, clearErrors } = useFormContext<OfferInput>();
@@ -68,6 +119,7 @@ export function OfferFields({ rules }: { rules: OfferRules }) {
     <OfferField name="message" label={t('message')} hint={t('privacy')}>{(id, invalid) => <>
       <Textarea {...register('message')} id={id} maxLength={rules.messageMaxLength} rows={4} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error ${id}-count`} className="min-h-28 scroll-mb-40" />
       <p id={`${id}-count`} className="text-right text-sm tabular-nums text-muted-foreground">{t('messageCount', { count: message.length, maximum: rules.messageMaxLength })}</p>
+      {onDraftMessage && <MessageDraft onDraft={onDraftMessage} />}
     </>}</OfferField>
     <OfferField name="brings" label={t('brings')} hint={t('bringsHint')}>{(id, invalid) => <Controller name="brings" control={control} render={({ field }) => <div className="space-y-3">
       <div className="flex flex-wrap gap-2">

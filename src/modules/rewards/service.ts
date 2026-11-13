@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, isNotNull, lte, ne } from 'drizzle-orm';
+import type { EmailProvider } from '@/integrations/email';
 import type { ActionResult, RewardGrantView, RewardRiskSignal, RewardStatus, RewardVoidReason, RewardsPageData } from '@/contracts';
 import type { GiftCardProvider } from '@/integrations/gift-cards';
 import { users } from '@/modules/accounts/schema';
@@ -11,6 +12,7 @@ import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { LAUNCH_PROGRAMS, REWARD_RULES, nextGrantState, repeatProgress, repeatTrigger, rewardOrder, welcomeCandidate, type BookingFact } from './domain';
+import { sendGiftCardEmail } from './emails';
 import { REVIEW_SIGNALS, riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
 
@@ -206,7 +208,12 @@ export async function getRewardsPage(db: Db, user: { id: string; helperReady: bo
 }
 
 /** Redeems a redeemable grant: the gift card is ordered (the grant id is the idempotency key) and delivered as a link. */
-export async function redeemReward(deps: { db: Db; giftCards: GiftCardProvider | null }, helperUserId: string, grantId: string, now: Date): Promise<ActionResult> {
+export async function redeemReward(
+  deps: { db: Db; giftCards: GiftCardProvider | null; email?: { provider: EmailProvider; appUrl: string } },
+  helperUserId: string,
+  grantId: string,
+  now: Date,
+): Promise<ActionResult> {
   const { db, giftCards } = deps;
   if (!giftCards) return { ok: false, code: 'unknown' };
   const limited = await consumeRateLimit(db, `rewards:${helperUserId}`, REDEEM_RULE, now);
@@ -223,5 +230,7 @@ export async function redeemReward(deps: { db: Db; giftCards: GiftCardProvider |
     .update(rewardGrants)
     .set(result.ok ? { status: 'delivered', providerOrderId: result.orderId, deliveryUrl: result.deliveryUrl, deliveredAt: now, updatedAt: now } : { status: 'failed', updatedAt: now })
     .where(eq(rewardGrants.id, claimed.id));
+  // The link also goes by email (B-051), in case the page is closed before it's opened.
+  if (result.ok && deps.email) await sendGiftCardEmail({ db, email: deps.email.provider, appUrl: deps.email.appUrl }, { ...claimed, deliveryUrl: result.deliveryUrl });
   return result.ok ? { ok: true, code: 'submitted' } : { ok: false, code: 'unknown' };
 }

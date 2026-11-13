@@ -1,9 +1,10 @@
 import { useTranslations } from 'next-intl';
 import { ACTION_ERROR_CODES, BACKGROUND_CHECK_STATUSES, IDENTITY_STATUSES, PAYOUT_ACCOUNT_STATUSES, routes, type AppShellHandlers, type HelperOnboardingPageData, type PreviewEntry } from '@/contracts';
-import { fakeHandler, fakeOnboardingHandlers, onboardingAreaStep, onboardingBackgroundNotStarted, onboardingBackgroundPending, onboardingDone, onboardingIdentityProcessing, onboardingIdentityRetry, onboardingIdentityStep, onboardingPayoutActionNeeded, onboardingPayoutStep, onboardingProfileStep, onboardingServicesStep, priyaShell } from '@/fixtures';
+import { fakeHandler, fakeOnboardingHandlers, onboardingAreaStep, onboardingBackgroundNotStarted, onboardingBackgroundPending, onboardingDone, onboardingIdentityProcessing, onboardingIdentityRetry, onboardingIdentityStep, onboardingPayoutActionNeeded, onboardingPayoutStep, onboardingProfileStep, onboardingServicesStep, priyaShell, samProfileDraft } from '@/fixtures';
 import { HelperOnboardingScreen } from '@/ui/screens/helper/helper-onboarding-screen';
 import { VerificationPanel } from '@/ui/screens/helper/verification-panel';
 import { AppShell } from '@/ui/shells/app-shell';
+import { ClickOnLoad } from './click-on-load';
 import copy from '../../../messages/en/ui/helperOnboarding.json';
 import verificationCopy from '../../../messages/en/ui/verification.json';
 
@@ -19,6 +20,14 @@ function ProviderErrors() {
 
 export const helperOnboardingPreviews: PreviewEntry[] = [
   preview('profile', copy.screen.steps.profile, onboardingProfileStep),
+  {
+    id: 'screen-helper-onboarding/profile-drafted', title: copy.screen.previews.profileDrafted, group: copy.screen.previews.group, layout: 'fullscreen',
+    render: () => <AppShell viewer={priyaShell} handlers={shellHandlers} currentPath={routes.app.helperOnboarding('profile')} layout="flow">
+      <ClickOnLoad label={copy.forms.profile.ai.draft}>
+        <HelperOnboardingScreen data={onboardingProfileStep} handlers={{ ...fakeOnboardingHandlers, onDraftProfile: async () => ({ ok: true, draft: samProfileDraft }) }} />
+      </ClickOnLoad>
+    </AppShell>,
+  },
   preview('services', copy.screen.steps.services, onboardingServicesStep),
   preview('area', copy.screen.steps.area, onboardingAreaStep),
   preview('identity', copy.screen.steps.identity, onboardingIdentityStep),

@@ -29,6 +29,8 @@ import type { FileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
 import { avatarPhoto, MAX_PHOTO_BYTES } from '@/modules/files/photos';
 import { storePhoto } from '@/modules/files/uploads';
+import { aiWritingSetUp } from '@/integrations/ai';
+import { aiDraftingEnabledFor } from '@/modules/assist/availability';
 import { getFlags, getMarketView, listCategoryViews } from '@/modules/markets/queries';
 import { areas, categories, markets } from '@/modules/markets/schema';
 import { countFoundingHelpers, fileUrl, initialsOf } from '@/modules/profiles/queries';
@@ -543,6 +545,7 @@ export async function getOnboardingPageData(db: Db, userId: string, step: Onboar
     values: formValues(state),
     verification: summary(state, result.backgroundRequired),
     firstPayoutDays: FIRST_PAYOUT_DAYS,
+    aiDraftingEnabled: aiWritingSetUp() && flags.ai_drafting === true,
     ...(welcomeOpen
       ? { welcomeReward: { amountCents: WELCOME_PROGRAM.amountCents, minTaskPriceCents: WELCOME_PROGRAM.minTaskPriceCents, windowDays: WELCOME_PROGRAM.windowDays } }
       : {}),
@@ -587,6 +590,7 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
     },
     verification: summary(state, result.backgroundRequired),
     paused: state.profile.status === 'paused',
+    aiDraftingEnabled: await aiDraftingEnabledFor(db, userId),
   };
 }
 

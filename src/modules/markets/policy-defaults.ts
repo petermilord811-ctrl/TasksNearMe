@@ -24,7 +24,7 @@ export const DEFAULT_TIMERS: PolicyTimers = {
 };
 
 export const DEFAULT_FLAGS: Record<string, { enabled: boolean; description: string }> = {
-  ai_drafting: { enabled: true, description: 'Help me describe this in the posting wizard' },
+  ai_drafting: { enabled: true, description: 'Writing help: Help me describe this when posting, Write it for me on helper profiles and offers' },
   'reward.welcome': { enabled: true, description: '$50 welcome gift card for the founding cohort' },
   'reward.repeat': { enabled: true, description: '$10 gift card on the 3rd paid booking with the same client' },
   'reward.acceptance': { enabled: false, description: '5% offer-acceptance reward (off at launch)' },

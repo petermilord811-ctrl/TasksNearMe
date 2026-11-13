@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
+import type { EmailProvider } from '@/integrations/email';
 import type { ActionResult, AdminRewardFilter, AdminRewardRow, AdminRewardsPageData, RewardDecisionInput, RewardProgramCode, RewardRiskSignal, RewardStatus, StaffRewardActionId } from '@/contracts';
 import { ADMIN_REWARD_FILTERS, rewardDecisionInputSchema } from '@/contracts';
 import type { GiftCardProvider } from '@/integrations/gift-cards';
@@ -13,6 +14,7 @@ import { newId } from '@/platform/db/ids';
 import { REWARD_RULES } from './domain';
 import { riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
+import { sendGiftCardEmail } from './emails';
 
 /**
  * Reward administration for staff (UI-020; B-057; blueprint 05 §1): the review queue with risk signals,
@@ -121,7 +123,14 @@ export const parseRewardFilter = (value: string | string[] | undefined): AdminRe
 };
 
 /** Approve or reject a review, void, or reissue a failed delivery (audited with the note). */
-export async function decideReward(db: Db, giftCards: GiftCardProvider | null, staff: StaffActor, input: RewardDecisionInput, now: Date): Promise<ActionResult> {
+export async function decideReward(
+  db: Db,
+  giftCards: GiftCardProvider | null,
+  staff: StaffActor,
+  input: RewardDecisionInput,
+  now: Date,
+  email?: { provider: EmailProvider; appUrl: string },
+): Promise<ActionResult> {
   const parsed = rewardDecisionInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const [grant] = await db.select().from(rewardGrants).where(eq(rewardGrants.id, parsed.data.grantId)).limit(1);
@@ -148,6 +157,7 @@ export async function decideReward(db: Db, giftCards: GiftCardProvider | null, s
           .update(rewardGrants)
           .set(result.ok ? { status: 'delivered', providerOrderId: result.orderId, deliveryUrl: result.deliveryUrl, deliveredAt: now, updatedAt: now } : { status: 'failed', updatedAt: now })
           .where(eq(rewardGrants.id, grant.id));
+        if (result.ok && email) await sendGiftCardEmail({ db, email: email.provider, appUrl: email.appUrl }, { ...grant, deliveryUrl: result.deliveryUrl });
       }
       break;
     }

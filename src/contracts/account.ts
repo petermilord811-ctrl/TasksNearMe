@@ -127,6 +127,22 @@ export interface AccountPageData {
   privacy: { exportRequestedAt?: ISODateTime; deletionRequestedAt?: ISODateTime };
 }
 
+/**
+ * `/email/unsubscribe?token=…`: from the link in a notification email, without signing in. The page asks
+ * before turning the topic's emails off (link scanners open links). `locked`: receipts and safety emails
+ * (bookings and payments) can't be turned off. `invalid`: a link that was changed or isn't ours.
+ */
+export interface EmailUnsubscribePageData {
+  state: 'confirm' | 'unsubscribed' | 'locked' | 'invalid';
+  topic?: NotificationTopic;
+}
+
+/** Both resolve with ok `updated`; `not_allowed` for a bad link or a locked topic. */
+export interface EmailUnsubscribeHandlers {
+  onUnsubscribe: () => Promise<ActionResult>;
+  onResubscribe: () => Promise<ActionResult>;
+}
+
 /** Changing the account's email: the code went to the new address; entering it switches the account to it. */
 export const emailChangeConfirmInputSchema = z.object({ email: emailField, code: oneTimeCodeField });
 export type EmailChangeConfirmInput = z.input<typeof emailChangeConfirmInputSchema>;

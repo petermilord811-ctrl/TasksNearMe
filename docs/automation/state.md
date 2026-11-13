@@ -12,7 +12,7 @@
 - support for members, reporting and blocking; staff queues, cases, money resolutions, the staff booking page, rewards review, users.
 
 **Codex:** at its ChatGPT usage limit until 2026-11-17 12:32 (local). Buying credits is the owner's call. Tickets run with `node scripts/codex-run.mjs UI-xxx` (logs in `scratchpad/codex-UI-xxx.log`).
-**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0027). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
+**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0028). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
 **New dependencies (UI-036):** `motion`, `maplibre-gl`. Run `npm install` after pulling (never while a dev server runs in that checkout).
 
 ## Done after the finish (2026-11-12, owner requests)
@@ -23,6 +23,10 @@
 - **Real Google sign-in and the welcome email** (owner request): `.env` regenerated (documented; the owner's Google keys kept); real Google in development, the stand-in beside it for tests; the welcome email after sign-up (founding helper $50 gift card first, live spots), the designed sign-in code email, Postmark built (`POSTMARK_SERVER_TOKEN`, `EMAIL_FROM`). Google's page answers `redirect_uri_mismatch` until the OAuth client lists `http://localhost:3000/api/auth/callback/google`.
 
 - **Six-digit codes everywhere, and profiles** (owner request, UI-044–045): the code is six boxes that submit on the last digit; the email changes with a code sent to the new address (the old one gets a notice), the phone is added or changed with a texted code; profile photos (`users.avatar_file_id`, migration 0027) on the account page, the account menu, the helper editor, the public helper profile (new header) and helper and offer cards; Resend beside Postmark for real inbox delivery (one key at a time).
+
+- **Claude writing help** (owner request, UI-048): with `ANTHROPIC_API_KEY`, "Help me describe this" (posting) and "Write it for me" (helper profile, offer message) use Claude Opus 5.5 through `@anthropic-ai/sdk` (pinned 1.3.0); one `ai_drafting` flag, hourly limits, masking; tests use stand-ins (`tnm_ai_stand_in`). Run `npm install` after pulling.
+
+- **Email** (owner request, UI-049): real delivery through Resend (`RESEND_API_KEY` in `.env`; the dev outbox keeps a copy of everything outside production); designed notification emails with signed unsubscribe links and one-click headers; `/email/unsubscribe`; bounces and complaints from a signed Resend webhook suppress notification email (`email_suppressions`, migration 0028); the gift card email. Restart the dev server after changing job or email code (the job runner keeps the code it started with).
 
 ## Done in iteration 13 (the finish)
 - **`/app/helpers`** (UI-039): browse and search the market's helpers.

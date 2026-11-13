@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
+import { draftOfferMessageAction } from '@/modules/assist/actions';
 import { getHelperTaskView } from '@/modules/offers/helper';
 import { helperOfferActionHandler, quoteOfferAction, reviseOfferAction, submitOfferAction } from '@/modules/offers/helper-actions';
 import { getViewer } from '@/platform/auth/viewer';
@@ -33,6 +34,7 @@ async function HelperTask({ params }: Pick<PageProps<'/app/find-work/[taskId]'>,
       now={now.toISOString()}
       handlers={{
         onQuote: quoteOfferAction,
+        onDraftOfferMessage: draftOfferMessageAction.bind(null, taskId),
         onSubmitOffer: submitOfferAction.bind(null, taskId),
         onReviseOffer: reviseOfferAction.bind(null, taskId),
         onOfferAction: helperOfferActionHandler,

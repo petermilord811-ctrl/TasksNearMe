@@ -115,6 +115,7 @@ export const helperDeskWithOffer: HelperTaskView = {
   setup: jordanSetup,
   offerRules: deskRules,
   offerDefaults: { pricing: { type: 'fixed', priceCents: 6000 }, startTime: '10:00', message: '', brings: [] },
+  aiDraftingEnabled: true,
 };
 
 /** The yard: no offer yet, the form prefilled with the poster's budget. */
@@ -126,6 +127,7 @@ export const helperYardNoOffer: HelperTaskView = {
   setup: jordanSetup,
   offerRules: { date: '2026-11-28', startTimes: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30'], pricingType: 'fixed', minPriceCents: 2500, messageMaxLength: 500 },
   offerDefaults: { pricing: { type: 'fixed', priceCents: 12000 }, startTime: '09:00', message: '', brings: [] },
+  aiDraftingEnabled: true,
 };
 
 /** Chris's move: an hourly offer (rate and cap). */
@@ -145,6 +147,7 @@ export const helperMovingHourly: HelperTaskView = {
     messageMaxLength: 500,
   },
   offerDefaults: { pricing: { type: 'hourly', rateCents: 3500, estimatedHours: 3.5, hoursCap: 4 }, startTime: '09:00', message: '', brings: [] },
+  aiDraftingEnabled: true,
 };
 
 /** Computer help: Jordan doesn't offer it. */
@@ -157,6 +160,7 @@ export const helperComputerBlocked: HelperTaskView = {
   setup: jordanSetup,
   offerRules: { date: '2026-11-23', startTimes: ['10:00', '10:30', '11:00', '11:30'], pricingType: 'fixed', minPriceCents: 2500, messageMaxLength: 500 },
   offerDefaults: { pricing: { type: 'fixed', priceCents: 4000 }, startTime: '10:00', message: '', brings: [] },
+  aiDraftingEnabled: true,
 };
 
 /** Sam's offer went stale after Maya changed the time: confirm it again or revise it. */
@@ -200,8 +204,12 @@ export const myOffersEmptyData: MyOffersPageData = { active: [], booked: [], clo
 
 const wait = <T,>(value: T, ms = 500) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 
+/** What "Write it for me" drafts for an offer in previews and tests. */
+export const deskOfferMessageDraft = "Hi! I'd be glad to put your standing desk together, drawer unit too. I can start at 10:00 am and I'll bring my own drill and bits. I'll clear the packaging away when I'm done.";
+
 export const fakeHelperWorkHandlers: HelperWorkHandlers = {
   onQuote: ({ pricing }) => wait(pricing.type === 'hourly' ? movingFundedBreakdown : deskBreakdown, 300),
+  onDraftOfferMessage: () => wait({ ok: true, message: deskOfferMessageDraft }, 900),
   onSubmitOffer: () => wait({ ok: true, code: 'sent' }),
   onReviseOffer: () => wait({ ok: true, code: 'updated' }),
   onOfferAction: () => wait({ ok: true, code: 'updated' }),

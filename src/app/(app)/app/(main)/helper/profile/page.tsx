@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { removeProfilePhotoAction, uploadProfilePhotoAction } from '@/modules/accounts/account-actions';
+import { draftHelperProfileAction } from '@/modules/assist/actions';
 import {
   editorRemoveWorkSample,
   editorReorderWorkSamples,
@@ -42,6 +43,7 @@ async function Editor() {
       data={data}
       handlers={{
         onSaveProfile: editorSaveProfile,
+        onDraftProfile: draftHelperProfileAction,
         onSaveServices: editorSaveServices,
         onSaveArea: editorSaveArea,
         onSaveTools: editorSaveTools,

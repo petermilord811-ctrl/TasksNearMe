@@ -158,6 +158,33 @@
     "emailChange": "Changing the email: the code step",
     "emailInUse": "Changing the email: address already used",
     "phoneAdd": "Adding a phone number",
-    "phoneCodeWrong": "Changing the phone: wrong code"
+    "phoneCodeWrong": "Changing the phone: wrong code",
+    "unsubscribeConfirm": "Unsubscribe from an email: asks first",
+    "unsubscribeDone": "Unsubscribed from an email",
+    "unsubscribeLocked": "Unsubscribe link for emails that can't be turned off",
+    "unsubscribeInvalid": "Unsubscribe link that doesn't work"
+  },
+  "unsubscribe": {
+    "title": "Email preferences",
+    "confirmTitle": "Stop {topic} emails?",
+    "confirmText": "You'll still see these updates in the app. Booking and payment emails keep coming: they're your receipts and safety updates.",
+    "confirm": "Unsubscribe",
+    "working": "Saving…",
+    "doneTitle": "You won't get {topic} emails anymore",
+    "doneText": "You'll still see these updates in your notifications in the app.",
+    "resubscribe": "Turn them back on",
+    "resubscribed": "{topic} emails are back on.",
+    "lockedTitle": "These emails can't be turned off",
+    "lockedText": "Booking and payment emails are your receipts and safety updates, so they always come.",
+    "invalidTitle": "This link doesn't work",
+    "invalidText": "It may have been copied only in part. You can choose which emails you get in your account.",
+    "manage": "Manage all notifications",
+    "topics": {
+      "bookings": "booking",
+      "messages": "message",
+      "offers": "offer",
+      "payments": "payment",
+      "tips_and_news": "tips and news"
+    }
   }
 }

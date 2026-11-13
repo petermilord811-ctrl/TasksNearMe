@@ -86,3 +86,17 @@ export const privacyRequests = pgTable(
   },
   (t) => [index('privacy_requests_user_idx').on(t.userId, t.kind)],
 );
+
+/**
+ * Email addresses we stop sending notification email to: a permanent bounce or a spam complaint reported by
+ * the email provider's webhook (blueprint 09 §3). Sign-in codes still go out (the person is asking for one).
+ */
+export const emailSuppressions = pgTable('email_suppressions', {
+  /** Lowercase. */
+  email: text('email').primaryKey(),
+  reason: text('reason').notNull(), // bounced | complained
+  /** The provider's words, e.g. the bounce message. */
+  detail: text('detail').notNull().default(''),
+  provider: text('provider').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

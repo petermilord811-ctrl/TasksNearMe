@@ -7,14 +7,18 @@ import type { EmailProvider } from './index';
  */
 const ENDPOINT = 'https://api.resend.com/emails';
 
-export function createResendEmailProvider(options: { apiKey: string; from: string; fetch?: typeof fetch }): EmailProvider {
+export function createResendEmailProvider(options: { apiKey: string; from: string; replyTo?: string; fetch?: typeof fetch }): EmailProvider {
   const send = options.fetch ?? fetch;
   return {
     name: 'resend',
     async send(message) {
       const response = await send(ENDPOINT, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${options.apiKey}`, 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${options.apiKey}`,
+          'Content-Type': 'application/json',
+          ...(message.idempotencyKey ? { 'Idempotency-Key': message.idempotencyKey } : {}),
+        },
         body: JSON.stringify({
           from: options.from,
           to: [message.to],
@@ -22,6 +26,8 @@ export function createResendEmailProvider(options: { apiKey: string; from: strin
           text: message.text,
           ...(message.html ? { html: message.html } : {}),
           ...(message.tag ? { tags: [{ name: 'kind', value: message.tag.replace(/[^A-Za-z0-9_-]/g, '_') }] } : {}),
+          ...(options.replyTo ? { reply_to: options.replyTo } : {}),
+          ...(message.headers ? { headers: message.headers } : {}),
         }),
       });
       if (response.ok) return;

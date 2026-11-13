@@ -46,6 +46,18 @@ export const helperProfileInputSchema = z.object({
 });
 export type HelperProfileInput = z.input<typeof helperProfileInputSchema>;
 
+/**
+ * "Write it for me" on the profile (onboarding and the editor): a few words about themselves in; a
+ * headline and an about-me out, built from those words and their services, area, tools and languages.
+ * The helper reviews and edits it before saving. Drafting saves nothing.
+ */
+export const profileDraftInputSchema = z.object({ notes: z.string().trim().max(600, code('too_long')) });
+export type ProfileDraftInput = z.input<typeof profileDraftInputSchema>;
+/** `prohibited`: the notes describe something TasksNearMe doesn't allow. `rate_limited`: 10 drafts an hour. */
+export type ProfileDraftResult =
+  | { ok: true; draft: { headline: string; bio: string } }
+  | { ok: false; code: 'unavailable' | 'rate_limited' | 'prohibited' };
+
 const serviceSchema = z.object({
   categorySlug: z.enum(CATEGORY_SLUGS, code('required')),
   pricingType: z.enum(['fixed', 'hourly'], code('required')),
@@ -134,6 +146,8 @@ export interface HelperOnboardingPageData {
   firstPayoutDays: number;
   /** Founding-cohort reward, when the helper can still earn it. */
   welcomeReward?: { amountCents: Cents; minTaskPriceCents: Cents; windowDays: number };
+  /** The `ai_drafting` flag, and drafting is set up: show "Write it for me" on the profile step. */
+  aiDraftingEnabled: boolean;
 }
 
 /**
@@ -144,6 +158,8 @@ export interface HelperOnboardingPageData {
  */
 export interface HelperOnboardingHandlers {
   onSaveProfile: ActionHandler<HelperProfileInput>;
+  /** "Write it for me" (only when `aiDraftingEnabled`). Saves nothing. */
+  onDraftProfile: QueryHandler<ProfileDraftInput, ProfileDraftResult>;
   onSaveServices: ActionHandler<HelperServicesInput>;
   onSaveArea: ActionHandler<HelperAreaInput>;
   onStartIdentity: ActionHandler;
@@ -184,6 +200,8 @@ export interface HelperProfileEditorData {
   verification: VerificationSummary;
   /** Paused profiles don't appear in search and can't receive invites. */
   paused: boolean;
+  /** The `ai_drafting` flag, and drafting is set up: show "Write it for me" on the profile. */
+  aiDraftingEnabled: boolean;
 }
 
 /**
@@ -192,6 +210,8 @@ export interface HelperProfileEditorData {
  */
 export interface HelperProfileEditorHandlers {
   onSaveProfile: ActionHandler<HelperProfileInput>;
+  /** "Write it for me" (only when `aiDraftingEnabled`). Saves nothing. */
+  onDraftProfile: QueryHandler<ProfileDraftInput, ProfileDraftResult>;
   onSaveServices: ActionHandler<HelperServicesInput>;
   onSaveArea: ActionHandler<HelperAreaInput>;
   onSaveTools: ActionHandler<HelperToolsInput>;

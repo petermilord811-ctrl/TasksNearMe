@@ -4,13 +4,15 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Controller, useFieldArray, useForm, useWatch, type FieldValues, type Path, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Sparkles, Trash2 } from 'lucide-react';
 import {
   createHelperServicesSchema, helperAreaInputSchema, helperProfileInputSchema, helperToolsInputSchema,
   SERVICE_RADIUS_MILES, type ActionHandler, type CategoryView, type HelperAreaInput,
   type HelperOnboardingPageData, type HelperProfileInput, type HelperServicesInput, type HelperToolsInput,
+  type ProfileDraftInput, type ProfileDraftResult, type QueryHandler,
 } from '@/contracts';
 import { formatMoney, formatMoneyInput, parseMoneyInput } from '@/shared/format';
+import { AiDraftButton, AiDraftStatus, type AiDraftOutcome } from '@/ui/components/forms/ai-draft';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { TextFormField } from '@/ui/components/forms/text-form-field';
 import { Badge } from '@/ui/primitives/badge';
@@ -58,8 +60,58 @@ function SaveButton({ pending, label }: { pending: boolean; label?: string }) {
   return <div className={label ? 'fixed inset-x-0 bottom-app-navigation z-20 border-t bg-card px-gutter pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:p-0' : undefined}><div className="mx-auto max-w-reading"><Button type="submit" disabled={pending} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{pending ? t('forms.saving') : label ?? t('forms.save')}</Button></div></div>;
 }
 
-export function HelperProfileForm({ values, languageOptions, onSave, submitLabel }: {
+/**
+ * "Write it for me": a few words about the helper go to `onDraft`, and the headline and about-me it returns
+ * replace what's in the form (Undo puts it back). Nothing is saved until the form is.
+ */
+function ProfileDraftPanel({ onDraft, disabled, onDrafted, onUndo }: {
+  onDraft: QueryHandler<ProfileDraftInput, ProfileDraftResult>;
+  disabled: boolean;
+  onDrafted: (draft: { headline: string; bio: string }) => void;
+  onUndo: () => void;
+}) {
+  const t = useTranslations('helperOnboarding.forms.profile.ai');
+  const id = useId();
+  const [notes, setNotes] = useState('');
+  const [pending, setPending] = useState(false);
+  const [outcome, setOutcome] = useState<AiDraftOutcome>();
+  const [drafted, setDrafted] = useState(false);
+
+  async function draft() {
+    if (pending) return;
+    setPending(true);
+    setOutcome(undefined);
+    let result: ProfileDraftResult;
+    try {
+      result = await onDraft({ notes: notes.trim() });
+    } catch {
+      result = { ok: false, code: 'unavailable' };
+    }
+    setPending(false);
+    if (!result.ok) {
+      setOutcome({ kind: 'failed', code: result.code });
+      return;
+    }
+    setDrafted(true);
+    onDrafted(result.draft);
+    setOutcome({ kind: 'drafted' });
+  }
+
+  return <div role="group" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} className="space-y-3 rounded-xl border border-dashed bg-accent/40 p-4">
+    <p id={`${id}-title`} className="flex items-center gap-2 font-medium"><Sparkles aria-hidden="true" className="size-4 text-primary" />{t('title')}</p>
+    <p id={`${id}-description`} className="text-sm text-muted-foreground">{t('description')}</p>
+    <HelperField id={`${id}-notes`} label={t('notes')} hint={t('notesHint')}>
+      <Textarea id={`${id}-notes`} value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={600} rows={2} disabled={disabled || pending} aria-describedby={`${id}-notes-hint`} />
+    </HelperField>
+    <AiDraftButton pending={pending} disabled={disabled} onClick={() => void draft()}>{t(drafted ? 'redraft' : 'draft')}</AiDraftButton>
+    <AiDraftStatus outcome={outcome} onUndo={() => { onUndo(); setOutcome({ kind: 'undone' }); }} />
+  </div>;
+}
+
+export function HelperProfileForm({ values, languageOptions, onSave, onDraft, submitLabel }: {
   values: HelperProfileInput; languageOptions: HelperOnboardingPageData['languageOptions']; onSave: ActionHandler<HelperProfileInput>; submitLabel?: string;
+  /** "Write it for me", when drafting is on for this person. */
+  onDraft?: QueryHandler<ProfileDraftInput, ProfileDraftResult>;
 }) {
   const t = useTranslations('helperOnboarding');
   const fields = useTranslations('forms');
@@ -69,8 +121,26 @@ export function HelperProfileForm({ values, languageOptions, onSave, submitLabel
   const pending = action.pending || form.formState.isSubmitting;
   const headline = useWatch({ control: form.control, name: 'headline' });
   const bio = useWatch({ control: form.control, name: 'bio' });
+  // What the draft replaced, for Undo.
+  const [beforeDraft, setBeforeDraft] = useState<{ headline: string; bio: string }>();
+  const fill = (next: { headline: string; bio: string }) => {
+    form.setValue('headline', next.headline, { shouldDirty: true, shouldValidate: true });
+    form.setValue('bio', next.bio, { shouldDirty: true, shouldValidate: true });
+  };
   return <form noValidate onSubmit={form.handleSubmit(async (input) => { await action.run(onSave, input); })} aria-busy={pending} className="space-y-6">
     <p className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('forms.profile.privacy')}</p>
+    {onDraft && <ProfileDraftPanel
+      onDraft={onDraft}
+      disabled={pending}
+      onDrafted={(draft) => {
+        setBeforeDraft((kept) => kept ?? { headline: form.getValues('headline'), bio: form.getValues('bio') });
+        fill(draft);
+      }}
+      onUndo={() => {
+        if (beforeDraft) fill(beforeDraft);
+        setBeforeDraft(undefined);
+      }}
+    />}
     <fieldset disabled={pending} className="space-y-6">
       <legend className="sr-only">{t('forms.profile.title')}</legend>
       <div className="space-y-2"><TextFormField control={form.control} name="headline" label={t('forms.profile.headline')} hint={t('forms.profile.headlineHint')} maxLength={80} /><p className="text-right text-sm tabular-nums text-muted-foreground">{t('forms.counter', { count: headline.length, maximum: 80 })}</p></div>

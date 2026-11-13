@@ -49,7 +49,7 @@ export function HelperOnboardingScreen({ data, handlers }: { data: HelperOnboard
     <OnboardingStepper progress={data.progress} />
     {(step === 'profile' || step === 'services' || step === 'area') && <section className="space-y-5 rounded-xl border bg-card p-card shadow-card">
       <div className="space-y-2"><h2 className="text-xl font-semibold">{t(`screen.titles.${step}`)}</h2><p className="text-muted-foreground">{t(`screen.descriptions.${step}`)}</p></div>
-      {step === 'profile' && <HelperProfileForm key={step} values={data.values.profile} languageOptions={data.languageOptions} onSave={handlers.onSaveProfile} submitLabel={t('screen.saveContinue')} />}
+      {step === 'profile' && <HelperProfileForm key={step} values={data.values.profile} languageOptions={data.languageOptions} onSave={handlers.onSaveProfile} onDraft={data.aiDraftingEnabled ? handlers.onDraftProfile : undefined} submitLabel={t('screen.saveContinue')} />}
       {step === 'services' && <HelperServicesForm key={step} values={data.values.services} categories={data.categories} onSave={handlers.onSaveServices} submitLabel={t('screen.saveContinue')} />}
       {step === 'area' && <HelperAreaForm key={step} values={data.values.area} areas={data.areas} remoteAllowed={remoteAllowed} onSave={handlers.onSaveArea} submitLabel={t('screen.saveContinue')} />}
     </section>}

@@ -102,6 +102,8 @@ export interface HelperTaskView {
   offerRules: OfferRules;
   /** Prefilled offer: the poster's budget and the window start. */
   offerDefaults: OfferInput;
+  /** The `ai_drafting` flag, and drafting is set up: show "Write it for me" on the offer message. */
+  aiDraftingEnabled: boolean;
 }
 
 export interface OfferRules {
@@ -162,8 +164,26 @@ export type OfferInput = z.input<ReturnType<typeof createOfferInputSchema>>;
  * - `onOfferAction`: `withdraw_offer`, `reconfirm_offer` (ok `updated`). Messaging the poster
  *   arrives with messaging (UI-014).
  */
+/**
+ * "Write it for me" on the offer message: drafted from the task as the helper sees it, the helper's
+ * profile, the chosen start time and what they'll bring, plus any notes. Saves nothing; the helper edits it.
+ */
+export interface OfferMessageDraftInput {
+  /** Market-local "HH:MM" from `offerRules.startTimes`. */
+  startTime: string;
+  brings: string[];
+  /** Anything the helper wants it to say (at most 300 characters). */
+  notes?: string;
+}
+/** `prohibited`: the notes ask for something TasksNearMe doesn't allow. `rate_limited`: 20 drafts an hour. */
+export type OfferMessageDraftResult =
+  | { ok: true; message: string }
+  | { ok: false; code: 'unavailable' | 'rate_limited' | 'prohibited' };
+
 export interface HelperWorkHandlers {
   onQuote: QueryHandler<{ pricing: PricingInput }, PriceBreakdown>;
+  /** "Write it for me" (only when `aiDraftingEnabled`); bound to the task by the page. */
+  onDraftOfferMessage: QueryHandler<OfferMessageDraftInput, OfferMessageDraftResult>;
   onSubmitOffer: ActionHandler<OfferInput>;
   onReviseOffer: ActionHandler<OfferInput>;
   onOfferAction: (input: { offerId: string; action: OfferActionId }) => Promise<ActionResult>;

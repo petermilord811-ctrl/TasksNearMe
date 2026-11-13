@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, gte, inArray, isNull, lte, or, type SQL } from 'drizzle-orm';
+import { aiDraftingEnabledFor } from '@/modules/assist/availability';
 import type {
   ActionResult,
   CategorySlug,
@@ -320,6 +321,7 @@ export async function getHelperTaskView(db: Db, userId: string, taskId: string, 
     setup: state.setup,
     offerRules: rules,
     offerDefaults: offerDefaultsFor(budgetOfTask(row.task), rules),
+    aiDraftingEnabled: await aiDraftingEnabledFor(db, userId),
   };
 }
 

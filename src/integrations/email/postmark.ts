@@ -8,7 +8,7 @@ import type { EmailProvider } from './index';
  */
 const ENDPOINT = 'https://api.postmarkapp.com/email';
 
-export function createPostmarkEmailProvider(options: { token: string; from: string; messageStream?: string; fetch?: typeof fetch }): EmailProvider {
+export function createPostmarkEmailProvider(options: { token: string; from: string; replyTo?: string; messageStream?: string; fetch?: typeof fetch }): EmailProvider {
   const send = options.fetch ?? fetch;
   return {
     name: 'postmark',
@@ -23,6 +23,8 @@ export function createPostmarkEmailProvider(options: { token: string; from: stri
           TextBody: message.text,
           ...(message.html ? { HtmlBody: message.html } : {}),
           ...(message.tag ? { Tag: message.tag } : {}),
+          ...(options.replyTo ? { ReplyTo: options.replyTo } : {}),
+          ...(message.headers ? { Headers: Object.entries(message.headers).map(([Name, Value]) => ({ Name, Value })) } : {}),
           MessageStream: options.messageStream ?? 'outbound',
         }),
       });

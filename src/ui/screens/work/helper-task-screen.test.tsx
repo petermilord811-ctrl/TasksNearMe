@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, OFFER_ACTION_IDS, routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers } from '@/contracts';
-import { deskBreakdown, helperComputerBlocked, helperDeskStaleOffer, helperDeskWithOffer, helperMovingHourly } from '@/fixtures';
+import { deskBreakdown, deskOfferMessageDraft, helperComputerBlocked, helperDeskStaleOffer, helperDeskWithOffer, helperMovingHourly } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import helperTask from '../../../../messages/en/ui/helperTask.json';
 import findWork from '../../../../messages/en/ui/findWork.json';
@@ -22,6 +22,7 @@ const now = '2026-11-17T15:00:00.000Z';
 function makeHandlers(overrides: Partial<HelperWorkHandlers> = {}): HelperWorkHandlers {
   return {
     onQuote: vi.fn(async () => deskBreakdown),
+    onDraftOfferMessage: vi.fn(async () => ({ ok: true as const, message: deskOfferMessageDraft })),
     onSubmitOffer: vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'sent' })),
     onReviseOffer: vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' })),
     onOfferAction: vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' })),

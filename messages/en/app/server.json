@@ -56,7 +56,60 @@
     "actorFallback": "Someone",
     "email": {
       "open": "Open it in TasksNearMe: {url}",
-      "footer": "You're getting this email because of your notification settings. Change them here: {settingsUrl}"
+      "footer": "You're getting this email because of your notification settings. Change them here: {settingsUrl}",
+      "topics": {
+        "bookings": "Bookings",
+        "messages": "Messages",
+        "offers": "Offers",
+        "payments": "Payments",
+        "tips_and_news": "Tips and news"
+      },
+      "cta": {
+        "booking": "View the booking",
+        "task": "View your task",
+        "thread": "Open the conversation",
+        "messages": "Open your messages",
+        "find_work_task": "View the task",
+        "onboarding": "Continue setting up",
+        "earnings": "View your earnings",
+        "support_case": "View the case",
+        "invite": "View the invite",
+        "proposal": "View the proposal"
+      },
+      "next": {
+        "offer_received": "Compare the offers on your task and book the one that fits. You're only charged when you book.",
+        "offer_updated": "Check the new price and time before you book.",
+        "offer_declined": "Find work has other tasks near you.",
+        "booking_confirmed": "Everything about it, including the chat with the other person, is on the booking page.",
+        "booking_canceled": "The booking page says what happens next, including any refund.",
+        "helper_on_the_way": "Follow along and message them from the booking page.",
+        "helper_running_late": "If the new time doesn't work, message them from the booking page.",
+        "cant_access": "Message them from the booking page so they can get in.",
+        "work_submitted": "Check the photos, then approve or report a problem.",
+        "work_approved": "Your earnings are on their way.",
+        "problem_reported": "Talk it through on the booking page. Support can step in if you can't sort it out together.",
+        "earnings_transferred": "They go to your bank account on your usual payout schedule.",
+        "payout_paid": "It can take a business day to show in your bank account.",
+        "review_published": "Reviews help neighbors choose with confidence.",
+        "message_received": "Reply in the app. Contact details stay hidden until a booking is confirmed.",
+        "support_replied": "Read the reply and answer on the case page.",
+        "case_resolved": "The case page has the outcome.",
+        "change_proposed": "Accept or decline the change from the booking page.",
+        "change_applied": "The booking page shows the new details.",
+        "invite_received": "Accept it, decline it, or suggest a different price or time.",
+        "invite_countered": "Accept the counteroffer or reply with your own.",
+        "invite_accepted": "It's booked. The details are on the booking page.",
+        "rebook_proposed": "Accept and pay to book it, or decline.",
+        "rebook_accepted": "It's booked. The details are on the booking page.",
+        "task_reopened": "The client is looking for a new helper. Send an offer if you're free.",
+        "booking_reminder": "Check the time and the details on the booking page."
+      },
+      "lockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates.",
+      "optionalFooter": "You're getting this because {topic} emails are on.",
+      "manage": "Manage notifications",
+      "unsubscribe": "Unsubscribe from these emails",
+      "textLockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates. Manage notifications: {settingsUrl}",
+      "textOptionalFooter": "You're getting this because {topic} emails are on. Manage notifications: {settingsUrl} · Unsubscribe: {unsubscribeUrl}"
     },
     "sms": "TasksNearMe: {sentence} {url}",
     "types": {
@@ -192,6 +245,24 @@
       "notYou": "Didn't change it? Contact support right away so we can secure your account.",
       "help": "Contact support",
       "text": "Your TasksNearMe account now uses the number ending in {last4}. Didn't change it? Contact support right away: {helpUrl}"
+    },
+    "giftCard": {
+      "subject": "Your {amount} gift card is ready",
+      "preheader": "Open the link to choose your gift card. Keep it private: it works like cash.",
+      "title": "Your gift card is ready",
+      "heading": "Your {amount} gift card is ready",
+      "body": "Thanks for helping your neighbors, {firstName}. Here is your {program} reward.",
+      "programs": {
+        "welcome": "founding helper",
+        "repeat": "repeat client",
+        "acceptance": "offer",
+        "completion": "completion"
+      },
+      "cta": "Open my gift card",
+      "safety": "Anyone with the link can use it, so don't forward this email. You'll also find it on your Rewards page.",
+      "rewards": "Rewards page",
+      "help": "Contact support",
+      "text": "Thanks for helping your neighbors, {firstName}. Your {amount} {program} gift card is ready: {url}\n\nAnyone with the link can use it, so don't forward this email. It's also on your Rewards page: {rewardsUrl}"
     }
   }
 }

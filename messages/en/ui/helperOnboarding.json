@@ -13,7 +13,15 @@
       "bioHint": "Tell clients about your experience and how you work. Use 40–1,000 characters.",
       "languages": "Languages",
       "languagesHint": "Choose 1–6 languages you can use with clients.",
-      "privacy": "Clients see your first name and last initial."
+      "privacy": "Clients see your first name and last initial.",
+      "ai": {
+        "title": "Write it for me",
+        "description": "Tell us a little about you. We'll draft your headline and about-me from it and your services, and you can change anything before you save.",
+        "notes": "A few words about you (optional)",
+        "notesHint": "For example: what you're good at, what you're careful about, why you like helping.",
+        "draft": "Draft my profile",
+        "redraft": "Draft again"
+      }
     },
     "services": {
       "title": "Services",
@@ -113,7 +121,8 @@
       "errors": "Provider action errors",
       "errorHint": "Try the provider buttons to see pending and error feedback.",
       "savedServices": "Services with prices",
-      "emptyTools": "Tools: empty"
+      "emptyTools": "Tools: empty",
+      "profileDrafted": "Profile drafted with \"Write it for me\""
     }
   }
 }
