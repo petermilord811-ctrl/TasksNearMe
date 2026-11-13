@@ -1,3 +1,6 @@
+import { createTranslator } from 'next-intl';
+import { DEFAULT_LOCALE, type AppLocale } from '@/contracts/locale';
+import { messagesFor, perLocale } from '@/i18n/catalog';
 import type { BookingView } from '@/contracts';
 
 /**
@@ -12,6 +15,8 @@ function stamp(date: Date): string {
 }
 
 /** Escapes text per RFC 5545 §3.3.11. */
+const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.calendar' }));
+
 function text(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
 }
@@ -36,8 +41,9 @@ function endOf(view: BookingView): Date {
   return new Date(windowEnd > start + HOUR ? windowEnd : start + 2 * HOUR);
 }
 
-export function bookingCalendarFile(view: BookingView, bookingUrl: string, now: Date): string {
-  const where = view.location.kind === 'remote' ? 'Remote' : `${view.location.areaName}, ${view.location.marketName}`;
+export function bookingCalendarFile(view: BookingView, bookingUrl: string, now: Date, locale: AppLocale = DEFAULT_LOCALE): string {
+  const t = tFor(locale);
+  const where = view.location.kind === 'remote' ? t('remote') : `${view.location.areaName}, ${view.location.marketName}`;
   const other = view.viewerRole === 'poster' ? view.helper.displayName : view.poster.displayName;
   const lines = [
     'BEGIN:VCALENDAR',
@@ -50,9 +56,9 @@ export function bookingCalendarFile(view: BookingView, bookingUrl: string, now: 
     `DTSTAMP:${stamp(now)}`,
     `DTSTART:${stamp(new Date(view.terms.start))}`,
     `DTEND:${stamp(endOf(view))}`,
-    `SUMMARY:${text(`TasksNearMe: ${view.task.title}`)}`,
+    `SUMMARY:${text(t('eventTitle', { title: view.task.title }))}`,
     `LOCATION:${text(where)}`,
-    `DESCRIPTION:${text(`With ${other}. Details and the address: ${bookingUrl}`)}`,
+    `DESCRIPTION:${text(t('description', { name: other, url: bookingUrl }))}`,
     `URL:${bookingUrl}`,
     'END:VEVENT',
     'END:VCALENDAR',

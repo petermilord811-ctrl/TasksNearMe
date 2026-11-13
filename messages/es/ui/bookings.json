@@ -39,5 +39,16 @@
     "review_work": "Revisa el trabajo antes de {date}, o se aprobará automáticamente.",
     "on_my_way": "Toca \"En camino\" cuando salgas. Empieza a las {time}.",
     "check_in": "Toca \"Ya llegué\" cuando llegues. Empieza a las {time}."
+  },
+  "regular": {
+    "title": "Visitas regulares",
+    "with": "Con {name}",
+    "next": "Próxima visita: {date}",
+    "noNext": "No hay visitas próximas",
+    "pausedUntil": "En pausa hasta el {date}",
+    "endsOn": "Última visita el {date}",
+    "paymentDue": "Falta el pago",
+    "paused": "En pausa",
+    "ending": "Terminando"
   }
 }

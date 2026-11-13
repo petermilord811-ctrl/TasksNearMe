@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, lte, ne, notInArray, or } from 'drizzle-orm';
-import { DATA_EXPORT_DAYS, DELETION_GRACE_DAYS, type AccountPrivacyView, type ActionResult, type DeletionBlocker } from '@/contracts';
+import { DATA_EXPORT_DAYS, DELETION_GRACE_DAYS, localeOrDefault, type AccountPrivacyView, type ActionResult, type DeletionBlocker } from '@/contracts';
 import { isReservedEmailAddress, type EmailProvider } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
 import { accounts, phoneVerifications, sessions, staffAuthenticators, staffRoles, users, verifications } from '@/modules/accounts/schema';
@@ -317,7 +317,7 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
   }
 
   if (!isReservedEmailAddress(user.email) || process.env.NODE_ENV !== 'production') {
-    const email = renderAccountDeletedNotice({ appUrl: deps.appUrl });
+    const email = renderAccountDeletedNotice({ appUrl: deps.appUrl, locale: localeOrDefault(user.locale) });
     try {
       await deps.email.send({ to: user.email, subject: email.subject, text: email.text, html: email.html, tag: 'account-deleted', idempotencyKey: `account-deleted-${userId}` });
     } catch (error) {

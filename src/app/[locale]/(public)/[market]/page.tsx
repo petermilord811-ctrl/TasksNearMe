@@ -4,6 +4,8 @@ import { getTranslations } from 'next-intl/server';
 import { getMarketPageData } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { MarketScreen } from '@/ui/screens/public';
+import { languageAlternates } from '@/i18n/metadata';
+import { routes } from '@/contracts';
 
 export async function generateStaticParams() {
   const slugs = await listPublicMarketSlugs();
@@ -17,6 +19,7 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   return {
     title: t('title', { market: page.data.market.name }),
     description: t('description', { market: page.data.market.name }),
+    alternates: await languageAlternates(routes.market(market)),
   };
 }
 

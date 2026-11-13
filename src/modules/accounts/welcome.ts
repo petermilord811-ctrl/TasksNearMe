@@ -1,4 +1,5 @@
 import { and, asc, eq, isNull } from 'drizzle-orm';
+import { localeOrDefault } from '@/contracts';
 import type { EmailProvider } from '@/integrations/email';
 import { appUrl } from '@/integrations/oauth';
 import { getFlags } from '@/modules/markets/queries';
@@ -33,7 +34,7 @@ export async function sendWelcomeEmail(
     .update(users)
     .set({ welcomedAt: now })
     .where(and(eq(users.id, userId), isNull(users.welcomedAt)))
-    .returning({ email: users.email, firstName: users.firstName, marketId: users.homeMarketId });
+    .returning({ email: users.email, firstName: users.firstName, marketId: users.homeMarketId, locale: users.locale });
   if (!user) return 'already_sent';
 
   const [[market], categoryRows, offer] = await Promise.all([
@@ -48,6 +49,7 @@ export async function sendWelcomeEmail(
     market: market ? `${market.name}, ${market.state}` : '',
     ...(offer ? { offer } : {}),
     categories: categoryRows,
+    locale: localeOrDefault(user.locale),
   });
 
   let lastError: unknown;

@@ -1,14 +1,14 @@
 import { and, asc, count, eq, gte, inArray, isNull, lt, lte, or } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
-import type { AttentionTarget, NotificationTopic, NotificationType, NotificationView } from '@/contracts';
-import { routes } from '@/contracts';
+import type { AppLocale, AttentionTarget, NotificationTopic, NotificationType, NotificationView } from '@/contracts';
+import { DEFAULT_LOCALE, localeOrDefault, routes } from '@/contracts';
+import { messagesFor, perLocale } from '@/i18n/catalog';
 import { createEmailProvider, type EmailProvider } from '@/integrations/email';
 import { createSmsSender, type SmsSender } from '@/integrations/sms';
 import { users } from '@/modules/accounts/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { formatDate, formatDateTime, formatMoney, marketLocalToUtc } from '@/shared/format';
-import appMessages from '../../../messages/en/app';
 import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
 import { DELIVERY_CHANNELS, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
 import { renderNotificationEmail } from './emails';
@@ -41,7 +41,7 @@ const STUCK_MS = 10 * MINUTE;
 type NotificationRow = typeof notifications.$inferSelect;
 type DeliveryRow = typeof notificationDeliveries.$inferSelect;
 
-const t = createTranslator({ locale: 'en', messages: appMessages, namespace: 'server.notifications' });
+const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.notifications' }));
 
 function pathOf(target: AttentionTarget): string {
   switch (target.kind) {
@@ -76,8 +76,12 @@ function pathOf(target: AttentionTarget): string {
 
 const appUrl = () => (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
-/** One notification as an email (subject, text, designed version, unsubscribe headers) and a text message. */
-export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'> & { id?: string }) {
+/**
+ * One notification as an email (subject, text, designed version, unsubscribe headers), a text message and a
+ * push, in the recipient's language.
+ */
+export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'> & { id?: string }, locale: AppLocale = DEFAULT_LOCALE) {
+  const t = tFor(locale);
   const params: NonNullable<NotificationView['params']> = row.params ?? {};
   const sentence = t(`types.${row.type as NotificationType}`, {
     title: row.title ?? t('taskFallback'),
@@ -91,12 +95,12 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     days: params.days ?? 0,
     track: params.track ?? 'other',
     hasDate: params.at === undefined && params.day === undefined ? 'no' : 'yes',
-    date: params.at ? formatDateTime(params.at) : params.day ? formatDate(marketLocalToUtc(params.day, '12:00')) : '',
+    date: params.at ? formatDateTime(params.at, locale) : params.day ? formatDate(marketLocalToUtc(params.day, '12:00'), { locale }) : '',
     by: params.by ?? 'other',
   });
   const url = `${appUrl()}${pathOf(row.target)}`;
   const type = row.type as NotificationType;
-  const email = renderNotificationEmail({ type, topic: NOTIFICATION_TOPIC[type], sentence, target: row.target, url, userId: row.userId, appUrl: appUrl() });
+  const email = renderNotificationEmail({ type, topic: NOTIFICATION_TOPIC[type], sentence, target: row.target, url, userId: row.userId, appUrl: appUrl(), locale });
   return { ...email, sms: t('sms', { sentence, url }), push: { title: t('pushTitle'), body: sentence, url, ...(row.id ? { tag: row.id } : {}) } };
 }
 
@@ -148,12 +152,14 @@ interface Person {
   preferences: Map<string, boolean>;
   /** Devices with notifications on. */
   pushDevices: number;
+  /** The language their notifications go out in. */
+  locale: AppLocale;
 }
 
 async function peopleOf(db: Db, userIds: string[]): Promise<Map<string, Person>> {
   if (userIds.length === 0) return new Map();
   const [rows, prefs, devices] = await Promise.all([
-    db.select({ id: users.id, email: users.email, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt }).from(users).where(inArray(users.id, userIds)),
+    db.select({ id: users.id, email: users.email, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt, locale: users.locale }).from(users).where(inArray(users.id, userIds)),
     db.select().from(notificationPreferences).where(inArray(notificationPreferences.userId, userIds)),
     db.select({ userId: pushSubscriptions.userId, devices: count() }).from(pushSubscriptions).where(inArray(pushSubscriptions.userId, userIds)).groupBy(pushSubscriptions.userId),
   ]);
@@ -165,7 +171,7 @@ async function peopleOf(db: Db, userIds: string[]): Promise<Map<string, Person>>
   const people = new Map<string, Person>(
     rows.map((row) => [
       row.id,
-      { email: row.email || null, emailSuppressed: suppressed.has(row.email?.toLowerCase() ?? ''), phone: row.phone, phoneVerified: row.phoneVerifiedAt !== null, preferences: new Map(), pushDevices: devicesOf.get(row.id) ?? 0 },
+      { email: row.email || null, emailSuppressed: suppressed.has(row.email?.toLowerCase() ?? ''), phone: row.phone, phoneVerified: row.phoneVerifiedAt !== null, preferences: new Map(), pushDevices: devicesOf.get(row.id) ?? 0, locale: localeOrDefault(row.locale) },
     ]),
   );
   for (const pref of prefs) people.get(pref.userId)?.preferences.set(`${pref.topic}:${pref.channel}`, pref.enabled === 'true');
@@ -177,9 +183,9 @@ const addressOf = (person: Person, channel: DeliveryChannel) =>
 const channelOn = (person: Person, topic: NotificationTopic, channel: DeliveryChannel) => (channel === 'push' ? pushOn(topic) : preferenceOn(person.preferences, topic, channel));
 
 /** Sends a claimed delivery and records the outcome: sent, or failed with the next try. */
-async function attempt(db: Db, providers: DeliveryProviders, delivery: DeliveryRow, row: NotificationRow, to: string, now: Date): Promise<boolean> {
+async function attempt(db: Db, providers: DeliveryProviders, delivery: DeliveryRow, row: NotificationRow, to: string, now: Date, locale: AppLocale): Promise<boolean> {
   try {
-    await sendOne(db, providers, delivery, row, to, deliveryContent(row), now);
+    await sendOne(db, providers, delivery, row, to, deliveryContent(row, locale), now);
     await db.update(notificationDeliveries).set({ status: 'sent', sentAt: now, attempts: delivery.attempts + 1, reason: null, sendAfter: null, updatedAt: now }).where(eq(notificationDeliveries.id, delivery.id));
     return true;
   } catch (error) {
@@ -243,7 +249,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
         })
         .onConflictDoNothing({ target: [notificationDeliveries.notificationId, notificationDeliveries.channel] })
         .returning();
-      if (claimed && plan.action === 'send' && to && (await attempt(db, providers, claimed, notification, to, now))) sent += 1;
+      if (claimed && plan.action === 'send' && to && (await attempt(db, providers, claimed, notification, to, now, person.locale))) sent += 1;
     }
   }
 
@@ -283,7 +289,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
         ),
       )
       .returning();
-    if (claimed && claimed.status === 'sending' && to && (await attempt(db, providers, claimed, notification, to, now))) sent += 1;
+    if (claimed && claimed.status === 'sending' && to && person && (await attempt(db, providers, claimed, notification, to, now, person.locale))) sent += 1;
   }
   return { sent };
 }

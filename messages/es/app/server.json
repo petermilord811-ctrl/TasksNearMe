@@ -1,0 +1,328 @@
+{
+  "calendar": {
+    "eventTitle": "TasksNearMe: {title}",
+    "remote": "Remoto",
+    "description": "Con {name}. Detalles y dirección: {url}"
+  },
+  "meta": {
+    "home": {
+      "title": "TasksNearMe: ayuda cotidiana de personas cerca de ti en {market}",
+      "description": "Reserva ayuda local de confianza en {market} para armado de muebles, mudanzas, trabajo de jardín, limpieza ligera y ayuda con computadoras. Ve el precio completo antes de reservar."
+    },
+    "market": {
+      "title": "Ayuda local en {market}",
+      "description": "Ayudantes verificados en {market} para armado de muebles, ayuda con mudanzas, limpieza de jardín, limpieza ligera y ayuda con computadoras."
+    },
+    "category": {
+      "title": "{category} en {market}",
+      "description": "{category} en {market}: precios habituales, qué incluye y ayudantes locales verificados."
+    },
+    "howItWorks": {
+      "title": "Cómo funciona",
+      "description": "Publica una tarea, elige a tu ayudante y aprueba el trabajo. O crea tu perfil y haz ofertas en tareas cerca de ti."
+    },
+    "becomeHelper": {
+      "title": "Conviértete en ayudante",
+      "description": "Gana dinero con tus habilidades de todos los días. Ve cuánto ganarás antes de aceptar una tarea."
+    },
+    "pricing": {
+      "title": "Precios y tarifas",
+      "description": "Lo que pagas y lo que ganan los ayudantes: tarifas de servicio, tareas por hora, gastos y cancelaciones, con ejemplos."
+    },
+    "trustSafety": {
+      "title": "Confianza y seguridad",
+      "description": "Qué significan nuestras insignias, cómo protegemos tu dirección y tu pago, y cómo reportar un problema."
+    },
+    "signIn": {
+      "title": "Inicia sesión o crea una cuenta",
+      "description": "Inicia sesión en TasksNearMe con un código que te enviamos por correo. Sin contraseña."
+    },
+    "waitlist": {
+      "title": "Únete a la lista de espera",
+      "description": "TasksNearMe aún no está en tu ciudad. Déjanos tu correo y tu código postal y te avisaremos cuando abramos cerca de ti."
+    },
+    "help": {
+      "title": "Centro de ayuda",
+      "description": "Respuestas sobre cómo publicar tareas, pagos y tarifas, cómo verificarte como ayudante y cómo mantenerte seguro."
+    },
+    "taskBoard": {
+      "title": "Tareas abiertas en {market}",
+      "description": "Tareas locales en {market} para las que la gente necesita ayuda: armado de muebles, mudanzas, trabajo de jardín, limpieza y ayuda con computadoras."
+    }
+  },
+  "support": {
+    "contestNoShowOpening": "Quiero impugnar el reporte de ausencia de esta reserva."
+  },
+  "notifications": {
+    "taskFallback": "tu tarea",
+    "actorFallback": "Alguien",
+    "email": {
+      "open": "Ábrelo en TasksNearMe: {url}",
+      "footer": "Recibes este correo por tu configuración de notificaciones. Cámbiala aquí: {settingsUrl}",
+      "topics": {
+        "bookings": "Reservas",
+        "messages": "Mensajes",
+        "offers": "Ofertas",
+        "payments": "Pagos",
+        "tips_and_news": "Consejos y novedades",
+        "account": "Cuenta y verificación",
+        "task_alerts": "Tareas nuevas cerca de ti"
+      },
+      "topicEmails": {
+        "bookings": "reservas",
+        "messages": "mensajes",
+        "offers": "ofertas",
+        "payments": "pagos",
+        "tips_and_news": "consejos y novedades",
+        "account": "cuenta",
+        "task_alerts": "tareas nuevas"
+      },
+      "cta": {
+        "booking": "Ver la reserva",
+        "task": "Ver tu tarea",
+        "thread": "Abrir la conversación",
+        "messages": "Abrir tus mensajes",
+        "find_work_task": "Ver la tarea",
+        "onboarding": "Seguir con la configuración",
+        "earnings": "Ver tus ganancias",
+        "support_case": "Ver el caso",
+        "invite": "Ver la invitación",
+        "proposal": "Ver la propuesta",
+        "series": "Ver tus visitas regulares",
+        "account": "Abrir tu cuenta",
+        "verify_identity": "Verificar tu identidad"
+      },
+      "next": {
+        "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Solo se te cobra cuando reservas.",
+        "offer_updated": "Revisa el nuevo precio y la nueva hora antes de reservar.",
+        "offer_declined": "En Buscar trabajo hay otras tareas cerca de ti.",
+        "booking_confirmed": "Todo, incluido el chat con la otra persona, está en la página de la reserva.",
+        "booking_canceled": "La página de la reserva te dice qué sigue, incluido cualquier reembolso.",
+        "helper_on_the_way": "Sigue el avance y escríbele desde la página de la reserva.",
+        "helper_running_late": "Si la nueva hora no te funciona, escríbele desde la página de la reserva.",
+        "cant_access": "Escríbele desde la página de la reserva para que pueda entrar.",
+        "work_submitted": "Revisa las fotos y luego aprueba o reporta un problema.",
+        "work_approved": "Tus ganancias van en camino.",
+        "problem_reported": "Conversen en la página de la reserva. Soporte puede intervenir si no logran resolverlo entre ustedes.",
+        "earnings_transferred": "Llegan a tu cuenta bancaria según tu calendario de pagos habitual.",
+        "payout_paid": "Puede tardar un día hábil en aparecer en tu cuenta bancaria.",
+        "review_published": "Las reseñas ayudan a los vecinos a elegir con confianza.",
+        "message_received": "Responde en la app. Los datos de contacto permanecen ocultos hasta que se confirma una reserva.",
+        "support_replied": "Lee la respuesta y contesta en la página del caso.",
+        "case_resolved": "La página del caso tiene el resultado.",
+        "change_proposed": "Acepta o rechaza el cambio desde la página de la reserva.",
+        "change_applied": "La página de la reserva muestra los nuevos detalles.",
+        "invite_received": "Acéptala, recházala o sugiere otro precio u otra hora.",
+        "invite_countered": "Acepta la contraoferta o responde con la tuya.",
+        "invite_accepted": "Ya está reservado. Los detalles están en la página de la reserva.",
+        "rebook_proposed": "Acepta y paga para reservarlo, o recházalo.",
+        "rebook_accepted": "Ya está reservado. Los detalles están en la página de la reserva.",
+        "task_reopened": "Tu cliente busca un nuevo ayudante. Envía una oferta si estás disponible.",
+        "booking_reminder": "Revisa la hora y los detalles en la página de la reserva.",
+        "verification_passed": "Tu página de configuración muestra lo que falta antes de poder enviar ofertas.",
+        "verification_action_needed": "Abre tu página de configuración para ver qué hace falta. Solo toma unos minutos.",
+        "background_check_expiring": "Si la renuevas, tus categorías a domicilio siguen abiertas sin interrupción.",
+        "helper_ready": "Buscar trabajo muestra las tareas abiertas cerca de ti. Tu primera oferta está a un toque.",
+        "task_match": "Échale un vistazo y envía una oferta si te interesa. Puedes desactivar estos correos en la página de tu cuenta cuando quieras.",
+        "data_export_ready": "Descárgala desde la página de tu cuenta en un plazo de 7 días. Después se elimina, y puedes pedir una copia nueva cuando quieras.",
+        "tip_received": "Es todo tuyo. Sale con tu próximo pago.",
+        "series_started": "Las próximas visitas están en el calendario. Cada una se cobra a su tarjeta 2 días antes.",
+        "series_visit_skipped": "Las visitas posteriores siguen en el calendario como siempre.",
+        "series_paused": "Las visitas intermedias se omiten. No se cobra nada por ellas.",
+        "series_resumed": "Las próximas visitas vuelven a estar en el calendario.",
+        "scheduled_payment_failed": "Paga desde la página de la reserva o cambia la tarjeta. Volveremos a intentarlo antes de esa fecha.",
+        "replacement_needed": "Su ayudante canceló, así que la hora ya está fijada y el cliente está listo para reservar.",
+        "replacement_search_started": "Se te reembolsó el monto completo. Las nuevas ofertas aparecerán en tu tarea. Si ya no la necesitas, cancela la tarea."
+      },
+      "lockedFooter": "Los correos de reservas y pagos siempre están activados: son tus recibos y avisos de seguridad.",
+      "optionalFooter": "Recibes esto porque los correos de {topic} están activados.",
+      "manage": "Administrar notificaciones",
+      "unsubscribe": "Cancelar la suscripción a estos correos",
+      "textLockedFooter": "Los correos de reservas y pagos siempre están activados: son tus recibos y avisos de seguridad. Administrar notificaciones: {settingsUrl}",
+      "textOptionalFooter": "Recibes esto porque los correos de {topic} están activados. Administrar notificaciones: {settingsUrl} · Cancelar suscripción: {unsubscribeUrl}"
+    },
+    "sms": "TasksNearMe: {sentence} {url}",
+    "types": {
+      "offer_received": "{actorName} envió una oferta{hasAmount, select, yes { de {amount}} other {}} para {title}.",
+      "offer_updated": "{actorName} actualizó su oferta{hasAmount, select, yes { a {amount}} other {}} para {title}.",
+      "offer_declined": "Tu oferta para {title} no fue seleccionada.",
+      "booking_confirmed": "Tu reserva para {title} está confirmada.",
+      "booking_canceled": "Tu reserva para {title} fue cancelada.",
+      "helper_on_the_way": "{actorName} va en camino para {title}.",
+      "helper_running_late": "{actorName} llega {hasMinutes, select, yes {{minutes, plural, one {# minuto} other {# minutos}} } other {}}tarde a {title}.",
+      "helper_arrived": "{actorName} llegó para {title}.",
+      "cant_access": "{actorName} no puede entrar para {title}. Por favor responde.",
+      "work_submitted": "{actorName} envió {title} para tu aprobación.",
+      "work_approved": "El trabajo de {title} fue aprobado.",
+      "problem_reported": "Se reportó un problema con {title}.",
+      "earnings_transferred": "{hasAmount, select, yes {Se transfirieron {amount}} other {Se transfirieron tus ganancias}} a tu cuenta de pagos.",
+      "payout_paid": "Recibiste tu pago{hasAmount, select, yes { de {amount}} other {}}.",
+      "review_published": "Se publicó la reseña de {actorName} sobre {title}.",
+      "message_received": "{actorName} te envió un mensaje sobre {title}.",
+      "support_replied": "Soporte respondió sobre {title}.",
+      "case_resolved": "Soporte resolvió tu caso sobre {title}.",
+      "change_proposed": "{actorName} propuso un cambio en {title}. Revisa los detalles.",
+      "change_applied": "Los detalles de tu reserva para {title} se actualizaron.",
+      "invite_received": "{actorName} te envió una solicitud de reserva para {title}.",
+      "invite_countered": "{actorName} envió una contraoferta{hasAmount, select, yes { de {amount}} other {}} para {title}.",
+      "invite_accepted": "{actorName} aceptó tu solicitud de reserva para {title}. Ya está reservado.",
+      "rebook_proposed": "{actorName} propuso una reserva: {title}. Revisa los detalles.",
+      "rebook_accepted": "{actorName} aceptó tu propuesta para {title}. Ya está reservado.",
+      "rebook_declined": "{actorName} rechazó tu propuesta para {title}. No se hizo ninguna reserva.",
+      "task_reopened": "Tu cliente busca un nuevo ayudante para {title}. Haz una oferta si aún puedes ayudar.",
+      "approval_reminder": "Aprueba {title} o reporta un problema. Se aprueba automáticamente {hasHours, select, yes {en {hours, plural, one {# hora} other {# horas}}} other {pronto}}.",
+      "booking_reminder": "{title} empieza {hasHours, select, yes {en {hours, plural, one {# hora} other {# horas}}} other {pronto}}. Revisa los detalles.",
+      "verification_passed": "{track, select, phone {Tu número de teléfono está verificado.} identity {Tu identidad está verificada.} address {Tu dirección de domicilio está verificada.} payout {Tu cuenta de pagos está lista.} background {Tu verificación de antecedentes está completa.} other {Se completó un paso de verificación.}}",
+      "verification_action_needed": "{track, select, identity {Tu verificación de identidad necesita tu atención.} address {Necesitamos otro comprobante de tu domicilio.} payout {La configuración de tus pagos necesita más información.} background {Tu verificación de antecedentes necesita tu atención. Revisa tu correo de Checkr.} other {Un paso de verificación necesita tu atención.}}",
+      "background_check_expiring": "{days, plural, =0 {Tu verificación de antecedentes venció. Inicia una nueva para volver a tomar tareas a domicilio.} one {Tu verificación de antecedentes vence mañana. Inicia la renovación para conservar tus categorías a domicilio.} other {Tu verificación de antecedentes vence en # días. Inicia la renovación para conservar tus categorías a domicilio.}}",
+      "helper_ready": "Todo listo: ya puedes enviar ofertas. Busca trabajo cerca de ti.",
+      "task_match": "Nueva tarea cerca de ti: {title}{hasAmount, select, yes {, {amount}} other {}}.",
+      "data_export_ready": "La copia de tus datos de TasksNearMe que pediste ya está lista para descargar.",
+      "tip_received": "{actorName} agregó una propina{hasAmount, select, yes { de {amount}} other {}} por {title}.",
+      "series_started": "{actorName} inició visitas regulares: {title}.",
+      "series_visit_skipped": "{by, select, payment {Se omitió la visita del {date} para {title}: no se pagó a tiempo} other {{actorName} omitió la visita del {date} para {title}}}.",
+      "series_paused": "{actorName} pausó{hasDate, select, yes { hasta el {date}} other {}} las visitas regulares de {title}.",
+      "series_resumed": "Las visitas regulares de {title} se reanudaron.",
+      "series_stopped": "{by, select, helper {{actorName} va a terminar las visitas regulares de {title}{hasDate, select, yes {. La última visita puede ser el {date}} other {}}} poster {{actorName} detuvo las visitas regulares de {title}} other {Las visitas regulares de {title} se detuvieron}}.",
+      "scheduled_payment_failed": "No pudimos cobrar tu tarjeta por {title}{hasDate, select, yes {. Paga antes del {date} para conservar la reserva} other {}}.",
+      "replacement_needed": "Un cliente necesita un nuevo ayudante para {title}. Envía una oferta si puedes ayudar.",
+      "replacement_search_started": "{actorName} canceló {title}. Tu tarea vuelve a estar abierta a ofertas y avisamos a los ayudantes cercanos."
+    },
+    "pushTitle": "TasksNearMe"
+  },
+  "emails": {
+    "footer": {
+      "why": "Recibes esto porque tienes una cuenta de TasksNearMe con {email}.",
+      "preferences": "Preferencias de correo",
+      "help": "Centro de ayuda",
+      "rewardsTerms": "Términos de las recompensas",
+      "place": "TasksNearMe · Empezamos cerca de casa, en {market}."
+    },
+    "welcome": {
+      "subjectOffer": "¡Te damos la bienvenida, {firstName}! Gana una tarjeta de regalo de {amount} como ayudante fundador",
+      "subject": "Te damos la bienvenida a TasksNearMe, {firstName}",
+      "preheaderOffer": "{left, plural, one {Solo queda # lugar} other {Quedan # lugares}} para nuestros primeros {limit, number} ayudantes en {market}. Así puedes reservar el tuyo.",
+      "preheader": "Tu cuenta está lista: reserva ayuda local o gana dinero a tu propio ritmo.",
+      "title": "Te damos la bienvenida a TasksNearMe",
+      "greeting": "¡Te damos la bienvenida, {firstName}!",
+      "intro": "Tu cuenta está lista. Reserva ayuda local de confianza en {market} o gana dinero a tu propio ritmo como ayudante.",
+      "gift": {
+        "eyebrow": "Recompensa para ayudantes fundadores",
+        "label": "tarjeta de regalo",
+        "for": "Para nuestros primeros {limit, number} ayudantes verificados en {market}",
+        "claimed": "{claimed, number} de {limit, number} lugares reservados",
+        "left": "{left, plural, one {Solo queda # lugar} other {Quedan # lugares}}",
+        "cta": "Reserva tu lugar",
+        "learn": "Cómo se gana dinero"
+      },
+      "steps": {
+        "title": "Tu camino hacia {amount}",
+        "done": "Listo",
+        "account": {
+          "title": "Crea tu cuenta",
+          "body": "Todo listo. Te damos la bienvenida a bordo."
+        },
+        "profile": {
+          "title": "Configura tu perfil de ayudante",
+          "body": "Tus servicios, tus tarifas y la zona que cubres."
+        },
+        "verify": {
+          "title": "Verifícate",
+          "body": "Tu verificación de identidad, la configuración de pagos y cualquier verificación de antecedentes requerida."
+        },
+        "task": {
+          "title": "Termina tu primera tarea de {minimum} o más",
+          "body": "Complétala y recibe tu pago dentro de {days, plural, one {# día} other {# días}} después de la verificación."
+        },
+        "reward": {
+          "title": "Se desbloquea tu tarjeta de regalo de {amount}",
+          "body": "{days, plural, one {# día} other {# días}} después de que se pague la tarea, tras una revisión. Canjéala dentro de {redeemDays, plural, one {# día} other {# días}} desde que se desbloquea. Una recompensa de bienvenida por persona."
+        }
+      },
+      "client": {
+        "title": "¿Prefieres que te echen una mano?",
+        "body": "Publica lo que necesitas, acuerda un precio desde el inicio y paga solo cuando reserves. Elige un tipo de tarea para empezar:",
+        "cta": "Publicar una tarea"
+      },
+      "helper": {
+        "title": "Gana dinero a tu horario",
+        "body": "Elige las tareas que quieras, fija tus tarifas y recibe tu pago cuando el cliente apruebe el trabajo.",
+        "cta": "Conviértete en ayudante"
+      },
+      "signoff": "Nos vemos por el vecindario,",
+      "team": "El equipo de TasksNearMe"
+    },
+    "signInCode": {
+      "subject": "Tu código de TasksNearMe: {code}",
+      "preheader": "Ingrésalo para continuar. Funciona durante {minutes} minutos.",
+      "title": "Tu código para iniciar sesión",
+      "heading": "Este es tu código",
+      "body": "Ingrésalo en la página de inicio de sesión para continuar.",
+      "expires": "Funciona durante {minutes} minutos, una sola vez.",
+      "ignore": "¿No pediste un código? Puedes ignorar este correo: nadie puede iniciar sesión sin él.",
+      "text": "Tu código para iniciar sesión es {code}. Vence en {minutes} minutos. Si no lo pediste, ignora este correo."
+    },
+    "emailChangeCode": {
+      "subject": "Confirma tu nuevo correo para TasksNearMe: {code}",
+      "preheader": "Ingresa este código en la página de tu cuenta. Funciona durante {minutes} minutos.",
+      "title": "Confirma tu nuevo correo",
+      "heading": "Confirma tu nuevo correo",
+      "body": "Ingresa este código en la página de tu cuenta para empezar a usar {email} en TasksNearMe.",
+      "expires": "Funciona durante {minutes} minutos, una sola vez.",
+      "ignore": "¿No lo pediste? Ignora este correo: no cambia nada sin el código.",
+      "text": "Tu código de TasksNearMe es {code}. Ingrésalo en la página de tu cuenta para confirmar {email}; vence en {minutes} minutos. Si no lo pediste, ignora este correo."
+    },
+    "emailChanged": {
+      "subject": "Se cambió tu correo de TasksNearMe",
+      "preheader": "De ahora en adelante te escribiremos a {newEmail}.",
+      "title": "Se cambió tu correo",
+      "heading": "Se cambió tu correo",
+      "body": "Tu cuenta de TasksNearMe ahora usa {newEmail} en lugar de esta dirección. Los códigos de inicio de sesión y las novedades llegarán allí de ahora en adelante.",
+      "notYou": "¿No fuiste tú quien lo cambió? Contacta a soporte de inmediato para que podamos proteger tu cuenta.",
+      "help": "Contactar a soporte",
+      "text": "Tu cuenta de TasksNearMe ahora usa {newEmail} en lugar de esta dirección. ¿No fuiste tú quien lo cambió? Contacta a soporte de inmediato: {helpUrl}"
+    },
+    "phoneChanged": {
+      "subject": "Se cambió tu número de teléfono de TasksNearMe",
+      "preheader": "Tu cuenta ahora usa el número que termina en {last4}.",
+      "title": "Se cambió tu número de teléfono",
+      "heading": "Se cambió tu número de teléfono",
+      "body": "Tu cuenta de TasksNearMe ahora usa el número que termina en {last4}. Los mensajes de texto de reservas y las verificaciones de inicio de sesión llegarán allí de ahora en adelante.",
+      "notYou": "¿No fuiste tú quien lo cambió? Contacta a soporte de inmediato para que podamos proteger tu cuenta.",
+      "help": "Contactar a soporte",
+      "text": "Tu cuenta de TasksNearMe ahora usa el número que termina en {last4}. ¿No fuiste tú quien lo cambió? Contacta a soporte de inmediato: {helpUrl}"
+    },
+    "giftCard": {
+      "subject": "Tu tarjeta de regalo de {amount} está lista",
+      "preheader": "Abre el enlace para elegir tu tarjeta de regalo. Mantenlo en privado: funciona como efectivo.",
+      "title": "Tu tarjeta de regalo está lista",
+      "heading": "Tu tarjeta de regalo de {amount} está lista",
+      "body": "Gracias por ayudar a tus vecinos, {firstName}. Aquí está tu recompensa por {program}.",
+      "programs": {
+        "welcome": "ser ayudante fundador",
+        "repeat": "ser cliente recurrente",
+        "acceptance": "aceptar una oferta",
+        "completion": "completar una tarea"
+      },
+      "cta": "Abrir mi tarjeta de regalo",
+      "safety": "Cualquier persona con el enlace puede usarla, así que no reenvíes este correo. También la encontrarás en tu página de Recompensas.",
+      "rewards": "Página de Recompensas",
+      "help": "Contactar a soporte",
+      "text": "Gracias por ayudar a tus vecinos, {firstName}. Tu tarjeta de regalo de {amount} por {program} está lista: {url}\n\nCualquier persona con el enlace puede usarla, así que no reenvíes este correo. También está en tu página de Recompensas: {rewardsUrl}"
+    },
+    "accountDeleted": {
+      "subject": "Se eliminó tu cuenta de TasksNearMe",
+      "preheader": "Tu perfil y tus datos personales ya no existen.",
+      "title": "Se eliminó tu cuenta",
+      "heading": "Se eliminó tu cuenta",
+      "body": "Como lo pediste, eliminamos tu cuenta de TasksNearMe: tu perfil, tus datos de contacto, tus fotos y tus inicios de sesión ya no existen, y se cerró tu sesión en todas partes.",
+      "kept": "Los registros que exige la ley o que otras personas necesitan se conservan sin tu nombre: reservas, pagos y recibos, reseñas y los mensajes que enviaste a otras personas.",
+      "notYou": "¿No lo pediste? Contáctanos de inmediato.",
+      "help": "Obtener ayuda",
+      "text": "Como lo pediste, eliminamos tu cuenta de TasksNearMe: tu perfil, tus datos de contacto, tus fotos y tus inicios de sesión ya no existen. Los registros que exige la ley o que otras personas necesitan se conservan sin tu nombre. ¿No lo pediste? Contáctanos de inmediato: {helpUrl}"
+    }
+  },
+  "sms": {
+    "phoneCode": "{code} es tu código de TasksNearMe. Funciona durante {minutes} minutos. Nunca te llamaremos para pedírtelo."
+  }
+}

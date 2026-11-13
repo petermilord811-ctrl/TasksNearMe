@@ -37,3 +37,15 @@ const catalogs: Record<AppLocale, Messages> = {
 export function messagesFor(locale: AppLocale): Messages {
   return catalogs[locale];
 }
+
+/**
+ * Something built once per language and kept (a translator for emails: `perLocale((locale) =>
+ * createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.emails' }))`).
+ */
+export function perLocale<T>(make: (locale: AppLocale) => T): (locale: AppLocale) => T {
+  const made = new Map<AppLocale, T>();
+  return (locale) => {
+    if (!made.has(locale)) made.set(locale, make(locale));
+    return made.get(locale)!;
+  };
+}

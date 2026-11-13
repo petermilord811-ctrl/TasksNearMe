@@ -1,14 +1,15 @@
 import { createTranslator } from 'next-intl';
-import { routes } from '@/contracts';
+import { DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
+import { messagesFor, perLocale } from '@/i18n/catalog';
 import type { RenderedEmail } from '@/modules/accounts/emails/welcome';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
-import appMessages from '../../../messages/en/app';
 
 /** The last email to an account's address, once the account is deleted (src/modules/privacy/requests.ts). */
 
-const t = createTranslator({ locale: 'en', messages: appMessages, namespace: 'server.emails.accountDeleted' });
+const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.emails.accountDeleted' }));
 
-export function renderAccountDeletedNotice({ appUrl }: { appUrl: string }): RenderedEmail {
+export function renderAccountDeletedNotice({ appUrl, locale = DEFAULT_LOCALE }: { appUrl: string; locale?: AppLocale }): RenderedEmail {
+  const t = tFor(locale);
   const helpUrl = `${appUrl}${routes.help()}`;
   const preheader = t('preheader');
   const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
@@ -21,7 +22,7 @@ export function renderAccountDeletedNotice({ appUrl }: { appUrl: string }): Rend
   return {
     subject: t('subject'),
     preheader,
-    html: emailLayout({ title: t('title'), preheader, appUrl, body, footer: '' }),
+    html: emailLayout({ title: t('title'), preheader, appUrl, body, footer: '', lang: locale }),
     text: t('text', { helpUrl }),
   };
 }

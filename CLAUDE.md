@@ -29,6 +29,7 @@ When the user starts the `/loop` autopilot, or asks you to keep building on your
 | `src/contracts/**`, `src/shared/**`, `src/fixtures/**` | Claude | Isomorphic only: no server code, no React components |
 | `src/modules/**`, `src/platform/**`, `src/integrations/**`, `src/i18n/**` | Claude | Server and domain code |
 | `messages/en/app/**` | Claude | Top-level namespace `server` only |
+| `messages/es/**`, `content/help/es/**` | Claude | Spanish for every namespace except staff tools (`admin*`, `staff*`) |
 | `public/samples/**` | Claude | Placeholder images for fixtures and seeds |
 | `tests/**` | Claude | e2e (`tests/e2e`), preview harness (`tests/ui-previews`) |
 | `src/ui/**`, `messages/en/ui/**`, `public/ui/**`, `components.json` | **Codex** | Don't restyle or rewrite. Write a fix list for the user to send to Codex instead |
@@ -40,13 +41,13 @@ The only Codex-path files you created are setup stubs: `src/ui/theme/*`, `src/ui
 
 - Read `node_modules/next/dist/docs/` before using a Next API. It is newer than your training data.
 - **Cache Components is on.** Reading `cookies()`, `headers()`, `searchParams`, or `params` must happen inside a `<Suspense>` boundary (use a Codex skeleton as the fallback), or the data must be cached with `"use cache"`. Otherwise the build fails with a blocking-route error.
-- Request middleware is `src/proxy.ts`, not `middleware.ts`.
+- Request middleware is `src/proxy.ts`, not `middleware.ts`. It picks the language: pages live under the `[locale]` root segment (`src/app/[locale]/**`, read with `next/root-params`), and URLs carry no language (`/es/...` also works).
 - Tailwind runs through `@tailwindcss/turbopack` (configured in `next.config.ts`).
 
 ## Wiring pattern
 
 ```tsx
-// src/app/(app)/app/bookings/[bookingId]/page.tsx — Claude
+// src/app/[locale]/(app)/app/(main)/bookings/[bookingId]/page.tsx — Claude
 export default function Page({ params }: { params: Promise<{ bookingId: string }> }) {
   return (
     <Suspense fallback={<BookingHubSkeleton />}>
@@ -112,7 +113,8 @@ Before handing a ticket off, `npm run check` must pass, with the contracts compi
 
 ## Conventions
 
-- TypeScript strict. Money is integer cents. Timestamps are UTC ISO strings, displayed in America/Chicago via `@/shared/format`.
+- TypeScript strict. Money is integer cents. Timestamps are UTC ISO strings, displayed in America/Chicago via `@/shared/format`: in components, `const { formatDate } = useFormat()` (`@/ui/lib/format`) formats in the page's language; server code passes the reader's `locale`.
+- English and Spanish (`docs/automation/decisions.md`, 2026-11-13). Every message in `messages/en` needs its Spanish in `messages/es` (same keys, ICU arguments and tags): `npm run i18n:check -- <namespace>` shows what's missing, and `src/i18n/catalog.test.ts` fails otherwise. Emails, texts and push go out in the recipient's `users.locale`.
 - Canonical people and money values: `src/fixtures` (mirrors `docs/ui/ui-contract.md` §2–§3).
 - Branches: `ui/UI-xxx-*` for Codex work, `feat/*` for yours. Commit or push only when the user asks.
 - Keep `docs/blueprint/` authoritative. Change it only when a product decision changes, and say so.

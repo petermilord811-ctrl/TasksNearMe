@@ -8,6 +8,7 @@ import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/qu
 import { parseTaskBoardQuery } from '@/modules/tasks/projections';
 import { PageSkeleton } from '@/ui/components';
 import { TaskBoardScreen } from '@/ui/screens/public';
+import { languageAlternates } from '@/i18n/metadata';
 
 export async function generateStaticParams() {
   const slugs = await listPublicMarketSlugs();
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   if (!page) return {};
   const values = { market: page.data.market.name };
   // Filtered and paged URLs all point search engines at the plain board.
-  return { title: t('title', values), description: t('description', values), alternates: { canonical: routes.taskBoard(market) } };
+  return { title: t('title', values), description: t('description', values), alternates: await languageAlternates(routes.taskBoard(market)) };
 }
 
 /** Filters live in the URL, so the list renders per request inside Suspense; the data is cached per query. */

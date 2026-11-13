@@ -2,7 +2,7 @@ import 'server-only';
 import { isAPIError } from 'better-auth/api';
 import { and, eq, ne } from 'drizzle-orm';
 import type { ActionResult, EmailChangeConfirmInput, EmailInput, OneTimeCodeInput, PhoneInput } from '@/contracts';
-import { emailChangeConfirmInputSchema, emailInputSchema, oneTimeCodeInputSchema, phoneInputSchema } from '@/contracts';
+import { emailChangeConfirmInputSchema, emailInputSchema, localeOrDefault, oneTimeCodeInputSchema, phoneInputSchema } from '@/contracts';
 import type { EmailProvider } from '@/integrations/email';
 import { fieldError, rateLimited, validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -48,7 +48,7 @@ const expiredCode: ActionResult = { ok: false, code: 'expired', fieldErrors: { c
 export function createContactChange({ db, auth, email, phoneVerification, appUrl, now = () => new Date() }: ContactChangeDeps) {
   async function loadUser(userId: string) {
     const [user] = await db
-      .select({ email: users.email, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt })
+      .select({ email: users.email, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt, locale: users.locale })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
@@ -127,7 +127,7 @@ export function createContactChange({ db, auth, email, phoneVerification, appUrl
         targetId: userId,
         metadata: { previousEmail, newEmail },
       });
-      await notify(previousEmail, renderEmailChangedNotice({ newEmail, appUrl }), 'email-changed');
+      await notify(previousEmail, renderEmailChangedNotice({ newEmail, appUrl, locale: localeOrDefault(user.locale) }), 'email-changed');
       return { ok: true, code: 'updated' };
     },
 
@@ -176,7 +176,7 @@ export function createContactChange({ db, auth, email, phoneVerification, appUrl
         targetId: userId,
         metadata: { last4, ...(user.phone ? { previousLast4: user.phone.slice(-4) } : {}) },
       });
-      if (user.phone && user.phone !== result.phone) await notify(user.email, renderPhoneChangedNotice({ last4, appUrl }), 'phone-changed');
+      if (user.phone && user.phone !== result.phone) await notify(user.email, renderPhoneChangedNotice({ last4, appUrl, locale: localeOrDefault(user.locale) }), 'phone-changed');
       return { ok: true, code: 'updated' };
     },
   };

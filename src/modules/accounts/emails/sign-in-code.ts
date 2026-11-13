@@ -1,5 +1,6 @@
 import { createTranslator } from 'next-intl';
-import appMessages from '../../../../messages/en/app';
+import { DEFAULT_LOCALE, type AppLocale } from '@/contracts/locale';
+import { messagesFor, perLocale } from '@/i18n/catalog';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailLayout, esc } from '@/platform/email/layout';
 import type { RenderedEmail } from './welcome';
 
@@ -8,9 +9,10 @@ import type { RenderedEmail } from './welcome';
  * and what to do if you didn't ask for it. The plain-text version is the same sentence as before.
  */
 
-const t = createTranslator({ locale: 'en', messages: appMessages, namespace: 'server.emails' });
+const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.emails' }));
 
-export function renderSignInCodeEmail({ code, minutes, appUrl }: { code: string; minutes: number; appUrl: string }): RenderedEmail {
+export function renderSignInCodeEmail({ code, minutes, appUrl, locale = DEFAULT_LOCALE }: { code: string; minutes: number; appUrl: string; locale?: AppLocale }): RenderedEmail {
+  const t = tFor(locale);
   const preheader = t('signInCode.preheader', { minutes });
   const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
 <h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:30px;line-height:36px;font-weight:800;letter-spacing:-0.8px;color:${EMAIL_COLORS.ink};">${esc(t('signInCode.heading'))}</h1>
@@ -26,7 +28,7 @@ export function renderSignInCodeEmail({ code, minutes, appUrl }: { code: string;
   return {
     subject: t('signInCode.subject', { code }),
     preheader,
-    html: emailLayout({ title: t('signInCode.title'), preheader, appUrl, body, footer: '', css }),
+    html: emailLayout({ title: t('signInCode.title'), preheader, appUrl, body, footer: '', css, lang: locale }),
     text: t('signInCode.text', { code, minutes }),
   };
 }

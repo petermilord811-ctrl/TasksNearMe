@@ -10,8 +10,11 @@ import { mapTiles } from '@/modules/markets/map-tiles';
 import { fontVariables } from '@/ui/theme/fonts';
 import { themeInitScript } from '@/ui/theme/theme-script';
 import '@/ui/theme/globals.css';
+import { appUrl } from '@/integrations/oauth';
 
 export const metadata: Metadata = {
+  // Canonical and language links (src/i18n/metadata.ts) are made absolute against the app's address.
+  metadataBase: new URL(appUrl()),
   title: { default: 'TasksNearMe', template: '%s · TasksNearMe' },
   description: 'Book trusted local help for everyday tasks in Austin.',
   applicationName: 'TasksNearMe',

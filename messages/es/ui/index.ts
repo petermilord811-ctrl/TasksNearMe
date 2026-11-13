@@ -3,9 +3,11 @@
 // in English. src/i18n/catalog.test.ts checks every file against English and that each one is registered here.
 import account from './account.json';
 import actionReasons from './actionReasons.json';
+import actions from './actions.json';
 import availability from './availability.json';
 import bookingComplete from './bookingComplete.json';
 import bookingConfirm from './bookingConfirm.json';
+import bookingHub from './bookingHub.json';
 import bookingSheets from './bookingSheets.json';
 import bookings from './bookings.json';
 import brand from './brand.json';
@@ -35,6 +37,7 @@ import location from './location.json';
 import money from './money.json';
 import myOffers from './myOffers.json';
 import myTasks from './myTasks.json';
+import notifications from './notifications.json';
 import offers from './offers.json';
 import payments from './payments.json';
 import paymentsPage from './paymentsPage.json';
@@ -50,19 +53,23 @@ import report from './report.json';
 import reportProblem from './reportProblem.json';
 import review from './review.json';
 import reviews from './reviews.json';
+import rewards from './rewards.json';
 import safety from './safety.json';
 import savedHelpers from './savedHelpers.json';
+import series from './series.json';
 import shell from './shell.json';
 import signIn from './signIn.json';
+import status from './status.json';
 import support from './support.json';
 import supportCase from './supportCase.json';
 import taskBoard from './taskBoard.json';
 import taskCard from './taskCard.json';
 import taskManage from './taskManage.json';
+import thread from './thread.json';
 import timeline from './timeline.json';
 import verification from './verification.json';
 import waitlist from './waitlist.json';
 
-const uiMessages = { account, actionReasons, availability, bookingComplete, bookingConfirm, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helperCard, helperOnboarding, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, safety, savedHelpers, shell, signIn, support, supportCase, taskBoard, taskCard, taskManage, timeline, verification, waitlist };
+const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helperCard, helperOnboarding, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, taskCard, taskManage, thread, timeline, verification, waitlist };
 
 export default uiMessages;

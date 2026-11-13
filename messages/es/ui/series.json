@@ -1,0 +1,148 @@
+{
+  "schedule": {
+    "weekly": "Cada semana, {weekday} a las {time}",
+    "biweekly": "Cada 2 semanas, {weekday} a las {time}",
+    "monthly": "Cada mes, el {nth} {weekday} a las {time}",
+    "weekday": "{day, select, 0 {domingo} 1 {lunes} 2 {martes} 3 {miércoles} 4 {jueves} 5 {viernes} 6 {sábado} other {}}",
+    "nth": "{n, select, 1 {primer} 2 {segundo} 3 {tercer} 4 {cuarto} other {último}}",
+    "cadence": {
+      "once": "Solo una vez",
+      "weekly": "Cada semana",
+      "biweekly": "Cada 2 semanas",
+      "monthly": "Cada mes"
+    }
+  },
+  "back": "Reservas",
+  "withHelper": "Con {name}",
+  "withClient": "Para {name}",
+  "status": {
+    "active": "Visitas regulares",
+    "paused": "En pausa hasta el {date}",
+    "ending": "Termina después del {date}",
+    "ended": "Terminadas",
+    "canceled": "Detenidas"
+  },
+  "scheduleTitle": "Cómo se repite",
+  "place": "{category} · {area}",
+  "length": "{hours} por visita",
+  "since": "Empezaron el {date}",
+  "completed": "{count, plural, =0 {Aún no hay visitas hechas} one {# visita hecha} other {# visitas hechas}}",
+  "payment": {
+    "charged": "Cada visita se cobra a {card} 2 días antes.",
+    "missing": "No hay ninguna tarjeta guardada, así que no se pueden cobrar las próximas visitas. Elige una tarjeta para conservarlas.",
+    "helper": "La tarjeta de {name} se cobra 2 días antes de cada visita. Verás la dirección cuando se pague una visita."
+  },
+  "notes": {
+    "paused": "En pausa hasta el {date}. Las visitas anteriores a esa fecha se omiten y no se cobran.",
+    "ending": "Estas visitas regulares terminan después del {date}. Las visitas hasta entonces se hacen como se reservaron.",
+    "ended": "Estas visitas regulares terminaron.",
+    "canceled": "Estas visitas regulares se detuvieron. Las visitas pagadas se quedan en sus páginas de reserva.",
+    "endingByOther": "{name} va a terminar estas visitas regulares. Las visitas hasta el {date} se hacen como se reservaron.",
+    "canceledByOther": "{name} detuvo estas visitas regulares. Las visitas pagadas se quedan en sus páginas de reserva."
+  },
+  "actions": {
+    "pause_series": "Pausar",
+    "resume_series": "Reanudar ahora",
+    "change_card": "Cambiar tarjeta",
+    "cancel_series": "Detener visitas regulares",
+    "end_series": "Terminar visitas regulares",
+    "message": "Escribir a {name}"
+  },
+  "actionsLabel": "Acciones de las visitas regulares",
+  "pause": {
+    "title": "Pausar las visitas regulares",
+    "description": "Las visitas anteriores a la fecha que elijas se omiten y no se cobran. Se reanudan en esa fecha.",
+    "date": "Reanudar el",
+    "dateHint": "Cualquier día del {first} al {last}.",
+    "outOfRange": "Elige un día del {first} al {last}.",
+    "submit": "Pausar",
+    "pending": "Pausando…",
+    "success": "Las visitas regulares están en pausa."
+  },
+  "changeCard": {
+    "title": "Cambiar la tarjeta",
+    "description": "Las próximas visitas se cobran a la tarjeta que elijas. Si el cobro de una visita falló, se vuelve a intentar con ella de inmediato.",
+    "pick": "Tarjeta",
+    "noCards": "Aún no tienes ninguna tarjeta guardada.",
+    "addCard": "Agregar una tarjeta",
+    "submit": "Usar esta tarjeta",
+    "pending": "Guardando…",
+    "success": "La tarjeta se cambió."
+  },
+  "stop": {
+    "title": "¿Detener las visitas regulares?",
+    "description": "Las visitas que aún no se han pagado se eliminan. Las visitas pagadas se quedan y puedes cancelarlas en sus páginas de reserva.",
+    "confirm": "Detener visitas regulares",
+    "success": "Las visitas regulares se detuvieron."
+  },
+  "end": {
+    "title": "¿Terminar las visitas regulares?",
+    "description": "Las visitas hasta el {date} se siguen haciendo. Las posteriores se eliminan y se avisa a {name}.",
+    "confirm": "Terminar visitas regulares",
+    "success": "Las visitas regulares terminarán después del {date}."
+  },
+  "resume": {
+    "success": "Las visitas regulares se reanudaron."
+  },
+  "skip": {
+    "title": "¿Omitir la visita del {date}?",
+    "descriptionPoster": "No se cobra nada por ella. Las visitas posteriores se quedan en el calendario.",
+    "descriptionHelper": "Se avisa a {name} y no se cobra nada por ella. Las visitas posteriores se quedan en el calendario.",
+    "confirm": "Omitir visita",
+    "success": "La visita se omitió."
+  },
+  "keep": "Conservarlas",
+  "goBack": "Volver",
+  "changed": "Esto cambió. Vuelve a cargar la página para ver qué puedes hacer ahora.",
+  "reload": "Volver a cargar",
+  "upcoming": "Próximas visitas",
+  "noUpcoming": "No hay visitas próximas.",
+  "past": "Visitas anteriores",
+  "visit": {
+    "number": "Visita {index}",
+    "chargeAtPoster": "Tu tarjeta se cobra el {date}",
+    "chargeAtHelper": "La tarjeta de {name} se cobra el {date}",
+    "payByPoster": "Paga antes del {date} o se omite",
+    "payByHelper": "Esperando el pago de {name} hasta el {date}"
+  },
+  "state": {
+    "scheduled": "En el calendario",
+    "payment_due": "Falta el pago",
+    "booked": "Reservada y pagada",
+    "completed": "Hecha",
+    "skipped": "Omitida",
+    "canceled": "Cancelada"
+  },
+  "skippedBy": {
+    "poster": "Omitida por {name}",
+    "helper": "Omitida por {name}",
+    "payment": "Omitida: no se pagó a tiempo",
+    "pause": "Omitida durante la pausa"
+  },
+  "skippedByYou": "La omitiste",
+  "failure": {
+    "payment_declined": "La tarjeta fue rechazada.",
+    "insufficient_funds": "La tarjeta no tenía fondos suficientes.",
+    "requires_bank_verification": "Tu banco quiere que confirmes el pago.",
+    "no_card": "No hay ninguna tarjeta guardada."
+  },
+  "visitActions": {
+    "skip_visit": "Omitir",
+    "pay_visit": "Pagar ahora",
+    "open_booking": "Ver reserva"
+  },
+  "visitActionsLabel": "Visita del {date}",
+  "perVisitTotal": "Cada visita: tu total",
+  "perVisitEarnings": "Cada visita: lo que ganas",
+  "previews": {
+    "group": "Visitas regulares",
+    "client-active": "Cliente · activas",
+    "client-payment-due": "Cliente · falló un cobro",
+    "client-no-card": "Cliente · sin tarjeta guardada",
+    "client-paused": "Cliente · en pausa",
+    "client-monthly": "Cliente · mensuales",
+    "helper-active": "Ayudante · activas",
+    "helper-ended": "Ayudante · terminan tras aviso",
+    "client-stopped": "Cliente · detenidas"
+  }
+}

@@ -28,3 +28,22 @@ describe('email and text message content', () => {
     expect(deliveryContent({ ...base, type: 'booking_confirmed', title: null, params: null }).subject).toBe('Your booking for your task is confirmed.');
   });
 });
+
+describe('in Spanish', () => {
+  const base = { title: 'Armar un escritorio', actorName: 'Jordan T.', target: { kind: 'booking' as const, bookingId: 'bkg_desk' }, userId: 'usr_maya' };
+
+  it.each(NOTIFICATION_TYPES)('writes %s in Spanish, with no placeholders left', (type) => {
+    const content = deliveryContent({ ...base, type, params: { amountCents: 5400, minutes: 10, hours: 4 } }, 'es');
+    for (const text of [content.subject, content.text, content.sms]) expect(text).not.toMatch(/undefined|NaN|\{|\}|server\.notifications/);
+    expect(content.html).toContain('<html lang="es"');
+    expect(content.sms).toMatch(/^TasksNearMe: .+ http.+\/app\/bookings\/bkg_desk$/);
+  });
+
+  it('words the details, the date and the email in Spanish', () => {
+    expect(deliveryContent({ ...base, type: 'offer_received', params: { amountCents: 6000 } }, 'es').subject).toBe('Jordan T. envió una oferta de $60.00 para Armar un escritorio.');
+    const english = deliveryContent({ ...base, type: 'offer_received', params: { amountCents: 6000 } });
+    const spanish = deliveryContent({ ...base, type: 'offer_received', params: { amountCents: 6000 } }, 'es');
+    expect(spanish.text).not.toBe(english.text);
+    expect(spanish.push.body).toBe(spanish.subject);
+  });
+});

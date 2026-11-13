@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getPublicTaskPageData, listRecentTaskSlugs } from '@/modules/marketing/queries';
 import { PublicTaskScreen } from '@/ui/screens/public';
+import { languageAlternates } from '@/i18n/metadata';
+import { routes } from '@/contracts';
 
 export async function generateStaticParams() {
   const slugs = await listRecentTaskSlugs();
@@ -10,11 +12,12 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/tasks/[taskSlug]'>): Promise<Metadata> {
-  const page = await getPublicTaskPageData((await params).taskSlug);
+  const { taskSlug } = await params;
+  const page = await getPublicTaskPageData(taskSlug);
   if (!page) return {};
   const { task, acceptingOffers } = page.data;
   // Closed tasks stay reachable for links but drop out of search results.
-  return { title: task.title, description: task.excerpt, ...(acceptingOffers ? {} : { robots: { index: false } }) };
+  return { title: task.title, description: task.excerpt, alternates: await languageAlternates(routes.publicTask(taskSlug)), ...(acceptingOffers ? {} : { robots: { index: false } }) };
 }
 
 /** What anyone may see about a task: general area only, never the address or photos. */

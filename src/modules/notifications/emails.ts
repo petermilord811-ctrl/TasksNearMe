@@ -1,8 +1,8 @@
 import { createTranslator } from 'next-intl';
-import type { AttentionTarget, NotificationTopic, NotificationType } from '@/contracts';
-import { routes } from '@/contracts';
+import type { AppLocale, AttentionTarget, NotificationTopic, NotificationType } from '@/contracts';
+import { DEFAULT_LOCALE, routes } from '@/contracts';
+import { messagesFor, perLocale } from '@/i18n/catalog';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
-import appMessages from '../../../messages/en/app';
 import { isLockedPreference } from './delivery-domain';
 import { oneClickUnsubscribeUrl, unsubscribePageUrl } from './unsubscribe';
 
@@ -12,7 +12,7 @@ import { oneClickUnsubscribeUrl, unsubscribePageUrl } from './unsubscribe';
  * every other topic carries an unsubscribe link and the one-click `List-Unsubscribe` headers.
  */
 
-const t = createTranslator({ locale: 'en', messages: appMessages, namespace: 'server.notifications.email' });
+const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.notifications.email' }));
 
 export interface NotificationEmailInput {
   type: NotificationType;
@@ -24,6 +24,8 @@ export interface NotificationEmailInput {
   url: string;
   userId: string;
   appUrl: string;
+  /** The recipient's language (English when left out). */
+  locale?: AppLocale;
 }
 
 export interface NotificationEmail {
@@ -34,7 +36,8 @@ export interface NotificationEmail {
 }
 
 export function renderNotificationEmail(input: NotificationEmailInput): NotificationEmail {
-  const { type, topic, sentence, target, url, userId, appUrl } = input;
+  const { type, topic, sentence, target, url, userId, appUrl, locale = DEFAULT_LOCALE } = input;
+  const t = tFor(locale);
   // Not every type has a next step (the sentence says it all).
   const nextKey = `next.${type}` as 'next.offer_received';
   const next = t.has(nextKey) ? t(nextKey) : undefined;
@@ -64,7 +67,7 @@ ${next ? `<p class="muted" style="margin:12px 0 0;font-family:${EMAIL_FONT};font
   return {
     subject: sentence,
     text,
-    html: emailLayout({ title: sentence, preheader: next ?? sentence, appUrl, body, footer }),
+    html: emailLayout({ title: sentence, preheader: next ?? sentence, appUrl, body, footer, lang: locale }),
     ...(locked
       ? {}
       : { headers: { 'List-Unsubscribe': `<${oneClickUnsubscribeUrl(appUrl, userId, topic)}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }),

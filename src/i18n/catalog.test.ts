@@ -12,13 +12,10 @@ import { layOver, messagesFor } from './catalog';
  */
 
 /**
- * Namespaces still changing in English (regular visits, in progress): missing Spanish is allowed here until
- * they settle and are translated. Their existing translations are still checked. Keep this list short.
+ * Namespaces whose English is still being written: missing Spanish is allowed in them until it settles
+ * (their existing translations are still checked). Empty when every namespace is translated.
  */
-const PENDING = new Set([
-  'actions', 'bookingHub', 'notifications', 'rewards', 'server', 'status', 'thread',
-  'series', 'bookings', 'bookingConfirm', 'bookingSheets', 'helperCard', 'clients', 'proposal', 'payments',
-]);
+const PENDING = new Set<string>([]);
 
 describe('Spanish catalogs', () => {
   const report = checkCatalogs({ locales: ['es'] }).es ?? {};

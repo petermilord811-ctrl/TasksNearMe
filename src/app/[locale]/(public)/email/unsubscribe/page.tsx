@@ -5,8 +5,12 @@ import { getUnsubscribePage } from '@/modules/notifications/unsubscribe-service'
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { EmailUnsubscribeScreen } from '@/ui/screens/account';
+import { getTranslations } from 'next-intl/server';
 
-export const metadata: Metadata = { title: 'Email preferences', robots: { index: false, follow: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('account.unsubscribe');
+  return { title: t('title'), robots: { index: false, follow: false } };
+}
 
 /** From the unsubscribe link in a notification email (no sign-in: the link is signed). */
 export default function EmailUnsubscribePage({ searchParams }: PageProps<'/[locale]/email/unsubscribe'>) {

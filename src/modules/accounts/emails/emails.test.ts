@@ -69,3 +69,14 @@ describe('the sign-in code email', () => {
     expect(email.html).toContain('It works for 10 minutes, once.');
   });
 });
+
+describe('the emails in Spanish', () => {
+  it('sends the sign-in code in Spanish, marked as Spanish', () => {
+    const email = renderSignInCodeEmail({ code: '482915', minutes: 10, appUrl: 'https://tasksnearme.example', locale: 'es' });
+    expect(email.subject).toBe('Tu código de TasksNearMe: 482915');
+    expect(email.text).toContain('482915');
+    expect(email.text).toContain('10 minutos');
+    expect(email.html).toContain('<html lang="es"');
+    expect(renderSignInCodeEmail({ code: '482915', minutes: 10, appUrl: 'https://tasksnearme.example' }).html).toContain('<html lang="en"');
+  });
+});

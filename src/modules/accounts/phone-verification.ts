@@ -1,4 +1,7 @@
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
+import { createTranslator } from 'next-intl';
+import { localeOrDefault } from '@/contracts/locale';
+import { messagesFor, perLocale } from '@/i18n/catalog';
 import { and, desc, eq, ne } from 'drizzle-orm';
 import { SmsRejectedError, type SmsSender } from '@/integrations/sms';
 import type { Db } from '@/platform/db/connect';
@@ -40,6 +43,9 @@ export interface PhoneVerificationDeps {
   secret: string;
   now?: () => Date;
 }
+
+/** The code's text message, in the person's language. */
+const smsFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.sms' }));
 
 export function createPhoneVerification({ db, sms, secret, now = () => new Date() }: PhoneVerificationDeps) {
   const hashCode = (id: string, code: string) => createHmac('sha256', secret).update(`${id}:${code}`).digest('hex');
@@ -116,7 +122,8 @@ export function createPhoneVerification({ db, sms, secret, now = () => new Date(
         updatedAt: at,
       });
       try {
-        await sms.send({ to: phone, text: `${code} is your TasksNearMe code. It works for 10 minutes. We'll never call to ask for it.` });
+        const [person] = await db.select({ locale: users.locale }).from(users).where(eq(users.id, userId)).limit(1);
+        await sms.send({ to: phone, text: smsFor(localeOrDefault(person?.locale))('phoneCode', { code, minutes: PHONE_CODE_LIFETIME_MS / 60_000 }) });
       } catch (error) {
         // The provider can't text this number (not a mobile, or it replied STOP): ask for another one.
         if (!(error instanceof SmsRejectedError)) throw error;

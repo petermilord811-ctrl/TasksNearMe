@@ -1,13 +1,13 @@
 import { eq } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
-import { routes } from '@/contracts';
+import { DEFAULT_LOCALE, localeOrDefault, routes, type AppLocale } from '@/contracts';
+import { messagesFor, perLocale } from '@/i18n/catalog';
 import type { EmailProvider } from '@/integrations/email';
 import { users } from '@/modules/accounts/schema';
 import type { RenderedEmail } from '@/modules/accounts/emails/welcome';
 import type { Db } from '@/platform/db/connect';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 import { formatMoney } from '@/shared/format';
-import appMessages from '../../../messages/en/app';
 
 /**
  * The gift card email (backlog B-051: "LINK delivery in-app plus email fallback"): when a reward's gift
@@ -15,12 +15,14 @@ import appMessages from '../../../messages/en/app';
  * not to forward it. The Rewards page keeps it too.
  */
 
-const t = createTranslator({ locale: 'en', messages: appMessages, namespace: 'server.emails.giftCard' });
+const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.emails.giftCard' }));
 
 type Program = 'welcome' | 'repeat' | 'acceptance' | 'completion';
 const isProgram = (value: string): value is Program => ['welcome', 'repeat', 'acceptance', 'completion'].includes(value);
 
-export function renderGiftCardEmail(input: { firstName: string; amountCents: number; program: string; url: string; appUrl: string }): RenderedEmail {
+export function renderGiftCardEmail(input: { firstName: string; amountCents: number; program: string; url: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
+  const locale = input.locale ?? DEFAULT_LOCALE;
+  const t = tFor(locale);
   const amount = formatMoney(input.amountCents);
   const program = t(`programs.${isProgram(input.program) ? input.program : 'welcome'}`);
   const rewardsUrl = `${input.appUrl}${routes.app.rewards()}`;
@@ -48,10 +50,10 @@ export async function sendGiftCardEmail(
 ): Promise<void> {
   if (!grant.deliveryUrl) return;
   try {
-    const [helper] = await db.select({ email: users.email, firstName: users.firstName }).from(users).where(eq(users.id, grant.helperUserId)).limit(1);
+    const [helper] = await db.select({ email: users.email, firstName: users.firstName, locale: users.locale }).from(users).where(eq(users.id, grant.helperUserId)).limit(1);
     if (!helper?.email) return;
     const url = grant.deliveryUrl.startsWith('/') ? `${appUrl}${grant.deliveryUrl}` : grant.deliveryUrl;
-    const rendered = renderGiftCardEmail({ firstName: helper.firstName || 'there', amountCents: grant.amountCents, program: grant.program, url, appUrl });
+    const rendered = renderGiftCardEmail({ firstName: helper.firstName || 'there', amountCents: grant.amountCents, program: grant.program, url, appUrl, locale: localeOrDefault(helper.locale) });
     await email.send({ to: helper.email, subject: rendered.subject, text: rendered.text, html: rendered.html, tag: 'gift-card' });
   } catch (error) {
     console.error('[gift-card-email]', error);

@@ -1,3 +1,4 @@
+import type { AppLocale } from '@/contracts/locale';
 /**
  * TasksNearMe's email layout: plain tables and inline styles, so it reads the same in Gmail, Apple Mail and
  * Outlook. Hover effects, dark mode and small animations sit in the <style> block for the apps that support
@@ -49,6 +50,8 @@ export interface EmailLayoutInput {
   footer: string;
   /** Extra CSS for this email's own pieces. */
   css?: string;
+  /** The language it's written in (the recipient's), for mail apps and screen readers. */
+  lang?: AppLocale;
 }
 
 const BASE_CSS = `
@@ -78,11 +81,11 @@ const BASE_CSS = `
 `;
 
 /** The whole document: the page color, the logo, one card with the body rows, and the footer. */
-export function emailLayout({ title, preheader, appUrl, body, footer, css = '' }: EmailLayoutInput): string {
+export function emailLayout({ title, preheader, appUrl, body, footer, css = '', lang = 'en' }: EmailLayoutInput): string {
   // Spacer after the preheader, so inbox previews don't run on into the body text.
   const spacer = '&#8204;&nbsp;'.repeat(60);
   return `<!doctype html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<html lang="${lang}" xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

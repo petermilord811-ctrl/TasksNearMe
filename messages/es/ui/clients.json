@@ -59,7 +59,11 @@
     "expiry": "La propuesta vence en 48 horas o 2 horas antes del inicio, lo que ocurra primero.",
     "send": "Enviar propuesta",
     "sending": "Enviando propuesta…",
-    "sent": "Propuesta enviada. Tu cliente puede aceptar y pagar para reservar."
+    "sent": "Propuesta enviada. Tu cliente puede aceptar y pagar para reservar.",
+    "repeat": "Repetir",
+    "repeatOnce": "Solo esta reserva.",
+    "repeatPickDate": "Elige la fecha y la hora de inicio para ver el horario.",
+    "repeatHint": "{schedule}. Cada visita se cobra a la tarjeta de {client} 2 días antes. Puedes omitir una visita hasta con 2 días de anticipación, o terminar las visitas con una semana de aviso."
   },
   "formPreviews": {
     "group": "Proponer una reserva",
@@ -82,6 +86,8 @@
       "limit_reached": "Propuesta — límite de la cuenta",
       "identity_required": "Se necesita verificación de identidad",
       "unknown": "Propuesta — no se pudo enviar"
-    }
+    },
+    "repeatChoice": "Tarea de jardín: opciones de repetición",
+    "repeatBiweekly": "Cada 2 semanas, con el horario"
   }
 }

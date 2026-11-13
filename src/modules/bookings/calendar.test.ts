@@ -21,3 +21,11 @@ describe('booking calendar file', () => {
     expect(bookingCalendarFile(remoteBookingHelperConfirmed, 'https://example.test/b', now)).toContain('LOCATION:Remote');
   });
 });
+
+describe('booking calendar file in Spanish', () => {
+  it('describes the booking in Spanish', () => {
+    const now = new Date('2026-11-14T15:00:00.000Z');
+    expect(bookingCalendarFile(remoteBookingHelperConfirmed, 'https://example.test/b', now, 'es')).toContain('LOCATION:Remoto');
+    expect(bookingCalendarFile(deskBookingHelperConfirmed, 'https://example.test/b', now, 'es')).toMatch(/DESCRIPTION:Con .+\. Detalles y dirección: https:\/\/example\.test\/b/);
+  });
+});

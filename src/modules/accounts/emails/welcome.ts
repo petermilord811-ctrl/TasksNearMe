@@ -1,7 +1,7 @@
 import { createTranslator } from 'next-intl';
-import { routes } from '@/contracts';
+import { DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
+import { messagesFor, perLocale } from '@/i18n/catalog';
 import { formatMoney } from '@/shared/format';
-import appMessages from '../../../../messages/en/app';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 
 /**
@@ -11,7 +11,7 @@ import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout,
  * start. Then a way in for people who came to book help: one link per kind of task. Every link is absolute.
  */
 
-const t = createTranslator({ locale: 'en', messages: appMessages, namespace: 'server.emails' });
+const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.emails' }));
 
 /** The landing page's category colors, for the task links. */
 const CATEGORY_COLORS: Record<string, string> = {
@@ -42,6 +42,8 @@ export interface WelcomeEmailInput {
   offer?: WelcomeOffer;
   /** Kinds of task to start a post from, in display order. */
   categories: { slug: string; name: string }[];
+  /** The recipient's language (English when left out). */
+  locale?: AppLocale;
 }
 
 export interface RenderedEmail {
@@ -70,7 +72,7 @@ const CSS = `
   @media (prefers-reduced-motion: reduce) { .gift-amount { animation: none !important; } }
 `;
 
-function stepRow(marker: string, title: string, text: string, state: 'done' | 'next' | 'reward', last = false): string {
+function stepRow(marker: string, title: string, text: string, state: 'done' | 'next' | 'reward', last = false, doneLabel = ''): string {
   const circle =
     state === 'done'
       ? `<td class="step-done" width="36" height="36" align="center" valign="middle" style="width:36px;height:36px;border-radius:999px;background:${EMAIL_COLORS.success};color:#ffffff;font-family:${EMAIL_FONT};font-size:18px;font-weight:700;">&#10003;</td>`
@@ -83,13 +85,15 @@ function stepRow(marker: string, title: string, text: string, state: 'done' | 'n
 ${last ? '' : `<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="36"><tr><td align="center"><div class="rule" style="width:2px;height:22px;background:${EMAIL_COLORS.border};margin:4px auto 4px;"></div></td></tr></table>`}
 </td>
 <td valign="top" style="padding:6px 0 0 14px;">
-<p class="ink" style="margin:0;${body}font-weight:700;${ink}">${esc(title)}${state === 'done' ? ` <span style="display:inline-block;margin-left:6px;padding:1px 9px;border-radius:999px;background:#e3f3e8;color:${EMAIL_COLORS.success};font-size:12px;line-height:20px;font-weight:700;vertical-align:1px;">${esc(t('welcome.steps.done'))}</span>` : ''}</p>
+<p class="ink" style="margin:0;${body}font-weight:700;${ink}">${esc(title)}${state === 'done' ? ` <span style="display:inline-block;margin-left:6px;padding:1px 9px;border-radius:999px;background:#e3f3e8;color:${EMAIL_COLORS.success};font-size:12px;line-height:20px;font-weight:700;vertical-align:1px;">${esc(doneLabel)}</span>` : ''}</p>
 <p class="muted" style="margin:2px 0 ${last ? '0' : '10px'};font-family:${EMAIL_FONT};font-size:14px;line-height:21px;${muted}">${esc(text)}</p>
 </td>
 </tr>`;
 }
 
 export function renderWelcomeEmail(input: WelcomeEmailInput): RenderedEmail {
+  const locale = input.locale ?? DEFAULT_LOCALE;
+  const t = tFor(locale);
   const url = (path: string) => `${input.appUrl}${path}`;
   const offer = input.offer;
   const amount = offer ? formatMoney(offer.amountCents).replace(/\.00$/, '') : '';
@@ -132,7 +136,7 @@ export function renderWelcomeEmail(input: WelcomeEmailInput): RenderedEmail {
     ? `<tr><td class="card-pad" style="padding:28px 40px 4px;">
 <h2 class="ink" style="margin:0 0 16px;font-family:${EMAIL_DISPLAY_FONT};font-size:22px;line-height:28px;font-weight:800;letter-spacing:-0.5px;${ink}">${esc(t('welcome.steps.title', { amount }))}</h2>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-${stepRow('1', t('welcome.steps.account.title'), t('welcome.steps.account.body'), 'done')}
+${stepRow('1', t('welcome.steps.account.title'), t('welcome.steps.account.body'), 'done', false, t('welcome.steps.done'))}
 ${stepRow('2', t('welcome.steps.profile.title'), t('welcome.steps.profile.body'), 'next')}
 ${stepRow('3', t('welcome.steps.verify.title'), t('welcome.steps.verify.body'), 'next')}
 ${stepRow('4', t('welcome.steps.task.title', { minimum }), t('welcome.steps.task.body', { days: offer.windowDays }), 'next')}
@@ -172,7 +176,7 @@ ${emailButton({ href: url(routes.becomeAHelper()), label: t('welcome.helper.cta'
 <p style="margin:8px 0 0;">${link(url(routes.app.account()), t('footer.preferences'))} &nbsp;·&nbsp; ${link(url(routes.help()), t('footer.help'))}${offer ? ` &nbsp;·&nbsp; ${link(url(routes.legal('rewards-terms')), t('footer.rewardsTerms'))}` : ''}</p>
 <p style="margin:8px 0 0;">${esc(t('footer.place', { market: input.market }))}</p>`;
 
-  const html = emailLayout({ title: t('welcome.title'), preheader, appUrl: input.appUrl, body: hero + gift + steps + client + signoff, footer, css: CSS });
+  const html = emailLayout({ title: t('welcome.title'), preheader, appUrl: input.appUrl, body: hero + gift + steps + client + signoff, footer, css: CSS, lang: locale });
 
   const lines = [
     t('welcome.greeting', { firstName: input.firstName }),

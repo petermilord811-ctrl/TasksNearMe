@@ -64,6 +64,13 @@
     "expired": "Propuesta vencida",
     "withdrawn": "Propuesta retirada",
     "submitting": "Cliente · aceptando propuesta",
-    "result": "Respuesta de la propuesta · {code}"
-  }
+    "result": "Respuesta de la propuesta · {code}",
+    "client-repeat": "Cliente · visitas regulares propuestas",
+    "client-repeat-accepted": "Cliente · visitas regulares iniciadas"
+  },
+  "firstVisit": "Primera visita",
+  "schedule": "Visitas regulares",
+  "nextVisits": "Visitas el {dates}, y así en adelante",
+  "paymentNoteRepeat": "Pagas la primera visita ahora. Tu tarjeta se guarda y cada visita posterior se cobra a ella 2 días antes. Puedes omitir una visita, pausar o detener las visitas regulares cuando quieras.",
+  "viewSeries": "Ver visitas regulares"
 }

@@ -85,6 +85,10 @@
       "limit_reached": "Límite de la cuenta alcanzado",
       "identity_required": "Se necesita verificación de identidad",
       "unknown": "Resultado del pago desconocido"
-    }
-  }
+    },
+    "paysLater": "Reservado con más de 14 días de anticipación: se paga después"
+  },
+  "totalLater": "Total, se cobra antes de la tarea",
+  "paysLater": "Hoy no se cobra nada. Cobraremos a tu tarjeta el {chargeAt}; si no se procesa, puedes pagar en la página de la reserva hasta el {payBy}, o la reserva se cancela sin cargos.",
+  "submitLater": "Reservar ahora, pagar {amount} después"
 }

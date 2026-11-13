@@ -1,0 +1,108 @@
+{
+  "page": {
+    "title": "Recompensas",
+    "description": "Sigue tus recompensas en tarjetas de regalo y tus reservas repetidas.",
+    "totals": {
+      "label": "Totales de recompensas",
+      "ready": "Listas para canjear",
+      "pending": "En camino (pendientes)",
+      "redeemed": "Canjeadas este año"
+    },
+    "grants": "Tus recompensas",
+    "empty": {
+      "title": "Aún no tienes recompensas",
+      "body": "Aquí verás las recompensas en tarjetas de regalo de las reservas que califiquen. Busca una tarea para empezar.",
+      "action": "Buscar trabajo"
+    },
+    "notHelper": {
+      "title": "Configúrate como ayudante",
+      "body": "Las recompensas son para ayudantes. Termina tu configuración como ayudante para buscar trabajo y empezar a hacer reservas que califiquen.",
+      "action": "Configurarme como ayudante"
+    },
+    "repeat": {
+      "title": "Progreso de repetición",
+      "progress": "{count, number} de {needed, plural, one {# reserva pagada} other {# reservas pagadas}} con {name} · antes del {date}",
+      "empty": "No hay progreso de repetición que seguir por ahora. Aquí aparecerán las reservas pagadas que califiquen con el mismo cliente."
+    },
+    "monthly": {
+      "title": "Este mes",
+      "used": "{used} de {cap} usados",
+      "description": "El límite mensual cubre todos los programas de recompensas y se reinicia cada mes calendario."
+    },
+    "rules": {
+      "title": "Cómo funcionan las recompensas",
+      "welcome": "{amount} por tu primera reserva que califique, de {threshold} o más, como ayudante fundador.",
+      "repeat": "{amount} por tu tercera reserva pagada con el mismo cliente en un plazo de 90 días.",
+      "repeatThreshold": "Cada reserva que califique debe tener un precio de tarea de {threshold} o más.",
+      "hold": "Las recompensas tienen una retención de 7 días después de que el trabajo se completa y se paga. Las recompensas de bienvenida también necesitan una revisión de nuestro equipo antes de que puedas canjearlas.",
+      "expiry": "Canjéala dentro de los 90 días posteriores a que la recompensa esté lista para canjear.",
+      "giftCards": "Las recompensas son tarjetas de regalo, no ganancias",
+      "terms": "Leer los términos de las recompensas",
+      "detailsInTerms": "Consulta los términos de las recompensas para ver las reservas que califican y los montos de este programa.",
+      "recurringMonth": "{amount} cuando tus visitas regulares con un cliente tengan un mes calendario con todas las visitas, al menos dos, completadas y pagadas. Una vez por serie."
+    }
+  },
+  "previews": {
+    "group": "Recompensas",
+    "componentGroup": "Recompensa otorgada",
+    "pending": "Recompensa de bienvenida pendiente",
+    "qualified": "Recompensa de bienvenida calificada",
+    "redeemable": "Lista para canjear",
+    "delivered": "Tarjeta de regalo entregada",
+    "empty": "Aún no hay recompensas",
+    "notHelper": "Falta la configuración de ayudante",
+    "redeeming": "Canjeando tarjeta de regalo",
+    "redeemError": "La recompensa ya no se puede canjear",
+    "rateLimited": "Canje limitado por demasiadas solicitudes",
+    "unknownError": "Canje no disponible",
+    "submitted": "Tarjeta de regalo solicitada",
+    "allStatuses": "Todos los estados de recompensa",
+    "grants": "Recompensas otorgadas"
+  },
+  "programs": {
+    "welcome": "Recompensa de bienvenida",
+    "acceptance": "Recompensa por oferta aceptada",
+    "repeat": "Recompensa por reserva repetida",
+    "completion": "Recompensa por finalización",
+    "recurring_month": "Recompensa de visitas regulares"
+  },
+  "card": {
+    "withClient": "Con {name}",
+    "giftCard": "Tarjeta de regalo",
+    "opensInNewTab": "se abre en una pestaña nueva",
+    "deliveryUnavailable": "El enlace de la tarjeta de regalo aún no está disponible. Actualiza la página o contacta a soporte."
+  },
+  "statusDetails": {
+    "pending": "Se desbloquea después de que el trabajo se complete y se pague",
+    "qualified": "Lista el {date}",
+    "in_review": "Estamos revisando esta recompensa",
+    "redeemable": "Canjéala antes del {date}",
+    "issuing": "Tu tarjeta de regalo va en camino",
+    "delivered": "Tu tarjeta de regalo ya llegó",
+    "failed": "Falló la entrega. Soporte la volverá a emitir",
+    "voided": "Esta recompensa no se obtuvo. Contacta a soporte si necesitas ayuda.",
+    "expired": "Venció el {date}"
+  },
+  "statusFallbacks": {
+    "qualified": "Tu recompensa está en su periodo de retención",
+    "redeemable": "Tu recompensa está lista para canjear",
+    "expired": "Pasó el plazo para canjear esta recompensa"
+  },
+  "voidReasons": {
+    "booking_canceled": "La reserva se canceló, así que esta recompensa no se obtuvo.",
+    "refunded": "La reserva se reembolsó, así que esta recompensa no se obtuvo.",
+    "below_threshold": "El precio final de la tarea fue menor que el monto necesario para esta recompensa.",
+    "risk_review": "Esta recompensa no cumplió los requisitos del programa. Contacta a soporte si necesitas ayuda."
+  },
+  "actions": {
+    "redeem": "Canjear tarjeta de regalo",
+    "open_gift_card": "Abrir tarjeta de regalo"
+  },
+  "redeem": {
+    "pending": "Solicitando tarjeta de regalo…",
+    "submitted": "Tu tarjeta de regalo va en camino",
+    "not_allowed": "Esta recompensa ya no se puede canjear. Actualiza la página para ver su estado.",
+    "rate_limited": "Hubo demasiadas solicitudes. Espera un momento antes de canjear de nuevo.",
+    "unknown": "No pudimos solicitar tu tarjeta de regalo. Inténtalo de nuevo o contacta a soporte si sigue pasando."
+  }
+}

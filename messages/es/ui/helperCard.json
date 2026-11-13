@@ -19,6 +19,10 @@
     "samFull": "Sam · tarjeta completa de ayudante",
     "jordanFounding": "Jordan · ayudante fundador",
     "leeCompact": "Lee · tarjeta compacta de ayudante",
-    "profile": "Perfil del ayudante"
-  }
+    "profile": "Perfil del ayudante",
+    "samReliable": "Sam: un ayudante confiable"
+  },
+  "reliable": "Confiable",
+  "reliableLabel": "Confiable: sin ausencias y pocas cancelaciones en el último año",
+  "reliableHint": "Sin ausencias y pocas cancelaciones en el último año"
 }

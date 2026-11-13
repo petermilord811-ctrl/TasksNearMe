@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getHelperProfilePageData, listHelperHandles } from '@/modules/marketing/queries';
 import { HelperProfileScreen } from '@/ui/screens/public';
+import { languageAlternates } from '@/i18n/metadata';
+import { routes } from '@/contracts';
 
 export async function generateStaticParams() {
   const handles = await listHelperHandles();
@@ -10,9 +12,10 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/helpers/[handle]'>): Promise<Metadata> {
-  const data = await getHelperProfilePageData((await params).handle);
+  const { handle } = await params;
+  const data = await getHelperProfilePageData(handle);
   if (!data) return {};
-  return { title: data.helper.displayName, description: data.helper.headline };
+  return { title: data.helper.displayName, description: data.helper.headline, alternates: await languageAlternates(routes.helperProfile(handle)) };
 }
 
 /** First name and last initial, neighborhood-level area, badges, services, reviews, work samples. */

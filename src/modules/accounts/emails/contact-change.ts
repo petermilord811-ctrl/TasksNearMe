@@ -1,6 +1,6 @@
 import { createTranslator } from 'next-intl';
-import { routes } from '@/contracts';
-import appMessages from '../../../../messages/en/app';
+import { DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
+import { messagesFor, perLocale } from '@/i18n/catalog';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 import type { RenderedEmail } from './welcome';
 
@@ -10,14 +10,15 @@ import type { RenderedEmail } from './welcome';
  * wasn't them. A changed phone number gets the same notice by email (texts only show the last 4 digits).
  */
 
-const t = createTranslator({ locale: 'en', messages: appMessages, namespace: 'server.emails' });
+const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.emails' }));
 
 const heading = (text: string) =>
   `<h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:30px;line-height:36px;font-weight:800;letter-spacing:-0.8px;color:${EMAIL_COLORS.ink};">${esc(text)}</h1>`;
 const paragraph = (text: string, muted = true) =>
   `<p class="${muted ? 'muted' : 'ink'}" style="margin:10px 0 0;font-family:${EMAIL_FONT};font-size:16px;line-height:24px;color:${muted ? EMAIL_COLORS.muted : EMAIL_COLORS.ink};">${esc(text)}</p>`;
 
-export function renderEmailChangeCodeEmail({ code, minutes, email, appUrl }: { code: string; minutes: number; email: string; appUrl: string }): RenderedEmail {
+export function renderEmailChangeCodeEmail({ code, minutes, email, appUrl, locale = DEFAULT_LOCALE }: { code: string; minutes: number; email: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
+  const t = tFor(locale);
   const preheader = t('emailChangeCode.preheader', { minutes });
   const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
 ${heading(t('emailChangeCode.heading'))}
@@ -33,12 +34,13 @@ ${paragraph(t('emailChangeCode.body', { email }))}
   return {
     subject: t('emailChangeCode.subject', { code }),
     preheader,
-    html: emailLayout({ title: t('emailChangeCode.title'), preheader, appUrl, body, footer: '', css }),
+    html: emailLayout({ title: t('emailChangeCode.title'), preheader, appUrl, body, footer: '', css, lang: locale }),
     text: t('emailChangeCode.text', { email, code, minutes }),
   };
 }
 
-function changedNotice(kind: 'emailChanged' | 'phoneChanged', values: Record<string, string>, appUrl: string): RenderedEmail {
+function changedNotice(kind: 'emailChanged' | 'phoneChanged', values: Record<string, string>, appUrl: string, locale: AppLocale): RenderedEmail {
+  const t = tFor(locale);
   const helpUrl = `${appUrl}${routes.app.support()}`;
   const preheader = t(`${kind}.preheader`, values);
   const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
@@ -50,17 +52,17 @@ ${paragraph(t(`${kind}.notYou`), false)}
   return {
     subject: t(`${kind}.subject`),
     preheader,
-    html: emailLayout({ title: t(`${kind}.title`), preheader, appUrl, body, footer: '' }),
+    html: emailLayout({ title: t(`${kind}.title`), preheader, appUrl, body, footer: '', lang: locale }),
     text: t(`${kind}.text`, { ...values, helpUrl }),
   };
 }
 
 /** To the old address, after the account switched to `newEmail`. */
-export function renderEmailChangedNotice({ newEmail, appUrl }: { newEmail: string; appUrl: string }): RenderedEmail {
-  return changedNotice('emailChanged', { newEmail }, appUrl);
+export function renderEmailChangedNotice({ newEmail, appUrl, locale = DEFAULT_LOCALE }: { newEmail: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
+  return changedNotice('emailChanged', { newEmail }, appUrl, locale);
 }
 
 /** To the account's email, after its phone number changed (only the last 4 digits are shown). */
-export function renderPhoneChangedNotice({ last4, appUrl }: { last4: string; appUrl: string }): RenderedEmail {
-  return changedNotice('phoneChanged', { last4 }, appUrl);
+export function renderPhoneChangedNotice({ last4, appUrl, locale = DEFAULT_LOCALE }: { last4: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
+  return changedNotice('phoneChanged', { last4 }, appUrl, locale);
 }

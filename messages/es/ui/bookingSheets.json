@@ -23,7 +23,8 @@
     "safety": "Reporte de seguridad",
     "sending": "Enviando reporte de seguridad",
     "sent": "Reporte de seguridad enviado",
-    "validationFailed": "El reporte de seguridad necesita detalles"
+    "validationFailed": "El reporte de seguridad necesita detalles",
+    "clientNothingCharged": "El cliente cancela una reserva de pago posterior (sin cobro)"
   },
   "back": "Volver",
   "sending": "Enviando…",
@@ -59,7 +60,10 @@
       "scope_different": "La tarea es distinta de lo acordado",
       "safety_concern": "Tengo una preocupación de seguridad",
       "other": "Otro motivo"
-    }
+    },
+    "nothingChargedTitle": "Cancelar es gratis",
+    "nothingCharged": "Todavía no se ha cobrado nada, así que no hay nada que reembolsar ni tarifa que pagar.",
+    "nothingChargedHelper": "A {client} todavía no se le ha cobrado, así que cancelar ahora es gratis y no cuenta en tu contra."
   },
   "late": {
     "title": "¿Cuánto te retrasarás?",

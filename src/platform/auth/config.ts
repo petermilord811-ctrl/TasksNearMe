@@ -14,7 +14,7 @@ import { appUrl, socialProviderKeys, standInSecret, standInSocialProviders } fro
 import { socialStandIn } from '@/integrations/oauth/stand-in';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { createLocaleSyncHook, withRequestLocale } from './locale';
+import { createLocaleSyncHook, requestLocaleOf, withRequestLocale } from './locale';
 
 /** Accounts that can't sign in (src/modules/accounts/sign-in/steps.ts keeps the same list). */
 const BLOCKED_ACCOUNT_STATUSES = new Set(['suspended', 'banned', 'deleted']);
@@ -136,13 +136,15 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
         // Changing the account's email from the account page: the code goes to the new address
         // (src/modules/accounts/contact-change.ts).
         changeEmail: { enabled: true },
-        async sendVerificationOTP({ email: to, otp, type }) {
+        // In the language of the page that asked for the code.
+        async sendVerificationOTP({ email: to, otp, type }, ctx) {
+          const locale = requestLocaleOf(ctx);
           if (type === 'change-email') {
-            const { subject, text, html } = renderEmailChangeCodeEmail({ code: otp, minutes: 10, email: to, appUrl: appUrl() });
+            const { subject, text, html } = renderEmailChangeCodeEmail({ code: otp, minutes: 10, email: to, appUrl: appUrl(), locale });
             await email.send({ to, subject, text, html, tag: 'email-change-code' });
             return;
           }
-          const { subject, text, html } = renderSignInCodeEmail({ code: otp, minutes: 10, appUrl: appUrl() });
+          const { subject, text, html } = renderSignInCodeEmail({ code: otp, minutes: 10, appUrl: appUrl(), locale });
           await email.send({ to, subject, text, html, tag: 'sign-in-code' });
         },
       }),

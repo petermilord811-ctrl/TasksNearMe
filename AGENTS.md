@@ -77,7 +77,8 @@ Anything else needs a contract request first.
    - Distance bands: map to copy.
 7. **Privacy.** Only `ExactAddressPanel` renders an `ExactAddress`. Never render last names, emails, or phone numbers unless a contract field gives them to that screen. Message text arrives as `MessageSegment[]`; render masked segments, and never try to detect contact details yourself.
 8. **Copy.**
-   - Every user-facing string goes in `messages/en/ui/<namespace>.json` and is read with `useTranslations`.
+   - Every user-facing string goes in `messages/en/ui/<namespace>.json` and is read with `useTranslations`. Its Spanish goes in `messages/es/ui/<namespace>.json` (same keys and ICU arguments); `npm run i18n:check -- <namespace>` lists what's missing.
+   - Dates and times: `const { formatDate } = useFormat()` from `@/ui/lib/format`, never the plain helpers, so they read in the page's language.
    - Use ICU syntax for plurals and parameters.
    - Follow the voice, glossary, and banned words in design-system §6.
    - Content such as names, titles, and task text arrives in props.

@@ -1,6 +1,8 @@
 {
   "calendar": {
-    "eventTitle": "TasksNearMe: {title}"
+    "eventTitle": "TasksNearMe: {title}",
+    "remote": "Remote",
+    "description": "With {name}. Details and the address: {url}"
   },
   "meta": {
     "home": {
@@ -319,5 +321,8 @@
       "help": "Get help",
       "text": "As you asked, we deleted your TasksNearMe account: your profile, contact details, photos and sign-ins are gone. Records the law or other people need stay without your name. Didn't ask for this? Contact us right away: {helpUrl}"
     }
+  },
+  "sms": {
+    "phoneCode": "{code} is your TasksNearMe code. It works for {minutes} minutes. We'll never call to ask for it."
   }
 }
