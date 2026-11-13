@@ -11,7 +11,17 @@ import '@/ui/theme/globals.css';
 export const metadata: Metadata = {
   title: { default: 'TasksNearMe', template: '%s · TasksNearMe' },
   description: 'Book trusted local help for everyday tasks in Austin.',
-  icons: { icon: [{ url: '/ui/brand/icon.svg', type: 'image/svg+xml' }], apple: '/ui/brand/icon.svg' },
+  applicationName: 'TasksNearMe',
+  // The web app manifest (src/app/manifest.ts) is linked automatically; iPhones read these instead.
+  icons: {
+    icon: [
+      { url: '/ui/brand/icon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  appleWebApp: { capable: true, title: 'TasksNearMe', statusBarStyle: 'default' },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
