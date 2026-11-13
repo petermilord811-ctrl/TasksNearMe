@@ -22,6 +22,15 @@ export interface StripeConnect {
   /** The charge behind a payment intent, for `source_transaction`. */
   chargeOf(intentId: string): Promise<{ chargeId: string; amountCents: number } | null>;
   transfer(input: { amountCents: number; accountId: string; sourceChargeId?: string; group: string; idempotencyKey: string }): Promise<{ ok: true; transferId: string } | { ok: false; reason: 'account_not_ready' }>;
+  /** What the account can pay out instantly now (needs an eligible debit card on the account). */
+  instantAvailable(accountId: string): Promise<number>;
+  /**
+   * An instant payout of `amountCents` to the account's debit card. Stripe takes the Instant Payouts fee set
+   * in the platform's Connect pricing from it; the money arrives in minutes.
+   */
+  instantPayout(input: { accountId: string; amountCents: number; idempotencyKey: string }): Promise<{ payoutId: string; arrivalDate: string }>;
+  /** A one-time link to the helper's Express Dashboard (payouts, bank details, tax forms). */
+  dashboardLink(accountId: string): Promise<string>;
 }
 
 type Account = { requirements?: { currently_due?: unknown[]; past_due?: unknown[]; disabled_reason?: string | null; pending_verification?: unknown[] } | null; payouts_enabled?: boolean; capabilities?: { transfers?: string } | null };
@@ -74,6 +83,25 @@ export function createStripeConnect(config: { secretKey: string; fetch?: typeof 
       const chargeId = typeof intent.latest_charge === 'string' ? intent.latest_charge : null;
       const amount = typeof intent.amount_received === 'number' ? intent.amount_received : typeof intent.amount === 'number' ? intent.amount : 0;
       return chargeId ? { chargeId, amountCents: amount } : null;
+    },
+
+    async instantAvailable(accountId) {
+      const balance = await stripe.request('GET', '/balance', undefined, undefined, { account: accountId });
+      const instant = (balance.instant_available ?? []) as { amount?: unknown; currency?: unknown }[];
+      return instant.filter((row) => row.currency === 'usd' && typeof row.amount === 'number').reduce((sum, row) => sum + (row.amount as number), 0);
+    },
+
+    async instantPayout({ accountId, amountCents, idempotencyKey }) {
+      const payout = await stripe.request('POST', '/payouts', new URLSearchParams({ amount: String(amountCents), currency: 'usd', method: 'instant' }), idempotencyKey, { account: accountId });
+      if (typeof payout.id !== 'string') throw new Error('Stripe sent no payout id');
+      const arrival = typeof payout.arrival_date === 'number' ? new Date(payout.arrival_date * 1000) : new Date();
+      return { payoutId: payout.id, arrivalDate: arrival.toISOString().slice(0, 10) };
+    },
+
+    async dashboardLink(accountId) {
+      const link = await stripe.request('POST', `/accounts/${encodeURIComponent(accountId)}/login_links`);
+      if (typeof link.url !== 'string') throw new Error('Stripe sent no dashboard link');
+      return link.url;
     },
 
     async transfer({ amountCents, accountId, sourceChargeId, group, idempotencyKey }) {

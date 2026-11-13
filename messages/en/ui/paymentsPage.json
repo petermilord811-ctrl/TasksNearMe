@@ -50,6 +50,7 @@
     "account-statuses": "Earnings: payout account status",
     "with-tip": "Payments: a receipt with a tip",
     "receipt-tip": "Receipt: with a tip",
-    "earnings-tip": "Earnings: a tip from a client"
+    "earnings-tip": "Earnings: a tip from a client",
+    "earnings-instant": "Earnings: cash out now"
   }
 }

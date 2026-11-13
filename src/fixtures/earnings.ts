@@ -177,6 +177,12 @@ export const jordanEarningsWithTipData: EarningsPageData = {
   rows: [...jordanEarningsPageData.rows.slice(0, 3), { ...deskEarnings, id: 'ern_desk_tip', kind: 'tip', amountCents: 900 }, ...jordanEarningsPageData.rows.slice(3)],
 };
 
+/** $60 transferred and not yet paid out: Jordan can cash it out now for $0.90 (1.5%, at least 50 cents). */
+export const jordanEarningsInstantData: EarningsPageData = {
+  ...jordanEarningsPageData,
+  instantPayout: { availableCents: 6000, feeCents: 90, netCents: 5910 },
+};
+
 /** A payout failed: Jordan must update the bank account. */
 export const jordanEarningsActionNeededData: EarningsPageData = {
   ...jordanEarningsPageData,
@@ -210,4 +216,5 @@ export const fakePaymentMethodHandlers: PaymentMethodHandlers = {
 
 export const fakeEarningsHandlers: EarningsHandlers = {
   onOpenPayoutDashboard: () => wait({ ok: true, code: 'updated', redirectTo: routes.app.helperOnboarding('payout') }),
+  onInstantPayout: () => wait({ ok: true, code: 'submitted' }),
 };

@@ -31,4 +31,5 @@ export const DEFAULT_FLAGS: Record<string, { enabled: boolean; description: stri
   'reward.completion': { enabled: false, description: 'Completion bonus on flagged tasks (off at launch)' },
   background_checks: { enabled: true, description: 'Require background checks for in-home categories' },
   recurring: { enabled: false, description: 'Recurring visits (phase 2)' },
+  'credit.poster_welcome': { enabled: false, description: "$10 back on a client's first completed booking (platform-funded, up to the booking's fees)" },
 };

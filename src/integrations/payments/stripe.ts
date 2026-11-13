@@ -27,13 +27,14 @@ export class StripeError extends Error {
 }
 
 export interface StripeClient {
-  request(method: 'GET' | 'POST' | 'DELETE', path: string, params?: URLSearchParams, idempotencyKey?: string): Promise<StripeObject>;
+  /** `account`: act on a connected account (Stripe-Account), e.g. its balance and payouts. */
+  request(method: 'GET' | 'POST' | 'DELETE', path: string, params?: URLSearchParams, idempotencyKey?: string, options?: { account?: string }): Promise<StripeObject>;
 }
 
 export function createStripeClient(config: { secretKey: string; fetch?: typeof fetch }): StripeClient {
   const doFetch = config.fetch ?? fetch;
   return {
-    async request(method, path, params, idempotencyKey) {
+    async request(method, path, params, idempotencyKey, options = {}) {
       const query = method === 'GET' && params ? `?${params.toString()}` : '';
       const response = await doFetch(`${API}${path}${query}`, {
         method,
@@ -41,6 +42,7 @@ export function createStripeClient(config: { secretKey: string; fetch?: typeof f
           Authorization: `Bearer ${config.secretKey}`,
           ...(method === 'POST' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
           ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+          ...(options.account ? { 'Stripe-Account': options.account } : {}),
         },
         ...(method === 'POST' ? { body: (params ?? new URLSearchParams()).toString() } : {}),
         signal: AbortSignal.timeout(30_000),

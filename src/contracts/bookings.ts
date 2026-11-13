@@ -83,6 +83,11 @@ export interface BookingConfirmPageData {
   };
   /** Set when the offer can't be booked. The page explains why and links back to the task; no payment form. */
   unavailable?: BookingUnavailableReason;
+  /**
+   * The client's TasksNearMe credit: it comes back to their card when the job is done, up to what the
+   * platform earns on it (so it never costs the helper anything). Expiring soonest first.
+   */
+  credit?: { amountCents: Cents; expiresAt: ISODateTime };
 }
 
 export const confirmBookingInputSchema = z.object({

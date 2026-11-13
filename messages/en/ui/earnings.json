@@ -48,11 +48,23 @@
     "canceled": "Payout canceled",
     "arrival": "Arrives {date} · •••• {last4}",
     "paidOn": "Paid {date} · •••• {last4}",
-    "bank": "Bank account •••• {last4}"
+    "bank": "Bank account •••• {last4}",
+    "instant": "Instant payout"
   },
   "empty": {
     "title": "No earnings yet",
     "body": "Your task payments and reimbursed expenses will appear here after you complete a booking.",
     "action": "Find work"
+  },
+  "instant": {
+    "title": "Cash out now",
+    "body": "{amount} can go to your debit card in minutes instead of on the usual schedule.",
+    "fee": "Instant payout fee: {fee} (1.5%, at least $0.50). You get {net}.",
+    "action": "Cash out {net}",
+    "confirmTitle": "Cash out {net} now?",
+    "confirmBody": "The {fee} fee comes out of the {amount}. It usually arrives in minutes.",
+    "confirm": "Cash out",
+    "cancel": "Not now",
+    "sent": "On its way to your debit card."
   }
 }

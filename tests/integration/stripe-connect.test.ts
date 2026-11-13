@@ -29,6 +29,9 @@ const connect: StripeConnect = {
     transfers.push(input);
     return { ok: true as const, transferId: `tr_${transfers.length}` };
   }),
+  instantAvailable: vi.fn(async () => 0),
+  instantPayout: vi.fn(),
+  dashboardLink: vi.fn(),
 };
 const signed = (event: unknown) => {
   const payload = JSON.stringify(event);

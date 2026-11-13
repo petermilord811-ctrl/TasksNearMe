@@ -274,6 +274,13 @@
       "when": 1794569866625,
       "tag": "0038_payment_customers",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794574567477,
+      "tag": "0039_credits_and_instant_payouts",
+      "breakpoints": true
     }
   ]
 }

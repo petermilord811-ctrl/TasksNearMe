@@ -41,6 +41,10 @@ export const payouts = pgTable(
     /** Market calendar day, "2026-12-01". */
     arrivalDate: text('arrival_date').notNull(),
     bankLast4: text('bank_last4').notNull(),
+    /** standard (the provider's schedule) | instant (the helper asked; minutes, for a fee). */
+    method: text('method').notNull().default('standard'),
+    /** What an instant payout cost the helper. */
+    feeCents: integer('fee_cents').notNull().default(0),
     providerRef: text('provider_ref'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

@@ -18,7 +18,8 @@
     "change_decrease": "Lower agreed price",
     "dispute_settlement": "Problem resolved with a refund",
     "goodwill": "Goodwill refund",
-    "other": "Refund"
+    "other": "Refund",
+    "poster_credit": "TasksNearMe credit"
   },
   "tip": "Tip"
 }

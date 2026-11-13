@@ -109,7 +109,15 @@ export interface EarningsRowView {
   /** `on_hold`: why (a reported problem, a payout account issue). */
   holdReason?: 'dispute' | 'payout_account';
   transferredAt?: ISODateTime;
-  payout?: { id: string; arrivalDate: string; bankLast4: string; status: PayoutStatus };
+  payout?: { id: string; arrivalDate: string; bankLast4: string; status: PayoutStatus; instant?: true };
+}
+
+/** Money the helper can cash out now with an instant payout, and what it costs them. */
+export interface InstantPayoutOffer {
+  availableCents: Cents;
+  /** 1.5%, at least $0.50. */
+  feeCents: Cents;
+  netCents: Cents;
 }
 
 /** `/app/earnings`. */
@@ -132,6 +140,8 @@ export interface EarningsPageData {
   };
   /** The first payout usually arrives about 7 days after the first payment (blueprint 04 §5). */
   firstPayoutNotice: boolean;
+  /** Present when an instant payout is possible now (an active account, enough money, an eligible card). */
+  instantPayout?: InstantPayoutOffer;
 }
 
 /**
@@ -140,4 +150,6 @@ export interface EarningsPageData {
  */
 export interface EarningsHandlers {
   onOpenPayoutDashboard: () => Promise<ActionResult>;
+  /** Cashes out `instantPayout` now. ok `submitted`; `not_allowed` (nothing to cash out any more), `rate_limited` (3 a day). */
+  onInstantPayout?: () => Promise<ActionResult>;
 }

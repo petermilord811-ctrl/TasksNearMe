@@ -12,6 +12,7 @@
   "remoteAddress": "No address needed. You'll share a meeting link in chat.",
   "totalToday": "Total charged today",
   "paymentNote": "You pay when you book. Your helper is paid after the task is done.",
+  "credit": "Your TasksNearMe credit: {amount} comes back to your card when this job is done (use it by {date}).",
   "hourlyNote": "You pay for up to {hours, plural, one {# hour} other {# hours}} now. Unused hours are refunded after you approve.",
   "payment": "Payment",
   "terms": "I agree to the <terms>Terms of service</terms> and the <cancellation>Cancellation policy</cancellation>.",

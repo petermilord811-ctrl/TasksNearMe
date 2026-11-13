@@ -20,6 +20,9 @@ import type {
 } from '@/contracts';
 import { addCardInputSchema } from '@/contracts';
 import { createPaymentProvider, type CollectedCard, type PaymentProvider } from '@/integrations/payments';
+import { redeemCredits } from '@/modules/credits/service';
+import { stripeConnectFromEnv } from '@/integrations/payments/stripe-connect';
+import { instantPayoutOffer } from './instant';
 import { customerFor, newCardCollection } from '@/modules/payments/cards';
 import { users } from '@/modules/accounts/schema';
 import { bookingCompletions, bookings, bookingTerms } from '@/modules/bookings/schema';
@@ -141,6 +144,18 @@ export async function recordCompletionMoney(db: Db, bookingId: string, now: Date
       }
     }
   }
+  // The client's credit (src/modules/credits): up to what the platform earned here, never more than they paid.
+  if (payments_) {
+    const [charge] = await db
+      .select()
+      .from(payments)
+      .where(and(eq(payments.bookingId, bookingId), inArray(payments.purpose, ['booking_funding', 'invite_authorization']), inArray(payments.status, ['succeeded', 'partially_refunded'])))
+      .limit(1);
+    if (charge?.providerRef) {
+      const credited = await redeemCredits(db, payments_, { bookingId, posterUserId: row.booking.posterUserId, charge: { id: charge.id, providerRef: charge.providerRef }, capCents: Math.min(final.platformRevenueCents, final.posterTotalCents) }, now);
+      if (credited > 0 && charge.status === 'succeeded') await db.update(payments).set({ status: 'partially_refunded', updatedAt: now }).where(eq(payments.id, charge.id));
+    }
+  }
 }
 
 /** A late client cancellation or a client no-show pays the helper the compensation. */
@@ -247,7 +262,7 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
         amountCents: earning.amountCents,
         status: earning.status as EarningsStatus,
         ...(earning.transferredAt ? { transferredAt: earning.transferredAt.toISOString() } : {}),
-        ...(payout ? { payout: { id: payout.id, arrivalDate: payout.arrivalDate, bankLast4: payout.bankLast4, status: payout.status as PayoutStatus } } : {}),
+        ...(payout ? { payout: { id: payout.id, arrivalDate: payout.arrivalDate, bankLast4: payout.bankLast4, status: payout.status as PayoutStatus, ...(payout.method === 'instant' ? { instant: true as const } : {}) } } : {}),
       },
     ];
   });
@@ -258,6 +273,8 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
     .filter((row) => row.status === 'paid_out' && row.payout && row.payout.arrivalDate.startsWith(year))
     .reduce((total, row) => total + row.amountCents, 0);
   const status = (account?.status ?? 'not_started') as PayoutAccountStatus;
+  // Instant payouts (src/modules/earnings/instant.ts): offered when there's enough to cash out.
+  const instant = await instantPayoutOffer(db, stripeConnectFromEnv(), helperUserId);
   return {
     totals: { upcomingCents: sum(['not_due', 'on_hold', 'scheduled']), onTheWayCents: sum(['transferred']), paidThisYearCents: paidThisYear },
     rows: all,
@@ -267,6 +284,7 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
       actionNeeded: status === 'requirements_due' || status === 'restricted' || payoutRows.some((p) => p.status === 'failed'),
     },
     firstPayoutNotice: !payoutRows.some((p) => p.status === 'paid'),
+    ...(instant ? { instantPayout: instant } : {}),
   };
 }
 

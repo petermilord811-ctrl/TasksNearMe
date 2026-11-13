@@ -10,6 +10,7 @@ import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useEarningsStatus } from '@/ui/components/status/use-status';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { EarningsDashboardAction } from './earnings-dashboard-action';
+import { InstantPayoutCard } from './instant-payout-card';
 
 const payoutTones: Record<PayoutStatus, BadgeTone> = { pending: 'neutral', in_transit: 'info', paid: 'success', failed: 'danger', canceled: 'neutral' };
 const accountTones: Record<PayoutAccountStatus, BadgeTone> = { not_started: 'neutral', pending: 'info', requirements_due: 'warning', active: 'success', restricted: 'danger' };
@@ -78,6 +79,7 @@ export function EarningsScreen({ data, handlers, now }: EarningsScreenProps) {
       <p className="text-sm text-muted-foreground">{t('account.timing')}</p>
       <EarningsDashboardAction onOpenPayoutDashboard={handlers.onOpenPayoutDashboard} actionNeeded={account.actionNeeded} />
     </section>
+    {data.instantPayout && handlers.onInstantPayout && <InstantPayoutCard offer={data.instantPayout} onInstantPayout={handlers.onInstantPayout} />}
     {data.firstPayoutNotice && <Alert role="note" className="border-info/25">
       <Info aria-hidden="true" className="text-info" /><AlertDescription className="text-foreground">{t('firstPayoutNotice')}</AlertDescription>
     </Alert>}

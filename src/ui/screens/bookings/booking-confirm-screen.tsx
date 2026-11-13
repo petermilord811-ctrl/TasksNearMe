@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, CircleAlert, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BookingConfirmHandlers, type BookingConfirmPageData, type ISODateTime, type PaymentAttemptResult } from '@/contracts';
-import { formatDateTime } from '@/shared/format';
+import { formatDate, formatDateTime, formatMoney } from '@/shared/format';
 import { backArrow, backLink, cardTitle, note, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { GeneralArea } from '@/ui/components/location/general-area';
@@ -65,6 +65,7 @@ export function BookingConfirmContent({ data, handlers, now, initialResult, init
     <div className="space-y-3">
       <PriceBreakdown breakdown={data.breakdown} variant="poster" title={t('totalToday')} />
       <p className="text-sm text-muted-foreground">{t('paymentNote')}</p>
+      {data.credit && <p className={note}>{t('credit', { amount: formatMoney(data.credit.amountCents), date: formatDate(data.credit.expiresAt) })}</p>}
       {offer.pricing.type === 'hourly' && <p className={note}>{t('hourlyNote', { hours: offer.pricing.hoursCap })}</p>}
     </div>
     <CancellationSummary policy={data.cancellation} helperName={helper} />

@@ -6,7 +6,7 @@ import {
   deskReceiptPageData, deskSimpleReceiptPageData, earningsEmptyData, earningsFirstPayoutData,
   fakeEarningsHandlers, fakeHandler, fakePaymentMethodHandlers, jordanEarningsActionNeededData,
   jordanEarningsPageData, jordanShell, mayaPaymentsPageData, mayaShell, paymentsEmptyData,
-  deskTipReceiptPageData, jordanEarningsWithTipData, mayaPaymentsWithTipData,
+  deskTipReceiptPageData, jordanEarningsInstantData, jordanEarningsWithTipData, mayaPaymentsWithTipData,
 } from '@/fixtures';
 import { EarningsScreen, ReceiptScreen } from '@/ui/screens/money';
 import { PaymentsContent, PaymentsScreen } from '@/ui/screens/money/payments-screen';
@@ -59,6 +59,7 @@ export const moneyPagePreviews: PreviewEntry[] = [
   ].map(({ id, title, data }): PreviewEntry => ({ id: `screen-receipt/${id}`, title, group, layout: 'fullscreen', render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.receipt(data.booking.id)} layout="flow"><ReceiptScreen data={data} /></AppShell> })),
   earningsPreview('default', copy.previews['earnings-default'], jordanEarningsPageData),
   earningsPreview('tip', copy.previews['earnings-tip'], jordanEarningsWithTipData),
+  earningsPreview('instant', copy.previews['earnings-instant'], jordanEarningsInstantData),
   earningsPreview('action-needed', copy.previews['earnings-action-needed'], jordanEarningsActionNeededData),
   earningsPreview('first-payout', copy.previews['earnings-first-payout'], earningsFirstPayoutData),
   earningsPreview('empty', copy.previews['earnings-empty'], earningsEmptyData),

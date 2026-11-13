@@ -24,6 +24,7 @@ import { offerPricing } from '@/modules/offers/owner';
 import { offers } from '@/modules/offers/schema';
 import { cancellationSummary, quoteBreakdown } from '@/modules/payments/fees';
 import { paymentCustomers, paymentMethods, payments } from '@/modules/payments/schema';
+import { availableCredit, ensureWelcomeCredit } from '@/modules/credits/service';
 import { bankStep, chargeMethodOf } from '@/modules/payments/cards';
 
 export { bankStep, chargeMethodOf, customerFor, newCardCollection } from '@/modules/payments/cards';
@@ -193,6 +194,9 @@ export async function getBookingConfirmPage(
   if (!policy || !found || !helper) return null;
 
   const breakdown = breakdownFor(policy.fees, ctx.task, ctx.offer);
+  // A first-time client's welcome credit (when the market offers one), shown with the price.
+  await ensureWelcomeCredit(db, posterId, ctx.task.marketId, now);
+  const credit = await availableCredit(db, posterId, now);
   const proposedStart = ctx.offer.proposedStart.toISOString();
   const pending =
     live && live.status === 'pending_funding' && live.offerId === offerId && live.fundingExpiresAt
@@ -217,6 +221,7 @@ export async function getBookingConfirmPage(
       breakdown,
       cancellation: cancellationSummary(policy.cancellation, breakdown, proposedStart),
       payment: await paymentPanel(db, posterId, deps.payments),
+      ...(credit ? { credit } : {}),
       ...(pending
         ? { pending: { bookingId: pending.bookingId, expiresAt: pending.expiresAt, ...(pending.failure ? { lastFailure: pending.failure } : {}) } }
         : {}),

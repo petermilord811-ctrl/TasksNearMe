@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
-import { openPayoutDashboardAction } from '@/modules/earnings/actions';
+import { instantPayoutAction, openPayoutDashboardAction } from '@/modules/earnings/actions';
 import { getEarningsPage } from '@/modules/earnings/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -26,5 +26,5 @@ async function Earnings() {
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.earnings()));
   const now = await requestNow();
   const data = await getEarningsPage(db, viewer.user.id, now);
-  return <EarningsScreen data={data} now={now.toISOString()} handlers={{ onOpenPayoutDashboard: openPayoutDashboardAction }} />;
+  return <EarningsScreen data={data} now={now.toISOString()} handlers={{ onOpenPayoutDashboard: openPayoutDashboardAction, onInstantPayout: instantPayoutAction }} />;
 }

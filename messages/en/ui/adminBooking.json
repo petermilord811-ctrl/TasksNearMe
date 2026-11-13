@@ -35,7 +35,8 @@
     "unused_cap": "Unused hourly cap",
     "unused_allowance": "Unused expense allowance",
     "change_decrease": "Agreed price decrease",
-    "other": "Other refund"
+    "other": "Other refund",
+    "poster_credit": "Client's credit"
   },
   "earnings": "Helper earnings",
   "noEarnings": "No earnings have been recorded for this booking.",

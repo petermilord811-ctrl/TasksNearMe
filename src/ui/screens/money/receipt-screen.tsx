@@ -8,7 +8,7 @@ import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { PaymentMethodLabel } from '@/ui/components/payments';
 import { PrintReceiptButton } from './print-receipt-button';
 
-const refundReasons = ['cancellation', 'unused_cap', 'unused_allowance', 'change_decrease', 'dispute_settlement', 'goodwill'] as const;
+const refundReasons = ['cancellation', 'unused_cap', 'unused_allowance', 'change_decrease', 'dispute_settlement', 'goodwill', 'poster_credit'] as const;
 
 function ReceiptActivity({ line }: { line: ReceiptLine }) {
   const t = useTranslations('receipt');
