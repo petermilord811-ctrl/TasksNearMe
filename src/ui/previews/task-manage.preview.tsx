@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import { routes, type AppShellHandlers, type PreviewEntry, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
-import { bookshelfOwnerWithInviteView, deskOwnerView, deskOwnerNoOffersView, deskOwnerStaleView, deskOwnerBookedView, remoteOwnerView, fakeHandler, fakeInviteHandlers, mayaShell, movingDraft } from '@/fixtures';
+import { bookshelfOwnerWithInviteView, deskOwnerView, deskOwnerNoOffersView, deskOwnerStaleView, deskOwnerBookedView, remoteOwnerView, fakeHandler, fakeInviteHandlers, mayaShell, movingDraft, samplePushSetup } from '@/fixtures';
 import { TaskManageScreen } from '@/ui/screens/tasks/task-manage-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/taskManage.json';
@@ -10,6 +10,7 @@ const handlers: TaskOwnerHandlers = {
   onOfferAction: fakeHandler({ ok: true, code: 'updated' }),
   onTaskAction: fakeHandler({ ok: true, code: 'updated' }),
   onCancelTask: fakeHandler({ ok: true, code: 'canceled' }),
+  onSavePushSubscription: fakeHandler({ ok: true, code: 'updated' }),
 };
 const shellHandlers: AppShellHandlers = { onModeChange: fakeHandler({ ok: true, code: 'updated' }), onSignOut: fakeHandler({ ok: true, code: 'updated' }) };
 
@@ -27,6 +28,7 @@ export const taskManagePreviews: PreviewEntry[] = [
   },
   preview('offers', deskOwnerView),
   preview('no-offers', deskOwnerNoOffersView),
+  preview('push-prompt', { ...deskOwnerNoOffersView, push: samplePushSetup }),
   preview('stale-offer', deskOwnerStaleView),
   preview('booked', deskOwnerBookedView),
   preview('remote', remoteOwnerView),

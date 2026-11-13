@@ -1,4 +1,4 @@
-import type { NotificationChannel, NotificationTopic, NotificationType } from '@/contracts';
+import { NOTIFICATION_CHANNELS, type NotificationChannel, type NotificationTopic, type NotificationType } from '@/contracts';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
@@ -99,15 +99,25 @@ export function quietHoursEnd(now: Date): Date | null {
   return new Date(marketLocalToUtc(day, `${String(QUIET_HOURS.until).padStart(2, '0')}:00`));
 }
 
+/**
+ * Where deliveries go: the preference channels (email, texts), and push to the person's devices. Push is
+ * one switch per device ("Notifications on this device"), on for every topic but tips and news.
+ */
+export type DeliveryChannel = NotificationChannel | 'push';
+export const DELIVERY_CHANNELS: readonly DeliveryChannel[] = [...NOTIFICATION_CHANNELS, 'push'];
+export const pushOn = (topic: NotificationTopic) => topic !== 'tips_and_news';
+
 export type DeliveryPlan =
   | { action: 'send' }
   | { action: 'hold'; until: Date }
-  | { action: 'skip'; reason: 'preference_off' | 'no_email' | 'no_verified_phone' | 'email_suppressed' };
+  | { action: 'skip'; reason: 'preference_off' | 'no_email' | 'no_verified_phone' | 'no_device' | 'email_suppressed' };
+
+export const missingAddressReason = (channel: DeliveryChannel) => (channel === 'sms' ? 'no_verified_phone' : channel === 'push' ? 'no_device' : 'no_email');
 
 /** What to do with one notification on one channel now. */
 export function planDelivery(input: {
   type: NotificationType;
-  channel: NotificationChannel;
+  channel: DeliveryChannel;
   enabled: boolean;
   hasAddress: boolean;
   /** The email address bounced or complained (email_suppressions): nothing more goes to it. */
@@ -115,9 +125,10 @@ export function planDelivery(input: {
   now: Date;
 }): DeliveryPlan {
   if (!input.enabled) return { action: 'skip', reason: 'preference_off' };
-  if (!input.hasAddress) return { action: 'skip', reason: input.channel === 'sms' ? 'no_verified_phone' : 'no_email' };
+  if (!input.hasAddress) return { action: 'skip', reason: missingAddressReason(input.channel) };
   if (input.channel === 'email' && input.suppressed) return { action: 'skip', reason: 'email_suppressed' };
-  if (input.channel === 'sms' && !URGENT_TYPES.has(input.type)) {
+  // Texts and pushes that can wait don't buzz anyone at night.
+  if (input.channel !== 'email' && !URGENT_TYPES.has(input.type)) {
     const until = quietHoursEnd(input.now);
     if (until) return { action: 'hold', until };
   }

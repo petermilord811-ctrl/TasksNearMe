@@ -20,7 +20,7 @@ Every outside service sits behind a small interface in `src/integrations/*` (or,
 | Reading proofs of address (Claude) | `AddressDocumentReader` (`src/integrations/ai/document-reader.ts`), run by the job runner (`verification.read_documents`) | A stand-in that reads nothing (staff see "not sure") | Claude through `@anthropic-ai/sdk` (**built**) | `ANTHROPIC_API_KEY` (the same key) |
 | Staff two-step sign-in | Built in: TOTP (`src/platform/auth/totp.ts`, `src/modules/accounts/staff-authenticator.ts`) | The code 123456 still works outside production | Any authenticator app; nothing to buy | `BETTER_AUTH_SECRET` (hashes setup codes), `FIELD_ENCRYPTION_KEY` (keys) |
 | Map tiles | `MAP_STYLE_URL` | OpenFreeMap (free, no key) | Any MapLibre style (the same, or a paid one) | `MAP_STYLE_URL`, `MAP_ATTRIBUTION` |
-| Web push | Not built yet (decisions.md) | — | Service worker, VAPID keys, `push_subscriptions` | — |
+| Web push | `PushSender` (`src/integrations/push/web-push.ts`): RFC 8291 encryption and VAPID (RFC 8292) with Node's crypto, no dependency (**built**) | Off without keys (the app says "not set up here") | The browsers' own push services (Google, Mozilla, Apple, Windows); nothing to buy | `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY` (`npm run push:keys` makes a pair), optional `WEB_PUSH_SUBJECT` |
 
 ## What each adapter must do
 
@@ -89,6 +89,13 @@ There's no adapter to write: Better Auth has both providers built in. With keys 
 - **Rules around every call:** the market's `ai_drafting` flag (one switch for all three), an hourly limit per person (10 task drafts, 10 profile drafts, 20 offer messages), prohibited phrases checked before calling, and a refusal from Claude reads as `prohibited`. Drafts save nothing.
 - **Tests never call Claude:** without a key, development and tests use the stand-ins; where a key is set, a browser with the `tnm_ai_stand_in=1` cookie gets the stand-ins (never in production), as the e2e tests do.
 - Before launch: list Anthropic as a subprocessor in the privacy policy, and watch the per-person limits against real use.
+
+### Web push (notifications on a device)
+- **Built.** A device turns notifications on from the account page ("Notifications on this device"), after posting a task, or at the end of helper setup; the browser asks only after that tap. `public/sw.js` shows each push and opens its page. Subscriptions are `push_subscriptions` (one per browser); a subscription the push service says is gone is deleted.
+- **What's sent:** every notification the inbox gets, except tips and news, with the same quiet hours as texts (urgent day-of updates go at once). The message is encrypted for the browser (RFC 8291), so the push service can't read it; the request is signed with our VAPID key (RFC 8292).
+- **Only real push services:** the server posts to the endpoint a browser hands over, so only Google's, Mozilla's, Apple's and Windows' push hosts are accepted.
+- **iPhone:** web push works only from a Home Screen app (iOS 16.4+), which the manifest makes installable; the account page explains this on iPhone Safari.
+- Before launch: a production key pair in the host's secrets (never `.env.local`), and `WEB_PUSH_SUBJECT` set to a real `mailto:` or `https:` contact.
 
 ### Reading proofs of address (Claude)
 - **Built.** Each proof of address waiting for review is read once by the job runner (two a minute, after every other job, since it waits on the network): the photo (stored as WebP) or PDF goes to Claude with the account's name and the address typed in, and Claude answers five questions in a fixed shape (`messages.parse`): readable, name matches, address matches, dated within 90 days, and the kind of document. Only those answers are stored, in `address_verifications.auto_check`, with the reader's name; never the document's text. Staff see them beside the proof and still decide.

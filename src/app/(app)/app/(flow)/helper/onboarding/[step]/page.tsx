@@ -20,6 +20,7 @@ import { getOnboardingPageData, onboardingRedirect } from '@/modules/verificatio
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
+import { savePushSubscriptionAction } from '@/modules/notifications/actions';
 import { HelperOnboardingScreen } from '@/ui/screens/helper';
 import { requestNow } from '@/platform/clock';
 
@@ -62,6 +63,7 @@ async function Onboarding({ params }: Pick<PageProps<'/app/helper/onboarding/[st
         onStartPayout: onboardingStartPayout,
         onStartBackgroundCheck: onboardingStartBackgroundCheck,
         onRefreshStatus: onboardingRefreshStatus,
+        onSavePushSubscription: savePushSubscriptionAction,
       }}
     />
   );

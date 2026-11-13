@@ -4,7 +4,11 @@
   "invites": "Invites you sent",
   "offers": "{count, plural, one {# offer} other {# offers}}",
   "sort": "Sort offers",
-  "sortOptions": { "given": "As received", "newest": "Newest", "lowest": "Lowest price" },
+  "sortOptions": {
+    "given": "As received",
+    "newest": "Newest",
+    "lowest": "Lowest price"
+  },
   "compareTitle": "Compare offers",
   "compareHint": "Select 2–3 offers to see them together.",
   "compareCount": "{count, plural, one {# offer selected} other {# offers selected}}",
@@ -43,7 +47,8 @@
     }
   },
   "previews": {
-    "withInvite": "Direct invite", "group": "Task management",
+    "withInvite": "Direct invite",
+    "group": "Task management",
     "offers": "Task with three offers",
     "no-offers": "Waiting for offers",
     "stale-offer": "Offer needs re-confirmation",
@@ -52,6 +57,7 @@
     "compare": "Compare three offers",
     "cancel-sheet": "Cancel with a reason",
     "cancel-error": "Cancellation unavailable",
-    "allowance": "Task with an expense allowance"
+    "allowance": "Task with an expense allowance",
+    "push-prompt": "Waiting for offers, with notifications offered"
   }
 }

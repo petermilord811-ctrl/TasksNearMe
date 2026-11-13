@@ -61,7 +61,7 @@ Maps stay free: MapLibre with OpenFreeMap tiles, and the static fallback when We
 | 3.2 ☑ | Staff two-step sign-in with an authenticator app (TOTP) | The admin check still uses the development code 123456 (a TODO). Free, no provider |
 | 3.3 ☑ | Data export and account deletion | The account page records the requests; build the export (a download for the person) and the deletion (anonymize once nothing is open), per blueprint 08 §5 |
 | 3.4 ☑ | Retention timers | Blueprint 08 §5: exact addresses deleted 180 days after the last booking unless saved, and the rest of the table where a timer is missing |
-| 3.5 ☐ | Web push (the third channel) | Finishes T-29: a service worker, VAPID keys generated locally, a subscription per device, asked only after a related action (posting a task; finishing onboarding), and the account page's "Notifications on this device" |
+| 3.5 ☑ | Web push (the third channel) | Finishes T-29: a service worker, VAPID keys generated locally, a subscription per device, asked only after a related action (posting a task; finishing onboarding), and the account page's "Notifications on this device" |
 | 3.6 ☐ | Installable app | A web app manifest and icons, so phones can add TasksNearMe to the home screen (with push) |
 
 ## Part 4 — Good features

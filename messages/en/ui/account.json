@@ -172,7 +172,8 @@
     "unsubscribeLocked": "Unsubscribe link for emails that can't be turned off",
     "unsubscribeInvalid": "Unsubscribe link that doesn't work",
     "exportReady": "Account · data copy ready",
-    "deletionWaiting": "Account · deletion waiting for a booking"
+    "deletionWaiting": "Account · deletion waiting for a booking",
+    "pushDevice": "Account · notifications on this device"
   },
   "unsubscribe": {
     "title": "Email preferences",

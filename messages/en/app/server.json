@@ -166,7 +166,8 @@
       "helper_ready": "You're all set: you can send offers now. Find work near you.",
       "task_match": "New task near you: {title}{hasAmount, select, yes {, {amount}} other {}}.",
       "data_export_ready": "The copy of your TasksNearMe data you asked for is ready to download."
-    }
+    },
+    "pushTitle": "TasksNearMe"
   },
   "emails": {
     "footer": {

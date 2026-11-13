@@ -139,6 +139,33 @@ export interface AccountPageData {
   preferences: { topic: NotificationTopic; channel: NotificationChannel; enabled: boolean; locked: boolean }[];
   helper: { status: 'none' | 'draft' | 'active' | 'paused' | 'suspended' };
   privacy: AccountPrivacyView;
+  /** Notifications on this device (Web Push), when push is set up. */
+  push?: PushSetup;
+}
+
+/**
+ * A browser's push subscription (`PushSubscription.toJSON()`), saved to send notifications to that device.
+ * Only the big push services' endpoints are taken (src/modules/notifications/push.ts).
+ */
+export const pushSubscriptionInputSchema = z.object({
+  endpoint: z.string().url().max(2048),
+  keys: z.object({ p256dh: z.string().regex(/^[A-Za-z0-9_-]{80,100}$/), auth: z.string().regex(/^[A-Za-z0-9_-]{16,44}$/) }),
+});
+export type PushSubscriptionInput = z.input<typeof pushSubscriptionInputSchema>;
+
+/** Push is set up here: the key browsers subscribe with. Absent where it isn't (the app says so). */
+export interface PushSetup {
+  publicKey: string;
+}
+
+/**
+ * - `onSavePushSubscription`: this device gets notifications; ok `updated`. Errors: `validation_failed`
+ *   (not a push service we send to), `rate_limited`, `not_allowed`.
+ * - `onRemovePushSubscription`: this device stops; ok `updated` (also when it was already gone).
+ */
+export interface PushHandlers {
+  onSavePushSubscription: ActionHandler<PushSubscriptionInput>;
+  onRemovePushSubscription: ActionHandler<{ endpoint: string }>;
 }
 
 /** How long a prepared copy of someone's data stays downloadable. */
@@ -205,7 +232,7 @@ export type AccountProfileInput = z.input<typeof accountProfileInputSchema>;
  *   page load). It sends the person back to the account page with `signIn.notice`. Errors: `not_allowed`.
  * - `onDisconnectSignIn`: ok `updated` (the email code still works). Errors: `not_found` (not connected).
  */
-export interface AccountHandlers {
+export interface AccountHandlers extends PushHandlers {
   onSaveProfile: ActionHandler<AccountProfileInput>;
   onSavePreference: ActionHandler<{ topic: NotificationTopic; channel: NotificationChannel; enabled: boolean }>;
   onRequestExport: () => Promise<ActionResult>;

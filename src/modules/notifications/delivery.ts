@@ -1,7 +1,7 @@
-import { and, asc, eq, gte, inArray, isNull, lt, lte, or } from 'drizzle-orm';
+import { and, asc, count, eq, gte, inArray, isNull, lt, lte, or } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
-import type { AttentionTarget, NotificationChannel, NotificationTopic, NotificationType, NotificationView } from '@/contracts';
-import { NOTIFICATION_CHANNELS, routes } from '@/contracts';
+import type { AttentionTarget, NotificationTopic, NotificationType, NotificationView } from '@/contracts';
+import { routes } from '@/contracts';
 import { createEmailProvider, type EmailProvider } from '@/integrations/email';
 import { createSmsSender, type SmsSender } from '@/integrations/sms';
 import { users } from '@/modules/accounts/schema';
@@ -9,9 +9,10 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { formatMoney } from '@/shared/format';
 import appMessages from '../../../messages/en/app';
-import { NOTIFICATION_TOPIC, planDelivery, preferenceOn, RETRY_MINUTES } from './delivery-domain';
+import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
+import { DELIVERY_CHANNELS, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
 import { renderNotificationEmail } from './emails';
-import { emailSuppressions, notificationDeliveries, notificationPreferences, notifications } from './schema';
+import { emailSuppressions, notificationDeliveries, notificationPreferences, notifications, pushSubscriptions } from './schema';
 
 /**
  * Email and text messages for in-app notifications (backlog B-028, blueprint 10 §3.2 T-29). The job runner
@@ -23,10 +24,12 @@ import { emailSuppressions, notificationDeliveries, notificationPreferences, not
 export interface DeliveryProviders {
   email: EmailProvider;
   sms: SmsSender;
+  /** Notifications on devices; absent or null where push isn't set up. */
+  push?: PushSender | null;
 }
 
 export function createDeliveryProviders(db: Db): DeliveryProviders {
-  return { email: createEmailProvider(db), sms: createSmsSender(db) };
+  return { email: createEmailProvider(db), sms: createSmsSender(db), push: pushSenderFromEnv() };
 }
 
 const MINUTE = 60_000;
@@ -70,7 +73,7 @@ function pathOf(target: AttentionTarget): string {
 const appUrl = () => (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
 /** One notification as an email (subject, text, designed version, unsubscribe headers) and a text message. */
-export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'>) {
+export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'> & { id?: string }) {
   const params: NonNullable<NotificationView['params']> = row.params ?? {};
   const sentence = t(`types.${row.type as NotificationType}`, {
     title: row.title ?? t('taskFallback'),
@@ -87,11 +90,33 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
   const url = `${appUrl()}${pathOf(row.target)}`;
   const type = row.type as NotificationType;
   const email = renderNotificationEmail({ type, topic: NOTIFICATION_TOPIC[type], sentence, target: row.target, url, userId: row.userId, appUrl: appUrl() });
-  return { ...email, sms: t('sms', { sentence, url }) };
+  return { ...email, sms: t('sms', { sentence, url }), push: { title: t('pushTitle'), body: sentence, url, ...(row.id ? { tag: row.id } : {}) } };
 }
 
-async function sendOne(providers: DeliveryProviders, delivery: DeliveryRow, to: string, content: ReturnType<typeof deliveryContent>) {
-  if (delivery.channel === 'email') {
+/** One push to each of the person's devices; a device the push service says is gone is forgotten. */
+async function sendPush(db: Db, sender: PushSender, userId: string, message: PushMessage, urgent: boolean, now: Date) {
+  const devices = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
+  let sent = 0;
+  let retry = false;
+  for (const device of devices) {
+    const result = await sender.send({ endpoint: device.endpoint, p256dh: device.p256dh, auth: device.auth }, message, { urgent });
+    if (result.status === 'sent') {
+      sent += 1;
+      await db.update(pushSubscriptions).set({ lastSentAt: now }).where(eq(pushSubscriptions.id, device.id));
+    } else if (result.status === 'gone') {
+      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, device.id));
+    } else if (result.retry) {
+      retry = true;
+    }
+  }
+  if (sent === 0) throw new Error(retry ? 'The push service is unavailable' : 'No device took the push');
+}
+
+async function sendOne(db: Db, providers: DeliveryProviders, delivery: DeliveryRow, row: NotificationRow, to: string, content: ReturnType<typeof deliveryContent>, now: Date) {
+  if (delivery.channel === 'push') {
+    if (!providers.push) throw new Error('Push is not set up');
+    await sendPush(db, providers.push, delivery.userId, content.push, URGENT_TYPES.has(row.type as NotificationType), now);
+  } else if (delivery.channel === 'email') {
     await providers.email.send({
       to,
       subject: content.subject,
@@ -114,14 +139,18 @@ interface Person {
   phone: string | null;
   phoneVerified: boolean;
   preferences: Map<string, boolean>;
+  /** Devices with notifications on. */
+  pushDevices: number;
 }
 
 async function peopleOf(db: Db, userIds: string[]): Promise<Map<string, Person>> {
   if (userIds.length === 0) return new Map();
-  const [rows, prefs] = await Promise.all([
+  const [rows, prefs, devices] = await Promise.all([
     db.select({ id: users.id, email: users.email, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt }).from(users).where(inArray(users.id, userIds)),
     db.select().from(notificationPreferences).where(inArray(notificationPreferences.userId, userIds)),
+    db.select({ userId: pushSubscriptions.userId, devices: count() }).from(pushSubscriptions).where(inArray(pushSubscriptions.userId, userIds)).groupBy(pushSubscriptions.userId),
   ]);
+  const devicesOf = new Map(devices.map((row) => [row.userId, row.devices]));
   const emails = rows.map((row) => row.email?.toLowerCase()).filter((email): email is string => Boolean(email));
   const suppressed = new Set(
     emails.length > 0 ? (await db.select({ email: emailSuppressions.email }).from(emailSuppressions).where(inArray(emailSuppressions.email, emails))).map((row) => row.email) : [],
@@ -129,19 +158,21 @@ async function peopleOf(db: Db, userIds: string[]): Promise<Map<string, Person>>
   const people = new Map<string, Person>(
     rows.map((row) => [
       row.id,
-      { email: row.email || null, emailSuppressed: suppressed.has(row.email?.toLowerCase() ?? ''), phone: row.phone, phoneVerified: row.phoneVerifiedAt !== null, preferences: new Map() },
+      { email: row.email || null, emailSuppressed: suppressed.has(row.email?.toLowerCase() ?? ''), phone: row.phone, phoneVerified: row.phoneVerifiedAt !== null, preferences: new Map(), pushDevices: devicesOf.get(row.id) ?? 0 },
     ]),
   );
   for (const pref of prefs) people.get(pref.userId)?.preferences.set(`${pref.topic}:${pref.channel}`, pref.enabled === 'true');
   return people;
 }
 
-const addressOf = (person: Person, channel: NotificationChannel) => (channel === 'email' ? person.email : person.phoneVerified ? person.phone : null);
+const addressOf = (person: Person, channel: DeliveryChannel) =>
+  channel === 'email' ? person.email : channel === 'push' ? (person.pushDevices > 0 ? 'devices' : null) : person.phoneVerified ? person.phone : null;
+const channelOn = (person: Person, topic: NotificationTopic, channel: DeliveryChannel) => (channel === 'push' ? pushOn(topic) : preferenceOn(person.preferences, topic, channel));
 
 /** Sends a claimed delivery and records the outcome: sent, or failed with the next try. */
 async function attempt(db: Db, providers: DeliveryProviders, delivery: DeliveryRow, row: NotificationRow, to: string, now: Date): Promise<boolean> {
   try {
-    await sendOne(providers, delivery, to, deliveryContent(row));
+    await sendOne(db, providers, delivery, row, to, deliveryContent(row), now);
     await db.update(notificationDeliveries).set({ status: 'sent', sentAt: now, attempts: delivery.attempts + 1, reason: null, sendAfter: null, updatedAt: now }).where(eq(notificationDeliveries.id, delivery.id));
     return true;
   } catch (error) {
@@ -178,12 +209,14 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     if (!person) continue;
     const topic: NotificationTopic | undefined = NOTIFICATION_TOPIC[notification.type as NotificationType];
     if (!topic) continue;
-    for (const channel of NOTIFICATION_CHANNELS) {
+    for (const channel of DELIVERY_CHANNELS) {
+      // Push only where it's set up (no rows otherwise).
+      if (channel === 'push' && !providers.push) continue;
       const to = addressOf(person, channel);
       const plan = planDelivery({
         type: notification.type as NotificationType,
         channel,
-        enabled: preferenceOn(person.preferences, topic, channel),
+        enabled: channelOn(person, topic, channel),
         hasAddress: to !== null,
         suppressed: person.emailSuppressed,
         now,
@@ -224,13 +257,13 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
   const waiting = await peopleOf(db, [...new Set(due.map(({ delivery }) => delivery.userId))]);
   for (const { delivery, notification } of due) {
     const person = waiting.get(delivery.userId);
-    const channel = delivery.channel as NotificationChannel;
-    const to = person ? addressOf(person, channel) : null;
+    const channel = delivery.channel as DeliveryChannel;
+    const to = person && (channel !== 'push' || providers.push) ? addressOf(person, channel) : null;
     const topic = NOTIFICATION_TOPIC[notification.type as NotificationType];
-    // The person may have turned the channel off, or lost the address (or it bounced), while it waited.
-    const stillOn = person && topic ? preferenceOn(person.preferences, topic, channel) : false;
+    // The person may have turned the channel off, or lost the address (or it bounced, or the device left), while it waited.
+    const stillOn = person && topic ? channelOn(person, topic, channel) : false;
     const bounced = channel === 'email' && person?.emailSuppressed === true;
-    const skipReason = !to ? (channel === 'sms' ? 'no_verified_phone' : 'no_email') : bounced ? 'email_suppressed' : 'preference_off';
+    const skipReason = !to ? missingAddressReason(channel) : bounced ? 'email_suppressed' : 'preference_off';
     const [claimed] = await db
       .update(notificationDeliveries)
       .set(stillOn && to && !bounced ? { status: 'sending', updatedAt: now } : { status: 'skipped', reason: skipReason, sendAfter: null, updatedAt: now })

@@ -10,6 +10,7 @@ import { ownerDepsFor } from '@/modules/offers/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
+import { savePushSubscriptionAction } from '@/modules/notifications/actions';
 import { TaskManageScreen } from '@/ui/screens/tasks';
 import { requestNow } from '@/platform/clock';
 
@@ -42,6 +43,7 @@ async function ManageTask({ params }: Pick<PageProps<'/app/tasks/[taskId]'>, 'pa
         onOfferAction: posterOfferAction,
         onTaskAction: taskOwnerAction.bind(null, taskId),
         onCancelTask: cancelTaskAction.bind(null, taskId),
+        onSavePushSubscription: savePushSubscriptionAction,
       }}
     />
   );

@@ -26,6 +26,7 @@
     "db:seed": "tsx db/scripts/cli.ts seed",
     "db:reset": "tsx db/scripts/cli.ts reset",
     "staff:setup-code": "tsx db/scripts/cli.ts staff-setup-code",
+    "push:keys": "node scripts/push-keys.mjs",
     "test:db": "vitest run --config vitest.db.config.mts"
   },
   "dependencies": {

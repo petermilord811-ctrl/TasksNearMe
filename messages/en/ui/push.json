@@ -1,0 +1,32 @@
+{
+  "device": {
+    "title": "Notifications on this device",
+    "description": "Get a notification here as things happen: offers, bookings, messages. Tips and news never come this way.",
+    "checking": "Checking this device…",
+    "on": "On for this device.",
+    "off": "Off for this device.",
+    "turnOn": "Turn on",
+    "turningOn": "Turning on…",
+    "turnOff": "Turn off",
+    "turningOff": "Turning off…",
+    "blocked": "Notifications are blocked for TasksNearMe in this browser. Allow them in the browser's site settings, then come back.",
+    "unsupported": "This browser can't show notifications from websites. Email and texts still reach you.",
+    "installFirst": "On iPhone and iPad, add TasksNearMe to your Home Screen first (Share, then \"Add to Home Screen\"), then turn notifications on from there.",
+    "notSetUp": "Notifications on devices aren't set up here yet. Email and texts still reach you.",
+    "failed": "That didn't work. Try again, or check the browser's notification settings."
+  },
+  "prompt": {
+    "offersTitle": "Hear about offers as they come",
+    "offersBody": "Turn on notifications on this device and we'll tell you the moment a helper makes an offer.",
+    "tasksTitle": "Hear about new tasks near you",
+    "tasksBody": "Turn on notifications on this device and new tasks in your area reach you first.",
+    "turnOn": "Turn on notifications",
+    "notNow": "Not now",
+    "done": "You're set. Notifications will come to this device."
+  },
+  "previews": {
+    "group": "Notifications on this device",
+    "setting": "The account setting",
+    "prompt": "The prompt after posting"
+  }
+}

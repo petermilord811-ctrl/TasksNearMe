@@ -41,6 +41,10 @@ describe('notification delivery rules', () => {
     expect(planDelivery({ type: 'offer_received', channel: 'sms', enabled: true, hasAddress: true, now: night })).toEqual({ action: 'hold', until: morning });
     expect(planDelivery({ type: 'cant_access', channel: 'sms', enabled: true, hasAddress: true, now: night })).toEqual({ action: 'send' });
     expect(planDelivery({ type: 'offer_received', channel: 'email', enabled: true, hasAddress: true, now: night })).toEqual({ action: 'send' });
+    // Pushes too: nothing buzzes at night unless it's urgent.
+    expect(planDelivery({ type: 'offer_received', channel: 'push', enabled: true, hasAddress: true, now: night })).toEqual({ action: 'hold', until: morning });
+    expect(planDelivery({ type: 'helper_arrived', channel: 'push', enabled: true, hasAddress: true, now: night })).toEqual({ action: 'send' });
+    expect(planDelivery({ type: 'offer_received', channel: 'push', enabled: true, hasAddress: false, now: night })).toEqual({ action: 'skip', reason: 'no_device' });
   });
 
   it('skips a channel that is off or has no address', () => {

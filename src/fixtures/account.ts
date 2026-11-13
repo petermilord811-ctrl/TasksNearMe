@@ -83,6 +83,9 @@ export const newAccountData: AccountPageData = {
   privacy: { deletion: { requestedAt: '2026-11-21T10:00:00.000Z', scheduledFor: '2026-11-28T10:00:00.000Z' } },
 };
 
+/** Push set up (previews): a sample key in the right shape, not a real one. */
+export const samplePushSetup = { publicKey: 'BPz4yKsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8' };
+
 /** Jordan's copy is ready to download (for a week). */
 export const exportReadyPrivacy: AccountPageData['privacy'] = { export: { status: 'ready', requestedAt: '2026-11-20T18:00:00.000Z', expiresAt: '2026-11-27T18:02:00.000Z' } };
 /** Ana's deletion date has come, but a booking is still open: it waits. */
@@ -105,6 +108,8 @@ export const fakeAccountHandlers: AccountHandlers = {
   onRequestExport: () => wait({ ok: true, code: 'submitted' }),
   onRequestDeletion: () => wait({ ok: true, code: 'submitted' }),
   onCancelDeletion: () => wait({ ok: true, code: 'updated' }),
+  onSavePushSubscription: () => wait({ ok: true, code: 'updated' }),
+  onRemovePushSubscription: () => wait({ ok: true, code: 'updated' }),
   onSignOut: () => wait({ ok: true, code: 'updated', redirectTo: routes.home() }),
   // The real one returns the provider's page; previews stay put (only the hash changes).
   onConnectSignIn: () => wait({ ok: true, code: 'sent', redirectTo: '#connect-provider' }),

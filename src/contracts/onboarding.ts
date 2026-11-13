@@ -1,3 +1,4 @@
+import type { PushHandlers, PushSetup } from './account';
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
 import type { OneTimeCodeInput, PhoneInput } from './auth';
@@ -247,6 +248,8 @@ export interface VerificationSummary {
 
 export interface HelperOnboardingPageData {
   step: OnboardingStep;
+  /** The last step can offer notifications on this device ("hear about new tasks near you"). */
+  push?: PushSetup;
   progress: OnboardingProgress;
   categories: CategoryView[];
   areas: AreaOption[];
@@ -276,6 +279,7 @@ export interface HelperOnboardingPageData {
  * `onRefreshStatus` re-reads the provider status (ok `updated`).
  */
 export interface HelperOnboardingHandlers {
+  onSavePushSubscription?: PushHandlers['onSavePushSubscription'];
   onSaveProfile: ActionHandler<HelperProfileInput>;
   /** "Write it for me" (only when `aiDraftingEnabled`). Saves nothing. */
   onDraftProfile: QueryHandler<ProfileDraftInput, ProfileDraftResult>;

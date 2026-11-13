@@ -16,6 +16,7 @@ import { photoFromFile } from '@/modules/files/uploads';
 import { categories, type FeeSchedule } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { getHelperSummaries } from '@/modules/profiles/queries';
+import { pushSetup } from '@/modules/notifications/push';
 import { readExactAddress } from '@/modules/tasks/locations';
 import { budgetOf } from '@/modules/tasks/projections';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
@@ -236,6 +237,7 @@ export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: 
     offers: await offerViews(deps, task, offerRows, now),
     actions: taskOwnerActions(task),
     ...(bookingId ? { bookingId } : {}),
+    ...(task.status === 'open' && pushSetup() ? { push: pushSetup()! } : {}),
   };
 }
 

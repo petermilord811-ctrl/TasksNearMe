@@ -5,6 +5,7 @@ import { routes, type ActionResult, type CategorySlug, type InviteHandlers, type
 import { formatDate, formatDateTime, formatHours, formatMoney, formatRelative, formatTimeRange, marketDayKey } from '@/shared/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { InviteCard } from '@/ui/components/invites/invite-card';
+import { PushPrompt } from '@/ui/components/push/push-device';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useTaskStatus } from '@/ui/components/status/use-status';
 import { buttonVariants } from '@/ui/primitives/button';
@@ -48,6 +49,7 @@ export function TaskManageScreen({ data, handlers, inviteHandlers, now, initialS
       </div>
       <TaskActions actions={data.actions} handlers={handlers} initialCancelOpen={initialCancelOpen} initialCancelResult={initialCancelResult} />
     </header>
+    {task.status === 'open' && <PushPrompt push={data.push} onSave={handlers.onSavePushSubscription} kind="offers" />}
     {data.bookingId && <section className="space-y-3 rounded-xl border bg-secondary p-4 text-secondary-foreground sm:p-5"><h2 className="flex items-center gap-2 font-heading text-xl font-semibold"><CheckCircle2 aria-hidden="true" className="size-5 shrink-0" />{t('bookedTitle')}</h2><p className="text-sm">{t('bookedBody')}</p><Link href={routes.app.booking(data.bookingId)} className={buttonVariants({ variant: 'outline' })}>{t('viewBooking')}</Link></section>}
     {data.invites && data.invites.length > 0 && inviteHandlers && <section aria-labelledby="task-invites-title" className="space-y-4">
       <h2 id="task-invites-title" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('invites')}</h2>

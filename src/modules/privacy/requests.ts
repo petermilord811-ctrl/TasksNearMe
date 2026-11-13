@@ -7,7 +7,7 @@ import { availabilityPosts } from '@/modules/availability/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
 import { blocks, threadParticipants } from '@/modules/messaging/schema';
-import { notificationPreferences, notifications, privacyRequests } from '@/modules/notifications/schema';
+import { notificationPreferences, notifications, privacyRequests, pushSubscriptions } from '@/modules/notifications/schema';
 import { offers } from '@/modules/offers/schema';
 import { helperOfferAction } from '@/modules/offers/helper';
 import { cancelTask } from '@/modules/offers/owner';
@@ -278,6 +278,7 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.delete(staffAuthenticators).where(eq(staffAuthenticators.userId, userId));
     await tx.delete(notificationPreferences).where(eq(notificationPreferences.userId, userId));
     await tx.delete(notifications).where(eq(notifications.userId, userId));
+    await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
     await tx.delete(savedHelpers).where(or(eq(savedHelpers.userId, userId), eq(savedHelpers.helperUserId, userId)));
     await tx.delete(taskMarks).where(eq(taskMarks.userId, userId));
     await tx.delete(blocks).where(eq(blocks.blockerId, userId));

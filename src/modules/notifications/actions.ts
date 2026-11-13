@@ -1,7 +1,8 @@
 'use server';
 
 import { refresh } from 'next/cache';
-import type { AccountProfileInput, ActionResult, NotificationChannel, NotificationTopic } from '@/contracts';
+import { headers } from 'next/headers';
+import type { AccountProfileInput, ActionResult, NotificationChannel, NotificationTopic, PushSubscriptionInput } from '@/contracts';
 import { refreshPublicProfile } from '@/modules/accounts/profile-photo';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -13,6 +14,7 @@ import {
   saveNotificationPreference,
 } from './service';
 import { requestNow } from '@/platform/clock';
+import { removePushSubscription, savePushSubscription } from './push';
 import { cancelAccountDeletion, requestAccountDeletion, requestDataExport } from '@/modules/privacy/requests';
 
 /** Server Actions behind the notifications and account pages (src/contracts/account.ts). */
@@ -72,4 +74,16 @@ export async function cancelAccountDeletionAction(): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   return refreshed(await cancelAccountDeletion(db, userId, await requestNow()));
+}
+
+export async function savePushSubscriptionAction(input: PushSubscriptionInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return savePushSubscription(db, userId, input, (await headers()).get('user-agent'), await requestNow());
+}
+
+export async function removePushSubscriptionAction(input: { endpoint: string }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return removePushSubscription(db, userId, String(input?.endpoint ?? ''));
 }

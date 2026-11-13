@@ -13,6 +13,8 @@ import {
 import { connectSignInAction, disconnectSignInAction, signOut } from '@/modules/accounts/actions';
 import {
   cancelAccountDeletionAction,
+  removePushSubscriptionAction,
+  savePushSubscriptionAction,
   requestAccountDeletionAction,
   requestDataExportAction,
   saveAccountProfileAction,
@@ -55,6 +57,8 @@ async function Account({ searchParams }: Pick<PageProps<'/app/account'>, 'search
         onRequestExport: requestDataExportAction,
         onRequestDeletion: requestAccountDeletionAction,
         onCancelDeletion: cancelAccountDeletionAction,
+        onSavePushSubscription: savePushSubscriptionAction,
+        onRemovePushSubscription: removePushSubscriptionAction,
         onSignOut: signOut,
         onConnectSignIn: connectSignInAction,
         onDisconnectSignIn: disconnectSignInAction,

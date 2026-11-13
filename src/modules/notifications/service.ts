@@ -26,6 +26,7 @@ import { rebookProposals } from '@/modules/rebook/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { isLockedPreference, preferenceOn } from './delivery-domain';
 import { privacyViewOf } from '@/modules/privacy/requests';
+import { pushSetup } from './push';
 import { notificationPreferences, notifications } from './schema';
 import { verificationNotificationFor } from './verification-plan';
 import { helpersToAlert } from '@/modules/offers/task-alerts';
@@ -369,6 +370,7 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     ),
     helper: { status: (profile?.status as AccountPageData['helper']['status'] | undefined) ?? 'none' },
     privacy,
+    ...(pushSetup() ? { push: pushSetup()! } : {}),
   };
 }
 

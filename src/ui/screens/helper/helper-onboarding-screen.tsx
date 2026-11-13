@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { routes, type HelperOnboardingHandlers, type HelperOnboardingPageData, type OnboardingProgress } from '@/contracts';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Money } from '@/ui/components/money/money';
+import { PushPrompt } from '@/ui/components/push/push-device';
 import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';
 import { AddressStep } from './address-step';
@@ -27,12 +28,13 @@ function OnboardingStepper({ progress }: { progress: OnboardingProgress }) {
   </nav>;
 }
 
-function OnboardingDone({ data }: { data: HelperOnboardingPageData }) {
+function OnboardingDone({ data, onSavePushSubscription }: { data: HelperOnboardingPageData; onSavePushSubscription?: HelperOnboardingHandlers['onSavePushSubscription'] }) {
   const t = useTranslations('helperOnboarding');
   const remaining = data.progress.steps.filter(({ step, state }) => step !== 'done' && state !== 'done' && state !== 'skipped');
   return <section className="space-y-6 rounded-xl border bg-card p-card shadow-card">
     {data.progress.bookable ? <CircleCheck aria-hidden="true" className="size-10 text-primary" /> : <Clock aria-hidden="true" className="size-10 text-muted-foreground" />}
     <div className="space-y-2"><h2 className="text-xl font-semibold">{t(data.progress.bookable ? 'screen.doneReady' : 'screen.donePending')}</h2><p className="text-muted-foreground">{t(data.progress.bookable ? 'screen.doneReadyBody' : 'screen.donePendingBody')}</p></div>
+    {data.progress.bookable && <PushPrompt push={data.push} onSave={onSavePushSubscription} kind="tasks" />}
     {data.progress.bookable && <><ul className="list-disc space-y-1 pl-5">{data.progress.bookableCategories.map((slug) => <li key={slug}>{data.categories.find((category) => category.slug === slug)?.name}</li>)}</ul><Link href={routes.app.findWork()} className={buttonVariants()}>{t('screen.findWork')}</Link></>}
     {remaining.length > 0 && <div className="space-y-2"><h3 className="text-lg font-semibold">{t('screen.remaining')}</h3><ul className="space-y-1">{remaining.map(({ step, state }) => <li key={step}>{state === 'locked' ? <p className="flex min-h-11 items-center gap-2 text-muted-foreground"><Lock aria-hidden="true" className="size-4" />{t('screen.lockedStep', { step: t(`screen.steps.${step}`) })}</p> : <Link href={routes.app.helperOnboarding(step)} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">{t('screen.finishStep', { step: t(`screen.steps.${step}`) })}</Link>}</li>)}</ul></div>}
     {data.progress.bookable && data.welcomeReward && <aside className="space-y-2 rounded-xl bg-badge-reward p-4 text-badge-reward-foreground"><h3 className="flex items-center gap-2 text-lg font-semibold"><Gift aria-hidden="true" className="size-5" />{t('screen.rewardTitle')}</h3><p>{t.rich('screen.rewardBody', { amount: () => <Money cents={data.welcomeReward!.amountCents} />, minimum: () => <Money cents={data.welcomeReward!.minTaskPriceCents} />, days: data.welcomeReward.windowDays })}</p></aside>}
@@ -63,6 +65,6 @@ export function HelperOnboardingScreen({ data, handlers }: { data: HelperOnboard
       {step === 'background' && data.verification.background.requiredFor.length === 0 && <p className="rounded-xl border bg-card p-card">{t('screen.backgroundSkipped')}</p>}
       {next && next.state !== 'locked' && <div><Link href={routes.app.helperOnboarding(next.step)} className={buttonVariants({ variant: 'outline', className: 'w-full sm:w-auto' })}>{t('screen.continueStep', { step: t(`screen.steps.${next.step}`) })}</Link></div>}
     </>}
-    {step === 'done' && <OnboardingDone data={data} />}
+    {step === 'done' && <OnboardingDone data={data} onSavePushSubscription={handlers.onSavePushSubscription} />}
   </div>;
 }

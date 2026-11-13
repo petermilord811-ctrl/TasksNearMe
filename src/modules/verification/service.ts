@@ -1,3 +1,4 @@
+import { pushSetup } from '@/modules/notifications/push';
 import { and, asc, eq, max, notInArray } from 'drizzle-orm';
 import type {
   ActionResult,
@@ -354,6 +355,7 @@ export async function getOnboardingPageData(db: Db, userId: string, step: Onboar
   const welcomeOpen = flags['reward.welcome'] === true && spots < WELCOME_PROGRAM.cohortLimit && !state.profile?.foundingNumber;
   return {
     step,
+    ...(step === 'done' && pushSetup() ? { push: pushSetup()! } : {}),
     progress: result.progress,
     categories: shared.categories,
     areas: shared.areas,

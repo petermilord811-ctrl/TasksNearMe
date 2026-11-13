@@ -1,6 +1,7 @@
 import type { ActionDescriptor, ActionHandler, ActionResult } from './actions';
 import type { OfferActionId, TaskActionId } from './action-ids';
 import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
+import type { PushHandlers, PushSetup } from './account';
 import type { InviteView } from './invites';
 import type { ExactAddress } from './location';
 import type { MessageSegment } from './messaging';
@@ -105,6 +106,8 @@ export interface TaskOwnerView {
   bookingId?: string;
   /** Invites the client sent for this task (UI-025), open ones first. */
   invites?: InviteView[];
+  /** An open task can offer notifications on this device ("hear about offers as they come"). */
+  push?: PushSetup;
 }
 
 /** `/app/tasks/[taskId]/offers/[offerId]`: one offer in full. */
@@ -126,4 +129,5 @@ export interface TaskOwnerHandlers {
   onOfferAction: (input: { offerId: string; action: OfferActionId }) => Promise<ActionResult>;
   onTaskAction: (input: { action: Exclude<TaskActionId, 'cancel_task'> }) => Promise<ActionResult>;
   onCancelTask: ActionHandler<{ reason: TaskCancelReason }>;
+  onSavePushSubscription?: PushHandlers['onSavePushSubscription'];
 }

@@ -5,6 +5,7 @@ import { routes, type AccountHandlers, type AccountPageData } from '@/contracts'
 import { ProfilePhotoField } from '@/ui/components/forms/profile-photo-field';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
+import { PushDeviceSetting } from '@/ui/components/push/push-device';
 import { Button } from '@/ui/primitives/button';
 import { AccountContact } from './account-contact';
 import { AccountProfileForm } from './account-profile-form';
@@ -21,6 +22,7 @@ export function AccountScreen({ data, handlers, initialDialog }: {
   initialDialog?: { channel: 'email' | 'phone'; sentTo?: string };
 }) {
   const t = useTranslations('account');
+  const push = useTranslations('push');
   const helperStatus = data.helper.status;
   return <div className="mx-auto w-full max-w-[720px] space-y-6 lg:space-y-8">
     <PageHeader title={t('title')} description={t('description')} />
@@ -35,6 +37,7 @@ export function AccountScreen({ data, handlers, initialDialog }: {
     <div className={cardClass}><Section title={t('contact.title')} description={t('contact.description')}><AccountContact email={data.profile.email} phone={data.phone} handlers={handlers} initialDialog={initialDialog} /></Section></div>
     <div className={cardClass}><Section title={t('signIn.title')} description={t('signIn.description')}><AccountSignIn methods={data.signIn} onConnect={handlers.onConnectSignIn} onDisconnect={handlers.onDisconnectSignIn} /></Section></div>
     <div className={cardClass}><Section title={t('preferences.title')} description={t('preferences.description')}><AccountPreferences preferences={data.preferences} onSave={handlers.onSavePreference} /></Section></div>
+    <div className={cardClass}><Section title={push('device.title')}><PushDeviceSetting push={data.push} handlers={handlers} /></Section></div>
     <div className={cardClass}><Section title={t('helper.title')} description={t(`helper.descriptions.${helperStatus}`)}>
       {helperStatus === 'suspended' ? <Link href={routes.help()} className="inline-flex min-h-11 items-center text-sm text-primary underline underline-offset-4">{t('helper.contactSupport')}</Link> : <Button variant="outline" asChild className="h-auto min-h-11 max-w-full whitespace-normal"><Link href={helperStatus === 'none' || helperStatus === 'draft' ? routes.app.helperOnboarding() : routes.app.helperProfile()}>{t(helperStatus === 'none' ? 'helper.become' : helperStatus === 'draft' ? 'helper.finish' : 'helper.edit')}<ArrowRight aria-hidden="true" /></Link></Button>}
     </Section></div>
