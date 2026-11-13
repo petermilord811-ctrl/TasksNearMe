@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { routes } from '@/contracts';
 import { DEFAULT_LOCALE } from '@/contracts/locale';
 import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS, pickLocale, splitLocalePath } from '@/shared/locale';
+import { isLocalRequest } from '@/shared/local-request';
 
 /**
  * Every page request passes here (API routes, Next's own files and anything with a file extension don't).
@@ -17,11 +18,18 @@ import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS, pickLocale, splitLocalePath } fro
  * real redirect before anything renders. The app layout still verifies the session itself, so a stale
  * or forged cookie gets no further than this. `/admin` is deliberately not checked: it answers 404 to
  * anyone who is not signed-in staff.
+ *
+ * Development tools. `/dev/*` (sign in as anyone, the outbox of emailed codes, the provider stand-ins, the
+ * test clock) answers only requests made on this machine: a dev server behind a public proxy says not found
+ * to everyone else (src/shared/local-request.ts). Production builds have no `/dev` at all.
  */
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const explicit = splitLocalePath(pathname);
   const path = explicit?.path ?? pathname;
+  if (isDevToolPath(path) && !isLocalRequest((name) => request.headers.get(name))) {
+    return new NextResponse('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
+  }
 
   let response: NextResponse;
   if (isAppPath(path) && !getSessionCookie(request)) {
@@ -38,6 +46,10 @@ export function proxy(request: NextRequest) {
     response.cookies.set(LOCALE_COOKIE, explicit.locale, LOCALE_COOKIE_OPTIONS);
   }
   return response;
+}
+
+function isDevToolPath(path: string): boolean {
+  return path === '/dev' || path.startsWith('/dev/');
 }
 
 function isAppPath(path: string): boolean {

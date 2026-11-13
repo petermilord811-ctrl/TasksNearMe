@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { routes } from '@/contracts';
+import { isLocalRequest } from '@/shared/local-request';
 import { auth } from './auth';
 
 /** One email code exists per person at a time, so sign-ins for the same email run one after another. */
@@ -20,10 +21,12 @@ function serialize<T>(key: string, task: () => Promise<T>): Promise<T> {
  */
 export async function devSignInAs(formData: FormData): Promise<void> {
   if (process.env.NODE_ENV === 'production') throw new Error('Not available in production.');
+  const requestHeaders = await headers();
+  // Only on this machine: a dev server behind a public proxy must not sign strangers in as anyone.
+  if (!isLocalRequest((name) => requestHeaders.get(name))) throw new Error('Only available on this machine.');
 
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const target = String(formData.get('target') ?? routes.app.home());
-  const requestHeaders = await headers();
 
   await serialize(email, async () => {
     const otp = await auth.api.createVerificationOTP({ body: { email, type: 'sign-in' } });

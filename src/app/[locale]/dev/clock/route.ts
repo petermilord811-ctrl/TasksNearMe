@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { requestNow, TEST_CLOCK_COOKIE, testClockSecret } from '@/platform/clock';
 import { MAX_CLOCK_OFFSET_MS, signClockOffset } from '@/platform/clock/signing';
+import { isLocalRequest } from '@/shared/local-request';
 
 /**
  * The test clock (blueprint 10 §3.1): moves this browser's "now" for time-travel tests. Not found unless
@@ -12,6 +13,8 @@ import { MAX_CLOCK_OFFSET_MS, signClockOffset } from '@/platform/clock/signing';
 function secretFor(request: Request): string | Response {
   const secret = testClockSecret();
   if (!secret) return new Response(null, { status: 404 });
+  // Only on this machine (also checked in src/proxy.ts), as well as the secret.
+  if (!isLocalRequest((name) => request.headers.get(name))) return new Response(null, { status: 404 });
   if (request.headers.get('x-test-clock-secret') !== secret) return new Response(null, { status: 403 });
   return secret;
 }

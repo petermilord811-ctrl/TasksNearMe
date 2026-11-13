@@ -1,8 +1,9 @@
 import 'server-only';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import type { ActionResult, BotCheckAction, BotCheckConfig } from '@/contracts';
 import { botCheckConfig, createBotChecker, TURNSTILE_STAND_IN_COOKIE } from '@/integrations/turnstile';
 import { fieldError } from '@/platform/actions/results';
+import { isLocalRequest } from '@/shared/local-request';
 import { clientIp } from './sign-in/server';
 
 /**
@@ -11,7 +12,10 @@ import { clientIp } from './sign-in/server';
  * sign-up and posting a task.
  */
 
+/** The test browser's request for the stand-in, honored only on this machine (never through a public proxy). */
 async function standInCookie(): Promise<string | undefined> {
+  const requestHeaders = await headers();
+  if (!isLocalRequest((name) => requestHeaders.get(name))) return undefined;
   return (await cookies()).get(TURNSTILE_STAND_IN_COOKIE)?.value;
 }
 
