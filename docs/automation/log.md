@@ -133,3 +133,11 @@ One entry per iteration, newest last.
 ## 2026-11-13 — Post again (plan 4.2)
 - A finished task opens the wizard on its review step with everything from last time (UI-055); the saved address is read again on "Post", and a deleted one (retention) is searched again. Integration `post-again`, e2e `post-again`.
 - The completion plan is done (every item ☑). Next: the refinement pass across the screens, split with the other session.
+
+## 2026-11-13 — Phase 2: regular visits, scheduled payments, the recurring-month reward
+- Split of the remaining phase 2 items with the other session: regular visits (and the recurring-month reward), scheduled funding for far-ahead bookings, replacement matching, ranking by reliability and AI category suggestions here; passkeys, instant payouts, poster credits and Spanish UI there. Errands wait for counsel (F17, blocked.md).
+- Gate at 99b76aa: check 2,363, test:db 301, build green; e2e 157 passed with one failure and one flake, both in find work: Undo was ignored while a hide was on its way (fixed: each task's latest choice is queued), and the one-tap offer test wasn't retry-safe (c1aeccd).
+- Regular visits (migration 0040, e7650ea, ed37c2a): the series, `scheduled` bookings, the 48 h off-session charges with retries and the 12 h skip, skips, pauses, stops and ends, one conversation per series, six notifications, the jobs. Unit tests for the calendar (DST, monthly by weekday, the 5th weekday), integration `series` (the whole life of a weekly series).
+- The recurring-month reward (94ca9ef), integration `recurring-reward`.
+- Bookings more than 14 days ahead are booked now and charged 72 h before (87b4303), integration `scheduled-booking`.
+- Next: the UI for all of it (once the other session's format codemod lands): Repeat on the proposal form, the schedule on the proposal page, the series page, the booking page's "Pay now" card and series link, the regular visits on the bookings page, the confirmation page's "charged later"; then e2e.

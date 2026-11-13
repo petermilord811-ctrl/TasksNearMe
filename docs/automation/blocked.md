@@ -8,3 +8,4 @@ Things the autopilot can't do alone, and the workaround it uses meanwhile. None 
 | Final legal text (terms, privacy, helper agreement, rewards terms) | Needs counsel (blueprint 06 §5) | Pages marked "Draft — pending legal review" |
 | Deployment (Render, domain, DNS) | Accounts and billing | Local only. The build stays deployable (`npm run build`) |
 | Web push notifications | Done (plan 3.5): "Notifications on this device", VAPID keys from `npm run push:keys` | — |
+| Errands (blueprint 01 §6, phase 2) | Vehicle use and insurance review, and the TxDMV and licensed-work limits (F17), need counsel and an insurance decision | Not built: errands stay out of the categories; moving stays labor-only |

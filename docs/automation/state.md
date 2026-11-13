@@ -1,6 +1,6 @@
 # Autopilot state
 
-**Updated:** 2026-11-13 (the completion plan is done: verification, find work with a map, task alerts, maps, staff TOTP, data export and deletion, retention, web push, the provider adapters, the installable app, the one-tap offer; landing seventh pass; P2: ID checks for clients when risk asks, saved replies and response times for staff)
+**Updated:** 2026-11-13 (phase 2 in two sessions: regular visits with scheduled payments and the recurring-month reward, bookings far ahead paid later; from the other session: credits for clients, instant payouts, passkeys, and the Spanish UI under way)
 **Autopilot:** the owner said "go ahead, build all" (2026-11-12): build everything left, Claude doing the UI too while Codex is at its limit (decisions.md). On 2026-11-13 the owner added: "refine all uis and elements and implement new features that are left without asking me". Two Claude sessions share the work (see the memory note and the split below).
 **Phase:** 5–6 (repeat bookings, trust, support and staff tools). Wired end to end:
 - the landing page (UI-036): the new brand, the motion system, the hero canvas, the map of open tasks with "Use my location";
@@ -16,6 +16,10 @@
 **New dependencies (UI-036):** `motion`, `maplibre-gl`. Run `npm install` after pulling (never while a dev server runs in that checkout).
 
 ## Done on 2026-11-13 (owner requests)
+- **Regular visits** (blueprint 03 §7, migration 0040; this session): a helper proposes a past cleaning or yard task again on a schedule (weekly, every 2 weeks, monthly by weekday); the client pays the first visit and the card stays on file; each visit is its own booking, `scheduled` until its card is charged 48 h before (retries at 36 h and 24 h, skipped unpaid at 12 h, "Pay now" on the booking page); skip, pause (auto-resume), change card, stop; the helper skips 48 h ahead or ends with 7 days' notice; one conversation per series; six notifications. `recurring` is on by default. **UI still to build** (waiting for the other session's format codemod).
+- **The recurring-month reward** (blueprint 05 variant B): $15 once per series after a calendar month with every visit completed and paid (`reward.recurring_month`, on).
+- **Bookings more than 14 days ahead** are booked now and charged 72 h before (blueprint 04 phase 2; a retry at 48 h, canceled and reopened at 24 h). Only reachable when staff raise `maxLeadDays`.
+- From the other session: credits for clients and instant payouts (0039), passkeys and a session guard (0041), and the Spanish UI groundwork (pages under `src/app/[locale]`, the proxy picks the language; new pages go there).
 - **Every provider adapter is built** (no SDKs, each tested against the provider's documented API, on when its keys are set): Stripe payments (Stripe.js card field, customers in `payment_customers` (migration 0038), 3-D Secure in the bank dialog, payment-intent and chargeback webhooks), Stripe Connect payouts (Express onboarding, `scheduled` earnings moved by the `earnings.transfers` job, account and payout webhooks), Twilio texts, Cloudflare R2 file storage (SigV4), Tremendous gift cards, plus the earlier Stripe Identity, Checkr, Resend or Postmark, and Mapbox. Production refuses to fake texts, files, payments or gift cards. Deleting an account deletes the Stripe customer.
 - **Private feedback with a review** (P2): "Anything for our team?" opens a low-priority request only the author is on.
 - **Staff code fix:** only wrong codes count toward the 5-in-10-minutes pause (the e2e staff sign-ins were being refused).
@@ -87,11 +91,9 @@
 - The design system (§1–2.3) describes the new brand.
 
 ## Next steps
-1. Done: "Post again" (plan 4.2, UI-055).
-2. The refinement pass across every screen (this session), folder by folder; the other session's areas only after it says they're free.
+1. The UI for regular visits and scheduled payments: Repeat on the proposal form, the schedule on the proposal page, `/app/series/[seriesId]` (under `src/app/[locale]/(app)/app/`), the booking page's "Pay now" card, skip and series link, regular visits on the bookings page, the confirmation page's "charged later"; previews; e2e.
+2. Phase 2 left here: automated replacement matching, ranking helpers by reliability, AI-suggested category on posting; multi-helper bookings if time allows.
 3. Keep the gate green after each increment (`scripts/gate.mjs`, one heavy run at a time between the two sessions).
-
-Before that: the autopilot finished (`final-report.md`). What's left needs you: real provider accounts (then the adapters in `docs/integration-points.md`), web push (a product choice), legal text, deployment. When Codex is back (2026-11-17), it can take UI polish tickets again.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB plus the landing copy).
