@@ -12,10 +12,10 @@ Every outside service sits behind a small interface in `src/integrations/*` (or,
 | Background checks | `VerificationProviders.background` | `/dev/providers/background` | Checkr (**built**: `src/integrations/checkr`; webhooks at `/api/webhooks/checkr`) | `CHECKR_API_KEY`, `CHECKR_PACKAGE` |
 | Sign-in with Google or Microsoft | Better Auth social providers (`src/platform/auth/config.ts`, `src/integrations/oauth`) | The account chooser at `/dev/oauth/<provider>` (Better Auth's real flow; only the provider's page is replaced) | Google OAuth client; Microsoft Entra app registration | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`; `MICROSOFT_CLIENT_ID` + `MICROSOFT_CLIENT_SECRET` |
 | Email | `EmailProvider` (`src/integrations/email`) | The dev outbox (`/dev/outbox`, with each designed email in a frame) | Postmark or Resend (**both built**: `src/integrations/email/postmark.ts`, `resend.ts`) | `POSTMARK_SERVER_TOKEN` or `RESEND_API_KEY` (one, never both), and `EMAIL_FROM` |
-| Text messages and phone codes | `SmsSender` (`src/integrations/sms`) | The dev outbox | Twilio Verify (codes) and Programmable Messaging (alerts; needs A2P 10DLC or toll-free registration) | `TWILIO_ACCOUNT_SID` (and token, sender) |
+| Text messages and phone codes | `SmsSender` (`src/integrations/sms`) | The dev outbox | Twilio Programmable Messaging (**built**: `src/integrations/sms/twilio.ts`; the app's own codes, so Verify isn't needed; register A2P 10DLC or toll-free first) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_MESSAGING_SERVICE_SID` (or `TWILIO_FROM`) |
 | Gift cards (rewards) | `GiftCardProvider` (`src/integrations/gift-cards`) | `/dev/gift-cards/<id>` | Tremendous (sandbox first) | `TREMENDOUS_API_KEY` |
 | Address search | `Geocoder` (`src/integrations/geocoding`) | Fixed sample places in Austin (`FAKE_PLACES`) | Mapbox Geocoding v6 (**built**: `mapbox.ts`) | `MAPBOX_TOKEN` |
-| Photo storage | `FileStorage` (`src/integrations/storage`) | Local disk (`.data/uploads`) | Cloudflare R2 with presigned uploads | `R2_BUCKET` (and keys) |
+| File storage (photos, proofs of address, evidence, data copies) | `FileStorage` (`src/integrations/storage`) | Local disk (`.data/uploads`) | Cloudflare R2 (**built**: `src/integrations/storage/r2.ts`, S3 API signed with SigV4, private bucket) | `R2_BUCKET`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` |
 | Writing help (Claude) | `TaskDrafter`, `ProfileWriter`, `OfferMessageWriter` (`src/integrations/ai`) | Rule-based stand-ins | Claude through `@anthropic-ai/sdk` (**built**: `claude.ts`) | `ANTHROPIC_API_KEY` (optional `ANTHROPIC_MODEL`) |
 | Reading proofs of address (Claude) | `AddressDocumentReader` (`src/integrations/ai/document-reader.ts`), run by the job runner (`verification.read_documents`) | A stand-in that reads nothing (staff see "not sure") | Claude through `@anthropic-ai/sdk` (**built**) | `ANTHROPIC_API_KEY` (the same key) |
 | Staff two-step sign-in | Built in: TOTP (`src/platform/auth/totp.ts`, `src/modules/accounts/staff-authenticator.ts`) | The code 123456 still works outside production | Any authenticator app; nothing to buy | `BETTER_AUTH_SECRET` (hashes setup codes), `FIELD_ENCRYPTION_KEY` (keys) |
@@ -42,7 +42,7 @@ Every outside service sits behind a small interface in `src/integrations/*` (or,
 - Store only what the app uses: "verified", "is adult", the name match, and the check's status. Never the date of birth, the document, or report contents.
 
 ### Phone and home address
-- **Phone:** the onboarding step uses the same texted code as the account page (`src/modules/accounts/phone-verification.ts`); real texts need the Twilio Verify adapter (below).
+- **Phone:** the onboarding step uses the same texted code as the account page (`src/modules/accounts/phone-verification.ts`), sent through Twilio when its keys are set (below). A number Twilio can't text (a landline, an invalid number, one that replied STOP) comes back to the person as an invalid number.
 - **Home address:** chosen with the address search (Mapbox with `MAPBOX_TOKEN`, the sample addresses otherwise) and confirmed again on submit, so only real address points can be sent. The proof of address is stored with the app's file storage (local disk now; the R2 adapter must keep `address_proof/` objects private, with no public URL). Staff open it at `/api/verification-documents/<token>`.
 
 ### Sign-in with Google or Microsoft
@@ -65,7 +65,8 @@ There's no adapter to write: Better Auth has both providers built in. With keys 
 - **To send to everyone:** verify the domain in Resend (its SPF and DKIM records, plus a DMARC record), set `EMAIL_FROM` to an address on it (e.g. `TasksNearMe <hello@yourdomain>`), and set `EMAIL_REPLY_TO` to a support inbox.
 - `send` is all the app needs. Notification emails and texts go through `deliverNotifications` (`src/modules/notifications/delivery.ts`), which records every attempt in `notification_deliveries` and retries failures 5, 30 and 120 minutes later. Throw on a failed send so it's retried.
 - Texts go only to verified phones; texts that can wait are held from 9 pm to 8 am market time.
-- Before texting real people: register the sender (A2P 10DLC or toll-free) and add STOP handling.
+- **Twilio is built** (`src/integrations/sms/twilio.ts`, REST without the SDK): one message per text from the Messaging Service (`TWILIO_MESSAGING_SERVICE_SID`, preferred) or `TWILIO_FROM`. The app makes and checks its own six-digit codes, so Twilio only delivers them. Outside production every text is also kept in `/dev/outbox`, and numbers in the 555 exchange (the seeded and test people) never reach Twilio; production without the keys refuses to send rather than drop texts.
+- Before texting real people: register the sender (A2P 10DLC or toll-free). Twilio answers STOP, HELP and START itself on a Messaging Service; a number that replied STOP is refused (error 21610) and shows as one we can't text.
 
 ### Gift cards (Tremendous)
 - `order` places one reward order; the grant id travels as `externalId` (Tremendous's external id), so a retry never issues twice. The result's link replaces `/dev/gift-cards/<id>`.
@@ -79,7 +80,9 @@ There's no adapter to write: Better Auth has both providers built in. With keys 
 - **Tests never call Mapbox:** a browser with the `tnm_geo_stand_in=1` cookie gets the fictional sample addresses (never in production), as `tests/e2e/posting.spec.ts` does. Outside production the sample place ids (`plc_…`) still resolve beside Mapbox. A production build without a token has no address search rather than fictional addresses.
 - Only the public point (fuzzed 300–800 m) and the area are ever shown to anyone but the client and the booked helper.
 
-### Photo storage (R2)
+### File storage (R2)
+- **R2 is built** (`src/integrations/storage/r2.ts`): `put`, `get` and `delete` through R2's S3-compatible API, signed with AWS Signature Version 4 by Node's crypto (checked against the AWS documentation's example). Create a bucket with no public access and an R2 API token with Object Read & Write on it; its S3 access key pair goes in `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`, the Cloudflare account id in `R2_ACCOUNT_ID`. Every read still goes through the app (`/api/files/<id>`, `/api/verification-documents/<token>`), which checks who may see the file, so the bucket never needs a public URL.
+- Production without R2 refuses to store files (rather than keep them on a disk the next deploy wipes); `FILE_STORAGE=local` keeps the local disk on a server whose disk lasts.
 - `put` and `get` by key. Uploads already strip metadata (EXIF, GPS) and re-encode before storing; with R2, switch to presigned direct uploads so photos don't pass through Server Actions (decisions.md).
 - Profile photos (`kind: avatar`) are cropped to a 512 px square around the face or subject. One is public only while it's its owner's current photo (`isCurrentProfilePhoto`); a replaced or removed photo goes back to owner and staff only. With a CDN in front of R2, keep avatars out of long shared caches, or a removed photo stays visible until the cache expires.
 

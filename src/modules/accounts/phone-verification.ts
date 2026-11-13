@@ -1,6 +1,6 @@
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { and, desc, eq, ne } from 'drizzle-orm';
-import type { SmsSender } from '@/integrations/sms';
+import { SmsRejectedError, type SmsSender } from '@/integrations/sms';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimits } from '@/platform/rate-limit';
@@ -115,7 +115,14 @@ export function createPhoneVerification({ db, sms, secret, now = () => new Date(
         createdAt: at,
         updatedAt: at,
       });
-      await sms.send({ to: phone, text: `${code} is your TasksNearMe code. It works for 10 minutes. We'll never call to ask for it.` });
+      try {
+        await sms.send({ to: phone, text: `${code} is your TasksNearMe code. It works for 10 minutes. We'll never call to ask for it.` });
+      } catch (error) {
+        // The provider can't text this number (not a mobile, or it replied STOP): ask for another one.
+        if (!(error instanceof SmsRejectedError)) throw error;
+        await cancelPending(userId, at);
+        return { ok: false, reason: 'invalid' };
+      }
       return { ok: true, maskedPhone: maskUsPhone(phone), resendAvailableAt };
     },
 

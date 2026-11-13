@@ -1,9 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { r2FromEnv } from './r2';
 
 /**
- * File storage port. Development keeps files on local disk (`.data/uploads`, gitignored);
- * production uses object storage (Cloudflare R2) with presigned direct uploads once keys exist.
+ * File storage port. Development keeps files on local disk (`.data/uploads`, gitignored); with R2 keys the
+ * files go to a private Cloudflare R2 bucket (`./r2.ts`). Reads always go through the app's routes.
  */
 export interface FileStorage {
   readonly name: string;
@@ -43,10 +44,19 @@ export function createLocalFileStorage(root = path.join(process.cwd(), '.data', 
   };
 }
 
-export function createFileStorage(): FileStorage {
-  if (process.env.R2_BUCKET) {
-    // TODO(integration): R2 adapter with presigned uploads (Phase 10). Refuse to silently use disk.
-    throw new Error('R2_BUCKET is set but the R2 storage adapter is not implemented yet.');
+/**
+ * The app's file storage: R2 when `R2_BUCKET` is set (`./r2.ts`), local disk otherwise. Production needs R2,
+ * or `FILE_STORAGE=local` on a server with a lasting disk; without either it refuses to store files rather
+ * than lose them with the next deploy.
+ */
+export function createFileStorage(env: Record<string, string | undefined> = process.env): FileStorage {
+  const r2 = r2FromEnv(env);
+  if (r2) return r2;
+  if (env.NODE_ENV === 'production' && env.FILE_STORAGE !== 'local') {
+    const refuse = async (): Promise<never> => {
+      throw new Error('File storage needs R2 in production: set R2_BUCKET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY (or FILE_STORAGE=local on a lasting disk).');
+    };
+    return { name: 'unconfigured', put: refuse, get: refuse, delete: refuse };
   }
   return createLocalFileStorage();
 }

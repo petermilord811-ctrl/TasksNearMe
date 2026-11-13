@@ -1,10 +1,14 @@
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { devOutboxMessages } from '@/platform/dev-outbox/schema';
+import { twilioFromEnv } from './twilio';
+
+export { SmsRejectedError } from './errors';
 
 /**
- * SMS port. Development and tests write texts to the dev outbox (/dev/outbox). Production uses
- * Twilio Verify for phone codes (backlog B-011) once TWILIO_* keys exist (see blocked.md).
+ * SMS port. Development and tests write texts to the dev outbox (/dev/outbox). With TWILIO_* keys the texts
+ * go out through Twilio (`./twilio.ts`); outside production the outbox keeps a copy of each. Production
+ * without Twilio refuses to send rather than drop texts.
  */
 export interface SmsMessage {
   /** E.164, e.g. "+15125550167". */
@@ -26,10 +30,27 @@ export function createDevOutboxSmsSender(db: Db): SmsSender {
   };
 }
 
-export function createSmsSender(db: Db): SmsSender {
-  if (process.env.TWILIO_ACCOUNT_SID) {
-    // TODO(integration): Twilio Verify adapter (Phase 10). Refuse to silently drop texts.
-    throw new Error('TWILIO_ACCOUNT_SID is set but the Twilio adapter is not implemented yet.');
+export function createSmsSender(db: Db, env: Record<string, string | undefined> = process.env): SmsSender {
+  const twilio = twilioFromEnv(env);
+  const production = env.NODE_ENV === 'production';
+  if (!twilio) {
+    if (!production) return createDevOutboxSmsSender(db);
+    return {
+      name: 'unconfigured',
+      async send() {
+        throw new Error('Texts need Twilio in production: set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_MESSAGING_SERVICE_SID.');
+      },
+    };
   }
-  return createDevOutboxSmsSender(db);
+  if (production) return twilio;
+  const outbox = createDevOutboxSmsSender(db);
+  return {
+    name: twilio.name,
+    async send(message) {
+      await outbox.send(message);
+      // Numbers in the 555 exchange (the seeded and test people) never reach Twilio.
+      if (/^\+1\d{3}555\d{4}$/.test(message.to)) return;
+      await twilio.send(message);
+    },
+  };
 }

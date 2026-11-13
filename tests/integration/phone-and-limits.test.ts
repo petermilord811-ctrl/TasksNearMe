@@ -1,6 +1,6 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
-import { createDevOutboxSmsSender } from '@/integrations/sms';
+import { createDevOutboxSmsSender, SmsRejectedError } from '@/integrations/sms';
 import { createPhoneVerification } from '@/modules/accounts/phone-verification';
 import { users } from '@/modules/accounts/schema';
 import { waitlistEntries } from '@/modules/marketing/schema';
@@ -123,6 +123,18 @@ describe('phone verification', () => {
     await phones.cancel(userId);
     expect(await phones.pending(userId)).toBeNull();
     expect(await phones.verify(userId, await lastText('+15125550193'))).toEqual({ ok: false, reason: 'no_pending' });
+  });
+
+  it('asks for another number when the provider cannot text this one (a landline, or STOP)', async () => {
+    const t = clock('2026-11-17T19:00:00.000Z');
+    const refusing = { name: 'twilio', send: async () => { throw new SmsRejectedError('invalid_number', 21614); } };
+    const phones = createPhoneVerification({ db, sms: refusing, secret: 'test-secret', now: t.now });
+    const userId = await newUser('usr_phone_landline');
+    expect(await phones.start(userId, '512 555 0194')).toEqual({ ok: false, reason: 'invalid' });
+    expect(await phones.pending(userId)).toBeNull();
+    // Anything else is a failure to report, not the person's number.
+    const down = createPhoneVerification({ db, sms: { name: 'twilio', send: async () => { throw new Error('Twilio answered 503'); } }, secret: 'test-secret', now: t.now });
+    await expect(down.start(await newUser('usr_phone_outage'), '512 555 0195')).rejects.toThrow('Twilio answered 503');
   });
 });
 
