@@ -44,7 +44,7 @@ export function AccountLanguage({ language, onSave }: { language: AppLocale; onS
         'flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-2.5 text-base transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
         pending !== null && 'cursor-default opacity-80',
       )}>
-        <input type="radio" name={`${id}-language`} value={locale} checked={locale === language} onChange={() => void choose(locale)} className="size-4 shrink-0 accent-primary focus-visible:outline-none" />
+        <input type="radio" name={`${id}-language`} value={locale} checked={locale === (pending ?? language)} onChange={() => void choose(locale)} className="size-4 shrink-0 accent-primary focus-visible:outline-none" />
         <span lang={locale} className="flex-1 font-medium">{LOCALE_NAMES[locale]}</span>
         {pending === locale && <Spinner aria-hidden="true" className="size-4" />}
       </label>)}
