@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { createFileStorage } from '@/integrations/storage';
 import { canViewFile } from '@/modules/files/access';
 import { canViewRelatedFile, isCurrentProfilePhoto } from '@/modules/files/related-access';
+import { staffActorOf } from '@/modules/support/staff';
 import { files } from '@/modules/tasks/schema';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -15,9 +16,11 @@ export async function GET(_request: Request, ctx: RouteContext<'/api/files/[id]'
   const [file] = await db.select().from(files).where(eq(files.id, id)).limit(1);
   const viewer = await getViewer();
   const userId = viewer.kind === 'user' ? viewer.user.id : null;
+  // Staff only after this session's two-step check, like every staff page (not just a staff role).
+  const isStaff = viewer.kind === 'user' && staffActorOf(viewer.user) !== null;
   const allowed =
     file &&
-    (canViewFile(file, { userId, isStaff: viewer.kind === 'user' && viewer.user.staffRoles.length > 0 }) ||
+    (canViewFile(file, { userId, isStaff }) ||
       (await isCurrentProfilePhoto(db, file)) ||
       (userId !== null && (await canViewRelatedFile(db, file, userId, await requestNow()))));
   // An empty key: the retention timer deleted the file itself and kept only the record (a receipt line).
