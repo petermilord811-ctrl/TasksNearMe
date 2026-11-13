@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addressVisibility, bookingActions, bookingDeadlines, needsAction, sheetActions, type BookingFacts } from './domain';
+import { addressVisibility, bookingActions, bookingDeadlines, bookingNextStep, needsAction, sheetActions, type BookingFacts } from './domain';
 
 const start = new Date('2026-11-21T16:30:00.000Z'); // Sat 10:30 am in Austin
 const policy = { noShowMinutes: 30, addressHideAfterHours: 48 };
@@ -110,6 +110,19 @@ describe('deadlines and needing action', () => {
     expect(needsAction({ ...confirmed, status: 'completion_submitted' }, 'poster', start)).toBe(true);
     expect(needsAction(confirmed, 'helper', at('2026-11-20T12:00:00.000Z'))).toBe(false);
     expect(needsAction(confirmed, 'helper', at('2026-11-21T15:00:00.000Z'))).toBe(true);
+  });
+
+  it('says which step, and by when', () => {
+    const hold = at('2026-11-17T15:30:00.000Z');
+    expect(bookingNextStep({ ...confirmed, status: 'pending_funding', fundingExpiresAt: hold }, 'poster', start)).toEqual({ kind: 'pay', dueAt: hold.toISOString() });
+    expect(bookingNextStep({ ...confirmed, status: 'completion_submitted', approvalDueAt: at('2026-11-23T16:30:00.000Z') }, 'poster', start)).toEqual({ kind: 'review_work', dueAt: '2026-11-23T16:30:00.000Z' });
+    expect(bookingNextStep(confirmed, 'poster', start)).toBeUndefined();
+    // Helpers: "On my way" from 2 hours before, then "I'm here"; nothing for remote work or once arrived.
+    expect(bookingNextStep(confirmed, 'helper', at('2026-11-21T14:00:00.000Z'))).toBeUndefined();
+    expect(bookingNextStep(confirmed, 'helper', at('2026-11-21T15:00:00.000Z'))).toEqual({ kind: 'on_my_way', dueAt: start.toISOString() });
+    expect(bookingNextStep({ ...confirmed, onMyWayAt: at('2026-11-21T16:00:00.000Z') }, 'helper', at('2026-11-21T16:10:00.000Z'))).toEqual({ kind: 'check_in', dueAt: start.toISOString() });
+    expect(bookingNextStep({ ...confirmed, remote: true }, 'helper', start)).toBeUndefined();
+    expect(bookingNextStep({ ...confirmed, arrivedAt: start }, 'helper', start)).toBeUndefined();
   });
 });
 

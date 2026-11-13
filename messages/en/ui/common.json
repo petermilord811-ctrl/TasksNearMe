@@ -40,5 +40,9 @@
   "calendarDayTodaySelected": "{date}, today, selected",
   "calendarWeek": "Week {week}",
   "calendarWeekNumber": "Week number",
-  "scrollableRegion": "Scrollable content"
+  "scrollableRegion": "Scrollable content",
+  "days": {
+    "today": "Today",
+    "tomorrow": "Tomorrow"
+  }
 }

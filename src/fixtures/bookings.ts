@@ -443,7 +443,7 @@ export const remoteBookingHelperConfirmed: BookingView = {
   actions: [action('submit_completion', 'primary'), action('message'), action('add_to_calendar')],
 };
 
-const rowOf = (view: BookingView, amountCents: number, needsAction = false): BookingListRow => ({
+const rowOf = (view: BookingView, amountCents: number, nextStep?: BookingListRow['nextStep']): BookingListRow => ({
   id: view.id,
   title: view.task.title,
   categorySlug: view.task.categorySlug,
@@ -454,7 +454,8 @@ const rowOf = (view: BookingView, amountCents: number, needsAction = false): Boo
   start: view.terms.start,
   location: view.location,
   amountCents,
-  needsAction,
+  needsAction: nextStep !== undefined,
+  ...(nextStep ? { nextStep } : {}),
 });
 
 /** Maya's earlier yard booking with Sam (Oct 2026): $90 + $9.00. */
@@ -480,8 +481,8 @@ export const mayaBookingsPageData: BookingsPageData = {
 
 /** Maya after Jordan submitted the work: approving is waiting on her. */
 export const mayaBookingsNeedsActionData: BookingsPageData = {
-  needsAction: [rowOf(deskBookingPosterCompletionSubmitted, 6600, true)],
-  upcoming: [rowOf(deskBookingPosterCompletionSubmitted, 6600, true)],
+  needsAction: [rowOf(deskBookingPosterCompletionSubmitted, 6600, { kind: 'review_work', dueAt: DESK_TIMES.approvalDue })],
+  upcoming: [rowOf(deskBookingPosterCompletionSubmitted, 6600, { kind: 'review_work', dueAt: DESK_TIMES.approvalDue })],
   past: [mayaYardRow],
 };
 

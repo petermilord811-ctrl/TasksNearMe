@@ -1,6 +1,7 @@
-import { and, asc, count, desc, eq, inArray, isNull, notInArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, ne, notInArray } from 'drizzle-orm';
 import type {
   ActionResult,
+  BookingStatus,
   ExactAddress,
   MyTasksPageData,
   OfferDetailPageData,
@@ -11,7 +12,7 @@ import type {
   TaskCancelReason,
   TaskOwnerView,
 } from '@/contracts';
-import { bookings } from '@/modules/bookings/schema';
+import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { photoFromFile } from '@/modules/files/uploads';
 import { categories, type FeeSchedule } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
@@ -26,7 +27,7 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
-import { offerSortKey, posterOfferActions, taskOwnerActions } from './domain';
+import { byAttention, offerSortKey, ownerTaskAttention, posterOfferActions, taskOwnerActions } from './domain';
 import { offers } from './schema';
 
 /** The poster's side of tasks and offers: reads projected for the poster, and their changes. */
@@ -70,35 +71,102 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
     .orderBy(desc(tasks.createdAt));
   const visible = rows.filter((row) => row.status !== 'draft');
   const ids = visible.map((row) => row.id);
-  const unseen = ids.length
+  // Open offers, newest first: their count, the unopened ones, and the newest one per task.
+  const openOffers = ids.length
     ? await db
-        .select({ taskId: offers.taskId, value: count() })
+        .select({
+          id: offers.id,
+          taskId: offers.taskId,
+          helperUserId: offers.helperUserId,
+          posterSeenAt: offers.posterSeenAt,
+          updatedAt: offers.updatedAt,
+          pricingType: offers.pricingType,
+          priceCents: offers.priceCents,
+          hourlyRateCents: offers.hourlyRateCents,
+          estimatedHours: offers.estimatedHours,
+          hoursCap: offers.hoursCap,
+        })
         .from(offers)
-        .where(and(inArray(offers.taskId, ids), inArray(offers.status, ACTIVE), isNull(offers.posterSeenAt)))
-        .groupBy(offers.taskId)
+        .where(and(inArray(offers.taskId, ids), inArray(offers.status, ACTIVE)))
+        .orderBy(desc(offers.updatedAt))
     : [];
-  const unseenByTask = new Map(unseen.map((row) => [row.taskId, row.value]));
-  const bookingByTask = await bookingIdsOf(db, ids);
+  const offersByTask = new Map<string, typeof openOffers>();
+  for (const offer of openOffers) offersByTask.set(offer.taskId, [...(offersByTask.get(offer.taskId) ?? []), offer]);
+  // Each task's booking (the latest that isn't canceled), with its current terms' start.
+  const bookingRows = ids.length
+    ? await db
+        .select({
+          id: bookings.id,
+          taskId: bookings.taskId,
+          status: bookings.status,
+          helperUserId: bookings.helperUserId,
+          fundingExpiresAt: bookings.fundingExpiresAt,
+          approvalDueAt: bookings.approvalDueAt,
+          start: bookingTerms.startAt,
+        })
+        .from(bookings)
+        .innerJoin(bookingTerms, and(eq(bookingTerms.bookingId, bookings.id), eq(bookingTerms.version, bookings.termsVersion)))
+        .where(and(inArray(bookings.taskId, ids), ne(bookings.status, 'canceled')))
+        .orderBy(desc(bookings.createdAt))
+    : [];
+  const bookingOf = new Map<string, (typeof bookingRows)[number]>();
+  for (const booking of bookingRows) if (!bookingOf.has(booking.taskId)) bookingOf.set(booking.taskId, booking);
+  const helpers = await getHelperSummaries([...new Set([...openOffers.map((offer) => offer.helperUserId), ...bookingRows.map((booking) => booking.helperUserId)])], db);
   const categoryRows = await db.select({ id: categories.id, slug: categories.slug }).from(categories);
   const slugOf = new Map(categoryRows.map((row) => [row.id, row.slug]));
 
-  const toRow = (row: (typeof visible)[number]): OwnerTaskRow => ({
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    categorySlug: slugOf.get(row.categoryId) as OwnerTaskRow['categorySlug'],
-    status: (row.status === 'open' && row.windowEnd <= now ? 'expired' : row.status) as OwnerTaskRow['status'],
-    schedule: { windowStart: row.windowStart.toISOString(), windowEnd: row.windowEnd.toISOString(), flexible: row.flexible },
-    budget: budgetOf(row),
-    offerCount: row.offerCount,
-    newOfferCount: unseenByTask.get(row.id) ?? 0,
-    postedAt: (row.publishedAt ?? row.createdAt).toISOString(),
-    ...(bookingByTask.has(row.id) ? { bookingId: bookingByTask.get(row.id)! } : {}),
-  });
+  const toRow = (row: (typeof visible)[number]): OwnerTaskRow => {
+    const status = (row.status === 'open' && row.windowEnd <= now ? 'expired' : row.status) as OwnerTaskRow['status'];
+    const taskOffers = offersByTask.get(row.id) ?? [];
+    const newOfferCount = taskOffers.filter((offer) => offer.posterSeenAt === null).length;
+    const newest = taskOffers[0];
+    const newestHelper = newest ? helpers.get(newest.helperUserId) : undefined;
+    const booking = bookingOf.get(row.id);
+    const bookingHelper = booking ? helpers.get(booking.helperUserId) : undefined;
+    const attention = ownerTaskAttention(
+      {
+        status,
+        windowStart: row.windowStart,
+        windowEnd: row.windowEnd,
+        postedAt: row.publishedAt ?? row.createdAt,
+        activeOfferCount: taskOffers.length,
+        newOfferCount,
+        ...(booking ? { booking: { id: booking.id, status: booking.status, fundingExpiresAt: booking.fundingExpiresAt, approvalDueAt: booking.approvalDueAt } } : {}),
+      },
+      now,
+    );
+    return {
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      categorySlug: slugOf.get(row.categoryId) as OwnerTaskRow['categorySlug'],
+      status,
+      schedule: { windowStart: row.windowStart.toISOString(), windowEnd: row.windowEnd.toISOString(), flexible: row.flexible },
+      budget: budgetOf(row),
+      offerCount: row.offerCount,
+      newOfferCount,
+      postedAt: (row.publishedAt ?? row.createdAt).toISOString(),
+      // A hold waiting for payment isn't booked yet: the task still links to itself.
+      ...(booking && booking.status !== 'pending_funding' ? { bookingId: booking.id } : {}),
+      ...(status === 'open' && newest && newestHelper ? { newestOffer: { id: newest.id, helper: newestHelper, pricing: offerPricing(newest), submittedAt: newest.updatedAt.toISOString() } } : {}),
+      ...(booking && bookingHelper
+        ? {
+            booking: {
+              start: booking.start.toISOString(),
+              helper: { id: bookingHelper.id, displayName: bookingHelper.displayName, initials: bookingHelper.initials, memberSince: bookingHelper.memberSince, phoneVerified: bookingHelper.phoneVerified, ...(bookingHelper.photo ? { photo: bookingHelper.photo } : {}) },
+              status: booking.status as BookingStatus,
+            },
+          }
+        : {}),
+      ...(attention ? { attention } : {}),
+    };
+  };
   const all = visible.map(toRow);
+  const startOf = (row: OwnerTaskRow) => row.booking?.start ?? row.schedule.windowStart;
   return {
+    needsYou: all.filter((row) => row.attention).sort(byAttention),
     open: all.filter((row) => row.status === 'open'),
-    booked: all.filter((row) => row.status === 'assigned').sort((a, b) => a.schedule.windowStart.localeCompare(b.schedule.windowStart)),
+    booked: all.filter((row) => row.status === 'assigned').sort((a, b) => startOf(a).localeCompare(startOf(b))),
     past: all.filter((row) => row.status === 'completed' || row.status === 'canceled' || row.status === 'expired'),
   };
 }

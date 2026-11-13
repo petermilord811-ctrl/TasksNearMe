@@ -37,7 +37,7 @@ import { bookingOpenChange } from './changes';
 import { bookingThreadLink, ensureThread, postEvent } from '@/modules/messaging/service';
 import { canceledFacts, contestNoShow, reopenForReplacement, type ReopenedTask } from './after-cancel';
 import { autoApproveDue, completionViewOf } from './completion-view';
-import { addressVisibility, allBookingActions, bookingDeadlines, needsAction, type BookingFacts, type BookingPolicy } from './domain';
+import { addressVisibility, allBookingActions, bookingDeadlines, bookingNextStep, type BookingFacts, type BookingPolicy } from './domain';
 import { expireCantAccess } from './sheets';
 import { bookingTerms, bookings } from './schema';
 
@@ -291,6 +291,7 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
     const other = role === 'poster' ? helpers.get(booking.helperUserId) : clients.get(booking.posterUserId);
     if (!role || !view || !other) return [];
     const remote = view.location.kind === 'remote';
+    const nextStep = bookingNextStep(factsOf(booking, remote), role, now);
     return [
       {
         id: booking.id,
@@ -303,14 +304,15 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
         start: terms.startAt.toISOString(),
         location: view.location,
         amountCents: role === 'poster' ? (terms.breakdown.posterChargedCents ?? terms.breakdown.posterTotalCents) : terms.breakdown.helperEarningsCents,
-        needsAction: needsAction(factsOf(booking, remote), role, now),
+        needsAction: nextStep !== undefined,
+        ...(nextStep ? { nextStep } : {}),
       },
     ];
   });
   const byStart = (a: BookingListRow, b: BookingListRow) => a.start.localeCompare(b.start);
   const upcoming = list.filter((row) => !FINAL.includes(row.status)).sort(byStart);
   return {
-    needsAction: upcoming.filter((row) => row.needsAction),
+    needsAction: upcoming.filter((row) => row.needsAction).sort((a, b) => (a.nextStep?.dueAt ?? a.start).localeCompare(b.nextStep?.dueAt ?? b.start)),
     upcoming,
     past: list.filter((row) => FINAL.includes(row.status)).sort((a, b) => b.start.localeCompare(a.start)),
   };

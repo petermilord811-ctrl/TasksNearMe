@@ -1,13 +1,14 @@
 import Link from 'next/link';
-import { CalendarDays, ChevronRight, MapPin, Monitor } from 'lucide-react';
+import { CalendarDays, ChevronRight, CircleAlert, MapPin, Monitor } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BookingListRow, type BookingsPageData, type ISODateTime } from '@/contracts';
-import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
+import { formatDateTime, formatMoney, formatRelative, formatTime, marketDayKey } from '@/shared/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus } from '@/ui/components/status/use-status';
+import { groupByDay, useDayLabel } from '@/ui/components/time/day-groups';
 import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/primitives/tabs';
@@ -41,6 +42,12 @@ export function BookingRow({ row, tab, now, headingLevel = 2 }: { row: BookingLi
       <StatusBadge tone="neutral" label={t(`roles.${row.viewerRole}`)} />
       {row.needsAction && <StatusBadge tone="warning" label={t('needsAction')} />}
     </div>
+    {row.nextStep && <p className="mt-3 flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium tabular-nums">
+      <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+      {t(`nextStep.${row.nextStep.kind}`, row.nextStep.dueAt
+        ? { relative: formatRelative(row.nextStep.dueAt, now), date: formatDateTime(row.nextStep.dueAt), time: formatTime(row.nextStep.dueAt) }
+        : { relative: '', date: '', time: '' })}
+    </p>}
     <div className="mt-5 flex items-center gap-3">
       <InitialsAvatar initials={row.otherParty.initials} size="sm" />
       <p className="text-sm font-medium">{row.otherParty.displayName}</p>
@@ -56,8 +63,10 @@ export function BookingRow({ row, tab, now, headingLevel = 2 }: { row: BookingLi
   </article>;
 }
 
+/** Bookings as client or helper: what needs the viewer first (with the step), then upcoming by day, then past. */
 export function BookingsScreen({ data, now }: BookingsScreenProps) {
   const t = useTranslations('bookings');
+  const dayLabel = useDayLabel(marketDayKey(now));
   const initialTab = tabs.find((tab) => data[tab].length > 0) ?? 'upcoming';
 
   return <div className="mx-auto w-full max-w-content space-y-6">
@@ -68,7 +77,12 @@ export function BookingsScreen({ data, now }: BookingsScreenProps) {
       </TabsList>
       {tabs.map((tab) => <TabsContent key={tab} value={tab}>
         {data[tab].length > 0
-          ? <ul className="space-y-4">{data[tab].map((row) => <li key={row.id}><BookingRow row={row} tab={tab} now={now} /></li>)}</ul>
+          ? tab === 'upcoming'
+            ? <div className="space-y-6">{groupByDay(data.upcoming, (row) => row.start).map((group) => <section key={group.day} aria-labelledby={`upcoming-${group.day}`} className="space-y-3">
+                <h2 id={`upcoming-${group.day}`} className="text-sm font-semibold text-muted-foreground">{dayLabel(group.day)}</h2>
+                <ul className="space-y-4">{group.items.map((row) => <li key={row.id}><BookingRow row={row} tab={tab} now={now} headingLevel={3} /></li>)}</ul>
+              </section>)}</div>
+            : <ul className="space-y-4">{data[tab].map((row) => <li key={row.id}><BookingRow row={row} tab={tab} now={now} /></li>)}</ul>
           : <div className="space-y-3">
             <EmptyState title={t(`empty.${tab}.title`)} body={t(`empty.${tab}.body`)} action={tab === 'upcoming' ? { label: t('postTask'), href: routes.app.newTask() } : undefined} />
             {tab === 'upcoming' && <div className="flex justify-center"><Link href={routes.app.findWork()} className={buttonVariants({ variant: 'outline' })}>{t('findWork')}</Link></div>}

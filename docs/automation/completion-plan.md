@@ -45,11 +45,11 @@ Privacy: the document is the only verification data that enters our storage. It'
 
 | # | Piece | What it includes |
 |---|---|---|
-| 2.1 ☐ | Find work, redesigned | A compact sticky filter bar (chips that scroll on phones, the rest in a "Filters" sheet), sorts (soonest, newest, nearest, highest budget), days as sticky groups ("Today", "Tomorrow", "This weekend"), dense rows (budget and "you'd earn", distance band, time window, offers so far, a "New" mark, how long ago), and save / hide on each row |
-| 2.2 ☐ | List and map | On phones a list/map switch; on wide screens the list beside a sticky map. Each task is its general-area circle (never an address); nearby tasks group with a count; the helper's service area is drawn; hovering a row lights its circle and the other way round; tapping a circle shows the task card |
-| 2.3 ☐ | Saved and hidden tasks | "Save for later" and "Not interested" for helpers, with a Saved filter |
-| 2.4 ☐ | Maps elsewhere | The task page (helper and poster): the general-area circle and how far it is from the helper's area. Posting: a preview of exactly what helpers will see. The helper's area step: the service area drawn live as the radius changes. The booking page for the booked helper: Directions buttons (Google Maps, Apple Maps) built from the address text, never from stored coordinates. The public task board gets a map view too |
-| 2.5 ☐ | Poster's lists | My tasks and bookings: what needs attention first, grouped by day, offer counts and the newest offer on each task |
+| 2.1 ☑ | Find work, redesigned | A compact sticky filter bar (chips that scroll on phones, the rest in a "Filters" sheet), sorts (soonest, newest, nearest, highest budget), days as sticky groups ("Today", "Tomorrow", "This weekend"), dense rows (budget and "you'd earn", distance band, time window, offers so far, a "New" mark, how long ago), and save / hide on each row |
+| 2.2 ☑ | List and map | On phones a list/map switch; on wide screens the list beside a sticky map. Each task is its general-area circle (never an address); nearby tasks group with a count; the helper's service area is drawn; hovering a row lights its circle and the other way round; tapping a circle shows the task card |
+| 2.3 ☑ | Saved and hidden tasks | "Save for later" and "Not interested" for helpers, with a Saved filter |
+| 2.4 ☑ | Maps elsewhere | The task page (helper and poster): the general-area circle and how far it is from the helper's area. Posting: a preview of exactly what helpers will see. The helper's area step: the service area drawn live as the radius changes. The booking page for the booked helper: Directions buttons (Google Maps, Apple Maps) built from the address text, never from stored coordinates. The public task board gets a map view too |
+| 2.5 ☑ | Poster's lists | My tasks and bookings: what needs attention first, grouped by day, offer counts and the newest offer on each task |
 
 Maps stay free: MapLibre with OpenFreeMap tiles, and the static fallback when WebGL is missing. Mapbox is used only for address search (its terms: no stored coordinates).
 
@@ -57,8 +57,8 @@ Maps stay free: MapLibre with OpenFreeMap tiles, and the static fallback when We
 
 | # | Piece | Why |
 |---|---|---|
-| 3.1 ☐ | Task alerts for helpers | Blueprint J1: matching helpers (category, service area, alert settings) get an alert, rate-limited. A "New tasks near you" topic, at most 3 an hour and 10 a day per helper |
-| 3.2 ☐ | Staff two-step sign-in with an authenticator app (TOTP) | The admin check still uses the development code 123456 (a TODO). Free, no provider |
+| 3.1 ☑ | Task alerts for helpers | Blueprint J1: matching helpers (category, service area, alert settings) get an alert, rate-limited. A "New tasks near you" topic, at most 3 an hour and 10 a day per helper |
+| 3.2 ☑ | Staff two-step sign-in with an authenticator app (TOTP) | The admin check still uses the development code 123456 (a TODO). Free, no provider |
 | 3.3 ☐ | Data export and account deletion | The account page records the requests; build the export (a download for the person) and the deletion (anonymize once nothing is open), per blueprint 08 §5 |
 | 3.4 ☐ | Retention timers | Blueprint 08 §5: exact addresses deleted 180 days after the last booking unless saved, and the rest of the table where a timer is missing |
 | 3.5 ☐ | Web push (the third channel) | Finishes T-29: a service worker, VAPID keys generated locally, a subscription per device, asked only after a related action (posting a task; finishing onboarding), and the account page's "Notifications on this device" |
@@ -68,7 +68,7 @@ Maps stay free: MapLibre with OpenFreeMap tiles, and the static fallback when We
 
 | # | Feature | Why it's worth it |
 |---|---|---|
-| 4.1 ☐ | Automatic reading of proof-of-address documents | With `ANTHROPIC_API_KEY`, Claude reads the document once and tells staff whether the name, address and date match. Staff still decide; only the yes/no answers are kept. Stand-in in tests |
+| 4.1 ☑ | Automatic reading of proof-of-address documents | With `ANTHROPIC_API_KEY`, Claude reads the document once and tells staff whether the name, address and date match. Staff still decide; only the yes/no answers are kept. Stand-in in tests |
 | 4.2 ☐ | "Post again" | Posters repeat a past task in two taps (the same category, details and address) |
 | 4.3 ☐ | One-tap offer at the posted budget | For fixed-price tasks, helpers offer the asked price straight from the list |
 | 4.4 ☐ | Provider adapters for Stripe Identity and Checkr | Written against their APIs with tested webhooks, so adding the keys switches the stand-ins off |

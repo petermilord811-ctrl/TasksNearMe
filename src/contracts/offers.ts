@@ -5,9 +5,9 @@ import type { InviteView } from './invites';
 import type { ExactAddress } from './location';
 import type { MessageSegment } from './messaging';
 import type { PriceBreakdown, PricingInput } from './money';
-import type { HelperSummary } from './people';
+import type { HelperSummary, PersonSummary } from './people';
 import type { TaskDetailsValue } from './posting';
-import type { OfferStatus, TaskStatus } from './status';
+import type { BookingStatus, OfferStatus, TaskStatus } from './status';
 import type { TaskPublicView, TaskSchedule } from './tasks';
 
 /**
@@ -44,6 +44,16 @@ export interface OfferView {
 export const TASK_CANCEL_REASONS = ['no_longer_needed', 'found_help_elsewhere', 'details_wrong', 'other'] as const;
 export type TaskCancelReason = (typeof TASK_CANCEL_REASONS)[number];
 
+/**
+ * What needs the poster on a task, most urgent first (from the domain: `ownerTaskAttention`):
+ * `finish_payment` (a booking waits for the card, until `dueAt`), `review_work` (the helper marked the
+ * work complete: approve it or report a problem by `dueAt`), `choose_soon` (offers wait and the task's
+ * time is within a day; it closes at `dueAt`), `new_offers` (offers the poster hasn't opened), and
+ * `no_offers` (a day without an offer: invite helpers).
+ */
+export const OWNER_TASK_ATTENTIONS = ['finish_payment', 'review_work', 'choose_soon', 'new_offers', 'no_offers'] as const;
+export type OwnerTaskAttention = (typeof OWNER_TASK_ATTENTIONS)[number];
+
 export interface OwnerTaskRow {
   id: string;
   slug: string;
@@ -58,13 +68,21 @@ export interface OwnerTaskRow {
   postedAt: ISODateTime;
   /** Set once an offer is booked. */
   bookingId?: string;
+  /** The newest offer still open ("Newest: Jordan T., $60"). */
+  newestOffer?: { id: string; helper: HelperSummary; pricing: PricingInput; submittedAt: ISODateTime };
+  /** The booking, also while it waits for payment: when, with whom, and how it stands. */
+  booking?: { start: ISODateTime; helper: PersonSummary; status: BookingStatus };
+  /** What needs the poster now, if anything; `bookingId` for the booking's own steps. */
+  attention?: { kind: OwnerTaskAttention; dueAt?: ISODateTime; bookingId?: string };
 }
 
-/** `/app/tasks`: the poster's tasks in three tabs. */
+/** `/app/tasks`: what needs the poster first, then their tasks in three tabs. */
 export interface MyTasksPageData {
+  /** Tasks that need the poster now, most urgent first (`attention`). They also appear in their tab. */
+  needsYou: OwnerTaskRow[];
   /** `open` tasks, newest first. */
   open: OwnerTaskRow[];
-  /** `assigned` tasks (booked), soonest first. */
+  /** `assigned` tasks (booked), by the booking's start, soonest first. */
   booked: OwnerTaskRow[];
   /** `completed`, `canceled`, `expired`, newest first. */
   past: OwnerTaskRow[];

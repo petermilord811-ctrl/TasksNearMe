@@ -33,5 +33,11 @@
       "title": "Nothing has finished yet",
       "body": "Completed and canceled bookings will appear here."
     }
+  },
+  "nextStep": {
+    "pay": "Pay to confirm. The hold ends {relative}.",
+    "review_work": "Review the work by {date}, or it's approved automatically.",
+    "on_my_way": "Tap \"On my way\" when you leave. It starts at {time}.",
+    "check_in": "Tap \"I'm here\" when you arrive. It starts at {time}."
   }
 }

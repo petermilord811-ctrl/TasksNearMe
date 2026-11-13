@@ -20,6 +20,10 @@ describe("the poster's tasks and offers", () => {
     const mine = await getMyTasks(db, 'usr_maya', now());
     const desk = mine.open.find((row) => row.id === 'tsk_desk');
     expect(desk).toMatchObject({ offerCount: 3, newOfferCount: 1, status: 'open' });
+    // The newest offer on the row, and the desk among what needs Maya.
+    expect(desk?.newestOffer).toMatchObject({ id: 'off_jordan', helper: { displayName: 'Jordan T.' }, pricing: { type: 'fixed', priceCents: 6000 } });
+    expect(desk?.attention).toEqual({ kind: 'new_offers' });
+    expect(mine.needsYou.map((row) => row.id)).toContain('tsk_desk');
   });
 
   it('shows the owner view: offers newest first, masked messages, fees, and the own address', async () => {

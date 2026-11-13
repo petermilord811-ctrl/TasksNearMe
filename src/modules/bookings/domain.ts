@@ -1,4 +1,4 @@
-import type { ActionDescriptor, AddressVisibility, BookingActionId, BookingDeadlines, BookingStatus, BookingViewerRole } from '@/contracts';
+import type { ActionDescriptor, AddressVisibility, BookingActionId, BookingDeadlines, BookingNextStep, BookingStatus, BookingViewerRole } from '@/contracts';
 
 /**
  * Booking rules as pure functions (docs/blueprint/03 §4, docs/ui/ui-contract.md §5–6): which actions
@@ -189,12 +189,22 @@ export function bookingDeadlines(booking: BookingFacts, role: BookingViewerRole,
   }
 }
 
+/** What the viewer does next, if anything (see `BOOKING_NEXT_STEPS`). */
+export function bookingNextStep(booking: BookingFacts, role: BookingViewerRole, now: Date): { kind: BookingNextStep; dueAt?: string } | undefined {
+  if (role === 'poster') {
+    if (booking.status === 'pending_funding') return { kind: 'pay', ...(booking.fundingExpiresAt ? { dueAt: booking.fundingExpiresAt.toISOString() } : {}) };
+    if (booking.status === 'completion_submitted') return { kind: 'review_work', ...(booking.approvalDueAt ? { dueAt: booking.approvalDueAt.toISOString() } : {}) };
+    return undefined;
+  }
+  if (booking.status === 'confirmed' && !booking.remote && !booking.arrivedAt && now.getTime() >= booking.startAt.getTime() - ON_MY_WAY_LEAD_MS) {
+    return { kind: booking.onMyWayAt ? 'check_in' : 'on_my_way', dueAt: booking.startAt.toISOString() };
+  }
+  return undefined;
+}
+
 /** The viewer has something to do now. */
 export function needsAction(booking: BookingFacts, role: BookingViewerRole, now: Date): boolean {
-  if (role === 'poster') return booking.status === 'pending_funding' || booking.status === 'completion_submitted';
-  return (
-    booking.status === 'confirmed' && !booking.remote && !booking.arrivedAt && now.getTime() >= booking.startAt.getTime() - ON_MY_WAY_LEAD_MS
-  );
+  return bookingNextStep(booking, role, now) !== undefined;
 }
 
 const KIND_ORDER: Record<ActionDescriptor['kind'], number> = { primary: 0, secondary: 1, destructive: 2 };

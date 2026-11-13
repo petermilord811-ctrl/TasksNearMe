@@ -1,5 +1,5 @@
 import { routes, type AppShellHandlers, type MyTasksPageData, type PreviewEntry } from '@/contracts';
-import { fakeHandler, mayaShell, myTasksEmptyData, myTasksPageData } from '@/fixtures';
+import { fakeHandler, mayaShell, myTasksAllAttentionData, myTasksEmptyData, myTasksPageData } from '@/fixtures';
 import { MyTasksScreen } from '@/ui/screens/tasks/my-tasks-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/myTasks.json';
@@ -18,6 +18,7 @@ function preview(variant: string, title: string, data: MyTasksPageData, initialT
 
 export const myTasksPreviews: PreviewEntry[] = [
   preview('default', copy.previews.default, myTasksPageData),
+  preview('all-attention', copy.previews.allAttention, myTasksAllAttentionData),
   preview('empty', copy.previews.empty, myTasksEmptyData),
   preview('booked', copy.previews.booked, myTasksPageData, 'booked'),
   preview('past', copy.previews.past, myTasksPageData, 'past'),
@@ -25,6 +26,6 @@ export const myTasksPreviews: PreviewEntry[] = [
   preview('empty-past', copy.previews.emptyPast, myTasksEmptyData, 'past'),
   preview('past-statuses', copy.previews.pastStatuses, {
     ...myTasksPageData,
-    past: [myTasksPageData.past[0], { ...myTasksPageData.open[0], status: 'canceled' }, { ...myTasksPageData.booked[0], status: 'expired' }],
+    past: [myTasksPageData.past[0], { ...myTasksPageData.open[0], status: 'canceled' }, { ...myTasksPageData.booked[1], status: 'expired' }],
   }, 'past'),
 ];

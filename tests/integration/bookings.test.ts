@@ -128,6 +128,7 @@ describe('booking an offer', () => {
     expect(sam?.kind === 'page' && sam.data.unavailable).toBe('task_booked');
     const mine = await getMyTasks(db, 'usr_maya', now());
     expect(mine.booked.find((row) => row.id === 'tsk_bk1')?.bookingId).toBe(booking!.id);
+    expect(mine.booked.find((row) => row.id === 'tsk_bk1')?.booking).toMatchObject({ status: 'confirmed', helper: { displayName: 'Jordan T.' } });
   });
 
   it('cancels an unpaid hold after 30 minutes, and the offer stays open', async () => {

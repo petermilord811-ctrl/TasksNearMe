@@ -231,6 +231,14 @@ export interface BookingDisputeView {
   };
 }
 
+/**
+ * What the viewer does next on a booking (from the domain: `bookingNextStep`). Clients pay to confirm
+ * (until `dueAt`, when the hold ends) or review the work (by `dueAt`, then it's approved automatically).
+ * Helpers tap "On my way" when they leave, then "I'm here" (from 2 hours before the start, `dueAt`).
+ */
+export const BOOKING_NEXT_STEPS = ['pay', 'review_work', 'on_my_way', 'check_in'] as const;
+export type BookingNextStep = (typeof BOOKING_NEXT_STEPS)[number];
+
 /** A row on `/app/bookings`. */
 export interface BookingListRow {
   id: string;
@@ -245,13 +253,14 @@ export interface BookingListRow {
   location: TaskLocation;
   /** Posters: the total charged. Helpers: what they'll earn. */
   amountCents: Cents;
-  /** The viewer has something to do now (pay, check in, approve…). */
+  /** The viewer has something to do now (pay, check in, approve…): `nextStep`. */
   needsAction: boolean;
+  nextStep?: { kind: BookingNextStep; dueAt?: ISODateTime };
 }
 
 /** `/app/bookings`: every booking as poster or helper. */
 export interface BookingsPageData {
-  /** Bookings waiting on the viewer, most urgent first. They also appear in `upcoming`. */
+  /** Bookings waiting on the viewer, most urgent first (the nearest `nextStep.dueAt`). They also appear in `upcoming`. */
   needsAction: BookingListRow[];
   /** Not finished yet (`pending_funding` to `disputed`), soonest first. */
   upcoming: BookingListRow[];

@@ -1,4 +1,4 @@
-import type { ActionDescriptor, OfferActionId, OfferStatus, TaskActionId, TaskStatus } from '@/contracts';
+import { OWNER_TASK_ATTENTIONS, type ActionDescriptor, type OfferActionId, type OfferStatus, type OwnerTaskRow, type TaskActionId, type TaskStatus } from '@/contracts';
 
 /**
  * Which actions people get on offers and tasks (docs/blueprint/03 §2–3). Pure functions: the UI
@@ -51,4 +51,43 @@ export function taskOwnerActions(task: { status: TaskStatus | string }): ActionD
 /** Offers still in play: pending and stale ones, before the rest. */
 export function offerSortKey(status: string): number {
   return status === 'pending' ? 0 : status === 'stale' ? 1 : status === 'accepted' ? 2 : 3;
+}
+
+const DAY_MS = 86_400_000;
+
+/** What `ownerTaskAttention` looks at. */
+export interface OwnerTaskFacts {
+  /** As the poster sees it (`expired` once the window has passed). */
+  status: string;
+  windowStart: Date;
+  windowEnd: Date;
+  postedAt: Date;
+  /** Pending and stale offers. */
+  activeOfferCount: number;
+  newOfferCount: number;
+  /** The task's booking, unless canceled. */
+  booking?: { id: string; status: string; fundingExpiresAt: Date | null; approvalDueAt: Date | null };
+}
+
+/** What needs the poster on a task now (see `OWNER_TASK_ATTENTIONS`), or nothing. */
+export function ownerTaskAttention(task: OwnerTaskFacts, now: Date): OwnerTaskRow['attention'] {
+  const { booking } = task;
+  if (booking?.status === 'pending_funding' && (!booking.fundingExpiresAt || booking.fundingExpiresAt > now)) {
+    return { kind: 'finish_payment', bookingId: booking.id, ...(booking.fundingExpiresAt ? { dueAt: booking.fundingExpiresAt.toISOString() } : {}) };
+  }
+  if (booking?.status === 'completion_submitted') {
+    return { kind: 'review_work', bookingId: booking.id, ...(booking.approvalDueAt ? { dueAt: booking.approvalDueAt.toISOString() } : {}) };
+  }
+  if (task.status !== 'open' || task.windowEnd <= now) return undefined;
+  if (task.activeOfferCount > 0 && task.windowStart.getTime() - now.getTime() <= DAY_MS) return { kind: 'choose_soon', dueAt: task.windowEnd.toISOString() };
+  if (task.newOfferCount > 0) return { kind: 'new_offers' };
+  if (task.activeOfferCount === 0 && now.getTime() - task.postedAt.getTime() >= DAY_MS) return { kind: 'no_offers' };
+  return undefined;
+}
+
+/** "Needs you" order: the kind (most urgent first), then the nearest due time or start. */
+export function byAttention(a: Pick<OwnerTaskRow, 'attention' | 'schedule'>, b: Pick<OwnerTaskRow, 'attention' | 'schedule'>): number {
+  const rank = (row: typeof a) => (row.attention ? OWNER_TASK_ATTENTIONS.indexOf(row.attention.kind) : OWNER_TASK_ATTENTIONS.length);
+  const when = (row: typeof a) => row.attention?.dueAt ?? row.schedule.windowStart;
+  return rank(a) - rank(b) || when(a).localeCompare(when(b));
 }

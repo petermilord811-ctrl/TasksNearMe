@@ -34,6 +34,13 @@ describe('BookingsScreen', () => {
     expect(article.getByRole('img', { name: 'Avatar with initials JT' })).toBeVisible();
     expect(article.getByText('Sat, Nov 21 · 10:30 am')).toBeVisible();
     expect(article.getByText('Mueller')).toBeVisible();
+    // Upcoming goes by day.
+    expect(screen.getByRole('heading', { level: 2, name: 'Sat, Nov 21' })).toBeVisible();
+  });
+
+  it('says what to do on a booking that needs the viewer', () => {
+    renderBookings(mayaBookingsNeedsActionData);
+    expect(screen.getByText(/^Review the work by .+, or it's approved automatically\.$/)).toBeVisible();
   });
 
   it('prioritizes Needs action and preserves action markers in Upcoming', async () => {

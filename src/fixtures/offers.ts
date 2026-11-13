@@ -1,9 +1,12 @@
 import type {
   ActionDescriptor,
+  HelperSummary,
   MyTasksPageData,
   OfferActionId,
   OfferDetailPageData,
   OfferView,
+  OwnerTaskRow,
+  PersonSummary,
   PriceBreakdown,
   TaskActionId,
   TaskOwnerHandlers,
@@ -159,20 +162,58 @@ export const remoteOwnerView: TaskOwnerView = {
   actions: openTaskActions,
 };
 
+const personOf = (helper: HelperSummary): PersonSummary => ({ id: helper.id, displayName: helper.displayName, initials: helper.initials, memberSince: helper.memberSince, phoneVerified: helper.phoneVerified, ...(helper.photo ? { photo: helper.photo } : {}) });
+
+const deskRow: OwnerTaskRow = {
+  id: deskPublicTask.id, slug: deskPublicTask.slug, title: deskPublicTask.title, categorySlug: deskPublicTask.categorySlug, status: 'open', schedule: deskPublicTask.schedule, budget: deskPublicTask.budget, offerCount: 3, newOfferCount: 1, postedAt: deskPublicTask.postedAt,
+  newestOffer: { id: deskOfferJordan.id, helper: deskOfferJordan.helper, pricing: deskOfferJordan.pricing, submittedAt: deskOfferJordan.submittedAt },
+  attention: { kind: 'new_offers' },
+};
+const remoteRow: OwnerTaskRow = {
+  id: remoteComputerPublicTask.id, slug: remoteComputerPublicTask.slug, title: remoteComputerPublicTask.title, categorySlug: remoteComputerPublicTask.categorySlug, status: 'open', schedule: remoteComputerPublicTask.schedule, budget: remoteComputerPublicTask.budget, offerCount: 2, newOfferCount: 0, postedAt: remoteComputerPublicTask.postedAt,
+  newestOffer: { id: 'off_lee_remote', helper: lee, pricing: { type: 'hourly', rateCents: 3500, estimatedHours: 2, hoursCap: 3 }, submittedAt: '2026-11-17T13:20:00.000Z' },
+};
+/** Posted two days ago with no offers yet: Maya is nudged to invite a helper. */
+const fridgeRow: OwnerTaskRow = {
+  id: 'tsk_fridge', slug: 'clean-out-the-fridge-and-pantry', title: 'Clean out the fridge and pantry', categorySlug: 'light-cleaning', status: 'open',
+  schedule: { windowStart: '2026-11-24T16:00:00.000Z', windowEnd: '2026-11-24T20:00:00.000Z', flexible: true }, budget: { type: 'fixed', priceCents: 7000 }, offerCount: 0, newOfferCount: 0, postedAt: '2026-11-15T16:00:00.000Z',
+  attention: { kind: 'no_offers' },
+};
+/** Jordan loaded the truck yesterday and marked it complete: Maya reviews it by Wednesday. */
+const truckRow: OwnerTaskRow = {
+  id: 'tsk_truck', slug: 'help-load-a-moving-truck', title: 'Help load a moving truck', categorySlug: 'moving-help', status: 'assigned',
+  schedule: { windowStart: '2026-11-16T15:00:00.000Z', windowEnd: '2026-11-16T18:00:00.000Z', flexible: false }, budget: { type: 'hourly', rateCents: 4000, estimatedHours: 3, hoursCap: 4 }, offerCount: 2, newOfferCount: 0, postedAt: '2026-11-12T17:00:00.000Z',
+  bookingId: 'bkg_truck', booking: { start: '2026-11-16T15:00:00.000Z', helper: personOf(jordan), status: 'completion_submitted' },
+  attention: { kind: 'review_work', dueAt: '2026-11-18T15:00:00.000Z', bookingId: 'bkg_truck' },
+};
+const yardRow: OwnerTaskRow = {
+  id: yardPublicTask.id, slug: yardPublicTask.slug, title: yardPublicTask.title, categorySlug: yardPublicTask.categorySlug, status: 'assigned', schedule: yardPublicTask.schedule, budget: yardPublicTask.budget, offerCount: 1, newOfferCount: 0, postedAt: yardPublicTask.postedAt,
+  bookingId: 'bkg_yard', booking: { start: '2026-11-28T15:00:00.000Z', helper: personOf(sam), status: 'confirmed' },
+};
+
+/** Maya's tasks: the work to review, new offers, and a task without offers need her first. */
 export const myTasksPageData: MyTasksPageData = {
-  open: [
-    { id: deskPublicTask.id, slug: deskPublicTask.slug, title: deskPublicTask.title, categorySlug: deskPublicTask.categorySlug, status: 'open', schedule: deskPublicTask.schedule, budget: deskPublicTask.budget, offerCount: 3, newOfferCount: 1, postedAt: deskPublicTask.postedAt },
-    { id: remoteComputerPublicTask.id, slug: remoteComputerPublicTask.slug, title: remoteComputerPublicTask.title, categorySlug: remoteComputerPublicTask.categorySlug, status: 'open', schedule: remoteComputerPublicTask.schedule, budget: remoteComputerPublicTask.budget, offerCount: 2, newOfferCount: 0, postedAt: remoteComputerPublicTask.postedAt },
-  ],
-  booked: [
-    { id: yardPublicTask.id, slug: yardPublicTask.slug, title: yardPublicTask.title, categorySlug: yardPublicTask.categorySlug, status: 'assigned', schedule: yardPublicTask.schedule, budget: yardPublicTask.budget, offerCount: 1, newOfferCount: 0, postedAt: yardPublicTask.postedAt, bookingId: 'bkg_yard' },
-  ],
+  needsYou: [truckRow, deskRow, fridgeRow],
+  open: [deskRow, remoteRow, fridgeRow],
+  booked: [truckRow, yardRow],
   past: [
     { id: cleaningPublicTask.id, slug: cleaningPublicTask.slug, title: cleaningPublicTask.title, categorySlug: cleaningPublicTask.categorySlug, status: 'completed', schedule: cleaningPublicTask.schedule, budget: cleaningPublicTask.budget, offerCount: 4, newOfferCount: 0, postedAt: cleaningPublicTask.postedAt, bookingId: 'bkg_cleaning' },
   ],
 };
 
-export const myTasksEmptyData: MyTasksPageData = { open: [], booked: [], past: [] };
+/** Every kind of "Needs you" at once (previews): a payment to finish and a task about to close too. */
+export const myTasksAllAttentionData: MyTasksPageData = {
+  ...myTasksPageData,
+  needsYou: [
+    { ...remoteRow, title: 'Set up a new printer', id: 'tsk_printer', attention: { kind: 'finish_payment', dueAt: '2026-11-17T15:24:00.000Z', bookingId: 'bkg_printer' }, booking: { start: '2026-11-18T22:00:00.000Z', helper: personOf(lee), status: 'pending_funding' } },
+    truckRow,
+    { ...remoteRow, id: 'tsk_shelves', title: 'Hang three floating shelves', categorySlug: 'furniture-assembly', schedule: { windowStart: '2026-11-18T00:00:00.000Z', windowEnd: '2026-11-18T02:00:00.000Z', flexible: false }, attention: { kind: 'choose_soon', dueAt: '2026-11-18T02:00:00.000Z' } },
+    deskRow,
+    fridgeRow,
+  ],
+};
+
+export const myTasksEmptyData: MyTasksPageData = { needsYou: [], open: [], booked: [], past: [] };
 
 export const deskOfferDetailData: OfferDetailPageData = {
   task: {
