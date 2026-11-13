@@ -10,5 +10,39 @@
   "receipts": "Receipts",
   "receiptTitle": "Receipt: {description}",
   "finalCost": "Final cost",
-  "earnings": "What you'll earn"
+  "earnings": "What you'll earn",
+  "checklist": {
+    "title": "Checklist",
+    "summary": "{done} of {total} confirmed",
+    "done": "Confirmed",
+    "notDone": "Not ticked",
+    "items": {
+      "furniture-assembly": {
+        "all_parts_used": "All parts used, or spares handed back",
+        "level_and_stable": "It stands level and stable",
+        "anchored_if_asked": "Tall pieces anchored to the wall, when asked",
+        "packaging_cleared": "Packaging cleared away"
+      },
+      "moving-help": {
+        "placed_where_asked": "Everything placed where they asked",
+        "nothing_damaged": "Nothing damaged along the way",
+        "load_secured": "The load secured for the drive"
+      },
+      "yard-cleanup": {
+        "debris_bagged": "Leaves and debris bagged",
+        "bags_where_agreed": "Bags left where we agreed",
+        "walkways_clear": "Walkways and the drive swept clear"
+      },
+      "light-cleaning": {
+        "listed_rooms_done": "Every room on the list cleaned",
+        "supplies_put_away": "Supplies put back where they were",
+        "trash_out": "Trash taken out"
+      },
+      "computer-help": {
+        "backed_up_first": "Their data backed up before any change",
+        "moved_and_checked": "Files moved and checked on the new device",
+        "nothing_kept": "Nothing of theirs kept on my devices"
+      }
+    }
+  }
 }

@@ -16,6 +16,7 @@ import {
   jordanShell, mayaBookingsNeedsActionData, mayaBookingsPageData, mayaShell,
   movingBookingPosterConfirmed, remoteBookingHelperConfirmed,
   deskBookingPosterWithOpenChange, deskBookingHelperWithOpenChange,
+  deskBookingHelperTipped, deskBookingPosterTipAvailable, deskBookingPosterTipped, fakeBookingTipHandlers,
 } from '@/fixtures';
 import { BookingHubContent } from '@/ui/screens/bookings/booking-hub-screen';
 import { BookingsScreen } from '@/ui/screens/bookings/bookings-screen';
@@ -31,7 +32,7 @@ const shellHandlers: AppShellHandlers = {
   onSignOut: fakeHandler({ ok: true, code: 'updated' }),
 };
 
-type PreviewOptions = Pick<ComponentProps<typeof BookingHubContent>, 'initialResult' | 'initialPending' | 'handlers' | 'now'>;
+type PreviewOptions = Pick<ComponentProps<typeof BookingHubContent>, 'initialResult' | 'initialPending' | 'handlers' | 'now' | 'tip' | 'tipPreview'>;
 
 function hubPreview(id: string, title: string, data: BookingView, options: Partial<PreviewOptions> = {}): PreviewEntry {
   const person = data.viewerRole === 'poster' ? data.poster : data.helper;
@@ -73,6 +74,15 @@ export const bookingsPreviews: PreviewEntry[] = [
   hubPreview('helper-pending-funding', copy.previews.helperPendingFunding, deskBookingHelperPendingFunding, { now: '2026-11-17T15:02:00.000Z' }),
   hubPreview('client-completion-submitted', copy.previews.clientCompletionSubmitted, deskBookingPosterCompletionSubmitted, { now: afterSubmission }),
   hubPreview('client-completed', copy.previews.clientCompleted, deskBookingPosterCompleted, { now: afterApproval }),
+  hubPreview('client-tip', copy.previews.clientTip, deskBookingPosterTipAvailable, { now: afterApproval, tip: fakeBookingTipHandlers }),
+  hubPreview('client-tip-declined', copy.previews.clientTipDeclined, deskBookingPosterTipAvailable, {
+    now: afterApproval, tip: fakeBookingTipHandlers, tipPreview: { choice: 'p15', result: { ok: false, code: 'payment_declined' } },
+  }),
+  hubPreview('client-tip-bank-step', copy.previews.clientTipBankStep, deskBookingPosterTipAvailable, {
+    now: afterApproval, tip: fakeBookingTipHandlers, tipPreview: { choice: 'p15', result: { ok: false, code: 'requires_bank_verification', verification: { paymentId: 'pay_desk_tip', kind: 'dev' } } },
+  }),
+  hubPreview('client-tipped', copy.previews.clientTipped, deskBookingPosterTipped, { now: afterApproval }),
+  hubPreview('helper-tipped', copy.previews.helperTipped, deskBookingHelperTipped, { now: afterApproval }),
   hubPreview('client-completed-saved-reviewed', copy.previews.clientSavedReviewed, {
     ...deskBookingPosterCompleted,
     helperSaved: true,

@@ -5,9 +5,11 @@ import { getCompletionPage, getReportProblemPage, quoteFinal, reportProblem, sub
 import { confirmBooking } from '@/modules/bookings/confirm';
 import { getBookingView } from '@/modules/bookings/hub';
 import { canViewRelatedFile } from '@/modules/files/related-access';
-import { bookings } from '@/modules/bookings/schema';
+import { bookingCompletions, bookings } from '@/modules/bookings/schema';
 import { offers } from '@/modules/offers/schema';
 import { supportCases } from '@/modules/support/schema';
+import type { StaffActor } from '@/modules/support/staff';
+import { getAdminBooking } from '@/modules/support/staff-money';
 import { files, tasks } from '@/modules/tasks/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
@@ -17,6 +19,8 @@ afterAll(() => pool.end());
 
 const hub = { db, cipher: fieldCipherFromEnv() };
 const now = () => new Date();
+const alex: StaffActor = { id: 'usr_alex', roles: ['support_agent'] };
+const DESK_CHECKLIST = ['all_parts_used', 'level_and_stable', 'anchored_if_asked', 'packaging_cleared'];
 
 /** A booked copy of the desk (Ana ↔ Jordan; paying has a per-person limit and other files book as Maya), checked in. */
 async function bookedDesk(id: string): Promise<string> {
@@ -59,6 +63,7 @@ describe('completing the work', () => {
     const page = await getCompletionPage(hub, 'usr_jordan', first, now());
     expect(page?.rules).toMatchObject({ photosMin: 1, noteRequired: false });
     expect(page?.rules.hours).toBeUndefined();
+    expect(page?.rules.checklist).toEqual(DESK_CHECKLIST);
     expect(page?.unavailable).toBeUndefined();
     expect(await getCompletionPage(hub, 'usr_ana', first, now())).toBeNull();
     expect(await quoteFinal(db, 'usr_jordan', first, { expensesCents: 0 })).toMatchObject({ helperEarningsCents: 5400 });
@@ -76,13 +81,25 @@ describe('completing the work', () => {
       code: 'validation_failed',
       fieldErrors: { photoIds: ['invalid'] },
     });
-    const done = await submitCompletion(db, 'usr_jordan', first, { photoIds: ['fil_done_1'], note: 'All done.', expenses: [] }, now());
+    // Only the category's checklist items can be ticked.
+    expect(await submitCompletion(db, 'usr_jordan', first, { photoIds: ['fil_done_1'], note: '', expenses: [], checklist: { load_secured: true } }, now())).toEqual({
+      ok: false,
+      code: 'validation_failed',
+      fieldErrors: { checklist: ['invalid'] },
+    });
+    const done = await submitCompletion(db, 'usr_jordan', first, { photoIds: ['fil_done_1'], note: 'All done.', expenses: [], checklist: { level_and_stable: true, all_parts_used: true } }, now());
     expect(done).toEqual({ ok: true, code: 'submitted', redirectTo: `/app/bookings/${first}` });
     expect((await getCompletionPage(hub, 'usr_jordan', first, now()))?.unavailable).toBe('already_submitted');
 
     const view = await getBookingView(hub, 'usr_ana', first, now());
     expect(view?.status).toBe('completion_submitted');
     expect(view?.completion).toMatchObject({ note: 'All done.', photos: [{ id: 'fil_done_1' }], expenses: [] });
+    // The checklist is stored whole, ticked or not, and both people see it in the category's order.
+    const [stored] = await db.select({ checklist: bookingCompletions.checklist }).from(bookingCompletions).where(eq(bookingCompletions.bookingId, first));
+    expect(stored?.checklist).toEqual({ all_parts_used: true, level_and_stable: true, anchored_if_asked: false, packaging_cleared: false });
+    const checklist = { categorySlug: 'furniture-assembly', items: DESK_CHECKLIST.map((key, index) => ({ key, done: index < 2 })) };
+    expect(view?.completion?.checklist).toEqual(checklist);
+    expect((await getBookingView(hub, 'usr_jordan', first, now()))?.completion?.checklist).toEqual(checklist);
     expect(view?.actions.map((a) => a.id)).toEqual(['approve', 'report_problem', 'message']);
     // The client can open the helper's photo; other people can't.
     expect(await canViewRelatedFile(db, { id: 'fil_done_1', kind: 'evidence' }, 'usr_ana', now())).toBe(true);
@@ -110,11 +127,18 @@ describe('reporting a problem', () => {
     expect(cases).toEqual([expect.objectContaining({ type: 'dispute', status: 'open', reason: 'not_done', fileIds: ['fil_problem_1'] })]);
     expect(await canViewRelatedFile(db, { id: 'fil_problem_1', kind: 'evidence' }, 'usr_jordan', now())).toBe(true);
     expect((await getReportProblemPage(hub, 'usr_ana', first, now()))?.unavailable).toBe('closed');
+    // Support sees what the helper ticked when they sent the work.
+    expect((await getAdminBooking(db, alex, first, now()))?.checklist?.items.filter((item) => item.done).map((item) => item.key)).toEqual(['all_parts_used', 'level_and_stable']);
   });
 
   it('approves automatically when the window ends, and then problems go to support', async () => {
     await evidence('fil_done_2', 'usr_jordan');
     await submitCompletion(db, 'usr_jordan', second, { photoIds: ['fil_done_2'], note: '', expenses: [] }, now());
+    // Ticking is optional: nothing ticked shows every item unticked; work sent before checklists shows none.
+    expect((await getBookingView(hub, 'usr_ana', second, now()))?.completion?.checklist?.items.map((item) => item.done)).toEqual([false, false, false, false]);
+    await db.update(bookingCompletions).set({ checklist: {} }).where(eq(bookingCompletions.bookingId, second));
+    expect((await getBookingView(hub, 'usr_ana', second, now()))?.completion?.checklist).toBeUndefined();
+    expect((await getAdminBooking(db, alex, second, now()))?.checklist).toBeUndefined();
     await db.update(bookings).set({ approvalDueAt: new Date(Date.now() - 60_000) }).where(eq(bookings.id, second));
     const view = await getBookingView(hub, 'usr_ana', second, now());
     expect(view).toMatchObject({ status: 'completed', completedVia: 'auto' });

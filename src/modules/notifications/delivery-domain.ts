@@ -23,6 +23,7 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   problem_reported: 'bookings',
   earnings_transferred: 'payments',
   payout_paid: 'payments',
+  tip_received: 'payments',
   review_published: 'bookings',
   message_received: 'messages',
   support_replied: 'messages',

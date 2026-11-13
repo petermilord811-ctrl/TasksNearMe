@@ -14,7 +14,7 @@ export function bookingDeps(): BookingDeps | null {
 
 const cipher = fieldCipherFromEnv();
 
-/** The booking page's dependencies: the database and the address key. */
+/** The booking page's dependencies: the database, the address key, and the payment provider (the tip card's cards). */
 export function hubDeps(): HubDeps {
-  return { db, cipher };
+  return { db, cipher, payments: provider };
 }

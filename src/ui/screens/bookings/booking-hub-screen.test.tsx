@@ -17,6 +17,7 @@ import {
   deskBookingHelperDisputed, deskBookingHelperDisputedContacted, deskBookingHelperSettled,
   deskBookingPosterDisputed, deskBookingPosterSettled,
   deskBookingPosterWithOpenChange, deskBookingHelperWithOpenChange,
+  deskBookingPosterTipAvailable, deskBookingPosterTipped, fakeBookingTipHandlers,
 } from '@/fixtures';
 import { formatDate, formatDateTime, formatMoney, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
@@ -53,6 +54,27 @@ function mount(data: BookingView = deskBookingPosterConfirmed, now = '2026-11-17
 }
 
 const roles: BookingViewerRole[] = ['poster', 'helper'];
+
+describe('BookingHubScreen tips (UI-057)', () => {
+  it("shows the client's tip: the card, its own payment line and the timeline event", () => {
+    mount(deskBookingPosterTipped, '2026-11-21T19:30:00.000Z');
+    expect(screen.getByText('You tipped $9.00')).toBeInTheDocument();
+    const payments = screen.getByRole('region', { name: messages.bookingHub.payments });
+    expect(within(payments).getByText(messages.bookingHub.tip)).toBeInTheDocument();
+    expect(within(payments).getAllByText('$9.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Tip added · $9.00').length).toBeGreaterThan(0);
+  });
+
+  it('offers the tip card only with tip handlers', () => {
+    mount(deskBookingPosterTipAvailable, '2026-11-21T19:30:00.000Z');
+    expect(screen.queryByRole('region', { name: 'Add a tip for Jordan T.' })).not.toBeInTheDocument();
+    cleanup();
+    render(<NextIntlClientProvider locale="en" messages={messages}>
+      <BookingHubScreen data={deskBookingPosterTipAvailable} handlers={{ onAction: vi.fn() }} sheets={fakeBookingSheetHandlers} tip={fakeBookingTipHandlers} now="2026-11-21T19:30:00.000Z" />
+    </NextIntlClientProvider>);
+    expect(screen.getByRole('region', { name: 'Add a tip for Jordan T.' })).toBeInTheDocument();
+  });
+});
 
 describe('BookingHubScreen change requests', () => {
   it('omits the change banner when no open change is supplied', () => {

@@ -40,6 +40,8 @@ import { autoApproveDue, completionViewOf } from './completion-view';
 import { addressVisibility, allBookingActions, bookingDeadlines, bookingNextStep, type BookingFacts, type BookingPolicy } from './domain';
 import { expireCantAccess } from './sheets';
 import { readExactAddress } from '@/modules/tasks/locations';
+import type { PaymentProvider } from '@/integrations/payments';
+import { tipViewOf } from './tips';
 import { bookingTerms, bookings } from './schema';
 
 /**
@@ -50,6 +52,8 @@ import { bookingTerms, bookings } from './schema';
 export interface HubDeps {
   db: Db;
   cipher: FieldCipher;
+  /** For the client's tip card (UI-057): its cards come from the provider. Without it, no tip card is offered. */
+  payments?: PaymentProvider | null;
 }
 
 type BookingRow = typeof bookings.$inferSelect;
@@ -136,17 +140,22 @@ function timelineOf(
   };
   add(task.publishedAt ?? task.createdAt, 'poster', 'task_posted');
   if (offer) add(offer.createdAt, 'helper', 'offer_received', { amountCents: priceCents });
-  for (const payment of paymentRows) {
+  // A tip is its own event after approval (a declined tip stays in the client's payments, not the timeline).
+  const bookingMoney = paymentRows.filter((payment) => payment.purpose !== 'tip');
+  for (const payment of bookingMoney) {
     if (payment.status === 'failed') add(payment.updatedAt, 'system', 'payment_failed', { amountCents: payment.amountCents });
   }
   add(booking.confirmedAt, 'poster', 'booked');
-  for (const payment of paymentRows) {
+  for (const payment of bookingMoney) {
     if (payment.status === 'succeeded') add(payment.updatedAt, 'system', 'payment_succeeded', { amountCents: payment.amountCents });
   }
   add(booking.onMyWayAt, 'helper', 'on_my_way');
   add(booking.arrivedAt, 'helper', 'arrived');
   add(booking.completionSubmittedAt, 'helper', 'completion_submitted');
   if (booking.status === 'completed') add(booking.completedAt, booking.completedVia === 'auto' ? 'system' : 'poster', booking.completedVia === 'auto' ? 'auto_approved' : 'approved');
+  for (const payment of paymentRows) {
+    if (payment.purpose === 'tip' && ['succeeded', 'partially_refunded', 'refunded'].includes(payment.status)) add(payment.updatedAt, 'poster', 'tip_added', { amountCents: payment.amountCents });
+  }
   if (booking.status === 'canceled' && booking.cancelReason !== 'funding_failed') {
     const reason = booking.cancelReason ?? '';
     add(booking.canceledAt, reason.startsWith('poster') ? 'poster' : reason.startsWith('helper') ? 'helper' : 'support', 'canceled');
@@ -192,7 +201,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     .filter((row) => ['succeeded', 'failed', 'refunded', 'partially_refunded'].includes(row.status))
     .map((row) => ({
       id: row.id,
-      kind: 'charge' as const,
+      kind: row.purpose === 'tip' ? ('tip' as const) : ('charge' as const),
       amountCents: row.amountCents,
       status: row.status as PaymentStatus,
       ...(row.methodBrand ? { method: { brand: row.methodBrand as CardBrand, ...(row.methodLast4 ? { last4: row.methodLast4 } : {}) } } : {}),
@@ -213,7 +222,11 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     paymentLines.sort((a, b) => a.at.localeCompare(b.at));
   }
 
-  const [dispute, openChange] = await Promise.all([getBookingDispute(db, booking.id, userId, role), bookingOpenChange(db, booking.id, userId, role, now)]);
+  const [dispute, openChange, tip] = await Promise.all([
+    getBookingDispute(db, booking.id, userId, role),
+    bookingOpenChange(db, booking.id, userId, role, now),
+    tipViewOf(deps, booking, role, completion?.finalBreakdown.taskPriceCents ?? terms.breakdown.taskPriceCents, now),
+  ]);
 
   return {
     id: booking.id,
@@ -258,6 +271,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     ...(completion ? { completion } : {}),
     ...(role === 'poster' && review.facts?.helperSaved ? { helperSaved: true } : {}),
     ...(review.mine ? { myReview: review.mine } : {}),
+    ...(tip ? { tip } : {}),
     actions: allBookingActions(facts, role, policy, now),
   };
 }

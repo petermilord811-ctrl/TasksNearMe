@@ -1,12 +1,14 @@
 import { and, asc, eq, inArray, lte } from 'drizzle-orm';
 import type { CompletionView } from '@/contracts';
 import { photoFromFile } from '@/modules/files/uploads';
+import { categories } from '@/modules/markets/schema';
 import { files, tasks } from '@/modules/tasks/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { recordCompletionMoney } from '@/modules/earnings/service';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { outboxEvents } from '@/platform/outbox/schema';
+import { checklistView } from './checklist';
 import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookings, bookingTerms } from './schema';
 
 /**
@@ -45,11 +47,14 @@ export async function completionViewOf(db: Db, bookingId: string): Promise<Compl
   const [completion] = await db.select().from(bookingCompletions).where(eq(bookingCompletions.bookingId, bookingId)).limit(1);
   if (!completion) return null;
   const [terms] = await db
-    .select({ hoursCap: bookingTerms.hoursCap })
+    .select({ hoursCap: bookingTerms.hoursCap, categorySlug: categories.slug })
     .from(bookingTerms)
     .innerJoin(bookings, and(eq(bookings.id, bookingTerms.bookingId), eq(bookings.termsVersion, bookingTerms.version)))
+    .innerJoin(tasks, eq(tasks.id, bookings.taskId))
+    .innerJoin(categories, eq(categories.id, tasks.categoryId))
     .where(eq(bookingTerms.bookingId, bookingId))
     .limit(1);
+  const checklist = terms ? checklistView(terms.categorySlug, completion.checklist) : undefined;
   const [photoRows, expenseRows] = await Promise.all([
     db
       .select({ file: files })
@@ -77,5 +82,6 @@ export async function completionViewOf(db: Db, bookingId: string): Promise<Compl
       receipt: photoFromFile(file),
     })),
     finalBreakdown: completion.finalBreakdown,
+    ...(checklist ? { checklist } : {}),
   };
 }

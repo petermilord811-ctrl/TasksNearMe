@@ -117,6 +117,7 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
     case 'booking.approval_reminder':
     case 'booking.start_reminder':
     case 'booking.canceled':
+    case 'booking.tipped':
     case 'earnings.transferred':
     case 'reviews.published': {
       const booking = await bookingContext(db, text(p.bookingId) ?? event.aggregateId);
@@ -149,6 +150,10 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
         }
         case 'booking.canceled':
           return [forPoster('booking_canceled'), forHelper('booking_canceled')];
+        case 'booking.tipped': {
+          const cents = typeof p.amountCents === 'number' ? p.amountCents : undefined;
+          return [forHelper('tip_received', cents ? { params: { amountCents: cents } } : {})];
+        }
         case 'earnings.transferred': {
           const cents = typeof p.earningsCents === 'number' ? p.earningsCents : undefined;
           return [forHelper('earnings_transferred', { target: { kind: 'earnings' }, actorName: undefined, ...(cents ? { params: { amountCents: cents } } : {}) })];

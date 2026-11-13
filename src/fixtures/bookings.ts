@@ -10,6 +10,8 @@ import type {
   BookingTermsView,
   BookingUnavailableReason,
   BookingSheetHandlers,
+  BookingTipHandlers,
+  BookingTipView,
   BookingView,
   CancellationPreview,
   CompletionHandlers,
@@ -25,8 +27,9 @@ import type {
   ReportProblemHandlers,
   ReportProblemPageData,
   SavedPaymentMethod,
+  TimelineEvent,
 } from '@/contracts';
-import { DEV_TEST_CARDS, routes } from '@/contracts';
+import { DEV_TEST_CARDS, EVIDENCE_CHECKLISTS, routes } from '@/contracts';
 import { crestviewArea, deskExactAddress, muellerArea } from './locations';
 import { deskPublicTask, remoteComputerPublicTask } from './marketing';
 import { movingPublicTask } from './helper-work';
@@ -184,7 +187,7 @@ const booked: PaymentAttemptResult = { ok: true, code: 'booked', redirectTo: rou
  */
 export const fakeBookingConfirmHandlers: BookingConfirmHandlers = {
   onConfirm: ({ payment }) => {
-    if (payment.kind === 'saved') return wait(booked);
+    if (payment.kind !== 'dev_card') return wait(booked);
     switch (payment.card) {
       case 'declined':
         return wait({ ok: false, code: 'payment_declined' });
@@ -507,6 +510,47 @@ export const fakeBookingHubHandlers: BookingHubHandlers = {
     ),
 };
 
+// ---- Tips (UI-057) ------------------------------------------------------------------------------
+
+/** When Maya tipped: a quarter of an hour after approving. */
+export const DESK_TIP_AT = '2026-11-21T19:20:00.000Z';
+
+/** Maya after approving: a tip for Jordan until Sat, Dec 5 (14 days): $6, $9 or $12 (10, 15 or 20% of $60), or her own. */
+export const deskTipAvailable: Extract<BookingTipView, { state: 'available' }> = {
+  state: 'available',
+  presets: [{ percent: 10, amountCents: 600 }, { percent: 15, amountCents: 900 }, { percent: 20, amountCents: 1200 }],
+  minCents: 100,
+  maxCents: 20_000,
+  availableUntil: new Date(Date.parse(DESK_TIMES.approved) + 14 * 86_400_000).toISOString(),
+  payment: mayaPaymentPanel,
+};
+
+const deskTipEvent: TimelineEvent = { id: 'evt_tip_added', at: DESK_TIP_AT, actor: 'poster', actorName: maya.displayName, type: 'tip_added', params: { amountCents: 900 } };
+
+/** Maya's booking page right after approving: the tip card. */
+export const deskBookingPosterTipAvailable: BookingView = { ...deskBookingPosterCompleted, tip: deskTipAvailable };
+
+/** Maya tipped $9 with her Visa: "You tipped", the tip in her payments and the timeline. */
+export const deskBookingPosterTipped: BookingView = {
+  ...deskBookingPosterCompleted,
+  tip: { state: 'tipped', amountCents: 900, at: DESK_TIP_AT },
+  payments: [...(deskBookingPosterCompleted.payments ?? []), { id: 'pay_desk_tip', kind: 'tip', amountCents: 900, status: 'succeeded', method: { brand: 'visa', last4: '1881' }, at: DESK_TIP_AT }],
+  timeline: [...deskTimelineCompleted, deskTipEvent],
+};
+
+/** Jordan's side: "Tip: $9.00". */
+export const deskBookingHelperTipped: BookingView = {
+  ...deskBookingHelperCompleted,
+  tip: { state: 'tipped', amountCents: 900, at: DESK_TIP_AT },
+  timeline: [...deskTimelineCompleted, deskTipEvent],
+};
+
+/** Fake tip handlers: the tip goes through. */
+export const fakeBookingTipHandlers: BookingTipHandlers = {
+  onTip: () => wait({ ok: true, code: 'paid' }),
+  onFinishTipVerification: () => wait({ ok: true, code: 'paid' }),
+};
+
 // ---- Completing the work and reporting a problem (UI-013) ---------------------------------------
 
 const finishedDeskPhotos: Photo[] = [
@@ -528,7 +572,7 @@ const completionBooking = (view: BookingView): CompletionPageData['booking'] => 
   location: view.location,
 });
 
-export const deskCompletionRules: CompletionRules = { photosMin: 1, photosMax: 8, noteRequired: false, noteMaxLength: 1000, maxPhotoMegabytes: 10 };
+export const deskCompletionRules: CompletionRules = { photosMin: 1, photosMax: 8, noteRequired: false, noteMaxLength: 1000, maxPhotoMegabytes: 10, checklist: EVIDENCE_CHECKLISTS['furniture-assembly'] };
 
 /** Jordan at the desk, checked in: at least one photo of the finished work. */
 export const deskCompletionPageData: CompletionPageData = { booking: completionBooking(deskBookingHelperInProgress), rules: deskCompletionRules };
@@ -542,13 +586,13 @@ export const deskAllowanceCompletionPageData: CompletionPageData = {
 /** The move, hourly: the hours worked (half hours, at most the 4 h cap); no photos needed. */
 export const movingCompletionPageData: CompletionPageData = {
   booking: { ...completionBooking(movingBookingPosterConfirmed), terms: movingTerms },
-  rules: { photosMin: 0, photosMax: 8, hours: { estimated: 3.5, cap: 4 }, noteRequired: false, noteMaxLength: 1000, maxPhotoMegabytes: 10 },
+  rules: { photosMin: 0, photosMax: 8, hours: { estimated: 3.5, cap: 4 }, noteRequired: false, noteMaxLength: 1000, maxPhotoMegabytes: 10, checklist: EVIDENCE_CHECKLISTS['moving-help'] },
 };
 
 /** Remote laptop help: a short summary instead of photos. */
 export const remoteCompletionPageData: CompletionPageData = {
   booking: completionBooking(remoteBookingHelperConfirmed),
-  rules: { photosMin: 0, photosMax: 8, noteRequired: true, noteMaxLength: 1000, maxPhotoMegabytes: 10 },
+  rules: { photosMin: 0, photosMax: 8, noteRequired: true, noteMaxLength: 1000, maxPhotoMegabytes: 10, checklist: EVIDENCE_CHECKLISTS['computer-help'] },
 };
 
 /** One page per reason the form can't be used. */
@@ -565,6 +609,16 @@ export const deskCompletionView: CompletionView = {
   photos: finishedDeskPhotos,
   expenses: [],
   finalBreakdown: deskBreakdown,
+  // A desk needs no anchoring, so Jordan left that one unticked.
+  checklist: {
+    categorySlug: 'furniture-assembly',
+    items: [
+      { key: 'all_parts_used', done: true },
+      { key: 'level_and_stable', done: true },
+      { key: 'anchored_if_asked', done: false },
+      { key: 'packaging_cleared', done: true },
+    ],
+  },
 };
 
 /** With an $8 receipt against the $20 allowance: Maya gets $12.00 back; Jordan is reimbursed $8.00. */
@@ -582,6 +636,7 @@ export const movingCompletionView: CompletionView = {
   hoursCap: 4,
   expenses: [],
   finalBreakdown: movingFinalBreakdown,
+  checklist: { categorySlug: 'moving-help', items: [{ key: 'placed_where_asked', done: true }, { key: 'nothing_damaged', done: true }, { key: 'load_secured', done: true }] },
 };
 
 /** Maya's booking page after Jordan submitted: the work is shown. */

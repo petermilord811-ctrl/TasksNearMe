@@ -85,5 +85,9 @@
     "summaryHelperExpenses": "Helper · reimbursement",
     "uploader": "Work photos",
     "uploaderErrors": "Photo upload errors"
+  },
+  "checklist": {
+    "title": "Checklist",
+    "hint": "Optional. Tick what you did so your client can approve quickly; leave anything that didn’t apply."
   }
 }

@@ -2,6 +2,7 @@ import type { SavedReplyOption } from './admin-support-tools';
 import type { AdminVerificationQueue } from './admin-verification';
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
+import type { CompletionChecklistView } from './bookings';
 import type { Cents, ISODateTime, Photo, StaffRole } from './common';
 import type { ExactAddress } from './location';
 import type { PriceBreakdown } from './money';
@@ -293,7 +294,8 @@ export interface AdminBookingMoney {
   chargedCents: Cents;
   refundedCents: Cents;
   refunds: { id: string; amountCents: Cents; reason: string; status: 'pending' | 'succeeded' | 'failed'; createdAt: ISODateTime }[];
-  earnings: { kind: 'earnings' | 'reimbursement' | 'cancellation_compensation'; amountCents: Cents; status: EarningsStatus; transferredAt?: ISODateTime }[];
+  /** Transfers to the helper, a client's tip (`tip`, UI-057) included. */
+  earnings: { kind: 'earnings' | 'reimbursement' | 'cancellation_compensation' | 'tip'; amountCents: Cents; status: EarningsStatus; transferredAt?: ISODateTime }[];
 }
 
 export const ADMIN_BOOKING_ACTIONS = ['refund', 'reveal_address', 'reveal_conversation'] as const;
@@ -305,6 +307,8 @@ export interface AdminBookingPageData {
   poster: PersonSummary;
   helper: PersonSummary;
   money: AdminBookingMoney;
+  /** The helper's checklist answers from when they sent the work (blueprint 01, P2), for disputes; absent before checklists. */
+  checklist?: CompletionChecklistView;
   /** Cases about this booking, newest first. */
   cases: AdminCaseRow[];
   /**

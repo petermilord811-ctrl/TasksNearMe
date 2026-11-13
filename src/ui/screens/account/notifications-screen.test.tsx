@@ -41,6 +41,7 @@ const copy: Record<NotificationType, RegExp> = {
   problem_reported: /problem was reported/,
   earnings_transferred: /\$54\.00 was transferred/,
   payout_paid: /You were paid \$54\.00/,
+  tip_received: /added a tip( of \$54\.00)? for/,
   review_published: /review.*was published/,
   message_received: /sent you a message/,
   support_replied: /Support replied about/,
@@ -105,6 +106,7 @@ describe('NotificationsScreen', () => {
     { type: 'task_reopened', target: targets.find_work_task },
     { type: 'approval_reminder', target: targets.booking },
     { type: 'booking_reminder', target: targets.booking },
+    { type: 'tip_received', target: targets.booking },
   ] as const)('opens the supplied destination for $type', async ({ type, target }) => {
     const actions = handlers();
     const notification = { ...mayaNotificationsData.notifications[0], id: type, type, target: target.target };

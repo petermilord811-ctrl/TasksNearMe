@@ -13,6 +13,7 @@ import type {
   StaffSummary,
   StaffViewer,
 } from '@/contracts';
+import { deskCompletionView } from './bookings';
 import { deskExactAddress } from './locations';
 import { deskBreakdown, deskSettledBreakdown } from './money';
 import { jordan, maya, priya, ruth, sam } from './people';
@@ -313,6 +314,7 @@ export const adminBookingDisputedData: AdminBookingPageData = {
   poster: person(maya),
   helper: person(jordan),
   money: { breakdown: deskBreakdown, chargedCents: 6600, refundedCents: 0, refunds: [], earnings: [{ kind: 'earnings', amountCents: 5400, status: 'on_hold' }] },
+  checklist: deskCompletionView.checklist,
   cases: [disputeRow],
   refund: { maxCents: 6600, limitCents: 10000, leftCents: 6600 },
   refundRequests: [],
@@ -332,6 +334,7 @@ export const adminBookingSettledData: AdminBookingPageData = {
     refunds: [{ id: 'ref_settle', amountCents: 1650, reason: 'dispute_settlement', status: 'succeeded', createdAt: '2026-11-24T17:00:00.000Z' }],
     earnings: [{ kind: 'earnings', amountCents: 4050, status: 'transferred', transferredAt: '2026-11-24T17:00:00.000Z' }],
   },
+  checklist: deskCompletionView.checklist,
   cases: [{ ...disputeRow, status: 'resolved', slaBreached: false, awaitingReply: false }],
   refund: { maxCents: 4950, limitCents: 10000, leftCents: 4950 },
   refundRequests: [],
@@ -342,6 +345,8 @@ export const adminBookingSettledData: AdminBookingPageData = {
 export const adminBookingRefundRequestData: AdminBookingPageData = {
   ...adminBookingDisputedData,
   money: { ...adminBookingDisputedData.money, chargedCents: 15400 },
+  /** Work sent before checklists: nothing to show. */
+  checklist: undefined,
   refund: { maxCents: 10000, limitCents: 10000, leftCents: 15400 },
   refundRequests: [
     { id: 'rrq_moving', amountCents: 12000, reason: 'goodwill', note: 'The helper left two hours early; the client asked for most of it back.', requestedBy: 'Alex P.', requestedAt: '2026-11-22T18:00:00.000Z', status: 'pending', canDecide: true },

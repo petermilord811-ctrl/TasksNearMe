@@ -4,7 +4,7 @@
   "receipts": "Receipts",
   "helper": "Helper: {name}",
   "paidAt": "Paid {date}",
-  "amounts": "Charged {charged} · Refunded {refunded} · Net {net}",
+  "amounts": "Charged {charged} · Refunded {refunded}{hasTip, select, yes { · Tip {tip}} other {}} · Net {net}",
   "emptyTitle": "No payments yet",
   "emptyBody": "When you book a helper, your receipts will appear here.",
   "postTask": "Post a task",
@@ -47,6 +47,9 @@
     "earnings-empty": "Earnings: no transfers yet",
     "earnings-statuses": "Earnings: every transfer status",
     "payout-statuses": "Earnings: every payout status",
-    "account-statuses": "Earnings: payout account status"
+    "account-statuses": "Earnings: payout account status",
+    "with-tip": "Payments: a receipt with a tip",
+    "receipt-tip": "Receipt: with a tip",
+    "earnings-tip": "Earnings: a tip from a client"
   }
 }

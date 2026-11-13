@@ -62,7 +62,12 @@
       "limit_reached": "Account limit reached",
       "identity_required": "ID check needed",
       "unknown": "Could not save"
-    }
+    },
+    "clientTip": "Client · add a tip",
+    "clientTipDeclined": "Client · tip declined",
+    "clientTipBankStep": "Client · tip needs the bank",
+    "clientTipped": "Client · tipped",
+    "helperTipped": "Helper · tip received"
   },
   "back": "All bookings",
   "change": {
@@ -195,5 +200,29 @@
       "support": "Support approved your completed task.",
       "settlement": "Completed through a settlement"
     }
+  },
+  "tip": "Tip",
+  "tipCard": {
+    "title": "Add a tip for {name}",
+    "body": "A thank-you for good work, on top of the price. All of it goes to {name}; TasksNearMe keeps no fee.",
+    "until": "You can add one until {date}.",
+    "amount": "Choose an amount",
+    "preset": "{percent}%",
+    "custom": "Other amount",
+    "customLabel": "Your amount (USD)",
+    "customHint": "Between {min} and {max}.",
+    "customError": "Enter an amount between {min} and {max}.",
+    "payment": "Pay with",
+    "send": "Add a {amount} tip",
+    "sending": "Adding your tip…",
+    "thanks": "Thank you. {name} gets all of your tip.",
+    "changed": "This booking changed. Reload to see where it stands.",
+    "tippedTitle": "Your tip",
+    "tipped": "You tipped {amount}",
+    "tippedBody": "{name} got all of it.",
+    "receivedTitle": "Tip from {name}",
+    "received": "Tip: {amount}",
+    "receivedBody": "All of it is yours. It goes out with your next payout.",
+    "sendAny": "Add your tip"
   }
 }

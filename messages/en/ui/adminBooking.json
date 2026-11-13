@@ -42,7 +42,8 @@
   "earningsKinds": {
     "earnings": "Task earnings",
     "reimbursement": "Reimbursed expenses",
-    "cancellation_compensation": "Cancellation compensation"
+    "cancellation_compensation": "Cancellation compensation",
+    "tip": "Tip"
   },
   "transferred": "Transferred {at}",
   "cases": "Cases about this booking",
@@ -146,5 +147,7 @@
       "notAllowed": "You can't decide this request. Refresh to see its current state.",
       "done": "Saved."
     }
-  }
+  },
+  "checklist": "Helper’s checklist",
+  "checklistHint": "What they ticked when they sent the work. Ticking was optional."
 }

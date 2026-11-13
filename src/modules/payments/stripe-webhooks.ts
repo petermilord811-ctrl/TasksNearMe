@@ -3,6 +3,7 @@ import { verifyStripeSignature } from '@/integrations/stripe-identity';
 import { finishChangeVerification } from '@/modules/bookings/changes';
 import { finishBankVerification, settle, type BookingDeps } from '@/modules/bookings/confirm';
 import { bookingChangeRequests } from '@/modules/bookings/schema';
+import { finishTipVerification } from '@/modules/bookings/tips';
 import { finishCounterVerification, finishRequestVerification } from '@/modules/invites/service';
 import { invites } from '@/modules/invites/schema';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
@@ -64,6 +65,9 @@ export async function handleStripePaymentWebhook(deps: BookingDeps, input: { pay
     const [invite] = inviteId ? await deps.db.select({ id: invites.id, status: invites.status }).from(invites).where(eq(invites.id, inviteId)).limit(1) : [];
     if (invite?.status === 'authorizing') await finishRequestVerification(deps, payer, payment.id, 'approved', now);
     else if (invite?.status === 'countered') await finishCounterVerification(deps, payer, invite.id, payment.id, 'approved', now);
+  } else if (payment.purpose === 'tip' && payment.bookingId) {
+    // A client's tip after approval (UI-057).
+    await finishTipVerification(deps, payer, payment.bookingId, payment.id, 'approved', now);
   }
   return { status: 200, body: { ok: true } };
 }

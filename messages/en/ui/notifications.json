@@ -50,7 +50,8 @@
     "background_check_expiring": "{days, plural, =0 {Your background check has run out. Start a new one to take in-home tasks again} one {Your background check runs out tomorrow. Start the renewal} other {Your background check runs out in # days. Start the renewal}}",
     "helper_ready": "You're all set: you can send offers now",
     "task_match": "New task near you: {title}{hasAmount, select, yes {, {amount}} other {}}",
-    "data_export_ready": "The copy of your data is ready to download"
+    "data_export_ready": "The copy of your data is ready to download",
+    "tip_received": "{actorName} added a tip{hasAmount, select, yes { of {amount}} other {}} for {title}"
   },
   "previews": {
     "group": "Notifications",

@@ -30,6 +30,9 @@ test('staff find a booking that needs attention and open its task', async ({ pag
   // Phones get cards, desktops a table: the role query skips the hidden one.
   await page.getByRole('link', { name: 'Assemble a dresser' }).first().click();
   await expect(page).toHaveURL(/\/admin\/bookings\/bkg_dresser$/, { timeout: 30_000 });
+  // The disputed work's checklist, as Jordan ticked it.
+  const checklist = page.getByRole('heading', { level: 2, name: 'Helper’s checklist' }).locator('xpath=ancestor::section[1]');
+  await expect(checklist.getByText('3 of 4 confirmed')).toBeVisible();
   await page.getByRole('link', { name: 'Open the task' }).click();
   await expect(page).toHaveURL(/\/admin\/tasks\/tsk_dresser$/, { timeout: 30_000 });
   await expect(page.getByRole('heading', { level: 1, name: 'Assemble a dresser' })).toBeVisible();

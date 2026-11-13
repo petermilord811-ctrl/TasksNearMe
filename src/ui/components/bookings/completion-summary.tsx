@@ -1,7 +1,7 @@
 import Image from 'next/image';
-import { Expand } from 'lucide-react';
+import { Check, Expand, Minus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { CompletionView, Photo } from '@/contracts';
+import type { CompletionChecklistView, CompletionView, Photo } from '@/contracts';
 import { formatDateTime, formatHours, formatMoney } from '@/shared/format';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { cn } from '@/ui/lib/utils';
@@ -40,6 +40,31 @@ function EvidencePhoto({ photo, title, receipt = false, eager = false }: { photo
   </Dialog>;
 }
 
+/** The helper's checklist answers in the category's order: what they confirmed, and what they left unticked. */
+export function ChecklistItems({ checklist }: { checklist: CompletionChecklistView }) {
+  const t = useTranslations('completion');
+  return <ul className="space-y-2">
+    {checklist.items.map((item) => <li key={item.key} className={cn('flex items-start gap-2.5', !item.done && 'text-muted-foreground')}>
+      <span aria-hidden="true" className={cn('mt-0.5 grid size-5 shrink-0 place-items-center rounded-full', item.done ? 'bg-success/15 text-success' : 'border border-dashed border-foreground/25')}>
+        {item.done ? <Check className="size-3.5" /> : <Minus className="size-3" />}
+      </span>
+      <span className="min-w-0 break-words">{t(`checklist.items.${checklist.categorySlug}.${item.key}`)}<span className="sr-only"> · {t(item.done ? 'checklist.done' : 'checklist.notDone')}</span></span>
+    </li>)}
+  </ul>;
+}
+
+function ChecklistSummary({ checklist }: { checklist: CompletionChecklistView }) {
+  const t = useTranslations('completion');
+  const done = checklist.items.filter((item) => item.done).length;
+  return <section aria-label={t('checklist.title')} className="space-y-3 border-t border-foreground/[0.07] pt-5 dark:border-white/[0.07]">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <p className="font-semibold">{t('checklist.title')}</p>
+      <p className="text-sm tabular-nums text-muted-foreground">{t('checklist.summary', { done, total: checklist.items.length })}</p>
+    </div>
+    <ChecklistItems checklist={checklist} />
+  </section>;
+}
+
 /** Displays supplied evidence and final amounts without deriving payment totals. */
 export function CompletionSummary({ completion, variant, leadsPage = false }: CompletionSummaryProps) {
   const t = useTranslations('completion');
@@ -54,6 +79,7 @@ export function CompletionSummary({ completion, variant, leadsPage = false }: Co
       {completion.hoursWorked !== undefined && <p className="font-medium tabular-nums">{completion.hoursCap !== undefined
         ? t('hoursWorkedWithCap', { hours: completion.hoursWorked, cap: completion.hoursCap })
         : t('hoursWorked', { hours: formatHours(completion.hoursWorked) })}</p>}
+      {completion.checklist && <ChecklistSummary checklist={completion.checklist} />}
       {completion.expenses.length > 0 && <div className="space-y-3 border-t border-foreground/[0.07] pt-5 dark:border-white/[0.07]">
         <p className="font-semibold">{t('receipts')}</p>
         <ul aria-label={t('receipts')} className="space-y-3">

@@ -6,6 +6,7 @@ import {
   deskReceiptPageData, deskSimpleReceiptPageData, earningsEmptyData, earningsFirstPayoutData,
   fakeEarningsHandlers, fakeHandler, fakePaymentMethodHandlers, jordanEarningsActionNeededData,
   jordanEarningsPageData, jordanShell, mayaPaymentsPageData, mayaShell, paymentsEmptyData,
+  deskTipReceiptPageData, jordanEarningsWithTipData, mayaPaymentsWithTipData,
 } from '@/fixtures';
 import { EarningsScreen, ReceiptScreen } from '@/ui/screens/money';
 import { PaymentsContent, PaymentsScreen } from '@/ui/screens/money/payments-screen';
@@ -41,6 +42,7 @@ const paidRow = jordanEarningsPageData.rows.find((row) => row.payout?.status ===
 export const moneyPagePreviews: PreviewEntry[] = [
   paymentsPreview('default', copy.previews.default, mayaPaymentsPageData),
   paymentsPreview('empty', copy.previews.empty, paymentsEmptyData),
+  paymentsPreview('with-tip', copy.previews['with-tip'], mayaPaymentsWithTipData),
   paymentsPreview('adding-card', copy.previews['adding-card'], mayaPaymentsPageData, { adding: true }),
   paymentsPreview('card-declined', copy.previews['card-declined'], mayaPaymentsPageData, { addResult: declined }, { ...fakePaymentMethodHandlers, onAddCard: fakeHandler(declined) }),
   paymentsPreview('remove-confirm', copy.previews['remove-confirm'], mayaPaymentsPageData, { removeMethodId: mayaPaymentsPageData.methods[1].id }),
@@ -53,8 +55,10 @@ export const moneyPagePreviews: PreviewEntry[] = [
   ...[
     { id: 'allowance-refund', title: copy.previews['receipt-allowance-refund'], data: deskReceiptPageData },
     { id: 'simple', title: copy.previews['receipt-simple'], data: deskSimpleReceiptPageData },
+    { id: 'tip', title: copy.previews['receipt-tip'], data: deskTipReceiptPageData },
   ].map(({ id, title, data }): PreviewEntry => ({ id: `screen-receipt/${id}`, title, group, layout: 'fullscreen', render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.receipt(data.booking.id)} layout="flow"><ReceiptScreen data={data} /></AppShell> })),
   earningsPreview('default', copy.previews['earnings-default'], jordanEarningsPageData),
+  earningsPreview('tip', copy.previews['earnings-tip'], jordanEarningsWithTipData),
   earningsPreview('action-needed', copy.previews['earnings-action-needed'], jordanEarningsActionNeededData),
   earningsPreview('first-payout', copy.previews['earnings-first-payout'], earningsFirstPayoutData),
   earningsPreview('empty', copy.previews['earnings-empty'], earningsEmptyData),

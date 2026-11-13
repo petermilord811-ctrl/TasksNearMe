@@ -121,7 +121,8 @@
         "background_check_expiring": "Renewing keeps your in-home categories open without a gap.",
         "helper_ready": "Find work shows open tasks near you. Your first offer is a tap away.",
         "task_match": "Have a look and send an offer if it suits you. Turn these emails off on your account page any time.",
-        "data_export_ready": "Download it from your account page within 7 days. After that it's deleted, and you can ask for a new copy any time."
+        "data_export_ready": "Download it from your account page within 7 days. After that it's deleted, and you can ask for a new copy any time.",
+        "tip_received": "All of it is yours. It goes out with your next payout."
       },
       "lockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates.",
       "optionalFooter": "You're getting this because {topic} emails are on.",
@@ -166,7 +167,8 @@
       "background_check_expiring": "{days, plural, =0 {Your background check has run out. Start a new one to take in-home tasks again.} one {Your background check runs out tomorrow. Start the renewal to keep your in-home categories.} other {Your background check runs out in # days. Start the renewal to keep your in-home categories.}}",
       "helper_ready": "You're all set: you can send offers now. Find work near you.",
       "task_match": "New task near you: {title}{hasAmount, select, yes {, {amount}} other {}}.",
-      "data_export_ready": "The copy of your TasksNearMe data you asked for is ready to download."
+      "data_export_ready": "The copy of your TasksNearMe data you asked for is ready to download.",
+      "tip_received": "{actorName} added a tip{hasAmount, select, yes { of {amount}} other {}} for {title}."
     },
     "pushTitle": "TasksNearMe"
   },

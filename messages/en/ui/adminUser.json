@@ -135,7 +135,8 @@
     "background_check_expiring": "Background check expiring",
     "helper_ready": "Ready to send offers",
     "task_match": "New task near you",
-    "data_export_ready": "Data copy ready"
+    "data_export_ready": "Data copy ready",
+    "tip_received": "Tip received"
   },
   "previews": {
     "group": "Admin · person details",

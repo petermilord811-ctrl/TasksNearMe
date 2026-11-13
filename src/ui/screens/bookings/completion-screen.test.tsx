@@ -13,6 +13,8 @@ const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
+  // The checklist's Radix checkboxes measure themselves.
+  vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn(); });
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
@@ -22,6 +24,9 @@ const photo = deskCompletionView.photos[0]!;
 const receipt = deskWithExpensesCompletionView.expenses[0]!.receipt;
 const workInput = () => screen.getByLabelText(messages.bookingComplete.photos.label);
 const send = () => screen.getByRole('button', { name: messages.bookingComplete.send });
+/** The desk's checklist as sent when nothing is ticked: every item, unticked. */
+const unticked = Object.fromEntries(deskCompletionPageData.rules.checklist.map((key) => [key, false]));
+const deskItems = messages.completion.checklist.items['furniture-assembly'];
 
 function mount(data: CompletionPageData = deskCompletionPageData, overrides: Partial<CompletionHandlers> = {}) {
   const handlers: CompletionHandlers = {
@@ -81,7 +86,7 @@ describe('CompletionScreen', () => {
     await ready(handlers);
     await uploadWork(user);
     await user.click(send());
-    await waitFor(() => expect(handlers.onSubmit).toHaveBeenCalledExactlyOnceWith({ photoIds: [photo.id], note: '', expenses: [] }));
+    await waitFor(() => expect(handlers.onSubmit).toHaveBeenCalledExactlyOnceWith({ photoIds: [photo.id], note: '', expenses: [], checklist: unticked }));
     expect(navigation.push).toHaveBeenCalledExactlyOnceWith(success.redirectTo);
     const body = vi.mocked(handlers.onUploadPhoto).mock.calls[0]?.[0];
     expect(body).toBeInstanceOf(FormData);
@@ -155,8 +160,31 @@ describe('CompletionScreen', () => {
     expect(screen.getByText('$8.00 of $20.00 allowance')).toBeVisible();
     await user.click(send());
     await waitFor(() => expect(handlers.onSubmit).toHaveBeenCalledExactlyOnceWith({
-      photoIds: [photo.id], note: '', expenses: [{ description: 'Wall anchors', amountCents: 800, receiptPhotoId: receipt.id }],
+      photoIds: [photo.id], note: '', expenses: [{ description: 'Wall anchors', amountCents: 800, receiptPhotoId: receipt.id }], checklist: unticked,
     }));
+  });
+
+  it('sends the optional checklist ticks with the work', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount();
+    await ready(handlers);
+    const checklist = screen.getByRole('group', { name: messages.bookingComplete.checklist.title });
+    expect(checklist).toHaveAccessibleDescription(messages.bookingComplete.checklist.hint);
+    expect(screen.getAllByRole('checkbox').map((box) => box.getAttribute('aria-checked'))).toEqual(['false', 'false', 'false', 'false']);
+    await uploadWork(user);
+    await user.click(screen.getByRole('checkbox', { name: deskItems.level_and_stable }));
+    await user.click(screen.getByText(deskItems.packaging_cleared));
+    expect(screen.getByRole('checkbox', { name: deskItems.packaging_cleared })).toBeChecked();
+    await user.click(send());
+    await waitFor(() => expect(handlers.onSubmit).toHaveBeenCalledExactlyOnceWith({
+      photoIds: [photo.id], note: '', expenses: [], checklist: { ...unticked, level_and_stable: true, packaging_cleared: true },
+    }));
+  });
+
+  it('shows no checklist when the category has none', () => {
+    mount({ ...deskCompletionPageData, rules: { ...deskCompletionPageData.rules, checklist: [] } });
+    expect(screen.queryByRole('group', { name: messages.bookingComplete.checklist.title })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
   it('focuses a dotted server receipt error and retains the receipt fields', async () => {

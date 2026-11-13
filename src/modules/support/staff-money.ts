@@ -16,6 +16,7 @@ import type {
 import { caseResolutionInputSchema, refundDecisionInputSchema, restrictedAccessInputSchema, staffRefundInputSchema } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
+import { checklistView } from '@/modules/bookings/checklist';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { earnings } from '@/modules/earnings/schema';
 import { recordCompletionMoney } from '@/modules/earnings/service';
@@ -224,6 +225,7 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
   const poster = people.find((user) => user.id === booking.posterUserId);
   const helper = people.find((user) => user.id === booking.helperUserId);
   if (!found || !terms || !poster || !helper) return null;
+  const checklist = completion ? checklistView(found.view.categorySlug, completion.checklist) : undefined;
   const limit = refundLimitOf(staff.roles);
   const left = money ? money.chargedCents - money.refundedCents : 0;
   const canRefund = canWorkCases(staff.roles) && limit > 0 && left > 0;
@@ -249,12 +251,13 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
       refundedCents: money?.refundedCents ?? 0,
       refunds: refundRows.map((row) => ({ id: row.id, amountCents: row.amountCents, reason: row.reason, status: row.status as 'pending' | 'succeeded' | 'failed', createdAt: row.createdAt.toISOString() })),
       earnings: earningRows.map((row) => ({
-        kind: row.kind as 'earnings' | 'reimbursement' | 'cancellation_compensation',
+        kind: row.kind as AdminBookingPageData['money']['earnings'][number]['kind'],
         amountCents: row.amountCents,
         status: row.status as EarningsStatus,
         ...(row.transferredAt ? { transferredAt: row.transferredAt.toISOString() } : {}),
       })),
     },
+    ...(checklist ? { checklist } : {}),
     cases: await caseRowsFor(db, caseRows, now),
     ...(canRefund ? { refund: { maxCents: Math.min(left, limit), limitCents: limit, leftCents: left } } : {}),
     refundRequests: await refundRequestRows(db, staff, requestRows),

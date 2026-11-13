@@ -12,6 +12,7 @@ import {
   safetyReportAction,
 } from '@/modules/bookings/sheet-actions';
 import { getBookingView } from '@/modules/bookings/hub';
+import { finishTipVerificationAction, tipAction } from '@/modules/bookings/tip-actions';
 import { hubDeps } from '@/modules/bookings/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
@@ -48,6 +49,7 @@ async function Booking({ params }: Pick<PageProps<'/app/bookings/[bookingId]'>, 
         onCantAccess: cantAccessAction.bind(null, bookingId),
         onSafetyReport: safetyReportAction.bind(null, bookingId),
       }}
+      tip={{ onTip: tipAction.bind(null, bookingId), onFinishTipVerification: finishTipVerificationAction.bind(null, bookingId) }}
     />
   );
 }

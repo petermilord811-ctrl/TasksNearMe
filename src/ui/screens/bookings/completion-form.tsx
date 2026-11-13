@@ -23,6 +23,7 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
   const schema = useMemo(() => createCompletionInputSchema(data.rules), [data.rules]);
   const form = useForm<CompletionInput>({ resolver: zodResolver(schema), shouldFocusError: false, defaultValues: {
     photoIds: [], note: '', expenses: [], ...(data.rules.hours ? { hoursWorked: data.rules.hours.estimated } : {}),
+    ...(data.rules.checklist.length > 0 ? { checklist: Object.fromEntries(data.rules.checklist.map((key) => [key, false])) } : {}),
   } });
   const values = useWatch({ control: form.control });
   const expensesCents = (values.expenses ?? []).reduce((sum, item) => sum + (Number.isSafeInteger(item.amountCents) && (item.amountCents ?? 0) > 0 ? item.amountCents! : 0), 0);
@@ -70,7 +71,7 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
   }
   const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
   return <FormProvider {...form}><form ref={formRef} noValidate aria-label={t('form')} aria-busy={busy} className={cn(surface, surfacePad, 'space-y-6')} onSubmit={(event) => { if (disabled) { event.preventDefault(); return; } void form.handleSubmit(submit, () => { focusInvalid.current = true; })(event); }}>
-    <fieldset disabled={disabled} className="min-w-0" onFocusCapture={(event) => { const bar = submitBar.current; if (bar && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' }); }}><legend className="sr-only">{t('form')}</legend><CompletionFields rules={data.rules} onUploadPhoto={handlers.onUploadPhoto} onBusyChange={setUploading} expensesCents={expensesCents} /></fieldset>
+    <fieldset disabled={disabled} className="min-w-0" onFocusCapture={(event) => { const bar = submitBar.current; if (bar && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' }); }}><legend className="sr-only">{t('form')}</legend><CompletionFields rules={data.rules} categorySlug={data.booking.task.categorySlug} onUploadPhoto={handlers.onUploadPhoto} onBusyChange={setUploading} expensesCents={expensesCents} /></fieldset>
     <CompletionEarnings hoursWorked={values.hoursWorked} expensesCents={expensesCents} valid={validQuote} onQuote={handlers.onQuoteFinal} onBusyChange={setQuoting} disabled={pending || uploading} initialError={initialQuoteError} />
     {result && !result.ok && result.code === 'not_allowed' ? <div role="status" className="space-y-3 rounded-2xl border border-warning/40 bg-badge-warning/60 p-4"><p>{t('changed')}</p><Button type="button" variant="outline" disabled={busy} onClick={() => router.refresh()}>{t('reload')}</Button></div> : <FormFeedback result={feedback} successMessage={t('submitted')} />}
     <p id={`${id}-approval`} className={note}>{t('approval')}</p>

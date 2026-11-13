@@ -75,7 +75,8 @@
     "change_decrease": "Lower price after a change",
     "goodwill": "Goodwill",
     "fraud": "Fraud",
-    "refunded_in_dispute": "Refunded in a dispute"
+    "refunded_in_dispute": "Refunded in a dispute",
+    "tip": "Tip"
   },
   "bank": "Bank ending {last4}",
   "columns": {

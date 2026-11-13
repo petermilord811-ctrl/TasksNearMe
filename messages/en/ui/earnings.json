@@ -33,7 +33,8 @@
   "kinds": {
     "earnings": "Earnings",
     "reimbursement": "Expense reimbursement",
-    "cancellation_compensation": "Late cancellation"
+    "cancellation_compensation": "Late cancellation",
+    "tip": "Tip"
   },
   "holdReasons": {
     "dispute": "A problem was reported; support is looking at it",

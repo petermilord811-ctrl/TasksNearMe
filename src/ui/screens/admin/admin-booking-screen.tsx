@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { CalendarDays, MapPin } from 'lucide-react';
 import { routes, type AdminBookingHandlers, type AdminBookingMoney, type AdminBookingPageData, type AdminCaseRow, type ISODateTime } from '@/contracts';
 import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
+import { ChecklistItems } from '@/ui/components/bookings/completion-summary';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { StatusBadge } from '@/ui/components/status/status-badge';
@@ -18,6 +19,21 @@ function EarningsLine({ line }: { line: AdminBookingMoney['earnings'][number] })
     <div className="space-y-2"><p className="text-sm font-semibold">{t(`earningsKinds.${line.kind}`)}</p><StatusBadge {...useEarningsStatus(line.status)} />{line.transferredAt && <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={line.transferredAt}>{t('transferred', { at: formatDateTime(line.transferredAt) })}</time></p>}</div>
     <p className="font-semibold tabular-nums sm:text-right">{formatMoney(line.amountCents)}</p>
   </li>;
+}
+
+/** What the helper ticked when they sent the work: evidence for a dispute, next to the people. */
+function HelperChecklist({ checklist }: { checklist: NonNullable<AdminBookingPageData['checklist']> }) {
+  const t = useTranslations('adminBooking');
+  const completion = useTranslations('completion');
+  const done = checklist.items.filter((item) => item.done).length;
+  return <section className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('checklist')}</h2>
+      <p className="text-sm tabular-nums text-muted-foreground">{completion('checklist.summary', { done, total: checklist.items.length })}</p>
+    </div>
+    <p className="text-sm text-muted-foreground">{t('checklistHint')}</p>
+    <ChecklistItems checklist={checklist} />
+  </section>;
 }
 
 function BookingCase({ row, now }: { row: AdminCaseRow; now: ISODateTime }) {
@@ -51,6 +67,7 @@ export function AdminBookingContent({ data, handlers, now, ...previewState }: Ad
         <h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('people')}</h2>
         <dl className="grid gap-4 sm:grid-cols-2">{(['poster', 'helper'] as const).map((role) => <div key={role} className="space-y-2"><dt className="text-sm text-muted-foreground">{t(role)}</dt><dd className="flex items-center gap-3 font-semibold"><span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">{data[role].initials}</span>{data[role].displayName}</dd></div>)}</dl>
       </section>
+      {data.checklist && <HelperChecklist checklist={data.checklist} />}
       <section className="space-y-4" aria-label={t('money')}>
         <h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('money')}</h2>
         <dl className="grid grid-cols-2 gap-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]">

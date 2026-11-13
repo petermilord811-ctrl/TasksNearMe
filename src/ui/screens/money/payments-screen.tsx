@@ -29,6 +29,7 @@ function PaymentReceiptRow({ receipt }: { receipt: ReceiptRow }) {
       </p>
       <p className="pt-1 text-sm leading-6 font-medium tabular-nums">{t('amounts', {
         charged: formatMoney(receipt.chargedCents), refunded: formatMoney(receipt.refundedCents), net: formatMoney(receipt.netCents),
+        hasTip: receipt.tipCents ? 'yes' : 'no', tip: formatMoney(receipt.tipCents ?? 0),
       })}</p>
     </div>
     <div className="relative shrink-0 self-start"><StatusBadge {...status} /></div>

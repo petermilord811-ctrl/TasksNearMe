@@ -5,7 +5,7 @@ import {
   movingCompletionPageData,
   remoteCompletionPageData,
 } from '@/fixtures';
-import { createCompletionInputSchema, reportProblemInputSchema, type CompletionInput } from './bookings';
+import { createCompletionInputSchema, reportProblemInputSchema, tipInputSchema, type CompletionInput, type TipInput } from './bookings';
 
 const errorsOf = (schema: ReturnType<typeof createCompletionInputSchema>, input: CompletionInput) => {
   const result = schema.safeParse(input);
@@ -41,6 +41,31 @@ describe('completion schema', () => {
     const schema = createCompletionInputSchema(remoteCompletionPageData.rules);
     expect(errorsOf(schema, empty)).toEqual({ note: 'required' });
     expect(errorsOf(schema, { ...empty, note: 'Moved the photos and set up email.' })).toEqual({});
+  });
+
+  it('takes the category checklist as optional ticks and refuses items it does not have', () => {
+    const schema = createCompletionInputSchema(deskCompletionPageData.rules);
+    const work = { ...empty, photoIds: ['ph_1'] };
+    expect(errorsOf(schema, work)).toEqual({});
+    expect(errorsOf(schema, { ...work, checklist: { all_parts_used: true, anchored_if_asked: false } })).toEqual({});
+    expect(errorsOf(schema, { ...work, checklist: { all_parts_used: true, load_secured: true } })).toEqual({ checklist: 'invalid' });
+  });
+});
+
+describe('tip schema', () => {
+  const saved = { kind: 'saved', methodId: 'pm_maya_visa' } as const;
+  const tipErrors = (input: TipInput) => {
+    const result = tipInputSchema.safeParse(input);
+    return result.success ? {} : Object.fromEntries(result.error.issues.map((issue) => [issue.path.join('.'), issue.message]));
+  };
+
+  it('takes $1 to $200 in whole cents, with a card', () => {
+    expect(tipErrors({ amountCents: 100, payment: saved })).toEqual({});
+    expect(tipErrors({ amountCents: 20_000, payment: saved })).toEqual({});
+    expect(tipErrors({ amountCents: 99, payment: saved })).toEqual({ amountCents: 'out_of_range' });
+    expect(tipErrors({ amountCents: 20_001, payment: saved })).toEqual({ amountCents: 'out_of_range' });
+    expect(tipErrors({ amountCents: 950.5, payment: saved })).toEqual({ amountCents: 'invalid' });
+    expect(tipErrors({ amountCents: 900, payment: { kind: 'saved', methodId: '' } })).toEqual({ 'payment.methodId': 'required' });
   });
 });
 

@@ -505,7 +505,11 @@ export async function bookingMoneyFacts(db: Db, bookingId: string): Promise<Book
   if (!row) return null;
   const [[terms], paid, refunded, policy] = await Promise.all([
     db.select({ breakdown: bookingTerms.breakdown }).from(bookingTerms).where(and(eq(bookingTerms.bookingId, bookingId), eq(bookingTerms.version, row.termsVersion))).limit(1),
-    db.select({ amountCents: payments.amountCents }).from(payments).where(and(eq(payments.bookingId, bookingId), inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded']))),
+    // A client's tip is the helper's (UI-057): not part of what staff refund or settle.
+    db
+      .select({ amountCents: payments.amountCents })
+      .from(payments)
+      .where(and(eq(payments.bookingId, bookingId), notInArray(payments.purpose, ['tip']), inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded']))),
     db.select({ amountCents: refunds.amountCents }).from(refunds).where(and(eq(refunds.bookingId, bookingId), inArray(refunds.status, ['pending', 'succeeded']))),
     getPublishedPolicy(row.marketId, db),
   ]);

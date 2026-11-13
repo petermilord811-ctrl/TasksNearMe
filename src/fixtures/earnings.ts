@@ -70,6 +70,12 @@ export const mayaPaymentsPageData: PaymentsPageData = {
   newCard: devCards,
 };
 
+/** The desk after Maya tipped Jordan $9 (UI-057): its own line, in the net. */
+export const mayaPaymentsWithTipData: PaymentsPageData = {
+  ...mayaPaymentsPageData,
+  receipts: [deskAllowanceReceipt, { ...deskReceipt, tipCents: 900, netCents: 7500 }, yardRefundedReceipt],
+};
+
 export const paymentsEmptyData: PaymentsPageData = { receipts: [], methods: [], newCard: devCards };
 
 /** The desk receipt with the allowance refund. */
@@ -94,6 +100,13 @@ export const deskSimpleReceiptPageData: ReceiptPageData = {
   breakdown: deskBreakdown,
   lines: [{ id: 'pay_desk', kind: 'charge', amountCents: 6600, method: { brand: 'visa', last4: '1881' }, at: DESK_TIMES.booked }],
   netCents: 6600,
+};
+
+/** The desk receipt with Maya's $9 tip after approval (UI-057). */
+export const deskTipReceiptPageData: ReceiptPageData = {
+  ...deskSimpleReceiptPageData,
+  lines: [...deskSimpleReceiptPageData.lines, { id: 'pay_desk_tip', kind: 'tip', amountCents: 900, method: { brand: 'visa', last4: '1881' }, at: '2026-11-21T19:20:00.000Z' }],
+  netCents: 7500,
 };
 
 const deskEarnings: EarningsRowView = {
@@ -156,6 +169,12 @@ export const jordanEarningsPageData: EarningsPageData = {
   rows: [disputedEarnings, lateCancellationEarnings, movingEarnings, deskReimbursement, deskEarnings],
   payoutAccount: { status: 'active', bankLast4: '6789', actionNeeded: false },
   firstPayoutNotice: false,
+};
+
+/** Maya's $9 tip on the desk (UI-057): all of it Jordan's, transferred with the earnings. */
+export const jordanEarningsWithTipData: EarningsPageData = {
+  ...jordanEarningsPageData,
+  rows: [...jordanEarningsPageData.rows.slice(0, 3), { ...deskEarnings, id: 'ern_desk_tip', kind: 'tip', amountCents: 900 }, ...jordanEarningsPageData.rows.slice(3)],
 };
 
 /** A payout failed: Jordan must update the bank account. */

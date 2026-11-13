@@ -20,6 +20,8 @@ export const TIMELINE_EVENT_TYPES = [
   'evidence_added',
   'approved',
   'auto_approved',
+  /** The client tipped the helper after approval (UI-057). */
+  'tip_added',
   'problem_reported',
   'rework_offered',
   'settlement_offered',

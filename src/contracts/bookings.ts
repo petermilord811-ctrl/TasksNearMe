@@ -161,10 +161,10 @@ export interface BookingDeadlines {
   posterResponseDueAt?: ISODateTime;
 }
 
-/** A charge or a refund on the booking. Posters only. */
+/** A charge, a refund, or the client's tip on the booking. Posters only. */
 export interface BookingPaymentLine {
   id: string;
-  kind: 'charge' | 'refund';
+  kind: 'charge' | 'refund' | 'tip';
   amountCents: Cents;
   status: PaymentStatus;
   method?: PaymentMethodLabel;
@@ -199,6 +199,8 @@ export interface BookingView {
   helperSaved?: boolean;
   /** The viewer's review of this booking, once sent (UI-015). */
   myReview?: { rating: number; submittedAt: ISODateTime; publishedAt?: ISODateTime };
+  /** Completed bookings (UI-057): the client's tip card (`available`), or the tip once given (both people). */
+  tip?: BookingTipView;
   /** A problem report on this booking and how support resolved it (UI-026). */
   dispute?: BookingDisputeView;
   /** The open change request, if any (UI-027): the page links to `routes.app.bookingChange`. */
@@ -278,7 +280,75 @@ export interface BookingHubHandlers {
   onAction: (input: { action: BookingActionId }) => Promise<ActionResult>;
 }
 
+// ---- Tips (UI-057) -------------------------------------------------------------------------------
+
+/**
+ * Tips (blueprint 01, P2): once the client approves the work (or it's approved automatically) they may add one tip,
+ * within `windowDays`. All of it goes to the helper (no fee), and tips never count toward rewards. Presets are shares
+ * of the final task price in whole dollars (at least `minCents`); a custom tip is `minCents` to `maxCents`.
+ */
+export const TIP_RULES = { presetPercents: [10, 15, 20], minCents: 100, maxCents: 20_000, windowDays: 14 } as const;
+
+/** A preset: its share of the final task price, and the amount (whole dollars). */
+export interface TipPreset {
+  percent: number;
+  amountCents: Cents;
+}
+
+/**
+ * The tip on a completed booking, as each person sees it.
+ * - `available` (the client): the presets (the same amount appears once), the custom range, the last moment to tip,
+ *   and the cards to pay with.
+ * - `tipped` (both people): the client's tip ("You tipped $9"; the helper: "Tip: $9").
+ */
+export type BookingTipView =
+  | { state: 'available'; presets: TipPreset[]; minCents: Cents; maxCents: Cents; availableUntil: ISODateTime; payment: PaymentPanelData }
+  | { state: 'tipped'; amountCents: Cents; at: ISODateTime };
+
+export const tipInputSchema = z.object({
+  /** A preset's amount or a custom one, in cents. */
+  amountCents: z
+    .number(code('required'))
+    .int(code('invalid'))
+    .min(TIP_RULES.minCents, code('out_of_range'))
+    .max(TIP_RULES.maxCents, code('out_of_range')),
+  payment: paymentChoiceSchema,
+});
+export type TipInput = z.input<typeof tipInputSchema>;
+
+/**
+ * The client's tip on the booking page (UI-057).
+ * - `onTip`: ok `paid` (the page refreshes to "You tipped"). Errors: `validation_failed` (`amountCents`:
+ *   `out_of_range`, `invalid`; `payment.*`), `payment_declined`, `insufficient_funds`, `requires_bank_verification`
+ *   (with `verification`: run the bank step, then `onFinishTipVerification`), `not_allowed` (already tipped, the
+ *   window closed, or the booking changed: reload), `rate_limited`, `unknown`.
+ * - `onFinishTipVerification`: after the bank step; the same results.
+ */
+export interface BookingTipHandlers {
+  onTip: (input: TipInput) => Promise<PaymentAttemptResult>;
+  onFinishTipVerification: (input: { paymentId: string; outcome: 'approved' | 'failed' }) => Promise<PaymentAttemptResult>;
+}
+
 // ---- Completing the work and the client's review of it (UI-013) ---------------------------------
+
+/**
+ * The evidence checklist each category asks the helper about when sending the work (blueprint 01, P2 "structured
+ * evidence checklists per category"). Ticking is optional and never blocks sending; the client sees the answers where
+ * they approve, and staff see them on the booking. Copy: `completion.checklist.items.<category>.<key>`.
+ */
+export const EVIDENCE_CHECKLISTS = {
+  'furniture-assembly': ['all_parts_used', 'level_and_stable', 'anchored_if_asked', 'packaging_cleared'],
+  'moving-help': ['placed_where_asked', 'nothing_damaged', 'load_secured'],
+  'yard-cleanup': ['debris_bagged', 'bags_where_agreed', 'walkways_clear'],
+  'light-cleaning': ['listed_rooms_done', 'supplies_put_away', 'trash_out'],
+  'computer-help': ['backed_up_first', 'moved_and_checked', 'nothing_kept'],
+} as const satisfies Record<CategorySlug, readonly string[]>;
+
+/** The helper's answers, in the category's order: what they confirmed (`done`) and what they left unticked. */
+export interface CompletionChecklistView {
+  categorySlug: CategorySlug;
+  items: { key: string; done: boolean }[];
+}
 
 /** What the helper sends to mark the work complete: the category's evidence rules and the terms (blueprint 02 J6). */
 export interface CompletionRules {
@@ -293,6 +363,8 @@ export interface CompletionRules {
   noteRequired: boolean;
   noteMaxLength: number;
   maxPhotoMegabytes: number;
+  /** The category's evidence checklist (`EVIDENCE_CHECKLISTS`): optional ticks; empty when it has none. */
+  checklist: readonly string[];
 }
 
 /** Why the completion form can't be used now. */
@@ -330,10 +402,13 @@ export function createCompletionInputSchema(rules: CompletionRules) {
           }),
         )
         .max(rules.expenses?.maxItems ?? 0, code('too_long')),
+      /** The category's checklist: item key → ticked. Optional; only the rules' keys. */
+      checklist: z.record(z.string(), z.boolean()).optional(),
     })
     .superRefine((input, ctx) => {
       const issue = (path: (string | number)[], message: FieldErrorCode) => ctx.addIssue({ code: 'custom', path, message });
       if (input.photoIds.length < rules.photosMin) issue(['photoIds'], 'required');
+      if (input.checklist && Object.keys(input.checklist).some((key) => !rules.checklist.includes(key))) issue(['checklist'], 'invalid');
       if (rules.noteRequired && input.note.length === 0) issue(['note'], 'required');
       if (rules.hours) {
         if (input.hoursWorked === undefined) issue(['hoursWorked'], 'required');
@@ -369,6 +444,8 @@ export interface CompletionView {
   expenses: { id: string; description: string; amountCents: Cents; receipt: Photo }[];
   /** The final numbers with these hours and expenses (the UI shows the viewer's variant). */
   finalBreakdown: PriceBreakdown;
+  /** The category's evidence checklist as the helper answered it; absent for work sent before checklists. */
+  checklist?: CompletionChecklistView;
 }
 
 /** Why the client reports a problem (blueprint 02 J6; a support case opens). */

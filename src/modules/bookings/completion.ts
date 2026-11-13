@@ -23,6 +23,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { checklistAnswers, checklistFor } from './checklist';
 import { autoApproveDue, completionViewOf } from './completion-view';
 import { getBookingView, type HubDeps } from './hub';
 import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookings, bookingTerms } from './schema';
@@ -73,6 +74,7 @@ export function completionRulesFor(ctx: Pick<Context, 'terms' | 'task' | 'catego
     noteRequired: remote || evidence.remoteNote,
     noteMaxLength: 1000,
     maxPhotoMegabytes: MAX_MEGABYTES,
+    checklist: checklistFor(ctx.category.slug),
   };
 }
 
@@ -127,7 +129,8 @@ export async function submitCompletion(db: Db, helperId: string, bookingId: stri
   if (!ctx || ctx.booking.helperUserId !== helperId) return { ok: false, code: 'not_found' };
   if (completionUnavailable(ctx.booking, ctx.task.mode === 'remote')) return { ok: false, code: 'not_allowed' };
 
-  const parsed = createCompletionInputSchema(completionRulesFor(ctx)).safeParse(input);
+  const rules = completionRulesFor(ctx);
+  const parsed = createCompletionInputSchema(rules).safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const completion = parsed.data;
   if (!(await ownFiles(db, helperId, completion.photoIds))) return { ok: false, code: 'validation_failed', fieldErrors: { photoIds: ['invalid'] } };
@@ -160,6 +163,7 @@ export async function submitCompletion(db: Db, helperId: string, bookingId: stri
       note: completion.note,
       hoursWorked: completion.hoursWorked ?? null,
       finalBreakdown: final,
+      checklist: checklistAnswers(rules.checklist, completion.checklist),
     });
     if (completion.photoIds.length > 0) {
       await tx.insert(bookingCompletionPhotos).values(completion.photoIds.map((fileId, position) => ({ bookingId: ctx.booking.id, fileId, position })));

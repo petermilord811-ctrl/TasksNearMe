@@ -272,15 +272,15 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
 
 // ---- The client: receipts and cards ------------------------------------------------------------------
 
-async function chargesOf(db: Db, posterUserId: string, bookingId?: string) {
-  const conditions = [eq(payments.payerUserId, posterUserId), eq(payments.purpose, 'booking_funding'), inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded'])];
+async function chargesOf(db: Db, posterUserId: string, bookingId?: string, purpose: 'booking_funding' | 'tip' = 'booking_funding') {
+  const conditions = [eq(payments.payerUserId, posterUserId), eq(payments.purpose, purpose), inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded'])];
   if (bookingId) conditions.push(eq(payments.bookingId, bookingId));
   return db.select().from(payments).where(and(...conditions)).orderBy(desc(payments.updatedAt));
 }
 
 /** `/app/payments`: receipts (newest first) and saved cards. */
 export async function getPaymentsPage(db: Db, posterUserId: string): Promise<PaymentsPageData> {
-  const charges = await chargesOf(db, posterUserId);
+  const [charges, tips] = await Promise.all([chargesOf(db, posterUserId), chargesOf(db, posterUserId, undefined, 'tip')]);
   const bookingIds = charges.flatMap((c) => (c.bookingId ? [c.bookingId] : []));
   const [bookingRows, refundRows, methodRows] = await Promise.all([
     bookingIds.length
@@ -305,6 +305,8 @@ export async function getPaymentsPage(db: Db, posterUserId: string): Promise<Pay
     const helper = booking ? helpers.get(booking.booking.helperUserId) : undefined;
     if (!booking || !helper) return [];
     const refunded = refundRows.filter((r) => r.bookingId === booking.booking.id).reduce((sum, r) => sum + r.amountCents, 0);
+    // The client's tip after approval (UI-057) is its own charge, all of it the helper's.
+    const tipped = tips.filter((tip) => tip.bookingId === booking.booking.id).reduce((sum, tip) => sum + tip.amountCents, 0);
     return [
       {
         bookingId: booking.booking.id,
@@ -314,7 +316,8 @@ export async function getPaymentsPage(db: Db, posterUserId: string): Promise<Pay
         paidAt: charge.updatedAt.toISOString(),
         chargedCents: charge.amountCents,
         refundedCents: refunded,
-        netCents: charge.amountCents - refunded,
+        ...(tipped > 0 ? { tipCents: tipped } : {}),
+        netCents: charge.amountCents - refunded + tipped,
         status: charge.status as PaymentStatus,
       },
     ];
@@ -338,8 +341,9 @@ export async function getReceiptPage(db: Db, posterUserId: string, bookingId: st
     .where(and(eq(bookings.id, bookingId), eq(bookings.posterUserId, posterUserId)))
     .limit(1);
   if (!row) return null;
-  const [charges, refundRows, helpers] = await Promise.all([
+  const [charges, tips, refundRows, helpers] = await Promise.all([
     chargesOf(db, posterUserId, bookingId),
+    chargesOf(db, posterUserId, bookingId, 'tip'),
     db.select().from(refunds).where(and(eq(refunds.bookingId, bookingId), eq(refunds.status, 'succeeded'))).orderBy(asc(refunds.createdAt)),
     people(db, [row.booking.helperUserId]),
   ]);
@@ -352,8 +356,9 @@ export async function getReceiptPage(db: Db, posterUserId: string, bookingId: st
       const charge = charges.find((c) => c.id === r.paymentId);
       return { id: r.id, kind: 'refund' as const, amountCents: r.amountCents, reason: r.reason, ...(charge ? method(charge) : {}), at: r.createdAt.toISOString() };
     }),
+    ...tips.map((tip) => ({ id: tip.id, kind: 'tip' as const, amountCents: tip.amountCents, ...method(tip), at: tip.updatedAt.toISOString() })),
   ];
-  const net = lines.reduce((total, line) => total + (line.kind === 'charge' ? line.amountCents : -line.amountCents), 0);
+  const net = lines.reduce((total, line) => total + (line.kind === 'refund' ? -line.amountCents : line.amountCents), 0);
   const firstCharge = charges[charges.length - 1]!;
   return {
     receiptNumber: `TNM-${firstCharge.createdAt.getUTCFullYear()}-${row.booking.id.slice(-6).toUpperCase()}`,

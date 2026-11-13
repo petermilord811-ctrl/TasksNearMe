@@ -25,7 +25,9 @@ export interface ReceiptRow {
   paidAt: ISODateTime;
   chargedCents: Cents;
   refundedCents: Cents;
-  /** Charged − refunded. */
+  /** The client's tip after approval (UI-057), when they added one. */
+  tipCents?: Cents;
+  /** Charged − refunded, plus the tip. */
   netCents: Cents;
   /** The charge's state: `succeeded`, `partially_refunded`, or `refunded`. */
   status: PaymentStatus;
@@ -38,10 +40,10 @@ export interface PaymentsPageData {
   newCard: NewCardCollection;
 }
 
-/** A charge or refund on a receipt. */
+/** A charge, a refund, or the client's tip (UI-057) on a receipt. */
 export interface ReceiptLine {
   id: string;
-  kind: 'charge' | 'refund';
+  kind: 'charge' | 'refund' | 'tip';
   amountCents: Cents;
   /** Refunds: why (`cancellation`, `unused_cap`, `unused_allowance`, `change_decrease`, `dispute_settlement`, `goodwill`). */
   reason?: string;
@@ -91,7 +93,8 @@ export interface PaymentMethodHandlers {
 
 // ---- The helper: earnings and payouts ---------------------------------------------------------------
 
-export const EARNINGS_KINDS = ['earnings', 'reimbursement', 'cancellation_compensation'] as const;
+/** `tip`: the client's tip after approval (UI-057), all of it the helper's. */
+export const EARNINGS_KINDS = ['earnings', 'reimbursement', 'cancellation_compensation', 'tip'] as const;
 export type EarningsKind = (typeof EARNINGS_KINDS)[number];
 
 /** A transfer to the helper for one booking. */

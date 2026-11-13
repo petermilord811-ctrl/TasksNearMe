@@ -557,7 +557,14 @@ async function seedBookings(tx: Tx): Promise<void> {
   await seedOne({ id: 'bkg_dresser', taskId: 'tsk_dresser', offerId: 'off_dresser_jordan', priceCents: 6000, status: 'in_progress' });
   const [dresserTerms] = await tx.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_dresser'));
   const sent = new Date(Date.now() - 60 * 60_000);
-  await tx.insert(bookingCompletions).values({ bookingId: 'bkg_dresser', submittedAt: sent, note: 'All six drawers fitted.', finalBreakdown: dresserTerms!.breakdown });
+  await tx.insert(bookingCompletions).values({
+    bookingId: 'bkg_dresser',
+    submittedAt: sent,
+    note: 'All six drawers fitted.',
+    finalBreakdown: dresserTerms!.breakdown,
+    // The furniture checklist as Jordan ticked it (blueprint 01, P2): staff see it on the dispute.
+    checklist: { all_parts_used: true, level_and_stable: true, anchored_if_asked: false, packaging_cleared: true },
+  });
   await tx.update(bookings).set({ status: 'disputed', completionSubmittedAt: sent }).where(eq(bookings.id, 'bkg_dresser'));
   await tx.insert(supportCases).values({
     id: 'case_seed_dresser',

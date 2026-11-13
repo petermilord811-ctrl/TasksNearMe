@@ -3,7 +3,7 @@ import { ArrowLeft, CalendarDays, Check, Clock3, HelpCircle, Lock, Navigation } 
 import { useTranslations } from 'next-intl';
 import {
   routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
-  type BookingPaymentLine, type BookingSheetHandlers, type BookingView, type ISODateTime,
+  type BookingPaymentLine, type BookingSheetHandlers, type BookingTipHandlers, type BookingView, type ISODateTime,
 } from '@/contracts';
 import { formatDate, formatDateTime, formatHours, formatMoney, formatMonthYear, formatRelative, formatTime, formatTimeRange } from '@/shared/format';
 import { CompletionSummary } from '@/ui/components/bookings/completion-summary';
@@ -23,6 +23,7 @@ import { Timeline } from '@/ui/components/timeline/timeline';
 import { cn } from '@/ui/lib/utils';
 import { BookingHubActions } from './booking-hub-actions';
 import { BookingDisputeCard } from './booking-dispute-card';
+import { BookingTipCard, type TipCardPreviewState } from './booking-tip-card';
 import { BookingHubWithoutSheetHandlers } from './booking-hub-with-sheets';
 
 export interface BookingHubScreenProps {
@@ -30,6 +31,8 @@ export interface BookingHubScreenProps {
   handlers: BookingHubHandlers;
   /** Compatibility for the existing app route; new callers must supply sheet handlers. */
   sheets?: BookingSheetHandlers;
+  /** The client's tip card (UI-057). Without it no tip can be added (a tip already given still shows). */
+  tip?: BookingTipHandlers;
   now: ISODateTime;
 }
 
@@ -95,10 +98,11 @@ function BookingPayment({ payment }: { payment: BookingPaymentLine }) {
 }
 
 /** Initial result/pending states belong to the preview gallery. App pages use BookingHubScreen. */
-export function BookingHubContent({ data, handlers, sheets, now, initialResult, initialPending }: Omit<BookingHubScreenProps, 'sheets'> & {
+export function BookingHubContent({ data, handlers, sheets, tip, now, initialResult, initialPending, tipPreview }: Omit<BookingHubScreenProps, 'sheets'> & {
   sheets: BookingSheetHandlers;
   initialResult?: ActionResult;
   initialPending?: BookingActionId;
+  tipPreview?: TipCardPreviewState;
 }) {
   const t = useTranslations('bookingHub');
   const sheetCopy = useTranslations('bookingSheets');
@@ -132,6 +136,8 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
     {data.dispute && <BookingDisputeCard dispute={data.dispute} viewerRole={data.viewerRole} />}
 
     <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} />
+
+    <BookingTipCard key={`tip-${data.id}`} data={data} handlers={tip} preview={tipPreview} />
 
     {data.myReview && <section aria-label={t('review.title')} className={cn(surface, surfacePad, 'space-y-3')}>
       <h2 className={sectionTitle}>{t('review.title')}</h2>

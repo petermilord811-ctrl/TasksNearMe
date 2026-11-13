@@ -36,6 +36,22 @@ async function fillRefund(user: ReturnType<typeof userEvent.setup>, amount = '16
 }
 
 describe('AdminBookingScreen', () => {
+  it("shows the helper's checklist next to the people, and nothing without one", () => {
+    mount(adminBookingDisputedData);
+    const checklist = screen.getByRole('heading', { level: 2, name: copy.checklist }).closest('section')!;
+    expect(within(checklist).getByText('3 of 4 confirmed')).toBeInTheDocument();
+    expect(within(checklist).getByText(copy.checklistHint)).toBeInTheDocument();
+    expect(within(checklist).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'All parts used, or spares handed back · Confirmed',
+      'It stands level and stable · Confirmed',
+      'Tall pieces anchored to the wall, when asked · Not ticked',
+      'Packaging cleared away · Confirmed',
+    ]);
+    cleanup();
+    mount(adminBookingRefundRequestData);
+    expect(screen.queryByRole('heading', { name: copy.checklist })).not.toBeInTheDocument();
+  });
+
   it('shows staff booking details and supplied money without deriving amounts', () => {
     mount(adminBookingSettledData);
     expect(screen.getByRole('heading', { level: 1, name: adminBookingSettledData.booking.title })).toBeVisible();

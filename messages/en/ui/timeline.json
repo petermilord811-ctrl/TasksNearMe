@@ -22,6 +22,7 @@
   "evidence_added": "Photos or notes added",
   "approved": "Task approved",
   "auto_approved": "Task approved automatically",
+  "tip_added": "{hasAmount, select, yes {Tip added · {amount}} other {Tip added}}",
   "problem_reported": "Problem reported",
   "rework_offered": "{hasTime, select, yes {Offered to fix the problem at {time}} other {Offered to fix the problem}}",
   "settlement_offered": "{hasAmount, select, yes {Final price proposed · {amount}} other {Final price proposed}}",

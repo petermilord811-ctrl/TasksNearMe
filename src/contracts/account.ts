@@ -28,6 +28,8 @@ export const NOTIFICATION_TYPES = [
   'problem_reported',
   'earnings_transferred',
   'payout_paid',
+  /** The client tipped the helper on a completed booking (`params.amountCents`; all of it goes to the helper). */
+  'tip_received',
   'review_published',
   'message_received',
   /** Support wrote to the person on one of their cases (UI-026). */

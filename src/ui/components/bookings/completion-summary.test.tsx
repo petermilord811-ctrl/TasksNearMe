@@ -77,6 +77,24 @@ describe('CompletionSummary', () => {
     expect(screen.queryByRole('list', { name: 'Photos of the work' })).not.toBeInTheDocument();
   });
 
+  it('lists the checklist in its order with what the helper confirmed and left unticked', () => {
+    show(deskCompletionView);
+    const checklist = screen.getByRole('region', { name: 'Checklist' });
+    expect(within(checklist).getByText('3 of 4 confirmed')).toBeInTheDocument();
+    expect(within(checklist).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'All parts used, or spares handed back · Confirmed',
+      'It stands level and stable · Confirmed',
+      'Tall pieces anchored to the wall, when asked · Not ticked',
+      'Packaging cleared away · Confirmed',
+    ]);
+  });
+
+  it('shows no checklist for work sent before checklists', () => {
+    show({ ...deskCompletionView, checklist: undefined });
+    expect(screen.queryByText('Checklist')).not.toBeInTheDocument();
+    expect(screen.getByText(deskCompletionView.note!)).toBeInTheDocument();
+  });
+
   it('keeps the existing hours wording when no cap is supplied', () => {
     show({ ...movingCompletionView, hoursCap: undefined });
     expect(screen.getByText('Hours worked: 3.5 h')).toBeInTheDocument();

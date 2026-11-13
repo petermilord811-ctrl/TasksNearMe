@@ -4,10 +4,12 @@ import { useId, useState, type ReactNode } from 'react';
 import { Controller, useFieldArray, useFormContext, type FieldPath } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { Plus, Trash2 } from 'lucide-react';
-import type { CompletionHandlers, CompletionInput, CompletionRules, Photo } from '@/contracts';
+import type { CategorySlug, CompletionHandlers, CompletionInput, CompletionRules, Photo } from '@/contracts';
 import { formatMoney, formatMoneyInput, parseMoneyInput } from '@/shared/format';
 import { EvidencePhotoPicker } from '@/ui/components/bookings/evidence-photo-picker';
+import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
+import { Checkbox } from '@/ui/primitives/checkbox';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Input } from '@/ui/primitives/input';
 import { Textarea } from '@/ui/primitives/textarea';
@@ -37,7 +39,33 @@ function ReceiptRow({ index, rules, onUploadPhoto, onBusyChange, onRemove }: { i
   </div>;
 }
 
-export function CompletionFields({ rules, onUploadPhoto, onBusyChange, expensesCents }: { rules: CompletionRules; onUploadPhoto: CompletionHandlers['onUploadPhoto']; onBusyChange: (busy: boolean) => void; expensesCents: number }) {
+/**
+ * The category's evidence checklist (blueprint 01, P2): optional ticks that help the client approve. Each item is a
+ * card whose whole row toggles it; nothing here can block sending.
+ */
+function ChecklistFields({ rules, categorySlug }: { rules: CompletionRules; categorySlug: CategorySlug }) {
+  const t = useTranslations('bookingComplete');
+  const items = useTranslations('completion');
+  const id = useId();
+  const { control } = useFormContext<CompletionInput>();
+  return <fieldset aria-describedby={`${id}-hint`} className="min-w-0 space-y-3">
+    <legend className="font-heading text-xl/7 font-semibold tracking-[-0.015em]">{t('checklist.title')}</legend>
+    <p id={`${id}-hint`} className="text-sm text-muted-foreground">{t('checklist.hint')}</p>
+    <ul className="grid gap-2">
+      {rules.checklist.map((key) => <li key={key}>
+        <Controller control={control} name={`checklist.${key}`} render={({ field }) => <label htmlFor={`${id}-${key}`} className={cn(
+          'flex min-h-12 cursor-pointer items-start gap-3 rounded-2xl border px-3.5 py-3 leading-6 transition-[border-color,background-color] duration-200 ease-[var(--ease-out)] has-[:disabled]:cursor-not-allowed motion-reduce:transition-none',
+          field.value === true ? 'border-primary/45 bg-primary/[0.045]' : 'border-foreground/[0.09] bg-card hover:border-foreground/20',
+        )}>
+          <Checkbox id={`${id}-${key}`} ref={field.ref} name={field.name} checked={field.value === true} onCheckedChange={(checked) => field.onChange(checked === true)} onBlur={field.onBlur} className="mt-0.5 size-5" />
+          <span className="min-w-0 break-words">{items(`checklist.items.${categorySlug}.${key}`)}</span>
+        </label>} />
+      </li>)}
+    </ul>
+  </fieldset>;
+}
+
+export function CompletionFields({ rules, categorySlug, onUploadPhoto, onBusyChange, expensesCents }: { rules: CompletionRules; categorySlug: CategorySlug; onUploadPhoto: CompletionHandlers['onUploadPhoto']; onBusyChange: (busy: boolean) => void; expensesCents: number }) {
   const t = useTranslations('bookingComplete');
   const errors = useTranslations('forms');
   const id = useId();
@@ -49,6 +77,7 @@ export function CompletionFields({ rules, onUploadPhoto, onBusyChange, expensesC
   return <div className="space-y-6">
     {rules.photosMax > 0 && <Controller control={control} name="photoIds" render={({ field, fieldState }) => <EvidencePhotoPicker id={`${id}-photos`} label={t(rules.photosMin > 0 ? 'photos.label' : 'photos.optionalLabel')} hint={t('photos.hint', { minimum: rules.photosMin, maximum: rules.photosMax, megabytes: rules.maxPhotoMegabytes })} photos={photos} inputRef={field.ref} error={fieldState.error ? t(fieldState.error.message === 'required' ? 'photos.required' : 'photos.invalid', { minimum: rules.photosMin, maximum: rules.photosMax }) : undefined} onChange={(next) => { setPhotos(next); field.onChange(next.map((photo) => photo.id)); }} onUploadPhoto={onUploadPhoto} maxPhotos={rules.photosMax} maxPhotoMegabytes={rules.maxPhotoMegabytes} onBusyChange={onBusyChange} />} />}
     <CompletionField name="note" label={t(rules.noteRequired ? 'note' : 'noteOptional')} hint={t(rules.noteRequired ? 'noteHint' : 'noteOptionalHint')}>{(fieldId, invalid) => <><Textarea {...register('note')} id={fieldId} rows={4} maxLength={rules.noteMaxLength} aria-invalid={invalid} aria-describedby={`${fieldId}-hint ${fieldId}-error ${fieldId}-count`} className="scroll-mb-40" /><p id={`${fieldId}-count`} className="text-right text-sm tabular-nums text-muted-foreground">{t('counter', { count: note.length, maximum: rules.noteMaxLength })}</p></>}</CompletionField>
+    {rules.checklist.length > 0 && <ChecklistFields rules={rules} categorySlug={categorySlug} />}
     {rules.hours && <CompletionField name="hoursWorked" label={t('hours')} hint={t('hoursHint', { cap: rules.hours.cap })}>{(fieldId, invalid) => <Input {...register('hoursWorked', { setValueAs: (value: string) => value === '' ? undefined : Number(value) })} id={fieldId} type="number" inputMode="decimal" min={0.5} max={rules.hours?.cap} step={0.5} aria-invalid={invalid} aria-describedby={`${fieldId}-hint ${fieldId}-error`} className="max-w-sm scroll-mb-40 tabular-nums" />}</CompletionField>}
     {rules.expenses && <section aria-labelledby={`${id}-expenses`} className="space-y-4">
       <h2 id={`${id}-expenses`} className="font-heading text-xl/7 font-semibold tracking-[-0.015em]">{t('expenses.title')}</h2><p className="break-words text-sm text-muted-foreground">{rules.expenses.description}</p><p className="text-sm">{t('expenses.hint', { maximum: rules.expenses.maxItems })}</p>
