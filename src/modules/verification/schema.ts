@@ -1,11 +1,13 @@
-import { boolean, index, integer, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { users } from '../accounts/schema';
 
 /**
- * The verification tracks (docs/blueprint/06 §1), stored separately. Providers keep the ID documents,
- * selfies and background reports; we keep statuses, timestamps and pass flags. The one document that
- * enters our storage is a proof of the home address (added 2026-11-12): private, reviewed by staff, and
- * deleted 30 days after the decision.
+ * The verification tracks (docs/blueprint/06 §1), stored separately. Providers keep their own ID images
+ * and background reports; we keep statuses, timestamps and pass flags. Two kinds of document enter our
+ * storage, both private, opened only by staff with a logged reason, and deleted 30 days after the
+ * decision: a proof of the home address (added 2026-11-12), and the ID photos and selfie of our own ID
+ * check (stage 1, added 2026-11-13), which are also encrypted.
  *
  * "Request" rows: staff (or a change to the legal name) can ask for a new check. That adds a row with
  * status `not_started` (identity, background) or `requested` (address) and no provider reference; the
@@ -43,6 +45,66 @@ export const identityVerifications = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('identity_verifications_user_idx').on(t.userId, t.createdAt)],
+);
+
+/**
+ * The yes/no answers of the automatic reading of an ID (stage 1). The name, birth date and document
+ * number are read once and never kept; only these answers and the expiry month and year are.
+ */
+export interface StoredIdentityAutoCheck {
+  readable: boolean;
+  nameMatches?: boolean;
+  isAdult?: boolean;
+  notExpired?: boolean;
+  expiresMonth?: number;
+  expiresYear?: number;
+  /** What the document looks like: drivers_license | state_id | passport | other. */
+  documentType?: string;
+  /** Which reader produced it (`claude:<model>` or `stand-in`). */
+  by: string;
+  at: string;
+}
+
+/**
+ * Our own ID check, the first of two stages (owner, 2026-11-13): photos of the ID (the front, and the
+ * back except for passports) and a live selfie that follows a prompt, which staff compare. Once staff
+ * approve, the provider's hosted check runs as the double check (`identity_verifications`). The latest
+ * row since the last request row is the current one, and every row counts as a try toward the ID limits.
+ * The photos are `files` rows of kind `id_document` and `id_selfie`, encrypted (platform/crypto), and
+ * deleted 30 days after the decision (`files_deleted_at`; the row keeps its status and dates).
+ */
+export const identityCaptures = pgTable(
+  'identity_captures',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    documentType: text('document_type').notNull(), // drivers_license | state_id | passport
+    /** `files.id`; null once deleted (and `back` for passports). */
+    frontFileId: text('front_file_id'),
+    backFileId: text('back_file_id'),
+    selfieFileId: text('selfie_file_id'),
+    /** What the selfie had to show (LIVENESS_PROMPTS). */
+    promptKey: text('prompt_key').notNull(),
+    status: text('status').notNull(), // submitted | approved | rejected | canceled
+    rejectionReason: text('rejection_reason'), // document_unreadable | selfie_mismatch | prompt_not_followed | under_18 | expired | other
+    autoCheck: jsonb('auto_check').$type<StoredIdentityAutoCheck>(),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    decidedByUserId: text('decided_by_user_id'),
+    /** The deciding staff member's note (also in the audit log); never shown to the helper. */
+    staffNote: text('staff_note'),
+    filesDeletedAt: timestamp('files_deleted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('identity_captures_user_idx').on(t.userId, t.createdAt),
+    index('identity_captures_status_idx').on(t.status, t.submittedAt),
+    // One set of photos in review at a time, even when two submits race.
+    uniqueIndex('identity_captures_one_in_review').on(t.userId).where(sql`status = 'submitted'`),
+  ],
 );
 
 /** Stripe Connect accounts for payouts. No bank or tax details here. */
