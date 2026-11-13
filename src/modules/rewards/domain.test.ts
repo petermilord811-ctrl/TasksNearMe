@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextGrantState, repeatProgress, repeatTrigger, welcomeCandidate, type BookingFact } from './domain';
+import { nextGrantState, recurringMonthTrigger, repeatProgress, repeatTrigger, welcomeCandidate, type BookingFact, type SeriesVisitFact } from './domain';
 
 const day = (n: number) => new Date(Date.UTC(2026, 10, 1) + n * 86_400_000);
 const booking = (over: Partial<BookingFact>): BookingFact => ({ id: 'bkg', title: 'Task', posterUserId: 'usr_maya', status: 'confirmed', fundedAt: day(5), priceCents: 6000, ...over });
@@ -71,5 +71,41 @@ describe('a grant over time', () => {
     const redeemable = { program: 'repeat', status: 'redeemable' as const, holdUntil: day(17), expiresAt: day(107) };
     expect(nextGrantState(redeemable, undefined, day(106))).toBeNull();
     expect(nextGrantState(redeemable, undefined, day(107))).toEqual({ status: 'expired' });
+  });
+});
+
+describe('recurring-month reward', () => {
+  // Austin dates at 9 am (15:00 UTC in winter).
+  const at = (date: string) => new Date(`${date}T15:00:00.000Z`);
+  const visit = (bookingId: string, date: string, over: Partial<SeriesVisitFact> = {}): SeriesVisitFact => ({ bookingId, startAt: at(date), status: 'completed', transferredAt: at(date), ...over });
+
+  it('goes to the last visit of the first finished month with every visit, at least two, completed and paid', () => {
+    const visits = [visit('nov17', '2026-11-17'), visit('nov24', '2026-11-24'), visit('dec01', '2026-12-01'), visit('dec08', '2026-12-08')];
+    expect(recurringMonthTrigger(visits, at('2026-12-10'))?.bookingId).toBe('nov24');
+  });
+
+  it('waits until the month is over', () => {
+    expect(recurringMonthTrigger([visit('nov03', '2026-11-03'), visit('nov10', '2026-11-10')], at('2026-11-30'))).toBeUndefined();
+  });
+
+  it('needs two visits in the month, all completed and paid', () => {
+    // November: a single visit; December: one skipped; January: one not paid yet; February: both done.
+    const visits = [
+      visit('nov24', '2026-11-24'),
+      visit('dec01', '2026-12-01'),
+      visit('dec15', '2026-12-15', { status: 'canceled', transferredAt: undefined }),
+      visit('jan05', '2027-01-05'),
+      visit('jan19', '2027-01-19', { transferredAt: undefined }),
+      visit('feb02', '2027-02-02'),
+      visit('feb16', '2027-02-16'),
+    ];
+    expect(recurringMonthTrigger(visits, at('2027-03-02'))?.bookingId).toBe('feb16');
+    expect(recurringMonthTrigger(visits, at('2027-02-20'))).toBeUndefined();
+  });
+
+  it('has no price threshold once its visit is completed and paid', () => {
+    const grant = { program: 'recurring_month', status: 'pending' as const, holdUntil: null, expiresAt: null };
+    const fact = { id: 'b', title: 'Yard', posterUserId: 'usr_ben', status: 'completed', fundedAt: day(1), priceCents: 1500, finalPriceCents: 1500, transferredAt: day(2) };
+    expect(nextGrantState(grant, fact, day(3))).toMatchObject({ status: 'qualified' });
   });
 });

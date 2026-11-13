@@ -38,7 +38,8 @@
       "expiry": "Redeem within 90 days of a reward becoming ready to redeem.",
       "giftCards": "Rewards are gift cards, not earnings",
       "terms": "Read rewards terms",
-      "detailsInTerms": "See the rewards terms for this program's qualifying bookings and reward amounts."
+      "detailsInTerms": "See the rewards terms for this program's qualifying bookings and reward amounts.",
+      "recurringMonth": "{amount} once your regular visits with a client have a calendar month with every visit, at least two, completed and paid. Once per series."
     }
   },
   "previews": {
@@ -62,7 +63,8 @@
     "welcome": "Welcome reward",
     "acceptance": "Offer acceptance reward",
     "repeat": "Repeat booking reward",
-    "completion": "Completion reward"
+    "completion": "Completion reward",
+    "recurring_month": "Regular visits reward"
   },
   "card": {
     "withClient": "With {name}",

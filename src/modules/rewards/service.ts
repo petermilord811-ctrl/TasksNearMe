@@ -3,7 +3,8 @@ import type { EmailProvider } from '@/integrations/email';
 import type { ActionResult, RewardGrantView, RewardRiskSignal, RewardStatus, RewardVoidReason, RewardsPageData } from '@/contracts';
 import type { GiftCardProvider } from '@/integrations/gift-cards';
 import { users } from '@/modules/accounts/schema';
-import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
+import { bookingCompletions, bookingSeries, bookingTerms, bookings } from '@/modules/bookings/schema';
+import { getFlags } from '@/modules/markets/queries';
 import { earnings } from '@/modules/earnings/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { identityVerifications } from '@/modules/verification/schema';
@@ -11,7 +12,7 @@ import type { Db } from '@/platform/db/connect';
 import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { LAUNCH_PROGRAMS, REWARD_RULES, nextGrantState, repeatProgress, repeatTrigger, rewardOrder, welcomeCandidate, type BookingFact } from './domain';
+import { LAUNCH_PROGRAMS, REWARD_RULES, nextGrantState, recurringMonthTrigger, repeatProgress, repeatTrigger, rewardOrder, welcomeCandidate, type BookingFact } from './domain';
 import { sendGiftCardEmail } from './emails';
 import { REVIEW_SIGNALS, riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
@@ -99,6 +100,38 @@ async function createGrant(db: Db, grants: GrantRow[], values: typeof rewardGran
   }
 }
 
+/**
+ * The recurring-month reward (blueprint 05 variant B): once per series, after the first calendar month in which
+ * every visit (at least 2) was completed and paid. The grant's id is the series', so it can never repeat (a
+ * rejected one included). Behind the market's `reward.recurring_month` flag.
+ */
+async function syncRecurringMonth(db: Db, helperUserId: string, grants: GrantRow[], now: Date): Promise<void> {
+  const series = await db
+    .select({ id: bookingSeries.id, posterUserId: bookingSeries.posterUserId, marketId: bookingSeries.marketId })
+    .from(bookingSeries)
+    .where(eq(bookingSeries.helperUserId, helperUserId));
+  const waiting = series.filter((row) => !grants.some((grant) => grant.id === recurringGrantId(row.id)));
+  if (waiting.length === 0) return;
+  const visits = await db
+    .select({ bookingId: bookings.id, seriesId: bookings.seriesId, startAt: bookings.startAt, status: bookings.status, transferredAt: earnings.transferredAt })
+    .from(bookings)
+    .leftJoin(earnings, and(eq(earnings.bookingId, bookings.id), eq(earnings.kind, 'earnings')))
+    .where(and(eq(bookings.helperUserId, helperUserId), inArray(bookings.seriesId, waiting.map((row) => row.id))));
+  for (const row of waiting) {
+    const flags = await getFlags(row.marketId, db);
+    if (flags['reward.recurring_month'] !== true) continue;
+    const trigger = recurringMonthTrigger(
+      visits.filter((visit) => visit.seriesId === row.id).map((visit) => ({ bookingId: visit.bookingId, startAt: visit.startAt, status: visit.status, ...(visit.transferredAt ? { transferredAt: visit.transferredAt } : {}) })),
+      now,
+    );
+    if (!trigger) continue;
+    await createGrant(db, grants, { id: recurringGrantId(row.id), helperUserId, program: 'recurring_month', amountCents: REWARD_RULES.recurringMonth.amountCents, status: 'pending', bookingId: trigger.bookingId, posterUserId: row.posterUserId, createdAt: now, updatedAt: now }, now);
+  }
+}
+
+/** One recurring-month grant per series: its id says which. */
+const recurringGrantId = (seriesId: string) => `rwd_month_${seriesId}`;
+
 /** Brings the helper's grants up to date with their bookings. Idempotent. */
 export async function syncRewards(db: Db, helperUserId: string, now: Date): Promise<void> {
   const [facts, cohort, grants] = await Promise.all([
@@ -142,6 +175,9 @@ export async function syncRewards(db: Db, helperUserId: string, now: Date): Prom
       await createGrant(db, grants, { id: newId('rwd'), helperUserId, program: 'repeat', amountCents: REWARD_RULES.repeat.amountCents, status: 'pending', bookingId: trigger.id, posterUserId, createdAt: now, updatedAt: now }, now);
     }
   }
+
+  // Recurring month: a month of regular visits, all completed and paid.
+  await syncRecurringMonth(db, helperUserId, grants, now);
 }
 
 function grantView(grant: GrantRow, booking: BookingFact | undefined, clientName: string | undefined): RewardGrantView {

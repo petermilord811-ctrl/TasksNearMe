@@ -123,7 +123,8 @@ export const REWARD_STATUSES = [
 ] as const;
 export type RewardStatus = (typeof REWARD_STATUSES)[number];
 
-export const REWARD_PROGRAM_CODES = ['welcome', 'acceptance', 'repeat', 'completion'] as const;
+/** `recurring_month` (blueprint 05 variant B): a month of regular visits, all completed and paid, once per series. */
+export const REWARD_PROGRAM_CODES = ['welcome', 'acceptance', 'repeat', 'completion', 'recurring_month'] as const;
 export type RewardProgramCode = (typeof REWARD_PROGRAM_CODES)[number];
 
 export const CASE_TYPES = [

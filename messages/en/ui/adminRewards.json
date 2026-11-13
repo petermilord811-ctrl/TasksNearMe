@@ -2,9 +2,19 @@
   "title": "Rewards",
   "intro": "Review gift card rewards, check risk signals, and resolve delivery problems. Every decision needs a note for the audit log.",
   "filtersLabel": "Filter rewards",
-  "filters": { "in_review": "Under review", "failed": "Delivery problems", "all": "All rewards" },
+  "filters": {
+    "in_review": "Under review",
+    "failed": "Delivery problems",
+    "all": "All rewards"
+  },
   "filterCount": "{count, number}",
-  "programs": { "welcome": "Welcome reward", "acceptance": "Offer acceptance reward", "repeat": "Repeat booking reward", "completion": "Completion reward" },
+  "programs": {
+    "welcome": "Welcome reward",
+    "acceptance": "Offer acceptance reward",
+    "repeat": "Repeat booking reward",
+    "completion": "Completion reward",
+    "recurring_month": "Regular visits reward"
+  },
   "budgets": {
     "title": "Program budgets",
     "intro": "Committed includes rewards from pending through delivered. Delivered is part of the committed amount.",
@@ -17,7 +27,12 @@
   },
   "results": "Reward grants",
   "tableCaption": "Rewards, booking context, risk signals, and available decisions",
-  "columns": { "reward": "Reward", "people": "People and booking", "signals": "Hold and risk signals", "actions": "Actions" },
+  "columns": {
+    "reward": "Reward",
+    "people": "People and booking",
+    "signals": "Hold and risk signals",
+    "actions": "Actions"
+  },
   "helper": "Helper",
   "client": "Client",
   "price": "Task price: {amount}",
@@ -27,15 +42,30 @@
   "noBooking": "No linked booking",
   "noSignals": "No risk signals supplied",
   "signalsLabel": "Risk signals",
-  "signals": { "new_client_account": "New client account", "new_helper_account": "New helper account", "shared_card": "Same card as the client", "repeat_pair": "Repeat booking with this client" },
+  "signals": {
+    "new_client_account": "New client account",
+    "new_helper_account": "New helper account",
+    "shared_card": "Same card as the client",
+    "repeat_pair": "Repeat booking with this client"
+  },
   "emptyTitle": "Nothing to review",
   "emptyBody": "Rewards appear here when they need a decision or help with delivery. Choose all rewards to see other grants.",
   "viewAll": "View all rewards",
   "noActions": "No actions available",
   "actionsLabel": "Reward actions for {name}",
-  "actions": { "approve_review": "Approve", "reject_review": "Reject", "void": "Void", "reissue": "Reissue" },
+  "actions": {
+    "approve_review": "Approve",
+    "reject_review": "Reject",
+    "void": "Void",
+    "reissue": "Reissue"
+  },
   "decision": {
-    "titles": { "approve_review": "Approve reward", "reject_review": "Reject reward", "void": "Void reward", "reissue": "Reissue gift card" },
+    "titles": {
+      "approve_review": "Approve reward",
+      "reject_review": "Reject reward",
+      "void": "Void reward",
+      "reissue": "Reissue gift card"
+    },
     "descriptions": {
       "approve_review": "This makes the gift card reward available for the helper to redeem.",
       "reject_review": "The helper won't get this gift card. Your note explains why the reward was rejected.",

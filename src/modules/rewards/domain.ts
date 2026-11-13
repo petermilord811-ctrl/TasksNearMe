@@ -1,8 +1,10 @@
 import type { RewardProgramView, RewardStatus } from '@/contracts';
+import { marketDayKey } from '@/shared/format';
 
 /**
  * Pure reward rules (blueprint 05 §1–§2). Launch programs: welcome ($50, founding cohort) and repeat
- * ($10, paid-bookings version). Acceptance and completion are built later, off at launch.
+ * ($10, paid-bookings version). Acceptance and completion are built later, off at launch. With regular
+ * visits, the recurring-month reward (variant B): $15 once per series.
  */
 
 const DAY = 86_400_000;
@@ -10,6 +12,8 @@ const DAY = 86_400_000;
 export const REWARD_RULES = {
   welcome: { amountCents: 5000, thresholdCents: 4000, cohortSize: 100, windowDays: 60 },
   repeat: { amountCents: 1000, thresholdCents: 2500, needed: 3, windowDays: 90 },
+  /** A calendar month (market time) in which every visit of a series, at least 2, was completed and paid. */
+  recurringMonth: { amountCents: 1500, minVisits: 2 },
   holdDays: 7,
   redeemDays: 90,
   monthlyCapCents: 7500,
@@ -18,7 +22,37 @@ export const REWARD_RULES = {
 export const LAUNCH_PROGRAMS: RewardProgramView[] = [
   { program: 'welcome', amountCents: REWARD_RULES.welcome.amountCents, thresholdCents: REWARD_RULES.welcome.thresholdCents },
   { program: 'repeat', amountCents: REWARD_RULES.repeat.amountCents, thresholdCents: REWARD_RULES.repeat.thresholdCents },
+  { program: 'recurring_month', amountCents: REWARD_RULES.recurringMonth.amountCents },
 ];
+
+/** One visit of a helper's regular visits, for the recurring-month reward. */
+export interface SeriesVisitFact {
+  bookingId: string;
+  startAt: Date;
+  status: string;
+  /** The helper's earnings for it were transferred: completed and paid. */
+  transferredAt?: Date;
+}
+
+/**
+ * The recurring-month reward's trigger: the first calendar month (market time) that is over and in which every
+ * visit of the series, at least two, was completed and paid. A skipped or canceled visit in a month spoils that
+ * month (later months can still qualify). Returns the month's last visit (the grant's booking).
+ */
+export function recurringMonthTrigger(visits: SeriesVisitFact[], now: Date): SeriesVisitFact | undefined {
+  const thisMonth = marketDayKey(now).slice(0, 7);
+  const months = new Map<string, SeriesVisitFact[]>();
+  for (const visit of [...visits].sort((a, b) => a.startAt.getTime() - b.startAt.getTime())) {
+    const month = marketDayKey(visit.startAt).slice(0, 7);
+    months.set(month, [...(months.get(month) ?? []), visit]);
+  }
+  for (const [month, inMonth] of [...months].sort(([a], [b]) => a.localeCompare(b))) {
+    if (month >= thisMonth) break;
+    if (inMonth.length < REWARD_RULES.recurringMonth.minVisits) continue;
+    if (inMonth.every((visit) => visit.status === 'completed' && visit.transferredAt)) return inMonth.at(-1);
+  }
+  return undefined;
+}
 
 /** Bookings that were paid for (funded) and not canceled. */
 export const FUNDED_STATUSES = ['confirmed', 'in_progress', 'completion_submitted', 'completed', 'disputed'] as const;
@@ -106,7 +140,8 @@ export function nextGrantState(grant: GrantFacts, booking: BookingFact | undefin
   const open = grant.status === 'pending' || grant.status === 'qualified' || grant.status === 'in_review';
   if (open && booking?.status === 'canceled') return { status: 'voided', voidReason: 'booking_canceled' };
   if (grant.status === 'pending' && booking?.status === 'completed' && booking.transferredAt) {
-    const threshold = grant.program === 'welcome' ? REWARD_RULES.welcome.thresholdCents : REWARD_RULES.repeat.thresholdCents;
+    // The recurring-month reward has no price threshold (each visit was paid).
+    const threshold = grant.program === 'welcome' ? REWARD_RULES.welcome.thresholdCents : grant.program === 'recurring_month' ? 0 : REWARD_RULES.repeat.thresholdCents;
     if ((booking.finalPriceCents ?? booking.priceCents) < threshold) return { status: 'voided', voidReason: 'below_threshold' };
     return { status: 'qualified', holdUntil: new Date(booking.transferredAt.getTime() + REWARD_RULES.holdDays * DAY) };
   }
