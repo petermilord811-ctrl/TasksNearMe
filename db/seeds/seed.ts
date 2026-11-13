@@ -23,6 +23,7 @@ import { helperProfiles, helperServices } from '../../src/modules/profiles/schem
 import { AUSTIN, AUSTIN_AREAS, CATEGORIES } from './data/austin';
 import { PEOPLE, displayNameOf } from './data/people';
 import { CURRENT_TERMS_VERSION } from '../../src/modules/accounts/terms';
+import { recomputeBadges } from '../../src/modules/badges/service';
 import { FAKE_PLACES } from '../../src/integrations/geocoding';
 import { fuzzedPublicPoint, nearestArea } from '../../src/modules/markets/geo';
 import { taskLocations, tasks } from '../../src/modules/tasks/schema';
@@ -197,6 +198,8 @@ export async function seedDatabase(url: string): Promise<void> {
       await seedRewards(tx);
       await seedAvailability(tx);
     });
+    // Badges (completion plan 6.4) from the seeded bookings and reviews, stored without notifications.
+    for (const person of PEOPLE) await recomputeBadges(db, person.id, new Date(), { announce: false });
     await db.execute(sql`select 1`);
   } finally {
     await pool.end();

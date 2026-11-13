@@ -10,6 +10,8 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminUserScreen } from '@/ui/screens/admin';
 import { requestNow } from '@/platform/clock';
+import { adminBadgesFor, canModerateBadges } from '@/modules/badges/staff';
+import { moderateBadgeAction } from '@/modules/badges/staff-actions';
 
 export const metadata: Metadata = { title: 'Person', robots: { index: false } };
 
@@ -27,8 +29,9 @@ async function AdminUser({ params }: Pick<PageProps<'/[locale]/admin/users/[user
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
   const now = await requestNow();
-  const data = await getAdminUser(db, staff, userId, now);
-  if (!data) notFound();
+  const [person, badges] = await Promise.all([getAdminUser(db, staff, userId, now), adminBadgesFor(db, userId)]);
+  if (!person) notFound();
+  const data = { ...person, badges, canModerateBadges: canModerateBadges(staff.roles) };
   return (
     <AdminUserScreen
       data={data}
@@ -36,6 +39,7 @@ async function AdminUser({ params }: Pick<PageProps<'/[locale]/admin/users/[user
       handlers={{
         onSuspension: setHelperSuspensionAction.bind(null, userId),
         onReverseStrike: reverseStrikeAction.bind(null, userId),
+        onModerateBadge: moderateBadgeAction,
         onRevealAddressProof: revealAddressProofAction,
         onDecideAddress: decideAddressAction,
         onRevealIdentityCapture: revealIdentityCaptureAction,

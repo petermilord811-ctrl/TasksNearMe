@@ -8,6 +8,7 @@ import { AvailabilitySlotList } from '@/ui/components/availability/availability-
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
+import { AchievementBadgeList } from '@/ui/components/people/achievement-badges';
 import { WorkSampleGallery } from '@/ui/components/people/work-sample-gallery';
 import { ReviewCard } from '@/ui/components/reviews/review-card';
 import { cn } from '@/ui/lib/utils';
@@ -81,6 +82,7 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
               {helper.foundingHelperNumber !== undefined && <p className="w-fit rounded-full bg-badge-brand px-3 py-1 font-medium tabular-nums text-badge-brand-foreground">{t('foundingHelper', { number: helper.foundingHelperNumber })}</p>}
             </div>
             <VerificationBadges badges={helper.badges} />
+            {data.achievements && <AchievementBadgeList badges={data.achievements} />}
           </div>
           <div className="flex min-w-0 flex-col gap-4 border-t border-border pt-5 lg:mt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
             <RatingStars rating={helper.rating} />

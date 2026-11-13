@@ -1,0 +1,45 @@
+{
+  "listLabel": "Insignias",
+  "names": {
+    "tasks_completed": "Tareas hechas",
+    "five_star": "Cinco estrellas",
+    "on_time": "Puntual",
+    "repeat_clients": "Te vuelven a reservar",
+    "category_pro": "Experto en la categoría",
+    "regular_visits": "Visitas regulares",
+    "founding_helper": "Ayudante fundador",
+    "client_bookings": "Buen vecino",
+    "client_regular": "Cliente habitual",
+    "client_five_star": "Un gusto trabajar contigo"
+  },
+  "categoryPro": "Experto en {category}",
+  "details": {
+    "tasks_completed": "{threshold, plural, one {# tarea} other {# tareas}}",
+    "five_star": "{threshold, plural, one {# reseña de cinco estrellas} other {# reseñas de cinco estrellas}}",
+    "on_time": "{threshold, plural, one {# llegada a tiempo} other {# llegadas a tiempo}}",
+    "repeat_clients": "{threshold, plural, one {# cliente volvió} other {# clientes volvieron}}",
+    "category_pro": "{threshold, plural, one {# tarea} other {# tareas}}, calificación 4.8+",
+    "regular_visits": "{threshold, plural, one {# visita} other {# visitas}}",
+    "founding_helper": "n.º {number}",
+    "client_bookings": "{threshold, plural, one {# reserva} other {# reservas}}",
+    "client_regular": "{threshold, plural, one {# visita} other {# visitas}} en una serie",
+    "client_five_star": "{threshold, plural, one {# reseña de cinco estrellas} other {# reseñas de cinco estrellas}}"
+  },
+  "tier": "Nivel {tier} de {count}",
+  "earnedOn": "obtenida el {date}",
+  "next": "{count} de {threshold} para el siguiente nivel",
+  "progress": "{count} de {threshold}",
+  "title": "Insignias",
+  "description": "Se ganan con reservas completadas y pagadas. Aparecen en tu perfil.",
+  "none": "Aún no tienes insignias. La primera llega con tu primera reserva completada.",
+  "upNextTitle": "Las siguientes",
+  "howCounted": "Las insignias cuentan reservas completadas y pagadas: nunca las reembolsadas ni las disputadas, y como máximo 3 con la misma persona para las insignias de reservas. Nuestro equipo puede quitar una insignia obtenida de forma injusta.",
+  "previews": {
+    "group": "Insignias",
+    "profile": "Perfil público con insignias",
+    "account": "Cuenta: insignias y las siguientes",
+    "accountNone": "Cuenta: aún sin insignias",
+    "cards": "Tarjetas de ayudantes con insignias",
+    "admin": "Personal: insignias de una persona, una revocada"
+  }
+}

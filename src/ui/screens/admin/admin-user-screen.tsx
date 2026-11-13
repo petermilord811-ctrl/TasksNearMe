@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ShieldAlert } from 'lucide-react';
-import { routes, type AdminUserHandlers, type AdminUserPageData, type BadgeTone, type DeliveryStatus, type ISODateTime } from '@/contracts';
+import { routes, type AdminBadgeRow, type AdminUserHandlers, type AdminUserPageData, type BadgeTone, type DeliveryStatus, type ISODateTime } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
@@ -9,6 +9,8 @@ import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus } from '@/ui/components/status/use-status';
 import { AdminCaseRows } from './admin-case-rows';
 import { AdminStrikeReversal } from './admin-strike-controls';
+import { AdminBadgeModeration } from './admin-badge-controls';
+import { AchievementBadge, useBadgeWords } from '@/ui/components/people/achievement-badges';
 import { AdminRewardList } from './admin-reward-list';
 import { AdminVerificationSection } from './admin-verification-section';
 import { AdminUserControls, type AdminUserPreviewState } from './admin-user-controls';
@@ -110,9 +112,27 @@ export function AdminUserContent({ data, handlers, now, ...previewState }: Admin
         </li>;
       })}</ul>}
     </section>
+    {data.badges && <section aria-label={t('badges')} className="space-y-3">
+      <div><h2 className={adminH2}>{t('badges')}</h2><p className="mt-1 text-sm text-muted-foreground">{t('badgesHint')}</p></div>
+      {data.badges.length === 0 ? <p className={adminNote}>{t('noBadges')}</p> : <ul className={cn(adminPanel, 'divide-y divide-foreground/[0.07] px-4 sm:px-5 dark:divide-white/[0.07]')}>{data.badges.map((row) => <AdminBadgeRowView key={row.id} row={row} canModerate={data.canModerateBadges === true} onModerate={handlers.onModerateBadge} />)}</ul>}
+    </section>}
     <section aria-label={t('deliveries')} className="space-y-3">
       <div><h2 className={adminH2}>{t('deliveries')}</h2><p className="mt-1 text-sm text-muted-foreground">{t('deliveriesHint')}</p></div>
       {data.deliveries.length === 0 ? <p className={adminNote}>{t('noDeliveries')}</p> : <ul className={cn(adminPanel, 'divide-y divide-foreground/[0.07] px-4 sm:px-5 dark:divide-white/[0.07]')}>{data.deliveries.map((delivery) => <DeliveryRow key={delivery.id} delivery={delivery} now={now} />)}</ul>}
     </section>
   </div>;
+}
+
+function AdminBadgeRowView({ row, canModerate, onModerate }: { row: AdminBadgeRow; canModerate: boolean; onModerate?: AdminUserHandlers['onModerateBadge'] }) {
+  const t = useTranslations('adminUser');
+  const { formatDateTime } = useFormat();
+  const { name } = useBadgeWords();
+  const label = name(row.badge);
+  return <li className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+    <div className="min-w-0 space-y-1.5">
+      <div className="flex flex-wrap items-center gap-2"><AchievementBadge badge={row.badge} />{row.revoked && <StatusBadge tone="neutral" label={t('badgeRevokedLabel')} />}</div>
+      {row.revoked && <p className="text-sm text-muted-foreground"><time dateTime={row.revoked.at}>{t('badgeRevoked', { date: formatDateTime(row.revoked.at), reason: row.revoked.reason })}</time></p>}
+    </div>
+    {canModerate && onModerate && <AdminBadgeModeration badgeId={row.id} label={label} revoke={!row.revoked} onModerate={onModerate} />}
+  </li>;
 }

@@ -30,6 +30,7 @@ import {
 } from '@/modules/notifications/actions';
 import { getAccountPage } from '@/modules/notifications/service';
 import { accountVerificationFor } from '@/modules/badges/standing';
+import { ownBadges } from '@/modules/badges/service';
 import { requestNow } from '@/platform/clock';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -56,9 +57,9 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.account()));
   const { connect, error } = await searchParams;
   const now = await requestNow();
-  const [page, verification] = await Promise.all([getAccountPage(db, viewer.user.id, { connect, error }, now), accountVerificationFor(db, viewer.user.id, now)]);
+  const [page, verification, badges] = await Promise.all([getAccountPage(db, viewer.user.id, { connect, error }, now), accountVerificationFor(db, viewer.user.id, now), ownBadges(db, viewer.user.id)]);
   if (!page) notFound();
-  const data = { ...page, verification };
+  const data = { ...page, verification, badges };
   return (
     <AccountScreen
       data={data}

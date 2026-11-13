@@ -144,7 +144,8 @@
     "series_stopped": "Regular visits stopped",
     "scheduled_payment_failed": "Scheduled payment failed",
     "replacement_needed": "Replacement needed",
-    "replacement_search_started": "Task reopened for a replacement"
+    "replacement_search_started": "Task reopened for a replacement",
+    "badge_earned": "Badge earned"
   },
   "previews": {
     "group": "Admin · person details",
@@ -160,5 +161,29 @@
     "unknown": "Person · unexpected error",
     "previewReason": "Review the linked account activity before restoring this helper.",
     "strikeDialog": "Person · reverse a strike"
-  }
+  },
+  "badges": "Badges",
+  "badgesHint": "Earned from completed, paid bookings. Revoke one earned unfairly: it's hidden everywhere until restored.",
+  "noBadges": "No badges yet.",
+  "badgeRevoked": "Revoked {date}: {reason}",
+  "badgeRevoke": "Revoke",
+  "badgeRestore": "Restore",
+  "badgeRevokeLabel": "Revoke the {badge} badge",
+  "badgeRestoreLabel": "Restore the {badge} badge",
+  "badgeDialog": {
+    "revokeTitle": "Revoke this badge",
+    "restoreTitle": "Restore this badge",
+    "revokeDescription": "{badge} disappears from the profile, cards and account page, and isn't counted again until someone restores it.",
+    "restoreDescription": "{badge} shows again, counted from the person's bookings now.",
+    "reason": "Reason",
+    "hint": "Kept in the audit log. At least 10 characters.",
+    "required": "Write why, in at least 10 characters.",
+    "tooLong": "Keep it under 1,000 characters.",
+    "notAllowed": "You can't change this badge. It may have changed already: refresh the page.",
+    "cancel": "Cancel",
+    "revoke": "Revoke badge",
+    "restore": "Restore badge",
+    "pending": "Saving…"
+  },
+  "badgeRevokedLabel": "Revoked"
 }

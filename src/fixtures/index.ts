@@ -44,5 +44,6 @@ export * from './admin-support-tools';
 export * from './series';
 export * from './analytics';
 export * from './helper-standing';
+export * from './badges';
 export * from './beta';
 export * from './bot-check';

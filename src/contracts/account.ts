@@ -9,6 +9,7 @@ import type { PhotoUploadResult } from './posting';
 import type { AttentionTarget } from './home';
 import type { VerificationTrack } from './onboarding';
 import type { AccountVerification } from './helper-standing';
+import type { BadgeCode, OwnBadgesData } from './badges';
 
 /**
  * Notifications and the account page (blueprint 02 §1.2: `/app/notifications`, `/app/account`).
@@ -89,6 +90,8 @@ export const NOTIFICATION_TYPES = [
   'replacement_needed',
   /** The client's helper canceled: their task is open for offers again on its own, and nearby helpers were told. */
   'replacement_search_started',
+  /** A new badge, or a higher tier of one (`params.badge`, `params.tier`; completion plan 6.4). In the app only, unless the person turns on tips and news emails. */
+  'badge_earned',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -99,7 +102,7 @@ export interface NotificationView {
   title?: string;
   /** Who did it ("Jordan T."). */
   actorName?: string;
-  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system' };
+  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number };
   /** Where it leads (same targets as the home's attention items). */
   target: AttentionTarget;
   createdAt: ISODateTime;
@@ -153,6 +156,8 @@ export interface AccountSignInMethods {
 export interface AccountPageData {
   /** Where the person's verification stands (completion plan 6.5): every step for helpers; the phone and any ID check for clients. */
   verification?: AccountVerification;
+  /** The person's badges and the next ones (completion plan 6.4). */
+  badges?: OwnBadgesData;
   /** `photo`: the profile photo, when they added one (a square; helpers' shows on their public profile). */
   profile: { firstName: string; lastName: string; displayName: string; initials: string; email: string; photo?: Photo };
   /** The largest photo the profile photo upload takes. */

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, ArrowLeftRight, BadgeCheck, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, LifeBuoy, Repeat, SkipForward, UserSearch, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowLeftRight, Award, BadgeCheck, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, LifeBuoy, Repeat, SkipForward, UserSearch, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatMoney, marketLocalToUtc } from '@/shared/format';
@@ -49,6 +49,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   verification_action_needed: ShieldAlert,
   background_check_expiring: CalendarClock,
   helper_ready: BadgeCheck,
+  badge_earned: Award,
   task_match: MapPin,
   data_export_ready: Download,
   series_started: Repeat,
@@ -124,6 +125,8 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
             hasDate: notification.params?.at === undefined && notification.params?.day === undefined ? 'no' : 'yes',
             date: notificationDate(notification.params, format),
             by: notification.params?.by ?? 'other',
+            badge: notification.params?.badge ?? 'other',
+            tier: notification.params?.tier ?? 1,
           })}
         </span>
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm leading-5">

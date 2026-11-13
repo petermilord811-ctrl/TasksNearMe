@@ -2,6 +2,7 @@ import 'server-only';
 import { openSlotsOf } from '@/modules/availability/slots';
 import { and, asc, count, desc, eq, exists, inArray, isNotNull, sql } from 'drizzle-orm';
 import type {
+  BadgeView,
   CategorySlug,
   HelperProfilePageData,
   HelperReviewTag,
@@ -19,6 +20,7 @@ import { files } from '@/modules/tasks/schema';
 import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
 import { helperProfiles, helperServices, helperWorkSamples } from './schema';
+import { badgesFor } from '@/modules/badges/service';
 
 /**
  * Public helper cards. Only active helpers with active accounts appear. Last names, exact
@@ -32,7 +34,8 @@ export function initialsOf(firstName: string, lastName: string): string {
 type ProfileRow = typeof helperProfiles.$inferSelect;
 type UserRow = typeof users.$inferSelect;
 
-export function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: string, services: ServiceSummary[]): HelperSummary {
+/** `badges`: the helper's shown achievement badges, most notable first (cards show the top 3; completion plan 6.4). */
+export function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: string, services: ServiceSummary[], badges: BadgeView[] = []): HelperSummary {
   const phoneVerified = user.phoneVerifiedAt !== null;
   return {
     id: user.id,
@@ -57,6 +60,7 @@ export function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: st
     ...(profile.responseTimeMinutes !== null ? { responseTimeMinutes: profile.responseTimeMinutes } : {}),
     services,
     ...(profile.foundingNumber !== null ? { foundingHelperNumber: profile.foundingNumber } : {}),
+    ...(badges.length > 0 ? { topBadges: badges.slice(0, 3) } : {}),
   };
 }
 
@@ -127,7 +131,8 @@ export async function listPublicHelpers(options: {
     servicesByHelper.set(service.userId, list);
   }
 
-  return rows.map(({ profile, user, areaName }) => toHelperSummary(profile, user, areaName, servicesByHelper.get(user.id) ?? []));
+  const badges = await badgesFor(db, rows.map(({ user }) => user.id));
+  return rows.map(({ profile, user, areaName }) => toHelperSummary(profile, user, areaName, servicesByHelper.get(user.id) ?? [], badges.get(user.id)));
 }
 
 /** Founding-cohort spots already taken in the market (helpers given a founding number). */
@@ -189,13 +194,16 @@ export async function getHelperProfile(handle: string, database: Db = db): Promi
   }));
   const tagSet = new Set<string>(HELPER_REVIEW_TAGS);
 
+  const achievements = (await badgesFor(database, [row.user.id])).get(row.user.id) ?? [];
   return {
     helper: toHelperSummary(
       row.profile,
       row.user,
       row.areaName,
       services.map(({ description: _description, ...summary }) => summary),
+      achievements,
     ),
+    ...(achievements.length > 0 ? { achievements } : {}),
     bio: row.profile.bio,
     serviceRadiusMiles: Math.max(1, Math.floor(row.profile.serviceRadiusKm / KM_PER_MILE)),
     remoteOk: row.profile.remoteOk,
@@ -264,5 +272,6 @@ export async function getHelperSummaries(userIds: string[], database: Db = db): 
     });
     services.set(service.userId, list);
   }
-  return new Map(rows.map(({ profile, user, areaName }) => [user.id, toHelperSummary(profile, user, areaName, services.get(user.id) ?? [])]));
+  const badges = await badgesFor(database, rows.map(({ user }) => user.id));
+  return new Map(rows.map(({ profile, user, areaName }) => [user.id, toHelperSummary(profile, user, areaName, services.get(user.id) ?? [], badges.get(user.id))]));
 }

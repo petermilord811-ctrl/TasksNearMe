@@ -97,6 +97,8 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     hasDate: params.at === undefined && params.day === undefined ? 'no' : 'yes',
     date: params.at ? formatDateTime(params.at, locale) : params.day ? formatDate(marketLocalToUtc(params.day, '12:00'), { locale }) : '',
     by: params.by ?? 'other',
+    badge: params.badge ?? 'other',
+    tier: params.tier ?? 1,
   });
   const url = `${appUrl()}${pathOf(row.target)}`;
   const type = row.type as NotificationType;

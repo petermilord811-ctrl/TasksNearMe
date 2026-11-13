@@ -6,6 +6,7 @@ import type { AdminPersonVerification, AdminVerificationHandlers } from './admin
 import type { NotificationChannel, NotificationType } from './account';
 import type { Cents, ISODateTime, StaffRole } from './common';
 import type { PersonSummary } from './people';
+import type { BadgeView } from './badges';
 import type { BookingStatus, RewardProgramCode, RewardStatus } from './status';
 
 /**
@@ -127,7 +128,26 @@ export interface AdminUserPageData {
   actions: AdminUserActionId[];
   /** Phone, helper agreement, ID, home address, payouts and background check: statuses only. */
   verification: AdminPersonVerification;
+  /** Achievement badges (completion plan 6.4), shown and revoked, most notable first. */
+  badges?: AdminBadgeRow[];
+  /** Trust and safety, support leads and admins revoke a badge earned unfairly, or restore it. */
+  canModerateBadges?: boolean;
 }
+
+export interface AdminBadgeRow {
+  id: string;
+  badge: BadgeView;
+  /** Revoked by staff: hidden everywhere and no longer recomputed until restored. */
+  revoked?: { at: ISODateTime; reason: string };
+}
+
+/** Revoking a badge, or restoring it; the reason goes to the audit log. */
+export const badgeModerationInputSchema = z.object({
+  badgeId: z.string(code('required')).min(1, code('required')),
+  revoke: z.boolean(code('required')),
+  reason: z.string(code('required')).trim().min(10, code('too_short')).max(1000, code('too_long')),
+});
+export type BadgeModerationInput = z.input<typeof badgeModerationInputSchema>;
 
 export const helperSuspensionInputSchema = z.object({
   suspend: z.boolean(code('required')),
@@ -150,4 +170,6 @@ export interface AdminUserHandlers extends AdminVerificationHandlers {
   onSuspension: ActionHandler<HelperSuspensionInput>;
   /** ok `updated` (refresh). Errors: `validation_failed`, `not_allowed` (your role, or already reversed). */
   onReverseStrike: ActionHandler<StrikeReversalInput>;
+  /** ok `updated` (refresh). Errors: `validation_failed`, `not_allowed` (your role, or it already moved). */
+  onModerateBadge?: ActionHandler<BadgeModerationInput>;
 }

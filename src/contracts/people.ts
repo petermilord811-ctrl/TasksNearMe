@@ -1,4 +1,5 @@
 import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
+import type { BadgeView } from './badges';
 
 export interface PersonSummary {
   id: string;
@@ -34,6 +35,8 @@ export interface RatingSummary {
 }
 
 export interface HelperSummary extends PersonSummary {
+  /** Up to 3 achievement badges, most notable first (completion plan 6.4). */
+  topBadges?: BadgeView[];
   handle: string;
   headline: string;
   areaName: string;

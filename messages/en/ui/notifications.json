@@ -59,7 +59,8 @@
     "series_stopped": "{by, select, helper {{actorName} is ending regular visits for {title}{hasDate, select, yes {. The last visit can be on {date}} other {}}} poster {{actorName} stopped regular visits for {title}} other {Regular visits for {title} stopped}}",
     "scheduled_payment_failed": "We couldn't charge your card for {title}{hasDate, select, yes {. Pay by {date} to keep it} other {}}",
     "replacement_needed": "A client needs a new helper for {title}. Send an offer if you can help",
-    "replacement_search_started": "{actorName} canceled {title}. Your task is open for offers again, and we told helpers nearby"
+    "replacement_search_started": "{actorName} canceled {title}. Your task is open for offers again, and we told helpers nearby",
+    "badge_earned": "{tier, plural, =1 {You earned a badge: {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}}} other {Your {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}} badge reached level #}}"
   },
   "previews": {
     "group": "Notifications",

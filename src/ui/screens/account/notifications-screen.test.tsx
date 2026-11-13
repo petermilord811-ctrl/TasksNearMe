@@ -71,6 +71,8 @@ const copy: Record<NotificationType, RegExp> = {
   scheduled_payment_failed: /couldn't charge your card/,
   replacement_needed: /needs a new helper/,
   replacement_search_started: /open for offers again/,
+  // No badge in the shared params: the generic wording (the badge's own name is tested with the badges).
+  badge_earned: /You earned a badge: new/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },

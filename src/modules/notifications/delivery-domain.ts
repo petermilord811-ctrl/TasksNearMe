@@ -43,6 +43,7 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   verification_action_needed: 'account',
   background_check_expiring: 'account',
   helper_ready: 'account',
+  badge_earned: 'tips_and_news',
   task_match: 'task_alerts',
   data_export_ready: 'account',
   series_started: 'bookings',

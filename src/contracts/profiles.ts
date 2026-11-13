@@ -1,6 +1,7 @@
 import type { CategorySlug, ISODateTime, Photo } from './common';
 import type { AvailabilitySlotView } from './availability';
 import type { HelperSummary, ServiceSummary } from './people';
+import type { BadgeView } from './badges';
 
 /** Tags a client can give a helper in a review. The UI maps each to copy ("On time"). */
 export const HELPER_REVIEW_TAGS = [
@@ -44,6 +45,8 @@ export interface WorkSampleView {
  */
 export interface HelperProfilePageData {
   helper: HelperSummary;
+  /** Every achievement badge the helper shows, most notable first (completion plan 6.4). */
+  achievements?: BadgeView[];
   bio: string;
   /** "Travels up to about 5 miles from East Austin." */
   serviceRadiusMiles: number;

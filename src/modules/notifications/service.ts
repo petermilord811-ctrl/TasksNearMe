@@ -8,7 +8,7 @@ import type {
   NotificationType,
   NotificationView,
 } from '@/contracts';
-import { accountProfileInputSchema, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS } from '@/contracts';
+import { accountProfileInputSchema, BADGE_CODES, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, type BadgeCode } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
@@ -307,6 +307,13 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
     case 'verification.updated': {
       const planned = verificationNotificationFor(p);
       return planned ? [planned] : [];
+    }
+    case 'badge.earned': {
+      // Completion plan 6.4: a new badge or a higher tier, shown with the person's badges on the account page.
+      const userId = text(p.userId);
+      const badge = text(p.badge);
+      if (!userId || !badge || !(BADGE_CODES as readonly string[]).includes(badge)) return [];
+      return [{ userId, type: 'badge_earned' as const, target: { kind: 'account' } as AttentionTarget, params: { badge: badge as BadgeCode, tier: typeof p.tier === 'number' ? p.tier : 1 } }];
     }
     case 'privacy.export_ready': {
       const userId = text(p.userId);

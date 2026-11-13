@@ -8,6 +8,7 @@ import { InitialsAvatar } from './initials-avatar';
 import { RatingStars } from './rating-stars';
 import { ReliableBadge } from './reliable-badge';
 import { VerificationBadges } from './verification-badges';
+import { TopBadges } from './achievement-badges';
 
 export interface HelperCardProps {
   helper: HelperSummary;
@@ -40,6 +41,7 @@ export function HelperCard({ helper, variant = 'full' }: HelperCardProps) {
       )}
       <ReliableBadge reliable={helper.reliable} />
       <VerificationBadges badges={helper.badges} compact />
+      <TopBadges badges={helper.topBadges} />
       <div className="space-y-2">
         <RatingStars rating={helper.rating} />
         <p className="text-sm tabular-nums text-muted-foreground">{t('completed', { count: helper.completedCount })}</p>

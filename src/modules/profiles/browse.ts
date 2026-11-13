@@ -9,6 +9,7 @@ import type { Db } from '@/platform/db/connect';
 import { toHelperSummary } from './queries';
 import { byReliability, isReliable, reliabilityFacts } from './reliability';
 import { helperProfiles, helperServices } from './schema';
+import { badgesFor } from '@/modules/badges/service';
 
 /**
  * Browse and search helpers (blueprint 02 `/app/helpers`): the market's active helpers, filtered by
@@ -121,9 +122,10 @@ export async function getHelpersBrowse(db: Db, viewerId: string, marketId: strin
     ]);
   }
   const saved = new Set(savedRows.map((row) => row.helperUserId));
+  const badges = await badgesFor(db, page.map(({ user }) => user.id));
   const result: HelperBrowseRow[] = page.map(({ profile, user, area }) => {
     const next = nextSlot.get(user.id);
-    const summary = toHelperSummary(profile, user, area.name, services.get(user.id) ?? []);
+    const summary = toHelperSummary(profile, user, area.name, services.get(user.id) ?? [], badges.get(user.id));
     return { helper: isReliable(facts.get(user.id)!) ? { ...summary, reliable: true } : summary, saved: saved.has(user.id), ...(next ? { nextOpenTime: next } : {}) };
   });
   return { query, rows: result, areas: areaRows.map(({ slug, name }) => ({ slug, name })), total: candidates.length };

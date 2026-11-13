@@ -59,7 +59,8 @@
     "series_stopped": "{by, select, helper {{actorName} va a terminar las visitas regulares de {title}{hasDate, select, yes {. La última visita puede ser el {date}} other {}}} poster {{actorName} detuvo las visitas regulares de {title}} other {Las visitas regulares de {title} se detuvieron}}",
     "scheduled_payment_failed": "No pudimos cobrar a tu tarjeta por {title}{hasDate, select, yes {. Paga antes del {date} para conservarla} other {}}",
     "replacement_needed": "Un cliente necesita un nuevo ayudante para {title}. Envía una oferta si puedes ayudar",
-    "replacement_search_started": "{actorName} canceló {title}. Tu tarea vuelve a estar abierta a ofertas y avisamos a los ayudantes cercanos"
+    "replacement_search_started": "{actorName} canceló {title}. Tu tarea vuelve a estar abierta a ofertas y avisamos a los ayudantes cercanos",
+    "badge_earned": "{tier, plural, =1 {Ganaste una insignia: {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}}} other {Tu insignia {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}} subió al nivel #}}"
   },
   "previews": {
     "group": "Notificaciones",

@@ -1,0 +1,45 @@
+{
+  "listLabel": "Badges",
+  "names": {
+    "tasks_completed": "Tasks done",
+    "five_star": "Five-star",
+    "on_time": "On time",
+    "repeat_clients": "Booked again",
+    "category_pro": "Category pro",
+    "regular_visits": "Regular visits",
+    "founding_helper": "Founding helper",
+    "client_bookings": "Good neighbor",
+    "client_regular": "Regular client",
+    "client_five_star": "Great to work with"
+  },
+  "categoryPro": "{category} pro",
+  "details": {
+    "tasks_completed": "{threshold, plural, one {# task} other {# tasks}}",
+    "five_star": "{threshold, plural, one {# five-star review} other {# five-star reviews}}",
+    "on_time": "{threshold, plural, one {# on-time arrival} other {# on-time arrivals}}",
+    "repeat_clients": "{threshold, plural, one {# client came back} other {# clients came back}}",
+    "category_pro": "{threshold, plural, one {# task} other {# tasks}}, rated 4.8+",
+    "regular_visits": "{threshold, plural, one {# visit} other {# visits}}",
+    "founding_helper": "#{number}",
+    "client_bookings": "{threshold, plural, one {# booking} other {# bookings}}",
+    "client_regular": "{threshold, plural, one {# visit} other {# visits}} in one series",
+    "client_five_star": "{threshold, plural, one {# five-star review} other {# five-star reviews}}"
+  },
+  "tier": "Level {tier} of {count}",
+  "earnedOn": "earned {date}",
+  "next": "{count} of {threshold} for the next level",
+  "progress": "{count} of {threshold}",
+  "title": "Badges",
+  "description": "Earned with completed, paid bookings. They show on your profile.",
+  "none": "No badges yet. Your first comes with your first completed booking.",
+  "upNextTitle": "Up next",
+  "howCounted": "Badges count completed and paid bookings: never refunded or disputed ones, and at most 3 with the same person for the booking badges. Our team can remove a badge earned unfairly.",
+  "previews": {
+    "group": "Badges",
+    "profile": "Public profile with badges",
+    "account": "Account: badges and what's next",
+    "accountNone": "Account: no badges yet",
+    "cards": "Helper cards with top badges",
+    "admin": "Staff: a person’s badges, one revoked"
+  }
+}
