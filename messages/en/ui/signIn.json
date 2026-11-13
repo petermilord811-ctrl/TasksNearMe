@@ -86,5 +86,11 @@
     "social-use-email-code": "Account exists: use an email code",
     "social-not-allowed": "Account unavailable (Google)",
     "social-failed": "Microsoft sign-in failed"
+  },
+  "passkey": {
+    "action": "Sign in with a passkey",
+    "pending": "Waiting for your device…",
+    "failed": "That passkey didn't work. Try again, or sign in with an email code.",
+    "unknown": "This device doesn't have a passkey for TasksNearMe yet. Sign in with an email code, then add one on your account page."
   }
 }

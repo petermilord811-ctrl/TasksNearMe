@@ -1,10 +1,10 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { AccountSignInMethods, SocialProvider } from '@/contracts';
 import { offeredSocialProviders } from '@/integrations/oauth';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { accounts } from './schema';
+import { accounts, passkeys } from './schema';
 import { connectResultFrom, isSocialProvider } from './sign-in/providers';
 
 /**
@@ -29,6 +29,7 @@ export async function getSignInMethods(db: Db, user: { id: string; email: string
     // "Connected" only when it really is (the address alone proves nothing).
     notice = { provider: returned.connect, result: result === 'connected' && !connectedAt.has(returned.connect) ? 'failed' : result };
   }
+  const keys = await db.select().from(passkeys).where(eq(passkeys.userId, user.id)).orderBy(desc(passkeys.createdAt));
   return {
     email: user.email,
     providers: offered.map((provider) => {
@@ -36,6 +37,7 @@ export async function getSignInMethods(db: Db, user: { id: string; email: string
       return at ? { provider, connectedAt: at.toISOString() } : { provider };
     }),
     ...(notice ? { notice } : {}),
+    passkeys: keys.map((key) => ({ id: key.id, name: key.name ?? '', ...(key.createdAt ? { createdAt: key.createdAt.toISOString() } : {}), backedUp: key.backedUp })),
   };
 }
 

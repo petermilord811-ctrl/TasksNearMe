@@ -199,5 +199,23 @@
       "account": "account",
       "task_alerts": "new-task"
     }
+  },
+  "passkeys": {
+    "title": "Passkeys",
+    "description": "Sign in with your device's lock (Face ID, Touch ID, Windows Hello or a security key) instead of a code. The email code keeps working.",
+    "none": "No passkeys yet.",
+    "add": "Add a passkey",
+    "adding": "Waiting for your device…",
+    "nameLabel": "Name this passkey",
+    "nameHint": "So you can tell them apart, like 'iPhone' or 'Work laptop'.",
+    "defaultName": "This device",
+    "added": "Passkey added. Next time, sign in with it.",
+    "remove": "Remove",
+    "removeLabel": "Remove passkey {name}",
+    "removed": "Passkey removed.",
+    "addedOn": "Added {date}",
+    "synced": "Synced across your devices",
+    "cancelled": "Nothing was added.",
+    "unsupported": "This browser can't use passkeys."
   }
 }

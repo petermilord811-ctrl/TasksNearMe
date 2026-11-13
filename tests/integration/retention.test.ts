@@ -1,7 +1,7 @@
 import { eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FileStorage } from '@/integrations/storage';
-import { bookingCompletionPhotos, bookings } from '@/modules/bookings/schema';
+import { bookingCompletionPhotos, bookingSeries, bookings } from '@/modules/bookings/schema';
 import { messages, threads } from '@/modules/messaging/schema';
 import { addressDeleted, RETENTION_RULES, sweepAddresses, sweepAudit, sweepCompletionFiles, sweepMessages } from '@/modules/privacy/retention';
 import { readExactAddress } from '@/modules/tasks/locations';
@@ -71,6 +71,24 @@ describe('retention timers', () => {
     const [row] = await db.select().from(taskLocations).where(eq(taskLocations.id, OLD));
     expect(readExactAddress(cipher, row!.addressEnc)).toBeUndefined();
     expect(await sweepAddresses(db, now, { only: [OLD, RECENT, OPEN] })).toBe(0);
+  });
+
+  it('keeps an address while its regular visits are active or paused', async () => {
+    // A place last booked 250 days ago, but the template of a running series.
+    const [deskTask] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [deskLocation] = await db.select().from(taskLocations).where(eq(taskLocations.id, deskTask!.locationId!));
+    await db.insert(taskLocations).values({ ...deskLocation!, id: 'loc_tmp_ret_series', addressEnc: cipher.encrypt(JSON.stringify(address)), createdAt: ago(400), deletedAt: null });
+    await db.insert(tasks).values({ ...deskTask!, id: 'tsk_tmp_ret_series', slug: 'tsk-tmp-ret-series', locationId: 'loc_tmp_ret_series', status: 'completed', createdAt: ago(400), updatedAt: ago(250) });
+    await db.insert(bookingSeries).values({
+      id: 'srs_tmp_ret', posterUserId: deskTask!.posterUserId, helperUserId: 'usr_jordan', marketId: deskTask!.marketId, templateTaskId: 'tsk_tmp_ret_series', proposalId: 'rbp_tmp_ret',
+      cadence: 'monthly', anchorDate: '2026-01-05', startTime: '09:00', durationMinutes: 120, pricingType: 'fixed', priceCents: 6000, scopeText: 'Monthly tidy', status: 'paused',
+    });
+    expect(await sweepAddresses(db, now, { only: ['loc_tmp_ret_series'] })).toBe(0);
+    await db.update(bookingSeries).set({ status: 'ended' }).where(eq(bookingSeries.id, 'srs_tmp_ret'));
+    expect(await sweepAddresses(db, now, { only: ['loc_tmp_ret_series'] })).toBe(1);
+    await db.delete(bookingSeries).where(eq(bookingSeries.id, 'srs_tmp_ret'));
+    await db.delete(tasks).where(eq(tasks.id, 'tsk_tmp_ret_series'));
+    await db.delete(taskLocations).where(eq(taskLocations.id, 'loc_tmp_ret_series'));
   });
 
   it(`deletes a conversation's messages ${RETENTION_RULES.messageYears} years after its last one`, async () => {

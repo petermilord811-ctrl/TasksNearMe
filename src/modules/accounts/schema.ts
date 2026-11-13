@@ -192,3 +192,27 @@ export const staffSetupCodes = pgTable(
   (t) => [index('staff_setup_codes_user_idx').on(t.userId, t.createdAt)],
 );
 
+/**
+ * Passkeys (blueprint 01 P2): a person's WebAuthn credentials, stored by Better Auth's passkey plugin under
+ * these exact field names. Only the public key is kept; the private key never leaves the person's device.
+ */
+export const passkeys = pgTable(
+  'passkeys',
+  {
+    id: text('id').primaryKey(),
+    /** The person's own label ("iPhone", "Work laptop"). */
+    name: text('name'),
+    publicKey: text('public_key').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    credentialID: text('credential_id').notNull(),
+    counter: integer('counter').notNull(),
+    deviceType: text('device_type').notNull(),
+    backedUp: boolean('backed_up').notNull(),
+    transports: text('transports'),
+    createdAt: timestamp('created_at', { withTimezone: true }),
+    aaguid: text('aaguid'),
+  },
+  (t) => [index('passkeys_user_idx').on(t.userId), uniqueIndex('passkeys_credential_idx').on(t.credentialID)],
+);

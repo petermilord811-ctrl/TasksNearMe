@@ -51,7 +51,7 @@ export const mayaAccountData: AccountPageData = {
   maxPhotoMegabytes: 10,
   phone: { last4: '0101', verified: true },
   // Maya connected Google; Microsoft is offered too.
-  signIn: { email: 'maya@example.test', providers: [{ provider: 'google', connectedAt: '2026-11-02T16:20:00.000Z' }, { provider: 'microsoft' }] },
+  signIn: { email: 'maya@example.test', providers: [{ provider: 'google', connectedAt: '2026-11-02T16:20:00.000Z' }, { provider: 'microsoft' }], passkeys: [] },
   preferences,
   helper: { status: 'none' },
   privacy: {},
@@ -66,7 +66,7 @@ export const jordanAccountData: AccountPageData = {
   maxPhotoMegabytes: 10,
   phone: { last4: '0201', verified: true },
   // Back from connecting Microsoft.
-  signIn: { email: 'jordan@example.test', providers: [{ provider: 'google' }, { provider: 'microsoft', connectedAt: '2026-11-20T17:55:00.000Z' }], notice: { provider: 'microsoft', result: 'connected' } },
+  signIn: { email: 'jordan@example.test', providers: [{ provider: 'google' }, { provider: 'microsoft', connectedAt: '2026-11-20T17:55:00.000Z' }], notice: { provider: 'microsoft', result: 'connected' }, passkeys: [{ id: 'pky_jordan_phone', name: 'iPhone', createdAt: '2026-11-18T15:00:00.000Z', backedUp: true }] },
   preferences,
   helper: { status: 'active' },
   privacy: { export: { status: 'preparing', requestedAt: '2026-11-20T18:00:00.000Z' } },
@@ -77,7 +77,7 @@ export const newAccountData: AccountPageData = {
   profile: { firstName: 'Ana', lastName: 'Patel', displayName: 'Ana P.', initials: 'AP', email: 'ana@example.test' },
   maxPhotoMegabytes: 10,
   // Only the email code is offered (production without Google or Microsoft keys).
-  signIn: { email: 'ana@example.test', providers: [] },
+  signIn: { email: 'ana@example.test', providers: [], passkeys: [] },
   preferences,
   helper: { status: 'draft' },
   privacy: { deletion: { requestedAt: '2026-11-21T10:00:00.000Z', scheduledFor: '2026-11-28T10:00:00.000Z' } },

@@ -1,8 +1,10 @@
 import { betterAuth } from 'better-auth';
+import { eq } from 'drizzle-orm';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
 import { emailOTP } from 'better-auth/plugins';
-import { accounts, sessions, users, verifications } from '@/modules/accounts/schema';
+import { passkey } from '@better-auth/passkey';
+import { accounts, passkeys, sessions, users, verifications } from '@/modules/accounts/schema';
 import { renderEmailChangeCodeEmail } from '@/modules/accounts/emails/contact-change';
 import { renderSignInCodeEmail } from '@/modules/accounts/emails/sign-in-code';
 import { createProviderConnectedHook, createProviderGate } from '@/modules/accounts/sign-in/provider-gate';
@@ -13,7 +15,10 @@ import { socialStandIn } from '@/integrations/oauth/stand-in';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 
-const ID_PREFIX: Record<string, string> = { user: 'usr', session: 'ses', account: 'acc', verification: 'ver' };
+/** Accounts that can't sign in (src/modules/accounts/sign-in/steps.ts keeps the same list). */
+const BLOCKED_ACCOUNT_STATUSES = new Set(['suspended', 'banned', 'deleted']);
+
+const ID_PREFIX: Record<string, string> = { user: 'usr', session: 'ses', account: 'acc', verification: 'ver', passkey: 'pky' };
 
 /**
  * Better Auth for TasksNearMe: email one-time codes (6 digits, 10 minutes, 3 attempts) to sign in and to
@@ -43,7 +48,7 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
     secret: process.env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db, {
       provider: 'pg',
-      schema: { user: users, session: sessions, account: accounts, verification: verifications },
+      schema: { user: users, session: sessions, account: accounts, verification: verifications, passkey: passkeys },
     }),
     advanced: {
       database: { generateId: ({ model }) => newId(ID_PREFIX[model] ?? model.slice(0, 3)) },
@@ -92,6 +97,15 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
     },
     databaseHooks: {
       account: { create: { after: createProviderConnectedHook(db) } },
+      session: {
+        create: {
+          // Whatever the way in (a code, a provider, a passkey), a blocked account gets no session.
+          async before(session) {
+            const [person] = await db.select({ status: users.status }).from(users).where(eq(users.id, session.userId)).limit(1);
+            if (person && BLOCKED_ACCOUNT_STATUSES.has(person.status)) return false;
+          },
+        },
+      },
     },
     user: {
       validateUserInfo: createProviderGate(db),
@@ -126,6 +140,9 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
         },
       }),
       ...(standIn.length > 0 ? [socialStandIn({ providers: standIn, appUrl: appUrl(), secret: standInSecret(), mapProfile: userFromProviderProfile })] : []),
+      // Passkeys (blueprint 01 P2): sign in with the device's own lock (Face ID, Touch ID, Windows Hello, a
+      // security key) once an account has added one; email codes keep working.
+      passkey({ rpID: new URL(appUrl()).hostname, rpName: 'TasksNearMe', origin: new URL(appUrl()).origin }),
       ...nextCookiePlugins,
     ],
   });

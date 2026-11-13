@@ -14,7 +14,7 @@ import {
   requestAccountDeletion,
   requestDataExport,
 } from '@/modules/privacy/requests';
-import { bookings } from '@/modules/bookings/schema';
+import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { supportCases } from '@/modules/support/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
@@ -122,6 +122,21 @@ describe('deleting an account', () => {
     expect(await requestAccountDeletion(db, 'usr_chris', asked)).toEqual({ ok: false, code: 'not_allowed' });
     await db.delete(bookings).where(eq(bookings.id, 'bkg_tmp_privacy_open'));
     await db.delete(tasks).where(eq(tasks.id, 'tsk_tmp_privacy_open'));
+  });
+
+  it('is refused while regular visits are still running', async () => {
+    // Lou has an active series of visits (on their own task); ending it first keeps the helper's schedule whole.
+    await db.insert(bookingSeries).values({
+      id: 'srs_tmp_leaver', posterUserId: LEAVER, helperUserId: 'usr_jordan', marketId: 'mkt_austin', templateTaskId: 'tsk_tmp_leaver', proposalId: 'rbp_tmp_leaver',
+      cadence: 'weekly', anchorDate: '2026-12-01', startTime: '09:00', durationMinutes: 120, pricingType: 'fixed', priceCents: 6000, scopeText: 'Weekly tidy', status: 'active',
+    });
+    expect(await requestAccountDeletion(db, LEAVER, asked)).toEqual({ ok: false, code: 'not_allowed' });
+    await db.update(bookingSeries).set({ status: 'paused' }).where(eq(bookingSeries.id, 'srs_tmp_leaver'));
+    expect(await requestAccountDeletion(db, LEAVER, asked)).toEqual({ ok: false, code: 'not_allowed' });
+    await db.update(bookingSeries).set({ status: 'ended' }).where(eq(bookingSeries.id, 'srs_tmp_leaver'));
+    expect(await requestAccountDeletion(db, LEAVER, asked)).toEqual({ ok: true, code: 'submitted' });
+    expect(await cancelAccountDeletion(db, LEAVER, asked)).toEqual({ ok: true, code: 'updated' });
+    await db.delete(bookingSeries).where(eq(bookingSeries.id, 'srs_tmp_leaver'));
   });
 
   it('waits for an open case, then anonymizes the account', async () => {

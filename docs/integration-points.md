@@ -50,6 +50,10 @@ Every outside service sits behind a small interface in `src/integrations/*` (or,
 - **Phone:** the onboarding step uses the same texted code as the account page (`src/modules/accounts/phone-verification.ts`), sent through Twilio when its keys are set (below). A number Twilio can't text (a landline, an invalid number, one that replied STOP) comes back to the person as an invalid number.
 - **Home address:** chosen with the address search (Mapbox with `MAPBOX_TOKEN`, the sample addresses otherwise) and confirmed again on submit, so only real address points can be sent. The proof of address is stored with the app's file storage (local disk now; the R2 adapter must keep `address_proof/` objects private, with no public URL). Staff open it at `/api/verification-documents/<token>`.
 
+### Passkeys
+- **Built in** (Better Auth's passkey plugin, `@better-auth/passkey` with SimpleWebAuthn; nothing to buy). People add a passkey on the account page ("Passkeys": a name, the device's own prompt) and then use "Sign in with a passkey" on the email step. The email code always keeps working. The relying party is `APP_URL`'s host, so passkeys made on one domain don't work on another: set `APP_URL` to the real domain before people add them. Credentials live in `passkeys` (public keys only).
+- A suspended or deleted account gets no session by any route (a `session.create` guard in `src/platform/auth/config.ts`).
+
 ### Sign-in with Google or Microsoft
 There's no adapter to write: Better Auth has both providers built in. With keys set, the real provider replaces the stand-in for that provider; production builds without keys don't show its button.
 - **Google** (Google Cloud console → APIs & Services → Credentials): an OAuth client of type *Web application*. Authorized redirect URI: `<APP_URL>/api/auth/callback/google` (one per environment). The consent screen asks only for `openid`, `email` and `profile`. Publish the consent screen before launch, or only test users can sign in.

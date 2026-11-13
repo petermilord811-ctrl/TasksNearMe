@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { PasskeyOptionsResult } from './auth';
 import type { ActionHandler, ActionResult, QueryHandler } from './actions';
 import type { EmailInput, OneTimeCodeInput, PhoneInput, SocialProvider, SocialSignInInput } from './auth';
 import type { Cents, ISODateTime, Photo } from './common';
@@ -127,6 +128,8 @@ export interface AccountSignInMethods {
   providers: { provider: SocialProvider; connectedAt?: ISODateTime }[];
   /** After coming back from connecting one. */
   notice?: { provider: SocialProvider; result: SignInConnectResult };
+  /** Passkeys on the account (sign in with the device's lock), newest first. */
+  passkeys: { id: string; name: string; createdAt?: ISODateTime; backedUp: boolean }[];
 }
 
 export interface AccountPageData {
@@ -264,4 +267,11 @@ export interface AccountHandlers extends PushHandlers {
   onStartPhoneChange: ActionHandler<PhoneInput>;
   /** Verifies the new number. ok `updated`. `fieldErrors.code`: `incorrect`, `expired`; `rate_limited` after 3 wrong codes. */
   onConfirmPhoneChange: ActionHandler<OneTimeCodeInput>;
+  /**
+   * "Add a passkey": the options start the device's prompt; its answer and a name go to `onAddPasskey` (ok
+   * `saved`). `onRemovePasskey`: ok `updated`. Errors: `not_allowed`, `unknown`.
+   */
+  onPasskeyRegistrationOptions?: () => Promise<PasskeyOptionsResult>;
+  onAddPasskey?: ActionHandler<{ response: Record<string, unknown>; name: string }>;
+  onRemovePasskey?: ActionHandler<{ id: string }>;
 }

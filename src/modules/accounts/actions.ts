@@ -1,10 +1,10 @@
 'use server';
 
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
 import { refresh, revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { routes, socialSignInInputSchema, type ActionResult, type SocialSignInInput } from '@/contracts';
+import { routes, socialSignInInputSchema, type ActionResult, type PasskeyOptionsResult, type SocialSignInInput } from '@/contracts';
 import { offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
 import { validationFailed } from '@/platform/actions/results';
 import { auth } from '@/platform/auth/auth';
@@ -13,7 +13,7 @@ import { db } from '@/platform/db/client';
 import { requestNow } from '@/platform/clock';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { confirmEnrollment, redeemSetupCode, verifyStaffTotp } from './staff-authenticator';
-import { users } from './schema';
+import { passkeys, users } from './schema';
 import { disconnectSignIn } from './sign-in-methods';
 
 const modeInput = z.object({ mode: z.enum(['poster', 'helper']) });
@@ -71,6 +71,45 @@ export async function disconnectSignInAction(input: SocialSignInInput): Promise<
   if (viewer.kind !== 'user') return { ok: false, code: 'not_allowed' };
   const removed = await disconnectSignIn(db, viewer.user.id, parsed.data.provider);
   if (!removed) return { ok: false, code: 'not_found' };
+  revalidatePath(routes.app.account());
+  return { ok: true, code: 'updated' };
+}
+
+/** AccountHandlers.onPasskeyRegistrationOptions: the WebAuthn request for a new passkey on this account. */
+export async function passkeyRegistrationOptionsAction(): Promise<PasskeyOptionsResult> {
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user') return { ok: false, code: 'not_allowed' };
+  try {
+    const options = await auth.api.generatePasskeyRegistrationOptions({ headers: await headers() });
+    return { ok: true, options: options as unknown as Record<string, unknown> };
+  } catch {
+    return { ok: false, code: 'unknown' };
+  }
+}
+
+const passkeyNameSchema = z.string().trim().min(1).max(60);
+
+/** AccountHandlers.onAddPasskey: the device's answer is checked and the passkey saved under its name. */
+export async function addPasskeyAction(input: { response?: Record<string, unknown>; name?: string }): Promise<ActionResult> {
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user') return { ok: false, code: 'not_allowed' };
+  const name = passkeyNameSchema.safeParse(input?.name);
+  if (!input?.response || typeof input.response !== 'object' || !name.success) return { ok: false, code: 'validation_failed', fieldErrors: { name: ['required'] } };
+  try {
+    await auth.api.verifyPasskeyRegistration({ body: { response: input.response, name: name.data }, headers: await headers() });
+  } catch {
+    return { ok: false, code: 'not_allowed' };
+  }
+  revalidatePath(routes.app.account());
+  return { ok: true, code: 'saved' };
+}
+
+/** AccountHandlers.onRemovePasskey. The email code keeps working. */
+export async function removePasskeyAction(input: { id?: string }): Promise<ActionResult> {
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user' || typeof input?.id !== 'string') return { ok: false, code: 'not_allowed' };
+  const removed = await db.delete(passkeys).where(and(eq(passkeys.id, input.id), eq(passkeys.userId, viewer.user.id))).returning({ id: passkeys.id });
+  if (removed.length === 0) return { ok: false, code: 'not_found' };
   revalidatePath(routes.app.account());
   return { ok: true, code: 'updated' };
 }

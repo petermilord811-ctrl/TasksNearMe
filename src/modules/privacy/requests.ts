@@ -4,7 +4,7 @@ import { isReservedEmailAddress, type EmailProvider } from '@/integrations/email
 import type { FileStorage } from '@/integrations/storage';
 import { accounts, phoneVerifications, sessions, staffAuthenticators, staffRoles, users, verifications } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
-import { bookings } from '@/modules/bookings/schema';
+import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
 import { blocks, threadParticipants } from '@/modules/messaging/schema';
 import { notificationPreferences, notifications, privacyRequests, pushSubscriptions } from '@/modules/notifications/schema';
@@ -34,7 +34,7 @@ import { renderAccountDeletedNotice } from './emails';
  */
 
 const DAY_MS = 86_400_000;
-const OPEN_BOOKING_STATUSES = ['pending_funding', 'confirmed', 'in_progress', 'completion_submitted', 'disputed'];
+const OPEN_BOOKING_STATUSES = ['scheduled', 'pending_funding', 'confirmed', 'in_progress', 'completion_submitted', 'disputed'];
 const CLOSED_CASE_STATUSES = ['resolved', 'closed'];
 /** Earnings not yet in the helper's bank: due later, held, scheduled, or on the way. */
 const UNPAID_EARNING_STATUSES = ['not_due', 'on_hold', 'scheduled', 'transferred'];
@@ -60,7 +60,14 @@ async function hasOpenBookings(db: Db, userId: string): Promise<boolean> {
     .from(bookings)
     .where(and(inArray(bookings.status, OPEN_BOOKING_STATUSES), or(eq(bookings.posterUserId, userId), eq(bookings.helperUserId, userId))))
     .limit(1);
-  return Boolean(open);
+  if (open) return true;
+  // Regular visits still running (active or paused) are ended by the person first, so the helper's schedule stays whole.
+  const [series] = await db
+    .select({ id: bookingSeries.id })
+    .from(bookingSeries)
+    .where(and(inArray(bookingSeries.status, ['active', 'paused']), or(eq(bookingSeries.posterUserId, userId), eq(bookingSeries.helperUserId, userId))))
+    .limit(1);
+  return Boolean(series);
 }
 
 /** What keeps an account from being deleted right now (`DELETION_BLOCKERS`), if anything. */

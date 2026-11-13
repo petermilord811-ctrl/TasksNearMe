@@ -11,6 +11,7 @@ import { AccountContact } from './account-contact';
 import { AccountProfileForm } from './account-profile-form';
 import { AccountPreferences } from './account-preferences';
 import { AccountPrivacy, AccountSignOut } from './account-privacy';
+import { AccountPasskeys } from './account-passkeys';
 import { AccountSignIn } from './account-sign-in';
 
 const cardClass = 'rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6';
@@ -35,7 +36,7 @@ export function AccountScreen({ data, handlers, initialDialog }: {
       </Section>
     </div>
     <div className={cardClass}><Section title={t('contact.title')} description={t('contact.description')}><AccountContact email={data.profile.email} phone={data.phone} handlers={handlers} initialDialog={initialDialog} /></Section></div>
-    <div className={cardClass}><Section title={t('signIn.title')} description={t('signIn.description')}><AccountSignIn methods={data.signIn} onConnect={handlers.onConnectSignIn} onDisconnect={handlers.onDisconnectSignIn} /></Section></div>
+    <div className={cardClass}><Section title={t('signIn.title')} description={t('signIn.description')}><AccountSignIn methods={data.signIn} onConnect={handlers.onConnectSignIn} onDisconnect={handlers.onDisconnectSignIn} />{handlers.onPasskeyRegistrationOptions && handlers.onAddPasskey && handlers.onRemovePasskey && <AccountPasskeys passkeys={data.signIn.passkeys} handlers={{ onPasskeyRegistrationOptions: handlers.onPasskeyRegistrationOptions, onAddPasskey: handlers.onAddPasskey, onRemovePasskey: handlers.onRemovePasskey }} />}</Section></div>
     <div className={cardClass}><Section title={t('preferences.title')} description={t('preferences.description')}><AccountPreferences preferences={data.preferences} onSave={handlers.onSavePreference} /></Section></div>
     <div className={cardClass}><Section title={push('device.title')}><PushDeviceSetting push={data.push} handlers={handlers} /></Section></div>
     <div className={cardClass}><Section title={t('helper.title')} description={t(`helper.descriptions.${helperStatus}`)}>

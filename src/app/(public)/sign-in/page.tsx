@@ -5,6 +5,8 @@ import { Suspense } from 'react';
 import {
   changeEmail,
   changePhone,
+  passkeySignIn,
+  passkeySignInOptions,
   continueWith,
   requestEmailCode,
   resendEmailCode,
@@ -55,6 +57,8 @@ async function SignIn({ searchParams }: Pick<PageProps<'/sign-in'>, 'searchParam
         onVerifyPhoneCode: verifyPhoneCode.bind(null, data.next),
         onResendPhoneCode: resendPhoneCode.bind(null, data.next),
         onChangePhone: changePhone,
+        onPasskeyOptions: passkeySignInOptions,
+        onPasskeySignIn: passkeySignIn.bind(null, data.next),
       }}
     />
   );

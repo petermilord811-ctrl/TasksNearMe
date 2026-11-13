@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ActionHandler } from './actions';
+import type { ActionHandler, ActionResult } from './actions';
 import type { ISODateTime } from './common';
 import { emailField, mustAcceptField, oneTimeCodeField, personNameField, usPhoneField } from './forms';
 
@@ -93,7 +93,18 @@ export type PhoneInput = z.input<typeof phoneInputSchema>;
  * - `rate_limited` + `retryAt`: too many tries; show the time it's allowed again.
  * - `not_allowed`: this account can't sign in; point to the help center.
  */
+/** The browser's WebAuthn request (from the server, passed to the platform's passkey prompt as is). */
+export type PasskeyOptionsResult = { ok: true; options: Record<string, unknown> } | Extract<ActionResult, { ok: false }>;
+
 export interface SignInHandlers {
+  /**
+   * `email` step: "Sign in with a passkey" (shown when both are given and the browser has passkeys). The
+   * options start the device's prompt; its answer goes to `onPasskeySignIn`, which signs in and continues like
+   * the email code (ok `updated`, maybe with `redirectTo`). Errors: `not_allowed` (no account has this passkey,
+   * or the account can't sign in), `unknown`.
+   */
+  onPasskeyOptions?: () => Promise<PasskeyOptionsResult>;
+  onPasskeySignIn?: ActionHandler<{ response: Record<string, unknown> }>;
   /** `email` step. ok `sent`. */
   onRequestEmailCode: ActionHandler<EmailInput>;
   /**

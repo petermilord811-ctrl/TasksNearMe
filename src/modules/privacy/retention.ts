@@ -26,7 +26,7 @@ export const RETENTION_RULES = { addressDays: 180, messageYears: 2, completionFi
 
 const DAY_MS = 86_400_000;
 const YEAR_MS = 365 * DAY_MS;
-const OPEN_BOOKING = sql`('pending_funding', 'confirmed', 'in_progress', 'completion_submitted', 'disputed')`;
+const OPEN_BOOKING = sql`('scheduled', 'pending_funding', 'confirmed', 'in_progress', 'completion_submitted', 'disputed')`;
 const CLOSED_CASE = sql`('resolved', 'closed')`;
 
 export interface RetentionDeps {
@@ -55,6 +55,10 @@ export async function sweepAddresses(db: Db, now: Date, { limit = 200, only }: {
         and not exists (
           select 1 from tasks t join bookings b on b.task_id = t.id join rebook_proposals p on p.from_booking_id = b.id
           where t.location_id = l.id and p.status = 'sent'
+        )
+        and not exists (
+          select 1 from tasks t join booking_series s on s.template_task_id = t.id
+          where t.location_id = l.id and s.status in ('active', 'paused')
         )
       limit ${limit}
     `),

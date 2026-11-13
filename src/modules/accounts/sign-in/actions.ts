@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { refresh } from 'next/cache';
 import { after } from 'next/server';
 import { cookies, headers } from 'next/headers';
-import type { ActionResult, EmailInput, OneTimeCodeInput, PhoneInput, ProfileInput, SocialSignInInput } from '@/contracts';
+import type { ActionResult, EmailInput, OneTimeCodeInput, PasskeyOptionsResult, PhoneInput, ProfileInput, SocialSignInInput } from '@/contracts';
 import { emailInputSchema, oneTimeCodeInputSchema, phoneInputSchema, profileInputSchema, routes, socialSignInInputSchema } from '@/contracts';
 import { createEmailProvider } from '@/integrations/email';
 import { offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
@@ -252,4 +252,32 @@ export async function changePhone(): Promise<ActionResult> {
   await phoneVerification.cancel(userId);
   refresh();
   return { ok: true, code: 'updated' };
+}
+
+/** The `email` step's "Sign in with a passkey": the WebAuthn request (its challenge waits in a cookie). */
+export async function passkeySignInOptions(): Promise<PasskeyOptionsResult> {
+  try {
+    const options = await auth.api.generatePasskeyAuthenticationOptions({ headers: await headers() });
+    return { ok: true, options: options as unknown as Record<string, unknown> };
+  } catch {
+    return { ok: false, code: 'unknown' };
+  }
+}
+
+/** The device's signed answer: the passkey's account is signed in, then the flow goes on like after a code. */
+export async function passkeySignIn(next: string, input: { response?: Record<string, unknown> }): Promise<ActionResult> {
+  if (!input?.response || typeof input.response !== 'object') return { ok: false, code: 'validation_failed' };
+  try {
+    // Better Auth checks the answer's shape (the browser's AuthenticationResponseJSON).
+    const response = input.response as unknown as Parameters<typeof auth.api.verifyPasskeyAuthentication>[0] extends { body: { response: infer R } } ? R : never;
+    const result = await auth.api.verifyPasskeyAuthentication({ body: { response }, headers: await headers() });
+    const userId = (result as { session?: { userId?: string } }).session?.userId;
+    if (!userId) return { ok: false, code: 'not_allowed' };
+    await clearPendingEmail();
+    return continueAfterSignIn(next, userId, 'updated');
+  } catch (error) {
+    // An unknown passkey, a failed check, or an account that can't sign in.
+    if (isAPIError(error)) return { ok: false, code: 'not_allowed' };
+    throw error;
+  }
 }

@@ -10,7 +10,14 @@ import {
   startPhoneChangeAction,
   uploadProfilePhotoAction,
 } from '@/modules/accounts/account-actions';
-import { connectSignInAction, disconnectSignInAction, signOut } from '@/modules/accounts/actions';
+import {
+  addPasskeyAction,
+  connectSignInAction,
+  disconnectSignInAction,
+  passkeyRegistrationOptionsAction,
+  removePasskeyAction,
+  signOut,
+} from '@/modules/accounts/actions';
 import {
   cancelAccountDeletionAction,
   removePushSubscriptionAction,
@@ -62,6 +69,9 @@ async function Account({ searchParams }: Pick<PageProps<'/app/account'>, 'search
         onSignOut: signOut,
         onConnectSignIn: connectSignInAction,
         onDisconnectSignIn: disconnectSignInAction,
+        onPasskeyRegistrationOptions: passkeyRegistrationOptionsAction,
+        onAddPasskey: addPasskeyAction,
+        onRemovePasskey: removePasskeyAction,
         onUploadPhoto: uploadProfilePhotoAction,
         onRemovePhoto: removeProfilePhotoAction,
         onStartEmailChange: startEmailChangeAction,
