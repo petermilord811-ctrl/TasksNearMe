@@ -14,6 +14,8 @@ export interface PersonSummary {
 export interface VerificationBadges {
   idVerifiedAt?: ISODateTime;
   backgroundCheckedAt?: ISODateTime;
+  /** "Address verified · Nov 2026": a proof of the home address was approved (never the address itself). */
+  addressVerifiedAt?: ISODateTime;
   phoneVerified: boolean;
 }
 

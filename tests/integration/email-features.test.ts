@@ -45,7 +45,7 @@ describe('notification emails', () => {
   it('go out designed, with one-click unsubscribe headers and the delivery id as the idempotency key', async () => {
     const id = await notify('offer_received', { kind: 'task', taskId: 'tsk_desk' });
     const { sent, providers } = recording();
-    await deliverNotifications(db, new Date(), providers);
+    await deliverNotifications(db, new Date(), providers, 1_000);
     const message = sent.find((m) => m.to === ADDRESS);
     expect(message).toMatchObject({ subject: 'Jordan T. sent an offer of $60.00 for Assemble a desk.', tag: 'notification' });
     expect(message?.html).toContain('View your task');
@@ -61,7 +61,7 @@ describe('notification emails', () => {
     expect(await isEmailSuppressed(db, ADDRESS)).toBe(true);
     const id = await notify('booking_confirmed', { kind: 'booking', bookingId: 'bkg_desk' });
     const { sent, providers } = recording();
-    await deliverNotifications(db, new Date(), providers);
+    await deliverNotifications(db, new Date(), providers, 1_000);
     expect(sent.filter((m) => m.to === ADDRESS)).toHaveLength(0);
     const [delivery] = await db.select().from(notificationDeliveries).where(and(eq(notificationDeliveries.notificationId, id), eq(notificationDeliveries.channel, 'email')));
     expect(delivery).toMatchObject({ status: 'skipped', reason: 'email_suppressed' });

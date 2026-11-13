@@ -15,4 +15,10 @@ describe('file access', () => {
   it('shows work samples to everyone', () => {
     expect(canViewFile(sample, { userId: null, isStaff: false })).toBe(true);
   });
+
+  it('never serves a proof of address here, not to its owner or staff', () => {
+    const proof = { kind: 'address_proof', ownerUserId: 'usr_priya' };
+    expect(canViewFile(proof, { userId: 'usr_priya', isStaff: false })).toBe(false);
+    expect(canViewFile(proof, { userId: 'usr_taylor', isStaff: true })).toBe(false);
+  });
 });

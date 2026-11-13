@@ -47,6 +47,7 @@ export function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: st
     badges: {
       ...(profile.idVerifiedAt ? { idVerifiedAt: new Date(profile.idVerifiedAt).toISOString() } : {}),
       ...(profile.backgroundCheckedAt ? { backgroundCheckedAt: new Date(profile.backgroundCheckedAt).toISOString() } : {}),
+      ...(profile.addressVerifiedAt ? { addressVerifiedAt: new Date(profile.addressVerifiedAt).toISOString() } : {}),
       phoneVerified,
     },
     ...(profile.ratingCount > 0 && profile.ratingAverage !== null

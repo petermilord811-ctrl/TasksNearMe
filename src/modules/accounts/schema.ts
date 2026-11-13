@@ -141,3 +141,24 @@ export const phoneVerifications = pgTable(
   },
   (t) => [index('phone_verifications_user_idx').on(t.userId, t.createdAt)],
 );
+
+/**
+ * Agreements people accept (blueprint 08 `agreements`): the helper agreement, the Texas biometric notice
+ * before an ID check (CUBI), and the background-check disclosure before Checkr. One row per person, document
+ * and version, with where it was accepted from. The sign-up terms stay on `users.terms_version`.
+ */
+export const agreements = pgTable(
+  'agreements',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    doc: text('doc').notNull(), // helper_agreement | biometric_consent | bg_check_disclosure
+    version: text('version').notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull(),
+    ip: text('ip'),
+    userAgent: text('user_agent'),
+  },
+  (t) => [uniqueIndex('agreements_user_doc_version_idx').on(t.userId, t.doc, t.version)],
+);

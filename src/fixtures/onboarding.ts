@@ -1,4 +1,5 @@
 import type {
+  AddressSuggestion,
   AreaOption,
   HelperOnboardingHandlers,
   HelperOnboardingPageData,
@@ -71,10 +72,23 @@ function progress(
 }
 
 const notStarted: VerificationSummary = {
-  identity: { status: 'not_started' },
+  phone: { verified: false },
+  identity: { status: 'not_started', consentNeeded: true },
+  address: { status: 'not_started' },
   payout: { status: 'not_started' },
-  background: { status: 'not_required', requiredFor: [] },
+  background: { status: 'not_required', requiredFor: [], disclosureNeeded: true, renewalOpen: false, canStart: false },
 };
+
+const phoneDone: VerificationSummary['phone'] = { verified: true, last4: '0204' };
+const idVerified: VerificationSummary['identity'] = { status: 'verified', verifiedAt: '2026-11-17T14:00:00.000Z', consentNeeded: false };
+const addressVerified: VerificationSummary['address'] = {
+  status: 'verified',
+  verifiedAt: '2026-11-18T15:00:00.000Z',
+  label: '1234 Example Lane, Austin, TX 78723',
+  submittedAt: '2026-11-17T16:00:00.000Z',
+  documentType: 'utility_bill',
+};
+const cleaningNeedsCheck: VerificationSummary['background'] = { status: 'not_started', requiredFor: ['light-cleaning'], disclosureNeeded: true, renewalOpen: false, canStart: false };
 
 const emptyValues: HelperOnboardingPageData['values'] = {
   profile: { headline: '', bio: '', languages: ['en'] },
@@ -104,13 +118,17 @@ const base = {
   firstPayoutDays: 7,
   welcomeReward: { amountCents: 5000, minTaskPriceCents: 4000, windowDays: 60 },
   aiDraftingEnabled: true,
+  agreementNeeded: false,
 };
 
-/** A new helper on the first step. */
+const lockedAfterBasics: OnboardingStep[] = ['phone', 'identity', 'address', 'payout', 'background', 'done'];
+
+/** A new helper on the first step (the helper agreement still to accept). */
 export const onboardingProfileStep: HelperOnboardingPageData = {
   ...base,
+  agreementNeeded: true,
   step: 'profile',
-  progress: progress('profile', { locked: ['identity', 'payout', 'background', 'done'] }),
+  progress: progress('profile', { locked: lockedAfterBasics }),
   values: emptyValues,
   verification: notStarted,
 };
@@ -118,7 +136,7 @@ export const onboardingProfileStep: HelperOnboardingPageData = {
 export const onboardingServicesStep: HelperOnboardingPageData = {
   ...base,
   step: 'services',
-  progress: progress('services', { locked: ['identity', 'payout', 'background', 'done'] }),
+  progress: progress('services', { locked: lockedAfterBasics }),
   values: { ...priyaValues, services: { services: [] } },
   verification: notStarted,
 };
@@ -126,44 +144,138 @@ export const onboardingServicesStep: HelperOnboardingPageData = {
 export const onboardingAreaStep: HelperOnboardingPageData = {
   ...base,
   step: 'area',
-  progress: progress('area', { locked: ['identity', 'payout', 'background', 'done'] }),
+  progress: progress('area', { locked: lockedAfterBasics }),
   values: { ...priyaValues, area: emptyValues.area },
-  verification: { ...notStarted, background: { status: 'not_started', requiredFor: ['light-cleaning'] } },
+  verification: { ...notStarted, background: cleaningNeedsCheck },
 };
 
+/** The phone step: a number to add and verify. */
+export const onboardingPhoneStep: HelperOnboardingPageData = {
+  ...base,
+  step: 'phone',
+  progress: progress('phone', { locked: ['identity', 'address', 'payout', 'background', 'done'] }),
+  values: priyaValues,
+  verification: { ...notStarted, background: cleaningNeedsCheck },
+};
+
+/** The phone step when the account's number is already verified. */
+export const onboardingPhoneVerified: HelperOnboardingPageData = {
+  ...onboardingPhoneStep,
+  verification: { ...onboardingPhoneStep.verification, phone: phoneDone },
+};
+
+/** The ID step, before the Texas biometric notice is accepted. */
 export const onboardingIdentityStep: HelperOnboardingPageData = {
   ...base,
   step: 'identity',
-  progress: progress('identity', { locked: ['payout', 'background', 'done'] }),
+  progress: progress('identity', { locked: ['address', 'payout', 'background', 'done'] }),
   values: priyaValues,
-  verification: { ...notStarted, background: { status: 'not_started', requiredFor: ['light-cleaning'] } },
+  verification: { ...notStarted, phone: phoneDone, background: cleaningNeedsCheck },
 };
 
 /** The ID check needs another try. */
 export const onboardingIdentityRetry: HelperOnboardingPageData = {
   ...onboardingIdentityStep,
-  verification: {
-    ...onboardingIdentityStep.verification,
-    identity: { status: 'requires_input', failureReason: 'document_unreadable' },
-  },
+  verification: { ...onboardingIdentityStep.verification, identity: { status: 'requires_input', failureReason: 'document_unreadable', consentNeeded: false } },
 };
 
 /** Submitted; Stripe is still processing. */
 export const onboardingIdentityProcessing: HelperOnboardingPageData = {
   ...onboardingIdentityStep,
-  verification: { ...onboardingIdentityStep.verification, identity: { status: 'processing' } },
+  verification: { ...onboardingIdentityStep.verification, identity: { status: 'processing', consentNeeded: false } },
 };
+
+/** 3 tries today: the next one opens tomorrow. */
+export const onboardingIdentityTryLater: HelperOnboardingPageData = {
+  ...onboardingIdentityStep,
+  verification: {
+    ...onboardingIdentityStep.verification,
+    identity: { status: 'requires_input', failureReason: 'selfie_mismatch', consentNeeded: false, blocked: 'try_later', retryAt: '2026-11-18T15:30:00.000Z' },
+  },
+};
+
+/** 5 tries without a pass: our team looks at it. */
+export const onboardingIdentityTooMany: HelperOnboardingPageData = {
+  ...onboardingIdentityStep,
+  verification: { ...onboardingIdentityStep.verification, identity: { status: 'requires_input', failureReason: 'document_unreadable', consentNeeded: false, blocked: 'too_many_attempts' } },
+};
+
+/** The ID says under 18: helper onboarding is closed. */
+export const onboardingIdentityUnder18: HelperOnboardingPageData = {
+  ...onboardingIdentityStep,
+  verification: { ...onboardingIdentityStep.verification, identity: { status: 'requires_input', failureReason: 'under_18', consentNeeded: false, blocked: 'under_18' } },
+};
+
+/** Verified, but the ID's name differs from the account's: staff are checking it. */
+export const onboardingIdentityNameCheck: HelperOnboardingPageData = {
+  ...onboardingIdentityStep,
+  progress: progress('identity', { locked: ['background', 'done'] }),
+  verification: { ...onboardingIdentityStep.verification, identity: { ...idVerified, nameCheck: 'in_review' } },
+};
+
+/** Staff asked for a new ID check. */
+export const onboardingIdentityRequested: HelperOnboardingPageData = {
+  ...onboardingIdentityStep,
+  verification: { ...onboardingIdentityStep.verification, identity: { status: 'not_started', consentNeeded: false, requested: 'staff_request' } },
+};
+
+/** The home address step, nothing sent yet. */
+export const onboardingAddressStep: HelperOnboardingPageData = {
+  ...base,
+  step: 'address',
+  progress: progress('address', { locked: ['background', 'done'] }),
+  values: priyaValues,
+  verification: { ...notStarted, phone: phoneDone, identity: idVerified, background: cleaningNeedsCheck },
+};
+
+export const onboardingAddressInReview: HelperOnboardingPageData = {
+  ...onboardingAddressStep,
+  verification: {
+    ...onboardingAddressStep.verification,
+    address: { status: 'in_review', label: '1234 Example Lane, Austin, TX 78723', submittedAt: '2026-11-17T16:00:00.000Z', documentType: 'utility_bill' },
+  },
+};
+
+export const onboardingAddressRejected: HelperOnboardingPageData = {
+  ...onboardingAddressStep,
+  verification: {
+    ...onboardingAddressStep.verification,
+    address: { status: 'rejected', label: '1234 Example Lane, Austin, TX 78723', submittedAt: '2026-11-17T16:00:00.000Z', documentType: 'bank_statement', rejectionReason: 'too_old' },
+  },
+};
+
+export const onboardingAddressVerified: HelperOnboardingPageData = {
+  ...onboardingAddressStep,
+  verification: { ...onboardingAddressStep.verification, address: addressVerified },
+};
+
+/** A move: the new proof is in review while the earlier verification still counts. */
+export const onboardingAddressUpdate: HelperOnboardingPageData = {
+  ...onboardingAddressStep,
+  verification: { ...onboardingAddressStep.verification, address: { ...addressVerified, update: { status: 'in_review' } } },
+};
+
+/** Staff asked for a new proof. */
+export const onboardingAddressRequested: HelperOnboardingPageData = {
+  ...onboardingAddressStep,
+  verification: { ...onboardingAddressStep.verification, address: { status: 'requested' } },
+};
+
+/** Home address suggestions for previews and tests (fictional). */
+export const homeAddressSuggestions: AddressSuggestion[] = [
+  { placeId: 'plc_example_lane', line1: '1234 Example Lane', line2: 'Austin, TX 78723', areaName: 'Mueller', inServiceArea: true },
+  { placeId: 'plc_example_lane_unit', line1: '1234 Example Lane Unit B', line2: 'Austin, TX 78723', areaName: 'Mueller', inServiceArea: true },
+  { placeId: 'plc_example_far', line1: '1234 Example Road', line2: 'Waco, TX 76701', inServiceArea: false },
+];
+
+const readyForPayout: VerificationSummary = { ...notStarted, phone: phoneDone, identity: idVerified, address: addressVerified, background: cleaningNeedsCheck };
 
 export const onboardingPayoutStep: HelperOnboardingPageData = {
   ...base,
   step: 'payout',
   progress: progress('payout', { locked: ['background', 'done'] }),
   values: priyaValues,
-  verification: {
-    identity: { status: 'verified', verifiedAt: '2026-11-17T14:00:00.000Z' },
-    payout: { status: 'not_started' },
-    background: { status: 'not_started', requiredFor: ['light-cleaning'] },
-  },
+  verification: readyForPayout,
 };
 
 /** Stripe needs more information before payouts can start. */
@@ -172,23 +284,42 @@ export const onboardingPayoutActionNeeded: HelperOnboardingPageData = {
   verification: { ...onboardingPayoutStep.verification, payout: { status: 'requirements_due' } },
 };
 
+const backgroundBase: VerificationSummary = { ...readyForPayout, payout: { status: 'active' } };
+
 /** Yard work is bookable now; cleaning waits for the background check. */
 export const onboardingBackgroundPending: HelperOnboardingPageData = {
   ...base,
   step: 'background',
   progress: progress('background', { bookableCategories: ['yard-cleanup'] }),
   values: priyaValues,
-  verification: {
-    identity: { status: 'verified', verifiedAt: '2026-11-17T14:00:00.000Z' },
-    payout: { status: 'active' },
-    background: { status: 'pending', requiredFor: ['light-cleaning'] },
-  },
+  verification: { ...backgroundBase, background: { status: 'pending', requiredFor: ['light-cleaning'], disclosureNeeded: false, renewalOpen: false, canStart: false } },
 };
 
+/** Before the disclosure is acknowledged. */
 export const onboardingBackgroundNotStarted: HelperOnboardingPageData = {
   ...onboardingBackgroundPending,
-  verification: { ...onboardingBackgroundPending.verification, background: { status: 'not_started', requiredFor: ['light-cleaning'] } },
+  verification: { ...backgroundBase, background: { ...cleaningNeedsCheck, canStart: true } },
 };
+
+const withBackground = (background: Partial<VerificationSummary['background']>): HelperOnboardingPageData => ({
+  ...onboardingBackgroundPending,
+  verification: { ...backgroundBase, background: { status: 'pending', requiredFor: ['light-cleaning'], disclosureNeeded: false, renewalOpen: false, canStart: false, ...background } },
+});
+
+export const onboardingBackgroundInvited = withBackground({ status: 'invited', invitationExpiresAt: '2026-11-24T16:00:00.000Z' });
+export const onboardingBackgroundReview = withBackground({ status: 'consider' });
+export const onboardingBackgroundPreAdverse = withBackground({ status: 'consider', adjudication: 'pre_adverse', disputeUntil: '2026-11-25T16:00:00.000Z' });
+export const onboardingBackgroundPostAdverse = withBackground({ status: 'consider', adjudication: 'post_adverse' });
+export const onboardingBackgroundEngaged: HelperOnboardingPageData = {
+  ...withBackground({ status: 'consider', adjudication: 'engaged', checkedAt: '2026-11-19T16:00:00.000Z', validUntil: '2027-11-19T16:00:00.000Z' }),
+  progress: progress('background', { bookableCategories: ['light-cleaning', 'yard-cleanup'] }),
+};
+/** The current check runs out in 3 weeks: the renewal can start. */
+export const onboardingBackgroundRenewal: HelperOnboardingPageData = {
+  ...withBackground({ status: 'clear', checkedAt: '2025-12-10T16:00:00.000Z', validUntil: '2026-12-10T16:00:00.000Z', renewalOpen: true, canStart: true }),
+  progress: progress('background', { bookableCategories: ['light-cleaning', 'yard-cleanup'] }),
+};
+export const onboardingBackgroundSuspended = withBackground({ status: 'suspended' });
 
 /** Jordan: everything done, bookable in every category he offers. */
 export const onboardingDone: HelperOnboardingPageData = {
@@ -210,9 +341,11 @@ export const onboardingDone: HelperOnboardingPageData = {
     area: { areaId: 'area_east_austin', serviceRadiusMiles: 5, remoteOk: false },
   },
   verification: {
-    identity: { status: 'verified', verifiedAt: '2026-11-10T16:00:00.000Z' },
+    phone: { verified: true, last4: '0201' },
+    identity: { status: 'verified', verifiedAt: '2026-11-10T16:00:00.000Z', consentNeeded: false },
+    address: { ...addressVerified, label: '5678 Example Street, Austin, TX 78702' },
     payout: { status: 'active' },
-    background: { status: 'clear', checkedAt: '2026-11-12T16:00:00.000Z', requiredFor: ['furniture-assembly', 'moving-help'] },
+    background: { status: 'clear', checkedAt: '2026-11-12T16:00:00.000Z', requiredFor: ['furniture-assembly', 'moving-help'], disclosureNeeded: false, validUntil: '2027-11-12T16:00:00.000Z', renewalOpen: false, canStart: false },
   },
 };
 
@@ -248,9 +381,11 @@ export const samProfileEditorData: HelperProfileEditorData = {
   maxPhotoMegabytes: 10,
   badges: sam.badges,
   verification: {
-    identity: { status: 'verified', verifiedAt: sam.badges.idVerifiedAt! },
+    phone: { verified: true, last4: '0202' },
+    identity: { status: 'verified', verifiedAt: sam.badges.idVerifiedAt!, consentNeeded: false },
+    address: { status: 'verified', verifiedAt: '2026-01-11T16:00:00.000Z', label: '4321 Example Avenue, Austin, TX 78751', documentType: 'lease' },
     payout: { status: 'active' },
-    background: { status: 'clear', checkedAt: sam.badges.backgroundCheckedAt!, requiredFor: ['furniture-assembly', 'moving-help', 'light-cleaning'] },
+    background: { status: 'clear', checkedAt: sam.badges.backgroundCheckedAt!, requiredFor: ['furniture-assembly', 'moving-help', 'light-cleaning'], disclosureNeeded: false, validUntil: '2027-01-12T16:00:00.000Z', renewalOpen: false, canStart: false },
   },
   paused: false,
   aiDraftingEnabled: true,
@@ -273,8 +408,12 @@ export const fakeOnboardingHandlers: HelperOnboardingHandlers = {
   onDraftProfile: () => wait({ ok: true, draft: samProfileDraft }, 900),
   onSaveProfile: () => wait({ ok: true, code: 'saved', redirectTo: nextStepUrl('services') }),
   onSaveServices: () => wait({ ok: true, code: 'saved', redirectTo: nextStepUrl('area') }),
-  onSaveArea: () => wait({ ok: true, code: 'saved', redirectTo: nextStepUrl('identity') }),
+  onSaveArea: () => wait({ ok: true, code: 'saved', redirectTo: nextStepUrl('phone') }),
+  onStartPhone: () => wait({ ok: true, code: 'sent' }),
+  onConfirmPhone: () => wait({ ok: true, code: 'updated', redirectTo: nextStepUrl('identity') }),
   onStartIdentity: () => wait({ ok: true, code: 'updated', redirectTo: '/dev/providers/identity' }),
+  onSearchAddresses: () => wait(homeAddressSuggestions, 300),
+  onSubmitAddressProof: () => wait({ ok: true, code: 'submitted', redirectTo: nextStepUrl('payout') }, 800),
   onStartPayout: () => wait({ ok: true, code: 'updated', redirectTo: '/dev/providers/payout' }),
   onStartBackgroundCheck: () => wait({ ok: true, code: 'updated', redirectTo: '/dev/providers/background' }),
   onRefreshStatus: () => wait({ ok: true, code: 'updated' }),

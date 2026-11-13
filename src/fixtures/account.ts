@@ -38,6 +38,8 @@ const preferences: AccountPageData['preferences'] = [
   { topic: 'offers', channel: 'sms', enabled: false, locked: false },
   { topic: 'payments', channel: 'email', enabled: true, locked: true },
   { topic: 'payments', channel: 'sms', enabled: false, locked: false },
+  { topic: 'account', channel: 'email', enabled: true, locked: true },
+  { topic: 'account', channel: 'sms', enabled: false, locked: false },
   { topic: 'tips_and_news', channel: 'email', enabled: false, locked: false },
   { topic: 'tips_and_news', channel: 'sms', enabled: false, locked: false },
 ];

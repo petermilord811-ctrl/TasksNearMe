@@ -21,7 +21,9 @@
         "notesHint": "For example: what you're good at, what you're careful about, why you like helping.",
         "draft": "Draft my profile",
         "redraft": "Draft again"
-      }
+      },
+      "agreement": "I agree to the <agreement>Helper agreement</agreement> and the <guidelines>Community guidelines</guidelines>.",
+      "agreementRequired": "Agree to the Helper agreement and the Community guidelines to continue."
     },
     "services": {
       "title": "Services",
@@ -75,7 +77,9 @@
       "profile": "Profile",
       "services": "Services",
       "area": "Area",
+      "phone": "Phone",
       "identity": "ID check",
+      "address": "Home address",
       "payout": "Payout setup",
       "background": "Background check",
       "done": "Ready to help"
@@ -85,7 +89,8 @@
       "current": "Current step",
       "todo": "Coming up",
       "skipped": "Not needed",
-      "locked": "Locked"
+      "locked": "Locked",
+      "in_review": "In review"
     },
     "titles": {
       "profile": "Introduce yourself",
@@ -122,7 +127,33 @@
       "errorHint": "Try the provider buttons to see pending and error feedback.",
       "savedServices": "Services with prices",
       "emptyTools": "Tools: empty",
-      "profileDrafted": "Profile drafted with \"Write it for me\""
+      "profileDrafted": "Profile drafted with \"Write it for me\"",
+      "phone": "Phone: enter the number",
+      "phoneCode": "Phone: enter the code",
+      "phoneVerified": "Phone: verified",
+      "identityConsent": "ID check: biometric consent",
+      "identityNameCheck": "ID check: name check",
+      "identityTryLater": "ID check: 3 tries today",
+      "identityTooMany": "ID check: too many tries",
+      "identityUnder18": "ID check: under 18",
+      "identityRequested": "ID check: new check asked for",
+      "address": "Home address: not started",
+      "addressSearch": "Home address: search open",
+      "addressErrors": "Home address: errors",
+      "addressInReview": "Home address: in review",
+      "addressRejected": "Home address: another document needed",
+      "addressVerified": "Home address: verified",
+      "addressUpdate": "Home address: new proof in review",
+      "addressRequested": "Home address: new proof asked for",
+      "backgroundDisclosure": "Background check: disclosure",
+      "backgroundInvited": "Background check: invitation sent",
+      "backgroundReview": "Background check: under review",
+      "backgroundPreAdverse": "Background check: notice sent",
+      "backgroundPostAdverse": "Background check: not approved",
+      "backgroundEngaged": "Background check: approved after review",
+      "backgroundRenewal": "Background check: renewal open",
+      "agreement": "Profile: helper agreement",
+      "backgroundSuspended": "Background check: Checkr needs more information"
     }
   }
 }

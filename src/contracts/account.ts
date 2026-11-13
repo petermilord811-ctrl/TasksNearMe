@@ -5,6 +5,7 @@ import type { Cents, ISODateTime, Photo } from './common';
 import { emailField, oneTimeCodeField, personNameField } from './forms';
 import type { PhotoUploadResult } from './posting';
 import type { AttentionTarget } from './home';
+import type { VerificationTrack } from './onboarding';
 
 /**
  * Notifications and the account page (blueprint 02 §1.2: `/app/notifications`, `/app/account`).
@@ -55,6 +56,14 @@ export const NOTIFICATION_TYPES = [
   'approval_reminder',
   /** A confirmed booking starts in `params.hours` (24 h and 2 h before; both people). */
   'booking_reminder',
+  /** A verification step passed (`params.track`): the phone, the ID, the home address, payouts, the background check. */
+  'verification_passed',
+  /** A verification step needs the person (`params.track`): another try, another document, more information. */
+  'verification_action_needed',
+  /** The background check runs out in `params.days` (0: it has; in-home categories are paused). */
+  'background_check_expiring',
+  /** Onboarding is done: the helper can send offers. */
+  'helper_ready',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -65,7 +74,7 @@ export interface NotificationView {
   title?: string;
   /** Who did it ("Jordan T."). */
   actorName?: string;
-  params?: { amountCents?: Cents; minutes?: number; hours?: number };
+  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack };
   /** Where it leads (same targets as the home's attention items). */
   target: AttentionTarget;
   createdAt: ISODateTime;
@@ -87,7 +96,8 @@ export interface NotificationHandlers {
   onOpen: ActionHandler<{ notificationId: string }>;
 }
 
-export const NOTIFICATION_TOPICS = ['bookings', 'messages', 'offers', 'payments', 'tips_and_news'] as const;
+/** `account`: verification and account notices (email always on, like receipts). */
+export const NOTIFICATION_TOPICS = ['bookings', 'messages', 'offers', 'payments', 'account', 'tips_and_news'] as const;
 export type NotificationTopic = (typeof NOTIFICATION_TOPICS)[number];
 export const NOTIFICATION_CHANNELS = ['email', 'sms'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];

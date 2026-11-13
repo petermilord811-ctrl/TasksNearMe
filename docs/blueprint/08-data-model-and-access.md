@@ -53,6 +53,7 @@ ledger_journals ─1:N─ ledger_entries ─N:1─ ledger_accounts   (journals r
 |---|---|---|
 | `identity_verifications` | user_id, provider (`stripe_identity`), provider_session_id, status (`created`/`processing`/`requires_input`/`verified`/`canceled`/`redacted`), verified_at, checks (doc/selfie pass flags), is_adult, name_matches_profile, last_error_code | Unique provider_session_id. **No images, DOB, or ID numbers are stored** |
 | `eligibility_checks` | user_id, type (`background_check`), provider (`checkr`), candidate_id, invitation_id, report_id, package, status (`invited`/`pending`/`clear`/`consider`/`suspended`/`canceled`/`expired`), adjudication (`engaged`/`pre_adverse`/`post_adverse`), completed_at, expires_at | Unique report_id. Report contents stay at Checkr |
+| `address_verifications` (added 2026-11-12) | user_id, status (`requested`/`in_review`/`verified`/`rejected`/`withdrawn`), address_ciphertext, area_id, document_type, document_file_id, document_deleted_at, submitted_at, decided_at, decided_by, rejection_reason, auto_check (yes/no answers only) | The document is a private file, deleted 30 days after the decision. Built as `address_verifications`; the background checks table is `background_checks` |
 
 ### markets
 | Table | Key fields | Constraints and notes |
@@ -169,5 +170,6 @@ There is no direct database editing and no impersonation in production. Support 
 | Messages, completion photos, receipts | 2 years after last activity; longer while a case or legal hold is open |
 | Ledger, payments, tax records | 7 years |
 | Identity verification | Status kept. Provider-held images handled per the provider's retention and redaction settings, within Texas biometric limits (**F10**) |
+| Proof of address | Status, dates and the encrypted address kept; the document deleted 30 days after the decision |
 | Background checks | Status kept; report contents stay with the provider (FCRA) |
 | Audit log | 7 years |

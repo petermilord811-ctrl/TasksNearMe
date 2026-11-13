@@ -8,7 +8,7 @@ Every outside service sits behind a small interface in `src/integrations/*` (or,
 |---|---|---|---|---|
 | Card payments | `PaymentProvider` (`src/integrations/payments`) | `createDevPaymentProvider`: test cards (success, declined, insufficient funds, bank check) | Stripe PaymentIntents (charges; manual capture for invites) | `STRIPE_SECRET_KEY` |
 | Helper transfers and payouts | `transfer()` in `src/modules/earnings/service.ts`; payout accounts in `src/modules/verification` | Transfers succeed at once (`devtr_…`); `/dev/providers/payout` | Stripe Connect Express: a Transfer per earning with `source_transaction` set to the charge | `STRIPE_SECRET_KEY` |
-| ID checks | `src/modules/verification` (provider `dev`) | `/dev/providers/identity` picks the outcome | Stripe Identity (document and selfie; only "is adult" is stored) | Stripe keys |
+| ID checks | `src/modules/verification` (provider `dev`) | `/dev/providers/identity` picks the outcome (also "name differs" and "canceled") | Stripe Identity (document and selfie; only "is adult" and the name match are stored) | Stripe keys |
 | Background checks | `src/modules/verification` (provider `dev`) | `/dev/providers/background` | Checkr | Checkr key (to add) |
 | Sign-in with Google or Microsoft | Better Auth social providers (`src/platform/auth/config.ts`, `src/integrations/oauth`) | The account chooser at `/dev/oauth/<provider>` (Better Auth's real flow; only the provider's page is replaced) | Google OAuth client; Microsoft Entra app registration | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`; `MICROSOFT_CLIENT_ID` + `MICROSOFT_CLIENT_SECRET` |
 | Email | `EmailProvider` (`src/integrations/email`) | The dev outbox (`/dev/outbox`, with each designed email in a frame) | Postmark or Resend (**both built**: `src/integrations/email/postmark.ts`, `resend.ts`) | `POSTMARK_SERVER_TOKEN` or `RESEND_API_KEY` (one, never both), and `EMAIL_FROM` |
@@ -34,8 +34,14 @@ Every outside service sits behind a small interface in `src/integrations/*` (or,
 - Payout accounts: Connect Express onboarding links replace `/dev/providers/payout`; the account webhook updates `payout_accounts.status`.
 
 ### ID checks (Stripe Identity) and background checks (Checkr)
-- The verification module already models sessions, statuses and failure reasons; the adapters create the session or invitation and map the provider's webhook to the same outcomes the dev pages offer.
-- Store only what the app uses: "verified", "is adult", and the check's status. Never the date of birth or the document.
+- The verification module models every step (`src/modules/verification`): the rules in `standing.ts` and `progress.ts`, starting and recording in `tracks.ts`, staff decisions in `staff.ts`, timers in `timers.ts`. An adapter implements `VerificationProviders` (`providers.ts`) and maps the provider's webhook to the functions the dev pages call: `recordIdentityResult` (with the verified first and last name for the name check; never stored), `recordPayoutStatus`, `recordBackgroundResult` (`pending`, `clear`, `consider`, `suspended`, `canceled`).
+- **Stripe Identity:** `start` creates a VerificationSession (`type: document`, `require_matching_selfie`, `require_live_capture`, a `return_url` to `/app/helper/onboarding/identity`) and returns its URL; ask for `verified_outputs` (first name, last name, date of birth) only to compute "is adult" and the name match. `redact` calls `POST /v1/identity/verification_sessions/:id/redact` (the timer calls it 30 days after the result). Webhooks: `identity.verification_session.verified`, `.requires_input` (map `last_error.code` to the four failure reasons), `.canceled`.
+- **Checkr:** `start` creates the candidate and an invitation (package per category, work location Austin, TX) and returns the invitation URL; `preAdverseAction` and `postAdverseAction` call Checkr's adverse action API (Checkr sends the notices and the summary of rights). Webhooks: `report.completed` (`clear` or `consider`), `report.suspended`, `report.disputed` (keep waiting), `invitation.expired`.
+- Store only what the app uses: "verified", "is adult", the name match, and the check's status. Never the date of birth, the document, or report contents.
+
+### Phone and home address
+- **Phone:** the onboarding step uses the same texted code as the account page (`src/modules/accounts/phone-verification.ts`); real texts need the Twilio Verify adapter (below).
+- **Home address:** chosen with the address search (Mapbox with `MAPBOX_TOKEN`, the sample addresses otherwise) and confirmed again on submit, so only real address points can be sent. The proof of address is stored with the app's file storage (local disk now; the R2 adapter must keep `address_proof/` objects private, with no public URL). Staff open it at `/api/verification-documents/<token>`.
 
 ### Sign-in with Google or Microsoft
 There's no adapter to write: Better Auth has both providers built in. With keys set, the real provider replaces the stand-in for that provider; production builds without keys don't show its button.

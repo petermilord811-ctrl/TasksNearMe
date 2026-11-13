@@ -9,6 +9,7 @@ import { rewardGrants } from '@/modules/rewards/schema';
 import { getAdminRewardRows } from '@/modules/rewards/staff';
 import { supportCases } from '@/modules/support/schema';
 import { caseRowsFor, personSummaryOf, type StaffActor } from '@/modules/support/staff';
+import { getPersonVerification } from '@/modules/verification/staff';
 import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -123,6 +124,7 @@ export async function getAdminUser(db: Db, staff: StaffActor, userId: string, no
     })),
     ...(suspension && row.helperStatus === 'suspended' ? { suspension } : {}),
     actions,
+    verification: await getPersonVerification(db, staff, user.id, now),
   };
 }
 

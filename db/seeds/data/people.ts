@@ -24,6 +24,8 @@ interface SeedHelper {
   idVerifiedAt?: string;
   backgroundCheckedAt?: string;
   payoutsReadyAt?: string;
+  /** A verified proof of the home address: when it was approved, and the (fictional) address. */
+  homeAddress?: { verifiedAt: string; line1: string; zip: string };
   completedCount: number;
   ratingAverage?: number;
   ratingCount: number;
@@ -67,6 +69,7 @@ export const PEOPLE: SeedPerson[] = [
       tools: ['Drill', 'Hex keys', 'Level', 'Stud finder'],
       foundingNumber: 63,
       idVerifiedAt: '2026-11-04T16:00:00.000Z',
+      homeAddress: { verifiedAt: '2026-11-05T15:00:00.000Z', line1: '5678 Example Street', zip: '78702' },
       backgroundCheckedAt: '2026-11-06T16:00:00.000Z',
       payoutsReadyAt: '2026-11-05T16:00:00.000Z',
       completedCount: 0,
@@ -96,6 +99,7 @@ export const PEOPLE: SeedPerson[] = [
       remoteOk: false,
       tools: ['Drill', 'Hex keys', 'Level', 'Furniture sliders', 'Dolly'],
       idVerifiedAt: '2026-01-10T16:00:00.000Z',
+      homeAddress: { verifiedAt: '2026-01-11T16:00:00.000Z', line1: '4321 Example Avenue', zip: '78751' },
       backgroundCheckedAt: '2026-01-12T16:00:00.000Z',
       payoutsReadyAt: '2024-05-22T16:00:00.000Z',
       completedCount: 140,
@@ -127,6 +131,7 @@ export const PEOPLE: SeedPerson[] = [
       remoteOk: true,
       tools: ['Drill', 'Laptop toolkit'],
       idVerifiedAt: '2026-06-02T16:00:00.000Z',
+      homeAddress: { verifiedAt: '2026-06-02T20:00:00.000Z', line1: '2468 Example Court', zip: '78723' },
       backgroundCheckedAt: '2026-06-05T16:00:00.000Z',
       payoutsReadyAt: '2026-06-03T16:00:00.000Z',
       completedCount: 11,

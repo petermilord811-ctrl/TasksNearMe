@@ -11,3 +11,5 @@ export { AdminAuditScreen, type AdminAuditScreenProps } from './admin-audit-scre
 export { AdminPaymentsScreen, type AdminPaymentsScreenProps } from './admin-payments-screen';
 export { AdminStaffScreen, type AdminStaffScreenProps } from './admin-staff-screen';
 export { AdminConfigScreen, type AdminConfigScreenProps } from './admin-config-screen';
+export { AdminVerificationsScreen } from './admin-verifications-screen';
+export { AdminVerificationSection } from './admin-verification-section';

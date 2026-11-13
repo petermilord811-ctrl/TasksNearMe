@@ -31,7 +31,9 @@ import { marketDayKey, marketLocalToUtc } from '../../src/shared/format';
 import { SEED_TASKS } from './data/tasks';
 import { SEED_OFFERS } from './data/offers';
 import { offers } from '../../src/modules/offers/schema';
-import { backgroundChecks, identityVerifications, payoutAccounts } from '../../src/modules/verification/schema';
+import { addressVerifications, backgroundChecks, identityVerifications, payoutAccounts } from '../../src/modules/verification/schema';
+import { AGREEMENT_VERSIONS } from '../../src/modules/accounts/agreements';
+import { agreements } from '../../src/modules/accounts/schema';
 import { HELPER_LANGUAGES, SEED_REVIEWS, SERVICE_DESCRIPTIONS, WORK_SAMPLES } from './data/profile-extras';
 import { reviews } from '../../src/modules/reviews/schema';
 import { helperWorkSamples } from '../../src/modules/profiles/schema';
@@ -156,6 +158,7 @@ export async function seedDatabase(url: string): Promise<void> {
             foundingNumber: helper.foundingNumber ?? null,
             idVerifiedAt: helper.idVerifiedAt ?? null,
             backgroundCheckedAt: helper.backgroundCheckedAt ?? null,
+            addressVerifiedAt: helper.homeAddress?.verifiedAt ?? null,
             payoutsReadyAt: helper.payoutsReadyAt ?? null,
             completedCount: helper.completedCount,
             ratingAverage: helper.ratingAverage ?? null,
@@ -685,9 +688,44 @@ async function seedPaymentMethods(tx: Tx): Promise<void> {
  * where the seed put them (dev provider; nothing personal is stored).
  */
 async function seedVerification(tx: Tx): Promise<void> {
+  const key = process.env.FIELD_ENCRYPTION_KEY;
+  if (!key) throw new Error('FIELD_ENCRYPTION_KEY is not set (see .env.example).');
+  const cipher = createFieldCipher(key);
   for (const person of PEOPLE) {
     const helper = person.helper;
     if (!helper) continue;
+    const agree = async (doc: keyof typeof AGREEMENT_VERSIONS, at: Date) => {
+      const row = { id: `agr_seed_${doc}_${person.id.slice(4)}`, userId: person.id, doc, version: AGREEMENT_VERSIONS[doc], acceptedAt: at, ip: null, userAgent: null };
+      await tx.insert(agreements).values(row).onConflictDoUpdate({ target: agreements.id, set: row });
+    };
+    // Helpers who finished onboarding accepted the agreement and the notices along the way.
+    if (helper.status === 'active') await agree('helper_agreement', new Date(person.createdAt));
+    if (helper.idVerifiedAt) await agree('biometric_consent', new Date(new Date(helper.idVerifiedAt).getTime() - 5 * 60_000));
+    if (helper.backgroundCheckedAt) await agree('bg_check_disclosure', new Date(new Date(helper.backgroundCheckedAt).getTime() - 3 * 86_400_000));
+    if (helper.homeAddress) {
+      const at = new Date(helper.homeAddress.verifiedAt);
+      const sent = new Date(at.getTime() - 20 * 3_600_000);
+      const row = {
+        id: `adr_seed_${person.id.slice(4)}`,
+        userId: person.id,
+        status: 'verified',
+        addressCiphertext: cipher.encrypt(JSON.stringify({ line1: helper.homeAddress.line1, city: 'Austin', state: 'TX', zip: helper.homeAddress.zip })),
+        areaId: helper.areaId,
+        documentType: 'utility_bill',
+        // The document itself was deleted after the review (nothing to keep in a seed).
+        documentFileId: null,
+        documentDeletedAt: at,
+        submittedAt: sent,
+        decidedAt: at,
+        decidedByUserId: 'usr_taylor',
+        rejectionReason: null,
+        autoCheck: null,
+        requestedByUserId: null,
+        createdAt: sent,
+        updatedAt: at,
+      };
+      await tx.insert(addressVerifications).values(row).onConflictDoUpdate({ target: addressVerifications.id, set: row });
+    }
     if (helper.idVerifiedAt) {
       const at = new Date(helper.idVerifiedAt);
       const row = {
@@ -698,6 +736,7 @@ async function seedVerification(tx: Tx): Promise<void> {
         status: 'verified',
         failureReason: null,
         isAdult: true,
+        nameMatches: true,
         verifiedAt: at,
         createdAt: at,
         updatedAt: at,

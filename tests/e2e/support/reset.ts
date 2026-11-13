@@ -4,7 +4,8 @@ import { seedDatabase } from '../../../db/seeds/seed';
 import { offers } from '../../../src/modules/offers/schema';
 import { taskLocations, tasks } from '../../../src/modules/tasks/schema';
 import { helperServices, helperWorkSamples } from '../../../src/modules/profiles/schema';
-import { backgroundChecks, identityVerifications, payoutAccounts } from '../../../src/modules/verification/schema';
+import { addressVerifications, backgroundChecks, identityVerifications, payoutAccounts } from '../../../src/modules/verification/schema';
+import { agreements } from '../../../src/modules/accounts/schema';
 import { createDb } from '../../../src/platform/db/connect';
 
 /**
@@ -52,6 +53,8 @@ export async function resetE2eData(request: APIRequestContext): Promise<void> {
       await tx.delete(identityVerifications).where(eq(identityVerifications.userId, priya));
       await tx.delete(payoutAccounts).where(eq(payoutAccounts.userId, priya));
       await tx.delete(backgroundChecks).where(eq(backgroundChecks.userId, priya));
+      await tx.delete(addressVerifications).where(eq(addressVerifications.userId, priya));
+      await tx.delete(agreements).where(eq(agreements.userId, priya));
     });
   } finally {
     await pool.end();

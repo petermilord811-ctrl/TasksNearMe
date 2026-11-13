@@ -97,5 +97,12 @@
       "rate_limited": "That's a lot of drafts for now. Try again in an hour.",
       "prohibited": "We can't help write that. Check what TasksNearMe allows."
     }
+  },
+  "addressSearch": {
+    "results": "Address suggestions",
+    "loading": "Looking up addresses…",
+    "failed": "Address search is unavailable. Try again in a moment.",
+    "empty": "No matching addresses. Check the street number and name.",
+    "selected": "Chosen: {address}"
   }
 }

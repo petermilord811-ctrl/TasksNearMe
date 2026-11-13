@@ -38,6 +38,10 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   task_reopened: 'offers',
   approval_reminder: 'bookings',
   booking_reminder: 'bookings',
+  verification_passed: 'account',
+  verification_action_needed: 'account',
+  background_check_expiring: 'account',
+  helper_ready: 'account',
 };
 
 /** Day-of updates that can't wait until morning (a 7 am start's 2 h reminder comes at 5 am): texted even in quiet hours. */
@@ -54,6 +58,7 @@ export const URGENT_TYPES: ReadonlySet<NotificationType> = new Set<NotificationT
 export const LOCKED_PREFERENCES: readonly { topic: NotificationTopic; channel: NotificationChannel }[] = [
   { topic: 'bookings', channel: 'email' },
   { topic: 'payments', channel: 'email' },
+  { topic: 'account', channel: 'email' },
 ];
 
 /** What a person gets before changing anything. */
@@ -62,6 +67,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationTopic, readonly Notificatio
   messages: ['email'],
   offers: ['email'],
   payments: ['email'],
+  account: ['email'],
   tips_and_news: [],
 };
 

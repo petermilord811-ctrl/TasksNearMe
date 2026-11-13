@@ -91,7 +91,8 @@
       "messages": "Messages",
       "offers": "Offers",
       "payments": "Payments",
-      "tips_and_news": "Tips and news"
+      "tips_and_news": "Tips and news",
+      "account": "Account and verification"
     },
     "switchLabel": "{topic} by {channel}",
     "locked": "Receipts and safety messages can't be turned off.",
@@ -184,7 +185,8 @@
       "messages": "message",
       "offers": "offer",
       "payments": "payment",
-      "tips_and_news": "tips and news"
+      "tips_and_news": "tips and news",
+      "account": "account"
     }
   }
 }

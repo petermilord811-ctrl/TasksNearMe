@@ -17,10 +17,18 @@ Identity, work eligibility, and payout/tax onboarding answer different questions
 | Cost | $1.50 per completed check (first 50 free) | From about $30 per check (package-dependent); platform-paid for the founding cohort | Stripe Connect fees (04 §8) |
 | Re-verification | Risk triggers: account recovery, name change, suspicious device | Annual background re-check; policy changes | Stripe requirement updates (account events) → banner and bookable recompute |
 
-**Onboarding order:** profile → **ID** → **payout setup** → **background check** (in-home only) → **bookable**.
-- ID comes first because it's cheap and blocks fake accounts early.
+**Onboarding order** (changed 2026-11-12, owner request): profile with the **helper agreement** → services → area → **phone** → **ID** → **home address** → **payout setup** → **background check** (in-home only) → **bookable**.
+- The phone comes first among the checks: it's free, and clients and staff need to reach helpers on the day.
+- ID comes next because it's cheap and blocks fake accounts early.
+- The home address and payouts open together once the ID is verified, so a staff review of the address doesn't hold up payouts.
 - Payout setup comes before offers so every offer can be booked.
 - The background check is last because it's slow and costly, and only in-home categories need it.
+
+**Home address (added 2026-11-12).** The helper enters the address (address search, confirmed again on submit) and sends one proof of address: a utility, phone or internet bill, a bank or credit card statement, a lease or mortgage statement, an insurance statement, or a letter from a government agency, dated within 90 days, showing the helper's name and the address. Trust and safety (or a support lead or admin) reviews it and approves it or asks for another document, giving the helper a reason. A newer proof (after a move) doesn't undo an earlier verification until staff ask for a new one. The public profile says **"Address verified · Nov 2026"**, never the address.
+
+**ID check rules.** The Texas biometric notice is accepted before the check opens (§3). Three tries per 24 hours, five in all before staff review. An under-18 result closes helper onboarding until staff reopen it. A verified ID whose name doesn't match the account's legal name waits for a staff name check. Changing the legal name, or a staff request, needs a new check. Unfinished sessions close after 48 hours.
+
+**Background check rules.** Our summary of the check is acknowledged before Checkr's own FCRA disclosure and authorization. Invitations expire after 7 days. A `consider` result goes to staff, who either approve it (in-home work for 12 months, without the public badge) or start the pre-adverse notice; the final adverse action comes no sooner than 7 days later. Renewals open 30 days before a check runs out, with notices at 30 and 7 days.
 
 **Posters:** a verified phone number to post, and a card (with Stripe Radar) to book. ID checks for posters are risk-triggered in phase 2 (high-value tasks, flagged accounts). Asking every poster for ID at launch would cost more in conversion than it adds in safety.
 
@@ -56,7 +64,7 @@ Identity, work eligibility, and payout/tax onboarding answer different questions
 
 ## 4. Admin and support access (summary)
 
-Staff see **statuses, not secrets**. ID documents, selfies, SSNs, bank details, and background reports never enter our database.
+Staff see **statuses, not secrets**. ID documents, selfies, SSNs, bank details, and background reports never enter our database. The one exception is the **proof of address** (added 2026-11-12): it's stored privately, opened only by trust and safety, support leads and admins after giving a reason (logged, through a 5-minute link), and deleted 30 days after the decision.
 - Provider dashboards are restricted: Stripe Identity results need restricted or IP-restricted keys and are limited to the named trust and safety lead and finance lead. Checkr dashboard access goes to the trust and safety lead only.
 - Messages and exact addresses are readable by staff only with a reason, and every access is logged.
 - The full matrix is in [08-data-model-and-access.md](08-data-model-and-access.md) §4.

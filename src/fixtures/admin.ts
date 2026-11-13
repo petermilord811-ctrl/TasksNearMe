@@ -1,3 +1,4 @@
+import { adminHomeVerifications } from './admin-verification';
 import type {
   AdminBookingHandlers,
   AdminBookingPageData,
@@ -44,6 +45,7 @@ export const adminHomeData: AdminHomeData = {
     { queue: 'requests', openCount: 2, slaBreaches: 0, oldestOpenedAt: '2026-11-20T18:00:00.000Z' },
   ],
   myOpenCount: 1,
+  verifications: adminHomeVerifications,
 };
 
 export const adminHomeQuietData: AdminHomeData = {
@@ -55,6 +57,7 @@ export const adminHomeQuietData: AdminHomeData = {
     { queue: 'requests', openCount: 0, slaBreaches: 0 },
   ],
   myOpenCount: 0,
+  verifications: { counts: { address: 0, identity: 0, background: 0 } },
 };
 
 const disputeRow: AdminCaseRow = {

@@ -38,6 +38,13 @@
       "suspended": "Action needed",
       "canceled": "Check canceled",
       "expired": "Check expired"
+    },
+    "identityNameCheck": "Checking your name",
+    "identityBlocked": "Paused",
+    "backgroundAdjudication": {
+      "engaged": "Approved",
+      "pre_adverse": "Notice sent",
+      "post_adverse": "Not approved"
     }
   },
   "identityFailureReasons": {
@@ -63,7 +70,7 @@
       "invited": "Check your invitation from our screening partner to finish their steps.",
       "pending": "Your check is in progress. Check the status here when you're ready."
     },
-    "backgroundSuspended": "Contact support for help with your background check.",
+    "backgroundSuspended": "Checkr needs more information from you. Check your email from Checkr, or contact support.",
     "requiredCategories": "These services need a background check",
     "bookableCategories": "You can already make offers for",
     "categoryNames": {
@@ -90,7 +97,40 @@
       "identity": "Open ID check",
       "payout": "Open payout setup",
       "background": "Open background check"
-    }
+    },
+    "identityProcessing": "We'll update this page as soon as our ID partner has a result, usually within a few minutes. If you closed the check before finishing, continue it.",
+    "continueIdentity": "Continue the ID check",
+    "identityRequested": {
+      "staff_request": "Our team asked for a new ID check. Your earlier check no longer counts, so offers are paused until this one passes.",
+      "name_changed": "You changed the legal name on your account, so we need a new ID check that matches it."
+    },
+    "identityBlocked": {
+      "try_later": "You've tried 3 times in a day. You can try again from {time}. Good light and all four edges of the ID in view help.",
+      "too_many_attempts": "We couldn't verify your ID after several tries. Our team will look at it and get back to you by email. You can also contact support.",
+      "under_18": "Helpers need to be 18 or older. If this result is wrong, contact support and we will look at it."
+    },
+    "identityNameCheck": "Your ID is verified, but the name on it is different from the one on your account. Our team is checking it, usually within a day. If your account name isn't your legal name, <account>update it on your account page</account>.",
+    "biometric": {
+      "title": "Before your ID check",
+      "body": "Our ID partner, Stripe, compares a photo of your ID with a live selfie using face geometry, a biometric identifier. It's used only to verify that you are the person on the ID. Stripe keeps it, not us, and we ask Stripe to delete it 30 days after your result. Texas law requires your consent first.",
+      "checkbox": "I agree to the biometric check described here.",
+      "required": "Agree to the biometric check to start your ID check."
+    },
+    "disclosure": {
+      "title": "Before your background check",
+      "body": "Checkr, our screening partner, runs a consumer report for the in-home services you offer. On Checkr's page you'll read their disclosure, give your consent, and enter your Social Security number and date of birth. They never come to us. You can get a free copy of your report from Checkr, and you can dispute anything in it with them.",
+      "checkbox": "I understand, and I want to start my background check.",
+      "required": "Confirm you understand to start the background check."
+    },
+    "backgroundInvitedUntil": "Check your email for Checkr's invitation and finish their steps by {date}. After that, start a new check here.",
+    "backgroundReview": "Your check is complete and our team is reviewing it. We never show the details here; Checkr sends you a copy of your report. Your other services are not affected.",
+    "backgroundPreAdverse": "We've sent you a notice through Checkr with a copy of your report and a summary of your rights. If anything in it is wrong, dispute it with Checkr by {date}. We'll wait for their answer before we decide.",
+    "backgroundPostAdverse": "Based on your background check, you can't take in-home tasks. Your other services are not affected. Checkr sent you the notice with your rights.",
+    "backgroundEngaged": "Our team reviewed your check and approved you for in-home tasks.",
+    "backgroundValidUntil": "Your background check counts until {date}.",
+    "backgroundRenewal": "Your background check runs out on {date}. Start the renewal now so your in-home services keep going without a gap.",
+    "backgroundExpired": "Your background check ran out. Start a new one to take in-home tasks again.",
+    "startRenewal": "Start the renewal"
   },
   "preview": {
     "group": "People",
@@ -104,5 +144,94 @@
     "small": "Small",
     "medium": "Medium",
     "large": "Large"
+  },
+  "address": "Address verified",
+  "addressAt": "Address verified · {date}",
+  "addressMeaningAt": "A document showing this person's home address was reviewed in {date}. The address itself is never shown.",
+  "homeAddress": {
+    "title": "Home address",
+    "explanation": "We check that you live where you say, with a recent document from a company or agency. Clients never see your address, only your neighborhood.",
+    "formTitle": "Proof of address",
+    "rules": "Send a document dated within the last {days} days that shows your name and this address: a photo or a PDF up to {megabytes} MB, with all four corners visible.",
+    "search": "Your home address",
+    "searchHint": "Start typing your street address, then choose it from the list.",
+    "outOfArea": "We can verify home addresses in and around Austin only.",
+    "unit": "Apartment or unit (optional)",
+    "unitHint": "As it appears on your document.",
+    "documentType": "Document type",
+    "documentTypes": {
+      "utility_bill": "Utility bill",
+      "bank_statement": "Bank or credit card statement",
+      "lease": "Lease or mortgage statement",
+      "government_letter": "Letter from a government agency",
+      "insurance_statement": "Insurance statement",
+      "phone_or_internet_bill": "Phone or internet bill"
+    },
+    "file": "Document",
+    "fileHint": "A photo (JPEG, PNG, WebP or HEIC) or a PDF. Cover account numbers if you like; your name, address and the date must stay readable.",
+    "choose": "Choose a file",
+    "chooseAnother": "Choose a different file",
+    "previewAlt": "Preview of the chosen document",
+    "fileSize": "{size, number} MB",
+    "declaration": "This document shows my name and this address, and it's dated within the last {days} days.",
+    "submit": "Send for review",
+    "sending": "Sending…",
+    "sent": "Sent. We'll review it and let you know.",
+    "privacy": "Only our trust and safety team opens the document, and every view is logged. We delete it 30 days after we review it.",
+    "moving": "Moved? Send a new proof",
+    "requested": "Our team asked for a new proof of your home address. Send one below; offers are paused until it is approved.",
+    "inReview": "We're reviewing your document. It usually takes a day or two, and you can set up payouts meanwhile.",
+    "sentAt": "Sent {date}.",
+    "verified": "Your home address is verified.",
+    "verifiedAt": "Your home address was verified on {date}.",
+    "onFile": "On file:",
+    "updateInReview": "Your new proof is in review. Your earlier verification still counts meanwhile.",
+    "updateRejected": "We couldn't accept your newer document: {reason} Your earlier verification still counts.",
+    "statuses": {
+      "not_started": "Not started",
+      "in_review": "In review",
+      "verified": "Address verified",
+      "rejected": "Another document needed",
+      "requested": "New proof needed"
+    },
+    "rejectionReasons": {
+      "unreadable": "We couldn't read the document. Send a sharper photo with all four corners visible, or the PDF.",
+      "name_mismatch": "The name on the document didn't match the name on your account.",
+      "address_mismatch": "The address on the document didn't match the one you entered.",
+      "too_old": "The document was older than 90 days. Send a more recent one.",
+      "not_accepted": "We can't accept that kind of document. Use one of the types listed.",
+      "suspicious": "We couldn't accept that document. Send an original document from the company or agency.",
+      "other": "We couldn't accept that document. Try another one, or contact support."
+    },
+    "errors": {
+      "placeId": "Choose your address from the list.",
+      "documentType": "Choose the type of document.",
+      "fileRequired": "Add the document.",
+      "fileInvalid": "That file doesn't look like a photo or a PDF.",
+      "declaration": "Confirm that the document shows your name and this address.",
+      "too_large": "That file is over {megabytes} MB. Send a smaller photo or PDF.",
+      "unsupported_type": "Use a photo (JPEG, PNG, WebP or HEIC) or a PDF.",
+      "rate_limited": "You've sent several documents today. Try again tomorrow.",
+      "not_allowed": "This step is not open yet. Finish the steps before it first.",
+      "unknown": "We couldn't send it. Check your connection and try again."
+    }
+  },
+  "phoneStep": {
+    "title": "Phone number",
+    "explanation": "Clients and our team can reach you on the day of a booking, and you'll get texts about new bookings when you want them. Your number stays private.",
+    "numberLabel": "Mobile number",
+    "numberHint": "US numbers only. We'll text you a 6-digit code.",
+    "send": "Text me a code",
+    "codeSent": "We texted a 6-digit code to <strong>{phone}</strong>.",
+    "codeLabel": "6-digit code",
+    "codeHint": "It works for 10 minutes.",
+    "verify": "Verify",
+    "resend": "Send a new code",
+    "newCodeSent": "We sent a new code.",
+    "different": "Use a different number",
+    "verifiedNow": "Your phone number is verified.",
+    "verified": "Your phone number ending in {last4} is verified.",
+    "change": "Use a different number",
+    "privacy": "Clients never see your number: calls and messages go through the app."
   }
 }

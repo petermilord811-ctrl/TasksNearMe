@@ -9,5 +9,9 @@
   "noCases": "No open cases",
   "quietTitle": "Nothing waiting",
   "quietBody": "New reports and requests will appear in these queues.",
-  "viewCases": "View all cases"
+  "viewCases": "View all cases",
+  "verifications": {
+    "title": "Verifications",
+    "counts": "{address, plural, one {# proof of address} other {# proofs of address}} · {identity, plural, one {# ID check} other {# ID checks}} · {background, plural, one {# background check} other {# background checks}}"
+  }
 }

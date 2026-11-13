@@ -25,6 +25,8 @@ export const helperProfiles = pgTable('helper_profiles', {
   foundingNumber: integer('founding_number'),
   idVerifiedAt: timestamp('id_verified_at', { withTimezone: true, mode: 'string' }),
   backgroundCheckedAt: timestamp('background_checked_at', { withTimezone: true, mode: 'string' }),
+  /** "Address verified": when the current proof of the home address was approved. */
+  addressVerifiedAt: timestamp('address_verified_at', { withTimezone: true, mode: 'string' }),
   payoutsReadyAt: timestamp('payouts_ready_at', { withTimezone: true, mode: 'string' }),
   completedCount: integer('completed_count').notNull().default(0),
   ratingAverage: doublePrecision('rating_average'),

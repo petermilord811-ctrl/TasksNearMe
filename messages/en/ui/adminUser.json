@@ -129,7 +129,11 @@
     "rebook_declined": "Proposal declined",
     "task_reopened": "Task open again",
     "approval_reminder": "Approval reminder",
-    "booking_reminder": "Booking reminder"
+    "booking_reminder": "Booking reminder",
+    "verification_passed": "Verification step passed",
+    "verification_action_needed": "Verification needs action",
+    "background_check_expiring": "Background check expiring",
+    "helper_ready": "Ready to send offers"
   },
   "previews": {
     "group": "Admin · person details",

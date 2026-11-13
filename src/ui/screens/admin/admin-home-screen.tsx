@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowUpRight, CheckCheck } from 'lucide-react';
+import { ArrowUpRight, ShieldCheck, CheckCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ADMIN_QUEUES, routes, type AdminHomeData, type ISODateTime } from '@/contracts';
 import { formatDateTime, formatRelative } from '@/shared/format';
@@ -40,6 +40,14 @@ export function AdminHomeScreen({ data, now }: AdminHomeScreenProps) {
         </Link>;
       })}
     </div>
+    <Link href={routes.admin.verifications()} className="flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-4 shadow-card transition-colors hover:bg-accent sm:flex-row sm:items-center sm:justify-between sm:p-5">
+      <div className="min-w-0 space-y-1">
+        <h2 className="flex items-center gap-2 font-heading text-xl/7 font-semibold"><ShieldCheck aria-hidden="true" className="size-5 shrink-0" />{t('verifications.title')}</h2>
+        <p className="text-sm text-muted-foreground tabular-nums">{t('verifications.counts', { address: data.verifications.counts.address, identity: data.verifications.counts.identity, background: data.verifications.counts.background })}</p>
+        {data.verifications.oldestAt && <p className="text-sm text-muted-foreground tabular-nums">{t('oldest', { relative: formatRelative(data.verifications.oldestAt, now) })}</p>}
+      </div>
+      <ArrowUpRight aria-hidden="true" className="hidden size-5 shrink-0 text-muted-foreground sm:block" />
+    </Link>
     {data.queues.every((queue) => queue.openCount === 0) && <EmptyState title={t('quietTitle')} body={t('quietBody')} icon={<CheckCheck className="size-6" />} action={{ label: t('viewCases'), href: routes.admin.cases({ status: 'all' }) }} />}
   </div>;
 }

@@ -4,13 +4,17 @@ import { Suspense } from 'react';
 import { ONBOARDING_STEPS, routes, type OnboardingStep } from '@/contracts';
 import { draftHelperProfileAction } from '@/modules/assist/actions';
 import {
+  onboardingConfirmPhone,
   onboardingRefreshStatus,
   onboardingSaveArea,
   onboardingSaveProfile,
   onboardingSaveServices,
+  onboardingSearchHomeAddresses,
   onboardingStartBackgroundCheck,
   onboardingStartIdentity,
   onboardingStartPayout,
+  onboardingStartPhone,
+  onboardingSubmitAddressProof,
 } from '@/modules/verification/actions';
 import { getOnboardingPageData, onboardingRedirect } from '@/modules/verification/service';
 import { getViewer } from '@/platform/auth/viewer';
@@ -50,7 +54,11 @@ async function Onboarding({ params }: Pick<PageProps<'/app/helper/onboarding/[st
         onDraftProfile: draftHelperProfileAction,
         onSaveServices: onboardingSaveServices,
         onSaveArea: onboardingSaveArea,
+        onStartPhone: onboardingStartPhone,
+        onConfirmPhone: onboardingConfirmPhone,
         onStartIdentity: onboardingStartIdentity,
+        onSearchAddresses: onboardingSearchHomeAddresses,
+        onSubmitAddressProof: onboardingSubmitAddressProof,
         onStartPayout: onboardingStartPayout,
         onStartBackgroundCheck: onboardingStartBackgroundCheck,
         onRefreshStatus: onboardingRefreshStatus,

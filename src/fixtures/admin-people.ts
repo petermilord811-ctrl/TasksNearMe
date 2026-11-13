@@ -1,3 +1,4 @@
+import { devonVerification, fakeAdminVerificationHandlers, jordanVerification, priyaVerification } from './admin-verification';
 import type {
   AdminRewardRow,
   AdminRewardsHandlers,
@@ -98,6 +99,7 @@ export const adminUserJordanData: AdminUserPageData = {
     { id: 'dlv_jordan_offer_sms', channel: 'sms', type: 'offer_declined', status: 'skipped', reason: 'preference_off', attempts: 0, at: '2026-11-19T18:00:00.000Z' },
   ],
   actions: ['suspend_helper'],
+  verification: jordanVerification,
 };
 
 /** Devon, suspended after the reward review. */
@@ -111,12 +113,16 @@ export const adminUserSuspendedData: AdminUserPageData = {
   deliveries: [],
   suspension: { reason: 'Shares a card with the client on their only booking.', at: '2026-11-27T16:00:00.000Z', byDisplayName: 'Taylor B.' },
   actions: ['reinstate_helper'],
+  verification: { ...devonVerification, actions: [] },
 };
 
 /** A support agent sees the page but can't suspend. */
-export const adminUserReadOnlyData: AdminUserPageData = { ...adminUserJordanData, actions: [], canReverseStrikes: false };
+export const adminUserReadOnlyData: AdminUserPageData = { ...adminUserJordanData, actions: [], canReverseStrikes: false, verification: { ...jordanVerification, actions: [] } };
+
+/** Priya, with a proof of address to review. */
+export const adminUserPriyaData: AdminUserPageData = { ...adminUserJordanData, user: { ...adminUserJordanData.user, id: 'usr_priya', person: { id: 'usr_priya', displayName: 'Priya S.', initials: 'PS', memberSince: '2026-11-14T15:00:00.000Z', phoneVerified: true }, email: 'priya@example.test', helperStatus: 'draft', phone: { last4: '0204', verified: true } }, bookings: [], cases: [], rewards: [], strikes: [], deliveries: [], actions: [], verification: priyaVerification };
 
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 
 export const fakeAdminRewardsHandlers: AdminRewardsHandlers = { onDecide: () => wait({ ok: true, code: 'updated' }) };
-export const fakeAdminUserHandlers: AdminUserHandlers = { onSuspension: () => wait({ ok: true, code: 'updated' }), onReverseStrike: () => wait({ ok: true, code: 'updated' }) };
+export const fakeAdminUserHandlers: AdminUserHandlers = { onSuspension: () => wait({ ok: true, code: 'updated' }), onReverseStrike: () => wait({ ok: true, code: 'updated' }), ...fakeAdminVerificationHandlers };

@@ -11,6 +11,9 @@ import { createPaymentProvider } from '@/integrations/payments';
 import { expireDueInvites } from '@/modules/invites/service';
 import { expireDueOffers } from '@/modules/offers/helper';
 import { publishDueReviews } from '@/modules/reviews/service';
+import { createFileStorage } from '@/integrations/storage';
+import { verificationProvidersFor } from '@/modules/verification/providers';
+import { runVerificationTimers } from '@/modules/verification/timers';
 import type { Db } from '@/platform/db/connect';
 
 /**
@@ -39,6 +42,7 @@ export const JOBS: Job[] = [
   { name: 'bookings.approval_reminders', run: (db, now) => remindApprovalsDue(db, now) },
   { name: 'bookings.start_reminders', run: (db, now) => remindUpcomingBookings(db, now) },
   { name: 'reviews.publish', run: (db, now) => publishDueReviews(db, now) },
+  { name: 'verification.timers', run: (db, now) => runVerificationTimers(db, { storage: createFileStorage(), providers: verificationProvidersFor(process.env) }, now) },
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
   { name: 'notifications.deliver', run: (db, now) => deliverNotifications(db, now) },
 ];

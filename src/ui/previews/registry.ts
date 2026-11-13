@@ -65,6 +65,7 @@ import { availabilitySlotPreviews } from './availability-slots.preview';
 import { myClientsPreviews } from './my-clients.preview';
 import { proposeRebookPreviews } from './propose-rebook.preview';
 import { proposalPreviews } from './proposal.preview';
+import { verificationPreviews } from './verification.preview';
 
 export const previews: PreviewEntry[] = [
   ...brandPreviews,
@@ -94,6 +95,7 @@ export const previews: PreviewEntry[] = [
   ...taskManagePreviews,
   ...offerPreviews,
   ...helperOnboardingPreviews,
+  ...verificationPreviews,
   ...helperProfileEditorPreviews,
   ...findWorkPreviews,
   ...helperTaskPreviews,

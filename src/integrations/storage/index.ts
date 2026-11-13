@@ -9,6 +9,8 @@ export interface FileStorage {
   readonly name: string;
   put(key: string, body: Buffer, contentType: string): Promise<void>;
   get(key: string): Promise<Buffer | null>;
+  /** Deletes the object; deleting one that's already gone is fine. */
+  delete(key: string): Promise<void>;
 }
 
 export function createLocalFileStorage(root = path.join(process.cwd(), '.data', 'uploads')): FileStorage {
@@ -29,6 +31,13 @@ export function createLocalFileStorage(root = path.join(process.cwd(), '.data', 
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
         throw error;
+      }
+    },
+    async delete(key) {
+      try {
+        await fs.unlink(resolve(key));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       }
     },
   };

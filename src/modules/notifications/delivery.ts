@@ -79,6 +79,8 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     minutes: params.minutes ?? 0,
     hasHours: params.hours === undefined ? 'no' : 'yes',
     hours: params.hours ?? 0,
+    days: params.days ?? 0,
+    track: params.track ?? 'other',
   });
   const url = `${appUrl()}${pathOf(row.target)}`;
   const type = row.type as NotificationType;

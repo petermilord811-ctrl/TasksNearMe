@@ -9,6 +9,7 @@ import { useBookingStatus } from '@/ui/components/status/use-status';
 import { AdminCaseRows } from './admin-case-rows';
 import { AdminStrikeReversal } from './admin-strike-controls';
 import { AdminRewardList } from './admin-reward-list';
+import { AdminVerificationSection } from './admin-verification-section';
 import { AdminUserControls, type AdminUserPreviewState } from './admin-user-controls';
 import { AdminHelperBadge, AdminUserRoles } from './admin-user-summary';
 
@@ -70,6 +71,7 @@ export function AdminUserContent({ data, handlers, now, ...previewState }: Admin
       <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={data.suspension.at} title={formatRelative(data.suspension.at, now)}>{t('suspension.at', { date: formatDateTime(data.suspension.at) })}</time></p>
     </section>}
     <AdminUserControls key={user.id} data={data} handlers={handlers} {...previewState} />
+    <AdminVerificationSection userId={user.id} verification={data.verification} handlers={handlers} now={now} />
     <section aria-label={t('bookings')} className="space-y-3">
       <h2 className="font-heading text-xl font-semibold">{t('bookings')}</h2>
       {data.bookings.length === 0 ? <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">{t('noBookings')}</p> : <>

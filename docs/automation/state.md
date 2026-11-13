@@ -30,6 +30,8 @@
 
 - **Address search with Mapbox** (owner request): with `MAPBOX_TOKEN` in `.env`, posting suggests real Austin addresses (known address points only) and confirms the chosen one again on "Post" (`src/integrations/geocoding/mapbox.ts`); coordinates are never stored (Mapbox's terms). Tests use the sample addresses (`tnm_geo_stand_in`). No UPS/USPS check: their terms allow it only for their own shipments.
 
+- **Verification, start to finish** (owner request, completion plan Part 1): onboarding is now profile (with the helper agreement) → services → area → **phone** → ID (Texas biometric notice first; 3 tries a day, 5 in all; name check; under-18 closes onboarding) → **home address with a proof of address** (reviewed by staff; the document is private, opened with a logged reason through a 5-minute link, and deleted 30 days after the decision) → payouts → background check (disclosure first; 7-day invitations; staff adjudication with pre-adverse and final adverse action; 12-month renewal with notices). Staff get `/admin/verifications` and a Verification section on the person page; helpers get "Address verified" on their profile and an "Account and verification" notification topic. Timers delete documents, close stale sessions and invitations, ask for ID image redaction and send renewal notices. Migration 0029 (`agreements`, `address_verifications`, new verification columns).
+
 ## Done in iteration 13 (the finish)
 - **`/app/helpers`** (UI-039): browse and search the market's helpers.
 - **After a cancellation (T-10–T-12):** Find a replacement (`tasks.reopened_at`, migration 0023), Contest no-show report, Book again after a helper cancellation; staff reverse strikes on appeal.
@@ -60,7 +62,9 @@
 - The design system (§1–2.3) describes the new brand.
 
 ## Next steps
-The autopilot is finished (`final-report.md`). What's left needs you: real provider accounts (then the adapters in `docs/integration-points.md`), web push (a product choice), legal text, deployment. When Codex is back (2026-11-17), it can take UI polish tickets again.
+Working through `docs/automation/completion-plan.md` (owner request, 2026-11-12): Part 1 is done; next the comfortable find-work list with its map, task alerts, maps on the task pages, staff TOTP, data export and deletion, web push.
+
+Before that: the autopilot finished (`final-report.md`). What's left needs you: real provider accounts (then the adapters in `docs/integration-points.md`), web push (a product choice), legal text, deployment. When Codex is back (2026-11-17), it can take UI polish tickets again.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB plus the landing copy).

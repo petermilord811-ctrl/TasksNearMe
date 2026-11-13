@@ -1,3 +1,4 @@
+import type { AdminVerificationQueue } from './admin-verification';
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
 import type { Cents, ISODateTime, Photo, StaffRole } from './common';
@@ -53,6 +54,8 @@ export interface AdminHomeData {
   queues: QueueSummary[];
   /** Cases waiting on staff that are assigned to the viewer. */
   myOpenCount: number;
+  /** Verification reviews waiting (`routes.admin.verifications`): counts per queue and the oldest wait. */
+  verifications: { counts: Record<AdminVerificationQueue, number>; oldestAt?: ISODateTime };
 }
 
 export interface AdminCaseRow {

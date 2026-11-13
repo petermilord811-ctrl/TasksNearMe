@@ -168,6 +168,21 @@ export const BACKGROUND_CHECK_STATUSES = [
 ] as const;
 export type BackgroundCheckStatus = (typeof BACKGROUND_CHECK_STATUSES)[number];
 
+/**
+ * How staff decided a background check that came back `consider` (blueprint 08 `eligibility_checks`):
+ * `engaged` (approved for in-home work), `pre_adverse` (Checkr sent the pre-adverse notice; the person has
+ * 7 days to dispute through Checkr), `post_adverse` (final: no in-home categories).
+ */
+export const BACKGROUND_ADJUDICATIONS = ['engaged', 'pre_adverse', 'post_adverse'] as const;
+export type BackgroundAdjudication = (typeof BACKGROUND_ADJUDICATIONS)[number];
+
+/**
+ * A helper's home address with a proof-of-address document, reviewed by staff (added 2026-11-12).
+ * `requested`: staff asked for a new proof (an earlier verification no longer counts).
+ */
+export const ADDRESS_VERIFICATION_STATUSES = ['not_started', 'in_review', 'verified', 'rejected', 'requested'] as const;
+export type AddressVerificationStatus = (typeof ADDRESS_VERIFICATION_STATUSES)[number];
+
 export const PAYOUT_ACCOUNT_STATUSES = ['not_started', 'pending', 'requirements_due', 'active', 'restricted'] as const;
 export type PayoutAccountStatus = (typeof PAYOUT_ACCOUNT_STATUSES)[number];
 

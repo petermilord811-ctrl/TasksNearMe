@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { getAdminHome, staffActorOf } from '@/modules/support/staff';
+import { getVerificationCounts } from '@/modules/verification/staff';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
@@ -24,5 +25,6 @@ async function AdminHome() {
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
   const now = await requestNow();
-  return <AdminHomeScreen data={await getAdminHome(db, staff, now)} now={now.toISOString()} />;
+  const [home, verifications] = await Promise.all([getAdminHome(db, staff, now), getVerificationCounts(db, now)]);
+  return <AdminHomeScreen data={{ ...home, verifications }} now={now.toISOString()} />;
 }

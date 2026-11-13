@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { Controller, useFieldArray, useForm, useWatch, type FieldValues, type Path, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
@@ -9,7 +10,7 @@ import {
   createHelperServicesSchema, helperAreaInputSchema, helperProfileInputSchema, helperToolsInputSchema,
   SERVICE_RADIUS_MILES, type ActionHandler, type CategoryView, type HelperAreaInput,
   type HelperOnboardingPageData, type HelperProfileInput, type HelperServicesInput, type HelperToolsInput,
-  type ProfileDraftInput, type ProfileDraftResult, type QueryHandler,
+  type ProfileDraftInput, type ProfileDraftResult, type QueryHandler, routes,
 } from '@/contracts';
 import { formatMoney, formatMoneyInput, parseMoneyInput } from '@/shared/format';
 import { AiDraftButton, AiDraftStatus, type AiDraftOutcome } from '@/ui/components/forms/ai-draft';
@@ -108,10 +109,12 @@ function ProfileDraftPanel({ onDraft, disabled, onDrafted, onUndo }: {
   </div>;
 }
 
-export function HelperProfileForm({ values, languageOptions, onSave, onDraft, submitLabel }: {
+export function HelperProfileForm({ values, languageOptions, onSave, onDraft, submitLabel, agreementNeeded = false }: {
   values: HelperProfileInput; languageOptions: HelperOnboardingPageData['languageOptions']; onSave: ActionHandler<HelperProfileInput>; submitLabel?: string;
   /** "Write it for me", when drafting is on for this person. */
   onDraft?: QueryHandler<ProfileDraftInput, ProfileDraftResult>;
+  /** The helper agreement still needs accepting (onboarding): a required checkbox. */
+  agreementNeeded?: boolean;
 }) {
   const t = useTranslations('helperOnboarding');
   const fields = useTranslations('forms');
@@ -127,7 +130,13 @@ export function HelperProfileForm({ values, languageOptions, onSave, onDraft, su
     form.setValue('headline', next.headline, { shouldDirty: true, shouldValidate: true });
     form.setValue('bio', next.bio, { shouldDirty: true, shouldValidate: true });
   };
-  return <form noValidate onSubmit={form.handleSubmit(async (input) => { await action.run(onSave, input); })} aria-busy={pending} className="space-y-6">
+  return <form noValidate onSubmit={form.handleSubmit(async (input) => {
+    if (agreementNeeded && input.acceptHelperAgreement !== true) {
+      form.setError('acceptHelperAgreement', { type: 'manual', message: 'must_accept' }, { shouldFocus: true });
+      return;
+    }
+    await action.run(onSave, input);
+  })} aria-busy={pending} className="space-y-6">
     <p className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('forms.profile.privacy')}</p>
     {onDraft && <ProfileDraftPanel
       onDraft={onDraft}
@@ -155,6 +164,16 @@ export function HelperProfileForm({ values, languageOptions, onSave, onDraft, su
         </label>)}</div>
         {fieldState.error && <FieldError id={`${id}-languages-error`}>{fields(`fieldErrors.${fieldState.error.message ?? 'invalid'}`)}</FieldError>}
       </fieldset>} />
+      {agreementNeeded && <Controller name="acceptHelperAgreement" control={form.control} render={({ field, fieldState }) => <div className="space-y-2">
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border bg-card p-4 text-sm leading-6">
+          <input type="checkbox" name={field.name} ref={field.ref} checked={field.value === true} onBlur={field.onBlur} onChange={(event) => field.onChange(event.target.checked)} aria-invalid={fieldState.invalid} aria-describedby={fieldState.error ? `${id}-agreement-error` : undefined} className={`${checkboxClass} mt-0.5`} />
+          <span>{t.rich('forms.profile.agreement', {
+            agreement: (chunks) => <Link href={routes.legal('helper-agreement')} target="_blank" className="font-medium text-primary underline underline-offset-4">{chunks}</Link>,
+            guidelines: (chunks) => <Link href={routes.legal('community-guidelines')} target="_blank" className="font-medium text-primary underline underline-offset-4">{chunks}</Link>,
+          })}</span>
+        </label>
+        {fieldState.error && <FieldError id={`${id}-agreement-error`}>{t('forms.profile.agreementRequired')}</FieldError>}
+      </div>} />}
     </fieldset>
     <FormFeedback result={action.result} successMessage={t('forms.saved')} />
     <SaveButton pending={pending} label={submitLabel} />

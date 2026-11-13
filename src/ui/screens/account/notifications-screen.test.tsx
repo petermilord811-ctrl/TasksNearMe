@@ -56,6 +56,10 @@ const copy: Record<NotificationType, RegExp> = {
   task_reopened: /looking for a new helper.*Make an offer/,
   approval_reminder: /Approve .* or report a problem\. It's approved automatically/,
   booking_reminder: /starts (in \d+ hours?|soon)\. Check the details/,
+  verification_passed: /verification step is complete/,
+  verification_action_needed: /verification step needs your attention/,
+  background_check_expiring: /background check has run out/,
+  helper_ready: /you can send offers now/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },

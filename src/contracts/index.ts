@@ -36,6 +36,7 @@ export * from './invites';
 export * from './availability';
 export * from './rebook';
 export * from './admin-people';
+export * from './admin-verification';
 export * from './shell';
 export * from './routes';
 export type { PreviewEntry } from './preview';

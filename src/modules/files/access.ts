@@ -10,6 +10,9 @@ export interface FileAccessViewer {
 }
 
 export function canViewFile(file: { kind: string; ownerUserId: string }, viewer: FileAccessViewer): boolean {
+  // Proof-of-address documents open only through the staff link (a logged reason, 5 minutes), never here,
+  // not even for their owner: a stolen session shouldn't hand over someone's bill.
+  if (file.kind === 'address_proof') return false;
   if (file.kind === 'work_sample') return true;
   if (viewer.isStaff) return true;
   return viewer.userId !== null && viewer.userId === file.ownerUserId;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BadgeCheck, Phone, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, House, Phone, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { VerificationBadges as VerificationBadgeData } from '@/contracts';
 import { formatMonthYear } from '@/shared/format';
@@ -43,6 +43,12 @@ export function VerificationBadges({ badges, compact = false }: VerificationBadg
       Icon: BadgeCheck,
       label: compact ? t('background') : t('backgroundAt', { date: formatMonthYear(badges.backgroundCheckedAt) }),
       meaning: t('backgroundMeaningAt', { date: formatMonthYear(badges.backgroundCheckedAt) }),
+    }] : []),
+    ...(badges.addressVerifiedAt ? [{
+      key: 'address',
+      Icon: House,
+      label: compact ? t('address') : t('addressAt', { date: formatMonthYear(badges.addressVerifiedAt) }),
+      meaning: t('addressMeaningAt', { date: formatMonthYear(badges.addressVerifiedAt) }),
     }] : []),
     ...(badges.phoneVerified ? [{ key: 'phone', Icon: Phone, label: t('phone'), meaning: t('phoneMeaning') }] : []),
   ];

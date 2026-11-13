@@ -201,7 +201,8 @@ export async function caseRowsFor(db: Db, rows: CaseRow[], now: Date): Promise<A
 const ACTIVE_STATUSES = STATUS_FILTERS.active!;
 
 /** `/admin`: the queues and the viewer's open cases. */
-export async function getAdminHome(db: Db, staff: StaffActor, now: Date): Promise<AdminHomeData> {
+/** Without `verifications`: the page adds those (src/modules/verification/staff.ts). */
+export async function getAdminHome(db: Db, staff: StaffActor, now: Date): Promise<Omit<AdminHomeData, 'verifications'>> {
   const open = await db.select().from(supportCases).where(inArray(supportCases.status, ACTIVE_STATUSES));
   const me = (await staffById(db, [staff.id])).get(staff.id);
   return {

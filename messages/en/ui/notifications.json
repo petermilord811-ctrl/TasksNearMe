@@ -44,7 +44,11 @@
     "rebook_declined": "{actorName} declined your proposal for {title}. No booking was made",
     "task_reopened": "The client is looking for a new helper for {title}. Make an offer if you can still help",
     "approval_reminder": "Approve {title} or report a problem. It's approved automatically {hasHours, select, yes {in {hours, plural, one {# hour} other {# hours}}} other {soon}}",
-    "booking_reminder": "{title} starts {hasHours, select, yes {in {hours, plural, one {# hour} other {# hours}}} other {soon}}. Check the details"
+    "booking_reminder": "{title} starts {hasHours, select, yes {in {hours, plural, one {# hour} other {# hours}}} other {soon}}. Check the details",
+    "verification_passed": "{track, select, phone {Your phone number is verified} identity {Your ID is verified} address {Your home address is verified} payout {Your payout account is ready} background {Your background check is complete} other {A verification step is complete}}",
+    "verification_action_needed": "{track, select, identity {Your ID check needs your attention} address {We need another proof of your home address} payout {Your payout setup needs more information} background {Your background check needs your attention} other {A verification step needs your attention}}",
+    "background_check_expiring": "{days, plural, =0 {Your background check has run out. Start a new one to take in-home tasks again} one {Your background check runs out tomorrow. Start the renewal} other {Your background check runs out in # days. Start the renewal}}",
+    "helper_ready": "You're all set: you can send offers now"
   },
   "previews": {
     "group": "Notifications",

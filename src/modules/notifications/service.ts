@@ -26,6 +26,7 @@ import { rebookProposals } from '@/modules/rebook/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { isLockedPreference, preferenceOn } from './delivery-domain';
 import { notificationPreferences, notifications, privacyRequests } from './schema';
+import { verificationNotificationFor } from './verification-plan';
 
 /**
  * Notifications from outbox events (the dispatcher), the notifications page, and the account page
@@ -216,6 +217,10 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
       const recipients = Array.isArray(p.recipientIds) ? (p.recipientIds as string[]) : [];
       if (!caseId) return [];
       return recipients.map((userId) => ({ userId, type: 'case_resolved' as const, target: { kind: 'support_case', caseId } as AttentionTarget, title: text(p.subject) }));
+    }
+    case 'verification.updated': {
+      const planned = verificationNotificationFor(p);
+      return planned ? [planned] : [];
     }
     case 'message.sent': {
       const threadId = text(p.threadId);

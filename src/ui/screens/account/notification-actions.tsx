@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, ArrowLeftRight, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowLeftRight, BadgeCheck, CalendarClock, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
@@ -43,6 +43,10 @@ const icons: Record<NotificationType, LucideIcon> = {
   task_reopened: RotateCcw,
   approval_reminder: Hourglass,
   booking_reminder: AlarmClock,
+  verification_passed: ShieldCheck,
+  verification_action_needed: ShieldAlert,
+  background_check_expiring: CalendarClock,
+  helper_ready: BadgeCheck,
 };
 
 function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
@@ -95,6 +99,8 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
             minutes: notification.params?.minutes ?? 0,
             hasHours: notification.params?.hours === undefined ? 'no' : 'yes',
             hours: notification.params?.hours ?? 0,
+            days: notification.params?.days ?? 0,
+            track: notification.params?.track ?? 'other',
           })}
         </span>
         <time dateTime={notification.createdAt} className="block text-sm leading-5 tabular-nums text-muted-foreground">{t('time', { absolute: formatDateTime(notification.createdAt), relative: formatRelative(notification.createdAt, now) })}</time>

@@ -1,7 +1,6 @@
-import { and, asc, desc, eq, max, notInArray } from 'drizzle-orm';
+import { and, asc, eq, max, notInArray } from 'drizzle-orm';
 import type {
   ActionResult,
-  BackgroundCheckStatus,
   CategorySlug,
   HelperAreaInput,
   HelperOnboardingPageData,
@@ -9,12 +8,8 @@ import type {
   HelperProfileInput,
   HelperServicesInput,
   HelperToolsInput,
-  IdentityFailureReason,
-  IdentityStatus,
   LanguageCode,
   OnboardingStep,
-  PayoutAccountStatus,
-  VerificationSummary,
   WorkSampleUploadResult,
 } from '@/contracts';
 import {
@@ -26,6 +21,7 @@ import {
   SERVICE_RADIUS_MILES,
 } from '@/contracts';
 import type { FileStorage } from '@/integrations/storage';
+import { recordAgreement, type RequestOrigin } from '@/modules/accounts/agreements';
 import { users } from '@/modules/accounts/schema';
 import { avatarPhoto, MAX_PHOTO_BYTES } from '@/modules/files/photos';
 import { storePhoto } from '@/modules/files/uploads';
@@ -38,126 +34,45 @@ import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/pro
 import { FIRST_PAYOUT_DAYS, WELCOME_PROGRAM } from '@/modules/rewards/programs';
 import { files } from '@/modules/tasks/schema';
 import { fieldError, validationFailed } from '@/platform/actions/results';
-import { auditLog } from '@/platform/audit/schema';
+import { fieldCipherFromEnv, type FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { computeOnboarding, type OnboardingFacts } from './progress';
-import { backgroundChecks, identityVerifications, payoutAccounts } from './schema';
+import { computeOnboarding } from './progress';
+import { loadOnboardingState, syncHelperProfile, verificationSummary, type OnboardingState } from './state';
 
-/** Helper onboarding and verification (docs/blueprint/06 §1). Functions take the database so tests can use their own. */
+/**
+ * Helper onboarding and verification (docs/blueprint/06 §1): saving the profile steps, work samples, and
+ * the page data. The tracks themselves are in `state.ts` (where each stands), `tracks.ts` (ID, payouts,
+ * background checks), `address.ts` (the home address and its proof) and `staff.ts` (reviews). Functions
+ * take the database so tests can use their own.
+ */
+
+export { createDevVerificationProviders, type VerificationProviders } from './providers';
+export { loadOnboardingState, syncHelperProfile } from './state';
+export {
+  recordBackgroundResult,
+  recordIdentityResult,
+  recordPayoutStatus,
+  startBackgroundCheck,
+  startIdentity,
+  startPayout,
+  type BackgroundResult,
+  type IdentityResult,
+} from './tracks';
 
 const KM_PER_MILE = 1.609344;
-const BACKGROUND_VALID_DAYS = 365;
 const MAX_WORK_SAMPLES = 12;
 const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
 
-export interface VerificationProviders {
-  /** Starts a hosted flow and returns its URL (a dev stand-in in development). */
-  identity: { start(userId: string): Promise<{ sessionId: string; url: string }> };
-  payout: { start(userId: string): Promise<{ accountId: string; url: string }> };
-  background: { start(userId: string): Promise<{ ref: string; url: string }> };
+/** The app's cipher, when the key is set (the person's own address label needs it). */
+function optionalCipher(): FieldCipher | null {
+  try {
+    return fieldCipherFromEnv();
+  } catch {
+    return null;
+  }
 }
 
-/** Development stand-ins: pages under /dev/providers simulate the provider and its webhook. */
-export function createDevVerificationProviders(): VerificationProviders {
-  return {
-    identity: {
-      async start() {
-        const sessionId = newId('vs_dev');
-        return { sessionId, url: `/dev/providers/identity?session=${sessionId}` };
-      },
-    },
-    payout: {
-      async start(userId) {
-        const accountId = `acct_dev_${userId.slice(4)}`;
-        return { accountId, url: '/dev/providers/payout' };
-      },
-    },
-    background: {
-      async start() {
-        const ref = newId('chk_dev');
-        return { ref, url: `/dev/providers/background?check=${ref}` };
-      },
-    },
-  };
-}
-
-// ---- Facts and the cached profile state ---------------------------------------------------------
-
-async function latestIdentity(db: Db, userId: string) {
-  const [row] = await db
-    .select()
-    .from(identityVerifications)
-    .where(eq(identityVerifications.userId, userId))
-    .orderBy(desc(identityVerifications.createdAt))
-    .limit(1);
-  return row ?? null;
-}
-
-async function latestBackground(db: Db, userId: string) {
-  const [row] = await db
-    .select()
-    .from(backgroundChecks)
-    .where(eq(backgroundChecks.userId, userId))
-    .orderBy(desc(backgroundChecks.createdAt))
-    .limit(1);
-  return row ?? null;
-}
-
-export async function loadOnboardingState(db: Db, userId: string, now: Date) {
-  const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
-  const serviceRows = await db
-    .select({ service: helperServices, category: categories })
-    .from(helperServices)
-    .innerJoin(categories, eq(categories.id, helperServices.categoryId))
-    .where(and(eq(helperServices.userId, userId), eq(helperServices.status, 'active')))
-    .orderBy(asc(categories.sortOrder));
-  const [identity, payout, background] = await Promise.all([
-    latestIdentity(db, userId),
-    db.select().from(payoutAccounts).where(eq(payoutAccounts.userId, userId)).limit(1),
-    latestBackground(db, userId),
-  ]);
-  const backgroundStatus: BackgroundCheckStatus = !background
-    ? 'not_started'
-    : background.status === 'clear' && background.expiresAt && background.expiresAt <= now
-      ? 'expired'
-      : (background.status as BackgroundCheckStatus);
-
-  const facts: OnboardingFacts = {
-    profileComplete: Boolean(profile && profile.headline.trim() && profile.bio.trim() && profile.languages.length > 0),
-    services: serviceRows.map(({ category }) => ({
-      categorySlug: category.slug as CategorySlug,
-      requiresBackgroundCheck: category.requiresBackgroundCheck,
-    })),
-    areaSet: Boolean(profile?.areaId),
-    identity: (identity?.status as IdentityStatus | undefined) ?? 'not_started',
-    payout: (payout[0]?.status as PayoutAccountStatus | undefined) ?? 'not_started',
-    background: backgroundStatus,
-  };
-  return { profile: profile ?? null, serviceRows, identity, payout: payout[0] ?? null, background, facts };
-}
-
-/**
- * Recomputes what the profile shows from the three tracks: status (draft until bookable; paused
- * and suspended stay as they are) and the badge dates.
- */
-export async function syncHelperProfile(db: Db, userId: string, now: Date): Promise<void> {
-  const state = await loadOnboardingState(db, userId, now);
-  if (!state.profile) return;
-  const { progress } = computeOnboarding(state.facts);
-  const keep = state.profile.status === 'paused' || state.profile.status === 'suspended';
-  await db
-    .update(helperProfiles)
-    .set({
-      status: keep ? state.profile.status : progress.bookable ? 'active' : 'draft',
-      idVerifiedAt: state.identity?.status === 'verified' && state.identity.verifiedAt ? state.identity.verifiedAt.toISOString() : null,
-      backgroundCheckedAt:
-        state.facts.background === 'clear' && state.background?.completedAt ? state.background.completedAt.toISOString() : null,
-      payoutsReadyAt: state.payout?.status === 'active' && state.payout.activatedAt ? state.payout.activatedAt.toISOString() : null,
-      updatedAt: now.toISOString(),
-    })
-    .where(eq(helperProfiles.userId, userId));
-}
 
 // ---- Saving the profile ---------------------------------------------------------------------------
 
@@ -175,10 +90,24 @@ async function uniqueHandle(db: Db, firstName: string, lastName: string): Promis
   return `${base}-${Date.now().toString(36)}`;
 }
 
-export async function saveHelperProfile(db: Db, userId: string, input: HelperProfileInput, now: Date): Promise<ActionResult> {
+/**
+ * Saves the profile basics. From onboarding (`requireAgreement`), the helper agreement must be accepted
+ * once per version: with the save, or before.
+ */
+export async function saveHelperProfile(
+  db: Db,
+  userId: string,
+  input: HelperProfileInput,
+  now: Date,
+  options: { requireAgreement?: boolean; origin?: RequestOrigin } = {},
+): Promise<ActionResult> {
   const parsed = helperProfileInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
-  const { headline, bio, languages } = parsed.data;
+  const { headline, bio, languages, acceptHelperAgreement } = parsed.data;
+  if (acceptHelperAgreement === true) await recordAgreement(db, userId, 'helper_agreement', options.origin ?? {}, now);
+  else if (options.requireAgreement && !(await loadOnboardingState(db, userId, now)).facts.agreementAccepted) {
+    return fieldError('acceptHelperAgreement', 'must_accept');
+  }
   const [existing] = await db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
   if (existing) {
     await db.update(helperProfiles).set({ headline, bio, languages, updatedAt: now.toISOString() }).where(eq(helperProfiles.userId, userId));
@@ -283,101 +212,6 @@ export async function setHelperPaused(db: Db, userId: string, paused: boolean, n
   return { ok: true, code: 'updated' };
 }
 
-// ---- Provider flows -------------------------------------------------------------------------------
-
-export async function startIdentity(db: Db, providers: VerificationProviders, userId: string, now: Date): Promise<ActionResult> {
-  const state = await loadOnboardingState(db, userId, now);
-  if (!computeOnboarding(state.facts).progress.steps.some((s) => s.step === 'identity' && s.state !== 'locked')) {
-    return { ok: false, code: 'not_allowed' };
-  }
-  if (state.facts.identity === 'verified') return { ok: false, code: 'not_allowed' };
-  const { sessionId, url } = await providers.identity.start(userId);
-  await db.insert(identityVerifications).values({
-    id: newId('idv'),
-    userId,
-    provider: 'dev',
-    providerSessionId: sessionId,
-    status: 'processing',
-    createdAt: now,
-    updatedAt: now,
-  });
-  return { ok: true, code: 'updated', redirectTo: url };
-}
-
-export async function startPayout(db: Db, providers: VerificationProviders, userId: string, now: Date): Promise<ActionResult> {
-  const state = await loadOnboardingState(db, userId, now);
-  if (state.facts.identity !== 'verified') return { ok: false, code: 'not_allowed' };
-  const { accountId, url } = await providers.payout.start(userId);
-  if (!state.payout) {
-    await db.insert(payoutAccounts).values({ userId, provider: 'dev', providerAccountId: accountId, status: 'pending', createdAt: now, updatedAt: now });
-  }
-  return { ok: true, code: 'updated', redirectTo: url };
-}
-
-export async function startBackgroundCheck(db: Db, providers: VerificationProviders, userId: string, now: Date): Promise<ActionResult> {
-  const state = await loadOnboardingState(db, userId, now);
-  const { backgroundRequired } = computeOnboarding(state.facts);
-  if (state.facts.payout !== 'active' || !backgroundRequired) return { ok: false, code: 'not_allowed' };
-  if (['invited', 'pending', 'clear', 'consider'].includes(state.facts.background)) return { ok: false, code: 'not_allowed' };
-  const { ref, url } = await providers.background.start(userId);
-  await db.insert(backgroundChecks).values({ id: newId('bgc'), userId, provider: 'dev', providerRef: ref, status: 'invited', createdAt: now, updatedAt: now });
-  return { ok: true, code: 'updated', redirectTo: url };
-}
-
-/** Provider results (webhooks; the dev stand-in pages call these). */
-export async function recordIdentityResult(
-  db: Db,
-  sessionId: string,
-  result: { status: 'verified' } | { status: 'requires_input'; reason: IdentityFailureReason } | { status: 'processing' },
-  now: Date,
-): Promise<string | null> {
-  const [row] = await db.select().from(identityVerifications).where(eq(identityVerifications.providerSessionId, sessionId)).limit(1);
-  if (!row) return null;
-  await db
-    .update(identityVerifications)
-    .set({
-      status: result.status,
-      failureReason: result.status === 'requires_input' ? result.reason : null,
-      isAdult: result.status === 'verified' ? true : result.status === 'requires_input' && result.reason === 'under_18' ? false : null,
-      verifiedAt: result.status === 'verified' ? now : null,
-      updatedAt: now,
-    })
-    .where(eq(identityVerifications.id, row.id));
-  await db.insert(auditLog).values({ id: newId('aud'), actorRole: 'system', action: `identity.${result.status}`, targetType: 'user', targetId: row.userId });
-  await syncHelperProfile(db, row.userId, now);
-  return row.userId;
-}
-
-export async function recordPayoutStatus(db: Db, userId: string, status: PayoutAccountStatus, now: Date): Promise<void> {
-  await db
-    .update(payoutAccounts)
-    .set({ status, activatedAt: status === 'active' ? now : null, updatedAt: now })
-    .where(eq(payoutAccounts.userId, userId));
-  await syncHelperProfile(db, userId, now);
-}
-
-export async function recordBackgroundResult(
-  db: Db,
-  ref: string,
-  status: Extract<BackgroundCheckStatus, 'pending' | 'clear' | 'consider'>,
-  now: Date,
-): Promise<string | null> {
-  const [row] = await db.select().from(backgroundChecks).where(eq(backgroundChecks.providerRef, ref)).limit(1);
-  if (!row) return null;
-  await db
-    .update(backgroundChecks)
-    .set({
-      status,
-      completedAt: status === 'clear' || status === 'consider' ? now : null,
-      expiresAt: status === 'clear' ? new Date(now.getTime() + BACKGROUND_VALID_DAYS * 86_400_000) : null,
-      updatedAt: now,
-    })
-    .where(eq(backgroundChecks.id, row.id));
-  await db.insert(auditLog).values({ id: newId('aud'), actorRole: 'system', action: `background.${status}`, targetType: 'user', targetId: row.userId });
-  await syncHelperProfile(db, row.userId, now);
-  return row.userId;
-}
-
 // ---- Work samples ---------------------------------------------------------------------------------
 
 async function workSampleViews(db: Db, userId: string) {
@@ -468,24 +302,6 @@ export function nearestRadius(km: number): (typeof SERVICE_RADIUS_MILES)[number]
   return SERVICE_RADIUS_MILES.reduce((best, option) => (Math.abs(option - miles) < Math.abs(best - miles) ? option : best));
 }
 
-function summary(state: Awaited<ReturnType<typeof loadOnboardingState>>, backgroundRequired: boolean): VerificationSummary {
-  return {
-    identity: {
-      status: state.facts.identity,
-      ...(state.identity?.verifiedAt ? { verifiedAt: state.identity.verifiedAt.toISOString() } : {}),
-      ...(state.identity?.status === 'requires_input' && state.identity.failureReason
-        ? { failureReason: state.identity.failureReason as IdentityFailureReason }
-        : {}),
-    },
-    payout: { status: state.facts.payout },
-    background: {
-      status: backgroundRequired ? state.facts.background : 'not_required',
-      ...(state.facts.background === 'clear' && state.background?.completedAt ? { checkedAt: state.background.completedAt.toISOString() } : {}),
-      requiredFor: state.facts.services.filter((s) => s.requiresBackgroundCheck).map((s) => s.categorySlug),
-    },
-  };
-}
-
 async function sharedPageData(db: Db, userId: string) {
   const marketId = await marketIdOf(db, userId);
   if (!marketId) return null;
@@ -503,7 +319,7 @@ async function sharedPageData(db: Db, userId: string) {
   };
 }
 
-function formValues(state: Awaited<ReturnType<typeof loadOnboardingState>>) {
+function formValues(state: OnboardingState) {
   const profile = state.profile;
   return {
     profile: {
@@ -543,7 +359,8 @@ export async function getOnboardingPageData(db: Db, userId: string, step: Onboar
     areas: shared.areas,
     languageOptions: shared.languageOptions,
     values: formValues(state),
-    verification: summary(state, result.backgroundRequired),
+    verification: verificationSummary(state, result.backgroundRequired, optionalCipher()),
+    agreementNeeded: !state.facts.agreementAccepted,
     firstPayoutDays: FIRST_PAYOUT_DAYS,
     aiDraftingEnabled: aiWritingSetUp() && flags.ai_drafting === true,
     ...(welcomeOpen
@@ -586,9 +403,10 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
     badges: {
       ...(state.profile.idVerifiedAt ? { idVerifiedAt: new Date(state.profile.idVerifiedAt).toISOString() } : {}),
       ...(state.profile.backgroundCheckedAt ? { backgroundCheckedAt: new Date(state.profile.backgroundCheckedAt).toISOString() } : {}),
-      phoneVerified: true,
+      ...(state.profile.addressVerifiedAt ? { addressVerifiedAt: new Date(state.profile.addressVerifiedAt).toISOString() } : {}),
+      phoneVerified: state.facts.phoneVerified,
     },
-    verification: summary(state, result.backgroundRequired),
+    verification: verificationSummary(state, result.backgroundRequired, optionalCipher()),
     paused: state.profile.status === 'paused',
     aiDraftingEnabled: await aiDraftingEnabledFor(db, userId),
   };

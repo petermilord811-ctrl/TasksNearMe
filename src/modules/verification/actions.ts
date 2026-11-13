@@ -2,21 +2,31 @@
 
 import { eq } from 'drizzle-orm';
 import { refresh, updateTag } from 'next/cache';
+import { cookies, headers } from 'next/headers';
 import type {
   ActionResult,
+  AddressProofResult,
+  AddressSuggestion,
   CategorySlug,
   HelperAreaInput,
   HelperProfileInput,
   HelperServicesInput,
   HelperToolsInput,
+  OneTimeCodeInput,
   OnboardingStep,
+  PhoneInput,
   WorkSampleUploadResult,
 } from '@/contracts';
 import { ONBOARDING_STEPS, routes } from '@/contracts';
+import { GEO_STAND_IN_COOKIE, wantsGeoStandIn } from '@/integrations/geocoding';
+import { originFromHeaders } from '@/modules/accounts/agreements';
+import { confirmPhoneChangeAction, startPhoneChangeAction } from '@/modules/accounts/account-actions';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { fileStorage } from '@/modules/tasks/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
+import { consumeRateLimit } from '@/platform/rate-limit';
+import { searchHomeAddresses, submitAddressProof } from './address';
 import { computeOnboarding } from './progress';
 import {
   addWorkSample,
@@ -31,9 +41,10 @@ import {
   startBackgroundCheck,
   startIdentity,
   startPayout,
+  syncHelperProfile,
   updateWorkSample,
 } from './service';
-import { verificationProviders } from './server';
+import { homeGeocoder, sampleHomeGeocoder, verificationCipher, verificationProviders } from './server';
 import { requestNow } from '@/platform/clock';
 
 /** Server Actions for helper onboarding and the profile editor (src/contracts/onboarding.ts). */
@@ -50,12 +61,15 @@ async function refreshHelperPages(userId: string) {
   if (profile) updateTag(`helper:${profile.handle}`);
 }
 
-/** After a saved step: the next step in order, or the first step still to do when that one is locked. */
+/**
+ * After a saved step: the next step in order that still needs something (a phone verified at sign-up is
+ * skipped over), or the first step still to do when that one is locked. `done` once nothing is left.
+ */
 async function nextStepAfter(userId: string, saved: OnboardingStep): Promise<string> {
   const { progress, firstIncomplete } = computeOnboarding((await loadOnboardingState(db, userId, await requestNow())).facts);
   const following = ONBOARDING_STEPS.slice(ONBOARDING_STEPS.indexOf(saved) + 1).find((step) => {
     const state = progress.steps.find((s) => s.step === step)?.state;
-    return state !== 'skipped';
+    return state !== 'skipped' && (state !== 'done' || step === 'done');
   });
   const followingState = progress.steps.find((s) => s.step === following)?.state;
   return routes.app.helperOnboarding(following && followingState !== 'locked' ? following : firstIncomplete);
@@ -74,7 +88,8 @@ async function saved(userId: string, result: ActionResult, step?: OnboardingStep
 export async function onboardingSaveProfile(input: HelperProfileInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  return saved(userId, await saveHelperProfile(db, userId, input, await requestNow()), 'profile');
+  const origin = originFromHeaders(await headers());
+  return saved(userId, await saveHelperProfile(db, userId, input, await requestNow(), { requireAgreement: true, origin }), 'profile');
 }
 
 export async function onboardingSaveServices(input: HelperServicesInput): Promise<ActionResult> {
@@ -89,10 +104,55 @@ export async function onboardingSaveArea(input: HelperAreaInput): Promise<Action
   return saved(userId, await saveHelperArea(db, userId, input, await requestNow()), 'area');
 }
 
-export async function onboardingStartIdentity(): Promise<ActionResult> {
+/** The phone step: a code by text, as on the account page. */
+export async function onboardingStartPhone(input: PhoneInput): Promise<ActionResult> {
+  return startPhoneChangeAction(input);
+}
+
+/** Verifies the number, then goes on to the next step. */
+export async function onboardingConfirmPhone(input: OneTimeCodeInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  const result = await confirmPhoneChangeAction(input);
+  if (!result.ok) return result;
+  await syncHelperProfile(db, userId, await requestNow());
+  return { ...result, redirectTo: await nextStepAfter(userId, 'phone') };
+}
+
+export async function onboardingStartIdentity(input: { consent?: boolean } = {}): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId || !verificationProviders) return { ok: false, code: 'not_allowed' };
-  return startIdentity(db, verificationProviders, userId, await requestNow());
+  const origin = originFromHeaders(await headers());
+  return startIdentity(db, verificationProviders, userId, await requestNow(), { consent: input?.consent === true, origin });
+}
+
+/** Tests ask for the sample addresses, so they never reach Mapbox where a token is set. */
+async function geocoderForRequest() {
+  const standIn = wantsGeoStandIn((await cookies()).get(GEO_STAND_IN_COOKIE)?.value);
+  return standIn && sampleHomeGeocoder ? sampleHomeGeocoder : homeGeocoder;
+}
+
+const ADDRESS_SEARCH_RULE = { limit: 120, windowSeconds: 10 * 60 };
+
+/** Home address suggestions for the address step. */
+export async function onboardingSearchHomeAddresses(input: { query: string }): Promise<AddressSuggestion[]> {
+  const userId = await signedInUserId();
+  if (!userId) return [];
+  const query = String(input?.query ?? '').slice(0, 120);
+  if (query.trim().length < 3) return [];
+  const limited = await consumeRateLimit(db, `address-search:user:${userId}`, ADDRESS_SEARCH_RULE);
+  if (!limited.ok) throw new Error('Too many address searches; try again in a few minutes.');
+  return searchHomeAddresses({ db, geocoder: await geocoderForRequest() }, userId, query);
+}
+
+/** The home address with its proof of address (FormData). */
+export async function onboardingSubmitAddressProof(form: FormData): Promise<AddressProofResult> {
+  const userId = await signedInUserId();
+  if (!userId || !(form instanceof FormData)) return { ok: false, code: 'not_allowed' };
+  const result = await submitAddressProof({ db, storage: fileStorage, geocoder: await geocoderForRequest(), cipher: verificationCipher }, userId, form, await requestNow());
+  if (!result.ok) return result;
+  await refreshHelperPages(userId);
+  return { ...result, redirectTo: await nextStepAfter(userId, 'address') };
 }
 
 export async function onboardingStartPayout(): Promise<ActionResult> {
@@ -101,10 +161,11 @@ export async function onboardingStartPayout(): Promise<ActionResult> {
   return startPayout(db, verificationProviders, userId, await requestNow());
 }
 
-export async function onboardingStartBackgroundCheck(): Promise<ActionResult> {
+export async function onboardingStartBackgroundCheck(input: { acknowledged?: boolean } = {}): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId || !verificationProviders) return { ok: false, code: 'not_allowed' };
-  return startBackgroundCheck(db, verificationProviders, userId, await requestNow());
+  const origin = originFromHeaders(await headers());
+  return startBackgroundCheck(db, verificationProviders, userId, await requestNow(), { acknowledged: input?.acknowledged === true, origin });
 }
 
 /** Provider statuses arrive by webhook; this just re-renders with the latest. */

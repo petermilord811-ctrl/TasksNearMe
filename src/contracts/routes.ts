@@ -3,6 +3,7 @@ import type { AdminAuditFilters, AdminBookingFilter } from './admin-ops';
 import type { AdminMoneyTab } from './admin-money';
 import type { HelperBrowseQuery } from './helpers-browse';
 import type { AdminRewardFilter } from './admin-people';
+import type { AdminVerificationQueue } from './admin-verification';
 import type { CategorySlug } from './common';
 import type { FindWorkQuery } from './helper-work';
 import type { ExactAddress } from './location';
@@ -24,7 +25,12 @@ export const LEGAL_DOCS = [
 ] as const;
 export type LegalDoc = (typeof LEGAL_DOCS)[number];
 
-export const ONBOARDING_STEPS = ['profile', 'services', 'area', 'identity', 'payout', 'background', 'done'] as const;
+/**
+ * Helper onboarding, in order (blueprint 06 §1, extended 2026-11-12): the profile basics, then a verified
+ * phone, the ID check, the home address with a proof-of-address document, payouts, and a background check
+ * for in-home categories.
+ */
+export const ONBOARDING_STEPS = ['profile', 'services', 'area', 'phone', 'identity', 'address', 'payout', 'background', 'done'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
 const DEFAULT_MARKET = 'austin';
@@ -156,6 +162,8 @@ export const routes = {
     audit: (filters: AdminAuditFilters & { before?: string } = {}) =>
       withQuery('/admin/audit', { actor: filters.actor, action: filters.action, targetType: filters.targetType, targetId: filters.targetId, from: filters.from, to: filters.to, before: filters.before }),
     staff: () => '/admin/staff',
+    /** Verification reviews: address proofs, ID name checks and attempts, background checks to adjudicate. */
+    verifications: (queue?: AdminVerificationQueue) => withQuery('/admin/verifications', { queue }),
   },
 
   external: {

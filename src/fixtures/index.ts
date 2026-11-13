@@ -36,4 +36,5 @@ export * from './invites';
 export * from './availability';
 export * from './rebook';
 export * from './admin-people';
+export * from './admin-verification';
 export * from './report';

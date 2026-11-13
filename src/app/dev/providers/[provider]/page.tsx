@@ -15,9 +15,11 @@ const PROVIDERS = {
     action: devIdentityOutcome,
     outcomes: [
       ['verified', 'Pass: verified'],
+      ['verified_name_differs', 'Pass, but the ID shows a different name (staff name check)'],
       ['document_unreadable', 'Fail: document unreadable'],
       ['selfie_mismatch', 'Fail: selfie mismatch'],
       ['under_18', 'Fail: under 18'],
+      ['canceled', 'Canceled (closed the window)'],
       ['processing', 'Leave processing'],
     ],
   },
@@ -38,6 +40,8 @@ const PROVIDERS = {
     outcomes: [
       ['clear', 'Result: clear'],
       ['consider', 'Result: consider (review)'],
+      ['suspended', 'Suspended (Checkr needs more information)'],
+      ['canceled', 'Canceled'],
       ['pending', 'Still pending'],
     ],
   },

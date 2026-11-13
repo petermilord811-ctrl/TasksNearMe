@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { RewardActionId } from './action-ids';
 import type { ActionHandler, FieldErrorCode } from './actions';
 import type { AdminCaseRow } from './admin';
+import type { AdminPersonVerification, AdminVerificationHandlers } from './admin-verification';
 import type { NotificationChannel, NotificationType } from './account';
 import type { Cents, ISODateTime, StaffRole } from './common';
 import type { PersonSummary } from './people';
@@ -124,6 +125,8 @@ export interface AdminUserPageData {
   /** The latest suspension, while it lasts. */
   suspension?: { reason: string; at: ISODateTime; byDisplayName: string };
   actions: AdminUserActionId[];
+  /** Phone, helper agreement, ID, home address, payouts and background check: statuses only. */
+  verification: AdminPersonVerification;
 }
 
 export const helperSuspensionInputSchema = z.object({
@@ -143,7 +146,7 @@ export type StrikeReversalInput = z.input<typeof strikeReversalInputSchema>;
  * `onSuspension`: suspends a helper (their active offers are withdrawn and they leave search) or reinstates
  * them. ok `updated`. Errors: `validation_failed`, `not_allowed` (trust and safety, leads and admins only), `unknown`.
  */
-export interface AdminUserHandlers {
+export interface AdminUserHandlers extends AdminVerificationHandlers {
   onSuspension: ActionHandler<HelperSuspensionInput>;
   /** ok `updated` (refresh). Errors: `validation_failed`, `not_allowed` (your role, or already reversed). */
   onReverseStrike: ActionHandler<StrikeReversalInput>;
