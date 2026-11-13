@@ -162,6 +162,8 @@ describe('address search', () => {
       line1: '1234 Example Lane',
       line2: 'Austin, TX 78723',
       areaName: 'Mueller',
+      // The neighborhood's own center (public), for the preview map; never the address's point.
+      areaPoint: { lat: 30.2993, lng: -97.7036 },
       inServiceArea: true,
     });
     expect(await posting.searchAddresses('usr_maya', '44 sample way')).toEqual([

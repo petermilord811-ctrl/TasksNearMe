@@ -14,8 +14,8 @@ vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 const now = '2026-11-17T15:00:00.000Z';
-function renderWork(data: FindWorkPageData = findWorkPageData, handlers: FindWorkHandlers | undefined = fakeFindWorkHandlers) {
-  return render(<NextIntlClientProvider locale="en" messages={{ ...messages, findWork }}><FindWorkScreen data={data} now={now} handlers={handlers} liveMap={false} /></NextIntlClientProvider>);
+function renderWork(data: FindWorkPageData = findWorkPageData, handlers: FindWorkHandlers | null = fakeFindWorkHandlers) {
+  return render(<NextIntlClientProvider locale="en" messages={{ ...messages, findWork }}><FindWorkScreen data={data} now={now} handlers={handlers ?? undefined} liveMap={false} /></NextIntlClientProvider>);
 }
 const list = () => screen.getByRole('region', { name: findWork.resultsLabel });
 
@@ -142,8 +142,9 @@ describe('FindWorkScreen', () => {
   });
 
   it('shows no save or hide buttons without handlers', () => {
-    renderWork(findWorkPageData, undefined);
+    renderWork(findWorkPageData, null);
     expect(screen.queryByRole('button', { name: /for later/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Not interested/ })).toBeNull();
   });
 
   it('keeps marketplace copy within the approved vocabulary', () => {

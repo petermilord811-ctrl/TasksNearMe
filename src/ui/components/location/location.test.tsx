@@ -71,4 +71,10 @@ describe('ExactAddressPanel', () => {
     expect(screen.getByText('Copy the address to open it in your map app.')).toBeVisible();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
+
+  it('offers directions in the map apps the app supplies', () => {
+    renderLocation(<ExactAddressPanel address={deskExactAddress} mapsHref="https://maps.example/search" directions={{ google: 'https://maps.example/google', apple: 'https://maps.example/apple' }} />);
+    expect(screen.getByRole('link', { name: /Directions in Google Maps/ })).toHaveAttribute('href', 'https://maps.example/google');
+    expect(screen.getByRole('link', { name: /Directions in Apple Maps/ })).toHaveAttribute('href', 'https://maps.example/apple');
+  });
 });

@@ -168,7 +168,11 @@ export function BookingHubContent({ data, handlers, sheets, now, initialResult, 
         </p>}
       </div>
       {data.addressVisibility === 'visible' && data.exactAddress && <>
-        <ExactAddressPanel address={data.exactAddress} mapsHref={routes.external.googleMapsSearch(data.exactAddress)} />
+        <ExactAddressPanel
+          address={data.exactAddress}
+          mapsHref={routes.external.googleMapsSearch(data.exactAddress)}
+          {...(data.viewerRole === 'helper' ? { directions: { google: routes.external.googleMapsDirections(data.exactAddress), apple: routes.external.appleMapsDirections(data.exactAddress) } } : {})}
+        />
         {data.viewerRole === 'helper' && data.deadlines.addressHiddenAt && <p className="text-sm text-muted-foreground">
           <time dateTime={data.deadlines.addressHiddenAt}>{t('address.visible', { date: formatDateTime(data.deadlines.addressHiddenAt) })}</time>
         </p>}

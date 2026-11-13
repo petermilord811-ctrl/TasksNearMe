@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from 'react';
 import { Check, Copy, ExternalLink, LoaderCircle, Lock, Navigation } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type ExactAddress, type ISODateTime } from '@/contracts';
+import type { ExactAddress, ISODateTime } from '@/contracts';
 import { formatDateTime } from '@/shared/format';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
@@ -13,11 +13,13 @@ export interface ExactAddressPanelProps {
   visibleUntil?: ISODateTime;
   /** Supply a URL built by the routes contract once its external Maps builder is available. */
   mapsHref?: string;
+  /** Directions in the helper's own maps app (`routes.external.googleMapsDirections` / `appleMapsDirections`). */
+  directions?: { google: string; apple: string };
   className?: string;
 }
 
 /** The sole renderer of ExactAddress. Access decisions belong to the app, before these props arrive. */
-export function ExactAddressPanel({ address, visibleUntil, mapsHref, className }: ExactAddressPanelProps) {
+export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions, className }: ExactAddressPanelProps) {
   const t = useTranslations('location');
   const titleId = useId();
   const mapsHintId = useId();
@@ -83,9 +85,9 @@ export function ExactAddressPanel({ address, visibleUntil, mapsHref, className }
             </Button>
           )}
         </div>
-        {/* Directions in the helper's own maps app, from the address text (nothing is stored or geocoded here). */}
-        <div className="flex flex-wrap gap-2">
-          {([['google', routes.external.googleMapsDirections(address)], ['apple', routes.external.appleMapsDirections(address)]] as const).map(([app, href]) => (
+        {/* Directions in the helper's own maps app, when the app supplies them (nothing is stored or geocoded). */}
+        {directions && <div className="flex flex-wrap gap-2">
+          {([['google', directions.google], ['apple', directions.apple]] as const).map(([app, href]) => (
             <Button key={app} asChild variant="outline" className="min-h-11">
               <a href={href} target="_blank" rel="noopener noreferrer">
                 <Navigation aria-hidden="true" className="size-4" />
@@ -94,7 +96,7 @@ export function ExactAddressPanel({ address, visibleUntil, mapsHref, className }
               </a>
             </Button>
           ))}
-        </div>
+        </div>}
         {!mapsHref && <p id={mapsHintId} className="text-sm text-muted-foreground">{t('mapsUnavailable')}</p>}
         <p role="status" aria-live="polite" aria-atomic="true" className={cn('text-sm', copyState === 'error' ? 'text-destructive' : 'text-muted-foreground')}>
           {copyState === 'success' ? t('copySuccess') : copyState === 'error' ? t('copyError') : null}
