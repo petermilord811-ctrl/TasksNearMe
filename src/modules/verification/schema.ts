@@ -23,11 +23,22 @@ export const identityVerifications = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    provider: text('provider').notNull(), // dev | stripe_identity
-    /** Null on a request row. */
+    provider: text('provider').notNull(), // dev | stripe_identity | persona
+    /** Null on a request row. For Persona, the inquiry id (inq_…). */
     providerSessionId: text('provider_session_id'),
     status: text('status').notNull(), // not_started | processing | requires_input | verified | canceled
     failureReason: text('failure_reason'), // document_unreadable | selfie_mismatch | under_18 | other
+    /** The provider's own word for the result (Persona: approved, declined, failed, expired…), for staff. */
+    providerOutcome: text('provider_outcome'),
+    /** When the newest provider event applied here was created: older or repeated events change nothing. */
+    providerEventAt: timestamp('provider_event_at', { withTimezone: true }),
+    /**
+     * Staff's decision on a double check that didn't confirm the photos our team approved (`retry_allowed`
+     * or `rejected`), with who and when; until then the helper is paused.
+     */
+    reviewOutcome: text('review_outcome'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    reviewedByUserId: text('reviewed_by_user_id'),
     /** From the verified date of birth; the date itself is never stored. */
     isAdult: boolean('is_adult'),
     /** The verified first and last name matched the account's (the names themselves are never stored). */

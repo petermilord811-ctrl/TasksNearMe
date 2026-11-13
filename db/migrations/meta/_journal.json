@@ -323,6 +323,13 @@
       "when": 1794609822051,
       "tag": "0045_user_badges",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1794613501138,
+      "tag": "0046_identity_double_check",
+      "breakpoints": true
     }
   ]
 }
