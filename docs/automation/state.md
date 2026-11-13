@@ -1,7 +1,13 @@
 # Autopilot state
 
-**Updated:** 2026-11-13 (phase 2 in two sessions: regular visits with scheduled payments and the recurring-month reward, bookings far ahead paid later; from the other session: credits for clients, instant payouts, passkeys, and the Spanish UI under way)
-**Autopilot:** the owner said "go ahead, build all" (2026-11-12): build everything left, Claude doing the UI too while Codex is at its limit (decisions.md). On 2026-11-13 the owner added: "refine all uis and elements and implement new features that are left without asking me". Two Claude sessions share the work (see the memory note and the split below).
+**Updated:** 2026-11-13 evening, after the move to the VPS. Four Claude sessions share the checkout. The remaining work is Part 5 (before launch) and Part 6 (the owner's two-stage ID check, badges and the profile's first page) of `completion-plan.md`.
+**Autopilot:** the owner said "go ahead, build all" (2026-11-12): build everything left, with Claude doing the UI too. On 2026-11-13 they added "refine all uis and elements and implement new features that are left without asking me", and "with multi sessions, you can distribute".
+**Sessions (2026-11-13):** they share one tree and one branch, `feat/sign-in-providers-landing-motion` (there's no local `main`).
+- **tasksnearme-b2** coordinates: it runs the full gate, owns the dev server (a background job in a memory-capped scope; ask it for restarts) and keeps this file. It builds 6.1–6.3, the two-stage ID check, through a helper agent.
+- **tasksnearme-89** has 5.1, staff analytics at `/admin/metrics`, then 6.4–6.6 (badges, the first page, the founding-number fixes), then 5.2, the runbooks (already written).
+- **tasksnearme-8f** has 5.3, private-beta access (migration 0043, committed in 750307f), then 5.4, Turnstile.
+- **tasksnearme-3c** works with the owner directly. It set up the public dev URL through Caddy, and its edits to `next.config.ts`, `src/platform/auth/config.ts` and `.env.example` are uncommitted on purpose.
+- Heavy jobs take turns through `node scripts/heavy.mjs`. Migrations are numbered first come, first served: 0044 is reserved for 6.1, and other sessions ask b2 before `db:generate`. Git has no identity configured, so commits use `-c user.name/-c user.email` copied from the last commit.
 **Phase:** 5–6 (repeat bookings, trust, support and staff tools). Wired end to end:
 - the landing page (UI-036): the new brand, the motion system, the hero canvas, the map of open tasks with "Use my location";
 - posting a task, offers, find work, and booking with payment (development stand-in);
@@ -11,8 +17,9 @@
 - the home dashboards; notifications (incl. change and invite events), the account page, real unread badges;
 - support for members, reporting and blocking; staff queues, cases, money resolutions, the staff booking page, rewards review, users.
 
-**Codex:** at its ChatGPT usage limit until 2026-11-17 12:32 (local). Buying credits is the owner's call. Tickets run with `node scripts/codex-run.mjs UI-xxx` (logs in `scratchpad/codex-UI-xxx.log`).
-**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0038). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
+**Codex:** the owner handles it (login, usage limits, runs). Whenever Codex isn't running, Claude builds the UI itself, without waiting or asking (owner, 2026-11-13; decisions.md). It was at its ChatGPT usage limit until 2026-11-17 12:32 (local), and it isn't logged in on the VPS yet. Tickets run with `node scripts/codex-run.mjs UI-xxx` (logs in `scratchpad/codex-UI-xxx.log`).
+**Machine:** since 2026-11-13, an Ubuntu 26.04 VPS (4 vCPU, 7.7 GB RAM plus 8 GB swap, no GPU) shared with live sites and without a host firewall, so dev ports stay on loopback (AUTOPILOT, "Environment gotchas"). Node 26.13.1 with npm 12.2.2 (the nvm default; Node 24.22 stays because `sm-relay.service` runs on it by path), Playwright's Chromium with its system libraries, Codex CLI 0.169.0. A shell that inherited Node 24 on its `PATH` stays on it: run `nvm use` (reads `.nvmrc`) first.
+**Database:** Docker `tasksnearme-db` on `127.0.0.1:54329` (user `tnm`). Docker Engine starts on boot; if it's down, `sudo systemctl start docker` (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0042). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
 **New dependencies (UI-036):** `motion`, `maplibre-gl`. Run `npm install` after pulling (never while a dev server runs in that checkout).
 
 ## Done on 2026-11-13 (owner requests)
@@ -94,15 +101,20 @@
 - The design system (§1–2.3) describes the new brand.
 
 ## Next steps
-1. **On the new machine:** `npm install`, `npm run db:migrate` (0000–0042) and `npm run db:seed`, a dev server on :3000, then `node scripts/gate.mjs`. The last full gate here (2026-11-13, before the move) had test:db and the build green and e2e at 164 passed. Its two failures (an admin-ops test that wasn't retry-safe, and a focus test that flakes under load) were fixed or confirmed afterwards, and the check is green at 2,558.
-2. Phase 2 is done here except multi-helper bookings (two posts for now, decisions.md) and errands (blocked on F17).
-3. Before launch: a shared cache store for `"use cache"` across web instances (see the other session's note), real provider keys, legal text, deployment (blocked.md).
-4. When Codex is back (2026-11-17), it can take UI polish tickets again.
+1. **The first gate on the VPS** (Node 26, 2026-11-13) passed check (2,558 tests), test:db and the build.
+   - e2e had 149 passed, 9 flaky and 9 failed. Six of the failures came from a Turbopack panic in the long-running dev server, which was fixed by deleting `.next/dev` and restarting.
+   - Rerun alone on one worker, they pass, apart from "a notification preference saves" on desktop: its click landed before the page was interactive, during the dev-server restarts. It is being rerun.
+   - Run the full gate again once 5.1, 5.3 and 6.1 land.
+2. Part 6 (owner): 6.1, our own ID capture with staff review, is in progress. Then 6.2, the Persona double check (it needs the owner's Persona API key, inquiry template ID and webhook secret; a stand-in until then), and 6.3, duplicate-ID hashing, the expiry reminder and a new check after a name change.
+3. Part 5: 5.1 and 5.3 are in progress. Then 5.5, the shared cache store (b2, after Part 6), and 5.6–5.10 for whichever session is free next.
+4. Phase 2 is done apart from multi-helper bookings (two posts for now, decisions.md) and errands (blocked on F17). Before launch the owner still needs to provide real provider keys, the legal text and deployment (blocked.md).
+5. The owner handles Codex. When it isn't running, Claude builds the UI.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB plus the landing copy).
 - Featured helpers show on the landing page only on wide screens (floating cards). A helper strip on phones is possible later.
 - Checks are sensitive to machine load (two e2e checks flake under load and pass on retry): rerun failed specs alone before calling them real.
-- Web push isn't built (email and texts are); T-26 has no parallel test (the cohort cap can't be exceeded by design).
+- T-26 has no parallel test (the cohort cap can't be exceeded by design). Web push was built in plan 3.5.
+- The dev server needs more memory on a cold start. With a cold Turbopack cache under e2e, it passed 4 GB of RAM plus 2 GB of swap within 5 minutes and was killed by its cap, which is now 3.5 GB high, 5 GB max and 3 GB of swap. Avoid deleting `.next/dev` unless Turbopack panics, and warm the server up on one e2e worker afterwards.
 - Google and Microsoft sign-in need real keys before launch (docs/integration-points.md); until then production hides the buttons.
 - Resolved 2026-11-12: the landing filter cleared by hovering, MapLibre's "Style is not done loading", e2e data left on the landing page, the staff case page for review reports, a suspended account's pending email code. Checked and no longer reproducible: the notifications "marked as read" message; the my-offers invite preview dates.

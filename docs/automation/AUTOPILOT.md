@@ -96,15 +96,16 @@ Keep going until the Build plan below is done, then stop.
   - First choice: split the ticket (UI-0xxa/b).
   - Last resort: build that UI yourself in `src/ui`, following the ticket and `AGENTS.md`, and record it in `decisions.md`.
 
-## Environment gotchas (Windows)
+## Environment gotchas
+- **The machine (since 2026-11-13):** an Ubuntu 26.04 VPS (4 vCPU, 7.7 GB RAM plus 8 GB swap, no GPU) that also serves live sites (Caddy on 80/443, `sm-relay` on 8080) and has no host firewall. Keep every dev port on loopback: `npm run dev` binds `localhost` (not `127.0.0.1`: Next then treats the language rewrites to `localhost` as another origin and loops) and Postgres publishes on `127.0.0.1:54329`. The owner opens the app through VS Code's port forwarding at `http://localhost:3000`. With this little memory, restart the dev server before a long gate.
 - **Read the gate's `<step> exit <code>` lines** before committing. A command that pipes the gate into `tail` exits 0 even when a step failed. Under heavy load, vitest workers can fail to start ("Failed to start forks worker"): rerun the step when the machine is quieter.
 - **One heavy job at a time.** Run the full gate with `node scripts/gate.mjs --logs <dir>` (check, test:db, e2e, build). It takes `automation/heavy.lock`, and so does the runner's independent `check:ui`, which also retries once. Running both together starved the machine: vitest workers timed out and Playwright navigations failed.
 - Never run `npm ci` in the main checkout while `next dev` (or a Playwright-started server) is running. Native binaries are locked and `npm ci` leaves `node_modules` half-deleted. Stop the server first, or use `npm install`.
 - The Codex worktree needs `.env.local`. `scripts/codex-run.mjs` copies it; copy it by hand after recreating the worktree.
-- If many pages answer 500 with `SyntaxError: Unexpected non-whitespace character after JSON` in the dev log, two parallel compiles corrupted a dev manifest (seen: `.next/dev/prerender-manifest.json`). Stop the server (and its `node.exe` on port 3000), delete `.next/dev`, restart, and request the main pages one at a time before running e2e.
+- If many pages answer 500 with `SyntaxError: Unexpected non-whitespace character after JSON` in the dev log, two parallel compiles corrupted a dev manifest (seen: `.next/dev/prerender-manifest.json`). Stop the server (and whatever still listens on port 3000: `ss -ltnp | grep :3000`), delete `.next/dev`, restart, and request the main pages one at a time before running e2e.
 - Server Actions added to an existing file while `next dev` runs may not reach the client (the action fails before any POST shows in the log): restart the dev server.
 - Never run `vitest --config vitest.db.config.mts` while a gate's `test:db` runs: each run resets the shared test database.
-- If the dev server throws "X is not a function" for an export that typecheck sees, its module graph is stale (seen after `sed -i` edits). Restart it: stopping the background shell doesn't end `next dev` on Windows, so also stop the `node.exe` listening on port 3000 (`netstat -ano`, then `Stop-Process`), and start the logged server again.
+- If the dev server throws "X is not a function" for an export that typecheck sees, its module graph is stale (seen after `sed -i` edits). Restart it: stop the process listening on port 3000 (`ss -ltnp | grep :3000`, then `kill <pid>`) and start the logged server again. Don't use `pkill -f '<pattern>'` for this: the pattern also matches the shell running the command, which then kills itself.
 
 ## Build plan
 
@@ -113,7 +114,7 @@ Order matters. A UI ticket starts once its contracts are ready and the tickets i
 **Phase 1 — Foundation**
 - **UI-002 shells:** Codex's first unattended run.
 - **Database:**
-  - Try Docker first. Start `"C:\Program Files\Docker\Docker\Docker Desktop.exe"` if the daemon is down, and wait up to 3 minutes for `docker info`. Then run `postgis/postgis` from a `docker-compose.yml`.
+  - Try Docker first. On the VPS, Docker Engine is a system service that starts on boot: if `docker info` fails, run `sudo systemctl start docker`. A shell that says "permission denied" on the Docker socket started before the `docker` group was added, so use `sg docker -c '<command>'`. (On the old Windows machine: start Docker Desktop and wait up to 3 minutes.) Then run `postgis/postgis` from a `docker-compose.yml`.
   - Otherwise use PGlite for dev and tests: no PostGIS, so geo math runs in SQL or TS on lat/lng.
   - Record the choice in `decisions.md`.
   - Drizzle schema for the core tables (blueprint 08 §3), committed SQL migrations, and a seed script built from `src/fixtures` (people, the desk / moving / remote tasks, staff).

@@ -8,8 +8,9 @@ services:
       POSTGRES_USER: tnm
       POSTGRES_PASSWORD: tnm_dev_password
       POSTGRES_DB: tasksnearme
+    # Loopback only: the password above is public, and Docker's published ports skip host firewalls.
     ports:
-      - "54329:5432"
+      - "127.0.0.1:54329:5432"
     volumes:
       - tnm-pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro

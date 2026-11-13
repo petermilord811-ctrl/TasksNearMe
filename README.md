@@ -11,7 +11,7 @@ Book trusted local help for everyday tasks, starting in Austin, Texas. People po
 
 ## Run it locally
 
-You need Node.js 24 or later (26 recommended), npm, and Docker Desktop (for Postgres).
+You need Node.js 24 or later (26 recommended), npm, and Docker for Postgres (Docker Desktop, or Docker Engine with the Compose plugin on Linux).
 
 ```
 npm install
@@ -22,6 +22,8 @@ npm run db:seed                     # Austin, categories, people, tasks, offers,
 npx playwright install chromium     # once, for the preview harness and e2e
 npm run dev                         # http://localhost:3000
 ```
+
+The dev server and the database listen on this machine only. To open the app from another device, forward port 3000 (VS Code's port forwarding, or `ssh -L 3000:localhost:3000 <server>`).
 
 Every provider runs as a stand-in in development: payments, ID checks, payouts, background checks, email, texts, gift cards, geocoding and file storage. Nothing is charged or sent.
 
