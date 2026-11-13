@@ -1,9 +1,9 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import { Check, Copy, ExternalLink, LoaderCircle, Lock } from 'lucide-react';
+import { Check, Copy, ExternalLink, LoaderCircle, Lock, Navigation } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ExactAddress, ISODateTime } from '@/contracts';
+import { routes, type ExactAddress, type ISODateTime } from '@/contracts';
 import { formatDateTime } from '@/shared/format';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
@@ -82,6 +82,18 @@ export function ExactAddressPanel({ address, visibleUntil, mapsHref, className }
               {t('openMaps')}
             </Button>
           )}
+        </div>
+        {/* Directions in the helper's own maps app, from the address text (nothing is stored or geocoded here). */}
+        <div className="flex flex-wrap gap-2">
+          {([['google', routes.external.googleMapsDirections(address)], ['apple', routes.external.appleMapsDirections(address)]] as const).map(([app, href]) => (
+            <Button key={app} asChild variant="outline" className="min-h-11">
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                <Navigation aria-hidden="true" className="size-4" />
+                {t(app === 'google' ? 'directionsGoogle' : 'directionsApple')}
+                <span className="sr-only">{t('opensNewTab')}</span>
+              </a>
+            </Button>
+          ))}
         </div>
         {!mapsHref && <p id={mapsHintId} className="text-sm text-muted-foreground">{t('mapsUnavailable')}</p>}
         <p role="status" aria-live="polite" aria-atomic="true" className={cn('text-sm', copyState === 'error' ? 'text-destructive' : 'text-muted-foreground')}>

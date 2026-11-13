@@ -45,5 +45,7 @@
     "phoneTitle": "Phone number hidden until booking",
     "emailTitle": "Email address hidden until booking",
     "unmaskedTitle": "Message after booking"
-  }
+  },
+  "directionsGoogle": "Directions in Google Maps",
+  "directionsApple": "Directions in Apple Maps"
 }

@@ -18,7 +18,7 @@ const shellHandlers: AppShellHandlers = { onModeChange: fakeHandler({ ok: true, 
 function preview(variant: Exclude<keyof typeof copy.previews, 'group'>, data: HelperTaskView, options: Partial<ComponentProps<typeof HelperTaskScreen>> = {}, shellLayout: 'flow' | 'tabs' = 'flow'): PreviewEntry {
   return {
     id: `screen-helper-task/${variant}${shellLayout === 'tabs' ? '-with-tabs' : ''}`, group: copy.previews.group, title: copy.previews[variant], layout: 'fullscreen',
-    render: () => <AppShell viewer={data.setup.bookable ? jordanShell : priyaShell} handlers={shellHandlers} currentPath={routes.app.findWorkTask(data.task.id)} layout={shellLayout}><HelperTaskScreen data={data} handlers={handlers} now={now} {...options} /></AppShell>,
+    render: () => <AppShell viewer={data.setup.bookable ? jordanShell : priyaShell} handlers={shellHandlers} currentPath={routes.app.findWorkTask(data.task.id)} layout={shellLayout}><HelperTaskScreen data={data} handlers={handlers} now={now} liveMap={false} {...options} /></AppShell>,
   };
 }
 
@@ -39,7 +39,7 @@ export const helperTaskPreviews: PreviewEntry[] = [
     id: 'screen-helper-task/offer-drafted', group: copy.previews.group, title: copy.previews.offerDrafted, layout: 'fullscreen',
     render: () => <AppShell viewer={jordanShell} handlers={shellHandlers} currentPath={routes.app.findWorkTask(helperYardNoOffer.task.id)} layout="flow">
       <ClickOnLoad label={copy.form.aiDraft}>
-        <HelperTaskScreen data={helperYardNoOffer} handlers={{ ...handlers, onDraftOfferMessage: async () => ({ ok: true, message: deskOfferMessageDraft }) }} now={now} />
+        <HelperTaskScreen data={helperYardNoOffer} handlers={{ ...handlers, onDraftOfferMessage: async () => ({ ok: true, message: deskOfferMessageDraft }) }} now={now} liveMap={false} />
       </ClickOnLoad>
     </AppShell>,
   },

@@ -2,15 +2,17 @@ import { Laptop, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { TaskLocation } from '@/contracts';
 import { cn } from '@/ui/lib/utils';
-import { AreaMapPlaceholder } from './area-map-placeholder';
+import { GeneralAreaMap } from '@/ui/components/map/general-area-map';
 
 export interface GeneralAreaProps {
   location: TaskLocation;
   showMap?: boolean;
+  /** Previews and tests: the drawn map only. */
+  liveMap?: boolean;
   className?: string;
 }
 
-export function GeneralArea({ location, showMap = false, className }: GeneralAreaProps) {
+export function GeneralArea({ location, showMap = false, liveMap = true, className }: GeneralAreaProps) {
   const t = useTranslations('location');
 
   if (location.kind === 'remote') {
@@ -37,7 +39,7 @@ export function GeneralArea({ location, showMap = false, className }: GeneralAre
         )}
         <p className="text-sm text-muted-foreground">{t('areaDescription')}</p>
       </div>
-      {showMap && <AreaMapPlaceholder location={location} />}
+      {showMap && <GeneralAreaMap location={location} live={liveMap} />}
     </div>
   );
 }

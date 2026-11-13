@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { NextIntlClientProvider } from 'next-intl';
 import { AppToaster } from '@/ui/components/feedback/app-toaster';
+import { MapTilesProvider } from '@/ui/components/map/map-tiles';
+import { mapTiles } from '@/modules/markets/map-tiles';
 import { fontVariables } from '@/ui/theme/fonts';
 import { themeInitScript } from '@/ui/theme/theme-script';
 import '@/ui/theme/globals.css';
@@ -30,7 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {/* In the initial HTML before any app code (Next places it in <head>): the saved theme, before paint. */}
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <NextIntlClientProvider>
-          {children}
+          <MapTilesProvider tiles={{ ...mapTiles(), live: true }}>{children}</MapTilesProvider>
           <AppToaster />
         </NextIntlClientProvider>
       </body>

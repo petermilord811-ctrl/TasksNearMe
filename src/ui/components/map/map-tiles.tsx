@@ -9,11 +9,14 @@ import { createContext, useContext, type ReactNode } from 'react';
 export interface MapTiles {
   styleUrl: string;
   attribution: string;
+  /** Live maps (the app), or only drawn ones (previews, tests: the default without a provider). */
+  live: boolean;
 }
 
 const DEFAULT_TILES: MapTiles = {
   styleUrl: 'https://tiles.openfreemap.org/styles/liberty',
   attribution: 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
+  live: false,
 };
 
 const MapTilesContext = createContext<MapTiles>(DEFAULT_TILES);

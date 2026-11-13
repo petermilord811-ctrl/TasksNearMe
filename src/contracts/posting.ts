@@ -105,6 +105,8 @@ export interface AddressSuggestion {
   line2: string;
   /** The neighborhood helpers will see ("Mueller"). Absent outside the market. */
   areaName?: string;
+  /** That neighborhood's center (public; never the address's own point), for the preview map. */
+  areaPoint?: { lat: number; lng: number };
   /** False: outside the service area. Posting isn't possible there; offer `routes.waitlist()`. */
   inServiceArea: boolean;
 }

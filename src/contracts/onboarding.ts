@@ -130,6 +130,8 @@ export type HelperToolsInput = z.input<typeof helperToolsInputSchema>;
 export interface AreaOption {
   id: string;
   name: string;
+  /** The neighborhood's center, for the service-area map. */
+  center?: { lat: number; lng: number };
 }
 
 /** Why an ID check can't start right now. `try_later`: 3 tries in 24 hours (see `retryAt`). `too_many_attempts`: 5 tries without a pass, so our team looks at it. `under_18`: helpers must be 18 or older. */

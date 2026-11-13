@@ -23,6 +23,8 @@ import { Input } from '@/ui/primitives/input';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
 import { useFormAction } from '@/ui/lib/use-form-action';
+import { AreaMap } from '@/ui/components/map/area-map';
+import { useMapTiles } from '@/ui/components/map/map-tiles';
 
 const selectClass = 'min-h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-invalid:border-destructive';
 const checkboxClass = 'size-5 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
@@ -262,10 +264,14 @@ export function HelperServicesForm({ values, categories, onSave, submitLabel }: 
   </form>;
 }
 
-export function HelperAreaForm({ values, areas, remoteAllowed, onSave, submitLabel }: { values: HelperAreaInput; areas: HelperOnboardingPageData['areas']; remoteAllowed: boolean; onSave: ActionHandler<HelperAreaInput>; submitLabel?: string }) {
+export function HelperAreaForm({ values, areas, remoteAllowed, onSave, submitLabel, liveMap = true }: { values: HelperAreaInput; areas: HelperOnboardingPageData['areas']; remoteAllowed: boolean; onSave: ActionHandler<HelperAreaInput>; submitLabel?: string; liveMap?: boolean }) {
   const t = useTranslations('helperOnboarding');
   const id = useId();
+  const tiles = useMapTiles();
   const form = useForm<HelperAreaInput>({ resolver: zodResolver(helperAreaInputSchema), defaultValues: values });
+  const areaId = useWatch({ control: form.control, name: 'areaId' });
+  const radius = useWatch({ control: form.control, name: 'serviceRadiusMiles' });
+  const chosenArea = areas.find((area) => area.id === areaId);
   const action = useHelperFormAction(form);
   const pending = action.pending || form.formState.isSubmitting;
   const errors = form.formState.errors;
@@ -279,6 +285,10 @@ export function HelperAreaForm({ values, areas, remoteAllowed, onSave, submitLab
         <select {...form.register('serviceRadiusMiles', { valueAsNumber: true })} id={`${id}-radius`} aria-invalid={!!errors.serviceRadiusMiles} aria-describedby={`${id}-radius-hint${errors.serviceRadiusMiles ? ` ${id}-radius-error` : ''}`} className={selectClass}>{SERVICE_RADIUS_MILES.map((miles) => <option key={miles} value={miles}>{t('forms.area.miles', { miles })}</option>)}</select>
       </HelperField>
       {remoteAllowed && <div className="space-y-1"><label className="flex min-h-11 cursor-pointer items-center gap-3"><input {...form.register('remoteOk')} type="checkbox" aria-describedby={`${id}-remote-hint`} className={checkboxClass} />{t('forms.area.remote')}</label><p id={`${id}-remote-hint`} className="text-sm text-muted-foreground">{t('forms.area.remoteHint')}</p></div>}
+      {chosenArea?.center && <div className="space-y-2">
+        <AreaMap styleUrl={tiles.styleUrl} attribution={tiles.attribution} places={[]} serviceArea={{ center: chosenArea.center, radiusMiles: Number(radius) || 5 }} fallbackCenter={chosenArea.center} label={t('forms.area.mapLabel', { area: chosenArea.name, miles: Number(radius) || 5 })} groupLabel={(count) => String(count)} live={liveMap} className="h-56" />
+        <p className="text-sm text-muted-foreground">{t('forms.area.mapHint', { area: chosenArea.name, miles: Number(radius) || 5 })}</p>
+      </div>}
     </fieldset>
     <FormFeedback result={action.result} successMessage={t('forms.saved')} />
     <SaveButton pending={pending} label={submitLabel} />

@@ -21,7 +21,7 @@ function LocalAreaPreview({ location, role }: { location: TaskLocation; role: 'p
     <LocationPreviewFrame title={t(role === 'poster' ? 'previews.posterTitle' : 'previews.helperTitle')}>
       <section className="space-y-3 rounded-xl border bg-card p-4 sm:p-6">
         <h2 className="text-lg font-semibold">{t('previews.withMap')}</h2>
-        <GeneralArea location={location} showMap />
+        <GeneralArea location={location} showMap liveMap={false} />
       </section>
       <section className="space-y-3 rounded-xl border bg-card p-4 sm:p-6">
         <h2 className="text-lg font-semibold">{t('previews.withoutMap')}</h2>
@@ -36,7 +36,7 @@ function RemotePreview() {
   return (
     <LocationPreviewFrame title={t('previews.remoteTitle')}>
       <div className="rounded-xl border bg-card p-4 sm:p-6">
-        <GeneralArea location={remoteLocation} showMap />
+        <GeneralArea location={remoteLocation} showMap liveMap={false} />
       </div>
     </LocationPreviewFrame>
   );

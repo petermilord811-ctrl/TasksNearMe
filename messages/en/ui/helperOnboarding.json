@@ -58,7 +58,9 @@
       "radiusHint": "How far you're willing to travel from your home area.",
       "miles": "About {miles} miles",
       "remote": "I also help remotely",
-      "remoteHint": "Available for the services you offer that support remote help."
+      "remoteHint": "Available for the services you offer that support remote help.",
+      "mapLabel": "Map of your service area: {miles} miles around {area}",
+      "mapHint": "The dashed ring is how far you'll travel: {miles} miles around {area}. Clients see your neighborhood, never your address."
     },
     "tools": {
       "title": "Tools",

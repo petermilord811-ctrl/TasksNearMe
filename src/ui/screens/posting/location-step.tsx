@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { LoaderCircle, Lock, MapPin } from 'lucide-react';
 import { routes, type AddressSuggestion, type PostTaskHandlers, type PostTaskPageData, type TaskDraftInput } from '@/contracts';
 import { TextFormField } from '@/ui/components/forms/text-form-field';
+import { GeneralAreaMap } from '@/ui/components/map/general-area-map';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Input } from '@/ui/primitives/input';
 import { Textarea } from '@/ui/primitives/textarea';
@@ -17,9 +18,11 @@ export interface LocationStepProps {
   selectedAddress?: AddressSuggestion;
   onAddressChange: (address: AddressSuggestion | undefined) => void;
   initialSuggestions?: AddressSuggestion[];
+  /** Previews and tests: the drawn map only. */
+  liveMap?: boolean;
 }
 
-export function LocationStep({ data, handlers, selectedAddress, onAddressChange, initialSuggestions }: LocationStepProps) {
+export function LocationStep({ data, handlers, selectedAddress, onAddressChange, initialSuggestions, liveMap = true }: LocationStepProps) {
   const t = useTranslations('postTask');
   const errors = useTranslations('forms');
   const id = useId();
@@ -143,6 +146,7 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
       {outOfArea && <div className="rounded-lg border border-warning p-4 text-sm"><p className="font-medium">{t('location.outOfArea')}</p><a href={routes.waitlist()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('location.waitlist')}</a></div>}
       {selectedAddress?.inServiceArea ? <div className="space-y-3 rounded-xl bg-secondary p-4 text-secondary-foreground">
         {selectedAddress.areaName && <p className="flex items-start gap-2 font-medium"><MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('location.publicPreview', { area: selectedAddress.areaName, market: data.market.name })}</p>}
+        {selectedAddress.areaName && selectedAddress.areaPoint && <GeneralAreaMap location={{ kind: 'local', marketSlug: data.market.slug, marketName: data.market.name, areaName: selectedAddress.areaName, publicPoint: selectedAddress.areaPoint, radiusMeters: 1609 }} live={liveMap} className="h-44" />}
         <p className="flex items-start gap-2 text-sm"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('location.privateHint')}</p>
       </div> : location.placeId && <p className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('location.restoreHint')}</p>}
       <TextFormField control={control} name="location.unit" label={t('location.unit')} hint={t('location.unitHint')} maxLength={20} />

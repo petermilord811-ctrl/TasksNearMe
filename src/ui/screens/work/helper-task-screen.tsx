@@ -15,12 +15,14 @@ export interface HelperTaskScreenProps {
   data: HelperTaskView;
   handlers: HelperWorkHandlers;
   now: ISODateTime;
+  /** Previews and tests: the drawn map only. */
+  liveMap?: boolean;
   /** Preview-only starting state. */
   initialRevising?: boolean;
   initialResult?: ActionResult;
 }
 
-export function HelperTaskScreen({ data, handlers, now, initialRevising, initialResult }: HelperTaskScreenProps) {
+export function HelperTaskScreen({ data, handlers, now, initialRevising, initialResult, liveMap = true }: HelperTaskScreenProps) {
   const t = useTranslations('helperTask');
   const report = useTranslations('report');
   const card = useTranslations('taskCard');
@@ -40,7 +42,7 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
       <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={task.postedAt} title={formatDateTime(task.postedAt)}>{card('posted', { relative: formatRelative(task.postedAt, now) })}</time></p>
     </header>
     <div className="space-y-4 rounded-xl border bg-card p-card shadow-card">
-      <GeneralArea location={task.location} />
+      <GeneralArea location={task.location} showMap liveMap={liveMap} />
       <p className="flex items-start gap-2 tabular-nums"><CalendarDays aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><span>{schedule}</span></p>
       <div className="border-t pt-4"><p className="text-sm text-muted-foreground">{t('budget')}</p><p className="mt-1 text-xl font-semibold tabular-nums">{task.budget.type === 'fixed' ? formatMoney(task.budget.priceCents) : card('hourlyBudget', { rate: formatMoney(task.budget.rateCents), cap: formatHours(task.budget.hoursCap) })}</p></div>
       {task.location.kind === 'local' && <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>}

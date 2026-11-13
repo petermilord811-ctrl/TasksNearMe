@@ -181,6 +181,16 @@ export const routes = {
         .join(', ');
       return `https://www.google.com/maps/search/?api=1&query=${enc(query)}`;
     },
+    /** Directions to the address in Google Maps (no key; nothing stored). */
+    googleMapsDirections: (address: ExactAddress) => {
+      const query = [address.line1, address.line2, `${address.city}, ${address.state} ${address.zip}`].filter(Boolean).join(', ');
+      return `https://www.google.com/maps/dir/?api=1&destination=${enc(query)}`;
+    },
+    /** Directions to the address in Apple Maps. */
+    appleMapsDirections: (address: ExactAddress) => {
+      const query = [address.line1, address.line2, `${address.city}, ${address.state} ${address.zip}`].filter(Boolean).join(', ');
+      return `https://maps.apple.com/?daddr=${enc(query)}`;
+    },
   },
 
   dev: {

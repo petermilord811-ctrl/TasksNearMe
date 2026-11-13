@@ -309,12 +309,12 @@ async function sharedPageData(db: Db, userId: string) {
   if (!market) return null;
   const [categoryViews, areaRows] = await Promise.all([
     listCategoryViews(marketId, db),
-    db.select({ id: areas.id, name: areas.name }).from(areas).where(eq(areas.marketId, marketId)).orderBy(asc(areas.name)),
+    db.select({ id: areas.id, name: areas.name, lat: areas.centerLat, lng: areas.centerLng }).from(areas).where(eq(areas.marketId, marketId)).orderBy(asc(areas.name)),
   ]);
   return {
     market,
     categories: categoryViews,
-    areas: areaRows,
+    areas: areaRows.map((area) => ({ id: area.id, name: area.name, center: { lat: area.lat, lng: area.lng } })),
     languageOptions: LANGUAGE_CODES.map((code) => ({ code, name: languageNames.of(code) ?? code })),
   };
 }

@@ -97,7 +97,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
         placeId: place.placeId,
         line1: place.line1,
         line2: `${place.city}, ${place.state} ${place.zip}`,
-        ...(area ? { areaName: area.name } : {}),
+        ...(area ? { areaName: area.name, areaPoint: { lat: area.centerLat, lng: area.centerLng } } : {}),
         inServiceArea: inside && area !== null,
       };
     });
