@@ -8,7 +8,7 @@ import type {
   NotificationType,
   NotificationView,
 } from '@/contracts';
-import { accountProfileInputSchema, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS } from '@/contracts';
+import { accountProfileInputSchema, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
@@ -437,6 +437,7 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     helper: { status: (profile?.status as AccountPageData['helper']['status'] | undefined) ?? 'none' },
     privacy,
     ...(pushSetup() ? { push: pushSetup()! } : {}),
+    language: localeOrDefault(user.locale),
   };
 }
 

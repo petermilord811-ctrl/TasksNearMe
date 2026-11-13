@@ -7,6 +7,7 @@ import { Logo } from './logo';
 import { ScrollbarActivity } from '@/ui/motion';
 import { SkipLink } from './skip-link';
 import { MobileMenu } from './mobile-menu';
+import { LanguageLinks } from './language-links';
 import { getPublicNav } from './nav';
 import { NavLink } from './nav-link';
 import { PublicAccountLinks } from './public-account-links';
@@ -106,7 +107,7 @@ export function PublicShell({ viewer, children, currentPath, variant = 'default'
               <ul>{LEGAL_DOCS.map((doc) => <li key={doc}><Link href={routes.legal(doc)} className={linkClass}>{t(`legal.${doc}`)}</Link></li>)}</ul>
             </nav>
           </div>
-          <div className="mt-12 flex flex-wrap justify-between gap-3 border-t pt-6 text-xs text-muted-foreground"><p>{t('footer.signature')}</p><p>{t('footer.payment')}</p></div>
+          <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t pt-6 text-xs text-muted-foreground"><p>{t('footer.signature')}</p><LanguageLinks label={t('footer.language')} /><p>{t('footer.payment')}</p></div>
         </div>
       </footer>
     </div>

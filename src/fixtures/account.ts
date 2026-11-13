@@ -55,6 +55,7 @@ export const mayaAccountData: AccountPageData = {
   preferences,
   helper: { status: 'none' },
   privacy: {},
+  language: 'en',
 };
 
 /** The profile photo Jordan added (a square, like every profile photo). */
@@ -70,6 +71,7 @@ export const jordanAccountData: AccountPageData = {
   preferences,
   helper: { status: 'active' },
   privacy: { export: { status: 'preparing', requestedAt: '2026-11-20T18:00:00.000Z' } },
+  language: 'en',
 };
 
 /** A new account: no phone yet; deletion asked for, happening in a week. */
@@ -81,6 +83,7 @@ export const newAccountData: AccountPageData = {
   preferences,
   helper: { status: 'draft' },
   privacy: { deletion: { requestedAt: '2026-11-21T10:00:00.000Z', scheduledFor: '2026-11-28T10:00:00.000Z' } },
+  language: 'en',
 };
 
 /** Push set up (previews): a sample key in the right shape, not a real one. */

@@ -102,6 +102,12 @@
     "notAllowed": "This preference can't be changed. Your previous setting has been restored.",
     "unavailable": "Unavailable"
   },
+  "language": {
+    "title": "Language",
+    "description": "Choose the language for the app, emails and texts.",
+    "hint": "The page reloads in the language you choose.",
+    "failed": "We couldn't change your language. Try again."
+  },
   "helper": {
     "title": "Helping others",
     "descriptions": {

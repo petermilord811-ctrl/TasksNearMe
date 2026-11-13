@@ -14,6 +14,7 @@ import { appUrl, socialProviderKeys, standInSecret, standInSocialProviders } fro
 import { socialStandIn } from '@/integrations/oauth/stand-in';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { createLocaleSyncHook, withRequestLocale } from './locale';
 
 /** Accounts that can't sign in (src/modules/accounts/sign-in/steps.ts keeps the same list). */
 const BLOCKED_ACCOUNT_STATUSES = new Set(['suspended', 'banned', 'deleted']);
@@ -97,6 +98,8 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
     },
     databaseHooks: {
       account: { create: { after: createProviderConnectedHook(db) } },
+      // A new account takes the language it signed up in (src/platform/auth/locale.ts).
+      user: { create: { before: async (user, ctx) => withRequestLocale(user, ctx) } },
       session: {
         create: {
           // Whatever the way in (a code, a provider, a passkey), a blocked account gets no session.
@@ -104,6 +107,8 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
             const [person] = await db.select({ status: users.status }).from(users).where(eq(users.id, session.userId)).limit(1);
             if (person && BLOCKED_ACCOUNT_STATUSES.has(person.status)) return false;
           },
+          // Signing in, the device switches to the account's language.
+          after: createLocaleSyncHook(db),
         },
       },
     },
@@ -119,6 +124,8 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
         homeMarketId: { type: 'string', required: false, defaultValue: 'mkt_austin', input: false },
         // The profile photo (a file id); set from the account page, never by sign-in.
         avatarFileId: { type: 'string', required: false, input: false },
+        // 'en' | 'es': set at sign-up from the request, changed on the account page.
+        locale: { type: 'string', required: false, input: false },
       },
     },
     plugins: [

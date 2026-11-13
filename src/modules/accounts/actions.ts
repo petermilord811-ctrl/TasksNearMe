@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
 import { refresh, revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { routes, socialSignInInputSchema, type ActionResult, type PasskeyOptionsResult, type SocialSignInInput } from '@/contracts';
+import { languageInputSchema, routes, socialSignInInputSchema, type ActionResult, type LanguageInput, type PasskeyOptionsResult, type SocialSignInInput } from '@/contracts';
 import { offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
 import { validationFailed } from '@/platform/actions/results';
 import { auth } from '@/platform/auth/auth';
@@ -12,6 +12,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { requestNow } from '@/platform/clock';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
+import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS } from '@/shared/locale';
 import { confirmEnrollment, redeemSetupCode, verifyStaffTotp } from './staff-authenticator';
 import { passkeys, users } from './schema';
 import { disconnectSignIn } from './sign-in-methods';
@@ -111,6 +112,20 @@ export async function removePasskeyAction(input: { id?: string }): Promise<Actio
   const removed = await db.delete(passkeys).where(and(eq(passkeys.id, input.id), eq(passkeys.userId, viewer.user.id))).returning({ id: passkeys.id });
   if (removed.length === 0) return { ok: false, code: 'not_found' };
   revalidatePath(routes.app.account());
+  return { ok: true, code: 'updated' };
+}
+
+/**
+ * AccountHandlers.onSaveLanguage: the account's language (emails and texts go out in it) and this device's
+ * (src/proxy.ts reads the cookie), so the page reloads in it.
+ */
+export async function saveLanguageAction(input: LanguageInput): Promise<ActionResult> {
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user') return { ok: false, code: 'not_allowed' };
+  const parsed = languageInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  await db.update(users).set({ locale: parsed.data.locale, updatedAt: new Date() }).where(eq(users.id, viewer.user.id));
+  (await cookies()).set(LOCALE_COOKIE, parsed.data.locale, LOCALE_COOKIE_OPTIONS);
   return { ok: true, code: 'updated' };
 }
 

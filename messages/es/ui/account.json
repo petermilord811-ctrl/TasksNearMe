@@ -102,6 +102,12 @@
     "notAllowed": "Esta preferencia no se puede cambiar. Se restauró tu configuración anterior.",
     "unavailable": "No disponible"
   },
+  "language": {
+    "title": "Idioma",
+    "description": "Elige el idioma de la app, los correos y los mensajes de texto.",
+    "hint": "La página se vuelve a cargar en el idioma que elijas.",
+    "failed": "No pudimos cambiar tu idioma. Inténtalo de nuevo."
+  },
   "helper": {
     "title": "Ayudar a otros",
     "descriptions": {

@@ -3,6 +3,7 @@ import type { PasskeyOptionsResult } from './auth';
 import type { ActionHandler, ActionResult, QueryHandler } from './actions';
 import type { EmailInput, OneTimeCodeInput, PhoneInput, SocialProvider, SocialSignInInput } from './auth';
 import type { Cents, ISODateTime, Photo } from './common';
+import { APP_LOCALES, type AppLocale } from './locale';
 import { emailField, oneTimeCodeField, personNameField } from './forms';
 import type { PhotoUploadResult } from './posting';
 import type { AttentionTarget } from './home';
@@ -162,7 +163,13 @@ export interface AccountPageData {
   privacy: AccountPrivacyView;
   /** Notifications on this device (Web Push), when push is set up. */
   push?: PushSetup;
+  /** The language they use the app in; emails and texts go out in it too. */
+  language: AppLocale;
 }
+
+/** The account's language (blueprint 01, P2). */
+export const languageInputSchema = z.object({ locale: z.enum(APP_LOCALES) });
+export type LanguageInput = z.input<typeof languageInputSchema>;
 
 /**
  * A browser's push subscription (`PushSubscription.toJSON()`), saved to send notifications to that device.
@@ -290,4 +297,6 @@ export interface AccountHandlers extends PushHandlers {
   onPasskeyRegistrationOptions?: () => Promise<PasskeyOptionsResult>;
   onAddPasskey?: ActionHandler<{ response: Record<string, unknown>; name: string }>;
   onRemovePasskey?: ActionHandler<{ id: string }>;
+  /** The app, emails and texts in this language; this device switches too, so reload after. ok `updated`. Errors: `validation_failed`. */
+  onSaveLanguage?: ActionHandler<LanguageInput>;
 }
