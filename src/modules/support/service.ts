@@ -251,6 +251,45 @@ export async function createSupportRequest(db: Db, userId: string, input: NewSup
   return { ok: true, code: 'submitted', redirectTo: routes.app.supportCase(id) };
 }
 
+/**
+ * A review's private feedback (completion plan P2): a low-priority request only its author is on. It names
+ * the task (`context.taskId`) but not the booking, so the other person never becomes a party: replies and
+ * the resolution reach the author alone. A system note tells staff where it came from.
+ */
+export async function openReviewFeedbackCase(
+  db: Db,
+  input: { userId: string; taskId: string; taskTitle: string; rating: number; subjectName: string; feedback: string },
+  now: Date,
+): Promise<string> {
+  const id = newId('case');
+  await db.transaction(async (tx) => {
+    await tx.insert(supportCases).values({
+      id,
+      type: REQUEST_TYPE.booking,
+      status: 'open',
+      priority: 'low',
+      openedByUserId: input.userId,
+      topic: 'booking',
+      context: { taskId: input.taskId },
+      description: input.feedback,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await tx.insert(supportCaseEvents).values({
+      id: newId('cev'),
+      caseId: id,
+      kind: 'note',
+      authorUserId: null,
+      visibility: 'internal',
+      body: `Sent privately with a ${input.rating}-star review of ${input.subjectName} for “${input.taskTitle}”. Only the author is on this case; ${input.subjectName} can't see it.`,
+      createdAt: now,
+    });
+    await markCaseRead(tx, id, input.userId, now);
+    await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'support.case_opened', aggregateType: 'support_case', aggregateId: id, payload: { caseId: id, type: REQUEST_TYPE.booking, openedByUserId: input.userId } });
+  });
+  return id;
+}
+
 /** `/app/support/[caseId]` for the people who may see it (anyone else: not found). Opening it reads it. */
 export async function getSupportCasePage(db: Db, userId: string, caseId: string, now: Date): Promise<SupportCasePageData | null> {
   const found = await visibleCase(db, userId, caseId);

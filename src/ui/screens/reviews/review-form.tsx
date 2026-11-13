@@ -25,11 +25,12 @@ export function ReviewForm({ data, handlers, initialResult, initialPending = fal
   const fieldCopy = useTranslations('forms.fieldErrors');
   const id = useId();
   const schema = useMemo(() => createReviewInputSchema(data.direction), [data.direction]);
-  const form = useForm<ReviewInput>({ resolver: zodResolver(schema), defaultValues: { rating: 0, tags: [], body: '' } });
+  const form = useForm<ReviewInput>({ resolver: zodResolver(schema), defaultValues: { rating: 0, tags: [], body: '', privateFeedback: '' } });
   const action = useFormAction(form, { initialResult });
   const pending = action.pending || initialPending;
   const disabled = pending || Boolean(action.result?.ok);
   const body = useWatch({ control: form.control, name: 'body' });
+  const privateFeedback = useWatch({ control: form.control, name: 'privateFeedback' });
   const submitBar = useRef<HTMLDivElement>(null);
   const fieldError = (code: string) => fieldCopy(fieldCopy.has(code) ? code : 'invalid');
   const feedback = action.result && !action.result.ok ? { ...action.result, fieldErrors: undefined } : action.result;
@@ -78,6 +79,13 @@ export function ReviewForm({ data, handlers, initialResult, initialPending = fal
         <Textarea {...form.register('body')} id={`${id}-body`} rows={5} maxLength={1000} aria-invalid={Boolean(form.formState.errors.body)} aria-describedby={`${id}-body-hint ${id}-body-count${form.formState.errors.body ? ` ${id}-body-error` : ''}`} className="min-h-32" />
         <p id={`${id}-body-count`} className="text-sm tabular-nums text-muted-foreground">{t('bodyCount', { count: body?.length ?? 0 })}</p>
         {form.formState.errors.body?.message && <FieldError id={`${id}-body-error`}>{fieldError(form.formState.errors.body.message)}</FieldError>}
+      </Field>
+      <Field data-invalid={Boolean(form.formState.errors.privateFeedback)} className="gap-2 border-t pt-6">
+        <FieldLabel htmlFor={`${id}-private`} className="text-foreground">{t('privateLabel')}</FieldLabel>
+        <FieldDescription id={`${id}-private-hint`} className="flex items-start gap-2"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{t('privateHint', { name: data.subject.displayName })}</span></FieldDescription>
+        <Textarea {...form.register('privateFeedback')} id={`${id}-private`} rows={3} maxLength={1000} aria-invalid={Boolean(form.formState.errors.privateFeedback)} aria-describedby={`${id}-private-hint ${id}-private-count${form.formState.errors.privateFeedback ? ` ${id}-private-error` : ''}`} />
+        <p id={`${id}-private-count`} className="text-sm tabular-nums text-muted-foreground">{t('bodyCount', { count: privateFeedback?.length ?? 0 })}</p>
+        {form.formState.errors.privateFeedback?.message && <FieldError id={`${id}-private-error`}>{fieldError(form.formState.errors.privateFeedback.message)}</FieldError>}
       </Field>
     </fieldset>
     <p className="flex items-start gap-3 rounded-xl bg-secondary p-4 text-sm text-secondary-foreground"><Lock aria-hidden="true" className="mt-0.5 size-5 shrink-0" /><span>{t('privacyNote', { date: formatDate(data.publishesBy) })}</span></p>

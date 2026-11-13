@@ -99,10 +99,21 @@ describe('ReviewScreen', () => {
     await user.click(screen.getByRole('button', { name: messages.review.tags.tidy }));
     await user.type(screen.getByRole('textbox', { name: messages.review.bodyLabel }), '  Careful work.  ');
     await user.click(screen.getByRole('button', { name: messages.review.send }));
-    await waitFor(() => expect(onSubmit).toHaveBeenCalledExactlyOnceWith({ rating: 4, tags: ['careful', 'tidy'], body: 'Careful work.' }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledExactlyOnceWith({ rating: 4, tags: ['careful', 'tidy'], body: 'Careful work.', privateFeedback: '' }));
     expect(await screen.findByText(messages.review.sent)).toBeInTheDocument();
     expect(navigation.push).toHaveBeenCalledExactlyOnceWith(redirectTo);
     expect(screen.getByRole('button', { name: messages.review.send })).toBeDisabled();
+  });
+
+  it('sends a private note for support only, saying the other person never sees it', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount();
+    const note = screen.getByRole('textbox', { name: messages.review.privateLabel });
+    expect(note).toHaveAccessibleDescription(expect.stringContaining(`${deskReviewByClientData.subject.displayName} never sees it`));
+    await user.click(screen.getByRole('radio', { name: '2 of 5 stars' }));
+    await user.type(note, ' He arrived two hours late without a message. ');
+    await user.click(screen.getByRole('button', { name: messages.review.send }));
+    await waitFor(() => expect(handlers.onSubmit).toHaveBeenCalledExactlyOnceWith({ rating: 2, tags: [], body: '', privateFeedback: 'He arrived two hours late without a message.' }));
   });
 
   it('allows a one-star review with no tags or text', async () => {
@@ -110,7 +121,7 @@ describe('ReviewScreen', () => {
     const { handlers } = mount();
     await user.click(screen.getByRole('radio', { name: '1 of 5 stars' }));
     await user.click(screen.getByRole('button', { name: messages.review.send }));
-    await waitFor(() => expect(handlers.onSubmit).toHaveBeenCalledExactlyOnceWith({ rating: 1, tags: [], body: '' }));
+    await waitFor(() => expect(handlers.onSubmit).toHaveBeenCalledExactlyOnceWith({ rating: 1, tags: [], body: '', privateFeedback: '' }));
   });
 
   it('counts text and rejects text beyond the 1,000-character limit', async () => {

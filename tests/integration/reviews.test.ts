@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { confirmBooking } from '@/modules/bookings/confirm';
@@ -7,6 +7,9 @@ import { bookings } from '@/modules/bookings/schema';
 import { offers } from '@/modules/offers/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { getReviewPage, getSavedHelpers, setHelperSaved, submitReview } from '@/modules/reviews/service';
+import { supportCaseEvents, supportCaseReads, supportCases } from '@/modules/support/schema';
+import { getSupportCasePage, getSupportPage } from '@/modules/support/service';
+import { getAdminCase } from '@/modules/support/staff';
 import { tasks } from '@/modules/tasks/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
@@ -66,5 +69,47 @@ describe('saved helpers', () => {
     expect((await getSavedHelpers(db, 'usr_ruth')).helpers.map((h) => h.id)).toEqual(['usr_sam']);
     expect(await setHelperSaved(db, 'usr_ruth', 'usr_sam', false, new Date())).toEqual({ ok: true, code: 'updated' });
     expect((await getSavedHelpers(db, 'usr_ruth')).helpers).toEqual([]);
+  });
+});
+
+describe('private feedback with a review', () => {
+  let privateBookingId = '';
+  beforeAll(async () => {
+    // Ruth books Sam again on another copy of the desk, and it's completed.
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_sam'));
+    await db.insert(tasks).values({ ...desk!, id: 'tsk_rev_private', slug: 'rev-desk-private', posterUserId: 'usr_ruth', status: 'open', offerCount: 1, version: 1 });
+    await db.insert(offers).values({ ...offer!, id: 'off_rev_private', taskId: 'tsk_rev_private', status: 'pending', revision: 1, expiresAt: new Date(Date.now() + DAY) });
+    const booked = await confirmBooking({ db, payments: createDevPaymentProvider() }, 'usr_ruth', 'tsk_rev_private', 'off_rev_private', { offerRevision: 1, payment: { kind: 'dev_card', card: 'success', save: false }, acceptTerms: true }, new Date());
+    if (!booked.ok || !booked.redirectTo) throw new Error(`Booking failed: ${JSON.stringify(booked)}`);
+    privateBookingId = booked.redirectTo.split('/').pop()!;
+    await db.update(bookings).set({ status: 'completed', completedVia: 'poster', completedAt: new Date() }).where(eq(bookings.id, privateBookingId));
+  });
+
+  it('opens a low-priority case only its author is on; the other person never sees it', async () => {
+    const feedback = 'He arrived two hours late and did not message me.';
+    expect((await submitReview(db, 'usr_ruth', privateBookingId, { rating: 2, tags: [], body: '', privateFeedback: `  ${feedback}  ` }, new Date())).result).toMatchObject({ ok: true, code: 'submitted' });
+    const [opened] = await db.select().from(supportCases).where(and(eq(supportCases.openedByUserId, 'usr_ruth'), eq(supportCases.description, feedback)));
+    expect(opened).toMatchObject({ type: 'request', status: 'open', priority: 'low', bookingId: null, context: { taskId: 'tsk_rev_private' } });
+
+    // Sam can't see it, Ruth can, and staff see where it came from in a note only they read.
+    expect((await getSupportPage(db, 'usr_sam')).cases.map((row) => row.id)).not.toContain(opened!.id);
+    expect(await getSupportCasePage(db, 'usr_sam', opened!.id, new Date())).toBeNull();
+    expect((await getSupportPage(db, 'usr_ruth')).cases.map((row) => row.id)).toContain(opened!.id);
+    const staffView = await getAdminCase(db, { id: 'usr_alex', roles: ['support_agent'] }, opened!.id, new Date());
+    expect(staffView?.data.parties.map((party) => party.person.id)).toEqual(['usr_ruth']);
+    expect(staffView?.data.taskId).toBe('tsk_rev_private');
+    expect(staffView?.data.events.find((event) => event.kind === 'note')).toMatchObject({ actor: { kind: 'system' }, body: expect.stringContaining('2-star review of Sam K.') });
+    const ruthView = await getSupportCasePage(db, 'usr_ruth', opened!.id, new Date());
+    expect(JSON.stringify(ruthView)).not.toContain('2-star review');
+
+    // Nothing but spaces: no case.
+    const before = await db.select({ id: supportCases.id }).from(supportCases).where(eq(supportCases.openedByUserId, 'usr_sam'));
+    expect((await submitReview(db, 'usr_sam', privateBookingId, { rating: 5, tags: [], body: '', privateFeedback: '   ' }, new Date())).result).toMatchObject({ ok: true });
+    expect(await db.select({ id: supportCases.id }).from(supportCases).where(eq(supportCases.openedByUserId, 'usr_sam'))).toHaveLength(before.length);
+
+    await db.delete(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id));
+    await db.delete(supportCaseReads).where(eq(supportCaseReads.caseId, opened!.id));
+    await db.delete(supportCases).where(eq(supportCases.id, opened!.id));
   });
 });

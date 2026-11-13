@@ -29,6 +29,11 @@ export function createReviewInputSchema(direction: ReviewDirection) {
     rating: z.number(code('required')).int(code('required')).min(1, code('required')).max(5, code('out_of_range')),
     tags: z.array(z.enum(tags, code('invalid'))).max(5, code('too_long')),
     body: z.string(code('required')).trim().max(1000, code('too_long')),
+    /**
+     * For support only (completion plan P2): the other person never sees it. Sent with the review, it opens
+     * a low-priority support case only the author is on.
+     */
+    privateFeedback: z.string(code('invalid')).trim().max(1000, code('too_long')).optional(),
   });
 }
 export type ReviewInput = z.input<ReturnType<typeof createReviewInputSchema>>;
@@ -56,7 +61,7 @@ export interface ReviewPageData {
 }
 
 /**
- * - `onSubmit`: ok `submitted` with `redirectTo` (the booking). Errors: `validation_failed` (`rating`, `tags`, `body`),
+ * - `onSubmit`: ok `submitted` with `redirectTo` (the booking). Errors: `validation_failed` (`rating`, `tags`, `body`, `privateFeedback`),
  *   `not_allowed` (already reviewed, or the window ended), `rate_limited`, `unknown`.
  */
 export interface ReviewHandlers {

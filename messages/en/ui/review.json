@@ -12,6 +12,8 @@
   "bodyLabel": "Your review (optional)",
   "bodyHint": "Describe your experience with this task. Up to 1,000 characters.",
   "bodyCount": "{count} / 1,000 characters",
+  "privateLabel": "Anything for our team? (optional)",
+  "privateHint": "Only TasksNearMe support reads this; {name} never sees it. We'll write back if we need to.",
   "privacyNote": "Reviews stay hidden until you both send yours, or until {date}.",
   "send": "Send review",
   "sending": "Sending review…",

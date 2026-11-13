@@ -5,6 +5,7 @@ import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { categories } from '@/modules/markets/schema';
 import { getHelperSummaries, initialsOf } from '@/modules/profiles/queries';
+import { openReviewFeedbackCase } from '@/modules/support/service';
 import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
@@ -142,6 +143,12 @@ export async function submitReview(db: Db, userId: string, bookingId: string, in
   } catch (error) {
     if (isUniqueViolation(error)) return { result: { ok: false, code: 'not_allowed' }, ratedHelperId: null };
     throw error;
+  }
+  // Private feedback goes to support only (never to the other person).
+  const feedback = parsed.data.privateFeedback?.trim();
+  if (feedback) {
+    const [person] = await db.select({ name: users.name }).from(users).where(eq(users.id, subject)).limit(1);
+    await openReviewFeedbackCase(db, { userId, taskId: found.booking.taskId, taskTitle: found.title, rating: parsed.data.rating, subjectName: person?.name || 'the other person', feedback }, now);
   }
   const both = await db.select({ id: reviews.id }).from(reviews).where(eq(reviews.bookingId, found.booking.id));
   const rated = both.length >= 2 ? await publish(db, found.booking.id, now) : null;
