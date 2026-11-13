@@ -12,7 +12,7 @@
 - support for members, reporting and blocking; staff queues, cases, money resolutions, the staff booking page, rewards review, users.
 
 **Codex:** at its ChatGPT usage limit until 2026-11-17 12:32 (local). Buying credits is the owner's call. Tickets run with `node scripts/codex-run.mjs UI-xxx` (logs in `scratchpad/codex-UI-xxx.log`).
-**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0028). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
+**Database:** Docker `tasksnearme-db` on 54329 (user `tnm`). If Docker Desktop is down, start it (AUTOPILOT). After pulling, run `npm run db:migrate && npm run db:seed` (migrations 0000–0035). `npm run e2e` reseeds the dev database itself; `npx playwright test --project=e2e-setup` alone tidies it (removes e2e-posted tasks) without running the suites.
 **New dependencies (UI-036):** `motion`, `maplibre-gl`. Run `npm install` after pulling (never while a dev server runs in that checkout).
 
 ## Done on 2026-11-13 (owner requests)
@@ -20,6 +20,18 @@
 - **Installable app** (plan 3.6): `src/app/manifest.ts`, icons in `public/icons` (including the push badge).
 - **One-tap offer** (plan 4.3, UI-054): on find work, fixed-price tasks; Undo withdraws.
 - From the other session: data export and deletion (3.3), retention timers (3.4, `readExactAddress()`), web push (3.5, `public/sw.js`), Stripe Identity and Checkr adapters with signed webhooks (4.4).
+
+## Done for the completion plan (2026-11-12 – 13, owner request "complete the whole project", without asking)
+- **Find work, redesigned** (2.1–2.3): a pinned filter bar, sorts (soonest, newest, nearest, highest pay), days as groups, compact rows with what the helper earns, Save for later and Not interested (`task_marks`, migration 0030), and the list beside a map of general areas (MapLibre with OpenFreeMap over a drawn map; never an address).
+- **Task alerts** (3.1): new tasks reach the helpers they suit, at most 3 an hour and 10 a day (`task_match`, topic `task_alerts`).
+- **Maps where they help** (2.4): the task page, the posting preview, the helper's service area, directions links for the booked helper.
+- **The poster's lists** (2.5): "Needs you" on My tasks (a payment to finish, work to review, offers on a task within a day, new offers, no offers after a day), the newest offer on each task, booked tasks and upcoming bookings by day, and what to do next on bookings (`ownerTaskAttention`, `bookingNextStep`).
+- **Staff sign-in with an authenticator app** (3.2): TOTP built in, setup codes from another admin, resets that end sessions' checks, `npm run staff:setup-code` for the first admin (migration 0031). Development keeps 123456.
+- **Data export and account deletion** (3.3): a JSON copy prepared by the job runner and downloadable for 7 days; deletion after a 7-day grace (Keep my account), waiting while anything is open, then anonymized as "Deleted user" (migration 0032).
+- **Retention timers** (3.4): addresses 180 days after the last booking (`task_locations.deleted_at`, migration 0033; read through `readExactAddress`), messages and completion files after 2 years, the audit log after 7, expired sessions and codes.
+- **Web push** (3.5): "Notifications on this device", the prompt after posting and at the end of helper setup, `public/sw.js`, RFC 8291/8292 with Node's crypto, `npm run push:keys` (migration 0034).
+- **Proof-of-address reading by Claude** (4.1) and **Stripe Identity and Checkr adapters** with signed webhooks (4.4; migration 0035). Production verification still waits for the Stripe Connect payout adapter.
+- **Parallel work:** a second Claude session shares this checkout (memory `parallel-claude-session`). Claude's own work happens in the worktree `../TasksNearMe-claude` (branch `feat/find-work-map`, `node_modules` junctioned) and is fast-forwarded into the shared branch; the other session's uncommitted `docs/automation/decisions.md` rows are kept by a three-way merge each time.
 
 ## Done after the finish (2026-11-12, owner requests)
 - **Continue with Google / Microsoft** (UI-040): Better Auth providers; real with keys, a stand-in at `/dev/oauth/<provider>` without; a provider email creates or joins an account only when the provider confirms it; suspended accounts refused; "Ways to sign in" on the account page. Integration `social-sign-in`, e2e `social-sign-in.spec`.

@@ -21,6 +21,12 @@ function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
+function sameKey(current: ArrayBuffer | null | undefined, wanted: Uint8Array): boolean {
+  if (!current) return true;
+  const bytes = new Uint8Array(current);
+  return bytes.length === wanted.length && bytes.every((byte, index) => byte === wanted[index]);
+}
+
 /** iPhone and iPad Safari only allow push for Home Screen apps. */
 function needsInstall(): boolean {
   const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -64,7 +70,14 @@ export function usePushDevice(publicKey: string | undefined) {
       }
       const registration = await navigator.serviceWorker.register(SW_URL, { scope: '/' });
       await navigator.serviceWorker.ready;
-      const subscription = (await registration.pushManager.getSubscription()) ?? (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) }));
+      const key = keyBytes(publicKey);
+      let subscription = await registration.pushManager.getSubscription();
+      // Made with an older key (the site's key pair changed): pushes signed with the new one would be refused.
+      if (subscription && !sameKey(subscription.options.applicationServerKey, key)) {
+        await subscription.unsubscribe().catch(() => false);
+        subscription = null;
+      }
+      subscription ??= await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
       const json = subscription.toJSON();
       const result: ActionResult = await onSave({ endpoint: json.endpoint ?? subscription.endpoint, keys: { p256dh: json.keys?.p256dh ?? '', auth: json.keys?.auth ?? '' } });
       if (!result.ok) {
