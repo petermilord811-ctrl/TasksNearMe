@@ -65,6 +65,8 @@ function pathOf(target: AttentionTarget): string {
       return routes.app.offers(target.inviteId);
     case 'proposal':
       return routes.app.proposal(target.proposalId);
+    case 'series':
+      return routes.app.series(target.seriesId, target.payVisitId ? { pay: target.payVisitId } : {});
     case 'account':
       return routes.app.account();
     case 'verify_identity':

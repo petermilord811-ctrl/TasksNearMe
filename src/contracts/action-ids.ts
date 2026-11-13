@@ -93,6 +93,15 @@ export type ClientActionId = (typeof CLIENT_ACTION_IDS)[number];
 export const REBOOK_ACTION_IDS = ['accept_proposal', 'decline_proposal', 'withdraw_proposal'] as const;
 export type RebookActionId = (typeof REBOOK_ACTION_IDS)[number];
 
+/**
+ * Regular visits (`routes.app.series`): on the series, and on one visit. Kept out of `ALL_ACTION_IDS`: the
+ * series page has its own words for each, not the shared action bar's.
+ */
+export const SERIES_ACTION_IDS = ['pause_series', 'resume_series', 'change_card', 'cancel_series', 'end_series', 'message'] as const;
+export type SeriesActionId = (typeof SERIES_ACTION_IDS)[number];
+export const SERIES_VISIT_ACTION_IDS = ['skip_visit', 'pay_visit', 'open_booking'] as const;
+export type SeriesVisitActionId = (typeof SERIES_VISIT_ACTION_IDS)[number];
+
 export const REWARD_ACTION_IDS = [
   'redeem',
   'open_gift_card',

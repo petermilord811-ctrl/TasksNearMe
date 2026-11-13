@@ -35,6 +35,7 @@ export * from './changes';
 export * from './invites';
 export * from './availability';
 export * from './rebook';
+export * from './series';
 export * from './admin-people';
 export * from './admin-verification';
 export * from './admin-support-tools';

@@ -139,7 +139,8 @@ export const routes = {
     supportCase: (caseId: string) => `/app/support/${enc(caseId)}`,
     helperOnboarding: (step: OnboardingStep = 'profile') => `/app/helper/onboarding/${step}`,
     helperProfile: () => '/app/helper/profile',
-    series: (seriesId: string) => `/app/series/${enc(seriesId)}`,
+    /** Regular visits; `pay` opens that visit's payment. */
+    series: (seriesId: string, options: { pay?: string } = {}) => `/app/series/${enc(seriesId)}${options.pay ? `?pay=${enc(options.pay)}` : ''}`,
   },
 
   /** Downloads the app serves from route handlers. */
