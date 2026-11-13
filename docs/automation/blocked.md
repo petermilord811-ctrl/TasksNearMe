@@ -4,7 +4,7 @@ Things the autopilot can't do alone, and the workaround it uses meanwhile. None 
 
 | Item | Why it needs you | Workaround in use |
 |---|---|---|
-| Real provider accounts and keys (Stripe, Stripe Identity, Checkr, Tremendous, Twilio, Postmark, Google Maps, Anthropic) | Account creation, contracts, payment details | Fake providers behind the same interfaces. If test-mode keys appear in `.env.local`, Phase 10 wires them |
+| Real provider accounts and keys: Stripe (payments, Connect, Identity), Checkr, Tremendous, Twilio, Resend or Postmark, Cloudflare R2, Mapbox, Anthropic | Account creation, contracts, payment details, sender registration (A2P 10DLC), and Connect platform approval | Every adapter is built and tested against the provider's documented API. Each one switches on when its keys are set (see `.env.example` and docs/integration-points.md), and the stand-ins cover development. Production refuses to fake texts, file storage, payments and gift cards without them |
 | Final legal text (terms, privacy, helper agreement, rewards terms) | Needs counsel (blueprint 06 §5) | Pages marked "Draft — pending legal review" |
 | Deployment (Render, domain, DNS) | Accounts and billing | Local only. The build stays deployable (`npm run build`) |
-| Web push notifications | A product choice: when and how to ask for the browser's permission, and which updates are worth a push. Also needs a service worker and VAPID keys | Email and text messages by preference, with quiet hours (T-29). The delivery job and `notification_deliveries` take a third channel without changes to the planner's shape |
+| Web push notifications | Done (plan 3.5): "Notifications on this device", VAPID keys from `npm run push:keys` | — |
