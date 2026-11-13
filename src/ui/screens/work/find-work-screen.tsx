@@ -4,10 +4,11 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Lock, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type FindWorkCard, type FindWorkHandlers, type FindWorkPageData, type ISODateTime } from '@/contracts';
+import { routes, type ActionResult, type FindWorkCard, type FindWorkHandlers, type FindWorkPageData, type ISODateTime } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
+import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FinishSetupPanel } from '@/ui/components/helper/finish-setup-panel';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { AreaMap, type AreaMapPlace } from '@/ui/components/map/area-map';
@@ -26,7 +27,7 @@ export interface FindWorkScreenProps {
 }
 
 /** Why a one-tap offer didn't go through (each has its own words). */
-const QUICK_OFFER_ERRORS = ['not_allowed', 'limit_reached', 'rate_limited', 'not_found', 'unknown', 'undo_failed'] as const;
+const QUICK_OFFER_ERRORS = ['not_allowed', 'limit_reached', 'rate_limited', 'not_found', 'unknown', 'undo_failed', 'bot_check'] as const;
 type QuickOfferError = (typeof QUICK_OFFER_ERRORS)[number];
 
 /**
@@ -79,6 +80,8 @@ function useDayLabel(today: string) {
  * switch shows the list or the map; on wide screens both, and hovering a row lights its area.
  */
 export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWorkScreenProps) {
+  // One bot check for the list's one-tap offers (contracts/bot-check.ts).
+  const check = useBotCheck(data.botCheck, 'offer');
   const t = useTranslations('findWork');
   const budgetLabel = useBudgetLabel();
   const dayLabel = useDayLabel(data.today);
@@ -156,7 +159,14 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
     setOfferStates((current) => ({ ...current, [card.task.id]: 'sending' }));
     setOfferError(null);
     setOffered(null);
-    const result = await handlers.onQuickOffer({ taskId: card.task.id }).catch(() => ({ ok: false as const, code: 'unknown' as const }));
+    const result: ActionResult = await handlers.onQuickOffer({ taskId: card.task.id, ...(check.token ? { botCheck: check.token } : {}) }).catch(() => ({ ok: false as const, code: 'unknown' as const }));
+    // Each answer works once: the next tap gets a fresh one.
+    check.reset();
+    if (!result.ok && result.fieldErrors?.botCheck) {
+      setOfferStates(({ [card.task.id]: _gone, ...rest }) => rest);
+      setOfferError('bot_check');
+      return;
+    }
     if (result.ok) {
       setOfferStates((current) => ({ ...current, [card.task.id]: 'sent' }));
       setOffered({ card });
@@ -192,6 +202,7 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
         {!offered.undone && handlers?.onUndoQuickOffer && <button type="button" onClick={() => void undoQuickOffer(offered.card)} className="inline-flex min-h-11 items-center rounded-md px-2 font-medium text-primary underline underline-offset-4">{t('quickOfferUndo')}</button>}
       </p>}
       {offerError && <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{t(`quickOfferErrors.${offerError}`)}</p>}
+      {data.botCheck && handlers?.onQuickOffer && <BotCheckField check={check} />}
       {failed && <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{t('markFailed')}</p>}
     </div>
     <div className="gap-6 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">

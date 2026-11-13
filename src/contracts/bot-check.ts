@@ -1,13 +1,13 @@
 /**
  * Bot checks on abuse-prone forms (blueprint 07 §2 and §8, 06 §4): asking for a sign-in code, finishing
- * sign-up, and posting a task. The page says which check runs; the form sends the widget's answer as
- * `botCheck` with its input. A check the server turns down comes back as `validation_failed` with
+ * sign-up, posting a task, and offers (sending one, the one-tap offer, countering an invite). The page says
+ * which check runs; the form sends the widget's answer as `botCheck` with its input. A check the server turns down comes back as `validation_failed` with
  * `fieldErrors.botCheck`: `required` (no answer yet), `invalid` (try again), `expired` (the answer timed out or
  * was used: the widget gets a new one).
  */
 
 /** Which form the check ran on (Cloudflare's `action`; letters, digits and `_` only). */
-export const BOT_CHECK_ACTIONS = ['sign_in', 'sign_up', 'post_task'] as const;
+export const BOT_CHECK_ACTIONS = ['sign_in', 'sign_up', 'post_task', 'offer'] as const;
 export type BotCheckAction = (typeof BOT_CHECK_ACTIONS)[number];
 
 /**

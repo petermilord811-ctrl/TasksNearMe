@@ -2,7 +2,8 @@
 
 import { refresh, updateTag } from 'next/cache';
 import { z } from 'zod';
-import type { ActionResult, OfferActionId, OfferInput, PriceBreakdown, PricingInput } from '@/contracts';
+import type { ActionResult, BotCheckInput, OfferActionId, OfferInput, PriceBreakdown, PricingInput } from '@/contracts';
+import { checkBot } from '@/modules/accounts/bot-check';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { helperOfferAction, quoteForHelper, reviseOffer, setTaskMark, submitOffer, submitQuickOffer, withdrawOfferOnTask } from './helper';
@@ -45,9 +46,12 @@ export async function quoteOfferAction(input: { pricing: PricingInput }): Promis
 }
 
 /** Bound to the task id by the page: `submitOfferAction.bind(null, taskId)`. */
-export async function submitOfferAction(taskId: string, input: OfferInput): Promise<ActionResult> {
+export async function submitOfferAction(taskId: string, input: OfferInput & BotCheckInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
+  // Turnstile before anything is saved (blueprint 07 §2: offer forms).
+  const refused = await checkBot('offer', input?.botCheck);
+  if (refused) return refused;
   const result = await submitOffer(db, userId, String(taskId), input, await requestNow());
   if (result.ok) afterOfferChange();
   return result;
@@ -74,10 +78,12 @@ export async function helperOfferActionHandler(input: { offerId: string; action:
 const taskInput = z.object({ taskId: z.string().min(1).max(64) });
 
 /** FindWorkHandlers.onQuickOffer: the one-tap offer at the poster's price (fixed-price tasks only). */
-export async function quickOfferAction(input: { taskId: string }): Promise<ActionResult> {
+export async function quickOfferAction(input: { taskId: string } & BotCheckInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   const parsed = taskInput.safeParse({ taskId: input?.taskId });
   if (!userId || !parsed.success) return { ok: false, code: 'not_allowed' };
+  const refused = await checkBot('offer', input?.botCheck);
+  if (refused) return refused;
   const result = await submitQuickOffer(db, userId, parsed.data.taskId, await requestNow());
   if (result.ok) afterOfferChange();
   return result;

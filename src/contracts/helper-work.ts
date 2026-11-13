@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ActionDescriptor, ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
+import type { BotCheckConfig, BotCheckInput } from './bot-check';
 import type { OfferActionId } from './action-ids';
 import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
 import type { InviteView } from './invites';
@@ -109,6 +110,8 @@ export interface FindWorkPageData {
   today: string;
   /** Open tasks the helper saved. */
   savedCount: number;
+  /** The bot check for one-tap offers (contracts/bot-check.ts, action `offer`). Absent: none is set up. */
+  botCheck?: BotCheckConfig;
 }
 
 /**
@@ -119,10 +122,11 @@ export interface FindWorkHandlers {
   onSaveTask: ActionHandler<{ taskId: string; saved: boolean }>;
   onHideTask: ActionHandler<{ taskId: string; hidden: boolean }>;
   /**
-   * The one-tap offer (`card.quickOffer`): ok `sent`. Errors: `not_allowed` (the helper can't offer on it, or
-   * already has), `limit_reached` (too many active offers), `rate_limited`, `not_found` (no longer open).
+   * The one-tap offer (`card.quickOffer`), with the bot check's answer: ok `sent`. Errors: `not_allowed` (the
+   * helper can't offer on it, or already has), `limit_reached` (too many active offers), `rate_limited`,
+   * `not_found` (no longer open), `validation_failed` + `fieldErrors.botCheck` (the check was turned down).
    */
-  onQuickOffer?: ActionHandler<{ taskId: string }>;
+  onQuickOffer?: ActionHandler<{ taskId: string } & BotCheckInput>;
   /** Undo, right after a one-tap offer: withdraws the helper's active offer on that task (ok `updated`). */
   onUndoQuickOffer?: ActionHandler<{ taskId: string }>;
 }
@@ -163,6 +167,8 @@ export interface HelperTaskView {
   offerDefaults: OfferInput;
   /** The `ai_drafting` flag, and drafting is set up: show "Write it for me" on the offer message. */
   aiDraftingEnabled: boolean;
+  /** The bot check before sending a new offer (contracts/bot-check.ts, action `offer`). Absent: none is set up. */
+  botCheck?: BotCheckConfig;
 }
 
 export interface OfferRules {
@@ -243,7 +249,8 @@ export interface HelperWorkHandlers {
   onQuote: QueryHandler<{ pricing: PricingInput }, PriceBreakdown>;
   /** "Write it for me" (only when `aiDraftingEnabled`); bound to the task by the page. */
   onDraftOfferMessage: QueryHandler<OfferMessageDraftInput, OfferMessageDraftResult>;
-  onSubmitOffer: ActionHandler<OfferInput>;
+  /** With the bot check's answer; `fieldErrors.botCheck` when it's turned down. */
+  onSubmitOffer: ActionHandler<OfferInput & BotCheckInput>;
   onReviseOffer: ActionHandler<OfferInput>;
   onOfferAction: (input: { offerId: string; action: OfferActionId }) => Promise<ActionResult>;
 }

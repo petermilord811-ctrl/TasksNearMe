@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { botCheckForPage } from '@/modules/accounts/bot-check';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
@@ -26,11 +27,11 @@ async function HelperTask({ params }: Pick<PageProps<'/[locale]/app/find-work/[t
   const [{ taskId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.findWorkTask(taskId)));
   const now = await requestNow();
-  const data = await getHelperTaskView(db, viewer.user.id, taskId, now);
+  const [data, botCheck] = await Promise.all([getHelperTaskView(db, viewer.user.id, taskId, now), botCheckForPage()]);
   if (!data) notFound();
   return (
     <HelperTaskScreen
-      data={data}
+      data={botCheck ? { ...data, botCheck } : data}
       now={now.toISOString()}
       handlers={{
         onQuote: quoteOfferAction,

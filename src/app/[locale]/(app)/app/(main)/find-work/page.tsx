@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { botCheckForPage } from '@/modules/accounts/bot-check';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
@@ -25,7 +26,7 @@ async function Feed({ searchParams }: Pick<PageProps<'/[locale]/app/find-work'>,
   const [params, viewer] = await Promise.all([searchParams, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.findWork()));
   const now = await requestNow();
-  const data = await getFindWorkPageData(db, viewer.user.id, params, now);
+  const [data, botCheck] = await Promise.all([getFindWorkPageData(db, viewer.user.id, params, now), botCheckForPage()]);
   if (!data) notFound();
-  return <FindWorkScreen data={data} now={now.toISOString()} handlers={{ onSaveTask: saveTaskAction, onHideTask: hideTaskAction, onQuickOffer: quickOfferAction, onUndoQuickOffer: undoQuickOfferAction }} />;
+  return <FindWorkScreen data={botCheck ? { ...data, botCheck } : data} now={now.toISOString()} handlers={{ onSaveTask: saveTaskAction, onHideTask: hideTaskAction, onQuickOffer: quickOfferAction, onUndoQuickOffer: undoQuickOfferAction }} />;
 }

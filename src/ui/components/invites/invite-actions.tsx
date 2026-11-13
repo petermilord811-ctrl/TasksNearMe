@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { needsBankVerification, type ActionResult, type InviteActionId, type InviteHandlers, type InviteView, type PaymentAttemptResult, type PaymentVerification } from '@/contracts';
 import { formatMoney } from '@/shared/format';
+import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { BankVerificationDialog } from '@/ui/components/payments';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
@@ -33,6 +34,9 @@ export function InviteActions({ invite, handlers, headingLevel, initialCounterOp
   const [verification, setVerification] = useState<PaymentVerification | undefined>(initialResult && needsBankVerification(initialResult) ? initialResult.verification : undefined);
   const [confirm, setConfirm] = useState<ConfirmAction>();
   const [counterOpen, setCounterOpen] = useState(initialCounterOpen);
+  // A counter-offer runs the bot check; its answer goes with the counter.
+  const check = useBotCheck(invite.botCheck, 'offer');
+  const botCheckRefused = Boolean(result && !result.ok && result.fieldErrors?.botCheck);
   const disabled = pending || Boolean(verification) || Boolean(result?.ok);
 
   useEffect(() => {
@@ -72,7 +76,7 @@ export function InviteActions({ invite, handlers, headingLevel, initialCounterOp
   }
 
   return <>
-    <div ref={feedbackRef} tabIndex={-1} className="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><FormFeedback result={result && !result.ok ? { ...result, fieldErrors: undefined } : result} /></div>
+    <div ref={feedbackRef} tabIndex={-1} className="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><FormFeedback result={botCheckRefused ? undefined : result && !result.ok ? { ...result, fieldErrors: undefined } : result} /></div>
     {invite.actions.length > 0 && <div role="group" aria-label={t('actionsLabel')} className="flex flex-wrap gap-3">
       {invite.actions.map((action) => <Button key={action} type="button" variant={action === 'accept_invite' || action === 'accept_counter' ? 'default' : 'outline'} disabled={disabled} aria-busy={pending && active === action} onClick={(event) => {
         opener.current = event.currentTarget;
@@ -80,7 +84,8 @@ export function InviteActions({ invite, handlers, headingLevel, initialCounterOp
         else setConfirm(action);
       }}>{pending && active === action && <Spinner aria-hidden="true" />}{t(`actions.${action}`)}</Button>)}
     </div>}
-    {counterOpen && invite.actions.includes('counter_invite') && <CounterInviteForm invite={invite} headingLevel={headingLevel} pending={pending} result={result} onSubmit={async (counter) => { setActive('counter_invite'); await run(() => handlers.onCounter({ inviteId: invite.id, counter })); }} onClose={() => { setCounterOpen(false); opener.current?.focus(); }} />}
+    {counterOpen && invite.actions.includes('counter_invite') && <CounterInviteForm invite={invite} headingLevel={headingLevel} pending={pending} result={result} onSubmit={async (counter) => { setActive('counter_invite'); await run(() => handlers.onCounter({ inviteId: invite.id, counter, ...(check.token ? { botCheck: check.token } : {}) })); check.reset(); }} onClose={() => { setCounterOpen(false); opener.current?.focus(); }} />}
+    {counterOpen && invite.botCheck && invite.actions.includes('counter_invite') && <BotCheckField check={check} result={result} />}
     <AlertDialog open={Boolean(confirm)} onOpenChange={(open) => { if (!open) setConfirm(undefined); }}>
       <AlertDialogContent onCloseAutoFocus={(event) => { event.preventDefault(); if (opener.current?.isConnected && !opener.current.disabled) opener.current.focus(); }}>
         <AlertDialogHeader><AlertDialogTitle>{confirm ? t(`actions.${confirm}`) : t('actionsLabel')}</AlertDialogTitle><AlertDialogDescription>{confirm ? confirmation(confirm) : ''}</AlertDialogDescription></AlertDialogHeader>

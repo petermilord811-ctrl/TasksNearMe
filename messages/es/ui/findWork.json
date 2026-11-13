@@ -109,6 +109,7 @@
     "rate_limited": "Son muchas ofertas a la vez. Inténtalo de nuevo en unos minutos.",
     "not_found": "Esta tarea ya no está abierta.",
     "unknown": "Tu oferta no se envió. Inténtalo de nuevo.",
-    "undo_failed": "Tu oferta no se pudo retirar desde aquí. Abre la tarea para retirarla."
+    "undo_failed": "Tu oferta no se pudo retirar desde aquí. Abre la tarea para retirarla.",
+    "bot_check": "No pudimos confirmar que eres una persona, así que la oferta no se envió. Vuelve a intentarlo."
   }
 }

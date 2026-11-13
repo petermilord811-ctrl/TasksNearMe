@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { InviteActionId } from './action-ids';
 import type { AvailabilitySlotView } from './availability';
 import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
+import type { BotCheckConfig, BotCheckInput } from './bot-check';
 import type { CategorySlug, Cents, ISODateTime } from './common';
 import { mustAcceptField } from './forms';
 import type { PriceBreakdown, PricingInput } from './money';
@@ -91,6 +92,11 @@ export interface RequestHelperHandlers {
 /** An invite, projected for the viewer (clients see what they pay; helpers what they earn). */
 export interface InviteView {
   id: string;
+  /**
+   * The bot check before sending a counter-offer (contracts/bot-check.ts, action `offer`), set by the page on
+   * invites the helper can counter. Absent: none is set up.
+   */
+  botCheck?: BotCheckConfig;
   status: InviteStatus;
   viewerRole: 'poster' | 'helper';
   task: { id: string; title: string; categorySlug: CategorySlug };
@@ -130,7 +136,8 @@ export type CounterInviteInput = z.input<typeof counterInviteInputSchema>;
 export interface InviteHandlers {
   onAccept: ActionHandler<{ inviteId: string }>;
   onDecline: ActionHandler<{ inviteId: string }>;
-  onCounter: ActionHandler<{ inviteId: string; counter: CounterInviteInput }>;
+  /** With the bot check's answer; `fieldErrors.botCheck` when it's turned down. */
+  onCounter: ActionHandler<{ inviteId: string; counter: CounterInviteInput } & BotCheckInput>;
   onCancel: ActionHandler<{ inviteId: string }>;
   onAcceptCounter: QueryHandler<{ inviteId: string }, PaymentAttemptResult>;
   onDeclineCounter: ActionHandler<{ inviteId: string }>;

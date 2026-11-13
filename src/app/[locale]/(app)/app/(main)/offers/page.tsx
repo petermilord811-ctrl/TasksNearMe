@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { botCheckForPage } from '@/modules/accounts/bot-check';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
@@ -28,7 +29,9 @@ async function Offers({ searchParams }: Pick<PageProps<'/[locale]/app/offers'>, 
   const inviteId = typeof query.invite === 'string' ? query.invite : undefined;
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.offers(inviteId)));
   const now = await requestNow();
-  const [data, invites] = await Promise.all([getMyOffers(db, viewer.user.id, now), invitesForHelper(db, bookingDeps()?.payments ?? null, viewer.user.id, now)]);
+  const [data, found, botCheck] = await Promise.all([getMyOffers(db, viewer.user.id, now), invitesForHelper(db, bookingDeps()?.payments ?? null, viewer.user.id, now), botCheckForPage()]);
+  // Countering an invite runs the bot check (contracts/bot-check.ts).
+  const invites = botCheck ? found.map((invite) => (invite.actions.includes('counter_invite') ? { ...invite, botCheck } : invite)) : found;
   const openInviteId = inviteId && invites.some((invite) => invite.id === inviteId) ? inviteId : undefined;
   return <MyOffersScreen data={{ ...data, invites, ...(openInviteId ? { openInviteId } : {}) }} now={now.toISOString()} inviteHandlers={inviteHandlers} />;
 }

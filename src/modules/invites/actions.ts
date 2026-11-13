@@ -1,7 +1,8 @@
 'use server';
 
 import { refresh, updateTag } from 'next/cache';
-import type { ActionResult, CounterInviteInput, PaymentAttemptResult, PriceBreakdown, PricingInput, RequestHelperInput } from '@/contracts';
+import type { ActionResult, BotCheckInput, CounterInviteInput, PaymentAttemptResult, PriceBreakdown, PricingInput, RequestHelperInput } from '@/contracts';
+import { checkBot } from '@/modules/accounts/bot-check';
 import { createPaymentProvider } from '@/integrations/payments';
 import { bookingDeps } from '@/modules/bookings/server';
 import { getViewer } from '@/platform/auth/viewer';
@@ -69,9 +70,11 @@ export async function declineInviteAction(input: { inviteId: string }): Promise<
   return refreshed(await declineInvite(db, createPaymentProvider(), userId, String(input.inviteId), await requestNow()));
 }
 
-export async function counterInviteAction(input: { inviteId: string; counter: CounterInviteInput }): Promise<ActionResult> {
+export async function counterInviteAction(input: { inviteId: string; counter: CounterInviteInput } & BotCheckInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
+  const refused = await checkBot('offer', input?.botCheck);
+  if (refused) return refused;
   return refreshed(await counterInvite(db, createPaymentProvider(), userId, String(input.inviteId), input.counter, await requestNow()));
 }
 

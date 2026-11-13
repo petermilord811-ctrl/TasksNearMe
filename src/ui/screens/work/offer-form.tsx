@@ -7,6 +7,7 @@ import { FormProvider, useForm, useWatch, type FieldPath } from 'react-hook-form
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createOfferInputSchema, type ActionResult, type HelperTaskView, type HelperWorkHandlers, type OfferInput } from '@/contracts';
 import { marketLocalToUtc } from '@/shared/format';
+import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -61,18 +62,24 @@ export function OfferForm({ data, handlers, revising = false, onCancel, initialR
     }
   }, [result, pending, data.offerRules.pricingType, setError, setFocus]);
 
+  // A new offer runs the bot check (revising one doesn't); its answer goes with the offer.
+  const check = useBotCheck(revising ? undefined : data.botCheck, 'offer');
+
   async function submit(input: OfferInput) {
     if (locked.current) return;
     locked.current = true; setPending(true); setResult(undefined);
     let next: ActionResult;
-    try { next = await (revising ? handlers.onReviseOffer : handlers.onSubmitOffer)(input); }
+    try { next = await (revising ? handlers.onReviseOffer(input) : handlers.onSubmitOffer({ ...input, ...(check.token ? { botCheck: check.token } : {}) })); }
     catch { next = { ok: false, code: 'unknown' }; }
+    if (!next.ok) check.reset();
     locked.current = false; setPending(false); setResult(next);
     if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
 
   // Keep a summary even when a server error names a field this form doesn't know.
-  const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
+  // A turned-down bot check is said by the check itself.
+  const botCheckRefused = Boolean(result && !result.ok && result.fieldErrors?.botCheck);
+  const feedback = botCheckRefused ? undefined : result && !result.ok ? { ...result, fieldErrors: undefined } : result;
   return <section aria-labelledby={`${id}-title`} className="space-y-5 rounded-xl border bg-card p-4 shadow-card sm:p-6">
     <h2 ref={heading} tabIndex={-1} id={`${id}-title`} className="rounded-sm font-heading text-xl font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{t(revising ? 'reviseTitle' : 'title')}</h2>
     <p className="text-sm text-muted-foreground">{t('intro')}</p>
@@ -85,6 +92,7 @@ export function OfferForm({ data, handlers, revising = false, onCancel, initialR
         }
       }}><legend className="sr-only">{t('details')}</legend><OfferFields rules={data.offerRules} onDraftMessage={data.aiDraftingEnabled ? handlers.onDraftOfferMessage : undefined} /></fieldset>
       <OfferEarnings pricing={pricing} valid={validPricing} onQuote={handlers.onQuote} />
+      {!revising && data.botCheck && <BotCheckField check={check} result={result} />}
       <FormFeedback result={feedback} />
       <div ref={submitBar} className="sticky bottom-app-navigation z-10 flex flex-wrap gap-3 border-t bg-card pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <Button type="submit" disabled={pending} aria-busy={pending} className="min-w-0 flex-1 sm:flex-none">{pending && <Spinner />}{t(pending ? 'sending' : revising ? 'save' : 'send')}</Button>
