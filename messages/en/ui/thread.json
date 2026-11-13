@@ -1,7 +1,7 @@
 {
   "back": "All messages",
   "title": "Messages with {name}",
-  "subject": { "offer_for_client": "View offer", "task_for_helper": "View task", "booking": "View booking" },
+  "subject": { "offer_for_client": "View offer", "task_for_helper": "View task", "booking": "View booking", "series": "View regular visits" },
   "masking": "Phone numbers and emails stay hidden until the booking is confirmed",
   "disabled": { "blocked": "You can't message each other", "closed": "This conversation is closed", "unavailable": "Messaging is unavailable in this conversation" },
   "log": "Conversation messages",

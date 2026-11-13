@@ -14,7 +14,7 @@ import type {
 } from '@/contracts';
 import { sendMessageInputSchema } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
-import { bookings } from '@/modules/bookings/schema';
+import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { MAX_PHOTO_BYTES, photoFromFile } from '@/modules/files/uploads';
 import { offers } from '@/modules/offers/schema';
 import { initialsOf } from '@/modules/profiles/queries';
@@ -97,6 +97,19 @@ async function contextOf(db: Db, thread: ThreadRow, viewerId: string, now: Date)
       subject: { kind: 'booking', bookingId: booking.id },
       masking: booking.status === 'pending_funding',
       closed: endedAt !== null && now.getTime() > endedAt.getTime() + keepOpenDays * DAY,
+    };
+  }
+  if (thread.kind === 'series') {
+    // Regular visits: open while the series runs, and 30 days after its last visit once it's over.
+    const [series] = await db.select({ id: bookingSeries.id, status: bookingSeries.status }).from(bookingSeries).where(eq(bookingSeries.id, thread.linkedId)).limit(1);
+    if (!series) return null;
+    const [last] = await db.select({ startAt: bookings.startAt }).from(bookings).where(and(eq(bookings.seriesId, series.id), ne(bookings.status, 'canceled'))).orderBy(desc(bookings.startAt)).limit(1);
+    const over = series.status === 'canceled' || series.status === 'ended';
+    return {
+      title: task.title,
+      subject: { kind: 'series', seriesId: series.id },
+      masking: false,
+      closed: over && (!last || now.getTime() > last.startAt.getTime() + 30 * DAY),
     };
   }
   if (thread.kind === 'offer') {
@@ -311,8 +324,15 @@ export async function offerThreadId(db: Db, offerId: string, now: Date): Promise
 }
 
 /** The booking's link for its thread. */
-export function bookingThreadLink(booking: { id: string; taskId: string; posterUserId: string; helperUserId: string }): ThreadLink {
+/** A booking's conversation: its own, or, for a visit of regular visits, the series' one (all visits share it). */
+export function bookingThreadLink(booking: { id: string; taskId: string; posterUserId: string; helperUserId: string; seriesId?: string | null }): ThreadLink {
+  if (booking.seriesId) return { kind: 'series', linkedId: booking.seriesId, taskId: booking.taskId, participantIds: [booking.posterUserId, booking.helperUserId] };
   return { kind: 'booking', linkedId: booking.id, taskId: booking.taskId, participantIds: [booking.posterUserId, booking.helperUserId] };
+}
+
+/** The conversation of regular visits. */
+export function seriesThreadLink(series: { id: string; templateTaskId: string; posterUserId: string; helperUserId: string }): ThreadLink {
+  return { kind: 'series', linkedId: series.id, taskId: series.templateTaskId, participantIds: [series.posterUserId, series.helperUserId] };
 }
 
 /** Who may see a message photo: the people in its thread. */

@@ -10,7 +10,6 @@ import type {
   BookingViewerRole,
   CancelReason,
   CardBrand,
-  ClientSummary,
   CompletedVia,
   ExactAddress,
   PaymentStatus,
@@ -18,11 +17,10 @@ import type {
   TimelineEvent,
 } from '@/contracts';
 import { routes } from '@/contracts';
-import { users } from '@/modules/accounts/schema';
 import { marketPolicies } from '@/modules/markets/schema';
 import { offers } from '@/modules/offers/schema';
 import { payments, refunds } from '@/modules/payments/schema';
-import { getHelperSummaries, initialsOf } from '@/modules/profiles/queries';
+import { getHelperSummaries } from '@/modules/profiles/queries';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { taskLocations, tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
@@ -41,7 +39,10 @@ import { addressVisibility, allBookingActions, bookingDeadlines, bookingNextStep
 import { expireCantAccess } from './sheets';
 import { readExactAddress } from '@/modules/tasks/locations';
 import type { PaymentProvider } from '@/integrations/payments';
+import { clientSummary } from './people';
 import { tipViewOf } from './tips';
+import { scheduledPaymentViewOf } from './scheduled';
+import { seriesOfBooking, skipVisit } from './series';
 import { bookingTerms, bookings } from './schema';
 
 /**
@@ -98,6 +99,8 @@ function factsOf(booking: BookingRow, remote: boolean): BookingFacts {
     lateByMinutes: booking.lateByMinutes,
     cantAccessAt: booking.cantAccessAt,
     posterResponseDueAt: booking.posterResponseDueAt,
+    seriesId: booking.seriesId,
+    fundingFailure: booking.fundingFailure,
   };
 }
 
@@ -112,17 +115,7 @@ async function policyOf(db: Db, policyVersionId: string): Promise<BookingPolicy>
   return row ? { noShowMinutes: row.timers.noShowMinutes, addressHideAfterHours: row.timers.addressHideAfterHours } : DEFAULT_POLICY;
 }
 
-export async function clientSummary(db: Db, userId: string): Promise<ClientSummary | null> {
-  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (!user) return null;
-  return {
-    id: user.id,
-    displayName: user.name,
-    initials: initialsOf(user.firstName, user.lastName),
-    memberSince: user.createdAt.toISOString(),
-    phoneVerified: user.phoneVerifiedAt !== null,
-  };
-}
+export { clientSummary } from './people';
 
 function timelineOf(
   booking: BookingRow,
@@ -222,10 +215,12 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     paymentLines.sort((a, b) => a.at.localeCompare(b.at));
   }
 
-  const [dispute, openChange, tip] = await Promise.all([
+  const [dispute, openChange, tip, series, scheduledPayment] = await Promise.all([
     getBookingDispute(db, booking.id, userId, role),
     bookingOpenChange(db, booking.id, userId, role, now),
     tipViewOf(deps, booking, role, completion?.finalBreakdown.taskPriceCents ?? terms.breakdown.taskPriceCents, now),
+    seriesOfBooking(db, booking),
+    scheduledPaymentViewOf(deps, booking, role),
   ]);
 
   return {
@@ -272,6 +267,8 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     ...(role === 'poster' && review.facts?.helperSaved ? { helperSaved: true } : {}),
     ...(review.mine ? { myReview: review.mine } : {}),
     ...(tip ? { tip } : {}),
+    ...(series ? { series } : {}),
+    ...(scheduledPayment ? { scheduledPayment } : {}),
     actions: allBookingActions(facts, role, policy, now),
   };
 }
@@ -429,6 +426,8 @@ export async function runBookingAction(
       if (result.ok) await recordCompletionMoney(db, booking.id, now);
       return result;
     }
+    case 'skip_visit':
+      return skipVisit(db, userId, booking.id, now);
     case 'find_replacement': {
       const reopened = await reopenForReplacement(db, userId, booking, now);
       if (reopened.task) options.onTaskReopened?.(reopened.task);

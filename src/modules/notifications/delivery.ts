@@ -7,7 +7,7 @@ import { createSmsSender, type SmsSender } from '@/integrations/sms';
 import { users } from '@/modules/accounts/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { formatMoney } from '@/shared/format';
+import { formatDate, formatDateTime, formatMoney, marketLocalToUtc } from '@/shared/format';
 import appMessages from '../../../messages/en/app';
 import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
 import { DELIVERY_CHANNELS, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
@@ -66,7 +66,7 @@ function pathOf(target: AttentionTarget): string {
     case 'proposal':
       return routes.app.proposal(target.proposalId);
     case 'series':
-      return routes.app.series(target.seriesId, target.payVisitId ? { pay: target.payVisitId } : {});
+      return routes.app.series(target.seriesId);
     case 'account':
       return routes.app.account();
     case 'verify_identity':
@@ -90,6 +90,9 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     hours: params.hours ?? 0,
     days: params.days ?? 0,
     track: params.track ?? 'other',
+    hasDate: params.at === undefined && params.day === undefined ? 'no' : 'yes',
+    date: params.at ? formatDateTime(params.at) : params.day ? formatDate(marketLocalToUtc(params.day, '12:00')) : '',
+    by: params.by ?? 'other',
   });
   const url = `${appUrl()}${pathOf(row.target)}`;
   const type = row.type as NotificationType;

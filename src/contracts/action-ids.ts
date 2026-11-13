@@ -36,6 +36,8 @@ export const BOOKING_ACTION_IDS = [
   'book_again',
   'offer_rebook',
   'find_replacement',
+  /** A regular visit not paid yet: the client skips it (free), the helper too while it's 48 h or more away. */
+  'skip_visit',
   'report_damage',
   'safety_report',
   'contact_support',

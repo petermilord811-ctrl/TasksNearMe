@@ -50,6 +50,9 @@ export interface BookingFacts {
   canceledAt?: Date | null;
   task?: { status: string; windowEnd: Date; hidden: boolean };
   contested?: boolean;
+  /** Regular visits: the visit's series. A `scheduled` booking's charge failed (the client pays on the page). */
+  seriesId?: string | null;
+  fundingFailure?: string | null;
 }
 
 export interface BookingPolicy {
@@ -71,6 +74,8 @@ function opensAt(id: BookingActionId, kind: ActionDescriptor['kind'], at: Date, 
 export function bookingActions(booking: BookingFacts, role: BookingViewerRole, now: Date): ActionDescriptor<BookingActionId>[] {
   const actions = baseActions(booking, role, now);
   if (booking.status === 'pending_funding') return actions;
+  // Paid later: the conversation and the calendar; terms change once it's paid.
+  if (booking.status === 'scheduled') return [...actions, make('message', 'secondary'), make('add_to_calendar', 'secondary')];
   // The booking thread: after the primary action, before the calendar.
   const at = actions.findIndex((item) => item.id === 'add_to_calendar');
   const message = make('message', 'secondary');
@@ -100,9 +105,21 @@ function canceledActions(booking: BookingFacts, role: BookingViewerRole, now: Da
   return actions;
 }
 
+/** Regular visits: a helper skips a visit not paid yet only this long ahead (no strike); the client any time before it starts. */
+export const HELPER_SKIP_AHEAD_MS = 48 * HOUR;
+
+/** A booking paid later (`scheduled`): a regular visit is skipped in one tap (cancellations go through the sheet). */
+function scheduledActions(booking: BookingFacts, role: BookingViewerRole, now: Date): ActionDescriptor<BookingActionId>[] {
+  if (!booking.seriesId || booking.startAt <= now) return [];
+  const skip = make('skip_visit', 'destructive', { confirm: true });
+  if (role === 'poster') return [skip];
+  return booking.startAt.getTime() - now.getTime() >= HELPER_SKIP_AHEAD_MS ? [skip] : [];
+}
+
 function baseActions(booking: BookingFacts, role: BookingViewerRole, now: Date): ActionDescriptor<BookingActionId>[] {
   const calendar = make('add_to_calendar', 'secondary');
   if (booking.status === 'canceled') return canceledActions(booking, role, now);
+  if (booking.status === 'scheduled') return scheduledActions(booking, role, now);
   if (role === 'poster') {
     switch (booking.status) {
       case 'pending_funding':
@@ -162,6 +179,7 @@ export function addressVisibility(booking: BookingFacts, role: BookingViewerRole
         ? 'visible'
         : 'hidden_after_completion';
     case 'pending_funding':
+    case 'scheduled':
       return 'after_confirmation';
     default:
       return 'hidden_after_completion';
@@ -193,6 +211,8 @@ export function bookingDeadlines(booking: BookingFacts, role: BookingViewerRole,
 export function bookingNextStep(booking: BookingFacts, role: BookingViewerRole, now: Date): { kind: BookingNextStep; dueAt?: string } | undefined {
   if (role === 'poster') {
     if (booking.status === 'pending_funding') return { kind: 'pay', ...(booking.fundingExpiresAt ? { dueAt: booking.fundingExpiresAt.toISOString() } : {}) };
+    // Paid later, and the charge failed: the client pays on the page before the deadline.
+    if (booking.status === 'scheduled' && booking.fundingFailure) return { kind: 'pay', ...(booking.fundingExpiresAt ? { dueAt: booking.fundingExpiresAt.toISOString() } : {}) };
     if (booking.status === 'completion_submitted') return { kind: 'review_work', ...(booking.approvalDueAt ? { dueAt: booking.approvalDueAt.toISOString() } : {}) };
     return undefined;
   }
@@ -223,6 +243,8 @@ export function sheetActions(booking: BookingFacts, role: BookingViewerRole, pol
   const safety = make('safety_report', 'secondary');
   const cancel = make('cancel', 'destructive');
   const start = booking.startAt.getTime();
+  // A one-time booking paid later cancels free (a regular visit is skipped instead).
+  if (booking.status === 'scheduled') return booking.seriesId || start <= now.getTime() ? [] : [cancel];
   if (role === 'poster') {
     if (booking.status === 'confirmed') {
       if (booking.remote || booking.arrivedAt) return [safety, cancel];

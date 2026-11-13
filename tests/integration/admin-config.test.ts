@@ -10,7 +10,7 @@ import { createDb } from '@/platform/db/connect';
 
 /**
  * Market config (UI-038): policy versions and flags. Publishing runs on a throwaway market, so every other
- * test keeps Austin's launch fees; the flag test uses `recurring` (off at launch) and turns it back off.
+ * test keeps Austin's launch fees; the flag test uses `reward.acceptance` (off at launch) and turns it back off.
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
@@ -30,7 +30,7 @@ beforeAll(async () => {
 describe('market config', () => {
   it('is for admins only', async () => {
     expect(await getAdminConfig(db, morgan, 'austin')).toBeNull();
-    expect(await setFeatureFlag(db, morgan, { key: 'recurring', enabled: true, reason })).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await setFeatureFlag(db, morgan, { key: 'reward.acceptance', enabled: true, reason })).toEqual({ ok: false, code: 'not_allowed' });
     const page = await getAdminConfig(db, riley, 'austin');
     expect(page?.current).toMatchObject({ version: 1, status: 'published', values: { posterBps: 1000, helperBps: 1000, posterMinCents: 300, autoApproveHours: 72 } });
     expect(page?.flags.map((flag) => flag.key)).toContain('ai_drafting');
@@ -56,13 +56,13 @@ describe('market config', () => {
 
   it('turns a flag on and off, audited; unknown flags are refused', async () => {
     expect(await setFeatureFlag(db, riley, { key: 'no_such_flag', enabled: true, reason })).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { key: ['invalid'] } });
-    expect(await setFeatureFlag(db, riley, { key: 'recurring', enabled: true, reason })).toEqual({ ok: true, code: 'updated' });
-    expect((await getFlags('mkt_austin', db)).recurring).toBe(true);
-    expect(await setFeatureFlag(db, riley, { key: 'recurring', enabled: false, reason: 'Back off until phase 2.' })).toEqual({ ok: true, code: 'updated' });
-    expect((await getFlags('mkt_austin', db)).recurring).toBe(false);
-    const entries = await db.select().from(auditLog).where(and(eq(auditLog.action, 'config.set_flag'), eq(auditLog.targetId, 'recurring')));
+    expect(await setFeatureFlag(db, riley, { key: 'reward.acceptance', enabled: true, reason })).toEqual({ ok: true, code: 'updated' });
+    expect((await getFlags('mkt_austin', db))['reward.acceptance']).toBe(true);
+    expect(await setFeatureFlag(db, riley, { key: 'reward.acceptance', enabled: false, reason: 'Back off until the campaign.' })).toEqual({ ok: true, code: 'updated' });
+    expect((await getFlags('mkt_austin', db))['reward.acceptance']).toBe(false);
+    const entries = await db.select().from(auditLog).where(and(eq(auditLog.action, 'config.set_flag'), eq(auditLog.targetId, 'reward.acceptance')));
     expect(entries.map((entry) => entry.metadata)).toEqual(expect.arrayContaining([{ enabled: true }, { enabled: false }]));
-    const [flag] = await db.select().from(featureFlags).where(and(eq(featureFlags.key, 'recurring'), eq(featureFlags.marketId, 'global')));
+    const [flag] = await db.select().from(featureFlags).where(and(eq(featureFlags.key, 'reward.acceptance'), eq(featureFlags.marketId, 'global')));
     expect(flag?.enabled).toBe(false);
   });
 });

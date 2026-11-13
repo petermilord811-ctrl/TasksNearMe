@@ -63,6 +63,12 @@ const copy: Record<NotificationType, RegExp> = {
   helper_ready: /you can send offers now/,
   task_match: /New task near you: .*\$54\.00/,
   data_export_ready: /copy of your data is ready/,
+  series_started: /started regular visits/,
+  series_visit_skipped: /skipped the visit on/,
+  series_paused: /paused regular visits/,
+  series_resumed: /regular visits for .* are back on/i,
+  series_stopped: /regular visits/i,
+  scheduled_payment_failed: /couldn't charge your card/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -77,7 +83,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   support_case: { target: { kind: 'support_case', caseId: 'case / one' }, href: routes.app.supportCase('case / one') },
   invite: { target: { kind: 'invite', inviteId: 'invite / one' }, href: routes.app.offers('invite / one') },
   proposal: { target: { kind: 'proposal', proposalId: 'proposal / one' }, href: routes.app.proposal('proposal / one') },
-  series: { target: { kind: 'series', seriesId: 'series / one', payVisitId: 'visit / one' }, href: routes.app.series('series / one', { pay: 'visit / one' }) },
+  series: { target: { kind: 'series', seriesId: 'series / one' }, href: routes.app.series('series / one') },
 };
 
 describe('NotificationsScreen', () => {

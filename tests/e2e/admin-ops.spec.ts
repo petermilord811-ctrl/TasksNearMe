@@ -142,13 +142,13 @@ test('an admin sees the policy in use and turns a flag on and off', async ({ pag
   const form = page.getByRole('form', { name: 'Publish a new version' });
   await expect(form.getByLabel('Client fee (%)')).toHaveValue('10');
 
-  // `recurring` is off at launch (phase 2) and nothing reads it yet.
-  await page.getByRole('button', { name: 'Turn on recurring' }).click();
+  // `reward.acceptance` is off at launch (a campaign switch): on and back off.
+  await page.getByRole('button', { name: 'Turn on reward.acceptance' }).click();
   await page.getByRole('alertdialog').getByLabel('Reason').fill('Checking the flag tools work.');
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Turn on recurring' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Turn on reward.acceptance' }).click();
   await expect(page.getByText('Saved. The flag is updated.')).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Turn off recurring' }).click();
-  await page.getByRole('alertdialog').getByLabel('Reason').fill('Back off until phase 2.');
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Turn off recurring' }).click();
-  await expect(page.getByRole('button', { name: 'Turn on recurring' })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Turn off reward.acceptance' }).click();
+  await page.getByRole('alertdialog').getByLabel('Reason').fill('Back off until the campaign.');
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Turn off reward.acceptance' }).click();
+  await expect(page.getByRole('button', { name: 'Turn on reward.acceptance' })).toBeVisible({ timeout: 30_000 });
 });

@@ -21,6 +21,7 @@ function subjectHref(subject: ThreadSubject) {
     case 'offer_for_client': return routes.app.offer(subject.taskId, subject.offerId);
     case 'task_for_helper': return routes.app.findWorkTask(subject.taskId);
     case 'booking': return routes.app.booking(subject.bookingId);
+    case 'series': return routes.app.series(subject.seriesId);
   }
 }
 

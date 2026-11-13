@@ -66,6 +66,8 @@ function roleOf(booking: BookingRow, userId: string): BookingViewerRole | null {
 
 /** The money and strike outcome of a cancellation by `by` at `now`. */
 function outcomeOf(row: Loaded, by: BookingViewerRole | 'no_show' | 'poster_unavailable', now: Date) {
+  // Paid later and not paid yet: free for both, nothing to refund, no strike.
+  if (row.booking.status === 'scheduled') return { reason: (by === 'helper' ? 'helper' : 'poster_early') as CancelReason, late: false, refund: 0, compensation: 0, strike: null };
   const charged = row.terms.breakdown.posterChargedCents ?? row.terms.breakdown.posterTotalCents;
   const summary = cancellationSummary(row.policy.cancellation, row.terms.breakdown, row.booking.startAt.toISOString());
   const late = now.getTime() >= Date.parse(summary.freeUntil);
@@ -98,6 +100,7 @@ export async function previewCancellation(db: Db, userId: string, bookingId: str
     posterRefundCents: outcome.refund,
     helperCompensationCents: outcome.compensation,
     helperStrike: outcome.strike !== null,
+    ...(row.booking.status === 'scheduled' ? { nothingCharged: true } : {}),
   };
 }
 
@@ -195,12 +198,14 @@ export async function cancelBookingBy(deps: SheetDeps, userId: string, bookingId
   const row = await load(deps.db, String(bookingId));
   const role = row ? roleOf(row.booking, userId) : null;
   if (!row || !role) return { ok: false, code: 'not_found' };
-  if (row.booking.status !== 'confirmed') return { ok: false, code: 'not_allowed' };
+  // A one-time booking paid later cancels free; a regular visit not paid yet is skipped instead.
+  const scheduled = row.booking.status === 'scheduled' && !row.booking.seriesId;
+  if (row.booking.status !== 'confirmed' && !scheduled) return { ok: false, code: 'not_allowed' };
   const parsed = cancelBookingInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const choices: readonly string[] = role === 'poster' ? POSTER_CANCEL_REASONS : HELPER_CANCEL_REASONS;
   if (!choices.includes(parsed.data.reason)) return { ok: false, code: 'validation_failed', fieldErrors: { reason: ['invalid'] } };
-  return cancelWith(deps, row, userId, outcomeOf(row, role, now), { by: role, choice: parsed.data.reason, note: parsed.data.note, expected: ['confirmed'] }, now);
+  return cancelWith(deps, row, userId, outcomeOf(row, role, now), { by: role, choice: parsed.data.reason, note: parsed.data.note, expected: [row.booking.status] }, now);
 }
 
 export async function reportRunningLate(db: Db, userId: string, bookingId: string, minutes: LateByMinutes, now: Date): Promise<ActionResult> {

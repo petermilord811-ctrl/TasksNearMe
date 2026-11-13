@@ -123,7 +123,12 @@
         "helper_ready": "Find work shows open tasks near you. Your first offer is a tap away.",
         "task_match": "Have a look and send an offer if it suits you. Turn these emails off on your account page any time.",
         "data_export_ready": "Download it from your account page within 7 days. After that it's deleted, and you can ask for a new copy any time.",
-        "tip_received": "All of it is yours. It goes out with your next payout."
+        "tip_received": "All of it is yours. It goes out with your next payout.",
+        "series_started": "The next visits are on the calendar. Each is charged to their card 2 days before.",
+        "series_visit_skipped": "The visits after it are on the calendar as usual.",
+        "series_paused": "The visits in between are skipped. Nothing is charged for them.",
+        "series_resumed": "The next visits are on the calendar again.",
+        "scheduled_payment_failed": "Pay on the booking page, or change the card. We try again before then."
       },
       "lockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates.",
       "optionalFooter": "You're getting this because {topic} emails are on.",
@@ -169,7 +174,13 @@
       "helper_ready": "You're all set: you can send offers now. Find work near you.",
       "task_match": "New task near you: {title}{hasAmount, select, yes {, {amount}} other {}}.",
       "data_export_ready": "The copy of your TasksNearMe data you asked for is ready to download.",
-      "tip_received": "{actorName} added a tip{hasAmount, select, yes { of {amount}} other {}} for {title}."
+      "tip_received": "{actorName} added a tip{hasAmount, select, yes { of {amount}} other {}} for {title}.",
+      "series_started": "{actorName} started regular visits: {title}.",
+      "series_visit_skipped": "{by, select, payment {The visit on {date} for {title} was skipped: it wasn't paid in time} other {{actorName} skipped the visit on {date} for {title}}}.",
+      "series_paused": "{actorName} paused regular visits for {title}{hasDate, select, yes { until {date}} other {}}.",
+      "series_resumed": "Regular visits for {title} are back on.",
+      "series_stopped": "{by, select, helper {{actorName} is ending regular visits for {title}{hasDate, select, yes {. The last visit can be on {date}} other {}}} poster {{actorName} stopped regular visits for {title}} other {Regular visits for {title} stopped}}.",
+      "scheduled_payment_failed": "We couldn't charge your card for {title}{hasDate, select, yes {. Pay by {date} to keep it} other {}}."
     },
     "pushTitle": "TasksNearMe"
   },

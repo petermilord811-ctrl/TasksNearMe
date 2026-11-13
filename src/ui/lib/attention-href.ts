@@ -13,7 +13,7 @@ export function attentionHref(target: AttentionTarget): string {
     case 'support_case': return routes.app.supportCase(target.caseId);
     case 'invite': return routes.app.offers(target.inviteId);
     case 'proposal': return routes.app.proposal(target.proposalId);
-    case 'series': return routes.app.series(target.seriesId, target.payVisitId ? { pay: target.payVisitId } : {});
+    case 'series': return routes.app.series(target.seriesId);
     case 'account': return routes.app.account();
     case 'verify_identity': return routes.app.verifyIdentity();
   }

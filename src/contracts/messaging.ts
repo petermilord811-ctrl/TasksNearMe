@@ -22,7 +22,8 @@ export type MessageSegment =
 // Blueprint 02 J2 step 6 (pre-booking thread), 06 (contact details masked before confirmation),
 // 08 §117 (one thread per offer, invite, booking, or case).
 
-export const THREAD_KINDS = ['offer', 'invite', 'booking', 'case'] as const;
+/** `series`: one conversation for all the visits of regular visits. */
+export const THREAD_KINDS = ['offer', 'invite', 'booking', 'case', 'series'] as const;
 export type ThreadKind = (typeof THREAD_KINDS)[number];
 
 /** What a thread is about, so the UI can link to it with the route builders. */
@@ -32,7 +33,9 @@ export type ThreadSubject =
   /** The helper's view of the task they offered on: `routes.app.findWorkTask(taskId)`. */
   | { kind: 'task_for_helper'; taskId: string }
   /** `routes.app.booking(bookingId)`. */
-  | { kind: 'booking'; bookingId: string };
+  | { kind: 'booking'; bookingId: string }
+  /** Regular visits: `routes.app.series(seriesId)`. */
+  | { kind: 'series'; seriesId: string };
 
 export interface MessageView {
   id: string;

@@ -59,6 +59,7 @@ export const proposeDeskRebookData: ProposeRebookPageData = {
   client: maya,
   booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', categorySlug: 'furniture-assembly', areaName: 'Mueller', lastPricing: { type: 'fixed', priceCents: 6000 }, lastStart: DESK_TIMES.agreedStart },
   limits: { firstDate: '2026-12-08', lastDate: '2026-12-22', leadHours: 3 },
+  canRepeat: false,
 };
 
 const sentToMaya: RebookProposalView = {

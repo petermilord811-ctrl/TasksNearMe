@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, ArrowLeftRight, BadgeCheck, CalendarClock, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowLeftRight, BadgeCheck, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, Repeat, SkipForward, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
-import { formatDateTime, formatMoney, formatRelative } from '@/shared/format';
+import { formatDate, formatDateTime, formatMoney, formatRelative, marketLocalToUtc } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { attentionHref } from '@/ui/lib/attention-href';
 import { cn } from '@/ui/lib/utils';
@@ -50,7 +50,19 @@ const icons: Record<NotificationType, LucideIcon> = {
   helper_ready: BadgeCheck,
   task_match: MapPin,
   data_export_ready: Download,
+  series_started: Repeat,
+  series_visit_skipped: SkipForward,
+  series_paused: CirclePause,
+  series_resumed: CirclePlay,
+  series_stopped: CalendarOff,
+  scheduled_payment_failed: CreditCard,
 };
+
+/** A notification's moment ("Tue, Dec 1, 9:00 am") or day ("Dec 8"), for its words. */
+function notificationDate(params: NotificationView['params']): string {
+  if (params?.at) return formatDateTime(params.at);
+  return params?.day ? formatDate(marketLocalToUtc(params.day, '12:00')) : '';
+}
 
 function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
   notification: NotificationView;
@@ -104,6 +116,9 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
             hours: notification.params?.hours ?? 0,
             days: notification.params?.days ?? 0,
             track: notification.params?.track ?? 'other',
+            hasDate: notification.params?.at === undefined && notification.params?.day === undefined ? 'no' : 'yes',
+            date: notificationDate(notification.params),
+            by: notification.params?.by ?? 'other',
           })}
         </span>
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm leading-5">

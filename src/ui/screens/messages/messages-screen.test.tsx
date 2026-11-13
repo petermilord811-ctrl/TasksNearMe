@@ -146,6 +146,7 @@ describe('ThreadScreen', () => {
     { subject: { kind: 'offer_for_client', taskId: 'task with spaces', offerId: 'offer/encoded' }, href: routes.app.offer('task with spaces', 'offer/encoded') },
     { subject: { kind: 'task_for_helper', taskId: 'task with spaces' }, href: routes.app.findWorkTask('task with spaces') },
     { subject: { kind: 'booking', bookingId: 'booking/encoded' }, href: routes.app.booking('booking/encoded') },
+    { subject: { kind: 'series', seriesId: 'series/encoded' }, href: routes.app.series('series/encoded') },
   ];
   it.each(subjects)('links subject $subject.kind through the matching route builder', ({ subject, href }) => {
     thread({ ...closedThreadPageData, thread: { ...closedThreadPageData.thread, subject } });

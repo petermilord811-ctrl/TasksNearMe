@@ -45,6 +45,12 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   helper_ready: 'account',
   task_match: 'task_alerts',
   data_export_ready: 'account',
+  series_started: 'bookings',
+  series_visit_skipped: 'bookings',
+  series_paused: 'bookings',
+  series_resumed: 'bookings',
+  series_stopped: 'bookings',
+  scheduled_payment_failed: 'payments',
 };
 
 /** Day-of updates that can't wait until morning (a 7 am start's 2 h reminder comes at 5 am): texted even in quiet hours. */

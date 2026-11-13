@@ -11,7 +11,7 @@ import type {
 import { accountProfileInputSchema, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
-import { bookings } from '@/modules/bookings/schema';
+import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { offers } from '@/modules/offers/schema';
 import { avatarPhoto, MAX_PHOTO_BYTES } from '@/modules/files/photos';
 import { initialsOf } from '@/modules/profiles/queries';
@@ -240,6 +240,57 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
         title: task.title,
         ...(task.budgetCents ? { params: { amountCents: task.budgetCents } } : {}),
       }));
+    }
+    case 'series.started':
+    case 'series.paused':
+    case 'series.resumed':
+    case 'series.stopped':
+    case 'series.visit_skipped': {
+      // Regular visits (blueprint 03 §7): the other person hears what one of them did; both hear what the system did.
+      const seriesId = text(p.seriesId);
+      if (!seriesId) return [];
+      const [series] = await db
+        .select({ posterUserId: bookingSeries.posterUserId, helperUserId: bookingSeries.helperUserId, title: tasks.title })
+        .from(bookingSeries)
+        .innerJoin(tasks, eq(tasks.id, bookingSeries.templateTaskId))
+        .where(eq(bookingSeries.id, seriesId))
+        .limit(1);
+      if (!series) return [];
+      const target: AttentionTarget = { kind: 'series', seriesId };
+      const [posterName, helperName] = await Promise.all([nameOf(db, series.posterUserId), nameOf(db, series.helperUserId)]);
+      const by = text(p.by);
+      const toHelper = (type: NotificationType, params?: NotificationView['params']): Planned => ({ userId: series.helperUserId, type, target, title: series.title, actorName: posterName, ...(params ? { params } : {}) });
+      const toPoster = (type: NotificationType, params?: NotificationView['params']): Planned => ({ userId: series.posterUserId, type, target, title: series.title, actorName: helperName, ...(params ? { params } : {}) });
+      switch (event.type) {
+        case 'series.started':
+          return [toHelper('series_started')];
+        case 'series.paused': {
+          const until = text(p.until);
+          return [toHelper('series_paused', until ? { day: until } : undefined)];
+        }
+        case 'series.resumed':
+          return by === 'system' ? [toHelper('series_resumed', { by: 'system' }), toPoster('series_resumed', { by: 'system' })] : [toHelper('series_resumed', { by: 'poster' })];
+        case 'series.stopped': {
+          const endsOn = text(p.endsOn);
+          if (by === 'poster') return [toHelper('series_stopped', { by: 'poster' })];
+          if (by === 'helper') return [toPoster('series_stopped', { by: 'helper', ...(endsOn ? { day: endsOn } : {}) })];
+          return [toHelper('series_stopped', { by: 'system' }), toPoster('series_stopped', { by: 'system' })];
+        }
+        default: {
+          const start = text(p.start);
+          const params = (who: 'poster' | 'helper' | 'payment'): NotificationView['params'] => ({ by: who, ...(start ? { at: start } : {}) });
+          if (by === 'poster') return [toHelper('series_visit_skipped', params('poster'))];
+          if (by === 'helper') return [toPoster('series_visit_skipped', params('helper'))];
+          return [toHelper('series_visit_skipped', params('payment')), toPoster('series_visit_skipped', params('payment'))];
+        }
+      }
+    }
+    case 'booking.funding_failed': {
+      // A scheduled charge didn't go through: the client can still pay on the booking page until `payBy`.
+      const booking = await bookingContext(db, text(p.bookingId) ?? event.aggregateId);
+      if (!booking) return [];
+      const payBy = text(p.payBy);
+      return [{ userId: booking.posterUserId, type: 'scheduled_payment_failed' as const, target: { kind: 'booking', bookingId: booking.id } as AttentionTarget, title: booking.title, ...(payBy ? { params: { at: payBy } } : {}) }];
     }
     case 'verification.updated': {
       const planned = verificationNotificationFor(p);

@@ -446,7 +446,7 @@ export async function finishBankVerification(
   if (payment.status !== 'requires_confirmation') return { ok: false, code: 'not_allowed' };
   await expireUnfundedBookings(db, now);
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, payment.bookingId)).limit(1);
-  if (!booking || booking.status !== 'pending_funding') return { ok: false, code: 'expired' };
+  if (!booking || !AWAITING_MONEY.includes(booking.status)) return { ok: false, code: 'expired' };
 
   const completed = await deps.payments.completeAction({ providerRef: payment.providerRef, outcome: outcome === 'approved' ? 'approved' : 'failed' });
   const result: ChargeResult =
@@ -464,7 +464,14 @@ export async function confirmFundedBooking(deps: BookingDeps, posterId: string, 
   return settle(deps, posterId, paymentId, { status: 'succeeded', providerRef }, now);
 }
 
-/** Records the provider's answer. Success confirms the booking in one transaction. */
+/** Bookings a successful payment confirms: a hold being paid, or a booking paid later (`scheduled`). */
+const AWAITING_MONEY = ['pending_funding', 'scheduled'];
+
+/**
+ * Records the provider's answer. Success confirms the booking in one transaction. A `scheduled` booking (a
+ * regular visit, a one-time booking far ahead) was already booked: it's `booking.funded`, quietly, not a new
+ * booking for the helper to hear about.
+ */
 export async function settle(deps: BookingDeps, posterId: string, paymentId: string, result: ChargeResult, now: Date): Promise<PaymentAttemptResult> {
   const { db } = deps;
   if (result.status === 'failed') {
@@ -484,7 +491,7 @@ export async function settle(deps: BookingDeps, posterId: string, paymentId: str
     if (!payment?.bookingId) return { kind: 'missing' as const };
     const [booking] = await tx.select().from(bookings).where(eq(bookings.id, payment.bookingId)).limit(1);
     await tx.update(payments).set({ status: 'succeeded', providerRef: result.providerRef, failureCode: null, updatedAt: now }).where(eq(payments.id, paymentId));
-    if (!booking || booking.status !== 'pending_funding') {
+    if (!booking || !AWAITING_MONEY.includes(booking.status)) {
       // Paid after the hold ran out: support refunds it.
       await tx.insert(outboxEvents).values({
         id: newId('evt'),
@@ -498,7 +505,7 @@ export async function settle(deps: BookingDeps, posterId: string, paymentId: str
     await tx.execute(sql`select id from tasks where id = ${booking.taskId} for update`);
     await tx
       .update(bookings)
-      .set({ status: 'confirmed', confirmedAt: now, fundingExpiresAt: null, updatedAt: now })
+      .set({ status: 'confirmed', confirmedAt: now, fundingExpiresAt: null, fundingDueAt: null, fundingFailure: null, updatedAt: now })
       .where(eq(bookings.id, booking.id));
     if (booking.offerId) {
       await tx.update(offers).set({ status: 'accepted', closedAt: now, updatedAt: now }).where(eq(offers.id, booking.offerId));
@@ -534,7 +541,7 @@ export async function settle(deps: BookingDeps, posterId: string, paymentId: str
     await tx.insert(outboxEvents).values([
       {
         id: newId('evt'),
-        type: 'booking.confirmed',
+        type: booking.status === 'scheduled' ? 'booking.funded' : 'booking.confirmed',
         aggregateType: 'booking',
         aggregateId: booking.id,
         payload: { bookingId: booking.id, taskId: booking.taskId, posterUserId: booking.posterUserId, helperUserId: booking.helperUserId },
@@ -555,7 +562,7 @@ export async function settle(deps: BookingDeps, posterId: string, paymentId: str
       targetType: 'booking',
       targetId: booking.id,
     });
-    await postEvent(tx, bookingThreadLink(booking), 'system', { type: 'booked' }, now);
+    if (booking.status !== 'scheduled') await postEvent(tx, bookingThreadLink(booking), 'system', { type: 'booked' }, now);
     return { kind: 'booked' as const, bookingId: booking.id };
   });
 

@@ -41,7 +41,8 @@ describe('seeded market data', () => {
     const byKey = Object.fromEntries(flags.map((f) => [f.key, f.enabled]));
     expect(byKey['reward.welcome']).toBe(true);
     expect(byKey['reward.acceptance']).toBe(false);
-    expect(byKey.recurring).toBe(false);
+    // Regular visits are built (blueprint 03 §7) and on; staff can switch them off per market.
+    expect(byKey.recurring).toBe(true);
   });
 
   it('has PostGIS available for distance queries', async () => {

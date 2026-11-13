@@ -9,6 +9,7 @@ import type { PriceBreakdown, PricingInput } from './money';
 import { paymentChoiceSchema, type PaymentAttemptResult, type PaymentMethodLabel, type PaymentPanelData } from './payments';
 import type { ClientSummary, HelperSummary, PersonSummary } from './people';
 import type { PhotoUploadResult } from './posting';
+import type { SeriesCadence, SeriesChargeFailure } from './series';
 import type { BookingStatus, CancelReason, CaseResolution, CaseStatus, CompletedVia, PaymentStatus } from './status';
 import type { TaskPublicView, TaskSchedule } from './tasks';
 import type { TimelineEvent } from './timeline';
@@ -206,6 +207,10 @@ export interface BookingView {
   myReview?: { rating: number; submittedAt: ISODateTime; publishedAt?: ISODateTime };
   /** Completed bookings (UI-057): the client's tip card (`available`), or the tip once given (both people). */
   tip?: BookingTipView;
+  /** A visit of regular visits (`routes.app.series(id)`): how it repeats and which visit this is. */
+  series?: { id: string; cadence: SeriesCadence; index: number };
+  /** `scheduled`: when the card is charged, or why it wasn't and until when the client can pay (with their cards). */
+  scheduledPayment?: ScheduledPaymentView;
   /** A problem report on this booking and how support resolved it (UI-026). */
   dispute?: BookingDisputeView;
   /** The open change request, if any (UI-027): the page links to `routes.app.bookingChange`. */
@@ -283,6 +288,42 @@ export interface BookingsPageData {
  */
 export interface BookingHubHandlers {
   onAction: (input: { action: BookingActionId }) => Promise<ActionResult>;
+}
+
+// ---- Scheduled payments (blueprint 03 §7, 04) ----------------------------------------------------------
+
+/**
+ * A booking paid later (`scheduled`): a regular visit is charged 48 h before (retries at 36 h and 24 h), a one-time
+ * booking made more than 14 days ahead 72 h before (a retry at 48 h), to the card saved for it. Still unpaid at
+ * `payBy`, a visit is skipped and a one-time booking canceled, with no fees.
+ * - `chargeAt`: the next automatic charge (none left: only the client's own payment can save it).
+ * - `failure`: why the last charge didn't go through (`no_card`: the card was removed). The client sees "Pay now".
+ * - `amountCents`: what the client pays (their total).
+ * - `card`: the card it's charged to; `payment`: the client's cards for paying now (clients only).
+ */
+export interface ScheduledPaymentView {
+  chargeAt?: ISODateTime;
+  payBy: ISODateTime;
+  failure?: SeriesChargeFailure;
+  amountCents: Cents;
+  card?: PaymentMethodLabel;
+  payment?: PaymentPanelData;
+}
+
+export const payScheduledInputSchema = z.object({ payment: paymentChoiceSchema });
+export type PayScheduledInput = z.input<typeof payScheduledInputSchema>;
+
+/**
+ * The client pays a scheduled booking now (after a failed charge, or early):
+ * - `onPayNow`: ok `booked` (the page refreshes: paid). Errors: `validation_failed` (`payment.*`),
+ *   `payment_declined`, `insufficient_funds`, `requires_bank_verification` (with `verification`: run the bank
+ *   step, then `onFinishPayVerification`), `not_allowed` (paid already, or too late: reload), `rate_limited`,
+ *   `unknown`.
+ * - `onFinishPayVerification`: after the bank step; the same results.
+ */
+export interface ScheduledPaymentHandlers {
+  onPayNow: QueryHandler<PayScheduledInput, PaymentAttemptResult>;
+  onFinishPayVerification: QueryHandler<{ paymentId: string; outcome: 'approved' | 'failed' }, PaymentAttemptResult>;
 }
 
 // ---- Tips (UI-057) -------------------------------------------------------------------------------
@@ -518,6 +559,8 @@ export interface CancellationPreview {
   helperCompensationCents: Cents;
   /** A late helper cancellation counts against the helper. */
   helperStrike: boolean;
+  /** A booking paid later (`scheduled`): nothing was charged yet, so canceling is free and there's nothing to refund. */
+  nothingCharged?: boolean;
 }
 
 export const cancelBookingInputSchema = z.object({

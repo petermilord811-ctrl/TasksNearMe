@@ -29,7 +29,7 @@ export const adminConfigData: AdminConfigPageData = {
   flags: [
     { key: 'ai_drafting', description: 'Writing help: Help me describe this when posting, Write it for me on helper profiles and offers', enabled: true },
     { key: 'background_checks', description: 'Require background checks for in-home categories', enabled: true },
-    { key: 'recurring', description: 'Recurring visits (phase 2)', enabled: false },
+    { key: 'recurring', description: 'Regular visits for cleaning and yard work: helpers propose a schedule, each visit is charged 2 days before', enabled: true },
     { key: 'reward.acceptance', description: '5% offer-acceptance reward (off at launch)', enabled: false },
     { key: 'reward.completion', description: 'Completion bonus on flagged tasks (off at launch)', enabled: false },
     { key: 'reward.repeat', description: '$10 gift card on the 3rd paid booking with the same client', enabled: true },

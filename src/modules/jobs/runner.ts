@@ -6,6 +6,8 @@ import { sql } from 'drizzle-orm';
 import { autoApproveDue } from '@/modules/bookings/completion-view';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { expireUnfundedBookings } from '@/modules/bookings/confirm';
+import { chargeDueScheduled, expireUnpaidScheduled } from '@/modules/bookings/scheduled';
+import { runSeriesCalendars } from '@/modules/bookings/series';
 import { expireCantAccess } from '@/modules/bookings/sheets';
 import { deliverNotifications } from '@/modules/notifications/delivery';
 import { dispatchNotifications } from '@/modules/notifications/service';
@@ -26,7 +28,8 @@ import type { Db } from '@/platform/db/connect';
 
 /**
  * The in-process job runner (blueprint 07: jobs). Every minute it runs the due-work functions that
- * pages also call lazily, so timers fire even when nobody looks: offer and unpaid-hold expiry,
+ * pages also call lazily, so timers fire even when nobody looks: offer and unpaid-hold expiry, regular visits'
+ * calendars and the scheduled charges (with their deadlines),
  * can't-access expiry, start and approval reminders, auto-approval, review publishing, verification timers,
  * notifications and their email and text messages, privacy requests (data copies, deletions), retention
  * timers (hourly), and the reading of proofs of address. Each job is idempotent; a
@@ -46,6 +49,10 @@ export const JOBS: Job[] = [
   { name: 'availability.expire', run: (db, now) => expireDuePosts(db, now) },
   { name: 'rebook.expire', run: (db, now) => expireDueProposals(db, now) },
   { name: 'bookings.expire_unfunded', run: (db, now) => expireUnfundedBookings(db, now) },
+  // Scheduled payments: past the deadline first, then the calendars, then what's due to be charged.
+  { name: 'bookings.scheduled_deadlines', run: (db, now) => expireUnpaidScheduled(db, now) },
+  { name: 'series.calendars', run: (db, now) => runSeriesCalendars(db, now) },
+  { name: 'bookings.scheduled_charges', run: async (db, now) => { const payments = createPaymentProvider(); if (payments) await chargeDueScheduled({ db, payments }, now); } },
   { name: 'bookings.expire_cant_access', run: (db, now) => expireCantAccess(db, now) },
   { name: 'bookings.auto_approve', run: (db, now) => autoApproveDue(db, now) },
   { name: 'bookings.approval_reminders', run: (db, now) => remindApprovalsDue(db, now) },

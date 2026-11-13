@@ -24,8 +24,8 @@ export type AttentionTarget =
   | { kind: 'invite'; inviteId: string }
   /** A rebooking proposal (`routes.app.proposal(proposalId)`, UI-032). */
   | { kind: 'proposal'; proposalId: string }
-  /** Regular visits (`routes.app.series(seriesId)`); `payVisitId` opens that visit's payment. */
-  | { kind: 'series'; seriesId: string; payVisitId?: string }
+  /** Regular visits (`routes.app.series(seriesId)`). */
+  | { kind: 'series'; seriesId: string }
   /** The account page (privacy requests, sign-in, notifications). */
   | { kind: 'account' }
   /** A client's ID check (`routes.app.verifyIdentity()`). */

@@ -18,13 +18,17 @@ import type {
   RebookProposalStatus,
   RebookProposalView,
 } from '@/contracts';
-import { acceptProposalInputSchema, rebookProposalInputSchema, routes } from '@/contracts';
+import { acceptProposalInputSchema, RECURRING_CATEGORIES, rebookProposalInputSchema, routes, type SeriesCadence } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
 import { clientSummary } from '@/modules/bookings/hub';
 import { chargeMethodOf, finishBankVerification, methodForChoice, paymentPanel, settle, type BookingDeps } from '@/modules/bookings/confirm';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
+import { pricingColumns, pricingColumnsForTask, pricingOf } from '@/modules/bookings/pricing-columns';
 import { areas, categories } from '@/modules/markets/schema';
-import { getPublishedPolicy } from '@/modules/markets/queries';
+import { getFlags, getPublishedPolicy } from '@/modules/markets/queries';
+import { bookingSeries } from '@/modules/bookings/schema';
+import { scheduleOf, startSeriesFromProposal } from '@/modules/bookings/series';
+import { upcomingIndexes, visitStart } from '@/modules/bookings/series-domain';
 import { loadHelperState } from '@/modules/offers/helper';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { payments } from '@/modules/payments/schema';
@@ -38,7 +42,7 @@ import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { marketDayKey, marketLocalToUtc } from '@/shared/format';
+import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { readExactAddress } from '@/modules/tasks/locations';
 import { rebookProposals } from './schema';
 
@@ -57,19 +61,6 @@ const HOUR = 3_600_000;
 const DAY = 86_400_000;
 const PROPOSE_RULE = { limit: 10, windowSeconds: 24 * 60 * 60 };
 type ProposalRow = typeof rebookProposals.$inferSelect;
-
-const pricingOf = (row: Pick<ProposalRow, 'pricingType' | 'priceCents' | 'hourlyRateCents' | 'estimatedHours' | 'hoursCap'>): PricingInput =>
-  row.pricingType === 'hourly'
-    ? { type: 'hourly', rateCents: row.hourlyRateCents ?? 0, estimatedHours: row.estimatedHours ?? row.hoursCap ?? 1, hoursCap: row.hoursCap ?? 1 }
-    : { type: 'fixed', priceCents: row.priceCents ?? 0 };
-
-const pricingColumns = (pricing: PricingInput) => ({
-  pricingType: pricing.type,
-  priceCents: pricing.type === 'fixed' ? pricing.priceCents : null,
-  hourlyRateCents: pricing.type === 'hourly' ? pricing.rateCents : null,
-  estimatedHours: pricing.type === 'hourly' ? pricing.estimatedHours : null,
-  hoursCap: pricing.type === 'hourly' ? pricing.hoursCap : null,
-});
 
 /** Closes a proposal's leftovers: the draft task and a booking still waiting for money. */
 async function dropDraft(db: Db, row: Pick<ProposalRow, 'taskId' | 'bookingId'>, now: Date): Promise<void> {
@@ -105,6 +96,12 @@ async function pastBooking(db: Db, helperId: string, bookingId: string) {
     .where(and(eq(bookings.id, String(bookingId)), eq(bookings.helperUserId, helperId), eq(bookings.status, 'completed')))
     .limit(1);
   return row ?? null;
+}
+
+/** Regular visits for this past booking: its category has them and the market has them on (blueprint 03 §7). */
+async function canRepeat(db: Db, slug: string, marketId: string): Promise<boolean> {
+  if (!(RECURRING_CATEGORIES as readonly string[]).includes(slug)) return false;
+  return (await getFlags(marketId, db)).recurring === true;
 }
 
 /**
@@ -186,6 +183,7 @@ export async function getProposeRebookPage(db: Db, helperId: string, bookingId: 
       lastStart: past.booking.startAt.toISOString(),
     },
     limits: { firstDate: marketDayKey(now), lastDate: marketDayKey(new Date(now.getTime() + REBOOK_RULES.maxDaysAhead * DAY)), leadHours: REBOOK_RULES.leadHours },
+    canRepeat: await canRepeat(db, past.slug, past.booking.marketId),
   };
 }
 
@@ -210,7 +208,8 @@ export async function proposeRebook(db: Db, helperId: string, bookingId: string,
   if (await isBlockedBetween(db, helperId, posterId)) return { ok: false, code: 'not_allowed' };
   const state = await loadHelperState(db, helperId, now);
   if (!state.facts.bookableCategories.includes(past.slug as CategorySlug)) return { ok: false, code: 'not_allowed' };
-  const { date, startTime, pricing, message } = parsed.data;
+  const { date, startTime, pricing, message, repeat = 'once' } = parsed.data;
+  if (repeat !== 'once' && !(await canRepeat(db, past.slug, past.booking.marketId))) return { ok: false, code: 'validation_failed', fieldErrors: { repeat: ['invalid'] } };
   if (date < marketDayKey(now) || date > marketDayKey(new Date(now.getTime() + REBOOK_RULES.maxDaysAhead * DAY))) {
     return { ok: false, code: 'validation_failed', fieldErrors: { date: ['out_of_range'] } };
   }
@@ -234,6 +233,7 @@ export async function proposeRebook(db: Db, helperId: string, bookingId: string,
       startAt: start,
       ...pricingColumns(pricing),
       message: message?.trim() || null,
+      cadence: repeat === 'once' ? null : repeat,
       breakdown: quoteBreakdown(fees, pricing),
       expiresAt: new Date(Math.min(now.getTime() + 48 * HOUR, start.getTime() - 2 * HOUR)),
       createdAt: now,
@@ -248,6 +248,17 @@ export async function proposeRebook(db: Db, helperId: string, bookingId: string,
 }
 
 // ---- The proposal page --------------------------------------------------------------------------------
+
+/** A repeating proposal: how it repeats (from its start), the first four visit dates, and the series once it started. */
+async function repeatOf(db: Db, row: ProposalRow): Promise<Pick<RebookProposalView, 'schedule' | 'visitStarts' | 'seriesId'>> {
+  if (!row.cadence) return {};
+  const [past] = await db.select({ windowStart: tasks.windowStart, windowEnd: tasks.windowEnd }).from(bookings).innerJoin(tasks, eq(tasks.id, bookings.taskId)).where(eq(bookings.id, row.fromBookingId)).limit(1);
+  const calendar = { anchorDate: marketDayKey(row.startAt), startTime: marketClockTime(row.startAt), cadence: row.cadence as SeriesCadence, durationMinutes: past ? Math.max(60, Math.round((past.windowEnd.getTime() - past.windowStart.getTime()) / 60_000)) : 120 };
+  const [series] = row.status === 'accepted' ? await db.select({ id: bookingSeries.id }).from(bookingSeries).where(eq(bookingSeries.proposalId, row.id)).limit(1) : [];
+  // The dates as of the start: the first visit and the three after it.
+  const starts = upcomingIndexes({ ...calendar, status: 'active' }, new Date(row.startAt.getTime() - 60_000)).map((index) => visitStart(calendar, index).toISOString());
+  return { schedule: scheduleOf(calendar), visitStarts: starts, ...(series ? { seriesId: series.id } : {}) };
+}
 
 async function viewOf(db: Db, cipher: FieldCipher | null, row: ProposalRow, viewerId: string): Promise<RebookProposalView | null> {
   const viewerRole = row.posterUserId === viewerId ? 'poster' : row.helperUserId === viewerId ? 'helper' : null;
@@ -280,6 +291,7 @@ async function viewOf(db: Db, cipher: FieldCipher | null, row: ProposalRow, view
     breakdown: row.breakdown,
     ...(status === 'sent' ? { expiresAt: row.expiresAt.toISOString() } : {}),
     ...(status === 'accepted' && row.bookingId ? { bookingId: row.bookingId } : {}),
+    ...(await repeatOf(db, row)),
     sentAt: row.createdAt.toISOString(),
     actions,
   };
@@ -342,6 +354,12 @@ async function accepted(db: Db, proposalId: string, result: PaymentAttemptResult
   if (row) {
     await db.insert(outboxEvents).values({ id: newId('evt'), type: 'rebook.accepted', aggregateType: 'rebook_proposal', aggregateId: row.id, payload: { proposalId: row.id, helperUserId: row.helperUserId, posterUserId: row.posterUserId, bookingId: row.bookingId } });
   }
+  // Regular visits: the first one is paid, so the series starts (its page is where the client lands).
+  const [proposal] = await db.select({ cadence: rebookProposals.cadence }).from(rebookProposals).where(eq(rebookProposals.id, proposalId)).limit(1);
+  if (proposal?.cadence) {
+    const seriesId = await startSeriesFromProposal(db, proposalId, now);
+    if (seriesId) return { ok: true, code: 'booked', redirectTo: routes.app.series(seriesId) };
+  }
   return result;
 }
 
@@ -367,8 +385,10 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
   if (!policy) return { ok: false, code: 'unknown' };
   // Risk asked this client to verify their ID first; the amount counts for new accounts.
   if (await posterIdentityRequirement(db, posterId, now, quoteBreakdown(policy.fees, pricingOf(row)).posterTotalCents)) return { ok: false, code: 'identity_required' };
-  const method = await methodForChoice(deps, posterId, parsed.data.payment);
-  if (!('providerRef' in method)) return method;
+  const chosen = await methodForChoice(deps, posterId, parsed.data.payment);
+  if (!('providerRef' in chosen)) return chosen;
+  // Regular visits charge this card again before each visit: a new card is kept (the client agreed when accepting).
+  const method = row.cadence && !chosen.paymentMethodId ? { ...chosen, save: true } : chosen;
 
   const pricing = pricingOf(row);
   const breakdown = quoteBreakdown(policy.fees, pricing);
@@ -474,10 +494,3 @@ export async function finishProposalVerification(deps: BookingDeps, posterId: st
   return accepted(deps.db, row.id, await finishBankVerification(deps, posterId, String(paymentId), outcome, now), now);
 }
 
-const pricingColumnsForTask = (pricing: PricingInput) => ({
-  pricingType: pricing.type,
-  budgetCents: pricing.type === 'fixed' ? pricing.priceCents : null,
-  hourlyRateCents: pricing.type === 'hourly' ? pricing.rateCents : null,
-  estimatedHours: pricing.type === 'hourly' ? pricing.estimatedHours : null,
-  hoursCap: pricing.type === 'hourly' ? pricing.hoursCap : null,
-});

@@ -71,6 +71,18 @@ export const NOTIFICATION_TYPES = [
   'task_match',
   /** The copy of their data they asked for is ready to download on the account page (for `DATA_EXPORT_DAYS`). */
   'data_export_ready',
+  /** Regular visits (blueprint 03 §7): the client accepted the helper's schedule and paid the first visit. */
+  'series_started',
+  /** One visit was skipped (`params.at`: its start; `params.by`: poster, helper, or payment: it wasn't paid in time). */
+  'series_visit_skipped',
+  /** The client paused regular visits until `params.day`. */
+  'series_paused',
+  /** Regular visits start again (`params.by`: the client, or `system` on the date they picked). */
+  'series_resumed',
+  /** Regular visits stopped (`params.by` poster) or end (`params.by` helper; `params.day`: the last visit date). */
+  'series_stopped',
+  /** A scheduled charge (a regular visit, a booking far ahead) didn't go through: pay by `params.at` to keep it. */
+  'scheduled_payment_failed',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -81,7 +93,7 @@ export interface NotificationView {
   title?: string;
   /** Who did it ("Jordan T."). */
   actorName?: string;
-  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack };
+  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system' };
   /** Where it leads (same targets as the home's attention items). */
   target: AttentionTarget;
   createdAt: ISODateTime;

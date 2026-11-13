@@ -51,7 +51,13 @@
     "helper_ready": "You're all set: you can send offers now",
     "task_match": "New task near you: {title}{hasAmount, select, yes {, {amount}} other {}}",
     "data_export_ready": "The copy of your data is ready to download",
-    "tip_received": "{actorName} added a tip{hasAmount, select, yes { of {amount}} other {}} for {title}"
+    "tip_received": "{actorName} added a tip{hasAmount, select, yes { of {amount}} other {}} for {title}",
+    "series_started": "{actorName} started regular visits: {title}",
+    "series_visit_skipped": "{by, select, payment {The visit on {date} for {title} was skipped: it wasn't paid in time} other {{actorName} skipped the visit on {date} for {title}}}",
+    "series_paused": "{actorName} paused regular visits for {title}{hasDate, select, yes { until {date}} other {}}",
+    "series_resumed": "Regular visits for {title} are back on",
+    "series_stopped": "{by, select, helper {{actorName} is ending regular visits for {title}{hasDate, select, yes {. The last visit can be on {date}} other {}}} poster {{actorName} stopped regular visits for {title}} other {Regular visits for {title} stopped}}",
+    "scheduled_payment_failed": "We couldn't charge your card for {title}{hasDate, select, yes {. Pay by {date} to keep it} other {}}"
   },
   "previews": {
     "group": "Notifications",

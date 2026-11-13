@@ -136,7 +136,13 @@
     "helper_ready": "Ready to send offers",
     "task_match": "New task near you",
     "data_export_ready": "Data copy ready",
-    "tip_received": "Tip received"
+    "tip_received": "Tip received",
+    "series_started": "Regular visits started",
+    "series_visit_skipped": "Visit skipped",
+    "series_paused": "Regular visits paused",
+    "series_resumed": "Regular visits resumed",
+    "series_stopped": "Regular visits stopped",
+    "scheduled_payment_failed": "Scheduled payment failed"
   },
   "previews": {
     "group": "Admin · person details",

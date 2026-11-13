@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { SeriesActionId, SeriesVisitActionId } from './action-ids';
-import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
+import type { ActionHandler, FieldErrorCode } from './actions';
 import type { CategorySlug, ISODateTime } from './common';
 import type { PriceBreakdown, PricingInput } from './money';
-import { paymentChoiceSchema, type CardBrand, type PaymentAttemptResult, type PaymentPanelData } from './payments';
+import type { CardBrand, SavedPaymentMethod } from './payments';
 import type { ClientSummary, HelperSummary } from './people';
 
 /**
@@ -14,8 +14,9 @@ import type { ClientSummary, HelperSummary } from './people';
  * 36 h and 24 h, and the client can pay in the app meanwhile; still unpaid 12 h before, the visit is skipped
  * with no fees. The next four visits are always on the calendar. Clients skip a visit, pause until a date,
  * change the card, or stop; helpers skip a visit at least 48 h ahead and end the series with 7 days' notice.
- * A paid visit is a booking like any other: it's changed or canceled on its own page, under its own policy.
- * Behind the market's `recurring` flag; only `RECURRING_CATEGORIES`.
+ * Each visit is a booking (`scheduled` until it's paid): a visit whose charge failed is paid on its booking
+ * page, and a paid visit is changed or canceled there, under the booking's own policy. One conversation per
+ * series. Behind the market's `recurring` flag; only `RECURRING_CATEGORIES`.
  */
 
 const code = (value: FieldErrorCode) => value;
@@ -111,14 +112,12 @@ export interface SeriesView {
 /** `routes.app.series(seriesId)`. */
 export interface SeriesPageData {
   series: SeriesView;
-  /** Clients: their cards, to pay a visit or change the series' card. */
-  payment?: PaymentPanelData;
+  /** Clients: their saved cards, for "Change card" (cards are added on the payments page). */
+  cards?: SavedPaymentMethod[];
   /** Clients pausing: the resume dates allowed (market dates). */
   pauseLimits?: { firstDate: string; lastDate: string };
   /** Helpers: the last visit date if they end it today. */
   endsOnIfEnded?: string;
-  /** Open this visit's payment first (`?pay=<visitId>`, from a notification or the booking page). */
-  payVisitId?: string;
 }
 
 /** A series in a list (the bookings page, My clients). */
@@ -143,17 +142,12 @@ const marketDate = z.string(code('required')).regex(/^\d{4}-\d{2}-\d{2}$/, code(
 export const pauseSeriesInputSchema = z.object({ resumeOn: marketDate });
 export type PauseSeriesInput = z.input<typeof pauseSeriesInputSchema>;
 
-export const payVisitInputSchema = z.object({ visitId: z.string(code('required')).min(1, code('required')), payment: paymentChoiceSchema });
-export type PayVisitInput = z.input<typeof payVisitInputSchema>;
-
 export const changeSeriesCardInputSchema = z.object({ methodId: z.string(code('required')).min(1, code('required')) });
 export type ChangeSeriesCardInput = z.input<typeof changeSeriesCardInputSchema>;
 
 /**
- * - `onSkipVisit`: ok `updated`. Errors: `not_allowed` (no longer skippable: reload), `unknown`.
- * - `onPayVisit` (client): ok `booked` (the visit is paid), or the bank step first. Errors: `payment_declined`,
- *   `insufficient_funds`, `not_allowed`, `unknown`.
- * - `onFinishVerification`: after the dev bank dialog.
+ * - `onSkipVisit`: ok `updated`. Errors: `not_allowed` (no longer skippable: reload), `unknown`. (`pay_visit` and
+ *   `open_booking` link to the visit's booking page.)
  * - `onPause` (client): ok `updated`. Errors: `validation_failed` (`resumeOn` `out_of_range`), `not_allowed`.
  * - `onResume`, `onCancel` (client), `onEnd` (helper): ok `updated`. Errors: `not_allowed`, `unknown`.
  * - `onChangeCard` (client): ok `updated`. Errors: `validation_failed` (`methodId` `invalid`), `not_allowed`.
@@ -161,8 +155,6 @@ export type ChangeSeriesCardInput = z.input<typeof changeSeriesCardInputSchema>;
  */
 export interface SeriesHandlers {
   onSkipVisit: ActionHandler<{ visitId: string }>;
-  onPayVisit: QueryHandler<PayVisitInput, PaymentAttemptResult>;
-  onFinishVerification: QueryHandler<{ paymentId: string; outcome: 'approved' | 'failed' }, PaymentAttemptResult>;
   onPause: ActionHandler<PauseSeriesInput>;
   onResume: ActionHandler;
   onCancel: ActionHandler;
