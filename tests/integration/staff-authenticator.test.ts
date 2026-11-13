@@ -121,6 +121,18 @@ describe('the staff authenticator', () => {
     expect(await verifyStaffTotp(deps, staff, totpCode(secret, totpStep(now) + 5), now)).toMatchObject({ ok: false });
   });
 
+  it('pauses after 5 wrong codes in 10 minutes; right codes never use up the allowance', async () => {
+    // LOST has no authenticator yet: outside production the development code signs in, as often as needed.
+    const staff = { id: LOST, sessionId: 'ses_tmp_totp_lost' };
+    const now = at('2026-11-23T20:00:00.000Z');
+    for (let i = 0; i < 8; i += 1) expect(await verifyStaffTotp(dev, staff, DEV_STAFF_CODE, now)).toEqual({ ok: true, code: 'updated' });
+    for (let i = 0; i < 5; i += 1) expect(await verifyStaffTotp(dev, staff, '000000', now)).toMatchObject({ ok: false, code: 'validation_failed' });
+    // Paused, even for a right code, until the window ends.
+    expect(await verifyStaffTotp(dev, staff, DEV_STAFF_CODE, now)).toEqual({ ok: false, code: 'rate_limited' });
+    expect(await verifyStaffTotp(dev, staff, DEV_STAFF_CODE, at('2026-11-23T20:10:00.000Z'))).toEqual({ ok: true, code: 'updated' });
+    await db.delete(staffSessionChecks).where(eq(staffSessionChecks.sessionId, staff.sessionId));
+  });
+
   it('is reset by another admin with a reason, which asks every session for a code again', async () => {
     const now = at('2026-11-23T18:00:00.000Z');
     await db.insert(staffAuthenticators).values({ userId: LOST, secretCiphertext: cipher.encrypt('JBSWY3DPEHPK3PXP'), confirmedAt: now, lastStep: null });

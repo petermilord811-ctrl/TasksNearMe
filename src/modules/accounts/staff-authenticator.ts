@@ -6,7 +6,7 @@ import { newTotpSecret, otpauthUri, verifyTotp } from '@/platform/auth/totp';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { consumeRateLimit } from '@/platform/rate-limit';
+import { consumeRateLimit, rateLimitReached } from '@/platform/rate-limit';
 import { validationFailed } from '@/platform/actions/results';
 import { sessions, staffAuthenticators, staffRoles, staffSessionChecks, staffSetupCodes, users } from './schema';
 import type { StaffActor } from '@/modules/support/staff';
@@ -67,33 +67,39 @@ async function passSession(db: Db, sessionId: string) {
 export async function verifyStaffTotp(deps: StaffAuthDeps, staff: { id: string; sessionId: string }, code: string, now: Date): Promise<ActionResult> {
   const clean = code.replace(/\s/g, '');
   if (!/^\d{6}$/.test(clean)) return { ok: false, code: 'validation_failed', fieldErrors: { code: ['invalid'] } };
-  const limited = await consumeRateLimit(deps.db, `staff-two-step:user:${staff.id}`, ATTEMPT_RULE, now);
-  if (!limited.ok) return { ok: false, code: 'rate_limited' };
+  // 5 wrong codes in 10 minutes pause the checks; right ones don't count.
+  const key = `staff-two-step:user:${staff.id}`;
+  if (!(await rateLimitReached(deps.db, key, ATTEMPT_RULE, now)).ok) return { ok: false, code: 'rate_limited' };
   if (!deps.production && clean === DEV_STAFF_CODE) {
     await passSession(deps.db, staff.sessionId);
     return { ok: true, code: 'updated' };
   }
+  const wrong = async (): Promise<ActionResult> => {
+    await consumeRateLimit(deps.db, key, ATTEMPT_RULE, now);
+    return { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } };
+  };
   const authenticator = await authenticatorOf(deps.db, staff.id);
-  if (!authenticator?.confirmedAt) return { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } };
+  if (!authenticator?.confirmedAt) return wrong();
   const result = verifyTotp(deps.cipher.decrypt(authenticator.secretCiphertext), clean, now, authenticator.lastStep);
   if (!result.ok) {
     await deps.db.insert(auditLog).values({ id: newId('aud'), actorId: staff.id, actorRole: 'staff', action: 'staff.two_step_failed', targetType: 'user', targetId: staff.id });
-    return { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } };
+    return wrong();
   }
   const [claimed] = await deps.db
     .update(staffAuthenticators)
     .set({ lastStep: result.step, updatedAt: now })
     .where(and(eq(staffAuthenticators.userId, staff.id), or(isNull(staffAuthenticators.lastStep), lt(staffAuthenticators.lastStep, result.step))))
     .returning({ userId: staffAuthenticators.userId });
-  if (!claimed) return { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } };
+  // A code already used (a replay) counts as a wrong one.
+  if (!claimed) return wrong();
   await passSession(deps.db, staff.sessionId);
   return { ok: true, code: 'updated' };
 }
 
 /** A setup code from an admin starts enrollment: a new secret, shown to the staff member until confirmed. */
 export async function redeemSetupCode(deps: StaffAuthDeps, staff: { id: string }, setupCode: string, now: Date): Promise<ActionResult> {
-  const limited = await consumeRateLimit(deps.db, `staff-setup:user:${staff.id}`, ATTEMPT_RULE, now);
-  if (!limited.ok) return { ok: false, code: 'rate_limited' };
+  const setupKey = `staff-setup:user:${staff.id}`;
+  if (!(await rateLimitReached(deps.db, setupKey, ATTEMPT_RULE, now)).ok) return { ok: false, code: 'rate_limited' };
   const existing = await authenticatorOf(deps.db, staff.id);
   if (existing?.confirmedAt) return { ok: false, code: 'not_allowed' };
   const [row] = await deps.db
@@ -101,7 +107,10 @@ export async function redeemSetupCode(deps: StaffAuthDeps, staff: { id: string }
     .from(staffSetupCodes)
     .where(and(eq(staffSetupCodes.userId, staff.id), eq(staffSetupCodes.codeHash, hashCode(setupCode, deps.secret)), isNull(staffSetupCodes.usedAt), gt(staffSetupCodes.expiresAt, now)))
     .limit(1);
-  if (!row) return { ok: false, code: 'validation_failed', fieldErrors: { setupCode: ['incorrect'] } };
+  if (!row) {
+    await consumeRateLimit(deps.db, setupKey, ATTEMPT_RULE, now);
+    return { ok: false, code: 'validation_failed', fieldErrors: { setupCode: ['incorrect'] } };
+  }
   await deps.db.update(staffSetupCodes).set({ usedAt: now }).where(eq(staffSetupCodes.id, row.id));
   const secretCiphertext = deps.cipher.encrypt(newTotpSecret());
   await deps.db
@@ -115,10 +124,13 @@ export async function redeemSetupCode(deps: StaffAuthDeps, staff: { id: string }
 export async function confirmEnrollment(deps: StaffAuthDeps, staff: { id: string; sessionId: string }, code: string, now: Date): Promise<ActionResult> {
   const authenticator = await authenticatorOf(deps.db, staff.id);
   if (!authenticator || authenticator.confirmedAt) return { ok: false, code: 'not_allowed' };
-  const limited = await consumeRateLimit(deps.db, `staff-two-step:user:${staff.id}`, ATTEMPT_RULE, now);
-  if (!limited.ok) return { ok: false, code: 'rate_limited' };
+  const key = `staff-two-step:user:${staff.id}`;
+  if (!(await rateLimitReached(deps.db, key, ATTEMPT_RULE, now)).ok) return { ok: false, code: 'rate_limited' };
   const result = verifyTotp(deps.cipher.decrypt(authenticator.secretCiphertext), code.replace(/\s/g, ''), now, null);
-  if (!result.ok) return { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } };
+  if (!result.ok) {
+    await consumeRateLimit(deps.db, key, ATTEMPT_RULE, now);
+    return { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } };
+  }
   const [confirmed] = await deps.db
     .update(staffAuthenticators)
     .set({ confirmedAt: now, lastStep: result.step, updatedAt: now })

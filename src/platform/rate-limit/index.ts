@@ -34,6 +34,22 @@ export async function consumeRateLimit(
   return { ok: true, remaining: rule.limit - count };
 }
 
+/**
+ * Whether the window is already full, without counting a hit: for limits on failures only (count them with
+ * `consumeRateLimit` when one happens), so successes never use up the allowance.
+ */
+export async function rateLimitReached(db: Db, key: string, rule: RateLimitRule, now: Date = new Date()): Promise<RateLimitResult> {
+  const windowMs = rule.windowSeconds * 1000;
+  const windowStart = new Date(Math.floor(now.getTime() / windowMs) * windowMs);
+  const [row] = await db
+    .select({ count: rateLimits.count })
+    .from(rateLimits)
+    .where(sql`${rateLimits.key} = ${key} and ${rateLimits.windowStart} = ${windowStart}`)
+    .limit(1);
+  const count = row?.count ?? 0;
+  return count >= rule.limit ? { ok: false, retryAt: new Date(windowStart.getTime() + windowMs) } : { ok: true, remaining: rule.limit - count };
+}
+
 /** The first refusal among several rules, or ok. Every rule counts the hit. */
 export async function consumeRateLimits(
   db: Db,
