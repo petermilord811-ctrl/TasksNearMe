@@ -1,0 +1,48 @@
+{
+  "title": "Saved replies",
+  "intro": "Start a case reply from one of these. {firstName} becomes the person's first name and {staffName} yours when the reply is sent.",
+  "readOnly": "Support leads, trust & safety and admins keep this list.",
+  "allQueues": "All queues",
+  "empty": "No saved replies yet.",
+  "emptyManage": "No saved replies yet. Write the first one above.",
+  "edit": "Edit",
+  "editLabel": "Edit {title}",
+  "archive": "Archive",
+  "archiveLabel": "Archive {title}",
+  "archiveTitle": "Archive \"{title}\"?",
+  "archiveBody": "It leaves this list and the case pages. Replies already sent stay as they are.",
+  "archiveConfirm": "Archive",
+  "updated": "Updated by {name} on {date}",
+  "form": {
+    "newTitle": "New saved reply",
+    "editLabel": "Edit {title}",
+    "title": "Title",
+    "queue": "Queue",
+    "body": "Reply",
+    "bodyHint": "Write it as you'd send it. {firstName} and {staffName} are filled in on sending.",
+    "save": "Save reply",
+    "saveChanges": "Save changes",
+    "cancel": "Cancel",
+    "saved": "Saved. It's on the case pages now.",
+    "updated": "Changes saved.",
+    "gone": "This saved reply was archived by someone else. Refresh the page."
+  },
+  "errors": {
+    "title": {
+      "required": "Give it a title.",
+      "too_short": "Use at least 3 characters.",
+      "too_long": "Use {max} characters or fewer."
+    },
+    "body": {
+      "required": "Write the reply.",
+      "too_long": "Use {max} characters or fewer."
+    }
+  },
+  "previews": {
+    "group": "Staff: saved replies",
+    "lead": "A lead's list",
+    "agent": "An agent reads",
+    "empty": "None yet",
+    "case": "A case starting from one"
+  }
+}

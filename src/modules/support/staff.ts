@@ -73,6 +73,7 @@ import {
   slaDueAt,
   refundLimitOf,
   canModerateReviews,
+  fillReplyPlaceholders,
   resolutionMoney,
   staffCaseActions,
   type BookingMoneyFacts,
@@ -610,8 +611,11 @@ export async function staffReply(db: Db, staff: StaffActor, caseId: string, inpu
   const limited = await consumeRateLimit(db, `staff-reply:${staff.id}`, REPLY_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const subject = (await caseLabelsOf(db, [ctx.row])).get(ctx.row.id)?.subject ?? 'Support';
+  // A saved reply's (or a typed) `{first_name}` and `{staff_name}` become the real names.
+  const names = await usersById(db, [parsed.data.partyId, staff.id]);
+  const body = fillReplyPlaceholders(parsed.data.body, { first_name: names.get(parsed.data.partyId)?.firstName ?? '', staff_name: names.get(staff.id)?.firstName ?? '' });
   await db.transaction(async (tx) => {
-    await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'message', authorUserId: staff.id, partyUserId: parsed.data.partyId, body: parsed.data.body, createdAt: now });
+    await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'message', authorUserId: staff.id, partyUserId: parsed.data.partyId, body, createdAt: now });
     await tx
       .update(supportCases)
       .set({ updatedAt: now, ...(ctx.row.firstResponseAt ? {} : { firstResponseAt: now }) })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { caseResolutions, nextCaseStatuses, queueOf, refundLimitOf, resolutionMoney, slaDueAt, staffCaseActions, type BookingMoneyFacts, type StaffCaseFacts } from './staff-domain';
+import { canManageSavedReplies, caseResolutions, fillReplyPlaceholders, nextCaseStatuses, queueOf, queueResponseStats, refundLimitOf, resolutionMoney, slaDueAt, staffCaseActions, type BookingMoneyFacts, type ResponseCaseFacts, type StaffCaseFacts } from './staff-domain';
 
 const facts = (over: Partial<StaffCaseFacts> = {}): StaffCaseFacts => ({
   roles: ['support_agent'],
@@ -97,5 +97,51 @@ describe('the money a resolution moves', () => {
     expect(refundLimitOf(['support_agent'])).toBe(10_000);
     expect(refundLimitOf(['support_agent', 'support_lead'])).toBe(50_000);
     expect(refundLimitOf(['trust_safety'])).toBe(0);
+  });
+});
+
+describe('saved replies', () => {
+  it('fills the first name and the staff name, however the braces are spaced, and leaves the rest', () => {
+    const body = 'Hi {first_name},\n\nThanks, { Staff_Name }. {first_name} again. {booking_id} stays.';
+    expect(fillReplyPlaceholders(body, { first_name: 'Maya', staff_name: 'Alex' })).toBe('Hi Maya,\n\nThanks, Alex. Maya again. {booking_id} stays.');
+    expect(fillReplyPlaceholders('No placeholders.', { first_name: 'Maya', staff_name: 'Alex' })).toBe('No placeholders.');
+  });
+
+  it('lets leads keep the list', () => {
+    expect(canManageSavedReplies(['support_agent'])).toBe(false);
+    expect(canManageSavedReplies(['finance'])).toBe(false);
+    expect(canManageSavedReplies(['support_lead'])).toBe(true);
+    expect(canManageSavedReplies(['trust_safety'])).toBe(true);
+    expect(canManageSavedReplies(['admin'])).toBe(true);
+  });
+});
+
+describe('response times', () => {
+  const now = new Date('2026-11-23T16:00:00.000Z');
+  const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 3_600_000);
+  const item = (over: Partial<ResponseCaseFacts>): ResponseCaseFacts => ({ queue: 'disputes', status: 'open', createdAt: hoursAgo(1), firstResponseAt: null, ...over });
+
+  it('counts what waits on staff now: past due and due within the hour', () => {
+    const stats = queueResponseStats('disputes', [
+      item({ createdAt: hoursAgo(5) }), // first reply was due an hour ago
+      item({ createdAt: hoursAgo(3.5) }), // due in 30 minutes
+      item({ createdAt: hoursAgo(1) }), // due in 3 hours
+      item({ status: 'awaiting_poster', createdAt: hoursAgo(10) }), // waits on a member: nothing due
+      item({ status: 'resolved', createdAt: hoursAgo(10) }),
+      item({ queue: 'safety', createdAt: hoursAgo(5) }), // another queue
+    ], now);
+    expect(stats).toMatchObject({ queue: 'disputes', firstReplyHours: 4, waitingOnStaff: 3, pastDue: 1, dueSoon: 1 });
+  });
+
+  it('rates the last 7 days: on time out of the first replies that were due, and the middle reply time', () => {
+    const stats = queueResponseStats('reports', [
+      item({ queue: 'reports', status: 'resolved', createdAt: hoursAgo(48), firstResponseAt: hoursAgo(46) }), // 2 h: on time
+      item({ queue: 'reports', status: 'resolved', createdAt: hoursAgo(100), firstResponseAt: hoursAgo(70) }), // 30 h: late
+      item({ queue: 'reports', createdAt: hoursAgo(30) }), // no reply, past 24 h: due, late
+      item({ queue: 'reports', createdAt: hoursAgo(2) }), // no reply, still within 24 h: not due yet
+      item({ queue: 'reports', status: 'closed', createdAt: hoursAgo(24 * 8), firstResponseAt: hoursAgo(24 * 8 - 1) }), // older than a week
+    ], now);
+    expect(stats.week).toEqual({ opened: 4, due: 3, onTime: 1, medianFirstReplyMinutes: 960 });
+    expect(queueResponseStats('safety', [], now).week).toEqual({ opened: 0, due: 0, onTime: 0 });
   });
 });

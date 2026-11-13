@@ -1,3 +1,4 @@
+import type { SavedReplyOption } from './admin-support-tools';
 import type { AdminVerificationQueue } from './admin-verification';
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
@@ -163,6 +164,8 @@ export interface AdminCasePageData {
   resolutions: CaseResolution[];
   /** The booking's money, for the settle and goodwill inputs (cases about a paid booking). */
   money?: { priceCents: Cents; chargedCents: Cents; refundedCents: Cents };
+  /** Saved replies for this case's queue and every queue, when the viewer can reply (`routes.admin.savedReplies()`). */
+  savedReplies?: SavedReplyOption[];
 }
 
 /** The review a report is about, with what staff can do about it. */

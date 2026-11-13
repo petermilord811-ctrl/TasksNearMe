@@ -202,5 +202,11 @@
       "hideSubmit": "Hide review",
       "showSubmit": "Show review"
     }
+  },
+  "savedReplies": {
+    "label": "Start from a saved reply",
+    "choose": "Choose a saved reply",
+    "hint": "It replaces what you wrote; {firstName} and {staffName} are filled in when you send it.",
+    "manage": "All saved replies"
   }
 }

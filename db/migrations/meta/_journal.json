@@ -260,6 +260,13 @@
       "when": 1794566232799,
       "tag": "0036_completion_checklist",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794567786622,
+      "tag": "0037_support_macros",
+      "breakpoints": true
     }
   ]
 }

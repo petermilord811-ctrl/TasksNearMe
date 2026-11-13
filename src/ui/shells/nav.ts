@@ -21,6 +21,8 @@ export type NavId =
   | 'reports'
   | 'users'
   | 'verifications'
+  | 'responseTimes'
+  | 'savedReplies'
   | 'config'
   | 'audit'
   | 'staff'
@@ -85,6 +87,9 @@ export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
     { id: 'users', href: routes.admin.users() },
     // Address proofs, name checks, ID and background reviews: every staff role works this queue.
     { id: 'verifications', href: routes.admin.verifications() },
+    // Every staff role sees how the queues stand; leads keep the saved replies (others read them).
+    { id: 'responseTimes', href: routes.admin.responseTimes() },
+    { id: 'savedReplies', href: routes.admin.savedReplies() },
     { id: 'bookings', href: routes.admin.bookings() },
     { id: 'payments', href: routes.admin.payments() },
     { id: 'rewards', href: routes.admin.rewards() },

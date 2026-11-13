@@ -1,12 +1,13 @@
 'use server';
 
 import { refresh, updateTag } from 'next/cache';
-import type { ActionResult, CaseResolutionInput, CaseStatusInput, RefundDecisionInput, ResolutionPreviewResult, RestrictedAccessInput, RevealAddressResult, RevealConversationResult, ReviewModerationInput, StaffNoteInput, StaffRefundInput, StaffReplyInput } from '@/contracts';
+import type { ActionResult, SavedReplyInput, CaseResolutionInput, CaseStatusInput, RefundDecisionInput, ResolutionPreviewResult, RestrictedAccessInput, RevealAddressResult, RevealConversationResult, ReviewModerationInput, StaffNoteInput, StaffRefundInput, StaffReplyInput } from '@/contracts';
 import { createPaymentProvider } from '@/integrations/payments';
 import { getViewer } from '@/platform/auth/viewer';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { db } from '@/platform/db/client';
 import { addCaseNote, assignCase, closeCase, moderateReportedReview, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffReply, type StaffActor } from './staff';
+import { archiveSavedReply, createSavedReply, updateSavedReply } from './saved-replies';
 import { decideRefundRequest, resolveCaseWithMoney, revealBookingAddress, revealBookingConversation, staffRefund } from './staff-money';
 import { requestNow } from '@/platform/clock';
 
@@ -117,4 +118,24 @@ export async function revealBookingConversationAction(bookingId: string, input: 
   const actor = await staff();
   if (!actor) return { ok: false, code: 'not_allowed' };
   return revealBookingConversation(db, actor, String(bookingId), input, await requestNow());
+}
+
+// ---- Saved replies --------------------------------------------------------------------------------
+
+export async function createSavedReplyAction(input: SavedReplyInput): Promise<ActionResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return refreshed(await createSavedReply(db, actor, input, await requestNow()));
+}
+
+export async function updateSavedReplyAction(input: SavedReplyInput & { id: string }): Promise<ActionResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return refreshed(await updateSavedReply(db, actor, String(input?.id ?? ''), input, await requestNow()));
+}
+
+export async function archiveSavedReplyAction(input: { id: string }): Promise<ActionResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return refreshed(await archiveSavedReply(db, actor, String(input?.id ?? ''), await requestNow()));
 }

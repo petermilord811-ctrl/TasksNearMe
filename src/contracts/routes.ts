@@ -177,6 +177,10 @@ export const routes = {
     staff: () => '/admin/staff',
     /** Verification reviews: address proofs, ID name checks and attempts, background checks to adjudicate. */
     verifications: (queue?: AdminVerificationQueue) => withQuery('/admin/verifications', { queue }),
+    /** Saved replies staff start a case reply from (leads write them). */
+    savedReplies: () => '/admin/saved-replies',
+    /** Where each queue stands against its response targets. */
+    responseTimes: () => '/admin/response-times',
   },
 
   external: {

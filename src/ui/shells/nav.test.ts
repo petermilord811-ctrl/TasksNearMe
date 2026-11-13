@@ -33,7 +33,7 @@ describe('app navigation', () => {
 });
 
 describe('admin navigation', () => {
-  const standard = ['queues', 'cases', 'reports', 'users', 'verifications', 'bookings', 'payments', 'rewards'];
+  const standard = ['queues', 'cases', 'reports', 'users', 'verifications', 'responseTimes', 'savedReplies', 'bookings', 'payments', 'rewards'];
   // The audit log is for admins and support leads (UI-033).
   const withAudit = [...standard, 'audit'];
 
@@ -48,11 +48,11 @@ describe('admin navigation', () => {
 
   it('shows Config and Staff in their specified positions for an admin', () => {
     expect(ids(getAdminNav(rileyStaff.roles))).toEqual([
-      'queues', 'cases', 'reports', 'users', 'verifications', 'bookings', 'payments', 'rewards', 'config', 'audit', 'staff',
+      'queues', 'cases', 'reports', 'users', 'verifications', 'responseTimes', 'savedReplies', 'bookings', 'payments', 'rewards', 'config', 'audit', 'staff',
     ]);
     expect(getAdminNav(rileyStaff.roles).map((item) => item.href)).toEqual([
       routes.admin.home(), routes.admin.cases(), routes.admin.reports(), routes.admin.users(), routes.admin.verifications(),
-      routes.admin.bookings(), routes.admin.payments(), routes.admin.rewards(), routes.admin.config(),
+      routes.admin.responseTimes(), routes.admin.savedReplies(), routes.admin.bookings(), routes.admin.payments(), routes.admin.rewards(), routes.admin.config(),
       routes.admin.audit(), routes.admin.staff(),
     ]);
   });

@@ -70,7 +70,7 @@ export function PosterIdentityScreen({ data, handlers }: { data: PosterIdentityP
         {identity.nameCheck && <Note tone="info">{t('nameCheck')}</Note>}
         {!reason && !verified && !identity.nameCheck && <p>{t('notNeeded')}</p>}
         {needed && <>
-          {identity.status !== 'processing' && <p>{t('explanation')}</p>}
+          {identity.status !== 'processing' && !identity.blocked && <p>{t('explanation')}</p>}
           {identity.status === 'requires_input' && !identity.blocked && <Note tone="warning">{v(`identityFailureReasons.${identity.failureReason ?? 'other'}`)}</Note>}
           {identity.blocked === 'try_later' && <Note tone="warning">{v('setup.identityBlocked.try_later', { time: identity.retryAt ? formatDateTime(identity.retryAt) : '' })}</Note>}
           {identity.blocked === 'too_many_attempts' && <Note tone="warning">{v('setup.identityBlocked.too_many_attempts')}</Note>}

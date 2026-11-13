@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
+import { savedRepliesFor } from '@/modules/support/saved-replies';
 import { getAdminCase, staffActorOf } from '@/modules/support/staff';
 import {
   addCaseNoteAction,
@@ -39,9 +40,11 @@ async function AdminCase({ params }: Pick<PageProps<'/admin/cases/[caseId]'>, 'p
   const found = await getAdminCase(db, staff, caseId, now);
   if (!found) notFound();
   const { data, version } = found;
+  // Saved replies to start from, for whoever can reply.
+  const savedReplies = data.actions.includes('reply') ? await savedRepliesFor(db, data.case.queue) : [];
   return (
     <AdminCaseScreen
-      data={data}
+      data={savedReplies.length > 0 ? { ...data, savedReplies } : data}
       now={now.toISOString()}
       handlers={{
         onAssign: assignCaseAction.bind(null, caseId, version),

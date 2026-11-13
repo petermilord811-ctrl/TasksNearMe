@@ -18,6 +18,8 @@ const FAR = 'tsk_alert_far';
 const now = () => new Date();
 
 beforeAll(async () => {
+  // Files run earlier may have alerted Jordan this hour, and the cap would then leave him out: start from none.
+  await db.delete(notifications).where(and(eq(notifications.userId, 'usr_jordan'), eq(notifications.type, 'task_match')));
   const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_shelves'));
   const windowStart = new Date(Date.now() + 3 * 86_400_000);
   const windowEnd = new Date(windowStart.getTime() + 3 * 3_600_000);

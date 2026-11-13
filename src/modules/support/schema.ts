@@ -119,3 +119,29 @@ export const refundRequests = pgTable(
   (t) => [index('refund_requests_booking_idx').on(t.bookingId, t.status)],
 );
 
+
+/**
+ * Saved replies ("macros"): text staff start a reply from. Leads write them, for one queue or all; anyone
+ * who works cases uses them. `{first_name}` and `{staff_name}` are filled in when the reply is sent.
+ * Archived ones stay for the audit trail.
+ */
+export const supportMacros = pgTable(
+  'support_macros',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    /** `ADMIN_QUEUES`, or null for every queue. */
+    queue: text('queue'),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    updatedByUserId: text('updated_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('support_macros_queue_idx').on(t.archivedAt, t.queue)],
+);

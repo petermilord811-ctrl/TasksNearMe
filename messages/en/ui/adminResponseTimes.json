@@ -1,0 +1,36 @@
+{
+  "title": "Response times",
+  "intro": "First replies are due within 4 hours for disputes and safety, and within 24 hours for reports and requests. A resolution is due {hours} hours after a case opens. Nothing is due while a case waits on a member.",
+  "queuesTitle": "Queues",
+  "target": "First reply within {hours} h",
+  "waiting": "Waiting on us",
+  "pastDue": "Past due",
+  "dueSoon": "Due within 1 h",
+  "week": {
+    "title": "Last 7 days",
+    "onTime": "{percent}% of first replies on time ({onTime} of {due})",
+    "noneDue": "{opened, plural, =0 {No cases opened} one {# case opened, no first reply due yet} other {# cases opened, no first reply due yet}}",
+    "median": "Typical first reply: {time}"
+  },
+  "duration": {
+    "minutes": "{minutes} min",
+    "hours": "{hours} h {minutes} min",
+    "days": "{days} d {hours} h"
+  },
+  "pastDueTitle": "Past due",
+  "pastDueEmpty": "Nothing is past due.",
+  "dueSoonTitle": "Due within the next hour",
+  "dueSoonEmpty": "Nothing is due in the next hour.",
+  "peopleTitle": "Who has the waiting cases",
+  "peopleEmpty": "No cases are waiting on staff.",
+  "columns": {
+    "person": "Staff member",
+    "waiting": "Waiting",
+    "pastDue": "Past due"
+  },
+  "previews": {
+    "group": "Staff: response times",
+    "busy": "A busy day",
+    "calm": "All caught up"
+  }
+}

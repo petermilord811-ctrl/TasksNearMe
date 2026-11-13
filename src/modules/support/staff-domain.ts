@@ -180,3 +180,60 @@ export function resolutionMoney(
       return null;
   }
 }
+
+// ---- Saved replies ------------------------------------------------------------------------------
+
+/** Leads write, edit and archive saved replies; anyone who works cases uses them. */
+export const canManageSavedReplies = (roles: readonly StaffRole[]) => isCaseLead(roles);
+
+/**
+ * Fills `{first_name}` and `{staff_name}` (spaces inside the braces allowed, any case) when a reply is
+ * sent, from a saved reply or typed by hand. Anything else in braces stays as written.
+ */
+export function fillReplyPlaceholders(body: string, values: { first_name: string; staff_name: string }): string {
+  return body.replace(/\{\s*(first_name|staff_name)\s*\}/gi, (_match, name: string) => values[name.toLowerCase() as keyof typeof values]);
+}
+
+// ---- Response times -----------------------------------------------------------------------------
+
+export interface ResponseCaseFacts {
+  queue: AdminQueue;
+  status: CaseStatus;
+  createdAt: Date;
+  firstResponseAt: Date | null;
+}
+
+const HOUR_MS = 3_600_000;
+
+/**
+ * One queue's numbers against its targets: what waits on staff now (past due, due within the hour), and
+ * the last 7 days' first replies (on time out of those that were due: sent, or past the target unsent).
+ */
+export function queueResponseStats(queue: AdminQueue, cases: readonly ResponseCaseFacts[], now: Date) {
+  const mine = cases.filter((item) => item.queue === queue);
+  let waitingOnStaff = 0;
+  let pastDue = 0;
+  let dueSoon = 0;
+  for (const item of mine) {
+    if (!STATUS_FILTERS.active!.includes(item.status)) continue;
+    waitingOnStaff += 1;
+    const due = slaDueAt(item);
+    if (!due) continue;
+    if (due <= now) pastDue += 1;
+    else if (due.getTime() - now.getTime() <= HOUR_MS) dueSoon += 1;
+  }
+  const target = FIRST_RESPONSE_HOURS[queue] * HOUR_MS;
+  const week = mine.filter((item) => now.getTime() - item.createdAt.getTime() <= 7 * 24 * HOUR_MS);
+  const replyMinutes = week.flatMap((item) => (item.firstResponseAt ? [(item.firstResponseAt.getTime() - item.createdAt.getTime()) / 60_000] : [])).sort((a, b) => a - b);
+  const due = week.filter((item) => item.firstResponseAt || now.getTime() - item.createdAt.getTime() > target);
+  const onTime = week.filter((item) => item.firstResponseAt && item.firstResponseAt.getTime() - item.createdAt.getTime() <= target);
+  const middle = replyMinutes.length === 0 ? undefined : replyMinutes.length % 2 === 1 ? replyMinutes[(replyMinutes.length - 1) / 2]! : (replyMinutes[replyMinutes.length / 2 - 1]! + replyMinutes[replyMinutes.length / 2]!) / 2;
+  return {
+    queue,
+    firstReplyHours: FIRST_RESPONSE_HOURS[queue],
+    waitingOnStaff,
+    pastDue,
+    dueSoon,
+    week: { opened: week.length, due: due.length, onTime: onTime.length, ...(middle !== undefined ? { medianFirstReplyMinutes: Math.round(middle) } : {}) },
+  };
+}

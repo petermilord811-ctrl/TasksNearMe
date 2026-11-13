@@ -1,5 +1,5 @@
 import { useTranslations } from 'next-intl';
-import { BadgeCheck, BookOpen, CalendarDays, CalendarCheck, CircleDollarSign, ClipboardList, FileClock, Flag, Gift, Heart, HelpCircle, Home, Inbox, ListChecks, MessageCircle, Search, Settings, ShieldCheck, UserRound, UserSearch, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, BookOpen, CalendarDays, CalendarCheck, CircleDollarSign, ClipboardList, FileClock, Flag, Gift, Heart, HelpCircle, Home, Inbox, ListChecks, MessageCircle, MessageSquareText, Search, Settings, ShieldCheck, Timer, UserRound, UserSearch, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { cn } from '@/ui/lib/utils';
 import { NavIndicator } from './nav-indicator';
 import { NavLink } from './nav-link';
@@ -9,7 +9,7 @@ const icons: Record<NavId, LucideIcon> = {
   home: Home, tasks: ClipboardList, bookings: CalendarCheck, messages: MessageCircle,
   account: UserRound, findWork: Search, earnings: Wallet, helpers: UserSearch, saved: Heart, payments: CircleDollarSign,
   support: HelpCircle, offers: Inbox, availability: CalendarDays, clients: Users, rewards: Gift,
-  queues: ListChecks, cases: BookOpen, reports: Flag, users: Users, verifications: BadgeCheck, config: Settings,
+  queues: ListChecks, cases: BookOpen, reports: Flag, users: Users, verifications: BadgeCheck, responseTimes: Timer, savedReplies: MessageSquareText, config: Settings,
   audit: FileClock, staff: ShieldCheck, howItWorks: HelpCircle, becomeAHelper: Users, pricing: CircleDollarSign,
 };
 

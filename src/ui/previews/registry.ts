@@ -48,6 +48,7 @@ import { supportPreviews } from './support.preview';
 import { supportCasePreviews } from './support-case.preview';
 import { safetyPreviews } from './safety.preview';
 import { adminPreviews } from './admin.preview';
+import { adminSupportToolsPreviews } from './admin-support-tools.preview';
 import { adminMoneyPreviews } from './admin-money.preview';
 import { adminPeoplePreviews } from './admin-people.preview';
 import { adminOpsPreviews } from './admin-ops.preview';
@@ -116,6 +117,7 @@ export const previews: PreviewEntry[] = [
   ...supportCasePreviews,
   ...safetyPreviews,
   ...adminPreviews,
+  ...adminSupportToolsPreviews,
   ...adminMoneyPreviews,
   ...adminPeoplePreviews,
   ...adminOpsPreviews,
