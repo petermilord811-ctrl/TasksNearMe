@@ -16,7 +16,10 @@
 **New dependencies (UI-036):** `motion`, `maplibre-gl`. Run `npm install` after pulling (never while a dev server runs in that checkout).
 
 ## Done on 2026-11-13 (owner requests)
-- **Regular visits** (blueprint 03 §7, migration 0040; this session): a helper proposes a past cleaning or yard task again on a schedule (weekly, every 2 weeks, monthly by weekday); the client pays the first visit and the card stays on file; each visit is its own booking, `scheduled` until its card is charged 48 h before (retries at 36 h and 24 h, skipped unpaid at 12 h, "Pay now" on the booking page); skip, pause (auto-resume), change card, stop; the helper skips 48 h ahead or ends with 7 days' notice; one conversation per series; six notifications. `recurring` is on by default. **UI still to build** (waiting for the other session's format codemod).
+- **Regular visits** (blueprint 03 §7, migration 0040; this session): a helper proposes a past cleaning or yard task again on a schedule (weekly, every 2 weeks, monthly by weekday); the client pays the first visit and the card stays on file; each visit is its own booking, `scheduled` until its card is charged 48 h before (retries at 36 h and 24 h, skipped unpaid at 12 h, "Pay now" on the booking page); skip, pause (auto-resume), change card, stop; the helper skips 48 h ahead or ends with 7 days' notice; one conversation per series; six notifications. `recurring` is on by default. The UI is built (UI-059): Repeat on proposals, `/app/series/[seriesId]`, the booking page's paid-later card, regular visits on the bookings list, checkout for far-ahead bookings.
+- **Automated replacement matching** (P2): a helper who cancels 3 h or more ahead reopens the client's task on its own; earlier offerers and the 10 most reliable helpers it suits are told; the client is told.
+- **Ranking by reliability** (P2): browsing helpers lists the most reliable first; "Reliable" on helper cards and offers (UI-060).
+- **A suggested category on posting** (P2): "Not sure which one? Describe what you need" (UI-060).
 - **The recurring-month reward** (blueprint 05 variant B): $15 once per series after a calendar month with every visit completed and paid (`reward.recurring_month`, on).
 - **Bookings more than 14 days ahead** are booked now and charged 72 h before (blueprint 04 phase 2; a retry at 48 h, canceled and reopened at 24 h). Only reachable when staff raise `maxLeadDays`.
 - From the other session: credits for clients and instant payouts (0039), passkeys and a session guard (0041), and the Spanish UI groundwork (pages under `src/app/[locale]`, the proxy picks the language; new pages go there).
@@ -91,9 +94,9 @@
 - The design system (§1–2.3) describes the new brand.
 
 ## Next steps
-1. The UI for regular visits and scheduled payments: Repeat on the proposal form, the schedule on the proposal page, `/app/series/[seriesId]` (under `src/app/[locale]/(app)/app/`), the booking page's "Pay now" card, skip and series link, regular visits on the bookings page, the confirmation page's "charged later"; previews; e2e.
-2. Phase 2 left here: automated replacement matching, ranking helpers by reliability, AI-suggested category on posting; multi-helper bookings if time allows.
-3. Keep the gate green after each increment (`scripts/gate.mjs`, one heavy run at a time between the two sessions).
+1. Phase 2 is done here except multi-helper bookings (two separate bookings at launch, by design) and errands (blocked on F17). Keep refining the screens and run the gate after each increment (`scripts/gate.mjs`, one heavy run at a time between the two sessions).
+2. The other session: emails and texts in the recipient's language, then the Spanish translation of the namespaces this session settled (series, bookingHub, bookings, bookingConfirm, bookingSheets, helperCard, clients, proposal, rewards, actions, status, thread, notifications, server).
+3. When Codex is back (2026-11-17), it can take UI polish tickets again.
 
 ## Open issues
 - Each page ships the whole next-intl message catalog (about 76 KB plus the landing copy).
