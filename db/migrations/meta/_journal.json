@@ -316,6 +316,13 @@
       "when": 1794606538337,
       "tag": "0044_identity_captures",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1794609822051,
+      "tag": "0045_user_badges",
+      "breakpoints": true
     }
   ]
 }
