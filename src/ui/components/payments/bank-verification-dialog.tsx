@@ -1,11 +1,12 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import type { PaymentVerification } from '@/contracts';
 import { Button } from '@/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/ui/primitives/dialog';
 import { Spinner } from '@/ui/primitives/spinner';
+import { loadStripe } from './stripe-js';
 
 export function BankVerificationDialog({ verification, onDone, pending }: {
   verification: PaymentVerification;
@@ -14,6 +15,18 @@ export function BankVerificationDialog({ verification, onDone, pending }: {
 }) {
   const t = useTranslations('payments.verification');
   const opener = useRef<HTMLElement | null>(null);
+  const done = useEffectEvent((outcome: 'approved' | 'failed') => onDone(outcome));
+  const stripe = verification.kind === 'stripe' ? verification : null;
+
+  // Stripe: the bank's own step opens over the page (Stripe.js); its outcome is read on the server either way.
+  useEffect(() => {
+    if (!stripe) return;
+    let active = true;
+    void loadStripe(stripe.publishableKey)
+      .then((instance) => instance.handleNextAction({ clientSecret: stripe.clientSecret }))
+      .then((result) => { if (active) done(result.error ? 'failed' : 'approved'); }, () => { if (active) done('failed'); });
+    return () => { active = false; };
+  }, [stripe]);
   return <Dialog open>
     <DialogContent
       showCloseButton={false}
@@ -34,13 +47,13 @@ export function BankVerificationDialog({ verification, onDone, pending }: {
     >
       <DialogHeader className="pr-0 text-left">
         <DialogTitle className="leading-7">{t('title')}</DialogTitle>
-        <DialogDescription className="leading-6">{t('description')}</DialogDescription>
+        <DialogDescription className="leading-6">{t(stripe ? 'stripeDescription' : 'description')}</DialogDescription>
       </DialogHeader>
-      <p aria-live="polite" className="flex min-h-6 items-center gap-2 text-sm text-muted-foreground">{pending && <><Spinner aria-hidden="true" />{t('pending')}</>}</p>
-      <DialogFooter className="flex-col sm:flex-row">
+      <p aria-live="polite" className="flex min-h-6 items-center gap-2 text-sm text-muted-foreground">{(pending || stripe) && <><Spinner aria-hidden="true" />{t(pending ? 'pending' : 'waiting')}</>}</p>
+      {!stripe && <DialogFooter className="flex-col sm:flex-row">
         <Button type="button" disabled={pending} aria-busy={pending} onClick={() => onDone('approved')}>{t('approve')}</Button>
         <Button type="button" variant="outline" disabled={pending} onClick={() => onDone('failed')}>{t('fail')}</Button>
-      </DialogFooter>
+      </DialogFooter>}
     </DialogContent>
   </Dialog>;
 }

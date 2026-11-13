@@ -21,7 +21,7 @@ import type {
 import { acceptProposalInputSchema, rebookProposalInputSchema, routes } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
 import { clientSummary } from '@/modules/bookings/hub';
-import { finishBankVerification, methodForChoice, paymentPanel, settle, type BookingDeps } from '@/modules/bookings/confirm';
+import { chargeMethodOf, finishBankVerification, methodForChoice, paymentPanel, settle, type BookingDeps } from '@/modules/bookings/confirm';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { areas, categories } from '@/modules/markets/schema';
 import { getPublishedPolicy } from '@/modules/markets/queries';
@@ -461,7 +461,7 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
     return { bookingId: bookingId!, paymentId, idempotencyKey };
   });
   if (!hold) return { ok: false, code: 'not_allowed' };
-  const result = await deps.payments.charge({ amountCents, method: { providerRef: method.providerRef }, idempotencyKey: hold.idempotencyKey, description: `TasksNearMe booking ${hold.bookingId}` });
+  const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey: hold.idempotencyKey, description: `TasksNearMe booking ${hold.bookingId}` });
   return accepted(db, row.id, await settle(deps, posterId, hold.paymentId, result, now), now);
 }
 

@@ -9,15 +9,23 @@ import { Checkbox } from '@/ui/primitives/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/ui/primitives/radio-group';
 import { cn } from '@/ui/lib/utils';
 import { PaymentMethodLabel } from './payment-method-label';
+import { StripeCardField } from './stripe-card-field';
 
 /** A payment choice: a soft card that lifts on hover; chosen, it takes the brand's ring. */
 const optionCard = 'flex min-w-0 cursor-pointer items-center gap-3 rounded-2xl border border-foreground/[0.09] bg-card px-4 py-3 transition-[border-color,box-shadow,background-color] duration-200 ease-[var(--ease-out)] hover:border-foreground/20 hover:shadow-[0_8px_22px_-16px_rgb(60_30_10/0.45)] has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring motion-reduce:transition-none';
 const optionSelected = 'border-primary/60 bg-primary/[0.045] shadow-[0_0_0_1px_var(--primary)] hover:border-primary/60 hover:shadow-[0_0_0_1px_var(--primary)]';
 
+type NewCardChoice = Extract<PaymentChoice, { kind: 'dev_card' | 'stripe_card' }>;
+
+/** A new card as this panel collects it: Stripe's field (no card yet), or the first development test card. */
+function newCardChoice(panel: PaymentPanelData): NewCardChoice {
+  return panel.newCard.kind === 'stripe' ? { kind: 'stripe_card', paymentMethodId: '', save: false } : { kind: 'dev_card', card: panel.newCard.testCards[0] ?? 'success', save: false };
+}
+
 /** Defaults are selection behavior only; payment availability comes from the supplied panel. */
 export function getDefaultPaymentChoice(panel: PaymentPanelData): PaymentChoice {
   const method = panel.methods.find((candidate) => candidate.isDefault) ?? panel.methods[0];
-  return method ? { kind: 'saved', methodId: method.id } : { kind: 'dev_card', card: panel.newCard.testCards[0] ?? 'success', save: false };
+  return method ? { kind: 'saved', methodId: method.id } : newCardChoice(panel);
 }
 
 interface PaymentMethodPickerProps {
@@ -33,13 +41,13 @@ export function PaymentMethodPicker({ panel, field, disabled = false, error, id:
   const id = suppliedId ?? generatedId;
   const t = useTranslations('payments');
   const disabledControl = disabled || field.disabled;
-  const lastNewCard = useRef<Extract<PaymentChoice, { kind: 'dev_card' }>>({ kind: 'dev_card', card: panel.newCard.testCards[0] ?? 'success', save: false });
+  const lastNewCard = useRef<NewCardChoice>(newCardChoice(panel));
   const choice = field.value;
   const selected = choice.kind === 'saved' ? `saved:${choice.methodId}` : 'new';
 
   function changeChoice(value: PaymentChoice) {
     if (disabledControl) return;
-    if (value.kind === 'dev_card') lastNewCard.current = value;
+    if (value.kind !== 'saved') lastNewCard.current = value;
     field.onChange(value);
   }
 
@@ -56,7 +64,7 @@ export function PaymentMethodPicker({ panel, field, disabled = false, error, id:
       onValueChange={(value) => {
         if (value === 'new') changeChoice(lastNewCard.current);
         else {
-          if (choice.kind === 'dev_card') lastNewCard.current = choice;
+          if (choice.kind !== 'saved') lastNewCard.current = choice;
           changeChoice({ kind: 'saved', methodId: value.slice('saved:'.length) });
         }
       }}
@@ -95,7 +103,7 @@ export function PaymentMethodPicker({ panel, field, disabled = false, error, id:
         value={choice.card}
         onBlur={field.onBlur}
         onValueChange={(value) => {
-          const card = panel.newCard.testCards.find((candidate) => candidate === value);
+          const card = panel.newCard.kind === 'dev' ? panel.newCard.testCards.find((candidate) => candidate === value) : undefined;
           if (card) changeChoice({ ...choice, card });
         }}
         className="gap-1 sm:grid-cols-2"
@@ -105,6 +113,14 @@ export function PaymentMethodPicker({ panel, field, disabled = false, error, id:
           <span className="text-sm">{t(`testCards.${card}`)}</span>
         </label>)}
       </RadioGroup>
+      <label htmlFor={`${id}-save`} className={cn('flex min-h-11 cursor-pointer items-center gap-3', disabledControl && 'cursor-not-allowed opacity-60')}>
+        <Checkbox id={`${id}-save`} name={`${field.name}.save`} checked={choice.save} disabled={disabledControl} onBlur={field.onBlur} onCheckedChange={(checked) => changeChoice({ ...choice, save: checked === true })} className="scroll-mb-40" />
+        <span className="text-sm">{t('picker.save')}</span>
+      </label>
+    </div>}
+    {choice.kind === 'stripe_card' && panel.newCard.kind === 'stripe' && <div className="space-y-3 rounded-2xl border border-foreground/[0.09] bg-muted/30 p-4 animate-in fade-in-0 slide-in-from-top-2 duration-300">
+      <StripeCardField publishableKey={panel.newCard.publishableKey} disabled={disabledControl} describedBy={`${id}-stripe-hint`} onChange={(paymentMethodId) => changeChoice({ ...choice, paymentMethodId })} />
+      <p id={`${id}-stripe-hint`} className="text-sm text-muted-foreground">{t('picker.stripeHint')}</p>
       <label htmlFor={`${id}-save`} className={cn('flex min-h-11 cursor-pointer items-center gap-3', disabledControl && 'cursor-not-allowed opacity-60')}>
         <Checkbox id={`${id}-save`} name={`${field.name}.save`} checked={choice.save} disabled={disabledControl} onBlur={field.onBlur} onCheckedChange={(checked) => changeChoice({ ...choice, save: checked === true })} className="scroll-mb-40" />
         <span className="text-sm">{t('picker.save')}</span>

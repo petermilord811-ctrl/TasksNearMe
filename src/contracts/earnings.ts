@@ -61,16 +61,25 @@ export interface ReceiptPageData {
   netCents: Cents;
 }
 
-export const addCardInputSchema = z.object({
-  card: z.enum(DEV_TEST_CARDS, code('required')),
-  makeDefault: z.boolean(),
-});
+export const addCardInputSchema = z
+  .object({
+    /** A development test card. */
+    card: z.enum(DEV_TEST_CARDS, code('required')).optional(),
+    /** Stripe: the `pm_…` from Stripe's card field ('' until the card is complete). */
+    paymentMethodId: z.string(code('required')).optional(),
+    makeDefault: z.boolean(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.paymentMethodId !== undefined) {
+      if (!/^pm_[A-Za-z0-9_]{1,200}$/.test(value.paymentMethodId)) ctx.addIssue({ code: 'custom', path: ['paymentMethodId'], message: code('required') });
+    } else if (!value.card) ctx.addIssue({ code: 'custom', path: ['card'], message: code('required') });
+  });
 export type AddCardInput = z.input<typeof addCardInputSchema>;
 
 /**
  * Card handlers on `/app/payments`.
- * - `onAddCard`: ok `saved` (development test card). Errors: `validation_failed`, `payment_declined` (the test card
- *   declines), `rate_limited`, `unknown`.
+ * - `onAddCard`: ok `saved` (a development test card, or Stripe's card field). Errors: `validation_failed`,
+ *   `payment_declined` (the test card declines), `rate_limited`, `unknown`.
  * - `onRemoveCard`: ok `updated`. Errors: `not_allowed` (the card pays an open booking or hold), `not_found`.
  * - `onMakeDefault`: ok `updated`.
  */

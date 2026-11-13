@@ -1,11 +1,12 @@
 import { randomBytes } from 'node:crypto';
 import type { CardBrand, DevTestCard } from '@/contracts';
 import { DEV_TEST_CARDS } from '@/contracts';
+import { createStripePayments } from './stripe';
 
 /**
  * Payments port, shaped like Stripe PaymentIntents (docs/blueprint/04 §1, §4). Development uses a
  * stateless stand-in: every payment method reference names a test card, and each test card always
- * gives the same outcome. Production needs the Stripe adapter (blocked: no keys; see blocked.md).
+ * gives the same outcome. With Stripe keys, `./stripe.ts` takes over (cards come from Stripe.js).
  */
 
 export type PaymentFailureCode = 'payment_declined' | 'insufficient_funds';
@@ -13,6 +14,8 @@ export type PaymentFailureCode = 'payment_declined' | 'insufficient_funds';
 export interface ChargeMethod {
   /** The provider's payment method reference (a saved card or a card collected for this payment). */
   providerRef: string;
+  /** The person's customer at the provider (Stripe: the card is attached to it). */
+  customerRef?: string;
 }
 
 export type ChargeResult =
@@ -28,6 +31,9 @@ export interface CollectedCard {
   expMonth: number;
   expYear: number;
 }
+
+/** A card the browser collected, checked and attached to the person's customer (`prepareCard`). */
+export type PreparedCardResult = { ok: true; card: CollectedCard; customerRef: string } | { ok: false; reason: 'not_supported' };
 
 export type AuthorizeResult =
   | { status: 'authorized'; providerRef: string }
@@ -55,6 +61,15 @@ export interface PaymentProvider {
   refund(input: { chargeRef: string; amountCents: number; idempotencyKey: string }): Promise<{ status: 'succeeded' | 'failed'; refundRef: string }>;
   /** Development only: the payment method for a test card (what the provider's card form would return). */
   collectDevCard?(card: DevTestCard): CollectedCard;
+  /**
+   * Stripe: a card collected by Stripe.js (`pm_…`): its brand and last four, attached to the person's
+   * customer (made on first use; pass `ref` when one is stored). `not_supported`: not a card brand we take.
+   */
+  prepareCard?(input: { paymentMethodRef: string; customer: { ref?: string; userId: string; email: string; name: string } }): Promise<PreparedCardResult>;
+  /** Stripe: the intent's client secret, for Stripe.js to run the bank's step in the browser (never stored). */
+  clientSecretOf?(intentRef: string): Promise<string | null>;
+  /** Stripe: takes a saved card off the person's customer when they remove it. */
+  detachCard?(methodRef: string): Promise<void>;
 }
 
 /** The last four digits of Stripe's test cards with the same outcomes. */
@@ -125,11 +140,18 @@ export function createDevPaymentProvider(): PaymentProvider {
   };
 }
 
-/** The app's payment provider: the development stand-in until Stripe keys exist (never in production). */
-export function createPaymentProvider(): PaymentProvider | null {
-  if (process.env.STRIPE_SECRET_KEY) {
-    // TODO(integration): Stripe adapter (Phase 10). Refuse to fake payments when real keys are set.
-    throw new Error('STRIPE_SECRET_KEY is set but the Stripe adapter is not implemented yet.');
-  }
-  return process.env.NODE_ENV === 'production' ? null : createDevPaymentProvider();
+/**
+ * The app's payment provider. Stripe when both its secret key and its publishable key are set (the
+ * browser collects cards with Stripe.js); with the secret key alone (Stripe Identity only) payments keep
+ * the development stand-in outside production. Production without Stripe takes no payments (null).
+ */
+export function createPaymentProvider(env: Record<string, string | undefined> = process.env): PaymentProvider | null {
+  const secretKey = env.STRIPE_SECRET_KEY?.trim();
+  if (secretKey && env.STRIPE_PUBLISHABLE_KEY?.trim()) return createStripePayments({ secretKey });
+  return env.NODE_ENV === 'production' ? null : createDevPaymentProvider();
+}
+
+/** Stripe.js's key for the browser's card form, when Stripe takes the payments. */
+export function stripePublishableKey(env: Record<string, string | undefined> = process.env): string | null {
+  return env.STRIPE_SECRET_KEY?.trim() ? env.STRIPE_PUBLISHABLE_KEY?.trim() || null : null;
 }

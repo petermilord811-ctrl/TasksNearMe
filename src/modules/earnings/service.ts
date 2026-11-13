@@ -18,11 +18,12 @@ import type {
   ReceiptPageData,
   ReceiptRow,
 } from '@/contracts';
-import { addCardInputSchema, DEV_TEST_CARDS } from '@/contracts';
-import { createPaymentProvider, type PaymentProvider } from '@/integrations/payments';
+import { addCardInputSchema } from '@/contracts';
+import { createPaymentProvider, type CollectedCard, type PaymentProvider } from '@/integrations/payments';
+import { customerFor, newCardCollection } from '@/modules/payments/cards';
 import { users } from '@/modules/accounts/schema';
 import { bookingCompletions, bookings, bookingTerms } from '@/modules/bookings/schema';
-import { paymentMethods, payments, refunds } from '@/modules/payments/schema';
+import { paymentCustomers, paymentMethods, payments, refunds } from '@/modules/payments/schema';
 import { initialsOf } from '@/modules/profiles/queries';
 import { categories } from '@/modules/markets/schema';
 import { tasks } from '@/modules/tasks/schema';
@@ -309,7 +310,7 @@ export async function getPaymentsPage(db: Db, posterUserId: string): Promise<Pay
   return {
     receipts,
     methods: methodRows.map((m) => ({ id: m.id, brand: m.brand as CardBrand, last4: m.last4, expMonth: m.expMonth, expYear: m.expYear, isDefault: m.isDefault })),
-    newCard: { kind: 'dev', testCards: DEV_TEST_CARDS },
+    newCard: newCardCollection(provider()),
   };
 }
 
@@ -358,10 +359,22 @@ export async function addCard(db: Db, userId: string, input: AddCardInput, now: 
   if (!parsed.success) return validationFailed(parsed.error);
   const limited = await consumeRateLimit(db, `cards:${userId}`, CARD_RATE_LIMIT, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
-  if (!payments_?.collectDevCard) return { ok: false, code: 'not_allowed' };
-  // Saving a card checks it with the bank: test cards that decline are refused.
-  if (parsed.data.card === 'declined' || parsed.data.card === 'insufficient_funds') return { ok: false, code: 'payment_declined' };
-  const card = payments_.collectDevCard(parsed.data.card);
+  if (!payments_) return { ok: false, code: 'not_allowed' };
+  let card: CollectedCard;
+  if (parsed.data.paymentMethodId) {
+    // Stripe's card field: checked and attached to the person's customer (made the first time).
+    if (!payments_.prepareCard) return { ok: false, code: 'not_allowed' };
+    const customer = await customerFor(db, userId, payments_.name);
+    const prepared = await payments_.prepareCard({ paymentMethodRef: parsed.data.paymentMethodId, customer });
+    if (!prepared.ok) return { ok: false, code: 'validation_failed', fieldErrors: { paymentMethodId: ['invalid'] } };
+    if (!customer.ref) await db.insert(paymentCustomers).values({ userId, provider: payments_.name, customerRef: prepared.customerRef }).onConflictDoNothing();
+    card = prepared.card;
+  } else {
+    if (!payments_.collectDevCard || !parsed.data.card) return { ok: false, code: 'not_allowed' };
+    // Saving a card checks it with the bank: test cards that decline are refused.
+    if (parsed.data.card === 'declined' || parsed.data.card === 'insufficient_funds') return { ok: false, code: 'payment_declined' };
+    card = payments_.collectDevCard(parsed.data.card);
+  }
   const existing = await db.select({ id: paymentMethods.id }).from(paymentMethods).where(and(eq(paymentMethods.userId, userId), isNull(paymentMethods.detachedAt)));
   const makeDefault = parsed.data.makeDefault || existing.length === 0;
   await db.transaction(async (tx) => {
@@ -397,6 +410,9 @@ export async function removeCard(db: Db, userId: string, methodId: string, now: 
     .where(and(eq(payments.paymentMethodId, method.id), eq(bookings.status, 'pending_funding')))
     .limit(1);
   if (inUse) return { ok: false, code: 'not_allowed' };
+  // Stripe: the card leaves the person's customer too.
+  const payments_ = method.provider === 'stripe' ? provider() : null;
+  if (payments_?.detachCard) await payments_.detachCard(method.providerRef);
   await db.transaction(async (tx) => {
     await tx.update(paymentMethods).set({ detachedAt: now, isDefault: false }).where(eq(paymentMethods.id, method.id));
     if (method.isDefault) {

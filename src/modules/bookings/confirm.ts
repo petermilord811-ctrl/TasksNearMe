@@ -14,15 +14,19 @@ import type {
   PriceBreakdown,
   SavedPaymentMethod,
 } from '@/contracts';
-import { confirmBookingInputSchema, DEV_TEST_CARDS, routes } from '@/contracts';
+import { confirmBookingInputSchema, routes } from '@/contracts';
 import type { ChargeResult, PaymentProvider } from '@/integrations/payments';
+import { customerFor, newCardCollection } from '@/modules/payments/cards';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { categories } from '@/modules/markets/schema';
 import { expireDueOffers, loadHelperState } from '@/modules/offers/helper';
 import { offerPricing } from '@/modules/offers/owner';
 import { offers } from '@/modules/offers/schema';
 import { cancellationSummary, quoteBreakdown } from '@/modules/payments/fees';
-import { paymentMethods, payments } from '@/modules/payments/schema';
+import { paymentCustomers, paymentMethods, payments } from '@/modules/payments/schema';
+import { bankStep, chargeMethodOf } from '@/modules/payments/cards';
+
+export { bankStep, chargeMethodOf, customerFor, newCardCollection } from '@/modules/payments/cards';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
@@ -143,7 +147,7 @@ export async function paymentPanel(db: Db, userId: string, provider: PaymentProv
     expYear: row.expYear,
     isDefault: row.isDefault,
   }));
-  return { methods, newCard: { kind: 'dev', testCards: DEV_TEST_CARDS } };
+  return { methods, newCard: newCardCollection(provider) };
 }
 
 async function lastFailure(db: Db, bookingId: string): Promise<FailedPaymentAttempt | undefined> {
@@ -231,6 +235,8 @@ export interface ChosenMethod {
   expYear: number;
   paymentMethodId: string | null;
   save: boolean;
+  /** Stripe: the customer the card is attached to. */
+  customerRef?: string;
 }
 
 async function chosenMethod(deps: BookingDeps, posterId: string, input: ConfirmBookingInput): Promise<ChosenMethod | ActionResult> {
@@ -246,7 +252,9 @@ export async function methodForChoice(deps: BookingDeps, posterId: string, choic
       .where(and(eq(paymentMethods.id, choice.methodId), eq(paymentMethods.userId, posterId), isNull(paymentMethods.detachedAt)))
       .limit(1);
     if (!method) return fieldError('payment.methodId', 'invalid');
+    const customer = method.provider === 'stripe' ? await customerFor(deps.db, posterId, 'stripe') : null;
     return {
+      ...(customer?.ref ? { customerRef: customer.ref } : {}),
       providerRef: method.providerRef,
       brand: method.brand as CardBrand,
       last4: method.last4,
@@ -255,6 +263,15 @@ export async function methodForChoice(deps: BookingDeps, posterId: string, choic
       paymentMethodId: method.id,
       save: false,
     };
+  }
+  if (choice.kind === 'stripe_card') {
+    // A card from Stripe's form: checked, and attached to the person's customer (made the first time).
+    if (!deps.payments.prepareCard) return fieldError('payment', 'invalid');
+    const customer = await customerFor(deps.db, posterId, deps.payments.name);
+    const prepared = await deps.payments.prepareCard({ paymentMethodRef: choice.paymentMethodId, customer });
+    if (!prepared.ok) return fieldError('payment', 'invalid');
+    if (!customer.ref) await deps.db.insert(paymentCustomers).values({ userId: posterId, provider: deps.payments.name, customerRef: prepared.customerRef }).onConflictDoNothing();
+    return { ...prepared.card, paymentMethodId: null, save: choice.save, customerRef: prepared.customerRef };
   }
   if (!deps.payments.collectDevCard) return fieldError('payment.card', 'not_supported');
   const card = deps.payments.collectDevCard(choice.card);
@@ -397,7 +414,7 @@ export async function confirmBooking(
 
   const result = await deps.payments.charge({
     amountCents,
-    method: { providerRef: method.providerRef },
+    method: chargeMethodOf(method),
     idempotencyKey: hold.idempotencyKey,
     description: `TasksNearMe booking ${hold.bookingId}`,
   });
@@ -454,7 +471,7 @@ export async function settle(deps: BookingDeps, posterId: string, paymentId: str
   }
   if (result.status === 'requires_action') {
     await db.update(payments).set({ status: 'requires_confirmation', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
-    return { ok: false, code: 'requires_bank_verification', verification: { paymentId, kind: 'dev' } };
+    return { ok: false, code: 'requires_bank_verification', verification: await bankStep(deps.payments, paymentId, result.providerRef) };
   }
 
   const outcome = await db.transaction(async (tx) => {

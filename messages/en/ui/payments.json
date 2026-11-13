@@ -17,7 +17,12 @@
     "development": "Test card (development): no real charge",
     "developmentHint": "Choose an outcome to try the payment flow.",
     "outcome": "Test card outcome",
-    "save": "Save this card for next time"
+    "save": "Save this card for next time",
+    "cardLabel": "Card details",
+    "cardLoading": "Loading the secure card field…",
+    "cardUnavailable": "The card field didn't load. Check your connection and refresh the page, or choose a saved card.",
+    "cardFailed": "We couldn't check this card. Check the details and try again.",
+    "stripeHint": "We take Visa, Mastercard, American Express and Discover. Your card details go straight to Stripe, our payment provider."
   },
   "testCards": {
     "success": "Approved",
@@ -30,6 +35,8 @@
     "description": "This is a development stand-in for bank verification. Approve to continue booking, or fail to try another card. No real charge is made.",
     "approve": "Approve",
     "fail": "Fail",
-    "pending": "Verifying…"
+    "pending": "Verifying…",
+    "stripeDescription": "Your bank's own check opens over this page. Follow its steps to finish paying.",
+    "waiting": "Waiting for your bank…"
   }
 }

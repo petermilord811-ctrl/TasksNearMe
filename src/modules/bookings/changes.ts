@@ -29,7 +29,7 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { allowedChangeTypes, changeExpiresAt, OPEN_CHANGE_STATUSES, pricingOf, proposedTerms, type ChangeTerms } from './changes-domain';
-import { methodForChoice, paymentPanel, type BookingDeps } from './confirm';
+import { bankStep, chargeMethodOf, methodForChoice, paymentPanel, type BookingDeps } from './confirm';
 import { bookingChangeRequests, bookingTerms, bookings } from './schema';
 
 /**
@@ -364,7 +364,7 @@ async function chargeDifference(deps: BookingDeps, posterId: string, row: Change
     return true;
   });
   if (!started) return { ok: false, code: 'not_allowed' };
-  const result = await deps.payments.charge({ amountCents: row.differenceCents, method: { providerRef: method.providerRef }, idempotencyKey, description: `TasksNearMe change ${row.id}` });
+  const result = await deps.payments.charge({ amountCents: row.differenceCents, method: chargeMethodOf(method), idempotencyKey, description: `TasksNearMe change ${row.id}` });
   return settleDifference(deps, row.id, paymentId, result, now);
 }
 
@@ -376,7 +376,7 @@ async function settleDifference(deps: BookingDeps, changeId: string, paymentId: 
   }
   if (result.status === 'requires_action') {
     await db.update(payments).set({ status: 'requires_confirmation', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
-    return { ok: false, code: 'requires_bank_verification', verification: { paymentId, kind: 'dev' } };
+    return { ok: false, code: 'requires_bank_verification', verification: await bankStep(deps.payments, paymentId, result.providerRef) };
   }
   await db.update(payments).set({ status: 'succeeded', providerRef: result.providerRef, failureCode: null, updatedAt: now }).where(eq(payments.id, paymentId));
   const [row] = await db.select().from(bookingChangeRequests).where(eq(bookingChangeRequests.id, changeId)).limit(1);

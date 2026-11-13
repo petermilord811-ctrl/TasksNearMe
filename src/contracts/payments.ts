@@ -41,14 +41,18 @@ export const DEV_TEST_CARDS = ['success', 'declined', 'insufficient_funds', 'req
 export type DevTestCard = (typeof DEV_TEST_CARDS)[number];
 
 /**
- * How a new card is collected. Only `dev` exists until Stripe is connected; the Stripe Payment Element
- * (cards, Apple Pay, Google Pay) becomes a second kind then, with the same choice and result types.
+ * How a new card is collected: the development test cards, or Stripe's card form (Stripe.js, loaded from
+ * js.stripe.com with this publishable key), which gives a PaymentMethod id (`pm_…`) to pay with.
  */
 export interface DevCardCollection {
   kind: 'dev';
   testCards: readonly DevTestCard[];
 }
-export type NewCardCollection = DevCardCollection;
+export interface StripeCardCollection {
+  kind: 'stripe';
+  publishableKey: string;
+}
+export type NewCardCollection = DevCardCollection | StripeCardCollection;
 
 /** The payment section of a checkout. */
 export interface PaymentPanelData {
@@ -59,23 +63,34 @@ export interface PaymentPanelData {
 
 const code = (value: FieldErrorCode) => value;
 
-/** What the poster pays with: a saved card, or a new (development test) card, optionally saved for next time. */
-export const paymentChoiceSchema = z.discriminatedUnion(
-  'kind',
-  [
-    z.object({ kind: z.literal('saved'), methodId: z.string(code('required')).min(1, code('required')) }),
-    z.object({ kind: z.literal('dev_card'), card: z.enum(DEV_TEST_CARDS, code('required')), save: z.boolean() }),
-  ],
-  code('required'),
-);
+/** What the poster pays with: a saved card, or a new card (a development test card, or one from Stripe's form), optionally saved for next time. */
+export const paymentChoiceSchema = z
+  .discriminatedUnion(
+    'kind',
+    [
+      z.object({ kind: z.literal('saved'), methodId: z.string(code('required')).min(1, code('required')) }),
+      z.object({ kind: z.literal('dev_card'), card: z.enum(DEV_TEST_CARDS, code('required')), save: z.boolean() }),
+      /** `paymentMethodId`: Stripe's `pm_…` once the card in Stripe's field is complete ('' until then). */
+      z.object({ kind: z.literal('stripe_card'), paymentMethodId: z.string(code('required')), save: z.boolean() }),
+    ],
+    code('required'),
+  )
+  .superRefine((choice, ctx) => {
+    // An unfinished card shows on the payment field itself (every checkout shows that message).
+    if (choice.kind === 'stripe_card' && !/^pm_[A-Za-z0-9_]{1,200}$/.test(choice.paymentMethodId)) ctx.addIssue({ code: 'custom', path: [], message: code('required') });
+  });
 export type PaymentChoice = z.infer<typeof paymentChoiceSchema>;
 
-/** A bank verification step (3-D Secure) the poster must finish before the payment goes through. */
-export interface PaymentVerification {
-  paymentId: string;
-  /** `dev`: the UI shows a stand-in bank dialog with "Approve" and "Fail". */
-  kind: 'dev';
-}
+/**
+ * A bank verification step (3-D Secure) the poster must finish before the payment goes through, then
+ * `onFinishVerification`:
+ * - `dev`: the UI shows a stand-in bank dialog with "Approve" and "Fail";
+ * - `stripe`: Stripe.js runs the bank's own step (`handleNextAction` with the client secret), and the
+ *   outcome is read from Stripe (the `outcome` the UI passes is ignored).
+ */
+export type PaymentVerification =
+  | { paymentId: string; kind: 'dev' }
+  | { paymentId: string; kind: 'stripe'; clientSecret: string; publishableKey: string };
 
 /** What a checkout returns: a normal result, or a bank verification to finish first. */
 export type PaymentAttemptResult =

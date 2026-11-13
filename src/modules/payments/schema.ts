@@ -88,3 +88,21 @@ export const refunds = pgTable(
   },
   (t) => [index('refunds_booking_idx').on(t.bookingId), uniqueIndex('refunds_idempotency_idx').on(t.idempotencyKey)],
 );
+
+/**
+ * The person's customer at the payment provider (Stripe: `cus_…`), made the first time they pay with a new
+ * card. Every card they use is attached to it, so later charges on the same booking (changes, counter
+ * offers) and saved cards work. Deleted with the account.
+ */
+export const paymentCustomers = pgTable(
+  'payment_customers',
+  {
+    userId: text('user_id')
+      .primaryKey()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(), // stripe
+    customerRef: text('customer_ref').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('payment_customers_ref_idx').on(t.provider, t.customerRef)],
+);

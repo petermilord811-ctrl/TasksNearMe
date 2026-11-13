@@ -20,7 +20,7 @@ import type { PaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
 import { bookSlot, holdSlot, openSlotOf, releaseSlot, slotViewOf } from '@/modules/availability/slots';
-import { confirmFundedBooking, methodForChoice, paymentPanel, type BookingDeps } from '@/modules/bookings/confirm';
+import { bankStep, chargeMethodOf, confirmFundedBooking, customerFor, methodForChoice, paymentPanel, type BookingDeps } from '@/modules/bookings/confirm';
 import { clientSummary } from '@/modules/bookings/hub';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { getPublishedPolicy } from '@/modules/markets/queries';
@@ -289,8 +289,8 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
     if (error instanceof SlotTaken || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
     throw error;
   }
-  const result = await deps.payments.authorize({ amountCents: breakdown.posterTotalCents, method: { providerRef: method.providerRef }, idempotencyKey: `invite:${inviteId}:${paymentId}`, description: `TasksNearMe invite ${inviteId}` });
-  return settleRequest(db, inviteId, paymentId, result.status === 'authorized' ? { status: 'authorized', providerRef: result.providerRef } : result, now);
+  const result = await deps.payments.authorize({ amountCents: breakdown.posterTotalCents, method: chargeMethodOf(method), idempotencyKey: `invite:${inviteId}:${paymentId}`, description: `TasksNearMe invite ${inviteId}` });
+  return settleRequest(db, inviteId, paymentId, result.status === 'authorized' ? { status: 'authorized', providerRef: result.providerRef } : result, now, deps.payments);
 }
 
 async function settleRequest(
@@ -299,6 +299,7 @@ async function settleRequest(
   paymentId: string,
   result: { status: 'authorized'; providerRef: string } | { status: 'failed'; providerRef: string; failureCode: 'payment_declined' | 'insufficient_funds' } | { status: 'requires_action'; providerRef: string },
   now: Date,
+  provider?: PaymentProvider,
 ): Promise<PaymentAttemptResult> {
   if (result.status === 'failed') {
     await db.update(payments).set({ status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
@@ -308,7 +309,7 @@ async function settleRequest(
   }
   if (result.status === 'requires_action') {
     await db.update(payments).set({ status: 'requires_confirmation', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
-    return { ok: false, code: 'requires_bank_verification', verification: { paymentId, kind: 'dev' } };
+    return { ok: false, code: 'requires_bank_verification', verification: provider ? await bankStep(provider, paymentId, result.providerRef) : { paymentId, kind: 'dev' } };
   }
   await db.update(payments).set({ status: 'authorized', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
   const [invite] = await db
@@ -507,14 +508,16 @@ export async function acceptCounter(deps: BookingDeps, posterId: string, inviteI
     const paymentId = newId('pay');
     const { id: _old, createdAt: _created, updatedAt: _updated, providerRef: _ref, failureCode: _failure, ...method } = held;
     await db.insert(payments).values({ ...method, id: paymentId, amountCents: invite.counterBreakdown.posterTotalCents, status: 'processing', idempotencyKey: `invite:${invite.id}:${paymentId}`, createdAt: now, updatedAt: now });
-    const result = await deps.payments.authorize({ amountCents: invite.counterBreakdown.posterTotalCents, method: { providerRef: held.methodRef }, idempotencyKey: `invite:${invite.id}:${paymentId}`, description: `TasksNearMe invite ${invite.id}` });
+    // The same card, on the person's customer (Stripe needs it to use the card again).
+    const customer = deps.payments.name === 'stripe' ? await customerFor(db, posterId, 'stripe') : null;
+    const result = await deps.payments.authorize({ amountCents: invite.counterBreakdown.posterTotalCents, method: chargeMethodOf({ providerRef: held.methodRef, ...(customer?.ref ? { customerRef: customer.ref } : {}) }), idempotencyKey: `invite:${invite.id}:${paymentId}`, description: `TasksNearMe invite ${invite.id}` });
     if (result.status === 'failed') {
       await db.update(payments).set({ status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
       return { ok: false, code: result.failureCode };
     }
     if (result.status === 'requires_action') {
       await db.update(payments).set({ status: 'requires_confirmation', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
-      return { ok: false, code: 'requires_bank_verification', verification: { paymentId, kind: 'dev' } };
+      return { ok: false, code: 'requires_bank_verification', verification: await bankStep(deps.payments, paymentId, result.providerRef) };
     }
     return switchHold(deps, invite, held.id, paymentId, result.providerRef, now);
   }

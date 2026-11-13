@@ -1,7 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { blocks } from '@/modules/messaging/schema';
-import { notifications } from '@/modules/notifications/schema';
+import { notificationDeliveries, notifications } from '@/modules/notifications/schema';
 import { helpersToAlert, TASK_ALERT_LIMITS } from '@/modules/offers/task-alerts';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
@@ -17,9 +17,17 @@ const TASK = 'tsk_alert_test';
 const FAR = 'tsk_alert_far';
 const now = () => new Date();
 
+/** Jordan's task alerts, with any emails or pushes already sent for them. */
+async function clearJordansAlerts() {
+  const alerts = await db.select({ id: notifications.id }).from(notifications).where(and(eq(notifications.userId, 'usr_jordan'), eq(notifications.type, 'task_match')));
+  if (alerts.length === 0) return;
+  await db.delete(notificationDeliveries).where(inArray(notificationDeliveries.notificationId, alerts.map((alert) => alert.id)));
+  await db.delete(notifications).where(inArray(notifications.id, alerts.map((alert) => alert.id)));
+}
+
 beforeAll(async () => {
   // Files run earlier may have alerted Jordan this hour, and the cap would then leave him out: start from none.
-  await db.delete(notifications).where(and(eq(notifications.userId, 'usr_jordan'), eq(notifications.type, 'task_match')));
+  await clearJordansAlerts();
   const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_shelves'));
   const windowStart = new Date(Date.now() + 3 * 86_400_000);
   const windowEnd = new Date(windowStart.getTime() + 3 * 3_600_000);
@@ -30,7 +38,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.delete(notifications).where(and(eq(notifications.userId, 'usr_jordan'), eq(notifications.type, 'task_match')));
+  await clearJordansAlerts();
   await db.delete(blocks).where(and(eq(blocks.blockerId, 'usr_maya'), eq(blocks.blockedId, 'usr_sam')));
   await db.delete(tasks).where(inArray(tasks.id, [TASK, FAR]));
   await pool.end();
