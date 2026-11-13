@@ -92,6 +92,41 @@ describe('FindWorkScreen', () => {
     expect(within(list()).getByRole('link', { name: moving.title })).toBeVisible();
   });
 
+  it('sends Undo even while the hide is still on its way, and keeps the row in its place', async () => {
+    let finishHide: (result: ActionResult) => void = () => {};
+    const onHideTask = vi.fn((input: { taskId: string; hidden: boolean }) => (input.hidden
+      ? new Promise<ActionResult>((resolve) => { finishHide = resolve; })
+      : Promise.resolve<ActionResult>({ ok: true, code: 'updated' })));
+    const handlers = { ...fakeFindWorkHandlers, onHideTask };
+    const view = renderWork(findWorkPageData, handlers);
+    const moving = findWorkPageData.cards[1]!.task;
+    await userEvent.click(screen.getByRole('button', { name: `Not interested in ${moving.title}: hide it` }));
+    // Undo before the hide is answered: the row is back at once, and the request waits its turn.
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(onHideTask).toHaveBeenCalledTimes(1);
+    expect(within(list()).getByRole('link', { name: moving.title })).toBeVisible();
+    // The hide's answer brings a list without the row: it stays where it was.
+    finishHide({ ok: true, code: 'updated' });
+    const without: FindWorkPageData = { ...findWorkPageData, cards: findWorkPageData.cards.filter((card) => card.task.id !== moving.id) };
+    view.rerender(<NextIntlClientProvider locale="en" messages={{ ...messages, findWork }}><FindWorkScreen data={without} now={now} handlers={handlers} liveMap={false} /></NextIntlClientProvider>);
+    await vi.waitFor(() => expect(onHideTask).toHaveBeenLastCalledWith({ taskId: moving.id, hidden: false }));
+    const links = within(list()).getAllByRole('link').map((link) => link.textContent);
+    expect(links.indexOf(moving.title)).toBe(1);
+  });
+
+  it('never drops a tap on another row while a save is on its way', async () => {
+    let finishSave: (result: ActionResult) => void = () => {};
+    const onSaveTask = vi.fn(() => new Promise<ActionResult>((resolve) => { finishSave = resolve; }));
+    const onHideTask = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    renderWork(findWorkPageData, { ...fakeFindWorkHandlers, onSaveTask, onHideTask });
+    const [desk, moving] = [findWorkPageData.cards[0]!.task, findWorkPageData.cards[1]!.task];
+    await userEvent.click(screen.getByRole('button', { name: `Save ${desk.title} for later` }));
+    await userEvent.click(screen.getByRole('button', { name: `Not interested in ${moving.title}: hide it` }));
+    expect(onHideTask).toHaveBeenCalledWith({ taskId: moving.id, hidden: true });
+    finishSave({ ok: true, code: 'updated' });
+    await vi.waitFor(() => expect(screen.getByRole('button', { name: `Remove ${desk.title} from saved` })).toHaveAttribute('aria-pressed', 'true'));
+  });
+
   it('puts a refused save back and says so', async () => {
     const onSaveTask = vi.fn(async (): Promise<ActionResult> => ({ ok: false, code: 'not_found' }));
     renderWork(findWorkPageData, { ...fakeFindWorkHandlers, onSaveTask });

@@ -28,6 +28,40 @@ export interface FindWorkScreenProps {
 const QUICK_OFFER_ERRORS = ['not_allowed', 'limit_reached', 'rate_limited', 'not_found', 'unknown', 'undo_failed'] as const;
 type QuickOfferError = (typeof QUICK_OFFER_ERRORS)[number];
 
+/**
+ * The latest choice for each key (a task's save or hide), sent one request at a time. A tap while a request
+ * is on its way (Undo right after "Not interested") is sent once it's back, never dropped.
+ */
+class LatestChoice {
+  private readonly wanted = new Map<string, boolean>();
+  private readonly sending = new Set<string>();
+  private readonly onBusy: (key: string, busy: boolean) => void;
+
+  constructor(onBusy: (key: string, busy: boolean) => void) {
+    this.onBusy = onBusy;
+  }
+
+  /** Resolves with the value that failed, if one did. */
+  async send(key: string, value: boolean, request: (value: boolean) => Promise<{ ok: boolean }>): Promise<{ failed?: boolean }> {
+    this.wanted.set(key, value);
+    if (this.sending.has(key)) return {};
+    this.sending.add(key);
+    this.onBusy(key, true);
+    let sent: boolean | undefined;
+    try {
+      while (this.wanted.get(key) !== sent) {
+        sent = this.wanted.get(key)!;
+        const result = await request(sent).catch(() => ({ ok: false }));
+        if (!result.ok) return { failed: sent };
+      }
+      return {};
+    } finally {
+      this.sending.delete(key);
+      this.onBusy(key, false);
+    }
+  }
+}
+
 /** "2026-11-21" as a date at midday in Austin, for labels. */
 const dayAt = (day: string) => `${day}T18:00:00.000Z`;
 
@@ -52,14 +86,33 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
   const [undo, setUndo] = useState<FindWorkCard | null>(null);
-  const [pending, setPending] = useState<string | null>(null);
+  // Hidden rows and where they were, so Undo can put them back before the list comes back with them.
+  const [kept, setKept] = useState<Record<string, { card: FindWorkCard; index: number }>>({});
+  // Save and hide requests on their way (`save:<taskId>`, `hide:<taskId>`), and the latest choice for each.
+  const [pending, setPending] = useState<Record<string, true>>({});
+  const [choices] = useState(() => new LatestChoice((key, busy) => setPending(({ [key]: _was, ...rest }) => (busy ? { ...rest, [key]: true as const } : rest))));
   const [failed, setFailed] = useState(false);
   // The one-tap offer: per row while it's sent (and "sent" until the list refreshes), then a notice with Undo.
   const [offerStates, setOfferStates] = useState<Record<string, 'sending' | 'sent'>>({});
   const [offered, setOffered] = useState<{ card: FindWorkCard; undone?: boolean } | null>(null);
   const [offerError, setOfferError] = useState<QuickOfferError | null>(null);
 
-  const cards = data.cards.filter((card) => !hidden[card.task.id] && !(query.saved && saved[card.task.id] === false));
+  // A row hidden and brought back by Undo stays in its place until the list has it again.
+  const listed = useMemo(() => {
+    const out = [...data.cards];
+    for (const { card, index } of Object.values(kept)) {
+      if (hidden[card.task.id] === false && !out.some((each) => each.task.id === card.task.id)) out.splice(Math.min(index, out.length), 0, card);
+    }
+    return out;
+  }, [data.cards, kept, hidden]);
+  // Rows the list has again no longer need keeping.
+  const [listedCards, setListedCards] = useState(data.cards);
+  if (listedCards !== data.cards) {
+    setListedCards(data.cards);
+    const back = Object.keys(kept).filter((id) => data.cards.some((card) => card.task.id === id));
+    if (back.length > 0) setKept(Object.fromEntries(Object.entries(kept).filter(([id]) => !back.includes(id))));
+  }
+  const cards = listed.filter((card) => !hidden[card.task.id] && !(query.saved && saved[card.task.id] === false));
   const isSaved = (card: FindWorkCard) => saved[card.task.id] ?? card.saved;
   const places: AreaMapPlace[] = useMemo(() => cards.flatMap((card) => card.task.location.kind === 'local'
     ? [{ id: card.task.id, point: card.task.location.publicPoint, radiusMeters: card.task.location.radiusMeters, label: budgetLabel(card), name: t('mapPlace', { title: card.task.title, budget: budgetLabel(card), area: card.task.location.areaName }) }]
@@ -76,25 +129,24 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
   }
 
   async function toggleSave(card: FindWorkCard) {
-    if (!handlers || pending) return;
+    if (!handlers) return;
     const next = !isSaved(card);
     setSaved((current) => ({ ...current, [card.task.id]: next }));
-    setPending(card.task.id);
     setFailed(false);
-    const result = await handlers.onSaveTask({ taskId: card.task.id, saved: next }).catch(() => ({ ok: false as const, code: 'unknown' as const }));
-    setPending(null);
-    if (!result.ok) { setSaved((current) => ({ ...current, [card.task.id]: !next })); setFailed(true); }
+    const { failed: value } = await choices.send(`save:${card.task.id}`, next, (saved) => handlers.onSaveTask({ taskId: card.task.id, saved }));
+    if (value !== undefined) { setSaved((current) => ({ ...current, [card.task.id]: !value })); setFailed(true); }
   }
 
   async function hide(card: FindWorkCard, value: boolean) {
-    if (!handlers || pending) return;
-    setHidden((current) => ({ ...current, [card.task.id]: value }));
+    if (!handlers) return;
+    const id = card.task.id;
+    setHidden((current) => ({ ...current, [id]: value }));
+    // Undo puts the row back where it was, even when the list already came back without it.
+    if (value) setKept((current) => ({ ...current, [id]: { card, index: Math.max(0, data.cards.findIndex((each) => each.task.id === id)) } }));
     setUndo(value ? card : null);
-    setPending(card.task.id);
     setFailed(false);
-    const result = await handlers.onHideTask({ taskId: card.task.id, hidden: value }).catch(() => ({ ok: false as const, code: 'unknown' as const }));
-    setPending(null);
-    if (!result.ok) { setHidden((current) => ({ ...current, [card.task.id]: !value })); setUndo(null); setFailed(true); }
+    const { failed } = await choices.send(`hide:${id}`, value, (hidden) => handlers.onHideTask({ taskId: id, hidden }));
+    if (failed !== undefined) { setHidden((current) => ({ ...current, [id]: !failed })); setUndo(null); setFailed(true); }
   }
 
   async function quickOffer(card: FindWorkCard) {
@@ -147,7 +199,7 @@ export function FindWorkScreen({ data, now, handlers, liveMap = true }: FindWork
           : groups.map((group, index) => <section key={`${group.day ?? 'all'}-${index}`} aria-labelledby={group.day ? `day-${group.day}` : undefined} className="space-y-2">
             {group.day && <h2 id={`day-${group.day}`} className="text-sm font-semibold text-muted-foreground">{dayLabel(group.day)}</h2>}
             <ul className="space-y-2">{group.cards.map((card) => <li key={card.task.id} className="min-w-0">
-              <FindWorkRow card={card} now={now} active={active === card.task.id || selected === card.task.id} onActiveChange={setActive} saved={isSaved(card)} pending={pending === card.task.id} onToggleSave={handlers ? () => void toggleSave(card) : undefined} onHide={handlers ? () => void hide(card, true) : undefined} onQuickOffer={handlers?.onQuickOffer ? () => void quickOffer(card) : undefined} offerState={offerStates[card.task.id]} />
+              <FindWorkRow card={card} now={now} active={active === card.task.id || selected === card.task.id} onActiveChange={setActive} saved={isSaved(card)} pending={Boolean(pending[`save:${card.task.id}`] || pending[`hide:${card.task.id}`])} onToggleSave={handlers ? () => void toggleSave(card) : undefined} onHide={handlers ? () => void hide(card, true) : undefined} onQuickOffer={handlers?.onQuickOffer ? () => void quickOffer(card) : undefined} offerState={offerStates[card.task.id]} />
             </li>)}</ul>
           </section>)}
         {data.pageCount > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">

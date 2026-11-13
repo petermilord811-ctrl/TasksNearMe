@@ -42,6 +42,7 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
   saved: boolean;
   onToggleSave?: () => void;
   onHide?: () => void;
+  /** A save or hide on this row is on its way (the screen queues further taps, so those buttons stay usable). */
   pending?: boolean;
   onQuickOffer?: () => void;
   /** The one-tap offer on this row: being sent, or sent (until the list refreshes with the offer). */
@@ -110,10 +111,10 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
               {offerState === 'sending' ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <Send aria-hidden="true" className="size-4" />}
               {t('quickOffer', { price: formatMoney(card.quickOffer.priceCents) })}
             </button>)}
-          {onToggleSave && <button type="button" onClick={onToggleSave} disabled={pending} aria-pressed={saved} aria-label={saved ? t('unsave', { title: task.title }) : t('save', { title: task.title })} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-pressed:text-primary">
+          {onToggleSave && <button type="button" onClick={onToggleSave} aria-pressed={saved} aria-label={saved ? t('unsave', { title: task.title }) : t('save', { title: task.title })} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-pressed:text-primary">
             {saved ? <BookmarkCheck aria-hidden="true" className="size-5" /> : <Bookmark aria-hidden="true" className="size-5" />}
           </button>}
-          {onHide && <button type="button" onClick={onHide} disabled={pending} aria-label={t('hide', { title: task.title })} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+          {onHide && <button type="button" onClick={onHide} aria-label={t('hide', { title: task.title })} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
             <EyeOff aria-hidden="true" className="size-5" />
           </button>}
         </div>}

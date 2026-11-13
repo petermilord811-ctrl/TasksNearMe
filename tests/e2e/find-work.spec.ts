@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-import { eq } from 'drizzle-orm';
-import { taskMarks } from '../../src/modules/tasks/schema';
+import { and, eq, inArray } from 'drizzle-orm';
+import { offers } from '../../src/modules/offers/schema';
+import { taskMarks, tasks } from '../../src/modules/tasks/schema';
 import { createDb } from '../../src/platform/db/connect';
 import { devSignIn } from './support/sign-in';
 
@@ -15,6 +16,8 @@ const card = (page: Page, title: string) => page.getByRole('listitem').filter({ 
 test('a helper finds a nearby task, sends an offer, and withdraws it', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');
   test.setTimeout(120_000);
+  // A retry starts over: an offer an earlier try left on the shelves goes.
+  await withdrawJordanShelvesOffer();
   await devSignIn(page, 'jordan@example.test');
 
   await page.goto('/app/find-work');
@@ -28,8 +31,9 @@ test('a helper finds a nearby task, sends an offer, and withdraws it', async ({ 
 
   // The one-tap offer at Maya's $50 (completion plan 4.3), then Undo withdraws it.
   await card(page, 'Mount two floating shelves').getByRole('button', { name: /^Offer \$50\.00 for Mount two floating shelves/ }).click();
-  await expect(card(page, 'Mount two floating shelves').getByText('Offer sent')).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText('You offered $50.00 for “Mount two floating shelves”.', { exact: false })).toBeVisible();
+  await expect(page.getByText('You offered $50.00 for “Mount two floating shelves”.', { exact: false })).toBeVisible({ timeout: 30_000 });
+  // "Offer sent" shows until the list comes back with the offer, which can be in the same response.
+  await expect(card(page, 'Mount two floating shelves').getByText(/^(Offer sent|You made an offer)$/).first()).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByText('Your offer for “Mount two floating shelves” is withdrawn.')).toBeVisible({ timeout: 30_000 });
 
@@ -70,6 +74,30 @@ test('people who are not set up as helpers can browse but not offer', async ({ p
   const html = await page.content();
   for (const secret of ['300 Sample Street', 'Patel']) expect(html).not.toContain(secret);
 });
+
+/** Jordan has no offer on the shelves task (the e2e setup's state), as a first try would leave it. */
+async function withdrawJordanShelvesOffer() {
+  try {
+    process.loadEnvFile('.env.local');
+  } catch {
+    // Environment provided by the shell (CI).
+  }
+  const { db, pool } = createDb(process.env.DATABASE_URL ?? '', { max: 1 });
+  try {
+    const now = new Date();
+    const left = await db
+      .update(offers)
+      .set({ status: 'withdrawn', closedAt: now, updatedAt: now })
+      .where(and(eq(offers.taskId, 'tsk_shelves'), eq(offers.helperUserId, 'usr_jordan'), inArray(offers.status, ['pending', 'stale'])))
+      .returning({ id: offers.id });
+    if (left.length > 0) {
+      const active = await db.select({ id: offers.id }).from(offers).where(and(eq(offers.taskId, 'tsk_shelves'), inArray(offers.status, ['pending', 'stale'])));
+      await db.update(tasks).set({ offerCount: active.length }).where(eq(tasks.id, 'tsk_shelves'));
+    }
+  } finally {
+    await pool.end();
+  }
+}
 
 /** Jordan's saved and hidden tasks go back to none (the reseed keeps marks, which belong to people). */
 async function clearJordanMarks() {
