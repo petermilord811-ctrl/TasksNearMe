@@ -1,4 +1,8 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne, notInArray, or } from 'drizzle-orm';
+import { communityPosts, communityReactions, communityReplies } from '@/modules/community/schema';
+import { messageReactions, savedReplies } from '@/modules/messaging/schema';
+import { taskQuestions } from '@/modules/questions/schema';
+import { savedSearches } from '@/modules/searches/schema';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { DATA_EXPORT_DAYS, DELETION_GRACE_DAYS, localeOrDefault, type AccountPrivacyView, type ActionResult, type DeletionBlocker } from '@/contracts';
 import { isReservedEmailAddress, type EmailProvider } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
@@ -302,6 +306,24 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.update(helperProfiles).set({ handle: `deleted-${userId}`, headline: '', bio: '', tools: [], status: 'paused', updatedAt: now.toISOString() }).where(eq(helperProfiles.userId, userId));
     await tx.update(helperServices).set({ status: 'paused', description: '' }).where(eq(helperServices.userId, userId));
     await tx.delete(helperWorkSamples).where(eq(helperWorkSamples.userId, userId));
+    // Part 7: what they kept goes; what they wrote in the community and on tasks comes down (rows stay for
+    // reports and staff, as messages do); their reactions go, and the counts on what they reacted to follow.
+    await tx.delete(savedSearches).where(eq(savedSearches.userId, userId));
+    await tx.delete(savedReplies).where(eq(savedReplies.userId, userId));
+    await tx.delete(messageReactions).where(eq(messageReactions.userId, userId));
+    await tx.update(communityPosts).set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now }).where(and(eq(communityPosts.authorUserId, userId), ne(communityPosts.status, 'removed')));
+    await tx.update(communityReplies).set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now }).where(and(eq(communityReplies.authorUserId, userId), ne(communityReplies.status, 'removed')));
+    await tx.update(taskQuestions).set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now }).where(and(eq(taskQuestions.askerUserId, userId), ne(taskQuestions.status, 'removed')));
+    const reacted = await tx.delete(communityReactions).where(eq(communityReactions.userId, userId)).returning({ targetKind: communityReactions.targetKind, targetId: communityReactions.targetId });
+    for (const kind of ['post', 'reply'] as const) {
+      const ids = [...new Set(reacted.filter((row) => row.targetKind === kind).map((row) => row.targetId))];
+      if (ids.length === 0) continue;
+      const table = kind === 'post' ? communityPosts : communityReplies;
+      await tx.update(table).set({
+        thanksCount: sql`(select count(*) from ${communityReactions} r where r.target_kind = ${kind} and r.target_id = ${table.id} and r.kind = 'thanks')`,
+        helpfulCount: sql`(select count(*) from ${communityReactions} r where r.target_kind = ${kind} and r.target_id = ${table.id} and r.kind = 'helpful')`,
+      }).where(inArray(table.id, ids));
+    }
     if (photoFiles.length) await tx.delete(files).where(inArray(files.id, photoFiles.map((file) => file.id)));
     await tx.insert(auditLog).values({ id: newId('aud'), actorId: null, actorRole: 'system', action: 'account.deleted', targetType: 'user', targetId: userId, metadata: { at: now.toISOString() } });
   });

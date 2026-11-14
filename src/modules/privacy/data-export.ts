@@ -13,6 +13,10 @@ import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/pro
 import { reviews, savedHelpers } from '@/modules/reviews/schema';
 import { rewardGrants } from '@/modules/rewards/schema';
 import { supportCases } from '@/modules/support/schema';
+import { communityPosts, communityReplies } from '@/modules/community/schema';
+import { taskQuestions } from '@/modules/questions/schema';
+import { savedSearches } from '@/modules/searches/schema';
+import { savedReplies } from '@/modules/messaging/schema';
 import { taskLocations, taskMarks, tasks } from '@/modules/tasks/schema';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications } from '@/modules/verification/schema';
@@ -124,6 +128,14 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
     : [];
   const caseRows = await db.select().from(supportCases).where(eq(supportCases.openedByUserId, userId)).orderBy(asc(supportCases.createdAt));
   const notificationRows = await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(NOTIFICATION_LIMIT);
+  // Part 7: what they wrote in the community and on tasks, and what they keep (saved searches and replies).
+  const [postRows, replyRows, questionRows, searchRows, cannedRows] = await Promise.all([
+    db.select().from(communityPosts).where(eq(communityPosts.authorUserId, userId)).orderBy(asc(communityPosts.createdAt)),
+    db.select().from(communityReplies).where(eq(communityReplies.authorUserId, userId)).orderBy(asc(communityReplies.createdAt)),
+    db.select({ question: taskQuestions, title: tasks.title }).from(taskQuestions).innerJoin(tasks, eq(tasks.id, taskQuestions.taskId)).where(eq(taskQuestions.askerUserId, userId)).orderBy(asc(taskQuestions.createdAt)),
+    db.select().from(savedSearches).where(eq(savedSearches.userId, userId)).orderBy(asc(savedSearches.createdAt)),
+    db.select().from(savedReplies).where(eq(savedReplies.userId, userId)).orderBy(asc(savedReplies.createdAt)),
+  ]);
 
   await nameOf([
     ...offersReceived.map((row) => row.helperUserId),
@@ -236,5 +248,12 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
       .map((row) => ({ conversation: row.threadId, from: who(row.senderUserId), text: row.senderUserId === userId ? row.body : masked(row.body), at: iso(row.createdAt) })),
     supportCases: caseRows.map((row) => ({ id: row.id, type: row.type, topic: row.topic, status: row.status, reason: row.reason, description: row.description, openedAt: iso(row.createdAt), outcome: row.resolutionSummary, resolvedAt: iso(row.resolvedAt) })),
     notifications: notificationRows.map((row) => ({ type: row.type, about: row.title, at: iso(row.createdAt), readAt: iso(row.readAt) })),
+    community: {
+      posts: postRows.map((row) => ({ kind: row.kind, title: row.title, body: row.body, status: row.status, postedAt: iso(row.createdAt) })),
+      replies: replyRows.map((row) => ({ body: row.body, status: row.status, repliedAt: iso(row.createdAt) })),
+    },
+    taskQuestions: questionRows.map(({ question, title }) => ({ task: title, question: question.body, answer: question.answerBody, status: question.status, askedAt: iso(question.createdAt) })),
+    savedSearches: searchRows.map((row) => ({ name: row.name, filters: row.params, alerts: row.alert, savedAt: iso(row.createdAt) })),
+    savedReplies: cannedRows.map((row) => ({ title: row.title, body: row.body, savedAt: iso(row.createdAt) })),
   };
 }
