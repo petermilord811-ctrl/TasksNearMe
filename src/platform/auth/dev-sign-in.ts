@@ -1,9 +1,12 @@
 'use server';
 
+import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { routes } from '@/contracts';
 import { isLocalRequest } from '@/shared/local-request';
+import { staffRoles, users } from '@/modules/accounts/schema';
+import { db } from '@/platform/db/client';
 import { auth } from './auth';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
@@ -27,7 +30,8 @@ export async function devSignInAs(formData: FormData): Promise<void> {
   if (!isLocalRequest((name) => requestHeaders.get(name))) throw new Error('Only available on this machine.');
 
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
-  const target = String(formData.get('target') ?? routes.app.home());
+  const given = formData.get('target');
+  const target = given ? String(given) : await landingFor(email);
 
   await serialize(email, async () => {
     const otp = await auth.api.createVerificationOTP({ body: { email, type: 'sign-in' } });
@@ -35,4 +39,15 @@ export async function devSignInAs(formData: FormData): Promise<void> {
   });
 
   redirect(target.startsWith('/') ? target : routes.app.home());
+}
+
+/** Where the email form lands someone: staff at the two-step check, everyone else at the app home. */
+async function landingFor(email: string): Promise<string> {
+  const [staff] = await db
+    .select({ userId: staffRoles.userId })
+    .from(staffRoles)
+    .innerJoin(users, eq(users.id, staffRoles.userId))
+    .where(eq(users.email, email))
+    .limit(1);
+  return staff ? routes.admin.verify() : routes.app.home();
 }

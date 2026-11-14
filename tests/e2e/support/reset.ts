@@ -5,7 +5,7 @@ import { offers } from '../../../src/modules/offers/schema';
 import { files, taskLocations, tasks } from '../../../src/modules/tasks/schema';
 import { helperServices, helperWorkSamples } from '../../../src/modules/profiles/schema';
 import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications, payoutAccounts } from '../../../src/modules/verification/schema';
-import { agreements } from '../../../src/modules/accounts/schema';
+import { agreements, passkeys } from '../../../src/modules/accounts/schema';
 import { createDb } from '../../../src/platform/db/connect';
 
 /**
@@ -59,6 +59,8 @@ export async function resetE2eData(request: APIRequestContext): Promise<void> {
       await tx.delete(backgroundChecks).where(eq(backgroundChecks.userId, priya));
       await tx.delete(addressVerifications).where(eq(addressVerifications.userId, priya));
       await tx.delete(agreements).where(eq(agreements.userId, priya));
+      // The passkey e2e adds one to Priya and removes it at the end; a run that failed between left it behind.
+      await tx.delete(passkeys).where(eq(passkeys.userId, priya));
     });
   } finally {
     await pool.end();
