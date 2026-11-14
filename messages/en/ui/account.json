@@ -93,7 +93,8 @@
       "payments": "Payments",
       "tips_and_news": "Tips and news",
       "account": "Account and verification",
-      "task_alerts": "New tasks near you"
+      "task_alerts": "New tasks near you",
+      "community": "Community"
     },
     "switchLabel": "{topic} by {channel}",
     "locked": "Receipts and safety messages can't be turned off.",
@@ -203,7 +204,8 @@
       "payments": "payment",
       "tips_and_news": "tips and news",
       "account": "account",
-      "task_alerts": "new-task"
+      "task_alerts": "new-task",
+      "community": "community"
     }
   },
   "passkeys": {

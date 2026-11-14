@@ -69,6 +69,8 @@ function pathOf(target: AttentionTarget): string {
       return routes.app.series(target.seriesId);
     case 'account':
       return routes.app.account();
+    case 'community_post':
+      return routes.app.communityPost(target.postId);
     case 'verify_identity':
       return routes.app.verifyIdentity();
     case 'rewards':
@@ -101,6 +103,8 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     by: params.by ?? 'other',
     badge: params.badge ?? 'other',
     tier: params.tier ?? 1,
+    count: params.count ?? 0,
+    on: params.on ?? 'post',
   });
   const url = `${appUrl()}${pathOf(row.target)}`;
   const type = row.type as NotificationType;

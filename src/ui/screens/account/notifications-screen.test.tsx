@@ -77,6 +77,9 @@ const copy: Record<NotificationType, RegExp> = {
   badge_earned: /You earned a badge: new/,
   reward_earned: /Your welcome gift card of \$54\.00 is yours/,
   reward_ready: /Your gift card of \$54\.00 is ready/,
+  community_reply: /answered your post/,
+  community_answer_pinned: /pinned your answer/,
+  community_helpful: /found your post/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -93,6 +96,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   proposal: { target: { kind: 'proposal', proposalId: 'proposal / one' }, href: routes.app.proposal('proposal / one') },
   series: { target: { kind: 'series', seriesId: 'series / one' }, href: routes.app.series('series / one') },
   rewards: { target: { kind: 'rewards' }, href: routes.app.rewards() },
+  community_post: { target: { kind: 'community_post', postId: 'post / one' }, href: routes.app.communityPost('post / one') },
 };
 
 describe('NotificationsScreen', () => {

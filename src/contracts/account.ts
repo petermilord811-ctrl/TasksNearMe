@@ -103,6 +103,12 @@ export const NOTIFICATION_TYPES = [
   'reward_earned',
   /** A gift card reward (`params.amountCents`) is ready: the helper picks their card on the rewards page. */
   'reward_ready',
+  /** Someone answered the person's community post (`title`: the post; `actorName`: who; completion plan 7.7). */
+  'community_reply',
+  /** The post's author (`actorName`) pinned the person's answer on `title` as the one that helped. */
+  'community_answer_pinned',
+  /** The person's post or answer (`params.on`) on `title` reached `params.count` Helpful (1, 5, then 25). */
+  'community_helpful',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -113,7 +119,7 @@ export interface NotificationView {
   title?: string;
   /** Who did it ("Jordan T."). */
   actorName?: string;
-  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number };
+  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number; count?: number; on?: 'post' | 'reply' };
   /** Where it leads (same targets as the home's attention items). */
   target: AttentionTarget;
   createdAt: ISODateTime;
@@ -136,7 +142,7 @@ export interface NotificationHandlers {
 }
 
 /** `account`: verification and account notices (email always on, like receipts). */
-export const NOTIFICATION_TOPICS = ['bookings', 'messages', 'offers', 'task_alerts', 'payments', 'account', 'tips_and_news'] as const;
+export const NOTIFICATION_TOPICS = ['bookings', 'messages', 'offers', 'task_alerts', 'community', 'payments', 'account', 'tips_and_news'] as const;
 export type NotificationTopic = (typeof NOTIFICATION_TOPICS)[number];
 export const NOTIFICATION_CHANNELS = ['email', 'sms'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];

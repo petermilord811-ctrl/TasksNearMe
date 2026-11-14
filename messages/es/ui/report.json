@@ -2,17 +2,23 @@
   "title": {
     "task": "Reportar una tarea",
     "helper": "Reportar a un ayudante",
-    "review": "Reportar una reseña"
+    "review": "Reportar una reseña",
+    "post": "Reportar una publicación",
+    "reply": "Reportar una respuesta"
   },
   "subject": {
     "task": "{name}",
     "helper": "{name}",
-    "review": "Una reseña de {name}"
+    "review": "Una reseña de {name}",
+    "post": "{name}",
+    "reply": "Una respuesta de {name}"
   },
   "back": {
     "task": "Volver a la tarea",
     "helper": "Volver al perfil",
-    "review": "Volver al perfil"
+    "review": "Volver al perfil",
+    "post": "Volver a la publicación",
+    "reply": "Volver a la publicación"
   },
   "intro": "Cuéntale a soporte qué pasa. A la persona que reportes no se le dice quién la reportó.",
   "formTitle": "Tu reporte",
@@ -21,7 +27,9 @@
     "task": "Reportar esta tarea",
     "helper": "Reportar este perfil",
     "review": "Reportar esta reseña",
-    "reviewBy": "Reportar esta reseña de {name}"
+    "reviewBy": "Reportar esta reseña de {name}",
+    "post": "Reportar esta publicación",
+    "reply": "Reportar esta respuesta"
   },
   "previews": {
     "group": "Reporte",

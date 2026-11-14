@@ -6,6 +6,7 @@ export type NavId =
   | 'tasks'
   | 'bookings'
   | 'messages'
+  | 'community'
   | 'account'
   | 'findWork'
   | 'earnings'
@@ -64,12 +65,14 @@ export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[
     ],
     secondary: mode === 'poster'
       ? [
+          { id: 'community', href: routes.app.community() },
           { id: 'helpers', href: routes.app.helpers() },
           { id: 'saved', href: routes.app.saved() },
           { id: 'payments', href: routes.app.payments() },
           { id: 'support', href: routes.app.support() },
         ]
       : [
+          { id: 'community', href: routes.app.community() },
           { id: 'offers', href: routes.app.offers() },
           { id: 'availability', href: routes.app.availability() },
           { id: 'clients', href: routes.app.clients() },

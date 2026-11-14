@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { ActionResult, ReportInput, ReportPageData, ReportReason, ReportTargetKind } from '@/contracts';
 import { REPORT_TARGET_KINDS, reportInputSchema, routes } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
+import { communityPosts, communityReplies } from '@/modules/community/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { reviews } from '@/modules/reviews/schema';
 import { tasks } from '@/modules/tasks/schema';
@@ -25,7 +26,7 @@ const HIGH_PRIORITY: ReadonlySet<ReportReason> = new Set(['harassment', 'scam_or
 interface Target {
   page: ReportPageData;
   subjectUserId: string;
-  context: { taskId?: string; reviewId?: string };
+  context: { taskId?: string; reviewId?: string; postId?: string; replyId?: string };
 }
 
 async function targetOf(db: Db, userId: string, kind: string, id: string): Promise<Target | null> {
@@ -46,6 +47,21 @@ async function targetOf(db: Db, userId: string, kind: string, id: string): Promi
       .limit(1);
     if (!helper || helper.userId === userId) return null;
     return { page: { target: { kind: target, id: helper.handle, name: helper.name }, backHref: routes.helperProfile(helper.handle) }, subjectUserId: helper.userId, context: {} };
+  }
+  if (target === 'post') {
+    const [post] = await db.select({ id: communityPosts.id, title: communityPosts.title, authorUserId: communityPosts.authorUserId, status: communityPosts.status }).from(communityPosts).where(eq(communityPosts.id, id)).limit(1);
+    if (!post || post.status !== 'visible' || post.authorUserId === userId) return null;
+    return { page: { target: { kind: target, id: post.id, name: post.title }, backHref: routes.app.communityPost(post.id) }, subjectUserId: post.authorUserId, context: { postId: post.id } };
+  }
+  if (target === 'reply') {
+    const [reply] = await db
+      .select({ id: communityReplies.id, postId: communityReplies.postId, authorUserId: communityReplies.authorUserId, status: communityReplies.status, author: users.name })
+      .from(communityReplies)
+      .innerJoin(users, eq(users.id, communityReplies.authorUserId))
+      .where(eq(communityReplies.id, id))
+      .limit(1);
+    if (!reply || reply.status !== 'visible' || reply.authorUserId === userId) return null;
+    return { page: { target: { kind: target, id: reply.id, name: reply.author }, backHref: routes.app.communityPost(reply.postId) }, subjectUserId: reply.authorUserId, context: { postId: reply.postId, replyId: reply.id } };
   }
   const [review] = await db
     .select({ id: reviews.id, authorUserId: reviews.authorUserId, subjectUserId: reviews.subjectUserId, author: users.name, handle: helperProfiles.handle })

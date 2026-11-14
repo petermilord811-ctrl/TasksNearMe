@@ -49,6 +49,7 @@ const targetCases: Record<AttentionTarget['kind'], { target: AttentionTarget; hr
   account: { target: { kind: 'account' }, href: routes.app.account() },
   verify_identity: { target: { kind: 'verify_identity' }, href: routes.app.verifyIdentity() },
   rewards: { target: { kind: 'rewards' }, href: routes.app.rewards() },
+  community_post: { target: { kind: 'community_post', postId: 'post / one' }, href: routes.app.communityPost('post / one') },
 };
 
 describe('HomeScreen attention', () => {

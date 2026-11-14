@@ -1,0 +1,160 @@
+{
+  "title": "Community",
+  "intro": "Ask your neighbors in {market} who they'd hire, how they'd go about it, and who did a great job.",
+  "stats": "{posts, plural, one {# post} other {# posts}} this week · {replies, plural, one {# reply} other {# replies}} today",
+  "composer": {
+    "prompt": "What would you like to ask your neighbors?",
+    "label": "Start a post"
+  },
+  "kinds": {
+    "recommendation": "Ask for a recommendation",
+    "question": "Ask a question",
+    "tip": "Share a tip",
+    "thanks": "Thank a helper"
+  },
+  "kindBadge": {
+    "recommendation": "Recommendation",
+    "question": "Question",
+    "tip": "Tip",
+    "thanks": "Thanks"
+  },
+  "scope": {
+    "label": "Where",
+    "nearby": "Near you",
+    "nearbyArea": "Near {area}",
+    "market": "All of {market}"
+  },
+  "sort": {
+    "label": "Sort",
+    "active": "Active",
+    "new": "New",
+    "top": "Top this month"
+  },
+  "kindFilter": {
+    "label": "Post type",
+    "all": "All posts"
+  },
+  "roles": {
+    "helper": "Helper",
+    "poster": "Poster",
+    "neighbor": "Neighbor"
+  },
+  "verified": "ID verified",
+  "you": "you",
+  "allOf": "All of {market}",
+  "replyCount": "{count, plural, =0 {No replies yet} one {# reply} other {# replies}}",
+  "seeReplies": "{count, plural, one {See the reply} other {See all # replies}}",
+  "reply": "Reply",
+  "reactions": {
+    "thanks": "Thanks",
+    "helpful": "Helpful",
+    "label": "Reactions"
+  },
+  "pinned": "Pinned answer",
+  "pin": "Pin as the answer",
+  "unpin": "Unpin",
+  "delete": "Delete",
+  "deleteTitle": "Delete this?",
+  "deleteBody": "People won't see it anymore. Reports about it still reach our team.",
+  "deleteConfirm": "Delete",
+  "cancel": "Cancel",
+  "report": "Report",
+  "more": "More",
+  "helperCard": {
+    "recommended": "Recommended",
+    "thanked": "Thanked",
+    "selfTag": "Recommended themself",
+    "recommendedBy": "{count, plural, =0 {New on TasksNearMe} one {Recommended by # neighbor} other {Recommended by # neighbors}}",
+    "view": "View profile"
+  },
+  "replyForm": {
+    "label": "Your reply",
+    "placeholder": "Share what you know…",
+    "submit": "Reply",
+    "submitting": "Sending…",
+    "recommend": "Recommend a helper (optional)",
+    "recommendNone": "No one in particular",
+    "recommendSelf": "{name} (you)",
+    "recommendHint": "Helpers you booked or saved. One per request.",
+    "alreadyRecommended": "You already named a helper on this request.",
+    "closed": "Replies are closed."
+  },
+  "guidelines": "Be kind and keep it local. Contact details stay hidden until you book. Crime and safety reports belong with the police (911 in an emergency), not here.",
+  "guidelinesLink": "Community guidelines",
+  "empty": {
+    "title": "Nothing here yet",
+    "body": "Be the first to ask your neighbors.",
+    "filteredTitle": "No posts like that yet",
+    "filteredBody": "Try all posts, or all of {market}."
+  },
+  "postBlocked": {
+    "phone_required": "Verify your phone number to post and reply.",
+    "suspended": "Your account can't post right now."
+  },
+  "verifyPhone": "Verify your phone",
+  "newPost": {
+    "title": "New post",
+    "back": "Back to the community",
+    "kind": "What kind of post?",
+    "titleLabel": "Title",
+    "titleHints": {
+      "recommendation": "Say what you need: “Who do you recommend for mounting a TV?”",
+      "question": "Ask it in one line: “How long does a flat-pack wardrobe take?”",
+      "tip": "Sum it up: “Rent the dolly when you book the truck”",
+      "thanks": "Say who and what for: “Thank you, Sam, for the wardrobe!”"
+    },
+    "body": "Details",
+    "bodyHint": "What would help someone answer: the job, the size, the timing. No addresses or phone numbers.",
+    "bodyCount": "{count} of {max}",
+    "category": "Service",
+    "categoryNone": "Not about one service",
+    "area": "Neighborhood",
+    "areaHint": "Neighbors near it see it first; anyone in {market} can find it.",
+    "areaEverywhere": "All of {market}",
+    "booking": "Who are you thanking?",
+    "bookingOption": "{helper} · {task}",
+    "noBookings": "You can thank a helper here once a booking is done and paid.",
+    "submit": "Post",
+    "submitting": "Posting…",
+    "success": "Posted"
+  },
+  "pagination": "Community pages",
+  "previous": "Previous",
+  "next": "Next",
+  "page": "Page {page} of {count}",
+  "live": {
+    "show": "{count, plural, one {# new post} other {# new posts}} · Show",
+    "announce": "{count, plural, one {# new post} other {# new posts}} in the community",
+    "loading": "Loading…"
+  },
+  "back": "Community",
+  "moderation": {
+    "hidden": "Hidden by staff",
+    "removed": "Removed",
+    "reason": "Reason: {reason}",
+    "title": "Staff",
+    "action": "Action",
+    "hide": "Hide",
+    "remove": "Remove",
+    "restore": "Restore",
+    "reasonLabel": "Reason (kept in the audit log)",
+    "submit": "Apply"
+  },
+  "feedback": {
+    "replied": "Reply posted",
+    "pinned": "Answer pinned",
+    "unpinned": "Answer unpinned",
+    "deleted": "Deleted",
+    "moderated": "Done"
+  },
+  "previews": {
+    "group": "Community",
+    "feed": "Community · feed near you",
+    "feedEmpty": "Community · nothing yet",
+    "feedBlocked": "Community · verify your phone first",
+    "post": "Community · a recommendation request with answers",
+    "postStaff": "Community · staff view of a hidden reply",
+    "newPost": "Community · new post",
+    "newThanks": "Community · thank a helper"
+  }
+}

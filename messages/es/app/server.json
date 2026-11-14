@@ -88,7 +88,8 @@
         "payments": "Pagos",
         "tips_and_news": "Consejos y novedades",
         "account": "Cuenta y verificación",
-        "task_alerts": "Tareas nuevas cerca de ti"
+        "task_alerts": "Tareas nuevas cerca de ti",
+        "community": "Comunidad"
       },
       "topicEmails": {
         "bookings": "reservas",
@@ -97,7 +98,8 @@
         "payments": "pagos",
         "tips_and_news": "consejos y novedades",
         "account": "cuenta",
-        "task_alerts": "tareas nuevas"
+        "task_alerts": "tareas nuevas",
+        "community": "comunidad"
       },
       "cta": {
         "booking": "Ver la reserva",
@@ -113,7 +115,8 @@
         "series": "Ver tus visitas regulares",
         "account": "Abrir tu cuenta",
         "verify_identity": "Verificar tu identidad",
-        "rewards": "Abrir tus recompensas"
+        "rewards": "Abrir tus recompensas",
+        "community_post": "Abrir la publicación"
       },
       "next": {
         "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Solo se te cobra cuando reservas.",
@@ -160,7 +163,10 @@
         "badge_earned": "Mira todas tus insignias, y las próximas, en tu página de cuenta.",
         "city_open": "Elige tu vecindario y agrega tu domicilio. Después podrás enviar ofertas en tareas cerca de ti.",
         "reward_earned": "Nuestro equipo la revisa rápidamente y luego eliges la tarjeta que quieras. Las tarjetas de regalo son aparte de tus ganancias.",
-        "reward_ready": "Elige la tarjeta que quieras en tu página de Recompensas y canjéala dentro de 90 días."
+        "reward_ready": "Elige la tarjeta que quieras en tu página de Recompensas y canjéala dentro de 90 días.",
+        "community_reply": "Lee la respuesta y fija la que te ayudó.",
+        "community_answer_pinned": "Gracias por ayudar a un vecino.",
+        "community_helpful": "Mira la conversación en la comunidad."
       },
       "lockedFooter": "Los correos de reservas y pagos siempre están activados: son tus recibos y avisos de seguridad.",
       "optionalFooter": "Recibes esto porque los correos de {topic} están activados.",
@@ -219,7 +225,10 @@
       "badge_earned": "{tier, plural, =1 {Ganaste una insignia: {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}}} other {Tu insignia {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}} subió al nivel #}}.",
       "city_open": "TasksNearMe ya está en {title}. Elige tu vecindario para empezar a recibir tareas.",
       "reward_earned": "Tu tarjeta de regalo de bienvenida{hasAmount, select, yes { de {amount}} other {}} es tuya: pasaste las verificaciones de teléfono, identidad y antecedentes.",
-      "reward_ready": "Tu tarjeta de regalo{hasAmount, select, yes { de {amount}} other {}} está lista. Elige tu tarjeta en tu página de Recompensas."
+      "reward_ready": "Tu tarjeta de regalo{hasAmount, select, yes { de {amount}} other {}} está lista. Elige tu tarjeta en tu página de Recompensas.",
+      "community_reply": "{actorName} respondió a tu publicación «{title}».",
+      "community_answer_pinned": "{actorName} fijó tu respuesta en «{title}».",
+      "community_helpful": "{count, plural, one {A un vecino le resultó útil tu {on, select, reply {respuesta} other {publicación}} en «{title}»} other {A # vecinos les resultó útil tu {on, select, reply {respuesta} other {publicación}} en «{title}»}}."
     },
     "pushTitle": "TasksNearMe"
   },

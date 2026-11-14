@@ -10,24 +10,24 @@ describe('app navigation', () => {
   it('keeps the poster tabs and secondary links in the specified order', () => {
     const nav = getAppNav(mayaShell.mode);
     expect(ids(nav.primary)).toEqual(['home', 'tasks', 'bookings', 'messages', 'account']);
-    expect(ids(nav.secondary)).toEqual(['helpers', 'saved', 'payments', 'support']);
+    expect(ids(nav.secondary)).toEqual(['community', 'helpers', 'saved', 'payments', 'support']);
     expect(nav.primary.map((item) => item.href)).toEqual([
       routes.app.home(), routes.app.tasks(), routes.app.bookings(), routes.app.messages(), routes.app.account(),
     ]);
     expect(nav.secondary.map((item) => item.href)).toEqual([
-      routes.app.helpers(), routes.app.saved(), routes.app.payments(), routes.app.support(),
+      routes.app.community(), routes.app.helpers(), routes.app.saved(), routes.app.payments(), routes.app.support(),
     ]);
   });
 
   it('keeps the helper tabs and secondary links in the specified order', () => {
     const nav = getAppNav(jordanShell.mode);
     expect(ids(nav.primary)).toEqual(['home', 'findWork', 'bookings', 'messages', 'earnings']);
-    expect(ids(nav.secondary)).toEqual(['offers', 'availability', 'clients', 'rewards', 'support']);
+    expect(ids(nav.secondary)).toEqual(['community', 'offers', 'availability', 'clients', 'rewards', 'support']);
     expect(nav.primary.map((item) => item.href)).toEqual([
       routes.app.home(), routes.app.findWork(), routes.app.bookings(), routes.app.messages(), routes.app.earnings(),
     ]);
     expect(nav.secondary.map((item) => item.href)).toEqual([
-      routes.app.offers(), routes.app.availability(), routes.app.clients(), routes.app.rewards(), routes.app.support(),
+      routes.app.community(), routes.app.offers(), routes.app.availability(), routes.app.clients(), routes.app.rewards(), routes.app.support(),
     ]);
   });
 });

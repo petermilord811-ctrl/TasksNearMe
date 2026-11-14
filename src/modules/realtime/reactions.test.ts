@@ -28,7 +28,8 @@ describe('live notices for outbox events', () => {
       userIds: ['usr_jordan', 'usr_maya'],
       notice: { type: 'update', event: 'offer.submitted', offer: 'off_1', task: 'tsk_1' },
     });
-    expect(planNotices({ type: 'booking.confirmed', payload: { bookingId: 'bkg_1', taskId: 'tsk_1', posterUserId: 'usr_maya', helperUserId: 'usr_jordan' } })?.notice).toEqual({
+    expect(planNotices({ type: 'booking.confirmed', payload: { bookingId: 'bkg_1', taskId: 'tsk_1', posterUserId: 'usr_maya', helperUserId: 'usr_jordan' } })).toMatchObject({ kind: 'users' });
+    expect((planNotices({ type: 'booking.confirmed', payload: { bookingId: 'bkg_1', taskId: 'tsk_1', posterUserId: 'usr_maya', helperUserId: 'usr_jordan' } }) as { notice: unknown }).notice).toEqual({
       type: 'update',
       event: 'booking.confirmed',
       booking: 'bkg_1',
@@ -40,6 +41,15 @@ describe('live notices for outbox events', () => {
     for (const type of ['email.delivered', 'email.bounced', 'payment.refund_needed', 'support.safety_report', 'verification.updated']) {
       expect(planNotices({ type, payload: { userId: 'usr_maya', posterUserId: 'usr_maya' } }), type).toBeNull();
     }
+  });
+
+  it('tells the market about community posts and replies, and the person a reply or pin is for', () => {
+    expect(planNotices({ type: 'community.posted', payload: { postId: 'cpo_1', marketId: 'mkt_austin' } })).toEqual({ kind: 'community', marketId: 'mkt_austin', postId: 'cpo_1', event: 'posted', userIds: [] });
+    expect(planNotices({ type: 'community.replied', payload: { postId: 'cpo_1', marketId: 'mkt_austin', replyId: 'cre_1', postAuthorUserId: 'usr_maya', replierUserId: 'usr_lee' } })).toEqual({ kind: 'community', marketId: 'mkt_austin', postId: 'cpo_1', event: 'replied', userIds: ['usr_maya'], actorId: 'usr_lee' });
+    // Answering your own post: the market hears it, you don't get an update about yourself.
+    expect(planNotices({ type: 'community.replied', payload: { postId: 'cpo_1', marketId: 'mkt_austin', postAuthorUserId: 'usr_maya', replierUserId: 'usr_maya' } })).toMatchObject({ userIds: [] });
+    expect(planNotices({ type: 'community.answer_pinned', payload: { postId: 'cpo_1', marketId: 'mkt_austin', replyAuthorUserId: 'usr_lee' } })).toMatchObject({ event: 'pinned', userIds: ['usr_lee'] });
+    expect(planNotices({ type: 'community.posted', payload: { postId: 'cpo_1' } })).toBeNull();
   });
 
   it('finds the accounts a payload names, once each, and nothing that isn’t an account', () => {

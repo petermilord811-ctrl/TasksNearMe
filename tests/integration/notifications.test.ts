@@ -6,6 +6,8 @@ import { bookingTerms } from '@/modules/bookings/schema';
 import { invites } from '@/modules/invites/schema';
 import { getThreadPage, offerThreadId, sendMessage, unreadMessageCount } from '@/modules/messaging/service';
 import { notifications } from '@/modules/notifications/schema';
+import { communityPosts } from '@/modules/community/schema';
+import { blocks } from '@/modules/messaging/schema';
 import {
   dispatchNotifications,
   getAccountPage,
@@ -132,5 +134,44 @@ describe('the account page', () => {
     expect((await getAccountPage(db, 'usr_chris'))?.privacy.export).toMatchObject({ status: 'preparing' });
     // Chris has a booking in progress: deletion waits.
     expect(await requestAccountDeletion(db, 'usr_chris', new Date())).toEqual({ ok: false, code: 'not_allowed' });
+  });
+});
+
+describe('community notifications (completion plan 7.7)', () => {
+  const dispatchAll = () => dispatchNotifications(db, new Date(), 10_000);
+  const postId = `cpo_ntf_${Date.now().toString(36)}`;
+
+  beforeAll(async () => {
+    await db.insert(communityPosts).values({ id: postId, marketId: 'mkt_austin', authorUserId: 'usr_chris', kind: 'question', title: 'Leaf pickup this week?', body: 'Does curbside pickup still run weekly in December?' });
+  });
+
+  it('tells the post’s author about an answer, never about their own, and never across a block', async () => {
+    await db.insert(outboxEvents).values([
+      { id: `evt_${postId}_r1`, type: 'community.replied', aggregateType: 'community_post', aggregateId: postId, payload: { postId, replyId: 'cre_1', postAuthorUserId: 'usr_chris', replierUserId: 'usr_lee', marketId: 'mkt_austin' } },
+      { id: `evt_${postId}_r2`, type: 'community.replied', aggregateType: 'community_post', aggregateId: postId, payload: { postId, replyId: 'cre_2', postAuthorUserId: 'usr_chris', replierUserId: 'usr_chris', marketId: 'mkt_austin' } },
+    ]);
+    await db.insert(blocks).values({ blockerId: 'usr_chris', blockedId: 'usr_ben' }).onConflictDoNothing();
+    await db.insert(outboxEvents).values({ id: `evt_${postId}_r3`, type: 'community.replied', aggregateType: 'community_post', aggregateId: postId, payload: { postId, replyId: 'cre_3', postAuthorUserId: 'usr_chris', replierUserId: 'usr_ben', marketId: 'mkt_austin' } });
+    try {
+      await dispatchAll();
+      const rows = await db.select().from(notifications).where(inArray(notifications.sourceEventId, [`evt_${postId}_r1`, `evt_${postId}_r2`, `evt_${postId}_r3`]));
+      expect(rows).toEqual([expect.objectContaining({ userId: 'usr_chris', type: 'community_reply', actorName: 'Lee M.', title: 'Leaf pickup this week?', target: { kind: 'community_post', postId } })]);
+    } finally {
+      await db.delete(blocks).where(and(eq(blocks.blockerId, 'usr_chris'), eq(blocks.blockedId, 'usr_ben')));
+    }
+  });
+
+  it('tells someone their answer was pinned, and about Helpful once per milestone', async () => {
+    await db.insert(outboxEvents).values([
+      { id: `evt_pinned_${postId}`, type: 'community.answer_pinned', aggregateType: 'community_post', aggregateId: postId, payload: { postId, replyId: 'cre_1', replyAuthorUserId: 'usr_lee', marketId: 'mkt_austin' } },
+      { id: `evt_helpful_post_${postId}_5`, type: 'community.helpful', aggregateType: 'community_post', aggregateId: postId, payload: { postId, targetKind: 'post', targetId: postId, authorUserId: 'usr_chris', count: 5, marketId: 'mkt_austin' } },
+    ]);
+    // A recount can't send the same milestone again: its event id is the same.
+    await db.insert(outboxEvents).values({ id: `evt_helpful_post_${postId}_5`, type: 'community.helpful', aggregateType: 'community_post', aggregateId: postId, payload: { postId, targetKind: 'post', targetId: postId, authorUserId: 'usr_chris', count: 5, marketId: 'mkt_austin' } }).onConflictDoNothing();
+    await dispatchAll();
+    const pinned = await db.select().from(notifications).where(eq(notifications.sourceEventId, `evt_pinned_${postId}`));
+    expect(pinned).toEqual([expect.objectContaining({ userId: 'usr_lee', type: 'community_answer_pinned', actorName: 'Chris D.', target: { kind: 'community_post', postId } })]);
+    const helpful = await db.select().from(notifications).where(eq(notifications.sourceEventId, `evt_helpful_post_${postId}_5`));
+    expect(helpful).toEqual([expect.objectContaining({ userId: 'usr_chris', type: 'community_helpful', params: { count: 5, on: 'post' } })]);
   });
 });

@@ -112,6 +112,8 @@ export interface CommunityFeedPageData {
   stats: { postsThisWeek: number; repliesToday: number };
   /** Why the viewer can't post yet (a verified phone first), when they can't. */
   postBlocked?: 'phone_required' | 'suspended';
+  /** For live updates: the neighborhoods (ids) "near you" covers, when that's the scope. */
+  liveAreaIds?: string[];
 }
 
 export interface CommunityPostPageData {

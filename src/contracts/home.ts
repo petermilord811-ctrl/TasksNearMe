@@ -31,7 +31,9 @@ export type AttentionTarget =
   /** A client's ID check (`routes.app.verifyIdentity()`). */
   | { kind: 'verify_identity' }
   /** The helper's gift cards (`routes.app.rewards()`). */
-  | { kind: 'rewards' };
+  | { kind: 'rewards' }
+  /** A community post (`routes.app.communityPost(postId)`, completion plan 7.7). */
+  | { kind: 'community_post'; postId: string };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */

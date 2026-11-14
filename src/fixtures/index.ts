@@ -13,6 +13,7 @@ export * from './marketing';
 export * from './auth';
 export * from './content';
 export * from './board';
+export * from './community';
 export * from './profiles';
 export * from './posting';
 export * from './offers';

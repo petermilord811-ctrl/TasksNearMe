@@ -93,7 +93,8 @@
       "payments": "Pagos",
       "tips_and_news": "Consejos y novedades",
       "account": "Cuenta y verificación",
-      "task_alerts": "Tareas nuevas cerca de ti"
+      "task_alerts": "Tareas nuevas cerca de ti",
+      "community": "Comunidad"
     },
     "switchLabel": "{topic} por {channel}",
     "locked": "Los recibos y los mensajes de seguridad no se pueden desactivar.",
@@ -203,7 +204,8 @@
       "payments": "pagos",
       "tips_and_news": "consejos y novedades",
       "account": "la cuenta",
-      "task_alerts": "tareas nuevas"
+      "task_alerts": "tareas nuevas",
+      "community": "comunidad"
     }
   },
   "passkeys": {

@@ -25,6 +25,8 @@ import { newId } from '@/platform/db/ids';
 import { invites } from '@/modules/invites/schema';
 import { rebookProposals } from '@/modules/rebook/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
+import { communityPosts } from '@/modules/community/schema';
+import { isBlockedBetween } from '@/modules/trust/blocks';
 import { isLockedPreference, preferenceOn } from './delivery-domain';
 import { privacyViewOf } from '@/modules/privacy/requests';
 import { requestIdentityAfterNameChange } from '@/modules/verification/tracks';
@@ -79,10 +81,36 @@ async function bookingContext(db: Db, bookingId: string | undefined) {
   return row ?? null;
 }
 
+async function communityPost(db: Db, postId: string | undefined) {
+  if (!postId) return null;
+  const [post] = await db.select({ id: communityPosts.id, title: communityPosts.title, authorUserId: communityPosts.authorUserId, status: communityPosts.status }).from(communityPosts).where(eq(communityPosts.id, postId)).limit(1);
+  return post && post.status === 'visible' ? post : null;
+}
+
 /** Who hears about an event, and how. */
 async function plan(db: Db, event: EventRow): Promise<Planned[]> {
   const p = event.payload as Payload;
   switch (event.type) {
+    // The community (completion plan 7.7): never about your own act, never between people who blocked each other.
+    case 'community.replied': {
+      const post = await communityPost(db, text(p.postId));
+      const replier = text(p.replierUserId);
+      if (!post || !replier || post.authorUserId === replier || (await isBlockedBetween(db, post.authorUserId, replier))) return [];
+      return [{ userId: post.authorUserId, type: 'community_reply', target: { kind: 'community_post', postId: post.id }, title: post.title, actorName: await nameOf(db, replier) }];
+    }
+    case 'community.answer_pinned': {
+      const post = await communityPost(db, text(p.postId));
+      const answerer = text(p.replyAuthorUserId);
+      if (!post || !answerer || post.authorUserId === answerer || (await isBlockedBetween(db, post.authorUserId, answerer))) return [];
+      return [{ userId: answerer, type: 'community_answer_pinned', target: { kind: 'community_post', postId: post.id }, title: post.title, actorName: await nameOf(db, post.authorUserId) }];
+    }
+    case 'community.helpful': {
+      const post = await communityPost(db, text(p.postId));
+      const author = text(p.authorUserId);
+      const count = typeof p.count === 'number' ? p.count : undefined;
+      if (!post || !author || !count) return [];
+      return [{ userId: author, type: 'community_helpful', target: { kind: 'community_post', postId: post.id }, title: post.title, params: { count, on: p.targetKind === 'reply' ? 'reply' : 'post' } }];
+    }
     case 'offer.submitted':
     case 'offer.revised': {
       const poster = text(p.posterUserId);

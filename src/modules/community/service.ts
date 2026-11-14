@@ -308,8 +308,9 @@ export async function getCommunityFeed(db: Db, viewer: CommunityViewer, params: 
   const conditions: SQL[] = [eq(communityPosts.marketId, facts.market.id), eq(communityPosts.status, 'visible')];
   if (facts.blocked.length > 0) conditions.push(notInArray(communityPosts.authorUserId, facts.blocked));
   if (query.kind) conditions.push(eq(communityPosts.kind, query.kind));
+  let nearby: string[] | undefined;
   if (query.scope === 'nearby' && facts.area) {
-    const nearby = await nearbyAreaIds(db, facts);
+    nearby = await nearbyAreaIds(db, facts);
     conditions.push(or(isNull(communityPosts.areaId), inArray(communityPosts.areaId, nearby))!);
   }
   if (query.sort === 'top') conditions.push(gte(communityPosts.createdAt, new Date(now.getTime() - TOP_WINDOW_DAYS * 86_400_000)));
@@ -343,6 +344,7 @@ export async function getCommunityFeed(db: Db, viewer: CommunityViewer, params: 
     pageCount: Math.max(1, Math.ceil(totalCount / FEED_PAGE_SIZE)),
     stats: { postsThisWeek: Number(week?.value ?? 0), repliesToday: Number(today?.value ?? 0) },
     ...(facts.postBlocked ? { postBlocked: facts.postBlocked } : {}),
+    ...(nearby ? { liveAreaIds: nearby } : {}),
   };
 }
 

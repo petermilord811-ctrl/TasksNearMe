@@ -88,7 +88,8 @@
         "payments": "Payments",
         "tips_and_news": "Tips and news",
         "account": "Account and verification",
-        "task_alerts": "New tasks near you"
+        "task_alerts": "New tasks near you",
+        "community": "Community"
       },
       "topicEmails": {
         "bookings": "booking",
@@ -97,7 +98,8 @@
         "payments": "payment",
         "tips_and_news": "tips and news",
         "account": "account",
-        "task_alerts": "new-task"
+        "task_alerts": "new-task",
+        "community": "community"
       },
       "cta": {
         "booking": "View the booking",
@@ -113,7 +115,8 @@
         "series": "View your regular visits",
         "account": "Open your account",
         "verify_identity": "Verify your ID",
-        "rewards": "Open your rewards"
+        "rewards": "Open your rewards",
+        "community_post": "Open the post"
       },
       "next": {
         "offer_received": "Compare the offers on your task and book the one that fits. You're only charged when you book.",
@@ -160,7 +163,10 @@
         "badge_earned": "See all your badges, and the next ones, on your account page.",
         "city_open": "Choose your neighborhood and add your home address. Then you can send offers on tasks near you.",
         "reward_earned": "Our team gives it a quick check, then you pick the card you want. Gift cards are separate from your earnings.",
-        "reward_ready": "Pick the card you want on your Rewards page and redeem it within 90 days."
+        "reward_ready": "Pick the card you want on your Rewards page and redeem it within 90 days.",
+        "community_reply": "Read the answer, and pin the one that helped.",
+        "community_answer_pinned": "Thanks for helping a neighbor.",
+        "community_helpful": "See the conversation in the community."
       },
       "lockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates.",
       "optionalFooter": "You're getting this because {topic} emails are on.",
@@ -219,7 +225,10 @@
       "badge_earned": "{tier, plural, =1 {You earned a badge: {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}}} other {Your {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}} badge reached level #}}.",
       "city_open": "TasksNearMe is open in {title}. Choose your neighborhood to start taking tasks.",
       "reward_earned": "Your welcome gift card{hasAmount, select, yes { of {amount}} other {}} is yours: your phone, ID and background checks all passed.",
-      "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on your Rewards page."
+      "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on your Rewards page.",
+      "community_reply": "{actorName} answered your post “{title}”.",
+      "community_answer_pinned": "{actorName} pinned your answer on “{title}”.",
+      "community_helpful": "{count, plural, one {A neighbor found your {on, select, reply {answer} other {post}} on “{title}” helpful} other {# neighbors found your {on, select, reply {answer} other {post}} on “{title}” helpful}}."
     },
     "pushTitle": "TasksNearMe"
   },

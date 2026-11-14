@@ -149,7 +149,10 @@
     "badge_earned": "Badge earned",
     "city_open": "City opened",
     "reward_earned": "Welcome gift card earned",
-    "reward_ready": "Gift card ready"
+    "reward_ready": "Gift card ready",
+    "community_reply": "Community reply",
+    "community_answer_pinned": "Community answer pinned",
+    "community_helpful": "Community helpful"
   },
   "previews": {
     "group": "Admin · person details",

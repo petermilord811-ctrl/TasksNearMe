@@ -64,7 +64,10 @@
     "badge_earned": "{tier, plural, =1 {You earned a badge: {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}}} other {Your {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}} badge reached level #}}",
     "city_open": "TasksNearMe is open in {title}: choose your neighborhood to start taking tasks",
     "reward_earned": "Your welcome gift card{hasAmount, select, yes { of {amount}} other {}} is yours. Pick your card after our quick check",
-    "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on Rewards"
+    "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on Rewards",
+    "community_reply": "{actorName} answered your post “{title}”",
+    "community_answer_pinned": "{actorName} pinned your answer on “{title}”",
+    "community_helpful": "{count, plural, one {A neighbor found your {on, select, reply {answer} other {post}} on “{title}” helpful} other {# neighbors found your {on, select, reply {answer} other {post}} on “{title}” helpful}}"
   },
   "previews": {
     "group": "Notifications",

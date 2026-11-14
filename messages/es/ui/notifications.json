@@ -64,7 +64,10 @@
     "badge_earned": "{tier, plural, =1 {Ganaste una insignia: {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}}} other {Tu insignia {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}} subió al nivel #}}",
     "city_open": "TasksNearMe ya está en {title}: elige tu vecindario para empezar a recibir tareas",
     "reward_earned": "Tu tarjeta de regalo de bienvenida{hasAmount, select, yes { de {amount}} other {}} es tuya. Elige tu tarjeta después de nuestra revisión rápida",
-    "reward_ready": "Tu tarjeta de regalo{hasAmount, select, yes { de {amount}} other {}} está lista. Elige tu tarjeta en Recompensas"
+    "reward_ready": "Tu tarjeta de regalo{hasAmount, select, yes { de {amount}} other {}} está lista. Elige tu tarjeta en Recompensas",
+    "community_reply": "{actorName} respondió a tu publicación «{title}»",
+    "community_answer_pinned": "{actorName} fijó tu respuesta en «{title}»",
+    "community_helpful": "{count, plural, one {A un vecino le resultó útil tu {on, select, reply {respuesta} other {publicación}} en «{title}»} other {A # vecinos les resultó útil tu {on, select, reply {respuesta} other {publicación}} en «{title}»}}"
   },
   "previews": {
     "group": "Notificaciones",

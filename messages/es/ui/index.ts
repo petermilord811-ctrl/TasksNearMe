@@ -67,6 +67,7 @@ import status from './status.json';
 import support from './support.json';
 import supportCase from './supportCase.json';
 import taskBoard from './taskBoard.json';
+import community from './community.json';
 import taskCard from './taskCard.json';
 import taskManage from './taskManage.json';
 import thread from './thread.json';
@@ -74,6 +75,6 @@ import timeline from './timeline.json';
 import verification from './verification.json';
 import waitlist from './waitlist.json';
 
-const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helpContact, helperCard, helperOnboarding, helperStanding, badges, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, taskCard, taskManage, thread, timeline, verification, waitlist, beta };
+const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helpContact, helperCard, helperOnboarding, helperStanding, badges, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, community, taskCard, taskManage, thread, timeline, verification, waitlist, beta };
 
 export default uiMessages;

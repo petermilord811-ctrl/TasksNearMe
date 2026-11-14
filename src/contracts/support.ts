@@ -127,13 +127,13 @@ export interface ReportHandlers {
   onBlock: ActionHandler<{ blocked: boolean }>;
 }
 
-/** What a member reports from a page (backlog B-059): a task, a helper's profile, or a review. */
-export const REPORT_TARGET_KINDS = ['task', 'helper', 'review'] as const;
+/** What a member reports from a page (backlog B-059): a task, a helper's profile, a review, or a community post or reply (7.7). */
+export const REPORT_TARGET_KINDS = ['task', 'helper', 'review', 'post', 'reply'] as const;
 export type ReportTargetKind = (typeof REPORT_TARGET_KINDS)[number];
 
 /** `routes.app.report(kind, id)`: the report form for one task, helper or review. */
 export interface ReportPageData {
-  /** `name`: the task's title, the helper's display name, or the review author's display name. */
+  /** `name`: the task's or post's title, the helper's display name, or the review's or reply's author's display name. */
   target: { kind: ReportTargetKind; id: string; name: string };
   /** Where the page goes back to (Cancel and Done). */
   backHref: string;

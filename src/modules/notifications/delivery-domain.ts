@@ -59,6 +59,10 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   scheduled_payment_failed: 'payments',
   replacement_needed: 'task_alerts',
   replacement_search_started: 'bookings',
+  // The community (completion plan 7.7): in the app and on devices; email and texts only if the person turns them on.
+  community_reply: 'community',
+  community_answer_pinned: 'community',
+  community_helpful: 'community',
 };
 
 /** Day-of updates that can't wait until morning (a 7 am start's 2 h reminder comes at 5 am): texted even in quiet hours. */
@@ -86,6 +90,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationTopic, readonly Notificatio
   payments: ['email'],
   account: ['email'],
   task_alerts: ['email'],
+  community: [],
   tips_and_news: [],
 };
 

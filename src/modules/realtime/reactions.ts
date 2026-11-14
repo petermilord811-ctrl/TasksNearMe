@@ -1,4 +1,5 @@
 import { and, eq, isNull } from 'drizzle-orm';
+import { communityPosts } from '@/modules/community/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import type { Db } from '@/platform/db/connect';
@@ -19,7 +20,16 @@ type EventRow = typeof outboxEvents.$inferSelect;
  */
 export type NoticePlan =
   | { kind: 'users'; userIds: string[]; actorId?: string; notice: RealtimeNotice }
-  | { kind: 'market'; marketId: string; taskId: string; notice: RealtimeNotice };
+  | { kind: 'market'; marketId: string; taskId: string; notice: RealtimeNotice }
+  | { kind: 'community'; marketId: string; postId: string; event: string; userIds: string[]; actorId?: string };
+
+/** Community events (completion plan 7.7): the market's signed-in members hear that a post or its replies moved. */
+const COMMUNITY_EVENTS: Record<string, { event: string; recipient?: string; actor?: string }> = {
+  'community.posted': { event: 'posted' },
+  'community.replied': { event: 'replied', recipient: 'postAuthorUserId', actor: 'replierUserId' },
+  'community.answer_pinned': { event: 'pinned', recipient: 'replyAuthorUserId' },
+  'community.helpful': { event: 'helpful', recipient: 'authorUserId' },
+};
 
 /** Event types that change what someone sees on a signed-in page: their pages refresh. */
 const UPDATE_PREFIXES = ['offer.', 'invite.', 'booking.', 'change.', 'series.', 'rebook.', 'reviews.', 'earnings.', 'badge.'];
@@ -56,6 +66,16 @@ export function planNotices(event: Pick<EventRow, 'type' | 'payload'>): NoticePl
     const marketId = asString(payload.marketId);
     return taskId && marketId ? { kind: 'market', marketId, taskId, notice: { type: 'task.posted', task: taskId } } : null;
   }
+  const community = COMMUNITY_EVENTS[event.type];
+  if (community) {
+    const postId = asString(payload.postId);
+    const marketId = asString(payload.marketId);
+    const recipient = community.recipient ? asString(payload[community.recipient]) : undefined;
+    const actorId = community.actor ? asString(payload[community.actor]) : undefined;
+    // The person it's about hears it as an update (their bell and pages refresh), never about their own act.
+    const userIds = recipient && recipient !== actorId ? [recipient] : [];
+    return postId && marketId ? { kind: 'community', marketId, postId, event: community.event, userIds, ...(actorId ? { actorId } : {}) } : null;
+  }
   if (!UPDATE_TYPES.has(event.type) && !UPDATE_PREFIXES.some((prefix) => event.type.startsWith(prefix))) return null;
   const userIds = peopleIn(payload);
   if (userIds.length === 0) return null;
@@ -72,6 +92,21 @@ export function planNotices(event: Pick<EventRow, 'type' | 'payload'>): NoticePl
 export async function noticesFor(db: Db, event: Pick<EventRow, 'type' | 'payload'>): Promise<RealtimeEnvelope[]> {
   const plan = planNotices(event);
   if (!plan) return [];
+  if (plan.kind === 'community') {
+    // Only for a post people can see; the market's signed-in members get its id, kind and neighborhood.
+    const [post] = await db
+      .select({ id: communityPosts.id, kind: communityPosts.kind, areaId: communityPosts.areaId })
+      .from(communityPosts)
+      .where(and(eq(communityPosts.id, plan.postId), eq(communityPosts.marketId, plan.marketId), eq(communityPosts.status, 'visible')))
+      .limit(1);
+    if (!post) return [];
+    const envelopes: RealtimeEnvelope[] = [{ channel: marketChannel(plan.marketId), notice: { type: 'community', event: plan.event, post: post.id, kind: post.kind, area: post.areaId ?? '' } }];
+    for (const userId of plan.userIds) {
+      if (plan.actorId && (await isBlockedBetween(db, plan.actorId, userId))) continue;
+      envelopes.push({ channel: userChannel(userId), notice: { type: 'update', event: `community.${plan.event}`, post: post.id } });
+    }
+    return envelopes;
+  }
   if (plan.kind === 'market') {
     const [task] = await db
       .select({ id: tasks.id })

@@ -37,7 +37,7 @@ describe('AccountMenu', () => {
     expect(within(menu).queryByRole('menuitem', { name: absent })).not.toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Payments' })).toHaveAttribute('href', routes.app.payments());
     expect(within(menu).getByRole('menuitem', { name: 'Support' })).toHaveAttribute('href', routes.app.support());
-    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Account', extra, 'Payments', 'Support', 'Switch to dark mode', 'Español', 'Sign out']);
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Community', 'Account', extra, 'Payments', 'Support', 'Switch to dark mode', 'Español', 'Sign out']);
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: `${viewer.initials}, account menu for ${viewer.displayName}` })).toHaveFocus();

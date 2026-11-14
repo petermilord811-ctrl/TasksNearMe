@@ -1,0 +1,160 @@
+{
+  "title": "Comunidad",
+  "intro": "Pregunta a tus vecinos de {market} a quién contratarían, cómo lo harían y quién hizo un gran trabajo.",
+  "stats": "{posts, plural, one {# publicación} other {# publicaciones}} esta semana · {replies, plural, one {# respuesta} other {# respuestas}} hoy",
+  "composer": {
+    "prompt": "¿Qué te gustaría preguntar a tus vecinos?",
+    "label": "Empezar una publicación"
+  },
+  "kinds": {
+    "recommendation": "Pedir una recomendación",
+    "question": "Hacer una pregunta",
+    "tip": "Compartir un consejo",
+    "thanks": "Agradecer a un ayudante"
+  },
+  "kindBadge": {
+    "recommendation": "Recomendación",
+    "question": "Pregunta",
+    "tip": "Consejo",
+    "thanks": "Agradecimiento"
+  },
+  "scope": {
+    "label": "Dónde",
+    "nearby": "Cerca de ti",
+    "nearbyArea": "Cerca de {area}",
+    "market": "Todo {market}"
+  },
+  "sort": {
+    "label": "Ordenar",
+    "active": "Con actividad",
+    "new": "Nuevas",
+    "top": "Más útiles del mes"
+  },
+  "kindFilter": {
+    "label": "Tipo de publicación",
+    "all": "Todas"
+  },
+  "roles": {
+    "helper": "Ayudante",
+    "poster": "Cliente",
+    "neighbor": "Vecino"
+  },
+  "verified": "Identidad verificada",
+  "you": "tú",
+  "allOf": "Todo {market}",
+  "replyCount": "{count, plural, =0 {Aún sin respuestas} one {# respuesta} other {# respuestas}}",
+  "seeReplies": "{count, plural, one {Ver la respuesta} other {Ver las # respuestas}}",
+  "reply": "Responder",
+  "reactions": {
+    "thanks": "Gracias",
+    "helpful": "Útil",
+    "label": "Reacciones"
+  },
+  "pinned": "Respuesta fijada",
+  "pin": "Fijar como respuesta",
+  "unpin": "Desfijar",
+  "delete": "Eliminar",
+  "deleteTitle": "¿Eliminar esto?",
+  "deleteBody": "Ya nadie lo verá. Los reportes sobre esto siguen llegando a nuestro equipo.",
+  "deleteConfirm": "Eliminar",
+  "cancel": "Cancelar",
+  "report": "Reportar",
+  "more": "Más",
+  "helperCard": {
+    "recommended": "Recomendado",
+    "thanked": "Agradecido",
+    "selfTag": "Se recomendó a sí mismo",
+    "recommendedBy": "{count, plural, =0 {Nuevo en TasksNearMe} one {Lo recomienda # vecino} other {Lo recomiendan # vecinos}}",
+    "view": "Ver perfil"
+  },
+  "replyForm": {
+    "label": "Tu respuesta",
+    "placeholder": "Comparte lo que sabes…",
+    "submit": "Responder",
+    "submitting": "Enviando…",
+    "recommend": "Recomendar a un ayudante (opcional)",
+    "recommendNone": "Nadie en particular",
+    "recommendSelf": "{name} (tú)",
+    "recommendHint": "Ayudantes que contrataste o guardaste. Uno por petición.",
+    "alreadyRecommended": "Ya recomendaste a alguien en esta petición.",
+    "closed": "Las respuestas están cerradas."
+  },
+  "guidelines": "Sé amable y habla de lo local. Los datos de contacto quedan ocultos hasta que reservas. Los reportes de delitos o de seguridad son para la policía (911 en una emergencia), no para aquí.",
+  "guidelinesLink": "Normas de la comunidad",
+  "empty": {
+    "title": "Aún no hay nada aquí",
+    "body": "Sé la primera persona en preguntar a tus vecinos.",
+    "filteredTitle": "Todavía no hay publicaciones así",
+    "filteredBody": "Prueba con todas las publicaciones o con todo {market}."
+  },
+  "postBlocked": {
+    "phone_required": "Verifica tu número de teléfono para publicar y responder.",
+    "suspended": "Tu cuenta no puede publicar por ahora."
+  },
+  "verifyPhone": "Verificar tu teléfono",
+  "newPost": {
+    "title": "Nueva publicación",
+    "back": "Volver a la comunidad",
+    "kind": "¿Qué tipo de publicación?",
+    "titleLabel": "Título",
+    "titleHints": {
+      "recommendation": "Di qué necesitas: «¿A quién recomiendan para colgar una TV?»",
+      "question": "Pregúntalo en una línea: «¿Cuánto tarda armar un clóset?»",
+      "tip": "Resúmelo: «Renta la carretilla cuando reserves el camión»",
+      "thanks": "Di a quién y por qué: «¡Gracias, Sam, por el clóset!»"
+    },
+    "body": "Detalles",
+    "bodyHint": "Lo que ayude a responder: el trabajo, el tamaño, cuándo. Sin direcciones ni números de teléfono.",
+    "bodyCount": "{count} de {max}",
+    "category": "Servicio",
+    "categoryNone": "No es sobre un servicio",
+    "area": "Vecindario",
+    "areaHint": "Los vecinos cercanos lo ven primero; cualquiera en {market} puede encontrarlo.",
+    "areaEverywhere": "Todo {market}",
+    "booking": "¿A quién quieres agradecer?",
+    "bookingOption": "{helper} · {task}",
+    "noBookings": "Puedes agradecer a un ayudante aquí cuando una reserva esté terminada y pagada.",
+    "submit": "Publicar",
+    "submitting": "Publicando…",
+    "success": "Publicado"
+  },
+  "pagination": "Páginas de la comunidad",
+  "previous": "Anterior",
+  "next": "Siguiente",
+  "page": "Página {page} de {count}",
+  "live": {
+    "show": "{count, plural, one {# publicación nueva} other {# publicaciones nuevas}} · Ver",
+    "announce": "{count, plural, one {# publicación nueva} other {# publicaciones nuevas}} en la comunidad",
+    "loading": "Cargando…"
+  },
+  "back": "Comunidad",
+  "moderation": {
+    "hidden": "Oculto por el equipo",
+    "removed": "Eliminado",
+    "reason": "Motivo: {reason}",
+    "title": "Equipo",
+    "action": "Acción",
+    "hide": "Ocultar",
+    "remove": "Eliminar",
+    "restore": "Restaurar",
+    "reasonLabel": "Motivo (queda en el registro de auditoría)",
+    "submit": "Aplicar"
+  },
+  "feedback": {
+    "replied": "Respuesta publicada",
+    "pinned": "Respuesta fijada",
+    "unpinned": "Respuesta desfijada",
+    "deleted": "Eliminado",
+    "moderated": "Listo"
+  },
+  "previews": {
+    "group": "Comunidad",
+    "feed": "Comunidad · publicaciones cerca de ti",
+    "feedEmpty": "Comunidad · aún no hay nada",
+    "feedBlocked": "Comunidad · primero verifica tu teléfono",
+    "post": "Comunidad · petición de recomendación con respuestas",
+    "postStaff": "Comunidad · vista del equipo de una respuesta oculta",
+    "newPost": "Comunidad · nueva publicación",
+    "newThanks": "Comunidad · agradecer a un ayudante"
+  }
+}
