@@ -3,6 +3,7 @@ import type { Db } from '@/platform/db/connect';
 import { devOutboxMessages } from '@/platform/dev-outbox/schema';
 import { createPostmarkEmailProvider } from './postmark';
 import { createResendEmailProvider } from './resend';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Email provider port. Development and tests use the dev outbox (rows shown at /dev/outbox, with the HTML
@@ -95,5 +96,5 @@ export function createEmailProvider(db: Db, env: Record<string, string | undefin
   if (!from) throw new Error(`${postmark ? 'POSTMARK_SERVER_TOKEN' : 'RESEND_API_KEY'} is set but EMAIL_FROM is empty: set a sender the provider has verified.`);
   const replyTo = env.EMAIL_REPLY_TO?.trim() || undefined;
   const real = postmark ? createPostmarkEmailProvider({ token: postmark, from, replyTo }) : createResendEmailProvider({ apiKey: resend!, from, replyTo });
-  return env.NODE_ENV === 'production' ? realOnly(real) : withOutbox(createDevOutboxEmailProvider(db), real);
+  return !devHelpersOn(env) ? realOnly(real) : withOutbox(createDevOutboxEmailProvider(db), real);
 }

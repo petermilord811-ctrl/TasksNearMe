@@ -1,5 +1,6 @@
 import { BOT_CHECK_STAND_IN_TOKEN, type BotCheckAction, type BotCheckConfig } from '@/contracts';
 import { turnstileFromEnv } from './turnstile';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Bot checks on abuse-prone forms (blueprint 07 §2 and §8, 06 §4: sign-in codes, sign-up, posting). Cloudflare
@@ -33,7 +34,7 @@ export const TURNSTILE_STAND_IN_COOKIE = 'tnm_turnstile_stand_in';
 export const STAND_IN_PASS_TOKEN = BOT_CHECK_STAND_IN_TOKEN;
 
 export function standInBotCheckAllowed(env: Env = process.env): boolean {
-  return env.NODE_ENV !== 'production';
+  return devHelpersOn(env);
 }
 
 export const standInBotChecker: BotChecker = {

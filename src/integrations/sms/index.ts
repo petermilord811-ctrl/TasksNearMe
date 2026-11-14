@@ -2,6 +2,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { devOutboxMessages } from '@/platform/dev-outbox/schema';
 import { twilioFromEnv } from './twilio';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 export { SmsRejectedError } from './errors';
 
@@ -32,7 +33,7 @@ export function createDevOutboxSmsSender(db: Db): SmsSender {
 
 export function createSmsSender(db: Db, env: Record<string, string | undefined> = process.env): SmsSender {
   const twilio = twilioFromEnv(env);
-  const production = env.NODE_ENV === 'production';
+  const production = !devHelpersOn(env);
   if (!twilio) {
     if (!production) return createDevOutboxSmsSender(db);
     return {

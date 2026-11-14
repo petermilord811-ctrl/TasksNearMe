@@ -7,12 +7,13 @@ import { users } from '@/modules/accounts/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { db } from '@/platform/db/client';
 import { createTaskPosting, type TaskPosting } from './posting';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /** App-wide instances of the task services (the app's database, providers, and keys). */
 export const taskPosting = createTaskPosting({ db, geocoder: createGeocoder(), cipher: fieldCipherFromEnv() });
 /** Posting with the sample addresses, for tests (the `tnm_geo_stand_in` cookie). Never in production. */
 export const sampleAddressTaskPosting: TaskPosting | null =
-  process.env.NODE_ENV === 'production' ? null : createTaskPosting({ db, geocoder: createFakeGeocoder(), cipher: fieldCipherFromEnv() });
+  !devHelpersOn() ? null : createTaskPosting({ db, geocoder: createFakeGeocoder(), cipher: fieldCipherFromEnv() });
 export const fileStorage = createFileStorage();
 export const taskDrafter = createTaskDrafter();
 

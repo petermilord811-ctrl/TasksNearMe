@@ -10,6 +10,7 @@ import { grantStaffRole, removeStaffRole } from './staff-roles';
 import { requestNow } from '@/platform/clock';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createSetupCode, resetAuthenticator } from './staff-authenticator';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /** Server Action behind a person's staff page (src/contracts/admin-people.ts). */
 export async function setHelperSuspensionAction(userId: string, input: HelperSuspensionInput): Promise<ActionResult> {
@@ -55,7 +56,7 @@ export async function removeStaffRoleAction(input: StaffRoleRemoveInput): Promis
 }
 
 function authenticatorDeps() {
-  return { db, cipher: fieldCipherFromEnv(), secret: process.env.BETTER_AUTH_SECRET ?? '', production: process.env.NODE_ENV === 'production' };
+  return { db, cipher: fieldCipherFromEnv(), secret: process.env.BETTER_AUTH_SECRET ?? '', production: !devHelpersOn() };
 }
 
 /** Admins: a one-time setup code for a staff member's authenticator (shown once, 24 hours). */

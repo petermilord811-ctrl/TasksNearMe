@@ -27,7 +27,8 @@ describe('photo uploads', () => {
   it('re-encodes to WebP, shrinks to 2000 px, and drops all metadata', async () => {
     const result = await storePhoto(deps, { userId: 'usr_maya', kind: 'task_photo', file: await jpegWithExif(3000, 2000) });
     if (!result.ok) throw new Error(result.code);
-    expect(result.photo).toMatchObject({ width: 2000, height: 1333, src: `/api/files/${result.photo.id}` });
+    // Stored at up to 2000 px, shown through the route at 1280 (completion plan 5.7).
+    expect(result.photo).toMatchObject({ width: 2000, height: 1333, src: `/api/files/${result.photo.id}?w=1280` });
 
     const [row] = await db.select().from(files).where(eq(files.id, result.photo.id));
     expect(row).toMatchObject({ ownerUserId: 'usr_maya', kind: 'task_photo', contentType: 'image/webp' });

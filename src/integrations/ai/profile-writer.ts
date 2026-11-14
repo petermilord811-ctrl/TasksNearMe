@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { CategorySlug } from '@/contracts';
 import { CATEGORY_GUIDE } from './category-guide';
 import { AiUnavailableError, asPromptText, claudeWriterFromEnv, oneLine, type ClaudeWriter } from './claude';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * "Write it for me" on a helper's profile (onboarding and the editor): their notes, services, area, tools
@@ -113,5 +114,5 @@ export function createFakeProfileWriter(): ProfileWriter {
 export function createProfileWriter(env: Record<string, string | undefined> = process.env): ProfileWriter | null {
   const claude = claudeWriterFromEnv(env);
   if (claude) return createClaudeProfileWriter(claude);
-  return env.NODE_ENV === 'production' ? null : createFakeProfileWriter();
+  return !devHelpersOn(env) ? null : createFakeProfileWriter();
 }

@@ -10,8 +10,11 @@
  * - Restarts it at a safe point (the heavy-work lock is free) once its memory passes DEV_RESTART_AT_MB
  *   (default 3000), and after it exits for any reason.
  * - Restarts it at once when the heavy-lock holder asks (automation/dev-restart.request, written by
- *   scripts/lib/dev-restart.mjs): the gate does so before each e2e shard, `heavy.mjs --fresh-dev` before
- *   a test run. Writes its pid to automation/dev-supervisor.pid so callers can tell it's running.
+ *   scripts/lib/dev-restart.mjs): `heavy.mjs --fresh-dev` does so before a test run, the gate before each
+ *   shard against the dev server. Writes its pid to automation/dev-supervisor.pid so callers can tell it's running.
+ * - Keeps it stopped while the heavy-lock holder has paused it (automation/dev-pause.request, with the holder's
+ *   pid): the gate does so for its e2e build and the `next start` run against it. The pause ends when the
+ *   request is removed or that process exits.
  *
  *   node scripts/dev-supervisor.mjs        (logs to automation/logs/dev-server.log)
  */
@@ -19,13 +22,14 @@ import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
-import { RESTART_REQUEST, SUPERVISOR_PID } from './lib/dev-restart.mjs';
+import { PAUSE_REQUEST, RESTART_REQUEST, SUPERVISOR_PID } from './lib/dev-restart.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const port = Number(process.env.PORT ?? 3000);
 const restartAtMb = Number(process.env.DEV_RESTART_AT_MB ?? 3000);
 const memoryMax = process.env.DEV_MEMORY_MAX ?? '5G';
 const swapMax = process.env.DEV_SWAP_MAX ?? '1G';
+const heapMb = Number(process.env.DEV_HEAP_MB ?? 2560);
 const lockPath = path.join(root, 'automation/heavy.lock');
 const logPath = path.join(root, 'automation/logs/dev-server.log');
 fs.mkdirSync(path.dirname(logPath), { recursive: true });
@@ -73,6 +77,23 @@ function heavyJobRunning() {
   }
 }
 
+/** The pid that paused the server (automation/dev-pause.request) while it lives; a dead one's request is removed. */
+function pausedBy() {
+  let pid;
+  try {
+    pid = Number(fs.readFileSync(PAUSE_REQUEST, 'utf8'));
+  } catch {
+    return null;
+  }
+  try {
+    process.kill(pid, 0);
+    return pid;
+  } catch {
+    fs.rmSync(PAUSE_REQUEST, { force: true });
+    return null;
+  }
+}
+
 function hasSystemdRun() {
   try {
     execFileSync('systemd-run', ['--version'], { stdio: 'ignore' });
@@ -82,16 +103,22 @@ function hasSystemdRun() {
   }
 }
 
-/** Starts `npm run dev` with this Node's npm first on PATH, in a capped scope when systemd is there. */
+/**
+ * Starts `npm run dev` with this Node's npm first on PATH, in a capped scope when systemd is there.
+ * `next dev` sets its server's JS heap limit to half the machine's RAM (node_modules/next/dist/cli/next-dev.js),
+ * about 3.9 GB here, without regard to the scope's cap; DEV_HEAP_MB (default 2560) sets it lower through
+ * NODE_OPTIONS, so V8 collects before the heap and Turbopack together reach the cap.
+ */
 function startServer() {
-  const env = { ...process.env, PATH: `${path.dirname(process.execPath)}:${process.env.PATH}` };
+  const nodeOptions = [process.env.NODE_OPTIONS, `--max-old-space-size=${heapMb}`].filter(Boolean).join(' ');
+  const env = { ...process.env, NODE_OPTIONS: nodeOptions, PATH: `${path.dirname(process.execPath)}:${process.env.PATH}` };
   const log = fs.openSync(logPath, 'a');
   const [command, args] = hasSystemdRun()
     ? ['systemd-run', ['--user', '--scope', '--quiet', `--unit=tnm-dev-${Date.now()}`, '-p', `MemoryMax=${memoryMax}`, '-p', `MemorySwapMax=${swapMax}`, '--', 'npm', 'run', 'dev']]
     : ['npm', ['run', 'dev']];
   const child = spawn(command, args, { cwd: root, env, detached: true, stdio: ['ignore', log, log] });
   fs.closeSync(log);
-  say(`started pid ${child.pid} (${command === 'npm' ? 'no memory cap' : `cap ${memoryMax} + ${swapMax} swap`})`);
+  say(`started pid ${child.pid} (${command === 'npm' ? 'no memory cap' : `cap ${memoryMax} + ${swapMax} swap`}, JS heap ${heapMb} MB)`);
   return child;
 }
 
@@ -117,7 +144,24 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 fs.writeFileSync(SUPERVISOR_PID, String(process.pid));
 say(`supervisor up: restart at ${restartAtMb} MB when no heavy job runs, or when the lock holder asks`);
 let lastMemoryCheck = 0;
+let pausedFor = null;
 for (;;) {
+  // A pause from the heavy-lock holder (a gate's e2e build run): the server stays stopped until it ends.
+  const pauser = pausedBy();
+  if (pauser) {
+    if (pausedFor !== pauser) say(`pausing the server for pid ${pauser}`);
+    pausedFor = pauser;
+    if (child && !exited) {
+      stopChild();
+      while (!exited) await pause(500);
+    }
+    await pause(2000);
+    continue;
+  }
+  if (pausedFor) {
+    say(`pause for pid ${pausedFor} ended`);
+    pausedFor = null;
+  }
   if (!child || exited) {
     if (await portBusy()) {
       await pause(2000); // someone else's server (Playwright's) is serving; wait for it to exit

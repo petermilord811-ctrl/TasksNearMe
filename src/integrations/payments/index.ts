@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { CardBrand, DevTestCard } from '@/contracts';
 import { DEV_TEST_CARDS } from '@/contracts';
 import { createStripePayments } from './stripe';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Payments port, shaped like Stripe PaymentIntents (docs/blueprint/04 §1, §4). Development uses a
@@ -164,7 +165,7 @@ export function createDevPaymentProvider(): PaymentProvider {
 export function createPaymentProvider(env: Record<string, string | undefined> = process.env): PaymentProvider | null {
   const secretKey = env.STRIPE_SECRET_KEY?.trim();
   if (secretKey && env.STRIPE_PUBLISHABLE_KEY?.trim()) return createStripePayments({ secretKey });
-  return env.NODE_ENV === 'production' ? null : createDevPaymentProvider();
+  return !devHelpersOn(env) ? null : createDevPaymentProvider();
 }
 
 /** Stripe.js's key for the browser's card form, when Stripe takes the payments. */

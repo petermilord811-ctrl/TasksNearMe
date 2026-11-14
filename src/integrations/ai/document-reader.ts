@@ -3,6 +3,7 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
 import { ADDRESS_DOCUMENT_TYPES, type AddressDocumentType } from '@/contracts';
 import { AiRefusedError, AiUnavailableError, DEFAULT_CLAUDE_MODEL, type ClaudeClient } from './claude';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Reads a proof-of-address document once for our trust team (completion plan 4.1): is it readable, does the
@@ -120,5 +121,5 @@ export function documentReaderFromEnv(env: Record<string, string | undefined> = 
     // The job runner reads in the background, so it can wait longer than a button in a form.
     return createClaudeDocumentReader({ client: new Anthropic({ apiKey: key, timeout: 45_000, maxRetries: 1 }), model });
   }
-  return env.NODE_ENV === 'production' ? null : createStandInDocumentReader();
+  return !devHelpersOn(env) ? null : createStandInDocumentReader();
 }

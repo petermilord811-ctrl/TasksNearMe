@@ -9,6 +9,7 @@ import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Taking back a helper's transfer (blueprint 08 `transfer_reversals`; completion plan 5.13). Finance only, and
@@ -87,7 +88,7 @@ export async function reverseTransfer(db: Db, connect: StripeConnect | null, sta
   const idempotencyKey = `trr:${id}`;
   const outcome = connect
     ? await connect.reverseTransfer({ transferId: row.transferRef, amountCents, idempotencyKey, caseId })
-    : process.env.NODE_ENV === 'production'
+    : !devHelpersOn()
       ? null
       : ({ ok: true, reversalId: `trr_dev_${id.slice(4)}` } as const);
   if (!outcome) return { ok: false, code: 'not_allowed' };

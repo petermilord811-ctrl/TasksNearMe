@@ -159,7 +159,7 @@ describe('the profile photo', () => {
     const [file] = await db.select().from(files).where(eq(files.id, first.photo.id));
     expect(file).toMatchObject({ kind: 'avatar', ownerUserId: userId, width: 512, height: 512 });
     expect(await isCurrentProfilePhoto(db, file!)).toBe(true);
-    expect((await getAccountPage(db, userId))?.profile).toMatchObject({ initials: 'RC', photo: { id: first.photo.id, src: `/api/files/${first.photo.id}` } });
+    expect((await getAccountPage(db, userId))?.profile).toMatchObject({ initials: 'RC', photo: { id: first.photo.id, src: `/api/files/${first.photo.id}?w=256` } });
 
     // Replaced: the old one goes back to owner and staff only.
     const second = await setProfilePhoto({ db, storage }, userId, await portrait());

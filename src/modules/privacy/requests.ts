@@ -27,6 +27,7 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { buildDataExport, dataExportFilename } from './data-export';
 import { renderAccountDeletedNotice } from './emails';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Privacy requests (blueprint 08 §5; completion plan 3.3). A copy of the data is prepared by the job runner,
@@ -320,7 +321,7 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await db.update(privacyRequests).set({ status: 'expired', fileKey: null, completedAt: now }).where(eq(privacyRequests.id, row.id));
   }
 
-  if (!isReservedEmailAddress(user.email) || process.env.NODE_ENV !== 'production') {
+  if (!isReservedEmailAddress(user.email) || devHelpersOn()) {
     const email = renderAccountDeletedNotice({ appUrl: deps.appUrl, locale: localeOrDefault(user.locale) });
     try {
       await deps.email.send({ to: user.email, subject: email.subject, text: email.text, html: email.html, tag: 'account-deleted', idempotencyKey: `account-deleted-${userId}` });

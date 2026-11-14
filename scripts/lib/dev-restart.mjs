@@ -5,13 +5,24 @@
  * Only the holder of the heavy-work lock should call it: the restart breaks any test run in progress.
  */
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '../..');
 export const RESTART_REQUEST = path.join(root, 'automation/dev-restart.request');
+/** Holds the pid of the process that paused the dev server (`pauseDevServer`). */
+export const PAUSE_REQUEST = path.join(root, 'automation/dev-pause.request');
 export const SUPERVISOR_PID = path.join(root, 'automation/dev-supervisor.pid');
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function portOpen(port) {
+  return new Promise((resolve) => {
+    const socket = net.connect(port, '127.0.0.1');
+    socket.once('connect', () => (socket.destroy(), resolve(true)));
+    socket.once('error', () => resolve(false));
+  });
+}
 
 /** True while a supervisor process is alive (it writes its pid on start). */
 export function supervisorRunning() {
@@ -56,4 +67,28 @@ export async function restartDevServer({ port = 3000, timeoutMs = 5 * 60_000, wa
   }
   log('The fresh dev server is answering.');
   return true;
+}
+
+/**
+ * Stops the dev server and keeps it stopped until the returned function is called or this process exits (the
+ * supervisor watches the pid in the request), for a gate whose e2e build and `next start` run need the memory.
+ * Only the heavy-lock holder should call it. Without a supervisor it does nothing.
+ */
+export async function pauseDevServer({ port = 3000, timeoutMs = 2 * 60_000, log = () => {} } = {}) {
+  if (!supervisorRunning()) {
+    log('No dev-server supervisor is running, so the dev server was not paused.');
+    return () => {};
+  }
+  fs.writeFileSync(PAUSE_REQUEST, String(process.pid));
+  log('Asked the supervisor to pause the dev server…');
+  const deadline = Date.now() + timeoutMs;
+  while (await portOpen(port)) {
+    if (Date.now() > deadline) throw new Error('The dev server did not stop for the pause (is another server on the port?).');
+    await pause(500);
+  }
+  log('The dev server is paused.');
+  return () => {
+    fs.rmSync(PAUSE_REQUEST, { force: true });
+    log('The dev server may start again.');
+  };
 }

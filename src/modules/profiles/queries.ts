@@ -15,7 +15,7 @@ import { HELPER_REVIEW_TAGS } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { areas, categories } from '@/modules/markets/schema';
 import { reviews } from '@/modules/reviews/schema';
-import { avatarPhoto } from '@/modules/files/photos';
+import { avatarPhoto, photoSrc } from '@/modules/files/photos';
 import { files } from '@/modules/tasks/schema';
 import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
@@ -229,9 +229,9 @@ export async function getHelperProfile(handle: string, database: Db = db): Promi
   };
 }
 
-/** Where a stored file is served: bundled placeholders from /public, uploads through the files route. */
-export function fileUrl(file: { id: string; storageKey: string }): string {
-  return file.storageKey.startsWith('public/') ? `/${file.storageKey.slice('public/'.length)}` : `/api/files/${file.id}`;
+/** Where a stored image is served: bundled placeholders from /public, uploads through the files route (at most 1280 px). */
+export function fileUrl(file: { id: string; storageKey: string; width: number; height: number }): string {
+  return file.storageKey.startsWith('public/') ? `/${file.storageKey.slice('public/'.length)}` : photoSrc(file);
 }
 
 /** Active helper handles, for generateStaticParams. */

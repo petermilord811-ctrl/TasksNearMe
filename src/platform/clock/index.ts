@@ -1,5 +1,6 @@
 import 'server-only';
 import { cookies } from 'next/headers';
+import { E2E_BUILD } from '@/shared/dev-helpers';
 import { readClockOffset } from './signing';
 
 /**
@@ -9,7 +10,8 @@ import { readClockOffset } from './signing';
  * The test clock moves one browser's "now" through a signed cookie set by `/dev/clock`, so parallel e2e
  * tests never see each other's time. It's built in only in development and in builds made with
  * `TEST_CLOCK=1` (preview, staging): `next.config.ts` inlines `TEST_CLOCK_BUILD`, so a production build
- * without it reduces `requestNow()` to `new Date()`. Outside development it also needs `TEST_CLOCK_SECRET`.
+ * without it reduces `requestNow()` to `new Date()`. Outside development and the e2e build (which serves this
+ * machine only: src/shared/dev-helpers.ts) it also needs `TEST_CLOCK_SECRET`.
  */
 
 export const TEST_CLOCK_COOKIE = 'tnm_test_clock';
@@ -18,7 +20,7 @@ const DEV_SECRET = 'dev-test-clock';
 /** The secret that signs the clock cookie, or null when the test clock is off. */
 export function testClockSecret(): string | null {
   if (process.env.TEST_CLOCK_BUILD !== '1') return null;
-  return process.env.TEST_CLOCK_SECRET || (process.env.NODE_ENV === 'development' ? DEV_SECRET : null);
+  return process.env.TEST_CLOCK_SECRET || (process.env.NODE_ENV === 'development' || E2E_BUILD ? DEV_SECRET : null);
 }
 
 export async function requestNow(): Promise<Date> {

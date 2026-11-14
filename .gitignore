@@ -39,6 +39,7 @@ automation/runs/
 automation/logs/
 automation/heavy.lock
 automation/dev-restart.request
+automation/dev-pause.request
 automation/dev-supervisor.pid
 .npm-cache/
 

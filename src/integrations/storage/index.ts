@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { r2FromEnv } from './r2';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * File storage port. Development keeps files on local disk (`.data/uploads`, gitignored); with R2 keys the
@@ -53,7 +54,7 @@ export function createLocalFileStorage(root = path.join(process.cwd(), '.data', 
 export function createFileStorage(env: Record<string, string | undefined> = process.env): FileStorage {
   const r2 = r2FromEnv(env);
   if (r2) return r2;
-  if (env.NODE_ENV === 'production' && env.FILE_STORAGE !== 'local') {
+  if (!devHelpersOn(env) && env.FILE_STORAGE !== 'local') {
     const refuse = async (): Promise<never> => {
       throw new Error('File storage needs R2 in production: set R2_BUCKET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY (or FILE_STORAGE=local on a lasting disk).');
     };

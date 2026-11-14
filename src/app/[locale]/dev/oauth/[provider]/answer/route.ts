@@ -5,6 +5,7 @@ import { issueStandInCode, standInCallbackUrl } from '@/integrations/oauth/stand
 import { customStandInClaims, STAND_IN_PEOPLE } from '@/integrations/oauth/stand-in-people';
 import { isSocialProvider } from '@/modules/accounts/sign-in/providers';
 import { isLocalRequest } from '@/shared/local-request';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * The stand-in account chooser's answer (development only; 404 in production). Like a real provider, it
@@ -32,7 +33,7 @@ function problem(message: string, status = 400): Response {
 export async function POST(httpRequest: Request, { params }: RouteContext<'/[locale]/dev/oauth/[provider]/answer'>): Promise<Response> {
   // Only on this machine (also checked in src/proxy.ts): the stand-in signs in as any email it's given.
   if (!isLocalRequest((name) => httpRequest.headers.get(name))) return new Response('Not found', { status: 404 });
-  if (process.env.NODE_ENV === 'production') return problem('Not found', 404);
+  if (!devHelpersOn()) return problem('Not found', 404);
   const { provider } = await params;
   if (!isSocialProvider(provider) || !standInSocialProviders().includes(provider)) return problem('Not found', 404);
 

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { CategorySlug } from '@/contracts';
 import { CATEGORY_GUIDE } from './category-guide';
 import { AiUnavailableError, asPromptText, claudeWriterFromEnv, type ClaudeWriter } from './claude';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * "Write it for me" on a helper's offer: the message that goes with the price and start time. It reads the
@@ -103,5 +104,5 @@ export function createFakeOfferWriter(): OfferMessageWriter {
 export function createOfferWriter(env: Record<string, string | undefined> = process.env): OfferMessageWriter | null {
   const claude = claudeWriterFromEnv(env);
   if (claude) return createClaudeOfferWriter(claude);
-  return env.NODE_ENV === 'production' ? null : createFakeOfferWriter();
+  return !devHelpersOn(env) ? null : createFakeOfferWriter();
 }

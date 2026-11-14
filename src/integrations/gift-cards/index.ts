@@ -1,4 +1,5 @@
 import { tremendousFromEnv } from './tremendous';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Gift cards for rewards (blueprint 05: Tremendous, LINK delivery). Until Tremendous is connected, a
@@ -31,5 +32,5 @@ export function createDevGiftCardProvider(): GiftCardProvider {
 export function createGiftCardProvider(env: Record<string, string | undefined> = process.env): GiftCardProvider | null {
   const tremendous = tremendousFromEnv(env);
   if (tremendous) return tremendous;
-  return env.NODE_ENV === 'production' ? null : createDevGiftCardProvider();
+  return !devHelpersOn(env) ? null : createDevGiftCardProvider();
 }

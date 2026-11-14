@@ -8,6 +8,7 @@ import { helperProfiles } from '@/modules/profiles/schema';
 import type { Db } from '@/platform/db/connect';
 import { helperSetupNeedsInvite, normalizeInviteCode, signUpNeedsInvite } from './rules';
 import { accessRoles, betaGatesFor } from './service';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /** The private beta for this request: the browser's invite link, and whether a step waits for an invite. */
 
@@ -18,7 +19,7 @@ export const INVITE_COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
 export const BETA_GATE_COOKIE = 'tnm_beta_gate';
 
 export function betaGateForceAllowed(env: Record<string, string | undefined> = process.env): boolean {
-  return env.NODE_ENV !== 'production';
+  return devHelpersOn(env);
 }
 
 export async function betaForcedByBrowser(): Promise<boolean> {

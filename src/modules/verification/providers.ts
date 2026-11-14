@@ -4,6 +4,7 @@ import { stripeConnectFromEnv, type StripeConnect } from '@/integrations/payment
 import { personaIdentityFromEnv } from '@/integrations/persona';
 import { stripeIdentityFromEnv } from '@/integrations/stripe-identity';
 import { newId } from '@/platform/db/ids';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * The hosted verification providers (blueprint 06 §1): the ID check's double check (stage 2, after our
@@ -55,7 +56,7 @@ export function verificationProvidersFor(env: Record<string, string | undefined>
   const connect = stripeConnectFromEnv(env);
   const appUrl = (env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
   const payout = connect ? connectPayouts(connect, appUrl) : null;
-  if (env.NODE_ENV === 'production') return identity && background && payout ? { identity, payout, background } : null;
+  if (!devHelpersOn(env)) return identity && background && payout ? { identity, payout, background } : null;
   const dev = createDevVerificationProviders();
   return { identity: identity ?? dev.identity, payout: payout ?? dev.payout, background: background ?? dev.background };
 }

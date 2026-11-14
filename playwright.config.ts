@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = Number(process.env.PORT ?? 3000);
+/**
+ * E2E_TARGET=build runs against the e2e production build (`npm run e2e:build`, then `npm run e2e:serve` on :3300;
+ * src/shared/dev-helpers.ts) instead of the dev server. `next start` holds about 0.5 GB and compiles nothing,
+ * where the dev server's Turbopack grows to 2–6 GB over an e2e run, past what the 7.7 GB VPS can give it. The
+ * gate uses it (scripts/gate.mjs). The UI previews need the dev server.
+ */
+const target = process.env.E2E_TARGET === 'build' ? 'build' : 'dev';
+const PORT = Number(process.env.PORT ?? (target === 'build' ? 3300 : 3000));
 const baseURL = `http://localhost:${PORT}`;
 
 /**
@@ -24,13 +31,17 @@ export default defineConfig({
     baseURL,
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: 'npm run dev',
-    // The preview gallery needs no database, so the UI harness can start without one.
-    url: `${baseURL}/dev/ui`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 240_000,
-  },
+  webServer:
+    target === 'build'
+      ? // Answers once the e2e build is up: a normal build has no /dev and never gets there.
+        { command: 'npm run e2e:serve', url: `${baseURL}/dev/sign-in`, reuseExistingServer: !process.env.CI, timeout: 120_000 }
+      : {
+          command: 'npm run dev',
+          // The preview gallery needs no database, so the UI harness can start without one.
+          url: `${baseURL}/dev/ui`,
+          reuseExistingServer: !process.env.CI,
+          timeout: 240_000,
+        },
   projects: [
     {
       name: 'ui-mobile',

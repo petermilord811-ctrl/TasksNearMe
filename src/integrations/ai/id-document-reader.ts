@@ -3,6 +3,7 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { IDENTITY_DOCUMENT_TYPES, type IdentityDocumentType } from '@/contracts';
 import { AiRefusedError, AiUnavailableError, DEFAULT_CLAUDE_MODEL } from './claude';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Reads the photo of an ID's front once for our trust team (our own ID check, stage 1; completion plan
@@ -147,5 +148,5 @@ export function idReaderFromEnv(env: Record<string, string | undefined> = proces
     // The job runner reads in the background, so it can wait longer than a button in a form.
     return createClaudeIdReader({ client: new Anthropic({ apiKey: key, timeout: 45_000, maxRetries: 1 }), model });
   }
-  return env.NODE_ENV === 'production' ? null : createStandInIdReader();
+  return !devHelpersOn(env) ? null : createStandInIdReader();
 }

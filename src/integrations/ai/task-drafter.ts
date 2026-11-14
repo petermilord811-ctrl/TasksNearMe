@@ -3,6 +3,7 @@ import type { AiTaskDraft, CategorySlug, DetailFieldDef, TaskDetailsValue } from
 import { CATEGORY_DETAIL_FIELDS, compactTaskDetails, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, validateTaskDetails } from '@/contracts';
 import { CATEGORY_GUIDE } from './category-guide';
 import { asPromptText, claudeWriterFromEnv, oneLine, type ClaudeWriter } from './claude';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * "Help me describe this" (blueprint 02 J1 step 2). With `ANTHROPIC_API_KEY`, Claude drafts it (official
@@ -306,5 +307,5 @@ export function createClaudeTaskDrafter(writer: ClaudeWriter): TaskDrafter {
 export function createTaskDrafter(env: Record<string, string | undefined> = process.env): TaskDrafter | null {
   const claude = claudeWriterFromEnv(env);
   if (claude) return createClaudeTaskDrafter(claude);
-  return env.NODE_ENV === 'production' ? null : createFakeTaskDrafter();
+  return !devHelpersOn(env) ? null : createFakeTaskDrafter();
 }

@@ -17,9 +17,13 @@ const nextConfig: NextConfig = {
   ...(process.env.NEXT_OUTPUT === 'standalone' ? { output: 'standalone' as const } : {}),
   ...(devPublicHost ? { allowedDevOrigins: [devPublicHost] } : {}),
   env: {
-    // The test clock (blueprint 10 §3.1, src/platform/clock): built into development and into builds made
-    // with TEST_CLOCK=1 (preview, staging). Inlined at build time, so other production builds compile it out.
-    TEST_CLOCK_BUILD: process.env.NODE_ENV === 'development' || process.env.TEST_CLOCK === '1' ? '1' : '0',
+    // The test clock (blueprint 10 §3.1, src/platform/clock): built into development, into builds made
+    // with TEST_CLOCK=1 (preview, staging) and into the e2e build. Inlined at build time, so other production
+    // builds compile it out.
+    TEST_CLOCK_BUILD: process.env.NODE_ENV === 'development' || process.env.TEST_CLOCK === '1' || process.env.TNM_E2E_BUILD === '1' ? '1' : '0',
+    // The e2e suite's production build (`npm run e2e:build`, src/shared/dev-helpers.ts): inlined at build time,
+    // so no variable set when another build runs can switch its development helpers on.
+    TNM_E2E_BUILD: process.env.TNM_E2E_BUILD === '1' ? '1' : '0',
   },
   experimental: {
     // Task photos (up to 10 MB) are uploaded through a Server Action in development.

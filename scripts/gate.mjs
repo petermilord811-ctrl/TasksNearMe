@@ -4,12 +4,15 @@
  * Takes the heavy-work lock first (scripts/lib/heavy-lock.mjs), so it never runs at the same time as another
  * session's heavy job or Codex's independent `check:ui`.
  *
- *   node scripts/gate.mjs [--logs <dir>] [--only check,test:db] [--e2e-shards 3]
+ *   node scripts/gate.mjs [--logs <dir>] [--only check,test:db] [--e2e-target build|dev] [--e2e-shards n]
  *
- * e2e runs in shards (Playwright's --shard), each on a fresh dev server when the dev-server supervisor
- * runs (scripts/dev-supervisor.mjs). `--e2e-shards 1` runs it in one go. Each shard keeps its Playwright output
- * (traces, screenshots, error context) in <logs>/e2e-results/shard-<n> rather than test-results/, so the gate
- * neither wipes another run's results nor has its own wiped.
+ * e2e runs against the e2e production build by default (`--e2e-target build`): the dev server is paused
+ * (scripts/lib/dev-restart.mjs) to free its memory, `npm run e2e:build` makes the build, and Playwright serves it
+ * with `npm run e2e:serve` on :3300 (playwright.config.ts, src/shared/dev-helpers.ts). That build also stands in
+ * for the `build` step, so the default steps are check, test:db, e2e. `--e2e-target dev` runs against the dev
+ * server as before, in shards (default 3), each on a fresh server, and the default steps add `build`.
+ * Playwright output (traces, screenshots, error context) goes to <logs>/e2e-results/<all|shard-n> rather than
+ * test-results/, so the gate neither wipes another run's results nor has its own wiped.
  *
  * SIGINT or SIGTERM stops the running step (its whole process group) and releases the lock.
  * Prints `<step> exit <code>` for each step. Exit code: 0 when every step passed, else 1.
@@ -17,7 +20,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { restartDevServer } from './lib/dev-restart.mjs';
+import { pauseDevServer, restartDevServer } from './lib/dev-restart.mjs';
 import { acquireHeavyLock } from './lib/heavy-lock.mjs';
 
 const args = process.argv.slice(2);
@@ -26,8 +29,9 @@ const flag = (name) => {
   return index === -1 ? undefined : args[index + 1];
 };
 const logs = path.resolve(flag('--logs') ?? 'automation/logs/gate');
-const steps = (flag('--only') ?? 'check,test:db,e2e,build').split(',').map((step) => step.trim()).filter(Boolean);
-const shards = Math.max(1, Number(flag('--e2e-shards') ?? 3));
+const target = flag('--e2e-target') === 'dev' ? 'dev' : 'build';
+const steps = (flag('--only') ?? (target === 'build' ? 'check,test:db,e2e' : 'check,test:db,e2e,build')).split(',').map((step) => step.trim()).filter(Boolean);
+const shards = Math.max(1, Number(flag('--e2e-shards') ?? (target === 'build' ? 1 : 3)));
 fs.mkdirSync(logs, { recursive: true });
 const clock = () => new Date().toISOString().slice(11, 19);
 
@@ -68,19 +72,34 @@ try {
     const note = (line) => fs.writeSync(fd, `[gate ${clock()}] ${line}\n`);
     let code = 0;
     if (step === 'e2e') {
-      for (let shard = 1; shard <= shards && !stopping; shard += 1) {
+      let resume = () => {};
+      if (target === 'build') {
         try {
-          await restartDevServer({ log: note });
+          resume = await pauseDevServer({ log: note });
         } catch (error) {
-          note(`${error} Running the shard on the current dev server.`);
+          note(`${error} Building with the dev server still up.`);
+        }
+        note('e2e build (npm run e2e:build)');
+        code = await run('npm run e2e:build', fd);
+        if (code !== 0) note(`the e2e build failed (exit ${code}), so the e2e run is skipped`);
+      }
+      for (let shard = 1; shard <= shards && !stopping && code === 0; shard += 1) {
+        if (target === 'dev') {
+          try {
+            await restartDevServer({ log: note });
+          } catch (error) {
+            note(`${error} Running the shard on the current dev server.`);
+          }
         }
         const output = path.join(logs, 'e2e-results', shards > 1 ? `shard-${shard}` : 'all');
-        note(`e2e shard ${shard}/${shards} (output in ${path.relative(process.cwd(), output)})`);
+        note(`e2e ${shards > 1 ? `shard ${shard}/${shards} ` : ''}against the ${target === 'build' ? 'e2e build' : 'dev server'} (output in ${path.relative(process.cwd(), output)})`);
         const sharding = shards > 1 ? ` --shard=${shard}/${shards}` : '';
-        const shardCode = await run(`npm run e2e -- --reporter=line${sharding} --output=${JSON.stringify(output)}`, fd);
+        const environment = target === 'build' ? 'E2E_TARGET=build ' : '';
+        const shardCode = await run(`${environment}npm run e2e -- --reporter=line${sharding} --output=${JSON.stringify(output)}`, fd);
         if (shards > 1) console.log(`e2e shard ${shard}/${shards} exit ${shardCode}`);
         if (shardCode !== 0) code = shardCode;
       }
+      resume();
     } else {
       code = await run(`npm run ${step}`, fd);
     }

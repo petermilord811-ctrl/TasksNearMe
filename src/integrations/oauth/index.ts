@@ -1,5 +1,6 @@
 import type { SocialProvider } from '@/contracts';
 import { SOCIAL_PROVIDERS } from '@/contracts';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Google and Microsoft sign-in (docs/integration-points.md). Each provider is real when its keys are set.
@@ -49,7 +50,7 @@ export function socialProviderKeys(env: Env = process.env): { google: GoogleKeys
 
 /** The stand-in exists outside production builds only. */
 export function standInAllowed(env: Env = process.env): boolean {
-  return env.NODE_ENV !== 'production';
+  return devHelpersOn(env);
 }
 
 /** Providers the stand-in serves: all of them outside production (those with keys only on request). */

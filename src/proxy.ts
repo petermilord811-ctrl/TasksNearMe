@@ -5,6 +5,7 @@ import { DEFAULT_LOCALE } from '@/contracts/locale';
 import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS, pickLocale, splitLocalePath } from '@/shared/locale';
 import { isLocalRequest } from '@/shared/local-request';
 import { contentSecurityPolicy, cspHeaderName } from '@/shared/csp';
+import { E2E_BUILD } from '@/shared/dev-helpers';
 
 /**
  * Every page request passes here (API routes, Next's own files and anything with a file extension don't).
@@ -22,9 +23,13 @@ import { contentSecurityPolicy, cspHeaderName } from '@/shared/csp';
  *
  * Development tools. `/dev/*` (sign in as anyone, the outbox of emailed codes, the provider stand-ins, the
  * test clock) answers only requests made on this machine: a dev server behind a public proxy says not found
- * to everyone else (src/shared/local-request.ts). Production builds have no `/dev` at all.
+ * to everyone else (src/shared/local-request.ts). Production builds have no `/dev` at all, apart from the e2e
+ * build (src/shared/dev-helpers.ts), which answers not found to every page request from elsewhere.
  */
 export function proxy(request: NextRequest) {
+  if (E2E_BUILD && !isLocalRequest((name) => request.headers.get(name))) {
+    return new NextResponse('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
+  }
   const { pathname, search } = request.nextUrl;
   const explicit = splitLocalePath(pathname);
   const path = explicit?.path ?? pathname;

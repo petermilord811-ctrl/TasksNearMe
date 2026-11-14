@@ -8,12 +8,13 @@ import { db } from '@/platform/db/client';
 import { requestNow } from '@/platform/clock';
 import { isLocalRequest } from '@/shared/local-request';
 import { recordBackgroundResult, recordIdentityResult, recordPayoutStatus, type BackgroundResult, type IdentityResult } from './tracks';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /** Development only: the /dev/providers pages simulate each provider's hosted flow and webhook. */
 
 /** Development only, and only on this machine: never through a public proxy in front of a dev server. */
 async function assertDev() {
-  if (process.env.NODE_ENV === 'production') throw new Error('Not available in production.');
+  if (!devHelpersOn()) throw new Error('Not available in production.');
   const requestHeaders = await headers();
   if (!isLocalRequest((name) => requestHeaders.get(name))) throw new Error('Only available on this machine.');
 }

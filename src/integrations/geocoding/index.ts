@@ -1,5 +1,6 @@
 import { createMapboxGeocoder } from './mapbox';
 import { GeocoderUnavailableError, type GeoPlace, type Geocoder } from './types';
+import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Geocoding port (address autocomplete and lookup). With `MAPBOX_TOKEN`, Mapbox suggests real addresses and
@@ -18,7 +19,7 @@ export const GEO_STAND_IN_COOKIE = 'tnm_geo_stand_in';
 
 /** Whether this request asked for the sample addresses. `cookieValue` is its `tnm_geo_stand_in` cookie. */
 export function wantsGeoStandIn(cookieValue: string | undefined, env: Record<string, string | undefined> = process.env): boolean {
-  return env.NODE_ENV !== 'production' && cookieValue === '1';
+  return devHelpersOn(env) && cookieValue === '1';
 }
 
 /** Fictional streets placed near Austin neighborhoods, plus two places outside the service area. */
@@ -83,11 +84,11 @@ export function createGeocoder(env: Record<string, string | undefined> = process
     const secret = env.BETTER_AUTH_SECRET;
     if (!secret) throw new Error('MAPBOX_TOKEN needs BETTER_AUTH_SECRET, which signs the addresses people choose.');
     const mapbox = createMapboxGeocoder({ token, secret });
-    return env.NODE_ENV === 'production' ? mapbox : withSamplePlaces(mapbox);
+    return !devHelpersOn(env) ? mapbox : withSamplePlaces(mapbox);
   }
   if (env.GOOGLE_MAPS_API_KEY?.trim()) {
     // TODO(integration): a Google Places adapter. Refuse to silently use fake data.
     throw new Error('GOOGLE_MAPS_API_KEY is set, but only the Mapbox adapter is built: use MAPBOX_TOKEN, or leave both empty.');
   }
-  return env.NODE_ENV === 'production' ? noAddressSearch : createFakeGeocoder();
+  return !devHelpersOn(env) ? noAddressSearch : createFakeGeocoder();
 }

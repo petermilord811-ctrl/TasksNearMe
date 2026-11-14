@@ -9,6 +9,8 @@
     "dev": "next dev --hostname localhost",
     "build": "next build",
     "start": "next start",
+    "e2e:build": "TNM_E2E_BUILD=1 next build",
+    "e2e:serve": "APP_URL=http://localhost:3300 next start --hostname localhost --port 3300",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
