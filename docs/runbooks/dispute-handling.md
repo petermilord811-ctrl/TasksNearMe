@@ -51,11 +51,12 @@ Release, settle and refund are offered only on a paid booking whose work was sub
 
 ## Chargebacks
 
-1. Open the urgent `payment_issue` case. The internal note has the Stripe dispute id and the date evidence is due.
-2. Gather the evidence from the booking: the agreed terms and price, the timeline (check-in, arrival, completion), completion photos, the conversation (with a logged reason), and the client's approval if there was one.
+1. Open the urgent `payment_issue` case. The internal note has the Stripe dispute id, the date evidence is due, and where the evidence pack is.
+2. **Download the evidence pack** (finance or an admin, after the two-step check): `/api/admin/bookings/[bookingId]/evidence-pack` gives one JSON file for a booking whose charge was disputed ([evidence-pack.ts](../../src/modules/payments/evidence-pack.ts)). It has the dispute and the charge (card brand and last four), the agreed terms and price, the check-in (on my way, arrived), the completed work (note, hours, checklist, photo links), the approval (by the client, automatic, support or settlement), the people's own steps from the audit log, the conversation before and after booking (with photo links), the client's review, refunds, and the booking's ledger journals. It leaves the exact address out. Each download is in the audit log (`booking.evidence_pack_downloaded`). Open the photo links while signed in as staff to attach the images.
 3. Finance submits it in the Stripe Dashboard (Payments → Disputes → the dispute); the app doesn't send evidence. The payment shows the chargeback as **Bank dispute** (`chargeback_open`) on the booking pages and the client's payments, and as won or lost once Stripe closes it; its money status (`succeeded`, `refunded`) doesn't change.
-4. When Stripe closes the dispute (`charge.dispute.closed`), a note is added to the case. Resolve the case with the outcome, and decide with finance whether a lost chargeback needs a transfer reversal (see above) or an account action.
-5. Each lost chargeback costs a $15 fee, plus $15 if countered (returned on a win; blueprint 04 §8). Two or more from one client is a pattern worth a trust & safety look.
+4. **The helper's money while it's open:** what hasn't been sent to the helper yet (work waiting for approval, or approved but not transferred) waits: their earnings show it on hold, and the transfers job skips it. It goes out once Stripe closes the dispute, won or lost. What was already sent stays theirs (blueprint 04 §6).
+5. When Stripe closes the dispute (`charge.dispute.closed`), a note is added to the case. A lost one is the platform's loss: a `chargeback_loss` journal in the ledger (`ledger_journals`, `ledger_entries`) debits the disputed amount to `expense:chargeback_losses` and Stripe's fee to `expense:processing`, against `cash:stripe_platform`, once per dispute. Resolve the case with the outcome, and decide with finance whether a lost chargeback needs a transfer reversal (see above) or an account action.
+6. Each lost chargeback costs a $15 fee, plus $15 if countered (returned on a win; blueprint 04 §8). Two or more from one client is a pattern worth a trust & safety look.
 
 ## Patterns to watch
 

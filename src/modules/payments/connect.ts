@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lte } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lte, notExists } from 'drizzle-orm';
 import { parseConnectEvent, type StripeConnect } from '@/integrations/payments/stripe-connect';
 import { verifyStripeSignature } from '@/integrations/stripe-identity';
 import { earnings, payouts } from '@/modules/earnings/schema';
@@ -19,7 +19,18 @@ import type { StripeWebhookOutcome } from './stripe-webhooks';
 const BATCH = 50;
 
 export async function runScheduledTransfers(db: Db, connect: StripeConnect, now: Date): Promise<number> {
-  const due = await db.select().from(earnings).where(eq(earnings.status, 'scheduled')).orderBy(asc(earnings.createdAt)).limit(BATCH);
+  // Held while the client's bank disputes a charge on the booking (T-18: a chargeback before the money went
+  // out); it moves once Stripe closes the dispute, won or lost.
+  const chargedBack = db
+    .select({ id: payments.id })
+    .from(payments)
+    .where(and(eq(payments.bookingId, earnings.bookingId), eq(payments.disputeStatus, 'open')));
+  const due = await db
+    .select()
+    .from(earnings)
+    .where(and(eq(earnings.status, 'scheduled'), notExists(chargedBack)))
+    .orderBy(asc(earnings.createdAt))
+    .limit(BATCH);
   let moved = 0;
   for (const row of due) {
     const [account] = await db

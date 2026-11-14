@@ -54,7 +54,12 @@
   "actions": {
     "refund": "Refund",
     "reveal_address": "Show the address",
-    "reveal_conversation": "Open the conversation"
+    "reveal_conversation": "Open the conversation",
+    "download_evidence_pack": "Download the evidence pack"
+  },
+  "evidencePack": {
+    "title": "Chargeback evidence",
+    "description": "One file for the answer in Stripe: the terms and price, the check-in, the finished work with photo links, the approval, the conversation and the ledger. The exact address stays out. Each download is logged with your name."
   },
   "restricted": "Restricted details",
   "restrictedHint": "Give a reason before opening the address or conversation. Access is logged with your name.",

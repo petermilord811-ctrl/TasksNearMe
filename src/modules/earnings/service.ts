@@ -230,11 +230,18 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
   ]);
   const clients = await people(db, [...rows.map((r) => r.posterUserId), ...waiting.map((w) => w.booking.posterUserId)]);
   const payoutById = new Map(payoutRows.map((p) => [p.id, p]));
+  // The client's bank is disputing a charge (a chargeback): money not sent yet waits until it's decided (T-18).
+  const bookingIds = [...new Set([...rows.map((r) => r.earning.bookingId), ...waiting.map((w) => w.booking.id)])];
+  const chargedBack = new Set(
+    bookingIds.length > 0
+      ? (await db.select({ bookingId: payments.bookingId }).from(payments).where(and(inArray(payments.bookingId, bookingIds), eq(payments.disputeStatus, 'open')))).map((row) => row.bookingId)
+      : [],
+  );
 
   const pending: EarningsRowView[] = waiting.flatMap(({ booking, title, completion }) => {
     const client = clients.get(booking.posterUserId);
     if (!client) return [];
-    const disputed = booking.status === 'disputed';
+    const disputed = booking.status === 'disputed' || chargedBack.has(booking.id);
     return [
       {
         id: `pending_${booking.id}`,
@@ -252,6 +259,7 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
     const client = clients.get(posterUserId);
     if (!client) return [];
     const payout = earning.payoutId ? payoutById.get(earning.payoutId) : undefined;
+    const held = earning.status === 'scheduled' && chargedBack.has(earning.bookingId);
     return [
       {
         id: earning.id,
@@ -260,7 +268,8 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
         client,
         kind: earning.kind as EarningsKind,
         amountCents: earning.amountCents,
-        status: earning.status as EarningsStatus,
+        status: held ? 'on_hold' : (earning.status as EarningsStatus),
+        ...(held ? { holdReason: 'dispute' as const } : {}),
         ...(earning.transferredAt ? { transferredAt: earning.transferredAt.toISOString() } : {}),
         ...(payout ? { payout: { id: payout.id, arrivalDate: payout.arrivalDate, bankLast4: payout.bankLast4, status: payout.status as PayoutStatus, ...(payout.method === 'instant' ? { instant: true as const } : {}) } } : {}),
       },

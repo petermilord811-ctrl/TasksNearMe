@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, notInArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, notInArray, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
   AdminBookingPageData,
@@ -22,6 +22,7 @@ import { earnings } from '@/modules/earnings/schema';
 import { recordCompletionMoney } from '@/modules/earnings/service';
 import { threads } from '@/modules/messaging/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
+import { canDownloadEvidencePack } from '@/modules/payments/evidence-pack';
 import { payments, refunds } from '@/modules/payments/schema';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { taskLocations, tasks } from '@/modules/tasks/schema';
@@ -211,7 +212,7 @@ export async function resolveCaseWithMoney(
 export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: string, now: Date): Promise<AdminBookingPageData | null> {
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, String(bookingId))).limit(1);
   if (!booking) return null;
-  const [found, [terms], [completion], people, refundRows, earningRows, caseRows, money, requestRows] = await Promise.all([
+  const [found, [terms], [completion], people, refundRows, earningRows, caseRows, money, requestRows, [disputed]] = await Promise.all([
     findTaskWithPublicView(db, booking.taskId),
     db.select().from(bookingTerms).where(and(eq(bookingTerms.bookingId, booking.id), eq(bookingTerms.version, booking.termsVersion))).limit(1),
     db.select().from(bookingCompletions).where(eq(bookingCompletions.bookingId, booking.id)).limit(1),
@@ -221,6 +222,7 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
     db.select().from(supportCases).where(eq(supportCases.bookingId, booking.id)).orderBy(desc(supportCases.updatedAt)),
     bookingMoneyFacts(db, booking.id),
     db.select().from(refundRequests).where(eq(refundRequests.bookingId, booking.id)).orderBy(desc(refundRequests.createdAt)),
+    db.select({ id: payments.id }).from(payments).where(and(eq(payments.bookingId, booking.id), isNotNull(payments.disputeId))).limit(1),
   ]);
   const poster = people.find((user) => user.id === booking.posterUserId);
   const helper = people.find((user) => user.id === booking.helperUserId);
@@ -234,6 +236,8 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
   if (canWorkCases(staff.roles)) actions.push('reveal_address');
   // The conversation only while handling a case about this booking (blueprint 08; checked again on reading).
   if (canWorkCases(staff.roles) && caseRows.some((row) => row.status !== 'closed')) actions.push('reveal_conversation');
+  // A client's bank disputed a charge on it (T-18): finance downloads the evidence pack for Stripe.
+  if (disputed && canDownloadEvidencePack(staff)) actions.push('download_evidence_pack');
   return {
     booking: {
       id: booking.id,

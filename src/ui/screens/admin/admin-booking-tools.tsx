@@ -52,10 +52,12 @@ export function AdminBookingTools({ data, handlers, now, children, initialDialog
     return { ok: true, code: 'updated' };
   }
 
+  // The evidence pack is a download with its own section on the page, not a dialog.
+  const dialogActions = data.actions.filter((actionId) => actionId !== 'download_evidence_pack');
   return <div className="space-y-6">
     <div className="space-y-3">
-      {data.actions.length > 0 ? <div role="group" aria-label={t('actionsLabel')} className="flex flex-wrap gap-2">
-        {data.actions.map((actionId) => <Button key={actionId} variant={actionId === 'refund' ? 'default' : 'outline'} disabled={Boolean(pending)} className="h-auto min-h-11 whitespace-normal" onClick={(event) => { trigger.current = event.currentTarget; revealedReader.current = undefined; setResult(undefined); setDialog(actionId); }}>
+      {dialogActions.length > 0 ? <div role="group" aria-label={t('actionsLabel')} className="flex flex-wrap gap-2">
+        {dialogActions.map((actionId) => <Button key={actionId} variant={actionId === 'refund' ? 'default' : 'outline'} disabled={Boolean(pending)} className="h-auto min-h-11 whitespace-normal" onClick={(event) => { trigger.current = event.currentTarget; revealedReader.current = undefined; setResult(undefined); setDialog(actionId); }}>
           {actionId !== 'refund' && <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />}{t(`actions.${actionId}`)}
         </Button>)}
       </div> : <p className="text-sm text-muted-foreground">{t('readOnly')}</p>}

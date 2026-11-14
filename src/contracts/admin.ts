@@ -299,7 +299,11 @@ export interface AdminBookingMoney {
   earnings: { kind: 'earnings' | 'reimbursement' | 'cancellation_compensation' | 'tip'; amountCents: Cents; status: EarningsStatus; transferredAt?: ISODateTime }[];
 }
 
-export const ADMIN_BOOKING_ACTIONS = ['refund', 'reveal_address', 'reveal_conversation'] as const;
+/**
+ * `download_evidence_pack`: finance and admins, on a booking whose charge a client's bank disputed (T-18): the
+ * chargeback evidence pack, a file at `routes.api.evidencePack(booking.id)` (each download is audited).
+ */
+export const ADMIN_BOOKING_ACTIONS = ['refund', 'reveal_address', 'reveal_conversation', 'download_evidence_pack'] as const;
 export type AdminBookingActionId = (typeof ADMIN_BOOKING_ACTIONS)[number];
 
 /** `/admin/bookings/[bookingId]`. */

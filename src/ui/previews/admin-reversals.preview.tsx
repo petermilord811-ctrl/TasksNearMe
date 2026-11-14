@@ -5,7 +5,10 @@ import { AdminTransferReversals } from '@/ui/screens/admin/admin-transfer-revers
 import { AdminShell } from '@/ui/shells/admin-shell';
 import copy from '../../../messages/en/ui/adminBooking.json';
 
-/** Taking back a helper's transfer (completion plan 5.13): finance's form, the dialog, and an agent's read-only view. */
+/**
+ * Taking back a helper's transfer (completion plan 5.13): finance's form, the dialog, and an agent's read-only view;
+ * and finance's chargeback evidence pack (T-18).
+ */
 
 const r = copy.reversals;
 const handlers: AdminBookingHandlers = {
@@ -21,6 +24,8 @@ const page = (viewer: StaffViewer, data = adminBookingSettledData) => <AdminShel
 
 export const adminReversalsPreviews: PreviewEntry[] = [
   { id: 'screen-admin-booking/reversals-finance', group: 'Admin: transfer reversals', title: r.title, layout: 'fullscreen', render: () => page(caseyStaff, { ...adminBookingSettledData, reversals: financeReversals }) },
+  // A chargeback on the booking (T-18): finance downloads the evidence pack.
+  { id: 'screen-admin-booking/evidence-pack-finance', group: 'Admin: transfer reversals', title: copy.evidencePack.title, layout: 'fullscreen', render: () => page(caseyStaff, { ...adminBookingSettledData, reversals: financeReversals, actions: ['download_evidence_pack'] }) },
   { id: 'screen-admin-booking/reversals-agent', group: 'Admin: transfer reversals', title: r.historyTitle, layout: 'fullscreen', render: () => page(alexStaff, { ...adminBookingSettledData, reversals: agentReversals }) },
   { id: 'admin-transfer-reversals/dialog', group: 'Admin: transfer reversals', title: r.dialogTitle, render: () => <div className="p-4"><AdminTransferReversals data={financeReversals} onReverseTransfer={fakeHandler({ ok: false, code: 'insufficient_funds' })} initialOpen /></div> },
 ];

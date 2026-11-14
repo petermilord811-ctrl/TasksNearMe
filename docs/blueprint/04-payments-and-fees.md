@@ -110,7 +110,8 @@ Policy defaults (D15, configurable). The numbers use the $60 desk, charged $66.0
 
 **Card disputes (chargebacks):**
 - **Early fraud warning or chargeback before the task starts:** support cancels the booking, refunds proactively where still possible, notifies the helper, and reviews the poster.
-- **Chargeback after the work is done and approved:** the helper keeps the earnings. The platform contests with an evidence pack (approval log, completion photos, messages, check-in) and absorbs any loss, unless there's helper fraud or collusion.
+- **Chargeback while the helper's money hasn't gone out yet** (the work waits for approval, or is approved but not transferred): that money waits until the bank decides, then goes out whichever way it ended. Money already transferred stays the helper's.
+- **Chargeback after the work is done and approved:** the helper keeps the earnings. The platform contests with an evidence pack (approval log, completion photos, messages, check-in) and absorbs any loss, unless there's helper fraud or collusion. A lost chargeback is recorded in the ledger as the platform's loss (the disputed amount and Stripe's fee).
 - **Costs:** a **$15 dispute fee**, plus a **$15 dispute-countered fee** when we respond (returned if we win). Appeals cost $15 more.
 
 ## 7. Ledger and reconciliation

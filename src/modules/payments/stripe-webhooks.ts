@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import { routes } from '@/contracts';
 import { verifyStripeSignature } from '@/integrations/stripe-identity';
 import { finishChangeVerification } from '@/modules/bookings/changes';
 import { finishBankVerification, settle, type BookingDeps } from '@/modules/bookings/confirm';
@@ -6,6 +7,7 @@ import { bookingChangeRequests } from '@/modules/bookings/schema';
 import { finishTipVerification } from '@/modules/bookings/tips';
 import { finishCounterVerification, finishRequestVerification } from '@/modules/invites/service';
 import { invites } from '@/modules/invites/schema';
+import { postJournal } from '@/modules/ledger/journal';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { newId } from '@/platform/db/ids';
@@ -72,10 +74,23 @@ export async function handleStripePaymentWebhook(deps: BookingDeps, input: { pay
   return { status: 200, body: { ok: true } };
 }
 
+/** Stripe's fee for a dispute when its balance transactions don't say (blueprint 04 §8: $15). */
+const DISPUTE_FEE_CENTS = 1500;
+
+/** What Stripe charged for the dispute: the fees on its balance transactions (the withdrawal, a countered fee). */
+function disputeFeesOf(dispute: Record<string, unknown>): number {
+  const transactions = dispute.balance_transactions;
+  if (!Array.isArray(transactions) || transactions.length === 0) return DISPUTE_FEE_CENTS;
+  return transactions.reduce((sum: number, row: unknown) => sum + (row && typeof row === 'object' && Number.isInteger((row as { fee?: unknown }).fee) ? Math.max(0, (row as { fee: number }).fee) : 0), 0);
+}
+
 /**
  * A chargeback (the client's bank disputes a charge): an urgent payment case on the booking for staff, who
- * answer it in the Stripe Dashboard before the evidence deadline; its outcome arrives as a note. Once per
- * dispute and outcome (the audit log remembers).
+ * answer it in the Stripe Dashboard before the evidence deadline with the evidence pack
+ * (`routes.api.evidencePack`); its outcome arrives as a note. While it's open, the helper's money not sent yet
+ * waits (`runScheduledTransfers`; T-18). A lost one is the platform's loss: the amount and Stripe's fee go to the
+ * ledger as a `chargeback_loss` journal (the helper keeps what they were paid, blueprint 04 §6). Once per
+ * dispute and outcome (the audit log remembers; the journal has its own key).
  */
 async function recordChargeback(deps: BookingDeps, type: 'charge.dispute.created' | 'charge.dispute.closed', dispute: Record<string, unknown>, now: Date): Promise<StripeWebhookOutcome> {
   const disputeId = typeof dispute.id === 'string' ? dispute.id : null;
@@ -114,7 +129,9 @@ async function recordChargeback(deps: BookingDeps, type: 'charge.dispute.created
         kind: 'note',
         authorUserId: null,
         visibility: 'internal',
-        body: 'Stripe dispute ' + disputeId + ' on payment ' + payment.id + '. Answer it with evidence in the Stripe Dashboard' + (due ? ' by ' + due : '') + "; the bank holds the money until it's decided.",
+        body:
+          'Stripe dispute ' + disputeId + ' on payment ' + payment.id + '. Answer it with evidence in the Stripe Dashboard' + (due ? ' by ' + due : '') + "; the bank holds the money until it's decided." +
+          (payment.bookingId ? ' Finance downloads the evidence pack at ' + routes.api.evidencePack(payment.bookingId) + '.' : ''),
         createdAt: now,
       });
       await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'support.case_opened', aggregateType: 'support_case', aggregateId: caseId, payload: { caseId, type: 'payment_issue', openedByUserId: payment.payerUserId } });
@@ -133,6 +150,18 @@ async function recordChargeback(deps: BookingDeps, type: 'charge.dispute.created
     const closed = typeof dispute.status === 'string' ? dispute.status : '';
     const disputeStatus = type === 'charge.dispute.created' ? 'open' : closed === 'won' ? 'won' : closed === 'lost' ? 'lost' : null;
     await tx.update(payments).set({ disputeStatus, disputeId, updatedAt: now }).where(eq(payments.id, payment.id));
+    const fees = disputeStatus === 'lost' ? disputeFeesOf(dispute) : 0;
+    if (disputeStatus === 'lost' && cents + fees > 0) {
+      await postJournal(
+        tx,
+        { kind: 'chargeback_loss', occurredAt: now, paymentId: payment.id, bookingId: payment.bookingId, providerRef: disputeId, memo: 'Chargeback lost (reason: ' + reason + ').', idempotencyKey: 'chargeback_loss:' + disputeId },
+        [
+          { account: 'expense:chargeback_losses', debitCents: cents },
+          { account: 'expense:processing', debitCents: fees },
+          { account: 'cash:stripe_platform', creditCents: cents + fees },
+        ],
+      );
+    }
     await tx.insert(auditLog).values({ id: newId('aud'), actorId: null, actorRole: 'system', action, targetType: 'payment', targetId: disputeId, metadata: { paymentId: payment.id, ...(caseId ? { caseId } : {}) } });
   });
   return { status: 200, body: { ok: true } };

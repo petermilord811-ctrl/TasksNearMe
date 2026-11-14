@@ -82,6 +82,19 @@ describe('AdminBookingScreen', () => {
     expect(screen.queryByText(deskExactAddress.line1)).not.toBeInTheDocument();
   });
 
+  it('offers the chargeback evidence pack as a download where the action is given, and nowhere else', () => {
+    const view = mount({ ...adminBookingSettledData, actions: ['download_evidence_pack'] });
+    const link = screen.getByRole('link', { name: copy.actions.download_evidence_pack });
+    expect(link).toHaveAttribute('href', routes.api.evidencePack(adminBookingSettledData.booking.id));
+    expect(link).toHaveAttribute('download');
+    expect(screen.getByRole('heading', { name: copy.evidencePack.title })).toBeVisible();
+    // A download, not one of the dialog actions: a role without case work still reads the booking as read-only.
+    expect(screen.queryByRole('group', { name: copy.actionsLabel })).not.toBeInTheDocument();
+    expect(screen.getByText(copy.readOnly)).toBeVisible();
+    view.unmount(); mount(adminBookingSettledData);
+    expect(screen.queryByRole('link', { name: copy.actions.download_evidence_pack })).not.toBeInTheDocument();
+  });
+
   it('has copy for every action, refund reason and earnings status', () => {
     for (const action of ADMIN_BOOKING_ACTIONS) expect(copy.actions[action]).toBeTruthy();
     for (const value of STAFF_REFUND_REASONS) expect(copy.refund.reasons[value]).toBeTruthy();

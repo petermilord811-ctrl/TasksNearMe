@@ -151,6 +151,8 @@ export const routes = {
   api: {
     /** The signed-in person's prepared copy of their data (a JSON file), while it's ready. */
     dataExport: () => '/api/account/data-export',
+    /** Finance: a booking's chargeback evidence pack (a JSON file), while the client's bank disputes its charge (T-18). */
+    evidencePack: (bookingId: string) => `/api/admin/bookings/${enc(bookingId)}/evidence-pack`,
   },
 
   /** Static assets the app serves itself. */

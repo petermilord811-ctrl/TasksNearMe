@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { CalendarDays, MapPin } from 'lucide-react';
+import { CalendarDays, Download, MapPin } from 'lucide-react';
 import { routes, type AdminBookingHandlers, type AdminBookingMoney, type AdminBookingPageData, type AdminCaseRow, type ISODateTime } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
@@ -8,6 +8,7 @@ import { ChecklistItems } from '@/ui/components/bookings/completion-summary';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { StatusBadge } from '@/ui/components/status/status-badge';
+import { buttonVariants } from '@/ui/primitives/button';
 import { useBookingStatus, useCaseStatus, useEarningsStatus } from '@/ui/components/status/use-status';
 import { AdminBookingTools, type AdminBookingPreviewState } from './admin-booking-tools';
 import { AdminRefundRequests } from './admin-refund-requests';
@@ -48,6 +49,16 @@ function BookingCase({ row, now }: { row: AdminCaseRow; now: ISODateTime }) {
     <div className="min-w-0 space-y-1"><p className="text-sm text-muted-foreground">{cases(`types.${row.type}`)}</p><Link href={routes.admin.case(row.id)} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{row.subject}</Link><p className="text-sm tabular-nums text-muted-foreground"><time dateTime={row.openedAt} title={formatRelative(row.openedAt, now)}>{t('caseOpened', { at: formatDateTime(row.openedAt) })}</time></p></div>
     <div><StatusBadge {...useCaseStatus(row.status)} /></div>
   </li>;
+}
+
+/** Finance's chargeback evidence pack (T-18): a file to download for the answer in Stripe. */
+function EvidencePack({ bookingId }: { bookingId: string }) {
+  const t = useTranslations('adminBooking');
+  return <section aria-labelledby="booking-evidence-pack" className="space-y-3 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]">
+    <h2 id="booking-evidence-pack" className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('evidencePack.title')}</h2>
+    <p className="text-sm text-muted-foreground">{t('evidencePack.description')}</p>
+    <a href={routes.api.evidencePack(bookingId)} download className={buttonVariants({ variant: 'outline', className: 'h-auto min-h-11 max-w-full whitespace-normal text-left' })}><Download aria-hidden="true" />{t('actions.download_evidence_pack')}</a>
+  </section>;
 }
 
 export function AdminBookingScreen(props: AdminBookingScreenProps) { return <AdminBookingContent {...props} />; }
@@ -93,6 +104,7 @@ export function AdminBookingContent({ data, handlers, now, ...previewState }: Ad
         <section className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]"><h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('earnings')}</h2>{data.money.earnings.length > 0 ? <ul aria-label={t('earnings')} className="divide-y">{data.money.earnings.map((line, index) => <EarningsLine key={index} line={line} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noEarnings')}</p>}</section>
         {data.staffCancel && <StaffCancel staffCancel={data.staffCancel} onStaffCancel={handlers.onStaffCancel} />}
         {data.reversals && <AdminTransferReversals data={data.reversals} {...(handlers.onReverseTransfer ? { onReverseTransfer: handlers.onReverseTransfer } : {})} />}
+        {data.actions.includes('download_evidence_pack') && <EvidencePack bookingId={data.booking.id} />}
       </div>
       <AdminRefundRequests requests={data.refundRequests} onDecide={handlers.onDecideRefund} now={now} initialDecision={previewState.initialDecision} />
       <section className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]"><h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('cases')}</h2>{data.cases.length > 0 ? <ul aria-label={t('cases')} className="divide-y">{data.cases.map((row) => <BookingCase key={row.id} row={row} now={now} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noCases')}</p>}</section>
