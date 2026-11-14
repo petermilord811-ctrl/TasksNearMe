@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, Check, MessagesSquare, PenLine } from 'lucide-react';
+import { ArrowLeft, Check, MessagesSquare, PenLine } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CommunityFeedHandlers, CommunityFeedPageData, CommunityFeedQuery, ISODateTime } from '@/contracts';
 import { COMMUNITY_POST_KINDS, COMMUNITY_SCOPES, COMMUNITY_SORTS } from '@/contracts/community';
 import { routes } from '@/contracts/routes';
 import { CommunityFeedLive } from '@/ui/components/community/community-live';
-import { kindIcons, PostCard } from '@/ui/components/community/post-card';
+import { CommunityFeedList } from '@/ui/components/community/feed-list';
+import { kindIcons } from '@/ui/components/community/post-card';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
@@ -78,13 +79,23 @@ export function CommunityFeedScreen({ data, handlers, now }: CommunityFeedScreen
     <div id="community-feed" className="scroll-mt-28">
       {data.posts.length === 0
         ? <EmptyState icon={<MessagesSquare />} title={t(filtered ? 'empty.filteredTitle' : 'empty.title')} body={filtered ? t('empty.filteredBody', { market: market.name }) : t('empty.body')} action={{ label: t('kinds.recommendation'), href: routes.app.newCommunityPost('recommendation') }} />
-        : <ol className="space-y-3">{data.posts.map((post) => <li key={post.id}><PostCard post={post} now={now} onReact={handlers.onReact} /></li>)}</ol>}
+        : <CommunityFeedList
+            // A new filter or page starts a new list; a refresh (a reaction, the live pill) keeps what was added.
+            key={`${query.scope}:${query.sort}:${query.kind ?? ''}:${query.page}`}
+            posts={data.posts}
+            query={{ scope: query.scope, sort: query.sort, ...(query.kind ? { kind: query.kind } : {}) }}
+            page={query.page}
+            pageCount={data.pageCount}
+            now={now}
+            onReact={handlers.onReact}
+            {...(handlers.onMore ? { onMore: handlers.onMore } : {})}
+          />}
     </div>
 
-    {data.pageCount > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">
-      {query.page > 1 && <Link href={routes.app.community({ ...query, page: query.page - 1 })} rel="prev" className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('previous')}</Link>}
+    {/* Continuous below (the list adds the next pages); a later page reached by its address can go back. */}
+    {query.page > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">
+      <Link href={routes.app.community({ ...query, page: query.page - 1 })} rel="prev" className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('previous')}</Link>
       <p className="text-sm tabular-nums">{t('page', { page: query.page, count: data.pageCount })}</p>
-      {query.page < data.pageCount && <Link href={routes.app.community({ ...query, page: query.page + 1 })} rel="next" className={buttonVariants({ variant: 'outline' })}>{t('next')}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
     </nav>}
 
     <p className="text-sm text-muted-foreground">{t('guidelines')} <Link href={routes.legal('community-guidelines')} className="font-medium text-primary underline underline-offset-4">{t('guidelinesLink')}</Link></p>

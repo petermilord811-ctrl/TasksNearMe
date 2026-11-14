@@ -206,6 +206,18 @@ export interface CommunityPostHandlers {
 }
 
 /** The feed's reactions (the same as a post's). */
+/** One more page of the same feed (completion plan 7.7, continuous like LinkedIn's), read as the page reads it. */
+export interface CommunityFeedMore {
+  posts: CommunityPostView[];
+  page: number;
+  pageCount: number;
+}
+
 export interface CommunityFeedHandlers {
   onReact: ActionHandler<CommunityReactInput>;
+  /**
+   * The next page, appended under the posts already shown ("Show more posts", or on its own near the end of the
+   * list). `null` when the viewer can't read the feed (signed out). Without it, the next page is a link.
+   */
+  onMore?: (query: CommunityFeedQuery & { page: number }) => Promise<CommunityFeedMore | null>;
 }

@@ -161,5 +161,12 @@
     "badge": "Nueva",
     "title": "Desde tu última visita",
     "count": "{count, plural, one {# nueva desde tu última visita} other {# nuevas desde tu última visita}}"
+  },
+  "feedMore": {
+    "show": "Ver más publicaciones",
+    "loading": "Cargando más publicaciones…",
+    "loaded": "{count, plural, =0 {No hay más publicaciones} one {Se agregó # publicación más} other {Se agregaron # publicaciones más}}",
+    "end": "Estás al día",
+    "failed": "No se pudieron cargar más publicaciones. Intenta de nuevo."
   }
 }

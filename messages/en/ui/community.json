@@ -161,5 +161,12 @@
     "badge": "New",
     "title": "Since your last visit",
     "count": "{count, plural, one {# new since your last visit} other {# new since your last visit}}"
+  },
+  "feedMore": {
+    "show": "Show more posts",
+    "loading": "Loading more posts…",
+    "loaded": "{count, plural, =0 {No more posts} one {# more post added} other {# more posts added}}",
+    "end": "You're all caught up",
+    "failed": "Couldn't load more posts. Try again."
   }
 }

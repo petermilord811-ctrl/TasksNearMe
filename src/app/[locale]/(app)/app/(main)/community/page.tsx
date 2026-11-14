@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { routes } from '@/contracts/routes';
-import { reactInCommunityAction } from '@/modules/community/actions';
+import { loadCommunityFeedPageAction, reactInCommunityAction } from '@/modules/community/actions';
 import { getCommunityFeed } from '@/modules/community/service';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
@@ -33,7 +33,7 @@ async function Feed({ searchParams }: Pick<PageProps<'/[locale]/app/community'>,
   const [search, now] = await Promise.all([searchParams, requestNow()]);
   const data = await getCommunityFeed(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, search, now);
   if (!data) redirect(routes.app.home());
-  return <CommunityFeedScreen data={data} now={now.toISOString()} handlers={{ onReact: reactInCommunityAction }} />;
+  return <CommunityFeedScreen data={data} now={now.toISOString()} handlers={{ onReact: reactInCommunityAction, onMore: loadCommunityFeedPageAction }} />;
 }
 
 export default withClientMessages('[locale]/(app)/app/(main)/community/page.tsx', CommunityPage);
