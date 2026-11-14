@@ -39,8 +39,14 @@ async function measure(path) {
     }).observe({ type: 'largest-contentful-paint', buffered: true });
   });
   const response = await page.goto(`${base}${path}`, { waitUntil: 'load', timeout: 120_000 });
-  // LCP settles once the page is idle; input would stop it, so none is sent.
-  await page.waitForTimeout(3000);
+  // LCP keeps updating while larger content paints, such as an image a script adds late (the landing page's town
+  // at about 8 s). Input would stop it, so none is sent: wait until it has stayed the same for 5 s, or 20 s.
+  for (let waited = 0, last = -1, stableFor = 0; waited < 20_000 && stableFor < 5000; waited += 500) {
+    await page.waitForTimeout(500);
+    const now = await page.evaluate(() => window.__lcp.time);
+    stableFor = now === last ? stableFor + 500 : 0;
+    last = now;
+  }
   const result = await page.evaluate(() => {
     const resources = performance.getEntriesByType('resource');
     const [navigation] = performance.getEntriesByType('navigation');
