@@ -59,6 +59,8 @@ export const CLIENT_NAMESPACES = {
   "[locale]/(public)/legal/[doc]/page.tsx": [],
   "[locale]/(public)/pricing/page.tsx": [],
   "[locale]/(public)/sign-in/page.tsx": ["beta.code.accepted", "beta.code.hint", "beta.code.label", "beta.signUp.description", "beta.signUp.otherEmail", "beta.signUp.submit", "beta.signUp.title", "beta.waitlist.body", "beta.waitlist.link", "beta.waitlist.title", "common.loading", "feedback.error", "feedback.success", "forms", "signIn"],
+  "[locale]/(public)/sign-up/page.tsx": [],
+  "[locale]/(public)/signup/page.tsx": [],
   "[locale]/(public)/tasks/[taskSlug]/page.tsx": ["verification.address", "verification.addressAt", "verification.addressMeaningAt", "verification.background", "verification.backgroundAt", "verification.backgroundMeaningAt", "verification.badges", "verification.identity", "verification.identityAt", "verification.identityMeaningAt", "verification.none", "verification.phone", "verification.phoneMeaning"],
   "[locale]/(public)/trust-and-safety/page.tsx": [],
   "[locale]/(public)/waitlist/page.tsx": ["common.loading", "feedback.error", "feedback.success", "forms", "waitlist"],
