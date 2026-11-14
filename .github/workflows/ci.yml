@@ -45,7 +45,7 @@ jobs:
       # The tests expect the local address, as in .env.local. The build uses the preview's (PREVIEW_URL);
       # the preview's own settings live on the VPS.
       APP_URL: http://localhost:3000
-      PREVIEW_URL: https://preview.40-160-239-201.sslip.io
+      PREVIEW_URL: https://tasksnearme.com
       NEXT_TELEMETRY_DISABLED: '1'
       DEPLOY: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy) }}
     steps:

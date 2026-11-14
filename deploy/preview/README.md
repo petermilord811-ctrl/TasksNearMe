@@ -1,6 +1,7 @@
 # Preview site
 
-**https://preview.40-160-239-201.sslip.io** is the latest production build of `main`, running on the VPS. It's a
+**https://tasksnearme.com** shows the latest production build of `main`, running on the VPS, hidden from search
+engines (`X-Robots-Tag: noindex`) until launch. `www` and the old `preview.40-160-239-201.sslip.io` redirect there. It's a
 stopgap until the Render setup in the blueprint (07-architecture.md "Hosting", backlog B-002) takes over.
 
 ## How a change gets there
@@ -27,7 +28,7 @@ Building happens on GitHub's runner, not on the VPS. The VPS only runs `node ser
 | Settings and secrets | `/srv/tasksnearme-preview/preview.env` (root:tnm-preview, 640) |
 | `deploy.sh` and the Node binary (root-owned) | `/usr/local/lib/tasksnearme-preview/` |
 | Database | `tasksnearme_preview` (role `tnm_preview`) in the `tasksnearme-db` container |
-| Public address | the `preview.40-160-239-201.sslip.io` block in `/etc/caddy/Caddyfile` |
+| Public address | the `tasksnearme.com` block in `/etc/caddy/Caddyfile` (`www` redirects there) |
 
 Set up on 2026-11-13 with `sudo bash deploy/preview/setup-vps.sh <deploy-key.pub> <node binary>`, plus the
 database, `preview.env` and the Caddy block by hand. To set it up again, follow the same steps. After changing
@@ -69,7 +70,7 @@ A feature whose keys are empty in `preview.env` is refused, the same as in produ
 - **Texts:** need Twilio.
 - **Gift-card rewards:** need Tremendous.
 - **Google sign-in:** needs `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, plus the redirect URI
-  `https://preview.40-160-239-201.sslip.io/api/auth/callback/google` registered with Google.
+  `https://tasksnearme.com/api/auth/callback/google` registered with Google.
 
 Email (Resend), AI (Anthropic) and address search (Mapbox) use the same keys as development.
 
