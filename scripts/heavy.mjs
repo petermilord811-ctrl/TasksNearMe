@@ -29,10 +29,16 @@ if (command.length === 0) {
 const log = (line) => console.error(line);
 
 let running = null;
-// Each command in its own process group, so a stop signal reaches npm, node and the browsers under it.
-function run(line, env = process.env) {
+/**
+ * Runs `args` in its own process group, so a stop signal reaches npm, node and the browsers under it. Several
+ * arguments run exactly as given, never re-read by a shell, so paths like 'src/app/[locale]/(app)/page.tsx' pass
+ * through. A single argument is a shell command line ('a && b', pipes), as before. For a variable, use
+ * `env NAME=value <command>` (a bare `NAME=value` argument is no longer read by a shell).
+ */
+function run(args, env = process.env) {
   return new Promise((resolve) => {
-    const child = spawn(line, { shell: true, stdio: 'inherit', detached: true, env });
+    const options = { stdio: 'inherit', detached: true, env };
+    const child = args.length === 1 ? spawn(args[0], { ...options, shell: true }) : spawn(args[0], args.slice(1), options);
     running = child;
     child.on('error', () => resolve(1));
     child.on('exit', (status, signal) => {
@@ -63,10 +69,10 @@ try {
     } catch (error) {
       log(`${error} Building with the dev server still up.`);
     }
-    code = await run('npm run e2e:build');
+    code = await run(['npm', 'run', 'e2e:build']);
     if (code !== 0) log(`The e2e build failed (exit ${code}), so the command didn't run.`);
   }
-  if (code === undefined || code === 0) code = await run(command.join(' '), mode === '--e2e-build' ? { ...process.env, E2E_TARGET: 'build' } : process.env);
+  if (code === undefined || code === 0) code = await run(command, mode === '--e2e-build' ? { ...process.env, E2E_TARGET: 'build' } : process.env);
 } catch (error) {
   log(String(error));
   code = 1;
