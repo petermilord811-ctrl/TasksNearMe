@@ -2,12 +2,13 @@
 
 **Updated:** 2026-11-13 evening, after the move to the VPS. Four Claude sessions share the checkout. The remaining work is Part 5 (before launch) and Part 6 (the owner's two-stage ID check, badges and the profile's first page) of `completion-plan.md`.
 **Autopilot:** the owner said "go ahead, build all" (2026-11-12): build everything left, with Claude doing the UI too. On 2026-11-13 they added "refine all uis and elements and implement new features that are left without asking me", and "with multi sessions, you can distribute".
+**CI/CD (owner, 2026-11-13):** pushes come only from tasksnearme-3c's pipeline. GitHub Actions runs check, test:db and the standalone build, in 9–10 minutes. A green `feat/*` run fast-forwards `main` and deploys the preview, a production build at https://preview.40-160-239-201.sslip.io (127.0.0.1:3200). The first green run, 43531377511, put `main` and the preview at 0a224d3. The preview refuses sign-in, posting, offers and payments until the owner adds Stripe test and Turnstile keys to its env (decisions.md: real providers only).
 **Sessions (2026-11-13):** they share one tree and one branch, `feat/sign-in-providers-landing-motion` (there's no local `main`).
 - **tasksnearme-b2** coordinates: it runs the full gate, owns the dev server (a background job in a memory-capped scope; ask it for restarts) and keeps this file. It builds 6.1–6.3, the two-stage ID check, through a helper agent.
 - **tasksnearme-89** has 5.1, staff analytics at `/admin/metrics`, then 6.4–6.6 (badges, the first page, the founding-number fixes), then 5.2, the runbooks (already written).
 - **tasksnearme-8f** has 5.3, private-beta access (migration 0043, committed in 750307f), then 5.4, Turnstile.
 - **tasksnearme-3c** works with the owner directly. It set up the public dev URL through Caddy, and its edits to `next.config.ts`, `src/platform/auth/config.ts` and `.env.example` are uncommitted on purpose.
-- Heavy jobs take turns through `node scripts/heavy.mjs`. Migrations are numbered first come, first served: 0044 is reserved for 6.1, and other sessions ask b2 before `db:generate`. Git has no identity configured, so commits use `-c user.name/-c user.email` copied from the last commit.
+- Heavy jobs take turns through `node scripts/heavy.mjs`. Migrations: run `node scripts/heavy.mjs npm run db:generate`, then migrate the dev database and commit the migration right away. The lock stops two sessions from generating at the same moment, and the shared working tree keeps the numbering sequential. 0043–0048 are in. Git has no identity configured, so commits use `-c user.name/-c user.email` copied from the last commit.
 **Phase:** 5–6 (repeat bookings, trust, support and staff tools). Wired end to end:
 - the landing page (UI-036): the new brand, the motion system, the hero canvas, the map of open tasks with "Use my location";
 - posting a task, offers, find work, and booking with payment (development stand-in);

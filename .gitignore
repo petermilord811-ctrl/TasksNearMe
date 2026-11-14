@@ -38,6 +38,8 @@ npm-debug.log*
 automation/runs/
 automation/logs/
 automation/heavy.lock
+automation/dev-restart.request
+automation/dev-supervisor.pid
 .npm-cache/
 
 # Local file storage (uploads in development)

@@ -9,6 +9,9 @@
  *   so it can never push the rest of the machine into swap.
  * - Restarts it at a safe point (the heavy-work lock is free) once its memory passes DEV_RESTART_AT_MB
  *   (default 3000), and after it exits for any reason.
+ * - Restarts it at once when the heavy-lock holder asks (automation/dev-restart.request, written by
+ *   scripts/lib/dev-restart.mjs): the gate does so before each e2e shard, `heavy.mjs --fresh-dev` before
+ *   a test run. Writes its pid to automation/dev-supervisor.pid so callers can tell it's running.
  *
  *   node scripts/dev-supervisor.mjs        (logs to automation/logs/dev-server.log)
  */
@@ -16,6 +19,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
+import { RESTART_REQUEST, SUPERVISOR_PID } from './lib/dev-restart.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const port = Number(process.env.PORT ?? 3000);
@@ -105,11 +109,14 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     say(`supervisor stopping (${signal})`);
     stopChild();
+    fs.rmSync(SUPERVISOR_PID, { force: true });
     process.exit(0);
   });
 }
 
-say(`supervisor up: restart at ${restartAtMb} MB when no heavy job runs`);
+fs.writeFileSync(SUPERVISOR_PID, String(process.pid));
+say(`supervisor up: restart at ${restartAtMb} MB when no heavy job runs, or when the lock holder asks`);
+let lastMemoryCheck = 0;
 for (;;) {
   if (!child || exited) {
     if (await portBusy()) {
@@ -122,16 +129,26 @@ for (;;) {
       exited = true;
       say(`server exited (${signal ?? `code ${code}`})`);
     });
-    await pause(20_000);
+    fs.rmSync(RESTART_REQUEST, { force: true }); // a fresh start answers any pending request
+    await pause(5000);
     continue;
   }
-  const pid = listenerPid();
-  const used = pid ? memoryMb(pid) : 0;
-  if (used > restartAtMb && !heavyJobRunning()) {
-    say(`restarting: ${used} MB with no heavy job running`);
+  // A restart request comes from the heavy-lock holder (the gate between e2e shards, heavy.mjs --fresh-dev),
+  // so it is honored even while the lock is held. Memory restarts wait for the lock to be free.
+  let reason = fs.existsSync(RESTART_REQUEST) ? 'requested by the heavy-lock holder' : null;
+  if (!reason && Date.now() - lastMemoryCheck > 20_000) {
+    lastMemoryCheck = Date.now();
+    const pid = listenerPid();
+    const used = pid ? memoryMb(pid) : 0;
+    if (used > restartAtMb && !heavyJobRunning()) reason = `${used} MB with no heavy job running`;
+  }
+  if (reason) {
+    say(`restarting: ${reason}`);
     stopChild();
     while (!exited) await pause(500);
     while (await portBusy()) await pause(500);
+    fs.rmSync(RESTART_REQUEST, { force: true }); // tells the requester the old server is gone
+    continue;
   }
-  await pause(20_000);
+  await pause(2000);
 }
