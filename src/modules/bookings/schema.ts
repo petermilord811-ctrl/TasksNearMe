@@ -74,6 +74,8 @@ export const bookings = pgTable(
   (t) => [
     index('bookings_poster_idx').on(t.posterUserId, t.status),
     index('bookings_helper_idx').on(t.helperUserId, t.status),
+    // An offer's booking: every offer thread asks whether its offer was booked (EXPLAIN at volume, plan 5.7).
+    index('bookings_offer_idx').on(t.offerId),
     // At most one live booking per task.
     uniqueIndex('bookings_live_task_idx').on(t.taskId).where(sql`status <> 'canceled'`),
     // One booking per visit of a series.

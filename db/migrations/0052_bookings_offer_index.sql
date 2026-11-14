@@ -1,0 +1,1 @@
+CREATE INDEX "bookings_offer_idx" ON "bookings" USING btree ("offer_id");
