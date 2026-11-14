@@ -1,7 +1,8 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { ArrowRight, CircleDollarSign, Hammer, Laptop, Leaf, Lock, MapPin, Package, ShieldCheck, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type CategorySlug, type CategoryView, type HelperSummary, type ISODateTime, type MarketView, type TaskPublicView } from '@/contracts';
+import type { CategorySlug, CategoryView, HelperSummary, ISODateTime, MarketView, TaskPublicView } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { Section } from '@/ui/components/layout/section';
 import { PublicTaskCard } from '@/ui/components/tasks/public-task-card';

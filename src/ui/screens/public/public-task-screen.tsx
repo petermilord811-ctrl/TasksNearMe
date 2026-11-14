@@ -1,7 +1,8 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { CalendarDays, CircleDollarSign, Flag, Laptop, Lock, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type ISODateTime, type PublicTaskPageData } from '@/contracts';
+import type { ISODateTime, PublicTaskPageData } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { PageHeader } from '@/ui/components/layout/page-header';

@@ -1,7 +1,7 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { MessageCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { buttonVariants } from '@/ui/primitives/button';
 
 export function SupportCard() {

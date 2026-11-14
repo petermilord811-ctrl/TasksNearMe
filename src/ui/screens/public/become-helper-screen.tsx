@@ -1,9 +1,12 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { BadgeCheck, CircleDollarSign, Gift, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type BecomeHelperPageData } from '@/contracts';
+import type { BecomeHelperPageData } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { formatMoney } from '@/shared/format';
-import { PageHeader, PriceBreakdown, Section } from '@/ui/components';
+import { PageHeader } from '@/ui/components/layout/page-header';
+import { Section } from '@/ui/components/layout/section';
+import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';
 

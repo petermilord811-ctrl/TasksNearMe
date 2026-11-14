@@ -1,7 +1,8 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { Languages, TriangleAlert } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { routes, type LegalDocData } from '@/contracts';
+import type { LegalDocData } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { useFormat } from '@/ui/lib/format';
 import { ContentBlocks } from '@/ui/components/content/content-blocks';
 import { PageHeader } from '@/ui/components/layout/page-header';

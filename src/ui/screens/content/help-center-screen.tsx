@@ -1,10 +1,11 @@
 'use client';
 
 import { useId, useState } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { ArrowRight, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type HelpCenterData } from '@/contracts';
+import type { HelpCenterData } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { SupportCard } from '@/ui/components/content/support-card';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';

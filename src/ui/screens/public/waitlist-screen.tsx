@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { ArrowRight, BadgeCheck, CheckCircle2, MapPin, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { routes, WAITLIST_INTERESTS, waitlistInputSchema, type WaitlistHandlers, type WaitlistInput, type WaitlistPageData } from '@/contracts';
+import type { WaitlistHandlers, WaitlistInput, WaitlistPageData } from '@/contracts';
+import { WAITLIST_INTERESTS, waitlistInputSchema } from '@/contracts/marketing';
+import { routes } from '@/contracts/routes';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { TextFormField } from '@/ui/components/forms/text-form-field';
 import { Money } from '@/ui/components/money/money';

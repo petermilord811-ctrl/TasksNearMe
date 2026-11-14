@@ -1,6 +1,7 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useTranslations } from 'next-intl';
-import { routes, type ISODateTime, type MarketPageData } from '@/contracts';
+import type { ISODateTime, MarketPageData } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { buttonVariants } from '@/ui/primitives/button';
 import { CategoryGrid, Coverage, FeaturedHelpers, RecentTasks } from './marketing-sections';

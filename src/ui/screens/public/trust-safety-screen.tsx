@@ -1,7 +1,7 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { BadgeCheck, CircleDollarSign, Lock, MessageSquare, Phone, ShieldCheck, Siren } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
 import { buttonVariants } from '@/ui/primitives/button';

@@ -1,7 +1,8 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { Check, Clock3, Flag, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type CategorySlug, type HelperProfilePageData, type HelperServiceDetail } from '@/contracts';
+import type { CategorySlug, HelperProfilePageData, HelperServiceDetail } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { AvailabilitySlotList } from '@/ui/components/availability/availability-slot-list';

@@ -1,6 +1,7 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useTranslations } from 'next-intl';
-import { routes, type HelpArticleData } from '@/contracts';
+import type { HelpArticleData } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { useFormat } from '@/ui/lib/format';
 import { ContentBlocks } from '@/ui/components/content/content-blocks';
 import { SupportCard } from '@/ui/components/content/support-card';

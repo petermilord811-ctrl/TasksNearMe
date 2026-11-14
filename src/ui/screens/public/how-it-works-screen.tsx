@@ -1,7 +1,7 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useTranslations } from 'next-intl';
 import { BadgeCheck, CalendarCheck2, Camera, CreditCard, Lock, MessagesSquare, PencilLine, Search, ShieldCheck, Star, UsersRound, Wallet, type LucideIcon } from 'lucide-react';
-import { routes } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/primitives/tabs';
