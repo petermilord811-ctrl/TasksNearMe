@@ -31,7 +31,7 @@ describe('sitemapPages', () => {
   const pages = sitemapPages(data, ALL);
   const byPath = new Map(pages.map((page) => [page.path, page]));
 
-  it('lists the public pages, markets and their categories, helpers, then tasks', () => {
+  it('lists the public pages, markets and their categories (page, cost guide, job hub), helpers, then tasks', () => {
     expect(pages.map((page) => page.path)).toEqual([
       '/',
       '/how-it-works',
@@ -46,10 +46,13 @@ describe('sitemapPages', () => {
       '/austin/tasks',
       '/austin/furniture-assembly',
       '/austin/furniture-assembly/cost',
+      '/austin/tasks/furniture-assembly',
       '/austin/moving-help',
       '/austin/moving-help/cost',
+      '/austin/tasks/moving-help',
       '/austin/computer-help',
       '/austin/computer-help/cost',
+      '/austin/tasks/computer-help',
       '/helpers/jordan-t',
       '/tasks/assemble-a-desk-mueller-7f3k',
       '/tasks/help-loading-a-moving-truck-crestview-9d2a',
@@ -64,6 +67,9 @@ describe('sitemapPages', () => {
     expect(byPath.get('/austin/furniture-assembly')?.lastModified).toBe('2026-11-14T09:00:00.000Z');
     expect(byPath.get('/austin/moving-help')?.lastModified).toBe('2026-11-13T18:30:00.000Z');
     expect(byPath.get('/austin/computer-help')?.lastModified).toBeUndefined();
+    // A job hub changes when its category's tasks do.
+    expect(byPath.get('/austin/tasks/moving-help')?.lastModified).toBe('2026-11-13T18:30:00.000Z');
+    expect(byPath.get('/austin/tasks/computer-help')?.lastModified).toBeUndefined();
     expect(byPath.get('/help')?.lastModified).toBe('2026-11-12T17:00:00.000Z');
     expect(byPath.get('/help/post-your-first-task')?.lastModified).toBe('2026-11-11T17:00:00.000Z');
     expect(byPath.get('/legal/terms')?.lastModified).toBe('2026-11-01T17:00:00.000Z');

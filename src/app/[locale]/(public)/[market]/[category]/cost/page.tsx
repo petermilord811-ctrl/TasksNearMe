@@ -7,10 +7,9 @@ import { getCostGuideData, listCategorySlugs } from '@/modules/marketing/queries
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
 import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
-import { costGuidePath } from '@/modules/seo/paths';
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { formatMoney } from '@/shared/format';
-import { CostGuideScreen } from '@/ui/screens/public';
+import { CostGuideScreen } from '@/ui/screens/public/cost-guide-screen';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 
 /** Every enabled category in every public market, like the category pages. */
@@ -29,7 +28,7 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   const { lowCents, highCents, unit } = data.category.priceGuidance;
   return {
     ...(await publicPageMetadata({
-      path: costGuidePath(data.category.slug, market),
+      path: routes.costGuide(data.category.slug, market),
       // The question people search is the title, the same words as the category page's question.
       title: faq(`cost.${data.category.slug}`, { market: data.market.name }),
       description: meta('description', { market: data.market.name, low: formatMoney(lowCents), high: formatMoney(highCents), unit }),
@@ -43,18 +42,20 @@ async function CostGuidePage({ params }: PageProps<'/[locale]/[market]/[category
   const { market, category } = await params;
   const data = await getCostGuideData(market, category);
   if (!data) notFound();
-  const [context, faq, meta, categoryName] = await Promise.all([
+  const [context, faq, meta, hub, categoryName] = await Promise.all([
     structuredDataContext(),
     getTranslations('server.seo.categoryFaq'),
     getTranslations('server.meta'),
+    getTranslations('server.seo.taskHub'),
     categoryNames(),
   ]);
   const { market: view, category: shown } = data;
   const question = faq(`cost.${shown.slug}`, { market: view.name });
-  const path = costGuidePath(shown.slug, view.slug);
+  const path = routes.costGuide(shown.slug, view.slug);
   const related = [
     { label: meta('category.title', { category: categoryName(shown.slug), market: view.name }), href: routes.category(shown.slug, view.slug) },
-    { label: meta('taskBoard.title', { market: view.name }), href: routes.taskBoard(view.slug) },
+    // What people pay for this service right now, on its job hub (S4).
+    { label: hub(`title.${shown.slug}`, { market: view.name }), href: routes.taskBoard(view.slug, { category: shown.slug }) },
     { label: meta('pricing.title'), href: routes.pricing() },
   ];
   return (

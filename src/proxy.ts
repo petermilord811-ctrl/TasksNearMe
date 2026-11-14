@@ -2,11 +2,12 @@ import { getSessionCookie } from 'better-auth/cookies';
 import { NextResponse, type NextRequest } from 'next/server';
 import { routes } from '@/contracts';
 import { DEFAULT_LOCALE } from '@/contracts/locale';
-import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS, pickLocale, splitLocalePath } from '@/shared/locale';
+import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS, localizedPath, pickLocale, splitLocalePath } from '@/shared/locale';
 import { isLocalRequest } from '@/shared/local-request';
 import { contentSecurityPolicy, cspHeaderName } from '@/shared/csp';
 import { E2E_BUILD } from '@/shared/dev-helpers';
 import { robotsHeaderFor, searchIndexing } from '@/shared/search-indexing';
+import { taskHubRedirect } from '@/shared/task-hub';
 
 /**
  * Every page request passes here (API routes, Next's own files and anything with a file extension don't).
@@ -22,6 +23,9 @@ import { robotsHeaderFor, searchIndexing } from '@/shared/search-indexing';
  * real redirect before anything renders. The app layout still verifies the session itself, so a stale
  * or forged cookie gets no further than this. `/admin` is deliberately not checked: it answers 404 to
  * anyone who is not signed-in staff.
+ *
+ * Job hubs. A market's board filtered on one category (`/austin/tasks?category=moving-help`) is that category's job
+ * hub, `/austin/tasks/moving-help` (src/shared/task-hub.ts): a permanent redirect keeps one address per page.
  *
  * Development tools. `/dev/*` (sign in as anyone, the outbox of emailed codes, the provider stand-ins, the
  * test clock) answers only requests made on this machine: a dev server behind a public proxy says not found
@@ -40,7 +44,10 @@ export function proxy(request: NextRequest) {
   }
 
   let response: NextResponse;
-  if (isAppPath(path) && !getSessionCookie(request)) {
+  const hub = taskHubRedirect(path, request.nextUrl.searchParams);
+  if (hub) {
+    response = NextResponse.redirect(new URL(explicit ? localizedPath(hub, explicit.locale) : hub, request.url), 308);
+  } else if (isAppPath(path) && !getSessionCookie(request)) {
     response = NextResponse.redirect(new URL(routes.signIn(`${path}${search}`), request.url));
   } else if (explicit?.locale === DEFAULT_LOCALE) {
     response = NextResponse.redirect(new URL(`${path}${search}`, request.url));

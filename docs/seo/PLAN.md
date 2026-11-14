@@ -269,12 +269,15 @@ d4 task board and task page), **owner** (§8). Status as of writing.
 - Layout (a9's): counts under the H1; the guide after included/excluded; questions after the helpers; related links
   last. Previews `screen-category/furniture-seo` and `screen-category/moving-seo-empty`.
 
-### S4 Earn-side hubs (`/austin/tasks/[category]`)
-"Furniture assembly jobs in Austin" / "Trabajos de armado de muebles en Austin": the board pre-filtered on one
-category, with its own title, H1, intro and breadcrumbs; filtered board URLs canonicalize to it; indexed only while the
-market is indexable. Agreed with d4: its board redesign adds `TaskBoardPageData.heading` and
-`loadTaskBoard({ marketSlug, search, now, category })` (src/modules/tasks/board.ts); then b7 adds the route and makes
-`routes.taskBoard()` build `/<market>/tasks/<category>?…` in one commit.
+### S4 Earn-side hubs (`/austin/tasks/[category]`): built this run
+"Furniture assembly jobs near you in Austin" / "Trabajos de armado de muebles cerca de ti en Austin": the board on one
+category, with its own title and heading, an intro that says what the work is (from the category's scope: moving help
+is the lifting, not the truck) and how offers and addresses work, and breadcrumbs (TasksNearMe › Austin › Open tasks ›
+the hub). The other filters stay URL parameters and canonicalize to the hub. `routes.taskBoard(market, { category })`
+builds the hub's address, so every category link on the board, and the board's filters on a hub, lead to hubs;
+src/proxy.ts answers the board's older `?category=` addresses with a permanent redirect (`src/shared/task-hub.ts`).
+In the sitemap after each category's cost guide, dated by the category's newest task; linked from the category page
+and its cost guide; noindex outside indexable markets. The data is d4's `loadTaskBoard(…, { category, heading })`.
 
 ### S5 Cost guides (`/austin/[category]/cost`): built this run
 "How much does furniture assembly cost in Austin?" (the same words as the category page's question, one server string):
@@ -294,7 +297,9 @@ linked first in the category page's related links; BreadcrumbList; noindex outsi
   - employmentType CONTRACTOR; baseSalary only for hourly tasks (HOUR); directApply false; TELECOMMUTE for remote
     tasks, with Texas as the applicant location.
 - Indexing API `URL_UPDATED` when a task opens or changes, `URL_DELETED` when it closes, from the server (credentials
-  in its settings at launch).
+  in its settings at launch). Built with the switch at launch, not before: its default quota is 200 notifications a
+  day, so it needs a persisted log of what was sent (a small table), or every deploy would re-announce every open
+  task. `scripts/seo/google.mjs notify-job` covers single pages by hand meanwhile.
 - **Switches on only when all of these hold** (`JOB_POSTINGS_ENABLED` and `jobPostingEligible` in
   `src/modules/seo/job-posting.ts`, built and tested this run, off):
   - `LIVE_SITE_INDEXING` is `on`, the market is live, and the task is real, open, public and moderated (sample ids
@@ -326,7 +331,7 @@ linked first in the category page's related links; BreadcrumbList; noindex outsi
 | Home | Organization (logo, areaServed United States), WebSite (alternate names incl. the domain) | Live |
 | City | BreadcrumbList, Service + OfferCatalog | Live |
 | Category | BreadcrumbList, Service + AggregateOffer price range; ItemList of helper profile URLs once profiles are indexed | Live / at launch |
-| Board, job hubs | BreadcrumbList | Live / this run |
+| Board, job hubs | BreadcrumbList | Live / next ship |
 | Cost guide | BreadcrumbList (no Article: the page has no author or date of its own, and Article earns no rich result outside news) | Next ship |
 | Task | BreadcrumbList; JobPosting at launch (S6) | Live / at launch |
 | Helper profile | ProfilePage (no photo, area or reviews) | Live |
@@ -335,12 +340,21 @@ linked first in the category page's related links; BreadcrumbList; noindex outsi
 Never: ratings on home, city or category pages; FAQPage; addresses, contact details or last names.
 
 ### S9 Page experience
-- A JavaScript budget for public pages, measured per build.
-- Keep form validation and other app-only code out of public bundles (split imports from `@/contracts`).
-- Lazy-load the maps below the fold.
-- No text drawn only on a canvas.
-
-Owners: UI (83, a9). Proposed.
+Measured on 2026-11-14 with `node scripts/seo/page-weight.mjs` (the live site, before): every public page loaded the
+same 20 scripts, 445 kB of gzipped JavaScript (1.4 MB raw), /pricing as much as the home page. Barrel imports were the
+cause: a route importing `PricingScreen` from `@/ui/screens/public` got every public screen's client code (the
+landing's Motion animations and WebGL town, the waitlist form), and the public layout's `@/ui/shells` brought the app
+and admin shells.
+- Done (b7, 4d20013): routes import screens, components and shells from their own files. In the e2e build /pricing
+  is about 322 kB gzipped (client modules 48 → 29); the other public pages have 21–22 client modules, none from the
+  landing.
+- Asked of 83: the shell's client components import values from `@/contracts/locale` and `@/contracts/routes`, not
+  the `@/contracts` barrel, which brings zod and every form schema (42 kB gzipped) to every page; per-file imports from
+  `@/ui/motion`.
+- Asked of a9: the pricing and become-a-helper screens import from `@/ui/components` per file (the barrel brings the
+  offer card, the payment picker and the bank dialog).
+- Budget, checked after each build with page-weight.mjs: public pages other than home at most 250 kB of gzipped JS.
+- Lazy-load the maps below the fold; no text drawn only on a canvas.
 
 ### S10 Measurement
 - Daily Search Console report (once access is granted): indexed pages by type, queries with impressions, average

@@ -32,7 +32,7 @@ describe('CostGuideScreen', () => {
     expect(within(steps).getAllByRole('listitem')).toHaveLength(3);
     expect(within(screen.getByRole('region', { name: 'More in Austin' })).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
       '/austin/furniture-assembly',
-      '/austin/tasks',
+      '/austin/tasks/furniture-assembly',
       '/pricing',
     ]);
   });

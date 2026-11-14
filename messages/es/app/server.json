@@ -410,6 +410,24 @@
         "question": "¿Se puede hacer a distancia?",
         "answer": "Sí. Publícala como tarea remota: tu ayudante trabaja contigo compartiendo la pantalla, y tú mantienes el control de tu dispositivo y de tus contraseñas."
       }
+    },
+    "taskHub": {
+      "title": {
+        "furniture-assembly": "Trabajos de armado de muebles cerca de ti en {market}",
+        "moving-help": "Trabajos de mudanza cerca de ti en {market}",
+        "yard-cleanup": "Trabajos de limpieza de jardín cerca de ti en {market}",
+        "light-cleaning": "Trabajos de limpieza ligera cerca de ti en {market}",
+        "computer-help": "Trabajos de ayuda con computadoras y teléfonos cerca de ti en {market}"
+      },
+      "lead": {
+        "furniture-assembly": "Muebles desarmados que la gente necesita armar en {market}: escritorios, camas, estantes y clósets.",
+        "moving-help": "Cargar, descargar, subir, bajar y empacar para quienes se mudan en {market}: el trabajo, no el camión.",
+        "yard-cleanup": "Trabajo de jardín a nivel del suelo en {market}: rastrillar y embolsar hojas, quitar maleza y podar a mano.",
+        "light-cleaning": "Limpieza habitual en {market}: cocinas, baños y un orden ligero de la casa.",
+        "computer-help": "Ayuda con computadoras, teléfonos, Wi-Fi e impresoras en {market}, en casa o en una sesión guiada con pantalla compartida."
+      },
+      "how": "Cada trabajo muestra cuánto paga, cuándo se necesita y la zona general. Envía una oferta con tu precio; verás la dirección exacta cuando se confirme la reserva.",
+      "pays": "Mira cuánto paga cada uno y cuándo, y envía una oferta."
     }
   }
 }

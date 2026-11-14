@@ -5,7 +5,6 @@ import { routes } from '@/contracts';
 import { getHelpArticle, getLocalGuide } from '@/modules/content/loaders';
 import { getCategorySupply, listCategorySlugs } from '@/modules/marketing/queries';
 import { formatMoney } from '@/shared/format';
-import { costGuidePath } from './paths';
 
 /**
  * Help articles whose question and short answer the category FAQ reuses, so the help center and the category pages
@@ -20,7 +19,7 @@ const SHARED_ANSWERS = ['when-am-i-charged', 'who-sees-my-address'] as const;
  *   guidance the page shows), how helpers are checked, remote work where allowed, when you're charged, who sees your
  *   address;
  * - the city guide for the service, when one is written in this language (content/local);
- * - links to the city's other services, its open tasks and pricing.
+ * - links to the service's cost guide, the city's other services, the service's job hub and pricing.
  */
 export async function categorySeoContent(
   data: CategoryPageData,
@@ -28,9 +27,10 @@ export async function categorySeoContent(
   categoryName: (slug: CategorySlug) => string,
 ): Promise<CategorySeoContent> {
   const { market, category } = data;
-  const [t, meta, supply, slugs] = await Promise.all([
+  const [t, meta, hub, supply, slugs] = await Promise.all([
     getTranslations('server.seo.categoryFaq'),
     getTranslations('server.meta'),
+    getTranslations('server.seo.taskHub'),
     getCategorySupply(market.slug, category.slug),
     listCategorySlugs(market.slug),
   ]);
@@ -52,11 +52,12 @@ export async function categorySeoContent(
   ];
   const related: RelatedLink[] = [
     // The cost guide first: its title is the question people search.
-    { label: t(`cost.${category.slug}`, { market: market.name }), href: costGuidePath(category.slug, market.slug) },
+    { label: t(`cost.${category.slug}`, { market: market.name }), href: routes.costGuide(category.slug, market.slug) },
     ...slugs
       .filter((slug) => slug !== category.slug)
       .map((slug) => ({ label: categoryName(slug as CategorySlug), href: routes.category(slug as CategorySlug, market.slug) })),
-    { label: meta('taskBoard.title', { market: market.name }), href: routes.taskBoard(market.slug) },
+    // The same work from the helper's side: this category's job hub (S4).
+    { label: hub(`title.${category.slug}`, { market: market.name }), href: routes.taskBoard(market.slug, { category: category.slug }) },
     { label: meta('pricing.title'), href: routes.pricing() },
   ];
   const about = getLocalGuide(market.slug, category.slug, locale);

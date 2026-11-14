@@ -35,9 +35,10 @@ describe('category page search sections', () => {
 
     const related = screen.getByRole('region', { name: 'More in Austin' });
     expect(within(related).getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+      ['How much does furniture assembly cost in Austin?', '/austin/furniture-assembly/cost'],
       ['Moving help', '/austin/moving-help'],
       ['Yard cleanup', '/austin/yard-cleanup'],
-      ['Open tasks near you in Austin', '/austin/tasks'],
+      ['Furniture assembly jobs near you in Austin', '/austin/tasks/furniture-assembly'],
       ['Pricing and fees', '/pricing'],
     ]);
   });

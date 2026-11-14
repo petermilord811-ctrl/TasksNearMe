@@ -38,6 +38,8 @@ test.describe('search engines', () => {
       '/es/austin/furniture-assembly',
       '/austin/furniture-assembly/cost',
       '/es/austin/furniture-assembly/cost',
+      '/austin/tasks/furniture-assembly',
+      '/es/austin/tasks/furniture-assembly',
     ]) {
       expect(paths, path).toContain(path);
     }
@@ -117,6 +119,38 @@ test.describe('search engines', () => {
     const more = page.getByRole('region', { name: 'Más en Austin' });
     await expect(more.getByRole('link', { name: 'Ayuda con mudanzas cerca de ti en Austin' })).toHaveAttribute('href', '/es/austin/moving-help');
     await expect(more.getByRole('link', { name: 'Precios y tarifas' })).toHaveAttribute('href', '/es/pricing');
+  });
+
+  test('a job hub is the board on one category, with its own title, heading and breadcrumbs', async ({ page, request }) => {
+    // The board's older filtered address moves to the hub, its other filters kept.
+    const old = await request.get('/austin/tasks?category=yard-cleanup&sort=newest', { maxRedirects: 0 });
+    expect(old.status()).toBe(308);
+    const moved = new URL(old.headers()['location']!, 'http://localhost');
+    expect(moved.pathname + moved.search).toBe('/austin/tasks/yard-cleanup?sort=newest');
+
+    // Yard cleanup: no other e2e test posts or cancels yard tasks.
+    await page.goto('/austin/yard-cleanup');
+    await page.getByRole('region', { name: 'More in Austin' }).getByRole('link', { name: 'Yard cleanup jobs near you in Austin' }).click();
+    await expect(page).toHaveURL(/\/austin\/tasks\/yard-cleanup$/);
+    await expect(page).toHaveTitle('Yard cleanup jobs near you in Austin · TasksNearMe');
+    await expect(page.getByRole('heading', { level: 1, name: 'Yard cleanup jobs near you in Austin' })).toBeVisible();
+    // After the soft navigation the hub's canonical replaces the category page's: one in the head.
+    const canonical = page.locator('head link[rel="canonical"]');
+    await expect(canonical).toHaveCount(1);
+    await expect(canonical).toHaveAttribute('href', /\/austin\/tasks\/yard-cleanup$/);
+    await expect(page.getByRole('link', { name: 'Rake and bag front-yard leaves' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Assemble a desk (flat-pack, 1 item)' })).toHaveCount(0);
+    const [trail] = await structuredData(page);
+    expect((trail!.itemListElement as Array<{ name: string }>).map((item) => item.name)).toEqual([
+      'TasksNearMe',
+      'Austin',
+      'Open tasks near you in Austin',
+      'Yard cleanup jobs near you in Austin',
+    ]);
+
+    await page.goto('/es/austin/tasks/yard-cleanup');
+    await expect(page).toHaveTitle('Trabajos de limpieza de jardín cerca de ti en Austin · TasksNearMe');
+    await expect(page.getByRole('heading', { level: 1, name: 'Trabajos de limpieza de jardín cerca de ti en Austin' })).toBeVisible();
   });
 
   test('a public task and a helper profile carry only what their page shows', async ({ page }) => {

@@ -21,9 +21,13 @@ describe('routes', () => {
   it('puts task board filters in the URL and leaves defaults out', () => {
     expect(routes.taskBoard()).toBe('/austin/tasks');
     expect(routes.taskBoard('austin', { when: 'any', sort: 'soonest', page: 1, remoteOnly: false })).toBe('/austin/tasks');
+    // One category is its job hub, with the other filters as parameters.
     expect(
       routes.taskBoard('austin', { category: 'moving-help', when: 'this_weekend', remoteOnly: true, sort: 'newest', page: 3 }),
-    ).toBe('/austin/tasks?category=moving-help&when=this_weekend&remote=1&sort=newest&page=3');
+    ).toBe('/austin/tasks/moving-help?when=this_weekend&remote=1&sort=newest&page=3');
+    expect(routes.taskBoard('austin', { category: 'moving-help', type: 'load_truck' })).toBe('/austin/tasks/moving-help?type=load_truck');
+    expect(routes.taskBoard('austin', { type: 'load_truck' })).toBe('/austin/tasks');
+    expect(routes.costGuide('furniture-assembly')).toBe('/austin/furniture-assembly/cost');
     expect(routes.app.findWorkTask('tsk_desk')).toBe('/app/find-work/tsk_desk');
     expect(routes.app.findWork()).toBe('/app/find-work');
     expect(routes.app.findWork({ distance: 'any', when: 'any', page: 1 })).toBe('/app/find-work');

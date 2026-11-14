@@ -410,6 +410,24 @@
         "question": "Can it be done remotely?",
         "answer": "Yes. Post it as a remote task: your helper works with you by screen sharing, and you keep control of your device and your passwords."
       }
+    },
+    "taskHub": {
+      "title": {
+        "furniture-assembly": "Furniture assembly jobs near you in {market}",
+        "moving-help": "Moving help jobs near you in {market}",
+        "yard-cleanup": "Yard cleanup jobs near you in {market}",
+        "light-cleaning": "Light cleaning jobs near you in {market}",
+        "computer-help": "Computer and phone help jobs near you in {market}"
+      },
+      "lead": {
+        "furniture-assembly": "Flat-pack furniture people in {market} need put together: desks, beds, shelves and wardrobes.",
+        "moving-help": "Lifting, loading, unloading and packing for people moving in {market}: the work, not the truck.",
+        "yard-cleanup": "Ground-level yard work in {market}: raking and bagging leaves, weeding and light hand pruning.",
+        "light-cleaning": "Everyday cleaning in {market}: kitchens, bathrooms and a light tidy of the home.",
+        "computer-help": "Help with computers, phones, Wi-Fi and printers in {market}, at home or in a guided screen-sharing session."
+      },
+      "how": "Each task shows what it pays, when it's needed and the general area. Send an offer with your price; you'll see the exact address once the booking is confirmed.",
+      "pays": "See what each one pays and when, then send an offer."
     }
   }
 }

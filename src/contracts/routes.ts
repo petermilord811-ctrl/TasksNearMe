@@ -77,8 +77,15 @@ export const routes = {
   home: () => '/',
   market: (market = DEFAULT_MARKET) => `/${enc(market)}`,
   category: (slug: CategorySlug, market = DEFAULT_MARKET) => `/${enc(market)}/${slug}`,
-  /** Defaults (`when: any`, `sort: soonest`, page 1) are left out of the URL. */
-  taskBoard: (market = DEFAULT_MARKET, query: TaskBoardQuery = {}) => withQuery(`/${enc(market)}/tasks`, boardQuery(query)),
+  /** "How much does … cost in Austin?" for one service (docs/seo/PLAN.md S5). */
+  costGuide: (slug: CategorySlug, market = DEFAULT_MARKET) => `/${enc(market)}/${slug}/cost`,
+  /**
+   * The open tasks. Defaults (`when: any`, `sort: soonest`, page 1) are left out of the URL. One category is a page of
+   * its own, that category's job hub (`/austin/tasks/moving-help`, docs/seo/PLAN.md S4), with the other filters as
+   * parameters; src/proxy.ts sends the older `?category=` addresses there.
+   */
+  taskBoard: (market = DEFAULT_MARKET, query: TaskBoardQuery = {}) =>
+    withQuery(query.category ? `/${enc(market)}/tasks/${query.category}` : `/${enc(market)}/tasks`, { ...boardQuery(query), category: undefined }),
   publicTask: (taskSlug: string) => `/tasks/${enc(taskSlug)}`,
   helperProfile: (handle: string) => `/helpers/${enc(handle)}`,
   howItWorks: () => '/how-it-works',

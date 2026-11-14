@@ -275,9 +275,10 @@ export const furnitureCategorySeo: CategorySeoContent = {
     { question: 'Who sees my address?', answer: 'Only the helper you book, and only after you confirm.' },
   ],
   related: [
+    { label: 'How much does furniture assembly cost in Austin?', href: '/austin/furniture-assembly/cost' },
     { label: 'Moving help', href: '/austin/moving-help' },
     { label: 'Yard cleanup', href: '/austin/yard-cleanup' },
-    { label: 'Open tasks near you in Austin', href: '/austin/tasks' },
+    { label: 'Furniture assembly jobs near you in Austin', href: '/austin/tasks/furniture-assembly' },
     { label: 'Pricing and fees', href: '/pricing' },
   ],
 };
@@ -302,7 +303,7 @@ export const furnitureCostGuideData: CostGuidePageData = {
   fees: COST_FEES,
   related: [
     { label: 'Furniture assembly near you in Austin', href: '/austin/furniture-assembly' },
-    { label: 'Open tasks near you in Austin', href: '/austin/tasks' },
+    { label: 'Furniture assembly jobs near you in Austin', href: '/austin/tasks/furniture-assembly' },
     { label: 'Pricing and fees', href: '/pricing' },
   ],
 };
