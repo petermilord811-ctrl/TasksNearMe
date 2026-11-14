@@ -120,7 +120,9 @@ async function exceptions(db: Db, query: string, now: Date): Promise<Found> {
   const graceCutoff = new Date(now.getTime() - TRANSFER_GRACE_DAYS * DAY);
   const [failedRefunds, failedPayouts, missing, unrefunded] = await Promise.all([
     refundRows(db, query, [eq(refunds.status, 'failed')]),
-    payoutRows(db, query, [eq(payouts.status, 'failed')]),
+    // Only a failure that is still the helper's latest payout (5.17): once a later payout went out, Stripe sent that
+    // money again (with the bank fixed) and nobody needs to act. The payouts tab keeps the history.
+    payoutRows(db, query, [eq(payouts.status, 'failed'), sql`not exists (select 1 from ${payouts} later where later.helper_user_id = ${payouts.helperUserId} and later.created_at > ${payouts.createdAt})`]),
     db
       .select({ booking: bookings, terms: bookingTerms.breakdown, final: bookingCompletions.finalBreakdown })
       .from(bookings)

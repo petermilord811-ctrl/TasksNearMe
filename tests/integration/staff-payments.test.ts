@@ -23,6 +23,12 @@ beforeAll(async () => {
   const [lee] = await db.select().from(users).where(eq(users.id, 'usr_lee'));
   await db.insert(users).values({ ...lee!, id: 'usr_tmp_payee', email: 'tmp-payee@example.test', name: 'Pat Q.', firstName: 'Pat', phone: '+15125550281' });
   await db.insert(payouts).values({ id: 'po_pay_failed', helperUserId: 'usr_tmp_payee', amountCents: 4200, status: 'failed', arrivalDate: '2026-11-20', bankLast4: '0002' });
+  // Another helper's payout failed, and the next one (the bank fixed) was paid.
+  await db.insert(users).values({ ...lee!, id: 'usr_tmp_payee2', email: 'tmp-payee2@example.test', name: 'Pam R.', firstName: 'Pam', phone: null, phoneVerifiedAt: null });
+  await db.insert(payouts).values([
+    { id: 'po_pay_failed_then', helperUserId: 'usr_tmp_payee2', amountCents: 3100, status: 'failed', arrivalDate: '2026-11-10', bankLast4: '0002', createdAt: new Date(Date.now() - 3 * DAY) },
+    { id: 'po_pay_paid_after', helperUserId: 'usr_tmp_payee2', amountCents: 3100, status: 'paid', arrivalDate: '2026-11-13', bankLast4: '6789', createdAt: new Date(Date.now() - DAY) },
+  ]);
 
   const [tv] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
   const [tvBooking] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
@@ -55,6 +61,14 @@ describe('the payments page', () => {
     expect(page.rows.every((row) => row.exception)).toBe(true);
     expect(page.counts.exceptions).toBe(page.rows.length);
     expect(page.rows.find((row) => row.id === 'bkg_pay_noxfer')).toMatchObject({ kind: 'transfer', person: { displayName: 'Jordan T.' }, booking: { id: 'bkg_pay_noxfer' } });
+  });
+
+  it('drops a failed payout from the exceptions once a later payout went out, and keeps it in the history (5.17)', async () => {
+    const page = await getAdminPayments(db, { tab: 'exceptions', query: '' }, now());
+    expect(page.rows.find((row) => row.id === 'po_pay_failed_then')).toBeUndefined();
+    expect(page.rows.find((row) => row.id === 'po_pay_failed')?.exception).toBe('payout_failed');
+    const history = await getAdminPayments(db, { tab: 'payouts', query: 'tmp-payee2@example.test' }, now());
+    expect(history.rows.map((row) => [row.id, row.status])).toEqual([['po_pay_paid_after', 'paid'], ['po_pay_failed_then', 'failed']]);
   });
 
   it('shows each kind of money on its tab, with totals', async () => {
