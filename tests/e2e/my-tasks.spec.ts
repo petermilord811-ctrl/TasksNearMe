@@ -42,7 +42,10 @@ test('the poster declines an offer', async ({ page }, testInfo) => {
   if (await more.isVisible()) await more.click();
   await page.getByRole('button', { name: 'Decline offer' }).first().click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Confirm' }).click();
-  // The offer is closed: no more actions on it, and the public count drops to the offers in play.
+  // The offer is closed: no more actions on it, and the public count drops to the offers in play. "Not selected"
+  // first: while the dialog is open the page's buttons are hidden anyway, so their count alone passes before the
+  // decline is saved (5.19).
+  await expect(page.getByText('Not selected').first()).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('button', { name: 'Book helper' })).toHaveCount(0);
   await page.goto('/tasks/assemble-a-desk-mueller-7f3k');
   await expect(page.getByText('2 offers').first()).toBeVisible();

@@ -26,11 +26,15 @@ test('a message email is designed, and its unsubscribe link and one-click unsubs
   const message = await outboxMessage(page, SAM, title);
   await expect(message.frameLocator('iframe').getByRole('link', { name: /Open your messages/ })).toHaveAttribute('href', /\/app\/messages$/);
   const text = (await message.locator('pre').textContent()) ?? '';
-  const link = /Unsubscribe: (\S+)/.exec(text)?.[1];
-  expect(link).toMatch(/\/email\/unsubscribe\?token=/);
+  const sent = /Unsubscribe: (\S+)/.exec(text)?.[1];
+  expect(sent).toMatch(/\/email\/unsubscribe\?token=/);
+  // Followed on the server under test: the dev server's job runner shares the database and may be the one that
+  // sent the email, with its own address in the link (5.19). The signed token works on either.
+  const url = new URL(sent!);
+  const link = `${url.pathname}${url.search}`;
 
   // The page asks first, then offers the way back.
-  await page.goto(link!);
+  await page.goto(link);
   await expect(page.getByRole('heading', { level: 1, name: 'Stop message emails?' })).toBeVisible();
   await page.getByRole('button', { name: 'Unsubscribe' }).click();
   await expect(page.getByRole('heading', { level: 1, name: "You won't get message emails anymore" })).toBeVisible();
@@ -38,9 +42,9 @@ test('a message email is designed, and its unsubscribe link and one-click unsubs
   await expect(page.getByText('Message emails are back on.')).toBeVisible();
 
   // One-click from a mail app: a POST to the header's address.
-  const oneClick = link!.replace('/email/unsubscribe', '/api/email/unsubscribe');
+  const oneClick = link.replace('/email/unsubscribe', '/api/email/unsubscribe');
   expect((await request.post(oneClick, { form: { 'List-Unsubscribe': 'One-Click' } })).status()).toBe(200);
-  await page.goto(link!);
+  await page.goto(link);
   await expect(page.getByRole('heading', { level: 1, name: "You won't get message emails anymore" })).toBeVisible();
   await page.getByRole('button', { name: 'Turn them back on' }).click();
   await expect(page.getByText('Message emails are back on.')).toBeVisible();

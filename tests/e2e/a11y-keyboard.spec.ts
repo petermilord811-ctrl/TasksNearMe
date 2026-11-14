@@ -262,7 +262,9 @@ test('keyboard only: the client reports a problem and staff resolve the case', a
   await press(page, page.getByRole('button', { name: 'Report the problem' }));
   const confirm = page.getByRole('alertdialog');
   await press(page, confirm.getByRole('button', { name: 'Send report' }));
-  await expect(page.getByText('Your problem was reported.').first()).toBeVisible({ timeout: 30_000 });
+  // Where sending leads: the booking with the problem on it. The form's own success line shows only until that
+  // page arrives (the router keeps the form hidden behind it), so it isn't what to wait for.
+  await expect(page.getByRole('heading', { level: 2, name: 'Problem reported' })).toBeVisible({ timeout: 30_000 });
 
   // Staff find the case from the booking and settle it.
   await devSignIn(page, 'morgan@example.test', { landing: /\/admin\/verify$/ });
