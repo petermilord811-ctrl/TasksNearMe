@@ -18,8 +18,11 @@ export interface PointerSample {
   active: boolean;
 }
 
-/** Where the task list and map live on the page (the hero's cards scroll here). */
-export const MAP_SECTION_ID = 'tasks-near-you';
+/** Where the task list and map live on the page (the hero's cards scroll here). Defined in a plain module, so
+ * server components (the footer's index) can read it too. */
+import { MAP_SECTION_ID } from './sections/ids';
+
+export { MAP_SECTION_ID };
 
 /** Who the hero speaks to: someone who needs help (posts tasks), or someone who can help (a helper). */
 export type Audience = 'poster' | 'helper';

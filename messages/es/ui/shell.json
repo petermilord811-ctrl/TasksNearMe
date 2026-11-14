@@ -19,6 +19,10 @@
   "unreadNotifications": "Notificaciones, {count, plural, one {# notificación sin leer} other {# notificaciones sin leer}}",
   "unreadMessages": "{count, plural, one {# mensaje sin leer} other {# mensajes sin leer}}",
   "helperSetup": "Termina la configuración para empezar a ayudar",
+  "quickAction": {
+    "postTask": "Publicar una tarea",
+    "findWork": "Buscar trabajo"
+  },
   "notices": {
     "bookingsPaused": {
       "title": "Las reservas nuevas están en pausa por ahora",
@@ -69,17 +73,31 @@
   "footer": {
     "tagline": "Buenos vecinos. Listas de pendientes más ligeras.",
     "introduction": "Ayuda local para lo que hace un hogar, y un poco más de tiempo para ti.",
-    "signature": "TasksNearMe · Empezando cerca de casa en Austin, Texas.",
+    "signature": "TasksNearMe · Vecinos que ayudan a vecinos, abriendo ciudad por ciudad en todo EE. UU.",
     "payment": "Acuerden un precio. Reserva y paga a través de TasksNearMe.",
-    "localHelp": "Ayuda de todos los días, cerca de casa.",
-    "marketLabel": "Nuestra primera ciudad",
-    "austin": "Austin",
+    "localHelp": "Ayuda de todos los días de personas verificadas cerca de ti.",
+    "cities": "Ciudades",
+    "austin": "Austin, TX",
+    "firstCity": "Primera ciudad",
+    "cityNext": "¿Tu ciudad es la próxima? Únete a la lista",
+    "explore": "Explorar",
+    "onThisPage": "En esta página",
+    "sections": {
+      "tasks-near-you": "Tareas cerca de ti",
+      "how-it-works": "Cómo funciona",
+      "pricing": "Precios",
+      "trust": "Confianza y seguridad",
+      "for-helpers": "Para ayudantes",
+      "faq": "Preguntas"
+    },
     "categories": "Encuentra ayuda local",
     "resources": "Bueno saber",
     "legal": "Políticas y términos",
     "trust": "Confianza y seguridad",
     "help": "Ayuda",
-    "language": "Idioma"
+    "language": "Idioma",
+    "openTasks": "Tareas abiertas",
+    "becomeHelper": "Hazte ayudante"
   },
   "categories": {
     "furniture-assembly": "Armado de muebles",

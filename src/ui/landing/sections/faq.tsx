@@ -11,7 +11,7 @@ export function FaqSection() {
   const t = useTranslations('landing.faq');
   const keys = ['pay', 'address', 'verified', 'rebook', 'helper'] as const;
   return (
-    <section aria-labelledby="faq-title" className="py-20 sm:py-28 lg:py-32">
+    <section id="faq" aria-labelledby="faq-title" className="scroll-mt-24 py-20 sm:py-28 lg:py-32">
       <div className="mx-auto grid max-w-content gap-10 px-gutter lg:grid-cols-[1fr_1.4fr]">
         <Heading id="faq-title" eyebrow={t('eyebrow')} title={t('title')} body={t('body')} />
         <Reveal index={1}>

@@ -92,7 +92,10 @@ describe('HomeScreen (the landing page)', () => {
     show();
     const reward = homePageData.welcomeReward!;
     expect(screen.getByText(t('helpers.rewardAmount', { amount: formatMoney(reward.amountCents) }))).toBeInTheDocument();
-    expect(screen.getByText(t('helpers.rewardSpots', { claimed: reward.spotsClaimed, limit: reward.cohortLimit }))).toBeInTheDocument();
+    // Every helper who passes the three checks gets it: the checks, and no count of spots.
+    const checks = screen.getByRole('list', { name: t('helpers.rewardStepsLabel') });
+    expect(within(checks).getAllByRole('listitem').map((item) => item.textContent)).toEqual([t('helpers.rewardChecks.phone'), t('helpers.rewardChecks.id'), t('helpers.rewardChecks.background')]);
+    expect(screen.queryByText(/spots? (left|claimed)/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: t('helpers.rewardTerms') })).toHaveAttribute('href', routes.legal('rewards-terms'));
     cleanup();
 
@@ -177,6 +180,8 @@ describe('HomeScreen (the landing page)', () => {
     show(homePageData, { location: inDallas });
     expect(screen.getByText(t('map.outside'))).toBeInTheDocument();
     expect(screen.getByRole('link', { name: t('map.waitlist') })).toHaveAttribute('href', routes.waitlist());
+    // Helpers anywhere can get verified before their city opens.
+    expect(screen.getByRole('link', { name: t('map.outsideHelpers') })).toHaveAttribute('href', routes.becomeAHelper());
   });
 
   it('filters the map and its list by category', async () => {

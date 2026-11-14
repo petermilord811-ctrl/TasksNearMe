@@ -10,7 +10,7 @@ import feedback from '../../../messages/en/ui/feedback.json';
 import { AccountMenu } from './account-menu';
 
 const { push, toastSuccess, toastError } = vi.hoisted(() => ({ push: vi.fn(), toastSuccess: vi.fn(), toastError: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push, replace: vi.fn(), refresh: vi.fn() }), usePathname: () => '/app' }));
 vi.mock('sonner', () => ({ toast: { success: toastSuccess, error: toastError } }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
@@ -37,10 +37,25 @@ describe('AccountMenu', () => {
     expect(within(menu).queryByRole('menuitem', { name: absent })).not.toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Payments' })).toHaveAttribute('href', routes.app.payments());
     expect(within(menu).getByRole('menuitem', { name: 'Support' })).toHaveAttribute('href', routes.app.support());
-    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Account', extra, 'Payments', 'Support', 'Sign out']);
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Account', extra, 'Payments', 'Support', 'Switch to dark mode', 'Español', 'Sign out']);
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: `${viewer.initials}, account menu for ${viewer.displayName}` })).toHaveFocus();
+  });
+
+  it('switches the theme and the language from the menu (the bar has no room for them on phones)', async () => {
+    const onSwitchLanguage = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    render(<NextIntlClientProvider locale="en" messages={uiMessages}><AccountMenu viewer={mayaShell} onSignOut={vi.fn()} onSwitchLanguage={onSwitchLanguage} /></NextIntlClientProvider>);
+    let menu = await openMenu();
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Switch to dark mode' }));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    await userEvent.click(screen.getByRole('button', { name: `${mayaShell.initials}, account menu for ${mayaShell.displayName}` }));
+    menu = await screen.findByRole('menu');
+    const spanish = within(menu).getByRole('menuitem', { name: 'Español' });
+    expect(spanish).toHaveAttribute('lang', 'es');
+    await userEvent.click(spanish);
+    expect(onSwitchLanguage).toHaveBeenCalledExactlyOnceWith({ locale: 'es' });
+    document.documentElement.removeAttribute('data-theme');
   });
 
   it('keeps the staff menu limited to sign out', async () => {

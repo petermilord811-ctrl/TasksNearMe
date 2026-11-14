@@ -15,7 +15,8 @@ export interface NearbyPin {
 }
 
 /** How the list is ordered. "nearest" needs the visitor's location (it falls back to newest without one). */
-export type ListSort = 'newest' | 'nearest' | 'price';
+/** `price`: lowest first (someone pricing a task); `pay`: highest first (a helper looking for work). */
+export type ListSort = 'newest' | 'nearest' | 'price' | 'pay';
 
 /** What the live map shows right now (degrees). */
 export interface ViewBounds {
@@ -58,6 +59,7 @@ export function nearbyPins(
   const sort = effectiveSort(options.sort, from);
   if (sort === 'nearest') rows.sort((a, b) => (a.exact ?? 0) - (b.exact ?? 0) || a.order - b.order);
   else if (sort === 'price') rows.sort((a, b) => shownAmountCents(a.pin) - shownAmountCents(b.pin) || a.order - b.order);
+  else if (sort === 'pay') rows.sort((a, b) => shownAmountCents(b.pin) - shownAmountCents(a.pin) || a.order - b.order);
   return rows.slice(0, options.limit ?? rows.length).map(({ pin, exact }) => (exact === undefined ? { pin } : { pin, miles: roundMiles(exact) }));
 }
 

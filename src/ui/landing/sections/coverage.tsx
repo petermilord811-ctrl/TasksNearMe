@@ -9,9 +9,10 @@ import { MAP_SECTION_ID, useOptionalLanding } from '../landing-state';
 import { ArrowLink } from './heading';
 
 /**
- * Where we work: the market, its radius and its neighborhoods, each with how many of its tasks are open on the
- * map. A neighborhood is a shortcut: it flies the map above to that neighborhood (the same pick as the hero's
- * market line) and brings the map into view. Somewhere else: the waitlist.
+ * Where we work: we open city by city across the US, this market first: its radius and its neighborhoods, each with
+ * how many of its tasks are open on the map. A neighborhood is a shortcut: it flies the map above to that
+ * neighborhood (the same pick as the hero's market line) and brings the map into view. Somewhere else: the city
+ * list, and helpers anywhere can get verified now.
  */
 export function CoverageSection({ data }: { data: HomePageData }) {
   const t = useTranslations('landing.coverage');
@@ -37,9 +38,12 @@ export function CoverageSection({ data }: { data: HomePageData }) {
               <div>
                 <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">{t('eyebrow')}</p>
                 <h2 id="coverage-title" className="mt-2 font-display text-3xl font-semibold tracking-[-0.03em] text-balance">{t('title', { market: data.market.name })}</h2>
-                <p className="mt-2 text-muted-foreground">{t('body', { radius: data.market.serviceRadiusMiles })}</p>
+                <p className="mt-2 text-muted-foreground">{t('body', { radius: data.market.serviceRadiusMiles, market: data.market.name })}</p>
                 {landing && <p id={hintId} className="mt-1 text-sm text-muted-foreground">{t('mapHint')}</p>}
-                <ArrowLink href={routes.waitlist()} className="mt-3">{t('waitlist')}</ArrowLink>
+                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1">
+                  <ArrowLink href={routes.waitlist()}>{t('waitlist')}</ArrowLink>
+                  <ArrowLink href={routes.becomeAHelper()}>{t('helpersAnywhere')}</ArrowLink>
+                </div>
               </div>
               <ul className="flex flex-wrap gap-2">
                 {data.market.areaNames.map((name) => {

@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, ChevronDown, MapPin } from 'lucide-react';
-import type { HomePageData, MapArea } from '@/contracts';
+import Link from 'next/link';
+import { routes, type HomePageData, type MapArea } from '@/contracts';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/primitives/popover';
 import { cn } from '@/ui/lib/utils';
 
@@ -65,6 +66,11 @@ export function AreaPicker({ data, area, onPick }: { data: HomePageData; area: M
             );
           })}
         </div>
+        {/* We open city by city: somewhere else, the city list. */}
+        <p className="mt-1 border-t border-foreground/[0.07] px-3 pt-2.5 pb-1.5 text-xs leading-relaxed text-muted-foreground">
+          {t('area.elsewhere', { market: data.market.name })}{' '}
+          <Link href={routes.waitlist()} className="font-semibold text-primary underline-offset-4 hover:underline">{t('area.joinList')}</Link>
+        </p>
       </PopoverContent>
     </Popover>
   );

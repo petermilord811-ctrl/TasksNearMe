@@ -1,4 +1,5 @@
 import { withClientMessages } from '@/i18n/client-messages';
+import { switchLanguageAction } from '@/modules/accounts/language-actions';
 import { getPublicShellViewer } from '@/platform/auth/viewer';
 import { PublicShell } from '@/ui/shells';
 
@@ -8,7 +9,7 @@ import { PublicShell } from '@/ui/shells';
  * session, inside the shell's own Suspense boundaries with signed-out fallbacks.
  */
 function PublicLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <PublicShell viewer={getPublicShellViewer()}>{children}</PublicShell>;
+  return <PublicShell viewer={getPublicShellViewer()} onSwitchLanguage={switchLanguageAction}>{children}</PublicShell>;
 }
 
 export default withClientMessages('[locale]/(public)/layout.tsx', PublicLayout);

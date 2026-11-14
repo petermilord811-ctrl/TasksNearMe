@@ -27,20 +27,26 @@ async function latestCode(context: BrowserContext, to: string): Promise<string> 
   }
 }
 
-test('a browser in Spanish gets the site in Spanish, and the footer switches this device', async ({ page }) => {
+test('a browser in Spanish gets the site in Spanish, and the footer switches this device in place', async ({ page }) => {
   await page.goto('/pricing');
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   await expect(page.getByRole('link', { name: shellEs.postTask }).first()).toBeVisible();
 
-  await page.getByRole('navigation', { name: shellEs.footer.language }).getByRole('link', { name: 'English' }).click();
-  await expect(page).toHaveURL(/\/pricing$/);
+  // The switch changes the language without reloading the page: something set on the page survives it.
+  await page.evaluate(() => { (window as unknown as { tnmStayed?: boolean }).tnmStayed = true; });
+  await page.getByRole('contentinfo').getByRole('navigation', { name: shellEs.footer.language }).getByRole('link', { name: 'English' }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page).toHaveURL(/\/pricing$/);
+  await expect(page.getByRole('link', { name: shellEn.postTask }).first()).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { tnmStayed?: boolean }).tnmStayed)).toBe(true);
   // The choice sticks for this device, whatever the browser's languages.
   await page.goto('/how-it-works');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
-  await page.getByRole('navigation', { name: shellEn.footer.language }).getByRole('link', { name: 'Español' }).click();
-  await expect(page).toHaveURL(/\/es\/how-it-works$/);
+  await page.getByRole('contentinfo').getByRole('navigation', { name: shellEn.footer.language }).getByRole('link', { name: 'Español' }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+  await expect(page).toHaveURL(/\/how-it-works$/);
+  await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
 });
 

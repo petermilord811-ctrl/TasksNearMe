@@ -5,12 +5,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { CreditCard, Gift, Heart, LifeBuoy, LoaderCircle, LogOut, UserRound } from 'lucide-react';
+import { CreditCard, Gift, Heart, Languages, LifeBuoy, LoaderCircle, LogOut, Moon, Sun, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
-import { routes, type ActionHandler, type ActionResult, type SignedInViewer, type StaffViewer } from '@/contracts';
+import { APP_LOCALES, LOCALE_NAMES, routes, type ActionHandler, type ActionResult, type LanguageSwitchHandler, type SignedInViewer, type StaffViewer } from '@/contracts';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/ui/primitives/dropdown-menu';
+import { useLanguageSwitch } from './language-switch';
+import { switchTheme, useEffectiveTheme } from './theme-toggle';
 
 /** The avatar: a soft ring that warms to the brand color while pointed at or open. */
 const AVATAR = 'size-11 shrink-0 rounded-full bg-secondary object-cover shadow-[0_0_0_1px_color-mix(in_oklab,var(--foreground)_10%,transparent),0_4px_12px_-6px_rgb(60_30_10/0.4)] transition-[box-shadow] duration-300 ease-[var(--ease-out)] group-hover/avatar:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_28%,transparent),0_6px_16px_-6px_rgb(60_30_10/0.45)] group-data-[state=open]/avatar:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_40%,transparent),0_6px_16px_-6px_rgb(60_30_10/0.45)]';
@@ -18,10 +20,16 @@ const AVATAR = 'size-11 shrink-0 rounded-full bg-secondary object-cover shadow-[
 export interface AccountMenuProps {
   viewer: SignedInViewer | StaffViewer;
   onSignOut: ActionHandler;
+  /** The language row's handler (the bars' switch is hidden on phones, so the menu carries it too). */
+  onSwitchLanguage?: LanguageSwitchHandler;
 }
 
-export function AccountMenu({ viewer, onSignOut }: AccountMenuProps) {
+export function AccountMenu({ viewer, onSignOut, onSwitchLanguage }: AccountMenuProps) {
   const t = useTranslations('shell');
+  const theme = useEffectiveTheme();
+  const language = useLanguageSwitch(onSwitchLanguage);
+  const otherLanguage = APP_LOCALES.find((option) => option !== language.locale) ?? language.locale;
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const feedback = useTranslations('feedback');
   const router = useRouter();
   const statusId = useId();
@@ -67,7 +75,7 @@ export function AccountMenu({ viewer, onSignOut }: AccountMenuProps) {
     <div className="relative shrink-0">
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="ghost" size="icon" className="group/avatar rounded-full p-0 hover:bg-transparent active:scale-95 dark:hover:bg-transparent" aria-label={t('accountMenu', { name: viewer.displayName, initials: viewer.initials })} aria-describedby={statusId} aria-busy={pending} disabled={pending}>
+          <Button ref={triggerRef} type="button" variant="ghost" size="icon" className="group/avatar rounded-full p-0 hover:bg-transparent active:scale-95 dark:hover:bg-transparent" aria-label={t('accountMenu', { name: viewer.displayName, initials: viewer.initials })} aria-describedby={statusId} aria-busy={pending} disabled={pending}>
             {pending ? <LoaderCircle aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" /> : viewer.photo ? <Image src={viewer.photo.src} alt="" width={44} height={44} unoptimized className={AVATAR} /> : <span aria-hidden="true" className={cn(AVATAR, 'inline-flex items-center justify-center text-sm font-semibold text-secondary-foreground')}>{viewer.initials}</span>}
           </Button>
         </DropdownMenuTrigger>
@@ -80,6 +88,19 @@ export function AccountMenu({ viewer, onSignOut }: AccountMenuProps) {
             </DropdownMenuItem>
           ))}
           {links.length > 0 && <DropdownMenuSeparator />}
+          {/* Members: the theme and the language, also here because the bar's switches don't fit on phones (staff
+              tools stay in English, and their menu stays at sign out). */}
+          {viewer.kind === 'user' && <>
+            <DropdownMenuItem onSelect={() => switchTheme(triggerRef.current)}>
+              {theme === 'dark' ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+              {t(theme === 'dark' ? 'theme.toLight' : 'theme.toDark')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => language.switchTo(otherLanguage)} lang={otherLanguage}>
+              <Languages aria-hidden="true" />
+              {LOCALE_NAMES[otherLanguage]}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>}
           <DropdownMenuItem disabled={pending} aria-busy={pending} onSelect={(event) => { event.preventDefault(); void signOut(); }}>
             {pending ? <LoaderCircle aria-hidden="true" className="animate-spin motion-reduce:animate-none" /> : <LogOut aria-hidden="true" />}
             {t(pending ? 'signingOut' : 'signOut')}

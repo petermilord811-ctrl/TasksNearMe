@@ -63,13 +63,15 @@
       "label": "Qué te trae por aquí",
       "poster": "Necesito ayuda",
       "helper": "Puedo ayudar",
-      "rewardSpoken": "Recompensa de {amount} para ayudantes fundadores"
+      "rewardSpoken": "Tarjeta de regalo de bienvenida de {amount} para ayudantes verificados"
     },
     "area": {
       "button": "Vecindario: {area}. Elegir otro",
       "everywhere": "Todo {market}",
       "menuLabel": "Vecindarios de {market}",
-      "picked": "{area} · {market}, {state}"
+      "picked": "{area} · {market}, {state}",
+      "elsewhere": "¿No estás en {market}? Estamos abriendo en todo EE. UU., ciudad por ciudad.",
+      "joinList": "Únete a la lista de tu ciudad"
     },
     "helperMode": {
       "line1": "Echa una mano,",
@@ -100,8 +102,12 @@
       "learnPricing": "Ver precios"
     },
     "reward": {
-      "badge": "{amount} para los primeros {limit} ayudantes",
-      "spots": "{left, plural, one {Queda # lugar} other {Quedan # lugares}}"
+      "badge": "Tarjeta de regalo de {amount} al verificarte",
+      "checks": {
+        "phone": "teléfono",
+        "id": "identificación",
+        "background": "antecedentes"
+      }
     }
   },
   "map": {
@@ -117,8 +123,9 @@
     "privacy": "Tu ubicación se queda en este dispositivo.",
     "denied": "La ubicación está desactivada, así que ves todo {market}.",
     "unavailable": "No pudimos encontrar tu ubicación, así que ves todo {market}.",
-    "outside": "Aún no llegamos a tu zona.",
-    "waitlist": "Unirme a la lista de espera",
+    "outside": "Aún no llegamos a tu ciudad: estamos abriendo en todo EE. UU., una ciudad a la vez.",
+    "waitlist": "Únete a la lista de tu ciudad",
+    "outsideHelpers": "¿Puedes ayudar? Verifícate ahora",
     "caption": "Las zonas son aproximadas. Un ayudante ve la dirección exacta solo después de que reservas.",
     "listNearYou": "Tareas abiertas más cercanas",
     "listNewest": "Tareas abiertas más recientes",
@@ -147,6 +154,7 @@
     "ctrlZoom": "Mantén Ctrl y desplázate para acercar el mapa",
     "cmdZoom": "Mantén ⌘ y desplázate para acercar el mapa",
     "engaged": "Desplázate para acercar · Esc para mover la página",
+    "exploreHint": "Arrastra para explorar · haz clic en el mapa para hacer zoom",
     "engageFirst": "Haz clic en el mapa y luego desplázate para acercar",
     "fullscreenOpen": "Abrir el mapa en pantalla completa",
     "fullscreenClose": "Cerrar el mapa en pantalla completa",
@@ -160,13 +168,17 @@
     "sortLabel": "Orden",
     "sortNewest": "Recientes",
     "sortNearest": "Cercanas",
+    "sortPay": "Mejor pagadas",
     "sortPrice": "Menor precio",
     "listByPrice": "Tareas abiertas, de menor a mayor precio",
+    "listByPay": "Tareas abiertas, mejor pagadas primero",
     "withinLabel": "Distancia desde ti",
     "withinMiles": "{miles} mi",
     "withinAny": "Cualquiera",
-    "followMap": "Solo lo que está en el mapa",
-    "inView": "{shown, plural, =0 {Ninguna} other {#}} de {total} mostradas",
+    "followMap": "En el mapa",
+    "followMapLabel": "Mostrar solo lo que se ve en el mapa",
+    "liveRetry": "El mapa en vivo no cargó · Reintentar",
+    "inView": "{shown, plural, =0 {Ninguna} other {#}} en el mapa",
     "jumpLabel": "Ir a un vecindario",
     "jumpPlaceholder": "Vecindario",
     "showTaskOnMap": "Mostrar “{title}” en el mapa",
@@ -176,7 +188,8 @@
     "emptyInViewTitle": "No hay tareas abiertas en esta parte del mapa",
     "emptyFilteredBody": "Prueba con una distancia mayor, aleja el mapa o muestra todo.",
     "showEverything": "Mostrar todo",
-    "approximate": "Zona aproximada"
+    "approximate": "Zona aproximada",
+    "nearMe": "Ver tareas cerca de mí"
   },
   "categories": {
     "eyebrow": "Lo que más se reserva",
@@ -300,23 +313,33 @@
     "schedule": "Trabaja cuando te convenga",
     "repeat": "Convierte buenas tareas en clientes frecuentes",
     "cta": "Ser ayudante",
-    "rewardTitle": "Recompensa para ayudantes fundadores",
+    "rewardTitle": "Tarjeta de regalo de bienvenida",
     "rewardAmount": "Tarjeta de regalo de {amount}",
-    "rewardBody": "Para cada uno de los primeros {limit} ayudantes verificados que completen una tarea que cumpla los requisitos.",
-    "rewardSpots": "{claimed} de {limit} lugares reclamados",
+    "rewardBody": "Pasa tres verificaciones rápidas y es tuya. No necesitas una primera tarea ni competir por un lugar: cada ayudante verificado recibe una, y eliges la tarjeta después de una revisión rápida.",
+    "rewardStepsLabel": "Las tres verificaciones",
+    "rewardChecks": {
+      "phone": "Teléfono",
+      "id": "Identificación",
+      "background": "Antecedentes"
+    },
     "rewardTerms": "Términos de la recompensa",
     "earnTitle": "Lo que te quedas",
     "earnBody": "De {price} de trabajo acordado, después de la tarifa de servicio del ayudante.",
     "earnLink": "Cómo funcionan las tarifas",
-    "joinCount": "{count, plural, one {Únete a # ayudante con identidad verificada en {market}} other {Únete a # ayudantes con identidad verificada en {market}}}"
+    "joinCount": "{count, plural, one {Únete a # ayudante con identidad verificada en {market}} other {Únete a # ayudantes con identidad verificada en {market}}}",
+    "meetTitle": "Conoce a ayudantes en {market}",
+    "idVerified": "Identidad verificada",
+    "stripRating": "{rating} ({count})",
+    "stripDone": "{count, plural, one {# tarea hecha} other {# tareas hechas}}"
   },
   "coverage": {
-    "eyebrow": "Dónde trabajamos",
-    "title": "Empezamos en {market}",
-    "body": "Vecindarios a unas {radius} millas a la redonda, entre ellos:",
+    "eyebrow": "Abriendo ciudad por ciudad",
+    "title": "Primero {market}. Luego tu ciudad.",
+    "body": "Estamos abriendo en todo EE. UU., una ciudad a la vez. En {market}: vecindarios a unas {radius} millas a la redonda, entre ellos:",
     "mapHint": "Elige un vecindario para ver sus tareas abiertas en el mapa.",
     "openTasks": "{count, plural, one {tarea abierta} other {tareas abiertas}}",
-    "waitlist": "¿En otro lugar? Únete a la lista de espera"
+    "waitlist": "¿Tu ciudad es la próxima? Únete a la lista",
+    "helpersAnywhere": "¿Puedes ayudar en cualquier parte de EE. UU.? Verifícate ahora"
   },
   "faq": {
     "eyebrow": "Bueno saber",

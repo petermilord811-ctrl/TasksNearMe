@@ -44,7 +44,7 @@ export function StepsSection() {
 
   return (
     <LazyMotion features={domMax}>
-      <section aria-labelledby="steps-title" className="py-20 sm:py-28 lg:py-32">
+      <section id="how-it-works" aria-labelledby="steps-title" className="scroll-mt-24 py-20 sm:py-28 lg:py-32">
         <div className="mx-auto max-w-content px-gutter">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <Heading id="steps-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} />

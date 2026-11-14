@@ -79,7 +79,8 @@ describe('the map explorer', () => {
     fireEvent.click(within(distance).getByRole('button', { name: t('withinMiles', { miles: 1 }) }));
     expect(within(distance).getByRole('button', { name: t('withinMiles', { miles: 1 }) })).toHaveAttribute('aria-pressed', 'true');
     expect(hrefs(screen.getByRole('list', { name: t('listNearYou') }))).toEqual(within1.map((pin) => routes.publicTask(pin.slug)));
-    expect(screen.getByText(t('inView', { shown: 2, total: pins.length }))).toBeInTheDocument();
+    // The count line says how many of them the list shows.
+    expect(screen.getByText((text) => text.includes(t('inView', { shown: 2, total: pins.length })))).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: category('yard-cleanup') }));
     expect(screen.getByText(t('emptyWithinTitle', { miles: 1 }))).toBeInTheDocument();

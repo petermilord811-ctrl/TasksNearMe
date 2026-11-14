@@ -1,4 +1,5 @@
 import { withClientMessages } from '@/i18n/client-messages';
+import { switchLanguageAction } from '@/modules/accounts/language-actions';
 import { getPublicShellViewer } from '@/platform/auth/viewer';
 import { PublicShell } from '@/ui/shells';
 
@@ -7,7 +8,7 @@ import { PublicShell } from '@/ui/shells';
  * full-width sections. The viewer is passed as a promise, as on the other public pages.
  */
 function LandingLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <PublicShell viewer={getPublicShellViewer()} variant="landing">{children}</PublicShell>;
+  return <PublicShell viewer={getPublicShellViewer()} variant="landing" onSwitchLanguage={switchLanguageAction}>{children}</PublicShell>;
 }
 
 export default withClientMessages('[locale]/(landing)/layout.tsx', LandingLayout);

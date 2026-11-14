@@ -84,7 +84,15 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
     map.touchZoomRotate.disableRotation();
     map.keyboard.disableRotation();
     const gate = coarse ? null : createWheelGate({ container, enableZoom: () => map.scrollZoom.enable(), disableZoom: () => map.scrollZoom.disable() });
-    const giveUp = window.setTimeout(() => { if (!map.loaded()) latest.current.onFailed(); }, 12_000);
+    // Set up once the style and the first full render are in ('load'). On a slow connection the tiles can take a
+    // while: once the style itself is in, the map is usable while the rest fills in, so after a while it's set up
+    // anyway. Only a style that never arrives (or a lost GPU surface) means the drawn map stays.
+    let setUp = false;
+    const giveUp = window.setTimeout(() => {
+      if (setUp) return;
+      if (map.isStyleLoaded()) setUpMap();
+      else latest.current.onFailed();
+    }, 15_000);
     let lastZoom = -1;
 
     const paint = () => {
@@ -186,7 +194,9 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
     };
     frameRef.current = frame;
 
-    map.on('load', () => {
+    const setUpMap = () => {
+      if (setUp) return;
+      setUp = true;
       window.clearTimeout(giveUp);
       map.addSource(SERVICE, { type: 'geojson', data: serviceGeoJson(latest.current.serviceArea) });
       map.addSource(PLACES, { type: 'geojson', data: placesGeoJson(latest.current.places) });
@@ -198,7 +208,9 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
       frame();
       renderMarkers(true);
       latest.current.onReady();
-    });
+    };
+    map.on('load', setUpMap);
+    map.on('webglcontextlost', () => latest.current.onFailed());
     map.on('moveend', () => renderMarkers());
     map.on('click', 'tnm-places-fill', (event) => {
       const id = event.features?.[0]?.properties?.id;

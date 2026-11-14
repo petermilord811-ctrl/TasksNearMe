@@ -386,9 +386,24 @@ export function MapLibreView({
       if (arriving) followScroll();
     });
     sized.observe(container);
+    // Setting the map up (sources, layers, markers) waits for the style and the first full render ('load'). On a
+    // slow connection the tiles can take a while: once the style itself is in, the map is usable while the
+    // rest fills in, so after a while it's set up anyway. Only a style that never arrives means there's no map.
+    let setUp = false;
+    let failed = false;
+    const fail = () => {
+      if (setUp || failed) return;
+      failed = true;
+      window.clearTimeout(giveUp);
+      window.clearTimeout(styleGrace);
+      latest.current.onFailed();
+    };
+    let styleGrace = 0;
     const giveUp = window.setTimeout(() => {
-      if (!instance.loaded()) latest.current.onFailed();
-    }, 12_000);
+      if (setUp) return;
+      if (instance.isStyleLoaded()) setUpMap();
+      else fail();
+    }, 15_000);
 
     /**
      * A theme change repaints the base: colors only. The style already has its layout, filters and zoom ranges (a
@@ -540,8 +555,11 @@ export function MapLibreView({
     };
     relayout.current = scheduleLayout;
 
-    instance.on('load', () => {
+    const setUpMap = () => {
+      if (setUp || failed) return;
+      setUp = true;
       window.clearTimeout(giveUp);
+      window.clearTimeout(styleGrace);
       const styleLayers = (instance.getStyle().layers ?? []) as never;
       extrusions = extrusionLayers(styleLayers);
       const before = firstSymbolLayer(styleLayers);
@@ -651,16 +669,28 @@ export function MapLibreView({
       latest.current.onReady();
       if (arriving) followScroll();
       else reportView();
-    });
+    };
+    instance.on('load', setUpMap);
+    // A tile, a glyph range or the sprite failing now and then is normal (the map draws without it, and MapLibre
+    // retries tiles as the view moves). Before the style is in, an error gets a few seconds' grace; still no
+    // style after that, and the drawn map stays.
     instance.on('error', () => {
-      if (!instance.loaded()) {
-        window.clearTimeout(giveUp);
-        latest.current.onFailed();
-      }
+      if (setUp || instance.isStyleLoaded() || styleGrace) return;
+      styleGrace = window.setTimeout(() => {
+        styleGrace = 0;
+        if (!instance.isStyleLoaded()) fail();
+      }, 4000);
+    });
+    // The GPU took the drawing surface away (a driver reset, too many 3D views open): the drawn map comes back,
+    // and the page offers to try again.
+    instance.on('webglcontextlost', () => {
+      if (setUp) latest.current.onFailed();
+      else fail();
     });
 
     return () => {
       window.clearTimeout(giveUp);
+      window.clearTimeout(styleGrace);
       window.clearTimeout(clearTimer.current);
       cancelAnimationFrame(arrivalFrame);
       cancelAnimationFrame(layoutFrame);

@@ -43,14 +43,16 @@ test.describe('public pages', () => {
     await expect(page.getByText(/\d+ (Example|Sample) (Lane|Street|Road)/)).toHaveCount(0);
   });
 
-  test('home map: outside the service area, the waitlist', async ({ page, context }) => {
+  test('home map: outside the service area, the city list and helper sign-up', async ({ page, context }) => {
     await context.grantPermissions(['geolocation']);
     await context.setGeolocation({ latitude: 32.7767, longitude: -96.797 }); // Dallas
     await page.goto('/');
     const map = page.locator('#tasks-near-you');
     await map.getByRole('button', { name: 'Use my location' }).click();
-    await expect(map.getByText("We're not in your area yet.")).toBeVisible();
-    await expect(map.getByRole('link', { name: 'Join the waitlist' })).toHaveAttribute('href', '/waitlist');
+    // National, cities open in turn (owner, 2026-11-14).
+    await expect(map.getByText("We're not in your city yet: we're opening across the US one city at a time.")).toBeVisible();
+    await expect(map.getByRole('link', { name: "Join your city's list" })).toHaveAttribute('href', '/waitlist');
+    await expect(map.getByRole('link', { name: 'Can help? Get verified now' })).toHaveAttribute('href', '/become-a-helper');
   });
 
   test('market and category pages', async ({ page }) => {

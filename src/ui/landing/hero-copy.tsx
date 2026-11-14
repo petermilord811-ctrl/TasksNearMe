@@ -81,7 +81,9 @@ export function HeroCopy({ data, now }: { data: HomePageData; now: ISODateTime }
           ]}
         />
       </h1>
-      <p key={`subtitle-${audience}`} className="enter mt-5 max-w-[31rem] text-base leading-relaxed text-muted-foreground sm:text-lg lg:mt-[clamp(0.75rem,2svh,1.5rem)] lg:[@media(max-height:720px)]:text-base" style={delay(520)}>
+      {/* Painted at once on arrival (it's the page's largest text, so a fade would hold back its first paint);
+          after a switch of audience the new line fades in. */}
+      <p key={`subtitle-${audience}`} className={cn('mt-5 max-w-[31rem] text-base leading-relaxed text-muted-foreground sm:text-lg lg:mt-[clamp(0.75rem,2svh,1.5rem)] lg:[@media(max-height:720px)]:text-base', switched && 'enter')} style={delay(0)}>
         {t(`${copy}subtitle`)}
       </p>
       <div className="enter relative z-20 mt-8 lg:mt-[clamp(1rem,2.8svh,2.25rem)]" style={{ ['--enter-delay' as string]: '640ms' }}>

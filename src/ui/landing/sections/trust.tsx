@@ -22,7 +22,7 @@ export function TrustSection() {
     { key: 'reviews', Icon: Star, glow: 'var(--reward)', span: 'lg:col-span-7', picture: <ReviewsPicture client={art('client')} helper={art('helper')} rule={art('reviewsRule')} /> },
   ];
   return (
-    <section aria-labelledby="trust-title" className="py-20 sm:py-28 lg:py-32">
+    <section id="trust" aria-labelledby="trust-title" className="scroll-mt-24 py-20 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-content px-gutter">
         <Heading id="trust-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} />
         <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-12">

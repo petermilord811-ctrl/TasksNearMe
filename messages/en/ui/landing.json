@@ -63,13 +63,15 @@
       "label": "What brings you here",
       "poster": "Need help",
       "helper": "Can help",
-      "rewardSpoken": "{amount} founding helper reward"
+      "rewardSpoken": "{amount} welcome gift card for verified helpers"
     },
     "area": {
       "button": "Neighborhood: {area}. Pick another",
       "everywhere": "All of {market}",
       "menuLabel": "Neighborhoods in {market}",
-      "picked": "{area} · {market}, {state}"
+      "picked": "{area} · {market}, {state}",
+      "elsewhere": "Not in {market}? We're opening across the US city by city.",
+      "joinList": "Join your city's list"
     },
     "helperMode": {
       "line1": "Lend a hand,",
@@ -100,8 +102,12 @@
       "learnPricing": "See pricing"
     },
     "reward": {
-      "badge": "{amount} for the first {limit} helpers",
-      "spots": "{left, plural, one {# spot left} other {# spots left}}"
+      "badge": "{amount} gift card when you're verified",
+      "checks": {
+        "phone": "phone",
+        "id": "ID",
+        "background": "background"
+      }
     }
   },
   "map": {
@@ -117,8 +123,9 @@
     "privacy": "Your location stays on this device.",
     "denied": "Location is off, so you're seeing all of {market}.",
     "unavailable": "We couldn't find your location, so you're seeing all of {market}.",
-    "outside": "We're not in your area yet.",
-    "waitlist": "Join the waitlist",
+    "outside": "We're not in your city yet: we're opening across the US one city at a time.",
+    "waitlist": "Join your city's list",
+    "outsideHelpers": "Can help? Get verified now",
     "caption": "Areas are approximate. A helper sees the exact address only after you book.",
     "listNearYou": "Open tasks nearest you",
     "listNewest": "Newest open tasks",
@@ -147,6 +154,7 @@
     "ctrlZoom": "Hold Ctrl and scroll to zoom the map",
     "cmdZoom": "Hold ⌘ and scroll to zoom the map",
     "engaged": "Scroll to zoom · Esc to scroll the page",
+    "exploreHint": "Drag to look around · click the map to zoom",
     "engageFirst": "Click the map, then scroll to zoom",
     "fullscreenOpen": "Open the map full screen",
     "fullscreenClose": "Close the full-screen map",
@@ -160,13 +168,17 @@
     "sortLabel": "Order",
     "sortNewest": "Newest",
     "sortNearest": "Nearest",
+    "sortPay": "Highest pay",
     "sortPrice": "Lowest price",
     "listByPrice": "Open tasks, lowest price first",
+    "listByPay": "Open tasks, highest pay first",
     "withinLabel": "Distance from you",
     "withinMiles": "{miles} mi",
     "withinAny": "Any",
-    "followMap": "Only what's on the map",
-    "inView": "{shown, plural, =0 {None} other {#}} of {total} shown",
+    "followMap": "On map",
+    "followMapLabel": "Only list what's in the map view",
+    "liveRetry": "Live map didn't load · Try again",
+    "inView": "{shown, plural, =0 {None} other {#}} on the map",
     "jumpLabel": "Go to a neighborhood",
     "jumpPlaceholder": "Neighborhood",
     "showTaskOnMap": "Show “{title}” on the map",
@@ -176,7 +188,8 @@
     "emptyInViewTitle": "No open tasks in this part of the map",
     "emptyFilteredBody": "Try a wider distance, zoom out, or show everything.",
     "showEverything": "Show everything",
-    "approximate": "Approximate area"
+    "approximate": "Approximate area",
+    "nearMe": "Show tasks near me"
   },
   "categories": {
     "eyebrow": "What people book",
@@ -300,23 +313,33 @@
     "schedule": "Work when it suits you",
     "repeat": "Turn good tasks into regular clients",
     "cta": "Become a helper",
-    "rewardTitle": "Founding helper reward",
+    "rewardTitle": "Welcome gift card",
     "rewardAmount": "{amount} gift card",
-    "rewardBody": "For each of the first {limit} verified helpers who complete a qualifying task.",
-    "rewardSpots": "{claimed} of {limit} spots claimed",
+    "rewardBody": "Pass three quick checks and it's yours. No first task needed and no spots to race for: every verified helper gets one, and you pick the card after a quick review.",
+    "rewardStepsLabel": "The three checks",
+    "rewardChecks": {
+      "phone": "Phone",
+      "id": "ID",
+      "background": "Background"
+    },
     "rewardTerms": "Reward terms",
     "earnTitle": "What you keep",
     "earnBody": "From {price} of agreed work, after the helper service fee.",
     "earnLink": "How fees work",
-    "joinCount": "{count, plural, one {Join # ID-verified helper in {market}} other {Join # ID-verified helpers in {market}}}"
+    "joinCount": "{count, plural, one {Join # ID-verified helper in {market}} other {Join # ID-verified helpers in {market}}}",
+    "meetTitle": "Meet helpers in {market}",
+    "idVerified": "ID verified",
+    "stripRating": "{rating} ({count})",
+    "stripDone": "{count, plural, one {# task done} other {# tasks done}}"
   },
   "coverage": {
-    "eyebrow": "Where we work",
-    "title": "Starting in {market}",
-    "body": "Neighborhoods within about {radius} miles, including:",
+    "eyebrow": "Opening city by city",
+    "title": "{market} first. Your city next.",
+    "body": "We're opening across the US one city at a time. In {market}: neighborhoods within about {radius} miles, including:",
     "mapHint": "Pick a neighborhood to see its open tasks on the map.",
     "openTasks": "{count, plural, one {open task} other {open tasks}}",
-    "waitlist": "Somewhere else? Join the waitlist"
+    "waitlist": "Your city next? Join the list",
+    "helpersAnywhere": "Can help, anywhere in the US? Get verified now"
   },
   "faq": {
     "eyebrow": "Good to know",

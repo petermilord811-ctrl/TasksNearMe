@@ -95,7 +95,9 @@ describe('PublicShell', () => {
     for (const doc of LEGAL_DOCS) {
       expect(legal.getByRole('link', { name: uiMessages.shell.legal[doc] })).toHaveAttribute('href', routes.legal(doc));
     }
-    expect(footer.getByRole('link', { name: 'Austin' })).toHaveAttribute('href', routes.market());
+    expect(footer.getByRole('link', { name: /^Austin, TX/ })).toHaveAttribute('href', routes.market());
+    // Opening city by city: somewhere else, the city list.
+    expect(footer.getByRole('link', { name: uiMessages.shell.footer.cityNext })).toHaveAttribute('href', routes.waitlist());
     expect(footer.getByRole('link', { name: 'Trust & safety' })).toHaveAttribute('href', routes.trustAndSafety());
     expect(footer.getByRole('link', { name: 'Help' })).toHaveAttribute('href', routes.help());
   });
@@ -159,6 +161,12 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Finish setting up to start helping' })).toHaveAttribute('href', routes.app.helperOnboarding());
     expect(screen.getByRole('link', { name: 'Notifications' })).toHaveAttribute('href', routes.app.notifications());
     expect(within(screen.getByRole('navigation', { name: 'App navigation' })).getByRole('link', { name: 'Messages' })).toBeInTheDocument();
+  });
+
+  it('omits helper setup on the setup steps themselves (it would lead to the page it sits on)', () => {
+    pathname.mockReturnValue(routes.app.helperOnboarding('phone'));
+    show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Phone</h1></AppShell>);
+    expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
   });
 
   it.each([mayaShell, jordanShell])('omits helper setup for $displayName', (viewer) => {

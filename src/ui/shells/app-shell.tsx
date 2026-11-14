@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Bell, CirclePause, CircleUserRound } from 'lucide-react';
+import { Bell, CirclePause } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type AppShellHandlers, type ShellNotice, type SignedInViewer } from '@/contracts';
 import { buttonVariants } from '@/ui/primitives/button';
@@ -11,6 +11,10 @@ import { ScrollbarActivity } from '@/ui/motion';
 import { SkipLink } from './skip-link';
 import { ModeSwitch } from './mode-switch';
 import { AccountMenu } from './account-menu';
+import { LanguageSwitch } from './language-switch';
+import { HelperSetupLink } from './helper-setup-link';
+import { QuickAction } from './quick-action';
+import { ThemeToggle } from './theme-toggle';
 import { Navigation } from './navigation';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { getAppNav } from './nav';
@@ -19,9 +23,10 @@ export interface AppShellProps { viewer: SignedInViewer; handlers: AppShellHandl
 
 /**
  * The signed-in app, in the landing page's language: the paper under everything, a pinned glass bar (the logo, how
- * you're using TasksNearMe, notifications and your account), on wide screens a floating rail of links whose current
- * pill glides between pages, and on phones a glass dock of five tabs. `flow` pages (posting a task) keep the dock
- * away. `notices` (the outage switch) sit above every page's content, before the helper setup link.
+ * you're using TasksNearMe, the next step for that mode, the language and theme switches, notifications and your
+ * account, whose menu also carries the theme and the language on phones), on wide screens a floating rail of links
+ * whose current pill glides between pages, and on phones a glass dock of five tabs. `flow` pages (posting a task)
+ * keep the dock away. `notices` (the outage switch) sit above every page's content, before the helper setup link.
  */
 export function AppShell({ viewer, handlers, children, currentPath, layout = 'tabs', notices = [] }: AppShellProps) {
   const t = useTranslations('shell');
@@ -30,16 +35,20 @@ export function AppShell({ viewer, handlers, children, currentPath, layout = 'ta
     <SkipLink />
     <ScrollbarActivity />
     <AppBar>
-      <div className="mx-auto flex max-w-admin flex-wrap items-center gap-x-2 gap-y-2 px-gutter py-2 sm:flex-nowrap sm:gap-x-4 sm:py-2.5">
-        <Logo />
-        <div className="order-last w-full sm:order-none sm:ml-auto sm:w-auto"><ModeSwitch mode={viewer.mode} onModeChange={handlers.onModeChange} /></div>
-        <div className="ml-auto flex items-center gap-1 sm:ml-0">
-          <span aria-hidden="true" className="mr-1 hidden h-7 w-px bg-foreground/10 sm:block" />
+      <div className="mx-auto flex max-w-admin flex-wrap items-center gap-x-2 gap-y-2 px-gutter py-2 sm:flex-nowrap sm:gap-x-3 sm:py-2.5">
+        <Logo animated />
+        <div className="order-last w-full sm:order-none sm:ml-3 sm:w-auto lg:ml-5"><ModeSwitch mode={viewer.mode} onModeChange={handlers.onModeChange} /></div>
+        <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
+          {/* The next thing to do in this mode, one tap away. */}
+          <QuickAction mode={viewer.mode} />
+          <span aria-hidden="true" className="mx-1 hidden h-7 w-px bg-foreground/10 sm:block" />
+          <LanguageSwitch label={t('footer.language')} onSwitch={handlers.onSwitchLanguage} className="hidden lg:block" />
+          <ThemeToggle className="hidden sm:inline-flex" />
           <Link href={routes.app.notifications()} className={buttonVariants({ variant: 'ghost', size: 'icon', className: 'relative rounded-full text-foreground/80' })} aria-label={viewer.unreadNotifications > 0 ? t('unreadNotifications', { count: viewer.unreadNotifications }) : t('notifications')}>
             <Bell aria-hidden="true" className="size-5" />
             {viewer.unreadNotifications > 0 && <span aria-hidden="true" className="absolute top-1 right-0.5 min-w-5 rounded-full bg-primary px-1.5 text-center text-[0.6875rem] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{viewer.unreadNotifications}</span>}
           </Link>
-          <AccountMenu viewer={viewer} onSignOut={handlers.onSignOut} />
+          <AccountMenu viewer={viewer} onSignOut={handlers.onSignOut} onSwitchLanguage={handlers.onSwitchLanguage} />
         </div>
       </div>
     </AppBar>
@@ -56,7 +65,7 @@ export function AppShell({ viewer, handlers, children, currentPath, layout = 'ta
           <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-warning/15 text-warning"><CirclePause className="size-5" /></span>
           <div className="min-w-0 space-y-1"><p id="notice-bookings-paused" className="font-semibold text-foreground">{t('notices.bookingsPaused.title')}</p><p className="text-muted-foreground">{t('notices.bookingsPaused.body')}</p></div>
         </section>}
-        {viewer.mode === 'helper' && !viewer.helperReady && <Link href={routes.app.helperOnboarding()} className="group flex min-h-11 items-center gap-3 rounded-2xl border border-primary/25 bg-secondary/80 p-4 text-sm font-medium text-secondary-foreground shadow-card transition-[translate,box-shadow,background-color] duration-300 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-secondary"><span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-card/80 text-primary"><CircleUserRound className="size-5" /></span><span>{t('helperSetup')}</span><ArrowRight aria-hidden="true" className="ml-auto size-5 shrink-0 transition-transform duration-300 ease-[var(--ease-out)] group-hover:translate-x-1" /></Link>}
+        {viewer.mode === 'helper' && !viewer.helperReady && <HelperSetupLink />}
         {children}
       </main>
     </div>

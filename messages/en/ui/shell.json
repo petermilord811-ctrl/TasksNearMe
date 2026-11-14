@@ -19,6 +19,10 @@
   "unreadNotifications": "Notifications, {count, plural, one {# unread notification} other {# unread notifications}}",
   "unreadMessages": "{count, plural, one {# unread message} other {# unread messages}}",
   "helperSetup": "Finish setting up to start helping",
+  "quickAction": {
+    "postTask": "Post a task",
+    "findWork": "Find work"
+  },
   "notices": {
     "bookingsPaused": {
       "title": "New bookings are paused for now",
@@ -69,17 +73,31 @@
   "footer": {
     "tagline": "Good neighbors. Lighter to-do lists.",
     "introduction": "Local help for the things that make a home, and a little more time for you.",
-    "signature": "TasksNearMe · Starting close to home in Austin, Texas.",
+    "signature": "TasksNearMe · Neighbors helping neighbors, opening city by city across the US.",
     "payment": "Agree on a price. Book and pay through TasksNearMe.",
-    "localHelp": "Everyday help, close to home.",
-    "marketLabel": "Our first city",
-    "austin": "Austin",
+    "localHelp": "Everyday help from verified people nearby.",
+    "cities": "Cities",
+    "austin": "Austin, TX",
+    "firstCity": "First city",
+    "cityNext": "Your city next? Join the list",
+    "explore": "Explore",
+    "onThisPage": "On this page",
+    "sections": {
+      "tasks-near-you": "Tasks near you",
+      "how-it-works": "How it works",
+      "pricing": "Pricing",
+      "trust": "Trust and safety",
+      "for-helpers": "For helpers",
+      "faq": "Questions"
+    },
     "categories": "Find local help",
     "resources": "Good to know",
     "legal": "Policies and terms",
     "trust": "Trust & safety",
     "help": "Help",
-    "language": "Language"
+    "language": "Language",
+    "openTasks": "Open tasks",
+    "becomeHelper": "Become a helper"
   },
   "categories": {
     "furniture-assembly": "Furniture assembly",

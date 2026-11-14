@@ -10,14 +10,16 @@ import { cn } from '@/ui/lib/utils';
 import type { Audience } from '../landing-state';
 
 /**
- * "Need help · Can help": who the hero speaks to. A pill slides to the pick. "Can help" carries the founding
- * reward's amount while the program is open (spoken in full). Each side is a toggle button.
+ * "Need help · Can help": who the hero speaks to. A pill slides to the pick. "Can help" carries the welcome gift
+ * card's amount while the program is on (spoken in full). Each side is a toggle button.
  */
 export function AudienceSwitch({ audience, onChange, reward }: { audience: Audience; onChange: (audience: Audience) => void; reward: HomePageData['welcomeReward'] }) {
   const t = useTranslations('landing.hero.audience');
   const reduced = usePrefersReducedMotion();
   const pillId = useId();
-  const open = reward && reward.cohortLimit > reward.spotsClaimed ? reward : undefined;
+  // Every helper who passes the phone, ID and background checks gets it (no spots to run out), so it shows
+  // whenever the program is on.
+  const open = reward;
   const sides: Audience[] = ['poster', 'helper'];
 
   return (

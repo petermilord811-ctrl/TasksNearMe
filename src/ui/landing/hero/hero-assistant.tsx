@@ -441,7 +441,8 @@ export function HeroAssistant({ assistant: a, className }: { assistant: HeroAssi
                 htmlFor={inputId}
                 className={cn(
                   'mt-[0.55rem] shrink-0 overflow-hidden leading-6 whitespace-nowrap text-muted-foreground transition-[max-width,opacity,margin] duration-300 ease-[var(--ease-out)]',
-                  a.text ? '-mr-2 max-w-0 opacity-0' : 'max-w-[10rem] opacity-100',
+                  // Room for the longest prompt ("Necesito ayuda para…"); it's only a cap, so shorter ones keep their width.
+                  a.text ? '-mr-2 max-w-0 opacity-0' : 'max-w-[11.5rem] opacity-100',
                 )}
               >
                 {helper && <span className="sr-only">{t('helperLabel')}: </span>}

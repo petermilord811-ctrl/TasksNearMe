@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState, type ComponentType } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { Building2, Expand, Flame, Layers, MapPinned, Minus, MousePointerClick, Plus, Shrink, Target, X } from 'lucide-react';
+import { Building2, Expand, Flame, Layers, Loader2, LocateFixed, MapPinned, Minus, MousePointerClick, Move, Plus, RotateCw, Shrink, Target, X } from 'lucide-react';
 import type { LandingMapData } from '@/contracts';
 import { distanceMiles, roundMiles } from '@/shared/geo';
 import { usePrefersReducedMotion } from '@/ui/motion';
@@ -61,7 +61,7 @@ export function TaskMap({
 }) {
   const t = useTranslations('landing.map');
   // Pointing at a category quiets the other pins; picking one also flies the map to its tasks.
-  const { activeCategory, selectedCategory, litTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location } = useLanding();
+  const { activeCategory, selectedCategory, litTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location, requestLocation } = useLanding();
   const explorer = useOptionalMapExplorer();
   const reduced = usePrefersReducedMotion();
   const userPoint = location.status === 'granted' ? location.point : undefined;
@@ -70,12 +70,17 @@ export function TaskMap({
   const openRef = useRef<HTMLButtonElement>(null);
   const [near, setNear] = useState(false);
   const [failed, setFailed] = useState(false);
+  /** Each try at the live map (a retry mounts it afresh). */
+  const [attempt, setAttempt] = useState(0);
   const [Live, setLive] = useState<ComponentType<MapViewProps> | null>(null);
   const [ready, setReady] = useState(false);
   const [controls, setControls] = useState<MapControls | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [engaged, setEngaged] = useState(false);
-  const [hint, setHint] = useState<'engaged' | 'blocked' | null>(null);
+  const [hint, setHint] = useState<Hint | null>(null);
+  /** A mouse is over the live map: the hint follows it instead of sitting by the controls. */
+  const [pointerOver, setPointerOver] = useState(false);
+  const bubbleRef = useRef<HTMLDivElement>(null);
   const [localLayers, setLocalLayers] = useState<MapLayers>(DEFAULT_LAYERS);
   const hintTimer = useRef<number | undefined>(undefined);
   const fill = variant === 'fill';
@@ -88,24 +93,29 @@ export function TaskMap({
     [userPoint, map.pins],
   );
 
-  // When to load the live map: after the hero's town (or its timeout), or once the visitor scrolls the map in
-  // (a little past the fold: the map's section starts right under a full-screen hero), then when the browser is idle.
+  // When to load the live map: only once the visitor heads for it, so a visit that never scrolls down fetches no
+  // tiles at all (and the page's network settles). As the map comes within about a screen, its style is fetched
+  // and the engine starts once the hero's town has finished building (they'd compete for the main thread and
+  // the GPU) or after a short wait; when the map is actually in view it starts right away. Pointing at the map or
+  // asking it to show something also starts it (below). Either way in an idle moment.
   useEffect(() => {
     if (mode === 'static') return;
     const frame = frameRef.current;
     if (!frame) return;
     let started = false;
+    let approaching = false;
+    let heroDone = false;
     let idle = 0;
     let settle = 0;
     const hasIdle = typeof window.requestIdleCallback === 'function';
     let cancelHero = () => {};
-    let seen: IntersectionObserver | null = null;
+    const watchers: IntersectionObserver[] = [];
     const stopWatching = () => {
       cancelHero();
-      seen?.disconnect();
+      for (const watcher of watchers) watcher.disconnect();
       window.clearTimeout(settle);
     };
-    // The style (and its tiles' description, sprite and first glyphs) is only network: fetched at once.
+    // The style (and its tiles' description, sprite and first glyphs) is only network: fetched as the map nears.
     const warmUp = () => void prefetchBaseStyle(map.styleUrl);
     const start = () => {
       if (started) return;
@@ -114,13 +124,27 @@ export function TaskMap({
       warmUp();
       idle = hasIdle ? window.requestIdleCallback(() => setNear(true), { timeout: 1500 }) : window.setTimeout(() => setNear(true), 80);
     };
+    const maybeStart = () => {
+      if (approaching && heroDone) settle = window.setTimeout(start, HERO_SETTLE_MS);
+    };
     cancelHero = whenHeroReady(() => {
-      warmUp();
-      settle = window.setTimeout(start, HERO_SETTLE_MS);
+      heroDone = true;
+      maybeStart();
     }, HERO_WAIT_MS);
-    if (!started && 'IntersectionObserver' in window) {
-      seen = new IntersectionObserver(([entry]) => entry?.isIntersecting && start(), { rootMargin: '0px 0px -12% 0px' });
+    if ('IntersectionObserver' in window) {
+      const near = new IntersectionObserver(([entry]) => {
+        if (!entry?.isIntersecting || approaching) return;
+        approaching = true;
+        warmUp();
+        maybeStart();
+      }, { rootMargin: '0px 0px 80% 0px' });
+      const seen = new IntersectionObserver(([entry]) => entry?.isIntersecting && start(), { rootMargin: '0px 0px -12% 0px' });
+      near.observe(frame);
       seen.observe(frame);
+      watchers.push(near, seen);
+    } else {
+      approaching = true;
+      maybeStart();
     }
     return () => {
       started = true;
@@ -160,6 +184,21 @@ export function TaskMap({
     const timer = window.setTimeout(() => setDrawnGone(true), 900);
     return () => window.clearTimeout(timer);
   }, [liveReady]);
+  // The live map failed (no style, the GPU lost it): the drawn map is back, with a way to try again, and it tries
+  // again by itself when the connection comes back.
+  const retry = () => {
+    setReady(false);
+    setDrawnGone(false);
+    setFailed(false);
+    setAttempt((value) => value + 1);
+  };
+  useEffect(() => {
+    if (!failed) return;
+    const onOnline = () => retry();
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [failed]);
+
   const setLiveReady = explorer?.setLiveReady;
   useEffect(() => {
     setLiveReady?.(liveReady);
@@ -200,19 +239,45 @@ export function TaskMap({
   }, [fullscreen]);
 
   useEffect(() => () => window.clearTimeout(hintTimer.current), []);
-  const showHint = (which: 'engaged' | 'blocked', ms: number) => {
+  const showHint = (which: Hint, ms: number) => {
     window.clearTimeout(hintTimer.current);
     setHint(which);
     hintTimer.current = window.setTimeout(() => setHint(null), ms);
   };
   const use = () => controls?.engage();
 
+  // The hint at the pointer: placed by hand on each move (no re-render), a step behind it, never under it.
+  const followPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const bubble = bubbleRef.current;
+    const frame = frameRef.current;
+    if (!bubble || !frame) return;
+    const box = frame.getBoundingClientRect();
+    const x = Math.min(event.clientX - box.left + 18, box.width - bubble.offsetWidth - 12);
+    const y = Math.min(event.clientY - box.top + 22, box.height - bubble.offsetHeight - 12);
+    bubble.style.transform = `translate3d(${Math.max(8, x)}px, ${Math.max(8, y)}px, 0)`;
+  };
+  const mouseOnLive = fill && liveReady && !fullscreen;
+  const onMouseEnter = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || !mouseOnLive) return;
+    setPointerOver(true);
+    followPointer(event);
+    // The first time on the map in this visit: how it works, once.
+    if (!engaged && !hint && firstVisitToMap()) showHint('intro', 2600);
+  };
+
   return (
     <div
       ref={frameRef}
       {...{ [MAP_FRAME_ATTRIBUTE]: '' }}
       // The visitor reaches for the map: no more waiting.
-      onPointerEnter={mode === 'static' || load ? undefined : () => setNear(true)}
+      onPointerEnter={(event) => {
+        if (mode !== 'static' && !load) setNear(true);
+        onMouseEnter(event);
+      }}
+      onPointerMove={pointerOver ? followPointer : (event) => mouseOnLive && event.pointerType === 'mouse' && onMouseEnter(event)}
+      onPointerLeave={() => setPointerOver(false)}
+      // The map's own cursors (globals.css): a lens to look around, with a plus once the wheel zooms it.
+      data-map-cursor={fill && liveReady ? (engaged ? 'zoom' : 'explore') : undefined}
       role={fullscreen ? 'dialog' : undefined}
       aria-modal={fullscreen ? true : undefined}
       aria-label={fullscreen && market ? t('fullscreenLabel', { market }) : undefined}
@@ -243,6 +308,7 @@ export function TaskMap({
       {showLive && Live && (
         <div className={cn('absolute inset-0 transition-opacity duration-700', liveReady ? 'opacity-100' : 'pointer-events-none opacity-0')}>
           <Live
+            key={attempt}
             map={map}
             label={label}
             pins={map.pins}
@@ -284,14 +350,27 @@ export function TaskMap({
             className={cn(
               'pointer-events-none absolute top-1 transition-[opacity,translate] duration-300',
               fullscreen ? 'right-[calc(100%+0.75rem)]' : 'right-[calc(100%+0.75rem)] lg:right-auto lg:left-[calc(100%+0.75rem)]',
-              hint ? 'translate-x-0 opacity-100' : 'translate-x-1 opacity-0',
+              hint && !pointerOver ? 'translate-x-0 opacity-100' : 'translate-x-1 opacity-0',
             )}
           >
-            <span className="glass inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium whitespace-nowrap text-foreground shadow-overlay">
-              {hint === 'blocked' ? <MousePointerClick className="size-3.5 text-violet" /> : <Target className="size-3.5 text-violet" />}
-              {hint === 'blocked' ? t('engageFirst') : t('engaged')}
-            </span>
+            <HintChip hint={hint} />
           </div>
+          {/* Tasks around me: asks for the location the first time (only on this press; it stays on this device),
+              then brings the map back to it. The list switches to nearest first by itself. */}
+          <button
+            type="button"
+            onClick={() => {
+              use();
+              if (location.status === 'granted') explorer?.requestFocus({ kind: 'area', point: location.point });
+              else requestLocation();
+            }}
+            disabled={location.status === 'locating'}
+            aria-label={t('nearMe')}
+            title={t('nearMe')}
+            className={cn('glass inline-flex size-11 items-center justify-center rounded-full transition-transform hover:text-foreground active:scale-95 disabled:opacity-70', location.status === 'granted' ? 'text-violet' : 'text-foreground/80')}
+          >
+            {location.status === 'locating' ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <LocateFixed aria-hidden="true" className="size-4" />}
+          </button>
           <LayersControl layers={layers} onChange={(next) => { use(); setLayers(next); }} />
           <button
             ref={openRef}
@@ -318,6 +397,28 @@ export function TaskMap({
         </div>
       )}
 
+      {/* The same hint at the mouse pointer while it's over the map. */}
+      {mouseOnLive && (
+        <div ref={bubbleRef} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 z-[3] transition-transform duration-150 ease-out will-change-transform">
+          <div className={cn('transition-[opacity,scale] duration-200', hint && pointerOver ? 'scale-100 opacity-100' : 'scale-95 opacity-0')}>
+            <HintChip hint={hint} />
+          </div>
+        </div>
+      )}
+
+      {fill && failed && mode !== 'static' && (
+        <div className={cn('absolute z-[2] flex flex-col items-end gap-2', controlsClassName)}>
+          <button
+            type="button"
+            onClick={retry}
+            className="glass inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-xs font-semibold text-foreground shadow-overlay transition-transform hover:text-violet active:scale-95"
+          >
+            <RotateCw aria-hidden="true" className="size-3.5" />
+            {t('liveRetry')}
+          </button>
+        </div>
+      )}
+
       {fill && liveReady && engaged && !fullscreen && !reduced && <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] rounded-none ring-2 ring-violet/25 ring-inset" />}
 
       {fullscreen && (
@@ -333,6 +434,31 @@ export function TaskMap({
       )}
     </div>
   );
+}
+
+type Hint = 'intro' | 'engaged' | 'blocked';
+
+/** What the wheel and a drag do on the map right now, in one line. */
+function HintChip({ hint }: { hint: Hint | null }) {
+  const t = useTranslations('landing.map');
+  const Icon = hint === 'blocked' ? MousePointerClick : hint === 'intro' ? Move : Target;
+  return (
+    <span className="glass inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium whitespace-nowrap text-foreground shadow-overlay">
+      <Icon className="size-3.5 text-violet" />
+      {hint === 'blocked' ? t('engageFirst') : hint === 'intro' ? t('exploreHint') : t('engaged')}
+    </span>
+  );
+}
+
+/** Whether this is the visitor's first time pointing at the map in this visit (the intro hint shows once). */
+function firstVisitToMap(): boolean {
+  try {
+    if (window.sessionStorage.getItem('tnm-map-intro')) return false;
+    window.sessionStorage.setItem('tnm-map-intro', '1');
+  } catch {
+    /* storage blocked: show it, it's harmless */
+  }
+  return true;
 }
 
 /** The layers: the tasks as pins or as a glow of where help is needed, 3D buildings, and the service area. */

@@ -1,15 +1,23 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, CalendarClock, Gift, Repeat, WalletCards } from 'lucide-react';
-import { routes, type HomePageData } from '@/contracts';
+import { ArrowRight, BadgeCheck, CalendarClock, Gift, Phone, Repeat, ShieldCheck, Star, WalletCards } from 'lucide-react';
+import { routes, type HelperSummary, type HomePageData } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { HoverLift, Magnetic, Reveal } from '@/ui/motion';
 import { ArrowLink, Heading } from './heading';
 
+/** The checks that earn the welcome gift card, in onboarding order (blueprint 05 §2, 2026-11-14). */
+const REWARD_CHECKS = [
+  { key: 'phone', Icon: Phone },
+  { key: 'id', Icon: BadgeCheck },
+  { key: 'background', Icon: ShieldCheck },
+] as const;
+
 /**
- * For helpers: the pitch, what a helper keeps from a task (the fee engine's own example), the founding helper
- * reward while there is one, and how many ID-verified helpers are already here (with a few of their faces).
+ * For helpers: the pitch, what a helper keeps from a task (the fee engine's own example), the welcome gift card
+ * (every helper who passes the phone, ID and background checks gets one) while the program is on, and how many
+ * ID-verified helpers are already here (with a few of their faces).
  */
 export function HelpersSection({ data }: { data: HomePageData }) {
   const t = useTranslations('landing.helpers');
@@ -23,7 +31,7 @@ export function HelpersSection({ data }: { data: HomePageData }) {
     { key: 'repeat', Icon: Repeat },
   ] as const;
   return (
-    <section aria-labelledby="helpers-title" className="py-20 sm:py-28 lg:py-32">
+    <section id="for-helpers" aria-labelledby="helpers-title" className="scroll-mt-24 py-20 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-content px-gutter">
         <Reveal variant="bloom" origin="50% 100%">
           <div className="relative overflow-hidden rounded-[2.25rem] border border-foreground/[0.07] bg-card/70 p-6 shadow-card sm:p-10 lg:p-14">
@@ -78,28 +86,97 @@ export function HelpersSection({ data }: { data: HomePageData }) {
                   </HoverLift>
                 </Reveal>
                 {reward && (
+                  // A solid surface, not frosted glass: glass inside the fading reveal would flash the glow's colors.
                   <Reveal variant="bloom" index={2} origin="50% 50%">
-                    <HoverLift surfaceClassName="glass rounded-[1.75rem]" glow="var(--iri-2)" tilt={3} lift={5}>
+                    <HoverLift surfaceClassName="lift-shadow rounded-[1.75rem] border border-foreground/[0.07] bg-card" glow="var(--iri-2)" tilt={3} lift={5}>
                       <div className="p-6">
-                        <p className="inline-flex items-center gap-2 text-sm font-semibold"><Gift aria-hidden="true" className="lift-icon size-4 text-primary" />{t('rewardTitle')}</p>
-                        <p className="mt-3 font-display text-4xl font-semibold tracking-[-0.03em]">{t('rewardAmount', { amount: formatMoney(reward.amountCents) })}</p>
-                        <p className="mt-2 text-sm text-muted-foreground">{t('rewardBody', { limit: reward.cohortLimit })}</p>
-                        <div className="mt-5">
-                          <div className="h-2.5 overflow-hidden rounded-full bg-foreground/[0.08]" aria-hidden="true">
-                            <div className="reveal-fill h-full rounded-full" style={{ width: `${Math.min(100, (reward.spotsClaimed / Math.max(1, reward.cohortLimit)) * 100)}%`, backgroundImage: 'var(--iridescent)' }} />
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="inline-flex items-center gap-2 text-sm font-semibold"><Gift aria-hidden="true" className="lift-icon size-4 text-primary" />{t('rewardTitle')}</p>
+                            <p className="mt-3 font-display text-4xl font-semibold tracking-[-0.03em]">{t('rewardAmount', { amount: formatMoney(reward.amountCents) })}</p>
                           </div>
-                          <p className="mt-2 text-sm font-medium tabular-nums">{t('rewardSpots', { claimed: reward.spotsClaimed, limit: reward.cohortLimit })}</p>
+                          <GiftCardArt amount={formatMoney(reward.amountCents)} />
                         </div>
-                        <ArrowLink href={routes.legal('rewards-terms')} className="mt-2">{t('rewardTerms')}</ArrowLink>
+                        <p className="mt-2 text-sm text-muted-foreground">{t('rewardBody')}</p>
+                        {/* The three checks that earn it, drawn in one after another as the card comes in. */}
+                        <ol aria-label={t('rewardStepsLabel')} className="mt-5 grid grid-cols-3 gap-2">
+                          {REWARD_CHECKS.map(({ key, Icon }, index) => (
+                            <li key={key} className="flex flex-col items-center gap-1.5 rounded-2xl bg-foreground/[0.04] px-2 py-3 text-center text-xs font-medium dark:bg-white/[0.05]">
+                              <span className="relative grid size-8 place-items-center rounded-full bg-success/12 text-success">
+                                <Icon aria-hidden="true" className="size-4" />
+                                <svg aria-hidden="true" viewBox="0 0 16 16" className="absolute -right-1 -bottom-1 size-4 rounded-full bg-success text-white">
+                                  <path d="m4.5 8.3 2.2 2.2 4.8-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="draw-on-reveal" style={{ ['--draw-length' as string]: '12', strokeDasharray: 12, animationDelay: `${350 + index * 220}ms` }} />
+                                </svg>
+                              </span>
+                              {t(`rewardChecks.${key}`)}
+                            </li>
+                          ))}
+                        </ol>
+                        <ArrowLink href={routes.legal('rewards-terms')} className="mt-3">{t('rewardTerms')}</ArrowLink>
                       </div>
                     </HoverLift>
                   </Reveal>
                 )}
               </div>
             </div>
+            {/* Real helpers here, on phones and tablets too (wide screens meet one floating over the town). */}
+            {data.featuredHelpers.length > 0 && (
+              <div className="relative mt-10 xl:hidden">
+                <p className="text-sm font-semibold">{t('meetTitle', { market: data.market.name })}</p>
+                <ul className="-mx-6 mt-3 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none] sm:-mx-10 sm:scroll-px-10 sm:px-10 [&::-webkit-scrollbar]:hidden">
+                  {data.featuredHelpers.slice(0, 8).map((helper) => (
+                    <li key={helper.id} className="w-64 shrink-0 snap-start">
+                      <HelperStripCard helper={helper} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </Reveal>
       </div>
     </section>
+  );
+}
+
+/** A compact helper card for the strip: face, name and ID check, area, rating and jobs done, and the headline. */
+function HelperStripCard({ helper }: { helper: HelperSummary }) {
+  const t = useTranslations('landing.helpers');
+  return (
+    <Link href={routes.helperProfile(helper.handle)} className="flex h-full flex-col gap-3 rounded-[1.25rem] border border-foreground/[0.07] bg-card p-4 transition-[translate,box-shadow] duration-300 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:shadow-card">
+      <span className="flex items-center gap-3">
+        {helper.photo ? (
+          <Image src={helper.photo.src} alt="" width={44} height={44} unoptimized className="size-11 shrink-0 rounded-full object-cover" />
+        ) : (
+          <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full text-sm font-semibold text-white" style={{ backgroundImage: 'var(--iridescent)' }}>{helper.initials}</span>
+        )}
+        <span className="min-w-0">
+          <span className="flex items-center gap-1 font-semibold">
+            <span className="truncate">{helper.displayName}</span>
+            {helper.badges.idVerifiedAt && <BadgeCheck aria-label={t('idVerified')} className="size-4 shrink-0 text-violet" />}
+          </span>
+          <span className="block truncate text-xs text-muted-foreground">
+            {helper.rating ? (
+              <><Star aria-hidden="true" className="mr-0.5 inline size-3 fill-reward text-reward" />{t('stripRating', { rating: helper.rating.average.toFixed(1), count: helper.rating.count })} · </>
+            ) : null}
+            {helper.areaName}
+          </span>
+        </span>
+      </span>
+      <span className="line-clamp-2 text-sm text-muted-foreground">{helper.headline}</span>
+      {helper.completedCount > 0 && <span className="mt-auto text-xs font-medium text-foreground/80">{t('stripDone', { count: helper.completedCount })}</span>}
+    </Link>
+  );
+}
+
+/** A small gift card, tilted, with a light that sweeps across it now and then (still under reduced motion). */
+function GiftCardArt({ amount }: { amount: string }) {
+  return (
+    <span aria-hidden="true" className="lift-icon relative mt-1 grid h-14 w-[5.5rem] shrink-0 -rotate-6 overflow-hidden rounded-xl p-2 text-white shadow-[0_14px_28px_-14px_rgb(124_58_237/0.7)]" style={{ backgroundImage: 'var(--iridescent)' }}>
+      <span className="absolute inset-0 bg-[radial-gradient(120%_90%_at_20%_0%,rgb(255_255_255/0.45),transparent_55%)]" />
+      <span className="absolute inset-y-0 -left-1/2 w-1/2 bg-[linear-gradient(90deg,transparent,rgb(255_255_255/0.55),transparent)] [animation:sheen_3.6s_var(--ease-out)_1.2s_infinite] motion-reduce:hidden" />
+      <span className="relative h-2.5 w-3.5 rounded-[3px] bg-white/70" />
+      <span className="relative self-end justify-self-end font-display text-sm leading-none font-bold tracking-tight">{amount}</span>
+    </span>
   );
 }

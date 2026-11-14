@@ -1,5 +1,6 @@
 import type { Mode, Photo, StaffRole } from './common';
 import type { ActionHandler } from './actions';
+import type { AppLocale } from './locale';
 
 /** Who is using the app, as far as the page shells need to know. */
 export type ShellViewer =
@@ -39,10 +40,18 @@ export const SHELL_NOTICES = ['bookings_paused'] as const;
 export type ShellNotice = (typeof SHELL_NOTICES)[number];
 export type StaffViewer = Extract<ShellViewer, { kind: 'staff' }>;
 
+/**
+ * The shells' language switch: this device's language (and a signed-in account's, which emails and texts use).
+ * The page then re-renders in place in the new language, with no reload. Without it (previews) the switch falls
+ * back to plain /es and /en links.
+ */
+export type LanguageSwitchHandler = ActionHandler<{ locale: AppLocale }>;
+
 export interface AppShellHandlers {
   /** Switch between "I need help" and "I can help". May resolve with redirectTo (helper onboarding). */
   onModeChange: ActionHandler<{ mode: Mode }>;
   onSignOut: ActionHandler;
+  onSwitchLanguage?: LanguageSwitchHandler;
 }
 
 export interface AdminShellHandlers {

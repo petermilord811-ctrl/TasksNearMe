@@ -52,7 +52,7 @@ export function NearbyList({ map, limit = 7, fill = false, className }: { map: L
   // Narrowed to nothing by the distance or the map (there are tasks, just not here): offer to widen.
   const narrowed = rows.length === 0 && nearbyPins(map.pins, { category: selectedCategory, limit: 1 }).length > 0;
   const glide = reduced ? { duration: 0 } : spring.bloom;
-  const listLabel = sort === 'nearest' ? t('listNearYou') : sort === 'price' ? t('listByPrice') : t('listNewest');
+  const listLabel = sort === 'nearest' ? t('listNearYou') : sort === 'price' ? t('listByPrice') : sort === 'pay' ? t('listByPay') : t('listNewest');
   const rootRef = useRef<HTMLDivElement>(null);
   const leaveTimer = useRef<number | undefined>(undefined);
   // The task this list lit, and what's lit now: letting go clears only our own (the map may have lit another since).

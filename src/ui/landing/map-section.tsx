@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AnimatePresence, LazyMotion, domMax, m } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { ArrowDownUp, ChevronDown, LocateFixed, Loader2, MapPin, Navigation, ShieldCheck, Sparkles, X } from 'lucide-react';
@@ -77,8 +77,15 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
         ref={sheetRef}
         id={MAP_SECTION_ID}
         aria-labelledby="map-title"
-        className="relative grid scroll-mt-20 grid-cols-1 lg:z-[2] lg:min-h-[max(60rem,108svh)] lg:grid-cols-[minmax(var(--page-gutter),1fr)_minmax(0,40rem)_minmax(0,28.5rem)_minmax(var(--page-gutter),1fr)] lg:gap-x-10 lg:overflow-hidden lg:rounded-t-[2.75rem] lg:paper lg:shadow-[0_-34px_70px_-44px_rgb(0_0_0/0.42)]"
+        // `overflow-clip`, not `hidden`: clipping without becoming a scroll container keeps the explorer's sticky
+        // position working against the page. The third column is wider than the panel, which sits at its end.
+        className="relative grid scroll-mt-20 grid-cols-1 lg:z-[2] lg:min-h-[max(60rem,108svh)] lg:grid-cols-[minmax(var(--page-gutter),1fr)_minmax(0,38rem)_minmax(0,31rem)_minmax(var(--page-gutter),1fr)] lg:gap-x-10 lg:overflow-clip lg:rounded-t-[2.75rem] lg:paper lg:shadow-[0_-34px_70px_-44px_rgb(0_0_0/0.42)] dark:lg:shadow-[0_-34px_80px_-40px_rgb(0_0_0/0.9),0_-18px_60px_-34px_color-mix(in_oklab,var(--iri-3)_40%,transparent)]"
       >
+        {/* The sheet's edge, so it reads as a sheet sliding over the town in both themes (on dark paper a shadow
+            alone vanishes): a hairline that follows the rounded corners, brightest in the middle where an
+            iridescent line runs along it. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-[4] hidden h-16 rounded-t-[2.75rem] shadow-[inset_0_1px_0_rgb(255_255_255/0.7)] lg:block dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.13)]" />
+        <div aria-hidden="true" className="pointer-events-none absolute top-0 left-1/2 z-[4] hidden h-px w-[min(56rem,62%)] -translate-x-1/2 opacity-55 lg:block dark:opacity-90" style={{ background: 'linear-gradient(90deg, transparent, var(--iri-1) 22%, var(--iri-2) 50%, var(--iri-3) 78%, transparent)' }} />
         {/* The real map: between the heading and the list on phones, under everything on wide screens. */}
         <div className="relative order-2 mt-6 h-[72svh] max-h-[40rem] min-h-[26rem] lg:absolute lg:inset-0 lg:order-none lg:mt-0 lg:h-auto lg:max-h-none">
           <figure className="m-0 size-full">
@@ -134,8 +141,10 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
               {location.status === 'unavailable' && <p className="text-muted-foreground">{t('unavailable', { market })}</p>}
               {outside && (
                 <p className="text-foreground">
-                  {t('outside')}{' '}
+                  <span>{t('outside')}</span>{' '}
                   <Link href={routes.waitlist()} className="font-semibold text-primary underline-offset-4 hover:underline">{t('waitlist')}</Link>
+                  {' · '}
+                  <Link href={routes.becomeAHelper()} className="font-semibold text-primary underline-offset-4 hover:underline">{t('outsideHelpers')}</Link>
                 </p>
               )}
             </div>
@@ -144,20 +153,21 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
 
         {/* The explorer: find, pick a category, order and narrow, see how many, and the tasks themselves (the map's
             accessible twin). On wide screens it keeps one size whatever the list holds (its rows scroll in a
-            fixed viewport), anchored at its top, so moving the map never moves the panel or the page. */}
-        <div className="relative order-3 px-gutter pt-6 pb-16 sm:pb-20 lg:order-none lg:col-start-3 lg:row-start-1 lg:self-start lg:px-0 lg:pt-[max(7rem,9vw)] lg:pb-[max(6rem,8vw)]">
-          <Reveal variant="bloom" origin="100% 50%" className="lg:glass lg:rounded-[2rem] lg:p-3">
+            fixed viewport), and it stays in view while the map scrolls past: it sticks just under the top bar
+            (following the bar as it slips away and comes back) and leaves with the section's end. */}
+        <div className="relative order-3 px-gutter pt-6 pb-16 sm:pb-20 lg:sticky lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)] lg:order-none lg:col-start-3 lg:row-start-1 lg:mt-[max(6.5rem,8vw)] lg:mb-10 lg:w-[min(100%,26.5rem)] lg:self-start lg:justify-self-end lg:px-0 lg:py-0 lg:transition-[top] lg:duration-500 lg:ease-[var(--ease-out)]">
+          <Reveal variant="bloom" origin="100% 50%" className="lg:glass lg:rounded-[1.75rem] lg:p-2.5">
             <SmartSearch />
-            <div className="-mx-gutter mt-3 overflow-x-auto px-gutter pb-1 [scrollbar-width:none] lg:mx-0 lg:overflow-visible lg:px-1.5">
+            <ChipScroller className="mt-2">
               <CategoryFilter />
-            </div>
+            </ChipScroller>
             <ExplorerTools data={data} />
-            <div className="lg:px-2"><OpenCount data={data} /></div>
-            <div {...{ [LIST_VIEWPORT_ATTRIBUTE]: '' }} className="mt-1 lg:h-[min(27rem,46svh)] lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin]">
+            <div className="lg:px-1.5"><OpenCount data={data} /></div>
+            <div {...{ [LIST_VIEWPORT_ATTRIBUTE]: '' }} className="lg:h-[min(21rem,calc(100svh-25rem))] lg:min-h-[13rem] lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin]">
               <NearbyList map={data.map} fill={wide} />
             </div>
             {data.map.pins.length > 0 && (
-              <div className="mt-2 px-3.5 lg:pb-1">
+              <div className="mt-1 px-3 lg:-mb-1">
                 <Link href={routes.taskBoard(data.market.slug)} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">{t('browseAll')}</Link>
               </div>
             )}
@@ -290,6 +300,60 @@ function SmartSearch() {
   );
 }
 
+/**
+ * One sideways row for the category chips (it used to wrap to three rows on wide screens): no scrollbar, and an
+ * end fades only while there's more that way, so a chip cut at the edge reads as "scroll for more". A picked chip
+ * that sits partly outside glides into view.
+ */
+function ChipScroller({ children, className }: { children: ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [ends, setEnds] = useState({ start: true, end: true });
+  useEffect(() => {
+    const row = ref.current;
+    if (!row) return;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const max = row.scrollWidth - row.clientWidth;
+      setEnds({ start: row.scrollLeft <= 2, end: row.scrollLeft >= max - 2 });
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+    measure();
+    row.addEventListener('scroll', schedule, { passive: true });
+    const sized = typeof ResizeObserver === 'function' ? new ResizeObserver(schedule) : null;
+    sized?.observe(row);
+    // A pick (by click, by the smart search or from the hero) brings its chip fully into view.
+    const picked = new MutationObserver(() => {
+      const chip = row.querySelector<HTMLElement>('[aria-pressed="true"]');
+      if (!chip) return;
+      const box = row.getBoundingClientRect();
+      const rect = chip.getBoundingClientRect();
+      const pad = 28;
+      if (rect.left < box.left + pad) row.scrollBy?.({ left: rect.left - box.left - pad, behavior: 'smooth' });
+      else if (rect.right > box.right - pad) row.scrollBy?.({ left: rect.right - box.right + pad, behavior: 'smooth' });
+    });
+    picked.observe(row, { subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
+    return () => {
+      cancelAnimationFrame(frame);
+      row.removeEventListener('scroll', schedule);
+      sized?.disconnect();
+      picked.disconnect();
+    };
+  }, []);
+  const fade = `linear-gradient(to right, ${ends.start ? '#000' : 'transparent'}, #000 1.75rem, #000 calc(100% - 2.5rem), ${ends.end ? '#000' : 'transparent'})`;
+  return (
+    <div
+      ref={ref}
+      className={cn('-mx-gutter overflow-x-auto overscroll-x-contain px-gutter py-0.5 [scrollbar-width:none] lg:mx-0 lg:px-1 [&::-webkit-scrollbar]:hidden', className)}
+      style={{ maskImage: fade, WebkitMaskImage: fade }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /** The filter: "All" and each category. The picked one wears a pill that slides from the last pick. */
 function CategoryFilter() {
   const t = useTranslations('landing.map');
@@ -300,7 +364,7 @@ function CategoryFilter() {
   const options: (CategorySlug | null)[] = [null, ...CATEGORY_SLUGS];
 
   return (
-    <div role="group" aria-label={t('filterLabel')} className="flex w-max gap-2 lg:w-auto lg:flex-wrap">
+    <div role="group" aria-label={t('filterLabel')} className="flex w-max gap-1.5">
       {options.map((category) => {
         const on = selectedCategory === category;
         const Icon = category ? CATEGORY_ICONS[category] : null;
@@ -313,7 +377,7 @@ function CategoryFilter() {
             onPointerEnter={() => category && setPreviewCategory(category)}
             onPointerLeave={() => setPreviewCategory(null)}
             className={cn(
-              'relative isolate inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-[border-color,color,transform] duration-300 active:scale-[0.96] lg:gap-1.5 lg:px-3 lg:text-[13px]',
+              'relative isolate inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-medium whitespace-nowrap transition-[border-color,color,transform] duration-300 active:scale-[0.96] lg:min-h-10 lg:gap-1.5 lg:px-3 lg:text-[13px]',
               on ? 'border-transparent' : 'border-foreground/10 bg-card/60 hover:border-foreground/25',
               on && (category ? 'text-white' : 'text-background'),
             )}
@@ -348,20 +412,21 @@ function ExplorerTools({ data }: { data: HomePageData }) {
   const from = location.status === 'granted' ? location.point : undefined;
   const sort = effectiveSort(explorer.sortChoice ?? undefined, from);
   const field = 'relative inline-flex min-h-11 items-center rounded-full border border-foreground/10 bg-card/70 text-sm transition-colors focus-within:border-violet/40 hover:border-foreground/25';
-  const select = 'min-h-11 cursor-pointer appearance-none rounded-full bg-transparent py-2 pr-8 pl-9 text-base font-medium outline-none sm:text-sm';
+  const select = 'min-h-11 cursor-pointer appearance-none rounded-full bg-transparent py-2 pr-8 pl-9 text-base font-medium outline-none sm:text-sm lg:min-h-10 lg:pr-7 lg:pl-8 lg:text-[13px]';
 
   return (
-    <div className="mt-2 space-y-2 lg:px-1.5">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="mt-1.5 space-y-2 lg:px-1">
+      <div className="flex flex-wrap items-center gap-1.5">
         <label className={field}>
-          <ArrowDownUp aria-hidden="true" className="pointer-events-none absolute left-3.5 size-3.5 text-muted-foreground" />
+          <ArrowDownUp aria-hidden="true" className="pointer-events-none absolute left-3.5 size-3.5 text-muted-foreground lg:left-3" />
           <span className="sr-only">{t('sortLabel')}</span>
           <select value={sort} onChange={(event) => explorer.setSortChoice(event.target.value as ListSort)} className={select}>
             <option value="newest">{t('sortNewest')}</option>
             <option value="nearest" disabled={!from}>{t('sortNearest')}</option>
+            <option value="pay">{t('sortPay')}</option>
             <option value="price">{t('sortPrice')}</option>
           </select>
-          <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 size-3.5 text-muted-foreground" />
+          <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 size-3.5 text-muted-foreground lg:right-2.5" />
         </label>
         {/* There from the start (a pick before the live map is up waits for it), so nothing shifts when it comes. */}
         {data.map.areas.length > 0 && <NeighborhoodPicker areas={data.map.areas} current={area} onPick={pickArea} />}
@@ -378,7 +443,7 @@ function ExplorerTools({ data }: { data: HomePageData }) {
                 aria-pressed={on}
                 onClick={() => explorer.setWithinMiles(miles)}
                 className={cn(
-                  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm font-medium tabular-nums transition-[background-color,border-color,color] duration-200',
+                  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm font-medium tabular-nums transition-[background-color,border-color,color] duration-200 lg:min-h-9 lg:min-w-9 lg:text-[13px]',
                   on ? 'border-transparent bg-violet text-white' : 'border-foreground/10 bg-card/60 hover:border-foreground/25',
                 )}
               >
@@ -389,6 +454,34 @@ function ExplorerTools({ data }: { data: HomePageData }) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Whether the list follows the map: only meaningful once the live map is up. Until then it keeps its room
+ * (hidden), so nothing shifts when it comes.
+ */
+function FollowMapSwitch() {
+  const t = useTranslations('landing.map');
+  const explorer = useMapExplorer();
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={explorer.followMap}
+      aria-label={t('followMapLabel')}
+      title={t('followMapLabel')}
+      onClick={() => explorer.setFollowMap(!explorer.followMap)}
+      className={cn(
+        '-mr-1 inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full pr-1.5 pl-2 text-xs font-medium text-foreground/80 transition-[color,opacity] duration-500 hover:text-foreground lg:min-h-10',
+        !explorer.liveReady && 'invisible opacity-0',
+      )}
+    >
+      <span aria-hidden="true" className={cn('relative h-5 w-8 shrink-0 rounded-full transition-colors duration-300', explorer.followMap ? 'bg-violet' : 'bg-foreground/15')}>
+        <span className={cn('absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform duration-300 ease-[var(--ease-out)]', explorer.followMap && 'translate-x-3')} />
+      </span>
+      {t('followMap')}
+    </button>
   );
 }
 
@@ -432,7 +525,7 @@ function NeighborhoodPicker({ areas, current, onPick }: { areas: MapArea[]; curr
         aria-expanded={open}
         aria-controls={listId}
         aria-label={t('jumpLabel')}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-foreground/10 bg-card/70 pr-3 pl-3.5 text-base font-medium transition-colors hover:border-foreground/25 sm:text-sm"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-foreground/10 bg-card/70 pr-3 pl-3.5 text-base font-medium transition-colors hover:border-foreground/25 sm:text-sm lg:min-h-10 lg:gap-1.5 lg:pr-2.5 lg:pl-3 lg:text-[13px]"
       >
         <Navigation aria-hidden="true" className="size-3.5 text-muted-foreground" />
         {current?.name ?? t('jumpPlaceholder')}
@@ -472,15 +565,17 @@ function OpenCount({ data }: { data: HomePageData }) {
   const explorer = useMapExplorer();
   const reduced = usePrefersReducedMotion();
   const count = selectedCategory ? data.map.pins.filter((pin) => pin.categorySlug === selectedCategory).length : data.map.pins.length;
-  const text = selectedCategory ? t('countCategory', { category: categories(selectedCategory), count }) : t('countAll', { count, market: data.market.name });
   const from = location.status === 'granted' ? location.point : undefined;
   const bounds = explorer.followMap ? explorer.view : null;
   const withinMiles = from ? explorer.withinMiles : null;
   const shown = bounds || withinMiles ? nearbyPins(data.map.pins, { from, category: selectedCategory, withinMiles, bounds }).length : count;
+  const total = selectedCategory ? t('countCategory', { category: categories(selectedCategory), count }) : t('countAll', { count, market: data.market.name });
+  // How many of them the list shows (on the map, or within the distance) rides on the same line.
+  const text = shown < count ? `${total} · ${t('inView', { shown, total: count })}` : total;
 
   return (
-    <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
-      <p role="status" aria-live="polite" className="relative h-6 min-w-[12rem] flex-1 overflow-hidden text-sm font-medium text-muted-foreground">
+    <div className="mt-1 flex min-h-10 items-center gap-2">
+      <p role="status" aria-live="polite" className="relative h-6 min-w-0 flex-1 overflow-hidden text-sm font-medium text-muted-foreground">
         <AnimatePresence initial={false} mode="popLayout">
           <m.span
             key={text}
@@ -494,38 +589,7 @@ function OpenCount({ data }: { data: HomePageData }) {
           </m.span>
         </AnimatePresence>
       </p>
-      {/* Only meaningful with the live map; it keeps its room before then (hidden), so nothing shifts when it comes. */}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={explorer.followMap}
-        onClick={() => explorer.setFollowMap(!explorer.followMap)}
-        className={cn(
-          '-mr-1 inline-flex min-h-11 items-center gap-2 rounded-full px-1.5 text-xs font-medium text-foreground/80 transition-[color,opacity] duration-500 hover:text-foreground',
-          !explorer.liveReady && 'invisible opacity-0',
-        )}
-      >
-        <span aria-hidden="true" className={cn('relative h-5 w-8 shrink-0 rounded-full transition-colors duration-300', explorer.followMap ? 'bg-violet' : 'bg-foreground/15')}>
-          <span className={cn('absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform duration-300 ease-[var(--ease-out)]', explorer.followMap && 'translate-x-3')} />
-        </span>
-        {t('followMap')}
-      </button>
-      <p className="relative h-5 w-full overflow-hidden text-xs font-medium text-violet tabular-nums">
-        <AnimatePresence initial={false}>
-          {shown < count && (
-            <m.span
-              key={`${shown}-${count}`}
-              className="absolute inset-x-0 top-0 block truncate"
-              initial={reduced ? false : { y: '70%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { y: '-70%', opacity: 0 }}
-              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            >
-              {t('inView', { shown, total: count })}
-            </m.span>
-          )}
-        </AnimatePresence>
-      </p>
+      <FollowMapSwitch />
     </div>
   );
 }
