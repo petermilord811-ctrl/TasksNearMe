@@ -5,16 +5,18 @@ import { MARKET_TIME_ZONE } from '@/contracts/common';
 import { DEFAULT_LOCALE, isAppLocale, type AppLocale } from '@/contracts/locale';
 import { LOCALE_COOKIE, pickLocale } from '@/shared/locale';
 import { messagesFor } from './catalog';
+import { intlOnError } from './errors';
 
 /**
  * The language of a request. Pages and layouts read the [locale] root segment (src/app/[locale]), which
  * src/proxy.ts fills in from the URL, the device's choice or the browser's languages, so every page
  * prerenders once per language. An explicit `getTranslations({ locale })` wins over the segment.
  * Copy: UI namespaces in messages/<locale>/ui/*, server-side copy under "server" in messages/<locale>/app/*.
+ * In the e2e build a missing or broken message throws (src/i18n/errors.ts).
  */
 export default getRequestConfig(async ({ locale: explicit }) => {
   const locale = isAppLocale(explicit) ? explicit : await requestLocale();
-  return { locale, timeZone: MARKET_TIME_ZONE, messages: messagesFor(locale) };
+  return { locale, timeZone: MARKET_TIME_ZONE, messages: messagesFor(locale), ...(intlOnError ? { onError: intlOnError } : {}) };
 });
 
 async function requestLocale(): Promise<AppLocale> {
