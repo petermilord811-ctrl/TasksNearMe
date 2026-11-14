@@ -45,6 +45,14 @@ export const users = pgTable(
      * changed on the account page. Emails and texts go out in it; signing in sets the device to it.
      */
     locale: text('locale'),
+    /**
+     * The last time they had the app open (completion plan 7.1): a heartbeat from the live connection, at most
+     * once a minute. Shown as "Active now" or "Active 2 h ago" only to people they talk to, and only while
+     * `showActivity` is on.
+     */
+    lastActiveAt: timestamp('last_active_at', { withTimezone: true }),
+    /** "Show when I'm active" on the account page; on by default, off hides their activity from everyone. */
+    showActivity: boolean('show_activity').notNull().default(true),
   },
   // One account per verified phone number (NULLs don't collide).
   (t) => [uniqueIndex('users_phone_idx').on(t.phone)],

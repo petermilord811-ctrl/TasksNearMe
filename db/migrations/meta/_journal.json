@@ -386,6 +386,13 @@
       "when": 1794636227852,
       "tag": "0054_outbox_claims",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1794647431835,
+      "tag": "0055_realtime_presence",
+      "breakpoints": true
     }
   ]
 }
