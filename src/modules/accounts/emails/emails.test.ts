@@ -84,7 +84,7 @@ describe('the sign-in code email', () => {
   });
 
   it('shows the app icon from the site, with alt text', () => {
-    expect(render().html).toContain('<img src="https://tasksnearme.example/icons/icon-192.png?v=1" width="34" height="34" alt="TasksNearMe"');
+    expect(render().html).toContain('<img src="https://tasksnearme.example/icons/icon-192.png?v=2" width="34" height="34" alt="TasksNearMe"');
   });
 });
 

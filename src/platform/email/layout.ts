@@ -30,7 +30,7 @@ export function esc(value: string | number): string {
  * paths). It's the app's own PNG icon, so a new icon in public/icons reaches every email; raise the `v` when it
  * changes, because Gmail and Outlook cache images by URL.
  */
-export const EMAIL_ICON_PATH = '/icons/icon-192.png?v=1';
+export const EMAIL_ICON_PATH = '/icons/icon-192.png?v=2';
 
 /** A link that survives every email app: a table cell with the color, the link inside it. */
 export function emailButton({ href, label, variant = 'primary', arrow = true }: { href: string; label: string; variant?: 'primary' | 'light' | 'dark'; arrow?: boolean }): string {
