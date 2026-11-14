@@ -118,7 +118,22 @@ async function payoutRows(db: Db, query: string, conditions: SQL[] = []): Promis
 /** Everything that doesn't add up, newest first. */
 async function exceptions(db: Db, query: string, now: Date): Promise<Found> {
   const graceCutoff = new Date(now.getTime() - TRANSFER_GRACE_DAYS * DAY);
-  const [failedRefunds, failedPayouts, missing, unrefunded] = await Promise.all([
+  const missingWhere = and(
+    eq(bookings.status, 'completed'),
+    sql`${bookings.completedAt} < ${graceCutoff}`,
+    sql`not exists (select 1 from ${earnings} e where e.booking_id = ${bookings.id} and e.kind = 'earnings' and e.status in ('transferred', 'paid_out'))`,
+    personMatch(query, bookings.helperUserId, bookings.id),
+  );
+  const unrefundedWhere = and(
+    eq(bookings.status, 'canceled'),
+    eq(payments.purpose, 'booking_funding'),
+    eq(payments.status, 'succeeded'),
+    sql`not exists (select 1 from ${refunds} r where r.payment_id = ${payments.id})`,
+    sql`not exists (select 1 from ${earnings} e where e.booking_id = ${bookings.id} and e.kind = 'cancellation_compensation')`,
+    personMatch(query, payments.payerUserId, payments.bookingId),
+  );
+  const count = sql<number>`count(*)::int`;
+  const [failedRefunds, failedPayouts, missing, unrefunded, [missingTotal], [unrefundedTotal]] = await Promise.all([
     refundRows(db, query, [eq(refunds.status, 'failed')]),
     // Only a failure that is still the helper's latest payout (5.17): once a later payout went out, Stripe sent that
     // money again (with the bank fixed) and nobody needs to act. The payouts tab keeps the history.
@@ -128,32 +143,13 @@ async function exceptions(db: Db, query: string, now: Date): Promise<Found> {
       .from(bookings)
       .innerJoin(bookingTerms, and(eq(bookingTerms.bookingId, bookings.id), eq(bookingTerms.version, bookings.termsVersion)))
       .leftJoin(bookingCompletions, eq(bookingCompletions.bookingId, bookings.id))
-      .where(
-        and(
-          eq(bookings.status, 'completed'),
-          sql`${bookings.completedAt} < ${graceCutoff}`,
-          sql`not exists (select 1 from ${earnings} e where e.booking_id = ${bookings.id} and e.kind = 'earnings' and e.status in ('transferred', 'paid_out'))`,
-          personMatch(query, bookings.helperUserId, bookings.id),
-        ),
-      )
+      .where(missingWhere)
       .orderBy(desc(bookings.completedAt))
       .limit(PAGE_SIZE),
-    db
-      .select({ payment: payments })
-      .from(payments)
-      .innerJoin(bookings, eq(bookings.id, payments.bookingId))
-      .where(
-        and(
-          eq(bookings.status, 'canceled'),
-          eq(payments.purpose, 'booking_funding'),
-          eq(payments.status, 'succeeded'),
-          sql`not exists (select 1 from ${refunds} r where r.payment_id = ${payments.id})`,
-          sql`not exists (select 1 from ${earnings} e where e.booking_id = ${bookings.id} and e.kind = 'cancellation_compensation')`,
-          personMatch(query, payments.payerUserId, payments.bookingId),
-        ),
-      )
-      .orderBy(desc(payments.createdAt))
-      .limit(PAGE_SIZE),
+    db.select({ payment: payments }).from(payments).innerJoin(bookings, eq(bookings.id, payments.bookingId)).where(unrefundedWhere).orderBy(desc(payments.createdAt)).limit(PAGE_SIZE),
+    // Counted apart from the page (5.19): the tab's count is every exception, not the first hundred of each kind.
+    db.select({ value: count }).from(bookings).innerJoin(bookingTerms, and(eq(bookingTerms.bookingId, bookings.id), eq(bookingTerms.version, bookings.termsVersion))).where(missingWhere),
+    db.select({ value: count }).from(payments).innerJoin(bookings, eq(bookings.id, payments.bookingId)).where(unrefundedWhere),
   ]);
   const missingRows = await finish(
     db,
@@ -172,7 +168,7 @@ async function exceptions(db: Db, query: string, now: Date): Promise<Found> {
     ...missingRows,
     ...unrefundedRows,
   ].sort((a, b) => b.at.localeCompare(a.at));
-  return { rows: rows.slice(0, PAGE_SIZE), count: failedRefunds.count + failedPayouts.count + missing.length + unrefunded.length };
+  return { rows: rows.slice(0, PAGE_SIZE), count: failedRefunds.count + failedPayouts.count + (missingTotal?.value ?? 0) + (unrefundedTotal?.value ?? 0) };
 }
 
 async function totals(db: Db, now: Date): Promise<AdminMoneyTotals> {

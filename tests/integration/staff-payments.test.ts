@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
 import { bookings, bookingTerms } from '@/modules/bookings/schema';
@@ -51,16 +51,42 @@ beforeAll(async () => {
 
 describe('the payments page', () => {
   it('lists what doesn’t add up on the exceptions tab', async () => {
+    // Each looked up by its booking or person: in the shared test database other files' exceptions can be newer.
+    const exceptionOf = async (query: string, id: string) => (await getAdminPayments(db, { tab: 'exceptions', query }, now())).rows.find((row) => row.id === id);
+    expect((await exceptionOf('bkg_pay_cancel', 'pay_pay_cancel'))?.exception).toBe('canceled_not_refunded');
+    expect((await exceptionOf('bkg_pay_refund', 'ref_pay_failed'))?.exception).toBe('refund_failed');
+    expect((await exceptionOf('tmp-payee@example.test', 'po_pay_failed'))?.exception).toBe('payout_failed');
+    expect(await exceptionOf('bkg_pay_noxfer', 'bkg_pay_noxfer')).toMatchObject({ exception: 'transfer_missing', kind: 'transfer', person: { displayName: 'Jordan T.' }, booking: { id: 'bkg_pay_noxfer' } });
+    // The whole tab: a page of the newest, each one an exception, and the count of all of them.
     const page = await getAdminPayments(db, { tab: 'exceptions', query: '' }, now());
-    const exceptionOf = (id: string) => page.rows.find((row) => row.id === id)?.exception;
-    expect(exceptionOf('pay_pay_cancel')).toBe('canceled_not_refunded');
-    expect(exceptionOf('ref_pay_failed')).toBe('refund_failed');
-    expect(exceptionOf('po_pay_failed')).toBe('payout_failed');
-    expect(exceptionOf('bkg_pay_noxfer')).toBe('transfer_missing');
-    // The seeded bookings are in order: completed ones were paid out, canceled ones refunded.
     expect(page.rows.every((row) => row.exception)).toBe(true);
-    expect(page.counts.exceptions).toBe(page.rows.length);
-    expect(page.rows.find((row) => row.id === 'bkg_pay_noxfer')).toMatchObject({ kind: 'transfer', person: { displayName: 'Jordan T.' }, booking: { id: 'bkg_pay_noxfer' } });
+    expect(page.rows.map((row) => row.at)).toEqual(page.rows.map((row) => row.at).sort().reverse());
+    expect(page.rows.length).toBe(Math.min(page.counts.exceptions, 100));
+  });
+
+  it('counts every exception, past the first page (5.19)', async () => {
+    const [lee] = await db.select().from(users).where(eq(users.id, 'usr_lee'));
+    const [tv] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
+    const [tvBooking] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
+    const [tvTerms] = await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_tv'));
+    const [tvPayment] = await db.select().from(payments).where(eq(payments.bookingId, 'bkg_tv'));
+    const ids = Array.from({ length: 101 }, (_, index) => `pay_many_${index}`);
+    await db.insert(users).values({ ...lee!, id: 'usr_tmp_many', email: 'tmp-many@example.test', name: 'Max N.', firstName: 'Max', phone: null, phoneVerifiedAt: null });
+    try {
+      await db.insert(tasks).values(ids.map((id) => ({ ...tv!, id: `tsk_${id}`, slug: `${id}-tv`, status: 'canceled' as const })));
+      await db.insert(bookings).values(ids.map((id) => ({ ...tvBooking!, id: `bkg_${id}`, taskId: `tsk_${id}`, status: 'canceled' as const, cancelReason: 'poster_early' as const })));
+      await db.insert(bookingTerms).values(ids.map((id) => ({ ...tvTerms!, id: `btm_${id}_1`, bookingId: `bkg_${id}` })));
+      await db.insert(payments).values(ids.map((id) => ({ ...tvPayment!, id, bookingId: `bkg_${id}`, payerUserId: 'usr_tmp_many', status: 'succeeded' as const, idempotencyKey: `test:${id}` })));
+      const page = await getAdminPayments(db, { tab: 'exceptions', query: 'tmp-many@example.test' }, now());
+      expect(page.rows).toHaveLength(100);
+      expect(page.counts.exceptions).toBe(101);
+    } finally {
+      await db.delete(payments).where(like(payments.id, 'pay\\_many\\_%'));
+      await db.delete(bookingTerms).where(like(bookingTerms.id, 'btm\\_pay\\_many\\_%'));
+      await db.delete(bookings).where(like(bookings.id, 'bkg\\_pay\\_many\\_%'));
+      await db.delete(tasks).where(like(tasks.id, 'tsk\\_pay\\_many\\_%'));
+      await db.delete(users).where(eq(users.id, 'usr_tmp_many'));
+    }
   });
 
   it('drops a failed payout from the exceptions once a later payout went out, and keeps it in the history (5.17)', async () => {
