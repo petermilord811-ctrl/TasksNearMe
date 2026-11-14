@@ -15,7 +15,7 @@ export function PricingScreen({ data }: PricingScreenProps) {
 
   return <div className="space-y-8">
     <PageHeader title={t('title')} description={t('description')} />
-    <p className="flex items-start gap-3 rounded-[1.375rem] bg-secondary p-4 text-secondary-foreground sm:p-6">
+    <p className="flex w-fit max-w-full items-center gap-3 rounded-[1.375rem] bg-secondary py-3 pr-5 pl-3 text-secondary-foreground">
       <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-card/70 text-primary"><CircleDollarSign className="size-5" /></span>
       <span>{t('paymentTiming')}</span>
     </p>
@@ -37,9 +37,9 @@ export function PricingScreen({ data }: PricingScreenProps) {
 
     <div className="space-y-4">
       <p className="max-w-reading text-muted-foreground">{t('fixedIntro', { price: formatMoney(data.fixedExample.taskPriceCents) })}</p>
-      <div className="grid items-start gap-4 md:grid-cols-2">
-        <PriceBreakdown breakdown={data.fixedExample} variant="poster" title={t('fixedPosterTitle')} />
-        <PriceBreakdown breakdown={data.fixedExample} variant="helper" title={t('fixedHelperTitle')} />
+      <div className="grid gap-4 md:grid-cols-2">
+        <PriceBreakdown breakdown={data.fixedExample} variant="poster" title={t('fixedPosterTitle')} className="h-full" />
+        <PriceBreakdown breakdown={data.fixedExample} variant="helper" title={t('fixedHelperTitle')} className="h-full" />
       </div>
     </div>
 
@@ -52,17 +52,17 @@ export function PricingScreen({ data }: PricingScreenProps) {
 
     <Section title={t('hourlyTitle')}>
       <p className="max-w-reading text-muted-foreground">{t('hourlyDescription')}</p>
-      <div className="grid items-start gap-4 md:grid-cols-2">
-        <PriceBreakdown breakdown={data.hourlyExample.funded} variant="poster" title={t('hourlyFundedTitle')} />
-        <PriceBreakdown breakdown={data.hourlyExample.final} variant="poster" title={t('hourlyFinalTitle')} />
+      <div className="grid gap-4 md:grid-cols-2">
+        <PriceBreakdown breakdown={data.hourlyExample.funded} variant="poster" title={t('hourlyFundedTitle')} className="h-full" />
+        <PriceBreakdown breakdown={data.hourlyExample.final} variant="poster" title={t('hourlyFinalTitle')} className="h-full" />
       </div>
     </Section>
 
     <Section title={t('expensesTitle')}>
       <p className="max-w-reading text-muted-foreground">{t('expensesDescription')}</p>
-      <div className="grid items-start gap-4 md:grid-cols-2">
-        <PriceBreakdown breakdown={data.expensesExample} variant="poster" title={t('expensesPosterTitle')} />
-        <PriceBreakdown breakdown={data.expensesExample} variant="helper" title={t('expensesHelperTitle')} />
+      <div className="grid gap-4 md:grid-cols-2">
+        <PriceBreakdown breakdown={data.expensesExample} variant="poster" title={t('expensesPosterTitle')} className="h-full" />
+        <PriceBreakdown breakdown={data.expensesExample} variant="helper" title={t('expensesHelperTitle')} className="h-full" />
       </div>
     </Section>
 
@@ -99,15 +99,17 @@ export function PricingScreen({ data }: PricingScreenProps) {
       <Link href={routes.legal('cancellation-policy')} className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4">{t('cancellationPolicy')}</Link>
     </Section>
 
-    <div className="grid gap-6 border-t pt-8 md:grid-cols-2">
-      <Section title={t('approvalTitle')}>
-        <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><Clock className="size-5" /></span>
-        <p className="text-muted-foreground">{t('approvalDescription', { hours: data.timers.autoApproveHours })}</p>
-      </Section>
-      <Section title={t('inviteTitle')}>
-        <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><CreditCard className="size-5" /></span>
-        <p className="text-muted-foreground">{t('inviteDescription', { hours: data.timers.inviteHoldHours })}</p>
-      </Section>
+    <div className="grid gap-8 border-t pt-8 md:grid-cols-2">
+      {([
+        { id: 'pricing-approval', Icon: Clock, title: t('approvalTitle'), body: t('approvalDescription', { hours: data.timers.autoApproveHours }) },
+        { id: 'pricing-invite', Icon: CreditCard, title: t('inviteTitle'), body: t('inviteDescription', { hours: data.timers.inviteHoldHours }) },
+      ]).map(({ id, Icon, title, body }) => <section key={id} aria-labelledby={id} className="flex gap-4">
+        <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><Icon className="size-5" /></span>
+        <div className="min-w-0 space-y-2">
+          <h2 id={id} className="font-display text-xl leading-7 font-semibold tracking-[-0.02em] lg:text-[1.375rem] lg:leading-[1.875rem]">{title}</h2>
+          <p className="text-muted-foreground">{body}</p>
+        </div>
+      </section>)}
     </div>
     <Link href={routes.app.newTask()} className={cn(buttonVariants(), 'whitespace-normal text-center')}>{t('postTask')}</Link>
   </div>;

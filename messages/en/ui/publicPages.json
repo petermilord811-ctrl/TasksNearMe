@@ -249,6 +249,7 @@
     "posterTab": "I need help",
     "helperTab": "I can help",
     "helperAction": "Set up your helper profile",
+    "step": "Step {number}",
     "poster": {
       "title": "Get help with your task",
       "one": {
