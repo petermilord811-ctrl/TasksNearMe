@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   // sees an updateTag made on another (cache-handlers/shared-tags.mjs, decisions.md 2026-11-14).
   // SHARED_CACHE_HANDLER=off falls back to Next's built-in handler (one instance only).
   ...(process.env.SHARED_CACHE_HANDLER === 'off' ? {} : { cacheHandlers: { default: require.resolve('./cache-handlers/shared-tags.mjs') } }),
+  // The e2e build skips Next's own type check: the gate's `check` step runs it, and another session's unfinished
+  // types in the shared tree (often in tests) mustn't stop an e2e run. Every other build checks types.
+  ...(process.env.TNM_E2E_BUILD === '1' ? { typescript: { ignoreBuildErrors: true } } : {}),
   // CI's preview build (.github/workflows/ci.yml, scripts/preview/bundle.sh): a self-contained server folder.
   ...(process.env.NEXT_OUTPUT === 'standalone' ? { output: 'standalone' as const } : {}),
   ...(devPublicHost ? { allowedDevOrigins: [devPublicHost] } : {}),

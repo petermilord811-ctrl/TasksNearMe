@@ -9,10 +9,7 @@ import { E2E_BUILD } from '@/shared/dev-helpers';
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
   if (process.env.NEXT_PHASE === 'phase-production-build') return;
-  if (E2E_BUILD && !/^http:\/\/localhost(:\d+)?$/.test(process.env.APP_URL ?? '')) {
-    console.error(`This is the e2e build (TNM_E2E_BUILD=1). It serves http://localhost only, and APP_URL is ${process.env.APP_URL ?? 'unset'}.`);
-    process.exit(1);
-  }
+  if (E2E_BUILD) (await import('./platform/e2e-guard')).refuseUnlessLocal(process.env.APP_URL);
   if (process.env.JOBS_DISABLED === '1') return;
   const [{ startJobRunner }, { db }] = await Promise.all([import('./modules/jobs/runner'), import('./platform/db/client')]);
   startJobRunner(db);
