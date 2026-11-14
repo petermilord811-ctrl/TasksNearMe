@@ -52,6 +52,9 @@
     "copyCode": {
       "title": "Copy your sign-in code"
     },
+    "costGuide": {
+      "description": "In {market}, typical prices are {low}–{high} {unit, select, item {per item} hour {per hour} other {per task}}. See what you pay with the service fee, what your helper earns, and what changes the price."
+    },
     "categoryNames": {
       "furniture-assembly": "Furniture assembly",
       "moving-help": "Moving help",

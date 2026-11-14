@@ -243,7 +243,7 @@ d4 task board and task page), **owner** (§8). Status as of writing.
 | S1.3 | Search Console: submit sitemap, inspect key pages, daily report of queries, positions and indexed pages (`scripts/seo/google.mjs`) | b7 | Waits for the owner's access grant |
 | S1.4 | Request indexing for the ten most important URLs | owner | §8 |
 | S1.5 | Bing Webmaster Tools: import from Search Console | owner | §8 |
-| S1.6 | Footer links to Austin's category pages and the board (every indexable page within 3 clicks) | UI (83) | Proposed |
+| S1.6 | Footer links to Austin's category pages and the board (every indexable page within 3 clicks) | UI (83) | Live (f13f131) |
 
 ### S2 Supply-gated pages
 | ID | Item | Owner | Status |
@@ -276,11 +276,13 @@ market is indexable. Agreed with d4: its board redesign adds `TaskBoardPageData.
 `loadTaskBoard({ marketSlug, search, now, category })` (src/modules/tasks/board.ts); then b7 adds the route and makes
 `routes.taskBoard()` build `/<market>/tasks/<category>?…` in one commit.
 
-### S5 Cost guides (`/austin/[category]/cost`)
-"How much does furniture assembly cost in Austin?": the price range from the one price function, worked examples from
-the fee engine (what the poster pays, what the helper earns), what changes the price, how to get an exact price.
-"Updated <month>" in the text, never a year in the title. English and Spanish. b7, rendered with the existing content
-components. This run.
+### S5 Cost guides (`/austin/[category]/cost`): built this run
+"How much does furniture assembly cost in Austin?" (the same words as the category page's question, one server string):
+the typical range from the same price guidance as the category page; what a poster pays and what a helper earns at
+each end, worked out by the fee engine from the market's published policy (`getCostGuideData`); what changes the price
+(per service); how to get an exact price; related links. English and Spanish; in the sitemap after each category page;
+linked first in the category page's related links; BreadcrumbList; noindex outside indexable markets. The path lives in
+`src/modules/seo/paths.ts` until the board's route changes settle (then `routes.costGuide`).
 
 ### S6 Google Jobs for real tasks (built now, off until launch)
 - JobPosting on single open task pages only, one canonical copy (the English URL), filled per §3.3:
@@ -314,7 +316,9 @@ components. This run.
   crawlers follow those links to the English pages, so Spanish pages pass no link value to each other. Proposed for
   the UI owners: a locale-aware link (next-intl's `createNavigation` with `localePrefix: 'as-needed'`, or a small
   wrapper over `next/link`) so that on Spanish pages every internal `href` carries `/es`. Hreflang and the sitemap
-  already lead Google to each Spanish page meanwhile.
+  already lead Google to each Spanish page meanwhile. Done by 83 in d68d1f9: `LocaleLink` and `localeHref`
+  (`src/ui/lib/locale-link.tsx`) in the public shell, the footer and the landing; the category page's SEO sections and
+  the cost guides use it too (b7); the other public screens switch with a one-line import change (a9).
 
 ### S8 Structured data
 | Page | Markup | Status |
@@ -323,7 +327,7 @@ components. This run.
 | City | BreadcrumbList, Service + OfferCatalog | Live |
 | Category | BreadcrumbList, Service + AggregateOffer price range; ItemList of helper profile URLs once profiles are indexed | Live / at launch |
 | Board, job hubs | BreadcrumbList | Live / this run |
-| Cost guide | BreadcrumbList, Article (dateModified) | This run |
+| Cost guide | BreadcrumbList (no Article: the page has no author or date of its own, and Article earns no rich result outside news) | Next ship |
 | Task | BreadcrumbList; JobPosting at launch (S6) | Live / at launch |
 | Helper profile | ProfilePage (no photo, area or reviews) | Live |
 | Help article | BreadcrumbList, Article | Live |
@@ -355,7 +359,8 @@ Owners: UI (83, a9). Proposed.
    - (b) visible "sample" labels;
    - (c) accept it until launch.
 
-   Interim: `LIVE_SITE_INDEXING = 'off'`. (a) is a filter, not a schema change: real ids are `<prefix>_<32 hex>`,
+   Today the mode stays `site` until the owner decides; the fastest interim, if wanted, is `LIVE_SITE_INDEXING = 'off'`.
+   (a) is a filter, not a schema change: real ids are `<prefix>_<32 hex>`,
    demo ids contain `_demo_`, seed ids are fixed (`usr_jordan`, …). Recommended: (a). Logged in
    `docs/automation/blocked.md`.
 2. **Doorway pages:** no city, neighborhood or task-type page without real local supply and facts (S2). No synonym

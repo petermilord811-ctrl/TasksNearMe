@@ -1,6 +1,7 @@
 export { HomeScreen } from './home-screen';
 export { MarketScreen } from './market-screen';
 export { CategoryScreen } from './category-screen';
+export { CostGuideScreen } from './cost-guide-screen';
 export { HowItWorksScreen } from './how-it-works-screen';
 export { BecomeHelperScreen } from './become-helper-screen';
 export { PricingScreen } from './pricing-screen';

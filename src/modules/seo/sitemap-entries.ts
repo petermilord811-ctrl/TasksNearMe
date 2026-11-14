@@ -3,6 +3,7 @@ import type { CategorySlug, ISODateTime, LegalDoc } from '@/contracts';
 import { routes } from '@/contracts';
 import { APP_LOCALES } from '@/contracts/locale';
 import { languageAlternatePaths, localizedPath, type Hreflang } from '@/shared/locale';
+import { costGuidePath } from './paths';
 
 /**
  * What /sitemap.xml lists (blueprint 02 §1.1, backlog B-023): every indexable public page, once per language, each
@@ -76,7 +77,8 @@ export function sitemapPages(data: SitemapData, options: { listings: boolean }):
     pages.push({ path: routes.market(market.slug), lastModified }, { path: routes.taskBoard(market.slug), lastModified });
     for (const category of market.categorySlugs) {
       const inCategory = market.tasks.filter((task) => task.categorySlug === category).map((task) => task.updatedAt);
-      pages.push({ path: routes.category(category, market.slug), lastModified: latestDate(inCategory) });
+      // The category page, then its cost guide (no date of its own: it follows the market's published policy).
+      pages.push({ path: routes.category(category, market.slug), lastModified: latestDate(inCategory) }, { path: costGuidePath(category, market.slug) });
     }
   }
   if (!options.listings) return pages;

@@ -182,6 +182,56 @@
       "relatedTitle": "Más en {market}"
     }
   },
+  "costGuide": {
+    "back": "{category} en {market}",
+    "typicalTitle": "Precios habituales en {market}",
+    "examplesTitle": "Cuánto pagas y cuánto gana tu ayudante",
+    "examplesIntro": "Calculado con las tarifas de servicio vigentes hoy, para {unit, select, item {un artículo} hour {{hours} horas} other {una tarea}}.",
+    "lowEnd": "Con el precio más bajo: {price}{unit, select, item { por artículo} hour { la hora} other {}}",
+    "highEnd": "Con el precio más alto: {price}{unit, select, item { por artículo} hour { la hora} other {}}",
+    "helperEarns": "Cuánto gana tu ayudante con {price}{unit, select, item { por artículo} hour { la hora} other {}}",
+    "feesNote": "Quien publica paga una tarifa de servicio del {posterFeePercent}% (mínimo {posterMinimum}). Los ayudantes pagan el {helperFeePercent}% del precio de la tarea.",
+    "feesLink": "Cómo funcionan las tarifas",
+    "factorsTitle": "Qué cambia el precio",
+    "factors": {
+      "furniture-assembly": {
+        "items": "Cuántos artículos son y de qué tamaño: un buró se arma más rápido que un ropero.",
+        "anchoring": "Fijar los muebles a la pared para que no se vuelquen, si lo quieres.",
+        "access": "Escaleras, falta de elevador o una caminata larga desde el estacionamiento.",
+        "boxes": "Si las cajas ya están en el cuarto donde irá el mueble."
+      },
+      "moving-help": {
+        "hours": "Cuántas horas: cuánto hay que mover y qué tan lejos se estaciona el camión de la puerta.",
+        "stairs": "Escaleras y elevadores en los dos lugares.",
+        "packing": "Empacar, si quieres ayuda con eso.",
+        "heavy": "Objetos pesados o difíciles de mover. Los pianos, las cajas fuertes y los materiales peligrosos no forman parte de la ayuda con mudanzas."
+      },
+      "yard-cleanup": {
+        "size": "El tamaño del jardín y cuántas bolsas de hojas hay.",
+        "beds": "Quitar maleza de los arriates o despejar terreno abierto.",
+        "pruning": "Una poda ligera a mano, si forma parte del trabajo.",
+        "bags": "Si hay bolsas y dónde se dejan para la recolección."
+      },
+      "light-cleaning": {
+        "size": "El tamaño de tu casa: los cuartos y los baños.",
+        "since": "Cuánto tiempo ha pasado desde la última limpieza.",
+        "extras": "Extras, como el interior del horno o del refrigerador.",
+        "supplies": "Las mascotas y si los productos de limpieza ya están en casa."
+      },
+      "computer-help": {
+        "remote": "A distancia o en casa: una sesión a distancia suele ser más corta.",
+        "devices": "Cuántos aparatos son.",
+        "scope": "Una configuración completa o un arreglo rápido.",
+        "printers": "Las impresoras y el Wi-Fi, que suelen tardar más de lo esperado."
+      }
+    },
+    "stepsTitle": "Cómo saber el precio exacto",
+    "steps": {
+      "post": "Publica tu tarea con estos detalles. Publicar es gratis.",
+      "offers": "Los ayudantes cerca de ti envían ofertas con su precio, y puedes hacerles preguntas antes.",
+      "book": "Ves la tarifa de servicio y el total antes de reservar, y pagas al reservar."
+    }
+  },
   "categories": {
     "furniture-assembly": {
       "scope": "Escritorios, camas, estantes",
@@ -353,6 +403,8 @@
     "furniture": "Armado de muebles",
     "moving": "Ayuda con mudanzas sin tareas",
     "furnitureSeo": "Armado de muebles con cifras, guía de la ciudad, preguntas y enlaces relacionados",
+    "costFurniture": "Guía de precios: armado de muebles, por artículo",
+    "costMoving": "Guía de precios: ayuda con mudanzas, por hora con un mínimo",
     "movingSeoEmpty": "Ayuda con mudanzas con preguntas, pero sin cifras ni guía de la ciudad todavía",
     "computer": "Ayuda remota con computadoras",
     "yard": "Limpieza de jardín",

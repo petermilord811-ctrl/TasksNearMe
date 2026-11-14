@@ -182,6 +182,56 @@
       "relatedTitle": "More in {market}"
     }
   },
+  "costGuide": {
+    "back": "{category} in {market}",
+    "typicalTitle": "Typical prices in {market}",
+    "examplesTitle": "What you pay, and what your helper earns",
+    "examplesIntro": "Worked out with the service fees in effect today, for {unit, select, item {one item} hour {{hours} hours} other {one task}}.",
+    "lowEnd": "At the low end: {price}{unit, select, item { per item} hour { an hour} other {}}",
+    "highEnd": "At the high end: {price}{unit, select, item { per item} hour { an hour} other {}}",
+    "helperEarns": "What your helper earns at {price}{unit, select, item { per item} hour { an hour} other {}}",
+    "feesNote": "Posters pay a service fee of {posterFeePercent}% (at least {posterMinimum}). Helpers pay {helperFeePercent}% of the task price.",
+    "feesLink": "How fees work",
+    "factorsTitle": "What changes the price",
+    "factors": {
+      "furniture-assembly": {
+        "items": "How many items there are and how big: a nightstand is quicker than a wardrobe.",
+        "anchoring": "Anti-tip anchoring to the wall, if you want it.",
+        "access": "Stairs, no elevator, or a long walk from parking.",
+        "boxes": "Whether the boxes are already in the room where the furniture goes."
+      },
+      "moving-help": {
+        "hours": "How many hours: how much there is to move, and how far the truck parks from the door.",
+        "stairs": "Stairs and elevators at both ends.",
+        "packing": "Packing, if you want help with it.",
+        "heavy": "Heavy or awkward pieces. Pianos, safes and hazardous materials aren't part of moving help."
+      },
+      "yard-cleanup": {
+        "size": "The size of the yard and how many bags of leaves.",
+        "beds": "Weeding garden beds versus clearing open ground.",
+        "pruning": "Light hand pruning, if it's part of the job.",
+        "bags": "Whether bags are there, and where they go for collection."
+      },
+      "light-cleaning": {
+        "size": "The size of your home: the rooms and the bathrooms.",
+        "since": "How long it has been since the last cleaning.",
+        "extras": "Extras, like inside the oven or the fridge.",
+        "supplies": "Pets, and whether cleaning supplies are there."
+      },
+      "computer-help": {
+        "remote": "Remote or at home: a remote session is often shorter.",
+        "devices": "How many devices.",
+        "scope": "A full setup versus a quick fix.",
+        "printers": "Printers and Wi-Fi, which often take longer than expected."
+      }
+    },
+    "stepsTitle": "How to get an exact price",
+    "steps": {
+      "post": "Post your task with these details. Posting is free.",
+      "offers": "Helpers near you send offers with their price, and you can ask them questions first.",
+      "book": "You see the service fee and your total before you book, and you pay when you book."
+    }
+  },
   "categories": {
     "furniture-assembly": {
       "scope": "Desks, beds, shelves",
@@ -353,6 +403,8 @@
     "furniture": "Furniture assembly",
     "moving": "Moving help without tasks",
     "furnitureSeo": "Furniture assembly with counts, city guide, questions and related links",
+    "costFurniture": "Cost guide: furniture assembly, priced per item",
+    "costMoving": "Cost guide: moving help, by the hour with a minimum",
     "movingSeoEmpty": "Moving help with questions but no counts or city guide yet",
     "computer": "Remote computer help",
     "yard": "Yard cleanup",

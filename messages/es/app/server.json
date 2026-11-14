@@ -52,6 +52,9 @@
     "copyCode": {
       "title": "Copia tu código para iniciar sesión"
     },
+    "costGuide": {
+      "description": "En {market}, los precios habituales van de {low} a {high} {unit, select, item {por artículo} hour {por hora} other {por tarea}}. Mira cuánto pagas con la tarifa de servicio, cuánto gana tu ayudante y qué cambia el precio."
+    },
     "categoryNames": {
       "furniture-assembly": "Armado de muebles",
       "moving-help": "Ayuda con mudanzas",

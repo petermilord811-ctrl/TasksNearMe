@@ -45,8 +45,11 @@ describe('sitemapPages', () => {
       '/austin',
       '/austin/tasks',
       '/austin/furniture-assembly',
+      '/austin/furniture-assembly/cost',
       '/austin/moving-help',
+      '/austin/moving-help/cost',
       '/austin/computer-help',
+      '/austin/computer-help/cost',
       '/helpers/jordan-t',
       '/tasks/assemble-a-desk-mueller-7f3k',
       '/tasks/help-loading-a-moving-truck-crestview-9d2a',
@@ -66,7 +69,7 @@ describe('sitemapPages', () => {
     expect(byPath.get('/legal/terms')?.lastModified).toBe('2026-11-01T17:00:00.000Z');
     expect(byPath.get('/helpers/jordan-t')?.lastModified).toBe('2026-11-10T12:00:00.000Z');
     expect(byPath.get('/tasks/assemble-two-nightstands-mueller-8n2v')?.lastModified).toBe('2026-11-12T15:00:00.000Z');
-    for (const path of ['/how-it-works', '/pricing', '/become-a-helper', '/trust-and-safety']) {
+    for (const path of ['/how-it-works', '/pricing', '/become-a-helper', '/trust-and-safety', '/austin/furniture-assembly/cost']) {
       expect(byPath.get(path)?.lastModified, path).toBeUndefined();
     }
   });

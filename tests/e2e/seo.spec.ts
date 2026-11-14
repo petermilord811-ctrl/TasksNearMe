@@ -36,6 +36,8 @@ test.describe('search engines', () => {
       '/austin/tasks',
       '/austin/furniture-assembly',
       '/es/austin/furniture-assembly',
+      '/austin/furniture-assembly/cost',
+      '/es/austin/furniture-assembly/cost',
     ]) {
       expect(paths, path).toContain(path);
     }
@@ -90,6 +92,31 @@ test.describe('search engines', () => {
     await page.goto('/es/austin/furniture-assembly');
     await expect(page.getByRole('region', { name: 'Lo que conviene saber en Austin' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 3, name: '¿Cuánto cuesta el armado de muebles en Austin?' })).toBeVisible();
+  });
+
+  test('a cost guide answers the question with the published fees, in both languages', async ({ page }) => {
+    await page.goto('/austin/furniture-assembly');
+    await page.getByRole('region', { name: 'More in Austin' }).getByRole('link', { name: 'How much does furniture assembly cost in Austin?' }).click();
+    await expect(page).toHaveURL(/\/austin\/furniture-assembly\/cost$/);
+    await expect(page).toHaveTitle('How much does furniture assembly cost in Austin? · TasksNearMe');
+    await expect(page.getByRole('heading', { level: 1, name: 'How much does furniture assembly cost in Austin?' })).toBeVisible();
+    await expect(page.getByRole('region', { name: /^At the low end: \$/ })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'What changes the price' }).getByRole('listitem')).toHaveCount(4);
+    const [trail] = await structuredData(page);
+    expect((trail!.itemListElement as Array<{ name: string }>).map((item) => item.name)).toEqual([
+      'TasksNearMe',
+      'Austin',
+      'Furniture assembly',
+      'How much does furniture assembly cost in Austin?',
+    ]);
+
+    await page.goto('/es/austin/moving-help/cost');
+    await expect(page.getByRole('heading', { level: 1, name: '¿Cuánto cuesta la ayuda con mudanzas en Austin?' })).toBeVisible();
+    await expect(page.getByRole('region', { name: /^Con el precio más bajo: \$/ })).toBeVisible();
+    // Spanish pages link to Spanish pages (SEO plan S7.2).
+    const more = page.getByRole('region', { name: 'Más en Austin' });
+    await expect(more.getByRole('link', { name: 'Ayuda con mudanzas cerca de ti en Austin' })).toHaveAttribute('href', '/es/austin/moving-help');
+    await expect(more.getByRole('link', { name: 'Precios y tarifas' })).toHaveAttribute('href', '/es/pricing');
   });
 
   test('a public task and a helper profile carry only what their page shows', async ({ page }) => {

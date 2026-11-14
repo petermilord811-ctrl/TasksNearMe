@@ -1,7 +1,7 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { CategorySeoContent } from '@/contracts';
+import type { CategorySeoContent, RelatedLink } from '@/contracts';
 import { ContentBlocks } from '@/ui/components/content/content-blocks';
 import { Section } from '@/ui/components/layout/section';
 
@@ -49,11 +49,16 @@ export function CategoryFaq({ seo }: { seo: CategorySeoContent }) {
 
 /** Links to the city's other services, its open tasks and pricing. */
 export function CategoryRelated({ seo, market }: { seo: CategorySeoContent; market: string }) {
+  return <RelatedLinks links={seo.related} market={market} />;
+}
+
+/** "More in Austin": a plain list of links, each a full-height tap target. */
+export function RelatedLinks({ links, market }: { links: readonly RelatedLink[]; market: string }) {
   const t = useTranslations('publicPages.category.seo');
-  if (seo.related.length === 0) return null;
+  if (links.length === 0) return null;
   return <Section title={t('relatedTitle', { market })}>
     <ul className="grid gap-x-8 sm:grid-cols-2">
-      {seo.related.map((link) => (
+      {links.map((link) => (
         <li key={link.href}>
           <Link href={link.href} className="flex min-h-11 items-center rounded-md font-medium text-primary underline-offset-4 hover:underline">{link.label}</Link>
         </li>

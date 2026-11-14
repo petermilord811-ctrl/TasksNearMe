@@ -5,6 +5,7 @@ import type {
   BecomeHelperPageData,
   CategoryPageData,
   CategorySlug,
+  CostGuidePageData,
   HomePageData,
   ISODateTime,
   MarketPageData,
@@ -34,6 +35,7 @@ import { loadTaskBoard } from '@/modules/tasks/board';
 import { taskDrafter } from '@/modules/tasks/server';
 import { db } from '@/platform/db/client';
 import { buildBecomeHelperPageData, buildPricingPageData, landingFeeExamples } from './page-data';
+import { quoteBreakdown } from '@/modules/payments/fees';
 
 /**
  * Public marketing page data. Cached (Cache Components) so the pages prerender and stay fast;
@@ -210,6 +212,39 @@ export async function getCategorySupply(marketSlug: string, categorySlug: Catego
     countOpenTasks(db, { marketId: market.id, categorySlug, now: new Date(), realOnly: true }),
   ]);
   return { helperCount, openTaskCount };
+}
+
+/**
+ * A city's cost guide for one service (docs/seo/PLAN.md S5): the category's typical range and what it means in money
+ * at each end, from the same fee engine that prices bookings. The question and the links are added in the page's
+ * language by the route.
+ */
+export async function getCostGuideData(
+  marketSlug: string,
+  categorySlug: string,
+): Promise<Omit<CostGuidePageData, 'question' | 'related'> | null> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag(marketTag(marketSlug));
+  const market = await findPublicMarket(marketSlug);
+  if (!market) return null;
+  const [view, categories, policy] = await Promise.all([getMarketView(market), listCategoryViews(market.id), getPublishedPolicy(market.id)]);
+  const category = categories.find((candidate) => candidate.slug === categorySlug);
+  if (!category || !policy) return null;
+  const { lowCents, highCents, unit } = category.priceGuidance;
+  const hours = category.minHours ?? 2;
+  const at = (priceCents: number) =>
+    quoteBreakdown(
+      policy.fees,
+      unit === 'hour' ? { type: 'hourly', rateCents: priceCents, estimatedHours: hours, hoursCap: hours } : { type: 'fixed', priceCents },
+    );
+  return {
+    market: view,
+    category,
+    examples: { low: at(lowCents), high: at(highCents) },
+    ...(unit === 'hour' ? { exampleHours: hours } : {}),
+    fees: { posterFeePercent: policy.fees.posterBps / 100, posterMinimumCents: policy.fees.posterMinCents, helperFeePercent: policy.fees.helperBps / 100 },
+  };
 }
 
 /** Category slugs per public market, for generateStaticParams. */

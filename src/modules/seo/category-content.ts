@@ -5,6 +5,7 @@ import { routes } from '@/contracts';
 import { getHelpArticle, getLocalGuide } from '@/modules/content/loaders';
 import { getCategorySupply, listCategorySlugs } from '@/modules/marketing/queries';
 import { formatMoney } from '@/shared/format';
+import { costGuidePath } from './paths';
 
 /**
  * Help articles whose question and short answer the category FAQ reuses, so the help center and the category pages
@@ -50,6 +51,8 @@ export async function categorySeoContent(
     }),
   ];
   const related: RelatedLink[] = [
+    // The cost guide first: its title is the question people search.
+    { label: t(`cost.${category.slug}`, { market: market.name }), href: costGuidePath(category.slug, market.slug) },
     ...slugs
       .filter((slug) => slug !== category.slug)
       .map((slug) => ({ label: categoryName(slug as CategorySlug), href: routes.category(slug as CategorySlug, market.slug) })),

@@ -3,11 +3,13 @@ import type {
   CategoryPageData,
   CategorySeoContent,
   CategorySlug,
+  CostGuidePageData,
   CategoryView,
   HomePageData,
   LandingAiSuggestResult,
   LandingMapData,
   MarketView,
+  PriceBreakdown,
   PricingPageData,
   TaskPublicView,
   WaitlistPageData,
@@ -280,6 +282,42 @@ export const furnitureCategorySeo: CategorySeoContent = {
   ],
 };
 
+/**
+ * Cost guides (docs/seo/PLAN.md S5), worked out at the launch fees (poster max(10%, $3.00), helper 10%):
+ * furniture assembly at $50 and $80 an item; moving help for its 2 minimum hours at $32 and $40 an hour.
+ */
+const fixedAt = (priceCents: number): PriceBreakdown => {
+  const fee = Math.max(Math.round(priceCents / 10), 300);
+  const helperFee = Math.round(priceCents / 10);
+  return { pricingType: 'fixed', taskPriceCents: priceCents, posterFeeCents: fee, helperFeeCents: helperFee, expenseAllowanceCents: 0, posterTotalCents: priceCents + fee, helperEarningsCents: priceCents - helperFee, platformRevenueCents: fee + helperFee };
+};
+const hourlyAt = (rateCents: number, hours: number): PriceBreakdown => ({ ...fixedAt(rateCents * hours), pricingType: 'hourly', hourly: { rateCents, hours, basis: 'cap' } });
+const COST_FEES = { posterFeePercent: 10, posterMinimumCents: 300, helperFeePercent: 10 };
+
+export const furnitureCostGuideData: CostGuidePageData = {
+  market: austinMarket,
+  category: categoryViews[0]!,
+  question: 'How much does furniture assembly cost in Austin?',
+  examples: { low: fixedAt(5000), high: fixedAt(8000) },
+  fees: COST_FEES,
+  related: [
+    { label: 'Furniture assembly near you in Austin', href: '/austin/furniture-assembly' },
+    { label: 'Open tasks near you in Austin', href: '/austin/tasks' },
+    { label: 'Pricing and fees', href: '/pricing' },
+  ],
+};
+
+/** An hourly service: the examples are worked out for its minimum hours. */
+export const movingCostGuideData: CostGuidePageData = {
+  market: austinMarket,
+  category: categoryViews[1]!,
+  question: 'How much does moving help cost in Austin?',
+  examples: { low: hourlyAt(3200, 2), high: hourlyAt(4000, 2) },
+  exampleHours: 2,
+  fees: COST_FEES,
+  related: [{ label: 'Moving help near you in Austin', href: '/austin/moving-help' }, { label: 'Pricing and fees', href: '/pricing' }],
+};
+
 /** The furniture assembly page with every search section. */
 export const furnitureCategoryWithSeoData: CategoryPageData = { ...furnitureCategoryPageData, seo: furnitureCategorySeo };
 
@@ -289,7 +327,7 @@ export const movingCategoryWithSeoEmptyData: CategoryPageData = {
   seo: {
     helperCount: 0,
     openTaskCount: 0,
-    faq: [{ question: 'How much does moving help cost in Austin?', answer: 'In Austin, typical prices are $35.00–$60.00 per hour. You agree on the price with your helper before you book, and you see the service fee and your total before you pay.' }],
+    faq: [{ question: 'How much does moving help cost in Austin?', answer: 'In Austin, typical prices are $32.00–$40.00 per hour. You agree on the price with your helper before you book, and you see the service fee and your total before you pay.' }],
     related: [{ label: 'Furniture assembly', href: '/austin/furniture-assembly' }, { label: 'Pricing and fees', href: '/pricing' }],
   },
 };

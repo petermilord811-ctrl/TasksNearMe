@@ -189,6 +189,28 @@ export interface CategorySeoContent {
   related: RelatedLink[];
 }
 
+/**
+ * A city's cost guide for one service (docs/seo/PLAN.md S5): "How much does furniture assembly cost in Austin?",
+ * answered with the same price guidance as the category page and worked examples from the fee engine.
+ */
+export interface CostGuidePageData {
+  market: MarketView;
+  /** Carries the typical price range (priceGuidance), the same numbers the category page shows. */
+  category: CategoryView;
+  /** The page's heading: the question people search, in the page's language. */
+  question: string;
+  /**
+   * What a poster pays and what a helper earns at the low and the high end of the typical range: one item, one task,
+   * or the category's minimum hours at the hourly rate.
+   */
+  examples: { low: PriceBreakdown; high: PriceBreakdown };
+  /** The hours the hourly examples are worked out for (the category's minimum); absent for priced-per-item or per-task services. */
+  exampleHours?: number;
+  fees: { posterFeePercent: number; posterMinimumCents: Cents; helperFeePercent: number };
+  /** The service's page, the city's open tasks and pricing, in the page's language. */
+  related: RelatedLink[];
+}
+
 /** Everything the pricing page shows. Computed by the app's fee engine; the UI only displays it. */
 export interface PricingPageData {
   fees: { posterFeePercent: number; posterMinimumCents: Cents; helperFeePercent: number };
