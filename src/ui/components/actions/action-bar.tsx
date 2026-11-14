@@ -49,13 +49,37 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
   const [result, setResult] = useState<ActionResult | undefined>(initialResult);
   const confirmationTrigger = useRef<HTMLElement | null>(null);
   const restoreAfterPending = useRef(false);
+  const group = useRef<HTMLDivElement>(null);
+  const resultRegion = useRef<HTMLDivElement>(null);
+  /** The last control in the bar that had focus, to notice when a refresh removes it (WCAG 2.4.3). */
+  const lastFocus = useRef<HTMLElement | null>(null);
+
+  /**
+   * Where keyboard focus goes when the control that had it is gone, such as "Approve task" once the booking is
+   * approved: the result message, else the first action still available, else the page's main content.
+   */
+  function focusAfterRemoval() {
+    const region = resultRegion.current;
+    const next = region?.textContent?.trim() ? region : group.current?.querySelector<HTMLElement>('[data-action-id]:not(:disabled):not([aria-disabled="true"])');
+    (next ?? document.getElementById('main'))?.focus();
+  }
 
   useEffect(() => {
     if (pendingId === null && restoreAfterPending.current) {
-      confirmationTrigger.current?.focus();
       restoreAfterPending.current = false;
+      const trigger = confirmationTrigger.current;
+      if (trigger?.isConnected) trigger.focus();
+      else focusAfterRemoval();
     }
   }, [pendingId]);
+
+  useEffect(() => {
+    const last = lastFocus.current;
+    if (!last || last.isConnected || pendingRef.current || restoreAfterPending.current) return;
+    lastFocus.current = null;
+    if (document.activeElement && document.activeElement !== document.body) return;
+    focusAfterRemoval();
+  }, [actions]);
 
   async function run(action: ActionDescriptor) {
     if (!action.enabled || pendingRef.current) return;
@@ -155,13 +179,13 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
   // `bottom-app-navigation` (`--app-bottom-offset`), floating `--action-tray-gap` higher, so the next step is always
   // in reach. A fixed tray floats by its bottom margin; a sticky one by a small lift (see `actionTray`).
   return (
-    <div ref={barRef} className={cn(
+    <div ref={barRef} onFocus={(event) => { if (event.currentTarget.contains(event.target)) lastFocus.current = event.target; }} className={cn(
       'min-w-0',
       sticky ? actionTray : 'border-t border-foreground/[0.08] pt-4 dark:border-white/[0.08]',
       mobileFixed && `${trayGap} max-lg:fixed max-lg:inset-x-2.5 max-lg:bottom-app-navigation max-lg:z-10 max-lg:mx-auto max-lg:mt-0! max-lg:mb-(--action-tray-gap)! max-lg:translate-y-0 max-lg:max-h-[60dvh] max-lg:max-w-[45rem] max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:rounded-[1.375rem] max-lg:border max-lg:border-foreground/[0.07] max-lg:app-glass max-lg:p-3 max-lg:shadow-[0_18px_40px_-24px_rgb(40_20_5/0.45)] dark:max-lg:border-white/[0.08] dark:max-lg:shadow-[0_18px_40px_-20px_rgb(0_0_0/0.75)]`,
     )}>
       {description && <div className="mb-3 text-sm">{description}</div>}
-      <div role="group" aria-label={feedback('actionBar')} aria-busy={pendingId !== null} className="flex flex-wrap items-start gap-3">
+      <div ref={group} role="group" aria-label={feedback('actionBar')} aria-busy={pendingId !== null} className="flex flex-wrap items-start gap-3">
         {renderAction(actions[0], 'first')}
         {actions.length > 1 && <>
           <div className="hidden flex-wrap items-start gap-3 lg:contents">
@@ -181,7 +205,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
           </Sheet>
         </>}
       </div>
-      <div aria-live="polite" aria-atomic="true" className="mt-3">
+      <div ref={resultRegion} tabIndex={-1} aria-live="polite" aria-atomic="true" className="mt-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
         {resultContent()}
       </div>
       <AlertDialog open={confirmation !== null} onOpenChange={(open) => { if (!open) setConfirmation(null); }}>

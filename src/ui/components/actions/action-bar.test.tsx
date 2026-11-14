@@ -108,6 +108,28 @@ describe('ActionBar', () => {
     expect(within(sheet).getByRole('button', { name: 'Report a no-show' })).toHaveAccessibleDescription('Available at 11:00 am');
   });
 
+  it('returns focus to the button after a confirmed action, and to the result once the button is gone', async () => {
+    const handler = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'approved' }));
+    const { rerender } = show(deskCompletionSubmittedPosterActions, handler);
+    const approve = screen.getByRole('button', { name: 'Approve task' });
+    approve.focus();
+    await userEvent.keyboard('{Enter}');
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Confirm' }));
+    expect(await screen.findByText('Task approved')).toBeVisible();
+    expect(approve).toHaveFocus();
+    // The refreshed booking has other actions: focus moves to the result, not to the top of the page.
+    rerender(<NextIntlClientProvider locale="en" messages={uiMessages}><ActionBar actions={[{ id: 'message', kind: 'secondary', enabled: true }]} onAction={handler} /></NextIntlClientProvider>);
+    expect(approve).not.toBeInTheDocument();
+    expect(screen.getByText('Task approved').closest('[tabindex="-1"]')).toHaveFocus();
+  });
+
+  it('moves focus to the next action when a refresh removes the focused one without a result', () => {
+    const { rerender } = show([{ id: 'approve', kind: 'primary', enabled: true }, { id: 'message', kind: 'secondary', enabled: true }]);
+    act(() => screen.getByRole('button', { name: 'Approve task' }).focus());
+    rerender(<NextIntlClientProvider locale="en" messages={uiMessages}><ActionBar actions={[{ id: 'message', kind: 'secondary', enabled: true }]} onAction={vi.fn()} /></NextIntlClientProvider>);
+    expect(screen.getByRole('button', { name: 'Send message' })).toHaveFocus();
+  });
+
   it('does not submit twice while an action is pending', async () => {
     let finish: (result: ActionResult) => void = () => {};
     const handler = vi.fn(() => new Promise<ActionResult>((resolve) => { finish = resolve; }));
