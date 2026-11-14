@@ -56,6 +56,7 @@ export const mayaAccountData: AccountPageData = {
   helper: { status: 'none' },
   privacy: {},
   language: 'en',
+  activity: { shown: true },
 };
 
 /** The profile photo Jordan added (a square, like every profile photo). */
@@ -72,6 +73,8 @@ export const jordanAccountData: AccountPageData = {
   helper: { status: 'active' },
   privacy: { export: { status: 'preparing', requestedAt: '2026-11-20T18:00:00.000Z' } },
   language: 'en',
+  // Jordan keeps his activity to himself (completion plan 7.1).
+  activity: { shown: false },
 };
 
 /** A new account: no phone yet; deletion asked for, happening in a week. */
@@ -106,6 +109,7 @@ export const fakeNotificationHandlers: NotificationHandlers = {
 
 export const fakeAccountHandlers: AccountHandlers = {
   onSaveProfile: () => wait({ ok: true, code: 'saved' }),
+  onSaveActivity: () => wait({ ok: true, code: 'updated' }),
   onSavePreference: ({ topic, channel }) =>
     wait((topic === 'bookings' || topic === 'payments') && channel === 'email' ? { ok: false, code: 'not_allowed' } : { ok: true, code: 'updated' }),
   onRequestExport: () => wait({ ok: true, code: 'submitted' }),

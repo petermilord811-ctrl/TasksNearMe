@@ -517,6 +517,7 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     privacy,
     ...(pushSetup() ? { push: pushSetup()! } : {}),
     language: localeOrDefault(user.locale),
+    activity: { shown: user.showActivity },
   };
 }
 

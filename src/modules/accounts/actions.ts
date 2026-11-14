@@ -130,6 +130,16 @@ export async function saveLanguageAction(input: LanguageInput): Promise<ActionRe
   return { ok: true, code: 'updated' };
 }
 
+/** "Show when I'm active" (completion plan 7.1; decisions.md 2026-11-14): presence and "Seen", mutual. */
+export async function saveActivityAction(input: { shown?: unknown }): Promise<ActionResult> {
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user') return { ok: false, code: 'not_allowed' };
+  if (typeof input?.shown !== 'boolean') return { ok: false, code: 'validation_failed', fieldErrors: { shown: ['invalid'] } };
+  await db.update(users).set({ showActivity: input.shown, updatedAt: new Date() }).where(eq(users.id, viewer.user.id));
+  refresh();
+  return { ok: true, code: 'updated' };
+}
+
 /**
  * The authenticator's dependencies: the field cipher keeps the keys, the auth secret hashes setup codes. The
  * development code (123456) works only outside production and only on this machine (staff-dev-code.ts).

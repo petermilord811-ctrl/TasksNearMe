@@ -17,6 +17,7 @@ import {
   disconnectSignInAction,
   passkeyRegistrationOptionsAction,
   removePasskeyAction,
+  saveActivityAction,
   saveLanguageAction,
   signOut,
 } from '@/modules/accounts/actions';
@@ -79,6 +80,7 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
         onAddPasskey: addPasskeyAction,
         onRemovePasskey: removePasskeyAction,
         onSaveLanguage: saveLanguageAction,
+        onSaveActivity: saveActivityAction,
         onUploadPhoto: uploadProfilePhotoAction,
         onRemovePhoto: removeProfilePhotoAction,
         onStartEmailChange: startEmailChangeAction,

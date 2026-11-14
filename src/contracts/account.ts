@@ -178,6 +178,11 @@ export interface AccountPageData {
   push?: PushSetup;
   /** The language they use the app in; emails and texts go out in it too. */
   language: AppLocale;
+  /**
+   * "Show when I'm active" (completion plan 7.1): when on, people they talk to see "Active now" or "Active
+   * today" and "Seen"; when off, nobody does, and they don't see anyone else's either (it's mutual).
+   */
+  activity?: { shown: boolean };
 }
 
 /** The account's language (blueprint 01, P2). */
@@ -275,6 +280,8 @@ export type AccountProfileInput = z.input<typeof accountProfileInputSchema>;
  */
 export interface AccountHandlers extends PushHandlers {
   onSaveProfile: ActionHandler<AccountProfileInput>;
+  /** "Show when I'm active" on or off. ok `updated`. */
+  onSaveActivity?: ActionHandler<{ shown: boolean }>;
   onSavePreference: ActionHandler<{ topic: NotificationTopic; channel: NotificationChannel; enabled: boolean }>;
   onRequestExport: () => Promise<ActionResult>;
   onRequestDeletion: () => Promise<ActionResult>;

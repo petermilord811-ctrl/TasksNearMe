@@ -12,6 +12,7 @@ import { AccountProfileForm } from './account-profile-form';
 import { AccountPreferences } from './account-preferences';
 import { AccountPrivacy, AccountSignOut } from './account-privacy';
 import { AccountLanguage } from './account-language';
+import { AccountActivity } from './account-activity';
 import { AccountPasskeys } from './account-passkeys';
 import { AccountSignIn } from './account-sign-in';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
@@ -52,6 +53,7 @@ export function AccountScreen({ data, handlers, initialDialog }: {
     <div className={cardClass}><Section title={t('preferences.title')} description={t('preferences.description')}><AccountPreferences preferences={data.preferences} onSave={handlers.onSavePreference} /></Section></div>
     <div className={cardClass}><Section title={push('device.title')}><PushDeviceSetting push={data.push} handlers={handlers} /></Section></div>
     {handlers.onSaveLanguage && <div className={cardClass}><Section title={t('language.title')} description={t('language.description')}><AccountLanguage language={data.language} onSave={handlers.onSaveLanguage} /></Section></div>}
+    {data.activity && handlers.onSaveActivity && <div className={cardClass}><Section title={t('activity.title')} description={t('activity.description')}><AccountActivity shown={data.activity.shown} onSave={handlers.onSaveActivity} /></Section></div>}
     <div className={cardClass}><Section title={t('helper.title')} description={t(`helper.descriptions.${helperStatus}`)}>
       {helperStatus === 'suspended' ? <Link href={routes.help()} className="inline-flex min-h-11 items-center text-sm text-primary underline underline-offset-4">{t('helper.contactSupport')}</Link> : <Button variant="outline" asChild className="h-auto min-h-11 max-w-full whitespace-normal"><Link href={helperStatus === 'none' || helperStatus === 'draft' ? routes.app.helperOnboarding() : routes.app.helperProfile()}>{t(helperStatus === 'none' ? 'helper.become' : helperStatus === 'draft' ? 'helper.finish' : 'helper.edit')}<ArrowRight aria-hidden="true" /></Link></Button>}
     </Section></div>
