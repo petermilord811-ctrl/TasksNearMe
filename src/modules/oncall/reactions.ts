@@ -34,7 +34,8 @@ export async function reactForOperations(db: Db, event: ReactionEvent, now: Date
     case 'support.safety_report': {
       const caseId = text(event.payload.caseId) ?? event.aggregateId;
       const kind = text(event.payload.kind) ?? 'other';
-      await pageOnCall(deps(), { subject: 'Urgent safety report', text: `Someone reported "${words(kind)}" on a booking. Reply within minutes.`, path: `/admin/cases/${caseId}` }, now);
+      const reportedBy = text(event.payload.reportedBy);
+      await pageOnCall(deps(), { subject: 'Urgent safety report', text: `Someone reported "${words(kind)}" on a booking. Reply within minutes.`, path: `/admin/cases/${caseId}`, ...(reportedBy ? { reportedBy } : {}) }, now);
       return;
     }
     case 'support.case_opened': {

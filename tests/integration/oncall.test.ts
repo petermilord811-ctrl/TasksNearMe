@@ -3,7 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { EmailMessage, EmailProvider } from '@/integrations/email';
 import type { SmsMessage, SmsSender } from '@/integrations/sms';
 import { bookings } from '@/modules/bookings/schema';
-import { onCallContacts } from '@/modules/oncall/pager';
+import { users } from '@/modules/accounts/schema';
+import { onCallContacts, REPORTER_PAGES_PER_DAY } from '@/modules/oncall/pager';
 import { reactForOperations } from '@/modules/oncall/reactions';
 import { payments } from '@/modules/payments/schema';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
@@ -75,6 +76,38 @@ describe('paging the staff on call', () => {
     expect(texts).toEqual([]);
     await reactForOperations(db, event('support.case_opened', 'case_oc_urgent', { caseId: 'case_oc_urgent' }), now, pager);
     expect(texts[0]!.text).toContain('A payment issue case was opened as urgent.');
+  });
+
+  it('pages once per case, whatever sends the event again (5.18)', async () => {
+    texts = [];
+    await reactForOperations(db, event('support.safety_report', 'case_oc_urgent', { caseId: 'case_oc_urgent', bookingId: 'bkg_tv', reportedBy: 'usr_ben', kind: 'unsafe_now' }), now, pager);
+    await reactForOperations(db, event('support.case_opened', 'case_oc_urgent', { caseId: 'case_oc_urgent' }), now, pager);
+    // Both kinds of page already went out for this case in the tests above.
+    expect(texts).toEqual([]);
+  });
+
+  it(`caps one reporter at ${REPORTER_PAGES_PER_DAY} pages a day; later reports still open cases, without paging (5.18)`, async () => {
+    texts = [];
+    for (let report = 1; report <= REPORTER_PAGES_PER_DAY + 2; report++) {
+      await reactForOperations(db, event('support.safety_report', `case_oc_flood_${report}`, { caseId: `case_oc_flood_${report}`, bookingId: 'bkg_tv', reportedBy: 'usr_oc_flooder', kind: 'harassment' }), now, pager);
+    }
+    expect(texts.filter((message) => message.to === '+15125550900')).toHaveLength(REPORTER_PAGES_PER_DAY);
+    const capped = await db.select().from(auditLog).where(and(eq(auditLog.action, 'oncall.page_capped'), like(auditLog.targetId, '/admin/cases/case\\_oc\\_flood\\_%')));
+    expect(capped).toHaveLength(2);
+    // Someone else's report still pages.
+    texts = [];
+    await reactForOperations(db, event('support.safety_report', 'case_oc_other', { caseId: 'case_oc_other', bookingId: 'bkg_tv', reportedBy: 'usr_oc_someone_else', kind: 'unsafe_now' }), now, pager);
+    expect(texts.length).toBeGreaterThan(0);
+  });
+
+  it('leaves out trust and safety staff whose account is suspended (5.18)', async () => {
+    const [taylor] = await db.select().from(users).where(eq(users.email, 'taylor@example.test'));
+    await db.update(users).set({ status: 'suspended' }).where(eq(users.id, taylor!.id));
+    try {
+      expect((await onCallContacts(db, env)).emails).not.toContain('taylor@example.test');
+    } finally {
+      await db.update(users).set({ status: taylor!.status }).where(eq(users.id, taylor!.id));
+    }
   });
 });
 
