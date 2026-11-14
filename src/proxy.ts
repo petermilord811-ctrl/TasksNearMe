@@ -53,7 +53,7 @@ export function proxy(request: NextRequest) {
   }
   // The Content Security Policy for every page (src/shared/csp.ts): enforced in production, reported in development.
   const development = process.env.NODE_ENV !== 'production';
-  response.headers.set(cspHeaderName(development), contentSecurityPolicy({ development, mapStyleUrl: process.env.MAP_STYLE_URL }));
+  response.headers.set(cspHeaderName(development), contentSecurityPolicy({ development, mapStyleUrl: process.env.MAP_STYLE_URL, plainHttp: E2E_BUILD }));
   return response;
 }
 

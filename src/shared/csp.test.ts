@@ -38,4 +38,11 @@ describe('the Content Security Policy', () => {
     expect(cspHeaderName(true)).toBe('Content-Security-Policy-Report-Only');
     expect(cspHeaderName(false)).toBe('Content-Security-Policy');
   });
+
+  it('keeps the production policy over plain http (the e2e build on localhost), without the upgrade to https', () => {
+    const plain = contentSecurityPolicy({ development: false, plainHttp: true });
+    expect(plain).not.toContain('upgrade-insecure-requests');
+    expect(directive(plain, 'script-src')).toBe(directive(production, 'script-src'));
+    expect(plain).toBe(production.replace('; upgrade-insecure-requests', ''));
+  });
 });

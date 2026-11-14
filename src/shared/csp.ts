@@ -32,9 +32,14 @@ export interface CspOptions {
   development: boolean;
   /** `MAP_STYLE_URL`, when set: its host serves the style (and usually the tiles). */
   mapStyleUrl?: string | undefined;
+  /**
+   * Served over plain http: the e2e build on localhost (src/shared/dev-helpers.ts). It leaves out
+   * `upgrade-insecure-requests`, which would turn its redirects into https requests that can't connect.
+   */
+  plainHttp?: boolean;
 }
 
-export function contentSecurityPolicy({ development, mapStyleUrl }: CspOptions): string {
+export function contentSecurityPolicy({ development, mapStyleUrl, plainHttp = false }: CspOptions): string {
   const maps = [...new Set([DEFAULT_MAP_ORIGIN, originOf(mapStyleUrl)].filter((origin): origin is string => origin !== null))];
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
@@ -54,7 +59,7 @@ export function contentSecurityPolicy({ development, mapStyleUrl }: CspOptions):
     'frame-ancestors': ["'none'"],
   };
   const policy = Object.entries(directives).map(([name, values]) => `${name} ${values.join(' ')}`);
-  if (!development) policy.push('upgrade-insecure-requests');
+  if (!development && !plainHttp) policy.push('upgrade-insecure-requests');
   return policy.join('; ');
 }
 
