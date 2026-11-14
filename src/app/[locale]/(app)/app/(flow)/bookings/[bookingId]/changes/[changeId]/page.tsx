@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -20,7 +21,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Change request', robots: { index: false } };
 
 /** A change request for the two people on the booking (anyone else: not found). */
-export default function ChangeReviewPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/changes/[changeId]'>) {
+function ChangeReviewPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/changes/[changeId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <ChangeReview params={params} />
@@ -48,3 +49,5 @@ async function ChangeReview({ params }: Pick<PageProps<'/[locale]/app/bookings/[
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/bookings/[bookingId]/changes/[changeId]/page.tsx', ChangeReviewPage);

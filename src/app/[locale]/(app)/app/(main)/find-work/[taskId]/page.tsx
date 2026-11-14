@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { botCheckForPage } from '@/modules/accounts/bot-check';
 import { notFound, redirect } from 'next/navigation';
@@ -15,7 +16,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Task', robots: { index: false } };
 
 /** A task from the helper's side: the offer form, the helper's own offer, or why they can't offer. */
-export default function HelperTaskPage({ params }: PageProps<'/[locale]/app/find-work/[taskId]'>) {
+function HelperTaskPage({ params }: PageProps<'/[locale]/app/find-work/[taskId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <HelperTask params={params} />
@@ -43,3 +44,5 @@ async function HelperTask({ params }: Pick<PageProps<'/[locale]/app/find-work/[t
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/find-work/[taskId]/page.tsx', HelperTaskPage);

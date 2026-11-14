@@ -49,3 +49,26 @@ export function perLocale<T>(make: (locale: AppLocale) => T): (locale: AppLocale
     return made.get(locale)!;
   };
 }
+
+/**
+ * Only the given namespaces of a catalog, for a client provider (src/i18n/client-messages.tsx). A dotted
+ * namespace ("helperCard.categories") keeps just that part; "*" keeps everything. A namespace the catalog doesn't
+ * have is left out (src/i18n/client-messages.test.ts reports it).
+ */
+export function pickMessages(messages: object, namespaces: readonly string[]): Tree {
+  if (namespaces.includes('*')) return messages as Tree;
+  const picked: Tree = {};
+  for (const namespace of namespaces) {
+    const path = namespace.split('.');
+    let from: string | Tree | undefined = messages as Tree;
+    for (const key of path) from = typeof from === 'object' ? from[key] : undefined;
+    if (from === undefined) continue;
+    let into = picked;
+    path.slice(0, -1).forEach((key) => {
+      const next = into[key];
+      into = typeof next === 'object' ? next : (into[key] = {});
+    });
+    into[path.at(-1)!] = from;
+  }
+  return picked;
+}

@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
@@ -12,7 +13,7 @@ import { AdminSavedRepliesScreen } from '@/ui/screens/admin';
 export const metadata: Metadata = { title: 'Saved replies', robots: { index: false } };
 
 /** Saved replies staff start a case reply from: leads keep the list, everyone who works cases uses it. */
-export default function AdminSavedRepliesPage() {
+function AdminSavedRepliesPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <SavedReplies />
@@ -31,3 +32,5 @@ async function SavedReplies() {
     />
   );
 }
+
+export default withClientMessages('[locale]/admin/(gated)/saved-replies/page.tsx', AdminSavedRepliesPage);

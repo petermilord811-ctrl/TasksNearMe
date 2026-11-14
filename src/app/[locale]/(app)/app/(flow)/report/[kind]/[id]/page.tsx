@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -12,7 +13,7 @@ import { ReportScreen } from '@/ui/screens/support';
 export const metadata: Metadata = { title: 'Report', robots: { index: false } };
 
 /** Report a task, a helper's profile or a review (backlog B-059); public pages link here. */
-export default function ReportPage({ params }: PageProps<'/[locale]/app/report/[kind]/[id]'>) {
+function ReportPage({ params }: PageProps<'/[locale]/app/report/[kind]/[id]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Report params={params} />
@@ -27,3 +28,5 @@ async function Report({ params }: Pick<PageProps<'/[locale]/app/report/[kind]/[i
   if (!data) notFound();
   return <ReportScreen data={data} handlers={{ onReport: reportTargetAction.bind(null, kind, id) }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/report/[kind]/[id]/page.tsx', ReportPage);

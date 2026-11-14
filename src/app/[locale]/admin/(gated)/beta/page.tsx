@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
@@ -14,7 +15,7 @@ import { AdminBetaScreen } from '@/ui/screens/admin';
 export const metadata: Metadata = { title: 'Private beta', robots: { index: false } };
 
 /** The private beta (blueprint 11 B-068): invite-only switches per market, invite codes, who joined. */
-export default function AdminBetaPage() {
+function AdminBetaPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Beta />
@@ -33,3 +34,5 @@ async function Beta() {
     />
   );
 }
+
+export default withClientMessages('[locale]/admin/(gated)/beta/page.tsx', AdminBetaPage);

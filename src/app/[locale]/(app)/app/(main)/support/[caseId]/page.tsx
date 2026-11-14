@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Support case', robots: { index: false } };
 
 /** One case for the member who opened it (anyone else: not found). Opening it marks support's replies read. */
-export default function SupportCasePage({ params }: PageProps<'/[locale]/app/support/[caseId]'>) {
+function SupportCasePage({ params }: PageProps<'/[locale]/app/support/[caseId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <SupportCase params={params} />
@@ -29,3 +30,5 @@ async function SupportCase({ params }: Pick<PageProps<'/[locale]/app/support/[ca
   if (!data) notFound();
   return <SupportCaseScreen data={data} now={now.toISOString()} handlers={{ onReply: replyToSupportCaseAction.bind(null, caseId) }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/support/[caseId]/page.tsx', SupportCasePage);

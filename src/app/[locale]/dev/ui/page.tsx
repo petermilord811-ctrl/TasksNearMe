@@ -1,10 +1,11 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import { routes } from '@/contracts/routes';
 import { previews } from '@/ui/previews/registry';
 
 export const metadata = { title: 'UI previews' };
 
 /** Lists every registered preview. The test harness reads the data-preview-id links. */
-export default function PreviewIndexPage() {
+function PreviewIndexPage() {
   const groups = new Map<string, typeof previews>();
   for (const entry of previews) {
     groups.set(entry.group, [...(groups.get(entry.group) ?? []), entry]);
@@ -32,3 +33,5 @@ export default function PreviewIndexPage() {
     </main>
   );
 }
+
+export default withClientMessages('[locale]/dev/ui/page.tsx', PreviewIndexPage);

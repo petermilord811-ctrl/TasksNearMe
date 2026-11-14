@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -44,7 +45,7 @@ export const metadata: Metadata = { title: 'Account', robots: { index: false } }
  * sign in, notification preferences, helper status, privacy, sign out. Connecting Google or Microsoft comes
  * back here with `connect` (and `error` when it didn't work).
  */
-export default function AccountPage({ searchParams }: PageProps<'/[locale]/app/account'>) {
+function AccountPage({ searchParams }: PageProps<'/[locale]/app/account'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Account searchParams={searchParams} />
@@ -88,3 +89,5 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/account/page.tsx', AccountPage);

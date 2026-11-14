@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { withClientMessages } from '@/i18n/client-messages';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { reverseStrikeAction, setHelperSuspensionAction } from '@/modules/accounts/staff-actions';
@@ -18,7 +19,7 @@ import { accountActionAction } from '@/modules/accounts/account-moderation-actio
 export const metadata: Metadata = { title: 'Person', robots: { index: false } };
 
 /** One person for staff: bookings, cases, rewards, strikes, and suspending a helper. */
-export default function AdminUserPage({ params }: PageProps<'/[locale]/admin/users/[userId]'>) {
+function AdminUserPage({ params }: PageProps<'/[locale]/admin/users/[userId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <AdminUser params={params} />
@@ -52,3 +53,5 @@ async function AdminUser({ params }: Pick<PageProps<'/[locale]/admin/users/[user
     />
   );
 }
+
+export default withClientMessages('[locale]/admin/(gated)/users/[userId]/page.tsx', AdminUserPage);

@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
@@ -24,7 +25,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Case', robots: { index: false } };
 
 /** One case for staff. Moves are bound to the version this page shows (stale pages get version_conflict). */
-export default function AdminCasePage({ params }: PageProps<'/[locale]/admin/cases/[caseId]'>) {
+function AdminCasePage({ params }: PageProps<'/[locale]/admin/cases/[caseId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <AdminCase params={params} />
@@ -61,3 +62,5 @@ async function AdminCase({ params }: Pick<PageProps<'/[locale]/admin/cases/[case
     />
   );
 }
+
+export default withClientMessages('[locale]/admin/(gated)/cases/[caseId]/page.tsx', AdminCasePage);

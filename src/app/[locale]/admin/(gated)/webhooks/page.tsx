@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { AdminWebhooksScreen } from '@/ui/screens/admin';
 export const metadata: Metadata = { title: 'Webhooks', robots: { index: false } };
 
 /** The webhook inbox's failing and dead events, for admins and finance (completion plan 5.11). */
-export default function AdminWebhooksPage() {
+function AdminWebhooksPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <AdminWebhooks />
@@ -28,3 +29,5 @@ async function AdminWebhooks() {
   const now = await requestNow();
   return <AdminWebhooksScreen data={await getAdminWebhooks(db, now)} now={now.toISOString()} handlers={{ onAction: webhookAction }} />;
 }
+
+export default withClientMessages('[locale]/admin/(gated)/webhooks/page.tsx', AdminWebhooksPage);

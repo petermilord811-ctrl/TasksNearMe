@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -15,7 +16,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Conversation', robots: { index: false } };
 
 /** One conversation for its two people (anyone else: not found). Opening it marks it read. */
-export default function ThreadPage({ params }: PageProps<'/[locale]/app/messages/[threadId]'>) {
+function ThreadPage({ params }: PageProps<'/[locale]/app/messages/[threadId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <Thread params={params} />
@@ -38,3 +39,5 @@ async function Thread({ params }: Pick<PageProps<'/[locale]/app/messages/[thread
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/messages/[threadId]/page.tsx', ThreadPage);

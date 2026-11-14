@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
@@ -14,7 +15,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Config', robots: { index: false } };
 
 /** The launch market's policy versions and the feature flags, for admins only (other staff get not found). */
-export default function AdminConfigPage() {
+function AdminConfigPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <AdminConfig />
@@ -36,3 +37,5 @@ async function AdminConfig() {
     />
   );
 }
+
+export default withClientMessages('[locale]/admin/(gated)/config/page.tsx', AdminConfigPage);

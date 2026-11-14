@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -14,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /** Home for the default market. Data is cached, so the page prerenders. */
-export default async function HomePage() {
+async function HomePage() {
   const page = await getHomePageData();
   if (!page) notFound();
   return (
@@ -24,3 +25,5 @@ export default async function HomePage() {
     </LandingHandlersProvider>
   );
 }
+
+export default withClientMessages('[locale]/(landing)/page.tsx', HomePage);

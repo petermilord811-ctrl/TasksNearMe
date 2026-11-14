@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
@@ -12,7 +13,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Offer' };
 
 /** One offer on the poster's task. Opening it marks it seen. */
-export default function OfferDetailPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]/offers/[offerId]'>) {
+function OfferDetailPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]/offers/[offerId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <OfferDetail params={params} />
@@ -29,3 +30,5 @@ async function OfferDetail({ params }: Pick<PageProps<'/[locale]/app/tasks/[task
   if (!data) notFound();
   return <OfferDetailScreen data={data} now={now.toISOString()} handlers={{ onOfferAction: posterOfferAction }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/tasks/[taskId]/offers/[offerId]/page.tsx', OfferDetailPage);

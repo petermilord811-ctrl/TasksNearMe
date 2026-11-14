@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Propose a change', robots: { index: false } };
 
 /** Either person on the booking proposes new terms (anyone else: not found). */
-export default function ProposeChangePage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/changes/new'>) {
+function ProposeChangePage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/changes/new'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <ProposeChange params={params} />
@@ -29,3 +30,5 @@ async function ProposeChange({ params }: Pick<PageProps<'/[locale]/app/bookings/
   if (!data) notFound();
   return <ProposeChangeScreen data={data} now={now.toISOString()} handlers={{ onQuote: quoteChangeAction.bind(null, bookingId), onPropose: proposeChangeAction.bind(null, bookingId) }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/bookings/[bookingId]/changes/new/page.tsx', ProposeChangePage);

@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
@@ -13,7 +14,7 @@ export const prefetch = 'partial';
  * Staff area. Non-staff get a plain 404 (the admin area isn't advertised); staff must pass the
  * two-step check for this session first (/admin/verify, outside this group).
  */
-export default function AdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+function AdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <StaffShell>{children}</StaffShell>
@@ -31,3 +32,5 @@ async function StaffShell({ children }: { children: React.ReactNode }) {
     </AdminShell>
   );
 }
+
+export default withClientMessages('[locale]/admin/(gated)/layout.tsx', AdminLayout);

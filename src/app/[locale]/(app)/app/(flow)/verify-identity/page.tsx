@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -16,7 +17,7 @@ export const metadata: Metadata = { title: 'Verify your ID', robots: { index: fa
  * A client's ID check, when risk asks for one (blueprint 01 P2): posting and paying send the person here
  * with `next`, and "Continue" goes back there once the check passes.
  */
-export default function VerifyIdentityPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+function VerifyIdentityPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <VerifyIdentity searchParams={searchParams} />
@@ -31,3 +32,5 @@ async function VerifyIdentity({ searchParams }: { searchParams: Promise<Record<s
   const data = await getPosterIdentityPage(db, viewer.user.id, next, await requestNow());
   return <PosterIdentityScreen data={data} handlers={{ onStartIdentity: startPosterIdentityAction, onRefreshStatus: onboardingRefreshStatus }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/verify-identity/page.tsx', VerifyIdentityPage);

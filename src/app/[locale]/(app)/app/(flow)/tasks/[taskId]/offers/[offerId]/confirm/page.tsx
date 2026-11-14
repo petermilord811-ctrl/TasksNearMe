@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -14,7 +15,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Confirm and pay', robots: { index: false } };
 
 /** Book an offer: review the terms, pay, and confirm (blueprint 02 J4). */
-export default function ConfirmBookingPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]/offers/[offerId]/confirm'>) {
+function ConfirmBookingPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]/offers/[offerId]/confirm'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Confirm params={params} />
@@ -45,3 +46,5 @@ async function Confirm({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskId]/
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/tasks/[taskId]/offers/[offerId]/confirm/page.tsx', ConfirmBookingPage);

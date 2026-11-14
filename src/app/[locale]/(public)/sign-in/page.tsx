@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -32,7 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * One flow for sign-in and sign-up. The step comes from the session and pending codes. A Google or
  * Microsoft sign-in comes back here: signed in (the next step), or with `via` and `error`.
  */
-export default function SignInPage({ searchParams }: PageProps<'/[locale]/sign-in'>) {
+function SignInPage({ searchParams }: PageProps<'/[locale]/sign-in'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <SignIn searchParams={searchParams} />
@@ -70,3 +71,5 @@ async function SignIn({ searchParams }: Pick<PageProps<'/[locale]/sign-in'>, 'se
     />
   );
 }
+
+export default withClientMessages('[locale]/(public)/sign-in/page.tsx', SignInPage);

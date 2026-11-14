@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { botCheckForPage } from '@/modules/accounts/bot-check';
 import { redirect } from 'next/navigation';
@@ -16,7 +17,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'My offers', robots: { index: false } };
 
 /** The helper's invites from clients (`?invite=` opens one), then their offers: active, booked, and closed. */
-export default function MyOffersPage({ searchParams }: PageProps<'/[locale]/app/offers'>) {
+function MyOffersPage({ searchParams }: PageProps<'/[locale]/app/offers'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Offers searchParams={searchParams} />
@@ -35,3 +36,5 @@ async function Offers({ searchParams }: Pick<PageProps<'/[locale]/app/offers'>, 
   const openInviteId = inviteId && invites.some((invite) => invite.id === inviteId) ? inviteId : undefined;
   return <MyOffersScreen data={{ ...data, invites, ...(openInviteId ? { openInviteId } : {}) }} now={now.toISOString()} inviteHandlers={inviteHandlers} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/offers/page.tsx', MyOffersPage);

@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -26,7 +27,7 @@ import { foundingCardFor, verificationSteps } from '@/modules/badges/standing';
 export const metadata: Metadata = { title: 'Your helper profile', robots: { index: false } };
 
 /** Everything a helper can change after onboarding. No profile yet: start onboarding. */
-export default function HelperProfilePage() {
+function HelperProfilePage() {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Editor />
@@ -62,3 +63,5 @@ async function Editor() {
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/helper/profile/page.tsx', HelperProfilePage);

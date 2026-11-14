@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Payments', robots: { index: false } };
 
 /** The client's receipts and saved cards. */
-export default function PaymentsPage() {
+function PaymentsPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Payments />
@@ -34,3 +35,5 @@ async function Payments() {
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/payments/page.tsx', PaymentsPage);

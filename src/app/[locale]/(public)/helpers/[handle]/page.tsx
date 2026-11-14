@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getHelperProfilePageData, listHelperHandles } from '@/modules/marketing/queries';
@@ -19,8 +20,10 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/helpers/
 }
 
 /** First name and last initial, neighborhood-level area, badges, services, reviews, work samples. */
-export default async function HelperProfilePage({ params }: PageProps<'/[locale]/helpers/[handle]'>) {
+async function HelperProfilePage({ params }: PageProps<'/[locale]/helpers/[handle]'>) {
   const data = await getHelperProfilePageData((await params).handle);
   if (!data) notFound();
   return <HelperProfileScreen data={data} />;
 }
+
+export default withClientMessages('[locale]/(public)/helpers/[handle]/page.tsx', HelperProfilePage);

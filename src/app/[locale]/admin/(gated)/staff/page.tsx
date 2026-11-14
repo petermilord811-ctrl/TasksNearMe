@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Staff', robots: { index: false } };
 
 /** Staff roles, for admins only (other staff get not found). */
-export default function AdminStaffPage() {
+function AdminStaffPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <AdminStaff />
@@ -29,3 +30,5 @@ async function AdminStaff() {
   if (!data) notFound();
   return <AdminStaffScreen data={data} now={(await requestNow()).toISOString()} handlers={{ onGrant: grantStaffRoleAction, onRemove: removeStaffRoleAction, onCreateSetupCode: createStaffSetupCodeAction, onResetAuthenticator: resetStaffAuthenticatorAction }} />;
 }
+
+export default withClientMessages('[locale]/admin/(gated)/staff/page.tsx', AdminStaffPage);

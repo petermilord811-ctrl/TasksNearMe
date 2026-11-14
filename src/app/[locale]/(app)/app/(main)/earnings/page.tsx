@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Earnings', robots: { index: false } };
 
 /** The helper's transfers and payouts. */
-export default function EarningsPage() {
+function EarningsPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Earnings />
@@ -28,3 +29,5 @@ async function Earnings() {
   const data = await getEarningsPage(db, viewer.user.id, now);
   return <EarningsScreen data={data} now={now.toISOString()} handlers={{ onOpenPayoutDashboard: openPayoutDashboardAction, onInstantPayout: instantPayoutAction }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/earnings/page.tsx', EarningsPage);

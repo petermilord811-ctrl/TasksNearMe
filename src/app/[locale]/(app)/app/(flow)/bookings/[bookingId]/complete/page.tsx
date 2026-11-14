@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Mark the work complete', robots: { index: false } };
 
 /** The booking's helper sends the evidence for approval (blueprint 02 J6). */
-export default function CompletePage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/complete'>) {
+function CompletePage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/complete'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Complete params={params} />
@@ -39,3 +40,5 @@ async function Complete({ params }: Pick<PageProps<'/[locale]/app/bookings/[book
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/bookings/[bookingId]/complete/page.tsx', CompletePage);

@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -17,7 +18,7 @@ export const metadata: Metadata = { title: 'Booking proposal', robots: { index: 
  * A rebooking proposal, for its two people only: the client accepts by paying (or declines), the helper can
  * withdraw while it waits. The client sees their own address; the helper only the area.
  */
-export default function ProposalPage({ params }: PageProps<'/[locale]/app/proposals/[proposalId]'>) {
+function ProposalPage({ params }: PageProps<'/[locale]/app/proposals/[proposalId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <Proposal params={params} />
@@ -44,3 +45,5 @@ async function Proposal({ params }: Pick<PageProps<'/[locale]/app/proposals/[pro
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/proposals/[proposalId]/page.tsx', ProposalPage);

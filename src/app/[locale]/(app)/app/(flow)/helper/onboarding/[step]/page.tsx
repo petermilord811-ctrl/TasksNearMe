@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -33,7 +34,7 @@ import { HelperInviteScreen } from '@/ui/screens/beta';
 export const metadata: Metadata = { title: 'Become a helper', robots: { index: false } };
 
 /** Helper onboarding, one step per page. Locked steps send people to the first step still to do. */
-export default function HelperOnboardingPage({ params }: PageProps<'/[locale]/app/helper/onboarding/[step]'>) {
+function HelperOnboardingPage({ params }: PageProps<'/[locale]/app/helper/onboarding/[step]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Onboarding params={params} />
@@ -82,3 +83,5 @@ async function Onboarding({ params }: Pick<PageProps<'/[locale]/app/helper/onboa
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/helper/onboarding/[step]/page.tsx', HelperOnboardingPage);

@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -12,7 +13,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Home', robots: { index: false } };
 
 /** The signed-in home for the viewer's mode: needs your attention, then what's coming up. */
-export default function AppHomePage() {
+function AppHomePage() {
   return (
     <Suspense fallback={<PageSkeleton variant="cards" />}>
       <Home />
@@ -27,3 +28,5 @@ async function Home() {
   const data = await getAppHome(db, { id: viewer.user.id, firstName: viewer.user.firstName, mode: viewer.user.mode }, now);
   return <HomeScreen data={data} now={now.toISOString()} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/page.tsx', AppHomePage);

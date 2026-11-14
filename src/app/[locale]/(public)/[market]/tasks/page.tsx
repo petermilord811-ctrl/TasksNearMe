@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
 }
 
 /** Filters live in the URL, so the list renders per request inside Suspense; the data is cached per query. */
-export default function TaskBoardPage({ params, searchParams }: PageProps<'/[locale]/[market]/tasks'>) {
+function TaskBoardPage({ params, searchParams }: PageProps<'/[locale]/[market]/tasks'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Board params={params} searchParams={searchParams} />
@@ -39,3 +40,5 @@ async function Board({ params, searchParams }: Pick<PageProps<'/[locale]/[market
   if (!page) notFound();
   return <TaskBoardScreen data={page.data} now={page.now} />;
 }
+
+export default withClientMessages('[locale]/(public)/[market]/tasks/page.tsx', TaskBoardPage);

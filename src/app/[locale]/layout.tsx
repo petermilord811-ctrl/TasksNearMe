@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import * as rootParams from 'next/root-params';
 import Script from 'next/script';
-import { NextIntlClientProvider } from 'next-intl';
 import { APP_LOCALES, isAppLocale } from '@/contracts/locale';
 import { AppToaster } from '@/ui/components/feedback/app-toaster';
 import { MapTilesProvider } from '@/ui/components/map/map-tiles';
@@ -11,6 +10,7 @@ import { fontVariables } from '@/ui/theme/fonts';
 import { themeInitScript } from '@/ui/theme/theme-script';
 import '@/ui/theme/globals.css';
 import { appUrl } from '@/integrations/oauth';
+import { ClientMessages } from '@/i18n/client-messages';
 
 export const metadata: Metadata = {
   // Canonical and language links (src/i18n/metadata.ts) are made absolute against the app's address.
@@ -63,10 +63,11 @@ export default async function RootLayout({ children }: LayoutProps<'/[locale]'>)
       <body>
         {/* In the initial HTML before any app code (Next places it in <head>): the saved theme, before paint. */}
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <NextIntlClientProvider>
+        {/* Only the root's own copy (the toaster): each layout and page below gives its client components theirs. */}
+        <ClientMessages route="[locale]/layout.tsx">
           <MapTilesProvider tiles={{ ...mapTiles(), live: true }}>{children}</MapTilesProvider>
           <AppToaster />
-        </NextIntlClientProvider>
+        </ClientMessages>
       </body>
     </html>
   );

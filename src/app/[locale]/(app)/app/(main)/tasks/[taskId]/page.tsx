@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
@@ -17,7 +18,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Your task' };
 
 /** The poster's own task: offers, invites, compare, cancel. Anyone else gets a 404. */
-export default function ManageTaskPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]'>) {
+function ManageTaskPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <ManageTask params={params} />
@@ -48,3 +49,5 @@ async function ManageTask({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskI
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/tasks/[taskId]/page.tsx', ManageTaskPage);

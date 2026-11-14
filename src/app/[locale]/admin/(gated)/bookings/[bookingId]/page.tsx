@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { withClientMessages } from '@/i18n/client-messages';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { staffActorOf } from '@/modules/support/staff';
@@ -17,7 +18,7 @@ import { staffCancelBookingAction } from '@/modules/bookings/staff-cancel-action
 export const metadata: Metadata = { title: 'Booking', robots: { index: false } };
 
 /** One booking for staff: money, cases, refunds, and restricted data behind a logged reason. */
-export default function AdminBookingPage({ params }: PageProps<'/[locale]/admin/bookings/[bookingId]'>) {
+function AdminBookingPage({ params }: PageProps<'/[locale]/admin/bookings/[bookingId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <AdminBooking params={params} />
@@ -49,3 +50,5 @@ async function AdminBooking({ params }: Pick<PageProps<'/[locale]/admin/bookings
     />
   );
 }
+
+export default withClientMessages('[locale]/admin/(gated)/bookings/[bookingId]/page.tsx', AdminBookingPage);

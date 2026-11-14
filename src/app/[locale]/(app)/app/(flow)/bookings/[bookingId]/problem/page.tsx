@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Report a problem', robots: { index: false } };
 
 /** The booking's client reports a problem instead of approving (blueprint 02 J6). */
-export default function ProblemPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/problem'>) {
+function ProblemPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/problem'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Problem params={params} />
@@ -35,3 +36,5 @@ async function Problem({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/bookings/[bookingId]/problem/page.tsx', ProblemPage);

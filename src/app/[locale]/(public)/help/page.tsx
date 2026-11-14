@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { localeOrDefault } from '@/contracts';
@@ -11,6 +12,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('title'), description: t('description'), alternates: await languageAlternates(routes.help()) };
 }
 
-export default async function HelpCenterPage() {
+async function HelpCenterPage() {
   return <HelpCenterScreen data={getHelpCenterData(localeOrDefault(await getLocale()))} />;
 }
+
+export default withClientMessages('[locale]/(public)/help/page.tsx', HelpCenterPage);

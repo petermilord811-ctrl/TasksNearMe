@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -11,7 +12,7 @@ import { ReceiptScreen } from '@/ui/screens/money';
 export const metadata: Metadata = { title: 'Receipt', robots: { index: false } };
 
 /** A printable receipt for one booking, for its client only. */
-export default function ReceiptPage({ params }: PageProps<'/[locale]/app/payments/[bookingId]'>) {
+function ReceiptPage({ params }: PageProps<'/[locale]/app/payments/[bookingId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <Receipt params={params} />
@@ -26,3 +27,5 @@ async function Receipt({ params }: Pick<PageProps<'/[locale]/app/payments/[booki
   if (!data) notFound();
   return <ReceiptScreen data={data} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/payments/[bookingId]/page.tsx', ReceiptPage);

@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Rewards', robots: { index: false } };
 
 /** A helper's gift-card rewards (brought up to date with their bookings on each visit). */
-export default function RewardsPage() {
+function RewardsPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Rewards />
@@ -28,3 +29,5 @@ async function Rewards() {
   const data = await getRewardsPage(db, { id: viewer.user.id, helperReady: toSignedInViewer(viewer.user).helperReady }, now);
   return <RewardsScreen data={data} now={now.toISOString()} handlers={{ onRedeem: redeemRewardAction }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/rewards/page.tsx', RewardsPage);

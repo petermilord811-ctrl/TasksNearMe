@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -17,7 +18,7 @@ export const metadata: Metadata = { title: 'Request a helper', robots: { index: 
  * Ask one helper to do one of your open tasks (blueprint 02 J3): from their profile, saved helpers, or
  * Book again (`?from=booking:<id>` suggests the last task and price). The card is authorized, not charged.
  */
-export default function RequestHelperPage({ params, searchParams }: PageProps<'/[locale]/app/helpers/[handle]/request'>) {
+function RequestHelperPage({ params, searchParams }: PageProps<'/[locale]/app/helpers/[handle]/request'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <RequestHelper params={params} searchParams={searchParams} />
@@ -49,3 +50,5 @@ async function RequestHelper({ params, searchParams }: Pick<PageProps<'/[locale]
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/helpers/[handle]/request/page.tsx', RequestHelperPage);

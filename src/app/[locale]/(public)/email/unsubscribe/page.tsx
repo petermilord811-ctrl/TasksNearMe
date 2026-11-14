@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { resubscribeByLinkAction, unsubscribeByLinkAction } from '@/modules/notifications/unsubscribe-actions';
@@ -13,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /** From the unsubscribe link in a notification email (no sign-in: the link is signed). */
-export default function EmailUnsubscribePage({ searchParams }: PageProps<'/[locale]/email/unsubscribe'>) {
+function EmailUnsubscribePage({ searchParams }: PageProps<'/[locale]/email/unsubscribe'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Unsubscribe searchParams={searchParams} />
@@ -32,3 +33,5 @@ async function Unsubscribe({ searchParams }: Pick<PageProps<'/[locale]/email/uns
     />
   );
 }
+
+export default withClientMessages('[locale]/(public)/email/unsubscribe/page.tsx', EmailUnsubscribePage);

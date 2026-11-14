@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { botCheckForPage } from '@/modules/accounts/bot-check';
 import { notFound, redirect } from 'next/navigation';
@@ -14,7 +15,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Find work', robots: { index: false } };
 
 /** The helper feed: open tasks near the helper's area, with distance bands and filters. */
-export default function FindWorkPage({ searchParams }: PageProps<'/[locale]/app/find-work'>) {
+function FindWorkPage({ searchParams }: PageProps<'/[locale]/app/find-work'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="cards" />}>
       <Feed searchParams={searchParams} />
@@ -30,3 +31,5 @@ async function Feed({ searchParams }: Pick<PageProps<'/[locale]/app/find-work'>,
   if (!data) notFound();
   return <FindWorkScreen data={botCheck ? { ...data, botCheck } : data} now={now.toISOString()} handlers={{ onSaveTask: saveTaskAction, onHideTask: hideTaskAction, onQuickOffer: quickOfferAction, onUndoQuickOffer: undoQuickOfferAction }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/find-work/page.tsx', FindWorkPage);

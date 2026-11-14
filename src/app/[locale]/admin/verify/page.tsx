@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { headers } from 'next/headers';
@@ -15,7 +16,7 @@ import { StaffVerifyScreen } from '@/ui/screens/admin/staff-verify-screen';
 export const metadata: Metadata = { title: 'Staff sign-in', robots: { index: false } };
 
 /** The staff two-step check: the authenticator's code, or setting the authenticator up (blueprint 08). */
-export default function StaffVerifyPage() {
+function StaffVerifyPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <StaffVerify />
@@ -36,3 +37,5 @@ async function StaffVerify() {
   );
   return <StaffVerifyScreen data={data} handlers={{ onVerifyCode: verifyStaffCode, onRedeemSetupCode: redeemStaffSetupCode, onConfirmEnrollment: confirmStaffAuthenticator }} />;
 }
+
+export default withClientMessages('[locale]/admin/verify/page.tsx', StaffVerifyPage);

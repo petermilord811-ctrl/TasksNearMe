@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Notifications', robots: { index: false } };
 
 /** What happened on the viewer's offers, bookings, payments and messages. */
-export default function NotificationsPage() {
+function NotificationsPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Notifications />
@@ -34,3 +35,5 @@ async function Notifications() {
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/notifications/page.tsx', NotificationsPage);

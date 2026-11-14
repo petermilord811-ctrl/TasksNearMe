@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
@@ -12,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /** Outside the service area, or (`?from=beta`) from an invite-only step during the private beta. */
-export default function WaitlistPage({ searchParams }: PageProps<'/[locale]/waitlist'>) {
+function WaitlistPage({ searchParams }: PageProps<'/[locale]/waitlist'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Waitlist searchParams={searchParams} />
@@ -24,3 +25,5 @@ async function Waitlist({ searchParams }: Pick<PageProps<'/[locale]/waitlist'>, 
   const [{ from }, data] = await Promise.all([searchParams, getWaitlistPageData()]);
   return <WaitlistScreen data={{ ...data, ...(from === 'beta' ? { from: 'beta' as const } : {}) }} handlers={{ onJoin: joinWaitlistAction }} />;
 }
+
+export default withClientMessages('[locale]/(public)/waitlist/page.tsx', WaitlistPage);

@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -14,7 +15,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Find helpers', robots: { index: false } };
 
 /** Browse and search the market's helpers (blueprint 02 `/app/helpers`); filters live in the URL. */
-export default function HelpersPage({ searchParams }: PageProps<'/[locale]/app/helpers'>) {
+function HelpersPage({ searchParams }: PageProps<'/[locale]/app/helpers'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="cards" />}>
       <Helpers searchParams={searchParams} />
@@ -30,3 +31,5 @@ async function Helpers({ searchParams }: Pick<PageProps<'/[locale]/app/helpers'>
   const data = await getHelpersBrowse(db, viewer.user.id, market.id, parseHelperBrowseQuery(params), await requestNow());
   return <HelpersBrowseScreen data={data} handlers={{ onToggleSaved: toggleSavedHelperAction }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/helpers/page.tsx', HelpersPage);

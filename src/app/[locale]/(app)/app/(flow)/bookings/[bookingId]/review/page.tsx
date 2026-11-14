@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -13,7 +14,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Leave a review', robots: { index: false } };
 
 /** Either person on a completed booking reviews the other (double-blind). */
-export default function ReviewPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/review'>) {
+function ReviewPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/review'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Review params={params} />
@@ -29,3 +30,5 @@ async function Review({ params }: Pick<PageProps<'/[locale]/app/bookings/[bookin
   if (!data) notFound();
   return <ReviewScreen data={data} now={now.toISOString()} handlers={{ onSubmit: submitReviewAction.bind(null, bookingId) }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/bookings/[bookingId]/review/page.tsx', ReviewPage);

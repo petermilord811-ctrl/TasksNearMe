@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -14,7 +15,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Support', robots: { index: false } };
 
 /** The member's cases (open first) and a new request. */
-export default function SupportPage() {
+function SupportPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Support />
@@ -28,3 +29,5 @@ async function Support() {
   const data = await getSupportPage(db, viewer.user.id);
   return <SupportScreen data={data} now={(await requestNow()).toISOString()} handlers={{ onCreate: createSupportRequestAction, onUploadPhoto: uploadEvidencePhoto }} />;
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/support/page.tsx', SupportPage);

@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -16,7 +17,7 @@ export const metadata: Metadata = { title: 'Propose a booking', robots: { index:
  * The helper proposes doing a past client's task again (blueprint 02 J8): a new time and a price, the last
  * one suggested. Only the helper of the completed booking gets here; anyone else sees not found.
  */
-export default function RebookPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/rebook'>) {
+function RebookPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/rebook'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <Rebook params={params} />
@@ -38,3 +39,5 @@ async function Rebook({ params }: Pick<PageProps<'/[locale]/app/bookings/[bookin
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/bookings/[bookingId]/rebook/page.tsx', RebookPage);

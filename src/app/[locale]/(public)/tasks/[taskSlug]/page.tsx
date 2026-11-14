@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getPublicTaskPageData, listRecentTaskSlugs } from '@/modules/marketing/queries';
@@ -21,8 +22,10 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/tasks/[t
 }
 
 /** What anyone may see about a task: general area only, never the address or photos. */
-export default async function PublicTaskPage({ params }: PageProps<'/[locale]/tasks/[taskSlug]'>) {
+async function PublicTaskPage({ params }: PageProps<'/[locale]/tasks/[taskSlug]'>) {
   const page = await getPublicTaskPageData((await params).taskSlug);
   if (!page) notFound();
   return <PublicTaskScreen data={page.data} now={page.now} />;
 }
+
+export default withClientMessages('[locale]/(public)/tasks/[taskSlug]/page.tsx', PublicTaskPage);

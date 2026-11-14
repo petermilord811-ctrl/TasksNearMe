@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -23,7 +24,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Booking', robots: { index: false } };
 
 /** One booking for its client or its helper (anyone else: not found). */
-export default function BookingPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]'>) {
+function BookingPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
       <Booking params={params} />
@@ -55,3 +56,5 @@ async function Booking({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(main)/bookings/[bookingId]/page.tsx', BookingPage);

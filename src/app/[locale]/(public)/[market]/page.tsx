@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -24,9 +25,11 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
 }
 
 /** Params are awaited outside Suspense, so every market URL gets its own cached render and unknown ones a real 404. */
-export default async function MarketPage({ params }: PageProps<'/[locale]/[market]'>) {
+async function MarketPage({ params }: PageProps<'/[locale]/[market]'>) {
   const { market } = await params;
   const page = await getMarketPageData(market);
   if (!page) notFound();
   return <MarketScreen data={page.data} now={page.now} />;
 }
+
+export default withClientMessages('[locale]/(public)/[market]/page.tsx', MarketPage);

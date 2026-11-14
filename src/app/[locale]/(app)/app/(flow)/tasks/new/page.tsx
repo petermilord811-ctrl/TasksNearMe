@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import { createHash } from 'node:crypto';
 import { botCheckForPage } from '@/modules/accounts/bot-check';
 import type { Metadata } from 'next';
@@ -24,7 +25,7 @@ import { PostTaskScreen } from '@/ui/screens/posting';
 export const metadata: Metadata = { title: 'Post a task', robots: { index: false } };
 
 /** The posting wizard (blueprint 02 J1). Posting needs a verified phone. */
-export default function PostTaskPage({ searchParams }: PageProps<'/[locale]/app/tasks/new'>) {
+function PostTaskPage({ searchParams }: PageProps<'/[locale]/app/tasks/new'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
       <PostTask searchParams={searchParams} />
@@ -105,3 +106,5 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
     />
   );
 }
+
+export default withClientMessages('[locale]/(app)/app/(flow)/tasks/new/page.tsx', PostTaskPage);

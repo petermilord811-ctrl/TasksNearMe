@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -27,9 +28,11 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   return { title: t('title', values), description: t('description', values), alternates: await languageAlternates(routes.category(page.data.category.slug, market)) };
 }
 
-export default async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]'>) {
+async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]'>) {
   const { market, category } = await params;
   const page = await getCategoryPageData(market, category);
   if (!page) notFound();
   return <CategoryScreen data={page.data} now={page.now} />;
 }
+
+export default withClientMessages('[locale]/(public)/[market]/[category]/page.tsx', CategoryPage);
