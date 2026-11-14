@@ -33,6 +33,7 @@ import { notificationPreferences, notifications } from './schema';
 import { verificationNotificationFor } from './verification-plan';
 import { helpersToAlert, replacementHelpers } from '@/modules/offers/task-alerts';
 import { reactToEvent } from '@/modules/badges/reactions';
+import { reactForOperations } from '@/modules/oncall/reactions';
 
 /**
  * Notifications from outbox events (the dispatcher), the notifications page, and the account page
@@ -377,6 +378,12 @@ export async function dispatchNotifications(db: Db, now: Date, limit = 200): Pro
       await reactToEvent(db, event, now);
     } catch (error) {
       console.error(`[outbox] reacting to ${event.type} ${event.id} failed`, error);
+    }
+    // On-call pages and cases for events no screen handles (src/modules/oncall/reactions.ts, completion plan 5.12).
+    try {
+      await reactForOperations(db, event, now);
+    } catch (error) {
+      console.error(`[outbox] operations for ${event.type} ${event.id} failed`, error);
     }
     await db.update(outboxEvents).set({ dispatchedAt: now.toISOString() }).where(eq(outboxEvents.id, event.id));
   }

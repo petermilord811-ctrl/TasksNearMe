@@ -49,7 +49,7 @@ from earnings e left join payout_accounts pa on pa.user_id = e.helper_user_id
 where e.status = 'scheduled' order by e.created_at limit 100;
 
 -- Payments that a person has to refund: a second tip, or a change paid after its terms moved on.
--- Nothing turns these events into cases yet, so finance checks them daily.
+-- Each of these also opens a high-priority payment case for finance (once per payment); this lists them all.
 select id, aggregate_id as payment_id, payload, created_at
 from outbox_events where type = 'payment.refund_needed' and created_at > now() - interval '7 days'
 order by created_at desc;

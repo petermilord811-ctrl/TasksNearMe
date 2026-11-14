@@ -12,7 +12,7 @@ Use this when anyone reports that they're unsafe or were harmed, threatened or h
 | The support form with the safety topic | `type='safety'` | high |
 | A report on a profile, task, message or review (`/app/report/[kind]/[id]`) | `report_user` or `report_content`, in the reports queue | high for harassment or scam reasons |
 
-**Nobody is paged.** The `support.safety_report` outbox event has no consumer yet ([gaps](README.md#built-in-gaps)). Until paging exists, the safety on-call keeps `/admin/cases?queue=safety` open and checks it at least every 15 minutes, day and night. The first-reply target is 4 hours, but an `unsafe_now` report needs an answer in minutes.
+**The on-call is paged.** A safety report (and any case opened as urgent) texts and emails the on-call contacts in `ONCALL_PHONES` and `ONCALL_EMAILS` and every trust & safety staff member, at any hour ([src/modules/oncall](../../src/modules/oncall/pager.ts); audited as `oncall.paged` with how many were reached). The page says what happened and links to the case; it never carries names or contact details. Keep `/admin/cases?queue=safety` open anyway: the first-reply target is 4 hours, but an `unsafe_now` report needs an answer in minutes.
 
 ## Someone is unsafe now
 
