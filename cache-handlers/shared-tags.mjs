@@ -45,8 +45,12 @@ function streamFromBytes(bytes) {
 export function createPostgresTagStore(connectionString, options = {}) {
   let pool;
   const db = () => {
-    pool ??= new pg.Pool({ connectionString, max: options.max ?? 2, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 3_000 });
-    pool.on?.('error', () => {});
+    if (!pool) {
+      pool = new pg.Pool({ connectionString, max: options.max ?? 2, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 3_000 });
+      // An idle client's error (the database restarting) would otherwise crash the process; the next query fails
+      // and `warn` reports it. Registered once, with the pool: refreshTags runs on every request.
+      pool.on('error', () => {});
+    }
     return pool;
   };
   return {

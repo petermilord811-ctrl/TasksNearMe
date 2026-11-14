@@ -1,5 +1,26 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createSharedTagsCacheHandler } from '../../cache-handlers/shared-tags.mjs';
+import { createPostgresTagStore, createSharedTagsCacheHandler } from '../../cache-handlers/shared-tags.mjs';
+
+const pools = vi.hoisted(() => [] as { listeners: string[]; queries: number }[]);
+vi.mock('pg', () => {
+  class Pool {
+    listeners: string[] = [];
+    queries = 0;
+    constructor() {
+      pools.push(this);
+    }
+    on(event: string) {
+      this.listeners.push(event);
+      return this;
+    }
+    async query() {
+      this.queries++;
+      return { rows: [] };
+    }
+    async end() {}
+  }
+  return { default: { Pool } };
+});
 
 /**
  * The `'use cache'` handler (cache-handlers/shared-tags.mjs): entries in each instance's memory, tag
@@ -164,5 +185,18 @@ describe('on its own', () => {
     // The dev tiered handler's eviction sentinel.
     await development.set('aged', Promise.resolve(entry('aged', { expire: -1 })));
     expect(await development.get('aged', [])).toBeUndefined();
+  });
+});
+
+describe('the Postgres tag store', () => {
+  it('makes one pool with one error listener, however many reads and writes run', async () => {
+    const store = createPostgresTagStore('postgres://example.invalid/db');
+    for (let i = 0; i < 25; i++) {
+      await store.read(i === 0 ? null : Date.now());
+      await store.write([{ tag: `tag:${i}`, expired: Date.now() }]);
+    }
+    expect(pools).toHaveLength(1);
+    expect(pools[0]!.queries).toBe(50);
+    expect(pools[0]!.listeners).toEqual(['error']);
   });
 });
