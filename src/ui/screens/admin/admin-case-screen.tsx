@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { LockKeyhole, MessageSquare, UserRound } from 'lucide-react';
+import { Mail, LockKeyhole, MessageSquare, UserRound } from 'lucide-react';
 import type { AdminCaseActor, AdminCaseBookingSummary, AdminCaseEventView, AdminCaseHandlers, AdminCasePageData, CaseStatus, ISODateTime, Photo } from '@/contracts';
 import { routes } from '@/contracts';
 import { formatMoney } from '@/shared/format';
@@ -50,20 +50,28 @@ function Booking({ booking }: { booking: AdminCaseBookingSummary }) {
 
 function useActorName(actor: AdminCaseActor) {
   const t = useTranslations('adminCase.details');
-  return actor.kind === 'member' ? actor.person.displayName : actor.kind === 'staff' ? actor.staff.displayName : t('system');
+  return actor.kind === 'member' ? actor.person.displayName : actor.kind === 'staff' ? actor.staff.displayName : actor.kind === 'contact' ? t('contactForm') : t('system');
 }
 
-function CaseEvent({ event, parties, now }: { event: AdminCaseEventView; parties: AdminCasePageData['parties']; now: ISODateTime }) {
+function useMessageTitle(event: AdminCaseEventView, parties: AdminCasePageData['parties'], contact: AdminCasePageData['contact']) {
+  const t = useTranslations('adminCase.details');
+  if (event.actor.kind === 'contact') return t('from', { name: event.actor.email });
+  if (event.emailed) return t('emailedTo', { email: contact?.email ?? '' });
+  const party = parties.find(({ person }) => person.id === event.partyId)?.person;
+  const personName = party?.displayName ?? (event.actor.kind === 'member' ? event.actor.person.displayName : t('caseMember'));
+  return t(event.actor.kind === 'member' ? 'from' : 'to', { name: personName });
+}
+
+function CaseEvent({ event, parties, contact, now }: { event: AdminCaseEventView; parties: AdminCasePageData['parties']; contact: AdminCasePageData['contact']; now: ISODateTime }) {
   const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminCase');
   const actor = useActorName(event.actor);
-  const party = parties.find(({ person }) => person.id === event.partyId)?.person;
-  const personName = party?.displayName ?? (event.actor.kind === 'member' ? event.actor.person.displayName : t('details.caseMember'));
+  const messageTitle = useMessageTitle(event, parties, contact);
   const note = event.kind === 'note' || event.kind === 'review';
   return <li className="relative min-w-0 pl-6 before:absolute before:top-3 before:left-0 before:size-2 before:rounded-full before:bg-border">
     <article className={cn('space-y-2 rounded-lg border p-3 sm:p-4', note ? 'border-warning/30 bg-badge-warning' : 'bg-card')}>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <p className="flex items-center gap-2 font-semibold">{note && <LockKeyhole aria-hidden="true" className="size-4 text-badge-warning-foreground" />}{event.kind === 'message' && <MessageSquare aria-hidden="true" className="size-4 text-primary" />}{event.kind === 'review' ? t(event.reviewAction === 'shown' ? 'details.events.reviewShown' : 'details.events.reviewHidden') : note ? t('details.internalNote') : event.kind === 'message' ? t(event.actor.kind === 'member' ? 'details.from' : 'details.to', { name: personName }) : t(`details.events.${event.kind}`)}</p>
+        <p className="flex items-center gap-2 font-semibold">{note && <LockKeyhole aria-hidden="true" className="size-4 text-badge-warning-foreground" />}{event.kind === 'message' && (event.emailed || event.actor.kind === 'contact' ? <Mail aria-hidden="true" className="size-4 text-primary" /> : <MessageSquare aria-hidden="true" className="size-4 text-primary" />)}{event.kind === 'review' ? t(event.reviewAction === 'shown' ? 'details.events.reviewShown' : 'details.events.reviewHidden') : note ? t('details.internalNote') : event.kind === 'message' ? messageTitle : t(`details.events.${event.kind}`)}</p>
         <time dateTime={event.at} title={formatRelative(event.at, now)} className="tabular-nums text-muted-foreground">{formatDateTime(event.at)}</time>
       </div>
       <p className="text-sm text-muted-foreground">{actor}</p>
@@ -74,6 +82,23 @@ function CaseEvent({ event, parties, now }: { event: AdminCaseEventView; parties
       {event.photos && <Photos photos={event.photos} sender={actor} />}
     </article>
   </li>;
+}
+
+/** A public request's address (5.22): unconfirmed, with the account that uses it for staff to know about. */
+function ContactCard({ contact }: { contact: NonNullable<AdminCasePageData['contact']> }) {
+  const t = useTranslations('adminCase.details.contact');
+  return <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
+    <h2 className="text-xl font-semibold">{t('title')}</h2>
+    <p className="flex min-w-0 items-start gap-2 text-sm font-semibold"><Mail aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span className="min-w-0 [overflow-wrap:anywhere]">{contact.email}</span></p>
+    <p className="text-sm text-muted-foreground">{t('unconfirmed')}</p>
+    <p className="text-sm">{t('language', { language: t(`languages.${contact.locale}`) })}</p>
+    {contact.matchesAccount
+      ? <div className="space-y-1 border-t pt-3 text-sm">
+          <p>{t('account', { name: contact.matchesAccount.displayName })}</p>
+          <Link href={routes.admin.user(contact.matchesAccount.id)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{t('openAccount')}</Link>
+        </div>
+      : <p className="border-t pt-3 text-sm text-muted-foreground">{t('noAccount')}</p>}
+  </section>;
 }
 
 export function AdminCaseScreen(props: AdminCaseScreenProps) {
@@ -111,7 +136,7 @@ export function AdminCaseContent({ data, handlers, now, initialDialog, replyStat
             <h2 className="text-xl font-semibold">{t('details.opening')}</h2>
             {reason && <p className="text-sm font-medium">{t('details.reason', { reason })}</p>}
             {row.description && <p className="whitespace-pre-wrap leading-6">{row.description}</p>}
-            <Photos photos={row.photos} sender={row.openedBy.displayName} />
+            <Photos photos={row.photos} sender={row.openedBy?.displayName ?? row.contact?.email ?? ''} />
           </section>
           {row.resolution && <section className="space-y-3 rounded-xl border border-success/30 bg-card p-4 sm:p-5">
             <h2 className="text-xl font-semibold">{t('details.resolution')}</h2>
@@ -123,17 +148,18 @@ export function AdminCaseContent({ data, handlers, now, initialDialog, replyStat
           {data.review && <AdminReportedReview key={`${row.id}:${data.review.status}`} data={data.review} onModerate={handlers.onModerateReview} />}
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">{t('details.timeline')}</h2>
-            {data.events.length ? <ol aria-label={t('details.timeline')} className="space-y-3">{data.events.map((event) => <CaseEvent key={event.id} event={event} parties={data.parties} now={now} />)}</ol> : <p className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">{t('details.emptyTimeline')}</p>}
+            {data.events.length ? <ol aria-label={t('details.timeline')} className="space-y-3">{data.events.map((event) => <CaseEvent key={event.id} event={event} parties={data.parties} contact={data.contact} now={now} />)}</ol> : <p className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">{t('details.emptyTimeline')}</p>}
           </section>
         </div>
         <div className="min-w-0 space-y-5 max-xl:row-start-1">
-          <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
+          {data.contact && <ContactCard contact={data.contact} />}
+          {data.parties.length > 0 && <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
             <h2 className="text-xl font-semibold">{t('details.people')}</h2>
             <ul className="divide-y">{data.parties.map(({ person, role }) => <li key={person.id} className="flex min-w-0 items-start gap-3 py-3 first:pt-0 last:pb-0">
               <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">{person.initials}</span>
-              <div className="min-w-0 space-y-1"><p className="text-sm font-semibold">{person.displayName}</p><p className="text-sm text-muted-foreground">{t(`details.roles.${role}`)}</p>{role !== 'opener' && person.id === row.openedBy.id && <p className="text-sm text-muted-foreground">{t('details.roles.opener')}</p>}</div>
+              <div className="min-w-0 space-y-1"><p className="text-sm font-semibold">{person.displayName}</p><p className="text-sm text-muted-foreground">{t(`details.roles.${role}`)}</p>{role !== 'opener' && person.id === row.openedBy?.id && <p className="text-sm text-muted-foreground">{t('details.roles.opener')}</p>}</div>
             </li>)}</ul>
-          </section>
+          </section>}
           {data.booking && <Booking booking={data.booking} />}
           {data.taskId && <Link href={routes.admin.task(data.taskId)} className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4">{t('details.openTask')}</Link>}
         </div>

@@ -4,6 +4,7 @@ import { routes, type AdminCaseRow, type ISODateTime } from '@/contracts';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useCaseStatus } from '@/ui/components/status/use-status';
 import { cn } from '@/ui/lib/utils';
+import { AdminCaseOpener } from './admin-case-opener';
 import { AdminResponseTarget } from './admin-response-target';
 import { adminCard, adminTableFrame, adminTd, adminTh, adminTr } from './admin-ui';
 
@@ -21,14 +22,14 @@ function CaseRow({ item, now, mobile = false }: { item: AdminCaseRow; now: ISODa
     {summary}
     <StatusBadge {...status} />
     <dl className="grid grid-cols-2 gap-3 border-t border-foreground/[0.07] pt-3 text-sm dark:border-white/[0.07]">
-      <div className="min-w-0"><dt className="text-muted-foreground">{t('columns.openedBy')}</dt><dd className="break-words">{item.openedBy.displayName}</dd></div>
+      <div className="min-w-0"><dt className="text-muted-foreground">{t('columns.openedBy')}</dt><dd className="break-words"><AdminCaseOpener item={item} /></dd></div>
       <div className="min-w-0"><dt className="text-muted-foreground">{t('columns.assignee')}</dt><dd className="break-words">{assignee}</dd></div>
       <div className="col-span-2"><dt className="text-muted-foreground">{t('columns.response')}</dt><dd>{target}</dd></div>
     </dl>
   </li>;
   return <tr className={adminTr}>
     <th scope="row" className={cn(adminTd, 'text-left font-normal')}>{summary}</th>
-    <td className={cn(adminTd, 'break-words')}>{item.openedBy.displayName}</td>
+    <td className={cn(adminTd, 'break-words')}><AdminCaseOpener item={item} /></td>
     <td className={adminTd}><StatusBadge {...status} /></td>
     <td className={adminTd}>{target}</td>
     <td className={cn(adminTd, 'break-words', !item.assignee && 'text-muted-foreground')}>{assignee}</td>

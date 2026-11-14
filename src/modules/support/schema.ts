@@ -16,9 +16,14 @@ export const supportCases = pgTable(
     status: text('status').notNull(),
     priority: text('priority').notNull().default('normal'), // low | normal | high | urgent
     bookingId: text('booking_id'),
-    openedByUserId: text('opened_by_user_id')
-      .notNull()
-      .references(() => users.id),
+    /** Null for a request sent from the public contact form (5.22), which has only `contactEmail`. */
+    openedByUserId: text('opened_by_user_id').references(() => users.id),
+    /**
+     * A public request's reply address (5.22): typed by someone who isn't signed in, so never proof of an
+     * account. Replies go there by email, in `contactLocale`.
+     */
+    contactEmail: text('contact_email'),
+    contactLocale: text('contact_locale'),
     /** Requests: what the member asked about (`SUPPORT_TOPICS`). */
     topic: text('topic'),
     /** Reports: the person reported. */
@@ -48,6 +53,7 @@ export const supportCases = pgTable(
     index('support_cases_status_idx').on(t.status, t.createdAt),
     index('support_cases_opener_idx').on(t.openedByUserId, t.updatedAt),
     index('support_cases_assignee_idx').on(t.assigneeUserId, t.status),
+    index('support_cases_contact_idx').on(t.contactEmail, t.createdAt),
   ],
 );
 
@@ -64,7 +70,7 @@ export const supportCaseEvents = pgTable(
       .notNull()
       .references(() => supportCases.id),
     kind: text('kind').notNull(), // message | note | status | assignment | resolution
-    /** The member or a staff member; null for status changes. */
+    /** The member or a staff member; null for status changes and a public request's follow-ups (`meta.fromContact`). */
     authorUserId: text('author_user_id').references(() => users.id),
     /** Whose conversation with support this belongs to; null for the whole case (status changes, notes). */
     partyUserId: text('party_user_id').references(() => users.id),
@@ -74,7 +80,8 @@ export const supportCaseEvents = pgTable(
     /** Status changes: the new status. */
     status: text('status'),
     /** Assignment and resolution changes: the new assignee (null when unassigned) or the resolution. */
-    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown' }>(),
+    /** `emailed`: staff's answer went to a public request's address. `fromContact`: that address wrote again (5.22). */
+    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown'; emailed?: boolean; fromContact?: boolean }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('support_case_events_case_idx').on(t.caseId, t.createdAt)],

@@ -1,12 +1,14 @@
 'use server';
 
 import { refresh, updateTag } from 'next/cache';
-import type { ActionResult, SavedReplyInput, CaseResolutionInput, CaseStatusInput, RefundDecisionInput, ResolutionPreviewResult, RestrictedAccessInput, RevealAddressResult, RevealConversationResult, ReviewModerationInput, StaffNoteInput, StaffRefundInput, StaffReplyInput } from '@/contracts';
+import type { ActionResult, SavedReplyInput, CaseResolutionInput, CaseStatusInput, RefundDecisionInput, ResolutionPreviewResult, RestrictedAccessInput, RevealAddressResult, RevealConversationResult, ReviewModerationInput, StaffEmailContactInput, StaffNoteInput, StaffRefundInput, StaffReplyInput } from '@/contracts';
+import { createEmailProvider } from '@/integrations/email';
+import { appUrl } from '@/integrations/oauth';
 import { createPaymentProvider } from '@/integrations/payments';
 import { getViewer } from '@/platform/auth/viewer';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { db } from '@/platform/db/client';
-import { addCaseNote, assignCase, closeCase, moderateReportedReview, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffReply, type StaffActor } from './staff';
+import { addCaseNote, assignCase, closeCase, moderateReportedReview, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffEmailContact, staffReply, type StaffActor } from './staff';
 import { archiveSavedReply, createSavedReply, updateSavedReply } from './saved-replies';
 import { decideRefundRequest, resolveCaseWithMoney, revealBookingAddress, revealBookingConversation, staffRefund } from './staff-money';
 import { requestNow } from '@/platform/clock';
@@ -43,6 +45,13 @@ export async function staffReplyAction(caseId: string, input: StaffReplyInput): 
   const actor = await staff();
   if (!actor) return { ok: false, code: 'not_allowed' };
   return refreshed(await staffReply(db, actor, String(caseId), input, await requestNow()));
+}
+
+/** A public request's answer, by email (5.22). */
+export async function staffEmailContactAction(caseId: string, input: StaffEmailContactInput): Promise<ActionResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return refreshed(await staffEmailContact(db, { email: createEmailProvider(db), appUrl: appUrl() }, actor, String(caseId), input, await requestNow()));
 }
 
 export async function addCaseNoteAction(caseId: string, input: StaffNoteInput): Promise<ActionResult> {

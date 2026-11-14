@@ -12,7 +12,7 @@ import { Button } from '@/ui/primitives/button';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/ui/primitives/dialog';
 import { Spinner } from '@/ui/primitives/spinner';
-import { AdminCaseFeedback, AdminNoteForm, AdminReplyForm, AdminStatusForm, type AdminReplyState } from './admin-case-forms';
+import { AdminCaseFeedback, AdminEmailContactForm, AdminNoteForm, AdminReplyForm, AdminStatusForm, type AdminReplyState } from './admin-case-forms';
 import { AdminResolutionForm, type AdminResolutionState } from './admin-resolution-form';
 
 export interface AdminCaseControlsProps {
@@ -83,7 +83,9 @@ export function AdminCaseControls({ data, handlers, children, initialDialog, rep
     {(data.actions.includes('reply') || data.actions.includes('add_note')) && <div className="grid min-w-0 gap-5 xl:grid-cols-2">
       {data.actions.includes('reply') && <div className="min-w-0 space-y-3">
         {data.savedReplies && data.savedReplies.length > 0 && <SavedReplyPicker replies={data.savedReplies} onPick={(body) => setDraft((previous) => ({ nonce: (previous?.nonce ?? 0) + 1, body }))} />}
-        <AdminReplyForm key={`${data.case.id}-reply-${draft?.nonce ?? 0}`} data={data} handlers={handlers} focusId={`${id}-reply`} {...replyState} {...(draft ? { initialBody: draft.body } : {})} />
+        {data.contact
+          ? <AdminEmailContactForm key={`${data.case.id}-email-${draft?.nonce ?? 0}`} contact={data.contact} handlers={handlers} focusId={`${id}-reply`} {...replyState} {...(draft ? { initialBody: draft.body } : {})} />
+          : <AdminReplyForm key={`${data.case.id}-reply-${draft?.nonce ?? 0}`} data={data} handlers={handlers} focusId={`${id}-reply`} {...replyState} {...(draft ? { initialBody: draft.body } : {})} />}
       </div>}
       {data.actions.includes('add_note') && <AdminNoteForm key={`${data.case.id}-note`} handlers={handlers} focusId={`${id}-add_note`} />}
     </div>}
@@ -95,7 +97,7 @@ export function AdminCaseControls({ data, handlers, children, initialDialog, rep
     </Dialog>
     <AlertDialog open={dialogAllowed && dialog === 'resolve'} onOpenChange={(open) => { if (!open && !dialogBusy) setDialog(undefined); }}>
       <AlertDialogContent onEscapeKeyDown={(event) => { if (dialogBusy) event.preventDefault(); }} onCloseAutoFocus={(event) => { event.preventDefault(); trigger.current?.focus(); }} className="max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
-        <AlertDialogHeader><AlertDialogTitle>{t('resolve.title')}</AlertDialogTitle><AlertDialogDescription>{t('resolve.description')}</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogHeader><AlertDialogTitle>{t('resolve.title')}</AlertDialogTitle><AlertDialogDescription>{t(data.contact ? 'resolve.contactDescription' : 'resolve.description')}</AlertDialogDescription></AlertDialogHeader>
         <AdminResolutionForm data={data} handlers={handlers} onSuccess={dialogSuccess} onBusy={setDialogBusy} onCancel={() => setDialog(undefined)} {...resolutionState} />
       </AlertDialogContent>
     </AlertDialog>

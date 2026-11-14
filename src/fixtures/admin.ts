@@ -136,10 +136,26 @@ const closedRow: AdminCaseRow = {
   awaitingReply: false,
 };
 
+/** Sent from the public contact form (5.22) by someone who can't sign in: an address, no member. */
+const contactRow: AdminCaseRow = {
+  id: 'case_contact',
+  type: 'account',
+  queue: 'requests',
+  status: 'open',
+  priority: 'high',
+  subject: 'Can’t get into their account',
+  contact: { email: 'maya@example.test' },
+  openedAt: '2026-11-23T14:30:00.000Z',
+  updatedAt: '2026-11-23T15:10:00.000Z',
+  slaDueAt: '2026-11-24T14:30:00.000Z',
+  slaBreached: false,
+  awaitingReply: true,
+};
+
 export const adminCasesPageData: AdminCasesPageData = {
   filters: { status: 'all', mine: false },
-  cases: [disputeRow, safetyRow, reportRow, requestRow, closedRow],
-  totalCount: 5,
+  cases: [disputeRow, safetyRow, reportRow, contactRow, requestRow, closedRow],
+  totalCount: 6,
 };
 
 export const adminCasesFilteredData: AdminCasesPageData = {
@@ -268,12 +284,41 @@ export const reportedConversation: AdminConversationView = {
   ],
 };
 
+/**
+ * The contact form's "I can't get into my account" (5.22), written twice before support answered. An account
+ * uses the address, which staff see but which proves nothing: the answer goes by email, without account details.
+ */
+export const contactAdminCaseData: AdminCasePageData = {
+  case: { ...contactRow, description: 'I changed phones and the sign-in code never arrives. My account email is this one. I have a booking on Saturday.', photos: [] },
+  parties: [],
+  events: [
+    { id: 'aev_c1', kind: 'message', actor: { kind: 'contact', email: 'maya@example.test' }, body: 'Also, I can still get email at this address, just not texts.', at: '2026-11-23T15:10:00.000Z' },
+  ],
+  actions: ['assign_to_me', 'set_status', 'reply', 'add_note', 'resolve'],
+  nextStatuses: ['awaiting_support', 'escalated'],
+  resolutions: ['no_action', 'account_action'],
+  contact: { email: 'maya@example.test', locale: 'en', matchesAccount: { id: 'usr_maya', displayName: 'Maya R.' } },
+};
+
+/** After Alex answered: the email shows in the timeline. Spanish, and no account uses the address. */
+export const contactAnsweredAdminCaseData: AdminCasePageData = {
+  ...contactAdminCaseData,
+  case: { ...contactAdminCaseData.case, subject: 'Payment', type: 'payment_issue', priority: 'normal', contact: { email: 'vecino@example.test' }, awaitingReply: false, assignee: alexStaffSummary },
+  events: [
+    { id: 'aev_c2', kind: 'assignment', actor: { kind: 'staff', staff: alexStaffSummary }, assignee: alexStaffSummary, at: '2026-11-23T15:20:00.000Z' },
+    { id: 'aev_c3', kind: 'message', actor: { kind: 'staff', staff: alexStaffSummary }, emailed: true, body: 'Hola, gracias por escribirnos. Para ver tus pagos, inicia sesión y abre Pagos en tu cuenta.', at: '2026-11-23T15:30:00.000Z' },
+  ],
+  actions: ['unassign', 'set_status', 'reply', 'add_note', 'resolve'],
+  contact: { email: 'vecino@example.test', locale: 'es' },
+};
+
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 
 export const fakeAdminCaseHandlers: AdminCaseHandlers = {
   onAssign: () => wait({ ok: true, code: 'updated' }),
   onSetStatus: () => wait({ ok: true, code: 'updated' }),
   onReply: () => wait({ ok: true, code: 'sent' }),
+  onEmailContact: () => wait({ ok: true, code: 'sent' }),
   onAddNote: () => wait({ ok: true, code: 'saved' }),
   onResolve: () => wait({ ok: true, code: 'saved' }),
   onClose: () => wait({ ok: true, code: 'updated' }),

@@ -7,7 +7,7 @@
  */
 
 /** Which form the check ran on (Cloudflare's `action`; letters, digits and `_` only). */
-export const BOT_CHECK_ACTIONS = ['sign_in', 'sign_up', 'post_task', 'offer'] as const;
+export const BOT_CHECK_ACTIONS = ['sign_in', 'sign_up', 'post_task', 'offer', 'support'] as const;
 export type BotCheckAction = (typeof BOT_CHECK_ACTIONS)[number];
 
 /**

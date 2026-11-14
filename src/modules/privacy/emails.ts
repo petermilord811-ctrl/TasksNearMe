@@ -10,7 +10,8 @@ const tFor = perLocale((locale) => createTranslator({ locale, messages: messages
 
 export function renderAccountDeletedNotice({ appUrl, locale = DEFAULT_LOCALE }: { appUrl: string; locale?: AppLocale }): RenderedEmail {
   const t = tFor(locale);
-  const helpUrl = `${appUrl}${routes.help()}`;
+  // The public contact form (5.22): a deleted account can't sign in to reach support.
+  const helpUrl = `${appUrl}${routes.helpContact()}`;
   const preheader = t('preheader');
   const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
 <h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:30px;line-height:36px;font-weight:800;letter-spacing:-0.8px;color:${EMAIL_COLORS.ink};">${esc(t('heading'))}</h1>

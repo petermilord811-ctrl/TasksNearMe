@@ -8,6 +8,7 @@ import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useCaseStatus } from '@/ui/components/status/use-status';
 import { SideScrollList } from '@/ui/components/layout/side-scroll-list';
 import { cn } from '@/ui/lib/utils';
+import { AdminCaseOpener } from './admin-case-opener';
 import { AdminResponseTarget } from './admin-response-target';
 import { AdminFilterChip, adminCardLink, adminSection, adminTableFrame, adminTd, adminTh, adminTr } from './admin-ui';
 
@@ -35,7 +36,7 @@ function DesktopCaseRow({ item, now }: { item: AdminCaseRow; now: ISODateTime })
   const status = useCaseStatus(item.status);
   return <tr className={adminTr}>
     <th scope="row" className={cn(adminTd, 'text-left font-normal')}><CaseSummary item={item} linked /></th>
-    <td className={cn(adminTd, 'break-words')}>{item.openedBy.displayName}</td>
+    <td className={cn(adminTd, 'break-words')}><AdminCaseOpener item={item} /></td>
     <td className={adminTd}><StatusBadge {...status} /></td>
     <td className={adminTd}><AdminResponseTarget slaDueAt={item.slaDueAt} slaBreached={item.slaBreached} now={now} /></td>
     <td className={cn(adminTd, 'break-words', !item.assignee && 'text-muted-foreground')}>{item.assignee?.displayName ?? t('unassigned')}</td>
@@ -50,7 +51,7 @@ function MobileCaseRow({ item, now }: { item: AdminCaseRow; now: ISODateTime }) 
       <div className="flex items-start gap-2"><div className="min-w-0 flex-1"><CaseSummary item={item} /></div><ChevronRight aria-hidden="true" className="mt-1 size-5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5" /></div>
       <StatusBadge {...status} />
       <dl className="grid grid-cols-2 gap-3 border-t border-foreground/[0.07] pt-3 text-sm dark:border-white/[0.07]">
-        <div className="min-w-0 space-y-1"><dt className="text-muted-foreground">{t('columns.openedBy')}</dt><dd className="break-words">{item.openedBy.displayName}</dd></div>
+        <div className="min-w-0 space-y-1"><dt className="text-muted-foreground">{t('columns.openedBy')}</dt><dd className="break-words"><AdminCaseOpener item={item} /></dd></div>
         <div className="min-w-0 space-y-1"><dt className="text-muted-foreground">{t('columns.assignee')}</dt><dd className="break-words">{item.assignee?.displayName ?? t('unassigned')}</dd></div>
         <div className="col-span-2 space-y-1"><dt className="text-muted-foreground">{t('columns.response')}</dt><dd><AdminResponseTarget slaDueAt={item.slaDueAt} slaBreached={item.slaBreached} now={now} /></dd></div>
       </dl>

@@ -72,7 +72,9 @@
     "overLimit": "Above your refund limit. A lead or finance has to record this.",
     "retryPreview": "Try preview again",
     "save": "Save resolution",
-    "saved": "Resolution saved."
+    "saved": "Resolution saved.",
+    "contactDescription": "Record the outcome. Nobody on this case is signed in, so email your answer before you resolve it.",
+    "contactSummaryHint": "For staff only: this case has no one to show it to. Write 10–1,000 characters."
   },
   "resolutions": {
     "no_action": "No further action",
@@ -121,7 +123,21 @@
     "unassigned": "Unassigned",
     "opened": "Opened {at}",
     "newReply": "New reply",
-    "openTask": "Open the task"
+    "openTask": "Open the task",
+    "emailedTo": "Emailed to {email}",
+    "contactForm": "Contact form",
+    "contact": {
+      "title": "Who wrote",
+      "unconfirmed": "Sent from the contact form without signing in. Anyone can type an address there, so it isn't confirmed.",
+      "language": "Emails go out in {language}.",
+      "languages": {
+        "en": "English",
+        "es": "Spanish"
+      },
+      "account": "An account uses this address: {name}. That doesn’t prove they wrote.",
+      "openAccount": "Open the account",
+      "noAccount": "No account uses this address."
+    }
   },
   "conversation": {
     "title": "Reported conversation",
@@ -153,6 +169,9 @@
     "empty": "No matching cases",
     "dispute": "Desk problem report",
     "report": "Person report with restricted conversation",
+    "contact": "Contact form: can’t get into an account",
+    "contact-answered": "Contact form: answered by email, in Spanish",
+    "contact-resolve": "Contact form: resolve without anyone to tell",
     "resolved": "Resolved payment question",
     "conversation-revealed": "Conversation after logged access",
     "conversation-reason": "Reason required for conversation access",
@@ -208,5 +227,17 @@
     "choose": "Choose a saved reply",
     "hint": "It replaces what you wrote; {firstName} and {staffName} are filled in when you send it.",
     "manage": "All saved replies"
+  },
+  "emailContact": {
+    "title": "Answer by email",
+    "to": "To {email}",
+    "warning": "This may not be the account's owner: anyone can type an address into the contact form. Don't include account details (bookings, payments, addresses or verification), even if an account uses this address. For account questions, ask them to sign in and contact support from their account.",
+    "body": "Email message",
+    "bodyHint": "Up to 4,000 characters. Sent in {language} and signed with your first name. Replies to it don’t reach us: they write back through the contact form.",
+    "bodyRequired": "Write the email before sending.",
+    "bodyTooLong": "Keep the email to 4,000 characters or fewer.",
+    "send": "Send email",
+    "sending": "Sending…",
+    "sent": "Email sent."
   }
 }

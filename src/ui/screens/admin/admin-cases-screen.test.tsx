@@ -45,7 +45,9 @@ describe('AdminCasesScreen', () => {
       expect(row.getByRole('link', { name: item.subject })).toHaveAttribute('href', routes.admin.case(item.id));
       expect(row.getByText(adminCases.types[item.type])).toBeVisible();
       expect(row.getByText(`Priority: ${adminCases.priorities[item.priority]}`)).toBeVisible();
-      expect(row.getByText(item.openedBy.displayName)).toBeVisible();
+      expect(row.getByText(item.openedBy?.displayName ?? item.contact!.email)).toBeVisible();
+      // A public request (5.22) shows its address and where it came from.
+      expect(row.queryByText(adminCases.contactForm) !== null).toBe(Boolean(item.contact));
       expect(row.getByText(item.assignee?.displayName ?? 'Unassigned')).toBeVisible();
       expect(row.queryByText('New reply') !== null).toBe(item.awaitingReply);
     }

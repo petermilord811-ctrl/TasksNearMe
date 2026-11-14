@@ -46,7 +46,7 @@ describe('Help center', () => {
     const search = screen.getByRole('searchbox');
     await user.type(search, 'no-matching-article');
     expect(screen.getByRole('heading', { name: help.emptyTitle })).toBeDefined();
-    expect(screen.getByRole('link', { name: help.supportLink }).getAttribute('href')).toBe(routes.app.support());
+    expect(screen.getByRole('link', { name: help.supportLink }).getAttribute('href')).toBe(routes.helpContact());
     await user.clear(search);
     expect(screen.getByRole('link', { name: /Posting your first task/ })).toBeDefined();
     expect(screen.queryByRole('heading', { name: help.emptyTitle })).toBeNull();

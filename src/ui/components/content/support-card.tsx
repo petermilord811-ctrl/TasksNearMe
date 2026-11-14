@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { MessageCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes } from '@/contracts';
@@ -11,7 +11,7 @@ export function SupportCard() {
     <div className="min-w-0 space-y-3">
       <h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.015em] lg:text-[22px] lg:leading-[30px]">{t('supportTitle')}</h2>
       <p className="text-muted-foreground">{t('supportDescription')}</p>
-      <Link href={routes.app.support()} className={buttonVariants({ variant: 'outline' })}>{t('supportLink')}</Link>
+      <Link href={routes.helpContact()} className={buttonVariants({ variant: 'outline' })}>{t('supportLink')}</Link>
     </div>
   </section>;
 }

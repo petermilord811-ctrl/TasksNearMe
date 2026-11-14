@@ -45,6 +45,10 @@
       "title": "Centro de ayuda",
       "description": "Respuestas sobre cómo publicar tareas, pagos y tarifas, cómo verificarte como ayudante y cómo mantenerte seguro."
     },
+    "helpContact": {
+      "title": "Contactar a soporte",
+      "description": "¿No puedes iniciar sesión o no tienes cuenta? Escribe a soporte de TasksNearMe y te responderemos por correo, normalmente en menos de 24 horas."
+    },
     "taskBoard": {
       "title": "Trabajos disponibles cerca de ti en {market}",
       "description": "Trabajos locales en {market} por los que la gente paga: armado de muebles, mudanzas, jardinería, limpieza y ayuda con computadoras. Ve cuánto pagan antes de hacer una oferta."
@@ -362,6 +366,26 @@
       "notYou": "¿No lo pediste? Contáctanos de inmediato.",
       "help": "Obtener ayuda",
       "text": "Como lo pediste, eliminamos tu cuenta de TasksNearMe: tu perfil, tus datos de contacto, tus fotos y tus inicios de sesión ya no existen. Los registros que exige la ley o que otras personas necesitan se conservan sin tu nombre. ¿No lo pediste? Contáctanos de inmediato: {helpUrl}"
+    },
+    "supportReceived": {
+      "subject": "Recibimos tu mensaje",
+      "preheader": "Nuestro equipo de soporte te responde por correo, normalmente en menos de 24 horas.",
+      "title": "Recibimos tu mensaje",
+      "heading": "Recibimos tu mensaje",
+      "body": "Gracias por escribir a soporte de TasksNearMe. Te responderemos por correo a esta dirección, normalmente en menos de 24 horas.",
+      "more": "¿Quieres agregar algo? Envía el formulario otra vez con esta misma dirección de correo y lo sumaremos a tu solicitud.",
+      "notYou": "¿No nos escribiste? Puedes ignorar este correo.",
+      "contact": "Contactar a soporte",
+      "text": "Gracias por escribir a soporte de TasksNearMe. Te responderemos por correo a esta dirección, normalmente en menos de 24 horas.\n\n¿Quieres agregar algo? Envía el formulario otra vez con esta misma dirección de correo: {contactUrl}\n\n¿No nos escribiste? Puedes ignorar este correo."
+    },
+    "supportReply": {
+      "subject": "Una respuesta de soporte de TasksNearMe",
+      "title": "Una respuesta de soporte",
+      "heading": "Una respuesta de soporte",
+      "signature": "{name}, soporte de TasksNearMe",
+      "replyHow": "Las respuestas a este correo no nos llegan. Para contestar, usa el formulario de contacto con esta misma dirección de correo.",
+      "contact": "Contestar",
+      "text": "{reply}\n\n{name}, soporte de TasksNearMe\n\nLas respuestas a este correo no nos llegan. Para contestar, usa el formulario de contacto con esta misma dirección de correo: {contactUrl}"
     }
   },
   "sms": {

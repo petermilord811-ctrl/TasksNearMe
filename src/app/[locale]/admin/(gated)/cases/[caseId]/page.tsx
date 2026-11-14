@@ -14,6 +14,7 @@ import {
   resolveCaseAction,
   revealCaseConversationAction,
   setCaseStatusAction,
+  staffEmailContactAction,
   staffReplyAction,
 } from '@/modules/support/staff-actions';
 import { getViewer } from '@/platform/auth/viewer';
@@ -51,6 +52,7 @@ async function AdminCase({ params }: Pick<PageProps<'/[locale]/admin/cases/[case
         onAssign: assignCaseAction.bind(null, caseId, version),
         onSetStatus: setCaseStatusAction.bind(null, caseId, version),
         onReply: staffReplyAction.bind(null, caseId),
+        onEmailContact: staffEmailContactAction.bind(null, caseId),
         onAddNote: addCaseNoteAction.bind(null, caseId),
         onResolve: resolveCaseAction.bind(null, caseId, version),
         onClose: closeCaseAction.bind(null, caseId, version),

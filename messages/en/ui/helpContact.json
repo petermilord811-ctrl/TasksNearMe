@@ -1,0 +1,40 @@
+{
+  "title": "Contact support",
+  "description": "Can't sign in, or don't have an account? Write to us here and we'll answer by email.",
+  "danger": "In danger?",
+  "call": "Call 911",
+  "signedIn": {
+    "title": "Can you sign in?",
+    "body": "Contact support from your account instead. You can follow your case there, and we can help with your bookings and payments.",
+    "link": "Sign in to contact support"
+  },
+  "form": "Write to support",
+  "email": "Your email",
+  "emailHint": "We'll answer at this address.",
+  "topic": "What's it about?",
+  "topicRequired": "Choose what your message is about.",
+  "topics": {
+    "account_access": "I can't get into my account",
+    "payment": "A payment or charge",
+    "safety": "Safety",
+    "other": "Something else"
+  },
+  "message": "Your message",
+  "messageHint": "Use 20 to 2,000 characters. Tell us what happened. Never include a password, a card number or a code we sent you.",
+  "messageCount": "{count, number} / {max, number} characters",
+  "send": "Send message",
+  "sending": "Sending…",
+  "sent": {
+    "title": "Message sent",
+    "body": "We sent a confirmation to {email}, and we'll answer there, usually within 24 hours.",
+    "more": "No email? Check your spam folder, or send the form again with the right address.",
+    "back": "Back to the help center"
+  },
+  "previews": {
+    "form": "Contact support",
+    "noBotCheck": "Contact support, no bot check",
+    "invalid": "Contact support, errors",
+    "rateLimited": "Contact support, too many messages",
+    "sent": "Contact support, sent"
+  }
+}

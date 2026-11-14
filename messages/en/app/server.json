@@ -45,6 +45,10 @@
       "title": "Help center",
       "description": "Answers about posting tasks, payments and fees, getting verified as a helper, and staying safe."
     },
+    "helpContact": {
+      "title": "Contact support",
+      "description": "Can't sign in, or don't have an account? Write to TasksNearMe support and we'll answer by email, usually within 24 hours."
+    },
     "taskBoard": {
       "title": "Open tasks near you in {market}",
       "description": "Local tasks people need help with in {market}: furniture assembly, moving, yard work, cleaning, and computer help."
@@ -362,6 +366,26 @@
       "notYou": "Didn't ask for this? Contact us right away.",
       "help": "Get help",
       "text": "As you asked, we deleted your TasksNearMe account: your profile, contact details, photos and sign-ins are gone. Records the law or other people need stay without your name. Didn't ask for this? Contact us right away: {helpUrl}"
+    },
+    "supportReceived": {
+      "subject": "We got your message",
+      "preheader": "Our support team answers by email, usually within 24 hours.",
+      "title": "We got your message",
+      "heading": "We got your message",
+      "body": "Thanks for writing to TasksNearMe support. We'll answer by email at this address, usually within 24 hours.",
+      "more": "Want to add something? Send the form again with this same email address, and we'll add it to your request.",
+      "notYou": "Didn't write to us? You can ignore this email.",
+      "contact": "Contact support",
+      "text": "Thanks for writing to TasksNearMe support. We'll answer by email at this address, usually within 24 hours.\n\nWant to add something? Send the form again with this same email address: {contactUrl}\n\nDidn't write to us? You can ignore this email."
+    },
+    "supportReply": {
+      "subject": "An answer from TasksNearMe support",
+      "title": "An answer from support",
+      "heading": "An answer from support",
+      "signature": "{name}, TasksNearMe support",
+      "replyHow": "Replies to this email don't reach us. To write back, use the contact form with this same email address.",
+      "contact": "Write back",
+      "text": "{reply}\n\n{name}, TasksNearMe support\n\nReplies to this email don't reach us. To write back, use the contact form with this same email address: {contactUrl}"
     }
   },
   "sms": {

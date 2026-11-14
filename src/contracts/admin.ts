@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
 import type { CompletionChecklistView } from './bookings';
 import type { Cents, ISODateTime, Photo, StaffRole } from './common';
+import type { AppLocale } from './locale';
 import type { ExactAddress } from './location';
 import type { PriceBreakdown } from './money';
 import type { PersonSummary } from './people';
@@ -71,7 +72,10 @@ export interface AdminCaseRow {
   priority: CasePriority;
   /** The task's title, the reported person's name, or the request's topic. */
   subject: string;
-  openedBy: PersonSummary;
+  /** The member who opened it. Absent for a request from the public contact form (5.22): see `contact`. */
+  openedBy?: PersonSummary;
+  /** A public request's reply address, typed by someone who wasn't signed in (never proof of an account). */
+  contact?: { email: string };
   openedAt: ISODateTime;
   updatedAt: ISODateTime;
   /** When the next staff response is due (open cases only). */
@@ -108,7 +112,8 @@ export interface AdminCaseParty {
   canMessage: boolean;
 }
 
-export type AdminCaseActor = { kind: 'member'; person: PersonSummary } | { kind: 'staff'; staff: StaffSummary } | { kind: 'system' };
+/** `contact`: a public request's address writing again through the contact form (5.22). */
+export type AdminCaseActor = { kind: 'member'; person: PersonSummary } | { kind: 'staff'; staff: StaffSummary } | { kind: 'contact'; email: string } | { kind: 'system' };
 
 export interface AdminCaseEventView {
   id: string;
@@ -117,6 +122,8 @@ export interface AdminCaseEventView {
   actor: AdminCaseActor;
   /** Messages: whose conversation with support (an `AdminCaseParty` person id). */
   partyId?: string;
+  /** Messages emailed to a public request's contact address (no party: nobody can sign in to read them). */
+  emailed?: boolean;
   body?: string;
   photos?: Photo[];
   /** Status changes. */
@@ -170,6 +177,12 @@ export interface AdminCasePageData {
   money?: { priceCents: Cents; chargedCents: Cents; refundedCents: Cents };
   /** Saved replies for this case's queue and every queue, when the viewer can reply (`routes.admin.savedReplies()`). */
   savedReplies?: SavedReplyOption[];
+  /**
+   * A request from the public contact form (5.22): replies go to this address by email, in its language. The
+   * address was typed by someone who wasn't signed in. `matchesAccount` (staff only, never shown to the
+   * visitor) says an account uses it, which proves nothing about who wrote.
+   */
+  contact?: { email: string; locale: AppLocale; matchesAccount?: { id: string; displayName: string } };
 }
 
 /** The review a report is about, with what staff can do about it. */
@@ -212,6 +225,10 @@ export const staffReplyInputSchema = z.object({
   body: body(4000),
 });
 export type StaffReplyInput = z.input<typeof staffReplyInputSchema>;
+
+/** An email reply to a public request's contact address (5.22). */
+export const staffEmailContactInputSchema = z.object({ body: body(4000) });
+export type StaffEmailContactInput = z.input<typeof staffEmailContactInputSchema>;
 
 export const staffNoteInputSchema = z.object({ body: body(4000) });
 export type StaffNoteInput = z.input<typeof staffNoteInputSchema>;
@@ -272,6 +289,8 @@ export interface AdminCaseHandlers {
   onAssign: ActionHandler<{ assign: boolean }>;
   onSetStatus: ActionHandler<CaseStatusInput>;
   onReply: ActionHandler<StaffReplyInput>;
+  /** Public requests: email the contact address. ok `sent`; `not_allowed` (not a public request, or no reply action), `rate_limited`. */
+  onEmailContact: ActionHandler<StaffEmailContactInput>;
   onAddNote: ActionHandler<StaffNoteInput>;
   onResolve: ActionHandler<CaseResolutionInput>;
   onClose: ActionHandler;

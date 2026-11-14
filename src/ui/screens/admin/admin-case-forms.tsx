@@ -6,9 +6,9 @@ import { useTranslations } from 'next-intl';
 import { useForm, type FieldValues, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  caseStatusInputSchema, staffNoteInputSchema, staffReplyInputSchema,
+  caseStatusInputSchema, staffEmailContactInputSchema, staffNoteInputSchema, staffReplyInputSchema,
   type ActionResult, type AdminCaseHandlers, type AdminCasePageData,
-  type CaseStatusInput, type StaffNoteInput, type StaffReplyInput,
+  type CaseStatusInput, type StaffEmailContactInput, type StaffNoteInput, type StaffReplyInput,
 } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { useFormAction } from '@/ui/lib/use-form-action';
@@ -85,6 +85,41 @@ export function AdminReplyForm({ data, handlers, focusId, initialResult, initial
     </fieldset>
     <AdminCaseFeedback result={action.result} successMessage={action.result?.ok && action.result.code === 'sent' ? t('reply.sent') : undefined} />
     <Button type="submit" disabled={pending} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner aria-hidden="true" />}{t(pending ? 'reply.sending' : 'reply.send')}</Button>
+  </form>;
+}
+
+/**
+ * A public request's answer (5.22): an email to the address, which nobody confirmed. The warning stays up
+ * even when an account uses the address: the person writing may not be its owner.
+ */
+export function AdminEmailContactForm({ contact, handlers, focusId, initialResult, initialBody = '', initialPending = false }: {
+  contact: NonNullable<AdminCasePageData['contact']>; handlers: AdminCaseHandlers; focusId: string;
+} & AdminReplyState) {
+  const t = useTranslations('adminCase');
+  const fieldCopy = useFieldCopy();
+  const form = useForm<StaffEmailContactInput>({ resolver: zodResolver(staffEmailContactInputSchema), defaultValues: { body: initialBody } });
+  const action = useCaseForm(form, { initialResult, onSuccess: (result) => { if (result.ok && result.code === 'sent') form.reset({ body: '' }); } });
+  const pending = action.pending || form.formState.isSubmitting || initialPending;
+  const bodyCode = form.formState.errors.body?.message;
+  const bodyError = bodyCode === 'required' ? t('emailContact.bodyRequired') : bodyCode === 'too_long' ? t('emailContact.bodyTooLong') : fieldCopy(bodyCode);
+  const warningId = `${focusId}-warning`;
+  return <form noValidate aria-label={t('emailContact.title')} aria-busy={pending} className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]" onSubmit={(event) => {
+    if (pending) { event.preventDefault(); return; }
+    void form.handleSubmit(async (input) => { await action.run(handlers.onEmailContact, input); })(event);
+  }}>
+    <div className="space-y-1">
+      <h2 className="text-xl font-semibold">{t('emailContact.title')}</h2>
+      <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{t('emailContact.to', { email: contact.email })}</p>
+    </div>
+    <p id={warningId} className="rounded-lg border border-warning/30 bg-badge-warning p-3 text-sm leading-6 text-badge-warning-foreground">{t('emailContact.warning')}</p>
+    <fieldset disabled={pending} className="space-y-4">
+      <legend className="sr-only">{t('emailContact.title')}</legend>
+      <CaseField id={focusId} label={t('emailContact.body')} hint={t('emailContact.bodyHint', { language: t(`details.contact.languages.${contact.locale}`) })} error={bodyError}>
+        <Textarea {...form.register('body')} id={focusId} required rows={6} maxLength={4000} aria-invalid={Boolean(bodyError)} aria-describedby={`${warningId} ${focusId}-hint${bodyError ? ` ${focusId}-error` : ''}`} />
+      </CaseField>
+    </fieldset>
+    <AdminCaseFeedback result={action.result} successMessage={action.result?.ok && action.result.code === 'sent' ? t('emailContact.sent') : undefined} />
+    <Button type="submit" disabled={pending} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner aria-hidden="true" />}{t(pending ? 'emailContact.sending' : 'emailContact.send')}</Button>
   </form>;
 }
 

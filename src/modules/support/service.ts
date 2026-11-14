@@ -46,7 +46,8 @@ type CaseRow = typeof supportCases.$inferSelect;
 
 /** Requests become the blueprint's case types where one fits. */
 const REQUEST_TYPE: Record<SupportTopic, string> = { booking: 'request', payment: 'payment_issue', account: 'account', safety: 'safety', other: 'request' };
-const TOPIC_SUBJECT: Record<SupportTopic, string> = { booking: 'Booking', payment: 'Payment', account: 'Account', safety: 'Safety', other: 'Something else' };
+/** Staff's case subjects. `account_access` is the public contact form's "I can't get into my account" (5.22). */
+const TOPIC_SUBJECT: Record<SupportTopic | 'account_access', string> = { booking: 'Booking', payment: 'Payment', account: 'Account', safety: 'Safety', other: 'Something else', account_access: 'Can’t get into their account' };
 /** Reports support looks at first. */
 const HIGH_PRIORITY_REASONS: ReadonlySet<ReportReason> = new Set(['harassment', 'scam_or_fraud', 'off_platform_payment', 'unsafe_behavior', 'discrimination']);
 
@@ -93,7 +94,7 @@ export async function caseLabelsOf(db: Db, rows: CaseRow[], viewerId?: string): 
     rows.map((row) => {
       const name = row.subjectUserId ? nameOf.get(row.subjectUserId) : undefined;
       const booking = row.bookingId ? bookingOf.get(row.bookingId) : undefined;
-      const topic = row.topic ? TOPIC_SUBJECT[row.topic as SupportTopic] : undefined;
+      const topic = row.topic ? TOPIC_SUBJECT[row.topic as keyof typeof TOPIC_SUBJECT] : undefined;
       const viewerRole = !viewerId ? undefined : booking?.posterUserId === viewerId ? 'poster' : booking?.helperUserId === viewerId ? 'helper' : undefined;
       return [row.id, { subject: name ?? booking?.title ?? topic ?? 'Support', ...(viewerRole ? { viewerRole } : {}) }];
     }),

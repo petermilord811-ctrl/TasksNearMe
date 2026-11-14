@@ -49,6 +49,7 @@ export * from './staff-auth';
 export * from './poster-identity';
 export * from './beta';
 export * from './bot-check';
+export * from './public-support';
 export * from './shell';
 export * from './routes';
 export type { PreviewEntry } from './preview';

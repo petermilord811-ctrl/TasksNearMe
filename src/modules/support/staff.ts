@@ -24,6 +24,7 @@ import type {
   RestrictedAccessInput,
   ReviewModerationInput,
   RevealConversationResult,
+  StaffEmailContactInput,
   StaffNoteInput,
   StaffReplyInput,
   StaffRole,
@@ -39,9 +40,12 @@ import {
   restrictedAccessInputSchema,
   reviewModerationInputSchema,
   HELPER_REVIEW_TAGS,
+  localeOrDefault,
+  staffEmailContactInputSchema,
   staffNoteInputSchema,
   staffReplyInputSchema,
 } from '@/contracts';
+import type { EmailProvider } from '@/integrations/email';
 import { staffRoles, users } from '@/modules/accounts/schema';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { payments, refunds } from '@/modules/payments/schema';
@@ -59,7 +63,8 @@ import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
-import { consumeRateLimit } from '@/platform/rate-limit';
+import { consumeRateLimit, consumeRateLimits } from '@/platform/rate-limit';
+import { renderSupportEmailReply } from './emails';
 import { caseLabelsOf, caseStatusOf } from './service';
 import { supportCaseEvents, supportCases } from './schema';
 import {
@@ -102,6 +107,8 @@ type UserRow = typeof users.$inferSelect;
 type EventRow = typeof supportCaseEvents.$inferSelect;
 
 const REPLY_RULE = { limit: 60, windowSeconds: 10 * 60 };
+/** Emails to one public request's address (5.22), on top of the staff member's own reply limit. */
+export const EMAIL_CONTACT_RULE = { limit: 10, windowSeconds: 24 * 60 * 60 };
 
 export function personSummaryOf(user: UserRow): PersonSummary {
   return {
@@ -144,14 +151,18 @@ export async function staffById(db: Db, ids: string[]): Promise<Map<string, Staf
 const typeOf = (value: string): CaseType => ((CASE_TYPES as readonly string[]).includes(value) ? (value as CaseType) : 'request');
 const priorityOf = (value: string): CasePriority => ((CASE_PRIORITIES as readonly string[]).includes(value) ? (value as CasePriority) : 'normal');
 
+/** A member's message to support, or a public request's address writing again: not staff's. */
+const fromCaseMember = (event: Pick<EventRow, 'authorUserId' | 'partyUserId' | 'meta'>) =>
+  event.meta?.fromContact === true || (event.authorUserId !== null && event.authorUserId === event.partyUserId);
+
 /** Members wrote after the last staff message (or staff haven't written yet). */
-function awaitingReplyOf(row: CaseRow, events: Pick<EventRow, 'kind' | 'authorUserId' | 'partyUserId' | 'createdAt'>[]): boolean {
+function awaitingReplyOf(row: CaseRow, events: Pick<EventRow, 'kind' | 'authorUserId' | 'partyUserId' | 'meta' | 'createdAt'>[]): boolean {
   if (isFinishedStatus(caseStatusOf(row.status))) return false;
   let lastMember = row.createdAt;
   let lastStaff: Date | null = null;
   for (const event of events) {
     if (event.kind !== 'message') continue;
-    const fromMember = event.authorUserId !== null && event.authorUserId === event.partyUserId;
+    const fromMember = fromCaseMember(event);
     if (fromMember && event.createdAt > lastMember) lastMember = event.createdAt;
     if (!fromMember && (!lastStaff || event.createdAt > lastStaff)) lastStaff = event.createdAt;
   }
@@ -164,16 +175,17 @@ export async function caseRowsFor(db: Db, rows: CaseRow[], now: Date): Promise<A
   const ids = rows.map((row) => row.id);
   const [labels, openers, assignees, messageEvents] = await Promise.all([
     caseLabelsOf(db, rows),
-    usersById(db, rows.map((row) => row.openedByUserId)),
+    usersById(db, rows.flatMap((row) => (row.openedByUserId ? [row.openedByUserId] : []))),
     staffById(db, rows.flatMap((row) => (row.assigneeUserId ? [row.assigneeUserId] : []))),
     db
-      .select({ caseId: supportCaseEvents.caseId, kind: supportCaseEvents.kind, authorUserId: supportCaseEvents.authorUserId, partyUserId: supportCaseEvents.partyUserId, createdAt: supportCaseEvents.createdAt })
+      .select({ caseId: supportCaseEvents.caseId, kind: supportCaseEvents.kind, authorUserId: supportCaseEvents.authorUserId, partyUserId: supportCaseEvents.partyUserId, meta: supportCaseEvents.meta, createdAt: supportCaseEvents.createdAt })
       .from(supportCaseEvents)
       .where(and(inArray(supportCaseEvents.caseId, ids), eq(supportCaseEvents.kind, 'message'))),
   ]);
   return rows.flatMap((row) => {
-    const opener = openers.get(row.openedByUserId);
-    if (!opener) return [];
+    const opener = row.openedByUserId ? openers.get(row.openedByUserId) : undefined;
+    // A public request (5.22) has its address instead of a member.
+    if (!opener && !row.contactEmail) return [];
     const status = caseStatusOf(row.status);
     const queue = queueOf(row.type);
     const due = slaDueAt({ queue, status, createdAt: row.createdAt, firstResponseAt: row.firstResponseAt });
@@ -186,7 +198,7 @@ export async function caseRowsFor(db: Db, rows: CaseRow[], now: Date): Promise<A
         status,
         priority: priorityOf(row.priority),
         subject: labels.get(row.id)?.subject ?? 'Support',
-        openedBy: personSummaryOf(opener),
+        ...(opener ? { openedBy: personSummaryOf(opener) } : row.contactEmail ? { contact: { email: row.contactEmail } } : {}),
         openedAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
         ...(due ? { slaDueAt: due.toISOString() } : {}),
@@ -280,7 +292,7 @@ async function loadCase(db: Db, staff: StaffActor, caseId: string): Promise<Case
         .limit(1)
     : [];
   const [people, paidRows] = await Promise.all([
-    usersById(db, [row.openedByUserId, ...(row.subjectUserId ? [row.subjectUserId] : []), ...(booking ? [booking.posterUserId, booking.helperUserId] : [])]),
+    usersById(db, [...(row.openedByUserId ? [row.openedByUserId] : []), ...(row.subjectUserId ? [row.subjectUserId] : []), ...(booking ? [booking.posterUserId, booking.helperUserId] : [])]),
     booking
       ? db.select({ id: payments.id }).from(payments).where(and(eq(payments.bookingId, booking.id), inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded']))).limit(1)
       : Promise.resolve([]),
@@ -288,7 +300,7 @@ async function loadCase(db: Db, staff: StaffActor, caseId: string): Promise<Case
   const sideOf = (userId: string): 'poster' | 'helper' | undefined => (booking?.posterUserId === userId ? 'poster' : booking?.helperUserId === userId ? 'helper' : undefined);
 
   const parties: AdminCaseParty[] = [];
-  const opener = people.get(row.openedByUserId);
+  const opener = row.openedByUserId ? people.get(row.openedByUserId) : undefined;
   if (opener) parties.push({ person: personSummaryOf(opener), role: sideOf(opener.id) ?? 'opener', canMessage: true });
   const reported = row.subjectUserId ? people.get(row.subjectUserId) : undefined;
   if (reported) parties.push({ person: personSummaryOf(reported), role: 'reported', canMessage: false });
@@ -299,11 +311,14 @@ async function loadCase(db: Db, staff: StaffActor, caseId: string): Promise<Case
       parties.push({ person: personSummaryOf(person), role: sideOf(id)!, canMessage: true });
     }
   }
-  // Waiting on someone: by their side of the booking; without a booking, by how the opener uses the app.
+  // Waiting on someone: by their side of the booking; without a booking, by how the opener uses the app. A
+  // public request's address is neither (staff answer it and resolve; writing again adds to the case).
   const messageable = parties.filter((party) => party.canMessage);
   const waitingOn = booking
     ? { poster: messageable.some((party) => party.role === 'poster'), helper: messageable.some((party) => party.role === 'helper') }
-    : { poster: opener?.mode !== 'helper', helper: opener?.mode === 'helper' };
+    : opener
+      ? { poster: opener.mode !== 'helper', helper: opener.mode === 'helper' }
+      : { poster: false, helper: false };
   return {
     row,
     parties,
@@ -361,12 +376,14 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
     switch (event.kind) {
       case 'message': {
         const member = event.authorUserId && event.authorUserId === event.partyUserId ? members.get(event.authorUserId) : undefined;
+        const contact = event.meta?.fromContact && row.contactEmail ? row.contactEmail : undefined;
         return [
           {
             id: event.id,
             kind: 'message',
-            actor: member ? { kind: 'member', person: personSummaryOf(member) } : actor,
+            actor: member ? { kind: 'member', person: personSummaryOf(member) } : contact ? { kind: 'contact', email: contact } : actor,
             ...(event.partyUserId ? { partyId: event.partyUserId } : {}),
+            ...(event.meta?.emailed ? { emailed: true } : {}),
             body: event.body ?? '',
             ...photosOf(event.fileIds, photoOf),
             at,
@@ -420,8 +437,19 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
     nextStatuses: nextCaseStatuses(facts),
     resolutions: caseResolutions(facts),
     ...(money ? { money: { priceCents: money.priceCents, chargedCents: money.chargedCents, refundedCents: money.refundedCents } } : {}),
+    ...(row.contactEmail ? { contact: await contactOf(db, row) } : {}),
   };
   return { data, version: row.version };
+}
+
+/**
+ * A public request's address, its language, and the account that uses it, if any. The match is for staff
+ * only and proves nothing about who wrote: the form doesn't check the address (5.22).
+ */
+async function contactOf(db: Db, row: CaseRow): Promise<NonNullable<AdminCasePageData['contact']>> {
+  const email = row.contactEmail ?? '';
+  const [account] = await db.select({ id: users.id, name: users.name }).from(users).where(eq(users.email, email)).limit(1);
+  return { email, locale: localeOrDefault(row.contactLocale), ...(account ? { matchesAccount: { id: account.id, displayName: account.name } } : {}) };
 }
 
 // ---- A reported review (blueprint 08: hidden per policy by leads and trust & safety, audited) ----------
@@ -648,6 +676,55 @@ export async function staffReply(db: Db, staff: StaffActor, caseId: string, inpu
       aggregateId: ctx.row.id,
       payload: { caseId: ctx.row.id, partyUserId: parsed.data.partyId, subject },
     });
+  });
+  return { ok: true, code: 'sent' };
+}
+
+export interface ContactMailer {
+  email: EmailProvider;
+  appUrl: string;
+}
+
+/**
+ * Staff answer a public request (5.22) by email, in the address's language, signed with their first name.
+ * Limited per staff member and per case, and audited. The email goes first: a send that fails records
+ * nothing, so staff can try again. Nobody can sign in to read it, so it's a message with no party.
+ */
+export async function staffEmailContact(db: Db, mailer: ContactMailer, staff: StaffActor, caseId: string, input: StaffEmailContactInput, now: Date): Promise<ActionResult> {
+  const parsed = staffEmailContactInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const ctx = await loadCase(db, staff, caseId);
+  const to = ctx?.row.contactEmail;
+  if (!ctx || !to || !staffCaseActions(ctx.facts).includes('reply')) return { ok: false, code: 'not_allowed' };
+  const limited = await consumeRateLimits(
+    db,
+    [
+      { key: `staff-reply:${staff.id}`, rule: REPLY_RULE },
+      { key: `staff-email:${ctx.row.id}`, rule: EMAIL_CONTACT_RULE },
+    ],
+    now,
+  );
+  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
+  const staffName = (await usersById(db, [staff.id])).get(staff.id)?.firstName ?? '';
+  // Nobody's first name is known for an address: a saved reply's greeting drops it.
+  const body = fillReplyPlaceholders(parsed.data.body, { first_name: '', staff_name: staffName })
+    .replace(/[ \t]+([,.!?])/g, '$1')
+    .trim();
+  const eventId = newId('cev');
+  const rendered = renderSupportEmailReply({ body, staffName, appUrl: mailer.appUrl, locale: localeOrDefault(ctx.row.contactLocale) });
+  try {
+    await mailer.email.send({ to, subject: rendered.subject, text: rendered.text, html: rendered.html, tag: 'support-reply', idempotencyKey: eventId });
+  } catch (error) {
+    console.error('[support-reply]', error);
+    return { ok: false, code: 'unknown' };
+  }
+  await db.transaction(async (tx) => {
+    await tx.insert(supportCaseEvents).values({ id: eventId, caseId: ctx.row.id, kind: 'message', authorUserId: staff.id, body, meta: { emailed: true }, createdAt: now });
+    await tx
+      .update(supportCases)
+      .set({ updatedAt: now, ...(ctx.row.firstResponseAt ? {} : { firstResponseAt: now }) })
+      .where(eq(supportCases.id, ctx.row.id));
+    await audit(tx, staff, 'case.email_contact', ctx.row.id, now, { metadata: { eventId } });
   });
   return { ok: true, code: 'sent' };
 }

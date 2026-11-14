@@ -113,7 +113,7 @@ export function AdminResolutionForm({ data, handlers, onSuccess, onBusy, onCance
           onChange={(event) => { const raw = event.target.value; const cents = parseMoneyInput(raw) ?? -1; setEditing({ name: amountName, raw, cents }); field.onChange(cents); form.clearErrors(amountName); }} />}
         />
       </ResolutionField>}
-      <ResolutionField id={`${id}-summary`} label={t('resolve.summary')} hint={t('resolve.summaryHint')} error={summaryError}>
+      <ResolutionField id={`${id}-summary`} label={t('resolve.summary')} hint={t(data.contact ? 'resolve.contactSummaryHint' : 'resolve.summaryHint')} error={summaryError}>
         <Textarea {...form.register('summary')} id={`${id}-summary`} required rows={3} maxLength={1000} aria-invalid={Boolean(summaryError)} aria-describedby={`${id}-summary-hint ${id}-summary-error`} />
       </ResolutionField>
     </fieldset>

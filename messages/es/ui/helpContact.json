@@ -1,0 +1,40 @@
+{
+  "title": "Contactar a soporte",
+  "description": "¿No puedes iniciar sesión o no tienes cuenta? Escríbenos aquí y te responderemos por correo.",
+  "danger": "¿Estás en peligro?",
+  "call": "Llama al 911",
+  "signedIn": {
+    "title": "¿Puedes iniciar sesión?",
+    "body": "Mejor contacta a soporte desde tu cuenta. Ahí puedes seguir tu caso, y podemos ayudarte con tus reservas y pagos.",
+    "link": "Inicia sesión para contactar a soporte"
+  },
+  "form": "Escribir a soporte",
+  "email": "Tu correo",
+  "emailHint": "Te responderemos a esta dirección.",
+  "topic": "¿De qué se trata?",
+  "topicRequired": "Elige de qué trata tu mensaje.",
+  "topics": {
+    "account_access": "No puedo entrar a mi cuenta",
+    "payment": "Un pago o un cobro",
+    "safety": "Seguridad",
+    "other": "Otro tema"
+  },
+  "message": "Tu mensaje",
+  "messageHint": "Usa de 20 a 2,000 caracteres. Cuéntanos qué pasó. Nunca incluyas una contraseña, un número de tarjeta ni un código que te enviamos.",
+  "messageCount": "{count, number} / {max, number} caracteres",
+  "send": "Enviar mensaje",
+  "sending": "Enviando…",
+  "sent": {
+    "title": "Mensaje enviado",
+    "body": "Enviamos una confirmación a {email} y te responderemos ahí, normalmente en menos de 24 horas.",
+    "more": "¿No te llegó? Revisa tu carpeta de spam o envía el formulario otra vez con la dirección correcta.",
+    "back": "Volver al centro de ayuda"
+  },
+  "previews": {
+    "form": "Contactar a soporte",
+    "noBotCheck": "Contactar a soporte, sin verificación",
+    "invalid": "Contactar a soporte, errores",
+    "rateLimited": "Contactar a soporte, demasiados mensajes",
+    "sent": "Contactar a soporte, enviado"
+  }
+}

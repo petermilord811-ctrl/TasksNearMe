@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { ACTION_ERROR_CODES, routes, type ActionResult, type AdminCaseHandlers, type AdminCasePageData, type PreviewEntry } from '@/contracts';
-import { ADMIN_NOW, adminHomeData, adminHomeQuietData, adminCasesPageData, adminCasesFilteredData, adminCasesEmptyData, alexStaff, disputeAdminCaseData, reportAdminCaseData, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData, reportedConversation, fakeAdminCaseHandlers, fakeHandler } from '@/fixtures';
+import { ADMIN_NOW, adminHomeData, adminHomeQuietData, adminCasesPageData, adminCasesFilteredData, adminCasesEmptyData, alexStaff, contactAdminCaseData, contactAnsweredAdminCaseData, disputeAdminCaseData, reportAdminCaseData, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData, reportedConversation, fakeAdminCaseHandlers, fakeHandler } from '@/fixtures';
 import { AdminHomeScreen, AdminCasesScreen } from '@/ui/screens/admin';
 import { AdminCaseContent } from '@/ui/screens/admin/admin-case-screen';
 import { AdminShell } from '@/ui/shells/admin-shell';
@@ -48,6 +48,9 @@ export const adminPreviews: PreviewEntry[] = [
   { id: 'screen-admin-cases/empty', group: p.casesGroup, title: p.empty, layout: 'fullscreen', render: () => <Shell path={routes.admin.cases(adminCasesEmptyData.filters)}><AdminCasesScreen data={adminCasesEmptyData} now={ADMIN_NOW} /></Shell> },
   casePreview('dispute', p.dispute, disputeAdminCaseData),
   casePreview('report', p.report, reportAdminCaseData),
+  casePreview('contact', p.contact, contactAdminCaseData),
+  casePreview('contact-answered', p['contact-answered'], contactAnsweredAdminCaseData),
+  casePreview('contact-resolve', p['contact-resolve'], contactAdminCaseData, { initialDialog: 'resolve' }),
   casePreview('resolved', p.resolved, resolvedAdminCaseData),
   casePreview('review-report', p['review-report'], reviewReportAdminCaseData),
   casePreview('review-hidden', p['review-hidden'], reviewHiddenAdminCaseData),

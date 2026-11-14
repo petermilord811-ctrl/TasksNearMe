@@ -58,5 +58,6 @@
   "days": "{count, plural, one {# day} other {# days}}",
   "emptyTitle": "No cases match these filters",
   "emptyBody": "Try another queue or status to find the case you need.",
-  "clearFilters": "Clear filters"
+  "clearFilters": "Clear filters",
+  "contactForm": "Contact form, not signed in"
 }
