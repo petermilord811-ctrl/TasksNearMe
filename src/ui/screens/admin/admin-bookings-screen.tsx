@@ -27,7 +27,7 @@ function Flags({ flags }: { flags: AdminBookingFlag[] }) {
 
 function People({ row }: { row: AdminBookingRow }) {
   const t = useTranslations('adminBookings');
-  const person = (label: string, id: string, name: string) => <span className="block"><span className="text-muted-foreground">{label}{' '}</span><Link href={routes.admin.user(id)} className="inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:text-primary hover:underline sm:min-h-0">{name}</Link></span>;
+  const person = (label: string, id: string, name: string) => <span className="block"><span className="text-muted-foreground">{label}{' '}</span><Link href={routes.admin.user(id)} className="inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:text-primary hover:underline sm:min-h-6">{name}</Link></span>;
   return <span className="block space-y-0.5 text-sm">{person(t('client'), row.client.id, row.client.displayName)}{person(t('helper'), row.helper.id, row.helper.displayName)}</span>;
 }
 

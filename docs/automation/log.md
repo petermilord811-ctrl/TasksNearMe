@@ -213,3 +213,9 @@ One entry per iteration, newest last.
 - Cases list: on phones the queue and status filters are each one row that scrolls sideways (`SideScrollList`), so the first cases show sooner; the on-call's text from 5.12 opens these pages on a phone. Admin filter chips never wrap inside their label.
 - Case page: the response target in the header has its label ("Response target"), as in the list.
 - Checks: admin, admin-ops, admin-people, admin-metrics, admin-webhooks, staff-controls, refund-approval and support-tools on the e2e build (24 passed, 14 one-viewport skips); jsdom for admin screens (175); ui-audit over the 164 admin and staff previews (verification screens left to 5.18): only the bookings list's name links, 20 px tall on wide screens (fixed in the next batch).
+
+## 2026-11-14 — UI pass, batch 6: what the full audit found (plan 5.10)
+- A ui-audit sweep of all 1,106 previews at 360 and 1280 in English and Spanish (e2e build): 2 failures in English and 9 in Spanish. Of these, the landing hero's prompt label clipped by 2 px in Spanish went to the landing session (fixed there). The rest are fixed here.
+- Find work list: a task title is an inline link 19 px tall on phones, crowding its neighbors; 3 px of padding makes its target about 25 px without moving text. Bookings (staff): the client and helper name links are at least 24 px tall on wide screens (they were 20 px and 2 px apart).
+- `scripts/ui-audit.mjs` measures a link stretched over its card by an absolute `::after` as the card (My offers' "closed" cards were a false positive).
+- Checks: find-work, invites and a11y-phone on the e2e build (11 passed, 9 one-viewport skips); ui-audit over find work, my offers and staff bookings in English and Spanish: no failures.

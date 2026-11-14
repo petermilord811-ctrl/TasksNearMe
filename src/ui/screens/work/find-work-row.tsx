@@ -81,7 +81,7 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
       {/* The pay sits right under the title at every width: beside a long title it wrapped under it, right-aligned. */}
       <div className="space-y-0.5">
         <h3 id={titleId} className="min-w-0 text-base/6 font-semibold">
-          <Link href={routes.app.findWorkTask(task.id)} className="rounded-sm underline-offset-4 hover:text-primary hover:underline">{task.title}</Link>
+          <Link href={routes.app.findWorkTask(task.id)} className="rounded-sm py-[3px] underline-offset-4 hover:text-primary hover:underline">{task.title}</Link>
           {card.isNew && <span className="ml-2 inline-flex translate-y-[-1px] items-center rounded-full bg-badge-brand px-2 py-0.5 align-middle text-xs font-semibold text-badge-brand-foreground">{t('new')}</span>}
         </h3>
         <p className="flex flex-wrap items-baseline gap-x-2 tabular-nums"><span className="text-base font-semibold">{budget}</span><span className="text-xs text-muted-foreground">{earn}</span></p>

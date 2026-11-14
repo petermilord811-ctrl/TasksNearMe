@@ -84,7 +84,10 @@ function audit(rootSelector) {
     const parent = element.parentElement;
     const inline = element.tagName === 'A' && style.display === 'inline' && parent && (parent.textContent?.trim().length ?? 0) > (element.textContent?.trim().length ?? 0) + 2;
     if (inline) continue;
-    const box = element.getBoundingClientRect();
+    // A link stretched over its card by an absolute ::after (the whole card is the target): measure the card.
+    const after = getComputedStyle(element, '::after');
+    const stretched = after.content !== 'none' && after.position === 'absolute' && element.offsetParent instanceof HTMLElement && element.offsetParent !== document.body;
+    const box = stretched ? element.offsetParent.getBoundingClientRect() : element.getBoundingClientRect();
     let { left, top, right, bottom } = box;
     for (const label of element.labels ?? []) {
       const area = label.getBoundingClientRect();
