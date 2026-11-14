@@ -21,7 +21,7 @@
  * --locale es, --out <file> (JSON report; default artifacts/ui-audit/report[-es].json), --notes (print the
  * under-44 px notes too). Exits 1 when it finds a failure (a small target, clipped text, overflow).
  *
- * It opens a fresh page every 25 previews (a long-lived page grows Chrome's renderer past a gigabyte). Point
+ * It opens a fresh page every 10 previews (a long-lived page grows Chrome's renderer past a gigabyte). Point
  * --base at a server running the current code: `--e2e-build` builds it, but only Playwright's own web server
  * serves that build, so serve it yourself (`next start` on a free loopback port) inside the same heavy command.
  */
@@ -158,7 +158,9 @@ function audit(rootSelector) {
   return { failures, notes };
 }
 
-const PAGE_LIFE = 25;
+// A fresh page every 10 previews: Chrome's renderer grows about 16 MB per preview (measured 2026-11-14: one page
+// peaked at 2.2 GB, every 25 at 973 MB, every 10 at 689 MB, in the same time).
+const PAGE_LIFE = 10;
 const browser = await chromium.launch();
 const report = [];
 let failed = 0;

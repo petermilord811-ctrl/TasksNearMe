@@ -74,24 +74,22 @@ export function AccountContact({ email, phone, handlers, initialDialog }: {
         )}
       </div>
       <ul className="divide-y divide-foreground/[0.07] rounded-2xl border border-foreground/[0.08] dark:divide-white/[0.06] dark:border-white/[0.07]">
-        {/* The icon, what it is, and its button on one line: the text takes the room left, the button never wraps under it. */}
-        <li className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-4">
-          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground"><Mail className="size-4" /></span>
-          <span className="min-w-0">
-            <span className="block font-medium">{t('email')}</span>
-            <span className="block text-sm text-muted-foreground [overflow-wrap:anywhere]">{email}</span>
-          </span>
-          <Button type="button" variant="outline" aria-label={t('changeEmailLabel')} onClick={() => show('email')}>{t('change')}</Button>
+        {/* The icon beside both lines; what it is and its button on the first line (the button never wraps under the
+            text); the value on its own line across the row, so an email address isn't broken inside the word on phones.
+            Placed by the grid: screen readers still read what it is, the value, then the button. */}
+        <li className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 p-4">
+          <span aria-hidden="true" className="col-start-1 row-span-2 row-start-1 grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground"><Mail className="size-4" /></span>
+          <span className="col-start-2 row-start-1 min-w-0 font-medium">{t('email')}</span>
+          <span className="col-span-2 col-start-2 row-start-2 min-w-0 text-sm text-muted-foreground [overflow-wrap:anywhere]">{email}</span>
+          <Button type="button" variant="outline" className="col-start-3 row-start-1" aria-label={t('changeEmailLabel')} onClick={() => show('email')}>{t('change')}</Button>
         </li>
-        <li className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-4">
-          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+        <li className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 p-4">
+          <span aria-hidden="true" className="col-start-1 row-span-2 row-start-1 grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
             {phone?.verified ? <BadgeCheck className="size-4 text-success" /> : <Phone className="size-4" />}
           </span>
-          <span className="min-w-0">
-            <span className="block font-medium">{t('phone')}</span>
-            <span className="block text-sm tabular-nums text-muted-foreground">{phone ? t(phone.verified ? 'phoneVerified' : 'phoneUnverified', { last4: phone.last4 }) : t('noPhone')}</span>
-          </span>
-          <Button type="button" variant="outline" aria-label={t(phone ? 'changePhoneLabel' : 'addPhoneLabel')} onClick={() => show('phone')}>{t(phone ? 'change' : 'add')}</Button>
+          <span className="col-start-2 row-start-1 min-w-0 font-medium">{t('phone')}</span>
+          <span className="col-span-2 col-start-2 row-start-2 min-w-0 text-sm tabular-nums text-muted-foreground">{phone ? t(phone.verified ? 'phoneVerified' : 'phoneUnverified', { last4: phone.last4 }) : t('noPhone')}</span>
+          <Button type="button" variant="outline" className="col-start-3 row-start-1" aria-label={t(phone ? 'changePhoneLabel' : 'addPhoneLabel')} onClick={() => show('phone')}>{t(phone ? 'change' : 'add')}</Button>
         </li>
       </ul>
       {!phone && <p className="text-sm text-muted-foreground">{t('noPhoneHint')}</p>}

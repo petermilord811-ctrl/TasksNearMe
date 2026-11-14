@@ -105,14 +105,18 @@ export function MessageComposerContent({ rules, handlers, initialResult, initial
     <Field className="gap-1.5" data-invalid={!!bodyError}>
       {/* The panel above already says what this is: the label is for screen readers. */}
       <FieldLabel htmlFor={`${id}-body`} className="sr-only">{t('label')}</FieldLabel>
-      <Textarea {...form.register('body')} id={`${id}-body`} rows={1} maxLength={rules.maxLength} disabled={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className="max-h-40 min-h-12 resize-none field-sizing-content" onKeyDown={(event) => {
+      {/* Send sits beside the message, as in any chat (on phones as an icon, still named "Send"). */}
+      <div className="flex items-end gap-2">
+      <Textarea {...form.register('body')} id={`${id}-body`} rows={1} maxLength={rules.maxLength} disabled={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className="max-h-40 min-h-12 flex-1 resize-none field-sizing-content" onKeyDown={(event) => {
         if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || !window.matchMedia('(min-width: 1024px)').matches) return;
         event.preventDefault();
         if (!empty && !overLimit && !locked.current && !uploadLocked.current) void form.handleSubmit(submit)();
       }} />
+        <Button type="submit" disabled={pending || uploading || empty || overLimit} aria-busy={pending} className="h-12 shrink-0 transition-[transform,box-shadow,background-color,opacity] duration-200 max-sm:w-12 max-sm:px-0 sm:min-w-24">{pending ? <Spinner aria-hidden="true" /> : <Send aria-hidden="true" className="size-4" />}<span className="max-sm:sr-only">{t(pending ? 'sending' : 'send')}</span></Button>
+      </div>
       <div className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 px-1">
         <FieldDescription id={`${id}-hint`} className="text-xs">{t('hint')}</FieldDescription>
-        <p id={`${id}-counter`} className="text-xs text-muted-foreground tabular-nums">{t('counter', { count: body.length, maximum: rules.maxLength })}</p>
+        <p className="flex gap-3 text-xs text-muted-foreground"><span className="hidden lg:inline">{t('keyboardHint')}</span><span id={`${id}-counter`} className="tabular-nums">{t('counter', { count: body.length, maximum: rules.maxLength })}</span></p>
       </div>
       <div id={`${id}-body-error`} aria-live="polite">{bodyError && <FieldError>{bodyError}</FieldError>}</div>
     </Field>
@@ -125,9 +129,5 @@ export function MessageComposerContent({ rules, handlers, initialResult, initial
       {result.code === 'rate_limited' && result.retryAt && <p className="tabular-nums">{t('retryAt', { at: formatDateTime(result.retryAt) })}</p>}
       {result.code === 'not_allowed' && <Button type="button" variant="outline" className="mt-2" onClick={() => router.refresh()}>{t('reload')}</Button>}
     </AlertDescription></Alert></div> : <FormFeedback result={feedback} successMessage={result?.ok && result.code === 'sent' ? t('sent') : undefined} />}
-    <div className="flex items-center justify-end gap-3">
-      <p className="hidden text-xs text-muted-foreground lg:block">{t('keyboardHint')}</p>
-      <Button type="submit" disabled={pending || uploading || empty || overLimit} aria-busy={pending} className="min-w-24 transition-[transform,box-shadow,background-color,opacity] duration-200">{pending ? <Spinner aria-hidden="true" /> : <Send aria-hidden="true" className="size-4" />}{t(pending ? 'sending' : 'send')}</Button>
-    </div>
   </form>;
 }
