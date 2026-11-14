@@ -56,6 +56,9 @@ const payout = (id: string, status: 'pending' | 'in_transit' | 'paid' | 'failed'
     account: ACCOUNT,
     data: { object: { id, object: 'payout', amount: amountCents, status, arrival_date: seconds(new Date(Date.now() + DAY)), created: seconds(created), ...(status === 'failed' ? { failure_code: 'no_account' } : {}) } },
   });
+/** A bank account on the helper's connected account added or changed (Stripe disables one after a failed payout). */
+const externalAccount = (change: 'created' | 'updated', object: Record<string, unknown>) =>
+  deliver({ type: `account.external_account.${change}`, account: ACCOUNT, data: { object: { id: 'ba_t19_new', object: 'bank_account', account: ACCOUNT, last4: '6789', ...object } } });
 /** The helper fixed their bank in Stripe's dashboard: the account can take payouts again. */
 const bankUpdated = () => deliver({ type: 'account.updated', account: ACCOUNT, data: { object: { id: ACCOUNT, object: 'account', capabilities: { transfers: 'active' }, payouts_enabled: true, requirements: { currently_due: [], past_due: [], disabled_reason: null } } } });
 
@@ -75,7 +78,7 @@ beforeAll(async () => {
   const [task] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
   const [tv] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
   const [terms] = await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_tv'));
-  for (const name of ['a', 'b', 'c']) {
+  for (const name of ['a', 'b', 'c', 'd']) {
     await db.insert(tasks).values({ ...task!, id: `tsk_t19_${name}`, slug: `t19-${name}`, posterUserId: CLIENT, status: 'completed' });
     await db.insert(bookings).values({ ...tv!, id: `bkg_t19_${name}`, taskId: `tsk_t19_${name}`, offerId: null, posterUserId: CLIENT, helperUserId: HELPER, status: 'completed', completedAt: new Date(Date.now() - 4 * DAY), completedVia: 'poster', seriesId: null, visitIndex: null });
     await db.insert(bookingTerms).values({ ...terms!, id: `btm_t19_${name}`, bookingId: `bkg_t19_${name}` });
@@ -169,5 +172,31 @@ describe('T-19: a payout that fails', () => {
     const data = await page();
     expect(rowsOf(data, ['ern_t19_c'])[0]).toMatchObject({ status: 'paid_out' });
     expect(data.payoutAccount.actionNeeded).toBe(false);
+  });
+
+  it('stops asking once Stripe says the helper’s new bank works, before the next payout, and asks again if that fails', async () => {
+    await db.insert(earnings).values({ id: 'ern_t19_d', bookingId: 'bkg_t19_d', helperUserId: HELPER, kind: 'earnings', amountCents: 2000, status: 'transferred', transferRef: 'tr_ern_t19_d', transferredAt: new Date(Date.now() - 50 * 60_000), createdAt: new Date(Date.now() - 50 * 60_000) });
+    await payout('po_t19_5', 'pending', 2000, new Date(Date.now() - 40 * 60_000));
+    await payout('po_t19_5', 'failed', 2000, new Date(Date.now() - 40 * 60_000));
+    expect((await page()).payoutAccount.actionNeeded).toBe(true);
+    // Stripe disables the bank the payout went to; a second account that isn't the default pays nothing out.
+    expect(await externalAccount('updated', { status: 'errored', default_for_currency: true })).toEqual({ status: 200, body: { ok: true, ignored: true } });
+    expect(await externalAccount('created', { id: 'ba_t19_extra', status: 'new', default_for_currency: false })).toEqual({ status: 200, body: { ok: true, ignored: true } });
+    expect((await page()).payoutAccount.actionNeeded).toBe(true);
+
+    // The helper replaces it with a working default bank: no more "Action needed", though the money waits for the next payout.
+    expect(await externalAccount('created', { status: 'new', default_for_currency: true })).toEqual({ status: 200, body: { ok: true } });
+    let data = await page();
+    expect(data.payoutAccount.actionNeeded).toBe(false);
+    expect(rowsOf(data, ['ern_t19_d'])[0]).toMatchObject({ status: 'transferred' });
+    expect(await db.select({ at: payoutAccounts.bankUpdatedAt }).from(payoutAccounts).where(eq(payoutAccounts.userId, HELPER))).toEqual([{ at: expect.any(Date) }]);
+
+    // A payout that fails after the fix asks again.
+    await payout('po_t19_6', 'pending', 2000, new Date(Date.now() - 60_000));
+    await payout('po_t19_6', 'failed', 2000, new Date(Date.now() - 60_000));
+    data = await page();
+    expect(data.payoutAccount.actionNeeded).toBe(true);
+    // The deleted old bank is acknowledged and changes nothing.
+    expect(await deliver({ type: 'account.external_account.deleted', account: ACCOUNT, data: { object: { id: 'ba_t19_old', object: 'bank_account' } } })).toEqual({ status: 200, body: { ok: true, ignored: true } });
   });
 });

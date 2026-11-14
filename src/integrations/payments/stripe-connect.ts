@@ -143,15 +143,30 @@ export function createStripeConnect(config: { secretKey: string; fetch?: typeof 
 
 export type ConnectEvent =
   | { kind: 'account'; accountId: string; status: PayoutAccountStatus }
-  | { kind: 'payout'; accountId: string; payoutId: string; amountCents: number; status: 'in_transit' | 'paid' | 'failed' | 'canceled'; arrivalDate: string; createdAt: Date };
+  | { kind: 'payout'; accountId: string; payoutId: string; amountCents: number; status: 'in_transit' | 'paid' | 'failed' | 'canceled'; arrivalDate: string; createdAt: Date }
+  /** A bank account or debit card added or changed; `usable`: Stripe can pay out to it and it's the default. */
+  | { kind: 'external_account'; accountId: string; usable: boolean };
 
-/** The Connect events the app acts on: an account's state, and a connected account's payouts. */
+/** Stripe stops paying out to an external account that failed (`errored`) or didn't verify. */
+const UNUSABLE_EXTERNAL_ACCOUNT = new Set(['errored', 'verification_failed']);
+
+/**
+ * The Connect events the app acts on: an account's state, a connected account's payouts, and its bank account or
+ * debit card being added or changed (`account.external_account.created` and `.updated`; after a failed payout
+ * Stripe sends `.updated` with the bank `errored`, and a new or fixed one when the helper updates their bank).
+ */
 export function parseConnectEvent(event: unknown): ConnectEvent | null {
   if (!event || typeof event !== 'object') return null;
   const { type, account, data } = event as { type?: unknown; account?: unknown; data?: { object?: Record<string, unknown> } };
   const object = data?.object;
   if (typeof type !== 'string' || !object) return null;
   if (type === 'account.updated' && typeof object.id === 'string') return { kind: 'account', accountId: object.id, status: payoutStatusOf(object as Account) };
+  if (type === 'account.external_account.created' || type === 'account.external_account.updated') {
+    const accountId = typeof account === 'string' ? account : typeof object.account === 'string' ? object.account : null;
+    if (!accountId) return null;
+    const usable = object.default_for_currency === true && !(typeof object.status === 'string' && UNUSABLE_EXTERNAL_ACCOUNT.has(object.status));
+    return { kind: 'external_account', accountId, usable };
+  }
   if (type.startsWith('payout.') && typeof account === 'string' && typeof object.id === 'string') {
     const status = object.status === 'paid' ? 'paid' : object.status === 'failed' ? 'failed' : object.status === 'canceled' ? 'canceled' : 'in_transit';
     const arrival = typeof object.arrival_date === 'number' ? new Date(object.arrival_date * 1000) : new Date();

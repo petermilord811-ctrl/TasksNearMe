@@ -284,15 +284,17 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
   const status = (account?.status ?? 'not_started') as PayoutAccountStatus;
   // Instant payouts (src/modules/earnings/instant.ts): offered when there's enough to cash out.
   const instant = await instantPayoutOffer(db, stripeConnectFromEnv(), helperUserId);
-  // A failed payout needs the helper's bank until a later payout goes out (T-19); an old failure doesn't.
+  // A failed payout needs the helper's bank until a later payout goes out (T-19), or until Stripe says their bank
+  // works again (5.17: a working default bank reported after the failure); an old failure doesn't.
   const latestPayout = payoutRows.reduce<(typeof payoutRows)[number] | undefined>((latest, row) => (!latest || row.createdAt > latest.createdAt ? row : latest), undefined);
+  const bankFixed = latestPayout?.status === 'failed' && account?.bankUpdatedAt != null && account.bankUpdatedAt >= latestPayout.updatedAt;
   return {
     totals: { upcomingCents: sum(['not_due', 'on_hold', 'scheduled']), onTheWayCents: sum(['transferred']), paidThisYearCents: paidThisYear },
     rows: all,
     payoutAccount: {
       status,
       ...(account ? { bankLast4: DEV_BANK_LAST4 } : {}),
-      actionNeeded: status === 'requirements_due' || status === 'restricted' || latestPayout?.status === 'failed',
+      actionNeeded: status === 'requirements_due' || status === 'restricted' || (latestPayout?.status === 'failed' && !bankFixed),
     },
     firstPayoutNotice: !payoutRows.some((p) => p.status === 'paid'),
     ...(instant ? { instantPayout: instant } : {}),

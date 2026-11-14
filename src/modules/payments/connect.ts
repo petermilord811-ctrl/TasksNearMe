@@ -76,7 +76,7 @@ function payoutMoves(from: string, to: string): boolean {
 }
 
 /**
- * Connect events (`account.updated`, and `payout.*` from connected accounts), signed with the Connect
+ * Connect events (`account.updated`, and `account.external_account.*` and `payout.*` from connected accounts), signed with the Connect
  * endpoint's secret (or the main one when both point at this URL). A paid payout marks the helper's
  * transfers made before it as paid out. A failed one (T-19: the bank account was closed or wrong) gives back
  * what it had marked: the money is in the helper's Stripe balance again, and the next payout, once they've
@@ -95,6 +95,13 @@ export async function handleConnectWebhook(db: Db, input: { payload: string; sig
   if (parsed.kind === 'account') {
     const userId = await recordPayoutAccountStatus(db, parsed.accountId, parsed.status, now);
     return { status: 200, body: { ok: true, ...(userId ? {} : { ignored: true }) } };
+  }
+  if (parsed.kind === 'external_account') {
+    // A bank Stripe can pay out to again (the helper fixed it or added a new default): a payout that failed
+    // before this stops asking for it (5.17). A disabled bank (after a failure) changes nothing.
+    if (!parsed.usable) return { status: 200, body: { ok: true, ignored: true } };
+    const updated = await db.update(payoutAccounts).set({ bankUpdatedAt: now }).where(eq(payoutAccounts.providerAccountId, parsed.accountId)).returning({ userId: payoutAccounts.userId });
+    return { status: 200, body: { ok: true, ...(updated.length > 0 ? {} : { ignored: true }) } };
   }
   const [account] = await db.select({ userId: payoutAccounts.userId }).from(payoutAccounts).where(eq(payoutAccounts.providerAccountId, parsed.accountId)).limit(1);
   if (!account) return { status: 200, body: { ok: true, ignored: true } };

@@ -8,8 +8,9 @@ import { db } from '@/platform/db/client';
  * - identity.verification_session.processing, .verified, .requires_input and .canceled (ID checks);
  * - payment_intent.succeeded, .amount_capturable_updated, .payment_failed and .canceled (a bank step
  *   finished after the browser closed); charge.dispute.created and .closed (chargebacks: a case for staff);
- * - Connect: account.updated and payout.created, .paid, .failed and .canceled, from a Connect endpoint (events
- *   on connected accounts) pointed at this URL and signed with STRIPE_CONNECT_WEBHOOK_SECRET.
+ * - Connect: account.updated, account.external_account.created and .updated (a helper's bank works again after a
+ *   failed payout), and payout.created, .paid, .failed and .canceled, from a Connect endpoint (events on connected
+ *   accounts) pointed at this URL and signed with STRIPE_CONNECT_WEBHOOK_SECRET.
  *
  * Every signed event goes through the webhook inbox (src/modules/webhooks/inbox.ts): recorded once by its id,
  * retried with backoff when processing fails, and listed for staff when it can't be processed.

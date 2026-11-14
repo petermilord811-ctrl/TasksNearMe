@@ -58,6 +58,19 @@ describe('Stripe Connect payouts', () => {
     expect(parseConnectEvent({ type: 'charge.succeeded', data: { object: { id: 'ch_1' } } })).toBeNull();
   });
 
+  it('tells a bank account Stripe can pay out to from one it stopped using', () => {
+    const bank = (type: string, object: Record<string, unknown>, account: string | null = 'acct_1') => parseConnectEvent({ type, ...(account ? { account } : {}), data: { object: { id: 'ba_1', object: 'bank_account', ...object } } });
+    expect(bank('account.external_account.created', { status: 'new', default_for_currency: true })).toEqual({ kind: 'external_account', accountId: 'acct_1', usable: true });
+    expect(bank('account.external_account.updated', { status: 'verified', default_for_currency: true })).toEqual({ kind: 'external_account', accountId: 'acct_1', usable: true });
+    // After a failed payout Stripe disables the bank; an extra account that isn't the default pays nothing out.
+    expect(bank('account.external_account.updated', { status: 'errored', default_for_currency: true })).toEqual({ kind: 'external_account', accountId: 'acct_1', usable: false });
+    expect(bank('account.external_account.created', { status: 'new', default_for_currency: false })).toEqual({ kind: 'external_account', accountId: 'acct_1', usable: false });
+    // The connected account from the object when the event doesn't name it; neither: nothing to act on.
+    expect(bank('account.external_account.created', { status: 'new', default_for_currency: true, account: 'acct_2' }, null)).toEqual({ kind: 'external_account', accountId: 'acct_2', usable: true });
+    expect(bank('account.external_account.created', { status: 'new', default_for_currency: true }, null)).toBeNull();
+    expect(bank('account.external_account.deleted', { status: 'new', default_for_currency: true })).toBeNull();
+  });
+
   it('is on with the Stripe payment keys', () => {
     expect(stripeConnectFromEnv({})).toBeNull();
     expect(stripeConnectFromEnv({ STRIPE_SECRET_KEY: 'sk_test' })).toBeNull();

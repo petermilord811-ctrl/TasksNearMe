@@ -33,7 +33,8 @@ async function stripe(db: Db, payload: string, headers: WebhookHeaders, now: Dat
   if (!secret || !identity) return null;
   const signature = headers['stripe-signature'] ?? null;
   const type = stripeEventType(payload);
-  if (type === 'account.updated' || type?.startsWith('payout.')) {
+  // Connect: connected accounts' state, their bank accounts (`account.external_account.*`) and payouts.
+  if (type === 'account.updated' || type?.startsWith('account.external_account.') || type?.startsWith('payout.')) {
     const secrets = [env('STRIPE_CONNECT_WEBHOOK_SECRET'), secret].filter((value): value is string => Boolean(value));
     return handleConnectWebhook(db, { payload, signature, secrets }, now);
   }

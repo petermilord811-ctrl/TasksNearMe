@@ -77,7 +77,7 @@ group by booking_id having count(*) > 1;
 - `transfer_missing` on Exceptions more than 2 days after completion: open the booking (`/admin/bookings/[bookingId]`) and check the helper's payout account, then the logs for that earnings id.
 
 **Payouts failed**
-- `payout_failed` and "Action needed" for the helper: almost always bank details. The helper fixes them in Stripe's hosted page (Earnings → Payouts); Stripe retries the payout. We never store bank details.
+- `payout_failed` and "Action needed" for the helper: almost always bank details. The helper fixes them in Stripe's hosted page (Earnings → Payouts); Stripe retries the payout. We never store bank details. "Action needed" goes once Stripe reports a working default bank (`account.external_account.created` or `.updated`) or the next payout goes out, and the exception leaves Exceptions once a later payout exists for that helper (the Payouts tab keeps the failed one).
 
 **A refund failed**
 - Shows as `refund_failed` on Exceptions. Retry from the booking's refund tool: each click gets a fresh key (`refund:<booking>:staff:<id>`), so a retry is a new attempt.
