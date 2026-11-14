@@ -1,3 +1,5 @@
+import { helperProfiles } from '@/modules/profiles/schema';
+import { recomputeResponseTime } from '@/modules/profiles/response-time';
 import { and, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
@@ -330,6 +332,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     messages: rows.map((row) => toView(row, userId, found.context.masking, photos)),
     ...(presence ? { presence } : {}),
     ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),
+    ...(newlyRead[0] ? { firstUnreadId: newlyRead[0].id } : {}),
     composer: {
       canSend: !disabledReason,
       ...(disabledReason ? { disabledReason } : {}),
@@ -372,6 +375,9 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
   });
   await db.update(threads).set({ lastMessageAt: now }).where(eq(threads.id, thread.id));
   await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
+  // A helper's answer may change how fast they usually reply (completion plan 7.12); never holds up the message.
+  const [helper] = await db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
+  if (helper) await recomputeResponseTime(db, userId, now).catch((error) => console.error('[messaging] response time', error));
   return { ok: true, code: 'sent' };
 }
 

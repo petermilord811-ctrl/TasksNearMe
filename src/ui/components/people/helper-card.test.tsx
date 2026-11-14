@@ -35,7 +35,7 @@ describe('HelperCard', () => {
     expect(screen.getByText('Hyde Park')).toBeInTheDocument();
     expect(screen.getByText('4.9 out of 5, 112 reviews')).toBeInTheDocument();
     expect(screen.getByText('140 tasks completed')).toBeInTheDocument();
-    expect(screen.getByText('Usually responds in about 20 min')).toBeInTheDocument();
+    expect(screen.getByText('Usually replies within an hour')).toBeInTheDocument();
     expect(screen.getByText('from $50.00')).toBeInTheDocument();
     expect(screen.getByText('$38.00/h')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ID verified' })).toBeInTheDocument();
@@ -60,8 +60,8 @@ describe('HelperCard', () => {
   });
 
   it('does not invent a response time or amount when optional data is absent', () => {
-    renderHelper({ ...lee, responseTimeMinutes: undefined, services: [{ categorySlug: 'computer-help', pricingType: 'fixed' }] });
-    expect(screen.queryByText(/Usually responds/)).not.toBeInTheDocument();
+    renderHelper({ ...lee, responseTime: undefined, services: [{ categorySlug: 'computer-help', pricingType: 'fixed' }] });
+    expect(screen.queryByText(/Usually replies/)).not.toBeInTheDocument();
     expect(screen.getByText('Price shared in an offer')).toBeInTheDocument();
     expect(screen.queryByText(/from \$/)).not.toBeInTheDocument();
   });

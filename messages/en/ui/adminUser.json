@@ -152,7 +152,9 @@
     "reward_ready": "Gift card ready",
     "community_reply": "Community reply",
     "community_answer_pinned": "Community answer pinned",
-    "community_helpful": "Community helpful"
+    "community_helpful": "Community helpful",
+    "question_received": "Question received",
+    "question_answered": "Question answered"
   },
   "previews": {
     "group": "Admin · person details",

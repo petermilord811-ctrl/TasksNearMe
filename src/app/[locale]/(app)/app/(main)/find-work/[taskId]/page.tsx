@@ -7,6 +7,10 @@ import { routes } from '@/contracts';
 import { draftOfferMessageAction } from '@/modules/assist/actions';
 import { getHelperTaskView } from '@/modules/offers/helper';
 import { helperOfferActionHandler, quoteOfferAction, reviseOfferAction, submitOfferAction } from '@/modules/offers/helper-actions';
+import { answerTaskQuestionAction, askTaskQuestionAction, deleteTaskQuestionAction, moderateTaskQuestionAction, pinTaskQuestionAction } from '@/modules/questions/actions';
+import { getTaskQuestions } from '@/modules/questions/service';
+import { staffActorOf } from '@/modules/support/staff';
+import { TaskQuestions } from '@/ui/components/questions/task-questions';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
@@ -28,9 +32,10 @@ async function HelperTask({ params }: Pick<PageProps<'/[locale]/app/find-work/[t
   const [{ taskId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.findWorkTask(taskId)));
   const now = await requestNow();
-  const [data, botCheck] = await Promise.all([getHelperTaskView(db, viewer.user.id, taskId, now), botCheckForPage()]);
+  const [data, botCheck, questions] = await Promise.all([getHelperTaskView(db, viewer.user.id, taskId, now), botCheckForPage(), getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId)]);
   if (!data) notFound();
   return (
+    <div className="space-y-6">
     <HelperTaskScreen
       data={botCheck ? { ...data, botCheck } : data}
       now={now.toISOString()}
@@ -42,6 +47,15 @@ async function HelperTask({ params }: Pick<PageProps<'/[locale]/app/find-work/[t
         onOfferAction: helperOfferActionHandler,
       }}
     />
+    {/* Questions before offering (completion plan 7.9). */}
+    {questions && <TaskQuestions data={questions} now={now.toISOString()} handlers={{
+        onAsk: askTaskQuestionAction.bind(null, taskId),
+        onAnswer: answerTaskQuestionAction.bind(null, taskId),
+        onPin: pinTaskQuestionAction.bind(null, taskId),
+        onDelete: deleteTaskQuestionAction,
+        ...(staffActorOf(viewer.user) ? { onModerate: moderateTaskQuestionAction } : {}),
+      }} />}
+    </div>
   );
 }
 

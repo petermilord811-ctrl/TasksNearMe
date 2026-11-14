@@ -37,13 +37,13 @@ test('a conversation updates live: typing, new messages, then presence and Seen'
     await lee.getByRole('textbox', { name: 'Message' }).pressSequentially('On my way at ten', { delay: 30 });
     await expect(ruth.getByText('typing…')).toBeVisible({ timeout: 10_000 });
     await lee.getByRole('button', { name: 'Send' }).click();
-    await expect(ruth.getByText('On my way at ten')).toBeVisible({ timeout: 10_000 });
+    await expect(ruth.getByRole('log').getByText('On my way at ten')).toBeVisible({ timeout: 10_000 });
     expect(await ruth.evaluate(() => (window as unknown as { liveMarker?: boolean }).liveMarker)).toBe(true);
 
     // Ruth answers: now it's a conversation, so presence and Seen start.
     await ruth.getByRole('textbox', { name: 'Message' }).fill('Perfect, see you then');
     await ruth.getByRole('button', { name: 'Send' }).click();
-    await expect(lee.getByText('Perfect, see you then')).toBeVisible({ timeout: 10_000 });
+    await expect(lee.getByRole('log').getByText('Perfect, see you then')).toBeVisible({ timeout: 10_000 });
     await expect(ruth.getByText('Seen', { exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(lee.getByText('Active now')).toBeVisible({ timeout: 15_000 });
   } finally {

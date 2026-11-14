@@ -1,0 +1,40 @@
+{
+  "title": "Preguntas",
+  "count": "{count, plural, =0 {Aún sin preguntas} one {# pregunta} other {# preguntas}}",
+  "intro": "Los ayudantes preguntan antes de ofertar; las respuestas son para todos los ayudantes. Solo los miembros con sesión iniciada las ven.",
+  "ask": {
+    "label": "Hacer una pregunta",
+    "placeholder": "¿Qué necesitas saber para hacer una buena oferta?",
+    "hint": "Una pregunta abierta a la vez. Sin teléfonos ni correos: quedan ocultos hasta una reserva.",
+    "submit": "Preguntar",
+    "submitting": "Enviando…",
+    "sent": "Pregunta enviada"
+  },
+  "blocked": {
+    "poster": "Los ayudantes preguntan aquí antes de ofertar.",
+    "not_helper": "Los ayudantes que terminaron sus verificaciones pueden hacer preguntas aquí.",
+    "already_asked": "Ya hiciste una pregunta. Puedes hacer otra cuando la respondan.",
+    "closed": "Las preguntas están cerradas para esta tarea."
+  },
+  "answer": {
+    "from": "Respuesta",
+    "label": "Tu respuesta",
+    "placeholder": "Responde para todos los ayudantes que lo lean",
+    "submit": "Responder",
+    "edit": "Editar respuesta",
+    "submitting": "Enviando…",
+    "sent": "Respuesta publicada",
+    "waiting": "Esperando respuesta"
+  },
+  "pinned": "Fijada",
+  "pin": "Fijar para todos",
+  "unpin": "Desfijar",
+  "empty": "Aún sin preguntas.",
+  "posterEmpty": "Cuando los ayudantes pregunten sobre esta tarea, sus preguntas aparecerán aquí para que las respondas.",
+  "previews": {
+    "group": "Preguntas sobre una tarea",
+    "helper": "Preguntas · un ayudante pregunta",
+    "poster": "Preguntas · quien publicó responde",
+    "asked": "Preguntas · esperando la respuesta"
+  }
+}

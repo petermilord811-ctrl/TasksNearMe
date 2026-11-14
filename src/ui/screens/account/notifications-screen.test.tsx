@@ -80,6 +80,8 @@ const copy: Record<NotificationType, RegExp> = {
   community_reply: /answered your post/,
   community_answer_pinned: /pinned your answer/,
   community_helpful: /found your post/,
+  question_received: /asked a question about/,
+  question_answered: /answered your question about/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },

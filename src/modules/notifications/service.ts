@@ -104,6 +104,17 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
       if (!post || !answerer || post.authorUserId === answerer || (await isBlockedBetween(db, post.authorUserId, answerer))) return [];
       return [{ userId: answerer, type: 'community_answer_pinned', target: { kind: 'community_post', postId: post.id }, title: post.title, actorName: await nameOf(db, post.authorUserId) }];
     }
+    case 'question.asked':
+    case 'question.answered': {
+      const taskId = text(p.taskId);
+      const poster = text(p.posterUserId);
+      const asker = text(p.askerUserId);
+      if (!taskId || !poster || !asker || poster === asker || (await isBlockedBetween(db, poster, asker))) return [];
+      const title = await taskTitle(db, taskId);
+      return event.type === 'question.asked'
+        ? [{ userId: poster, type: 'question_received', target: { kind: 'task', taskId }, title, actorName: await nameOf(db, asker) }]
+        : [{ userId: asker, type: 'question_answered', target: { kind: 'find_work_task', taskId }, title, actorName: await nameOf(db, poster) }];
+    }
     case 'community.helpful': {
       const post = await communityPost(db, text(p.postId));
       const author = text(p.authorUserId);

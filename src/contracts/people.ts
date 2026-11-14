@@ -50,7 +50,10 @@ export interface HelperSummary extends PersonSummary {
   badges: VerificationBadges;
   rating?: RatingSummary;
   completedCount: number;
-  responseTimeMinutes?: number;
+  /** Neighbors who booked them and thanked or named them in the community (completion plan 7.8); absent at 0. */
+  recommendedBy?: number;
+  /** How fast they usually answer a new conversation, as a range (completion plan 7.12). */
+  responseTime?: 'hour' | 'few_hours' | 'day';
   services: ServiceSummary[];
   /** Founding-cohort number when the helper is in it, e.g. 63 (of 100). */
   foundingHelperNumber?: number;

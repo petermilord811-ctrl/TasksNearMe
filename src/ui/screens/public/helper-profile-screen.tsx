@@ -1,5 +1,5 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { Check, Clock3, Flag, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
+import { Check, Clock3, Flag, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon, ThumbsUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CategorySlug, HelperProfilePageData, HelperServiceDetail } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -92,9 +92,13 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
                 <Check aria-hidden="true" className="mb-1 size-4 text-success" />
                 <span>{t('completed', { count: helper.completedCount })}</span>
               </li>
-              {helper.responseTimeMinutes !== undefined && <li className="rounded-xl bg-muted/60 p-3">
+              {helper.recommendedBy !== undefined && <li className="rounded-xl bg-muted/60 p-3">
+                <ThumbsUp aria-hidden="true" className="mb-1 size-4 text-primary" />
+                <span>{t('recommendedBy', { count: helper.recommendedBy })}</span>
+              </li>}
+              {helper.responseTime !== undefined && <li className="rounded-xl bg-muted/60 p-3">
                 <Clock3 aria-hidden="true" className="mb-1 size-4 text-muted-foreground" />
-                <span>{t('responseTime', { minutes: helper.responseTimeMinutes })}</span>
+                <span>{t('responseTime', { range: helper.responseTime })}</span>
               </li>}
             </ul>
             <p className="text-sm text-muted-foreground">{t('memberSince', { date: formatMonthYear(helper.memberSince) })}</p>

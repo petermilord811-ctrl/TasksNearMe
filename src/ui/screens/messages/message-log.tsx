@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Expand } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -44,7 +44,10 @@ function MessageContent({ message }: { message: MessageView }) {
 }
 
 /** Refresh preserves draft state; only readers already at the bottom follow incoming messages. */
-export function MessageLog({ messages, otherParty, now, seenMessageId, className }: { messages: MessageView[]; otherParty: PersonSummary; now: ISODateTime; seenMessageId?: string; className?: string }) {
+/** Messages from the same person within this long read as one group: their name once, tighter spacing. */
+const GROUP_MS = 5 * 60_000;
+
+export function MessageLog({ messages, otherParty, now, seenMessageId, firstUnreadId, className }: { messages: MessageView[]; otherParty: PersonSummary; now: ISODateTime; seenMessageId?: string; firstUnreadId?: string; className?: string }) {
   const { formatDate, formatDateTime, formatRelative, formatTime } = useFormat();
   const t = useTranslations('thread');
   const router = useRouter();
@@ -54,6 +57,8 @@ export function MessageLog({ messages, otherParty, now, seenMessageId, className
   // While the live connection is up, new messages arrive at once (completion plan 7.1): the timer only covers
   // the times it's down.
   const live = useRealtimeConnected();
+  // "New messages" stays where it was when the conversation opened, however many arrive while it's open.
+  const [unreadFrom] = useState(firstUnreadId);
   const liveRef = useRef(live);
   useEffect(() => { liveRef.current = live; }, [live]);
 
@@ -95,7 +100,13 @@ export function MessageLog({ messages, otherParty, now, seenMessageId, className
       {/* A day separator, not a sticky chip: a sticky one covered photos while scrolling (UI-021). */}
       <h2 className="mx-auto w-fit rounded-full bg-foreground/[0.05] px-3 py-1 text-center text-xs font-semibold text-muted-foreground dark:bg-white/[0.07]"><time dateTime={day}>{formatDate(entries[0]!.createdAt, { withYear: true })}</time></h2>
       <ol className="space-y-2.5">
-        {entries.map((message) => {
+        {entries.map((message, index) => {
+          const previous = entries[index - 1];
+          // The same person, a moment later: no name again, closer to the one before.
+          const grouped = Boolean(previous && previous.kind === 'text' && message.kind === 'text' && previous.sender === message.sender && Date.parse(message.createdAt) - Date.parse(previous.createdAt) < GROUP_MS && message.id !== unreadFrom);
+          const divider = message.id === unreadFrom
+            ? <li><p className="flex items-center gap-3 py-1 text-xs font-semibold text-primary"><span aria-hidden="true" className="h-px flex-1 bg-primary/40" />{t('newMessages')}<span aria-hidden="true" className="h-px flex-1 bg-primary/40" /></p></li>
+            : null;
           const sender = message.sender === 'me' ? t('you') : message.sender === 'them' ? otherParty.displayName : t('system');
           const isNotice = message.kind !== 'text';
           const mine = message.sender === 'me';
@@ -103,14 +114,14 @@ export function MessageLog({ messages, otherParty, now, seenMessageId, className
             <span aria-hidden="true">{formatTime(message.createdAt)}</span><span className="sr-only">{formatDateTime(message.createdAt)}</span>
           </time>;
           // Updates ("On the way", an offer received…) are small notes between the bubbles.
-          if (isNotice) return <li key={message.id} className="flex min-w-0 justify-center">
+          if (isNotice) return <Fragment key={message.id}>{divider}<li className="flex min-w-0 justify-center">
             <article className="inline-flex max-w-full flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 rounded-full bg-foreground/[0.045] px-3.5 py-1.5 text-center text-sm text-muted-foreground [overflow-wrap:anywhere] dark:bg-white/[0.06]">
               <p className="sr-only">{sender}</p>
               <p className="text-sm font-medium text-foreground/80"><MessageContent message={message} /></p>
               {time}
             </article>
-          </li>;
-          return <li key={message.id} className={cn('flex min-w-0', mine ? 'justify-end' : 'justify-start')}>
+          </li></Fragment>;
+          return <Fragment key={message.id}>{divider}<li className={cn('flex min-w-0', mine ? 'justify-end' : 'justify-start', grouped && '-mt-1.5')}>
             <article className={cn(
               'min-w-0 max-w-[86%] space-y-1.5 rounded-[1.25rem] px-3.5 py-2.5 [overflow-wrap:anywhere] sm:max-w-[75%] sm:px-4 sm:py-3',
               mine
@@ -118,7 +129,7 @@ export function MessageLog({ messages, otherParty, now, seenMessageId, className
                 : 'rounded-bl-md border border-foreground/[0.07] bg-background shadow-[0_1px_2px_rgb(23_18_14/0.05)] dark:border-white/[0.07]',
             )}>
               {/* Your own bubbles don't need your name on them; it's still read out. */}
-              <p className={cn('text-xs font-semibold text-muted-foreground', mine && 'sr-only')}>{sender}</p>
+              <p className={cn('text-xs font-semibold text-muted-foreground', (mine || grouped) && 'sr-only')}>{sender}</p>
               <p className="text-[15px] leading-6"><MessageContent message={message} /></p>
               {message.attachments.length > 0 && <ul aria-label={t('photos')} className="grid max-w-96 grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
                 {message.attachments.map((photo, index) => <li key={photo.id} className="min-w-0"><MessagePhoto photo={photo} number={index + 1} count={message.attachments.length} sender={sender} /></li>)}
@@ -126,7 +137,7 @@ export function MessageLog({ messages, otherParty, now, seenMessageId, className
               {time}
               {mine && message.id === seenMessageId && <p className="text-right text-xs font-medium text-muted-foreground">{t('seen')}</p>}
             </article>
-          </li>;
+          </li></Fragment>;
         })}
       </ol>
     </section>)}

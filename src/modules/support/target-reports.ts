@@ -3,6 +3,7 @@ import type { ActionResult, ReportInput, ReportPageData, ReportReason, ReportTar
 import { REPORT_TARGET_KINDS, reportInputSchema, routes } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { communityPosts, communityReplies } from '@/modules/community/schema';
+import { taskQuestions } from '@/modules/questions/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { reviews } from '@/modules/reviews/schema';
 import { tasks } from '@/modules/tasks/schema';
@@ -26,7 +27,7 @@ const HIGH_PRIORITY: ReadonlySet<ReportReason> = new Set(['harassment', 'scam_or
 interface Target {
   page: ReportPageData;
   subjectUserId: string;
-  context: { taskId?: string; reviewId?: string; postId?: string; replyId?: string };
+  context: { taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string };
 }
 
 async function targetOf(db: Db, userId: string, kind: string, id: string): Promise<Target | null> {
@@ -52,6 +53,18 @@ async function targetOf(db: Db, userId: string, kind: string, id: string): Promi
     const [post] = await db.select({ id: communityPosts.id, title: communityPosts.title, authorUserId: communityPosts.authorUserId, status: communityPosts.status }).from(communityPosts).where(eq(communityPosts.id, id)).limit(1);
     if (!post || post.status !== 'visible' || post.authorUserId === userId) return null;
     return { page: { target: { kind: target, id: post.id, name: post.title }, backHref: routes.app.communityPost(post.id) }, subjectUserId: post.authorUserId, context: { postId: post.id } };
+  }
+  if (target === 'question') {
+    const [question] = await db
+      .select({ id: taskQuestions.id, taskId: taskQuestions.taskId, askerUserId: taskQuestions.askerUserId, status: taskQuestions.status, asker: users.name, posterUserId: tasks.posterUserId })
+      .from(taskQuestions)
+      .innerJoin(users, eq(users.id, taskQuestions.askerUserId))
+      .innerJoin(tasks, eq(tasks.id, taskQuestions.taskId))
+      .where(eq(taskQuestions.id, id))
+      .limit(1);
+    if (!question || question.status !== 'visible' || question.askerUserId === userId) return null;
+    const back = question.posterUserId === userId ? routes.app.task(question.taskId) : routes.app.findWorkTask(question.taskId);
+    return { page: { target: { kind: target, id: question.id, name: question.asker }, backHref: back }, subjectUserId: question.askerUserId, context: { taskId: question.taskId, questionId: question.id } };
   }
   if (target === 'reply') {
     const [reply] = await db

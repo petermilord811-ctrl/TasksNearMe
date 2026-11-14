@@ -8,6 +8,10 @@ import { invitesForTask } from '@/modules/invites/service';
 import { cancelTaskAction, posterOfferAction, taskOwnerAction } from '@/modules/offers/actions';
 import { getTaskOwnerView } from '@/modules/offers/owner';
 import { ownerDepsFor } from '@/modules/offers/server';
+import { answerTaskQuestionAction, askTaskQuestionAction, deleteTaskQuestionAction, moderateTaskQuestionAction, pinTaskQuestionAction } from '@/modules/questions/actions';
+import { getTaskQuestions } from '@/modules/questions/service';
+import { staffActorOf } from '@/modules/support/staff';
+import { TaskQuestions } from '@/ui/components/questions/task-questions';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
@@ -35,7 +39,9 @@ async function ManageTask({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskI
     ? await Promise.all([getTaskOwnerView(deps, viewer.user.id, taskId, now), invitesForTask(db, bookingDeps()?.payments ?? null, viewer.user.id, taskId, now)])
     : [null, []];
   if (!data) notFound();
+  const questions = await getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId);
   return (
+    <div className="space-y-6">
     <TaskManageScreen
       data={{ ...data, invites }}
       now={now.toISOString()}
@@ -47,6 +53,15 @@ async function ManageTask({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskI
         onSavePushSubscription: savePushSubscriptionAction,
       }}
     />
+    {/* Questions from helpers (completion plan 7.9): the poster answers and pins them here. */}
+    {questions && <TaskQuestions data={questions} now={now.toISOString()} handlers={{
+        onAsk: askTaskQuestionAction.bind(null, taskId),
+        onAnswer: answerTaskQuestionAction.bind(null, taskId),
+        onPin: pinTaskQuestionAction.bind(null, taskId),
+        onDelete: deleteTaskQuestionAction,
+        ...(staffActorOf(viewer.user) ? { onModerate: moderateTaskQuestionAction } : {}),
+      }} />}
+    </div>
   );
 }
 

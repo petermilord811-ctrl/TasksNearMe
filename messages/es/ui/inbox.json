@@ -6,7 +6,8 @@
     "offer": "Oferta",
     "booking": "Reserva",
     "invite": "Solicitud",
-    "case": "Soporte"
+    "case": "Soporte",
+    "series": "Visitas regulares"
   },
   "unread": "{count, plural, one {# sin leer} other {# sin leer}}",
   "youPrefix": "Tú: ",
@@ -23,5 +24,18 @@
     "helper": "Bandeja de entrada del ayudante",
     "empty": "Bandeja de entrada vacía",
     "kinds": "Solicitudes, soporte y una conversación nueva"
-  }
+  },
+  "filters": {
+    "label": "Mostrar",
+    "all": "Todas",
+    "unread": "Sin leer",
+    "offers": "Ofertas",
+    "bookings": "Reservas"
+  },
+  "search": {
+    "label": "Buscar conversaciones",
+    "placeholder": "Busca por nombre o tarea"
+  },
+  "noMatch": "Ninguna conversación coincide.",
+  "shown": "{count, plural, one {# conversación} other {# conversaciones}}"
 }

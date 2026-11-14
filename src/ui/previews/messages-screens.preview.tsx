@@ -8,7 +8,7 @@ import {
   mayaShell, movingOfferThreadForHelper,
 } from '@/fixtures';
 import { InboxScreen } from '@/ui/screens/messages';
-import { ThreadContent } from '@/ui/screens/messages/thread-screen';
+import { ThreadContent, ThreadScreen } from '@/ui/screens/messages/thread-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import inboxCopy from '../../../messages/en/ui/inbox.json';
 import threadCopy from '../../../messages/en/ui/thread.json';
@@ -58,6 +58,13 @@ export const messagesScreenPreviews: PreviewEntry[] = [
   threadPreview('offer-masked', threadCopy.previews['offer-masked'], deskOfferThreadPageData),
   threadPreview('closed', threadCopy.previews.closed, closedThreadPageData),
   threadPreview('blocked', threadCopy.previews.blocked, blockedThreadPageData),
+  // Wide screens: the conversations beside the open one, with "New messages" above what arrived since last time (7.3).
+  {
+    id: 'screen-thread/with-list', group: threadCopy.previews.group, title: threadCopy.previews.withList, layout: 'fullscreen',
+    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.thread(deskOfferThreadPageData.thread.id)} layout="flow">
+      <ThreadScreen data={{ ...deskOfferThreadPageData, firstUnreadId: deskOfferThreadPageData.messages.find((message) => message.kind === 'text')?.id }} handlers={fakeThreadHandlers} now={beforeBooking} inbox={mayaInboxPageData.threads.map((thread, index) => (index === 0 ? { ...thread, unreadCount: 2 } : thread))} />
+    </AppShell>,
+  },
   threadPreview('helper', threadCopy.previews.helper, {
     ...deskOfferThreadPageData,
     thread: movingOfferThreadForHelper,

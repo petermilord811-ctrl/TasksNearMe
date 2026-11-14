@@ -128,7 +128,7 @@ export interface ReportHandlers {
 }
 
 /** What a member reports from a page (backlog B-059): a task, a helper's profile, a review, or a community post or reply (7.7). */
-export const REPORT_TARGET_KINDS = ['task', 'helper', 'review', 'post', 'reply'] as const;
+export const REPORT_TARGET_KINDS = ['task', 'helper', 'review', 'post', 'reply', 'question'] as const;
 export type ReportTargetKind = (typeof REPORT_TARGET_KINDS)[number];
 
 /** `routes.app.report(kind, id)`: the report form for one task, helper or review. */

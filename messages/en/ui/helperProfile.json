@@ -4,7 +4,7 @@
   "requestBooking": "Request {name}",
   "memberSince": "Member since {date}",
   "completed": "{count, plural, one {# task completed} other {# tasks completed}}",
-  "responseTime": "Usually responds in about {minutes, number} min",
+  "responseTime": "{range, select, hour {Usually replies within an hour} few_hours {Usually replies within a few hours} other {Usually replies within a day}}",
   "foundingHelper": "Founding helper #{number, number}",
   "about": "About {name}",
   "services": "Services",
@@ -33,5 +33,6 @@
     "leeRemote": "Lee · remote help available",
     "withSlots": "Jordan · open times",
     "samPhoto": "Sam, with a profile photo"
-  }
+  },
+  "recommendedBy": "{count, plural, one {Recommended by # neighbor} other {Recommended by # neighbors}}"
 }

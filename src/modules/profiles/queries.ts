@@ -1,3 +1,5 @@
+import { recommendedByCounts } from '@/modules/community/service';
+import { responseTimeRange } from '@/shared/response-time';
 import 'server-only';
 import { openSlotsOf } from '@/modules/availability/slots';
 import { and, asc, count, desc, eq, exists, gt, inArray, isNotNull, max, or, sql } from 'drizzle-orm';
@@ -58,11 +60,17 @@ export function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: st
       ? { rating: { average: Math.round(profile.ratingAverage * 10) / 10, count: profile.ratingCount } }
       : {}),
     completedCount: profile.completedCount,
-    ...(profile.responseTimeMinutes !== null ? { responseTimeMinutes: profile.responseTimeMinutes } : {}),
+    ...(responseTimeRange(profile.responseTimeMinutes) ? { responseTime: responseTimeRange(profile.responseTimeMinutes) } : {}),
     services,
     ...(profile.foundingNumber !== null ? { foundingHelperNumber: profile.foundingNumber } : {}),
     ...(badges.length > 0 ? { topBadges: badges.slice(0, 3) } : {}),
   };
+}
+
+/** "Recommended by N neighbors" (completion plan 7.8): people who booked them and thanked or named them in the community. */
+function withRecommended(summary: HelperSummary, counts: ReadonlyMap<string, number>): HelperSummary {
+  const count = counts.get(summary.id) ?? 0;
+  return count > 0 ? { ...summary, recommendedBy: count } : summary;
 }
 
 /** The helper offers the category (an active service in it). */
@@ -137,7 +145,8 @@ export async function listPublicHelpers(options: {
   }
 
   const badges = await badgesFor(db, rows.map(({ user }) => user.id));
-  return rows.map(({ profile, user, areaName }) => toHelperSummary(profile, user, areaName, servicesByHelper.get(user.id) ?? [], badges.get(user.id)));
+  const recommended = await recommendedByCounts(db, rows.map(({ user }) => user.id));
+  return rows.map(({ profile, user, areaName }) => withRecommended(toHelperSummary(profile, user, areaName, servicesByHelper.get(user.id) ?? [], badges.get(user.id)), recommended));
 }
 
 /**
@@ -225,14 +234,15 @@ export async function getHelperProfile(handle: string, database: Db = db): Promi
   const tagSet = new Set<string>(HELPER_REVIEW_TAGS);
 
   const achievements = (await badgesFor(database, [row.user.id])).get(row.user.id) ?? [];
+  const recommended = await recommendedByCounts(database, [row.user.id]);
   return {
-    helper: toHelperSummary(
+    helper: withRecommended(toHelperSummary(
       row.profile,
       row.user,
       row.areaName,
       services.map(({ description: _description, ...summary }) => summary),
       achievements,
-    ),
+    ), recommended),
     ...(achievements.length > 0 ? { achievements } : {}),
     bio: row.profile.bio,
     serviceRadiusMiles: Math.max(1, Math.floor(row.profile.serviceRadiusKm / KM_PER_MILE)),
@@ -337,5 +347,6 @@ export async function getHelperSummaries(userIds: string[], database: Db = db): 
     services.set(service.userId, list);
   }
   const badges = await badgesFor(database, rows.map(({ user }) => user.id));
-  return new Map(rows.map(({ profile, user, areaName }) => [user.id, toHelperSummary(profile, user, areaName, services.get(user.id) ?? [], badges.get(user.id))]));
+  const recommended = await recommendedByCounts(database, rows.map(({ user }) => user.id));
+  return new Map(rows.map(({ profile, user, areaName }) => [user.id, withRecommended(toHelperSummary(profile, user, areaName, services.get(user.id) ?? [], badges.get(user.id)), recommended)]));
 }

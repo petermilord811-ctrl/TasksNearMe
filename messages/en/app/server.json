@@ -166,7 +166,9 @@
         "reward_ready": "Pick the card you want on your Rewards page and redeem it within 90 days.",
         "community_reply": "Read the answer, and pin the one that helped.",
         "community_answer_pinned": "Thanks for helping a neighbor.",
-        "community_helpful": "See the conversation in the community."
+        "community_helpful": "See the conversation in the community.",
+        "question_received": "Answer it on your task; every helper reads the answer.",
+        "question_answered": "Read the answer, then make your offer."
       },
       "lockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates.",
       "optionalFooter": "You're getting this because {topic} emails are on.",
@@ -228,7 +230,9 @@
       "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on your Rewards page.",
       "community_reply": "{actorName} answered your post “{title}”.",
       "community_answer_pinned": "{actorName} pinned your answer on “{title}”.",
-      "community_helpful": "{count, plural, one {A neighbor found your {on, select, reply {answer} other {post}} on “{title}” helpful} other {# neighbors found your {on, select, reply {answer} other {post}} on “{title}” helpful}}."
+      "community_helpful": "{count, plural, one {A neighbor found your {on, select, reply {answer} other {post}} on “{title}” helpful} other {# neighbors found your {on, select, reply {answer} other {post}} on “{title}” helpful}}.",
+      "question_received": "{actorName} asked a question about {title}.",
+      "question_answered": "{actorName} answered your question about {title}."
     },
     "pushTitle": "TasksNearMe"
   },

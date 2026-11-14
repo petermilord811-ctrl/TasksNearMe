@@ -50,6 +50,9 @@ import { notificationDeliveries, notificationPreferences, notifications, privacy
 import { rebookProposals } from '../../src/modules/rebook/schema';
 import { availabilityPosts } from '../../src/modules/availability/schema';
 import { rewardGrants } from '../../src/modules/rewards/schema';
+import { communityPosts, communityReactions, communityReplies } from '../../src/modules/community/schema';
+import { taskQuestions } from '../../src/modules/questions/schema';
+import { savedSearches } from '../../src/modules/searches/schema';
 import { paymentMethods, payments, refunds } from '../../src/modules/payments/schema';
 import { devCardRef } from '../../src/integrations/payments';
 import { quoteBreakdown } from '../../src/modules/payments/fees';
@@ -450,6 +453,15 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   // one day would otherwise hit the daily limits (reports are 10 a day).
   await tx.delete(rateLimits);
   await tx.delete(blocks).where(or(inArray(blocks.blockerId, people), inArray(blocks.blockedId, people)));
+  // Questions on the seeded tasks and the seeded people's community posts start over too (completion plan
+  // 7.7–7.10; the e2e asks, answers and posts). Demo people's posts (db/seeds/demo) are left alone.
+  await tx.delete(taskQuestions).where(or(inArray(taskQuestions.taskId, taskIds), inArray(taskQuestions.askerUserId, people)));
+  const seededPosts = tx.select({ id: communityPosts.id }).from(communityPosts).where(inArray(communityPosts.authorUserId, people));
+  const seededReplies = tx.select({ id: communityReplies.id }).from(communityReplies).where(or(inArray(communityReplies.authorUserId, people), inArray(communityReplies.postId, seededPosts)));
+  await tx.delete(communityReactions).where(or(inArray(communityReactions.userId, people), inArray(communityReactions.targetId, seededPosts), inArray(communityReactions.targetId, seededReplies)));
+  await tx.delete(communityReplies).where(or(inArray(communityReplies.authorUserId, people), inArray(communityReplies.postId, seededPosts)));
+  await tx.delete(communityPosts).where(inArray(communityPosts.authorUserId, people));
+  await tx.delete(savedSearches).where(inArray(savedSearches.userId, people));
   const peopleCases = (await tx.select({ id: supportCases.id }).from(supportCases).where(inArray(supportCases.openedByUserId, people))).map((row) => row.id);
   if (peopleCases.length > 0) {
     await tx.delete(supportCaseEvents).where(inArray(supportCaseEvents.caseId, peopleCases));

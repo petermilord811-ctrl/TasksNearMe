@@ -1,13 +1,22 @@
 {
   "back": "All messages",
   "title": "Messages with {name}",
-  "subject": { "offer_for_client": "View offer", "task_for_helper": "View task", "booking": "View booking", "series": "View regular visits" },
+  "subject": {
+    "offer_for_client": "View offer",
+    "task_for_helper": "View task",
+    "booking": "View booking",
+    "series": "View regular visits"
+  },
   "masking": "Phone numbers and emails stay hidden until the booking is confirmed",
   "presenceNow": "Active now",
   "presenceToday": "Active today",
   "typing": "typing…",
   "seen": "Seen",
-  "disabled": { "blocked": "You can't message each other", "closed": "This conversation is closed", "unavailable": "Messaging is unavailable in this conversation" },
+  "disabled": {
+    "blocked": "You can't message each other",
+    "closed": "This conversation is closed",
+    "unavailable": "Messaging is unavailable in this conversation"
+  },
   "log": "Conversation messages",
   "empty": "No messages yet.",
   "you": "You",
@@ -43,7 +52,8 @@
       "expired": "Expired action feedback",
       "limit_reached": "Account limit feedback",
       "identity_required": "ID check needed feedback"
-    }
+    },
+    "withList": "Conversation beside the list, with new messages marked"
   },
   "composer": {
     "label": "Message",
@@ -65,5 +75,6 @@
     "photosHint": "Up to {maximum, plural, one {# photo} other {# photos}}. JPEG, PNG, WebP or HEIC, up to {megabytes} MB each. Avoid house numbers, mail, and faces.",
     "blocked": "You can't message each other",
     "closed": "This conversation is closed"
-  }
+  },
+  "newMessages": "New messages"
 }

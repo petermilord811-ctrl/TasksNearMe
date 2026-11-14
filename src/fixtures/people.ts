@@ -45,7 +45,7 @@ export const jordan: HelperSummary = {
     phoneVerified: true,
   },
   completedCount: 0,
-  responseTimeMinutes: 35,
+  responseTime: 'hour',
   services: [
     { categorySlug: 'furniture-assembly', pricingType: 'fixed', fromPriceCents: 4500 },
     { categorySlug: 'moving-help', pricingType: 'hourly', hourlyRateCents: 3500, minHours: 2 },
@@ -70,7 +70,7 @@ export const sam: HelperSummary = {
   },
   rating: { average: 4.9, count: 112 },
   completedCount: 140,
-  responseTimeMinutes: 20,
+  responseTime: 'hour',
   services: [
     { categorySlug: 'furniture-assembly', pricingType: 'fixed', fromPriceCents: 5000 },
     { categorySlug: 'moving-help', pricingType: 'hourly', hourlyRateCents: 3800, minHours: 2 },
@@ -95,7 +95,7 @@ export const lee: HelperSummary = {
   },
   rating: { average: 4.6, count: 9 },
   completedCount: 11,
-  responseTimeMinutes: 60,
+  responseTime: 'few_hours',
   services: [
     { categorySlug: 'furniture-assembly', pricingType: 'fixed', fromPriceCents: 4000 },
     { categorySlug: 'computer-help', pricingType: 'fixed', fromPriceCents: 4000 },

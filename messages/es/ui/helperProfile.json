@@ -4,7 +4,7 @@
   "requestBooking": "Solicitar a {name}",
   "memberSince": "Miembro desde {date}",
   "completed": "{count, plural, one {# tarea completada} other {# tareas completadas}}",
-  "responseTime": "Suele responder en unos {minutes, number} min",
+  "responseTime": "{range, select, hour {Suele responder en menos de una hora} few_hours {Suele responder en unas horas} other {Suele responder en un día}}",
   "foundingHelper": "Ayudante fundador n.º {number, number}",
   "about": "Acerca de {name}",
   "services": "Servicios",
@@ -33,5 +33,6 @@
     "leeRemote": "Lee · ayuda remota disponible",
     "withSlots": "Jordan · horarios abiertos",
     "samPhoto": "Sam, con foto de perfil"
-  }
+  },
+  "recommendedBy": "{count, plural, one {# recomendación de vecinos} other {# recomendaciones de vecinos}}"
 }

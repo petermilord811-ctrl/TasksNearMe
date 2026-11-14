@@ -30,7 +30,7 @@ describe('HelperProfileScreen', () => {
     expect(screen.getByText('Travels up to about 6 miles from Hyde Park')).toBeInTheDocument();
     expect(screen.getByText('Member since May 2024')).toBeInTheDocument();
     expect(screen.getByText('140 tasks completed')).toBeInTheDocument();
-    expect(screen.getByText('Usually responds in about 20 min')).toBeInTheDocument();
+    expect(screen.getByText('Usually replies within an hour')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Sam K.');
   });

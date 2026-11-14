@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { sendMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
-import { getThreadPage } from '@/modules/messaging/service';
+import { getInbox, getThreadPage } from '@/modules/messaging/service';
 import { blockUserAction, reportUserAction } from '@/modules/support/actions';
 import { getReportSubject } from '@/modules/support/service';
 import { getViewer } from '@/platform/auth/viewer';
@@ -28,12 +28,15 @@ async function Thread({ params }: Pick<PageProps<'/[locale]/app/messages/[thread
   const [{ threadId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.thread(threadId)));
   const now = await requestNow();
+  // The conversation first (opening it marks it read), then the list beside it shows it read too.
   const [data, subject] = await Promise.all([getThreadPage(db, viewer.user.id, threadId, now), getReportSubject(db, viewer.user.id, threadId)]);
+  const inbox = data ? await getInbox(db, viewer.user.id, now) : null;
   if (!data) notFound();
   return (
     <ThreadScreen
       data={data}
       now={now.toISOString()}
+      inbox={inbox?.threads}
       handlers={{ onSend: sendMessageAction.bind(null, threadId), onUploadPhoto: uploadMessagePhoto, onTyping: typingAction.bind(null, threadId) }}
       {...(subject ? { safety: { subject, handlers: { onReport: reportUserAction.bind(null, threadId), onBlock: blockUserAction.bind(null, threadId) } } } : {})}
     />

@@ -109,6 +109,10 @@ export const NOTIFICATION_TYPES = [
   'community_answer_pinned',
   /** The person's post or answer (`params.on`) on `title` reached `params.count` Helpful (1, 5, then 25). */
   'community_helpful',
+  /** A helper (`actorName`) asked a question on the poster's task `title` (completion plan 7.9). */
+  'question_received',
+  /** The poster (`actorName`) answered the helper's question on `title`. */
+  'question_answered',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

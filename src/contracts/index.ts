@@ -26,6 +26,7 @@ export * from './reviews';
 export * from './account';
 export * from './support';
 export * from './community';
+export * from './questions';
 export * from './admin';
 export * from './admin-ops';
 export * from './admin-money';

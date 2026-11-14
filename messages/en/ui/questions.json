@@ -1,0 +1,40 @@
+{
+  "title": "Questions",
+  "count": "{count, plural, =0 {No questions yet} one {# question} other {# questions}}",
+  "intro": "Helpers ask before they offer; the answers are for every helper. Only signed-in members see them.",
+  "ask": {
+    "label": "Ask a question",
+    "placeholder": "What do you need to know to make a good offer?",
+    "hint": "One open question at a time. No phone numbers or emails: they're hidden until a booking.",
+    "submit": "Ask",
+    "submitting": "Sending…",
+    "sent": "Question sent"
+  },
+  "blocked": {
+    "poster": "Helpers ask here before they offer.",
+    "not_helper": "Helpers who've finished their checks can ask questions here.",
+    "already_asked": "You asked a question. You can ask another once it's answered.",
+    "closed": "Questions are closed for this task."
+  },
+  "answer": {
+    "from": "Answer",
+    "label": "Your answer",
+    "placeholder": "Answer for every helper who reads this",
+    "submit": "Answer",
+    "edit": "Edit answer",
+    "submitting": "Sending…",
+    "sent": "Answer posted",
+    "waiting": "Waiting for an answer"
+  },
+  "pinned": "Pinned",
+  "pin": "Pin for everyone",
+  "unpin": "Unpin",
+  "empty": "No questions yet.",
+  "posterEmpty": "When helpers ask about this task, their questions show up here for you to answer.",
+  "previews": {
+    "group": "Questions on a task",
+    "helper": "Questions · a helper asks",
+    "poster": "Questions · the poster answers",
+    "asked": "Questions · waiting for the answer"
+  }
+}

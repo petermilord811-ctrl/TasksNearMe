@@ -7,7 +7,7 @@
     "computer-help": "Ayuda con computadoras y teléfonos"
   },
   "completed": "{count, plural, one {# tarea completada} other {# tareas completadas}}",
-  "responseTime": "Suele responder en unos {minutes, number} min",
+  "responseTime": "{range, select, hour {Suele responder en menos de una hora} few_hours {Suele responder en unas horas} other {Suele responder en un día}}",
   "fixedPrice": "desde {amount}",
   "hourlyPrice": "{amount}/h",
   "priceInOffer": "El precio se comparte en una oferta",
@@ -24,5 +24,6 @@
   },
   "reliable": "Confiable",
   "reliableLabel": "Confiable: sin ausencias y pocas cancelaciones en el último año",
-  "reliableHint": "Sin ausencias y pocas cancelaciones en el último año"
+  "reliableHint": "Sin ausencias y pocas cancelaciones en el último año",
+  "recommendedBy": "{count, plural, one {# recomendación de vecinos} other {# recomendaciones de vecinos}}"
 }

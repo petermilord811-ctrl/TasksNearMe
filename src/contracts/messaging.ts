@@ -108,6 +108,8 @@ export interface ThreadPageData {
   presence?: PresenceState;
   /** The viewer's latest message, when the other person has read up to it ("Seen"). Mutual, like `presence`. */
   seenMessageId?: string;
+  /** The first message the viewer hadn't read before opening the conversation: "New messages" goes above it (7.3). */
+  firstUnreadId?: string;
 }
 
 export const sendMessageInputSchema = z

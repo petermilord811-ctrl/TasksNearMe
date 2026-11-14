@@ -7,7 +7,7 @@
     "computer-help": "Computer and phone help"
   },
   "completed": "{count, plural, one {# task completed} other {# tasks completed}}",
-  "responseTime": "Usually responds in about {minutes, number} min",
+  "responseTime": "{range, select, hour {Usually replies within an hour} few_hours {Usually replies within a few hours} other {Usually replies within a day}}",
   "fixedPrice": "from {amount}",
   "hourlyPrice": "{amount}/h",
   "priceInOffer": "Price shared in an offer",
@@ -24,5 +24,6 @@
   },
   "reliable": "Reliable",
   "reliableLabel": "Reliable: no no-shows and few cancellations over the last year",
-  "reliableHint": "No no-shows and few cancellations over the last year"
+  "reliableHint": "No no-shows and few cancellations over the last year",
+  "recommendedBy": "{count, plural, one {Recommended by # neighbor} other {Recommended by # neighbors}}"
 }

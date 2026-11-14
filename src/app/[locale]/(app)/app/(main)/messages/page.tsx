@@ -1,3 +1,4 @@
+import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -12,7 +13,7 @@ import { requestNow } from '@/platform/clock';
 export const metadata: Metadata = { title: 'Messages', robots: { index: false } };
 
 /** The viewer's conversations, latest activity first. */
-export default function MessagesPage() {
+function MessagesPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Inbox />
@@ -27,3 +28,6 @@ async function Inbox() {
   const data = await getInbox(db, viewer.user.id, now);
   return <InboxScreen data={data} now={now.toISOString()} />;
 }
+
+// The list's filters and search run in the browser (completion plan 7.3): it needs its copy there.
+export default withClientMessages('[locale]/(app)/app/(main)/messages/page.tsx', MessagesPage);

@@ -52,8 +52,10 @@ test('neighbors ask, answer, recommend a helper and pin the answer, live', async
     await lee.getByRole('textbox', { name: 'Your reply' }).fill('I anchor tall shelves most weekends. Saturday works.');
     await lee.getByLabel('Recommend a helper (optional)').selectOption({ label: 'Lee M. (you)' });
     await lee.getByRole('button', { name: 'Reply', exact: true }).click();
-    await expect(lee.getByText('I anchor tall shelves most weekends. Saturday works.')).toBeVisible({ timeout: 15_000 });
-    await expect(lee.getByText('Recommended themself')).toBeVisible();
+    // Inside the reply itself: for a moment the box still holds the words too.
+    const leeReply = lee.getByRole('article', { name: 'Lee M.' });
+    await expect(leeReply.getByText('I anchor tall shelves most weekends. Saturday works.')).toBeVisible({ timeout: 15_000 });
+    await expect(leeReply.getByText('Recommended themself')).toBeVisible();
 
     // Maya's page shows it without a reload; she pins it.
     await maya.evaluate(() => {
@@ -69,8 +71,11 @@ test('neighbors ask, answer, recommend a helper and pin the answer, live', async
     // Lee marks Maya's question Helpful; it counts once.
     await lee.goto(postUrl);
     const helpful = lee.getByRole('group', { name: 'Reactions' }).first().getByRole('button', { name: /Helpful/ });
+    // The button answers at once; wait for the server's answer before reloading (a reload cancels the request).
+    const saved = lee.waitForResponse((response) => response.request().method() === 'POST' && Boolean(response.request().headers()['next-action']));
     await helpful.click();
     await expect(helpful).toHaveAttribute('aria-pressed', 'true');
+    await saved;
     await lee.reload();
     await expect(lee.getByRole('group', { name: 'Reactions' }).first().getByRole('button', { name: /Helpful/ })).toHaveAttribute('aria-pressed', 'true');
   } finally {

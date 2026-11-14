@@ -2,7 +2,9 @@ import Link from 'next/link';
 import type { ComponentProps } from 'react';
 import { ArrowLeft, ArrowUpRight, LockKeyhole } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadPageData, type ThreadSubject } from '@/contracts';
+import { routes, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadPageData, type ThreadSubject, type ThreadSummary } from '@/contracts';
+import { InboxList } from '@/ui/components/messaging/inbox-list';
+import { cn } from '@/ui/lib/utils';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { ReportBlockMenu } from '@/ui/components/safety';
 import { buttonVariants } from '@/ui/primitives/button';
@@ -15,6 +17,8 @@ export interface ThreadScreenProps {
   handlers: ThreadHandlers;
   now: ISODateTime;
   safety?: { subject: ReportSubject; handlers: ReportHandlers };
+  /** The viewer's other conversations: a list beside this one on wide screens (completion plan 7.3). */
+  inbox?: ThreadSummary[];
 }
 
 function subjectHref(subject: ThreadSubject) {
@@ -26,8 +30,16 @@ function subjectHref(subject: ThreadSubject) {
   }
 }
 
-export function ThreadScreen({ data, handlers, now, safety }: ThreadScreenProps) {
-  return <ThreadContent data={data} handlers={handlers} now={now} safety={safety} />;
+export function ThreadScreen({ data, handlers, now, safety, inbox }: ThreadScreenProps) {
+  const inboxCopy = useTranslations('inbox');
+  if (!inbox || inbox.length === 0) return <ThreadContent data={data} handlers={handlers} now={now} safety={safety} />;
+  // Wide screens: the conversations beside the open one, like a mail or chat app; phones keep one pane at a time.
+  return <div className="lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-5">
+    <aside aria-label={inboxCopy('title')} className="hidden overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card lg:sticky lg:top-24 lg:flex lg:h-[calc(100dvh-8rem)] lg:flex-col dark:border-white/[0.06]">
+      <InboxList threads={inbox} now={now} currentId={data.thread.id} variant="pane" />
+    </aside>
+    <ThreadContent data={data} handlers={handlers} now={now} safety={safety} wide />
+  </div>;
 }
 
 /**
@@ -36,14 +48,16 @@ export function ThreadScreen({ data, handlers, now, safety }: ThreadScreenProps)
  *
  * State seeds keep async outcomes reproducible in the preview gallery.
  */
-export function ThreadContent({ data, handlers, now, safety, composerState }: ThreadScreenProps & {
+export function ThreadContent({ data, handlers, now, safety, composerState, wide = false }: ThreadScreenProps & {
   composerState?: Pick<ComponentProps<typeof MessageComposerContent>, 'initialResult' | 'initialPending' | 'initialBody'>;
+  /** Beside the conversation list: it fills its column instead of the reading width. */
+  wide?: boolean;
 }) {
   const t = useTranslations('thread');
   const { thread, messages, composer } = data;
 
-  return <div className="mx-auto w-full max-w-reading space-y-4">
-    <Link href={routes.app.messages()} className={buttonVariants({ variant: 'ghost', size: 'sm', className: '-ml-2' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
+  return <div className={cn('mx-auto w-full space-y-4', wide ? 'max-w-reading lg:max-w-none' : 'max-w-reading')}>
+    <Link href={routes.app.messages()} className={buttonVariants({ variant: 'ghost', size: 'sm', className: cn('-ml-2', wide && 'lg:hidden') })}><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
     <header className="flex min-w-0 items-start gap-3 sm:gap-4">
       <InitialsAvatar initials={thread.otherParty.initials} />
       <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
@@ -58,7 +72,7 @@ export function ThreadContent({ data, handlers, now, safety, composerState }: Th
     </header>
     {thread.contactMasking && <p className="flex items-start gap-2.5 rounded-2xl bg-secondary/70 px-4 py-3 text-sm leading-6 text-secondary-foreground"><LockKeyhole aria-hidden="true" className="mt-1 size-4 shrink-0" /><span>{t('masking')}</span></p>}
     <div className="flex h-[max(32rem,calc(100dvh-21rem))] flex-col overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]">
-      <MessageLog key={`log-${thread.id}`} messages={messages} otherParty={thread.otherParty} now={now} seenMessageId={data.seenMessageId} className="min-h-0 flex-1" />
+      <MessageLog key={`log-${thread.id}`} messages={messages} otherParty={thread.otherParty} now={now} seenMessageId={data.seenMessageId} firstUnreadId={data.firstUnreadId} className="min-h-0 flex-1" />
       {composer.canSend
         ? <MessageComposerContent key={`composer-${thread.id}`} rules={composer} handlers={handlers} {...composerState} />
         : <p role="status" className="border-t border-foreground/[0.07] bg-muted/60 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm font-medium dark:border-white/[0.06]">{t(`disabled.${composer.disabledReason ?? 'unavailable'}`)}</p>}

@@ -1,13 +1,22 @@
 {
   "back": "Todos los mensajes",
   "title": "Mensajes con {name}",
-  "subject": { "offer_for_client": "Ver oferta", "task_for_helper": "Ver tarea", "booking": "Ver reserva", "series": "Ver visitas regulares" },
+  "subject": {
+    "offer_for_client": "Ver oferta",
+    "task_for_helper": "Ver tarea",
+    "booking": "Ver reserva",
+    "series": "Ver visitas regulares"
+  },
   "masking": "Los números de teléfono y los correos se mantienen ocultos hasta que se confirme la reserva",
   "presenceNow": "En línea ahora",
   "presenceToday": "Se conectó hoy",
   "typing": "escribiendo…",
   "seen": "Visto",
-  "disabled": { "blocked": "No pueden enviarse mensajes", "closed": "Esta conversación está cerrada", "unavailable": "Los mensajes no están disponibles en esta conversación" },
+  "disabled": {
+    "blocked": "No pueden enviarse mensajes",
+    "closed": "Esta conversación está cerrada",
+    "unavailable": "Los mensajes no están disponibles en esta conversación"
+  },
   "log": "Mensajes de la conversación",
   "empty": "Aún no hay mensajes.",
   "you": "Tú",
@@ -43,7 +52,8 @@
       "expired": "Aviso de acción vencida",
       "limit_reached": "Aviso de límite de la cuenta",
       "identity_required": "Aviso de verificación de identidad necesaria"
-    }
+    },
+    "withList": "Conversación junto a la lista, con los mensajes nuevos marcados"
   },
   "composer": {
     "label": "Mensaje",
@@ -65,5 +75,6 @@
     "photosHint": "Hasta {maximum, plural, one {# foto} other {# fotos}}. JPEG, PNG, WebP o HEIC, de hasta {megabytes} MB cada una. Evita números de casa, correo postal y rostros.",
     "blocked": "No pueden enviarse mensajes",
     "closed": "Esta conversación está cerrada"
-  }
+  },
+  "newMessages": "Mensajes nuevos"
 }

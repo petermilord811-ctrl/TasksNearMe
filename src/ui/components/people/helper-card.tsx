@@ -1,5 +1,5 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { Clock3, MapPin } from 'lucide-react';
+import { Clock3, MapPin, ThumbsUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { HelperSummary } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -47,10 +47,11 @@ export function HelperCard({ helper, variant = 'full' }: HelperCardProps) {
       <div className="space-y-2">
         <RatingStars rating={helper.rating} />
         <p className="text-sm tabular-nums text-muted-foreground">{t('completed', { count: helper.completedCount })}</p>
-        {helper.responseTimeMinutes !== undefined && (
+        {helper.recommendedBy !== undefined && <p className="flex items-start gap-2 text-sm font-medium text-foreground"><ThumbsUp aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" /><span>{t('recommendedBy', { count: helper.recommendedBy })}</span></p>}
+        {helper.responseTime !== undefined && (
           <p className="flex items-start gap-2 text-sm tabular-nums text-muted-foreground">
             <Clock3 aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-            <span>{t('responseTime', { minutes: helper.responseTimeMinutes })}</span>
+            <span>{t('responseTime', { range: helper.responseTime })}</span>
           </p>
         )}
       </div>
