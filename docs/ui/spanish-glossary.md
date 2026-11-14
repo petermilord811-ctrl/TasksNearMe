@@ -8,6 +8,7 @@ For anyone writing Spanish copy (`messages/es/**`, the Spanish emails and texts 
 - **Tú, always.** Informal imperatives: *Revisa, Elige, Inténtalo de nuevo*. Never *usted*, *Ingrese* or *su cuenta*. *Ustedes* is only for addressing both people on a booking ("Conversen… entre ustedes").
 - **Sentence case.** Capitalize only the first word and names ("Términos del servicio" is a document's name, so it keeps its capital).
 - **Opening marks.** Every question starts with ¿ and every exclamation with ¡, also inside ICU branches.
+- **No gendered words about the reader.** We don't know who reads, so rephrase with a verb or a noun instead of an adjective that agrees: *Mostrar cuándo me conecto*, *tu actividad*, not *activo/a*. Labels about a thing agree with the thing (*Visto* for a message, *Reservada* for a booking).
 - **Same arguments and tags as English.** `npm run i18n:check -- <namespace>` and `src/i18n/catalog.test.ts` check them. The e2e build throws on a bad key or argument (5.19).
 
 ## Terms
