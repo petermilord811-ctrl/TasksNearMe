@@ -58,6 +58,13 @@ export const payments = pgTable(
     saveMethod: boolean('save_method').notNull().default(false),
     /** payment_declined | insufficient_funds */
     failureCode: text('failure_code'),
+    /**
+     * A bank dispute (chargeback) on the charge, from Stripe's `charge.dispute.*` webhooks: open, won or lost
+     * (completion plan 5.13). Kept apart from `status`, which says where the money went; screens show the two
+     * together as `chargeback_open`, `chargeback_won` or `chargeback_lost`.
+     */
+    disputeStatus: text('dispute_status'),
+    disputeId: text('dispute_id'),
     idempotencyKey: text('idempotency_key').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

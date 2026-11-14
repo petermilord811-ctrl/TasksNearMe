@@ -51,3 +51,31 @@ export const payouts = pgTable(
   },
   (t) => [index('payouts_helper_idx').on(t.helperUserId, t.createdAt)],
 );
+
+/**
+ * Taking back part or all of a helper's transfer (blueprint 08 `transfer_reversals`; completion plan 5.13):
+ * finance only, always with the support case that justifies it. `failed`: Stripe couldn't take it back (the
+ * helper's balance was already paid out); the money is then recovered by hand.
+ */
+export const transferReversals = pgTable(
+  'transfer_reversals',
+  {
+    id: text('id').primaryKey(),
+    earningsId: text('earnings_id')
+      .notNull()
+      .references(() => earnings.id),
+    bookingId: text('booking_id').notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    reason: text('reason').notNull(),
+    caseId: text('case_id').notNull(),
+    /** succeeded | failed */
+    status: text('status').notNull(),
+    stripeReversalId: text('stripe_reversal_id'),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    idempotencyKey: text('idempotency_key').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('transfer_reversals_idempotency_idx').on(t.idempotencyKey), index('transfer_reversals_earnings_idx').on(t.earningsId)],
+);
