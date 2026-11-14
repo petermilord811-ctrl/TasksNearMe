@@ -120,7 +120,9 @@ describe('real time through Postgres', () => {
   it('shows presence and "Seen" only when both people share their activity', async () => {
     const now = new Date();
     await db.update(users).set({ lastActiveAt: now, showActivity: true }).where(inArray(users.id, ['usr_maya', 'usr_lee']));
-    expect((await sendMessage(db, 'usr_maya', threadId, { body: 'Great, see you then.', attachmentIds: [] }, now)).ok).toBe(true);
+    // Only Lee has written in this offer thread: Maya's activity stays hidden from him until she answers.
+    expect((await getThreadPage(db, 'usr_lee', threadId, now))?.presence).toBeUndefined();
+    expect((await sendMessage(db, 'usr_maya', threadId, { body: 'Great, see you then.', attachmentIds: [] }, new Date(now.getTime() + 500))).ok).toBe(true);
     const [mine] = await db.select({ id: messages.id }).from(messages).where(and(eq(messages.threadId, threadId), eq(messages.senderUserId, 'usr_maya')));
 
     const maya = collect(userChannel('usr_maya'));

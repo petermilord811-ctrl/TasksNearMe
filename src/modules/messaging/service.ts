@@ -311,7 +311,11 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   // Mutual (WhatsApp's rule, completion plan 7.1): someone who hides their own activity doesn't see anyone
   // else's or "Seen", and reading their messages sends no "Seen" either.
   const [viewer] = await db.select({ showActivity: users.showActivity }).from(users).where(eq(users.id, userId)).limit(1);
-  const mutual = !blocked && viewer?.showActivity !== false && found.other.showActivity;
+  // Only once it's a real conversation (the research report's rule 10): a booking's or regular visits' thread,
+  // or an offer or invite thread where both people have written. Any verified helper opens a thread by making
+  // an offer, so a poster who never answered never shows their activity to them.
+  const engaged = (thread.kind !== 'offer' && thread.kind !== 'invite') || (rows.some((row) => row.senderUserId === userId) && rows.some((row) => row.senderUserId === found.other.id));
+  const mutual = engaged && !blocked && viewer?.showActivity !== false && found.other.showActivity;
   const presence = mutual ? presenceOf(found.other.lastActiveAt, true, now) : undefined;
   // "Seen" for the people whose messages were just read: a live notice, ids only.
   const newlyRead = rows.filter((row) => row.senderUserId && row.senderUserId !== userId && (!mine?.lastReadAt || row.createdAt > mine.lastReadAt));

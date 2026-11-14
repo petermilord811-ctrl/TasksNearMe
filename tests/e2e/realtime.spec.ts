@@ -3,10 +3,11 @@ import { devSignIn } from './support/sign-in';
 
 /**
  * Real time (completion plan 7.1–7.2): Maya and Lee have the same conversation open, each in their own browser.
- * Lee's typing shows on Maya's screen, his message appears without a reload, both see each other as active, and
- * Lee sees "Seen" once Maya has read it.
+ * Lee's typing shows on Maya's screen and his message appears without a reload. Once both have written, each sees
+ * the other as active, and Maya sees "Seen" when Lee has read her reply (presence waits for a real conversation:
+ * the research report's rule 10).
  */
-test('a conversation updates live: typing, the new message, presence and Seen', async ({ browser }, testInfo) => {
+test('a conversation updates live: typing, new messages, then presence and Seen', async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');
   test.setTimeout(180_000);
   const mayaContext = await browser.newContext();
@@ -23,10 +24,10 @@ test('a conversation updates live: typing, the new message, presence and Seen', 
     await devSignIn(lee, 'lee@example.test');
     await lee.goto(threadUrl);
     await expect(lee.getByRole('textbox', { name: 'Message' })).toBeVisible();
-    // Maya's live connection is open, so Lee sees her as active.
-    await expect(lee.getByText('Active now')).toBeVisible({ timeout: 15_000 });
+    // Nobody has written yet: no presence.
+    await expect(lee.getByText('Active now')).toHaveCount(0);
 
-    // A marker that a full reload would wipe: the message must arrive without one.
+    // A marker that a full reload would wipe: messages must arrive without one.
     await maya.evaluate(() => {
       (window as unknown as { liveMarker: boolean }).liveMarker = true;
     });
@@ -36,8 +37,12 @@ test('a conversation updates live: typing, the new message, presence and Seen', 
     await expect(maya.getByText('On my way at ten')).toBeVisible({ timeout: 10_000 });
     expect(await maya.evaluate(() => (window as unknown as { liveMarker?: boolean }).liveMarker)).toBe(true);
 
-    // Maya's screen showed it, which marked it read: Lee sees "Seen" on his message, live as well.
-    await expect(lee.getByText('Seen', { exact: true })).toBeVisible({ timeout: 15_000 });
+    // Maya answers: now it's a conversation, so presence and Seen start.
+    await maya.getByRole('textbox', { name: 'Message' }).fill('Perfect, see you then');
+    await maya.getByRole('button', { name: 'Send' }).click();
+    await expect(lee.getByText('Perfect, see you then')).toBeVisible({ timeout: 10_000 });
+    await expect(maya.getByText('Seen', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(lee.getByText('Active now')).toBeVisible({ timeout: 15_000 });
   } finally {
     await mayaContext.close();
     await leeContext.close();
