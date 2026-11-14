@@ -78,7 +78,7 @@
       "line2": "cobra de tus",
       "line3Vivid": "vecinos",
       "line3Rest": ".",
-      "subtitle": "Elige las tareas que quieres, acuerda el precio desde el inicio y cobra a través de la plataforma."
+      "subtitle": "Elige los trabajos que quieres, acuerda el precio desde el inicio y cobra a través de la plataforma."
     },
     "activity": {
       "label": "Nuevas tareas abiertas",
@@ -305,10 +305,10 @@
     "link": "Nuestro enfoque de confianza y seguridad"
   },
   "helpers": {
-    "eyebrow": "Para ayudantes",
+    "eyebrow": "Trabajos cerca de ti",
     "title": "Tus habilidades,",
     "titleAccent": "tu horario",
-    "body": "Elige las tareas que te convengan, fija tus propios precios y ve cuánto ganarás antes de ofrecerte.",
+    "body": "Elige los trabajos que te convengan, fija tus propios precios y ve cuánto ganarás antes de ofrecerte.",
     "prices": "Tus precios, tus ofertas",
     "schedule": "Trabaja cuando te convenga",
     "repeat": "Convierte buenas tareas en clientes frecuentes",
