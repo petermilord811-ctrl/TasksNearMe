@@ -23,3 +23,6 @@ export * from '../../modules/earnings/schema';
 export * from '../../modules/notifications/schema';
 export * from '../../modules/badges/schema';
 export * from '../../modules/webhooks/schema';
+export * from '../../modules/community/schema';
+export * from '../../modules/questions/schema';
+export * from '../../modules/searches/schema';
