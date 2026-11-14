@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { bookingsPaused } from '@/modules/markets/outage';
 import { and, asc, desc, eq, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
@@ -229,6 +230,10 @@ export async function fillCalendar(db: Db, seriesId: string, now: Date): Promise
     await stop(db, series, 'canceled', 'system', now);
     return;
   }
+  // The outage switch (5.15, 5.18): no new visits while the market is paused, since each is a charge to come.
+  // Visits already on the calendar go ahead; the next run after the switch goes off adds the missing ones (each
+  // visit index once).
+  if (await bookingsPaused(db, series.marketId)) return;
   const [template] = await db.select().from(tasks).where(eq(tasks.id, series.templateTaskId)).limit(1);
   const policy = await getPublishedPolicy(series.marketId, db);
   if (!template || !policy) return;

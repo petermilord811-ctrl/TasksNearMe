@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, like, or } from 'drizzle-orm';
+import { OUTAGE_FLAG } from '@/modules/markets/outage';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider, devCardRef } from '@/integrations/payments';
 import { getBookingView, runBookingAction } from '@/modules/bookings/hub';
@@ -285,6 +286,27 @@ describe('regular visits', () => {
     const after = (await visitsOf(seriesId)).filter((row) => row.status === 'scheduled');
     expect(after).toHaveLength(4);
     expect(after.every((row) => marketDayKey(row.startAt) >= resumeOn)).toBe(true);
+  });
+
+  it('adds no visits while the market’s outage switch is on, and catches up once it’s off (5.18)', async () => {
+    // A week after resuming, the four-ahead calendar would take one more visit.
+    const later = new Date(Date.parse(`${resumedOn}T12:00:00Z`) + 7 * DAY);
+    const before = await visitsOf(seriesId);
+    await db.insert(featureFlags).values({ key: OUTAGE_FLAG, marketId: 'mkt_austin', enabled: true }).onConflictDoUpdate({ target: [featureFlags.key, featureFlags.marketId], set: { enabled: true } });
+    try {
+      await runSeriesCalendars(db, later);
+      expect((await visitsOf(seriesId)).map((row) => row.visitIndex)).toEqual(before.map((row) => row.visitIndex));
+    } finally {
+      await db.delete(featureFlags).where(and(eq(featureFlags.key, OUTAGE_FLAG), eq(featureFlags.marketId, 'mkt_austin')));
+    }
+    await runSeriesCalendars(db, later);
+    const caughtUp = await visitsOf(seriesId);
+    expect(caughtUp.length).toBeGreaterThan(before.length);
+    // Running again adds nothing twice.
+    await runSeriesCalendars(db, later);
+    const again = await visitsOf(seriesId);
+    expect(again.map((row) => row.visitIndex)).toEqual(caughtUp.map((row) => row.visitIndex));
+    expect(new Set(again.map((row) => row.visitIndex)).size).toBe(again.length);
   });
 
   it('ends with 7 days of notice from the helper, and tells both people what happened', async () => {
