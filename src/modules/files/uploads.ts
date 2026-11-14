@@ -5,7 +5,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { files } from '../tasks/schema';
-import { ACCEPTED_IMAGE_TYPES, AVATAR_PX, MAX_PHOTO_BYTES, photoFromFile } from './photos';
+import { ACCEPTED_IMAGE_TYPES, AVATAR_PX, MAX_PHOTO_BYTES, avatarPhoto, photoFromFile } from './photos';
 
 /**
  * Photo uploads (blueprint 02 J1 step 4): every image is decoded and re-encoded, which drops all
@@ -66,5 +66,6 @@ export async function storePhoto(
     createdAt: now(),
   };
   await db.insert(files).values(row);
-  return { ok: true, photo: photoFromFile(row) };
+  // A profile photo comes back at the size it's shown everywhere (photos.ts), so the page and the menu agree.
+  return { ok: true, photo: input.kind === 'avatar' ? avatarPhoto(row.id, row.alt) : photoFromFile(row) };
 }

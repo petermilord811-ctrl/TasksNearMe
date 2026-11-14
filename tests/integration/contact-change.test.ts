@@ -155,7 +155,8 @@ describe('the profile photo', () => {
     const userId = 'usr_contact_robin';
     const first = await setProfilePhoto({ db, storage }, userId, await portrait());
     if (!first.ok) throw new Error(first.code);
-    expect(first.photo).toMatchObject({ width: 512, height: 512, alt: 'Robin C.' });
+    // Stored as a 512 px square, shown at 256 (completion plan 5.7).
+    expect(first.photo).toMatchObject({ width: 256, height: 256, alt: 'Robin C.', src: `/api/files/${first.photo.id}?w=256` });
     const [file] = await db.select().from(files).where(eq(files.id, first.photo.id));
     expect(file).toMatchObject({ kind: 'avatar', ownerUserId: userId, width: 512, height: 512 });
     expect(await isCurrentProfilePhoto(db, file!)).toBe(true);

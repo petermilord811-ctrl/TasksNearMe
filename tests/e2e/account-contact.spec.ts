@@ -126,13 +126,16 @@ test('account: a profile photo shows everywhere and is public only while current
   const avatar = page.getByRole('img', { name: 'Profile photo of Casey M.' });
   await expect(avatar).toBeVisible();
   const src = await avatar.getAttribute('src');
-  expect(src).toMatch(/^\/api\/files\/fil_/);
+  // Shown at 256 px (completion plan 5.7): the route resizes the stored 512 px square.
+  expect(src).toMatch(/^\/api\/files\/fil_[0-9a-z]+\?w=256$/);
   // Cropped to a square, re-encoded, and readable without signing in while it's the current photo.
   const served = await request.get(src!);
   expect(served.status()).toBe(200);
   expect(served.headers()['content-type']).toBe('image/webp');
   const meta = await sharp(await served.body()).metadata();
-  expect([meta.width, meta.height]).toEqual([512, 512]);
+  expect([meta.width, meta.height]).toEqual([256, 256]);
+  const stored = await sharp(await (await request.get(src!.replace(/\?.*$/, ''))).body()).metadata();
+  expect([stored.width, stored.height]).toEqual([512, 512]);
 
   // After a reload the account menu shows it too.
   await page.reload();
@@ -142,4 +145,5 @@ test('account: a profile photo shows everywhere and is public only while current
   await expect(page.getByText('Your photo was removed.')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Avatar with initials CM' })).toBeVisible();
   expect((await request.get(src!)).status()).toBe(404);
+  expect((await request.get(src!.replace(/\?.*$/, ''))).status()).toBe(404);
 });
