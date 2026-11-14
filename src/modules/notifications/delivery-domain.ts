@@ -66,6 +66,9 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   // Questions on a task (completion plan 7.9) are part of getting to an offer.
   question_received: 'offers',
   question_answered: 'offers',
+  // Saved searches (completion plan 7.10) are new-task alerts the person asked for.
+  saved_search_match: 'task_alerts',
+  saved_search_digest: 'task_alerts',
 };
 
 /** Day-of updates that can't wait until morning (a 7 am start's 2 h reminder comes at 5 am): texted even in quiet hours. */

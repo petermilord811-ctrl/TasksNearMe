@@ -124,6 +124,12 @@ describe('TaskBoardScreen', () => {
     expect(within(screen.getByRole('navigation', { name: 'Group' })).getByRole('link', { name: /By day/ }).getAttribute('aria-current')).toBe('true');
   });
 
+  it('saves the current view, filters and all, for alerts (completion plan 7.10)', () => {
+    renderBoard(taskBoardFilteredData);
+    const save = screen.getByRole('link', { name: 'Save this search' });
+    expect(save.getAttribute('href')).toBe(routes.app.newSavedSearch(routes.taskBoard('austin', { ...taskBoardFilteredData.query, page: undefined })));
+  });
+
   it('shows cards without the grouping control', () => {
     renderBoard(taskBoardCardsData);
     expect(screen.queryByRole('navigation', { name: 'Group' })).toBeNull();

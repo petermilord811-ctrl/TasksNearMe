@@ -15,6 +15,7 @@ export * from './content';
 export * from './board';
 export * from './community';
 export * from './questions';
+export * from './searches';
 export * from './profiles';
 export * from './posting';
 export * from './offers';

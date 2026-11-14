@@ -67,6 +67,7 @@ import { helpersBrowsePreviews } from './helpers-browse.preview';
 import { reportPreviews } from './report.preview';
 import { communityPreviews } from './community.preview';
 import { questionPreviews } from './questions.preview';
+import { searchPreviews } from './searches.preview';
 import { rewardsPreviews } from './rewards.preview';
 import { changesPreviews } from './changes.preview';
 import { inviteCardPreviews } from './invite-card.preview';
@@ -158,4 +159,5 @@ export const previews: PreviewEntry[] = [
   ...reportPreviews,
   ...communityPreviews,
   ...questionPreviews,
+  ...searchPreviews,
 ];

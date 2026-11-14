@@ -127,13 +127,20 @@ export const routes = {
         slot: opts.slotId,
       }),
     saved: () => '/app/saved',
+    /** Saved searches and their alerts (plan 7.10). */
+    savedSearches: () => '/app/saved-searches',
+    /** Opens a saved search's board view. */
+    savedSearch: (searchId: string) => `/app/saved-searches/${enc(searchId)}`,
+    /** Save the board view at `from` (its path and query). */
+    newSavedSearch: (from: string) => withQuery('/app/saved-searches/new', { from }),
     /** A client's ID check, when risk asks for one; `next` is where to go once verified (an app path). */
     verifyIdentity: (next?: string) => withQuery('/app/verify-identity', { next }),
     /** The helper feed. Same parameters as the task board, plus `distance` (default `any`, left out). */
     /** Defaults (`when: any`, `sort: soonest`, `distance: any`, the list, page 1) are left out of the URL. */
     findWork: (query: FindWorkQuery = {}) =>
       withQuery('/app/find-work', {
-        ...boardQuery({ category: query.category, when: query.when, remoteOnly: query.remoteOnly, page: query.page }),
+        // Every board filter (completion plan 7.4: keyword, type, neighborhoods, price, time of day…), then find work's own.
+        ...boardQuery({ category: query.category, type: query.type, q: query.q, areas: query.areas, minPrice: query.minPrice, maxPrice: query.maxPrice, pricing: query.pricing, posted: query.posted, times: query.times, few: query.few, when: query.when, remoteOnly: query.remoteOnly, page: query.page }),
         sort: query.sort && query.sort !== 'soonest' ? query.sort : undefined,
         distance: query.distance && query.distance !== 'any' ? query.distance : undefined,
         saved: query.saved ? '1' : undefined,

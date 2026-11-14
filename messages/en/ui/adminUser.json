@@ -154,7 +154,9 @@
     "community_answer_pinned": "Community answer pinned",
     "community_helpful": "Community helpful",
     "question_received": "Question received",
-    "question_answered": "Question answered"
+    "question_answered": "Question answered",
+    "saved_search_match": "Saved search match",
+    "saved_search_digest": "Saved search digest"
   },
   "previews": {
     "group": "Admin · person details",

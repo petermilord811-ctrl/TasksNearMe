@@ -1,12 +1,12 @@
 import { useTranslations } from 'next-intl';
-import { BadgeCheck, BookOpen, ChartColumn, Webhook, CalendarDays, CalendarCheck, CircleDollarSign, ClipboardList, FileClock, Flag, Gift, Heart, HelpCircle, Home, Inbox, ListChecks, MessageCircle, MessageSquareText, MessagesSquare, Search, Settings, Ticket, ShieldCheck, Timer, UserRound, UserSearch, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, BookOpen, ChartColumn, Webhook, CalendarDays, CalendarCheck, CircleDollarSign, ClipboardList, FileClock, Flag, Gift, Heart, HelpCircle, Home, Inbox, ListChecks, MessageCircle, MessageSquareText, MessagesSquare, BellRing, Search, Settings, Ticket, ShieldCheck, Timer, UserRound, UserSearch, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { cn } from '@/ui/lib/utils';
 import { NavIndicator } from './nav-indicator';
 import { NavLink } from './nav-link';
 import type { NavId, NavItem } from './nav';
 
 const icons: Record<NavId, LucideIcon> = {
-  home: Home, tasks: ClipboardList, bookings: CalendarCheck, messages: MessageCircle, community: MessagesSquare,
+  home: Home, tasks: ClipboardList, bookings: CalendarCheck, messages: MessageCircle, community: MessagesSquare, savedSearches: BellRing,
   account: UserRound, findWork: Search, earnings: Wallet, helpers: UserSearch, saved: Heart, payments: CircleDollarSign,
   support: HelpCircle, offers: Inbox, availability: CalendarDays, clients: Users, rewards: Gift,
   queues: ListChecks, cases: BookOpen, reports: Flag, users: Users, verifications: BadgeCheck, responseTimes: Timer, savedReplies: MessageSquareText, metrics: ChartColumn, webhooks: Webhook, beta: Ticket, config: Settings,

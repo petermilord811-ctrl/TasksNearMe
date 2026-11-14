@@ -69,7 +69,9 @@
     "community_answer_pinned": "{actorName} pinned your answer on the post: {title}",
     "community_helpful": "{count, plural, one {A neighbor found your {on, select, reply {answer} other {post}} helpful: {title}} other {# neighbors found your {on, select, reply {answer} other {post}} helpful: {title}}}",
     "question_received": "{actorName} asked a question about {title}",
-    "question_answered": "{actorName} answered your question about {title}"
+    "question_answered": "{actorName} answered your question about {title}",
+    "saved_search_match": "New task for your search {search}: {title}",
+    "saved_search_digest": "{count, plural, one {# new task for your search {search}} other {# new tasks for your search {search}}}"
   },
   "previews": {
     "group": "Notifications",

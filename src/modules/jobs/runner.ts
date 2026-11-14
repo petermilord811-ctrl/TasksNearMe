@@ -1,3 +1,4 @@
+import { runSavedSearchDigests } from '@/modules/searches/service';
 import { stripeConnectFromEnv } from '@/integrations/payments/stripe-connect';
 import { runScheduledTransfers } from '@/modules/payments/connect';
 import { expireDuePosts } from '@/modules/availability/service';
@@ -66,6 +67,8 @@ export const JOBS: Job[] = [
   { name: 'verification.timers', run: (db, now) => runVerificationTimers(db, { storage: createFileStorage(), providers: verificationProvidersFor(process.env) }, now) },
   // Welcome gift cards for helpers whose three checks passed, and the month's waiting line (before notifications).
   { name: 'rewards.welcome', run: (db, now) => runWelcomeRewards(db, now) },
+  // Saved searches' morning digest (completion plan 7.10): once a day from 8 am, before the dispatch.
+  { name: 'searches.digest', run: (db, now) => runSavedSearchDigests(db, now).then(() => undefined) },
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
   { name: 'notifications.deliver', run: (db, now) => deliverNotifications(db, now) },
   { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), payments: createPaymentProvider(), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },

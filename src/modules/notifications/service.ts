@@ -27,6 +27,7 @@ import { rebookProposals } from '@/modules/rebook/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { communityPosts } from '@/modules/community/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
+import { instantSearchMatches } from '@/modules/searches/service';
 import { isLockedPreference, preferenceOn } from './delivery-domain';
 import { privacyViewOf } from '@/modules/privacy/requests';
 import { requestIdentityAfterNameChange } from '@/modules/verification/tracks';
@@ -114,6 +115,13 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
       return event.type === 'question.asked'
         ? [{ userId: poster, type: 'question_received', target: { kind: 'task', taskId }, title, actorName: await nameOf(db, asker) }]
         : [{ userId: asker, type: 'question_answered', target: { kind: 'find_work_task', taskId }, title, actorName: await nameOf(db, poster) }];
+    }
+    case 'searches.digest': {
+      const userId = text(p.userId);
+      const searchId = text(p.searchId);
+      const total = typeof p.count === 'number' ? p.count : undefined;
+      if (!userId || !searchId || !total) return [];
+      return [{ userId, type: 'saved_search_digest', target: { kind: 'saved_search', searchId }, params: { count: total, search: text(p.name) ?? '' } }];
     }
     case 'community.helpful': {
       const post = await communityPost(db, text(p.postId));
@@ -287,13 +295,25 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
       const [task] = await db.select({ title: tasks.title, budgetCents: tasks.budgetCents }).from(tasks).where(eq(tasks.id, taskId)).limit(1);
       if (!task) return [];
       const helpers = await helpersToAlert(db, taskId, new Date(event.createdAt));
-      return helpers.map((userId) => ({
-        userId,
-        type: 'task_match' as const,
-        target: { kind: 'find_work_task', taskId } as AttentionTarget,
-        title: task.title,
-        ...(task.budgetCents ? { params: { amountCents: task.budgetCents } } : {}),
-      }));
+      // Saved searches with instant alerts that the task fits (completion plan 7.10), once per person, after the
+      // helpers' own task alerts (someone already told about it isn't told twice).
+      const searches = (await instantSearchMatches(db, taskId, new Date(event.createdAt))).filter((match) => !helpers.includes(match.userId));
+      return [
+        ...helpers.map((userId) => ({
+          userId,
+          type: 'task_match' as const,
+          target: { kind: 'find_work_task', taskId } as AttentionTarget,
+          title: task.title,
+          ...(task.budgetCents ? { params: { amountCents: task.budgetCents } } : {}),
+        })),
+        ...searches.map((match) => ({
+          userId: match.userId,
+          type: 'saved_search_match' as const,
+          target: { kind: 'saved_search', searchId: match.searchId } as AttentionTarget,
+          title: task.title,
+          params: { search: match.name },
+        })),
+      ];
     }
     case 'series.started':
     case 'series.paused':

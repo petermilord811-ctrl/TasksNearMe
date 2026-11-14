@@ -71,6 +71,8 @@ function pathOf(target: AttentionTarget): string {
       return routes.app.account();
     case 'community_post':
       return routes.app.communityPost(target.postId);
+    case 'saved_search':
+      return routes.app.savedSearch(target.searchId);
     case 'verify_identity':
       return routes.app.verifyIdentity();
     case 'rewards':
@@ -105,6 +107,7 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     tier: params.tier ?? 1,
     count: params.count ?? 0,
     on: params.on ?? 'post',
+    search: params.search ?? '',
   });
   const url = `${appUrl()}${pathOf(row.target)}`;
   const type = row.type as NotificationType;

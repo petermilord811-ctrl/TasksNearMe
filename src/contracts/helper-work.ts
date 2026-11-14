@@ -9,7 +9,7 @@ import type { PriceBreakdown, PricingInput } from './money';
 import type { OnboardingStep } from './routes';
 import type { OfferStatus } from './status';
 import type { TaskDetailsValue } from './posting';
-import type { TaskBoardQuery, TaskPublicView } from './tasks';
+import type { TaskBoardQuery, TaskPublicView, TaskBoardQueryState } from './tasks';
 
 /**
  * The helper's side of the marketplace (blueprint 02 J2): find work, a task from the helper's view,
@@ -99,8 +99,10 @@ export interface FindWorkPageData {
     distance: FindWorkDistance;
     saved: boolean;
     view: FindWorkView;
-  };
+  } & Partial<Pick<TaskBoardQueryState, 'type' | 'q' | 'areas' | 'minPrice' | 'maxPrice' | 'pricing' | 'posted' | 'times' | 'few'>>;
   categories: CategoryView[];
+  /** The market's neighborhoods, for the neighborhood filter (completion plan 7.4). */
+  areas?: { slug: string; name: string }[];
   cards: FindWorkCard[];
   totalCount: number;
   pageCount: number;

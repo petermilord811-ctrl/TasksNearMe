@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, Check, LayoutGrid, List, Lock, Plus, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BellRing, Check, LayoutGrid, List, Lock, Plus, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { ISODateTime, TaskBoardPageData, TaskBoardQuery, TaskPublicView } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -47,6 +47,7 @@ const panelHeadClass = 'flex flex-wrap items-baseline justify-between gap-x-3 ga
 export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const t = useTranslations('taskBoard');
   const card = useTranslations('taskCard');
+  const saved = useTranslations('savedSearches');
   const { formatDate } = useFormat();
   const locale = useLocale();
   const { market, query } = data;
@@ -151,6 +152,10 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
           </div>
         </div>
 
+        {/* Save this view and get alerts when a new task fits (completion plan 7.10); signing in comes first. */}
+        <div className="flex justify-end">
+          <Link href={routes.app.newSavedSearch(routes.taskBoard(market.slug, { ...query, page: undefined }))} rel="nofollow" className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-foreground/[0.1] bg-card px-3 text-[13px] font-semibold hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring dark:border-white/[0.1]"><BellRing aria-hidden="true" className="size-4 text-primary" />{saved('save')}</Link>
+        </div>
         {chips.length > 0 && <nav aria-label={t('active')} className="flex flex-wrap items-center gap-1.5">
           {chips.map((chip) => <Link key={chip.key} href={chip.href} rel="nofollow" aria-label={t('removeFilter', { label: chip.label })} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-primary/30 bg-brand-soft px-3 text-[13px] font-medium transition-colors hover:border-primary/60 focus-visible:outline-2 focus-visible:outline-ring">{chip.label}<X aria-hidden="true" className="size-3.5" /></Link>)}
           <Link href={routes.taskBoard(market.slug, { view: query.view, group: query.group, sort: query.sort })} rel="nofollow" className="inline-flex min-h-8 items-center px-2 text-[13px] font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('clearAll')}</Link>

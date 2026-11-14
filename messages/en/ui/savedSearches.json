@@ -1,0 +1,47 @@
+{
+  "title": "Saved searches",
+  "description": "Board views you come back to, with alerts when a new task fits.",
+  "empty": {
+    "title": "No saved searches yet",
+    "body": "On the task board, set the filters you want and choose “Save this search”.",
+    "action": "Open the task board"
+  },
+  "open": "Open",
+  "openCount": "{count, plural, =0 {No open tasks right now} one {# open task} other {# open tasks}}",
+  "everything": "All open tasks in {market}",
+  "alerts": {
+    "label": "Alerts",
+    "instant": "Right away",
+    "daily": "Morning digest",
+    "off": "Off",
+    "hint": "Right away: up to 10 alerts a day across your searches. Morning digest: one note at 8 am when there's something new."
+  },
+  "delete": "Delete",
+  "deleteLabel": "Delete {name}",
+  "updated": "Saved",
+  "deleted": "Deleted",
+  "limit": "You can keep up to {max} saved searches.",
+  "save": "Save this search",
+  "new": {
+    "title": "Save this search",
+    "back": "Back to the board",
+    "filters": "Filters",
+    "name": "Name",
+    "nameHint": "So you know it in your alerts.",
+    "submit": "Save search",
+    "submitting": "Saving…",
+    "full": "You have {max} saved searches, the most you can keep. Delete one to save this one.",
+    "manage": "Manage your saved searches"
+  },
+  "chips": {
+    "price": "${min} to ${max}",
+    "from": "${min} and up",
+    "upTo": "Up to ${max}"
+  },
+  "previews": {
+    "group": "Saved searches",
+    "list": "Saved searches · three with different alerts",
+    "empty": "Saved searches · none yet",
+    "new": "Save this search"
+  }
+}

@@ -116,7 +116,8 @@
         "account": "Abrir tu cuenta",
         "verify_identity": "Verificar tu identidad",
         "rewards": "Abrir tus recompensas",
-        "community_post": "Abrir la publicación"
+        "community_post": "Abrir la publicación",
+        "saved_search": "Abrir tu búsqueda"
       },
       "next": {
         "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Solo se te cobra cuando reservas.",
@@ -168,7 +169,9 @@
         "community_answer_pinned": "Gracias por ayudar a un vecino.",
         "community_helpful": "Mira la conversación en la comunidad.",
         "question_received": "Respóndela en tu tarea; todos los ayudantes leen la respuesta.",
-        "question_answered": "Lee la respuesta y luego haz tu oferta."
+        "question_answered": "Lee la respuesta y luego haz tu oferta.",
+        "saved_search_match": "Abre tu búsqueda para verla junto a las demás.",
+        "saved_search_digest": "Abre tu búsqueda para verlas."
       },
       "lockedFooter": "Los correos de reservas y pagos siempre están activados: son tus recibos y avisos de seguridad.",
       "optionalFooter": "Recibes esto porque los correos de {topic} están activados.",
@@ -232,7 +235,9 @@
       "community_answer_pinned": "{actorName} fijó tu respuesta en la publicación: {title}.",
       "community_helpful": "{count, plural, one {A un vecino le resultó útil tu {on, select, reply {respuesta} other {publicación}}: {title}} other {A # vecinos les resultó útil tu {on, select, reply {respuesta} other {publicación}}: {title}}}.",
       "question_received": "{actorName} hizo una pregunta sobre {title}.",
-      "question_answered": "{actorName} respondió tu pregunta sobre {title}."
+      "question_answered": "{actorName} respondió tu pregunta sobre {title}.",
+      "saved_search_match": "Nueva tarea para tu búsqueda {search}: {title}.",
+      "saved_search_digest": "{count, plural, one {# tarea nueva para tu búsqueda {search}} other {# tareas nuevas para tu búsqueda {search}}}."
     },
     "pushTitle": "TasksNearMe"
   },

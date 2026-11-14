@@ -113,6 +113,10 @@ export const NOTIFICATION_TYPES = [
   'question_received',
   /** The poster (`actorName`) answered the helper's question on `title`. */
   'question_answered',
+  /** A new task (`title`) fits the person's saved search `params.search` (completion plan 7.10). */
+  'saved_search_match',
+  /** The morning digest: `params.count` new tasks fit the saved search `params.search`. */
+  'saved_search_digest',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -123,7 +127,7 @@ export interface NotificationView {
   title?: string;
   /** Who did it ("Jordan T."). */
   actorName?: string;
-  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number; count?: number; on?: 'post' | 'reply' };
+  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number; count?: number; on?: 'post' | 'reply'; search?: string };
   /** Where it leads (same targets as the home's attention items). */
   target: AttentionTarget;
   createdAt: ISODateTime;

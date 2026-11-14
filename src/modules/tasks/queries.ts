@@ -216,12 +216,12 @@ export async function listFeedTasks(
   },
 ): Promise<{ tasks: { view: TaskPublicView; distanceMiles: number | null; posterUserId: string; status: string; windowEnd: Date }[]; totalCount: number }> {
   const { query, now, center } = options;
-  const conditions = openIn(options.marketId, now);
+  // The board's own filters (completion plan 7.4: keyword, type, neighborhoods, price, time of day, posted…), then
+  // find work's: blocked people, the distance, the helper's hidden and saved tasks.
+  const areaIds = new Map((await db.select({ id: areas.id, slug: areas.slug }).from(areas).where(eq(areas.marketId, options.marketId))).map((area) => [area.slug, area.id]));
+  const { sort: _sort, view: _view, distance: _distance, saved: _saved, page: _page, ...filters } = query;
+  const conditions = boardConditions({ ...filters, areas: filters.areas ?? [], times: filters.times ?? [], few: filters.few ?? false }, { marketId: options.marketId, now, areaIds });
   if (options.excludePosterIds.length > 0) conditions.push(notInArray(tasks.posterUserId, options.excludePosterIds));
-  if (query.category) conditions.push(eq(categories.slug, query.category));
-  if (query.remoteOnly) conditions.push(eq(tasks.mode, 'remote'));
-  const range = whenRange(query.when, now);
-  if (range) conditions.push(lt(tasks.windowStart, range.to), gt(tasks.windowEnd, range.from));
   const miles = center ? milesFrom(center) : sql<number | null>`null`;
   if (center && options.maxMiles !== null) {
     conditions.push(or(eq(tasks.mode, 'remote'), sql`${miles} <= ${options.maxMiles}`)!);

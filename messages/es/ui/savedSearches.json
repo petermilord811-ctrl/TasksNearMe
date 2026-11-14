@@ -1,0 +1,47 @@
+{
+  "title": "Búsquedas guardadas",
+  "description": "Las vistas del tablero a las que vuelves, con avisos cuando aparece una tarea que encaja.",
+  "empty": {
+    "title": "Aún no tienes búsquedas guardadas",
+    "body": "En el tablero de tareas, elige los filtros que quieras y toca «Guardar esta búsqueda».",
+    "action": "Abrir el tablero de tareas"
+  },
+  "open": "Abrir",
+  "openCount": "{count, plural, =0 {Ninguna tarea abierta por ahora} one {# tarea abierta} other {# tareas abiertas}}",
+  "everything": "Todas las tareas abiertas en {market}",
+  "alerts": {
+    "label": "Avisos",
+    "instant": "Al momento",
+    "daily": "Resumen por la mañana",
+    "off": "Desactivados",
+    "hint": "Al momento: hasta 10 avisos al día entre todas tus búsquedas. Resumen por la mañana: un aviso a las 8 a.m. cuando hay algo nuevo."
+  },
+  "delete": "Eliminar",
+  "deleteLabel": "Eliminar {name}",
+  "updated": "Guardado",
+  "deleted": "Eliminada",
+  "limit": "Puedes tener hasta {max} búsquedas guardadas.",
+  "save": "Guardar esta búsqueda",
+  "new": {
+    "title": "Guardar esta búsqueda",
+    "back": "Volver al tablero",
+    "filters": "Filtros",
+    "name": "Nombre",
+    "nameHint": "Para reconocerla en tus avisos.",
+    "submit": "Guardar búsqueda",
+    "submitting": "Guardando…",
+    "full": "Tienes {max} búsquedas guardadas, el máximo. Elimina una para guardar esta.",
+    "manage": "Administrar tus búsquedas guardadas"
+  },
+  "chips": {
+    "price": "De ${min} a ${max}",
+    "from": "${min} o más",
+    "upTo": "Hasta ${max}"
+  },
+  "previews": {
+    "group": "Búsquedas guardadas",
+    "list": "Búsquedas guardadas · tres con avisos distintos",
+    "empty": "Búsquedas guardadas · ninguna aún",
+    "new": "Guardar esta búsqueda"
+  }
+}

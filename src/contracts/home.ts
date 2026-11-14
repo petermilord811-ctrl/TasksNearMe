@@ -33,7 +33,9 @@ export type AttentionTarget =
   /** The helper's gift cards (`routes.app.rewards()`). */
   | { kind: 'rewards' }
   /** A community post (`routes.app.communityPost(postId)`, completion plan 7.7). */
-  | { kind: 'community_post'; postId: string };
+  | { kind: 'community_post'; postId: string }
+  /** A saved search's board view (`routes.app.savedSearch(searchId)`, completion plan 7.10). */
+  | { kind: 'saved_search'; searchId: string };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */
