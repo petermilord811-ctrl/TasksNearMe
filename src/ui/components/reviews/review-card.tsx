@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { Flag } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PublicReviewView } from '@/contracts';

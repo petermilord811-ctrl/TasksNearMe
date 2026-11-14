@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { Inbox } from 'lucide-react';
 import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';

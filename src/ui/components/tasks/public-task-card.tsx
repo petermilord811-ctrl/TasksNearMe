@@ -1,8 +1,9 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import type { ReactNode } from 'react';
 import { CalendarDays, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type CategorySlug, type ISODateTime, type TaskPublicView } from '@/contracts';
+import type { CategorySlug, ISODateTime, TaskPublicView } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';

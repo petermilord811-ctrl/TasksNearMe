@@ -1,8 +1,9 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { ArrowRight, Circle, CircleCheck, CircleDashed, Clock, Gift, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { routes, type OnboardingStepState, type WelcomeGiftCard } from '@/contracts';
+import type { OnboardingStepState, WelcomeGiftCard } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';

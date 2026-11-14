@@ -1,7 +1,8 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { Clock3, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type HelperSummary } from '@/contracts';
+import type { HelperSummary } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
 import { cn } from '@/ui/lib/utils';
 import { InitialsAvatar } from './initials-avatar';
