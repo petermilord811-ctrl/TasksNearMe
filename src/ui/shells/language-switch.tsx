@@ -3,7 +3,9 @@
 import { useEffect, useState, useTransition, type MouseEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
-import { APP_LOCALES, DEFAULT_LOCALE, LOCALE_NAMES, isAppLocale, type AppLocale, type LanguageSwitchHandler } from '@/contracts';
+// Values from their own modules, not the contracts barrel: it would bring every zod schema onto every page.
+import { APP_LOCALES, DEFAULT_LOCALE, LOCALE_NAMES, isAppLocale, type AppLocale } from '@/contracts/locale';
+import type { LanguageSwitchHandler } from '@/contracts';
 import { splitLocalePath } from '@/shared/locale';
 import { cn } from '@/ui/lib/utils';
 

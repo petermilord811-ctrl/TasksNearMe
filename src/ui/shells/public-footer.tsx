@@ -1,9 +1,11 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { ArrowUpRight, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { CATEGORY_SLUGS, LEGAL_DOCS, routes, type LanguageSwitchHandler } from '@/contracts';
+import type { LanguageSwitchHandler } from '@/contracts';
+import { CATEGORY_SLUGS } from '@/contracts/common';
+import { LEGAL_DOCS, routes } from '@/contracts/routes';
 import { LANDING_SECTIONS } from '@/ui/landing/sections/ids';
-import { Reveal } from '@/ui/motion';
+import { Reveal } from '@/ui/motion/reveal';
 import { LanguageSwitch } from './language-switch';
 import { Logo } from './logo';
 

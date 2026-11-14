@@ -2,7 +2,7 @@ import { Suspense, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { LanguageSwitchHandler, ShellViewer } from '@/contracts';
 import { Logo } from './logo';
-import { ScrollbarActivity } from '@/ui/motion';
+import { ScrollbarActivity } from '@/ui/motion/scrollbar-activity';
 import { SkipLink } from './skip-link';
 import { MobileMenu } from './mobile-menu';
 import { LanguageSwitch } from './language-switch';

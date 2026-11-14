@@ -3,7 +3,8 @@
 import { use } from 'react';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useTranslations } from 'next-intl';
-import { routes, type ShellViewer } from '@/contracts';
+import type { ShellViewer } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';
 

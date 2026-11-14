@@ -1,6 +1,6 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useTranslations } from 'next-intl';
-import { routes } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { cn } from '@/ui/lib/utils';
 
 /**

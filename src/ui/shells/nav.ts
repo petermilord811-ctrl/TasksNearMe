@@ -1,4 +1,5 @@
-import { routes, type Mode, type StaffRole } from '@/contracts';
+import type { Mode, StaffRole } from '@/contracts';
+import { routes } from '@/contracts/routes';
 
 export type NavId =
   | 'home'

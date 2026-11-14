@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Plus, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type Mode } from '@/contracts';
+import type { Mode } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { splitLocalePath } from '@/shared/locale';
 
 /**

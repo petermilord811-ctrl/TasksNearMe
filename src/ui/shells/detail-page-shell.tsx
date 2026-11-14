@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { buttonVariants } from '@/ui/primitives/button';
 import { AppBar } from './app-bar';
-import { ScrollbarActivity } from '@/ui/motion';
+import { ScrollbarActivity } from '@/ui/motion/scrollbar-activity';
 import { SkipLink } from './skip-link';
 
 export interface DetailPageShellProps { title: string; backHref: string; actions?: ReactNode; children: ReactNode }

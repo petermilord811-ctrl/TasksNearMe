@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowRight, CircleUserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { splitLocalePath } from '@/shared/locale';
 
 /** Where helper setup's steps live: the link would only lead to the page it sits on. */
