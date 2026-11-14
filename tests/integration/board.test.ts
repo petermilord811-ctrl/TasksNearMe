@@ -41,7 +41,15 @@ async function inSnapshot(check: (snapshot: Snapshot) => Promise<void>): Promise
   await db.transaction(
     async (transaction) => {
       const tx = transaction as unknown as Db;
-      const all = (await listBoardTasks(tx, { marketId, query: query({ group: 'none' }), now, areaIds })).tasks;
+      // Every open task, page by page (a page holds 20; CI's shared database holds many more).
+      const firstPage = await listBoardTasks(tx, { marketId, query: query({ group: 'none' }), now, areaIds });
+      const all = [...firstPage.tasks];
+      for (let page = 2; all.length < firstPage.totalCount; page += 1) {
+        const next = await listBoardTasks(tx, { marketId, query: query({ group: 'none', page: String(page) }), now, areaIds });
+        if (next.tasks.length === 0) break;
+        all.push(...next.tasks);
+      }
+      expect(all.length).toBe(firstPage.totalCount);
       const rows = await tx.select().from(tasks).where(and(eq(tasks.marketId, marketId), eq(tasks.status, 'open')));
       expect(all.length).toBeGreaterThan(3);
       const total = async (params: Record<string, string>) => (await listBoardTasks(tx, { marketId, query: query(params), now, areaIds })).totalCount;
