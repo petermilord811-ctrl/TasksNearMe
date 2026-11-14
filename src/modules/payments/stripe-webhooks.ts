@@ -8,6 +8,7 @@ import { finishTipVerification } from '@/modules/bookings/tips';
 import { finishCounterVerification, finishRequestVerification } from '@/modules/invites/service';
 import { invites } from '@/modules/invites/schema';
 import { postJournal } from '@/modules/ledger/journal';
+import { proposalFunded } from '@/modules/rebook/service';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { newId } from '@/platform/db/ids';
@@ -51,7 +52,9 @@ export async function handleStripePaymentWebhook(deps: BookingDeps, input: { pay
   const payer = payment.payerUserId;
 
   if (payment.purpose === 'booking_funding') {
-    await finishBankVerification(deps, payer, payment.id, 'approved', now);
+    const finished = await finishBankVerification(deps, payer, payment.id, 'approved', now);
+    // A rebooking proposal's booking: the proposal ends as it does when the client comes back (5.17).
+    if (finished.ok && payment.bookingId) await proposalFunded(deps.db, payment.bookingId, now);
     // The hold ran out meanwhile: settle anyway, so a payment that went through is refunded by support.
     const [after] = await deps.db.select({ status: payments.status }).from(payments).where(eq(payments.id, payment.id)).limit(1);
     if (after?.status === 'requires_confirmation') {

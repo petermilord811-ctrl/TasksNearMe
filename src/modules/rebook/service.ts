@@ -364,6 +364,16 @@ async function accepted(db: Db, proposalId: string, result: PaymentAttemptResult
 }
 
 /**
+ * Stripe's webhook settled the payment of a booking a proposal made, while the client never came back from the bank
+ * (5.17): the proposal ends as it does on the client's path (accepted, the helper told, regular visits started).
+ * Nothing to do when it isn't a proposal's booking or the client got there first.
+ */
+export async function proposalFunded(db: Db, bookingId: string, now: Date): Promise<void> {
+  const [row] = await db.select({ id: rebookProposals.id }).from(rebookProposals).where(and(eq(rebookProposals.bookingId, bookingId), eq(rebookProposals.status, 'sent'))).limit(1);
+  if (row) await accepted(db, row.id, { ok: true, code: 'booked', redirectTo: routes.app.booking(bookingId) }, now);
+}
+
+/**
  * The client accepts and pays. The first attempt copies the past task (same place, a draft) and opens a
  * booking waiting for money; a retry after a declined card reuses them.
  */
@@ -488,7 +498,8 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
 /** After the dev bank dialog on an accepted proposal's charge. */
 export async function finishProposalVerification(deps: BookingDeps, posterId: string, proposalId: string, paymentId: string, outcome: 'approved' | 'failed', now: Date): Promise<PaymentAttemptResult> {
   const row = await ownProposal(deps.db, posterId, proposalId, 'poster', now);
-  if (!row || row.status !== 'sent' || !row.bookingId) return { ok: false, code: 'not_allowed' };
+  // Accepted already: Stripe's webhook finished the payment first (5.17); finishing it again answers as it would have.
+  if (!row || (row.status !== 'sent' && row.status !== 'accepted') || !row.bookingId) return { ok: false, code: 'not_allowed' };
   const [payment] = await deps.db.select({ bookingId: payments.bookingId }).from(payments).where(eq(payments.id, String(paymentId))).limit(1);
   if (payment?.bookingId !== row.bookingId) return { ok: false, code: 'not_allowed' };
   return accepted(deps.db, row.id, await finishBankVerification(deps, posterId, String(paymentId), outcome, now), now);

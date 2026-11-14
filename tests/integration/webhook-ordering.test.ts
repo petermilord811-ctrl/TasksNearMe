@@ -2,8 +2,16 @@ import { createHmac } from 'node:crypto';
 import { and, eq, inArray, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { routes, needsBankVerification } from '@/contracts';
+import { acceptChange, finishChangeVerification, payChangeDifference, proposeChange } from '@/modules/bookings/changes';
+import { acceptCounter, counterInvite, finishCounterVerification, finishRequestVerification, requestHelper } from '@/modules/invites/service';
+import { invites } from '@/modules/invites/schema';
+import { getPublishedPolicy } from '@/modules/markets/queries';
+import { quoteBreakdown } from '@/modules/payments/fees';
+import { rebookProposals } from '@/modules/rebook/schema';
+import { acceptProposal, finishProposalVerification, proposeRebook } from '@/modules/rebook/service';
+import { marketDayKey } from '@/shared/format';
 import { confirmBooking, finishBankVerification, getBookingConfirmPage } from '@/modules/bookings/confirm';
-import { bookings } from '@/modules/bookings/schema';
+import { bookingChangeRequests, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { messages, threads } from '@/modules/messaging/schema';
 import { offers } from '@/modules/offers/schema';
 import { paymentCustomers, paymentMethods, payments } from '@/modules/payments/schema';
@@ -35,6 +43,8 @@ const { db, pool, deps, stripe } = await vi.hoisted(async () => {
     intents: new Map<string, string>(),
     attached: new Map<string, string>(),
     customers: 0,
+    captures: [] as string[],
+    cancels: [] as string[],
     /** Hold the reads of one intent until `count` of them are waiting (or a moment has passed): both paths at once. */
     barrier: null as null | { intent: string; count: number; waiting: (() => void)[] },
   };
@@ -55,6 +65,12 @@ const { db, pool, deps, stripe } = await vi.hoisted(async () => {
       const id = `pi_t06_${stripe.intents.size + 1}`;
       stripe.intents.set(id, 'requires_action');
       return json({ id, status: 'requires_action', client_secret: `${id}_secret_t06` });
+    }
+    const settled = path.match(/^\/payment_intents\/(pi_t06_\d+)\/(capture|cancel)$/);
+    if (settled && method === 'POST') {
+      stripe[settled[2] === 'capture' ? 'captures' : 'cancels'].push(settled[1]!);
+      stripe.intents.set(settled[1]!, settled[2] === 'capture' ? 'succeeded' : 'canceled');
+      return json({ id: settled[1], status: settled[2] === 'capture' ? 'succeeded' : 'canceled' });
     }
     const intent = path.match(/^\/payment_intents\/(pi_t06_\d+)$/)?.[1];
     if (intent) {
@@ -152,6 +168,41 @@ async function stateOf(c: Case) {
 }
 const CONVERGED = { bookings: ['confirmed'], payments: ['succeeded'], savedCards: 1, confirmations: 1, refundsAskedFor: 0, audited: 1, bookedMessages: 1, task: 'assigned', offer: 'accepted', page: 'booked' };
 
+/** A case's booking, confirmed, with a $20 higher price the helper accepted, its difference paid with the saved card and waiting for the bank's step. */
+async function startChange(name: string): Promise<Case & { changeId: string; changePaymentId: string; changeIntent: string }> {
+  const c = await startCase(name);
+  stripe.intents.set(c.intent, 'succeeded');
+  expect(await clientReturns(c)).toMatchObject({ ok: true, code: 'booked' });
+  const proposed = await proposeChange(db, c.client, c.bookingId, { priceCents: 8000, scopeText: 'Assemble the desk and the matching chair.', message: 'Could you also do the chair?' }, new Date());
+  const changeId = proposed.ok && proposed.redirectTo ? proposed.redirectTo.split('/').pop()! : '';
+  expect(await acceptChange(deps, 'usr_jordan', c.bookingId, changeId, {}, new Date())).toMatchObject({ ok: true });
+  const [card] = await db.select({ id: paymentMethods.id }).from(paymentMethods).where(eq(paymentMethods.userId, c.client));
+  const paying = await payChangeDifference(deps, c.client, c.bookingId, changeId, { payment: { kind: 'saved', methodId: card!.id } }, new Date());
+  if (!needsBankVerification(paying)) throw new Error(`Expected the bank's step: ${JSON.stringify(paying)}`);
+  const [payment] = await db.select().from(payments).where(eq(payments.id, paying.verification.paymentId));
+  expect(payment).toMatchObject({ status: 'requires_confirmation', purpose: 'change_funding' });
+  return { ...c, changeId, changePaymentId: payment!.id, changeIntent: payment!.providerRef! };
+}
+const changeReturns = (c: Awaited<ReturnType<typeof startChange>>) => finishChangeVerification(deps, c.client, c.bookingId, c.changeId, c.changePaymentId, 'approved', new Date());
+
+/** What applying a change touches, counted. */
+async function changeStateOf(c: Awaited<ReturnType<typeof startChange>>) {
+  const [change] = await db.select({ status: bookingChangeRequests.status }).from(bookingChangeRequests).where(eq(bookingChangeRequests.id, c.changeId));
+  const [booking] = await db.select({ version: bookings.termsVersion }).from(bookings).where(eq(bookings.id, c.bookingId));
+  const terms = await db.select({ version: bookingTerms.version }).from(bookingTerms).where(eq(bookingTerms.bookingId, c.bookingId));
+  const [paid] = await db.select({ status: payments.status }).from(payments).where(eq(payments.id, c.changePaymentId));
+  const events = await db.select({ type: outboxEvents.type }).from(outboxEvents).where(inArray(outboxEvents.aggregateId, [c.bookingId, c.changePaymentId]));
+  return {
+    change: change?.status,
+    termsVersion: booking?.version,
+    versions: terms.map((row) => row.version).sort(),
+    payment: paid?.status,
+    applied: events.filter((row) => row.type === 'change.applied').length,
+    refundsAskedFor: events.filter((row) => row.type === 'payment.refund_needed').length,
+  };
+}
+const CHANGE_APPLIED = { change: 'applied', termsVersion: 2, versions: [1, 2], payment: 'succeeded', applied: 1, refundsAskedFor: 0 };
+
 beforeAll(() => {
   process.env.STRIPE_WEBHOOK_SECRET = SECRET;
   process.env.STRIPE_SECRET_KEY = 'sk_test_t06';
@@ -244,5 +295,169 @@ describe('T-06: Stripe webhooks in any order', () => {
     const [booking] = await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, c.bookingId));
     // The hold stays: the client can try another card.
     expect(booking?.status).toBe('pending_funding');
+  });
+});
+
+describe('5.17: a change’s difference paid in any order', () => {
+  it('applies the change once when the webhook and the client arrive at the same moment', async () => {
+    const c = await startChange('chg_race');
+    stripe.intents.set(c.changeIntent, 'succeeded');
+    stripe.barrier = { intent: c.changeIntent, count: 2, waiting: [] };
+    const [webhook, back] = await Promise.all([deliver({ id: 'evt_t06_chg_race', type: 'payment_intent.succeeded', intent: c.changeIntent }), changeReturns(c)]);
+    stripe.barrier = null;
+    expect(webhook).toEqual({ status: 200, body: { ok: true } });
+    expect(back).toEqual({ ok: true, code: 'paid', redirectTo: routes.app.booking(c.bookingId) });
+    expect(await changeStateOf(c)).toEqual(CHANGE_APPLIED);
+  });
+
+  it('applies it once for three deliveries at once, and answers the client who comes back after', async () => {
+    const c = await startChange('chg_burst');
+    stripe.intents.set(c.changeIntent, 'succeeded');
+    stripe.barrier = { intent: c.changeIntent, count: 3, waiting: [] };
+    const answers = await Promise.all([1, 2, 3].map(() => deliver({ id: 'evt_t06_chg_burst', type: 'payment_intent.succeeded', intent: c.changeIntent })));
+    stripe.barrier = null;
+    expect(answers.every((answer) => answer?.status === 200)).toBe(true);
+    expect(await inboxRow('evt_t06_chg_burst')).toMatchObject({ status: 'processed' });
+    expect(await changeStateOf(c)).toEqual(CHANGE_APPLIED);
+    expect(await changeReturns(c)).toEqual({ ok: true, code: 'paid', redirectTo: routes.app.booking(c.bookingId) });
+  });
+
+  it('ignores a payment_failed that arrives after the change was paid', async () => {
+    const c = await startChange('chg_stale');
+    stripe.intents.set(c.changeIntent, 'succeeded');
+    expect(await deliver({ id: 'evt_t06_chg_ok', type: 'payment_intent.succeeded', intent: c.changeIntent })).toEqual({ status: 200, body: { ok: true } });
+    expect(await deliver({ id: 'evt_t06_chg_failed', type: 'payment_intent.payment_failed', intent: c.changeIntent })).toEqual({ status: 200, body: { ok: true, ignored: true } });
+    expect(await changeStateOf(c)).toEqual(CHANGE_APPLIED);
+  });
+});
+
+
+// ---- 5.17: invite holds and rebooking proposals ------------------------------------------------------------
+
+/** An invite to Jordan on the client's own copy of the desk, held with a card that needs the bank's step. */
+async function startInvite(name: string) {
+  const client = await throwawayClient(db, `usr_t06_${name}`);
+  clients.push(client);
+  const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+  const windowStart = new Date(Date.now() + 3 * 24 * HOUR);
+  const taskId = `tsk_t06_${name}`;
+  await db.insert(tasks).values({ ...desk!, id: taskId, slug: `${taskId}-slug`, posterUserId: client, status: 'open', offerCount: 0, version: 1, windowStart, windowEnd: new Date(windowStart.getTime() + 6 * HOUR) });
+  const sent = await requestHelper(deps, client, 'jordan-t', {
+    taskId,
+    start: new Date(windowStart.getTime() + HOUR).toISOString(),
+    pricing: { type: 'fixed', priceCents: 4500 },
+    message: 'Same kind of flat-pack as last time.',
+    payment: { kind: 'stripe_card', paymentMethodId: `pm_t06_${name}`, save: false },
+    acceptTerms: true,
+  }, new Date());
+  if (!needsBankVerification(sent)) throw new Error(`Expected the bank's step: ${JSON.stringify(sent)}`);
+  const [invite] = await db.select().from(invites).where(eq(invites.paymentId, sent.verification.paymentId));
+  const [payment] = await db.select().from(payments).where(eq(payments.id, sent.verification.paymentId));
+  expect(invite).toMatchObject({ status: 'authorizing' });
+  return { client, taskId, inviteId: invite!.id, paymentId: payment!.id, intent: payment!.providerRef! };
+}
+const capturable = (intent: string, id: string) => deliver({ id, type: 'payment_intent.amount_capturable_updated', intent });
+async function inviteStateOf(inviteId: string, paymentId: string) {
+  const [invite] = await db.select({ status: invites.status, bookingId: invites.bookingId }).from(invites).where(eq(invites.id, inviteId));
+  const [payment] = await db.select({ status: payments.status }).from(payments).where(eq(payments.id, paymentId));
+  const events = await db.select({ type: outboxEvents.type }).from(outboxEvents).where(eq(outboxEvents.aggregateId, inviteId));
+  return { invite: invite?.status, payment: payment?.status, sent: events.filter((row) => row.type === 'invite.sent').length, accepted: events.filter((row) => row.type === 'invite.accepted').length };
+}
+const INVITE_SENT = { invite: 'sent', payment: 'authorized', sent: 1, accepted: 0 };
+
+describe('5.17: an invite’s hold finished from both sides', () => {
+  it('sends the invite once when the webhook and the client arrive at the same moment', async () => {
+    const c = await startInvite('inv_race');
+    stripe.intents.set(c.intent, 'requires_capture');
+    stripe.barrier = { intent: c.intent, count: 2, waiting: [] };
+    const [webhook, back] = await Promise.all([capturable(c.intent, 'evt_t06_inv_race'), finishRequestVerification(deps, c.client, c.paymentId, 'approved', new Date())]);
+    stripe.barrier = null;
+    expect(webhook).toEqual({ status: 200, body: { ok: true } });
+    expect(back).toEqual({ ok: true, code: 'sent', redirectTo: routes.app.task(c.taskId) });
+    expect(await inviteStateOf(c.inviteId, c.paymentId)).toEqual(INVITE_SENT);
+  });
+
+  it('sends it once for three deliveries at once, and tells the client who comes back after that it was sent', async () => {
+    const c = await startInvite('inv_burst');
+    stripe.intents.set(c.intent, 'requires_capture');
+    stripe.barrier = { intent: c.intent, count: 3, waiting: [] };
+    const answers = await Promise.all([1, 2, 3].map(() => capturable(c.intent, 'evt_t06_inv_burst')));
+    stripe.barrier = null;
+    expect(answers.every((answer) => answer?.status === 200)).toBe(true);
+    expect(await inviteStateOf(c.inviteId, c.paymentId)).toEqual(INVITE_SENT);
+    expect(await finishRequestVerification(deps, c.client, c.paymentId, 'approved', new Date())).toEqual({ ok: true, code: 'sent', redirectTo: routes.app.task(c.taskId) });
+    expect(await inviteStateOf(c.inviteId, c.paymentId)).toEqual(INVITE_SENT);
+  });
+
+  it('books a counter’s higher hold once, whichever side finishes it, and answers the client who comes back after', async () => {
+    const c = await startInvite('inv_counter');
+    stripe.intents.set(c.intent, 'requires_capture');
+    expect(await finishRequestVerification(deps, c.client, c.paymentId, 'approved', new Date())).toMatchObject({ ok: true, code: 'sent' });
+    expect(await counterInvite(db, deps.payments, 'usr_jordan', c.inviteId, { pricing: { type: 'fixed', priceCents: 5000 }, message: 'This one has a glass door.' }, new Date())).toEqual({ ok: true, code: 'sent' });
+    const higher = await acceptCounter(deps, c.client, c.inviteId, new Date());
+    if (!needsBankVerification(higher)) throw new Error(`Expected the bank's step: ${JSON.stringify(higher)}`);
+    const [hold] = await db.select().from(payments).where(eq(payments.id, higher.verification.paymentId));
+    stripe.intents.set(hold!.providerRef!, 'requires_capture');
+    const before = { captures: stripe.captures.length, cancels: stripe.cancels.length };
+    stripe.barrier = { intent: hold!.providerRef!, count: 3, waiting: [] };
+    const answers = await Promise.all([1, 2, 3].map(() => capturable(hold!.providerRef!, 'evt_t06_inv_counter')));
+    stripe.barrier = null;
+    expect(answers.every((answer) => answer?.status === 200)).toBe(true);
+    const [invite] = await db.select({ status: invites.status, bookingId: invites.bookingId, paymentId: invites.paymentId }).from(invites).where(eq(invites.id, c.inviteId));
+    expect(invite).toMatchObject({ status: 'accepted', paymentId: hold!.id });
+    expect(await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.taskId, c.taskId))).toEqual([{ status: 'confirmed' }]);
+    // One capture of the new hold, one release of the old one.
+    expect(stripe.captures.length - before.captures).toBe(1);
+    expect(stripe.cancels.slice(before.cancels)).toEqual([c.intent]);
+    expect((await inviteStateOf(c.inviteId, hold!.id)).accepted).toBe(1);
+    expect(await finishCounterVerification(deps, c.client, c.inviteId, hold!.id, 'approved', new Date())).toEqual({ ok: true, code: 'booked', redirectTo: routes.app.booking(invite!.bookingId!) });
+  });
+});
+
+/** Sam cleaned this client's apartment ten days ago (a completed copy of the cleaning); Sam proposes the same again. */
+async function startProposal(name: string) {
+  const client = await throwawayClient(db, `usr_t06_${name}`);
+  clients.push(client);
+  const [cleaning] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_cleaning'));
+  const policy = await getPublishedPolicy(cleaning!.marketId, db);
+  const start = new Date(Date.now() - 10 * 24 * HOUR);
+  const pastTask = `tsk_t06_${name}`;
+  const pastBooking = `bkg_t06_${name}`;
+  await db.insert(tasks).values({ ...cleaning!, id: pastTask, slug: `${pastTask}-slug`, posterUserId: client, status: 'completed', offerCount: 0, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 3 * HOUR) });
+  await db.insert(bookings).values({ id: pastBooking, taskId: pastTask, posterUserId: client, helperUserId: 'usr_sam', marketId: cleaning!.marketId, policyVersionId: policy!.id, status: 'completed', startAt: start, confirmedAt: start, completedAt: new Date(start.getTime() + 4 * HOUR) });
+  await db.insert(bookingTerms).values({ id: `btm_t06_${name}`, bookingId: pastBooking, version: 1, pricingType: 'fixed', priceCents: 9000, breakdown: quoteBreakdown(policy!.fees, { type: 'fixed', priceCents: 9000 }), scopeText: cleaning!.description, startAt: start });
+  const date = marketDayKey(new Date(Date.now() + 3 * 24 * HOUR));
+  expect(await proposeRebook(db, 'usr_sam', pastBooking, { date, startTime: '10:00', pricing: { type: 'fixed', priceCents: 9000 }, message: 'Same as last time?' }, new Date())).toMatchObject({ ok: true });
+  const [proposal] = await db.select().from(rebookProposals).where(and(eq(rebookProposals.fromBookingId, pastBooking), eq(rebookProposals.status, 'sent')));
+  const paying = await acceptProposal(deps, client, proposal!.id, { payment: { kind: 'stripe_card', paymentMethodId: `pm_t06_${name}`, save: false }, acceptTerms: true }, new Date());
+  if (!needsBankVerification(paying)) throw new Error(`Expected the bank's step: ${JSON.stringify(paying)}`);
+  const [payment] = await db.select().from(payments).where(eq(payments.id, paying.verification.paymentId));
+  return { client, proposalId: proposal!.id, paymentId: payment!.id, bookingId: payment!.bookingId!, intent: payment!.providerRef! };
+}
+async function proposalStateOf(c: Awaited<ReturnType<typeof startProposal>>) {
+  const [proposal] = await db.select({ status: rebookProposals.status, bookingId: rebookProposals.bookingId }).from(rebookProposals).where(eq(rebookProposals.id, c.proposalId));
+  const [booking] = await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, c.bookingId));
+  const events = await db.select({ type: outboxEvents.type }).from(outboxEvents).where(inArray(outboxEvents.aggregateId, [c.proposalId, c.bookingId]));
+  return { proposal: proposal?.status, booking: booking?.status, accepted: events.filter((row) => row.type === 'rebook.accepted').length, confirmations: events.filter((row) => row.type === 'booking.confirmed').length };
+}
+const PROPOSAL_ACCEPTED = { proposal: 'accepted', booking: 'confirmed', accepted: 1, confirmations: 1 };
+
+describe('5.17: a rebooking proposal paid while the client is away', () => {
+  it('is accepted when only the webhook finishes its payment, as when the client comes back', async () => {
+    const c = await startProposal('rbk_webhook');
+    stripe.intents.set(c.intent, 'succeeded');
+    expect(await deliver({ id: 'evt_t06_rbk_webhook', type: 'payment_intent.succeeded', intent: c.intent })).toEqual({ status: 200, body: { ok: true } });
+    expect(await proposalStateOf(c)).toEqual(PROPOSAL_ACCEPTED);
+    // The client comes back from the bank afterwards: booked, and nothing happens twice.
+    expect(await finishProposalVerification(deps, c.client, c.proposalId, c.paymentId, 'approved', new Date())).toEqual({ ok: true, code: 'booked', redirectTo: routes.app.booking(c.bookingId) });
+    expect(await proposalStateOf(c)).toEqual(PROPOSAL_ACCEPTED);
+  });
+
+  it('ends the same way when the client is back first and the webhook comes after', async () => {
+    const c = await startProposal('rbk_client');
+    stripe.intents.set(c.intent, 'succeeded');
+    expect(await finishProposalVerification(deps, c.client, c.proposalId, c.paymentId, 'approved', new Date())).toEqual({ ok: true, code: 'booked', redirectTo: routes.app.booking(c.bookingId) });
+    expect(await deliver({ id: 'evt_t06_rbk_client', type: 'payment_intent.succeeded', intent: c.intent })).toEqual({ status: 200, body: { ok: true, ignored: true } });
+    expect(await proposalStateOf(c)).toEqual(PROPOSAL_ACCEPTED);
   });
 });

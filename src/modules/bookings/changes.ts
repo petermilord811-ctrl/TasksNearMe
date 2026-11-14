@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lte, notInArray, sql } from 'drizzle-orm';
 import type {
   AcceptChangeInput,
   ActionResult,
@@ -42,6 +42,7 @@ import { bookingChangeRequests, bookingTerms, bookings } from './schema';
 type BookingRow = typeof bookings.$inferSelect;
 type TermsRow = typeof bookingTerms.$inferSelect;
 type ChangeRow = typeof bookingChangeRequests.$inferSelect;
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 const PROPOSE_RULE = { limit: 10, windowSeconds: 60 * 60 };
 
@@ -277,33 +278,36 @@ export async function getChangeReviewPage(db: Db, payments_: PaymentProvider | n
   };
 }
 
+/** The new terms version, inside the caller's transaction: false when the terms moved on meanwhile. */
+async function writeChange(tx: Tx, row: ChangeRow, now: Date): Promise<boolean> {
+  const [booking] = await tx.select().from(bookings).where(eq(bookings.id, row.bookingId)).limit(1);
+  if (!booking || booking.termsVersion !== row.fromVersion) return false;
+  const terms = changeTermsOf(row);
+  const version = booking.termsVersion + 1;
+  await tx.insert(bookingTerms).values({
+    id: newId('btm'),
+    bookingId: booking.id,
+    version,
+    pricingType: terms.pricingType,
+    priceCents: terms.priceCents,
+    hourlyRateCents: terms.hourlyRateCents,
+    estimatedHours: terms.estimatedHours,
+    hoursCap: terms.hoursCap,
+    expenseAllowanceCents: terms.expenseAllowanceCents,
+    breakdown: row.afterBreakdown,
+    scopeText: terms.scopeText,
+    startAt: terms.startAt,
+    createdAt: now,
+  });
+  await tx.update(bookings).set({ termsVersion: version, startAt: terms.startAt, updatedAt: now }).where(eq(bookings.id, booking.id));
+  await tx.update(bookingChangeRequests).set({ status: 'applied', decidedAt: now, updatedAt: now }).where(eq(bookingChangeRequests.id, row.id));
+  await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'change.applied', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, changeId: row.id } });
+  return true;
+}
+
 /** Applies accepted terms: a new terms version (the start moves if it changed); a lower total is refunded. */
 async function applyChange(db: Db, payments_: PaymentProvider | null, row: ChangeRow, now: Date): Promise<boolean> {
-  const applied = await db.transaction(async (tx) => {
-    const [booking] = await tx.select().from(bookings).where(eq(bookings.id, row.bookingId)).limit(1);
-    if (!booking || booking.termsVersion !== row.fromVersion) return false;
-    const terms = changeTermsOf(row);
-    const version = booking.termsVersion + 1;
-    await tx.insert(bookingTerms).values({
-      id: newId('btm'),
-      bookingId: booking.id,
-      version,
-      pricingType: terms.pricingType,
-      priceCents: terms.priceCents,
-      hourlyRateCents: terms.hourlyRateCents,
-      estimatedHours: terms.estimatedHours,
-      hoursCap: terms.hoursCap,
-      expenseAllowanceCents: terms.expenseAllowanceCents,
-      breakdown: row.afterBreakdown,
-      scopeText: terms.scopeText,
-      startAt: terms.startAt,
-      createdAt: now,
-    });
-    await tx.update(bookings).set({ termsVersion: version, startAt: terms.startAt, updatedAt: now }).where(eq(bookings.id, booking.id));
-    await tx.update(bookingChangeRequests).set({ status: 'applied', decidedAt: now, updatedAt: now }).where(eq(bookingChangeRequests.id, row.id));
-    await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'change.applied', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, changeId: row.id } });
-    return true;
-  });
+  const applied = await db.transaction((tx) => writeChange(tx, row, now));
   if (applied && row.differenceCents < 0 && payments_) {
     const [charge] = await db
       .select()
@@ -368,24 +372,54 @@ async function chargeDifference(deps: BookingDeps, posterId: string, row: Change
   return settleDifference(deps, row.id, paymentId, result, now);
 }
 
+/** A change payment whose money came in (refunds come later): it can't be settled again. */
+const SETTLED = ['succeeded', 'partially_refunded', 'refunded'];
+
+/** The answer for a change payment the other path already settled (the browser and Stripe's webhook both finish it). */
+async function settledDifference(db: Db, changeId: string): Promise<PaymentAttemptResult> {
+  const [row] = await db.select({ status: bookingChangeRequests.status, bookingId: bookingChangeRequests.bookingId }).from(bookingChangeRequests).where(eq(bookingChangeRequests.id, changeId)).limit(1);
+  if (!row) return { ok: false, code: 'not_found' };
+  return row.status === 'applied' ? { ok: true, code: 'paid', redirectTo: routes.app.booking(row.bookingId) } : { ok: false, code: 'version_conflict' };
+}
+
+/**
+ * Records the provider's answer on a change payment, once (5.17, T-06's rule): the payment row is locked and
+ * the change applied in the same transaction, so when the browser and the webhook finish it at the same moment the
+ * second finds it settled and gets the same answer. A failure or a bank step never overwrites a settled payment.
+ */
 async function settleDifference(deps: BookingDeps, changeId: string, paymentId: string, result: ChargeResult, now: Date): Promise<PaymentAttemptResult> {
   const { db } = deps;
-  if (result.status === 'failed') {
-    await db.update(payments).set({ status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
-    return { ok: false, code: result.failureCode };
-  }
-  if (result.status === 'requires_action') {
-    await db.update(payments).set({ status: 'requires_confirmation', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
+  if (result.status === 'failed' || result.status === 'requires_action') {
+    const [updated] = await db
+      .update(payments)
+      .set(
+        result.status === 'failed'
+          ? { status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now }
+          : { status: 'requires_confirmation', providerRef: result.providerRef, updatedAt: now },
+      )
+      .where(and(eq(payments.id, paymentId), notInArray(payments.status, SETTLED)))
+      .returning({ id: payments.id });
+    if (!updated) return settledDifference(db, changeId);
+    if (result.status === 'failed') return { ok: false, code: result.failureCode };
     return { ok: false, code: 'requires_bank_verification', verification: await bankStep(deps.payments, paymentId, result.providerRef) };
   }
-  await db.update(payments).set({ status: 'succeeded', providerRef: result.providerRef, failureCode: null, updatedAt: now }).where(eq(payments.id, paymentId));
-  const [row] = await db.select().from(bookingChangeRequests).where(eq(bookingChangeRequests.id, changeId)).limit(1);
-  if (!row || !(await applyChange(db, deps.payments, row, now))) {
-    // Paid but the terms moved on: support refunds it.
-    await db.insert(outboxEvents).values({ id: newId('evt'), type: 'payment.refund_needed', aggregateType: 'payment', aggregateId: paymentId, payload: { paymentId, changeId } });
-    return { ok: false, code: 'version_conflict' };
-  }
-  return { ok: true, code: 'paid', redirectTo: routes.app.booking(row.bookingId) };
+  const outcome = await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from payments where id = ${paymentId} for update`);
+    const [payment] = await tx.select({ status: payments.status }).from(payments).where(eq(payments.id, paymentId)).limit(1);
+    if (!payment) return { kind: 'missing' as const };
+    if (SETTLED.includes(payment.status)) return { kind: 'settled' as const };
+    await tx.update(payments).set({ status: 'succeeded', providerRef: result.providerRef, failureCode: null, updatedAt: now }).where(eq(payments.id, paymentId));
+    const [row] = await tx.select().from(bookingChangeRequests).where(eq(bookingChangeRequests.id, changeId)).limit(1);
+    if (!row || !(await writeChange(tx, row, now))) {
+      // Paid but the terms moved on: support refunds it.
+      await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'payment.refund_needed', aggregateType: 'payment', aggregateId: paymentId, payload: { paymentId, changeId } });
+      return { kind: 'conflict' as const };
+    }
+    return { kind: 'applied' as const, bookingId: row.bookingId };
+  });
+  if (outcome.kind === 'applied') return { ok: true, code: 'paid', redirectTo: routes.app.booking(outcome.bookingId) };
+  if (outcome.kind === 'settled') return settledDifference(db, changeId);
+  return { ok: false, code: outcome.kind === 'conflict' ? 'version_conflict' : 'not_found' };
 }
 
 /**
@@ -429,7 +463,11 @@ export async function finishChangeVerification(deps: BookingDeps, userId: string
     .from(payments)
     .where(and(eq(payments.id, String(paymentId)), eq(payments.payerUserId, userId), eq(payments.purpose, 'change_funding')))
     .limit(1);
-  if (!payment?.providerRef || payment.status !== 'requires_confirmation' || found.row.paymentId !== payment.id) return { ok: false, code: 'not_allowed' };
+  if (!payment?.providerRef || found.row.paymentId !== payment.id) return { ok: false, code: 'not_allowed' };
+  // Stripe's webhook (or another tab) finished it first: the answer this call would have given.
+  if (SETTLED.includes(payment.status)) return settledDifference(deps.db, found.row.id);
+  if (payment.status === 'failed') return { ok: false, code: payment.failureCode === 'insufficient_funds' ? 'insufficient_funds' : 'payment_declined' };
+  if (payment.status !== 'requires_confirmation') return { ok: false, code: 'not_allowed' };
   const completed = await deps.payments.completeAction({ providerRef: payment.providerRef, outcome });
   const result: ChargeResult =
     completed.status === 'succeeded' ? { status: 'succeeded', providerRef: payment.providerRef } : { status: 'failed', providerRef: payment.providerRef, failureCode: completed.failureCode };

@@ -293,6 +293,28 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
   return settleRequest(db, inviteId, paymentId, result.status === 'authorized' ? { status: 'authorized', providerRef: result.providerRef } : result, now, deps.payments);
 }
 
+/** A hold not decided yet: the first answer decides it (5.17: the browser and Stripe's webhook both finish one). */
+const UNDECIDED = ['processing', 'requires_confirmation'];
+
+/** The answer for a first hold the other path already settled: sent, or why it isn't. */
+async function settledRequest(db: Db, inviteId: string): Promise<PaymentAttemptResult> {
+  const [invite] = await db.select({ status: invites.status, taskId: invites.taskId, paymentId: invites.paymentId }).from(invites).where(eq(invites.id, inviteId)).limit(1);
+  if (!invite) return { ok: false, code: 'not_found' };
+  if (invite.status === 'auth_failed') {
+    const [payment] = invite.paymentId ? await db.select({ failureCode: payments.failureCode }).from(payments).where(eq(payments.id, invite.paymentId)).limit(1) : [];
+    return { ok: false, code: payment?.failureCode === 'insufficient_funds' ? 'insufficient_funds' : 'payment_declined' };
+  }
+  if (invite.status === 'expired') return { ok: false, code: 'expired' };
+  if (invite.status === 'authorizing') return { ok: false, code: 'not_allowed' };
+  // Sent, or answered since: the hold went through.
+  return { ok: true, code: 'sent', redirectTo: routes.app.task(invite.taskId) };
+}
+
+/**
+ * Records the bank's answer on an invite's first hold, once: the invite moves on from `authorizing` only for the
+ * first answer (a guarded update), so a second finisher, at the same moment or later, changes nothing and gets the
+ * same answer, and a late failure never undoes a hold that went through.
+ */
 async function settleRequest(
   db: Db,
   inviteId: string,
@@ -301,23 +323,29 @@ async function settleRequest(
   now: Date,
   provider?: PaymentProvider,
 ): Promise<PaymentAttemptResult> {
-  if (result.status === 'failed') {
-    await db.update(payments).set({ status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
-    const [failed] = await db.update(invites).set({ status: 'auth_failed', decidedAt: now, updatedAt: now }).where(eq(invites.id, inviteId)).returning({ slotId: invites.slotId });
-    await releaseSlot(db, failed?.slotId ?? null, now);
-    return { ok: false, code: result.failureCode };
-  }
   if (result.status === 'requires_action') {
-    await db.update(payments).set({ status: 'requires_confirmation', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
+    const [waiting] = await db
+      .update(payments)
+      .set({ status: 'requires_confirmation', providerRef: result.providerRef, updatedAt: now })
+      .where(and(eq(payments.id, paymentId), inArray(payments.status, UNDECIDED)))
+      .returning({ id: payments.id });
+    if (!waiting) return settledRequest(db, inviteId);
     return { ok: false, code: 'requires_bank_verification', verification: provider ? await bankStep(provider, paymentId, result.providerRef) : { paymentId, kind: 'dev' } };
   }
-  await db.update(payments).set({ status: 'authorized', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
+  if (result.status === 'failed') {
+    const [failed] = await db.update(invites).set({ status: 'auth_failed', decidedAt: now, updatedAt: now }).where(and(eq(invites.id, inviteId), eq(invites.status, 'authorizing'))).returning({ slotId: invites.slotId });
+    if (!failed) return settledRequest(db, inviteId);
+    await db.update(payments).set({ status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
+    await releaseSlot(db, failed.slotId ?? null, now);
+    return { ok: false, code: result.failureCode };
+  }
   const [invite] = await db
     .update(invites)
     .set({ status: 'sent', expiresAt: sql`least(${now.toISOString()}::timestamptz + interval '48 hours', ${invites.startAt} - interval '2 hours')`, updatedAt: now })
-    .where(eq(invites.id, inviteId))
+    .where(and(eq(invites.id, inviteId), eq(invites.status, 'authorizing')))
     .returning();
-  if (!invite) return { ok: false, code: 'unknown' };
+  if (!invite) return settledRequest(db, inviteId);
+  await db.update(payments).set({ status: 'authorized', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
   await db.insert(outboxEvents).values({ id: newId('evt'), type: 'invite.sent', aggregateType: 'invite', aggregateId: invite.id, payload: { inviteId: invite.id, taskId: invite.taskId, posterUserId: invite.posterUserId, helperUserId: invite.helperUserId } });
   return { ok: true, code: 'sent', redirectTo: routes.app.task(invite.taskId) };
 }
@@ -325,8 +353,10 @@ async function settleRequest(
 /** After the dev bank dialog on an invite's first authorization. */
 export async function finishRequestVerification(deps: BookingDeps, posterId: string, paymentId: string, outcome: 'approved' | 'failed', now: Date): Promise<PaymentAttemptResult> {
   const [payment] = await deps.db.select().from(payments).where(and(eq(payments.id, String(paymentId)), eq(payments.payerUserId, posterId), eq(payments.purpose, 'invite_authorization'))).limit(1);
-  const [invite] = payment ? await deps.db.select().from(invites).where(and(eq(invites.paymentId, payment.id), eq(invites.status, 'authorizing'))).limit(1) : [];
-  if (!payment?.providerRef || payment.status !== 'requires_confirmation' || !invite) return { ok: false, code: 'not_allowed' };
+  const [invite] = payment ? await deps.db.select().from(invites).where(eq(invites.paymentId, payment.id)).limit(1) : [];
+  if (!payment?.providerRef || !invite) return { ok: false, code: 'not_allowed' };
+  // Stripe's webhook (or another tab) finished it first: the answer this call would have given (5.17).
+  if (invite.status !== 'authorizing' || payment.status !== 'requires_confirmation') return settledRequest(deps.db, invite.id);
   const completed = await deps.payments.completeAction({ providerRef: payment.providerRef, outcome });
   return settleRequest(deps.db, invite.id, payment.id, completed.status === 'succeeded' ? { status: 'authorized', providerRef: payment.providerRef } : { status: 'failed', providerRef: payment.providerRef, failureCode: completed.failureCode === 'insufficient_funds' ? 'insufficient_funds' : 'payment_declined' }, now);
 }
@@ -524,9 +554,26 @@ export async function acceptCounter(deps: BookingDeps, posterId: string, inviteI
   return book(deps, invite, counterPricingOf(invite), invite.counterStartAt ?? invite.startAt, invite.counterBreakdown, now);
 }
 
-/** The new, higher hold replaces the old one, then the booking confirms. */
+/** The answer for a counter's new hold the other path already settled: the booking, or why there isn't one. */
+async function settledCounter(db: Db, inviteId: string, paymentId: string): Promise<PaymentAttemptResult> {
+  const [invite] = await db.select({ status: invites.status, bookingId: invites.bookingId }).from(invites).where(eq(invites.id, inviteId)).limit(1);
+  if (invite?.status === 'accepted' && invite.bookingId) return { ok: true, code: 'booked', redirectTo: routes.app.booking(invite.bookingId) };
+  const [payment] = await db.select({ status: payments.status, failureCode: payments.failureCode }).from(payments).where(eq(payments.id, paymentId)).limit(1);
+  if (payment?.status === 'failed') return { ok: false, code: payment.failureCode === 'insufficient_funds' ? 'insufficient_funds' : 'payment_declined' };
+  return { ok: false, code: 'not_allowed' };
+}
+
+/**
+ * The new, higher hold replaces the old one, then the booking confirms. Once (5.17): the first finisher claims the
+ * new hold (a guarded update); a second, at the same moment or later, gets the settled answer.
+ */
 async function switchHold(deps: BookingDeps, invite: InviteRow, oldPaymentId: string, paymentId: string, providerRef: string, now: Date): Promise<PaymentAttemptResult> {
-  await deps.db.update(payments).set({ status: 'authorized', providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
+  const [claimed] = await deps.db
+    .update(payments)
+    .set({ status: 'authorized', providerRef, updatedAt: now })
+    .where(and(eq(payments.id, paymentId), inArray(payments.status, UNDECIDED)))
+    .returning({ id: payments.id });
+  if (!claimed) return settledCounter(deps.db, invite.id, paymentId);
   await release(deps.db, deps.payments, oldPaymentId, now);
   await deps.db.update(invites).set({ paymentId, updatedAt: now }).where(eq(invites.id, invite.id));
   return book(deps, { ...invite, paymentId }, counterPricingOf(invite), invite.counterStartAt ?? invite.startAt, invite.counterBreakdown!, now);
@@ -535,16 +582,25 @@ async function switchHold(deps: BookingDeps, invite: InviteRow, oldPaymentId: st
 /** After the dev bank dialog on a higher hold for a counter. */
 export async function finishCounterVerification(deps: BookingDeps, posterId: string, inviteId: string, paymentId: string, outcome: 'approved' | 'failed', now: Date): Promise<PaymentAttemptResult> {
   const invite = await ownInvite(deps.db, deps.payments, posterId, inviteId, 'poster', now);
-  // The payment must be this invite's own new hold (its key names the invite), not another invite's bank step.
+  // The payment must be this invite's own new hold (its key names the invite), not another invite's bank step. Once
+  // booked it's the booking's charge (`booking_funding`), which a late return still finds.
   const [payment] = await deps.db
     .select()
     .from(payments)
-    .where(and(eq(payments.id, String(paymentId)), eq(payments.payerUserId, posterId), eq(payments.purpose, 'invite_authorization'), eq(payments.idempotencyKey, `invite:${String(inviteId)}:${String(paymentId)}`)))
+    .where(and(eq(payments.id, String(paymentId)), eq(payments.payerUserId, posterId), inArray(payments.purpose, ['invite_authorization', 'booking_funding']), eq(payments.idempotencyKey, `invite:${String(inviteId)}:${String(paymentId)}`)))
     .limit(1);
-  if (!invite || invite.status !== 'countered' || !payment?.providerRef || payment.status !== 'requires_confirmation' || !invite.paymentId) return { ok: false, code: 'not_allowed' };
+  if (!invite || !payment?.providerRef) return { ok: false, code: 'not_allowed' };
+  // Stripe's webhook (or another tab) finished it first: the answer this call would have given (5.17).
+  if (payment.status !== 'requires_confirmation') return settledCounter(deps.db, invite.id, payment.id);
+  if (invite.status !== 'countered' || !invite.paymentId) return { ok: false, code: 'not_allowed' };
   const completed = await deps.payments.completeAction({ providerRef: payment.providerRef, outcome });
   if (completed.status !== 'succeeded') {
-    await deps.db.update(payments).set({ status: 'failed', failureCode: completed.failureCode, updatedAt: now }).where(eq(payments.id, payment.id));
+    const [failed] = await deps.db
+      .update(payments)
+      .set({ status: 'failed', failureCode: completed.failureCode, updatedAt: now })
+      .where(and(eq(payments.id, payment.id), inArray(payments.status, UNDECIDED)))
+      .returning({ id: payments.id });
+    if (!failed) return settledCounter(deps.db, invite.id, payment.id);
     return { ok: false, code: completed.failureCode };
   }
   return switchHold(deps, invite, invite.paymentId, payment.id, payment.providerRef, now);
