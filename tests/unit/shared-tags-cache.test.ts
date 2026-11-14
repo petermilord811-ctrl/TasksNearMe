@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { createPostgresTagStore, createSharedTagsCacheHandler } from '../../cache-handlers/shared-tags.mjs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { CLOCK_SKEW_MS, createPostgresTagStore, createSharedTagsCacheHandler } from '../../cache-handlers/shared-tags.mjs';
 
 const pools = vi.hoisted(() => [] as { listeners: string[]; queries: number }[]);
 vi.mock('pg', () => {
@@ -79,9 +79,8 @@ describe('two instances sharing tags', () => {
     expect(await read(await b.get('board', []))).toBe('the board');
     await b.refreshTags();
     expect(await b.get('board', [])).toBeUndefined();
-    // A new entry made after the invalidation is fresh again.
-    await tick();
-    await b.set('board', Promise.resolve(entry('the new board')));
+    // A new entry made after the invalidation (past the clock skew it covers) is fresh again.
+    await b.set('board', Promise.resolve(entry('the new board', { timestamp: performance.timeOrigin + performance.now() + CLOCK_SKEW_MS + 1 })));
     expect(await read(await b.get('board', []))).toBe('the new board');
   });
 
@@ -198,5 +197,47 @@ describe('the Postgres tag store', () => {
     expect(pools).toHaveLength(1);
     expect(pools[0]!.queries).toBe(50);
     expect(pools[0]!.listeners).toEqual(['error']);
+  });
+});
+
+describe('time at millisecond resolution (a CI flake, 5.18)', () => {
+  /** performance.now() made to return `ms` after the time origin's next whole second plus `fraction`. */
+  const at = (offset: number) => {
+    const base = Math.floor(performance.timeOrigin) + 10_000 - performance.timeOrigin;
+    vi.spyOn(performance, 'now').mockReturnValue(base + offset);
+    return Math.floor(performance.timeOrigin) + 10_000 + offset;
+  };
+  afterEach(() => vi.restoreAllMocks());
+
+  it('an updateTag in the same millisecond as the entry, just after it, still expires it', async () => {
+    const store = fakeStore();
+    const a = createSharedTagsCacheHandler({ store, development: false });
+    const b = createSharedTagsCacheHandler({ store, development: false });
+    await b.refreshTags();
+    at(0.1);
+    await b.set('board', Promise.resolve(entry('the board')));
+    at(0.3);
+    await a.updateTags(['tasks']);
+    // Its own updateTag counts at once, in the same millisecond.
+    await a.set('own', Promise.resolve(entry('own', { timestamp: Math.floor(performance.timeOrigin) + 10_000 + 0.2 })));
+    expect(await a.get('own', [])).toBeUndefined();
+    await b.refreshTags();
+    expect(await b.get('board', [])).toBeUndefined();
+  });
+
+  it('covers an entry another instance stamped a little later by its clock, not one made well after', async () => {
+    const store = fakeStore();
+    const a = createSharedTagsCacheHandler({ store, development: false });
+    const b = createSharedTagsCacheHandler({ store, development: false });
+    await b.refreshTags();
+    const invalidated = at(5);
+    await a.updateTags(['tasks']);
+    at(400);
+    await b.refreshTags();
+    // B's clock runs a few ms ahead: its entry was made before the invalidation, though stamped after it.
+    await b.set('skewed', Promise.resolve(entry('skewed', { timestamp: invalidated + CLOCK_SKEW_MS - 2 })));
+    expect(await b.get('skewed', [])).toBeUndefined();
+    await b.set('fresh', Promise.resolve(entry('fresh', { timestamp: invalidated + 200 })));
+    expect(await read(await b.get('fresh', []))).toBe('fresh');
   });
 });

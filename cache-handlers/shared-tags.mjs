@@ -10,6 +10,11 @@
 // - a negative `expire` is the dev tiered handler's eviction sentinel;
 // - an expired tag makes the entry a miss; a stale tag serves it with `revalidate: -1` (regenerated in the
 //   background); `getExpiration` answers with the newest `expired` time, which covers soft tags.
+// - Unlike default.js, times are whole milliseconds rounded up, and compared at that resolution: an invalidation
+//   always covers every entry stamped before it, even within the same millisecond (default.js rounds to the
+//   nearest, so an entry stamped half a millisecond before an updateTag could survive it). It also covers entries
+//   stamped up to `CLOCK_SKEW_MS` after it, since another web instance's clock can run a little ahead of the one
+//   that wrote the invalidation; such an entry is only rendered again.
 //
 // Shared state: `updateTags` writes each tag's times to `cache_tag_invalidations` (src/platform/cache/schema.ts);
 // `refreshTags` (called by Next once per request, before the first read) reads the rows changed since this
@@ -25,8 +30,15 @@ const DEV_MIN_EXPIRE_SECONDS = 300;
 /** Rows committed just before a read can carry a slightly older time: read back a little further each time. */
 const READ_OVERLAP_MS = 5_000;
 const LOG_EVERY_MS = 60_000;
+/**
+ * How far apart two web instances' clocks may be (NTP keeps machines in one region within a few ms). An entry made
+ * within this long after an invalidation is rendered once more, the cost of covering the skew.
+ */
+export const CLOCK_SKEW_MS = 10;
 
 const nowMs = () => performance.timeOrigin + performance.now();
+/** The current time as the whole millisecond that has started, rounded up: the resolution tags are kept at. */
+const nowCeil = () => Math.ceil(nowMs());
 
 function streamFromBytes(bytes) {
   return new ReadableStream({
@@ -148,14 +160,20 @@ export function createSharedTagsCacheHandler({ store, maxBytes = DEFAULT_MAX_BYT
     log(`[cache] ${what}; using this instance's tags only: ${error instanceof Error ? error.message : String(error)}`);
   };
 
+  // An expiry counts once its millisecond has come (`<= nowCeil()`), for every entry stamped before it or within
+  // the clock skew after it.
   const expiredFor = (entryTags, timestamp) => {
-    const now = nowMs();
+    const now = nowCeil();
     return entryTags.some((tag) => {
       const expired = tags.get(tag)?.expired;
-      return typeof expired === 'number' && expired <= now && expired > timestamp;
+      return typeof expired === 'number' && expired <= now && expired + CLOCK_SKEW_MS > timestamp;
     });
   };
-  const staleFor = (entryTags, timestamp) => entryTags.some((tag) => (tags.get(tag)?.stale ?? 0) > timestamp);
+  const staleFor = (entryTags, timestamp) =>
+    entryTags.some((tag) => {
+      const stale = tags.get(tag)?.stale;
+      return typeof stale === 'number' && stale + CLOCK_SKEW_MS > timestamp;
+    });
 
   function apply(row) {
     const current = tags.get(row.tag) ?? {};
@@ -221,12 +239,15 @@ export function createSharedTagsCacheHandler({ store, maxBytes = DEFAULT_MAX_BYT
       await refreshing;
     },
 
+    // Next treats an entry stamped at or before this as expired (soft tags, revalidatePath): the clock skew too.
     async getExpiration(tagList) {
-      return Math.max(...tagList.map((tag) => tags.get(tag)?.expired ?? 0), 0);
+      const latest = Math.max(...tagList.map((tag) => tags.get(tag)?.expired ?? 0), 0);
+      return latest > 0 ? latest + CLOCK_SKEW_MS : 0;
     },
 
     async updateTags(tagList, durations) {
-      const now = Math.round(nowMs());
+      // Rounded up, so the invalidation is never earlier than an entry stamped before it.
+      const now = nowCeil();
       const updates = tagList.map((tag) => (durations ? { tag, stale: now, ...(durations.expire !== undefined ? { expired: now + durations.expire * 1000 } : {}) } : { tag, expired: now }));
       // This instance's next read must miss at once, whatever the database says.
       updates.forEach(apply);

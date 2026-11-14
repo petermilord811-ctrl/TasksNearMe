@@ -23,6 +23,9 @@ export interface TagStore {
   write(updates: TagUpdate[]): Promise<void>;
 }
 
+/** How far apart two web instances' clocks may be: an invalidation also covers entries stamped this long after it. */
+export const CLOCK_SKEW_MS: number;
+
 export function createPostgresTagStore(connectionString: string, options?: { max?: number }): TagStore & { end(): Promise<void> };
 
 export interface SharedTagsCacheHandler extends CacheHandler {
