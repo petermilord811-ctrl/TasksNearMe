@@ -70,6 +70,8 @@ export const routes = {
   pricing: () => '/pricing',
   trustAndSafety: () => '/trust-and-safety',
   help: (slug?: string) => (slug ? `/help/${slug.split('/').map(enc).join('/')}` : '/help'),
+  /** The help center's contact form for people who aren't signed in (5.22). */
+  helpContact: () => '/help/contact',
   legal: (doc: LegalDoc) => `/legal/${doc}`,
   signIn: (next?: string) => withQuery('/sign-in', { next }),
   /** `from: 'beta'`: from an invite-only step (private beta) rather than from outside the service area. */
