@@ -49,7 +49,8 @@ type ScenarioState =
 async function scenario(name: string, state: ScenarioState, startsInMs: number, priceCents = 6000): Promise<BookingScenario> {
   const { db, pool } = database();
   try {
-    const run = Date.now().toString(36);
+    // Unique even for two copies started in the same millisecond (--repeat-each runs them side by side).
+    const run = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
     const taskId = `tsk_e2e_${name}_${run}`;
     const bookingId = `bkg_e2e_${name}_${run}`;
     const title = `Assemble a desk (e2e ${name} ${run})`;
