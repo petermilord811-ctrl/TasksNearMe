@@ -1,6 +1,24 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
+ * The e2e database's URL: DATABASE_URL (from .env.local) with the name swapped, as in scripts/e2e-db.mjs, which
+ * creates and fills it. Computed here, because Playwright loads this file as CommonJS and that ES module uses
+ * import.meta. Keep the name in step with E2E_DATABASE there.
+ */
+function e2eDatabaseUrl(): string {
+  if (!process.env.DATABASE_URL) {
+    try {
+      process.loadEnvFile('.env.local');
+    } catch {
+      // Environment provided by the shell.
+    }
+  }
+  const url = new URL(process.env.DATABASE_URL ?? '');
+  url.pathname = '/tasksnearme_e2e';
+  return url.toString();
+}
+
+/**
  * E2E_TARGET=build runs against the e2e production build (`npm run e2e:build`, then `npm run e2e:serve` on :3300;
  * src/shared/dev-helpers.ts) instead of the dev server. `next start` holds about 0.5 GB and compiles nothing,
  * where the dev server's Turbopack grows to 2–6 GB over an e2e run, past what the 7.7 GB VPS can give it. The
@@ -8,6 +26,10 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const target = process.env.E2E_TARGET === 'build' ? 'build' : 'dev';
 const PORT = Number(process.env.PORT ?? (target === 'build' ? 3300 : 3000));
+// The e2e build runs against its own database (scripts/e2e-db.mjs), not the dev data people browse on the dev
+// server. Set here, it reaches the server Playwright starts and every spec (their loadEnvFile('.env.local') never
+// overrides it). CI's jobs bring their own database, so CI keeps the DATABASE_URL it sets.
+if (target === 'build' && !process.env.CI) process.env.DATABASE_URL = e2eDatabaseUrl();
 const baseURL = `http://localhost:${PORT}`;
 
 /**

@@ -16,6 +16,7 @@
  * preview runs, which need the dev server.
  */
 import { spawn } from 'node:child_process';
+import { e2eDatabaseUrl } from './e2e-db.mjs';
 import { pauseDevServer, restartDevServer } from './lib/dev-restart.mjs';
 import { acquireHeavyLock } from './lib/heavy-lock.mjs';
 
@@ -61,6 +62,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 const release = await acquireHeavyLock(`heavy: ${command.join(' ')}`.slice(0, 120), { log });
 let resume = () => {};
 let code;
+let commandEnv = process.env;
 try {
   if (mode === '--fresh-dev') await restartDevServer({ log });
   if (mode === '--e2e-build') {
@@ -69,14 +71,18 @@ try {
     } catch (error) {
       log(`${error} Building with the dev server still up.`);
     }
-    code = await run(['npm', 'run', 'e2e:build']);
+    // Locally the e2e build has its own database (scripts/e2e-db.mjs); CI's jobs bring theirs.
+    const e2eEnv = process.env.CI ? process.env : { ...process.env, DATABASE_URL: e2eDatabaseUrl() };
+    commandEnv = { ...e2eEnv, E2E_TARGET: 'build' };
+    if (!process.env.CI) code = await run(['node', 'scripts/e2e-db.mjs', 'prepare']);
+    if (code === undefined || code === 0) code = await run(['npm', 'run', 'e2e:build'], e2eEnv);
     if (code !== 0) log(`The e2e build failed (exit ${code}), so the command didn't run.`);
     // Only the build needs the dev server's memory; the run's `next start` holds about 0.4 GB. Letting the dev
     // server come back now keeps dev.tasksnearme.com usable while e2e runs queue one after another.
     resume();
     resume = () => {};
   }
-  if (code === undefined || code === 0) code = await run(command, mode === '--e2e-build' ? { ...process.env, E2E_TARGET: 'build' } : process.env);
+  if (code === undefined || code === 0) code = await run(command, commandEnv);
 } catch (error) {
   log(String(error));
   code = 1;

@@ -20,6 +20,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { e2eDatabaseUrl } from './e2e-db.mjs';
 import { pauseDevServer, restartDevServer } from './lib/dev-restart.mjs';
 import { acquireHeavyLock } from './lib/heavy-lock.mjs';
 
@@ -79,8 +80,14 @@ try {
         } catch (error) {
           note(`${error} Building with the dev server still up.`);
         }
+        // Locally the e2e build has its own database (scripts/e2e-db.mjs); CI's jobs bring theirs.
+        if (!process.env.CI) {
+          note('e2e database (node scripts/e2e-db.mjs prepare)');
+          code = await run('node scripts/e2e-db.mjs prepare', fd);
+          process.env.DATABASE_URL = e2eDatabaseUrl();
+        }
         note('e2e build (npm run e2e:build)');
-        code = await run('npm run e2e:build', fd);
+        if (code === 0) code = await run('npm run e2e:build', fd);
         if (code !== 0) note(`the e2e build failed (exit ${code}), so the e2e run is skipped`);
         // Only the build needs the dev server's memory (next start holds about 0.4 GB): let it come back for the run.
         resume();
