@@ -3,7 +3,7 @@
   "email": {
     "title": "Inicia sesión o crea una cuenta",
     "description": "Te enviaremos un código por correo para continuar. Sin contraseñas que recordar.",
-    "descriptionWithProviders": "Continúa con Google o Microsoft, o recibe un código por correo. Sin contraseñas que recordar."
+    "descriptionWithProviders": "Continúa con una de las cuentas de abajo, o recibe un código por correo. Sin contraseñas que recordar."
   },
   "social": {
     "or": "o",

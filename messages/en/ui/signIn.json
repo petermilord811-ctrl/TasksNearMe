@@ -3,7 +3,7 @@
   "email": {
     "title": "Sign in or create an account",
     "description": "We'll email you a code to continue. No password to remember.",
-    "descriptionWithProviders": "Continue with Google or Microsoft, or get a code by email. No password to remember."
+    "descriptionWithProviders": "Continue with an account below, or get a code by email. No password to remember."
   },
   "social": {
     "or": "or",
