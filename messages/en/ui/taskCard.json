@@ -20,5 +20,44 @@
     "cleaningFlexible": "Cleaning with a flexible window",
     "remote": "Remote computer help",
     "hourly": "Task with an hourly budget"
-  }
+  },
+  "types": {
+    "furniture-assembly": {
+      "desk": "Desk",
+      "bed": "Bed",
+      "shelving": "Bookshelf or shelves",
+      "wardrobe": "Wardrobe",
+      "dresser": "Dresser",
+      "table": "Table or chairs",
+      "other": "Other furniture"
+    },
+    "moving-help": {
+      "load_truck": "Load a truck",
+      "unload_truck": "Unload a truck",
+      "load_and_unload": "Load and unload",
+      "within_home": "Within a home"
+    },
+    "yard-cleanup": {
+      "leaves": "Leaves",
+      "weeding": "Weeding",
+      "pruning": "Pruning",
+      "debris": "Yard debris",
+      "mixed": "Mixed yard work"
+    },
+    "light-cleaning": {
+      "studio_one": "Studio or 1 bedroom",
+      "two_bedroom": "2 bedrooms",
+      "three_plus": "3+ bedrooms"
+    },
+    "computer-help": {
+      "computer": "Computer",
+      "phone_tablet": "Phone or tablet",
+      "wifi": "Wi-Fi",
+      "printer": "Printer",
+      "tv": "TV",
+      "other": "Other device"
+    }
+  },
+  "perHour": "/h",
+  "upToHours": "up to {hours}"
 }

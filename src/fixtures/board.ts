@@ -58,10 +58,39 @@ const moving: TaskPublicView = {
   taskType: 'load_truck',
 };
 
-const boardTasks = [desk, bookshelf, wardrobe, cleaning, yard, moving, computer];
+const bed: TaskPublicView = {
+  ...deskPublicTask,
+  id: 'tsk_board_bed',
+  slug: 'put-together-a-queen-bed-frame-tonight-mueller-g7h8',
+  title: 'Put together a queen bed frame tonight',
+  excerpt: 'Metal-and-wood frame with a slatted base, still in the box. All the tools are here.',
+  schedule: { windowStart: '2026-11-17T23:00:00.000Z', windowEnd: '2026-11-18T01:00:00.000Z', flexible: false },
+  budget: { type: 'fixed', priceCents: 8500 },
+  offerCount: 0,
+  postedAt: '2026-11-17T14:30:00.000Z',
+  taskType: 'bed',
+};
+const dresser: TaskPublicView = {
+  ...deskPublicTask,
+  id: 'tsk_board_dresser',
+  slug: 'assemble-a-six-drawer-dresser-mueller-j9k0',
+  title: 'Assemble a six-drawer dresser',
+  excerpt: 'Flat-pack dresser, about 60 parts. It goes in a second-floor bedroom.',
+  schedule: { windowStart: '2026-11-18T15:00:00.000Z', windowEnd: '2026-11-18T18:00:00.000Z', flexible: false },
+  budget: { type: 'hourly', rateCents: 3500, estimatedHours: 2, hoursCap: 3 },
+  offerCount: 1,
+  postedAt: '2026-11-17T13:00:00.000Z',
+  taskType: 'dresser',
+};
+
+/** Mueller's first five (of nine), soonest first; the other sections hold one each. */
+const muellerTasks = [bed, dresser, wardrobe, desk, bookshelf];
+const boardTasks = [...muellerTasks, yard, moving, cleaning, computer];
+const bySoonest = [...boardTasks].sort((a, b) => a.schedule.windowStart.localeCompare(b.schedule.windowStart));
+const byNewest = [...boardTasks].sort((a, b) => b.postedAt.localeCompare(a.postedAt));
 
 const facets: TaskBoardFacets = {
-  categories: { 'furniture-assembly': 3, 'moving-help': 1, 'yard-cleanup': 1, 'light-cleaning': 1, 'computer-help': 1 },
+  categories: { 'furniture-assembly': 8, 'moving-help': 2, 'yard-cleanup': 1, 'light-cleaning': 1, 'computer-help': 1 },
   types: [],
   areas: [
     { slug: 'allandale', name: 'Allandale', count: 0 },
@@ -69,19 +98,19 @@ const facets: TaskBoardFacets = {
     { slug: 'downtown', name: 'Downtown', count: 0 },
     { slug: 'east-austin', name: 'East Austin', count: 1 },
     { slug: 'hyde-park', name: 'Hyde Park', count: 1 },
-    { slug: 'mueller', name: 'Mueller', count: 3 },
+    { slug: 'mueller', name: 'Mueller', count: 9 },
     { slug: 'zilker', name: 'Zilker', count: 0 },
   ],
-  pricing: { fixed: 6, hourly: 1 },
-  posted: { '24h': 4, '3d': 7, '7d': 7 },
-  times: { morning: 4, afternoon: 4, evening: 2 },
-  when: { today: 0, this_week: 3, this_weekend: 2 },
-  prices: { under50: 1, from50: 2, from100: 3, from200: 1 },
-  few: 4,
+  pricing: { fixed: 10, hourly: 3 },
+  posted: { '24h': 5, '3d': 10, '7d': 13 },
+  times: { morning: 6, afternoon: 7, evening: 3 },
+  when: { today: 1, this_week: 6, this_weekend: 4 },
+  prices: { under50: 2, from50: 5, from100: 4, from200: 2 },
+  few: 8,
   remote: 1,
 };
 
-const stats = { openCount: boardTasks.length, postedToday: 3 };
+const stats = { openCount: 13, postedToday: 3 };
 
 /** The default board: a section per neighborhood, most tasks first, remote work last. */
 export const taskBoardPageData: TaskBoardPageData = {
@@ -90,17 +119,17 @@ export const taskBoardPageData: TaskBoardPageData = {
   query: defaultQuery,
   tasks: boardTasks,
   sections: [
-    { key: 'mueller', kind: 'area', areaSlug: 'mueller', areaName: 'Mueller', count: 3, tasks: [desk, bookshelf, wardrobe] },
+    { key: 'mueller', kind: 'area', areaSlug: 'mueller', areaName: 'Mueller', count: 9, tasks: muellerTasks },
     { key: 'crestview', kind: 'area', areaSlug: 'crestview', areaName: 'Crestview', count: 1, tasks: [yard] },
     { key: 'east-austin', kind: 'area', areaSlug: 'east-austin', areaName: 'East Austin', count: 1, tasks: [moving] },
     { key: 'hyde-park', kind: 'area', areaSlug: 'hyde-park', areaName: 'Hyde Park', count: 1, tasks: [cleaning] },
     { key: 'remote', kind: 'remote', count: 1, tasks: [computer] },
   ],
-  totalCount: boardTasks.length,
+  totalCount: 13,
   pageCount: 1,
   facets,
   stats,
-  today: '2026-11-16',
+  today: '2026-11-17',
 };
 
 /** By day, soonest first. */
@@ -108,7 +137,9 @@ export const taskBoardByDayData: TaskBoardPageData = {
   ...taskBoardPageData,
   query: { ...defaultQuery, group: 'day' },
   sections: undefined,
-  tasks: [...boardTasks].sort((a, b) => a.schedule.windowStart.localeCompare(b.schedule.windowStart)),
+  tasks: bySoonest,
+  totalCount: bySoonest.length,
+  stats: { ...stats, openCount: bySoonest.length },
 };
 
 /** Cards in one list, newest first. */
@@ -116,7 +147,9 @@ export const taskBoardCardsData: TaskBoardPageData = {
   ...taskBoardPageData,
   query: { ...defaultQuery, view: 'cards', group: 'none', sort: 'newest' },
   sections: undefined,
-  tasks: [...boardTasks].sort((a, b) => b.postedAt.localeCompare(a.postedAt)),
+  tasks: byNewest,
+  totalCount: boardTasks.length,
+  stats: { ...stats, openCount: boardTasks.length },
 };
 
 /** Page 2 of 3 in one list, sorted by newest. */
@@ -124,6 +157,7 @@ export const taskBoardPagedData: TaskBoardPageData = {
   ...taskBoardPageData,
   query: { ...defaultQuery, sort: 'newest', page: 2, group: 'none' },
   sections: undefined,
+  tasks: byNewest,
   totalCount: 47,
   pageCount: 3,
 };
@@ -146,10 +180,14 @@ export const taskBoardFilteredData: TaskBoardPageData = {
 export const taskBoardHubData: TaskBoardPageData = {
   ...taskBoardPageData,
   query: { ...defaultQuery, category: 'furniture-assembly' },
-  sections: [{ key: 'mueller', kind: 'area', areaSlug: 'mueller', areaName: 'Mueller', count: 3, tasks: [desk, bookshelf, wardrobe] }],
-  tasks: [desk, bookshelf, wardrobe],
-  totalCount: 3,
-  facets: { ...facets, types: [{ slug: 'desk', count: 1 }, { slug: 'bed', count: 0 }, { slug: 'shelving', count: 1 }, { slug: 'wardrobe', count: 1 }, { slug: 'dresser', count: 0 }, { slug: 'table', count: 0 }, { slug: 'other', count: 0 }] },
+  sections: [{ key: 'mueller', kind: 'area', areaSlug: 'mueller', areaName: 'Mueller', count: 8, tasks: muellerTasks }],
+  tasks: muellerTasks,
+  totalCount: 8,
+  facets: {
+    ...facets,
+    areas: facets.areas.map((area) => ({ ...area, count: area.slug === 'mueller' ? 8 : 0 })),
+    types: [{ slug: 'desk', count: 2 }, { slug: 'bed', count: 1 }, { slug: 'shelving', count: 2 }, { slug: 'wardrobe', count: 1 }, { slug: 'dresser', count: 1 }, { slug: 'table', count: 1 }, { slug: 'other', count: 0 }],
+  },
   heading: { title: 'Furniture assembly jobs in Austin', intro: 'Flat-pack desks, beds, shelves and wardrobes posted by neighbors, with the price they offer.' },
 };
 

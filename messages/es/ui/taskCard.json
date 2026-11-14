@@ -20,5 +20,44 @@
     "cleaningFlexible": "Limpieza con horario flexible",
     "remote": "Ayuda remota con computadora",
     "hourly": "Tarea con presupuesto por hora"
-  }
+  },
+  "types": {
+    "furniture-assembly": {
+      "desk": "Escritorio",
+      "bed": "Cama",
+      "shelving": "Librero o repisas",
+      "wardrobe": "Clóset",
+      "dresser": "Cómoda",
+      "table": "Mesa o sillas",
+      "other": "Otro mueble"
+    },
+    "moving-help": {
+      "load_truck": "Cargar un camión",
+      "unload_truck": "Descargar un camión",
+      "load_and_unload": "Cargar y descargar",
+      "within_home": "Dentro de casa"
+    },
+    "yard-cleanup": {
+      "leaves": "Hojas",
+      "weeding": "Maleza",
+      "pruning": "Poda",
+      "debris": "Residuos del jardín",
+      "mixed": "Jardín en general"
+    },
+    "light-cleaning": {
+      "studio_one": "Estudio o 1 recámara",
+      "two_bedroom": "2 recámaras",
+      "three_plus": "3 o más recámaras"
+    },
+    "computer-help": {
+      "computer": "Computadora",
+      "phone_tablet": "Teléfono o tableta",
+      "wifi": "Wi-Fi",
+      "printer": "Impresora",
+      "tv": "TV",
+      "other": "Otro dispositivo"
+    }
+  },
+  "perHour": "/h",
+  "upToHours": "hasta {hours}"
 }

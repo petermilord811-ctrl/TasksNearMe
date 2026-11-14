@@ -12,14 +12,12 @@
     "this_weekend": "Este fin de semana"
   },
   "remoteOnly": "Solo remotas",
-  "remoteOn": "Sí",
-  "remoteOff": "No",
   "sort": "Ordenar",
   "sortOptions": {
     "soonest": "Más próximas",
     "newest": "Más recientes",
-    "price_high": "Precio: de mayor a menor",
-    "price_low": "Precio: de menor a mayor"
+    "price_high": "Precio más alto",
+    "price_low": "Precio más bajo"
   },
   "results": "{count, plural, one {# tarea abierta} other {# tareas abiertas}}",
   "pagination": "Páginas de tareas",
@@ -40,6 +38,93 @@
     "default": "Tablero de tareas",
     "paged": "Tablero de tareas · página 2",
     "filteredEmpty": "Tablero de tareas · sin tareas coincidentes",
-    "noTasks": "Tablero de tareas · sin tareas abiertas"
+    "noTasks": "Tablero de tareas · sin tareas abiertas",
+    "byDay": "Tablero de tareas · por día",
+    "cards": "Tablero de tareas · tarjetas",
+    "filtered": "Tablero de tareas · con filtros",
+    "hub": "Tablero de tareas · página de categoría"
+  },
+  "panel": {
+    "toggle": "Filtros"
+  },
+  "search": {
+    "label": "Buscar",
+    "placeholder": "escritorio, cajas, Wi-Fi…",
+    "submit": "Buscar tareas"
+  },
+  "types": "Tipo de tarea",
+  "allTypes": "Todos los tipos",
+  "areas": "Vecindarios",
+  "anyArea": "Todos los vecindarios",
+  "price": "Precio",
+  "anyPrice": "Cualquier precio",
+  "pricePresets": {
+    "under50": "Menos de $50",
+    "from50": "De $50 a $99",
+    "from100": "De $100 a $199",
+    "from200": "$200 o más"
+  },
+  "priceRange": {
+    "min": "Mín. $",
+    "max": "Máx. $",
+    "apply": "Ir"
+  },
+  "priceChip": {
+    "between": "De ${min} a ${max}",
+    "from": "${min} o más",
+    "upTo": "Hasta ${max}"
+  },
+  "pricing": "Presupuesto",
+  "pricingOptions": {
+    "any": "Fijo o por hora",
+    "fixed": "Precio fijo",
+    "hourly": "Por hora"
+  },
+  "times": "Hora del día",
+  "timeOptions": {
+    "morning": "Mañana (antes del mediodía)",
+    "afternoon": "Tarde (del mediodía a las 5 p.m.)",
+    "evening": "Noche (después de las 5 p.m.)"
+  },
+  "posted": "Publicadas",
+  "postedOptions": {
+    "any": "Cuando sea",
+    "24h": "En las últimas 24 horas",
+    "3d": "En los últimos 3 días",
+    "7d": "En la última semana"
+  },
+  "more": "Más",
+  "few": "0 o 1 ofertas hasta ahora",
+  "clearAll": "Borrar todo",
+  "keyword": "“{q}”",
+  "active": "Filtros en uso",
+  "removeFilter": "Quitar {label}",
+  "group": "Agrupar",
+  "groupOptions": {
+    "area": "Por vecindario",
+    "day": "Por día",
+    "none": "Una sola lista"
+  },
+  "view": "Vista",
+  "viewOptions": {
+    "list": "Lista",
+    "cards": "Tarjetas"
+  },
+  "sectionCount": "{count, plural, one {# tarea} other {# tareas}}",
+  "seeAll": "Ver las {count} de {area}",
+  "seeAllRemote": "Ver las {count} tareas remotas",
+  "remoteSection": "Remotas",
+  "today": "Hoy",
+  "tomorrow": "Mañana",
+  "stats": {
+    "open": "{count, plural, one {# tarea abierta} other {# tareas abiertas}}",
+    "postedToday": "{count, plural, =0 {ninguna publicada hoy todavía} one {# publicada hoy} other {# publicadas hoy}}"
+  },
+  "row": {
+    "new": "Nueva",
+    "first": "Aún sin ofertas",
+    "offers": "{count, plural, one {# oferta} other {# ofertas}}",
+    "anyTime": "Cualquier hora",
+    "remote": "Remota"
   }
 }

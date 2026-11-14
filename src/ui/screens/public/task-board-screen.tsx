@@ -1,71 +1,159 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Check, Lock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, LayoutGrid, List, Lock, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, TASK_BOARD_SORTS, TASK_BOARD_WHEN, type ISODateTime, type TaskBoardPageData, type TaskBoardQuery } from '@/contracts';
+import { routes, TASK_BOARD_GROUPS, TASK_BOARD_PRICE_PRESETS, TASK_BOARD_SORTS, TASK_BOARD_VIEWS, type ISODateTime, type TaskBoardPageData, type TaskBoardQuery, type TaskPublicView } from '@/contracts';
+import { marketDayKey } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
-import { PageHeader } from '@/ui/components/layout/page-header';
-import { SideScrollList } from '@/ui/components/layout/side-scroll-list';
+import { BoardFilters, activeFilterCount, boardHref } from '@/ui/components/search/board-filters';
 import { PublicTaskCard } from '@/ui/components/tasks/public-task-card';
+import { TaskRow } from '@/ui/components/tasks/task-row';
 import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';
 
 export interface TaskBoardScreenProps { data: TaskBoardPageData; now: ISODateTime }
 
-function FilterLink({ href, selected, children }: { href: string; selected: boolean; children: ReactNode }) {
-  return <Link href={href} aria-current={selected ? 'true' : undefined} className={cn(
-    'inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-[background-color,border-color,color,box-shadow] duration-200 ease-[var(--ease-out)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-    selected ? 'border-primary/40 bg-brand-soft text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_22%,transparent)]' : 'border-foreground/[0.1] bg-card text-foreground hover:border-foreground/25 hover:bg-background dark:border-white/[0.1]',
-  )}>{selected && <Check aria-hidden="true" className="size-4 shrink-0 text-primary" />}{children}</Link>;
+function Segmented({ label, children }: { label: string; children: ReactNode }) {
+  return <nav aria-label={label} className="shrink-0"><ul className="inline-flex rounded-lg bg-foreground/[0.05] p-0.5 dark:bg-white/[0.06]">{children}</ul></nav>;
 }
 
+function SegmentLink({ href, selected, label, icon }: { href: string; selected: boolean; label: string; icon?: ReactNode }) {
+  return <li><Link href={href} rel="nofollow" aria-current={selected ? 'true' : undefined} title={icon ? label : undefined} className={cn('relative inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-md px-2.5 text-[13px] font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-ring', selected ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
+    {icon ?? (selected && <Check aria-hidden="true" className="size-3.5" />)}
+    <span className={icon ? 'sr-only' : undefined}>{label}</span>
+  </Link></li>;
+}
+
+// The controls row scrolls sideways on phones; its ends fade over the page gutter so a cut control reads as "more".
+const EDGE_FADE = 'linear-gradient(to right, transparent, #000 var(--spacing-gutter, 1rem), #000 calc(100% - var(--spacing-gutter, 1rem)), transparent)';
+const edgeFade = { '--board-fade': EDGE_FADE } as CSSProperties;
+
+function Rows({ tasks, now, showArea = true }: { tasks: TaskPublicView[]; now: ISODateTime; showArea?: boolean }) {
+  return <ol className="divide-y divide-foreground/[0.06] dark:divide-white/[0.05]">{tasks.map((task) => <li key={task.id}><TaskRow task={task} now={now} showArea={showArea} /></li>)}</ol>;
+}
+
+const panelClass = 'overflow-hidden rounded-[1.125rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]';
+const panelHeadClass = 'flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-foreground/[0.06] bg-foreground/[0.025] px-3 py-2 sm:px-4 dark:border-white/[0.05] dark:bg-white/[0.025]';
+
+/**
+ * The public task board, Craigslist-style (completion plan 7.4): dense rows grouped by neighborhood with their
+ * counts (or by day, or one list; or cards), a filter column where every option shows its count, the active
+ * filters as removable chips, and the market's real numbers. Every view is a link with its own URL.
+ */
 export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const t = useTranslations('taskBoard');
-  const categoryName = useTranslations('helperCard.categories');
+  const card = useTranslations('taskCard');
+  const { formatDate } = useFormat();
   const { market, query } = data;
-  const filterHref = (change: TaskBoardQuery) => routes.taskBoard(market.slug, { ...query, ...change, page: undefined });
-  const hasFilters = query.category !== undefined || query.when !== 'any' || query.remoteOnly;
+  const href = (change: Partial<TaskBoardQuery>) => boardHref(data, change);
+  const filtered = activeFilterCount(query) > 0;
+  const tomorrow = marketDayKey(new Date(new Date(`${data.today}T12:00:00Z`).getTime() + 86_400_000));
 
-  return <div className="space-y-section">
-    <PageHeader title={t('title', { market: market.name })} description={t('description')} />
-    {/* Filters. On phones each group is one row that scrolls sideways (the picked chip kept in view), so the
-        first tasks show on the first screen; from `sm` up the chips wrap. */}
-    <section aria-label={t('filters')} className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card sm:space-y-5 dark:border-white/[0.06]">
-      <nav aria-label={t('category')} className="space-y-2">
-        <p className="text-sm font-semibold">{t('category')}</p>
-        <SideScrollList>
-          <li><FilterLink href={filterHref({ category: undefined })} selected={query.category === undefined}>{t('allCategories')}</FilterLink></li>
-          {data.categories.map((category) => <li key={category.slug}><FilterLink href={filterHref({ category: category.slug })} selected={query.category === category.slug}>{categoryName(category.slug)}</FilterLink></li>)}
-        </SideScrollList>
-      </nav>
-      <div className="flex flex-wrap items-end gap-x-8 gap-y-4 border-t pt-4 sm:gap-y-5 sm:pt-5">
-        <nav aria-label={t('when')} className="w-full space-y-2 sm:w-auto">
-          <p className="text-sm font-semibold">{t('when')}</p>
-          <SideScrollList>{TASK_BOARD_WHEN.map((when) => <li key={when}><FilterLink href={filterHref({ when })} selected={query.when === when}>{t(`whenOptions.${when}`)}</FilterLink></li>)}</SideScrollList>
-        </nav>
-        <div>
-          <Link href={filterHref({ remoteOnly: !query.remoteOnly })} aria-current={query.remoteOnly ? 'true' : undefined} className={cn('inline-flex min-h-11 items-center gap-3 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-[background-color,border-color,box-shadow] duration-200 ease-[var(--ease-out)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring', query.remoteOnly ? 'border-primary/40 bg-brand-soft text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_22%,transparent)]' : 'border-foreground/[0.1] bg-card hover:border-foreground/25 hover:bg-background dark:border-white/[0.1]')}>
-            <span>{t('remoteOnly')}</span>{' '}<span className={cn('rounded-full px-2 py-0.5 text-xs', query.remoteOnly ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>{query.remoteOnly ? t('remoteOn') : t('remoteOff')}</span>
-          </Link>
-        </div>
-        {/* On phones the label sits beside its two chips (they wrap under it when a language runs long). */}
-        <nav aria-label={t('sort')} className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:block sm:space-y-2">
-          <p className="text-sm font-semibold">{t('sort')}</p>
-          <ul className="flex flex-wrap gap-2">{TASK_BOARD_SORTS.map((sort) => <li key={sort}><FilterLink href={filterHref({ sort })} selected={query.sort === sort}>{t(`sortOptions.${sort}`)}</FilterLink></li>)}</ul>
-        </nav>
+  // The filters in effect, each a link that removes it.
+  const priceLabel = (() => {
+    if (query.minPrice === undefined && query.maxPrice === undefined) return null;
+    const preset = TASK_BOARD_PRICE_PRESETS.find((candidate) => ('min' in candidate ? candidate.min : undefined) === query.minPrice && ('max' in candidate ? candidate.max : undefined) === query.maxPrice);
+    if (preset) return t(`pricePresets.${preset.key}`);
+    if (query.minPrice !== undefined && query.maxPrice !== undefined) return t('priceChip.between', { min: query.minPrice, max: query.maxPrice });
+    return query.minPrice !== undefined ? t('priceChip.from', { min: query.minPrice }) : t('priceChip.upTo', { max: query.maxPrice ?? 0 });
+  })();
+  const chips: { key: string; label: string; href: string }[] = [
+    ...(query.category ? [{ key: 'category', label: card(`categories.${query.category}`), href: href({ category: undefined, type: undefined }) }] : []),
+    ...(query.category && query.type ? [{ key: 'type', label: card(`types.${query.category}.${query.type}`), href: href({ type: undefined }) }] : []),
+    ...(query.q ? [{ key: 'q', label: t('keyword', { q: query.q }), href: href({ q: undefined }) }] : []),
+    ...query.areas.map((slug) => ({ key: `area-${slug}`, label: data.facets.areas.find((area) => area.slug === slug)?.name ?? slug, href: href({ areas: query.areas.filter((other) => other !== slug) }) })),
+    ...(priceLabel ? [{ key: 'price', label: priceLabel, href: href({ minPrice: undefined, maxPrice: undefined }) }] : []),
+    ...(query.pricing ? [{ key: 'pricing', label: t(`pricingOptions.${query.pricing}`), href: href({ pricing: undefined }) }] : []),
+    ...(query.when !== 'any' ? [{ key: 'when', label: t(`whenOptions.${query.when}`), href: href({ when: 'any' }) }] : []),
+    ...query.times.map((time) => ({ key: `time-${time}`, label: t(`timeOptions.${time}`), href: href({ times: query.times.filter((other) => other !== time) }) })),
+    ...(query.posted ? [{ key: 'posted', label: t(`postedOptions.${query.posted}`), href: href({ posted: undefined }) }] : []),
+    ...(query.few ? [{ key: 'few', label: t('few'), href: href({ few: false }) }] : []),
+    ...(query.remoteOnly ? [{ key: 'remote', label: t('remoteOnly'), href: href({ remoteOnly: false }) }] : []),
+  ];
+
+  // Grouped by day when asked (one list, in the order the sort gives).
+  const dayGroups = query.group === 'day' && query.view === 'list' && !data.sections
+    ? data.tasks.reduce<{ day: string; tasks: TaskPublicView[] }[]>((groups, task) => {
+        const day = marketDayKey(task.schedule.windowStart);
+        const last = groups.at(-1);
+        if (last && last.day === day) last.tasks.push(task);
+        else groups.push({ day, tasks: [task] });
+        return groups;
+      }, [])
+    : null;
+  const dayLabel = (day: string, sample: TaskPublicView) => (day === data.today ? t('today') : day === tomorrow ? t('tomorrow') : formatDate(sample.schedule.windowStart));
+
+  const list = data.tasks.length === 0
+    ? <EmptyState title={t(filtered ? 'filteredEmptyTitle' : 'noTasksTitle')} body={t(filtered ? 'filteredEmptyBody' : 'noTasksBody')} action={filtered ? { label: t('clearFilters'), href: routes.taskBoard(market.slug) } : { label: t('postTask'), href: routes.app.newTask() }} />
+    : query.view === 'cards'
+      ? <ul className="grid gap-3 sm:grid-cols-2">{data.tasks.map((task) => <li key={task.id} className="min-w-0"><PublicTaskCard task={task} now={now} headingLevel={2} /></li>)}</ul>
+      : data.sections
+        ? <div className="space-y-3">{data.sections.map((section) => {
+            const name = section.kind === 'remote' ? t('remoteSection') : section.areaName ?? section.key;
+            const more = section.count > section.tasks.length;
+            return <section key={section.key} aria-labelledby={`board-${section.key}`} className={panelClass}>
+              <header className={panelHeadClass}>
+                <h2 id={`board-${section.key}`} className="text-[15px] font-semibold">{name}<span className="ml-2 text-[13px] font-normal text-muted-foreground tabular-nums">{t('sectionCount', { count: section.count })}</span></h2>
+                {more && <Link href={section.kind === 'remote' ? href({ remoteOnly: true }) : href({ areas: [section.areaSlug ?? section.key] })} rel="nofollow" className="inline-flex min-h-8 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{section.kind === 'remote' ? t('seeAllRemote', { count: section.count }) : t('seeAll', { count: section.count, area: name })}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>}
+              </header>
+              <Rows tasks={section.tasks} now={now} showArea={false} />
+            </section>;
+          })}</div>
+        : dayGroups
+          ? <div className="space-y-3">{dayGroups.map((group) => <section key={group.day} aria-labelledby={`board-day-${group.day}`} className={panelClass}>
+              <header className={panelHeadClass}><h2 id={`board-day-${group.day}`} className="text-[15px] font-semibold">{dayLabel(group.day, group.tasks[0]!)}<span className="ml-2 text-[13px] font-normal text-muted-foreground tabular-nums">{t('sectionCount', { count: group.tasks.length })}</span></h2></header>
+              <Rows tasks={group.tasks} now={now} />
+            </section>)}</div>
+          : <div className={panelClass}><Rows tasks={data.tasks} now={now} /></div>;
+
+  return <div className="space-y-5">
+    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+      <div className="min-w-0 max-w-3xl space-y-1.5">
+        <h1 className="font-display text-[1.75rem]/[1.15] font-semibold tracking-[-0.02em] sm:text-[2rem]/[1.1]">{data.heading?.title ?? t('title', { market: market.name })}</h1>
+        <p className="text-[15px] text-muted-foreground">{data.heading?.intro ?? t('description')}</p>
+        <p className="flex flex-wrap gap-x-2 text-sm font-medium tabular-nums">
+          <span>{t('stats.open', { count: data.stats.openCount })}</span>
+          <span aria-hidden="true" className="text-muted-foreground">·</span>
+          <span className={data.stats.postedToday > 0 ? 'text-primary' : 'text-muted-foreground'}>{t('stats.postedToday', { count: data.stats.postedToday })}</span>
+        </p>
       </div>
-    </section>
-    <div className="space-y-4">
-      <p className="font-semibold tabular-nums">{t('results', { count: data.totalCount })}</p>
-      {data.tasks.length > 0 ? <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{data.tasks.map((task) => <li key={task.id} className="min-w-0"><PublicTaskCard task={task} now={now} headingLevel={2} /></li>)}</ul>
-        : <EmptyState title={t(hasFilters ? 'filteredEmptyTitle' : 'noTasksTitle')} body={t(hasFilters ? 'filteredEmptyBody' : 'noTasksBody')} action={hasFilters ? { label: t('clearFilters'), href: routes.taskBoard(market.slug) } : { label: t('postTask'), href: routes.app.newTask() }} />}
-      {data.pageCount > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">
-        {query.page > 1 && <Link href={routes.taskBoard(market.slug, { ...query, page: query.page - 1 })} rel="prev" className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('previous')}</Link>}
-        <p className="text-sm tabular-nums">{t('page', { page: query.page, count: data.pageCount })}</p>
-        {query.page < data.pageCount && <Link href={routes.taskBoard(market.slug, { ...query, page: query.page + 1 })} rel="next" className={buttonVariants({ variant: 'outline' })}>{t('next')}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
-      </nav>}
+      <Link href={routes.app.newTask()} className={buttonVariants({ className: 'shrink-0' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>
+    </header>
+
+    <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6">
+      <aside aria-label={t('filters')} className="lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pb-2 lg:pr-1">
+        <BoardFilters board={data} />
+      </aside>
+
+      <div className="min-w-0 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          {/* The market's own counts are in the header; a filtered board says how many match. */}
+          {filtered && <p className="text-sm font-semibold tabular-nums" role="status">{t('results', { count: data.totalCount })}</p>}
+          {/* One row: it scrolls sideways on phones rather than stacking three rows above the first task. */}
+          <div className="-mx-gutter flex w-[calc(100%+2*var(--page-gutter))] gap-2 overflow-x-auto px-gutter py-0.5 [scrollbar-width:none] sm:mx-0 sm:ml-auto sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0 [mask-image:var(--board-fade)] [-webkit-mask-image:var(--board-fade)] sm:[mask-image:none] sm:[-webkit-mask-image:none]" style={edgeFade}>
+            <Segmented label={t('sort')}>{TASK_BOARD_SORTS.map((sort) => <SegmentLink key={sort} href={href({ sort })} selected={query.sort === sort} label={t(`sortOptions.${sort}`)} />)}</Segmented>
+            {query.view === 'list' && <Segmented label={t('group')}>{TASK_BOARD_GROUPS.map((group) => <SegmentLink key={group} href={href({ group })} selected={query.group === group} label={t(`groupOptions.${group}`)} />)}</Segmented>}
+            <Segmented label={t('view')}>{TASK_BOARD_VIEWS.map((view) => <SegmentLink key={view} href={href({ view })} selected={query.view === view} label={t(`viewOptions.${view}`)} icon={view === 'list' ? <List aria-hidden="true" className="size-4" /> : <LayoutGrid aria-hidden="true" className="size-4" />} />)}</Segmented>
+          </div>
+        </div>
+
+        {chips.length > 0 && <nav aria-label={t('active')} className="flex flex-wrap items-center gap-1.5">
+          {chips.map((chip) => <Link key={chip.key} href={chip.href} rel="nofollow" aria-label={t('removeFilter', { label: chip.label })} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-primary/30 bg-brand-soft px-3 text-[13px] font-medium transition-colors hover:border-primary/60 focus-visible:outline-2 focus-visible:outline-ring">{chip.label}<X aria-hidden="true" className="size-3.5" /></Link>)}
+          <Link href={routes.taskBoard(market.slug, { view: query.view, group: query.group, sort: query.sort })} rel="nofollow" className="inline-flex min-h-8 items-center px-2 text-[13px] font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('clearAll')}</Link>
+        </nav>}
+
+        {list}
+
+        {data.pageCount > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          {query.page > 1 && <Link href={routes.taskBoard(market.slug, { ...query, page: query.page - 1 })} rel="prev" className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('previous')}</Link>}
+          <p className="text-sm tabular-nums">{t('page', { page: query.page, count: data.pageCount })}</p>
+          {query.page < data.pageCount && <Link href={routes.taskBoard(market.slug, { ...query, page: query.page + 1 })} rel="next" className={buttonVariants({ variant: 'outline' })}>{t('next')}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
+        </nav>}
+      </div>
     </div>
-    <div className="flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+
+    <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
       <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>
       <div className="flex flex-wrap items-center gap-x-2"><p className="text-sm text-muted-foreground">{t('helperHint')}</p><Link href={routes.becomeAHelper()} className={buttonVariants({ variant: 'link', className: 'px-0' })}>{t('becomeHelper')}<ArrowRight aria-hidden="true" /></Link></div>
     </div>

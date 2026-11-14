@@ -5,12 +5,20 @@
   "category": "Category",
   "allCategories": "All",
   "when": "When",
-  "whenOptions": { "any": "Any time", "today": "Today", "this_week": "This week", "this_weekend": "This weekend" },
+  "whenOptions": {
+    "any": "Any time",
+    "today": "Today",
+    "this_week": "This week",
+    "this_weekend": "This weekend"
+  },
   "remoteOnly": "Remote only",
-  "remoteOn": "On",
-  "remoteOff": "Off",
   "sort": "Sort",
-  "sortOptions": { "soonest": "Soonest", "newest": "Newest", "price_high": "Price: high to low", "price_low": "Price: low to high" },
+  "sortOptions": {
+    "soonest": "Soonest",
+    "newest": "Newest",
+    "price_high": "Highest price",
+    "price_low": "Lowest price"
+  },
   "results": "{count, plural, one {# open task} other {# open tasks}}",
   "pagination": "Task pages",
   "page": "Page {page} of {count}",
@@ -25,5 +33,98 @@
   "privacy": "Exact addresses go only to the booked helper",
   "becomeHelper": "Become a helper",
   "helperHint": "Ready to lend a hand?",
-  "previews": { "group": "Public task pages", "default": "Task board", "paged": "Task board · page 2", "filteredEmpty": "Task board · no matching tasks", "noTasks": "Task board · no open tasks" }
+  "previews": {
+    "group": "Public task pages",
+    "default": "Task board",
+    "paged": "Task board · page 2",
+    "filteredEmpty": "Task board · no matching tasks",
+    "noTasks": "Task board · no open tasks",
+    "byDay": "Task board · by day",
+    "cards": "Task board · cards",
+    "filtered": "Task board · filtered",
+    "hub": "Task board · category page"
+  },
+  "panel": {
+    "toggle": "Filters"
+  },
+  "search": {
+    "label": "Search",
+    "placeholder": "desk, boxes, Wi-Fi…",
+    "submit": "Search tasks"
+  },
+  "types": "Task type",
+  "allTypes": "All types",
+  "areas": "Neighborhoods",
+  "anyArea": "All neighborhoods",
+  "price": "Price",
+  "anyPrice": "Any price",
+  "pricePresets": {
+    "under50": "Under $50",
+    "from50": "$50 to $99",
+    "from100": "$100 to $199",
+    "from200": "$200 and up"
+  },
+  "priceRange": {
+    "min": "Min $",
+    "max": "Max $",
+    "apply": "Go"
+  },
+  "priceChip": {
+    "between": "${min} to ${max}",
+    "from": "${min} and up",
+    "upTo": "Up to ${max}"
+  },
+  "pricing": "Budget",
+  "pricingOptions": {
+    "any": "Fixed or hourly",
+    "fixed": "Fixed price",
+    "hourly": "Hourly"
+  },
+  "times": "Time of day",
+  "timeOptions": {
+    "morning": "Morning (before noon)",
+    "afternoon": "Afternoon (noon to 5 pm)",
+    "evening": "Evening (after 5 pm)"
+  },
+  "posted": "Posted",
+  "postedOptions": {
+    "any": "Any time",
+    "24h": "In the last 24 hours",
+    "3d": "In the last 3 days",
+    "7d": "In the last week"
+  },
+  "more": "More",
+  "few": "0 or 1 offers so far",
+  "clearAll": "Clear all",
+  "keyword": "“{q}”",
+  "active": "Filters in use",
+  "removeFilter": "Remove {label}",
+  "group": "Group",
+  "groupOptions": {
+    "area": "By neighborhood",
+    "day": "By day",
+    "none": "One list"
+  },
+  "view": "View",
+  "viewOptions": {
+    "list": "List",
+    "cards": "Cards"
+  },
+  "sectionCount": "{count, plural, one {# task} other {# tasks}}",
+  "seeAll": "See all {count} in {area}",
+  "seeAllRemote": "See all {count} remote tasks",
+  "remoteSection": "Remote",
+  "today": "Today",
+  "tomorrow": "Tomorrow",
+  "stats": {
+    "open": "{count, plural, one {# open task} other {# open tasks}}",
+    "postedToday": "{count, plural, =0 {none posted today yet} one {# posted today} other {# posted today}}"
+  },
+  "row": {
+    "new": "New",
+    "first": "No offers yet",
+    "offers": "{count, plural, one {# offer} other {# offers}}",
+    "anyTime": "Any time",
+    "remote": "Remote"
+  }
 }
