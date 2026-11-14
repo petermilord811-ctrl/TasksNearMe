@@ -17,8 +17,12 @@ const option = (name, fallback) => {
 };
 const runs = Number(option('runs', 3));
 
-/** Budgets: LCP from blueprint 07 §6; JS per route (compressed) so the phone stays within it. */
-export const BUDGETS = { lcpMs: 2500, jsKb: 350 };
+/**
+ * Budgets: LCP from blueprint 07 §6; JS per route, compressed (decisions.md 2026-11-14). Every public page loads
+ * the same shared scripts (the shell, React, motion, Radix: about 420 KB on 2026-11-14), so the budget guards
+ * against growth; the landing page adds the town and the map, loaded after its first paint.
+ */
+export const BUDGETS = { lcpMs: 2500, jsKb: (path) => (path === '/' ? 950 : 450) };
 
 const browser = await chromium.launch();
 async function measure(path) {
@@ -84,10 +88,10 @@ for (const path of pages) {
   const lcp = median(samples.map((sample) => sample.lcp.time));
   const pick = samples.find((sample) => sample.lcp.time === lcp) ?? samples[0];
   const row = { path, status: pick.status, lcpMs: Math.round(lcp), lcpElement: pick.lcp.element, ttfbMs: Math.round(median(samples.map((s) => s.ttfb))), htmlKb: +(pick.htmlBytes / 1024).toFixed(1), jsKb: +(pick.jsBytes / 1024).toFixed(1), cssKb: +(pick.cssBytes / 1024).toFixed(1), imageKb: +(pick.imageBytes / 1024).toFixed(1), requests: pick.requests };
-  row.pass = row.status === 200 && row.lcpMs <= BUDGETS.lcpMs && row.jsKb <= BUDGETS.jsKb;
+  row.pass = row.status === 200 && row.lcpMs <= BUDGETS.lcpMs && row.jsKb <= BUDGETS.jsKb(path);
   report.push(row);
   console.log(`${row.pass ? 'ok  ' : 'OVER'} ${path.padEnd(34)} LCP ${String(row.lcpMs).padStart(5)} ms  TTFB ${String(row.ttfbMs).padStart(4)}  HTML ${String(row.htmlKb).padStart(6)} KB  JS ${String(row.jsKb).padStart(6)} KB  CSS ${String(row.cssKb).padStart(5)} KB  img ${String(row.imageKb).padStart(6)} KB  (${row.lcpElement})`);
 }
 await browser.close();
-if (option('json')) fs.writeFileSync(option('json'), `${JSON.stringify({ base, runs, budgets: BUDGETS, report }, null, 2)}\n`);
+if (option('json')) fs.writeFileSync(option('json'), `${JSON.stringify({ base, runs, budgets: { lcpMs: BUDGETS.lcpMs, jsKbPublic: BUDGETS.jsKb('/pricing'), jsKbLanding: BUDGETS.jsKb('/') }, report }, null, 2)}\n`);
 process.exit(report.every((row) => row.pass) ? 0 : 1);
