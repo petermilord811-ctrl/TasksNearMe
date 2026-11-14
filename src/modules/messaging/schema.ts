@@ -51,9 +51,43 @@ export const messages = pgTable(
     /** Status and system messages: the event to word. */
     event: jsonb('event').$type<Pick<TimelineEvent, 'type' | 'params'>>(),
     flaggedAt: timestamp('flagged_at', { withTimezone: true }),
+    /** A reply to an earlier message in the same thread (completion plan 7.3): shown quoted above it. */
+    replyToMessageId: text('reply_to_message_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('messages_thread_idx').on(t.threadId, t.createdAt)],
+);
+
+/** Reactions on a message (completion plan 7.3): one of a few emoji, once each per person; the thread's people only. */
+export const messageReactions = pgTable(
+  'message_reactions',
+  {
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    emoji: text('emoji').notNull(), // thumbs_up | heart | laugh | check
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.messageId, t.userId, t.emoji] })],
+);
+
+/** A person's saved replies (completion plan 7.3): short texts with {first_name} and {task}, filled in when used. */
+export const savedReplies = pgTable(
+  'saved_replies',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('saved_replies_user_idx').on(t.userId, t.createdAt)],
 );
 
 /** Blocked people can't message, offer, or invite each other (blueprint 08). */

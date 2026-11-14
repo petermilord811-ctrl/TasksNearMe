@@ -414,6 +414,13 @@
       "when": 1794654031588,
       "tag": "0058_community_questions_searches",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794658831839,
+      "tag": "0059_chat_reactions_replies",
+      "breakpoints": true
     }
   ]
 }
