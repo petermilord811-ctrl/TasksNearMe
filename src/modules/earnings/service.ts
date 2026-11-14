@@ -275,13 +275,15 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
   const status = (account?.status ?? 'not_started') as PayoutAccountStatus;
   // Instant payouts (src/modules/earnings/instant.ts): offered when there's enough to cash out.
   const instant = await instantPayoutOffer(db, stripeConnectFromEnv(), helperUserId);
+  // A failed payout needs the helper's bank until a later payout goes out (T-19); an old failure doesn't.
+  const latestPayout = payoutRows.reduce<(typeof payoutRows)[number] | undefined>((latest, row) => (!latest || row.createdAt > latest.createdAt ? row : latest), undefined);
   return {
     totals: { upcomingCents: sum(['not_due', 'on_hold', 'scheduled']), onTheWayCents: sum(['transferred']), paidThisYearCents: paidThisYear },
     rows: all,
     payoutAccount: {
       status,
       ...(account ? { bankLast4: DEV_BANK_LAST4 } : {}),
-      actionNeeded: status === 'requirements_due' || status === 'restricted' || payoutRows.some((p) => p.status === 'failed'),
+      actionNeeded: status === 'requirements_due' || status === 'restricted' || latestPayout?.status === 'failed',
     },
     firstPayoutNotice: !payoutRows.some((p) => p.status === 'paid'),
     ...(instant ? { instantPayout: instant } : {}),
