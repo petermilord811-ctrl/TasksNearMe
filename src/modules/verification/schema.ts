@@ -47,11 +47,17 @@ export const identityVerifications = pgTable(
     nameConfirmedAt: timestamp('name_confirmed_at', { withTimezone: true }),
     nameConfirmedByUserId: text('name_confirmed_by_user_id'),
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
-    /** Request rows: why (`staff_request`, `name_changed`, `allow_retry`) and by whom (staff; null for the system). */
+    /**
+     * Request rows: why (`staff_request`, `name_changed`, `allow_retry`, `id_expiring`) and by whom (staff;
+     * null for the system). `id_expiring` (6.3): the ID our team approved runs out within 30 days, so a new
+     * check starts while the verification before it counts until the ID's expiry month ends.
+     */
     requestedReason: text('requested_reason'),
     requestedByUserId: text('requested_by_user_id'),
     /** Texas biometric limits (blueprint 06 §3): the provider is asked to delete the images after the result. */
     redactionRequestedAt: timestamp('redaction_requested_at', { withTimezone: true }),
+    /** On an `id_expiring` request row: 1 once the helper was told the ID runs out, 2 once told it has. */
+    expiryNotices: integer('expiry_notices').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -99,7 +105,7 @@ export const identityCaptures = pgTable(
     /** What the selfie had to show (LIVENESS_PROMPTS). */
     promptKey: text('prompt_key').notNull(),
     status: text('status').notNull(), // submitted | approved | rejected | canceled
-    rejectionReason: text('rejection_reason'), // document_unreadable | selfie_mismatch | prompt_not_followed | under_18 | expired | other
+    rejectionReason: text('rejection_reason'), // document_unreadable | selfie_mismatch | prompt_not_followed | under_18 | expired | double_check_failed | duplicate_id | other
     autoCheck: jsonb('auto_check').$type<StoredIdentityAutoCheck>(),
     submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull(),
     decidedAt: timestamp('decided_at', { withTimezone: true }),
@@ -107,11 +113,23 @@ export const identityCaptures = pgTable(
     /** The deciding staff member's note (also in the audit log); never shown to the helper. */
     staffNote: text('staff_note'),
     filesDeletedAt: timestamp('files_deleted_at', { withTimezone: true }),
+    /**
+     * The same ID on two accounts (6.3): a keyed hash (HMAC-SHA256, its own key derived from
+     * FIELD_ENCRYPTION_KEY) of the document number, issuing state and birth date read from the front. The
+     * number itself is never stored or logged. Null when the reading didn't find all three.
+     */
+    documentHash: text('document_hash'),
+    /** Another account already had a capture with the same hash: the double check waits for staff. */
+    duplicateOfUserId: text('duplicate_of_user_id'),
+    /** Staff found the duplicate in order (the hold is lifted), with who and when. */
+    duplicateClearedAt: timestamp('duplicate_cleared_at', { withTimezone: true }),
+    duplicateClearedByUserId: text('duplicate_cleared_by_user_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index('identity_captures_user_idx').on(t.userId, t.createdAt),
+    index('identity_captures_document_hash_idx').on(t.documentHash),
     index('identity_captures_status_idx').on(t.status, t.submittedAt),
     // One set of photos in review at a time, even when two submits race.
     uniqueIndex('identity_captures_one_in_review').on(t.userId).where(sql`status = 'submitted'`),
