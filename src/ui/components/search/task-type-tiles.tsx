@@ -7,7 +7,7 @@ import { cn } from '@/ui/lib/utils';
 export interface TaskTypeTileItem {
   slug: string;
   count: number;
-  /** What its tasks on the board offer: the middle half of their budgets (one price when they agree). */
+  /** What its real tasks on the board offer: the middle half of their budgets (one price when they agree). */
   budget?: { lowCents: number; highCents: number };
   /** The board with this type (or, for the chosen one, without it). */
   href: string;
@@ -16,9 +16,9 @@ export interface TaskTypeTileItem {
 
 /**
  * The chosen category's task types as tiles above the list (completion plan 7.5, TaskRabbit's popular projects):
- * the busiest first, each with what its tasks offer and how many are open, linking to that type like the filter
- * does (the chosen one links back to all). The facts are the board's own tasks. On phones the tiles scroll
- * sideways in one row, so the list still starts near the top.
+ * the busiest first, each with how many are open and what its real tasks offer (no price from demo rows), linking
+ * to that type like the filter does (the chosen one links back to all). The facts are the board's own tasks. On
+ * phones the tiles scroll sideways in one row, so the list still starts near the top.
  */
 export function TaskTypeTiles({ category, items }: { category: CategorySlug; items: TaskTypeTileItem[] }) {
   const t = useTranslations('taskBoard.typeTiles');

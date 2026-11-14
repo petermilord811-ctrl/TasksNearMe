@@ -38,7 +38,8 @@ describe('TaskBoardScreen', () => {
       'Bed$85.001 open',
       'Wardrobe$120.001 open',
       'Dresser$70.001 open',
-      'Table or chairs$50.001 open',
+      // Only demo tasks of this type: how many, but no price.
+      'Table or chairs1 open',
     ]);
     expect(hrefOf(tiles[0]!)).toBe(board(taskBoardHubData, { type: 'desk' }));
     expect(tiles[0]!.getAttribute('aria-current')).toBeNull();

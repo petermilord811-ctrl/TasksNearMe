@@ -9,6 +9,7 @@ import { tasks } from '@/modules/tasks/schema';
 import { createDb, type Db } from '@/platform/db/connect';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { budgetSpread } from '@/shared/budget-spread';
+import { isRealRecordId } from '@/shared/sample-data';
 import { taskTypeOf } from '@/shared/task-types';
 
 /**
@@ -91,9 +92,10 @@ describe('the task board', () => {
     // Task types are counted within the category, from the tasks' own details.
     const furniture = rows.filter((row) => all.some((task) => task.id === row.id && task.categorySlug === 'furniture-assembly' && task.budget.type === 'fixed'));
     for (const type of facets.types) expect(type.count, type.slug).toBe(furniture.filter((row) => taskTypeOf('furniture-assembly', row.details) === type.slug).length);
-    // And what they offer, for the type tiles (plan 7.5): the middle half of the same tasks' budgets.
+    // And what they offer, for the type tiles (plan 7.5): the middle half of the same real tasks' budgets (demo and
+    // seed rows never count).
     for (const type of facets.types) {
-      const budgets = furniture.filter((row) => taskTypeOf('furniture-assembly', row.details) === type.slug).map((row) => row.budgetCents ?? 0);
+      const budgets = furniture.filter((row) => taskTypeOf('furniture-assembly', row.details) === type.slug && isRealRecordId(row.id)).map((row) => row.budgetCents ?? 0);
       expect(type.budget, type.slug).toEqual(budgetSpread(budgets));
     }
   }));

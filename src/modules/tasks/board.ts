@@ -17,6 +17,7 @@ import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
 import { budgetSpread } from '@/shared/budget-spread';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
+import { GENERATED_ID_PATTERN } from '@/shared/sample-data';
 import { taskTypeOf, taskTypesFor } from '@/shared/task-types';
 import { BOARD_PAGE_SIZE, toTaskPublicView, whenRange } from './projections';
 import { boardConditions, boardOrder, listBoardTasks, openIn, selectPublic, taskPriceCents, timeCondition, toRow, type BoardFilterKey } from './queries';
@@ -61,12 +62,13 @@ export async function boardFacets(database: Db, query: TaskBoardQueryState, scop
     database.select({ n: sum(eq(tasks.mode, 'remote')) }).from(tasks).innerJoin(categories, joined).where(where('remote')),
     typeField
       ? database
-          .select({ value: sql<string | null>`(${tasks.details} ->> ${typeField})`, n: count(), budgets: sql<number[]>`array_agg(${taskPriceCents})` })
+          // Budgets from real tasks only: a demo row's price must never read as what the market pays (sample-data.ts).
+          .select({ value: sql<string | null>`(${tasks.details} ->> ${typeField})`, n: count(), budgets: sql<number[] | null>`array_agg(${taskPriceCents}) filter (where ${tasks.id} ~ ${GENERATED_ID_PATTERN})` })
           .from(tasks)
           .innerJoin(categories, joined)
           .where(where('type'))
           .groupBy(sql`1`)
-      : Promise.resolve([] as { value: string | null; n: number; budgets: number[] }[]),
+      : Promise.resolve([] as { value: string | null; n: number; budgets: number[] | null }[]),
   ]);
 
   const areaCounts = new Map(byArea.map((row) => [row.area, row.n]));

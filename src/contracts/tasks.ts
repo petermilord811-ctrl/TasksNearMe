@@ -148,8 +148,9 @@ export interface TaskBoardQueryState {
 export interface TaskBoardFacets {
   categories: Partial<Record<CategorySlug, number>>;
   /**
-   * The chosen category's task types, in display order (empty without a category), with what their tasks on the
-   * board offer: the middle half of the budgets (all of them when there are a few), in whole dollars (plan 7.5).
+   * The chosen category's task types, in display order (empty without a category), with what their real tasks on
+   * the board offer (never demo rows): the middle half of the budgets (all of them when there are a few), in whole
+   * dollars (plan 7.5). No budget while a type has no real open task.
    */
   types: { slug: string; count: number; budget?: { lowCents: number; highCents: number } }[];
   /** Every neighborhood of the market, by name, with its count (0 included, so the list doesn't jump). */
