@@ -46,8 +46,9 @@ async function SignIn({ searchParams }: Pick<PageProps<'/[locale]/sign-in'>, 'se
   const resolution = await resolveCurrentSignIn(typeof next === 'string' ? next : undefined, { via, error });
   if (resolution.kind === 'done') redirect(resolution.redirectTo);
 
-  // The email and name steps run a bot check before Continue (Turnstile, or the stand-in outside production).
-  const botCheck = resolution.data.step === 'email' || resolution.data.step === 'profile' ? await botCheckForPage() : undefined;
+  // The name step (finishing sign-up) runs a bot check before Continue (Turnstile, or the stand-in outside
+  // production). Asking for a code doesn't, since 2026-11-14 (the owner's call; rate limits hold floods).
+  const botCheck = resolution.data.step === 'profile' ? await botCheckForPage() : undefined;
   const data = botCheck ? { ...resolution.data, botCheck } : resolution.data;
   return (
     <SignInScreen

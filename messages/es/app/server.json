@@ -48,6 +48,9 @@
     "taskBoard": {
       "title": "Tareas abiertas en {market}",
       "description": "Tareas locales en {market} para las que la gente necesita ayuda: armado de muebles, mudanzas, trabajo de jardín, limpieza y ayuda con computadoras."
+    },
+    "copyCode": {
+      "title": "Copia tu código para iniciar sesión"
     }
   },
   "support": {
@@ -257,14 +260,20 @@
       "team": "El equipo de TasksNearMe"
     },
     "signInCode": {
-      "subject": "Tu código de TasksNearMe: {code}",
-      "preheader": "Ingrésalo para continuar. Funciona durante {minutes} minutos.",
+      "subject": "{code} es tu código de TasksNearMe",
+      "preheader": "Ingrésalo para iniciar sesión. Funciona durante {minutes} minutos.",
       "title": "Tu código para iniciar sesión",
+      "eyebrow": "Código de inicio de sesión",
       "heading": "Este es tu código",
-      "body": "Ingrésalo en la página de inicio de sesión para continuar.",
-      "expires": "Funciona durante {minutes} minutos, una sola vez.",
+      "body": "Ingrésalo en la página de TasksNearMe donde lo pediste.",
+      "expires": "Funciona durante {minutes} minutos, una sola vez",
+      "copy": "Copiar código",
+      "copyHint": "Abre una página de nuestro sitio que lo copia con un toque. En tu teléfono, también puedes tocar el código para seleccionarlo.",
+      "privateTitle": "No lo compartas.",
+      "private": "TasksNearMe nunca te pedirá este código por teléfono, mensaje de texto ni chat.",
       "ignore": "¿No pediste un código? Puedes ignorar este correo: nadie puede iniciar sesión sin él.",
-      "text": "Tu código para iniciar sesión es {code}. Vence en {minutes} minutos. Si no lo pediste, ignora este correo."
+      "footer": "Recibiste este correo porque alguien pidió iniciar sesión en {host} con esta dirección.",
+      "text": "Tu código para iniciar sesión en TasksNearMe:\n\n{code}\n\nFunciona durante {minutes} minutos, una sola vez. No lo compartas: TasksNearMe nunca te lo pedirá por teléfono, mensaje de texto ni chat.\n\nSi no lo pediste, ignora este correo."
     },
     "emailChangeCode": {
       "subject": "Confirma tu nuevo correo para TasksNearMe: {code}",

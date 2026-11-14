@@ -8,8 +8,8 @@ import { clientIp } from './sign-in/server';
 
 /**
  * The bot check for this request (blueprint 07 §8, 06 §4; `src/integrations/turnstile`): what the page tells
- * the form's widget, and the server-side check of its answer. Used by asking for a sign-in code, finishing
- * sign-up and posting a task.
+ * the form's widget, and the server-side check of its answer. Used by finishing sign-up, posting a task and
+ * offers. Asking for a sign-in code doesn't use it since 2026-11-14 (the owner's call; decisions.md).
  */
 
 /** The test browser's request for the stand-in, honored only on this machine (never through a public proxy). */

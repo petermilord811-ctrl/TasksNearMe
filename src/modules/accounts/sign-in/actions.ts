@@ -117,9 +117,8 @@ export async function continueWith(rawNext: string, input: SocialSignInInput): P
 export async function requestEmailCode(_next: string, input: EmailInput & BotCheckInput): Promise<ActionResult> {
   const parsed = emailInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
-  // Bots asking for codes (to sign up in bulk, or to flood an inbox): Turnstile first (blueprint 06 §4).
-  const refused = await checkBot('sign_in', input?.botCheck);
-  if (refused) return refused;
+  // No Turnstile here since 2026-11-14 (the owner's call: the widget kept them from signing in; decisions.md).
+  // Floods are held by sendEmailCode's per-email and per-IP limits; sign-up, posting and offers keep Turnstile.
   return sendEmailCode(parsed.data.email);
 }
 

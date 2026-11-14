@@ -94,5 +94,21 @@
     "pending": "Waiting for your device…",
     "failed": "That passkey didn't work. Try again, or sign in with an email code.",
     "unknown": "This device doesn't have a passkey for TasksNearMe yet. Sign in with an email code, then add one on your account page."
+  },
+  "copyCode": {
+    "title": "Your sign-in code",
+    "intro": "Copy it, then paste it on the TasksNearMe sign-in page where you asked for it.",
+    "codeLabel": "Sign-in code {code}",
+    "expiresIn": "{minutes, plural, one {Works for 1 more minute} other {Works for # more minutes}}",
+    "copy": "Copy code",
+    "copied": "Copied",
+    "copiedHint": "Copied. Paste it on the sign-in page.",
+    "copyFailed": "Couldn't copy it here. The code is selected: copy it from your device's menu.",
+    "back": "Go to sign-in",
+    "private": "This page keeps the code on your device: it's never sent to our servers.",
+    "expired": "This code has expired",
+    "expiredHint": "Codes work for 10 minutes. Ask for a new one on the sign-in page.",
+    "missing": "There's no code here",
+    "missingHint": "Open this page with the Copy code button in your sign-in email."
   }
 }

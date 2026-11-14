@@ -25,15 +25,22 @@ export function esc(value: string | number): string {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/**
+ * The app icon at the top of every email, as an absolute https URL (mail apps don't show SVG or relative
+ * paths). It's the app's own PNG icon, so a new icon in public/icons reaches every email; raise the `v` when it
+ * changes, because Gmail and Outlook cache images by URL.
+ */
+export const EMAIL_ICON_PATH = '/icons/icon-192.png?v=1';
+
 /** A link that survives every email app: a table cell with the color, the link inside it. */
-export function emailButton({ href, label, variant = 'primary' }: { href: string; label: string; variant?: 'primary' | 'light' | 'dark' }): string {
+export function emailButton({ href, label, variant = 'primary', arrow = true }: { href: string; label: string; variant?: 'primary' | 'light' | 'dark'; arrow?: boolean }): string {
   const look = {
     primary: { background: EMAIL_COLORS.primary, color: '#ffffff', border: EMAIL_COLORS.primary },
     dark: { background: EMAIL_COLORS.ink, color: '#ffffff', border: EMAIL_COLORS.ink },
     light: { background: '#ffffff', color: EMAIL_COLORS.ink, border: '#ffffff' },
   }[variant];
   return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:separate;"><tr><td class="btn-cell btn-${variant}" style="border-radius:999px;background:${look.background};border:1px solid ${look.border};">`
-    + `<a class="btn" href="${esc(href)}" target="_blank" style="display:inline-block;padding:14px 26px;font-family:${EMAIL_FONT};font-size:16px;line-height:20px;font-weight:700;color:${look.color};text-decoration:none;border-radius:999px;">${esc(label)}&nbsp;&rarr;</a>`
+    + `<a class="btn" href="${esc(href)}" target="_blank" style="display:inline-block;padding:14px 26px;font-family:${EMAIL_FONT};font-size:16px;line-height:20px;font-weight:700;color:${look.color};text-decoration:none;border-radius:999px;">${esc(label)}${arrow ? '&nbsp;&rarr;' : ''}</a>`
     + `</td></tr></table>`;
 }
 
@@ -102,7 +109,7 @@ export function emailLayout({ title, preheader, appUrl, body, footer, css = '', 
 <table role="presentation" class="container" width="600" cellspacing="0" cellpadding="0" border="0" style="width:600px;max-width:600px;">
 <tr><td style="padding:0 8px 18px;">
 <a href="${esc(appUrl)}" target="_blank" style="text-decoration:none;font-family:${EMAIL_DISPLAY_FONT};font-size:24px;line-height:28px;font-weight:800;letter-spacing:-0.5px;">`
-    + `<span style="display:inline-block;width:30px;height:30px;line-height:30px;margin-right:8px;border-radius:9px;background:${EMAIL_COLORS.violet};background-image:linear-gradient(135deg,#ff8a5b,#ff5fa2 50%,#8b5cf6);color:#ffffff;text-align:center;font-size:16px;vertical-align:middle;">&#10003;</span>`
+    + `<img src="${esc(appUrl.replace(/\/+$/, '') + EMAIL_ICON_PATH)}" width="34" height="34" alt="TasksNearMe" style="display:inline-block;width:34px;height:34px;margin-right:9px;border:0;border-radius:10px;vertical-align:middle;">`
     + `<span class="ink" style="color:${EMAIL_COLORS.ink};vertical-align:middle;">tasks</span><span style="color:#e5508a;vertical-align:middle;">near</span><span class="ink" style="color:${EMAIL_COLORS.ink};vertical-align:middle;">me</span></a>
 </td></tr>
 <tr><td class="bg-card" style="background:${EMAIL_COLORS.card};border:1px solid ${EMAIL_COLORS.border};border-radius:28px;">

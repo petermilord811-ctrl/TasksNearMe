@@ -61,19 +61,37 @@ describe('the welcome email', () => {
 });
 
 describe('the sign-in code email', () => {
-  it('keeps the same plain text, and shows the code large in the designed version', () => {
-    const email = renderSignInCodeEmail({ code: '482915', minutes: 10, appUrl: 'https://tasksnearme.example' });
-    expect(email.subject).toBe('Your TasksNearMe code: 482915');
-    expect(email.text).toBe("Your sign-in code is 482915. It expires in 10 minutes. If you didn't ask for it, ignore this email.");
+  const now = new Date('2026-11-14T05:00:00Z');
+  const render = () => renderSignInCodeEmail({ code: '482915', minutes: 10, appUrl: 'https://tasksnearme.example', now });
+
+  it('leads with the code: first in the subject, alone on its line in the text, large in the design', () => {
+    const email = render();
+    expect(email.subject).toBe('482915 is your TasksNearMe code');
+    expect(email.text.startsWith('Your TasksNearMe sign-in code:\n\n482915\n')).toBe(true);
+    expect(email.text.match(/\b\d{6}\b/g)).toEqual(['482915']);
     expect(email.html).toContain('>482915<');
-    expect(email.html).toContain('It works for 10 minutes, once.');
+    expect(email.html).toContain('user-select:all');
+    expect(email.html).toContain('Works for 10 minutes, once');
+    expect(email.html).toContain('TasksNearMe will never ask for this code');
+  });
+
+  it('copies through /code, with the code and its expiry in the fragment only', () => {
+    const { html } = render();
+    const expires = Date.parse('2026-11-14T05:10:00Z') / 1000;
+    expect(html).toContain(`href="https://tasksnearme.example/code#c=482915&amp;e=${expires}"`);
+    expect(html).not.toMatch(/\/code\?/);
+    expect(html).toContain('>Copy code</a>');
+  });
+
+  it('shows the app icon from the site, with alt text', () => {
+    expect(render().html).toContain('<img src="https://tasksnearme.example/icons/icon-192.png?v=1" width="34" height="34" alt="TasksNearMe"');
   });
 });
 
 describe('the emails in Spanish', () => {
   it('sends the sign-in code in Spanish, marked as Spanish', () => {
     const email = renderSignInCodeEmail({ code: '482915', minutes: 10, appUrl: 'https://tasksnearme.example', locale: 'es' });
-    expect(email.subject).toBe('Tu código de TasksNearMe: 482915');
+    expect(email.subject).toBe('482915 es tu código de TasksNearMe');
     expect(email.text).toContain('482915');
     expect(email.text).toContain('10 minutos');
     expect(email.html).toContain('<html lang="es"');

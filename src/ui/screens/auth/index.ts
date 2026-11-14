@@ -5,3 +5,4 @@ export { InviteCodeStep } from './invite-code-step';
 export { ProfileStep } from './profile-step';
 export { PhoneStep } from './phone-step';
 export { PhoneCodeStep } from './phone-code-step';
+export { CopyCodeScreen, readCopyCodeFragment } from './copy-code-screen';

@@ -94,5 +94,21 @@
     "pending": "Esperando tu dispositivo…",
     "failed": "Esa llave de acceso no funcionó. Inténtalo de nuevo o inicia sesión con un código por correo.",
     "unknown": "Este dispositivo aún no tiene una llave de acceso para TasksNearMe. Inicia sesión con un código por correo y luego agrega una en la página de tu cuenta."
+  },
+  "copyCode": {
+    "title": "Tu código para iniciar sesión",
+    "intro": "Cópialo y pégalo en la página de inicio de sesión de TasksNearMe donde lo pediste.",
+    "codeLabel": "Código para iniciar sesión {code}",
+    "expiresIn": "{minutes, plural, one {Funciona 1 minuto más} other {Funciona # minutos más}}",
+    "copy": "Copiar código",
+    "copied": "Copiado",
+    "copiedHint": "Copiado. Pégalo en la página de inicio de sesión.",
+    "copyFailed": "No se pudo copiar aquí. El código está seleccionado: cópialo desde el menú de tu dispositivo.",
+    "back": "Ir a iniciar sesión",
+    "private": "Esta página guarda el código en tu dispositivo: nunca se envía a nuestros servidores.",
+    "expired": "Este código ya venció",
+    "expiredHint": "Los códigos funcionan 10 minutos. Pide uno nuevo en la página de inicio de sesión.",
+    "missing": "Aquí no hay ningún código",
+    "missingHint": "Abre esta página con el botón Copiar código de tu correo de inicio de sesión."
   }
 }

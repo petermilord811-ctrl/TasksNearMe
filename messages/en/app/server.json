@@ -48,6 +48,9 @@
     "taskBoard": {
       "title": "Open tasks in {market}",
       "description": "Local tasks people need help with in {market}: furniture assembly, moving, yard work, cleaning, and computer help."
+    },
+    "copyCode": {
+      "title": "Copy your sign-in code"
     }
   },
   "support": {
@@ -257,14 +260,20 @@
       "team": "The TasksNearMe team"
     },
     "signInCode": {
-      "subject": "Your TasksNearMe code: {code}",
-      "preheader": "Enter it to continue. It works for {minutes} minutes.",
+      "subject": "{code} is your TasksNearMe code",
+      "preheader": "Enter it to sign in. It works for {minutes} minutes.",
       "title": "Your sign-in code",
-      "heading": "Here is your code",
-      "body": "Enter it on the sign-in page to continue.",
-      "expires": "It works for {minutes} minutes, once.",
+      "eyebrow": "Sign-in code",
+      "heading": "Here's your code",
+      "body": "Enter it on the TasksNearMe page where you asked for it.",
+      "expires": "Works for {minutes} minutes, once",
+      "copy": "Copy code",
+      "copyHint": "Opens a page on our site that copies it with one tap. On your phone, you can also tap the code to select it.",
+      "privateTitle": "Keep it to yourself.",
+      "private": "TasksNearMe will never ask for this code by phone, text or chat.",
       "ignore": "Didn't ask for a code? You can ignore this email: nobody can sign in without it.",
-      "text": "Your sign-in code is {code}. It expires in {minutes} minutes. If you didn't ask for it, ignore this email."
+      "footer": "You got this because someone asked to sign in to {host} with this email address.",
+      "text": "Your TasksNearMe sign-in code:\n\n{code}\n\nIt works for {minutes} minutes, once. Keep it to yourself: TasksNearMe will never ask for it by phone, text or chat.\n\nIf you didn't ask for it, ignore this email."
     },
     "emailChangeCode": {
       "subject": "Confirm your new email for TasksNearMe: {code}",
