@@ -15,6 +15,11 @@ export const outboxEvents = pgTable(
     payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
     createdAt: createdAt(),
     dispatchedAt: tsz('dispatched_at'),
+    /**
+     * When a dispatcher took the event (FOR NO KEY UPDATE SKIP LOCKED, src/modules/notifications/service.ts), so
+     * two never handle the same one. A claim older than a few minutes is taken again: still at least once.
+     */
+    claimedAt: tsz('claimed_at'),
   },
   (t) => [index('outbox_events_pending_idx').on(t.dispatchedAt, t.createdAt)],
 );

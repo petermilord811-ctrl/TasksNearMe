@@ -379,6 +379,13 @@
       "when": 1794626401019,
       "tag": "0053_payout_bank_updated",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794636227852,
+      "tag": "0054_outbox_claims",
+      "breakpoints": true
     }
   ]
 }
