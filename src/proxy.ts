@@ -14,8 +14,9 @@ import { robotsHeaderFor, searchIndexing } from '@/shared/search-indexing';
  * Language. Pages live under the [locale] root segment (src/app/[locale]), but URLs carry no language:
  * /pricing is rewritten to /en/pricing or /es/pricing, from the device's choice (the NEXT_LOCALE cookie),
  * else the browser's languages, else English. An explicit /es/... URL (shareable, and what search engines
- * index for Spanish) is served as it is and becomes the device's choice; /en/... does the same and then
- * redirects to the plain URL, since English is the default.
+ * index for Spanish) is served as it is and, opened as a page, becomes the device's choice; /en/... does the same
+ * and then redirects to the plain URL, since English is the default. The router's prefetches of /es links never
+ * change the choice.
  *
  * Sign-in. Optimistic check only: a visitor to /app without a session cookie is sent to sign-in with a
  * real redirect before anything renders. The app layout still verifies the session itself, so a stale
@@ -49,7 +50,11 @@ export function proxy(request: NextRequest) {
     const locale = pickLocale({ cookie: request.cookies.get(LOCALE_COOKIE)?.value, acceptLanguage: request.headers.get('accept-language') });
     response = NextResponse.rewrite(new URL(`/${locale}${pathname === '/' ? '' : pathname}${search}`, request.url));
   }
-  if (explicit && request.cookies.get(LOCALE_COOKIE)?.value !== explicit.locale) {
+  // An explicit-language page load becomes this device's choice, but not the router's own fetches (prefetches,
+  // client navigations and actions say Sec-Fetch-Mode "cors"; Next hides its RSC headers from the proxy): Spanish
+  // pages prefetch their /es links (LocaleLink), and a late prefetch would undo a switch to English made a moment before.
+  const pageLoad = (request.headers.get('sec-fetch-mode') ?? 'navigate') === 'navigate';
+  if (explicit && pageLoad && request.cookies.get(LOCALE_COOKIE)?.value !== explicit.locale) {
     response.cookies.set(LOCALE_COOKIE, explicit.locale, LOCALE_COOKIE_OPTIONS);
   }
   // The Content Security Policy for every page (src/shared/csp.ts): enforced in production, reported in development.

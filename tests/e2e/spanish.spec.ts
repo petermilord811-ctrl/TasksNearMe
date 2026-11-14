@@ -50,6 +50,17 @@ test('a browser in Spanish gets the site in Spanish, and the footer switches thi
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
 });
 
+test('an /es page opened as a page sets this device to Spanish; the router fetching it does not', async ({ request }) => {
+  const cookieOf = (headers: { name: string; value: string }[]) =>
+    headers.filter((header) => header.name.toLowerCase() === 'set-cookie' && header.value.startsWith('NEXT_LOCALE=')).map((header) => header.value.split(';')[0]);
+  // Spanish pages prefetch their /es links: a prefetch arriving after a switch to English must not undo it.
+  const prefetch = await request.get('/es/pricing', { headers: { 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty' } });
+  expect(prefetch.ok()).toBe(true);
+  expect(cookieOf(prefetch.headersArray())).toEqual([]);
+  const page = await request.get('/es/pricing', { headers: { 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document' } });
+  expect(cookieOf(page.headersArray())).toEqual(['NEXT_LOCALE=es']);
+});
+
 test('help articles read in Spanish, dates included', async ({ page }) => {
   await page.goto('/es/help/when-am-i-charged');
   await expect(page.getByRole('heading', { level: 1, name: '¿Cuándo me cobran?' })).toBeVisible();
