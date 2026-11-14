@@ -271,3 +271,13 @@ The public board `/[market]/tasks` (and b7's category hubs, the same screen with
 - 7.11 (4cb6d25): the demo marketplace gains 120 community posts, 157 replies and 749 reactions in its 15 markets, from real completed demo bookings; replaced on every run.
 - Also: board test fixes for CI's shared DB (62c0230 snapshot, bbdd997 every page), realtime.spec independent of my-tasks.spec (e44c9aa).
 - Checks: npm run check (3161 tests), the whole DB suite on a scratch DB (100 files, 503 tests), e2e community.spec (two browsers), board.spec with the live test, realtime, account, posting; previews at 360 and 1280 in en and es with axe.
+
+## 2026-11-14 — Chat, questions, saved searches, response times (plan 7.3–7.12, tasksnearme-d4)
+
+- 7.3 (29d74a4): on wide screens the conversation list sits beside the open conversation; the inbox filters (all, unread, offers, bookings) and searches as you type; messages from one person within five minutes group; "New messages" marks where the unread began and stays put. Reactions, quote-reply and saved replies follow (migration 0059).
+- 7.9 (29d74a4, 022c961): verified helpers ask on an open task (one open question each, masked); the poster answers, edits and pins; reports and staff moderation; notifications question_received / question_answered.
+- 7.8 (29d74a4): "Recommended by N neighbors" on helper cards and profiles.
+- 7.12 (29d74a4): response times as ranges (within an hour, a few hours, a day), recomputed when a helper sends a message (median first reply over 30 days, at least three).
+- 7.10 (00c1a44, 083a3cd): "Save this search" on the board; /app/saved-searches with alerts right away (matched with the board's rules, at most 10 a day, never the poster or across a block) or a morning digest (a job at 8 am); nav and the phone menu.
+- 7.4b (00c1a44, 083a3cd): find work applies every board filter, and its sheet offers them.
+- Checks: npm run check, test:db for questions, searches, notifications, response time, board and find work; e2e questions, saved-searches, community, messaging, realtime, find-work, board, posting, account, my-tasks; previews with axe.
