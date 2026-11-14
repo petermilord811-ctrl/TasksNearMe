@@ -234,7 +234,7 @@
   "activity": {
     "title": "Actividad",
     "description": "Si las personas con las que hablas ven cuándo estás disponible.",
-    "label": "Mostrar cuándo estoy activo",
+    "label": "Mostrar cuándo me conecto",
     "on": "Activado: ven “En línea ahora” o “Se conectó hoy”, y “Visto” en los mensajes.",
     "off": "Desactivado: nadie ve tu actividad, y tú tampoco ves la suya.",
     "hint": "Solo lo ven las personas con las que tienes una conversación o una reserva, nunca con la hora exacta y nunca en tu perfil público.",
