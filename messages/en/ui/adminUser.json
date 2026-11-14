@@ -186,5 +186,58 @@
     "restore": "Restore badge",
     "pending": "Saving…"
   },
-  "badgeRevokedLabel": "Revoked"
+  "badgeRevokedLabel": "Revoked",
+  "reasonAction": {
+    "reason": "Reason",
+    "hint": "Kept in the audit log. At least 10 characters.",
+    "required": "Write why, in at least 10 characters.",
+    "tooLong": "Keep it under 1,000 characters.",
+    "failed": "That didn't go through. Try again.",
+    "cancel": "Cancel"
+  },
+  "account": {
+    "title": "Account",
+    "hint": "Suspending or banning stops sign-in, ends every session they have now, and suspends their helper profile. A ban takes two people: one asks, another approves.",
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "banned": "Banned"
+    },
+    "pendingBan": "Ban requested by {name}, {date}: {reason}",
+    "staffNote": "This is a staff account. Remove their staff roles first.",
+    "saving": "Saving…",
+    "notAllowed": "You can't do that on this account now. It may have changed: refresh the page.",
+    "actions": {
+      "suspend": {
+        "trigger": "Suspend account",
+        "title": "Suspend this account",
+        "description": "They're signed out everywhere, can't sign in, and their helper profile is suspended. You can reinstate them later.",
+        "submit": "Suspend"
+      },
+      "reinstate": {
+        "trigger": "Reinstate account",
+        "title": "Reinstate this account",
+        "description": "They can sign in again. A suspended helper profile stays suspended until you reinstate it in the helper section.",
+        "submit": "Reinstate"
+      },
+      "request_ban": {
+        "trigger": "Request a ban",
+        "title": "Request a ban",
+        "description": "A ban needs a second reviewer: another trust and safety member or an admin approves it before it takes effect.",
+        "submit": "Request ban"
+      },
+      "approve_ban": {
+        "trigger": "Approve the ban",
+        "title": "Approve this ban",
+        "description": "They're signed out everywhere and can't sign in again. Only an admin can lift a ban.",
+        "submit": "Ban account"
+      },
+      "decline_ban": {
+        "trigger": "Decline the ban",
+        "title": "Decline this ban request",
+        "description": "The account stays as it is. The request and your reason stay in the audit log.",
+        "submit": "Decline"
+      }
+    }
+  }
 }

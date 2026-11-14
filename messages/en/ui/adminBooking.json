@@ -186,5 +186,16 @@
     "cancel": "Cancel",
     "submit": "Take it back",
     "pending": "Taking it back…"
+  },
+  "staffCancel": {
+    "title": "Cancel this booking",
+    "description": "Support cancels it: the client gets {amount} back, the helper gets no compensation and no strike, and both are told it was support.",
+    "descriptionUnpaid": "Support cancels it. Nothing was charged yet. Both are told it was support.",
+    "trigger": "Cancel booking",
+    "dialogTitle": "Cancel this booking",
+    "submit": "Cancel booking",
+    "pending": "Canceling…",
+    "notAllowed": "You can't cancel this booking now: it may have moved on, or the refund is above your limit.",
+    "aboveLimit": "The refund is above your refund limit: ask a support lead."
   }
 }

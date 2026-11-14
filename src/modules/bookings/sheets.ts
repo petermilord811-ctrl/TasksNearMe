@@ -9,7 +9,8 @@ import type {
   LateByMinutes,
   SafetyReportInput,
 } from '@/contracts';
-import { bookingNoteInputSchema, cancelBookingInputSchema, HELPER_CANCEL_REASONS, LATE_BY_MINUTES, POSTER_CANCEL_REASONS, safetyReportInputSchema } from '@/contracts';
+import { bookingNoteInputSchema, cancelBookingInputSchema, HELPER_CANCEL_REASONS, LATE_BY_MINUTES, POSTER_CANCEL_REASONS, safetyReportInputSchema, staffCancelInputSchema, type StaffCancelInput, type StaffRole } from '@/contracts';
+import { refundLimitOf } from '@/modules/support/staff-domain';
 import { createPaymentProvider, type PaymentProvider } from '@/integrations/payments';
 import { recordCompensation } from '@/modules/earnings/service';
 import { marketPolicies } from '@/modules/markets/schema';
@@ -209,6 +210,51 @@ export async function cancelBookingBy(deps: SheetDeps, userId: string, bookingId
   const choices: readonly string[] = role === 'poster' ? POSTER_CANCEL_REASONS : HELPER_CANCEL_REASONS;
   if (!choices.includes(parsed.data.reason)) return { ok: false, code: 'validation_failed', fieldErrors: { reason: ['invalid'] } };
   return cancelWith(deps, row, userId, outcomeOf(row, role, now), { by: role, choice: parsed.data.reason, note: parsed.data.note, expected: [row.booking.status] }, now);
+}
+
+/**
+ * Support cancels a booking (completion plan 5.14; blueprint 08: cancellations with policy override): the client
+ * gets the whole charge back, the helper no compensation and no strike, and both are told it was support. For a
+ * suspended helper's upcoming bookings, or anything our team decides can't go ahead. Leads, trust and safety and
+ * admins may; a support agent only when the refund is within their refund limit. Audited with the note.
+ */
+export async function cancelBookingByStaff(deps: SheetDeps, staff: { id: string; roles: readonly StaffRole[] }, bookingId: string, input: StaffCancelInput, now: Date): Promise<ActionResult> {
+  const parsed = staffCancelInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const row = await load(deps.db, String(bookingId));
+  if (!row) return { ok: false, code: 'not_found' };
+  const refund = await staffCancelRefund(deps.db, row.booking.id);
+  if (!staffMayCancel(staff.roles, refund)) return { ok: false, code: 'not_allowed' };
+  if (!STAFF_CANCELABLE.includes(row.booking.status)) return { ok: false, code: 'not_allowed' };
+  const result = await cancelWith(deps, row, staff.id, { reason: 'admin', late: false, refund, compensation: 0, strike: null }, { by: 'staff', note: parsed.data.note, expected: [row.booking.status] }, now);
+  if (result.ok) {
+    await deps.db.insert(auditLog).values({ id: newId('aud'), at: now.toISOString(), actorId: staff.id, actorRole: staff.roles[0] ?? 'staff', action: 'booking.canceled_by_staff', targetType: 'booking', targetId: row.booking.id, reason: parsed.data.note, metadata: { refundCents: refund } });
+  }
+  return result;
+}
+
+const STAFF_CANCELABLE = ['confirmed', 'scheduled', 'in_progress'];
+const STAFF_CANCEL_LEADS: readonly StaffRole[] = ['support_lead', 'trust_safety', 'admin'];
+
+/** What a staff cancellation refunds: the booking's charge, when it was paid. */
+export async function staffCancelRefund(db: Db, bookingId: string): Promise<number> {
+  const [charge] = await db
+    .select({ amountCents: payments.amountCents })
+    .from(payments)
+    .where(and(eq(payments.bookingId, bookingId), eq(payments.purpose, 'booking_funding'), eq(payments.status, 'succeeded')))
+    .limit(1);
+  return charge?.amountCents ?? 0;
+}
+
+export function staffMayCancel(roles: readonly StaffRole[], refundCents: number): boolean {
+  return roles.some((role) => STAFF_CANCEL_LEADS.includes(role)) || (roles.length > 0 && refundCents <= refundLimitOf(roles));
+}
+
+/** The staff booking page's cancel control, when the booking can still be canceled. */
+export async function staffCancelView(db: Db, roles: readonly StaffRole[], booking: { id: string; status: string }): Promise<{ refundCents: number; allowed: boolean } | undefined> {
+  if (!STAFF_CANCELABLE.includes(booking.status)) return undefined;
+  const refundCents = await staffCancelRefund(db, booking.id);
+  return { refundCents, allowed: staffMayCancel(roles, refundCents) };
 }
 
 export async function reportRunningLate(db: Db, userId: string, bookingId: string, minutes: LateByMinutes, now: Date): Promise<ActionResult> {

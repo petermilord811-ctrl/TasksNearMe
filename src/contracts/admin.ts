@@ -310,6 +310,11 @@ export interface AdminBookingPageData {
   money: AdminBookingMoney;
   /** The helper's transfers and their reversals (completion plan 5.13). */
   reversals?: AdminBookingReversals;
+  /**
+   * Support cancels the booking with the whole charge back to the client (completion plan 5.14). Absent once it
+   * can't be canceled; `allowed`: leads, trust and safety and admins, or an agent within their refund limit.
+   */
+  staffCancel?: { refundCents: Cents; allowed: boolean };
   /** The helper's checklist answers from when they sent the work (blueprint 01, P2), for disputes; absent before checklists. */
   checklist?: CompletionChecklistView;
   /** Cases about this booking, newest first. */
@@ -369,4 +374,12 @@ export interface AdminBookingHandlers {
   onRevealConversation: QueryHandler<RestrictedAccessInput, RevealConversationResult>;
   /** Finance takes back a helper's transfer (completion plan 5.13). */
   onReverseTransfer?: AdminReversalHandlers['onReverseTransfer'];
+  /** Support cancels the booking (completion plan 5.14). ok `canceled`. Errors: `validation_failed` (`note`), `not_allowed`, `not_found`. */
+  onStaffCancel?: ActionHandler<StaffCancelInput>;
 }
+
+/** Why support canceled (the audit log keeps it; both people are told it was support). */
+export const staffCancelInputSchema = z.object({
+  note: z.string(code('required')).trim().min(10, code('too_short')).max(1000, code('too_long')),
+});
+export type StaffCancelInput = z.input<typeof staffCancelInputSchema>;

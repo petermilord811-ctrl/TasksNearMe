@@ -10,6 +10,7 @@ import { useBookingStatus } from '@/ui/components/status/use-status';
 import { AdminCaseRows } from './admin-case-rows';
 import { AdminStrikeReversal } from './admin-strike-controls';
 import { AdminBadgeModeration } from './admin-badge-controls';
+import { AdminReasonAction } from './admin-reason-action';
 import { AchievementBadge, useBadgeWords } from '@/ui/components/people/achievement-badges';
 import { AdminRewardList } from './admin-reward-list';
 import { AdminVerificationSection } from './admin-verification-section';
@@ -112,6 +113,7 @@ export function AdminUserContent({ data, handlers, now, ...previewState }: Admin
         </li>;
       })}</ul>}
     </section>
+    {data.account && <AdminAccountSection account={data.account} onAccountAction={handlers.onAccountAction} />}
     {data.badges && <section aria-label={t('badges')} className="space-y-3">
       <div><h2 className={adminH2}>{t('badges')}</h2><p className="mt-1 text-sm text-muted-foreground">{t('badgesHint')}</p></div>
       {data.badges.length === 0 ? <p className={adminNote}>{t('noBadges')}</p> : <ul className={cn(adminPanel, 'divide-y divide-foreground/[0.07] px-4 sm:px-5 dark:divide-white/[0.07]')}>{data.badges.map((row) => <AdminBadgeRowView key={row.id} row={row} canModerate={data.canModerateBadges === true} onModerate={handlers.onModerateBadge} />)}</ul>}
@@ -135,4 +137,33 @@ function AdminBadgeRowView({ row, canModerate, onModerate }: { row: AdminBadgeRo
     </div>
     {canModerate && onModerate && <AdminBadgeModeration badgeId={row.id} label={label} revoke={!row.revoked} onModerate={onModerate} />}
   </li>;
+}
+
+function AdminAccountSection({ account, onAccountAction }: { account: NonNullable<AdminUserPageData['account']>; onAccountAction?: AdminUserHandlers['onAccountAction'] }) {
+  const t = useTranslations('adminUser.account');
+  const { formatDateTime } = useFormat();
+  const tone = account.status === 'banned' ? 'danger' : account.status === 'suspended' ? 'warning' : 'success';
+  return <section aria-label={t('title')} className="space-y-3">
+    <div><h2 className={adminH2}>{t('title')}</h2><p className="mt-1 text-sm text-muted-foreground">{t('hint')}</p></div>
+    <div className={cn(adminSection, 'space-y-3')}>
+      <StatusBadge tone={tone} label={t(`status.${account.status}`)} />
+      {account.pendingBan && <p className="text-sm"><time dateTime={account.pendingBan.at}>{t('pendingBan', { name: account.pendingBan.requestedByName, date: formatDateTime(account.pendingBan.at), reason: account.pendingBan.reason })}</time></p>}
+      {account.isStaff && <p className="text-sm text-muted-foreground">{t('staffNote')}</p>}
+      {onAccountAction && account.actions.length > 0 && <div className="flex flex-wrap gap-2">
+        {account.actions.map((action) => <AdminReasonAction
+          key={action}
+          trigger={t(`actions.${action}.trigger`)}
+          title={t(`actions.${action}.title`)}
+          description={t(`actions.${action}.description`)}
+          submit={t(`actions.${action}.submit`)}
+          pending={t('saving')}
+          destructive={action === 'suspend' || action === 'request_ban' || action === 'approve_ban'}
+          notAllowed={t('notAllowed')}
+          action={onAccountAction}
+          payload={{ action }}
+          field="reason"
+        />)}
+      </div>}
+    </div>
+  </section>;
 }

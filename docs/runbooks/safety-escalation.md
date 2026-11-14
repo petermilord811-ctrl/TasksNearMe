@@ -19,7 +19,7 @@ Use this when anyone reports that they're unsafe or were harmed, threatened or h
 1. **Emergency services come first.** If the reporter says they're in danger, reply at once: "If you're in danger, call 911 now." The app can't call for them.
 2. **Find the booking and the people.** The case links the booking (`/admin/bookings/[bookingId]`): who, when, and where (the area name).
 3. **Get the address only if responders need it.** On the booking page, "Show the address" asks for a written reason (10 to 500 characters), shows the address, and logs it as `booking.view_address`. Give it only to emergency services, never to the other party.
-4. **Stop further contact.** Suspend the helper if the helper is the one reported (see Suspensions). If the client is reported, ask the helper to leave; staff can't ban a client from the app (see Suspensions).
+4. **Stop further contact.** Suspend the helper if the helper is the one reported, or the whole account if the client is (see Suspensions); either ends their sessions at once. Ask the helper to leave if they're still there.
 5. **Keep a timeline** in the case's internal notes: who said what, when, and what you did. It's the record for any police request.
 6. Tell the trust & safety lead and the duty manager, and open an incident note ([README](README.md#after-every-sev1-or-sev2)).
 
@@ -39,17 +39,13 @@ Use this when anyone reports that they're unsafe or were harmed, threatened or h
 **A helper** (`/admin/users/[userId]` → Suspend; [setHelperSuspension](../../src/modules/accounts/staff.ts)):
 - Trust & safety, support leads and admins can suspend, with a reason of at least 10 characters. It's logged as `helper.suspend`.
 - It sets `helper_profiles.status='suspended'`, withdraws the helper's open offers, and hides them from search and new bookings.
-- **It doesn't cancel bookings already confirmed**, and it doesn't sign the person out. Look at the helper's upcoming bookings on the person page and deal with each one:
-  - Staff have no cancel action, so ask each client to cancel from the booking page.
-  - Refund any late-cancellation fee with the booking's refund tool (goodwill, with the case id in the note).
-  - Offer to help the client find a replacement.
-- Blueprint 08 wants a second reviewer for bans, and the code doesn't ask for one. Ask a second person (trust & safety or a lead) to confirm before suspending, and name them in the reason.
+- **It doesn't cancel bookings already confirmed.** Look at the helper's upcoming bookings on the person page and cancel each one from its staff page (**Cancel this booking**, with a reason): the client gets the whole charge back, the helper gets no compensation and no strike, and both are told it was support (`booking.canceled_by_staff`). Leads, trust & safety and admins can; a support agent only when the refund is within their limit. Then offer to help the client find a replacement.
 - Reinstating works from the same page (`helper.reinstate`).
 
-**A whole account** (a client, or a helper who must not sign in at all):
-- There's no staff tool. An engineer sets `users.status` to `suspended` or `banned`, which refuses new sign-ins and new sessions ([src/platform/auth/config.ts](../../src/platform/auth/config.ts)).
-- **Sessions that are already signed in stay valid**, so the engineer also deletes that user's rows from `sessions`.
-- Record who asked, who did it, and why in the case's internal notes, because the audit log doesn't see database changes.
+**A whole account** (a client, or a helper who must not sign in at all): the person page's **Account** section ([account-moderation.ts](../../src/modules/accounts/account-moderation.ts)).
+- **Suspend** (trust & safety, support leads, admins): `users.status='suspended'`, every current session ends at once, sign-in is refused, and the helper profile is suspended (open offers withdrawn). **Reinstate** lifts it (`account.suspended`, `account.reinstated`).
+- **Ban** takes two people (blueprint 08): trust & safety or an admin **requests** it with the reason, and a *different* trust & safety member or admin **approves** it (or declines). Approved, it does everything a suspension does, with `users.status='banned'`; only an admin can lift a ban (`account.ban_requested`, `account.banned`, `account.ban_declined`).
+- Staff accounts have none of these: remove their staff roles first.
 
 **Strikes:** three no-show or late-cancellation strikes within 90 days call for a suspension review (blueprint 06 §2). On appeal, trust & safety, a lead or an admin can reverse a strike (`helper.strike_reversed`).
 

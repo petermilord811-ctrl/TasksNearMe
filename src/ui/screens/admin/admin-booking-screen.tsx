@@ -12,6 +12,7 @@ import { useBookingStatus, useCaseStatus, useEarningsStatus } from '@/ui/compone
 import { AdminBookingTools, type AdminBookingPreviewState } from './admin-booking-tools';
 import { AdminRefundRequests } from './admin-refund-requests';
 import { AdminTransferReversals } from './admin-transfer-reversals';
+import { AdminReasonAction } from './admin-reason-action';
 
 export interface AdminBookingScreenProps { data: AdminBookingPageData; handlers: AdminBookingHandlers; now: ISODateTime }
 
@@ -90,10 +91,23 @@ export function AdminBookingContent({ data, handlers, now, ...previewState }: Ad
           </li>)}</ul> : <p className="text-sm text-muted-foreground">{t('noRefunds')}</p>}
         </section>
         <section className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]"><h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('earnings')}</h2>{data.money.earnings.length > 0 ? <ul aria-label={t('earnings')} className="divide-y">{data.money.earnings.map((line, index) => <EarningsLine key={index} line={line} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noEarnings')}</p>}</section>
+        {data.staffCancel && <StaffCancel staffCancel={data.staffCancel} onStaffCancel={handlers.onStaffCancel} />}
         {data.reversals && <AdminTransferReversals data={data.reversals} {...(handlers.onReverseTransfer ? { onReverseTransfer: handlers.onReverseTransfer } : {})} />}
       </div>
       <AdminRefundRequests requests={data.refundRequests} onDecide={handlers.onDecideRefund} now={now} initialDecision={previewState.initialDecision} />
       <section className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]"><h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('cases')}</h2>{data.cases.length > 0 ? <ul aria-label={t('cases')} className="divide-y">{data.cases.map((row) => <BookingCase key={row.id} row={row} now={now} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noCases')}</p>}</section>
     </AdminBookingTools>
   </div>;
+}
+
+function StaffCancel({ staffCancel, onStaffCancel }: { staffCancel: NonNullable<AdminBookingPageData['staffCancel']>; onStaffCancel?: AdminBookingHandlers['onStaffCancel'] }) {
+  const t = useTranslations('adminBooking.staffCancel');
+  const description = staffCancel.refundCents > 0 ? t('description', { amount: formatMoney(staffCancel.refundCents) }) : t('descriptionUnpaid');
+  return <section aria-labelledby="booking-staff-cancel" className="space-y-3 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]">
+    <h2 id="booking-staff-cancel" className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('title')}</h2>
+    <p className="text-sm text-muted-foreground">{description}</p>
+    {staffCancel.allowed && onStaffCancel
+      ? <AdminReasonAction trigger={t('trigger')} title={t('dialogTitle')} description={description} submit={t('submit')} pending={t('pending')} destructive notAllowed={t('notAllowed')} action={onStaffCancel} payload={{}} field="note" />
+      : <p className="text-sm">{t('aboveLimit')}</p>}
+  </section>;
 }

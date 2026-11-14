@@ -132,7 +132,32 @@ export interface AdminUserPageData {
   badges?: AdminBadgeRow[];
   /** Trust and safety, support leads and admins revoke a badge earned unfairly, or restore it. */
   canModerateBadges?: boolean;
+  /** Suspend, ban (two reviewers) or reinstate the whole account (completion plan 5.14). */
+  account?: AdminAccountView;
 }
+
+/** Account-level moderation on the person page (completion plan 5.14). */
+export const ACCOUNT_ACTIONS = ['suspend', 'reinstate', 'request_ban', 'approve_ban', 'decline_ban'] as const;
+export type AccountActionId = (typeof ACCOUNT_ACTIONS)[number];
+
+/**
+ * The person's account (completion plan 5.14). A suspension or a ban stops sign-in, ends every current session
+ * and suspends the helper profile. A ban takes two reviewers: one requests it, another approves it (blueprint
+ * 08). `actions`, in this order, are what the viewer may do; staff accounts get none (change their roles first).
+ */
+export interface AdminAccountView {
+  status: 'active' | 'suspended' | 'banned';
+  pendingBan?: { requestedById: string; requestedByName: string; reason: string; at: ISODateTime };
+  isStaff: boolean;
+  actions: AccountActionId[];
+}
+
+export const accountActionInputSchema = z.object({
+  action: z.enum(ACCOUNT_ACTIONS, code('required')),
+  /** Kept in the audit log. */
+  reason: z.string(code('required')).trim().min(10, code('too_short')).max(1000, code('too_long')),
+});
+export type AccountActionInput = z.input<typeof accountActionInputSchema>;
 
 export interface AdminBadgeRow {
   id: string;
@@ -172,4 +197,6 @@ export interface AdminUserHandlers extends AdminVerificationHandlers {
   onReverseStrike: ActionHandler<StrikeReversalInput>;
   /** ok `updated` (refresh). Errors: `validation_failed`, `not_allowed` (your role, or it already moved). */
   onModerateBadge?: ActionHandler<BadgeModerationInput>;
+  /** ok `updated` (refresh). Errors: `validation_failed` (`reason`), `not_allowed` (your role, or it moved on). */
+  onAccountAction?: ActionHandler<AccountActionInput>;
 }

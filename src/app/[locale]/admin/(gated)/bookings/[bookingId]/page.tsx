@@ -11,6 +11,8 @@ import { AdminBookingScreen } from '@/ui/screens/admin';
 import { requestNow } from '@/platform/clock';
 import { getBookingReversals } from '@/modules/payments/reversals';
 import { reverseTransferAction } from '@/modules/payments/reversal-actions';
+import { staffCancelView } from '@/modules/bookings/sheets';
+import { staffCancelBookingAction } from '@/modules/bookings/staff-cancel-actions';
 
 export const metadata: Metadata = { title: 'Booking', robots: { index: false } };
 
@@ -30,7 +32,8 @@ async function AdminBooking({ params }: Pick<PageProps<'/[locale]/admin/bookings
   const now = await requestNow();
   const [booking, reversals] = await Promise.all([getAdminBooking(db, staff, bookingId, now), getBookingReversals(db, staff, bookingId)]);
   if (!booking) notFound();
-  const data = { ...booking, reversals };
+  const staffCancel = await staffCancelView(db, staff.roles, booking.booking);
+  const data = { ...booking, reversals, ...(staffCancel ? { staffCancel } : {}) };
   return (
     <AdminBookingScreen
       data={data}
@@ -41,6 +44,7 @@ async function AdminBooking({ params }: Pick<PageProps<'/[locale]/admin/bookings
         onRevealAddress: revealBookingAddressAction.bind(null, bookingId),
         onRevealConversation: revealBookingConversationAction.bind(null, bookingId),
         onReverseTransfer: reverseTransferAction.bind(null, bookingId),
+        onStaffCancel: staffCancelBookingAction.bind(null, bookingId),
       }}
     />
   );
