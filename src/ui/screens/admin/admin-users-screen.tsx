@@ -40,7 +40,7 @@ export function AdminUsersScreen({ data, now }: AdminUsersScreenProps) {
     <PageHeader title={t('title')} description={t('intro')} />
     <form method="get" action={routes.admin.users(data.query)} role="search" aria-label={t('search')} className={cn(adminSection, 'space-y-2')}>
       <Label htmlFor={`${id}-search`}>{t('search')}</Label>
-      <div className="flex flex-col gap-2 sm:flex-row"><Input key={data.query} id={`${id}-search`} name="q" type="search" defaultValue={data.query} aria-describedby={`${id}-hint`} className="min-w-0 flex-1" /><Button type="submit"><Search aria-hidden="true" className="size-4" />{t('submitSearch')}</Button></div>
+      <div className="flex flex-col gap-2 sm:flex-row"><Input progressive key={data.query} id={`${id}-search`} name="q" type="search" defaultValue={data.query} aria-describedby={`${id}-hint`} className="min-w-0 flex-1" /><Button progressive type="submit"><Search aria-hidden="true" className="size-4" />{t('submitSearch')}</Button></div>
       <p id={`${id}-hint`} className="text-sm text-muted-foreground">{t('searchHint')}</p>
     </form>
     <section aria-label={t('results')} className="space-y-3">

@@ -4,6 +4,7 @@ import { useId, useRef, useState, type ClipboardEvent, type Ref } from 'react';
 import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/ui/lib/utils';
+import { useHydrated } from '@/ui/lib/hydration';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 
 /**
@@ -42,6 +43,8 @@ export function CodeInput({
   inputRef?: Ref<HTMLInputElement>;
 }) {
   const [focused, setFocused] = useState(false);
+  // Read-only until the page hydrates, like every text field (src/ui/primitives/gated.tsx): typing would be lost.
+  const hydrated = useHydrated();
   const completedFor = useRef<string | null>(null);
   const digits = value.replace(/\D/g, '').slice(0, length);
   const active = Math.min(digits.length, length - 1);
@@ -86,6 +89,8 @@ export function CodeInput({
         name={name}
         value={digits}
         disabled={disabled}
+        readOnly={!hydrated && !disabled}
+        data-hydrating={hydrated || disabled ? undefined : ''}
         autoFocus={autoFocus}
         inputMode="numeric"
         pattern="[0-9]*"

@@ -3,6 +3,7 @@
 import * as React from "react"
 import { type VariantProps } from "class-variance-authority"
 import { cn } from "@/ui/lib/utils"
+import { useHydrationGate } from "@/ui/lib/hydration"
 import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui"
 
 import { toggleVariants } from "@/ui/primitives/toggle"
@@ -56,6 +57,7 @@ function ToggleGroupItem({
   ...props
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Item> &
   VariantProps<typeof toggleVariants>) {
+  const gate = useHydrationGate()
   const context = React.useContext(ToggleGroupContext)
 
   return (
@@ -73,6 +75,7 @@ function ToggleGroupItem({
         "data-[spacing=0]:rounded-none data-[spacing=0]:shadow-none data-[spacing=0]:first:rounded-l-full data-[spacing=0]:last:rounded-r-full data-[spacing=0]:data-[variant=outline]:border-l-0 data-[spacing=0]:data-[variant=outline]:first:border-l",
         className
       )}
+      {...gate}
       {...props}
     >
       {children}

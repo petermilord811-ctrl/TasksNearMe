@@ -72,7 +72,7 @@ export function AdminBookingsScreen({ data, now }: AdminBookingsScreenProps) {
     <form method="get" action={routes.admin.bookings()} role="search" aria-label={t('search')} className={cn(adminSection, 'space-y-2')}>
       <input type="hidden" name="filter" value={data.filter} />
       <Label htmlFor={`${id}-search`}>{t('search')}</Label>
-      <div className="flex flex-col gap-2 sm:flex-row"><Input key={data.query} id={`${id}-search`} name="q" type="search" defaultValue={data.query} aria-describedby={`${id}-hint`} className="min-w-0 flex-1" /><Button type="submit"><Search aria-hidden="true" className="size-4" />{t('submitSearch')}</Button></div>
+      <div className="flex flex-col gap-2 sm:flex-row"><Input progressive key={data.query} id={`${id}-search`} name="q" type="search" defaultValue={data.query} aria-describedby={`${id}-hint`} className="min-w-0 flex-1" /><Button progressive type="submit"><Search aria-hidden="true" className="size-4" />{t('submitSearch')}</Button></div>
       <div className="flex flex-wrap items-center justify-between gap-x-4">
         <p id={`${id}-hint`} className="text-sm text-muted-foreground">{t('searchHint')}</p>
         {data.query && <Link href={routes.admin.bookings({ filter: data.filter })} className="inline-flex min-h-11 items-center gap-1 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline"><X aria-hidden="true" className="size-4" />{t('clearSearch')}</Link>}

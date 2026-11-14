@@ -31,8 +31,8 @@ export function AdminShell({ viewer, handlers, breadcrumbs = [], children, curre
           <ul aria-label={t('admin.roles')} className="flex flex-wrap gap-1.5">{viewer.roles.map((role) => <li key={role} className="rounded-full border border-foreground/10 bg-card/70 px-3 py-1 text-sm text-muted-foreground dark:border-white/10 dark:bg-white/[0.04]">{t(`roles.${role}`)}</li>)}</ul>
         </div>
         <form role="search" aria-label={t('admin.search')} method="get" action={routes.admin.search('')} className="flex w-full items-center gap-2 lg:ml-auto lg:w-auto lg:flex-1 lg:max-w-sm">
-          <label htmlFor="staff-search" className="sr-only">{t('admin.search')}</label><Input id="staff-search" name="q" type="search" placeholder={t('admin.search')} aria-describedby="staff-search-hint" className="min-w-0 rounded-full" /><span id="staff-search-hint" className="sr-only">{t('admin.searchHint')}</span>
-          <Button type="submit" variant="outline" size="icon" aria-label={t('admin.submitSearch')}><Search aria-hidden="true" className="size-5" /></Button>
+          <label htmlFor="staff-search" className="sr-only">{t('admin.search')}</label><Input progressive id="staff-search" name="q" type="search" placeholder={t('admin.search')} aria-describedby="staff-search-hint" className="min-w-0 rounded-full" /><span id="staff-search-hint" className="sr-only">{t('admin.searchHint')}</span>
+          <Button progressive type="submit" variant="outline" size="icon" aria-label={t('admin.submitSearch')}><Search aria-hidden="true" className="size-5" /></Button>
         </form>
       </div>
     </AppBar>

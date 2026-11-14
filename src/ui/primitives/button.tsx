@@ -2,6 +2,7 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/ui/lib/utils"
 import { Slot } from "radix-ui"
+import { GatedButton } from "./gated"
 
 /**
  * Pill buttons, as on the landing page: a 44 px touch target, a soft lift on hover (the filled ones glow in their
@@ -42,17 +43,24 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * `progressive`: the button works without JavaScript (a GET search form's submit). Any other button that does
+ * something (a click handler, or submitting a form the page's scripts handle) waits for the page to hydrate
+ * (src/ui/primitives/gated.tsx, completion plan 5.19). Links (`asChild`) never wait.
+ */
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  progressive = false,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    progressive?: boolean
   }) {
-  const Comp = asChild ? Slot.Root : "button"
+  const Comp = asChild ? Slot.Root : progressive || (props.type === "button" && !props.onClick) ? "button" : GatedButton
 
   return (
     <Comp

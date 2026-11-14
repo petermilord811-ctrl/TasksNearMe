@@ -3,6 +3,7 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/ui/lib/utils"
+import { useHydrationGate } from "@/ui/lib/hydration"
 import { Tabs as TabsPrimitive } from "radix-ui"
 
 function Tabs({
@@ -59,6 +60,7 @@ function TabsTrigger({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+  const gate = useHydrationGate()
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
@@ -69,6 +71,7 @@ function TabsTrigger({
         "after:absolute after:rounded-full after:bg-primary after:opacity-0 after:transition-opacity after:duration-300 group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-[state=active]:after:opacity-100",
         className
       )}
+      {...gate}
       {...props}
     />
   )

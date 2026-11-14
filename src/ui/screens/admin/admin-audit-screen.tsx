@@ -87,15 +87,15 @@ export function AdminAuditScreen({ data, now }: AdminAuditScreenProps) {
     <form method="get" action={routes.admin.audit()} aria-label={t('filters')} className={cn(adminSection, 'space-y-4')}>
       <h2 className="flex items-center gap-2 font-display text-lg leading-6 font-semibold tracking-[-0.01em]"><Filter aria-hidden="true" className="size-4 text-muted-foreground" />{t('filters')}</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="space-y-2"><Label htmlFor={`${id}-actor`}>{t('actor')}</Label><Input id={`${id}-actor`} name="actor" defaultValue={filters.actor ?? ''} aria-describedby={`${id}-actor-hint`} /><p id={`${id}-actor-hint`} className="text-sm text-muted-foreground">{t('actorHint')}</p></div>
+        <div className="space-y-2"><Label htmlFor={`${id}-actor`}>{t('actor')}</Label><Input progressive id={`${id}-actor`} name="actor" defaultValue={filters.actor ?? ''} aria-describedby={`${id}-actor-hint`} /><p id={`${id}-actor-hint`} className="text-sm text-muted-foreground">{t('actorHint')}</p></div>
         <div className="space-y-2"><Label htmlFor={`${id}-action`}>{t('action')}</Label><select id={`${id}-action`} name="action" defaultValue={filters.action ?? ''} className={adminSelect}><option value="">{t('anyAction')}</option>{data.actionFamilies.map((family) => <option key={family} value={family}>{family}</option>)}{filters.action && !data.actionFamilies.includes(filters.action) && <option value={filters.action}>{filters.action}</option>}</select></div>
         <div className="space-y-2"><Label htmlFor={`${id}-type`}>{t('targetType')}</Label><select id={`${id}-type`} name="targetType" defaultValue={filters.targetType ?? ''} className={adminSelect}><option value="">{t('anyTarget')}</option>{data.targetTypes.map((type) => <option key={type} value={type}>{typeLabel(type)}</option>)}</select></div>
-        <div className="space-y-2"><Label htmlFor={`${id}-target`}>{t('targetId')}</Label><Input id={`${id}-target`} name="targetId" defaultValue={filters.targetId ?? ''} /></div>
-        <div className="space-y-2"><Label htmlFor={`${id}-from`}>{t('from')}</Label><Input id={`${id}-from`} name="from" type="date" defaultValue={filters.from ?? ''} className="tabular-nums" /></div>
-        <div className="space-y-2"><Label htmlFor={`${id}-to`}>{t('to')}</Label><Input id={`${id}-to`} name="to" type="date" defaultValue={filters.to ?? ''} className="tabular-nums" /></div>
+        <div className="space-y-2"><Label htmlFor={`${id}-target`}>{t('targetId')}</Label><Input progressive id={`${id}-target`} name="targetId" defaultValue={filters.targetId ?? ''} /></div>
+        <div className="space-y-2"><Label htmlFor={`${id}-from`}>{t('from')}</Label><Input progressive id={`${id}-from`} name="from" type="date" defaultValue={filters.from ?? ''} className="tabular-nums" /></div>
+        <div className="space-y-2"><Label htmlFor={`${id}-to`}>{t('to')}</Label><Input progressive id={`${id}-to`} name="to" type="date" defaultValue={filters.to ?? ''} className="tabular-nums" /></div>
       </div>
       <div className="flex flex-wrap items-center gap-3 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.07]">
-        <Button type="submit"><Filter aria-hidden="true" className="size-4" />{t('apply')}</Button>
+        <Button progressive type="submit"><Filter aria-hidden="true" className="size-4" />{t('apply')}</Button>
         {filtered && <Link href={routes.admin.audit()} className="inline-flex min-h-11 items-center gap-1 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline"><X aria-hidden="true" className="size-4" />{t('clear')}</Link>}
       </div>
     </form>

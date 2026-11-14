@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/ui/lib/utils"
+import { useHydrationGate } from "@/ui/lib/hydration"
 import { ChevronDownIcon } from "lucide-react"
 import { Accordion as AccordionPrimitive } from "radix-ui"
 
@@ -29,6 +30,7 @@ function AccordionTrigger({
   children,
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Trigger>) {
+  const gate = useHydrationGate()
   return (
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
@@ -37,6 +39,7 @@ function AccordionTrigger({
           "flex flex-1 items-start justify-between gap-4 rounded-xl py-4 text-left text-sm font-medium transition-colors duration-200 outline-none hover:text-primary focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
           className
         )}
+        {...gate}
         {...props}
       >
         {children}

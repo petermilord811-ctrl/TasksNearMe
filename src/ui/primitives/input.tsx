@@ -1,9 +1,15 @@
 import * as React from "react"
 import { cn } from "@/ui/lib/utils"
+import { GatedInput } from "./gated"
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+/**
+ * `progressive`: the field works without JavaScript (a GET search form). Any other text field is read-only until
+ * the page hydrates (src/ui/primitives/gated.tsx, completion plan 5.19).
+ */
+function Input({ className, type, progressive = false, ...props }: React.ComponentProps<"input"> & { progressive?: boolean }) {
+  const Field = progressive || type === "hidden" || type === "file" || type === "checkbox" || type === "radio" ? "input" : GatedInput
   return (
-    <input
+    <Field
       type={type}
       data-slot="input"
       className={cn(

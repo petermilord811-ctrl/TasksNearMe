@@ -20,7 +20,23 @@ export async function noTransitions(context: BrowserContext): Promise<void> {
   });
 }
 
-const isFocused = (target: Locator) => target.evaluate((element) => element === document.activeElement || element.contains(document.activeElement)).catch(() => false);
+/**
+ * Waits until the page's controls react to keys: a control that needs JavaScript is unavailable until its part of
+ * the page hydrates (src/ui/primitives/gated.tsx). Clicks and typing wait for that by themselves; key presses don't.
+ */
+export async function interactive(page: Page): Promise<void> {
+  await expect(page.locator('[data-hydrating]')).toHaveCount(0, { timeout: 30_000 });
+}
+
+/** Whether `target` has focus, and what does (for the error when Tab never gets there). */
+const focusOn = (target: Locator) =>
+  target
+    .evaluate((element) => {
+      const active = document.activeElement;
+      const what = !active || active === document.body ? 'body' : `${active.tagName.toLowerCase()} "${(active.getAttribute('aria-label') ?? active.textContent ?? '').trim().slice(0, 30)}"`;
+      return { focused: element === active || element.contains(active), what };
+    })
+    .catch(() => ({ focused: false, what: 'the target is gone' }));
 
 /**
  * Whether the focused element shows its focus: some style of it or its three nearest ancestors (outline, ring,
@@ -51,15 +67,21 @@ export async function focusIsVisible(page: Page): Promise<{ visible: boolean; wh
 export async function tabTo(page: Page, target: Locator, options: { max?: number; backwards?: boolean } = {}): Promise<void> {
   const max = options.max ?? 120;
   await expect(target).toBeVisible();
+  // Pressing Tab before the page hydrates, or past a control that is still disabled, would go round without it.
+  await interactive(page);
+  await expect(target).toBeEnabled();
+  const path: string[] = [];
   for (let presses = 0; presses <= max; presses++) {
-    if (await isFocused(target)) {
+    const now = await focusOn(target);
+    if (now.focused) {
       const focus = await focusIsVisible(page);
       expect(focus.visible, `keyboard focus should be visible on ${focus.what}`).toBe(true);
       return;
     }
+    path.push(now.what);
     await page.keyboard.press(options.backwards ? 'Shift+Tab' : 'Tab');
   }
-  throw new Error(`Couldn't reach ${target} with ${options.backwards ? 'Shift+Tab' : 'Tab'} in ${max} presses`);
+  throw new Error(`Couldn't reach ${target} with ${options.backwards ? 'Shift+Tab' : 'Tab'} in ${max} presses. Focus went: ${path.slice(0, 45).join(' → ')}`);
 }
 
 /** Tab to a control and press Enter (buttons, links). */
@@ -137,6 +159,9 @@ export async function auditPage(page: Page, project: string): Promise<void> {
   const key = `${project}:${path}`;
   if (audited.has(key)) return;
   audited.add(key);
+  // The title streams in after the page's first HTML (Next's streamed metadata): axe's document-title rule waits.
+  await expect.poll(() => page.title(), { message: `a title on ${path}`, timeout: 30_000 }).not.toBe('');
+  await interactive(page);
   const results = await new AxeBuilder({ page }).exclude('nextjs-portal').analyze();
   const serious = results.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical').map((violation) => `${violation.id}: ${violation.help} (${violation.nodes.map((node) => node.target.join(' ')).slice(0, 3).join('; ')})`);
   expect.soft(serious, `axe on ${path}`).toEqual([]);
