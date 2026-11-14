@@ -9,9 +9,9 @@
  *   node scripts/heavy.mjs --fresh-dev npx playwright test tests/ui-previews/booking.spec.ts --project=ui-mobile
  *
  * Waits while another job holds the lock, runs the command, and exits with its exit code.
- * `--e2e-build` is for e2e runs: it pauses the dev server (its memory is needed), makes the e2e production build
- * (`npm run e2e:build`), runs the command with E2E_TARGET=build, so Playwright serves that build on :3300
- * (playwright.config.ts), and lets the dev server start again afterwards.
+ * `--e2e-build` is for e2e runs: it pauses the dev server while it makes the e2e production build (`npm run e2e:build`,
+ * which needs its memory), lets the dev server start again, then runs the command with E2E_TARGET=build, so
+ * Playwright serves that build on :3300 (playwright.config.ts).
  * `--fresh-dev` first asks the dev-server supervisor for a fresh dev server (scripts/lib/dev-restart.mjs), for
  * preview runs, which need the dev server.
  */
@@ -71,6 +71,10 @@ try {
     }
     code = await run(['npm', 'run', 'e2e:build']);
     if (code !== 0) log(`The e2e build failed (exit ${code}), so the command didn't run.`);
+    // Only the build needs the dev server's memory; the run's `next start` holds about 0.4 GB. Letting the dev
+    // server come back now keeps dev.tasksnearme.com usable while e2e runs queue one after another.
+    resume();
+    resume = () => {};
   }
   if (code === undefined || code === 0) code = await run(command, mode === '--e2e-build' ? { ...process.env, E2E_TARGET: 'build' } : process.env);
 } catch (error) {

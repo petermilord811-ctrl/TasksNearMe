@@ -82,6 +82,9 @@ try {
         note('e2e build (npm run e2e:build)');
         code = await run('npm run e2e:build', fd);
         if (code !== 0) note(`the e2e build failed (exit ${code}), so the e2e run is skipped`);
+        // Only the build needs the dev server's memory (next start holds about 0.4 GB): let it come back for the run.
+        resume();
+        resume = () => {};
       }
       for (let shard = 1; shard <= shards && !stopping && code === 0; shard += 1) {
         if (target === 'dev') {
