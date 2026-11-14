@@ -239,7 +239,7 @@ d4 task board and task page), **owner** (§8). Status as of writing.
 | ID | Item | Owner | Status |
 |---|---|---|---|
 | S1.1 | robots.txt, sitemap.xml with hreflang, canonical and language links | b7 | Live |
-| S1.2 | IndexNow: job runner announces new and changed sitemap pages every 15 min; `scripts/seo/indexnow.mjs` after deploys | b7 | Next ship |
+| S1.2 | IndexNow: job runner announces new and changed sitemap pages every 15 min; `scripts/seo/indexnow.mjs` after deploys | b7 | Live (4e4a1cf; 42 pages accepted) |
 | S1.3 | Search Console: submit sitemap, inspect key pages, daily report of queries, positions and indexed pages (`scripts/seo/google.mjs`) | b7 | Waits for the owner's access grant |
 | S1.4 | Request indexing for the ten most important URLs | owner | §8 |
 | S1.5 | Bing Webmaster Tools: import from Search Console | owner | §8 |
@@ -248,8 +248,8 @@ d4 task board and task page), **owner** (§8). Status as of writing.
 ### S2 Supply-gated pages
 | ID | Item | Owner | Status |
 |---|---|---|---|
-| S2.1 | Market pages (city, board, categories) indexed once `live`, Austin from the start; others noindex + out of the sitemap | b7 | Next ship |
-| S2.2 | Helper profiles indexed (in `on`) only with a completed task or a published review | b7 | Next ship |
+| S2.1 | Market pages (city, board, categories) indexed once `live`, Austin from the start; others noindex + out of the sitemap | b7 | Live (4e4a1cf) |
+| S2.2 | Helper profiles indexed (in `on`) only with a completed task or a published review | b7 | Live (4e4a1cf); listed only in `on` |
 | S2.3 | Task pages indexed (in `on`) only while open, public and from a poster with a verified phone; closed ones noindex, follow with a banner (already the board's rule) | b7 | Rule in place; poster check at launch |
 
 ### S3 Category pages, the money pages (`/austin/[category]`): built this run
@@ -398,6 +398,12 @@ and admin shells.
 | Day 1–2 | Fixes from Search Console data; S9 proposals to the UI owners; final report to the owner | Ship 4 |
 
 Each ship runs the full e2e suite in CI before it deploys; after each, `node scripts/seo/indexnow.mjs`.
+
+Status, 2026-11-14 midday: Ship 1 (4e4a1cf) is live. Ships 2–6 were each stopped by CI on a regression from the
+parallel sessions' work, so nothing broken reached the site: duplicated server-rendered content (fixed in 21141ce), a
+reverted marketing hunk (f05399a), the language cookie undone by /es prefetches (398d804), a missing no-session allowlist
+entry (06a698f), an e2e test-order clash (e44c9aa), the board's integration counts (d4). S3, S4, S5, S7.2 and S9 are
+committed and go live with the next green ship.
 
 ## 8. The owner's checklist
 
