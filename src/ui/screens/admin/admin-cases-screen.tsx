@@ -6,6 +6,7 @@ import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useCaseStatus } from '@/ui/components/status/use-status';
+import { SideScrollList } from '@/ui/components/layout/side-scroll-list';
 import { cn } from '@/ui/lib/utils';
 import { AdminResponseTarget } from './admin-response-target';
 import { AdminFilterChip, adminCardLink, adminSection, adminTableFrame, adminTd, adminTh, adminTr } from './admin-ui';
@@ -66,15 +67,16 @@ export function AdminCasesScreen({ data, now }: AdminCasesScreenProps) {
     <div className={cn(adminSection, 'space-y-4')}>
       <nav aria-label={t('queueFilter')} className="space-y-2">
         <p className="text-xs font-semibold tracking-[0.04em] text-muted-foreground uppercase">{t('queueFilter')}</p>
-        <div className="flex flex-wrap gap-2">
-          <AdminFilterChip href={routes.admin.cases({ ...filters, queue: undefined })} current={!filters.queue} currentValue="true">{t('allQueues')}</AdminFilterChip>
-          {ADMIN_QUEUES.map((queue) => <AdminFilterChip key={queue} href={routes.admin.cases({ ...filters, queue })} current={filters.queue === queue} currentValue="true">{t(`queues.${queue}`)}</AdminFilterChip>)}
-        </div>
+        {/* On phones each filter group is one row that scrolls sideways (the on-call opens this from a text). */}
+        <SideScrollList>
+          <li><AdminFilterChip href={routes.admin.cases({ ...filters, queue: undefined })} current={!filters.queue} currentValue="true">{t('allQueues')}</AdminFilterChip></li>
+          {ADMIN_QUEUES.map((queue) => <li key={queue}><AdminFilterChip href={routes.admin.cases({ ...filters, queue })} current={filters.queue === queue} currentValue="true">{t(`queues.${queue}`)}</AdminFilterChip></li>)}
+        </SideScrollList>
       </nav>
       <div className="flex flex-wrap items-end gap-x-6 gap-y-4 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.07]">
-        <nav aria-label={t('statusFilter')} className="space-y-2">
+        <nav aria-label={t('statusFilter')} className="w-full space-y-2 sm:w-auto">
           <p className="text-xs font-semibold tracking-[0.04em] text-muted-foreground uppercase">{t('statusFilter')}</p>
-          <div className="flex flex-wrap gap-2">{ADMIN_CASE_STATUS_FILTERS.map((status) => <AdminFilterChip key={status} href={routes.admin.cases({ ...filters, status })} current={filters.status === status} currentValue="true">{t(`filters.${status}`)}</AdminFilterChip>)}</div>
+          <SideScrollList>{ADMIN_CASE_STATUS_FILTERS.map((status) => <li key={status}><AdminFilterChip href={routes.admin.cases({ ...filters, status })} current={filters.status === status} currentValue="true">{t(`filters.${status}`)}</AdminFilterChip></li>)}</SideScrollList>
         </nav>
         <nav aria-label={t('assignmentFilter')}>
           <AdminFilterChip href={routes.admin.cases({ ...filters, mine: !filters.mine })} current={filters.mine} currentValue="true">{t('assignedToMe')}{' '}<span className={cn('font-normal', filters.mine ? 'text-background/80' : 'text-muted-foreground')}>{t(filters.mine ? 'filterOn' : 'filterOff')}</span></AdminFilterChip>

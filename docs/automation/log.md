@@ -208,3 +208,8 @@ One entry per iteration, newest last.
 - Account, contact details: the email or phone sits on its own line across the row, with what it is and its button on the line above, so an email address is no longer broken inside the word on phones. Placed by the grid, so screen readers still read the label, the value, then the button.
 - `scripts/ui-audit.mjs` opens a fresh page every 10 previews (measured: a long-lived page grew Chrome's renderer to 2.2 GB).
 - Checks: messaging, support, notification-delivery, account, account-contact, passkeys and helper-standing on the e2e build (20 passed, 13 one-viewport skips, 1 flake on a notification preference's saved message that passed on retry); jsdom for messages and account (195); ui-audit on the thread, inbox and account previews: no failures; screenshots in English and Spanish.
+
+## 2026-11-14 — UI pass, batch 5: the admin queues (plan 5.10)
+- Cases list: on phones the queue and status filters are each one row that scrolls sideways (`SideScrollList`), so the first cases show sooner; the on-call's text from 5.12 opens these pages on a phone. Admin filter chips never wrap inside their label.
+- Case page: the response target in the header has its label ("Response target"), as in the list.
+- Checks: admin, admin-ops, admin-people, admin-metrics, admin-webhooks, staff-controls, refund-approval and support-tools on the e2e build (24 passed, 14 one-viewport skips); jsdom for admin screens (175); ui-audit over the 164 admin and staff previews (verification screens left to 5.18): only the bookings list's name links, 20 px tall on wide screens (fixed in the next batch).

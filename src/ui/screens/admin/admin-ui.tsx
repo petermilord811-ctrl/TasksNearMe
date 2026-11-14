@@ -69,7 +69,7 @@ export function AdminFilterChip({ href, current, currentValue = 'page', count, i
     href={href}
     aria-current={current ? currentValue : undefined}
     className={cn(
-      'inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-[background-color,border-color,color,box-shadow] duration-200',
+      'inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full border px-4 text-sm font-medium transition-[background-color,border-color,color,box-shadow] duration-200',
       current
         ? 'border-transparent bg-foreground text-background shadow-[0_6px_16px_-10px_rgb(23_18_14/0.6)]'
         : 'border-foreground/[0.1] bg-card text-foreground/80 hover:border-foreground/[0.2] hover:bg-foreground/[0.04] hover:text-foreground dark:border-white/[0.12]',

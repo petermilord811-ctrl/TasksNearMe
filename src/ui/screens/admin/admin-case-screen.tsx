@@ -101,7 +101,7 @@ export function AdminCaseContent({ data, handlers, now, initialDialog, replyStat
       <PageHeader title={row.subject} />
       <div className="flex flex-wrap items-start justify-between gap-3 text-sm">
         <div className="space-y-1"><p className="flex items-center gap-2"><UserRound aria-hidden="true" className="size-4 text-muted-foreground" />{row.assignee ? t('details.assignedTo', { name: row.assignee.displayName }) : t('details.unassigned')}</p><p className="tabular-nums text-muted-foreground">{t('details.opened', { at: formatDateTime(row.openedAt) })}</p></div>
-        <AdminResponseTarget slaDueAt={row.slaDueAt} slaBreached={row.slaBreached} now={now} />
+        <div className="space-y-1"><p className="text-xs font-semibold tracking-[0.04em] text-muted-foreground uppercase">{list('response')}</p><AdminResponseTarget slaDueAt={row.slaDueAt} slaBreached={row.slaBreached} now={now} /></div>
       </div>
     </div>
     <AdminCaseControls key={row.id} data={data} handlers={handlers} initialDialog={initialDialog} replyState={replyState} resolutionState={resolutionState}>
