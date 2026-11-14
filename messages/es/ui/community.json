@@ -37,7 +37,7 @@
   "roles": {
     "helper": "Ayudante",
     "poster": "Cliente",
-    "neighbor": "Vecino"
+    "neighbor": "Del vecindario"
   },
   "verified": "Identidad verificada",
   "you": "tú",
@@ -61,10 +61,10 @@
   "report": "Reportar",
   "more": "Más",
   "helperCard": {
-    "recommended": "Recomendado",
-    "thanked": "Agradecido",
-    "selfTag": "Se recomendó a sí mismo",
-    "recommendedBy": "{count, plural, =0 {Nuevo en TasksNearMe} one {Lo recomienda # vecino} other {Lo recomiendan # vecinos}}",
+    "recommended": "Recomendación",
+    "thanked": "Le agradecieron",
+    "selfTag": "Recomendación propia",
+    "recommendedBy": "{count, plural, =0 {Recién llegó a TasksNearMe} one {# recomendación de vecinos} other {# recomendaciones de vecinos}}",
     "view": "Ver perfil"
   },
   "replyForm": {
@@ -75,11 +75,11 @@
     "recommend": "Recomendar a un ayudante (opcional)",
     "recommendNone": "Nadie en particular",
     "recommendSelf": "{name} (tú)",
-    "recommendHint": "Ayudantes que contrataste o guardaste. Uno por petición.",
-    "alreadyRecommended": "Ya recomendaste a alguien en esta petición.",
+    "recommendHint": "Ayudantes que contrataste o guardaste. Uno por publicación.",
+    "alreadyRecommended": "Ya recomendaste a alguien en esta publicación.",
     "closed": "Las respuestas están cerradas."
   },
-  "guidelines": "Sé amable y habla de lo local. Los datos de contacto quedan ocultos hasta que reservas. Los reportes de delitos o de seguridad son para la policía (911 en una emergencia), no para aquí.",
+  "guidelines": "Sé amable y habla de lo local. Los datos de contacto quedan ocultos hasta que reservas. Los delitos y los problemas de seguridad se reportan a la policía (911 en una emergencia), no aquí.",
   "guidelinesLink": "Normas de la comunidad",
   "empty": {
     "title": "Aún no hay nada aquí",
@@ -98,13 +98,13 @@
     "kind": "¿Qué tipo de publicación?",
     "titleLabel": "Título",
     "titleHints": {
-      "recommendation": "Di qué necesitas: «¿A quién recomiendan para colgar una TV?»",
+      "recommendation": "Di qué necesitas: «¿A quién recomiendan para armar una cuna?»",
       "question": "Pregúntalo en una línea: «¿Cuánto tarda armar un clóset?»",
       "tip": "Resúmelo: «Renta la carretilla cuando reserves el camión»",
       "thanks": "Di a quién y por qué: «¡Gracias, Sam, por el clóset!»"
     },
     "body": "Detalles",
-    "bodyHint": "Lo que ayude a responder: el trabajo, el tamaño, cuándo. Sin direcciones ni números de teléfono.",
+    "bodyHint": "Lo que ayude a responder: la tarea, el tamaño, cuándo. Sin direcciones ni números de teléfono.",
     "bodyCount": "{count} de {max}",
     "category": "Servicio",
     "categoryNone": "No es sobre un servicio",
@@ -152,7 +152,7 @@
     "feed": "Comunidad · publicaciones cerca de ti",
     "feedEmpty": "Comunidad · aún no hay nada",
     "feedBlocked": "Comunidad · primero verifica tu teléfono",
-    "post": "Comunidad · petición de recomendación con respuestas",
+    "post": "Comunidad · publicación pidiendo una recomendación, con respuestas",
     "postStaff": "Comunidad · vista del equipo de una respuesta oculta",
     "newPost": "Comunidad · nueva publicación",
     "newThanks": "Comunidad · agradecer a un ayudante"
