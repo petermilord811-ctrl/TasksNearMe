@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { getHelperProfile, listActiveHelperHandles, listPublicProfileDates } from '@/modules/profiles/queries';
+import { helperProfileIndexable } from '@/modules/seo/indexable';
 import { findPublicTask, listOpenTaskDates, listRecentOpenTasks } from '@/modules/tasks/queries';
 import { createDb } from '@/platform/db/connect';
 
@@ -24,15 +25,19 @@ describe('sitemap queries', () => {
     expect(await listOpenTaskDates(db, { marketId: MARKET, now, limit: 2 })).toHaveLength(Math.min(2, listed.length));
   });
 
-  it('lists every helper whose profile page shows, and only those, with a real date', async () => {
+  it('lists the helpers whose profile shows and has earned a place in search, with a real date', async () => {
     const listed = await listPublicProfileDates(db);
     expect(listed.length).toBeGreaterThan(0);
     for (const helper of listed) {
       expect(Number.isNaN(helper.updatedAt.getTime()), helper.handle).toBe(false);
       expect(await getHelperProfile(helper.handle, db), helper.handle).not.toBeNull();
     }
-    const shown = [];
-    for (const handle of await listActiveHelperHandles(db)) if (await getHelperProfile(handle, db)) shown.push(handle);
-    expect(listed.map((helper) => helper.handle).sort()).toEqual(shown.sort());
+    // The same rule the profile page applies to its robots metadata (src/modules/seo/indexable.ts).
+    const earned = [];
+    for (const handle of await listActiveHelperHandles(db)) {
+      const profile = await getHelperProfile(handle, db);
+      if (profile && helperProfileIndexable(profile.helper)) earned.push(handle);
+    }
+    expect(listed.map((helper) => helper.handle).sort()).toEqual(earned.sort());
   });
 });

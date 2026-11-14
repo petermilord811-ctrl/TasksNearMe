@@ -6,6 +6,7 @@ import { CATEGORY_SLUGS } from '@/contracts';
 import { getCategoryPageData, listCategorySlugs } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
+import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, categoryServiceNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { CategoryScreen } from '@/ui/screens/public';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
@@ -28,7 +29,10 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   if (!page) return {};
   // The category's name in the page's language: the database's is English.
   const values = { category: categoryName(page.data.category.slug), market: page.data.market.name };
-  return publicPageMetadata({ path: routes.category(page.data.category.slug, market), title: t('title', values), description: t('description', values) });
+  return {
+    ...(await publicPageMetadata({ path: routes.category(page.data.category.slug, market), title: t('title', values), description: t('description', values) })),
+    ...(marketPagesIndexable(page.data.market, DEFAULT_MARKET_SLUG) ? {} : KEEP_OUT_OF_SEARCH),
+  };
 }
 
 async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]'>) {

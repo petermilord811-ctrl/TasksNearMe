@@ -83,12 +83,18 @@ with each deploy and no server setting is needed. It applies to a production bui
 
 `SEARCH_INDEXING` (off, site or on) in `preview.env` would override it without a deploy; nothing needs it.
 
-Caddy holds the same line until the build with this code is live (since 2026-11-14): the `tasksnearme.com` block in
-`/etc/caddy/Caddyfile` sends no `X-Robots-Tag` on the site's pages, `noindex` on `/tasks/*` and `/helpers/*` (and
-their `/es/` versions) and `noindex, nofollow` on `/app`, `/admin` and `/api/*`; `dev.tasksnearme.com` keeps
-`noindex, nofollow` on everything. Backup of the earlier file: `/etc/caddy/Caddyfile.bak-2026-11-14-seo`. Once that
-build is live, the two `tasksnearme.com` rules can go, so the code alone decides (`sudo caddy validate --config
-/etc/caddy/Caddyfile`, then `sudo systemctl reload caddy`).
+Caddy leaves the decision to the app: the `tasksnearme.com` block in `/etc/caddy/Caddyfile` only repeats, as a second
+layer, `noindex, nofollow` on `/app`, `/admin` and `/api/*`; `dev.tasksnearme.com` keeps `noindex, nofollow` on
+everything. (Until the SEO build shipped, Caddy also held the listings back; backups of the earlier files:
+`/etc/caddy/Caddyfile.bak-2026-11-14-seo` and `…-seo2`.) After an edit: `sudo caddy validate --config
+/etc/caddy/Caddyfile`, then `sudo systemctl reload caddy`.
+
+IndexNow (Bing, Yandex, Seznam, Naver, Yep; Google doesn't take part) hears about new and changed pages from the
+server itself: the job runner's `seo.indexnow` step announces the sitemap's pages every 15 minutes, on the live site
+only (`src/modules/seo/indexnow.ts`; the key file is `public/<key>.txt`). To announce everything at once after a
+deploy: `node scripts/seo/indexnow.mjs`. Search Console from the command line, with the owner's service account
+(key outside the repo, in `~/.config/tasksnearme/`): `node scripts/seo/google.mjs sites | sitemaps |
+submit-sitemap | inspect <url> | queries [days] | pages [days]`.
 
 Check: `curl -sI https://tasksnearme.com/ | grep -i x-robots` prints nothing, a task page prints `noindex`, and
 (with the SEO build) `curl -s https://tasksnearme.com/robots.txt` shows `Allow: /` and the `Sitemap:` line. In

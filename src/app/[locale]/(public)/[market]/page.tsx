@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import { getMarketPageData } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
+import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, marketServiceNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { MarketScreen } from '@/ui/screens/public';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
@@ -19,11 +20,15 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   const { market } = await params;
   const [page, t] = await Promise.all([getMarketPageData(market), getTranslations('server.meta.market')]);
   if (!page) return {};
-  return publicPageMetadata({
-    path: routes.market(market),
-    title: t('title', { market: page.data.market.name }),
-    description: t('description', { market: page.data.market.name }),
-  });
+  return {
+    ...(await publicPageMetadata({
+      path: routes.market(market),
+      title: t('title', { market: page.data.market.name }),
+      description: t('description', { market: page.data.market.name }),
+    })),
+    // A city that isn't open yet stays out of search until it is (src/modules/seo/indexable.ts).
+    ...(marketPagesIndexable(page.data.market, DEFAULT_MARKET_SLUG) ? {} : KEEP_OUT_OF_SEARCH),
+  };
 }
 
 /** Params are awaited outside Suspense, so every market URL gets its own cached render and unknown ones a real 404. */

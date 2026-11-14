@@ -92,7 +92,8 @@ export function websiteNode(context: StructuredDataContext, description: string)
     '@type': 'WebSite',
     '@id': `${homeUrl(context)}/#website`,
     name: SITE_NAME,
-    alternateName: 'Tasks Near Me',
+    // Google rarely shows a generic phrase as a site name; the domain, listed last, is its fallback (site names guide).
+    alternateName: ['Tasks Near Me', 'tasksnearme.com'],
     url: homeUrl(context),
     description,
     inLanguage: APP_LOCALES.map((locale) => INTL_LOCALES[locale]),

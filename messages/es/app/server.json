@@ -6,11 +6,11 @@
   },
   "meta": {
     "home": {
-      "title": "TasksNearMe: tareas cerca de ti, con ayudantes de confianza",
+      "title": "TasksNearMe: ayuda de confianza cerca de ti",
       "description": "Haz tus tareas de todos los días con ayudantes verificados cerca de ti: armado de muebles, mudanzas, jardín, limpieza y ayuda con computadoras. Ve el precio completo antes de reservar. Ya en {market}."
     },
     "market": {
-      "title": "Ayuda con tareas cerca de ti en {market}",
+      "title": "Ayuda para el hogar cerca de ti en {market}",
       "description": "Ayudantes verificados en {market} para armado de muebles, ayuda con mudanzas, limpieza de jardín, limpieza ligera y ayuda con computadoras."
     },
     "category": {
@@ -22,7 +22,7 @@
       "description": "Publica una tarea, elige a tu ayudante y aprueba el trabajo. O crea tu perfil y haz ofertas en tareas cerca de ti."
     },
     "becomeHelper": {
-      "title": "Gana dinero haciendo tareas cerca de ti",
+      "title": "Gana dinero con trabajos cerca de ti",
       "description": "Gana dinero con tus habilidades de todos los días. Ve cuánto ganarás antes de aceptar una tarea."
     },
     "pricing": {
@@ -46,8 +46,8 @@
       "description": "Respuestas sobre cómo publicar tareas, pagos y tarifas, cómo verificarte como ayudante y cómo mantenerte seguro."
     },
     "taskBoard": {
-      "title": "Tareas abiertas cerca de ti en {market}",
-      "description": "Tareas locales en {market} para las que la gente necesita ayuda: armado de muebles, mudanzas, trabajo de jardín, limpieza y ayuda con computadoras."
+      "title": "Trabajos disponibles cerca de ti en {market}",
+      "description": "Trabajos locales en {market} por los que la gente paga: armado de muebles, mudanzas, jardinería, limpieza y ayuda con computadoras. Ve cuánto pagan antes de hacer una oferta."
     },
     "copyCode": {
       "title": "Copia tu código para iniciar sesión"

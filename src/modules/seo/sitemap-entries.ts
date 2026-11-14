@@ -22,6 +22,8 @@ export interface SitemapData {
   homeMarketSlug: string;
   markets: {
     slug: string;
+    /** Whether its pages earn a place in search (src/modules/seo/indexable.ts); if not, they and its tasks are left out. */
+    indexable: boolean;
     /** Its enabled categories, in display order. */
     categorySlugs: CategorySlug[];
     /** Its open tasks (what the board lists), newest first. */
@@ -68,7 +70,8 @@ export function sitemapPages(data: SitemapData, options: { listings: boolean }):
     ...data.helpArticles.map((article) => ({ path: routes.help(article.slug), lastModified: article.updatedAt })),
     ...data.legalDocs.map((legal) => ({ path: routes.legal(legal.doc), lastModified: legal.updatedAt })),
   ];
-  for (const market of data.markets) {
+  const markets = data.markets.filter((market) => market.indexable);
+  for (const market of markets) {
     const lastModified = newestTask.get(market.slug);
     pages.push({ path: routes.market(market.slug), lastModified }, { path: routes.taskBoard(market.slug), lastModified });
     for (const category of market.categorySlugs) {
@@ -78,7 +81,7 @@ export function sitemapPages(data: SitemapData, options: { listings: boolean }):
   }
   if (!options.listings) return pages;
   pages.push(...data.helpers.map((helper) => ({ path: routes.helperProfile(helper.handle), lastModified: helper.updatedAt })));
-  for (const market of data.markets) {
+  for (const market of markets) {
     pages.push(...market.tasks.map((task) => ({ path: routes.publicTask(task.slug), lastModified: task.updatedAt })));
   }
   return pages;

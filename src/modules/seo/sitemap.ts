@@ -8,24 +8,22 @@ import { listPublicProfileDates } from '@/modules/profiles/queries';
 import { listOpenTaskDates } from '@/modules/tasks/queries';
 import { appUrl } from '@/integrations/oauth';
 import { db } from '@/platform/db/client';
+import { marketPagesIndexable } from './indexable';
 import { sitemapEntries, sitemapPages, type SitemapData } from './sitemap-entries';
 
 /** Open tasks listed per market, newest first: with both languages, well under the 50,000-URL limit. */
 const TASKS_PER_MARKET = 10_000;
 
 /**
- * The entries of /sitemap.xml (src/app/sitemap.ts). Cached like the public pages: rebuilt at most hourly, and sooner
- * when tasks, helpers or markets change (the cache tags their writes update). `listings` adds the task pages and
- * helper profiles (the `on` mode, src/shared/search-indexing.ts). Addresses are absolute against APP_URL, the address canonical links use.
+ * The sitemap's entries, straight from the database (no cache): for the IndexNow job, which runs outside requests.
+ * `listings` adds the task pages and helper profiles (the `on` mode, src/shared/search-indexing.ts). Addresses are
+ * absolute against APP_URL, the address canonical links use.
  */
-export async function getSitemap(options: { listings: boolean }): Promise<MetadataRoute.Sitemap> {
-  'use cache';
-  cacheLife('hours');
-  cacheTag('sitemap', 'markets', 'tasks', 'helpers');
+export async function loadSitemapEntries(options: { listings: boolean }): Promise<{ entries: MetadataRoute.Sitemap; marketSlugs: string[] }> {
   const now = new Date();
+  const marketSlugs = await listPublicMarketSlugs();
   const markets = await Promise.all(
-    (await listPublicMarketSlugs()).map(async (slug) => {
-      cacheTag(marketTag(slug));
+    marketSlugs.map(async (slug) => {
       const market = await findPublicMarket(slug);
       if (!market) return null;
       const [categories, tasks] = await Promise.all([
@@ -34,6 +32,7 @@ export async function getSitemap(options: { listings: boolean }): Promise<Metada
       ]);
       return {
         slug: market.slug,
+        indexable: marketPagesIndexable(market, DEFAULT_MARKET_SLUG),
         categorySlugs: categories.map((category) => category.slug),
         tasks: tasks.map((task) => ({ slug: task.slug, categorySlug: task.categorySlug, updatedAt: task.updatedAt.toISOString() })),
       };
@@ -48,5 +47,18 @@ export async function getSitemap(options: { listings: boolean }): Promise<Metada
     helpArticles: listHelpArticleDates(),
     legalDocs: listPublishedLegalDocs(),
   };
-  return sitemapEntries(appUrl(), sitemapPages(data, options));
+  return { entries: sitemapEntries(appUrl(), sitemapPages(data, options)), marketSlugs };
+}
+
+/**
+ * The entries of /sitemap.xml (src/app/sitemap.ts). Cached like the public pages: rebuilt at most hourly, and sooner
+ * when tasks, helpers or markets change (the cache tags their writes update).
+ */
+export async function getSitemap(options: { listings: boolean }): Promise<MetadataRoute.Sitemap> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('sitemap', 'markets', 'tasks', 'helpers');
+  const { entries, marketSlugs } = await loadSitemapEntries(options);
+  for (const slug of marketSlugs) cacheTag(marketTag(slug));
+  return entries;
 }

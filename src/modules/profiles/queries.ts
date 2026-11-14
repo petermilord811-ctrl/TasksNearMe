@@ -1,6 +1,6 @@
 import 'server-only';
 import { openSlotsOf } from '@/modules/availability/slots';
-import { and, asc, count, desc, eq, exists, inArray, isNotNull, max, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, exists, gt, inArray, isNotNull, max, or, sql } from 'drizzle-orm';
 import type {
   BadgeView,
   CategorySlug,
@@ -21,6 +21,7 @@ import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
 import { helperProfiles, helperServices, helperWorkSamples } from './schema';
 import { badgesFor } from '@/modules/badges/service';
+import { GENERATED_ID_PATTERN } from '@/shared/sample-data';
 
 /**
  * Public helper cards. Only active helpers with active accounts appear. Last names, exact
@@ -64,12 +65,9 @@ export function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: st
   };
 }
 
-export async function listPublicHelpers(options: {
-  marketId: string;
-  categorySlug?: CategorySlug;
-  limit: number;
-}): Promise<HelperSummary[]> {
-  const offersCategory = options.categorySlug
+/** The helper offers the category (an active service in it). */
+function offersCategory(categorySlug: CategorySlug | undefined) {
+  return categorySlug
     ? exists(
         db
           .select({ one: sql`1` })
@@ -79,11 +77,18 @@ export async function listPublicHelpers(options: {
             and(
               eq(helperServices.userId, helperProfiles.userId),
               eq(helperServices.status, 'active'),
-              eq(categories.slug, options.categorySlug),
+              eq(categories.slug, categorySlug),
             ),
           ),
       )
     : undefined;
+}
+
+export async function listPublicHelpers(options: {
+  marketId: string;
+  categorySlug?: CategorySlug;
+  limit: number;
+}): Promise<HelperSummary[]> {
 
   const rows = await db
     .select({ profile: helperProfiles, user: users, areaName: areas.name })
@@ -95,7 +100,7 @@ export async function listPublicHelpers(options: {
         eq(helperProfiles.status, 'active'),
         eq(users.status, 'active'),
         eq(areas.marketId, options.marketId),
-        offersCategory,
+        offersCategory(options.categorySlug),
       ),
     )
     .orderBy(desc(helperProfiles.completedCount), sql`${helperProfiles.ratingAverage} desc nulls last`, asc(users.name))
@@ -133,6 +138,31 @@ export async function listPublicHelpers(options: {
 
   const badges = await badgesFor(db, rows.map(({ user }) => user.id));
   return rows.map(({ profile, user, areaName }) => toHelperSummary(profile, user, areaName, servicesByHelper.get(user.id) ?? [], badges.get(user.id)));
+}
+
+/**
+ * How many helpers listPublicHelpers would show in the market (and category), not only the first few. `realOnly`
+ * leaves sample data out (src/shared/sample-data.ts), for counts shown as facts on public pages.
+ */
+export async function countPublicHelpers(
+  options: { marketId: string; categorySlug?: CategorySlug; realOnly?: boolean },
+  database: Db = db,
+): Promise<number> {
+  const [row] = await database
+    .select({ value: count() })
+    .from(helperProfiles)
+    .innerJoin(users, eq(users.id, helperProfiles.userId))
+    .innerJoin(areas, eq(areas.id, helperProfiles.areaId))
+    .where(
+      and(
+        eq(helperProfiles.status, 'active'),
+        eq(users.status, 'active'),
+        eq(areas.marketId, options.marketId),
+        offersCategory(options.categorySlug),
+        options.realOnly ? sql`${users.id} ~ ${GENERATED_ID_PATTERN}` : undefined,
+      ),
+    );
+  return row?.value ?? 0;
 }
 
 /** Founding-cohort spots already taken in the market (helpers given a founding number). */
@@ -245,7 +275,8 @@ export async function listActiveHelperHandles(database: Db = db): Promise<string
 }
 
 /**
- * The sitemap's helpers: those whose public profile shows (getHelperProfile's conditions, area included), with when
+ * The sitemap's helpers: those whose public profile shows (getHelperProfile's conditions, area included) and has
+ * earned a place in search, with a completed task or a published review (src/modules/seo/indexable.ts); with when
  * the page last changed: the profile itself or its newest published review, whichever is later.
  */
 export async function listPublicProfileDates(database: Db = db): Promise<{ handle: string; updatedAt: Date }[]> {
@@ -261,7 +292,13 @@ export async function listPublicProfileDates(database: Db = db): Promise<{ handl
     .innerJoin(users, eq(users.id, helperProfiles.userId))
     .innerJoin(areas, eq(areas.id, helperProfiles.areaId))
     .leftJoin(latestReview, eq(latestReview.subjectUserId, helperProfiles.userId))
-    .where(and(eq(helperProfiles.status, 'active'), eq(users.status, 'active')))
+    .where(
+      and(
+        eq(helperProfiles.status, 'active'),
+        eq(users.status, 'active'),
+        or(gt(helperProfiles.completedCount, 0), gt(helperProfiles.ratingCount, 0)),
+      ),
+    )
     .orderBy(asc(helperProfiles.handle));
   return rows.map(({ handle, profileUpdatedAt, reviewedAt }) => {
     // The profile's time comes back as Postgres text (a mode: 'string' column), the review's as a Date.

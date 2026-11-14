@@ -36,7 +36,7 @@ describe('the site', () => {
       '@type': 'WebSite',
       '@id': 'https://tasksnearme.com/#website',
       name: 'TasksNearMe',
-      alternateName: 'Tasks Near Me',
+      alternateName: ['Tasks Near Me', 'tasksnearme.com'],
       url: 'https://tasksnearme.com',
       inLanguage: ['en-US', 'es-US'],
       publisher: { '@id': 'https://tasksnearme.com/#organization' },

@@ -10,6 +10,7 @@ const data: SitemapData = {
   markets: [
     {
       slug: 'austin',
+      indexable: true,
       categorySlugs: ['furniture-assembly', 'moving-help', 'computer-help'],
       tasks: [
         { slug: 'assemble-a-desk-mueller-7f3k', categorySlug: 'furniture-assembly', updatedAt: '2026-11-14T09:00:00.000Z' },
@@ -82,6 +83,13 @@ describe('sitemapPages', () => {
     expect(site.map((page) => page.path)).toEqual(pages.map((page) => page.path).filter((path) => !/^\/(tasks|helpers)\//.test(path)));
     expect(site.find((page) => page.path === '/austin/furniture-assembly')?.lastModified).toBe('2026-11-14T09:00:00.000Z');
     expect(site.find((page) => page.path === '/')?.lastModified).toBe('2026-11-14T09:00:00.000Z');
+  });
+
+  it('leaves out a market that is not open yet, with its board, categories and tasks', () => {
+    const chicago = { slug: 'chicago', indexable: false, categorySlugs: ['moving-help' as const], tasks: [{ slug: 'help-moving-a-sofa-loop-1a2b', categorySlug: 'moving-help', updatedAt: '2026-11-14T10:00:00.000Z' }] };
+    const paths = sitemapPages({ ...data, markets: [...data.markets, chicago] }, ALL).map((page) => page.path);
+    expect(paths.filter((path) => path.includes('chicago') || path.includes('loop-1a2b'))).toEqual([]);
+    expect(paths).toContain('/austin/moving-help');
   });
 
   it('works with no markets, tasks, helpers or published legal texts', () => {

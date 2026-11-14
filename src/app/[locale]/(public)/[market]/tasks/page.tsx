@@ -7,6 +7,7 @@ import { routes } from '@/contracts';
 import { getMarketPageData, getTaskBoardPageData } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
+import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { parseTaskBoardQuery } from '@/modules/tasks/projections';
 import { PageSkeleton } from '@/ui/components';
@@ -24,7 +25,10 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   if (!page) return {};
   const values = { market: page.data.market.name };
   // Filtered and paged URLs all point search engines at the plain board.
-  return publicPageMetadata({ path: routes.taskBoard(market), title: t('title', values), description: t('description', values) });
+  return {
+    ...(await publicPageMetadata({ path: routes.taskBoard(market), title: t('title', values), description: t('description', values) })),
+    ...(marketPagesIndexable(page.data.market, DEFAULT_MARKET_SLUG) ? {} : KEEP_OUT_OF_SEARCH),
+  };
 }
 
 /** Filters live in the URL, so the list renders per request inside Suspense; the data is cached per query. */

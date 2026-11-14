@@ -27,6 +27,7 @@ import { idReaderFromEnv } from '@/integrations/ai/id-document-reader';
 import { byteCipherFromEnv, fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { pruneCacheTags } from '@/platform/cache/prune';
+import { announceChangedPages } from '@/modules/seo/indexnow-job';
 import { retryDueWebhooks } from '@/modules/webhooks/inbox';
 
 /**
@@ -70,6 +71,8 @@ export const JOBS: Job[] = [
   { name: 'retention.sweep', run: (db, now) => (retentionDue(now) ? runRetention(db, { storage: createFileStorage() }, now) : Promise.resolve()) },
   // Shared 'use cache' tag rows a week old (cache-handlers/shared-tags.mjs).
   { name: 'cache.prune_tags', run: async (db, now) => { await pruneCacheTags(db, now); } },
+  // Search engines: new or changed public pages to IndexNow, every 15 minutes, on the live site only (src/modules/seo).
+  { name: 'seo.indexnow', run: async (_db, now) => { await announceChangedPages(now); } },
   // Last: it waits on Claude (a few seconds a document).
   { name: 'earnings.transfers', run: async (db, now) => { const connect = stripeConnectFromEnv(); if (connect) await runScheduledTransfers(db, connect, now); } },
   {
