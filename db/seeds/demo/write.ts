@@ -29,7 +29,8 @@ import { seedVerification, upsertPeople, type Tx } from '../seed';
 import { AUSTIN, CATEGORIES } from '../data/austin';
 import { DEMO_MARKETS, demoAreaId, demoMarketId, demoPolicyId } from './markets';
 import { buildDemoPlan, DEMO_PREFIX, type DemoPlan, type DemoPolicies } from './plan';
-import { buildDemoCommunity, type DemoCommunity } from './community';
+import { buildDemoCommunity, buildDemoQuestions, type DemoCommunity, type DemoTaskQuestion } from './community';
+import { taskQuestions } from '../../../src/modules/questions/schema';
 
 /** `<table prefix>_demo_%` as a LIKE pattern (underscores escaped). */
 const demoIds = (prefix: string) => `${prefix}\\_${DEMO_PREFIX.replace('_', '\\_')}%`;
@@ -251,6 +252,14 @@ export async function writeDemoCommunity(tx: Tx, community: DemoCommunity): Prom
   }
 }
 
+/** Demo questions on the demo tasks (completion plan 7.11), replaced on every run (demo ids only). */
+export async function writeDemoQuestions(tx: Tx, questions: DemoTaskQuestion[]): Promise<void> {
+  await tx.delete(taskQuestions).where(like(taskQuestions.id, demoIds('tqn')));
+  for (let i = 0; i < questions.length; i += 300) {
+    await tx.insert(taskQuestions).values(questions.slice(i, i + 300).map((question) => ({ ...question, status: 'visible', updatedAt: question.answeredAt ?? question.createdAt })));
+  }
+}
+
 /** Writes the markets, builds the plan from their published fees and writes it, in one transaction; then badges. */
 export async function seedDemoData(url: string, now = new Date()): Promise<{ markets: number; people: number; tasks: number; offers: number; bookings: number }> {
   const key = process.env.FIELD_ENCRYPTION_KEY;
@@ -262,6 +271,7 @@ export async function seedDemoData(url: string, now = new Date()): Promise<{ mar
       const built = buildDemoPlan({ now, policies: await loadDemoPolicies(tx) });
       await writeDemoPlan(tx, built, key);
       await writeDemoCommunity(tx, buildDemoCommunity(built, now));
+      await writeDemoQuestions(tx, buildDemoQuestions(built, now));
       return built;
     });
     for (const person of plan.people) await recomputeBadges(db, person.id, now, { announce: false });

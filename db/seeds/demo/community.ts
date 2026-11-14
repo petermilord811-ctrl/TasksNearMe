@@ -202,3 +202,68 @@ export function buildDemoCommunity(plan: DemoPlan, now: Date): DemoCommunity {
   }
   return out;
 }
+
+export interface DemoTaskQuestion {
+  id: string;
+  taskId: string;
+  askerUserId: string;
+  body: string;
+  answerBody: string | null;
+  answeredAt: Date | null;
+  pinned: boolean;
+  createdAt: Date;
+}
+
+const QUESTIONS_BY_CATEGORY: Record<CategorySlug, readonly (readonly [string, string])[]> = {
+  'furniture-assembly': [
+    ['Do you have all the hardware, or is anything missing from the box?', 'Everything is in the box. I counted the bags against the manual.'],
+    ['Is it going on carpet or a hard floor?', 'Hard floor, and there is room to lay all the pieces out.'],
+    ['Does it need to be anchored to the wall?', 'Yes please, the anchor kit came with it. The wall is drywall.'],
+  ],
+  'moving-help': [
+    ['Is there an elevator, or stairs only?', 'Stairs only, second floor. Nothing weighs more than about 80 pounds.'],
+    ['Will the truck be parked close to the door?', 'Right in front of the building, with the ramp down.'],
+  ],
+  'yard-cleanup': [
+    ['Do you have bags and a rake, or should I bring them?', 'I have paper bags. Please bring a rake.'],
+    ['Where should the bags go when it is done?', 'By the curb on the left side of the driveway.'],
+  ],
+  'light-cleaning': [
+    ['Do you have supplies, or should I bring mine?', 'Supplies are under the kitchen sink, including a mop.'],
+    ['Any pets at home?', 'One friendly cat who mostly stays upstairs.'],
+  ],
+  'computer-help': [
+    ['Is it Windows or a Mac?', 'Windows 11, about a year old.'],
+    ['Do you still have the password for the old device?', 'Yes, I have it written down.'],
+  ],
+};
+
+/** Questions on open demo tasks (completion plan 7.11): asked by demo helpers in the market, mostly answered. */
+export function buildDemoQuestions(plan: DemoPlan, now: Date): DemoTaskQuestion[] {
+  const rng: Rng = createRng(9_009);
+  const out: DemoTaskQuestion[] = [];
+  const markets = [...new Set(plan.tasks.map((task) => task.marketId))];
+  for (const marketId of markets) {
+    const key = marketId.replace(/^mkt_(demo_)?/, '');
+    const helpers = plan.people.filter((person) => person.helper && (person.homeMarketId ?? 'mkt_austin') === marketId).map((person) => person.id);
+    const open = plan.tasks.filter((task) => task.marketId === marketId && task.status === 'open' && task.windowEnd > now);
+    if (helpers.length === 0 || open.length === 0) continue;
+    let n = 0;
+    for (const task of rng.shuffle(open).slice(0, Math.min(3, open.length))) {
+      const pairs = rng.shuffle(QUESTIONS_BY_CATEGORY[task.categorySlug]).slice(0, rng.int(1, 2));
+      const askers = rng.shuffle(helpers.filter((id) => id !== task.posterUserId)).slice(0, pairs.length);
+      let pinned = false;
+      pairs.forEach(([question, answer], index) => {
+        const askerUserId = askers[index];
+        if (!askerUserId) return;
+        const createdAt = new Date(Math.min(now.getTime() - 3_600_000, task.publishedAt.getTime() + rng.int(30, 600) * 60_000));
+        const answered = rng.chance(0.75);
+        const answeredAt = answered ? new Date(Math.min(now.getTime(), createdAt.getTime() + rng.int(10, 240) * 60_000)) : null;
+        const pin = answered && !pinned && rng.chance(0.5);
+        if (pin) pinned = true;
+        out.push({ id: `tqn_demo_${key}_${String(++n).padStart(3, '0')}`, taskId: task.id, askerUserId, body: question, answerBody: answered ? answer : null, answeredAt, pinned: pin, createdAt });
+      });
+    }
+  }
+  return out;
+}
