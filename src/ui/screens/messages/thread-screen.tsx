@@ -10,6 +10,7 @@ import { ReportBlockMenu } from '@/ui/components/safety';
 import { buttonVariants } from '@/ui/primitives/button';
 import { MessageComposerContent } from './message-composer';
 import { MessageLog } from './message-log';
+import { ReplyProvider } from './reply-context';
 import { ThreadPresence } from './thread-presence';
 
 export interface ThreadScreenProps {
@@ -72,10 +73,12 @@ export function ThreadContent({ data, handlers, now, safety, composerState, wide
     </header>
     {thread.contactMasking && <p className="flex items-start gap-2.5 rounded-2xl bg-secondary/70 px-4 py-3 text-sm leading-6 text-secondary-foreground"><LockKeyhole aria-hidden="true" className="mt-1 size-4 shrink-0" /><span>{t('masking')}</span></p>}
     <div className="flex h-[max(32rem,calc(100dvh-21rem))] flex-col overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]">
-      <MessageLog key={`log-${thread.id}`} messages={messages} otherParty={thread.otherParty} now={now} seenMessageId={data.seenMessageId} firstUnreadId={data.firstUnreadId} className="min-h-0 flex-1" />
+      <ReplyProvider>
+      <MessageLog key={`log-${thread.id}`} messages={messages} otherParty={thread.otherParty} now={now} seenMessageId={data.seenMessageId} firstUnreadId={data.firstUnreadId} {...(composer.canSend && handlers.onReact ? { onReact: handlers.onReact } : {})} className="min-h-0 flex-1" />
       {composer.canSend
-        ? <MessageComposerContent key={`composer-${thread.id}`} rules={composer} handlers={handlers} {...composerState} />
+        ? <MessageComposerContent key={`composer-${thread.id}`} rules={composer} handlers={handlers} savedReplies={data.savedReplies} template={{ firstName: thread.otherParty.displayName.split(' ')[0] ?? '', task: thread.title }} {...composerState} />
         : <p role="status" className="border-t border-foreground/[0.07] bg-muted/60 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm font-medium dark:border-white/[0.06]">{t(`disabled.${composer.disabledReason ?? 'unavailable'}`)}</p>}
+      </ReplyProvider>
     </div>
   </div>;
 }

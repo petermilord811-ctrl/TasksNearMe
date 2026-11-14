@@ -37,6 +37,17 @@ export type ThreadSubject =
   /** Regular visits: `routes.app.series(seriesId)`. */
   | { kind: 'series'; seriesId: string };
 
+/** Reactions on a message (completion plan 7.3): a small set, like a team chat. */
+export const MESSAGE_REACTIONS = ['thumbs_up', 'heart', 'laugh', 'check'] as const;
+export type MessageReaction = (typeof MESSAGE_REACTIONS)[number];
+
+/** A person's saved reply: `{first_name}` and `{task}` are filled in when it's used (completion plan 7.3). */
+export interface MessageSavedReply {
+  id: string;
+  title: string;
+  body: string;
+}
+
 export interface MessageView {
   id: string;
   sender: 'me' | 'them' | 'system';
@@ -50,6 +61,10 @@ export interface MessageView {
   attachments: Photo[];
   /** Status and system messages: the event to word (messages key `timeline.<type>`). */
   event?: Pick<TimelineEvent, 'type' | 'params'>;
+  /** A reply to an earlier message: who wrote it and its first words, masked as the original is (7.3). */
+  replyTo?: { id: string; sender: 'me' | 'them'; segments: MessageSegment[] };
+  /** Reactions: each emoji with its count and whether the viewer gave it (7.3). */
+  reactions?: { emoji: MessageReaction; count: number; mine: boolean }[];
   createdAt: ISODateTime;
 }
 
@@ -110,12 +125,16 @@ export interface ThreadPageData {
   seenMessageId?: string;
   /** The first message the viewer hadn't read before opening the conversation: "New messages" goes above it (7.3). */
   firstUnreadId?: string;
+  /** The viewer's saved replies, for the composer (7.3). */
+  savedReplies?: MessageSavedReply[];
 }
 
 export const sendMessageInputSchema = z
   .object({
     body: z.string('required').trim().max(2000, 'too_long'),
     attachmentIds: z.array(z.string().min(1)).max(4, 'too_long'),
+    /** A reply to an earlier message in the same conversation (7.3). */
+    replyToId: z.string().min(1).max(80).optional(),
   })
   .refine((input) => input.body.length > 0 || input.attachmentIds.length > 0, { path: ['body'], message: 'required' });
 export type SendMessageInput = z.input<typeof sendMessageInputSchema>;
@@ -135,4 +154,16 @@ export interface ThreadHandlers {
    * 2.5 s) and the other person sees "typing…" for a few seconds. Fire and forget: it never fails visibly.
    */
   onTyping?: () => Promise<void>;
+  /** A reaction on a message (7.3): ok `updated`. Errors: `not_allowed` (not in the conversation, or blocked). */
+  onReact?: ActionHandler<{ messageId: string; emoji: MessageReaction; on: boolean }>;
+  /** Save the composer's text as a saved reply: ok `saved`. Errors: `validation_failed`, `limit_reached` (20). */
+  onSaveReply?: ActionHandler<MessageSavedReplyInput>;
+  onDeleteReply?: ActionHandler<{ id: string }>;
 }
+
+export const MESSAGE_SAVED_REPLY_MAX = 20;
+export const messageSavedReplyInputSchema = z.object({
+  title: z.string('required').trim().min(1, 'required').max(40, 'too_long'),
+  body: z.string('required').trim().min(1, 'required').max(1000, 'too_long'),
+});
+export type MessageSavedReplyInput = z.input<typeof messageSavedReplyInputSchema>;

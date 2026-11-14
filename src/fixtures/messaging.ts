@@ -130,4 +130,7 @@ export const fakeThreadHandlers: ThreadHandlers = {
     const result: PhotoUploadResult = { ok: true, photo: { id: `ph_msg_${attachmentCount}`, src: '/samples/work-desk.svg', alt: `Attached photo ${attachmentCount}`, width: 800, height: 600 } };
     return wait(result);
   },
+  onReact: () => wait({ ok: true, code: 'updated' }),
+  onSaveReply: () => wait({ ok: true, code: 'saved' }),
+  onDeleteReply: () => wait({ ok: true, code: 'updated' }),
 };

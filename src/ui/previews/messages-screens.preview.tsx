@@ -58,6 +58,20 @@ export const messagesScreenPreviews: PreviewEntry[] = [
   threadPreview('offer-masked', threadCopy.previews['offer-masked'], deskOfferThreadPageData),
   threadPreview('closed', threadCopy.previews.closed, closedThreadPageData),
   threadPreview('blocked', threadCopy.previews.blocked, blockedThreadPageData),
+  // Quote-replies, reactions and saved replies (completion plan 7.3).
+  threadPreview('replies-reactions', threadCopy.previews.repliesReactions, {
+    ...deskBookingThreadPageData,
+    messages: deskBookingThreadPageData.messages.map((message, index, all) => {
+      const firstText = all.find((candidate) => candidate.kind === 'text' && candidate.sender === 'me');
+      if (message.kind !== 'text') return message;
+      if (message.sender === 'them' && firstText) return { ...message, replyTo: { id: firstText.id, sender: 'me' as const, segments: firstText.segments }, reactions: [{ emoji: 'thumbs_up' as const, count: 1, mine: true }] };
+      return { ...message, reactions: [{ emoji: 'heart' as const, count: 1, mine: false }] };
+    }),
+    savedReplies: [
+      { id: 'srp_on_my_way', title: 'On my way', body: 'Hi {first_name}, I am on my way for {task}. See you soon!' },
+      { id: 'srp_tools', title: 'What I bring', body: 'I bring my own drill and level, so there is nothing to have ready.' },
+    ],
+  }),
   // Wide screens: the conversations beside the open one, with "New messages" above what arrived since last time (7.3).
   {
     id: 'screen-thread/with-list', group: threadCopy.previews.group, title: threadCopy.previews.withList, layout: 'fullscreen',

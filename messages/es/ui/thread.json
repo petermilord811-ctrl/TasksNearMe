@@ -53,7 +53,8 @@
       "limit_reached": "Aviso de límite de la cuenta",
       "identity_required": "Aviso de verificación de identidad necesaria"
     },
-    "withList": "Conversación junto a la lista, con los mensajes nuevos marcados"
+    "withList": "Conversación junto a la lista, con los mensajes nuevos marcados",
+    "repliesReactions": "Respuestas que citan un mensaje, reacciones y respuestas guardadas"
   },
   "composer": {
     "label": "Mensaje",
@@ -74,7 +75,30 @@
     "photos": "Fotos para enviar",
     "photosHint": "Hasta {maximum, plural, one {# foto} other {# fotos}}. JPEG, PNG, WebP o HEIC, de hasta {megabytes} MB cada una. Evita números de casa, correo postal y rostros.",
     "blocked": "No pueden enviarse mensajes",
-    "closed": "Esta conversación está cerrada"
+    "closed": "Esta conversación está cerrada",
+    "replyingTo": "Respondiendo a {name}",
+    "cancelReply": "Cancelar la respuesta",
+    "savedReplies": {
+      "button": "Respuestas guardadas",
+      "empty": "Aún no tienes respuestas guardadas. Escribe un mensaje y guárdalo aquí para la próxima vez.",
+      "save": "Guardar este texto como respuesta",
+      "saved": "Guardado como respuesta",
+      "delete": "Eliminar {title}",
+      "limit": "Puedes tener hasta 20 respuestas guardadas.",
+      "failed": "No se pudo guardar esa respuesta. Inténtalo de nuevo.",
+      "hint": "'{first_name}' y '{task}' se completan en cada conversación."
+    }
   },
-  "newMessages": "Mensajes nuevos"
+  "newMessages": "Mensajes nuevos",
+  "actions": {
+    "label": "Responder o reaccionar a {name}",
+    "reply": "Responder"
+  },
+  "reactions": {
+    "label": "Reacciones",
+    "thumbs_up": "Pulgar arriba",
+    "heart": "Corazón",
+    "laugh": "Risa",
+    "check": "Listo"
+  }
 }

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
-import { sendMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { deleteReplyAction, reactToMessageAction, saveReplyAction, sendMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
 import { getInbox, getThreadPage } from '@/modules/messaging/service';
 import { blockUserAction, reportUserAction } from '@/modules/support/actions';
 import { getReportSubject } from '@/modules/support/service';
@@ -37,7 +37,7 @@ async function Thread({ params }: Pick<PageProps<'/[locale]/app/messages/[thread
       data={data}
       now={now.toISOString()}
       inbox={inbox?.threads}
-      handlers={{ onSend: sendMessageAction.bind(null, threadId), onUploadPhoto: uploadMessagePhoto, onTyping: typingAction.bind(null, threadId) }}
+      handlers={{ onSend: sendMessageAction.bind(null, threadId), onUploadPhoto: uploadMessagePhoto, onTyping: typingAction.bind(null, threadId), onReact: reactToMessageAction.bind(null, threadId), onSaveReply: saveReplyAction, onDeleteReply: deleteReplyAction }}
       {...(subject ? { safety: { subject, handlers: { onReport: reportUserAction.bind(null, threadId), onBlock: blockUserAction.bind(null, threadId) } } } : {})}
     />
   );

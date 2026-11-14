@@ -53,7 +53,8 @@
       "limit_reached": "Account limit feedback",
       "identity_required": "ID check needed feedback"
     },
-    "withList": "Conversation beside the list, with new messages marked"
+    "withList": "Conversation beside the list, with new messages marked",
+    "repliesReactions": "Replies quoting a message, reactions and saved replies"
   },
   "composer": {
     "label": "Message",
@@ -74,7 +75,30 @@
     "photos": "Photos to send",
     "photosHint": "Up to {maximum, plural, one {# photo} other {# photos}}. JPEG, PNG, WebP or HEIC, up to {megabytes} MB each. Avoid house numbers, mail, and faces.",
     "blocked": "You can't message each other",
-    "closed": "This conversation is closed"
+    "closed": "This conversation is closed",
+    "replyingTo": "Replying to {name}",
+    "cancelReply": "Cancel the reply",
+    "savedReplies": {
+      "button": "Saved replies",
+      "empty": "No saved replies yet. Write a message and save it here for next time.",
+      "save": "Save this text as a reply",
+      "saved": "Saved as a reply",
+      "delete": "Delete {title}",
+      "limit": "You can keep up to 20 saved replies.",
+      "failed": "That reply couldn’t be saved. Try again.",
+      "hint": "'{first_name}' and '{task}' are filled in for each conversation."
+    }
   },
-  "newMessages": "New messages"
+  "newMessages": "New messages",
+  "actions": {
+    "label": "Reply or react to {name}",
+    "reply": "Reply"
+  },
+  "reactions": {
+    "label": "Reactions",
+    "thumbs_up": "Thumbs up",
+    "heart": "Heart",
+    "laugh": "Laugh",
+    "check": "Done"
+  }
 }

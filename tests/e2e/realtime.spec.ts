@@ -46,6 +46,19 @@ test('a conversation updates live: typing, new messages, then presence and Seen'
     await expect(lee.getByRole('log').getByText('Perfect, see you then')).toBeVisible({ timeout: 10_000 });
     await expect(ruth.getByText('Seen', { exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(lee.getByText('Active now')).toBeVisible({ timeout: 15_000 });
+
+    // A professional chat (completion plan 7.3): Lee quotes Ruth's message in his reply and gives hers a thumbs up;
+    // Ruth sees both without a reload.
+    const ruthsMessage = lee.getByRole('log').getByRole('listitem').filter({ hasText: 'Perfect, see you then' }).first();
+    await ruthsMessage.getByRole('button', { name: 'Reply', exact: true }).click();
+    await expect(lee.getByText('Replying to Ruth A.')).toBeVisible();
+    await lee.getByRole('textbox', { name: 'Message' }).fill('Great, ten it is');
+    await lee.getByRole('button', { name: 'Send' }).click();
+    await ruthsMessage.getByRole('button', { name: 'Thumbs up' }).click();
+    const quoted = ruth.getByRole('log').getByRole('listitem').filter({ hasText: 'Great, ten it is' }).first();
+    await expect(quoted.locator('blockquote')).toContainText('Perfect, see you then', { timeout: 15_000 });
+    await expect(ruth.getByRole('log').getByRole('list', { name: 'Reactions' }).first()).toBeVisible({ timeout: 15_000 });
+    expect(await ruth.evaluate(() => (window as unknown as { liveMarker?: boolean }).liveMarker)).toBe(true);
   } finally {
     await ruthContext.close();
     await leeContext.close();

@@ -1,6 +1,6 @@
 import { helperProfiles } from '@/modules/profiles/schema';
 import { recomputeResponseTime } from '@/modules/profiles/response-time';
-import { and, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
   ComposerDisabledReason,
@@ -14,7 +14,7 @@ import type {
   ThreadSummary,
   TimelineEvent,
 } from '@/contracts';
-import { sendMessageInputSchema } from '@/contracts';
+import { MESSAGE_REACTIONS, MESSAGE_SAVED_REPLY_MAX, messageSavedReplyInputSchema, sendMessageInputSchema, type MessageReaction, type MessageSavedReplyInput } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { MAX_PHOTO_BYTES, photoFromFile } from '@/modules/files/uploads';
@@ -31,7 +31,7 @@ import { consumeRateLimit } from '@/platform/rate-limit';
 import { userChannel } from '@/platform/realtime/hub';
 import { publishNotices } from '@/platform/realtime/publish';
 import { presenceOf } from '@/modules/realtime/presence';
-import { messages, threadParticipants, threads } from './schema';
+import { messageReactions, messages, savedReplies, threadParticipants, threads } from './schema';
 
 /**
  * Threads between the two people on an offer or a booking (blueprint 02 J2 step 6, 06, 08). Bodies are
@@ -327,9 +327,35 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   }
   const lastMine = [...rows].reverse().find((row) => row.senderUserId === userId);
   const disabledReason: ComposerDisabledReason | undefined = blocked ? 'blocked' : found.context.closed ? 'closed' : undefined;
+  // Quotes (a replied-to message may be older than this page) and reactions, then the viewer's saved replies (7.3).
+  const quotedIds = [...new Set(rows.flatMap((row) => (row.replyToMessageId ? [row.replyToMessageId] : [])))];
+  const [quotedRows, reactionRows, replies] = await Promise.all([
+    quotedIds.length ? db.select({ id: messages.id, body: messages.body, senderUserId: messages.senderUserId }).from(messages).where(and(inArray(messages.id, quotedIds), eq(messages.threadId, thread.id))) : Promise.resolve([]),
+    rows.length ? db.select({ messageId: messageReactions.messageId, userId: messageReactions.userId, emoji: messageReactions.emoji }).from(messageReactions).where(inArray(messageReactions.messageId, rows.map((row) => row.id))) : Promise.resolve([]),
+    listSavedReplies(db, userId),
+  ]);
+  const quoted = new Map(quotedRows.map((row) => [row.id, row]));
+  const reactionsOf = (messageId: string) => {
+    const mine = reactionRows.filter((row) => row.messageId === messageId);
+    return MESSAGE_REACTIONS.flatMap((emoji) => {
+      const given = mine.filter((row) => row.emoji === emoji);
+      return given.length ? [{ emoji, count: given.length, mine: given.some((row) => row.userId === userId) }] : [];
+    });
+  };
+  const withExtras = (row: typeof messages.$inferSelect) => {
+    const view = toView(row, userId, found.context.masking, photos);
+    const quote = row.replyToMessageId ? quoted.get(row.replyToMessageId) : undefined;
+    const reactions = reactionsOf(row.id);
+    return {
+      ...view,
+      ...(quote ? { replyTo: { id: quote.id, sender: quote.senderUserId === userId ? ('me' as const) : ('them' as const), segments: toMessageSegments(quote.body.length > 160 ? `${quote.body.slice(0, 157)}…` : quote.body, { mask: found.context.masking && quote.senderUserId !== userId }) } } : {}),
+      ...(reactions.length ? { reactions } : {}),
+    };
+  };
   return {
     thread: { ...found.summary, unreadCount: 0 },
-    messages: rows.map((row) => toView(row, userId, found.context.masking, photos)),
+    messages: rows.map(withExtras),
+    ...(replies.length ? { savedReplies: replies } : {}),
     ...(presence ? { presence } : {}),
     ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),
     ...(newlyRead[0] ? { firstUnreadId: newlyRead[0].id } : {}),
@@ -353,6 +379,14 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
   const limited = await consumeRateLimit(db, `messages:${userId}`, SEND_RATE_LIMIT, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
 
+  // A reply quotes an earlier message of the same conversation (completion plan 7.3).
+  let replyToMessageId: string | null = null;
+  if (parsed.data.replyToId) {
+    const [quoted] = await db.select({ id: messages.id }).from(messages).where(and(eq(messages.id, parsed.data.replyToId), eq(messages.threadId, thread.id), eq(messages.kind, 'text'))).limit(1);
+    if (!quoted) return { ok: false, code: 'validation_failed', fieldErrors: { replyToId: ['invalid'] } };
+    replyToMessageId = quoted.id;
+  }
+
   const attachmentIds = [...new Set(parsed.data.attachmentIds)];
   if (attachmentIds.length > 0) {
     const owned = await db
@@ -361,7 +395,7 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
       .where(and(inArray(files.id, attachmentIds), eq(files.ownerUserId, userId), eq(files.kind, 'message')));
     if (owned.length !== attachmentIds.length) return { ok: false, code: 'validation_failed', fieldErrors: { attachmentIds: ['invalid'] } };
   }
-  await db.insert(messages).values({ id: newId('msg'), threadId: thread.id, senderUserId: userId, kind: 'text', body: parsed.data.body, attachmentFileIds: attachmentIds, createdAt: now });
+  await db.insert(messages).values({ id: newId('msg'), threadId: thread.id, senderUserId: userId, kind: 'text', body: parsed.data.body, attachmentFileIds: attachmentIds, replyToMessageId, createdAt: now });
   const others = await db
     .select({ userId: threadParticipants.userId })
     .from(threadParticipants)
@@ -379,6 +413,40 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
   const [helper] = await db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
   if (helper) await recomputeResponseTime(db, userId, now).catch((error) => console.error('[messaging] response time', error));
   return { ok: true, code: 'sent' };
+}
+
+/** A reaction on a message (completion plan 7.3): the conversation's two people only, never across a block. */
+export async function reactToMessage(db: Db, userId: string, threadId: string, input: { messageId: string; emoji: MessageReaction; on: boolean }, now: Date): Promise<ActionResult> {
+  if (!(MESSAGE_REACTIONS as readonly string[]).includes(input.emoji)) return { ok: false, code: 'validation_failed' };
+  const [thread] = await db.select().from(threads).where(eq(threads.id, String(threadId))).limit(1);
+  const found = thread ? await summaryOf(db, thread, userId, now) : null;
+  if (!thread || !found) return { ok: false, code: 'not_found' };
+  if (await isBlocked(db, userId, found.other.id)) return { ok: false, code: 'not_allowed' };
+  const [message] = await db.select({ id: messages.id }).from(messages).where(and(eq(messages.id, String(input.messageId)), eq(messages.threadId, thread.id), eq(messages.kind, 'text'))).limit(1);
+  if (!message) return { ok: false, code: 'not_found' };
+  if (input.on) await db.insert(messageReactions).values({ messageId: message.id, userId, emoji: input.emoji, createdAt: now }).onConflictDoNothing();
+  else await db.delete(messageReactions).where(and(eq(messageReactions.messageId, message.id), eq(messageReactions.userId, userId), eq(messageReactions.emoji, input.emoji)));
+  // The other person's open conversation shows it at once (ids only).
+  await publishNotices(db, [{ channel: userChannel(found.other.id), notice: { type: 'update', event: 'message.reacted', thread: thread.id } }]);
+  return { ok: true, code: 'updated' };
+}
+
+export async function listSavedReplies(db: Db, userId: string) {
+  return db.select({ id: savedReplies.id, title: savedReplies.title, body: savedReplies.body }).from(savedReplies).where(eq(savedReplies.userId, userId)).orderBy(asc(savedReplies.createdAt)).limit(MESSAGE_SAVED_REPLY_MAX);
+}
+
+export async function saveReply(db: Db, userId: string, input: MessageSavedReplyInput, now: Date): Promise<ActionResult> {
+  const parsed = messageSavedReplyInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const [mine] = await db.select({ value: count() }).from(savedReplies).where(eq(savedReplies.userId, userId));
+  if (Number(mine?.value ?? 0) >= MESSAGE_SAVED_REPLY_MAX) return { ok: false, code: 'limit_reached' };
+  await db.insert(savedReplies).values({ id: newId('srp'), userId, title: parsed.data.title, body: parsed.data.body, createdAt: now, updatedAt: now });
+  return { ok: true, code: 'saved' };
+}
+
+export async function deleteReply(db: Db, userId: string, id: string): Promise<ActionResult> {
+  const deleted = await db.delete(savedReplies).where(and(eq(savedReplies.id, String(id)), eq(savedReplies.userId, userId))).returning({ id: savedReplies.id });
+  return deleted.length ? { ok: true, code: 'updated' } : { ok: false, code: 'not_found' };
 }
 
 /** When each person last said they were typing in a thread (this server only; it only spaces the notices out). */
