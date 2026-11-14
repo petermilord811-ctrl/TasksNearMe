@@ -139,11 +139,11 @@ describe('phone verification', () => {
 });
 
 describe('waitlist', () => {
-  it('keeps one entry per email and updates it on rejoin', async () => {
+  it('keeps one entry per email, and the first answer (a stranger can’t change it)', async () => {
     await joinWaitlist(db, { email: 'sky@example.test', zip: '10001', interest: 'need_help' });
     await joinWaitlist(db, { email: 'sky@example.test', zip: '10002', interest: 'both' });
     const rows = await db.select().from(waitlistEntries).where(eq(waitlistEntries.email, 'sky@example.test'));
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ zip: '10002', interest: 'both' });
+    expect(rows[0]).toMatchObject({ zip: '10001', interest: 'need_help' });
   });
 });

@@ -104,6 +104,7 @@
 6. **Google Maps.** Billing, key restrictions.
 7. **Cloudflare.** WAF and rate-limit rules, Turnstile keys.
 8. **Legal.** Documents published and versioned in `agreements` (**F4–F10, F12–F14, F18, F20**).
+9. **Hosting.** The proxy in front of the web service must **replace** `X-Forwarded-For` with the visitor's address, not append to it (or the per-IP limits must read the right-most trusted hop instead of the first). Otherwise a client sending `X-Forwarded-For: 127.0.0.1` skips the per-IP limits on sign-in codes, the waitlist and invite links. Check Render's behavior before launch (B-061).
 
 ## 5. Launch criteria (go/no-go)
 

@@ -1,9 +1,10 @@
+import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { NOTIFICATION_TYPES, type AttentionTarget } from '@/contracts';
 import { parseResendEvent, signResendWebhook, verifyResendWebhook } from '@/integrations/email/resend-webhook';
 import { deliveryContent } from './delivery';
 import { planDelivery } from './delivery-domain';
-import { readUnsubscribeToken, unsubscribeToken } from './unsubscribe';
+import { LEGACY_LINKS_UNTIL, readUnsubscribeToken, unsubscribeToken } from './unsubscribe';
 
 const row = (type: (typeof NOTIFICATION_TYPES)[number], target: AttentionTarget = { kind: 'booking', bookingId: 'bkg_desk' }) => ({
   type,
@@ -61,6 +62,23 @@ describe('unsubscribe links', () => {
     expect(readUnsubscribeToken('usr_maya.unknown_topic.abc', 'secret-a')).toBeNull();
     expect(readUnsubscribeToken(undefined, 'secret-a')).toBeNull();
     expect(readUnsubscribeToken(`${token}.extra`, 'secret-a')).toBeNull();
+  });
+
+  it('works for a year from the day it was sent, and a changed date breaks it', () => {
+    const sent = new Date('2026-12-01T15:00:00.000Z');
+    const day = 24 * 60 * 60 * 1000;
+    const token = unsubscribeToken('usr_maya', 'offers', 'secret-a', sent);
+    expect(readUnsubscribeToken(token, 'secret-a', new Date(sent.getTime() + 364 * day))).toEqual({ userId: 'usr_maya', topic: 'offers' });
+    expect(readUnsubscribeToken(token, 'secret-a', new Date(sent.getTime() + 367 * day))).toBeNull();
+    const [user, topic, issued, signature] = token.split('.');
+    const laterDay = (parseInt(issued!, 36) + 300).toString(36);
+    expect(readUnsubscribeToken([user, topic, laterDay, signature].join('.'), 'secret-a', new Date(sent.getTime() + 400 * day))).toBeNull();
+  });
+
+  it('still reads links sent before dates were added, until a year after the change', () => {
+    const legacy = `usr_maya.offers.${createHmac('sha256', 'secret-a').update('unsubscribe:usr_maya:offers').digest('base64url').slice(0, 32)}`;
+    expect(readUnsubscribeToken(legacy, 'secret-a', new Date('2027-06-01T00:00:00.000Z'))).toEqual({ userId: 'usr_maya', topic: 'offers' });
+    expect(readUnsubscribeToken(legacy, 'secret-a', LEGACY_LINKS_UNTIL)).toBeNull();
   });
 });
 
