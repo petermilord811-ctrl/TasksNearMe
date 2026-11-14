@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { CreditCard, Gift, Heart, Languages, LifeBuoy, LoaderCircle, LogOut, MessagesSquare, Moon, Sun, UserRound } from 'lucide-react';
+import { BellRing, CreditCard, Gift, Heart, Languages, LifeBuoy, LoaderCircle, LogOut, MessagesSquare, Moon, Sun, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ActionHandler, ActionResult, LanguageSwitchHandler, SignedInViewer, StaffViewer } from '@/contracts';
 import { APP_LOCALES, LOCALE_NAMES } from '@/contracts/locale';
@@ -66,6 +66,8 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage }: AccountMenu
 
   const links = viewer.kind === 'user' ? [
     { id: 'community', href: routes.app.community(), icon: MessagesSquare },
+    // Phones reach their saved searches (and can stop an alert) from here (completion plan 7.10).
+    { id: 'savedSearches', href: routes.app.savedSearches(), icon: BellRing },
     { id: 'account', href: routes.app.account(), icon: UserRound },
     viewer.mode === 'helper'
       ? { id: 'rewards', href: routes.app.rewards(), icon: Gift }

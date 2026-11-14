@@ -126,7 +126,8 @@ test('a helper saves a task, hides one (Undo brings it back), and sees the areas
     // Save for later: the Saved filter lists it.
     await card(page, shelves).getByRole('button', { name: `Save ${shelves} for later` }).click();
     await expect(card(page, shelves).getByRole('button', { name: `Remove ${shelves} from saved` })).toHaveAttribute('aria-pressed', 'true');
-    await page.getByRole('link', { name: /^Saved/ }).click();
+    // The filter ("Saved", with its count), not the nav's "Saved searches".
+    await page.getByRole('link', { name: /^Saved( \d+)?$/ }).click();
     await expect(page).toHaveURL(/saved=1/);
     await expect(page.getByRole('link', { name: shelves })).toBeVisible();
     await page.goto('/app/find-work');

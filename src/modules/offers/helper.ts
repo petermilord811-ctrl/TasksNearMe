@@ -213,9 +213,11 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
     latestOffer.set(offer.taskId, { id: offer.id, status: expired ? 'expired' : (offer.status as OfferStatus) });
   }
 
+  const marketAreas = await db.select({ slug: areas.slug, name: areas.name }).from(areas).where(eq(areas.marketId, state.marketId)).orderBy(asc(areas.name));
   return {
     query,
     categories: categoryViews,
+    areas: marketAreas,
     cards: found.map(({ view, distanceMiles, posterUserId, status, windowEnd }) => {
       const task: typeof view =
         view.location.kind === 'local' && distanceMiles !== null

@@ -157,12 +157,13 @@ export async function deleteSavedSearch(db: Db, userId: string, id: string): Pro
  * their instant searches in its market that it fits, one alert per person per task, never the poster or
  * someone blocked either way, and at most `INSTANT_ALERTS_PER_DAY` a day (the rest wait for a digest, if any).
  */
-export async function instantSearchMatches(db: Db, taskId: string, now: Date): Promise<{ userId: string; searchId: string; name: string }[]> {
+export async function instantSearchMatches(db: Db, taskId: string, now: Date, onlyUserId?: string): Promise<{ userId: string; searchId: string; name: string }[]> {
   const found = await findTaskWithPublicView(db, taskId);
   if (!found || found.view.status !== 'open') return [];
   const [task] = await db.select({ marketId: tasks.marketId, posterUserId: tasks.posterUserId }).from(tasks).where(eq(tasks.id, taskId)).limit(1);
   if (!task) return [];
-  const rows = await db.select().from(savedSearches).where(and(eq(savedSearches.marketId, task.marketId), eq(savedSearches.alert, 'instant')));
+  // One person's notifications page only needs that person's searches (deliverPending runs this per page load).
+  const rows = await db.select().from(savedSearches).where(and(eq(savedSearches.marketId, task.marketId), eq(savedSearches.alert, 'instant'), onlyUserId ? eq(savedSearches.userId, onlyUserId) : undefined));
   if (rows.length === 0) return [];
   const { names } = await areaMaps(db, task.marketId);
   const since = new Date(marketLocalToUtc(marketDayKey(now), '00:00'));

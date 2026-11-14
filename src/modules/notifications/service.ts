@@ -88,8 +88,11 @@ async function communityPost(db: Db, postId: string | undefined) {
   return post && post.status === 'visible' ? post : null;
 }
 
-/** Who hears about an event, and how. */
-async function plan(db: Db, event: EventRow): Promise<Planned[]> {
+/**
+ * Who hears about an event, and how. `onlyUserId` (deliverPending, for one person's page) lets the costly cases
+ * look at that one person only.
+ */
+async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Planned[]> {
   const p = event.payload as Payload;
   switch (event.type) {
     // The community (completion plan 7.7): never about your own act, never between people who blocked each other.
@@ -297,7 +300,7 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
       const helpers = await helpersToAlert(db, taskId, new Date(event.createdAt));
       // Saved searches with instant alerts that the task fits (completion plan 7.10), once per person, after the
       // helpers' own task alerts (someone already told about it isn't told twice).
-      const searches = (await instantSearchMatches(db, taskId, new Date(event.createdAt))).filter((match) => !helpers.includes(match.userId));
+      const searches = (await instantSearchMatches(db, taskId, new Date(event.createdAt), onlyUserId)).filter((match) => !helpers.includes(match.userId));
       return [
         ...helpers.map((userId) => ({
           userId,
@@ -427,7 +430,7 @@ async function claimEvents(db: Db, limit: number) {
 /** Makes an event's notifications, one per event and person (idempotent); `onlyUserId`, just that person's. */
 async function deliver(db: Db, event: EventRow, onlyUserId?: string): Promise<number> {
   let made = 0;
-  for (const item of await plan(db, event)) {
+  for (const item of await plan(db, event, onlyUserId)) {
     if (onlyUserId && item.userId !== onlyUserId) continue;
     // Several unread messages in one thread make one notification.
     if (item.type === 'message_received' && item.target.kind === 'thread') {
