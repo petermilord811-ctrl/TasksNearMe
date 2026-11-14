@@ -26,6 +26,7 @@ import { documentReaderFromEnv } from '@/integrations/ai/document-reader';
 import { idReaderFromEnv } from '@/integrations/ai/id-document-reader';
 import { byteCipherFromEnv, fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
+import { pruneCacheTags } from '@/platform/cache/prune';
 import { retryDueWebhooks } from '@/modules/webhooks/inbox';
 
 /**
@@ -67,6 +68,8 @@ export const JOBS: Job[] = [
   // Webhook events whose processing failed, again on their backoff (completion plan 5.11).
   { name: 'webhooks.retry', run: (db, now) => retryDueWebhooks(db, now) },
   { name: 'retention.sweep', run: (db, now) => (retentionDue(now) ? runRetention(db, { storage: createFileStorage() }, now) : Promise.resolve()) },
+  // Shared 'use cache' tag rows a week old (cache-handlers/shared-tags.mjs).
+  { name: 'cache.prune_tags', run: async (db, now) => { await pruneCacheTags(db, now); } },
   // Last: it waits on Claude (a few seconds a document).
   { name: 'earnings.transfers', run: async (db, now) => { const connect = stripeConnectFromEnv(); if (connect) await runScheduledTransfers(db, connect, now); } },
   {

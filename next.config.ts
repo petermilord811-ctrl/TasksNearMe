@@ -9,6 +9,10 @@ const devPublicHost = process.env.DEV_PUBLIC_HOST?.trim() || undefined;
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // 'use cache' entries stay in each process; tag invalidations are shared through Postgres so every web instance
+  // sees an updateTag made on another (cache-handlers/shared-tags.mjs, decisions.md 2026-11-14).
+  // SHARED_CACHE_HANDLER=off falls back to Next's built-in handler (one instance only).
+  ...(process.env.SHARED_CACHE_HANDLER === 'off' ? {} : { cacheHandlers: { default: require.resolve('./cache-handlers/shared-tags.mjs') } }),
   // CI's preview build (.github/workflows/ci.yml, scripts/preview/bundle.sh): a self-contained server folder.
   ...(process.env.NEXT_OUTPUT === 'standalone' ? { output: 'standalone' as const } : {}),
   ...(devPublicHost ? { allowedDevOrigins: [devPublicHost] } : {}),
