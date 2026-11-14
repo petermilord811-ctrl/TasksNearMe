@@ -84,51 +84,79 @@ interface ThreadContext {
   closed: boolean;
 }
 
-async function contextOf(db: Db, thread: ThreadRow, viewerId: string, now: Date): Promise<ThreadContext | null> {
-  const [task] = await db.select({ title: tasks.title, posterUserId: tasks.posterUserId }).from(tasks).where(eq(tasks.id, thread.taskId)).limit(1);
-  if (!task) return null;
-  if (thread.kind === 'booking') {
-    const [booking] = await db.select().from(bookings).where(eq(bookings.id, thread.linkedId)).limit(1);
-    if (!booking) return null;
-    const endedAt = booking.status === 'completed' ? booking.completedAt : booking.status === 'canceled' ? booking.canceledAt : null;
-    const keepOpenDays = booking.status === 'completed' ? 30 : 7;
-    return {
-      title: task.title,
-      subject: { kind: 'booking', bookingId: booking.id },
-      masking: booking.status === 'pending_funding',
-      closed: endedAt !== null && now.getTime() > endedAt.getTime() + keepOpenDays * DAY,
-    };
+/**
+ * What several threads are about, with one query per kind of record they link to rather than a few per thread
+ * (the inbox and the home page list every thread a person has: completion plan 5.7). A thread whose task or
+ * linked record is gone has no entry.
+ */
+async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date): Promise<Map<string, ThreadContext>> {
+  const out = new Map<string, ThreadContext>();
+  if (list.length === 0) return out;
+  const linked = (kind: ThreadKind) => [...new Set(list.filter((thread) => thread.kind === kind).map((thread) => thread.linkedId))];
+  const bookingIds = linked('booking');
+  const seriesIds = linked('series');
+  const offerIds = linked('offer');
+  const [taskRows, bookingRows, seriesRows, lastVisits, offerRows, bookedRows] = await Promise.all([
+    db.select({ id: tasks.id, title: tasks.title, posterUserId: tasks.posterUserId }).from(tasks).where(inArray(tasks.id, [...new Set(list.map((thread) => thread.taskId))])),
+    bookingIds.length ? db.select().from(bookings).where(inArray(bookings.id, bookingIds)) : [],
+    seriesIds.length ? db.select({ id: bookingSeries.id, status: bookingSeries.status }).from(bookingSeries).where(inArray(bookingSeries.id, seriesIds)) : [],
+    // Each series' last visit that isn't canceled.
+    seriesIds.length
+      ? db
+          .selectDistinctOn([bookings.seriesId], { seriesId: bookings.seriesId, startAt: bookings.startAt })
+          .from(bookings)
+          .where(and(inArray(bookings.seriesId, seriesIds), ne(bookings.status, 'canceled')))
+          .orderBy(bookings.seriesId, desc(bookings.startAt))
+      : [],
+    offerIds.length ? db.select().from(offers).where(inArray(offers.id, offerIds)) : [],
+    offerIds.length ? db.selectDistinct({ offerId: bookings.offerId }).from(bookings).where(and(inArray(bookings.offerId, offerIds), inArray(bookings.status, LIVE_BOOKING_STATUSES))) : [],
+  ]);
+  const taskById = new Map(taskRows.map((task) => [task.id, task]));
+  const bookingById = new Map(bookingRows.map((booking) => [booking.id, booking]));
+  const seriesById = new Map(seriesRows.map((series) => [series.id, series]));
+  const lastVisitBySeries = new Map(lastVisits.map((visit) => [visit.seriesId, visit.startAt]));
+  const offerById = new Map(offerRows.map((offer) => [offer.id, offer]));
+  const bookedOffers = new Set(bookedRows.map((row) => row.offerId));
+  for (const thread of list) {
+    const task = taskById.get(thread.taskId);
+    if (!task) continue;
+    if (thread.kind === 'booking') {
+      const booking = bookingById.get(thread.linkedId);
+      if (!booking) continue;
+      const endedAt = booking.status === 'completed' ? booking.completedAt : booking.status === 'canceled' ? booking.canceledAt : null;
+      const keepOpenDays = booking.status === 'completed' ? 30 : 7;
+      out.set(thread.id, {
+        title: task.title,
+        subject: { kind: 'booking', bookingId: booking.id },
+        masking: booking.status === 'pending_funding',
+        closed: endedAt !== null && now.getTime() > endedAt.getTime() + keepOpenDays * DAY,
+      });
+    } else if (thread.kind === 'series') {
+      // Regular visits: open while the series runs, and 30 days after its last visit once it's over.
+      const series = seriesById.get(thread.linkedId);
+      if (!series) continue;
+      const last = lastVisitBySeries.get(series.id);
+      const over = series.status === 'canceled' || series.status === 'ended';
+      out.set(thread.id, {
+        title: task.title,
+        subject: { kind: 'series', seriesId: series.id },
+        masking: false,
+        closed: over && (!last || now.getTime() > last.getTime() + 30 * DAY),
+      });
+    } else if (thread.kind === 'offer') {
+      const offer = offerById.get(thread.linkedId);
+      if (!offer) continue;
+      const booked = bookedOffers.has(offer.id);
+      const open = ['pending', 'stale'].includes(offer.status) && offer.expiresAt > now;
+      out.set(thread.id, {
+        title: task.title,
+        subject: viewerId === task.posterUserId ? { kind: 'offer_for_client', taskId: thread.taskId, offerId: offer.id } : { kind: 'task_for_helper', taskId: thread.taskId },
+        masking: !booked,
+        closed: !open && !booked,
+      });
+    }
   }
-  if (thread.kind === 'series') {
-    // Regular visits: open while the series runs, and 30 days after its last visit once it's over.
-    const [series] = await db.select({ id: bookingSeries.id, status: bookingSeries.status }).from(bookingSeries).where(eq(bookingSeries.id, thread.linkedId)).limit(1);
-    if (!series) return null;
-    const [last] = await db.select({ startAt: bookings.startAt }).from(bookings).where(and(eq(bookings.seriesId, series.id), ne(bookings.status, 'canceled'))).orderBy(desc(bookings.startAt)).limit(1);
-    const over = series.status === 'canceled' || series.status === 'ended';
-    return {
-      title: task.title,
-      subject: { kind: 'series', seriesId: series.id },
-      masking: false,
-      closed: over && (!last || now.getTime() > last.startAt.getTime() + 30 * DAY),
-    };
-  }
-  if (thread.kind === 'offer') {
-    const [offer] = await db.select().from(offers).where(eq(offers.id, thread.linkedId)).limit(1);
-    if (!offer) return null;
-    const [booked] = await db
-      .select({ id: bookings.id })
-      .from(bookings)
-      .where(and(eq(bookings.offerId, offer.id), inArray(bookings.status, LIVE_BOOKING_STATUSES)))
-      .limit(1);
-    const open = ['pending', 'stale'].includes(offer.status) && offer.expiresAt > now;
-    return {
-      title: task.title,
-      subject: viewerId === task.posterUserId ? { kind: 'offer_for_client', taskId: thread.taskId, offerId: offer.id } : { kind: 'task_for_helper', taskId: thread.taskId },
-      masking: !booked,
-      closed: !open && !booked,
-    };
-  }
-  return null;
+  return out;
 }
 
 function personOf(user: typeof users.$inferSelect): PersonSummary {
@@ -139,16 +167,6 @@ function personOf(user: typeof users.$inferSelect): PersonSummary {
     memberSince: user.createdAt.toISOString(),
     phoneVerified: user.phoneVerifiedAt !== null,
   };
-}
-
-async function otherParticipant(db: Db, threadId: string, viewerId: string) {
-  const [row] = await db
-    .select({ user: users })
-    .from(threadParticipants)
-    .innerJoin(users, eq(users.id, threadParticipants.userId))
-    .where(and(eq(threadParticipants.threadId, threadId), ne(threadParticipants.userId, viewerId)))
-    .limit(1);
-  return row?.user ?? null;
 }
 
 const isBlocked = isBlockedBetween;
@@ -170,54 +188,78 @@ function toView(row: typeof messages.$inferSelect, viewerId: string, masking: bo
   };
 }
 
-async function summaryOf(db: Db, thread: ThreadRow, viewerId: string, now: Date): Promise<{ summary: ThreadSummary; context: ThreadContext; other: typeof users.$inferSelect } | null> {
-  const [context, other, participant] = await Promise.all([
-    contextOf(db, thread, viewerId, now),
-    otherParticipant(db, thread.id, viewerId),
+type Summary = { summary: ThreadSummary; context: ThreadContext; other: typeof users.$inferSelect };
+
+/**
+ * The inbox rows for several threads, in their order: about eight queries however many threads there are (each
+ * thread used to cost six of its own). A thread the viewer isn't in, or whose subject is gone, is left out.
+ */
+async function summariesOf(db: Db, list: ThreadRow[], viewerId: string, now: Date): Promise<Map<string, Summary>> {
+  const out = new Map<string, Summary>();
+  if (list.length === 0) return out;
+  const threadIds = list.map((thread) => thread.id);
+  const [contexts, people, latestRows, unreadRows] = await Promise.all([
+    contextsOf(db, list, viewerId, now),
     db
-      .select({ lastReadAt: threadParticipants.lastReadAt })
+      .select({ threadId: threadParticipants.threadId, lastReadAt: threadParticipants.lastReadAt, user: users })
       .from(threadParticipants)
-      .where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, viewerId)))
-      .limit(1),
+      .innerJoin(users, eq(users.id, threadParticipants.userId))
+      .where(inArray(threadParticipants.threadId, threadIds)),
+    db.selectDistinctOn([messages.threadId]).from(messages).where(inArray(messages.threadId, threadIds)).orderBy(messages.threadId, desc(messages.createdAt)),
+    // Messages from anyone else (or the system) since the viewer last read the thread.
+    db
+      .select({ threadId: messages.threadId, value: sql<number>`count(*)::int` })
+      .from(messages)
+      .innerJoin(threadParticipants, and(eq(threadParticipants.threadId, messages.threadId), eq(threadParticipants.userId, viewerId)))
+      .where(
+        and(
+          inArray(messages.threadId, threadIds),
+          or(isNull(messages.senderUserId), ne(messages.senderUserId, viewerId)),
+          or(isNull(threadParticipants.lastReadAt), gt(messages.createdAt, threadParticipants.lastReadAt)),
+        ),
+      )
+      .groupBy(messages.threadId),
   ]);
-  if (!context || !other || participant.length === 0) return null;
-  const lastReadAt = participant[0]!.lastReadAt;
-  const [latest] = await db.select().from(messages).where(eq(messages.threadId, thread.id)).orderBy(desc(messages.createdAt)).limit(1);
-  const unread = await db
-    .select({ value: sql<number>`count(*)::int` })
-    .from(messages)
-    .where(
-      and(
-        eq(messages.threadId, thread.id),
-        or(isNull(messages.senderUserId), ne(messages.senderUserId, viewerId)),
-        lastReadAt ? gt(messages.createdAt, lastReadAt) : sql`true`,
-      ),
-    );
-  const latestView = latest ? toView(latest, viewerId, context.masking, new Map()) : null;
-  return {
-    summary: {
-      id: thread.id,
-      kind: thread.kind as ThreadKind,
-      title: context.title,
-      otherParty: personOf(other),
-      subject: context.subject,
-      ...(latestView
-        ? {
-            lastMessage: {
-              sender: latestView.sender,
-              kind: latestView.kind,
-              preview: latestView.segments,
-              ...(latestView.event ? { event: latestView.event } : {}),
-              createdAt: latestView.createdAt,
-            },
-          }
-        : {}),
-      unreadCount: unread[0]?.value ?? 0,
-      contactMasking: context.masking,
-    },
-    context,
-    other,
-  };
+  const latestByThread = new Map(latestRows.map((row) => [row.threadId, row]));
+  const unreadByThread = new Map(unreadRows.map((row) => [row.threadId, row.value]));
+  for (const thread of list) {
+    const context = contexts.get(thread.id);
+    const here = people.filter((person) => person.threadId === thread.id);
+    const viewer = here.find((person) => person.user.id === viewerId);
+    const other = here.find((person) => person.user.id !== viewerId)?.user;
+    if (!context || !other || !viewer) continue;
+    const latest = latestByThread.get(thread.id);
+    const latestView = latest ? toView(latest, viewerId, context.masking, new Map()) : null;
+    out.set(thread.id, {
+      summary: {
+        id: thread.id,
+        kind: thread.kind as ThreadKind,
+        title: context.title,
+        otherParty: personOf(other),
+        subject: context.subject,
+        ...(latestView
+          ? {
+              lastMessage: {
+                sender: latestView.sender,
+                kind: latestView.kind,
+                preview: latestView.segments,
+                ...(latestView.event ? { event: latestView.event } : {}),
+                createdAt: latestView.createdAt,
+              },
+            }
+          : {}),
+        unreadCount: unreadByThread.get(thread.id) ?? 0,
+        contactMasking: context.masking,
+      },
+      context,
+      other,
+    });
+  }
+  return out;
+}
+
+async function summaryOf(db: Db, thread: ThreadRow, viewerId: string, now: Date): Promise<Summary | null> {
+  return (await summariesOf(db, [thread], viewerId, now)).get(thread.id) ?? null;
 }
 
 /** Messages (and booking updates) in the viewer's threads that they haven't read yet: the shell's badge. */
@@ -243,8 +285,8 @@ export async function getInbox(db: Db, userId: string, now: Date): Promise<Inbox
     .innerJoin(threads, eq(threads.id, threadParticipants.threadId))
     .where(eq(threadParticipants.userId, userId))
     .orderBy(desc(sql`coalesce(${threads.lastMessageAt}, ${threads.createdAt})`));
-  const summaries = await Promise.all(rows.map(({ thread }) => summaryOf(db, thread, userId, now)));
-  return { threads: summaries.flatMap((item) => (item ? [item.summary] : [])) };
+  const summaries = await summariesOf(db, rows.map(({ thread }) => thread), userId, now);
+  return { threads: rows.flatMap(({ thread }) => { const found = summaries.get(thread.id); return found ? [found.summary] : []; }) };
 }
 
 /** One conversation for a participant (null for anyone else). Opening it marks it read. */
