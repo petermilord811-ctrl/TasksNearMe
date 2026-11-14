@@ -62,7 +62,7 @@ Earlier runs had two e2e checks that flake under machine load and pass on retry;
 | T-03 Declined card, then a good card | Covered | e2e `booking`; integration `bookings` |
 | T-04 Bank check completed, or abandoned | Covered | integration `bookings`, `launch-gaps` |
 | T-05 Double tap and two tabs | Covered | integration `double-submit` (found and fixed four ways to charge twice) |
-| T-06 Webhook ordering | Needs a real provider | Stripe webhooks: the handler comes with the Stripe adapter (`docs/integration-points.md`) |
+| T-06 Webhook ordering | Covered (signed test events, a fake Stripe) | integration `webhook-ordering`: through the webhook inbox, the webhook before and after the client's return from the bank, the same event three times in a row and three times at once, the webhook and the client at the same moment, and `payment_failed` after `succeeded` all end the same way (one confirmed booking, one charge, one saved card, one confirmation, the client told it's booked); also `webhook-inbox`, `stripe-payments` |
 | T-07 Invite holds | Covered | integration `invites` (holds released after a counter and a cancel) |
 | T-08, T-09 Client cancels early or late | Covered | integration `booking-sheets`, `earnings`, `welcome-reward` |
 | T-10 Helper cancels | Covered | e2e `after-cancel`; integration `after-cancel`, `booking-sheets` |
@@ -72,18 +72,18 @@ Earlier runs had two e2e checks that flake under machine load and pass on retry;
 | T-15 Change requests | Covered | e2e `changes`; integration `changes`, `launch-gaps`, `double-submit` |
 | T-16 Hourly with a cap | Covered | integration `money-scenarios` ($154.00, $19.25, $110.25; 4.5 h blocked until a funded cap increase) |
 | T-17 Expense allowance | Covered | integration `money-scenarios` ($86.00, $8.00 apart, $12.00 back) |
-| T-18 Chargebacks | Needs a real provider | Stripe disputes |
-| T-19 Payout failure | Needs a real provider | Stripe's failing test bank account; the "Action needed" screens exist |
+| T-18 Chargebacks | Covered (signed test events, a fake Stripe) | integration `chargebacks`: before approval the helper's earnings are held until the dispute is won; after the payout the helper keeps the money and a lost chargeback is a balanced `chargeback_loss` journal in the ledger, once; finance (and admins) download the evidence pack from the staff booking page, audited, and nobody else can; also `stripe-payments`, `transfer-reversals`, unit `admin-booking-screen`. The hold, the ledger (migration 0051) and the evidence pack were built for it |
+| T-19 Payout failure | Covered (signed test events) | integration `payout-failure`, proven on the earnings page's data: "Action needed" after `payout.failed`, gone once the next payout after the bank update (`account.updated`) is paid, with the same money; a payout returned days after it was paid; payout events out of order; also `stripe-connect`, `staff-payments` |
 | T-20 Address privacy | Covered | e2e `address-privacy`, `booking-page`; integration `booking-hub`, `staff-money`, `uploads` (no EXIF) |
 | T-21 Contact masking | Covered | e2e `messaging`; integration `messaging` |
 | T-22 Welcome reward | Covered (fake gift cards) | integration `welcome-reward`, `rewards` |
 | T-23 Repeat reward | Covered | integration `rewards`, `monthly-cap` |
 | T-24 Stacking | Not built by design | The acceptance and completion programs are off at launch (blueprint 05); one reward per booking is enforced by an index |
 | T-25 Self-dealing pair | Covered | integration `reward-risk` |
-| T-26 Budget under concurrency | Partly | The founding-cohort cap can't be exceeded (each helper's rank is fixed); no parallel test |
+| T-26 Budget under concurrency | Covered | integration `reward-budget`: 50 parallel qualifications against a budget for 10 make exactly 10 grants, a voided grant's share goes to exactly one more helper, and the founding cohort's last 10 numbers go to exactly 10 of 50 helpers at once; also `welcome-reward`, `monthly-cap`, `founding` |
 | T-27 Rewards and reviews | Covered | integration `reward-risk` |
 | T-28 Staff limits | Covered | e2e `refund-approval`; integration `refund-approval`, `launch-gaps`, `strike-reversal` |
-| T-29 Notifications | Partly | Email and texts by preference with quiet hours: e2e `notification-delivery`, integration `notification-delivery`. Web push isn't built |
+| T-29 Notifications | Covered, push through a stand-in push service | Email and texts by preference with quiet hours: e2e `notification-delivery`, integration `notification-delivery`. Web push (built in plan 3.5): integration `push` (every device of the person, quiet hours with urgent updates at once, devices the push service says are gone forgotten, never tips and news), unit `web-push` (RFC 8291 encryption, VAPID) and `delivery-domain`, component `push-device`. Not covered: a real browser's push service and the service worker (`public/sw.js`) showing the notification (no e2e). Push has one switch per device rather than per-topic preferences, by design |
 | T-30 Daylight saving | Covered | unit `bookings/dst`, `notifications/delivery-domain` |
 
 The scenario tests found real bugs, and each one is fixed:
@@ -91,6 +91,10 @@ The scenario tests found real bugs, and each one is fixed:
 - **Charging twice (T-05):** a double tap, a second tab, a double-paid change difference, or a double-accepted rebooking proposal each charged the card twice.
 - **Daylight saving (T-30):** on the night the clocks fall back, the offer form listed 1:00 and 1:30 twice.
 - **Rejected rewards (T-25):** a reward staff rejected after review came back on the next visit.
+- **Webhooks at the same moment (T-06):** when Stripe's webhook and the client's return from the bank finished a payment at once, the booking was confirmed two or three times (as many saved cards, messages and confirmations); a client whose webhook got there first was told the booking failed, and a declined one wasn't told why.
+- **Chargebacks (T-18):** a chargeback opened before approval didn't hold the helper's earnings, and a lost one left no record of the platform's loss.
+- **Payout failure (T-19):** "Action needed" never went away after one failed payout, a payout that failed after it was paid kept its earnings "paid out", and a late payout event moved a paid payout back to "in transit".
+- **Reward budgets (T-26):** the welcome program's budget was only shown to staff, never enforced: 50 helpers qualifying at once got 50 grants against a budget for 10.
 
 ## Not done, and why
 
