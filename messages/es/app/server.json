@@ -229,7 +229,7 @@
       "reward_earned": "Tu tarjeta de regalo de bienvenida{hasAmount, select, yes { de {amount}} other {}} es tuya: pasaste las verificaciones de teléfono, identidad y antecedentes.",
       "reward_ready": "Tu tarjeta de regalo{hasAmount, select, yes { de {amount}} other {}} está lista. Elige tu tarjeta en tu página de Recompensas.",
       "community_reply": "{actorName} respondió a tu publicación: {title}.",
-      "community_answer_pinned": "{actorName} fijó tu respuesta en: {title}.",
+      "community_answer_pinned": "{actorName} fijó tu respuesta en la publicación: {title}.",
       "community_helpful": "{count, plural, one {A un vecino le resultó útil tu {on, select, reply {respuesta} other {publicación}}: {title}} other {A # vecinos les resultó útil tu {on, select, reply {respuesta} other {publicación}}: {title}}}.",
       "question_received": "{actorName} hizo una pregunta sobre {title}.",
       "question_answered": "{actorName} respondió tu pregunta sobre {title}."
