@@ -14,8 +14,8 @@ stopgap until the Render setup in the blueprint (07-architecture.md "Hosting", b
    `gh workflow run ci.yml --ref feat/<branch> -f deploy=true`. A push straight to `main` ships too. The quick
    checks and the e2e suite run side by side. The e2e suite runs against the e2e production build in 3 parallel
    shards, each with its own Postgres, so it takes no lock and touches no dev database. Tick **e2e** without
-   **Ship** to run the suite on any branch without deploying. Failed tests leave their traces as the run's
-   `e2e-results-<n>` artifacts.
+   **Ship** to run the suite on any branch without deploying. Failed and flaky tests (passed on retry) leave
+   their traces as the run's `e2e-results-<n>` artifacts, kept 5 days.
 3. When every job is green and `main` can fast-forward to the branch, the ship job sends the build packed by
    `scripts/preview/bundle.sh` over SSH: `ssh tnm-preview@<vps> "deploy <sha>" < preview-bundle.tgz`.
 4. Only after that deploy passes its health check does the run fast-forward `main` to the commit, so `main`

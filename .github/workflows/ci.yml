@@ -172,13 +172,16 @@ jobs:
       - name: e2e shard ${{ matrix.shard }} of 3
         run: npx playwright test --project=app-mobile --project=app-desktop --shard=${{ matrix.shard }}/3 --reporter=line,github
 
-      - name: Traces and screenshots of failed tests
-        if: failure()
+      # Traces are recorded on a test's retry only (playwright.config.ts), so this holds just the failed and flaky
+      # tests, and a shard where every test passed first time uploads nothing. A flaky test is diagnosable from the
+      # one run that caught it.
+      - name: Traces of failed and flaky tests
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: e2e-results-${{ matrix.shard }}
           path: test-results/
-          retention-days: 7
+          retention-days: 5
           if-no-files-found: ignore
 
   ship:
