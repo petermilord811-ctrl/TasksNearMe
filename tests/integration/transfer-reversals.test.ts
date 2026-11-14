@@ -1,4 +1,4 @@
-import { and, eq, like } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { StripeConnect } from '@/integrations/payments/stripe-connect';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
@@ -43,7 +43,8 @@ afterAll(async () => {
   await db.delete(supportCases).where(eq(supportCases.id, 'case_rev_1'));
   await db.delete(bookingTerms).where(eq(bookingTerms.id, 'btm_rev_1'));
   await db.delete(bookings).where(eq(bookings.id, BOOKING));
-  await db.delete(tasks).where(like(tasks.id, 'tsk\\_rev\\_%'));
+  // Only this file's task: another file's `tsk_rev_…` rows (offers on them) aren't ours to remove.
+  await db.delete(tasks).where(eq(tasks.id, 'tsk_rev_1'));
   await pool.end();
 });
 
