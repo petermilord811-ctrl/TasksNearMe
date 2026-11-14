@@ -535,7 +535,12 @@ async function switchHold(deps: BookingDeps, invite: InviteRow, oldPaymentId: st
 /** After the dev bank dialog on a higher hold for a counter. */
 export async function finishCounterVerification(deps: BookingDeps, posterId: string, inviteId: string, paymentId: string, outcome: 'approved' | 'failed', now: Date): Promise<PaymentAttemptResult> {
   const invite = await ownInvite(deps.db, deps.payments, posterId, inviteId, 'poster', now);
-  const [payment] = await deps.db.select().from(payments).where(and(eq(payments.id, String(paymentId)), eq(payments.payerUserId, posterId), eq(payments.purpose, 'invite_authorization'))).limit(1);
+  // The payment must be this invite's own new hold (its key names the invite), not another invite's bank step.
+  const [payment] = await deps.db
+    .select()
+    .from(payments)
+    .where(and(eq(payments.id, String(paymentId)), eq(payments.payerUserId, posterId), eq(payments.purpose, 'invite_authorization'), eq(payments.idempotencyKey, `invite:${String(inviteId)}:${String(paymentId)}`)))
+    .limit(1);
   if (!invite || invite.status !== 'countered' || !payment?.providerRef || payment.status !== 'requires_confirmation' || !invite.paymentId) return { ok: false, code: 'not_allowed' };
   const completed = await deps.payments.completeAction({ providerRef: payment.providerRef, outcome });
   if (completed.status !== 'succeeded') {
