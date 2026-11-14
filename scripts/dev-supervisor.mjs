@@ -9,6 +9,11 @@
  *   so it can never push the rest of the machine into swap.
  * - Restarts it at a safe point (the heavy-work lock is free) once its memory passes DEV_RESTART_AT_MB
  *   (default 3000), and after it exits for any reason.
+ * - Also restarts it, with the lock free, once it has been idle for DEV_IDLE_MINUTES (default 20; 0 turns this
+ *   off) while holding more than DEV_IDLE_RESTART_AT_MB (default 1500). Idle means it wrote nothing to its log:
+ *   it logs every request it serves, and its compiles and errors. Turbopack never gives memory back, so an idle
+ *   server kept 1.5–3 GB for nobody. A fresh one holds under 1 GB until it's used again, and its first page
+ *   recompiles from the disk cache.
  * - Restarts it at once when the heavy-lock holder asks (automation/dev-restart.request, written by
  *   scripts/lib/dev-restart.mjs): `heavy.mjs --fresh-dev` does so before a test run, the gate before each
  *   shard against the dev server. Writes its pid to automation/dev-supervisor.pid so callers can tell it's running.
@@ -27,6 +32,8 @@ import { PAUSE_REQUEST, RESTART_REQUEST, SUPERVISOR_PID } from './lib/dev-restar
 const root = path.resolve(import.meta.dirname, '..');
 const port = Number(process.env.PORT ?? 3000);
 const restartAtMb = Number(process.env.DEV_RESTART_AT_MB ?? 3000);
+const idleRestartAtMb = Number(process.env.DEV_IDLE_RESTART_AT_MB ?? 1500);
+const idleMinutes = Number(process.env.DEV_IDLE_MINUTES ?? 20);
 const memoryMax = process.env.DEV_MEMORY_MAX ?? '5G';
 const swapMax = process.env.DEV_SWAP_MAX ?? '1G';
 const heapMb = Number(process.env.DEV_HEAP_MB ?? 2560);
@@ -34,7 +41,30 @@ const lockPath = path.join(root, 'automation/heavy.lock');
 const logPath = path.join(root, 'automation/logs/dev-server.log');
 fs.mkdirSync(path.dirname(logPath), { recursive: true });
 
-const say = (line) => fs.appendFileSync(logPath, `[supervisor ${new Date().toISOString()}] ${line}\n`);
+function logSize() {
+  try {
+    return fs.statSync(logPath).size;
+  } catch {
+    return 0;
+  }
+}
+
+/** The server's last output (the log grew), which is how idleness is told; the supervisor's own lines don't count. */
+let lastActivity = Date.now();
+let seenLogSize = logSize();
+function noteActivity() {
+  const size = logSize();
+  if (size !== seenLogSize) {
+    seenLogSize = size;
+    lastActivity = Date.now();
+  }
+}
+
+const say = (line) => {
+  noteActivity(); // the server's output since the last check counts, the line written next doesn't
+  fs.appendFileSync(logPath, `[supervisor ${new Date().toISOString()}] ${line}\n`);
+  seenLogSize = logSize();
+};
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function portBusy() {
@@ -142,7 +172,9 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 }
 
 fs.writeFileSync(SUPERVISOR_PID, String(process.pid));
-say(`supervisor up: restart at ${restartAtMb} MB when no heavy job runs, or when the lock holder asks`);
+say(
+  `supervisor up: restart at ${restartAtMb} MB when no heavy job runs${idleMinutes > 0 ? `, or at ${idleRestartAtMb} MB after ${idleMinutes} idle minutes` : ''}, or when the lock holder asks`,
+);
 let lastMemoryCheck = 0;
 let pausedFor = null;
 for (;;) {
@@ -169,6 +201,7 @@ for (;;) {
     }
     child = startServer();
     exited = false;
+    lastActivity = Date.now();
     child.on('exit', (code, signal) => {
       exited = true;
       say(`server exited (${signal ?? `code ${code}`})`);
@@ -182,9 +215,16 @@ for (;;) {
   let reason = fs.existsSync(RESTART_REQUEST) ? 'requested by the heavy-lock holder' : null;
   if (!reason && Date.now() - lastMemoryCheck > 20_000) {
     lastMemoryCheck = Date.now();
+    noteActivity();
     const pid = listenerPid();
     const used = pid ? memoryMb(pid) : 0;
-    if (used > restartAtMb && !heavyJobRunning()) reason = `${used} MB with no heavy job running`;
+    const idleMs = Date.now() - lastActivity;
+    if (!heavyJobRunning()) {
+      if (used > restartAtMb) reason = `${used} MB with no heavy job running`;
+      else if (idleMinutes > 0 && used > idleRestartAtMb && idleMs > idleMinutes * 60_000) {
+        reason = `${used} MB after ${Math.round(idleMs / 60_000)} idle minutes`;
+      }
+    }
   }
   if (reason) {
     say(`restarting: ${reason}`);

@@ -45,3 +45,7 @@ automation/dev-supervisor.pid
 
 # Local file storage (uploads in development)
 /.data/
+
+# Claude Code's agent worktrees (full copies of the repo). Ignored here so Tailwind's source scan and
+# git status skip them; ESLint ignores them too (eslint.config.mjs). TypeScript's `**` skips dot-folders.
+/.claude/worktrees/

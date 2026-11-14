@@ -1,0 +1,32 @@
+{
+  // Build output, screenshots and logs change all the time (Turbopack, builds, preview runs, the dev server's
+  // log), and watching them only fed the editor's file watcher, TypeScript and git a stream of events. The route
+  // types in .next/types and .next/dev/types stay watched, so the editor's TypeScript sees new routes. The first
+  // four entries are VS Code's defaults, repeated so they stay in effect.
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/.hg/store/**": true,
+    "**/node_modules/*/**": true,
+    "**/.next/cache/**": true,
+    "**/.next/server/**": true,
+    "**/.next/static/**": true,
+    "**/.next/build/**": true,
+    "**/.next/standalone/**": true,
+    "**/.next/diagnostics/**": true,
+    "**/.next/dev/cache/**": true,
+    "**/.next/dev/server/**": true,
+    "**/.next/dev/static/**": true,
+    "**/.next/dev/logs/**": true,
+    "**/artifacts/**": true,
+    "**/automation/logs/**": true,
+    "**/automation/runs/**": true,
+    "**/test-results/**": true,
+    "**/playwright-report/**": true,
+    "**/blob-report/**": true,
+    "**/coverage/**": true,
+    "**/.data/**": true,
+    "**/.npm-cache/**": true,
+    "**/.claude/worktrees/**": true
+  }
+}

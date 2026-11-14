@@ -10,6 +10,14 @@ const HIDE_DEV_OVERLAY = 'nextjs-portal { display: none !important; }';
 const SHARDS = 4;
 const PER_PREVIEW_MS = 15_000;
 
+/**
+ * Each shard moves to a fresh page after this many previews. A new page gets a new renderer process. One page
+ * kept for a whole shard grew its renderer by about 16 MB a preview, and four such pages ran the 7.7 GB VPS
+ * out of memory (2026-11-14). Measured on the same 120 previews: one page peaked at 2.2 GB, a fresh page every
+ * 25 at 973 MB, every 10 at 689 MB, all at the same speed.
+ */
+const PREVIEWS_PER_PAGE = 10;
+
 const fileFor = (id: string) => `${id.replaceAll('/', '__')}.png`;
 
 /**
@@ -42,7 +50,8 @@ function removeStaleScreenshots(outDir: string, ids: string[]) {
  * screenshot per preview and viewport to artifacts/ui-previews/<project>/<id>.png.
  */
 for (let shard = 0; shard < SHARDS; shard += 1) {
-  test(`UI previews render, pass axe, and are captured (part ${shard + 1} of ${SHARDS})`, async ({ page }, testInfo) => {
+  test(`UI previews render, pass axe, and are captured (part ${shard + 1} of ${SHARDS})`, async ({ page: firstPage, context }, testInfo) => {
+    let page = firstPage;
     const ids = await listPreviewIds(page);
     test.skip(ids.length === 0, 'No previews registered yet');
     const mine = ids.filter((_, index) => index % SHARDS === shard);
@@ -52,15 +61,23 @@ for (let shard = 0; shard < SHARDS; shard += 1) {
     removeStaleScreenshots(outDir, ids);
 
     let errors: string[] = [];
-    page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
-    page.on('console', (message) => {
-      // The machine's network changing mid-run is not an app error.
-      if (message.type() === 'error' && !message.text().includes('net::ERR_NETWORK_CHANGED')) {
-        errors.push(`console.error: ${message.text()}`);
-      }
-    });
+    const collectErrors = (target: Page) => {
+      target.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
+      target.on('console', (message) => {
+        // The machine's network changing mid-run is not an app error.
+        if (message.type() === 'error' && !message.text().includes('net::ERR_NETWORK_CHANGED')) {
+          errors.push(`console.error: ${message.text()}`);
+        }
+      });
+    };
+    collectErrors(page);
 
-    for (const id of mine) {
+    for (const [index, id] of mine.entries()) {
+      if (index > 0 && index % PREVIEWS_PER_PAGE === 0) {
+        await page.close();
+        page = await context.newPage();
+        collectErrors(page);
+      }
       await test.step(id, async () => {
         errors = [];
         await page.goto(`${BASE}/dev/ui/${id.split('/').map(encodeURIComponent).join('/')}`);

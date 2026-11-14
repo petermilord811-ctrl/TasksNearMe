@@ -45,6 +45,8 @@ const eslintConfig = defineConfig([
     'playwright-report/**',
     'test-results/**',
     '.scaffold-tmp/**',
+    // Claude Code's agent worktrees: full copies of the repo, each checked in its own tree.
+    '.claude/**',
   ]),
   {
     // `_`-prefixed parameters are intentionally unused (e.g. a bound Server Action argument).

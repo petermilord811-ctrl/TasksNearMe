@@ -29,12 +29,16 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   use: {
     baseURL,
-    trace: 'retain-on-failure',
+    // Traced only on the retry. Recording every first attempt (screencast, DOM snapshots) cost CPU and memory on
+    // every run; a failing test is always retried once, so it still leaves a trace.
+    trace: 'on-first-retry',
   },
   webServer:
     target === 'build'
-      ? // Answers once the e2e build is up: a normal build has no /dev and never gets there.
-        { command: 'npm run e2e:serve', url: `${baseURL}/dev/sign-in`, reuseExistingServer: !process.env.CI, timeout: 120_000 }
+      ? // Answers once the e2e build is up: a normal build has no /dev and never gets there. Never reuses a server
+        // already on the port: an orphaned `e2e:serve` from an earlier run served a stale build (missing CSS
+        // chunks, old content), so a leftover server now fails the run instead.
+        { command: 'npm run e2e:serve', url: `${baseURL}/dev/sign-in`, reuseExistingServer: false, timeout: 120_000 }
       : {
           command: 'npm run dev',
           // The preview gallery needs no database, so the UI harness can start without one.
@@ -47,12 +51,14 @@ export default defineConfig({
       name: 'ui-mobile',
       testMatch: /ui-previews\/.*\.spec\.ts/,
       // Settled states: screenshots and axe see final frames, not animations in flight.
-      use: { ...devices['Pixel 7'], viewport: { width: 360, height: 800 }, reducedMotion: 'reduce' },
+      // No trace: one test walks a few hundred previews, so a trace ran past 80 MB. A failure names the preview
+      // and its error, and /dev/ui/<id> shows it.
+      use: { ...devices['Pixel 7'], viewport: { width: 360, height: 800 }, reducedMotion: 'reduce', trace: 'off' },
     },
     {
       name: 'ui-desktop',
       testMatch: /ui-previews\/.*\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce', trace: 'off' },
     },
     {
       // Reseeds the dev database before the app flows, and again after them (tests/e2e/support/reset.ts).
