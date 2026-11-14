@@ -69,7 +69,7 @@
     "welcomeEyebrow": "Tarjeta de regalo de bienvenida",
     "welcomeChecks": {
       "phone": "Verifica tu teléfono",
-      "identity": "Verifica tu identificación",
+      "identity": "Verifica tu identidad",
       "background": "Pasa una verificación de antecedentes"
     },
     "welcomeCta": "Empieza y gana {amount}",

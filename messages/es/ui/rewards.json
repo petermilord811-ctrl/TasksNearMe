@@ -31,10 +31,10 @@
     },
     "rules": {
       "title": "Cómo funcionan las recompensas",
-      "welcome": "Tarjeta de regalo de {amount} cuando pasan tus verificaciones de teléfono, identificación y antecedentes. No necesitas una reserva.",
+      "welcome": "Tarjeta de regalo de {amount} cuando pasan tus verificaciones de teléfono, identidad y antecedentes. No necesitas una reserva.",
       "repeat": "{amount} por tu tercera reserva pagada con el mismo cliente en un plazo de 90 días.",
       "repeatThreshold": "Cada reserva que califique debe tener un precio de tarea de {threshold} o más.",
-      "hold": "Las recompensas por reservas tienen una espera de 7 días después de que el trabajo se completa y se paga. Las tarjetas de regalo de bienvenida pasan antes por una revisión rápida de nuestro equipo.",
+      "hold": "Las recompensas por reservas tienen una espera de 7 días después de que la tarea se completa y se paga. Las tarjetas de regalo de bienvenida pasan antes por una revisión rápida de nuestro equipo.",
       "expiry": "Canjéala dentro de los 90 días posteriores a que la recompensa esté lista para canjear.",
       "giftCards": "Las recompensas son tarjetas de regalo, no ganancias",
       "terms": "Leer los términos de las recompensas",
@@ -131,7 +131,7 @@
     "checksLabel": "Las verificaciones que la ganan",
     "checks": {
       "phone": "Teléfono",
-      "identity": "Identificación",
+      "identity": "Identidad",
       "background": "Antecedentes"
     },
     "states": {

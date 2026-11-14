@@ -218,7 +218,7 @@
       "replacement_search_started": "{actorName} canceló {title}. Tu tarea vuelve a estar abierta a ofertas y avisamos a los ayudantes cercanos.",
       "badge_earned": "{tier, plural, =1 {Ganaste una insignia: {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}}} other {Tu insignia {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}} subió al nivel #}}.",
       "city_open": "TasksNearMe ya está en {title}. Elige tu vecindario para empezar a recibir tareas.",
-      "reward_earned": "Tu tarjeta de regalo de bienvenida{hasAmount, select, yes { de {amount}} other {}} es tuya: pasaste las verificaciones de teléfono, identificación y antecedentes.",
+      "reward_earned": "Tu tarjeta de regalo de bienvenida{hasAmount, select, yes { de {amount}} other {}} es tuya: pasaste las verificaciones de teléfono, identidad y antecedentes.",
       "reward_ready": "Tu tarjeta de regalo{hasAmount, select, yes { de {amount}} other {}} está lista. Elige tu tarjeta en tu página de Recompensas."
     },
     "pushTitle": "TasksNearMe"
@@ -244,7 +244,7 @@
         "label": "tarjeta de regalo",
         "checks": {
           "phone": "Teléfono",
-          "identity": "Identificación",
+          "identity": "Identidad",
           "background": "Antecedentes"
         },
         "for": "Para cada ayudante que pasa nuestras tres verificaciones. Sin lugares limitados y sin necesidad de una primera tarea.",
@@ -267,7 +267,7 @@
           "body": "Un código de seis dígitos por mensaje de texto."
         },
         "identity": {
-          "title": "Verifica tu identificación",
+          "title": "Verifica tu identidad",
           "body": "Fotos de tu identificación y una selfie, revisadas por nuestro equipo y nuestro socio de verificación."
         },
         "background": {
