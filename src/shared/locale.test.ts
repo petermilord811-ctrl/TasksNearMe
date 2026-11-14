@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { localizedPath, negotiateLocale, pickLocale, splitLocalePath } from './locale';
+import { languageAlternatePaths, localizedPath, negotiateLocale, pickLocale, splitLocalePath } from './locale';
 
 describe('splitLocalePath', () => {
   it('finds a language prefix and the path after it', () => {
@@ -21,6 +21,13 @@ describe('localizedPath', () => {
     expect(localizedPath('/pricing', 'es')).toBe('/es/pricing');
     expect(localizedPath('/', 'es')).toBe('/es');
     expect(localizedPath('/pricing', 'en')).toBe('/pricing');
+  });
+});
+
+describe('languageAlternatePaths', () => {
+  it('names every language by hreflang, with English as the default for everyone else', () => {
+    expect(languageAlternatePaths('/pricing')).toEqual({ 'en-US': '/pricing', 'es-US': '/es/pricing', 'x-default': '/pricing' });
+    expect(languageAlternatePaths('/')).toEqual({ 'en-US': '/', 'es-US': '/es', 'x-default': '/' });
   });
 });
 

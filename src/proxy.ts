@@ -6,6 +6,7 @@ import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS, pickLocale, splitLocalePath } fro
 import { isLocalRequest } from '@/shared/local-request';
 import { contentSecurityPolicy, cspHeaderName } from '@/shared/csp';
 import { E2E_BUILD } from '@/shared/dev-helpers';
+import { robotsHeaderFor, searchIndexing } from '@/shared/search-indexing';
 
 /**
  * Every page request passes here (API routes, Next's own files and anything with a file extension don't).
@@ -54,6 +55,10 @@ export function proxy(request: NextRequest) {
   // The Content Security Policy for every page (src/shared/csp.ts): enforced in production, reported in development.
   const development = process.env.NODE_ENV !== 'production';
   response.headers.set(cspHeaderName(development), contentSecurityPolicy({ development, mapStyleUrl: process.env.MAP_STYLE_URL, plainHttp: E2E_BUILD }));
+  // Search engines (src/shared/search-indexing.ts): only the live site is indexed, its listings only in the `on` mode,
+  // and signed-in and staff pages never, whatever their own metadata says.
+  const robots = robotsHeaderFor(searchIndexing(), path);
+  if (robots) response.headers.set('X-Robots-Tag', robots);
   return response;
 }
 

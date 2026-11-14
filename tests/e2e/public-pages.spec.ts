@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 test.describe('public pages', () => {
   test('home: the landing page from the database', async ({ page }, testInfo) => {
     await page.goto('/');
-    await expect(page).toHaveTitle(/everyday help from people near you in Austin/);
+    await expect(page).toHaveTitle('TasksNearMe: tasks near me, done by trusted local helpers');
     await expect(page.getByRole('heading', { level: 1, name: 'Everyday tasks, done by people nearby.' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Furniture assembly/ }).first()).toBeVisible();
     // The fee example comes from the fee engine and the published policy (the spoken values are final at once).
@@ -60,7 +60,7 @@ test.describe('public pages', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Everyday help in Austin' })).toBeVisible();
 
     await page.goto('/austin/furniture-assembly');
-    await expect(page).toHaveTitle('Furniture assembly in Austin · TasksNearMe');
+    await expect(page).toHaveTitle('Furniture assembly near you in Austin · TasksNearMe');
     await expect(page.getByRole('heading', { level: 1, name: 'Furniture assembly in Austin' })).toBeVisible();
   });
 

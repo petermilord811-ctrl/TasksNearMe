@@ -23,6 +23,20 @@ export function localizedPath(path: string, locale: AppLocale): string {
   return path === '/' ? `/${locale}` : `/${locale}${path}`;
 }
 
+/** Each language's hreflang code for search engines: US English and US Spanish (as INTL_LOCALES formats them). */
+const HREFLANG = { en: 'en-US', es: 'es-US' } as const satisfies Record<AppLocale, string>;
+export type Hreflang = (typeof HREFLANG)[AppLocale] | 'x-default';
+
+/**
+ * A public page's path in every language, by hreflang: "/x" in English, which is also the default (x-default) for
+ * everyone else, and "/es/x" in Spanish. One source for the pages' language links (src/i18n/metadata.ts) and the
+ * sitemap's (src/modules/seo), which search engines expect to agree.
+ */
+export function languageAlternatePaths(path: string): Record<Hreflang, string> {
+  const byLanguage = Object.fromEntries(APP_LOCALES.map((locale) => [HREFLANG[locale], localizedPath(path, locale)]));
+  return { ...byLanguage, 'x-default': localizedPath(path, DEFAULT_LOCALE) } as Record<Hreflang, string>;
+}
+
 /**
  * The best of our languages for an Accept-Language header, by quality, matching on the primary subtag
  * ("es-MX" → es). A wildcard or nothing we offer → English.

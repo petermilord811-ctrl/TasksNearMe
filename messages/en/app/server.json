@@ -6,15 +6,15 @@
   },
   "meta": {
     "home": {
-      "title": "TasksNearMe: everyday help from people near you in {market}",
-      "description": "Book trusted local help in {market} for furniture assembly, moving, yard work, light cleaning, and computer help. See the full price before you book."
+      "title": "TasksNearMe: tasks near me, done by trusted local helpers",
+      "description": "Get everyday tasks done by verified helpers near you: furniture assembly, moving, yard work, cleaning, and computer help. See the full price before you book. Now in {market}."
     },
     "market": {
-      "title": "Local help in {market}",
+      "title": "Help with tasks near you in {market}",
       "description": "Verified helpers in {market} for furniture assembly, moving help, yard cleanup, light cleaning, and computer help."
     },
     "category": {
-      "title": "{category} in {market}",
+      "title": "{category} near you in {market}",
       "description": "{category} in {market}: typical prices, what's included, and verified local helpers."
     },
     "howItWorks": {
@@ -22,7 +22,7 @@
       "description": "Post a task, choose a helper, and approve the work. Or set up your profile and make offers on tasks near you."
     },
     "becomeHelper": {
-      "title": "Become a helper",
+      "title": "Earn money doing tasks near you",
       "description": "Earn with your everyday skills. See what you'll earn before you accept a task."
     },
     "pricing": {
@@ -46,11 +46,23 @@
       "description": "Answers about posting tasks, payments and fees, getting verified as a helper, and staying safe."
     },
     "taskBoard": {
-      "title": "Open tasks in {market}",
+      "title": "Open tasks near you in {market}",
       "description": "Local tasks people need help with in {market}: furniture assembly, moving, yard work, cleaning, and computer help."
     },
     "copyCode": {
       "title": "Copy your sign-in code"
+    },
+    "categoryNames": {
+      "furniture-assembly": "Furniture assembly",
+      "moving-help": "Moving help",
+      "yard-cleanup": "Yard cleanup",
+      "light-cleaning": "Light cleaning",
+      "computer-help": "Computer and phone help"
+    },
+    "site": {
+      "description": "Book trusted local help for everyday tasks from verified people near you, and see the full price before you book.",
+      "tagline": "Everyday help from people near you",
+      "shareImageAlt": "TasksNearMe: everyday help from people near you"
     }
   },
   "support": {

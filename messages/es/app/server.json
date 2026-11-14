@@ -6,15 +6,15 @@
   },
   "meta": {
     "home": {
-      "title": "TasksNearMe: ayuda cotidiana de personas cerca de ti en {market}",
-      "description": "Reserva ayuda local de confianza en {market} para armado de muebles, mudanzas, trabajo de jardín, limpieza ligera y ayuda con computadoras. Ve el precio completo antes de reservar."
+      "title": "TasksNearMe: tareas cerca de ti, con ayudantes de confianza",
+      "description": "Haz tus tareas de todos los días con ayudantes verificados cerca de ti: armado de muebles, mudanzas, jardín, limpieza y ayuda con computadoras. Ve el precio completo antes de reservar. Ya en {market}."
     },
     "market": {
-      "title": "Ayuda local en {market}",
+      "title": "Ayuda con tareas cerca de ti en {market}",
       "description": "Ayudantes verificados en {market} para armado de muebles, ayuda con mudanzas, limpieza de jardín, limpieza ligera y ayuda con computadoras."
     },
     "category": {
-      "title": "{category} en {market}",
+      "title": "{category} cerca de ti en {market}",
       "description": "{category} en {market}: precios habituales, qué incluye y ayudantes locales verificados."
     },
     "howItWorks": {
@@ -22,7 +22,7 @@
       "description": "Publica una tarea, elige a tu ayudante y aprueba el trabajo. O crea tu perfil y haz ofertas en tareas cerca de ti."
     },
     "becomeHelper": {
-      "title": "Conviértete en ayudante",
+      "title": "Gana dinero haciendo tareas cerca de ti",
       "description": "Gana dinero con tus habilidades de todos los días. Ve cuánto ganarás antes de aceptar una tarea."
     },
     "pricing": {
@@ -46,11 +46,23 @@
       "description": "Respuestas sobre cómo publicar tareas, pagos y tarifas, cómo verificarte como ayudante y cómo mantenerte seguro."
     },
     "taskBoard": {
-      "title": "Tareas abiertas en {market}",
+      "title": "Tareas abiertas cerca de ti en {market}",
       "description": "Tareas locales en {market} para las que la gente necesita ayuda: armado de muebles, mudanzas, trabajo de jardín, limpieza y ayuda con computadoras."
     },
     "copyCode": {
       "title": "Copia tu código para iniciar sesión"
+    },
+    "categoryNames": {
+      "furniture-assembly": "Armado de muebles",
+      "moving-help": "Ayuda con mudanzas",
+      "yard-cleanup": "Limpieza de jardín",
+      "light-cleaning": "Limpieza ligera",
+      "computer-help": "Ayuda con computadoras y teléfonos"
+    },
+    "site": {
+      "description": "Reserva ayuda local de confianza para las tareas de todos los días, con personas verificadas cerca de ti, y ve el precio completo antes de reservar.",
+      "tagline": "Ayuda cotidiana de personas cerca de ti",
+      "shareImageAlt": "TasksNearMe: ayuda cotidiana de personas cerca de ti"
     }
   },
   "support": {

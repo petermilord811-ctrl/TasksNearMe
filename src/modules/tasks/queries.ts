@@ -196,6 +196,23 @@ export async function listRecentOpenTasks(
   return rows.map((row) => toTaskPublicView(toRow(row)));
 }
 
+/**
+ * The sitemap's tasks in a market: the ones the board lists (open, not past, not hidden), newest first, with their
+ * category and last change. Closed tasks stay reachable but are noindex, so they're left out.
+ */
+export async function listOpenTaskDates(
+  db: Db,
+  options: { marketId: string; now: Date; limit: number },
+): Promise<{ slug: string; categorySlug: string; updatedAt: Date }[]> {
+  return db
+    .select({ slug: tasks.slug, categorySlug: categories.slug, updatedAt: tasks.updatedAt })
+    .from(tasks)
+    .innerJoin(categories, eq(categories.id, tasks.categoryId))
+    .where(and(...openIn(options.marketId, options.now)))
+    .orderBy(desc(tasks.publishedAt), asc(tasks.id))
+    .limit(options.limit);
+}
+
 /** A task anyone may see by its slug (drafts never), and whether it still takes offers. */
 export async function findPublicTask(
   db: Db,

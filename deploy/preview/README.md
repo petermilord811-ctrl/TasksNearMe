@@ -68,6 +68,35 @@ database, `preview.env` and the Caddy block by hand. To set it up again, follow 
   up to date on every deploy. To refresh it between deploys, from the repo with the preview's `DATABASE_URL` and
   `FIELD_ENCRYPTION_KEY` in the environment: `npm run db:demo`.
 
+## Search engines
+
+What Google may index is set in the code, `LIVE_SITE_INDEXING` in `src/shared/search-indexing.ts`, so it ships
+with each deploy and no server setting is needed. It applies to a production build whose `APP_URL` is
+`https://tasksnearme.com`; every other copy (the dev server, the e2e build, a staging server) stays out of search.
+
+- `site`, the owner's choice (2026-11-14) while the preview shows sample tasks and helpers: the site's own pages are
+  indexed (home, markets, categories, task boards, how it works, pricing, becoming a helper, trust and safety,
+  help); task pages and helper profiles answer `noindex` and the sitemap leaves them out.
+- `on`: every public page (launch, once the sample data is gone). Change the constant and its test, and deploy.
+- `off`: nothing; robots.txt says `Disallow: /` and every page answers `noindex`.
+
+`SEARCH_INDEXING` (off, site or on) in `preview.env` would override it without a deploy; nothing needs it.
+
+Caddy holds the same line until the build with this code is live (since 2026-11-14): the `tasksnearme.com` block in
+`/etc/caddy/Caddyfile` sends no `X-Robots-Tag` on the site's pages, `noindex` on `/tasks/*` and `/helpers/*` (and
+their `/es/` versions) and `noindex, nofollow` on `/app`, `/admin` and `/api/*`; `dev.tasksnearme.com` keeps
+`noindex, nofollow` on everything. Backup of the earlier file: `/etc/caddy/Caddyfile.bak-2026-11-14-seo`. Once that
+build is live, the two `tasksnearme.com` rules can go, so the code alone decides (`sudo caddy validate --config
+/etc/caddy/Caddyfile`, then `sudo systemctl reload caddy`).
+
+Check: `curl -sI https://tasksnearme.com/ | grep -i x-robots` prints nothing, a task page prints `noindex`, and
+(with the SEO build) `curl -s https://tasksnearme.com/robots.txt` shows `Allow: /` and the `Sitemap:` line. In
+Google Search Console: add the domain property (a DNS TXT record at Cloudflare), ask for indexing of the home page
+with URL Inspection, and once the SEO build is live, submit `https://tasksnearme.com/sitemap.xml`. The sitemap
+(`src/app/sitemap.ts`) lists every indexable public page in English and Spanish and refreshes within the hour when
+tasks or helpers change. The link-preview cards are `public/og/tasksnearme-{en,es}.png`; redraw them with
+`node scripts/seo/share-image.mjs` when the brand mark or tagline changes.
+
 ## Production mode
 
 The preview is a real production build: `/dev/*` doesn't exist, and every integration uses real providers only.

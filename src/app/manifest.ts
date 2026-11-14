@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: '/',
     name: 'TasksNearMe',
     short_name: 'TasksNearMe',
-    description: 'Book trusted local help for everyday tasks in Austin.',
+    description: 'Book trusted local help for everyday tasks from verified people near you.',
     lang: 'en-US',
     dir: 'ltr',
     start_url: '/app',

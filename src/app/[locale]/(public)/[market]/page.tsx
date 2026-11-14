@@ -4,8 +4,10 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { getMarketPageData } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
+import { JsonLd } from '@/modules/seo/json-ld';
+import { breadcrumbNode, marketServiceNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { MarketScreen } from '@/ui/screens/public';
-import { languageAlternates } from '@/i18n/metadata';
+import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 
 export async function generateStaticParams() {
@@ -17,11 +19,11 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   const { market } = await params;
   const [page, t] = await Promise.all([getMarketPageData(market), getTranslations('server.meta.market')]);
   if (!page) return {};
-  return {
+  return publicPageMetadata({
+    path: routes.market(market),
     title: t('title', { market: page.data.market.name }),
     description: t('description', { market: page.data.market.name }),
-    alternates: await languageAlternates(routes.market(market)),
-  };
+  });
 }
 
 /** Params are awaited outside Suspense, so every market URL gets its own cached render and unknown ones a real 404. */
@@ -29,7 +31,29 @@ async function MarketPage({ params }: PageProps<'/[locale]/[market]'>) {
   const { market } = await params;
   const page = await getMarketPageData(market);
   if (!page) notFound();
-  return <MarketScreen data={page.data} now={page.now} />;
+  const [context, t, categoryName] = await Promise.all([structuredDataContext(), getTranslations('server.meta.market'), categoryNames()]);
+  const { market: view, categories } = page.data;
+  const path = routes.market(view.slug);
+  return (
+    <>
+      <JsonLd
+        nodes={[
+          breadcrumbNode(context, [
+            { name: SITE_NAME, path: routes.home() },
+            { name: view.name, path },
+          ]),
+          marketServiceNode(context, {
+            market: view,
+            name: t('title', { market: view.name }),
+            description: t('description', { market: view.name }),
+            path,
+            categories: categories.map((category) => ({ name: categoryName(category.slug), path: routes.category(category.slug, view.slug) })),
+          }),
+        ]}
+      />
+      <MarketScreen data={page.data} now={page.now} />
+    </>
+  );
 }
 
 export default withClientMessages('[locale]/(public)/[market]/page.tsx', MarketPage);

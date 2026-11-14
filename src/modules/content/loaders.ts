@@ -104,6 +104,11 @@ export function listHelpArticleSlugs(): string[] {
   return readHelpArticles().map((article) => article.slug);
 }
 
+/** Every help article and its date (the English file's, which every language shows), for the sitemap. */
+export function listHelpArticleDates(): { slug: string; updatedAt: ISODateTime }[] {
+  return readHelpArticles().map(({ slug, updatedAt }) => ({ slug, updatedAt }));
+}
+
 export function getHelpArticle(slug: string, locale: AppLocale = DEFAULT_LOCALE): HelpArticleData | null {
   if (!SLUG.test(slug)) return null;
   const articles = readHelpArticles(locale);
@@ -130,6 +135,14 @@ function readLegalFile(doc: LegalDoc) {
   const file = `${doc}.md`;
   const { meta, body } = splitFrontMatter(fs.readFileSync(path.join(CONTENT_DIR, 'legal', file), 'utf8'));
   return { meta, body, file };
+}
+
+/** The legal documents in effect, with their last update, for the sitemap. Drafts are noindex, so they're left out. */
+export function listPublishedLegalDocs(): { doc: LegalDoc; updatedAt: ISODateTime }[] {
+  return LEGAL_DOCS.flatMap((doc) => {
+    const { meta, file } = readLegalFile(doc);
+    return required(meta, 'status', file) === 'published' ? [{ doc, updatedAt: dateToIso(meta.updated, file) }] : [];
+  });
 }
 
 export function getLegalDoc(doc: string): LegalDocData | null {

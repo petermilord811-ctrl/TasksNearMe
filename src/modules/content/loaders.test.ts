@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentBlock, InlineNode } from '@/contracts';
 import { CATEGORY_SLUGS, LEGAL_DOCS } from '@/contracts';
-import { getHelpArticle, getHelpCenterData, getLegalDoc, listHelpArticleSlugs } from './loaders';
+import { getHelpArticle, getHelpCenterData, getLegalDoc, listHelpArticleDates, listHelpArticleSlugs, listPublishedLegalDocs } from './loaders';
 
 /** Checks the real files in content/: every article and document parses, and links resolve. */
 
@@ -104,5 +104,18 @@ describe('legal content', () => {
 
   it('refuses unknown documents', () => {
     expect(getLegalDoc('cookies')).toBeNull();
+  });
+});
+
+describe('sitemap content', () => {
+  it('lists every help article with the date its page shows', () => {
+    const dated = listHelpArticleDates();
+    expect(dated.map((article) => article.slug)).toEqual(listHelpArticleSlugs());
+    for (const { slug, updatedAt } of dated) expect(updatedAt).toBe(getHelpArticle(slug)!.updatedAt);
+  });
+
+  it('lists exactly the legal documents in effect (none while they are drafts)', () => {
+    const published = LEGAL_DOCS.filter((doc) => getLegalDoc(doc)!.status === 'published');
+    expect(listPublishedLegalDocs()).toEqual(published.map((doc) => ({ doc, updatedAt: getLegalDoc(doc)!.updatedAt })));
   });
 });

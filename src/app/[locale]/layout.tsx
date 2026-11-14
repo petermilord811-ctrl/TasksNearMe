@@ -11,13 +11,21 @@ import { themeInitScript } from '@/ui/theme/theme-script';
 import '@/ui/theme/globals.css';
 import { appUrl } from '@/integrations/oauth';
 import { ClientMessages } from '@/i18n/client-messages';
+import { SHARE_IMAGES } from '@/i18n/metadata';
 
 export const metadata: Metadata = {
   // Canonical and language links (src/i18n/metadata.ts) are made absolute against the app's address.
   metadataBase: new URL(appUrl()),
   title: { default: 'TasksNearMe', template: '%s · TasksNearMe' },
-  description: 'Book trusted local help for everyday tasks in Austin.',
+  // The brand is national; city pages name their city.
+  description: 'Book trusted local help for everyday tasks from verified people near you.',
   applicationName: 'TasksNearMe',
+  // Large image previews and full snippets in search results. Whether a page may be indexed at all is the page's
+  // own robots metadata and, for the whole site, the SEARCH_INDEXING switch (src/shared/search-indexing.ts).
+  robots: { 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 },
+  // Link previews for pages without their own card (public pages set theirs with publicPageMetadata).
+  openGraph: { type: 'website', siteName: 'TasksNearMe', images: [SHARE_IMAGES.en] },
+  twitter: { card: 'summary_large_image', images: [SHARE_IMAGES.en] },
   // The web app manifest (src/app/manifest.ts) is linked automatically; iPhones read these instead.
   icons: {
     icon: [

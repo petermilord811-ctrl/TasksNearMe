@@ -1,6 +1,6 @@
 import 'server-only';
 import { openSlotsOf } from '@/modules/availability/slots';
-import { and, asc, count, desc, eq, exists, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, exists, inArray, isNotNull, max, sql } from 'drizzle-orm';
 import type {
   BadgeView,
   CategorySlug,
@@ -242,6 +242,33 @@ export async function listActiveHelperHandles(database: Db = db): Promise<string
     .innerJoin(users, eq(users.id, helperProfiles.userId))
     .where(and(eq(helperProfiles.status, 'active'), eq(users.status, 'active')));
   return rows.map((r) => r.handle);
+}
+
+/**
+ * The sitemap's helpers: those whose public profile shows (getHelperProfile's conditions, area included), with when
+ * the page last changed: the profile itself or its newest published review, whichever is later.
+ */
+export async function listPublicProfileDates(database: Db = db): Promise<{ handle: string; updatedAt: Date }[]> {
+  const latestReview = database
+    .select({ subjectUserId: reviews.subjectUserId, publishedAt: max(reviews.publishedAt).as('latest_published_at') })
+    .from(reviews)
+    .where(and(eq(reviews.direction, 'client_to_helper'), eq(reviews.status, 'published')))
+    .groupBy(reviews.subjectUserId)
+    .as('latest_review');
+  const rows = await database
+    .select({ handle: helperProfiles.handle, profileUpdatedAt: helperProfiles.updatedAt, reviewedAt: latestReview.publishedAt })
+    .from(helperProfiles)
+    .innerJoin(users, eq(users.id, helperProfiles.userId))
+    .innerJoin(areas, eq(areas.id, helperProfiles.areaId))
+    .leftJoin(latestReview, eq(latestReview.subjectUserId, helperProfiles.userId))
+    .where(and(eq(helperProfiles.status, 'active'), eq(users.status, 'active')))
+    .orderBy(asc(helperProfiles.handle));
+  return rows.map(({ handle, profileUpdatedAt, reviewedAt }) => {
+    // The profile's time comes back as Postgres text (a mode: 'string' column), the review's as a Date.
+    const changed = new Date(profileUpdatedAt);
+    const reviewed = reviewedAt ? new Date(reviewedAt) : null;
+    return { handle, updatedAt: reviewed && reviewed > changed ? reviewed : changed };
+  });
 }
 
 /** Helper cards for specific helpers (e.g. the people who made offers), whatever their profile status. */
