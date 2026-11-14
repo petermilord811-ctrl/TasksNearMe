@@ -129,7 +129,7 @@
   "runningLate": "Se retrasa {minutes, plural, one {# minuto} other {# minutos}}",
   "arrived": "Llegó a las {time}",
   "noCheckIn": "Aún no hay avisos de llegada.",
-  "terms": "Términos y dinero",
+  "terms": "Condiciones y dinero",
   "totalCharged": "Total cobrado",
   "totalDue": "Total a pagar",
   "scope": "Alcance acordado",
@@ -158,7 +158,7 @@
   "state": {
     "poster": {
       "pending_funding": "{hasTime, select, yes {Completa el pago antes de las {time}} other {Completa el pago para confirmar tu reserva.}}",
-      "scheduled": "Empieza el {date} a las {time}. Tu tarjeta se cobra poco antes, no ahora.",
+      "scheduled": "Empieza el {date} a las {time}. Se cobra a tu tarjeta poco antes, no ahora.",
       "confirmed": "Empieza el {date} a las {time}",
       "in_progress": "{hasTime, select, yes {Empezó a las {time}} other {Tu ayudante empezó la tarea.}}",
       "completion_submitted": "{hasTime, select, yes {Aprueba antes de {deadline}, o se aprobará automáticamente.} other {Tu ayudante envió el trabajo. Apruébalo o reporta un problema.}}",
@@ -168,7 +168,7 @@
     },
     "helper": {
       "pending_funding": "{name} te está reservando.",
-      "scheduled": "Empieza el {date} a las {time}. La tarjeta de {name} se cobra poco antes.",
+      "scheduled": "Empieza el {date} a las {time}. Se cobra a la tarjeta de {name} poco antes.",
       "confirmed": "Empieza el {date} a las {time}",
       "in_progress": "{hasTime, select, yes {Empezó a las {time}} other {Empezaste la tarea.}}",
       "completion_submitted": "Esperando que {name} apruebe.",
@@ -263,7 +263,7 @@
     "paying": "Pagando…",
     "paid": "Pagado. Todo listo.",
     "changed": "Esta reserva cambió. Recárgala para ver cómo está.",
-    "helperScheduled": "La tarjeta de {name} se cobra el {date}. Verás la dirección cuando se pague.",
+    "helperScheduled": "Se cobra a la tarjeta de {name} el {date}. Verás la dirección cuando se pague.",
     "helperWaiting": "Esperando que {name} pague, antes del {date}. Si no se paga para entonces, {kind, select, visit {esta visita se omite} other {esta reserva se cancela}}."
   },
   "seriesLink": "Visita {index} · Visitas regulares {cadence, select, weekly {cada semana} biweekly {cada 2 semanas} other {cada mes}}",

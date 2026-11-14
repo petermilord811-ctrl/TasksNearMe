@@ -30,7 +30,7 @@
   "payment": {
     "charged": "Cada visita se cobra a {card} 2 días antes.",
     "missing": "No hay ninguna tarjeta guardada, así que no se pueden cobrar las próximas visitas. Elige una tarjeta para conservarlas.",
-    "helper": "La tarjeta de {name} se cobra 2 días antes de cada visita. Verás la dirección cuando se pague una visita."
+    "helper": "Se cobra a la tarjeta de {name} 2 días antes de cada visita. Verás la dirección cuando se pague una visita."
   },
   "notes": {
     "paused": "En pausa hasta el {date}. Las visitas anteriores a esa fecha se omiten y no se cobran.",
@@ -100,8 +100,8 @@
   "past": "Visitas anteriores",
   "visit": {
     "number": "Visita {index}",
-    "chargeAtPoster": "Tu tarjeta se cobra el {date}",
-    "chargeAtHelper": "La tarjeta de {name} se cobra el {date}",
+    "chargeAtPoster": "Se cobra a tu tarjeta el {date}",
+    "chargeAtHelper": "Se cobra a la tarjeta de {name} el {date}",
     "payByPoster": "Paga antes del {date} o se omite",
     "payByHelper": "Esperando el pago de {name} hasta el {date}"
   },
@@ -109,7 +109,7 @@
     "scheduled": "En el calendario",
     "payment_due": "Falta el pago",
     "booked": "Reservada y pagada",
-    "completed": "Hecha",
+    "completed": "Completada",
     "skipped": "Omitida",
     "canceled": "Cancelada"
   },

@@ -97,7 +97,7 @@
     },
     "switchLabel": "{topic} por {channel}",
     "locked": "Los recibos y los mensajes de seguridad no se pueden desactivar.",
-    "quietHours": "Los mensajes de texto que pueden esperar llegan después de las 8 a. m. Las novedades de reservas del mismo día, como un ayudante en camino o una cancelación, llegan de inmediato.",
+    "quietHours": "Los mensajes de texto que pueden esperar llegan después de las 8 a.m. Las novedades de reservas del mismo día, como un ayudante en camino o una cancelación, llegan de inmediato.",
     "saved": "{preference}: se guardó tu preferencia.",
     "notAllowed": "Esta preferencia no se puede cambiar. Se restauró tu configuración anterior.",
     "unavailable": "No disponible"

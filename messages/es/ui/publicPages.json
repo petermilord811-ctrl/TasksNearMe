@@ -35,7 +35,7 @@
     "cancellationHelperCancels": "Tu ayudante cancela",
     "fullRefund": "Reembolso completo: {amount}",
     "noPayment": "Sin pago",
-    "lateFeeExample": "En este ejemplo, la tarifa por cancelación tardía es de {fee}. Tu ayudante recibe {received} y a ti te devolvemos {refund}.",
+    "lateFeeExample": "En este ejemplo, el cargo por cancelación tardía es de {fee}. Tu ayudante recibe {received} y a ti te devolvemos {refund}.",
     "cancellationPolicy": "Lee la política de cancelación",
     "approvalTitle": "Tiempo para revisar la tarea terminada",
     "approvalDescription": "Cuando tu ayudante marque la tarea como terminada, tienes {hours} horas para aprobarla o reportar un problema. Después de ese plazo, la tarea se aprueba automáticamente. Al reportar un problema, el pago queda en pausa mientras se revisa.",
@@ -262,7 +262,7 @@
       },
       "three": {
         "title": "Confirma los detalles y reserva",
-        "body": "Revisa el alcance, el horario, el total y los términos de cancelación. Paga para confirmar una oferta. Las invitaciones directas ponen una retención en tu tarjeta; se te cobra cuando el ayudante acepta."
+        "body": "Revisa el alcance, el horario, el total y las condiciones de cancelación. Paga para confirmar una oferta. Las invitaciones directas ponen una retención en tu tarjeta; se te cobra cuando el ayudante acepta."
       },
       "four": {
         "title": "Mantén el trabajo en marcha",
