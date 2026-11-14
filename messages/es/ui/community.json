@@ -167,6 +167,6 @@
     "loading": "Cargando más publicaciones…",
     "loaded": "{count, plural, =0 {No hay más publicaciones} one {Se agregó # publicación más} other {Se agregaron # publicaciones más}}",
     "end": "Estás al día",
-    "failed": "No se pudieron cargar más publicaciones. Intenta de nuevo."
+    "failed": "No se pudieron cargar más publicaciones. Inténtalo de nuevo."
   }
 }
