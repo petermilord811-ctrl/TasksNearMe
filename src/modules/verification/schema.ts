@@ -145,6 +145,11 @@ export const payoutAccounts = pgTable('payout_accounts', {
   providerAccountId: text('provider_account_id').notNull(),
   status: text('status').notNull(), // not_started | pending | requirements_due | active | restricted
   activatedAt: timestamp('activated_at', { withTimezone: true }),
+  /**
+   * When Stripe last reported a working default bank account (`account.external_account.created` or `.updated`):
+   * a payout that failed before this no longer asks the helper for their bank (completion plan 5.17).
+   */
+  bankUpdatedAt: timestamp('bank_updated_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

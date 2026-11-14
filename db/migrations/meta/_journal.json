@@ -372,6 +372,13 @@
       "when": 1794625577895,
       "tag": "0052_bookings_offer_index",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1794626401019,
+      "tag": "0053_payout_bank_updated",
+      "breakpoints": true
     }
   ]
 }

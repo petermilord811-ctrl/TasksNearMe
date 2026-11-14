@@ -1,0 +1,1 @@
+ALTER TABLE "payout_accounts" ADD COLUMN "bank_updated_at" timestamp with time zone;
