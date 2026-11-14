@@ -215,6 +215,8 @@ afterAll(async () => {
     else process.env[name] = value;
   }
   await db.delete(webhookEvents).where(like(webhookEvents.eventId, 'evt\\_t06\\_%'));
+  // Tasks still open (a declined hold, invites never answered) leave the shared board for the files after this one.
+  await db.update(tasks).set({ status: 'canceled' }).where(and(like(tasks.id, 'tsk\\_t06\\_%'), eq(tasks.status, 'open')));
   if (clients.length > 0) {
     await db.delete(paymentMethods).where(inArray(paymentMethods.userId, clients));
     await db.delete(paymentCustomers).where(inArray(paymentCustomers.userId, clients));

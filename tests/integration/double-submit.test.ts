@@ -14,6 +14,7 @@ import { offers } from '@/modules/offers/schema';
 import { payments } from '@/modules/payments/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
+import { throwawayClient } from '../support/people';
 
 /** T-05: a double tap on Book, and the same offer booked from two tabs. Chris posts copies of the desk. */
 
@@ -113,12 +114,14 @@ describe('T-05: booking twice at once', () => {
   });
 
   it('accepting a rebooking proposal twice at once books and charges once', async () => {
-    // Sam cleaned Ruth's apartment ten days ago (a completed copy of the seeded cleaning task).
+    // Sam cleaned a client's apartment ten days ago (a completed copy of the seeded cleaning task). The client is this
+    // file's own: one proposal can be open per helper and client, and other files propose to Sam's seeded clients.
+    const client = await throwawayClient(db, 'usr_t05_rbk_client');
     const [cleaning] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_cleaning'));
     const policy = await getPublishedPolicy(cleaning!.marketId, db);
     const start = new Date(Date.now() - 10 * 24 * HOUR);
-    await db.insert(tasks).values({ ...cleaning!, id: 'tsk_t05_rbk', slug: 't05-rbk-x9y8', posterUserId: 'usr_ruth', status: 'completed', offerCount: 0, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 3 * HOUR) });
-    await db.insert(bookings).values({ id: 'bkg_t05_rbk', taskId: 'tsk_t05_rbk', posterUserId: 'usr_ruth', helperUserId: 'usr_sam', marketId: cleaning!.marketId, policyVersionId: policy!.id, status: 'completed', startAt: start, confirmedAt: start, completedAt: new Date(start.getTime() + 4 * HOUR) });
+    await db.insert(tasks).values({ ...cleaning!, id: 'tsk_t05_rbk', slug: 't05-rbk-x9y8', posterUserId: client, status: 'completed', offerCount: 0, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 3 * HOUR) });
+    await db.insert(bookings).values({ id: 'bkg_t05_rbk', taskId: 'tsk_t05_rbk', posterUserId: client, helperUserId: 'usr_sam', marketId: cleaning!.marketId, policyVersionId: policy!.id, status: 'completed', startAt: start, confirmedAt: start, completedAt: new Date(start.getTime() + 4 * HOUR) });
     await db.insert(bookingTerms).values({ id: 'btm_t05_rbk', bookingId: 'bkg_t05_rbk', version: 1, pricingType: 'fixed', priceCents: 9000, breakdown: quoteBreakdown(policy!.fees, { type: 'fixed', priceCents: 9000 }), scopeText: cleaning!.description, startAt: start });
     const date = marketDayKey(new Date(Date.now() + 3 * 24 * HOUR));
     expect(await proposeRebook(db, 'usr_sam', 'bkg_t05_rbk', { date, startTime: '10:00', pricing: { type: 'fixed', priceCents: 9000 }, message: 'Same as last time?' }, new Date())).toMatchObject({ ok: true });
@@ -127,7 +130,7 @@ describe('T-05: booking twice at once', () => {
     const { provider, charges } = countingProvider();
     const deps = { db, payments: provider };
     const accept = { payment: card.payment, acceptTerms: true as const };
-    const results = await Promise.all([acceptProposal(deps, 'usr_ruth', proposal!.id, accept, new Date()), acceptProposal(deps, 'usr_ruth', proposal!.id, accept, new Date())]);
+    const results = await Promise.all([acceptProposal(deps, client, proposal!.id, accept, new Date()), acceptProposal(deps, client, proposal!.id, accept, new Date())]);
     expect(results.some((result) => result.ok)).toBe(true);
     expect(charges).toHaveLength(1);
     const [row] = await db.select().from(rebookProposals).where(eq(rebookProposals.id, proposal!.id));

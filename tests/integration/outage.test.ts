@@ -106,6 +106,8 @@ beforeAll(async () => {
 afterAll(async () => {
   // Never leave Austin paused for the files after this one.
   await db.delete(featureFlags).where(and(eq(featureFlags.key, OUTAGE_FLAG), eq(featureFlags.marketId, AUSTIN)));
+  // Nor Sam's proposal to Ruth open: one proposal can be open per helper and client, so it would refuse other files' (T-05's rebook).
+  if (ready.proposalId) await db.update(rebookProposals).set({ status: 'withdrawn', updatedAt: new Date() }).where(and(eq(rebookProposals.id, ready.proposalId), eq(rebookProposals.status, 'sent')));
   await db.delete(auditLog).where(and(eq(auditLog.action, 'config.outage_switch'), eq(auditLog.targetId, AUSTIN)));
   await pool.end();
 });

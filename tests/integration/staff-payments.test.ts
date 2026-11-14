@@ -71,11 +71,18 @@ describe('the payments page', () => {
     expect(history.rows.map((row) => [row.id, row.status])).toEqual([['po_pay_paid_after', 'paid'], ['po_pay_failed_then', 'failed']]);
   });
 
-  it('shows each kind of money on its tab, with totals', async () => {
+  it('shows each kind of money on its tab, newest first, with totals', async () => {
+    // A page of the newest charges: in the shared test database most of them are other files'.
     const charges = await getAdminPayments(db, { tab: 'charges', query: '' }, now());
-    expect(charges.rows.map((row) => row.id)).toEqual(expect.arrayContaining(['pay_pay_cancel', 'pay_tv']));
+    expect(charges.rows.length).toBeGreaterThan(0);
     expect(charges.rows.every((row) => row.kind === 'charge')).toBe(true);
-    const refundsTab = await getAdminPayments(db, { tab: 'refunds', query: '' }, now());
+    expect(charges.rows.map((row) => row.at)).toEqual(charges.rows.map((row) => row.at).sort().reverse());
+    expect(charges.counts.charges).toBeGreaterThanOrEqual(charges.rows.length);
+    // This file's and the seed's rows, found by their bookings wherever they'd fall in the list.
+    expect((await getAdminPayments(db, { tab: 'charges', query: 'bkg_pay_cancel' }, now())).rows.map((row) => row.id)).toContain('pay_pay_cancel');
+    expect((await getAdminPayments(db, { tab: 'charges', query: 'bkg_tv' }, now())).rows.map((row) => row.id)).toContain('pay_tv');
+    const refundsTab = await getAdminPayments(db, { tab: 'refunds', query: 'bkg_pay_refund' }, now());
+    expect(refundsTab.rows.every((row) => row.kind === 'refund')).toBe(true);
     expect(refundsTab.rows.find((row) => row.id === 'ref_pay_failed')).toMatchObject({ status: 'failed', detail: 'goodwill', amountCents: 500 });
     expect(charges.totals.chargedCents).toBeGreaterThan(0);
     expect(Object.values(charges.totals).every((cents) => Number.isInteger(cents) && cents >= 0)).toBe(true);

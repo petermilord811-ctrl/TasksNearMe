@@ -19,6 +19,18 @@ afterAll(async () => {
 
 const now = () => new Date();
 const feed = (params: Record<string, string> = {}) => getFindWorkPageData(db, JORDAN, params, now());
+/**
+ * Every card of the feed, page by page. The test database is shared by every file, and the open tasks other files
+ * leave (most of them a few days out) come before the seeded shelves in the soonest-first order, so the shelves
+ * aren't always on the first page.
+ */
+async function allCards(params: Record<string, string> = {}) {
+  const first = await feed(params);
+  const cards = [...first!.cards];
+  for (let page = 2; page <= first!.pageCount; page += 1) cards.push(...(await feed({ ...params, page: String(page) }))!.cards);
+  return cards;
+}
+const shelvesIn = async (params: Record<string, string> = {}) => (await allCards(params)).find((card) => card.task.id === 'tsk_shelves');
 
 describe('find work', () => {
   it("gives each card what Jordan would earn, its start day, and whether it's new", async () => {
@@ -32,7 +44,7 @@ describe('find work', () => {
         expect(card.earnings.amountCents).toBe(card.task.budget.priceCents - Math.round(card.task.budget.priceCents * 0.1));
       }
     }
-    const shelves = data!.cards.find((card) => card.task.id === 'tsk_shelves');
+    const shelves = await shelvesIn();
     expect(shelves?.earnings).toEqual({ type: 'fixed', amountCents: 4500 });
     expect(data!.today).toBe(marketDayKey(now()));
     // The map: tiles and Jordan's own area (a neighborhood center), never an address.
@@ -55,9 +67,8 @@ describe('find work', () => {
   it('saves a task for later and lists only saved tasks on request', async () => {
     expect(await setTaskMark(db, JORDAN, { taskId: 'tsk_shelves', kind: 'saved', on: true }, now())).toEqual({ ok: true, code: 'updated' });
     expect(await setTaskMark(db, JORDAN, { taskId: 'tsk_shelves', kind: 'saved', on: true }, now())).toEqual({ ok: true, code: 'updated' });
-    const all = await feed();
-    expect(all!.cards.find((card) => card.task.id === 'tsk_shelves')?.saved).toBe(true);
-    expect(all!.savedCount).toBe(1);
+    expect((await shelvesIn())?.saved).toBe(true);
+    expect((await feed())!.savedCount).toBe(1);
     const saved = await feed({ saved: '1' });
     expect(saved!.query.saved).toBe(true);
     expect(saved!.cards.map((card) => card.task.id)).toEqual(['tsk_shelves']);
@@ -66,14 +77,13 @@ describe('find work', () => {
   });
 
   it('hides a task from the list until the helper takes it back', async () => {
-    const before = (await feed())!.cards.map((card) => card.task.id);
-    expect(before).toContain('tsk_shelves');
+    expect(await shelvesIn()).toBeDefined();
     await setTaskMark(db, JORDAN, { taskId: 'tsk_shelves', kind: 'hidden', on: true }, now());
-    expect((await feed())!.cards.map((card) => card.task.id)).not.toContain('tsk_shelves');
+    expect(await shelvesIn()).toBeUndefined();
     const [mark] = await db.select().from(taskMarks).where(and(eq(taskMarks.userId, JORDAN), eq(taskMarks.kind, 'hidden')));
     expect(mark).toMatchObject({ taskId: 'tsk_shelves' });
     await setTaskMark(db, JORDAN, { taskId: 'tsk_shelves', kind: 'hidden', on: false }, now());
-    expect((await feed())!.cards.map((card) => card.task.id)).toContain('tsk_shelves');
+    expect(await shelvesIn()).toBeDefined();
   });
 
   it("refuses marks on tasks that aren't open, or on the helper's own", async () => {
