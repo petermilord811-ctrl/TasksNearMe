@@ -252,7 +252,7 @@ d4 task board and task page), **owner** (§8). Status as of writing.
 | S2.2 | Helper profiles indexed (in `on`) only with a completed task or a published review | b7 | Live (4e4a1cf); listed only in `on` |
 | S2.3 | Task pages indexed (in `on`) only while open, public and from a poster with a verified phone; closed ones noindex, follow with a banner (already the board's rule) | b7 | Rule in place; poster check at launch |
 
-### S3 Category pages, the money pages (`/austin/[category]`): built this run
+### S3 Category pages, the money pages (`/austin/[category]`): live (bbdd997)
 - `CategoryPageData.seo` (`CategorySeoContent`), filled in the page's language by `src/modules/seo/category-content.ts`:
   - **counts**: real helpers offering the service in the city and its open tasks, never sample data (`isRealRecordId`);
     the page shows the line only above zero;
@@ -269,7 +269,7 @@ d4 task board and task page), **owner** (§8). Status as of writing.
 - Layout (a9's): counts under the H1; the guide after included/excluded; questions after the helpers; related links
   last. Previews `screen-category/furniture-seo` and `screen-category/moving-seo-empty`.
 
-### S4 Earn-side hubs (`/austin/tasks/[category]`): built this run
+### S4 Earn-side hubs (`/austin/tasks/[category]`): live (bbdd997)
 "Furniture assembly jobs near you in Austin" / "Trabajos de armado de muebles cerca de ti en Austin": the board on one
 category, with its own title and heading, an intro that says what the work is (from the category's scope: moving help
 is the lifting, not the truck) and how offers and addresses work, and breadcrumbs (TasksNearMe › Austin › Open tasks ›
@@ -279,7 +279,7 @@ src/proxy.ts answers the board's older `?category=` addresses with a permanent r
 In the sitemap after each category's cost guide, dated by the category's newest task; linked from the category page
 and its cost guide; noindex outside indexable markets. The data is d4's `loadTaskBoard(…, { category, heading })`.
 
-### S5 Cost guides (`/austin/[category]/cost`): built this run
+### S5 Cost guides (`/austin/[category]/cost`): live (bbdd997)
 "How much does furniture assembly cost in Austin?" (the same words as the category page's question, one server string):
 the typical range from the same price guidance as the category page; what a poster pays and what a helper earns at
 each end, worked out by the fee engine from the market's published policy (`getCostGuideData`); what changes the price
@@ -331,8 +331,8 @@ linked first in the category page's related links; BreadcrumbList; noindex outsi
 | Home | Organization (logo, areaServed United States), WebSite (alternate names incl. the domain) | Live |
 | City | BreadcrumbList, Service + OfferCatalog | Live |
 | Category | BreadcrumbList, Service + AggregateOffer price range; ItemList of helper profile URLs once profiles are indexed | Live / at launch |
-| Board, job hubs | BreadcrumbList | Live / next ship |
-| Cost guide | BreadcrumbList (no Article: the page has no author or date of its own, and Article earns no rich result outside news) | Next ship |
+| Board, job hubs | BreadcrumbList | Live |
+| Cost guide | BreadcrumbList (no Article: the page has no author or date of its own, and Article earns no rich result outside news) | Live |
 | Task | BreadcrumbList; JobPosting at launch (S6) | Live / at launch |
 | Helper profile | ProfilePage (no photo, area or reviews) | Live |
 | Help article | BreadcrumbList, Article | Live |
@@ -404,6 +404,10 @@ parallel sessions' work, so nothing broken reached the site: duplicated server-r
 reverted marketing hunk (f05399a), the language cookie undone by /es prefetches (398d804), a missing no-session allowlist
 entry (06a698f), an e2e test-order clash (e44c9aa), the board's integration counts (d4). S3, S4, S5, S7.2 and S9 are
 committed and go live with the next green ship.
+
+Ship 7 (run 43589096954, bbdd997) is live since midday: 62 pages in the sitemap (the cost guides and job hubs in
+both languages), IndexNow accepted all 62, the board's old `?category=` addresses answer 308 to their hubs, and /pricing
+loads 233 kB of gzipped JavaScript (445 before). Search Console still answers 403 for the service account (§8.1).
 
 ## 8. The owner's checklist
 
