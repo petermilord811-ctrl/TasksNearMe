@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { getPublicTaskPageData, listRecentTaskSlugs } from '@/modules/marketing/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
-import { PublicTaskScreen } from '@/ui/screens/public';
+import { PublicTaskScreen } from '@/ui/screens/public/public-task-screen';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 

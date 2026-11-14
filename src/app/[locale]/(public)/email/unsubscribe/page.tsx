@@ -4,8 +4,8 @@ import { Suspense } from 'react';
 import { resubscribeByLinkAction, unsubscribeByLinkAction } from '@/modules/notifications/unsubscribe-actions';
 import { getUnsubscribePage } from '@/modules/notifications/unsubscribe-service';
 import { db } from '@/platform/db/client';
-import { PageSkeleton } from '@/ui/components';
-import { EmailUnsubscribeScreen } from '@/ui/screens/account';
+import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
+import { EmailUnsubscribeScreen } from '@/ui/screens/account/email-unsubscribe-screen';
 import { getTranslations } from 'next-intl/server';
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -5,7 +5,7 @@ import { getHelperProfilePageData, listHelperHandles } from '@/modules/marketing
 import { JsonLd } from '@/modules/seo/json-ld';
 import { helperProfileIndexable, KEEP_OUT_OF_SEARCH } from '@/modules/seo/indexable';
 import { helperProfileNode } from '@/modules/seo/structured-data';
-import { HelperProfileScreen } from '@/ui/screens/public';
+import { HelperProfileScreen } from '@/ui/screens/public/helper-profile-screen';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 

@@ -7,7 +7,7 @@ import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/qu
 import { JsonLd } from '@/modules/seo/json-ld';
 import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, marketServiceNode, SITE_NAME } from '@/modules/seo/structured-data';
-import { MarketScreen } from '@/ui/screens/public';
+import { MarketScreen } from '@/ui/screens/public/market-screen';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 

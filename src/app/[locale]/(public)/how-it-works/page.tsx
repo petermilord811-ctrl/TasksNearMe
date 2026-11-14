@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { HowItWorksScreen } from '@/ui/screens/public';
+import { HowItWorksScreen } from '@/ui/screens/public/how-it-works-screen';
 import { publicPageMetadata } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 

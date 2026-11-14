@@ -5,8 +5,8 @@ import { Suspense } from 'react';
 import { joinWaitlistAction } from '@/modules/marketing/actions';
 import { getWaitlistDemand, getWaitlistPageData } from '@/modules/marketing/queries';
 import { normalizeZip } from '@/shared/us-zip';
-import { PageSkeleton } from '@/ui/components';
-import { WaitlistScreen } from '@/ui/screens/public';
+import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
+import { WaitlistScreen } from '@/ui/screens/public/waitlist-screen';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('server.meta.waitlist');

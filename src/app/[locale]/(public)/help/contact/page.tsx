@@ -8,8 +8,8 @@ import { JsonLd } from '@/modules/seo/json-ld';
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { submitPublicSupportAction } from '@/modules/support/public-actions';
 import { publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
-import { PageSkeleton } from '@/ui/components';
-import { HelpContactScreen } from '@/ui/screens/content';
+import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
+import { HelpContactScreen } from '@/ui/screens/content/help-contact-screen';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('server.meta.helpContact');

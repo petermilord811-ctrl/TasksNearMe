@@ -9,7 +9,7 @@ import { JsonLd } from '@/modules/seo/json-ld';
 import { categorySeoContent } from '@/modules/seo/category-content';
 import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, categoryServiceNode, SITE_NAME } from '@/modules/seo/structured-data';
-import { CategoryScreen } from '@/ui/screens/public';
+import { CategoryScreen } from '@/ui/screens/public/category-screen';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 

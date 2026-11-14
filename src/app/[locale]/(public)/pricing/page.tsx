@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { getPricingPageData } from '@/modules/marketing/queries';
-import { PricingScreen } from '@/ui/screens/public';
+import { PricingScreen } from '@/ui/screens/public/pricing-screen';
 import { publicPageMetadata } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 

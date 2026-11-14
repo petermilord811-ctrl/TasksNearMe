@@ -10,8 +10,8 @@ import { JsonLd } from '@/modules/seo/json-ld';
 import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { parseTaskBoardQuery } from '@/modules/tasks/projections';
-import { PageSkeleton } from '@/ui/components';
-import { TaskBoardScreen } from '@/ui/screens/public';
+import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
+import { TaskBoardScreen } from '@/ui/screens/public/task-board-screen';
 import { publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 
 export async function generateStaticParams() {

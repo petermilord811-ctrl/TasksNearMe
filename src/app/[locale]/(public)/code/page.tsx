@@ -1,7 +1,7 @@
 import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { CopyCodeScreen } from '@/ui/screens/auth';
+import { CopyCodeScreen } from '@/ui/screens/auth/copy-code-screen';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('server.meta.copyCode');

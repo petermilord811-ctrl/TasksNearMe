@@ -5,7 +5,7 @@ import { localeOrDefault } from '@/contracts';
 import { getHelpArticle, listHelpArticleSlugs } from '@/modules/content/loaders';
 import { JsonLd } from '@/modules/seo/json-ld';
 import { breadcrumbNode, helpArticleNode, SITE_NAME } from '@/modules/seo/structured-data';
-import { HelpArticleScreen } from '@/ui/screens/content';
+import { HelpArticleScreen } from '@/ui/screens/content/help-article-screen';
 import { publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 

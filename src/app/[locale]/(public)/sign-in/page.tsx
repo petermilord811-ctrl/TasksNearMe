@@ -21,8 +21,8 @@ import {
 import { botCheckForPage } from '@/modules/accounts/bot-check';
 import { resolveCurrentSignIn } from '@/modules/accounts/sign-in/server';
 import { redeemSignUpInvite } from '@/modules/beta/actions';
-import { PageSkeleton } from '@/ui/components';
-import { SignInScreen } from '@/ui/screens/auth';
+import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
+import { SignInScreen } from '@/ui/screens/auth/sign-in-screen';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('server.meta.signIn');

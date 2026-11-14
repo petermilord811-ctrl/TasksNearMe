@@ -1,7 +1,7 @@
 import { withClientMessages } from '@/i18n/client-messages';
 import { switchLanguageAction } from '@/modules/accounts/language-actions';
 import { getPublicShellViewer } from '@/platform/auth/viewer';
-import { PublicShell } from '@/ui/shells';
+import { PublicShell } from '@/ui/shells/public-shell';
 
 /**
  * Public pages. The viewer is passed as a promise: the shell renders its chrome and the page

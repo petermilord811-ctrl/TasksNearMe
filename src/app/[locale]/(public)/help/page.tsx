@@ -5,7 +5,7 @@ import { localeOrDefault } from '@/contracts';
 import { getHelpCenterData } from '@/modules/content/loaders';
 import { JsonLd } from '@/modules/seo/json-ld';
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
-import { HelpCenterScreen } from '@/ui/screens/content';
+import { HelpCenterScreen } from '@/ui/screens/content/help-center-screen';
 import { publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 

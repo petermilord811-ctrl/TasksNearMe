@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { TrustSafetyScreen } from '@/ui/screens/public';
+import { TrustSafetyScreen } from '@/ui/screens/public/trust-safety-screen';
 import { publicPageMetadata } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 

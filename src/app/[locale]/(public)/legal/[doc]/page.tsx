@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { LEGAL_DOCS } from '@/contracts';
 import { getLegalDoc } from '@/modules/content/loaders';
-import { LegalDocScreen } from '@/ui/screens/content';
+import { LegalDocScreen } from '@/ui/screens/content/legal-doc-screen';
 import { publicPageMetadata } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 
