@@ -40,10 +40,10 @@ const ben: PersonSummary = { id: 'usr_ben', displayName: 'Ben W.', initials: 'BW
 export const adminHomeData: AdminHomeData = {
   staff: alexStaffSummary,
   queues: [
-    { queue: 'disputes', openCount: 1, slaBreaches: 1, oldestOpenedAt: '2026-11-22T15:00:00.000Z' },
-    { queue: 'safety', openCount: 1, slaBreaches: 0, oldestOpenedAt: '2026-11-23T14:10:00.000Z' },
-    { queue: 'reports', openCount: 1, slaBreaches: 0, oldestOpenedAt: '2026-11-23T09:30:00.000Z' },
-    { queue: 'requests', openCount: 2, slaBreaches: 0, oldestOpenedAt: '2026-11-20T18:00:00.000Z' },
+    { queue: 'disputes', openCount: 1, slaBreaches: 1, urgentCount: 0, oldestOpenedAt: '2026-11-22T15:00:00.000Z' },
+    { queue: 'safety', openCount: 1, slaBreaches: 0, urgentCount: 1, oldestOpenedAt: '2026-11-23T14:10:00.000Z' },
+    { queue: 'reports', openCount: 1, slaBreaches: 0, urgentCount: 0, oldestOpenedAt: '2026-11-23T09:30:00.000Z' },
+    { queue: 'requests', openCount: 2, slaBreaches: 0, urgentCount: 0, oldestOpenedAt: '2026-11-20T18:00:00.000Z' },
   ],
   myOpenCount: 1,
   verifications: adminHomeVerifications,
@@ -52,10 +52,10 @@ export const adminHomeData: AdminHomeData = {
 export const adminHomeQuietData: AdminHomeData = {
   staff: alexStaffSummary,
   queues: [
-    { queue: 'disputes', openCount: 0, slaBreaches: 0 },
-    { queue: 'safety', openCount: 0, slaBreaches: 0 },
-    { queue: 'reports', openCount: 0, slaBreaches: 0 },
-    { queue: 'requests', openCount: 0, slaBreaches: 0 },
+    { queue: 'disputes', openCount: 0, slaBreaches: 0, urgentCount: 0 },
+    { queue: 'safety', openCount: 0, slaBreaches: 0, urgentCount: 0 },
+    { queue: 'reports', openCount: 0, slaBreaches: 0, urgentCount: 0 },
+    { queue: 'requests', openCount: 0, slaBreaches: 0, urgentCount: 0 },
   ],
   myOpenCount: 0,
   verifications: { counts: { address: 0, identity: 0, background: 0 } },

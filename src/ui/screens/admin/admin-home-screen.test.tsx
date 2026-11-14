@@ -31,6 +31,15 @@ describe('AdminHomeScreen', () => {
     expect(screen.queryByText('Nothing waiting')).not.toBeInTheDocument();
   });
 
+  it('makes a queue with an urgent case stand out, with the count in words', () => {
+    renderHome();
+    const safety = screen.getByRole('heading', { name: adminCases.queues.safety }).closest('a')!;
+    expect(safety).toHaveTextContent('1 urgent');
+    expect(safety.className).toContain('border-destructive/50');
+    const disputes = screen.getByRole('heading', { name: adminCases.queues.disputes }).closest('a')!;
+    expect(disputes).not.toHaveTextContent(/urgent/);
+  });
+
   it('keeps the four queues available when there is nothing waiting', () => {
     renderHome(adminHomeQuietData);
     expect(screen.getByRole('heading', { name: 'Nothing waiting' })).toBeVisible();

@@ -38,6 +38,7 @@ function SavedCard({ method, handlers, onRemoved, onRemovalFocus, initialOpen = 
   const [pending, setPending] = useState(false);
   const locked = useRef(false);
   const removed = useRef(false);
+  const item = useRef<HTMLLIElement>(null);
 
   async function run(nextOperation: 'remove' | 'default') {
     if (locked.current) return;
@@ -52,6 +53,8 @@ function SavedCard({ method, handlers, onRemoved, onRemovalFocus, initialOpen = 
       setResult(undefined);
       onRemoved(next);
     } else setResult(next);
+    // The default card has no "Make default": the button goes away, so focus moves to the card (now marked Default).
+    if (next.ok && nextOperation === 'default') item.current?.focus();
     if (next.ok) {
       setOpen(false);
       if (next.redirectTo) router.push(next.redirectTo);
@@ -60,7 +63,7 @@ function SavedCard({ method, handlers, onRemoved, onRemovalFocus, initialOpen = 
   }
 
   const feedback = <FormFeedback result={result && !result.ok ? { ...result, fieldErrors: undefined } : result} successMessage={t(operation === 'remove' ? 'removed' : 'defaultUpdated')} errorMessage={result && !result.ok && result.code === 'not_allowed' && operation === 'remove' ? t('removeNotAllowed') : undefined} />;
-  return <li aria-labelledby={`${id}-label`} className="space-y-3 py-4 first:pt-0 last:pb-0">
+  return <li ref={item} tabIndex={-1} aria-labelledby={`${id}-label`} className="space-y-3 rounded-xl py-4 outline-offset-4 first:pt-0 last:pb-0 focus-visible:outline-2 focus-visible:outline-ring">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
         <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground"><CreditCard className="size-5" /></span>
@@ -70,7 +73,7 @@ function SavedCard({ method, handlers, onRemoved, onRemovalFocus, initialOpen = 
         </div>
       </div>
       <div className="flex flex-wrap gap-2 pl-13 sm:pl-0">
-        <Button type="button" variant="outline" disabled={pending || method.isDefault} aria-describedby={`${id}-label`} aria-busy={pending && operation === 'default'} onClick={() => void run('default')}>{pending && operation === 'default' && <Spinner aria-hidden="true" />}{t(pending && operation === 'default' ? 'makingDefault' : 'makeDefault')}</Button>
+        {!method.isDefault && <Button type="button" variant="outline" disabled={pending} aria-describedby={`${id}-label`} aria-busy={pending && operation === 'default'} onClick={() => void run('default')}>{pending && operation === 'default' && <Spinner aria-hidden="true" />}{t(pending && operation === 'default' ? 'makingDefault' : 'makeDefault')}</Button>}
         <AlertDialog open={open} onOpenChange={(value) => { if (!pending) setOpen(value); }}>
           <AlertDialogTrigger asChild><Button type="button" variant="ghost" disabled={pending} aria-describedby={`${id}-label`} onClick={() => setResult(undefined)}>{t('remove')}</Button></AlertDialogTrigger>
           <AlertDialogContent onCloseAutoFocus={(event) => {

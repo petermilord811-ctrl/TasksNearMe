@@ -227,3 +227,9 @@ One entry per iteration, newest last.
 - Support, new request: the topics are bordered rows with a normal radio, as in the booking sheets (they had 44 px empty circles beside the text).
 - Left as they are, on purpose: the default card's disabled "Make default" on Payments (a test asserts it); the helper profile editor (in the gift-card rework).
 - Checks: booking-page, support, a11y-phone, sign-in and social-sign-in on the e2e build (40 passed, 6 one-viewport skips), with no missing or misformatted messages in the server log; jsdom 83; ui-audit over bookings, support and sign-in in English and Spanish: no failures.
+
+## 2026-11-14 — UI pass, batch 8: three calls on the open points (plan 5.10)
+- Payments: the default card has no "Make default" (its "Default" badge says so); when another card becomes the default, focus moves to that card.
+- Bookings (Spanish): the "Requieren acción" tab is "Pendientes" (the term the Spanish copy uses for that state), so the three tabs fit on one line at 360. English unchanged.
+- Admin home: `QueueSummary.urgentCount` counts the open urgent cases in each queue (a safety report opens one); a queue with any has a stronger edge and an "N urgent" badge (words and an icon, not color alone). The client message map regenerated for the new key.
+- Checks: booking-sheets (a safety report, then staff see the urgent badge on their home), admin, spanish and a11y-phone on the e2e build (18 passed, 10 one-viewport skips, no copy errors); staff-cases integration (7, with the urgent count, and back to 0 once resolved); jsdom 111; ui-audit over the admin home, payments and bookings: no failures. The type check's two errors are in other sessions' uncommitted files (src/i18n/client-messages.tsx, tests/integration/demo-data.test.ts).

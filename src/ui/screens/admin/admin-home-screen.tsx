@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowUpRight, CheckCheck, CircleAlert, CircleCheck, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, CheckCheck, CircleAlert, CircleCheck, ShieldCheck, Siren } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ADMIN_QUEUES, routes, type AdminHomeData, type ISODateTime } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
@@ -24,9 +24,14 @@ export function AdminHomeScreen({ data, now }: AdminHomeScreenProps) {
       {ADMIN_QUEUES.map((queue) => {
         const summary = data.queues.find((item) => item.queue === queue);
         const late = Boolean(summary && summary.slaBreaches > 0);
-        return <Link key={queue} href={routes.admin.cases({ queue, status: 'active' })} className={cn(adminCardLink, 'group space-y-4 sm:p-5', late && 'border-destructive/25 dark:border-destructive/35')}>
+        // An urgent case (a safety report) makes its queue stand out: a stronger edge and a count in words, not color alone.
+        const urgent = summary?.urgentCount ?? 0;
+        return <Link key={queue} href={routes.admin.cases({ queue, status: 'active' })} className={cn(adminCardLink, 'group space-y-4 sm:p-5', late && 'border-destructive/25 dark:border-destructive/35', urgent > 0 && 'border-destructive/50 shadow-[0_0_0_3px_color-mix(in_oklab,var(--destructive)_14%,transparent)] dark:border-destructive/55')}>
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{labels(`queues.${queue}`)}</h2>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{labels(`queues.${queue}`)}</h2>
+              {urgent > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2.5 py-0.5 text-sm font-semibold text-white tabular-nums"><Siren aria-hidden="true" className="size-4 shrink-0" />{t('urgent', { count: urgent })}</span>}
+            </div>
             <ArrowUpRight aria-hidden="true" className="size-5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground" />
           </div>
           <p className="font-display text-[2rem] leading-none font-semibold tracking-[-0.03em] tabular-nums">{t('openCount', { count: summary?.openCount ?? 0 })}</p>

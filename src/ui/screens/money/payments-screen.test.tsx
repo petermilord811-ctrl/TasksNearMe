@@ -68,7 +68,8 @@ describe('PaymentsScreen', () => {
     mount();
     expect(within(visa()).getByText('Expires 08/28')).toBeVisible();
     expect(within(visa()).getByText(messages.payments.picker.default)).toBeVisible();
-    expect(within(visa()).getByRole('button', { name: copy.makeDefault })).toBeDisabled();
+    // The default card says so and has no "Make default".
+    expect(within(visa()).queryByRole('button', { name: copy.makeDefault })).not.toBeInTheDocument();
     expect(within(mastercard()).getByText('Expires 03/27')).toBeVisible();
     expect(within(mastercard()).getByRole('button', { name: copy.makeDefault })).toBeEnabled();
     for (const card of DEV_TEST_CARDS) expect(screen.getByRole('radio', { name: messages.payments.testCards[card] })).toBeVisible();

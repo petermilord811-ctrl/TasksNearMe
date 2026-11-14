@@ -215,7 +215,8 @@ export async function getAdminHome(db: Db, staff: StaffActor, now: Date): Promis
         const due = slaDueAt({ queue, status: caseStatusOf(row.status), createdAt: row.createdAt, firstResponseAt: row.firstResponseAt });
         return Boolean(due && due < now);
       }).length;
-      return { queue, openCount: inQueue.length, slaBreaches: breaches, ...(oldest ? { oldestOpenedAt: oldest.toISOString() } : {}) };
+      const urgent = inQueue.filter((row) => row.priority === 'urgent').length;
+      return { queue, openCount: inQueue.length, slaBreaches: breaches, urgentCount: urgent, ...(oldest ? { oldestOpenedAt: oldest.toISOString() } : {}) };
     }),
     myOpenCount: open.filter((row) => row.assigneeUserId === staff.id).length,
   };

@@ -4,7 +4,8 @@ import { devSignIn } from './support/sign-in';
 /**
  * Booking sheets (UI-012) on the seeded booking (Ben's TV with Jordan, in a few days). The cancel sheet
  * is opened and closed without cancelling, so other tests can keep reading the booking; cancelling
- * itself is covered by integration tests. A safety report only opens a support case.
+ * itself is covered by integration tests. A safety report only opens a support case, which staff then see as
+ * urgent on their queues.
  */
 
 async function openAction(page: Page, name: string) {
@@ -26,8 +27,9 @@ test('the cancel sheet shows the refund from the policy', async ({ page }, testI
   await expect(page.getByRole('heading', { level: 1, name: 'Anchor a tall bookshelf to the wall' })).toBeVisible();
 });
 
-test('a safety report puts 911 first and reaches support', async ({ page }, testInfo) => {
+test('a safety report puts 911 first and reaches support', async ({ page, browser }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'one project is enough');
+  test.setTimeout(150_000);
   await devSignIn(page, 'ben@example.test');
   await page.goto('/app/bookings/bkg_tv');
   await openAction(page, 'Report a safety concern');
@@ -36,6 +38,16 @@ test('a safety report puts 911 first and reaches support', async ({ page }, test
   await page.getByRole('textbox').last().fill('Someone was waiting outside and would not leave.');
   await page.getByRole('button', { name: 'Send safety report' }).click();
   await expect(page.getByText('Support will contact you shortly').first()).toBeVisible({ timeout: 30_000 });
+
+  // Staff see it at once: the safety queue stands out with its urgent count (a safety report opens an urgent case).
+  const staff = await (await browser.newContext()).newPage();
+  await devSignIn(staff, 'alex@example.test', { landing: /\/admin\/verify$/ });
+  await staff.getByLabel('Code').fill('123456');
+  await staff.getByRole('button', { name: 'Verify' }).click();
+  await expect(staff).toHaveURL(/\/admin$/, { timeout: 30_000 });
+  const safety = staff.locator('a[href="/admin/cases?queue=safety&status=active"]');
+  await expect(safety.getByText(/^\d+ urgent$/)).toBeVisible({ timeout: 30_000 });
+  await staff.context().close();
 });
 
 // UI-030 fixed the bottom tab bar covering the booking page's action bar on phones.

@@ -48,6 +48,8 @@ export interface QueueSummary {
   openCount: number;
   /** Open cases past their response target. */
   slaBreaches: number;
+  /** Open cases opened at urgent priority (a safety report, for one): the queue's card stands out with this count. */
+  urgentCount: number;
   oldestOpenedAt?: ISODateTime;
 }
 

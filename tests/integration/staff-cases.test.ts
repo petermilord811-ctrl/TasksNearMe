@@ -44,6 +44,21 @@ describe('the queues and the case list', () => {
     const list = await getAdminCases(db, alex, { queue: 'disputes', status: 'active', mine: false }, new Date());
     expect(list.cases.find((row) => row.id === caseId)).toMatchObject({ subject: 'Anchor a tall bookshelf to the wall', slaBreached: true, awaitingReply: true, priority: 'high' });
   });
+
+  it('counts the open urgent cases in each queue (a safety report), so the card can stand out', async () => {
+    const urgentIn = async (queue: string) => (await getAdminHome(db, alex, new Date())).queues.find((row) => row.queue === queue)!.urgentCount;
+    const [safetyBefore, disputesBefore] = [await urgentIn('safety'), await urgentIn('disputes')];
+    await db.insert(supportCases).values({ id: 'case_staff_urgent', type: 'safety', status: 'open', priority: 'urgent', bookingId: 'bkg_tv', openedByUserId: 'usr_ben', description: 'Someone is waiting outside and will not leave.' });
+    try {
+      expect(await urgentIn('safety')).toBe(safetyBefore + 1);
+      // The dispute above is high priority, not urgent.
+      expect(await urgentIn('disputes')).toBe(disputesBefore);
+      await db.update(supportCases).set({ status: 'resolved' }).where(eq(supportCases.id, 'case_staff_urgent'));
+      expect(await urgentIn('safety')).toBe(safetyBefore);
+    } finally {
+      await db.delete(supportCases).where(eq(supportCases.id, 'case_staff_urgent'));
+    }
+  });
 });
 
 describe('working a case', () => {

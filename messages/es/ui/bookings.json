@@ -3,7 +3,7 @@
   "description": "Lleva el control de la ayuda que reservaste y de las tareas en las que ayudas.",
   "tabsLabel": "Listas de reservas",
   "tabs": {
-    "needsAction": "Requieren acción",
+    "needsAction": "Pendientes",
     "upcoming": "Próximas",
     "past": "Pasadas"
   },

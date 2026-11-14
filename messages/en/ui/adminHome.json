@@ -5,6 +5,7 @@
   "openCount": "{count, plural, one {# open case} other {# open cases}}",
   "pastDue": "{count, number} past due",
   "onTime": "No responses past due",
+  "urgent": "{count, number} urgent",
   "oldest": "Oldest: {relative}",
   "noCases": "No open cases",
   "quietTitle": "Nothing waiting",
