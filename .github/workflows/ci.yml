@@ -1,6 +1,7 @@
 # Every push: typecheck, lint, unit tests, DB integration tests and a production build.
-# A green feat/* branch is then merged into main (fast-forward only; no review needed: one developer), and
-# main is deployed to the preview site on the VPS (deploy/preview/README.md). Pushes straight to main and
+# A green feat/* branch is then deployed to the site on the VPS (deploy/preview/README.md) and, once the deploy
+# passes its health check, merged into main (fast-forward only; no review needed: one developer), so main
+# never holds a build that failed to start. Pushes straight to main and
 # manual runs with "deploy" ticked deploy too. Codex's ui/* branches aren't merged here: they go through
 # review into the work branch first (CLAUDE.md). The e2e suite isn't here yet (about 22 minutes locally).
 name: CI
@@ -83,28 +84,25 @@ jobs:
           NEXT_OUTPUT: standalone
           APP_URL: ${{ env.PREVIEW_URL }}
 
-      - name: Merge into main
-        id: merge
+      - name: Can this merge into main?
+        id: premerge
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feat/')
         run: |
           git fetch --no-tags origin main
           if [ "$(git rev-parse origin/main)" = "$GITHUB_SHA" ]; then
             echo "main is already at ${GITHUB_SHA::7}; its own run deploys it."
-          elif ! git merge-base --is-ancestor origin/main "$GITHUB_SHA"; then
-            echo "::warning title=Not merged::main has commits that $GITHUB_REF_NAME doesn't, so it can't fast-forward. Merge by hand."
-          elif git push origin "$GITHUB_SHA:refs/heads/main"; then
-            echo "merged=true" >> "$GITHUB_OUTPUT"
-            echo "Merged $GITHUB_REF_NAME into main at ${GITHUB_SHA::7}." >> "$GITHUB_STEP_SUMMARY"
+          elif git merge-base --is-ancestor origin/main "$GITHUB_SHA"; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning title=Not merged::main moved while this run was checking. Push again to retry."
+            echo "::warning title=Not merged::main has commits that $GITHUB_REF_NAME doesn't, so it can't fast-forward. Merge by hand."
           fi
 
       - name: Bundle for the preview
-        if: env.DEPLOY == 'true' || steps.merge.outputs.merged == 'true'
+        if: env.DEPLOY == 'true' || steps.premerge.outputs.ok == 'true'
         run: bash scripts/preview/bundle.sh preview-bundle "$GITHUB_SHA"
 
       - name: Deploy to the preview
-        if: env.DEPLOY == 'true' || steps.merge.outputs.merged == 'true'
+        if: env.DEPLOY == 'true' || steps.premerge.outputs.ok == 'true'
         env:
           SSH_KEY: ${{ secrets.PREVIEW_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.PREVIEW_SSH_KNOWN_HOSTS }}
@@ -117,3 +115,14 @@ jobs:
           ssh -i ~/.ssh/preview_deploy -o BatchMode=yes -o ServerAliveInterval=30 \
             "tnm-preview@$SSH_HOST" "deploy $GITHUB_SHA" < preview-bundle.tgz
           echo "Live: $PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"
+
+      # Only after the deploy passed its health check (a failing release is rolled back on the VPS and fails
+      # this run), so main always holds a build that started and served its pages.
+      - name: Merge into main
+        if: steps.premerge.outputs.ok == 'true'
+        run: |
+          if git push origin "$GITHUB_SHA:refs/heads/main"; then
+            echo "Merged $GITHUB_REF_NAME into main at ${GITHUB_SHA::7}." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning title=Not merged::main moved while this run was deploying. Push again to retry."
+          fi

@@ -58,15 +58,22 @@ switch_to() {
   mv -T "$ROOT/current.next" "$ROOT/current"
   sudo /usr/bin/systemctl restart "$SERVICE"
 }
-# Asks for the home page the way Caddy does (public host, https), so a release that only fails behind the
-# proxy, such as a rewrite treated as another origin, counts as broken.
+# Asks for a few pages the way Caddy does (public host, https), so a release that only fails behind the proxy,
+# such as a rewrite treated as another origin (a 307 loop on every English page), counts as broken. English
+# pages go through the proxy's language rewrite; /es doesn't.
 public_host=$(env_value APP_URL | sed -E 's#^https?://##; s#/.*$##')
+HEALTH_PATHS=(/ /es /sign-in)
 healthy() {
   for _ in $(seq 1 45); do
-    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H "Host: $public_host" -H 'X-Forwarded-Proto: https' "http://127.0.0.1:$PORT/" || true)
-    [[ "$code" == 200 ]] && return 0
+    local ok=1 path code
+    for path in "${HEALTH_PATHS[@]}"; do
+      code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 -H "Host: $public_host" -H 'X-Forwarded-Proto: https' "http://127.0.0.1:$PORT$path" || true)
+      [[ "$code" == 200 ]] || { ok=0; break; }
+    done
+    [[ $ok == 1 ]] && return 0
     sleep 2
   done
+  echo "health check: $path answered $code" >&2
   return 1
 }
 

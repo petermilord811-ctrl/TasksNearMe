@@ -8,14 +8,16 @@ stopgap until the Render setup in the blueprint (07-architecture.md "Hosting", b
 
 1. A push to any branch runs `.github/workflows/ci.yml` on GitHub: typecheck, lint, unit tests, DB integration
    tests, and a standalone production build (`NEXT_OUTPUT=standalone`).
-2. When all of that passes on a `feat/*` branch, the run fast-forwards `main` to that commit. No review is
-   needed, since one person develops this. If `main` has commits the branch lacks, it doesn't merge; it warns
-   instead. Codex's `ui/*` branches are never merged here: they're reviewed into the work branch first.
-3. A merged run, a push straight to `main`, or a manual run with **deploy** ticked then packs the build with
+2. When all of that passes on a `feat/*` branch that `main` can fast-forward to, the run packs the build with
    `scripts/preview/bundle.sh` and sends it over SSH: `ssh tnm-preview@<vps> "deploy <sha>" < preview-bundle.tgz`.
+   A push straight to `main`, or a manual run with **deploy** ticked, deploys the same way.
+3. Only after that deploy passes its health check does the run fast-forward `main` to the commit, so `main`
+   always holds a build that started and served its pages. No review is needed, since one person develops this.
+   If `main` has commits the branch lacks, nothing is deployed or merged; the run warns instead. Codex's `ui/*`
+   branches are never merged here: they're reviewed into the work branch first.
 4. On the VPS, that key can only run `deploy.sh`. The script unpacks the release, runs `prepare-db.cjs`
    (migrations, plus the sample data when the database is empty), switches `current`, restarts the service,
-   and rolls back if the new release doesn't answer.
+   and rolls back unless `/`, `/es` and `/sign-in` answer 200 when asked the way Caddy asks (public host, https).
 
 Building happens on GitHub's runner, not on the VPS. The VPS only runs `node server.js`, capped at 1.2 GB.
 
