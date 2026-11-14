@@ -3,7 +3,7 @@ title: Canceling a booking
 summary: Cancel free until 24 hours before the start. After that, a late fee applies.
 topic: payments
 order: 2
-updated: 2026-11-11
+updated: 2026-11-14
 ---
 Plans change. Here is what canceling costs.
 
@@ -15,6 +15,10 @@ Plans change. Here is what canceling costs.
 ## If your helper cancels
 
 You get everything back, and you can book someone else.
+
+## If we cancel
+
+If our support team has to cancel a booking, for example over a safety concern, you get a full refund.
 
 ## No-shows and access problems
 

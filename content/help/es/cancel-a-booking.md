@@ -3,7 +3,7 @@ title: Cancelar una reserva
 summary: Cancela gratis hasta 24 horas antes del inicio. Después se aplica un cargo por cancelación tardía.
 topic: payments
 order: 2
-updated: 2026-11-11
+updated: 2026-11-14
 ---
 Los planes cambian. Esto es lo que cuesta cancelar.
 
@@ -15,6 +15,10 @@ Los planes cambian. Esto es lo que cuesta cancelar.
 ## Si cancela tu ayudante
 
 Recuperas todo y puedes reservar a otra persona.
+
+## Si cancelamos nosotros
+
+Si nuestro equipo de soporte tiene que cancelar una reserva, por ejemplo por un problema de seguridad, recibes un reembolso completo.
 
 ## Ausencias y problemas de acceso
 

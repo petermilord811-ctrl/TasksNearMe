@@ -3,7 +3,7 @@ title: ¿Quién ve mi dirección?
 summary: Solo el ayudante que reservas, y solo después de que confirmas.
 topic: getting-started
 order: 2
-updated: 2026-11-11
+updated: 2026-11-14
 ---
 Tu dirección exacta llega a **una sola persona: el ayudante que reservas**, y solo cuando la reserva está confirmada.
 
@@ -14,6 +14,8 @@ Todos los demás, incluidos los ayudantes que hacen ofertas, solo ven tu vecinda
 ## Después de la tarea
 
 Tu dirección vuelve a quedar oculta para el ayudante 48 horas después de que se completa la tarea.
+
+Nuestro equipo de soporte solo puede abrirla cuando necesita ayudar con una reserva, y cada vez que lo hace queda registrado.
 
 > [!warning] No pongas tu dirección, número de teléfono ni datos de pago en la descripción de una tarea. Quitamos los datos de contacto que encontramos, pero por favor no cuentes con eso.
 

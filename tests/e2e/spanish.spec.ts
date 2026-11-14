@@ -53,7 +53,7 @@ test('a browser in Spanish gets the site in Spanish, and the footer switches thi
 test('help articles read in Spanish, dates included', async ({ page }) => {
   await page.goto('/es/help/when-am-i-charged');
   await expect(page.getByRole('heading', { level: 1, name: '¿Cuándo me cobran?' })).toBeVisible();
-  await expect(page.getByText(/11 de nov de 2026/)).toBeVisible();
+  await expect(page.getByText(/14 de nov de 2026/)).toBeVisible();
 });
 
 test('someone who signs up in Spanish gets a Spanish account, and can switch it to English', async ({ page, context }, testInfo) => {

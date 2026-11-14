@@ -322,7 +322,7 @@
       "preheader": "Open the link to choose your gift card. Keep it private: it works like cash.",
       "title": "Your gift card is ready",
       "heading": "Your {amount} gift card is ready",
-      "body": "Thanks for helping your neighbors, {firstName}. Here is your {program} reward.",
+      "body": "{greeting, select, welcome {Welcome aboard{hasName, select, yes {, {firstName}} other {}}.} other {Thanks for helping your neighbors{hasName, select, yes {, {firstName}} other {}}.}} Here is your {program} reward.",
       "programs": {
         "welcome": "founding helper",
         "repeat": "repeat client",
@@ -333,7 +333,7 @@
       "safety": "Anyone with the link can use it, so don't forward this email. You'll also find it on your Rewards page.",
       "rewards": "Rewards page",
       "help": "Contact support",
-      "text": "Thanks for helping your neighbors, {firstName}. Your {amount} {program} gift card is ready: {url}\n\nAnyone with the link can use it, so don't forward this email. It's also on your Rewards page: {rewardsUrl}"
+      "text": "{greeting, select, welcome {Welcome aboard{hasName, select, yes {, {firstName}} other {}}.} other {Thanks for helping your neighbors{hasName, select, yes {, {firstName}} other {}}.}} Your {amount} {program} gift card is ready: {url}\n\nAnyone with the link can use it, so don't forward this email. It's also on your Rewards page: {rewardsUrl}"
     },
     "accountDeleted": {
       "subject": "Your TasksNearMe account was deleted",

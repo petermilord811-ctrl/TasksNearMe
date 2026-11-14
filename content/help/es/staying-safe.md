@@ -3,7 +3,7 @@ title: Cómo mantenerte seguro
 summary: Hábitos sencillos que mantienen las tareas seguras para todos.
 topic: safety
 order: 2
-updated: 2026-11-11
+updated: 2026-11-14
 ---
 La mayoría de las tareas salen bien. Estos hábitos ayudan a que siga siendo así.
 
@@ -17,6 +17,12 @@ La mayoría de las tareas salen bien. Estos hábitos ayudan a que siga siendo as
 
 - Avisa a alguien adónde vas si trabajas solo.
 - No hagas nada fuera de la tarea acordada, como manejar contraseñas o temas bancarios, ni nada de la lista de tareas prohibidas.
+
+## Si algo sale mal
+
+- Durante una reserva, elige **Reportar un problema de seguridad** en la página de la reserva. Le llega de inmediato a nuestro equipo de seguridad, a cualquier hora.
+- Desde una conversación, puedes reportar o bloquear a alguien. Las personas bloqueadas no pueden enviarse mensajes, ofertas ni invitaciones.
+- También puedes reportar una tarea, un perfil o una reseña desde su página.
 
 > [!warning] En una emergencia, llama primero al 911.
 

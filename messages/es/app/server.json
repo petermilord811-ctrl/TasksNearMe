@@ -322,7 +322,7 @@
       "preheader": "Abre el enlace para elegir tu tarjeta de regalo. Mantenlo en privado: funciona como efectivo.",
       "title": "Tu tarjeta de regalo está lista",
       "heading": "Tu tarjeta de regalo de {amount} está lista",
-      "body": "Gracias por ayudar a tus vecinos, {firstName}. Aquí está tu recompensa por {program}.",
+      "body": "{greeting, select, welcome {Te damos la bienvenida{hasName, select, yes {, {firstName}} other {}}.} other {Gracias por ayudar a tus vecinos{hasName, select, yes {, {firstName}} other {}}.}} Aquí está tu recompensa por {program}.",
       "programs": {
         "welcome": "ser ayudante fundador",
         "repeat": "ser cliente recurrente",
@@ -333,7 +333,7 @@
       "safety": "Cualquier persona con el enlace puede usarla, así que no reenvíes este correo. También la encontrarás en tu página de Recompensas.",
       "rewards": "Página de Recompensas",
       "help": "Contactar a soporte",
-      "text": "Gracias por ayudar a tus vecinos, {firstName}. Tu tarjeta de regalo de {amount} por {program} está lista: {url}\n\nCualquier persona con el enlace puede usarla, así que no reenvíes este correo. También está en tu página de Recompensas: {rewardsUrl}"
+      "text": "{greeting, select, welcome {Te damos la bienvenida{hasName, select, yes {, {firstName}} other {}}.} other {Gracias por ayudar a tus vecinos{hasName, select, yes {, {firstName}} other {}}.}} Tu tarjeta de regalo de {amount} por {program} está lista: {url}\n\nCualquier persona con el enlace puede usarla, así que no reenvíes este correo. También está en tu página de Recompensas: {rewardsUrl}"
     },
     "accountDeleted": {
       "subject": "Se eliminó tu cuenta de TasksNearMe",

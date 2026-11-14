@@ -3,9 +3,9 @@ title: Cómo reportar un problema con una tarea
 summary: Repórtalo dentro de las 72 horas posteriores a que se complete y pausamos el pago mientras lo revisamos.
 topic: safety
 order: 1
-updated: 2026-11-11
+updated: 2026-11-14
 ---
-Si algo salió mal, avísanos **dentro de las 72 horas** posteriores a que la tarea se marque como terminada. Mientras lo revisamos, el pago de tu ayudante queda en pausa.
+Si algo salió mal, avísanos antes de aprobar la tarea, **dentro de las 72 horas** posteriores a que tu ayudante la marque como terminada. Mientras lo revisamos, el pago de tu ayudante queda en pausa.
 
 ## Cómo reportar
 
@@ -15,6 +15,7 @@ Si algo salió mal, avísanos **dentro de las 72 horas** posteriores a que la ta
 
 ## Qué puede pasar
 
+- Tu ayudante puede ofrecerse a volver para arreglarlo.
 - Tú y tu ayudante pueden acordar un precio menor. Te reembolsamos la diferencia.
 - Si el trabajo no se hizo, te reembolsamos todo.
 - La mayoría de los reportes se resuelven en 3 días hábiles.

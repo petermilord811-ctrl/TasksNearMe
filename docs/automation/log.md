@@ -240,3 +240,13 @@ One entry per iteration, newest last.
 - Emails and notifications: "Tu reserva está confirmada" replaces "Ya está reservado"; "Tu domicilio está verificado"; "{actorName} terminó {title} y espera tu aprobación"; "Gana dinero a tu propio ritmo", as elsewhere.
 - Sent to the landing and shell session: "reservar" used for claiming a gift-card spot (gone with its rework) and "Términos de recompensas" (now aligned).
 - Checks: i18n:check on each namespace changed, the catalog test, spanish and a11y-phone on the e2e build (11 passed; it throws on copy errors, none), ui-audit in Spanish over the booking, bookings, series, home, how it works and my tasks previews: no failures.
+
+## 2026-11-14 — The help center and emails against today's product (plan 5.21)
+- Help center, English and Spanish, each claim checked against the code or decisions.md:
+  - Getting verified: the six steps (phone and home address were missing), when offers open, and the ID facts: one ID per account, photos deleted once both checks are final (30 days at most), and the check counting until the ID's expiry month ends, with a reminder 30 days before.
+  - When do I get paid: tips are all yours, and what makes a payment wait (a reported problem, a bank dispute, a failed payout with "Action needed" clearing once the bank works).
+  - When am I charged: bookings more than 14 days ahead (charged 3 days before), regular visits (2 days before), and the outage pause.
+  - Canceling: a cancellation by our support team is a full refund. Staying safe: the safety report reaching the safety team at any hour, blocking and reporting. Reporting a problem: before you approve, and the helper's offer to fix it. Who sees my address: support opens it only when needed, logged.
+- Emails and texts: one shared layout with the new icon; plain-text versions present and matching; links through the route contract; no exact address or contact details. Fixed the gift card email: its html now says its language, a missing first name leaves no English stand-in ("there"), and a welcome card (which can come before any task) welcomes rather than thanks. New unit test `src/modules/rewards/emails.test.ts`.
+- For the owner: the "your email or phone changed, not you?" notices send people to /app/support, which needs a sign-in the person may have lost. There is no public support route or address yet.
+- Checks: email, content and catalog unit tests (128), i18n:check server, email and spanish on the e2e build (9 passed, no copy errors).

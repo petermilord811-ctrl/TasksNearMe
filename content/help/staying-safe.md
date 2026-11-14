@@ -3,7 +3,7 @@ title: Staying safe
 summary: Simple habits that keep tasks safe for everyone.
 topic: safety
 order: 2
-updated: 2026-11-11
+updated: 2026-11-14
 ---
 Most tasks go smoothly. These habits help keep it that way.
 
@@ -17,6 +17,12 @@ Most tasks go smoothly. These habits help keep it that way.
 
 - Tell someone where you're going if you work alone.
 - Don't do anything outside the agreed task, such as handling passwords or banking, or anything on the prohibited list.
+
+## If something goes wrong
+
+- During a booking, choose **Report a safety concern** on the booking page. It reaches our safety team right away, at any hour.
+- From a conversation, you can report or block someone. Blocked people can't message, offer, or invite each other.
+- You can also report a task, a profile, or a review from its page.
 
 > [!warning] In an emergency, call 911 first.
 
