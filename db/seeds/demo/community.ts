@@ -118,6 +118,14 @@ export function buildDemoCommunity(plan: DemoPlan, now: Date): DemoCommunity {
     const completed = plan.bookings.filter((booking) => booking.marketId === marketId && booking.status === 'completed');
     const everyone = [...clients.map((client) => client.userId), ...helpers];
     if (clients.length < 3) continue;
+    // Busier markets talk more: Austin's feed runs past one page (20 posts), so it reads as continuous; a small
+    // market keeps about eight posts.
+    const volume = {
+      recommendations: Math.min(completed.length, Math.max(3, Math.round(clients.length / 6))),
+      questions: Math.min(QUESTIONS.length, Math.max(2, Math.round(clients.length / 12))),
+      tips: Math.min(TIPS.length, Math.max(1, Math.round(clients.length / 20))),
+      thanks: Math.max(2, Math.round(clients.length / 9)),
+    };
     let n = 0;
     const postId = () => `cpo_demo_${key}_${String(++n).padStart(3, '0')}`;
     let r = 0;
@@ -153,7 +161,7 @@ export function buildDemoCommunity(plan: DemoPlan, now: Date): DemoCommunity {
     };
 
     // Recommendation requests, answered by neighbors who booked someone, and by helpers offering themselves.
-    for (const booking of rng.shuffle(completed).slice(0, Math.min(3, completed.length))) {
+    for (const booking of rng.shuffle(completed).slice(0, volume.recommendations)) {
       const task = tasksById.get(booking.taskId);
       if (!task) continue;
       const asker = rng.pick(clients.filter((client) => client.userId !== booking.posterUserId));
@@ -172,7 +180,7 @@ export function buildDemoCommunity(plan: DemoPlan, now: Date): DemoCommunity {
     }
 
     // Questions, answered by neighbors and helpers.
-    for (const question of rng.shuffle(QUESTIONS).slice(0, 2)) {
+    for (const question of rng.shuffle(QUESTIONS).slice(0, volume.questions)) {
       const asker = rng.pick(clients);
       const answerers = rng.shuffle(everyone.filter((id) => id !== asker.userId)).slice(0, question.answers.length);
       addPost(
@@ -182,13 +190,14 @@ export function buildDemoCommunity(plan: DemoPlan, now: Date): DemoCommunity {
       );
     }
 
-    // A tip from someone who knows (a helper, or a neighbor), for the whole market.
-    const tip = rng.pick(TIPS);
-    const tipper = helpers.length > 0 && rng.chance(0.6) ? rng.pick(helpers) : rng.pick(clients).userId;
-    addPost({ marketId, areaId: null, authorUserId: tipper, kind: 'tip', categorySlug: tip.category, helperUserId: null, bookingId: null, title: tip.title, body: tip.body, createdAt: hoursAgo(rng.int(6, 240)) }, [], false);
+    // Tips from people who know (a helper, or a neighbor), for the whole market.
+    for (const tip of rng.shuffle(TIPS).slice(0, volume.tips)) {
+      const tipper = helpers.length > 0 && rng.chance(0.6) ? rng.pick(helpers) : rng.pick(clients).userId;
+      addPost({ marketId, areaId: null, authorUserId: tipper, kind: 'tip', categorySlug: tip.category, helperUserId: null, bookingId: null, title: tip.title, body: tip.body, createdAt: hoursAgo(rng.int(6, 240)) }, [], false);
+    }
 
     // Thanks for finished bookings, answered by the helper.
-    for (const booking of completed.slice(-2)) {
+    for (const booking of completed.slice(-volume.thanks)) {
       const task = tasksById.get(booking.taskId);
       if (!task || out.posts.some((post) => post.bookingId === booking.id)) continue;
       const client = clients.find((candidate) => candidate.userId === booking.posterUserId);
