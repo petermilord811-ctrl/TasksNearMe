@@ -2,7 +2,7 @@ import { and, eq, inArray, isNotNull, like, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
-import { areas } from '@/modules/markets/schema';
+import { areas, markets } from '@/modules/markets/schema';
 import { DEFAULT_FEES } from '@/modules/markets/policy-defaults';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { helperProfiles } from '@/modules/profiles/schema';
@@ -25,6 +25,9 @@ import { createDb } from '@/platform/db/connect';
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 12 });
 const HELPERS = Array.from({ length: 50 }, (_, n) => `usr_t26_h${String(n).padStart(2, '0')}`);
 const ANCHOR = 'usr_t26_anchor';
+/** The founding test's own market and area (copies of Sam's), so other files' founding numbers don't count. */
+const MARKET = 'mkt_t26';
+const AREA = 'area_t26';
 const WELCOME = REWARD_RULES.welcome.amountCents;
 const DAY = 86_400_000;
 const VERIFIED = Date.parse('2020-01-01T12:00:00.000Z');
@@ -73,6 +76,8 @@ afterAll(async () => {
   await db.delete(identityVerifications).where(inArray(identityVerifications.userId, people));
   await db.delete(helperProfiles).where(inArray(helperProfiles.userId, people));
   await db.delete(users).where(inArray(users.id, people));
+  await db.delete(areas).where(eq(areas.id, AREA));
+  await db.delete(markets).where(eq(markets.id, MARKET));
   await pool.end();
 });
 
@@ -105,8 +110,15 @@ describe('T-26: budgets under concurrency', () => {
   });
 
   it('gives the founding cohort’s last 10 numbers to exactly 10 of 50 helpers clearing verification at once', async () => {
+    // Founding numbers count per market, and other files hand out numbers in Sam's: this test's helpers move to a
+    // market of their own (a copy of Sam's), so its count starts at zero whatever ran before (CI's file order).
     const [profile] = await db.select({ areaId: helperProfiles.areaId }).from(helperProfiles).where(eq(helperProfiles.userId, 'usr_sam'));
-    const [area] = await db.select({ marketId: areas.marketId }).from(areas).where(eq(areas.id, profile!.areaId!));
+    const [samArea] = await db.select().from(areas).where(eq(areas.id, profile!.areaId!));
+    const [samMarket] = await db.select().from(markets).where(eq(markets.id, samArea!.marketId));
+    await db.insert(markets).values({ ...samMarket!, id: MARKET, slug: 't26-market' });
+    await db.insert(areas).values({ ...samArea!, id: AREA, marketId: MARKET, slug: 't26-area' });
+    await db.update(helperProfiles).set({ areaId: AREA }).where(inArray(helperProfiles.userId, [...HELPERS, ANCHOR]));
+    const area = { marketId: MARKET };
     const taken = async () =>
       (
         await db
@@ -116,7 +128,7 @@ describe('T-26: budgets under concurrency', () => {
           .where(and(eq(areas.marketId, area!.marketId), isNotNull(helperProfiles.foundingNumber)))
       )[0]!;
     const before = await taken();
-    expect(Math.max(before.count, before.highest)).toBeLessThan(90);
+    expect(before).toEqual({ count: 0, highest: 0 });
     // A helper holding number 90: ten numbers are left.
     await db.update(helperProfiles).set({ foundingNumber: 90 }).where(eq(helperProfiles.userId, ANCHOR));
 
