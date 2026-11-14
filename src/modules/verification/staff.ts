@@ -26,6 +26,7 @@ import type {
   IdentityCaptureRevealResult,
   IdentityCaptureStatus,
   IdentityDocumentType,
+  IdentityProviderOutcome,
   LivenessPrompt,
   StaffRole,
   VerificationActionInput,
@@ -35,6 +36,7 @@ import {
   addressDecisionInputSchema,
   addressProofRevealInputSchema,
   IDENTITY_CAPTURE_PHOTOS,
+  IDENTITY_PROVIDER_OUTCOMES,
   identityCaptureDecisionInputSchema,
   identityCaptureRevealInputSchema,
   verificationActionInputSchema,
@@ -71,6 +73,13 @@ const QUEUE_LIMIT = 100;
 export const DOCUMENT_LINK_MINUTES = 5;
 
 export const canDecideVerification = (staff: { roles: readonly StaffRole[] }) => staff.roles.some((role) => DECIDERS.includes(role));
+/** Background-check adjudication (approving after review, the pre-adverse and the final notice): trust and safety only (blueprint 08 §4). */
+const ADJUDICATORS: readonly StaffRole[] = ['trust_safety'];
+export const canAdjudicateBackground = (staff: { roles: readonly StaffRole[] }) => staff.roles.some((role) => ADJUDICATORS.includes(role));
+const BACKGROUND_ACTIONS: readonly AdminVerificationActionId[] = ['engage_background', 'pre_adverse_background', 'post_adverse_background'];
+
+const providerOutcomeOf = (value: string | null | undefined): IdentityProviderOutcome | undefined =>
+  !value ? undefined : (IDENTITY_PROVIDER_OUTCOMES as readonly string[]).includes(value) ? (value as IdentityProviderOutcome) : 'other';
 const roleOf = (staff: StaffActor) => DECIDERS.find((role) => staff.roles.includes(role)) ?? staff.roles[0] ?? 'support_agent';
 
 function autoCheckView(stored: StoredAddressAutoCheck | null): AddressAutoCheck | undefined {
@@ -150,7 +159,8 @@ async function identityQueue(db: Db, now: Date): Promise<AdminIdentityReviewRow[
     db.select().from(users).where(inArray(users.id, ids)),
   ]);
   const out: AdminIdentityReviewRow[] = [];
-  for (const person of people) {
+  // A deleted account has nothing left to decide.
+  for (const person of people.filter((row) => row.status !== 'deleted')) {
     const theirs = captures.filter((row) => row.userId === person.id);
     const standing = identityStanding(rows.filter((row) => row.userId === person.id), now, theirs);
     const waiting = standing.capture?.status === 'submitted' ? theirs.find((row) => row.id === standing.capture!.id) : undefined;
@@ -163,6 +173,25 @@ async function identityQueue(db: Db, now: Date): Promise<AdminIdentityReviewRow[
         at: waiting.submittedAt.toISOString(),
         attempts: standing.attempts,
         capture: { documentType: waiting.documentType as IdentityDocumentType, ...(autoCheck ? { autoCheck } : {}), overdue: now.getTime() - waiting.submittedAt.getTime() > IDENTITY_CAPTURE_RULES.responseTargetHours * HOUR_MS },
+      });
+      continue;
+    }
+    if (standing.blocked === 'double_check_review' && standing.doubleCheck && standing.reviewSince) {
+      // Both results: the photos our team approved, and what the provider said.
+      const approved = theirs.filter((row) => row.status === 'approved').sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).at(-1);
+      const session = rows.find((row) => row.id === standing.doubleCheck!.id);
+      const outcome = providerOutcomeOf(session?.providerOutcome);
+      out.push({
+        id: standing.doubleCheck.id,
+        person: personSummaryOf(person),
+        kind: 'double_check',
+        at: standing.reviewSince.toISOString(),
+        attempts: standing.attempts,
+        doubleCheck: {
+          approvedAt: (approved?.decidedAt ?? approved?.createdAt ?? standing.reviewSince).toISOString(),
+          ...(outcome ? { providerOutcome: outcome } : {}),
+          endedAt: standing.reviewSince.toISOString(),
+        },
       });
       continue;
     }
@@ -274,12 +303,16 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
     if (identity.capture?.status === 'submitted') actions.push('review_identity_capture');
     if (state.captureRows.some((row) => captureFileIds(row).length > 0)) actions.push('view_identity_photos');
     if (identity.nameCheck) actions.push('confirm_name');
-    if (identity.blocked) actions.push('allow_identity_retry');
+    // A double check that didn't confirm our approval has its own two decisions.
+    if (identity.blocked === 'double_check_review') actions.push('allow_double_check_retry', 'reject_double_check');
+    else if (identity.blocked) actions.push('allow_identity_retry');
     if (identity.verified) actions.push('request_identity');
-    if (latestBackground?.status === 'consider' && (latestBackground.adjudication === null || latestBackground.adjudication === 'pre_adverse')) actions.push('engage_background');
-    if (latestBackground?.status === 'consider' && latestBackground.adjudication === null) actions.push('pre_adverse_background');
-    if (latestBackground?.status === 'consider' && latestBackground.adjudication === 'pre_adverse' && latestBackground.preAdverseAt && now.getTime() >= latestBackground.preAdverseAt.getTime() + BACKGROUND_RULES.disputeDays * DAY_MS) {
-      actions.push('post_adverse_background');
+    if (canAdjudicateBackground(staff)) {
+      if (latestBackground?.status === 'consider' && (latestBackground.adjudication === null || latestBackground.adjudication === 'pre_adverse')) actions.push('engage_background');
+      if (latestBackground?.status === 'consider' && latestBackground.adjudication === null) actions.push('pre_adverse_background');
+      if (latestBackground?.status === 'consider' && latestBackground.adjudication === 'pre_adverse' && latestBackground.preAdverseAt && now.getTime() >= latestBackground.preAdverseAt.getTime() + BACKGROUND_RULES.disputeDays * DAY_MS) {
+        actions.push('post_adverse_background');
+      }
     }
   }
   const latestIdentityRow = state.identityRows.find((row) => row.id === latestIdentity?.id);
@@ -303,6 +336,7 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
       ...(identity.requested ? { requested: identity.requested } : {}),
       ...(state.agreements.biometric_consent ? { consentAt: state.agreements.biometric_consent.toISOString() } : {}),
       ...(latestIdentityRow?.redactionRequestedAt ? { redactionRequestedAt: latestIdentityRow.redactionRequestedAt.toISOString() } : {}),
+      ...(providerOutcomeOf(latestIdentityRow?.providerOutcome) ? { providerOutcome: providerOutcomeOf(latestIdentityRow?.providerOutcome)! } : {}),
       captures,
     },
     address: {
@@ -394,11 +428,14 @@ export async function verificationAction(db: Db, providers: VerificationProvider
   const parsed = verificationActionInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const { userId, action, note } = parsed.data;
+  if (BACKGROUND_ACTIONS.includes(action) && !canAdjudicateBackground(staff)) return { ok: false, code: 'not_allowed' };
   const view = await getPersonVerification(db, staff, userId, now);
   if (!view.actions.includes(action)) return { ok: false, code: 'not_allowed' };
   const state = await loadOnboardingState(db, userId, now);
   const latestIdentity = state.identity.latest as IdentityRow | undefined;
   const latestBackground = state.background.latest;
+  /** What the audit row keeps besides the note (the double check's two results). */
+  let metadata: Record<string, unknown> = {};
 
   switch (action) {
     case 'request_address':
@@ -430,6 +467,27 @@ export async function verificationAction(db: Db, providers: VerificationProvider
       // A client (no helper profile) is sent to their own ID page.
       await emitVerificationEvent(db, userId, state.profile ? 'identity' : 'poster_identity', 'action_needed');
       break;
+    case 'allow_double_check_retry': {
+      // Staff looked at both and let the helper try the double check again (our approval stands).
+      const failed = state.identity.doubleCheck!;
+      await db.update(identityVerifications).set({ reviewOutcome: 'retry_allowed', reviewedAt: now, reviewedByUserId: staff.id, updatedAt: now }).where(eq(identityVerifications.id, failed.id));
+      metadata = doubleCheckAudit(state, failed.id);
+      await emitVerificationEvent(db, userId, 'identity', 'action_needed');
+      break;
+    }
+    case 'reject_double_check': {
+      // Staff agree with the provider: the approved photos are turned down, and the helper starts over.
+      const failed = state.identity.doubleCheck!;
+      const approved = state.captureRows.filter((row) => row.status === 'approved').at(-1)!;
+      await db.update(identityVerifications).set({ reviewOutcome: 'rejected', reviewedAt: now, reviewedByUserId: staff.id, updatedAt: now }).where(eq(identityVerifications.id, failed.id));
+      await db
+        .update(identityCaptures)
+        .set({ status: 'rejected', rejectionReason: 'double_check_failed', decidedAt: now, decidedByUserId: staff.id, staffNote: note, updatedAt: now })
+        .where(and(eq(identityCaptures.id, approved.id), eq(identityCaptures.status, 'approved')));
+      metadata = doubleCheckAudit(state, failed.id);
+      await emitVerificationEvent(db, userId, 'identity', 'action_needed');
+      break;
+    }
     case 'engage_background': {
       // After a pre-adverse notice, the provider's scheduled final notice must not go.
       const [adverse] = await db.select({ adjudication: backgroundChecks.adjudication, ref: backgroundChecks.adverseActionRef }).from(backgroundChecks).where(eq(backgroundChecks.id, latestBackground!.id)).limit(1);
@@ -465,9 +523,20 @@ export async function verificationAction(db: Db, providers: VerificationProvider
         .where(eq(backgroundChecks.id, latestBackground!.id));
       break;
   }
-  await audit(db, staff, `verification.${action}`, userId, note);
+  await audit(db, staff, `verification.${action}`, userId, note, metadata);
   await syncHelperProfile(db, userId, now);
   return { ok: true, code: 'updated' };
+}
+
+/** Both results of a double check staff decided: our approval and the provider's word (no personal data). */
+function doubleCheckAudit(state: Awaited<ReturnType<typeof loadOnboardingState>>, sessionId: string): Record<string, unknown> {
+  const approved = state.captureRows.filter((row) => row.status === 'approved').at(-1);
+  const session = state.identityRows.find((row) => row.id === sessionId);
+  return {
+    identityVerificationId: sessionId,
+    providerOutcome: session?.providerOutcome ?? null,
+    ...(approved ? { captureId: approved.id, approvedAt: (approved.decidedAt ?? approved.createdAt).toISOString() } : {}),
+  };
 }
 
 // ---- Opening a proof of address -------------------------------------------------------------------

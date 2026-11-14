@@ -19,6 +19,7 @@ import type {
   BackgroundAdjudication,
   BackgroundCheckStatus,
   IdentityCaptureStatus,
+  IdentityProviderOutcome,
   IdentityStatus,
   PayoutAccountStatus,
 } from './status';
@@ -67,8 +68,11 @@ export interface AdminAddressReviewRow {
   overdue: boolean;
 }
 
-/** `capture`: ID photos to compare (our own check, stage 1). */
-export type AdminIdentityReviewKind = 'capture' | 'name_check' | 'too_many_attempts';
+/**
+ * `capture`: ID photos to compare (our own check, stage 1). `double_check`: the provider's double check
+ * didn't confirm photos our team approved; the helper is paused until staff decide.
+ */
+export type AdminIdentityReviewKind = 'capture' | 'double_check' | 'name_check' | 'too_many_attempts';
 
 /**
  * What the automatic reading of an ID found (only when it's on; staff still decide). Only these answers
@@ -99,6 +103,8 @@ export interface AdminIdentityReviewRow {
   attempts: number;
   /** With `capture`. `overdue`: waiting longer than the 2-day response target. */
   capture?: { documentType: IdentityDocumentType; autoCheck?: IdentityAutoCheck; overdue: boolean };
+  /** With `double_check`: both results, our approval and the provider's. */
+  doubleCheck?: { approvedAt: ISODateTime; providerOutcome?: IdentityProviderOutcome; endedAt: ISODateTime };
 }
 
 /** A background check that came back `consider`, until it's engaged or final. */
@@ -174,6 +180,10 @@ export const ADMIN_VERIFICATION_ACTIONS = [
   'allow_identity_retry',
   /** Ask for a new ID check (the current verification stops counting). */
   'request_identity',
+  /** The double check didn't confirm the approved photos: let the helper try the double check again. */
+  'allow_double_check_retry',
+  /** The double check didn't confirm the approved photos: turn them down (the helper sees why and can start over). */
+  'reject_double_check',
   /** A `consider` background check: approve the helper for in-home work. */
   'engage_background',
   /** A `consider` background check: start the pre-adverse notice through Checkr. */
@@ -203,6 +213,8 @@ export interface AdminPersonVerification {
     consentAt?: ISODateTime;
     /** The provider was asked to delete the ID images (30 days after the result). */
     redactionRequestedAt?: ISODateTime;
+    /** The provider's own word for its latest result (Persona), beside ours. */
+    providerOutcome?: IdentityProviderOutcome;
     /** Our own check's tries (stage 1), newest first, up to 5. */
     captures: AdminIdentityCaptureView[];
   };
@@ -245,7 +257,7 @@ export type AddressDecisionInput = z.input<typeof addressDecisionInputSchema>;
 export const verificationActionInputSchema = z.object({
   userId: z.string(code('required')).min(1, code('required')),
   action: z.enum(
-    ['request_address', 'confirm_name', 'allow_identity_retry', 'request_identity', 'engage_background', 'pre_adverse_background', 'post_adverse_background'],
+    ['request_address', 'confirm_name', 'allow_identity_retry', 'request_identity', 'allow_double_check_retry', 'reject_double_check', 'engage_background', 'pre_adverse_background', 'post_adverse_background'],
     code('required'),
   ),
   note,

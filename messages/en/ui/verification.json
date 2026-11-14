@@ -60,7 +60,7 @@
       "background": "Background check"
     },
     "identityExplanation": "Our ID partner will ask for a photo of your ID and a selfie. It takes about 2 minutes.",
-    "identityDoubleCheck": "Our team approved your photos. Last step: a double check with our ID partner, Stripe. It takes about 2 minutes.",
+    "identityDoubleCheck": "Our team approved your photos. Last step: a double check with our ID partner, Persona. It takes about 2 minutes.",
     "identityPublic": "Clients see an “ID verified” badge with the month and year of your check. Your ID photo and selfie stay private.",
     "payoutExplanation": "Set up where your earnings go with Stripe, our payment partner. Stripe handles your payout details.",
     "firstPayout": "Your first payout can take about {days} days.",
@@ -109,12 +109,13 @@
     "identityBlocked": {
       "try_later": "You've tried 3 times in a day. You can try again from {time}. Good light and all four edges of the ID in view help.",
       "too_many_attempts": "We couldn't verify your ID after several tries. Our team will look at it and get back to you by email. You can also contact support.",
-      "under_18": "Helpers need to be 18 or older. If this result is wrong, contact support and we will look at it."
+      "under_18": "Helpers need to be 18 or older. If this result is wrong, contact support and we will look at it.",
+      "double_check_review": "Our ID partner couldn't confirm the ID our team approved. Our team is looking at both checks and will get back to you, usually within a day. Offers stay paused meanwhile."
     },
     "identityNameCheck": "Your ID is verified, but the name on it is different from the one on your account. Our team is checking it, usually within a day. If your account name isn't your legal name, <account>update it on your account page</account>.",
     "biometric": {
       "title": "Before your ID check",
-      "body": "Our ID partner, Stripe, compares a photo of your ID with a live selfie using face geometry, a biometric identifier. It's used only to verify that you are the person on the ID. Stripe keeps it, not us, and we ask Stripe to delete it 30 days after your result. Texas law requires your consent first.",
+      "body": "Our ID partner, Persona, compares a photo of your ID with a live selfie using face geometry, a biometric identifier. It's used only to verify that you are the person on the ID. Persona keeps it, not us, and we ask Persona to delete it 30 days after your result. Texas law requires your consent first.",
       "checkbox": "I agree to the biometric check described here.",
       "required": "Agree to the biometric check to start your ID check."
     },
@@ -259,7 +260,7 @@
     },
     "notice": {
       "title": "Before you take your photos",
-      "body": "To check that you are the person on your ID, we take photos of your ID and a selfie that follows an instruction, and our trust and safety team compares your face with the photo on the ID. Then our ID partner, Stripe, double-checks your ID and a selfie using face geometry, a biometric identifier. The photos are used only to verify your identity. We keep ours encrypted until both checks are finished and delete them no later than 30 days after our decision; we ask Stripe to delete theirs 30 days after its result. Texas law requires your consent first.",
+      "body": "To check that you are the person on your ID, we take photos of your ID and a selfie that follows an instruction, and our trust and safety team compares your face with the photo on the ID. Then our ID partner, Persona, double-checks your ID and a selfie using face geometry, a biometric identifier. The photos are used only to verify your identity. We keep ours encrypted until both checks are finished and delete them no later than 30 days after our decision; we ask Persona to delete theirs 30 days after its result. Texas law requires your consent first.",
       "checkbox": "I agree to the ID and selfie check described here.",
       "required": "Agree to the ID and selfie check to take your photos.",
       "continue": "Continue"
@@ -351,6 +352,7 @@
       "prompt_not_followed": "Your selfie didn't follow its instruction. Take new photos; you'll get a new instruction.",
       "under_18": "Helpers need to be 18 or older.",
       "expired": "That ID has expired. Take photos of a current ID.",
+      "double_check_failed": "Our ID partner couldn't verify this ID. Take new photos of a current, valid ID, or contact support if you think this is a mistake.",
       "other": "We couldn't accept these photos. Take them again, or contact support if this keeps happening."
     },
     "privacy": "Only our trust and safety team sees your photos, and every view is logged. An automated reader (Claude, by Anthropic) reads the name and dates on the front of your ID for them; we keep only its yes-or-no answers, never your name, birth date or ID number. Your photos are stored encrypted and deleted no later than 30 days after our decision.",
@@ -391,7 +393,9 @@
       "tryLater": "Paused: 3 tries today",
       "tooMany": "Paused: too many tries",
       "under18": "Paused: under 18",
-      "requested": "New check asked for"
+      "requested": "New check asked for",
+      "doubleCheckReview": "Paused: the double check didn't confirm",
+      "doubleCheckRejected": "New photos after the double check"
     }
   }
 }

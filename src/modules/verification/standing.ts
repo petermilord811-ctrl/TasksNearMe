@@ -72,6 +72,8 @@ export interface IdentityRow {
   nameConfirmedAt: Date | null;
   verifiedAt: Date | null;
   requestedReason: string | null;
+  /** Staff's decision on a double check that didn't confirm our approval (`retry_allowed`, `rejected`). */
+  reviewOutcome?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -115,6 +117,8 @@ export interface IdentityStanding {
   captureApproved: boolean;
   /** New photos can be sent now (not verified, not paused, nothing in review or approved). */
   canCapture: boolean;
+  /** With `blocked: double_check_review`: the provider's session that didn't confirm the approved photos. */
+  doubleCheck?: IdentityRow;
 }
 
 const byCreated = <T extends { createdAt: Date }>(rows: readonly T[]) => [...rows].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
@@ -176,8 +180,18 @@ export function identityStanding(rows: readonly IdentityRow[], now: Date, captur
     .filter((at) => now.getTime() - at.getTime() < DAY_MS)
     .sort((a, b) => a.getTime() - b.getTime());
   const inFlight = status === 'processing' || captureInReview;
+  // The double check (the provider, after our team approved the photos) ended without a pass: our team
+  // looks at both before anything else happens, unless they already decided.
+  const approval = currentCaptures.findLast((row) => row.status === 'approved');
+  const approvedAt = approval ? (approval.decidedAt ?? approval.createdAt).getTime() : Number.POSITIVE_INFINITY;
+  const lastDoubleCheck = sessions.filter((row) => row.createdAt.getTime() >= approvedAt).at(-1);
+  const doubleCheckFailed = lastDoubleCheck?.status === 'requires_input' && !lastDoubleCheck.reviewOutcome;
   if (under18) standing.blocked = 'under_18';
-  else if (failures.length >= IDENTITY_RULES.total && !inFlight) {
+  else if (doubleCheckFailed) {
+    standing.blocked = 'double_check_review';
+    standing.doubleCheck = lastDoubleCheck;
+    standing.reviewSince = lastDoubleCheck.updatedAt;
+  } else if (failures.length >= IDENTITY_RULES.total && !inFlight) {
     standing.blocked = 'too_many_attempts';
     standing.reviewSince = failures.at(-1)!;
   } else if (lastDay.length >= IDENTITY_RULES.perDay && !inFlight) {

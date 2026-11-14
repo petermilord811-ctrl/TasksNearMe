@@ -112,7 +112,7 @@ describe('sending the photos', () => {
     expect(await acceptIdentityNotice(db, MAIN, { consent: false }, at(0))).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { consent: ['must_accept'] } });
     expect(await acceptIdentityNotice(db, MAIN, { consent: true }, at(0), { ip: '203.0.113.9', userAgent: 'test' })).toEqual({ ok: true, code: 'updated' });
     const [consent] = await db.select().from(agreements).where(and(eq(agreements.userId, MAIN), eq(agreements.doc, 'biometric_consent')));
-    expect(consent).toMatchObject({ version: 'draft-0.2', ip: '203.0.113.9' });
+    expect(consent).toMatchObject({ version: 'draft-0.3', ip: '203.0.113.9' });
   });
 
   it('checks the kind of ID and every photo', async () => {
@@ -320,17 +320,18 @@ describe('the limits', () => {
 });
 
 describe('deleting the photos', () => {
-  it('deletes them 30 days after the decision, rejected ones too, keeping the status and answers', async () => {
+  it('deletes approved photos once the double check clears the ID, the others 30 days after the decision, keeping the status and answers', async () => {
     const before = await capturesOf(MAIN);
     const keys = await db.select({ key: files.storageKey }).from(files).where(and(eq(files.ownerUserId, MAIN), inArray(files.kind, ['id_document', 'id_selfie'])));
     expect(keys).toHaveLength(5);
     const old = await revealIdentityCapture(db, { secret }, taylor, { captureId: before[0]!.id, reason: 'Looking again before deletion.' }, at(20));
     if (!old.ok) throw new Error('reveal failed');
-    await runVerificationTimers(db, { storage, providers }, at(20), { userIds: PEOPLE });
-    expect((await capturesOf(MAIN)).every((row) => row.filesDeletedAt === null)).toBe(true);
-    // The first photos were decided on day 1, the second on day 1.2: both are due by day 31.3.
+    // Both stages are final for the approved photos (6.2): they go on the next run. The turned-down ones stay for now.
+    expect((await runVerificationTimers(db, { storage, providers }, at(20), { userIds: PEOPLE })).idPhotosDeleted).toBe(1);
+    expect((await capturesOf(MAIN)).map((row) => [row.status, row.filesDeletedAt === null])).toEqual([['rejected', true], ['approved', false]]);
+    // The first photos were decided on day 1: due by day 31.3.
     const result = await runVerificationTimers(db, { storage, providers }, at(31.3), { userIds: [MAIN] });
-    expect(result.idPhotosDeleted).toBe(2);
+    expect(result.idPhotosDeleted).toBe(1);
     const after = await capturesOf(MAIN);
     expect(after.map((row) => row.status)).toEqual(['rejected', 'approved']);
     expect(after.every((row) => row.frontFileId === null && row.backFileId === null && row.selfieFileId === null && row.filesDeletedAt !== null)).toBe(true);

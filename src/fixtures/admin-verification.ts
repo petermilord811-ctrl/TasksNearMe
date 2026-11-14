@@ -14,6 +14,7 @@ const devon: PersonSummary = { id: 'usr_devon', displayName: 'Devon K.', initial
 const lee: PersonSummary = { id: 'usr_lee', displayName: 'Lee M.', initials: 'LM', memberSince: '2026-06-01T15:00:00.000Z', phoneVerified: true };
 const rosa: PersonSummary = { id: 'usr_rosa', displayName: 'Rosa T.', initials: 'RT', memberSince: '2026-11-16T15:00:00.000Z', phoneVerified: true };
 const omar: PersonSummary = { id: 'usr_omar', displayName: 'Omar H.', initials: 'OH', memberSince: '2026-11-18T15:00:00.000Z', phoneVerified: true };
+const ana: PersonSummary = { id: 'usr_ana', displayName: 'Ana V.', initials: 'AV', memberSince: '2026-11-15T15:00:00.000Z', phoneVerified: true };
 
 /** What the automatic reading of an ID found: everything matches, or the name and expiry need a look. */
 const idAllMatch: IdentityAutoCheck = { readable: true, nameMatches: true, isAdult: true, notExpired: true, expires: { month: 4, year: 2029 }, documentType: 'drivers_license' };
@@ -35,11 +36,24 @@ const rosaTurnedDown: AdminIdentityCaptureView = {
   note: 'Selfie shows no hand; asked for a new one with the prompt.',
 };
 const priyaApproved: AdminIdentityCaptureView = { id: 'idc_priya', status: 'approved', documentType: 'drivers_license', submittedAt: '2026-11-17T13:00:00.000Z', prompt: 'smile', autoCheck: idAllMatch, photos: ['front', 'back', 'selfie'], decidedAt: '2026-11-17T13:40:00.000Z', decidedBy: 'Taylor B.', note: 'ID and selfie match; smile as asked.' };
+/** Approved by our team, then not confirmed by the provider's double check. */
+const anaApproved: AdminIdentityCaptureView = {
+  id: 'idc_ana',
+  status: 'approved',
+  documentType: 'state_id',
+  submittedAt: '2026-11-19T15:00:00.000Z',
+  prompt: 'three_fingers',
+  autoCheck: { ...idAllMatch, expires: { month: 8, year: 2030 }, documentType: 'state_id' },
+  photos: ['front', 'back', 'selfie'],
+  decidedAt: '2026-11-19T16:30:00.000Z',
+  decidedBy: 'Taylor B.',
+  note: 'ID and selfie match; three fingers as asked.',
+};
 const devonApproved: AdminIdentityCaptureView = { id: 'idc_devon', status: 'approved', documentType: 'passport', submittedAt: '2026-10-10T13:00:00.000Z', prompt: 'look_up', autoCheck: { readable: true, nameMatches: false, isAdult: true, notExpired: true, expires: { month: 2, year: 2031 }, documentType: 'passport' }, photos: [], photosDeletedAt: '2026-11-09T16:00:00.000Z', decidedAt: '2026-10-10T16:00:00.000Z', decidedBy: 'Morgan L.', note: 'Passport matches; married name on the account.' };
 
 export const adminVerificationsAddressData: AdminVerificationsPageData = {
   queue: 'address',
-  counts: { address: 2, identity: 4, background: 1 },
+  counts: { address: 2, identity: 5, background: 1 },
   address: [
     {
       id: 'adr_priya',
@@ -66,6 +80,7 @@ export const adminVerificationsIdentityData: AdminVerificationsPageData = {
     { id: 'idv_devon', person: devon, kind: 'name_check', at: '2026-11-18T14:00:00.000Z', attempts: 1 },
     { id: 'idv_lee', person: lee, kind: 'too_many_attempts', at: '2026-11-19T17:10:00.000Z', attempts: 5 },
     { id: 'idc_rosa', person: rosa, kind: 'capture', at: '2026-11-19T18:20:00.000Z', attempts: 2, capture: { documentType: 'drivers_license', autoCheck: idAllMatch, overdue: false } },
+    { id: 'idv_ana', person: ana, kind: 'double_check', at: '2026-11-19T21:05:00.000Z', attempts: 2, doubleCheck: { approvedAt: '2026-11-19T16:30:00.000Z', providerOutcome: 'declined', endedAt: '2026-11-19T21:05:00.000Z' } },
   ],
 };
 
@@ -156,6 +171,17 @@ export const rosaVerification: AdminPersonVerification = {
   payout: { status: 'not_started' },
   background: { status: 'not_started', requiredFor: ['light-cleaning'] },
   actions: ['review_identity_capture', 'view_identity_photos'],
+};
+
+/** Ana: the provider's double check declined the ID our team approved; she's paused until staff decide. */
+export const anaDoubleCheckVerification: AdminPersonVerification = {
+  phone: { verified: true, last4: '0211', verifiedAt: '2026-11-15T15:00:00.000Z' },
+  agreement: { version: 'draft-0.1', acceptedAt: '2026-11-15T15:10:00.000Z' },
+  identity: { status: 'requires_input', failureReason: 'other', providerOutcome: 'declined', blocked: 'double_check_review', attempts: 2, consentAt: '2026-11-19T14:50:00.000Z', captures: [anaApproved] },
+  address: { status: 'not_started', proofs: [] },
+  payout: { status: 'not_started' },
+  background: { status: 'not_started', requiredFor: ['light-cleaning'] },
+  actions: ['view_identity_photos', 'allow_double_check_retry', 'reject_double_check'],
 };
 
 /** A support agent sees Rosa's statuses and answers, but can't open the photos or decide. */

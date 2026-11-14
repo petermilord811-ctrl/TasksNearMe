@@ -1,11 +1,12 @@
 {
   "title": "Webhooks",
-  "intro": "Events from Stripe, Checkr and Resend go through an inbox: each is recorded once, retried when processing fails, and listed here when it keeps failing.",
+  "intro": "Events from Stripe, Checkr, Resend and Persona go through an inbox: each is recorded once, retried when processing fails, and listed here when it keeps failing.",
   "dayTitle": "The last 24 hours",
   "providers": {
     "stripe": "Stripe",
     "checkr": "Checkr",
-    "resend": "Resend"
+    "resend": "Resend",
+    "persona": "Persona"
   },
   "counts": {
     "processed": "Processed",

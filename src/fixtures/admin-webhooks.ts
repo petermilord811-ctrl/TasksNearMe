@@ -33,6 +33,7 @@ export const adminWebhooksFailingData: AdminWebhooksPageData = {
     { provider: 'stripe', processed: 184, ignored: 41, failed: 0, dead: 1 },
     { provider: 'checkr', processed: 6, ignored: 2, failed: 1, dead: 0 },
     { provider: 'resend', processed: 12, ignored: 230, failed: 0, dead: 0 },
+    { provider: 'persona', processed: 3, ignored: 1, failed: 0, dead: 0 },
   ],
   canAct: true,
 };

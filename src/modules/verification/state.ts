@@ -79,7 +79,8 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
     })),
     areaSet: Boolean(profile?.areaId),
     phoneVerified: Boolean(user?.phone && user.phoneVerifiedAt),
-    identity: { status: identity.status, cleared: identity.cleared, captureInReview: identity.capture?.status === 'submitted' },
+    // Waiting for our team: photos in review, or a double check that didn't confirm their approval.
+    identity: { status: identity.status, cleared: identity.cleared, captureInReview: identity.capture?.status === 'submitted' || identity.blocked === 'double_check_review' },
     address: { status: address.status, verified: address.verified },
     payout: (payout?.status as PayoutAccountStatus | undefined) ?? 'not_started',
     background: { status: background.status, eligible: background.eligible },

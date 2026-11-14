@@ -3,8 +3,8 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { IDENTITY_CAPTURE_REJECTION_REASONS, LIVENESS_PROMPTS, type ActionResult, type AdminVerificationHandlers, type IdentityCaptureRevealResult } from '@/contracts';
-import { ADMIN_NOW, adminVerificationsIdentityData, fakeAdminVerificationHandlers, identityCaptureRevealed, jordanVerification, rosaReadOnlyVerification, rosaVerification } from '@/fixtures';
+import { IDENTITY_CAPTURE_REJECTION_REASONS, IDENTITY_PROVIDER_OUTCOMES, LIVENESS_PROMPTS, type ActionResult, type AdminVerificationHandlers, type IdentityCaptureRevealResult } from '@/contracts';
+import { ADMIN_NOW, adminVerificationsIdentityData, anaDoubleCheckVerification, fakeAdminVerificationHandlers, identityCaptureRevealed, jordanVerification, rosaReadOnlyVerification, rosaVerification } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import copy from '../../../../messages/en/ui/adminVerification.json';
 import { AdminVerificationSection } from './admin-verification-section';
@@ -95,8 +95,33 @@ describe('staff review of our ID photos', () => {
     expect(screen.getByRole('link', { name: /Rosa T\./ })).toHaveTextContent(copy.queues.idAutoAllMatch);
   });
 
+  it("shows both results of a double check that didn't confirm our approval, with staff's two decisions", async () => {
+    const onVerificationAction = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    show(anaDoubleCheckVerification, { onVerificationAction });
+    expect(screen.getByText(copy.identityBlocked.double_check_review)).toBeVisible();
+    expect(screen.getByText(copy.providerOutcome.replace('{outcome}', copy.providerOutcomes.declined))).toBeVisible();
+    const [approved] = screen.getByRole('list', { name: c.title }).querySelectorAll<HTMLElement>(':scope > li');
+    expect(within(approved!).getByText(c.statuses.approved)).toBeVisible();
+    const actions = screen.getByRole('group', { name: copy.actionsLabel });
+    expect(within(actions).queryByRole('button', { name: copy.actions.allow_identity_retry })).not.toBeInTheDocument();
+    await userEvent.click(within(actions).getByRole('button', { name: copy.actions.reject_double_check }));
+    const dialog = screen.getByRole('dialog', { name: copy.actions.reject_double_check });
+    expect(dialog).toHaveTextContent(copy.actionHints.reject_double_check);
+    await userEvent.type(within(dialog).getByRole('textbox'), 'The ID number fails the state check.');
+    await userEvent.click(within(dialog).getByRole('button', { name: copy.actions.reject_double_check }));
+    expect(onVerificationAction).toHaveBeenCalledExactlyOnceWith({ userId: 'usr_rosa', action: 'reject_double_check', note: 'The ID number fails the state check.' });
+  });
+
+  it("marks a double check that didn't confirm our approval in the identity queue, with both dates", () => {
+    render(<NextIntlClientProvider locale="en" messages={uiMessages}><AdminVerificationsScreen data={adminVerificationsIdentityData} now={ADMIN_NOW} /></NextIntlClientProvider>);
+    const ana = screen.getByRole('link', { name: /Ana V\./ });
+    expect(ana).toHaveTextContent(copy.queues.identityKinds.double_check);
+    expect(ana).toHaveTextContent(`${copy.providerOutcomes.declined}`);
+  });
+
   it('has copy for every prompt and reason', () => {
     for (const prompt of LIVENESS_PROMPTS) expect(c.prompts[prompt]).toBeTruthy();
     for (const reason of IDENTITY_CAPTURE_REJECTION_REASONS) expect(c.rejectionReasons[reason]).toBeTruthy();
+    for (const outcome of IDENTITY_PROVIDER_OUTCOMES) expect(copy.providerOutcomes[outcome]).toBeTruthy();
   });
 });

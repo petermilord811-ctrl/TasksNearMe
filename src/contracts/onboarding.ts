@@ -137,8 +137,13 @@ export interface AreaOption {
   center?: { lat: number; lng: number };
 }
 
-/** Why an ID check can't start right now. `try_later`: 3 tries in 24 hours (see `retryAt`). `too_many_attempts`: 5 tries without a pass, so our team looks at it. `under_18`: helpers must be 18 or older. */
-export const IDENTITY_BLOCKED_REASONS = ['try_later', 'too_many_attempts', 'under_18'] as const;
+/**
+ * Why an ID check can't start right now. `try_later`: 3 tries in 24 hours (see `retryAt`).
+ * `too_many_attempts`: 5 tries without a pass, so our team looks at it. `under_18`: helpers must be 18 or
+ * older. `double_check_review`: the provider's double check didn't confirm the photos our team approved,
+ * so our team looks at both before anything else happens (helpers only; offers stay paused).
+ */
+export const IDENTITY_BLOCKED_REASONS = ['try_later', 'too_many_attempts', 'under_18', 'double_check_review'] as const;
 export type IdentityBlockedReason = (typeof IDENTITY_BLOCKED_REASONS)[number];
 
 /** Why a new ID check was asked for: by our team, or because the legal name on the account changed. */
@@ -152,8 +157,9 @@ export type IdentityDocumentType = (typeof IDENTITY_DOCUMENT_TYPES)[number];
 /**
  * Why our team asked for new ID photos (the helper sees the reason, never the note). `under_18` closes
  * helper setup until our team reopens it, as an under-18 result from the provider does.
+ * `double_check_failed`: the provider's double check didn't confirm these photos, and our team agreed.
  */
-export const IDENTITY_CAPTURE_REJECTION_REASONS = ['document_unreadable', 'selfie_mismatch', 'prompt_not_followed', 'under_18', 'expired', 'other'] as const;
+export const IDENTITY_CAPTURE_REJECTION_REASONS = ['document_unreadable', 'selfie_mismatch', 'prompt_not_followed', 'under_18', 'expired', 'double_check_failed', 'other'] as const;
 export type IdentityCaptureRejectionReason = (typeof IDENTITY_CAPTURE_REJECTION_REASONS)[number];
 
 /**

@@ -15,9 +15,11 @@ export const AGREEMENT_VERSIONS = {
    * The Texas biometric notice (Bus. & Com. Code §503.001), accepted before the ID check. draft-0.2
    * (2026-11-13): a helper's check has two stages, our own photos of the ID and a selfie (compared by our
    * team, kept encrypted until the checks finish and deleted at most 30 days after our decision), then the
-   * provider's double check; a client's check is the provider's alone.
+   * provider's double check; a client's check is the provider's alone. draft-0.3 (2026-11-13): the
+   * provider is Persona (completion plan 6.2), which keeps its images and is asked to delete them 30 days
+   * after its result.
    */
-  biometric_consent: 'draft-0.2',
+  biometric_consent: 'draft-0.3',
   /** Our summary of the background check, before Checkr's own FCRA disclosure and authorization. */
   bg_check_disclosure: 'draft-0.1',
 } as const;

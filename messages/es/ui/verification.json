@@ -60,7 +60,7 @@
       "background": "Verificación de antecedentes"
     },
     "identityExplanation": "Nuestro socio de verificación de identidad te pedirá una foto de tu documento de identidad y una selfie. Toma unos 2 minutos.",
-    "identityDoubleCheck": "Nuestro equipo aprobó tus fotos. Último paso: una segunda verificación con nuestro socio de identidad, Stripe. Toma unos 2 minutos.",
+    "identityDoubleCheck": "Nuestro equipo aprobó tus fotos. Último paso: una segunda verificación con nuestro socio de identidad, Persona. Toma unos 2 minutos.",
     "identityPublic": "Los clientes ven una insignia de «Identidad verificada» con el mes y el año de tu verificación. La foto de tu documento y tu selfie se mantienen privadas.",
     "payoutExplanation": "Configura con Stripe, nuestro socio de pagos, dónde se depositan tus ganancias. Stripe se encarga de los datos de tus pagos.",
     "firstPayout": "Tu primer pago puede tardar unos {days} días.",
@@ -109,12 +109,13 @@
     "identityBlocked": {
       "try_later": "Lo has intentado 3 veces en un día. Podrás volver a intentarlo a partir de {time}. Ayuda tener buena luz y los cuatro bordes del documento a la vista.",
       "too_many_attempts": "No pudimos verificar tu identidad después de varios intentos. Nuestro equipo lo revisará y te responderá por correo. También puedes contactar a soporte.",
-      "under_18": "Los ayudantes deben tener 18 años o más. Si este resultado es incorrecto, contacta a soporte y lo revisaremos."
+      "under_18": "Los ayudantes deben tener 18 años o más. Si este resultado es incorrecto, contacta a soporte y lo revisaremos.",
+      "double_check_review": "Nuestro socio de identidad no pudo confirmar la identificación que aprobó nuestro equipo. Nuestro equipo está revisando las dos verificaciones y te responderá, normalmente en un día. Mientras tanto, las ofertas quedan en pausa."
     },
     "identityNameCheck": "Tu identidad está verificada, pero el nombre del documento es distinto al de tu cuenta. Nuestro equipo lo está revisando, normalmente en un día. Si el nombre de tu cuenta no es tu nombre legal, <account>actualízalo en la página de tu cuenta</account>.",
     "biometric": {
       "title": "Antes de tu verificación de identidad",
-      "body": "Nuestro socio de verificación de identidad, Stripe, compara una foto de tu documento con una selfie en vivo mediante geometría facial, un identificador biométrico. Se usa únicamente para verificar que eres la persona del documento. Stripe lo conserva, no nosotros, y le pedimos que lo elimine 30 días después de tu resultado. La ley de Texas exige tu consentimiento previo.",
+      "body": "Nuestro socio de identidad, Persona, compara una foto de tu identificación con una selfie en vivo usando la geometría facial, un identificador biométrico. Se usa solo para verificar que eres la persona de la identificación. Persona la guarda, no nosotros, y le pedimos a Persona que la borre 30 días después de tu resultado. La ley de Texas exige tu consentimiento antes.",
       "checkbox": "Acepto la verificación biométrica descrita aquí.",
       "required": "Acepta la verificación biométrica para iniciar tu verificación de identidad."
     },
@@ -259,7 +260,7 @@
     },
     "notice": {
       "title": "Antes de tomar tus fotos",
-      "body": "Para comprobar que eres la persona de tu identificación, tomamos fotos de tu identificación y una selfie que sigue una instrucción, y nuestro equipo de confianza y seguridad compara tu cara con la foto de la identificación. Después, nuestro socio de identidad, Stripe, verifica por segunda vez tu identificación y una selfie usando la geometría facial, un identificador biométrico. Las fotos se usan solo para verificar tu identidad. Guardamos las nuestras cifradas hasta que terminen las dos verificaciones y las borramos a más tardar 30 días después de nuestra decisión; le pedimos a Stripe que borre las suyas 30 días después de su resultado. La ley de Texas exige tu consentimiento antes.",
+      "body": "Para comprobar que eres la persona de tu identificación, tomamos fotos de tu identificación y una selfie que sigue una instrucción, y nuestro equipo de confianza y seguridad compara tu cara con la foto de la identificación. Después, nuestro socio de identidad, Persona, verifica por segunda vez tu identificación y una selfie usando la geometría facial, un identificador biométrico. Las fotos se usan solo para verificar tu identidad. Guardamos las nuestras cifradas hasta que terminen las dos verificaciones y las borramos a más tardar 30 días después de nuestra decisión; le pedimos a Persona que borre las suyas 30 días después de su resultado. La ley de Texas exige tu consentimiento antes.",
       "checkbox": "Acepto la verificación de identidad y selfie descrita aquí.",
       "required": "Acepta la verificación de identidad y selfie para tomar tus fotos.",
       "continue": "Continuar"
@@ -351,6 +352,7 @@
       "prompt_not_followed": "Tu selfie no siguió su instrucción. Toma fotos nuevas; recibirás una instrucción nueva.",
       "under_18": "Los ayudantes deben tener 18 años o más.",
       "expired": "Esa identificación está vencida. Toma fotos de una identificación vigente.",
+      "double_check_failed": "Nuestro socio de identidad no pudo verificar esta identificación. Toma fotos nuevas de una identificación vigente y válida, o contacta a soporte si crees que es un error.",
       "other": "No pudimos aceptar estas fotos. Tómalas de nuevo o contacta a soporte si sigue pasando."
     },
     "privacy": "Solo nuestro equipo de confianza y seguridad ve tus fotos, y cada vista queda registrada. Un lector automático (Claude, de Anthropic) lee para ellos el nombre y las fechas del frente de tu identificación; guardamos solo sus respuestas de sí o no, nunca tu nombre, tu fecha de nacimiento ni tu número de identificación. Tus fotos se guardan cifradas y se borran a más tardar 30 días después de nuestra decisión.",
@@ -391,7 +393,9 @@
       "tryLater": "En pausa: 3 intentos hoy",
       "tooMany": "En pausa: demasiados intentos",
       "under18": "En pausa: menor de 18",
-      "requested": "Se pidió una verificación nueva"
+      "requested": "Se pidió una verificación nueva",
+      "doubleCheckReview": "En pausa: la segunda verificación no confirmó",
+      "doubleCheckRejected": "Fotos nuevas tras la segunda verificación"
     }
   }
 }

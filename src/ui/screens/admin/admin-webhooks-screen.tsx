@@ -37,7 +37,7 @@ export function AdminWebhooksScreen({ data, handlers, now }: { data: AdminWebhoo
     <PageHeader title={t('title')} description={t('intro')} />
     <section aria-labelledby="webhooks-day" className="space-y-3">
       <h2 id="webhooks-day" className={adminH2}>{t('dayTitle')}</h2>
-      <ul className="grid gap-3 sm:grid-cols-3">{data.last24h.map((item) => <li key={item.provider} className={adminSection}>
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{data.last24h.map((item) => <li key={item.provider} className={adminSection}>
         <h3 className="font-semibold">{t(`providers.${item.provider}`)}</h3>
         <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
           {(['processed', 'ignored', 'failed', 'dead'] as const).map((key) => <div key={key} className="flex justify-between gap-2">

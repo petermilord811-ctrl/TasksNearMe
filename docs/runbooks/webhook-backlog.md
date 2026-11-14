@@ -13,6 +13,7 @@ Each endpoint answers **404 until its keys are set**, so a missing environment v
 | `/api/webhooks/stripe` ([route](../../src/app/api/webhooks/stripe/route.ts)) | Stripe | `STRIPE_WEBHOOK_SECRET`, `STRIPE_SECRET_KEY` | `stripe-signature` header | `payment_intent.*` and `charge.dispute.*` → [stripe-webhooks.ts](../../src/modules/payments/stripe-webhooks.ts); `account.updated` and `payout.*` → [connect.ts](../../src/modules/payments/connect.ts) (signed with `STRIPE_CONNECT_WEBHOOK_SECRET`, or the main secret); everything else → Stripe Identity ([verification/webhooks.ts](../../src/modules/verification/webhooks.ts)) |
 | `/api/webhooks/checkr` | Checkr | `CHECKR_API_KEY` | `X-Checkr-Signature` (HMAC with the API key) | Background check results |
 | `/api/webhooks/resend` | Resend | `RESEND_WEBHOOK_SECRET` | svix headers (401 if bad) | Bounces and complaints → `email_suppressions` |
+| `/api/webhooks/persona` ([route](../../src/app/api/webhooks/persona/route.ts)) | Persona | `PERSONA_API_KEY`, `PERSONA_INQUIRY_TEMPLATE_ID`, `PERSONA_WEBHOOK_SECRET` | `Persona-Signature` (`t=…,v1=…` sets: HMAC of `t.body`, 5 minutes) | The ID check's double check (`inquiry.*`) → [verification/webhooks.ts](../../src/modules/verification/webhooks.ts); the inbox dedupes by the event's `data.id` |
 
 Not built: a Postmark bounce webhook (if Postmark is the sender, bounces aren't suppressed) and a Tremendous webhook (gift-card deliveries are read from the order response).
 
@@ -37,6 +38,7 @@ Running an event twice is safe anyway, because every handler only moves state fo
 - Payouts are upserted by `provider_ref`; a payout marks earnings `transferred` → `paid_out` once.
 - Chargebacks are deduped through the audit log (`action` `payment.chargeback_opened` or `payment.chargeback_closed`, `target_id` = the Stripe dispute id), so a replay doesn't open a second case.
 - A background check stops at its final result (`clear`, `consider`, `canceled`, `expired`); a replay after that changes nothing ([src/modules/verification/tracks.ts](../../src/modules/verification/tracks.ts)).
+- An ID session takes a Persona event only when it was made after the last one applied (`provider_event_at`), a verified result is final, and a progress update never undoes a decline (same file).
 
 ## First 15 minutes
 

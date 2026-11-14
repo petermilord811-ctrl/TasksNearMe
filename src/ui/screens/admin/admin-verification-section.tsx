@@ -159,6 +159,7 @@ export function AdminVerificationSection({ userId, verification, handlers, now, 
           : <StatusBadge tone={identity.blocked ? 'warning' : identity.nameMatches === false && !identity.nameConfirmedAt ? 'info' : identityStatusTones[identity.status]} label={status(`identity.${identity.status}`)} />}
         {identity.verifiedAt && <p>{t('verifiedOn', { date: formatDate(identity.verifiedAt) })}</p>}
         {identity.failureReason && <p>{t(`identityFailure.${identity.failureReason}`)}</p>}
+        {identity.providerOutcome && <p>{t('providerOutcome', { outcome: t(`providerOutcomes.${identity.providerOutcome}`) })}</p>}
         <p className="tabular-nums">{t('attempts', { count: identity.attempts })}</p>
         {identity.nameMatches === false && <p className="font-medium">{identity.nameConfirmedAt ? t('nameConfirmed', { date: formatDate(identity.nameConfirmedAt) }) : t('nameDiffers')}</p>}
         {identity.blocked && <p className="font-medium">{t(`identityBlocked.${identity.blocked}`)}</p>}

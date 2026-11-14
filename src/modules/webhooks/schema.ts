@@ -10,7 +10,7 @@ export const webhookEvents = pgTable(
   'webhook_events',
   {
     id: text('id').primaryKey(),
-    provider: text('provider').notNull(), // stripe | checkr | resend
+    provider: text('provider').notNull(), // stripe | checkr | resend | persona
     eventId: text('event_id').notNull(),
     type: text('type').notNull().default(''),
     /** SHA-256 of the body as received. */

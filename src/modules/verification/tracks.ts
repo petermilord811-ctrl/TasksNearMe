@@ -71,12 +71,19 @@ export type IdentityResult =
   | { status: 'processing' }
   | { status: 'canceled' };
 
-/** A provider result (webhook). Returns the person's id, or null for an unknown session. */
-export async function recordIdentityResult(db: Db, sessionId: string, result: IdentityResult, now: Date): Promise<string | null> {
+/**
+ * A provider result (webhook). Returns the person's id, or null for an unknown session. `event`: when the
+ * provider made the event and its own word for the result (Persona), so events that arrive late or twice
+ * change nothing: only one newer than the last applied counts.
+ */
+export async function recordIdentityResult(db: Db, sessionId: string, result: IdentityResult, now: Date, event: { at?: Date; outcome?: string } = {}): Promise<string | null> {
   const [row] = await db.select().from(identityVerifications).where(eq(identityVerifications.providerSessionId, sessionId)).limit(1);
   if (!row) return null;
-  // A late result for a session that was already replaced or decided changes nothing.
+  if (event.at && row.providerEventAt && event.at.getTime() <= row.providerEventAt.getTime()) return row.userId;
+  // A late result for a session that was already replaced or decided changes nothing, and a decision
+  // isn't undone by a progress update.
   if (row.status === 'verified' || (row.status === 'canceled' && result.status !== 'verified')) return row.userId;
+  if (row.status === 'requires_input' && result.status === 'processing') return row.userId;
   let nameMatches: boolean | null = null;
   if (result.status === 'verified') {
     const [account] = await db.select({ firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, row.userId)).limit(1);
@@ -90,6 +97,8 @@ export async function recordIdentityResult(db: Db, sessionId: string, result: Id
       isAdult: result.status === 'verified' ? true : result.status === 'requires_input' && result.reason === 'under_18' ? false : null,
       nameMatches,
       verifiedAt: result.status === 'verified' ? now : null,
+      ...(event.at ? { providerEventAt: event.at } : {}),
+      ...(event.outcome ? { providerOutcome: event.outcome } : {}),
       updatedAt: now,
     })
     .where(eq(identityVerifications.id, row.id));

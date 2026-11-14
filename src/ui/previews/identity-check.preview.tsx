@@ -4,6 +4,7 @@ import {
   ADMIN_NOW,
   adminUserJordanData,
   alexStaff,
+  anaDoubleCheckVerification,
   fakeAdminUserHandlers,
   fakeHandler,
   fakeOnboardingHandlers,
@@ -13,6 +14,8 @@ import {
   onboardingIdentityCaptureApproved,
   onboardingIdentityCaptureInReview,
   onboardingIdentityCaptureRejected,
+  onboardingIdentityDoubleCheckRejected,
+  onboardingIdentityDoubleCheckReview,
   onboardingIdentityStep,
   priyaShell,
   rosaReadOnlyVerification,
@@ -31,7 +34,8 @@ import adminCopy from '../../../messages/en/ui/adminVerification.json';
 /**
  * The ID check in two stages (completion plan 6.1): our own capture (the Texas notice, the kind of ID, its
  * photos and a live selfie that follows a prompt, then the review), its review states, the provider's
- * double check once approved, and the staff side (the photos to compare, opened with a logged reason).
+ * double check once approved (and its review when it doesn't confirm our approval, 6.2), and the staff side
+ * (the photos to compare, opened with a logged reason, and the double check's case).
  * The camera is a stand-in here: previews never open one.
  */
 
@@ -76,6 +80,8 @@ export const identityCheckPreviews: PreviewEntry[] = [
   onboarding('id-rejected', p.rejected, <HelperOnboardingScreen data={onboardingIdentityCaptureRejected} handlers={fakeOnboardingHandlers} />),
   onboarding('id-in-review', p.inReview, <HelperOnboardingScreen data={onboardingIdentityCaptureInReview} handlers={fakeOnboardingHandlers} />),
   onboarding('id-approved', p.approved, <HelperOnboardingScreen data={onboardingIdentityCaptureApproved} handlers={fakeOnboardingHandlers} />),
+  onboarding('id-double-check-review', p.doubleCheckReview, <HelperOnboardingScreen data={onboardingIdentityDoubleCheckReview} handlers={fakeOnboardingHandlers} />),
+  onboarding('id-double-check-rejected', p.doubleCheckRejected, <HelperOnboardingScreen data={onboardingIdentityDoubleCheckRejected} handlers={fakeOnboardingHandlers} />),
 
   {
     id: 'screen-admin-user/verification-id-photos', title: a.sectionCapture, group: a.group, layout: 'fullscreen',
@@ -84,6 +90,10 @@ export const identityCheckPreviews: PreviewEntry[] = [
   {
     id: 'screen-admin-user/verification-id-photos-opened', title: a.sectionCaptureOpened, group: a.group, layout: 'fullscreen',
     render: () => <Admin path={routes.admin.user('usr_rosa')}><div className="mx-auto max-w-content p-gutter"><AdminVerificationSection userId="usr_rosa" verification={rosaVerification} handlers={fakeAdminUserHandlers} now={ADMIN_NOW} initialCaptureRevealed={{ captureId: 'idc_rosa', result: identityCaptureRevealed }} /></div></Admin>,
+  },
+  {
+    id: 'screen-admin-user/verification-double-check', title: a.sectionDoubleCheck, group: a.group, layout: 'fullscreen',
+    render: () => <Admin path={routes.admin.user('usr_ana')}><div className="mx-auto max-w-content p-gutter"><AdminVerificationSection userId="usr_ana" verification={anaDoubleCheckVerification} handlers={fakeAdminUserHandlers} now={ADMIN_NOW} /></div></Admin>,
   },
   {
     id: 'screen-admin-user/verification-id-photos-read-only', title: a.sectionCaptureReadOnly, group: a.group, layout: 'fullscreen',

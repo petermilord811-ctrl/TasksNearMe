@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lte, ne, notInArray, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne, notInArray, or } from 'drizzle-orm';
 import { DATA_EXPORT_DAYS, DELETION_GRACE_DAYS, localeOrDefault, type AccountPrivacyView, type ActionResult, type DeletionBlocker } from '@/contracts';
 import { isReservedEmailAddress, type EmailProvider } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
@@ -15,6 +15,9 @@ import type { PaymentProvider } from '@/integrations/payments';
 import { paymentCustomers, paymentMethods } from '@/modules/payments/schema';
 import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/profiles/schema';
 import { savedHelpers } from '@/modules/reviews/schema';
+import { deleteAddressDocument } from '@/modules/verification/address';
+import { deleteIdentityCapturePhotos } from '@/modules/verification/capture';
+import { addressVerifications, identityCaptures } from '@/modules/verification/schema';
 import { supportCases } from '@/modules/support/schema';
 import { files, taskMarks, tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
@@ -243,8 +246,8 @@ export async function processDueDeletions(db: Db, deps: PrivacyJobDeps, now: Dat
 
 /**
  * Anonymizes an account. Their open tasks are canceled and pending offers withdrawn first (the other
- * people are told, as usual); then the personal details, sign-ins, sessions, preferences, photos and
- * marks go, and the person gets a last email at the old address. Bookings, payments, messages others
+ * people are told, as usual); then the personal details, sign-ins, sessions, preferences, photos, marks
+ * and verification documents go, and the person gets a last email at the old address. Bookings, payments, messages others
  * received and reviews stay, under "Deleted user", for the people and the records that need them.
  */
 export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: string, now: Date): Promise<void> {
@@ -303,6 +306,7 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
   });
 
   for (const file of photoFiles) await deps.storage.delete(file.storageKey);
+  await deleteVerificationDocuments(db, deps.storage, userId, now);
   // Their customer at the payment provider goes too, with every card on it (payments themselves stay on the
   // provider's records, as the law requires). Connected payout accounts stay for tax reporting.
   const [customer] = await db.select().from(paymentCustomers).where(eq(paymentCustomers.userId, userId)).limit(1);
@@ -322,6 +326,28 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
       await deps.email.send({ to: user.email, subject: email.subject, text: email.text, html: email.html, tag: 'account-deleted', idempotencyKey: `account-deleted-${userId}` });
     } catch (error) {
       console.error('[privacy] the goodbye email failed', error instanceof Error ? error.message : error);
+    }
+  }
+}
+
+/**
+ * A deleted account's verification documents go at once (blueprint 08 §5): the proofs of address and our
+ * own ID check's photos. A proof or photos still waiting for staff are withdrawn first, so they leave the
+ * queues. The rows keep their statuses and dates; the verification timers stay as the backstop.
+ */
+async function deleteVerificationDocuments(db: Db, storage: FileStorage, userId: string, now: Date): Promise<void> {
+  await db.update(addressVerifications).set({ status: 'withdrawn', updatedAt: now }).where(and(eq(addressVerifications.userId, userId), eq(addressVerifications.status, 'in_review')));
+  const proofs = await db.select({ id: addressVerifications.id }).from(addressVerifications).where(and(eq(addressVerifications.userId, userId), isNotNull(addressVerifications.documentFileId)));
+  for (const proof of proofs) {
+    if (await deleteAddressDocument({ db, storage }, proof.id, now)) {
+      await db.insert(auditLog).values({ id: newId('aud'), actorRole: 'system', action: 'address_proof.deleted', targetType: 'user', targetId: userId, metadata: { verificationId: proof.id, after: 'account_deleted' } });
+    }
+  }
+  await db.update(identityCaptures).set({ status: 'canceled', decidedAt: now, updatedAt: now }).where(and(eq(identityCaptures.userId, userId), eq(identityCaptures.status, 'submitted')));
+  const captures = await db.select({ id: identityCaptures.id, status: identityCaptures.status }).from(identityCaptures).where(and(eq(identityCaptures.userId, userId), isNull(identityCaptures.filesDeletedAt)));
+  for (const capture of captures) {
+    if (await deleteIdentityCapturePhotos({ db, storage }, capture.id, now)) {
+      await db.insert(auditLog).values({ id: newId('aud'), actorRole: 'system', action: 'identity_capture.deleted', targetType: 'user', targetId: userId, metadata: { captureId: capture.id, status: capture.status, after: 'account_deleted' } });
     }
   }
 }

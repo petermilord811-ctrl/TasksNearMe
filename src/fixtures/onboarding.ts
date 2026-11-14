@@ -202,6 +202,12 @@ export const onboardingIdentityCaptureApproved = withIdentity({ status: 'not_sta
 /** The double check needs another try (the photos stay approved). */
 export const onboardingIdentityRetry = withIdentity({ status: 'requires_input', failureReason: 'document_unreadable', consentNeeded: false, capture: captureApproved });
 
+/** The double check didn't confirm the photos our team approved: paused while our team looks at both. */
+export const onboardingIdentityDoubleCheckReview = withIdentity({ status: 'requires_input', failureReason: 'other', consentNeeded: false, blocked: 'double_check_review', capture: captureApproved });
+
+/** Our team then turned the approved photos down: new photos, with a new prompt. */
+export const onboardingIdentityDoubleCheckRejected = withIdentity({ status: 'requires_input', failureReason: 'other', consentNeeded: false, capture: { ...captureNeeded, ...sentPhotos, rejectionReason: 'double_check_failed', prompt: 'tilt_head' } });
+
 /** The double check was sent; the provider is still processing. */
 export const onboardingIdentityProcessing = withIdentity({ status: 'processing', consentNeeded: false, capture: captureApproved });
 

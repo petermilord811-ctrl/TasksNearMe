@@ -16,7 +16,8 @@ import {
 } from '@/modules/privacy/requests';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { supportCases } from '@/modules/support/schema';
-import { tasks } from '@/modules/tasks/schema';
+import { files, tasks } from '@/modules/tasks/schema';
+import { addressVerifications, identityCaptures } from '@/modules/verification/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
@@ -140,6 +141,20 @@ describe('deleting an account', () => {
   });
 
   it('waits for an open case, then anonymizes the account', async () => {
+    // Verification documents: a verified proof of address, a newer one in review, and ID photos in review.
+    const document = async (id: string, kind: string) => {
+      await storage.put(`${kind}/${id}.bin`, Buffer.from('sealed'), 'application/octet-stream');
+      await db.insert(files).values({ id, ownerUserId: LEAVER, kind, storageKey: `${kind}/${id}.bin`, contentType: 'image/jpeg', width: 1000, height: 1300, bytes: 6 });
+      return id;
+    };
+    await db.insert(addressVerifications).values([
+      { id: 'adr_tmp_leaver_ok', userId: LEAVER, status: 'verified', documentType: 'utility_bill', documentFileId: await document('fil_tmp_leaver_bill', 'address_proof'), submittedAt: asked, decidedAt: asked, decidedByUserId: 'usr_taylor', createdAt: asked },
+      { id: 'adr_tmp_leaver_new', userId: LEAVER, status: 'in_review', documentType: 'lease', documentFileId: await document('fil_tmp_leaver_lease', 'address_proof'), submittedAt: asked, createdAt: new Date(asked.getTime() + 1000) },
+    ]);
+    await db.insert(identityCaptures).values({
+      id: 'idc_tmp_leaver', userId: LEAVER, documentType: 'passport', promptKey: 'smile', status: 'submitted', submittedAt: asked, createdAt: asked,
+      frontFileId: await document('fil_tmp_leaver_front', 'id_document'), selfieFileId: await document('fil_tmp_leaver_selfie', 'id_selfie'),
+    });
     expect(await requestAccountDeletion(db, LEAVER, asked)).toEqual({ ok: true, code: 'submitted' });
     await db.insert(supportCases).values({ id: 'case_tmp_leaver', type: 'request', status: 'open', openedByUserId: LEAVER, topic: 'account', description: 'A question first.' });
     const due = new Date(asked.getTime() + 8 * DAY);
@@ -158,6 +173,19 @@ describe('deleting an account', () => {
     const [request] = await db.select().from(privacyRequests).where(and(eq(privacyRequests.userId, LEAVER), eq(privacyRequests.status, 'done')));
     expect(request?.completedAt).toEqual(due);
     expect((await db.select({ action: auditLog.action }).from(auditLog).where(eq(auditLog.targetId, LEAVER))).map((row) => row.action)).toContain('account.deleted');
+    // The verification documents went at once, not 30 days after their decisions; the rows keep their statuses.
+    expect(await db.select().from(files).where(eq(files.ownerUserId, LEAVER))).toEqual([]);
+    expect([...stored.keys()].filter((key) => key.includes('tmp_leaver'))).toEqual([]);
+    const proofs = await db.select().from(addressVerifications).where(eq(addressVerifications.userId, LEAVER));
+    expect(proofs.map((row) => [row.id, row.status, row.documentFileId, row.documentDeletedAt?.toISOString()]).sort()).toEqual([
+      ['adr_tmp_leaver_new', 'withdrawn', null, due.toISOString()],
+      ['adr_tmp_leaver_ok', 'verified', null, due.toISOString()],
+    ]);
+    const [capture] = await db.select().from(identityCaptures).where(eq(identityCaptures.userId, LEAVER));
+    expect(capture).toMatchObject({ status: 'canceled', frontFileId: null, selfieFileId: null, filesDeletedAt: due });
+    const deletions = await db.select({ action: auditLog.action, metadata: auditLog.metadata }).from(auditLog).where(and(eq(auditLog.targetId, LEAVER), inArray(auditLog.action, ['address_proof.deleted', 'identity_capture.deleted'])));
+    expect(deletions).toHaveLength(3);
+    expect(deletions.every((row) => row.metadata.after === 'account_deleted')).toBe(true);
     // A last email at the old address.
     expect(sent.map((message) => [message.to, message.subject])).toEqual([['tmp-leaver@example.test', 'Your TasksNearMe account was deleted']]);
     // Once.

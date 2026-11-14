@@ -1,20 +1,23 @@
 import { routes, type PayoutAccountStatus } from '@/contracts';
 import { checkrFromEnv } from '@/integrations/checkr';
 import { stripeConnectFromEnv, type StripeConnect } from '@/integrations/payments/stripe-connect';
+import { personaIdentityFromEnv } from '@/integrations/persona';
 import { stripeIdentityFromEnv } from '@/integrations/stripe-identity';
 import { newId } from '@/platform/db/ids';
 
 /**
- * The hosted verification providers (blueprint 06 §1): Stripe Identity for the ID check, Stripe Connect
- * for payouts, Checkr for background checks. Stripe Identity (`STRIPE_SECRET_KEY`) and Checkr
- * (`CHECKR_API_KEY`, `CHECKR_PACKAGE`) are built (src/integrations) and replace their stand-ins as soon as
- * their keys are set; without keys, development uses pages under /dev/providers that simulate each
- * provider's flow and webhook. Stripe Connect (payouts) is on with the Stripe payment keys
- * (`STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY`). Production needs all three (docs/integration-points.md).
+ * The hosted verification providers (blueprint 06 §1): the ID check's double check (stage 2, after our
+ * own capture) and clients' risk-triggered checks, Stripe Connect for payouts, Checkr for background
+ * checks. The ID provider is Persona (`PERSONA_API_KEY`, `PERSONA_INQUIRY_TEMPLATE_ID` and
+ * `PERSONA_WEBHOOK_SECRET`), otherwise Stripe Identity (`STRIPE_SECRET_KEY`). Checkr (`CHECKR_API_KEY`,
+ * `CHECKR_PACKAGE`) is built too. Each replaces its stand-in as soon as its keys are set; without keys,
+ * development uses pages under /dev/providers that simulate each provider's flow and webhook. Stripe
+ * Connect (payouts) is on with the Stripe payment keys (`STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY`).
+ * Production needs all three (docs/integration-points.md).
  */
 export interface VerificationProviders {
   identity: {
-    /** Stored on each row (`dev`, `stripe_identity`). */
+    /** Stored on each row (`dev`, `stripe_identity`, `persona`). */
     readonly provider: string;
     /** Starts a hosted session (document and live selfie) and returns where to send the person; it comes back to `returnPath` (helper setup by default). */
     start(userId: string, options?: { returnPath?: string }): Promise<{ sessionId: string; url: string }>;
@@ -46,7 +49,8 @@ export interface VerificationProviders {
  * stand-in otherwise. In production: none until every adapter exists (payouts need Stripe Connect).
  */
 export function verificationProvidersFor(env: Record<string, string | undefined>): VerificationProviders | null {
-  const identity = stripeIdentityFromEnv(env);
+  // Persona first (the owner's choice for the double check), then Stripe Identity.
+  const identity = personaIdentityFromEnv(env) ?? stripeIdentityFromEnv(env);
   const background = checkrFromEnv(env);
   const connect = stripeConnectFromEnv(env);
   const appUrl = (env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');

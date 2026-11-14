@@ -46,6 +46,7 @@ export function AdminVerificationsScreen({ data, now }: { data: AdminVerificatio
           <span className="flex flex-wrap items-center gap-2 font-semibold">{row.person.displayName}{row.capture?.overdue && <span className="inline-flex items-center gap-1 rounded-full bg-badge-warning px-2 py-0.5 text-xs font-medium text-badge-warning-foreground"><Clock aria-hidden="true" className="size-3" />{t('queues.overdue')}</span>}</span>
           <span className="block text-sm">{t(`queues.identityKinds.${row.kind}`)}{row.capture ? ` · ${t(`capture.documentTypes.${row.capture.documentType}`)}` : ''}</span>
           <span className="block text-sm text-muted-foreground tabular-nums">{t('attempts', { count: row.attempts })} · {when(row.at)}</span>
+          {row.doubleCheck && <span className="block text-sm text-muted-foreground">{t('queues.doubleCheckDetail', { approved: formatDateTime(row.doubleCheck.approvedAt), outcome: t(`providerOutcomes.${row.doubleCheck.providerOutcome ?? 'other'}`) })}</span>}
           {row.capture?.autoCheck && <span className="block text-sm text-muted-foreground">{row.capture.autoCheck.readable && row.capture.autoCheck.nameMatches && row.capture.autoCheck.isAdult && row.capture.autoCheck.notExpired ? t('queues.idAutoAllMatch') : t('queues.idAutoCheckFlag')}</span>}
         </span>
         <ArrowUpRight aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />

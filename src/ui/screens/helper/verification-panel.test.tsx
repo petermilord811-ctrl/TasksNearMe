@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, BACKGROUND_CHECK_STATUSES, IDENTITY_FAILURE_REASONS, IDENTITY_STATUSES, PAYOUT_ACCOUNT_STATUSES, routes, type ActionResult, type HelperOnboardingHandlers, type VerificationSummary } from '@/contracts';
-import { fakeOnboardingHandlers, onboardingBackgroundNotStarted, onboardingDone, onboardingIdentityCaptureApproved, onboardingIdentityStep, onboardingPayoutStep } from '@/fixtures';
+import { fakeOnboardingHandlers, onboardingBackgroundNotStarted, onboardingDone, onboardingIdentityCaptureApproved, onboardingIdentityDoubleCheckReview, onboardingIdentityStep, onboardingPayoutStep } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import verificationCopy from '../../../../messages/en/ui/verification.json';
 import { backgroundStatusTones, identityStatusTones, payoutStatusTones, VerificationPanel, type VerificationPanelProps } from './verification-panel';
@@ -79,6 +79,17 @@ describe('helper verification', () => {
     // Before the approval there's nothing to start here (the capture step takes the photos).
     show({ verification: onboardingIdentityStep.verification });
     expect(screen.queryByRole('button', { name: /Start/ })).not.toBeInTheDocument();
+  });
+
+  it("pauses the ID step while our team reviews a double check that didn't confirm the approved photos", () => {
+    show({ verification: onboardingIdentityDoubleCheckReview.verification });
+    expect(screen.getByText(verificationCopy.setup.identityBlocked.double_check_review)).toBeVisible();
+    // Not "last step: the double check", and nothing to start: the helper can reach support.
+    expect(screen.queryByText(verificationCopy.setup.identityDoubleCheck)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Start|Try again/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: verificationCopy.setup.contactSupport })).toHaveAttribute('href', routes.app.support());
+    const stages = screen.getByRole('list', { name: verificationCopy.capture.stages.label });
+    expect(stages).toHaveTextContent(verificationCopy.capture.stages.states.in_review);
   });
 
   it("shows a helper the two-stage notice when it's asked again before the double check", async () => {

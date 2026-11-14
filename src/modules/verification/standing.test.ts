@@ -123,10 +123,31 @@ describe('our own ID check (stage 1)', () => {
     // Two failed tries and an approval today: the double check can start.
     expect(identityStanding([], now, captures)).toMatchObject({ captureApproved: true, canStart: true, attempts: 3 });
     expect(identityStanding([], now, captures).blocked).toBeUndefined();
-    // A failed double check makes 3 failed tries today: the next opens 24 hours after the first.
-    const standing = identityStanding([failed(ago(0.3))], now, captures);
+    // A double check that staff let the helper try again still counts: 3 failed tries today, so the next
+    // opens 24 hours after the first.
+    const standing = identityStanding([{ ...failed(ago(0.3)), reviewOutcome: 'retry_allowed' }], now, captures);
     expect(standing).toMatchObject({ blocked: 'try_later', canStart: false, captureApproved: true, attempts: 4 });
     expect(standing.retryAt).toEqual(new Date(captures[0]!.createdAt.getTime() + DAY));
+  });
+
+  it('pauses the helper when the double check fails after our team approved the photos, until staff decide', () => {
+    const approved = decided('approved', ago(2));
+    const declined = idRow({ status: 'requires_input', failureReason: 'other', createdAt: ago(1), updatedAt: ago(0.9) });
+    const standing = identityStanding([declined], now, [approved]);
+    expect(standing).toMatchObject({ blocked: 'double_check_review', canStart: false, canCapture: false, captureApproved: true, doubleCheck: { id: declined.id } });
+    expect(standing.reviewSince).toEqual(ago(0.9));
+    // A session from before the approval isn't the double check.
+    const before = idRow({ status: 'requires_input', failureReason: 'other', createdAt: ago(3) });
+    expect(identityStanding([before], now, [approved]).blocked).toBeUndefined();
+    // Staff let them try again: no longer paused. Or turned the photos down: new photos.
+    expect(identityStanding([{ ...declined, reviewOutcome: 'retry_allowed' }], now, [approved])).toMatchObject({ canStart: true, captureApproved: true });
+    const rejected = { ...approved, status: 'rejected', rejectionReason: 'double_check_failed' };
+    expect(identityStanding([{ ...declined, reviewOutcome: 'rejected' }], now, [rejected])).toMatchObject({ canCapture: true, captureApproved: false });
+    // A double check that was only canceled (closed, expired) can simply start again.
+    const closed = idRow({ status: 'canceled', createdAt: ago(1) });
+    expect(identityStanding([closed], now, [approved])).toMatchObject({ canStart: true });
+    // Under 18 stays what it is.
+    expect(identityStanding([{ ...declined, failureReason: 'under_18', isAdult: false }], now, [approved]).blocked).toBe('under_18');
   });
 
   it('pauses for 24 hours after 3 turned-down tries, and never while photos wait for review', () => {
@@ -138,7 +159,8 @@ describe('our own ID check (stage 1)', () => {
 
   it('sends 5 tries without a pass to staff, photos and sessions together', () => {
     const captures = [decided('rejected', ago(6)), decided('rejected', ago(5)), decided('canceled', ago(4)), decided('approved', ago(3.5))];
-    const sessions = [failed(ago(3)), failed(ago(2))];
+    // Double checks staff already let the helper try again (each still a failed try).
+    const sessions = [failed(ago(3)), failed(ago(2))].map((row) => ({ ...row, reviewOutcome: 'retry_allowed' }));
     const standing = identityStanding(sessions, now, captures);
     expect(standing).toMatchObject({ blocked: 'too_many_attempts', canStart: false, attempts: 6 });
     expect(standing.reviewSince).toEqual(sessions[1]!.updatedAt);

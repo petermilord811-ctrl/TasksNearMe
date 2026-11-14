@@ -176,6 +176,13 @@ export type IdentityStatus = (typeof IDENTITY_STATUSES)[number];
 export const IDENTITY_CAPTURE_STATUSES = ['submitted', 'approved', 'rejected', 'canceled'] as const;
 export type IdentityCaptureStatus = (typeof IDENTITY_CAPTURE_STATUSES)[number];
 
+/**
+ * The ID provider's own word for its result (Persona's inquiry statuses), shown to staff beside ours.
+ * `other`: a status the app doesn't know yet.
+ */
+export const IDENTITY_PROVIDER_OUTCOMES = ['created', 'pending', 'completed', 'needs_review', 'approved', 'declined', 'failed', 'expired', 'other'] as const;
+export type IdentityProviderOutcome = (typeof IDENTITY_PROVIDER_OUTCOMES)[number];
+
 export const BACKGROUND_CHECK_STATUSES = [
   'not_required',
   'not_started',

@@ -32,7 +32,8 @@
   "identityBlocked": {
     "try_later": "3 tries in the last 24 hours.",
     "too_many_attempts": "5 tries without a pass: waiting on staff.",
-    "under_18": "Under 18: helper onboarding is closed."
+    "under_18": "Under 18: helper onboarding is closed.",
+    "double_check_review": "The double check didn't confirm the photos our team approved: the helper is paused until staff decide."
   },
   "identityRequested": {
     "staff_request": "Staff asked for a new check.",
@@ -108,6 +109,8 @@
     "confirm_name": "Confirm the name",
     "allow_identity_retry": "Allow new ID tries",
     "request_identity": "Ask for a new ID check",
+    "allow_double_check_retry": "Let them try the double check again",
+    "reject_double_check": "Turn the photos down",
     "engage_background": "Approve for in-home work",
     "pre_adverse_background": "Send the pre-adverse notice",
     "post_adverse_background": "Send the final adverse action"
@@ -117,6 +120,8 @@
     "confirm_name": "Confirm the ID belongs to this person (a nickname or a married name, for example). The ID check then counts.",
     "allow_identity_retry": "The try count starts again (also after an under-18 result that was a misread).",
     "request_identity": "The current ID check stops counting, and offers pause until a new one passes.",
+    "allow_double_check_retry": "Our approval stands and the helper can start the double check again (it counts as a try). Use it when the provider's result looks like a glitch.",
+    "reject_double_check": "The approved photos are turned down: the helper is told the double check couldn't verify the ID and can start over within the limits.",
     "engage_background": "After reviewing the report at Checkr: in-home categories open for 12 months.",
     "pre_adverse_background": "Checkr sends the notice with a copy of the report and the summary of rights. The final decision waits 7 days.",
     "post_adverse_background": "Final: the helper can no longer take in-home categories. Checkr sends the notice."
@@ -142,13 +147,15 @@
     "autoCheckFlag": "Automatic reading: something to check.",
     "identityKinds": {
       "capture": "ID photos to compare",
+      "double_check": "The double check didn't confirm our approval",
       "name_check": "The ID's name differs from the account's",
       "too_many_attempts": "5 tries without a pass"
     },
     "preAdverse": "Pre-adverse notice sent",
     "toReview": "Came back \"consider\": review the report at Checkr",
     "idAutoAllMatch": "Automatic reading: name matches, 18 or older, not expired.",
-    "idAutoCheckFlag": "Automatic reading: something to check."
+    "idAutoCheckFlag": "Automatic reading: something to check.",
+    "doubleCheckDetail": "Photos approved {approved} · the provider: {outcome}"
   },
   "previews": {
     "group": "Staff: verifications",
@@ -165,7 +172,8 @@
     "sectionPoster": "Person: a client",
     "sectionCapture": "Person: ID photos to review",
     "sectionCaptureOpened": "Person: ID photos opened",
-    "sectionCaptureReadOnly": "Person: ID photos, read-only"
+    "sectionCaptureReadOnly": "Person: ID photos, read-only",
+    "sectionDoubleCheck": "Person: the double check didn't confirm"
   },
   "capture": {
     "title": "Our ID photos",
@@ -191,7 +199,7 @@
       "tilt_head": "tilt their head to one side",
       "three_fingers": "hold up three fingers next to their face"
     },
-    "photosKept": "{count, plural, one {# photo stored} other {# photos stored}} (deleted 30 days after the decision).",
+    "photosKept": "{count, plural, one {# photo stored} other {# photos stored}} (deleted once the double check clears the ID, at the latest 30 days after the decision).",
     "photosDeleted": "Photos deleted on {date}.",
     "photosNone": "No photos stored.",
     "decided": "Decided {date} by {name}",
@@ -213,6 +221,7 @@
       "prompt_not_followed": "the selfie didn't follow its prompt",
       "under_18": "under 18",
       "expired": "the ID has expired",
+      "double_check_failed": "the double check didn't confirm the ID",
       "other": "other"
     },
     "reveal": {
@@ -250,5 +259,17 @@
       "submitApprove": "Approve",
       "submitReject": "Ask for new photos"
     }
+  },
+  "providerOutcome": "The provider's result: {outcome}",
+  "providerOutcomes": {
+    "created": "created",
+    "pending": "in progress",
+    "completed": "completed, waiting for its decision",
+    "needs_review": "in the provider's review",
+    "approved": "approved",
+    "declined": "declined",
+    "failed": "failed",
+    "expired": "expired",
+    "other": "another status"
   }
 }

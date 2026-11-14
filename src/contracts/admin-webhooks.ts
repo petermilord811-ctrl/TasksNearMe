@@ -10,7 +10,7 @@ import type { ISODateTime } from './common';
 
 const code = (value: FieldErrorCode) => value;
 
-export const WEBHOOK_PROVIDER_IDS = ['stripe', 'checkr', 'resend'] as const;
+export const WEBHOOK_PROVIDER_IDS = ['stripe', 'checkr', 'resend', 'persona'] as const;
 export type WebhookProviderId = (typeof WEBHOOK_PROVIDER_IDS)[number];
 
 export interface AdminWebhookRow {

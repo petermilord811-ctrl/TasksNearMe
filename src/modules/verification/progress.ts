@@ -32,7 +32,7 @@ export interface OnboardingFacts {
   services: { categorySlug: CategorySlug; requiresBackgroundCheck: boolean }[];
   areaSet: boolean;
   phoneVerified: boolean;
-  /** `captureInReview`: our own check's photos wait for our team (stage 1). */
+  /** `captureInReview`: our team has it: our own check's photos (stage 1), or a double check that didn't confirm them. */
   identity: { status: IdentityStatus; cleared: boolean; captureInReview?: boolean };
   address: { status: AddressVerificationStatus; verified: boolean };
   payout: PayoutAccountStatus;

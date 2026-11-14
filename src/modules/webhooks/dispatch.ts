@@ -1,11 +1,12 @@
 import { createHmac } from 'node:crypto';
 import { stripeIdentityFromEnv } from '@/integrations/stripe-identity';
 import { parseResendEvent, signResendWebhook, verifyResendWebhook } from '@/integrations/email/resend-webhook';
+import { personaIdentityFromEnv } from '@/integrations/persona';
 import { bookingDeps } from '@/modules/bookings/server';
 import { handleConnectWebhook } from '@/modules/payments/connect';
 import { handleStripePaymentWebhook, stripeEventType } from '@/modules/payments/stripe-webhooks';
 import { recordEmailFeedback } from '@/modules/notifications/suppressions';
-import { handleCheckrWebhook, handleStripeIdentityWebhook } from '@/modules/verification/webhooks';
+import { handleCheckrWebhook, handlePersonaWebhook, handleStripeIdentityWebhook } from '@/modules/verification/webhooks';
 import type { Db } from '@/platform/db/connect';
 
 /**
@@ -14,8 +15,8 @@ import type { Db } from '@/platform/db/connect';
  * the signature and acts. `null`: the endpoint is off (its keys aren't set), so the route answers 404.
  */
 
-export type WebhookProvider = 'stripe' | 'checkr' | 'resend';
-export const WEBHOOK_PROVIDERS: readonly WebhookProvider[] = ['stripe', 'checkr', 'resend'];
+export type WebhookProvider = 'stripe' | 'checkr' | 'resend' | 'persona';
+export const WEBHOOK_PROVIDERS: readonly WebhookProvider[] = ['stripe', 'checkr', 'resend', 'persona'];
 export interface WebhookOutcome {
   status: number;
   body: Record<string, unknown>;
@@ -61,19 +62,32 @@ async function resend(db: Db, payload: string, headers: WebhookHeaders, now: Dat
   return { status: 200, body: { ok: true } };
 }
 
-const DISPATCH = { stripe, checkr, resend } as const;
+/** Persona: the ID check's double check (inquiry events, completion plan 6.2). */
+async function persona(db: Db, payload: string, headers: WebhookHeaders, now: Date): Promise<WebhookOutcome | null> {
+  const secret = env('PERSONA_WEBHOOK_SECRET');
+  if (!secret || !personaIdentityFromEnv()) return null;
+  return handlePersonaWebhook(db, { payload, signature: headers['persona-signature'] ?? null, secret }, now);
+}
+
+const DISPATCH = { stripe, checkr, resend, persona } as const;
 
 export function dispatchWebhook(provider: WebhookProvider, db: Db, payload: string, headers: WebhookHeaders, now: Date): Promise<WebhookOutcome | null> {
   return DISPATCH[provider](db, payload, headers, now);
 }
 
-/** The provider's id and type for an event (Resend's id is the svix-id header). */
+/** The provider's id and type for an event (Resend's id is the svix-id header; Persona's event is `data`). */
 export function eventIdentity(provider: WebhookProvider, payload: string, headers: WebhookHeaders): { eventId: string; type: string } | null {
-  let parsed: { id?: unknown; type?: unknown } = {};
+  let parsed: { id?: unknown; type?: unknown; data?: { id?: unknown; attributes?: { name?: unknown } } } = {};
   try {
     parsed = JSON.parse(payload) as typeof parsed;
   } catch {
     return null;
+  }
+  // A body that isn't an object (`null`, a number) names no event.
+  if (!parsed || typeof parsed !== 'object') return null;
+  if (provider === 'persona') {
+    const name = parsed.data?.attributes?.name;
+    return typeof parsed.data?.id === 'string' ? { eventId: parsed.data.id, type: typeof name === 'string' ? name : '' } : null;
   }
   const type = typeof parsed.type === 'string' ? parsed.type : '';
   const eventId = provider === 'resend' ? headers['svix-id'] : typeof parsed.id === 'string' ? parsed.id : null;
@@ -97,6 +111,11 @@ export function signAgain(provider: WebhookProvider, payload: string, eventId: s
   if (provider === 'checkr') {
     const apiKey = env('CHECKR_API_KEY');
     return apiKey ? { 'x-checkr-signature': createHmac('sha256', apiKey).update(payload).digest('hex') } : null;
+  }
+  if (provider === 'persona') {
+    // Persona-Signature: `t=<unix>,v1=<HMAC-SHA256 of "t.payload">`.
+    const secret = env('PERSONA_WEBHOOK_SECRET');
+    return secret ? { 'persona-signature': `t=${seconds},v1=${createHmac('sha256', secret).update(`${seconds}.${payload}`).digest('hex')}` } : null;
   }
   const secret = env('RESEND_WEBHOOK_SECRET');
   return secret ? { 'svix-id': eventId, 'svix-timestamp': String(seconds), 'svix-signature': signResendWebhook(secret, eventId, seconds, payload) } : null;

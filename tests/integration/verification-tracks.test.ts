@@ -39,6 +39,8 @@ const providers = createDevVerificationProviders();
 const geocoder = createFakeGeocoder();
 const taylor = { id: 'usr_taylor', roles: ['trust_safety' as const] };
 const alex = { id: 'usr_alex', roles: ['support_agent' as const] };
+const morgan = { id: 'usr_morgan', roles: ['support_lead' as const] };
+const riley = { id: 'usr_riley', roles: ['admin' as const] };
 const PEOPLE = ['usr_vt_address', 'usr_vt_identity', 'usr_vt_background'];
 const param = (url: string, key: string) => new URL(url, 'http://localhost').searchParams.get(key) ?? '';
 const t0 = new Date('2026-11-20T16:00:00.000Z');
@@ -220,10 +222,13 @@ describe('ID checks', () => {
     expect(await startIdentity(db, providers, id, at(0), { consent: true })).toEqual({ ok: false, code: 'not_allowed' });
     await photosApproved(id, at(-0.5));
     expect(await startIdentity(db, providers, id, at(0))).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { consent: ['must_accept'] } });
+    // A double check that fails after our team's approval waits for staff (6.2); here they let them try again each time.
     const fail = async (when: Date) => {
       const start = await startIdentity(db, providers, id, when, { consent: true });
       if (!start.ok) return start;
       await recordIdentityResult(db, param(start.redirectTo!, 'session'), { status: 'requires_input', reason: 'document_unreadable' }, when);
+      expect((await loadOnboardingState(db, id, when)).identity).toMatchObject({ blocked: 'double_check_review', canStart: false });
+      expect(await verificationAction(db, providers, taylor, { userId: id, action: 'allow_double_check_retry', note: 'Glare on the license; one more try.' }, when)).toEqual({ ok: true, code: 'updated' });
       return start;
     };
     for (const hours of [0, 1, 2]) expect((await fail(new Date(at(0).getTime() + hours * 3_600_000))).ok).toBe(true);
@@ -292,10 +297,22 @@ describe('background checks', () => {
     await recordBackgroundResult(db, param(start.redirectTo!, 'check'), 'consider', at(12));
     expect((await loadOnboardingState(db, id, at(12))).background).toMatchObject({ status: 'consider', eligible: false, canStart: false });
     expect((await getAdminVerificationsPage(db, taylor, 'background', at(12))).background.find((row) => row.person.id === id)).toBeDefined();
+    // Adjudication is trust and safety's alone (blueprint 08's permission matrix): a support lead or an admin is refused.
+    for (const other of [morgan, riley]) {
+      expect((await getPersonVerification(db, other, id, at(12))).actions).not.toEqual(expect.arrayContaining(['engage_background']));
+      for (const action of ['pre_adverse_background', 'engage_background'] as const) {
+        expect(await verificationAction(db, providers, other, { userId: id, action, note: 'Not my call to make, by the matrix.' }, at(12))).toEqual({ ok: false, code: 'not_allowed' });
+      }
+    }
+    expect((await getPersonVerification(db, taylor, id, at(12))).actions).toEqual(expect.arrayContaining(['engage_background', 'pre_adverse_background']));
     expect(await verificationAction(db, providers, taylor, { userId: id, action: 'post_adverse_background', note: 'Trying to finalize too early.' }, at(12))).toEqual({ ok: false, code: 'not_allowed' });
     expect(await verificationAction(db, providers, taylor, { userId: id, action: 'pre_adverse_background', note: 'Report has a recent relevant record.' }, at(12))).toEqual({ ok: true, code: 'updated' });
     expect((await loadOnboardingState(db, id, at(12))).background).toMatchObject({ adjudication: 'pre_adverse', disputeUntil: at(19) });
     expect(await verificationAction(db, providers, taylor, { userId: id, action: 'post_adverse_background', note: 'Still inside the dispute window.' }, at(15))).toEqual({ ok: false, code: 'not_allowed' });
+    // Past the dispute window, the final notice is still trust and safety's.
+    expect(await verificationAction(db, providers, morgan, { userId: id, action: 'post_adverse_background', note: 'Past the window; finalizing.' }, at(20))).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await verificationAction(db, providers, riley, { userId: id, action: 'post_adverse_background', note: 'Past the window; finalizing.' }, at(20))).toEqual({ ok: false, code: 'not_allowed' });
+    expect((await getPersonVerification(db, taylor, id, at(20))).actions).toContain('post_adverse_background');
     // The person disputed and Checkr corrected the record: staff approve instead.
     expect(await verificationAction(db, providers, taylor, { userId: id, action: 'engage_background', note: 'Checkr corrected the record after the dispute.' }, at(20))).toEqual({ ok: true, code: 'updated' });
     const state = await loadOnboardingState(db, id, at(20));

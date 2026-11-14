@@ -4,9 +4,9 @@ import { byteCipherFromEnv, fieldCipherFromEnv } from '@/platform/crypto/field-e
 import { verificationProvidersFor } from './providers';
 
 /**
- * Identity (Stripe Identity), payouts (Stripe Connect), and background checks (Checkr). Until provider
- * keys exist (blocked.md), development uses stand-ins under /dev/providers; production has none, so the
- * provider steps can't start there yet.
+ * Identity (Persona, or Stripe Identity), payouts (Stripe Connect), and background checks (Checkr). Until
+ * provider keys exist (blocked.md), development uses stand-ins under /dev/providers; production has none,
+ * so the provider steps can't start there yet.
  */
 export const verificationProviders = verificationProvidersFor(process.env);
 

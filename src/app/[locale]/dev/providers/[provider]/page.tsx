@@ -5,12 +5,12 @@ import { devBackgroundOutcome, devIdentityOutcome, devPayoutOutcome } from '@/mo
 export const metadata = { title: 'Dev provider' };
 
 /**
- * Development only (the /dev layout 404s in production): stand-ins for Stripe Identity, Stripe
- * Connect onboarding, and Checkr. Each button simulates the provider's result and webhook.
+ * Development only (the /dev layout 404s in production): stand-ins for the ID provider (Persona, or
+ * Stripe Identity), Stripe Connect onboarding, and Checkr. Each button simulates the provider's result and webhook.
  */
 const PROVIDERS = {
   identity: {
-    title: 'ID check (Stripe Identity stand-in)',
+    title: 'ID check (Persona stand-in)',
     field: 'session',
     action: devIdentityOutcome,
     outcomes: [
