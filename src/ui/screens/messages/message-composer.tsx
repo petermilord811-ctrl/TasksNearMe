@@ -45,6 +45,7 @@ export function MessageComposerContent({ rules, handlers, initialResult, initial
   const [result, setResult] = useState<ActionResult | undefined>(initialResult);
   const [pending, setPending] = useState(initialPending);
   const [uploading, setUploading] = useState(false);
+  const lastTyping = useRef(0);
   const locked = useRef(initialPending);
   const uploadLocked = useRef(false);
   const mounted = useRef(true);
@@ -107,7 +108,12 @@ export function MessageComposerContent({ rules, handlers, initialResult, initial
       <FieldLabel htmlFor={`${id}-body`} className="sr-only">{t('label')}</FieldLabel>
       {/* Send sits beside the message, as in any chat (on phones as an icon, still named "Send"). */}
       <div className="flex items-end gap-2">
-      <Textarea {...form.register('body')} id={`${id}-body`} rows={1} maxLength={rules.maxLength} disabled={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className="max-h-40 min-h-12 flex-1 resize-none field-sizing-content" onKeyDown={(event) => {
+      <Textarea {...form.register('body')} id={`${id}-body`} rows={1} maxLength={rules.maxLength} disabled={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className="max-h-40 min-h-12 flex-1 resize-none field-sizing-content" onInput={() => {
+        // "Typing…" for the other person (completion plan 7.1), at most one ping every 2.5 s; never blocks typing.
+        if (!handlers.onTyping || Date.now() - lastTyping.current < 2500) return;
+        lastTyping.current = Date.now();
+        void handlers.onTyping().catch(() => {});
+      }} onKeyDown={(event) => {
         if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || !window.matchMedia('(min-width: 1024px)').matches) return;
         event.preventDefault();
         if (!empty && !overLimit && !locked.current && !uploadLocked.current) void form.handleSubmit(submit)();

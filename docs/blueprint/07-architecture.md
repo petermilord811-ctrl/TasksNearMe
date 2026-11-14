@@ -22,7 +22,7 @@ When to reconsider: separate worker queues once job volume competes with webhook
 | Authorization | App-level policy functions per module (`policies.ts`) plus scoped query helpers | Explicit, testable, works with connection pooling | Access matrix in [08-data-model-and-access.md](08-data-model-and-access.md) |
 | Background jobs and timers | **graphile-worker** on the same Postgres | Jobs are enqueued **in the same transaction** as the state change; `job_key` for timers; crontab for periodic jobs | Cron is UTC. Prove the rollback behavior with an integration test in M0. Alternative: pg-boss |
 | File storage | **Cloudflare R2** (S3 API): private bucket plus a public bucket for moderated images | No egress fees; presigned uploads | Images processed in the worker with `sharp` (re-encode, strip metadata, resize) |
-| Realtime | **Ably** (token auth; each client subscribes only to `user:{id}`) | Managed fan-out; the server publishes after commit | Messages are stored in Postgres first; Ably only delivers notices. Free tier covers launch (spot-check limits) |
+| Realtime | **Server-sent events from our own servers over Postgres LISTEN/NOTIFY** (changed 2026-11-14 from Ably, completion plan 7.1): each signed-in stream gets only `user:{id}`, boards get a public `market:{id}` stream; one LISTEN connection per server fanned out in memory | No provider account or per-message cost, and it works today on one region; the outbox dispatcher (claims, 5.18) publishes after commit, woken by an insert trigger | Messages are stored in Postgres first; notices carry ids only and the page reads the rest with the usual permissions. Ably stays the option if we run in several regions |
 | Email | **Postmark** (transactional stream) + React Email templates | Deliverability; manual account approval (< 24 h) | Separate broadcast stream later for marketing |
 | SMS and OTP | **Twilio Verify** (OTP) + Twilio Messaging (critical alerts) | Verify needs no A2P 10DLC registration of our own | Alerts need A2P 10DLC or toll-free verification: **plan about 2 weeks** (**F11**) |
 | Web push | Web Push API + VAPID (`web-push`) | No app store needed | iOS delivers push only to Home Screen web apps (16.4+); prompt Austin users to install |
@@ -203,7 +203,7 @@ tasksnearme/
 3. **Provider call** (outside the transaction): create the PaymentIntent with the stored idempotency key; save its ID; return the client secret.
 4. **Client** confirms the payment with the Payment Element (including 3-D Secure), then calls `POST /api/v1/bookings/:id/refresh`.
 5. **Funding confirmation** runs the same idempotent `confirmFunding(paymentId)` from either the refresh call or the `payment_intent.succeeded` webhook job, whichever arrives first. Transaction 2: payment `succeeded`; booking `confirmed`; offer `accepted`; other offers declined; task `assigned`; address access granted; ledger entries; reminder jobs enqueued (the auto-approve timer is set later, when completion is submitted); outbox events (`booking.confirmed`) → notifications, rewards (create `pending` grants), messaging (open the booking thread).
-6. The outbox dispatcher publishes realtime notices to each participant's `user:{id}` channel after commit.
+6. The outbox dispatcher (woken at once by an insert trigger) publishes realtime notices to each participant's `user:{id}` channel after commit, as `pg_notify` through each server's one LISTEN connection to the participants' server-sent event streams.
 
 ## 6. Cross-cutting design
 

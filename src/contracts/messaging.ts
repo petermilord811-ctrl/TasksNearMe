@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { ActionHandler, QueryHandler } from './actions';
 import type { ISODateTime, Photo } from './common';
-import type { PersonSummary } from './people';
+import type { PersonSummary, PresenceState } from './people';
 import type { PhotoUploadResult } from './posting';
 import type { TimelineEvent } from './timeline';
 
@@ -100,6 +100,14 @@ export interface ThreadPageData {
   thread: ThreadSummary;
   messages: MessageView[];
   composer: ComposerRules;
+  /**
+   * The other person's activity (completion plan 7.1), coarse on purpose: "Active now" or "Active today".
+   * Absent when they turned "Show when I'm active" off, when the viewer did (it's mutual), when they're blocked,
+   * or when they haven't been around today.
+   */
+  presence?: PresenceState;
+  /** The viewer's latest message, when the other person has read up to it ("Seen"). Mutual, like `presence`. */
+  seenMessageId?: string;
 }
 
 export const sendMessageInputSchema = z
@@ -120,4 +128,9 @@ export type SendMessageInput = z.input<typeof sendMessageInputSchema>;
 export interface ThreadHandlers {
   onSend: ActionHandler<SendMessageInput>;
   onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
+  /**
+   * The viewer is typing (completion plan 7.1). Call it as they type; the app spaces the notices out (one every
+   * 2.5 s) and the other person sees "typing…" for a few seconds. Fire and forget: it never fails visibly.
+   */
+  onTyping?: () => Promise<void>;
 }

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
-import { sendMessageAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { sendMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
 import { getThreadPage } from '@/modules/messaging/service';
 import { blockUserAction, reportUserAction } from '@/modules/support/actions';
 import { getReportSubject } from '@/modules/support/service';
@@ -34,7 +34,7 @@ async function Thread({ params }: Pick<PageProps<'/[locale]/app/messages/[thread
     <ThreadScreen
       data={data}
       now={now.toISOString()}
-      handlers={{ onSend: sendMessageAction.bind(null, threadId), onUploadPhoto: uploadMessagePhoto }}
+      handlers={{ onSend: sendMessageAction.bind(null, threadId), onUploadPhoto: uploadMessagePhoto, onTyping: typingAction.bind(null, threadId) }}
       {...(subject ? { safety: { subject, handlers: { onReport: reportUserAction.bind(null, threadId), onBlock: blockUserAction.bind(null, threadId) } } } : {})}
     />
   );

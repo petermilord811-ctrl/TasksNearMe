@@ -34,6 +34,7 @@ import { verificationNotificationFor } from './verification-plan';
 import { helpersToAlert, replacementHelpers } from '@/modules/offers/task-alerts';
 import { reactToEvent } from '@/modules/badges/reactions';
 import { reactForOperations } from '@/modules/oncall/reactions';
+import { publishRealtime } from '@/modules/realtime/reactions';
 
 /**
  * Notifications from outbox events (the dispatcher), the notifications page, and the account page
@@ -425,6 +426,13 @@ export async function dispatchNotifications(db: Db, now: Date, limit = 200): Pro
       await reactForOperations(db, event, now);
     } catch (error) {
       console.error(`[outbox] operations for ${event.type} ${event.id} failed`, error);
+    }
+    // Live notices for open pages (src/modules/realtime/reactions.ts, completion plan 7.1): ids only, after the
+    // notifications above exist, here in the claimer's loop so other dispatchers' deliveries don't send twice.
+    try {
+      await publishRealtime(db, event);
+    } catch (error) {
+      console.error(`[outbox] live notices for ${event.type} ${event.id} failed`, error);
     }
     await db.update(outboxEvents).set({ dispatchedAt: now.toISOString() }).where(eq(outboxEvents.id, event.id));
   }

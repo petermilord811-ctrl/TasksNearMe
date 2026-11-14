@@ -1,6 +1,13 @@
 import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
 import type { BadgeView } from './badges';
 
+/**
+ * Someone's activity as people they talk to see it (completion plan 7.1): `now` within 5 minutes, `today` within
+ * 24 hours. Never exact times, never on public pages, and nothing for people who turned it off.
+ */
+export const PRESENCE_STATES = ['now', 'today'] as const;
+export type PresenceState = (typeof PRESENCE_STATES)[number];
+
 export interface PersonSummary {
   id: string;
   /** First name + last initial, e.g. "Maya R.". Never the full last name. */

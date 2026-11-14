@@ -46,7 +46,8 @@
 | `POST /api/v1/bookings/:id/approve`, `…/problem` | Poster | Approve or dispute |
 | `POST /api/v1/bookings/:id/review`, `…/rebook` | Participants | Review; pre-filled rebook invite |
 | `GET /api/v1/threads`, `GET/POST /api/v1/threads/:id/messages`, `POST /api/v1/threads/:id/read` | Participants | Messaging |
-| `POST /api/v1/realtime/token` | User | Ably token scoped to `user:{id}` (subscribe only) |
+| `GET /api/realtime` | User | Server-sent events for `user:{id}` only (ids and types, never text); replaced the Ably token endpoint on 2026-11-14 |
+| `GET /api/realtime/market/:slug` | Public | Server-sent events of a market's newly posted open tasks, as the board shows them |
 | `POST /api/v1/payment-methods/setup-intent`, `GET/DELETE /api/v1/payment-methods` | Poster | Saved cards (needed for recurring visits) |
 | `GET /api/v1/receipts`, `GET /api/v1/earnings` | Poster, helper | Money history |
 | `GET /api/v1/rewards`, `POST /api/v1/rewards/:grantId/redeem` | Helper | Rewards |

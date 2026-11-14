@@ -26,6 +26,9 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { userChannel } from '@/platform/realtime/hub';
+import { publishNotices } from '@/platform/realtime/publish';
+import { presenceOf } from '@/modules/realtime/presence';
 import { messages, threadParticipants, threads } from './schema';
 
 /**
@@ -299,13 +302,30 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   const fileIds = [...new Set(rows.flatMap((row) => row.attachmentFileIds))];
   const photoRows = fileIds.length ? await db.select().from(files).where(inArray(files.id, fileIds)) : [];
   const photos = new Map(photoRows.map((file) => [file.id, file]));
+  const participants = await db.select().from(threadParticipants).where(eq(threadParticipants.threadId, thread.id));
+  const mine = participants.find((row) => row.userId === userId);
+  const theirs = participants.find((row) => row.userId === found.other.id);
   await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
 
   const blocked = await isBlocked(db, userId, found.other.id);
+  // Mutual (WhatsApp's rule, completion plan 7.1): someone who hides their own activity doesn't see anyone
+  // else's or "Seen", and reading their messages sends no "Seen" either.
+  const [viewer] = await db.select({ showActivity: users.showActivity }).from(users).where(eq(users.id, userId)).limit(1);
+  const mutual = !blocked && viewer?.showActivity !== false && found.other.showActivity;
+  const presence = mutual ? presenceOf(found.other.lastActiveAt, true, now) : undefined;
+  // "Seen" for the people whose messages were just read: a live notice, ids only.
+  const newlyRead = rows.filter((row) => row.senderUserId && row.senderUserId !== userId && (!mine?.lastReadAt || row.createdAt > mine.lastReadAt));
+  if (newlyRead.length > 0 && mutual) {
+    const senders = [...new Set(newlyRead.map((row) => row.senderUserId!))];
+    await publishNotices(db, senders.map((sender) => ({ channel: userChannel(sender), notice: { type: 'read', thread: thread.id } })));
+  }
+  const lastMine = [...rows].reverse().find((row) => row.senderUserId === userId);
   const disabledReason: ComposerDisabledReason | undefined = blocked ? 'blocked' : found.context.closed ? 'closed' : undefined;
   return {
     thread: { ...found.summary, unreadCount: 0 },
     messages: rows.map((row) => toView(row, userId, found.context.masking, photos)),
+    ...(presence ? { presence } : {}),
+    ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),
     composer: {
       canSend: !disabledReason,
       ...(disabledReason ? { disabledReason } : {}),
@@ -349,6 +369,33 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
   await db.update(threads).set({ lastMessageAt: now }).where(eq(threads.id, thread.id));
   await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
   return { ok: true, code: 'sent' };
+}
+
+/** When each person last said they were typing in a thread (this server only; it only spaces the notices out). */
+const typingSentAt = new Map<string, number>();
+const TYPING_EVERY_MS = 2500;
+
+/**
+ * "Typing…" (completion plan 7.1): a live notice to the thread's other participants, at most one every 2.5 s
+ * per person and thread. Ephemeral: never stored and never an outbox event. Only a participant sends one, and
+ * blocked pairs get nothing.
+ */
+export async function notifyTyping(db: Db, userId: string, threadId: string, now: Date): Promise<'sent' | 'throttled' | 'not_found'> {
+  const key = `${userId}:${threadId}`;
+  if (now.getTime() - (typingSentAt.get(key) ?? 0) < TYPING_EVERY_MS) return 'throttled';
+  const participants = await db.select({ userId: threadParticipants.userId }).from(threadParticipants).where(eq(threadParticipants.threadId, threadId));
+  if (!participants.some((row) => row.userId === userId)) return 'not_found';
+  typingSentAt.set(key, now.getTime());
+  if (typingSentAt.size > 10_000) {
+    for (const [entry, at] of typingSentAt) if (now.getTime() - at > 60_000) typingSentAt.delete(entry);
+  }
+  const envelopes = [];
+  for (const { userId: other } of participants) {
+    if (other === userId || (await isBlockedBetween(db, userId, other))) continue;
+    envelopes.push({ channel: userChannel(other), notice: { type: 'typing', thread: threadId } });
+  }
+  await publishNotices(db, envelopes);
+  return 'sent';
 }
 
 // ---- Threads for offers and bookings ------------------------------------------------------------------

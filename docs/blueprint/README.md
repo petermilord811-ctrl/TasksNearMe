@@ -36,7 +36,7 @@ This blueprint is the input to implementation. It contains no application code. 
 | D10 | Optional AI task drafting with the Claude API (`claude-opus-5-5`, low effort, structured output) behind a flag | 07 §8 |
 | D11 | Better Auth (email codes, staff TOTP) + Twilio Verify for phones | 07 |
 | D12 | graphile-worker jobs enqueued in the same transaction as state changes (outbox) | 07 |
-| D13 | Ably (realtime), Postmark (email), Twilio (SMS), Web Push | 07 |
+| D13 | Server-sent events over Postgres LISTEN/NOTIFY (realtime; was Ably, changed 2026-11-14), Postmark (email), Twilio (SMS), Web Push | 07 |
 | D14 | Address privacy: encrypted exact address; deterministic fuzzed public point per saved address; revealed on confirmation; hidden 48 h after completion | 07 §6, 08 |
 | D15 | Cancellation: free until 24 h before; after that `max($10, 20%)`, all of it to the helper; helper cancellations refund in full and add a strike | 04 §6 |
 | D16 | Policy timers and limits are versioned per market and snapshotted onto each booking | 03 §1 |

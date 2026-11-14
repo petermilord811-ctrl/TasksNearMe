@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import type { ISODateTime, MessageView, PersonSummary, Photo } from '@/contracts';
 import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
+import { useRealtimeConnected } from '@/ui/lib/realtime';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
 import { cn } from '@/ui/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
@@ -43,17 +44,22 @@ function MessageContent({ message }: { message: MessageView }) {
 }
 
 /** Refresh preserves draft state; only readers already at the bottom follow incoming messages. */
-export function MessageLog({ messages, otherParty, now, className }: { messages: MessageView[]; otherParty: PersonSummary; now: ISODateTime; className?: string }) {
+export function MessageLog({ messages, otherParty, now, seenMessageId, className }: { messages: MessageView[]; otherParty: PersonSummary; now: ISODateTime; seenMessageId?: string; className?: string }) {
   const { formatDate, formatDateTime, formatRelative, formatTime } = useFormat();
   const t = useTranslations('thread');
   const router = useRouter();
   const logRef = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
   const scrollTop = useRef(0);
+  // While the live connection is up, new messages arrive at once (completion plan 7.1): the timer only covers
+  // the times it's down.
+  const live = useRealtimeConnected();
+  const liveRef = useRef(live);
+  useEffect(() => { liveRef.current = live; }, [live]);
 
   useEffect(() => {
     const refresh = () => { if (document.visibilityState === 'visible') router.refresh(); };
-    const timer = window.setInterval(refresh, 15_000);
+    const timer = window.setInterval(() => { if (!liveRef.current) refresh(); }, 15_000);
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
     return () => {
@@ -118,6 +124,7 @@ export function MessageLog({ messages, otherParty, now, className }: { messages:
                 {message.attachments.map((photo, index) => <li key={photo.id} className="min-w-0"><MessagePhoto photo={photo} number={index + 1} count={message.attachments.length} sender={sender} /></li>)}
               </ul>}
               {time}
+              {mine && message.id === seenMessageId && <p className="text-right text-xs font-medium text-muted-foreground">{t('seen')}</p>}
             </article>
           </li>;
         })}
