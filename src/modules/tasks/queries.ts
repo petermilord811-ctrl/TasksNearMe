@@ -1,11 +1,12 @@
 import { and, asc, count, desc, gt, gte, ilike, inArray, isNull, lt, lte, ne, notInArray, or, eq, sql, type SQL } from 'drizzle-orm';
 import { MARKET_TIME_ZONE } from '@/contracts/common';
-import type { CategorySlug, FindWorkPageData, TaskBoardPosted, TaskBoardQueryState, TaskBoardSort, TaskBoardTime, TaskPublicView } from '@/contracts';
+import type { CategorySlug, FindWorkPageData, TaskBoardQueryState, TaskBoardSort, TaskBoardTime, TaskPublicView } from '@/contracts';
 import { taskTypesFor } from '@/shared/task-types';
 import type { Db } from '@/platform/db/connect';
 import { users } from '../accounts/schema';
 import { areas, categories, markets } from '../markets/schema';
 import { BOARD_PAGE_SIZE, toTaskPublicView, whenRange, type PublicTaskRow } from './projections';
+import { POSTED_MS, TIME_SLOTS } from '@/shared/board-match';
 import { taskMarks, tasks } from './schema';
 import { GENERATED_ID_PATTERN } from '@/shared/sample-data';
 
@@ -82,9 +83,8 @@ export type BoardFilterKey = 'category' | 'type' | 'q' | 'areas' | 'price' | 'pr
 /** What a client offers for the whole task: the fixed price, or the rate × the estimated hours. */
 export const taskPriceCents = sql<number>`coalesce(${tasks.budgetCents}, round(${tasks.hourlyRateCents} * coalesce(${tasks.estimatedHours}, 1)))`;
 
-const POSTED_MS: Record<TaskBoardPosted, number> = { '24h': 24 * 3_600_000, '3d': 3 * 86_400_000, '7d': 7 * 86_400_000 };
 /** Minutes after midnight, Central time: morning before noon, afternoon to 5 pm, evening after. */
-export const TIME_SLOTS: Record<TaskBoardTime, [number, number]> = { morning: [0, 720], afternoon: [720, 1020], evening: [1020, 1440] };
+export { TIME_SLOTS };
 
 const localMinutes = (column: typeof tasks.windowStart | typeof tasks.windowEnd) =>
   sql`(extract(hour from (${column} at time zone ${MARKET_TIME_ZONE})) * 60 + extract(minute from (${column} at time zone ${MARKET_TIME_ZONE})))`;

@@ -126,5 +126,12 @@
     "offers": "{count, plural, one {# offer} other {# offers}}",
     "anyTime": "Any time",
     "remote": "Remote"
+  },
+  "live": {
+    "live": "Live",
+    "liveHint": "New tasks show up here as they are posted",
+    "show": "{count, plural, one {# new task} other {# new tasks}} · Show",
+    "announce": "{count, plural, one {# new task posted} other {# new tasks posted}}",
+    "loading": "Loading…"
   }
 }

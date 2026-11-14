@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { routes, type TaskBoardPageData } from '@/contracts';
@@ -15,6 +15,8 @@ import {
 } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { TaskBoardScreen } from './task-board-screen';
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 afterEach(cleanup);
 const now = '2026-11-17T15:00:00.000Z';

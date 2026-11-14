@@ -1,9 +1,11 @@
-import Link from 'next/link';
 import { Clock, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { MARKET_TIME_ZONE, routes, type CategorySlug, type ISODateTime, type TaskPublicView } from '@/contracts';
+import type { CategorySlug, ISODateTime, TaskPublicView } from '@/contracts';
+import { MARKET_TIME_ZONE } from '@/contracts/common';
+import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 
 const categoryIcons: Record<CategorySlug, LucideIcon> = {

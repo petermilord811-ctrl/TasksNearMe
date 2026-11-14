@@ -1,16 +1,10 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Check, Search, X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import {
-  routes,
-  TASK_BOARD_POSTED,
-  TASK_BOARD_PRICE_PRESETS,
-  TASK_BOARD_TIMES,
-  type TaskBoardPageData,
-  type TaskBoardQuery,
-  type TaskBoardTime,
-} from '@/contracts';
+import { useLocale, useTranslations } from 'next-intl';
+import type { TaskBoardPageData, TaskBoardQuery, TaskBoardTime } from '@/contracts';
+import { routes } from '@/contracts/routes';
+import { TASK_BOARD_POSTED, TASK_BOARD_PRICE_PRESETS, TASK_BOARD_TIMES } from '@/contracts/tasks';
+import { LocaleLink as Link, localeHref } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
 import { FiltersToggle } from './filters-toggle';
@@ -69,14 +63,17 @@ export function activeFilterCount(query: TaskBoardPageData['query']): number {
 export function BoardFilters({ board }: { board: Board }) {
   const t = useTranslations('taskBoard');
   const card = useTranslations('taskCard');
+  const locale = useLocale();
   const { query, facets } = board;
+  // The forms' own addresses keep the page's language, as the links do.
+  const formAction = (href: string) => localeHref(new URL(href, 'https://board.invalid').pathname, locale);
   const href = (change: Partial<TaskBoardQuery>) => boardHref(board, change);
   const priceKey = TASK_BOARD_PRICE_PRESETS.find((preset) => ('min' in preset ? preset.min : undefined) === query.minPrice && ('max' in preset ? preset.max : undefined) === query.maxPrice)?.key;
   const totalAll = Object.values(facets.categories).reduce((sum, count) => sum + (count ?? 0), 0);
 
   return <FiltersToggle label={t('panel.toggle')} count={activeFilterCount(query)}>
     <div className="space-y-4">
-      <form action={new URL(href({ q: undefined }), 'https://board.invalid').pathname} method="get" role="search" className="space-y-1.5">
+      <form action={formAction(href({ q: undefined }))} method="get" role="search" className="space-y-1.5">
         <label htmlFor="board-q" className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('search.label')}</label>
         <div className="flex gap-1.5">
           <input id="board-q" name="q" type="search" defaultValue={query.q ?? ''} maxLength={80} placeholder={t('search.placeholder')} className="h-10 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" />
@@ -104,7 +101,7 @@ export function BoardFilters({ board }: { board: Board }) {
         <Option href={href({ minPrice: undefined, maxPrice: undefined })} selected={query.minPrice === undefined && query.maxPrice === undefined} label={t('anyPrice')} />
         {TASK_BOARD_PRICE_PRESETS.map((preset) => <Option key={preset.key} href={priceKey === preset.key ? href({ minPrice: undefined, maxPrice: undefined }) : href({ minPrice: 'min' in preset ? preset.min : undefined, maxPrice: 'max' in preset ? preset.max : undefined })} selected={priceKey === preset.key} label={t(`pricePresets.${preset.key}`)} count={facets.prices[preset.key]} />)}
         <li>
-          <form action={new URL(href({}), 'https://board.invalid').pathname} method="get" className="flex items-center gap-1.5 px-2 pt-1">
+          <form action={formAction(href({}))} method="get" className="flex items-center gap-1.5 px-2 pt-1">
             <HiddenFields href={href({ minPrice: undefined, maxPrice: undefined })} except={['min', 'max', 'page']} />
             <label className="sr-only" htmlFor="board-min">{t('priceRange.min')}</label>
             <input id="board-min" name="min" inputMode="numeric" pattern="[0-9]*" defaultValue={query.minPrice ?? ''} placeholder={t('priceRange.min')} className="h-9 w-0 min-w-0 flex-1 rounded-lg border border-input bg-background px-2 text-sm tabular-nums" />

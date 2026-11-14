@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { postFurnitureTask } from './support/post-task';
+import { devSignIn } from './support/sign-in';
 
 /**
  * The Craigslist-style board (completion plan 7.4) on the seeded Austin market: tasks grouped by neighborhood
@@ -70,4 +72,39 @@ test('one list sorted by newest, paged, with the day on each row', async ({ page
   await expect(link).toHaveAttribute('href', /^\/tasks\//);
   await expect(rows.first().locator('time')).toHaveAttribute('datetime', /^\d{4}-\d\d-\d\dT/);
   await expect(rows.first()).toContainText('$');
+});
+
+test('a task posted while the board is open shows up as "1 new task · Show", without a reload', async ({ browser, baseURL }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-desktop', 'posts a task; desktop only');
+  test.setTimeout(180_000);
+  const readerContext = await browser.newContext();
+  const posterContext = await browser.newContext();
+  await posterContext.addCookies([{ name: 'tnm_geo_stand_in', value: '1', url: baseURL! }]);
+  try {
+    // The reader watches furniture assembly, newest first.
+    const reader = await readerContext.newPage();
+    await reader.goto('/austin/tasks?category=furniture-assembly&sort=newest&group=none');
+    await expect(reader.getByText('Live', { exact: true })).toBeVisible({ timeout: 30_000 });
+    await reader.evaluate(() => {
+      (window as unknown as { liveMarker: boolean }).liveMarker = true;
+    });
+
+    const poster = await posterContext.newPage();
+    await devSignIn(poster, 'maya@example.test');
+    const title = `Live board bookshelf (${Date.now()})`;
+    await postFurnitureTask(poster, title);
+
+    // The pill, not the task: nothing moves under the reader until they ask.
+    // Other specs may post furniture tasks at the same time, so the count can be more than one.
+    const pill = reader.getByRole('button', { name: /^\d+ new tasks? · Show$/ });
+    await expect(pill).toBeVisible({ timeout: 15_000 });
+    await expect(reader.getByRole('link', { name: title })).toHaveCount(0);
+    await pill.click();
+    await expect(reader.getByRole('link', { name: title })).toBeVisible({ timeout: 15_000 });
+    await expect(pill).toHaveCount(0);
+    expect(await reader.evaluate(() => (window as unknown as { liveMarker?: boolean }).liveMarker)).toBe(true);
+  } finally {
+    await readerContext.close();
+    await posterContext.close();
+  }
 });

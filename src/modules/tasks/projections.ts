@@ -2,13 +2,11 @@ import type {
   CategorySlug,
   PricingInput,
   TaskBoardPageData,
-  TaskBoardWhen,
   TaskPublicView,
   TaskStatus,
 } from '@/contracts';
 import { CATEGORY_SLUGS, TASK_BOARD_GROUPS, TASK_BOARD_POSTED, TASK_BOARD_Q_MAX, TASK_BOARD_SORTS, TASK_BOARD_TIMES, TASK_BOARD_VIEWS, TASK_BOARD_WHEN } from '@/contracts';
 import { isTaskType, taskTypeOf } from '@/shared/task-types';
-import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { publicExcerpt } from '@/modules/trust/contact-masking';
 
 /** Pure projections from task rows to public contract types, and board query parsing. */
@@ -147,27 +145,5 @@ export function parseTaskBoardQuery(params: SearchParams): TaskBoardPageData['qu
   };
 }
 
-function addDays(dayKey: string, days: number): string {
-  const [y, m, d] = dayKey.split('-').map(Number) as [number, number, number];
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-}
-
-/**
- * The time range a "when" filter covers, in the market's calendar: today; this week (through
- * Sunday); this weekend (Saturday and Sunday, or the rest of it if it's already the weekend).
- */
-export function whenRange(when: TaskBoardWhen, now: Date): { from: Date; to: Date } | null {
-  if (when === 'any') return null;
-  const today = marketDayKey(now);
-  const [y, m, d] = today.split('-').map(Number) as [number, number, number];
-  const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = Sunday
-  const startOf = (dayKey: string) => new Date(marketLocalToUtc(dayKey, '00:00'));
-  if (when === 'today') return { from: now, to: startOf(addDays(today, 1)) };
-  const daysToMonday = weekday === 0 ? 1 : 8 - weekday;
-  if (when === 'this_week') return { from: now, to: startOf(addDays(today, daysToMonday)) };
-  // this_weekend
-  const daysToSaturday = weekday === 0 ? -1 : 6 - weekday;
-  const saturday = addDays(today, daysToSaturday);
-  const from = weekday === 6 || weekday === 0 ? now : startOf(saturday);
-  return { from, to: startOf(addDays(saturday, 2)) };
-}
+/** The time range a "when" filter covers (src/shared/board-match.ts, shared with the live board). */
+export { whenRange } from '@/shared/board-match';

@@ -1,12 +1,15 @@
 import type { CSSProperties, ReactNode } from 'react';
-import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Check, LayoutGrid, List, Lock, Plus, X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { routes, TASK_BOARD_GROUPS, TASK_BOARD_PRICE_PRESETS, TASK_BOARD_SORTS, TASK_BOARD_VIEWS, type ISODateTime, type TaskBoardPageData, type TaskBoardQuery, type TaskPublicView } from '@/contracts';
+import { useLocale, useTranslations } from 'next-intl';
+import type { ISODateTime, TaskBoardPageData, TaskBoardQuery, TaskPublicView } from '@/contracts';
+import { routes } from '@/contracts/routes';
+import { TASK_BOARD_GROUPS, TASK_BOARD_PRICE_PRESETS, TASK_BOARD_SORTS, TASK_BOARD_VIEWS } from '@/contracts/tasks';
 import { marketDayKey } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
+import { LocaleLink as Link, localeHref } from '@/ui/lib/locale-link';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { BoardFilters, activeFilterCount, boardHref } from '@/ui/components/search/board-filters';
+import { BoardLive } from '@/ui/components/search/board-live';
 import { PublicTaskCard } from '@/ui/components/tasks/public-task-card';
 import { TaskRow } from '@/ui/components/tasks/task-row';
 import { buttonVariants } from '@/ui/primitives/button';
@@ -45,6 +48,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const t = useTranslations('taskBoard');
   const card = useTranslations('taskCard');
   const { formatDate } = useFormat();
+  const locale = useLocale();
   const { market, query } = data;
   const href = (change: Partial<TaskBoardQuery>) => boardHref(data, change);
   const filtered = activeFilterCount(query) > 0;
@@ -85,7 +89,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const dayLabel = (day: string, sample: TaskPublicView) => (day === data.today ? t('today') : day === tomorrow ? t('tomorrow') : formatDate(sample.schedule.windowStart));
 
   const list = data.tasks.length === 0
-    ? <EmptyState title={t(filtered ? 'filteredEmptyTitle' : 'noTasksTitle')} body={t(filtered ? 'filteredEmptyBody' : 'noTasksBody')} action={filtered ? { label: t('clearFilters'), href: routes.taskBoard(market.slug) } : { label: t('postTask'), href: routes.app.newTask() }} />
+    ? <EmptyState title={t(filtered ? 'filteredEmptyTitle' : 'noTasksTitle')} body={t(filtered ? 'filteredEmptyBody' : 'noTasksBody')} action={filtered ? { label: t('clearFilters'), href: localeHref(routes.taskBoard(market.slug), locale) } : { label: t('postTask'), href: localeHref(routes.app.newTask(), locale) }} />
     : query.view === 'cards'
       ? <ul className="grid gap-3 sm:grid-cols-2">{data.tasks.map((task) => <li key={task.id} className="min-w-0"><PublicTaskCard task={task} now={now} headingLevel={2} /></li>)}</ul>
       : data.sections
@@ -128,8 +132,17 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
 
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          {/* The market's own counts are in the header; a filtered board says how many match. */}
-          {filtered && <p className="text-sm font-semibold tabular-nums" role="status">{t('results', { count: data.totalCount })}</p>}
+          <div className="flex items-center gap-3">
+            {/* The market's own counts are in the header; a filtered board says how many match. */}
+            {filtered && <p className="text-sm font-semibold tabular-nums" role="status">{t('results', { count: data.totalCount })}</p>}
+            <BoardLive
+              marketSlug={market.slug}
+              query={{ category: query.category, type: query.type, q: query.q, areas: query.areas, minPrice: query.minPrice, maxPrice: query.maxPrice, pricing: query.pricing, posted: query.posted, times: query.times, few: query.few, when: query.when, remoteOnly: query.remoteOnly }}
+              areas={data.facets.areas.map(({ slug, name }) => ({ slug, name }))}
+              shownIds={data.tasks.map((task) => task.id)}
+              listId="board-list"
+            />
+          </div>
           {/* One row: it scrolls sideways on phones rather than stacking three rows above the first task. */}
           <div className="-mx-gutter flex w-[calc(100%+2*var(--page-gutter))] gap-2 overflow-x-auto px-gutter py-0.5 [scrollbar-width:none] sm:mx-0 sm:ml-auto sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0 [mask-image:var(--board-fade)] [-webkit-mask-image:var(--board-fade)] sm:[mask-image:none] sm:[-webkit-mask-image:none]" style={edgeFade}>
             <Segmented label={t('sort')}>{TASK_BOARD_SORTS.map((sort) => <SegmentLink key={sort} href={href({ sort })} selected={query.sort === sort} label={t(`sortOptions.${sort}`)} />)}</Segmented>
@@ -143,7 +156,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
           <Link href={routes.taskBoard(market.slug, { view: query.view, group: query.group, sort: query.sort })} rel="nofollow" className="inline-flex min-h-8 items-center px-2 text-[13px] font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('clearAll')}</Link>
         </nav>}
 
-        {list}
+        <div id="board-list" className="scroll-mt-28">{list}</div>
 
         {data.pageCount > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">
           {query.page > 1 && <Link href={routes.taskBoard(market.slug, { ...query, page: query.page - 1 })} rel="prev" className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('previous')}</Link>}

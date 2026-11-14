@@ -67,7 +67,7 @@
   "priceRange": {
     "min": "Mín. $",
     "max": "Máx. $",
-    "apply": "Ir"
+    "apply": "Aplicar"
   },
   "priceChip": {
     "between": "De ${min} a ${max}",
@@ -126,5 +126,12 @@
     "offers": "{count, plural, one {# oferta} other {# ofertas}}",
     "anyTime": "Cualquier hora",
     "remote": "Remota"
+  },
+  "live": {
+    "live": "En vivo",
+    "liveHint": "Las tareas nuevas aparecen aquí en cuanto se publican",
+    "show": "{count, plural, one {# tarea nueva} other {# tareas nuevas}} · Ver",
+    "announce": "{count, plural, one {Se publicó # tarea nueva} other {Se publicaron # tareas nuevas}}",
+    "loading": "Cargando…"
   }
 }
