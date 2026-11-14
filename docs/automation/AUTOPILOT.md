@@ -36,6 +36,7 @@ Keep going until the Build plan below is done, then stop.
 4. **Keep `main` green.**
    - Commit to `main` only when `npm run check` passes, plus `npm run build` when routes or config change.
    - Make small commits with clear messages, one after every finished increment.
+   - **Commit with `node scripts/commit-own.mjs -m "Subject" -m "Body" -- <your paths>`, never a plain `git commit`.** The sessions share one git index, so `git commit` takes whatever anyone has staged. On 2026-11-14 that swept others' work into the wrong commit three times. The script commits only the paths you name, from a private index. For a shared file that also holds others' uncommitted lines, write HEAD's version plus your lines to a scratch file and pass `<path>=<scratch file>`. It never stages anything in the shared index.
    - Local commits are authorized for the autopilot. Pushing is not.
 5. **Codex owns `src/ui`.**
    - Never restyle or rewrite Codex's UI.
