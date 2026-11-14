@@ -6,6 +6,7 @@ import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { earnings } from '@/modules/earnings/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { DEFAULT_FEES } from '@/modules/markets/policy-defaults';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { rewardGrants } from '@/modules/rewards/schema';
 import { getRewardsPage, redeemReward } from '@/modules/rewards/service';
 import { decideReward } from '@/modules/rewards/staff';
@@ -30,9 +31,15 @@ const morgan = { id: 'usr_morgan', roles: ['support_lead' as const] };
 const rewardsOf = async (helperUserId: string, now = new Date()) =>
   (await getRewardsPage(db, { id: helperUserId, helperReady: true }, now)).grants.filter((grant) => grant.program === 'welcome');
 
+/**
+ * A helper with a verified ID. The founding cohort counts helpers only (blueprint 05; completion plan 6.6), so
+ * each one gets a helper profile too: an ID check alone (a client's, say) takes no founding place.
+ */
 async function helper(id: string, verifiedAt: Date) {
   const [sam] = await db.select().from(users).where(eq(users.id, 'usr_sam'));
+  const [samProfile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, 'usr_sam'));
   await db.insert(users).values({ ...sam!, id, email: `${id}@example.test`, name: `T22 ${id.slice(-4)}`, phone: null, phoneVerifiedAt: null });
+  await db.insert(helperProfiles).values({ ...samProfile!, userId: id, handle: `t22-${id.slice('usr_t22_'.length)}`, foundingNumber: null, completedCount: 0, ratingAverage: null, ratingCount: 0 });
   await db.insert(identityVerifications).values({ id: `idv_${id}`, userId: id, provider: 'dev', providerSessionId: `dev_${id}`, status: 'verified', isAdult: true, verifiedAt, createdAt: verifiedAt, updatedAt: verifiedAt });
 }
 
@@ -63,6 +70,7 @@ afterAll(async () => {
       await db.delete(tasks).where(inArray(tasks.id, rows.map((row) => `tsk_${row}`)));
     }
     await db.delete(identityVerifications).where(inArray(identityVerifications.userId, helpers));
+    await db.delete(helperProfiles).where(inArray(helperProfiles.userId, helpers));
     await db.delete(users).where(inArray(users.id, helpers));
   }
   await pool.end();
