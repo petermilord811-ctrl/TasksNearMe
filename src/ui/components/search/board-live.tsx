@@ -4,9 +4,10 @@ import { useEffect, useEffectEvent, useMemo, useState, useTransition } from 'rea
 import { useRouter } from 'next/navigation';
 import { ArrowUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { TaskPublicView } from '@/contracts';
+import type { TaskLiveState, TaskPublicView } from '@/contracts';
 import { taskMatchesBoard, type BoardMatchQuery } from '@/shared/board-match';
 import { cn } from '@/ui/lib/utils';
+import { setTaskLiveState } from './board-live-store';
 
 /** A tab in the background lets its stream go after this long, and opens it again when it's back. */
 const HIDDEN_CLOSE_MS = 120_000;
@@ -25,8 +26,9 @@ export interface BoardLiveProps {
 /**
  * The board, live (completion plan 7.6): the market's public stream says when a task is posted; the ones that fit
  * the board's own filters become "2 new tasks · Show", a pill above the list that loads them when tapped. Nothing
- * is inserted under the reader, and nothing counts who is looking. Without JavaScript or a stream, the board is
- * simply the page as it loaded.
+ * is inserted under the reader, and nothing counts who is looking. A task's offers and its end (booked, closed)
+ * reach its row as they happen (board-live-store). Without JavaScript or a stream, the board is simply the page
+ * as it loaded.
  */
 export function BoardLive({ marketSlug, query, areas, shownIds, listId }: BoardLiveProps) {
   const t = useTranslations('taskBoard.live');
@@ -40,6 +42,11 @@ export function BoardLive({ marketSlug, query, areas, shownIds, listId }: BoardL
   const onTask = useEffectEvent((task: TaskPublicView) => {
     if (!taskMatchesBoard(task, query, { now: new Date(), areaNames })) return;
     setFresh((ids) => (ids.includes(task.id) ? ids : [...ids, task.id].slice(-50)));
+  });
+  const onState = useEffectEvent((state: TaskLiveState) => {
+    setTaskLiveState(state);
+    // A new task that's already booked or closed is no longer worth showing.
+    if (state.state !== 'open') setFresh((ids) => (ids.includes(state.id) ? ids.filter((id) => id !== state.id) : ids));
   });
 
   useEffect(() => {
@@ -57,6 +64,14 @@ export function BoardLive({ marketSlug, query, areas, shownIds, listId }: BoardL
           if (task?.id) onTask(task);
         } catch {
           /* not a task: ignore */
+        }
+      });
+      source.addEventListener('task-state', (event) => {
+        try {
+          const state = JSON.parse((event as MessageEvent<string>).data) as TaskLiveState;
+          if (state?.id && typeof state.offerCount === 'number' && typeof state.readAt === 'string') onState(state);
+        } catch {
+          /* not a state: ignore */
         }
       });
     };

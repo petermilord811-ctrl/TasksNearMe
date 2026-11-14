@@ -209,7 +209,8 @@ test('keyboard only: post a task, a helper offers, the client books and pays, th
   await auditPage(page, testInfo.project.name);
   await typeInto(page, page.getByRole('textbox', { name: 'Message' }), 'The box is by the door. See you then.');
   await press(page, page.getByRole('button', { name: 'Send' }));
-  await expect(page.getByText('The box is by the door. See you then.')).toBeVisible({ timeout: 30_000 });
+  // In the conversation itself: on wide screens the conversation list beside it previews the same words.
+  await expect(page.getByRole('log').getByText('The box is by the door. See you then.')).toBeVisible({ timeout: 30_000 });
 });
 
 test('keyboard only: the client approves and reviews, with focus back on the button after a dialog', async ({ page }, testInfo) => {

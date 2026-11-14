@@ -27,6 +27,7 @@ describe('live notices for outbox events', () => {
       kind: 'users',
       userIds: ['usr_jordan', 'usr_maya'],
       notice: { type: 'update', event: 'offer.submitted', offer: 'off_1', task: 'tsk_1' },
+      boardTaskId: 'tsk_1',
     });
     expect(planNotices({ type: 'booking.confirmed', payload: { bookingId: 'bkg_1', taskId: 'tsk_1', posterUserId: 'usr_maya', helperUserId: 'usr_jordan' } })).toMatchObject({ kind: 'users' });
     expect((planNotices({ type: 'booking.confirmed', payload: { bookingId: 'bkg_1', taskId: 'tsk_1', posterUserId: 'usr_maya', helperUserId: 'usr_jordan' } }) as { notice: unknown }).notice).toEqual({
@@ -35,6 +36,23 @@ describe('live notices for outbox events', () => {
       booking: 'bkg_1',
       task: 'tsk_1',
     });
+  });
+
+  it('tells the task’s board when its offers or its state change, with the task’s id only', () => {
+    for (const type of ['offer.submitted', 'offer.withdrawn', 'offer.declined', 'booking.confirmed', 'task.canceled', 'task.reopened']) {
+      expect(planNotices({ type, payload: { taskId: 'tsk_1', offerId: 'off_1', bookingId: 'bkg_1', posterUserId: 'usr_maya', helperUserId: 'usr_jordan' } }), type).toMatchObject({ boardTaskId: 'tsk_1' });
+    }
+    // Staff cancel a task: nobody's named, the board still hears it.
+    expect(planNotices({ type: 'task.canceled', payload: { taskId: 'tsk_1', reason: 'staff' } })).toEqual({
+      kind: 'users',
+      userIds: [],
+      notice: { type: 'update', event: 'task.canceled', task: 'tsk_1' },
+      boardTaskId: 'tsk_1',
+    });
+    // A revised or reconfirmed offer leaves the count as it was.
+    for (const type of ['offer.revised', 'offer.reconfirmed', 'booking.completed']) {
+      expect(planNotices({ type, payload: { taskId: 'tsk_1', offerId: 'off_1', posterUserId: 'usr_maya' } }), type).not.toHaveProperty('boardTaskId');
+    }
   });
 
   it('ignores events no open page shows (emails, privacy, staff-only)', () => {

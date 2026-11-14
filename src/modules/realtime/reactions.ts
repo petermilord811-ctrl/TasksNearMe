@@ -15,11 +15,12 @@ type EventRow = typeof outboxEvents.$inferSelect;
  * again), which is fine: a notice only tells the page to read again.
  *
  * Who gets one follows who may read the thing: a conversation's other participants, the people a task, offer,
- * invite or booking names, and the market's public stream for a newly posted (open, unhidden) task. Blocked
- * pairs get nothing from each other. Ids and the event type only, never text.
+ * invite or booking names, and the market's public stream for a newly posted (open, unhidden) task or a task whose
+ * offers or state changed (its id only). Blocked pairs get nothing from each other. Ids and the event type only,
+ * never text.
  */
 export type NoticePlan =
-  | { kind: 'users'; userIds: string[]; actorId?: string; notice: RealtimeNotice }
+  | { kind: 'users'; userIds: string[]; actorId?: string; notice: RealtimeNotice; boardTaskId?: string }
   | { kind: 'market'; marketId: string; taskId: string; notice: RealtimeNotice }
   | { kind: 'community'; marketId: string; postId: string; event: string; userIds: string[]; actorId?: string };
 
@@ -34,6 +35,11 @@ const COMMUNITY_EVENTS: Record<string, { event: string; recipient?: string; acto
 /** Event types that change what someone sees on a signed-in page: their pages refresh. */
 const UPDATE_PREFIXES = ['offer.', 'invite.', 'booking.', 'change.', 'series.', 'rebook.', 'reviews.', 'earnings.', 'badge.'];
 const UPDATE_TYPES = new Set(['task.canceled', 'task.reopened', 'support.replied', 'support.resolved', 'privacy.export_ready']);
+/**
+ * Events that change a task's row on its market's board (completion plan 7.6): its offer count, or whether it still
+ * takes offers. The market's public stream hears the task's id; the stream reads the count and state itself.
+ */
+const BOARD_EVENTS = new Set(['offer.submitted', 'offer.withdrawn', 'offer.declined', 'booking.confirmed', 'task.canceled', 'task.reopened']);
 const ID_KEYS = ['taskId', 'offerId', 'bookingId', 'threadId', 'inviteId', 'seriesId', 'changeId', 'caseId'] as const;
 
 const asString = (value: unknown) => (typeof value === 'string' && value.length > 0 && value.length <= 80 ? value : undefined);
@@ -78,14 +84,15 @@ export function planNotices(event: Pick<EventRow, 'type' | 'payload'>): NoticePl
   }
   if (!UPDATE_TYPES.has(event.type) && !UPDATE_PREFIXES.some((prefix) => event.type.startsWith(prefix))) return null;
   const userIds = peopleIn(payload);
-  if (userIds.length === 0) return null;
+  const boardTaskId = BOARD_EVENTS.has(event.type) ? asString(payload.taskId) : undefined;
+  if (userIds.length === 0 && !boardTaskId) return null;
   const notice: RealtimeNotice = { type: 'update', event: event.type };
   for (const key of ID_KEYS) {
     const id = asString(payload[key]);
     if (id) notice[key.replace(/Id$/, '')] = id;
   }
   const actorId = asString(payload.senderUserId) ?? asString(payload.actorUserId);
-  return { kind: 'users', userIds, ...(actorId ? { actorId } : {}), notice };
+  return { kind: 'users', userIds, ...(actorId ? { actorId } : {}), notice, ...(boardTaskId ? { boardTaskId } : {}) };
 }
 
 /** The envelopes for an event, after the checks: blocked pairs dropped, market notices only for open tasks. */
@@ -119,6 +126,11 @@ export async function noticesFor(db: Db, event: Pick<EventRow, 'type' | 'payload
   for (const userId of plan.userIds) {
     if (plan.actorId && plan.actorId !== userId && (await isBlockedBetween(db, plan.actorId, userId))) continue;
     envelopes.push({ channel: userChannel(userId), notice: plan.notice });
+  }
+  if (plan.boardTaskId) {
+    // A draft was never on a board; any other task may be on someone's open board page, so its market hears it.
+    const [task] = await db.select({ marketId: tasks.marketId, status: tasks.status }).from(tasks).where(eq(tasks.id, plan.boardTaskId)).limit(1);
+    if (task && task.status !== 'draft') envelopes.push({ channel: marketChannel(task.marketId), notice: { type: 'task.changed', task: plan.boardTaskId } });
   }
   return envelopes;
 }

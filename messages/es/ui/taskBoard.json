@@ -118,14 +118,18 @@
   "tomorrow": "Mañana",
   "stats": {
     "open": "{count, plural, one {# tarea abierta} other {# tareas abiertas}}",
-    "postedToday": "{count, plural, =0 {ninguna publicada hoy todavía} one {# publicada hoy} other {# publicadas hoy}}"
+    "postedToday": "{count, plural, =0 {ninguna publicada hoy todavía} one {# publicada hoy} other {# publicadas hoy}}",
+    "sinceVisit": "desde tu última visita, {when}"
   },
   "row": {
     "new": "Nueva",
     "first": "Aún sin ofertas",
     "offers": "{count, plural, one {# oferta} other {# ofertas}}",
     "anyTime": "Cualquier hora",
-    "remote": "Remota"
+    "remote": "Remota",
+    "booked": "Reservada",
+    "closed": "Ya no recibe ofertas",
+    "newSinceVisit": "Publicada desde tu última visita"
   },
   "live": {
     "live": "En vivo",

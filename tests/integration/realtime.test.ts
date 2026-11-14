@@ -5,6 +5,7 @@ import { blocks, messages } from '@/modules/messaging/schema';
 import { getThreadPage, notifyTyping, offerThreadId, sendMessage } from '@/modules/messaging/service';
 import { notifications } from '@/modules/notifications/schema';
 import { dispatchNotifications } from '@/modules/notifications/service';
+import { findTaskLiveState } from '@/modules/realtime/board';
 import { noticesFor } from '@/modules/realtime/reactions';
 import { createDb } from '@/platform/db/connect';
 import { outboxEvents } from '@/platform/outbox/schema';
@@ -16,7 +17,7 @@ import { publishNotices } from '@/platform/realtime/publish';
  * Real time (completion plan 7.1) against Postgres: notices go out on commit through the one LISTEN connection,
  * an outbox insert wakes the dispatcher, a message reaches the other participant only (never across a block),
  * typing is spaced out and for participants only, presence and "Seen" are mutual, and a posted task reaches its
- * market's public stream while it's open.
+ * market's public stream while it's open, as do changes to a task's offers or state (7.6).
  */
 const url = process.env.TEST_DATABASE_URL ?? '';
 const { db, pool } = createDb(url, { max: 3 });
@@ -147,5 +148,16 @@ describe('real time through Postgres', () => {
       { channel: marketChannel('mkt_austin'), notice: { type: 'task.posted', task: 'tsk_desk' } },
     ]);
     expect(await noticesFor(db, { type: 'task.posted', payload: { taskId: 'tsk_missing', marketId: 'mkt_austin' } })).toEqual([]);
+  });
+
+  it('tells a task’s board when its offers or state change (its id), and the stream reads only public facts', async () => {
+    const notices = await noticesFor(db, { type: 'offer.withdrawn', payload: { offerId: 'off_none', taskId: 'tsk_desk', helperUserId: 'usr_jordan', posterUserId: 'usr_maya' } });
+    expect(notices).toContainEqual({ channel: marketChannel('mkt_austin'), notice: { type: 'task.changed', task: 'tsk_desk' } });
+    expect(await noticesFor(db, { type: 'task.canceled', payload: { taskId: 'tsk_missing', reason: 'staff' } })).toEqual([]);
+
+    const readAt = new Date('2026-11-14T12:00:00.000Z');
+    const state = await findTaskLiveState(db, 'tsk_desk', readAt);
+    expect(state).toEqual({ id: 'tsk_desk', offerCount: expect.any(Number), state: 'open', readAt: readAt.toISOString() });
+    expect(await findTaskLiveState(db, 'tsk_missing')).toBeNull();
   });
 });

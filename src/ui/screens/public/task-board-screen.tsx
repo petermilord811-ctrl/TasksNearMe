@@ -11,6 +11,7 @@ import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { BoardFilters, activeFilterCount, boardHref } from '@/ui/components/search/board-filters';
 import { BoardLive } from '@/ui/components/search/board-live';
 import { PublicTaskCard } from '@/ui/components/tasks/public-task-card';
+import { LastVisitNote } from '@/ui/components/tasks/task-live';
 import { TaskRow } from '@/ui/components/tasks/task-row';
 import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';
@@ -32,8 +33,8 @@ function SegmentLink({ href, selected, label, icon }: { href: string; selected: 
 const EDGE_FADE = 'linear-gradient(to right, transparent, #000 var(--spacing-gutter, 1rem), #000 calc(100% - var(--spacing-gutter, 1rem)), transparent)';
 const edgeFade = { '--board-fade': EDGE_FADE } as CSSProperties;
 
-function Rows({ tasks, now, showArea = true }: { tasks: TaskPublicView[]; now: ISODateTime; showArea?: boolean }) {
-  return <ol className="divide-y divide-foreground/[0.06] dark:divide-white/[0.05]">{tasks.map((task) => <li key={task.id}><TaskRow task={task} now={now} showArea={showArea} /></li>)}</ol>;
+function Rows({ tasks, now, showArea = true, visitKey }: { tasks: TaskPublicView[]; now: ISODateTime; showArea?: boolean; visitKey: string }) {
+  return <ol className="divide-y divide-foreground/[0.06] dark:divide-white/[0.05]">{tasks.map((task) => <li key={task.id}><TaskRow task={task} now={now} showArea={showArea} visitKey={visitKey} /></li>)}</ol>;
 }
 
 const panelClass = 'overflow-hidden rounded-[1.125rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]';
@@ -51,6 +52,8 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const { formatDate } = useFormat();
   const locale = useLocale();
   const { market, query } = data;
+  // This browser's last look at the market's board marks what's new since (completion plan 7.6).
+  const visitKey = `board:${market.slug}`;
   const href = (change: Partial<TaskBoardQuery>) => boardHref(data, change);
   const filtered = activeFilterCount(query) > 0;
   const tomorrow = marketDayKey(new Date(new Date(`${data.today}T12:00:00Z`).getTime() + 86_400_000));
@@ -102,15 +105,15 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
                 <h2 id={`board-${section.key}`} className="text-[15px] font-semibold">{name}<span className="ml-2 text-[13px] font-normal text-muted-foreground tabular-nums">{t('sectionCount', { count: section.count })}</span></h2>
                 {more && <Link href={section.kind === 'remote' ? href({ remoteOnly: true }) : href({ areas: [section.areaSlug ?? section.key] })} rel="nofollow" className="inline-flex min-h-8 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{section.kind === 'remote' ? t('seeAllRemote', { count: section.count }) : t('seeAll', { count: section.count, area: name })}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>}
               </header>
-              <Rows tasks={section.tasks} now={now} showArea={false} />
+              <Rows tasks={section.tasks} now={now} visitKey={visitKey} showArea={false} />
             </section>;
           })}</div>
         : dayGroups
           ? <div className="space-y-3">{dayGroups.map((group) => <section key={group.day} aria-labelledby={`board-day-${group.day}`} className={panelClass}>
               <header className={panelHeadClass}><h2 id={`board-day-${group.day}`} className="text-[15px] font-semibold">{dayLabel(group.day, group.tasks[0]!)}<span className="ml-2 text-[13px] font-normal text-muted-foreground tabular-nums">{t('sectionCount', { count: group.tasks.length })}</span></h2></header>
-              <Rows tasks={group.tasks} now={now} />
+              <Rows tasks={group.tasks} now={now} visitKey={visitKey} />
             </section>)}</div>
-          : <div className={panelClass}><Rows tasks={data.tasks} now={now} /></div>;
+          : <div className={panelClass}><Rows tasks={data.tasks} now={now} visitKey={visitKey} /></div>;
 
   return <div className="space-y-5">
     <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -121,6 +124,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
           <span>{t('stats.open', { count: data.stats.openCount })}</span>
           <span aria-hidden="true" className="text-muted-foreground">·</span>
           <span className={data.stats.postedToday > 0 ? 'text-primary' : 'text-muted-foreground'}>{t('stats.postedToday', { count: data.stats.postedToday })}</span>
+          <LastVisitNote visitKey={visitKey} now={now} />
         </p>
       </div>
       <Link href={routes.app.newTask()} className={buttonVariants({ className: 'shrink-0' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>

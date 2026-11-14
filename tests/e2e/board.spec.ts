@@ -17,6 +17,17 @@ async function openFilters(page: Page, isMobile: boolean) {
 
 const filterGroup = (page: Page, name: string) => page.getByRole('complementary', { name: 'Filter open tasks' }).getByRole('group', { name });
 
+/** Cancels the poster's task from its page ("I found help elsewhere"), as my-tasks.spec.ts does. */
+async function cancelTask(page: Page, taskId: string): Promise<void> {
+  await page.goto(`/app/tasks/${taskId}`);
+  const more = page.getByRole('button', { name: 'More' });
+  if (await more.isVisible()) await more.click();
+  await page.getByRole('button', { name: 'Cancel task' }).first().click();
+  await page.getByRole('radio', { name: 'I found help elsewhere' }).check();
+  await page.getByRole('button', { name: 'Cancel task' }).last().click();
+  await expect(page.getByText(/Canceled/i).first()).toBeVisible({ timeout: 30_000 });
+}
+
 test('the board groups tasks by neighborhood, filters by link and searches', async ({ page, isMobile }) => {
   await page.goto('/austin/tasks');
   await expect(page.getByRole('heading', { level: 1, name: 'Open tasks in Austin' })).toBeVisible();
@@ -74,12 +85,15 @@ test('one list sorted by newest, paged, with the day on each row', async ({ page
   await expect(rows.first()).toContainText('$');
 });
 
-test('a task posted while the board is open shows up as "1 new task · Show", without a reload', async ({ browser, baseURL }, testInfo) => {
+test('a task posted while the board is open shows up as "1 new task · Show"; its offers and its end arrive live', async ({ browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'posts a task; desktop only');
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const readerContext = await browser.newContext();
   const posterContext = await browser.newContext();
+  const helperContext = await browser.newContext();
   await posterContext.addCookies([{ name: 'tnm_geo_stand_in', value: '1', url: baseURL! }]);
+  const poster = await posterContext.newPage();
+  let openTaskId = '';
   try {
     // The reader watches furniture assembly, newest first.
     const reader = await readerContext.newPage();
@@ -89,10 +103,10 @@ test('a task posted while the board is open shows up as "1 new task · Show", wi
       (window as unknown as { liveMarker: boolean }).liveMarker = true;
     });
 
-    const poster = await posterContext.newPage();
     await devSignIn(poster, 'maya@example.test');
     const title = `Live board bookshelf (${Date.now()})`;
     await postFurnitureTask(poster, title);
+    openTaskId = new URL(poster.url()).pathname.split('/').pop()!;
 
     // The pill, not the task: nothing moves under the reader until they ask.
     // Other specs may post furniture tasks at the same time, so the count can be more than one.
@@ -102,9 +116,29 @@ test('a task posted while the board is open shows up as "1 new task · Show", wi
     await pill.click();
     await expect(reader.getByRole('link', { name: title })).toBeVisible({ timeout: 15_000 });
     await expect(pill).toHaveCount(0);
+    const row = reader.getByRole('article').filter({ has: reader.getByRole('link', { name: title }) });
+    await expect(row.getByText('No offers yet')).toBeVisible();
+
+    // A helper offers: the row's count moves, without a reload (completion plan 7.6).
+    const helper = await helperContext.newPage();
+    await devSignIn(helper, 'jordan@example.test');
+    await helper.goto(`/app/find-work/${openTaskId}`);
+    await expect(helper.getByRole('heading', { level: 1, name: title })).toBeVisible({ timeout: 30_000 });
+    await helper.getByLabel('Message to the client').fill('I can assemble it on the day, and I bring my own tools.');
+    await helper.getByRole('button', { name: 'Send offer' }).click();
+    await expect(helper.getByRole('heading', { name: 'Your offer' })).toBeVisible({ timeout: 30_000 });
+    await expect(row.getByText('1 offer', { exact: true })).toBeVisible({ timeout: 15_000 });
+
+    // The poster cancels it: the row says so, still without a reload.
+    await cancelTask(poster, openTaskId);
+    openTaskId = '';
+    await expect(row.getByText('No longer taking offers')).toBeVisible({ timeout: 15_000 });
     expect(await reader.evaluate(() => (window as unknown as { liveMarker?: boolean }).liveMarker)).toBe(true);
   } finally {
+    // Never leave an open task behind: the home page lists the market's four newest (tasks-public.spec).
+    if (openTaskId) await cancelTask(poster, openTaskId).catch(() => undefined);
     await readerContext.close();
     await posterContext.close();
+    await helperContext.close();
   }
 });

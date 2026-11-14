@@ -118,14 +118,18 @@
   "tomorrow": "Tomorrow",
   "stats": {
     "open": "{count, plural, one {# open task} other {# open tasks}}",
-    "postedToday": "{count, plural, =0 {none posted today yet} one {# posted today} other {# posted today}}"
+    "postedToday": "{count, plural, =0 {none posted today yet} one {# posted today} other {# posted today}}",
+    "sinceVisit": "since your last visit, {when}"
   },
   "row": {
     "new": "New",
     "first": "No offers yet",
     "offers": "{count, plural, one {# offer} other {# offers}}",
     "anyTime": "Any time",
-    "remote": "Remote"
+    "remote": "Remote",
+    "booked": "Booked",
+    "closed": "No longer taking offers",
+    "newSinceVisit": "Posted since your last visit"
   },
   "live": {
     "live": "Live",

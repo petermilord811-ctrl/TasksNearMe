@@ -7,6 +7,7 @@ import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
+import { LiveOfferCount, NewSinceBadge } from './task-live';
 
 const categoryIcons: Record<CategorySlug, LucideIcon> = {
   'furniture-assembly': Hammer,
@@ -22,8 +23,10 @@ const NEW_FOR_MS = 24 * 3_600_000;
  * One task as a dense row (completion plan 7.4, Craigslist-style): the day on the left, the title and what it is
  * (type, neighborhood, time, offers) in the middle, the price on the right. On phones the price joins the details
  * line, so the title gets the row's width. The whole title is the link. The general area only, never an address.
+ * With `visitKey` (the board's), "New" means posted since the reader's last visit, and the offer count is live
+ * (completion plan 7.6).
  */
-export function TaskRow({ task, now, showArea = true, href = routes.publicTask(task.slug) }: { task: TaskPublicView; now: ISODateTime; showArea?: boolean; href?: string }) {
+export function TaskRow({ task, now, showArea = true, href = routes.publicTask(task.slug), visitKey }: { task: TaskPublicView; now: ISODateTime; showArea?: boolean; href?: string; visitKey?: string }) {
   const t = useTranslations('taskBoard.row');
   const card = useTranslations('taskCard');
   const { formatDate, formatDateTime, formatTimeRange, locale } = useFormat();
@@ -45,14 +48,18 @@ export function TaskRow({ task, now, showArea = true, href = routes.publicTask(t
     <div className="min-w-0 space-y-0.5">
       <h3 className="text-[15px]/6 font-semibold [overflow-wrap:anywhere]">
         <Link href={href} className="rounded-sm underline-offset-4 outline-offset-2 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring">{task.title}</Link>
-        {isNew && <span className="ml-2 inline-flex translate-y-[-1px] items-center rounded-full bg-badge-brand px-1.5 py-px align-middle text-[11px] font-semibold text-badge-brand-foreground">{t('new')}</span>}
+        {visitKey
+          ? <NewSinceBadge postedAt={task.postedAt} recent={isNew} visitKey={visitKey} />
+          : isNew && <span className="ml-2 inline-flex translate-y-[-1px] items-center rounded-full bg-badge-brand px-1.5 py-px align-middle text-[11px] font-semibold text-badge-brand-foreground">{t('new')}</span>}
       </h3>
       <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-muted-foreground">
         <span className="font-display text-sm font-semibold text-foreground tabular-nums sm:hidden">{price}{priceNote && <span className="ml-1 font-sans text-[12px] font-normal text-muted-foreground">{priceNote}</span>}</span>
         <span className="inline-flex items-center gap-1"><Icon aria-hidden="true" className="size-3.5 shrink-0" />{task.taskType ? card(`types.${task.categorySlug}.${task.taskType}`) : card(`categories.${task.categorySlug}`)}</span>
         {showArea && <span className="inline-flex items-center gap-1">{task.location.kind === 'remote' ? <><Laptop aria-hidden="true" className="size-3.5 shrink-0" />{t('remote')}</> : <><MapPin aria-hidden="true" className="size-3.5 shrink-0" />{task.location.areaName}</>}</span>}
         <span className="inline-flex items-center gap-1 tabular-nums"><Clock aria-hidden="true" className="size-3.5 shrink-0" />{task.schedule.flexible ? t('anyTime') : formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd)}</span>
-        <span className={cn('tabular-nums', task.offerCount === 0 && 'font-medium text-foreground')}>{task.offerCount === 0 ? t('first') : t('offers', { count: task.offerCount })}</span>
+        {visitKey
+          ? <LiveOfferCount taskId={task.id} offerCount={task.offerCount} renderedAt={now} />
+          : <span className={cn('tabular-nums', task.offerCount === 0 && 'font-medium text-foreground')}>{task.offerCount === 0 ? t('first') : t('offers', { count: task.offerCount })}</span>}
       </p>
     </div>
     <p className="hidden text-right leading-tight sm:block">

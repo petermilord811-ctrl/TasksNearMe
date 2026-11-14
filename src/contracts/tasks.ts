@@ -42,6 +42,19 @@ export interface TaskPublicView {
   taskType?: string;
 }
 
+/**
+ * A task's row, live (completion plan 7.6): the market's public stream sends this when an offer is made, withdrawn
+ * or declined, or the task is booked, canceled or reopened. Public facts only (the board already shows the count).
+ * `readAt` is the server's clock, so a row can tell it apart from a page rendered later.
+ */
+export interface TaskLiveState {
+  id: string;
+  offerCount: number;
+  /** Still taking offers, booked by someone, or closed some other way (canceled, expired, hidden). */
+  state: 'open' | 'booked' | 'closed';
+  readAt: ISODateTime;
+}
+
 /** `/[market]/tasks` filters. They live in the URL; build links with `routes.taskBoard(market, query)`. */
 export const TASK_BOARD_WHEN = ['any', 'today', 'this_week', 'this_weekend'] as const;
 export type TaskBoardWhen = (typeof TASK_BOARD_WHEN)[number];
