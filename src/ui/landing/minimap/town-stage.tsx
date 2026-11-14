@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { BadgeCheck, MapPin, Pause, Play, Star } from 'lucide-react';

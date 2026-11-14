@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, type ComponentProps } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/ui/lib/utils';
 import { isNavItemActive, type NavItem } from './nav';

@@ -82,6 +82,15 @@ describe('PublicShell', () => {
     expect(screen.getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', postHref);
   });
 
+  it('keeps Spanish pages on Spanish addresses (search engines follow them to Spanish pages)', () => {
+    render(<NextIntlClientProvider locale="es" messages={uiMessages}><PublicShell viewer={publicViewer}><h1>Ayuda local</h1></PublicShell></NextIntlClientProvider>);
+    const footer = within(screen.getByRole('contentinfo'));
+    const categories = within(footer.getByRole('navigation', { name: 'Find local help' }));
+    expect(categories.getByRole('link', { name: uiMessages.shell.categories['yard-cleanup'] })).toHaveAttribute('href', `/es${routes.category('yard-cleanup')}`);
+    expect(footer.getByRole('link', { name: uiMessages.shell.footer.cityNext })).toHaveAttribute('href', `/es${routes.waitlist()}`);
+    expect(screen.getAllByRole('link', { name: uiMessages.shell.homeLink })[0]).toHaveAttribute('href', '/es');
+  });
+
   it('includes every category and legal document with the contract destination', () => {
     show(<PublicShell viewer={publicViewer}><h1>Local help</h1></PublicShell>);
     const footer = within(screen.getByRole('contentinfo'));

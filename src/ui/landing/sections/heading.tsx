@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import type { ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Reveal } from '@/ui/motion';

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { ViewTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { ArrowRight, Globe, ShieldCheck } from 'lucide-react';

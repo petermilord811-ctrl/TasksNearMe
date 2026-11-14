@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useTranslations } from 'next-intl';
 import { ArrowRight, BadgeCheck, CreditCard, Tags } from 'lucide-react';
 import { routes, type HomePageData } from '@/contracts';

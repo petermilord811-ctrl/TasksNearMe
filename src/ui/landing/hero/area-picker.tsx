@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, ChevronDown, MapPin } from 'lucide-react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { routes, type HomePageData, type MapArea } from '@/contracts';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/primitives/popover';
 import { cn } from '@/ui/lib/utils';

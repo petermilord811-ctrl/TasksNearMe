@@ -1,7 +1,7 @@
 'use client';
 
 import { use } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useTranslations } from 'next-intl';
 import { routes, type ShellViewer } from '@/contracts';
 import { buttonVariants } from '@/ui/primitives/button';

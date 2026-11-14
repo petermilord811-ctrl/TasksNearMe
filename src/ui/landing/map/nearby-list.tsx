@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type ReactNode } from 'react';
 import { AnimatePresence, LazyMotion, domMax, m, useIsPresent } from 'motion/react';
 import { useTranslations } from 'next-intl';

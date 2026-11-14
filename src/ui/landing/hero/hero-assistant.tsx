@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import {
   useCallback,
   useEffect,
