@@ -12,7 +12,6 @@ import type {
   CardBrand,
   CompletedVia,
   ExactAddress,
-  PaymentStatus,
   PricingInput,
   TimelineEvent,
 } from '@/contracts';
@@ -44,6 +43,7 @@ import { tipViewOf } from './tips';
 import { scheduledPaymentViewOf } from './scheduled';
 import { seriesOfBooking, seriesSummaries, skipVisit } from './series';
 import { bookingTerms, bookings } from './schema';
+import { shownPaymentStatus } from '@/modules/payments/shown-status';
 
 /**
  * The booking page and the bookings list (blueprint 03 §4; ui-contract §5–6), projected for the
@@ -196,7 +196,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
       id: row.id,
       kind: row.purpose === 'tip' ? ('tip' as const) : ('charge' as const),
       amountCents: row.amountCents,
-      status: row.status as PaymentStatus,
+      status: shownPaymentStatus(row),
       ...(row.methodBrand ? { method: { brand: row.methodBrand as CardBrand, ...(row.methodLast4 ? { last4: row.methodLast4 } : {}) } } : {}),
       at: row.updatedAt.toISOString(),
     }));

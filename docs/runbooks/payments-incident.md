@@ -90,7 +90,7 @@ group by booking_id having count(*) > 1;
 3. Find the cause before restarting the runner. Each funding payment has a unique `idempotency_key`; two successful rows on one booking mean two different keys, so look for the code path that made the second one.
 
 **A transfer to the wrong helper, or one paid twice (SEV1)**
-- The app can't reverse transfers ([gaps](README.md#built-in-gaps)). Finance reverses the transfer in the Stripe Dashboard (Connect → the account → Transfers → Reverse) and records the case link. Then mark it in our data with the engineer, because `earnings.status` won't change on its own.
+- Finance takes the transfer back from the booking's staff page (**Helper transfers** → **Take back from the helper**), naming the case and the amount; it's audited as `booking.transfer_reversed`, and the transfer shows as partly or fully taken back. If Stripe can't (the helper was already paid out to their bank), the attempt is recorded as failed: recover the money by hand.
 
 ## What to tell people
 
@@ -115,7 +115,7 @@ B-066 is done when the team has run this exercise once. Run it with the on-call 
 | 0:15 | 14 bookings are `pending_funding`; their 30-minute window is running out. Two clients ask whether they were charged. | Explain the expiry: offers reopen, nobody is charged for a booking that didn't confirm. Answer from the copy. |
 | 0:25 | 9 regular visits are due their 48-hour charge today. | Check `funding_attempts` and the retry plan (36 h, 24 h). Nothing to do yet; note the deadline. |
 | 0:35 | Stripe recovers. The logs show `earnings.transfers` catching up. | Watch transfers move to `transferred`. Count the expired bookings and plan the follow-up message. |
-| 0:40 | A helper writes: "I was paid twice for Thursday's job." | Treat as SEV1: run the double-transfer check, reverse in the Stripe Dashboard (no in-app reversal), and write the case note. |
+| 0:40 | A helper writes: "I was paid twice for Thursday's job." | Treat as SEV1: run the double-transfer check, take the transfer back from the booking's staff page (finance, with the case), and write the case note. |
 
 Debrief questions:
 - Who noticed first, and how could we have known sooner? (No alerting exists on the failure rate.)

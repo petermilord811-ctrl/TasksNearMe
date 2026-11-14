@@ -9,7 +9,6 @@ import type {
   EarningsRowView,
   EarningsStatus,
   PaymentsPageData,
-  PaymentStatus,
   PayoutAccountStatus,
   PayoutStatus,
   PersonSummary,
@@ -38,6 +37,7 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { marketDayKey } from '@/shared/format';
 import { earnings, payouts } from './schema';
+import { shownPaymentStatus } from '@/modules/payments/shown-status';
 
 /**
  * The money after the work (blueprint 04 §5–6): transfers to helpers when a booking completes or a
@@ -336,7 +336,7 @@ export async function getPaymentsPage(db: Db, posterUserId: string): Promise<Pay
         refundedCents: refunded,
         ...(tipped > 0 ? { tipCents: tipped } : {}),
         netCents: charge.amountCents - refunded + tipped,
-        status: charge.status as PaymentStatus,
+        status: shownPaymentStatus(charge),
       },
     ];
   });

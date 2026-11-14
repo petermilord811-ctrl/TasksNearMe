@@ -47,13 +47,13 @@ Release, settle and refund are offered only on a paid booking whose work was sub
 
 - You can refund up to your limit per booking without approval: agents $100, leads and finance $500. Above that, your refund becomes a request; a lead approves up to $500, finance approves any amount, and nobody approves their own.
 - **If a resolution's refund fails,** resolving again won't retry it: the attempt's key is fixed per case. Use the booking's refund tool for the same amount, put the case id in the reason, and note it on the case ([payments incident](payments-incident.md#fixes-by-symptom)).
-- **If the helper was already paid** (a late chargeback, or a reopened case), the app can't take the transfer back. Finance decides whether to reverse it in the Stripe Dashboard (Connect → the account → Transfers → Reverse) and records the case id. The refund to the client comes from platform funds either way.
+- **If the helper was already paid** (a late chargeback, or a reopened case): finance can take the transfer back from the booking's staff page (**Helper transfers** → **Take back from the helper**), naming the case, the amount and why (completion plan 5.13). Stripe takes it from the helper's balance; if it's already been paid out to their bank, the attempt is recorded as failed and the money is recovered by hand. The refund to the client comes from platform funds either way.
 
 ## Chargebacks
 
 1. Open the urgent `payment_issue` case. The internal note has the Stripe dispute id and the date evidence is due.
 2. Gather the evidence from the booking: the agreed terms and price, the timeline (check-in, arrival, completion), completion photos, the conversation (with a logged reason), and the client's approval if there was one.
-3. Finance submits it in the Stripe Dashboard (Payments → Disputes → the dispute). The app doesn't send evidence, and it doesn't change the payment's status: `chargeback_open`, `won` and `lost` aren't recorded yet.
+3. Finance submits it in the Stripe Dashboard (Payments → Disputes → the dispute); the app doesn't send evidence. The payment shows the chargeback as **Bank dispute** (`chargeback_open`) on the booking pages and the client's payments, and as won or lost once Stripe closes it; its money status (`succeeded`, `refunded`) doesn't change.
 4. When Stripe closes the dispute (`charge.dispute.closed`), a note is added to the case. Resolve the case with the outcome, and decide with finance whether a lost chargeback needs a transfer reversal (see above) or an account action.
 5. Each lost chargeback costs a $15 fee, plus $15 if countered (returned on a win; blueprint 04 §8). Two or more from one client is a pattern worth a trust & safety look.
 

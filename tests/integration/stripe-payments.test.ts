@@ -14,6 +14,7 @@ import { supportCaseEvents, supportCases } from '@/modules/support/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
+import { shownPaymentStatus } from '@/modules/payments/shown-status';
 
 /**
  * Stripe payments end to end against a fake Stripe (no network): a new card from Stripe's field goes on the
@@ -148,11 +149,18 @@ describe('chargebacks and leaving', () => {
     const notes = await db.select({ body: supportCaseEvents.body }).from(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id));
     expect(notes[0]?.body).toContain('by 2026-12-01');
     expect(await handleStripePaymentWebhook(deps, dispute('charge.dispute.created'), new Date())).toEqual({ status: 200, body: { ok: true, ignored: true } });
+    // The payment carries the chargeback (completion plan 5.13) while its money status stays as it was.
+    const disputed = (await db.select().from(payments).where(eq(payments.providerRef, 'pi_test_1')))[0]!;
+    expect(disputed).toMatchObject({ disputeStatus: 'open', disputeId: 'dp_test_1', status: 'succeeded' });
+    expect(shownPaymentStatus(disputed)).toBe('chargeback_open');
 
     // The outcome lands on the same case.
     expect(await handleStripePaymentWebhook(deps, dispute('charge.dispute.closed', 'won'), new Date())).toEqual({ status: 200, body: { ok: true } });
     const after = await db.select({ body: supportCaseEvents.body }).from(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id));
     expect(after.map((row) => row.body)).toContain('Stripe dispute dp_test_1 closed: won.');
+    const won = (await db.select().from(payments).where(eq(payments.providerRef, 'pi_test_1')))[0]!;
+    expect(won).toMatchObject({ disputeStatus: 'won', status: 'succeeded' });
+    expect(shownPaymentStatus(won)).toBe('chargeback_won');
     await db.delete(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id));
     await db.delete(supportCases).where(eq(supportCases.id, opened!.id));
   });

@@ -11,6 +11,7 @@ import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus, useCaseStatus, useEarningsStatus } from '@/ui/components/status/use-status';
 import { AdminBookingTools, type AdminBookingPreviewState } from './admin-booking-tools';
 import { AdminRefundRequests } from './admin-refund-requests';
+import { AdminTransferReversals } from './admin-transfer-reversals';
 
 export interface AdminBookingScreenProps { data: AdminBookingPageData; handlers: AdminBookingHandlers; now: ISODateTime }
 
@@ -89,6 +90,7 @@ export function AdminBookingContent({ data, handlers, now, ...previewState }: Ad
           </li>)}</ul> : <p className="text-sm text-muted-foreground">{t('noRefunds')}</p>}
         </section>
         <section className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]"><h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('earnings')}</h2>{data.money.earnings.length > 0 ? <ul aria-label={t('earnings')} className="divide-y">{data.money.earnings.map((line, index) => <EarningsLine key={index} line={line} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noEarnings')}</p>}</section>
+        {data.reversals && <AdminTransferReversals data={data.reversals} {...(handlers.onReverseTransfer ? { onReverseTransfer: handlers.onReverseTransfer } : {})} />}
       </div>
       <AdminRefundRequests requests={data.refundRequests} onDecide={handlers.onDecideRefund} now={now} initialDecision={previewState.initialDecision} />
       <section className="space-y-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]"><h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('cases')}</h2>{data.cases.length > 0 ? <ul aria-label={t('cases')} className="divide-y">{data.cases.map((row) => <BookingCase key={row.id} row={row} now={now} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noCases')}</p>}</section>

@@ -150,5 +150,41 @@
     }
   },
   "checklist": "Helper’s checklist",
-  "checklistHint": "What they ticked when they sent the work. Ticking was optional."
+  "checklistHint": "What they ticked when they sent the work. Ticking was optional.",
+  "reversals": {
+    "title": "Helper transfers",
+    "intro": "Money sent to the helper for this booking. Finance can take part or all of it back when a case calls for it, for example after a lost chargeback or a refund that followed the transfer.",
+    "none": "Nothing has been transferred to the helper yet.",
+    "kinds": {
+      "earnings": "Earnings",
+      "reimbursement": "Reimbursed expenses",
+      "cancellation_compensation": "Cancellation compensation",
+      "tip": "Tip"
+    },
+    "amounts": "{transferred} sent · {reversed} taken back",
+    "historyTitle": "Taken back",
+    "historyDone": "{amount} taken back by {name}, {date}",
+    "historyFailed": "{amount} not taken back ({name}, {date}): Stripe couldn't. Recover it by hand.",
+    "historyCase": "Case {case}",
+    "needsCase": "Taking money back needs a case on this booking. Open one first.",
+    "open": "Take back from the helper",
+    "dialogTitle": "Take money back from the helper",
+    "dialogDescription": "Stripe takes it from the helper's balance. If they've already been paid out to their bank, it can't, and you'll recover it by hand.",
+    "transfer": "Transfer",
+    "transferOption": "{kind}: {amount} left",
+    "amount": "Amount",
+    "amountHint": "Up to {amount}.",
+    "amountTooHigh": "At most {amount} is left to take back.",
+    "amountInvalid": "Enter an amount, like 27.00.",
+    "case": "Case",
+    "reason": "Why",
+    "reasonHint": "Kept in the audit log. At least 10 characters.",
+    "reasonRequired": "Write why, in at least 10 characters.",
+    "reasonTooLong": "Keep it under 1,000 characters.",
+    "insufficient": "Stripe couldn't take it back: the helper's balance doesn't cover it. It's recorded; recover the money by hand.",
+    "notAllowed": "Only finance can take money back, and only from a transfer that has money left.",
+    "cancel": "Cancel",
+    "submit": "Take it back",
+    "pending": "Taking it back…"
+  }
 }

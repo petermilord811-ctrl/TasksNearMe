@@ -46,5 +46,6 @@ export * from './analytics';
 export * from './helper-standing';
 export * from './badges';
 export * from './admin-webhooks';
+export * from './admin-reversals';
 export * from './beta';
 export * from './bot-check';

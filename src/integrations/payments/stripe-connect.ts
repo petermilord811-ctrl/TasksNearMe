@@ -22,6 +22,12 @@ export interface StripeConnect {
   /** The charge behind a payment intent, for `source_transaction`. */
   chargeOf(intentId: string): Promise<{ chargeId: string; amountCents: number } | null>;
   transfer(input: { amountCents: number; accountId: string; sourceChargeId?: string; group: string; idempotencyKey: string }): Promise<{ ok: true; transferId: string } | { ok: false; reason: 'account_not_ready' }>;
+  /**
+   * Takes back part or all of a transfer (completion plan 5.13): the money returns from the helper's Stripe
+   * balance to the platform. `insufficient`: the helper's balance can't cover it (already paid out to the bank);
+   * Stripe then leaves it to us to recover. `already_reversed`: nothing left to take back.
+   */
+  reverseTransfer(input: { transferId: string; amountCents: number; idempotencyKey: string; caseId: string }): Promise<{ ok: true; reversalId: string } | { ok: false; reason: 'insufficient' | 'already_reversed' }>;
   /** What the account can pay out instantly now (needs an eligible debit card on the account). */
   instantAvailable(accountId: string): Promise<number>;
   /**
@@ -113,6 +119,22 @@ export function createStripeConnect(config: { secretKey: string; fetch?: typeof 
       } catch (error) {
         // The account can't take transfers yet (onboarding unfinished, or restricted): try again later.
         if (error instanceof StripeError && error.status === 400 && /capabilit|account/i.test(`${error.body.code ?? ''}`)) return { ok: false, reason: 'account_not_ready' };
+        throw error;
+      }
+    },
+
+    async reverseTransfer({ transferId, amountCents, idempotencyKey, caseId }) {
+      const params = new URLSearchParams({ amount: String(amountCents), 'metadata[case_id]': caseId });
+      try {
+        const reversal = await stripe.request('POST', `/transfers/${encodeURIComponent(transferId)}/reversals`, params, idempotencyKey);
+        if (typeof reversal.id !== 'string') throw new Error('Stripe sent no reversal id');
+        return { ok: true, reversalId: reversal.id };
+      } catch (error) {
+        if (error instanceof StripeError && error.status === 400) {
+          const code = `${error.body.code ?? ''}`;
+          if (/insufficient/i.test(code)) return { ok: false, reason: 'insufficient' };
+          if (/reversed|amount_too_large/i.test(code)) return { ok: false, reason: 'already_reversed' };
+        }
         throw error;
       }
     },

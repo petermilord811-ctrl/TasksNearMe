@@ -63,4 +63,18 @@ describe('Stripe Connect payouts', () => {
     expect(stripeConnectFromEnv({ STRIPE_SECRET_KEY: 'sk_test' })).toBeNull();
     expect(stripeConnectFromEnv({ STRIPE_SECRET_KEY: 'sk_test', STRIPE_PUBLISHABLE_KEY: 'pk_test' })?.provider).toBe('stripe');
   });
+
+  it('reverses a transfer with the case on it, and says when the helper’s balance can’t cover it', async () => {
+    const ok = fakeStripe(() => json({ id: 'trr_1' }));
+    expect(await ok.connect.reverseTransfer({ transferId: 'tr_9', amountCents: 2700, idempotencyKey: 'trr:rev_1', caseId: 'case_1' })).toEqual({ ok: true, reversalId: 'trr_1' });
+    expect(ok.calls[0]).toMatchObject({ method: 'POST', path: '/transfers/tr_9/reversals' });
+    expect(Object.fromEntries(ok.calls[0]!.params)).toEqual({ amount: '2700', 'metadata[case_id]': 'case_1' });
+    expect(ok.calls[0]!.headers['Idempotency-Key']).toBe('trr:rev_1');
+
+    const short = fakeStripe(() => json({ error: { type: 'invalid_request_error', code: 'insufficient_funds' } }, 400));
+    expect(await short.connect.reverseTransfer({ transferId: 'tr_9', amountCents: 2700, idempotencyKey: 'trr:rev_2', caseId: 'case_1' })).toEqual({ ok: false, reason: 'insufficient' });
+    const done = fakeStripe(() => json({ error: { type: 'invalid_request_error', code: 'transfer_already_reversed' } }, 400));
+    expect(await done.connect.reverseTransfer({ transferId: 'tr_9', amountCents: 2700, idempotencyKey: 'trr:rev_3', caseId: 'case_1' })).toEqual({ ok: false, reason: 'already_reversed' });
+  });
 });
+

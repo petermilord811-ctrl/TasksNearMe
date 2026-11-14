@@ -1,4 +1,5 @@
 import type { SavedReplyOption } from './admin-support-tools';
+import type { AdminBookingReversals, AdminReversalHandlers } from './admin-reversals';
 import type { AdminVerificationQueue } from './admin-verification';
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
@@ -307,6 +308,8 @@ export interface AdminBookingPageData {
   poster: PersonSummary;
   helper: PersonSummary;
   money: AdminBookingMoney;
+  /** The helper's transfers and their reversals (completion plan 5.13). */
+  reversals?: AdminBookingReversals;
   /** The helper's checklist answers from when they sent the work (blueprint 01, P2), for disputes; absent before checklists. */
   checklist?: CompletionChecklistView;
   /** Cases about this booking, newest first. */
@@ -364,4 +367,6 @@ export interface AdminBookingHandlers {
   onDecideRefund: ActionHandler<RefundDecisionInput>;
   onRevealAddress: QueryHandler<RestrictedAccessInput, RevealAddressResult>;
   onRevealConversation: QueryHandler<RestrictedAccessInput, RevealConversationResult>;
+  /** Finance takes back a helper's transfer (completion plan 5.13). */
+  onReverseTransfer?: AdminReversalHandlers['onReverseTransfer'];
 }

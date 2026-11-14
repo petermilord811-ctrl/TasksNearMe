@@ -9,6 +9,8 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminBookingScreen } from '@/ui/screens/admin';
 import { requestNow } from '@/platform/clock';
+import { getBookingReversals } from '@/modules/payments/reversals';
+import { reverseTransferAction } from '@/modules/payments/reversal-actions';
 
 export const metadata: Metadata = { title: 'Booking', robots: { index: false } };
 
@@ -26,8 +28,9 @@ async function AdminBooking({ params }: Pick<PageProps<'/[locale]/admin/bookings
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
   const now = await requestNow();
-  const data = await getAdminBooking(db, staff, bookingId, now);
-  if (!data) notFound();
+  const [booking, reversals] = await Promise.all([getAdminBooking(db, staff, bookingId, now), getBookingReversals(db, staff, bookingId)]);
+  if (!booking) notFound();
+  const data = { ...booking, reversals };
   return (
     <AdminBookingScreen
       data={data}
@@ -37,6 +40,7 @@ async function AdminBooking({ params }: Pick<PageProps<'/[locale]/admin/bookings
         onDecideRefund: decideRefundAction.bind(null, bookingId),
         onRevealAddress: revealBookingAddressAction.bind(null, bookingId),
         onRevealConversation: revealBookingConversationAction.bind(null, bookingId),
+        onReverseTransfer: reverseTransferAction.bind(null, bookingId),
       }}
     />
   );

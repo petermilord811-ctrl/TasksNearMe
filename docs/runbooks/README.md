@@ -48,8 +48,6 @@ Blueprint 10 §5 asks for these before launch. Fill in the names before the beta
 These aren't built yet, so the runbooks handle them by hand. Close them before the gaps cost more than the manual steps.
 
 - **No paging.** The outbox events `support.safety_report`, `support.case_opened` and `payment.refund_needed` have no consumer. Nobody is paged for an urgent safety case, and a "refund needed" event creates no case. Until paging exists, the safety on-call watches the safety queue ([safety escalation](safety-escalation.md)), and finance checks for those events daily ([payments incident](payments-incident.md)).
-- **No transfer reversals.** Nothing reverses a helper's transfer. A refund after the helper was paid comes from platform funds; claw back in the Stripe Dashboard ([dispute handling](dispute-handling.md)).
-- **Chargeback status isn't recorded.** A chargeback opens an urgent case, but the payment's status stays as it was (`chargeback_open`, `won` and `lost` exist in the contracts and are never set). Evidence goes in through the Stripe Dashboard.
 - **No account ban tool.** Staff can suspend a *helper profile*. Blocking a whole account (`users.status` `suspended` or `banned`) is a database change, and it doesn't end sessions that are already signed in ([safety escalation](safety-escalation.md)).
 - **No booking or payment kill switch.** No feature flag pauses new bookings during an outage; payment errors show friendly copy and unpaid bookings expire on their own.
 - **Jobs have no dashboard.** The runner logs failures and retries every minute; there's no jobs table to inspect.

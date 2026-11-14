@@ -30,6 +30,7 @@ const connect: StripeConnect = {
     return { ok: true as const, transferId: `tr_${transfers.length}` };
   }),
   instantAvailable: vi.fn(async () => 0),
+  reverseTransfer: vi.fn(),
   instantPayout: vi.fn(),
   dashboardLink: vi.fn(),
 };

@@ -44,6 +44,7 @@ export * from './analytics';
 export * from './badges';
 export * from './helper-standing';
 export * from './admin-webhooks';
+export * from './admin-reversals';
 export * from './staff-auth';
 export * from './poster-identity';
 export * from './beta';

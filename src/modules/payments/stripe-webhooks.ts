@@ -128,6 +128,11 @@ async function recordChargeback(deps: BookingDeps, type: 'charge.dispute.created
         await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId, kind: 'note', authorUserId: null, visibility: 'internal', body: 'Stripe dispute ' + disputeId + ' closed: ' + status + '.', createdAt: now });
       }
     }
+    // The payment's chargeback state (completion plan 5.13): open until Stripe closes it won or lost. A closed
+    // inquiry (`warning_closed`) never became a chargeback, so the payment goes back to plain.
+    const closed = typeof dispute.status === 'string' ? dispute.status : '';
+    const disputeStatus = type === 'charge.dispute.created' ? 'open' : closed === 'won' ? 'won' : closed === 'lost' ? 'lost' : null;
+    await tx.update(payments).set({ disputeStatus, disputeId, updatedAt: now }).where(eq(payments.id, payment.id));
     await tx.insert(auditLog).values({ id: newId('aud'), actorId: null, actorRole: 'system', action, targetType: 'payment', targetId: disputeId, metadata: { paymentId: payment.id, ...(caseId ? { caseId } : {}) } });
   });
   return { status: 200, body: { ok: true } };
