@@ -71,6 +71,15 @@ describe('in Spanish', () => {
     ['limpiar la cocina y el baño', 'light-cleaning'],
     ['recoger las hojas del jardín', 'yard-cleanup'],
     ['recoger las hojas del jardin', 'yard-cleanup'],
+    // Texas Spanish and everyday verb forms (a9's 5.20 list).
+    ['limpiar la yarda y cortar el zacate', 'yard-cleanup'],
+    ['ayuda para cargar una traila', 'moving-help'],
+    ['me mudo el sábado', 'moving-help'],
+    ['que alguien me arme una litera', 'furniture-assembly'],
+    ['que limpien la cocina, el refri y los trastes', 'light-cleaning'],
+    ['configurar la tele inteligente', 'computer-help'],
+    // "Descargar" is also "to download": a phone or an app wins.
+    ['ayuda para descargar una aplicación en mi celular', 'computer-help'],
   ])('reads "%s" as %s', (text, category) => {
     expect(readTaskIntent(text).category).toBe(category);
   });
@@ -79,6 +88,8 @@ describe('in Spanish', () => {
     ['colgar mi tele en la pared', 'tv-mounting'],
     ['arreglar una fuga en la tubería', 'licensed-trade'],
     ['necesito un electricista', 'licensed-trade'],
+    ['destapar el fregadero', 'licensed-trade'],
+    ['cambiar un contacto en la cocina', 'licensed-trade'],
   ])('reads "%s" as not offered (%s)', (text, reason) => {
     const intent = readTaskIntent(text);
     expect(intent.notOffered).toBe(reason);

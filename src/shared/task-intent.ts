@@ -16,24 +16,24 @@ interface Signals {
 
 const SIGNALS: Record<CategorySlug, Signals> = {
   'furniture-assembly': {
-    strong: ['assemble', 'assembling', 'assembly', 'ikea', 'flat pack', 'flat-pack', 'flatpack', 'put together', 'mount', 'mounting', 'wall mount', 'hang', 'hanging', 'armar', 'armado', 'ensamblar', 'ensamblado', 'montar', 'colgar'],
-    weak: ['desk', 'bed frame', 'bookshelf', 'bookcase', 'shelf', 'shelves', 'wardrobe', 'dresser', 'table', 'chair', 'chairs', 'crib', 'cabinet', 'furniture', 'anchor', 'anti-tip', 'mirror', 'curtains', 'blinds', 'pictures', 'frames', 'build', 'drill', 'escritorio', 'cama', 'librero', 'estante', 'estantes', 'repisa', 'repisas', 'ropero', 'armario', 'comoda', 'mesa', 'silla', 'sillas', 'cuna', 'gabinete', 'mueble', 'muebles', 'espejo', 'cortina', 'cortinas'],
+    strong: ['assemble', 'assembling', 'assembly', 'ikea', 'flat pack', 'flat-pack', 'flatpack', 'put together', 'mount', 'mounting', 'wall mount', 'hang', 'hanging', 'armar', 'armado', 'ensamblar', 'ensamblado', 'montar', 'colgar', 'arme', 'armen', 'armarlo', 'armarla', 'armarlos', 'armando', 'atornillar'],
+    weak: ['desk', 'bed frame', 'bookshelf', 'bookcase', 'shelf', 'shelves', 'wardrobe', 'dresser', 'table', 'chair', 'chairs', 'crib', 'cabinet', 'furniture', 'anchor', 'anti-tip', 'mirror', 'curtains', 'blinds', 'pictures', 'frames', 'build', 'drill', 'escritorio', 'cama', 'librero', 'estante', 'estantes', 'repisa', 'repisas', 'ropero', 'armario', 'comoda', 'mesa', 'silla', 'sillas', 'cuna', 'gabinete', 'mueble', 'muebles', 'espejo', 'cortina', 'cortinas', 'buro', 'closet', 'cajonera', 'litera', 'base de cama', 'tocador'],
   },
   'moving-help': {
-    strong: ['move', 'moving', 'movers', 'truck', 'u-haul', 'uhaul', 'load', 'loading', 'unload', 'unloading', 'haul', 'carry', 'lift', 'heavy lifting', 'mudanza', 'mudar', 'mudarme', 'mudarnos', 'camioneta', 'troca', 'camion', 'cargar', 'descargar', 'acarrear'],
-    weak: ['boxes', 'couch', 'sofa', 'washer', 'dryer', 'upstairs', 'downstairs', 'storage unit', 'pack', 'packing', 'piano', 'mattress', 'rearrange', 'strong', 'heavy', 'cajas', 'sofa', 'lavadora', 'secadora', 'arriba', 'abajo', 'bodega', 'empacar', 'colchon', 'pesado', 'pesada', 'pesados', 'fuerte', 'levantar'],
+    strong: ['move', 'moving', 'movers', 'truck', 'u-haul', 'uhaul', 'load', 'loading', 'unload', 'unloading', 'haul', 'carry', 'lift', 'heavy lifting', 'mudanza', 'mudar', 'mudarme', 'mudarnos', 'camioneta', 'troca', 'camion', 'cargar', 'acarrear', 'traila', 'mudamos', 'mudo', 'mudando', 'mudanzas'],
+    weak: ['boxes', 'couch', 'sofa', 'washer', 'dryer', 'upstairs', 'downstairs', 'storage unit', 'pack', 'packing', 'piano', 'mattress', 'rearrange', 'strong', 'heavy', 'cajas', 'sofa', 'lavadora', 'secadora', 'arriba', 'abajo', 'bodega', 'empacar', 'colchon', 'pesado', 'pesada', 'pesados', 'fuerte', 'levantar', 'descargar', 'sillon', 'subir', 'bajar', 'almacen', 'storage'],
   },
   'yard-cleanup': {
-    strong: ['yard', 'garden', 'gardening', 'lawn', 'leaves', 'rake', 'raking', 'weeds', 'weeding', 'mow', 'mowing', 'prune', 'pruning', 'hedge', 'hedges', 'mulch', 'jardin', 'jardineria', 'cesped', 'pasto', 'hojas', 'rastrillar', 'maleza', 'malezas', 'deshierbar', 'podar', 'poda', 'setos', 'mantillo'],
-    weak: ['trim', 'trimming', 'bushes', 'branches', 'shrubs', 'flower bed', 'flowerbed', 'plants', 'planting', 'backyard', 'front yard', 'debris', 'gutters', 'grass', 'patio', 'outdoor', 'outside', 'recortar', 'arbustos', 'ramas', 'plantas', 'plantar', 'flores', 'escombros', 'canaletas', 'afuera', 'exterior'],
+    strong: ['yard', 'garden', 'gardening', 'lawn', 'leaves', 'rake', 'raking', 'weeds', 'weeding', 'mow', 'mowing', 'prune', 'pruning', 'hedge', 'hedges', 'mulch', 'jardin', 'jardineria', 'cesped', 'pasto', 'hojas', 'rastrillar', 'maleza', 'malezas', 'deshierbar', 'podar', 'poda', 'setos', 'mantillo', 'yarda', 'zacate', 'desyerbar', 'mala hierba', 'podadora', 'jardinero', 'cortar el pasto', 'cortar el zacate'],
+    weak: ['trim', 'trimming', 'bushes', 'branches', 'shrubs', 'flower bed', 'flowerbed', 'plants', 'planting', 'backyard', 'front yard', 'debris', 'gutters', 'grass', 'patio', 'outdoor', 'outside', 'recortar', 'arbustos', 'ramas', 'plantas', 'plantar', 'flores', 'escombros', 'canaletas', 'afuera', 'exterior', 'hierba'],
   },
   'light-cleaning': {
-    strong: ['clean', 'cleaning', 'cleaner', 'tidy', 'tidying', 'declutter', 'decluttering', 'dust', 'dusting', 'vacuum', 'vacuuming', 'mop', 'mopping', 'scrub', 'limpiar', 'limpieza', 'ordenar', 'aspirar', 'trapear', 'tallar', 'sacudir', 'polvo'],
-    weak: ['kitchen', 'bathroom', 'laundry', 'fold', 'dishes', 'oven', 'fridge', 'windows', 'organize', 'organise', 'organizing', 'move-out', 'guests', 'floors', 'spotless', 'mess', 'cocina', 'bano', 'ropa', 'doblar', 'platos', 'horno', 'refrigerador', 'nevera', 'ventanas', 'organizar', 'pisos', 'desorden', 'visitas'],
+    strong: ['clean', 'cleaning', 'cleaner', 'tidy', 'tidying', 'declutter', 'decluttering', 'dust', 'dusting', 'vacuum', 'vacuuming', 'mop', 'mopping', 'scrub', 'limpiar', 'limpieza', 'ordenar', 'aspirar', 'trapear', 'tallar', 'sacudir', 'polvo', 'limpie', 'limpien', 'limpiando', 'barrer'],
+    weak: ['kitchen', 'bathroom', 'laundry', 'fold', 'dishes', 'oven', 'fridge', 'windows', 'organize', 'organise', 'organizing', 'move-out', 'guests', 'floors', 'spotless', 'mess', 'cocina', 'bano', 'ropa', 'doblar', 'platos', 'horno', 'refrigerador', 'nevera', 'ventanas', 'organizar', 'pisos', 'desorden', 'visitas', 'refri', 'trastes', 'lavar', 'planchar', 'mugre', 'sucio', 'sucia'],
   },
   'computer-help': {
-    strong: ['computer', 'laptop', 'pc', 'mac', 'macbook', 'wifi', 'wi-fi', 'router', 'printer', 'iphone', 'android', 'tablet', 'ipad', 'smartphone', 'email', 'software', 'virus', 'password', 'backup', 'smart tv', 'internet', 'tech', 'techie', 'computadora', 'computadoras', 'compu', 'computacion', 'impresora', 'celular', 'tableta', 'correo', 'contrasena', 'tecnologia'],
-    weak: ['phone', 'set up', 'setup', 'install', 'update', 'slow', 'connect', 'account', 'zoom', 'photos', 'files', 'device', 'devices', 'apps', 'app', 'screen', 'online', 'computers', 'telefono', 'configurar', 'instalar', 'actualizar', 'lento', 'lenta', 'conectar', 'cuenta', 'fotos', 'archivos', 'dispositivo', 'dispositivos', 'aplicacion', 'aplicaciones', 'pantalla', 'en linea'],
+    strong: ['computer', 'laptop', 'pc', 'mac', 'macbook', 'wifi', 'wi-fi', 'router', 'printer', 'iphone', 'android', 'tablet', 'ipad', 'smartphone', 'email', 'software', 'virus', 'password', 'backup', 'smart tv', 'internet', 'tech', 'techie', 'computadora', 'computadoras', 'compu', 'computacion', 'impresora', 'celular', 'tableta', 'correo', 'contrasena', 'tecnologia', 'whatsapp', 'facebook', 'correo electronico', 'tele inteligente'],
+    weak: ['phone', 'set up', 'setup', 'install', 'update', 'slow', 'connect', 'account', 'zoom', 'photos', 'files', 'device', 'devices', 'apps', 'app', 'screen', 'online', 'computers', 'telefono', 'configurar', 'instalar', 'actualizar', 'lento', 'lenta', 'conectar', 'cuenta', 'fotos', 'archivos', 'dispositivo', 'dispositivos', 'aplicacion', 'aplicaciones', 'pantalla', 'en linea', 'mensajes'],
   },
 };
 
@@ -65,8 +65,9 @@ const NOT_OFFERED: { reason: 'tv-mounting' | 'licensed-trade'; patterns: RegExp[
       // "mount my 55 inch TV", "hang a TV" (the TV is what's put up; not "shelves above the TV", not "apps on my TV").
       /(?:^|[^a-z])(?:mount|mounting|hang|hanging|put up)\s+(?:(?:a|my|the|our|your|this|two|2)\s+)?(?:\d+\s*(?:inch|in|")\s*)?(?:(?:new|smart|flat|flat-screen|big|large)\s+)?(?:tv|television)s?\b/,
       /\b(?:tv|television)\s*(?:mount|mounting|bracket|on the wall|to the wall|on a wall|onto the wall)/,
-      // Spanish: "colgar mi tele", "montar la television", "la pantalla en la pared".
-      /(?:^|[^a-z])(?:montar|colgar|instalar|poner)\s+(?:(?:la|una|mi|el|un|nuestra)\s+)?(?:tele|television|tv|pantalla)s?\b/,
+      // Spanish: "colgar mi tele", "montar la television", "la pantalla en la pared" (not "instalar la tele inteligente":
+      // setting one up is computer help).
+      /(?:^|[^a-z])(?:montar|colgar)\s+(?:(?:la|una|mi|el|un|nuestra)\s+)?(?:tele|television|tv|pantalla)s?\b/,
       /\b(?:tele|television|tv|pantalla)\s+(?:en|a)\s+la\s+pared/,
     ],
   },
@@ -78,7 +79,9 @@ const NOT_OFFERED: { reason: 'tv-mounting' | 'licensed-trade'; patterns: RegExp[
       /\b(?:gas line|gas stove|gas dryer|gas leak)\b/,
       // Spanish: electricians, plumbers and gas.
       /\b(?:electricista|instalacion electrica|cableado|enchufe|enchufes|apagador|apagadores|lampara de techo|ventilador de techo|breaker|circuito)\b/,
-      /\b(?:plomero|plomeria|fuga|gotea|goteando|tuberia|tuberias|inodoro|excusado|calentador de agua|boiler|drenaje|tapado|tapada)\b/,
+      /\b(?:plomero|plomeria|fuga|gotea|goteando|tuberia|tuberias|inodoro|excusado|calentador de agua|boiler|drenaje|tapado|tapada|lavabo|fregadero|regadera|destapar)\b/,
+      // An outlet is "contacto" in Texas Spanish, which also means a contact: only where it's clearly the outlet.
+      /\b(?:contactos? electricos?|(?:cambiar|instalar|arreglar|poner|reparar)\s+(?:(?:un|el|los|unos|mas|otro)\s+)?contactos?)\b/,
       /\b(?:linea de gas|estufa de gas|secadora de gas|fuga de gas)\b/,
     ],
   },
