@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { routes } from '@/contracts';
+import { safeNextPath } from '@/modules/accounts/sign-in/steps';
 import { isLocalRequest } from '@/shared/local-request';
 import { staffRoles, users } from '@/modules/accounts/schema';
 import { db } from '@/platform/db/client';
@@ -38,7 +39,8 @@ export async function devSignInAs(formData: FormData): Promise<void> {
     await auth.api.signInEmailOTP({ body: { email, otp }, headers: requestHeaders });
   });
 
-  redirect(target.startsWith('/') ? target : routes.app.home());
+  // Same-site paths only (one leading slash, no scheme, no backslash): never another host (5.18).
+  redirect(safeNextPath(target));
 }
 
 /** Where the email form lands someone: staff at the two-step check, everyone else at the app home. */
