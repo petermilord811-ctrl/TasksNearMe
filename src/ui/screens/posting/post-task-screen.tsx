@@ -266,19 +266,20 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
       <header className="space-y-3">
         <p aria-live="polite" aria-atomic="true" className="text-sm font-medium text-primary">{t('progress', { current: index + 1, total: POST_TASK_STEPS.length, step: t(`steps.${step}`) })}</p>
         <h1 ref={heading} tabIndex={-1} className="font-heading text-2xl font-bold outline-none md:text-3xl">{t('title')}</h1>
-        <p className="text-muted-foreground">{t('intro')}</p>
+        {/* The intro on the first step only: after that, every step's form starts right under the progress. */}
+        {index === 0 && <p className="text-muted-foreground">{t('intro')}</p>}
         <ol aria-label={t('navigation')} className="grid grid-cols-8 gap-1.5">
           {POST_TASK_STEPS.map((item, itemIndex) => <li key={item} aria-current={item === step ? 'step' : undefined} className="min-w-0">
             <span className={cn('block h-1.5 rounded-full transition-colors duration-500 ease-[var(--ease-out)]', itemIndex < index ? 'bg-primary/70' : itemIndex === index ? 'bg-primary' : 'bg-foreground/[0.08] dark:bg-white/[0.1]')} />
             <span className="sr-only">{t(`steps.${item}`)}</span>
           </li>)}
         </ol>
+        <div aria-live="polite" className="text-xs text-muted-foreground">{storageFailed ? t('storageUnavailable') : restored ? t('restored') : t('saved')}</div>
       </header>
       {data.repeat && <p className="flex items-start gap-2.5 rounded-2xl border border-primary/20 bg-primary/[0.06] p-3.5 text-sm">
         <Repeat aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
         <span>{t(data.repeat.addressDeleted ? 'repeat.addressDeleted' : 'repeat.ready', { title: data.repeat.fromTitle })}</span>
       </p>}
-      <div aria-live="polite" className="text-sm text-muted-foreground">{storageFailed ? t('storageUnavailable') : restored ? t('restored') : t('saved')}</div>
       <div role="status" aria-live="polite" className={restoringPhotos || photoRestoreFailed ? 'flex items-center gap-2 text-sm text-muted-foreground' : 'sr-only'}>
         {restoringPhotos ? <><Spinner />{t('photos.loadingSaved')}</> : photoRestoreFailed ? t('photos.restoreFailed') : ''}
       </div>
@@ -286,7 +287,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
       {invalid && !unknownFieldFailure && <p role="alert" className="text-sm text-destructive">{t('checkFields')}</p>}
       {hasProhibited && <Link href={routes.legal('prohibited-tasks')} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">{t('prohibitedLink')}</Link>}
       <fieldset disabled={pending || !!result?.ok} className="min-w-0 flex-1 space-y-6">
-        <legend className="mb-5 font-heading text-xl font-semibold">{t(`steps.${step}`)}</legend>
+        <legend className="sr-only">{t(`steps.${step}`)}</legend>
         {step === 'category' && <CategoryStep data={data} />}
         {step === 'describe' && <DescribeStep data={data} handlers={handlers} initialSuggestion={initialSuggestion} autoDraft={autoDraft} onAutoDraftStarted={autoDraftStarted} />}
         {step === 'details' && values.categorySlug && <DetailsStep category={values.categorySlug} />}

@@ -32,7 +32,7 @@ export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
     : t('hourlyBudget', { rate: formatMoney(task.budget.rateCents), cap: formatHours(task.budget.hoursCap) });
 
   return <div className="space-y-section">
-    <div className="mx-auto max-w-reading space-y-6">
+    <div className="space-y-6">
       <Breadcrumb><BreadcrumbList>
         <BreadcrumbItem><BreadcrumbLink asChild><Link href={routes.market(market.slug)}>{market.name}</Link></BreadcrumbLink></BreadcrumbItem>
         <BreadcrumbSeparator />
@@ -45,7 +45,11 @@ export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
         <PageHeader title={task.title} />
         <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={task.postedAt} title={formatDateTime(task.postedAt)}>{t('posted', { relative: formatRelative(task.postedAt, now) })}</time></p>
       </div>
-      <div className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
+    </div>
+    {/* Phones read top to bottom: what, where and when, the task, who posted it, then the offer. On wide screens
+        the task and its poster take the left column, and the summary and the offer stay on the right. */}
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr] lg:gap-x-12">
+      <div className="space-y-4 rounded-[1.375rem] lg:col-start-2 lg:row-start-1 border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
         <p className="flex items-start gap-3"><LocationIcon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><span>{task.location.kind === 'remote' ? t('remote') : t('area', { area: task.location.areaName, market: task.location.marketName })}</span></p>
         <p className="flex items-start gap-3 tabular-nums"><CalendarDays aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><span>{schedule}</span></p>
         <div className="flex flex-wrap items-end justify-between gap-3 border-t pt-4">
@@ -53,17 +57,21 @@ export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
           <p className="text-sm tabular-nums text-muted-foreground">{t('offers', { count: task.offerCount })}</p>
         </div>
       </div>
-      <Section title={t('about')}><p className="whitespace-pre-line leading-7 break-words">{task.excerpt}</p></Section>
-      <section aria-label={t('posterTitle')} className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
-        <h2 className="font-display text-xl font-semibold tracking-[-0.015em]">{t('posterTitle')}</h2>
-        <div className="flex items-center gap-3"><span className="rounded-full p-0.5 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_14%,transparent)]"><InitialsAvatar initials={task.poster.initials} /></span><div><p className="font-semibold">{task.poster.displayName}</p><p className="text-sm tabular-nums text-muted-foreground">{t('memberSince', { date: formatMonthYear(task.poster.memberSince) })}</p></div></div>
-        {task.poster.phoneVerified && <VerificationBadges badges={{ phoneVerified: task.poster.phoneVerified }} />}
-        {task.poster.ratingAsClient && <div className="space-y-2"><p className="text-sm text-muted-foreground">{t('clientRating')}</p><RatingStars rating={task.poster.ratingAsClient} /></div>}
-      </section>
-      <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(task.location.kind === 'remote' ? 'remotePrivacy' : 'privacy')}</p>
-      <div className="relative isolate space-y-3 overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]"><span aria-hidden="true" className="pointer-events-none absolute -top-20 -right-12 -z-10 size-56 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--primary)_14%,transparent),transparent)]" />
-        {data.acceptingOffers ? <><Link href={routes.app.findWorkTask(task.id)} className={buttonVariants({ className: 'w-full sm:w-auto' })}>{t('makeOffer')}</Link><p className="text-sm">{t('offerHint')}</p></>
-          : <><p className="font-semibold">{t('closed')}</p><Link href={routes.taskBoard(market.slug)} className={buttonVariants({ variant: 'outline' })}>{t('backToBoard')}</Link></>}
+      <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <Section title={t('about')}><p className="whitespace-pre-line leading-7 break-words">{task.excerpt}</p></Section>
+        <section aria-label={t('posterTitle')} className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
+          <h2 className="font-display text-xl font-semibold tracking-[-0.015em]">{t('posterTitle')}</h2>
+          <div className="flex items-center gap-3"><span className="rounded-full p-0.5 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_14%,transparent)]"><InitialsAvatar initials={task.poster.initials} /></span><div><p className="font-semibold">{task.poster.displayName}</p><p className="text-sm tabular-nums text-muted-foreground">{t('memberSince', { date: formatMonthYear(task.poster.memberSince) })}</p></div></div>
+          {task.poster.phoneVerified && <VerificationBadges badges={{ phoneVerified: task.poster.phoneVerified }} />}
+          {task.poster.ratingAsClient && <div className="space-y-2"><p className="text-sm text-muted-foreground">{t('clientRating')}</p><RatingStars rating={task.poster.ratingAsClient} /></div>}
+        </section>
+      </div>
+      <div className="space-y-4 lg:sticky lg:top-28 lg:col-start-2 lg:row-start-2 lg:self-start">
+        <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(task.location.kind === 'remote' ? 'remotePrivacy' : 'privacy')}</p>
+        <div className="relative isolate space-y-3 overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]"><span aria-hidden="true" className="pointer-events-none absolute -top-20 -right-12 -z-10 size-56 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--primary)_14%,transparent),transparent)]" />
+          {data.acceptingOffers ? <><Link href={routes.app.findWorkTask(task.id)} className={buttonVariants({ className: 'w-full sm:w-auto' })}>{t('makeOffer')}</Link><p className="text-sm">{t('offerHint')}</p></>
+            : <><p className="font-semibold">{t('closed')}</p><Link href={routes.taskBoard(market.slug)} className={buttonVariants({ variant: 'outline' })}>{t('backToBoard')}</Link></>}
+        </div>
       </div>
     </div>
     {data.similarTasks.length > 0 && <Section title={t('similarTasks')}><ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{data.similarTasks.map((similar) => <li key={similar.id} className="min-w-0"><PublicTaskCard task={similar} now={now} /></li>)}</ul></Section>}
