@@ -11,12 +11,13 @@ import { FeaturedHelpers, RecentTasks, categoryIcons } from './marketing-section
 
 export function CategoryScreen({ data, now }: { data: CategoryPageData; now: ISODateTime }) {
   const t = useTranslations('publicPages');
+  const categoryName = useTranslations('helperCard.categories');
   const { category, market } = data;
   const Icon = categoryIcons[category.slug];
   const included = Object.keys(t.raw(`categories.${category.slug}.included`) as Record<string, string>);
   const excluded = Object.keys(t.raw(`categories.${category.slug}.excluded`) as Record<string, string>);
   return <div className="space-y-section">
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5"><ViewTransition name={`category-icon-${category.slug}`} share="category-morph" default="none"><span className="grid size-14 shrink-0 place-items-center rounded-2xl shadow-[inset_0_0_0_1px_color-mix(in_oklab,currentColor_18%,transparent)]" style={{ background: `color-mix(in oklab, var(--cat-${category.slug}) 15%, transparent)`, color: `var(--cat-${category.slug})` }}><Icon aria-hidden="true" className="size-7" /></span></ViewTransition><div className="min-w-0 flex-1"><PageHeader title={t('category.title', { category: category.name, market: market.name })} description={t(`categories.${category.slug}.intro`)} /></div></div>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5"><ViewTransition name={`category-icon-${category.slug}`} share="category-morph" default="none"><span className="grid size-14 shrink-0 place-items-center rounded-2xl shadow-[inset_0_0_0_1px_color-mix(in_oklab,currentColor_18%,transparent)]" style={{ background: `color-mix(in oklab, var(--cat-${category.slug}) 15%, transparent)`, color: `var(--cat-${category.slug})` }}><Icon aria-hidden="true" className="size-7" /></span></ViewTransition><div className="min-w-0 flex-1"><PageHeader title={t('category.title', { category: categoryName(category.slug), market: market.name })} description={t(`categories.${category.slug}.intro`)} /></div></div>
     <section aria-label={t('category.pricingTitle')} className="space-y-3 rounded-[1.375rem] border border-foreground/[0.05] bg-secondary p-card text-secondary-foreground">
       <p className="font-display text-xl font-semibold tracking-[-0.015em] tabular-nums md:text-2xl">{t(`category.typical.${category.priceGuidance.unit}`, { market: market.name, low: formatMoney(category.priceGuidance.lowCents), high: formatMoney(category.priceGuidance.highCents) })}</p>
       <p>{t(`categories.${category.slug}.pricing`)}</p>

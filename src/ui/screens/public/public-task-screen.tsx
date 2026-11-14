@@ -20,6 +20,7 @@ export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
   const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange } = useFormat();
   const t = useTranslations('publicTask');
   const report = useTranslations('report');
+  const categoryName = useTranslations('helperCard.categories');
   const { task, category, market } = data;
   const CategoryIcon = categoryIcons[task.categorySlug];
   const LocationIcon = task.location.kind === 'remote' ? Laptop : MapPin;
@@ -38,10 +39,10 @@ export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
         <BreadcrumbSeparator />
         <BreadcrumbItem><BreadcrumbLink asChild><Link href={routes.taskBoard(market.slug)}>{t('taskBoard')}</Link></BreadcrumbLink></BreadcrumbItem>
         <BreadcrumbSeparator />
-        <BreadcrumbItem><BreadcrumbLink asChild><Link href={routes.category(category.slug, market.slug)}>{category.name}</Link></BreadcrumbLink></BreadcrumbItem>
+        <BreadcrumbItem><BreadcrumbLink asChild><Link href={routes.category(category.slug, market.slug)}>{categoryName(category.slug)}</Link></BreadcrumbLink></BreadcrumbItem>
       </BreadcrumbList></Breadcrumb>
       <div className="space-y-4">
-        <p className="flex items-center gap-2.5 text-sm font-medium text-foreground"><span aria-hidden="true" className="grid size-10 place-items-center rounded-2xl" style={{ background: `color-mix(in oklab, var(--cat-${task.categorySlug}) 15%, transparent)`, color: `var(--cat-${task.categorySlug})` }}><CategoryIcon className="size-5" /></span>{category.name}</p>
+        <p className="flex items-center gap-2.5 text-sm font-medium text-foreground"><span aria-hidden="true" className="grid size-10 place-items-center rounded-2xl" style={{ background: `color-mix(in oklab, var(--cat-${task.categorySlug}) 15%, transparent)`, color: `var(--cat-${task.categorySlug})` }}><CategoryIcon className="size-5" /></span>{categoryName(category.slug)}</p>
         <PageHeader title={task.title} />
         <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={task.postedAt} title={formatDateTime(task.postedAt)}>{t('posted', { relative: formatRelative(task.postedAt, now) })}</time></p>
       </div>
