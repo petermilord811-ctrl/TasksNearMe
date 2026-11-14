@@ -385,6 +385,10 @@ async function book(deps: BookingDeps, invite: InviteRow, pricing: PricingInput,
   const [task] = await db.select().from(tasks).where(eq(tasks.id, invite.taskId)).limit(1);
   const policy = task ? await getPublishedPolicy(task.marketId, db) : null;
   if (!task || !policy || task.status !== 'open') return { ok: false, code: 'not_allowed' };
+  // The outage switch (5.15, 5.18) covers every way in, the counter's finished bank step included: the hold stays
+  // authorized and the invite as it is, to accept once the switch is off.
+  const paused = await pausedIn(db, task.marketId);
+  if (paused) return paused;
   const bookingId = newId('bkg');
   try {
     await db.transaction(async (tx) => {

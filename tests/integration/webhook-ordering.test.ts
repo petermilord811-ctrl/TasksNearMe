@@ -1,4 +1,6 @@
 import { createHmac } from 'node:crypto';
+import { featureFlags } from '@/modules/markets/schema';
+import { OUTAGE_FLAG } from '@/modules/markets/outage';
 import { and, eq, inArray, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { routes, needsBankVerification } from '@/contracts';
@@ -413,6 +415,30 @@ describe('5.17: an invite’s hold finished from both sides', () => {
     expect(stripe.cancels.slice(before.cancels)).toEqual([c.intent]);
     expect((await inviteStateOf(c.inviteId, hold!.id)).accepted).toBe(1);
     expect(await finishCounterVerification(deps, c.client, c.inviteId, hold!.id, 'approved', new Date())).toEqual({ ok: true, code: 'booked', redirectTo: routes.app.booking(invite!.bookingId!) });
+  });
+
+  it('books nothing from a counter’s finished bank step while the market is paused: the hold stays, the invite waits (5.18)', async () => {
+    const c = await startInvite('inv_paused');
+    stripe.intents.set(c.intent, 'requires_capture');
+    expect(await finishRequestVerification(deps, c.client, c.paymentId, 'approved', new Date())).toMatchObject({ ok: true, code: 'sent' });
+    expect(await counterInvite(db, deps.payments, 'usr_jordan', c.inviteId, { pricing: { type: 'fixed', priceCents: 5000 }, message: 'This one has a glass door.' }, new Date())).toEqual({ ok: true, code: 'sent' });
+    const higher = await acceptCounter(deps, c.client, c.inviteId, new Date());
+    if (!needsBankVerification(higher)) throw new Error(`Expected the bank's step: ${JSON.stringify(higher)}`);
+    const [hold] = await db.select().from(payments).where(eq(payments.id, higher.verification.paymentId));
+    stripe.intents.set(hold!.providerRef!, 'requires_capture');
+    // The switch goes on while the client is at their bank.
+    await db.insert(featureFlags).values({ key: OUTAGE_FLAG, marketId: 'mkt_austin', enabled: true }).onConflictDoUpdate({ target: [featureFlags.key, featureFlags.marketId], set: { enabled: true } });
+    try {
+      const captures = stripe.captures.length;
+      expect(await finishCounterVerification(deps, c.client, c.inviteId, hold!.id, 'approved', new Date())).toEqual({ ok: false, code: 'paused' });
+      const [invite] = await db.select({ status: invites.status, paymentId: invites.paymentId }).from(invites).where(eq(invites.id, c.inviteId));
+      expect(invite).toEqual({ status: 'countered', paymentId: hold!.id });
+      expect((await db.select({ status: payments.status }).from(payments).where(eq(payments.id, hold!.id)))[0]!.status).toBe('authorized');
+      expect(await db.select().from(bookings).where(eq(bookings.taskId, c.taskId))).toEqual([]);
+      expect(stripe.captures.length).toBe(captures);
+    } finally {
+      await db.delete(featureFlags).where(and(eq(featureFlags.key, OUTAGE_FLAG), eq(featureFlags.marketId, 'mkt_austin')));
+    }
   });
 });
 
