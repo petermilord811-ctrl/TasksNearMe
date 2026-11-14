@@ -30,6 +30,15 @@ describe('devHelpersOn', () => {
     expect(devHelpersOn({ NODE_ENV: 'production' })).toBe(false);
   });
 
+  it('stays off in a production build whatever NODE_ENV says at run time', async () => {
+    // A normal build started with NODE_ENV=test: the build's own NODE_ENV (inlined, here stubbed) decides.
+    vi.stubEnv('NODE_ENV', 'production');
+    const { devHelpersOn } = await load(false);
+    expect(devHelpersOn({ NODE_ENV: 'test' })).toBe(false);
+    expect(devHelpersOn({ NODE_ENV: 'development' })).toBe(false);
+    expect(devHelpersOn()).toBe(false);
+  });
+
   it('is on in the e2e build, which is a production build', async () => {
     const { devHelpersOn, E2E_BUILD } = await load(true);
     expect(E2E_BUILD).toBe(true);
