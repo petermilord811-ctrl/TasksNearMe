@@ -10,6 +10,8 @@ interface SeedService {
   fromPriceCents?: number;
   hourlyRateCents?: number;
   minHours?: number;
+  /** The helper's own words about the service (the base seed sets these in profile-extras instead). */
+  description?: string;
 }
 
 interface SeedHelper {
@@ -18,8 +20,12 @@ interface SeedHelper {
   bio: string;
   status: 'draft' | 'active';
   areaId: string;
+  /** Default 8 km (the column's default). */
+  serviceRadiusKm?: number;
   remoteOk: boolean;
   tools: string[];
+  /** Default ['en'] (the base seed sets languages in profile-extras instead). */
+  languages?: string[];
   foundingNumber?: number;
   idVerifiedAt?: string;
   backgroundCheckedAt?: string;
@@ -40,6 +46,8 @@ export interface SeedPerson {
   lastName: string;
   mode: 'poster' | 'helper';
   phone?: string;
+  /** The language emails and texts go out in; unset means the default (English). */
+  locale?: 'en' | 'es';
   createdAt: string;
   helper?: SeedHelper;
   staffRole?: 'support_agent' | 'support_lead' | 'trust_safety' | 'finance' | 'admin';

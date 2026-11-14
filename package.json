@@ -27,6 +27,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx db/scripts/cli.ts migrate",
     "db:seed": "tsx db/scripts/cli.ts seed",
+    "db:demo": "tsx db/scripts/cli.ts demo",
     "db:reset": "tsx db/scripts/cli.ts reset",
     "staff:setup-code": "tsx db/scripts/cli.ts staff-setup-code",
     "push:keys": "node scripts/push-keys.mjs",

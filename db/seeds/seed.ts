@@ -21,7 +21,7 @@ import {
 import { staffRoles, users } from '../../src/modules/accounts/schema';
 import { helperProfiles, helperServices } from '../../src/modules/profiles/schema';
 import { AUSTIN, AUSTIN_AREAS, CATEGORIES } from './data/austin';
-import { PEOPLE, displayNameOf } from './data/people';
+import { PEOPLE, displayNameOf, type SeedPerson } from './data/people';
 import { CURRENT_TERMS_VERSION } from '../../src/modules/accounts/terms';
 import { recomputeBadges } from '../../src/modules/badges/service';
 import { FAKE_PLACES } from '../../src/integrations/geocoding';
@@ -122,69 +122,7 @@ export async function seedDatabase(url: string): Promise<void> {
           .onConflictDoNothing();
       }
 
-      for (const person of PEOPLE) {
-        const user = {
-          id: person.id,
-          email: person.email,
-          name: displayNameOf(person),
-          emailVerified: true,
-          firstName: person.firstName,
-          lastName: person.lastName,
-          phone: person.phone ?? null,
-          phoneVerifiedAt: person.phone ? new Date(person.createdAt) : null,
-          // Seeded people finished sign-up (18+ and terms) when they joined.
-          adultAttestedAt: new Date(person.createdAt),
-          termsAcceptedAt: new Date(person.createdAt),
-          termsVersion: CURRENT_TERMS_VERSION,
-          mode: person.mode,
-          createdAt: new Date(person.createdAt),
-        };
-        await tx.insert(users).values(user).onConflictDoUpdate({ target: users.id, set: { ...user, createdAt: undefined } });
-
-        if (person.staffRole) {
-          await tx.insert(staffRoles).values({ userId: person.id, role: person.staffRole, grantedBy: 'seed' }).onConflictDoNothing();
-        }
-
-        if (person.helper) {
-          const { services, ...helper } = person.helper;
-          const profile = {
-            userId: person.id,
-            handle: helper.handle,
-            headline: helper.headline,
-            bio: helper.bio,
-            status: helper.status,
-            areaId: helper.areaId,
-            remoteOk: helper.remoteOk,
-            tools: helper.tools,
-            foundingNumber: helper.foundingNumber ?? null,
-            idVerifiedAt: helper.idVerifiedAt ?? null,
-            backgroundCheckedAt: helper.backgroundCheckedAt ?? null,
-            addressVerifiedAt: helper.homeAddress?.verifiedAt ?? null,
-            payoutsReadyAt: helper.payoutsReadyAt ?? null,
-            completedCount: helper.completedCount,
-            ratingAverage: helper.ratingAverage ?? null,
-            ratingCount: helper.ratingCount,
-            responseTimeMinutes: helper.responseTimeMinutes ?? null,
-          };
-          await tx.insert(helperProfiles).values(profile).onConflictDoUpdate({ target: helperProfiles.userId, set: profile });
-
-          for (const service of services) {
-            const row = {
-              id: `svc_${person.id.slice(4)}_${service.categoryId.slice(4)}`,
-              userId: person.id,
-              categoryId: service.categoryId,
-              pricingType: service.pricingType,
-              fromPriceCents: service.fromPriceCents ?? null,
-              hourlyRateCents: service.hourlyRateCents ?? null,
-              minHours: service.minHours ?? null,
-            };
-            await tx
-              .insert(helperServices)
-              .values(row)
-              .onConflictDoUpdate({ target: [helperServices.userId, helperServices.categoryId], set: row });
-          }
-        }
-      }
+      await upsertPeople(tx, PEOPLE);
 
       await clearSeedBookings(tx);
       await seedTasks(tx);
@@ -206,7 +144,81 @@ export async function seedDatabase(url: string): Promise<void> {
   }
 }
 
-type Tx = Parameters<Parameters<ReturnType<typeof createDb>['db']['transaction']>[0]>[0];
+export type Tx = Parameters<Parameters<ReturnType<typeof createDb>['db']['transaction']>[0]>[0];
+
+/**
+ * Accounts, staff roles, helper profiles and services, as given (the demo data in db/seeds/demo uses it too).
+ * People finished sign-up when they joined; a phone counts as verified from then.
+ */
+export async function upsertPeople(tx: Tx, people: readonly SeedPerson[]): Promise<void> {
+  for (const person of people) {
+    const user = {
+      id: person.id,
+      email: person.email,
+      name: displayNameOf(person),
+      emailVerified: true,
+      firstName: person.firstName,
+      lastName: person.lastName,
+      phone: person.phone ?? null,
+      phoneVerifiedAt: person.phone ? new Date(person.createdAt) : null,
+      // Seeded people finished sign-up (18+ and terms) when they joined.
+      adultAttestedAt: new Date(person.createdAt),
+      termsAcceptedAt: new Date(person.createdAt),
+      termsVersion: CURRENT_TERMS_VERSION,
+      mode: person.mode,
+      ...(person.locale ? { locale: person.locale } : {}),
+      createdAt: new Date(person.createdAt),
+    };
+    await tx.insert(users).values(user).onConflictDoUpdate({ target: users.id, set: { ...user, createdAt: undefined } });
+
+    if (person.staffRole) {
+      await tx.insert(staffRoles).values({ userId: person.id, role: person.staffRole, grantedBy: 'seed' }).onConflictDoNothing();
+    }
+
+    if (person.helper) {
+      const { services, ...helper } = person.helper;
+      const profile = {
+        userId: person.id,
+        handle: helper.handle,
+        headline: helper.headline,
+        bio: helper.bio,
+        status: helper.status,
+        areaId: helper.areaId,
+        ...(helper.serviceRadiusKm !== undefined ? { serviceRadiusKm: helper.serviceRadiusKm } : {}),
+        remoteOk: helper.remoteOk,
+        tools: helper.tools,
+        ...(helper.languages ? { languages: helper.languages } : {}),
+        foundingNumber: helper.foundingNumber ?? null,
+        idVerifiedAt: helper.idVerifiedAt ?? null,
+        backgroundCheckedAt: helper.backgroundCheckedAt ?? null,
+        addressVerifiedAt: helper.homeAddress?.verifiedAt ?? null,
+        payoutsReadyAt: helper.payoutsReadyAt ?? null,
+        completedCount: helper.completedCount,
+        ratingAverage: helper.ratingAverage ?? null,
+        ratingCount: helper.ratingCount,
+        responseTimeMinutes: helper.responseTimeMinutes ?? null,
+      };
+      await tx.insert(helperProfiles).values(profile).onConflictDoUpdate({ target: helperProfiles.userId, set: profile });
+
+      for (const service of services) {
+        const row = {
+          id: `svc_${person.id.slice(4)}_${service.categoryId.slice(4)}`,
+          userId: person.id,
+          categoryId: service.categoryId,
+          pricingType: service.pricingType,
+          fromPriceCents: service.fromPriceCents ?? null,
+          hourlyRateCents: service.hourlyRateCents ?? null,
+          minHours: service.minHours ?? null,
+          ...(service.description !== undefined ? { description: service.description } : {}),
+        };
+        await tx
+          .insert(helperServices)
+          .values(row)
+          .onConflictDoUpdate({ target: [helperServices.userId, helperServices.categoryId], set: row });
+      }
+    }
+  }
+}
 
 function addDays(dayKey: string, days: number): string {
   const [y, m, d] = dayKey.split('-').map(Number) as [number, number, number];
@@ -697,11 +709,11 @@ async function seedPaymentMethods(tx: Tx): Promise<void> {
  * Verification rows that match the seeded helpers' badges, so recomputing a profile keeps them
  * where the seed put them (dev provider; nothing personal is stored).
  */
-async function seedVerification(tx: Tx): Promise<void> {
+export async function seedVerification(tx: Tx, people: readonly SeedPerson[] = PEOPLE): Promise<void> {
   const key = process.env.FIELD_ENCRYPTION_KEY;
   if (!key) throw new Error('FIELD_ENCRYPTION_KEY is not set (see .env.example).');
   const cipher = createFieldCipher(key);
-  for (const person of PEOPLE) {
+  for (const person of people) {
     const helper = person.helper;
     if (!helper) continue;
     const agree = async (doc: keyof typeof AGREEMENT_VERSIONS, at: Date) => {

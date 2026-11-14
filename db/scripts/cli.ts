@@ -1,11 +1,16 @@
 /**
  * npm run db:migrate | db:seed | db:reset   (dev database from .env.local)
+ * npm run db:demo
+ *   Adds the demo marketplace (db/seeds/demo: ~80 people, 200+ tasks with offers, bookings and reviews) on top of
+ *   the seed, or moves it up to today. The preview does this on every deploy. e2e expects the plain seed, so a
+ *   dev database with demo data goes back with db:reset.
  * npm run staff:setup-code -- <email> [--admin] [--reset]
  *   A one-time setup code for a staff member's authenticator app (the first admin has nobody to ask).
  *   --admin makes them an admin first, only while there is none. --reset removes their authenticator first.
  */
 import { loadEnv, migrateDatabase, resetDatabase } from './lib';
 import { seedDatabase } from '../seeds/seed';
+import { seedDemoData } from '../seeds/demo/write';
 import { bootstrapSetupCode } from '../../src/modules/accounts/staff-authenticator';
 import { createDb } from '../../src/platform/db/connect';
 
@@ -17,6 +22,10 @@ const commands: Record<string, () => Promise<void>> = {
   migrate: () => migrateDatabase(url),
   seed: () => seedDatabase(url),
   reset: () => resetDatabase(url),
+  demo: async () => {
+    const written = await seedDemoData(url);
+    console.log(`demo marketplace: ${written.people} people, ${written.tasks} tasks, ${written.offers} offers, ${written.bookings} bookings`);
+  },
   'staff-setup-code': async () => {
     const args = process.argv.slice(3);
     const email = args.find((arg) => !arg.startsWith('--'));
@@ -38,7 +47,7 @@ const commands: Record<string, () => Promise<void>> = {
 
 const run = commands[command ?? ''];
 if (!run) {
-  console.error('Usage: tsx db/scripts/cli.ts <migrate|seed|reset|staff-setup-code>');
+  console.error('Usage: tsx db/scripts/cli.ts <migrate|seed|reset|demo|staff-setup-code>');
   process.exit(1);
 }
 

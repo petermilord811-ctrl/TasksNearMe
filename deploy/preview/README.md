@@ -16,7 +16,8 @@ stopgap until the Render setup in the blueprint (07-architecture.md "Hosting", b
    If `main` has commits the branch lacks, nothing is deployed or merged; the run warns instead. Codex's `ui/*`
    branches are never merged here: they're reviewed into the work branch first.
 4. On the VPS, that key can only run `deploy.sh`. The script unpacks the release, runs `prepare-db.cjs`
-   (migrations, plus the sample data when the database is empty), switches `current`, restarts the service,
+   (migrations, plus the sample data when the database is empty, then the demo marketplace from `db/seeds/demo`
+   written again with today's dates), switches `current`, restarts the service,
    and rolls back unless `/`, `/es` and `/sign-in` answer 200 when asked the way Caddy asks (public host, https).
 
 Building happens on GitHub's runner, not on the VPS. The VPS only runs `node server.js`, capped at 1.2 GB.
@@ -56,6 +57,9 @@ database, `preview.env` and the Caddy block by hand. To set it up again, follow 
   and restart.
 - Fresh sample data: drop and recreate `tasksnearme_preview` (owner `tnm_preview`, `CREATE EXTENSION postgis`).
   The next deploy migrates it and seeds it again.
+- The demo marketplace (about 80 people with `demo_` ids, 200+ tasks, their offers, bookings and reviews) comes back
+  up to date on every deploy. To refresh it between deploys, from the repo with the preview's `DATABASE_URL` and
+  `FIELD_ENCRYPTION_KEY` in the environment: `npm run db:demo`.
 
 ## Production mode
 
