@@ -104,6 +104,7 @@ const PUBLIC: Record<string, string> = {
   'accounts/actions#signOut': 'signs this browser out',
   'marketing/actions#joinWaitlistAction': 'the public waitlist (rate-limited per address)',
   'marketing/assistant-actions#suggestTaskWithAi': 'the landing page’s assistant (rate-limited per visitor and site-wide)',
+  'support/public-actions#submitPublicSupportAction': 'the signed-out contact form at /help/contact (5.22): Turnstile, 3 a day per address, 5 an hour per IP; opens a case for the typed address, never as an account',
   'notifications/unsubscribe-actions#unsubscribeByLinkAction': 'the unsubscribe page, with the email’s signed token',
   'notifications/unsubscribe-actions#resubscribeByLinkAction': 'undoing it on the same page, with the same token',
   'verification/actions#onboardingRefreshStatus': 'without a session it only refreshes the page (reads and writes nothing)',
