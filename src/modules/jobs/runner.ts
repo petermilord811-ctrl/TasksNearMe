@@ -26,6 +26,7 @@ import { documentReaderFromEnv } from '@/integrations/ai/document-reader';
 import { idReaderFromEnv } from '@/integrations/ai/id-document-reader';
 import { byteCipherFromEnv, fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
+import { retryDueWebhooks } from '@/modules/webhooks/inbox';
 
 /**
  * The in-process job runner (blueprint 07: jobs). Every minute it runs the due-work functions that
@@ -63,6 +64,8 @@ export const JOBS: Job[] = [
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
   { name: 'notifications.deliver', run: (db, now) => deliverNotifications(db, now) },
   { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), payments: createPaymentProvider(), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
+  // Webhook events whose processing failed, again on their backoff (completion plan 5.11).
+  { name: 'webhooks.retry', run: (db, now) => retryDueWebhooks(db, now) },
   { name: 'retention.sweep', run: (db, now) => (retentionDue(now) ? runRetention(db, { storage: createFileStorage() }, now) : Promise.resolve()) },
   // Last: it waits on Claude (a few seconds a document).
   { name: 'earnings.transfers', run: async (db, now) => { const connect = stripeConnectFromEnv(); if (connect) await runScheduledTransfers(db, connect, now); } },

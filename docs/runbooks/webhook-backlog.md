@@ -23,9 +23,16 @@ Not built: a Postmark bounce webhook (if Postmark is the sender, bounces aren't 
 
 **Watch out:** if the booking dependencies aren't available (`bookingDeps()` returns nothing, for example when `STRIPE_PUBLISHABLE_KEY` is missing in production), `payment_intent.*` and `charge.dispute.*` events get a 200 "ignored" **and Stripe won't send them again**. Chargebacks would then open no case. After fixing the key, replay those events from the Stripe Dashboard.
 
-## Why replays are safe
+## The inbox
 
-There's no `webhook_events` inbox yet (blueprint 09 §4.2), so the app doesn't store or dedupe raw events by id. Replays are safe anyway because every handler only moves state forward:
+Every signed event goes through the webhook inbox (`webhook_events`, [src/modules/webhooks/inbox.ts](../../src/modules/webhooks/inbox.ts)):
+- It's recorded once by `(provider, event id)`. A redelivery of a processed event is acknowledged with `{ ok: true, duplicate: true }` and not run again.
+- A bad signature or an endpoint that's off isn't recorded.
+- When processing throws, the event becomes `failed`: its payload is kept, the endpoint answers 500 (so the provider retries too), and the `webhooks.retry` job tries again after 5 minutes, 30 minutes, 2 hours and 12 hours. After that it's `dead`.
+- **`/admin/webhooks`** (admins and finance) shows the last 24 hours per provider and every failing or dead event, with its last error. **Replay** runs it again; **Dismiss** takes it off the list when nothing more is needed. Both are in the audit log (`webhook.replayed`, `webhook.dismissed`).
+- Retries and replays sign the stored payload again with our own secrets, so they pass the same checks as a delivery.
+
+Running an event twice is safe anyway, because every handler only moves state forward:
 - Payment events act only on a payment still in `requires_confirmation`, and re-read the PaymentIntent from Stripe instead of trusting the payload.
 - Payouts are upserted by `provider_ref`; a payout marks earnings `transferred` → `paid_out` once.
 - Chargebacks are deduped through the audit log (`action` `payment.chargeback_opened` or `payment.chargeback_closed`, `target_id` = the Stripe dispute id), so a replay doesn't open a second case.
@@ -33,7 +40,7 @@ There's no `webhook_events` inbox yet (blueprint 09 §4.2), so the app doesn't s
 
 ## First 15 minutes
 
-1. **Look at the provider's side.** Stripe Dashboard → Developers → Webhooks → the endpoint: failed deliveries, the response codes, and the time of the oldest pending event. Checkr and Resend have the same view in their dashboards.
+1. **Look at the inbox, then the provider's side.** `/admin/webhooks`: is anything failing or dead, and what's the error? Are events arriving at all (the last 24 hours per provider)? Then the Stripe Dashboard → Developers → Webhooks → the endpoint: failed deliveries, the response codes, and the time of the oldest pending event (Checkr and Resend have the same view). Events that never reached us are only there.
 2. **Read the response codes.**
    - **404:** an environment variable is missing on the running deploy. Check the four above and redeploy.
    - **400:** the signing secret doesn't match. A rolled secret in the dashboard needs the new value in the environment. Connect events use their own secret.
@@ -48,7 +55,7 @@ There's no `webhook_events` inbox yet (blueprint 09 §4.2), so the app doesn't s
 ## Fix and catch up
 
 1. Fix the cause: the environment variable, the secret, the database, or our bug.
-2. **Replay what failed.** In the Stripe Dashboard, resend the failed events from the endpoint's page; for a long outage, use the Stripe CLI (`stripe events resend <id>`) on the ids listed there. Checkr can resend a report's webhook from its dashboard. Stripe keeps events for 30 days.
+2. **Replay what failed.** Events that reached us retry on their own; replay the dead ones from `/admin/webhooks` once the cause is fixed. Events that never reached us (a 404 or a 400 at the provider): resend them from the Stripe Dashboard's endpoint page, or with the Stripe CLI (`stripe events resend <id>`) for a long outage. Checkr can resend a report's webhook from its dashboard. Stripe keeps events for 30 days.
 3. Watch the symptoms clear: the `requires_confirmation` count, then the exceptions.
 4. **Anything older than the provider's retry window** won't come back by itself.
    - Payments: open each one at `/admin/bookings/[bookingId]` and compare with the PaymentIntent in Stripe. An engineer can finish one by re-running the handler for that PaymentIntent.
@@ -61,4 +68,4 @@ There's no `webhook_events` inbox yet (blueprint 09 §4.2), so the app doesn't s
 
 ## Afterwards
 
-Write the incident note ([README](README.md#after-every-sev1-or-sev2)). If the backlog cost more than an hour of manual replays, raise the priority of the `webhook_events` inbox with its dead-letter queue: blueprint 10 §5 requires "webhook processing lag p95 < 1 min with an empty dead-letter queue" before launch.
+Write the incident note ([README](README.md#after-every-sev1-or-sev2)). Before launch, blueprint 10 §5 asks for "webhook processing lag p95 < 1 min with an empty dead-letter queue": `/admin/webhooks` should show nothing dead.

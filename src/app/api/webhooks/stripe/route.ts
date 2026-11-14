@@ -1,8 +1,4 @@
-import { stripeIdentityFromEnv } from '@/integrations/stripe-identity';
-import { bookingDeps } from '@/modules/bookings/server';
-import { handleConnectWebhook } from '@/modules/payments/connect';
-import { handleStripePaymentWebhook, stripeEventType } from '@/modules/payments/stripe-webhooks';
-import { handleStripeIdentityWebhook } from '@/modules/verification/webhooks';
+import { receiveWebhook } from '@/modules/webhooks/inbox';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 
@@ -14,26 +10,13 @@ import { db } from '@/platform/db/client';
  *   finished after the browser closed); charge.dispute.created and .closed (chargebacks: a case for staff);
  * - Connect: account.updated and payout.created, .paid, .failed and .canceled, from a Connect endpoint (events
  *   on connected accounts) pointed at this URL and signed with STRIPE_CONNECT_WEBHOOK_SECRET.
+ *
+ * Every signed event goes through the webhook inbox (src/modules/webhooks/inbox.ts): recorded once by its id,
+ * retried with backoff when processing fails, and listed for staff when it can't be processed.
  */
 export async function POST(request: Request) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
-  const identity = stripeIdentityFromEnv();
-  if (!secret || !identity) return new Response('Not found', { status: 404 });
   const payload = await request.text();
-  const signature = request.headers.get('stripe-signature');
-  const now = await requestNow();
-  const type = stripeEventType(payload);
-  if (type === 'account.updated' || type?.startsWith('payout.')) {
-    const secrets = [process.env.STRIPE_CONNECT_WEBHOOK_SECRET?.trim(), secret].filter((value): value is string => Boolean(value));
-    const outcome = await handleConnectWebhook(db, { payload, signature, secrets }, now);
-    return Response.json(outcome.body, { status: outcome.status });
-  }
-  if (type?.startsWith('payment_intent.') || type?.startsWith('charge.dispute.')) {
-    const deps = bookingDeps();
-    if (!deps) return Response.json({ ok: true, ignored: true });
-    const outcome = await handleStripePaymentWebhook(deps, { payload, signature, secret }, now);
-    return Response.json(outcome.body, { status: outcome.status });
-  }
-  const outcome = await handleStripeIdentityWebhook(db, { payload, signature, secret, identity }, now);
+  const outcome = await receiveWebhook(db, 'stripe', payload, { 'stripe-signature': request.headers.get('stripe-signature') }, await requestNow());
+  if (!outcome) return new Response('Not found', { status: 404 });
   return Response.json(outcome.body, { status: outcome.status });
 }

@@ -43,16 +43,16 @@ describe('admin navigation', () => {
   });
 
   it.each(STAFF_ROLES.filter((role) => role !== 'admin'))('omits Config and Staff for %s', (role) => {
-    expect(ids(getAdminNav([role]))).toEqual(role === 'support_lead' ? withAudit : standard);
+    expect(ids(getAdminNav([role]))).toEqual(role === 'support_lead' ? withAudit : role === 'finance' ? [...standard, 'webhooks'] : standard);
   });
 
   it('shows Config and Staff in their specified positions for an admin', () => {
     expect(ids(getAdminNav(rileyStaff.roles))).toEqual([
-      'queues', 'cases', 'reports', 'users', 'verifications', 'responseTimes', 'savedReplies', 'bookings', 'payments', 'rewards', 'metrics', 'beta', 'config', 'audit', 'staff',
+      'queues', 'cases', 'reports', 'users', 'verifications', 'responseTimes', 'savedReplies', 'bookings', 'payments', 'rewards', 'metrics', 'beta', 'webhooks', 'config', 'audit', 'staff',
     ]);
     expect(getAdminNav(rileyStaff.roles).map((item) => item.href)).toEqual([
       routes.admin.home(), routes.admin.cases(), routes.admin.reports(), routes.admin.users(), routes.admin.verifications(),
-      routes.admin.responseTimes(), routes.admin.savedReplies(), routes.admin.bookings(), routes.admin.payments(), routes.admin.rewards(), routes.admin.metrics(), routes.admin.beta(), routes.admin.config(),
+      routes.admin.responseTimes(), routes.admin.savedReplies(), routes.admin.bookings(), routes.admin.payments(), routes.admin.rewards(), routes.admin.metrics(), routes.admin.beta(), routes.admin.webhooks(), routes.admin.config(),
       routes.admin.audit(), routes.admin.staff(),
     ]);
   });
@@ -60,7 +60,7 @@ describe('admin navigation', () => {
   it('supports multiple roles without duplicating navigation', () => {
     const roles: StaffRole[] = ['support_lead', 'admin', 'finance'];
     expect(getAdminNav(roles)).toEqual(getAdminNav(['admin']));
-    expect(ids(getAdminNav(['support_agent', 'finance']))).toEqual(standard);
+    expect(ids(getAdminNav(['support_agent', 'finance']))).toEqual([...standard, 'webhooks']);
   });
 });
 

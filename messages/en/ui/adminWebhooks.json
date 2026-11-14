@@ -1,0 +1,44 @@
+{
+  "title": "Webhooks",
+  "intro": "Events from Stripe, Checkr and Resend go through an inbox: each is recorded once, retried when processing fails, and listed here when it keeps failing.",
+  "dayTitle": "The last 24 hours",
+  "providers": {
+    "stripe": "Stripe",
+    "checkr": "Checkr",
+    "resend": "Resend"
+  },
+  "counts": {
+    "processed": "Processed",
+    "ignored": "Ignored",
+    "failed": "Failing",
+    "dead": "Dead"
+  },
+  "failingTitle": "Failing events",
+  "failingIntro": "Dead events have no more automatic tries. Replay one once the cause is fixed, or dismiss it when nothing more is needed. Both are logged.",
+  "nothingFailing": "Nothing is failing.",
+  "noType": "no type",
+  "status": {
+    "failed": "Retrying",
+    "dead": "Dead"
+  },
+  "received": "Received",
+  "attempts": "Attempts",
+  "nextTry": "Next try",
+  "noMoreTries": "No more tries",
+  "lastError": "Last error",
+  "cannotReplay": "Can't be replayed here: the provider's keys aren't set. Resend it from the provider's dashboard.",
+  "replay": "Replay",
+  "dismiss": "Dismiss",
+  "replayLabel": "Replay {event}",
+  "dismissLabel": "Dismiss {event}",
+  "result": {
+    "done": "Done.",
+    "notAllowed": "This event can't be changed. It may have moved on: refresh the page.",
+    "failedAgain": "It failed again. The error above is the latest."
+  },
+  "previews": {
+    "group": "Admin: webhooks",
+    "failing": "Webhooks: dead and retrying events",
+    "calm": "Webhooks: nothing failing"
+  }
+}

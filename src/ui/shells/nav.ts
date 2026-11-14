@@ -24,6 +24,7 @@ export type NavId =
   | 'responseTimes'
   | 'savedReplies'
   | 'metrics'
+  | 'webhooks'
   | 'beta'
   | 'config'
   | 'audit'
@@ -82,6 +83,8 @@ export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
   const isAdmin = roles.includes('admin');
   // The audit log is for admins and support leads (the route says not found to others).
   const readsAudit = isAdmin || roles.includes('support_lead');
+  // The webhook inbox's failures are for admins and finance (completion plan 5.11).
+  const readsWebhooks = isAdmin || roles.includes('finance');
   return [
     { id: 'queues', href: routes.admin.home(), exact: true },
     { id: 'cases', href: routes.admin.cases() },
@@ -99,6 +102,7 @@ export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
     { id: 'metrics', href: routes.admin.metrics() },
     // Every staff role sees the private beta; leads and admins manage it (others read).
     { id: 'beta', href: routes.admin.beta() },
+    ...(readsWebhooks ? [{ id: 'webhooks' as const, href: routes.admin.webhooks() }] : []),
     ...(isAdmin ? [{ id: 'config' as const, href: routes.admin.config() }] : []),
     ...(readsAudit ? [{ id: 'audit' as const, href: routes.admin.audit() }] : []),
     ...(isAdmin ? [{ id: 'staff' as const, href: routes.admin.staff() }] : []),

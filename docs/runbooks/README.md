@@ -41,13 +41,12 @@ Blueprint 10 §5 asks for these before launch. Fill in the names before the beta
 | Market health | `/admin/metrics` (the launch targets, the funnel, liquidity, reward spend) |
 | Feature flags and policies | `/admin/config` (admins only) |
 | Background jobs | Server logs only: lines starting `[jobs] <name> failed` ([src/modules/jobs/runner.ts](../../src/modules/jobs/runner.ts)) |
-| Provider events | Each provider's dashboard (Stripe, Checkr, Resend); the app doesn't store raw webhook events |
+| Provider events | `/admin/webhooks` (admins and finance): the webhook inbox's failing and dead events, with replay and dismiss. Older history and events that never reached us: each provider's dashboard |
 
 ## Built-in gaps
 
 These aren't built yet, so the runbooks handle them by hand. Close them before the gaps cost more than the manual steps.
 
-- **No webhook inbox.** Blueprint 09 §4.2 specifies a `webhook_events` table with a dead-letter queue; it doesn't exist. Delivery history and replays live in each provider's dashboard ([webhook backlog](webhook-backlog.md)).
 - **No paging.** The outbox events `support.safety_report`, `support.case_opened` and `payment.refund_needed` have no consumer. Nobody is paged for an urgent safety case, and a "refund needed" event creates no case. Until paging exists, the safety on-call watches the safety queue ([safety escalation](safety-escalation.md)), and finance checks for those events daily ([payments incident](payments-incident.md)).
 - **No transfer reversals.** Nothing reverses a helper's transfer. A refund after the helper was paid comes from platform funds; claw back in the Stripe Dashboard ([dispute handling](dispute-handling.md)).
 - **Chargeback status isn't recorded.** A chargeback opens an urgent case, but the payment's status stays as it was (`chargeback_open`, `won` and `lost` exist in the contracts and are never set). Evidence goes in through the Stripe Dashboard.

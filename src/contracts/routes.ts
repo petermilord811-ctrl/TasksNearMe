@@ -188,6 +188,8 @@ export const routes = {
     /** Where each queue stands against its response targets. */
     responseTimes: () => '/admin/response-times',
     /** Market metrics: the launch targets, the funnel, liquidity and reward spend (30 days unless another period). */
+    /** The webhook inbox's failing and dead events (admins and finance). */
+    webhooks: () => '/admin/webhooks',
     metrics: (days?: MetricsPeriodDays) => withQuery('/admin/metrics', { days: days && days !== DEFAULT_METRICS_PERIOD ? String(days) : undefined }),
     /** The private beta: invite-only switches per market, invite codes and who joined with them. */
     beta: () => '/admin/beta',
