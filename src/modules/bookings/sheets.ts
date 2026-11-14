@@ -14,6 +14,7 @@ import { refundLimitOf } from '@/modules/support/staff-domain';
 import { createPaymentProvider, type PaymentProvider } from '@/integrations/payments';
 import { recordCompensation } from '@/modules/earnings/service';
 import { marketPolicies } from '@/modules/markets/schema';
+import { openRefundCase } from '@/modules/oncall/reactions';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { cancellationSummary, lateCancellation } from '@/modules/payments/fees';
 import { payments, refunds } from '@/modules/payments/schema';
@@ -139,14 +140,19 @@ async function refundCharge(deps: SheetDeps, booking: BookingRow, amountCents: n
   }
 }
 
-/** Cancels in one transaction (state, strike, events), then refunds outside it. */
+/**
+ * Cancels in one transaction (state, strike, events, and a staff cancellation's audit row), then refunds outside
+ * it: `refund` replaces the usual partial refund of the booking's charge (a staff cancellation refunds every
+ * charge's remainder).
+ */
 async function cancelWith(
   deps: SheetDeps,
   row: Loaded,
   actorId: string,
   outcome: ReturnType<typeof outcomeOf>,
-  details: { by: string; choice?: string; note?: string; expected: string[] },
+  details: { by: string; choice?: string; note?: string; expected: string[]; staff?: { role: string; refundCents: number } },
   now: Date,
+  refund: () => Promise<void> = () => refundCharge(deps, row.booking, outcome.refund, now),
 ): Promise<ActionResult> {
   const { booking } = row;
   const done = await deps.db.transaction(async (tx) => {
@@ -184,12 +190,16 @@ async function cancelWith(
         helperUserId: booking.helperUserId,
       },
     });
-    await tx.insert(auditLog).values({ id: newId('aud'), actorId, actorRole: 'user', action: 'booking.canceled', targetType: 'booking', targetId: booking.id, reason: outcome.reason });
+    await tx.insert(auditLog).values({ id: newId('aud'), actorId, actorRole: details.staff?.role ?? 'user', action: 'booking.canceled', targetType: 'booking', targetId: booking.id, reason: outcome.reason });
+    // Written with the cancellation, so a refund that fails afterwards never leaves it without a trace.
+    if (details.staff) {
+      await tx.insert(auditLog).values({ id: newId('aud'), at: now.toISOString(), actorId, actorRole: details.staff.role, action: 'booking.canceled_by_staff', targetType: 'booking', targetId: booking.id, reason: details.note ?? null, metadata: { refundCents: details.staff.refundCents } });
+    }
     await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'canceled' }, now);
     return true;
   });
   if (!done) return { ok: false, code: 'not_allowed' };
-  await refundCharge(deps, booking, outcome.refund, now);
+  await refund();
   if (outcome.compensation > 0) await recordCompensation(deps.db, booking, outcome.compensation, now);
   // The helper canceled: the task opens for offers again on its own when there's time (replacement matching).
   if (outcome.reason === 'helper') await reopenAfterHelperCancel(deps.db, booking, now);
@@ -223,38 +233,106 @@ export async function cancelBookingByStaff(deps: SheetDeps, staff: { id: string;
   if (!parsed.success) return validationFailed(parsed.error);
   const row = await load(deps.db, String(bookingId));
   if (!row) return { ok: false, code: 'not_found' };
-  const refund = await staffCancelRefund(deps.db, row.booking.id);
+  // Never on a booking of their own: that would be a full refund, no late fee and no strike for themselves.
+  if (staff.id === row.booking.posterUserId || staff.id === row.booking.helperUserId) return { ok: false, code: 'not_allowed' };
+  const charges = await refundableCharges(deps.db, row.booking.id);
+  const refund = charges.reduce((total, charge) => total + charge.remainingCents, 0);
   if (!staffMayCancel(staff.roles, refund)) return { ok: false, code: 'not_allowed' };
   if (!STAFF_CANCELABLE.includes(row.booking.status)) return { ok: false, code: 'not_allowed' };
-  const result = await cancelWith(deps, row, staff.id, { reason: 'admin', late: false, refund, compensation: 0, strike: null }, { by: 'staff', note: parsed.data.note, expected: [row.booking.status] }, now);
-  if (result.ok) {
-    await deps.db.insert(auditLog).values({ id: newId('aud'), at: now.toISOString(), actorId: staff.id, actorRole: staff.roles[0] ?? 'staff', action: 'booking.canceled_by_staff', targetType: 'booking', targetId: row.booking.id, reason: parsed.data.note, metadata: { refundCents: refund } });
+  const role = staff.roles.find((candidate) => STAFF_CANCEL_LEADS.includes(candidate)) ?? staff.roles[0] ?? 'staff';
+  return cancelWith(
+    deps,
+    row,
+    staff.id,
+    { reason: 'admin', late: false, refund, compensation: 0, strike: null },
+    { by: 'staff', note: parsed.data.note, expected: [row.booking.status], staff: { role, refundCents: refund } },
+    now,
+    () => refundRemainders(deps, row.booking, charges, now),
+  );
+}
+
+/** A charge on the booking and how much of it can still be refunded. */
+export interface RefundableCharge {
+  id: string;
+  providerRef: string | null;
+  amountCents: number;
+  remainingCents: number;
+}
+
+/**
+ * The booking's charges with money left on them (completion plan 5.18): the booking itself and any paid changes,
+ * minus what was refunded already (goodwill, a change that lowered the price) or is being refunded.
+ */
+export async function refundableCharges(db: Db, bookingId: string): Promise<RefundableCharge[]> {
+  const charges = await db
+    .select()
+    .from(payments)
+    .where(and(eq(payments.bookingId, bookingId), inArray(payments.purpose, ['booking_funding', 'change_funding']), inArray(payments.status, ['succeeded', 'partially_refunded'])));
+  if (charges.length === 0) return [];
+  const taken = await db
+    .select({ paymentId: refunds.paymentId, amountCents: refunds.amountCents })
+    .from(refunds)
+    .where(and(inArray(refunds.paymentId, charges.map((charge) => charge.id)), inArray(refunds.status, ['succeeded', 'pending'])));
+  return charges
+    .map((charge) => ({
+      id: charge.id,
+      providerRef: charge.providerRef,
+      amountCents: charge.amountCents,
+      remainingCents: charge.amountCents - taken.filter((row) => row.paymentId === charge.id).reduce((total, row) => total + row.amountCents, 0),
+    }))
+    .filter((charge) => charge.remainingCents > 0);
+}
+
+/**
+ * Refunds what's left of each charge. The refund row is written (pending) before the provider is called, so a
+ * call that throws leaves a failed refund and a case in finance's queue (opened once per payment) instead of
+ * nothing.
+ */
+async function refundRemainders(deps: SheetDeps, booking: BookingRow, charges: RefundableCharge[], now: Date): Promise<void> {
+  for (const charge of charges) {
+    const idempotencyKey = `refund:${booking.id}:staff_cancel:${charge.id}`;
+    const [pending] = await deps.db
+      .insert(refunds)
+      .values({ id: newId('ref'), paymentId: charge.id, bookingId: booking.id, amountCents: charge.remainingCents, reason: 'cancellation', status: 'pending', providerRef: null, idempotencyKey, createdAt: now })
+      .onConflictDoNothing({ target: refunds.idempotencyKey })
+      .returning({ id: refunds.id });
+    if (!pending) continue;
+    try {
+      if (!charge.providerRef) throw new Error(`payment ${charge.id} has no provider reference`);
+      const result = await deps.payments.refund({ chargeRef: charge.providerRef, amountCents: charge.remainingCents, idempotencyKey });
+      await deps.db.update(refunds).set({ status: result.status, providerRef: result.refundRef }).where(eq(refunds.id, pending.id));
+      if (result.status === 'succeeded') await deps.db.update(payments).set({ status: 'refunded', updatedAt: now }).where(eq(payments.id, charge.id));
+      if (result.status === 'failed') await openRefundCase(deps.db, charge.id, 'staff_cancel_refund_failed', now);
+    } catch (error) {
+      console.error(`[bookings] refunding ${charge.id} after a staff cancellation failed`, error);
+      await deps.db.update(refunds).set({ status: 'failed' }).where(eq(refunds.id, pending.id));
+      await openRefundCase(deps.db, charge.id, 'staff_cancel_refund_failed', now);
+    }
   }
-  return result;
 }
 
 const STAFF_CANCELABLE = ['confirmed', 'scheduled', 'in_progress'];
 const STAFF_CANCEL_LEADS: readonly StaffRole[] = ['support_lead', 'trust_safety', 'admin'];
 
-/** What a staff cancellation refunds: the booking's charge, when it was paid. */
+/** What a staff cancellation refunds: what's left of every charge on the booking. */
 export async function staffCancelRefund(db: Db, bookingId: string): Promise<number> {
-  const [charge] = await db
-    .select({ amountCents: payments.amountCents })
-    .from(payments)
-    .where(and(eq(payments.bookingId, bookingId), eq(payments.purpose, 'booking_funding'), eq(payments.status, 'succeeded')))
-    .limit(1);
-  return charge?.amountCents ?? 0;
+  return (await refundableCharges(db, bookingId)).reduce((total, charge) => total + charge.remainingCents, 0);
 }
 
 export function staffMayCancel(roles: readonly StaffRole[], refundCents: number): boolean {
   return roles.some((role) => STAFF_CANCEL_LEADS.includes(role)) || (roles.length > 0 && refundCents <= refundLimitOf(roles));
 }
 
-/** The staff booking page's cancel control, when the booking can still be canceled. */
-export async function staffCancelView(db: Db, roles: readonly StaffRole[], booking: { id: string; status: string }): Promise<{ refundCents: number; allowed: boolean } | undefined> {
+/** The staff booking page's cancel control, when the booking can still be canceled (never on their own booking). */
+export async function staffCancelView(db: Db, roles: readonly StaffRole[], booking: { id: string; status: string }, staffId?: string): Promise<{ refundCents: number; allowed: boolean } | undefined> {
   if (!STAFF_CANCELABLE.includes(booking.status)) return undefined;
   const refundCents = await staffCancelRefund(db, booking.id);
-  return { refundCents, allowed: staffMayCancel(roles, refundCents) };
+  let party = false;
+  if (staffId) {
+    const [people] = await db.select({ poster: bookings.posterUserId, helper: bookings.helperUserId }).from(bookings).where(eq(bookings.id, booking.id)).limit(1);
+    party = people?.poster === staffId || people?.helper === staffId;
+  }
+  return { refundCents, allowed: !party && staffMayCancel(roles, refundCents) };
 }
 
 export async function reportRunningLate(db: Db, userId: string, bookingId: string, minutes: LateByMinutes, now: Date): Promise<ActionResult> {

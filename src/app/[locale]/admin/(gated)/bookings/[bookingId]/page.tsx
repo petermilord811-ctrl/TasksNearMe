@@ -33,7 +33,7 @@ async function AdminBooking({ params }: Pick<PageProps<'/[locale]/admin/bookings
   const now = await requestNow();
   const [booking, reversals] = await Promise.all([getAdminBooking(db, staff, bookingId, now), getBookingReversals(db, staff, bookingId)]);
   if (!booking) notFound();
-  const staffCancel = await staffCancelView(db, staff.roles, booking.booking);
+  const staffCancel = await staffCancelView(db, staff.roles, booking.booking, staff.id);
   const data = { ...booking, reversals, ...(staffCancel ? { staffCancel } : {}) };
   return (
     <AdminBookingScreen

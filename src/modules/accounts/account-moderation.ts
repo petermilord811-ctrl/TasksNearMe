@@ -45,7 +45,8 @@ export async function adminAccountView(db: Db, staff: StaffActor, userId: string
   const actions: AccountActionId[] = [];
   if (roles.length === 0) {
     if (status === 'active' && has(staff, MODERATORS)) actions.push('suspend');
-    if (status === 'suspended' && has(staff, MODERATORS)) actions.push('reinstate');
+    // Not while a ban is pending: reinstating would quietly drop the request (5.18); a ban reviewer declines it first.
+    if (status === 'suspended' && has(staff, MODERATORS) && !pending) actions.push('reinstate');
     if (status === 'banned' && staff.roles.includes('admin')) actions.push('reinstate');
     if (status !== 'banned' && !pending && has(staff, BAN_REVIEWERS)) actions.push('request_ban');
     if (pending && has(staff, BAN_REVIEWERS) && pending.actorId !== staff.id) actions.push('approve_ban');
