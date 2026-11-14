@@ -2,12 +2,14 @@ import type { PushHandlers, PushSetup } from './account';
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
 import type { OneTimeCodeInput, PhoneInput } from './auth';
-import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
+import type { CategorySlug, ISODateTime, Photo } from './common';
 import { CATEGORY_SLUGS } from './common';
+import { zipField } from './forms';
 import type { CategoryView } from './marketing';
 import type { VerificationBadges } from './people';
 import type { AddressSuggestion, PhotoUploadResult } from './posting';
 import type { WorkSampleView } from './profiles';
+import type { WelcomeGiftCard } from './rewards';
 import type { OnboardingStep } from './routes';
 import type {
   AddressVerificationStatus,
@@ -36,8 +38,11 @@ export type VerificationTrack = (typeof VERIFICATION_TRACKS)[number];
 export const IDENTITY_FAILURE_REASONS = ['document_unreadable', 'selfie_mismatch', 'under_18', 'other'] as const;
 export type IdentityFailureReason = (typeof IDENTITY_FAILURE_REASONS)[number];
 
-/** `in_review`: waiting on the provider or our team (an ID check processing or a name check, an address proof, a background check). */
-export type OnboardingStepState = 'done' | 'current' | 'todo' | 'skipped' | 'locked' | 'in_review';
+/**
+ * `in_review`: waiting on the provider or our team (an ID check processing or a name check, an address proof, a background check).
+ * `later`: not yet, for a helper outside the cities we're open in: the home address is asked for when their city opens.
+ */
+export type OnboardingStepState = 'done' | 'current' | 'todo' | 'skipped' | 'locked' | 'in_review' | 'later';
 
 export interface OnboardingProgress {
   steps: { step: OnboardingStep; state: OnboardingStepState }[];
@@ -117,13 +122,53 @@ export function createHelperServicesSchema(categories: Pick<CategoryView, 'slug'
 }
 export type HelperServicesInput = z.input<ReturnType<typeof createHelperServicesSchema>>;
 
-export const helperAreaInputSchema = z.object({
-  areaId: z.string(code('required')).min(1, code('required')),
-  serviceRadiusMiles: z.literal(SERVICE_RADIUS_MILES, code('required')),
-  /** Offer remote help in categories that allow it. */
-  remoteOk: z.boolean(),
-});
+/**
+ * Where a helper helps. `where`: `market` (a neighborhood in their market, `areaId`) or `elsewhere`, anywhere else
+ * in the US (owner, 2026-11-14: national, cities open in turn): their ZIP and city. A helper elsewhere can finish
+ * their checks and waits for their city to open. The server answers `fieldErrors.homeZip: ['in_market']` when the
+ * ZIP is in their own market (choose the neighborhood instead) and `not_supported` for a ZIP we can't serve.
+ */
+export const helperAreaInputSchema = z
+  .object({
+    where: z.enum(['market', 'elsewhere']).default('market'),
+    areaId: z.string(code('required')),
+    homeZip: z.string().trim().optional(),
+    homeCity: z.string().trim().max(60, code('too_long')).optional(),
+    serviceRadiusMiles: z.literal(SERVICE_RADIUS_MILES, code('required')),
+    /** Offer remote help in categories that allow it. */
+    remoteOk: z.boolean(),
+  })
+  .superRefine(
+    (value, ctx) => {
+      const issue = (path: string, message: FieldErrorCode) => ctx.addIssue({ code: 'custom', path: [path], message });
+      // It also runs when another field failed (so every field's error shows at once): read defensively.
+      const text = (field: unknown) => (typeof field === 'string' ? field.trim() : '');
+      if (value.where !== 'elsewhere') {
+        if (!text(value.areaId)) issue('areaId', 'required');
+        return;
+      }
+      const zip = zipField.safeParse(text(value.homeZip));
+      if (!zip.success) issue('homeZip', (zip.error.issues[0]?.message as FieldErrorCode | undefined) ?? 'invalid');
+      const city = text(value.homeCity);
+      if (!city) issue('homeCity', 'required');
+      else if (city.length < 2) issue('homeCity', 'too_short');
+    },
+    { when: (payload) => typeof payload.value === 'object' && payload.value !== null },
+  );
 export type HelperAreaInput = z.input<typeof helperAreaInputSchema>;
+
+/** The helper's market, for the area step's "In {name}" choice. `zipPrefixes`: the ZIP3s it covers. */
+export interface HelperHomeMarket {
+  name: string;
+  zipPrefixes: string[];
+}
+
+/** A helper outside every city we're open in: where they wait (shown on the area and done steps). */
+export interface AwaitingCity {
+  city: string;
+  /** Two-letter state code from the ZIP. */
+  state: string;
+}
 
 export const helperToolsInputSchema = z.object({
   tools: z.array(z.string().trim().min(2, code('too_short')).max(40, code('too_long'))).max(20, code('too_long')),
@@ -350,6 +395,10 @@ export interface HelperOnboardingPageData {
   progress: OnboardingProgress;
   categories: CategoryView[];
   areas: AreaOption[];
+  /** The helper's market (the area step's "In Austin"); absent in older fixtures. */
+  homeMarket?: HelperHomeMarket;
+  /** Outside every city we're open in: the helper can finish their checks and waits for this city to open. */
+  awaitingCity?: AwaitingCity;
   /** Display names by code, e.g. { code: 'es', name: 'Spanish' }. */
   languageOptions: { code: LanguageCode; name: string }[];
   /** What's saved so far (defaults for the forms). */
@@ -363,8 +412,11 @@ export interface HelperOnboardingPageData {
   agreementNeeded: boolean;
   /** "Your first payout can take about 7 days." */
   firstPayoutDays: number;
-  /** Founding-cohort reward, when the helper can still earn it. */
-  welcomeReward?: { amountCents: Cents; minTaskPriceCents: Cents; windowDays: number };
+  /**
+   * The $50 welcome gift card and where its three checks (phone, ID, background) stand, while it applies. Shown
+   * under the stepper on every step, and on the done step.
+   */
+  welcomeReward?: WelcomeGiftCard;
   /** The `ai_drafting` flag, and drafting is set up: show "Write it for me" on the profile step. */
   aiDraftingEnabled: boolean;
 }
@@ -426,6 +478,8 @@ export interface HelperProfileEditorData {
   progress: OnboardingProgress;
   categories: CategoryView[];
   areas: AreaOption[];
+  homeMarket?: HelperHomeMarket;
+  awaitingCity?: AwaitingCity;
   languageOptions: { code: LanguageCode; name: string }[];
   values: {
     profile: HelperProfileInput;

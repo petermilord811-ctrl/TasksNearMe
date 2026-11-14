@@ -61,7 +61,10 @@
     "scheduled_payment_failed": "We couldn't charge your card for {title}{hasDate, select, yes {. Pay by {date} to keep it} other {}}",
     "replacement_needed": "A client needs a new helper for {title}. Send an offer if you can help",
     "replacement_search_started": "{actorName} canceled {title}. Your task is open for offers again, and we told helpers nearby",
-    "badge_earned": "{tier, plural, =1 {You earned a badge: {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}}} other {Your {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}} badge reached level #}}"
+    "badge_earned": "{tier, plural, =1 {You earned a badge: {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}}} other {Your {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}} badge reached level #}}",
+    "city_open": "TasksNearMe is open in {title}: choose your neighborhood to start taking tasks",
+    "reward_earned": "Your welcome gift card{hasAmount, select, yes { of {amount}} other {}} is yours. Pick your card after our quick check",
+    "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on Rewards"
   },
   "previews": {
     "group": "Notifications",
@@ -77,6 +80,8 @@
     "inviteReceived": "A booking request for the helper",
     "inviteUpdates": "Counter-offer and accepted request",
     "rebookClient": "Client · review a booking proposal",
-    "rebookHelper": "Helper · accepted and declined proposals"
+    "rebookHelper": "Helper · accepted and declined proposals",
+    "reward_earned": "Welcome gift card earned",
+    "reward_ready": "Gift card ready"
   }
 }

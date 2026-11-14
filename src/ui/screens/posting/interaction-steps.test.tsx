@@ -111,7 +111,11 @@ describe('posting address combobox', () => {
     expect(outside).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(outside);
     expect(draft().location).toMatchObject({ mode: 'local', placeId: '' });
-    expect(screen.getByRole('link', { name: 'Join the waitlist' })).toHaveAttribute('href', routes.waitlist());
+    // National (owner, 2026-11-14): the panel names the city, and offers its waitlist and helper sign-up.
+    expect(outside).toHaveTextContent('Not open in Waco yet');
+    expect(screen.getByText("We're not in Waco yet.")).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Join the list for Waco' })).toHaveAttribute('href', routes.waitlist({ zip: '76701' }));
+    expect(screen.getByRole('link', { name: 'Live there and can help? Get verified now' })).toHaveAttribute('href', routes.becomeAHelper());
     fireEvent.keyDown(search, { key: 'ArrowDown' });
     fireEvent.keyDown(search, { key: 'Enter' });
     expect(draft().location).toMatchObject({ mode: 'local', placeId: addressSuggestions[0]!.placeId });

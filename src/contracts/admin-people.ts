@@ -48,8 +48,20 @@ export interface AdminRewardsPageData {
   filter: AdminRewardFilter;
   rows: AdminRewardRow[];
   counts: Record<AdminRewardFilter, number>;
-  /** Per program: what's committed (pending to delivered) and delivered, against the budget. */
-  budgets: { program: RewardProgramCode; budgetCents?: Cents; committedCents: Cents; deliveredCents: Cents }[];
+  /**
+   * Per program: what's committed (pending to delivered) and delivered, against the budget. A monthly budget
+   * (`period` `month`, the welcome gift card since 2026-11-14) is set against what left the waiting line this
+   * calendar month (`releasedThisMonthCents`); `queuedCents` waits for next month's.
+   */
+  budgets: {
+    program: RewardProgramCode;
+    budgetCents?: Cents;
+    period?: 'month';
+    releasedThisMonthCents?: Cents;
+    queuedCents?: Cents;
+    committedCents: Cents;
+    deliveredCents: Cents;
+  }[];
 }
 
 export const rewardDecisionInputSchema = z.object({

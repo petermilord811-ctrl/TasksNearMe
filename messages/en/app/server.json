@@ -105,7 +105,8 @@
         "proposal": "View the proposal",
         "series": "View your regular visits",
         "account": "Open your account",
-        "verify_identity": "Verify your ID"
+        "verify_identity": "Verify your ID",
+        "rewards": "Open your rewards"
       },
       "next": {
         "offer_received": "Compare the offers on your task and book the one that fits. You're only charged when you book.",
@@ -149,7 +150,10 @@
         "scheduled_payment_failed": "Pay on the booking page, or change the card. We try again before then.",
         "replacement_needed": "Their helper canceled, so the time is set and the client is ready to book.",
         "replacement_search_started": "You were refunded in full. New offers will appear on your task. If you no longer need it, cancel the task.",
-        "badge_earned": "See all your badges, and the next ones, on your account page."
+        "badge_earned": "See all your badges, and the next ones, on your account page.",
+        "city_open": "Choose your neighborhood and add your home address. Then you can send offers on tasks near you.",
+        "reward_earned": "Our team gives it a quick check, then you pick the card you want. Gift cards are separate from your earnings.",
+        "reward_ready": "Pick the card you want on your Rewards page and redeem it within 90 days."
       },
       "lockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates.",
       "optionalFooter": "You're getting this because {topic} emails are on.",
@@ -205,7 +209,10 @@
       "scheduled_payment_failed": "We couldn't charge your card for {title}{hasDate, select, yes {. Pay by {date} to keep it} other {}}.",
       "replacement_needed": "A client needs a new helper for {title}. Send an offer if you can help.",
       "replacement_search_started": "{actorName} canceled {title}. Your task is open for offers again, and we told helpers nearby.",
-      "badge_earned": "{tier, plural, =1 {You earned a badge: {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}}} other {Your {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}} badge reached level #}}."
+      "badge_earned": "{tier, plural, =1 {You earned a badge: {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}}} other {Your {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}} badge reached level #}}.",
+      "city_open": "TasksNearMe is open in {title}. Choose your neighborhood to start taking tasks.",
+      "reward_earned": "Your welcome gift card{hasAmount, select, yes { of {amount}} other {}} is yours: your phone, ID and background checks all passed.",
+      "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on your Rewards page."
     },
     "pushTitle": "TasksNearMe"
   },
@@ -218,20 +225,23 @@
       "place": "TasksNearMe · Starting close to home in {market}."
     },
     "welcome": {
-      "subjectOffer": "Welcome, {firstName}! Earn a {amount} gift card as a founding helper",
+      "subjectOffer": "Welcome, {firstName}! Get verified and get a {amount} gift card",
       "subject": "Welcome to TasksNearMe, {firstName}",
-      "preheaderOffer": "{left, plural, one {Only # spot is} other {# spots are}} left for our first {limit, number} helpers in {market}. Here is how to claim yours.",
+      "preheaderOffer": "Every helper who passes three quick checks gets a {amount} gift card. No spots to race for.",
       "preheader": "Your account is ready: book local help, or earn on your own schedule.",
       "title": "Welcome to TasksNearMe",
       "greeting": "Welcome, {firstName}!",
       "intro": "Your account is ready. Book trusted local help in {market}, or earn on your own schedule as a helper.",
       "gift": {
-        "eyebrow": "Founding helper reward",
+        "eyebrow": "Welcome gift card",
         "label": "gift card",
-        "for": "For our first {limit, number} verified helpers in {market}",
-        "claimed": "{claimed, number} of {limit, number} spots claimed",
-        "left": "{left, plural, one {Only # spot left} other {# spots left}}",
-        "cta": "Claim your spot",
+        "checks": {
+          "phone": "Phone",
+          "identity": "ID",
+          "background": "Background check"
+        },
+        "for": "For every helper who passes our three checks. No spots to race for, and no first task needed.",
+        "cta": "Get verified",
         "learn": "How earning works"
       },
       "steps": {
@@ -245,17 +255,21 @@
           "title": "Set up your helper profile",
           "body": "Your services, your rates, and the area you cover."
         },
-        "verify": {
-          "title": "Get verified",
-          "body": "Your ID check, payout setup, and any required background check."
+        "phone": {
+          "title": "Verify your phone",
+          "body": "A six-digit code by text."
         },
-        "task": {
-          "title": "Finish your first task of {minimum} or more",
-          "body": "Complete it and be paid within {days, plural, one {# day} other {# days}} of verification."
+        "identity": {
+          "title": "Verify your ID",
+          "body": "Photos of your ID and a selfie, checked by our team and our ID partner."
+        },
+        "background": {
+          "title": "Pass a background check",
+          "body": "Run by Checkr, with your consent."
         },
         "reward": {
-          "title": "Your {amount} gift card unlocks",
-          "body": "{days, plural, one {# day} other {# days}} after the task is paid, following a review. Redeem within {redeemDays, plural, one {# day} other {# days}} of unlocking. One welcome reward per person."
+          "title": "Your {amount} gift card is yours",
+          "body": "After a quick check by our team, pick your card on the Rewards page. Redeem within {redeemDays, plural, one {# day} other {# days}}. One welcome gift card per person."
         }
       },
       "client": {
@@ -324,7 +338,7 @@
       "heading": "Your {amount} gift card is ready",
       "body": "{greeting, select, welcome {Welcome aboard{hasName, select, yes {, {firstName}} other {}}.} other {Thanks for helping your neighbors{hasName, select, yes {, {firstName}} other {}}.}} Here is your {program} reward.",
       "programs": {
-        "welcome": "founding helper",
+        "welcome": "welcome",
         "repeat": "repeat client",
         "acceptance": "offer",
         "completion": "completion"

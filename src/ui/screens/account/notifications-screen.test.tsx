@@ -62,6 +62,7 @@ const copy: Record<NotificationType, RegExp> = {
   background_check_expiring: /background check has run out/,
   id_expiring: /ID you verified with has expired/,
   helper_ready: /you can send offers now/,
+  city_open: /TasksNearMe is open in /,
   task_match: /New task near you: .*\$54\.00/,
   data_export_ready: /copy of your data is ready/,
   series_started: /started regular visits/,
@@ -74,6 +75,8 @@ const copy: Record<NotificationType, RegExp> = {
   replacement_search_started: /open for offers again/,
   // No badge in the shared params: the generic wording (the badge's own name is tested with the badges).
   badge_earned: /You earned a badge: new/,
+  reward_earned: /Your welcome gift card of \$54\.00 is yours/,
+  reward_ready: /Your gift card of \$54\.00 is ready/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -89,6 +92,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   invite: { target: { kind: 'invite', inviteId: 'invite / one' }, href: routes.app.offers('invite / one') },
   proposal: { target: { kind: 'proposal', proposalId: 'proposal / one' }, href: routes.app.proposal('proposal / one') },
   series: { target: { kind: 'series', seriesId: 'series / one' }, href: routes.app.series('series / one') },
+  rewards: { target: { kind: 'rewards' }, href: routes.app.rewards() },
 };
 
 describe('NotificationsScreen', () => {

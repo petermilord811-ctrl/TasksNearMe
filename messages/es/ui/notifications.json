@@ -61,7 +61,10 @@
     "scheduled_payment_failed": "No pudimos cobrar a tu tarjeta por {title}{hasDate, select, yes {. Paga antes del {date} para conservarla} other {}}",
     "replacement_needed": "Un cliente necesita un nuevo ayudante para {title}. Envía una oferta si puedes ayudar",
     "replacement_search_started": "{actorName} canceló {title}. Tu tarea vuelve a estar abierta a ofertas y avisamos a los ayudantes cercanos",
-    "badge_earned": "{tier, plural, =1 {Ganaste una insignia: {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}}} other {Tu insignia {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}} subió al nivel #}}"
+    "badge_earned": "{tier, plural, =1 {Ganaste una insignia: {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}}} other {Tu insignia {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}} subió al nivel #}}",
+    "city_open": "TasksNearMe ya está en {title}: elige tu vecindario para empezar a recibir tareas",
+    "reward_earned": "Tu tarjeta de regalo de bienvenida{hasAmount, select, yes { de {amount}} other {}} es tuya. Elige tu tarjeta después de nuestra revisión rápida",
+    "reward_ready": "Tu tarjeta de regalo{hasAmount, select, yes { de {amount}} other {}} está lista. Elige tu tarjeta en Recompensas"
   },
   "previews": {
     "group": "Notificaciones",
@@ -77,6 +80,8 @@
     "inviteReceived": "Una solicitud de reserva para el ayudante",
     "inviteUpdates": "Contraoferta y solicitud aceptada",
     "rebookClient": "Cliente · revisar una propuesta de reserva",
-    "rebookHelper": "Ayudante · propuestas aceptadas y rechazadas"
+    "rebookHelper": "Ayudante · propuestas aceptadas y rechazadas",
+    "reward_earned": "Tarjeta de regalo de bienvenida ganada",
+    "reward_ready": "Tarjeta de regalo lista"
   }
 }

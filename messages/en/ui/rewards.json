@@ -11,7 +11,7 @@
     "grants": "Your rewards",
     "empty": {
       "title": "No rewards yet",
-      "body": "Gift card rewards from qualifying bookings will appear here. Find a task to get started.",
+      "body": "Gift cards you earn will appear here: the welcome gift card for your checks, and rewards from repeat bookings. Find a task to get started.",
       "action": "Find work"
     },
     "notHelper": {
@@ -31,10 +31,10 @@
     },
     "rules": {
       "title": "How rewards work",
-      "welcome": "{amount} for your first qualifying booking of {threshold} or more as a founding helper.",
+      "welcome": "{amount} gift card once your phone, ID and background checks pass. No booking needed.",
       "repeat": "{amount} for your third paid booking with the same client within 90 days.",
       "repeatThreshold": "Each qualifying booking must have a task price of {threshold} or more.",
-      "hold": "Rewards have a 7-day hold after the work is completed and paid. Welcome rewards also need a check from our team before you can redeem them.",
+      "hold": "Booking rewards have a 7-day hold after the work is completed and paid. Welcome gift cards get a quick check from our team first.",
       "expiry": "Redeem within 90 days of a reward becoming ready to redeem.",
       "giftCards": "Rewards are gift cards, not earnings",
       "terms": "Read rewards terms",
@@ -45,8 +45,8 @@
   "previews": {
     "group": "Rewards",
     "componentGroup": "Reward grant",
-    "pending": "Pending welcome reward",
-    "qualified": "Qualified welcome reward",
+    "pending": "Welcome gift card in line",
+    "qualified": "Welcome gift card in review, repeat reward on hold",
     "redeemable": "Ready to redeem",
     "delivered": "Gift card delivered",
     "empty": "No rewards yet",
@@ -57,7 +57,11 @@
     "unknownError": "Redemption unavailable",
     "submitted": "Gift card requested",
     "allStatuses": "Every reward status",
-    "grants": "Reward grants"
+    "grants": "Reward grants",
+    "welcomeOpen": "Welcome gift card: checks to go",
+    "welcomeQueued": "Welcome gift card: in line for next month",
+    "welcomeReady": "Welcome gift card: ready to pick",
+    "welcomeStrip": "Welcome gift card: onboarding strip"
   },
   "programs": {
     "welcome": "Welcome reward",
@@ -88,6 +92,10 @@
     "redeemable": "Your reward is ready to redeem",
     "expired": "The time to redeem this reward has passed"
   },
+  "welcomeDetails": {
+    "queued": "In line for this month's gift cards. It moves on by {date}.",
+    "in_review": "Our team is giving it a quick check."
+  },
   "voidReasons": {
     "booking_canceled": "The booking was canceled, so this reward wasn't earned.",
     "refunded": "The booking was refunded, so this reward wasn't earned.",
@@ -104,5 +112,46 @@
     "not_allowed": "This reward is no longer available to redeem. Refresh the page to see its status.",
     "rate_limited": "There have been too many requests. Wait a moment before redeeming again.",
     "unknown": "We couldn't request your gift card. Try again, or contact support if it keeps happening."
+  },
+  "welcomeCard": {
+    "eyebrow": "Welcome gift card",
+    "titles": {
+      "open": "Get verified, get {amount}",
+      "earned": "Your {amount} gift card is yours",
+      "ready": "Your {amount} gift card is ready",
+      "delivered": "Your {amount} gift card was sent"
+    },
+    "openBody": "Every helper who passes these three checks gets a {amount} gift card. No spots to race for, and no first task needed.",
+    "earnedBody": "Our team gives it a quick check, then you pick your card on <link>Rewards</link>.",
+    "queuedBody": "So many helpers got verified this month that yours is in line for the next round. It moves on by {date}, with nothing to do on your side.",
+    "readyBody": "Pick your card on <link>Rewards</link> by {date}.",
+    "readyBodyNoDate": "Pick your card on <link>Rewards</link>.",
+    "deliveredBody": "Find it on <link>Rewards</link> or in your email.",
+    "progress": "{done} of {total} checks done",
+    "checksLabel": "The checks that earn it",
+    "checks": {
+      "phone": "Phone",
+      "identity": "ID",
+      "background": "Background check"
+    },
+    "states": {
+      "done": "Done",
+      "in_review": "In review",
+      "current": "Up next",
+      "todo": "To do",
+      "locked": "After the step before",
+      "skipped": "Not needed yet"
+    },
+    "backgroundSkipped": "Comes with an in-home service",
+    "founding": "Founding helper #{number}",
+    "continue": "Continue verification",
+    "pick": "Pick your card",
+    "fineprint": "One per person. Rewards never depend on reviews or ratings.",
+    "artLabel": "Gift card",
+    "stripLabel": "Welcome gift card",
+    "stripSr": "{done} of {total} checks done for your {amount} gift card.",
+    "stripEarnedSr": "Your {amount} gift card is earned.",
+    "stripGift": "{amount} gift card",
+    "stripEarned": "{amount} gift card earned"
   }
 }

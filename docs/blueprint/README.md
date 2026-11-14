@@ -13,7 +13,7 @@ This blueprint is the input to implementation. It contains no application code. 
 | 03 | [State machines](03-state-machines.md) | Task, offer, invite, **booking**, change request, **payment**, helper earnings, recurring visits, **reward**, and support case states, with each person's actions |
 | 04 | [Payments and fees](04-payments-and-fees.md) | Stripe Connect design, fee formulas, funding timing, transfers and payouts, refunds and disputes, ledger, **margin on a $60 booking** |
 | 05 | [Rewards](05-rewards.md) | The four reward programs: funding, basis, unlock, stacking, cancellation; economics challenged; **launch policy** |
-| 06 | [Verification, trust, compliance](06-verification-trust-compliance.md) | Identity vs eligibility vs payout/tax tracks, public badges, trust & safety, **pre-launch confirmations F1–F20** |
+| 06 | [Verification, trust, compliance](06-verification-trust-compliance.md) | Identity vs eligibility vs payout/tax tracks, public badges, trust & safety, **pre-launch confirmations F1–F21** |
 | 07 | [Architecture](07-architecture.md) | Stack, modules, **repository tree**, where code belongs, cross-cutting design, environments, AI drafting |
 | 08 | [Data model and access](08-data-model-and-access.md) | Tables, relationships, constraints, **access matrix**, staff limits, retention |
 | 09 | [APIs, events, idempotency](09-apis-events-idempotency.md) | Routes, provider events, **duplicate-charge, payout, and reward prevention** |
@@ -31,7 +31,7 @@ This blueprint is the input to implementation. It contains no application code. 
 | D5 | Fees: 10% poster service fee (minimum $3) + 10% helper service fee; none on expenses | 04 |
 | D6 | Stripe Identity for ID checks; Stripe-hosted payout and tax onboarding; 1099s filed by the platform through Stripe | 06 |
 | D7 | Background checks (Checkr) before in-home categories, with a launch contingency. **Needs founder sign-off** | 06 |
-| D8 | Rewards at launch: **welcome $50 (first 100 helpers)** and **repeat $10 (3rd paid booking with the same poster)** on; acceptance 5% and completion bonus built but off; one booking-level reward per booking | 05 |
+| D8 | Rewards at launch: **welcome $50 for every helper whose phone, ID and background checks pass** (the owner's change of 2026-11-14: no cohort, no first task; no monthly limit (the owner's choice: every card goes to staff review, the program switch is the only limit on spend); the first 100 per market keep the Founding helper badge) and **repeat $10 (3rd paid booking with the same poster)** on; acceptance 5% and completion bonus built but off; one booking-level reward per booking | 05 |
 | D9 | Recurring visits in phase 2; data model at launch | 03 §7 |
 | D10 | Optional AI task drafting with the Claude API (`claude-opus-5-5`, low effort, structured output) behind a flag | 07 §8 |
 | D11 | Better Auth (email codes, staff TOTP) + Twilio Verify for phones | 07 |
@@ -46,7 +46,7 @@ This blueprint is the input to implementation. It contains no application code. 
 | ID | Assumption |
 |---|---|
 | A1 | Team: 3 full-stack engineers (one owns payments), a part-time designer, and a founder/PM who also runs beta ops and support. About 18–20 weeks to public launch (24–30 with 2 engineers) |
-| A2 | Launch market: Austin city plus adjacent ZIP codes within about 25 km of downtown (a configurable polygon); `America/Chicago`; USD; English at launch, Spanish in phase 2 |
+| A2 | Launch market: Austin city plus adjacent ZIP codes within about 25 km of downtown (a configurable polygon; ZIP3 prefixes 786 and 787 for matching ZIPs); `America/Chicago`; USD; English at launch, Spanish in phase 2. Since 2026-11-14 (owner) the site is national and cities open in turn: Austin is the first, not the only one (01 §1) |
 | A3 | Individuals 18+ only; helpers do the work themselves; no companies or agencies |
 | A4 | Helpers are independent contractors who set their own prices and choose their tasks (to confirm, **F5**) |
 | A5 | Fee schedule as in D5 |
@@ -56,13 +56,13 @@ This blueprint is the input to implementation. It contains no application code. 
 | A9 | First 3 months: 300–1,000 bookings/month and up to 500 active helpers (affects infrastructure sizing only) |
 | A10 | Installable mobile-first web app; no native apps at launch |
 | A11 | Rewards are promotional gift cards delivered through Tremendous and taxable to recipients |
-| A12 | Promotions budget: $5,000 for the welcome cohort, plus about $1,500/month for repeat rewards (estimate) |
+| A12 | Promotions budget: welcome gift cards are uncapped since 2026-11-14 ($50 plus about $30 of checks per verified helper, no monthly limit; the program switch is the only brake), plus about $1,500/month for repeat rewards (estimate) |
 
 ## Founder decisions needed before build starts
 
 1. **Fee levels** (D5): 10% + 10% gives about $6.97–$8.47 contribution per $60 booking.
 2. **Background checks** (D7): cost and the contingency of launching with yard and remote categories if Checkr isn't ready.
-3. **Welcome reward** (D8): $50 for 100 helpers ($5,000), or $25, or shift part of the budget to poster credits (05 §3).
+3. **Welcome reward** (D8): decided 2026-11-14: $50 for every helper whose phone, ID and background checks pass, with no cohort and no monthly limit (05 §2–§4).
 4. **Launch categories:** all five, or the three hero categories only.
 5. **Team size**, which sets the timeline (A1).
 

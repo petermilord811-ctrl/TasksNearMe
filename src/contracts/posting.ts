@@ -173,6 +173,11 @@ export interface AddressSuggestion {
   areaPoint?: { lat: number; lng: number };
   /** False: outside the service area. Posting isn't possible there; offer `routes.waitlist()`. */
   inServiceArea: boolean;
+  /**
+   * Outside the cities we're open in (owner, 2026-11-14: national, cities open in turn): where the address is, so
+   * the UI can say "We're not in Dallas yet" and link the waitlist with the ZIP (`routes.waitlist({ zip })`).
+   */
+  outside?: { city: string; state: string; zip: string };
 }
 
 export type PhotoUploadResult =

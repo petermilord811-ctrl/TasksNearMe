@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { joinWaitlistAction } from '@/modules/marketing/actions';
-import { getWaitlistPageData } from '@/modules/marketing/queries';
+import { getWaitlistDemand, getWaitlistPageData } from '@/modules/marketing/queries';
+import { normalizeZip } from '@/shared/us-zip';
 import { PageSkeleton } from '@/ui/components';
 import { WaitlistScreen } from '@/ui/screens/public';
 
@@ -12,7 +13,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('title'), description: t('description'), robots: { index: false, follow: true } };
 }
 
-/** Outside the service area, or (`?from=beta`) from an invite-only step during the private beta. */
+/**
+ * Outside the cities we're open in, or (`?from=beta`) from an invite-only step during the private beta. `?zip=`
+ * (posting's "We're not in Dallas yet") fills the form and shows how many people already wait near it.
+ */
 function WaitlistPage({ searchParams }: PageProps<'/[locale]/waitlist'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="form" />}>
@@ -22,8 +26,20 @@ function WaitlistPage({ searchParams }: PageProps<'/[locale]/waitlist'>) {
 }
 
 async function Waitlist({ searchParams }: Pick<PageProps<'/[locale]/waitlist'>, 'searchParams'>) {
-  const [{ from }, data] = await Promise.all([searchParams, getWaitlistPageData()]);
-  return <WaitlistScreen data={{ ...data, ...(from === 'beta' ? { from: 'beta' as const } : {}) }} handlers={{ onJoin: joinWaitlistAction }} />;
+  const [{ from, zip }, data] = await Promise.all([searchParams, getWaitlistPageData()]);
+  const initialZip = typeof zip === 'string' ? normalizeZip(zip) : null;
+  const demand = initialZip ? await getWaitlistDemand(initialZip) : null;
+  return (
+    <WaitlistScreen
+      data={{
+        ...data,
+        ...(from === 'beta' ? { from: 'beta' as const } : {}),
+        ...(initialZip ? { initialZip } : {}),
+        ...(demand ? { demand } : {}),
+      }}
+      handlers={{ onJoin: joinWaitlistAction }}
+    />
+  );
 }
 
 export default withClientMessages('[locale]/(public)/waitlist/page.tsx', WaitlistPage);

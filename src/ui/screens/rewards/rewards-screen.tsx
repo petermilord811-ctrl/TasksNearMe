@@ -7,7 +7,7 @@ import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Money } from '@/ui/components/money/money';
-import { RewardGrantCard } from '@/ui/components/rewards';
+import { RewardGrantCard, WelcomeGiftCardView } from '@/ui/components/rewards';
 import { cn } from '@/ui/lib/utils';
 
 export interface RewardsScreenProps {
@@ -24,8 +24,8 @@ function ProgramSummary({ program }: { program: RewardProgramView }) {
   return <li className="space-y-1">
     <h3 className="text-[17px]/6 font-semibold md:text-lg/6.5">{t(`programs.${program.program}`)}</h3>
     <p className="text-sm leading-6 text-muted-foreground tabular-nums">
-      {program.program === 'welcome' && amount && threshold
-        ? t('page.rules.welcome', { amount, threshold })
+      {program.program === 'welcome' && amount
+        ? t('page.rules.welcome', { amount })
         : program.program === 'repeat' && amount
           ? t('page.rules.repeat', { amount })
           : program.program === 'recurring_month' && amount
@@ -45,8 +45,11 @@ export function RewardsScreen({ data, handlers, now }: RewardsScreenProps) {
     { label: 'redeemed', cents: data.totals.redeemedThisYearCents },
   ] as const;
 
+  // The welcome gift card leads the page while it's still to earn, on its way or ready to pick.
+  const welcome = data.welcome && data.welcome.state !== 'delivered' ? data.welcome : undefined;
   return <div className="mx-auto w-full max-w-content space-y-6 md:space-y-8">
     <PageHeader title={t('page.title')} description={t('page.description')} />
+    {welcome && <WelcomeGiftCardView card={welcome} />}
     {!data.helperReady ? <EmptyState
       title={t('page.notHelper.title')}
       body={t('page.notHelper.body')}

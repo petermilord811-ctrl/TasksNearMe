@@ -18,6 +18,11 @@ function RewardStatusDetail({ grant, now }: Pick<RewardGrantCardProps, 'grant' |
   const { formatDate, formatRelative } = useFormat();
   const t = useTranslations('rewards');
   if (grant.status === 'voided' && grant.voidReason) return t(`voidReasons.${grant.voidReason}`);
+  // The welcome gift card follows no booking: it waits in line for the month's gift cards, then a quick check.
+  if (grant.program === 'welcome' && grant.queuedUntil) {
+    return <time dateTime={grant.queuedUntil} title={formatRelative(grant.queuedUntil, now)}>{t('welcomeDetails.queued', { date: formatDate(grant.queuedUntil) })}</time>;
+  }
+  if (grant.program === 'welcome' && grant.status === 'in_review') return t('welcomeDetails.in_review');
   if (grant.status === 'qualified' || grant.status === 'redeemable' || grant.status === 'expired') {
     const date = grant.status === 'qualified' ? grant.holdUntil : grant.expiresAt;
     return date

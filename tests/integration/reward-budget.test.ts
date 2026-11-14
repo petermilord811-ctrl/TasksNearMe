@@ -1,25 +1,23 @@
-import { and, eq, inArray, isNotNull, like, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
-import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { areas, markets } from '@/modules/markets/schema';
-import { DEFAULT_FEES } from '@/modules/markets/policy-defaults';
-import { quoteBreakdown } from '@/modules/payments/fees';
 import { helperProfiles } from '@/modules/profiles/schema';
-import { BUDGET_COMMITTED_STATUSES, REWARD_RULES } from '@/modules/rewards/domain';
-import { assignFoundingNumber } from '@/modules/rewards/founding';
+import { REWARD_RULES, nextMarketMonthStart, releasedThisMonthCents } from '@/modules/rewards/domain';
+import { FOUNDING_COHORT_SIZE, assignFoundingNumber } from '@/modules/rewards/founding';
 import { rewardGrants } from '@/modules/rewards/schema';
 import { syncRewards } from '@/modules/rewards/service';
-import { tasks } from '@/modules/tasks/schema';
-import { identityVerifications } from '@/modules/verification/schema';
+import { releaseWelcomeQueue } from '@/modules/rewards/welcome';
 import { createDb } from '@/platform/db/connect';
+import { outboxEvents } from '@/platform/outbox/schema';
 
 /**
- * T-26: reward budgets under concurrency. 50 helpers qualify for the welcome reward at the same moment against
- * a budget that has room for 10, and exactly 10 grants are made; the founding cohort's last 10 numbers go to
- * exactly 10 of 50 helpers clearing verification at once. Real parallel calls on a pool big enough for them to
- * overlap. 50 helpers made for this file (copies of Sam), verified in January 2020 (before every seeded helper,
- * so all 50 are in the founding cohort), each with a $60 booking funded nine days later.
+ * T-26: reward budgets under concurrency, with the welcome gift card's rule of 2026-11-14. 50 helpers pass their
+ * phone, ID and background checks at the same moment: every one of them gets a gift card at once, and a monthly
+ * budget with room for 10 lets exactly 10 leave the waiting line for review; the other 40 wait, and the next month
+ * moves the 10 oldest on. The founding badge's last 10 numbers go to exactly 10 of 50 helpers clearing verification
+ * at once. Real parallel calls on a pool big enough for them to overlap. 50 helpers made for this file (copies of
+ * Sam, whose ID and background checks are done), with verified phones.
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 12 });
@@ -29,51 +27,29 @@ const ANCHOR = 'usr_t26_anchor';
 const MARKET = 'mkt_t26';
 const AREA = 'area_t26';
 const WELCOME = REWARD_RULES.welcome.amountCents;
-const DAY = 86_400_000;
-const VERIFIED = Date.parse('2020-01-01T12:00:00.000Z');
+const VERIFIED = new Date('2020-01-01T12:00:00.000Z');
 
-async function committedWelcomeCents(): Promise<number> {
-  const [row] = await db
-    .select({ cents: sql<number>`coalesce(sum(${rewardGrants.amountCents}), 0)::int` })
-    .from(rewardGrants)
-    .where(and(eq(rewardGrants.program, 'welcome'), inArray(rewardGrants.status, [...BUDGET_COMMITTED_STATUSES])));
-  return row?.cents ?? 0;
-}
+const allWelcome = () =>
+  db.select({ program: rewardGrants.program, status: rewardGrants.status, amountCents: rewardGrants.amountCents, holdUntil: rewardGrants.holdUntil }).from(rewardGrants).where(eq(rewardGrants.program, 'welcome'));
 const grantsOfMine = () => db.select().from(rewardGrants).where(and(inArray(rewardGrants.helperUserId, HELPERS), eq(rewardGrants.program, 'welcome')));
+const released = <T extends { status: string }>(grants: T[]) => grants.filter((grant) => grant.status === 'in_review');
+const waiting = <T extends { status: string }>(grants: T[]) => grants.filter((grant) => grant.status === 'pending');
 
 beforeAll(async () => {
   const [sam] = await db.select().from(users).where(eq(users.id, 'usr_sam'));
   const [samProfile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, 'usr_sam'));
-  const [tv] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
-  const [task] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
-  const [terms] = await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_tv'));
-  if (!sam || !samProfile || !tv || !task || !terms) throw new Error('The seeded helper or booking is missing');
+  if (!sam || !samProfile?.idVerifiedAt || !samProfile.backgroundCheckedAt) throw new Error('The seeded helper is missing, or not verified');
   const people = [...HELPERS, ANCHOR];
-  await db.insert(users).values(people.map((id) => ({ ...sam, id, email: `${id}@example.test`, name: `T26 ${id.slice(-3)}`, phone: null, phoneVerifiedAt: null })));
+  await db.insert(users).values(people.map((id) => ({ ...sam, id, email: `${id}@example.test`, name: `T26 ${id.slice(-3)}`, phone: null, phoneVerifiedAt: VERIFIED })));
   await db.insert(helperProfiles).values(
     people.map((id) => ({ ...samProfile, userId: id, handle: id.replace(/_/g, '-'), status: 'active', foundingNumber: null, completedCount: 0, ratingAverage: null, ratingCount: 0 })),
   );
-  await db.insert(identityVerifications).values(
-    HELPERS.map((id, n) => {
-      const verifiedAt = new Date(VERIFIED + n * 60_000);
-      return { id: `idv_${id}`, userId: id, provider: 'dev', providerSessionId: `dev_${id}`, status: 'verified', isAdult: true, verifiedAt, createdAt: verifiedAt, updatedAt: verifiedAt };
-    }),
-  );
-  const fundedAt = new Date(VERIFIED + 9 * DAY);
-  await db.insert(tasks).values(HELPERS.map((id) => ({ ...task, id: `tsk_${id}`, slug: `t26-${id.slice(-3)}`, posterUserId: 'usr_ana', status: 'assigned' })));
-  await db.insert(bookings).values(
-    HELPERS.map((id) => ({ ...tv, id: `bkg_${id}`, taskId: `tsk_${id}`, offerId: null, posterUserId: 'usr_ana', helperUserId: id, status: 'confirmed', confirmedAt: fundedAt, createdAt: fundedAt, seriesId: null, visitIndex: null })),
-  );
-  await db.insert(bookingTerms).values(HELPERS.map((id) => ({ ...terms, id: `btm_${id}`, bookingId: `bkg_${id}`, priceCents: 6000, breakdown: quoteBreakdown(DEFAULT_FEES, { type: 'fixed', priceCents: 6000 }) })));
 });
 
 afterAll(async () => {
   const people = [...HELPERS, ANCHOR];
   await db.delete(rewardGrants).where(inArray(rewardGrants.helperUserId, people));
-  await db.delete(bookingTerms).where(like(bookingTerms.bookingId, 'bkg\\_usr\\_t26\\_%'));
-  await db.delete(bookings).where(like(bookings.id, 'bkg\\_usr\\_t26\\_%'));
-  await db.delete(tasks).where(like(tasks.id, 'tsk\\_usr\\_t26\\_%'));
-  await db.delete(identityVerifications).where(inArray(identityVerifications.userId, people));
+  await db.delete(outboxEvents).where(and(eq(outboxEvents.type, 'reward.earned'), inArray(sql`${outboxEvents.payload}->>'userId'`, people)));
   await db.delete(helperProfiles).where(inArray(helperProfiles.userId, people));
   await db.delete(users).where(inArray(users.id, people));
   await db.delete(areas).where(eq(areas.id, AREA));
@@ -82,34 +58,54 @@ afterAll(async () => {
 });
 
 describe('T-26: budgets under concurrency', () => {
-  it('makes exactly 10 welcome grants when 50 helpers qualify at once against a budget for 10', async () => {
-    const budget = (await committedWelcomeCents()) + 10 * WELCOME;
-    const now = new Date();
+  const now = new Date();
+
+  it('gives all 50 helpers their gift card at once, and lets exactly 10 out of the line against a month’s budget for 10', async () => {
+    const budget = releasedThisMonthCents(await allWelcome(), 'welcome', now) + 10 * WELCOME;
     await Promise.all(HELPERS.map((id) => syncRewards(db, id, now, { budgets: { welcome: budget } })));
-    const granted = await grantsOfMine();
-    expect(granted).toHaveLength(10);
-    expect(new Set(granted.map((grant) => grant.helperUserId)).size).toBe(10);
-    expect(granted.every((grant) => grant.status === 'pending' && grant.amountCents === WELCOME)).toBe(true);
-    expect(await committedWelcomeCents()).toBe(budget);
+    const grants = await grantsOfMine();
+    expect(grants).toHaveLength(50);
+    expect(new Set(grants.map((grant) => grant.helperUserId)).size).toBe(50);
+    expect(grants.every((grant) => grant.amountCents === WELCOME && grant.bookingId === null)).toBe(true);
+    expect(released(grants)).toHaveLength(10);
+    expect(waiting(grants)).toHaveLength(40);
+    expect(releasedThisMonthCents(await allWelcome(), 'welcome', now)).toBe(budget);
+    // Every helper heard they earned it, once.
+    const [{ count }] = (await db.execute(sql`select count(*)::int as count from outbox_events where type = 'reward.earned' and payload->>'userId' like 'usr_t26_h%'`)).rows as [{ count: number }];
+    expect(count).toBe(50);
 
-    // Spent: another round at once makes nothing more.
+    // Spent: another round at once moves no one, and makes no second card.
     await Promise.all(HELPERS.map((id) => syncRewards(db, id, new Date(), { budgets: { welcome: budget } })));
-    expect(await grantsOfMine()).toHaveLength(10);
+    const again = await grantsOfMine();
+    expect(again).toHaveLength(50);
+    expect(released(again)).toHaveLength(10);
   });
 
-  it('gives a voided grant’s share to exactly one more helper', async () => {
-    const budget = await committedWelcomeCents();
-    const [first] = await grantsOfMine();
-    await db.update(rewardGrants).set({ status: 'voided', voidReason: 'booking_canceled', updatedAt: new Date() }).where(eq(rewardGrants.id, first!.id));
+  it('gives a voided card’s share of the month to exactly one helper waiting in line', async () => {
+    const budget = releasedThisMonthCents(await allWelcome(), 'welcome', now);
+    const [first] = released(await grantsOfMine());
+    await db.update(rewardGrants).set({ status: 'voided', voidReason: 'risk_review', updatedAt: new Date() }).where(eq(rewardGrants.id, first!.id));
     await Promise.all(HELPERS.map((id) => syncRewards(db, id, new Date(), { budgets: { welcome: budget } })));
-    const live = (await grantsOfMine()).filter((grant) => grant.status !== 'voided');
-    expect(live).toHaveLength(10);
-    // The voided helper's booking already had its chance: the freed $50 went to someone new.
-    expect(live.some((grant) => grant.helperUserId === first!.helperUserId)).toBe(false);
-    expect(await committedWelcomeCents()).toBe(budget);
+    const grants = await grantsOfMine();
+    expect(released(grants)).toHaveLength(10);
+    expect(waiting(grants)).toHaveLength(39);
+    // Turned down by our team: that helper's program is over, no new card.
+    expect(grants.filter((grant) => grant.helperUserId === first!.helperUserId && grant.status !== 'voided')).toHaveLength(0);
   });
 
-  it('gives the founding cohort’s last 10 numbers to exactly 10 of 50 helpers clearing verification at once', async () => {
+  it('moves the 10 oldest waiting cards on when the next month’s budget opens, however many callers race', async () => {
+    const before = await grantsOfMine();
+    const oldest = [...waiting(before)].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id)).slice(0, 10).map((grant) => grant.id);
+    const nextMonth = new Date(nextMarketMonthStart(now).getTime() + 60 * 60 * 1000);
+    // Other tests' cards don't leave the line in that month, so a budget for 10 is room for exactly 10.
+    await Promise.all([0, 1, 2].map(() => releaseWelcomeQueue(db, nextMonth, { welcome: 10 * WELCOME })));
+    const after = await grantsOfMine();
+    const moved = released(after).filter((grant) => grant.holdUntil?.getTime() === nextMonth.getTime());
+    expect(moved.map((grant) => grant.id).sort()).toEqual([...oldest].sort());
+    expect(waiting(after)).toHaveLength(29);
+  });
+
+  it('gives the founding badge’s last 10 numbers to exactly 10 of 50 helpers clearing verification at once', async () => {
     // Founding numbers count per market, and other files hand out numbers in Sam's: this test's helpers move to a
     // market of their own (a copy of Sam's), so its count starts at zero whatever ran before (CI's file order).
     const [profile] = await db.select({ areaId: helperProfiles.areaId }).from(helperProfiles).where(eq(helperProfiles.userId, 'usr_sam'));
@@ -137,6 +133,6 @@ describe('T-26: budgets under concurrency', () => {
     expect(given).toEqual([91, 92, 93, 94, 95, 96, 97, 98, 99, 100]);
     const stored = await db.select({ number: helperProfiles.foundingNumber }).from(helperProfiles).where(and(inArray(helperProfiles.userId, HELPERS), isNotNull(helperProfiles.foundingNumber)));
     expect(stored.map((row) => row.number).sort((a, b) => a! - b!)).toEqual(given);
-    expect((await taken()).highest).toBe(REWARD_RULES.welcome.cohortSize);
+    expect((await taken()).highest).toBe(FOUNDING_COHORT_SIZE);
   });
 });

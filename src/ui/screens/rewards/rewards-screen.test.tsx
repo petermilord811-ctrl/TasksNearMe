@@ -33,6 +33,19 @@ describe('RewardsScreen', () => {
     expect(within(grants[0]).getByText('Repeat booking reward')).toBeVisible();
     expect(within(grants[1]).getByText('Welcome reward')).toBeVisible();
     expect(screen.getByText('$60.00 of $75.00 used')).toBeVisible();
+    // Sent: the welcome gift card no longer leads the page.
+    expect(screen.queryByRole('region', { name: /gift card was sent/ })).not.toBeInTheDocument();
+  });
+
+  it('leads with the welcome gift card: in line with its date, ready to pick, or still to earn', () => {
+    mount(rewardsPendingData);
+    expect(screen.getByRole('region', { name: 'Your $50 gift card is yours' })).toHaveTextContent('It moves on by Fri, Jan 1');
+    cleanup();
+    mount(rewardsRedeemableData);
+    expect(within(screen.getByRole('region', { name: 'Your $50 gift card is ready' })).getByRole('link', { name: 'Pick your card' })).toHaveAttribute('href', routes.app.rewards());
+    cleanup();
+    mount(rewardsNotHelperData);
+    expect(screen.getByRole('region', { name: 'Get verified, get $50' })).toBeVisible();
   });
 
   it('exposes the supplied repeat count and deadline as an accessible progress bar', () => {
@@ -55,6 +68,7 @@ describe('RewardsScreen', () => {
 
   it('gives helpers with no grants a find-work action and explains empty progress', () => {
     mount(rewardsEmptyData);
+    expect(screen.getByText('Comes with an in-home service')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'No rewards yet' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Find work' })).toHaveAttribute('href', routes.app.findWork());
     expect(screen.queryByRole('article')).not.toBeInTheDocument();

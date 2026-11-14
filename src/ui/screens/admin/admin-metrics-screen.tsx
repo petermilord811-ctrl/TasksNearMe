@@ -254,27 +254,30 @@ function Liquidity({ data }: { data: AdminMetricsPageData['liquidity'] }) {
 function ProgramSpend({ spend }: { spend: RewardProgramSpend }) {
   const t = useTranslations('adminMetrics.rewards');
   const program = t(`programs.${spend.program}`);
+  // A monthly budget (the welcome gift card's) is used by what left its waiting line this month.
+  const used = spend.budgetPeriod === 'month' ? (spend.releasedThisMonthCents ?? 0) : spend.committedCents;
   const row = (label: string, value: string) => <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-muted-foreground">{label}</dt><dd className="font-medium tabular-nums">{value}</dd></div>;
   return <li className={cn(adminSection, 'space-y-3')}>
     <div className="flex flex-wrap items-baseline justify-between gap-2">
       <h3 className="font-semibold">{program}</h3>
-      <p className="text-sm text-muted-foreground tabular-nums">{spend.budgetCents === undefined ? t('noBudget') : t('budgetAmount', { amount: formatMoney(spend.budgetCents) })}</p>
+      <p className="text-sm text-muted-foreground tabular-nums">{spend.budgetCents === undefined ? t('noBudget') : t(spend.budgetPeriod === 'month' ? 'budgetAmountMonthly' : 'budgetAmount', { amount: formatMoney(spend.budgetCents) })}</p>
     </div>
     {spend.budgetCents !== undefined && <div
       role="meter"
       aria-valuemin={0}
       aria-valuemax={spend.budgetCents}
-      aria-valuenow={Math.min(spend.committedCents, spend.budgetCents)}
-      aria-valuetext={t('budgetMeterValue', { committed: formatMoney(spend.committedCents), budget: formatMoney(spend.budgetCents) })}
+      aria-valuenow={Math.min(used, spend.budgetCents)}
+      aria-valuetext={t('budgetMeterValue', { committed: formatMoney(used), budget: formatMoney(spend.budgetCents) })}
       aria-label={t('budgetMeter', { program, used: spend.budgetUsedPercent ?? 0 })}
       className="h-2.5 rounded-full bg-foreground/[0.07] dark:bg-white/[0.08]"
     >
       <div className="h-2.5 rounded-full bg-primary" style={{ width: `${Math.min(100, spend.budgetUsedPercent ?? 0)}%` }} />
     </div>}
     <dl className="space-y-1 text-sm">
+      {spend.budgetPeriod === 'month' && row(t('releasedThisMonth'), formatMoney(used))}
       {row(t('committed'), formatMoney(spend.committedCents))}
       {row(t('delivered'), formatMoney(spend.deliveredCents))}
-      {spend.remainingCents !== undefined && row(t('remaining'), formatMoney(spend.remainingCents))}
+      {spend.remainingCents !== undefined && row(t(spend.budgetPeriod === 'month' ? 'remainingMonthly' : 'remaining'), formatMoney(spend.remainingCents))}
       {row(t('inReview'), count(spend.inReview))}
     </dl>
     <div className="space-y-1 border-t border-foreground/[0.07] pt-3 text-sm dark:border-white/[0.07]">

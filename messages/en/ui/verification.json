@@ -161,7 +161,7 @@
     "rules": "Send a document dated within the last {days} days that shows your name and this address: a photo or a PDF up to {megabytes} MB, with all four corners visible.",
     "search": "Your home address",
     "searchHint": "Start typing your street address, then choose it from the list.",
-    "outOfArea": "We can verify home addresses in and around Austin only.",
+    "outOfArea": "We can verify home addresses only in the cities we're open in. Live somewhere else? On the Area step, choose “Somewhere else in the US” and finish your other checks now.",
     "unit": "Apartment or unit (optional)",
     "unitHint": "As it appears on your document.",
     "documentType": "Document type",

@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ActionResult, HelperServicesInput } from '@/contracts';
 import { routes } from '@/contracts';
-import { onboardingAreaStep, onboardingProfileStep, samProfileEditorData } from '@/fixtures';
+import { onboardingAreaAwaiting, onboardingAreaStep, onboardingProfileStep, samProfileEditorData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import helperOnboarding from '../../../../messages/en/ui/helperOnboarding.json';
 import { HelperAreaForm, HelperProfileForm, HelperServicesForm, HelperToolsForm } from './helper-forms';
@@ -108,7 +108,46 @@ describe('helper area and tools forms', () => {
     await user.selectOptions(screen.getByLabelText('Service radius'), '8');
     await user.click(screen.getByRole('checkbox', { name: 'I also help remotely' }));
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(onSave).toHaveBeenCalledWith({ areaId: 'area_mueller', serviceRadiusMiles: 8, remoteOk: true });
+    expect(onSave).toHaveBeenCalledWith({ where: 'market', areaId: 'area_mueller', homeZip: '', homeCity: '', serviceRadiusMiles: 8, remoteOk: true });
+  });
+
+  it('takes a ZIP and city somewhere else in the US, refusing a ZIP the market already covers (national, 2026-11-14)', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(saved);
+    renderForm(<HelperAreaForm values={onboardingAreaStep.values.area} areas={onboardingAreaStep.areas} remoteAllowed={false} onSave={onSave} homeMarket={onboardingAreaStep.homeMarket} />);
+    expect(screen.getByRole('radio', { name: /In Austin/ })).toBeChecked();
+    await user.click(screen.getByRole('radio', { name: /Somewhere else in the US/ }));
+    expect(screen.queryByLabelText('Home area')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getAllByText(messages.forms.fieldErrors.required)).toHaveLength(2);
+    const zip = screen.getByRole('textbox', { name: 'ZIP code' });
+    await user.type(zip, '78723');
+    expect(screen.getByText('That ZIP is in Austin. Choose “In Austin” and pick your neighborhood.')).toBeInTheDocument();
+    expect(zip).toHaveAttribute('aria-invalid', 'true');
+    await user.clear(zip);
+    await user.type(zip, '75204');
+    await user.type(screen.getByRole('textbox', { name: 'City' }), 'Dallas');
+    expect(screen.getByText(/We're opening city by city/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(onSave).toHaveBeenCalledWith({ where: 'elsewhere', areaId: '', homeZip: '75204', homeCity: 'Dallas', serviceRadiusMiles: 5, remoteOk: false });
+  });
+
+  it('shows the server\'s answer for a ZIP in the market, and where a waiting helper is on the list', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(() => Promise.resolve<ActionResult>({ ok: false, code: 'validation_failed', fieldErrors: { homeZip: ['in_market'] } }));
+    renderForm(<HelperAreaForm values={onboardingAreaAwaiting.values.area} areas={onboardingAreaAwaiting.areas} remoteAllowed={false} onSave={onSave} homeMarket={onboardingAreaAwaiting.homeMarket} awaitingCity={onboardingAreaAwaiting.awaitingCity} />);
+    expect(screen.getByRole('radio', { name: /Somewhere else in the US/ })).toBeChecked();
+    expect(screen.getByRole('textbox', { name: 'ZIP code' })).toHaveValue('75204');
+    expect(screen.getByText("You're on the list for Dallas, TX. We'll tell you the moment we open there.")).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText('That ZIP is in Austin. Choose “In Austin” and pick your neighborhood.')).toBeInTheDocument();
+  });
+
+  it('offers only the neighborhood without a home market (older callers)', () => {
+    renderForm(<HelperAreaForm values={onboardingAreaStep.values.area} areas={onboardingAreaStep.areas} remoteAllowed={false} onSave={saved} />);
+    expect(screen.queryByRole('radio', { name: /Somewhere else/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Home area')).toBeInTheDocument();
   });
 
   it('does not show remote help when offered services do not allow it', () => {

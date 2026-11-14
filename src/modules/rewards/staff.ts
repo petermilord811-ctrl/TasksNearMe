@@ -11,7 +11,8 @@ import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { BUDGET_COMMITTED_STATUSES, REWARD_BUDGETS, REWARD_RULES } from './domain';
+import { BUDGET_COMMITTED_STATUSES, REWARD_BUDGETS, REWARD_RULES, WELCOME_QUEUED_STATUSES, releasedThisMonthCents } from './domain';
+import { emitRewardEvent } from './grants';
 import { giftCardRecipient } from './service';
 import { riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
@@ -91,8 +92,11 @@ async function rowsOf(db: Db, staff: StaffActor, grants: GrantRow[]): Promise<Ad
 /** Reward rows with their booking, people and risk signals (also used on a person's page). */
 export const getAdminRewardRows = rowsOf;
 
-/** `routes.admin.rewards(filter)`: in review oldest first; otherwise newest first. */
-export async function getAdminRewards(db: Db, staff: StaffActor, filter: AdminRewardFilter): Promise<AdminRewardsPageData> {
+/**
+ * `routes.admin.rewards(filter)`: in review oldest first; otherwise newest first. Budgets are monthly (the welcome
+ * gift card's, 2026-11-14): set against what left its waiting line this calendar month, with what's still in line.
+ */
+export async function getAdminRewards(db: Db, staff: StaffActor, filter: AdminRewardFilter, now: Date = new Date()): Promise<AdminRewardsPageData> {
   const all = await db.select().from(rewardGrants).orderBy(desc(rewardGrants.createdAt)).limit(500);
   const selected =
     filter === 'in_review'
@@ -101,13 +105,26 @@ export async function getAdminRewards(db: Db, staff: StaffActor, filter: AdminRe
         ? all.filter((grant) => grant.status === 'failed')
         : all;
   const programs = [...new Set(all.map((grant) => grant.program as RewardProgramCode)), 'welcome' as RewardProgramCode];
+  // The monthly budget's numbers from every grant, not just the latest 500: what left the line this month, and
+  // what's still in it.
+  const monthly = await Promise.all(
+    [...new Set(programs)].filter((program) => REWARD_BUDGETS[program] !== undefined).map(async (program) => {
+      const rows = await db
+        .select({ program: rewardGrants.program, status: rewardGrants.status, amountCents: rewardGrants.amountCents, holdUntil: rewardGrants.holdUntil })
+        .from(rewardGrants)
+        .where(and(eq(rewardGrants.program, program), inArray(rewardGrants.status, [...WELCOME_QUEUED_STATUSES, ...BUDGET_COMMITTED_STATUSES])));
+      const queuedCents = rows.filter((row) => WELCOME_QUEUED_STATUSES.includes(row.status as RewardStatus)).reduce((sum, row) => sum + row.amountCents, 0);
+      return [program, { releasedThisMonthCents: releasedThisMonthCents(rows, program, now), queuedCents }] as const;
+    }),
+  );
+  const monthlyOf = new Map(monthly);
   return {
     filter,
     rows: await rowsOf(db, staff, selected.slice(0, 100)),
     counts: { in_review: all.filter((grant) => grant.status === 'in_review').length, failed: all.filter((grant) => grant.status === 'failed').length, all: all.length },
     budgets: [...new Set(programs)].map((program) => ({
       program,
-      ...(REWARD_BUDGETS[program] !== undefined ? { budgetCents: REWARD_BUDGETS[program] } : {}),
+      ...(REWARD_BUDGETS[program] !== undefined ? { budgetCents: REWARD_BUDGETS[program], period: 'month' as const, ...monthlyOf.get(program) } : {}),
       committedCents: all.filter((grant) => grant.program === program && BUDGET_COMMITTED_STATUSES.includes(grant.status as RewardStatus)).reduce((sum, grant) => sum + grant.amountCents, 0),
       deliveredCents: all.filter((grant) => grant.program === program && grant.status === 'delivered').reduce((sum, grant) => sum + grant.amountCents, 0),
     })),
@@ -139,6 +156,8 @@ export async function decideReward(
   switch (parsed.data.action) {
     case 'approve_review':
       moved = await guarded({ status: 'redeemable', redeemableAt: now, expiresAt: new Date(now.getTime() + REWARD_RULES.redeemDays * DAY) });
+      // The helper hears it's ready to pick (`reward_ready`).
+      if (moved.length > 0) await emitRewardEvent(db, 'reward.ready', grant);
       break;
     case 'reject_review':
     case 'void':

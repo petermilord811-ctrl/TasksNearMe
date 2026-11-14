@@ -16,7 +16,8 @@
       "todo": "To do",
       "in_review": "In review. We'll let you know.",
       "locked": "Opens after the steps before it",
-      "skipped": "Not needed"
+      "skipped": "Not needed",
+      "later": "When your city opens"
     },
     "actions": {
       "start": "Start",
@@ -25,26 +26,14 @@
       "statusLabel": "Check status: {step}"
     }
   },
-  "founding": {
-    "openTitle": "<amount></amount> founding-helper gift card",
-    "openBody": "Our first {cohort} verified helpers get a <amount></amount> gift card with their first completed and paid task of <minimum></minimum> or more, within {days, plural, one {# day} other {# days}} of their ID check.",
-    "spotsLeft": "{spots, plural, one {# spot left} other {# spots left}} of {cohort}",
-    "spotsMeter": "{taken} of {cohort} founding spots taken",
-    "stillNeeded": "{done} of {total} verification steps done. Still to do: {steps}.",
-    "almost": "Your verification steps are done. Your founding number comes as soon as your profile is ready.",
-    "yoursTitle": "You're founding helper #{number}",
-    "yoursBody": "Complete your first paid task of <minimum></minimum> or more by {date} and the <amount></amount> gift card is yours.",
-    "yoursBodyNoDate": "Complete your first paid task of <minimum></minimum> or more within {days, plural, one {# day} other {# days}} of your ID check and the <amount></amount> gift card is yours.",
-    "earnedBody": "Your <amount></amount> gift card is on its way. Follow it on <link>Rewards</link>.",
-    "noReviews": "Rewards never depend on reviews or ratings."
-  },
   "previews": {
     "group": "Helper: the profile's first page",
-    "onboardingOpen": "Onboarding profile step: founding card, spots left",
-    "onboardingLastSpot": "Onboarding profile step: the last founding spot",
-    "onboardingNoFounding": "Onboarding profile step: no founding spots left",
-    "editorYours": "Profile editor: founding helper #12",
-    "editorEarned": "Profile editor: founding gift card on its way",
+    "onboardingOpen": "Onboarding profile step: welcome gift card, checks to go",
+    "onboardingAlmost": "Onboarding profile step: one check to go",
+    "onboardingRemoteOnly": "Onboarding profile step: the background check comes with in-home services",
+    "onboardingNoGift": "Onboarding profile step: no gift card (program off)",
+    "editorReady": "Profile editor: gift card ready to pick",
+    "editorQueued": "Profile editor: gift card in line for next month",
     "accountHelper": "Account: a helper's verification",
     "accountClient": "Account: a client's verification"
   }

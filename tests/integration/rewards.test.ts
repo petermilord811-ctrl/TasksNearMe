@@ -12,17 +12,19 @@ afterAll(() => pool.end());
 
 const deps = { db, giftCards: createDevGiftCardProvider() };
 
-describe('the welcome reward', () => {
-  it('is pending for a founding helper once a qualifying booking is paid, and redeems to a gift card link', async () => {
+describe('the welcome gift card', () => {
+  it('is Jordan’s for his phone, ID and background checks (no booking), and redeems to a gift card link', async () => {
     const page = await getRewardsPage(db, { id: 'usr_jordan', helperReady: true }, new Date());
     const welcome = page.grants.find((grant) => grant.program === 'welcome');
-    expect(welcome).toMatchObject({ amountCents: 5000, status: 'pending', actions: [] });
+    expect(welcome).toMatchObject({ amountCents: 5000, status: 'in_review', actions: [] });
+    expect(welcome).not.toHaveProperty('booking');
+    expect(page.welcome).toMatchObject({ state: 'earned', foundingNumber: 63 });
     expect(page.totals.pendingCents).toBeGreaterThanOrEqual(5000);
     // Asking twice changes nothing.
     expect((await getRewardsPage(db, { id: 'usr_jordan', helperReady: true }, new Date())).grants.filter((grant) => grant.program === 'welcome')).toHaveLength(1);
 
     expect(await redeemReward(deps, 'usr_jordan', welcome!.id, new Date())).toEqual({ ok: false, code: 'not_allowed' });
-    // The hold and the review passed (the job runner and the staff tools do this later).
+    // Our team's check passed (the staff tools do this; welcome-reward.test.ts goes through them).
     await db.update(rewardGrants).set({ status: 'redeemable', redeemableAt: new Date(), expiresAt: new Date(Date.now() + 90 * 86_400_000) }).where(eq(rewardGrants.id, welcome!.id));
     expect(await redeemReward(deps, 'usr_sam', welcome!.id, new Date())).toEqual({ ok: false, code: 'not_allowed' });
     expect(await redeemReward(deps, 'usr_jordan', welcome!.id, new Date())).toEqual({ ok: true, code: 'submitted' });
@@ -32,9 +34,10 @@ describe('the welcome reward', () => {
     expect(await redeemReward(deps, 'usr_jordan', welcome!.id, new Date())).toEqual({ ok: false, code: 'not_allowed' });
   });
 
-  it('is not for helpers verified more than 60 days before the booking, nor for people who are not helpers', async () => {
-    expect((await getRewardsPage(db, { id: 'usr_lee', helperReady: true }, new Date())).grants.filter((grant) => grant.program === 'welcome')).toEqual([]);
+  it('has no window or cohort: Lee, verified in June with no founding number, gets one too; a client gets none', async () => {
+    expect((await getRewardsPage(db, { id: 'usr_lee', helperReady: true }, new Date())).grants.filter((grant) => grant.program === 'welcome')).toEqual([expect.objectContaining({ amountCents: 5000 })]);
     expect(await getRewardsPage(db, { id: 'usr_maya', helperReady: false }, new Date())).toMatchObject({ helperReady: false, grants: [] });
+    expect((await db.select().from(rewardGrants).where(and(eq(rewardGrants.helperUserId, 'usr_maya'), eq(rewardGrants.program, 'welcome'))))).toEqual([]);
   });
 });
 

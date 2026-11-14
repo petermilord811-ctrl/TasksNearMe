@@ -18,6 +18,11 @@ export const markets = pgTable('markets', {
   centerLat: doublePrecision('center_lat').notNull(),
   centerLng: doublePrecision('center_lng').notNull(),
   serviceRadiusKm: integer('service_radius_km').notNull(),
+  /**
+   * The ZIP3 prefixes (first three digits of a ZIP) the market covers, e.g. Austin's ["786", "787"]. Helpers and
+   * waitlist entries elsewhere in the US are matched to a market by their ZIP (src/modules/markets/coverage.ts).
+   */
+  zipPrefixes: jsonb('zip_prefixes').$type<string[]>().notNull().default([]),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

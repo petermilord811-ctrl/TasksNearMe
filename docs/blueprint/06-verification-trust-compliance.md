@@ -52,7 +52,7 @@ Each capture counts as a try toward the limits above, as a provider session does
 ### D7 — Background checks (founders to sign off)
 
 - **Recommendation:** require a background check before helpers can take **in-home** tasks: assembly, moving help, cleaning, and in-person computer help. Yard cleanup and remote help don't require one.
-- The platform pays for the founding cohort, about 100 × $30–$60.
+- The platform pays for the founding cohort, about 100 × $30–$60. Since 2026-11-14 a clear background check is also one of the three checks that earn the $50 welcome gift card for every helper (05 §2), so who pays for checks past the first 100, and whether yard or remote-only helpers may opt into one, is an open cost decision for the owner.
 - **Contingency:** if Checkr credentialing and FCRA review (**F9**) aren't finished by M7, launch with yard cleanup and remote computer help only, and enable the in-home categories when ready. The category flag `requires_background_check` makes this a config change.
 
 ## 2. Trust and safety controls at launch
@@ -106,3 +106,4 @@ Staff see **statuses, not secrets**. SSNs, bank details, background reports and 
 | **F18** | Consumer protection | Cancellation, refund, auto-approval, and dispute wording (Texas DTPA); price display | Counsel | **Yes** |
 | F19 | Checkout presentment | Apple Pay and Google Pay domain registration for every domain and subdomain (including `www`) on the platform account; statement descriptor; receipts | Eng | **Yes** |
 | **F20** | Data retention and requests | Retention schedule (08 §5); law-enforcement request policy | Counsel | **Yes** |
+| **F21** | Helpers outside Texas (owner, 2026-11-14: national, cities open in turn) | Helpers anywhere in the US can now sign up and take the ID check (our selfie capture and the provider's) and the background check before their city opens. Confirm per state: biometric consent and retention rules beyond Texas CUBI (Illinois BIPA: a written release and a public retention policy, with a private right of action; Washington RCW 19.375; Texas-only wording in our notice today); background-check disclosures and fair-chance steps (California ICRAA and the Fair Chance Act, New York Article 23-A, city ordinances); worker classification (01 F5 is Texas-only); the gift card's tax and sweepstakes-style rules by state | Counsel | **Yes** for the ID and background checks of helpers outside Texas |

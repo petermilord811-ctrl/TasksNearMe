@@ -53,7 +53,7 @@
 | T-10 | H cancels | Full refund; strike on H; **Find a replacement** reopens the task; H2 can offer |
 | T-11 | H no-show | P can report only after start + 30 min with no check-in; refund; H contests → case |
 | T-12 | P unavailable | H waits 20 min, reports **Can't access**; no reply in 30 min → H gets $12.00; P contests → case |
-| T-13 | Dispute settled at $45 | Refund $16.50; transfer $40.50; welcome reward still qualifies |
+| T-13 | Dispute settled at $45 | Refund $16.50; transfer $40.50; a booking reward re-evaluated on the final price still qualifies (the welcome gift card follows no booking since 2026-11-14) |
 | T-14 | Dispute resolved as full refund by S | Refund $66.00; no transfer; reward voided |
 | T-15 | Change requests | Increase charged on-session before taking effect; decrease refunded; decline or expiry keeps the old terms; fees recalculated |
 | T-16 | Hourly with cap (moving help $35/h, cap 4 h, worked 3.5 h) | Charge $154.00; refund $19.25; transfer $110.25. Submitting 4.5 h is blocked until a cap increase is accepted and funded |
@@ -62,7 +62,7 @@
 | T-19 | Payout failure (Stripe's failing test bank account) | H sees "Action needed"; after updating the bank, the next payout succeeds |
 | T-20 | **Address privacy** | H2 never gets the address (UI, API, HTML, OG tags, JSON-LD, notifications, logs). H sees it only after confirmation, until 48 h after completion. S needs a reason, and the access is logged. Photos have no EXIF |
 | T-21 | Contact masking | Phone and email patterns masked before confirmation, shown after |
-| T-22 | **Welcome reward** | $60 task → pending → qualified → redeemable after a 7-day hold → redeemed (sandbox). A $35 task creates no grant. Canceling voids the grant and the next qualifying booking creates a new one. When the cohort cap is reached, no new grants are created |
+| T-22 | **Welcome gift card** (rule of 2026-11-14) | The last of the phone, ID and background checks passes → a grant with no booking, the helper told once → out of the month's waiting line → our team approves (the helper told) → redeemed once (sandbox). A helper without the background check gets none; one turned down in review never gets another; an unredeemed card expires after 90 days. Past the month's budget, cards wait and the oldest move on when the next month opens (T-26) |
 | T-23 | **Repeat reward** | 3rd paid booking with the same poster within 90 days → $10. A fully refunded booking doesn't count. Once per pair; monthly cap enforced |
 | T-24 | **Stacking** (acceptance and completion flags on in staging) | Only one booking-level reward per booking; acceptance = 5% × $60 = $3.00, capped |
 | T-25 | Self-dealing pair (shared device or card fingerprint) | Grant goes to `in_review`; S rejects → voided |
@@ -124,3 +124,14 @@
 - **Invite-only:** 30–50 founding-cohort helpers (welcome reward eligible) and 100–150 posters from 2–3 Austin neighborhoods (for example Mueller, East Austin, Hyde Park), recruited through neighborhood groups and personal networks.
 - **Ops cadence:** staff watch every booking; daily money reconciliation review; twice-weekly policy tuning (fees, timers, price guidance) through versioned market policies.
 - **Exit:** ≥ 50 completed paid bookings across at least 4 categories, launch criteria trending green, and no open P0 bugs.
+
+## 7. Opening the next cities (owner, 2026-11-14: national, cities open in turn)
+
+Austin launches first (M8); the site already speaks to the whole US. Each next city follows the same path:
+
+1. **Demand.** The waitlist page lists the cities people ask for most (waitlist entries plus helpers waiting there, at least 3 people per city), and `/waitlist?zip=` shows the count near a ZIP. Staff pick the next city from these counts and from waiting helpers per category.
+2. **Market data.** A market row with its ZIP3 prefixes, center, radius, neighborhoods (areas), categories with local price guidance, and a published policy, in a seed or staff tool. No code change.
+3. **Pre-launch.** An admin sets the market to pre-launch (`setMarketStatus`, with a reason, audited). Helpers who waited there move to it and are told (`city_open`); they choose a neighborhood and verify their home address. Clients come in by invitation (private beta, as in §6).
+4. **Live.** When the city meets §5's supply and quality criteria, an admin sets it live. Until dates are formatted in each market's own time zone (completion plan 8.1), only a market in Central time can go live; the status change refuses others.
+5. **Counsel before the first city outside Texas** (blocked.md): the biometric notice for the ID selfie (Illinois BIPA, Washington, others), background-check disclosures (California ICRAA, New York Article 23-A, local fair-chance rules), sales tax on service fees, and each state's worker-classification tests.
+

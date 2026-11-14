@@ -135,14 +135,20 @@ export interface MetricsLiquidity {
 
 export interface RewardProgramSpend {
   program: RewardProgramCode;
-  /** Programs without a budget run on the helpers' monthly cap alone. */
+  /**
+   * Programs without a budget run on the helpers' monthly cap alone. The welcome gift card's budget is monthly
+   * (`budgetPeriod`, 2026-11-14): it's set against what left its waiting line this calendar month.
+   */
   budgetCents?: Cents;
+  budgetPeriod?: 'month';
+  /** Monthly budgets: what left the waiting line this calendar month. */
+  releasedThisMonthCents?: Cents;
   /** Everything not voided or expired: pending to delivered. */
   committedCents: Cents;
   deliveredCents: Cents;
-  /** `budgetCents − committedCents`, never below 0 (no budget: absent). */
+  /** `budgetCents −` what counts against it (committed, or released this month), never below 0 (no budget: absent). */
   remainingCents?: Cents;
-  /** Of the budget, committed (no budget: absent). */
+  /** Of the budget, used (no budget: absent). */
   budgetUsedPercent?: number;
   /** Granted in the period (not voided since). */
   periodGrantedCents: Cents;

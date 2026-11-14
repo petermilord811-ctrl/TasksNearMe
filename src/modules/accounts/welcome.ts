@@ -4,17 +4,16 @@ import type { EmailProvider } from '@/integrations/email';
 import { appUrl } from '@/integrations/oauth';
 import { getFlags } from '@/modules/markets/queries';
 import { categories, markets } from '@/modules/markets/schema';
-import { countFoundingHelpers } from '@/modules/profiles/queries';
 import { WELCOME_PROGRAM } from '@/modules/rewards/programs';
 import type { Db } from '@/platform/db/connect';
 import { renderWelcomeEmail, type WelcomeOffer } from './emails/welcome';
 import { users } from './schema';
 
-/** The founding helper reward while it's open in this market: the same rule as the become-a-helper page. */
+/** The welcome gift card while the program is on in this market: the same rule as the become-a-helper page. */
 export async function welcomeOfferFor(db: Db, marketId: string): Promise<WelcomeOffer | undefined> {
-  const [flags, claimed] = await Promise.all([getFlags(marketId, db), countFoundingHelpers(marketId, db)]);
-  if (flags['reward.welcome'] !== true || claimed >= WELCOME_PROGRAM.cohortLimit) return undefined;
-  return { ...WELCOME_PROGRAM, spotsClaimed: claimed };
+  const flags = await getFlags(marketId, db);
+  if (flags['reward.welcome'] !== true) return undefined;
+  return { amountCents: WELCOME_PROGRAM.amountCents, redeemWithinDays: WELCOME_PROGRAM.redeemWithinDays };
 }
 
 /**

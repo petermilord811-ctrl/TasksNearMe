@@ -295,7 +295,7 @@ describe('HomeScreen (the landing page)', () => {
     expect(within(panel).getByText(open)).toBeInTheDocument();
     expect(within(hero()).getAllByText(open)).toHaveLength(2);
     const reward = homePageData.welcomeReward!;
-    expect(within(panel).getByText(t('hero.reward.badge', { amount: formatMoney(reward.amountCents), limit: reward.cohortLimit }))).toBeInTheDocument();
+    expect(within(panel).getByText(t('hero.reward.badge', { amount: formatMoney(reward.amountCents) }))).toBeInTheDocument();
     expect(within(panel).getByRole('link', { name: t('assistant.helperBecome') })).toHaveAttribute('href', routes.becomeAHelper());
     fireEvent.click(within(panel).getByRole('button', { name: t('assistant.helperSee') }));
     const filter = screen.getByRole('group', { name: t('map.filterLabel') });

@@ -29,7 +29,9 @@ export type AttentionTarget =
   /** The account page (privacy requests, sign-in, notifications). */
   | { kind: 'account' }
   /** A client's ID check (`routes.app.verifyIdentity()`). */
-  | { kind: 'verify_identity' };
+  | { kind: 'verify_identity' }
+  /** The helper's gift cards (`routes.app.rewards()`). */
+  | { kind: 'rewards' };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */

@@ -16,5 +16,6 @@ export function attentionHref(target: AttentionTarget): string {
     case 'series': return routes.app.series(target.seriesId);
     case 'account': return routes.app.account();
     case 'verify_identity': return routes.app.verifyIdentity();
+    case 'rewards': return routes.app.rewards();
   }
 }

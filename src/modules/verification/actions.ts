@@ -74,7 +74,7 @@ async function nextStepAfter(userId: string, saved: OnboardingStep): Promise<str
   const { progress, firstIncomplete } = computeOnboarding((await loadOnboardingState(db, userId, await requestNow())).facts);
   const following = ONBOARDING_STEPS.slice(ONBOARDING_STEPS.indexOf(saved) + 1).find((step) => {
     const state = progress.steps.find((s) => s.step === step)?.state;
-    return state !== 'skipped' && (state !== 'done' || step === 'done');
+    return state !== 'skipped' && state !== 'later' && (state !== 'done' || step === 'done');
   });
   const followingState = progress.steps.find((s) => s.step === following)?.state;
   return routes.app.helperOnboarding(following && followingState !== 'locked' ? following : firstIncomplete);

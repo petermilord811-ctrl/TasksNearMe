@@ -19,7 +19,7 @@ import type {
   RewardStatus,
 } from '@/contracts';
 import { REWARD_PROGRAM_CODES } from '@/contracts';
-import { marketMonthStart } from '@/modules/rewards/domain';
+import { marketMonthStart, releasedThisMonthCents } from '@/modules/rewards/domain';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
@@ -93,6 +93,8 @@ export interface GrantFact {
   createdAt: Date;
   updatedAt: Date;
   deliveredAt?: Date;
+  /** Welcome gift cards: when the grant left its waiting line for review (what counts against a monthly budget). */
+  holdUntil?: Date;
 }
 
 export interface MetricsFacts {
@@ -112,6 +114,7 @@ export interface MetricsFacts {
   helperIdVerifiedAt: ReadonlyMap<string, Date>;
   /** Every reward grant (finance and admins only; empty otherwise). */
   grants: GrantFact[];
+  /** Monthly program budgets (`REWARD_BUDGETS`): set against what left the program's waiting line this month. */
   budgets: Partial<Record<RewardProgramCode, Cents>>;
   monthlyCapCents: Cents;
 }
@@ -223,10 +226,18 @@ function rewardSpendOf(facts: MetricsFacts, period: MetricsPeriod): MetricsRewar
     const committedCents = sum(grants.filter(committed));
     const budgetCents = facts.budgets[program];
     const periodGranted = grants.filter((grant) => committed(grant) && inPeriod(grant.createdAt, period));
+    // Budgets are monthly (2026-11-14): what left the waiting line this calendar month counts against them.
+    const releasedCents = releasedThisMonthCents(grants, program, period.now);
     return {
       program,
       ...(budgetCents !== undefined
-        ? { budgetCents, remainingCents: Math.max(0, budgetCents - committedCents), budgetUsedPercent: budgetCents > 0 ? Math.round((100 * committedCents) / budgetCents) : 100 }
+        ? {
+            budgetCents,
+            budgetPeriod: 'month' as const,
+            releasedThisMonthCents: releasedCents,
+            remainingCents: Math.max(0, budgetCents - releasedCents),
+            budgetUsedPercent: budgetCents > 0 ? Math.round((100 * releasedCents) / budgetCents) : 100,
+          }
         : {}),
       committedCents,
       deliveredCents: sum(grants.filter((grant) => grant.status === 'delivered')),

@@ -73,16 +73,14 @@ export function buildPricingPageData({ fees, cancellation, timers }: PublishedPo
 export interface BecomeHelperInput {
   fees: FeeSchedule;
   flags: Record<string, boolean>;
-  /** Founding-cohort spots already taken in this market. */
-  foundingSpotsClaimed: number;
 }
 
-export function buildBecomeHelperPageData({ fees, flags, foundingSpotsClaimed }: BecomeHelperInput): BecomeHelperPageData {
-  const welcomeOpen = flags['reward.welcome'] === true && foundingSpotsClaimed < WELCOME_PROGRAM.cohortLimit;
+/** The welcome gift card is for every helper whose checks pass (2026-11-14): on whenever its flag is. */
+export function buildBecomeHelperPageData({ fees, flags }: BecomeHelperInput): BecomeHelperPageData {
   return {
     exampleEarnings: quoteBreakdown(fees, { type: 'fixed', priceCents: DESK_CENTS }),
     firstPayoutDays: FIRST_PAYOUT_DAYS,
-    ...(welcomeOpen ? { welcomeReward: { ...WELCOME_PROGRAM, spotsClaimed: foundingSpotsClaimed } } : {}),
+    ...(flags['reward.welcome'] === true ? { welcomeReward: { amountCents: WELCOME_PROGRAM.amountCents, checks: WELCOME_PROGRAM.checks, redeemWithinDays: WELCOME_PROGRAM.redeemWithinDays } } : {}),
     ...(flags['reward.repeat'] === true ? { repeatReward: { ...REPEAT_PROGRAM } } : {}),
     inHomeCategoriesRequireBackgroundCheck: flags.background_checks === true,
   };

@@ -5,10 +5,10 @@ import { formatMoney } from '@/shared/format';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 
 /**
- * The welcome email, sent once when someone finishes signing up. The founding helper reward leads it while
- * the program is open (amounts and terms straight from the rewards program, spots from the live count):
- * a gift card with the spots left, the steps to earn it with the first one already done, and a button to
- * start. Then a way in for people who came to book help: one link per kind of task. Every link is absolute.
+ * The welcome email, sent once when someone finishes signing up. The welcome gift card leads it while the program
+ * is on (blueprint 05 §2, 2026-11-14: every helper whose phone, ID and background checks pass): the gift card
+ * with its three checks, the steps to earn it with the first one already done, and a button to start. Then a way
+ * in for people who came to book help: one link per kind of task. Every link is absolute.
  */
 
 const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.emails' }));
@@ -24,11 +24,6 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export interface WelcomeOffer {
   amountCents: number;
-  cohortLimit: number;
-  spotsClaimed: number;
-  minTaskPriceCents: number;
-  windowDays: number;
-  unlockDays: number;
   redeemWithinDays: number;
 }
 
@@ -38,7 +33,7 @@ export interface WelcomeEmailInput {
   appUrl: string;
   /** "Austin, TX". */
   market: string;
-  /** The founding helper reward, while it's open (absent: the program is off or the cohort is full). */
+  /** The welcome gift card, while the program is on in the person's market. */
   offer?: WelcomeOffer;
   /** Kinds of task to start a post from, in display order. */
   categories: { slug: string; name: string }[];
@@ -97,12 +92,15 @@ export function renderWelcomeEmail(input: WelcomeEmailInput): RenderedEmail {
   const url = (path: string) => `${input.appUrl}${path}`;
   const offer = input.offer;
   const amount = offer ? formatMoney(offer.amountCents).replace(/\.00$/, '') : '';
-  const left = offer ? Math.max(0, offer.cohortLimit - offer.spotsClaimed) : 0;
-  const claimedPercent = offer ? Math.min(100, Math.max(4, Math.round((offer.spotsClaimed / offer.cohortLimit) * 100))) : 0;
-  const minimum = offer ? formatMoney(offer.minTaskPriceCents).replace(/\.00$/, '') : '';
   const onboarding = url(routes.app.helperOnboarding());
   const subject = offer ? t('welcome.subjectOffer', { firstName: input.firstName, amount }) : t('welcome.subject', { firstName: input.firstName });
-  const preheader = offer ? t('welcome.preheaderOffer', { left, limit: offer.cohortLimit, market: input.market }) : t('welcome.preheader');
+  const preheader = offer ? t('welcome.preheaderOffer', { amount }) : t('welcome.preheader');
+  // The three checks that earn the gift card, as chips on it.
+  const checkChips = offer
+    ? (['phone', 'identity', 'background'] as const)
+        .map((check) => `<span style="display:inline-block;margin:0 6px 6px 0;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,0.22);font-size:13px;line-height:18px;font-weight:700;color:#ffffff;">&#10003; ${esc(t(`welcome.gift.checks.${check}`))}</span>`)
+        .join('')
+    : '';
 
   const hero = `<tr><td class="card-pad" style="padding:40px 40px 8px;">
 <h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:36px;line-height:42px;font-weight:800;letter-spacing:-1px;${ink}">${esc(t('welcome.greeting', { firstName: input.firstName }))}</h1>
@@ -116,16 +114,9 @@ export function renderWelcomeEmail(input: WelcomeEmailInput): RenderedEmail {
 <p style="margin:0;font-size:12px;line-height:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#ffffff;opacity:0.9;">${esc(t('welcome.gift.eyebrow'))}</p>
 <p class="gift-amount" style="margin:10px 0 0;font-family:${EMAIL_DISPLAY_FONT};font-size:72px;line-height:72px;font-weight:800;letter-spacing:-3px;color:#ffffff;">${esc(amount)}</p>
 <p style="margin:2px 0 0;font-size:20px;line-height:26px;font-weight:700;color:#ffffff;">${esc(t('welcome.gift.label'))}</p>
-<p style="margin:10px 0 0;font-size:15px;line-height:22px;color:#ffffff;">${esc(t('welcome.gift.for', { limit: offer.cohortLimit, market: input.market }))}</p>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;"><tr>
-<td width="${claimedPercent}%" style="height:10px;border-radius:999px 0 0 999px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
-<td style="height:10px;border-radius:0 999px 999px 0;background:#ffffff;opacity:0.3;background-color:rgba(255,255,255,0.32);font-size:0;line-height:0;">&nbsp;</td>
-</tr></table>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:8px;"><tr>
-<td style="font-size:13px;line-height:18px;color:#ffffff;">${esc(t('welcome.gift.claimed', { claimed: offer.spotsClaimed, limit: offer.cohortLimit }))}</td>
-<td align="right" style="font-size:13px;line-height:18px;font-weight:700;color:#ffffff;">${esc(t('welcome.gift.left', { left }))}</td>
-</tr></table>
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:22px;"><tr><td>${emailButton({ href: onboarding, label: t('welcome.gift.cta'), variant: 'light' })}</td></tr></table>
+<p style="margin:10px 0 0;font-size:15px;line-height:22px;color:#ffffff;">${esc(t('welcome.gift.for'))}</p>
+<p style="margin:14px 0 0;">${checkChips}</p>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:16px;"><tr><td>${emailButton({ href: onboarding, label: t('welcome.gift.cta'), variant: 'light' })}</td></tr></table>
 <p style="margin:14px 0 0;font-size:14px;line-height:20px;"><a class="link" href="${esc(url(routes.becomeAHelper()))}" target="_blank" style="color:#ffffff;text-decoration:underline;">${esc(t('welcome.gift.learn'))}</a></p>
 </td></tr>
 </table>
@@ -138,9 +129,10 @@ export function renderWelcomeEmail(input: WelcomeEmailInput): RenderedEmail {
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
 ${stepRow('1', t('welcome.steps.account.title'), t('welcome.steps.account.body'), 'done', false, t('welcome.steps.done'))}
 ${stepRow('2', t('welcome.steps.profile.title'), t('welcome.steps.profile.body'), 'next')}
-${stepRow('3', t('welcome.steps.verify.title'), t('welcome.steps.verify.body'), 'next')}
-${stepRow('4', t('welcome.steps.task.title', { minimum }), t('welcome.steps.task.body', { days: offer.windowDays }), 'next')}
-${stepRow('', t('welcome.steps.reward.title', { amount }), t('welcome.steps.reward.body', { days: offer.unlockDays, redeemDays: offer.redeemWithinDays }), 'reward', true)}
+${stepRow('3', t('welcome.steps.phone.title'), t('welcome.steps.phone.body'), 'next')}
+${stepRow('4', t('welcome.steps.identity.title'), t('welcome.steps.identity.body'), 'next')}
+${stepRow('5', t('welcome.steps.background.title'), t('welcome.steps.background.body'), 'next')}
+${stepRow('', t('welcome.steps.reward.title', { amount }), t('welcome.steps.reward.body', { redeemDays: offer.redeemWithinDays }), 'reward', true)}
 </table>
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:20px;"><tr><td>${emailButton({ href: onboarding, label: t('welcome.gift.cta') })}</td></tr></table>
 </td></tr>`
@@ -187,15 +179,15 @@ ${emailButton({ href: url(routes.becomeAHelper()), label: t('welcome.helper.cta'
   if (offer) {
     lines.push(
       `${t('welcome.gift.eyebrow').toUpperCase()}: ${amount} ${t('welcome.gift.label')}`,
-      t('welcome.gift.for', { limit: offer.cohortLimit, market: input.market }),
-      `${t('welcome.gift.claimed', { claimed: offer.spotsClaimed, limit: offer.cohortLimit })} · ${t('welcome.gift.left', { left })}`,
+      t('welcome.gift.for'),
       '',
       t('welcome.steps.title', { amount }),
       `[x] ${t('welcome.steps.account.title')}`,
       `[ ] ${t('welcome.steps.profile.title')}: ${t('welcome.steps.profile.body')}`,
-      `[ ] ${t('welcome.steps.verify.title')}: ${t('welcome.steps.verify.body')}`,
-      `[ ] ${t('welcome.steps.task.title', { minimum })}: ${t('welcome.steps.task.body', { days: offer.windowDays })}`,
-      `${t('welcome.steps.reward.title', { amount })} ${t('welcome.steps.reward.body', { days: offer.unlockDays, redeemDays: offer.redeemWithinDays })}`,
+      `[ ] ${t('welcome.steps.phone.title')}: ${t('welcome.steps.phone.body')}`,
+      `[ ] ${t('welcome.steps.identity.title')}: ${t('welcome.steps.identity.body')}`,
+      `[ ] ${t('welcome.steps.background.title')}: ${t('welcome.steps.background.body')}`,
+      `${t('welcome.steps.reward.title', { amount })} ${t('welcome.steps.reward.body', { redeemDays: offer.redeemWithinDays })}`,
       '',
       `${t('welcome.gift.cta')}: ${onboarding}`,
       `${t('footer.rewardsTerms')}: ${url(routes.legal('rewards-terms'))}`,

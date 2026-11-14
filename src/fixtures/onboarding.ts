@@ -10,8 +10,10 @@ import type {
   OnboardingStep,
   OnboardingStepState,
   VerificationSummary,
+  WelcomeGiftCard,
 } from '@/contracts';
 import { ONBOARDING_STEPS, routes } from '@/contracts';
+import { welcomeAlmostCard, welcomeEarnedCard, welcomeOpenCard } from './helper-standing';
 import { categoryViews } from './marketing';
 import { jordan, sam } from './people';
 import { samProfilePageData } from './profiles';
@@ -125,9 +127,19 @@ const base = {
   areas: austinAreaOptions,
   languageOptions,
   firstPayoutDays: 7,
-  welcomeReward: { amountCents: 5000, minTaskPriceCents: 4000, windowDays: 60 },
+  // The welcome gift card before any check: the phone comes first.
+  welcomeReward: {
+    state: 'open',
+    amountCents: 5000,
+    checks: [
+      { check: 'phone', state: 'todo' },
+      { check: 'identity', state: 'locked' },
+      { check: 'background', state: 'locked' },
+    ],
+  } satisfies WelcomeGiftCard,
   aiDraftingEnabled: true,
   agreementNeeded: false,
+  homeMarket: { name: 'Austin', zipPrefixes: ['786', '787'] },
 };
 
 const lockedAfterBasics: OnboardingStep[] = ['phone', 'identity', 'address', 'payout', 'background', 'done'];
@@ -158,6 +170,20 @@ export const onboardingAreaStep: HelperOnboardingPageData = {
   verification: { ...notStarted, background: cleaningNeedsCheck },
 };
 
+/** Somewhere else in the US (owner, 2026-11-14: national, cities open in turn): a ZIP and city instead of a neighborhood. */
+export const onboardingAreaElsewhere: HelperOnboardingPageData = {
+  ...onboardingAreaStep,
+  values: { ...priyaValues, area: { where: 'elsewhere', areaId: '', homeZip: '', homeCity: '', serviceRadiusMiles: 5, remoteOk: false } },
+};
+
+/** Priya lives in Dallas: her ZIP and city are saved, and she waits for Dallas to open. */
+const dallasArea: HelperOnboardingPageData['values']['area'] = { where: 'elsewhere', areaId: '', homeZip: '75204', homeCity: 'Dallas', serviceRadiusMiles: 12, remoteOk: false };
+export const onboardingAreaAwaiting: HelperOnboardingPageData = {
+  ...onboardingAreaStep,
+  awaitingCity: { city: 'Dallas', state: 'TX' },
+  values: { ...priyaValues, area: dallasArea },
+};
+
 /** The phone step: a number to add and verify. */
 export const onboardingPhoneStep: HelperOnboardingPageData = {
   ...base,
@@ -176,6 +202,7 @@ export const onboardingPhoneVerified: HelperOnboardingPageData = {
 /** The ID step, before the Texas biometric notice is accepted (our own check comes first). */
 export const onboardingIdentityStep: HelperOnboardingPageData = {
   ...base,
+  welcomeReward: { ...welcomeOpenCard, checks: [{ check: 'phone', state: 'done' }, { check: 'identity', state: 'current' }, { check: 'background', state: 'locked' }] },
   step: 'identity',
   progress: progress('identity', { locked: ['address', 'payout', 'background', 'done'] }),
   values: priyaValues,
@@ -328,6 +355,7 @@ const backgroundBase: VerificationSummary = { ...readyForPayout, payout: { statu
 /** Yard work is bookable now; cleaning waits for the background check. */
 export const onboardingBackgroundPending: HelperOnboardingPageData = {
   ...base,
+  welcomeReward: welcomeAlmostCard,
   step: 'background',
   progress: progress('background', { bookableCategories: ['yard-cleanup'] }),
   values: priyaValues,
@@ -360,9 +388,10 @@ export const onboardingBackgroundRenewal: HelperOnboardingPageData = {
 };
 export const onboardingBackgroundSuspended = withBackground({ status: 'suspended' });
 
-/** Jordan: everything done, bookable in every category he offers. */
+/** Jordan: everything done, bookable in every category he offers; the welcome gift card earned. */
 export const onboardingDone: HelperOnboardingPageData = {
   ...base,
+  welcomeReward: welcomeEarnedCard,
   step: 'done',
   progress: progress('done', { bookableCategories: ['furniture-assembly', 'moving-help', 'yard-cleanup'] }),
   values: {
@@ -387,6 +416,34 @@ export const onboardingDone: HelperOnboardingPageData = {
     payout: { status: 'active' },
     background: { status: 'clear', checkedAt: '2026-11-12T16:00:00.000Z', requiredFor: ['furniture-assembly', 'moving-help'], disclosureNeeded: false, validUntil: '2027-11-12T16:00:00.000Z', renewalOpen: false, canStart: false },
   },
+};
+
+/** Steps for a helper waiting for their city: everything before `pending` done, the home address `later`. */
+function awaitingProgress(pending: OnboardingStep[] = []): OnboardingProgress {
+  return {
+    steps: ONBOARDING_STEPS.map((step) => ({ step, state: step === 'address' ? 'later' : step === 'done' ? 'current' : pending.includes(step) ? 'todo' : 'done' })),
+    bookable: false,
+    bookableCategories: [],
+  };
+}
+
+/**
+ * Done while waiting for Dallas (owner, 2026-11-14): the phone, ID, payouts and background check are done; the
+ * home address waits until Dallas opens, and nothing is bookable yet.
+ */
+export const onboardingDoneAwaitingCity: HelperOnboardingPageData = {
+  ...onboardingDone,
+  progress: awaitingProgress(),
+  awaitingCity: { city: 'Dallas', state: 'TX' },
+  values: { ...onboardingDone.values, area: dallasArea },
+  verification: { ...onboardingDone.verification, address: { status: 'not_started' } },
+};
+
+/** Waiting for Dallas with the background check still to do. */
+export const onboardingDoneAwaitingCityPending: HelperOnboardingPageData = {
+  ...onboardingDoneAwaitingCity,
+  progress: awaitingProgress(['background']),
+  verification: { ...onboardingDoneAwaitingCity.verification, background: { status: 'not_started', requiredFor: ['furniture-assembly', 'moving-help'], disclosureNeeded: true, renewalOpen: false, canStart: true } },
 };
 
 /** The profile photo Sam can add in the editor (previews). */

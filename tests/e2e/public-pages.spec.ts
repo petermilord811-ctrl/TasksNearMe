@@ -11,7 +11,7 @@ test.describe('public pages', () => {
     await expect(page.getByText('A $60.00 task')).toBeAttached();
     await expect(page.getByText('$66.00', { exact: true }).first()).toBeAttached();
     await expect(page.getByText('$54.00', { exact: true }).first()).toBeAttached();
-    // The founding helper reward, while the program is on.
+    // The welcome gift card, while the program is on.
     await expect(page.getByText('$50.00 gift card')).toBeAttached();
     // Featured helpers are active helpers only (Priya's profile is still a draft); they float around the
     // hero on wide screens.
@@ -72,11 +72,14 @@ test.describe('public pages', () => {
     }
   });
 
-  test('become a helper: reward cards follow the flags and the founding cohort', async ({ page }) => {
+  test('become a helper: the welcome gift card for the three checks leads, with no spots to count', async ({ page }) => {
     await page.goto('/become-a-helper');
     await expect(page.getByRole('heading', { level: 1, name: 'Put your everyday skills to work nearby' })).toBeVisible();
-    // One founding number is taken in the seed (Jordan, #63).
-    await expect(page.getByText('99 spots left')).toBeVisible();
+    // Every helper who passes the phone, ID and background checks gets it (2026-11-14).
+    const gift = page.getByRole('region', { name: 'Get verified, get a $50 gift card' });
+    await expect(gift).toBeVisible();
+    await expect(gift.getByText('Pass a background check')).toBeVisible();
+    await expect(page.getByText(/spots? left/)).toHaveCount(0);
     await expect(page.getByText('$54.00').first()).toBeVisible();
   });
 

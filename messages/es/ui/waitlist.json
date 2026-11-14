@@ -1,6 +1,6 @@
 {
   "title": "Todavía no estamos en tu ciudad.",
-  "description": "Cuéntanos dónde te gustaría recibir ayuda local. Te escribiremos por correo cuando TasksNearMe abra cerca de ti.",
+  "description": "TasksNearMe abre ciudad por ciudad en todo EE. UU. Dinos dónde estás y te escribiremos cuando abramos cerca de ti. Cuantos más vecinos lo pidan, antes llegamos.",
   "join": "Unirme a la lista de espera",
   "interests": {
     "need_help": "Necesito ayuda",
@@ -15,10 +15,27 @@
     "group": "Lista de espera",
     "default": "Unirme a la lista de espera",
     "joined": "Confirmación de lista de espera",
-    "beta": "Unirse a la lista de espera desde un paso de invitación"
+    "beta": "Unirse a la lista de espera desde un paso de invitación",
+    "comingNext": "Ciudades que vienen, con la tarjeta de regalo para ayudantes",
+    "demand": "Desde publicar, con personas esperando cerca"
   },
   "beta": {
     "title": "Por ahora, TasksNearMe es solo con invitación.",
     "description": "Estamos dejando entrar a la gente poco a poco mientras empezamos. Deja tu correo y tu código postal, y te avisaremos por correo cuando haya un lugar."
+  },
+  "demand": "{count, plural, one {# persona cerca de {zip} ya está esperando} other {# personas cerca de {zip} ya están esperando}}",
+  "city": "Ciudad (opcional)",
+  "cityHint": "Así sabemos qué ciudad abrir después.",
+  "helpers": {
+    "title": "¿Puedes ayudar? Verifícate ya, vivas donde vivas",
+    "body": "Los ayudantes de cualquier lugar de EE. UU. pueden completar hoy sus verificaciones de teléfono, identidad y antecedentes y ganar una tarjeta de regalo de <amount></amount>. Tendrás todo listo el día que abramos en tu ciudad.",
+    "cta": "Hazte ayudante"
+  },
+  "comingNext": {
+    "title": "Adónde vamos después",
+    "description": "Las ciudades que más se piden. Cada solicitud acerca una ciudad.",
+    "city": "{city}, {state}",
+    "people": "{count, plural, one {# persona} other {# personas}}",
+    "helpers": "{count, plural, one {# ayudante con todo listo} other {# ayudantes con todo listo}}"
   }
 }

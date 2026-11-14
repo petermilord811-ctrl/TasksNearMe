@@ -99,6 +99,7 @@ describe('the gift card email', () => {
     expect(sent[0]).toMatchObject({ to: 'jordan@example.test', subject: 'Your $50.00 gift card is ready', tag: 'gift-card' });
     expect(sent[0]!.html).toContain('href="https://tasksnearme.example/dev/gift-cards/abc"');
     expect(sent[0]!.text).toContain("don't forward this email");
-    expect(sent[0]!.text).toContain('founding helper');
+    // The welcome card is for every verified helper now (no founding cohort).
+    expect(sent[0]!.text).toContain('welcome gift card');
   });
 });

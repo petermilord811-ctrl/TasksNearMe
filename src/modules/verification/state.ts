@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import type {
   AddressRejectionReason,
   CategorySlug,
@@ -10,7 +10,8 @@ import type {
 } from '@/contracts';
 import { currentAgreements } from '@/modules/accounts/agreements';
 import { users } from '@/modules/accounts/schema';
-import { categories } from '@/modules/markets/schema';
+import { awaitingCity, OPEN_MARKET_STATUSES } from '@/modules/markets/coverage';
+import { categories, markets } from '@/modules/markets/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
@@ -26,15 +27,16 @@ import { addressStanding, backgroundStanding, identityStanding, livenessPromptFo
  */
 
 export type VerificationTrack = 'phone' | 'identity' | 'address' | 'payout' | 'background' | 'helper' | 'poster_identity';
-export type VerificationOutcome = 'passed' | 'action_needed' | 'expiring' | 'expired' | 'ready';
+/** `city_open` (track `helper`): a helper who waited outside the cities we're open in can choose a neighborhood now. */
+export type VerificationOutcome = 'passed' | 'action_needed' | 'expiring' | 'expired' | 'ready' | 'city_open';
 
 /** `verification.updated` in the outbox: the dispatcher turns it into the person's notification. */
 export async function emitVerificationEvent(
-  db: Db,
+  db: Pick<Db, 'insert'>,
   userId: string,
   track: VerificationTrack,
   outcome: VerificationOutcome,
-  extra: { days?: number } = {},
+  extra: { days?: number; city?: string } = {},
 ): Promise<void> {
   await db.insert(outboxEvents).values({
     id: newId('evt'),
@@ -46,7 +48,7 @@ export async function emitVerificationEvent(
 }
 
 export async function loadOnboardingState(db: Db, userId: string, now: Date) {
-  const [[user], [profile], serviceRows, identityRows, addressRows, backgroundRows, [payout], agreements, captureRows] = await Promise.all([
+  const [[user], [profile], serviceRows, identityRows, addressRows, backgroundRows, [payout], agreements, captureRows, openMarkets] = await Promise.all([
     db
       .select({ firstName: users.firstName, lastName: users.lastName, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt, homeMarketId: users.homeMarketId })
       .from(users)
@@ -65,7 +67,10 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
     db.select().from(payoutAccounts).where(eq(payoutAccounts.userId, userId)).limit(1),
     currentAgreements(db, userId),
     db.select().from(identityCaptures).where(eq(identityCaptures.userId, userId)).orderBy(asc(identityCaptures.createdAt)),
+    db.select({ id: markets.id, status: markets.status, zipPrefixes: markets.zipPrefixes }).from(markets).where(inArray(markets.status, [...OPEN_MARKET_STATUSES])),
   ]);
+  // Outside every city we're open in: the helper gave a ZIP and waits for their city (owner, 2026-11-14).
+  const waitingIn = profile ? awaitingCity(profile, openMarkets) : null;
   const identity = identityStanding(identityRows, now, captureRows);
   const address = addressStanding(addressRows);
   const background = backgroundStanding(backgroundRows, now);
@@ -77,7 +82,8 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
       categorySlug: category.slug as CategorySlug,
       requiresBackgroundCheck: category.requiresBackgroundCheck,
     })),
-    areaSet: Boolean(profile?.areaId),
+    areaSet: Boolean(profile?.areaId) || waitingIn !== null,
+    awaitingCity: waitingIn !== null,
     phoneVerified: Boolean(user?.phone && user.phoneVerifiedAt),
     // Waiting for our team: photos in review, a double check that didn't confirm their approval, or the
     // same ID on another account. `renewal`: a new check while the earlier one still counts (6.3).
@@ -106,6 +112,8 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
     background,
     payout: payout ?? null,
     agreements,
+    /** Where the helper waits for us to open, when they're outside every open market. */
+    awaitingCity: waitingIn,
     facts,
   };
 }

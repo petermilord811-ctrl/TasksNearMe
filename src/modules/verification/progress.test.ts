@@ -116,3 +116,39 @@ describe('helper onboarding', () => {
     expect(states({ ...ready, payout: 'pending' }).done).toBe('locked');
   });
 });
+
+describe('a helper waiting for their city (owner, 2026-11-14: national, cities open in turn)', () => {
+  // A ZIP and city instead of a neighborhood: the area counts as set, the home address waits.
+  const waiting: OnboardingFacts = { ...basics, awaitingCity: true };
+
+  it('opens the phone, ID, payouts and background check, and shows the home address as later', () => {
+    expect(states(waiting)).toMatchObject({ area: 'done', phone: 'todo', address: 'later' });
+    const checked = { ...waiting, phoneVerified: true, identity: verifiedId };
+    expect(states(checked)).toMatchObject({ address: 'later', payout: 'todo', background: 'locked' });
+    expect(computeOnboarding(checked).firstIncomplete).toBe('payout');
+    expect(canOpenStep(checked, 'address')).toBe(false);
+  });
+
+  it('finishes setup once every check that can be done now is done, but is never bookable', () => {
+    const all = { ...waiting, phoneVerified: true, identity: verifiedId, payout: 'active' as const, background: { status: 'clear' as const, eligible: true } };
+    const result = computeOnboarding(all);
+    expect(result.complete).toBe(true);
+    expect(result.firstIncomplete).toBe('done');
+    expect(result.progress.bookable).toBe(false);
+    expect(result.progress.bookableCategories).toEqual([]);
+    expect(states(all)).toMatchObject({ address: 'later', done: 'done' });
+  });
+
+  it('is not complete while a check is still to do', () => {
+    const noBackground = { ...waiting, phoneVerified: true, identity: verifiedId, payout: 'active' as const };
+    expect(computeOnboarding(noBackground).complete).toBe(false);
+    expect(computeOnboarding(noBackground).firstIncomplete).toBe('background');
+  });
+
+  it('stays unbookable even with an address verified before they moved away', () => {
+    const moved = { ...ready, awaitingCity: true, background: { status: 'clear' as const, eligible: true } };
+    expect(computeOnboarding(moved).progress.bookable).toBe(false);
+    expect(states(moved).address).toBe('done');
+  });
+});
+

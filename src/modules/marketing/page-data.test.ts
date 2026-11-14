@@ -20,21 +20,19 @@ describe('pricing page data', () => {
 });
 
 describe('become-a-helper page data', () => {
-  it('matches the fixture with both programs on and 63 founding spots taken', () => {
-    expect(buildBecomeHelperPageData({ fees: DEFAULT_FEES, flags: allFlags, foundingSpotsClaimed: 63 })).toEqual(
-      becomeHelperPageData,
-    );
+  it('matches the fixture with both programs on', () => {
+    expect(buildBecomeHelperPageData({ fees: DEFAULT_FEES, flags: allFlags })).toEqual(becomeHelperPageData);
   });
 
   it('drops reward cards when the programs are off', () => {
-    const data = buildBecomeHelperPageData({ fees: DEFAULT_FEES, flags: { background_checks: true }, foundingSpotsClaimed: 0 });
+    const data = buildBecomeHelperPageData({ fees: DEFAULT_FEES, flags: { background_checks: true } });
     expect(data).toEqual({ ...becomeHelperNoRewardsData, welcomeReward: undefined, repeatReward: undefined });
     expect('welcomeReward' in data).toBe(false);
   });
 
-  it('closes the welcome reward when the founding cohort is full', () => {
-    const data = buildBecomeHelperPageData({ fees: DEFAULT_FEES, flags: allFlags, foundingSpotsClaimed: 100 });
-    expect(data.welcomeReward).toBeUndefined();
-    expect(data.repeatReward).toBeDefined();
+  it('offers the welcome gift card for the three checks, with no spots to count (2026-11-14)', () => {
+    const data = buildBecomeHelperPageData({ fees: DEFAULT_FEES, flags: allFlags });
+    expect(data.welcomeReward).toEqual({ amountCents: 5000, checks: ['phone', 'identity', 'background'], redeemWithinDays: 90 });
+    expect(data.welcomeReward).not.toHaveProperty('cohortLimit');
   });
 });

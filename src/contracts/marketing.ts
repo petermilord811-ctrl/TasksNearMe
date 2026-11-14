@@ -5,6 +5,7 @@ import type { ContentBlock } from './content';
 import { emailField, zipField } from './forms';
 import type { PriceBreakdown, PricingInput } from './money';
 import type { HelperSummary } from './people';
+import type { WelcomeGiftCheck } from './rewards';
 import type { TaskPublicView } from './tasks';
 
 export interface PriceGuidance {
@@ -50,8 +51,19 @@ export interface HomePageData {
    * lets the visitor switch between them (the UI picks, the fee engine computed every number).
    */
   feeExamples: PriceBreakdown[];
-  /** The founding helpers' welcome reward; absent when the program is off or the cohort is full. */
-  welcomeReward?: { amountCents: Cents; cohortLimit: number; spotsClaimed: number };
+  /**
+   * The welcome gift card: every helper whose `checks` pass earns `amountCents` (blueprint 05 §2, 2026-11-14).
+   * Absent when the program is off.
+   */
+  welcomeReward?: {
+    amountCents: Cents;
+    /** The checks that earn it, in order. */
+    checks: readonly WelcomeGiftCheck[];
+    /** @deprecated The gift card has no cohort since 2026-11-14; never set. Kept until the landing stops reading it. */
+    cohortLimit?: number;
+    /** @deprecated See `cohortLimit`; never set. */
+    spotsClaimed?: number;
+  };
   /** The landing page's map of open tasks (UI-036). */
   map: LandingMapData;
   /**
@@ -205,19 +217,20 @@ export interface BecomeHelperPageData {
   exampleEarnings: PriceBreakdown;
   /** "Your first payout can take about N days." */
   firstPayoutDays: number;
-  /** Absent when the program is off or the cohort is full. */
+  /**
+   * The welcome gift card for every helper whose `checks` pass (blueprint 05 §2, 2026-11-14). Absent when the
+   * program is off.
+   */
   welcomeReward?: {
     amountCents: Cents;
-    cohortLimit: number;
-    spotsClaimed: number;
-    /** The first paid task must be at least this much… */
-    minTaskPriceCents: Cents;
-    /** …and happen within this many days of verification. */
-    windowDays: number;
-    /** Days after the task is paid before the reward can be redeemed. */
-    unlockDays: number;
-    /** Days to redeem once it's redeemable. */
+    /** The checks that earn it, in order. */
+    checks: readonly WelcomeGiftCheck[];
+    /** Days to redeem once our team's quick check is done. */
     redeemWithinDays: number;
+    /** @deprecated The gift card has no cohort since 2026-11-14; never set. */
+    cohortLimit?: number;
+    /** @deprecated See `cohortLimit`; never set. */
+    spotsClaimed?: number;
   };
   repeatReward?: {
     amountCents: Cents;
@@ -233,10 +246,40 @@ export interface BecomeHelperPageData {
   inHomeCategoriesRequireBackgroundCheck: boolean;
 }
 
-/** `/waitlist`: people outside the service area leave their email and ZIP for their city. */
+/**
+ * How many people wait for us near a ZIP (owner, 2026-11-14: national, cities open in turn), by its ZIP3 prefix
+ * (the first three digits: the USPS sectional center, about a metro area). Counts only, never who.
+ * `waiting`: waitlist entries; `helpersWaiting`: helpers who signed up there and wait for the city to open.
+ */
+export interface WaitlistDemand {
+  zip: string;
+  /** Two-letter state code from the ZIP. */
+  state: string;
+  waiting: number;
+  helpersWaiting: number;
+}
+
+/** A city people asked for, by the name they typed (cities with at least 3 people only). */
+export interface WaitlistCity {
+  city: string;
+  state: string;
+  /** Waitlist entries plus waiting helpers. */
+  people: number;
+  helpersWaiting: number;
+}
+
+/** `/waitlist`: people outside the cities we're open in leave their email, ZIP and city. */
 export interface WaitlistPageData {
   /** Markets we serve or are about to open ("Already in Austin? See local help"). */
   markets: MarketView[];
+  /** The most-asked-for cities we aren't in yet, most people first (up to 6). */
+  comingNext: WaitlistCity[];
+  /** `?zip=` from the link (posting's "We're not in Dallas yet"), to fill the form and show `demand`. */
+  initialZip?: string;
+  /** People already waiting near `initialZip`. */
+  demand?: WaitlistDemand;
+  /** Helpers anywhere in the US can get verified now and earn the welcome gift card (absent when the program is off). */
+  helperReward?: { amountCents: Cents };
   /**
    * `beta`: sent here from an invite-only step (private beta, `routes.waitlist({ from: 'beta' })`), so the
    * page says the market is invite-only for now instead of "We're not in your city yet".
@@ -250,6 +293,8 @@ export type WaitlistInterest = (typeof WAITLIST_INTERESTS)[number];
 export const waitlistInputSchema = z.object({
   email: emailField,
   zip: zipField,
+  /** The city, as people call it (optional): groups demand by city on the waitlist page. */
+  city: z.string().trim().max(60, 'too_long').optional(),
   interest: z.enum(WAITLIST_INTERESTS, 'required'),
 });
 export type WaitlistInput = z.input<typeof waitlistInputSchema>;

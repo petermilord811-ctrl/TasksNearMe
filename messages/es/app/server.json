@@ -105,7 +105,8 @@
         "proposal": "Ver la propuesta",
         "series": "Ver tus visitas regulares",
         "account": "Abrir tu cuenta",
-        "verify_identity": "Verificar tu identidad"
+        "verify_identity": "Verificar tu identidad",
+        "rewards": "Abrir tus recompensas"
       },
       "next": {
         "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Solo se te cobra cuando reservas.",
@@ -149,7 +150,10 @@
         "scheduled_payment_failed": "Paga desde la página de la reserva o cambia la tarjeta. Volveremos a intentarlo antes de esa fecha.",
         "replacement_needed": "Su ayudante canceló, así que la hora ya está fijada y el cliente está listo para reservar.",
         "replacement_search_started": "Se te reembolsó el monto completo. Las nuevas ofertas aparecerán en tu tarea. Si ya no la necesitas, cancela la tarea.",
-        "badge_earned": "Mira todas tus insignias, y las próximas, en tu página de cuenta."
+        "badge_earned": "Mira todas tus insignias, y las próximas, en tu página de cuenta.",
+        "city_open": "Elige tu vecindario y agrega tu domicilio. Después podrás enviar ofertas en tareas cerca de ti.",
+        "reward_earned": "Nuestro equipo la revisa rápidamente y luego eliges la tarjeta que quieras. Las tarjetas de regalo son aparte de tus ganancias.",
+        "reward_ready": "Elige la tarjeta que quieras en tu página de Recompensas y canjéala dentro de 90 días."
       },
       "lockedFooter": "Los correos de reservas y pagos siempre están activados: son tus recibos y avisos de seguridad.",
       "optionalFooter": "Recibes esto porque los correos de {topic} están activados.",
@@ -205,7 +209,10 @@
       "scheduled_payment_failed": "No pudimos cobrar tu tarjeta por {title}{hasDate, select, yes {. Paga antes del {date} para conservar la reserva} other {}}.",
       "replacement_needed": "Un cliente necesita un nuevo ayudante para {title}. Envía una oferta si puedes ayudar.",
       "replacement_search_started": "{actorName} canceló {title}. Tu tarea vuelve a estar abierta a ofertas y avisamos a los ayudantes cercanos.",
-      "badge_earned": "{tier, plural, =1 {Ganaste una insignia: {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}}} other {Tu insignia {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}} subió al nivel #}}."
+      "badge_earned": "{tier, plural, =1 {Ganaste una insignia: {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}}} other {Tu insignia {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}} subió al nivel #}}.",
+      "city_open": "TasksNearMe ya está en {title}. Elige tu vecindario para empezar a recibir tareas.",
+      "reward_earned": "Tu tarjeta de regalo de bienvenida{hasAmount, select, yes { de {amount}} other {}} es tuya: pasaste las verificaciones de teléfono, identificación y antecedentes.",
+      "reward_ready": "Tu tarjeta de regalo{hasAmount, select, yes { de {amount}} other {}} está lista. Elige tu tarjeta en tu página de Recompensas."
     },
     "pushTitle": "TasksNearMe"
   },
@@ -218,20 +225,23 @@
       "place": "TasksNearMe · Empezamos cerca de casa, en {market}."
     },
     "welcome": {
-      "subjectOffer": "¡Te damos la bienvenida, {firstName}! Gana una tarjeta de regalo de {amount} como ayudante fundador",
+      "subjectOffer": "¡Te damos la bienvenida, {firstName}! Verifícate y recibe una tarjeta de regalo de {amount}",
       "subject": "Te damos la bienvenida a TasksNearMe, {firstName}",
-      "preheaderOffer": "{left, plural, one {Solo queda # lugar} other {Quedan # lugares}} para nuestros primeros {limit, number} ayudantes en {market}. Así puedes reservar el tuyo.",
+      "preheaderOffer": "Cada ayudante que pasa tres verificaciones rápidas recibe una tarjeta de regalo de {amount}. Sin lugares limitados.",
       "preheader": "Tu cuenta está lista: reserva ayuda local o gana dinero a tu propio ritmo.",
       "title": "Te damos la bienvenida a TasksNearMe",
       "greeting": "¡Te damos la bienvenida, {firstName}!",
       "intro": "Tu cuenta está lista. Reserva ayuda local de confianza en {market} o gana dinero a tu propio ritmo como ayudante.",
       "gift": {
-        "eyebrow": "Recompensa para ayudantes fundadores",
+        "eyebrow": "Tarjeta de regalo de bienvenida",
         "label": "tarjeta de regalo",
-        "for": "Para nuestros primeros {limit, number} ayudantes verificados en {market}",
-        "claimed": "{claimed, number} de {limit, number} lugares reservados",
-        "left": "{left, plural, one {Solo queda # lugar} other {Quedan # lugares}}",
-        "cta": "Reserva tu lugar",
+        "checks": {
+          "phone": "Teléfono",
+          "identity": "Identificación",
+          "background": "Antecedentes"
+        },
+        "for": "Para cada ayudante que pasa nuestras tres verificaciones. Sin lugares limitados y sin necesidad de una primera tarea.",
+        "cta": "Verifícate",
         "learn": "Cómo se gana dinero"
       },
       "steps": {
@@ -245,17 +255,21 @@
           "title": "Configura tu perfil de ayudante",
           "body": "Tus servicios, tus tarifas y la zona que cubres."
         },
-        "verify": {
-          "title": "Verifícate",
-          "body": "Tu verificación de identidad, la configuración de pagos y cualquier verificación de antecedentes requerida."
+        "phone": {
+          "title": "Verifica tu teléfono",
+          "body": "Un código de seis dígitos por mensaje de texto."
         },
-        "task": {
-          "title": "Termina tu primera tarea de {minimum} o más",
-          "body": "Complétala y recibe tu pago dentro de {days, plural, one {# día} other {# días}} después de la verificación."
+        "identity": {
+          "title": "Verifica tu identificación",
+          "body": "Fotos de tu identificación y una selfie, revisadas por nuestro equipo y nuestro socio de verificación."
+        },
+        "background": {
+          "title": "Pasa una verificación de antecedentes",
+          "body": "La hace Checkr, con tu consentimiento."
         },
         "reward": {
-          "title": "Se desbloquea tu tarjeta de regalo de {amount}",
-          "body": "{days, plural, one {# día} other {# días}} después de que se pague la tarea, tras una revisión. Canjéala dentro de {redeemDays, plural, one {# día} other {# días}} desde que se desbloquea. Una recompensa de bienvenida por persona."
+          "title": "Tu tarjeta de regalo de {amount} es tuya",
+          "body": "Después de una revisión rápida de nuestro equipo, elige tu tarjeta en la página de Recompensas. Canjéala dentro de {redeemDays, plural, one {# día} other {# días}}. Una tarjeta de regalo de bienvenida por persona."
         }
       },
       "client": {
@@ -324,7 +338,7 @@
       "heading": "Tu tarjeta de regalo de {amount} está lista",
       "body": "{greeting, select, welcome {Te damos la bienvenida{hasName, select, yes {, {firstName}} other {}}.} other {Gracias por ayudar a tus vecinos{hasName, select, yes {, {firstName}} other {}}.}} Aquí está tu recompensa por {program}.",
       "programs": {
-        "welcome": "ser ayudante fundador",
+        "welcome": "verificarte",
         "repeat": "ser cliente recurrente",
         "acceptance": "aceptar una oferta",
         "completion": "completar una tarea"

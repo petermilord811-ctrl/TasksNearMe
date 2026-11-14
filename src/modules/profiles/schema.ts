@@ -18,6 +18,14 @@ export const helperProfiles = pgTable('helper_profiles', {
   bio: text('bio').notNull().default(''),
   status: text('status').notNull().default('draft'), // draft | active | paused | suspended
   areaId: text('area_id').references(() => areas.id),
+  /**
+   * A helper outside every market we're open in (owner, 2026-11-14: national, cities open in turn): their ZIP,
+   * the city they typed and the ZIP's state. Set only while `areaId` is null; they can finish their checks but
+   * aren't bookable until a market covering the ZIP opens (src/modules/markets/coverage.ts).
+   */
+  homeZip: text('home_zip'),
+  homeCity: text('home_city'),
+  homeState: text('home_state'),
   serviceRadiusKm: integer('service_radius_km').notNull().default(8),
   remoteOk: boolean('remote_ok').notNull().default(false),
   tools: jsonb('tools').$type<string[]>().notNull().default([]),

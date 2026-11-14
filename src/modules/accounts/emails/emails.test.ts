@@ -12,20 +12,26 @@ const base: WelcomeEmailInput = {
     { slug: 'yard-cleanup', name: 'Yard cleanup' },
   ],
 };
-const offer = { amountCents: 5000, cohortLimit: 100, spotsClaimed: 63, minTaskPriceCents: 4000, windowDays: 60, unlockDays: 7, redeemWithinDays: 90 };
+const offer = { amountCents: 5000, redeemWithinDays: 90 };
 
 describe('the welcome email', () => {
-  it('leads with the founding helper gift card while the program is open', () => {
+  it('leads with the welcome gift card for every verified helper, with its three checks and no spots (2026-11-14)', () => {
     const email = renderWelcomeEmail({ ...base, offer });
-    expect(email.subject).toBe('Welcome, Robin! Earn a $50 gift card as a founding helper');
-    expect(email.preheader).toBe('37 spots are left for our first 100 helpers in Austin, TX. Here is how to claim yours.');
+    expect(email.subject).toBe('Welcome, Robin! Get verified and get a $50 gift card');
+    expect(email.preheader).toBe('Every helper who passes three quick checks gets a $50 gift card. No spots to race for.');
     expect(email.html).toContain('>$50<');
-    expect(email.html).toContain('63 of 100 spots claimed');
-    expect(email.html).toContain('37 spots left');
-    expect(email.html).toContain('Finish your first task of $40 or more');
-    expect(email.html).toContain('Redeem within 90 days of unlocking');
-    // The spots bar is drawn to the real share (63%).
-    expect(email.html).toContain('width="63%"');
+    for (const check of ['Phone', 'ID', 'Background check']) expect(email.html).toContain(`&#10003; ${check}`);
+    expect(email.html).toContain('Verify your phone');
+    expect(email.html).toContain('Pass a background check');
+    expect(email.html).toContain('Redeem within 90 days. One welcome gift card per person.');
+    expect(email.html).not.toMatch(/spots? (left|claimed)/);
+    expect(email.html).not.toContain('first task of');
+  });
+
+  it('reads the same in Spanish', () => {
+    const email = renderWelcomeEmail({ ...base, offer, locale: 'es' });
+    expect(email.subject).toBe('¡Te damos la bienvenida, Robin! Verifícate y recibe una tarjeta de regalo de $50');
+    expect(email.html).toContain('&#10003; Antecedentes');
   });
 
   it('links every button and task kind to the app, absolutely', () => {
@@ -34,11 +40,11 @@ describe('the welcome email', () => {
     expect(html).toContain('href="https://tasksnearme.example/app/tasks/new?category=yard-cleanup"');
     expect(html).toContain('href="https://tasksnearme.example/legal/rewards-terms"');
     expect(html).not.toMatch(/href="\//);
-    expect(text).toContain('Claim your spot: https://tasksnearme.example/app/helper/onboarding/profile');
+    expect(text).toContain('Get verified: https://tasksnearme.example/app/helper/onboarding/profile');
     expect(text).toContain('- Yard cleanup: https://tasksnearme.example/app/tasks/new?category=yard-cleanup');
   });
 
-  it('says nothing about a gift card when the program is off or full', () => {
+  it('says nothing about a gift card when the program is off', () => {
     const email = renderWelcomeEmail(base);
     expect(email.subject).toBe('Welcome to TasksNearMe, Robin');
     expect(email.html).not.toContain('gift card');

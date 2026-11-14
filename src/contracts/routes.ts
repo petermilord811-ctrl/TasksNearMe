@@ -75,7 +75,8 @@ export const routes = {
   legal: (doc: LegalDoc) => `/legal/${doc}`,
   signIn: (next?: string) => withQuery('/sign-in', { next }),
   /** `from: 'beta'`: from an invite-only step (private beta) rather than from outside the service area. */
-  waitlist: (query: { from?: 'beta' } = {}) => withQuery('/waitlist', { from: query.from }),
+  /** `zip`: fills the form and shows how many people already wait near it (posting's "We're not in Dallas yet"). */
+  waitlist: (query: { from?: 'beta'; zip?: string } = {}) => withQuery('/waitlist', { from: query.from, zip: query.zip }),
   /** An invite link (private beta): keeps the code for sign-up or helper setup, then opens sign-in. */
   invite: (code: string) => `/invite/${enc(code)}`,
 

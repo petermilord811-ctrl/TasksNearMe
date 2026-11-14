@@ -3,9 +3,9 @@ import { routes, type AppShellHandlers, type PreviewEntry, type RewardsHandlers,
 import {
   fakeHandler, jordanShell, mayaShell, REWARDS_NOW, rewardGrantsByStatus,
   rewardsDeliveredData, rewardsEmptyData, rewardsNotHelperData, rewardsPendingData,
-  rewardsQualifiedData, rewardsRedeemableData,
+  rewardsQualifiedData, rewardsRedeemableData, welcomeAlmostCard, welcomeEarnedCard, welcomeOpenCard, welcomeQueuedCard, welcomeReadyCard,
 } from '@/fixtures';
-import { RewardGrantCard } from '@/ui/components/rewards';
+import { RewardGrantCard, WelcomeGiftCardView, WelcomeGiftStrip } from '@/ui/components/rewards';
 import { RewardsScreen } from '@/ui/screens/rewards';
 import { AppShell } from '@/ui/shells/app-shell';
 import { AccountInteractionPreview } from './account-examples';
@@ -64,5 +64,13 @@ export const rewardsPreviews: PreviewEntry[] = [
   {
     id: 'component-reward-grant/all-statuses', group: copy.previews.componentGroup,
     title: copy.previews.allStatuses, render: () => <AllRewardStatusesPreview />,
+  },
+  // The welcome gift card (2026-11-14): every helper whose phone, ID and background checks pass.
+  { id: 'component-welcome-gift/open', group: copy.previews.componentGroup, title: copy.previews.welcomeOpen, render: () => <main className="mx-auto max-w-content p-gutter"><WelcomeGiftCardView card={welcomeOpenCard} /></main> },
+  { id: 'component-welcome-gift/queued', group: copy.previews.componentGroup, title: copy.previews.welcomeQueued, render: () => <main className="mx-auto max-w-content p-gutter"><WelcomeGiftCardView card={welcomeQueuedCard} /></main> },
+  { id: 'component-welcome-gift/ready', group: copy.previews.componentGroup, title: copy.previews.welcomeReady, render: () => <main className="mx-auto max-w-content p-gutter"><WelcomeGiftCardView card={welcomeReadyCard} /></main> },
+  {
+    id: 'component-welcome-gift/strip', group: copy.previews.componentGroup, title: copy.previews.welcomeStrip,
+    render: () => <main className="mx-auto max-w-reading space-y-4 p-gutter"><WelcomeGiftStrip card={welcomeOpenCard} /><WelcomeGiftStrip card={welcomeAlmostCard} /><WelcomeGiftStrip card={welcomeEarnedCard} /></main>,
   },
 ];

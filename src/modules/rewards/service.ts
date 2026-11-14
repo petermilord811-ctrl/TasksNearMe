@@ -1,43 +1,44 @@
-import { and, asc, eq, gte, inArray, isNotNull, lte, ne, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull } from 'drizzle-orm';
 import type { EmailProvider } from '@/integrations/email';
-import type { ActionResult, RewardGrantView, RewardProgramCode, RewardRiskSignal, RewardStatus, RewardVoidReason, RewardsPageData } from '@/contracts';
+import type { ActionResult, RewardGrantView, RewardRiskSignal, RewardStatus, RewardVoidReason, RewardsPageData } from '@/contracts';
 import type { GiftCardProvider } from '@/integrations/gift-cards';
 import { users } from '@/modules/accounts/schema';
 import { bookingCompletions, bookingSeries, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { getFlags } from '@/modules/markets/queries';
 import { earnings } from '@/modules/earnings/schema';
 import { tasks } from '@/modules/tasks/schema';
-import { helperProfiles } from '@/modules/profiles/schema';
-import { identityVerifications } from '@/modules/verification/schema';
+import { computeOnboarding } from '@/modules/verification/progress';
+import { loadOnboardingState } from '@/modules/verification/state';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import {
-  BUDGET_COMMITTED_STATUSES,
   LAUNCH_PROGRAMS,
-  REWARD_BUDGETS,
   REWARD_RULES,
+  WELCOME_QUEUED_STATUSES,
   marketMonthStart,
   nextGrantState,
+  nextMarketMonthStart,
   recurringMonthTrigger,
   repeatProgress,
   repeatTrigger,
   rewardOrder,
-  welcomeCandidate,
   type BookingFact,
   type RewardBudgets,
 } from './domain';
 import { sendGiftCardEmail } from './emails';
+import { createGrant, emitRewardEvent, type GrantRow } from './grants';
 import { REVIEW_SIGNALS, riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
+import { ensureWelcomeGrant, welcomeCardFor } from './welcome';
 
 /**
- * Rewards for helpers (blueprint 05). Grants are derived from booking facts by `syncRewards`, run
- * lazily when the helper looks at their rewards (the job runner takes this over later). Redeeming
- * orders a gift card through the provider with the grant id as the idempotency key.
+ * Rewards for helpers (blueprint 05). Booking rewards are derived from booking facts by `syncRewards`, run
+ * lazily when the helper looks at their rewards; the welcome gift card comes from the helper's checks
+ * (`welcome.ts`, also given out by the job runner). Redeeming orders a gift card through the provider with the
+ * grant id as the idempotency key.
  */
 
-type GrantRow = typeof rewardGrants.$inferSelect;
 const REDEEM_RULE = { limit: 10, windowSeconds: 60 * 60 };
 
 async function helperBookingFacts(db: Db, helperUserId: string): Promise<BookingFact[]> {
@@ -80,71 +81,18 @@ async function helperBookingFacts(db: Db, helperUserId: string): Promise<Booking
   });
 }
 
-/**
- * The helper's place among verified helpers (the founding cohort is the first 100). Only people with a helper
- * profile count: clients' risk-triggered ID checks don't take founding spots (completion plan 6.6).
- */
-export async function cohortFacts(db: Db, helperUserId: string): Promise<{ verifiedAt: Date; rank: number } | null> {
-  const [mine] = await db
-    .select({ verifiedAt: identityVerifications.verifiedAt })
-    .from(identityVerifications)
-    .where(and(eq(identityVerifications.userId, helperUserId), eq(identityVerifications.status, 'verified'), isNotNull(identityVerifications.verifiedAt)))
-    .orderBy(asc(identityVerifications.verifiedAt))
-    .limit(1);
-  if (!mine?.verifiedAt) return null;
-  const earlier = await db
-    .selectDistinct({ userId: identityVerifications.userId })
-    .from(identityVerifications)
-    .innerJoin(helperProfiles, eq(helperProfiles.userId, identityVerifications.userId))
-    .where(and(eq(identityVerifications.status, 'verified'), lte(identityVerifications.verifiedAt, mine.verifiedAt), ne(identityVerifications.userId, helperUserId)));
-  return { verifiedAt: mine.verifiedAt, rank: earlier.length + 1 };
-}
-
 /** The monthly cap's month: the calendar month in market time. */
 const monthStart = marketMonthStart;
 const live = (grant: GrantRow) => grant.status !== 'voided';
 /** Staff rejected it after a risk review: that program is over for the helper (welcome) or the pair (repeat). */
 const rejected = (grant: GrantRow) => grant.status === 'voided' && grant.voidReason === 'risk_review';
 
-const centsOf = () => sql<number>`coalesce(sum(${rewardGrants.amountCents}), 0)::int`;
-
-/**
- * Creates a grant within the helper's monthly cap (at most $75 a calendar month across programs) and its
- * program's budget (blueprint 05 §1.4), or not at all: it waits, and a later sync tries again (in a later month,
- * or once a void frees budget). The checks and the insert share one transaction behind two advisory locks, the
- * helper's and then the program's (always in that order), so parallel qualifications can't pass either limit
- * (T-26): each request sums what's committed only once the one before it has committed its grant.
- */
-async function createGrant(db: Db, grants: GrantRow[], values: typeof rewardGrants.$inferInsert, now: Date, budgets: RewardBudgets): Promise<void> {
-  const created = await db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`reward-cap:${values.helperUserId}`}))`);
-    const [month] = await tx
-      .select({ cents: centsOf() })
-      .from(rewardGrants)
-      .where(and(eq(rewardGrants.helperUserId, values.helperUserId), ne(rewardGrants.status, 'voided'), gte(rewardGrants.createdAt, monthStart(now))));
-    if ((month?.cents ?? 0) + values.amountCents > REWARD_RULES.monthlyCapCents) return null;
-    const budget = budgets[values.program as RewardProgramCode];
-    if (budget !== undefined) {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`reward-budget:${values.program}`}))`);
-      const [committed] = await tx
-        .select({ cents: centsOf() })
-        .from(rewardGrants)
-        .where(and(eq(rewardGrants.program, values.program), inArray(rewardGrants.status, [...BUDGET_COMMITTED_STATUSES])));
-      if ((committed?.cents ?? 0) + values.amountCents > budget) return null;
-    }
-    // Another request created the same grant first (the partial unique indexes, or a fixed id): nothing to add.
-    const [row] = await tx.insert(rewardGrants).values(values).onConflictDoNothing().returning();
-    return row ?? null;
-  });
-  if (created) grants.push(created);
-}
-
 /**
  * The recurring-month reward (blueprint 05 variant B): once per series, after the first calendar month in which
  * every visit (at least 2) was completed and paid. The grant's id is the series', so it can never repeat (a
  * rejected one included). Behind the market's `reward.recurring_month` flag.
  */
-async function syncRecurringMonth(db: Db, helperUserId: string, grants: GrantRow[], now: Date, budgets: RewardBudgets): Promise<void> {
+async function syncRecurringMonth(db: Db, helperUserId: string, grants: GrantRow[], now: Date): Promise<void> {
   const series = await db
     .select({ id: bookingSeries.id, posterUserId: bookingSeries.posterUserId, marketId: bookingSeries.marketId })
     .from(bookingSeries)
@@ -164,7 +112,7 @@ async function syncRecurringMonth(db: Db, helperUserId: string, grants: GrantRow
       now,
     );
     if (!trigger) continue;
-    await createGrant(db, grants, { id: recurringGrantId(row.id), helperUserId, program: 'recurring_month', amountCents: REWARD_RULES.recurringMonth.amountCents, status: 'pending', bookingId: trigger.bookingId, posterUserId: row.posterUserId, createdAt: now, updatedAt: now }, now, budgets);
+    await createGrant(db, grants, { id: recurringGrantId(row.id), helperUserId, program: 'recurring_month', amountCents: REWARD_RULES.recurringMonth.amountCents, status: 'pending', bookingId: trigger.bookingId, posterUserId: row.posterUserId, createdAt: now, updatedAt: now }, now);
   }
 }
 
@@ -172,16 +120,11 @@ async function syncRecurringMonth(db: Db, helperUserId: string, grants: GrantRow
 const recurringGrantId = (seriesId: string) => `rwd_month_${seriesId}`;
 
 /**
- * Brings the helper's grants up to date with their bookings. Idempotent. `budgets`: the program budgets
- * (`REWARD_BUDGETS` unless given).
+ * Brings the helper's grants up to date with their checks and bookings. Idempotent. `budgets`: the monthly program
+ * budgets (`REWARD_BUDGETS` unless given).
  */
 export async function syncRewards(db: Db, helperUserId: string, now: Date, options: { budgets?: RewardBudgets } = {}): Promise<void> {
-  const budgets = options.budgets ?? REWARD_BUDGETS;
-  const [facts, cohort, grants] = await Promise.all([
-    helperBookingFacts(db, helperUserId),
-    cohortFacts(db, helperUserId),
-    db.select().from(rewardGrants).where(eq(rewardGrants.helperUserId, helperUserId)),
-  ]);
+  const [facts, grants] = await Promise.all([helperBookingFacts(db, helperUserId), db.select().from(rewardGrants).where(eq(rewardGrants.helperUserId, helperUserId))]);
   const bookingOf = new Map(facts.map((fact) => [fact.id, fact]));
 
   // Grants whose hold ended: risk signals decide between review and redeemable.
@@ -193,38 +136,39 @@ export async function syncRewards(db: Db, helperUserId: string, now: Date, optio
   for (const grant of grants) {
     const change = nextGrantState({ program: grant.program, status: grant.status as RewardStatus, holdUntil: grant.holdUntil, expiresAt: grant.expiresAt, needsReview: needsReview(grant.id) }, grant.bookingId ? bookingOf.get(grant.bookingId) : undefined, now);
     if (!change) continue;
-    const [updated] = await db
-      .update(rewardGrants)
-      .set({ ...change, updatedAt: now })
-      .where(and(eq(rewardGrants.id, grant.id), eq(rewardGrants.status, grant.status)))
-      .returning();
+    // Ready to redeem: the helper hears about it (`reward_ready`) in the same transaction as the move.
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(rewardGrants)
+        .set({ ...change, updatedAt: now })
+        .where(and(eq(rewardGrants.id, grant.id), eq(rewardGrants.status, grant.status)))
+        .returning();
+      if (row?.status === 'redeemable') await emitRewardEvent(tx, 'reward.ready', row);
+      return row;
+    });
     if (updated) Object.assign(grant, updated);
   }
 
-  // Welcome: the founding cohort's first qualifying booking within 60 days of the ID check.
-  if (cohort && cohort.rank <= REWARD_RULES.welcome.cohortSize && !grants.some((grant) => grant.program === 'welcome' && (live(grant) || rejected(grant)))) {
-    const used = new Set(grants.filter((grant) => grant.program === 'welcome').map((grant) => grant.bookingId));
-    const candidate = welcomeCandidate(facts.filter((fact) => !used.has(fact.id)), cohort.verifiedAt);
-    if (candidate) {
-      await createGrant(db, grants, { id: newId('rwd'), helperUserId, program: 'welcome', amountCents: REWARD_RULES.welcome.amountCents, status: 'pending', bookingId: candidate.id, createdAt: now, updatedAt: now }, now, budgets);
-    }
-  }
+  // Welcome: the gift card for the helper's three checks (phone, ID, background), and the waiting line.
+  await ensureWelcomeGrant(db, helperUserId, now, { grants, ...(options.budgets ? { budgets: options.budgets } : {}) });
 
   // Repeat: the third paid booking with the same client within 90 days, once per pair.
   for (const posterUserId of new Set(facts.map((fact) => fact.posterUserId))) {
     if (grants.some((grant) => grant.program === 'repeat' && grant.posterUserId === posterUserId && (live(grant) || rejected(grant)))) continue;
     const trigger = repeatTrigger(facts, posterUserId);
     if (trigger) {
-      await createGrant(db, grants, { id: newId('rwd'), helperUserId, program: 'repeat', amountCents: REWARD_RULES.repeat.amountCents, status: 'pending', bookingId: trigger.id, posterUserId, createdAt: now, updatedAt: now }, now, budgets);
+      await createGrant(db, grants, { id: newId('rwd'), helperUserId, program: 'repeat', amountCents: REWARD_RULES.repeat.amountCents, status: 'pending', bookingId: trigger.id, posterUserId, createdAt: now, updatedAt: now }, now);
     }
   }
 
   // Recurring month: a month of regular visits, all completed and paid.
-  await syncRecurringMonth(db, helperUserId, grants, now, budgets);
+  await syncRecurringMonth(db, helperUserId, grants, now);
 }
 
-function grantView(grant: GrantRow, booking: BookingFact | undefined, clientName: string | undefined): RewardGrantView {
+function grantView(grant: GrantRow, booking: BookingFact | undefined, clientName: string | undefined, now: Date): RewardGrantView {
   const status = grant.status as RewardStatus;
+  // A welcome gift card still in line for the month's budget moves on by the next month's start.
+  const queued = grant.program === 'welcome' && WELCOME_QUEUED_STATUSES.includes(status);
   const actions: RewardGrantView['actions'] = status === 'redeemable' ? ['redeem'] : status === 'delivered' && grant.deliveryUrl ? ['open_gift_card'] : [];
   return {
     id: grant.id,
@@ -233,13 +177,20 @@ function grantView(grant: GrantRow, booking: BookingFact | undefined, clientName
     status,
     ...(booking ? { booking: { id: booking.id, title: booking.title } } : {}),
     ...(grant.program === 'repeat' && clientName ? { clientDisplayName: clientName } : {}),
-    ...(grant.holdUntil ? { holdUntil: grant.holdUntil.toISOString() } : {}),
+    ...(grant.holdUntil && !queued && grant.program !== 'welcome' ? { holdUntil: grant.holdUntil.toISOString() } : {}),
+    ...(queued ? { queuedUntil: nextMarketMonthStart(now).toISOString() } : {}),
     ...(grant.redeemableAt ? { redeemableAt: grant.redeemableAt.toISOString() } : {}),
     ...(grant.expiresAt ? { expiresAt: grant.expiresAt.toISOString() } : {}),
     ...(grant.voidReason ? { voidReason: grant.voidReason as RewardVoidReason } : {}),
     ...(grant.deliveryUrl && status === 'delivered' ? { deliveryUrl: grant.deliveryUrl } : {}),
     actions,
   };
+}
+
+/** The welcome gift card with where its checks stand in onboarding (in review, skipped). */
+async function welcomeCardWithProgress(db: Db, userId: string, now: Date) {
+  const state = await loadOnboardingState(db, userId, now);
+  return welcomeCardFor(db, userId, now, computeOnboarding(state.facts).progress);
 }
 
 /** `/app/rewards` for a helper (after bringing the grants up to date). */
@@ -252,8 +203,13 @@ export async function getRewardsPage(db: Db, user: { id: string; helperReady: bo
     programs: LAUNCH_PROGRAMS,
     monthly: { capCents: REWARD_RULES.monthlyCapCents, usedCents: 0 },
   };
-  if (!user.helperReady) return empty;
+  if (!user.helperReady) {
+    // Not set up yet: the gift card the three checks earn is the reason to finish.
+    const welcome = await welcomeCardWithProgress(db, user.id, now);
+    return { ...empty, ...(welcome ? { welcome } : {}) };
+  }
   await syncRewards(db, user.id, now);
+  const welcome = await welcomeCardWithProgress(db, user.id, now);
   const [grants, facts] = await Promise.all([
     db.select().from(rewardGrants).where(eq(rewardGrants.helperUserId, user.id)),
     helperBookingFacts(db, user.id),
@@ -266,7 +222,7 @@ export async function getRewardsPage(db: Db, user: { id: string; helperReady: bo
   const sum = (list: GrantRow[]) => list.reduce((total, grant) => total + grant.amountCents, 0);
   const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
   const views = grants
-    .map((grant) => grantView(grant, grant.bookingId ? bookingOf.get(grant.bookingId) : undefined, grant.posterUserId ? nameOf.get(grant.posterUserId) : undefined))
+    .map((grant) => grantView(grant, grant.bookingId ? bookingOf.get(grant.bookingId) : undefined, grant.posterUserId ? nameOf.get(grant.posterUserId) : undefined, now))
     .sort((a, b) => rewardOrder(a.status) - rewardOrder(b.status));
   const progress = posterIds.flatMap((posterId) => {
     if (grants.some((grant) => grant.program === 'repeat' && grant.posterUserId === posterId && live(grant))) return [];
@@ -275,6 +231,7 @@ export async function getRewardsPage(db: Db, user: { id: string; helperReady: bo
   });
   return {
     ...empty,
+    ...(welcome ? { welcome } : {}),
     totals: {
       pendingCents: sum(grants.filter((grant) => ['pending', 'qualified', 'in_review', 'issuing'].includes(grant.status))),
       redeemableCents: sum(grants.filter((grant) => grant.status === 'redeemable')),

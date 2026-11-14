@@ -59,6 +59,15 @@ describe('helper onboarding schemas', () => {
     });
   });
 
+  it('area somewhere else in the US: a ZIP and a city instead of a neighborhood (national, 2026-11-14)', () => {
+    const elsewhere = { where: 'elsewhere' as const, areaId: '', serviceRadiusMiles: 5 as const, remoteOk: false };
+    expect(errorsOf(helperAreaInputSchema, { ...elsewhere, homeZip: '75204', homeCity: 'Dallas' })).toEqual({});
+    expect(errorsOf(helperAreaInputSchema, elsewhere)).toEqual({ homeZip: 'required', homeCity: 'required' });
+    expect(errorsOf(helperAreaInputSchema, { ...elsewhere, homeZip: '7520', homeCity: 'D' })).toEqual({ homeZip: 'invalid', homeCity: 'too_short' });
+    // Every field's error at once, even with the radius wrong too.
+    expect(errorsOf(helperAreaInputSchema, { ...elsewhere, serviceRadiusMiles: 7, homeZip: '', homeCity: 'Dallas' })).toEqual({ homeZip: 'required', serviceRadiusMiles: 'required' });
+  });
+
   it('tools: short names, at most 20', () => {
     expect(errorsOf(helperToolsInputSchema, { tools: ['Drill', 'x'] })).toEqual({ 'tools.1': 'too_short' });
   });

@@ -161,7 +161,7 @@
     "rules": "Envía un documento con fecha de los últimos {days} días que muestre tu nombre y esta dirección: una foto o un PDF de hasta {megabytes} MB, con las cuatro esquinas visibles.",
     "search": "Tu domicilio",
     "searchHint": "Empieza a escribir tu dirección y elígela de la lista.",
-    "outOfArea": "Solo podemos verificar domicilios en Austin y sus alrededores.",
+    "outOfArea": "Solo podemos verificar domicilios en las ciudades donde estamos. ¿Vives en otro lugar? En el paso Área, elige «En otro lugar de EE. UU.» y completa ya tus otras verificaciones.",
     "unit": "Apartamento o unidad (opcional)",
     "unitHint": "Tal como aparece en tu documento.",
     "documentType": "Tipo de documento",

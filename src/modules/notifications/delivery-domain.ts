@@ -44,7 +44,11 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   background_check_expiring: 'account',
   id_expiring: 'account',
   helper_ready: 'account',
+  city_open: 'account',
   badge_earned: 'tips_and_news',
+  // A gift card is money-like and once in a lifetime: told like the account's verification news (email always on).
+  reward_earned: 'account',
+  reward_ready: 'account',
   task_match: 'task_alerts',
   data_export_ready: 'account',
   series_started: 'bookings',

@@ -6,20 +6,21 @@ import {
   fakeHandler,
   fakeOnboardingHandlers,
   fakeProfileEditorHandlers,
-  foundingEarnedCard,
-  foundingLastSpotCard,
   helperAccountVerification,
   jordanAccountData,
   jordanShell,
-  lateHelperStanding,
   mayaAccountData,
   mayaShell,
   newHelperStanding,
+  noGiftCardHelperStanding,
   onboardingProfileStep,
   priyaShell,
   sam,
   samProfileEditorData,
   verifiedHelperStanding,
+  welcomeAlmostCard,
+  welcomeQueuedCard,
+  welcomeRemoteOnlyCard,
 } from '@/fixtures';
 import { AccountScreen } from '@/ui/screens/account/account-screen';
 import { HelperOnboardingScreen } from '@/ui/screens/helper';
@@ -27,7 +28,7 @@ import { HelperProfileEditorScreen } from '@/ui/screens/helper/helper-profile-ed
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/helperStanding.json';
 
-/** The profile's first page (completion plan 6.5): the founding gift card and the verification steps. */
+/** The profile's first page (completion plan 6.5): the welcome gift card and the verification steps. */
 
 const p = copy.previews;
 const shellHandlers: AppShellHandlers = { onModeChange: fakeHandler({ ok: true, code: 'updated' }), onSignOut: fakeHandler({ ok: true, code: 'updated' }) };
@@ -43,16 +44,17 @@ const onboarding = (id: string, title: string, standing = newHelperStanding): Pr
 });
 
 export const helperStandingPreviews: PreviewEntry[] = [
-  onboarding('profile-founding-open', p.onboardingOpen),
-  onboarding('profile-founding-last-spot', p.onboardingLastSpot, { ...newHelperStanding, founding: foundingLastSpotCard }),
-  onboarding('profile-no-founding', p.onboardingNoFounding, lateHelperStanding),
+  onboarding('profile-gift-open', p.onboardingOpen),
+  onboarding('profile-gift-almost', p.onboardingAlmost, { ...newHelperStanding, giftCard: welcomeAlmostCard }),
+  onboarding('profile-gift-remote-only', p.onboardingRemoteOnly, { ...newHelperStanding, giftCard: welcomeRemoteOnlyCard }),
+  onboarding('profile-no-gift', p.onboardingNoGift, noGiftCardHelperStanding),
   {
-    id: 'screen-helper-profile-editor/founding-yours', title: p.editorYours, group: p.group, layout: 'fullscreen',
+    id: 'screen-helper-profile-editor/gift-ready', title: p.editorReady, group: p.group, layout: 'fullscreen',
     render: () => <Shell viewer={samShell} path={routes.app.helperProfile()}><HelperProfileEditorScreen data={samProfileEditorData} handlers={fakeProfileEditorHandlers} standing={verifiedHelperStanding} /></Shell>,
   },
   {
-    id: 'screen-helper-profile-editor/founding-earned', title: p.editorEarned, group: p.group, layout: 'fullscreen',
-    render: () => <Shell viewer={samShell} path={routes.app.helperProfile()}><HelperProfileEditorScreen data={samProfileEditorData} handlers={fakeProfileEditorHandlers} standing={{ ...verifiedHelperStanding, founding: foundingEarnedCard }} /></Shell>,
+    id: 'screen-helper-profile-editor/gift-queued', title: p.editorQueued, group: p.group, layout: 'fullscreen',
+    render: () => <Shell viewer={samShell} path={routes.app.helperProfile()}><HelperProfileEditorScreen data={samProfileEditorData} handlers={fakeProfileEditorHandlers} standing={{ ...verifiedHelperStanding, giftCard: welcomeQueuedCard }} /></Shell>,
   },
   {
     id: 'screen-account/helper-verification', title: p.accountHelper, group: p.group, layout: 'fullscreen',

@@ -173,7 +173,8 @@ describe('address search', () => {
       inServiceArea: true,
     });
     expect(await posting.searchAddresses('usr_maya', '44 sample way')).toEqual([
-      { placeId: 'plc_roundrock_44', line1: '44 Sample Way', line2: 'Round Rock, TX 78664', inServiceArea: false },
+      // Outside our cities: where it is, for "We're not in Round Rock yet" and the city list (national, cities in turn).
+      { placeId: 'plc_roundrock_44', line1: '44 Sample Way', line2: 'Round Rock, TX 78664', inServiceArea: false, outside: { city: 'Round Rock', state: 'TX', zip: '78664' } },
     ]);
     expect(await posting.searchAddresses('usr_maya', 'ex')).toEqual([]);
   });

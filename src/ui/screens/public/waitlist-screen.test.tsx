@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { routes, type ActionResult, type WaitlistHandlers, type WaitlistInput } from '@/contracts';
-import { fakeHandler, waitlistPageData } from '@/fixtures';
+import { fakeHandler, waitlistFromPostingData, waitlistPageData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { WaitlistScreen } from './waitlist-screen';
 
@@ -19,8 +19,8 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
-function renderWaitlist(onJoin: WaitlistHandlers['onJoin']) {
-  return render(<NextIntlClientProvider locale="en" messages={messages}><WaitlistScreen data={waitlistPageData} handlers={{ onJoin }} /></NextIntlClientProvider>);
+function renderWaitlist(onJoin: WaitlistHandlers['onJoin'], data = waitlistPageData) {
+  return render(<NextIntlClientProvider locale="en" messages={messages}><WaitlistScreen data={data} handlers={{ onJoin }} /></NextIntlClientProvider>);
 }
 
 async function fillWaitlist(user: ReturnType<typeof userEvent.setup>) {
@@ -36,7 +36,7 @@ describe('waitlist form', () => {
     renderWaitlist(onJoin);
     await fillWaitlist(user);
     await user.click(screen.getByRole('button', { name: 'Join the waitlist' }));
-    expect(onJoin).toHaveBeenCalledWith({ email: 'maya@example.test', zip: '10001', interest: 'both' });
+    expect(onJoin).toHaveBeenCalledWith({ email: 'maya@example.test', zip: '10001', city: '', interest: 'both' });
     expect(await screen.findByRole('heading', { name: "You're on the list." })).toBeInTheDocument();
     expect(screen.getByText("We'll email maya@example.test when TasksNearMe opens near 10001.")).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Email' })).not.toBeInTheDocument();
@@ -83,5 +83,41 @@ describe('waitlist form', () => {
     await user.click(screen.getByRole('button', { name: 'Join the waitlist' }));
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(routes.market()));
     expect(screen.queryByRole('heading', { name: "You're on the list." })).not.toBeInTheDocument();
+  });
+});
+
+describe('waitlist across the US (owner, 2026-11-14: national, cities open in turn)', () => {
+  it('fills the ZIP from posting, says how many already wait near it, and sends the city', async () => {
+    const user = userEvent.setup();
+    const onJoin = vi.fn(fakeHandler<WaitlistInput>({ ok: true, code: 'submitted' }, 0));
+    renderWaitlist(onJoin, waitlistFromPostingData);
+    expect(screen.getByText('41 people near 75201 are already waiting')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'ZIP code' })).toHaveValue('75201');
+    await user.type(screen.getByRole('textbox', { name: 'Email' }), 'sky@example.test');
+    await user.type(screen.getByRole('textbox', { name: 'City (optional)' }), 'Dallas');
+    await user.click(screen.getByRole('radio', { name: 'I want to help' }));
+    await user.click(screen.getByRole('button', { name: 'Join the waitlist' }));
+    expect(onJoin).toHaveBeenCalledWith({ email: 'sky@example.test', zip: '75201', city: 'Dallas', interest: 'give_help' });
+  });
+
+  it('lists the cities coming next with their people and helpers, and invites helpers to get verified now', () => {
+    renderWaitlist(fakeHandler<WaitlistInput>(), waitlistFromPostingData);
+    const next = screen.getByRole('heading', { name: "Where we're heading next" }).closest('section')!;
+    const items = next.querySelectorAll('li');
+    expect(items).toHaveLength(4);
+    expect(items[0]).toHaveTextContent('Dallas, TX');
+    expect(items[0]).toHaveTextContent('41 people');
+    expect(items[0]).toHaveTextContent('12 helpers ready');
+    expect(items[2]).not.toHaveTextContent('helpers ready');
+    expect(screen.getByRole('heading', { name: 'Can help? Get verified now, wherever you live' })).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && /earn a \$50\.00 gift card/.test(element.textContent ?? ''))).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Become a helper' })).toHaveAttribute('href', routes.becomeAHelper());
+  });
+
+  it('shows neither list nor helper card when there is nothing to show', () => {
+    renderWaitlist(fakeHandler<WaitlistInput>());
+    expect(screen.queryByRole('heading', { name: "Where we're heading next" })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Become a helper' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/already waiting/)).not.toBeInTheDocument();
   });
 });

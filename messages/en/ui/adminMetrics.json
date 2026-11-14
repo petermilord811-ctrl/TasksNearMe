@@ -171,7 +171,10 @@
     "cap": "Each helper can earn up to {cap} a calendar month. This month {atCap, plural, =0 {no helper has} one {# helper has} other {# helpers have}} reached it and {nearCap, plural, =0 {none are} one {# is} other {# are}} at 80% or more.",
     "restricted": "Reward spend is shown to finance and admins.",
     "budgetAmount": "Budget {amount}",
-    "budgetMeterValue": "{committed} of {budget}"
+    "budgetMeterValue": "{committed} of {budget}",
+    "budgetAmountMonthly": "Budget {amount} a month",
+    "releasedThisMonth": "Released this month",
+    "remainingMonthly": "Left this month"
   },
   "notes": {
     "title": "How these are counted",

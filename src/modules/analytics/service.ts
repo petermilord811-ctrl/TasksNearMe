@@ -127,6 +127,7 @@ export async function getAdminMetrics(db: Db, staff: StaffActor, days: MetricsPe
         createdAt: grant.createdAt,
         updatedAt: grant.updatedAt,
         ...(grant.deliveredAt ? { deliveredAt: grant.deliveredAt } : {}),
+        ...(grant.holdUntil ? { holdUntil: grant.holdUntil } : {}),
       }),
     ),
     budgets: REWARD_BUDGETS,

@@ -22,23 +22,24 @@ const person = (p: PersonSummary): PersonSummary => ({ id: p.id, displayName: p.
 const dana: PersonSummary = { id: 'usr_dana', displayName: 'Dana K.', initials: 'DK', memberSince: '2026-11-18T15:00:00.000Z', phoneVerified: true };
 const devon: PersonSummary = { id: 'usr_devon', displayName: 'Devon K.', initials: 'DK', memberSince: '2026-11-17T15:00:00.000Z', phoneVerified: true };
 
+/** Jordan's welcome gift card: earned by the three checks (no booking), out of the line for review on Nov 27. */
 const jordanWelcome: AdminRewardRow = {
   id: 'rwd_jordan_welcome',
   program: 'welcome',
   amountCents: 5000,
   status: 'in_review',
   helper: person(jordan),
-  booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', client: person(maya), priceCents: 6000, completedAt: '2026-11-21T19:05:00.000Z' },
-  holdUntil: '2026-11-28T19:05:00.000Z',
-  createdAt: '2026-11-17T15:02:00.000Z',
+  holdUntil: '2026-11-27T15:02:00.000Z',
+  createdAt: '2026-11-27T15:02:00.000Z',
   signals: [],
   actions: ['approve_review', 'reject_review', 'void'],
 };
 
-const devonWelcome: AdminRewardRow = {
-  id: 'rwd_devon_welcome',
-  program: 'welcome',
-  amountCents: 5000,
+/** Devon's third booking with Dana: a repeat reward the risk signals sent to review. */
+const devonRepeat: AdminRewardRow = {
+  id: 'rwd_devon_repeat',
+  program: 'repeat',
+  amountCents: 1000,
   status: 'in_review',
   helper: devon,
   booking: { id: 'bkg_dana', title: 'Assemble a chair', client: dana, priceCents: 4000, completedAt: '2026-11-19T20:00:00.000Z' },
@@ -60,13 +61,14 @@ const failedGiftCard: AdminRewardRow = {
   actions: ['reissue', 'void'],
 };
 
+/** The welcome gift card's monthly budget: $100 left the line this month, $200 waits for next month's. */
 const budgets: AdminRewardsPageData['budgets'] = [
-  { program: 'welcome', budgetCents: 500_000, committedCents: 15_000, deliveredCents: 5_000 },
-  { program: 'repeat', committedCents: 1_000, deliveredCents: 0 },
+  { program: 'welcome', budgetCents: 500_000, period: 'month', releasedThisMonthCents: 10_000, queuedCents: 20_000, committedCents: 45_000, deliveredCents: 5_000 },
+  { program: 'repeat', committedCents: 2_000, deliveredCents: 0 },
 ];
 
-/** The oldest first: Devon's flagged reward, then Jordan's clean one. */
-export const adminRewardsReviewData: AdminRewardsPageData = { filter: 'in_review', rows: [devonWelcome, jordanWelcome], counts: { in_review: 2, failed: 1, all: 6 }, budgets };
+/** The oldest first: Devon's flagged repeat reward, then Jordan's welcome gift card. */
+export const adminRewardsReviewData: AdminRewardsPageData = { filter: 'in_review', rows: [devonRepeat, jordanWelcome], counts: { in_review: 2, failed: 1, all: 6 }, budgets };
 export const adminRewardsFailedData: AdminRewardsPageData = { ...adminRewardsReviewData, filter: 'failed', rows: [failedGiftCard] };
 export const adminRewardsEmptyData: AdminRewardsPageData = { filter: 'in_review', rows: [], counts: { in_review: 0, failed: 0, all: 0 }, budgets };
 
@@ -107,7 +109,7 @@ export const adminUserSuspendedData: AdminUserPageData = {
   user: { ...devonRow, helperStatus: 'suspended' },
   bookings: [{ id: 'bkg_dana', title: 'Assemble a chair', role: 'helper', status: 'completed', start: '2026-11-19T17:00:00.000Z', amountCents: 3600 }],
   cases: [],
-  rewards: [{ ...devonWelcome, status: 'voided', actions: [] }],
+  rewards: [{ ...devonRepeat, status: 'voided', actions: [] }],
   strikes: [{ id: 'stk_devon', bookingId: 'bkg_dana', reason: 'linked_accounts', at: '2026-11-27T16:00:00.000Z' }],
   canReverseStrikes: true,
   deliveries: [],

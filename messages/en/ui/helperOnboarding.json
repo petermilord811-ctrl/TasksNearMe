@@ -60,7 +60,20 @@
       "remote": "I also help remotely",
       "remoteHint": "Available for the services you offer that support remote help.",
       "mapLabel": "Map of your service area: {miles} miles around {area}",
-      "mapHint": "The dashed ring is how far you'll travel: {miles} miles around {area}. Clients see your neighborhood, never your address."
+      "mapHint": "The dashed ring is how far you'll travel: {miles} miles around {area}. Clients see your neighborhood, never your address.",
+      "where": "Where do you live?",
+      "inMarket": "In {market}",
+      "inMarketHint": "Choose your neighborhood.",
+      "elsewhere": "Somewhere else in the US",
+      "elsewhereHint": "Get verified now and start when we open in your city.",
+      "zip": "ZIP code",
+      "zipHint": "Five digits.",
+      "city": "City",
+      "cityHint": "Where you live, like Dallas or Tulsa.",
+      "zipInMarket": "That ZIP is in {market}. Choose “In {market}” and pick your neighborhood.",
+      "zipNotSupported": "Enter a US ZIP code.",
+      "elsewhereNote": "We're opening city by city. You can finish your phone, ID and background checks now. When we open in your city, you'll choose your neighborhood and add your home address.",
+      "waiting": "You're on the list for {city}, {state}. We'll tell you the moment we open there."
     },
     "tools": {
       "title": "Tools",
@@ -92,7 +105,8 @@
       "todo": "Coming up",
       "skipped": "Not needed",
       "locked": "Locked",
-      "in_review": "In review"
+      "in_review": "In review",
+      "later": "When your city opens"
     },
     "titles": {
       "profile": "Introduce yourself",
@@ -115,8 +129,6 @@
     "lockedStep": "{step}: Locked",
     "finishStep": "Finish {step}",
     "findWork": "Find work",
-    "rewardTitle": "Your welcome gift card reward",
-    "rewardBody": "Complete an eligible task priced at least <minimum></minimum> within {days, plural, one {# day} other {# days}} to earn a <amount></amount> gift card reward.",
     "previews": {
       "group": "Helper onboarding",
       "identityRetry": "ID check: try again",
@@ -155,10 +167,22 @@
       "backgroundEngaged": "Background check: approved after review",
       "backgroundRenewal": "Background check: renewal open",
       "agreement": "Profile: helper agreement",
-      "backgroundSuspended": "Background check: Checkr needs more information"
+      "backgroundSuspended": "Background check: Checkr needs more information",
+      "areaElsewhere": "Area: somewhere else in the US",
+      "areaAwaiting": "Area: waiting for Dallas",
+      "doneAwaitingCity": "Done: verified, waiting for Dallas",
+      "doneAwaitingCityPending": "Done: waiting for Dallas, a check left"
     },
     "stepOf": "Step {number} of {total}: {step}",
     "allSteps": "All steps",
-    "fewerSteps": "Fewer steps"
+    "fewerSteps": "Fewer steps",
+    "awaitingCity": {
+      "title": "We're not in {city}, {state} yet",
+      "verifiedTitle": "You're verified. We'll tell you the moment {city} opens.",
+      "body": "Your checks count wherever you live. When TasksNearMe opens in {city}, you'll choose your neighborhood, add your home address and start taking tasks. Until then, get your profile ready.",
+      "profile": "Get your profile ready",
+      "changeCity": "Change your city"
+    },
+    "giftStep": "Counts toward your welcome gift card"
   }
 }

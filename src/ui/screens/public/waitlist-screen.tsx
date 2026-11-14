@@ -2,15 +2,16 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, MapPin } from 'lucide-react';
+import { ArrowRight, BadgeCheck, CheckCircle2, MapPin, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { routes, WAITLIST_INTERESTS, waitlistInputSchema, type WaitlistHandlers, type WaitlistInput, type WaitlistPageData } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { TextFormField } from '@/ui/components/forms/text-form-field';
+import { Money } from '@/ui/components/money/money';
 import { useFormAction } from '@/ui/lib/use-form-action';
-import { Button } from '@/ui/primitives/button';
+import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/ui/primitives/field';
 import { RadioGroup, RadioGroupItem } from '@/ui/primitives/radio-group';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -29,6 +30,13 @@ export function WaitlistConfirmation({ email, zip }: Pick<WaitlistInput, 'email'
   </div>;
 }
 
+const card = 'rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]';
+
+/**
+ * `/waitlist` (owner, 2026-11-14: national, cities open in turn). We open city by city: people elsewhere leave
+ * their email, ZIP and city, see how many already wait near them and which cities come next by demand, and
+ * helpers learn they can get verified now, wherever they live.
+ */
 export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
   const t = useTranslations('waitlist');
   const forms = useTranslations('forms');
@@ -37,10 +45,11 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
   const [joined, setJoined] = useState<WaitlistInput>();
   const form = useForm<WaitlistInput>({
     resolver: zodResolver(waitlistInputSchema),
-    defaultValues: { email: '', zip: '' },
+    defaultValues: { email: '', zip: data.initialZip ?? '', city: '' },
   });
   const action = useFormAction(form);
   const pending = action.pending || form.formState.isSubmitting;
+  const nearby = data.demand ? data.demand.waiting + data.demand.helpersWaiting : 0;
 
   useEffect(() => {
     if (joined) confirmationRef.current?.focus();
@@ -48,22 +57,26 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
 
   return <section aria-labelledby={`${id}-title`} className="mx-auto max-w-reading space-y-6 py-4 sm:py-8">
     <header className="space-y-3">
-      <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary size-12"><MapPin className="size-6" /></span>
+      <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><MapPin className="size-6" /></span>
       <h1 id={`${id}-title`} className="font-display text-2xl font-semibold leading-8 tracking-[-0.025em] lg:text-3xl lg:leading-[38px]">{t(data.from === 'beta' ? 'beta.title' : 'title')}</h1>
       <p className="text-muted-foreground">{t(data.from === 'beta' ? 'beta.description' : 'description')}</p>
+      {data.demand && nearby > 0 && <p className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm text-secondary-foreground"><Users aria-hidden="true" className="size-4 text-primary" />{t('demand', { count: nearby, zip: data.demand.zip })}</p>}
     </header>
 
     <div aria-live="polite" aria-atomic="true" ref={confirmationRef} tabIndex={joined ? -1 : undefined} className={joined ? undefined : 'sr-only'}>
       {joined && <WaitlistConfirmation email={joined.email} zip={joined.zip} />}
     </div>
 
-    {!joined && <form noValidate aria-busy={pending} className="space-y-6 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]" onSubmit={form.handleSubmit(async (values) => {
+    {!joined && <form noValidate aria-busy={pending} className={`space-y-6 ${card}`} onSubmit={form.handleSubmit(async (values) => {
       const result = await action.run(handlers.onJoin, values);
       if (result?.ok && result.code === 'submitted') setJoined(values);
     })}>
       <FieldGroup>
         <TextFormField control={form.control} name="email" label={forms('fields.email.label')} hint={forms('fields.email.hint')} type="email" autoComplete="email" required disabled={pending} />
-        <TextFormField control={form.control} name="zip" label={forms('fields.zip.label')} hint={forms('fields.zip.hint')} autoComplete="postal-code" inputMode="numeric" maxLength={5} required disabled={pending} />
+        <div className="grid gap-6 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)]">
+          <TextFormField control={form.control} name="zip" label={forms('fields.zip.label')} hint={forms('fields.zip.hint')} autoComplete="postal-code" inputMode="numeric" maxLength={5} required disabled={pending} />
+          <TextFormField control={form.control} name="city" label={t('city')} hint={t('cityHint')} autoComplete="address-level2" maxLength={60} disabled={pending} />
+        </div>
         <Controller control={form.control} name="interest" render={({ field, fieldState }) => <FieldSet data-invalid={fieldState.invalid} className="gap-3">
           <FieldLegend id={`${id}-interest-label`} className="mb-0">{forms('fields.interest.label')}</FieldLegend>
           <FieldDescription id={`${id}-interest-hint`}>{forms('fields.interest.hint')}</FieldDescription>
@@ -93,6 +106,27 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
         {t('join')}
       </Button>
     </form>}
+
+    {data.helperReward && <section aria-labelledby={`${id}-helpers`} className={`space-y-3 ${card}`}>
+      <span aria-hidden="true" className="grid size-10 place-items-center rounded-xl bg-badge-reward text-badge-reward-foreground"><BadgeCheck className="size-5" /></span>
+      <h2 id={`${id}-helpers`} className="text-[17px] font-semibold leading-6 lg:text-lg">{t('helpers.title')}</h2>
+      <p className="text-muted-foreground">{t.rich('helpers.body', { amount: () => <Money cents={data.helperReward!.amountCents} /> })}</p>
+      <Link href={routes.becomeAHelper()} className={buttonVariants({ variant: 'outline', className: 'w-full sm:w-auto' })}>{t('helpers.cta')}<ArrowRight aria-hidden="true" /></Link>
+    </section>}
+
+    {data.comingNext.length > 0 && <section aria-labelledby={`${id}-next`} className={`space-y-3 ${card}`}>
+      <div className="space-y-1">
+        <h2 id={`${id}-next`} className="text-[17px] font-semibold leading-6 lg:text-lg">{t('comingNext.title')}</h2>
+        <p className="text-sm text-muted-foreground">{t('comingNext.description')}</p>
+      </div>
+      <ol className="divide-y divide-foreground/[0.07] dark:divide-white/[0.07]">
+        {data.comingNext.map((city, index) => <li key={`${city.city}-${city.state}`} className="flex min-h-12 items-center gap-3 py-2">
+          <span aria-hidden="true" className="w-6 shrink-0 text-sm font-semibold text-muted-foreground tabular-nums">{index + 1}</span>
+          <span className="min-w-0 flex-1 font-medium">{t('comingNext.city', { city: city.city, state: city.state })}</span>
+          <span className="shrink-0 text-right text-sm text-muted-foreground">{t('comingNext.people', { count: city.people })}{city.helpersWaiting > 0 && <span className="block text-xs">{t('comingNext.helpers', { count: city.helpersWaiting })}</span>}</span>
+        </li>)}
+      </ol>
+    </section>}
 
     {data.markets.length > 0 && <section aria-labelledby={`${id}-markets`} className="space-y-2 rounded-[1.375rem] bg-secondary p-4 text-secondary-foreground sm:p-6">
       <h2 id={`${id}-markets`} className="text-[17px] font-semibold leading-6 lg:text-lg">{t('marketsTitle')}</h2>

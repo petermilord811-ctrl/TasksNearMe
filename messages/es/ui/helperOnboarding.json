@@ -60,7 +60,20 @@
       "remote": "También ayudo a distancia",
       "remoteHint": "Disponible para los servicios que ofreces y que admiten ayuda a distancia.",
       "mapLabel": "Mapa de tu área de servicio: {miles} millas alrededor de {area}",
-      "mapHint": "El círculo punteado es hasta dónde te desplazarás: {miles} millas alrededor de {area}. Los clientes ven tu vecindario, nunca tu dirección."
+      "mapHint": "El círculo punteado es hasta dónde te desplazarás: {miles} millas alrededor de {area}. Los clientes ven tu vecindario, nunca tu dirección.",
+      "where": "¿Dónde vives?",
+      "inMarket": "En {market}",
+      "inMarketHint": "Elige tu vecindario.",
+      "elsewhere": "En otro lugar de EE. UU.",
+      "elsewhereHint": "Verifícate ahora y empieza cuando abramos en tu ciudad.",
+      "zip": "Código postal",
+      "zipHint": "Cinco dígitos.",
+      "city": "Ciudad",
+      "cityHint": "Donde vives, como Dallas o Tulsa.",
+      "zipInMarket": "Ese código postal está en {market}. Elige «En {market}» y tu vecindario.",
+      "zipNotSupported": "Escribe un código postal de EE. UU.",
+      "elsewhereNote": "Abrimos ciudad por ciudad. Ya puedes completar tus verificaciones de teléfono, identidad y antecedentes. Cuando abramos en tu ciudad, elegirás tu vecindario y agregarás tu domicilio.",
+      "waiting": "Estás en la lista de {city}, {state}. Te avisaremos en cuanto abramos allí."
     },
     "tools": {
       "title": "Herramientas",
@@ -92,7 +105,8 @@
       "todo": "Próximamente",
       "skipped": "No necesario",
       "locked": "Bloqueado",
-      "in_review": "En revisión"
+      "in_review": "En revisión",
+      "later": "Cuando abramos en tu ciudad"
     },
     "titles": {
       "profile": "Preséntate",
@@ -115,8 +129,6 @@
     "lockedStep": "{step}: bloqueado",
     "finishStep": "Terminar {step}",
     "findWork": "Buscar trabajo",
-    "rewardTitle": "Tu recompensa de bienvenida en tarjeta de regalo",
-    "rewardBody": "Completa una tarea elegible con un precio de al menos <minimum></minimum> dentro de {days, plural, one {# día} other {# días}} para ganar una recompensa de <amount></amount> en tarjeta de regalo.",
     "previews": {
       "group": "Registro de ayudantes",
       "identityRetry": "Verificación de identidad: intentar de nuevo",
@@ -155,10 +167,22 @@
       "backgroundEngaged": "Verificación de antecedentes: aprobada tras la revisión",
       "backgroundRenewal": "Verificación de antecedentes: renovación abierta",
       "agreement": "Perfil: acuerdo de ayudantes",
-      "backgroundSuspended": "Verificación de antecedentes: Checkr necesita más información"
+      "backgroundSuspended": "Verificación de antecedentes: Checkr necesita más información",
+      "areaElsewhere": "Área: en otro lugar de EE. UU.",
+      "areaAwaiting": "Área: esperando a Dallas",
+      "doneAwaitingCity": "Listo: verificación completa, esperando a Dallas",
+      "doneAwaitingCityPending": "Listo: esperando a Dallas, falta una verificación"
     },
     "stepOf": "Paso {number} de {total}: {step}",
     "allSteps": "Todos los pasos",
-    "fewerSteps": "Menos pasos"
+    "fewerSteps": "Menos pasos",
+    "awaitingCity": {
+      "title": "Todavía no estamos en {city}, {state}",
+      "verifiedTitle": "Tu verificación está completa. Te avisaremos en cuanto abramos en {city}.",
+      "body": "Tus verificaciones valen sin importar dónde vivas. Cuando TasksNearMe abra en {city}, elegirás tu vecindario, agregarás tu domicilio y empezarás a recibir tareas. Mientras tanto, deja tu perfil listo.",
+      "profile": "Deja tu perfil listo",
+      "changeCity": "Cambiar tu ciudad"
+    },
+    "giftStep": "Cuenta para tu tarjeta de regalo de bienvenida"
   }
 }

@@ -3,10 +3,11 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it } from 'vitest';
 import { routes, VERIFICATION_STEP_IDS } from '@/contracts';
-import { clientAccountVerification, foundingEarnedCard, foundingYoursCard, newHelperStanding } from '@/fixtures';
+import { clientAccountVerification, newHelperStanding, welcomeEarnedCard, welcomeQueuedCard, welcomeReadyCard, welcomeRemoteOnlyCard } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import copy from '../../../../messages/en/ui/helperStanding.json';
-import { FoundingHelperCardView, HelperStandingPanel, VerificationChecklist } from './helper-standing';
+import { WelcomeGiftCardView, WelcomeGiftStrip } from '@/ui/components/rewards/welcome-gift-card';
+import { HelperStandingPanel, VerificationChecklist } from './helper-standing';
 
 afterEach(cleanup);
 const withMessages = (node: React.ReactNode) => <NextIntlClientProvider locale="en" timeZone="America/Chicago" messages={uiMessages}>{node}</NextIntlClientProvider>;
@@ -17,13 +18,17 @@ describe('the profile’s first page', () => {
     for (const state of ['done', 'current', 'todo', 'in_review', 'locked', 'skipped'] as const) expect(copy.checklist.states[state]).toBeTruthy();
   });
 
-  it('shows the open founding card with spots left and what’s still needed, then each step', () => {
+  it('shows the welcome gift card with its three checks and no spots to count, then each step', () => {
     render(withMessages(<HelperStandingPanel standing={newHelperStanding} />));
-    const card = within(screen.getByRole('region', { name: '$50.00 founding-helper gift card' }));
-    expect(card.getByText('37 spots left of 100')).toBeTruthy();
-    expect(card.getByRole('meter', { name: '63 of 100 founding spots taken' })).toBeTruthy();
-    expect(card.getByText('1 of 5 verification steps done. Still to do: ID check, Home address, Payout setup, Background check.')).toBeTruthy();
-    expect(card.getByText('Rewards never depend on reviews or ratings.')).toBeTruthy();
+    const card = within(screen.getByRole('region', { name: 'Get verified, get $50' }));
+    expect(card.getByText('1 of 3 checks done')).toBeTruthy();
+    const checks = within(card.getByRole('list', { name: 'The checks that earn it' }));
+    expect(checks.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['PhoneDone', 'IDIn review', 'Background checkAfter the step before']);
+    expect(card.queryByText(/spots? left/)).toBeNull();
+    expect(card.queryByRole('meter')).toBeNull();
+    // The next check to do opens its onboarding step (the ID is in review, so the background check isn't next yet).
+    expect(card.getByRole('link', { name: 'Continue verification' }).getAttribute('href')).toBe(routes.app.helperOnboarding('identity'));
+    expect(card.getByText('One per person. Rewards never depend on reviews or ratings.')).toBeTruthy();
 
     const checklist = within(screen.getByRole('region', { name: 'Your verification' }));
     expect(checklist.getByText('1 of 5 done')).toBeTruthy();
@@ -32,13 +37,31 @@ describe('the profile’s first page', () => {
     expect(checklist.queryByRole('link', { name: /Home address/ })).toBeNull();
   });
 
-  it('names the founding number and the deadline, or points to the gift card on its way', () => {
-    render(withMessages(<FoundingHelperCardView card={foundingYoursCard} />));
-    expect(screen.getByRole('heading', { name: "You're founding helper #12" })).toBeTruthy();
-    expect(screen.getByText(/by Sat, Jan 2/)).toBeTruthy();
-    cleanup();
-    render(withMessages(<FoundingHelperCardView card={foundingEarnedCard} />));
+  it('says the gift card is earned (with the founding badge), in line, or ready to pick', () => {
+    render(withMessages(<WelcomeGiftCardView card={welcomeEarnedCard} />));
+    expect(screen.getByRole('heading', { name: 'Your $50 gift card is yours' })).toBeTruthy();
+    expect(screen.getByText('Founding helper #4')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Rewards' }).getAttribute('href')).toBe(routes.app.rewards());
+    cleanup();
+    render(withMessages(<WelcomeGiftCardView card={welcomeQueuedCard} />));
+    expect(screen.getByText(/It moves on by Tue, Dec 1/)).toBeTruthy();
+    cleanup();
+    render(withMessages(<WelcomeGiftCardView card={welcomeReadyCard} />));
+    expect(screen.getByRole('heading', { name: 'Your $50 gift card is ready' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Pick your card' }).getAttribute('href')).toBe(routes.app.rewards());
+  });
+
+  it('explains a background check that only comes with in-home services', () => {
+    render(withMessages(<WelcomeGiftCardView card={welcomeRemoteOnlyCard} />));
+    expect(screen.getByText('Comes with an in-home service')).toBeTruthy();
+  });
+
+  it('sums the checks up in one line under onboarding’s stepper', () => {
+    render(withMessages(<WelcomeGiftStrip card={newHelperStanding.giftCard!} />));
+    expect(screen.getByRole('complementary', { name: 'Welcome gift card' }).textContent).toContain('1 of 3 checks done for your $50 gift card.');
+    cleanup();
+    render(withMessages(<WelcomeGiftStrip card={welcomeEarnedCard} />));
+    expect(screen.getByRole('link', { name: '$50 gift card earned' }).getAttribute('href')).toBe(routes.app.rewards());
   });
 
   it('sends a client to their ID check page, and back to the account', () => {

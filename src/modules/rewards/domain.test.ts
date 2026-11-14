@@ -1,20 +1,71 @@
 import { describe, expect, it } from 'vitest';
-import { marketMonthStart, nextGrantState, recurringMonthTrigger, repeatProgress, repeatTrigger, welcomeCandidate, type BookingFact, type SeriesVisitFact } from './domain';
+import {
+  REWARD_BUDGETS,
+  REWARD_RULES,
+  marketMonthStart,
+  nextGrantState,
+  nextMarketMonthStart,
+  recurringMonthTrigger,
+  releasedThisMonthCents,
+  repeatProgress,
+  repeatTrigger,
+  welcomeChecksDone,
+  welcomeEarnedAt,
+  welcomeReleases,
+  type BookingFact,
+  type SeriesVisitFact,
+} from './domain';
 
 const day = (n: number) => new Date(Date.UTC(2026, 10, 1) + n * 86_400_000);
 const booking = (over: Partial<BookingFact>): BookingFact => ({ id: 'bkg', title: 'Task', posterUserId: 'usr_maya', status: 'confirmed', fundedAt: day(5), priceCents: 6000, ...over });
 
-describe('welcome reward', () => {
-  it('goes to the first funded booking of $40 or more within 60 days of the ID check', () => {
-    const verifiedAt = day(0);
-    const list = [
-      booking({ id: 'small', fundedAt: day(2), priceCents: 3500 }),
-      booking({ id: 'canceled', fundedAt: day(3), status: 'canceled' }),
-      booking({ id: 'first', fundedAt: day(4) }),
-      booking({ id: 'later', fundedAt: day(9) }),
+describe('the welcome gift card (the owner’s rule of 2026-11-14)', () => {
+  it('is earned the moment the last of the phone, ID and background checks passes, with no booking', () => {
+    const facts = { phoneVerifiedAt: day(1), idVerifiedAt: day(3), backgroundCheckedAt: null };
+    expect(welcomeChecksDone(facts)).toEqual(['phone', 'identity']);
+    expect(welcomeEarnedAt(facts)).toBeNull();
+    expect(welcomeEarnedAt({ ...facts, backgroundCheckedAt: day(6) })).toEqual(day(6));
+    // Any order: the phone added last earns it then.
+    expect(welcomeEarnedAt({ phoneVerifiedAt: day(9), idVerifiedAt: day(3), backgroundCheckedAt: day(6) })).toEqual(day(9));
+    expect(welcomeEarnedAt({ phoneVerifiedAt: null, idVerifiedAt: day(3), backgroundCheckedAt: day(6) })).toBeNull();
+  });
+
+  it('is $50 with no cohort, threshold, window or monthly budget (the program switch is the only limit)', () => {
+    expect(REWARD_RULES.welcome).toEqual({ amountCents: 5000 });
+    expect(REWARD_BUDGETS.welcome).toBeUndefined();
+  });
+
+  it('leaves the waiting line oldest first while the month’s budget has room for a whole card', () => {
+    const queue = [1, 2, 3, 4].map((n) => ({ id: `rwd_${n}`, amountCents: 5000 }));
+    expect(welcomeReleases(queue, 0, 15_000)).toEqual(['rwd_1', 'rwd_2', 'rwd_3']);
+    expect(welcomeReleases(queue, 12_000, 15_000)).toEqual([]);
+    expect(welcomeReleases(queue, 10_000, 15_000)).toEqual(['rwd_1']);
+    // No budget: everyone moves on.
+    expect(welcomeReleases(queue, 1_000_000, undefined)).toHaveLength(4);
+  });
+
+  it('counts against the month (market time) it left the line in, not the month it was earned', () => {
+    const now = new Date('2026-12-10T18:00:00.000Z');
+    const grants = [
+      { program: 'welcome', status: 'in_review', amountCents: 5000, holdUntil: new Date('2026-12-01T06:00:00.000Z') },
+      { program: 'welcome', status: 'delivered', amountCents: 5000, holdUntil: new Date('2026-12-05T18:00:00.000Z') },
+      // Left the line on Nov 30 at 11 pm in Austin (December in UTC): November's.
+      { program: 'welcome', status: 'redeemable', amountCents: 5000, holdUntil: new Date('2026-12-01T05:00:00.000Z') },
+      { program: 'welcome', status: 'pending', amountCents: 5000, holdUntil: null },
+      { program: 'welcome', status: 'voided', amountCents: 5000, holdUntil: new Date('2026-12-02T18:00:00.000Z') },
+      { program: 'repeat', status: 'redeemable', amountCents: 1000, holdUntil: new Date('2026-12-02T18:00:00.000Z') },
     ];
-    expect(welcomeCandidate(list, verifiedAt)?.id).toBe('first');
-    expect(welcomeCandidate([booking({ fundedAt: day(61) })], verifiedAt)).toBeUndefined();
+    expect(releasedThisMonthCents(grants, 'welcome', now)).toBe(10_000);
+    expect(nextMarketMonthStart(now).toISOString()).toBe('2027-01-01T06:00:00.000Z');
+  });
+
+  it('follows no booking: a canceled or completed booking never moves it; only an unredeemed card expires', () => {
+    const pending = { program: 'welcome', status: 'pending' as const, holdUntil: null, expiresAt: null };
+    expect(nextGrantState(pending, booking({ status: 'canceled' }), day(10))).toBeNull();
+    expect(nextGrantState(pending, booking({ status: 'completed', transferredAt: day(10) }), day(10))).toBeNull();
+    const redeemable = { program: 'welcome', status: 'redeemable' as const, holdUntil: day(1), expiresAt: day(91) };
+    expect(nextGrantState(redeemable, undefined, day(90))).toBeNull();
+    expect(nextGrantState(redeemable, undefined, day(91))).toEqual({ status: 'expired' });
   });
 });
 
@@ -34,8 +85,8 @@ describe('repeat reward', () => {
   });
 });
 
-describe('a grant over time', () => {
-  const pending = { program: 'welcome', status: 'pending' as const, holdUntil: null, expiresAt: null };
+describe('a booking reward over time', () => {
+  const pending = { program: 'repeat', status: 'pending' as const, holdUntil: null, expiresAt: null };
 
   it('is voided when its booking is canceled', () => {
     expect(nextGrantState(pending, booking({ status: 'canceled' }), day(10))).toEqual({ status: 'voided', voidReason: 'booking_canceled' });
@@ -44,12 +95,12 @@ describe('a grant over time', () => {
   it('qualifies when the work is completed and paid, unless the final price fell below the threshold', () => {
     const paid = booking({ status: 'completed', transferredAt: day(10) });
     expect(nextGrantState(pending, paid, day(10))).toEqual({ status: 'qualified', holdUntil: day(17) });
-    expect(nextGrantState(pending, { ...paid, finalPriceCents: 3900 }, day(10))).toEqual({ status: 'voided', voidReason: 'below_threshold' });
+    expect(nextGrantState(pending, { ...paid, finalPriceCents: 2400 }, day(10))).toEqual({ status: 'voided', voidReason: 'below_threshold' });
     expect(nextGrantState(pending, booking({ status: 'completion_submitted' }), day(10))).toBeNull();
   });
 
-  it('T-13: still qualifies after a dispute settled at $45 (at least the $40 threshold)', () => {
-    const settled = booking({ status: 'completed', transferredAt: day(10), finalPriceCents: 4500 });
+  it('T-13: still qualifies after a dispute settled at $30 (at least the $25 threshold)', () => {
+    const settled = booking({ status: 'completed', transferredAt: day(10), finalPriceCents: 3000 });
     expect(nextGrantState(pending, settled, day(10))).toEqual({ status: 'qualified', holdUntil: day(17) });
   });
 
@@ -58,12 +109,11 @@ describe('a grant over time', () => {
     expect(nextGrantState({ ...qualified, needsReview: true }, booking({ status: 'completed', transferredAt: day(10) }), day(18))).toEqual({ status: 'in_review' });
   });
 
-  it('after the hold: welcome rewards go to review, repeat rewards become redeemable for 90 days', () => {
-    const qualified = { program: 'welcome', status: 'qualified' as const, holdUntil: day(17), expiresAt: null };
+  it('after the hold, with no dispute and no risk signal, becomes redeemable for 90 days', () => {
+    const qualified = { program: 'repeat', status: 'qualified' as const, holdUntil: day(17), expiresAt: null };
     const completed = booking({ status: 'completed', transferredAt: day(10) });
     expect(nextGrantState(qualified, completed, day(16))).toBeNull();
-    expect(nextGrantState(qualified, completed, day(17))).toEqual({ status: 'in_review' });
-    expect(nextGrantState({ ...qualified, program: 'repeat' }, completed, day(18))).toEqual({ status: 'redeemable', redeemableAt: day(17), expiresAt: day(107) });
+    expect(nextGrantState(qualified, completed, day(17))).toEqual({ status: 'redeemable', redeemableAt: day(17), expiresAt: day(107) });
     expect(nextGrantState(qualified, booking({ status: 'disputed' }), day(18))).toBeNull();
   });
 

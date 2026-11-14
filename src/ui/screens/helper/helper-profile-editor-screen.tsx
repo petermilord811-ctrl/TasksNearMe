@@ -56,7 +56,7 @@ export function HelperProfileEditorScreen({ data, handlers, initialSection = 'pr
       <div className="border-t pt-6"><HelperProfileForm values={data.values.profile} languageOptions={data.languageOptions} onSave={handlers.onSaveProfile} onDraft={data.aiDraftingEnabled ? handlers.onDraftProfile : undefined} /></div>
     </div>,
     services: <HelperServicesForm values={data.values.services} categories={data.categories} onSave={handlers.onSaveServices} />,
-    area: <HelperAreaForm values={data.values.area} areas={data.areas} remoteAllowed={remoteAllowed} onSave={handlers.onSaveArea} />,
+    area: <HelperAreaForm values={data.values.area} areas={data.areas} remoteAllowed={remoteAllowed} onSave={handlers.onSaveArea} homeMarket={data.homeMarket} awaitingCity={data.awaitingCity} />,
     tools: <HelperToolsForm values={data.values.tools} onSave={handlers.onSaveTools} />,
     'work-samples': <WorkSamplesEditor samples={data.workSamples} categories={data.categories} maxWorkSamples={data.maxWorkSamples} maxPhotoMegabytes={data.maxPhotoMegabytes} handlers={handlers} />,
     verification: <div className="space-y-6"><VerificationBadges badges={data.badges} />{(['identity', 'payout', 'background'] as const).map((track) => <VerificationPanel key={track} track={track} verification={data.verification} categories={data.categories} bookableCategories={data.progress.bookableCategories} headingLevel={3} />)}</div>,

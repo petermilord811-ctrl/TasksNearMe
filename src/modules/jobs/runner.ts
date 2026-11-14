@@ -18,6 +18,7 @@ import { publishDueReviews } from '@/modules/reviews/service';
 import { createFileStorage } from '@/integrations/storage';
 import { verificationProvidersFor } from '@/modules/verification/providers';
 import { runVerificationTimers } from '@/modules/verification/timers';
+import { runWelcomeRewards } from '@/modules/rewards/welcome';
 import { readPendingDocuments } from '@/modules/verification/auto-check';
 import { runPrivacyRequests } from '@/modules/privacy/requests';
 import { retentionDue, runRetention } from '@/modules/privacy/retention';
@@ -36,9 +37,9 @@ import { retryDueWebhooks } from '@/modules/webhooks/inbox';
  * calendars and the scheduled charges (with their deadlines),
  * can't-access expiry, start and approval reminders, auto-approval, review publishing, verification timers,
  * notifications and their email and text messages, privacy requests (data copies, deletions), retention
- * timers (hourly), and the reading of proofs of address and IDs. Each job is idempotent; a
- * Postgres advisory lock lets only one server instance run them at a time. Payouts and rewards stay
- * lazy per person for now.
+ * timers (hourly), the welcome gift cards (and their monthly waiting line), and the reading of proofs of address
+ * and IDs. Each job is idempotent; a Postgres advisory lock lets only one server instance run them at a time.
+ * Booking rewards stay lazy per person for now.
  */
 
 export interface Job {
@@ -63,6 +64,8 @@ export const JOBS: Job[] = [
   { name: 'bookings.start_reminders', run: (db, now) => remindUpcomingBookings(db, now) },
   { name: 'reviews.publish', run: (db, now) => publishDueReviews(db, now) },
   { name: 'verification.timers', run: (db, now) => runVerificationTimers(db, { storage: createFileStorage(), providers: verificationProvidersFor(process.env) }, now) },
+  // Welcome gift cards for helpers whose three checks passed, and the month's waiting line (before notifications).
+  { name: 'rewards.welcome', run: (db, now) => runWelcomeRewards(db, now) },
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
   { name: 'notifications.deliver', run: (db, now) => deliverNotifications(db, now) },
   { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), payments: createPaymentProvider(), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },

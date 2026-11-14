@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes, type ActionResult, type HelperOnboardingPageData, type HelperProfileEditorHandlers } from '@/contracts';
-import { fakeOnboardingHandlers, fakeProfileEditorHandlers, onboardingAreaStep, onboardingDone, onboardingIdentityStep, onboardingProfileStep, onboardingServicesStep, samProfileEditorData } from '@/fixtures';
+import { fakeOnboardingHandlers, fakeProfileEditorHandlers, onboardingAreaStep, onboardingDone, onboardingDoneAwaitingCity, onboardingDoneAwaitingCityPending, onboardingIdentityStep, onboardingProfileStep, onboardingServicesStep, samProfileEditorData } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import { HelperOnboardingScreen } from './helper-onboarding-screen';
 import { HelperProfileEditorScreen } from './helper-profile-editor-screen';
@@ -93,21 +93,59 @@ describe('helper onboarding screen', () => {
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
   });
 
-  it('shows the canonical welcome reward and find-work link only when supplied and bookable', () => {
+  it('shows the earned welcome gift card (no first task) and the find-work link on the last step', () => {
     show(<HelperOnboardingScreen data={onboardingDone} handlers={fakeOnboardingHandlers} />);
     expect(screen.getByRole('heading', { name: 'You can make offers now' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Find work' })).toHaveAttribute('href', routes.app.findWork());
-    const reward = screen.getByRole('complementary');
-    expect(reward).toHaveTextContent('$50.00');
-    expect(reward).toHaveTextContent('$40.00');
-    expect(reward).toHaveTextContent('60 days');
-    expect(reward).not.toHaveTextContent(/reviews?|ratings?/i);
+    const reward = screen.getByRole('region', { name: 'Your $50 gift card is yours' });
+    expect(reward).toHaveTextContent('3 of 3 checks done');
+    expect(reward).toHaveTextContent('Founding helper #4');
+    expect(reward).not.toHaveTextContent(/\$40|60 days|spots? left/);
+    // The last step shows the card itself, not the strip.
+    expect(screen.queryByRole('complementary', { name: 'Welcome gift card' })).not.toBeInTheDocument();
   });
 
-  it('omits the welcome reward when the app does not supply one', () => {
+  it('puts the three checks and the gift card under the stepper on the steps in between, and marks the steps that earn it', () => {
+    show(<HelperOnboardingScreen data={onboardingIdentityStep} handlers={fakeOnboardingHandlers} />);
+    expect(screen.getByRole('complementary', { name: 'Welcome gift card' })).toHaveTextContent('1 of 3 checks done for your $50 gift card.');
+    // The three steps in the list, and the phone's "Step 5 of 9: ID check" line (the ID step is one of them).
+    expect(screen.getAllByText('. Counts toward your welcome gift card')).toHaveLength(4);
+  });
+
+  it('on phones, keeps the step list (the current step too) behind "All steps", so the card sits under the bar', async () => {
+    show(<HelperOnboardingScreen data={onboardingIdentityStep} handlers={fakeOnboardingHandlers} />);
+    const navigation = screen.getByRole('navigation', { name: 'Helper setup progress' });
+    const list = navigation.querySelector('ol')!;
+    expect(list).toHaveClass('max-sm:hidden');
+    expect(list.querySelector('[aria-current="step"]')).not.toHaveClass('max-sm:col-span-2');
+    await userEvent.click(within(navigation).getByRole('button', { name: 'All steps' }));
+    expect(list).not.toHaveClass('max-sm:hidden');
+    expect(within(navigation).getByRole('button', { name: 'Fewer steps' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('omits the welcome gift card when the app does not supply one', () => {
     show(<HelperOnboardingScreen data={{ ...onboardingDone, welcomeReward: undefined }} handlers={fakeOnboardingHandlers} />);
-    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /gift card/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Find work' })).toBeVisible();
+  });
+
+  it('tells a verified helper outside our cities we will say when their city opens (national, 2026-11-14)', () => {
+    show(<HelperOnboardingScreen data={onboardingDoneAwaitingCity} handlers={fakeOnboardingHandlers} />);
+    expect(screen.getByRole('heading', { name: "You're verified. We'll tell you the moment Dallas opens." })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'A few steps left' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Find work' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Get your profile ready' })).toHaveAttribute('href', routes.app.helperProfile());
+    expect(screen.getByRole('link', { name: 'Change your city' })).toHaveAttribute('href', routes.app.helperOnboarding('area'));
+    // The home address waits for the city: it's neither a step to finish nor "not needed".
+    expect(screen.queryByRole('link', { name: /Finish Home address/ })).not.toBeInTheDocument();
+    const navigation = within(screen.getByRole('navigation', { name: 'Helper setup progress' }));
+    expect(navigation.getByText('Home address').closest('li')).toHaveTextContent('When your city opens');
+  });
+
+  it('lists the checks still to do for a helper waiting for their city', () => {
+    show(<HelperOnboardingScreen data={onboardingDoneAwaitingCityPending} handlers={fakeOnboardingHandlers} />);
+    expect(screen.getByRole('heading', { name: "We're not in Dallas, TX yet" })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Finish Background check' })).toHaveAttribute('href', routes.app.helperOnboarding('background'));
   });
 
   it.each([onboardingProfileStep, onboardingServicesStep, onboardingAreaStep])('does not collect private provider details in the $step form', (data) => {

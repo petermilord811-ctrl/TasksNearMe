@@ -17,13 +17,16 @@
   },
   "budgets": {
     "title": "Program budgets",
-    "intro": "Committed includes rewards from pending through delivered. Delivered is part of the committed amount.",
+    "intro": "Committed includes rewards from pending through delivered; delivered is part of it. A monthly budget limits how much leaves the waiting line for review each calendar month. The rest waits for next month's, oldest first.",
     "committed": "Committed",
     "delivered": "Delivered",
     "budget": "Budget",
     "unset": "No budget set",
     "meter": "{program}: {kind}",
-    "meterValue": "{amount} of {budget}"
+    "meterValue": "{amount} of {budget}",
+    "releasedThisMonth": "Released this month",
+    "queued": "Waiting for next month",
+    "budgetMonthly": "Budget a month"
   },
   "results": "Reward grants",
   "tableCaption": "Rewards, booking context, risk signals, and available decisions",

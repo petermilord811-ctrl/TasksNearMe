@@ -109,6 +109,8 @@ export const FIELD_ERROR_CODES = [
   'out_of_range',
   /** A checkbox that must be ticked (age, terms). */
   'must_accept',
+  /** A place inside a city we already serve, given where another one was asked for (a helper's ZIP in their own market). */
+  'in_market',
 ] as const;
 export type FieldErrorCode = (typeof FIELD_ERROR_CODES)[number];
 

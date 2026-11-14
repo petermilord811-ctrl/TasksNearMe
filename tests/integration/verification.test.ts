@@ -153,11 +153,11 @@ describe('helper onboarding', () => {
     expect((await profile()).backgroundCheckedAt).not.toBeNull();
     expect(done?.agreementNeeded).toBe(false);
 
-    // The welcome reward stays on the done step once the helper holds a founding number (given out when
-    // they first become bookable), not only while they don't.
-    expect(done?.welcomeReward).toBeDefined();
+    // The phone, ID and background checks have all passed: the welcome gift card is theirs on the done step
+    // (2026-11-14: no booking, no cohort), with the founding badge's number once they hold one.
+    expect(done?.welcomeReward).toMatchObject({ state: 'earned', amountCents: 5000, checks: [{ check: 'phone', state: 'done' }, { check: 'identity', state: 'done' }, { check: 'background', state: 'done' }] });
     await db.update(helperProfiles).set({ foundingNumber: 98 }).where(eq(helperProfiles.userId, userId));
-    expect((await getOnboardingPageData(db, userId, 'done', now()))?.welcomeReward).toMatchObject({ amountCents: 5000 });
+    expect((await getOnboardingPageData(db, userId, 'done', now()))?.welcomeReward).toMatchObject({ state: 'earned', amountCents: 5000, foundingNumber: 98 });
   });
 
   it('pauses and resumes, and manages work samples', async () => {
@@ -189,6 +189,6 @@ describe('helper onboarding', () => {
     expect(await removeWorkSample(db, 'usr_maya', second.sample.id)).toEqual({ ok: false, code: 'not_found' });
     editor = await getProfileEditorData(db, userId, now());
     expect(editor?.workSamples).toHaveLength(1);
-    expect(editor?.values.area).toEqual({ areaId: 'area_mueller', serviceRadiusMiles: 5, remoteOk: false });
+    expect(editor?.values.area).toEqual({ where: 'market', areaId: 'area_mueller', serviceRadiusMiles: 5, remoteOk: false, homeZip: '', homeCity: '' });
   });
 });

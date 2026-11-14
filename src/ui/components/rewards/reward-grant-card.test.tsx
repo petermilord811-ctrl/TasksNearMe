@@ -21,13 +21,29 @@ function mount(grant: RewardGrantView = redeemable, onRedeem: RewardsHandlers['o
 }
 
 describe('RewardGrantCard', () => {
-  it('shows the supplied amount, program, booking destination, status, and expiry in Central time', () => {
+  it('shows the supplied amount, program, status, and expiry in Central time', () => {
     mount();
     expect(screen.getByRole('heading', { name: rewards.programs.welcome })).toBeVisible();
     expect(screen.getByText(formatMoney(redeemable.amountCents))).toBeVisible();
-    expect(screen.getByRole('link', { name: redeemable.booking!.title })).toHaveAttribute('href', routes.app.booking(redeemable.booking!.id));
+    // The welcome gift card follows no booking (2026-11-14).
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(screen.getByText(messages.status.reward.redeemable)).toBeVisible();
     expect(screen.getByText(`Redeem by ${formatDate(redeemable.expiresAt!)}`)).toHaveAttribute('dateTime', redeemable.expiresAt);
+  });
+
+  it('links a booking reward to its booking', () => {
+    const booking = { id: 'bkg_series_visit', title: 'Biweekly cleaning' };
+    mount({ ...redeemable, id: 'rwd_month', program: 'recurring_month', amountCents: 1500, booking });
+    expect(screen.getByRole('link', { name: booking.title })).toHaveAttribute('href', routes.app.booking(booking.id));
+  });
+
+  it('says when a welcome gift card in line moves on, and that our team is checking it', () => {
+    const queued = rewardGrantsByStatus[0]!;
+    mount(queued);
+    expect(screen.getByText(`In line for this month's gift cards. It moves on by ${formatDate(queued.queuedUntil!)}.`)).toHaveAttribute('dateTime', queued.queuedUntil);
+    cleanup();
+    mount(rewardGrantsByStatus[2]!);
+    expect(screen.getByText(rewards.welcomeDetails.in_review)).toBeVisible();
   });
 
   it('shows the client for relationship rewards', () => {
@@ -132,7 +148,11 @@ describe('RewardGrantCard', () => {
       ? `Unlocking ${formatDateTime(grant.holdUntil!)}`
       : messages.status.reward[grant.status];
     expect(screen.getByText(expectedBadge)).toBeVisible();
-    const expectedDetail = grant.status === 'qualified'
+    const expectedDetail = grant.program === 'welcome' && grant.queuedUntil
+      ? `In line for this month's gift cards. It moves on by ${formatDate(grant.queuedUntil)}.`
+      : grant.program === 'welcome' && grant.status === 'in_review'
+        ? rewards.welcomeDetails.in_review
+        : grant.status === 'qualified'
       ? `Ready on ${formatDate(grant.holdUntil!)}`
       : grant.status === 'redeemable'
         ? `Redeem by ${formatDate(grant.expiresAt!)}`

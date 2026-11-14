@@ -6,7 +6,8 @@ import { clientIp } from '@/modules/accounts/sign-in/server';
 import { rateLimited, validationFailed } from '@/platform/actions/results';
 import { db } from '@/platform/db/client';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { joinWaitlist } from './waitlist';
+import { updateTag } from 'next/cache';
+import { joinWaitlist, WAITLIST_TAG } from './waitlist';
 
 /** `/waitlist` form (WaitlistHandlers.onJoin). */
 export async function joinWaitlistAction(input: WaitlistInput): Promise<ActionResult> {
@@ -18,5 +19,7 @@ export async function joinWaitlistAction(input: WaitlistInput): Promise<ActionRe
     if (!limited.ok) return rateLimited(limited.retryAt);
   }
   await joinWaitlist(db, parsed.data);
+  // The waitlist page's cities and counts include this entry.
+  updateTag(WAITLIST_TAG);
   return { ok: true, code: 'submitted' };
 }

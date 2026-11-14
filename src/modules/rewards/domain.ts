@@ -2,15 +2,17 @@ import type { Cents, RewardProgramCode, RewardProgramView, RewardStatus } from '
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
- * Pure reward rules (blueprint 05 §1–§2). Launch programs: welcome ($50, founding cohort) and repeat
- * ($10, paid-bookings version). Acceptance and completion are built later, off at launch. With regular
- * visits, the recurring-month reward (variant B): $15 once per series.
+ * Pure reward rules (blueprint 05 §1–§2). Launch programs: the welcome gift card ($50 for every helper whose phone,
+ * ID and background checks have passed; the owner's choice on 2026-11-14) and repeat ($10, paid-bookings
+ * version). Acceptance and completion are built later, off at launch. With regular visits, the recurring-month
+ * reward (variant B): $15 once per series.
  */
 
 const DAY = 86_400_000;
 
 export const REWARD_RULES = {
-  welcome: { amountCents: 5000, thresholdCents: 4000, cohortSize: 100, windowDays: 60 },
+  /** No booking, no window, no cohort: the three checks earn it (`welcomeEarnedAt`). */
+  welcome: { amountCents: 5000 },
   repeat: { amountCents: 1000, thresholdCents: 2500, needed: 3, windowDays: 90 },
   /** A calendar month (market time) in which every visit of a series, at least 2, was completed and paid. */
   recurringMonth: { amountCents: 1500, minVisits: 2 },
@@ -19,14 +21,77 @@ export const REWARD_RULES = {
   monthlyCapCents: 7500,
 } as const;
 
+/** The checks that earn the welcome gift card, in onboarding order (blueprint 05 §2, 2026-11-14). */
+export const WELCOME_CHECKS = ['phone', 'identity', 'background'] as const;
+export type WelcomeCheck = (typeof WELCOME_CHECKS)[number];
+
+/** When each check passed (null: not yet): the phone code, the ID (both stages), a clear background check. */
+export interface WelcomeFacts {
+  phoneVerifiedAt: Date | null;
+  idVerifiedAt: Date | null;
+  backgroundCheckedAt: Date | null;
+}
+
+const CHECK_FACT: Record<WelcomeCheck, keyof WelcomeFacts> = { phone: 'phoneVerifiedAt', identity: 'idVerifiedAt', background: 'backgroundCheckedAt' };
+
+/** The welcome checks that have passed, in order. */
+export function welcomeChecksDone(facts: WelcomeFacts): WelcomeCheck[] {
+  return WELCOME_CHECKS.filter((check) => facts[CHECK_FACT[check]] !== null);
+}
+
+/** The moment the last of the three checks passed (the welcome gift card is earned then), or null. */
+export function welcomeEarnedAt(facts: WelcomeFacts): Date | null {
+  const times = WELCOME_CHECKS.map((check) => facts[CHECK_FACT[check]]);
+  if (times.some((time) => time === null)) return null;
+  return new Date(Math.max(...times.map((time) => time!.getTime())));
+}
+
 /**
- * Program budgets (blueprint 05 §1.4: reserved under a database lock, and the program stops when its budget is
- * spent). At launch only the welcome reward has one: its founding cohort, 100 × $50.
+ * Monthly program budgets (blueprint 05 §1.4, as changed on 2026-11-14): a safety valve, never a count of spots.
+ * A program with a budget limits how much leaves the waiting line for review in one calendar month (market time);
+ * past it, grants wait (pending) and move on, oldest first, when the next month starts. The welcome gift card has
+ * none (the owner's choice, 2026-11-14: "no monthly limit"): every card earned goes to staff review within the
+ * minute, and the program's switch (`reward.welcome`) is the only limit on spend. The mechanism stays for a
+ * budget set later.
  */
 export type RewardBudgets = Partial<Record<RewardProgramCode, Cents>>;
-export const REWARD_BUDGETS: RewardBudgets = { welcome: REWARD_RULES.welcome.cohortSize * REWARD_RULES.welcome.amountCents };
+export const REWARD_BUDGETS: RewardBudgets = {};
 /** Grants that hold part of their program's budget: all but voided and expired ones. */
 export const BUDGET_COMMITTED_STATUSES: readonly RewardStatus[] = ['pending', 'qualified', 'in_review', 'redeemable', 'issuing', 'delivered', 'failed'];
+/** A welcome grant waiting in line for its month's budget (`qualified`: one earned under the old booking rule). */
+export const WELCOME_QUEUED_STATUSES: readonly RewardStatus[] = ['pending', 'qualified'];
+/** Welcome grants that left the line: they count against the month they left it in (their `holdUntil`). */
+export const WELCOME_RELEASED_STATUSES: readonly RewardStatus[] = ['in_review', 'redeemable', 'issuing', 'delivered', 'failed'];
+
+/**
+ * Which waiting welcome grants leave the line now: oldest first, while the month's budget has room for the whole
+ * amount (no budget: all of them). `releasedCents`: what already left the line this month.
+ */
+export function welcomeReleases(queue: readonly { id: string; amountCents: Cents }[], releasedCents: Cents, budgetCents: Cents | undefined): string[] {
+  const ids: string[] = [];
+  let used = releasedCents;
+  for (const grant of queue) {
+    if (budgetCents !== undefined && used + grant.amountCents > budgetCents) break;
+    used += grant.amountCents;
+    ids.push(grant.id);
+  }
+  return ids;
+}
+
+/**
+ * What left a program's waiting line in `now`'s calendar month (market time), by when it left (`holdUntil`): the
+ * amount that counts against the month's budget. Staff tools and the metrics page use it.
+ */
+export function releasedThisMonthCents(
+  grants: readonly { program: string; status: string; amountCents: Cents; holdUntil?: Date | null }[],
+  program: RewardProgramCode,
+  now: Date,
+): Cents {
+  const start = marketMonthStart(now);
+  return grants
+    .filter((grant) => grant.program === program && (WELCOME_RELEASED_STATUSES as readonly string[]).includes(grant.status) && grant.holdUntil && grant.holdUntil >= start)
+    .reduce((total, grant) => total + grant.amountCents, 0);
+}
 
 /**
  * The start of the calendar month in market time (America/Chicago) that `now` falls in: the $75 monthly cap
@@ -37,8 +102,15 @@ export function marketMonthStart(now: Date): Date {
   return new Date(marketLocalToUtc(`${marketDayKey(now).slice(0, 7)}-01`, '00:00'));
 }
 
+/** The start of the next calendar month in market time: when a waiting welcome grant gets the new budget. */
+export function nextMarketMonthStart(now: Date): Date {
+  const [year, month] = marketDayKey(now).slice(0, 7).split('-').map(Number) as [number, number];
+  const next = month === 12 ? `${year + 1}-01` : `${year}-${String(month + 1).padStart(2, '0')}`;
+  return new Date(marketLocalToUtc(`${next}-01`, '00:00'));
+}
+
 export const LAUNCH_PROGRAMS: RewardProgramView[] = [
-  { program: 'welcome', amountCents: REWARD_RULES.welcome.amountCents, thresholdCents: REWARD_RULES.welcome.thresholdCents },
+  { program: 'welcome', amountCents: REWARD_RULES.welcome.amountCents },
   { program: 'repeat', amountCents: REWARD_RULES.repeat.amountCents, thresholdCents: REWARD_RULES.repeat.thresholdCents },
   { program: 'recurring_month', amountCents: REWARD_RULES.recurringMonth.amountCents },
 ];
@@ -93,14 +165,6 @@ export interface BookingFact {
 const funded = (booking: BookingFact) => (FUNDED_STATUSES as readonly string[]).includes(booking.status);
 const byFundedAt = (a: BookingFact, b: BookingFact) => a.fundedAt.getTime() - b.fundedAt.getTime();
 
-/** The first funded booking of $40 or more within 60 days of the ID check. */
-export function welcomeCandidate(bookings: BookingFact[], verifiedAt: Date): BookingFact | undefined {
-  const windowEnd = verifiedAt.getTime() + REWARD_RULES.welcome.windowDays * DAY;
-  return bookings
-    .filter((booking) => funded(booking) && booking.priceCents >= REWARD_RULES.welcome.thresholdCents && booking.fundedAt >= verifiedAt && booking.fundedAt.getTime() <= windowEnd)
-    .sort(byFundedAt)[0];
-}
-
 /** Funded bookings of $25 or more with one client, oldest first. */
 function qualifyingWith(bookings: BookingFact[], posterUserId: string): BookingFact[] {
   return bookings.filter((booking) => booking.posterUserId === posterUserId && funded(booking) && booking.priceCents >= REWARD_RULES.repeat.thresholdCents).sort(byFundedAt);
@@ -146,26 +210,29 @@ export type GrantChange =
   | { status: 'expired' };
 
 /**
- * The next state of a grant from its booking (lazily, until the job runner exists):
+ * The next state of a grant from its booking (lazily, when the helper looks at their rewards):
  * - pending, qualified or in review, and the booking was canceled: voided;
  * - pending, and the work was completed and paid: qualified for 7 days (voided if the final price fell
  *   below the program's threshold);
- * - qualified, the hold is over, and no dispute: welcome rewards go to review (every one at launch),
- *   the others become redeemable for 90 days;
+ * - qualified, the hold is over, and no dispute: redeemable for 90 days, or to staff review when a risk signal
+ *   says so;
  * - redeemable past its 90 days: expired.
+ * Welcome grants follow no booking (2026-11-14): they leave their waiting line for review (`welcomeReleases`),
+ * staff make them redeemable, and only the expiry applies here.
  */
 export function nextGrantState(grant: GrantFacts, booking: BookingFact | undefined, now: Date): GrantChange | null {
+  if (grant.program === 'welcome') return grant.status === 'redeemable' && grant.expiresAt && grant.expiresAt <= now ? { status: 'expired' } : null;
   const open = grant.status === 'pending' || grant.status === 'qualified' || grant.status === 'in_review';
   if (open && booking?.status === 'canceled') return { status: 'voided', voidReason: 'booking_canceled' };
   if (grant.status === 'pending' && booking?.status === 'completed' && booking.transferredAt) {
     // The recurring-month reward has no price threshold (each visit was paid).
-    const threshold = grant.program === 'welcome' ? REWARD_RULES.welcome.thresholdCents : grant.program === 'recurring_month' ? 0 : REWARD_RULES.repeat.thresholdCents;
+    const threshold = grant.program === 'recurring_month' ? 0 : REWARD_RULES.repeat.thresholdCents;
     if ((booking.finalPriceCents ?? booking.priceCents) < threshold) return { status: 'voided', voidReason: 'below_threshold' };
     return { status: 'qualified', holdUntil: new Date(booking.transferredAt.getTime() + REWARD_RULES.holdDays * DAY) };
   }
   if (grant.status === 'qualified' && grant.holdUntil && grant.holdUntil <= now && booking?.status !== 'disputed') {
-    // Welcome rewards are always reviewed; others when a risk signal says so (a self-dealing pair).
-    if (grant.program === 'welcome' || grant.needsReview) return { status: 'in_review' };
+    // Staff review when a risk signal says so (a self-dealing pair).
+    if (grant.needsReview) return { status: 'in_review' };
     return { status: 'redeemable', redeemableAt: grant.holdUntil, expiresAt: new Date(grant.holdUntil.getTime() + REWARD_RULES.redeemDays * DAY) };
   }
   if (grant.status === 'redeemable' && grant.expiresAt && grant.expiresAt <= now) return { status: 'expired' };

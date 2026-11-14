@@ -120,12 +120,13 @@ export const addressSuggestions: AddressSuggestion[] = [
   { placeId: 'plc_crestview_88', line1: '88 Sample Street', line2: 'Austin, TX 78757', areaName: 'Crestview', inServiceArea: true },
 ];
 
-/** Outside the service area: offer the waitlist instead. */
+/** Outside the service area: offer the waitlist instead (for Waco, with its ZIP), and helper sign-up. */
 export const outOfAreaSuggestion: AddressSuggestion = {
   placeId: 'plc_waco_100',
   line1: '100 Example Road',
   line2: 'Waco, TX 76701',
   inServiceArea: false,
+  outside: { city: 'Waco', state: 'TX', zip: '76701' },
 };
 
 export const aiDeskDraft: AiTaskDraft = {

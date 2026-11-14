@@ -1,5 +1,5 @@
 import { pushSetup } from '@/modules/notifications/push';
-import { and, asc, eq, max, notInArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, max, notInArray } from 'drizzle-orm';
 import type {
   ActionResult,
   CategorySlug,
@@ -28,14 +28,17 @@ import { avatarPhoto, MAX_PHOTO_BYTES } from '@/modules/files/photos';
 import { storePhoto } from '@/modules/files/uploads';
 import { aiWritingSetUp } from '@/integrations/ai';
 import { aiDraftingEnabledFor } from '@/modules/assist/availability';
+import { marketForZip, OPEN_MARKET_STATUSES } from '@/modules/markets/coverage';
 import { getFlags, getMarketView, listCategoryViews } from '@/modules/markets/queries';
 import { areas, categories, markets } from '@/modules/markets/schema';
-import { countFoundingHelpers, fileUrl, initialsOf } from '@/modules/profiles/queries';
+import { fileUrl, initialsOf } from '@/modules/profiles/queries';
 import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/profiles/schema';
-import { FIRST_PAYOUT_DAYS, WELCOME_PROGRAM } from '@/modules/rewards/programs';
+import { FIRST_PAYOUT_DAYS } from '@/modules/rewards/programs';
+import { welcomeCardFor } from '@/modules/rewards/welcome';
 import { files } from '@/modules/tasks/schema';
 import { fieldError, validationFailed } from '@/platform/actions/results';
 import { fieldCipherFromEnv, type FieldCipher } from '@/platform/crypto/field-encryption';
+import { normalizeZip, stateOfZip, tidyCityName } from '@/shared/us-zip';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { computeOnboarding } from './progress';
@@ -179,20 +182,37 @@ export async function saveHelperServices(db: Db, userId: string, input: HelperSe
   return { ok: true, code: 'saved' };
 }
 
+/**
+ * The area step: a neighborhood in the helper's market, or (owner, 2026-11-14: national, cities open in turn)
+ * a ZIP and city anywhere else in the US. Outside every open market the helper waits for their city: they can
+ * finish their checks, and aren't bookable until it opens. A ZIP in another city we're open in moves the
+ * helper's market there, and they choose a neighborhood in it next.
+ */
 export async function saveHelperArea(db: Db, userId: string, input: HelperAreaInput, now: Date): Promise<ActionResult> {
   const parsed = helperAreaInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const marketId = await marketIdOf(db, userId);
-  const [area] = await db.select({ id: areas.id }).from(areas).where(and(eq(areas.id, parsed.data.areaId), eq(areas.marketId, marketId ?? ''))).limit(1);
-  if (!area) return fieldError('areaId', 'invalid');
+  const reach = { serviceRadiusKm: Math.round(parsed.data.serviceRadiusMiles * KM_PER_MILE), remoteOk: parsed.data.remoteOk, updatedAt: now.toISOString() };
+  let place: Partial<typeof helperProfiles.$inferInsert>;
+  if (parsed.data.where === 'elsewhere') {
+    const zip = normalizeZip(parsed.data.homeZip ?? '');
+    const state = zip ? stateOfZip(zip) : null;
+    if (!zip || !state) return fieldError('homeZip', 'not_supported');
+    const city = tidyCityName(parsed.data.homeCity);
+    if (!city) return fieldError('homeCity', 'invalid');
+    const open = await db.select({ id: markets.id, status: markets.status, zipPrefixes: markets.zipPrefixes }).from(markets).where(inArray(markets.status, [...OPEN_MARKET_STATUSES]));
+    const covering = marketForZip(open, zip);
+    if (covering && covering.id === marketId) return fieldError('homeZip', 'in_market');
+    if (covering) await db.update(users).set({ homeMarketId: covering.id, updatedAt: now }).where(eq(users.id, userId));
+    place = { areaId: null, homeZip: zip, homeCity: city, homeState: state };
+  } else {
+    const [area] = await db.select({ id: areas.id }).from(areas).where(and(eq(areas.id, parsed.data.areaId), eq(areas.marketId, marketId ?? ''))).limit(1);
+    if (!area) return fieldError('areaId', 'invalid');
+    place = { areaId: area.id, homeZip: null, homeCity: null, homeState: null };
+  }
   const updated = await db
     .update(helperProfiles)
-    .set({
-      areaId: area.id,
-      serviceRadiusKm: Math.round(parsed.data.serviceRadiusMiles * KM_PER_MILE),
-      remoteOk: parsed.data.remoteOk,
-      updatedAt: now.toISOString(),
-    })
+    .set({ ...place, ...reach })
     .where(eq(helperProfiles.userId, userId))
     .returning({ userId: helperProfiles.userId });
   if (updated.length === 0) return { ok: false, code: 'not_allowed' };
@@ -320,6 +340,7 @@ async function sharedPageData(db: Db, userId: string) {
   ]);
   return {
     market,
+    homeMarket: { name: market.name, zipPrefixes: market.zipPrefixes },
     categories: categoryViews,
     areas: areaRows.map((area) => ({ id: area.id, name: area.name, center: { lat: area.lat, lng: area.lng } })),
     languageOptions: LANGUAGE_CODES.map((code) => ({ code, name: languageNames.of(code) ?? code })),
@@ -345,11 +366,20 @@ function formValues(state: OnboardingState) {
       })),
     },
     area: {
+      // A helper whose city has since opened chooses a neighborhood in it.
+      where: !profile?.areaId && state.awaitingCity ? ('elsewhere' as const) : ('market' as const),
       areaId: profile?.areaId ?? '',
+      homeZip: profile?.homeZip ?? '',
+      homeCity: profile?.homeCity ?? '',
       serviceRadiusMiles: nearestRadius(profile?.serviceRadiusKm ?? 8),
       remoteOk: profile?.remoteOk ?? false,
     },
   };
+}
+
+/** Where a helper outside every open market waits, for the screens. */
+function waitingFor(state: OnboardingState) {
+  return state.awaitingCity ? { awaitingCity: { city: state.awaitingCity.city, state: state.awaitingCity.state } } : {};
 }
 
 export async function getOnboardingPageData(db: Db, userId: string, step: OnboardingStep, now: Date): Promise<HelperOnboardingPageData | null> {
@@ -357,25 +387,23 @@ export async function getOnboardingPageData(db: Db, userId: string, step: Onboar
   if (!shared) return null;
   const result = computeOnboarding(state.facts, step);
   const flags = await getFlags(shared.market.id, db);
-  const spots = await countFoundingHelpers(shared.market.id, db);
-  // Founding numbers are given out when a helper first becomes bookable (0576be3): a helper who holds one
-  // keeps seeing the reward, even once the last spot is taken; others see it while spots are left.
-  const welcomeOpen = flags['reward.welcome'] === true && (Boolean(state.profile?.foundingNumber) || spots < WELCOME_PROGRAM.cohortLimit);
+  // The $50 welcome gift card and where its three checks stand (blueprint 05 §2, 2026-11-14): every helper earns it.
+  const welcomeReward = await welcomeCardFor(db, userId, now, result.progress);
   return {
     step,
     ...(step === 'done' && pushSetup() ? { push: pushSetup()! } : {}),
     progress: result.progress,
     categories: shared.categories,
     areas: shared.areas,
+    homeMarket: shared.homeMarket,
+    ...waitingFor(state),
     languageOptions: shared.languageOptions,
     values: formValues(state),
     verification: verificationSummary(state, result.backgroundRequired, optionalCipher(), promptSecret()),
     agreementNeeded: !state.facts.agreementAccepted,
     firstPayoutDays: FIRST_PAYOUT_DAYS,
     aiDraftingEnabled: aiWritingSetUp() && flags.ai_drafting === true,
-    ...(welcomeOpen
-      ? { welcomeReward: { amountCents: WELCOME_PROGRAM.amountCents, minTaskPriceCents: WELCOME_PROGRAM.minTaskPriceCents, windowDays: WELCOME_PROGRAM.windowDays } }
-      : {}),
+    ...(welcomeReward ? { welcomeReward } : {}),
   };
 }
 
@@ -384,7 +412,7 @@ export async function onboardingRedirect(db: Db, userId: string, step: Onboardin
   const state = await loadOnboardingState(db, userId, now);
   const result = computeOnboarding(state.facts);
   const stepState = result.progress.steps.find((s) => s.step === step)?.state;
-  return stepState === 'locked' || stepState === 'skipped' ? result.firstIncomplete : null;
+  return stepState === 'locked' || stepState === 'skipped' || stepState === 'later' ? result.firstIncomplete : null;
 }
 
 export async function getProfileEditorData(db: Db, userId: string, now: Date): Promise<HelperProfileEditorData | null> {
@@ -405,6 +433,8 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
     progress: result.progress,
     categories: shared.categories,
     areas: shared.areas,
+    homeMarket: shared.homeMarket,
+    ...waitingFor(state),
     languageOptions: shared.languageOptions,
     values: { ...formValues(state), tools: { tools: state.profile.tools } },
     workSamples: await workSampleViews(db, userId),

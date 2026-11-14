@@ -37,6 +37,8 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [outOfArea, setOutOfArea] = useState(!!initialSuggestions?.some((suggestion) => !suggestion.inServiceArea));
+  // An address picked outside the cities we're open in: the panel names its city (owner, 2026-11-14).
+  const [outsidePick, setOutsidePick] = useState<AddressSuggestion['outside']>();
   const request = useRef(0);
   const modeError = getFieldState('location.mode', formState).error?.message;
   const placeError = getFieldState('location.placeId', formState).error?.message;
@@ -73,13 +75,14 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
     setOpen(false);
     setActive(-1);
     setOutOfArea(false);
+    setOutsidePick(undefined);
     setStatus('idle');
     onAddressChange(undefined);
     setValue('location.placeId', '', { shouldDirty: true });
   }
 
   function chooseAddress(address: AddressSuggestion) {
-    if (!address.inServiceArea) { setOutOfArea(true); setOpen(false); return; }
+    if (!address.inServiceArea) { setOutOfArea(true); setOutsidePick(address.outside); setOpen(false); return; }
     request.current++;
     setValue('location.placeId', address.placeId, { shouldDirty: true, shouldValidate: true });
     onAddressChange(address);
@@ -87,6 +90,7 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
     setSearchEnabled(false);
     setOpen(false);
     setOutOfArea(false);
+    setOutsidePick(undefined);
     setStatus('idle');
     setActive(-1);
   }
@@ -101,6 +105,7 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
     setSearchEnabled(false);
     setOpen(false);
     setOutOfArea(false);
+    setOutsidePick(undefined);
     setStatus('idle');
   }
 
@@ -130,7 +135,7 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
             {suggestions.map((address, index) => <li key={address.placeId} id={`${id}-result-${index}`} role="option" aria-selected={active === index} aria-disabled={!address.inServiceArea} className={cn('min-h-14 cursor-pointer rounded-lg p-3 text-sm', active === index && 'bg-accent', !address.inServiceArea && 'text-muted-foreground')} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseAddress(address)}>
               <span className="block break-words font-medium">{address.line1}</span>
               <span className="block break-words">{address.line2}</span>
-              {!address.inServiceArea && <span className="mt-1 block font-medium">{t('location.outOfArea')}</span>}
+              {!address.inServiceArea && <span className="mt-1 block font-medium">{address.outside ? t('location.notYetIn', { city: address.outside.city }) : t('location.outOfArea')}</span>}
             </li>)}
           </ul>}
         </div>
@@ -143,7 +148,14 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
         {status === 'loaded' && suggestions.length === 0 && <p>{t('location.empty')}</p>}
         {selectedAddress?.inServiceArea && <span className="sr-only">{t('location.selected')}</span>}
       </div>
-      {outOfArea && <div className="rounded-2xl border border-warning/50 bg-warning/[0.06] p-4 text-sm"><p className="font-medium">{t('location.outOfArea')}</p><a href={routes.waitlist()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('location.waitlist')}</a></div>}
+      {outOfArea && (outsidePick ? <div className="space-y-1 rounded-2xl border border-warning/50 bg-warning/[0.06] p-4 text-sm">
+        <p className="font-medium">{t('location.outsideTitle', { city: outsidePick.city })}</p>
+        <p className="text-muted-foreground">{t('location.outsideBody', { city: outsidePick.city })}</p>
+        <div className="flex flex-wrap gap-x-4">
+          <a href={routes.waitlist({ zip: outsidePick.zip })} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('location.outsideWaitlist', { city: outsidePick.city })}</a>
+          <a href={routes.becomeAHelper()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('location.outsideHelper')}</a>
+        </div>
+      </div> : <div className="rounded-2xl border border-warning/50 bg-warning/[0.06] p-4 text-sm"><p className="font-medium">{t('location.outOfArea')}</p><a href={routes.waitlist()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('location.waitlist')}</a></div>)}
       {selectedAddress?.inServiceArea ? <div className="space-y-3 rounded-2xl bg-secondary/70 p-4 text-foreground dark:bg-secondary/40">
         {selectedAddress.areaName && <p className="flex items-start gap-2 font-medium"><MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('location.publicPreview', { area: selectedAddress.areaName, market: data.market.name })}</p>}
         {selectedAddress.areaName && selectedAddress.areaPoint && <GeneralAreaMap location={{ kind: 'local', marketSlug: data.market.slug, marketName: data.market.name, areaName: selectedAddress.areaName, publicPoint: selectedAddress.areaPoint, radiusMeters: 1609 }} live={liveMap} className="h-44" />}

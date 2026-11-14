@@ -31,6 +31,11 @@ describe('verification notifications', () => {
     expect(verificationNotificationFor({ userId: 'usr_jordan', track: 'helper', outcome: 'ready' })).toEqual({ userId: 'usr_jordan', type: 'helper_ready', target: { kind: 'onboarding', step: 'done' } });
   });
 
+  it('tells a helper who waited that their city opened, leading to the area step (national, 2026-11-14)', () => {
+    expect(verificationNotificationFor({ userId: 'usr_priya', track: 'helper', outcome: 'city_open', city: 'Dallas' })).toEqual({ userId: 'usr_priya', type: 'city_open', target: { kind: 'onboarding', step: 'area' }, title: 'Dallas' });
+    expect(verificationNotificationFor({ userId: 'usr_priya', track: 'helper', outcome: 'city_open' })).toBeNull();
+  });
+
   it('ignores anything else', () => {
     expect(verificationNotificationFor({ userId: 'usr_x', track: 'selfie', outcome: 'passed' })).toBeNull();
     expect(verificationNotificationFor({ userId: 'usr_x', track: 'address', outcome: 'expiring' })).toBeNull();

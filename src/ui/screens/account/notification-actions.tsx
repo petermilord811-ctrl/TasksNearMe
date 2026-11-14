@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, ArrowLeftRight, Award, BadgeCheck, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, LifeBuoy, Repeat, SkipForward, UserSearch, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowLeftRight, Award, BadgeCheck, Gift, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, LifeBuoy, Repeat, SkipForward, UserSearch, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MapPinned, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatMoney, marketLocalToUtc } from '@/shared/format';
@@ -50,7 +50,10 @@ const icons: Record<NotificationType, LucideIcon> = {
   background_check_expiring: CalendarClock,
   id_expiring: CalendarClock,
   helper_ready: BadgeCheck,
+  city_open: MapPinned,
   badge_earned: Award,
+  reward_earned: Gift,
+  reward_ready: Gift,
   task_match: MapPin,
   data_export_ready: Download,
   series_started: Repeat,

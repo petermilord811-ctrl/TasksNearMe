@@ -323,7 +323,12 @@
     "unitHint": "Only your booked helper sees this.",
     "accessNotes": "Access notes (optional)",
     "accessHint": "Only your booked helper sees this. Include entry instructions, parking, or stairs.",
-    "restoreHint": "Your address choice is saved. Search again if you need to change it."
+    "restoreHint": "Your address choice is saved. Search again if you need to change it.",
+    "notYetIn": "Not open in {city} yet",
+    "outsideTitle": "We're not in {city} yet.",
+    "outsideBody": "TasksNearMe opens city by city. Join the list for {city}, and we'll email you the day we open there.",
+    "outsideWaitlist": "Join the list for {city}",
+    "outsideHelper": "Live there and can help? Get verified now"
   },
   "review": {
     "intro": "Check your task and who can see each part. You can go back to change anything before posting.",

@@ -41,7 +41,9 @@ export async function writeDemoMarkets(tx: Tx): Promise<void> {
   const effectiveFrom = '2026-11-01T06:00:00.000Z';
   for (const market of DEMO_MARKETS) {
     const id = demoMarketId(market);
-    const place = { name: market.name, state: market.state, timeZone: 'America/Chicago', centerLat: market.lat, centerLng: market.lng, serviceRadiusKm: market.serviceRadiusKm };
+    // The ZIP3 prefixes its neighborhoods sit in (national, cities open in turn): a ZIP there reads as this city.
+    const zipPrefixes = [...new Set(market.areas.map((area) => area.zip.slice(0, 3)))];
+    const place = { name: market.name, state: market.state, timeZone: 'America/Chicago', centerLat: market.lat, centerLng: market.lng, serviceRadiusKm: market.serviceRadiusKm, zipPrefixes };
     await tx.insert(markets).values({ id, slug: market.slug, currency: 'USD', status: 'prelaunch', ...place }).onConflictDoUpdate({ target: markets.id, set: place });
     for (const area of market.areas) {
       const row = { id: demoAreaId(market, area), marketId: id, slug: area.slug, name: area.name, centerLat: area.lat, centerLng: area.lng };

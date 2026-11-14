@@ -176,7 +176,8 @@ describe('money', () => {
 
   it('is left out for roles without money, and shown to finance', () => {
     const grants = [
-      { helperUserId: 'usr_helper', program: 'welcome' as const, amountCents: 5000, status: 'delivered' as const, createdAt: at('2026-02-07T12:00:00.000Z'), updatedAt: at('2026-02-11T12:00:00.000Z'), deliveredAt: at('2026-02-11T12:00:00.000Z') },
+      // Left the welcome line for review on Feb 8: it counts against February's budget.
+      { helperUserId: 'usr_helper', program: 'welcome' as const, amountCents: 5000, status: 'delivered' as const, createdAt: at('2026-02-07T12:00:00.000Z'), updatedAt: at('2026-02-11T12:00:00.000Z'), deliveredAt: at('2026-02-11T12:00:00.000Z'), holdUntil: at('2026-02-08T12:00:00.000Z') },
       { helperUserId: 'usr_helper', program: 'repeat' as const, amountCents: 1000, status: 'in_review' as const, createdAt: at('2026-02-10T12:00:00.000Z'), updatedAt: at('2026-02-10T12:00:00.000Z') },
       { helperUserId: 'usr_other', program: 'repeat' as const, amountCents: 1000, status: 'voided' as const, createdAt: at('2026-02-09T12:00:00.000Z'), updatedAt: at('2026-02-10T12:00:00.000Z') },
     ];
@@ -192,7 +193,7 @@ describe('money', () => {
     const finance = computeMetrics(facts({ bookings: [completed], grants }), metricsPeriod(7, now), true);
     expect(targetOf(finance.targets, 'contribution_per_booking')).toMatchObject({ status: 'met', value: { kind: 'money_per_booking', cents: 697, bookings: 1 } });
     expect(finance.rewards!.programs.map((program) => program.program)).toEqual(['welcome', 'repeat', 'recurring_month']);
-    expect(finance.rewards!.programs[0]).toMatchObject({ budgetCents: 500_000, committedCents: 5000, deliveredCents: 5000, remainingCents: 495_000, budgetUsedPercent: 1, periodGrantedCents: 5000, periodDeliveredCents: 5000 });
+    expect(finance.rewards!.programs[0]).toMatchObject({ budgetCents: 500_000, budgetPeriod: 'month', releasedThisMonthCents: 5000, committedCents: 5000, deliveredCents: 5000, remainingCents: 495_000, budgetUsedPercent: 1, periodGrantedCents: 5000, periodDeliveredCents: 5000 });
     expect(finance.rewards!.programs[1]).toMatchObject({ committedCents: 1000, inReview: 1, periodVoided: 1, periodGrants: 1 });
     expect(finance.rewards!.programs[1]!.budgetCents).toBeUndefined();
     // $60 of $75 this month: near the cap, not at it.

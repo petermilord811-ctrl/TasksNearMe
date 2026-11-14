@@ -75,6 +75,8 @@ export const NOTIFICATION_TYPES = [
   'id_expiring',
   /** Onboarding is done: the helper can send offers. */
   'helper_ready',
+  /** A helper who waited for their city: we've opened there (`title`: the city); they choose a neighborhood next. */
+  'city_open',
   /** A new task the helper could take, in their area and categories (blueprint 02 J1; at most 3 an hour). */
   'task_match',
   /** The copy of their data they asked for is ready to download on the account page (for `DATA_EXPORT_DAYS`). */
@@ -97,6 +99,10 @@ export const NOTIFICATION_TYPES = [
   'replacement_search_started',
   /** A new badge, or a higher tier of one (`params.badge`, `params.tier`; completion plan 6.4). In the app only, unless the person turns on tips and news emails. */
   'badge_earned',
+  /** The helper's phone, ID and background checks all passed: the welcome gift card (`params.amountCents`) is theirs, on its way after a quick check. */
+  'reward_earned',
+  /** A gift card reward (`params.amountCents`) is ready: the helper picks their card on the rewards page. */
+  'reward_ready',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

@@ -11,7 +11,7 @@
     "grants": "Tus recompensas",
     "empty": {
       "title": "Aún no tienes recompensas",
-      "body": "Aquí verás las recompensas en tarjetas de regalo de las reservas que califiquen. Busca una tarea para empezar.",
+      "body": "Aquí aparecerán las tarjetas de regalo que ganes: la de bienvenida por tus verificaciones y las recompensas por reservas repetidas. Busca una tarea para empezar.",
       "action": "Buscar trabajo"
     },
     "notHelper": {
@@ -31,10 +31,10 @@
     },
     "rules": {
       "title": "Cómo funcionan las recompensas",
-      "welcome": "{amount} por tu primera reserva que califique, de {threshold} o más, como ayudante fundador.",
+      "welcome": "Tarjeta de regalo de {amount} cuando pasan tus verificaciones de teléfono, identificación y antecedentes. No necesitas una reserva.",
       "repeat": "{amount} por tu tercera reserva pagada con el mismo cliente en un plazo de 90 días.",
       "repeatThreshold": "Cada reserva que califique debe tener un precio de tarea de {threshold} o más.",
-      "hold": "Las recompensas tienen una retención de 7 días después de que el trabajo se completa y se paga. Las recompensas de bienvenida también necesitan una revisión de nuestro equipo antes de que puedas canjearlas.",
+      "hold": "Las recompensas por reservas tienen una espera de 7 días después de que el trabajo se completa y se paga. Las tarjetas de regalo de bienvenida pasan antes por una revisión rápida de nuestro equipo.",
       "expiry": "Canjéala dentro de los 90 días posteriores a que la recompensa esté lista para canjear.",
       "giftCards": "Las recompensas son tarjetas de regalo, no ganancias",
       "terms": "Leer los términos de las recompensas",
@@ -45,8 +45,8 @@
   "previews": {
     "group": "Recompensas",
     "componentGroup": "Recompensa otorgada",
-    "pending": "Recompensa de bienvenida pendiente",
-    "qualified": "Recompensa de bienvenida calificada",
+    "pending": "Tarjeta de regalo de bienvenida en fila",
+    "qualified": "Tarjeta de regalo de bienvenida en revisión, recompensa por repetir en espera",
     "redeemable": "Lista para canjear",
     "delivered": "Tarjeta de regalo entregada",
     "empty": "Aún no hay recompensas",
@@ -57,7 +57,11 @@
     "unknownError": "Canje no disponible",
     "submitted": "Tarjeta de regalo solicitada",
     "allStatuses": "Todos los estados de recompensa",
-    "grants": "Recompensas otorgadas"
+    "grants": "Recompensas otorgadas",
+    "welcomeOpen": "Tarjeta de regalo de bienvenida: verificaciones pendientes",
+    "welcomeQueued": "Tarjeta de regalo de bienvenida: en fila para el próximo mes",
+    "welcomeReady": "Tarjeta de regalo de bienvenida: lista para elegir",
+    "welcomeStrip": "Tarjeta de regalo de bienvenida: franja de la configuración"
   },
   "programs": {
     "welcome": "Recompensa de bienvenida",
@@ -88,6 +92,10 @@
     "redeemable": "Tu recompensa está lista para canjear",
     "expired": "Pasó el plazo para canjear esta recompensa"
   },
+  "welcomeDetails": {
+    "queued": "En fila para las tarjetas de regalo de este mes. Avanza a más tardar el {date}.",
+    "in_review": "Nuestro equipo la está revisando rápidamente."
+  },
   "voidReasons": {
     "booking_canceled": "La reserva se canceló, así que esta recompensa no se obtuvo.",
     "refunded": "La reserva se reembolsó, así que esta recompensa no se obtuvo.",
@@ -104,5 +112,46 @@
     "not_allowed": "Esta recompensa ya no se puede canjear. Actualiza la página para ver su estado.",
     "rate_limited": "Hubo demasiadas solicitudes. Espera un momento antes de canjear de nuevo.",
     "unknown": "No pudimos solicitar tu tarjeta de regalo. Inténtalo de nuevo o contacta a soporte si sigue pasando."
+  },
+  "welcomeCard": {
+    "eyebrow": "Tarjeta de regalo de bienvenida",
+    "titles": {
+      "open": "Verifícate y recibe {amount}",
+      "earned": "Tu tarjeta de regalo de {amount} es tuya",
+      "ready": "Tu tarjeta de regalo de {amount} está lista",
+      "delivered": "Te enviamos tu tarjeta de regalo de {amount}"
+    },
+    "openBody": "Cada ayudante que pasa estas tres verificaciones recibe una tarjeta de regalo de {amount}. Sin lugares limitados y sin necesidad de una primera tarea.",
+    "earnedBody": "Nuestro equipo la revisa rápidamente y luego eliges tu tarjeta en <link>Recompensas</link>.",
+    "queuedBody": "Este mes se verificaron tantos ayudantes que la tuya está en fila para la siguiente ronda. Avanza a más tardar el {date}, sin que tengas que hacer nada.",
+    "readyBody": "Elige tu tarjeta en <link>Recompensas</link> antes del {date}.",
+    "readyBodyNoDate": "Elige tu tarjeta en <link>Recompensas</link>.",
+    "deliveredBody": "Búscala en <link>Recompensas</link> o en tu correo.",
+    "progress": "{done} de {total} verificaciones listas",
+    "checksLabel": "Las verificaciones que la ganan",
+    "checks": {
+      "phone": "Teléfono",
+      "identity": "Identificación",
+      "background": "Antecedentes"
+    },
+    "states": {
+      "done": "Listo",
+      "in_review": "En revisión",
+      "current": "Sigue",
+      "todo": "Pendiente",
+      "locked": "Después del paso anterior",
+      "skipped": "Aún no hace falta"
+    },
+    "backgroundSkipped": "Llega con un servicio en casa",
+    "founding": "Ayudante fundador n.º {number}",
+    "continue": "Continuar la verificación",
+    "pick": "Elegir tu tarjeta",
+    "fineprint": "Una por persona. Las recompensas nunca dependen de reseñas ni calificaciones.",
+    "artLabel": "Tarjeta de regalo",
+    "stripLabel": "Tarjeta de regalo de bienvenida",
+    "stripSr": "{done} de {total} verificaciones listas para tu tarjeta de regalo de {amount}.",
+    "stripEarnedSr": "Ganaste tu tarjeta de regalo de {amount}.",
+    "stripGift": "Tarjeta de regalo de {amount}",
+    "stripEarned": "Tarjeta de regalo de {amount} ganada"
   }
 }

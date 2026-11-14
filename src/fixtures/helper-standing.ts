@@ -1,41 +1,64 @@
-import type { AccountVerification, FoundingHelperCard, HelperStandingView } from '@/contracts';
+import type { AccountVerification, HelperStandingView, WelcomeGiftCard } from '@/contracts';
 
 /**
- * The profile's first page (completion plan 6.5): the founding-helper gift card in each state, the verification
- * steps a new helper and a verified helper see, and the account page's verification section for a helper and
- * a client. The welcome program's canonical values: $50, first 100 verified helpers, a $40 task within 60 days.
+ * The profile's first page (completion plan 6.5): the $50 welcome gift card in each state (blueprint 05 §2,
+ * 2026-11-14: every helper whose phone, ID and background checks pass), the verification steps a new helper and a
+ * verified helper see, and the account page's verification section for a helper and a client.
  */
 
-const welcome = { amountCents: 5000, cohortSize: 100, minTaskPriceCents: 4000, windowDays: 60 } as const;
+const amountCents = 5000;
 
-/** A new helper: 37 spots left, the phone done, the ID check in review, three steps to go. */
-export const foundingOpenCard: FoundingHelperCard = {
-  ...welcome,
+/** A new helper: the phone done, the ID check in review, the background check still locked. */
+export const welcomeOpenCard: WelcomeGiftCard = {
   state: 'open',
-  spotsLeft: 37,
-  stillNeeded: ['identity', 'address', 'payout', 'background'],
-  progress: { done: 1, total: 5 },
+  amountCents,
+  checks: [
+    { check: 'phone', state: 'done' },
+    { check: 'identity', state: 'in_review' },
+    { check: 'background', state: 'locked' },
+  ],
 };
 
-/** Sam: founding helper #12, the first $40 task still to do by Jan 2. */
-export const foundingYoursCard: FoundingHelperCard = {
-  ...welcome,
-  state: 'yours',
-  number: 12,
-  spotsLeft: 36,
-  claimBy: '2027-01-02T18:00:00.000Z',
-  stillNeeded: [],
-  progress: { done: 5, total: 5 },
+/** One check to go: the background check is next. */
+export const welcomeAlmostCard: WelcomeGiftCard = {
+  ...welcomeOpenCard,
+  checks: [
+    { check: 'phone', state: 'done' },
+    { check: 'identity', state: 'done' },
+    { check: 'background', state: 'current' },
+  ],
 };
 
-/** Jordan: #4, the gift card on its way. */
-export const foundingEarnedCard: FoundingHelperCard = { ...foundingYoursCard, state: 'earned', number: 4 };
+/** Computer help only: the background check comes with an in-home service. */
+export const welcomeRemoteOnlyCard: WelcomeGiftCard = {
+  ...welcomeOpenCard,
+  checks: [
+    { check: 'phone', state: 'done' },
+    { check: 'identity', state: 'done' },
+    { check: 'background', state: 'skipped' },
+  ],
+};
 
-/** The last spot is about to go (one left). */
-export const foundingLastSpotCard: FoundingHelperCard = { ...foundingOpenCard, spotsLeft: 1, stillNeeded: ['background'], progress: { done: 4, total: 5 } };
+const allDone: WelcomeGiftCard['checks'] = [
+  { check: 'phone', state: 'done' },
+  { check: 'identity', state: 'done' },
+  { check: 'background', state: 'done' },
+];
+
+/** Jordan, founding helper #4: earned, with our team's quick check. */
+export const welcomeEarnedCard: WelcomeGiftCard = { state: 'earned', amountCents, checks: allDone, foundingNumber: 4 };
+
+/** Earned in a busy month: in line until December's gift cards (Dec 1, midnight in Austin). */
+export const welcomeQueuedCard: WelcomeGiftCard = { ...welcomeEarnedCard, queuedUntil: '2026-12-01T06:00:00.000Z' };
+
+/** Sam: ready to pick, by Feb 25. */
+export const welcomeReadyCard: WelcomeGiftCard = { state: 'ready', amountCents, checks: allDone, expiresAt: '2027-02-25T18:00:00.000Z' };
+
+/** Sent. */
+export const welcomeDeliveredCard: WelcomeGiftCard = { state: 'delivered', amountCents, checks: allDone };
 
 export const newHelperStanding: HelperStandingView = {
-  founding: foundingOpenCard,
+  giftCard: welcomeOpenCard,
   steps: [
     { step: 'phone', state: 'done' },
     { step: 'identity', state: 'in_review' },
@@ -45,19 +68,20 @@ export const newHelperStanding: HelperStandingView = {
   ],
 };
 
-/** Sam: every step done (a yard and furniture helper who doesn't need the background check). */
+/** Sam: every step done, the gift card ready to pick. */
 export const verifiedHelperStanding: HelperStandingView = {
-  founding: foundingYoursCard,
+  giftCard: welcomeReadyCard,
   steps: [
     { step: 'phone', state: 'done' },
     { step: 'identity', state: 'done' },
     { step: 'address', state: 'done' },
     { step: 'payout', state: 'done' },
+    { step: 'background', state: 'done' },
   ],
 };
 
-/** No founding card (the spots went before this helper verified): the checklist alone. */
-export const lateHelperStanding: HelperStandingView = { steps: newHelperStanding.steps };
+/** No gift card (the program is off in this market, or our team turned it down): the checklist alone. */
+export const noGiftCardHelperStanding: HelperStandingView = { steps: newHelperStanding.steps };
 
 export const helperAccountVerification: AccountVerification = {
   role: 'helper',

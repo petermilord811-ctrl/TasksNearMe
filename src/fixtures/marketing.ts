@@ -227,7 +227,7 @@ export const homePageData: HomePageData = {
   featuredHelpers: [sam, lee, jordan],
   feeExample: deskBreakdown,
   feeExamples: [smallTaskBreakdown, deskBreakdown, largeTaskBreakdown],
-  welcomeReward: { amountCents: 5000, cohortLimit: 100, spotsClaimed: 63 },
+  welcomeReward: { amountCents: 5000, checks: ['phone', 'identity', 'background'] },
   map: austinLandingMap,
   aiDraftingEnabled: true,
   helpers: { verified: 23, openThisWeek: 9 },
@@ -236,7 +236,7 @@ export const homePageData: HomePageData = {
 /** No open in-person tasks yet: the map shows the service area and invites the first post. */
 export const homeEmptyMapData: HomePageData = { ...homePageData, recentTasks: [], map: { ...austinLandingMap, pins: [] } };
 
-/** The founding cohort is full (or the program is off): no reward on the landing page. */
+/** The welcome program is off: no reward on the landing page. */
 export const homeNoRewardData: HomePageData = { ...homePageData, welcomeReward: undefined };
 
 /** Before launch: no helpers verified yet, and no AI drafting (the hero hides both). */
@@ -308,21 +308,41 @@ export const pricingPageData: PricingPageData = {
 export const becomeHelperPageData: BecomeHelperPageData = {
   exampleEarnings: deskBreakdown,
   firstPayoutDays: 7,
-  welcomeReward: { amountCents: 5000, cohortLimit: 100, spotsClaimed: 63, minTaskPriceCents: 4000, windowDays: 60, unlockDays: 7, redeemWithinDays: 90 },
+  welcomeReward: { amountCents: 5000, checks: ['phone', 'identity', 'background'], redeemWithinDays: 90 },
   repeatReward: { amountCents: 1000, bookingsNeeded: 3, withinDays: 90, minTaskPriceCents: 2500, unlockDays: 7, redeemWithinDays: 90 },
   inHomeCategoriesRequireBackgroundCheck: true,
 };
 
-/** Cohort full / programs off: no reward cards. */
+/** Programs off: no reward cards. */
 export const becomeHelperNoRewardsData: BecomeHelperPageData = {
   ...becomeHelperPageData,
   welcomeReward: undefined,
   repeatReward: undefined,
 };
 
-export const waitlistPageData: WaitlistPageData = { markets: [austinMarket] };
+export const waitlistPageData: WaitlistPageData = { markets: [austinMarket], comingNext: [] };
 /** From an invite-only step (private beta): the same form, with the invite-only heading. */
 export const waitlistPageDataBeta: WaitlistPageData = { ...waitlistPageData, from: 'beta' };
+/**
+ * National (owner, 2026-11-14): the cities people ask for most, and the gift card helpers anywhere can get verified
+ * for. Counts are made up for previews; the page shows only cities with at least 3 people.
+ */
+export const waitlistComingNextData: WaitlistPageData = {
+  ...waitlistPageData,
+  comingNext: [
+    { city: 'Dallas', state: 'TX', people: 41, helpersWaiting: 12 },
+    { city: 'Denver', state: 'CO', people: 27, helpersWaiting: 5 },
+    { city: 'San Antonio', state: 'TX', people: 19, helpersWaiting: 0 },
+    { city: 'Raleigh', state: 'NC', people: 8, helpersWaiting: 2 },
+  ],
+  helperReward: { amountCents: 5000 },
+};
+/** From posting's "We're not in Dallas yet" (`?zip=75201`): the ZIP filled in and the people already waiting near it. */
+export const waitlistFromPostingData: WaitlistPageData = {
+  ...waitlistComingNextData,
+  initialZip: '75201',
+  demand: { zip: '75201', state: 'TX', waiting: 29, helpersWaiting: 12 },
+};
 
 /**
  * Previews: "Write it with AI" answering the way the app's rule-based stand-in does (a tidy title from the words,

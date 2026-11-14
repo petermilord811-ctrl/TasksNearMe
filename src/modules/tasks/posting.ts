@@ -115,8 +115,10 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
   }
 
   /**
-   * Address search for the "where" step: only the place and its public area, never stored. Places near the
-   * market come first, and nothing beyond twice its radius (closer ones outside it offer the waitlist).
+   * Address search for the "where" step: only the place and its public area, never stored. The whole US is
+   * searched (owner, 2026-11-14: national, cities open in turn), places near the market first. An address outside
+   * it can't be posted, and says where it is (`outside`), so the screen can say "We're not in Dallas yet" and
+   * offer the waitlist for that ZIP and helper sign-up.
    */
   async function searchAddresses(userId: string, query: string): Promise<AddressSuggestion[]> {
     if (query.trim().length < 3) return [];
@@ -124,7 +126,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
     const market = poster ? await marketFor(poster.homeMarketId) : null;
     if (!market) return [];
     const marketAreas = await db.select().from(areas).where(eq(areas.marketId, market.id));
-    const places = await geocoder.search(query, { near: { lat: market.centerLat, lng: market.centerLng }, withinKm: market.serviceRadiusKm * 2 });
+    const places = await geocoder.search(query, { near: { lat: market.centerLat, lng: market.centerLng } });
     return places.map((place) => {
       const inside = inServiceArea(market, place);
       const area = inside ? nearestArea(marketAreas, place) : null;
@@ -134,6 +136,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
         line2: `${place.city}, ${place.state} ${place.zip}`,
         ...(area ? { areaName: area.name, areaPoint: { lat: area.centerLat, lng: area.centerLng } } : {}),
         inServiceArea: inside && area !== null,
+        ...(inside && area ? {} : { outside: { city: place.city, state: place.state, zip: place.zip } }),
       };
     });
   }

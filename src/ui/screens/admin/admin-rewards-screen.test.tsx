@@ -74,15 +74,18 @@ describe('AdminRewardsScreen', () => {
     expect(within(signals).getAllByRole('listitem').map((item) => item.textContent)).toEqual(row.signals.map((signal) => copy.signals[signal]));
   });
 
-  it('displays committed and delivered amounts against the supplied budget and omits unset meters', () => {
+  it('meters a monthly budget against what left the line this month, shows what waits, and omits unset meters', () => {
     mount();
     const section = screen.getByRole('region', { name: copy.budgets.title });
-    const capped = adminRewardsReviewData.budgets[0];
+    const monthly = adminRewardsReviewData.budgets[0];
     const meters = within(section).getAllByRole('meter');
-    expect(meters).toHaveLength(2);
-    expect(meters[0]).toHaveAttribute('value', String(capped.committedCents));
-    expect(meters[1]).toHaveAttribute('value', String(capped.deliveredCents));
-    for (const meter of meters) expect(meter).toHaveAttribute('max', String(capped.budgetCents));
+    expect(meters).toHaveLength(1);
+    expect(meters[0]).toHaveAttribute('value', String(monthly.releasedThisMonthCents));
+    expect(meters[0]).toHaveAttribute('max', String(monthly.budgetCents));
+    const welcome = within(section).getByRole('heading', { name: copy.programs.welcome }).closest('li')!;
+    expect(within(welcome).getByText(copy.budgets.budgetMonthly)).toBeVisible();
+    expect(within(welcome).getByText(copy.budgets.queued)).toBeVisible();
+    expect(within(welcome).getByText(formatMoney(monthly.queuedCents!))).toBeVisible();
     for (const budget of adminRewardsReviewData.budgets) {
       const card = within(section).getByRole('heading', { name: copy.programs[budget.program] }).closest('li')!;
       expect(within(card).getByText(formatMoney(budget.committedCents))).toBeVisible();

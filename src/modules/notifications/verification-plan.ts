@@ -5,12 +5,16 @@ import { VERIFICATION_TRACKS } from '@/contracts';
  * Which notification a `verification.updated` event becomes (src/modules/verification/state.ts):
  * - a step passed (the phone, the ID, the home address, payouts, the background check) or needs the helper;
  * - the background check runs out soon, or has (`days` 0); the same for the ID a helper verified with (6.3);
- * - onboarding is done (`helper` + `ready`): the helper can send offers.
+ * - onboarding is done (`helper` + `ready`): the helper can send offers;
+ * - a helper who waited outside the cities we're open in: we've opened in theirs (`helper` + `city_open`, the
+ *   city's name in `city`); they choose a neighborhood next.
  */
 export interface PlannedVerificationNotification {
   userId: string;
-  type: Extract<NotificationType, 'verification_passed' | 'verification_action_needed' | 'background_check_expiring' | 'id_expiring' | 'helper_ready'>;
+  type: Extract<NotificationType, 'verification_passed' | 'verification_action_needed' | 'background_check_expiring' | 'id_expiring' | 'helper_ready' | 'city_open'>;
   target: AttentionTarget;
+  /** `city_open`: the city's name. */
+  title?: string;
   params?: NotificationView['params'];
 }
 
@@ -20,7 +24,11 @@ export function verificationNotificationFor(payload: Record<string, unknown>): P
   const track = text(payload.track);
   const outcome = text(payload.outcome);
   if (!userId || !track || !outcome) return null;
-  if (track === 'helper') return outcome === 'ready' ? { userId, type: 'helper_ready', target: { kind: 'onboarding', step: 'done' } } : null;
+  if (track === 'helper') {
+    if (outcome === 'ready') return { userId, type: 'helper_ready', target: { kind: 'onboarding', step: 'done' } };
+    const city = text(payload.city);
+    return outcome === 'city_open' && city ? { userId, type: 'city_open', target: { kind: 'onboarding', step: 'area' }, title: city } : null;
+  }
   // A client's ID check (asked for by risk): its results lead to their own ID page.
   if (track === 'poster_identity') {
     if (outcome !== 'passed' && outcome !== 'action_needed') return null;

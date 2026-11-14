@@ -121,7 +121,7 @@ export const adminMetricsFinanceData: AdminMetricsPageData = {
   },
   rewards: {
     programs: [
-      { program: 'welcome', budgetCents: 500_000, committedCents: 145_000, deliveredCents: 95_000, remainingCents: 355_000, budgetUsedPercent: 29, periodGrantedCents: 45_000, periodGrants: 9, periodDeliveredCents: 30_000, periodVoided: 2, inReview: 3 },
+      { program: 'welcome', budgetCents: 500_000, budgetPeriod: 'month', releasedThisMonthCents: 145_000, committedCents: 245_000, deliveredCents: 95_000, remainingCents: 355_000, budgetUsedPercent: 29, periodGrantedCents: 45_000, periodGrants: 9, periodDeliveredCents: 30_000, periodVoided: 2, inReview: 3 },
       { program: 'repeat', committedCents: 23_000, deliveredCents: 12_000, periodGrantedCents: 8_000, periodGrants: 8, periodDeliveredCents: 6_000, periodVoided: 0, inReview: 1 },
       { program: 'recurring_month', committedCents: 4_500, deliveredCents: 1_500, periodGrantedCents: 3_000, periodGrants: 2, periodDeliveredCents: 1_500, periodVoided: 0, inReview: 0 },
     ],
@@ -162,7 +162,7 @@ export const adminMetricsEmptyData: AdminMetricsPageData = (() => {
     liquidity: { overall: empty(), byCategory: [], byArea: [] },
     rewards: {
       programs: [
-        { program: 'welcome', budgetCents: 500_000, committedCents: 0, deliveredCents: 0, remainingCents: 500_000, budgetUsedPercent: 0, periodGrantedCents: 0, periodGrants: 0, periodDeliveredCents: 0, periodVoided: 0, inReview: 0 },
+        { program: 'welcome', budgetCents: 500_000, budgetPeriod: 'month', releasedThisMonthCents: 0, committedCents: 0, deliveredCents: 0, remainingCents: 500_000, budgetUsedPercent: 0, periodGrantedCents: 0, periodGrants: 0, periodDeliveredCents: 0, periodVoided: 0, inReview: 0 },
         { program: 'repeat', committedCents: 0, deliveredCents: 0, periodGrantedCents: 0, periodGrants: 0, periodDeliveredCents: 0, periodVoided: 0, inReview: 0 },
         { program: 'recurring_month', committedCents: 0, deliveredCents: 0, periodGrantedCents: 0, periodGrants: 0, periodDeliveredCents: 0, periodVoided: 0, inReview: 0 },
       ],

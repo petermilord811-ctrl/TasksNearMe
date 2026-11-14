@@ -91,7 +91,8 @@ export async function submitAddressProof(deps: AddressProofDeps, userId: string,
   const { db } = deps;
   const state = await loadOnboardingState(db, userId, now);
   const step = computeOnboarding(state.facts).progress.steps.find((s) => s.step === 'address');
-  if (!step || step.state === 'locked' || !state.address.canSubmit) return { ok: false, code: 'not_allowed' };
+  // `later`: a helper outside the cities we're open in gives their home address when their city opens.
+  if (!step || step.state === 'locked' || step.state === 'later' || !state.address.canSubmit) return { ok: false, code: 'not_allowed' };
 
   const line2 = String(form.get('line2') ?? '').trim();
   const parsed = addressProofInputSchema.safeParse({

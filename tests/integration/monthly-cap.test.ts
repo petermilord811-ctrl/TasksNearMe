@@ -1,10 +1,12 @@
-import { eq, inArray, like } from 'drizzle-orm';
+import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { DEFAULT_FEES } from '@/modules/markets/policy-defaults';
 import { quoteBreakdown } from '@/modules/payments/fees';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { rewardGrants } from '@/modules/rewards/schema';
+import { outboxEvents } from '@/platform/outbox/schema';
 import { getRewardsPage } from '@/modules/rewards/service';
 import { tasks } from '@/modules/tasks/schema';
 import { identityVerifications } from '@/modules/verification/schema';
@@ -12,8 +14,8 @@ import { createDb } from '@/platform/db/connect';
 
 /**
  * T-23's monthly cap (blueprint 05: at most $75 of rewards a calendar month across programs): a new helper
- * earns the $50 welcome reward and three $10 repeat rewards at once; the third repeat waits for next month.
- * A helper and three clients made for this file.
+ * earns the $50 welcome gift card (their phone, ID and background checks) and three $10 repeat rewards at once;
+ * the third repeat waits for next month. A helper and three clients made for this file.
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
@@ -30,8 +32,11 @@ async function person(id: string, source: string, createdAt: Date) {
 
 beforeAll(async () => {
   await person(HELPER, 'usr_sam', new Date(Date.now() - 40 * DAY));
-  // Verified 20 days ago: in the founding cohort, so the first $40+ booking earns the welcome reward.
+  // Phone, ID and background checks passed 20 days ago (a copy of Sam's profile): the welcome gift card is theirs.
   const verifiedAt = new Date(Date.now() - 20 * DAY);
+  await db.update(users).set({ phoneVerifiedAt: verifiedAt }).where(eq(users.id, HELPER));
+  const [samProfile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, 'usr_sam'));
+  await db.insert(helperProfiles).values({ ...samProfile!, userId: HELPER, handle: 't23-helper', foundingNumber: null, completedCount: 0, ratingAverage: null, ratingCount: 0, idVerifiedAt: verifiedAt.toISOString(), backgroundCheckedAt: verifiedAt.toISOString() });
   await db.insert(identityVerifications).values({ id: 'idv_t23', userId: HELPER, provider: 'dev', providerSessionId: 'dev_t23', status: 'verified', isAdult: true, verifiedAt, createdAt: verifiedAt, updatedAt: verifiedAt });
   const [tv] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
   const [task] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
@@ -58,6 +63,8 @@ afterAll(async () => {
   }
   await db.delete(tasks).where(like(tasks.id, 'tsk\\_t23\\_%'));
   await db.delete(identityVerifications).where(eq(identityVerifications.userId, HELPER));
+  await db.delete(outboxEvents).where(and(inArray(outboxEvents.type, ['reward.earned', 'reward.ready']), sql`${outboxEvents.payload}->>'userId' = ${HELPER}`));
+  await db.delete(helperProfiles).where(eq(helperProfiles.userId, HELPER));
   await db.delete(users).where(inArray(users.id, people));
   await pool.end();
 });

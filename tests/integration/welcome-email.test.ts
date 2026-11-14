@@ -8,8 +8,9 @@ import { devOutboxMessages } from '@/platform/dev-outbox/schema';
 import { throwawayClient } from '../support/people';
 
 /**
- * The welcome email goes out once per account when sign-up finishes, leads with the founding helper reward
- * while it's open (live spots), and never fails sign-up: a failed send is retried, then given up.
+ * The welcome email goes out once per account when sign-up finishes, leads with the welcome gift card while the
+ * program is on (every helper whose three checks pass, 2026-11-14), and never fails sign-up: a failed send is
+ * retried, then given up.
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
@@ -19,19 +20,19 @@ const outbox = createDevOutboxEmailProvider(db);
 const welcomes = async (email: string) => db.select().from(devOutboxMessages).where(and(eq(devOutboxMessages.to, email), eq(devOutboxMessages.tag, 'welcome')));
 
 describe('the welcome email', () => {
-  it('goes out once, with the founding helper reward and its live spots', async () => {
+  it('goes out once, with the welcome gift card and its three checks', async () => {
     const id = await throwawayClient(db, 'usr_welcome_once');
     const email = `${id}@example.test`;
     const offer = await welcomeOfferFor(db, 'mkt_austin');
-    expect(offer).toMatchObject({ amountCents: 5000, cohortLimit: 100 });
+    expect(offer).toEqual({ amountCents: 5000, redeemWithinDays: 90 });
 
     expect(await sendWelcomeEmail(db, outbox, id, new Date())).toBe('sent');
     expect(await sendWelcomeEmail(db, outbox, id, new Date())).toBe('already_sent');
     const [sent, ...more] = await welcomes(email);
     expect(more).toHaveLength(0);
-    expect(sent?.subject).toBe('Welcome, Ruth! Earn a $50 gift card as a founding helper');
-    expect(sent?.html).toContain(`${offer!.spotsClaimed} of 100 spots claimed`);
-    expect(sent?.body).toContain('Claim your spot: http');
+    expect(sent?.subject).toBe('Welcome, Ruth! Get verified and get a $50 gift card');
+    expect(sent?.html).toContain('Pass a background check');
+    expect(sent?.body).toContain('Get verified: http');
     expect((await db.select({ at: users.welcomedAt }).from(users).where(eq(users.id, id)))[0]?.at).toBeInstanceOf(Date);
   });
 

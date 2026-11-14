@@ -20,7 +20,7 @@
 /help, /help/[article]              Help center
 /legal/[doc]                        terms, privacy, helper-agreement, cancellation-policy, rewards-terms, community-guidelines, prohibited-tasks
 /sign-in                            One flow for sign-in and sign-up (email code, or Continue with Google or Microsoft → name and age for new accounts → phone verification when needed) — noindex
-/waitlist                           Outside the service area: join the waitlist for your city — noindex
+/waitlist                           Outside the cities we're open in: join the waitlist for your city (email, ZIP, optional city); how many already wait near your ZIP (?zip=); the cities coming next by demand; helpers can get verified now — noindex
 ```
 
 ### 1.2 Signed in (one account; a mode switch only changes the default home and navigation)
@@ -144,6 +144,13 @@ Result: the task is `open`. Matching helpers (category, service area, alert sett
 - Both are prompted after completion. Reviews are **double-blind**: each becomes visible when both are submitted, or after 14 days. A review has a 1–5 rating, tags, and optional text. Reviews can be reported but are removed only under the published policy. Low ratings are never suppressed (**F12**).
 - Maya taps **Save Jordan** and later **Book again**, which opens a pre-filled invite (J3) with the same category, the same address, and the last price as a suggestion.
 - From **My clients**, Jordan can send Maya a pre-filled rebooking proposal. It becomes a booking only when Maya accepts and pays.
+
+### J9 — Outside the cities we're open in (owner, 2026-11-14: national, cities open in turn)
+
+- **A visitor in Dallas** posts a task: the address search covers the whole US, and her Dallas address says *Not open in Dallas yet*. She can't post it; the panel says "We're not in Dallas yet", links **Join the list for Dallas** (`/waitlist?zip=75204`, which fills her ZIP and shows how many people near it already wait) and **Live there and can help? Get verified now** (`/become-a-helper`).
+- **A helper in Dallas** signs up as usual. On the Area step he chooses **Somewhere else in the US** and gives his ZIP and city instead of an Austin neighborhood. He finishes the phone, ID, payouts and (for in-home services) background checks, and earns the welcome gift card like any helper (05). The home address step shows *When your city opens*: we verify addresses only where we're open. The done step says "You're verified. We'll tell you the moment Dallas opens." He isn't bookable and doesn't appear in any market's search.
+- **When staff open Dallas** (pre-launch or live, `setMarketStatus`, admins only, with a reason, audited), every helper waiting with a ZIP the Dallas market covers moves to it and gets *TasksNearMe is open in Dallas* (`city_open`), leading to the Area step: he chooses his neighborhood, adds his home address, and can be booked once it's verified.
+- Matching a ZIP to a city uses the market's ZIP3 prefixes (`markets.zip_prefixes`, Austin: 786 and 787), never a geocoder's stored result.
 
 ## 3. Worked example: the $60 desk assembly
 

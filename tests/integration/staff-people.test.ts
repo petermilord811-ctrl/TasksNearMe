@@ -43,7 +43,8 @@ describe('reward reviews', () => {
     expect(forAgent?.actions).toEqual(['void']);
     const forLead = await getAdminRewards(db, morgan, 'in_review');
     expect(forLead.rows.find((row) => row.id === 'rwd_tmp_review')?.actions).toEqual(['approve_review', 'reject_review', 'void']);
-    expect(forLead.budgets.find((budget) => budget.program === 'welcome')?.budgetCents).toBe(500_000);
+    // The welcome gift card has no monthly budget (owner, 2026-11-14), so staff see no meter for it.
+    expect(forLead.budgets.find((budget) => budget.program === 'welcome')?.budgetCents).toBeUndefined();
 
     expect(await decideReward(db, gifts, alex, { grantId: 'rwd_tmp_review', action: 'approve_review', note: 'Looks fine to me.' }, now())).toEqual({ ok: false, code: 'not_allowed' });
     expect(await decideReward(db, gifts, morgan, { grantId: 'rwd_tmp_review', action: 'approve_review', note: 'Short' }, now())).toMatchObject({ ok: false, code: 'validation_failed' });

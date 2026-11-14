@@ -1,123 +1,113 @@
-import { eq, inArray, like } from 'drizzle-orm';
+import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevGiftCardProvider } from '@/integrations/gift-cards';
 import { users } from '@/modules/accounts/schema';
-import { bookingTerms, bookings } from '@/modules/bookings/schema';
-import { earnings } from '@/modules/earnings/schema';
-import { quoteBreakdown } from '@/modules/payments/fees';
-import { DEFAULT_FEES } from '@/modules/markets/policy-defaults';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { rewardGrants } from '@/modules/rewards/schema';
 import { getRewardsPage, redeemReward } from '@/modules/rewards/service';
 import { decideReward } from '@/modules/rewards/staff';
-import { tasks } from '@/modules/tasks/schema';
-import { identityVerifications } from '@/modules/verification/schema';
+import { runWelcomeRewards, welcomeCardFor } from '@/modules/rewards/welcome';
 import { createDb } from '@/platform/db/connect';
+import { outboxEvents } from '@/platform/outbox/schema';
 
 /**
- * T-22, the welcome reward through its whole life: a $35 task earns nothing, a $60 one is pending, a
- * cancellation voids it and the next qualifying booking earns a new one, which qualifies when paid out,
- * waits 7 days, is reviewed and redeemed. Past the founding cohort of 100, nothing is granted. New helpers
- * made for this file (and removed after it); Ana is the client.
+ * T-22, the welcome gift card through its whole life under the owner's rule of 2026-11-14: every helper whose
+ * phone, ID and background checks have passed gets $50, with no booking, window or cohort. The job runner's sweep
+ * gives it to a helper verified before the change (the backfill); a missing background check earns nothing; our
+ * team's quick check makes it ready (the helper is told), it's redeemed once, and an unredeemed card expires.
+ * Turned down after a review, it never comes back. New helpers made for this file (copies of Sam, whose ID and
+ * background checks are done), removed after it.
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 const giftCards = createDevGiftCardProvider();
 const DAY = 86_400_000;
 const HELPER = 'usr_t22_helper';
-const LATE = 'usr_t22_late';
+const NO_BACKGROUND = 'usr_t22_nobg';
+const TURNED_DOWN = 'usr_t22_down';
 const morgan = { id: 'usr_morgan', roles: ['support_lead' as const] };
 
-const rewardsOf = async (helperUserId: string, now = new Date()) =>
-  (await getRewardsPage(db, { id: helperUserId, helperReady: true }, now)).grants.filter((grant) => grant.program === 'welcome');
+const welcomeOf = async (helperUserId: string) => db.select().from(rewardGrants).where(and(eq(rewardGrants.helperUserId, helperUserId), eq(rewardGrants.program, 'welcome')));
+const eventsOf = async (type: string, userId: string) => db.select().from(outboxEvents).where(and(eq(outboxEvents.type, type), sql`${outboxEvents.payload}->>'userId' = ${userId}`));
 
-/**
- * A helper with a verified ID. The founding cohort counts helpers only (blueprint 05; completion plan 6.6), so
- * each one gets a helper profile too: an ID check alone (a client's, say) takes no founding place.
- */
-async function helper(id: string, verifiedAt: Date) {
+/** A helper with a verified phone and ID, and a background check cleared at `background` (null: not done). */
+async function helper(id: string, background: string | null) {
   const [sam] = await db.select().from(users).where(eq(users.id, 'usr_sam'));
   const [samProfile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, 'usr_sam'));
-  await db.insert(users).values({ ...sam!, id, email: `${id}@example.test`, name: `T22 ${id.slice(-4)}`, phone: null, phoneVerifiedAt: null });
-  await db.insert(helperProfiles).values({ ...samProfile!, userId: id, handle: `t22-${id.slice('usr_t22_'.length)}`, foundingNumber: null, completedCount: 0, ratingAverage: null, ratingCount: 0 });
-  await db.insert(identityVerifications).values({ id: `idv_${id}`, userId: id, provider: 'dev', providerSessionId: `dev_${id}`, status: 'verified', isAdult: true, verifiedAt, createdAt: verifiedAt, updatedAt: verifiedAt });
-}
-
-/** A booking funded `daysAgo` for `priceCents`, between Ana and the helper, on a copy of the TV task. */
-async function booking(id: string, helperUserId: string, priceCents: number, daysAgo: number) {
-  const [tv] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
-  const [task] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
-  const [terms] = await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_tv'));
-  const confirmedAt = new Date(Date.now() - daysAgo * DAY);
-  await db.insert(tasks).values({ ...task!, id: `tsk_${id}`, slug: `t22-${id}`, posterUserId: 'usr_ana', status: 'assigned' });
-  await db.insert(bookings).values({ ...tv!, id, taskId: `tsk_${id}`, offerId: null, posterUserId: 'usr_ana', helperUserId, status: 'confirmed', confirmedAt, createdAt: confirmedAt });
-  await db.insert(bookingTerms).values({ ...terms!, id: `btm_${id}`, bookingId: id, priceCents, breakdown: quoteBreakdown(DEFAULT_FEES, { type: 'fixed', priceCents }) });
+  await db.insert(users).values({ ...sam!, id, email: `${id}@example.test`, name: `T22 ${id.slice(-4)}`, phone: null, phoneVerifiedAt: new Date('2019-12-01T12:00:00.000Z') });
+  await db.insert(helperProfiles).values({ ...samProfile!, userId: id, handle: id.replace(/_/g, '-'), foundingNumber: null, completedCount: 0, ratingAverage: null, ratingCount: 0, backgroundCheckedAt: background });
 }
 
 beforeAll(async () => {
-  await helper(HELPER, new Date(Date.now() - 20 * DAY));
+  // Checked long before anyone else, so the sweep's oldest-first batch of one is this helper.
+  await helper(HELPER, '2019-12-02T12:00:00.000Z');
+  await helper(NO_BACKGROUND, null);
+  await helper(TURNED_DOWN, '2019-12-09T12:00:00.000Z');
 });
 
 afterAll(async () => {
   const helpers = (await db.select({ id: users.id }).from(users).where(like(users.id, 'usr\\_t22\\_%'))).map((row) => row.id);
   if (helpers.length > 0) {
     await db.delete(rewardGrants).where(inArray(rewardGrants.helperUserId, helpers));
-    await db.delete(earnings).where(inArray(earnings.helperUserId, helpers));
-    const rows = (await db.select({ id: bookings.id }).from(bookings).where(inArray(bookings.helperUserId, helpers))).map((row) => row.id);
-    if (rows.length > 0) {
-      await db.delete(bookingTerms).where(inArray(bookingTerms.bookingId, rows));
-      await db.delete(bookings).where(inArray(bookings.id, rows));
-      await db.delete(tasks).where(inArray(tasks.id, rows.map((row) => `tsk_${row}`)));
-    }
-    await db.delete(identityVerifications).where(inArray(identityVerifications.userId, helpers));
+    await db.delete(outboxEvents).where(and(inArray(outboxEvents.type, ['reward.earned', 'reward.ready']), inArray(sql`${outboxEvents.payload}->>'userId'`, helpers)));
     await db.delete(helperProfiles).where(inArray(helperProfiles.userId, helpers));
     await db.delete(users).where(inArray(users.id, helpers));
   }
   await pool.end();
 });
 
-describe('T-22: the welcome reward', () => {
-  it('skips a $35 task, voids with a canceled booking, and grants again for the next qualifying one', async () => {
-    await booking('bkg_t22_small', HELPER, 3500, 10);
-    expect(await rewardsOf(HELPER)).toEqual([]);
-
-    await booking('bkg_t22_first', HELPER, 6000, 9);
-    const [first] = await rewardsOf(HELPER);
-    expect(first).toMatchObject({ amountCents: 5000, status: 'pending', booking: { id: 'bkg_t22_first' } });
-
-    await db.update(bookings).set({ status: 'canceled', cancelReason: 'poster_early', canceledAt: new Date() }).where(eq(bookings.id, 'bkg_t22_first'));
-    expect((await rewardsOf(HELPER)).find((grant) => grant.id === first!.id)).toMatchObject({ status: 'voided', voidReason: 'booking_canceled' });
-
-    await booking('bkg_t22_second', HELPER, 6000, 8);
-    const second = (await rewardsOf(HELPER)).find((grant) => grant.status === 'pending');
-    expect(second).toMatchObject({ amountCents: 5000, booking: { id: 'bkg_t22_second' } });
-    expect(second!.id).not.toBe(first!.id);
+describe('T-22: the welcome gift card', () => {
+  it('reaches a helper verified before the change through the sweep, with no booking, and says so once', async () => {
+    expect(await runWelcomeRewards(db, new Date(), { limit: 1 })).toBe(1);
+    const [grant, ...more] = await welcomeOf(HELPER);
+    expect(more).toHaveLength(0);
+    expect(grant).toMatchObject({ amountCents: 5000, bookingId: null, status: 'in_review' });
+    expect(await eventsOf('reward.earned', HELPER)).toHaveLength(1);
+    // The page shows it on its way; asking again changes nothing.
+    const page = await getRewardsPage(db, { id: HELPER, helperReady: true }, new Date());
+    expect(page.welcome).toMatchObject({ state: 'earned', amountCents: 5000 });
+    expect(page.grants.filter((item) => item.program === 'welcome')).toEqual([expect.objectContaining({ status: 'in_review', actions: [] })]);
+    expect(page.totals.pendingCents).toBe(5000);
+    expect(await welcomeOf(HELPER)).toHaveLength(1);
   });
 
-  it('qualifies when the work is paid out, waits 7 days, goes to review, then redeems once', async () => {
-    const [grant] = (await rewardsOf(HELPER)).filter((item) => item.status === 'pending');
-    const transferredAt = new Date(Date.now() - 2 * DAY);
-    await db.update(bookings).set({ status: 'completed', completedAt: transferredAt, completedVia: 'poster' }).where(eq(bookings.id, 'bkg_t22_second'));
-    await db.insert(earnings).values({ id: 'ern_t22_second', bookingId: 'bkg_t22_second', helperUserId: HELPER, kind: 'earnings', amountCents: 5400, status: 'transferred', transferredAt, createdAt: transferredAt });
-    expect((await rewardsOf(HELPER)).find((item) => item.id === grant!.id)).toMatchObject({ status: 'qualified' });
+  it('isn’t earned without the background check: the card shows what’s left', async () => {
+    const page = await getRewardsPage(db, { id: NO_BACKGROUND, helperReady: true }, new Date());
+    expect(page.grants.filter((item) => item.program === 'welcome')).toEqual([]);
+    expect(page.welcome).toMatchObject({ state: 'open', checks: [{ check: 'phone', state: 'done' }, { check: 'identity', state: 'done' }, { check: 'background', state: expect.not.stringMatching(/^done$/) }] });
+    expect(await welcomeOf(NO_BACKGROUND)).toHaveLength(0);
+  });
 
-    // Still on hold 6 days later; after 7 days (5 from now) it goes to staff review.
-    expect((await rewardsOf(HELPER, new Date(Date.now() + 3 * DAY))).find((item) => item.id === grant!.id)).toMatchObject({ status: 'qualified' });
-    expect((await rewardsOf(HELPER, new Date(Date.now() + 5 * DAY + 60_000))).find((item) => item.id === grant!.id)).toMatchObject({ status: 'in_review' });
+  it('is ready once our team approves it (the helper is told), redeems once, and the card says it was sent', async () => {
+    const [grant] = await welcomeOf(HELPER);
     expect(await redeemReward({ db, giftCards }, HELPER, grant!.id, new Date())).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await decideReward(db, giftCards, morgan, { grantId: grant!.id, action: 'approve_review', note: 'Checks all clear; one account.' }, new Date())).toEqual({ ok: true, code: 'updated' });
+    expect(await eventsOf('reward.ready', HELPER)).toHaveLength(1);
+    expect(await welcomeCardFor(db, HELPER, new Date())).toMatchObject({ state: 'ready', expiresAt: expect.any(String) });
 
-    expect(await decideReward(db, giftCards, morgan, { grantId: grant!.id, action: 'approve_review', note: 'First booking with a long-standing client.' }, new Date())).toEqual({ ok: true, code: 'updated' });
     expect(await redeemReward({ db, giftCards }, HELPER, grant!.id, new Date())).toEqual({ ok: true, code: 'submitted' });
-    expect((await rewardsOf(HELPER)).find((item) => item.id === grant!.id)).toMatchObject({ status: 'delivered' });
+    expect(await welcomeCardFor(db, HELPER, new Date())).toMatchObject({ state: 'delivered' });
     expect(await redeemReward({ db, giftCards }, HELPER, grant!.id, new Date())).toEqual({ ok: false, code: 'not_allowed' });
   });
 
-  it('grants nothing once the founding cohort of 100 is full', async () => {
-    // 100 helpers verified before this one.
-    const earlier = Array.from({ length: 100 }, (_, n) => `usr_t22_c${String(n).padStart(3, '0')}`);
-    for (const id of earlier) await helper(id, new Date(Date.now() - 30 * DAY));
-    await helper(LATE, new Date(Date.now() - 5 * DAY));
-    await booking('bkg_t22_late', LATE, 6000, 2);
-    expect(await rewardsOf(LATE)).toEqual([]);
+  it('expires when it isn’t redeemed within 90 days of being ready', async () => {
+    // The rewards page gives it lazily, like the verification event would.
+    await getRewardsPage(db, { id: TURNED_DOWN, helperReady: true }, new Date());
+    const [grant] = await welcomeOf(TURNED_DOWN);
+    await db.update(rewardGrants).set({ status: 'redeemable', redeemableAt: new Date(Date.now() - 91 * DAY), expiresAt: new Date(Date.now() - DAY) }).where(eq(rewardGrants.id, grant!.id));
+    const page = await getRewardsPage(db, { id: TURNED_DOWN, helperReady: true }, new Date());
+    expect(page.grants.find((item) => item.id === grant!.id)).toMatchObject({ status: 'expired' });
+    // Expired: no second card, and the card no longer shows.
+    expect(await welcomeOf(TURNED_DOWN)).toHaveLength(1);
+    expect(page.welcome).toBeUndefined();
+  });
+
+  it('never comes back once our team turns it down', async () => {
+    const [grant] = await welcomeOf(TURNED_DOWN);
+    await db.update(rewardGrants).set({ status: 'in_review', expiresAt: null, redeemableAt: null }).where(eq(rewardGrants.id, grant!.id));
+    expect(await decideReward(db, giftCards, morgan, { grantId: grant!.id, action: 'reject_review', note: 'Second account of a helper we know.' }, new Date())).toEqual({ ok: true, code: 'updated' });
+    await getRewardsPage(db, { id: TURNED_DOWN, helperReady: true }, new Date());
+    expect((await welcomeOf(TURNED_DOWN)).filter((row) => row.status !== 'voided')).toHaveLength(0);
+    expect(await welcomeCardFor(db, TURNED_DOWN, new Date())).toBeUndefined();
   });
 });

@@ -23,6 +23,12 @@ import { ONBOARDING_STEPS } from '@/contracts';
  * active. A helper is bookable in a category once the agreement, phone, ID (with its name matched or
  * confirmed), home address and payouts are done and, for in-home categories, a background check is
  * clear (or approved) and current.
+ *
+ * A helper outside every city we're open in (`awaitingCity`, owner 2026-11-14: national, cities open in turn)
+ * gave a ZIP instead of a neighborhood. The area counts as set, so they can finish the phone, ID, payouts and
+ * background check; the home address waits (`later`) because we verify addresses only where we're open. They're
+ * never bookable until their city opens and they choose a neighborhood; with everything else done, setup is
+ * complete and the done step says we'll tell them when their city opens.
  */
 
 export interface OnboardingFacts {
@@ -31,6 +37,8 @@ export interface OnboardingFacts {
   agreementAccepted: boolean;
   services: { categorySlug: CategorySlug; requiresBackgroundCheck: boolean }[];
   areaSet: boolean;
+  /** Outside every open market: the area is a ZIP and city, the home address waits, nothing is bookable. */
+  awaitingCity?: boolean;
   phoneVerified: boolean;
   /**
    * `captureInReview`: our team has it: our own check's photos (stage 1), a double check that didn't
@@ -54,6 +62,7 @@ export interface OnboardingResult {
 
 export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingStep): OnboardingResult {
   const backgroundRequired = facts.services.some((service) => service.requiresBackgroundCheck);
+  const waiting = facts.awaitingCity === true;
   // A renewal's earlier check still counts, so the steps after it stay open.
   const identityVerified = facts.identity.status === 'verified' || facts.identity.cleared;
   const done: Record<OnboardingStep, boolean> = {
@@ -86,19 +95,22 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
     background: !basics || !done.phone || !identityVerified || !done.payout,
     done: !(basics && done.phone && identityVerified && done.payout),
   };
-  const ready = done.profile && done.phone && done.identity && done.address && done.payout;
-  const complete = basics && ready && done.background;
+  const ready = done.profile && done.phone && done.identity && done.address && done.payout && !waiting;
+  // Waiting for their city: everything we can check now is done; the address comes when the city opens.
+  const complete = basics && done.background && (ready || (waiting && done.profile && done.phone && done.identity && done.payout));
   done.done = complete;
+  const later = (step: OnboardingStep) => waiting && step === 'address' && !done.address;
 
   const bookableCategories = ready
     ? facts.services.filter((service) => !service.requiresBackgroundCheck || facts.background.eligible).map((service) => service.categorySlug)
     : [];
 
   const firstIncomplete =
-    ONBOARDING_STEPS.find((step) => step !== 'done' && !done[step] && !(step === 'background' && !backgroundRequired)) ?? 'done';
+    ONBOARDING_STEPS.find((step) => step !== 'done' && !done[step] && !later(step) && !(step === 'background' && !backgroundRequired)) ?? 'done';
 
   const stateOf = (step: OnboardingStep): OnboardingStepState => {
     if (step === 'background' && !backgroundRequired) return 'skipped';
+    if (later(step)) return 'later';
     if (step === viewing) return 'current';
     // Still counting, but a new ID check is due: the step asks for it again.
     if (step === 'identity' && facts.identity.renewal) return inReview.identity ? 'in_review' : 'todo';
@@ -123,5 +135,5 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
 export function canOpenStep(facts: OnboardingFacts, step: OnboardingStep): boolean {
   const { progress } = computeOnboarding(facts);
   const state = progress.steps.find((s) => s.step === step)?.state;
-  return state !== 'locked' && state !== 'skipped';
+  return state !== 'locked' && state !== 'skipped' && state !== 'later';
 }

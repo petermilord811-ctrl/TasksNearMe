@@ -318,6 +318,14 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
       if (!userId || !badge || !(BADGE_CODES as readonly string[]).includes(badge)) return [];
       return [{ userId, type: 'badge_earned' as const, target: { kind: 'account' } as AttentionTarget, params: { badge: badge as BadgeCode, tier: typeof p.tier === 'number' ? p.tier : 1 } }];
     }
+    case 'reward.earned':
+    case 'reward.ready': {
+      // The welcome gift card was earned (its three checks passed), or a gift card is ready to pick (blueprint 05).
+      const userId = text(p.userId);
+      if (!userId) return [];
+      const amountCents = typeof p.amountCents === 'number' ? p.amountCents : undefined;
+      return [{ userId, type: event.type === 'reward.earned' ? ('reward_earned' as const) : ('reward_ready' as const), target: { kind: 'rewards' } as AttentionTarget, ...(amountCents !== undefined ? { params: { amountCents } } : {}) }];
+    }
     case 'privacy.export_ready': {
       const userId = text(p.userId);
       return userId ? [{ userId, type: 'data_export_ready' as const, target: { kind: 'account' } as AttentionTarget }] : [];

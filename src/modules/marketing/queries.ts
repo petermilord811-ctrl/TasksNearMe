@@ -11,6 +11,7 @@ import type {
   PricingPageData,
   PublicTaskPageData,
   TaskBoardPageData,
+  WaitlistDemand,
   WaitlistPageData,
   LandingMapData,
   TaskMapPin,
@@ -28,12 +29,15 @@ import { users } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
 import { areas as areaTable } from '@/modules/markets/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
-import { countFoundingHelpers, countPublicHelpers, getHelperProfile, listActiveHelperHandles, listPublicHelpers } from '@/modules/profiles/queries';
+import { countPublicHelpers, getHelperProfile, listActiveHelperHandles, listPublicHelpers } from '@/modules/profiles/queries';
 import { BOARD_PAGE_SIZE } from '@/modules/tasks/projections';
 import { countOpenTasks, findPublicTask, listBoardTasks, listRecentOpenTasks } from '@/modules/tasks/queries';
 import { taskDrafter } from '@/modules/tasks/server';
 import { db } from '@/platform/db/client';
+import { WELCOME_PROGRAM } from '@/modules/rewards/programs';
+import { normalizeZip } from '@/shared/us-zip';
 import { buildBecomeHelperPageData, buildPricingPageData, landingFeeExamples } from './page-data';
+import { citiesComingNext, WAITLIST_TAG, waitlistDemand } from './waitlist';
 
 /**
  * Public marketing page data. Cached (Cache Components) so the pages prerender and stay fast;
@@ -72,8 +76,8 @@ export async function getHomePageData(): Promise<WithNow<HomePageData> | null> {
   if (!page) return null;
   // Pricing transparency and the founding reward, from the same sources as /pricing and /become-a-helper.
   const { market, policy } = await defaultMarketPolicy();
-  const [flags, foundingSpotsClaimed, helpers] = await Promise.all([getFlags(market.id), countFoundingHelpers(market.id), countLandingHelpers(market.id, new Date(page.now))]);
-  const helper = buildBecomeHelperPageData({ fees: policy.fees, flags, foundingSpotsClaimed });
+  const [flags, helpers] = await Promise.all([getFlags(market.id), countLandingHelpers(market.id, new Date(page.now))]);
+  const helper = buildBecomeHelperPageData({ fees: policy.fees, flags });
   const reward = helper.welcomeReward;
   return {
     ...page,
@@ -81,7 +85,7 @@ export async function getHomePageData(): Promise<WithNow<HomePageData> | null> {
       ...page.data,
       feeExample: buildPricingPageData(policy).fixedExample,
       feeExamples: landingFeeExamples(policy.fees),
-      ...(reward ? { welcomeReward: { amountCents: reward.amountCents, cohortLimit: reward.cohortLimit, spotsClaimed: reward.spotsClaimed } } : {}),
+      ...(reward ? { welcomeReward: { amountCents: reward.amountCents, checks: reward.checks } } : {}),
       map: await landingMap(market),
       // The wizard drafts with AI only when the market allows it and a writer is set up (as on /app/tasks/new).
       aiDraftingEnabled: Boolean(flags.ai_drafting) && taskDrafter !== null,
@@ -242,22 +246,37 @@ export async function getBecomeHelperPageData(): Promise<BecomeHelperPageData> {
   cacheLife('hours');
   cacheTag(marketTag(DEFAULT_MARKET_SLUG));
   const { market, policy } = await defaultMarketPolicy();
-  const [flags, foundingSpotsClaimed] = await Promise.all([getFlags(market.id), countFoundingHelpers(market.id)]);
-  return buildBecomeHelperPageData({ fees: policy.fees, flags, foundingSpotsClaimed });
+  return buildBecomeHelperPageData({ fees: policy.fees, flags: await getFlags(market.id) });
 }
 
-/** `/waitlist`: the markets we serve or are about to open. */
-export async function getWaitlistPageData(): Promise<WaitlistPageData> {
+/**
+ * `/waitlist` (owner, 2026-11-14: national, cities open in turn): the markets we serve or are about to open, the
+ * cities people ask for most, and the welcome gift card helpers anywhere can get verified for.
+ */
+export async function getWaitlistPageData(): Promise<Omit<WaitlistPageData, 'initialZip' | 'demand' | 'from'>> {
   'use cache';
-  cacheLife('hours');
+  cacheLife('minutes');
   cacheTag('markets');
-  const markets = await Promise.all(
-    (await listPublicMarketSlugs()).map(async (slug) => {
-      const market = await findPublicMarket(slug);
-      return market ? getMarketView(market) : null;
-    }),
-  );
-  return { markets: markets.filter((market) => market !== null) };
+  cacheTag(WAITLIST_TAG);
+  const rows = (await Promise.all((await listPublicMarketSlugs()).map((slug) => findPublicMarket(slug)))).filter((market) => market !== null);
+  const [markets, comingNext, flags] = await Promise.all([
+    Promise.all(rows.map((market) => getMarketView(market))),
+    citiesComingNext(db, rows.flatMap((market) => market.zipPrefixes)),
+    defaultMarketPolicy().then(({ market }) => getFlags(market.id)),
+  ]);
+  return { markets, comingNext, ...(flags['reward.welcome'] ? { helperReward: { amountCents: WELCOME_PROGRAM.amountCents } } : {}) };
+}
+
+/**
+ * People waiting near a ZIP (its ZIP3 prefix): waitlist entries and helpers who wait for the city. For the
+ * waitlist page's `?zip=` and the landing page ("12 people near 75201 are waiting"). Null for a ZIP we can't serve.
+ */
+export async function getWaitlistDemand(zip: string): Promise<WaitlistDemand | null> {
+  'use cache';
+  cacheLife('minutes');
+  cacheTag(WAITLIST_TAG);
+  const five = normalizeZip(zip);
+  return five ? waitlistDemand(db, five) : null;
 }
 
 /** `/[market]/tasks`: one page of open tasks for the filters in the URL. */

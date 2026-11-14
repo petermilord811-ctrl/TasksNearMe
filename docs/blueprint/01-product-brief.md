@@ -4,9 +4,9 @@
 
 ## 1. The product in one line
 
-TasksNearMe lets people in one city book a verified local helper for a specific task. The price is agreed up front, payment goes through the platform, and rebooking takes two taps.
+TasksNearMe lets people book a verified local helper for a specific task, anywhere in the US as we open city by city. The price is agreed up front, payment goes through the platform, and rebooking takes two taps.
 
-**Working market:** Austin, Texas (A2). Everything market-specific (boundary, time zone, categories, fees, policies, price guidance) lives in market configuration, so a second city is a data change, not a code change.
+**Scope (owner, 2026-11-14): national, cities open in turn.** The site speaks to the whole US. Austin, Texas is the first city (A2); others open one at a time, in the order demand shows. In a city we haven't opened, people join that city's waitlist (with its demand counted, by ZIP and city), and helpers can sign up, pass the phone, ID and background checks and earn the welcome gift card now, then choose their neighborhood and add their home address when their city opens. Posting and booking happen only in open cities. Everything market-specific (the ZIP3 prefixes a market covers, boundary, time zone, categories, fees, policies, price guidance) lives in market configuration, so a new city is a data change, not a code change, except one prerequisite: until dates are formatted in each market's own time zone, only markets in Central time can go live (completion plan 8.1).
 
 ## 2. Product principles (used to break ties)
 
@@ -114,7 +114,7 @@ Marketing should lead with three hero categories (**furniture assembly, moving h
 | **Reviews and repeat** | Two-way, double-blind reviews; saved helpers; Book again; My clients list | Private feedback to support (P2) | Reviews from anyone without a completed booking |
 | **Rewards** | Rules engine; **welcome** and **repeat (paid-bookings version)** turned on; **acceptance** and **completion** built but switched off (D8) | Recurring-month repeat reward (with recurring visits); poster credits (P2) | Rewards tied to reviews or ratings; cash-equivalent wallets |
 | **Admin and support** | Queues, user and booking timelines, moderation, cancellation overrides, refunds with limits, dispute cases, reward review/void/reissue, audit log, market and fee config | Macros and SLAs dashboard (P2); fraud scoring model (P3) | Direct database editing by staff |
-| **Platform** | Installable mobile-first web app (PWA), SEO pages per market and category, analytics, error monitoring, feature flags | Native apps (P3); second market (P3) | Native apps at launch |
+| **Platform** | Installable mobile-first web app (PWA), SEO pages per market and category, analytics, error monitoring, feature flags; a national site with city waitlists and helper sign-up anywhere in the US (owner, 2026-11-14) | Native apps (P3); the next cities, in the order demand shows (the first outside Central time needs per-market time zones, plan 8.1) | Native apps at launch |
 
 ## 8. Candidate features: prioritization
 

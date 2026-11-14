@@ -20,7 +20,7 @@ import {
 } from '../../src/modules/markets/policy-defaults';
 import { staffRoles, users } from '../../src/modules/accounts/schema';
 import { helperProfiles, helperServices } from '../../src/modules/profiles/schema';
-import { AUSTIN, AUSTIN_AREAS, CATEGORIES } from './data/austin';
+import { AUSTIN, AUSTIN_AREAS, AUSTIN_ZIP_PREFIXES, CATEGORIES } from './data/austin';
 import { PEOPLE, displayNameOf, type SeedPerson } from './data/people';
 import { CURRENT_TERMS_VERSION } from '../../src/modules/accounts/terms';
 import { recomputeBadges } from '../../src/modules/badges/service';
@@ -60,8 +60,8 @@ export async function seedDatabase(url: string): Promise<void> {
     await db.transaction(async (tx) => {
       await tx
         .insert(markets)
-        .values({ ...AUSTIN })
-        .onConflictDoUpdate({ target: markets.id, set: { name: AUSTIN.name, status: AUSTIN.status } });
+        .values({ ...AUSTIN, zipPrefixes: AUSTIN_ZIP_PREFIXES })
+        .onConflictDoUpdate({ target: markets.id, set: { name: AUSTIN.name, status: AUSTIN.status, zipPrefixes: AUSTIN_ZIP_PREFIXES } });
 
       for (const area of AUSTIN_AREAS) {
         await tx

@@ -13,6 +13,9 @@ export const AUSTIN = {
   serviceRadiusKm: 25,
 } as const;
 
+/** The ZIP3 prefixes Austin covers: 787 is the city, 786 the towns around it (Round Rock, Pflugerville, Kyle). */
+export const AUSTIN_ZIP_PREFIXES: string[] = ['786', '787'];
+
 export const AUSTIN_AREAS: Array<{ slug: string; name: string; lat: number; lng: number }> = [
   { slug: 'downtown', name: 'Downtown', lat: 30.2672, lng: -97.7431 },
   { slug: 'mueller', name: 'Mueller', lat: 30.2993, lng: -97.7036 },

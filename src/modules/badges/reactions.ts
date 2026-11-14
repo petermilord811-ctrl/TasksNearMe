@@ -2,14 +2,19 @@ import { and, count, eq } from 'drizzle-orm';
 import { bookings } from '@/modules/bookings/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { assignFoundingNumber } from '@/modules/rewards/founding';
+import { ensureWelcomeGrant } from '@/modules/rewards/welcome';
 import { recomputeBadges } from './service';
 import { supportCases } from '@/modules/support/schema';
 import type { Db } from '@/platform/db/connect';
 
+/** Verification tracks whose pass can complete the welcome gift card's checks (and onboarding's end). */
+const WELCOME_TRACKS = ['phone', 'identity', 'background', 'helper'];
+
 /**
  * What changes when certain outbox events go out (completion plan 6.4, 6.6). The notification dispatcher calls
  * `reactToEvent` for every event it dispatches, after planning its notifications:
- * - a helper who just cleared verification gets the market's next founding number;
+ * - a helper who just cleared verification gets the market's next founding number (a badge);
+ * - a passed phone, ID or background check that completes the three gives the welcome gift card;
  * - a booking that completed, was canceled (a refund after completion cancels it), or whose case was resolved
  *   (support can release or settle it) brings the helper's completed count up to date;
  * - those, published reviews and a cleared verification bring both people's badges up to date (6.4).
@@ -53,6 +58,10 @@ export async function reactToEvent(db: Db, event: ReactionEvent, now: Date): Pro
       if (userId && event.payload.track === 'helper' && event.payload.outcome === 'ready') {
         await assignFoundingNumber(db, userId, now);
         await recomputeBadges(db, userId, now);
+      }
+      // The welcome gift card the moment the last of the phone, ID and background checks passes (2026-11-14).
+      if (userId && (event.payload.outcome === 'passed' || event.payload.outcome === 'ready') && WELCOME_TRACKS.includes(String(event.payload.track))) {
+        await ensureWelcomeGrant(db, userId, now);
       }
       return;
     }

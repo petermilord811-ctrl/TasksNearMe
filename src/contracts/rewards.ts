@@ -1,14 +1,40 @@
 import type { RewardActionId } from './action-ids';
 import type { ActionHandler } from './actions';
 import type { Cents, ISODateTime } from './common';
+import type { OnboardingStepState } from './onboarding';
 import type { RewardProgramCode, RewardStatus } from './status';
 
 /**
  * Gift-card rewards for helpers (blueprint 05; `/app/rewards`). Rewards come from the promotions budget
- * as gift cards, never as earnings: they show only on this page. A reward is pending when its trigger
- * happens, qualified once the work is completed and paid, redeemable after a 7-day hold (welcome
- * rewards go through a manual review first), and must be redeemed within 90 days.
+ * as gift cards, never as earnings: they show only on this page. Booking rewards (repeat, regular visits) are
+ * pending when their trigger happens, qualified once the work is completed and paid, redeemable after a 7-day
+ * hold, and must be redeemed within 90 days. The welcome gift card follows no booking: see `WelcomeGiftCard`.
  */
+
+/** The checks that earn the welcome gift card, in order (blueprint 05 §2, the owner's rule of 2026-11-14). */
+export const WELCOME_GIFT_CHECKS = ['phone', 'identity', 'background'] as const;
+export type WelcomeGiftCheck = (typeof WELCOME_GIFT_CHECKS)[number];
+
+/**
+ * The $50 welcome gift card: every helper earns it once their phone, ID and background checks have passed. No
+ * spots to race for and no first task (blueprint 05 §2, 2026-11-14).
+ * - `open`: checks still to pass (`checks` says which; a background check `skipped` comes with in-home services).
+ * - `earned`: on its way: in line for the month's gift-card budget (`queuedUntil`), or a quick check by our team.
+ * - `ready`: redeemable on the rewards page, where the helper picks the card (by `expiresAt`).
+ * - `delivered`: the gift card was sent.
+ * Absent when the program is off in the helper's market, or our team turned it down after a review.
+ */
+export interface WelcomeGiftCard {
+  state: 'open' | 'earned' | 'ready' | 'delivered';
+  amountCents: Cents;
+  checks: { check: WelcomeGiftCheck; state: OnboardingStepState }[];
+  /** `earned` and still in line: when the next month's budget opens (it moves on by then at the latest). */
+  queuedUntil?: ISODateTime;
+  /** `ready`: redeem by this time. */
+  expiresAt?: ISODateTime;
+  /** The founding-helper badge's number, when the helper has one (the first 100 verified in a market). */
+  foundingNumber?: number;
+}
 
 export const REWARD_VOID_REASONS = ['booking_canceled', 'refunded', 'below_threshold', 'risk_review'] as const;
 export type RewardVoidReason = (typeof REWARD_VOID_REASONS)[number];
@@ -27,6 +53,8 @@ export interface RewardGrantView {
   clientDisplayName?: string;
   /** Qualified: when the 7-day hold ends. */
   holdUntil?: ISODateTime;
+  /** A welcome gift card waiting in line for the month's budget: when the next month's budget opens. */
+  queuedUntil?: ISODateTime;
   /** Redeemable or later: when it became redeemable. */
   redeemableAt?: ISODateTime;
   /** Redeemable: redeem by this time (90 days). */
@@ -53,7 +81,7 @@ export interface RewardProgramView {
   /** Percentage programs, in basis points (acceptance 5% = 500). */
   percentBps?: number;
   capCents?: Cents;
-  /** The lowest eligible task price (welcome $40, repeat $25). */
+  /** The lowest eligible task price (repeat $25). */
   thresholdCents?: Cents;
 }
 
@@ -61,6 +89,8 @@ export interface RewardProgramView {
 export interface RewardsPageData {
   /** Not set up as a helper: an empty state that links to helper onboarding. */
   helperReady: boolean;
+  /** The welcome gift card and its three checks, for helpers (set up or not) while it applies. */
+  welcome?: WelcomeGiftCard;
   totals: { pendingCents: Cents; redeemableCents: Cents; redeemedThisYearCents: Cents };
   /** Redeemable first, then on their way (pending, qualified, in review, issuing), then delivered, then the rest. */
   grants: RewardGrantView[];

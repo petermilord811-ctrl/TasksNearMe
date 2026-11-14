@@ -71,6 +71,8 @@ function pathOf(target: AttentionTarget): string {
       return routes.app.account();
     case 'verify_identity':
       return routes.app.verifyIdentity();
+    case 'rewards':
+      return routes.app.rewards();
   }
 }
 

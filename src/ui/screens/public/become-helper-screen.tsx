@@ -15,11 +15,38 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
   const repeat = data.repeatReward;
   const onboardingHref = routes.signIn(routes.app.helperOnboarding());
 
+  const giftAmount = welcome ? formatMoney(welcome.amountCents).replace(/\.00$/, '') : '';
+
   return <div className="space-y-8">
     <div className="relative isolate space-y-6 overflow-hidden rounded-[1.75rem] border border-foreground/[0.06] bg-[linear-gradient(115deg,var(--color-brand-soft),var(--color-clay-soft)_55%,var(--color-violet-soft))] p-5 sm:p-10 dark:border-white/[0.06]">
       <PageHeader title={t('title')} description={t('description')} />
       <Link href={onboardingHref} className={buttonVariants()}>{t('cta')}</Link>
     </div>
+
+    {/* The welcome gift card first (blueprint 05 §2, 2026-11-14): three checks, then $50, for every helper. */}
+    {welcome && <section aria-labelledby="welcome-gift-title" className="relative isolate overflow-hidden rounded-[1.75rem] border border-badge-reward-foreground/15 bg-badge-reward p-5 text-badge-reward-foreground sm:p-10">
+      <span aria-hidden="true" className="pointer-events-none absolute -top-32 -right-24 -z-10 size-96 rounded-full opacity-40 blur-3xl" style={{ backgroundImage: 'var(--iridescent)' }} />
+      <div className="grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="space-y-4">
+          <p className="text-xs font-semibold tracking-[0.16em] uppercase">{t('welcomeEyebrow')}</p>
+          <h2 id="welcome-gift-title" className="font-display text-3xl leading-tight font-semibold tracking-[-0.03em] text-balance sm:text-4xl">{t('welcomeOffer', { amount: giftAmount })}</h2>
+          <p className="max-w-reading text-lg">{t('welcomeTerms')}</p>
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {welcome.checks.map((check, index) => <li key={check} className="flex min-h-14 items-center gap-3 rounded-2xl border border-badge-reward-foreground/12 bg-card/60 px-4 py-3 text-foreground dark:bg-white/[0.04]">
+              <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-foreground text-sm font-semibold text-background tabular-nums">{index + 1}</span>
+              <span className="font-semibold">{t(`welcomeChecks.${check}`)}</span>
+            </li>)}
+          </ol>
+          <p className="text-sm">{t('welcomeUnlock', { redeemDays: welcome.redeemWithinDays })}</p>
+          <Link href={onboardingHref} className={buttonVariants({ size: 'lg' })}>{t('welcomeCta', { amount: giftAmount })}</Link>
+        </div>
+        <div aria-hidden="true" className="relative mx-auto grid aspect-[1.586] w-64 max-w-full -rotate-3 overflow-hidden rounded-3xl p-5 text-white shadow-[0_24px_60px_-24px_rgb(80_40_140/0.6)] sm:w-72" style={{ backgroundImage: 'var(--iridescent)' }}>
+          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_20%_0%,rgb(255_255_255/0.45),transparent_55%)]" />
+          <div className="relative flex items-start justify-between"><Gift className="size-6" /><span className="text-xs font-semibold tracking-[0.14em] uppercase">{t('welcomeArt')}</span></div>
+          <p className="relative self-end font-display text-5xl leading-none font-semibold tracking-[-0.04em]">{giftAmount}</p>
+        </div>
+      </div>
+    </section>}
 
     <Section title={t('requirementsTitle')}>
       <ul className="grid gap-4 md:grid-cols-3">
@@ -57,10 +84,9 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
         {welcome && <section aria-label={t('welcomeTitle')} className="rounded-xl border border-border bg-badge-reward p-4 text-badge-reward-foreground sm:p-6">
           <Gift aria-hidden="true" className="mb-3 size-6" />
           <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('welcomeTitle')}</h3>
-          <p className="mt-3 text-lg font-semibold tabular-nums">{t('welcomeOffer', { amount: formatMoney(welcome.amountCents), limit: welcome.cohortLimit })}</p>
-          <p className="mt-2 font-semibold tabular-nums">{t('spotsLeft', { count: welcome.cohortLimit - welcome.spotsClaimed })}</p>
-          <p className="mt-4 text-sm">{t('welcomeTerms', { minimum: formatMoney(welcome.minTaskPriceCents), days: welcome.windowDays })}</p>
-          <p className="mt-3 text-sm">{t('welcomeUnlock', { days: welcome.unlockDays, redeemDays: welcome.redeemWithinDays })}</p>
+          <p className="mt-3 text-lg font-semibold tabular-nums">{t('welcomeOffer', { amount: giftAmount })}</p>
+          <p className="mt-4 text-sm">{t('welcomeTerms')}</p>
+          <p className="mt-3 text-sm">{t('welcomeUnlock', { redeemDays: welcome.redeemWithinDays })}</p>
         </section>}
         {repeat && <section aria-label={t('repeatTitle')} className="rounded-xl border border-border bg-badge-reward p-4 text-badge-reward-foreground sm:p-6">
           <Gift aria-hidden="true" className="mb-3 size-6" />

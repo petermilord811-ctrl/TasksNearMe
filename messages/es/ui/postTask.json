@@ -323,7 +323,12 @@
     "unitHint": "Solo lo ve tu ayudante reservado.",
     "accessNotes": "Notas de acceso (opcional)",
     "accessHint": "Solo lo ve tu ayudante reservado. Incluye instrucciones de entrada, estacionamiento o escaleras.",
-    "restoreHint": "Tu dirección está guardada. Vuelve a buscar si necesitas cambiarla."
+    "restoreHint": "Tu dirección está guardada. Vuelve a buscar si necesitas cambiarla.",
+    "notYetIn": "Todavía no estamos en {city}",
+    "outsideTitle": "Todavía no estamos en {city}.",
+    "outsideBody": "TasksNearMe abre ciudad por ciudad. Únete a la lista de {city} y te escribiremos el día que abramos allí.",
+    "outsideWaitlist": "Unirme a la lista de {city}",
+    "outsideHelper": "¿Vives allí y puedes ayudar? Verifícate ya"
   },
   "review": {
     "intro": "Revisa tu tarea y quién puede ver cada parte. Puedes volver atrás para cambiar lo que quieras antes de publicar.",

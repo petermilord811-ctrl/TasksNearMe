@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { ACTION_ERROR_CODES, BACKGROUND_CHECK_STATUSES, IDENTITY_STATUSES, PAYOUT_ACCOUNT_STATUSES, routes, type AppShellHandlers, type HelperOnboardingPageData, type PreviewEntry } from '@/contracts';
-import { fakeHandler, fakeOnboardingHandlers, onboardingAreaStep, onboardingIdentityCaptureApproved, onboardingBackgroundNotStarted, onboardingBackgroundPending, onboardingDone, onboardingIdentityProcessing, onboardingIdentityRetry, onboardingIdentityStep, onboardingPayoutActionNeeded, onboardingPayoutStep, onboardingProfileStep, onboardingServicesStep, priyaShell, samProfileDraft } from '@/fixtures';
+import { fakeHandler, fakeOnboardingHandlers, onboardingAreaAwaiting, onboardingAreaElsewhere, onboardingAreaStep, onboardingDoneAwaitingCity, onboardingDoneAwaitingCityPending, onboardingIdentityCaptureApproved, onboardingBackgroundNotStarted, onboardingBackgroundPending, onboardingDone, onboardingIdentityProcessing, onboardingIdentityRetry, onboardingIdentityStep, onboardingPayoutActionNeeded, onboardingPayoutStep, onboardingProfileStep, onboardingServicesStep, priyaShell, samProfileDraft } from '@/fixtures';
 import { HelperOnboardingScreen } from '@/ui/screens/helper/helper-onboarding-screen';
 import { VerificationPanel } from '@/ui/screens/helper/verification-panel';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -30,6 +30,11 @@ export const helperOnboardingPreviews: PreviewEntry[] = [
   },
   preview('services', copy.screen.steps.services, onboardingServicesStep),
   preview('area', copy.screen.steps.area, onboardingAreaStep),
+  // National (owner, 2026-11-14): a helper somewhere else in the US gives a ZIP and city, and waits for it to open.
+  preview('area-elsewhere', copy.screen.previews.areaElsewhere, onboardingAreaElsewhere),
+  preview('area-awaiting', copy.screen.previews.areaAwaiting, onboardingAreaAwaiting),
+  preview('done-awaiting-city', copy.screen.previews.doneAwaitingCity, onboardingDoneAwaitingCity),
+  preview('done-awaiting-city-pending', copy.screen.previews.doneAwaitingCityPending, onboardingDoneAwaitingCityPending),
   preview('identity', copy.screen.steps.identity, onboardingIdentityStep),
   preview('identity-retry', copy.screen.previews.identityRetry, onboardingIdentityRetry),
   preview('identity-processing', copy.screen.previews.identityProcessing, onboardingIdentityProcessing),

@@ -1,19 +1,21 @@
-import { eq, inArray, like, sql } from 'drizzle-orm';
+import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
 import { reactToEvent } from '@/modules/badges/reactions';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
-import { cohortFacts } from '@/modules/rewards/service';
+import { rewardGrants } from '@/modules/rewards/schema';
 import { supportCases } from '@/modules/support/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { identityVerifications } from '@/modules/verification/schema';
 import { createDb } from '@/platform/db/connect';
+import { outboxEvents } from '@/platform/outbox/schema';
 
 /**
- * Completion plan 6.6: founding numbers given out as helpers clear verification, clients' ID checks kept out
- * of the founding count, and `helper_profiles.completed_count` kept up to date. People made for this file
- * (copies of Jordan, a helper, and Ruth, a client); Jordan's own rows are never changed.
+ * Completion plan 6.6: founding numbers given out as helpers clear verification (a badge only since 2026-11-14),
+ * the welcome gift card given by the verification events (never for a client's ID check), and
+ * `helper_profiles.completed_count` kept up to date. People made for this file (copies of Jordan, a helper, and
+ * Ruth, a client); Jordan's own rows are never changed.
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
@@ -52,6 +54,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await db.delete(rewardGrants).where(inArray(rewardGrants.helperUserId, [READY, DRAFT, CLIENT]));
+  await db.delete(outboxEvents).where(and(inArray(outboxEvents.type, ['reward.earned', 'reward.ready']), inArray(sql`${outboxEvents.payload}->>'userId'`, [READY, DRAFT, CLIENT])));
   await db.delete(supportCases).where(like(supportCases.id, 'case\\_fd\\_%'));
   await db.delete(bookingTerms).where(like(bookingTerms.bookingId, 'bkg\\_fd\\_%'));
   await db.delete(bookings).where(like(bookings.id, 'bkg\\_fd\\_%'));
@@ -83,16 +87,36 @@ describe('founding numbers', () => {
   });
 });
 
-describe('the founding cohort', () => {
-  it('ranks helpers among helpers: a client’s ID check takes no place', async () => {
-    const verifiedAt = new Date('2020-01-02T12:00:00.000Z');
-    // A client checked first (a risk-triggered check), then the helper.
-    await db.insert(identityVerifications).values([
-      { id: 'idv_fd_client', userId: CLIENT, provider: 'dev', providerSessionId: 'dev_fd_client', status: 'verified', isAdult: true, verifiedAt: new Date(verifiedAt.getTime() - 60_000), createdAt: verifiedAt, updatedAt: verifiedAt },
-      { id: 'idv_fd_ready', userId: READY, provider: 'dev', providerSessionId: 'dev_fd_ready', status: 'verified', isAdult: true, verifiedAt, createdAt: verifiedAt, updatedAt: verifiedAt },
-    ]);
-    // Earlier than every seeded check: first among helpers.
-    expect(await cohortFacts(db, READY)).toEqual({ verifiedAt, rank: 1 });
+describe('the welcome gift card from verification events (2026-11-14)', () => {
+  const passed = (userId: string, track: string) => event('verification.updated', 'user', userId, { userId, track, outcome: 'passed' });
+  const welcomeOf = (userId: string) => db.select().from(rewardGrants).where(and(eq(rewardGrants.helperUserId, userId), eq(rewardGrants.program, 'welcome')));
+  const earnedEvents = (userId: string) => db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'reward.earned'), sql`${outboxEvents.payload}->>'userId' = ${userId}`));
+
+  it('comes with the last of the phone, ID and background checks, once, and is announced', async () => {
+    // Copied from Jordan: ID and background check done, but no phone yet.
+    await reactToEvent(db, passed(READY, 'background'), now);
+    expect(await welcomeOf(READY)).toHaveLength(0);
+
+    await db.update(users).set({ phoneVerifiedAt: now }).where(eq(users.id, READY));
+    await reactToEvent(db, passed(READY, 'phone'), now);
+    const [grant, ...more] = await welcomeOf(READY);
+    expect(more).toHaveLength(0);
+    // No booking behind it; out of the line for our team's quick check (this month's budget has room).
+    expect(grant).toMatchObject({ amountCents: 5000, bookingId: null, status: 'in_review' });
+    expect(await earnedEvents(READY)).toHaveLength(1);
+
+    // A retried dispatch changes nothing.
+    await reactToEvent(db, passed(READY, 'phone'), now);
+    expect(await welcomeOf(READY)).toHaveLength(1);
+    expect(await earnedEvents(READY)).toHaveLength(1);
+  });
+
+  it('is never a client’s: an ID check and a phone without a helper profile earn nothing', async () => {
+    await db.update(users).set({ phoneVerifiedAt: now }).where(eq(users.id, CLIENT));
+    await db.insert(identityVerifications).values({ id: 'idv_fd_client', userId: CLIENT, provider: 'dev', providerSessionId: 'dev_fd_client', status: 'verified', isAdult: true, verifiedAt: now, createdAt: now, updatedAt: now });
+    await reactToEvent(db, event('verification.updated', 'user', CLIENT, { userId: CLIENT, track: 'poster_identity', outcome: 'passed' }), now);
+    await reactToEvent(db, passed(CLIENT, 'identity'), now);
+    expect(await welcomeOf(CLIENT)).toHaveLength(0);
   });
 });
 
