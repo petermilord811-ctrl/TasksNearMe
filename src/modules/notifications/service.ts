@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type {
   AccountPageData,
   AccountProfileInput,
@@ -341,58 +341,76 @@ const CLAIM_EXPIRES_MS = 5 * 60_000;
  * Takes up to `limit` undispatched events for this dispatcher, oldest first, in one statement: the rows are locked
  * with FOR NO KEY UPDATE SKIP LOCKED while `claimed_at` is set, so dispatchers running at once (the job runner,
  * every signed-in page, the notifications page) never take the same event, and an on-call page goes out once.
+ * Claims are kept on the database's clock, not the request's (5.19): a request on the test clock, days ahead,
+ * would otherwise find every live claim stale and take it again.
  */
-async function claimEvents(db: Db, now: Date, limit: number) {
-  const stale = new Date(now.getTime() - CLAIM_EXPIRES_MS).toISOString();
+async function claimEvents(db: Db, limit: number) {
   const free = db
     .select({ id: outboxEvents.id })
     .from(outboxEvents)
-    .where(and(isNull(outboxEvents.dispatchedAt), or(isNull(outboxEvents.claimedAt), lt(outboxEvents.claimedAt, stale))))
+    .where(and(isNull(outboxEvents.dispatchedAt), or(isNull(outboxEvents.claimedAt), sql`${outboxEvents.claimedAt} < now() - ${CLAIM_EXPIRES_MS}::int * interval '1 millisecond'`)))
     .orderBy(asc(outboxEvents.createdAt))
     .limit(limit)
     .for('no key update', { skipLocked: true });
-  const claimed = await db.update(outboxEvents).set({ claimedAt: now.toISOString() }).where(inArray(outboxEvents.id, free)).returning();
+  const claimed = await db.update(outboxEvents).set({ claimedAt: sql`now()` }).where(inArray(outboxEvents.id, free)).returning();
   return claimed.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+/** Makes an event's notifications, one per event and person (idempotent); `onlyUserId`, just that person's. */
+async function deliver(db: Db, event: EventRow, onlyUserId?: string): Promise<number> {
+  let made = 0;
+  for (const item of await plan(db, event)) {
+    if (onlyUserId && item.userId !== onlyUserId) continue;
+    // Several unread messages in one thread make one notification.
+    if (item.type === 'message_received' && item.target.kind === 'thread') {
+      const threadId = item.target.threadId;
+      const unread = await db
+        .select({ id: notifications.id, target: notifications.target })
+        .from(notifications)
+        .where(and(eq(notifications.userId, item.userId), eq(notifications.type, 'message_received'), isNull(notifications.readAt)));
+      if (unread.some((row) => row.target.kind === 'thread' && row.target.threadId === threadId)) continue;
+    }
+    // Someone who is gone (a deleted account) can't get a notification; one bad event never blocks the rest.
+    try {
+      const inserted = await db
+        .insert(notifications)
+        .values({
+          id: newId('ntf'),
+          userId: item.userId,
+          type: item.type,
+          title: item.title ?? null,
+          actorName: item.actorName ?? null,
+          params: item.params ?? null,
+          target: item.target,
+          sourceEventId: event.id,
+          createdAt: new Date(event.createdAt),
+        })
+        .onConflictDoNothing({ target: [notifications.sourceEventId, notifications.userId] })
+        .returning({ id: notifications.id });
+      made += inserted.length;
+    } catch (error) {
+      if (!isForeignKeyViolation(error)) throw error;
+    }
+  }
+  return made;
+}
+
+/**
+ * One person's notifications from the events other dispatchers hold right now (5.19): the signed-in layout
+ * rendering beside the page, another page, the job runner. Made here too, so the notifications page shows them
+ * at once; the dispatcher that claimed an event still runs its reactions and marks it dispatched.
+ */
+async function deliverHeld(db: Db, userId: string, limit = 200): Promise<void> {
+  const held = await db.select().from(outboxEvents).where(and(isNull(outboxEvents.dispatchedAt), isNotNull(outboxEvents.claimedAt))).orderBy(asc(outboxEvents.createdAt)).limit(limit);
+  for (const event of held) await deliver(db, event, userId);
 }
 
 /** Turns undispatched outbox events into notifications (idempotent), oldest first. */
 export async function dispatchNotifications(db: Db, now: Date, limit = 200): Promise<number> {
-  const pending = await claimEvents(db, now, limit);
+  const pending = await claimEvents(db, limit);
   let made = 0;
   for (const event of pending) {
-    const planned = await plan(db, event);
-    for (const item of planned) {
-      // Several unread messages in one thread make one notification.
-      if (item.type === 'message_received' && item.target.kind === 'thread') {
-        const threadId = item.target.threadId;
-        const unread = await db
-          .select({ id: notifications.id, target: notifications.target })
-          .from(notifications)
-          .where(and(eq(notifications.userId, item.userId), eq(notifications.type, 'message_received'), isNull(notifications.readAt)));
-        if (unread.some((row) => row.target.kind === 'thread' && row.target.threadId === threadId)) continue;
-      }
-      // Someone who is gone (a deleted account) can't get a notification; one bad event never blocks the rest.
-      try {
-        const inserted = await db
-          .insert(notifications)
-          .values({
-            id: newId('ntf'),
-            userId: item.userId,
-            type: item.type,
-            title: item.title ?? null,
-            actorName: item.actorName ?? null,
-            params: item.params ?? null,
-            target: item.target,
-            sourceEventId: event.id,
-            createdAt: new Date(event.createdAt),
-          })
-          .onConflictDoNothing({ target: [notifications.sourceEventId, notifications.userId] })
-          .returning({ id: notifications.id });
-        made += inserted.length;
-      } catch (error) {
-        if (!isForeignKeyViolation(error)) throw error;
-      }
-    }
+    made += await deliver(db, event);
     // What else changes with the event: founding numbers, completed counts, badges (src/modules/badges/reactions.ts).
     // A failure is logged and never holds up the notifications.
     try {
@@ -424,6 +442,7 @@ export async function getNotificationsPage(db: Db, userId: string, now: Date): P
   await remindApprovalsDue(db, now, { posterUserId: userId });
   await remindUpcomingBookings(db, now, { userId });
   await dispatchNotifications(db, now);
+  await deliverHeld(db, userId);
   const rows = await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(50);
   return {
     notifications: rows.map((row) => ({

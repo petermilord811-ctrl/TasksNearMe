@@ -1,7 +1,8 @@
 import { and, eq, inArray, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bookings } from '@/modules/bookings/schema';
-import { dispatchNotifications } from '@/modules/notifications/service';
+import { notifications } from '@/modules/notifications/schema';
+import { dispatchNotifications, getNotificationsPage } from '@/modules/notifications/service';
 import { payments } from '@/modules/payments/schema';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
 import { auditLog } from '@/platform/audit/schema';
@@ -12,6 +13,7 @@ import { outboxEvents } from '@/platform/outbox/schema';
  * Outbox claims (completion plan 5.18, migration 0054): dispatchers run at once (the job runner, every signed-in
  * page, the notifications page), and each event is handled by one of them. A refund that needs a person opens one
  * case, not one per dispatcher, and a claim left by a dispatcher that stopped is taken again after 5 minutes.
+ * The notifications page still shows what another dispatcher is holding (5.19).
  */
 
 const url = process.env.TEST_DATABASE_URL ?? '';
@@ -34,6 +36,7 @@ afterAll(async () => {
     await db.delete(supportCases).where(inArray(supportCases.id, cases));
   }
   await db.delete(auditLog).where(and(eq(auditLog.action, 'payment.refund_case_opened'), inArray(auditLog.targetId, PAYMENTS)));
+  await db.delete(notifications).where(like(notifications.sourceEventId, 'evt\\_claim\\_%'));
   await db.delete(outboxEvents).where(like(outboxEvents.id, 'evt\\_claim\\_%'));
   await db.delete(payments).where(inArray(payments.id, PAYMENTS));
   await first.pool.end();
@@ -64,5 +67,32 @@ describe('outbox claims', () => {
     const [live] = await db.select().from(outboxEvents).where(eq(outboxEvents.id, 'evt_claim_live'));
     expect(stale!.dispatchedAt).not.toBeNull();
     expect(live!.dispatchedAt).toBeNull();
+  });
+
+  it('a request on the test clock, days ahead, leaves a claim another dispatcher holds (5.19)', async () => {
+    await db.insert(outboxEvents).values({ id: 'evt_claim_ahead', type: 'claim.test', aggregateType: 'test', aggregateId: 'z', payload: {}, claimedAt: new Date(Date.now() - 60_000).toISOString() });
+    await dispatchNotifications(db, new Date(Date.now() + 48 * 3_600_000));
+    const [held] = await db.select().from(outboxEvents).where(eq(outboxEvents.id, 'evt_claim_ahead'));
+    expect(held!.dispatchedAt).toBeNull();
+  });
+
+  it('the notifications page shows a notification whose event another dispatcher is still handling (5.19)', async () => {
+    // The signed-in layout renders beside the page and dispatches too: here it has claimed the reminder and not finished.
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
+    await db.insert(outboxEvents).values({
+      id: 'evt_claim_held',
+      type: 'booking.approval_reminder',
+      aggregateType: 'booking',
+      aggregateId: 'bkg_tv',
+      payload: { bookingId: 'bkg_tv', taskId: booking!.taskId, posterUserId: booking!.posterUserId, hours: 24, approvalDueAt: new Date(Date.now() + 24 * 3_600_000).toISOString() },
+      claimedAt: new Date().toISOString(),
+    });
+    const page = await getNotificationsPage(db, booking!.posterUserId, new Date());
+    const [made] = await db.select().from(notifications).where(eq(notifications.sourceEventId, 'evt_claim_held'));
+    expect(made?.userId).toBe(booking!.posterUserId);
+    expect(page.notifications.map((item) => item.id)).toContain(made!.id);
+    // The claimer still finishes it: the page made the notification but didn't dispatch the event.
+    const [event] = await db.select().from(outboxEvents).where(eq(outboxEvents.id, 'evt_claim_held'));
+    expect(event!.dispatchedAt).toBeNull();
   });
 });
