@@ -62,6 +62,30 @@ describe('work the platform does not offer (blueprint 01)', () => {
   });
 });
 
+describe('in Spanish', () => {
+  it.each([
+    ['Tengo una camioneta', 'moving-help'],
+    ['Sé de computadoras', 'computer-help'],
+    ['Necesito armar un escritorio de IKEA', 'furniture-assembly'],
+    ['armar un escritorio eléctrico', 'furniture-assembly'],
+    ['limpiar la cocina y el baño', 'light-cleaning'],
+    ['recoger las hojas del jardín', 'yard-cleanup'],
+    ['recoger las hojas del jardin', 'yard-cleanup'],
+  ])('reads "%s" as %s', (text, category) => {
+    expect(readTaskIntent(text).category).toBe(category);
+  });
+
+  it.each([
+    ['colgar mi tele en la pared', 'tv-mounting'],
+    ['arreglar una fuga en la tubería', 'licensed-trade'],
+    ['necesito un electricista', 'licensed-trade'],
+  ])('reads "%s" as not offered (%s)', (text, reason) => {
+    const intent = readTaskIntent(text);
+    expect(intent.notOffered).toBe(reason);
+    expect(intent.category).toBeNull();
+  });
+});
+
 describe('suggestTitle', () => {
   it('drops the asking and keeps the task', () => {
     expect(suggestTitle('I need help to assemble an IKEA desk.')).toBe('Assemble an IKEA desk');
