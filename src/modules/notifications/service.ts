@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 import type {
   AccountPageData,
   AccountProfileInput,
@@ -334,9 +334,30 @@ async function plan(db: Db, event: EventRow): Promise<Planned[]> {
   }
 }
 
+/** A claim this old belongs to a dispatcher that stopped half-way: the event is taken again (at least once). */
+const CLAIM_EXPIRES_MS = 5 * 60_000;
+
+/**
+ * Takes up to `limit` undispatched events for this dispatcher, oldest first, in one statement: the rows are locked
+ * with FOR NO KEY UPDATE SKIP LOCKED while `claimed_at` is set, so dispatchers running at once (the job runner,
+ * every signed-in page, the notifications page) never take the same event, and an on-call page goes out once.
+ */
+async function claimEvents(db: Db, now: Date, limit: number) {
+  const stale = new Date(now.getTime() - CLAIM_EXPIRES_MS).toISOString();
+  const free = db
+    .select({ id: outboxEvents.id })
+    .from(outboxEvents)
+    .where(and(isNull(outboxEvents.dispatchedAt), or(isNull(outboxEvents.claimedAt), lt(outboxEvents.claimedAt, stale))))
+    .orderBy(asc(outboxEvents.createdAt))
+    .limit(limit)
+    .for('no key update', { skipLocked: true });
+  const claimed = await db.update(outboxEvents).set({ claimedAt: now.toISOString() }).where(inArray(outboxEvents.id, free)).returning();
+  return claimed.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
 /** Turns undispatched outbox events into notifications (idempotent), oldest first. */
 export async function dispatchNotifications(db: Db, now: Date, limit = 200): Promise<number> {
-  const pending = await db.select().from(outboxEvents).where(isNull(outboxEvents.dispatchedAt)).orderBy(asc(outboxEvents.createdAt)).limit(limit);
+  const pending = await claimEvents(db, now, limit);
   let made = 0;
   for (const event of pending) {
     const planned = await plan(db, event);
