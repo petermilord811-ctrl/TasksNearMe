@@ -128,12 +128,18 @@ export async function quoteTaskPrice(input: { budget: PricingInput; expenseAllow
   return quoteBreakdown(policy.fees, input.budget, { expenseAllowanceCents: allowance });
 }
 
+/** Posting attempts per person (B-061 rate-limit review). */
+const POSTING_RULE = { limit: 30, windowSeconds: 60 * 60 };
+
 export async function postTaskAction(input: TaskDraftInput & BotCheckInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   // Turnstile before anything is saved (blueprint 06 §4: posting).
   const refused = await checkBot('post_task', input?.botCheck);
   if (refused) return refused;
+  // A backstop for accounts past their first week (whose open tasks aren't capped): plenty for a person.
+  const limited = await consumeRateLimit(db, `post-task:user:${userId}`, POSTING_RULE);
+  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const outcome = await (await postingForRequest()).post(userId, input);
   if (!outcome.ok) return outcome.result;
 
