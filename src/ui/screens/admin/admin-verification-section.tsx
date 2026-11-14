@@ -1,12 +1,14 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Download, LockKeyhole, ShieldCheck } from 'lucide-react';
 import {
   ADDRESS_REJECTION_REASONS,
   IDENTITY_CAPTURE_REJECTION_REASONS,
+  routes,
   type ActionResult,
   type AddressAutoCheck,
   type AddressProofRevealResult,
@@ -93,6 +95,8 @@ function CaptureList({ captures, canView, canReview, revealed, onOpen, onReview,
         {capture.decidedAt && <p>{t('capture.decided', { date: formatDateTime(capture.decidedAt), name: capture.decidedBy ?? t('staff') })}</p>}
         {capture.rejectionReason && <p>{t('capture.rejectedFor', { reason: t(`capture.rejectionReasons.${capture.rejectionReason}`) })}</p>}
         {capture.note && <p className="break-words text-muted-foreground">{t('capture.note', { note: capture.note })}</p>}
+        {capture.duplicateOf && capture.duplicateOf.length > 0 && <p className="font-medium">{t('capture.duplicateOf')}{capture.duplicateOf.map((other, index) => <span key={other.id}>{index > 0 ? ', ' : ''}<Link href={routes.admin.user(other.id)} className="underline underline-offset-4">{other.displayName}</Link></span>)}</p>}
+        {capture.duplicateClearedAt && <p className="text-muted-foreground">{t('capture.duplicateCleared', { date: formatDateTime(capture.duplicateClearedAt) })}</p>}
         <p className="text-muted-foreground">{capture.photos.length > 0 ? t('capture.photosKept', { count: capture.photos.length }) : capture.photosDeletedAt ? t('capture.photosDeleted', { date: formatDate(capture.photosDeletedAt) }) : t('capture.photosNone')}</p>
         {revealed?.captureId === capture.id && <div className="space-y-3 rounded-lg border border-primary/40 p-3">
           <p role="status" className="flex items-center gap-2 font-medium text-success"><LockKeyhole aria-hidden="true" className="size-4" />{t('capture.reveal.logged')}</p>

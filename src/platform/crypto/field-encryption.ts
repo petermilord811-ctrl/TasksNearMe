@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHmac, hkdfSync, randomBytes } from 'node:crypto';
 
 /**
  * Field-level encryption for sensitive values at rest (exact addresses, access notes):
@@ -83,4 +83,20 @@ export function byteCipherFromEnv(): ByteCipher {
   const key = process.env.FIELD_ENCRYPTION_KEY;
   if (!key) throw new Error('FIELD_ENCRYPTION_KEY is not set (see .env.example).');
   return createByteCipher(key);
+}
+
+/**
+ * A keyed hash for matching a value without keeping it (completion plan 6.3: the same ID on two
+ * accounts): HMAC-SHA256 under a key derived (HKDF-SHA256) from FIELD_ENCRYPTION_KEY with the caller's
+ * own `label`, so it never shares a key with encryption or another hash. Without the key, a hash can't be
+ * checked against a guess.
+ */
+export type KeyedHasher = (message: string) => string;
+
+export function createKeyedHasher(keyBase64: string, label: string): KeyedHasher {
+  const master = Buffer.from(keyBase64, 'base64');
+  if (master.length !== 32) throw new Error('FIELD_ENCRYPTION_KEY must be 32 bytes, base64-encoded.');
+  if (!label) throw new Error('A keyed hash needs its own label.');
+  const key = Buffer.from(hkdfSync('sha256', master, Buffer.alloc(0), label, 32));
+  return (message) => createHmac('sha256', key).update(message, 'utf8').digest('hex');
 }

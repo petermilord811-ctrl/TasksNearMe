@@ -10,6 +10,8 @@ import {
   onboardingIdentityCaptureApproved,
   onboardingIdentityCaptureInReview,
   onboardingIdentityCaptureRejected,
+  onboardingIdentityExpired,
+  onboardingIdentityRenewal,
   onboardingIdentityStep,
   onboardingIdentityTooMany,
   onboardingIdentityTryLater,
@@ -175,6 +177,21 @@ describe('our own ID check (stage 1)', () => {
     expect(screen.queryByRole('button', { name: c.continue })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: copy.setup.contactSupport }) !== null).toBe(support);
     if (support) expect(screen.getByRole('link', { name: copy.setup.contactSupport })).toHaveAttribute('href', routes.app.support());
+  });
+
+  it('asks for a new check before the ID runs out, saying until when the current one counts (6.3)', () => {
+    show({ verification: onboardingIdentityRenewal.verification });
+    // Nov 30 is the last day of the expiry month: it counts until Dec 1 in Austin.
+    expect(screen.getByText(/keeps counting until Tue, Dec 1/)).toBeVisible();
+    expect(screen.getByRole('heading', { name: c.documentType.legend })).toBeVisible();
+    cleanup();
+    show({ verification: onboardingIdentityExpired.verification });
+    expect(screen.getByText(copy.setup.identityRequested.id_expired)).toBeVisible();
+  });
+
+  it('says why photos with an ID used on another account were turned down', () => {
+    show({ verification: { ...onboardingIdentityCaptureRejected.verification, identity: { ...onboardingIdentityCaptureRejected.verification.identity, capture: { ...onboardingIdentityCaptureRejected.verification.identity.capture!, rejectionReason: 'duplicate_id' } } } });
+    expect(screen.getByText(c.rejectionReasons.duplicate_id)).toBeVisible();
   });
 
   it('never asks for an ID number, a birth date or other private fields', () => {

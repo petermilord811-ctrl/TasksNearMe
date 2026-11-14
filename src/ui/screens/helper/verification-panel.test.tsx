@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, BACKGROUND_CHECK_STATUSES, IDENTITY_FAILURE_REASONS, IDENTITY_STATUSES, PAYOUT_ACCOUNT_STATUSES, routes, type ActionResult, type HelperOnboardingHandlers, type VerificationSummary } from '@/contracts';
-import { fakeOnboardingHandlers, onboardingBackgroundNotStarted, onboardingDone, onboardingIdentityCaptureApproved, onboardingIdentityDoubleCheckReview, onboardingIdentityStep, onboardingPayoutStep } from '@/fixtures';
+import { fakeOnboardingHandlers, onboardingBackgroundNotStarted, onboardingDone, onboardingIdentityCaptureApproved, onboardingIdentityDoubleCheckReview, onboardingIdentityDuplicateHold, onboardingIdentityStep, onboardingPayoutStep } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import verificationCopy from '../../../../messages/en/ui/verification.json';
 import { backgroundStatusTones, identityStatusTones, payoutStatusTones, VerificationPanel, type VerificationPanelProps } from './verification-panel';
@@ -90,6 +90,16 @@ describe('helper verification', () => {
     expect(screen.getByRole('link', { name: verificationCopy.setup.contactSupport })).toHaveAttribute('href', routes.app.support());
     const stages = screen.getByRole('list', { name: verificationCopy.capture.stages.label });
     expect(stages).toHaveTextContent(verificationCopy.capture.stages.states.in_review);
+  });
+
+  it('holds the double check while our team checks an ID found on another account (6.3)', () => {
+    show({ verification: onboardingIdentityDuplicateHold.verification });
+    expect(screen.getByText(verificationCopy.setup.identityBlocked.duplicate_id)).toBeVisible();
+    expect(screen.queryByText(verificationCopy.setup.identityDoubleCheck)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Start|Try again/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: verificationCopy.setup.contactSupport })).toHaveAttribute('href', routes.app.support());
+    // The double check hasn't started.
+    expect(screen.getByRole('list', { name: verificationCopy.capture.stages.label })).toHaveTextContent(verificationCopy.capture.stages.states.next);
   });
 
   it("shows a helper the two-stage notice when it's asked again before the double check", async () => {

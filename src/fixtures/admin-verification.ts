@@ -15,6 +15,7 @@ const lee: PersonSummary = { id: 'usr_lee', displayName: 'Lee M.', initials: 'LM
 const rosa: PersonSummary = { id: 'usr_rosa', displayName: 'Rosa T.', initials: 'RT', memberSince: '2026-11-16T15:00:00.000Z', phoneVerified: true };
 const omar: PersonSummary = { id: 'usr_omar', displayName: 'Omar H.', initials: 'OH', memberSince: '2026-11-18T15:00:00.000Z', phoneVerified: true };
 const ana: PersonSummary = { id: 'usr_ana', displayName: 'Ana V.', initials: 'AV', memberSince: '2026-11-15T15:00:00.000Z', phoneVerified: true };
+const kai: PersonSummary = { id: 'usr_kai', displayName: 'Kai D.', initials: 'KD', memberSince: '2026-11-19T15:00:00.000Z', phoneVerified: true };
 
 /** What the automatic reading of an ID found: everything matches, or the name and expiry need a look. */
 const idAllMatch: IdentityAutoCheck = { readable: true, nameMatches: true, isAdult: true, notExpired: true, expires: { month: 4, year: 2029 }, documentType: 'drivers_license' };
@@ -49,11 +50,25 @@ const anaApproved: AdminIdentityCaptureView = {
   decidedBy: 'Taylor B.',
   note: 'ID and selfie match; three fingers as asked.',
 };
+/** Approved by our team; then the reading found the same ID on Lee's account (6.3). */
+const kaiFlagged: AdminIdentityCaptureView = {
+  id: 'idc_kai',
+  status: 'approved',
+  documentType: 'drivers_license',
+  submittedAt: '2026-11-20T09:00:00.000Z',
+  prompt: 'tilt_head',
+  autoCheck: idAllMatch,
+  photos: ['front', 'back', 'selfie'],
+  decidedAt: '2026-11-20T11:15:00.000Z',
+  decidedBy: 'Taylor B.',
+  note: 'License and selfie match; head tilted as asked.',
+  duplicateOf: [lee],
+};
 const devonApproved: AdminIdentityCaptureView = { id: 'idc_devon', status: 'approved', documentType: 'passport', submittedAt: '2026-10-10T13:00:00.000Z', prompt: 'look_up', autoCheck: { readable: true, nameMatches: false, isAdult: true, notExpired: true, expires: { month: 2, year: 2031 }, documentType: 'passport' }, photos: [], photosDeletedAt: '2026-11-09T16:00:00.000Z', decidedAt: '2026-10-10T16:00:00.000Z', decidedBy: 'Morgan L.', note: 'Passport matches; married name on the account.' };
 
 export const adminVerificationsAddressData: AdminVerificationsPageData = {
   queue: 'address',
-  counts: { address: 2, identity: 5, background: 1 },
+  counts: { address: 2, identity: 6, background: 1 },
   address: [
     {
       id: 'adr_priya',
@@ -81,6 +96,7 @@ export const adminVerificationsIdentityData: AdminVerificationsPageData = {
     { id: 'idv_lee', person: lee, kind: 'too_many_attempts', at: '2026-11-19T17:10:00.000Z', attempts: 5 },
     { id: 'idc_rosa', person: rosa, kind: 'capture', at: '2026-11-19T18:20:00.000Z', attempts: 2, capture: { documentType: 'drivers_license', autoCheck: idAllMatch, overdue: false } },
     { id: 'idv_ana', person: ana, kind: 'double_check', at: '2026-11-19T21:05:00.000Z', attempts: 2, doubleCheck: { approvedAt: '2026-11-19T16:30:00.000Z', providerOutcome: 'declined', endedAt: '2026-11-19T21:05:00.000Z' } },
+    { id: 'idc_kai', person: kai, kind: 'duplicate_id', at: '2026-11-20T09:00:00.000Z', attempts: 1, duplicate: { others: [lee] } },
   ],
 };
 
@@ -182,6 +198,17 @@ export const anaDoubleCheckVerification: AdminPersonVerification = {
   payout: { status: 'not_started' },
   background: { status: 'not_started', requiredFor: ['light-cleaning'] },
   actions: ['view_identity_photos', 'allow_double_check_retry', 'reject_double_check'],
+};
+
+/** Kai: the same ID is on Lee's account; the double check waits until staff decide (6.3). */
+export const kaiDuplicateVerification: AdminPersonVerification = {
+  phone: { verified: true, last4: '0213', verifiedAt: '2026-11-19T15:00:00.000Z' },
+  agreement: { version: 'draft-0.1', acceptedAt: '2026-11-19T15:10:00.000Z' },
+  identity: { status: 'not_started', blocked: 'duplicate_id', attempts: 1, consentAt: '2026-11-20T08:55:00.000Z', captures: [kaiFlagged] },
+  address: { status: 'not_started', proofs: [] },
+  payout: { status: 'not_started' },
+  background: { status: 'not_started', requiredFor: ['light-cleaning'] },
+  actions: ['view_identity_photos', 'clear_duplicate_id', 'reject_duplicate_id'],
 };
 
 /** A support agent sees Rosa's statuses and answers, but can't open the photos or decide. */

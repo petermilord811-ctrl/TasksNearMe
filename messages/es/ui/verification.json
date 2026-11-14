@@ -104,13 +104,16 @@
     "continueIdentity": "Continuar la verificación de identidad",
     "identityRequested": {
       "staff_request": "Nuestro equipo pidió una nueva verificación de identidad. Tu verificación anterior ya no cuenta, así que tus ofertas están en pausa hasta que esta se apruebe.",
-      "name_changed": "Cambiaste el nombre legal en tu cuenta, así que necesitamos una nueva verificación de identidad que coincida con él."
+      "name_changed": "Cambiaste el nombre legal en tu cuenta, así que necesitamos una nueva verificación de identidad que coincida con él.",
+      "id_expiring": "La identificación con la que te verificaste vence pronto. Haz una nueva verificación con una identificación vigente: tu verificación actual sigue contando hasta el {date}, así que tus ofertas siguen abiertas hasta entonces.",
+      "id_expired": "La identificación con la que te verificaste venció. Haz una nueva verificación con una identificación vigente: tus ofertas están en pausa hasta que se apruebe."
     },
     "identityBlocked": {
       "try_later": "Lo has intentado 3 veces en un día. Podrás volver a intentarlo a partir de {time}. Ayuda tener buena luz y los cuatro bordes del documento a la vista.",
       "too_many_attempts": "No pudimos verificar tu identidad después de varios intentos. Nuestro equipo lo revisará y te responderá por correo. También puedes contactar a soporte.",
       "under_18": "Los ayudantes deben tener 18 años o más. Si este resultado es incorrecto, contacta a soporte y lo revisaremos.",
-      "double_check_review": "Nuestro socio de identidad no pudo confirmar la identificación que aprobó nuestro equipo. Nuestro equipo está revisando las dos verificaciones y te responderá, normalmente en un día. Mientras tanto, las ofertas quedan en pausa."
+      "double_check_review": "Nuestro socio de identidad no pudo confirmar la identificación que aprobó nuestro equipo. Nuestro equipo está revisando las dos verificaciones y te responderá, normalmente en un día. Mientras tanto, las ofertas quedan en pausa.",
+      "duplicate_id": "Nuestro equipo está revisando tu identificación con más detalle antes de la segunda verificación. Te responderemos, normalmente en un día. Mientras tanto, las ofertas quedan en pausa."
     },
     "identityNameCheck": "Tu identidad está verificada, pero el nombre del documento es distinto al de tu cuenta. Nuestro equipo lo está revisando, normalmente en un día. Si el nombre de tu cuenta no es tu nombre legal, <account>actualízalo en la página de tu cuenta</account>.",
     "biometric": {
@@ -353,9 +356,10 @@
       "under_18": "Los ayudantes deben tener 18 años o más.",
       "expired": "Esa identificación está vencida. Toma fotos de una identificación vigente.",
       "double_check_failed": "Nuestro socio de identidad no pudo verificar esta identificación. Toma fotos nuevas de una identificación vigente y válida, o contacta a soporte si crees que es un error.",
+      "duplicate_id": "Esta identificación ya se usa en otra cuenta. Contacta a soporte si crees que es un error.",
       "other": "No pudimos aceptar estas fotos. Tómalas de nuevo o contacta a soporte si sigue pasando."
     },
-    "privacy": "Solo nuestro equipo de confianza y seguridad ve tus fotos, y cada vista queda registrada. Un lector automático (Claude, de Anthropic) lee para ellos el nombre y las fechas del frente de tu identificación; guardamos solo sus respuestas de sí o no, nunca tu nombre, tu fecha de nacimiento ni tu número de identificación. Tus fotos se guardan cifradas y se borran a más tardar 30 días después de nuestra decisión.",
+    "privacy": "Solo nuestro equipo de confianza y seguridad ve tus fotos, y cada vista queda registrada. Un lector automático (Claude, de Anthropic) lee para ellos el nombre, las fechas y el número del frente de tu identificación; guardamos solo sus respuestas de sí o no, nunca tu nombre, tu fecha de nacimiento ni tu número de identificación, además de un código de un solo sentido hecho con el número, el estado emisor y la fecha de nacimiento, que no permite recuperarlos, solo para detectar la misma identificación en dos cuentas. Tus fotos se guardan cifradas y se borran a más tardar 30 días después de nuestra decisión.",
     "errors": {
       "photo": {
         "required": "Primero toma esta foto.",
@@ -395,7 +399,10 @@
       "under18": "En pausa: menor de 18",
       "requested": "Se pidió una verificación nueva",
       "doubleCheckReview": "En pausa: la segunda verificación no confirmó",
-      "doubleCheckRejected": "Fotos nuevas tras la segunda verificación"
+      "doubleCheckRejected": "Fotos nuevas tras la segunda verificación",
+      "duplicateHold": "En pausa: la identificación también está en otra cuenta",
+      "renewal": "Una nueva verificación antes de que venza la identificación",
+      "expired": "La identificación venció"
     }
   }
 }

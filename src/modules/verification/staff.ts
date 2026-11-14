@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { and, asc, desc, eq, inArray, isNotNull, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or } from 'drizzle-orm';
 import type {
   ActionResult,
   AddressAutoCheck,
@@ -28,6 +28,7 @@ import type {
   IdentityDocumentType,
   IdentityProviderOutcome,
   LivenessPrompt,
+  PersonSummary,
   StaffRole,
   VerificationActionInput,
 } from '@/contracts';
@@ -115,6 +116,29 @@ async function areaNames(db: Db, ids: (string | null)[]): Promise<Map<string, st
   return new Map(rows.map((row) => [row.id, row.name]));
 }
 
+/**
+ * The other accounts whose ID photos carry the same ID (a keyed hash of its number, state and birth date;
+ * plan 6.3), per hash. Up to 5 people each; the ID itself is never stored, so never shown.
+ */
+async function othersWithSameId(db: Db, hashes: readonly string[], except: string): Promise<Map<string, PersonSummary[]>> {
+  const wanted = [...new Set(hashes)];
+  if (wanted.length === 0) return new Map();
+  const rows = await db
+    .selectDistinct({ hash: identityCaptures.documentHash, userId: identityCaptures.userId })
+    .from(identityCaptures)
+    .where(and(inArray(identityCaptures.documentHash, wanted), ne(identityCaptures.userId, except)));
+  const people = rows.length ? await db.select().from(users).where(inArray(users.id, [...new Set(rows.map((row) => row.userId))])) : [];
+  const out = new Map<string, PersonSummary[]>();
+  for (const row of rows) {
+    const person = people.find((candidate) => candidate.id === row.userId);
+    if (!person || !row.hash) continue;
+    const list = out.get(row.hash) ?? [];
+    if (list.length < 5) list.push(personSummaryOf(person));
+    out.set(row.hash, list);
+  }
+  return out;
+}
+
 // ---- Queues ---------------------------------------------------------------------------------------
 
 async function addressQueue(db: Db, now: Date) {
@@ -143,13 +167,17 @@ async function addressQueue(db: Db, now: Date) {
 }
 
 async function identityQueue(db: Db, now: Date): Promise<AdminIdentityReviewRow[]> {
-  // People who could need staff: photos waiting for review, a verified ID whose name didn't match, or failed tries.
+  // People who could need staff: photos waiting for review, a verified ID whose name didn't match, failed
+  // tries, or the same ID on two accounts (not yet cleared).
   const [fromChecks, fromCaptures] = await Promise.all([
     db
       .selectDistinct({ userId: identityVerifications.userId })
       .from(identityVerifications)
       .where(or(and(eq(identityVerifications.status, 'verified'), eq(identityVerifications.nameMatches, false)), inArray(identityVerifications.status, ['requires_input', 'canceled']))),
-    db.selectDistinct({ userId: identityCaptures.userId }).from(identityCaptures).where(inArray(identityCaptures.status, ['submitted', 'rejected', 'canceled'])),
+    db
+      .selectDistinct({ userId: identityCaptures.userId })
+      .from(identityCaptures)
+      .where(or(inArray(identityCaptures.status, ['submitted', 'rejected', 'canceled']), and(isNotNull(identityCaptures.duplicateOfUserId), isNull(identityCaptures.duplicateClearedAt)))),
   ]);
   const ids = [...new Set([...fromChecks, ...fromCaptures].map((row) => row.userId))];
   if (ids.length === 0) return [];
@@ -164,6 +192,24 @@ async function identityQueue(db: Db, now: Date): Promise<AdminIdentityReviewRow[
     const theirs = captures.filter((row) => row.userId === person.id);
     const standing = identityStanding(rows.filter((row) => row.userId === person.id), now, theirs);
     const waiting = standing.capture?.status === 'submitted' ? theirs.find((row) => row.id === standing.capture!.id) : undefined;
+    if (standing.blocked === 'duplicate_id' && standing.duplicate) {
+      // The same ID on another account: staff look at both before the double check opens.
+      const flagged = theirs.find((row) => row.id === standing.duplicate!.id)!;
+      const others = flagged.documentHash ? ((await othersWithSameId(db, [flagged.documentHash], person.id)).get(flagged.documentHash) ?? []) : [];
+      const autoCheck = identityAutoCheckView(flagged.autoCheck);
+      out.push({
+        id: flagged.id,
+        person: personSummaryOf(person),
+        kind: 'duplicate_id',
+        at: flagged.submittedAt.toISOString(),
+        attempts: standing.attempts,
+        ...(flagged.status === 'submitted'
+          ? { capture: { documentType: flagged.documentType as IdentityDocumentType, ...(autoCheck ? { autoCheck } : {}), overdue: now.getTime() - flagged.submittedAt.getTime() > IDENTITY_CAPTURE_RULES.responseTargetHours * HOUR_MS } }
+          : {}),
+        duplicate: { others },
+      });
+      continue;
+    }
     if (waiting) {
       const autoCheck = identityAutoCheckView(waiting.autoCheck);
       out.push({
@@ -256,9 +302,12 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
       return ids.length ? db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids)) : [];
     })(),
   ]);
+  const flagged = captureRows.filter((row) => row.duplicateOfUserId && row.documentHash);
+  const sameId = await othersWithSameId(db, flagged.map((row) => row.documentHash!), userId);
   const captures: AdminIdentityCaptureView[] = captureRows.map((row) => {
     const autoCheck = identityAutoCheckView(row.autoCheck);
     const decidedBy = deciders.find((person) => person.id === row.decidedByUserId)?.name;
+    const duplicateOf = row.duplicateOfUserId && row.documentHash ? sameId.get(row.documentHash) : undefined;
     return {
       id: row.id,
       status: row.status as IdentityCaptureStatus,
@@ -272,6 +321,8 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
       ...(decidedBy ? { decidedBy } : {}),
       ...(row.rejectionReason ? { rejectionReason: row.rejectionReason as IdentityCaptureRejectionReason } : {}),
       ...(row.staffNote ? { note: row.staffNote } : {}),
+      ...(duplicateOf?.length ? { duplicateOf } : {}),
+      ...(row.duplicateClearedAt ? { duplicateClearedAt: row.duplicateClearedAt.toISOString() } : {}),
     };
   });
   const proofs: AdminAddressProofView[] = proofRows.map((row) => {
@@ -303,8 +354,9 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
     if (identity.capture?.status === 'submitted') actions.push('review_identity_capture');
     if (state.captureRows.some((row) => captureFileIds(row).length > 0)) actions.push('view_identity_photos');
     if (identity.nameCheck) actions.push('confirm_name');
-    // A double check that didn't confirm our approval has its own two decisions.
+    // A double check that didn't confirm our approval, and the same ID on another account, have their own decisions.
     if (identity.blocked === 'double_check_review') actions.push('allow_double_check_retry', 'reject_double_check');
+    else if (identity.blocked === 'duplicate_id') actions.push('clear_duplicate_id', 'reject_duplicate_id');
     else if (identity.blocked) actions.push('allow_identity_retry');
     if (identity.verified) actions.push('request_identity');
     if (canAdjudicateBackground(staff)) {
@@ -485,6 +537,25 @@ export async function verificationAction(db: Db, providers: VerificationProvider
         .set({ status: 'rejected', rejectionReason: 'double_check_failed', decidedAt: now, decidedByUserId: staff.id, staffNote: note, updatedAt: now })
         .where(and(eq(identityCaptures.id, approved.id), eq(identityCaptures.status, 'approved')));
       metadata = doubleCheckAudit(state, failed.id);
+      await emitVerificationEvent(db, userId, 'identity', 'action_needed');
+      break;
+    }
+    case 'clear_duplicate_id': {
+      // Staff looked at both accounts and found it in order: the double check can go ahead.
+      const flagged = state.identity.duplicate!;
+      await db.update(identityCaptures).set({ duplicateClearedAt: now, duplicateClearedByUserId: staff.id, updatedAt: now }).where(eq(identityCaptures.id, flagged.id));
+      metadata = { captureId: flagged.id, otherUserId: flagged.duplicateOfUserId ?? null };
+      await emitVerificationEvent(db, userId, 'identity', 'action_needed');
+      break;
+    }
+    case 'reject_duplicate_id': {
+      // Staff turn these photos down: the ID belongs to another account. The helper sees why.
+      const flagged = state.identity.duplicate!;
+      await db
+        .update(identityCaptures)
+        .set({ status: 'rejected', rejectionReason: 'duplicate_id', decidedAt: now, decidedByUserId: staff.id, staffNote: note, updatedAt: now })
+        .where(and(eq(identityCaptures.id, flagged.id), inArray(identityCaptures.status, ['submitted', 'approved'])));
+      metadata = { captureId: flagged.id, otherUserId: flagged.duplicateOfUserId ?? null };
       await emitVerificationEvent(db, userId, 'identity', 'action_needed');
       break;
     }

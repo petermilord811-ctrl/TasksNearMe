@@ -33,11 +33,14 @@
     "try_later": "3 tries in the last 24 hours.",
     "too_many_attempts": "5 tries without a pass: waiting on staff.",
     "under_18": "Under 18: helper onboarding is closed.",
-    "double_check_review": "The double check didn't confirm the photos our team approved: the helper is paused until staff decide."
+    "double_check_review": "The double check didn't confirm the photos our team approved: the helper is paused until staff decide.",
+    "duplicate_id": "The same ID is on another account: the double check waits until staff decide."
   },
   "identityRequested": {
     "staff_request": "Staff asked for a new check.",
-    "name_changed": "The legal name changed after the last check."
+    "name_changed": "The legal name changed after the last check.",
+    "id_expiring": "The ID runs out: a new check was asked for (the earlier one counts until the end of its expiry month).",
+    "id_expired": "The ID ran out before a new check passed."
   },
   "noProofs": "No proof of address sent.",
   "proofs": "Proofs of address",
@@ -111,6 +114,8 @@
     "request_identity": "Ask for a new ID check",
     "allow_double_check_retry": "Let them try the double check again",
     "reject_double_check": "Turn the photos down",
+    "clear_duplicate_id": "It's in order",
+    "reject_duplicate_id": "Turn down: not their ID",
     "engage_background": "Approve for in-home work",
     "pre_adverse_background": "Send the pre-adverse notice",
     "post_adverse_background": "Send the final adverse action"
@@ -122,6 +127,8 @@
     "request_identity": "The current ID check stops counting, and offers pause until a new one passes.",
     "allow_double_check_retry": "Our approval stands and the helper can start the double check again (it counts as a try). Use it when the provider's result looks like a glitch.",
     "reject_double_check": "The approved photos are turned down: the helper is told the double check couldn't verify the ID and can start over within the limits.",
+    "clear_duplicate_id": "After looking at both accounts (the same person's closed account, say): the hold is lifted and the double check can go ahead.",
+    "reject_duplicate_id": "The photos are turned down because the ID is used on another account; the helper is told why. Consider the other account too.",
     "engage_background": "After reviewing the report at Checkr: in-home categories open for 12 months.",
     "pre_adverse_background": "Checkr sends the notice with a copy of the report and the summary of rights. The final decision waits 7 days.",
     "post_adverse_background": "Final: the helper can no longer take in-home categories. Checkr sends the notice."
@@ -148,6 +155,7 @@
     "identityKinds": {
       "capture": "ID photos to compare",
       "double_check": "The double check didn't confirm our approval",
+      "duplicate_id": "The same ID is on another account",
       "name_check": "The ID's name differs from the account's",
       "too_many_attempts": "5 tries without a pass"
     },
@@ -155,7 +163,8 @@
     "toReview": "Came back \"consider\": review the report at Checkr",
     "idAutoAllMatch": "Automatic reading: name matches, 18 or older, not expired.",
     "idAutoCheckFlag": "Automatic reading: something to check.",
-    "doubleCheckDetail": "Photos approved {approved} · the provider: {outcome}"
+    "doubleCheckDetail": "Photos approved {approved} · the provider: {outcome}",
+    "duplicateDetail": "Same ID as: {names}"
   },
   "previews": {
     "group": "Staff: verifications",
@@ -173,7 +182,8 @@
     "sectionCapture": "Person: ID photos to review",
     "sectionCaptureOpened": "Person: ID photos opened",
     "sectionCaptureReadOnly": "Person: ID photos, read-only",
-    "sectionDoubleCheck": "Person: the double check didn't confirm"
+    "sectionDoubleCheck": "Person: the double check didn't confirm",
+    "sectionDuplicate": "Person: the same ID on another account"
   },
   "capture": {
     "title": "Our ID photos",
@@ -222,6 +232,7 @@
       "under_18": "under 18",
       "expired": "the ID has expired",
       "double_check_failed": "the double check didn't confirm the ID",
+      "duplicate_id": "the ID is used on another account",
       "other": "other"
     },
     "reveal": {
@@ -258,7 +269,9 @@
       "cancel": "Cancel",
       "submitApprove": "Approve",
       "submitReject": "Ask for new photos"
-    }
+    },
+    "duplicateOf": "The same ID is on: ",
+    "duplicateCleared": "Staff found the same ID in order on {date}."
   },
   "providerOutcome": "The provider's result: {outcome}",
   "providerOutcomes": {

@@ -9,6 +9,7 @@ import {
   fakeHandler,
   fakeOnboardingHandlers,
   identityCaptureRevealed,
+  kaiDuplicateVerification,
   morganStaff,
   onboardingIdentityCapture,
   onboardingIdentityCaptureApproved,
@@ -16,6 +17,9 @@ import {
   onboardingIdentityCaptureRejected,
   onboardingIdentityDoubleCheckRejected,
   onboardingIdentityDoubleCheckReview,
+  onboardingIdentityDuplicateHold,
+  onboardingIdentityExpired,
+  onboardingIdentityRenewal,
   onboardingIdentityStep,
   priyaShell,
   rosaReadOnlyVerification,
@@ -34,8 +38,9 @@ import adminCopy from '../../../messages/en/ui/adminVerification.json';
 /**
  * The ID check in two stages (completion plan 6.1): our own capture (the Texas notice, the kind of ID, its
  * photos and a live selfie that follows a prompt, then the review), its review states, the provider's
- * double check once approved (and its review when it doesn't confirm our approval, 6.2), and the staff side
- * (the photos to compare, opened with a logged reason, and the double check's case).
+ * double check once approved (and its review when it doesn't confirm our approval, 6.2), the hold for the
+ * same ID on another account and the new check before an ID runs out (6.3), and the staff side (the
+ * photos to compare, opened with a logged reason, the double check's case, the same ID elsewhere).
  * The camera is a stand-in here: previews never open one.
  */
 
@@ -82,6 +87,9 @@ export const identityCheckPreviews: PreviewEntry[] = [
   onboarding('id-approved', p.approved, <HelperOnboardingScreen data={onboardingIdentityCaptureApproved} handlers={fakeOnboardingHandlers} />),
   onboarding('id-double-check-review', p.doubleCheckReview, <HelperOnboardingScreen data={onboardingIdentityDoubleCheckReview} handlers={fakeOnboardingHandlers} />),
   onboarding('id-double-check-rejected', p.doubleCheckRejected, <HelperOnboardingScreen data={onboardingIdentityDoubleCheckRejected} handlers={fakeOnboardingHandlers} />),
+  onboarding('id-duplicate-hold', p.duplicateHold, <HelperOnboardingScreen data={onboardingIdentityDuplicateHold} handlers={fakeOnboardingHandlers} />),
+  onboarding('id-renewal', p.renewal, <HelperOnboardingScreen data={onboardingIdentityRenewal} handlers={fakeOnboardingHandlers} />),
+  onboarding('id-expired', p.expired, <HelperOnboardingScreen data={onboardingIdentityExpired} handlers={fakeOnboardingHandlers} />),
 
   {
     id: 'screen-admin-user/verification-id-photos', title: a.sectionCapture, group: a.group, layout: 'fullscreen',
@@ -94,6 +102,10 @@ export const identityCheckPreviews: PreviewEntry[] = [
   {
     id: 'screen-admin-user/verification-double-check', title: a.sectionDoubleCheck, group: a.group, layout: 'fullscreen',
     render: () => <Admin path={routes.admin.user('usr_ana')}><div className="mx-auto max-w-content p-gutter"><AdminVerificationSection userId="usr_ana" verification={anaDoubleCheckVerification} handlers={fakeAdminUserHandlers} now={ADMIN_NOW} /></div></Admin>,
+  },
+  {
+    id: 'screen-admin-user/verification-duplicate-id', title: a.sectionDuplicate, group: a.group, layout: 'fullscreen',
+    render: () => <Admin path={routes.admin.user('usr_kai')}><div className="mx-auto max-w-content p-gutter"><AdminVerificationSection userId="usr_kai" verification={kaiDuplicateVerification} handlers={fakeAdminUserHandlers} now={ADMIN_NOW} /></div></Admin>,
   },
   {
     id: 'screen-admin-user/verification-id-photos-read-only', title: a.sectionCaptureReadOnly, group: a.group, layout: 'fullscreen',

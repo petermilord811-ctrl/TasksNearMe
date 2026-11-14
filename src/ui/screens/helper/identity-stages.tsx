@@ -29,7 +29,8 @@ export function IdentityStages({ identity }: { identity: VerificationSummary['id
   if (!capture) return null;
   const verified = identity.status === 'verified';
   const photos: StageState = capture.stage === 'in_review' ? 'in_review' : capture.stage === 'needed' ? 'current' : 'done';
-  const double: StageState = verified ? 'done' : capture.stage === 'approved' ? (identity.status === 'processing' || identity.blocked === 'double_check_review' ? 'in_review' : 'current') : 'next';
+  // Held while our team looks at the same ID on another account: the double check hasn't started.
+  const double: StageState = verified ? 'done' : capture.stage !== 'approved' || identity.blocked === 'duplicate_id' ? 'next' : identity.status === 'processing' || identity.blocked === 'double_check_review' ? 'in_review' : 'current';
   const stages = [
     { key: 'photos', state: photos, title: t('photos'), hint: t('photosHint') },
     { key: 'doubleCheck', state: double, title: t('doubleCheck'), hint: t('doubleCheckHint') },

@@ -306,7 +306,7 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
   });
 
   for (const file of photoFiles) await deps.storage.delete(file.storageKey);
-  await deleteVerificationDocuments(db, deps.storage, userId, now);
+  await deleteVerificationDocuments(db, deps.storage, userId, now, { keepIdHash: user.status === 'banned' });
   // Their customer at the payment provider goes too, with every card on it (payments themselves stay on the
   // provider's records, as the law requires). Connected payout accounts stay for tax reporting.
   const [customer] = await db.select().from(paymentCustomers).where(eq(paymentCustomers.userId, userId)).limit(1);
@@ -333,9 +333,12 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
 /**
  * A deleted account's verification documents go at once (blueprint 08 §5): the proofs of address and our
  * own ID check's photos. A proof or photos still waiting for staff are withdrawn first, so they leave the
- * queues. The rows keep their statuses and dates; the verification timers stay as the backstop.
+ * queues. The rows keep their statuses and dates; the verification timers stay as the backstop. The ID's
+ * keyed hash (plan 6.3) goes too, unless the account was banned: then a new account with the same ID is
+ * still flagged for our team.
  */
-async function deleteVerificationDocuments(db: Db, storage: FileStorage, userId: string, now: Date): Promise<void> {
+async function deleteVerificationDocuments(db: Db, storage: FileStorage, userId: string, now: Date, options: { keepIdHash: boolean }): Promise<void> {
+  if (!options.keepIdHash) await db.update(identityCaptures).set({ documentHash: null }).where(eq(identityCaptures.userId, userId));
   await db.update(addressVerifications).set({ status: 'withdrawn', updatedAt: now }).where(and(eq(addressVerifications.userId, userId), eq(addressVerifications.status, 'in_review')));
   const proofs = await db.select({ id: addressVerifications.id }).from(addressVerifications).where(and(eq(addressVerifications.userId, userId), isNotNull(addressVerifications.documentFileId)));
   for (const proof of proofs) {

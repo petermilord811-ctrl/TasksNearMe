@@ -104,13 +104,16 @@
     "continueIdentity": "Continue the ID check",
     "identityRequested": {
       "staff_request": "Our team asked for a new ID check. Your earlier check no longer counts, so offers are paused until this one passes.",
-      "name_changed": "You changed the legal name on your account, so we need a new ID check that matches it."
+      "name_changed": "You changed the legal name on your account, so we need a new ID check that matches it.",
+      "id_expiring": "The ID you verified with expires soon. Take a new ID check with a current ID: your current check keeps counting until {date}, so offers stay open until then.",
+      "id_expired": "The ID you verified with has expired. Take a new ID check with a current ID: offers are paused until it passes."
     },
     "identityBlocked": {
       "try_later": "You've tried 3 times in a day. You can try again from {time}. Good light and all four edges of the ID in view help.",
       "too_many_attempts": "We couldn't verify your ID after several tries. Our team will look at it and get back to you by email. You can also contact support.",
       "under_18": "Helpers need to be 18 or older. If this result is wrong, contact support and we will look at it.",
-      "double_check_review": "Our ID partner couldn't confirm the ID our team approved. Our team is looking at both checks and will get back to you, usually within a day. Offers stay paused meanwhile."
+      "double_check_review": "Our ID partner couldn't confirm the ID our team approved. Our team is looking at both checks and will get back to you, usually within a day. Offers stay paused meanwhile.",
+      "duplicate_id": "Our team is taking a closer look at your ID before the double check. We'll get back to you, usually within a day. Offers stay paused meanwhile."
     },
     "identityNameCheck": "Your ID is verified, but the name on it is different from the one on your account. Our team is checking it, usually within a day. If your account name isn't your legal name, <account>update it on your account page</account>.",
     "biometric": {
@@ -353,9 +356,10 @@
       "under_18": "Helpers need to be 18 or older.",
       "expired": "That ID has expired. Take photos of a current ID.",
       "double_check_failed": "Our ID partner couldn't verify this ID. Take new photos of a current, valid ID, or contact support if you think this is a mistake.",
+      "duplicate_id": "This ID is already used on another account. Contact support if you think this is a mistake.",
       "other": "We couldn't accept these photos. Take them again, or contact support if this keeps happening."
     },
-    "privacy": "Only our trust and safety team sees your photos, and every view is logged. An automated reader (Claude, by Anthropic) reads the name and dates on the front of your ID for them; we keep only its yes-or-no answers, never your name, birth date or ID number. Your photos are stored encrypted and deleted no later than 30 days after our decision.",
+    "privacy": "Only our trust and safety team sees your photos, and every view is logged. An automated reader (Claude, by Anthropic) reads the name, dates and ID number on the front of your ID for them; we keep only its yes-or-no answers, never your name, birth date or ID number, plus a one-way code made from the number, issuing state and birth date that can't be turned back into them, only to spot the same ID on two accounts. Your photos are stored encrypted and deleted no later than 30 days after our decision.",
     "errors": {
       "photo": {
         "required": "Take this photo first.",
@@ -395,7 +399,10 @@
       "under18": "Paused: under 18",
       "requested": "New check asked for",
       "doubleCheckReview": "Paused: the double check didn't confirm",
-      "doubleCheckRejected": "New photos after the double check"
+      "doubleCheckRejected": "New photos after the double check",
+      "duplicateHold": "Paused: the ID is on another account too",
+      "renewal": "A new check before the ID expires",
+      "expired": "The ID has expired"
     }
   }
 }

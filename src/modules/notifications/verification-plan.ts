@@ -4,12 +4,12 @@ import { VERIFICATION_TRACKS } from '@/contracts';
 /**
  * Which notification a `verification.updated` event becomes (src/modules/verification/state.ts):
  * - a step passed (the phone, the ID, the home address, payouts, the background check) or needs the helper;
- * - the background check runs out soon, or has (`days` 0);
+ * - the background check runs out soon, or has (`days` 0); the same for the ID a helper verified with (6.3);
  * - onboarding is done (`helper` + `ready`): the helper can send offers.
  */
 export interface PlannedVerificationNotification {
   userId: string;
-  type: Extract<NotificationType, 'verification_passed' | 'verification_action_needed' | 'background_check_expiring' | 'helper_ready'>;
+  type: Extract<NotificationType, 'verification_passed' | 'verification_action_needed' | 'background_check_expiring' | 'id_expiring' | 'helper_ready'>;
   target: AttentionTarget;
   params?: NotificationView['params'];
 }
@@ -29,9 +29,9 @@ export function verificationNotificationFor(payload: Record<string, unknown>): P
   if (!(VERIFICATION_TRACKS as readonly string[]).includes(track)) return null;
   const step = track as VerificationTrack;
   if (outcome === 'expiring' || outcome === 'expired') {
-    if (step !== 'background') return null;
+    if (step !== 'background' && step !== 'identity') return null;
     const days = typeof payload.days === 'number' && outcome === 'expiring' ? Math.max(0, Math.round(payload.days)) : 0;
-    return { userId, type: 'background_check_expiring', target: { kind: 'onboarding', step: 'background' }, params: { days } };
+    return { userId, type: step === 'identity' ? 'id_expiring' : 'background_check_expiring', target: { kind: 'onboarding', step }, params: { days } };
   }
   if (outcome !== 'passed' && outcome !== 'action_needed') return null;
   return { userId, type: outcome === 'passed' ? 'verification_passed' : 'verification_action_needed', target: { kind: 'onboarding', step }, params: { track: step } };

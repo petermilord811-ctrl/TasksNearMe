@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import { AiRefusedError, AiUnavailableError } from '@/integrations/ai';
 import { createStandInDocumentReader, type AddressDocumentReader } from '@/integrations/ai/document-reader';
 import { createStandInIdReader, type IdDocumentReader } from '@/integrations/ai/id-document-reader';
@@ -6,9 +6,12 @@ import { isReservedEmailAddress } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
 import { files } from '@/modules/tasks/schema';
-import type { ByteCipher, FieldCipher } from '@/platform/crypto/field-encryption';
+import { auditLog } from '@/platform/audit/schema';
+import type { ByteCipher, FieldCipher, KeyedHasher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
+import { newId } from '@/platform/db/ids';
 import type { AddressDocumentType, IdentityDocumentType } from '@/contracts';
+import { identityDocumentHash, identityDocumentHasherFromEnv } from './document-hash';
 import { addressVerifications, identityCaptures, type StoredAddressAutoCheck, type StoredIdentityAutoCheck } from './schema';
 import { deriveIdentityAutoCheck } from './standing';
 import { addressLabel } from './state';
@@ -21,11 +24,15 @@ import { addressLabel } from './state';
  * reach a provider; they get the stand-ins.
  */
 
-/** The ID reading's needs: where the photos are, their key, and the reader (none in production without a key). */
+/**
+ * The ID reading's needs: where the photos are, their key, the reader (none in production without a key),
+ * and the ID hash's key (from FIELD_ENCRYPTION_KEY unless given).
+ */
 export interface IdReadingDeps {
   storage: FileStorage;
   files: ByteCipher;
   reader: IdDocumentReader | null;
+  hasher?: KeyedHasher | null;
 }
 
 /** A minute's worth: the runner waits for these, so they go last and few at a time. */
@@ -100,9 +107,13 @@ async function readPendingProofs(
 /**
  * The front of each ID in review, read once: the reader transcribes the name, birth date and expiry, and
  * only the answers derived from them are stored (`deriveIdentityAutoCheck`). The selfie is never read.
+ * The document number, issuing state and birth date become a keyed hash (plan 6.3), never stored or
+ * logged themselves: when another account's photos carry the same hash, these are flagged and the double
+ * check waits for staff (the identity queue's `duplicate_id`).
  */
 export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, scope: { userIds?: readonly string[] } = {}): Promise<number> {
   if (!deps.reader) return 0;
+  const hasher = deps.hasher === undefined ? identityDocumentHasherFromEnv() : deps.hasher;
   const rows = await db
     .select({ capture: identityCaptures, email: users.email, firstName: users.firstName, lastName: users.lastName })
     .from(identityCaptures)
@@ -129,12 +140,15 @@ export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, sco
       bytes = null;
     }
     let check: StoredIdentityAutoCheck;
+    let documentHash: string | null = null;
     if (!file || !bytes) {
       check = { readable: false, by: reader.name, at: now.toISOString() };
     } else {
       try {
         const reading = await reader.read({ document: { bytes, contentType: file.contentType }, declaredType: capture.documentType as IdentityDocumentType });
         check = { ...deriveIdentityAutoCheck(reading, { firstName, lastName }, now), by: reader.name, at: now.toISOString() };
+        // The number lives only in `reading`, for this hash.
+        documentHash = reading.readable && hasher ? identityDocumentHash(reading, hasher) : null;
       } catch (error) {
         if (!(error instanceof AiUnavailableError) && !(error instanceof AiRefusedError)) throw error;
         // Not this time: staff read it themselves (it isn't retried, so one bad answer never loops).
@@ -142,8 +156,34 @@ export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, sco
         check = { readable: false, by: `${reader.name} (unavailable)`, at: now.toISOString() };
       }
     }
-    await db.update(identityCaptures).set({ autoCheck: check, updatedAt: now }).where(and(eq(identityCaptures.id, capture.id), isNull(identityCaptures.autoCheck)));
+    const [saved] = await db
+      .update(identityCaptures)
+      .set({ autoCheck: check, documentHash, updatedAt: now })
+      .where(and(eq(identityCaptures.id, capture.id), isNull(identityCaptures.autoCheck)))
+      .returning({ id: identityCaptures.id });
+    if (saved && documentHash) await flagDuplicateId(db, { captureId: capture.id, userId: capture.userId, documentHash }, now);
     read += 1;
   }
   return read;
+}
+
+/** Another account's photos with the same ID: this capture is flagged, which holds the double check for staff. */
+async function flagDuplicateId(db: Db, capture: { captureId: string; userId: string; documentHash: string }, now: Date): Promise<void> {
+  const [other] = await db
+    .select({ userId: identityCaptures.userId })
+    .from(identityCaptures)
+    .where(and(eq(identityCaptures.documentHash, capture.documentHash), ne(identityCaptures.userId, capture.userId)))
+    .orderBy(asc(identityCaptures.createdAt))
+    .limit(1);
+  if (!other) return;
+  await db.update(identityCaptures).set({ duplicateOfUserId: other.userId, updatedAt: now }).where(eq(identityCaptures.id, capture.captureId));
+  // Which accounts, never the ID.
+  await db.insert(auditLog).values({
+    id: newId('aud'),
+    actorRole: 'system',
+    action: 'identity_capture.duplicate_id',
+    targetType: 'user',
+    targetId: capture.userId,
+    metadata: { captureId: capture.captureId, otherUserId: other.userId },
+  });
 }

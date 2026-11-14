@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IDENTITY_CAPTURE_REJECTION_REASONS, IDENTITY_PROVIDER_OUTCOMES, LIVENESS_PROMPTS, type ActionResult, type AdminVerificationHandlers, type IdentityCaptureRevealResult } from '@/contracts';
-import { ADMIN_NOW, adminVerificationsIdentityData, anaDoubleCheckVerification, fakeAdminVerificationHandlers, identityCaptureRevealed, jordanVerification, rosaReadOnlyVerification, rosaVerification } from '@/fixtures';
+import { ADMIN_NOW, adminVerificationsIdentityData, anaDoubleCheckVerification, kaiDuplicateVerification, fakeAdminVerificationHandlers, identityCaptureRevealed, jordanVerification, rosaReadOnlyVerification, rosaVerification } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import copy from '../../../../messages/en/ui/adminVerification.json';
 import { AdminVerificationSection } from './admin-verification-section';
@@ -110,6 +110,22 @@ describe('staff review of our ID photos', () => {
     await userEvent.type(within(dialog).getByRole('textbox'), 'The ID number fails the state check.');
     await userEvent.click(within(dialog).getByRole('button', { name: copy.actions.reject_double_check }));
     expect(onVerificationAction).toHaveBeenCalledExactlyOnceWith({ userId: 'usr_rosa', action: 'reject_double_check', note: 'The ID number fails the state check.' });
+  });
+
+  it('shows the other account with the same ID, and the two decisions (6.3)', () => {
+    show(kaiDuplicateVerification);
+    expect(screen.getByText(copy.identityBlocked.duplicate_id)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Lee M.' })).toHaveAttribute('href', '/admin/users/usr_lee');
+    const actions = screen.getByRole('group', { name: copy.actionsLabel });
+    expect(within(actions).getByRole('button', { name: copy.actions.clear_duplicate_id })).toBeVisible();
+    expect(within(actions).getByRole('button', { name: copy.actions.reject_duplicate_id })).toBeVisible();
+  });
+
+  it('marks the same ID on another account in the identity queue, naming the other account', () => {
+    render(<NextIntlClientProvider locale="en" messages={uiMessages}><AdminVerificationsScreen data={adminVerificationsIdentityData} now={ADMIN_NOW} /></NextIntlClientProvider>);
+    const kai = screen.getByRole('link', { name: /Kai D\./ });
+    expect(kai).toHaveTextContent(copy.queues.identityKinds.duplicate_id);
+    expect(kai).toHaveTextContent('Same ID as: Lee M.');
   });
 
   it("marks a double check that didn't confirm our approval in the identity queue, with both dates", () => {

@@ -70,9 +70,10 @@ export interface AdminAddressReviewRow {
 
 /**
  * `capture`: ID photos to compare (our own check, stage 1). `double_check`: the provider's double check
- * didn't confirm photos our team approved; the helper is paused until staff decide.
+ * didn't confirm photos our team approved; the helper is paused until staff decide. `duplicate_id`: the ID
+ * on the photos is on another account too (6.3); the double check waits until staff decide.
  */
-export type AdminIdentityReviewKind = 'capture' | 'double_check' | 'name_check' | 'too_many_attempts';
+export type AdminIdentityReviewKind = 'capture' | 'double_check' | 'duplicate_id' | 'name_check' | 'too_many_attempts';
 
 /**
  * What the automatic reading of an ID found (only when it's on; staff still decide). Only these answers
@@ -105,6 +106,8 @@ export interface AdminIdentityReviewRow {
   capture?: { documentType: IdentityDocumentType; autoCheck?: IdentityAutoCheck; overdue: boolean };
   /** With `double_check`: both results, our approval and the provider's. */
   doubleCheck?: { approvedAt: ISODateTime; providerOutcome?: IdentityProviderOutcome; endedAt: ISODateTime };
+  /** With `duplicate_id`: the other accounts whose ID photos carry the same ID (never the ID itself). */
+  duplicate?: { others: PersonSummary[] };
 }
 
 /** A background check that came back `consider`, until it's engaged or final. */
@@ -163,6 +166,12 @@ export interface AdminIdentityCaptureView {
   rejectionReason?: IdentityCaptureRejectionReason;
   /** The deciding staff member's note (staff only; the helper sees the reason). */
   note?: string;
+  /**
+   * The same ID (a keyed hash of its number, state and birth date; never the number) is on these other
+   * accounts too (6.3). `duplicateClearedAt`: staff found it in order and the double check could go ahead.
+   */
+  duplicateOf?: PersonSummary[];
+  duplicateClearedAt?: ISODateTime;
 }
 
 export const ADMIN_VERIFICATION_ACTIONS = [
@@ -184,6 +193,10 @@ export const ADMIN_VERIFICATION_ACTIONS = [
   'allow_double_check_retry',
   /** The double check didn't confirm the approved photos: turn them down (the helper sees why and can start over). */
   'reject_double_check',
+  /** The same ID is on another account: it's in order (the double check can go ahead). */
+  'clear_duplicate_id',
+  /** The same ID is on another account: turn these photos down (`duplicate_id`). */
+  'reject_duplicate_id',
   /** A `consider` background check: approve the helper for in-home work. */
   'engage_background',
   /** A `consider` background check: start the pre-adverse notice through Checkr. */
@@ -257,7 +270,19 @@ export type AddressDecisionInput = z.input<typeof addressDecisionInputSchema>;
 export const verificationActionInputSchema = z.object({
   userId: z.string(code('required')).min(1, code('required')),
   action: z.enum(
-    ['request_address', 'confirm_name', 'allow_identity_retry', 'request_identity', 'allow_double_check_retry', 'reject_double_check', 'engage_background', 'pre_adverse_background', 'post_adverse_background'],
+    [
+      'request_address',
+      'confirm_name',
+      'allow_identity_retry',
+      'request_identity',
+      'allow_double_check_retry',
+      'reject_double_check',
+      'clear_duplicate_id',
+      'reject_duplicate_id',
+      'engage_background',
+      'pre_adverse_background',
+      'post_adverse_background',
+    ],
     code('required'),
   ),
   note,

@@ -107,7 +107,7 @@ export function IdentityCaptureStep({ verification, handlers, preview }: Identit
   const capture = identity.capture;
   if (!capture) return null;
   const badge = identityBadge(identity);
-  const supportNeeded = identity.blocked === 'under_18' || identity.blocked === 'too_many_attempts';
+  const supportNeeded = identity.blocked === 'under_18' || identity.blocked === 'too_many_attempts' || identity.blocked === 'duplicate_id';
 
   return <section aria-labelledby={`${id}-heading`} className="space-y-5 rounded-xl border bg-card p-4 shadow-sm sm:p-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -121,11 +121,12 @@ export function IdentityCaptureStep({ verification, handlers, preview }: Identit
 
     <div className="space-y-3 text-sm leading-6 text-muted-foreground">
       {capture.stage === 'needed' && !identity.blocked && <p>{t('capture.explanation')}</p>}
-      {identity.requested && <Note tone="warning">{t(`setup.identityRequested.${identity.requested}`)}</Note>}
+      {identity.requested && <Note tone={identity.renewal ? 'info' : 'warning'}>{t(`setup.identityRequested.${identity.requested}`, { date: identity.renewal ? formatDate(identity.renewal.countsUntil) : '' })}</Note>}
       {capture.rejectionReason && identity.blocked !== 'under_18' && <Note tone="warning">{t(`capture.rejectionReasons.${capture.rejectionReason}`)}</Note>}
       {identity.blocked === 'try_later' && <Note tone="warning">{t('setup.identityBlocked.try_later', { time: identity.retryAt ? formatDateTime(identity.retryAt) : '' })}</Note>}
       {identity.blocked === 'too_many_attempts' && <Note tone="warning">{t('setup.identityBlocked.too_many_attempts')}</Note>}
       {identity.blocked === 'under_18' && <Note tone="warning">{t('setup.identityBlocked.under_18')}</Note>}
+      {identity.blocked === 'duplicate_id' && <Note tone="warning">{t('setup.identityBlocked.duplicate_id')}</Note>}
       {capture.stage === 'in_review' && <Note tone="info">{t('capture.inReview')}{capture.submittedAt ? ` ${t('capture.sentAt', { date: formatDate(capture.submittedAt) })}` : ''}</Note>}
     </div>
 

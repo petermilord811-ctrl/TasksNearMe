@@ -133,6 +133,7 @@
     "verification_passed": "Verification step passed",
     "verification_action_needed": "Verification needs action",
     "background_check_expiring": "Background check expiring",
+    "id_expiring": "ID expiring",
     "helper_ready": "Ready to send offers",
     "task_match": "New task near you",
     "data_export_ready": "Data copy ready",

@@ -60,6 +60,7 @@ const copy: Record<NotificationType, RegExp> = {
   verification_passed: /verification step is complete/,
   verification_action_needed: /verification step needs your attention/,
   background_check_expiring: /background check has run out/,
+  id_expiring: /ID you verified with has expired/,
   helper_ready: /you can send offers now/,
   task_match: /New task near you: .*\$54\.00/,
   data_export_ready: /copy of your data is ready/,

@@ -9,6 +9,8 @@ import {
   deriveIdentityAutoCheck,
   identitySessionIsStale,
   identityStanding,
+  idExpiresAt,
+  idExpiryNoticeDue,
   livenessPromptFor,
   namesMatch,
   type AddressRow,
@@ -200,6 +202,18 @@ describe('our own ID check (stage 1)', () => {
     expect(capturePhotosDue({ status: 'rejected', decidedAt: ago(40), filesDeletedAt: ago(5), hasFiles: false }, now)).toBe(false);
   });
 
+  it('holds the double check while the ID is on another account too, until staff clear it (6.3)', () => {
+    const flagged = { ...decided('approved', ago(1)), duplicateOfUserId: 'usr_other' };
+    const held = identityStanding([], now, [flagged]);
+    expect(held).toMatchObject({ blocked: 'duplicate_id', canStart: false, canCapture: false, captureApproved: true, duplicate: { id: flagged.id }, reviewSince: flagged.submittedAt });
+    // Also while the photos are still in review, and an under-18 finding comes first.
+    expect(identityStanding([], now, [captureRow({ createdAt: ago(0.1), duplicateOfUserId: 'usr_other' })]).blocked).toBe('duplicate_id');
+    expect(identityStanding([], now, [flagged, decided('rejected', ago(0.5), 'under_18')]).blocked).toBe('under_18');
+    // Cleared by staff, or turned down: no hold.
+    expect(identityStanding([], now, [{ ...flagged, duplicateClearedAt: ago(0.5) }]).blocked).toBeUndefined();
+    expect(identityStanding([], now, [{ ...flagged, status: 'rejected', rejectionReason: 'duplicate_id' }]).blocked).toBeUndefined();
+  });
+
   it('picks the selfie prompt from a keyed hash of the person and the try, so reloading never changes it', () => {
     expect(livenessPromptFor('usr_a', 0, 'secret')).toBe(livenessPromptFor('usr_a', 0, 'secret'));
     const prompts = new Set(Array.from({ length: 60 }, (_, tries) => livenessPromptFor('usr_a', tries, 'secret')));
@@ -207,6 +221,59 @@ describe('our own ID check (stage 1)', () => {
     for (const prompt of prompts) expect(LIVENESS_PROMPTS).toContain(prompt);
     const other = Array.from({ length: 12 }, (_, tries) => livenessPromptFor('usr_a', tries, 'another secret'));
     expect(other).not.toEqual(Array.from({ length: 12 }, (_, tries) => livenessPromptFor('usr_a', tries, 'secret')));
+  });
+});
+
+describe('the ID running out (6.3)', () => {
+  const expiring = (month: number, year: number, createdAt: Date) => ({ ...decided('approved', createdAt), autoCheck: { expiresMonth: month, expiresYear: year } });
+
+  it('ends at the start of the month after the expiry month, in Austin', () => {
+    expect(idExpiresAt(12, 2026)).toEqual(new Date('2027-01-01T06:00:00.000Z'));
+    expect(idExpiresAt(6, 2027)).toEqual(new Date('2027-07-01T05:00:00.000Z'));
+    expect(idExpiresAt(13, 2026)).toBeUndefined();
+    expect(idExpiryNoticeDue(new Date('2027-01-01T06:00:00.000Z'), new Date('2026-12-02T05:59:00.000Z'))).toBe(false);
+    expect(idExpiryNoticeDue(new Date('2027-01-01T06:00:00.000Z'), new Date('2026-12-02T06:00:00.000Z'))).toBe(true);
+  });
+
+  it('knows when the verification runs out, and stops counting it after that', () => {
+    const photos = expiring(12, 2026, ago(40));
+    const pass = idRow({ status: 'verified', verifiedAt: ago(39), nameMatches: true, createdAt: ago(39) });
+    expect(identityStanding([pass], now, [photos])).toMatchObject({ verified: true, cleared: true, expiresAt: new Date('2027-01-01T06:00:00.000Z') });
+    const later = new Date('2027-01-02T00:00:00.000Z');
+    expect(identityStanding([pass], later, [photos])).toMatchObject({ verified: true, cleared: false, requested: 'id_expired' });
+    // Without the month (verified before our own check, or a reading that found none): nothing runs out.
+    expect(identityStanding([pass], later, [decided('approved', ago(40))]).expiresAt).toBeUndefined();
+  });
+
+  it('keeps the earlier check counting while the new one asked for runs, until the month ends', () => {
+    const photos = expiring(12, 2026, ago(40));
+    const pass = idRow({ status: 'verified', verifiedAt: ago(39), nameMatches: true, createdAt: ago(39) });
+    const asked = idRow({ status: 'not_started', providerSessionId: null, requestedReason: 'id_expiring', createdAt: ago(1) });
+    const renewing = identityStanding([pass, asked], now, [photos]);
+    expect(renewing).toMatchObject({ status: 'not_started', verified: false, cleared: true, verifiedAt: pass.verifiedAt, requested: 'id_expiring', renewal: { countsUntil: new Date('2027-01-01T06:00:00.000Z') }, canCapture: true, captureApproved: false, attempts: 0 });
+    // New photos in review: still counting.
+    expect(identityStanding([pass, asked], now, [photos, captureRow({ createdAt: ago(0.5) })])).toMatchObject({ cleared: true, capture: { status: 'submitted' } });
+    // The month ended before the new check passed.
+    const after = identityStanding([pass, asked], new Date('2027-01-01T06:00:00.000Z'), [photos]);
+    expect(after).toMatchObject({ cleared: false, requested: 'id_expired' });
+    expect(after.renewal).toBeUndefined();
+    // The new check passed: it's the one that counts, with its own ID.
+    const newPhotos = expiring(3, 2031, ago(0.4));
+    const newPass = idRow({ status: 'verified', verifiedAt: ago(0.2), nameMatches: true, createdAt: ago(0.3) });
+    expect(identityStanding([pass, asked, newPass], new Date('2027-02-01T00:00:00.000Z'), [photos, newPhotos])).toMatchObject({ cleared: true, expiresAt: new Date('2031-04-01T05:00:00.000Z') });
+  });
+
+  it("stops counting the earlier check when the new one turns something up for our team", () => {
+    const photos = expiring(12, 2026, ago(40));
+    const pass = idRow({ status: 'verified', verifiedAt: ago(39), nameMatches: true, createdAt: ago(39) });
+    const asked = idRow({ status: 'not_started', providerSessionId: null, requestedReason: 'id_expiring', createdAt: ago(1) });
+    const flagged = { ...decided('approved', ago(0.5)), duplicateOfUserId: 'usr_other' };
+    const held = identityStanding([pass, asked], now, [photos, flagged]);
+    expect(held).toMatchObject({ blocked: 'duplicate_id', cleared: false });
+    expect(held.renewal).toBeUndefined();
+    // A staff request or a name change in between: no grace.
+    const request = idRow({ status: 'not_started', providerSessionId: null, requestedReason: 'name_changed', createdAt: ago(0.5) });
+    expect(identityStanding([pass, asked, request], now, [photos])).toMatchObject({ cleared: false, requested: 'name_changed' });
   });
 });
 

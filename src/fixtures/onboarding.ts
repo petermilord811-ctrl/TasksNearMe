@@ -208,6 +208,21 @@ export const onboardingIdentityDoubleCheckReview = withIdentity({ status: 'requi
 /** Our team then turned the approved photos down: new photos, with a new prompt. */
 export const onboardingIdentityDoubleCheckRejected = withIdentity({ status: 'requires_input', failureReason: 'other', consentNeeded: false, capture: { ...captureNeeded, ...sentPhotos, rejectionReason: 'double_check_failed', prompt: 'tilt_head' } });
 
+/** The same ID is on another account (6.3): the double check waits for our team. */
+export const onboardingIdentityDuplicateHold = withIdentity({ status: 'not_started', consentNeeded: false, blocked: 'duplicate_id', capture: captureApproved });
+
+/** The ID runs out at the end of November (6.3): a new check is asked for, and the earlier one counts until then. */
+export const onboardingIdentityRenewal = withIdentity({
+  status: 'not_started',
+  consentNeeded: false,
+  requested: 'id_expiring',
+  renewal: { countsUntil: '2026-12-01T06:00:00.000Z' },
+  capture: { ...captureNeeded, prompt: 'look_up' },
+});
+
+/** The month ended before a new check passed: offers are paused until one does. */
+export const onboardingIdentityExpired = withIdentity({ status: 'not_started', consentNeeded: false, requested: 'id_expired', capture: { ...captureNeeded, prompt: 'look_up' } });
+
 /** The double check was sent; the provider is still processing. */
 export const onboardingIdentityProcessing = withIdentity({ status: 'processing', consentNeeded: false, capture: captureApproved });
 

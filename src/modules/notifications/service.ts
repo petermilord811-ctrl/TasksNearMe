@@ -27,6 +27,7 @@ import { rebookProposals } from '@/modules/rebook/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { isLockedPreference, preferenceOn } from './delivery-domain';
 import { privacyViewOf } from '@/modules/privacy/requests';
+import { requestIdentityAfterNameChange } from '@/modules/verification/tracks';
 import { pushSetup } from './push';
 import { notificationPreferences, notifications } from './schema';
 import { verificationNotificationFor } from './verification-plan';
@@ -466,7 +467,10 @@ export async function saveAccountProfile(db: Db, userId: string, input: AccountP
   const parsed = accountProfileInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const { firstName, lastName } = parsed.data;
+  const [before] = await db.select({ firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, userId)).limit(1);
   await db.update(users).set({ firstName, lastName, name: `${firstName} ${lastName.charAt(0).toUpperCase()}.`, updatedAt: now }).where(eq(users.id, userId));
+  // A verified helper's new legal name needs a new ID check (plan 6.3).
+  if (before) await requestIdentityAfterNameChange(db, userId, { before, after: { firstName, lastName } }, now);
   return { ok: true, code: 'saved' };
 }
 

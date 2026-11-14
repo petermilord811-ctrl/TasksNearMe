@@ -22,13 +22,18 @@ describe('verification notifications', () => {
     expect(verificationNotificationFor({ userId: 'usr_lee', track: 'background', outcome: 'expired', days: 4 })).toMatchObject({ type: 'background_check_expiring', params: { days: 0 } });
   });
 
+  it('warns before the ID a helper verified with runs out, and when it has (plan 6.3)', () => {
+    expect(verificationNotificationFor({ userId: 'usr_jordan', track: 'identity', outcome: 'expiring', days: 30 })).toEqual({ userId: 'usr_jordan', type: 'id_expiring', target: { kind: 'onboarding', step: 'identity' }, params: { days: 30 } });
+    expect(verificationNotificationFor({ userId: 'usr_jordan', track: 'identity', outcome: 'expired' })).toMatchObject({ type: 'id_expiring', params: { days: 0 } });
+  });
+
   it('says when onboarding is done', () => {
     expect(verificationNotificationFor({ userId: 'usr_jordan', track: 'helper', outcome: 'ready' })).toEqual({ userId: 'usr_jordan', type: 'helper_ready', target: { kind: 'onboarding', step: 'done' } });
   });
 
   it('ignores anything else', () => {
     expect(verificationNotificationFor({ userId: 'usr_x', track: 'selfie', outcome: 'passed' })).toBeNull();
-    expect(verificationNotificationFor({ userId: 'usr_x', track: 'identity', outcome: 'expiring' })).toBeNull();
+    expect(verificationNotificationFor({ userId: 'usr_x', track: 'address', outcome: 'expiring' })).toBeNull();
     expect(verificationNotificationFor({ track: 'identity', outcome: 'passed' })).toBeNull();
     expect(verificationNotificationFor({ userId: 'usr_x', track: 'helper', outcome: 'passed' })).toBeNull();
   });

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, lte, or } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
 import type { FileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
 import { auditLog } from '@/platform/audit/schema';
@@ -9,7 +9,7 @@ import { captureFileIds, deleteIdentityCapturePhotos } from './capture';
 import { computeOnboarding } from './progress';
 import type { VerificationProviders } from './providers';
 import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications } from './schema';
-import { addressDocumentDue, ADDRESS_RULES, BACKGROUND_RULES, backgroundNoticeDue, capturePhotosDue, IDENTITY_CAPTURE_RULES, IDENTITY_RULES, identityStanding } from './standing';
+import { addressDocumentDue, ADDRESS_RULES, BACKGROUND_RULES, backgroundNoticeDue, capturePhotosDue, IDENTITY_CAPTURE_RULES, IDENTITY_RULES, identityStanding, idExpiryNoticeDue } from './standing';
 import { emitVerificationEvent, loadOnboardingState, syncHelperProfile } from './state';
 
 /**
@@ -20,6 +20,8 @@ import { emitVerificationEvent, loadOnboardingState, syncHelperProfile } from '.
  *   our team approved), and at the latest 30 days after the stage-1 decision, whether approved or rejected
  *   (canceled ones, and a deleted account's, at once);
  * - hosted ID sessions nobody finished within 48 hours are closed, so a new one can start;
+ * - 30 days before the ID a helper verified with runs out (the end of its expiry month), a new ID check is
+ *   asked for and the helper is told; they stay bookable until the month ends, then not until it passes;
  * - the provider is asked to delete ID images 30 days after a final result (Texas biometric limits);
  * - Checkr invitations nobody used within 7 days expire;
  * - background checks send renewal notices at 30 and 7 days, and pause in-home work when they run out.
@@ -109,12 +111,17 @@ export async function runVerificationTimers(db: Db, deps: VerificationTimerDeps,
       db.select().from(identityVerifications).where(eq(identityVerifications.userId, capture.userId)),
       db.select().from(identityCaptures).where(eq(identityCaptures.userId, capture.userId)),
     ]);
-    if (!identityStanding(identityRows, now, captureRows).cleared) continue;
+    // The current check itself passed (a renewal's earlier check counting doesn't make these final).
+    const standing = identityStanding(identityRows, now, captureRows);
+    if (!standing.verified || !standing.cleared) continue;
     if (await deleteIdentityCapturePhotos({ db, storage: deps.storage }, capture.id, now)) {
       idPhotosDeleted += 1;
       await db.insert(auditLog).values({ id: newId('aud'), actorRole: 'system', action: 'identity_capture.deleted', targetType: 'user', targetId: capture.userId, metadata: { captureId: capture.id, status: 'approved', after: 'double_check' } });
     }
   }
+
+  // The ID a helper verified with runs out (6.3).
+  const idRenewals = await runIdExpiry(db, deps, now, scope, touched);
 
   // Unfinished ID sessions.
   const stale = await db
@@ -192,5 +199,82 @@ export async function runVerificationTimers(db: Db, deps: VerificationTimerDeps,
   }
 
   for (const userId of touched) await syncHelperProfile(db, userId, now);
-  return { documentsDeleted, idPhotosDeleted, staleSessions: stale.length, redactions, expiredInvites: expiredInvites.length, notices };
+  return { documentsDeleted, idPhotosDeleted, idRenewals, staleSessions: stale.length, redactions, expiredInvites: expiredInvites.length, notices };
+}
+
+/**
+ * The ID behind a helper's verification runs out at the end of its expiry month (we keep only the month
+ * and year). 30 days before, an `id_expiring` request row asks for a new check, and the helper is told; the
+ * earlier check counts until the month ends (`identityStanding`), so they stay bookable meanwhile. Once
+ * it has ended without a new check passing, they're told once more and the profile stops being bookable.
+ * Returns the new checks asked for.
+ */
+async function runIdExpiry(db: Db, deps: VerificationTimerDeps, now: Date, scope: { userIds?: readonly string[] }, touched: Set<string>): Promise<number> {
+  const only = (column: Parameters<typeof inArray>[0]) => (scope.userIds ? [inArray(column, [...scope.userIds])] : []);
+  // People with approved photos of an ID whose expiry month ends by the end of next month (a cheap first cut).
+  const months = now.getUTCFullYear() * 12 + now.getUTCMonth() + 1;
+  const expiring = await db
+    .selectDistinct({ userId: identityCaptures.userId })
+    .from(identityCaptures)
+    .innerJoin(users, eq(users.id, identityCaptures.userId))
+    .where(
+      and(
+        ...only(identityCaptures.userId),
+        eq(identityCaptures.status, 'approved'),
+        ne(users.status, 'deleted'),
+        sql`(${identityCaptures.autoCheck} ->> 'expiresYear')::int * 12 + (${identityCaptures.autoCheck} ->> 'expiresMonth')::int <= ${months + 1}`,
+      ),
+    )
+    .limit(BATCH * 4);
+  let asked = 0;
+  for (const { userId } of expiring) {
+    const [rows, captures] = await Promise.all([
+      db.select().from(identityVerifications).where(eq(identityVerifications.userId, userId)),
+      db.select().from(identityCaptures).where(eq(identityCaptures.userId, userId)),
+    ]);
+    const standing = identityStanding(rows, now, captures);
+    if (!standing.verified || !standing.expiresAt || !idExpiryNoticeDue(standing.expiresAt, now)) continue;
+    const passed = now.getTime() >= standing.expiresAt.getTime();
+    await db.insert(identityVerifications).values({
+      id: newId('idv'),
+      userId,
+      provider: deps.providers?.identity.provider ?? 'dev',
+      providerSessionId: null,
+      status: 'not_started',
+      requestedReason: 'id_expiring',
+      requestedByUserId: null,
+      expiryNotices: passed ? 2 : 1,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const days = Math.max(0, Math.ceil((standing.expiresAt.getTime() - now.getTime()) / DAY_MS));
+    await emitVerificationEvent(db, userId, 'identity', passed ? 'expired' : 'expiring', { days });
+    await db.insert(auditLog).values({ id: newId('aud'), actorRole: 'system', action: 'identity.renewal_requested', targetType: 'user', targetId: userId, metadata: { expiresAt: standing.expiresAt.toISOString() } });
+    touched.add(userId);
+    asked += 1;
+  }
+
+  // Renewals whose month has ended without a new check passing: told once, and no longer bookable.
+  const renewals = await db
+    .select()
+    .from(identityVerifications)
+    .where(and(...only(identityVerifications.userId), eq(identityVerifications.requestedReason, 'id_expiring'), lt(identityVerifications.expiryNotices, 2)))
+    .limit(BATCH * 4);
+  for (const renewal of renewals) {
+    const [rows, captures] = await Promise.all([
+      db.select().from(identityVerifications).where(eq(identityVerifications.userId, renewal.userId)),
+      db.select().from(identityCaptures).where(eq(identityCaptures.userId, renewal.userId)),
+    ]);
+    const standing = identityStanding(rows, now, captures);
+    // Still counting: nothing to do yet.
+    if (standing.renewal) continue;
+    const resets = rows.filter((row) => row.providerSessionId === null).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const current = resets.at(-1)?.id === renewal.id;
+    await db.update(identityVerifications).set({ expiryNotices: 2 }).where(eq(identityVerifications.id, renewal.id));
+    // A newer request, or a new check that already passed: nothing to say.
+    if (!current || standing.verified) continue;
+    await emitVerificationEvent(db, renewal.userId, 'identity', 'expired', { days: 0 });
+    touched.add(renewal.userId);
+  }
+  return asked;
 }

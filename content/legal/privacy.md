@@ -11,7 +11,7 @@ updated: 2026-11-13
 - **Account details:** name, email, and phone number.
 - **Task and booking details:** descriptions, photos, messages, addresses, and reviews.
 - **Verification results** for helpers: whether an ID or background check passed, and when.
-- **ID photos** for a helper's ID check: photos of the ID and a selfie, which our trust and safety team compares before our ID partner double-checks them. They're kept encrypted until both checks are finished and deleted no later than 30 days after our decision. From the ID itself we keep only yes-or-no answers (the name matches, 18 or older, not expired) and its expiry month and year, never its number or the birth date.
+- **ID photos** for a helper's ID check: photos of the ID and a selfie, which our trust and safety team compares before our ID partner double-checks them. They're kept encrypted until both checks are finished and deleted no later than 30 days after our decision. From the ID itself we keep only yes-or-no answers (the name matches, 18 or older, not expired) and its expiry month and year, never its number or the birth date. We also keep a one-way code made from the ID's number, issuing state and birth date, which can't be turned back into them, only to notice the same ID on two accounts; it's deleted with your account. We remind you 30 days before the ID's expiry month ends, so you can verify a current one.
 - **Payment records** from our payment provider. We never see full card or bank numbers.
 - **Device and usage data:** to keep the service secure and working.
 

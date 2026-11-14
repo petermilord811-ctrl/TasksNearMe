@@ -68,6 +68,11 @@ export const NOTIFICATION_TYPES = [
   'verification_action_needed',
   /** The background check runs out in `params.days` (0: it has; in-home categories are paused). */
   'background_check_expiring',
+  /**
+   * The ID our team approved runs out in `params.days` (0: its expiry month has ended, so the helper can't
+   * be booked until a new ID check passes). A new check is asked for 30 days before (plan 6.3).
+   */
+  'id_expiring',
   /** Onboarding is done: the helper can send offers. */
   'helper_ready',
   /** A new task the helper could take, in their area and categories (blueprint 02 J1; at most 3 an hour). */

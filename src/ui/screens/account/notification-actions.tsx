@@ -48,6 +48,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   verification_passed: ShieldCheck,
   verification_action_needed: ShieldAlert,
   background_check_expiring: CalendarClock,
+  id_expiring: CalendarClock,
   helper_ready: BadgeCheck,
   badge_earned: Award,
   task_match: MapPin,

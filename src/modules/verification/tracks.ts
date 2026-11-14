@@ -10,7 +10,7 @@ import { newId } from '@/platform/db/ids';
 import { computeOnboarding } from './progress';
 import type { VerificationProviders } from './providers';
 import { backgroundChecks, identityVerifications, payoutAccounts } from './schema';
-import { BACKGROUND_RULES, namesMatch } from './standing';
+import { BACKGROUND_RULES, namesMatch, normalizeName } from './standing';
 import { emitVerificationEvent, loadOnboardingState, syncHelperProfile } from './state';
 
 /**
@@ -110,6 +110,40 @@ export async function recordIdentityResult(db: Db, sessionId: string, result: Id
   if (result.status === 'requires_input') await emitVerificationEvent(db, row.userId, track, 'action_needed');
   await syncHelperProfile(db, row.userId, now);
   return row.userId;
+}
+
+/**
+ * The legal name on the account changed (plan 6.3; blueprint 06 §1): a verified helper's ID check stops
+ * counting and a new one is asked for (`name_changed`), so the ID's name is compared with the new one.
+ * Case, accents and punctuation don't count as a change. A check under way already compares with the
+ * name as it is. Returns whether a new check was asked for.
+ */
+export async function requestIdentityAfterNameChange(
+  db: Db,
+  userId: string,
+  names: { before: { firstName: string; lastName: string }; after: { firstName: string; lastName: string } },
+  now: Date,
+): Promise<boolean> {
+  const { before, after } = names;
+  if (normalizeName(before.firstName) === normalizeName(after.firstName) && normalizeName(before.lastName) === normalizeName(after.lastName)) return false;
+  const state = await loadOnboardingState(db, userId, now);
+  // Helpers only, verified (or still counting while a renewal runs).
+  if (!state.profile || (!state.identity.verified && !state.identity.renewal)) return false;
+  await db.insert(identityVerifications).values({
+    id: newId('idv'),
+    userId,
+    provider: state.identityRows.at(-1)?.provider ?? 'dev',
+    providerSessionId: null,
+    status: 'not_started',
+    requestedReason: 'name_changed',
+    requestedByUserId: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await audit(db, 'identity.requested', userId, { reason: 'name_changed' });
+  await emitVerificationEvent(db, userId, 'identity', 'action_needed');
+  await syncHelperProfile(db, userId, now);
+  return true;
 }
 
 // ---- Payouts --------------------------------------------------------------------------------------

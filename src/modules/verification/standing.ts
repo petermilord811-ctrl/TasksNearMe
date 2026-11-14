@@ -13,6 +13,7 @@ import type {
   LivenessPrompt,
 } from '@/contracts';
 import { LIVENESS_PROMPTS } from '@/contracts';
+import { marketLocalToUtc } from '@/shared/format';
 
 /**
  * Where each verification track stands, as pure functions of its rows (blueprint 06 §1, extended
@@ -31,6 +32,25 @@ export const IDENTITY_RULES = {
   /** A hosted session nobody finished is closed after this long. */
   staleHours: 48,
 } as const;
+
+/**
+ * The ID a helper verified with runs out (plan 6.3): we keep only its expiry month and year (from our own
+ * check's reading), so it counts until that month ends in Austin. A new check is asked for this long
+ * before; the helper stays bookable until the month ends, then not until a new check passes.
+ */
+export const ID_EXPIRY_RULES = {
+  noticeDays: 30,
+} as const;
+
+/** The first instant after an ID's expiry month, in Austin (an ID is good through its expiry date). */
+export function idExpiresAt(month: number, year: number): Date | undefined {
+  if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year) || year < 2000 || year > 2200) return undefined;
+  const next = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+  return new Date(marketLocalToUtc(`${next.year}-${String(next.month).padStart(2, '0')}-01`, '00:00'));
+}
+
+/** The 30-day notice (and the new check it asks for) is due. */
+export const idExpiryNoticeDue = (expiresAt: Date, now: Date) => now.getTime() >= expiresAt.getTime() - ID_EXPIRY_RULES.noticeDays * DAY_MS;
 
 export const BACKGROUND_RULES = {
   /** A clear (or approved) check counts this long. */
@@ -52,7 +72,7 @@ export const ADDRESS_RULES = {
 
 /** Our own ID check (stage 1, added 2026-11-13). Its tries count toward `IDENTITY_RULES`. */
 export const IDENTITY_CAPTURE_RULES = {
-  /** The photos are deleted this long after the stage-1 decision (6.2 deletes them sooner once both stages are final). */
+  /** The photos are deleted this long after the stage-1 decision, at the latest (sooner once both stages are final). */
   photoRetentionDays: 30,
   /** Staff aim to decide within this long. */
   responseTargetHours: 48,
@@ -74,6 +94,8 @@ export interface IdentityRow {
   requestedReason: string | null;
   /** Staff's decision on a double check that didn't confirm our approval (`retry_allowed`, `rejected`). */
   reviewOutcome?: string | null;
+  /** On an `id_expiring` request row: 1 once the helper was told the ID runs out, 2 once told it has. */
+  expiryNotices?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -86,6 +108,11 @@ export interface CaptureRow {
   rejectionReason: string | null;
   submittedAt: Date;
   decidedAt: Date | null;
+  /** The reading's answers: only the expiry month and year are used here (the ID's expiry, 6.3). */
+  autoCheck?: { expiresMonth?: number; expiresYear?: number } | null;
+  /** Another account has the same ID (6.3), until staff clear it. */
+  duplicateOfUserId?: string | null;
+  duplicateClearedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -119,12 +146,32 @@ export interface IdentityStanding {
   canCapture: boolean;
   /** With `blocked: double_check_review`: the provider's session that didn't confirm the approved photos. */
   doubleCheck?: IdentityRow;
+  /** With `blocked: duplicate_id`: the photos whose ID is on another account too. */
+  duplicate?: CaptureRow;
+  /** Verified: when the ID behind it runs out (the end of its expiry month), when we know it. */
+  expiresAt?: Date;
+  /**
+   * A new check asked for because the ID runs out (`id_expiring`): the verification before it still counts
+   * (`cleared`, `verifiedAt`) until `countsUntil`.
+   */
+  renewal?: { countsUntil: Date };
 }
 
 const byCreated = <T extends { createdAt: Date }>(rows: readonly T[]) => [...rows].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
 function asRequestReason(value: string | null): IdentityRequestReason | undefined {
-  return value === 'staff_request' || value === 'name_changed' ? value : undefined;
+  return value === 'staff_request' || value === 'name_changed' || value === 'id_expiring' ? value : undefined;
+}
+
+/**
+ * When the ID behind a verified session runs out: the expiry month of the photos our team approved for it
+ * (the newest approved capture in its window, from `windowStart`, made before the session).
+ */
+function verificationExpiry(session: IdentityRow, captures: readonly CaptureRow[], windowStart: number): Date | undefined {
+  const approval = captures.findLast((row) => row.status === 'approved' && row.createdAt.getTime() >= windowStart && row.createdAt.getTime() <= session.createdAt.getTime());
+  const month = approval?.autoCheck?.expiresMonth;
+  const year = approval?.autoCheck?.expiresYear;
+  return month && year ? idExpiresAt(month, year) : undefined;
 }
 
 /**
@@ -137,10 +184,12 @@ export function identityStanding(rows: readonly IdentityRow[], now: Date, captur
   const ordered = byCreated(rows);
   const latest = ordered.at(-1);
   const resetIndex = ordered.findLastIndex((row) => row.providerSessionId === null);
-  const resetAt = resetIndex >= 0 ? ordered[resetIndex]!.createdAt.getTime() : Number.NEGATIVE_INFINITY;
+  const reset = resetIndex >= 0 ? ordered[resetIndex] : undefined;
+  const resetAt = reset ? reset.createdAt.getTime() : Number.NEGATIVE_INFINITY;
   const sessions = ordered.slice(resetIndex + 1);
+  const allCaptures = byCreated(captures);
   // A capture sent the moment a new check was asked for belongs to the new check.
-  const currentCaptures = byCreated(captures).filter((row) => row.createdAt.getTime() >= resetAt);
+  const currentCaptures = allCaptures.filter((row) => row.createdAt.getTime() >= resetAt);
   const capture = currentCaptures.at(-1);
   const captureApproved = currentCaptures.some((row) => row.status === 'approved');
   const captureInReview = capture?.status === 'submitted';
@@ -168,7 +217,35 @@ export function identityStanding(rows: readonly IdentityRow[], now: Date, captur
     const requested = asRequestReason(latest!.requestedReason);
     if (requested) standing.requested = requested;
   }
-  if (verified) return standing;
+  if (verified) {
+    // The ID behind it runs out at the end of its expiry month (6.3): from then on it doesn't count.
+    const expiresAt = verificationExpiry(latest!, allCaptures, resetAt);
+    if (expiresAt) {
+      standing.expiresAt = expiresAt;
+      if (now.getTime() >= expiresAt.getTime()) {
+        standing.cleared = false;
+        standing.requested = 'id_expired';
+      }
+    }
+    return standing;
+  }
+
+  // A new check asked for because the ID runs out: the verification before it counts until the ID's
+  // expiry month ends (the helper stays bookable meanwhile), then not until the new check passes.
+  if (reset?.requestedReason === 'id_expiring') {
+    const previousResetIndex = ordered.slice(0, resetIndex).findLastIndex((row) => row.providerSessionId === null);
+    const previousResetAt = previousResetIndex >= 0 ? ordered[previousResetIndex]!.createdAt.getTime() : Number.NEGATIVE_INFINITY;
+    const counted = ordered.slice(previousResetIndex + 1, resetIndex).at(-1);
+    const countedClears = counted?.status === 'verified' && (counted.nameMatches !== false || counted.nameConfirmedAt !== null);
+    const countsUntil = counted && countedClears ? verificationExpiry(counted, allCaptures, previousResetAt) : undefined;
+    if (countsUntil && now.getTime() < countsUntil.getTime()) {
+      standing.renewal = { countsUntil };
+      standing.cleared = true;
+      if (counted!.verifiedAt) standing.verifiedAt = counted!.verifiedAt;
+    } else if (standing.requested === 'id_expiring') {
+      standing.requested = 'id_expired';
+    }
+  }
 
   const under18 = sessions.some((row) => row.failureReason === 'under_18' || row.isAdult === false) || currentCaptures.some((row) => row.status === 'rejected' && row.rejectionReason === 'under_18');
   const failures = [
@@ -186,8 +263,14 @@ export function identityStanding(rows: readonly IdentityRow[], now: Date, captur
   const approvedAt = approval ? (approval.decidedAt ?? approval.createdAt).getTime() : Number.POSITIVE_INFINITY;
   const lastDoubleCheck = sessions.filter((row) => row.createdAt.getTime() >= approvedAt).at(-1);
   const doubleCheckFailed = lastDoubleCheck?.status === 'requires_input' && !lastDoubleCheck.reviewOutcome;
+  // The ID on photos in review or approved is on another account too (6.3): the double check waits for staff.
+  const duplicate = currentCaptures.findLast((row) => !!row.duplicateOfUserId && !row.duplicateClearedAt && (row.status === 'submitted' || row.status === 'approved'));
   if (under18) standing.blocked = 'under_18';
-  else if (doubleCheckFailed) {
+  else if (duplicate) {
+    standing.blocked = 'duplicate_id';
+    standing.duplicate = duplicate;
+    standing.reviewSince = duplicate.submittedAt;
+  } else if (doubleCheckFailed) {
     standing.blocked = 'double_check_review';
     standing.doubleCheck = lastDoubleCheck;
     standing.reviewSince = lastDoubleCheck.updatedAt;
@@ -200,6 +283,13 @@ export function identityStanding(rows: readonly IdentityRow[], now: Date, captur
   }
   standing.canStart = !standing.blocked;
   standing.canCapture = !standing.blocked && !captureInReview && !captureApproved;
+  // A renewal that turns up something for our team to look at (a minor, the same ID elsewhere, a double
+  // check that didn't confirm) pauses the helper instead of waiting for the month to end.
+  if (standing.renewal && (standing.blocked === 'under_18' || standing.blocked === 'duplicate_id' || standing.blocked === 'double_check_review')) {
+    delete standing.renewal;
+    delete standing.verifiedAt;
+    standing.cleared = false;
+  }
   return standing;
 }
 

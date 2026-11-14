@@ -6,9 +6,10 @@ import { AiRefusedError, AiUnavailableError, DEFAULT_CLAUDE_MODEL } from './clau
 
 /**
  * Reads the photo of an ID's front once for our trust team (our own ID check, stage 1; completion plan
- * 6.1): the name, birth date, expiry date, document type and issuing state, as printed. The app compares
- * them with the account at once and keeps only yes/no answers and the expiry month and year
- * (`deriveIdentityAutoCheck`); the name, birth date and document number are never stored. Claude is never
+ * 6.1): the name, birth date, expiry date, document type, issuing state and document number, as printed.
+ * The app compares them with the account at once and keeps only yes/no answers and the expiry month and
+ * year (`deriveIdentityAutoCheck`), plus a keyed hash of the number, state and birth date to spot the same
+ * ID on two accounts (6.3); the name, birth date and document number themselves are never stored or logged. Claude is never
  * shown the selfie and never asked to compare faces: staff do that, and the provider double-checks.
  * With `ANTHROPIC_API_KEY` Claude reads it (through the official SDK, with the server-side fallback for a
  * declined request); without one, development and tests use a stand-in that reads nothing.
@@ -25,6 +26,8 @@ export interface IdDocumentReading {
   documentType?: IdentityDocumentType | 'other';
   /** The US state, or the country for a passport, as a code ("TX", "USA"). Read, never stored. */
   issuingState?: string;
+  /** The license, ID card or passport number, as printed. Read once for a keyed hash, never stored or logged. */
+  documentNumber?: string;
 }
 
 export interface IdDocumentInput {
@@ -53,6 +56,7 @@ const answerSchema = z.object({
   dateOfBirth: z.string().nullable(),
   expiryDate: z.string().nullable(),
   issuingState: z.string().nullable(),
+  documentNumber: z.string().nullable(),
 });
 
 const SYSTEM = [
@@ -66,7 +70,7 @@ const SYSTEM = [
 function promptFor(declaredType: IdentityDocumentType): string {
   return [
     `The person said it is a: ${declaredType.replaceAll('_', ' ')}.`,
-    'Read the given names, the surname, the date of birth, the expiry date, the kind of document, and the issuing state (a two-letter code) or, for a passport, the issuing country (its three-letter code).',
+    'Read the given names, the surname, the date of birth, the expiry date, the kind of document, the issuing state (a two-letter code) or, for a passport, the issuing country (its three-letter code), and the document number (the license, ID card or passport number, not any other number on it).',
   ].join('\n');
 }
 
@@ -114,6 +118,7 @@ export function createClaudeIdReader({ client, model }: { client: ClaudeBetaClie
         dateOfBirth: text(answer.dateOfBirth),
         expiryDate: text(answer.expiryDate),
         issuingState: text(answer.issuingState)?.toUpperCase(),
+        documentNumber: text(answer.documentNumber),
       };
       return {
         readable: true,

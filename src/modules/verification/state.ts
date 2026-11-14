@@ -79,8 +79,14 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
     })),
     areaSet: Boolean(profile?.areaId),
     phoneVerified: Boolean(user?.phone && user.phoneVerifiedAt),
-    // Waiting for our team: photos in review, or a double check that didn't confirm their approval.
-    identity: { status: identity.status, cleared: identity.cleared, captureInReview: identity.capture?.status === 'submitted' || identity.blocked === 'double_check_review' },
+    // Waiting for our team: photos in review, a double check that didn't confirm their approval, or the
+    // same ID on another account. `renewal`: a new check while the earlier one still counts (6.3).
+    identity: {
+      status: identity.status,
+      cleared: identity.cleared,
+      captureInReview: identity.capture?.status === 'submitted' || identity.blocked === 'double_check_review' || identity.blocked === 'duplicate_id',
+      ...(identity.renewal ? { renewal: true } : {}),
+    },
     address: { status: address.status, verified: address.verified },
     payout: (payout?.status as PayoutAccountStatus | undefined) ?? 'not_started',
     background: { status: background.status, eligible: background.eligible },
@@ -178,6 +184,7 @@ export function verificationSummary(state: OnboardingState, backgroundRequired: 
       ...(identity.retryAt ? { retryAt: identity.retryAt.toISOString() } : {}),
       ...(identity.nameCheck ? { nameCheck: identity.nameCheck } : {}),
       ...(identity.requested ? { requested: identity.requested } : {}),
+      ...(identity.renewal ? { renewal: { countsUntil: identity.renewal.countsUntil.toISOString() } } : {}),
       // Helpers take our own check first; a client's ID check is the provider's alone.
       ...(state.profile ? { capture: captureSummary(state, options.promptSecret ?? '') } : {}),
     },

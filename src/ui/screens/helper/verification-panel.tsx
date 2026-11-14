@@ -82,7 +82,7 @@ export function VerificationPanel({ track, verification, bookableCategories, fir
       : background.adjudication ? t(`statuses.backgroundAdjudication.${background.adjudication}`) : t(`statuses.background.${background.status}`);
   const Icon = track === 'identity' ? ShieldCheck : track === 'payout' ? CircleDollarSign : BadgeCheck;
   const complete = track === 'identity' ? identity.status === 'verified' && !identity.nameCheck : track === 'payout' ? payout.status === 'active' : backgroundApproved || background.status === 'not_required';
-  const supportNeeded = (track === 'payout' && payout.status === 'restricted') || (track === 'background' && (background.status === 'suspended' || background.adjudication === 'post_adverse')) || (track === 'identity' && (identity.blocked === 'under_18' || identity.blocked === 'too_many_attempts' || identity.blocked === 'double_check_review'));
+  const supportNeeded = (track === 'payout' && payout.status === 'restricted') || (track === 'background' && (background.status === 'suspended' || background.adjudication === 'post_adverse')) || (track === 'identity' && (identity.blocked === 'under_18' || identity.blocked === 'too_many_attempts' || identity.blocked === 'double_check_review' || identity.blocked === 'duplicate_id'));
   /** Consent (identity) or the disclosure (background) is needed before the provider opens. */
   const needsAgreement = track === 'identity' ? identity.consentNeeded : track === 'background' ? background.disclosureNeeded : false;
   /** A helper's notice covers both stages of the ID check; a client's, the provider's check alone. */
@@ -142,14 +142,15 @@ export function VerificationPanel({ track, verification, bookableCategories, fir
     <div className="space-y-3 text-sm leading-6 text-muted-foreground">
       {track === 'identity' && <>
         {capture && <IdentityStages identity={identity} />}
-        {!complete && identity.blocked !== 'double_check_review' && <p>{t(capture?.stage === 'approved' ? 'setup.identityDoubleCheck' : capture?.stage === 'in_review' ? 'capture.inReview' : capture ? 'capture.explanation' : 'setup.identityExplanation')}</p>}
+        {!complete && identity.blocked !== 'double_check_review' && identity.blocked !== 'duplicate_id' && <p>{t(capture?.stage === 'approved' ? 'setup.identityDoubleCheck' : capture?.stage === 'in_review' ? 'capture.inReview' : capture ? 'capture.explanation' : 'setup.identityExplanation')}</p>}
         {capture?.stage === 'needed' && capture.rejectionReason && !identity.blocked && <Note tone="warning">{t(`capture.rejectionReasons.${capture.rejectionReason}`)}</Note>}
-        {identity.requested && <Note tone="warning">{t(`setup.identityRequested.${identity.requested}`)}</Note>}
+        {identity.requested && <Note tone={identity.renewal ? 'info' : 'warning'}>{t(`setup.identityRequested.${identity.requested}`, { date: identity.renewal ? formatDate(identity.renewal.countsUntil) : '' })}</Note>}
         {identity.status === 'requires_input' && !identity.blocked && <Note tone="warning">{t(`identityFailureReasons.${identity.failureReason ?? 'other'}`)}</Note>}
         {identity.blocked === 'try_later' && <Note tone="warning">{t('setup.identityBlocked.try_later', { time: identity.retryAt ? formatDateTime(identity.retryAt) : '' })}</Note>}
         {identity.blocked === 'too_many_attempts' && <Note tone="warning">{t('setup.identityBlocked.too_many_attempts')}</Note>}
         {identity.blocked === 'under_18' && <Note tone="warning">{t('setup.identityBlocked.under_18')}</Note>}
         {identity.blocked === 'double_check_review' && <Note tone="warning">{t('setup.identityBlocked.double_check_review')}</Note>}
+        {identity.blocked === 'duplicate_id' && <Note tone="warning">{t('setup.identityBlocked.duplicate_id')}</Note>}
         {identity.nameCheck && <Note tone="info">{t.rich('setup.identityNameCheck', { account: (chunks) => <Link href={routes.app.account()} className="font-medium underline underline-offset-4">{chunks}</Link> })}</Note>}
         {identity.status === 'processing' && <p>{t('setup.identityProcessing')}</p>}
         <p>{t('setup.identityPublic')}</p>

@@ -142,12 +142,18 @@ export interface AreaOption {
  * `too_many_attempts`: 5 tries without a pass, so our team looks at it. `under_18`: helpers must be 18 or
  * older. `double_check_review`: the provider's double check didn't confirm the photos our team approved,
  * so our team looks at both before anything else happens (helpers only; offers stay paused).
+ * `duplicate_id`: the ID on these photos is on another account too, so the double check waits for our
+ * team (helpers only).
  */
-export const IDENTITY_BLOCKED_REASONS = ['try_later', 'too_many_attempts', 'under_18', 'double_check_review'] as const;
+export const IDENTITY_BLOCKED_REASONS = ['try_later', 'too_many_attempts', 'under_18', 'double_check_review', 'duplicate_id'] as const;
 export type IdentityBlockedReason = (typeof IDENTITY_BLOCKED_REASONS)[number];
 
-/** Why a new ID check was asked for: by our team, or because the legal name on the account changed. */
-export const IDENTITY_REQUEST_REASONS = ['staff_request', 'name_changed'] as const;
+/**
+ * Why a new ID check was asked for: by our team, or because the legal name on the account changed.
+ * `id_expiring`: the ID our team approved runs out within 30 days; the check before it still counts until
+ * the end of the ID's expiry month (`renewal`). `id_expired`: that month has ended, so it no longer counts.
+ */
+export const IDENTITY_REQUEST_REASONS = ['staff_request', 'name_changed', 'id_expiring', 'id_expired'] as const;
 export type IdentityRequestReason = (typeof IDENTITY_REQUEST_REASONS)[number];
 
 /** The IDs our own check takes (stage 1). A passport has no back to photograph. */
@@ -158,8 +164,9 @@ export type IdentityDocumentType = (typeof IDENTITY_DOCUMENT_TYPES)[number];
  * Why our team asked for new ID photos (the helper sees the reason, never the note). `under_18` closes
  * helper setup until our team reopens it, as an under-18 result from the provider does.
  * `double_check_failed`: the provider's double check didn't confirm these photos, and our team agreed.
+ * `duplicate_id`: the ID is already used on another account.
  */
-export const IDENTITY_CAPTURE_REJECTION_REASONS = ['document_unreadable', 'selfie_mismatch', 'prompt_not_followed', 'under_18', 'expired', 'double_check_failed', 'other'] as const;
+export const IDENTITY_CAPTURE_REJECTION_REASONS = ['document_unreadable', 'selfie_mismatch', 'prompt_not_followed', 'under_18', 'expired', 'double_check_failed', 'duplicate_id', 'other'] as const;
 export type IdentityCaptureRejectionReason = (typeof IDENTITY_CAPTURE_REJECTION_REASONS)[number];
 
 /**
@@ -291,8 +298,13 @@ export interface VerificationSummary {
     retryAt?: ISODateTime;
     /** Verified, but the name on the ID differs from the account's name: our team is checking it. */
     nameCheck?: 'in_review';
-    /** A new check was asked for (the earlier one no longer counts). */
+    /** A new check was asked for (the earlier one no longer counts, except while `renewal` is set). */
     requested?: IdentityRequestReason;
+    /**
+     * With `requested: id_expiring`: the earlier check still counts (the helper stays bookable) until
+     * `countsUntil`, the end of the ID's expiry month in Austin.
+     */
+    renewal?: { countsUntil: ISODateTime };
     /** Helpers only: our own check, the first stage (a client's ID check is the provider's alone). */
     capture?: IdentityCaptureSummary;
   };

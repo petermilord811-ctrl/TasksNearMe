@@ -1,6 +1,6 @@
-import { randomBytes } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { createByteCipher, createFieldCipher } from './field-encryption';
+import { createByteCipher, createFieldCipher, createKeyedHasher } from './field-encryption';
 
 const key = randomBytes(32).toString('base64');
 
@@ -46,5 +46,19 @@ describe('file encryption', () => {
     const sealed = files.encrypt(Buffer.from('hello'));
     expect(() => fields.decrypt(sealed.toString('latin1'))).toThrow();
     expect(() => createByteCipher('c2hvcnQ=')).toThrow('32 bytes');
+  });
+});
+
+describe('keyed hashes', () => {
+  it('is stable for a key and label, and differs with another label or key, never the plain HMAC of the key', () => {
+    const hash = createKeyedHasher(key, 'tasksnearme.test.v1');
+    expect(hash('D1234567|TX|1990-05-01')).toMatch(/^[0-9a-f]{64}$/);
+    expect(hash('D1234567|TX|1990-05-01')).toBe(createKeyedHasher(key, 'tasksnearme.test.v1')('D1234567|TX|1990-05-01'));
+    expect(hash('D1234567|TX|1990-05-01')).not.toBe(createKeyedHasher(key, 'tasksnearme.other.v1')('D1234567|TX|1990-05-01'));
+    expect(hash('D1234567|TX|1990-05-01')).not.toBe(createKeyedHasher(randomBytes(32).toString('base64'), 'tasksnearme.test.v1')('D1234567|TX|1990-05-01'));
+    // The derived key, not the master key itself.
+    expect(hash('x')).not.toBe(createHmac('sha256', Buffer.from(key, 'base64')).update('x').digest('hex'));
+    expect(() => createKeyedHasher(key, '')).toThrow();
+    expect(() => createKeyedHasher(Buffer.from('short').toString('base64'), 'x')).toThrow();
   });
 });

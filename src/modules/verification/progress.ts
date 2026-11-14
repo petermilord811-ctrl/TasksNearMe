@@ -32,8 +32,12 @@ export interface OnboardingFacts {
   services: { categorySlug: CategorySlug; requiresBackgroundCheck: boolean }[];
   areaSet: boolean;
   phoneVerified: boolean;
-  /** `captureInReview`: our team has it: our own check's photos (stage 1), or a double check that didn't confirm them. */
-  identity: { status: IdentityStatus; cleared: boolean; captureInReview?: boolean };
+  /**
+   * `captureInReview`: our team has it: our own check's photos (stage 1), a double check that didn't
+   * confirm them, or the same ID on another account. `renewal`: a new check was asked for because the ID
+   * runs out, while the earlier one still counts (`cleared`; plan 6.3).
+   */
+  identity: { status: IdentityStatus; cleared: boolean; captureInReview?: boolean; renewal?: boolean };
   address: { status: AddressVerificationStatus; verified: boolean };
   payout: PayoutAccountStatus;
   background: { status: BackgroundCheckStatus; eligible: boolean };
@@ -50,7 +54,8 @@ export interface OnboardingResult {
 
 export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingStep): OnboardingResult {
   const backgroundRequired = facts.services.some((service) => service.requiresBackgroundCheck);
-  const identityVerified = facts.identity.status === 'verified';
+  // A renewal's earlier check still counts, so the steps after it stay open.
+  const identityVerified = facts.identity.status === 'verified' || facts.identity.cleared;
   const done: Record<OnboardingStep, boolean> = {
     profile: facts.profileComplete && facts.agreementAccepted,
     services: facts.services.length > 0,
@@ -95,6 +100,8 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
   const stateOf = (step: OnboardingStep): OnboardingStepState => {
     if (step === 'background' && !backgroundRequired) return 'skipped';
     if (step === viewing) return 'current';
+    // Still counting, but a new ID check is due: the step asks for it again.
+    if (step === 'identity' && facts.identity.renewal) return inReview.identity ? 'in_review' : 'todo';
     if (done[step]) return 'done';
     if (locked[step]) return 'locked';
     return inReview[step] ? 'in_review' : 'todo';
