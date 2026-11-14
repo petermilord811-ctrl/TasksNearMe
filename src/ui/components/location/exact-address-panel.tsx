@@ -64,14 +64,15 @@ export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions,
         </div>
       )}
 
+      {/* On phones the actions stack full width (four pills of different widths wrapped raggedly); from `sm` a row. */}
       <div className="space-y-2">
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" className="min-h-11" disabled={copyState === 'pending'} aria-busy={copyState === 'pending'} onClick={copyAddress}>
+        <div className="grid gap-2 sm:flex sm:flex-wrap">
+          <Button type="button" variant="outline" className="min-h-11 max-sm:justify-start" disabled={copyState === 'pending'} aria-busy={copyState === 'pending'} onClick={copyAddress}>
             {copyState === 'pending' ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" /> : copyState === 'success' ? <Check aria-hidden="true" className="size-4" /> : <Copy aria-hidden="true" className="size-4" />}
             {t(copyState === 'pending' ? 'copyPending' : 'copyAddress')}
           </Button>
           {mapsHref ? (
-            <Button asChild variant="outline" className="min-h-11">
+            <Button asChild variant="outline" className="min-h-11 max-sm:justify-start">
               <a href={mapsHref} target="_blank" rel="noopener noreferrer">
                 <ExternalLink aria-hidden="true" className="size-4" />
                 {t('openMaps')}
@@ -80,16 +81,16 @@ export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions,
             </Button>
           ) : (
             // TODO(contract): routes.external.googleMapsSearch(address: ExactAddress): string.
-            <Button type="button" variant="outline" className="min-h-11" disabled aria-describedby={mapsHintId}>
+            <Button type="button" variant="outline" className="min-h-11 max-sm:justify-start" disabled aria-describedby={mapsHintId}>
               <ExternalLink aria-hidden="true" className="size-4" />
               {t('openMaps')}
             </Button>
           )}
         </div>
         {/* Directions in the helper's own maps app, when the app supplies them (nothing is stored or geocoded). */}
-        {directions && <div className="flex flex-wrap gap-2">
+        {directions && <div className="grid gap-2 sm:flex sm:flex-wrap">
           {([['google', directions.google], ['apple', directions.apple]] as const).map(([app, href]) => (
-            <Button key={app} asChild variant="outline" className="min-h-11">
+            <Button key={app} asChild variant="outline" className="min-h-11 max-sm:justify-start">
               <a href={href} target="_blank" rel="noopener noreferrer">
                 <Navigation aria-hidden="true" className="size-4" />
                 {t(app === 'google' ? 'directionsGoogle' : 'directionsApple')}

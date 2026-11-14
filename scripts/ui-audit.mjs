@@ -3,9 +3,9 @@
  * UI audit over the preview harness (completion plan 5.10): opens every preview (or the ones matching --filter)
  * at the given widths and reports what screenshots and axe don't:
  *
- *   - tap targets smaller than 24 × 24 CSS px (WCAG 2.2, 2.5.8), leaving out links inside a sentence (the
- *     criterion's "inline" exception); and controls under 44 px tall or wide, the app's own minimum (`min-h-11`),
- *     as notes;
+ *   - tap targets smaller than 24 × 24 CSS px that crowd another target (WCAG 2.2, 2.5.8, with its label, inline
+ *     and spacing exceptions, as tests/e2e/support/keyboard.ts counts them); and controls under 44 px tall or wide,
+ *     the app's own minimum (`min-h-11`), as notes;
  *   - text that is clipped without meaning to be: a box that hides overflow, holds text, and has more content than
  *     room, with no ellipsis or line clamp;
  *   - content past the right or left edge of the viewport that no clipping or scrolling box contains, and a page
@@ -73,19 +73,46 @@ function audit(rootSelector) {
     return (rect.width <= 1 && rect.height <= 1) || style.clip === 'rect(0px, 0px, 0px, 0px)' || style.clipPath === 'inset(50%)';
   };
 
-  // 1. Tap targets.
-  const interactive = root.querySelectorAll('a[href], button, input:not([type=hidden]), select, textarea, summary, [role=button], [role=tab], [role=checkbox], [role=radio], [role=switch], [role=menuitem], [role=option], [role=slider]');
+  // 1. Tap targets, as WCAG 2.2 counts them (the same rules as tests/e2e/support/keyboard.ts `smallTargets`): a
+  // control's labels count as part of it (a radio drawn by its label), and an undersized target passes when a
+  // 24 px circle on its centre touches no other target (the spacing exception).
+  const interactive = root.querySelectorAll('a[href], button, input:not([type=hidden]), select, textarea, summary, [role=button], [role=link], [role=tab], [role=checkbox], [role=radio], [role=switch], [role=menuitem], [role=option], [role=slider]');
+  const targets = [];
   for (const element of interactive) {
     if (hidden(element) || srOnly(element)) continue;
-    // A radio or checkbox drawn by its label: the label is the target.
-    const target = (element.matches('input[type=radio], input[type=checkbox]') && element.closest('label')) || element;
-    const rect = target.getBoundingClientRect();
-    const style = getComputedStyle(target);
-    const inline = target.tagName === 'A' && style.display === 'inline' && (target.parentElement?.textContent?.trim().length ?? 0) > (target.textContent?.trim().length ?? 0) + 2;
+    const style = getComputedStyle(element);
+    const parent = element.parentElement;
+    const inline = element.tagName === 'A' && style.display === 'inline' && parent && (parent.textContent?.trim().length ?? 0) > (element.textContent?.trim().length ?? 0) + 2;
     if (inline) continue;
-    const size = `${Math.round(rect.width)}×${Math.round(rect.height)}`;
-    if (rect.width < 24 || rect.height < 24) failures.push({ kind: 'small-target', where: describe(element), size });
-    else if ((rect.height < 44 || rect.width < 44) && !element.matches('input[type=radio], input[type=checkbox]')) notes.push({ kind: 'under-44', where: describe(element), size });
+    const box = element.getBoundingClientRect();
+    let { left, top, right, bottom } = box;
+    for (const label of element.labels ?? []) {
+      const area = label.getBoundingClientRect();
+      if (area.width === 0 || area.height === 0) continue;
+      left = Math.min(left, area.left); top = Math.min(top, area.top); right = Math.max(right, area.right); bottom = Math.max(bottom, area.bottom);
+    }
+    targets.push({ element, left, top, right, bottom });
+  }
+  const undersized = targets.filter((target) => target.right - target.left < 24 || target.bottom - target.top < 24);
+  const centre = (target) => ({ x: (target.left + target.right) / 2, y: (target.top + target.bottom) / 2 });
+  const distanceToBox = (point, target) => Math.hypot(Math.max(target.left - point.x, 0, point.x - target.right), Math.max(target.top - point.y, 0, point.y - target.bottom));
+  const contains = (outer, inner) => outer.left <= inner.left && outer.top <= inner.top && outer.right >= inner.right && outer.bottom >= inner.bottom;
+  for (const target of undersized) {
+    const point = centre(target);
+    const crowded = targets.some((other) => {
+      if (other === target || contains(other, target) || contains(target, other) || other.element.contains(target.element) || target.element.contains(other.element)) return false;
+      if (undersized.includes(other)) {
+        const otherPoint = centre(other);
+        return Math.hypot(point.x - otherPoint.x, point.y - otherPoint.y) < 24;
+      }
+      return distanceToBox(point, other) < 12;
+    });
+    if (crowded) failures.push({ kind: 'small-target', where: describe(target.element), size: `${Math.round(target.right - target.left)}×${Math.round(target.bottom - target.top)}` });
+  }
+  for (const target of targets) {
+    const width = target.right - target.left;
+    const height = target.bottom - target.top;
+    if (width >= 24 && height >= 24 && (width < 44 || height < 44)) notes.push({ kind: 'under-44', where: describe(target.element), size: `${Math.round(width)}×${Math.round(height)}` });
   }
 
   // 2. Clipped text.

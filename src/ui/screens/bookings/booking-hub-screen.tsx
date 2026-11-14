@@ -201,7 +201,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
               : t('window', { date: formatDate(schedule.windowStart), time: formatTimeRange(schedule.windowStart, schedule.windowEnd) })}</dd>
           </div>
         </dl>
-        <div className="border-t border-foreground/[0.07] pt-5 dark:border-white/[0.07]"><GeneralArea location={data.location} /></div>
+        <div className="border-t border-foreground/[0.07] pt-5 dark:border-white/[0.07]"><GeneralArea location={data.location} privacyNote={!(data.addressVisibility === 'visible' && data.exactAddress)} /></div>
         {data.addressVisibility !== 'visible' && <p className="flex items-start gap-2 rounded-2xl bg-muted/70 px-3.5 py-3 text-sm">
           <Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span>{t(`address.${data.addressVisibility}`)}</span>
         </p>}

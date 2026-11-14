@@ -9,10 +9,12 @@ export interface GeneralAreaProps {
   showMap?: boolean;
   /** Previews and tests: the drawn map only. */
   liveMap?: boolean;
+  /** False where the exact address is shown on the same page (a confirmed booking): "the exact address is private" would contradict it. */
+  privacyNote?: boolean;
   className?: string;
 }
 
-export function GeneralArea({ location, showMap = false, liveMap = true, className }: GeneralAreaProps) {
+export function GeneralArea({ location, showMap = false, liveMap = true, privacyNote = true, className }: GeneralAreaProps) {
   const t = useTranslations('location');
 
   if (location.kind === 'remote') {
@@ -37,7 +39,7 @@ export function GeneralArea({ location, showMap = false, liveMap = true, classNa
         {location.distanceBand && (
           <p className="text-sm text-muted-foreground">{t(`distance.${location.distanceBand}`)}</p>
         )}
-        <p className="text-sm text-muted-foreground">{t('areaDescription')}</p>
+        {privacyNote && <p className="text-sm text-muted-foreground">{t('areaDescription')}</p>}
       </div>
       {showMap && <GeneralAreaMap location={location} live={liveMap} />}
     </div>

@@ -12,6 +12,7 @@ import { TopBadges } from './achievement-badges';
 
 export interface HelperCardProps {
   helper: HelperSummary;
+  /** `compact` once a price is on the table (an offer, a booking): who they are and why to trust them, without their services' prices. */
   variant?: 'compact' | 'full';
 }
 
@@ -52,7 +53,7 @@ export function HelperCard({ helper, variant = 'full' }: HelperCardProps) {
           </p>
         )}
       </div>
-      <dl aria-label={t('services')} className="space-y-3 border-t border-border pt-4 text-sm">
+      {variant === 'full' && <dl aria-label={t('services')} className="space-y-3 border-t border-border pt-4 text-sm">
         {helper.services.map((service) => (
           <div key={service.categorySlug} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
             <dt>{t(`categories.${service.categorySlug}`)}</dt>
@@ -68,7 +69,7 @@ export function HelperCard({ helper, variant = 'full' }: HelperCardProps) {
             </dd>
           </div>
         ))}
-      </dl>
+      </dl>}
     </article>
   );
 }

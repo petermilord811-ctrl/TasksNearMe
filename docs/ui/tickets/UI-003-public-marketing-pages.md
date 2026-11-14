@@ -27,7 +27,7 @@ The public site's marketing screens: home, market, category, how it works, becom
 | Component | File | Props | Notes |
 |---|---|---|---|
 | `PublicTaskCard` | `components/tasks/public-task-card.tsx` | `task: TaskPublicView`, `now: ISODateTime`, `headingLevel?: 2 \| 3` | Title links to `routes.publicTask(slug)`. Shows the category icon and name; the area name or "Remote"; the date and window ("Sat, Nov 21 · 10:00 am–1:00 pm", or "Any time on Wed, Nov 25" when flexible); the budget ("$60.00", or "$35.00/h, up to 4 h"); the offer count ("3 offers" / "No offers yet"); "Posted 2 days ago"; and poster trust signals (name, phone verified, member since). **No photos, no address.** |
-| `HelperCard` | `components/people/helper-card.tsx` | `helper: HelperSummary`, `variant?: 'compact' \| 'full'` | Initials avatar, name, headline, area, compact `VerificationBadges`, `RatingStars`, completed count, "Usually responds in about 20 min", services with "from $45.00" or "$35.00/h", and a founding-helper badge when `foundingHelperNumber` is set. Links to `routes.helperProfile(handle)` |
+| `HelperCard` | `components/people/helper-card.tsx` | `helper: HelperSummary`, `variant?: 'compact' \| 'full'` | Initials avatar, name, headline, area, compact `VerificationBadges`, `RatingStars`, completed count, "Usually responds in about 20 min", services with "from $45.00" or "$35.00/h" (`full` only: `compact` is used once a price is on the table, on the booking confirm page and the booking page; changed in plan 5.10), and a founding-helper badge when `foundingHelperNumber` is set. Links to `routes.helperProfile(handle)` |
 
 **Screens** (`src/ui/screens/public/`). Each has exactly one H1, and is synchronous; use small client islands only for tabs and accordions.
 

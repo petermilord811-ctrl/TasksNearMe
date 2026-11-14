@@ -51,12 +51,12 @@ describe('HelperCard', () => {
     expect(screen.getByText('$35.00/h')).toBeInTheDocument();
   });
 
-  it('keeps both supplied services and verification visible in compact mode', () => {
+  it('leaves out the services and their prices in compact mode (an offer or booking has its own price), keeping verification', () => {
     renderHelper(lee, 'compact');
-    expect(screen.getByText('Furniture assembly')).toBeInTheDocument();
-    expect(screen.getByText('Computer and phone help')).toBeInTheDocument();
-    expect(screen.getAllByText('from $40.00')).toHaveLength(2);
+    expect(screen.queryByText('Furniture assembly')).not.toBeInTheDocument();
+    expect(screen.queryByText(/from \$/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Background checked' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: lee.displayName })).toHaveAttribute('href', routes.helperProfile(lee.handle));
   });
 
   it('does not invent a response time or amount when optional data is absent', () => {
