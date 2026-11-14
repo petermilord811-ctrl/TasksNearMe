@@ -228,9 +228,9 @@
       "city_open": "TasksNearMe is open in {title}. Choose your neighborhood to start taking tasks.",
       "reward_earned": "Your welcome gift card{hasAmount, select, yes { of {amount}} other {}} is yours: your phone, ID and background checks all passed.",
       "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on your Rewards page.",
-      "community_reply": "{actorName} answered your post “{title}”.",
-      "community_answer_pinned": "{actorName} pinned your answer on “{title}”.",
-      "community_helpful": "{count, plural, one {A neighbor found your {on, select, reply {answer} other {post}} on “{title}” helpful} other {# neighbors found your {on, select, reply {answer} other {post}} on “{title}” helpful}}.",
+      "community_reply": "{actorName} answered your post: {title}.",
+      "community_answer_pinned": "{actorName} pinned your answer on: {title}.",
+      "community_helpful": "{count, plural, one {A neighbor found your {on, select, reply {answer} other {post}} helpful: {title}} other {# neighbors found your {on, select, reply {answer} other {post}} helpful: {title}}}.",
       "question_received": "{actorName} asked a question about {title}.",
       "question_answered": "{actorName} answered your question about {title}."
     },

@@ -1,7 +1,7 @@
 {
   "title": "Preguntas",
   "count": "{count, plural, =0 {Aún sin preguntas} one {# pregunta} other {# preguntas}}",
-  "intro": "Los ayudantes preguntan antes de ofertar; las respuestas son para todos los ayudantes. Solo los miembros con sesión iniciada las ven.",
+  "intro": "Los ayudantes preguntan antes de ofertar; las respuestas son para todos los ayudantes. Solo las ve quien inició sesión.",
   "ask": {
     "label": "Hacer una pregunta",
     "placeholder": "¿Qué necesitas saber para hacer una buena oferta?",
@@ -19,7 +19,7 @@
   "answer": {
     "from": "Respuesta",
     "label": "Tu respuesta",
-    "placeholder": "Responde para todos los ayudantes que lo lean",
+    "placeholder": "Todos los ayudantes verán tu respuesta",
     "submit": "Responder",
     "edit": "Editar respuesta",
     "submitting": "Enviando…",
