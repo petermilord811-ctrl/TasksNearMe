@@ -214,6 +214,25 @@ export const kaiDuplicateVerification: AdminPersonVerification = {
 /** A support agent sees Rosa's statuses and answers, but can't open the photos or decide. */
 export const rosaReadOnlyVerification: AdminPersonVerification = { ...rosaVerification, actions: [] };
 
+/**
+ * Photos in review not read automatically yet (5.18): approving reads them first; after `until`, or with no
+ * reader set up, approval goes ahead without the duplicate-ID check.
+ */
+const { autoCheck: _read, ...rosaUnread } = rosaInReview;
+const rosaNotRead: AdminIdentityCaptureView = { ...rosaUnread, reading: { state: 'waiting', until: '2026-11-19T18:35:00.000Z' } };
+export const rosaReadingWaitingVerification: AdminPersonVerification = { ...rosaVerification, identity: { ...rosaVerification.identity, captures: [rosaNotRead, rosaTurnedDown] } };
+export const rosaReadingSkippedVerification: AdminPersonVerification = {
+  ...rosaVerification,
+  identity: { ...rosaVerification.identity, captures: [{ ...rosaNotRead, reading: { state: 'skipped', why: 'no_reader' } }, rosaTurnedDown] },
+};
+export const adminVerificationsReadingData: AdminVerificationsPageData = {
+  ...adminVerificationsIdentityData,
+  identity: [
+    { id: 'idc_rosa', person: rosa, kind: 'capture', at: '2026-11-19T18:20:00.000Z', attempts: 2, capture: { documentType: 'drivers_license', overdue: false, reading: { state: 'waiting', until: '2026-11-19T18:35:00.000Z' } } },
+    { id: 'idc_omar', person: omar, kind: 'capture', at: '2026-11-18T09:30:00.000Z', attempts: 1, capture: { documentType: 'state_id', overdue: true, reading: { state: 'skipped', why: 'timed_out' } } },
+  ],
+};
+
 /** A poster who never started helper onboarding. */
 export const posterVerification: AdminPersonVerification = {
   phone: { verified: true, last4: '0101', verifiedAt: '2026-09-04T15:00:00.000Z' },

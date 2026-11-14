@@ -163,6 +163,8 @@
     "toReview": "Came back \"consider\": review the report at Checkr",
     "idAutoAllMatch": "Automatic reading: name matches, 18 or older, not expired.",
     "idAutoCheckFlag": "Automatic reading: something to check.",
+    "idReadingPending": "Not read automatically yet",
+    "idReadingSkipped": "No automatic reading: no duplicate-ID check",
     "doubleCheckDetail": "Photos approved {approved} · the provider: {outcome}",
     "duplicateDetail": "Same ID as: {names}"
   },
@@ -183,7 +185,10 @@
     "sectionCaptureOpened": "Person: ID photos opened",
     "sectionCaptureReadOnly": "Person: ID photos, read-only",
     "sectionDoubleCheck": "Person: the double check didn't confirm",
-    "sectionDuplicate": "Person: the same ID on another account"
+    "sectionDuplicate": "Person: the same ID on another account",
+    "sectionReadingWaiting": "Person: ID photos not read automatically yet",
+    "sectionReadingSkipped": "Person: ID photos with no automatic reading",
+    "readingQueue": "Queues: IDs waiting for the automatic reading"
   },
   "capture": {
     "title": "Our ID photos",
@@ -271,7 +276,12 @@
       "submitReject": "Ask for new photos"
     },
     "duplicateOf": "The same ID is on: ",
-    "duplicateCleared": "Staff found the same ID in order on {date}."
+    "duplicateCleared": "Staff found the same ID in order on {date}.",
+    "reading": {
+      "waiting": "Not read automatically yet. Opening the photos or approving reads them; after {time} you can approve without the reading.",
+      "no_reader": "No automatic reading here (no reader is set up): approving skips the duplicate-ID check, and the audit log says so.",
+      "timed_out": "The automatic reading didn’t answer in time: approving skips the duplicate-ID check, and the audit log says so."
+    }
   },
   "providerOutcome": "The provider's result: {outcome}",
   "providerOutcomes": {

@@ -16,7 +16,7 @@ import { readPendingIds } from '@/modules/verification/auto-check';
 import { acceptIdentityNotice, submitIdentityCapture } from '@/modules/verification/capture';
 import { createDevVerificationProviders } from '@/modules/verification/providers';
 import { addressVerifications, identityCaptures, identityVerifications, payoutAccounts } from '@/modules/verification/schema';
-import { decideIdentityCapture, getAdminVerificationsPage, getPersonVerification, verificationAction } from '@/modules/verification/staff';
+import { APPROVED_WITHOUT_READING, decideIdentityCapture, getAdminVerificationsPage, getPersonVerification, ID_READING_WAIT_MS, verificationAction } from '@/modules/verification/staff';
 import { computeOnboarding } from '@/modules/verification/progress';
 import { captureSummary, loadOnboardingState, verificationSummary } from '@/modules/verification/state';
 import { runVerificationTimers } from '@/modules/verification/timers';
@@ -50,7 +50,11 @@ const RENEWER = 'usr_ix_renewer';
 const LAPSED = 'usr_ix_lapsed';
 const RENAMED = 'usr_ix_renamed';
 const CLIENT = 'usr_ix_client';
-const PEOPLE = [FIRST, SECOND, RENEWER, LAPSED, RENAMED, CLIENT];
+const WAIT_NONE = 'usr_ix_wait_none';
+const WAIT_READ = 'usr_ix_wait_read';
+const WAIT_DOWN = 'usr_ix_wait_down';
+const WAIT_DUP = 'usr_ix_wait_dup';
+const PEOPLE = [FIRST, SECOND, RENEWER, LAPSED, RENAMED, CLIENT, WAIT_NONE, WAIT_READ, WAIT_DOWN, WAIT_DUP];
 const NUMBER = '31415926';
 const t0 = new Date('2026-11-20T16:00:00.000Z');
 const at = (days: number) => new Date(t0.getTime() + days * DAY);
@@ -272,5 +276,64 @@ describe('a legal-name change', () => {
     await db.insert(identityVerifications).values({ id: 'idv_ix_client', userId: CLIENT, provider: 'dev', providerSessionId: 'vs_ix_client', status: 'verified', isAdult: true, nameMatches: true, verifiedAt: at(-5), createdAt: at(-5), updatedAt: at(-5) });
     expect(await saveAccountProfile(db, CLIENT, { firstName: 'Cleo', lastName: 'Newname' }, at(2))).toEqual({ ok: true, code: 'saved' });
     expect(await db.select().from(identityVerifications).where(and(eq(identityVerifications.userId, CLIENT), eq(identityVerifications.requestedReason, 'name_changed')))).toHaveLength(0);
+  });
+});
+
+describe('approval waits for the automatic reading (5.18)', () => {
+  const reading = (reader: IdDocumentReader | null) => ({ storage, files: fileCipher, reader, hasher });
+  /** Another person's license: no duplicate with anyone above. */
+  const ownLicense = (number: string): IdDocumentReader => ({ name: 'stub', read: async () => ({ readable: true, documentType: 'drivers_license' as const, givenNames: 'Vera', surname: 'Tester', dateOfBirth: '1991-02-03', expiryDate: '2031-01-31', issuingState: 'TX', documentNumber: number }) });
+  const broken: IdDocumentReader = { name: 'stub', read: async () => { throw new Error('the reader crashed'); } };
+  const submitted = async (id: string, when: Date) => {
+    await helper(id);
+    await acceptIdentityNotice(db, id, { consent: true }, when);
+    expect(await submitIdentityCapture(deps, id, await captureForm(), when)).toEqual({ ok: true, code: 'submitted' });
+    return (await capturesOf(id)).at(-1)!;
+  };
+  const approve = (captureId: string, when: Date, reader: IdDocumentReader | null) => decideIdentityCapture(db, taylor, { captureId, decision: 'approve', note: 'License and selfie match.' }, when, { reading: reading(reader) });
+  const approvalAudit = async (userId: string) => (await db.select().from(auditLog).where(and(eq(auditLog.targetId, userId), eq(auditLog.action, 'identity_capture.approved'))))[0];
+
+  it('without a reader, approves without the reading and the audit log says so', async () => {
+    const capture = await submitted(WAIT_NONE, at(10));
+    const view = await getPersonVerification(db, taylor, WAIT_NONE, at(10), false);
+    expect(view.identity.captures[0]!.reading).toEqual({ state: 'skipped', why: 'no_reader' });
+    expect(await approve(capture.id, at(10), null)).toEqual({ ok: true, code: 'updated' });
+    expect((await approvalAudit(WAIT_NONE))!.metadata).toMatchObject({ captureId: capture.id, withoutReading: 'no_reader', remark: APPROVED_WITHOUT_READING });
+  });
+
+  it('reads the photos first when the job hasn’t, so the ID is hashed before anyone approves', async () => {
+    const capture = await submitted(WAIT_READ, at(11));
+    const view = await getPersonVerification(db, taylor, WAIT_READ, at(11), true);
+    expect(view.identity.captures[0]!.reading).toEqual({ state: 'waiting', until: new Date(at(11).getTime() + ID_READING_WAIT_MS).toISOString() });
+    expect(await approve(capture.id, at(11), ownLicense('27182818'))).toEqual({ ok: true, code: 'updated' });
+    const [read] = await capturesOf(WAIT_READ);
+    expect(read).toMatchObject({ status: 'approved', autoCheck: expect.objectContaining({ readable: true }) });
+    expect(read!.documentHash).toMatch(/^[0-9a-f]{64}$/);
+    expect((await approvalAudit(WAIT_READ))!.metadata).not.toHaveProperty('withoutReading');
+  });
+
+  it('holds approval while the reader fails, for 15 minutes; then lets it through without the reading', async () => {
+    const capture = await submitted(WAIT_DOWN, at(12));
+    expect(await approve(capture.id, new Date(at(12).getTime() + 60_000), broken)).toEqual({ ok: false, code: 'not_ready' });
+    expect((await capturesOf(WAIT_DOWN))[0]!.status).toBe('submitted');
+    expect(await approve(capture.id, new Date(at(12).getTime() + ID_READING_WAIT_MS + 60_000), broken)).toEqual({ ok: true, code: 'updated' });
+    expect((await approvalAudit(WAIT_DOWN))!.metadata).toMatchObject({ withoutReading: 'timed_out', remark: APPROVED_WITHOUT_READING });
+  });
+
+  it('stops the approval when that reading finds the same ID on another account, and shows it to the deciders only', async () => {
+    const capture = await submitted(WAIT_DUP, at(13));
+    expect(await approve(capture.id, at(13), sameLicense)).toEqual({ ok: false, code: 'version_conflict' });
+    // The same license as the accounts above (whichever of them the flag names).
+    const [flagged] = await capturesOf(WAIT_DUP);
+    expect(flagged).toMatchObject({ status: 'submitted', duplicateOfUserId: expect.stringMatching(/^usr_ix_(first|second)$/) });
+    const other = flagged!.duplicateOfUserId!;
+    // Who else holds the ID: the capture deciders (trust and safety here) see it; a support agent sees none.
+    const forTaylor = await getPersonVerification(db, taylor, WAIT_DUP, at(13), true);
+    expect(forTaylor.identity.captures[0]!.duplicateOf?.map((person) => person.id)).toContain(other);
+    const forAlex = await getPersonVerification(db, alex, WAIT_DUP, at(13), true);
+    expect(forAlex.identity.captures[0]!.duplicateOf).toBeUndefined();
+    const queueRow = (page: Awaited<ReturnType<typeof getAdminVerificationsPage>>) => page.identity.find((row) => row.id === capture.id);
+    expect(queueRow(await getAdminVerificationsPage(db, taylor, 'identity', at(13), true))?.duplicate?.others.map((person) => person.id)).toContain(other);
+    expect(queueRow(await getAdminVerificationsPage(db, alex, 'identity', at(13), true))?.duplicate?.others).toEqual([]);
   });
 });

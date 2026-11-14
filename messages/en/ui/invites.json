@@ -72,6 +72,7 @@
       "limit_reached": "Request — account limit",
       "identity_required": "ID check needed",
       "paused": "Request — bookings paused",
+      "not_ready": "Request — not ready yet",
       "unknown": "Request — couldn't send"
     }
   }

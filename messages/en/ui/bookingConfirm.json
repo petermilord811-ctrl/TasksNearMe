@@ -85,6 +85,7 @@
       "limit_reached": "Account limit reached",
       "identity_required": "ID check needed",
       "paused": "Bookings paused",
+      "not_ready": "Not ready yet",
       "unknown": "Payment outcome unknown"
     },
     "paysLater": "Booked more than 14 days ahead: paid later"

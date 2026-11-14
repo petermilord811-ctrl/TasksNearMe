@@ -92,6 +92,7 @@ function CaptureList({ captures, canView, canReview, revealed, onOpen, onReview,
         <p className="tabular-nums"><time dateTime={capture.submittedAt} title={formatRelative(capture.submittedAt, now)}>{t('capture.sentOn', { date: formatDateTime(capture.submittedAt) })}</time></p>
         <p>{t('capture.prompt', { prompt: t(`capture.prompts.${capture.prompt}`) })}</p>
         {capture.autoCheck && <IdAutoCheck check={capture.autoCheck} />}
+        {capture.reading && <p className={capture.reading.state === 'skipped' ? 'font-medium text-warning' : 'text-muted-foreground'}>{capture.reading.state === 'waiting' ? t('capture.reading.waiting', { time: formatDateTime(capture.reading.until) }) : t(`capture.reading.${capture.reading.why}`)}</p>}
         {capture.decidedAt && <p>{t('capture.decided', { date: formatDateTime(capture.decidedAt), name: capture.decidedBy ?? t('staff') })}</p>}
         {capture.rejectionReason && <p>{t('capture.rejectedFor', { reason: t(`capture.rejectionReasons.${capture.rejectionReason}`) })}</p>}
         {capture.note && <p className="break-words text-muted-foreground">{t('capture.note', { note: capture.note })}</p>}

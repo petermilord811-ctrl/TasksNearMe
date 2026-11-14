@@ -85,6 +85,7 @@
       "limit_reached": "Límite de la cuenta alcanzado",
       "identity_required": "Se necesita verificación de identidad",
       "paused": "Reservas en pausa",
+      "not_ready": "Todavía no está listo",
       "unknown": "Resultado del pago desconocido"
     },
     "paysLater": "Reservado con más de 14 días de anticipación: se paga después"

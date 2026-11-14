@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or } from 'drizzle-orm';
 import type {
   ActionResult,
+  IdentityReadingState,
   AddressAutoCheck,
   AddressDecisionInput,
   AddressDocumentType,
@@ -42,6 +43,7 @@ import {
   identityCaptureRevealInputSchema,
   verificationActionInputSchema,
 } from '@/contracts';
+import { aiWritingSetUp } from '@/integrations/ai';
 import type { FileStorage } from '@/integrations/storage';
 import { AGREEMENT_VERSIONS } from '@/modules/accounts/agreements';
 import { users } from '@/modules/accounts/schema';
@@ -53,6 +55,7 @@ import { auditLog } from '@/platform/audit/schema';
 import type { ByteCipher, FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { readPendingIds, type IdReadingDeps } from './auto-check';
 import { captureFileIds, IDENTITY_FILE_KINDS } from './capture';
 import type { VerificationProviders } from './providers';
 import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications, type StoredAddressAutoCheck, type StoredIdentityAutoCheck } from './schema';
@@ -166,7 +169,24 @@ async function addressQueue(db: Db, now: Date) {
   });
 }
 
-async function identityQueue(db: Db, now: Date): Promise<AdminIdentityReviewRow[]> {
+/** How long approval waits for a configured reader that hasn't answered (completion plan 5.18). */
+export const ID_READING_WAIT_MS = 15 * 60_000;
+/** What the audit log says of an approval made without the automatic reading. */
+export const APPROVED_WITHOUT_READING = 'approved without the automatic reading (no duplicate check)';
+
+/**
+ * Photos in review without their automatic reading: approval reads them first when a reader is set up (and
+ * waits up to `ID_READING_WAIT_MS` for one that doesn't answer); without a reader it goes ahead without the
+ * duplicate check. Undefined once the reading ran, readable or not.
+ */
+export function identityReadingState(capture: { status: string; autoCheck: unknown; submittedAt: Date }, readerOn: boolean, now: Date): IdentityReadingState | undefined {
+  if (capture.status !== 'submitted' || capture.autoCheck !== null) return undefined;
+  if (!readerOn) return { state: 'skipped', why: 'no_reader' };
+  const until = new Date(capture.submittedAt.getTime() + ID_READING_WAIT_MS);
+  return now < until ? { state: 'waiting', until: until.toISOString() } : { state: 'skipped', why: 'timed_out' };
+}
+
+async function identityQueue(db: Db, now: Date, readerOn = aiWritingSetUp(), deciding = true): Promise<AdminIdentityReviewRow[]> {
   // People who could need staff: photos waiting for review, a verified ID whose name didn't match, failed
   // tries, or the same ID on two accounts (not yet cleared).
   const [fromChecks, fromCaptures] = await Promise.all([
@@ -195,7 +215,8 @@ async function identityQueue(db: Db, now: Date): Promise<AdminIdentityReviewRow[
     if (standing.blocked === 'duplicate_id' && standing.duplicate) {
       // The same ID on another account: staff look at both before the double check opens.
       const flagged = theirs.find((row) => row.id === standing.duplicate!.id)!;
-      const others = flagged.documentHash ? ((await othersWithSameId(db, [flagged.documentHash], person.id)).get(flagged.documentHash) ?? []) : [];
+      // Who else holds the same ID is for the capture deciders only (5.18); everyone else sees that there is one.
+      const others = deciding && flagged.documentHash ? ((await othersWithSameId(db, [flagged.documentHash], person.id)).get(flagged.documentHash) ?? []) : [];
       const autoCheck = identityAutoCheckView(flagged.autoCheck);
       out.push({
         id: flagged.id,
@@ -212,13 +233,14 @@ async function identityQueue(db: Db, now: Date): Promise<AdminIdentityReviewRow[
     }
     if (waiting) {
       const autoCheck = identityAutoCheckView(waiting.autoCheck);
+      const reading = identityReadingState(waiting, readerOn, now);
       out.push({
         id: waiting.id,
         person: personSummaryOf(person),
         kind: 'capture',
         at: waiting.submittedAt.toISOString(),
         attempts: standing.attempts,
-        capture: { documentType: waiting.documentType as IdentityDocumentType, ...(autoCheck ? { autoCheck } : {}), overdue: now.getTime() - waiting.submittedAt.getTime() > IDENTITY_CAPTURE_RULES.responseTargetHours * HOUR_MS },
+        capture: { documentType: waiting.documentType as IdentityDocumentType, ...(autoCheck ? { autoCheck } : {}), overdue: now.getTime() - waiting.submittedAt.getTime() > IDENTITY_CAPTURE_RULES.responseTargetHours * HOUR_MS, ...(reading ? { reading } : {}) },
       });
       continue;
     }
@@ -275,8 +297,8 @@ export async function getVerificationCounts(db: Db, now: Date): Promise<{ counts
   return { counts: { address: address.length, identity: identity.length, background: background.length }, ...(oldest ? { oldestAt: oldest } : {}) };
 }
 
-export async function getAdminVerificationsPage(db: Db, staff: StaffActor, queue: string | undefined, now: Date): Promise<AdminVerificationsPageData> {
-  const [address, identity, background] = await Promise.all([addressQueue(db, now), identityQueue(db, now), backgroundQueue(db, now)]);
+export async function getAdminVerificationsPage(db: Db, staff: StaffActor, queue: string | undefined, now: Date, readerOn = aiWritingSetUp()): Promise<AdminVerificationsPageData> {
+  const [address, identity, background] = await Promise.all([addressQueue(db, now), identityQueue(db, now, readerOn, canDecideVerification(staff)), backgroundQueue(db, now)]);
   const chosen = (ADMIN_VERIFICATION_QUEUES as readonly string[]).includes(queue ?? '') ? (queue as AdminVerificationQueue) : address.length || !(identity.length || background.length) ? 'address' : identity.length ? 'identity' : 'background';
   return {
     queue: chosen,
@@ -290,7 +312,7 @@ export async function getAdminVerificationsPage(db: Db, staff: StaffActor, queue
 
 // ---- A person's verification ----------------------------------------------------------------------
 
-export async function getPersonVerification(db: Db, staff: StaffActor, userId: string, now: Date): Promise<AdminPersonVerification> {
+export async function getPersonVerification(db: Db, staff: StaffActor, userId: string, now: Date, readerOn = aiWritingSetUp()): Promise<AdminPersonVerification> {
   const state = await loadOnboardingState(db, userId, now);
   const { identity, address, background } = state;
   const proofRows = state.addressRows.filter((row) => row.status !== 'withdrawn').reverse().slice(0, 5);
@@ -302,10 +324,12 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
       return ids.length ? db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids)) : [];
     })(),
   ]);
-  const flagged = captureRows.filter((row) => row.duplicateOfUserId && row.documentHash);
+  // Who else holds the same ID: the capture deciders only (5.18).
+  const flagged = canDecideVerification(staff) ? captureRows.filter((row) => row.duplicateOfUserId && row.documentHash) : [];
   const sameId = await othersWithSameId(db, flagged.map((row) => row.documentHash!), userId);
   const captures: AdminIdentityCaptureView[] = captureRows.map((row) => {
     const autoCheck = identityAutoCheckView(row.autoCheck);
+    const reading = identityReadingState(row, readerOn, now);
     const decidedBy = deciders.find((person) => person.id === row.decidedByUserId)?.name;
     const duplicateOf = row.duplicateOfUserId && row.documentHash ? sameId.get(row.documentHash) : undefined;
     return {
@@ -315,6 +339,7 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
       submittedAt: row.submittedAt.toISOString(),
       prompt: row.promptKey as LivenessPrompt,
       ...(autoCheck ? { autoCheck } : {}),
+      ...(reading ? { reading } : {}),
       photos: photosOf(row),
       ...(row.filesDeletedAt ? { photosDeletedAt: row.filesDeletedAt.toISOString() } : {}),
       ...(row.decidedAt ? { decidedAt: row.decidedAt.toISOString() } : {}),
@@ -447,12 +472,51 @@ export async function decideAddress(db: Db, staff: StaffActor, input: AddressDec
  * Approves or rejects the ID photos in review (our own check, stage 1). Approval opens the provider's
  * double check for the helper; a rejection gives them the reason (never the note), and they can try
  * again within the limits (an `under_18` rejection closes helper setup until staff allow new tries).
+ *
+ * Approval waits for the automatic reading (5.18), which also hashes the ID to find it on other accounts: with
+ * `reading` (the reader the job uses) it reads the photos now if the job hasn't yet. A duplicate found that way
+ * stops the approval (`version_conflict`: staff see the other account first). A reader that doesn't answer holds
+ * approval for `ID_READING_WAIT_MS` (`not_ready`); with no reader, or after that, approval goes ahead and the audit
+ * log says it was made without the reading.
  */
-export async function decideIdentityCapture(db: Db, staff: StaffActor, input: IdentityCaptureDecisionInput, now: Date): Promise<ActionResult> {
+/**
+ * Reads one capture's photos now when it is in review without its automatic reading (staff opened it, or are
+ * approving it), instead of waiting for the job. True when it read them. A failure is logged and leaves the
+ * capture for the job.
+ */
+export async function readCaptureNow(db: Db, reading: IdReadingDeps | null | undefined, captureId: string, now: Date): Promise<boolean> {
+  if (!reading?.reader) return false;
+  const [capture] = await db.select({ userId: identityCaptures.userId, status: identityCaptures.status, autoCheck: identityCaptures.autoCheck }).from(identityCaptures).where(eq(identityCaptures.id, captureId)).limit(1);
+  if (!capture || capture.status !== 'submitted' || capture.autoCheck !== null) return false;
+  try {
+    return (await readPendingIds(db, reading, now, { userIds: [capture.userId] })) > 0;
+  } catch (error) {
+    console.error('[verification] reading the ID for staff failed', error);
+    return false;
+  }
+}
+
+export async function decideIdentityCapture(db: Db, staff: StaffActor, input: IdentityCaptureDecisionInput, now: Date, options: { reading?: IdReadingDeps | null } = {}): Promise<ActionResult> {
   if (!canDecideVerification(staff)) return { ok: false, code: 'not_allowed' };
   const parsed = identityCaptureDecisionInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const { captureId, decision, reason, note } = parsed.data;
+  let withoutReading: 'no_reader' | 'timed_out' | undefined;
+  if (decision === 'approve') {
+    let [capture] = await db.select().from(identityCaptures).where(eq(identityCaptures.id, captureId)).limit(1);
+    if (!capture || capture.status !== 'submitted') return { ok: false, code: 'not_allowed' };
+    const reader = options.reading?.reader ? options.reading : null;
+    if (capture.autoCheck === null && reader) {
+      await readCaptureNow(db, reader, captureId, now);
+      const flaggedBefore = capture.duplicateOfUserId;
+      [capture] = await db.select().from(identityCaptures).where(eq(identityCaptures.id, captureId)).limit(1);
+      if (!capture) return { ok: false, code: 'not_allowed' };
+      if (capture.duplicateOfUserId && !flaggedBefore) return { ok: false, code: 'version_conflict' };
+    }
+    const reading = identityReadingState(capture, reader !== null, now);
+    if (reading?.state === 'waiting') return { ok: false, code: 'not_ready' };
+    if (reading?.state === 'skipped') withoutReading = reading.why;
+  }
   const updated = await db
     .update(identityCaptures)
     .set({
@@ -467,7 +531,11 @@ export async function decideIdentityCapture(db: Db, staff: StaffActor, input: Id
     .returning({ userId: identityCaptures.userId });
   const userId = updated[0]?.userId;
   if (!userId) return { ok: false, code: 'not_allowed' };
-  await audit(db, staff, decision === 'approve' ? 'identity_capture.approved' : 'identity_capture.rejected', userId, note, { captureId, ...(decision === 'reject' && reason ? { reason } : {}) });
+  await audit(db, staff, decision === 'approve' ? 'identity_capture.approved' : 'identity_capture.rejected', userId, note, {
+    captureId,
+    ...(decision === 'reject' && reason ? { reason } : {}),
+    ...(withoutReading ? { withoutReading, remark: APPROVED_WITHOUT_READING } : {}),
+  });
   // Either way the helper has something to do: the double check, or new photos.
   await emitVerificationEvent(db, userId, 'identity', 'action_needed');
   await syncHelperProfile(db, userId, now);

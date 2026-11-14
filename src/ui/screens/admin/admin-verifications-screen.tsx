@@ -48,6 +48,7 @@ export function AdminVerificationsScreen({ data, now }: { data: AdminVerificatio
           <span className="block text-sm text-muted-foreground tabular-nums">{t('attempts', { count: row.attempts })} · {when(row.at)}</span>
           {row.duplicate && row.duplicate.others.length > 0 && <span className="block text-sm text-muted-foreground">{t('queues.duplicateDetail', { names: row.duplicate.others.map((other) => other.displayName).join(', ') })}</span>}
           {row.doubleCheck && <span className="block text-sm text-muted-foreground">{t('queues.doubleCheckDetail', { approved: formatDateTime(row.doubleCheck.approvedAt), outcome: t(`providerOutcomes.${row.doubleCheck.providerOutcome ?? 'other'}`) })}</span>}
+          {row.capture?.reading && <span className="block text-sm text-muted-foreground">{row.capture.reading.state === 'waiting' ? t('queues.idReadingPending') : t('queues.idReadingSkipped')}</span>}
           {row.capture?.autoCheck && <span className="block text-sm text-muted-foreground">{row.capture.autoCheck.readable && row.capture.autoCheck.nameMatches && row.capture.autoCheck.isAdult && row.capture.autoCheck.notExpired ? t('queues.idAutoAllMatch') : t('queues.idAutoCheckFlag')}</span>}
         </span>
         <ArrowUpRight aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />

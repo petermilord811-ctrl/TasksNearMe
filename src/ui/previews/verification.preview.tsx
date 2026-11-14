@@ -8,6 +8,7 @@ import {
   adminVerificationsBackgroundData,
   adminVerificationsEmptyData,
   adminVerificationsIdentityData,
+  adminVerificationsReadingData,
   adminVerificationsReadOnlyData,
   alexStaff,
   devonVerification,
@@ -145,6 +146,7 @@ export const verificationPreviews: PreviewEntry[] = [
 
   queue('address', a.address, adminVerificationsAddressData),
   queue('identity', a.identity, adminVerificationsIdentityData),
+  queue('identity-reading', a.readingQueue, adminVerificationsReadingData),
   queue('background', a.background, adminVerificationsBackgroundData),
   queue('empty', a.empty, adminVerificationsEmptyData),
   queue('read-only', a.readOnly, adminVerificationsReadOnlyData, alexStaff),

@@ -72,6 +72,7 @@
       "limit_reached": "Solicitud — límite de la cuenta",
       "identity_required": "Se necesita verificación de identidad",
       "paused": "Solicitud: reservas en pausa",
+      "not_ready": "Solicitud: todavía no está lista",
       "unknown": "Solicitud — no se pudo enviar"
     }
   }

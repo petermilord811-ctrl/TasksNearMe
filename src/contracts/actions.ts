@@ -75,6 +75,11 @@ export const ACTION_ERROR_CODES = [
    * nothing was charged, and bookings people already have go ahead.
    */
   'paused',
+  /**
+   * Not yet: something it depends on is still running (completion plan 5.18: approving an ID waits for its
+   * automatic reading, so a duplicate ID is found first). Try again in a few minutes.
+   */
+  'not_ready',
   'unknown',
 ] as const;
 export type ActionErrorCode = (typeof ACTION_ERROR_CODES)[number];

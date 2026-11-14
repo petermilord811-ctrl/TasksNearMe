@@ -23,6 +23,8 @@ import {
   onboardingIdentityStep,
   priyaShell,
   rosaReadOnlyVerification,
+  rosaReadingSkippedVerification,
+  rosaReadingWaitingVerification,
   rosaVerification,
 } from '@/fixtures';
 import { AdminUserContent } from '@/ui/screens/admin/admin-user-screen';
@@ -110,5 +112,13 @@ export const identityCheckPreviews: PreviewEntry[] = [
   {
     id: 'screen-admin-user/verification-id-photos-read-only', title: a.sectionCaptureReadOnly, group: a.group, layout: 'fullscreen',
     render: () => <Admin path={routes.admin.user('usr_rosa')} viewer={alexStaff}><div className="mx-auto max-w-content p-gutter"><AdminVerificationSection userId="usr_rosa" verification={rosaReadOnlyVerification} handlers={fakeAdminUserHandlers} now={ADMIN_NOW} /></div></Admin>,
+  },
+  {
+    id: 'screen-admin-user/verification-id-reading-waiting', title: a.sectionReadingWaiting, group: a.group, layout: 'fullscreen',
+    render: () => <Admin path={routes.admin.user('usr_rosa')}><div className="mx-auto max-w-content p-gutter"><AdminVerificationSection userId="usr_rosa" verification={rosaReadingWaitingVerification} handlers={fakeAdminUserHandlers} now={ADMIN_NOW} /></div></Admin>,
+  },
+  {
+    id: 'screen-admin-user/verification-id-reading-skipped', title: a.sectionReadingSkipped, group: a.group, layout: 'fullscreen',
+    render: () => <Admin path={routes.admin.user('usr_rosa')}><div className="mx-auto max-w-content p-gutter"><AdminVerificationSection userId="usr_rosa" verification={rosaReadingSkippedVerification} handlers={fakeAdminUserHandlers} now={ADMIN_NOW} /></div></Admin>,
   },
 ];

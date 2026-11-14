@@ -103,7 +103,7 @@ export interface AdminIdentityReviewRow {
   /** Tries since the last reset (photos and provider checks). */
   attempts: number;
   /** With `capture`. `overdue`: waiting longer than the 2-day response target. */
-  capture?: { documentType: IdentityDocumentType; autoCheck?: IdentityAutoCheck; overdue: boolean };
+  capture?: { documentType: IdentityDocumentType; autoCheck?: IdentityAutoCheck; overdue: boolean; reading?: IdentityReadingState };
   /** With `double_check`: both results, our approval and the provider's. */
   doubleCheck?: { approvedAt: ISODateTime; providerOutcome?: IdentityProviderOutcome; endedAt: ISODateTime };
   /** With `duplicate_id`: the other accounts whose ID photos carry the same ID (never the ID itself). */
@@ -150,6 +150,15 @@ export interface AdminAddressProofView {
 }
 
 /** One try at our own ID check, as staff see it on the person page (the photos only through `onRevealIdentityCapture`). */
+/**
+ * Photos in review whose automatic reading hasn't run (completion plan 5.18). Approval reads the ID first, so a
+ * duplicate ID is found before anyone approves. `waiting`: the reader is set up; approving reads it then (the
+ * job reads it within minutes anyway), and after `until` approval goes ahead without it. `skipped`: approving
+ * goes ahead without the reading, so without the duplicate-ID check, and the audit log says so (no reader set up,
+ * or it didn't answer in time).
+ */
+export type IdentityReadingState = { state: 'waiting'; until: ISODateTime } | { state: 'skipped'; why: 'no_reader' | 'timed_out' };
+
 export interface AdminIdentityCaptureView {
   id: string;
   status: IdentityCaptureStatus;
@@ -158,6 +167,8 @@ export interface AdminIdentityCaptureView {
   /** What the selfie had to show. */
   prompt: LivenessPrompt;
   autoCheck?: IdentityAutoCheck;
+  /** In review without its automatic reading yet. */
+  reading?: IdentityReadingState;
   /** The photos still stored (they're deleted 30 days after the decision). */
   photos: IdentityCapturePhoto[];
   photosDeletedAt?: ISODateTime;

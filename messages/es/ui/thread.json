@@ -29,6 +29,7 @@
       "not_allowed": "La conversación ya no permite mensajes",
       "rate_limited": "Espera antes de volver a enviar",
       "paused": "Reservas en pausa (aviso)",
+      "not_ready": "Todavía no está listo (aviso)",
       "unknown": "No se pudo enviar el mensaje",
       "payment_declined": "Aviso de pago rechazado",
       "insufficient_funds": "Aviso de fondos insuficientes",
