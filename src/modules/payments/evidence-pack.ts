@@ -9,6 +9,7 @@ import { reviews } from '@/modules/reviews/schema';
 import type { StaffActor } from '@/modules/support/staff';
 import { isoOf } from '@/modules/support/staff-audit';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
+import { toMessageSegments } from '@/modules/trust/message-segments';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
@@ -20,7 +21,8 @@ import { shownPaymentStatus } from './shown-status';
  * completion photos, messages, check-in"): one JSON file finance downloads from `routes.api.evidencePack` and
  * submits with its answer in the Stripe Dashboard. Finance and admins only, only for a booking whose charge a
  * client's bank disputed, and every download goes to the audit log. It leaves the exact address out (that needs
- * its own reason, blueprint 08); photos are staff links (`/api/files/…`).
+ * its own reason, blueprint 08); photos are staff links (`/api/files/…`). The pack leaves the platform (Stripe,
+ * the card issuer), so phone numbers and emails in what people wrote are hidden, as in a thread before booking.
  */
 
 export interface ChargebackEvidencePack {
@@ -67,6 +69,16 @@ export interface ChargebackEvidencePack {
 export const canDownloadEvidencePack = (staff: StaffActor) => staff.roles.includes('finance') || staff.roles.includes('admin');
 
 const iso = (value: Date | null | undefined) => (value ? value.toISOString() : null);
+
+/** A dispute that is open, or was won or lost; an inquiry that closed without a chargeback clears it (stripe-webhooks.ts). */
+export const LIVE_DISPUTE_STATUSES = ['open', 'won', 'lost'] as const;
+
+/** What someone wrote, with phone numbers and emails replaced (src/modules/trust/message-segments.ts). */
+function withoutContacts(text: string): string {
+  return toMessageSegments(text, { mask: true })
+    .map((segment) => (segment.kind === 'text' ? segment.text : segment.detail === 'phone' ? '[phone number hidden]' : '[email hidden]'))
+    .join('');
+}
 const APPROVAL_VIA: Record<string, string> = { poster: 'client', auto: 'automatic', support: 'support', settlement: 'settlement' };
 
 /** The pack for finance, audited; null for anyone else, an unknown booking, or a booking never charged back. */
@@ -74,7 +86,11 @@ export async function chargebackEvidencePack(db: Db, staff: StaffActor, bookingI
   if (!canDownloadEvidencePack(staff)) return null;
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, String(bookingId))).limit(1);
   if (!booking) return null;
-  const disputed = await db.select().from(payments).where(and(eq(payments.bookingId, booking.id), isNotNull(payments.disputeId))).orderBy(asc(payments.createdAt));
+  const disputed = await db
+    .select()
+    .from(payments)
+    .where(and(eq(payments.bookingId, booking.id), isNotNull(payments.disputeId), inArray(payments.disputeStatus, [...LIVE_DISPUTE_STATUSES])))
+    .orderBy(asc(payments.createdAt));
   if (disputed.length === 0) return null;
 
   const threadLinks = [and(eq(threads.kind, 'booking'), eq(threads.linkedId, booking.id))];
@@ -101,8 +117,10 @@ export async function chargebackEvidencePack(db: Db, staff: StaffActor, bookingI
   const fileUrl = (fileId: string) => `/api/files/${encodeURIComponent(fileId)}`;
   const checklist = completion ? checklistView(found.view.categorySlug, completion.checklist) : undefined;
 
+  // The role that allows the download, for the pack and its audit row (not whichever role is listed first).
+  const role = staff.roles.includes('finance') ? 'finance' : 'admin';
   const pack: ChargebackEvidencePack = {
-    pack: { kind: 'chargeback_evidence', version: 1, generatedAt: now.toISOString(), generatedBy: { id: staff.id, role: staff.roles.includes('finance') ? 'finance' : 'admin' } },
+    pack: { kind: 'chargeback_evidence', version: 1, generatedAt: now.toISOString(), generatedBy: { id: staff.id, role } },
     disputes: disputed.map((payment) => ({
       disputeId: payment.disputeId!,
       status: shownPaymentStatus(payment),
@@ -134,14 +152,14 @@ export async function chargebackEvidencePack(db: Db, staff: StaffActor, bookingI
       estimatedHours: terms.estimatedHours,
       hoursCap: terms.hoursCap,
       expenseAllowanceCents: terms.expenseAllowanceCents,
-      scope: terms.scopeText,
+      scope: withoutContacts(terms.scopeText),
       breakdown: terms.breakdown,
     },
     checkIn: { onMyWayAt: iso(booking.onMyWayAt), arrivedAt: iso(booking.arrivedAt), lateByMinutes: booking.lateByMinutes },
     completion: completion
       ? {
           submittedAt: completion.submittedAt.toISOString(),
-          note: completion.note,
+          note: withoutContacts(completion.note),
           hoursWorked: completion.hoursWorked,
           checklist: (checklist?.items ?? []).map((item) => ({ item: item.key, done: item.done })),
           photos: photos.map((photo) => ({ fileId: photo.fileId, url: fileUrl(photo.fileId) })),
@@ -158,10 +176,10 @@ export async function chargebackEvidencePack(db: Db, staff: StaffActor, bookingI
       thread: threadKind.get(row.threadId) ?? 'booking',
       from: roleOf(row.senderUserId),
       kind: row.kind,
-      text: row.body || (row.event ? row.event.type : ''),
+      text: row.body ? withoutContacts(row.body) : row.event ? row.event.type : '',
       photos: row.attachmentFileIds.map(fileUrl),
     })),
-    reviewByClient: review ? { rating: review.rating, body: review.body, at: review.createdAt.toISOString() } : null,
+    reviewByClient: review ? { rating: review.rating, body: review.body === null ? null : withoutContacts(review.body), at: review.createdAt.toISOString() } : null,
     refunds: refundRows.map((row) => ({ amountCents: row.amountCents, reason: row.reason, status: row.status, at: row.createdAt.toISOString() })),
     ledger: ledger.map((journal) => ({ kind: journal.kind, at: journal.occurredAt.toISOString(), memo: journal.memo, entries: journal.entries })),
   };
@@ -169,7 +187,7 @@ export async function chargebackEvidencePack(db: Db, staff: StaffActor, bookingI
     id: newId('aud'),
     at: now.toISOString(),
     actorId: staff.id,
-    actorRole: staff.roles[0] ?? 'staff',
+    actorRole: role,
     action: 'booking.evidence_pack_downloaded',
     targetType: 'booking',
     targetId: booking.id,

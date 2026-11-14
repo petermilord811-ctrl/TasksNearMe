@@ -22,7 +22,7 @@ import { earnings } from '@/modules/earnings/schema';
 import { recordCompletionMoney } from '@/modules/earnings/service';
 import { threads } from '@/modules/messaging/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
-import { canDownloadEvidencePack } from '@/modules/payments/evidence-pack';
+import { canDownloadEvidencePack, LIVE_DISPUTE_STATUSES } from '@/modules/payments/evidence-pack';
 import { payments, refunds } from '@/modules/payments/schema';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { taskLocations, tasks } from '@/modules/tasks/schema';
@@ -222,7 +222,11 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
     db.select().from(supportCases).where(eq(supportCases.bookingId, booking.id)).orderBy(desc(supportCases.updatedAt)),
     bookingMoneyFacts(db, booking.id),
     db.select().from(refundRequests).where(eq(refundRequests.bookingId, booking.id)).orderBy(desc(refundRequests.createdAt)),
-    db.select({ id: payments.id }).from(payments).where(and(eq(payments.bookingId, booking.id), isNotNull(payments.disputeId))).limit(1),
+    db
+      .select({ id: payments.id })
+      .from(payments)
+      .where(and(eq(payments.bookingId, booking.id), isNotNull(payments.disputeId), inArray(payments.disputeStatus, [...LIVE_DISPUTE_STATUSES])))
+      .limit(1),
   ]);
   const poster = people.find((user) => user.id === booking.posterUserId);
   const helper = people.find((user) => user.id === booking.helperUserId);

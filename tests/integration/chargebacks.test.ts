@@ -298,4 +298,34 @@ describe('T-18: chargebacks', () => {
     expect(await actionsOf({ id: 'usr_alex', roles: ['support_agent'] }, AFTER)).not.toContain('download_evidence_pack');
     expect(await actionsOf({ id: 'usr_casey', roles: ['finance'] }, PLAIN)).not.toContain('download_evidence_pack');
   });
+
+  it('hides contact details from the pack, only while a dispute is live, and audits the role that allowed it (5.18)', async () => {
+    // The pack leaves the platform (Stripe, the card issuer): phone numbers and emails come out masked, everywhere.
+    await db.insert(messages).values({ id: 'msg_t18_contact', threadId: 'thr_t18_after', senderUserId: CLIENT, kind: 'text', body: 'Call me at 512-555-0142 or write to me@client.example.', createdAt: new Date() });
+    await db.update(bookingTerms).set({ scopeText: 'Desk assembly. Text 512-555-0177 when you arrive.' }).where(eq(bookingTerms.bookingId, AFTER));
+    await db.update(bookingCompletions).set({ note: 'Done. Questions? helper.hale@example.test' }).where(eq(bookingCompletions.bookingId, AFTER));
+    // Support first, finance second: the audit names finance, the role that allows the download.
+    viewer.current = staffViewer('usr_casey', ['support_agent', 'finance']);
+    const response = await download(AFTER);
+    expect(response.status).toBe(200);
+    const pack = await response.json();
+    const text = JSON.stringify(pack);
+    for (const detail of ['512-555-0142', 'me@client.example', '512-555-0177', 'helper.hale@example.test']) expect(text).not.toContain(detail);
+    expect(pack.messages.find((message: { text: string }) => message.text.startsWith('Call me at'))?.text).toBe('Call me at [phone number hidden] or write to [email hidden].');
+    expect(pack.terms.scope).toBe('Desk assembly. Text [phone number hidden] when you arrive.');
+    expect(pack.completion.note).toBe('Done. Questions? [email hidden]');
+    const audits = await db.select().from(auditLog).where(and(eq(auditLog.action, 'booking.evidence_pack_downloaded'), eq(auditLog.targetId, AFTER), eq(auditLog.actorId, 'usr_casey')));
+    expect(audits.at(-1)?.actorRole).toBe('finance');
+
+    // An inquiry that closed without a chargeback keeps its dispute id but no dispute status: no pack, no download.
+    const [payment] = await db.select().from(payments).where(eq(payments.bookingId, AFTER));
+    await db.update(payments).set({ disputeStatus: null }).where(eq(payments.id, payment!.id));
+    try {
+      viewer.current = staffViewer('usr_casey', ['finance']);
+      expect((await download(AFTER)).status).toBe(404);
+      expect((await getAdminBooking(db, { id: 'usr_casey', roles: ['finance'] }, AFTER, new Date()))?.actions ?? []).not.toContain('download_evidence_pack');
+    } finally {
+      await db.update(payments).set({ disputeStatus: payment!.disputeStatus }).where(eq(payments.id, payment!.id));
+    }
+  });
 });
