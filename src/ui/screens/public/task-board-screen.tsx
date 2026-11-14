@@ -10,6 +10,7 @@ import { LocaleLink as Link, localeHref } from '@/ui/lib/locale-link';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { BoardFilters, activeFilterCount, boardHref } from '@/ui/components/search/board-filters';
 import { BoardLive } from '@/ui/components/search/board-live';
+import { TaskTypeTiles } from '@/ui/components/search/task-type-tiles';
 import { PublicTaskCard } from '@/ui/components/tasks/public-task-card';
 import { LastVisitNote } from '@/ui/components/tasks/task-live';
 import { TaskRow } from '@/ui/components/tasks/task-row';
@@ -55,6 +56,13 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   // This browser's last look at the market's board marks what's new since (completion plan 7.6).
   const visitKey = `board:${market.slug}`;
   const href = (change: Partial<TaskBoardQuery>) => boardHref(data, change);
+  // A category's types as tiles (plan 7.5): the ones with open tasks, busiest first, and the chosen one.
+  const typeTiles = query.category
+    ? data.facets.types
+        .filter((type) => type.count > 0 || type.slug === query.type)
+        .sort((a, b) => b.count - a.count)
+        .map((type) => ({ ...type, href: href({ type: type.slug === query.type ? undefined : type.slug }), selected: type.slug === query.type }))
+    : [];
   const filtered = activeFilterCount(query) > 0;
   const tomorrow = marketDayKey(new Date(new Date(`${data.today}T12:00:00Z`).getTime() + 86_400_000));
 
@@ -155,6 +163,8 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
             <Segmented label={t('view')}>{TASK_BOARD_VIEWS.map((view) => <SegmentLink key={view} href={href({ view })} selected={query.view === view} label={t(`viewOptions.${view}`)} icon={view === 'list' ? <List aria-hidden="true" className="size-4" /> : <LayoutGrid aria-hidden="true" className="size-4" />} />)}</Segmented>
           </div>
         </div>
+
+        {query.category && typeTiles.length > 1 && <TaskTypeTiles category={query.category} items={typeTiles} />}
 
         {/* Save this view and get alerts when a new task fits (completion plan 7.10); signing in comes first. */}
         <div className="flex justify-end">

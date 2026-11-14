@@ -15,6 +15,7 @@ import { areas, categories } from '@/modules/markets/schema';
 import { findPublicMarket, getMarketView, listCategoryViews } from '@/modules/markets/queries';
 import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
+import { budgetSpread } from '@/shared/budget-spread';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { taskTypeOf, taskTypesFor } from '@/shared/task-types';
 import { BOARD_PAGE_SIZE, toTaskPublicView, whenRange } from './projections';
@@ -59,19 +60,32 @@ export async function boardFacets(database: Db, query: TaskBoardQueryState, scop
     database.select({ n: sum(lte(tasks.offerCount, 1)) }).from(tasks).innerJoin(categories, joined).where(where('few')),
     database.select({ n: sum(eq(tasks.mode, 'remote')) }).from(tasks).innerJoin(categories, joined).where(where('remote')),
     typeField
-      ? database.select({ value: sql<string | null>`(${tasks.details} ->> ${typeField})`, n: count() }).from(tasks).innerJoin(categories, joined).where(where('type')).groupBy(sql`1`)
-      : Promise.resolve([] as { value: string | null; n: number }[]),
+      ? database
+          .select({ value: sql<string | null>`(${tasks.details} ->> ${typeField})`, n: count(), budgets: sql<number[]>`array_agg(${taskPriceCents})` })
+          .from(tasks)
+          .innerJoin(categories, joined)
+          .where(where('type'))
+          .groupBy(sql`1`)
+      : Promise.resolve([] as { value: string | null; n: number; budgets: number[] }[]),
   ]);
 
   const areaCounts = new Map(byArea.map((row) => [row.area, row.n]));
   const typeCounts = new Map<string, number>();
+  const typeBudgets = new Map<string, number[]>();
   for (const row of byType) {
     const type = query.category && typeField ? taskTypeOf(query.category, { [typeField]: typeField === 'bedrooms' && row.value !== null ? Number(row.value) : row.value }) : undefined;
-    if (type) typeCounts.set(type, (typeCounts.get(type) ?? 0) + row.n);
+    if (!type) continue;
+    typeCounts.set(type, (typeCounts.get(type) ?? 0) + row.n);
+    typeBudgets.set(type, [...(typeBudgets.get(type) ?? []), ...(row.budgets ?? []).map(Number)]);
   }
   return {
     categories: Object.fromEntries(byCategory.map((row) => [row.slug as CategorySlug, row.n])),
-    types: query.category ? taskTypesFor(query.category).map((type) => ({ slug: type.slug, count: typeCounts.get(type.slug) ?? 0 })) : [],
+    types: query.category
+      ? taskTypesFor(query.category).map((type) => {
+          const budget = budgetSpread(typeBudgets.get(type.slug) ?? []);
+          return { slug: type.slug, count: typeCounts.get(type.slug) ?? 0, ...(budget ? { budget } : {}) };
+        })
+      : [],
     areas: [...areaRows].sort((a, b) => a.name.localeCompare(b.name)).map((area) => ({ slug: area.slug, name: area.name, count: areaCounts.get(area.id) ?? 0 })),
     pricing: { fixed: byPricing.find((row) => row.pricing === 'fixed')?.n ?? 0, hourly: byPricing.find((row) => row.pricing === 'hourly')?.n ?? 0 },
     posted: { '24h': intOf(posted[0]?.['24h']), '3d': intOf(posted[0]?.['3d']), '7d': intOf(posted[0]?.['7d']) },

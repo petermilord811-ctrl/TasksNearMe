@@ -137,5 +137,10 @@
     "show": "{count, plural, one {# new task} other {# new tasks}} · Show",
     "announce": "{count, plural, one {# new task posted} other {# new tasks posted}}",
     "loading": "Loading…"
+  },
+  "typeTiles": {
+    "label": "Popular task types",
+    "open": "{count, plural, =0 {none open now} one {# open} other {# open}}",
+    "range": "{low}–{high}"
   }
 }

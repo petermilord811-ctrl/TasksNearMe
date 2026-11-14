@@ -28,6 +28,35 @@ const group = (name: string) => within(screen.getByRole('group', { name }));
 const board = (data: TaskBoardPageData, change: Parameters<typeof routes.taskBoard>[1] = {}) => routes.taskBoard(data.market.slug, { ...data.query, page: undefined, ...change });
 
 describe('TaskBoardScreen', () => {
+  it('shows a category’s task types as tiles, busiest first, with what their tasks offer (plan 7.5)', () => {
+    renderBoard(taskBoardHubData);
+    const tiles = within(screen.getByRole('navigation', { name: 'Popular task types' })).getAllByRole('link');
+    // Desk and shelving have two each (desk first, as on the form), then the ones with one; "Other" has none.
+    expect(tiles.map((tile) => tile.textContent)).toEqual([
+      'Desk$60.00–$90.002 open',
+      'Bookshelf or shelves$45.00–$60.002 open',
+      'Bed$85.001 open',
+      'Wardrobe$120.001 open',
+      'Dresser$70.001 open',
+      'Table or chairs$50.001 open',
+    ]);
+    expect(hrefOf(tiles[0]!)).toBe(board(taskBoardHubData, { type: 'desk' }));
+    expect(tiles[0]!.getAttribute('aria-current')).toBeNull();
+  });
+
+  it('marks the chosen type’s tile, which leads back to every type', () => {
+    const chosen = { ...taskBoardHubData, query: { ...taskBoardHubData.query, type: 'bed' } };
+    renderBoard(chosen);
+    const tile = within(screen.getByRole('navigation', { name: 'Popular task types' })).getByRole('link', { name: /^Bed/ });
+    expect(tile.getAttribute('aria-current')).toBe('true');
+    expect(hrefOf(tile)).toBe(board(chosen, { type: undefined }));
+  });
+
+  it('has no tiles without a category', () => {
+    renderBoard(taskBoardPageData);
+    expect(screen.queryByRole('navigation', { name: 'Popular task types' })).toBeNull();
+  });
+
   it('groups tasks by neighborhood with their counts, and links the rest of a busy one', () => {
     renderBoard(taskBoardPageData);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);

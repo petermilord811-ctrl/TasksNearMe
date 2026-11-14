@@ -172,7 +172,15 @@ export const taskBoardFilteredData: TaskBoardPageData = {
   facets: {
     ...facets,
     categories: { 'furniture-assembly': 2 },
-    types: [{ slug: 'desk', count: 1 }, { slug: 'bed', count: 0 }, { slug: 'shelving', count: 1 }, { slug: 'wardrobe', count: 0 }, { slug: 'dresser', count: 0 }, { slug: 'table', count: 0 }, { slug: 'other', count: 0 }],
+    types: [
+      { slug: 'desk', count: 1, budget: { lowCents: 6000, highCents: 6000 } },
+      { slug: 'bed', count: 0 },
+      { slug: 'shelving', count: 1, budget: { lowCents: 5500, highCents: 5500 } },
+      { slug: 'wardrobe', count: 0 },
+      { slug: 'dresser', count: 0 },
+      { slug: 'table', count: 0 },
+      { slug: 'other', count: 0 },
+    ],
   },
 };
 
@@ -186,7 +194,16 @@ export const taskBoardHubData: TaskBoardPageData = {
   facets: {
     ...facets,
     areas: facets.areas.map((area) => ({ ...area, count: area.slug === 'mueller' ? 8 : 0 })),
-    types: [{ slug: 'desk', count: 2 }, { slug: 'bed', count: 1 }, { slug: 'shelving', count: 2 }, { slug: 'wardrobe', count: 1 }, { slug: 'dresser', count: 1 }, { slug: 'table', count: 1 }, { slug: 'other', count: 0 }],
+    // What each type's tasks offer: the middle half of their budgets (plan 7.5), a single price for one task.
+    types: [
+      { slug: 'desk', count: 2, budget: { lowCents: 6000, highCents: 9000 } },
+      { slug: 'bed', count: 1, budget: { lowCents: 8500, highCents: 8500 } },
+      { slug: 'shelving', count: 2, budget: { lowCents: 4500, highCents: 6000 } },
+      { slug: 'wardrobe', count: 1, budget: { lowCents: 12000, highCents: 12000 } },
+      { slug: 'dresser', count: 1, budget: { lowCents: 7000, highCents: 7000 } },
+      { slug: 'table', count: 1, budget: { lowCents: 5000, highCents: 5000 } },
+      { slug: 'other', count: 0 },
+    ],
   },
   heading: { title: 'Furniture assembly jobs in Austin', intro: 'Flat-pack desks, beds, shelves and wardrobes posted by neighbors, with the price they offer.' },
 };

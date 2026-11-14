@@ -137,5 +137,10 @@
     "show": "{count, plural, one {# tarea nueva} other {# tareas nuevas}} · Ver",
     "announce": "{count, plural, one {Se publicó # tarea nueva} other {Se publicaron # tareas nuevas}}",
     "loading": "Cargando…"
+  },
+  "typeTiles": {
+    "label": "Tipos de tarea populares",
+    "open": "{count, plural, =0 {ninguna abierta ahora} one {# abierta} other {# abiertas}}",
+    "range": "{low}–{high}"
   }
 }
