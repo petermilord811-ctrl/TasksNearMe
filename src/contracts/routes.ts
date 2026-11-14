@@ -6,6 +6,7 @@ import type { AdminRewardFilter } from './admin-people';
 import type { AdminVerificationQueue } from './admin-verification';
 import { DEFAULT_METRICS_PERIOD, type MetricsPeriodDays } from './analytics';
 import type { CategorySlug } from './common';
+import type { CommunityFeedQuery, CommunityPostKind } from './community';
 import type { FindWorkQuery } from './helper-work';
 import type { ExactAddress } from './location';
 import { TASK_BOARD_Q_MAX, TASK_BOARD_TIMES, type TaskBoardQuery } from './tasks';
@@ -158,6 +159,16 @@ export const routes = {
     bookingCalendar: (bookingId: string) => `/app/bookings/${enc(bookingId)}/calendar.ics`,
     messages: () => '/app/messages',
     thread: (threadId: string) => `/app/messages/${enc(threadId)}`,
+    /** The community feed (plan 7.7). Defaults (`nearby`, `active`, page 1) are left out. */
+    community: (query: CommunityFeedQuery = {}) =>
+      withQuery('/app/community', {
+        scope: query.scope && query.scope !== 'nearby' ? query.scope : undefined,
+        sort: query.sort && query.sort !== 'active' ? query.sort : undefined,
+        kind: query.kind,
+        page: query.page && query.page > 1 ? String(query.page) : undefined,
+      }),
+    communityPost: (postId: string) => `/app/community/${enc(postId)}`,
+    newCommunityPost: (kind?: CommunityPostKind) => withQuery('/app/community/new', { kind }),
     payments: () => '/app/payments',
     /** A receipt for one booking (printable). */
     receipt: (bookingId: string) => `/app/payments/${enc(bookingId)}`,
