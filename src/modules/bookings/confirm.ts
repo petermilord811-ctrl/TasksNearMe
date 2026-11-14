@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lte, ne, notInArray, sql } from 'drizzle-orm';
 import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type {
   ActionResult,
@@ -552,6 +552,9 @@ export async function finishBankVerification(
     .where(and(eq(payments.id, String(paymentId)), eq(payments.payerUserId, posterId)))
     .limit(1);
   if (!payment || !payment.bookingId || !payment.providerRef) return { ok: false, code: 'not_found' };
+  // Stripe's webhook (or another tab) finished it first: the answer this call would have given (T-06).
+  if (SETTLED.includes(payment.status)) return settledResult(db, payment.bookingId);
+  if (payment.status === 'failed') return { ok: false, code: payment.failureCode === 'insufficient_funds' ? 'insufficient_funds' : 'payment_declined' };
   if (payment.status !== 'requires_confirmation') return { ok: false, code: 'not_allowed' };
   await expireUnfundedBookings(db, now);
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, payment.bookingId)).limit(1);
@@ -575,29 +578,55 @@ export async function confirmFundedBooking(deps: BookingDeps, posterId: string, 
 
 /** Bookings a successful payment confirms: a hold being paid, or a booking paid later (`scheduled`). */
 const AWAITING_MONEY = ['pending_funding', 'scheduled'];
+/** A payment whose money came in (refunds happen later): nothing about it can be settled again. */
+const SETTLED = ['succeeded', 'partially_refunded', 'refunded'];
+
+/**
+ * The answer for a payment the other path already settled (the browser's return from the bank and Stripe's
+ * webhook both finish a payment, in either order or at once): booked, or what became of the booking since.
+ */
+async function settledResult(db: Db, bookingId: string): Promise<PaymentAttemptResult> {
+  const [booking] = await db.select({ id: bookings.id, status: bookings.status }).from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+  if (!booking) return { ok: false, code: 'not_found' };
+  // Paid after the hold ran out (support refunds it).
+  if (booking.status === 'canceled') return { ok: false, code: 'expired' };
+  if (AWAITING_MONEY.includes(booking.status)) return { ok: false, code: 'not_allowed' };
+  return { ok: true, code: 'booked', redirectTo: routes.app.booking(booking.id) };
+}
 
 /**
  * Records the provider's answer. Success confirms the booking in one transaction. A `scheduled` booking (a
  * regular visit, a one-time booking far ahead) was already booked: it's `booking.funded`, quietly, not a new
- * booking for the helper to hear about.
+ * booking for the helper to hear about. A payment already settled stays as it is, whatever arrives later: a
+ * second success changes nothing, and a late failure is ignored (T-06).
  */
 export async function settle(deps: BookingDeps, posterId: string, paymentId: string, result: ChargeResult, now: Date): Promise<PaymentAttemptResult> {
   const { db } = deps;
-  if (result.status === 'failed') {
-    await db
+  if (result.status === 'failed' || result.status === 'requires_action') {
+    const [updated] = await db
       .update(payments)
-      .set({ status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now })
-      .where(eq(payments.id, paymentId));
-    return { ok: false, code: result.failureCode };
-  }
-  if (result.status === 'requires_action') {
-    await db.update(payments).set({ status: 'requires_confirmation', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
+      .set(
+        result.status === 'failed'
+          ? { status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now }
+          : { status: 'requires_confirmation', providerRef: result.providerRef, updatedAt: now },
+      )
+      .where(and(eq(payments.id, paymentId), notInArray(payments.status, SETTLED)))
+      .returning({ id: payments.id });
+    if (!updated) {
+      const [settled] = await db.select({ bookingId: payments.bookingId }).from(payments).where(eq(payments.id, paymentId)).limit(1);
+      return settled?.bookingId ? settledResult(db, settled.bookingId) : { ok: false, code: 'not_found' };
+    }
+    if (result.status === 'failed') return { ok: false, code: result.failureCode };
     return { ok: false, code: 'requires_bank_verification', verification: await bankStep(deps.payments, paymentId, result.providerRef) };
   }
 
   const outcome = await db.transaction(async (tx) => {
+    // Locked: the browser and the webhook can settle the same payment at the same moment; the second waits here
+    // and finds it settled (without the lock both confirmed the booking, or the second asked for a refund).
+    await tx.execute(sql`select id from payments where id = ${paymentId} for update`);
     const [payment] = await tx.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
     if (!payment?.bookingId) return { kind: 'missing' as const };
+    if (SETTLED.includes(payment.status)) return { kind: 'settled' as const, bookingId: payment.bookingId };
     const [booking] = await tx.select().from(bookings).where(eq(bookings.id, payment.bookingId)).limit(1);
     await tx.update(payments).set({ status: 'succeeded', providerRef: result.providerRef, failureCode: null, updatedAt: now }).where(eq(payments.id, paymentId));
     if (!booking || !AWAITING_MONEY.includes(booking.status)) {
@@ -676,5 +705,6 @@ export async function settle(deps: BookingDeps, posterId: string, paymentId: str
   });
 
   if (outcome.kind === 'booked') return { ok: true, code: 'booked', redirectTo: routes.app.booking(outcome.bookingId) };
+  if (outcome.kind === 'settled') return settledResult(db, outcome.bookingId);
   return { ok: false, code: outcome.kind === 'expired' ? 'expired' : 'not_found' };
 }
