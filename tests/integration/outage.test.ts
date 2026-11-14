@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider, type PaymentProvider } from '@/integrations/payments';
 import { acceptChange, payChangeDifference, proposeChange } from '@/modules/bookings/changes';
@@ -109,6 +109,9 @@ afterAll(async () => {
   // Nor Sam's proposal to Ruth open: one proposal can be open per helper and client, so it would refuse other files' (T-05's rebook).
   if (ready.proposalId) await db.update(rebookProposals).set({ status: 'withdrawn', updatedAt: new Date() }).where(and(eq(rebookProposals.id, ready.proposalId), eq(rebookProposals.status, 'sent')));
   await db.delete(auditLog).where(and(eq(auditLog.action, 'config.outage_switch'), eq(auditLog.targetId, AUSTIN)));
+  // Nor this file's desks open on the board, with their offers pending (5.19): later files count open tasks and offers.
+  await db.update(offers).set({ status: 'withdrawn', updatedAt: new Date() }).where(and(like(offers.taskId, 'tsk\\_out\\_%'), inArray(offers.status, ['pending', 'stale'])));
+  await db.update(tasks).set({ status: 'canceled', updatedAt: new Date() }).where(and(like(tasks.id, 'tsk\\_out\\_%'), eq(tasks.status, 'open')));
   await pool.end();
 });
 
