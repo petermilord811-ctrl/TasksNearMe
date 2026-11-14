@@ -25,10 +25,10 @@ describe('TaskBoardScreen', () => {
   it('resets the page for every filter and preserves the other query values', () => {
     renderBoard(taskBoardPagedData);
     const category = within(screen.getByRole('navigation', { name: 'Category' }));
-    expect(category.getByRole('link', { name: 'Furniture assembly' }).getAttribute('href')).toBe('/austin/tasks?category=furniture-assembly&sort=newest');
-    expect(screen.getByRole('link', { name: 'Today' }).getAttribute('href')).toBe('/austin/tasks?when=today&sort=newest');
-    expect(screen.getByRole('link', { name: /Remote only/ }).getAttribute('href')).toBe('/austin/tasks?remote=1&sort=newest');
-    expect(screen.getByRole('link', { name: 'Soonest' }).getAttribute('href')).toBe('/austin/tasks');
+    expect(category.getByRole('link', { name: 'Furniture assembly' }).getAttribute('href')).toBe('/austin/tasks?category=furniture-assembly&sort=newest&group=none');
+    expect(screen.getByRole('link', { name: 'Today' }).getAttribute('href')).toBe('/austin/tasks?when=today&sort=newest&group=none');
+    expect(screen.getByRole('link', { name: /Remote only/ }).getAttribute('href')).toBe('/austin/tasks?remote=1&sort=newest&group=none');
+    expect(screen.getByRole('link', { name: 'Soonest' }).getAttribute('href')).toBe('/austin/tasks?group=none');
     for (const name of ['Category', 'When', 'Sort']) {
       for (const link of within(screen.getByRole('navigation', { name })).getAllByRole('link')) {
         expect(link.getAttribute('href')).not.toContain('page=');
@@ -39,8 +39,8 @@ describe('TaskBoardScreen', () => {
   it('links page 2 backward without page and forward to page 3', () => {
     renderBoard(taskBoardPagedData);
     expect(screen.getByText('Page 2 of 3')).toBeDefined();
-    expect(screen.getByRole('link', { name: 'Previous' }).getAttribute('href')).toBe('/austin/tasks?sort=newest');
-    expect(screen.getByRole('link', { name: 'Next' }).getAttribute('href')).toBe('/austin/tasks?sort=newest&page=3');
+    expect(screen.getByRole('link', { name: 'Previous' }).getAttribute('href')).toBe('/austin/tasks?sort=newest&group=none');
+    expect(screen.getByRole('link', { name: 'Next' }).getAttribute('href')).toBe('/austin/tasks?sort=newest&group=none&page=3');
   });
 
   it('clears every filter for a filtered empty state', () => {

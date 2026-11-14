@@ -10,7 +10,7 @@
   "remoteOn": "On",
   "remoteOff": "Off",
   "sort": "Sort",
-  "sortOptions": { "soonest": "Soonest", "newest": "Newest" },
+  "sortOptions": { "soonest": "Soonest", "newest": "Newest", "price_high": "Price: high to low", "price_low": "Price: low to high" },
   "results": "{count, plural, one {# open task} other {# open tasks}}",
   "pagination": "Task pages",
   "page": "Page {page} of {count}",

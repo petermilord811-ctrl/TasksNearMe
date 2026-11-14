@@ -1,5 +1,7 @@
-import { and, asc, count, desc, gt, isNull, lt, ne, notInArray, or, eq, sql, type SQL } from 'drizzle-orm';
-import type { CategorySlug, FindWorkPageData, TaskBoardPageData, TaskPublicView } from '@/contracts';
+import { and, asc, count, desc, gt, gte, ilike, inArray, isNull, lt, lte, ne, notInArray, or, eq, sql, type SQL } from 'drizzle-orm';
+import { MARKET_TIME_ZONE } from '@/contracts/common';
+import type { CategorySlug, FindWorkPageData, TaskBoardPosted, TaskBoardQueryState, TaskBoardSort, TaskBoardTime, TaskPublicView } from '@/contracts';
+import { taskTypesFor } from '@/shared/task-types';
 import type { Db } from '@/platform/db/connect';
 import { users } from '../accounts/schema';
 import { areas, categories, markets } from '../markets/schema';
@@ -15,6 +17,7 @@ const columns = {
   title: tasks.title,
   description: tasks.description,
   categorySlug: categories.slug,
+  details: tasks.details,
   mode: tasks.mode,
   status: tasks.status,
   pricingType: tasks.pricingType,
@@ -41,7 +44,7 @@ const columns = {
   posterPhoneVerifiedAt: users.phoneVerifiedAt,
 };
 
-function selectPublic(db: Db) {
+export function selectPublic(db: Db) {
   return db
     .select(columns)
     .from(tasks)
@@ -53,7 +56,7 @@ function selectPublic(db: Db) {
 
 type Row = Awaited<ReturnType<ReturnType<typeof selectPublic>['execute']>>[number];
 
-function toRow(row: Row): PublicTaskRow {
+export function toRow(row: Row): PublicTaskRow {
   return {
     ...row,
     poster: {
@@ -67,21 +70,108 @@ function toRow(row: Row): PublicTaskRow {
 }
 
 /** Open, not past, and not hidden by staff: what the board, the feeds and the public pages list. */
-function openIn(marketId: string, now: Date): SQL[] {
+export function openIn(marketId: string, now: Date): SQL[] {
   return [eq(tasks.marketId, marketId), eq(tasks.status, 'open'), gt(tasks.windowEnd, now), isNull(tasks.hiddenAt)];
 }
 
+/** The board's filters (completion plan 7.4), as `parseTaskBoardQuery` returns them. */
+export type BoardFilters = Pick<TaskBoardQueryState, 'when' | 'remoteOnly'> & Partial<Omit<TaskBoardQueryState, 'when' | 'remoteOnly'>>;
+/** A filter a facet count leaves out, so an option's count never counts itself out. */
+export type BoardFilterKey = 'category' | 'type' | 'q' | 'areas' | 'price' | 'pricing' | 'posted' | 'times' | 'few' | 'when' | 'remote';
+
+/** What a client offers for the whole task: the fixed price, or the rate × the estimated hours. */
+export const taskPriceCents = sql<number>`coalesce(${tasks.budgetCents}, round(${tasks.hourlyRateCents} * coalesce(${tasks.estimatedHours}, 1)))`;
+
+const POSTED_MS: Record<TaskBoardPosted, number> = { '24h': 24 * 3_600_000, '3d': 3 * 86_400_000, '7d': 7 * 86_400_000 };
+/** Minutes after midnight, Central time: morning before noon, afternoon to 5 pm, evening after. */
+export const TIME_SLOTS: Record<TaskBoardTime, [number, number]> = { morning: [0, 720], afternoon: [720, 1020], evening: [1020, 1440] };
+
+const localMinutes = (column: typeof tasks.windowStart | typeof tasks.windowEnd) =>
+  sql`(extract(hour from (${column} at time zone ${MARKET_TIME_ZONE})) * 60 + extract(minute from (${column} at time zone ${MARKET_TIME_ZONE})))`;
+
+/** The window touches the slot (a flexible day touches every slot). */
+export function timeCondition(time: TaskBoardTime): SQL {
+  const [from, to] = TIME_SLOTS[time];
+  return or(eq(tasks.flexible, true), and(sql`${localMinutes(tasks.windowStart)} < ${to}`, sql`${localMinutes(tasks.windowEnd)} > ${from}`))!;
+}
+
+/** Each word in the title or the description (case-insensitive; LIKE wildcards in the words are literal). */
+export function keywordCondition(q: string): SQL | undefined {
+  const words = q.split(/\s+/).map((word) => word.trim()).filter(Boolean).slice(0, 6);
+  if (words.length === 0) return undefined;
+  return and(...words.map((word) => {
+    const pattern = `%${word.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+    return or(ilike(tasks.title, pattern), ilike(tasks.description, pattern))!;
+  }));
+}
+
+/** The category's task type (src/shared/task-types.ts) from the task's details. */
+export function typeCondition(category: CategorySlug, slug: string): SQL {
+  const type = taskTypesFor(category).find((candidate) => candidate.slug === slug);
+  if (!type) return sql`false`;
+  const value = sql`(${tasks.details} ->> ${type.field})`;
+  if (type.values) return sql`${value} in (${sql.join(type.values.map((option) => sql`${option}`), sql`, `)})`;
+  const number = sql`(case when ${value} ~ '^[0-9]{1,3}$' then ${value}::int end)`;
+  return type.range!.max === undefined ? sql`${number} >= ${type.range!.min}` : sql`${number} between ${type.range!.min} and ${type.range!.max}`;
+}
+
+/**
+ * Every filter as SQL, on top of "open, not past, not hidden" (needs the categories join). `skip` leaves one
+ * filter out, for that filter's own counts. `areaIds` maps the market's neighborhood slugs to ids.
+ */
+export function boardConditions(query: BoardFilters, scope: { marketId: string; now: Date; areaIds: ReadonlyMap<string, string> }, skip?: BoardFilterKey): SQL[] {
+  const { now } = scope;
+  const conditions = openIn(scope.marketId, now);
+  if (query.category && skip !== 'category') {
+    conditions.push(eq(categories.slug, query.category));
+    if (query.type && skip !== 'type') conditions.push(typeCondition(query.category, query.type));
+  }
+  if (query.q && skip !== 'q') {
+    const keyword = keywordCondition(query.q);
+    if (keyword) conditions.push(keyword);
+  }
+  if (query.areas?.length && skip !== 'areas') {
+    const ids = query.areas.map((slug) => scope.areaIds.get(slug)).filter((id): id is string => Boolean(id));
+    conditions.push(ids.length > 0 ? inArray(tasks.publicAreaId, ids) : sql`false`);
+  }
+  if (skip !== 'price') {
+    if (query.minPrice !== undefined) conditions.push(sql`${taskPriceCents} >= ${query.minPrice * 100}`);
+    if (query.maxPrice !== undefined) conditions.push(sql`${taskPriceCents} <= ${query.maxPrice * 100}`);
+  }
+  if (query.pricing && skip !== 'pricing') conditions.push(eq(tasks.pricingType, query.pricing));
+  if (query.posted && skip !== 'posted') conditions.push(gte(tasks.publishedAt, new Date(now.getTime() - POSTED_MS[query.posted])));
+  if (query.times?.length && skip !== 'times') conditions.push(or(...query.times.map(timeCondition))!);
+  if (query.few && skip !== 'few') conditions.push(lte(tasks.offerCount, 1));
+  if (skip !== 'when') {
+    const range = whenRange(query.when, now);
+    if (range) conditions.push(lt(tasks.windowStart, range.to), gt(tasks.windowEnd, range.from));
+  }
+  if (query.remoteOnly && skip !== 'remote') conditions.push(eq(tasks.mode, 'remote'));
+  return conditions;
+}
+
+/** The board's order: soonest window, newest post, or price (high or low), with a stable tie-break. */
+export function boardOrder(sort: TaskBoardSort | undefined): SQL[] {
+  if (sort === 'newest') return [desc(tasks.publishedAt), asc(tasks.id)];
+  if (sort === 'price_high') return [sql`${taskPriceCents} desc nulls last`, asc(tasks.windowStart), asc(tasks.id)];
+  if (sort === 'price_low') return [sql`${taskPriceCents} asc nulls last`, asc(tasks.windowStart), asc(tasks.id)];
+  return [asc(tasks.windowStart), asc(tasks.id)];
+}
+
+/** The market's neighborhoods by slug (the board's `area` filter names them). */
+export async function marketAreaIds(db: Db, marketId: string): Promise<Map<string, string>> {
+  const rows = await db.select({ id: areas.id, slug: areas.slug }).from(areas).where(eq(areas.marketId, marketId));
+  return new Map(rows.map((row) => [row.slug, row.id]));
+}
+
+/** One page of the board's matching tasks, in its order. */
 export async function listBoardTasks(
   db: Db,
-  options: { marketId: string; query: TaskBoardPageData['query']; now: Date },
+  options: { marketId: string; query: BoardFilters & Pick<TaskBoardQueryState, 'sort' | 'page'>; now: Date; areaIds?: ReadonlyMap<string, string> },
 ): Promise<{ tasks: TaskPublicView[]; totalCount: number }> {
   const { query, now } = options;
-  const conditions = openIn(options.marketId, now);
-  if (query.category) conditions.push(eq(categories.slug, query.category));
-  if (query.remoteOnly) conditions.push(eq(tasks.mode, 'remote'));
-  const range = whenRange(query.when, now);
-  if (range) conditions.push(lt(tasks.windowStart, range.to), gt(tasks.windowEnd, range.from));
-  const where = and(...conditions);
+  const areaIds = options.areaIds ?? (query.areas?.length ? await marketAreaIds(db, options.marketId) : new Map<string, string>());
+  const where = and(...boardConditions(query, { marketId: options.marketId, now, areaIds }));
 
   const [total] = await db
     .select({ value: count() })
@@ -90,7 +180,7 @@ export async function listBoardTasks(
     .where(where);
   const rows = await selectPublic(db)
     .where(where)
-    .orderBy(...(query.sort === 'newest' ? [desc(tasks.publishedAt), asc(tasks.id)] : [asc(tasks.windowStart), asc(tasks.id)]))
+    .orderBy(...boardOrder(query.sort))
     .limit(BOARD_PAGE_SIZE)
     .offset((query.page - 1) * BOARD_PAGE_SIZE);
   return { tasks: rows.map((row) => toTaskPublicView(toRow(row))), totalCount: total?.value ?? 0 };

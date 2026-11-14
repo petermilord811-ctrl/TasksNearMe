@@ -28,7 +28,7 @@ export type FindWorkSort = (typeof FIND_WORK_SORTS)[number];
 export const FIND_WORK_VIEWS = ['list', 'map'] as const;
 export type FindWorkView = (typeof FIND_WORK_VIEWS)[number];
 
-export interface FindWorkQuery extends Omit<TaskBoardQuery, 'sort'> {
+export interface FindWorkQuery extends Omit<TaskBoardQuery, 'sort' | 'view' | 'group'> {
   /** Default `any`. Measured from the helper's area. */
   distance?: FindWorkDistance;
   /** Default `soonest`. */

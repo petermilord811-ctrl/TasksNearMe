@@ -59,21 +59,43 @@ describe('toTaskPublicView', () => {
 });
 
 describe('board query', () => {
+  const defaults = { areas: [], times: [], few: false, when: 'any', remoteOnly: false, sort: 'soonest', page: 1, view: 'list', group: 'area' };
+
   it('fills defaults and ignores unknown values', () => {
-    expect(parseTaskBoardQuery({})).toEqual({ when: 'any', remoteOnly: false, sort: 'soonest', page: 1 });
+    expect(parseTaskBoardQuery({})).toEqual(defaults);
     expect(parseTaskBoardQuery({ category: 'moving-help', when: 'today', remote: '1', sort: 'newest', page: '3' })).toEqual({
+      ...defaults,
       category: 'moving-help',
       when: 'today',
       remoteOnly: true,
       sort: 'newest',
       page: 3,
     });
-    expect(parseTaskBoardQuery({ category: 'plumbing', when: 'someday', sort: 'cheap', page: '-2' })).toEqual({
-      when: 'any',
-      remoteOnly: false,
-      sort: 'soonest',
-      page: 1,
+    expect(parseTaskBoardQuery({ category: 'plumbing', when: 'someday', sort: 'cheap', page: '-2', view: 'grid', group: 'zip' })).toEqual(defaults);
+  });
+
+  it('reads the Craigslist-style filters (completion plan 7.4) and drops what doesn’t fit', () => {
+    expect(
+      parseTaskBoardQuery({ category: 'furniture-assembly', type: 'desk', q: '  flat   pack desk ', area: 'mueller,hyde-park,mueller,Bad Slug!', min: '150', max: '50', pricing: 'fixed', posted: '3d', time: 'evening,morning,noon', few: '1', view: 'cards', group: 'day' }),
+    ).toEqual({
+      ...defaults,
+      category: 'furniture-assembly',
+      type: 'desk',
+      q: 'flat pack desk',
+      areas: ['hyde-park', 'mueller'],
+      minPrice: 50,
+      maxPrice: 150,
+      pricing: 'fixed',
+      posted: '3d',
+      times: ['morning', 'evening'],
+      few: true,
+      view: 'cards',
+      group: 'day',
     });
+    // A type needs its category; unknown pricing, posted windows and prices are ignored.
+    expect(parseTaskBoardQuery({ type: 'desk', pricing: 'free', posted: '1y', min: 'cheap', max: '9999999' })).toEqual(defaults);
+    expect(parseTaskBoardQuery({ category: 'yard-cleanup', type: 'desk' })).toEqual({ ...defaults, category: 'yard-cleanup' });
+    expect(parseTaskBoardQuery({ q: 'x'.repeat(120) }).q).toHaveLength(80);
   });
 
   it('turns "when" into market-calendar ranges', () => {

@@ -8,7 +8,7 @@ import { DEFAULT_METRICS_PERIOD, type MetricsPeriodDays } from './analytics';
 import type { CategorySlug } from './common';
 import type { FindWorkQuery } from './helper-work';
 import type { ExactAddress } from './location';
-import type { TaskBoardQuery } from './tasks';
+import { TASK_BOARD_Q_MAX, TASK_BOARD_TIMES, type TaskBoardQuery } from './tasks';
 
 /**
  * Typed route builders for every page (docs/blueprint/02 §1 + docs/ui/ui-contract.md §13).
@@ -38,12 +38,28 @@ const DEFAULT_MARKET = 'austin';
 const enc = encodeURIComponent;
 
 /** Task board filters as URL parameters. Defaults (`when: any`, `sort: soonest`, page 1) are left out. */
+/**
+ * The board's filters as URL parameters (completion plan 7.4), in a fixed order and without defaults, so the
+ * same filters always make the same URL. Lists (`area`, `time`) are comma-separated and sorted.
+ */
 function boardQuery(query: TaskBoardQuery): Record<string, string | undefined> {
+  const q = query.q?.trim().slice(0, TASK_BOARD_Q_MAX);
   return {
     category: query.category,
+    type: query.category && query.type ? query.type : undefined,
+    q: q ? q : undefined,
+    area: query.areas?.length ? [...new Set(query.areas)].sort().join(',') : undefined,
+    min: query.minPrice !== undefined ? String(query.minPrice) : undefined,
+    max: query.maxPrice !== undefined ? String(query.maxPrice) : undefined,
+    pricing: query.pricing,
+    posted: query.posted,
+    time: query.times?.length ? TASK_BOARD_TIMES.filter((time) => query.times!.includes(time)).join(',') : undefined,
+    few: query.few ? '1' : undefined,
     when: query.when && query.when !== 'any' ? query.when : undefined,
     remote: query.remoteOnly ? '1' : undefined,
     sort: query.sort && query.sort !== 'soonest' ? query.sort : undefined,
+    view: query.view && query.view !== 'list' ? query.view : undefined,
+    group: query.group && query.group !== 'area' ? query.group : undefined,
     page: query.page && query.page > 1 ? String(query.page) : undefined,
   };
 }

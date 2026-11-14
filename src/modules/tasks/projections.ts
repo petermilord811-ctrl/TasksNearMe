@@ -2,12 +2,12 @@ import type {
   CategorySlug,
   PricingInput,
   TaskBoardPageData,
-  TaskBoardSort,
   TaskBoardWhen,
   TaskPublicView,
   TaskStatus,
 } from '@/contracts';
-import { CATEGORY_SLUGS, TASK_BOARD_SORTS, TASK_BOARD_WHEN } from '@/contracts';
+import { CATEGORY_SLUGS, TASK_BOARD_GROUPS, TASK_BOARD_POSTED, TASK_BOARD_Q_MAX, TASK_BOARD_SORTS, TASK_BOARD_TIMES, TASK_BOARD_VIEWS, TASK_BOARD_WHEN } from '@/contracts';
+import { isTaskType, taskTypeOf } from '@/shared/task-types';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { publicExcerpt } from '@/modules/trust/contact-masking';
 
@@ -38,6 +38,8 @@ export interface PublicTaskRow {
   marketSlug: string;
   marketName: string;
   poster: { name: string; firstName: string; lastName: string; createdAt: Date; phoneVerifiedAt: Date | null };
+  /** The posting form's details; only the field that decides the task type (7.5) is read here. */
+  details?: Record<string, unknown> | null;
 }
 
 /** The general-area circle shown for local tasks (about a mile). */
@@ -56,6 +58,7 @@ export function budgetOf(row: Pick<PublicTaskRow, 'pricingType' | 'budgetCents' 
 }
 
 export function toTaskPublicView(row: PublicTaskRow): TaskPublicView {
+  const taskType = taskTypeOf(row.categorySlug as CategorySlug, row.details);
   const initials = `${row.poster.firstName.charAt(0)}${row.poster.lastName.charAt(0)}`.toUpperCase();
   return {
     id: row.id,
@@ -89,6 +92,7 @@ export function toTaskPublicView(row: PublicTaskRow): TaskPublicView {
       memberSince: row.poster.createdAt.toISOString(),
       phoneVerified: row.poster.phoneVerifiedAt !== null,
     },
+    ...(taskType ? { taskType } : {}),
   };
 }
 
@@ -97,18 +101,49 @@ export const BOARD_PAGE_SIZE = 20;
 type SearchParams = Record<string, string | string[] | undefined>;
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
-/** URL search params → the board's query with defaults (unknown values are ignored). */
+const AREA_SLUG = /^[a-z0-9][a-z0-9-]{0,47}$/;
+const MAX_PRICE_DOLLARS = 100_000;
+
+function oneOf<T extends string>(value: string | undefined, options: readonly T[]): T | undefined {
+  return value !== undefined && (options as readonly string[]).includes(value) ? (value as T) : undefined;
+}
+
+function dollars(value: string | undefined): number | undefined {
+  if (value === undefined || !/^\d{1,6}$/.test(value.trim())) return undefined;
+  const amount = Number.parseInt(value, 10);
+  return amount <= MAX_PRICE_DOLLARS ? amount : undefined;
+}
+
+/** URL search params → the board's query with defaults (unknown values are ignored; completion plan 7.4). */
 export function parseTaskBoardQuery(params: SearchParams): TaskBoardPageData['query'] {
-  const category = first(params.category);
-  const when = first(params.when);
-  const sort = first(params.sort);
+  const category = oneOf(first(params.category), CATEGORY_SLUGS);
+  const type = first(params.type);
+  const q = first(params.q)?.replace(/\s+/g, ' ').trim().slice(0, TASK_BOARD_Q_MAX);
+  const areas = [...new Set((first(params.area) ?? '').split(',').map((slug) => slug.trim()).filter((slug) => AREA_SLUG.test(slug)))].slice(0, 12).sort();
+  const times = TASK_BOARD_TIMES.filter((time) => (first(params.time) ?? '').split(',').includes(time));
+  let minPrice = dollars(first(params.min));
+  let maxPrice = dollars(first(params.max));
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) [minPrice, maxPrice] = [maxPrice, minPrice];
   const page = Number.parseInt(first(params.page) ?? '1', 10);
+  const pricing = oneOf(first(params.pricing), ['fixed', 'hourly'] as const);
+  const posted = oneOf(first(params.posted), TASK_BOARD_POSTED);
   return {
-    ...(category && (CATEGORY_SLUGS as readonly string[]).includes(category) ? { category: category as CategorySlug } : {}),
-    when: when && (TASK_BOARD_WHEN as readonly string[]).includes(when) ? (when as TaskBoardWhen) : 'any',
+    ...(category ? { category } : {}),
+    ...(category && type && isTaskType(category, type) ? { type } : {}),
+    ...(q ? { q } : {}),
+    areas,
+    ...(minPrice !== undefined && minPrice > 0 ? { minPrice } : {}),
+    ...(maxPrice !== undefined ? { maxPrice } : {}),
+    ...(pricing ? { pricing } : {}),
+    ...(posted ? { posted } : {}),
+    times,
+    few: first(params.few) === '1',
+    when: oneOf(first(params.when), TASK_BOARD_WHEN) ?? 'any',
     remoteOnly: first(params.remote) === '1',
-    sort: sort && (TASK_BOARD_SORTS as readonly string[]).includes(sort) ? (sort as TaskBoardSort) : 'soonest',
+    sort: oneOf(first(params.sort), TASK_BOARD_SORTS) ?? 'soonest',
     page: Number.isFinite(page) && page > 1 ? Math.min(page, 1000) : 1,
+    view: oneOf(first(params.view), TASK_BOARD_VIEWS) ?? 'list',
+    group: oneOf(first(params.group), TASK_BOARD_GROUPS) ?? 'area',
   };
 }
 

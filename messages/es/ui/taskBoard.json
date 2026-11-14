@@ -17,7 +17,9 @@
   "sort": "Ordenar",
   "sortOptions": {
     "soonest": "Más próximas",
-    "newest": "Más recientes"
+    "newest": "Más recientes",
+    "price_high": "Precio: de mayor a menor",
+    "price_low": "Precio: de menor a mayor"
   },
   "results": "{count, plural, one {# tarea abierta} other {# tareas abiertas}}",
   "pagination": "Páginas de tareas",
