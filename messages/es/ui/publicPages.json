@@ -166,7 +166,14 @@
     "remoteNote": "La ayuda remota con computadoras se hace compartiendo la pantalla. Tú mantienes el control de tu dispositivo y escribes tus propias contraseñas. No se usan herramientas de acceso remoto sin supervisión.",
     "helpersTitle": "Ayudantes de esta categoría",
     "ctaTitle": "¿Listo para resolverlo?",
-    "ctaBody": "Describe el trabajo, elige tu horario y compara ofertas antes de reservar."
+    "ctaBody": "Describe el trabajo, elige tu horario y compara ofertas antes de reservar.",
+    "seo": {
+      "helpers": "{count, plural, one {# ayudante verificado} other {# ayudantes verificados}}",
+      "openTasks": "{count, plural, one {# tarea abierta} other {# tareas abiertas}}",
+      "aboutTitle": "Lo que conviene saber en {market}",
+      "faqTitle": "Preguntas frecuentes",
+      "relatedTitle": "Más en {market}"
+    }
   },
   "categories": {
     "furniture-assembly": {
@@ -338,6 +345,8 @@
     "market": "Mercado de Austin",
     "furniture": "Armado de muebles",
     "moving": "Ayuda con mudanzas sin tareas",
+    "furnitureSeo": "Armado de muebles con cifras, guía de la ciudad, preguntas y enlaces relacionados",
+    "movingSeoEmpty": "Ayuda con mudanzas con preguntas, pero sin cifras ni guía de la ciudad todavía",
     "computer": "Ayuda remota con computadoras",
     "yard": "Limpieza de jardín",
     "cleaning": "Limpieza ligera",

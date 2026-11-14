@@ -252,18 +252,29 @@ d4 task board and task page), **owner** (§8). Status as of writing.
 | S2.2 | Helper profiles indexed (in `on`) only with a completed task or a published review | b7 | Next ship |
 | S2.3 | Task pages indexed (in `on`) only while open, public and from a poster with a verified phone; closed ones noindex, follow with a banner (already the board's rule) | b7 | Rule in place; poster check at launch |
 
-### S3 Category pages, the money pages (`/austin/[category]`)
-| ID | Item | Owner | Status |
-|---|---|---|---|
-| S3.1 | Data in the page contract: helper count in the city and category, price guide from the one price function with an "updated <month>" line, open-task count | b7 | This run |
-| S3.2 | Austin text per category: 200–400 words written for Austin (what people book, typical jobs in Austin homes, neighborhoods, seasonal notes), English and Spanish, kept in the repo as content | b7 | This run |
-| S3.3 | FAQ text (cost, what's included, verification, how payment works) from the same data, no FAQ markup | b7 + UI | This run (data and copy), UI renders |
-| S3.4 | Links: other services in Austin, the same service in other live cities, the cost guide, the job hub | b7 + UI | This run |
+### S3 Category pages, the money pages (`/austin/[category]`): built this run
+- `CategoryPageData.seo` (`CategorySeoContent`), filled in the page's language by `src/modules/seo/category-content.ts`:
+  - **counts**: real helpers offering the service in the city and its open tasks, never sample data (`isRealRecordId`);
+    the page shows the line only above zero;
+  - **questions people ask**: the cost (from the same price guidance the page shows, so the numbers never disagree),
+    how helpers are checked (with the background check for in-home services), remote work where allowed, and two
+    answers taken from the help center's own summaries (when you're charged, who sees your address), so the two
+    never disagree. Rows open in place; no FAQ markup;
+  - **the city guide**: 180–270 words per service written for Austin, in English and Spanish
+    (`content/local/austin/*.md`, `content/local/es/austin/*.md`), with checked local facts: the IKEA store in
+    Round Rock and its pick-up points; the spring live-oak leaf drop; the City's yard-trimming rules (paper bags,
+    weekly on trash day, bundles under 5 feet); no oak pruning February–June (oak wilt); summer heat; August lease
+    turnover and UT move-in;
+  - **related links**: the city's other services, its open tasks, pricing.
+- Layout (a9's): counts under the H1; the guide after included/excluded; questions after the helpers; related links
+  last. Previews `screen-category/furniture-seo` and `screen-category/moving-seo-empty`.
 
 ### S4 Earn-side hubs (`/austin/tasks/[category]`)
 "Furniture assembly jobs in Austin" / "Trabajos de armado de muebles en Austin": the board pre-filtered on one
-category, with its own title, intro and breadcrumbs; `?category=` board URLs canonicalize to it. Indexed only while the
-market is indexable. Route b7, screen d4 (shared board component). This run.
+category, with its own title, H1, intro and breadcrumbs; filtered board URLs canonicalize to it; indexed only while the
+market is indexable. Agreed with d4: its board redesign adds `TaskBoardPageData.heading` and
+`loadTaskBoard({ marketSlug, search, now, category })` (src/modules/tasks/board.ts); then b7 adds the route and makes
+`routes.taskBoard()` build `/<market>/tasks/<category>?…` in one commit.
 
 ### S5 Cost guides (`/austin/[category]/cost`)
 "How much does furniture assembly cost in Austin?": the price range from the one price function, worked examples from
@@ -296,8 +307,14 @@ components. This run.
   and UI.
 
 ### S7 Spanish
-Every indexable page fully Spanish at /es (headings fixed by a9 today), Spanish cost guides and job hubs, "trabajos" on
-earning pages. b7 + a9.
+- Every indexable page fully Spanish at /es (category names translated by a9; "trabajos" on earning pages, per
+  `docs/ui/spanish-glossary.md`); city guides in Spanish (S3); Spanish cost guides and job hubs with the English ones.
+- **Links inside Spanish pages should stay in Spanish.** Today a page at `/es/austin` links to `/austin/yard-cleanup`,
+  `/pricing` and so on (only the language switch says `/es/…`). People keep Spanish through the language cookie, but
+  crawlers follow those links to the English pages, so Spanish pages pass no link value to each other. Proposed for
+  the UI owners: a locale-aware link (next-intl's `createNavigation` with `localePrefix: 'as-needed'`, or a small
+  wrapper over `next/link`) so that on Spanish pages every internal `href` carries `/es`. Hreflang and the sitemap
+  already lead Google to each Spanish page meanwhile.
 
 ### S8 Structured data
 | Page | Markup | Status |

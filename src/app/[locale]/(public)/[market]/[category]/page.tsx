@@ -6,6 +6,7 @@ import { CATEGORY_SLUGS } from '@/contracts';
 import { getCategoryPageData, listCategorySlugs } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
+import { categorySeoContent } from '@/modules/seo/category-content';
 import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, categoryServiceNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { CategoryScreen } from '@/ui/screens/public';
@@ -40,6 +41,8 @@ async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]
   const page = await getCategoryPageData(market, category);
   if (!page) notFound();
   const [context, t, categoryName] = await Promise.all([structuredDataContext(), getTranslations('server.meta.category'), categoryNames()]);
+  // Counts, questions people ask, the city guide and related links (docs/seo/PLAN.md S3).
+  const seo = await categorySeoContent(page.data, context.locale, categoryName);
   const { market: view, category: shown } = page.data;
   const values = { category: categoryName(shown.slug), market: view.name };
   const path = routes.category(shown.slug, view.slug);
@@ -62,7 +65,7 @@ async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]
           }),
         ]}
       />
-      <CategoryScreen data={page.data} now={page.now} />
+      <CategoryScreen data={{ ...page.data, seo }} now={page.now} />
     </>
   );
 }

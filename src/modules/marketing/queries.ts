@@ -28,9 +28,9 @@ import { users } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
 import { areas as areaTable } from '@/modules/markets/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
-import { countFoundingHelpers, getHelperProfile, listActiveHelperHandles, listPublicHelpers } from '@/modules/profiles/queries';
+import { countFoundingHelpers, countPublicHelpers, getHelperProfile, listActiveHelperHandles, listPublicHelpers } from '@/modules/profiles/queries';
 import { BOARD_PAGE_SIZE } from '@/modules/tasks/projections';
-import { findPublicTask, listBoardTasks, listRecentOpenTasks } from '@/modules/tasks/queries';
+import { countOpenTasks, findPublicTask, listBoardTasks, listRecentOpenTasks } from '@/modules/tasks/queries';
 import { taskDrafter } from '@/modules/tasks/server';
 import { db } from '@/platform/db/client';
 import { buildBecomeHelperPageData, buildPricingPageData, landingFeeExamples } from './page-data';
@@ -193,6 +193,23 @@ export async function getCategoryPageData(
     listRecentOpenTasks(db, { marketId: market.id, categorySlug: category.slug as CategorySlug, limit: RECENT_TASKS, now }),
   ]);
   return { data: { market: view, category, recentTasks, topHelpers }, now: now.toISOString() };
+}
+
+/**
+ * Real helpers offering a category in a market, and its open tasks: facts the category page states (SEO plan S3), so
+ * sample data never counts (src/shared/sample-data.ts).
+ */
+export async function getCategorySupply(marketSlug: string, categorySlug: CategorySlug): Promise<{ helperCount: number; openTaskCount: number }> {
+  'use cache';
+  cacheLife('minutes');
+  cacheTag(marketTag(marketSlug), 'tasks', 'helpers');
+  const market = await findPublicMarket(marketSlug);
+  if (!market) return { helperCount: 0, openTaskCount: 0 };
+  const [helperCount, openTaskCount] = await Promise.all([
+    countPublicHelpers({ marketId: market.id, categorySlug, realOnly: true }),
+    countOpenTasks(db, { marketId: market.id, categorySlug, now: new Date(), realOnly: true }),
+  ]);
+  return { helperCount, openTaskCount };
 }
 
 /** Category slugs per public market, for generateStaticParams. */

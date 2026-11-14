@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentBlock, InlineNode } from '@/contracts';
 import { CATEGORY_SLUGS, LEGAL_DOCS } from '@/contracts';
-import { getHelpArticle, getHelpCenterData, getLegalDoc, listHelpArticleDates, listHelpArticleSlugs, listPublishedLegalDocs } from './loaders';
+import fs from 'node:fs';
+import { getHelpArticle, getHelpCenterData, getLegalDoc, getLocalGuide, listHelpArticleDates, listHelpArticleSlugs, listPublishedLegalDocs } from './loaders';
 
 /** Checks the real files in content/: every article and document parses, and links resolve. */
 
@@ -104,6 +105,31 @@ describe('legal content', () => {
 
   it('refuses unknown documents', () => {
     expect(getLegalDoc('cookies')).toBeNull();
+  });
+});
+
+describe('city guides (content/local)', () => {
+  const words = (blocks: ContentBlock[]) =>
+    JSON.stringify(blocks).replace(/"(type|content|items|text|href|ordered|tone|strong)":/g, ' ').split(/\s+/).filter((word) => /\p{L}/u.test(word)).length;
+  const guides = fs.readdirSync('content/local/austin').filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3));
+
+  it('covers every category in Austin', () => {
+    expect([...guides].sort()).toEqual([...CATEGORY_SLUGS].sort());
+  });
+
+  it.each(guides)('%s exists in English and Spanish, with substance, and links only to https or this site', (slug) => {
+    for (const locale of ['en', 'es'] as const) {
+      const blocks = getLocalGuide('austin', slug, locale);
+      expect(blocks, `${locale} ${slug}`).not.toBeNull();
+      expect(words(blocks!), `${locale} ${slug}`).toBeGreaterThan(150);
+      for (const href of hrefs(blocks!)) expect(href.startsWith('https://') || isKnownInternalLink(href), href).toBe(true);
+    }
+  });
+
+  it('has nothing for a city or language without a guide, and refuses unsafe slugs', () => {
+    expect(getLocalGuide('chicago', 'furniture-assembly')).toBeNull();
+    expect(getLocalGuide('austin', '../legal/terms')).toBeNull();
+    expect(getLocalGuide('../content', 'furniture-assembly')).toBeNull();
   });
 });
 

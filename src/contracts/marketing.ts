@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ActionHandler, QueryHandler } from './actions';
 import type { CategorySlug, Cents, ISODateTime } from './common';
+import type { ContentBlock } from './content';
 import { emailField, zipField } from './forms';
 import type { PriceBreakdown, PricingInput } from './money';
 import type { HelperSummary } from './people';
@@ -145,6 +146,35 @@ export interface CategoryPageData {
   /** Open tasks in this category (may be empty). */
   recentTasks: TaskPublicView[];
   topHelpers: HelperSummary[];
+  /** Local substance for search and readers (SEO plan S3), in the page's language. Absent: the sections don't show. */
+  seo?: CategorySeoContent;
+}
+
+/** A question people ask about a service, answered from the platform's rules and the page's own data. */
+export interface FaqEntry {
+  question: string;
+  answer: string;
+}
+
+/** A link to a related page: other services in the city, its open tasks, pricing. */
+export interface RelatedLink {
+  label: string;
+  href: string;
+}
+
+/**
+ * What a category page adds for people arriving from search (docs/seo/PLAN.md S3). The counts are real rows only,
+ * never sample data: the UI shows them only above 0. Every string is already in the page's language.
+ */
+export interface CategorySeoContent {
+  /** Verified helpers offering this category in the city. */
+  helperCount: number;
+  /** Open tasks in this category in the city. */
+  openTaskCount: number;
+  /** A few paragraphs written for this city and category, when they exist in the page's language. */
+  about?: ContentBlock[];
+  faq: FaqEntry[];
+  related: RelatedLink[];
 }
 
 /** Everything the pricing page shows. Computed by the app's fee engine; the UI only displays it. */

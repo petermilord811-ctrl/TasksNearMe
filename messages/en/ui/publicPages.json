@@ -166,7 +166,14 @@
     "remoteNote": "Remote computer help uses screen sharing. You keep control of your device and enter your own passwords. No unattended remote-access tools.",
     "helpersTitle": "Helpers for this category",
     "ctaTitle": "Ready to get it done?",
-    "ctaBody": "Describe the work, choose your time, and compare offers before you book."
+    "ctaBody": "Describe the work, choose your time, and compare offers before you book.",
+    "seo": {
+      "helpers": "{count, plural, one {# verified helper} other {# verified helpers}}",
+      "openTasks": "{count, plural, one {# open task} other {# open tasks}}",
+      "aboutTitle": "Good to know in {market}",
+      "faqTitle": "Questions people ask",
+      "relatedTitle": "More in {market}"
+    }
   },
   "categories": {
     "furniture-assembly": {
@@ -338,6 +345,8 @@
     "market": "Austin market",
     "furniture": "Furniture assembly",
     "moving": "Moving help without tasks",
+    "furnitureSeo": "Furniture assembly with counts, city guide, questions and related links",
+    "movingSeoEmpty": "Moving help with questions but no counts or city guide yet",
     "computer": "Remote computer help",
     "yard": "Yard cleanup",
     "cleaning": "Light cleaning",

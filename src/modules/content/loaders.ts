@@ -1,7 +1,7 @@
 import 'server-only';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { AppLocale, HelpArticleData, HelpArticleSummary, HelpCenterData, ISODateTime, LegalDoc, LegalDocData } from '@/contracts';
+import type { AppLocale, ContentBlock, HelpArticleData, HelpArticleSummary, HelpCenterData, ISODateTime, LegalDoc, LegalDocData } from '@/contracts';
 import { DEFAULT_LOCALE, LEGAL_DOCS } from '@/contracts';
 import { parseBlocks, parseSections, splitFrontMatter } from './markdown';
 
@@ -135,6 +135,22 @@ function readLegalFile(doc: LegalDoc) {
   const file = `${doc}.md`;
   const { meta, body } = splitFrontMatter(fs.readFileSync(path.join(CONTENT_DIR, 'legal', file), 'utf8'));
   return { meta, body, file };
+}
+
+/**
+ * A city guide for one service (content/local/<market>/<category>.md; Spanish in content/local/es/<market>/...): a few
+ * paragraphs written for that city, shown on its category page (docs/seo/PLAN.md S3). Null when there is none in that
+ * language: a page never mixes languages.
+ */
+export function getLocalGuide(marketSlug: string, categorySlug: string, locale: AppLocale = DEFAULT_LOCALE): ContentBlock[] | null {
+  if (!SLUG.test(marketSlug) || !SLUG.test(categorySlug)) return null;
+  const dir = locale === DEFAULT_LOCALE ? path.join(CONTENT_DIR, 'local', marketSlug) : path.join(CONTENT_DIR, 'local', locale, marketSlug);
+  const file = path.join(dir, `${categorySlug}.md`);
+  // content/ ships whole (scripts/preview/bundle.sh); without the ignore, Next's file tracer copies the whole project.
+  if (!fs.existsSync(/*turbopackIgnore: true*/ file)) return null;
+  const { body } = splitFrontMatter(fs.readFileSync(/*turbopackIgnore: true*/ file, 'utf8'));
+  const blocks = parseBlocks(body);
+  return blocks.length > 0 ? blocks : null;
 }
 
 /** The legal documents in effect, with their last update, for the sitemap. Drafts are noindex, so they're left out. */

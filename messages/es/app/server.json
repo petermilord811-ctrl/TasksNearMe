@@ -349,5 +349,26 @@
   },
   "sms": {
     "phoneCode": "{code} es tu código de TasksNearMe. Funciona durante {minutes} minutos. Nunca te llamaremos para pedírtelo."
+  },
+  "seo": {
+    "categoryFaq": {
+      "cost": {
+        "furniture-assembly": "¿Cuánto cuesta el armado de muebles en {market}?",
+        "moving-help": "¿Cuánto cuesta la ayuda con mudanzas en {market}?",
+        "yard-cleanup": "¿Cuánto cuesta la limpieza de jardín en {market}?",
+        "light-cleaning": "¿Cuánto cuesta la limpieza ligera en {market}?",
+        "computer-help": "¿Cuánto cuesta la ayuda con computadoras y teléfonos en {market}?",
+        "answer": "En {market}, los precios habituales van de {low} a {high} {unit, select, item {por artículo} hour {por hora} other {por tarea}}. Acuerdas el precio con tu ayudante antes de reservar y ves la tarifa de servicio y el total antes de pagar."
+      },
+      "checked": {
+        "question": "¿Cómo se verifica a los ayudantes?",
+        "answer": "Antes de enviar ofertas, cada ayudante verifica su teléfono, una identificación oficial con una selfie en vivo y su domicilio. Los clientes ven una insignia con la fecha de cada verificación.",
+        "inHome": "Antes de enviar ofertas, cada ayudante verifica su teléfono, una identificación oficial con una selfie en vivo y su domicilio. Este servicio se hace en tu casa, así que además necesitan una verificación de antecedentes aprobada para poder hacerlo."
+      },
+      "remote": {
+        "question": "¿Se puede hacer a distancia?",
+        "answer": "Sí. Publícala como tarea remota: tu ayudante trabaja contigo compartiendo la pantalla, y tú mantienes el control de tu dispositivo y de tus contraseñas."
+      }
+    }
   }
 }

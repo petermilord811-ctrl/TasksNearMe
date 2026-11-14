@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { CategoryPageData, PreviewEntry } from '@/contracts';
 import { routes } from '@/contracts';
-import { becomeHelperNoRewardsData, becomeHelperPageData, categoryViews, cleaningPublicTask, furnitureCategoryPageData, homePageData, lee, movingCategoryPageData, pricingPageData, publicViewer, remoteComputerPublicTask, sam, yardPublicTask } from '@/fixtures';
+import { becomeHelperNoRewardsData, becomeHelperPageData, categoryViews, cleaningPublicTask, furnitureCategoryPageData, furnitureCategoryWithSeoData, homePageData, lee, movingCategoryPageData, movingCategoryWithSeoEmptyData, pricingPageData, publicViewer, remoteComputerPublicTask, sam, yardPublicTask } from '@/fixtures';
 import { PublicShell } from '@/ui/shells/public-shell';
 import { BecomeHelperScreen, CategoryScreen, HowItWorksScreen, MarketScreen, PricingScreen, TrustSafetyScreen } from '@/ui/screens/public';
 import copy from '../../../messages/en/ui/publicPages.json';
@@ -19,6 +19,8 @@ export const publicPagePreviews: PreviewEntry[] = [
   page('screen-market/default', copy.previews.market, routes.market(), () => <MarketScreen data={homePageData} now={now} />),
   page('screen-category/furniture', copy.previews.furniture, routes.category('furniture-assembly'), () => <CategoryScreen data={furnitureCategoryPageData} now={now} />),
   page('screen-category/moving-empty', copy.previews.moving, routes.category('moving-help'), () => <CategoryScreen data={movingCategoryPageData} now={now} />),
+  page('screen-category/furniture-seo', copy.previews.furnitureSeo, routes.category('furniture-assembly'), () => <CategoryScreen data={furnitureCategoryWithSeoData} now={now} />),
+  page('screen-category/moving-seo-empty', copy.previews.movingSeoEmpty, routes.category('moving-help'), () => <CategoryScreen data={movingCategoryWithSeoEmptyData} now={now} />),
   page('screen-category/computer-remote', copy.previews.computer, routes.category('computer-help'), () => <CategoryScreen data={computerData} now={now} />),
   page('screen-category/yard', copy.previews.yard, routes.category('yard-cleanup'), () => <CategoryScreen data={yardData} now={now} />),
   page('screen-category/cleaning', copy.previews.cleaning, routes.category('light-cleaning'), () => <CategoryScreen data={cleaningData} now={now} />),

@@ -349,5 +349,26 @@
   },
   "sms": {
     "phoneCode": "{code} is your TasksNearMe code. It works for {minutes} minutes. We'll never call to ask for it."
+  },
+  "seo": {
+    "categoryFaq": {
+      "cost": {
+        "furniture-assembly": "How much does furniture assembly cost in {market}?",
+        "moving-help": "How much does moving help cost in {market}?",
+        "yard-cleanup": "How much does yard cleanup cost in {market}?",
+        "light-cleaning": "How much does light cleaning cost in {market}?",
+        "computer-help": "How much does computer and phone help cost in {market}?",
+        "answer": "In {market}, typical prices are {low}–{high} {unit, select, item {per item} hour {per hour} other {per task}}. You agree on the price with your helper before you book, and you see the service fee and your total before you pay."
+      },
+      "checked": {
+        "question": "How are helpers checked?",
+        "answer": "Before sending offers, every helper verifies their phone, a government ID with a live selfie, and their home address. Clients see a badge with the date of each check.",
+        "inHome": "Before sending offers, every helper verifies their phone, a government ID with a live selfie, and their home address. This service happens in your home, so helpers also need a cleared background check before they can take it."
+      },
+      "remote": {
+        "question": "Can it be done remotely?",
+        "answer": "Yes. Post it as a remote task: your helper works with you by screen sharing, and you keep control of your device and your passwords."
+      }
+    }
   }
 }

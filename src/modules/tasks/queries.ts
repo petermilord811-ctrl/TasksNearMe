@@ -5,6 +5,7 @@ import { users } from '../accounts/schema';
 import { areas, categories, markets } from '../markets/schema';
 import { BOARD_PAGE_SIZE, toTaskPublicView, whenRange, type PublicTaskRow } from './projections';
 import { taskMarks, tasks } from './schema';
+import { GENERATED_ID_PATTERN } from '@/shared/sample-data';
 
 /** Public task reads. Only open tasks whose window hasn't ended are listed. */
 
@@ -194,6 +195,25 @@ export async function listRecentOpenTasks(
     .orderBy(desc(tasks.publishedAt), asc(tasks.id))
     .limit(options.limit);
   return rows.map((row) => toTaskPublicView(toRow(row)));
+}
+
+/**
+ * How many open tasks the board lists in the market (and category). `realOnly` leaves sample data out
+ * (src/shared/sample-data.ts), for counts shown as facts on public pages.
+ */
+export async function countOpenTasks(
+  db: Db,
+  options: { marketId: string; categorySlug?: CategorySlug; now: Date; realOnly?: boolean },
+): Promise<number> {
+  const conditions = openIn(options.marketId, options.now);
+  if (options.categorySlug) conditions.push(eq(categories.slug, options.categorySlug));
+  if (options.realOnly) conditions.push(sql`${tasks.id} ~ ${GENERATED_ID_PATTERN}`);
+  const [row] = await db
+    .select({ value: count() })
+    .from(tasks)
+    .innerJoin(categories, eq(categories.id, tasks.categoryId))
+    .where(and(...conditions));
+  return row?.value ?? 0;
 }
 
 /**

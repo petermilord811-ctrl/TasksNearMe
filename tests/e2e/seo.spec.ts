@@ -75,6 +75,23 @@ test.describe('search engines', () => {
     expect(nodes[1]).toMatchObject({ serviceType: 'Armado de muebles', areaServed: { '@type': 'City', name: 'Austin' } });
   });
 
+  test('a category page gives Austin substance: the city guide, questions people ask, related links', async ({ page }) => {
+    await page.goto('/austin/furniture-assembly');
+    await expect(page.getByRole('region', { name: 'Good to know in Austin' })).toBeVisible();
+    const faq = page.getByRole('region', { name: 'Questions people ask' });
+    const cost = faq.getByRole('heading', { level: 3, name: 'How much does furniture assembly cost in Austin?' });
+    await expect(cost).toBeVisible();
+    await cost.click();
+    await expect(faq.getByText(/^In Austin, typical prices are \$/)).toBeVisible();
+    await expect(page.getByRole('region', { name: 'More in Austin' }).getByRole('link', { name: 'Moving help' })).toHaveAttribute('href', '/austin/moving-help');
+    // Seeded people aren't real, so no counts line.
+    await expect(page.getByText(/^\d+ verified helpers?/)).toHaveCount(0);
+
+    await page.goto('/es/austin/furniture-assembly');
+    await expect(page.getByRole('region', { name: 'Lo que conviene saber en Austin' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 3, name: '¿Cuánto cuesta el armado de muebles en Austin?' })).toBeVisible();
+  });
+
   test('a public task and a helper profile carry only what their page shows', async ({ page }) => {
     await page.goto('/austin/tasks');
     await page.locator('a[href^="/tasks/"]').first().click();

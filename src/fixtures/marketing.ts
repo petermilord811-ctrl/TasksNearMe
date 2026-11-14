@@ -1,6 +1,7 @@
 import type {
   BecomeHelperPageData,
   CategoryPageData,
+  CategorySeoContent,
   CategorySlug,
   CategoryView,
   HomePageData,
@@ -254,6 +255,43 @@ export const movingCategoryPageData: CategoryPageData = {
   category: categoryViews[1]!,
   recentTasks: [],
   topHelpers: [sam, jordan],
+};
+
+/** A category page's search content (docs/seo/PLAN.md S3): counts, the city guide, questions people ask, related links. */
+export const furnitureCategorySeo: CategorySeoContent = {
+  helperCount: 12,
+  openTaskCount: 5,
+  about: [
+    { type: 'paragraph', content: ['Most flat-pack furniture in Austin comes from the IKEA store in Round Rock or its pick-up points in town. Say the brand, the model and how many boxes, and helpers can price it right.'] },
+    { type: 'heading', text: 'Apartments and stairs' },
+    { type: 'paragraph', content: ['In apartment buildings, mention the floor, the elevator and where to park, so your helper can plan the trip up.'] },
+    { type: 'list', ordered: false, items: [['Have the boxes in the room where the furniture goes.'], ['Anchoring to the wall needs studs: say so in your task.']] },
+  ],
+  faq: [
+    { question: 'How much does furniture assembly cost in Austin?', answer: 'In Austin, typical prices are $50.00–$80.00 per item. You agree on the price with your helper before you book, and you see the service fee and your total before you pay.' },
+    { question: 'How are helpers checked?', answer: 'Before sending offers, every helper verifies their phone, a government ID with a live selfie, and their home address. This service happens in your home, so helpers also need a cleared background check before they can take it.' },
+    { question: 'Who sees my address?', answer: 'Only the helper you book, and only after you confirm.' },
+  ],
+  related: [
+    { label: 'Moving help', href: '/austin/moving-help' },
+    { label: 'Yard cleanup', href: '/austin/yard-cleanup' },
+    { label: 'Open tasks near you in Austin', href: '/austin/tasks' },
+    { label: 'Pricing and fees', href: '/pricing' },
+  ],
+};
+
+/** The furniture assembly page with every search section. */
+export const furnitureCategoryWithSeoData: CategoryPageData = { ...furnitureCategoryPageData, seo: furnitureCategorySeo };
+
+/** Search content with no real helpers or tasks yet, and no city guide: no counts line, no guide section. */
+export const movingCategoryWithSeoEmptyData: CategoryPageData = {
+  ...movingCategoryPageData,
+  seo: {
+    helperCount: 0,
+    openTaskCount: 0,
+    faq: [{ question: 'How much does moving help cost in Austin?', answer: 'In Austin, typical prices are $35.00–$60.00 per hour. You agree on the price with your helper before you book, and you see the service fee and your total before you pay.' }],
+    related: [{ label: 'Furniture assembly', href: '/austin/furniture-assembly' }, { label: 'Pricing and fees', href: '/pricing' }],
+  },
 };
 
 export const pricingPageData: PricingPageData = {
