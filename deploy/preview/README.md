@@ -45,6 +45,8 @@ database, `preview.env` and the Caddy block by hand. To set it up again, follow 
 
 - Logs: `journalctl -u tasksnearme-preview -f`
 - After editing `preview.env`: `sudo systemctl restart tasksnearme-preview`
+- If the shared `'use cache'` handler (`cache-handlers/shared-tags.mjs`) misbehaves, add `SHARED_CACHE_HANDLER=off`
+  to `preview.env` and restart: that falls back to Next's built-in handler without a code change.
 - Not using it for a while (saves about 0.5 GB of RAM): `sudo systemctl stop tasksnearme-preview`. To bring it
   back: `sudo systemctl start tasksnearme-preview`.
 - Roll back by hand: `sudo -u tnm-preview ln -sfn /srv/tasksnearme-preview/releases/<sha> /srv/tasksnearme-preview/current`
@@ -59,7 +61,11 @@ A feature whose keys are empty in `preview.env` is refused, the same as in produ
 
 - **Sign-in code, sign-up, posting a task, offers** (sending one, the one-tap offer, countering): need
   `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`.
-- **Payments, Stripe Identity:** need the Stripe keys (test mode for a preview).
+- **Payments, Stripe Identity:** need the Stripe keys (test mode for a preview), plus the two webhook
+  secrets for ID-check results, payouts and late bank steps (`STRIPE_WEBHOOK_SECRET`,
+  `STRIPE_CONNECT_WEBHOOK_SECRET`; the events are listed in `src/app/api/webhooks/stripe/route.ts`).
+- **Persona** (optional): with `PERSONA_API_KEY`, `PERSONA_INQUIRY_TEMPLATE_ID` and `PERSONA_WEBHOOK_SECRET` all
+  set, Persona does the ID double check instead of Stripe Identity. Until then, `/api/webhooks/persona` answers 404.
 - **Texts:** need Twilio.
 - **Gift-card rewards:** need Tremendous.
 - **Google sign-in:** needs `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, plus the redirect URI
