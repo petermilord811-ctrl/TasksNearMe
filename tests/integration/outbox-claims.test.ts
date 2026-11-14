@@ -95,4 +95,28 @@ describe('outbox claims', () => {
     const [event] = await db.select().from(outboxEvents).where(eq(outboxEvents.id, 'evt_claim_held'));
     expect(event!.dispatchedAt).toBeNull();
   });
+
+  it('the notifications page also shows one whose claim is still being written, which its own claim skipped as locked (5.19)', async () => {
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
+    await db.insert(outboxEvents).values({
+      id: 'evt_claim_locked',
+      type: 'booking.approval_reminder',
+      aggregateType: 'booking',
+      aggregateId: 'bkg_tv',
+      payload: { bookingId: 'bkg_tv', taskId: booking!.taskId, posterUserId: booking!.posterUserId, hours: 4, approvalDueAt: new Date(Date.now() + 4 * 3_600_000).toISOString() },
+    });
+    // Another dispatcher's claim statement has the row locked and hasn't committed: the row still reads as unclaimed.
+    const other = await second.pool.connect();
+    try {
+      await other.query('begin');
+      await other.query("select id from outbox_events where id = 'evt_claim_locked' for no key update");
+      const page = await getNotificationsPage(db, booking!.posterUserId, new Date());
+      const [made] = await db.select().from(notifications).where(eq(notifications.sourceEventId, 'evt_claim_locked'));
+      expect(made?.userId).toBe(booking!.posterUserId);
+      expect(page.notifications.map((item) => item.id)).toContain(made!.id);
+    } finally {
+      await other.query('rollback');
+      other.release();
+    }
+  });
 });

@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import type {
   AccountPageData,
   AccountProfileInput,
@@ -396,13 +396,15 @@ async function deliver(db: Db, event: EventRow, onlyUserId?: string): Promise<nu
 }
 
 /**
- * One person's notifications from the events other dispatchers hold right now (5.19): the signed-in layout
- * rendering beside the page, another page, the job runner. Made here too, so the notifications page shows them
- * at once; the dispatcher that claimed an event still runs its reactions and marks it dispatched.
+ * One person's notifications from every event not dispatched yet (5.19): those other dispatchers hold right now
+ * (the signed-in layout rendering beside the page, another page, the job runner), including one whose claim is
+ * still being written, which this request's own claim skipped as locked while it still reads as unclaimed. Made
+ * here too (idempotent), so the notifications page shows them at once; the dispatcher that claims an event still
+ * runs its reactions and marks it dispatched.
  */
-async function deliverHeld(db: Db, userId: string, limit = 200): Promise<void> {
-  const held = await db.select().from(outboxEvents).where(and(isNull(outboxEvents.dispatchedAt), isNotNull(outboxEvents.claimedAt))).orderBy(asc(outboxEvents.createdAt)).limit(limit);
-  for (const event of held) await deliver(db, event, userId);
+async function deliverPending(db: Db, userId: string, limit = 200): Promise<void> {
+  const pending = await db.select().from(outboxEvents).where(isNull(outboxEvents.dispatchedAt)).orderBy(asc(outboxEvents.createdAt)).limit(limit);
+  for (const event of pending) await deliver(db, event, userId);
 }
 
 /** Turns undispatched outbox events into notifications (idempotent), oldest first. */
@@ -442,7 +444,7 @@ export async function getNotificationsPage(db: Db, userId: string, now: Date): P
   await remindApprovalsDue(db, now, { posterUserId: userId });
   await remindUpcomingBookings(db, now, { userId });
   await dispatchNotifications(db, now);
-  await deliverHeld(db, userId);
+  await deliverPending(db, userId);
   const rows = await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(50);
   return {
     notifications: rows.map((row) => ({
