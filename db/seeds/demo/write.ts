@@ -21,6 +21,7 @@ import { reviews, savedHelpers } from '../../../src/modules/reviews/schema';
 import { messages, threadParticipants, threads } from '../../../src/modules/messaging/schema';
 import { availabilityPosts } from '../../../src/modules/availability/schema';
 import { notificationDeliveries, notifications } from '../../../src/modules/notifications/schema';
+import { communityPosts, communityReactions, communityReplies } from '../../../src/modules/community/schema';
 import { devCardRef } from '../../../src/integrations/payments';
 import { recomputeBadges } from '../../../src/modules/badges/service';
 import { cacheTagInvalidations } from '../../../src/platform/cache/schema';
@@ -28,6 +29,7 @@ import { seedVerification, upsertPeople, type Tx } from '../seed';
 import { AUSTIN, CATEGORIES } from '../data/austin';
 import { DEMO_MARKETS, demoAreaId, demoMarketId, demoPolicyId } from './markets';
 import { buildDemoPlan, DEMO_PREFIX, type DemoPlan, type DemoPolicies } from './plan';
+import { buildDemoCommunity, type DemoCommunity } from './community';
 
 /** `<table prefix>_demo_%` as a LIKE pattern (underscores escaped). */
 const demoIds = (prefix: string) => `${prefix}\\_${DEMO_PREFIX.replace('_', '\\_')}%`;
@@ -228,6 +230,27 @@ export async function writeDemoPlan(tx: Tx, plan: DemoPlan, encryptionKey: strin
     where s.user_id = hp.user_id`);
 }
 
+/**
+ * The demo community (completion plan 7.11), replaced on every run: the old demo posts go (their replies with
+ * them, and every reaction on either, including real people's), then the new ones are written.
+ */
+export async function writeDemoCommunity(tx: Tx, community: DemoCommunity): Promise<void> {
+  const oldPosts = tx.select({ id: communityPosts.id }).from(communityPosts).where(like(communityPosts.id, demoIds('cpo')));
+  const oldReplies = tx.select({ id: communityReplies.id }).from(communityReplies).where(inArray(communityReplies.postId, oldPosts));
+  await tx.delete(communityReactions).where(or(inArray(communityReactions.targetId, oldPosts), inArray(communityReactions.targetId, oldReplies)));
+  await tx.delete(communityReplies).where(inArray(communityReplies.postId, oldPosts));
+  await tx.delete(communityPosts).where(like(communityPosts.id, demoIds('cpo')));
+  for (let i = 0; i < community.posts.length; i += 200) {
+    await tx.insert(communityPosts).values(community.posts.slice(i, i + 200).map((post) => ({ ...post, status: 'visible', updatedAt: post.lastActivityAt })));
+  }
+  for (let i = 0; i < community.replies.length; i += 300) {
+    await tx.insert(communityReplies).values(community.replies.slice(i, i + 300).map((reply) => ({ ...reply, status: 'visible', updatedAt: reply.createdAt })));
+  }
+  for (let i = 0; i < community.reactions.length; i += 500) {
+    await tx.insert(communityReactions).values(community.reactions.slice(i, i + 500)).onConflictDoNothing();
+  }
+}
+
 /** Writes the markets, builds the plan from their published fees and writes it, in one transaction; then badges. */
 export async function seedDemoData(url: string, now = new Date()): Promise<{ markets: number; people: number; tasks: number; offers: number; bookings: number }> {
   const key = process.env.FIELD_ENCRYPTION_KEY;
@@ -238,6 +261,7 @@ export async function seedDemoData(url: string, now = new Date()): Promise<{ mar
       await writeDemoMarkets(tx);
       const built = buildDemoPlan({ now, policies: await loadDemoPolicies(tx) });
       await writeDemoPlan(tx, built, key);
+      await writeDemoCommunity(tx, buildDemoCommunity(built, now));
       return built;
     });
     for (const person of plan.people) await recomputeBadges(db, person.id, now, { announce: false });
