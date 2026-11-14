@@ -57,7 +57,8 @@ database, `preview.env` and the Caddy block by hand. To set it up again, follow 
 The preview is a real production build: `/dev/*` doesn't exist, and every integration uses real providers only.
 A feature whose keys are empty in `preview.env` is refused, the same as in production (see `.env.example`):
 
-- **Sign-in code, sign-up, posting a task:** need `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`.
+- **Sign-in code, sign-up, posting a task, offers** (sending one, the one-tap offer, countering): need
+  `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`.
 - **Payments, Stripe Identity:** need the Stripe keys (test mode for a preview).
 - **Texts:** need Twilio.
 - **Gift-card rewards:** need Tremendous.
@@ -65,3 +66,7 @@ A feature whose keys are empty in `preview.env` is refused, the same as in produ
   `https://preview.40-160-239-201.sslip.io/api/auth/callback/google` registered with Google.
 
 Email (Resend), AI (Anthropic) and address search (Mapbox) use the same keys as development.
+
+The Content Security Policy is enforced in production builds (development only reports it), so it applies
+here first. When the preview blocks a script, a frame or a connection, the browser console names the
+directive. Fix the policy, not the preview.
