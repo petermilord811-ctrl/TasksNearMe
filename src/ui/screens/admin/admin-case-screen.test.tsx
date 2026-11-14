@@ -15,7 +15,8 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 function content(data: AdminCasePageData, handlers: AdminCaseHandlers = fakeAdminCaseHandlers) {
-  return <NextIntlClientProvider locale="en" messages={{ ...messages, adminCase, adminCases }}><AdminCaseScreen data={data} handlers={handlers} now={ADMIN_NOW} /></NextIntlClientProvider>;
+  // A missing message fails the test (next-intl only logs it and renders the key, which no screenshot check catches).
+  return <NextIntlClientProvider locale="en" messages={{ ...messages, adminCase, adminCases }} onError={(error) => { throw error; }}><AdminCaseScreen data={data} handlers={handlers} now={ADMIN_NOW} /></NextIntlClientProvider>;
 }
 
 function section(title: string) { return within(screen.getByRole('heading', { name: title, level: 2 }).closest('section')!); }
@@ -30,6 +31,7 @@ describe('AdminCaseScreen', () => {
     expect(screen.getByText(adminCases.priorities.high)).toBeVisible();
     expect(screen.getByText(adminCase.details.newReply)).toBeVisible();
     expect(screen.getByText('Past due 1 h')).toBeVisible();
+    expect(screen.getByText(adminCases.columns.response)).toBeVisible();
     expect(section(adminCase.details.opening).getByText(data.case.description)).toBeVisible();
     expect(section(adminCase.details.opening).getByText(`Reason: ${adminCase.details.reasons.incomplete}`)).toBeVisible();
     const people = section(adminCase.details.people);
