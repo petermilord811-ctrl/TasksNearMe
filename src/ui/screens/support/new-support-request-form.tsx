@@ -89,11 +89,12 @@ export function NewSupportRequestForm({ data, handlers, initialResult, initialPe
       <Controller control={form.control} name="topic" render={({ field, fieldState }) => <Field data-invalid={fieldState.invalid} className="gap-2">
         <p id={`${id}-topic-label`} className="font-medium">{t('topic')}</p>
         <FieldDescription id={`${id}-topic-hint`}>{t('topicHint')}</FieldDescription>
-        <RadioGroup name={field.name} value={field.value ?? ''} onValueChange={field.onChange} onBlur={field.onBlur} disabled={disabled} aria-labelledby={`${id}-topic-label`} aria-describedby={`${id}-topic-hint${fieldState.error ? ` ${id}-topic-error` : ''}`} aria-invalid={fieldState.invalid} aria-required="true" className="gap-1 sm:grid-cols-2">
-          {SUPPORT_TOPICS.map((topic, index) => <div key={topic} className="flex min-h-11 items-center gap-2">
-            <RadioGroupItem id={`${id}-topic-${topic}`} value={topic} ref={index === 0 ? (node) => { topicInput.current = node; field.ref(node); } : undefined} className="size-11 shrink-0" />
-            <label htmlFor={`${id}-topic-${topic}`} className="flex min-h-11 flex-1 cursor-pointer items-center text-sm">{t(`topics.${topic}`)}</label>
-          </div>)}
+        <RadioGroup name={field.name} value={field.value ?? ''} onValueChange={field.onChange} onBlur={field.onBlur} disabled={disabled} aria-labelledby={`${id}-topic-label`} aria-describedby={`${id}-topic-hint${fieldState.error ? ` ${id}-topic-error` : ''}`} aria-invalid={fieldState.invalid} aria-required="true" className="gap-2 sm:grid-cols-2">
+          {/* The row is the target (as in the booking sheets): a bordered choice with a normal-sized radio, not a 44 px circle. */}
+          {SUPPORT_TOPICS.map((topic, index) => <label key={topic} htmlFor={`${id}-topic-${topic}`} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-2xl border border-foreground/[0.09] px-3.5 py-2 transition-[border-color,background-color] duration-200 ease-[var(--ease-out)] hover:not-has-[[data-state=checked]]:not-has-disabled:border-foreground/20 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring has-disabled:cursor-not-allowed has-[[data-state=checked]]:border-primary/60 has-[[data-state=checked]]:bg-primary/[0.045]">
+            <RadioGroupItem id={`${id}-topic-${topic}`} value={topic} ref={index === 0 ? (node) => { topicInput.current = node; field.ref(node); } : undefined} className="size-5 shrink-0" />
+            <span className="min-w-0 flex-1 text-sm">{t(`topics.${topic}`)}</span>
+          </label>)}
         </RadioGroup>
         {fieldState.error?.message && <FieldError id={`${id}-topic-error`}>{errorText(fieldState.error.message)}</FieldError>}
       </Field>} />

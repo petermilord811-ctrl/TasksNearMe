@@ -220,3 +220,10 @@ One entry per iteration, newest last.
 - `scripts/ui-audit.mjs` measures a link stretched over its card by an absolute `::after` as the card (My offers' "closed" cards were a false positive).
 - Checks: find-work, invites and a11y-phone on the e2e build (11 passed, 9 one-viewport skips); ui-audit over find work, my offers and staff bookings in English and Spanish: no failures.
 - Fix to batch 5 (found by d1): the case page's response-target label used `adminCases.response`, but the key is `adminCases.columns.response`, so every staff case page showed the key and logged MISSING_MESSAGE. The jsdom test for the case page now asserts the label, and its intl provider throws on any missing message. A grep of batches 2–6's e2e server logs found no other missing messages.
+
+## 2026-11-14 — UI pass, batch 7: the remaining screens (plan 5.10)
+- A screenshot review of the screens not yet covered (my tasks, bookings, earnings, payments, availability, notifications, reviews, support, sign-in as changed today, browsing and saved helpers, the public helper profile, help): only two clear problems, fixed here.
+- Bookings: on phones the three tabs size to their labels (they were equal thirds, so "Upcoming (1)" broke before its count); English fits on one line, and Spanish wraps evenly.
+- Support, new request: the topics are bordered rows with a normal radio, as in the booking sheets (they had 44 px empty circles beside the text).
+- Left as they are, on purpose: the default card's disabled "Make default" on Payments (a test asserts it); the helper profile editor (in the gift-card rework).
+- Checks: booking-page, support, a11y-phone, sign-in and social-sign-in on the e2e build (40 passed, 6 one-viewport skips), with no missing or misformatted messages in the server log; jsdom 83; ui-audit over bookings, support and sign-in in English and Spanish: no failures.

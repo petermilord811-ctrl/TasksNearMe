@@ -77,7 +77,7 @@ export function BookingsScreen({ data, now }: BookingsScreenProps) {
     <RegularVisitsSection regular={data.regular} />
     <Tabs defaultValue={initialTab} className="gap-6">
       <TabsList aria-label={t('tabsLabel')} className="w-full sm:w-fit">
-        {tabs.map((tab) => <TabsTrigger key={tab} value={tab} className="min-w-0 whitespace-normal tabular-nums sm:min-w-28">{t('tabCount', { label: t(`tabs.${tab}`), count: data[tab].length })}</TabsTrigger>)}
+        {tabs.map((tab) => <TabsTrigger key={tab} value={tab} className="min-w-0 whitespace-normal tabular-nums [text-wrap:balance] max-sm:flex-auto max-sm:px-2.5 sm:min-w-28">{t('tabCount', { label: t(`tabs.${tab}`), count: data[tab].length })}</TabsTrigger>)}
       </TabsList>
       {tabs.map((tab) => <TabsContent key={tab} value={tab}>
         {data[tab].length > 0
