@@ -32,8 +32,12 @@ async function answers(url) {
   }
 }
 
-/** Returns false (and does nothing) when no supervisor runs, so the caller can carry on as before. */
-export async function restartDevServer({ port = 3000, timeoutMs = 5 * 60_000, log = () => {} } = {}) {
+/**
+ * Returns false (and does nothing) when no supervisor runs, so the caller can carry on as before.
+ * `warmPath` is the page it waits for: by default the dev sign-in page, which every e2e test opens first. Not
+ * /dev/ui, which compiles every preview screen into the fresh server before the run starts.
+ */
+export async function restartDevServer({ port = 3000, timeoutMs = 5 * 60_000, warmPath = '/dev/sign-in', log = () => {} } = {}) {
   if (!supervisorRunning()) {
     log('No dev-server supervisor is running, so the dev server was not restarted.');
     return false;
@@ -46,7 +50,7 @@ export async function restartDevServer({ port = 3000, timeoutMs = 5 * 60_000, lo
     if (Date.now() > deadline) throw new Error('The dev-server supervisor did not pick up the restart request.');
     await pause(500);
   }
-  while (!(await answers(`http://localhost:${port}/dev/ui`))) {
+  while (!(await answers(`http://localhost:${port}${warmPath}`))) {
     if (Date.now() > deadline) throw new Error('The restarted dev server did not answer in time.');
     await pause(1000);
   }
