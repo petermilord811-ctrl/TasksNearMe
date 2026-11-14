@@ -32,6 +32,9 @@ function initialsOf(firstName: string, lastName: string, fallback: string): stri
   return (letters || fallback.slice(0, 2)).toUpperCase();
 }
 
+/** Account statuses that never act as signed in (src/modules/accounts/account-moderation.ts sets them). */
+const BLOCKED_STATUSES = new Set(['suspended', 'banned', 'deleted']);
+
 /** The signed-in person for this request (deduplicated per request). */
 export const getViewer = cache(async (): Promise<Viewer> => {
   const session = await auth.api.getSession({ headers: await authRequestHeaders() });
@@ -44,6 +47,9 @@ export const getViewer = cache(async (): Promise<Viewer> => {
     status?: string;
     avatarFileId?: string | null;
   };
+  // A suspended, banned or deleted account is signed out everywhere, even with a session that outlived the block
+  // (one created while staff were blocking it, say): every page and action sees the public viewer (5.18).
+  if (u.status && BLOCKED_STATUSES.has(u.status)) return { kind: 'public' };
 
   const [roleRows, profileRows, checkRows] = await Promise.all([
     db.select({ role: staffRoles.role }).from(staffRoles).where(eq(staffRoles.userId, u.id)),
