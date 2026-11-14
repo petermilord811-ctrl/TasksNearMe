@@ -165,6 +165,18 @@ describe('AppShell', () => {
     show(<AppShell viewer={viewer} handlers={handlers}><h1>Home</h1></AppShell>);
     expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
   });
+
+  it('says bookings are paused while the outage switch is on, above the page content', () => {
+    show(<AppShell viewer={mayaShell} handlers={handlers} notices={['bookings_paused']}><h1>Home</h1></AppShell>);
+    const notice = screen.getByRole('region', { name: 'New bookings are paused for now' });
+    expect(notice).toHaveTextContent('Bookings you already have go ahead as planned');
+    expect(notice.compareDocumentPosition(screen.getByRole('heading', { name: 'Home' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows no notice when there is none', () => {
+    show(<AppShell viewer={mayaShell} handlers={handlers}><h1>Home</h1></AppShell>);
+    expect(screen.queryByRole('region', { name: 'New bookings are paused for now' })).not.toBeInTheDocument();
+  });
 });
 
 describe('AdminShell', () => {

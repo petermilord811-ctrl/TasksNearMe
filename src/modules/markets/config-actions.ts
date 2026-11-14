@@ -1,12 +1,13 @@
 'use server';
 
 import { refresh, updateTag } from 'next/cache';
-import type { ActionResult, FlagSetInput, PolicyPublishInput } from '@/contracts';
+import type { ActionResult, FlagSetInput, OutageSwitchInput, PolicyPublishInput } from '@/contracts';
 import { marketTag } from '@/modules/marketing/queries';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { publishPolicy, setFeatureFlag } from './admin-config';
+import { setOutageSwitch } from './outage';
 import { requestNow } from '@/platform/clock';
 
 async function signedInStaff() {
@@ -36,5 +37,14 @@ export async function setFeatureFlagAction(marketSlug: string, input: FlagSetInp
     updateTag(marketTag(String(marketSlug)));
     refresh();
   }
+  return result;
+}
+
+/** Admins turn the market's outage switch on or off (completion plan 5.15); every signed-in page shows it at once. */
+export async function setOutageSwitchAction(marketId: string, input: OutageSwitchInput): Promise<ActionResult> {
+  const staff = await signedInStaff();
+  if (!staff) return { ok: false, code: 'not_allowed' };
+  const result = await setOutageSwitch(db, staff, String(marketId), input, await requestNow());
+  if (result.ok) refresh();
   return result;
 }

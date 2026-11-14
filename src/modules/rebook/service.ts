@@ -44,6 +44,7 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { readExactAddress } from '@/modules/tasks/locations';
+import { pausedIn } from '@/modules/markets/outage';
 import { rebookProposals } from './schema';
 
 /**
@@ -391,6 +392,9 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
   if (!(await placeKept(db, past.task))) return { ok: false, code: 'not_allowed' };
   const helper = await loadHelperState(db, row.helperUserId, now);
   if (!helper.facts.bookableCategories.includes(past.slug as CategorySlug)) return { ok: false, code: 'not_allowed' };
+  // The outage switch: the proposal stays open until it's off.
+  const paused = await pausedIn(db, past.task.marketId);
+  if (paused) return paused;
   const policy = await getPublishedPolicy(past.task.marketId, db);
   if (!policy) return { ok: false, code: 'unknown' };
   // Risk asked this client to verify their ID first; the amount counts for new accounts.

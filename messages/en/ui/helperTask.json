@@ -85,6 +85,7 @@
     "version-conflict": "Offer changed elsewhere",
     "not-found": "Task no longer found",
     "expired": "Offer expired",
+    "paused": "Bookings paused response",
     "unknown": "Unexpected offer error",
     "offerDrafted": "Offer message drafted with \"Write it for me\""
   }

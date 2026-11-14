@@ -17,6 +17,7 @@ import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { getOutageSwitch, OUTAGE_FLAG } from './outage';
 import { featureFlags, marketPolicies, markets } from './schema';
 
 /**
@@ -54,9 +55,10 @@ export async function getAdminConfig(db: Db, staff: StaffActor, marketSlug: stri
   if (!canManageConfig(staff.roles)) return null;
   const [market] = await db.select().from(markets).where(eq(markets.slug, marketSlug)).limit(1);
   if (!market) return null;
-  const [versions, flags] = await Promise.all([
+  const [versions, flags, outage] = await Promise.all([
     db.select().from(marketPolicies).where(eq(marketPolicies.marketId, market.id)).orderBy(desc(marketPolicies.version)),
     db.select().from(featureFlags).where(eq(featureFlags.marketId, 'global')).orderBy(featureFlags.key),
+    getOutageSwitch(db, market.id),
   ]);
   const publisherIds = [...new Set(versions.flatMap((row) => (row.publishedBy ? [row.publishedBy] : [])))];
   const publishers = publisherIds.length ? await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, publisherIds)) : [];
@@ -70,9 +72,11 @@ export async function getAdminConfig(db: Db, staff: StaffActor, marketSlug: stri
   if (!current) return null;
   return {
     market: { id: market.id, name: market.name, slug: market.slug },
+    outage,
     current,
     history,
-    flags: flags.map((row) => ({ key: row.key, description: row.description, enabled: row.enabled })),
+    // The outage switch has its own section (per market); it isn't offered as a plain global flag.
+    flags: flags.filter((row) => row.key !== OUTAGE_FLAG).map((row) => ({ key: row.key, description: row.description, enabled: row.enabled })),
   };
 }
 

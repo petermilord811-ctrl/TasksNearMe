@@ -19,6 +19,12 @@
   "unreadNotifications": "Notifications, {count, plural, one {# unread notification} other {# unread notifications}}",
   "unreadMessages": "{count, plural, one {# unread message} other {# unread messages}}",
   "helperSetup": "Finish setting up to start helping",
+  "notices": {
+    "bookingsPaused": {
+      "title": "New bookings are paused for now",
+      "body": "We're fixing a problem. Until then, new bookings, tips and paid changes wait, and nothing is charged for them. Bookings you already have go ahead as planned, and you can still post tasks, make offers and send messages."
+    }
+  },
   "back": "Go back",
   "pageActions": "Page actions",
   "mode": {
@@ -117,6 +123,7 @@
     "appPoster": "App · I need help",
     "appHelper": "App · I can help",
     "appHelperNotReady": "App · finish helper setup",
+    "appBookingsPaused": "App · bookings paused (outage switch)",
     "appModeRedirect": "Mode switch · onboarding redirect",
     "detailPage": "Detail · sticky action",
     "adminAgent": "Admin · support agent",

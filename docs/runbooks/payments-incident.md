@@ -25,7 +25,7 @@ The provider is Stripe only when both `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABL
 4. **Stop making it worse.**
    - A bug of ours moving money wrongly (double charges, transfers to the wrong person): ask the engineer to stop the job runner with `JOBS_DISABLED=1` and a restart ([src/instrumentation.ts](../../src/instrumentation.ts)). This also stops auto-approval, reminders, notifications and retention, so note the time and restart the runner as soon as the bug is fixed. Every job is safe to rerun.
    - Stripe being down: don't stop anything. Charges fail cleanly, scheduled charges retry on their plan, and transfers retry every minute.
-   - **No switch pauses new bookings** ([gaps](README.md#built-in-gaps)). If clients keep paying into a broken flow, the engineer can deploy a maintenance banner.
+   - **Pause new bookings** when clients would keep paying into a broken flow (most charges failing for more than a few minutes, or a bug of ours in booking or payment code): an admin opens `/admin/config` → **Outage switch** → **Pause bookings** and writes the reason. At once, nobody in the market can book an offer, request a helper (or a helper accept a request), take a counter, accept a rebook or regular visits, tip, or pay for a change: they're told it's paused and nothing was charged, and every signed-in page shows a notice. Posting, offers and messages keep working. Bookings that exist go ahead: scheduled charges, Pay now, refunds and transfers carry on (stop the runner as above if a job is the problem). Reopen from the same place as soon as charges work; both changes are in the audit log (`config.outage_switch`, [src/modules/markets/outage.ts](../../src/modules/markets/outage.ts)).
 5. **Tell people what to expect.** Use the copy below, and post it before the queues fill up.
 
 ## Read-only queries
@@ -64,8 +64,8 @@ group by booking_id having count(*) > 1;
 
 **Charges failing for everyone (Stripe outage or a bad key)**
 - A key rotated or revoked: restore it in the environment and redeploy. The Stripe Dashboard's API keys page shows when it was rolled.
-- A Stripe outage: wait. Clients see "Your card was declined…" copy on some errors; support tells anyone who writes in to try again later. Unpaid bookings expire after 30 minutes and their offers reopen.
-- After recovery: count the `pending_funding` bookings that expired during the window (`cancel_reason='funding_failed'`, `canceled_at` in the window). Support writes to those clients with a link to book again.
+- A Stripe outage: pause bookings (step 4 above) if it lasts more than a few minutes, then wait. Without the switch, clients see "Your card was declined…" copy on some errors and keep retrying; unpaid bookings expire after 30 minutes and their offers reopen. Support tells anyone who writes in to try again later.
+- After recovery: reopen bookings, then count the `pending_funding` bookings that expired during the window (`cancel_reason='funding_failed'`, `canceled_at` in the window). Support writes to those clients with a link to book again.
 
 **Scheduled charges failing**
 - Retries follow the plan: series visits at 36 h and 24 h before, far-ahead bookings at 48 h. If an outage eats the retries, a visit is skipped (or a booking canceled) at its deadline. Before the deadline, a support lead can ask the client to use "Pay now" on the booking page.
@@ -95,13 +95,14 @@ group by booking_id having count(*) > 1;
 ## What to tell people
 
 - **Clients, payments failing:** "Payments aren't going through right now because of a problem with our payment provider. You haven't been charged for any booking that didn't confirm. Please try again in a little while."
+- **Clients and helpers, bookings paused** (the app already shows this on every page): "We've paused new bookings for a short while to fix a problem. Bookings you already have go ahead as planned, and you can still post tasks, make offers and send messages. We'll let you know when booking is back."
 - **Helpers, transfers delayed:** "Transfers to helpers are delayed by a problem with our payment provider. Your earnings are safe and will be sent as soon as it's fixed. Nothing is needed from you."
 - **One client, double-charged:** "You were charged twice for this booking by mistake. We've refunded {amount}; it usually shows on your statement within 5–10 business days."
 
 ## After the incident
 
 1. Reconcile with finance: every `payments` row changed in the window against the Stripe Dashboard (charges, refunds), and every `earnings` row against Connect transfers.
-2. Restart the runner if it was stopped, and watch one full minute of `[jobs]` logs.
+2. Reopen bookings if they were paused (`/admin/config`), restart the runner if it was stopped, and watch one full minute of `[jobs]` logs.
 3. Write the incident note ([README](README.md#after-every-sev1-or-sev2)).
 
 ## Tabletop exercise: a payments outage
@@ -111,15 +112,15 @@ B-066 is done when the team has run this exercise once. Run it with the on-call 
 | Time | What happens | What the team should do |
 |---|---|---|
 | 0:00 | Saturday 10:15 am. Support gets three messages in ten minutes: "my card keeps getting declined." `/admin/payments` → Charges shows `failed` payments with `payment_declined`. | Check Stripe's status page and API logs. Run the outcome query. Decide: is it a few cards or everyone? |
-| 0:05 | Stripe's status page reports elevated API errors. 80% of charges in the last 30 minutes failed. | Declare SEV1. Name the lead. Don't stop the runner (it's a provider outage). Post the client copy. |
+| 0:05 | Stripe's status page reports elevated API errors. 80% of charges in the last 30 minutes failed. | Declare SEV1. Name the lead. Don't stop the runner (it's a provider outage). An admin pauses bookings at `/admin/config` with the reason. Post the client copy. |
 | 0:15 | 14 bookings are `pending_funding`; their 30-minute window is running out. Two clients ask whether they were charged. | Explain the expiry: offers reopen, nobody is charged for a booking that didn't confirm. Answer from the copy. |
 | 0:25 | 9 regular visits are due their 48-hour charge today. | Check `funding_attempts` and the retry plan (36 h, 24 h). Nothing to do yet; note the deadline. |
-| 0:35 | Stripe recovers. The logs show `earnings.transfers` catching up. | Watch transfers move to `transferred`. Count the expired bookings and plan the follow-up message. |
+| 0:35 | Stripe recovers. The logs show `earnings.transfers` catching up. | Reopen bookings. Watch transfers move to `transferred`. Count the expired bookings and plan the follow-up message. |
 | 0:40 | A helper writes: "I was paid twice for Thursday's job." | Treat as SEV1: run the double-transfer check, take the transfer back from the booking's staff page (finance, with the case), and write the case note. |
 
 Debrief questions:
 - Who noticed first, and how could we have known sooner? (No alerting exists on the failure rate.)
-- Did anyone need a switch to pause booking? (None exists.)
+- Was the outage switch flipped early enough, and reopened as soon as charges worked?
 - Were the refund limits and approvals clear to everyone?
 
 Record each run here:

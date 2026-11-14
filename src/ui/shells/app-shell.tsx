@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Bell, CircleUserRound } from 'lucide-react';
+import { ArrowRight, Bell, CirclePause, CircleUserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type AppShellHandlers, type SignedInViewer } from '@/contracts';
+import { routes, type AppShellHandlers, type ShellNotice, type SignedInViewer } from '@/contracts';
 import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';
 import { AppBar } from './app-bar';
@@ -15,15 +15,15 @@ import { Navigation } from './navigation';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { getAppNav } from './nav';
 
-export interface AppShellProps { viewer: SignedInViewer; handlers: AppShellHandlers; children: ReactNode; currentPath?: string; layout?: 'tabs' | 'flow' }
+export interface AppShellProps { viewer: SignedInViewer; handlers: AppShellHandlers; children: ReactNode; currentPath?: string; layout?: 'tabs' | 'flow'; notices?: readonly ShellNotice[] }
 
 /**
  * The signed-in app, in the landing page's language: the paper under everything, a pinned glass bar (the logo, how
  * you're using TasksNearMe, notifications and your account), on wide screens a floating rail of links whose current
  * pill glides between pages, and on phones a glass dock of five tabs. `flow` pages (posting a task) keep the dock
- * away.
+ * away. `notices` (the outage switch) sit above every page's content, before the helper setup link.
  */
-export function AppShell({ viewer, handlers, children, currentPath, layout = 'tabs' }: AppShellProps) {
+export function AppShell({ viewer, handlers, children, currentPath, layout = 'tabs', notices = [] }: AppShellProps) {
   const t = useTranslations('shell');
   const nav = getAppNav(viewer.mode);
   return <div data-app-shell={layout} data-app-surface="" className={cn('paper flex min-h-dvh flex-col [--app-bottom-offset:0px]', layout === 'tabs' && 'pb-[var(--app-bottom-offset)] max-lg:[--app-bottom-offset:var(--app-bottom-nav-height)]')}>
@@ -52,6 +52,10 @@ export function AppShell({ viewer, handlers, children, currentPath, layout = 'ta
         </div>
       </aside>
       <main id="main" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-content space-y-6 px-gutter pt-6 pb-10 outline-none lg:pt-8">
+        {notices.includes('bookings_paused') && <section aria-labelledby="notice-bookings-paused" className="flex gap-3 rounded-2xl border border-warning/40 bg-card/90 p-4 text-sm shadow-card dark:border-warning/40">
+          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-warning/15 text-warning"><CirclePause className="size-5" /></span>
+          <div className="min-w-0 space-y-1"><p id="notice-bookings-paused" className="font-semibold text-foreground">{t('notices.bookingsPaused.title')}</p><p className="text-muted-foreground">{t('notices.bookingsPaused.body')}</p></div>
+        </section>}
         {viewer.mode === 'helper' && !viewer.helperReady && <Link href={routes.app.helperOnboarding()} className="group flex min-h-11 items-center gap-3 rounded-2xl border border-primary/25 bg-secondary/80 p-4 text-sm font-medium text-secondary-foreground shadow-card transition-[translate,box-shadow,background-color] duration-300 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-secondary"><span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-card/80 text-primary"><CircleUserRound className="size-5" /></span><span>{t('helperSetup')}</span><ArrowRight aria-hidden="true" className="ml-auto size-5 shrink-0 transition-transform duration-300 ease-[var(--ease-out)] group-hover:translate-x-1" /></Link>}
         {children}
       </main>

@@ -71,6 +71,7 @@
       "rate_limited": "Request — try later",
       "limit_reached": "Request — account limit",
       "identity_required": "ID check needed",
+      "paused": "Request — bookings paused",
       "unknown": "Request — couldn't send"
     }
   }

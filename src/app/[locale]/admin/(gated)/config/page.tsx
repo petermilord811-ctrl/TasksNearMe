@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { getAdminConfig } from '@/modules/markets/admin-config';
-import { publishPolicyAction, setFeatureFlagAction } from '@/modules/markets/config-actions';
+import { publishPolicyAction, setFeatureFlagAction, setOutageSwitchAction } from '@/modules/markets/config-actions';
 import { DEFAULT_MARKET_SLUG } from '@/modules/markets/queries';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
@@ -32,7 +32,7 @@ async function AdminConfig() {
     <AdminConfigScreen
       data={data}
       now={(await requestNow()).toISOString()}
-      handlers={{ onPublishPolicy: publishPolicyAction.bind(null, data.market.id, data.market.slug), onSetFlag: setFeatureFlagAction.bind(null, data.market.slug) }}
+      handlers={{ onPublishPolicy: publishPolicyAction.bind(null, data.market.id, data.market.slug), onSetFlag: setFeatureFlagAction.bind(null, data.market.slug), onSetOutage: setOutageSwitchAction.bind(null, data.market.id) }}
     />
   );
 }

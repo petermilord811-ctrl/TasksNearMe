@@ -19,6 +19,12 @@
   "unreadNotifications": "Notificaciones, {count, plural, one {# notificación sin leer} other {# notificaciones sin leer}}",
   "unreadMessages": "{count, plural, one {# mensaje sin leer} other {# mensajes sin leer}}",
   "helperSetup": "Termina la configuración para empezar a ayudar",
+  "notices": {
+    "bookingsPaused": {
+      "title": "Las reservas nuevas están en pausa por ahora",
+      "body": "Estamos resolviendo un problema. Mientras tanto, las reservas nuevas, las propinas y los cambios con pago quedan en espera, y no se cobra nada por ellos. Las reservas que ya tienes siguen según lo previsto, y aún puedes publicar tareas, hacer ofertas y enviar mensajes."
+    }
+  },
   "back": "Volver",
   "pageActions": "Acciones de la página",
   "mode": {
@@ -117,6 +123,7 @@
     "appPoster": "App · Necesito ayuda",
     "appHelper": "App · Puedo ayudar",
     "appHelperNotReady": "App · terminar la configuración de ayudante",
+    "appBookingsPaused": "App · reservas en pausa (interruptor de incidentes)",
     "appModeRedirect": "Cambio de modo · redirección al registro",
     "detailPage": "Detalle · acción fija",
     "adminAgent": "Admin · agente de soporte",

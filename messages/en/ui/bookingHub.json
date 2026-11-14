@@ -61,6 +61,7 @@
       "rate_limited": "Try again later",
       "limit_reached": "Account limit reached",
       "identity_required": "ID check needed",
+      "paused": "Bookings paused",
       "unknown": "Could not save"
     },
     "clientTip": "Client · add a tip",

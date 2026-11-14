@@ -85,6 +85,7 @@
     "version-conflict": "La oferta cambió en otro lugar",
     "not-found": "La tarea ya no se encuentra",
     "expired": "Oferta vencida",
+    "paused": "Respuesta: reservas en pausa",
     "unknown": "Error inesperado en la oferta",
     "offerDrafted": "Mensaje de la oferta redactado con \"Escríbelo por mí\""
   }

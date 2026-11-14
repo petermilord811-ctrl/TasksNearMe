@@ -41,6 +41,7 @@ import { newId } from '@/platform/db/ids';
 import { isUniqueViolation } from '@/platform/db/errors';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { pausedIn } from '@/modules/markets/outage';
 import { bookingTerms, bookings } from './schema';
 import { ONE_TIME_CHARGE_PLAN, chargeSchedule, firstChargeAt, paysLater } from './series-domain';
 
@@ -327,6 +328,9 @@ export async function confirmBooking(
   // The helper must still be bookable for this category (ID, payouts, background check where needed).
   const helper = await loadHelperState(db, ctx.offer.helperUserId, now);
   if (!helper.facts.bookableCategories.includes(ctx.categorySlug)) return { ok: false, code: 'not_allowed' };
+  // The outage switch: no new booking (or a new try at paying for a held one) until it's off.
+  const paused = await pausedIn(db, ctx.task.marketId);
+  if (paused) return paused;
 
   const policy = await getPublishedPolicy(ctx.task.marketId, db);
   if (!policy) return { ok: false, code: 'unknown' };

@@ -38,6 +38,7 @@ import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { pausedIn } from '@/modules/markets/outage';
 import { invites } from './schema';
 
 /**
@@ -234,6 +235,9 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
     if (start < open.row.startAt || start >= open.row.endAt) return { ok: false, code: 'validation_failed', fieldErrors: { start: ['out_of_range'] } };
     slotId = open.row.id;
   }
+  // The outage switch: no new request (and no hold on the card) until it's off.
+  const paused = await pausedIn(db, task.marketId);
+  if (paused) return paused;
   const fees = await feesOf(db, task.marketId);
   if (!fees) return { ok: false, code: 'unknown' };
   // Risk asked this client to verify their ID first; the amount counts for new accounts.
@@ -438,9 +442,12 @@ export async function acceptInvite(deps: BookingDeps, helperId: string, inviteId
   if (!invite) return { ok: false, code: 'not_allowed' };
   if (invite.status !== 'sent') return { ok: false, code: invite.status === 'expired' ? 'expired' : 'not_allowed' };
   if (await isBlockedBetween(deps.db, invite.posterUserId, helperId)) return { ok: false, code: 'not_allowed' };
-  const [task] = await deps.db.select({ slug: categories.slug }).from(tasks).innerJoin(categories, eq(categories.id, tasks.categoryId)).where(eq(tasks.id, invite.taskId)).limit(1);
+  const [task] = await deps.db.select({ slug: categories.slug, marketId: tasks.marketId }).from(tasks).innerJoin(categories, eq(categories.id, tasks.categoryId)).where(eq(tasks.id, invite.taskId)).limit(1);
   const state = await loadHelperState(deps.db, helperId, now);
   if (!task || !state.facts.bookableCategories.includes(task.slug as CategorySlug)) return { ok: false, code: 'not_allowed' };
+  // The outage switch: the request waits (its hold stays until it expires) rather than becoming a booking.
+  const paused = await pausedIn(deps.db, task.marketId);
+  if (paused) return paused;
   const pricing = pricingFrom(invite.pricingType, invite.priceCents, invite.hourlyRateCents, invite.estimatedHours, invite.hoursCap);
   const result = await book(deps, invite, pricing, invite.startAt, invite.breakdown, now);
   return 'verification' in result ? { ok: false, code: 'unknown' } : result;
@@ -532,6 +539,9 @@ export async function acceptCounter(deps: BookingDeps, posterId: string, inviteI
   const invite = await ownInvite(db, deps.payments, posterId, inviteId, 'poster', now);
   if (!invite) return { ok: false, code: 'not_allowed' };
   if (invite.status !== 'countered' || !invite.counterBreakdown) return { ok: false, code: invite.status === 'expired' ? 'expired' : 'not_allowed' };
+  const [market] = await db.select({ id: tasks.marketId }).from(tasks).where(eq(tasks.id, invite.taskId)).limit(1);
+  const paused = market ? await pausedIn(db, market.id) : null;
+  if (paused) return paused;
   const [held] = invite.paymentId ? await db.select().from(payments).where(eq(payments.id, invite.paymentId)).limit(1) : [];
   if (!held?.methodRef) return { ok: false, code: 'not_allowed' };
   if (invite.counterBreakdown.posterTotalCents > held.amountCents) {

@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { ACTION_ERROR_CODES, type ActionResult, type AppShellHandlers, type SignedInViewer, type StaffViewer } from '@/contracts';
+import { ACTION_ERROR_CODES, type ActionResult, type AppShellHandlers, type ShellNotice, type SignedInViewer, type StaffViewer } from '@/contracts';
 import { fakeHandler, mayaShell } from '@/fixtures';
 import { AppToaster } from '@/ui/components/feedback/app-toaster';
 import { PageHeader } from '@/ui/components/layout/page-header';
@@ -17,6 +17,7 @@ export function AppShellExample({
   modeResult = updated,
   signOutResult = updated,
   hint,
+  notices,
   children,
 }: {
   initialViewer: SignedInViewer;
@@ -24,6 +25,7 @@ export function AppShellExample({
   modeResult?: ActionResult;
   signOutResult?: ActionResult;
   hint?: 'redirectHint' | 'signOutHint';
+  notices?: ShellNotice[];
   children?: ReactNode;
 }) {
   const t = useTranslations('shell');
@@ -36,7 +38,7 @@ export function AppShellExample({
 
   return (
     <>
-      <AppShell viewer={viewer} currentPath={currentPath} handlers={{ onModeChange, onSignOut: fakeHandler(signOutResult) }}>
+      <AppShell viewer={viewer} currentPath={currentPath} notices={notices} handlers={{ onModeChange, onSignOut: fakeHandler(signOutResult) }}>
         <PageHeader title={t('preview.contentTitle')} description={t('preview.contentBody')} />
         {hint && <p className="max-w-2xl text-sm text-muted-foreground">{t(`preview.${hint}`)}</p>}
         {children}

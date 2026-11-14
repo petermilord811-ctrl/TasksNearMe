@@ -70,6 +70,11 @@ export const ACTION_ERROR_CODES = [
   'limit_reached',
   /** The client has to verify their ID first (`routes.app.verifyIdentity()`; contracts/poster-identity.ts). */
   'identity_required',
+  /**
+   * New bookings and payments are paused in this market for a while (the outage switch, completion plan 5.15):
+   * nothing was charged, and bookings people already have go ahead.
+   */
+  'paused',
   'unknown',
 ] as const;
 export type ActionErrorCode = (typeof ACTION_ERROR_CODES)[number];

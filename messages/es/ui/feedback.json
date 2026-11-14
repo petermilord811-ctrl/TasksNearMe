@@ -53,6 +53,7 @@
     "rate_limited": "Hubo demasiados intentos. Espera un momento e inténtalo de nuevo.",
     "limit_reached": "Por ahora llegaste a un límite en tu cuenta. Consulta el centro de ayuda para ver los detalles.",
     "unknown": "No pudimos completar esa acción. Inténtalo de nuevo o comunícate con soporte si sigue pasando.",
-    "identity_required": "Primero necesitamos verificar tu identidad. Toma unos 2 minutos."
+    "identity_required": "Primero necesitamos verificar tu identidad. Toma unos 2 minutos.",
+    "paused": "Las reservas nuevas y los pagos están en pausa por un rato. No se reservó ni se cobró nada, así que inténtalo más tarde. Las reservas que ya tienes siguen según lo previsto."
   }
 }

@@ -12,6 +12,7 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { methodForChoice, paymentPanel, type BookingDeps } from './confirm';
+import { pausedIn } from '@/modules/markets/outage';
 import { bookings } from './schema';
 import { tipPresets, tipRefusal, tipWindowEndsAt } from './tip-rules';
 
@@ -78,6 +79,8 @@ export async function tipBooking(deps: BookingDeps, userId: string, bookingId: s
   const role = booking ? roleOf(booking, userId) : null;
   if (!booking || !role) return { ok: false, code: 'not_found' };
   if (tipRefusal(factsOf(booking, Boolean(await tipThatWentThrough(db, booking.id))), role, now)) return { ok: false, code: 'not_allowed' };
+  const paused = await pausedIn(db, booking.marketId);
+  if (paused) return paused;
   const limited = await consumeRateLimit(db, `tip:${userId}`, TIP_RATE_LIMIT, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const method = await methodForChoice(deps, userId, parsed.data.payment);

@@ -30,6 +30,7 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { allowedChangeTypes, changeExpiresAt, OPEN_CHANGE_STATUSES, pricingOf, proposedTerms, type ChangeTerms } from './changes-domain';
 import { bankStep, chargeMethodOf, methodForChoice, paymentPanel, type BookingDeps } from './confirm';
+import { pausedIn } from '@/modules/markets/outage';
 import { bookingChangeRequests, bookingTerms, bookings } from './schema';
 
 /**
@@ -327,9 +328,12 @@ async function applyChange(db: Db, payments_: PaymentProvider | null, row: Chang
 }
 
 /** Charges the difference with the chosen card; success applies the change. */
-async function chargeDifference(deps: BookingDeps, posterId: string, row: ChangeRow, input: AcceptChangeInput, now: Date): Promise<PaymentAttemptResult> {
+async function chargeDifference(deps: BookingDeps, posterId: string, row: ChangeRow, marketId: string, input: AcceptChangeInput, now: Date): Promise<PaymentAttemptResult> {
   const parsed = acceptChangeInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
+  // The outage switch: the change waits (still proposed, or accepted and waiting for the money) until it's off.
+  const paused = await pausedIn(deps.db, marketId);
+  if (paused) return paused;
   if (!parsed.data.payment) return { ok: false, code: 'validation_failed', fieldErrors: { payment: ['required'] } };
   const method = await methodForChoice(deps, posterId, parsed.data.payment);
   if (!('providerRef' in method)) return method;
@@ -437,7 +441,7 @@ export async function acceptChange(deps: BookingDeps, userId: string, bookingId:
   if (row.differenceCents <= 0) {
     return (await applyChange(deps.db, deps.payments, row, now)) ? { ok: true, code: 'updated', redirectTo: routes.app.booking(loaded.booking.id) } : { ok: false, code: 'version_conflict' };
   }
-  if (loaded.role === 'poster') return chargeDifference(deps, userId, row, input, now);
+  if (loaded.role === 'poster') return chargeDifference(deps, userId, row, loaded.booking.marketId, input, now);
   await deps.db
     .update(bookingChangeRequests)
     .set({ status: 'accepted_pending_funding', expiresAt: changeExpiresAt('pending_funding', { status: loaded.booking.status, startAt: loaded.booking.startAt, now }), updatedAt: now })
@@ -451,7 +455,7 @@ export async function payChangeDifference(deps: BookingDeps, userId: string, boo
   if (!found) return { ok: false, code: 'not_found' };
   if (found.loaded.role !== 'poster') return { ok: false, code: 'not_allowed' };
   if (found.row.status !== 'accepted_pending_funding') return { ok: false, code: found.row.status === 'expired' ? 'expired' : 'not_allowed' };
-  return chargeDifference(deps, userId, found.row, input, now);
+  return chargeDifference(deps, userId, found.row, found.loaded.booking.marketId, input, now);
 }
 
 /** After the dev bank dialog on a change payment. */

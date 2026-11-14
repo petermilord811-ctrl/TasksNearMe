@@ -53,6 +53,7 @@
     "rate_limited": "There have been too many attempts. Wait a moment and try again.",
     "limit_reached": "You've reached a limit on your account for now. Check the help center for details.",
     "unknown": "We couldn't complete that action. Try again, or contact support if it keeps happening.",
-    "identity_required": "We need to check your ID first. It takes about 2 minutes."
+    "identity_required": "We need to check your ID first. It takes about 2 minutes.",
+    "paused": "New bookings and payments are paused for a little while. Nothing was booked or charged, so try again later. Bookings you already have go ahead as planned."
   }
 }

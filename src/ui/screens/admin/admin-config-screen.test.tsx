@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POLICY_FIELDS, type AdminConfigHandlers } from '@/contracts';
-import { ADMIN_NOW, adminConfigData, fakeHandler } from '@/fixtures';
+import { ADMIN_NOW, adminConfigData, adminConfigPausedData, fakeHandler } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import copy from '../../../../messages/en/ui/adminConfig.json';
 import { AdminConfigScreen } from './admin-config-screen';
@@ -16,16 +16,44 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function mount() {
+function mount(data = adminConfigData) {
   const handlers = {
     onPublishPolicy: vi.fn<AdminConfigHandlers['onPublishPolicy']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
     onSetFlag: vi.fn<AdminConfigHandlers['onSetFlag']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
+    onSetOutage: vi.fn<AdminConfigHandlers['onSetOutage']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
   };
-  render(<NextIntlClientProvider locale="en" messages={uiMessages}><AdminConfigScreen data={adminConfigData} handlers={handlers} now={ADMIN_NOW} /></NextIntlClientProvider>);
+  render(<NextIntlClientProvider locale="en" messages={uiMessages}><AdminConfigScreen data={data} handlers={handlers} now={ADMIN_NOW} /></NextIntlClientProvider>);
   return handlers;
 }
 
 describe('AdminConfigScreen', () => {
+  it('pauses bookings behind a reason dialog (the outage switch)', async () => {
+    const user = userEvent.setup();
+    const handlers = mount();
+    const section = within(screen.getByRole('region', { name: copy.outage.title }));
+    expect(section.getByText(copy.outage.open)).toBeInTheDocument();
+    await user.click(section.getByRole('button', { name: copy.outage.pause }));
+    const dialog = within(await screen.findByRole('alertdialog', { name: 'Pause new bookings in Austin?' }));
+    await user.type(dialog.getByLabelText('Reason'), 'Card charges are failing for everyone.');
+    await user.click(dialog.getByRole('button', { name: copy.outage.pause }));
+    await waitFor(() => expect(handlers.onSetOutage).toHaveBeenCalledWith({ state: 'paused', reason: 'Card charges are failing for everyone.' }));
+    expect(navigation.refresh).toHaveBeenCalled();
+  });
+
+  it('shows who paused bookings and why, and offers to reopen', async () => {
+    const user = userEvent.setup();
+    const handlers = mount(adminConfigPausedData);
+    const section = within(screen.getByRole('region', { name: copy.outage.title }));
+    expect(section.getByText(copy.outage.paused)).toBeInTheDocument();
+    expect(section.getByText(/^Paused .* by Riley N\.$/)).toBeInTheDocument();
+    expect(section.getByText(`Reason: ${adminConfigPausedData.outage.changed!.reason}`)).toBeInTheDocument();
+    await user.click(section.getByRole('button', { name: copy.outage.resume }));
+    const dialog = within(await screen.findByRole('alertdialog', { name: 'Reopen bookings in Austin?' }));
+    await user.type(dialog.getByLabelText('Reason'), 'Stripe confirmed the fix.');
+    await user.click(dialog.getByRole('button', { name: copy.outage.resume }));
+    await waitFor(() => expect(handlers.onSetOutage).toHaveBeenCalledWith({ state: 'open', reason: 'Stripe confirmed the fix.' }));
+  });
+
   it('has a label for every policy field', () => {
     for (const key of POLICY_FIELDS) expect(copy.fields[key]).toMatch(/\S/);
   });

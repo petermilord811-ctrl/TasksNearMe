@@ -29,6 +29,14 @@ export type ShellViewer =
     };
 
 export type SignedInViewer = Extract<ShellViewer, { kind: 'user' }>;
+
+/**
+ * What everyone in the market should know, at the top of every signed-in page. `bookings_paused`: the outage
+ * switch is on (completion plan 5.15), so new bookings, tips and paid changes wait; bookings people already have
+ * go ahead, and posting, offers and messages work as usual.
+ */
+export const SHELL_NOTICES = ['bookings_paused'] as const;
+export type ShellNotice = (typeof SHELL_NOTICES)[number];
 export type StaffViewer = Extract<ShellViewer, { kind: 'staff' }>;
 
 export interface AppShellHandlers {

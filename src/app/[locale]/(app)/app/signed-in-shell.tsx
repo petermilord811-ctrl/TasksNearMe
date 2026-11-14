@@ -5,6 +5,7 @@ import { setMode, signOut } from '@/modules/accounts/actions';
 import { signUpUnfinished } from '@/modules/accounts/sign-up';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { unreadMessageCount } from '@/modules/messaging/service';
+import { shellNoticesFor } from '@/modules/markets/outage';
 import { dispatchNotifications, unreadNotificationCount } from '@/modules/notifications/service';
 import { getViewer, toSignedInViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -37,9 +38,10 @@ async function ViewerShell({ layout, children }: { layout: ShellLayout; children
   await remindApprovalsDue(db, now, { posterUserId: viewer.user.id });
   await remindUpcomingBookings(db, now, { userId: viewer.user.id });
   await dispatchNotifications(db, now, 50);
-  const [unreadMessages, unreadNotifications] = await Promise.all([unreadMessageCount(db, viewer.user.id), unreadNotificationCount(db, viewer.user.id)]);
+  // `notices`: the outage switch of the person's market (completion plan 5.15), on every signed-in page.
+  const [unreadMessages, unreadNotifications, notices] = await Promise.all([unreadMessageCount(db, viewer.user.id), unreadNotificationCount(db, viewer.user.id), shellNoticesFor(db, viewer.user.id)]);
   return (
-    <AppShell viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications }} handlers={{ onModeChange: setMode, onSignOut: signOut }} layout={layout}>
+    <AppShell viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications }} notices={notices} handlers={{ onModeChange: setMode, onSignOut: signOut }} layout={layout}>
       {children}
     </AppShell>
   );

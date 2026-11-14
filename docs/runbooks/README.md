@@ -47,7 +47,6 @@ Blueprint 10 §5 asks for these before launch. Fill in the names before the beta
 
 These aren't built yet, so the runbooks handle them by hand. Close them before the gaps cost more than the manual steps.
 
-- **No booking or payment kill switch.** No feature flag pauses new bookings during an outage; payment errors show friendly copy and unpaid bookings expire on their own.
 - **Jobs have no dashboard.** The runner logs failures and retries every minute; there's no jobs table to inspect.
 
 ## After every SEV1 or SEV2

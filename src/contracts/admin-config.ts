@@ -66,9 +66,22 @@ export interface AdminFeatureFlag {
   enabled: boolean;
 }
 
+/**
+ * The market's outage switch (completion plan 5.15; the payments-incident runbook). On, nobody in the market can
+ * start a booking (an offer, a direct request or its counter, a rebook or regular visits), tip or pay for a change,
+ * and every signed-in page says so. Bookings that exist go ahead: their scheduled charges, Pay now, refunds and
+ * transfers to helpers carry on.
+ */
+export interface AdminOutageSwitch {
+  paused: boolean;
+  /** The last time it was switched, by whom and why (from the audit log); absent when it never was. */
+  changed?: { at: ISODateTime; by: string; reason: string };
+}
+
 /** `routes.admin.config()`: admins only. */
 export interface AdminConfigPageData {
   market: { id: string; name: string; slug: string };
+  outage: AdminOutageSwitch;
   /** The published version new bookings use. */
   current: AdminPolicyVersion;
   /** Every version, newest first. */
@@ -93,10 +106,19 @@ export const flagSetInputSchema = z.object({
 });
 export type FlagSetInput = z.input<typeof flagSetInputSchema>;
 
-/** Both ok `updated`. Errors: `validation_failed` (a value out of range, the reason), `not_allowed`, `unknown`. */
+/** Turn the market's outage switch on (`paused`) or off (`open`), with the reason for the audit log. */
+export const outageSwitchInputSchema = z.object({
+  state: z.enum(['paused', 'open'], code('invalid')),
+  reason: reason(),
+});
+export type OutageSwitchInput = z.input<typeof outageSwitchInputSchema>;
+
+/** All ok `updated`. Errors: `validation_failed` (a value out of range, the reason), `not_allowed`, `unknown`. */
 export interface AdminConfigHandlers {
   onPublishPolicy: ActionHandler<PolicyPublishInput>;
   onSetFlag: ActionHandler<FlagSetInput>;
+  /** A Server Action (the reason dialog calls it with `{ state, reason }`). */
+  onSetOutage: ActionHandler<OutageSwitchInput>;
 }
 
 /** Form text for a basis-point value: 1000 → "10", 1250 → "12.5". */

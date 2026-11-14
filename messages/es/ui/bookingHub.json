@@ -61,6 +61,7 @@
       "rate_limited": "Inténtalo más tarde",
       "limit_reached": "Límite de la cuenta alcanzado",
       "identity_required": "Se necesita verificación de identidad",
+      "paused": "Reservas en pausa",
       "unknown": "No se pudo guardar"
     },
     "clientTip": "Cliente · agregar una propina",

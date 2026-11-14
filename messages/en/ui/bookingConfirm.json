@@ -84,6 +84,7 @@
       "validation_failed": "Accept the terms",
       "limit_reached": "Account limit reached",
       "identity_required": "ID check needed",
+      "paused": "Bookings paused",
       "unknown": "Payment outcome unknown"
     },
     "paysLater": "Booked more than 14 days ahead: paid later"

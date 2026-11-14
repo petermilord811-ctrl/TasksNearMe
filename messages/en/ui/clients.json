@@ -85,6 +85,7 @@
       "rate_limited": "Proposal — try later",
       "limit_reached": "Proposal — account limit",
       "identity_required": "ID check needed",
+      "paused": "Proposal — bookings paused",
       "unknown": "Proposal — couldn't send"
     },
     "repeatChoice": "Yard task: repeat choices",

@@ -58,6 +58,8 @@ export const shellPreviews: PreviewEntry[] = [
   { id: 'shell/app-poster', group: preview.group, title: preview.appPoster, layout: 'fullscreen', render: () => <AppShellExample initialViewer={mayaShell} currentPath={routes.app.bookings()} /> },
   { id: 'shell/app-helper', group: preview.group, title: preview.appHelper, layout: 'fullscreen', render: () => <AppShellExample initialViewer={jordanShell} currentPath={routes.app.findWork()} /> },
   { id: 'shell/app-helper-not-ready', group: preview.group, title: preview.appHelperNotReady, layout: 'fullscreen', render: () => <AppShellExample initialViewer={priyaShell} currentPath={routes.app.home()} /> },
+  // The outage switch's notice above the helper setup link (completion plan 5.15).
+  { id: 'shell/app-bookings-paused', group: preview.group, title: preview.appBookingsPaused, layout: 'fullscreen', render: () => <AppShellExample initialViewer={priyaShell} currentPath={routes.app.home()} notices={['bookings_paused']} /> },
   { id: 'shell/app-mode-switch-redirect', group: preview.group, title: preview.appModeRedirect, layout: 'fullscreen', notes: preview.redirectHint, render: () => <AppShellExample initialViewer={{ ...priyaShell, mode: 'poster' }} currentPath={routes.app.home()} modeResult={{ ok: true, code: 'updated', redirectTo: routes.app.helperOnboarding() }} hint="redirectHint" /> },
   { id: 'shell/detail-page', group: preview.group, title: preview.detailPage, layout: 'fullscreen', render: () => <DetailShellExample /> },
   { id: 'shell/admin-agent', group: preview.group, title: preview.adminAgent, layout: 'fullscreen', render: () => <AdminAgentExample /> },
