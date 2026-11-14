@@ -1,9 +1,16 @@
-# Every push: typecheck, lint, unit tests, DB integration tests and a production build.
-# A green feat/* branch is then deployed to the site on the VPS (deploy/preview/README.md) and, once the deploy
-# passes its health check, merged into main (fast-forward only; no review needed: one developer), so main
-# never holds a build that failed to start. Pushes straight to main and
-# manual runs with "deploy" ticked deploy too. Codex's ui/* branches aren't merged here: they go through
-# review into the work branch first (CLAUDE.md). The e2e suite isn't here yet (about 22 minutes locally).
+# Two kinds of run (owner, 2026-11-14: e2e only before a merge into main, quick checks on every push):
+#
+# - Every push: the quick checks (typecheck, lint, unit tests, DB integration tests, a production build). Nothing
+#   deploys or merges. A newer push to the same branch cancels the older run, so a burst of pushes costs one run.
+# - Ship: Actions → CI → Run workflow → pick the feat/* branch → tick "Ship", or
+#     gh workflow run ci.yml --ref feat/<branch> -f deploy=true
+#   The quick checks and the e2e suite (against the e2e production build, in parallel shards, each with its own
+#   database) run side by side. Only when every one is green does the branch deploy to the site on the VPS
+#   (deploy/preview/README.md) and, once the deploy passes its health check, fast-forward main to it. So main never
+#   holds a build that failed e2e or failed to start. A push straight to main ships the same way.
+#   "e2e" without "Ship" runs the suite on any branch without deploying.
+#
+# Codex's ui/* branches never ship from here: they go through review into the work branch first (CLAUDE.md).
 name: CI
 
 on:
@@ -12,22 +19,30 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: Deploy this branch to the preview site
+        description: 'Ship: run the e2e suite too, then deploy this branch to tasksnearme.com and merge it into main'
+        type: boolean
+        default: false
+      e2e:
+        description: 'Run the e2e suite without shipping'
         type: boolean
         default: false
 
 concurrency:
-  group: ci-${{ github.ref }}
-  # A run may be merging or deploying, so it always finishes; a newer push to the same branch waits.
-  cancel-in-progress: false
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  # Quick-check runs on a branch give way to a newer push. Ship runs (manual, or a push to main) always finish:
+  # one may be deploying or merging.
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
 permissions:
-  contents: write # the merge step pushes main
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
 
 jobs:
-  check-build-deploy:
+  checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     services:
       db:
         image: postgis/postgis:17-3.5
@@ -47,12 +62,9 @@ jobs:
       # the preview's own settings live on the VPS.
       APP_URL: http://localhost:3000
       PREVIEW_URL: https://tasksnearme.com
-      NEXT_TELEMETRY_DISABLED: '1'
-      DEPLOY: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy) }}
+      SHIP: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy) }}
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0 # the merge step compares this commit with main
 
       - uses: actions/setup-node@v5
         with:
@@ -84,25 +96,135 @@ jobs:
           NEXT_OUTPUT: standalone
           APP_URL: ${{ env.PREVIEW_URL }}
 
-      - name: Can this merge into main?
-        id: premerge
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feat/')
-        run: |
-          git fetch --no-tags origin main
-          if [ "$(git rev-parse origin/main)" = "$GITHUB_SHA" ]; then
-            echo "main is already at ${GITHUB_SHA::7}; its own run deploys it."
-          elif git merge-base --is-ancestor origin/main "$GITHUB_SHA"; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning title=Not merged::main has commits that $GITHUB_REF_NAME doesn't, so it can't fast-forward. Merge by hand."
-          fi
-
       - name: Bundle for the preview
-        if: env.DEPLOY == 'true' || steps.premerge.outputs.ok == 'true'
+        if: env.SHIP == 'true'
         run: bash scripts/preview/bundle.sh preview-bundle "$GITHUB_SHA"
 
+      - name: Keep the bundle for the ship job
+        if: env.SHIP == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-bundle
+          path: preview-bundle.tgz
+          compression-level: 0 # already gzipped
+          retention-days: 3
+          overwrite: true # a re-run of this job replaces it
+
+  e2e:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && (inputs.deploy || inputs.e2e))
+    name: e2e (${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # Every shard finishes, so one run shows every failing test.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    services:
+      db:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: tnm
+          POSTGRES_PASSWORD: tnm_dev_password
+          POSTGRES_DB: tasksnearme
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U tnm -d tasksnearme"
+          --health-interval 3s --health-timeout 3s --health-retries 40
+    env:
+      # This shard's own database: the e2e setup project reseeds it (tests/e2e/support/reset.ts).
+      DATABASE_URL: postgres://tnm:tnm_dev_password@localhost:5432/tasksnearme
+      # The e2e build serves http://localhost:3300 only (npm run e2e:serve, src/platform/e2e-guard.ts). PORT points
+      # the specs that clear the app cache at that server.
+      E2E_TARGET: build
+      APP_URL: http://localhost:3300
+      PORT: '3300'
+      # The public dev-only values of .env.example: this build never leaves the runner.
+      BETTER_AUTH_SECRET: dev-only-secret-change-me-0123456789abcdef
+      FIELD_ENCRYPTION_KEY: ZGV2LW9ubHkta2V5LWZvci1sb2NhbC10ZXN0aW5nISE=
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Browser cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Chromium and its system libraries
+        run: npx playwright install --with-deps chromium
+
+      - name: Database
+        run: |
+          npm run db:migrate
+          npm run db:seed
+
+      - name: e2e build
+        run: npm run e2e:build
+
+      - name: e2e shard ${{ matrix.shard }} of 3
+        run: npx playwright test --project=app-mobile --project=app-desktop --shard=${{ matrix.shard }}/3 --reporter=line,github
+
+      - name: Traces and screenshots of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  ship:
+    needs: [checks, e2e]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # the merge step pushes main
+    # One deploy at a time, whichever branch it comes from.
+    concurrency:
+      group: ship
+      cancel-in-progress: false
+    env:
+      PREVIEW_URL: https://tasksnearme.com
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the merge check compares this commit with main
+
+      - name: Can this merge into main?
+        id: premerge
+        run: |
+          case "$GITHUB_REF" in
+            refs/heads/main)
+              echo "On main: deploy only." ;;
+            refs/heads/feat/*)
+              git fetch --no-tags origin main
+              if [ "$(git rev-parse origin/main)" = "$GITHUB_SHA" ]; then
+                echo "main is already at ${GITHUB_SHA::7}: deploy only."
+              elif git merge-base --is-ancestor origin/main "$GITHUB_SHA"; then
+                echo "merge=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "::error title=Not shipped::main has commits that $GITHUB_REF_NAME doesn't, so it can't fast-forward. Merge main into the branch, push, and ship again."
+                exit 1
+              fi ;;
+            *)
+              echo "::error title=Not shipped::Only feat/* branches and main ship ($GITHUB_REF_NAME doesn't). Run e2e alone instead."
+              exit 1 ;;
+          esac
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: preview-bundle
+
       - name: Deploy to the preview
-        if: env.DEPLOY == 'true' || steps.premerge.outputs.ok == 'true'
         env:
           SSH_KEY: ${{ secrets.PREVIEW_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.PREVIEW_SSH_KNOWN_HOSTS }}
@@ -117,12 +239,12 @@ jobs:
           echo "Live: $PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"
 
       # Only after the deploy passed its health check (a failing release is rolled back on the VPS and fails
-      # this run), so main always holds a build that started and served its pages.
+      # this run), so main always holds a build that passed e2e, started and served its pages.
       - name: Merge into main
-        if: steps.premerge.outputs.ok == 'true'
+        if: steps.premerge.outputs.merge == 'true'
         run: |
           if git push origin "$GITHUB_SHA:refs/heads/main"; then
             echo "Merged $GITHUB_REF_NAME into main at ${GITHUB_SHA::7}." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::warning title=Not merged::main moved while this run was deploying. Push again to retry."
+            echo "::warning title=Not merged::main moved while this run was deploying. Ship again to retry."
           fi

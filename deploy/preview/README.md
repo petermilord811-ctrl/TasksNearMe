@@ -6,16 +6,23 @@ stopgap until the Render setup in the blueprint (07-architecture.md "Hosting", b
 
 ## How a change gets there
 
-1. A push to any branch runs `.github/workflows/ci.yml` on GitHub: typecheck, lint, unit tests, DB integration
-   tests, and a standalone production build (`NEXT_OUTPUT=standalone`).
-2. When all of that passes on a `feat/*` branch that `main` can fast-forward to, the run packs the build with
-   `scripts/preview/bundle.sh` and sends it over SSH: `ssh tnm-preview@<vps> "deploy <sha>" < preview-bundle.tgz`.
-   A push straight to `main`, or a manual run with **deploy** ticked, deploys the same way.
-3. Only after that deploy passes its health check does the run fast-forward `main` to the commit, so `main`
-   always holds a build that started and served its pages. No review is needed, since one person develops this.
-   If `main` has commits the branch lacks, nothing is deployed or merged; the run warns instead. Codex's `ui/*`
-   branches are never merged here: they're reviewed into the work branch first.
-4. On the VPS, that key can only run `deploy.sh`. The script unpacks the release, runs `prepare-db.cjs`
+1. A push to any branch runs `.github/workflows/ci.yml` on GitHub: the quick checks only (typecheck, lint, unit
+   tests, DB integration tests, and a standalone production build, `NEXT_OUTPUT=standalone`). Nothing deploys or
+   merges, and a newer push to the same branch cancels the older run.
+2. **Shipping** is a manual run (owner, 2026-11-14: e2e only before a merge into `main`): on GitHub, Actions → CI →
+   Run workflow → pick the `feat/*` branch → tick **Ship**, or from the repo
+   `gh workflow run ci.yml --ref feat/<branch> -f deploy=true`. A push straight to `main` ships too. The quick
+   checks and the e2e suite run side by side. The e2e suite runs against the e2e production build in 3 parallel
+   shards, each with its own Postgres, so it takes no lock and touches no dev database. Tick **e2e** without
+   **Ship** to run the suite on any branch without deploying. Failed tests leave their traces as the run's
+   `e2e-results-<n>` artifacts.
+3. When every job is green and `main` can fast-forward to the branch, the ship job sends the build packed by
+   `scripts/preview/bundle.sh` over SSH: `ssh tnm-preview@<vps> "deploy <sha>" < preview-bundle.tgz`.
+4. Only after that deploy passes its health check does the run fast-forward `main` to the commit, so `main`
+   always holds a build that passed e2e, started and served its pages. No review is needed, since one person
+   develops this. If `main` has commits the branch lacks, nothing is deployed or merged and the run fails. Codex's
+   `ui/*` branches never ship: they're reviewed into the work branch first.
+5. On the VPS, that key can only run `deploy.sh`. The script unpacks the release, runs `prepare-db.cjs`
    (migrations, plus the sample data when the database is empty, then the demo marketplace from `db/seeds/demo`
    written again with today's dates), switches `current`, restarts the service,
    and rolls back unless `/`, `/es` and `/sign-in` answer 200 when asked the way Caddy asks (public host, https).
