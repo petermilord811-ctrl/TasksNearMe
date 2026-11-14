@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CommunityFeedPageData, CommunityPostPageData, CommunityReactInput } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { communityFeedEmptyData, communityFeedPageData, communityPostHelperViewData, communityPostPageData, fakeHandler } from '@/fixtures';
+import { resetLastVisits } from '@/ui/lib/last-visit';
 import messages from '../../../../messages/en/ui';
 import { CommunityFeedScreen } from './community-feed-screen';
 import { CommunityPostScreen } from './community-post-screen';
@@ -57,6 +58,38 @@ describe('CommunityFeedScreen', () => {
 });
 
 describe('CommunityPostScreen', () => {
+  it('marks the replies since your last visit, never your own, and says how many', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.parse(now));
+    try {
+      resetLastVisits();
+      window.localStorage.clear();
+      // The last look at the post ended at 2 pm; the self-tag (2:05 pm) and the tip (2:40 pm, yours here) came after.
+      window.localStorage.setItem(`tnm:visit:post:${communityPostPageData.post.id}`, JSON.stringify({ seen: Date.parse('2026-11-17T14:00:00.000Z'), previous: null }));
+      const [pinned, selfTag, tip] = communityPostPageData.replies;
+      post({ ...communityPostPageData, replies: [pinned!, selfTag!, { ...tip!, author: { ...tip!.author, isYou: true } }] });
+      expect(screen.getByRole('heading', { level: 2, name: /^3 replies/ }).textContent).toContain('1 new since your last visit');
+      const marked = (reply: { id: string }) => within(document.getElementById(`reply-${reply.id}`)!).queryByTitle('Since your last visit');
+      expect(marked(selfTag!)).not.toBeNull();
+      expect(marked(pinned!)).toBeNull();
+      expect(marked(tip!)).toBeNull();
+    } finally {
+      window.localStorage.clear();
+      resetLastVisits();
+      vi.useRealTimers();
+    }
+  });
+
+  it('marks nothing on a first visit', () => {
+    resetLastVisits();
+    window.localStorage.clear();
+    post(communityPostPageData);
+    expect(screen.queryByTitle('Since your last visit')).toBeNull();
+    expect(screen.queryByText(/new since your last visit/)).toBeNull();
+    window.localStorage.clear();
+    resetLastVisits();
+  });
+
   it('puts the pinned answer first and lets the author pin and delete', () => {
     post(communityPostPageData);
     expect(screen.getByRole('heading', { level: 1, name: /Who do you recommend/ })).toBeDefined();

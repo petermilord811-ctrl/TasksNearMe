@@ -7,6 +7,7 @@ import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 import { AuthorLine } from './author-line';
 import { HelperRecommendation } from './helper-recommendation';
+import { NewSinceVisit } from './new-since-visit';
 import { ReactionBar } from './reaction-bar';
 
 export const kindIcons: Record<CommunityPostKind, LucideIcon> = { recommendation: UserRoundSearch, question: CircleHelp, tip: Lightbulb, thanks: HandHeart };
@@ -24,12 +25,14 @@ export function KindBadge({ kind }: { kind: CommunityPostKind }) {
 }
 
 /** One reply: its author, the words, a named helper, and its reactions (completion plan 7.7). */
-export function ReplyItem({ reply, now, onReact, actions, compact = false }: { reply: CommunityReplyView; now: ISODateTime; onReact: ActionHandler<CommunityReactInput>; actions?: ReactNode; compact?: boolean }) {
+/** With `visitKey` (the post page's), a reply posted since the reader's last visit says "New" (plan 7.6). */
+export function ReplyItem({ reply, now, onReact, actions, compact = false, visitKey }: { reply: CommunityReplyView; now: ISODateTime; onReact: ActionHandler<CommunityReactInput>; actions?: ReactNode; compact?: boolean; visitKey?: string }) {
   const t = useTranslations('community');
   return <article id={`reply-${reply.id}`} aria-label={reply.author.displayName} className={cn('min-w-0 space-y-2', reply.pinned && !compact && 'rounded-2xl border border-primary/25 bg-brand-soft/40 p-3 sm:p-4', reply.moderation && 'rounded-2xl border border-dashed border-destructive/50 p-3')}>
     <div className="flex items-start justify-between gap-2">
       <AuthorLine author={reply.author} at={reply.createdAt} now={now} size="sm" />
       <div className="flex shrink-0 items-center gap-1">
+        {visitKey && <NewSinceVisit at={reply.createdAt} visitKey={visitKey} own={reply.author.isYou} />}
         {reply.pinned && <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground"><Pin aria-hidden="true" className="size-3" />{t('pinned')}</span>}
         {actions}
       </div>

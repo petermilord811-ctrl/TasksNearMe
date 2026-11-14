@@ -156,5 +156,10 @@
     "postStaff": "Community · staff view of a hidden reply",
     "newPost": "Community · new post",
     "newThanks": "Community · thank a helper"
+  },
+  "sinceVisit": {
+    "badge": "New",
+    "title": "Since your last visit",
+    "count": "{count, plural, one {# new since your last visit} other {# new since your last visit}}"
   }
 }

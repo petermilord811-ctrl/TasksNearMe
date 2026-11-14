@@ -156,5 +156,10 @@
     "postStaff": "Comunidad · vista del equipo de una respuesta oculta",
     "newPost": "Comunidad · nueva publicación",
     "newThanks": "Comunidad · agradecer a un ayudante"
+  },
+  "sinceVisit": {
+    "badge": "Nueva",
+    "title": "Desde tu última visita",
+    "count": "{count, plural, one {# nueva desde tu última visita} other {# nuevas desde tu última visita}}"
   }
 }

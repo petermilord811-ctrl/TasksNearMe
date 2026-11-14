@@ -4,6 +4,7 @@ import type { CommunityPostHandlers, CommunityPostPageData, ISODateTime } from '
 import { routes } from '@/contracts/routes';
 import { CommunityItemActions } from '@/ui/components/community/item-actions';
 import { CommunityPostLive } from '@/ui/components/community/community-live';
+import { RepliesSinceVisit } from '@/ui/components/community/new-since-visit';
 import { PostCard, ReplyItem } from '@/ui/components/community/post-card';
 import { CommunityReplyForm } from '@/ui/components/community/reply-form';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
@@ -13,11 +14,13 @@ export interface CommunityPostScreenProps { data: CommunityPostPageData; handler
 /**
  * One community post and its conversation (completion plan 7.7–7.8): the post, the pinned answer first, then the
  * replies in order, each with Thanks and Helpful; the author pins the answer that helped; anyone can report;
- * staff hide or remove with a reason. New replies arrive live.
+ * staff hide or remove with a reason. New replies arrive live, and the ones since your last visit say "New".
  */
 export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreenProps) {
   const t = useTranslations('community');
   const { post, viewer } = data;
+  // This browser's last look at the post marks the replies since (completion plan 7.6).
+  const visitKey = `post:${post.id}`;
   return <div className="mx-auto max-w-2xl space-y-5">
     <CommunityPostLive postId={post.id} />
     <Link href={routes.app.community()} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
@@ -33,10 +36,10 @@ export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreen
     />} />
 
     <section aria-labelledby="community-replies" className="space-y-4">
-      <h2 id="community-replies" className="text-base font-semibold">{t('replyCount', { count: data.replies.length })}</h2>
+      <h2 id="community-replies" className="text-base font-semibold">{t('replyCount', { count: data.replies.length })}<RepliesSinceVisit visitKey={visitKey} replies={data.replies.map((reply) => ({ at: reply.createdAt, own: reply.author.isYou }))} /></h2>
       {data.replies.length > 0 && <ol className="space-y-4">
         {data.replies.map((reply) => <li key={reply.id} className="border-b border-foreground/[0.06] pb-4 last:border-b-0 dark:border-white/[0.05]">
-          <ReplyItem reply={reply} now={now} onReact={handlers.onReact} actions={<CommunityItemActions
+          <ReplyItem reply={reply} now={now} onReact={handlers.onReact} visitKey={visitKey} actions={<CommunityItemActions
             target="reply"
             id={reply.id}
             label={reply.author.displayName}
