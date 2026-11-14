@@ -11,7 +11,7 @@ import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { REWARD_RULES } from './domain';
+import { BUDGET_COMMITTED_STATUSES, REWARD_BUDGETS, REWARD_RULES } from './domain';
 import { giftCardRecipient } from './service';
 import { riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
@@ -25,10 +25,6 @@ import { sendGiftCardEmail } from './emails';
 
 type GrantRow = typeof rewardGrants.$inferSelect;
 const DAY = 86_400_000;
-
-/** At launch: the welcome reward's founding-cohort budget (100 × $50). */
-export const REWARD_BUDGETS: Partial<Record<RewardProgramCode, number>> = { welcome: REWARD_RULES.welcome.cohortSize * REWARD_RULES.welcome.amountCents };
-const COMMITTED: RewardStatus[] = ['pending', 'qualified', 'in_review', 'redeemable', 'issuing', 'delivered', 'failed'];
 
 const LEADS = ['support_lead', 'admin'] as const;
 const WORKERS = ['support_agent', 'support_lead', 'trust_safety', 'admin'] as const;
@@ -112,7 +108,7 @@ export async function getAdminRewards(db: Db, staff: StaffActor, filter: AdminRe
     budgets: [...new Set(programs)].map((program) => ({
       program,
       ...(REWARD_BUDGETS[program] !== undefined ? { budgetCents: REWARD_BUDGETS[program] } : {}),
-      committedCents: all.filter((grant) => grant.program === program && COMMITTED.includes(grant.status as RewardStatus)).reduce((sum, grant) => sum + grant.amountCents, 0),
+      committedCents: all.filter((grant) => grant.program === program && BUDGET_COMMITTED_STATUSES.includes(grant.status as RewardStatus)).reduce((sum, grant) => sum + grant.amountCents, 0),
       deliveredCents: all.filter((grant) => grant.program === program && grant.status === 'delivered').reduce((sum, grant) => sum + grant.amountCents, 0),
     })),
   };

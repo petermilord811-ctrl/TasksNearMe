@@ -1,6 +1,6 @@
-import { and, asc, eq, gte, inArray, isNotNull, lte, ne } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, lte, ne, sql } from 'drizzle-orm';
 import type { EmailProvider } from '@/integrations/email';
-import type { ActionResult, RewardGrantView, RewardRiskSignal, RewardStatus, RewardVoidReason, RewardsPageData } from '@/contracts';
+import type { ActionResult, RewardGrantView, RewardProgramCode, RewardRiskSignal, RewardStatus, RewardVoidReason, RewardsPageData } from '@/contracts';
 import type { GiftCardProvider } from '@/integrations/gift-cards';
 import { users } from '@/modules/accounts/schema';
 import { bookingCompletions, bookingSeries, bookingTerms, bookings } from '@/modules/bookings/schema';
@@ -10,10 +10,23 @@ import { tasks } from '@/modules/tasks/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { identityVerifications } from '@/modules/verification/schema';
 import type { Db } from '@/platform/db/connect';
-import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { LAUNCH_PROGRAMS, REWARD_RULES, marketMonthStart, nextGrantState, recurringMonthTrigger, repeatProgress, repeatTrigger, rewardOrder, welcomeCandidate, type BookingFact } from './domain';
+import {
+  BUDGET_COMMITTED_STATUSES,
+  LAUNCH_PROGRAMS,
+  REWARD_BUDGETS,
+  REWARD_RULES,
+  marketMonthStart,
+  nextGrantState,
+  recurringMonthTrigger,
+  repeatProgress,
+  repeatTrigger,
+  rewardOrder,
+  welcomeCandidate,
+  type BookingFact,
+  type RewardBudgets,
+} from './domain';
 import { sendGiftCardEmail } from './emails';
 import { REVIEW_SIGNALS, riskSignalsOf } from './risk';
 import { rewardGrants } from './schema';
@@ -93,17 +106,37 @@ const live = (grant: GrantRow) => grant.status !== 'voided';
 /** Staff rejected it after a risk review: that program is over for the helper (welcome) or the pair (repeat). */
 const rejected = (grant: GrantRow) => grant.status === 'voided' && grant.voidReason === 'risk_review';
 
-async function createGrant(db: Db, grants: GrantRow[], values: typeof rewardGrants.$inferInsert, now: Date): Promise<void> {
-  // At most $75 a calendar month across programs (the grant waits for a later month otherwise).
-  const thisMonth = grants.filter((grant) => live(grant) && grant.createdAt >= monthStart(now)).reduce((sum, grant) => sum + grant.amountCents, 0);
-  if (thisMonth + values.amountCents > REWARD_RULES.monthlyCapCents) return;
-  try {
-    const [row] = await db.insert(rewardGrants).values(values).returning();
-    if (row) grants.push(row);
-  } catch (error) {
-    // Another request created it first (the partial unique indexes).
-    if (!isUniqueViolation(error)) throw error;
-  }
+const centsOf = () => sql<number>`coalesce(sum(${rewardGrants.amountCents}), 0)::int`;
+
+/**
+ * Creates a grant within the helper's monthly cap (at most $75 a calendar month across programs) and its
+ * program's budget (blueprint 05 §1.4), or not at all: it waits, and a later sync tries again (in a later month,
+ * or once a void frees budget). The checks and the insert share one transaction behind two advisory locks, the
+ * helper's and then the program's (always in that order), so parallel qualifications can't pass either limit
+ * (T-26): each request sums what's committed only once the one before it has committed its grant.
+ */
+async function createGrant(db: Db, grants: GrantRow[], values: typeof rewardGrants.$inferInsert, now: Date, budgets: RewardBudgets): Promise<void> {
+  const created = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`reward-cap:${values.helperUserId}`}))`);
+    const [month] = await tx
+      .select({ cents: centsOf() })
+      .from(rewardGrants)
+      .where(and(eq(rewardGrants.helperUserId, values.helperUserId), ne(rewardGrants.status, 'voided'), gte(rewardGrants.createdAt, monthStart(now))));
+    if ((month?.cents ?? 0) + values.amountCents > REWARD_RULES.monthlyCapCents) return null;
+    const budget = budgets[values.program as RewardProgramCode];
+    if (budget !== undefined) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`reward-budget:${values.program}`}))`);
+      const [committed] = await tx
+        .select({ cents: centsOf() })
+        .from(rewardGrants)
+        .where(and(eq(rewardGrants.program, values.program), inArray(rewardGrants.status, [...BUDGET_COMMITTED_STATUSES])));
+      if ((committed?.cents ?? 0) + values.amountCents > budget) return null;
+    }
+    // Another request created the same grant first (the partial unique indexes, or a fixed id): nothing to add.
+    const [row] = await tx.insert(rewardGrants).values(values).onConflictDoNothing().returning();
+    return row ?? null;
+  });
+  if (created) grants.push(created);
 }
 
 /**
@@ -111,7 +144,7 @@ async function createGrant(db: Db, grants: GrantRow[], values: typeof rewardGran
  * every visit (at least 2) was completed and paid. The grant's id is the series', so it can never repeat (a
  * rejected one included). Behind the market's `reward.recurring_month` flag.
  */
-async function syncRecurringMonth(db: Db, helperUserId: string, grants: GrantRow[], now: Date): Promise<void> {
+async function syncRecurringMonth(db: Db, helperUserId: string, grants: GrantRow[], now: Date, budgets: RewardBudgets): Promise<void> {
   const series = await db
     .select({ id: bookingSeries.id, posterUserId: bookingSeries.posterUserId, marketId: bookingSeries.marketId })
     .from(bookingSeries)
@@ -131,15 +164,19 @@ async function syncRecurringMonth(db: Db, helperUserId: string, grants: GrantRow
       now,
     );
     if (!trigger) continue;
-    await createGrant(db, grants, { id: recurringGrantId(row.id), helperUserId, program: 'recurring_month', amountCents: REWARD_RULES.recurringMonth.amountCents, status: 'pending', bookingId: trigger.bookingId, posterUserId: row.posterUserId, createdAt: now, updatedAt: now }, now);
+    await createGrant(db, grants, { id: recurringGrantId(row.id), helperUserId, program: 'recurring_month', amountCents: REWARD_RULES.recurringMonth.amountCents, status: 'pending', bookingId: trigger.bookingId, posterUserId: row.posterUserId, createdAt: now, updatedAt: now }, now, budgets);
   }
 }
 
 /** One recurring-month grant per series: its id says which. */
 const recurringGrantId = (seriesId: string) => `rwd_month_${seriesId}`;
 
-/** Brings the helper's grants up to date with their bookings. Idempotent. */
-export async function syncRewards(db: Db, helperUserId: string, now: Date): Promise<void> {
+/**
+ * Brings the helper's grants up to date with their bookings. Idempotent. `budgets`: the program budgets
+ * (`REWARD_BUDGETS` unless given).
+ */
+export async function syncRewards(db: Db, helperUserId: string, now: Date, options: { budgets?: RewardBudgets } = {}): Promise<void> {
+  const budgets = options.budgets ?? REWARD_BUDGETS;
   const [facts, cohort, grants] = await Promise.all([
     helperBookingFacts(db, helperUserId),
     cohortFacts(db, helperUserId),
@@ -169,7 +206,7 @@ export async function syncRewards(db: Db, helperUserId: string, now: Date): Prom
     const used = new Set(grants.filter((grant) => grant.program === 'welcome').map((grant) => grant.bookingId));
     const candidate = welcomeCandidate(facts.filter((fact) => !used.has(fact.id)), cohort.verifiedAt);
     if (candidate) {
-      await createGrant(db, grants, { id: newId('rwd'), helperUserId, program: 'welcome', amountCents: REWARD_RULES.welcome.amountCents, status: 'pending', bookingId: candidate.id, createdAt: now, updatedAt: now }, now);
+      await createGrant(db, grants, { id: newId('rwd'), helperUserId, program: 'welcome', amountCents: REWARD_RULES.welcome.amountCents, status: 'pending', bookingId: candidate.id, createdAt: now, updatedAt: now }, now, budgets);
     }
   }
 
@@ -178,12 +215,12 @@ export async function syncRewards(db: Db, helperUserId: string, now: Date): Prom
     if (grants.some((grant) => grant.program === 'repeat' && grant.posterUserId === posterUserId && (live(grant) || rejected(grant)))) continue;
     const trigger = repeatTrigger(facts, posterUserId);
     if (trigger) {
-      await createGrant(db, grants, { id: newId('rwd'), helperUserId, program: 'repeat', amountCents: REWARD_RULES.repeat.amountCents, status: 'pending', bookingId: trigger.id, posterUserId, createdAt: now, updatedAt: now }, now);
+      await createGrant(db, grants, { id: newId('rwd'), helperUserId, program: 'repeat', amountCents: REWARD_RULES.repeat.amountCents, status: 'pending', bookingId: trigger.id, posterUserId, createdAt: now, updatedAt: now }, now, budgets);
     }
   }
 
   // Recurring month: a month of regular visits, all completed and paid.
-  await syncRecurringMonth(db, helperUserId, grants, now);
+  await syncRecurringMonth(db, helperUserId, grants, now, budgets);
 }
 
 function grantView(grant: GrantRow, booking: BookingFact | undefined, clientName: string | undefined): RewardGrantView {

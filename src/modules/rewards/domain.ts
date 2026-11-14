@@ -1,4 +1,4 @@
-import type { RewardProgramView, RewardStatus } from '@/contracts';
+import type { Cents, RewardProgramCode, RewardProgramView, RewardStatus } from '@/contracts';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
@@ -18,6 +18,15 @@ export const REWARD_RULES = {
   redeemDays: 90,
   monthlyCapCents: 7500,
 } as const;
+
+/**
+ * Program budgets (blueprint 05 §1.4: reserved under a database lock, and the program stops when its budget is
+ * spent). At launch only the welcome reward has one: its founding cohort, 100 × $50.
+ */
+export type RewardBudgets = Partial<Record<RewardProgramCode, Cents>>;
+export const REWARD_BUDGETS: RewardBudgets = { welcome: REWARD_RULES.welcome.cohortSize * REWARD_RULES.welcome.amountCents };
+/** Grants that hold part of their program's budget: all but voided and expired ones. */
+export const BUDGET_COMMITTED_STATUSES: readonly RewardStatus[] = ['pending', 'qualified', 'in_review', 'redeemable', 'issuing', 'delivered', 'failed'];
 
 /**
  * The start of the calendar month in market time (America/Chicago) that `now` falls in: the $75 monthly cap

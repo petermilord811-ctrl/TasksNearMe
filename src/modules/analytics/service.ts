@@ -4,9 +4,8 @@ import { bookingCompletions, bookingTerms, bookings, helperStrikes } from '@/mod
 import { areas, categories } from '@/modules/markets/schema';
 import { offers } from '@/modules/offers/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
-import { REWARD_RULES } from '@/modules/rewards/domain';
+import { REWARD_BUDGETS, REWARD_RULES } from '@/modules/rewards/domain';
 import { rewardGrants } from '@/modules/rewards/schema';
-import { REWARD_BUDGETS } from '@/modules/rewards/staff';
 import { supportCases } from '@/modules/support/schema';
 import type { StaffActor } from '@/modules/support/staff';
 import { tasks } from '@/modules/tasks/schema';
