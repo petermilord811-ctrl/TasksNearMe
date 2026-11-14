@@ -64,9 +64,10 @@ database, `preview.env` and the Caddy block by hand. To set it up again, follow 
   and restart.
 - Fresh sample data: drop and recreate `tasksnearme_preview` (owner `tnm_preview`, `CREATE EXTENSION postgis`).
   The next deploy migrates it and seeds it again.
-- The demo marketplace (about 80 people with `demo_` ids, 200+ tasks, their offers, bookings and reviews) comes back
-  up to date on every deploy. To refresh it between deploys, from the repo with the preview's `DATABASE_URL` and
-  `FIELD_ENCRYPTION_KEY` in the environment: `npm run db:demo`.
+- The demo marketplace (Austin and 14 more markets such as `/pretty-prairie` and `/chicago`: about 600 people with
+  `demo_` ids, 1,200 tasks, their offers, bookings and reviews) comes back up to date on every deploy. To refresh it
+  between deploys, from the repo with the preview's `DATABASE_URL` and `FIELD_ENCRYPTION_KEY` in the environment:
+  `npm run db:demo` (about 10 seconds). Its market, board and category pages are indexable under the rules above.
 
 ## Search engines
 

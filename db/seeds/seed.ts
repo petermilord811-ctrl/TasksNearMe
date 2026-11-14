@@ -167,6 +167,7 @@ export async function upsertPeople(tx: Tx, people: readonly SeedPerson[]): Promi
       termsVersion: CURRENT_TERMS_VERSION,
       mode: person.mode,
       ...(person.locale ? { locale: person.locale } : {}),
+      ...(person.homeMarketId ? { homeMarketId: person.homeMarketId } : {}),
       createdAt: new Date(person.createdAt),
     };
     await tx.insert(users).values(user).onConflictDoUpdate({ target: users.id, set: { ...user, createdAt: undefined } });

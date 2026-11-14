@@ -1,15 +1,16 @@
 /**
- * Writes the demo marketplace (./plan.ts) on top of the base seed. Safe to run again: people, addresses and tasks
- * are updated in place (so anything a real person did that points at them stays valid), and everything that
- * happens on the demo tasks (offers, bookings, money, reviews, conversations, saved helpers, open slots) is
- * replaced, with times moved up to now. Only rows with demo ids are touched.
+ * Writes the demo marketplace (./plan.ts) on top of the base seed. Safe to run again: the demo markets, people,
+ * addresses and tasks are updated in place (so anything a real person did that points at them stays valid), and
+ * everything that happens on the demo tasks (offers, bookings, money, reviews, conversations, saved helpers, open
+ * slots) is replaced, with times moved up to now. Only rows with demo ids are touched.
  *
  * The preview runs it on every deploy (scripts/preview/prepare-db.ts); locally, `npm run db:demo`.
  */
 import { and, eq, inArray, like, notInArray, or, sql } from 'drizzle-orm';
 import { createDb } from '../../../src/platform/db/connect';
 import { createFieldCipher } from '../../../src/platform/crypto/field-encryption';
-import { marketPolicies } from '../../../src/modules/markets/schema';
+import { areas, marketCategories, marketPolicies, markets } from '../../../src/modules/markets/schema';
+import { DEFAULT_CANCELLATION, DEFAULT_FEES, DEFAULT_TIMERS } from '../../../src/modules/markets/policy-defaults';
 import { helperProfiles } from '../../../src/modules/profiles/schema';
 import { taskLocations, tasks } from '../../../src/modules/tasks/schema';
 import { offers } from '../../../src/modules/offers/schema';
@@ -24,11 +25,53 @@ import { devCardRef } from '../../../src/integrations/payments';
 import { recomputeBadges } from '../../../src/modules/badges/service';
 import { cacheTagInvalidations } from '../../../src/platform/cache/schema';
 import { seedVerification, upsertPeople, type Tx } from '../seed';
-import { AUSTIN } from '../data/austin';
-import { buildDemoPlan, DEMO_PREFIX, type DemoPlan } from './plan';
+import { AUSTIN, CATEGORIES } from '../data/austin';
+import { DEMO_MARKETS, demoAreaId, demoMarketId, demoPolicyId } from './markets';
+import { buildDemoPlan, DEMO_PREFIX, type DemoPlan, type DemoPolicies } from './plan';
 
 /** `<table prefix>_demo_%` as a LIKE pattern (underscores escaped). */
 const demoIds = (prefix: string) => `${prefix}\\_${DEMO_PREFIX.replace('_', '\\_')}%`;
+
+/**
+ * The demo markets beyond Austin, as the app needs them to show work: the market (pre-launch, Central time), its
+ * neighborhoods, every category enabled with prices at the city's level, and a published policy with the default
+ * fees. A market's status and a policy staff published later are left as they are.
+ */
+export async function writeDemoMarkets(tx: Tx): Promise<void> {
+  const effectiveFrom = '2026-11-01T06:00:00.000Z';
+  for (const market of DEMO_MARKETS) {
+    const id = demoMarketId(market);
+    const place = { name: market.name, state: market.state, timeZone: 'America/Chicago', centerLat: market.lat, centerLng: market.lng, serviceRadiusKm: market.serviceRadiusKm };
+    await tx.insert(markets).values({ id, slug: market.slug, currency: 'USD', status: 'prelaunch', ...place }).onConflictDoUpdate({ target: markets.id, set: place });
+    for (const area of market.areas) {
+      const row = { id: demoAreaId(market, area), marketId: id, slug: area.slug, name: area.name, centerLat: area.lat, centerLng: area.lng };
+      await tx.insert(areas).values(row).onConflictDoUpdate({ target: areas.id, set: row });
+    }
+    for (const category of CATEGORIES) {
+      const step = category.guidance.unit === 'hour' ? 100 : 500;
+      const scale = (cents: number) => Math.max(step, Math.round((cents * market.priceFactor) / step) * step);
+      const priceGuidance = { ...category.guidance, lowCents: scale(category.guidance.lowCents), highCents: scale(category.guidance.highCents) };
+      await tx
+        .insert(marketCategories)
+        .values({ marketId: id, categoryId: category.id, enabled: true, priceGuidance })
+        .onConflictDoUpdate({ target: [marketCategories.marketId, marketCategories.categoryId], set: { priceGuidance } });
+    }
+    await tx
+      .insert(marketPolicies)
+      .values({ id: demoPolicyId(market), marketId: id, version: 1, status: 'published', effectiveFrom, fees: DEFAULT_FEES, cancellation: DEFAULT_CANCELLATION, timers: DEFAULT_TIMERS, publishedBy: 'system', publishedAt: effectiveFrom })
+      .onConflictDoNothing();
+  }
+}
+
+/** Each market's current published policy (Austin's from the base seed, the others from `writeDemoMarkets`). */
+export async function loadDemoPolicies(tx: Tx): Promise<DemoPolicies> {
+  const marketIds = [AUSTIN.id, ...DEMO_MARKETS.map(demoMarketId)];
+  const rows = await tx.select().from(marketPolicies).where(and(inArray(marketPolicies.marketId, marketIds), eq(marketPolicies.status, 'published')));
+  const policies: DemoPolicies = {};
+  for (const row of rows.sort((a, b) => a.version - b.version)) policies[row.marketId] = { id: row.id, fees: row.fees };
+  for (const marketId of marketIds) if (!policies[marketId]) throw new Error(`Demo data: no published policy for ${marketId} (Austin's comes from the base seed).`);
+  return policies;
+}
 
 /** Everything on the demo tasks goes, before it's written again (bookings first: they point at offers). */
 async function clearDemoActivity(tx: Tx, plan: DemoPlan): Promise<void> {
@@ -88,7 +131,7 @@ export async function writeDemoPlan(tx: Tx, plan: DemoPlan, encryptionKey: strin
 
   for (const task of plan.tasks) {
     const { categorySlug: _slug, ...rest } = task;
-    const row = { ...rest, marketId: AUSTIN.id, reopenedAt: null, hiddenAt: null, hiddenByUserId: null, hiddenReason: null };
+    const row = { ...rest, reopenedAt: null, hiddenAt: null, hiddenByUserId: null, hiddenReason: null };
     await tx.insert(tasks).values(row).onConflictDoUpdate({ target: tasks.id, set: row });
   }
   // Demo tasks an earlier version of the plan had and this one doesn't: closed, so nothing stays open forever.
@@ -101,7 +144,7 @@ export async function writeDemoPlan(tx: Tx, plan: DemoPlan, encryptionKey: strin
 
   for (const booking of plan.bookings) {
     const { terms, payment, completion, earning, refund, reviews: bookingReviews, chat, ...row } = booking;
-    await tx.insert(bookings).values({ ...row, marketId: AUSTIN.id, policyVersionId: plan.policyId, termsVersion: 1 });
+    await tx.insert(bookings).values({ ...row, termsVersion: 1 });
     await tx.insert(bookingTerms).values({ id: `btm_${booking.id.slice(4)}_1`, bookingId: booking.id, version: 1, ...terms, startAt: booking.startAt, createdAt: booking.confirmedAt });
     const paymentId = `pay_${booking.id.slice(4)}`;
     await tx.insert(payments).values({
@@ -165,7 +208,7 @@ export async function writeDemoPlan(tx: Tx, plan: DemoPlan, encryptionKey: strin
 
   if (plan.savedHelpers.length > 0) await tx.insert(savedHelpers).values(plan.savedHelpers).onConflictDoNothing();
   if (plan.availability.length > 0) {
-    await tx.insert(availabilityPosts).values(plan.availability.map((post) => ({ ...post, marketId: AUSTIN.id, status: 'active', updatedAt: post.createdAt })));
+    await tx.insert(availabilityPosts).values(plan.availability.map((post) => ({ ...post, status: 'active', updatedAt: post.createdAt })));
   }
 
   // Ratings on cards and profiles come from published reviews (as in the base seed).
@@ -183,27 +226,39 @@ export async function writeDemoPlan(tx: Tx, plan: DemoPlan, encryptionKey: strin
     where s.user_id = hp.user_id`);
 }
 
-/** Builds the plan from the market's published fees and writes it in one transaction; then badges. */
-export async function seedDemoData(url: string, now = new Date()): Promise<{ people: number; tasks: number; offers: number; bookings: number }> {
+/** Writes the markets, builds the plan from their published fees and writes it, in one transaction; then badges. */
+export async function seedDemoData(url: string, now = new Date()): Promise<{ markets: number; people: number; tasks: number; offers: number; bookings: number }> {
   const key = process.env.FIELD_ENCRYPTION_KEY;
   if (!key) throw new Error('FIELD_ENCRYPTION_KEY is not set (see .env.example).');
   const { db, pool } = createDb(url, { max: 2 });
   try {
-    const [policy] = await db.select().from(marketPolicies).where(and(eq(marketPolicies.marketId, AUSTIN.id), eq(marketPolicies.status, 'published'))).limit(1);
-    if (!policy) throw new Error('Demo data needs the base seed first: no published policy for Austin.');
-    const plan = buildDemoPlan({ now, fees: policy.fees, policyId: policy.id });
-    await db.transaction((tx) => writeDemoPlan(tx, plan, key));
+    const plan = await db.transaction(async (tx) => {
+      await writeDemoMarkets(tx);
+      const built = buildDemoPlan({ now, policies: await loadDemoPolicies(tx) });
+      await writeDemoPlan(tx, built, key);
+      return built;
+    });
     for (const person of plan.people) await recomputeBadges(db, person.id, now, { announce: false });
     // Cached pages (the board, the market and category pages, profiles, task pages) show the new data at once:
     // the same invalidation `updateTag` shares (cache-handlers/shared-tags.mjs), so it reaches every instance,
     // and on a deploy it also covers what the build prerendered.
-    const tags = ['tasks', 'helpers', 'markets', 'sitemap', `market:${AUSTIN.slug}`, ...plan.tasks.map((task) => `task:${task.slug}`), ...plan.people.flatMap((person) => (person.helper ? [`helper:${person.helper.handle}`] : []))];
+    const tags = [
+      'tasks',
+      'helpers',
+      'markets',
+      'sitemap',
+      ...[AUSTIN.slug, ...DEMO_MARKETS.map((market) => market.slug)].map((slug) => `market:${slug}`),
+      ...plan.tasks.map((task) => `task:${task.slug}`),
+      ...plan.people.flatMap((person) => (person.helper ? [`helper:${person.helper.handle}`] : [])),
+    ];
     const expiredAt = Date.now() + 1;
-    await db
-      .insert(cacheTagInvalidations)
-      .values(tags.map((tag) => ({ tag, expiredAt, updatedAt: sql`clock_timestamp()` })))
-      .onConflictDoUpdate({ target: cacheTagInvalidations.tag, set: { expiredAt: sql`greatest(coalesce(${cacheTagInvalidations.expiredAt}, 0), excluded.expired_at)`, updatedAt: sql`clock_timestamp()` } });
-    return { people: plan.people.length, tasks: plan.tasks.length, offers: plan.offers.length, bookings: plan.bookings.length };
+    for (let i = 0; i < tags.length; i += 500) {
+      await db
+        .insert(cacheTagInvalidations)
+        .values(tags.slice(i, i + 500).map((tag) => ({ tag, expiredAt, updatedAt: sql`clock_timestamp()` })))
+        .onConflictDoUpdate({ target: cacheTagInvalidations.tag, set: { expiredAt: sql`greatest(coalesce(${cacheTagInvalidations.expiredAt}, 0), excluded.expired_at)`, updatedAt: sql`clock_timestamp()` } });
+    }
+    return { markets: DEMO_MARKETS.length + 1, people: plan.people.length, tasks: plan.tasks.length, offers: plan.offers.length, bookings: plan.bookings.length };
   } finally {
     await pool.end();
   }

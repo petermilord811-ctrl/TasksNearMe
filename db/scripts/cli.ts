@@ -1,7 +1,7 @@
 /**
  * npm run db:migrate | db:seed | db:reset   (dev database from .env.local)
  * npm run db:demo
- *   Adds the demo marketplace (db/seeds/demo: ~80 people, 200+ tasks with offers, bookings and reviews) on top of
+ *   Adds the demo marketplace (db/seeds/demo: Austin and 14 more markets, ~600 people, 1,200 tasks with offers, bookings and reviews) on top of
  *   the seed, or moves it up to today. The preview does this on every deploy. e2e expects the plain seed, so a
  *   dev database with demo data goes back with db:reset.
  * npm run staff:setup-code -- <email> [--admin] [--reset]
@@ -24,7 +24,7 @@ const commands: Record<string, () => Promise<void>> = {
   reset: () => resetDatabase(url),
   demo: async () => {
     const written = await seedDemoData(url);
-    console.log(`demo marketplace: ${written.people} people, ${written.tasks} tasks, ${written.offers} offers, ${written.bookings} bookings`);
+    console.log(`demo marketplace: ${written.markets} markets, ${written.people} people, ${written.tasks} tasks, ${written.offers} offers, ${written.bookings} bookings`);
   },
   'staff-setup-code': async () => {
     const args = process.argv.slice(3);

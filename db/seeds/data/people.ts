@@ -48,6 +48,8 @@ export interface SeedPerson {
   phone?: string;
   /** The language emails and texts go out in; unset means the default (English). */
   locale?: 'en' | 'es';
+  /** Default Austin (the column's default). */
+  homeMarketId?: string;
   createdAt: string;
   helper?: SeedHelper;
   staffRole?: 'support_agent' | 'support_lead' | 'trust_safety' | 'finance' | 'admin';

@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   // recent bookings and reviews. It's one transaction; if it fails, the release still goes out.
   try {
     const written = await seedDemoData(url);
-    console.log(`demo marketplace refreshed: ${written.people} people, ${written.tasks} tasks, ${written.offers} offers, ${written.bookings} bookings`);
+    console.log(`demo marketplace refreshed: ${written.markets} markets, ${written.people} people, ${written.tasks} tasks, ${written.offers} offers, ${written.bookings} bookings`);
   } catch (error) {
     console.error('demo marketplace not refreshed (the release goes out anyway):', error);
   }

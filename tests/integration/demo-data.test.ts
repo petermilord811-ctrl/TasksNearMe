@@ -1,26 +1,28 @@
 /**
- * The demo marketplace (db/seeds/demo) in the database, read back through the app's own queries: helpers are
- * bookable by the app's onboarding rules, every live offer passes the offer rules with the facts the app loads,
- * the board lists the open tasks, profiles show the ratings their reviews give, and booking pages open.
+ * The demo marketplace (db/seeds/demo) in the database, read back through the app's own queries: the demo markets
+ * are public, helpers are bookable by the app's onboarding rules, every live offer passes the offer rules with the
+ * facts the app loads, the boards list the open tasks, profiles show the ratings their reviews give, and booking
+ * pages open.
  *
  * Written in a transaction that is rolled back, so the shared test database keeps only the base seed.
  */
-import { and, eq, like } from 'drizzle-orm';
+import { like } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { getBookingView } from '@/modules/bookings/hub';
-import { marketPolicies } from '@/modules/markets/schema';
+import { categories } from '@/modules/markets/schema';
+import { findPublicMarket, listCategoryViews } from '@/modules/markets/queries';
 import { offerBlockedReason } from '@/modules/offers/helper-domain';
 import { getFindWorkPageData, loadHelperState } from '@/modules/offers/helper';
 import { offers } from '@/modules/offers/schema';
 import { getHelperProfile } from '@/modules/profiles/queries';
 import { parseTaskBoardQuery } from '@/modules/tasks/projections';
 import { listBoardTasks } from '@/modules/tasks/queries';
-import { categories } from '@/modules/markets/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createDb, type Db } from '@/platform/db/connect';
+import { DEMO_MARKETS, demoMarketId } from '../../db/seeds/demo/markets';
 import { buildDemoPlan } from '../../db/seeds/demo/plan';
-import { writeDemoPlan } from '../../db/seeds/demo/write';
+import { loadDemoPolicies, writeDemoMarkets, writeDemoPlan } from '../../db/seeds/demo/write';
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 2 });
 afterAll(() => pool.end());
@@ -34,43 +36,51 @@ function milesBetween(a: { lat: number; lng: number }, b: { lat: number; lng: nu
 }
 
 describe('the demo marketplace in the database', () => {
-  it('writes again on the next deploy without leftovers, and the app reads it like real activity', async () => {
+  it('writes again on the next deploy without leftovers, and the app reads it like real activity', { timeout: 300_000 }, async () => {
     const key = process.env.FIELD_ENCRYPTION_KEY ?? '';
-    const [policy] = await db.select().from(marketPolicies).where(and(eq(marketPolicies.marketId, 'mkt_austin'), eq(marketPolicies.status, 'published'))).limit(1);
     const first = new Date();
     const next = new Date(first.getTime() + 26 * 3_600_000);
-    const later = buildDemoPlan({ now: next, fees: policy!.fees, policyId: policy!.id });
 
     await db
       .transaction(async (tx) => {
         const d = tx as unknown as Db;
+        await writeDemoMarkets(tx);
+        const policies = await loadDemoPolicies(tx);
         // Today's deploy, then tomorrow's (times move up; some tasks change state).
-        await writeDemoPlan(tx, buildDemoPlan({ now: first, fees: policy!.fees, policyId: policy!.id }), key);
+        await writeDemoPlan(tx, buildDemoPlan({ now: first, policies }), key);
+        await writeDemoMarkets(tx);
+        const later = buildDemoPlan({ now: next, policies: await loadDemoPolicies(tx) });
         await writeDemoPlan(tx, later, key);
+
+        // Every demo market is public with its categories, like Austin.
+        for (const market of DEMO_MARKETS) {
+          expect(await findPublicMarket(market.slug, d), market.slug).not.toBeNull();
+          expect((await listCategoryViews(demoMarketId(market), d)).length, market.slug).toBe(5);
+        }
 
         // Exactly the latest plan: no offers left over from the first run, offer counts that match.
         const demoOffers = await tx.select().from(offers).where(like(offers.id, 'off\\_demo\\_%'));
         expect(demoOffers.length).toBe(later.offers.length);
         const demoTasks = await tx.select().from(tasks).where(like(tasks.id, 'tsk\\_demo\\_%'));
         expect(demoTasks.filter((task) => task.status === 'open').length).toBe(later.tasks.filter((task) => task.status === 'open').length);
-        for (const task of demoTasks) {
-          expect(task.offerCount, task.id).toBe(demoOffers.filter((offer) => offer.taskId === task.id && offer.status === 'pending').length);
-        }
+        const pendingByTask = new Map<string, number>();
+        for (const offer of demoOffers.filter((o) => o.status === 'pending')) pendingByTask.set(offer.taskId, (pendingByTask.get(offer.taskId) ?? 0) + 1);
+        for (const task of demoTasks) expect(task.offerCount, task.id).toBe(pendingByTask.get(task.id) ?? 0);
 
-        // Helpers are bookable by the app's own rules, and every live offer is one the app would take now.
-        const categorySlug = new Map((await tx.select().from(categories)).map((row) => [row.id, row]));
-        const helperIds = later.people.filter((person) => person.helper).map((person) => person.id);
-        for (const helperId of helperIds) {
-          const state = await loadHelperState(d, helperId, next);
-          const person = later.people.find((p) => p.id === helperId)!;
-          const offered = person.helper!.services.map((service) => categorySlug.get(service.categoryId)!.slug);
-          expect(state.facts.bookableCategories.length, helperId).toBeGreaterThan(0);
-          expect([...state.facts.bookableCategories].sort(), helperId).toEqual(
-            offered.filter((slug) => !categorySlug.get(`cat_${slug.replaceAll('-', '_')}`)!.requiresBackgroundCheck || person.helper!.backgroundCheckedAt).sort(),
+        // Helpers are bookable by the app's own rules, and every live offer is one the app would take now
+        // (all of Austin's helpers and every third elsewhere, so the check stays quick).
+        const categoryRows = new Map((await tx.select().from(categories)).map((row) => [row.id, row]));
+        const helpers = later.people.filter((person) => person.helper).filter((person, index) => person.homeMarketId === 'mkt_austin' || index % 3 === 0);
+        for (const person of helpers) {
+          const state = await loadHelperState(d, person.id, next);
+          expect(state.marketId, person.id).toBe(person.homeMarketId);
+          const offered = person.helper!.services.map((service) => categoryRows.get(service.categoryId)!);
+          expect([...state.facts.bookableCategories].sort(), person.id).toEqual(
+            offered.filter((category) => !category.requiresBackgroundCheck || person.helper!.backgroundCheckedAt).map((category) => category.slug).sort(),
           );
-          for (const offer of demoOffers.filter((o) => o.helperUserId === helperId && o.status === 'pending')) {
+          for (const offer of demoOffers.filter((o) => o.helperUserId === person.id && o.status === 'pending')) {
             const task = demoTasks.find((t) => t.id === offer.taskId)!;
-            const category = categorySlug.get(task.categoryId)!;
+            const category = categoryRows.get(task.categoryId)!;
             const blocked = offerBlockedReason(
               state.facts,
               {
@@ -89,32 +99,39 @@ describe('the demo marketplace in the database', () => {
           }
         }
 
-        // Find work shows a helper their live offers.
-        const busiest = helperIds.map((id) => [id, demoOffers.filter((o) => o.helperUserId === id && o.status === 'pending').length] as const).sort((a, b) => b[1] - a[1])[0]!;
+        // Find work shows a Pretty Prairie helper their live offers, and only work in their own market.
+        const prairieHelpers = later.people.filter((person) => person.homeMarketId === 'mkt_demo_pp' && person.helper);
+        const busiest = prairieHelpers.map((person) => [person.id, demoOffers.filter((o) => o.helperUserId === person.id && o.status === 'pending').length] as const).sort((a, b) => b[1] - a[1])[0]!;
         const findWork = await getFindWorkPageData(d, busiest[0], { distance: 'any' }, next);
         expect(findWork!.cards.filter((card) => card.myOffer?.status === 'pending').length).toBeGreaterThan(0);
+        const prairieTaskIds = new Set(later.tasks.filter((task) => task.marketId === 'mkt_demo_pp').map((task) => task.id));
+        expect(findWork!.cards.every((card) => prairieTaskIds.has(card.task.id))).toBe(true);
 
-        // The public board lists the open demo tasks with the base seed's.
-        const board = await listBoardTasks(d, { marketId: 'mkt_austin', query: parseTaskBoardQuery({}), now: next });
-        expect(board.totalCount).toBeGreaterThanOrEqual(later.tasks.filter((task) => task.status === 'open').length);
+        // The public boards list each market's open tasks: Austin's with the base seed's, Pretty Prairie's exactly.
+        const austinBoard = await listBoardTasks(d, { marketId: 'mkt_austin', query: parseTaskBoardQuery({}), now: next });
+        expect(austinBoard.totalCount).toBeGreaterThanOrEqual(later.tasks.filter((task) => task.marketId === 'mkt_austin' && task.status === 'open').length);
+        const prairieBoard = await listBoardTasks(d, { marketId: 'mkt_demo_pp', query: parseTaskBoardQuery({}), now: next });
+        expect(prairieBoard.totalCount).toBe(later.tasks.filter((task) => task.marketId === 'mkt_demo_pp' && task.status === 'open').length);
 
         // A profile shows the rating its published reviews give, and the work it completed.
-        const rated = later.people.filter((person) => person.helper).map((person) => {
-          const published = later.bookings.flatMap((b) => b.reviews).filter((r) => r.subjectUserId === person.id && r.direction === 'client_to_helper' && r.status === 'published');
-          return { person, published };
-        }).sort((a, b) => b.published.length - a.published.length)[0]!;
+        const rated = later.people
+          .filter((person) => person.helper)
+          .map((person) => ({ person, published: later.bookings.flatMap((b) => b.reviews).filter((r) => r.subjectUserId === person.id && r.direction === 'client_to_helper' && r.status === 'published') }))
+          .sort((a, b) => b.published.length - a.published.length)[0]!;
         const profile = await getHelperProfile(rated.person.helper!.handle, d);
         expect(profile?.helper.rating?.count).toBe(rated.published.length);
         expect(profile?.helper.rating?.average).toBe(Math.round((rated.published.reduce((sum, r) => sum + r.rating, 0) / rated.published.length) * 10) / 10);
         expect(profile?.helper.completedCount).toBe(later.helperStats.find((s) => s.userId === rated.person.id)!.completedCount);
         expect(profile?.reviews.length).toBeGreaterThan(0);
 
-        // Booking pages open for both people, in the booking's state.
+        // Booking pages open for both people, in the booking's state, in Austin and beyond.
         const hub = { db: d, cipher: fieldCipherFromEnv() };
-        for (const status of ['completed', 'confirmed'] as const) {
-          const booking = later.bookings.find((b) => b.status === status)!;
-          expect((await getBookingView(hub, booking.posterUserId, booking.id, next))?.status, booking.id).toBe(status);
-          expect((await getBookingView(hub, booking.helperUserId, booking.id, next))?.status, booking.id).toBe(status);
+        for (const marketId of ['mkt_austin', 'mkt_demo_pp', 'mkt_demo_chi']) {
+          for (const status of ['completed', 'confirmed'] as const) {
+            const booking = later.bookings.find((b) => b.marketId === marketId && b.status === status)!;
+            expect((await getBookingView(hub, booking.posterUserId, booking.id, next))?.status, booking.id).toBe(status);
+            expect((await getBookingView(hub, booking.helperUserId, booking.id, next))?.status, booking.id).toBe(status);
+          }
         }
 
         throw new Rollback();

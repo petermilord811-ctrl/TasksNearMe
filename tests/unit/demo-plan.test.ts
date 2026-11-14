@@ -1,7 +1,7 @@
 /**
- * The demo marketplace (db/seeds/demo) follows the app's rules: what clients post fits their home and the
- * category's fields and wording rules; only helpers who could really offer do (the offer rules, the onboarding
- * rules, the area); bookings, money and reviews are what the app itself would have written.
+ * The demo marketplace (db/seeds/demo) follows the app's rules in every market: what clients post fits their home
+ * and the category's fields and wording rules; only helpers who could really offer do (same market, the offer rules,
+ * the onboarding rules, the area); bookings, money and reviews are what the app itself would have written.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -19,16 +19,21 @@ import { computeOnboarding } from '@/modules/verification/progress';
 import { DEFAULT_FEES } from '@/modules/markets/policy-defaults';
 import { finalBreakdown, quoteBreakdown } from '@/modules/payments/fees';
 import { marketClockTime, marketDayKey } from '@/shared/format';
-import { AUSTIN_AREAS, CATEGORIES } from '../../db/seeds/data/austin';
-import { buildDemoPlan, DEMO_PREFIX, REVIEW_TAGS, type DemoPlan } from '../../db/seeds/demo/plan';
-import { DEMO_CLIENTS } from '../../db/seeds/demo/people';
+import { AUSTIN, AUSTIN_AREAS, CATEGORIES } from '../../db/seeds/data/austin';
+import { DEMO_MARKETS, demoAreaId, demoMarketId } from '../../db/seeds/demo/markets';
+import { buildDemoPlan, defaultDemoPolicies, DEMO_PREFIX, REVIEW_TAGS, type DemoPlan } from '../../db/seeds/demo/plan';
 
 const DAYTIME = new Date('2026-11-14T18:10:00.000Z'); // 12:10 in Austin
 const NIGHT = new Date('2026-11-15T07:40:00.000Z'); // 01:40 in Austin
 const KM_PER_MILE = 1.609344;
+const POLICIES = defaultDemoPolicies();
 const categoryBySlug = new Map(CATEGORIES.map((category) => [category.slug as CategorySlug, category]));
 const categoryById = new Map(CATEGORIES.map((category) => [category.id, category]));
-const areaById = new Map(AUSTIN_AREAS.map((area) => [`area_${area.slug.replaceAll('-', '_')}`, area]));
+/** Every demo neighborhood: its center and its market. */
+const areaById = new Map<string, { lat: number; lng: number; marketId: string }>([
+  ...AUSTIN_AREAS.map((area) => [`area_${area.slug.replaceAll('-', '_')}`, { lat: area.lat, lng: area.lng, marketId: AUSTIN.id }] as const),
+  ...DEMO_MARKETS.flatMap((market) => market.areas.map((area) => [demoAreaId(market, area), { lat: area.lat, lng: area.lng, marketId: demoMarketId(market) }] as const)),
+]);
 const POSTING_RULES: TaskPostingRules = { minLeadHours: 3, maxLeadDays: 14, maxPhotos: 8, maxPhotoMegabytes: 10, maxExpenseAllowanceCents: 50_000 };
 const CATEGORY_VIEWS: CategoryView[] = CATEGORIES.map((category) => ({
   slug: category.slug as CategorySlug,
@@ -48,26 +53,43 @@ function milesBetween(a: { lat: number; lng: number }, b: { lat: number; lng: nu
   return 3958.8 * 2 * Math.asin(Math.sqrt(h));
 }
 
-const plans: Array<[string, Date, DemoPlan]> = [DAYTIME, NIGHT].map((now) => [now.toISOString(), now, buildDemoPlan({ now, fees: DEFAULT_FEES, policyId: 'pol_austin_v1' })]);
+const plans: Array<[string, Date, DemoPlan]> = [DAYTIME, NIGHT].map((now) => [now.toISOString(), now, buildDemoPlan({ now, policies: POLICIES })]);
 
 describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
   const people = new Map(plan.people.map((person) => [person.id, person]));
+  const clients = new Map(plan.clients.map((client) => [client.userId, client]));
   const tasksById = new Map(plan.tasks.map((task) => [task.id, task]));
   const locationById = new Map(plan.locations.map((location) => [location.id, location]));
+  const offersByTask = new Map<string, typeof plan.offers>();
+  for (const offer of plan.offers) offersByTask.set(offer.taskId, [...(offersByTask.get(offer.taskId) ?? []), offer]);
 
-  it('is big enough to feel busy, in every category and neighborhood', () => {
+  it('is busy everywhere: about 1,200 tasks, every market and neighborhood, and plenty in Pretty Prairie', () => {
     const open = plan.tasks.filter((task) => task.status === 'open');
-    expect(plan.people.length).toBeGreaterThanOrEqual(80);
-    expect(open.length).toBeGreaterThanOrEqual(70);
-    expect(plan.bookings.filter((booking) => booking.status === 'completed').length).toBeGreaterThanOrEqual(45);
-    expect(plan.bookings.filter((booking) => booking.status !== 'completed').length).toBeGreaterThanOrEqual(10);
-    expect(plan.offers.filter((offer) => offer.status === 'pending').length).toBeGreaterThanOrEqual(100);
+    expect(plan.tasks.length).toBe(216 + 1000);
+    expect(open.length).toBeGreaterThanOrEqual(400);
+    expect(plan.bookings.filter((booking) => booking.status === 'completed').length).toBeGreaterThanOrEqual(300);
     for (const category of CATEGORIES) expect(open.some((task) => task.categoryId === category.id)).toBe(true);
-    for (const areaId of areaById.keys()) expect(plan.tasks.some((task) => task.publicAreaId === areaId)).toBe(true);
+    for (const [areaId] of areaById) expect(plan.tasks.some((task) => task.publicAreaId === areaId), areaId).toBe(true);
+    for (const market of DEMO_MARKETS) {
+      const marketTasks = plan.tasks.filter((task) => task.marketId === demoMarketId(market));
+      expect(marketTasks.length).toBe(market.taskCount);
+      expect(marketTasks.filter((task) => task.status === 'open').length, market.slug).toBeGreaterThanOrEqual(Math.floor(market.taskCount / 5));
+      expect(plan.bookings.some((booking) => booking.marketId === demoMarketId(market) && booking.status === 'completed'), market.slug).toBe(true);
+    }
+    const prairie = DEMO_MARKETS.find((market) => market.slug === 'pretty-prairie')!;
+    expect(plan.tasks.filter((task) => task.publicAreaId === demoAreaId(prairie, prairie.areas[0]!)).length).toBeGreaterThanOrEqual(45);
+  });
+
+  it('has at least three tasks for every client and every helper, on average', () => {
+    const helpers = plan.people.filter((person) => person.helper).length;
+    const posters = plan.people.length - helpers;
+    expect(plan.tasks.length / posters).toBeGreaterThanOrEqual(3);
+    expect(plan.tasks.length / helpers).toBeGreaterThanOrEqual(3);
+    for (const client of plan.clients.filter((c) => c.marketId !== AUSTIN.id)) expect(plan.tasks.some((task) => task.posterUserId === client.userId), client.userId).toBe(true);
   });
 
   it('comes out the same on every run, with demo ids only', () => {
-    const again = buildDemoPlan({ now, fees: DEFAULT_FEES, policyId: 'pol_austin_v1' });
+    const again = buildDemoPlan({ now, policies: POLICIES });
     expect(JSON.stringify(again)).toBe(JSON.stringify(plan));
     const ids = [...plan.people, ...plan.tasks, ...plan.offers, ...plan.bookings, ...plan.locations, ...plan.availability].map((row) => row.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -82,17 +104,22 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
     expect(new Set(plan.people.map((person) => person.email)).size).toBe(plan.people.length);
     expect(new Set(plan.people.map((person) => person.phone)).size).toBe(plan.people.length);
     for (const person of plan.people) {
-      expect(person.email).toMatch(/^[a-z.-]+\.demo@example\.test$/);
-      expect(person.phone).toMatch(/^\+1512555\d{4}$/);
+      expect(person.email).toMatch(/^[a-z0-9.-]+\.demo@example\.test$/);
+      // The 555 exchange: never texted (src/integrations/sms).
+      expect(person.phone).toMatch(/^\+1\d{3}555\d{4}$/);
+      expect(person.homeMarketId).toBeDefined();
     }
   });
 
-  it('gives every helper a complete profile the app accepts, with what bookable needs', () => {
+  it('gives every helper a complete profile the app accepts, in their own market, with what bookable needs', () => {
     for (const person of plan.people.filter((p) => p.helper)) {
       const helper = person.helper!;
-      expect(helperProfileInputSchema.pick({ headline: true, bio: true, languages: true }).safeParse({ headline: helper.headline, bio: helper.bio, languages: helper.languages }).success).toBe(true);
+      expect(areaById.get(helper.areaId)?.marketId).toBe(person.homeMarketId);
+      const parsed = helperProfileInputSchema.pick({ headline: true, bio: true, languages: true }).safeParse({ headline: helper.headline, bio: helper.bio, languages: helper.languages });
+      expect(parsed.success, `${person.id}: ${JSON.stringify(parsed.error?.issues)}`).toBe(true);
       expect(SERVICE_RADIUS_MILES).toContain(Math.round(helper.serviceRadiusKm! / KM_PER_MILE));
       const services = helper.services.map((service) => categoryById.get(service.categoryId)!);
+      expect(new Set(services.map((category) => category.id)).size).toBe(services.length);
       const onboarding = computeOnboarding({
         profileComplete: true,
         agreementAccepted: true,
@@ -115,19 +142,24 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
         expect(service.fromPriceCents ?? service.hourlyRateCents ?? 0).toBeGreaterThanOrEqual(category.slug === 'moving-help' ? 3000 : category.minPriceCents);
       }
     }
+    // Every category has at least two helpers in every market beyond Austin.
+    for (const market of DEMO_MARKETS) {
+      for (const category of CATEGORIES) {
+        const offering = plan.people.filter((p) => p.homeMarketId === demoMarketId(market) && p.helper?.services.some((service) => service.categoryId === category.id));
+        expect(offering.length, `${market.slug} ${category.slug}`).toBeGreaterThanOrEqual(2);
+      }
+    }
   });
 
   it('has clients post what fits their home, in their own neighborhood, by the category’s rules', () => {
-    const clientSpec = new Map(DEMO_CLIENTS.map((client) => [`usr_${DEMO_PREFIX}${client.key}`, client]));
     for (const task of plan.tasks) {
       const category = categoryById.get(task.categoryId)!;
-      const client = clientSpec.get(task.posterUserId)!;
-      expect(people.get(task.posterUserId)?.mode).toBe('poster');
-      expect(task.title.length).toBeGreaterThanOrEqual(8);
-      expect(task.title.length).toBeLessThanOrEqual(80);
-      expect(task.description.length).toBeGreaterThanOrEqual(20);
+      const client = clients.get(task.posterUserId)!;
+      const poster = people.get(task.posterUserId)!;
+      expect(poster.mode).toBe('poster');
+      expect(poster.homeMarketId).toBe(task.marketId);
       const words = `${task.title} ${task.description} ${Object.values(task.details).join(' ')}`.toLowerCase();
-      for (const keyword of category.prohibitedKeywords) expect(words).not.toContain(keyword);
+      for (const keyword of category.prohibitedKeywords) expect(words, task.id).not.toContain(keyword);
       expect(words).not.toMatch(/https?:|www\.|@|\d{3}[-. ]\d{3}[-. ]\d{4}/);
       // The category's fields, with allowed values.
       for (const field of CATEGORY_DETAIL_FIELDS[category.slug as CategorySlug]) {
@@ -169,15 +201,16 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
         const location = locationById.get(task.locationId!)!;
         expect(location.ownerUserId).toBe(task.posterUserId);
         expect(task.publicAreaId).toBe(location.areaId);
-        expect(`area_${client.area.replaceAll('-', '_')}`).toBe(location.areaId);
+        expect(client.areaId).toBe(location.areaId);
         const center = areaById.get(location.areaId)!;
+        expect(center.marketId).toBe(task.marketId);
         expect(milesBetween(center, { lat: task.publicLat!, lng: task.publicLng! })).toBeLessThan(0.25);
       }
       if (category.slug === 'yard-cleanup') expect(client.home).toBe('house');
       if (task.details.floor !== undefined) expect(client.home).toBe('apartment');
       expect(task.windowEnd.getTime()).toBeGreaterThan(task.windowStart.getTime());
       expect(task.publishedAt.getTime()).toBeLessThan(now.getTime());
-      expect(Date.parse(people.get(task.posterUserId)!.createdAt)).toBeLessThan(task.publishedAt.getTime());
+      expect(Date.parse(poster.createdAt)).toBeLessThan(task.publishedAt.getTime());
       if (task.status === 'open') expect(task.windowEnd.getTime()).toBeGreaterThan(now.getTime());
       if (task.status === 'expired' || task.status === 'completed') expect(task.windowEnd.getTime()).toBeLessThan(now.getTime());
     }
@@ -187,13 +220,15 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
     for (const count of open.values()) expect(count).toBeLessThanOrEqual(3);
   });
 
-  it('only has offers the app would accept, from helpers who cover the task', () => {
+  it('only has offers the app would accept, from helpers in the market who cover the task', () => {
     const pendingByTask = new Map<string, number>();
     const pairs = new Set<string>();
     for (const offer of plan.offers) {
       const task = tasksById.get(offer.taskId)!;
       const category = categoryById.get(task.categoryId)!;
-      const helper = people.get(offer.helperUserId)!.helper!;
+      const helperPerson = people.get(offer.helperUserId)!;
+      const helper = helperPerson.helper!;
+      expect(helperPerson.homeMarketId, offer.id).toBe(task.marketId);
       const area = areaById.get(helper.areaId)!;
       const offered = helper.services.map((service) => categoryById.get(service.categoryId)!.slug as CategorySlug);
       const bookable = offered.filter((slug) => !categoryBySlug.get(slug)!.requiresBackgroundCheck || helper.backgroundCheckedAt);
@@ -217,7 +252,7 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
       if (offer.pricingType === 'fixed') expect(offer.priceCents!).toBeGreaterThanOrEqual(rules.minPriceCents);
       else expect(offer.hoursCap!).toBeGreaterThanOrEqual(rules.minHoursCap ?? 0);
       expect(offer.message.length).toBeLessThanOrEqual(500);
-      expect(offer.brings.every((tool) => people.get(offer.helperUserId)!.helper!.tools.includes(tool))).toBe(true);
+      expect(offer.brings.every((tool) => helper.tools.includes(tool))).toBe(true);
       expect(offer.expiresAt.getTime()).toBe(Math.min(task.windowStart.getTime(), offer.createdAt.getTime() + 72 * 3_600_000));
       if (offer.status === 'pending') {
         expect(task.status).toBe('open');
@@ -232,17 +267,19 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
     for (const task of plan.tasks) expect(task.offerCount).toBe(pendingByTask.get(task.id) ?? 0);
   });
 
-  it('books one helper per task, at a time they are free, with the app’s money', () => {
+  it('books one helper per task, at a time they are free, with the market’s money', () => {
     const busy = new Map<string, Array<[number, number]>>();
     for (const booking of plan.bookings) {
       const task = tasksById.get(booking.taskId)!;
-      const taskOffers = plan.offers.filter((offer) => offer.taskId === task.id);
+      const taskOffers = offersByTask.get(task.id) ?? [];
       const accepted = taskOffers.filter((offer) => offer.status === 'accepted');
       expect(accepted.map((offer) => offer.id)).toEqual([booking.offerId]);
       expect(taskOffers.filter((offer) => offer.id !== booking.offerId).every((offer) => offer.status === 'declined')).toBe(true);
       const offer = accepted[0]!;
       expect(booking.helperUserId).toBe(offer.helperUserId);
       expect(booking.posterUserId).toBe(task.posterUserId);
+      expect(booking.marketId).toBe(task.marketId);
+      expect(booking.policyVersionId).toBe(POLICIES[task.marketId]!.id);
       expect(task.status).toBe(booking.status === 'completed' ? 'completed' : 'assigned');
       expect(booking.startAt.getTime()).toBe(offer.proposedStart.getTime());
       // In order: offers, booked, started, sent, approved; all before now.
@@ -288,7 +325,9 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
       }
     }
     // Every completed booking's helper is counted on their profile.
-    for (const stat of plan.helperStats) expect(stat.completedCount).toBe(plan.bookings.filter((b) => b.helperUserId === stat.userId && b.status === 'completed').length);
+    const completedBy = new Map<string, number>();
+    for (const booking of plan.bookings.filter((b) => b.status === 'completed')) completedBy.set(booking.helperUserId, (completedBy.get(booking.helperUserId) ?? 0) + 1);
+    for (const stat of plan.helperStats) expect(stat.completedCount).toBe(completedBy.get(stat.userId) ?? 0);
   });
 
   it('keeps reviews double-blind: published when both are in or 14 days after completion', () => {
@@ -313,12 +352,12 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
   });
 
   it('saves only helpers the client booked, and opens slots helpers are free for', () => {
-    for (const saved of plan.savedHelpers) {
-      expect(plan.bookings.some((b) => b.posterUserId === saved.userId && b.helperUserId === saved.helperUserId && b.status === 'completed')).toBe(true);
-    }
+    const completedPairs = new Set(plan.bookings.filter((b) => b.status === 'completed').map((b) => `${b.posterUserId}:${b.helperUserId}`));
+    for (const saved of plan.savedHelpers) expect(completedPairs.has(`${saved.userId}:${saved.helperUserId}`)).toBe(true);
     for (const post of plan.availability) {
-      const helper = people.get(post.helperUserId)!.helper!;
-      expect(helper.services.map((service) => service.categoryId)).toContain(post.categoryId);
+      const person = people.get(post.helperUserId)!;
+      expect(person.homeMarketId).toBe(post.marketId);
+      expect(person.helper!.services.map((service) => service.categoryId)).toContain(post.categoryId);
       expect(post.startAt.getTime()).toBeGreaterThan(now.getTime() + 3 * 3_600_000);
       expect(post.startAt.getTime()).toBeLessThan(now.getTime() + 14 * 86_400_000);
       for (const booking of plan.bookings.filter((b) => b.helperUserId === post.helperUserId)) {

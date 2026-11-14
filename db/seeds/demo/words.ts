@@ -38,6 +38,8 @@ interface Template {
   homes?: HomeKind[];
   /** Households it fits (default: any). */
   households?: Household[];
+  /** Only in small towns and farm country (Pretty Prairie and around). */
+  rural?: boolean;
   make(rng: Rng, home: ClientHome): TaskDraft;
 }
 
@@ -512,18 +514,97 @@ const COMPUTER: Template[] = [
   },
 ];
 
+/** Farm-country jobs, after the general ones so the city lists keep their order. */
+const RURAL: Template[] = [
+  {
+    category: 'yard-cleanup',
+    homes: ['house'],
+    rural: true,
+    make: (rng) => ({
+      title: 'Pick up branches along the windbreak',
+      description: 'Last week’s wind brought down a lot of small branches along the tree line. Gather them into piles by the shed and stack the bigger pieces.',
+      details: { yardSize: 'large', work: 'debris', greenWastePlan: 'poster_handles', toolsOnSite: true },
+      budget: { type: 'hourly', rateCents: rng.pick([2800, 3000] as const), estimatedHours: 3, hoursCap: 4 },
+      workHours: 3,
+    }),
+  },
+  {
+    category: 'moving-help',
+    homes: ['house'],
+    rural: true,
+    make: (rng) => ({
+      title: 'Move a hutch and a bed frame into the farmhouse',
+      description: 'Bought them at an estate sale and they’re waiting in the barn. They need to come inside and upstairs to the back bedroom.',
+      details: { moveType: 'within_home', rooms: 1, heavyItems: 'Oak hutch, bed frame', stairFlights: 1 },
+      budget: { type: 'hourly', rateCents: rng.pick([3000, 3200] as const), estimatedHours: 2, hoursCap: 3 },
+      workHours: 2,
+    }),
+  },
+  {
+    category: 'yard-cleanup',
+    homes: ['house'],
+    rural: true,
+    make: (rng) => ({
+      title: 'Rake the yard and clear the flower beds',
+      description: 'Big yard on the edge of town. Leaves raked and bagged, the beds cleared for winter, bags left by the garage for the town pickup.',
+      details: { yardSize: 'large', work: 'mixed', greenWastePlan: 'curbside', toolsOnSite: rng.chance(0.6) },
+      budget: { type: 'fixed', priceCents: dollars(110, 150, rng) },
+      workHours: 4,
+    }),
+  },
+];
+
 export const TEMPLATES: Record<CategorySlug, Template[]> = {
   'furniture-assembly': FURNITURE,
-  'moving-help': MOVING,
-  'yard-cleanup': YARD,
+  'moving-help': [...MOVING, ...RURAL.filter((template) => template.category === 'moving-help')],
+  'yard-cleanup': [...YARD, ...RURAL.filter((template) => template.category === 'yard-cleanup')],
   'light-cleaning': CLEANING,
   'computer-help': COMPUTER,
 };
 
-export function templatesFor(category: CategorySlug, home: ClientHome): Template[] {
+export function templatesFor(category: CategorySlug, home: ClientHome, rural = false): Template[] {
   return TEMPLATES[category].filter(
-    (template) => (!template.homes || template.homes.includes(home.kind)) && (!template.households || template.households.includes(home.household)),
+    (template) =>
+      (!template.homes || template.homes.includes(home.kind)) &&
+      (!template.households || template.households.includes(home.household)) &&
+      (!template.rural || rural),
   );
+}
+
+const SERVICE_VERBS: Record<CategorySlug, string> = {
+  'furniture-assembly': 'assemble flat-pack furniture',
+  'moving-help': 'help with moves and heavy lifting',
+  'yard-cleanup': 'clean up yards',
+  'light-cleaning': 'do light cleaning',
+  'computer-help': 'set up computers, phones and Wi-Fi',
+};
+
+const HEADLINES: Record<CategorySlug, Array<(area: string, market: string) => string>> = {
+  'furniture-assembly': [(area) => `Careful furniture assembly in ${area}`, (_, market) => `Flat-pack builds and anchoring around ${market}`, (_, market) => `Furniture assembly done right in ${market}`],
+  'moving-help': [(_, market) => `Moving help and heavy lifting in ${market}`, (area) => `Truck loading and moving day help in ${area}`],
+  'yard-cleanup': [(area) => `Yard cleanups and garden tidying in ${area}`, (_, market) => `Leaves, weeds and storm cleanup around ${market}`],
+  'light-cleaning': [(area) => `Light cleaning for homes in ${area}`, (_, market) => `Kitchens, bathrooms and tidy-ups in ${market}`],
+  'computer-help': [(_, market) => `Patient tech help in ${market}, in person or remote`, (area) => `Computer, phone and Wi-Fi help around ${area}`],
+};
+
+export function helperHeadline(rng: Rng, category: CategorySlug, area: string, market: string): string {
+  return rng.pick(HEADLINES[category])(area, market);
+}
+
+export function helperBio(rng: Rng, input: { services: CategorySlug[]; area: string; market: string; rural: boolean; spanish: boolean }): string {
+  const years = rng.int(3, 25);
+  const intros = input.rural
+    ? [`I grew up on a farm near ${input.area} and I’m handy with most tools.`, `Born and raised in ${input.area}; neighbors call me when something needs doing.`, `Retired after ${years} years of farming, and still happiest when I’m busy.`]
+    : [
+        `I’ve lived in ${input.area} for ${years} years and take jobs on evenings and weekends.`,
+        `Retired after ${years} years in ${rng.pick(['construction', 'retail', 'the Air Force', 'teaching', 'warehouse work', 'property management'])}, and still happiest when I’m busy.`,
+        `College student in ${input.market}, working around my class schedule.`,
+        'Parent of two with flexible daytime hours.',
+      ];
+  const verbs = input.services.map((service) => SERVICE_VERBS[service]);
+  const list = verbs.length > 1 ? `${verbs.slice(0, -1).join(', ')} and ${verbs[verbs.length - 1]}` : verbs[0];
+  const extras = [' I bring my own tools.', ' Happy to work around pets and kids.', ' I send a photo when the job is done.', ' Same-week availability most weeks.', '', ...(input.spanish ? [' Hablo español también.'] : [])];
+  return `${rng.pick(intros)} I ${list}.${rng.pick(extras)}`;
 }
 
 /** What a helper writes with an offer, in their own voice. */
