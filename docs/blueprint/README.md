@@ -1,6 +1,6 @@
 # TasksNearMe — Product and engineering blueprint (v0.1, 2026-11-10)
 
-A person-to-person marketplace for booking local help with specific everyday tasks. One account works for both "I need help" and "I can help". Launching first in **Austin, Texas**; the launch market is configuration, not code.
+A person-to-person marketplace for booking local help with specific everyday tasks. One account works for both "I need help" and "I can help". Launching first in **Gainesville, Florida** (owner, 2026-11-17; it was Austin, Texas until then, which stays as a later city); the launch market is configuration, not code.
 
 This blueprint is the input to implementation. It contains no application code. The next step is to start the backlog at **M0 / B-001** ([11-initial-backlog.md](11-initial-backlog.md)).
 
@@ -46,7 +46,7 @@ This blueprint is the input to implementation. It contains no application code. 
 | ID | Assumption |
 |---|---|
 | A1 | Team: 3 full-stack engineers (one owns payments), a part-time designer, and a founder/PM who also runs beta ops and support. About 18–20 weeks to public launch (24–30 with 2 engineers) |
-| A2 | Launch market: Austin city plus adjacent ZIP codes within about 25 km of downtown (a configurable polygon; ZIP3 prefixes 786 and 787 for matching ZIPs); `America/Chicago`; USD; English at launch, Spanish in phase 2. Since 2026-11-14 (owner) the site is national and cities open in turn: Austin is the first, not the only one (01 §1) |
+| A2 | Launch market (owner, 2026-11-17): Gainesville, Florida, the city and the rest of Alachua County within about 25 km of downtown (ZIP3 prefix 326 for matching ZIPs); `America/New_York`; USD; English and Spanish. It opens once dates follow each market's own time zone (completion plan 8.1), so until then it waits paused. Austin, Texas (ZIP3 786 and 787, `America/Chicago`), the launch market until 2026-11-17, stays as a later city. Since 2026-11-14 (owner) the site is national and cities open in turn (01 §1) |
 | A3 | Individuals 18+ only; helpers do the work themselves; no companies or agencies |
 | A4 | Helpers are independent contractors who set their own prices and choose their tasks (to confirm, **F5**) |
 | A5 | Fee schedule as in D5 |

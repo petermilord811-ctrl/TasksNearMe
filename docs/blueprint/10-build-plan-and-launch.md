@@ -22,7 +22,7 @@
 | **M5 Reviews, repeat, rewards** | 11–14 | E5 | Double-blind reviews; Book again; **welcome and repeat rewards** pending → held → redeemable → redeemed through the Tremendous sandbox; voided correctly on cancellation or refund; self-dealing pairs land in review; budget cap holds under concurrency |
 | **M6 Admin and support** | 10–14 | E6 | Support resolves a dispute with a $45 settlement; refunds respect role limits and dual approval; moderation and suspensions work; every staff action is in the audit log; queues show SLAs |
 | **M7 Hardening, live activation, private beta** | 14–18 | E7 + beta | E2E suite green on staging 3 days in a row; security and accessibility audits closed; live activation checklist (§4) done; **private beta** starts week 16 (see §6) |
-| **M8 Public launch (Austin)** | 18–20 | Go/no-go | Every launch criterion in §5 met; marketing starts with the three hero categories |
+| **M8 Public launch (Gainesville; Austin until 2026-11-17)** | 18–20 | Go/no-go | Every launch criterion in §5 met; marketing starts with the three hero categories |
 
 ## 3. Test plan
 
@@ -121,13 +121,13 @@
 
 ## 6. Private beta (weeks 16–18)
 
-- **Invite-only:** 30–50 founding-cohort helpers (welcome reward eligible) and 100–150 posters from 2–3 Austin neighborhoods (for example Mueller, East Austin, Hyde Park), recruited through neighborhood groups and personal networks.
+- **Invite-only:** 30–50 founding-cohort helpers (welcome reward eligible) and 100–150 posters from 2–3 Gainesville neighborhoods (for example Duckpond, Midtown, Haile Plantation), recruited through neighborhood groups and personal networks.
 - **Ops cadence:** staff watch every booking; daily money reconciliation review; twice-weekly policy tuning (fees, timers, price guidance) through versioned market policies.
 - **Exit:** ≥ 50 completed paid bookings across at least 4 categories, launch criteria trending green, and no open P0 bugs.
 
 ## 7. Opening the next cities (owner, 2026-11-14: national, cities open in turn)
 
-Austin launches first (M8); the site already speaks to the whole US. Each next city follows the same path:
+Gainesville launches first (M8; owner, 2026-11-17, in place of Austin, which stays as a later city); the site already speaks to the whole US. Each next city follows the same path:
 
 1. **Demand.** The waitlist page lists the cities people ask for most (waitlist entries plus helpers waiting there, at least 3 people per city), and `/waitlist?zip=` shows the count near a ZIP. Staff pick the next city from these counts and from waiting helpers per category.
 2. **Market data.** A market row with its ZIP3 prefixes, center, radius, neighborhoods (areas), categories with local price guidance, and a published policy, in a seed or staff tool. No code change.

@@ -1,6 +1,6 @@
 # CLAUDE.md — TasksNearMe
 
-Person-to-person marketplace for booking local help, launching in Austin, TX. Product source of truth: `docs/blueprint/` (01 brief → 11 backlog).
+Person-to-person marketplace for booking local help, launching in Gainesville, FL (owner, 2026-11-17; Austin, TX is a later city). Product source of truth: `docs/blueprint/` (01 brief → 11 backlog).
 
 ## Autopilot (long unattended runs)
 

@@ -6,7 +6,7 @@
 
 TasksNearMe lets people book a verified local helper for a specific task, anywhere in the US as we open city by city. The price is agreed up front, payment goes through the platform, and rebooking takes two taps.
 
-**Scope (owner, 2026-11-14): national, cities open in turn.** The site speaks to the whole US. Austin, Texas is the first city (A2); others open one at a time, in the order demand shows. In a city we haven't opened, people join that city's waitlist (with its demand counted, by ZIP and city), and helpers can sign up, pass the phone, ID and background checks and earn the welcome gift card now, then choose their neighborhood and add their home address when their city opens. Posting and booking happen only in open cities. Everything market-specific (the ZIP3 prefixes a market covers, boundary, time zone, categories, fees, policies, price guidance) lives in market configuration, so a new city is a data change, not a code change, except one prerequisite: until dates are formatted in each market's own time zone, only markets in Central time can go live (completion plan 8.1).
+**Scope (owner, 2026-11-14): national, cities open in turn.** The site speaks to the whole US. Gainesville, Florida is the first city (A2; owner, 2026-11-17, in place of Austin, Texas, which stays as a later city); others open one at a time, in the order demand shows. In a city we haven't opened, people join that city's waitlist (with its demand counted, by ZIP and city), and helpers can sign up, pass the phone, ID and background checks and earn the welcome gift card now, then choose their neighborhood and add their home address when their city opens. Posting and booking happen only in open cities. Everything market-specific (the ZIP3 prefixes a market covers, boundary, time zone, categories, fees, policies, price guidance) lives in market configuration, so a new city is a data change, not a code change, except one prerequisite: until dates are formatted in each market's own time zone, only markets in Central time can go live (completion plan 8.1).
 
 ## 2. Product principles (used to break ties)
 
@@ -78,7 +78,7 @@ Scoring criteria: how often people need it, how well it fits fixed pricing, phys
 
 Remote computer help works like this: the helper shares a video meeting link in the booking chat, the poster shares their screen, and the helper guides them. The poster keeps control of the device and types their own credentials. The chat flags messages that look like passwords or card numbers.
 
-Marketing should lead with three hero categories (**furniture assembly, moving help, yard cleanup**). Austin's leaf season runs roughly November–February, which suits a winter launch. The product enables all five categories.
+Marketing should lead with three hero categories (**furniture assembly, moving help, yard cleanup**). In Gainesville, oaks drop most of their leaves in late winter and spring, and the University of Florida's move-in and move-out weeks (August, December, May) bring moving help in waves. The product enables all five categories.
 
 ### 6.2 Booking types
 
