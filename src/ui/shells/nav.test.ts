@@ -33,7 +33,9 @@ describe('app navigation', () => {
 });
 
 describe('admin navigation', () => {
-  const standard = ['queues', 'cases', 'reports', 'users', 'verifications', 'responseTimes', 'savedReplies', 'bookings', 'payments', 'rewards', 'metrics', 'beta'];
+  const base = ['queues', 'cases', 'reports', 'users', 'verifications', 'responseTimes', 'savedReplies', 'bookings', 'payments', 'rewards', 'metrics', 'beta'];
+  // Every staff role reads the markets on the config page (plan 8.2).
+  const standard = [...base, 'config'];
   // The audit log is for admins and support leads (UI-033).
   const withAudit = [...standard, 'audit'];
 
@@ -42,8 +44,8 @@ describe('admin navigation', () => {
     expect(ids(getAdminNav(morganStaff.roles))).toEqual(withAudit);
   });
 
-  it.each(STAFF_ROLES.filter((role) => role !== 'admin'))('omits Config and Staff for %s', (role) => {
-    expect(ids(getAdminNav([role]))).toEqual(role === 'support_lead' ? withAudit : role === 'finance' ? [...standard, 'webhooks'] : standard);
+  it.each(STAFF_ROLES.filter((role) => role !== 'admin'))('omits Staff for %s, and shows Config (read-only markets)', (role) => {
+    expect(ids(getAdminNav([role]))).toEqual(role === 'support_lead' ? withAudit : role === 'finance' ? [...base, 'webhooks', 'config'] : standard);
   });
 
   it('shows Config and Staff in their specified positions for an admin', () => {
@@ -60,7 +62,7 @@ describe('admin navigation', () => {
   it('supports multiple roles without duplicating navigation', () => {
     const roles: StaffRole[] = ['support_lead', 'admin', 'finance'];
     expect(getAdminNav(roles)).toEqual(getAdminNav(['admin']));
-    expect(ids(getAdminNav(['support_agent', 'finance']))).toEqual([...standard, 'webhooks']);
+    expect(ids(getAdminNav(['support_agent', 'finance']))).toEqual([...base, 'webhooks', 'config']);
   });
 });
 

@@ -1,13 +1,14 @@
 import { routes, type PreviewEntry } from '@/contracts';
-import { ADMIN_NOW, adminConfigData, adminConfigNeverPausedData, adminConfigPausedData, fakeAdminConfigHandlers, fakeHandler, rileyStaff } from '@/fixtures';
+import { ADMIN_NOW, adminConfigData, adminConfigNeverPausedData, adminConfigNoMarketsData, adminConfigPausedData, adminConfigStaleMarketsData, adminMarketsReadOnlyData, alexStaff, fakeAdminConfigHandlers, fakeHandler, rileyStaff } from '@/fixtures';
 import type { AdminConfigPreviewState } from '@/ui/screens/admin/admin-config-controls';
-import { AdminConfigContent } from '@/ui/screens/admin/admin-config-screen';
+import type { AdminMarketsPreviewState } from '@/ui/screens/admin/admin-config-markets';
+import { AdminConfigContent, AdminMarketsScreen } from '@/ui/screens/admin/admin-config-screen';
 import { AdminShell } from '@/ui/shells/admin-shell';
 import copy from '../../../messages/en/ui/adminConfig.json';
 
 const shellHandlers = { onSignOut: fakeHandler({ ok: true, code: 'updated' }) };
 
-function config(id: string, title: string, state: AdminConfigPreviewState & { outageOpen?: boolean } = {}, data = adminConfigData): PreviewEntry {
+function config(id: string, title: string, state: AdminConfigPreviewState & AdminMarketsPreviewState & { outageOpen?: boolean } = {}, data = adminConfigData): PreviewEntry {
   return {
     id: `screen-admin-config/${id}`, group: copy.previews.group, title, layout: 'fullscreen',
     render: () => <AdminShell viewer={rileyStaff} handlers={shellHandlers} currentPath={routes.admin.config()}>
@@ -30,4 +31,15 @@ export const adminConfigPreviews: PreviewEntry[] = [
   config('outage-paused', p.outagePaused, {}, adminConfigPausedData),
   config('outage-never', p.outageNever, {}, adminConfigNeverPausedData),
   config('outage-dialog', p.outageDialog, { outageOpen: true }),
+  // Where we're open (completion plan 8.2): the confirm step for going live (with the waitlist email count, 8.3), the
+  // time-zone refusal from the server, no markets, and the section read-only for staff who aren't admins.
+  config('markets-live-dialog', p.marketsLive, { marketDialog: { marketId: 'mkt_austin', status: 'live' } }),
+  config('markets-refused', p.marketsRefused, { marketDialog: { marketId: 'mkt_boise', status: 'live', result: { ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } } } }, adminConfigStaleMarketsData),
+  config('markets-empty', p.marketsEmpty, {}, adminConfigNoMarketsData),
+  {
+    id: 'screen-admin-config/markets-read-only', group: copy.previews.group, title: p.marketsReadOnly, layout: 'fullscreen',
+    render: () => <AdminShell viewer={alexStaff} handlers={shellHandlers} currentPath={routes.admin.config()}>
+      <AdminMarketsScreen data={adminMarketsReadOnlyData} />
+    </AdminShell>,
+  },
 ];

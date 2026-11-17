@@ -1,11 +1,12 @@
 import { useTranslations } from 'next-intl';
-import { percentText, type AdminConfigHandlers, type AdminConfigPageData, type BadgeTone, type ISODateTime, type PolicyVersionStatus } from '@/contracts';
+import { percentText, type AdminConfigHandlers, type AdminConfigPageData, type AdminMarketsHandlers, type AdminMarketsPageData, type BadgeTone, type ISODateTime, type PolicyVersionStatus } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { cn } from '@/ui/lib/utils';
 import { AdminConfigControls, type AdminConfigPreviewState } from './admin-config-controls';
+import { AdminMarketsSection, type AdminMarketsPreviewState } from './admin-config-markets';
 import { AdminReasonAction } from './admin-reason-action';
 import { adminH2, adminPanel, adminSection } from './admin-ui';
 
@@ -15,8 +16,23 @@ const statusTones: Record<PolicyVersionStatus, BadgeTone> = { draft: 'info', pub
 
 export function AdminConfigScreen(props: AdminConfigScreenProps) { return <AdminConfigContent {...props} />; }
 
-/** Admins: the outage switch (completion plan 5.15), the market's policy versions and the feature flags (UI-038). */
-export function AdminConfigContent({ data, handlers, outageOpen = false, ...preview }: AdminConfigScreenProps & AdminConfigPreviewState & { outageOpen?: boolean }) {
+/**
+ * Staff who aren't admins: the config page shows where we're open, read-only (completion plan 8.2). The policy, the
+ * outage switch and the flags stay with admins.
+ */
+export function AdminMarketsScreen({ data, handlers = {}, ...preview }: { data: AdminMarketsPageData; handlers?: AdminMarketsHandlers } & AdminMarketsPreviewState) {
+  const t = useTranslations('adminConfig');
+  return <div className="min-w-0 space-y-8 [overflow-wrap:anywhere]">
+    <PageHeader title={t('title')} description={t('introReadOnly')} />
+    <AdminMarketsSection markets={data.markets} onSetMarketStatus={handlers.onSetMarketStatus} readOnly={data.readOnly} {...preview} />
+  </div>;
+}
+
+/**
+ * Admins: the outage switch (completion plan 5.15), where we're open (the markets, 8.2), the market's policy versions
+ * and the feature flags (UI-038).
+ */
+export function AdminConfigContent({ data, handlers, outageOpen = false, marketDialog, ...preview }: AdminConfigScreenProps & AdminConfigPreviewState & AdminMarketsPreviewState & { outageOpen?: boolean }) {
   const { formatDate, formatDateTime } = useFormat();
   const t = useTranslations('adminConfig');
   const { current, outage } = data;
@@ -48,6 +64,7 @@ export function AdminConfigContent({ data, handlers, outageOpen = false, ...prev
         />
       </div>
     </section>
+    <AdminMarketsSection markets={data.markets} onSetMarketStatus={handlers.onSetMarketStatus} marketDialog={marketDialog} />
     <section aria-labelledby="config-policy" className="space-y-4">
       <div className="space-y-1"><h2 id="config-policy" className={adminH2}>{t('policyTitle')}</h2><p className="text-sm text-muted-foreground">{t('policyIntro')}</p></div>
       <div className={cn(adminSection, 'space-y-1 border-success/25 dark:border-success/30')}>

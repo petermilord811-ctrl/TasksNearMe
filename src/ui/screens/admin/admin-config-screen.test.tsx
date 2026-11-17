@@ -4,10 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POLICY_FIELDS, type AdminConfigHandlers } from '@/contracts';
-import { ADMIN_NOW, adminConfigData, adminConfigPausedData, fakeHandler } from '@/fixtures';
+import { ADMIN_NOW, adminConfigData, adminConfigNoMarketsData, adminConfigPausedData, adminConfigStaleMarketsData, adminMarketsReadOnlyData, fakeHandler } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import copy from '../../../../messages/en/ui/adminConfig.json';
-import { AdminConfigScreen } from './admin-config-screen';
+import { AdminConfigScreen, AdminMarketsScreen } from './admin-config-screen';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
@@ -21,6 +21,7 @@ function mount(data = adminConfigData) {
     onPublishPolicy: vi.fn<AdminConfigHandlers['onPublishPolicy']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
     onSetFlag: vi.fn<AdminConfigHandlers['onSetFlag']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
     onSetOutage: vi.fn<AdminConfigHandlers['onSetOutage']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
+    onSetMarketStatus: vi.fn<AdminConfigHandlers['onSetMarketStatus']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
   };
   render(<NextIntlClientProvider locale="en" messages={uiMessages}><AdminConfigScreen data={data} handlers={handlers} now={ADMIN_NOW} /></NextIntlClientProvider>);
   return handlers;
@@ -96,5 +97,87 @@ describe('AdminConfigScreen', () => {
     await user.click(dialog.getByRole('button', { name: 'Turn off ai_drafting' }));
     await waitFor(() => expect(handlers.onSetFlag).toHaveBeenCalledWith({ key: 'ai_drafting', enabled: false, reason: 'Pausing while we review its suggestions.' }));
     expect(await screen.findByText(copy.flagSaved)).toBeInTheDocument();
+  });
+});
+
+describe('the Markets section (plan 8.2)', () => {
+  const markets = copy.markets;
+  const card = (name: string) => within(screen.getByRole('listitem', { name }));
+
+  it('lists each market with its status, ZIP prefixes, time zone, waiting helpers and waitlist', () => {
+    mount();
+    const section = within(screen.getByRole('region', { name: markets.title }));
+    expect(section.getAllByRole('listitem')).toHaveLength(4);
+    const austin = card('Austin, TX');
+    expect(austin.getByText(markets.statuses.prelaunch)).toBeInTheDocument();
+    expect(austin.getByText('786, 787')).toBeInTheDocument();
+    expect(austin.getByText('America/Chicago')).toBeInTheDocument();
+    expect(austin.getByText('4 helpers')).toBeInTheDocument();
+    expect(austin.getByText('61 people')).toBeInTheDocument();
+    expect(austin.getByText("Goes to 58 people when it's live")).toBeInTheDocument();
+    expect(austin.getByText(/^Pre-launch since .* by Riley N\.$/)).toBeInTheDocument();
+    expect(card('Tulsa, OK').getByText('Sent to 96, 31 still going out')).toBeInTheDocument();
+  });
+
+  it('shows the time-zone refusal and offers the opening buttons disabled', () => {
+    mount();
+    const boise = card('Boise, ID');
+    expect(boise.getByText("Boise can't open yet: dates and times can't be shown in its time zone (America/Boise) yet. Pausing works.")).toBeInTheDocument();
+    expect(boise.getByRole('button', { name: 'Take Boise live' })).toBeDisabled();
+    expect(boise.getByRole('button', { name: 'Move Boise to pre-launch' })).toBeDisabled();
+    expect(card('Gainesville, FL').getByRole('button', { name: 'Take Gainesville live' })).toBeEnabled();
+  });
+
+  it('takes a market live behind a confirm step with a reason, saying who hears about it', async () => {
+    const user = userEvent.setup();
+    const handlers = mount();
+    await user.click(card('Austin, TX').getByRole('button', { name: 'Take Austin live' }));
+    const dialog = within(await screen.findByRole('alertdialog', { name: 'Take Austin live?' }));
+    expect(dialog.getByText("Austin opens to everyone. 58 people on its waitlist get one email that it's open, in their language.")).toBeInTheDocument();
+    await user.click(dialog.getByRole('button', { name: 'Take Austin live' }));
+    expect(await dialog.findByText('Write why, in at least 10 characters.')).toBeInTheDocument();
+    expect(handlers.onSetMarketStatus).not.toHaveBeenCalled();
+    await user.type(dialog.getByLabelText('Reason'), 'Austin meets the supply and quality criteria.');
+    await user.click(dialog.getByRole('button', { name: 'Take Austin live' }));
+    await waitFor(() => expect(handlers.onSetMarketStatus).toHaveBeenCalledWith({ marketId: 'mkt_austin', status: 'live', reason: 'Austin meets the supply and quality criteria.' }));
+    expect(navigation.refresh).toHaveBeenCalled();
+  });
+
+  it('says what opening a paused market does, and cancels without calling anything', async () => {
+    const user = userEvent.setup();
+    const handlers = mount();
+    await user.click(card('Gainesville, FL').getByRole('button', { name: 'Move Gainesville to pre-launch' }));
+    const dialog = within(await screen.findByRole('alertdialog', { name: 'Move Gainesville to pre-launch?' }));
+    expect(dialog.getByText('Gainesville opens to helpers first. Its waitlist is emailed only once it goes live. 23 helpers waiting there come in and are told to choose a neighborhood.')).toBeInTheDocument();
+    await user.click(dialog.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(handlers.onSetMarketStatus).not.toHaveBeenCalled();
+  });
+
+  it('shows the server’s time-zone refusal in the confirm step', async () => {
+    const user = userEvent.setup();
+    const handlers = mount(adminConfigStaleMarketsData);
+    handlers.onSetMarketStatus.mockResolvedValue({ ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } });
+    await user.click(card('Boise, ID').getByRole('button', { name: 'Take Boise live' }));
+    const dialog = within(await screen.findByRole('alertdialog', { name: 'Take Boise live?' }));
+    await user.type(dialog.getByLabelText('Reason'), 'Opening Boise for the season.');
+    await user.click(dialog.getByRole('button', { name: 'Take Boise live' }));
+    expect(await dialog.findByText("Boise can't open yet: dates and times can't be shown in its time zone (America/Boise) yet. Pausing works.")).toBeInTheDocument();
+    expect(navigation.refresh).not.toHaveBeenCalled();
+  });
+
+  it('says when there are no markets', () => {
+    mount(adminConfigNoMarketsData);
+    expect(within(screen.getByRole('region', { name: markets.title })).getByText(markets.empty)).toBeInTheDocument();
+  });
+
+  it('is read-only for staff who aren’t admins, with nothing else of config', () => {
+    render(<NextIntlClientProvider locale="en" messages={uiMessages}><AdminMarketsScreen data={adminMarketsReadOnlyData} /></NextIntlClientProvider>);
+    expect(screen.getByRole('heading', { level: 1, name: copy.title })).toBeInTheDocument();
+    expect(screen.getByText(markets.readOnly)).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: copy.policyTitle })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: copy.outage.title })).not.toBeInTheDocument();
   });
 });

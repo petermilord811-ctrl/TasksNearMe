@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import type { ActionHandler, FieldErrorCode } from './actions';
-import type { Cents, ISODateTime } from './common';
+import type { ActionDescriptor, ActionHandler, FieldErrorCode } from './actions';
+import type { Cents, ISODateTime, TimeZone } from './common';
 
 /**
  * Staff tools, part 7 (UI-038; blueprint 02 `/admin/config`, 08 §4, D16): the market's policy (fees,
  * cancellation, timers) as versions, and feature flags. Admins only; every change needs a reason and is
- * audited. Publishing makes a new version: bookings keep the version they were confirmed under.
+ * audited. Publishing makes a new version: bookings keep the version they were confirmed under. The Markets
+ * section (completion plan 8.2) is read by every staff role; only admins change a market's status.
  */
 
 const code = (value: FieldErrorCode) => value;
@@ -78,9 +79,66 @@ export interface AdminOutageSwitch {
   changed?: { at: ISODateTime; by: string; reason: string };
 }
 
-/** `routes.admin.config()`: admins only. */
+/**
+ * Where we're open (completion plan 8.2): a market's status (src/modules/markets/coverage.ts). `prelaunch`: helpers
+ * join and the first clients come in by invitation; `live`: open to everyone; `paused`: closed for now.
+ */
+export const ADMIN_MARKET_STATUSES = ['prelaunch', 'live', 'paused'] as const;
+export type AdminMarketStatus = (typeof ADMIN_MARKET_STATUSES)[number];
+
+/** A status the viewer can move a market to, and what the move does: the counts its confirm step names. */
+export interface AdminMarketStatusAction extends ActionDescriptor<AdminMarketStatus> {
+  /** Waiting helpers it brings in and tells to choose a neighborhood (opening a paused market). */
+  helpersIn: number;
+  /** Waitlist entries it emails that the city is open (going live, completion plan 8.3). */
+  waitlistEmails: number;
+}
+
+/** One market in the config page's Markets section (completion plan 8.2). Counts only, never who. */
+export interface AdminMarketRow {
+  id: string;
+  slug: string;
+  name: string;
+  /** Two-letter state code. */
+  state: string;
+  status: AdminMarketStatus;
+  /** The ZIP3 prefixes it covers (a ZIP's first three digits), e.g. `["326"]`. */
+  zipPrefixes: string[];
+  /** Its IANA time zone, e.g. `America/New_York`. */
+  timeZone: TimeZone;
+  /**
+   * Helpers with a ZIP it covers and no neighborhood yet: while it's paused they wait for it (and come in when it
+   * opens); once it's open, they came in and still have to choose one.
+   */
+  helpersWaiting: number;
+  /**
+   * Its waitlist: `entries` whose ZIP it covers, and its "we're open" email (completion plan 8.3): `told` got it,
+   * `queued` are still going out, `toTell` would get it when it next goes live (never told, still subscribed).
+   */
+  waitlist: { entries: number; told: number; queued: number; toTell: number };
+  /** The last status change (the audit log); absent when it never changed. */
+  lastChange?: { at: ISODateTime; by: string; reason: string; from: AdminMarketStatus; to: AdminMarketStatus };
+  /**
+   * Why it can't open (pre-launch or live) now: `time_zone_unsupported` while dates can't be shown in its zone
+   * (completion plan 8.1). Pausing still works. The matching actions arrive disabled.
+   */
+  openingRefused?: 'time_zone_unsupported';
+  /** Where the viewer can move it, in order (pre-launch, live, paused), each confirmed with a reason; empty for staff who aren't admins. */
+  actions: AdminMarketStatusAction[];
+}
+
+/** `routes.admin.config()` for staff who aren't admins: the markets, read-only (completion plan 8.2). */
+export interface AdminMarketsPageData {
+  markets: AdminMarketRow[];
+  /** The viewer can't change a market's status (say so; the rows carry no actions). */
+  readOnly: boolean;
+}
+
+/** `routes.admin.config()`: the whole page for admins (other staff get `AdminMarketsPageData`). */
 export interface AdminConfigPageData {
   market: { id: string; name: string; slug: string };
+  /** Every market, by name (completion plan 8.2). */
+  markets: AdminMarketRow[];
   outage: AdminOutageSwitch;
   /** The published version new bookings use. */
   current: AdminPolicyVersion;
@@ -115,10 +173,10 @@ export type OutageSwitchInput = z.input<typeof outageSwitchInputSchema>;
 
 /**
  * An admin opens, pauses or pre-launches a market (owner, 2026-11-14: national, cities open in turn). Moving a
- * market to pre-launch or live brings in the helpers who waited there and tells them. Until dates follow each
- * market's own time zone (completion plan 8.1), opening (pre-launch or live) is refused for a market outside
- * America/Chicago: `validation_failed` with `fieldErrors.timeZone: ['not_supported']` (the market's zone, not the
- * status asked for, is what isn't supported yet).
+ * market to pre-launch or live from paused brings in the helpers who waited there and tells them; going live also
+ * emails its waitlist (completion plan 8.3). Opening (pre-launch or live) is refused for a market in a zone dates
+ * aren't shown and checked in (outside the supported US zones, completion plan 8.1): `validation_failed` with
+ * `fieldErrors.timeZone: ['not_supported']` (the market's zone, not the status asked for, is what isn't supported).
  */
 export const marketStatusInputSchema = z.object({
   status: z.enum(['prelaunch', 'live', 'paused'], code('invalid')),
@@ -126,13 +184,28 @@ export const marketStatusInputSchema = z.object({
 });
 export type MarketStatusInput = z.input<typeof marketStatusInputSchema>;
 
+/** The Markets section's confirm step: one market, the status asked for and the reason. */
+export const marketStatusChangeInputSchema = marketStatusInputSchema.extend({
+  marketId: z.string(code('required')).trim().min(1, code('required')).max(80, code('too_long')),
+});
+export type MarketStatusChangeInput = z.input<typeof marketStatusChangeInputSchema>;
+
 /** All ok `updated`. Errors: `validation_failed` (a value out of range, the reason), `not_allowed`, `unknown`. */
 export interface AdminConfigHandlers {
   onPublishPolicy: ActionHandler<PolicyPublishInput>;
   onSetFlag: ActionHandler<FlagSetInput>;
   /** A Server Action (the reason dialog calls it with `{ state, reason }`). */
   onSetOutage: ActionHandler<OutageSwitchInput>;
+  /**
+   * A Server Action (a market's reason dialog calls it with `{ marketId, status, reason }`; completion plan 8.2). ok
+   * `updated`. Errors: `validation_failed` with `fieldErrors.timeZone: ['not_supported']` (it can't open in its zone
+   * yet) or `fieldErrors.reason`; `not_allowed` (not an admin); `not_found` (no such market); `unknown`.
+   */
+  onSetMarketStatus: ActionHandler<MarketStatusChangeInput>;
 }
+
+/** The read-only Markets page needs no handler: its rows carry no actions. */
+export type AdminMarketsHandlers = Partial<Pick<AdminConfigHandlers, 'onSetMarketStatus'>>;
 
 /** Form text for a basis-point value: 1000 → "10", 1250 → "12.5". */
 export const percentText = (bps: number): string => String(bps / 100);

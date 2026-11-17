@@ -1,4 +1,4 @@
-import type { AdminConfigHandlers, AdminConfigPageData, AdminPolicyValues } from '@/contracts';
+import type { AdminConfigHandlers, AdminConfigPageData, AdminMarketRow, AdminMarketsPageData, AdminPolicyValues } from '@/contracts';
 
 /** Staff tools, part 7 (UI-038): Austin's config, as Riley (an admin) sees it. */
 
@@ -18,9 +18,58 @@ const launch: AdminPolicyValues = {
   minLeadHours: 3,
 };
 
+/**
+ * The Markets section (completion plan 8.2), as Riley (an admin) sees it: Austin in pre-launch, Gainesville paused with
+ * helpers and a waitlist waiting for it, Tulsa live with its waitlist's "we're open" email still going out (8.3), and
+ * Boise paused and refused, its row made with a zone dates aren't checked in (America/Boise, not one of the supported
+ * US zones, plan 8.1). Counts are made up for previews.
+ */
+export const adminMarketRows: AdminMarketRow[] = [
+  {
+    id: 'mkt_austin', slug: 'austin', name: 'Austin', state: 'TX', status: 'prelaunch', zipPrefixes: ['786', '787'], timeZone: 'America/Chicago',
+    helpersWaiting: 4,
+    waitlist: { entries: 61, told: 0, queued: 0, toTell: 58 },
+    lastChange: { at: '2026-11-17T16:20:00.000Z', by: 'Riley N.', reason: 'Austin waits while Gainesville opens first (owner, Nov 17).', from: 'live', to: 'prelaunch' },
+    actions: [
+      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 58 },
+      { id: 'paused', kind: 'destructive', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0 },
+    ],
+  },
+  {
+    id: 'mkt_gainesville', slug: 'gainesville', name: 'Gainesville', state: 'FL', status: 'paused', zipPrefixes: ['326'], timeZone: 'America/New_York',
+    helpersWaiting: 23,
+    waitlist: { entries: 214, told: 0, queued: 0, toTell: 209 },
+    actions: [
+      { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 23, waitlistEmails: 0 },
+      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 23, waitlistEmails: 209 },
+    ],
+  },
+  {
+    id: 'mkt_boise', slug: 'boise', name: 'Boise', state: 'ID', status: 'paused', zipPrefixes: ['836', '837'], timeZone: 'America/Boise',
+    helpersWaiting: 2,
+    waitlist: { entries: 17, told: 0, queued: 0, toTell: 17 },
+    openingRefused: 'time_zone_unsupported',
+    actions: [
+      { id: 'prelaunch', kind: 'secondary', enabled: false, confirm: true, helpersIn: 2, waitlistEmails: 0 },
+      { id: 'live', kind: 'primary', enabled: false, confirm: true, helpersIn: 2, waitlistEmails: 17 },
+    ],
+  },
+  {
+    id: 'mkt_tulsa', slug: 'tulsa', name: 'Tulsa', state: 'OK', status: 'live', zipPrefixes: ['740', '741'], timeZone: 'America/Chicago',
+    helpersWaiting: 1,
+    waitlist: { entries: 133, told: 96, queued: 31, toTell: 2 },
+    lastChange: { at: '2026-11-18T14:05:00.000Z', by: 'Riley N.', reason: 'Tulsa meets the supply and quality criteria: opening to everyone.', from: 'prelaunch', to: 'live' },
+    actions: [
+      { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0 },
+      { id: 'paused', kind: 'destructive', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0 },
+    ],
+  },
+];
+
 /** `/admin/config`: version 1 in use, a draft 2 waiting. */
 export const adminConfigData: AdminConfigPageData = {
   market: { id: 'mkt_austin', name: 'Austin', slug: 'austin' },
+  markets: adminMarketRows,
   outage: { paused: false, changed: { at: '2026-11-02T14:05:00.000Z', by: 'Riley N.', reason: 'Stripe confirmed the charge errors are fixed; charges are going through again.' } },
   current: { id: 'pol_austin_1', version: 1, status: 'published', publishedAt: '2026-10-15T15:00:00.000Z', publishedBy: 'Riley N.', values: launch },
   history: [
@@ -47,10 +96,26 @@ export const adminConfigPausedData: AdminConfigPageData = {
 /** A market whose outage switch was never used. */
 export const adminConfigNeverPausedData: AdminConfigPageData = { ...adminConfigData, outage: { paused: false } };
 
+/**
+ * A page loaded before Boise's zone was refused (a stale page): its buttons arrive enabled, and the server's refusal
+ * is what the confirm step shows.
+ */
+export const adminConfigStaleMarketsData: AdminConfigPageData = {
+  ...adminConfigData,
+  markets: adminMarketRows.map((market) => (market.openingRefused ? { ...market, openingRefused: undefined, actions: market.actions.map((action) => ({ ...action, enabled: true })) } : market)),
+};
+
+/** No markets at all (a fresh database). */
+export const adminConfigNoMarketsData: AdminConfigPageData = { ...adminConfigData, markets: [] };
+
+/** Staff who aren't admins (Alex P., a support agent): the markets, read-only, with no actions. */
+export const adminMarketsReadOnlyData: AdminMarketsPageData = { markets: adminMarketRows.map((market) => ({ ...market, actions: [] })), readOnly: true };
+
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 
 export const fakeAdminConfigHandlers: AdminConfigHandlers = {
   onPublishPolicy: () => wait({ ok: true as const, code: 'updated' as const }),
   onSetFlag: () => wait({ ok: true as const, code: 'updated' as const }),
   onSetOutage: () => wait({ ok: true as const, code: 'updated' as const }),
+  onSetMarketStatus: () => wait({ ok: true as const, code: 'updated' as const }),
 };

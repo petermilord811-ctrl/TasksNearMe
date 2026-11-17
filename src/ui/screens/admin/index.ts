@@ -10,7 +10,7 @@ export { AdminTaskScreen, type AdminTaskScreenProps } from './admin-task-screen'
 export { AdminAuditScreen, type AdminAuditScreenProps } from './admin-audit-screen';
 export { AdminPaymentsScreen, type AdminPaymentsScreenProps } from './admin-payments-screen';
 export { AdminStaffScreen, type AdminStaffScreenProps } from './admin-staff-screen';
-export { AdminConfigScreen, type AdminConfigScreenProps } from './admin-config-screen';
+export { AdminConfigScreen, AdminMarketsScreen, type AdminConfigScreenProps } from './admin-config-screen';
 export { AdminVerificationsScreen } from './admin-verifications-screen';
 export { AdminVerificationSection } from './admin-verification-section';
 export { AdminResponseTimesScreen } from './admin-response-times-screen';

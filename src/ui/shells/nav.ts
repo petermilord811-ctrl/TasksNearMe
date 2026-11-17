@@ -110,7 +110,8 @@ export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
     // Every staff role sees the private beta; leads and admins manage it (others read).
     { id: 'beta', href: routes.admin.beta() },
     ...(readsWebhooks ? [{ id: 'webhooks' as const, href: routes.admin.webhooks() }] : []),
-    ...(isAdmin ? [{ id: 'config' as const, href: routes.admin.config() }] : []),
+    // Every staff role reads where we're open (the config page's Markets section, plan 8.2); the rest of it is admins'.
+    { id: 'config', href: routes.admin.config() },
     ...(readsAudit ? [{ id: 'audit' as const, href: routes.admin.audit() }] : []),
     ...(isAdmin ? [{ id: 'staff' as const, href: routes.admin.staff() }] : []),
   ];

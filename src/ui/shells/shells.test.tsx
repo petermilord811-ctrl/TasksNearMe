@@ -206,13 +206,10 @@ describe('AdminShell', () => {
     const nav = within(screen.getByRole('navigation', { name: 'Staff navigation' }));
     expect(nav.getByRole('link', { name: 'Cases' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: 'Queues' })).not.toHaveAttribute('aria-current');
-    if (isAdmin) {
-      expect(nav.getByRole('link', { name: 'Config' })).toHaveAttribute('href', routes.admin.config());
-      expect(nav.getByRole('link', { name: 'Staff' })).toHaveAttribute('href', routes.admin.staff());
-    } else {
-      expect(nav.queryByRole('link', { name: 'Config' })).not.toBeInTheDocument();
-      expect(nav.queryByRole('link', { name: 'Staff' })).not.toBeInTheDocument();
-    }
+    // Every staff role reads the markets on the config page (plan 8.2); Staff is for admins.
+    expect(nav.getByRole('link', { name: 'Config' })).toHaveAttribute('href', routes.admin.config());
+    if (isAdmin) expect(nav.getByRole('link', { name: 'Staff' })).toHaveAttribute('href', routes.admin.staff());
+    else expect(nav.queryByRole('link', { name: 'Staff' })).not.toBeInTheDocument();
   });
 
   it('shows all supplied role badges and preserves breadcrumb destinations', () => {

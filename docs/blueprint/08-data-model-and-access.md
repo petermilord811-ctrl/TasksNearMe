@@ -147,7 +147,7 @@ Enforced in each module's `policies.ts`. Integration tests in `tests/integration
 | Reviews | Published | Published | Write own; read both once published | Same | Hide per policy (lead or trust & safety), audited |
 | Rewards | Program terms | — | — | Own grants | Support: view, void, reissue. Lead: reinstate, approve reviews. Finance: budgets |
 | Cases | — | — | Own cases (participant-visible events) | Own cases | By role |
-| Config, policies, fees, flags | Published fees and policies | Same | — | — | Admin only; versioned; audited |
+| Config, policies, fees, flags | Published fees and policies | Same | — | — | Admin only; versioned; audited. Every staff role reads which markets are open and who waits for them (plan 8.2) |
 | Audit log | — | — | — | — | Read: admin and support lead. Nobody can edit |
 
 ### Staff roles and limits (configurable)

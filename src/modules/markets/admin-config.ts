@@ -50,8 +50,11 @@ function valuesOf(row: PolicyRow): AdminPolicyValues {
 
 const iso = (value: string | null) => (value ? new Date(value.includes('T') ? value : value.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00')).toISOString() : undefined);
 
-/** `routes.admin.config()` for a market (Austin at launch): admins only, null for anyone else. */
-export async function getAdminConfig(db: Db, staff: StaffActor, marketSlug: string): Promise<AdminConfigPageData | null> {
+/**
+ * `routes.admin.config()` for a market (the launch market): admins only, null for anyone else. The Markets section
+ * comes from ./admin-markets.ts (every staff role reads it).
+ */
+export async function getAdminConfig(db: Db, staff: StaffActor, marketSlug: string): Promise<Omit<AdminConfigPageData, 'markets'> | null> {
   if (!canManageConfig(staff.roles)) return null;
   const [market] = await db.select().from(markets).where(eq(markets.slug, marketSlug)).limit(1);
   if (!market) return null;

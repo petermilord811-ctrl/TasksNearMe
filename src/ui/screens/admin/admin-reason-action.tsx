@@ -3,41 +3,60 @@
 import { useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { ActionHandler, ActionResult } from '@/contracts';
+import type { ActionErrorCode, ActionHandler, ActionResult } from '@/contracts';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { Button } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
 
+/** Copy for the failures one action can come back with: by the field the server names (`fieldErrors`) first, else by code. */
+export interface AdminReasonErrorMessages {
+  fields?: Partial<Record<string, string>>;
+  codes?: Partial<Record<ActionErrorCode, string>>;
+}
+
 /**
  * A staff action that needs a written reason (10 to 1,000 characters, kept in the audit log), confirmed in a
- * dialog: suspending or banning an account, canceling a booking (completion plan 5.14). The reason is checked
- * here only for length; the server decides the rest. `action` is the Server Action itself (server components
- * can pass it, never a closure); it's called with `payload` plus the reason under `field`.
+ * dialog: suspending or banning an account, canceling a booking (completion plan 5.14), changing a market's status
+ * (8.2). The reason is checked here only for length; the server decides the rest. `action` is the Server Action
+ * itself (server components can pass it, never a closure); it's called with `payload` plus the reason under `field`.
+ * `disabled` renders an action the app sent as not enabled (the screen says why next to it).
  */
-export function AdminReasonAction<P extends Record<string, string>>({ trigger, title, description, submit, pending: pendingLabel, destructive = false, action, payload, field, notAllowed, initialOpen = false }: {
+export function AdminReasonAction<P extends Record<string, string>>({ trigger, title, description, submit, pending: pendingLabel, destructive = false, primary = false, disabled = false, action, payload, field, notAllowed, errorMessages, initialOpen = false, initialResult }: {
   trigger: string;
   title: string;
   description: string;
   submit: string;
   pending: string;
   destructive?: boolean;
+  /** The screen's main action (a filled button rather than an outline). */
+  primary?: boolean;
+  disabled?: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   action: ActionHandler<any>;
   payload: P;
   field: 'reason' | 'note';
   notAllowed: string;
+  errorMessages?: AdminReasonErrorMessages;
   initialOpen?: boolean;
+  /** Previews: the dialog opens showing this result's failure. */
+  initialResult?: ActionResult;
 }) {
   const t = useTranslations('adminUser.reasonAction');
   const router = useRouter();
   const id = useId();
   const button = useRef<HTMLButtonElement>(null);
-  const [open, setOpen] = useState(initialOpen);
+  const failureOf = (result: ActionResult | undefined): string | null => {
+    if (!result || result.ok) return null;
+    const named = Object.keys(result.fieldErrors ?? {}).find((key) => errorMessages?.fields?.[key]);
+    if (named) return errorMessages!.fields![named]!;
+    return errorMessages?.codes?.[result.code] ?? (result.code === 'not_allowed' ? notAllowed : t('failed'));
+  };
+  const [open, setOpen] = useState(initialOpen && !disabled);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(() => failureOf(initialResult));
   const [pending, setPending] = useState(false);
   const submitReason = async () => {
     const text = reason.trim();
@@ -52,7 +71,7 @@ export function AdminReasonAction<P extends Record<string, string>>({ trigger, t
         setOpen(false);
         setReason('');
         router.refresh();
-      } else setFailure(result.code === 'not_allowed' ? notAllowed : t('failed'));
+      } else setFailure(failureOf(result));
     } catch {
       setFailure(t('failed'));
     } finally {
@@ -60,7 +79,7 @@ export function AdminReasonAction<P extends Record<string, string>>({ trigger, t
     }
   };
   return <>
-    <Button ref={button} type="button" variant={destructive ? 'destructive' : 'outline'} className="min-h-11" onClick={() => setOpen(true)}>{trigger}</Button>
+    <Button ref={button} type="button" variant={destructive ? 'destructive' : primary ? 'default' : 'outline'} className="min-h-11" disabled={disabled} onClick={() => setOpen(true)}>{trigger}</Button>
     <AlertDialog open={open} onOpenChange={(next) => { if (pending) return; setOpen(next); if (!next) { setError(null); setFailure(null); } }}>
       <AlertDialogContent onCloseAutoFocus={(event) => { event.preventDefault(); button.current?.focus(); }}>
         <AlertDialogHeader>

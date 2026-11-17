@@ -65,7 +65,7 @@
 /admin/reports                      User and content reports → cases
 /admin/payments                     Charges, refunds, transfers, payouts, chargebacks, reconciliation exceptions
 /admin/rewards                      Programs, budgets, grants, risk review queue, void / reissue
-/admin/config                       Markets, categories, fee schedules, policies, feature flags (admin role only; versioned)
+/admin/config                       Markets, categories, fee schedules, policies, feature flags (admin role only; versioned). Every staff role reads the markets' status, read-only (plan 8.2)
 /admin/audit                        Append-only audit log search and export
 /admin/staff                        Staff roles (admin role only)
 ```

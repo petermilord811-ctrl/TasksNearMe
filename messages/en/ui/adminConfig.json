@@ -1,6 +1,7 @@
 {
   "title": "Config",
-  "intro": "{market}'s fees, cancellation terms and timers, and the feature flags. Admins only; every change needs a reason and goes to the audit log.",
+  "intro": "Where we're open, {market}'s fees, cancellation terms and timers, and the feature flags. Every change needs a reason and goes to the audit log.",
+  "introReadOnly": "Where TasksNearMe is open, and who's waiting in the cities still to come. Admins change a market's status, with a reason that goes to the audit log.",
   "outage": {
     "title": "Outage switch",
     "intro": "Pauses new bookings and payments in {market} during an incident (the payments incident runbook). Every signed-in page shows a notice while it's on.",
@@ -19,6 +20,61 @@
     "resumeDescription": "People can book, tip and pay for changes again, and the notice goes away.",
     "pausing": "Pausing…",
     "resuming": "Reopening…"
+  },
+  "markets": {
+    "title": "Markets",
+    "intro": "A market covers the ZIP codes that start with its prefixes. Outside every open market, people join the waitlist and helpers wait for their city.",
+    "readOnly": "Only admins can change a market's status.",
+    "listLabel": "Markets, by name",
+    "empty": "No markets yet.",
+    "name": "{name}, {state}",
+    "statuses": {
+      "prelaunch": "Pre-launch",
+      "live": "Live",
+      "paused": "Paused"
+    },
+    "zips": "ZIP prefixes",
+    "noZips": "None yet",
+    "timeZone": "Time zone",
+    "helpersWaiting": "Helpers waiting",
+    "helpersSettling": "Helpers yet to choose a neighborhood",
+    "helpers": "{count, plural, one {# helper} other {# helpers}}",
+    "waitlist": "Waitlist",
+    "waitlistEntries": "{count, plural, one {# person} other {# people}}",
+    "email": "“We’re open” email",
+    "emailSending": "Sent to {told}, {queued} still going out",
+    "emailSent": "{count, plural, one {Sent to # person} other {Sent to # people}}",
+    "emailLater": "{count, plural, =0 {Nobody to email yet} one {Goes to # person when it's live} other {Goes to # people when it's live}}",
+    "emailNone": "Nobody to email",
+    "lastChange": "{status} since {date}, by {name}",
+    "reason": "Reason: {reason}",
+    "refused": {
+      "time_zone_unsupported": "{name} can't open yet: dates and times can't be shown in its time zone ({zone}) yet. Pausing works."
+    },
+    "actions": {
+      "prelaunch": "Move {name} to pre-launch",
+      "live": "Take {name} live",
+      "paused": "Pause {name}"
+    },
+    "confirm": {
+      "titles": {
+        "prelaunch": "Move {name} to pre-launch?",
+        "live": "Take {name} live?",
+        "paused": "Pause {name}?"
+      },
+      "leads": {
+        "prelaunch": "{from, select, live {{name} goes back to pre-launch. Nobody is emailed.} other {{name} opens to helpers first. Its waitlist is emailed only once it goes live.}}",
+        "live": "{name} opens to everyone.",
+        "paused": "{name} closes for now: its pages go away, and its ZIP codes count as waiting again. Nobody is emailed."
+      },
+      "helpersIn": "{count, plural, one {# helper waiting there comes in and is told to choose a neighborhood.} other {# helpers waiting there come in and are told to choose a neighborhood.}}",
+      "waitlistEmails": "{count, plural, =0 {Nobody on its waitlist is left to email.} one {# person on its waitlist gets one email that it's open, in their language.} other {# people on its waitlist get one email that it's open, in their language.}}"
+    },
+    "saving": "Saving…",
+    "errors": {
+      "notAllowed": "Only admins can change a market's status. Refresh the page to see where things stand.",
+      "notFound": "This market isn't there anymore. Refresh the page."
+    }
   },
   "policyTitle": "Market policy",
   "policyIntro": "Publishing makes a new version that new bookings use. Existing bookings keep the version they were confirmed under.",
@@ -85,6 +141,10 @@
     "flagDialog": "Config · turn a flag off",
     "outagePaused": "Config · bookings paused",
     "outageNever": "Config · outage switch never used",
-    "outageDialog": "Config · pause bookings"
+    "outageDialog": "Config · pause bookings",
+    "marketsLive": "Config · take a market live (confirm step)",
+    "marketsRefused": "Config · a market refused for its time zone",
+    "marketsReadOnly": "Config · markets, read-only for staff who aren’t admins",
+    "marketsEmpty": "Config · no markets"
   }
 }
