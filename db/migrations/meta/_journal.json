@@ -435,6 +435,13 @@
       "when": 1794951497773,
       "tag": "0061_gainesville_first_city",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1794952947197,
+      "tag": "0062_waitlist_city_open",
+      "breakpoints": true
     }
   ]
 }
