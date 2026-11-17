@@ -1,5 +1,5 @@
 import { routes, type AppHomePageData, type AppShellHandlers, type ISODateTime, type PreviewEntry, type SignedInViewer } from '@/contracts';
-import { DESK_TIMES, deskBookingPosterCantAccessReported, deskBookingPosterPendingFunding, fakeHandler, jordanHomeData, jordanHomeInviteData, jordanHomePayoutActionData, jordanShell, mayaHomeCounterData, mayaHomeData, mayaHomeProposalData, mayaShell, posterHomeEmptyData, priyaHomeData, priyaShell, ruth } from '@/fixtures';
+import { DESK_TIMES, deskBookingPosterCantAccessReported, deskBookingPosterPendingFunding, fakeHandler, jordanHomeData, jordanHomeInviteData, jordanHomePayoutActionData, jordanShell, mayaHomeCounterData, mayaHomeData, mayaHomeProposalData, mayaShell, posterHomeEmptyData, priyaHomeData, priyaHomeWaitingData, priyaShell, ruth } from '@/fixtures';
 import { HomeScreen } from '@/ui/screens/home';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/home.json';
@@ -25,6 +25,7 @@ export const homePreviews: PreviewEntry[] = [
   preview('helper', copy.previews.helper, jordanHomeData, jordanShell),
   preview('helper-payout-action', copy.previews.helperPayoutAction, jordanHomePayoutActionData, jordanShell),
   preview('helper-not-set-up', copy.previews.helperNotSetUp, priyaHomeData, priyaShell),
+  preview('helper-waiting', copy.previews.helperWaiting, priyaHomeWaitingData, priyaShell),
   preview('client-payment-access', copy.previews.clientPaymentAccess, {
     ...mayaHomeData,
     attention: [

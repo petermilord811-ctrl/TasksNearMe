@@ -154,6 +154,8 @@ async function helperHome(db: Db, user: { id: string; firstName: string }, now: 
     suggestions: (state.setup.bookable ? open : (feed?.cards ?? [])).slice(0, 3),
     earnings: { upcomingCents: earnings.totals.upcomingCents, onTheWayCents: earnings.totals.onTheWayCents },
     setup: state.setup,
+    // Find work's own answer, so the two pages say the same (plan 8.4).
+    ...(feed?.waitingFor ? { waitingFor: feed.waitingFor } : {}),
   };
 }
 

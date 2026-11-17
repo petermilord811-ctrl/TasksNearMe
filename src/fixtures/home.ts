@@ -1,6 +1,6 @@
 import type { HelperHomeData, PosterHomeData } from '@/contracts';
 import { jordanBookingsPageData, mayaBookingsPageData } from './bookings';
-import { findWorkNotBookableData, findWorkPageData, jordanSetup, myOffersPageData } from './helper-work';
+import { findWorkNotBookableData, findWorkPageData, findWorkWaitingData, jordanSetup, myOffersPageData } from './helper-work';
 import { myTasksPageData } from './offers';
 import { DESK_TIMES } from './timeline';
 
@@ -56,6 +56,9 @@ export const priyaHomeData: HelperHomeData = {
   earnings: { upcomingCents: 0, onTheWayCents: 0 },
   setup: findWorkNotBookableData.setup,
 };
+
+/** Priya waiting for her city (completion plan 8.4): find work's same note instead of nearby tasks. */
+export const priyaHomeWaitingData: HelperHomeData = { ...priyaHomeData, suggestions: [], waitingFor: findWorkWaitingData.waitingFor! };
 
 /** Maya invited Jordan to the bookshelf (UI-025): his answer is due Thu Dec 10, 10:00 am. */
 export const jordanHomeInviteData: HelperHomeData = {

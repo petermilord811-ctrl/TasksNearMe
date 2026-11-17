@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Lock, MapPin, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lock, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type FindWorkCard, type FindWorkHandlers, type FindWorkPageData, type FindWorkWaiting, type ISODateTime } from '@/contracts';
 import { formatMoney } from '@/shared/format';
@@ -10,6 +10,7 @@ import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FinishSetupPanel } from '@/ui/components/helper/finish-setup-panel';
+import { WaitingForCityNote } from '@/ui/components/helper/waiting-for-city';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { AreaMap, type AreaMapPlace } from '@/ui/components/map/area-map';
 import { buttonVariants } from '@/ui/primitives/button';
@@ -92,21 +93,9 @@ export function FindWorkScreen(props: FindWorkScreenProps) {
 function WaitingForCity({ data, waiting }: { data: FindWorkPageData; waiting: FindWorkWaiting }) {
   const page = useTranslations('findWork');
   const t = useTranslations('findWork.waiting');
-  // The others: everyone on the waitlist near them, and the waiting helpers but this one.
-  const others = waiting.waiting + Math.max(0, waiting.helpersWaiting - 1);
   return <div className="mx-auto w-full max-w-content space-y-4">
     <PageHeader title={page('title')} description={page('description')} />
-    <section aria-labelledby="find-work-waiting" className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-5 shadow-card sm:p-6 dark:border-white/[0.06]">
-      <div className="flex items-start gap-3">
-        <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-primary"><MapPin className="size-5" /></span>
-        <div className="min-w-0 space-y-1.5">
-          <h2 id="find-work-waiting" className="font-display text-xl/7 font-semibold tracking-[-0.015em] [overflow-wrap:anywhere]">{t('title', { city: waiting.city })}</h2>
-          <p className="text-[15px] text-muted-foreground">{t('body', { city: waiting.city, state: waiting.state })}</p>
-        </div>
-      </div>
-      <p className="text-sm font-medium tabular-nums">{t('demand', { people: others, zip: waiting.zip })}</p>
-      <Link href={routes.waitlist({ zip: waiting.zip })} className={buttonVariants({ variant: 'outline' })}>{t('waitlist', { zip: waiting.zip })}<ArrowRight aria-hidden="true" /></Link>
-    </section>
+    <WaitingForCityNote waiting={waiting} />
     {data.setup.bookable
       ? <p className="text-sm text-muted-foreground">{t('ready', { city: waiting.city })}</p>
       : <FinishSetupPanel setup={data.setup} title={t('setupTitle')} body={t('setupBody', { city: waiting.city })} />}

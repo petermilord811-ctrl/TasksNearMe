@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { ATTENTION_KINDS, routes, type AppHomePageData, type AttentionKind, type AttentionTarget } from '@/contracts';
-import { DESK_TIMES, jordanHomeData, jordanHomeInviteData, jordanHomePayoutActionData, mayaHomeCounterData, mayaHomeData, mayaHomeProposalData, posterHomeEmptyData, priyaHomeData } from '@/fixtures';
+import { DESK_TIMES, jordanHomeData, jordanHomeInviteData, jordanHomePayoutActionData, mayaHomeCounterData, mayaHomeData, mayaHomeProposalData, posterHomeEmptyData, priyaHomeData, priyaHomeWaitingData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { HomeScreen } from './home-screen';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
@@ -215,6 +215,16 @@ describe('HomeScreen dashboards', () => {
     renderHome({ ...priyaHomeData, attention: [], setup: { ...priyaHomeData.setup, nextOnboardingStep: 'payout' } });
     expect(screen.getByRole('link', { name: 'Finish setup' })).toHaveAttribute('href', routes.app.helperOnboarding('payout'));
     expect(section('Nearby tasks').getAllByRole('article')).toHaveLength(priyaHomeData.suggestions.length);
+  });
+
+  it('shows a helper waiting for their city the same note as find work, not nearby tasks (plan 8.4)', () => {
+    renderHome(priyaHomeWaitingData);
+    expect(screen.getByRole('heading', { name: "We're not in Pretty Prairie yet" })).toBeInTheDocument();
+    expect(screen.getByText('3 other people near 67570 are waiting for us too.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'See the waitlist for 67570' })).toHaveAttribute('href', routes.waitlist({ zip: '67570' }));
+    // Their checks to finish meanwhile, and no "Nearby tasks" from another city.
+    expect(screen.getByRole('link', { name: 'Finish setup' })).toHaveAttribute('href', routes.app.helperOnboarding('identity'));
+    expect(screen.queryByRole('region', { name: 'Nearby tasks' })).not.toBeInTheDocument();
   });
 
   it('omits the setup banner for a bookable helper', () => {

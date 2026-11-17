@@ -9,6 +9,7 @@ import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Money } from '@/ui/components/money/money';
 import { PublicTaskCard } from '@/ui/components/tasks/public-task-card';
+import { WaitingForCityNote } from '@/ui/components/helper/waiting-for-city';
 import { buttonVariants } from '@/ui/primitives/button';
 import { BookingRow } from '@/ui/screens/bookings/bookings-screen';
 import { TaskRow } from '@/ui/screens/tasks/my-tasks-screen';
@@ -106,7 +107,8 @@ export function HomeScreen({ data, now }: HomeScreenProps) {
         </HomeSection>}
     </div>
 
-    {data.mode === 'helper' && <HomeSection id="home-nearby" title={t('sections.nearby')} action={{ label: t('findWork'), href: routes.app.findWork() }}>
+    {data.mode === 'helper' && data.waitingFor && <WaitingForCityNote waiting={data.waitingFor} />}
+    {data.mode === 'helper' && !data.waitingFor && <HomeSection id="home-nearby" title={t('sections.nearby')} action={{ label: t('findWork'), href: routes.app.findWork() }}>
       {data.suggestions.length > 0
         ? <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.suggestions.slice(0, 3).map((card) => <li key={card.task.id} className="min-w-0">
           <PublicTaskCard task={card.task} now={now} headingLevel={3} href={routes.app.findWorkTask(card.task.id)} footer={<FindWorkCardContext card={card} />} />

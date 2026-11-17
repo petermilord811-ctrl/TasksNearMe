@@ -1,6 +1,6 @@
 import type { BookingListRow } from './bookings';
 import type { Cents, ISODateTime } from './common';
-import type { FindWorkCard, HelperSetupState, MyOfferRow } from './helper-work';
+import type { FindWorkCard, FindWorkWaiting, HelperSetupState, MyOfferRow } from './helper-work';
 import type { OwnerTaskRow } from './offers';
 import type { OnboardingStep } from './routes';
 
@@ -105,6 +105,8 @@ export interface HelperHomeData {
   suggestions: FindWorkCard[];
   earnings: { upcomingCents: Cents; onTheWayCents: Cents };
   setup: HelperSetupState;
+  /** Waiting for their city (completion plan 8.4): find work's same `waitingFor`, shown instead of nearby tasks. */
+  waitingFor?: FindWorkWaiting;
 }
 
 /** `/app` (the public home is `HomePageData` in marketing.ts). */

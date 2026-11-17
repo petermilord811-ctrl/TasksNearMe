@@ -106,6 +106,7 @@
     "helperEmpty": "Ayudante · secciones vacías",
     "helperInvite": "Ayudante · responder a una solicitud de reserva",
     "clientCounter": "Cliente · responder a una contraoferta",
-    "clientProposal": "Cliente · responder a una propuesta de reserva"
+    "clientProposal": "Cliente · responder a una propuesta de reserva",
+    "helperWaiting": "Ayudante · esperando su ciudad"
   }
 }

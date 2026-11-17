@@ -5,6 +5,7 @@ import { waitlistEntries } from '@/modules/marketing/schema';
 import { citiesComingNext, joinWaitlist, waitlistDemand } from '@/modules/marketing/waitlist';
 import { markets } from '@/modules/markets/schema';
 import { setMarketStatus } from '@/modules/markets/status';
+import { getAppHome } from '@/modules/home/service';
 import { getFindWorkPageData } from '@/modules/offers/helper';
 import { helperProfiles } from '@/modules/profiles/schema';
 import type { StaffActor } from '@/modules/support/staff';
@@ -105,6 +106,9 @@ describe('the waitlist across the US', () => {
     expect(waiting?.waitingFor).toEqual({ city: 'Denver', state: 'CO', zip: '80202', waiting: 2, helpersWaiting: 1 });
     expect(waiting?.cards).toEqual([]);
     expect(waiting?.totalCount).toBe(0);
+    // The signed-in home says the same, from the same data.
+    const home = await getAppHome(db, { id: DENVER_HELPER, firstName: 'Pat', mode: 'helper' }, now);
+    expect(home.mode === 'helper' ? home.waitingFor : undefined).toEqual(waiting?.waitingFor);
     // A helper with a neighborhood in an open market finds its tasks as before.
     const jordan = await getFindWorkPageData(db, 'usr_jordan', {}, now);
     expect(jordan?.waitingFor).toBeUndefined();
