@@ -10,6 +10,7 @@ import { requestRows } from '@/platform/auth/audience';
 import { searchEngineRows } from '@/shared/sample-data';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { HelperProfileScreen } from '@/ui/screens/public/helper-profile-screen';
+import { MarketTime } from '@/ui/lib/market-time';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 
@@ -60,7 +61,7 @@ async function HelperProfile({ handle }: { handle: string }) {
   const data = await getHelperProfilePageData(handle, await requestRows());
   // A sample person for the public. The page is already streaming, so this answers 200 with noindex (Next adds it).
   if (!data) notFound();
-  return <HelperProfileScreen data={data} />;
+  return <MarketTime timeZone={data.timeZone}><HelperProfileScreen data={data} /></MarketTime>;
 }
 
 export default withClientMessages('[locale]/(public)/helpers/[handle]/page.tsx', HelperProfilePage);

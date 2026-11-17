@@ -6,7 +6,7 @@
   "backHome": "Back to Home",
   "backClients": "Back to My clients",
   "task": "The proposed task",
-  "start": "Proposed start · Austin time",
+  "start": "Proposed start · {zone}",
   "hourlyTerms": "{rate}/h · about {estimate} · up to {cap}",
   "message": "Message from {helper}",
   "expires": "Proposal expires",

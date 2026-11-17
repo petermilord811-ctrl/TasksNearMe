@@ -23,6 +23,7 @@ import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
 import { helperProfiles, helperServices, helperWorkSamples } from './schema';
 import { badgesFor } from '@/modules/badges/service';
+import { marketTimeZone } from '@/modules/markets/time-zone';
 import { rowScopeCondition, type RowScope } from '@/shared/sample-data';
 
 /**
@@ -198,7 +199,7 @@ const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
  */
 export async function getHelperProfile(handle: string, database: Db = db, rows: RowScope = 'all'): Promise<HelperProfilePageData | null> {
   const [row] = await database
-    .select({ profile: helperProfiles, user: users, areaName: areas.name })
+    .select({ profile: helperProfiles, user: users, areaName: areas.name, marketId: areas.marketId })
     .from(helperProfiles)
     .innerJoin(users, eq(users.id, helperProfiles.userId))
     .innerJoin(areas, eq(areas.id, helperProfiles.areaId))
@@ -243,7 +244,10 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
 
   const achievements = (await badgesFor(database, [row.user.id])).get(row.user.id) ?? [];
   const recommended = await recommendedByCounts(database, [row.user.id], rows);
+  // Their market's clock: open slots and review dates (completion plan 8.1). Their area says which market.
+  const timeZone = await marketTimeZone(database, row.marketId);
   return {
+    timeZone,
     helper: withRecommended(toHelperSummary(
       row.profile,
       row.user,

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { CalendarX, CirclePause, CirclePlay, CreditCard, MessageCircle, RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { pauseSeriesInputSchema, routes, type ActionResult, type SeriesActionId, type SeriesHandlers, type SeriesPageData } from '@/contracts';
-import { marketLocalToUtc } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { PaymentMethodLabel } from '@/ui/components/payments';
 import { useFormat } from '@/ui/lib/format';
@@ -28,7 +27,8 @@ const icons: Record<SeriesActionId, typeof CirclePause> = {
 };
 
 /** A market date ("2026-12-21") as a day to read ("Mon, Dec 21"). */
-const dayOf = (date: string) => marketLocalToUtc(date, '12:00');
+// Noon UTC: the same calendar day in every US market, to format the day itself.
+const dayOf = (date: string) => `${date}T18:00:00.000Z`;
 
 /** One modal at every width: a bottom sheet on phones, a centered panel from `sm` up. */
 function SeriesSheet({ title, description, open, onOpenChange, locked, children }: { title: string; description: string; open: boolean; onOpenChange: (open: boolean) => void; locked: boolean; children: ReactNode }) {

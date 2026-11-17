@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { CalendarDays, ChevronRight, CircleAlert, MapPin, Monitor } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BookingListRow, type BookingsPageData, type ISODateTime } from '@/contracts';
-import { formatMoney, marketDayKey } from '@/shared/format';
+import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
@@ -69,7 +69,8 @@ export function BookingRow({ row, tab, now, headingLevel = 2 }: { row: BookingLi
 /** Bookings as client or helper: what needs the viewer first (with the step), then upcoming by day, then past. */
 export function BookingsScreen({ data, now }: BookingsScreenProps) {
   const t = useTranslations('bookings');
-  const dayLabel = useDayLabel(marketDayKey(now));
+  const { dayKey } = useFormat();
+  const dayLabel = useDayLabel(dayKey(now));
   const initialTab = tabs.find((tab) => data[tab].length > 0) ?? 'upcoming';
 
   return <div className="mx-auto w-full max-w-content space-y-6">
@@ -82,7 +83,7 @@ export function BookingsScreen({ data, now }: BookingsScreenProps) {
       {tabs.map((tab) => <TabsContent key={tab} value={tab}>
         {data[tab].length > 0
           ? tab === 'upcoming'
-            ? <div className="space-y-6">{groupByDay(data.upcoming, (row) => row.start).map((group) => <section key={group.day} aria-labelledby={`upcoming-${group.day}`} className="space-y-3">
+            ? <div className="space-y-6">{groupByDay(data.upcoming, (row) => row.start, dayKey).map((group) => <section key={group.day} aria-labelledby={`upcoming-${group.day}`} className="space-y-3">
                 <h2 id={`upcoming-${group.day}`} className="text-sm font-semibold text-muted-foreground">{dayLabel(group.day)}</h2>
                 <ul className="space-y-4">{group.items.map((row) => <li key={row.id}><BookingRow row={row} tab={tab} now={now} headingLevel={3} /></li>)}</ul>
               </section>)}</div>

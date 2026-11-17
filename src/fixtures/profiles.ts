@@ -42,6 +42,7 @@ const samReviews: PublicReviewView[] = [
 ];
 
 export const samProfilePageData: HelperProfilePageData = {
+  timeZone: 'America/Chicago',
   helper: sam,
   bio: 'I’ve been assembling furniture and helping neighbors move since 2024. I bring my own drill, bits, and moving straps, and I clean up when I’m done.',
   serviceRadiusMiles: 6,
@@ -78,6 +79,7 @@ export const samProfilePageData: HelperProfilePageData = {
 
 /** Founding helper #63, verified but no completed tasks or reviews yet. */
 export const jordanProfilePageData: HelperProfilePageData = {
+  timeZone: 'America/Chicago',
   helper: jordan,
   bio: 'New to TasksNearMe and happy to help with furniture and moves around East Austin.',
   serviceRadiusMiles: 5,
@@ -91,6 +93,7 @@ export const jordanProfilePageData: HelperProfilePageData = {
 
 /** Remote computer help, a few reviews, no work samples. */
 export const leeProfilePageData: HelperProfilePageData = {
+  timeZone: 'America/Chicago',
   helper: lee,
   bio: 'Patient help with new phones, printers, Wi-Fi, and backups, in person or over a screen share where you stay in control.',
   serviceRadiusMiles: 8,

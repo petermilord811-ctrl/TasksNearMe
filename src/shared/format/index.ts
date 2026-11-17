@@ -10,4 +10,5 @@ export {
   marketClockTime,
   marketDayKey,
   marketLocalToUtc,
+  timeZoneName,
 } from './datetime';

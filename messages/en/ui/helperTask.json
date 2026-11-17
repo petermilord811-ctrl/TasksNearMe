@@ -14,7 +14,7 @@
     "hoursCapHint": "The most hours the client would book. Use half-hour steps.",
     "hoursCapMinimumHint": "Allow at least {minimum}, and no less than your estimate. Use half-hour steps.",
     "startTime": "Proposed start",
-    "startTimeHint": "Choose a time in the client's window. Times are in Austin time.",
+    "startTimeHint": "Choose a time in the client's window. Times are in {zone}.",
     "chooseStart": "Choose a start time",
     "message": "Message to the client",
     "privacy": "Phone numbers and emails are hidden until the booking is confirmed.",

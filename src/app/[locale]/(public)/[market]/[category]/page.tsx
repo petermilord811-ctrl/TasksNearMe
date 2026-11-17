@@ -14,6 +14,7 @@ import { requestRows } from '@/platform/auth/audience';
 import { searchEngineRows } from '@/shared/sample-data';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { CategoryScreen } from '@/ui/screens/public/category-screen';
+import { MarketTime } from '@/ui/lib/market-time';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 
@@ -84,7 +85,7 @@ async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]
 async function Category({ market, category, seo }: { market: string; category: string; seo: CategorySeoContent }) {
   const page = await getCategoryPageData(market, category, await requestRows());
   if (!page) notFound();
-  return <CategoryScreen data={{ ...page.data, seo }} now={page.now} />;
+  return <MarketTime timeZone={page.data.market.timeZone}><CategoryScreen data={{ ...page.data, seo }} now={page.now} /></MarketTime>;
 }
 
 export default withClientMessages('[locale]/(public)/[market]/[category]/page.tsx', CategoryPage);

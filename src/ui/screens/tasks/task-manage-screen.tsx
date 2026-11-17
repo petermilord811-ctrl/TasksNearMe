@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, CheckCircle2, Hammer, Laptop, Leaf, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type CategorySlug, type InviteHandlers, type ISODateTime, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
-import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { InviteCard } from '@/ui/components/invites/invite-card';
@@ -29,14 +29,14 @@ export interface TaskManageScreenProps {
 const categoryIcons: Record<CategorySlug, LucideIcon> = { 'furniture-assembly': Hammer, 'moving-help': Package, 'yard-cleanup': Leaf, 'light-cleaning': Sparkles, 'computer-help': Laptop };
 
 export function TaskManageScreen({ data, handlers, inviteHandlers, now, initialSelectedOfferIds, initialCancelOpen, initialCancelResult }: TaskManageScreenProps) {
-  const { formatDate, formatDateTime, formatRelative, formatTimeRange } = useFormat();
+  const { formatDate, formatDateTime, formatRelative, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('taskManage');
   const card = useTranslations('taskCard');
   const status = useTaskStatus(data.task.status);
   const { task } = data;
   const Icon = categoryIcons[task.categorySlug];
   const schedule = task.schedule.flexible ? card('flexibleSchedule', { date: formatDate(task.schedule.windowStart) })
-    : marketDayKey(task.schedule.windowStart) === marketDayKey(task.schedule.windowEnd)
+    : dayKey(task.schedule.windowStart) === dayKey(task.schedule.windowEnd)
       ? card('scheduledWindow', { date: formatDate(task.schedule.windowStart), window: formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd) })
       : formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd);
 

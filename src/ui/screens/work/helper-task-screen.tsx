@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, Expand, Flag, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { CATEGORY_DETAIL_FIELDS, routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers, type ISODateTime } from '@/contracts';
-import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { GeneralArea } from '@/ui/components/location/general-area';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
@@ -24,7 +24,7 @@ export interface HelperTaskScreenProps {
 }
 
 export function HelperTaskScreen({ data, handlers, now, initialRevising, initialResult, liveMap = true }: HelperTaskScreenProps) {
-  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange } = useFormat();
+  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('helperTask');
   const report = useTranslations('report');
   const card = useTranslations('taskCard');
@@ -32,7 +32,7 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
   const blocked = useTranslations('findWork');
   const { task } = data;
   const schedule = task.schedule.flexible ? card('flexibleSchedule', { date: formatDate(task.schedule.windowStart) })
-    : marketDayKey(task.schedule.windowStart) === marketDayKey(task.schedule.windowEnd)
+    : dayKey(task.schedule.windowStart) === dayKey(task.schedule.windowEnd)
       ? card('scheduledWindow', { date: formatDate(task.schedule.windowStart), window: formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd) })
       : formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd);
 

@@ -12,6 +12,7 @@ import { requestRows } from '@/platform/auth/audience';
 import { searchEngineRows } from '@/shared/sample-data';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { MarketScreen } from '@/ui/screens/public/market-screen';
+import { MarketTime } from '@/ui/lib/market-time';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 
@@ -74,7 +75,7 @@ async function MarketPage({ params }: PageProps<'/[locale]/[market]'>) {
 async function Market({ slug }: { slug: string }) {
   const page = await getMarketPageData(slug, await requestRows());
   if (!page) notFound();
-  return <MarketScreen data={page.data} now={page.now} />;
+  return <MarketTime timeZone={page.data.market.timeZone}><MarketScreen data={page.data} now={page.now} /></MarketTime>;
 }
 
 export default withClientMessages('[locale]/(public)/[market]/page.tsx', MarketPage);

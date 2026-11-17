@@ -10,6 +10,7 @@ import { requestRows } from '@/platform/auth/audience';
 import { searchEngineRows } from '@/shared/sample-data';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { PublicTaskScreen } from '@/ui/screens/public/public-task-screen';
+import { MarketTime } from '@/ui/lib/market-time';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 
@@ -68,7 +69,7 @@ async function PublicTask({ slug }: { slug: string }) {
   const page = await getPublicTaskPageData(slug, await requestRows());
   // A sample task for the public. The page is already streaming, so this answers 200 with noindex (Next adds it).
   if (!page) notFound();
-  return <PublicTaskScreen data={page.data} now={page.now} />;
+  return <MarketTime timeZone={page.data.market.timeZone}><PublicTaskScreen data={page.data} now={page.now} /></MarketTime>;
 }
 
 export default withClientMessages('[locale]/(public)/tasks/[taskSlug]/page.tsx', PublicTaskPage);

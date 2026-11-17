@@ -48,7 +48,7 @@ describe('ProposeChangeScreen', () => {
     const { onPropose } = mount({ initialInput: {} });
     fireEvent.change(screen.getByLabelText('Task price (USD)'), { target: { value: '80.25' } });
     fireEvent.change(screen.getByLabelText('Expense allowance (USD)'), { target: { value: '20.00' } });
-    fireEvent.change(screen.getByLabelText('New start (Austin time)'), { target: { value: '2026-11-21T11:30' } });
+    fireEvent.change(screen.getByLabelText('New start (Central Time)'), { target: { value: '2026-11-21T11:30' } });
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: message } });
     await userEvent.click(screen.getByRole('button', { name: 'Send change' }));
     expect(onPropose).not.toHaveBeenCalled();
@@ -60,7 +60,7 @@ describe('ProposeChangeScreen', () => {
     const { onPropose } = mount({ data: movingProposeChangeData, initialInput: { message } });
     expect(screen.getByLabelText('Hourly rate (USD)')).toHaveValue('35');
     expect(screen.queryByLabelText('Task price (USD)')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('New start (Austin time)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('New start (Central Time)')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Hours cap'), { target: { value: '5' } });
     await sendProposal();
     expect(onPropose).toHaveBeenCalledExactlyOnceWith({ hoursCap: 5, message });
@@ -86,7 +86,7 @@ describe('ProposeChangeScreen', () => {
 
   it('validates the market schedule window and focuses its labelled error', async () => {
     const { onQuote, onPropose } = mount({ initialInput: { start: '2026-12-18T16:00:00.000Z', message } });
-    const start = screen.getByLabelText('New start (Austin time)');
+    const start = screen.getByLabelText('New start (Central Time)');
     expect(start).toHaveAttribute('min', '2026-11-18T10:00');
     expect(start).toHaveAttribute('max', '2026-12-17T10:00');
     await userEvent.click(screen.getByRole('button', { name: 'Send change' }));

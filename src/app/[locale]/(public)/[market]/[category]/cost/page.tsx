@@ -10,6 +10,7 @@ import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexabl
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { formatMoney } from '@/shared/format';
 import { CostGuideScreen } from '@/ui/screens/public/cost-guide-screen';
+import { MarketTime } from '@/ui/lib/market-time';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 
 /** Every enabled category in every public market, like the category pages. */
@@ -70,7 +71,7 @@ async function CostGuidePage({ params }: PageProps<'/[locale]/[market]/[category
           ]),
         ]}
       />
-      <CostGuideScreen data={{ ...data, question, related }} />
+      <MarketTime timeZone={data.market.timeZone}><CostGuideScreen data={{ ...data, question, related }} /></MarketTime>
     </>
   );
 }

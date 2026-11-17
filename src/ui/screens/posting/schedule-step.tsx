@@ -11,7 +11,8 @@ export function ScheduleStep({ data }: { data: PostTaskPageData }) {
   const t = useTranslations('postTask');
   const { register, watch, setValue, clearErrors, getFieldState, formState } = useFormContext<TaskDraftInput>();
   const schedule = watch('schedule');
-  const minimumDate = marketDayKey(data.now);
+  // Today on the poster's market clock (completion plan 8.1).
+  const minimumDate = marketDayKey(data.now, data.market.timeZone);
   const lastDate = new Date(`${minimumDate}T12:00:00Z`);
   lastDate.setUTCDate(lastDate.getUTCDate() + data.rules.maxLeadDays);
   const maximumDate = lastDate.toISOString().slice(0, 10);

@@ -2,7 +2,8 @@ import * as React from 'react';
 import { useLocale } from 'next-intl';
 import { MARKET_TIME_ZONE, type ISODateTime, type TimeZone } from '@/contracts/common';
 import { DEFAULT_LOCALE, isAppLocale, type AppLocale } from '@/contracts/locale';
-import { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTime, formatTimeRange, marketDayKey } from '@/shared/format';
+import { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTime, formatTimeRange, marketDayKey, timeZoneName } from '@/shared/format';
+import { requestTimeZone } from '@/shared/format/request-zone';
 
 type When = ISODateTime | Date;
 
@@ -22,6 +23,8 @@ export interface Formatters {
   formatRelative(value: When, now: When): string;
   /** The market's calendar day, "2026-11-21" (for grouping and "today"). */
   dayKey(value: When): string;
+  /** The zone's name in the page's language, for labels: "Eastern Time", "hora oriental". */
+  zoneName: string;
 }
 
 const BOUND = new Map<string, Formatters>();
@@ -40,6 +43,7 @@ export function formattersFor(locale: AppLocale, timeZone: TimeZone = MARKET_TIM
       formatTimeRange: (start, end) => formatTimeRange(start, end, locale, timeZone),
       formatRelative: (value, now) => formatRelative(value, now, locale),
       dayKey: (value) => marketDayKey(value, timeZone),
+      zoneName: timeZoneName(timeZone, locale),
     };
     BOUND.set(key, bound);
   }
@@ -55,12 +59,13 @@ const useZoneFromContext: () => TimeZone | null = TimeZoneContext ? () => React.
 
 /**
  * The date and time helpers in the page's language and its market's time zone (completion plan 8.1):
- * `const { formatDate } = useFormat(data.timeZone);`. A server component passes the zone of the data it shows; a
- * client component may leave it out and use the page's `<TimeZoneProvider>`. With neither, the default market's
- * zone. Works in client components and in server components that aren't async (next-intl's `useLocale`).
+ * `const { formatDate } = useFormat();`, or `useFormat(data.timeZone)` for data from a given market. Without one:
+ * in a client component, the page's `<TimeZoneProvider>`; in a server component, the request's zone (the page's
+ * market, else the signed-in person's, src/shared/format/request-zone.ts); else the default market's. Works in
+ * client components and in server components that aren't async (next-intl's `useLocale`).
  */
 export function useFormat(timeZone?: TimeZone): Formatters {
   const locale = useLocale();
   const fromContext = useZoneFromContext();
-  return formattersFor(isAppLocale(locale) ? locale : DEFAULT_LOCALE, timeZone ?? fromContext ?? MARKET_TIME_ZONE);
+  return formattersFor(isAppLocale(locale) ? locale : DEFAULT_LOCALE, timeZone ?? fromContext ?? requestTimeZone() ?? MARKET_TIME_ZONE);
 }

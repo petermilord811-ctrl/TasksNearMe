@@ -9,7 +9,7 @@ import type { ActionHandler, ISODateTime, MessageReaction, MessageView, PersonSu
 import { MESSAGE_REACTIONS } from '@/contracts/messaging';
 import { Reply } from 'lucide-react';
 import { REACTION_EMOJI, useReply } from './reply-context';
-import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { useRealtimeConnected } from '@/ui/lib/realtime';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
@@ -51,7 +51,7 @@ function MessageContent({ message }: { message: MessageView }) {
 const GROUP_MS = 5 * 60_000;
 
 export function MessageLog({ messages, otherParty, now, seenMessageId, firstUnreadId, onReact, className }: { messages: MessageView[]; otherParty: PersonSummary; now: ISODateTime; seenMessageId?: string; firstUnreadId?: string; onReact?: ActionHandler<{ messageId: string; emoji: MessageReaction; on: boolean }>; className?: string }) {
-  const { formatDate, formatDateTime, formatRelative, formatTime } = useFormat();
+  const { formatDate, formatDateTime, formatRelative, formatTime, dayKey } = useFormat();
   const t = useTranslations('thread');
   const router = useRouter();
   const logRef = useRef<HTMLDivElement>(null);
@@ -98,7 +98,7 @@ export function MessageLog({ messages, otherParty, now, seenMessageId, firstUnre
 
   const days = new Map<string, MessageView[]>();
   for (const message of messages) {
-    const key = marketDayKey(message.createdAt);
+    const key = dayKey(message.createdAt);
     const day = days.get(key) ?? [];
     day.push(message);
     days.set(key, day);

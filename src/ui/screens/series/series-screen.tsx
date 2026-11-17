@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarClock, CreditCard, MapPin, Repeat, TriangleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BadgeTone, type ISODateTime, type SeriesHandlers, type SeriesPageData, type SeriesVisitState, type SeriesVisitView, type SeriesView } from '@/contracts';
-import { formatHours, marketLocalToUtc } from '@/shared/format';
+import { formatHours } from '@/shared/format';
 import { backArrow, backLink, note, pageTitle, sectionTitle, surface, surfacePad, warningPanel } from '@/ui/components/bookings/surface';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { useScheduleWords } from '@/ui/components/series/schedule-words';
@@ -21,7 +21,8 @@ export interface SeriesScreenProps {
 const visitTones: Record<SeriesVisitState, BadgeTone> = { scheduled: 'info', payment_due: 'warning', booked: 'success', completed: 'neutral', skipped: 'neutral', canceled: 'neutral' };
 
 /** A market date ("2026-12-21") as an instant to format as a day. */
-const dayOf = (date: string) => marketLocalToUtc(date, '12:00');
+// Noon UTC: the same calendar day in every US market, to format the day itself.
+const dayOf = (date: string) => `${date}T18:00:00.000Z`;
 
 function useSeriesStatus(series: SeriesView): { tone: BadgeTone; label: string } {
   const t = useTranslations('series');

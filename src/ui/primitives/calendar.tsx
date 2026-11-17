@@ -2,8 +2,6 @@
 
 import * as React from "react"
 import { useTranslations } from "next-intl"
-import { MARKET_TIME_ZONE } from "@/contracts"
-import { marketDayKey } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { cn } from "@/ui/lib/utils"
 import {
@@ -32,13 +30,14 @@ function Calendar({
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
-  const { formatDate } = useFormat();
+  // The page's market clock (completion plan 8.1): days start at its midnight.
+  const { formatDate, timeZone } = useFormat();
   const defaultClassNames = getDefaultClassNames()
   const t = useTranslations('common')
 
   return (
     <DayPicker
-      timeZone={MARKET_TIME_ZONE}
+      timeZone={timeZone}
       showOutsideDays={showOutsideDays}
       className={cn(
         "group/calendar bg-background p-2 [--cell-size:--spacing(11)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
@@ -200,6 +199,7 @@ function CalendarDayButton({
   modifiers,
   ...props
 }: React.ComponentProps<typeof DayButton>) {
+  const { dayKey } = useFormat();
   const defaultClassNames = getDefaultClassNames()
 
   const ref = React.useRef<HTMLButtonElement>(null)
@@ -212,7 +212,7 @@ function CalendarDayButton({
       ref={ref}
       variant="ghost"
       size="icon"
-      data-day={marketDayKey(day.date)}
+      data-day={dayKey(day.date)}
       data-selected-single={
         modifiers.selected &&
         !modifiers.range_start &&

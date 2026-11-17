@@ -59,7 +59,7 @@ function RepeatField({ clientName, disabled, timeZone }: { clientName: string; d
 }
 
 export function ProposeRebookFields({ data, disabled, earliest }: { data: ProposeRebookPageData; disabled: boolean; earliest: { date: string; time: string } }) {
-  const { formatDate } = useFormat(data.timeZone);
+  const { formatDate, zoneName } = useFormat(data.timeZone);
   const t = useTranslations('clients.form');
   const { register, watch } = useFormContext<RebookProposalInput>();
   const date = watch('date');
@@ -67,7 +67,7 @@ export function ProposeRebookFields({ data, disabled, earliest }: { data: Propos
   return <div className="space-y-5">
     <div className="grid gap-5 sm:grid-cols-2">
       <ProposalField name="date" label={t('date')} hint={t('dateHint', { first: formatDate(marketLocalToUtc(data.limits.firstDate, '12:00', data.timeZone)), last: formatDate(marketLocalToUtc(data.limits.lastDate, '12:00', data.timeZone)) })}>{(id, invalid) => <Input {...register('date')} id={id} type="date" min={data.limits.firstDate} max={data.limits.lastDate} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40 tabular-nums" />}</ProposalField>
-      <ProposalField name="startTime" label={t('startTime')} hint={t('startTimeHint', { hours: data.limits.leadHours })}>{(id, invalid) => <Input {...register('startTime')} id={id} type="time" step={60} min={date === earliest.date ? earliest.time : undefined} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40 tabular-nums" />}</ProposalField>
+      <ProposalField name="startTime" label={t('startTime')} hint={t('startTimeHint', { hours: data.limits.leadHours, zone: zoneName })}>{(id, invalid) => <Input {...register('startTime')} id={id} type="time" step={60} min={date === earliest.date ? earliest.time : undefined} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40 tabular-nums" />}</ProposalField>
     </div>
     {data.canRepeat && <RepeatField clientName={data.client.displayName} disabled={disabled} timeZone={data.timeZone} />}
     <PricingFields disabled={disabled} namespace="clients.form" />

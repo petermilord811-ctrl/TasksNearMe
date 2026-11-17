@@ -13,6 +13,8 @@ vi.mock('@/platform/auth/auth', () => ({
   auth: { api: { getSession: async () => ({ session: { id: 'ses_1' }, user: { id: 'usr_x', email: 'x@example.test', name: 'X Y.', firstName: 'X', lastName: 'Y', mode: 'poster', status: state.status } }) } },
 }));
 vi.mock('@/platform/db/client', () => ({ db: { select: () => ({ from: () => ({ where: async () => [] }) }) } }));
+// The person's home-market zone (completion plan 8.1): Austin's.
+vi.mock('@/modules/markets/time-zone', () => ({ userTimeZone: async () => 'America/Chicago' }));
 
 const { getViewer } = await import('@/platform/auth/viewer');
 

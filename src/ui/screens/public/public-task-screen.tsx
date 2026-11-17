@@ -3,7 +3,7 @@ import { CalendarDays, CircleDollarSign, Flag, Laptop, Lock, MapPin } from 'luci
 import { useTranslations } from 'next-intl';
 import type { ISODateTime, PublicTaskPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
-import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
@@ -18,7 +18,7 @@ import { categoryIcons } from './marketing-sections';
 export interface PublicTaskScreenProps { data: PublicTaskPageData; now: ISODateTime }
 
 export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
-  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange } = useFormat();
+  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('publicTask');
   const report = useTranslations('report');
   const categoryName = useTranslations('helperCard.categories');
@@ -27,7 +27,7 @@ export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
   const LocationIcon = task.location.kind === 'remote' ? Laptop : MapPin;
   const schedule = task.schedule.flexible
     ? t('flexibleSchedule', { date: formatDate(task.schedule.windowStart) })
-    : marketDayKey(task.schedule.windowStart) === marketDayKey(task.schedule.windowEnd)
+    : dayKey(task.schedule.windowStart) === dayKey(task.schedule.windowEnd)
       ? t('scheduledWindow', { date: formatDate(task.schedule.windowStart), window: formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd) })
       : formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd);
   const budget = task.budget.type === 'fixed' ? formatMoney(task.budget.priceCents)

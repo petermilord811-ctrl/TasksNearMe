@@ -28,7 +28,7 @@ export function ProposalContent({ data, handlers, now, initialResult, initialPen
   initialResult?: PaymentAttemptResult;
   initialPending?: boolean;
 }) {
-  const { formatDate, formatDateTime } = useFormat();
+  const { formatDate, formatDateTime, zoneName } = useFormat();
   const t = useTranslations('proposal');
   const categories = useTranslations('helperCard.categories');
   const { proposal } = data;
@@ -56,7 +56,7 @@ export function ProposalContent({ data, handlers, now, initialResult, initialPen
       </div>
       <div className="flex items-start gap-2">
         <CalendarDays aria-hidden="true" className="mt-1 size-5 shrink-0 text-primary" />
-        <div><p className="text-sm text-muted-foreground">{t(proposal.schedule ? 'firstVisit' : 'start')}</p><time dateTime={proposal.start} className="font-medium tabular-nums">{formatDateTime(proposal.start)}</time></div>
+        <div><p className="text-sm text-muted-foreground">{t(proposal.schedule ? 'firstVisit' : 'start', { zone: zoneName })}</p><time dateTime={proposal.start} className="font-medium tabular-nums">{formatDateTime(proposal.start)}</time></div>
       </div>
       {proposal.schedule && <div className="flex items-start gap-2">
         <Repeat aria-hidden="true" className="mt-1 size-5 shrink-0 text-primary" />

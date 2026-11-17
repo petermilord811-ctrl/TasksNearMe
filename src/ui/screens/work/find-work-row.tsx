@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Bookmark, BookmarkCheck, CalendarDays, Check, EyeOff, Hammer, Info, Laptop, Leaf, Loader2, MapPin, Package, Send, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CategorySlug, type FindWorkCard, type ISODateTime } from '@/contracts';
-import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useOfferStatus } from '@/ui/components/status/use-status';
@@ -49,7 +49,7 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
   /** The one-tap offer on this row: being sent, or sent (until the list refreshes with the offer). */
   offerState?: 'sending' | 'sent';
 }) {
-  const { formatDate, formatDateTime, formatRelative, formatTime, formatTimeRange } = useFormat();
+  const { formatDate, formatDateTime, formatRelative, formatTime, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('findWork');
   const card_ = useTranslations('taskCard');
   const location = useTranslations('location');
@@ -57,7 +57,7 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
   const Icon = categoryIcons[task.categorySlug];
   const schedule = task.schedule.flexible
     ? card_('flexibleSchedule', { date: formatDate(task.schedule.windowStart) })
-    : marketDayKey(task.schedule.windowStart) === marketDayKey(task.schedule.windowEnd)
+    : dayKey(task.schedule.windowStart) === dayKey(task.schedule.windowEnd)
       ? formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd)
       : `${formatDate(task.schedule.windowStart)} – ${formatDate(task.schedule.windowEnd)}`;
   const budget = task.budget.type === 'fixed'

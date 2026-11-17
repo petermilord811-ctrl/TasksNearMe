@@ -16,9 +16,9 @@
     "moneyHint": "Escribe dólares y centavos. Las tarifas de servicio se muestran abajo.",
     "hoursCap": "Límite de horas",
     "hoursHint": "El máximo de horas incluidas en la reserva, hasta 24.",
-    "start": "Nuevo inicio (hora de Austin)",
-    "startHint": "Elige una fecha y una hora en la zona horaria del centro de Austin.",
-    "windowHint": "Elige un inicio entre {earliest} y {latest}, en la zona horaria del centro de Austin.",
+    "start": "Nuevo inicio ({zone})",
+    "startHint": "Elige una fecha y una hora ({zone}).",
+    "windowHint": "Elige un inicio entre {earliest} y {latest} ({zone}).",
     "scope": "Alcance de la tarea",
     "scopeHint": "Describe la tarea completa con los cambios propuestos. Usa de 10 a 2,000 caracteres.",
     "expenses": "Asignación para gastos (USD)",
@@ -112,7 +112,7 @@
     "types": {
       "price": "Precio de la tarea",
       "scope": "Detalles de la tarea",
-      "schedule": "Inicio (hora del centro)",
+      "schedule": "Inicio ({zone})",
       "hours_cap": "Límite de horas",
       "expense_allowance": "Asignación para gastos"
     },

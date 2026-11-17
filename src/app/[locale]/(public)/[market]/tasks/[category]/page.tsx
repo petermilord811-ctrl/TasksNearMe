@@ -15,6 +15,7 @@ import { requestRows } from '@/platform/auth/audience';
 import { searchEngineRows } from '@/shared/sample-data';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { TaskBoardScreen } from '@/ui/screens/public/task-board-screen';
+import { MarketTime } from '@/ui/lib/market-time';
 import { publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 
 /**
@@ -92,7 +93,7 @@ async function Hub({ params, searchParams }: Pick<PageProps<'/[locale]/[market]/
           ]),
         ]}
       />
-      <TaskBoardScreen data={board.data} now={board.now} />
+      <MarketTime timeZone={board.data.market.timeZone}><TaskBoardScreen data={board.data} now={board.now} /></MarketTime>
     </>
   );
 }

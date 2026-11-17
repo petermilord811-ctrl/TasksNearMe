@@ -56,6 +56,22 @@ function perZone(make: (timeZone: TimeZone) => Intl.DateTimeFormat) {
   };
 }
 
+const ZONE_NAMES = new Map<string, string>();
+
+/**
+ * A zone's name in the reader's language, for labelling times where they could be read in another zone
+ * (completion plan 8.1): "Central Time", "Eastern Time"; "hora central", "hora oriental".
+ */
+export function timeZoneName(timeZone: TimeZone, locale: AppLocale = DEFAULT_LOCALE): string {
+  const key = `${locale}|${timeZone}`;
+  let name = ZONE_NAMES.get(key);
+  if (!name) {
+    name = new Intl.DateTimeFormat(INTL_LOCALES[locale], { timeZone, timeZoneName: 'longGeneric' }).formatToParts(new Date()).find((part) => part.type === 'timeZoneName')?.value ?? timeZone;
+    ZONE_NAMES.set(key, name);
+  }
+  return name;
+}
+
 /** "now" in each language (under a minute either way). */
 const NOW: Record<AppLocale, string> = { en: 'now', es: 'ahora' };
 

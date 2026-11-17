@@ -114,6 +114,13 @@ describe('each market in its own time zone (completion plan 8.1)', () => {
     expect(f.marketClockTime(start, CENTRAL)).toBe('09:30');
   });
 
+  it('names each zone in the reader’s language, for labels', async () => {
+    const f = await import('./index');
+    expect(f.timeZoneName(EASTERN)).toBe('Eastern Time');
+    expect(f.timeZoneName(CENTRAL, 'es')).toBe('hora central');
+    expect(f.timeZoneName(EASTERN, 'es')).toBe('hora oriental');
+  });
+
   it('draws the day line at each market’s own midnight', async () => {
     const f = await import('./index');
     // 12:30 am Sunday in Gainesville is still 11:30 pm Saturday in Austin.

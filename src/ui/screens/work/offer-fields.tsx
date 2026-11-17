@@ -88,7 +88,7 @@ export function OfferFields({ rules, onDraftMessage }: {
   onDraftMessage?: QueryHandler<OfferMessageDraftInput, OfferMessageDraftResult>;
 }) {
   // On the task's market clock (completion plan 8.1).
-  const { formatTime } = useFormat(rules.timeZone);
+  const { formatTime, zoneName } = useFormat(rules.timeZone);
   const t = useTranslations('helperTask.form');
   const fields = useTranslations('forms');
   const { register, watch, control, setValue, setError, clearErrors } = useFormContext<OfferInput>();
@@ -115,7 +115,7 @@ export function OfferFields({ rules, onDraftMessage }: {
           aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40 tabular-nums"
         />}</OfferField>)}</div>
       </>}
-    <OfferField name="startTime" label={t('startTime')} hint={t('startTimeHint')}>{(id, invalid) => <select {...register('startTime')} id={id} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="min-h-11 w-full scroll-mb-40 rounded-[10px] border border-input bg-background px-3 text-base tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+    <OfferField name="startTime" label={t('startTime')} hint={t('startTimeHint', { zone: zoneName })}>{(id, invalid) => <select {...register('startTime')} id={id} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="min-h-11 w-full scroll-mb-40 rounded-[10px] border border-input bg-background px-3 text-base tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
       <option value="" disabled>{t('chooseStart')}</option>
       {rules.startTimes.map((time) => <option key={time} value={time}>{formatTime(marketLocalToUtc(rules.date, time, rules.timeZone))}</option>)}
     </select>}</OfferField>

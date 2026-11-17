@@ -25,7 +25,7 @@ export function InviteCardContent({ invite, handlers, now, headingLevel = 2, ini
   initialResult?: PaymentAttemptResult;
   initialPending?: boolean;
 }) {
-  const { formatDate, formatDateTime, formatRelative, formatTimeRange } = useFormat();
+  const { formatDate, formatDateTime, formatRelative, formatTimeRange, zoneName } = useFormat();
   const t = useTranslations('inviteCard');
   const id = useId();
   const status = useInviteStatus(invite.status, invite.viewerRole, invite.helper.displayName);
@@ -39,7 +39,7 @@ export function InviteCardContent({ invite, handlers, now, headingLevel = 2, ini
   function terms(value: InviteView['terms']) {
     return <div className="space-y-3">
       <p className="text-lg font-semibold"><OfferPrice pricing={value.pricing} /></p>
-      <p className="flex items-start gap-2 text-sm"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span><span className="block text-muted-foreground">{t('start')}</span><time dateTime={value.start} className="tabular-nums">{formatDateTime(value.start)}</time></span></p>
+      <p className="flex items-start gap-2 text-sm"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span><span className="block text-muted-foreground">{t('start', { zone: zoneName })}</span><time dateTime={value.start} className="tabular-nums">{formatDateTime(value.start)}</time></span></p>
       {value.message && <div className="space-y-1"><p className="text-sm text-muted-foreground">{t('message')}</p><p className="whitespace-pre-wrap break-words text-sm leading-6">{value.message}</p></div>}
     </div>;
   }

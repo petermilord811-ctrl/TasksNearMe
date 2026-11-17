@@ -14,7 +14,7 @@
     "hoursCapHint": "El máximo de horas que tu cliente reservaría. Usa intervalos de media hora.",
     "hoursCapMinimumHint": "Permite al menos {minimum}, y no menos que tu estimación. Usa intervalos de media hora.",
     "startTime": "Inicio propuesto",
-    "startTimeHint": "Elige una hora dentro del horario de tu cliente. Las horas son de Austin.",
+    "startTimeHint": "Elige una hora dentro del horario de tu cliente. Las horas están en {zone}.",
     "chooseStart": "Elige una hora de inicio",
     "message": "Mensaje para tu cliente",
     "privacy": "Los números de teléfono y los correos se ocultan hasta que se confirme la reserva.",

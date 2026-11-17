@@ -4,7 +4,7 @@ import { CalendarDays, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type Luc
 import { useTranslations } from 'next-intl';
 import type { CategorySlug, ISODateTime, TaskPublicView } from '@/contracts';
 import { routes } from '@/contracts/routes';
-import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 
@@ -25,14 +25,14 @@ const categoryIcons: Record<CategorySlug, LucideIcon> = {
 };
 
 export function PublicTaskCard({ task, now, headingLevel = 3, href = routes.publicTask(task.slug), footer }: PublicTaskCardProps) {
-  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange } = useFormat();
+  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('taskCard');
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const CategoryIcon = categoryIcons[task.categorySlug];
   const LocationIcon = task.location.kind === 'remote' ? Laptop : MapPin;
   const schedule = task.schedule.flexible
     ? t('flexibleSchedule', { date: formatDate(task.schedule.windowStart) })
-    : marketDayKey(task.schedule.windowStart) === marketDayKey(task.schedule.windowEnd)
+    : dayKey(task.schedule.windowStart) === dayKey(task.schedule.windowEnd)
       ? t('scheduledWindow', {
           date: formatDate(task.schedule.windowStart),
           window: formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd),

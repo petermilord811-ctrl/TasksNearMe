@@ -2,13 +2,13 @@ import Link from 'next/link';
 import { CalendarDays, ChevronRight, Repeat } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type SeriesSummary } from '@/contracts';
-import { marketLocalToUtc } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { useScheduleWords } from '@/ui/components/series/schedule-words';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 
 /** A market date ("2026-12-08") as a moment to format (midday in Austin). */
-const dayAt = (day: string) => marketLocalToUtc(day, '12:00');
+// Noon UTC: the same calendar day in every US market, to format the day itself.
+const dayAt = (day: string) => `${day}T18:00:00.000Z`;
 
 function RegularRow({ series }: { series: SeriesSummary }) {
   const t = useTranslations('bookings.regular');

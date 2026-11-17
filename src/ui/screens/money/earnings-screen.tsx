@@ -23,13 +23,13 @@ export interface EarningsScreenProps {
 }
 
 function EarningsRow({ row, now }: { row: EarningsRowView; now: ISODateTime }) {
-  const { formatDate, formatRelative } = useFormat();
+  const { formatDate, formatRelative, timeZone } = useFormat();
   const t = useTranslations('earnings');
   const status = useEarningsStatus(row.status);
   const titleId = `earnings-${row.id}`;
   const payout = row.payout;
   // The provider supplies a calendar day, not a midnight UTC instant.
-  const arrival = payout ? formatDate(marketLocalToUtc(payout.arrivalDate, '12:00')) : undefined;
+  const arrival = payout ? formatDate(marketLocalToUtc(payout.arrivalDate, '12:00', timeZone)) : undefined;
 
   return <article aria-labelledby={titleId} className="min-w-0 space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] p-4 transition-shadow duration-200 md:p-6">
     <div className="flex flex-wrap items-center justify-between gap-3">

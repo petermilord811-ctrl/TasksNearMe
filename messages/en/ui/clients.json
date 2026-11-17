@@ -34,7 +34,7 @@
     "date": "Date",
     "dateHint": "Choose a date from {first} through {last}.",
     "startTime": "Start time",
-    "startTimeHint": "Austin time. Choose a start at least {hours, plural, one {# hour} other {# hours}} from now.",
+    "startTimeHint": "Times are in {zone}. Choose a start at least {hours, plural, one {# hour} other {# hours}} from now.",
     "pricingType": "Price type",
     "pricingTypeHint": "The last price is filled in. You can keep it or choose a new price.",
     "fixed": "Fixed price",

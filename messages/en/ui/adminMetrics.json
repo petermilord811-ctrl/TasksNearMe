@@ -1,6 +1,6 @@
 {
   "title": "Market metrics",
-  "intro": "How the market is doing against the launch targets, from posting to booking again. Days are counted in Austin time.",
+  "intro": "How the market is doing against the launch targets, from posting to booking again. Days are counted in {zone}.",
   "periodsLabel": "Period",
   "periods": {
     "7": "7 days",

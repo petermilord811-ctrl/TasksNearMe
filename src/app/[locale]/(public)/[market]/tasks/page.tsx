@@ -14,6 +14,7 @@ import { requestRows } from '@/platform/auth/audience';
 import { searchEngineRows } from '@/shared/sample-data';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { TaskBoardScreen } from '@/ui/screens/public/task-board-screen';
+import { MarketTime } from '@/ui/lib/market-time';
 import { publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 
 export async function generateStaticParams() {
@@ -62,7 +63,7 @@ async function Board({ params, searchParams }: Pick<PageProps<'/[locale]/[market
           ]),
         ]}
       />
-      <TaskBoardScreen data={page.data} now={page.now} />
+      <MarketTime timeZone={page.data.market.timeZone}><TaskBoardScreen data={page.data} now={page.now} /></MarketTime>
     </>
   );
 }

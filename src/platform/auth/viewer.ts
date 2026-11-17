@@ -1,11 +1,13 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
 import { cache } from 'react';
-import { STAFF_ROLES, type Mode, type Photo, type ShellViewer, type SignedInViewer, type StaffRole, type StaffViewer } from '@/contracts';
+import { STAFF_ROLES, type Mode, type Photo, type ShellViewer, type SignedInViewer, type StaffRole, type StaffViewer, type TimeZone } from '@/contracts';
 import { staffRoles, staffSessionChecks } from '@/modules/accounts/schema';
 import { avatarPhoto } from '@/modules/files/photos';
+import { userTimeZone } from '@/modules/markets/time-zone';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { db } from '@/platform/db/client';
+import { setDefaultRequestTimeZone } from '@/shared/format/request-zone';
 import { auth } from './auth';
 import { authRequestHeaders } from './request-headers';
 
@@ -23,6 +25,8 @@ export interface ViewerUser {
   staffRoles: StaffRole[];
   staffTwoStepVerified: boolean;
   helperStatus: 'none' | 'draft' | 'active' | 'paused' | 'suspended';
+  /** Their home market's zone: their pages' dates are on its clock (completion plan 8.1). */
+  timeZone: TimeZone;
 }
 
 export type Viewer = { kind: 'public' } | { kind: 'user'; user: ViewerUser };
@@ -51,11 +55,14 @@ export const getViewer = cache(async (): Promise<Viewer> => {
   // (one created while staff were blocking it, say): every page and action sees the public viewer (5.18).
   if (u.status && BLOCKED_STATUSES.has(u.status)) return { kind: 'public' };
 
-  const [roleRows, profileRows, checkRows] = await Promise.all([
+  const [roleRows, profileRows, checkRows, timeZone] = await Promise.all([
     db.select({ role: staffRoles.role }).from(staffRoles).where(eq(staffRoles.userId, u.id)),
     db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, u.id)),
     db.select({ verifiedAt: staffSessionChecks.verifiedAt }).from(staffSessionChecks).where(eq(staffSessionChecks.sessionId, session.session.id)),
+    userTimeZone(db, u.id),
   ]);
+  // The request's dates default to the person's own market clock (a page about another market names its own).
+  setDefaultRequestTimeZone(timeZone);
 
   const firstName = u.firstName ?? '';
   const lastName = u.lastName ?? '';
@@ -76,6 +83,7 @@ export const getViewer = cache(async (): Promise<Viewer> => {
       staffRoles: roles,
       staffTwoStepVerified: checkRows.length > 0,
       helperStatus: (profileRows[0]?.status as ViewerUser['helperStatus'] | undefined) ?? 'none',
+      timeZone,
     },
   };
 });

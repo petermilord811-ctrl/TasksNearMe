@@ -122,7 +122,7 @@ type DailyColumn = DailySeries | 'repeat' | 'rewardsDelivered';
 
 function Daily({ data }: { data: AdminMetricsPageData }) {
   const t = useTranslations('adminMetrics.daily');
-  const { formatDate } = useFormat();
+  const { formatDate } = useFormat(data.timeZone);
   const series: { id: DailySeries | 'rewardsDelivered'; total: string; points: { startsAt: string; value: number; label: string }[] }[] = [
     ...(['posted', 'offers', 'booked', 'completed'] as const).map((id) => ({
       id,
@@ -320,10 +320,11 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
  */
 export function AdminMetricsScreen({ data }: { data: AdminMetricsPageData }) {
   const t = useTranslations('adminMetrics');
-  const { formatDate, formatTime } = useFormat();
+  // Every market in one reporting zone, named in the intro (completion plan 8.1).
+  const { formatDate, formatTime, zoneName } = useFormat(data.timeZone);
   return <div className="min-w-0 space-y-8 [overflow-wrap:anywhere]">
     <div className="space-y-4">
-      <PageHeader title={t('title')} description={t('intro')} />
+      <PageHeader title={t('title')} description={t('intro', { zone: zoneName })} />
       <nav aria-label={t('periodsLabel')} className="flex flex-wrap gap-2">
         {METRICS_PERIODS.map((days) => <AdminFilterChip key={days} href={routes.admin.metrics(days)} current={data.days === days}>{t(`periods.${days}`)}</AdminFilterChip>)}
       </nav>

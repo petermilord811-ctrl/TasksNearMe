@@ -1,4 +1,4 @@
-import type { CategorySlug, ISODateTime, Photo } from './common';
+import type { CategorySlug, ISODateTime, Photo, TimeZone } from './common';
 import type { AvailabilitySlotView } from './availability';
 import type { HelperSummary, ServiceSummary } from './people';
 import type { BadgeView } from './badges';
@@ -45,6 +45,8 @@ export interface WorkSampleView {
  */
 export interface HelperProfilePageData {
   helper: HelperSummary;
+  /** The helper's market zone: their open slots and reviews are dated on its clock (completion plan 8.1). */
+  timeZone: TimeZone;
   /** Every achievement badge the helper shows, most notable first (completion plan 6.4). */
   achievements?: BadgeView[];
   bio: string;

@@ -28,8 +28,8 @@ export function requestStartWindow(data: RequestHelperPageData, task: InvitableT
   };
 }
 
-function localStart(value: string) {
-  return value && Number.isFinite(new Date(value).getTime()) ? `${marketDayKey(value)}T${marketClockTime(value)}` : '';
+function localStart(value: string, timeZone: string) {
+  return value && Number.isFinite(new Date(value).getTime()) ? `${marketDayKey(value, timeZone)}T${marketClockTime(value, timeZone)}` : '';
 }
 
 function RequestField({ name, label, hint, children }: { name: FieldPath<RequestHelperInput>; label: string; hint: string; children: (id: string, invalid: boolean) => ReactNode }) {
@@ -46,7 +46,8 @@ function RequestField({ name, label, hint, children }: { name: FieldPath<Request
 }
 
 export function RequestHelperFields({ data, disabled }: { data: RequestHelperPageData; disabled: boolean }) {
-  const { formatDateTime } = useFormat();
+  // The page's market clock (completion plan 8.1): shown, typed and converted in it.
+  const { formatDateTime, timeZone, zoneName } = useFormat();
   const t = useTranslations('invites');
   const categories = useTranslations('helperCard.categories');
   const { control, register, watch, setValue, clearErrors } = useFormContext<RequestHelperInput>();
@@ -67,16 +68,16 @@ export function RequestHelperFields({ data, disabled }: { data: RequestHelperPag
           <span className="min-w-0 space-y-1">
             <span className="block font-medium break-words">{task.title}</span>
             <span className="block text-sm text-muted-foreground">{categories(task.categorySlug)}</span>
-            <span className="block text-sm tabular-nums text-muted-foreground">{t('window', { start: formatDateTime(task.windowStart), end: formatDateTime(task.windowEnd) })}</span>
+            <span className="block text-sm tabular-nums text-muted-foreground">{t('window', { start: formatDateTime(task.windowStart), end: formatDateTime(task.windowEnd), zone: zoneName })}</span>
           </span>
         </label>)}
       </RadioGroup>} />}</RequestField>
     </section>
     <section className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
       <h2 className="font-heading text-xl/7 font-semibold">{t('details')}</h2>
-      <RequestField name="start" label={t('start')} hint={t(hasSlot ? 'slotStartHint' : 'startHint')}>{(id, invalid) => <Controller name="start" control={control} render={({ field }) => <Input id={id} name={field.name} ref={field.ref} onBlur={field.onBlur} type="datetime-local" value={localStart(field.value)} min={window ? localStart(window.start) : undefined} max={window ? localStart(window.end) : undefined} step={60} onChange={(event) => {
+      <RequestField name="start" label={t('start')} hint={t(hasSlot ? 'slotStartHint' : 'startHint', { zone: zoneName })}>{(id, invalid) => <Controller name="start" control={control} render={({ field }) => <Input id={id} name={field.name} ref={field.ref} onBlur={field.onBlur} type="datetime-local" value={localStart(field.value, timeZone)} min={window ? localStart(window.start, timeZone) : undefined} max={window ? localStart(window.end, timeZone) : undefined} step={60} onChange={(event) => {
         const [date, time] = event.target.value.split('T');
-        field.onChange(date && time ? marketLocalToUtc(date, time) : '');
+        field.onChange(date && time ? marketLocalToUtc(date, time, timeZone) : '');
       }} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="max-w-sm scroll-mb-40 tabular-nums" />} />}</RequestField>
       <PricingFields disabled={disabled} />
       <RequestField name="message" label={t('message')} hint={t('messageHint')}>{(id, invalid) => <Textarea {...register('message')} id={id} rows={4} maxLength={1000} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40" />}</RequestField>

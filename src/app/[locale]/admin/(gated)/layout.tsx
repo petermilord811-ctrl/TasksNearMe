@@ -5,6 +5,7 @@ import { routes } from '@/contracts';
 import { signOut } from '@/modules/accounts/actions';
 import { getViewer, toStaffViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { AdminShell } from '@/ui/shells';
 
 /** Instant navigations inside the signed-in area (per-segment Partial Prefetching). */
@@ -26,10 +27,13 @@ async function StaffShell({ children }: { children: React.ReactNode }) {
   const viewer = await getViewer();
   if (viewer.kind !== 'user' || viewer.user.staffRoles.length === 0) notFound();
   if (!viewer.user.staffTwoStepVerified) redirect(routes.admin.verify());
+  // Staff pages show times on the staff member's own market clock, labelled where several markets meet (plan 8.1).
   return (
-    <AdminShell viewer={toStaffViewer(viewer.user)} handlers={{ onSignOut: signOut }}>
-      {children}
-    </AdminShell>
+    <TimeZoneProvider timeZone={viewer.user.timeZone}>
+      <AdminShell viewer={toStaffViewer(viewer.user)} handlers={{ onSignOut: signOut }}>
+        {children}
+      </AdminShell>
+    </TimeZoneProvider>
   );
 }
 

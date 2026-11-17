@@ -4,7 +4,6 @@ import { useLocale, useTranslations } from 'next-intl';
 import type { ISODateTime, TaskBoardPageData, TaskBoardQuery, TaskPublicView } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { TASK_BOARD_GROUPS, TASK_BOARD_PRICE_PRESETS, TASK_BOARD_SORTS, TASK_BOARD_VIEWS } from '@/contracts/tasks';
-import { marketDayKey } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link, localeHref } from '@/ui/lib/locale-link';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
@@ -50,7 +49,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const t = useTranslations('taskBoard');
   const card = useTranslations('taskCard');
   const saved = useTranslations('savedSearches');
-  const { formatDate } = useFormat();
+  const { formatDate, dayKey } = useFormat();
   const locale = useLocale();
   const { market, query } = data;
   // This browser's last look at the market's board marks what's new since (completion plan 7.6).
@@ -67,7 +66,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   // On a category's job hub the category is the page, not a filter: with nothing else chosen, an empty hub invites a
   // post like the whole board does (before launch every hub is empty for the public).
   const emptyFiltered = filtered && !(data.heading && query.category && activeFilterCount(query) === 1);
-  const tomorrow = marketDayKey(new Date(new Date(`${data.today}T12:00:00Z`).getTime() + 86_400_000));
+  const tomorrow = dayKey(new Date(new Date(`${data.today}T12:00:00Z`).getTime() + 86_400_000));
 
   // The filters in effect, each a link that removes it.
   const priceLabel = (() => {
@@ -94,7 +93,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   // Grouped by day when asked (one list, in the order the sort gives).
   const dayGroups = query.group === 'day' && query.view === 'list' && !data.sections
     ? data.tasks.reduce<{ day: string; tasks: TaskPublicView[] }[]>((groups, task) => {
-        const day = marketDayKey(task.schedule.windowStart);
+        const day = dayKey(task.schedule.windowStart);
         const last = groups.at(-1);
         if (last && last.day === day) last.tasks.push(task);
         else groups.push({ day, tasks: [task] });

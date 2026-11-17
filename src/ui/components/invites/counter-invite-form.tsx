@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { counterInviteInputSchema, type ActionResult, type CounterInviteInput, type InviteView } from '@/contracts';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { MoneyInput } from '@/ui/components/forms/money-input';
 import { Button } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
@@ -23,6 +24,8 @@ export function CounterInviteForm({ invite, headingLevel, pending, result, onSub
 }) {
   const t = useTranslations('inviteCard.counter');
   const errors = useTranslations('forms.fieldErrors');
+  // The task's market clock, from the page (completion plan 8.1): typed and converted in it.
+  const { timeZone, zoneName } = useFormat();
   const id = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const Heading = headingLevel === 4 ? 'h4' : 'h3';
@@ -71,9 +74,9 @@ export function CounterInviteForm({ invite, headingLevel, pending, result, onSub
         <input type="checkbox" checked={start !== undefined} className="size-5 shrink-0 accent-primary" onChange={(event) => { setValue('start', event.target.checked ? invite.terms.start : undefined, { shouldDirty: true }); form.clearErrors('start'); form.clearErrors('pricing'); }} />
         {t('changeStart')}
       </label>
-      {start !== undefined && field('start', t('start'), t('startHint'), (fieldId, invalid) => <Controller name="start" control={control} render={({ field: value }) => <Input name={value.name} ref={value.ref} onBlur={value.onBlur} id={fieldId} type="datetime-local" defaultValue={`${marketDayKey(invite.terms.start)}T${marketClockTime(invite.terms.start)}`} aria-invalid={invalid} aria-describedby={`${fieldId}-hint ${fieldId}-error`} onChange={(event) => {
+      {start !== undefined && field('start', t('start', { zone: zoneName }), t('startHint', { zone: zoneName }), (fieldId, invalid) => <Controller name="start" control={control} render={({ field: value }) => <Input name={value.name} ref={value.ref} onBlur={value.onBlur} id={fieldId} type="datetime-local" defaultValue={`${marketDayKey(invite.terms.start, timeZone)}T${marketClockTime(invite.terms.start, timeZone)}`} aria-invalid={invalid} aria-describedby={`${fieldId}-hint ${fieldId}-error`} onChange={(event) => {
         const [date, time] = event.target.value.split('T');
-        try { value.onChange(date && time ? marketLocalToUtc(date, time) : ''); } catch { value.onChange(''); }
+        try { value.onChange(date && time ? marketLocalToUtc(date, time, timeZone) : ''); } catch { value.onChange(''); }
       }} />} />)}
       <div id={`${id}-change-error`} aria-live="polite">{formState.errors.pricing?.message && <FieldError>{pricing === undefined && start === undefined ? t('changeRequired') : errors.has(formState.errors.pricing.message) ? errors(formState.errors.pricing.message) : errors('invalid')}</FieldError>}</div>
       {field('message', t('message'), t('messageHint'), (fieldId, invalid) => <Textarea {...register('message')} id={fieldId} rows={4} maxLength={1000} aria-invalid={invalid} aria-describedby={`${fieldId}-hint ${fieldId}-error`} />)}

@@ -36,7 +36,7 @@ function ReviewLine({ label, children }: { label: string; children: ReactNode })
 
 /** The three visibility groups mirror the supplied posting contract. Amounts come from onQuote. */
 export function ReviewStep({ data, handlers, values, photos, selectedAddress }: ReviewStepProps) {
-  const { formatDate, formatTimeRange } = useFormat();
+  const { formatDate, formatTimeRange, timeZone } = useFormat();
   const t = useTranslations('postTask');
   const id = useId();
   const [attempt, setAttempt] = useState(0);
@@ -58,10 +58,10 @@ export function ReviewStep({ data, handlers, values, photos, selectedAddress }: 
   const category = data.categories.find((item) => item.slug === values.categorySlug);
   const local = values.location.mode === 'local' ? values.location : undefined;
   const address = local && selectedAddress?.placeId === local.placeId ? selectedAddress : undefined;
-  const date = values.schedule.date ? formatDate(marketLocalToUtc(values.schedule.date, '12:00')) : t('review.notSet');
+  const date = values.schedule.date ? formatDate(marketLocalToUtc(values.schedule.date, '12:00', timeZone)) : t('review.notSet');
   const { startTime, endTime } = values.schedule;
   const time = values.schedule.flexible ? t('review.flexible') : startTime && endTime && values.schedule.date
-    ? formatTimeRange(marketLocalToUtc(values.schedule.date, startTime), marketLocalToUtc(values.schedule.date, endTime))
+    ? formatTimeRange(marketLocalToUtc(values.schedule.date, startTime, timeZone), marketLocalToUtc(values.schedule.date, endTime, timeZone))
     : t('review.notSet');
   const visiblePhotos = values.photoIds.map((photoId) => photos.find((photo) => photo.id === photoId));
 

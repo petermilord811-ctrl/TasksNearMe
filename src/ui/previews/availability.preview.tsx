@@ -10,7 +10,7 @@ import feedback from '../../../messages/en/ui/feedback.json';
 const now = '2026-12-08T16:00:00.000Z';
 const shellHandlers: AppShellHandlers = { onModeChange: fakeHandler({ ok: true, code: 'updated' }), onSignOut: fakeHandler({ ok: true, code: 'updated' }) };
 const handlers: AvailabilityHandlers = { onCreate: fakeHandler({ ok: true, code: 'saved' }), onCancel: fakeHandler({ ok: true, code: 'canceled' }) };
-const values: AvailabilityPostInput = { categorySlug: yardPostActive.categorySlug, date: marketDayKey(yardPostActive.start), startTime: marketClockTime(yardPostActive.start), endTime: marketClockTime(yardPostActive.end), pricing: yardPostActive.pricing };
+const values: AvailabilityPostInput = { categorySlug: yardPostActive.categorySlug, date: marketDayKey(yardPostActive.start, 'America/Chicago'), startTime: marketClockTime(yardPostActive.start, 'America/Chicago'), endTime: marketClockTime(yardPostActive.end, 'America/Chicago'), pricing: yardPostActive.pricing };
 const fieldErrors: ActionResult = { ok: false, code: 'validation_failed', fieldErrors: { categorySlug: ['invalid'], date: ['out_of_range'], startTime: ['out_of_range'], endTime: ['out_of_range'] } };
 type Options = Omit<ComponentProps<typeof MyAvailabilityContent>, 'data' | 'now' | 'handlers'> & { handlers?: AvailabilityHandlers };
 

@@ -86,7 +86,7 @@ describe('InviteCard', () => {
     const user = userEvent.setup(); const { handlers } = mount();
     await user.click(screen.getByRole('button', { name: 'Counter' }));
     await user.click(screen.getByRole('checkbox', { name: 'Change the start' }));
-    const start = screen.getByLabelText('New start · Austin time');
+    const start = screen.getByLabelText('New start · Central Time');
     await user.clear(start); await user.type(start, '2026-12-12T11:00');
     await user.type(screen.getByRole('textbox', { name: 'Message to the client' }), 'I can arrive one hour later.');
     await user.click(screen.getByRole('button', { name: 'Send counter' }));

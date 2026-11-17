@@ -16,9 +16,9 @@
     "moneyHint": "Enter dollars and cents. Service fees are shown below.",
     "hoursCap": "Hours cap",
     "hoursHint": "The most hours included in the booking, up to 24.",
-    "start": "New start (Austin time)",
-    "startHint": "Choose a date and time in Austin's Central time zone.",
-    "windowHint": "Choose a start from {earliest} to {latest}, in Austin's Central time zone.",
+    "start": "New start ({zone})",
+    "startHint": "Choose a date and time ({zone}).",
+    "windowHint": "Choose a start from {earliest} to {latest} ({zone}).",
     "scope": "Task scope",
     "scopeHint": "Describe the full task with the proposed changes. Use 10–2,000 characters.",
     "expenses": "Expense allowance (USD)",
@@ -112,7 +112,7 @@
     "types": {
       "price": "Task price",
       "scope": "Task details",
-      "schedule": "Start (Central time)",
+      "schedule": "Start ({zone})",
       "hours_cap": "Hours cap",
       "expense_allowance": "Expense allowance"
     },

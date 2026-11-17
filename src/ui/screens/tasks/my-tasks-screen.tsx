@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { CalendarDays, ChevronRight, ClipboardCheck, Clock, CreditCard, Hammer, Inbox, Laptop, Leaf, Package, Plus, Sparkles, UserPlus, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CategorySlug, type ISODateTime, type MyTasksPageData, type OwnerTaskAttention, type OwnerTaskRow, type PricingInput } from '@/contracts';
-import { formatHours, formatMoney, marketDayKey } from '@/shared/format';
+import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
@@ -44,7 +44,7 @@ function usePriceLabel() {
 }
 
 export function TaskRow({ task, tab, now, headingLevel = 2 }: { task: OwnerTaskRow; tab: TaskTab; now: ISODateTime; headingLevel?: 2 | 3 }) {
-  const { formatDate, formatDateTime, formatRelative, formatTimeRange } = useFormat();
+  const { formatDate, formatDateTime, formatRelative, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('myTasks');
   const card = useTranslations('taskCard');
   const status = useTaskStatus(task.status);
@@ -54,7 +54,7 @@ export function TaskRow({ task, tab, now, headingLevel = 2 }: { task: OwnerTaskR
     ? t('bookedWith', { time: formatDateTime(task.booking.start), name: task.booking.helper.displayName })
     : task.schedule.flexible
       ? card('flexibleSchedule', { date: formatDate(task.schedule.windowStart) })
-      : marketDayKey(task.schedule.windowStart) === marketDayKey(task.schedule.windowEnd)
+      : dayKey(task.schedule.windowStart) === dayKey(task.schedule.windowEnd)
         ? card('scheduledWindow', { date: formatDate(task.schedule.windowStart), window: formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd) })
         : formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd);
   const href = tab === 'booked' && task.bookingId ? routes.app.booking(task.bookingId) : routes.app.task(task.id);
@@ -140,7 +140,8 @@ function NeedsYou({ rows, now }: { rows: OwnerTaskRow[]; now: ISODateTime }) {
  */
 export function MyTasksScreen({ data, now, initialTab = 'open' }: MyTasksScreenProps) {
   const t = useTranslations('myTasks');
-  const dayLabel = useDayLabel(marketDayKey(now));
+  const { dayKey } = useFormat();
+  const dayLabel = useDayLabel(dayKey(now));
   return <div className="mx-auto w-full max-w-content space-y-6">
     <PageHeader title={t('title')} description={t('description')}>
       {data.open.length > 0 && <Link href={routes.app.newTask()} className={buttonVariants()}><Plus aria-hidden="true" />{t('postTask')}</Link>}
@@ -154,7 +155,7 @@ export function MyTasksScreen({ data, now, initialTab = 'open' }: MyTasksScreenP
         {data[tab].length === 0
           ? <EmptyState title={t(`empty.${tab}.title`)} body={t(`empty.${tab}.body`)} action={{ label: t('postTask'), href: routes.app.newTask() }} />
           : tab === 'booked'
-            ? <div className="space-y-6">{groupByDay(data.booked, (task) => task.booking?.start ?? task.schedule.windowStart).map((group) => <section key={group.day} aria-labelledby={`booked-${group.day}`} className="space-y-3">
+            ? <div className="space-y-6">{groupByDay(data.booked, (task) => task.booking?.start ?? task.schedule.windowStart, dayKey).map((group) => <section key={group.day} aria-labelledby={`booked-${group.day}`} className="space-y-3">
                 <h2 id={`booked-${group.day}`} className="text-sm font-semibold text-muted-foreground">{dayLabel(group.day)}</h2>
                 <ul className="space-y-4">{group.items.map((task) => <li key={task.id}><TaskRow task={task} tab={tab} now={now} headingLevel={3} /></li>)}</ul>
               </section>)}</div>

@@ -68,7 +68,7 @@ export function ChangeReviewContent({ data, handlers, now, initialResult, initia
 }
 
 function Terms({ terms, types, proposed }: { terms: ChangeTermsView; types: ProposableChangeType[]; proposed: boolean }) {
-  const { formatDateTime } = useFormat();
+  const { formatDateTime, zoneName } = useFormat();
   const t = useTranslations('changes.review');
   const rows: { type: ProposableChangeType; value: string }[] = [
     { type: 'price', value: terms.pricing.type === 'fixed' ? formatMoney(terms.pricing.priceCents) : t('hourlyRate', { amount: formatMoney(terms.pricing.rateCents) }) },
@@ -82,7 +82,7 @@ function Terms({ terms, types, proposed }: { terms: ChangeTermsView; types: Prop
     <dl className="space-y-4">
       {rows.map(({ type, value }) => <div key={type} className={cn('min-w-0 space-y-1', types.includes(type) && '-ml-3 rounded-r-xl border-l-2 border-primary bg-primary/[0.035] py-1 pl-3 pr-2')}>
         <dt className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          {t(`types.${type}`)}
+          {t(`types.${type}`, { zone: zoneName })}
           {types.includes(type) && <span className="rounded-full bg-badge-brand px-2 py-0.5 text-xs font-medium text-badge-brand-foreground">{t('changed')}</span>}
         </dt>
         <dd className={cn('whitespace-pre-wrap break-words text-sm leading-6', type !== 'scope' && 'tabular-nums')}>{value}</dd>
