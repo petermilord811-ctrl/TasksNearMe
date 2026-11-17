@@ -41,7 +41,7 @@ const taylor = { id: 'usr_taylor', roles: ['trust_safety' as const] };
 const alex = { id: 'usr_alex', roles: ['support_agent' as const] };
 const morgan = { id: 'usr_morgan', roles: ['support_lead' as const] };
 const riley = { id: 'usr_riley', roles: ['admin' as const] };
-const PEOPLE = ['usr_vt_address', 'usr_vt_identity', 'usr_vt_background'];
+const PEOPLE = ['usr_vt_address', 'usr_vt_identity', 'usr_vt_background', 'usr_vt_bg_where'];
 const param = (url: string, key: string) => new URL(url, 'http://localhost').searchParams.get(key) ?? '';
 const t0 = new Date('2026-11-20T16:00:00.000Z');
 const at = (days: number) => new Date(t0.getTime() + days * DAY);
@@ -289,6 +289,29 @@ describe('background checks', () => {
     expect(first.ok).toBe(true);
     await runVerificationTimers(db, { storage, providers }, at(8), { userIds: PEOPLE });
     expect((await loadOnboardingState(db, id, at(8))).background).toMatchObject({ status: 'expired', canStart: true });
+  });
+
+  it("tells the provider where the helper works: their neighborhood's market, or while they wait, their home ZIP", async () => {
+    const where = 'usr_vt_bg_where';
+    await helper(where, { identity: true, payout: true, inHome: true });
+    const seen: unknown[] = [];
+    const recording = {
+      ...providers,
+      background: { ...providers.background, start: async (person: Parameters<typeof providers.background.start>[0]) => (seen.push(person.workLocation), providers.background.start(person)) },
+    };
+    expect((await startBackgroundCheck(db, recording, where, at(0), { acknowledged: true })).ok).toBe(true);
+    // Waiting for their city in Florida (a ZIP instead of a neighborhood): Florida's rules, not Austin's.
+    await db.update(helperProfiles).set({ areaId: null, homeZip: '32601', homeCity: 'Gainesville', homeState: 'FL' }).where(eq(helperProfiles.userId, where));
+    await runVerificationTimers(db, { storage, providers }, at(8), { userIds: [where] });
+    expect((await startBackgroundCheck(db, recording, where, at(9), { acknowledged: true })).ok).toBe(true);
+    // Neither a neighborhood nor a ZIP: no check without knowing where.
+    await runVerificationTimers(db, { storage, providers }, at(17), { userIds: [where] });
+    await db.update(helperProfiles).set({ homeZip: null, homeCity: null, homeState: null }).where(eq(helperProfiles.userId, where));
+    expect(await startBackgroundCheck(db, recording, where, at(18), { acknowledged: true })).toEqual({ ok: false, code: 'not_allowed' });
+    expect(seen).toEqual([
+      { state: 'TX', city: 'Austin' },
+      { state: 'FL', city: 'Gainesville' },
+    ]);
   });
 
   it('adjudicates a consider result: pre-adverse, then final only after the dispute window', async () => {

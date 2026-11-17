@@ -16,8 +16,11 @@ export type CheckrStatus = 'pending' | 'clear' | 'consider' | 'suspended' | 'can
 
 export interface Checkr {
   readonly provider: 'checkr';
-  /** A candidate and an invitation; the candidate's id is the check's reference (webhooks carry it). */
-  start(person: { userId: string; email: string; firstName: string; lastName: string }): Promise<{ ref: string; url: string }>;
+  /**
+   * A candidate and an invitation; the candidate's id is the check's reference (webhooks carry it). Both carry where
+   * the person works (`work_locations`), from which Checkr applies the state's and city's rules, so there's no default.
+   */
+  start(person: { userId: string; email: string; firstName: string; lastName: string; workLocation: { state: string; city: string | null } }): Promise<{ ref: string; url: string }>;
   /** The pre-adverse notice for the latest report, with every adverse item; Checkr sends the final notice 7 days later. Returns its id. */
   preAdverseAction(ref: string): Promise<string>;
   /** Checkr sends the final notice on its schedule: nothing to do. */
@@ -26,9 +29,8 @@ export interface Checkr {
   cancelAdverseAction(adverseActionId: string): Promise<void>;
 }
 
-export function createCheckr(config: { apiKey: string; packageSlug: string; workLocation?: { country: string; state: string; city: string }; fetch?: typeof fetch; now?: () => Date }): Checkr {
+export function createCheckr(config: { apiKey: string; packageSlug: string; fetch?: typeof fetch; now?: () => Date }): Checkr {
   const doFetch = config.fetch ?? fetch;
-  const workLocations = [config.workLocation ?? { country: 'US', state: 'TX', city: 'Austin' }];
   const auth = `Basic ${Buffer.from(`${config.apiKey}:`).toString('base64')}`;
   async function call(method: 'GET' | 'POST' | 'DELETE', path: string, body?: unknown) {
     const response = await doFetch(`${API}${path}`, {
@@ -43,6 +45,8 @@ export function createCheckr(config: { apiKey: string; packageSlug: string; work
   return {
     provider: 'checkr',
     async start(person) {
+      const { state, city } = person.workLocation;
+      const workLocations = [{ country: 'US', state, ...(city ? { city } : {}) }];
       const candidate = await call('POST', '/candidates', { email: person.email, first_name: person.firstName, last_name: person.lastName, custom_id: person.userId, work_locations: workLocations });
       if (typeof candidate.id !== 'string') throw new Error('Checkr made no candidate');
       const invitation = await call('POST', '/invitations', { candidate_id: candidate.id, package: config.packageSlug, work_locations: workLocations });

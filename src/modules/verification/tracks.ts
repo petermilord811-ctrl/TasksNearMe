@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { ActionResult, BackgroundCheckStatus, IdentityFailureReason, PayoutAccountStatus } from '@/contracts';
 import { recordAgreement, type RequestOrigin } from '@/modules/accounts/agreements';
 import { users } from '@/modules/accounts/schema';
+import { areas, markets } from '@/modules/markets/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { fieldError } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -12,6 +13,7 @@ import type { VerificationProviders } from './providers';
 import { backgroundChecks, identityVerifications, payoutAccounts } from './schema';
 import { BACKGROUND_RULES, namesMatch, normalizeName } from './standing';
 import { emitVerificationEvent, loadOnboardingState, syncHelperProfile } from './state';
+import { workLocationFor, type WorkLocation } from './work-location';
 
 /**
  * Starting the hosted checks and recording their results (blueprint 06 §1). Results come by webhook
@@ -216,8 +218,9 @@ export async function startBackgroundCheck(
     await recordAgreement(db, userId, 'bg_check_disclosure', options.origin ?? {}, now);
   }
   const [person] = await db.select({ email: users.email, firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, userId)).limit(1);
-  if (!person) return { ok: false, code: 'not_allowed' };
-  const { ref, url } = await providers.background.start({ userId, ...person });
+  const workLocation = await helperWorkLocation(db, userId);
+  if (!person || !workLocation) return { ok: false, code: 'not_allowed' };
+  const { ref, url } = await providers.background.start({ userId, ...person, workLocation });
   await db.insert(backgroundChecks).values({
     id: newId('bgc'),
     userId,
@@ -230,6 +233,20 @@ export async function startBackgroundCheck(
   });
   await audit(db, 'background.invited', userId);
   return { ok: true, code: 'updated', redirectTo: url };
+}
+
+/** Where the helper works, for the check's state and local rules (work-location.ts). */
+async function helperWorkLocation(db: Pick<Db, 'select'>, userId: string): Promise<WorkLocation | null> {
+  const [row] = await db
+    .select({ areaId: helperProfiles.areaId, homeZip: helperProfiles.homeZip, homeCity: helperProfiles.homeCity, homeState: helperProfiles.homeState, marketName: markets.name, marketState: markets.state })
+    .from(helperProfiles)
+    .leftJoin(areas, eq(areas.id, helperProfiles.areaId))
+    .leftJoin(markets, eq(markets.id, areas.marketId))
+    .where(eq(helperProfiles.userId, userId))
+    .limit(1);
+  if (!row) return null;
+  const market = row.marketName && row.marketState ? { name: row.marketName, state: row.marketState } : null;
+  return workLocationFor({ ...row, market });
 }
 
 export type BackgroundResult = Extract<BackgroundCheckStatus, 'pending' | 'clear' | 'consider' | 'suspended' | 'canceled'>;

@@ -5,17 +5,24 @@ import { checkrFromEnv, createCheckr, parseCheckrEvent, verifyCheckrSignature } 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 describe('Checkr', () => {
-  it('makes a candidate and an invitation for Austin work, and returns the hosted invitation', async () => {
+  it('makes a candidate and an invitation for where the person works, and returns the hosted invitation', async () => {
     const fetcher = vi.fn(async (url: string, _init?: RequestInit) => (url.endsWith('/candidates') ? json({ id: 'cand_1' }) : json({ id: 'inv_1', invitation_url: 'https://apply.checkr.com/invite/abc', status: 'pending' })));
     const checkr = createCheckr({ apiKey: 'key_test', packageSlug: 'tasker_standard', fetch: fetcher as unknown as typeof fetch });
-    expect(await checkr.start({ userId: 'usr_jordan', email: 'jordan@example.test', firstName: 'Jordan', lastName: 'Thompson' })).toEqual({ ref: 'cand_1', url: 'https://apply.checkr.com/invite/abc' });
+    expect(await checkr.start({ userId: 'usr_jordan', email: 'jordan@example.test', firstName: 'Jordan', lastName: 'Thompson', workLocation: { state: 'FL', city: 'Gainesville' } })).toEqual({ ref: 'cand_1', url: 'https://apply.checkr.com/invite/abc' });
     const [[candidateUrl, candidateInit], [invitationUrl, invitationInit]] = fetcher.mock.calls as [string, RequestInit][];
     expect(candidateUrl).toBe('https://api.checkr.com/v1/candidates');
     expect(candidateInit.headers).toMatchObject({ Authorization: `Basic ${Buffer.from('key_test:').toString('base64')}`, 'Content-Type': 'application/json' });
-    const location = [{ country: 'US', state: 'TX', city: 'Austin' }];
+    const location = [{ country: 'US', state: 'FL', city: 'Gainesville' }];
     expect(JSON.parse(String(candidateInit.body))).toEqual({ email: 'jordan@example.test', first_name: 'Jordan', last_name: 'Thompson', custom_id: 'usr_jordan', work_locations: location });
     expect(invitationUrl).toBe('https://api.checkr.com/v1/invitations');
     expect(JSON.parse(String(invitationInit.body))).toEqual({ candidate_id: 'cand_1', package: 'tasker_standard', work_locations: location });
+  });
+
+  it('leaves the city out when only the state is known', async () => {
+    const fetcher = vi.fn(async (url: string, _init?: RequestInit) => (url.endsWith('/candidates') ? json({ id: 'cand_2' }) : json({ id: 'inv_2', invitation_url: 'https://apply.checkr.com/invite/def' })));
+    const checkr = createCheckr({ apiKey: 'key_test', packageSlug: 'tasker_standard', fetch: fetcher as unknown as typeof fetch });
+    await checkr.start({ userId: 'usr_sam', email: 'sam@example.test', firstName: 'Sam', lastName: 'Kim', workLocation: { state: 'WA', city: null } });
+    for (const [, init] of fetcher.mock.calls as [string, RequestInit][]) expect(JSON.parse(String(init.body)).work_locations).toEqual([{ country: 'US', state: 'WA' }]);
   });
 
   it('sends the pre-adverse notice on the latest report with every adverse item, and can cancel the final one', async () => {

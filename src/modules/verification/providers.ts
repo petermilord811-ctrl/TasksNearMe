@@ -5,6 +5,7 @@ import { personaIdentityFromEnv } from '@/integrations/persona';
 import { stripeIdentityFromEnv } from '@/integrations/stripe-identity';
 import { newId } from '@/platform/db/ids';
 import { devHelpersOn } from '@/shared/dev-helpers';
+import type { WorkLocation } from './work-location';
 
 /**
  * The hosted verification providers (blueprint 06 §1): the ID check's double check (stage 2, after our
@@ -34,8 +35,11 @@ export interface VerificationProviders {
   };
   background: {
     readonly provider: string;
-    /** Creates the candidate and invitation (the person gives SSN, birth date and consent on the provider's page). */
-    start(person: { userId: string; email: string; firstName: string; lastName: string }): Promise<{ ref: string; url: string }>;
+    /**
+     * Creates the candidate and invitation (the person gives SSN, birth date and consent on the provider's page), for
+     * work where the helper works (work-location.ts): the provider applies that state's and city's rules.
+     */
+    start(person: { userId: string; email: string; firstName: string; lastName: string; workLocation: WorkLocation }): Promise<{ ref: string; url: string }>;
     /** Sends the pre-adverse action notice (with a copy of the report and the summary of rights); returns its id when the provider has one. */
     preAdverseAction(ref: string): Promise<string | void>;
     /** Sends the final adverse action notice, after the dispute window (Checkr does it on its own schedule). */
