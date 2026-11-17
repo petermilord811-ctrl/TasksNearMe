@@ -311,10 +311,16 @@ function addDayKey(dayKey: string, days: number): string {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
-const at = (dayKey: string, time: string) => new Date(marketLocalToUtc(dayKey, time));
+/**
+ * The demo markets' clock (completion plan 8.1): every demo market is in Central time today (./markets.ts, write.ts),
+ * so the plan's days and times are on it. Moving the demo to another market changes this with the markets' rows.
+ */
+export const DEMO_TIME_ZONE = 'America/Chicago';
+
+const at = (dayKey: string, time: string) => new Date(marketLocalToUtc(dayKey, time, DEMO_TIME_ZONE));
 
 function clockLabel(date: Date): string {
-  const [h, m] = marketClockTime(date).split(':').map(Number) as [number, number];
+  const [h, m] = marketClockTime(date, DEMO_TIME_ZONE).split(':').map(Number) as [number, number];
   const suffix = h < 12 ? 'AM' : 'PM';
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${suffix}`;
 }
@@ -443,9 +449,9 @@ function uniqueName(rng: Rng, names: Set<string>): [string, string] {
 
 export function buildDemoPlan(input: { now: Date; policies: DemoPolicies }): DemoPlan {
   const { now, policies } = input;
-  const today = marketDayKey(now);
+  const today = marketDayKey(now, DEMO_TIME_ZONE);
   const nowMs = now.getTime();
-  const localHour = Number(marketClockTime(now).slice(0, 2));
+  const localHour = Number(marketClockTime(now, DEMO_TIME_ZONE).slice(0, 2));
 
   const people: SeedPerson[] = [];
   const clientsOut: DemoPlan['clients'] = [];

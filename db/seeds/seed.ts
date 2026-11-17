@@ -269,13 +269,14 @@ async function seedTasks(tx: Tx): Promise<void> {
   if (!key) throw new Error('FIELD_ENCRYPTION_KEY is not set (see .env.example).');
   const cipher = createFieldCipher(key);
   const now = new Date();
-  const today = marketDayKey(now);
+  // The seed's tasks are Austin's: their windows are on Austin's clock (completion plan 8.1).
+  const today = marketDayKey(now, AUSTIN.timeZone);
   const areaRows = await tx.select().from(areas);
 
   for (const seed of SEED_TASKS) {
     const date = addDays(today, seed.daysFromToday);
-    const windowStart = new Date(marketLocalToUtc(date, seed.start ?? '00:00'));
-    const windowEnd = new Date(marketLocalToUtc(date, seed.end ?? '23:59'));
+    const windowStart = new Date(marketLocalToUtc(date, seed.start ?? '00:00', AUSTIN.timeZone));
+    const windowEnd = new Date(marketLocalToUtc(date, seed.end ?? '23:59', AUSTIN.timeZone));
     const place = seed.placeId ? FAKE_PLACES.find((p) => p.placeId === seed.placeId) : undefined;
     if (seed.placeId && !place) throw new Error(`Unknown seed place ${seed.placeId}`);
     const area = place ? nearestArea(areaRows, place) : null;
@@ -718,14 +719,14 @@ async function seedSupport(tx: Tx): Promise<void> {
 
 /** Jordan's open Saturday-style yard slot, 10 days out (the availability e2e requests it for Ben's leaves). */
 async function seedAvailability(tx: Tx): Promise<void> {
-  const date = addDays(marketDayKey(new Date()), 10);
+  const date = addDays(marketDayKey(new Date(), AUSTIN.timeZone), 10);
   await tx.insert(availabilityPosts).values({
     id: 'avl_seed_yard',
     helperUserId: 'usr_jordan',
     marketId: 'mkt_austin',
     categoryId: 'cat_yard_cleanup',
-    startAt: new Date(marketLocalToUtc(date, '09:00')),
-    endAt: new Date(marketLocalToUtc(date, '13:00')),
+    startAt: new Date(marketLocalToUtc(date, '09:00', AUSTIN.timeZone)),
+    endAt: new Date(marketLocalToUtc(date, '13:00', AUSTIN.timeZone)),
     pricingType: 'hourly',
     hourlyRateCents: 3000,
     estimatedHours: 3,

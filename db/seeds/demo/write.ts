@@ -28,7 +28,7 @@ import { cacheTagInvalidations } from '../../../src/platform/cache/schema';
 import { seedVerification, upsertPeople, type Tx } from '../seed';
 import { AUSTIN, CATEGORIES } from '../data/austin';
 import { DEMO_MARKETS, demoAreaId, demoMarketId, demoPolicyId } from './markets';
-import { buildDemoPlan, DEMO_PREFIX, type DemoPlan, type DemoPolicies } from './plan';
+import { buildDemoPlan, DEMO_PREFIX, DEMO_TIME_ZONE, type DemoPlan, type DemoPolicies } from './plan';
 import { buildDemoCommunity, buildDemoQuestions, type DemoCommunity, type DemoTaskQuestion } from './community';
 import { taskQuestions } from '../../../src/modules/questions/schema';
 
@@ -46,7 +46,7 @@ export async function writeDemoMarkets(tx: Tx): Promise<void> {
     const id = demoMarketId(market);
     // The ZIP3 prefixes its neighborhoods sit in (national, cities open in turn): a ZIP there reads as this city.
     const zipPrefixes = [...new Set(market.areas.map((area) => area.zip.slice(0, 3)))];
-    const place = { name: market.name, state: market.state, timeZone: 'America/Chicago', centerLat: market.lat, centerLng: market.lng, serviceRadiusKm: market.serviceRadiusKm, zipPrefixes };
+    const place = { name: market.name, state: market.state, timeZone: DEMO_TIME_ZONE, centerLat: market.lat, centerLng: market.lng, serviceRadiusKm: market.serviceRadiusKm, zipPrefixes };
     await tx.insert(markets).values({ id, slug: market.slug, currency: 'USD', status: 'prelaunch', ...place }).onConflictDoUpdate({ target: markets.id, set: place });
     for (const area of market.areas) {
       const row = { id: demoAreaId(market, area), marketId: id, slug: area.slug, name: area.name, centerLat: area.lat, centerLng: area.lng };
