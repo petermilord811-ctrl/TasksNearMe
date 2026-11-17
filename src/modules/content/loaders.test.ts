@@ -111,15 +111,19 @@ describe('legal content', () => {
 describe('city guides (content/local)', () => {
   const words = (blocks: ContentBlock[]) =>
     JSON.stringify(blocks).replace(/"(type|content|items|text|href|ordered|tone|strong)":/g, ' ').split(/\s+/).filter((word) => /\p{L}/u.test(word)).length;
-  const guides = fs.readdirSync('content/local/austin').filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3));
+  // Every city with guides: Austin, and Gainesville, the first city (owner, 2026-11-17).
+  const cities = fs.readdirSync('content/local').filter((dir) => dir !== 'es' && fs.statSync(`content/local/${dir}`).isDirectory());
+  const guidesOf = (city: string) => fs.readdirSync(`content/local/${city}`).filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3));
+  const guides = cities.flatMap((city) => guidesOf(city).map((slug) => [city, slug] as const));
 
-  it('covers every category in Austin', () => {
-    expect([...guides].sort()).toEqual([...CATEGORY_SLUGS].sort());
+  it.each(['austin', 'gainesville'])('covers every category in %s', (city) => {
+    expect(cities).toContain(city);
+    expect([...guidesOf(city)].sort()).toEqual([...CATEGORY_SLUGS].sort());
   });
 
-  it.each(guides)('%s exists in English and Spanish, with substance, and links only to https or this site', (slug) => {
+  it.each(guides)('%s/%s exists in English and Spanish, with substance, and links only to https or this site', (city, slug) => {
     for (const locale of ['en', 'es'] as const) {
-      const blocks = getLocalGuide('austin', slug, locale);
+      const blocks = getLocalGuide(city, slug, locale);
       expect(blocks, `${locale} ${slug}`).not.toBeNull();
       expect(words(blocks!), `${locale} ${slug}`).toBeGreaterThan(150);
       for (const href of hrefs(blocks!)) expect(href.startsWith('https://') || isKnownInternalLink(href), href).toBe(true);
