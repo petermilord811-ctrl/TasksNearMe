@@ -53,9 +53,39 @@ export const users = pgTable(
     lastActiveAt: timestamp('last_active_at', { withTimezone: true }),
     /** "Show when I'm active" on the account page; on by default, off hides their activity from everyone. */
     showActivity: boolean('show_activity').notNull().default(true),
+    /**
+     * Since when the account's sign-in details are held (completion plan 5.23): someone used the "Not you?" link
+     * in a contact change notice. Until trust and safety or an admin clears it on the person page, the email and
+     * phone can't change and no passkey or Google or Microsoft sign-in can be added. Signing in still works.
+     */
+    contactHoldAt: timestamp('contact_hold_at', { withTimezone: true }),
   },
   // One account per verified phone number (NULLs don't collide).
   (t) => [uniqueIndex('users_phone_idx').on(t.phone)],
+);
+
+/**
+ * The "Not you?" link in an email or phone change notice (completion plan 5.23): one row per change, sent to the
+ * old address or number. Only the row's id travels, signed with HMAC (contact-revert-token.ts); the row holds the
+ * link's expiry and its single use. `previousValue` (the old address, or the old number in E.164) and `newValue`
+ * let the change be undone. Both are cleared once the link is used or expires (the hourly sweep in
+ * privacy/retention.ts), and deleting the account removes the rows.
+ */
+export const contactChangeReverts = pgTable(
+  'contact_change_reverts',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(), // email | phone
+    previousValue: text('previous_value'),
+    newValue: text('new_value'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+  },
+  (t) => [index('contact_change_reverts_user_idx').on(t.userId, t.kind, t.createdAt)],
 );
 
 export const sessions = pgTable(
