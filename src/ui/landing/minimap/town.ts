@@ -91,6 +91,7 @@ import {
 import { DARK_PALETTE, LIGHT_PALETTE, paintColor, type ColorKey, type PaintRef, type TownPalette } from './town-palette';
 
 export { DARK_PALETTE, LIGHT_PALETTE, type TownPalette };
+export { townPalette, type TownScheme } from './town-seasons';
 
 /**
  * The hero's 3D mini-map (three.js): the town from `scene.ts` as a lit model on the page, with soft sun

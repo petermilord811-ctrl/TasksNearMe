@@ -6,14 +6,14 @@ import { SEASONS, seasonAt } from './seasons';
 
 describe('the assistant’s seasons', () => {
   it('reads the month on Austin’s calendar', () => {
-    expect(seasonAt('2026-11-17T15:00:00.000Z')).toBe('fall');
+    expect(seasonAt('2026-11-17T15:00:00.000Z', 'America/Chicago')).toBe('fall');
     // 11:30 pm on November 30 in Austin, already December 1 in UTC.
-    expect(seasonAt('2026-12-01T05:30:00.000Z')).toBe('fall');
-    expect(seasonAt('2026-12-01T06:30:00.000Z')).toBe('winter');
-    expect(seasonAt('2027-02-28T18:00:00.000Z')).toBe('winter');
-    expect(seasonAt('2027-03-01T18:00:00.000Z')).toBe('spring');
-    expect(seasonAt('2027-06-15T18:00:00.000Z')).toBe('summer');
-    expect(seasonAt('2027-09-01T18:00:00.000Z')).toBe('fall');
+    expect(seasonAt('2026-12-01T05:30:00.000Z', 'America/Chicago')).toBe('fall');
+    expect(seasonAt('2026-12-01T06:30:00.000Z', 'America/Chicago')).toBe('winter');
+    expect(seasonAt('2027-02-28T18:00:00.000Z', 'America/Chicago')).toBe('winter');
+    expect(seasonAt('2027-03-01T18:00:00.000Z', 'America/Chicago')).toBe('spring');
+    expect(seasonAt('2027-06-15T18:00:00.000Z', 'America/Chicago')).toBe('summer');
+    expect(seasonAt('2027-09-01T18:00:00.000Z', 'America/Chicago')).toBe('fall');
   });
 
   it('has an example per season and kind of help that reads as that kind, as a request and as a skill', () => {

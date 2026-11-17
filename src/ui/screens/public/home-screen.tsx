@@ -1,9 +1,11 @@
 ﻿import type { CategorySlug, HomePageData, ISODateTime } from '@/contracts';
 import type { LatLng } from '@/shared/geo';
+import { seasonAt, type Season } from '@/shared/seasons';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { Hero } from '@/ui/landing/hero';
 import { LandingProvider } from '@/ui/landing/landing-state';
 import { MapSection } from '@/ui/landing/map-section';
+import { SeasonProvider } from '@/ui/landing/season';
 import type { MapMode } from '@/ui/landing/map/task-map';
 import { CategoriesSection, ClosingSection, CoverageSection, FaqSection, HelpersSection, PricingSection, StepsSection, TrustSection } from '@/ui/landing/sections';
 import { MotionRoot } from '@/ui/motion';
@@ -16,33 +18,44 @@ export interface HomeScreenProps {
   /** Previews: a visitor who already shared a location, or picked a category. */
   initialLocation?: LatLng;
   initialCategory?: CategorySlug;
+  /** The season to dress for: a `?season=` link (to see another season's look) and previews. Otherwise the
+   * market's own, on its calendar at `now`. */
+  season?: Season;
 }
 
 /**
  * The landing page (UI-036): one shared state so the hero canvas, the floating cards, the categories, the
  * map and its list respond to each other; scroll reveals switched on by `MotionRoot`.
+ *
+ * It dresses for the season (`data-season`, globals.css "Seasons"): late fall now, snow from December, blossoms
+ * in spring, full green in summer. The hero's town, sky and weather, the map's parks and water, and the closing
+ * card follow it, and the task assistant's examples are the season's. The brand, the words and the data don't
+ * change.
  */
-export function HomeScreen({ data, now, mapMode = 'interactive', initialLocation, initialCategory }: HomeScreenProps) {
+export function HomeScreen({ data, now, mapMode = 'interactive', initialLocation, initialCategory, season: chosen }: HomeScreenProps) {
+  const season = chosen ?? seasonAt(now, data.market.timeZone);
   return (
-    <LandingProvider initialLocation={initialLocation} initialCategory={initialCategory}>
-      <MotionRoot />
-      {/* One paper under the whole page (a faint marble), so no section starts or stops a background. */}
-      <div className="paper">
-        {/* On wide screens the hero stays pinned while the map slides up over it like a sheet. */}
-        <div className="relative">
-          <Hero data={data} mode={mapMode} now={now} />
-          <MapSection data={data} mapMode={mapMode} />
+    <SeasonProvider season={season}>
+      <LandingProvider initialLocation={initialLocation} initialCategory={initialCategory}>
+        <MotionRoot />
+        {/* One paper under the whole page (a faint marble), so no section starts or stops a background. */}
+        <div className="paper" data-season={season}>
+          {/* On wide screens the hero stays pinned while the map slides up over it like a sheet. */}
+          <div className="relative">
+            <Hero data={data} mode={mapMode} now={now} season={season} />
+            <MapSection data={data} mapMode={mapMode} />
+          </div>
+          <CategoriesSection data={data} />
+          <StepsSection />
+          <PricingSection data={data} />
+          <TrustSection />
+          <HelpersSection data={data} />
+          <CoverageSection data={data} />
+          <FaqSection />
+          <ClosingSection data={data} season={season} />
         </div>
-        <CategoriesSection data={data} />
-        <StepsSection />
-        <PricingSection data={data} />
-        <TrustSection />
-        <HelpersSection data={data} />
-        <CoverageSection data={data} />
-        <FaqSection />
-        <ClosingSection data={data} />
-      </div>
-    </LandingProvider>
+      </LandingProvider>
+    </SeasonProvider>
   );
 }
 

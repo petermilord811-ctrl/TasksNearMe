@@ -1,13 +1,15 @@
 'use client';
 
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode, type SyntheticEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { BadgeCheck, MapPin, Pause, Play, Star } from 'lucide-react';
 import { routes, type HelperSummary, type TaskPublicView } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
+import type { Season } from '@/shared/seasons';
+import { setHeroPaused, useHeroPaused } from '../hero-pause';
 import { clearHeroReady, markHeroReady } from '../hero-ready';
 import { MAP_SECTION_ID, useOptionalLanding } from '../landing-state';
 import { BUILD_UP } from './build-up';
@@ -18,10 +20,8 @@ import type { TownController, TownView } from './town';
 
 export type TownMode = 'interactive' | 'static';
 
-const PAUSE_KEY = 'tnm-town-paused';
 /** On the wide stage, the hero's words must end by this fraction of its height (the plates' tallest things start below). */
 const WORDS_FIT = 0.76;
-const PAUSE_EVENT = 'tnm-town-paused';
 const CARD = { width: 240, height: 98 };
 /** Wide screens get the town beside the headline; narrower ones get the band under it (the hero's `lg`). */
 const WIDE_QUERY = '(min-width: 1024px)';
@@ -38,27 +38,6 @@ const STILL_FADE = 750;
 const CARD_STAGGER = 90;
 /** A card stays pointed at for a moment after the pointer slips off it (no flicker at its edges). */
 const HOVER_GRACE = 140;
-
-/** The visitor's pause choice for this visit (sessionStorage), as an external store. */
-function readPaused(): boolean {
-  try {
-    return window.sessionStorage.getItem(PAUSE_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-function subscribePaused(onChange: () => void) {
-  window.addEventListener(PAUSE_EVENT, onChange);
-  return () => window.removeEventListener(PAUSE_EVENT, onChange);
-}
-function writePaused(value: boolean) {
-  try {
-    window.sessionStorage.setItem(PAUSE_KEY, value ? '1' : '0');
-  } catch {
-    /* storage blocked */
-  }
-  window.dispatchEvent(new Event(PAUSE_EVENT));
-}
 
 /** Which layout the screen shows now (the server renders both; CSS shows the right one before this runs). */
 function useTownLayout(): TownLayout {
@@ -192,6 +171,8 @@ export function TownStage({
   tasks,
   helper,
   mode,
+  season,
+  weather = false,
   skeleton,
   className,
   stageClassName,
@@ -200,6 +181,10 @@ export function TownStage({
   tasks: TaskPublicView[];
   helper?: HelperSummary;
   mode: TownMode;
+  /** The season the town is dressed for (its trees, lawns, water and light; its still picture). */
+  season: Season;
+  /** The season's weather moves over the town (SeasonWeather): the Pause button shows from the start, for both. */
+  weather?: boolean;
   /** The town's skeleton (`TownSkeleton`, rendered on the server), shown until the live town takes over. */
   skeleton?: ReactNode;
   className?: string;
@@ -210,8 +195,14 @@ export function TownStage({
   const tMap = useTranslations('landing.map');
   const landing = useOptionalLanding();
   const reduced = usePrefersReducedMotion();
-  const paused = useSyncExternalStore(subscribePaused, readPaused, () => false);
+  const paused = useHeroPaused();
   const layout = useTownLayout();
+  // The town is built once per layout; a new season repaints it (below) rather than building it again.
+  const seasonRef = useRef(season);
+  const paintedFor = useRef(season);
+  useEffect(() => {
+    seasonRef.current = season;
+  }, [season]);
   const windowRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -234,6 +225,8 @@ export function TownStage({
   /** The still picture has loaded (it fades in over the skeleton), and then the skeleton is gone. */
   const [stillReady, setStillReady] = useState(mode === 'static');
   const [stillDone, setStillDone] = useState(mode === 'static');
+  /** The still picture couldn't load (missing, offline): the skeleton stays, with the pins and cards on it. */
+  const [stillBroken, setStillBroken] = useState(false);
   const [onScreen, setOnScreen] = useState(true);
   const [hidden, setHidden] = useState(false);
   const [covered, setCovered] = useState(false);
@@ -245,8 +238,8 @@ export function TownStage({
   const town = built !== null && built.layout === layout ? built.town : null;
   const shown = town !== null && shownIn === layout;
   const live = shown;
-  const skeletonFading = shown || (failed && stillReady);
-  const skeletonGone = failed ? stillDone : shown && revealedIn === layout;
+  const skeletonFading = shown || (failed && stillReady && !stillBroken);
+  const skeletonGone = failed ? stillDone && !stillBroken : shown && revealedIn === layout;
   const cardsShown = (drawn: TownLayout) => (failed ? stillReady : cardsIn === drawn);
   const pinsKey = pins.map((pin) => `${pin.slotId}:${pin.task.id}:${pin.task.categorySlug}`).join('|');
 
@@ -274,13 +267,14 @@ export function TownStage({
         return;
       }
       try {
-        const [model, { createTown, DARK_PALETTE, LIGHT_PALETTE }] = await Promise.all([worker ? worker.scene : Promise.resolve(null), code]);
+        const [model, { createTown, townPalette }] = await Promise.all([worker ? worker.scene : Promise.resolve(null), code]);
         if (controller.signal.aborted) return;
         const measured = measureView(view, stage);
         viewRef.current = measured;
         const dark = darkAt(stage);
+        paintedFor.current = seasonRef.current;
         const next = await createTown(canvas, {
-          palette: dark ? DARK_PALETTE : LIGHT_PALETTE,
+          palette: townPalette(dark ? 'dark' : 'light', paintedFor.current),
           shadowSize: coarse ? 1024 : 2048,
           layout,
           // It grows out of its skeleton (unless motion is reduced or it's paused: then it's simply there).
@@ -294,7 +288,7 @@ export function TownStage({
           return;
         }
         // The theme may have changed while it was being built.
-        if (darkAt(stage) !== dark) next.setPalette(dark ? LIGHT_PALETTE : DARK_PALETTE);
+        if (darkAt(stage) !== dark) next.setPalette(townPalette(dark ? 'light' : 'dark', seasonRef.current));
         made = next;
         setBuilt({ town: next, layout });
       } catch (error) {
@@ -358,8 +352,8 @@ export function TownStage({
       const next = darkAt(stage);
       if (next === dark) return;
       dark = next;
-      void import('./town').then(({ DARK_PALETTE, LIGHT_PALETTE }) => {
-        town.setPalette(dark ? DARK_PALETTE : LIGHT_PALETTE);
+      void import('./town').then(({ townPalette }) => {
+        town.setPalette(townPalette(dark ? 'dark' : 'light', season));
         town.renderOnce();
       });
     };
@@ -367,12 +361,20 @@ export function TownStage({
     themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
     const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
     media?.addEventListener('change', repaint);
+    // Another season (a preview switching it): the same town, repainted.
+    if (paintedFor.current !== season) {
+      paintedFor.current = season;
+      void import('./town').then(({ townPalette }) => {
+        town.setPalette(townPalette(dark ? 'dark' : 'light', season));
+        town.renderOnce();
+      });
+    }
     return () => {
       resize.disconnect();
       themeWatch.disconnect();
       media?.removeEventListener('change', repaint);
     };
-  }, [town]);
+  }, [town, season]);
 
   // Run only while it's seen.
   useEffect(() => {
@@ -547,6 +549,13 @@ export function TownStage({
     };
   }, [layout]);
 
+  // A still that doesn't load mustn't hold the page back: the pins and cards come in over the skeleton, and the
+  // map below starts. Only the picture being shown counts (the other theme's may be fetched too).
+  const stillFailed = (event: SyntheticEvent<HTMLImageElement>) => {
+    if (event.currentTarget.checkVisibility?.() === false) return;
+    setStillBroken(true);
+    setStillReady(true);
+  };
   const showOnMap = (event: MouseEvent, task: TaskPublicView) => {
     if (!landing || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
@@ -589,25 +598,27 @@ export function TownStage({
           <div aria-hidden="true" className={cn('absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none', stillReady ? 'opacity-100' : 'opacity-0')}>
             {/* The wide still also shows the land left of the stage (it's 2600 × 1000 units; the stage starts at 1000). */}
             <picture className="dark:hidden">
-              <source media={WIDE_QUERY} srcSet="/ui/landing/town-wide-light.webp" />
+              <source media={WIDE_QUERY} srcSet={`/ui/landing/town-wide-light-${season}.webp`} />
               <img
-                src="/ui/landing/town-band-light.webp"
+                src={`/ui/landing/town-band-light-${season}.webp`}
                 alt=""
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
                 onLoad={() => setStillReady(true)}
+                onError={stillFailed}
                 className="absolute top-0 left-0 size-full max-w-none lg:left-[-62.5%] lg:w-[162.5%]"
               />
             </picture>
             <picture className="hidden dark:block">
-              <source media={WIDE_QUERY} srcSet="/ui/landing/town-wide-dark.webp" />
+              <source media={WIDE_QUERY} srcSet={`/ui/landing/town-wide-dark-${season}.webp`} />
               <img
-                src="/ui/landing/town-band-dark.webp"
+                src={`/ui/landing/town-band-dark-${season}.webp`}
                 alt=""
                 loading="lazy"
                 decoding="async"
                 onLoad={() => setStillReady(true)}
+                onError={stillFailed}
                 className="absolute top-0 left-0 size-full max-w-none lg:left-[-62.5%] lg:w-[162.5%]"
               />
             </picture>
@@ -731,10 +742,11 @@ export function TownStage({
         </div>
       </div>
 
-      {live && !reduced && (
+      {/* The town and the weather over it both move (the weather from the start, the town once it's live). */}
+      {mode !== 'static' && !reduced && (live || failed || weather) && (
         <button
           type="button"
-          onClick={() => writePaused(!paused)}
+          onClick={() => setHeroPaused(!paused)}
           aria-pressed={paused}
           aria-label={paused ? t('play') : t('pause')}
           className={cn('glass pointer-events-auto absolute inline-flex size-11 items-center justify-center rounded-full text-foreground/80 transition-transform hover:text-foreground active:scale-95', controlsClassName)}

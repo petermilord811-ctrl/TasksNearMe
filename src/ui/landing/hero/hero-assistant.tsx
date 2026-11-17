@@ -37,6 +37,7 @@ import { useLandingHandlers } from '../landing-handlers';
 import { MAP_SECTION_ID, useOptionalLanding } from '../landing-state';
 import { ConfidenceBars, confidenceLevel, moveWithArrows, TypewriterHint, useReveal, useSpeechInput } from './assistant-parts';
 import { RewardBadge } from './reward-badge';
+import { useSeason } from '../season';
 import { seasonAt } from './seasons';
 
 /** Who the assistant serves: someone posting a task ("I need help to…") or a helper ("I can…"). */
@@ -117,7 +118,8 @@ export function useHeroAssistant({ data, now, mode, area }: { data: HomePageData
   const view: CategoryView | undefined = category ? data.categories.find((item) => item.slug === category) : undefined;
   const typed = trimmed.length >= 3 || (mode === 'helper' && picked !== null);
   const collapsed = !expanded && trimmed.length > 0;
-  const season = seasonAt(now);
+  // The landing's season (a `?season=` link shows another's examples too), or the calendar's.
+  const season = useSeason() ?? seasonAt(now, data.market.timeZone);
   const examples = useMemo(() => CATEGORY_SLUGS.map((slug) => tHero(`seasons.${season}.${slug}`)), [tHero, season]);
   const place = area?.name ?? data.market.name;
   const matching = category ? data.map.pins.filter((pin) => pin.categorySlug === category && (!area || pin.areaName === area.name)).length : 0;

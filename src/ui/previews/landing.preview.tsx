@@ -2,6 +2,7 @@ import type { CategorySlug, HomePageData, PreviewEntry } from '@/contracts';
 import { routes } from '@/contracts';
 import { homeEmptyMapData, homeNoListingsData, homeNoRewardData, homePageData, previewSuggestTaskWithAi, publicViewer } from '@/fixtures';
 import type { LatLng } from '@/shared/geo';
+import type { Season } from '@/shared/seasons';
 import { LandingHandlersProvider } from '@/ui/landing/landing-handlers';
 import { LandingProvider } from '@/ui/landing/landing-state';
 import { MapSection } from '@/ui/landing/map-section';
@@ -14,7 +15,7 @@ const now = '2026-11-17T15:00:00.000Z';
 const inMueller: LatLng = { lat: 30.2989, lng: -97.7064 };
 const inDallas: LatLng = { lat: 32.7767, lng: -96.797 };
 
-function landing(id: string, title: string, data: HomePageData, theme: 'light' | 'dark' = 'light'): PreviewEntry {
+function landing(id: string, title: string, data: HomePageData, theme: 'light' | 'dark' = 'light', season?: Season): PreviewEntry {
   return {
     id,
     group: copy.previews.group,
@@ -24,7 +25,7 @@ function landing(id: string, title: string, data: HomePageData, theme: 'light' |
       <div data-theme={theme} className="bg-background text-foreground">
         <PublicShell viewer={publicViewer} currentPath={routes.home()} variant="landing">
           <LandingHandlersProvider handlers={{ onSuggestWithAi: previewSuggestTaskWithAi }}>
-            <HomeScreen data={data} now={now} mapMode="static" />
+            <HomeScreen data={data} now={now} mapMode="static" season={season} />
           </LandingHandlersProvider>
         </PublicShell>
       </div>
@@ -68,6 +69,12 @@ export const landingPreviews: PreviewEntry[] = [
     ),
   },
   landing('screen-home/dark', copy.previews.dark, homePageData, 'dark'),
+  // The other seasons' looks (`now` is in late fall: the default and dark previews show fall).
+  landing('screen-home/winter', copy.previews.winter, homePageData, 'light', 'winter'),
+  landing('screen-home/winter-dark', copy.previews.winterDark, homePageData, 'dark', 'winter'),
+  landing('screen-home/spring', copy.previews.spring, homePageData, 'light', 'spring'),
+  landing('screen-home/summer', copy.previews.summer, homePageData, 'light', 'summer'),
+  landing('screen-home/summer-dark', copy.previews.summerDark, homePageData, 'dark', 'summer'),
   map('component-landing-map/default', copy.previews.map),
   map('component-landing-map/near-you', copy.previews.mapNearYou, { location: inMueller }),
   map('component-landing-map/outside-area', copy.previews.mapOutside, { location: inDallas }),
