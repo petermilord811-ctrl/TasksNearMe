@@ -417,6 +417,17 @@
       "replyHow": "Las respuestas a este correo no nos llegan. Para contestar, usa el formulario de contacto con esta misma dirección de correo.",
       "contact": "Contestar",
       "text": "{reply}\n\n{name}, soporte de TasksNearMe\n\nLas respuestas a este correo no nos llegan. Para contestar, usa el formulario de contacto con esta misma dirección de correo: {contactUrl}"
+    },
+    "cityOpen": {
+      "subject": "TasksNearMe ya está en {city}",
+      "heading": "TasksNearMe ya está en {city}",
+      "preheader": "{interest, select, give_help {Verifícate y envía ofertas en tareas cerca de ti.} both {Publica una tarea o ayuda con una cerca de ti.} other {Publica una tarea y recibe ofertas de ayudantes cerca de ti.}}",
+      "intro": "Te uniste a nuestra lista de espera para {zip}, y ya llegamos.",
+      "body": "{interest, select, give_help {Crea tu perfil de ayudante, verifica tu teléfono y tu identidad, e indica dónde quieres recibir tus ganancias. Luego envía ofertas en tareas cerca de ti.} both {Publica una tarea y los ayudantes cerca de ti te envían ofertas. O crea tu perfil de ayudante, verifícate y envía ofertas en tareas cercanas.} other {Describe tu tarea y tu presupuesto, y los ayudantes cerca de ti te envían ofertas. Pagas al reservar. Tu ayudante recibe su pago cuando termina la tarea.}}",
+      "cta": "{interest, select, give_help {Hazte ayudante} other {Publicar una tarea}}",
+      "secondary": "{interest, select, both {Hazte ayudante} other {Ver TasksNearMe en {city}}}",
+      "why": "Recibes esto porque {email} se unió a la lista de espera de TasksNearMe para {zip}. Es el único correo que enviamos sobre esto.",
+      "unsubscribe": "Cancelar la suscripción"
     }
   },
   "sms": {

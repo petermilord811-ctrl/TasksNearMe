@@ -12,6 +12,7 @@ import { runSeriesCalendars } from '@/modules/bookings/series';
 import { expireCantAccess } from '@/modules/bookings/sheets';
 import { deliverNotifications } from '@/modules/notifications/delivery';
 import { dispatchNotifications } from '@/modules/notifications/service';
+import { sendCityOpenEmails } from '@/modules/marketing/city-open';
 import { createPaymentProvider } from '@/integrations/payments';
 import { expireDueInvites } from '@/modules/invites/service';
 import { expireDueOffers } from '@/modules/offers/helper';
@@ -37,7 +38,8 @@ import { retryDueWebhooks } from '@/modules/webhooks/inbox';
  * pages also call lazily, so timers fire even when nobody looks: offer and unpaid-hold expiry, regular visits'
  * calendars and the scheduled charges (with their deadlines),
  * can't-access expiry, start and approval reminders, auto-approval, review publishing, verification timers,
- * notifications and their email and text messages, privacy requests (data copies, deletions), retention
+ * notifications and their email and text messages, the waitlist's "we're open" emails, privacy requests (data
+ * copies, deletions), retention
  * timers (hourly), the welcome gift cards (and their monthly waiting line), and the reading of proofs of address
  * and IDs. Each job is idempotent; a Postgres advisory lock lets only one server instance run them at a time.
  * Booking rewards stay lazy per person for now.
@@ -71,6 +73,8 @@ export const JOBS: Job[] = [
   { name: 'searches.digest', run: (db, now) => runSavedSearchDigests(db, now).then(() => undefined) },
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
   { name: 'notifications.deliver', run: (db, now) => deliverNotifications(db, now) },
+  // The waitlist of a market that went live hears it's open (completion plan 8.3), a batch a minute.
+  { name: 'waitlist.city_open', run: (db, now) => sendCityOpenEmails(db, { email: createEmailProvider(db), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
   { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), payments: createPaymentProvider(), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
   // Webhook events whose processing failed, again on their backoff (completion plan 5.11).
   { name: 'webhooks.retry', run: (db, now) => retryDueWebhooks(db, now) },

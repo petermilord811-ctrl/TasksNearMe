@@ -14,6 +14,8 @@ import type {
   PricingPageData,
   TaskPublicView,
   WaitlistPageData,
+  WaitlistUnsubscribeHandlers,
+  WaitlistUnsubscribePageData,
   TaskMapPin,
 } from '@/contracts';
 import { crestviewArea, hydeParkArea, muellerArea, remoteLocation } from './locations';
@@ -395,6 +397,18 @@ export const waitlistFromPostingData: WaitlistPageData = {
   ...waitlistComingNextData,
   initialZip: '75201',
   demand: { zip: '75201', state: 'TX', waiting: 29, helpersWaiting: 12 },
+};
+
+/** The unsubscribe link in a waitlist email (`/email/waitlist`, completion plan 8.3), in each state. */
+export const waitlistUnsubscribePages = {
+  confirm: { state: 'confirm' },
+  unsubscribed: { state: 'unsubscribed' },
+  invalid: { state: 'invalid' },
+} satisfies Record<string, WaitlistUnsubscribePageData>;
+
+export const fakeWaitlistUnsubscribeHandlers: WaitlistUnsubscribeHandlers = {
+  onUnsubscribe: () => new Promise((resolve) => setTimeout(() => resolve({ ok: true, code: 'updated' }), 400)),
+  onResubscribe: () => new Promise((resolve) => setTimeout(() => resolve({ ok: true, code: 'updated' }), 400)),
 };
 
 /**

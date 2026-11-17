@@ -8,6 +8,7 @@ import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { queueCityOpenEmails } from '@/modules/marketing/city-open';
 import { helpersCoveredBy, isOpenMarketStatus, marketStatusChange, type MarketStatus } from './coverage';
 import { markets } from './schema';
 
@@ -15,10 +16,14 @@ import { markets } from './schema';
  * Opening cities in turn (owner, 2026-11-14). An admin moves a market between pre-launch, live and paused, with a
  * reason, audited. A market that becomes open (pre-launch or live) brings in the helpers who waited outside every
  * open market with a ZIP it covers: their home market becomes this one, and they're told to choose a
- * neighborhood (the `city_open` notification). Their checks carry over; the home address is asked for next.
+ * neighborhood (the `city_open` notification). Their checks carry over; the home address is asked for next. Moving
+ * between pre-launch and live brings nobody in again: helpers there were told when it opened.
  *
- * Until dates follow each market's own time zone (completion plan 8.1), a market outside America/Chicago can't
- * go live (`marketStatusChange`).
+ * Going live also tells the waitlist (completion plan 8.3): the entries whose ZIP it covers and that were never told
+ * are queued in this transaction, and the job runner emails them (src/modules/marketing/city-open.ts).
+ *
+ * A market opens (pre-launch or live) only in a time zone dates are shown and checked in, the US zones
+ * (`marketStatusChange`, completion plan 8.1); pausing works in any.
  */
 export async function setMarketStatus(db: Db, staff: StaffActor, marketId: string, input: MarketStatusInput, now: Date): Promise<ActionResult> {
   if (!staff.roles.includes('admin')) return { ok: false, code: 'not_allowed' };
@@ -35,12 +40,13 @@ export async function setMarketStatus(db: Db, staff: StaffActor, marketId: strin
   }
   await db.transaction(async (tx) => {
     await tx.update(markets).set({ status: next, updatedAt: now.toISOString() }).where(eq(markets.id, market.id));
-    const opened = { ...market, status: next };
-    const covered = isOpenMarketStatus(next) ? await waitingHelpersFor(tx, opened) : [];
+    const opening = isOpenMarketStatus(next) && !isOpenMarketStatus(market.status);
+    const covered = opening ? await waitingHelpersFor(tx, { ...market, status: next }) : [];
     for (const helper of covered) {
       await tx.update(users).set({ homeMarketId: market.id, updatedAt: now }).where(eq(users.id, helper.userId));
       await emitVerificationEvent(tx, helper.userId, 'helper', 'city_open', { city: market.name });
     }
+    const waitlistQueued = next === 'live' ? await queueCityOpenEmails(tx, market, now) : 0;
     await tx.insert(auditLog).values({
       id: newId('aud'),
       actorId: staff.id,
@@ -49,7 +55,7 @@ export async function setMarketStatus(db: Db, staff: StaffActor, marketId: strin
       targetType: 'market',
       targetId: market.id,
       reason: parsed.data.reason,
-      metadata: { from: market.status, to: next, helpersBroughtIn: covered.length },
+      metadata: { from: market.status, to: next, helpersBroughtIn: covered.length, waitlistQueued },
     });
   });
   return { ok: true, code: 'updated' };

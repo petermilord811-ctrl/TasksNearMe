@@ -17,7 +17,10 @@
     "joined": "Waitlist confirmation",
     "beta": "Join the waitlist from an invite step",
     "comingNext": "Cities coming next, with the gift card for helpers",
-    "demand": "From posting, with people waiting nearby"
+    "demand": "From posting, with people waiting nearby",
+    "unsubscribeConfirm": "Waitlist email unsubscribe: asks first",
+    "unsubscribeDone": "Unsubscribed from waitlist emails",
+    "unsubscribeInvalid": "Waitlist unsubscribe link that doesn't work"
   },
   "beta": {
     "title": "TasksNearMe is invite-only for now.",
@@ -37,5 +40,19 @@
     "city": "{city}, {state}",
     "people": "{count, plural, one {# person} other {# people}}",
     "helpers": "{count, plural, one {# helper ready} other {# helpers ready}}"
+  },
+  "unsubscribe": {
+    "title": "Waitlist emails",
+    "confirmTitle": "Stop waitlist emails?",
+    "confirmText": "We email the waitlist only to say we've opened near you. If you unsubscribe, we won't email this address about it again.",
+    "confirm": "Unsubscribe",
+    "working": "Saving…",
+    "doneTitle": "You won't get waitlist emails anymore",
+    "doneText": "We won't email this address about the waitlist again.",
+    "resubscribe": "Turn them back on",
+    "resubscribed": "Waitlist emails are back on.",
+    "invalidTitle": "This link doesn't work",
+    "invalidText": "It may have been copied only in part, or it's more than a year old.",
+    "home": "Go to TasksNearMe"
   }
 }

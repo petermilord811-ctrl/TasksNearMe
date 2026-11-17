@@ -17,7 +17,10 @@
     "joined": "Confirmación de lista de espera",
     "beta": "Unirse a la lista de espera desde un paso de invitación",
     "comingNext": "Ciudades que vienen, con la tarjeta de regalo para ayudantes",
-    "demand": "Desde publicar, con personas esperando cerca"
+    "demand": "Desde publicar, con personas esperando cerca",
+    "unsubscribeConfirm": "Cancelar los correos de la lista de espera: pregunta primero",
+    "unsubscribeDone": "Suscripción a la lista de espera cancelada",
+    "unsubscribeInvalid": "Enlace para cancelar la lista de espera que no funciona"
   },
   "beta": {
     "title": "Por ahora, TasksNearMe es solo con invitación.",
@@ -37,5 +40,19 @@
     "city": "{city}, {state}",
     "people": "{count, plural, one {# persona} other {# personas}}",
     "helpers": "{count, plural, one {# ayudante con todo listo} other {# ayudantes con todo listo}}"
+  },
+  "unsubscribe": {
+    "title": "Correos de la lista de espera",
+    "confirmTitle": "¿Dejar de recibir correos de la lista de espera?",
+    "confirmText": "Solo escribimos a la lista de espera para avisar que abrimos cerca de ti. Si cancelas la suscripción, no volveremos a escribir a esta dirección sobre esto.",
+    "confirm": "Cancelar suscripción",
+    "working": "Guardando…",
+    "doneTitle": "Ya no recibirás correos de la lista de espera",
+    "doneText": "No volveremos a escribir a esta dirección sobre la lista de espera.",
+    "resubscribe": "Volver a activarlos",
+    "resubscribed": "Los correos de la lista de espera se activaron de nuevo.",
+    "invalidTitle": "Este enlace no funciona",
+    "invalidText": "Puede que se haya copiado incompleto, o que tenga más de un año.",
+    "home": "Ir a TasksNearMe"
   }
 }

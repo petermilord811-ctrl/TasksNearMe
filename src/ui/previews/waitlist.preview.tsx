@@ -1,6 +1,7 @@
 import { routes, type PreviewEntry, type WaitlistInput } from '@/contracts';
-import { fakeHandler, publicViewer, signInEmailCodeStep, waitlistComingNextData, waitlistFromPostingData, waitlistPageData, waitlistPageDataBeta } from '@/fixtures';
+import { fakeHandler, fakeWaitlistUnsubscribeHandlers, publicViewer, signInEmailCodeStep, waitlistComingNextData, waitlistFromPostingData, waitlistPageData, waitlistPageDataBeta, waitlistUnsubscribePages } from '@/fixtures';
 import { WaitlistConfirmation, WaitlistScreen } from '@/ui/screens/public/waitlist-screen';
+import { WaitlistUnsubscribeScreen } from '@/ui/screens/public/waitlist-unsubscribe-screen';
 import { PublicShell } from '@/ui/shells/public-shell';
 import copy from '../../../messages/en/ui/waitlist.json';
 
@@ -39,4 +40,13 @@ export const waitlistPreviews: PreviewEntry[] = [
     title: copy.previews.joined,
     render: () => <div className="mx-auto max-w-reading"><WaitlistConfirmation email={signInEmailCodeStep.email!} zip="10001" /></div>,
   },
+  // The unsubscribe link in the email telling the waitlist its city opened (completion plan 8.3).
+  ...([
+    ['confirm', copy.previews.unsubscribeConfirm],
+    ['unsubscribed', copy.previews.unsubscribeDone],
+    ['invalid', copy.previews.unsubscribeInvalid],
+  ] as const).map(([state, title]): PreviewEntry => ({
+    id: `screen-waitlist-unsubscribe/${state}`, title, group: copy.previews.group, layout: 'fullscreen',
+    render: () => <PublicShell viewer={publicViewer} currentPath={routes.waitlistUnsubscribe('preview')}><WaitlistUnsubscribeScreen data={waitlistUnsubscribePages[state]} handlers={fakeWaitlistUnsubscribeHandlers} /></PublicShell>,
+  })),
 ];

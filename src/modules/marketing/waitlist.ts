@@ -1,5 +1,5 @@
 import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm';
-import type { WaitlistCity, WaitlistDemand, WaitlistInterest } from '@/contracts';
+import { DEFAULT_LOCALE, type AppLocale, type WaitlistCity, type WaitlistDemand, type WaitlistInterest } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import type { Db } from '@/platform/db/connect';
@@ -17,10 +17,11 @@ export const WAITLIST_TAG = 'waitlist';
  * anyone could otherwise change someone else's ZIP and interest. The answer is "submitted" either way, so the
  * form never tells whether an email is on the list. The city (optional) is kept tidied, and the state comes from
  * the ZIP (src/shared/us-zip.ts), so demand can be counted per city (owner, 2026-11-14: national, cities open in turn).
+ * The page's language is kept too: the email telling them their city opened goes out in it (completion plan 8.3).
  */
 export async function joinWaitlist(
   db: Db,
-  entry: { email: string; zip: string; city?: string; interest: WaitlistInterest },
+  entry: { email: string; zip: string; city?: string; interest: WaitlistInterest; locale?: AppLocale },
   now: Date = new Date(),
 ): Promise<void> {
   await db
@@ -32,6 +33,7 @@ export async function joinWaitlist(
       city: tidyCityName(entry.city),
       state: stateOfZip(entry.zip),
       interest: entry.interest,
+      locale: entry.locale ?? DEFAULT_LOCALE,
       createdAt: now,
       updatedAt: now,
     })

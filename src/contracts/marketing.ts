@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ActionHandler, QueryHandler } from './actions';
+import type { ActionHandler, ActionResult, QueryHandler } from './actions';
 import type { CategorySlug, Cents, ISODateTime, TimeZone } from './common';
 import type { ContentBlock } from './content';
 import { emailField, zipField } from './forms';
@@ -329,4 +329,20 @@ export interface WaitlistHandlers {
    * opens near 10001"). `validation_failed` + `fieldErrors`; `rate_limited` + `retryAt`.
    */
   onJoin: ActionHandler<WaitlistInput>;
+}
+
+/**
+ * `routes.waitlistUnsubscribe(token)`: from the unsubscribe link in a waitlist email (the one telling someone their
+ * city opened, completion plan 8.3), without signing in. `confirm` asks first; `unsubscribed`: they're already off
+ * (offer to turn the emails back on); `invalid`: the link doesn't work (copied in part, or more than a year old). It
+ * never says whose address it is.
+ */
+export interface WaitlistUnsubscribePageData {
+  state: 'confirm' | 'unsubscribed' | 'invalid';
+}
+
+/** Both resolve with ok `updated`. Errors: `not_allowed` (a link that doesn't work), `rate_limited` with `retryAt`, `unknown`. */
+export interface WaitlistUnsubscribeHandlers {
+  onUnsubscribe: () => Promise<ActionResult>;
+  onResubscribe: () => Promise<ActionResult>;
 }

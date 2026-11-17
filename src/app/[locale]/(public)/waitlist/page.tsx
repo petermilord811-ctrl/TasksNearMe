@@ -1,7 +1,8 @@
 import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
+import { localeOrDefault } from '@/contracts';
 import { joinWaitlistAction } from '@/modules/marketing/actions';
 import { getWaitlistDemand, getWaitlistPageData } from '@/modules/marketing/queries';
 import { normalizeZip } from '@/shared/us-zip';
@@ -15,7 +16,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * Outside the cities we're open in, or (`?from=beta`) from an invite-only step during the private beta. `?zip=`
- * (posting's "We're not in Dallas yet") fills the form and shows how many people already wait near it.
+ * (posting's "We're not in Dallas yet") fills the form and shows how many people already wait near it. Joining keeps
+ * the page's language, for the email that tells them their city opened (completion plan 8.3).
  */
 function WaitlistPage({ searchParams }: PageProps<'/[locale]/waitlist'>) {
   return (
@@ -26,7 +28,7 @@ function WaitlistPage({ searchParams }: PageProps<'/[locale]/waitlist'>) {
 }
 
 async function Waitlist({ searchParams }: Pick<PageProps<'/[locale]/waitlist'>, 'searchParams'>) {
-  const [{ from, zip }, data] = await Promise.all([searchParams, getWaitlistPageData()]);
+  const [{ from, zip }, data, locale] = await Promise.all([searchParams, getWaitlistPageData(), getLocale()]);
   const initialZip = typeof zip === 'string' ? normalizeZip(zip) : null;
   const demand = initialZip ? await getWaitlistDemand(initialZip) : null;
   return (
@@ -37,7 +39,7 @@ async function Waitlist({ searchParams }: Pick<PageProps<'/[locale]/waitlist'>, 
         ...(initialZip ? { initialZip } : {}),
         ...(demand ? { demand } : {}),
       }}
-      handlers={{ onJoin: joinWaitlistAction }}
+      handlers={{ onJoin: joinWaitlistAction.bind(null, localeOrDefault(locale)) }}
     />
   );
 }

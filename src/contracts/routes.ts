@@ -103,6 +103,11 @@ export const routes = {
   /** `from: 'beta'`: from an invite-only step (private beta) rather than from outside the service area. */
   /** `zip`: fills the form and shows how many people already wait near it (posting's "We're not in Dallas yet"). */
   waitlist: (query: { from?: 'beta'; zip?: string } = {}) => withQuery('/waitlist', { from: query.from, zip: query.zip }),
+  /**
+   * The unsubscribe link in a waitlist email (plan 8.3): works without signing in, asks first. Under /email, with the
+   * account emails' unsubscribe page, so crawlers stay out (src/modules/seo/robots.ts).
+   */
+  waitlistUnsubscribe: (token: string) => withQuery('/email/waitlist', { token }),
   /** Where we're open and where we go next (plan 8.7); with a state's slug (`florida`), that state's page. */
   cities: (stateSlug?: string) => (stateSlug ? `/cities/${enc(stateSlug)}` : '/cities'),
   /** An invite link (private beta): keeps the code for sign-up or helper setup, then opens sign-in. */

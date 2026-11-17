@@ -417,6 +417,17 @@
       "replyHow": "Replies to this email don't reach us. To write back, use the contact form with this same email address.",
       "contact": "Write back",
       "text": "{reply}\n\n{name}, TasksNearMe support\n\nReplies to this email don't reach us. To write back, use the contact form with this same email address: {contactUrl}"
+    },
+    "cityOpen": {
+      "subject": "TasksNearMe is open in {city}",
+      "heading": "TasksNearMe is open in {city}",
+      "preheader": "{interest, select, give_help {Get verified and send offers on tasks near you.} both {Post a task, or help with one near you.} other {Post a task and get offers from helpers near you.}}",
+      "intro": "You joined our waitlist for {zip}, and we're there now.",
+      "body": "{interest, select, give_help {Set up your helper profile, verify your phone and ID, and add where your earnings go. Then send offers on tasks near you.} both {Post a task, and helpers near you send offers. Or set up your helper profile, get verified and send offers on tasks nearby.} other {Describe your task and your budget, and helpers near you send offers. You pay when you book. Your helper is paid after the task is done.}}",
+      "cta": "{interest, select, give_help {Become a helper} other {Post a task}}",
+      "secondary": "{interest, select, both {Become a helper} other {See TasksNearMe in {city}}}",
+      "why": "You're getting this because {email} joined the TasksNearMe waitlist for {zip}. It's the only email we send about it.",
+      "unsubscribe": "Unsubscribe"
     }
   },
   "sms": {
