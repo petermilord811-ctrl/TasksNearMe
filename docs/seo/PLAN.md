@@ -53,8 +53,9 @@ Facts that shape everything:
   form validation (zod, pulled in through `@/contracts`) rides along on public pages (§5, S9).
 - Visible text: home ~1,100 words, a category page ~510, the board ~680.
 
-**The biggest risk, for the owner to decide (§6):** public pages show sample people with fake ratings, reviews and
-"ID verified · Background checked" badges, and Google can index those pages.
+**The biggest risk, resolved 2026-11-17 (§6.1):** public pages showed sample people with fake ratings, reviews and
+"ID verified · Background checked" badges, and Google could index those pages. The owner chose (a): only signed-in
+testers see the sample marketplace; the public and search engines see real rows only.
 
 ## 3. Research
 
@@ -364,19 +365,16 @@ and admin shells.
 
 ## 6. Risks and guardrails
 
-1. **Sample people and fake ratings on public pages: the owner decides.** The demo marketplace and the base seed show
-   fictional helpers with "ID verified · Background checked", star ratings, reviews and task counts on public pages,
-   and Google may index them. That is the "fake reviews" both Google and the FTC prohibit.
-   Options:
-   - (a) the sample marketplace only for signed-in testers; the public and Google see real data, with empty states
-     until launch;
-   - (b) visible "sample" labels;
-   - (c) accept it until launch.
-
-   Today the mode stays `site` until the owner decides; the fastest interim, if wanted, is `LIVE_SITE_INDEXING = 'off'`.
-   (a) is a filter, not a schema change: real ids are `<prefix>_<32 hex>`,
-   demo ids contain `_demo_`, seed ids are fixed (`usr_jordan`, …). Recommended: (a). Logged in
-   `docs/automation/blocked.md`.
+1. **Sample people and fake ratings on public pages: resolved 2026-11-17, the owner chose (a).** The demo marketplace
+   and the base seed showed fictional helpers with "ID verified · Background checked", star ratings, reviews and task
+   counts on public pages, and Google could index them: the "fake reviews" both Google and the FTC prohibit.
+   The options were (a) the sample marketplace only for signed-in testers, the public and Google seeing real data with
+   empty states until launch; (b) visible "sample" labels; (c) accepting it until launch.
+   Done (completion plan 5.24, `src/shared/sample-data.ts`): a row is real when its id is `<prefix>_<32 hex>` (`newId`);
+   demo ids contain `_demo_` and seed ids are fixed (`usr_jordan`, …). Without a session cookie, public pages read real
+   people and tasks only (and everything counted from them); signed-in testers read every row. Search engines always get
+   the public's rows: the sitemap, IndexNow, JSON-LD and task and profile titles. In development and the e2e build every
+   row is seed data, so nothing is hidden there. Logged in `docs/automation/decisions.md` and `blocked.md`.
 2. **Doorway pages:** no city, neighborhood or task-type page without real local supply and facts (S2). No synonym
    pages: one URL per service and city.
 3. **User-generated content:** Q&A and task text get `rel="ugc nofollow"` on links, contact masking and moderation;
@@ -421,7 +419,7 @@ loads 233 kB of gzipped JavaScript (445 before). Search Console still answers 40
    - the five `/austin/<category>` pages;
    - `/become-a-helper`.
 3. **Bing Webmaster Tools:** sign in, "Import from Google Search Console".
-4. **Decide on the sample data** (§6.1).
+4. ~~**Decide on the sample data** (§6.1).~~ Done 2026-11-17: (a), hidden from the public and search engines.
 5. **Profiles named exactly "TasksNearMe"**, each linking to tasksnearme.com: LinkedIn, Facebook, Instagram, X, a
    Nextdoor business page, Crunchbase, a Product Hunt launch. Send the URLs, and they go into the Organization's
    `sameAs`.
@@ -438,7 +436,8 @@ loads 233 kB of gzipped JavaScript (445 before). Search Console still answers 40
 
 ## 9. Launch switch (`on`)
 
-1. The sample data is gone from public pages, or the demo marketplace is cleared.
+1. The sample data is gone from public pages, or the demo marketplace is cleared. Done 2026-11-17 (§6.1): the public
+   and search engines see real rows only; signed-in testers keep the demo marketplace.
 2. `LIVE_SITE_INDEXING = 'on'`: task pages and helper profiles that pass S2 become indexable, and the sitemap lists
    them.
 3. Google Jobs (S6) switches on with its conditions; the server gets the service account to send Indexing API
