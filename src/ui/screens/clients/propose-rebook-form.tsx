@@ -20,19 +20,21 @@ export function ProposeRebookForm({ data, handlers, now, initialResult, initialP
   const id = useId();
   const router = useRouter();
   const earliestStart = new Date(Date.parse(now) + data.limits.leadHours * 3_600_000);
-  const earliest = { date: marketDayKey(earliestStart), time: marketClockTime(earliestStart) };
+  // On the booking's market clock (completion plan 8.1).
+  const zone = data.timeZone;
+  const earliest = { date: marketDayKey(earliestStart, zone), time: marketClockTime(earliestStart, zone) };
   const schema = useMemo(() => rebookProposalInputSchema.superRefine((input, context) => {
     if (input.date < data.limits.firstDate || input.date > data.limits.lastDate) {
       context.addIssue({ code: 'custom', path: ['date'], message: 'out_of_range' });
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !/^\d{2}:\d{2}$/.test(input.startTime)) return;
-    const start = marketLocalToUtc(input.date, input.startTime);
-    if (marketDayKey(start) !== input.date) context.addIssue({ code: 'custom', path: ['date'], message: 'invalid' });
-    if (marketClockTime(start) !== input.startTime) context.addIssue({ code: 'custom', path: ['startTime'], message: 'invalid' });
+    const start = marketLocalToUtc(input.date, input.startTime, zone);
+    if (marketDayKey(start, zone) !== input.date) context.addIssue({ code: 'custom', path: ['date'], message: 'invalid' });
+    if (marketClockTime(start, zone) !== input.startTime) context.addIssue({ code: 'custom', path: ['startTime'], message: 'invalid' });
     if (Date.parse(start) < Date.parse(now) + data.limits.leadHours * 3_600_000) {
       context.addIssue({ code: 'custom', path: ['startTime'], message: 'out_of_range' });
     }
-  }), [data.limits, now]);
+  }), [data.limits, now, zone]);
   const form = useForm<RebookProposalInput>({ resolver: zodResolver(schema), defaultValues: { date: '', startTime: '', pricing: data.booking.lastPricing, message: '', ...(data.canRepeat ? { repeat: 'once' as const } : {}), ...initialValues } });
   const { setError, setFocus } = form;
   const pricing = useWatch({ control: form.control, name: 'pricing' });

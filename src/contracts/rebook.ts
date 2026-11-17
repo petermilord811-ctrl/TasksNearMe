@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { ClientActionId, RebookActionId } from './action-ids';
 import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
-import type { CategorySlug, Cents, ISODateTime } from './common';
+import type { CategorySlug, Cents, ISODateTime, TimeZone } from './common';
 import { mustAcceptField } from './forms';
 import type { HelperSetupState } from './helper-work';
 import { invitePricingSchema } from './invites';
@@ -61,8 +61,10 @@ export interface ProposeRebookPageData {
     lastPricing: PricingInput;
     lastStart: ISODateTime;
   };
-  /** Market-time dates allowed (`YYYY-MM-DD`): today to 14 days ahead; the start at least `leadHours` away. */
+  /** Dates allowed on the market's clock (`YYYY-MM-DD`): today to 14 days ahead; the start at least `leadHours` away. */
   limits: { firstDate: string; lastDate: string; leadHours: number };
+  /** The booking's market zone: the date and start time are on its clock (completion plan 8.1). */
+  timeZone: TimeZone;
   /** The task can repeat (its category has regular visits, and the market has them on): the "Repeat" choice. */
   canRepeat: boolean;
 }

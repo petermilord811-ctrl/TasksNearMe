@@ -14,6 +14,7 @@ import type {
   SeriesStatus,
   SeriesSummary,
   SeriesVisitView,
+  TimeZone,
 } from '@/contracts';
 import { changeSeriesCardInputSchema, pauseSeriesInputSchema, routes } from '@/contracts';
 import { areas, categories } from '@/modules/markets/schema';
@@ -26,6 +27,7 @@ import { getHelperSummaries } from '@/modules/profiles/queries';
 import { rebookProposals } from '@/modules/rebook/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
+import { marketTimeZone, marketTimeZones } from '@/modules/markets/time-zone';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
@@ -104,6 +106,8 @@ export async function startSeriesFromProposal(db: Db, proposalId: string, now: D
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, proposal.bookingId)).limit(1);
   const [task] = await db.select().from(tasks).where(eq(tasks.id, proposal.taskId)).limit(1);
   if (!booking || !task || !PAID.includes(booking.status)) return null;
+  // The series keeps its first visit's wall-clock time on its market's clock (completion plan 8.1).
+  const timeZone = await marketTimeZone(db, booking.marketId);
   const id = newId('srs');
   try {
     await db.transaction(async (tx) => {
@@ -115,8 +119,8 @@ export async function startSeriesFromProposal(db: Db, proposalId: string, now: D
         templateTaskId: task.id,
         proposalId: proposal.id,
         cadence: proposal.cadence!,
-        anchorDate: marketDayKey(booking.startAt),
-        startTime: marketClockTime(booking.startAt),
+        anchorDate: marketDayKey(booking.startAt, timeZone),
+        startTime: marketClockTime(booking.startAt, timeZone),
         durationMinutes: Math.max(60, Math.round((task.windowEnd.getTime() - task.windowStart.getTime()) / MINUTE)),
         ...pricingColumns(pricingOf(proposal)),
         scopeText: task.description,
@@ -157,7 +161,7 @@ export async function startPendingSeries(db: Db, now: Date): Promise<number> {
 
 /** Puts one visit on the calendar: a copy of the series' task and a `scheduled` booking charged 48 h before. */
 async function addVisit(db: Db, series: SeriesRow, template: typeof tasks.$inferSelect, policy: NonNullable<Awaited<ReturnType<typeof getPublishedPolicy>>>, index: number, now: Date): Promise<void> {
-  const start = visitStart({ ...series, cadence: series.cadence as SeriesCadence }, index);
+  const start = visitStart({ ...series, cadence: series.cadence as SeriesCadence, timeZone: await marketTimeZone(db, series.marketId) }, index);
   const chargeAt = firstChargeAt(VISIT_CHARGE_PLAN, start, now);
   // Too close to charge in time: this date is left out.
   if (!chargeAt) return;
@@ -221,7 +225,7 @@ async function addVisit(db: Db, series: SeriesRow, template: typeof tasks.$infer
 export async function fillCalendar(db: Db, seriesId: string, now: Date): Promise<void> {
   const [series] = await db.select().from(bookingSeries).where(eq(bookingSeries.id, seriesId)).limit(1);
   if (!series || !RUNNING.includes(series.status as SeriesStatus)) return;
-  const wanted = upcomingIndexes({ ...series, cadence: series.cadence as SeriesCadence, status: series.status as SeriesStatus }, now);
+  const wanted = upcomingIndexes({ ...series, cadence: series.cadence as SeriesCadence, status: series.status as SeriesStatus, timeZone: await marketTimeZone(db, series.marketId) }, now);
   if (wanted.length === 0) return;
   const there = await db.select({ index: bookings.visitIndex }).from(bookings).where(and(eq(bookings.seriesId, series.id), inArray(bookings.visitIndex, wanted)));
   const missing = wanted.filter((index) => !there.some((row) => row.index === index));
@@ -243,12 +247,18 @@ export async function fillCalendar(db: Db, seriesId: string, now: Date): Promise
 /** The job: starts series waiting for theirs, resumes paused ones on their date, and keeps every calendar filled. */
 export async function runSeriesCalendars(db: Db, now: Date): Promise<void> {
   await startPendingSeries(db, now);
-  const today = marketDayKey(now);
-  const resuming = await db
-    .update(bookingSeries)
-    .set({ status: 'active', pausedUntil: null, updatedAt: now })
-    .where(and(eq(bookingSeries.status, 'paused'), lte(bookingSeries.pausedUntil, today)))
-    .returning({ id: bookingSeries.id, posterUserId: bookingSeries.posterUserId, helperUserId: bookingSeries.helperUserId });
+  // A paused series resumes on its date in its own market (completion plan 8.1): the zones' "today" can differ.
+  const paused = await db.select({ id: bookingSeries.id, marketId: bookingSeries.marketId, pausedUntil: bookingSeries.pausedUntil }).from(bookingSeries).where(eq(bookingSeries.status, 'paused'));
+  const zones = await marketTimeZones(db, paused.map((row) => row.marketId));
+  const dueIds = paused.filter((row) => row.pausedUntil !== null && row.pausedUntil <= marketDayKey(now, zones.get(row.marketId)!)).map((row) => row.id);
+  const resuming =
+    dueIds.length === 0
+      ? []
+      : await db
+          .update(bookingSeries)
+          .set({ status: 'active', pausedUntil: null, updatedAt: now })
+          .where(and(eq(bookingSeries.status, 'paused'), inArray(bookingSeries.id, dueIds)))
+          .returning({ id: bookingSeries.id, posterUserId: bookingSeries.posterUserId, helperUserId: bookingSeries.helperUserId });
   for (const series of resuming) {
     await db.insert(outboxEvents).values({ id: newId('evt'), type: 'series.resumed', aggregateType: 'series', aggregateId: series.id, payload: { seriesId: series.id, by: 'system' } });
   }
@@ -284,14 +294,15 @@ async function scheduledVisits(db: Db, seriesId: string): Promise<BookingRow[]> 
 
 /** Stops a series (the client's stop: `canceled`; the helper's end: `ended` with a last date): visits after it that aren't paid yet go. */
 async function stop(db: Db, series: SeriesRow, status: 'canceled' | 'ended', by: string, now: Date): Promise<void> {
-  const endsOn = status === 'ended' ? endsOnFor(marketDayKey(now)) : null;
+  const timeZone = await marketTimeZone(db, series.marketId);
+  const endsOn = status === 'ended' ? endsOnFor(marketDayKey(now, timeZone)) : null;
   const [changed] = await db
     .update(bookingSeries)
     .set({ status, endsOn, pausedUntil: null, changedBy: by, updatedAt: now })
     .where(and(eq(bookingSeries.id, series.id), inArray(bookingSeries.status, ['active', 'paused'])))
     .returning();
   if (!changed) return;
-  const visits = (await scheduledVisits(db, series.id)).filter((visit) => !endsOn || marketDayKey(visit.startAt) > endsOn);
+  const visits = (await scheduledVisits(db, series.id)).filter((visit) => !endsOn || marketDayKey(visit.startAt, timeZone) > endsOn);
   await dropScheduled(db, visits, 'series_stopped', by, now);
   await db.insert(outboxEvents).values({ id: newId('evt'), type: 'series.stopped', aggregateType: 'series', aggregateId: series.id, payload: { seriesId: series.id, by, ...(endsOn ? { endsOn } : {}) } });
   await db.insert(auditLog).values({ id: newId('aud'), actorId: by === 'system' ? 'system' : by === 'poster' ? series.posterUserId : series.helperUserId, actorRole: by === 'system' ? 'system' : 'user', action: `series.${status}`, targetType: 'series', targetId: series.id });
@@ -324,7 +335,8 @@ export async function pauseSeries(db: Db, posterId: string, seriesId: string, in
   if (!parsed.success) return validationFailed(parsed.error);
   const own = await ownSeries(db, posterId, seriesId);
   if (!own || own.role !== 'poster' || own.series.status !== 'active') return { ok: false, code: 'not_allowed' };
-  const limits = pauseLimits(marketDayKey(now));
+  const timeZone = await marketTimeZone(db, own.series.marketId);
+  const limits = pauseLimits(marketDayKey(now, timeZone));
   const { resumeOn } = parsed.data;
   if (resumeOn < limits.firstDate || resumeOn > limits.lastDate) return { ok: false, code: 'validation_failed', fieldErrors: { resumeOn: ['out_of_range'] } };
   const [paused] = await db
@@ -333,7 +345,7 @@ export async function pauseSeries(db: Db, posterId: string, seriesId: string, in
     .where(and(eq(bookingSeries.id, own.series.id), eq(bookingSeries.status, 'active')))
     .returning();
   if (!paused) return { ok: false, code: 'not_allowed' };
-  const visits = (await scheduledVisits(db, own.series.id)).filter((visit) => marketDayKey(visit.startAt) < resumeOn);
+  const visits = (await scheduledVisits(db, own.series.id)).filter((visit) => marketDayKey(visit.startAt, timeZone) < resumeOn);
   await dropScheduled(db, visits, 'series_paused', 'poster', now);
   await db.insert(outboxEvents).values({ id: newId('evt'), type: 'series.paused', aggregateType: 'series', aggregateId: own.series.id, payload: { seriesId: own.series.id, until: resumeOn } });
   return { ok: true, code: 'updated' };
@@ -404,14 +416,15 @@ export async function seriesConversation(db: Db, userId: string, seriesId: strin
 // ---- Reading ----------------------------------------------------------------------------------------------
 
 /** How the series repeats, for the words. */
-export function scheduleOf(series: Pick<SeriesRow, 'cadence' | 'anchorDate' | 'startTime' | 'durationMinutes'>): SeriesSchedule {
+export function scheduleOf(series: Pick<SeriesRow, 'cadence' | 'anchorDate' | 'startTime' | 'durationMinutes'>, timeZone: TimeZone): SeriesSchedule {
   const cadence = series.cadence as SeriesCadence;
   return {
     cadence,
     weekday: weekdayOf(series.anchorDate),
     ...(cadence === 'monthly' ? { monthWeek: Math.min(5, monthWeekOf(series.anchorDate)) } : {}),
-    firstStart: visitStart({ ...series, cadence }, 1).toISOString(),
+    firstStart: visitStart({ ...series, cadence, timeZone }, 1).toISOString(),
     durationMinutes: series.durationMinutes,
+    timeZone,
   };
 }
 
@@ -459,7 +472,8 @@ export async function getSeriesPage(db: Db, viewerId: string, seriesId: string, 
   const status = series.status as SeriesStatus;
   const ahead = visits.filter((visit) => isAhead(visit, now));
   const past = visits.filter((visit) => !isAhead(visit, now)).reverse().slice(0, 6);
-  const today = marketDayKey(now);
+  const timeZone = await marketTimeZone(db, series.marketId);
+  const today = marketDayKey(now, timeZone);
   let card: SeriesPageData['series']['card'];
   let cards: SavedPaymentMethod[] | undefined;
   if (role === 'poster') {
@@ -476,7 +490,7 @@ export async function getSeriesPage(db: Db, viewerId: string, seriesId: string, 
       client,
       helper,
       task: { title: template.title, categorySlug: template.slug as CategorySlug, areaName: template.areaName ?? '' },
-      schedule: scheduleOf(series),
+      schedule: scheduleOf(series, timeZone),
       pricing,
       breakdown: quoteBreakdown(policy.fees, pricing),
       ...(role === 'poster' ? { card } : {}),
@@ -519,6 +533,7 @@ export async function seriesSummaries(db: Db, userId: string, now: Date): Promis
   ]);
   for (const [id, summary] of helpers) names.set(id, summary.displayName);
   for (const [id, summary] of clients) if (summary && !names.has(id)) names.set(id, summary.displayName);
+  const zones = await marketTimeZones(db, rows.map(({ series }) => series.marketId));
   const out: SeriesSummary[] = [];
   for (const { series, title, slug } of rows) {
     const mine = visits.filter((visit) => visit.seriesId === series.id);
@@ -532,7 +547,7 @@ export async function seriesSummaries(db: Db, userId: string, now: Date): Promis
       title,
       categorySlug: slug as CategorySlug,
       otherName: names.get(client ? series.helperUserId : series.posterUserId) ?? '',
-      schedule: scheduleOf(series),
+      schedule: scheduleOf(series, zones.get(series.marketId)!),
       ...(next ? { nextVisit: { start: next.startAt.toISOString(), state: visitState(next).state } } : {}),
       ...(client && live.some((visit) => visit.status === 'scheduled' && visit.fundingFailure) ? { paymentDue: true } : {}),
       ...(series.pausedUntil ? { pausedUntil: series.pausedUntil } : {}),

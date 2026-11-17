@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { SeriesActionId, SeriesVisitActionId } from './action-ids';
 import type { ActionHandler, FieldErrorCode } from './actions';
-import type { CategorySlug, ISODateTime } from './common';
+import type { CategorySlug, ISODateTime, TimeZone } from './common';
 import type { PriceBreakdown, PricingInput } from './money';
 import type { CardBrand, SavedPaymentMethod } from './payments';
 import type { ClientSummary, HelperSummary } from './people';
@@ -62,6 +62,8 @@ export interface SeriesSchedule {
   firstStart: ISODateTime;
   /** Each visit's length. */
   durationMinutes: number;
+  /** The series' market zone: every visit starts at the same wall-clock time on its clock (completion plan 8.1). */
+  timeZone: TimeZone;
 }
 
 export interface SeriesVisitView {

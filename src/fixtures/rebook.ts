@@ -59,6 +59,7 @@ export const proposeDeskRebookData: ProposeRebookPageData = {
   client: maya,
   booking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', categorySlug: 'furniture-assembly', areaName: 'Mueller', lastPricing: { type: 'fixed', priceCents: 6000 }, lastStart: DESK_TIMES.agreedStart },
   limits: { firstDate: '2026-12-08', lastDate: '2026-12-22', leadHours: 3 },
+  timeZone: 'America/Chicago',
   canRepeat: false,
 };
 
@@ -91,6 +92,7 @@ export const proposeYardRebookData: ProposeRebookPageData = {
   client: maya,
   booking: { id: 'bkg_yard_done', title: 'Rake and bag front-yard leaves', categorySlug: 'yard-cleanup', areaName: 'Crestview', lastPricing: { type: 'fixed', priceCents: 6000 }, lastStart: '2026-11-24T15:00:00.000Z' },
   limits: { firstDate: '2026-12-08', lastDate: '2026-12-22', leadHours: 3 },
+  timeZone: 'America/Chicago',
   canRepeat: true,
 };
 
@@ -101,7 +103,7 @@ export const yardSeriesProposalPoster: RebookProposalView = {
   task: { title: 'Rake and bag front-yard leaves', categorySlug: 'yard-cleanup', areaName: 'Crestview' },
   start: yardStart,
   message: 'Leaves keep coming down. Every other Tuesday morning works for me.',
-  schedule: { cadence: 'biweekly', weekday: 2, firstStart: yardStart, durationMinutes: 120 },
+  schedule: { cadence: 'biweekly', weekday: 2, firstStart: yardStart, durationMinutes: 120, timeZone: 'America/Chicago' },
   visitStarts: [yardStart, '2026-12-29T15:00:00.000Z', '2027-01-12T15:00:00.000Z', '2027-01-26T15:00:00.000Z'],
 };
 export const yardSeriesProposalAcceptedPoster: RebookProposalView = { ...yardSeriesProposalPoster, status: 'accepted', bookingId: 'bkg_yard_1', seriesId: 'srs_yard', expiresAt: undefined, actions: [] };

@@ -55,22 +55,29 @@ describe('the series calendar', () => {
 
   it('keeps the wall-clock start across daylight saving', () => {
     // 9:00 am in Austin: 15:00 UTC in winter, 14:00 UTC in summer.
-    const series = { anchorDate: '2027-03-09', startTime: '09:00', cadence: 'weekly' as const }; // DST starts Mar 14
+    const series = { timeZone: 'America/Chicago', anchorDate: '2027-03-09', startTime: '09:00', cadence: 'weekly' as const }; // DST starts Mar 14
     expect(visitStart(series, 1).toISOString()).toBe('2027-03-09T15:00:00.000Z');
     expect(visitStart(series, 2).toISOString()).toBe('2027-03-16T14:00:00.000Z');
     expect(marketClockTime(visitStart(series, 2))).toBe('09:00');
     expect(marketDayKey(visitStart(series, 2))).toBe('2027-03-16');
   });
 
+  it('keeps a Gainesville series at 9:00 am Eastern across the same DST change (plan 8.1)', () => {
+    const series = { timeZone: 'America/New_York', anchorDate: '2027-03-09', startTime: '09:00', cadence: 'weekly' as const };
+    expect(visitStart(series, 1).toISOString()).toBe('2027-03-09T14:00:00.000Z');
+    expect(visitStart(series, 2).toISOString()).toBe('2027-03-16T13:00:00.000Z');
+    expect(marketClockTime(visitStart(series, 2), 'America/New_York')).toBe('09:00');
+  });
+
   it('keeps the next four visits after now on the calendar', () => {
-    const series = { anchorDate: '2026-11-17', startTime: '09:00', cadence: 'weekly' as const, status: 'active' as const };
+    const series = { timeZone: 'America/Chicago', anchorDate: '2026-11-17', startTime: '09:00', cadence: 'weekly' as const, status: 'active' as const };
     expect(upcomingIndexes(series, at('2026-11-16T12:00:00Z'))).toEqual([1, 2, 3, 4]);
     // The first visit has started: the next four follow it.
     expect(upcomingIndexes(series, at('2026-11-17T15:30:00Z'))).toEqual([2, 3, 4, 5]);
   });
 
   it('starts again on the resume date while paused, stops after the last date, and holds nothing once canceled', () => {
-    const base = { anchorDate: '2026-11-17', startTime: '09:00', cadence: 'weekly' as const };
+    const base = { timeZone: 'America/Chicago', anchorDate: '2026-11-17', startTime: '09:00', cadence: 'weekly' as const };
     expect(upcomingIndexes({ ...base, status: 'paused', pausedUntil: '2026-12-08' }, at('2026-11-18T12:00:00Z'))).toEqual([4, 5, 6, 7]);
     expect(upcomingIndexes({ ...base, status: 'ended', endsOn: '2026-12-01' }, at('2026-11-18T12:00:00Z'))).toEqual([2, 3]);
     expect(upcomingIndexes({ ...base, status: 'canceled' }, at('2026-11-18T12:00:00Z'))).toEqual([]);

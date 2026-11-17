@@ -35,7 +35,7 @@ const choiceChosen = 'border-primary/60 bg-primary/[0.045] shadow-[0_0_0_1px_var
  * Regular visits (blueprint 03 §7): just once, or every week, every 2 weeks or monthly from the chosen start, with
  * the schedule in words and what it means for the client's card. Only where the task can repeat (`canRepeat`).
  */
-function RepeatField({ clientName, disabled }: { clientName: string; disabled: boolean }) {
+function RepeatField({ clientName, disabled, timeZone }: { clientName: string; disabled: boolean; timeZone: string }) {
   const t = useTranslations('clients.form');
   const cadences = useTranslations('series.schedule.cadence');
   const scheduleWords = useScheduleWords();
@@ -43,7 +43,7 @@ function RepeatField({ clientName, disabled }: { clientName: string; disabled: b
   const { watch } = useFormContext<RebookProposalInput>();
   const { field } = useController<RebookProposalInput, 'repeat'>({ name: 'repeat' });
   const value: RepeatChoice = field.value ?? 'once';
-  const schedule = value === 'once' ? null : draftSchedule(value, watch('date'), watch('startTime'));
+  const schedule = value === 'once' ? null : draftSchedule(value, watch('date'), watch('startTime'), timeZone);
   return <fieldset className="min-w-0 space-y-3" disabled={disabled}>
     <legend id={`${id}-label`} className="font-medium">{t('repeat')}</legend>
     <RadioGroup aria-labelledby={`${id}-label`} aria-describedby={`${id}-hint`} value={value} onValueChange={(next) => field.onChange(next as RepeatChoice)} className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -59,17 +59,17 @@ function RepeatField({ clientName, disabled }: { clientName: string; disabled: b
 }
 
 export function ProposeRebookFields({ data, disabled, earliest }: { data: ProposeRebookPageData; disabled: boolean; earliest: { date: string; time: string } }) {
-  const { formatDate } = useFormat();
+  const { formatDate } = useFormat(data.timeZone);
   const t = useTranslations('clients.form');
   const { register, watch } = useFormContext<RebookProposalInput>();
   const date = watch('date');
   const message = watch('message') ?? '';
   return <div className="space-y-5">
     <div className="grid gap-5 sm:grid-cols-2">
-      <ProposalField name="date" label={t('date')} hint={t('dateHint', { first: formatDate(marketLocalToUtc(data.limits.firstDate, '12:00')), last: formatDate(marketLocalToUtc(data.limits.lastDate, '12:00')) })}>{(id, invalid) => <Input {...register('date')} id={id} type="date" min={data.limits.firstDate} max={data.limits.lastDate} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40 tabular-nums" />}</ProposalField>
+      <ProposalField name="date" label={t('date')} hint={t('dateHint', { first: formatDate(marketLocalToUtc(data.limits.firstDate, '12:00', data.timeZone)), last: formatDate(marketLocalToUtc(data.limits.lastDate, '12:00', data.timeZone)) })}>{(id, invalid) => <Input {...register('date')} id={id} type="date" min={data.limits.firstDate} max={data.limits.lastDate} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40 tabular-nums" />}</ProposalField>
       <ProposalField name="startTime" label={t('startTime')} hint={t('startTimeHint', { hours: data.limits.leadHours })}>{(id, invalid) => <Input {...register('startTime')} id={id} type="time" step={60} min={date === earliest.date ? earliest.time : undefined} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40 tabular-nums" />}</ProposalField>
     </div>
-    {data.canRepeat && <RepeatField clientName={data.client.displayName} disabled={disabled} />}
+    {data.canRepeat && <RepeatField clientName={data.client.displayName} disabled={disabled} timeZone={data.timeZone} />}
     <PricingFields disabled={disabled} namespace="clients.form" />
     <ProposalField name="message" label={t('message')} hint={t('messageHint')}>{(id, invalid) => <>
       <Textarea {...register('message')} id={id} rows={4} maxLength={1000} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error ${id}-count`} className="scroll-mb-40" />

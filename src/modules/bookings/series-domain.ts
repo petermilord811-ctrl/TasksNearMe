@@ -1,4 +1,4 @@
-import type { BookingStatus, CancelReason, SeriesActionId, SeriesCadence, SeriesChargeFailure, SeriesSkipper, SeriesStatus, SeriesVisitActionId, SeriesVisitState } from '@/contracts';
+import type { BookingStatus, CancelReason, SeriesActionId, SeriesCadence, SeriesChargeFailure, SeriesSkipper, SeriesStatus, SeriesVisitActionId, SeriesVisitState, TimeZone } from '@/contracts';
 import { marketLocalToUtc } from '@/shared/format';
 
 /**
@@ -89,11 +89,13 @@ export interface SeriesCalendar {
   anchorDate: string;
   startTime: string;
   cadence: SeriesCadence;
+  /** The series' market zone: its dates and start time are on that clock (completion plan 8.1). */
+  timeZone: TimeZone;
 }
 
-/** When visit `index` starts (UTC), at the series' wall-clock time whatever daylight saving does. */
+/** When visit `index` starts (UTC), at the series' wall-clock time on its market's clock, whatever daylight saving does. */
 export function visitStart(series: SeriesCalendar, index: number): Date {
-  return new Date(marketLocalToUtc(visitDate(series.anchorDate, series.cadence, index), series.startTime));
+  return new Date(marketLocalToUtc(visitDate(series.anchorDate, series.cadence, index), series.startTime, series.timeZone));
 }
 
 /**

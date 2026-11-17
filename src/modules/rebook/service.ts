@@ -18,7 +18,7 @@ import type {
   RebookProposalStatus,
   RebookProposalView,
 } from '@/contracts';
-import { acceptProposalInputSchema, RECURRING_CATEGORIES, rebookProposalInputSchema, routes, type SeriesCadence } from '@/contracts';
+import { acceptProposalInputSchema, MARKET_TIME_ZONE, RECURRING_CATEGORIES, rebookProposalInputSchema, routes, type SeriesCadence } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
 import { clientSummary } from '@/modules/bookings/hub';
 import { chargeMethodOf, finishBankVerification, methodForChoice, paymentPanel, settle, type BookingDeps } from '@/modules/bookings/confirm';
@@ -45,6 +45,7 @@ import { consumeRateLimit } from '@/platform/rate-limit';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { readExactAddress } from '@/modules/tasks/locations';
 import { pausedIn } from '@/modules/markets/outage';
+import { marketTimeZone } from '@/modules/markets/time-zone';
 import { rebookProposals } from './schema';
 
 /**
@@ -173,6 +174,8 @@ export async function getProposeRebookPage(db: Db, helperId: string, bookingId: 
   if (!past || (await isBlockedBetween(db, helperId, past.booking.posterUserId))) return null;
   const client = await clientSummary(db, past.booking.posterUserId);
   if (!client) return null;
+  // The new visit is in the same market: its dates are on that clock (completion plan 8.1).
+  const timeZone = await marketTimeZone(db, past.booking.marketId);
   return {
     client,
     booking: {
@@ -183,7 +186,8 @@ export async function getProposeRebookPage(db: Db, helperId: string, bookingId: 
       lastPricing: termsPricing(past.terms),
       lastStart: past.booking.startAt.toISOString(),
     },
-    limits: { firstDate: marketDayKey(now), lastDate: marketDayKey(new Date(now.getTime() + REBOOK_RULES.maxDaysAhead * DAY)), leadHours: REBOOK_RULES.leadHours },
+    limits: { firstDate: marketDayKey(now, timeZone), lastDate: marketDayKey(new Date(now.getTime() + REBOOK_RULES.maxDaysAhead * DAY), timeZone), leadHours: REBOOK_RULES.leadHours },
+    timeZone,
     canRepeat: await canRepeat(db, past.slug, past.booking.marketId),
   };
 }
@@ -211,10 +215,11 @@ export async function proposeRebook(db: Db, helperId: string, bookingId: string,
   if (!state.facts.bookableCategories.includes(past.slug as CategorySlug)) return { ok: false, code: 'not_allowed' };
   const { date, startTime, pricing, message, repeat = 'once' } = parsed.data;
   if (repeat !== 'once' && !(await canRepeat(db, past.slug, past.booking.marketId))) return { ok: false, code: 'validation_failed', fieldErrors: { repeat: ['invalid'] } };
-  if (date < marketDayKey(now) || date > marketDayKey(new Date(now.getTime() + REBOOK_RULES.maxDaysAhead * DAY))) {
+  const timeZone = await marketTimeZone(db, past.booking.marketId);
+  if (date < marketDayKey(now, timeZone) || date > marketDayKey(new Date(now.getTime() + REBOOK_RULES.maxDaysAhead * DAY), timeZone)) {
     return { ok: false, code: 'validation_failed', fieldErrors: { date: ['out_of_range'] } };
   }
-  const start = new Date(marketLocalToUtc(date, startTime));
+  const start = new Date(marketLocalToUtc(date, startTime, timeZone));
   if (Number.isNaN(start.getTime()) || start.getTime() - now.getTime() < REBOOK_RULES.leadHours * HOUR) {
     return { ok: false, code: 'validation_failed', fieldErrors: { startTime: ['out_of_range'] } };
   }
@@ -253,12 +258,13 @@ export async function proposeRebook(db: Db, helperId: string, bookingId: string,
 /** A repeating proposal: how it repeats (from its start), the first four visit dates, and the series once it started. */
 async function repeatOf(db: Db, row: ProposalRow): Promise<Pick<RebookProposalView, 'schedule' | 'visitStarts' | 'seriesId'>> {
   if (!row.cadence) return {};
-  const [past] = await db.select({ windowStart: tasks.windowStart, windowEnd: tasks.windowEnd }).from(bookings).innerJoin(tasks, eq(tasks.id, bookings.taskId)).where(eq(bookings.id, row.fromBookingId)).limit(1);
-  const calendar = { anchorDate: marketDayKey(row.startAt), startTime: marketClockTime(row.startAt), cadence: row.cadence as SeriesCadence, durationMinutes: past ? Math.max(60, Math.round((past.windowEnd.getTime() - past.windowStart.getTime()) / 60_000)) : 120 };
+  const [past] = await db.select({ windowStart: tasks.windowStart, windowEnd: tasks.windowEnd, marketId: bookings.marketId }).from(bookings).innerJoin(tasks, eq(tasks.id, bookings.taskId)).where(eq(bookings.id, row.fromBookingId)).limit(1);
+  const timeZone = past ? await marketTimeZone(db, past.marketId) : MARKET_TIME_ZONE;
+  const calendar = { timeZone, anchorDate: marketDayKey(row.startAt, timeZone), startTime: marketClockTime(row.startAt, timeZone), cadence: row.cadence as SeriesCadence, durationMinutes: past ? Math.max(60, Math.round((past.windowEnd.getTime() - past.windowStart.getTime()) / 60_000)) : 120 };
   const [series] = row.status === 'accepted' ? await db.select({ id: bookingSeries.id }).from(bookingSeries).where(eq(bookingSeries.proposalId, row.id)).limit(1) : [];
   // The dates as of the start: the first visit and the three after it.
   const starts = upcomingIndexes({ ...calendar, status: 'active' }, new Date(row.startAt.getTime() - 60_000)).map((index) => visitStart(calendar, index).toISOString());
-  return { schedule: scheduleOf(calendar), visitStarts: starts, ...(series ? { seriesId: series.id } : {}) };
+  return { schedule: scheduleOf(calendar, timeZone), visitStarts: starts, ...(series ? { seriesId: series.id } : {}) };
 }
 
 async function viewOf(db: Db, cipher: FieldCipher | null, row: ProposalRow, viewerId: string): Promise<RebookProposalView | null> {

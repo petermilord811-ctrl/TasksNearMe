@@ -656,7 +656,7 @@ export const mayaYardSeriesSummary: SeriesSummary = {
   title: 'Rake the backyard and bag the leaves',
   categorySlug: 'yard-cleanup',
   otherName: sam.displayName,
-  schedule: { cadence: 'weekly', weekday: 2, firstStart: YARD_VISIT_TIMES.firstStart, durationMinutes: 120 },
+  schedule: { cadence: 'weekly', weekday: 2, firstStart: YARD_VISIT_TIMES.firstStart, durationMinutes: 120, timeZone: 'America/Chicago' },
   nextVisit: { start: YARD_VISIT_TIMES.start, state: 'scheduled' },
 };
 export const mayaCleaningSeriesSummary: SeriesSummary = {
@@ -665,7 +665,7 @@ export const mayaCleaningSeriesSummary: SeriesSummary = {
   title: 'Light cleaning for a 2-bedroom apartment',
   categorySlug: 'light-cleaning',
   otherName: lee.displayName,
-  schedule: { cadence: 'monthly', weekday: 5, monthWeek: 1, firstStart: '2026-11-06T17:00:00.000Z', durationMinutes: 180 },
+  schedule: { cadence: 'monthly', weekday: 5, monthWeek: 1, firstStart: '2026-11-06T17:00:00.000Z', durationMinutes: 180, timeZone: 'America/Chicago' },
   paymentDue: true,
   pausedUntil: '2026-12-15',
 };

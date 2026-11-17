@@ -36,7 +36,7 @@ const base: SeriesView = {
   client: maya,
   helper: jordan,
   task: { title: 'Rake and bag the backyard leaves', categorySlug: 'yard-cleanup', areaName: 'Mueller' },
-  schedule: { cadence: 'weekly', weekday: 2, firstStart: at('2026-11-10'), durationMinutes: 180 },
+  schedule: { cadence: 'weekly', weekday: 2, firstStart: at('2026-11-10'), durationMinutes: 180, timeZone: 'America/Chicago' },
   pricing: { type: 'fixed', priceCents: 6000 },
   breakdown: deskBreakdown,
   card: { methodId: 'pm_maya_visa', brand: 'visa', last4: '1881', expMonth: 8, expYear: 2028 },
@@ -123,7 +123,7 @@ export const seriesClientMonthlyData: SeriesPageData = {
     id: 'srs_cleaning',
     task: { title: 'Light cleaning for a 2-bedroom apartment', categorySlug: 'light-cleaning', areaName: 'Hyde Park' },
     helper: { ...jordan, reliable: true },
-    schedule: { cadence: 'monthly', weekday: 6, monthWeek: 3, firstStart: '2026-11-21T16:00:00.000Z', durationMinutes: 120 },
+    schedule: { cadence: 'monthly', weekday: 6, monthWeek: 3, firstStart: '2026-11-21T16:00:00.000Z', durationMinutes: 120, timeZone: 'America/Chicago' },
     completedCount: 1,
     upcoming: [
       visit(2, '2026-12-19', { start: '2026-12-19T16:00:00.000Z', end: '2026-12-19T18:00:00.000Z', state: 'scheduled', chargeAt: '2026-12-17T16:00:00.000Z', actions: ['skip_visit', 'open_booking'] }),
