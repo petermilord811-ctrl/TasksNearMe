@@ -5,6 +5,7 @@ import type { GiftCardProvider } from '@/integrations/gift-cards';
 import { users } from '@/modules/accounts/schema';
 import { bookingCompletions, bookingSeries, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { getFlags } from '@/modules/markets/queries';
+import { marketTimeZone, userTimeZone } from '@/modules/markets/time-zone';
 import { earnings } from '@/modules/earnings/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { computeOnboarding } from '@/modules/verification/progress';
@@ -13,6 +14,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import {
+  BUDGET_TIME_ZONE,
   LAUNCH_PROGRAMS,
   REWARD_RULES,
   WELCOME_QUEUED_STATUSES,
@@ -81,8 +83,6 @@ async function helperBookingFacts(db: Db, helperUserId: string): Promise<Booking
   });
 }
 
-/** The monthly cap's month: the calendar month in market time. */
-const monthStart = marketMonthStart;
 const live = (grant: GrantRow) => grant.status !== 'voided';
 /** Staff rejected it after a risk review: that program is over for the helper (welcome) or the pair (repeat). */
 const rejected = (grant: GrantRow) => grant.status === 'voided' && grant.voidReason === 'risk_review';
@@ -107,9 +107,11 @@ async function syncRecurringMonth(db: Db, helperUserId: string, grants: GrantRow
   for (const row of waiting) {
     const flags = await getFlags(row.marketId, db);
     if (flags['reward.recurring_month'] !== true) continue;
+    // A month of visits is the series' market's calendar month (completion plan 8.1).
     const trigger = recurringMonthTrigger(
       visits.filter((visit) => visit.seriesId === row.id).map((visit) => ({ bookingId: visit.bookingId, startAt: visit.startAt, status: visit.status, ...(visit.transferredAt ? { transferredAt: visit.transferredAt } : {}) })),
       now,
+      await marketTimeZone(db, row.marketId),
     );
     if (!trigger) continue;
     await createGrant(db, grants, { id: recurringGrantId(row.id), helperUserId, program: 'recurring_month', amountCents: REWARD_RULES.recurringMonth.amountCents, status: 'pending', bookingId: trigger.bookingId, posterUserId: row.posterUserId, createdAt: now, updatedAt: now }, now);
@@ -178,7 +180,7 @@ function grantView(grant: GrantRow, booking: BookingFact | undefined, clientName
     ...(booking ? { booking: { id: booking.id, title: booking.title } } : {}),
     ...(grant.program === 'repeat' && clientName ? { clientDisplayName: clientName } : {}),
     ...(grant.holdUntil && !queued && grant.program !== 'welcome' ? { holdUntil: grant.holdUntil.toISOString() } : {}),
-    ...(queued ? { queuedUntil: nextMarketMonthStart(now).toISOString() } : {}),
+    ...(queued ? { queuedUntil: nextMarketMonthStart(now, BUDGET_TIME_ZONE).toISOString() } : {}),
     ...(grant.redeemableAt ? { redeemableAt: grant.redeemableAt.toISOString() } : {}),
     ...(grant.expiresAt ? { expiresAt: grant.expiresAt.toISOString() } : {}),
     ...(grant.voidReason ? { voidReason: grant.voidReason as RewardVoidReason } : {}),
@@ -209,7 +211,7 @@ export async function getRewardsPage(db: Db, user: { id: string; helperReady: bo
     return { ...empty, ...(welcome ? { welcome } : {}) };
   }
   await syncRewards(db, user.id, now);
-  const welcome = await welcomeCardWithProgress(db, user.id, now);
+  const [welcome, timeZone] = await Promise.all([welcomeCardWithProgress(db, user.id, now), userTimeZone(db, user.id)]);
   const [grants, facts] = await Promise.all([
     db.select().from(rewardGrants).where(eq(rewardGrants.helperUserId, user.id)),
     helperBookingFacts(db, user.id),
@@ -239,7 +241,8 @@ export async function getRewardsPage(db: Db, user: { id: string; helperReady: bo
     },
     grants: views,
     repeatProgress: progress,
-    monthly: { capCents: REWARD_RULES.monthlyCapCents, usedCents: sum(grants.filter((grant) => live(grant) && grant.createdAt >= monthStart(now))) },
+    // The $75 cap's month is the helper's own (their home market's calendar), as createGrant counts it.
+    monthly: { capCents: REWARD_RULES.monthlyCapCents, usedCents: sum(grants.filter((grant) => live(grant) && grant.createdAt >= marketMonthStart(now, timeZone))) },
   };
 }
 

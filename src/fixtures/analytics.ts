@@ -1,5 +1,8 @@
 import type { AdminMetricsPageData, LiquidityFigures, MetricShare, MetricsDay, MetricsPeriodDays, MetricsTotals, StaffViewer } from '@/contracts';
 import { marketLocalToUtc } from '@/shared/format';
+
+/** The metrics' reporting zone in these fixtures: Austin's, named rather than assumed (completion plan 8.1). */
+const METRICS_ZONE = 'America/Chicago';
 import { ADMIN_NOW } from './admin';
 
 /**
@@ -38,7 +41,7 @@ function buildDays(days: MetricsPeriodDays, withMoney: boolean): MetricsDay[] {
     const at = index + offset;
     return {
       day,
-      startsAt: marketLocalToUtc(day, '00:00'),
+      startsAt: marketLocalToUtc(day, '00:00', METRICS_ZONE),
       posted: POSTED[at] ?? 0,
       offers: OFFERS[at] ?? 0,
       booked: BOOKED[at] ?? 0,
@@ -76,6 +79,7 @@ export const adminMetricsFinanceData: AdminMetricsPageData = {
   days: 30,
   from: monthDaily[0]!.startsAt,
   generatedAt: ADMIN_NOW,
+  timeZone: METRICS_ZONE,
   canSeeMoney: true,
   targets: [
     { id: 'offer_within_2h', area: 'liquidity', comparison: 'at_least', target: { kind: 'percent', percent: 70 }, value: { kind: 'share', share: share(268, 352) }, status: 'met' },
@@ -149,11 +153,12 @@ const empty = (): LiquidityFigures => ({ offerWithin2h: share(0, 0), offerWithin
 
 /** A market's first morning (finance): nothing posted yet, every target waiting for data. */
 export const adminMetricsEmptyData: AdminMetricsPageData = (() => {
-  const daily = dayKeys(7).map((day): MetricsDay => ({ day, startsAt: marketLocalToUtc(day, '00:00'), posted: 0, offers: 0, booked: 0, completed: 0, repeat: 0, rewardsDeliveredCents: 0 }));
+  const daily = dayKeys(7).map((day): MetricsDay => ({ day, startsAt: marketLocalToUtc(day, '00:00', METRICS_ZONE), posted: 0, offers: 0, booked: 0, completed: 0, repeat: 0, rewardsDeliveredCents: 0 }));
   return {
     days: 7,
     from: daily[0]!.startsAt,
     generatedAt: ADMIN_NOW,
+    timeZone: METRICS_ZONE,
     canSeeMoney: true,
     targets: adminMetricsFinanceData.targets.map((target) => ({ id: target.id, area: target.area, comparison: target.comparison, target: target.target, status: target.id === 'address_incidents' ? ('not_measured' as const) : ('no_data' as const) })),
     funnel: { steps: adminMetricsFinanceData.funnel.steps.map((step) => ({ id: step.id, count: 0, ofPosted: share(0, 0), ofPrevious: share(0, 0) })), rebookMaturing: 0 },

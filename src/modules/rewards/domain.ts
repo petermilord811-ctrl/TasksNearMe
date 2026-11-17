@@ -1,4 +1,4 @@
-import type { Cents, RewardProgramCode, RewardProgramView, RewardStatus } from '@/contracts';
+import { MARKET_TIME_ZONE, type Cents, type RewardProgramCode, type RewardProgramView, type RewardStatus, type TimeZone } from '@/contracts';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
@@ -86,27 +86,34 @@ export function releasedThisMonthCents(
   grants: readonly { program: string; status: string; amountCents: Cents; holdUntil?: Date | null }[],
   program: RewardProgramCode,
   now: Date,
+  timeZone: TimeZone = BUDGET_TIME_ZONE,
 ): Cents {
-  const start = marketMonthStart(now);
+  const start = marketMonthStart(now, timeZone);
   return grants
     .filter((grant) => grant.program === program && (WELCOME_RELEASED_STATUSES as readonly string[]).includes(grant.status) && grant.holdUntil && grant.holdUntil >= start)
     .reduce((total, grant) => total + grant.amountCents, 0);
 }
 
 /**
- * The start of the calendar month in market time (America/Chicago) that `now` falls in: the $75 monthly cap
- * counts grants made since then (blueprint 05 §1). At 11 pm on Nov 30 in Austin it's still November, even
- * though it's already December in UTC.
+ * Program budgets (the welcome gift's monthly pool, blueprint 05 §1) are one pool for the whole platform, so their
+ * month is the default market's (completion plan 8.1). A person's own $75 cap uses their home market's month.
  */
-export function marketMonthStart(now: Date): Date {
-  return new Date(marketLocalToUtc(`${marketDayKey(now).slice(0, 7)}-01`, '00:00'));
+export const BUDGET_TIME_ZONE: TimeZone = MARKET_TIME_ZONE;
+
+/**
+ * The start of the calendar month that `now` falls in, in a market's zone: the $75 monthly cap counts grants made
+ * since then (blueprint 05 §1). At 11 pm on Nov 30 in Austin it's still November, even though it's already
+ * December in UTC (and in Gainesville).
+ */
+export function marketMonthStart(now: Date, timeZone: TimeZone): Date {
+  return new Date(marketLocalToUtc(`${marketDayKey(now, timeZone).slice(0, 7)}-01`, '00:00', timeZone));
 }
 
-/** The start of the next calendar month in market time: when a waiting welcome grant gets the new budget. */
-export function nextMarketMonthStart(now: Date): Date {
-  const [year, month] = marketDayKey(now).slice(0, 7).split('-').map(Number) as [number, number];
+/** The start of the next calendar month in a market's zone: when a waiting welcome grant gets the new budget. */
+export function nextMarketMonthStart(now: Date, timeZone: TimeZone): Date {
+  const [year, month] = marketDayKey(now, timeZone).slice(0, 7).split('-').map(Number) as [number, number];
   const next = month === 12 ? `${year + 1}-01` : `${year}-${String(month + 1).padStart(2, '0')}`;
-  return new Date(marketLocalToUtc(`${next}-01`, '00:00'));
+  return new Date(marketLocalToUtc(`${next}-01`, '00:00', timeZone));
 }
 
 export const LAUNCH_PROGRAMS: RewardProgramView[] = [
@@ -129,11 +136,11 @@ export interface SeriesVisitFact {
  * visit of the series, at least two, was completed and paid. A skipped or canceled visit in a month spoils that
  * month (later months can still qualify). Returns the month's last visit (the grant's booking).
  */
-export function recurringMonthTrigger(visits: SeriesVisitFact[], now: Date): SeriesVisitFact | undefined {
-  const thisMonth = marketDayKey(now).slice(0, 7);
+export function recurringMonthTrigger(visits: SeriesVisitFact[], now: Date, timeZone: TimeZone): SeriesVisitFact | undefined {
+  const thisMonth = marketDayKey(now, timeZone).slice(0, 7);
   const months = new Map<string, SeriesVisitFact[]>();
   for (const visit of [...visits].sort((a, b) => a.startAt.getTime() - b.startAt.getTime())) {
-    const month = marketDayKey(visit.startAt).slice(0, 7);
+    const month = marketDayKey(visit.startAt, timeZone).slice(0, 7);
     months.set(month, [...(months.get(month) ?? []), visit]);
   }
   for (const [month, inMonth] of [...months].sort(([a], [b]) => a.localeCompare(b))) {

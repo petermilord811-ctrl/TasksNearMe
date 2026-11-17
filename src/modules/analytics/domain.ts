@@ -18,8 +18,8 @@ import type {
   RewardProgramSpend,
   RewardStatus,
 } from '@/contracts';
-import { REWARD_PROGRAM_CODES } from '@/contracts';
-import { marketMonthStart, releasedThisMonthCents } from '@/modules/rewards/domain';
+import { MARKET_TIME_ZONE, REWARD_PROGRAM_CODES, type TimeZone } from '@/contracts';
+import { BUDGET_TIME_ZONE, marketMonthStart, releasedThisMonthCents } from '@/modules/rewards/domain';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
@@ -66,6 +66,8 @@ export interface TaskFact {
   areaName?: string;
   status: string;
   publishedAt: Date;
+  /** Its market's zone: "posted in business hours" is on the task's own clock (completion plan 8.1). */
+  timeZone: TimeZone;
   firstOfferAt?: Date;
 }
 
@@ -124,13 +126,21 @@ export interface MetricsPeriod {
   dayKeys: string[];
   from: Date;
   now: Date;
+  /** The zone its days and months are counted in: the metrics cover every market, so one reporting zone. */
+  timeZone: TimeZone;
 }
 
-/** The last `days` market days, today included; the period starts at the first one's market midnight. */
-export function metricsPeriod(days: MetricsPeriodDays, now: Date): MetricsPeriod {
-  const [year, month, day] = marketDayKey(now).split('-').map(Number) as [number, number, number];
+/**
+ * Platform-wide metrics count days and months on one clock, the default market's (completion plan 8.1); a
+ * per-market view would pass that market's zone.
+ */
+export const METRICS_TIME_ZONE: TimeZone = MARKET_TIME_ZONE;
+
+/** The last `days` days in `timeZone`, today included; the period starts at the first one's midnight there. */
+export function metricsPeriod(days: MetricsPeriodDays, now: Date, timeZone: TimeZone = METRICS_TIME_ZONE): MetricsPeriod {
+  const [year, month, day] = marketDayKey(now, timeZone).split('-').map(Number) as [number, number, number];
   const dayKeys = Array.from({ length: days }, (_, index) => new Date(Date.UTC(year, month - 1, day - (days - 1 - index))).toISOString().slice(0, 10));
-  return { days, dayKeys, from: new Date(marketLocalToUtc(dayKeys[0]!, '00:00')), now };
+  return { days, dayKeys, from: new Date(marketLocalToUtc(dayKeys[0]!, '00:00', timeZone)), now, timeZone };
 }
 
 export function share(part: number, whole: number): MetricShare {
@@ -152,7 +162,7 @@ export const madeAt = (booking: BookingFact) => booking.confirmedAt ?? booking.c
 
 function liquidityOf(tasks: TaskFact[], bookedTaskIds: ReadonlySet<string>, now: Date): LiquidityFigures {
   const businessHours = tasks.filter((task) => {
-    const hour = Number(marketClockTime(task.publishedAt).slice(0, 2));
+    const hour = Number(marketClockTime(task.publishedAt, task.timeZone).slice(0, 2));
     return hour >= BUSINESS_HOURS.from && hour < BUSINESS_HOURS.to && task.publishedAt.getTime() + 2 * HOUR <= now.getTime();
   });
   const dayOld = tasks.filter((task) => task.publishedAt.getTime() + DAY <= now.getTime());
@@ -181,12 +191,12 @@ function groupRows<T extends { key: string; name: string }>(tasks: TaskFact[], k
 }
 
 /** Contribution per completed booking before rewards (04 §8 assumptions), in cents. */
-export function contributionOf(bookings: BookingFact[]): { cents: Cents; bookings: number } | undefined {
+export function contributionOf(bookings: BookingFact[], timeZone: TimeZone): { cents: Cents; bookings: number } | undefined {
   if (bookings.length === 0) return undefined;
   const a = CONTRIBUTION_ASSUMPTIONS;
   // The connected account's monthly fee, split over the helper's completed bookings that month.
   const perHelperMonth = new Map<string, number>();
-  const monthKey = (booking: BookingFact) => `${booking.helperUserId}:${marketDayKey(booking.completedAt!).slice(0, 7)}`;
+  const monthKey = (booking: BookingFact) => `${booking.helperUserId}:${marketDayKey(booking.completedAt!, timeZone).slice(0, 7)}`;
   for (const booking of bookings) perHelperMonth.set(monthKey(booking), (perHelperMonth.get(monthKey(booking)) ?? 0) + 1);
   let total = 0;
   for (const booking of bookings) {
@@ -227,7 +237,7 @@ function rewardSpendOf(facts: MetricsFacts, period: MetricsPeriod): MetricsRewar
     const budgetCents = facts.budgets[program];
     const periodGranted = grants.filter((grant) => committed(grant) && inPeriod(grant.createdAt, period));
     // Budgets are monthly (2026-11-14): what left the waiting line this calendar month counts against them.
-    const releasedCents = releasedThisMonthCents(grants, program, period.now);
+    const releasedCents = releasedThisMonthCents(grants, program, period.now, BUDGET_TIME_ZONE);
     return {
       program,
       ...(budgetCents !== undefined
@@ -249,7 +259,7 @@ function rewardSpendOf(facts: MetricsFacts, period: MetricsPeriod): MetricsRewar
     };
   });
   // The monthly cap as the rewards service applies it: grants not voided, created this calendar month (market time).
-  const monthStart = marketMonthStart(period.now);
+  const monthStart = marketMonthStart(period.now, period.timeZone);
   const thisMonth = new Map<string, number>();
   for (const grant of facts.grants) {
     if (grant.status === 'voided' || grant.createdAt < monthStart) continue;
@@ -336,7 +346,7 @@ export function computeMetrics(facts: MetricsFacts, period: MetricsPeriod, canSe
   });
 
   const completedInPeriod = facts.bookings.filter((booking) => booking.status === 'completed' && inPeriod(booking.completedAt, period));
-  const contribution = contributionOf(completedInPeriod);
+  const contribution = contributionOf(completedInPeriod, period.timeZone);
 
   const targets: MetricTarget[] = [
     shareTarget('offer_within_2h', 'liquidity', 'at_least', 70, liquidity.overall.offerWithin2h),
@@ -369,11 +379,11 @@ export function computeMetrics(facts: MetricsFacts, period: MetricsPeriod, canSe
 
   // ---- Daily figures (market days).
   const days = new Map<string, MetricsDay>(
-    period.dayKeys.map((day) => [day, { day, startsAt: marketLocalToUtc(day, '00:00'), posted: 0, offers: 0, booked: 0, completed: 0, repeat: 0, ...(canSeeMoney ? { rewardsDeliveredCents: 0 } : {}) }]),
+    period.dayKeys.map((day) => [day, { day, startsAt: marketLocalToUtc(day, '00:00', period.timeZone), posted: 0, offers: 0, booked: 0, completed: 0, repeat: 0, ...(canSeeMoney ? { rewardsDeliveredCents: 0 } : {}) }]),
   );
   const bump = (at: Date | undefined, field: 'posted' | 'offers' | 'booked' | 'completed' | 'repeat', by = 1) => {
     if (!inPeriod(at, period)) return;
-    const entry = days.get(marketDayKey(at));
+    const entry = days.get(marketDayKey(at, period.timeZone));
     if (entry) entry[field] += by;
   };
   for (const task of facts.tasks) bump(task.publishedAt, 'posted');
@@ -388,7 +398,7 @@ export function computeMetrics(facts: MetricsFacts, period: MetricsPeriod, canSe
   if (canSeeMoney) {
     for (const grant of facts.grants) {
       if (grant.status !== 'delivered' || !inPeriod(grant.deliveredAt, period)) continue;
-      const entry = days.get(marketDayKey(grant.deliveredAt));
+      const entry = days.get(marketDayKey(grant.deliveredAt, period.timeZone));
       if (entry) entry.rewardsDeliveredCents = (entry.rewardsDeliveredCents ?? 0) + grant.amountCents;
     }
   }
@@ -408,6 +418,7 @@ export function computeMetrics(facts: MetricsFacts, period: MetricsPeriod, canSe
     days: period.days,
     from: period.from.toISOString(),
     generatedAt: now.toISOString(),
+    timeZone: period.timeZone,
     canSeeMoney,
     targets,
     funnel,

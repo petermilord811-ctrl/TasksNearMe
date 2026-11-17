@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
 import { areas, markets } from '@/modules/markets/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
-import { REWARD_RULES, nextMarketMonthStart, releasedThisMonthCents } from '@/modules/rewards/domain';
+import { REWARD_RULES, BUDGET_TIME_ZONE, nextMarketMonthStart, releasedThisMonthCents } from '@/modules/rewards/domain';
 import { FOUNDING_COHORT_SIZE, assignFoundingNumber } from '@/modules/rewards/founding';
 import { rewardGrants } from '@/modules/rewards/schema';
 import { syncRewards } from '@/modules/rewards/service';
@@ -96,7 +96,7 @@ describe('T-26: budgets under concurrency', () => {
   it('moves the 10 oldest waiting cards on when the next month’s budget opens, however many callers race', async () => {
     const before = await grantsOfMine();
     const oldest = [...waiting(before)].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id)).slice(0, 10).map((grant) => grant.id);
-    const nextMonth = new Date(nextMarketMonthStart(now).getTime() + 60 * 60 * 1000);
+    const nextMonth = new Date(nextMarketMonthStart(now, BUDGET_TIME_ZONE).getTime() + 60 * 60 * 1000);
     // Other tests' cards don't leave the line in that month, so a budget for 10 is room for exactly 10.
     await Promise.all([0, 1, 2].map(() => releaseWelcomeQueue(db, nextMonth, { welcome: 10 * WELCOME })));
     const after = await grantsOfMine();

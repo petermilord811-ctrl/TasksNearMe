@@ -11,7 +11,7 @@ import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { BUDGET_COMMITTED_STATUSES, REWARD_BUDGETS, REWARD_RULES, WELCOME_QUEUED_STATUSES, releasedThisMonthCents } from './domain';
+import { BUDGET_COMMITTED_STATUSES, BUDGET_TIME_ZONE, REWARD_BUDGETS, REWARD_RULES, WELCOME_QUEUED_STATUSES, releasedThisMonthCents } from './domain';
 import { emitRewardEvent } from './grants';
 import { giftCardRecipient } from './service';
 import { riskSignalsOf } from './risk';
@@ -114,7 +114,7 @@ export async function getAdminRewards(db: Db, staff: StaffActor, filter: AdminRe
         .from(rewardGrants)
         .where(and(eq(rewardGrants.program, program), inArray(rewardGrants.status, [...WELCOME_QUEUED_STATUSES, ...BUDGET_COMMITTED_STATUSES])));
       const queuedCents = rows.filter((row) => WELCOME_QUEUED_STATUSES.includes(row.status as RewardStatus)).reduce((sum, row) => sum + row.amountCents, 0);
-      return [program, { releasedThisMonthCents: releasedThisMonthCents(rows, program, now), queuedCents }] as const;
+      return [program, { releasedThisMonthCents: releasedThisMonthCents(rows, program, now, BUDGET_TIME_ZONE), queuedCents }] as const;
     }),
   );
   const monthlyOf = new Map(monthly);

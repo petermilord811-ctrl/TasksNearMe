@@ -1,4 +1,4 @@
-import type { Cents, CategorySlug, ISODateTime } from './common';
+import type { Cents, CategorySlug, ISODateTime, TimeZone } from './common';
 import type { RewardProgramCode } from './status';
 
 /**
@@ -86,7 +86,7 @@ export interface MetricsFunnel {
   rebookMaturing: number;
 }
 
-/** One market day (America/Chicago). */
+/** One day in the metrics' reporting zone (`AdminMetricsPageData.timeZone`). */
 export interface MetricsDay {
   /** `YYYY-MM-DD`, market time. */
   day: string;
@@ -173,9 +173,11 @@ export interface MetricsRewardSpend {
 /** `/admin/metrics`: every staff role reads it; money only for finance and admins. */
 export interface AdminMetricsPageData {
   days: MetricsPeriodDays;
-  /** The first day's market midnight; the period runs to `generatedAt`. */
+  /** The first day's midnight in `timeZone`; the period runs to `generatedAt`. */
   from: ISODateTime;
   generatedAt: ISODateTime;
+  /** The zone its days are counted and shown in: one reporting zone for every market (completion plan 8.1). */
+  timeZone: TimeZone;
   canSeeMoney: boolean;
   targets: MetricTarget[];
   funnel: MetricsFunnel;

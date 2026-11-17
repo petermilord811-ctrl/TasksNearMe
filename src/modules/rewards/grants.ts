@@ -2,6 +2,7 @@ import { and, eq, gte, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
+import { userTimeZone } from '@/modules/markets/time-zone';
 import { REWARD_RULES, marketMonthStart } from './domain';
 import { rewardGrants } from './schema';
 
@@ -18,12 +19,14 @@ const centsOf = () => sql<number>`coalesce(sum(${rewardGrants.amountCents}), 0):
  * Returns the new row, or null (over the cap, or another request made the same grant first).
  */
 export async function createGrant(db: Db, grants: GrantRow[], values: typeof rewardGrants.$inferInsert, now: Date, announce?: (tx: Tx, row: GrantRow) => Promise<void>): Promise<GrantRow | null> {
+  // The cap's month is the helper's own: their home market's calendar (completion plan 8.1).
+  const timeZone = await userTimeZone(db, values.helperUserId);
   const created = await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`reward-cap:${values.helperUserId}`}))`);
     const [month] = await tx
       .select({ cents: centsOf() })
       .from(rewardGrants)
-      .where(and(eq(rewardGrants.helperUserId, values.helperUserId), ne(rewardGrants.status, 'voided'), gte(rewardGrants.createdAt, marketMonthStart(now))));
+      .where(and(eq(rewardGrants.helperUserId, values.helperUserId), ne(rewardGrants.status, 'voided'), gte(rewardGrants.createdAt, marketMonthStart(now, timeZone))));
     if ((month?.cents ?? 0) + values.amountCents > REWARD_RULES.monthlyCapCents) return null;
     // Another request created the same grant first (the partial unique indexes, or a fixed id): nothing to add.
     const [row] = await tx.insert(rewardGrants).values(values).onConflictDoNothing().returning();

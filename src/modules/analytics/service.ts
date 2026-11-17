@@ -2,6 +2,7 @@ import { and, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-
 import type { AdminMetricsPageData, CategorySlug, MetricsPeriodDays, RewardProgramCode, RewardStatus, StaffRole } from '@/contracts';
 import { bookingCompletions, bookingTerms, bookings, helperStrikes } from '@/modules/bookings/schema';
 import { areas, categories } from '@/modules/markets/schema';
+import { marketTimeZones } from '@/modules/markets/time-zone';
 import { offers } from '@/modules/offers/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { REWARD_BUDGETS, REWARD_RULES } from '@/modules/rewards/domain';
@@ -43,6 +44,7 @@ export async function getAdminMetrics(db: Db, staff: StaffActor, days: MetricsPe
         publishedAt: tasks.publishedAt,
         category: categories.slug,
         categoryName: categories.name,
+        marketId: tasks.marketId,
         areaId: areas.id,
         areaName: areas.name,
         firstOfferAt: firstOffers.at,
@@ -85,6 +87,7 @@ export async function getAdminMetrics(db: Db, staff: StaffActor, days: MetricsPe
         .where(and(inArray(helperProfiles.userId, helperIds), isNotNull(helperProfiles.idVerifiedAt)))
     : [];
 
+  const taskZones = await marketTimeZones(db, taskRows.map((row) => row.marketId));
   const facts: MetricsFacts = {
     tasks: taskRows.map(
       (row): TaskFact => ({
@@ -95,6 +98,7 @@ export async function getAdminMetrics(db: Db, staff: StaffActor, days: MetricsPe
         ...(row.areaId ? { areaId: row.areaId, areaName: row.areaName ?? row.areaId } : {}),
         status: row.status,
         publishedAt: toDate(row.publishedAt),
+        timeZone: taskZones.get(row.marketId)!,
         ...(row.firstOfferAt ? { firstOfferAt: toDate(row.firstOfferAt) } : {}),
       }),
     ),

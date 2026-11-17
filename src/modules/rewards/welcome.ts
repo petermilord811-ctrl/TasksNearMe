@@ -7,6 +7,7 @@ import { helperProfiles } from '@/modules/profiles/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import {
+  BUDGET_TIME_ZONE,
   REWARD_BUDGETS,
   REWARD_RULES,
   WELCOME_QUEUED_STATUSES,
@@ -134,7 +135,7 @@ export async function releaseWelcomeQueue(db: Db, now: Date, budgets: RewardBudg
     const [released] = await tx
       .select({ cents: sql<number>`coalesce(sum(${rewardGrants.amountCents}), 0)::int` })
       .from(rewardGrants)
-      .where(and(eq(rewardGrants.program, 'welcome'), inArray(rewardGrants.status, [...WELCOME_RELEASED_STATUSES]), gte(rewardGrants.holdUntil, marketMonthStart(now))));
+      .where(and(eq(rewardGrants.program, 'welcome'), inArray(rewardGrants.status, [...WELCOME_RELEASED_STATUSES]), gte(rewardGrants.holdUntil, marketMonthStart(now, BUDGET_TIME_ZONE))));
     const ids = welcomeReleases(queue, released?.cents ?? 0, budgets.welcome);
     if (ids.length === 0) return [];
     const moved = await tx
@@ -227,7 +228,7 @@ export async function welcomeCardFor(db: Db, userId: string, now: Date, progress
   switch (live.status) {
     case 'pending':
     case 'qualified':
-      return { ...base, state: 'earned', queuedUntil: nextMarketMonthStart(now).toISOString() };
+      return { ...base, state: 'earned', queuedUntil: nextMarketMonthStart(now, BUDGET_TIME_ZONE).toISOString() };
     case 'in_review':
     case 'failed':
       return { ...base, state: 'earned' };

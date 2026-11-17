@@ -20,8 +20,11 @@ const sixty: PriceBreakdown = {
   platformRevenueCents: 1200,
 };
 
+const AUSTIN = 'America/Chicago';
+
 const task = (id: string, publishedAt: string, extra: Partial<TaskFact> = {}): TaskFact => ({
   id,
+  timeZone: AUSTIN,
   posterUserId: 'usr_poster',
   category: 'furniture-assembly',
   categoryName: 'Furniture assembly',
@@ -63,14 +66,14 @@ const targetOf = (targets: MetricTarget[], id: MetricTarget['id']) => targets.fi
 
 describe('the period', () => {
   it('is the last N market days, today included, from the first one’s market midnight', () => {
-    const period = metricsPeriod(7, now);
+    const period = metricsPeriod(7, now, AUSTIN);
     expect(period.dayKeys).toEqual(['2026-02-06', '2026-02-07', '2026-02-08', '2026-02-09', '2026-02-10', '2026-02-11', '2026-02-12']);
     expect(period.from.toISOString()).toBe('2026-02-06T06:00:00.000Z');
   });
 
   it('keeps one key per day across a daylight-saving change', () => {
     // Nov 1 2026 falls back; just after midnight in Austin on Nov 3.
-    const period = metricsPeriod(7, at('2026-11-03T06:30:00.000Z'));
+    const period = metricsPeriod(7, at('2026-11-03T06:30:00.000Z'), AUSTIN);
     expect(period.dayKeys).toEqual(['2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02', '2026-11-03']);
     expect(period.from.toISOString()).toBe('2026-10-28T05:00:00.000Z');
   });
@@ -94,7 +97,7 @@ describe('liquidity', () => {
     // An hour ago: too new for either share.
     task('tsk_d', '2026-02-12T17:00:00.000Z'),
   ];
-  const data = computeMetrics(facts({ tasks, bookings: [booking('a', { taskId: 'tsk_a' })] }), metricsPeriod(7, now), false);
+  const data = computeMetrics(facts({ tasks, bookings: [booking('a', { taskId: 'tsk_a' })] }), metricsPeriod(7, now, AUSTIN), false);
 
   it('counts offers within 2 h for tasks posted 7 am–9 pm, and within 24 h for tasks a day old', () => {
     expect(data.liquidity.overall).toEqual({
@@ -105,6 +108,14 @@ describe('liquidity', () => {
     });
     expect(targetOf(data.targets, 'offer_within_2h')).toMatchObject({ status: 'missed', value: { kind: 'share', share: { part: 1, whole: 2 } } });
     expect(targetOf(data.targets, 'posted_to_booked')).toMatchObject({ status: 'missed', maturing: 3 });
+  });
+
+  it('judges business hours on each task’s own clock (plan 8.1): 9:30 pm in Gainesville is 8:30 pm in Austin', () => {
+    // Posted 02:30 UTC: 9:30 pm EST in Gainesville (outside 7 am–9 pm), 8:30 pm CST in Austin (inside).
+    const late = (id: string, timeZone: string) => task(id, '2026-02-11T02:30:00.000Z', { timeZone, firstOfferAt: at('2026-02-11T03:00:00.000Z') });
+    const share = (timeZone: string) => computeMetrics(facts({ tasks: [late('tsk_x', timeZone)] }), metricsPeriod(7, now, AUSTIN), false).liquidity.overall.offerWithin2h;
+    expect(share(AUSTIN)).toMatchObject({ part: 1, whole: 1 });
+    expect(share('America/New_York')).toMatchObject({ part: 0, whole: 0 });
   });
 
   it('breaks down by category (most posted first) and by area (remote last)', () => {
@@ -128,7 +139,7 @@ describe('bookings that started', () => {
     // Never paid: not a confirmed booking.
     booking('unpaid', { status: 'canceled', confirmedAt: undefined }),
   ];
-  const data = computeMetrics(facts({ bookings, disputeBookingIds: new Set(['done']), strikeBookingIds: new Set(['late']) }), metricsPeriod(7, now), false);
+  const data = computeMetrics(facts({ bookings, disputeBookingIds: new Set(['done']), strikeBookingIds: new Set(['late']) }), metricsPeriod(7, now, AUSTIN), false);
 
   it('completion counts finished ones; disputes and strikes count every confirmed one', () => {
     expect(targetOf(data.targets, 'bookings_completed')).toMatchObject({ status: 'missed', value: { share: { part: 1, whole: 2 } }, maturing: 1 });
@@ -139,9 +150,9 @@ describe('bookings that started', () => {
 
   it('compares ceilings exactly (3.2% is over 3%, even though it reads 3.2)', () => {
     const many = Array.from({ length: 217 }, (_, index) => booking(`b${index}`));
-    const disputed = computeMetrics(facts({ bookings: many, disputeBookingIds: new Set(many.slice(0, 7).map((item) => item.id)) }), metricsPeriod(7, now), false);
+    const disputed = computeMetrics(facts({ bookings: many, disputeBookingIds: new Set(many.slice(0, 7).map((item) => item.id)) }), metricsPeriod(7, now, AUSTIN), false);
     expect(targetOf(disputed.targets, 'bookings_disputed')).toMatchObject({ status: 'missed', value: { share: { percent: 3.2 } } });
-    const fewer = computeMetrics(facts({ bookings: many, disputeBookingIds: new Set(many.slice(0, 6).map((item) => item.id)) }), metricsPeriod(7, now), false);
+    const fewer = computeMetrics(facts({ bookings: many, disputeBookingIds: new Set(many.slice(0, 6).map((item) => item.id)) }), metricsPeriod(7, now, AUSTIN), false);
     expect(targetOf(fewer.targets, 'bookings_disputed').status).toBe('met');
   });
 });
@@ -151,11 +162,11 @@ describe('booking again', () => {
   it('counts a client who booked again within 60 days, not a later visit of a series', () => {
     const first = booking('first', { status: 'completed', completedAt });
     const visit = booking('visit', { taskId: 'tsk_visit', confirmedAt: at('2026-02-12T15:00:00.000Z'), visitIndex: 2, startAt: at('2026-02-19T16:00:00.000Z') });
-    const visitsOnly = computeMetrics(facts({ bookings: [first, visit] }), metricsPeriod(7, now), false);
+    const visitsOnly = computeMetrics(facts({ bookings: [first, visit] }), metricsPeriod(7, now, AUSTIN), false);
     expect(targetOf(visitsOnly.targets, 'rebook_60d')).toMatchObject({ value: { share: { part: 0, whole: 1 } }, maturing: 1 });
 
     const again = booking('again', { taskId: 'tsk_again', confirmedAt: at('2026-02-12T15:00:00.000Z'), startAt: at('2026-02-20T16:00:00.000Z') });
-    const data = computeMetrics(facts({ bookings: [first, again], firstCompletionByPoster: new Map([['usr_poster', completedAt]]) }), metricsPeriod(7, now), false);
+    const data = computeMetrics(facts({ bookings: [first, again], firstCompletionByPoster: new Map([['usr_poster', completedAt]]) }), metricsPeriod(7, now, AUSTIN), false);
     expect(targetOf(data.targets, 'rebook_60d')).toMatchObject({ status: 'met', value: { share: { part: 1, whole: 1 } } });
     expect(data.targets.find((target) => target.id === 'rebook_60d')!.maturing).toBeUndefined();
     // The day it was booked shows a repeat booking.
@@ -165,13 +176,13 @@ describe('booking again', () => {
 
 describe('money', () => {
   it('reproduces the conservative $6.97 contribution of a $60 booking (blueprint 04 §8)', () => {
-    expect(contributionOf([booking('one', { status: 'completed', completedAt: at('2026-02-11T20:00:00.000Z') })])).toEqual({ cents: 697, bookings: 1 });
+    expect(contributionOf([booking('one', { status: 'completed', completedAt: at('2026-02-11T20:00:00.000Z') })], AUSTIN)).toEqual({ cents: 697, bookings: 1 });
   });
 
   it('splits the payout account’s $2 a month over the helper’s bookings that month', () => {
     const two = ['x', 'y'].map((id) => booking(id, { status: 'completed', completedAt: at('2026-02-11T20:00:00.000Z') }));
     // $1 of account fee each instead of $2.
-    expect(contributionOf(two)).toEqual({ cents: 797, bookings: 2 });
+    expect(contributionOf(two, AUSTIN)).toEqual({ cents: 797, bookings: 2 });
   });
 
   it('is left out for roles without money, and shown to finance', () => {
@@ -183,14 +194,14 @@ describe('money', () => {
     ];
     const completed = booking('paid', { status: 'completed', completedAt: at('2026-02-11T20:00:00.000Z') });
 
-    const agent = computeMetrics(facts({ bookings: [completed], grants: [] }), metricsPeriod(7, now), false);
+    const agent = computeMetrics(facts({ bookings: [completed], grants: [] }), metricsPeriod(7, now, AUSTIN), false);
     expect(agent.canSeeMoney).toBe(false);
     expect(agent.rewards).toBeUndefined();
     expect(targetOf(agent.targets, 'contribution_per_booking')).toEqual({ id: 'contribution_per_booking', area: 'economics', comparison: 'at_least', target: { kind: 'money', cents: 600 }, status: 'restricted' });
     expect(agent.daily.every((day) => day.rewardsDeliveredCents === undefined)).toBe(true);
     expect(agent.totals.rewardsDeliveredCents).toBeUndefined();
 
-    const finance = computeMetrics(facts({ bookings: [completed], grants }), metricsPeriod(7, now), true);
+    const finance = computeMetrics(facts({ bookings: [completed], grants }), metricsPeriod(7, now, AUSTIN), true);
     expect(targetOf(finance.targets, 'contribution_per_booking')).toMatchObject({ status: 'met', value: { kind: 'money_per_booking', cents: 697, bookings: 1 } });
     expect(finance.rewards!.programs.map((program) => program.program)).toEqual(['welcome', 'repeat', 'recurring_month']);
     expect(finance.rewards!.programs[0]).toMatchObject({ budgetCents: 500_000, budgetPeriod: 'month', releasedThisMonthCents: 5000, committedCents: 5000, deliveredCents: 5000, remainingCents: 495_000, budgetUsedPercent: 1, periodGrantedCents: 5000, periodDeliveredCents: 5000 });
@@ -207,7 +218,7 @@ describe('ID checks and incidents', () => {
     const bookings = [booking('one'), booking('two', { helperUserId: 'usr_late' })];
     const data = computeMetrics(
       facts({ bookings, helperIdVerifiedAt: new Map([['usr_helper', at('2026-01-02T12:00:00.000Z')], ['usr_late', at('2026-02-11T12:00:00.000Z')]]) }),
-      metricsPeriod(7, now),
+      metricsPeriod(7, now, AUSTIN),
       true,
     );
     expect(targetOf(data.targets, 'helpers_id_verified')).toMatchObject({ status: 'missed', value: { share: { part: 1, whole: 2 } } });
@@ -215,7 +226,7 @@ describe('ID checks and incidents', () => {
   });
 
   it('says no data rather than met or missed when nothing happened', () => {
-    const data = computeMetrics(facts(), metricsPeriod(7, now), true);
+    const data = computeMetrics(facts(), metricsPeriod(7, now, AUSTIN), true);
     expect(data.targets.filter((target) => target.status !== 'no_data').map((target) => target.id)).toEqual(['address_incidents']);
     expect(data.daily).toHaveLength(7);
     expect(data.totals).toEqual({ posted: 0, offers: 0, booked: 0, completed: 0, repeat: 0, rewardsDeliveredCents: 0 });
@@ -227,10 +238,10 @@ describe('the monthly cap in reward spend', () => {
     // Nov 30, 11:30 pm CST (already Dec 1 in UTC); the grant came that afternoon.
     const night = new Date('2026-12-01T05:30:00.000Z');
     const grant = { helperUserId: 'usr_helper', program: 'welcome' as const, amountCents: 7500, status: 'qualified' as const, createdAt: at('2026-11-30T20:00:00.000Z'), updatedAt: at('2026-11-30T20:00:00.000Z') };
-    const data = computeMetrics(facts({ grants: [grant] }), metricsPeriod(7, night), true);
+    const data = computeMetrics(facts({ grants: [grant] }), metricsPeriod(7, night, AUSTIN), true);
     expect(data.rewards).toMatchObject({ helpersAtCap: 1, helpersNearCap: 0 });
     // After midnight in Austin it's a new month.
-    const december = computeMetrics(facts({ grants: [grant] }), metricsPeriod(7, new Date('2026-12-01T06:30:00.000Z')), true);
+    const december = computeMetrics(facts({ grants: [grant] }), metricsPeriod(7, new Date('2026-12-01T06:30:00.000Z'), AUSTIN), true);
     expect(december.rewards).toMatchObject({ helpersAtCap: 0 });
   });
 });

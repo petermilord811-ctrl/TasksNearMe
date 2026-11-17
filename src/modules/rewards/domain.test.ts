@@ -19,6 +19,9 @@ import {
 const day = (n: number) => new Date(Date.UTC(2026, 10, 1) + n * 86_400_000);
 const booking = (over: Partial<BookingFact>): BookingFact => ({ id: 'bkg', title: 'Task', posterUserId: 'usr_maya', status: 'confirmed', fundedAt: day(5), priceCents: 6000, ...over });
 
+const AUSTIN = 'America/Chicago';
+const GAINESVILLE = 'America/New_York';
+
 describe('the welcome gift card (the owner’s rule of 2026-11-14)', () => {
   it('is earned the moment the last of the phone, ID and background checks passes, with no booking', () => {
     const facts = { phoneVerifiedAt: day(1), idVerifiedAt: day(3), backgroundCheckedAt: null };
@@ -56,7 +59,7 @@ describe('the welcome gift card (the owner’s rule of 2026-11-14)', () => {
       { program: 'repeat', status: 'redeemable', amountCents: 1000, holdUntil: new Date('2026-12-02T18:00:00.000Z') },
     ];
     expect(releasedThisMonthCents(grants, 'welcome', now)).toBe(10_000);
-    expect(nextMarketMonthStart(now).toISOString()).toBe('2027-01-01T06:00:00.000Z');
+    expect(nextMarketMonthStart(now, AUSTIN).toISOString()).toBe('2027-01-01T06:00:00.000Z');
   });
 
   it('follows no booking: a canceled or completed booking never moves it; only an unredeemed card expires', () => {
@@ -131,11 +134,11 @@ describe('recurring-month reward', () => {
 
   it('goes to the last visit of the first finished month with every visit, at least two, completed and paid', () => {
     const visits = [visit('nov17', '2026-11-17'), visit('nov24', '2026-11-24'), visit('dec01', '2026-12-01'), visit('dec08', '2026-12-08')];
-    expect(recurringMonthTrigger(visits, at('2026-12-10'))?.bookingId).toBe('nov24');
+    expect(recurringMonthTrigger(visits, at('2026-12-10'), AUSTIN)?.bookingId).toBe('nov24');
   });
 
   it('waits until the month is over', () => {
-    expect(recurringMonthTrigger([visit('nov03', '2026-11-03'), visit('nov10', '2026-11-10')], at('2026-11-30'))).toBeUndefined();
+    expect(recurringMonthTrigger([visit('nov03', '2026-11-03'), visit('nov10', '2026-11-10')], at('2026-11-30'), AUSTIN)).toBeUndefined();
   });
 
   it('needs two visits in the month, all completed and paid', () => {
@@ -149,8 +152,8 @@ describe('recurring-month reward', () => {
       visit('feb02', '2027-02-02'),
       visit('feb16', '2027-02-16'),
     ];
-    expect(recurringMonthTrigger(visits, at('2027-03-02'))?.bookingId).toBe('feb16');
-    expect(recurringMonthTrigger(visits, at('2027-02-20'))).toBeUndefined();
+    expect(recurringMonthTrigger(visits, at('2027-03-02'), AUSTIN)?.bookingId).toBe('feb16');
+    expect(recurringMonthTrigger(visits, at('2027-02-20'), AUSTIN)).toBeUndefined();
   });
 
   it('has no price threshold once its visit is completed and paid', () => {
@@ -163,13 +166,24 @@ describe('recurring-month reward', () => {
 describe('the monthly cap’s month (market time)', () => {
   it('is still November at 11:30 pm on Nov 30 in Austin, though it is December in UTC', () => {
     // 2026-12-01T05:30Z is Nov 30, 11:30 pm CST.
-    expect(marketMonthStart(new Date('2026-12-01T05:30:00.000Z')).toISOString()).toBe('2026-11-01T05:00:00.000Z');
+    expect(marketMonthStart(new Date('2026-12-01T05:30:00.000Z'), AUSTIN).toISOString()).toBe('2026-11-01T05:00:00.000Z');
+  });
+
+  it('turns at each market’s own midnight: 11:30 pm on Nov 30 in Austin is already December in Gainesville (plan 8.1)', () => {
+    const late = new Date('2026-12-01T05:30:00.000Z');
+    expect(marketMonthStart(late, AUSTIN).toISOString()).toBe('2026-11-01T05:00:00.000Z');
+    expect(marketMonthStart(late, GAINESVILLE).toISOString()).toBe('2026-12-01T05:00:00.000Z');
+    expect(nextMarketMonthStart(late, GAINESVILLE).toISOString()).toBe('2027-01-01T05:00:00.000Z');
+    // A visit at 11:30 pm Nov 30 in Austin belongs to November there, December in Gainesville.
+    const visits = [{ bookingId: 'nov', startAt: new Date('2026-11-10T16:00:00.000Z'), status: 'completed', transferredAt: new Date('2026-11-11T16:00:00.000Z') }, { bookingId: 'late', startAt: late, status: 'completed', transferredAt: late }];
+    expect(recurringMonthTrigger(visits, new Date('2026-12-02T18:00:00.000Z'), AUSTIN)?.bookingId).toBe('late');
+    expect(recurringMonthTrigger(visits, new Date('2026-12-02T18:00:00.000Z'), GAINESVILLE)).toBeUndefined();
   });
 
   it('turns at midnight in Austin, across daylight saving', () => {
     // Dec 1, 12:30 am CST.
-    expect(marketMonthStart(new Date('2026-12-01T06:30:00.000Z')).toISOString()).toBe('2026-12-01T06:00:00.000Z');
+    expect(marketMonthStart(new Date('2026-12-01T06:30:00.000Z'), AUSTIN).toISOString()).toBe('2026-12-01T06:00:00.000Z');
     // Mar 31, 11 pm CDT (DST began Mar 8): still March, which started in CST.
-    expect(marketMonthStart(new Date('2027-04-01T04:00:00.000Z')).toISOString()).toBe('2027-03-01T06:00:00.000Z');
+    expect(marketMonthStart(new Date('2027-04-01T04:00:00.000Z'), AUSTIN).toISOString()).toBe('2027-03-01T06:00:00.000Z');
   });
 });
