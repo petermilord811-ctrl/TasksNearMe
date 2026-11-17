@@ -38,6 +38,7 @@ import { consumeRateLimit } from '@/platform/rate-limit';
 import { marketDayKey } from '@/shared/format';
 import { earnings, payouts } from './schema';
 import { shownPaymentStatus } from '@/modules/payments/shown-status';
+import { userTimeZone } from '@/modules/markets/time-zone';
 
 /**
  * The money after the work (blueprint 04 §5–6): transfers to helpers when a booking completes or a
@@ -165,7 +166,9 @@ export async function recordCompensation(db: Writer, booking: { id: string; help
 
 /** Development payouts: transfers older than two days go out together and arrive the next day. */
 export async function settleDevPayouts(db: Db, helperUserId: string, now: Date): Promise<void> {
-  const today = marketDayKey(now);
+  // Arrival dates are calendar days where the helper lives (completion plan 8.1).
+  const timeZone = await userTimeZone(db, helperUserId);
+  const today = marketDayKey(now, timeZone);
   await db
     .update(payouts)
     .set({ status: 'paid', updatedAt: now })
@@ -185,7 +188,7 @@ export async function settleDevPayouts(db: Db, helperUserId: string, now: Date):
     helperUserId,
     amountCents: due.reduce((sum, row) => sum + row.amountCents, 0),
     status: 'in_transit',
-    arrivalDate: marketDayKey(new Date(now.getTime() + DAY)),
+    arrivalDate: marketDayKey(new Date(now.getTime() + DAY), timeZone),
     bankLast4: DEV_BANK_LAST4,
     providerRef: `devpo_${payoutId.slice(3)}`,
     createdAt: now,
@@ -277,7 +280,7 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
   });
   const all = [...pending, ...ledger];
   const sum = (statuses: string[]) => all.filter((row) => statuses.includes(row.status)).reduce((total, row) => total + row.amountCents, 0);
-  const year = marketDayKey(now).slice(0, 4);
+  const year = marketDayKey(now, await userTimeZone(db, helperUserId)).slice(0, 4);
   const paidThisYear = ledger
     .filter((row) => row.status === 'paid_out' && row.payout && row.payout.arrivalDate.startsWith(year))
     .reduce((total, row) => total + row.amountCents, 0);

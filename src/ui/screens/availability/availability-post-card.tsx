@@ -16,13 +16,15 @@ import { Spinner } from '@/ui/primitives/spinner';
 
 const tones: Record<AvailabilityStatus, BadgeTone> = { active: 'brand', held: 'warning', booked: 'info', expired: 'neutral', canceled: 'neutral' };
 
-export function AvailabilityPostCard({ post, onCancel, initialConfirm = false, initialResult }: {
+export function AvailabilityPostCard({ post, timeZone, onCancel, initialConfirm = false, initialResult }: {
   post: AvailabilityPostView;
+  /** The helper's market zone: the slot's day and times are on its clock (completion plan 8.1). */
+  timeZone: string;
   onCancel: AvailabilityHandlers['onCancel'];
   initialConfirm?: boolean;
   initialResult?: ActionResult;
 }) {
-  const { formatDate, formatTimeRange } = useFormat();
+  const { formatDate, formatTimeRange } = useFormat(timeZone);
   const t = useTranslations('availability');
   const categories = useTranslations('helperProfile.categories');
   const actions = useTranslations('actions');

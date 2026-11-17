@@ -29,7 +29,7 @@ export function MyAvailabilityContent({ data, handlers, now, initialConfirmId, i
         : <AvailabilityPostForm data={data} onCreate={handlers.onCreate} now={now} {...formState} />}
     <section className="space-y-4" aria-label={t('postsTitle')}>
       <div className="space-y-2"><h2 className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{t('postsTitle')}</h2><p className="text-sm text-muted-foreground">{t('marketTime')}</p></div>
-      {data.posts.length ? <ul className="space-y-4">{data.posts.map((post) => <li key={post.id}><AvailabilityPostCard post={post} onCancel={handlers.onCancel} initialConfirm={initialConfirmId === post.id} initialResult={initialConfirmId === post.id ? initialCancelResult : undefined} /></li>)}</ul>
+      {data.posts.length ? <ul className="space-y-4">{data.posts.map((post) => <li key={post.id}><AvailabilityPostCard post={post} timeZone={data.timeZone} onCancel={handlers.onCancel} initialConfirm={initialConfirmId === post.id} initialResult={initialConfirmId === post.id ? initialCancelResult : undefined} /></li>)}</ul>
         : <EmptyState title={t('emptyTitle')} body={t(data.setup.bookable ? 'emptyBody' : 'emptySetupBody')} headingLevel={3} icon={<CalendarDays className="size-6" />} />}
     </section>
   </div>;

@@ -8,6 +8,7 @@ import { closeSlotRequests, listedPricingOf } from '@/modules/invites/service';
 import { areas, categories } from '@/modules/markets/schema';
 import { loadHelperState } from '@/modules/offers/helper';
 import { helperProfiles } from '@/modules/profiles/schema';
+import { marketTimeZone, userTimeZone } from '@/modules/markets/time-zone';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
@@ -93,6 +94,8 @@ export async function getMyAvailabilityPage(db: Db, helperId: string, now: Date)
       actions: OPEN_POSTS.includes(status) ? ['cancel_post'] : [],
     };
   });
+  // The helper's market (their home market without an area): the form and the posts are on its clock (plan 8.1).
+  const timeZone = state.marketId ? await marketTimeZone(db, state.marketId) : await userTimeZone(db, helperId);
   return {
     posts,
     setup: state.setup,
@@ -100,13 +103,14 @@ export async function getMyAvailabilityPage(db: Db, helperId: string, now: Date)
     radiusMiles: area?.radiusMiles ?? 1,
     listedPricing,
     limits: {
-      firstDate: marketDayKey(now),
-      lastDate: marketDayKey(new Date(now.getTime() + AVAILABILITY_RULES.maxDaysAhead * DAY)),
+      firstDate: marketDayKey(now, timeZone),
+      lastDate: marketDayKey(new Date(now.getTime() + AVAILABILITY_RULES.maxDaysAhead * DAY), timeZone),
       leadHours: AVAILABILITY_RULES.leadHours,
       maxHours: AVAILABILITY_RULES.maxHours,
       maxActive: AVAILABILITY_RULES.maxActive,
       activeCount: activeCountOf(rows.map(({ row }) => row), now),
     },
+    timeZone,
   };
 }
 
@@ -128,10 +132,12 @@ export async function createAvailabilityPost(db: Db, helperId: string, input: Av
   const state = await loadHelperState(db, helperId, now);
   if (!state.setup.bookable || !state.marketId) return { ok: false, code: 'not_allowed' };
   if (!state.setup.bookableCategories.includes(categorySlug)) return { ok: false, code: 'validation_failed', fieldErrors: { categorySlug: ['invalid'] } };
-  const lastDate = marketDayKey(new Date(now.getTime() + AVAILABILITY_RULES.maxDaysAhead * DAY));
-  if (date < marketDayKey(now) || date > lastDate) return outOfRange('date');
-  const start = new Date(marketLocalToUtc(date, startTime));
-  const end = new Date(marketLocalToUtc(date, endTime));
+  // The slot is in the helper's market, on its clock (completion plan 8.1).
+  const timeZone = await marketTimeZone(db, state.marketId);
+  const lastDate = marketDayKey(new Date(now.getTime() + AVAILABILITY_RULES.maxDaysAhead * DAY), timeZone);
+  if (date < marketDayKey(now, timeZone) || date > lastDate) return outOfRange('date');
+  const start = new Date(marketLocalToUtc(date, startTime, timeZone));
+  const end = new Date(marketLocalToUtc(date, endTime, timeZone));
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return { ok: false, code: 'validation_failed', fieldErrors: { startTime: ['invalid'] } };
   if (start.getTime() - now.getTime() < AVAILABILITY_RULES.leadHours * HOUR) return outOfRange('startTime');
   if (end <= start || end.getTime() - start.getTime() > AVAILABILITY_RULES.maxHours * HOUR) return outOfRange('endTime');

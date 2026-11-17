@@ -26,7 +26,7 @@ export function AvailabilityPostForm({ data, onCreate, now, initialResult, initi
   onCreate: AvailabilityHandlers['onCreate'];
   now: ISODateTime;
 } & AvailabilityFormPreviewState) {
-  const { formatDate, formatDateTime } = useFormat();
+  const { formatDate, formatDateTime } = useFormat(data.timeZone);
   const t = useTranslations('availability');
   const categories = useTranslations('helperProfile.categories');
   const fieldCopy = useTranslations('forms.fieldErrors');
@@ -107,7 +107,7 @@ export function AvailabilityPostForm({ data, onCreate, now, initialResult, initi
           <option value="">{t('chooseCategory')}</option>
           {data.setup.bookableCategories.map((value) => <option key={value} value={value}>{categories(value)}</option>)}
         </select>)}
-        {field('date', t('date'), t('dateHint', { first: formatDate(marketLocalToUtc(data.limits.firstDate, '12:00')), last: formatDate(marketLocalToUtc(data.limits.lastDate, '12:00')) }), (props) => <MarketDateInput {...register('date')} {...props} min={data.limits.firstDate} max={data.limits.lastDate} className="max-w-sm" />)}
+        {field('date', t('date'), t('dateHint', { first: formatDate(marketLocalToUtc(data.limits.firstDate, '12:00', data.timeZone)), last: formatDate(marketLocalToUtc(data.limits.lastDate, '12:00', data.timeZone)) }), (props) => <MarketDateInput {...register('date')} {...props} min={data.limits.firstDate} max={data.limits.lastDate} className="max-w-sm" />)}
         <div className="grid gap-5 sm:grid-cols-2">{(['startTime', 'endTime'] as const).map((name) => <div key={name}>{field(name, t(name), t('timeHint'), (props) => <MarketTimeSelect {...register(name)} {...props} date={date || data.limits.firstDate} placeholder={t('chooseTime')} />)}</div>)}</div>
         <div className="space-y-2 rounded-2xl bg-secondary p-4 text-sm text-secondary-foreground">
           <p>{t('timePolicy', data.limits)}</p><p className="tabular-nums">{t('currentTime', { now: formatDateTime(now) })}</p>

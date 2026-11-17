@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { AvailabilityActionId } from './action-ids';
 import type { ActionHandler, FieldErrorCode } from './actions';
-import { CATEGORY_SLUGS, type CategorySlug, type ISODateTime } from './common';
+import { CATEGORY_SLUGS, type CategorySlug, type ISODateTime, type TimeZone } from './common';
 import type { HelperSetupState } from './helper-work';
 import { invitePricingSchema } from './invites';
 import type { PricingInput } from './money';
@@ -60,6 +60,8 @@ export interface MyAvailabilityPageData {
    * `leadHours` from now, lasts at most `maxHours`, and a helper has at most `maxActive` active or held posts.
    */
   limits: { firstDate: string; lastDate: string; leadHours: number; maxHours: number; maxActive: number; activeCount: number };
+  /** The helper's market zone: the form's dates and times and every post's are on its clock (completion plan 8.1). */
+  timeZone: TimeZone;
 }
 
 /** A new slot, in market time (like the posting wizard's schedule). */

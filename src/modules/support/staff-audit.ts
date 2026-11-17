@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, ilike, inArray, lt, or, sql, type SQL } from 'drizzle-orm';
-import { routes, type AdminAuditActor, type AdminAuditEntry, type AdminAuditFilters, type AdminAuditPageData, type StaffRole } from '@/contracts';
+import { MARKET_TIME_ZONE, routes, type AdminAuditActor, type AdminAuditEntry, type AdminAuditFilters, type AdminAuditPageData, type StaffRole } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
@@ -82,8 +82,10 @@ export async function getAdminAuditPage(db: Db, staff: StaffActor, filters: Admi
   if (filters.action) conditions.push(filters.action.includes('.') ? eq(auditLog.action, filters.action) : ilike(auditLog.action, `${escapeLike(filters.action)}.%`));
   if (filters.targetType) conditions.push(eq(auditLog.targetType, filters.targetType));
   if (filters.targetId) conditions.push(eq(auditLog.targetId, filters.targetId));
-  if (filters.from) conditions.push(gte(auditLog.at, marketLocalToUtc(filters.from, '00:00')));
-  if (filters.to) conditions.push(lt(auditLog.at, marketLocalToUtc(nextDay(filters.to), '00:00')));
+  // The audit log spans every market: its date filters are days on the staff's reporting clock (the default
+  // market's, completion plan 8.1), the zone the page shows its times in.
+  if (filters.from) conditions.push(gte(auditLog.at, marketLocalToUtc(filters.from, '00:00', MARKET_TIME_ZONE)));
+  if (filters.to) conditions.push(lt(auditLog.at, marketLocalToUtc(nextDay(filters.to), '00:00', MARKET_TIME_ZONE)));
   if (before) {
     const [cursor] = await db.select({ at: auditLog.at, id: auditLog.id }).from(auditLog).where(eq(auditLog.id, before)).limit(1);
     if (cursor) conditions.push(or(lt(auditLog.at, cursor.at), and(eq(auditLog.at, cursor.at), lt(auditLog.id, cursor.id)))!);

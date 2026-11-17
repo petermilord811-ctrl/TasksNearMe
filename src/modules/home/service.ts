@@ -10,6 +10,7 @@ import { getInbox } from '@/modules/messaging/service';
 import { getFindWorkPageData, getMyOffers, loadHelperState } from '@/modules/offers/helper';
 import { getMyTasks } from '@/modules/offers/owner';
 import { tasks } from '@/modules/tasks/schema';
+import { marketTimeZones } from '@/modules/markets/time-zone';
 import type { Db } from '@/platform/db/connect';
 import { marketDayKey } from '@/shared/format';
 
@@ -128,9 +129,11 @@ async function helperHome(db: Db, user: { id: string; firstName: string }, now: 
   if (!state.setup.bookable) {
     attention.push({ id: 'att_setup', kind: 'finish_setup', target: { kind: 'onboarding', step: state.setup.nextOnboardingStep ?? 'profile' } });
   }
-  const today = marketDayKey(now);
+  // "Today" on the booking's market clock (completion plan 8.1).
+  const zones = await marketTimeZones(db, rows.map(({ booking }) => booking.marketId));
   for (const { booking, title } of rows) {
-    if (booking.status === 'confirmed' && !booking.arrivedAt && marketDayKey(booking.startAt) === today) {
+    const timeZone = zones.get(booking.marketId)!;
+    if (booking.status === 'confirmed' && !booking.arrivedAt && marketDayKey(booking.startAt, timeZone) === marketDayKey(now, timeZone)) {
       attention.push({ id: `att_checkin_${booking.id}`, kind: 'check_in_today', title, dueAt: booking.startAt.toISOString(), target: { kind: 'booking', bookingId: booking.id } });
     }
   }

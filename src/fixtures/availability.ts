@@ -81,6 +81,8 @@ export const myAvailabilityData: MyAvailabilityPageData = {
     'yard-cleanup': { type: 'hourly', rateCents: 3000, estimatedHours: 2, hoursCap: 2 },
   },
   limits,
+  // Jordan helps in Austin: the slots are on Central time, named rather than assumed (plan 8.1).
+  timeZone: 'America/Chicago',
 };
 
 /** No posts yet. */

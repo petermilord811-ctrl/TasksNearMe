@@ -2,6 +2,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import type { ActionResult, Cents, InstantPayoutOffer } from '@/contracts';
 import type { StripeConnect } from '@/integrations/payments/stripe-connect';
 import { payoutAccounts } from '@/modules/verification/schema';
+import { userTimeZone } from '@/modules/markets/time-zone';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
@@ -70,7 +71,7 @@ export async function requestInstantPayout(db: Db, connect: StripeConnect | null
       .values({ id: payoutId, helperUserId, amountCents: offer.availableCents, status: 'in_transit', arrivalDate: payout.arrivalDate, bankLast4: '', method: 'instant', feeCents: offer.feeCents, providerRef: payout.payoutId, createdAt: now, updatedAt: now });
   } else {
     await db.transaction(async (tx) => {
-      await tx.insert(payouts).values({ id: payoutId, helperUserId, amountCents: offer.availableCents, status: 'paid', arrivalDate: marketDayKey(now), bankLast4: DEV_BANK_LAST4, method: 'instant', feeCents: offer.feeCents, providerRef: `devpo_${payoutId.slice(3)}`, createdAt: now, updatedAt: now });
+      await tx.insert(payouts).values({ id: payoutId, helperUserId, amountCents: offer.availableCents, status: 'paid', arrivalDate: marketDayKey(now, await userTimeZone(db, helperUserId)), bankLast4: DEV_BANK_LAST4, method: 'instant', feeCents: offer.feeCents, providerRef: `devpo_${payoutId.slice(3)}`, createdAt: now, updatedAt: now });
       await tx.update(earnings).set({ status: 'paid_out', payoutId, updatedAt: now }).where(and(eq(earnings.helperUserId, helperUserId), eq(earnings.status, 'transferred'), isNull(earnings.payoutId)));
     });
   }

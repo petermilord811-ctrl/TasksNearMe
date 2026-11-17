@@ -124,10 +124,11 @@ export async function draftOfferMessage(
         // Already masked for helpers.
         description: view.description,
         details: Object.entries(view.details).map(([key, value]) => `${key}: ${String(value)}`),
-        dateLabel: formatDate(marketLocalToUtc(rules.date, rules.startTimes[0] ?? '12:00')),
+        // On the task's market clock (completion plan 8.1).
+        dateLabel: formatDate(marketLocalToUtc(rules.date, rules.startTimes[0] ?? '12:00', rules.timeZone), { timeZone: rules.timeZone }),
         remote: view.task.location.kind === 'remote',
       },
-      ...(startTime ? { startLabel: formatTime(marketLocalToUtc(rules.date, startTime)) } : {}),
+      ...(startTime ? { startLabel: formatTime(marketLocalToUtc(rules.date, startTime, rules.timeZone), 'en', rules.timeZone) } : {}),
       brings: brings.map(clean),
       notes: clean(notes),
       maxLength: rules.messageMaxLength,
