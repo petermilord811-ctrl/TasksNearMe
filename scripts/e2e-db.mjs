@@ -6,7 +6,9 @@
  * database name swapped, so it needs no setting of its own.
  *
  *   node scripts/e2e-db.mjs url       prints the URL
- *   node scripts/e2e-db.mjs prepare   creates it when missing, then migrates and seeds it (idempotent)
+ *   node scripts/e2e-db.mjs prepare   creates it when missing, then resets it: drops its schemas, migrates and seeds
+ *                                      (every run starts from the seed alone; specs' leftovers from earlier runs, such as
+ *                                      a11y-keyboard's bookings, can't push seeded rows out of "newest N" lists)
  *
  * `heavy.mjs --e2e-build` and the gate prepare it before the e2e build, and build and serve against it;
  * playwright.config.ts points the e2e build's tests at it.
@@ -47,7 +49,7 @@ async function prepare() {
   } finally {
     await client.end();
   }
-  for (const step of ['migrate', 'seed']) {
+  for (const step of ['reset']) {
     const result = spawnSync('npx', ['tsx', 'db/scripts/cli.ts', step], { cwd: root, stdio: 'inherit', env: { ...process.env, DATABASE_URL: url } });
     if (result.status !== 0) throw new Error(`db ${step} on ${E2E_DATABASE} failed (exit ${result.status}).`);
   }
