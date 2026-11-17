@@ -2,6 +2,7 @@ import type { HomePageData, ISODateTime } from '@/contracts';
 import type { Season } from '@/shared/seasons';
 import { cn } from '@/ui/lib/utils';
 import { HeroCopy } from './hero-copy';
+import { floraFor } from './minimap/flora';
 import { TownSkeleton } from './minimap/town-skeleton';
 import { TownStage, type TownMode } from './minimap/town-stage';
 import { SeasonWeather } from './weather';
@@ -21,10 +22,11 @@ import { SeasonWeather } from './weather';
  * and the town tilts toward a view from above and pulls back as it's covered: no seam, no gap, no cross-fade.
  * The page's paper (a faint marble) shows through; only a breath of the brand's light sits behind the headline.
  *
- * It's dressed for the season (`season`, from the page's `data-season`): the town's trees, lawns, water and light,
- * the season's sky glowing in from the top right (globals.css, "Seasons"), and its weather in the air over the
- * town and under the words (`SeasonWeather`: snow, leaves, petals, summer motes). Previews and tests (`static`)
- * get one still frame of it.
+ * The town grows the market's own plants (`floraFor`: Austin's Hill Country, or north Florida's live oaks, pines and
+ * palmettos for Gainesville). It's dressed for the season (`season`, from the page's `data-season`): the town's
+ * trees, lawns, water and light, the season's sky glowing in from the top right (globals.css, "Seasons"), and its
+ * weather in the air over the town and under the words (`SeasonWeather`: snow, leaves, petals, summer motes).
+ * Previews and tests (`static`) get one still frame of it.
  */
 export function Hero({ data, mode, now, season }: { data: HomePageData; mode: TownMode; now: ISODateTime; season: Season }) {
   const localTasks = data.recentTasks.filter((task) => task.location.kind === 'local');
@@ -51,6 +53,7 @@ export function Hero({ data, mode, now, season }: { data: HomePageData; mode: To
         helper={data.featuredHelpers[0]}
         mode={mode}
         season={season}
+        flora={floraFor(data.market)}
         weather={mode !== 'static'}
         skeleton={<TownSkeleton />}
         className={cn(

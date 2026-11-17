@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
- * Renders the hero town's still pictures (public/ui/landing/town-<layout>-<theme>-<season>.webp): the picture
+ * Renders the hero town's still pictures (public/ui/landing/town-<flora>-<layout>-<theme>-<season>.webp): the picture
  * browsers without a GPU see, and what previews and tests show. Each is drawn by the dev page /dev/town-still
  * on the town's own renderer, so it matches the live town; software WebGL (this VPS) is slow but draws the same.
  *
- *   node scripts/heavy.mjs node scripts/render-town-stills.mjs                     all 16
- *   node scripts/render-town-stills.mjs --only wide-light-winter,band-dark-fall    some
+ *   node scripts/heavy.mjs node scripts/render-town-stills.mjs                              all 32
+ *   node scripts/render-town-stills.mjs --only florida-wide-light-winter,texas-band-dark-fall   some
+ *   node scripts/render-town-stills.mjs --flora florida                                     one region's 16
  *   node scripts/render-town-stills.mjs --out /some/folder                         somewhere else (to compare)
  *
  * Needs the dev server (npm run dev) on --base (default http://localhost:3000).
@@ -21,17 +22,19 @@ const option = (name, fallback) => {
 };
 const base = option('base', 'http://localhost:3000');
 const out = resolve(option('out', 'public/ui/landing'));
+const floraOnly = option('flora', '');
 const only = option('only', '')
   .split(',')
   .map((name) => name.trim())
   .filter(Boolean);
 
+const FLORAS = ['texas', 'florida'];
 const LAYOUTS = ['wide', 'band'];
 const THEMES = ['light', 'dark'];
 const SEASONS = ['fall', 'winter', 'spring', 'summer'];
-const wanted = LAYOUTS.flatMap((layout) => THEMES.flatMap((theme) => SEASONS.map((season) => ({ layout, theme, season, name: `${layout}-${theme}-${season}` })))).filter(
-  (still) => only.length === 0 || only.includes(still.name),
-);
+const wanted = FLORAS.flatMap((flora) =>
+  LAYOUTS.flatMap((layout) => THEMES.flatMap((theme) => SEASONS.map((season) => ({ flora, layout, theme, season, name: `${flora}-${layout}-${theme}-${season}` })))),
+).filter((still) => (only.length === 0 || only.includes(still.name)) && (!floraOnly || still.flora === floraOnly));
 if (wanted.length === 0) {
   console.error(`Nothing matches --only ${only.join(',')}`);
   process.exit(1);
@@ -46,7 +49,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 1400, height: 640 } });
     const started = Date.now();
     try {
-      await page.goto(`${base}/dev/town-still?layout=${still.layout}&theme=${still.theme}&season=${still.season}`, { waitUntil: 'load', timeout: 180_000 });
+      await page.goto(`${base}/dev/town-still?flora=${still.flora}&layout=${still.layout}&theme=${still.theme}&season=${still.season}`, { waitUntil: 'load', timeout: 180_000 });
       await page.waitForFunction(() => window.__townStill || window.__townStillError, null, { timeout: 300_000, polling: 500 });
       const { url, error } = await page.evaluate(() => ({ url: window.__townStill, error: window.__townStillError }));
       if (!url || !url.startsWith('data:image/webp;base64,')) throw new Error(error ?? `no WebP (got ${String(url).slice(0, 30)})`);

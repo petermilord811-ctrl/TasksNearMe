@@ -1,4 +1,5 @@
 import type { Season } from '@/shared/seasons';
+import type { TownFlora } from './flora';
 import { DARK_PALETTE, LIGHT_PALETTE, type TownPalette } from './town-palette';
 
 export type TownScheme = 'light' | 'dark';
@@ -50,6 +51,7 @@ function winter(base: TownPalette, scheme: TownScheme): Partial<TownPalette> {
     autumn: day ? ['#f1eee9', '#e5edf3'] : ['#c0c4cc', '#b0bccb'],
     conifer: day ? '#3f7d63' : '#24523f',
     agave: day ? '#a5c4b8' : '#56766b',
+    moss: day ? '#d3dbdf' : '#9aa4b2',
     cactus: day ? '#79ad7a' : '#3f6c4a',
     bluebonnet: day ? '#d43d3d' : '#e0504f',
     flowers: day ? ['#d63d3d', '#ffffff', '#3f8f5a', '#e2b33c'] : ['#e0504f', '#e9edf3', '#4f9a68', '#e2b33c'],
@@ -134,12 +136,25 @@ function fall(scheme: TownScheme): Partial<TownPalette> {
 }
 
 /**
- * The town's colors for a theme and a season: the theme's palette with the season's nature and light over it
- * (the houses, cars and people keep theirs). Every season's palette has the same keys and list lengths as the
- * theme's, so switching repaints the same parts.
+ * Florida's plants over the season's colors: saw palmetto where Texas has agaves (frosted like everything else in
+ * winter), Spanish moss in the live oaks, and coreopsis (the state wildflower, yellow) where Texas has bluebonnets
+ * in spring. Summer and fall already have yellow wildflowers.
  */
-export function townPalette(scheme: TownScheme, season: Season): TownPalette {
+function florida(scheme: TownScheme, season: Season): Partial<TownPalette> {
+  const day = scheme === 'light';
+  return {
+    ...(season === 'winter' ? {} : { agave: day ? '#7aa25e' : '#3f5f3a' }),
+    ...(season === 'spring' ? { bluebonnet: day ? '#f2c230' : '#e8b53a', meadow: day ? '#e5eec7' : '#3d4a2c' } : {}),
+  };
+}
+
+/**
+ * The town's colors for a theme, a season and a region's plants: the theme's palette with the season's nature
+ * and light over it, then the region's plants (the houses, cars and people keep theirs). Every palette has the same
+ * keys and list lengths as the theme's, so switching repaints the same parts.
+ */
+export function townPalette(scheme: TownScheme, season: Season, flora: TownFlora = 'texas'): TownPalette {
   const base = scheme === 'dark' ? DARK_PALETTE : LIGHT_PALETTE;
   const change = season === 'winter' ? winter(base, scheme) : season === 'spring' ? spring(scheme) : season === 'summer' ? summer(scheme) : fall(scheme);
-  return { ...base, ...change };
+  return { ...base, ...change, ...(flora === 'florida' ? florida(scheme, season) : {}) };
 }

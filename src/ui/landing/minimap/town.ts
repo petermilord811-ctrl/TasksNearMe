@@ -88,10 +88,12 @@ import {
   type Part,
   type VignetteKind,
 } from './town-parts';
+import type { TownFlora } from './flora';
 import { DARK_PALETTE, LIGHT_PALETTE, paintColor, type ColorKey, type PaintRef, type TownPalette } from './town-palette';
 
 export { DARK_PALETTE, LIGHT_PALETTE, type TownPalette };
 export { townPalette, type TownScheme } from './town-seasons';
+export type { TownFlora } from './flora';
 
 /**
  * The hero's 3D mini-map (three.js): the town from `scene.ts` as a lit model on the page, with soft sun
@@ -228,6 +230,8 @@ export interface TownOptions {
   layout?: TownLayout;
   /** The town to draw, built ahead (in a worker); without it, it's built here. */
   scene?: TownModel;
+  /** Which region's plants grow (flora.ts), when the town is built here (a scene built ahead says its own). */
+  flora?: TownFlora;
   /** Play the build-up the first time it starts (off: the town is complete from its first frame). */
   buildUp?: boolean;
   /** The canvas's first size and view, so the warm-up frame is the real first frame. */
@@ -244,7 +248,8 @@ function nextTask(): Promise<void> {
 }
 
 export async function createTown(canvas: HTMLCanvasElement, options: TownOptions): Promise<TownController> {
-  const data: TownModel = options.scene ?? townScene(options.layout ?? 'wide');
+  const data: TownModel = options.scene ?? townScene(options.layout ?? 'wide', options.flora ?? 'texas');
+  const florida = data.flora === 'florida';
   const { view, stage } = data.composition;
   let palette = options.palette;
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' });
@@ -519,6 +524,8 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
   const fronds: Grown[] = [];
   const agaves: Grown[] = [];
   const cacti: Grown[] = [];
+  /** Spanish moss hanging from Florida's live oaks (and some of its round oaks). */
+  const moss: Grown[] = [];
   const middle = view.target;
   const still = new Quaternion();
   data.trees.forEach((tree, index) => {
@@ -528,10 +535,23 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     const spin = new Quaternion().setFromAxisAngle(up, (index * 2.39996) % (Math.PI * 2));
     const trunk = (height: number, radius: number, turn = still) => trunks.push({ position: at(0, height / 2, 0), turn, scale: new Vector3(radius * s, height * s, radius * s), delay });
     const crown = (dx: number, dy: number, dz: number, rx: number, ry = rx) => crowns.push({ position: at(dx, dy, dz), turn: spin, scale: new Vector3(rx * s, ry * s, rx * s), tone: tree.tone, delay });
+    /** Strands of moss hanging from under a crown (its middle and radius), a few around it. */
+    const drape = (dx: number, dy: number, dz: number, r: number, strands: number) => {
+      for (let k = 0; k < strands; k += 1) {
+        const angle = (k / strands) * Math.PI * 2 + index * 0.7;
+        const length = 12 + ((index + k * 3) % 4) * 2;
+        const x = dx + Math.cos(angle) * r * 0.74;
+        const z = dz + Math.sin(angle) * r * 0.74;
+        // Two strands, one shorter beside the other: a wisp rather than a spike.
+        moss.push({ position: at(x, dy - r * 0.42, z), turn: spin, scale: new Vector3(1.45 * s, length * s, 1.45 * s), delay });
+        moss.push({ position: at(x + Math.sin(angle) * 1.7, dy - r * 0.4, z - Math.cos(angle) * 1.7), turn: spin, scale: new Vector3(1.05 * s, length * 0.68 * s, 1.05 * s), delay });
+      }
+    };
     switch (tree.variant) {
       case 0:
         trunk(10, 1.7);
         crown(0, 19, 0, 11, 10.4);
+        if (florida && index % 3 === 0) drape(0, 19, 0, 11, 3);
         break;
       case 1:
         trunk(8, 1.6);
@@ -549,8 +569,20 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
         crown(9, 23.5, -3, 12.5);
         crown(0, 34, 0, 13.5);
         crown(2, 26, 9, 10);
+        // A live oak in Florida: Spanish moss hangs from its spreading limbs.
+        if (florida) {
+          drape(-9, 23, 3, 12.5, 4);
+          drape(9, 23.5, -3, 12.5, 4);
+          drape(2, 26, 9, 10, 3);
+        }
         break;
       case 4:
+        if (florida) {
+          // A tall pine (longleaf, slash): a long bare trunk and a small tufted crown up top.
+          trunk(24, 1.1);
+          for (const [y, r, h] of [[25, 7, 8], [29, 5.6, 7], [32.5, 3.6, 5.5]] as const) cones.push({ position: at(0, y, 0), turn: spin, scale: new Vector3(r * s, h * s, r * s), delay });
+          break;
+        }
         trunk(6, 1.3);
         for (const [y, r, h] of [[12, 9, 15], [19.5, 7, 12.5], [26, 5, 10]] as const) cones.push({ position: at(0, y, 0), turn: spin, scale: new Vector3(r * s, h * s, r * s), delay });
         break;
@@ -568,7 +600,11 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
         break;
       }
       case 6:
-        agaves.push({ position: at(0, 0, 0), turn: spin, scale: new Vector3(7 * s, 6 * s, 7 * s), delay });
+        // An agave; in Florida, saw palmetto: wider and lower, in a clump (the palette makes it green).
+        if (florida) {
+          agaves.push({ position: at(0, 0, 0), turn: spin, scale: new Vector3(9 * s, 4.6 * s, 9 * s), delay });
+          agaves.push({ position: at(6.5, 0, 3), turn: spin, scale: new Vector3(6.5 * s, 3.6 * s, 6.5 * s), delay });
+        } else agaves.push({ position: at(0, 0, 0), turn: spin, scale: new Vector3(7 * s, 6 * s, 7 * s), delay });
         break;
       case 7:
         cacti.push({ position: at(0, 0, 0), turn: spin, scale: new Vector3(15 * s, 15 * s, 15 * s), delay });
@@ -598,6 +634,27 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
   const frondMesh = instancedMesh(frondGeometry(), paint('palm', { roughness: 0.75, side: DoubleSide }), fronds.length, scene, true);
   const agaveMesh = instancedMesh(agaveGeometry(), paint('agave', { roughness: 0.7 }), agaves.length, scene, true);
   const cactusMesh = instancedMesh(cactusGeometry(), paint('cactus', { roughness: 0.75 }), cacti.length, scene, true);
+  // Spanish moss: thin strands hanging from their top (the strand's tip sways, its top stays put).
+  const mossMaterial = paint('moss', { roughness: 0.95 });
+  mossMaterial.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = swayTime;
+    shader.vertexShader = `uniform float uTime;\n${shader.vertexShader}`.replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+      #ifdef USE_INSTANCING
+        vec3 rootAt = instanceMatrix[3].xyz;
+        float phase = rootAt.x * 0.017 + rootAt.z * 0.013;
+        float sway = sin(uTime * 0.9 + phase) * 0.12;
+        transformed.x += sway * -position.y;
+        transformed.z += sway * 0.5 * -position.y;
+      #endif`,
+    );
+  };
+  mossMaterial.customProgramCacheKey = () => 'moss-sway';
+  const strand = new ConeGeometry(1, 1, 5, 1);
+  strand.rotateX(Math.PI);
+  strand.translate(0, -0.5, 0);
+  const mossMesh = instancedMesh(strand, mossMaterial, moss.length, scene);
   const grownSets: [InstancedMesh, Grown[], boolean][] = [
     [crownMesh, crowns, true],
     [trunkMesh, trunks, false],
@@ -605,6 +662,7 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     [frondMesh, fronds, true],
     [agaveMesh, agaves, true],
     [cactusMesh, cacti, true],
+    [mossMesh, moss, false],
   ];
   for (const [mesh] of grownSets) mesh.receiveShadow = true;
   const crownColor = (tone: number) => (tone >= 6 ? palette.autumn[(tone - 6) % palette.autumn.length]! : tone >= 4 ? palette.blossoms[(tone - 4) % palette.blossoms.length]! : palette.leaves[tone % palette.leaves.length]!);

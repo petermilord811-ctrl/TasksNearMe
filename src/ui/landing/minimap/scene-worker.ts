@@ -5,16 +5,19 @@
  * `scene.ts`: plates, water, roads, houses, trees, movers…) and posts everything the town draws (`TownModel`).
  * The fields' functions stay here.
  */
+import type { TownFlora } from './flora';
 import { townScene, type TownLayout, type TownModel } from './scene';
 
 export interface SceneRequest {
   layout: TownLayout;
+  /** Which region's plants grow (the market's). */
+  flora: TownFlora;
 }
 
 export type SceneReply =
   /** The WebGL renderer's name, or null when this worker can't tell (no OffscreenCanvas or no WebGL 2 here). */
   | { kind: 'gpu'; renderer: string | null }
-  | { kind: 'scene'; layout: TownLayout; model: TownModel };
+  | { kind: 'scene'; layout: TownLayout; flora: TownFlora; model: TownModel };
 
 // A worker's global scope (typed by hand: the project's types are the DOM's, not the worker's).
 const scope = self as unknown as {
@@ -37,9 +40,9 @@ function rendererName(): string | null {
 }
 
 scope.onmessage = (event) => {
-  const { layout } = event.data;
+  const { layout, flora } = event.data;
   scope.postMessage({ kind: 'gpu', renderer: rendererName() });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- the functions can't be posted
-  const { fields, ...model } = townScene(layout);
-  scope.postMessage({ kind: 'scene', layout, model });
+  const { fields, ...model } = townScene(layout, flora);
+  scope.postMessage({ kind: 'scene', layout, flora, model });
 };

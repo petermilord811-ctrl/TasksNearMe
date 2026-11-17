@@ -48,7 +48,10 @@ export interface TownPalette {
   autumn: string[];
   conifer: string;
   palm: string;
+  /** Agaves (Texas), or saw palmetto where the flora is Florida's (town-seasons.ts). */
   agave: string;
+  /** Spanish moss hanging from Florida's live oaks. */
+  moss: string;
   cactus: string;
   bluebonnet: string;
   /** A bluebonnet meadow's ground (a lawn gone periwinkle). */
@@ -127,6 +130,7 @@ export const LIGHT_PALETTE: TownPalette = {
   conifer: '#4f9467',
   palm: '#7cc26c',
   agave: '#93bba8',
+  moss: '#adb69f',
   cactus: '#6aa86d',
   bluebonnet: '#5876da',
   meadow: '#cdd6ef',
@@ -204,6 +208,7 @@ export const DARK_PALETTE: TownPalette = {
   conifer: '#22533a',
   palm: '#3e7c46',
   agave: '#4d6c5e',
+  moss: '#727e69',
   cactus: '#3e6c45',
   bluebonnet: '#6079d8',
   meadow: '#2e3a57',

@@ -1,3 +1,4 @@
+import type { TownFlora } from './flora';
 import { cameraPose, projector, STAGE, unprojector, VIEW, type Frame, type View } from './camera';
 import { chaikin, contours, pointInPolygon, seeded, simplify, spline, type Pt } from './geometry';
 
@@ -542,6 +543,8 @@ export interface TownScene {
   balloons: Balloon[];
   /** The helper's way to the first pin (dotted). */
   route: Pt[];
+  /** Which region's plants grow here (flora.ts): the kinds of trees, their blossoms, the lawns' flowers. */
+  flora: TownFlora;
 }
 
 /**
@@ -752,22 +755,38 @@ function pathLength(line: Pt[]): number {
 
 export const COMPOSITIONS: Record<TownLayout, Composition> = { wide: WIDE, band: BAND };
 
-const cached = new Map<TownLayout, TownScene>();
+const cached = new Map<string, TownScene>();
 
 /** A layout's town (built on first use, then reused: it never changes). */
-export function townScene(layout: TownLayout = 'wide'): TownScene {
-  let scene = cached.get(layout);
+export function townScene(layout: TownLayout = 'wide', flora: TownFlora = 'texas'): TownScene {
+  const key = `${layout}:${flora}`;
+  let scene = cached.get(key);
   if (!scene) {
-    scene = buildTown(layout);
-    cached.set(layout, scene);
+    scene = buildTown(layout, undefined, flora);
+    cached.set(key, scene);
   }
   return scene;
 }
 
+/**
+ * What grows, by region: the kinds of tree by weight (0 round, 1 bushy, 2 tall, 3 big, 4 conifer, 5 palm, 6 agave,
+ * 7 cactus) and the crowns' colors (0–3 greens, 4–5 blossom, 6–7 autumn). Texas is the town as it was drawn first.
+ * Florida's big crowns are live oaks (hung with moss), its conifers tall pines, its agaves saw palmetto; more palms,
+ * no cacti, and more trees in blossom (azaleas and dogwoods in spring, crape myrtles in summer).
+ */
+const TREE_MIX: Record<TownFlora, readonly (readonly [Tree['variant'], number])[]> = {
+  texas: [[0, 24], [1, 24], [2, 14], [3, 7], [4, 13], [5, 6], [6, 6], [7, 6]],
+  florida: [[0, 20], [1, 22], [2, 5], [3, 15], [4, 14], [5, 10], [6, 10], [7, 0]],
+};
+const TONE_MIX: Record<TownFlora, readonly (readonly [number, number])[]> = {
+  texas: [[0, 22], [1, 22], [2, 18], [3, 16], [4, 6], [5, 5], [6, 6], [7, 5]],
+  florida: [[0, 22], [1, 22], [2, 18], [3, 16], [4, 10], [5, 9], [6, 4], [7, 3]],
+};
+
 type Rect = { x: number; y: number; w: number; d: number };
 const overlaps = (a: Rect, b: Rect, gap: number) => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.d + gap && b.y < a.y + a.d + gap;
 
-export function buildTown(layout: TownLayout = 'wide', seed = 11): TownScene {
+export function buildTown(layout: TownLayout = 'wide', seed = 11, flora: TownFlora = 'texas'): TownScene {
   const composition = COMPOSITIONS[layout];
   const lens = lensOf(composition);
   const { toGround, toStage, drawn, grid: GRID } = lens;
@@ -1134,7 +1153,7 @@ export function buildTown(layout: TownLayout = 'wide', seed = 11): TownScene {
   }
 
   // Trees: dart throwing on the plates, clear of houses, roads, lamps and the garden. Mostly round and bushy
-  // greens; some conifers, palms, agaves and cacti; a few in blossom and a few in autumn colors.
+  // greens; some conifers, palms, agaves and cacti (by region: TREE_MIX); a few in blossom and a few in autumn colors.
   const trees: Tree[] = [];
   const blocked = (world: Pt, radius: number) =>
     insideAny(world, radius + 5) ||
@@ -1149,12 +1168,14 @@ export function buildTown(layout: TownLayout = 'wide', seed = 11): TownScene {
     const depth = islandAt(world);
     if (depth > -10) continue;
     if (depth < -70 && random() < 0.4) continue;
-    const variant = weighted<Tree['variant']>([[0, 24], [1, 24], [2, 14], [3, 7], [4, 13], [5, 6], [6, 6], [7, 6]]);
+    const variant = weighted<Tree['variant']>(TREE_MIX[flora]);
     const scale = 0.85 + random() * 0.5;
     const radius = radiusOf(variant, scale);
     if (blocked(world, radius)) continue;
     if (trees.some((tree) => Math.hypot(tree.x - world.x, tree.y - world.y) < radius + radiusOf(tree.variant, tree.scale) * 0.5 + 8)) continue;
-    const tone = variant >= 4 ? 0 : weighted<number>([[0, 22], [1, 22], [2, 18], [3, 16], [4, 6], [5, 5], [6, 6], [7, 5]]);
+    // Florida's live oaks (the big crowns) are evergreen: the green that holds on (tone 3: olive in fall, snowy in
+    // winter, deep green in summer) rather than a crown that turns.
+    const tone = variant >= 4 ? 0 : flora === 'florida' && variant === 3 ? 3 : weighted<number>(TONE_MIX[flora]);
     trees.push({ x: world.x, y: world.y, variant, scale, tone });
   }
 
@@ -1292,6 +1313,7 @@ export function buildTown(layout: TownLayout = 'wide', seed = 11): TownScene {
       })),
       ...kayaks,
     ],
+    flora,
   };
 }
 

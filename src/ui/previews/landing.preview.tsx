@@ -11,6 +11,22 @@ import { PublicShell } from '@/ui/shells/public-shell';
 import copy from '../../../messages/en/ui/landing.json';
 
 const now = '2026-11-17T15:00:00.000Z';
+/**
+ * Gainesville before its first helper and task, as the public will first see it there: the town grows north
+ * Florida's plants (live oaks hung with moss, tall pines, cabbage palms, saw palmetto). Its neighborhoods are the
+ * seed's (db/seeds/data/gainesville.ts).
+ */
+const gainesville: HomePageData = {
+  ...homeNoListingsData,
+  market: {
+    ...homeNoListingsData.market,
+    slug: 'gainesville',
+    name: 'Gainesville',
+    state: 'FL',
+    timeZone: 'America/New_York',
+    areaNames: ['Downtown', 'Duckpond', 'Pleasant Street', 'University Heights', 'Midtown', 'Golfview', 'Thornebrook', 'Millhopper'],
+  },
+};
 /** A visitor in Mueller (inside the service area) and one in Dallas (outside it). */
 const inMueller: LatLng = { lat: 30.2989, lng: -97.7064 };
 const inDallas: LatLng = { lat: 32.7767, lng: -96.797 };
@@ -75,6 +91,8 @@ export const landingPreviews: PreviewEntry[] = [
   landing('screen-home/spring', copy.previews.spring, homePageData, 'light', 'spring'),
   landing('screen-home/summer', copy.previews.summer, homePageData, 'light', 'summer'),
   landing('screen-home/summer-dark', copy.previews.summerDark, homePageData, 'dark', 'summer'),
+  landing('screen-home/gainesville', copy.previews.gainesville, gainesville),
+  landing('screen-home/gainesville-spring', copy.previews.gainesvilleSpring, gainesville, 'light', 'spring'),
   map('component-landing-map/default', copy.previews.map),
   map('component-landing-map/near-you', copy.previews.mapNearYou, { location: inMueller }),
   map('component-landing-map/outside-area', copy.previews.mapOutside, { location: inDallas }),

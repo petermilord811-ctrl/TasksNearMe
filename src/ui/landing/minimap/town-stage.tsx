@@ -9,6 +9,7 @@ import { formatMoney } from '@/shared/format';
 import { usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import type { Season } from '@/shared/seasons';
+import type { TownFlora } from './flora';
 import { setHeroPaused, useHeroPaused } from '../hero-pause';
 import { clearHeroReady, markHeroReady } from '../hero-ready';
 import { MAP_SECTION_ID, useOptionalLanding } from '../landing-state';
@@ -78,7 +79,7 @@ function webglWorthIt(): boolean {
  * The town's worker (see `scene-worker.ts`): which GPU draws WebGL here (null when it can't tell), then the
  * layout's town. Null when workers aren't available: then both are done on the page (the town in steps).
  */
-function startTownWorker(layout: TownLayout, signal: AbortSignal): { gpu: Promise<string | null>; scene: Promise<TownModel | null>; stop: () => void } | null {
+function startTownWorker(layout: TownLayout, flora: TownFlora, signal: AbortSignal): { gpu: Promise<string | null>; scene: Promise<TownModel | null>; stop: () => void } | null {
   let worker: Worker;
   try {
     worker = new Worker(new URL('./scene-worker.ts', import.meta.url), { type: 'module' });
@@ -100,12 +101,12 @@ function startTownWorker(layout: TownLayout, signal: AbortSignal): { gpu: Promis
     const reply = event.data;
     if (reply.kind === 'gpu') answerGpu(reply.renderer);
     else {
-      answerScene(reply.layout === layout ? reply.model : null);
+      answerScene(reply.layout === layout && reply.flora === flora ? reply.model : null);
       stop();
     }
   };
   worker.onerror = stop;
-  worker.postMessage({ layout } satisfies SceneRequest);
+  worker.postMessage({ layout, flora } satisfies SceneRequest);
   return { gpu, scene, stop };
 }
 
@@ -172,6 +173,7 @@ export function TownStage({
   helper,
   mode,
   season,
+  flora = 'texas',
   weather = false,
   skeleton,
   className,
@@ -183,6 +185,8 @@ export function TownStage({
   mode: TownMode;
   /** The season the town is dressed for (its trees, lawns, water and light; its still picture). */
   season: Season;
+  /** Which region's plants grow in the town (flora.ts: the market's), and so which still pictures it shows. */
+  flora?: TownFlora;
   /** The season's weather moves over the town (SeasonWeather): the Pause button shows from the start, for both. */
   weather?: boolean;
   /** The town's skeleton (`TownSkeleton`, rendered on the server), shown until the live town takes over. */
@@ -255,7 +259,7 @@ export function TownStage({
     const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
     // Off the main thread, right away: the worker (which GPU, then the scene) and the 3D code's download.
     // Putting the town together waits until the page has settled after its first paint (the still is up).
-    const worker = startTownWorker(layout, controller.signal);
+    const worker = startTownWorker(layout, flora, controller.signal);
     const code = import('./town');
     code.catch(() => {}); // a failed download is handled where it's awaited
     const build = async () => {
@@ -274,9 +278,10 @@ export function TownStage({
         const dark = darkAt(stage);
         paintedFor.current = seasonRef.current;
         const next = await createTown(canvas, {
-          palette: townPalette(dark ? 'dark' : 'light', paintedFor.current),
+          palette: townPalette(dark ? 'dark' : 'light', paintedFor.current, flora),
           shadowSize: coarse ? 1024 : 2048,
           layout,
+          flora,
           // It grows out of its skeleton (unless motion is reduced or it's paused: then it's simply there).
           buildUp: true,
           scene: model ?? undefined,
@@ -288,7 +293,7 @@ export function TownStage({
           return;
         }
         // The theme may have changed while it was being built.
-        if (darkAt(stage) !== dark) next.setPalette(townPalette(dark ? 'light' : 'dark', seasonRef.current));
+        if (darkAt(stage) !== dark) next.setPalette(townPalette(dark ? 'light' : 'dark', seasonRef.current, flora));
         made = next;
         setBuilt({ town: next, layout });
       } catch (error) {
@@ -308,7 +313,7 @@ export function TownStage({
       made?.dispose();
       setBuilt((current) => (current?.town === made ? null : current));
     };
-  }, [mode, layout]);
+  }, [mode, layout, flora]);
 
   // The skeleton fades off the live town drawn under it, then goes.
   useEffect(() => {
@@ -353,7 +358,7 @@ export function TownStage({
       if (next === dark) return;
       dark = next;
       void import('./town').then(({ townPalette }) => {
-        town.setPalette(townPalette(dark ? 'dark' : 'light', season));
+        town.setPalette(townPalette(dark ? 'dark' : 'light', season, flora));
         town.renderOnce();
       });
     };
@@ -365,7 +370,7 @@ export function TownStage({
     if (paintedFor.current !== season) {
       paintedFor.current = season;
       void import('./town').then(({ townPalette }) => {
-        town.setPalette(townPalette(dark ? 'dark' : 'light', season));
+        town.setPalette(townPalette(dark ? 'dark' : 'light', season, flora));
         town.renderOnce();
       });
     }
@@ -374,7 +379,7 @@ export function TownStage({
       themeWatch.disconnect();
       media?.removeEventListener('change', repaint);
     };
-  }, [town, season]);
+  }, [town, season, flora]);
 
   // Run only while it's seen.
   useEffect(() => {
@@ -598,9 +603,9 @@ export function TownStage({
           <div aria-hidden="true" className={cn('absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none', stillReady ? 'opacity-100' : 'opacity-0')}>
             {/* The wide still also shows the land left of the stage (it's 2600 × 1000 units; the stage starts at 1000). */}
             <picture className="dark:hidden">
-              <source media={WIDE_QUERY} srcSet={`/ui/landing/town-wide-light-${season}.webp`} />
+              <source media={WIDE_QUERY} srcSet={`/ui/landing/town-${flora}-wide-light-${season}.webp`} />
               <img
-                src={`/ui/landing/town-band-light-${season}.webp`}
+                src={`/ui/landing/town-${flora}-band-light-${season}.webp`}
                 alt=""
                 loading="eager"
                 fetchPriority="high"
@@ -611,9 +616,9 @@ export function TownStage({
               />
             </picture>
             <picture className="hidden dark:block">
-              <source media={WIDE_QUERY} srcSet={`/ui/landing/town-wide-dark-${season}.webp`} />
+              <source media={WIDE_QUERY} srcSet={`/ui/landing/town-${flora}-wide-dark-${season}.webp`} />
               <img
-                src={`/ui/landing/town-band-dark-${season}.webp`}
+                src={`/ui/landing/town-${flora}-band-dark-${season}.webp`}
                 alt=""
                 loading="lazy"
                 decoding="async"

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { parseSeason } from '@/shared/seasons';
+import { TOWN_FLORAS, type TownFlora } from '@/ui/landing/minimap/flora';
 import type { TownView } from '@/ui/landing/minimap/town';
 
 /**
@@ -21,7 +22,7 @@ declare global {
 }
 
 /**
- * Draws the hero town once, complete and at rest, for `?layout=wide|band&theme=light|dark&season=…`, and leaves
+ * Draws the hero town once, complete and at rest, for `?flora=texas|florida&layout=wide|band&theme=light|dark&season=…`, and leaves
  * the picture as a WebP data URL on `window.__townStill` (scripts/render-town-stills.mjs saves it). It draws on
  * whatever WebGL the browser has, software included: the picture is the same, only slower.
  */
@@ -36,6 +37,7 @@ export function TownStillCapture() {
     const layout = params.get('layout') === 'band' ? 'band' : 'wide';
     const scheme = params.get('theme') === 'dark' ? 'dark' : 'light';
     const season = parseSeason(params.get('season')) ?? 'fall';
+    const flora: TownFlora = TOWN_FLORAS.find((name) => name === params.get('flora')) ?? 'texas';
     const quality = Math.min(1, Math.max(0.5, Number(params.get('quality')) || 0.86));
     const frame = FRAMES[layout];
     canvas.style.width = `${frame.width}px`;
@@ -45,9 +47,10 @@ export function TownStillCapture() {
     void (async () => {
       const { createTown, townPalette } = await import('@/ui/landing/minimap/town');
       const town = await createTown(canvas, {
-        palette: townPalette(scheme, season),
+        palette: townPalette(scheme, season, flora),
         shadowSize: 2048,
         layout,
+        flora,
         buildUp: false,
         size: { width: frame.width, height: frame.height, pixelRatio: 2, view: frame },
       });
@@ -57,7 +60,7 @@ export function TownStillCapture() {
       town.renderOnce();
       // Read in the same task as the draw, before the browser clears the drawing buffer.
       window.__townStill = canvas.toDataURL('image/webp', quality);
-      setStatus(`done: ${layout} ${scheme} ${season}`);
+      setStatus(`done: ${flora} ${layout} ${scheme} ${season}`);
     })().catch((error: unknown) => {
       window.__townStillError = String(error);
       setStatus(`failed: ${String(error)}`);
