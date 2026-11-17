@@ -204,7 +204,7 @@ export function createFakeTaskDrafter(): TaskDrafter {
 
 // ---- Claude -----------------------------------------------------------------------------------
 
-const DRAFT_SYSTEM = `You help people in Austin, Texas, post a task on TasksNearMe, a marketplace where neighbors book local help. You turn the few words someone typed into a clear task draft. They review and edit it before posting; nothing is posted automatically.
+const DRAFT_SYSTEM = `You help people post a task on TasksNearMe, a US marketplace where neighbors book local help. You turn the few words someone typed into a clear task draft. They review and edit it before posting; nothing is posted automatically.
 
 How to write the draft:
 - Use only what the person wrote. Never invent facts such as counts, sizes, brands, floors, dates, times, or prices. When a detail isn't stated, set it to null.

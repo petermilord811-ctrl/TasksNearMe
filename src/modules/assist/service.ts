@@ -6,7 +6,7 @@ import { AiRefusedError, AiUnavailableError } from '@/integrations/ai';
 import type { OfferMessageWriter } from '@/integrations/ai/offer-writer';
 import type { ProfileWriter } from '@/integrations/ai/profile-writer';
 import { users } from '@/modules/accounts/schema';
-import { areas, categories } from '@/modules/markets/schema';
+import { areas, categories, markets } from '@/modules/markets/schema';
 import { getHelperTaskView } from '@/modules/offers/helper';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { findProhibitedPhrase, maskContactDetails } from '@/modules/trust/contact-masking';
@@ -63,7 +63,9 @@ export async function draftHelperProfile(
       .from(helperServices)
       .innerJoin(categories, eq(categories.id, helperServices.categoryId))
       .where(and(eq(helperServices.userId, userId), eq(helperServices.status, 'active'))),
-    person.profile?.areaId ? db.select({ name: areas.name }).from(areas).where(eq(areas.id, person.profile.areaId)).limit(1) : Promise.resolve([]),
+    person.profile?.areaId
+      ? db.select({ name: areas.name, city: markets.name }).from(areas).innerJoin(markets, eq(markets.id, areas.marketId)).where(eq(areas.id, person.profile.areaId)).limit(1)
+      : Promise.resolve([]),
   ]);
   const profile = person.profile;
   try {
@@ -72,7 +74,7 @@ export async function draftHelperProfile(
       services: services
         .filter((service): service is { slug: CategorySlug; description: string } => (CATEGORY_SLUGS as readonly string[]).includes(service.slug))
         .map(({ slug, description }) => ({ categorySlug: slug, ...(description ? { description: clean(description) } : {}) })),
-      ...(area ? { areaName: area.name } : {}),
+      ...(area ? { areaName: area.name, cityName: area.city } : {}),
       tools: profile?.tools ?? [],
       languages: (profile?.languages ?? ['en']).map((code) => languageNames.of(code) ?? code),
       notes: clean(notes),

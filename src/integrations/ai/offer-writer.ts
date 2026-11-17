@@ -35,7 +35,7 @@ export interface OfferMessageWriter {
   draft(facts: OfferFacts): Promise<string>;
 }
 
-const OFFER_SYSTEM = `You help a helper on TasksNearMe, a marketplace in Austin, Texas, where neighbors book local help, write the short message that goes with their offer on a client's task. The price and the start time are already in the offer; this message is for the client.
+const OFFER_SYSTEM = `You help a helper on TasksNearMe, a US marketplace where neighbors book local help, write the short message that goes with their offer on a client's task. The price and the start time are already in the offer; this message is for the client.
 
 - First person, friendly, and specific to this task: show the helper read it (the items, the rooms, the device), say when they'll arrive, and what they'll bring.
 - Use only the facts given. Never invent experience, certifications, or promises the facts don't support.

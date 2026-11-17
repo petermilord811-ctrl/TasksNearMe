@@ -18,6 +18,8 @@ export interface ProfileFacts {
   services: { categorySlug: CategorySlug; description?: string }[];
   /** The neighborhood they work from ("Hyde Park"). */
   areaName?: string;
+  /** Their city, the market they work in ("Gainesville"), when they have one. */
+  cityName?: string;
   tools: string[];
   /** Language names ("English", "Spanish"). */
   languages: string[];
@@ -37,7 +39,7 @@ export interface ProfileWriter {
   draft(facts: ProfileFacts): Promise<ProfileDraft>;
 }
 
-const PROFILE_SYSTEM = `You help helpers on TasksNearMe, a marketplace in Austin, Texas, where neighbors book local help, write their public profile: a headline and an "about me". They review and edit it before saving.
+const PROFILE_SYSTEM = `You help helpers on TasksNearMe, a US marketplace where neighbors book local help, write their public profile: a headline and an "about me". They review and edit it before saving.
 
 - Write in the helper's own voice, first person, warm and plain. US English.
 - Use only the facts given: their notes, services, area, tools, and languages. Never invent experience, years, numbers of jobs, certifications, licenses, insurance, awards, or background checks (TasksNearMe shows verified badges on its own).
@@ -74,7 +76,7 @@ export function createClaudeProfileWriter(writer: ClaudeWriter): ProfileWriter {
               return `- ${guide.name} (covers ${guide.covers}; never ${guide.never})${description ? `. Their words: "${asPromptText(description)}"` : ''}`;
             })
           : ['- none chosen yet']),
-        `Area: ${facts.areaName ? `${asPromptText(facts.areaName)}, Austin` : 'Austin'}`,
+        `Area: ${[facts.areaName, facts.cityName].filter((part): part is string => Boolean(part)).map(asPromptText).join(', ') || 'not chosen yet'}`,
         `Tools they bring: ${facts.tools.length > 0 ? facts.tools.map(asPromptText).join(', ') : 'none listed'}`,
         `Languages: ${facts.languages.length > 0 ? facts.languages.join(', ') : 'English'}`,
         ...(facts.current?.headline ? [`Current headline: ${asPromptText(facts.current.headline)}`] : []),
@@ -97,7 +99,7 @@ export function createFakeProfileWriter(): ProfileWriter {
     async draft(facts) {
       const names = facts.services.map(({ categorySlug }) => CATEGORY_GUIDE[categorySlug].name.replace(/ \(.*\)$/, '').toLowerCase());
       const what = names.length > 0 ? names.join(' and ') : 'everyday tasks';
-      const where = facts.areaName ? ` in ${facts.areaName}` : ' around Austin';
+      const where = facts.areaName ? ` in ${facts.areaName}` : facts.cityName ? ` around ${facts.cityName}` : '';
       const headline = `${what.charAt(0).toUpperCase()}${what.slice(1)}${where}`;
       const paragraphs = [
         `Hi, I'm ${facts.firstName}. I help neighbors with ${what}${where}.`,
