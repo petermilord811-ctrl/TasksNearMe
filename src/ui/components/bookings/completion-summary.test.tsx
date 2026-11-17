@@ -8,11 +8,12 @@ import { deskCompletionView, deskWithExpensesCompletionView, movingCompletionVie
 import uiMessages from '../../../../messages/en/ui';
 import completionMessages from '../../../../messages/en/ui/completion.json';
 import { CompletionSummary } from './completion-summary';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 afterEach(cleanup);
 
 function show(completion: CompletionView, variant: 'poster' | 'helper' = 'poster') {
-  return render(<NextIntlClientProvider locale="en" messages={{ ...uiMessages, completion: completionMessages }}><CompletionSummary completion={completion} variant={variant} /></NextIntlClientProvider>);
+  return render(<NextIntlClientProvider locale="en" messages={{ ...uiMessages, completion: completionMessages }}><TimeZoneProvider timeZone="America/Chicago"><CompletionSummary completion={completion} variant={variant} /></TimeZoneProvider></NextIntlClientProvider>);
 }
 
 describe('CompletionSummary', () => {

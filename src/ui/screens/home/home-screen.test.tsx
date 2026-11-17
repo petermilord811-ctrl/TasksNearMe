@@ -6,13 +6,14 @@ import { ATTENTION_KINDS, routes, type AppHomePageData, type AttentionKind, type
 import { DESK_TIMES, jordanHomeData, jordanHomeInviteData, jordanHomePayoutActionData, mayaHomeCounterData, mayaHomeData, mayaHomeProposalData, posterHomeEmptyData, priyaHomeData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { HomeScreen } from './home-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 afterEach(cleanup);
 
 const now = '2026-11-21T16:00:00.000Z';
 
 function renderHome(data: AppHomePageData = mayaHomeData, at = now) {
-  return render(<NextIntlClientProvider locale="en" messages={messages}><HomeScreen data={data} now={at} /></NextIntlClientProvider>);
+  return render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><HomeScreen data={data} now={at} /></TimeZoneProvider></NextIntlClientProvider>);
 }
 
 function section(name: string) {

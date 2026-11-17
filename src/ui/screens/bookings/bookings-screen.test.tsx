@@ -8,12 +8,13 @@ import { bookingsEmptyData, jordanBookingsPageData, mayaBookingsNeedsActionData,
 import messages from '../../../../messages/en/ui';
 import bookings from '../../../../messages/en/ui/bookings.json';
 import { BookingsScreen } from './bookings-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 afterEach(cleanup);
 const now = '2026-11-17T15:00:00.000Z';
 
 function renderBookings(data: BookingsPageData = mayaBookingsPageData) {
-  return render(<NextIntlClientProvider locale="en" messages={{ ...messages, bookings }}><BookingsScreen data={data} now={now} /></NextIntlClientProvider>);
+  return render(<NextIntlClientProvider locale="en" messages={{ ...messages, bookings }}><TimeZoneProvider timeZone="America/Chicago"><BookingsScreen data={data} now={now} /></TimeZoneProvider></NextIntlClientProvider>);
 }
 
 describe('BookingsScreen', () => {

@@ -8,6 +8,7 @@ import { bookshelfInviteAcceptedPoster, bookshelfInviteCounteredPoster, bookshel
 import messages from '../../../../messages/en/ui';
 import inviteCard from '../../../../messages/en/ui/inviteCard.json';
 import { InviteCard } from './invite-card';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
@@ -23,7 +24,7 @@ function mount(invite = bookshelfInviteSentHelper, overrides: Partial<InviteHand
     onAcceptCounter: vi.fn(fakeHandler<unknown>({ ok: true, code: 'booked' }, 0)), onDeclineCounter: vi.fn(fakeHandler<unknown>({ ok: true, code: 'updated' }, 0)),
     onFinishVerification: vi.fn(fakeHandler<unknown>({ ok: true, code: 'booked', redirectTo: routes.app.booking('bkg_bookshelf') }, 0)), ...overrides,
   };
-  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={{ ...messages, inviteCard }}><InviteCard invite={invite} handlers={handlers} now={now} /></NextIntlClientProvider>) };
+  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={{ ...messages, inviteCard }}><TimeZoneProvider timeZone="America/Chicago"><InviteCard invite={invite} handlers={handlers} now={now} /></TimeZoneProvider></NextIntlClientProvider>) };
 }
 
 async function confirm(user: ReturnType<typeof userEvent.setup>, label: string) {

@@ -8,6 +8,7 @@ import { fakeHandler, proposalAcceptedData, proposalHelperData, proposalPosterDa
 import baseMessages from '../../../../messages/en/ui';
 import proposalCopy from '../../../../messages/en/ui/proposal.json';
 import { ProposalScreen } from './proposal-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const messages = { ...baseMessages, proposal: proposalCopy };
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
@@ -28,7 +29,7 @@ function mount(data: ProposalPageData = proposalPosterData, overrides: Partial<P
     onDecline: vi.fn(fakeHandler({ ok: true, code: 'updated' }, 0)), onWithdraw: vi.fn(fakeHandler({ ok: true, code: 'updated' }, 0)),
     ...overrides,
   };
-  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><ProposalScreen data={data} handlers={handlers} now={now} /></NextIntlClientProvider>) };
+  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><ProposalScreen data={data} handlers={handlers} now={now} /></TimeZoneProvider></NextIntlClientProvider>) };
 }
 
 const terms = () => screen.getByRole('checkbox', { name: /I agree/ });
@@ -83,7 +84,7 @@ describe('ProposalScreen', () => {
   it('honors a supplied action order and absence without inventing controls', () => {
     const { rerender, handlers } = mount({ ...proposalPosterData, proposal: { ...proposalPosterData.proposal, actions: ['decline_proposal', 'accept_proposal'] } });
     expect(within(screen.getByRole('group', { name: 'Proposal actions' })).getAllByRole('button').map((button) => button.textContent)).toEqual(['Decline', 'Accept and pay']);
-    rerender(<NextIntlClientProvider locale="en" messages={messages}><ProposalScreen data={{ ...proposalPosterData, proposal: { ...proposalPosterData.proposal, actions: [] } }} handlers={handlers} now={now} /></NextIntlClientProvider>);
+    rerender(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><ProposalScreen data={{ ...proposalPosterData, proposal: { ...proposalPosterData.proposal, actions: [] } }} handlers={handlers} now={now} /></TimeZoneProvider></NextIntlClientProvider>);
     expect(screen.queryByRole('group', { name: 'Proposal actions' })).not.toBeInTheDocument();
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
   });

@@ -7,15 +7,16 @@ import { cleaningPublicTask, deskPublicTask, remoteComputerPublicTask, yardPubli
 import uiMessages from '../../../../messages/en/ui';
 import taskCard from '../../../../messages/en/ui/taskCard.json';
 import { PublicTaskCard } from './public-task-card';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 afterEach(cleanup);
 const now = '2026-11-17T15:00:00.000Z';
 
 function renderTask(task: TaskPublicView, headingLevel?: 2 | 3) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ ...uiMessages, taskCard }}>
+    <NextIntlClientProvider locale="en" messages={{ ...uiMessages, taskCard }}><TimeZoneProvider timeZone="America/Chicago">
       <PublicTaskCard task={task} now={now} headingLevel={headingLevel} />
-    </NextIntlClientProvider>,
+    </TimeZoneProvider></NextIntlClientProvider>,
   );
 }
 

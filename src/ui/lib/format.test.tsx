@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
+import { MARKET_TIME_ZONE } from '@/contracts/common';
 import { formattersFor, useFormat } from './format';
 import { TimeZoneProvider } from './time-zone-provider';
 
@@ -14,12 +15,12 @@ function When({ at }: { at: string }) {
 
 describe('useFormat', () => {
   it('formats in the page’s language', () => {
-    render(<NextIntlClientProvider locale="es" messages={{}}><When at="2026-11-21T16:30:00.000Z" /></NextIntlClientProvider>);
+    render(<NextIntlClientProvider locale="es" messages={{}}><TimeZoneProvider timeZone="America/Chicago"><When at="2026-11-21T16:30:00.000Z" /></TimeZoneProvider></NextIntlClientProvider>);
     expect(screen.getByText('sáb, 21 de nov · 10:30 a.m. (hace 2 horas)')).toBeInTheDocument();
   });
 
   it('formats in English on an English page', () => {
-    render(<NextIntlClientProvider locale="en" messages={{}}><When at="2026-11-21T16:30:00.000Z" /></NextIntlClientProvider>);
+    render(<NextIntlClientProvider locale="en" messages={{}}><TimeZoneProvider timeZone="America/Chicago"><When at="2026-11-21T16:30:00.000Z" /></TimeZoneProvider></NextIntlClientProvider>);
     expect(screen.getByText('Sat, Nov 21 · 10:30 am (2 hours ago)')).toBeInTheDocument();
   });
 
@@ -34,15 +35,17 @@ describe('useFormat', () => {
         <TimeZoneProvider timeZone="America/New_York"><At /><At zone="America/Chicago" /></TimeZoneProvider>
       </NextIntlClientProvider>,
     );
-    // No zone anywhere: the default market's. The page's provider: Gainesville. An explicit zone wins.
-    expect(screen.getAllByText(/^America\/Chicago: 11:30 pm 2026-11-21$/)).toHaveLength(2);
-    expect(screen.getByText('America/New_York: 12:30 am 2026-11-22')).toBeInTheDocument();
+    // No zone anywhere: the default market's (whichever that is). The page's provider: Gainesville. An explicit zone wins.
+    const fallback = formattersFor('en', MARKET_TIME_ZONE);
+    expect(screen.getAllByText(`${MARKET_TIME_ZONE}: ${fallback.formatTime('2026-11-22T05:30:00.000Z')} ${fallback.dayKey('2026-11-22T05:30:00.000Z')}`).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('America/Chicago: 11:30 pm 2026-11-21').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('America/New_York: 12:30 am 2026-11-22').length).toBeGreaterThanOrEqual(1);
   });
 
   it('binds each language once, so components get the same functions every render', () => {
     expect(formattersFor('es')).toBe(formattersFor('es'));
     expect(formattersFor('es', 'America/New_York')).toBe(formattersFor('es', 'America/New_York'));
-    expect(formattersFor('es', 'America/New_York')).not.toBe(formattersFor('es'));
-    expect(formattersFor('es').formatDate('2026-11-21T16:30:00.000Z', { withYear: true })).toBe('sáb, 21 de nov de 2026');
+    expect(formattersFor('es', 'America/New_York')).not.toBe(formattersFor('es', 'America/Chicago'));
+    expect(formattersFor('es', 'America/Chicago').formatDate('2026-11-21T16:30:00.000Z', { withYear: true })).toBe('sáb, 21 de nov de 2026');
   });
 });

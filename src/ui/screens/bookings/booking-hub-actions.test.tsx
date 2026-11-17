@@ -7,6 +7,7 @@ import { ACTION_ERROR_CODES, routes, type ActionResult, type BookingHubHandlers,
 import { deskBookingHelperConfirmed, deskBookingHelperDayOf, deskBookingPosterCantAccessReported, deskBookingPosterCompletionSubmitted, deskBookingPosterConfirmed, deskBookingPosterNoShowNotYet, deskBookingPosterWithSheets, fakeBookingSheetHandlers, fakeHandler } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { BookingHubActions } from './booking-hub-actions';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
@@ -17,7 +18,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 function mount(data: BookingView = deskBookingHelperDayOf, onAction = vi.fn(fakeHandler<{ action: Parameters<BookingHubHandlers['onAction']>[0]['action'] }>({ ok: true, code: 'updated' }, 0))) {
-  return { onAction, ...render(<NextIntlClientProvider locale="en" messages={messages}><BookingHubActions data={data} handlers={{ onAction }} sheets={fakeBookingSheetHandlers} /></NextIntlClientProvider>) };
+  return { onAction, ...render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><BookingHubActions data={data} handlers={{ onAction }} sheets={fakeBookingSheetHandlers} /></TimeZoneProvider></NextIntlClientProvider>) };
 }
 
 describe('BookingHubActions', () => {
@@ -123,7 +124,7 @@ describe('BookingHubActions', () => {
     });
     const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ height: 100 } as DOMRect);
     const onAction = vi.fn(fakeHandler<Parameters<BookingHubHandlers['onAction']>[0]>({ ok: true, code: 'updated' }, 0));
-    const { container, unmount } = render(<NextIntlClientProvider locale="en" messages={messages}><div data-booking-hub><BookingHubActions data={deskBookingHelperDayOf} handlers={{ onAction }} sheets={fakeBookingSheetHandlers} /></div></NextIntlClientProvider>);
+    const { container, unmount } = render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><div data-booking-hub><BookingHubActions data={deskBookingHelperDayOf} handlers={{ onAction }} sheets={fakeBookingSheetHandlers} /></div></TimeZoneProvider></NextIntlClientProvider>);
     const page = container.querySelector<HTMLElement>('[data-booking-hub]')!;
     expect(page.style.getPropertyValue('--booking-actions-height')).toBe('100px');
     bounds.mockReturnValue({ height: 240 } as DOMRect);

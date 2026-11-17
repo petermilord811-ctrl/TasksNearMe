@@ -10,6 +10,7 @@ import actions from '../../../../messages/en/ui/actions.json';
 import feedback from '../../../../messages/en/ui/feedback.json';
 import reasons from '../../../../messages/en/ui/actionReasons.json';
 import { ActionBar } from './action-bar';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const { push, toastSuccess, toastError } = vi.hoisted(() => ({ push: vi.fn(), toastSuccess: vi.fn(), toastError: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
@@ -17,7 +18,7 @@ vi.mock('sonner', () => ({ toast: { success: toastSuccess, error: toastError } }
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 function show(descriptors: ActionDescriptor[], onAction = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'saved' }))) {
-  return render(<NextIntlClientProvider locale="en" messages={uiMessages}><ActionBar actions={descriptors} onAction={onAction} /></NextIntlClientProvider>);
+  return render(<NextIntlClientProvider locale="en" messages={uiMessages}><TimeZoneProvider timeZone="America/Chicago"><ActionBar actions={descriptors} onAction={onAction} /></TimeZoneProvider></NextIntlClientProvider>);
 }
 
 describe('action copy coverage', () => {
@@ -118,7 +119,7 @@ describe('ActionBar', () => {
     expect(await screen.findByText('Task approved')).toBeVisible();
     expect(approve).toHaveFocus();
     // The refreshed booking has other actions: focus moves to the result, not to the top of the page.
-    rerender(<NextIntlClientProvider locale="en" messages={uiMessages}><ActionBar actions={[{ id: 'message', kind: 'secondary', enabled: true }]} onAction={handler} /></NextIntlClientProvider>);
+    rerender(<NextIntlClientProvider locale="en" messages={uiMessages}><TimeZoneProvider timeZone="America/Chicago"><ActionBar actions={[{ id: 'message', kind: 'secondary', enabled: true }]} onAction={handler} /></TimeZoneProvider></NextIntlClientProvider>);
     expect(approve).not.toBeInTheDocument();
     expect(screen.getByText('Task approved').closest('[tabindex="-1"]')).toHaveFocus();
   });
@@ -126,7 +127,7 @@ describe('ActionBar', () => {
   it('moves focus to the next action when a refresh removes the focused one without a result', () => {
     const { rerender } = show([{ id: 'approve', kind: 'primary', enabled: true }, { id: 'message', kind: 'secondary', enabled: true }]);
     act(() => screen.getByRole('button', { name: 'Approve task' }).focus());
-    rerender(<NextIntlClientProvider locale="en" messages={uiMessages}><ActionBar actions={[{ id: 'message', kind: 'secondary', enabled: true }]} onAction={vi.fn()} /></NextIntlClientProvider>);
+    rerender(<NextIntlClientProvider locale="en" messages={uiMessages}><TimeZoneProvider timeZone="America/Chicago"><ActionBar actions={[{ id: 'message', kind: 'secondary', enabled: true }]} onAction={vi.fn()} /></TimeZoneProvider></NextIntlClientProvider>);
     expect(screen.getByRole('button', { name: 'Send message' })).toHaveFocus();
   });
 

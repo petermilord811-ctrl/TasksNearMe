@@ -10,6 +10,9 @@ import {
   formatTimeRange,
 } from './index';
 
+/** Austin's clock, named: these cases read Central time, whatever the default market is (plan 8.1). */
+const AUSTIN_ZONE = 'America/Chicago';
+
 describe('formatMoney', () => {
   it('formats cents with two decimals', () => {
     expect(formatMoney(6600)).toBe('$66.00');
@@ -38,31 +41,31 @@ describe('date and time in America/Chicago', () => {
   const start = '2026-11-21T16:30:00.000Z';
 
   it('formats the date, time and both together', () => {
-    expect(formatDate(start)).toBe('Sat, Nov 21');
-    expect(formatDate(start, { withYear: true })).toBe('Sat, Nov 21, 2026');
-    expect(formatTime(start)).toBe('10:30 am');
-    expect(formatDateTime(start)).toBe('Sat, Nov 21 · 10:30 am');
+    expect(formatDate(start, { timeZone: AUSTIN_ZONE })).toBe('Sat, Nov 21');
+    expect(formatDate(start, { withYear: true , timeZone: AUSTIN_ZONE })).toBe('Sat, Nov 21, 2026');
+    expect(formatTime(start, 'en', AUSTIN_ZONE)).toBe('10:30 am');
+    expect(formatDateTime(start, 'en', AUSTIN_ZONE)).toBe('Sat, Nov 21 · 10:30 am');
   });
 
   it('formats same-day and cross-day ranges', () => {
-    expect(formatTimeRange('2026-11-21T16:00:00.000Z', '2026-11-21T19:00:00.000Z')).toBe('10:00 am–1:00 pm');
-    expect(formatTimeRange('2026-11-22T04:00:00.000Z', '2026-11-22T07:00:00.000Z')).toBe(
+    expect(formatTimeRange('2026-11-21T16:00:00.000Z', '2026-11-21T19:00:00.000Z', 'en', AUSTIN_ZONE)).toBe('10:00 am–1:00 pm');
+    expect(formatTimeRange('2026-11-22T04:00:00.000Z', '2026-11-22T07:00:00.000Z', 'en', AUSTIN_ZONE)).toBe(
       'Sat, Nov 21 · 10:00 pm–Sun, Nov 22 · 1:00 am',
     );
   });
 
   it('handles the end of daylight saving time (Nov 1, 2026)', () => {
     // 1:30 am happens twice: first CDT (UTC−5), then CST (UTC−6).
-    expect(formatTime('2026-11-01T06:30:00.000Z')).toBe('1:30 am');
-    expect(formatTime('2026-11-01T07:30:00.000Z')).toBe('1:30 am');
-    expect(formatTime('2026-11-01T08:30:00.000Z')).toBe('2:30 am');
+    expect(formatTime('2026-11-01T06:30:00.000Z', 'en', AUSTIN_ZONE)).toBe('1:30 am');
+    expect(formatTime('2026-11-01T07:30:00.000Z', 'en', AUSTIN_ZONE)).toBe('1:30 am');
+    expect(formatTime('2026-11-01T08:30:00.000Z', 'en', AUSTIN_ZONE)).toBe('2:30 am');
   });
 
   it('handles the start of daylight saving time (Mar 14, 2027)', () => {
     // Clocks jump from 2:00 am CST to 3:00 am CDT at 08:00 UTC.
-    expect(formatTime('2027-03-14T07:30:00.000Z')).toBe('1:30 am');
-    expect(formatTime('2027-03-14T08:30:00.000Z')).toBe('3:30 am');
-    expect(formatDate('2027-03-14T08:30:00.000Z')).toBe('Sun, Mar 14');
+    expect(formatTime('2027-03-14T07:30:00.000Z', 'en', AUSTIN_ZONE)).toBe('1:30 am');
+    expect(formatTime('2027-03-14T08:30:00.000Z', 'en', AUSTIN_ZONE)).toBe('3:30 am');
+    expect(formatDate('2027-03-14T08:30:00.000Z', { timeZone: AUSTIN_ZONE })).toBe('Sun, Mar 14');
   });
 
   it('formats relative times', () => {
@@ -74,9 +77,9 @@ describe('date and time in America/Chicago', () => {
   });
 
   it('formats month and year in the market time zone', () => {
-    expect(formatMonthYear('2026-11-04T16:00:00.000Z')).toBe('Nov 2026');
+    expect(formatMonthYear('2026-11-04T16:00:00.000Z', 'en', AUSTIN_ZONE)).toBe('Nov 2026');
     // 11:30 pm on Nov 30 in Austin is already Dec 1 in UTC.
-    expect(formatMonthYear('2026-12-01T05:30:00.000Z')).toBe('Nov 2026');
+    expect(formatMonthYear('2026-12-01T05:30:00.000Z', 'en', AUSTIN_ZONE)).toBe('Nov 2026');
   });
 
   it('formats hours', () => {
@@ -170,12 +173,12 @@ describe('dates and times in Spanish', () => {
   const start = '2026-11-21T16:30:00.000Z'; // Sat, Nov 21, 10:30 am in Austin
 
   it('formats days, months and times in the market time zone', () => {
-    expect(formatDate(start, { locale: 'es' })).toBe('sáb, 21 de nov');
-    expect(formatDate(start, { locale: 'es', withYear: true })).toBe('sáb, 21 de nov de 2026');
-    expect(formatMonthYear(start, 'es')).toBe('nov 2026');
-    expect(formatTime(start, 'es')).toBe('10:30 a.m.');
-    expect(formatDateTime(start, 'es')).toBe('sáb, 21 de nov · 10:30 a.m.');
-    expect(formatTimeRange(start, '2026-11-21T19:00:00.000Z', 'es')).toBe('10:30 a.m.–1:00 p.m.');
+    expect(formatDate(start, { locale: 'es' , timeZone: AUSTIN_ZONE })).toBe('sáb, 21 de nov');
+    expect(formatDate(start, { locale: 'es', withYear: true , timeZone: AUSTIN_ZONE })).toBe('sáb, 21 de nov de 2026');
+    expect(formatMonthYear(start, 'es', AUSTIN_ZONE)).toBe('nov 2026');
+    expect(formatTime(start, 'es', AUSTIN_ZONE)).toBe('10:30 a.m.');
+    expect(formatDateTime(start, 'es', AUSTIN_ZONE)).toBe('sáb, 21 de nov · 10:30 a.m.');
+    expect(formatTimeRange(start, '2026-11-21T19:00:00.000Z', 'es', AUSTIN_ZONE)).toBe('10:30 a.m.–1:00 p.m.');
   });
 
   it('formats relative times', () => {
@@ -186,7 +189,7 @@ describe('dates and times in Spanish', () => {
   });
 
   it('leaves English as the default', () => {
-    expect(formatDateTime(start)).toBe('Sat, Nov 21 · 10:30 am');
-    expect(formatDateTime(start, 'en')).toBe('Sat, Nov 21 · 10:30 am');
+    expect(formatDateTime(start, 'en', AUSTIN_ZONE)).toBe('Sat, Nov 21 · 10:30 am');
+    expect(formatDateTime(start, 'en', AUSTIN_ZONE)).toBe('Sat, Nov 21 · 10:30 am');
   });
 });

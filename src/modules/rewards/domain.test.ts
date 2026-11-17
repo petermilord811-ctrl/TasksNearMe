@@ -58,7 +58,7 @@ describe('the welcome gift card (the owner’s rule of 2026-11-14)', () => {
       { program: 'welcome', status: 'voided', amountCents: 5000, holdUntil: new Date('2026-12-02T18:00:00.000Z') },
       { program: 'repeat', status: 'redeemable', amountCents: 1000, holdUntil: new Date('2026-12-02T18:00:00.000Z') },
     ];
-    expect(releasedThisMonthCents(grants, 'welcome', now)).toBe(10_000);
+    expect(releasedThisMonthCents(grants, 'welcome', now, AUSTIN)).toBe(10_000);
     expect(nextMarketMonthStart(now, AUSTIN).toISOString()).toBe('2027-01-01T06:00:00.000Z');
   });
 

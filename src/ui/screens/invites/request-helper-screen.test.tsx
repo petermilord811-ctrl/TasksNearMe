@@ -7,6 +7,7 @@ import { ACTION_ERROR_CODES, routes, type PaymentAttemptResult, type RequestHelp
 import { bookshelfBreakdown, fakeHandler, jordanYardSlot, movingFundedBreakdown, movingPublicTask, requestJordanData, requestJordanSlotData, requestJordanSlotTakenData, requestNoTasksData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { RequestHelperContent, RequestHelperScreen } from './request-helper-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
@@ -35,9 +36,9 @@ function mount(data: RequestHelperPageData = requestJordanData, overrides: Parti
     ...overrides,
   };
   const props = { data, handlers, now };
-  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}>
+  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago">
     {initialResult ? <RequestHelperContent {...props} initialResult={initialResult} /> : <RequestHelperScreen {...props} />}
-  </NextIntlClientProvider>) };
+  </TimeZoneProvider></NextIntlClientProvider>) };
 }
 
 async function ready() {

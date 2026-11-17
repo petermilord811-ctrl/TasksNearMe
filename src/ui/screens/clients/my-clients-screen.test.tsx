@@ -6,11 +6,12 @@ import { CLIENT_ACTION_IDS, routes, type MyClientsPageData } from '@/contracts';
 import { findWorkNotBookableData, myClientsData, myClientsEmptyData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { MyClientsScreen } from './my-clients-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 afterEach(cleanup);
 const now = '2026-12-08T17:00:00.000Z';
 function renderClients(data: MyClientsPageData = myClientsData) {
-  return render(<NextIntlClientProvider locale="en" messages={messages}><MyClientsScreen data={data} now={now} /></NextIntlClientProvider>);
+  return render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><MyClientsScreen data={data} now={now} /></TimeZoneProvider></NextIntlClientProvider>);
 }
 
 describe('MyClientsScreen', () => {

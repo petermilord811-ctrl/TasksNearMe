@@ -8,6 +8,7 @@ import { deskBookingThreadPageData, fakeHandler, fakeThreadHandlers, uploadedTas
 import uiMessages from '../../../../messages/en/ui';
 import thread from '../../../../messages/en/ui/thread.json';
 import { MessageComposer, type MessageComposerProps } from './message-composer';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const messages = { ...uiMessages, thread };
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
@@ -20,7 +21,7 @@ function mount(props: Partial<MessageComposerProps> = {}) {
     onSend: vi.fn(fakeHandler<SendMessageInput>({ ok: true, code: 'sent' }, 0)),
     onUploadPhoto: vi.fn(async () => ({ ok: true as const, photo: uploadedTaskPhotos[0]! })),
   };
-  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><MessageComposer rules={deskBookingThreadPageData.composer} handlers={handlers} {...props} /></NextIntlClientProvider>) };
+  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><MessageComposer rules={deskBookingThreadPageData.composer} handlers={handlers} {...props} /></TimeZoneProvider></NextIntlClientProvider>) };
 }
 
 const input = () => screen.getByRole('textbox', { name: thread.composer.label });

@@ -9,6 +9,7 @@ import uiMessages from '../../../../messages/en/ui';
 import location from '../../../../messages/en/ui/location.json';
 import { ExactAddressPanel } from './exact-address-panel';
 import { GeneralArea } from './general-area';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 afterEach(() => {
   cleanup();
@@ -17,9 +18,9 @@ afterEach(() => {
 
 function renderLocation(children: ReactNode) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ ...uiMessages, location }}>
+    <NextIntlClientProvider locale="en" messages={{ ...uiMessages, location }}><TimeZoneProvider timeZone="America/Chicago">
       {children}
-    </NextIntlClientProvider>,
+    </TimeZoneProvider></NextIntlClientProvider>,
   );
 }
 

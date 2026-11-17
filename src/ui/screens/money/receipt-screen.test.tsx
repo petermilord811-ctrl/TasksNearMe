@@ -8,11 +8,12 @@ import { deskReceiptPageData, deskSimpleReceiptPageData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import receipt from '../../../../messages/en/ui/receipt.json';
 import { ReceiptScreen } from './receipt-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 function mount(data: ReceiptPageData = deskReceiptPageData) {
-  return render(<NextIntlClientProvider locale="en" messages={{ ...messages, receipt }}><ReceiptScreen data={data} /></NextIntlClientProvider>);
+  return render(<NextIntlClientProvider locale="en" messages={{ ...messages, receipt }}><TimeZoneProvider timeZone="America/Chicago"><ReceiptScreen data={data} /></TimeZoneProvider></NextIntlClientProvider>);
 }
 
 describe('ReceiptScreen', () => {

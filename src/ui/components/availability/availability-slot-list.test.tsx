@@ -6,13 +6,14 @@ import { routes } from '@/contracts';
 import { jordanProfileWithSlotsData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { AvailabilitySlotList } from './availability-slot-list';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 afterEach(cleanup);
 
 describe('AvailabilitySlotList', () => {
   it('preserves slot order and links each opening to its helper and slot id', () => {
     const slots = jordanProfileWithSlotsData.slots!;
-    render(<NextIntlClientProvider locale="en" messages={messages}><AvailabilitySlotList slots={slots} handle={jordanProfileWithSlotsData.helper.handle} /></NextIntlClientProvider>);
+    render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><AvailabilitySlotList slots={slots} handle={jordanProfileWithSlotsData.helper.handle} /></TimeZoneProvider></NextIntlClientProvider>);
     const cards = within(screen.getByRole('region', { name: 'Open times' })).getAllByRole('listitem');
     expect(cards).toHaveLength(slots.length);
     slots.forEach((slot, index) => expect(within(cards[index]!).getByRole('link', { name: 'Request this time' })).toHaveAttribute('href', routes.app.requestHelper(jordanProfileWithSlotsData.helper.handle, { slotId: slot.id })));

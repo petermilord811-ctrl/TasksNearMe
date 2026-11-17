@@ -26,6 +26,7 @@ import {
 import { formatDateTime } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import { BookingConfirmScreen } from './booking-confirm-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
@@ -48,7 +49,7 @@ function mount(data: BookingConfirmPageData = deskConfirmData, overrides: Partia
     onFinishVerification: vi.fn(fakeHandler<Parameters<BookingConfirmHandlers['onFinishVerification']>[0]>(booked, 0)),
     ...overrides,
   };
-  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><BookingConfirmScreen data={data} handlers={handlers} now={now} /></NextIntlClientProvider>) };
+  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><BookingConfirmScreen data={data} handlers={handlers} now={now} /></TimeZoneProvider></NextIntlClientProvider>) };
 }
 
 const terms = () => screen.getByRole('checkbox', { name: /I agree/ });
@@ -63,7 +64,7 @@ describe('BookingConfirmScreen', () => {
   it('books a far-off task without charging today, says when the card is charged, and keeps the card', () => {
     mount(deskConfirmPaysLaterData);
     expect(screen.getByText(messages.bookingConfirm.totalLater)).toBeInTheDocument();
-    expect(screen.getByText(`Nothing is charged today. We'll charge your card on ${formatDateTime(deskConfirmPaysLaterData.paysLater!.chargeAt)}; if that doesn't go through, you can pay on the booking page until ${formatDateTime(deskConfirmPaysLaterData.paysLater!.payBy)}, or the booking is canceled with no fees.`)).toBeInTheDocument();
+    expect(screen.getByText(`Nothing is charged today. We'll charge your card on ${formatDateTime(deskConfirmPaysLaterData.paysLater!.chargeAt, 'en', 'America/Chicago')}; if that doesn't go through, you can pay on the booking page until ${formatDateTime(deskConfirmPaysLaterData.paysLater!.payBy, 'en', 'America/Chicago')}, or the booking is canceled with no fees.`)).toBeInTheDocument();
     expect(screen.queryByText(messages.bookingConfirm.paymentNote)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Book now, pay $66.00 later' })).toBeInTheDocument();
   });

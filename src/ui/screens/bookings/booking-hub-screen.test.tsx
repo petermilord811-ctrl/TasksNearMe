@@ -23,6 +23,7 @@ import {
 import { formatDate, formatDateTime, formatMoney, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import { BookingHubScreen } from './booking-hub-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 const addressRenderer = vi.hoisted(() => vi.fn());
@@ -48,9 +49,9 @@ function mount(data: BookingView = deskBookingPosterConfirmed, now = '2026-11-17
   const onAction = vi.fn(fakeHandler<Parameters<BookingHubHandlers['onAction']>[0]>({ ok: true, code: 'updated' }, 0));
   return {
     onError, onAction,
-    ...render(<NextIntlClientProvider locale="en" messages={messages} onError={onError}>
+    ...render(<NextIntlClientProvider locale="en" messages={messages} onError={onError}><TimeZoneProvider timeZone="America/Chicago">
       <BookingHubScreen data={data} handlers={{ onAction }} sheets={fakeBookingSheetHandlers} now={now} />
-    </NextIntlClientProvider>),
+    </TimeZoneProvider></NextIntlClientProvider>),
   };
 }
 
@@ -90,9 +91,9 @@ describe('BookingHubScreen tips (UI-057)', () => {
     mount(deskBookingPosterTipAvailable, '2026-11-21T19:30:00.000Z');
     expect(screen.queryByRole('region', { name: 'Add a tip for Jordan T.' })).not.toBeInTheDocument();
     cleanup();
-    render(<NextIntlClientProvider locale="en" messages={messages}>
+    render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago">
       <BookingHubScreen data={deskBookingPosterTipAvailable} handlers={{ onAction: vi.fn() }} sheets={fakeBookingSheetHandlers} tip={fakeBookingTipHandlers} now="2026-11-21T19:30:00.000Z" />
-    </NextIntlClientProvider>);
+    </TimeZoneProvider></NextIntlClientProvider>);
     expect(screen.getByRole('region', { name: 'Add a tip for Jordan T.' })).toBeInTheDocument();
   });
 });
@@ -154,9 +155,9 @@ describe('BookingHubScreen dispute integration', () => {
 describe('BookingHubScreen privacy and supplied data', () => {
   it('keeps the existing app caller compatible while failing closed until sheet handlers are supplied', async () => {
     const onAction = vi.fn(fakeHandler<Parameters<BookingHubHandlers['onAction']>[0]>({ ok: true, code: 'updated' }, 0));
-    render(<NextIntlClientProvider locale="en" messages={messages}>
+    render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago">
       <BookingHubScreen data={{ ...deskBookingPosterConfirmed, actions: [{ id: 'cancel', kind: 'destructive', enabled: true }] }} handlers={{ onAction }} now="2026-11-21T16:00:00.000Z" />
-    </NextIntlClientProvider>);
+    </TimeZoneProvider></NextIntlClientProvider>);
     await userEvent.click(screen.getByRole('button', { name: messages.actions.cancel }));
     expect(await screen.findByText(messages.bookingSheets.cancel.loadError)).toBeVisible();
     expect(screen.getByRole('alertdialog')).toBeVisible();
@@ -197,7 +198,7 @@ describe('BookingHubScreen privacy and supplied data', () => {
     const payments = screen.getByRole('region', { name: 'Payments' });
     expect(payments).toHaveTextContent('$66.00');
     expect(payments).toHaveTextContent(/Visa.*1881/);
-    expect(payments).toHaveTextContent(formatDateTime(deskBookingPosterConfirmed.payments![0].at));
+    expect(payments).toHaveTextContent(formatDateTime(deskBookingPosterConfirmed.payments![0].at, 'en', 'America/Chicago'));
     expect(within(payments).getByText(messages.status.payment.succeeded)).toBeVisible();
   });
 
@@ -267,7 +268,7 @@ describe('BookingHubScreen privacy and supplied data', () => {
     mount({ ...deskBookingHelperCompleted, myReview: { ...deskReviewPublishedData.mine!, rating: 1 } });
     const review = screen.getByRole('region', { name: messages.bookingHub.review.title });
     expect(review).toHaveTextContent('You rated this 1 star');
-    expect(review).toHaveTextContent(`Visible since ${formatDate(deskReviewPublishedData.mine!.publishedAt!)}`);
+    expect(review).toHaveTextContent(`Visible since ${formatDate(deskReviewPublishedData.mine!.publishedAt!, { timeZone: 'America/Chicago' })}`);
     expect(review.querySelector('time')).toHaveAttribute('dateTime', deskReviewPublishedData.mine!.publishedAt);
     expect(review).not.toHaveTextContent(messages.bookingHub.review.hidden);
   });
@@ -283,7 +284,7 @@ describe('BookingHubScreen privacy and supplied data', () => {
     const { container } = mount(deskBookingHelperConfirmed);
     expect(screen.getByRole('heading', { name: deskBookingHelperConfirmed.poster.displayName })).toBeVisible();
     expect(container.textContent).toContain(deskBookingHelperConfirmed.poster.initials);
-    expect(container.textContent).toContain(formatMonthYear(deskBookingHelperConfirmed.poster.memberSince));
+    expect(container.textContent).toContain(formatMonthYear(deskBookingHelperConfirmed.poster.memberSince, 'en', 'America/Chicago'));
     expect(screen.getByText('Phone verified')).toBeVisible();
   });
 
@@ -310,9 +311,9 @@ describe('BookingHubScreen privacy and supplied data', () => {
   it('shows the agreed start and the original task window independently', () => {
     const { container } = mount();
     const { terms, task } = deskBookingPosterConfirmed;
-    expect(container.textContent).toContain(formatDateTime(terms.start));
-    expect(container.textContent).toContain(formatDate(task.schedule.windowStart));
-    expect(container.textContent).toContain(formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd));
+    expect(container.textContent).toContain(formatDateTime(terms.start, 'en', 'America/Chicago'));
+    expect(container.textContent).toContain(formatDate(task.schedule.windowStart, { timeZone: 'America/Chicago' }));
+    expect(container.textContent).toContain(formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd, 'en', 'America/Chicago'));
   });
 
   it('shows each supplied check-in update', () => {
@@ -399,8 +400,8 @@ describe.each(roles)('BookingHubScreen %s copy coverage', (viewerRole) => {
     const t = createTranslator({ locale: 'en', messages, namespace: 'bookingHub' });
     expect(screen.getByText(t(`state.${viewerRole}.${status}`, {
       name: deskBookingPosterConfirmed.poster.displayName,
-      date: formatDate(deskBookingPosterConfirmed.terms.start),
-      time: formatTime(deskBookingPosterConfirmed.terms.start),
+      date: formatDate(deskBookingPosterConfirmed.terms.start, { timeZone: 'America/Chicago' }),
+      time: formatTime(deskBookingPosterConfirmed.terms.start, 'en', 'America/Chicago'),
       deadline: '',
       hasTime: status === 'pending_funding' || status === 'in_progress' || status === 'completion_submitted' ? 'no' : 'yes',
     }))).toBeVisible();

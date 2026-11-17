@@ -27,6 +27,7 @@ import { PhoneStep } from './phone-step';
 import { PhoneCodeStep } from './phone-code-step';
 import { ProfileStep } from './profile-step';
 import { SignInScreen } from './sign-in-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const { push, replace } = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, replace }) }));
@@ -46,7 +47,7 @@ function handlers(overrides: Partial<SignInHandlers> = {}): SignInHandlers {
 
 function show(children: ReactElement) {
   return render(children, {
-    wrapper: ({ children }) => <NextIntlClientProvider locale="en" messages={{ ...uiMessages, forms, signIn }}>{children}</NextIntlClientProvider>,
+    wrapper: ({ children }) => <NextIntlClientProvider locale="en" messages={{ ...uiMessages, forms, signIn }}><TimeZoneProvider timeZone="America/Chicago">{children}</TimeZoneProvider></NextIntlClientProvider>,
   });
 }
 

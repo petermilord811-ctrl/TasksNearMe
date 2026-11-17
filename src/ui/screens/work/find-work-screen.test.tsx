@@ -8,6 +8,7 @@ import { fakeFindWorkHandlers, findWorkByPayData, findWorkEmptyData, findWorkMap
 import messages from '../../../../messages/en/ui';
 import findWork from '../../../../messages/en/ui/findWork.json';
 import { FindWorkScreen } from './find-work-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
@@ -15,7 +16,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 const now = '2026-11-17T15:00:00.000Z';
 function renderWork(data: FindWorkPageData = findWorkPageData, handlers: FindWorkHandlers | null = fakeFindWorkHandlers) {
-  return render(<NextIntlClientProvider locale="en" messages={{ ...messages, findWork }}><FindWorkScreen data={data} now={now} handlers={handlers ?? undefined} liveMap={false} /></NextIntlClientProvider>);
+  return render(<NextIntlClientProvider locale="en" messages={{ ...messages, findWork }}><TimeZoneProvider timeZone="America/Chicago"><FindWorkScreen data={data} now={now} handlers={handlers ?? undefined} liveMap={false} /></TimeZoneProvider></NextIntlClientProvider>);
 }
 const list = () => screen.getByRole('region', { name: findWork.resultsLabel });
 
@@ -108,7 +109,7 @@ describe('FindWorkScreen', () => {
     // The hide's answer brings a list without the row: it stays where it was.
     finishHide({ ok: true, code: 'updated' });
     const without: FindWorkPageData = { ...findWorkPageData, cards: findWorkPageData.cards.filter((card) => card.task.id !== moving.id) };
-    view.rerender(<NextIntlClientProvider locale="en" messages={{ ...messages, findWork }}><FindWorkScreen data={without} now={now} handlers={handlers} liveMap={false} /></NextIntlClientProvider>);
+    view.rerender(<NextIntlClientProvider locale="en" messages={{ ...messages, findWork }}><TimeZoneProvider timeZone="America/Chicago"><FindWorkScreen data={without} now={now} handlers={handlers} liveMap={false} /></TimeZoneProvider></NextIntlClientProvider>);
     await vi.waitFor(() => expect(onHideTask).toHaveBeenLastCalledWith({ taskId: moving.id, hidden: false }));
     const links = within(list()).getAllByRole('link').map((link) => link.textContent);
     expect(links.indexOf(moving.title)).toBe(1);

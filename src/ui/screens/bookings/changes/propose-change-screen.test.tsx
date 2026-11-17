@@ -9,6 +9,7 @@ import messages from '../../../../../messages/en/ui';
 import { ChangeQuote } from './change-quote';
 import { ProposeChangeContent } from './propose-change-screen';
 import { changedInput, changeDefaults } from './propose-change-values';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
@@ -33,9 +34,9 @@ function mount({
   onQuote?: ProposeChangeHandlers['onQuote'];
   onPropose?: ProposeChangeHandlers['onPropose'];
 } = {}) {
-  return { onQuote, onPropose, ...render(<NextIntlClientProvider locale="en" messages={messages}>
+  return { onQuote, onPropose, ...render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago">
     <ProposeChangeContent data={data} handlers={{ onQuote, onPropose }} now={now} initialInput={initialInput} />
-  </NextIntlClientProvider>) };
+  </TimeZoneProvider></NextIntlClientProvider>) };
 }
 
 async function sendProposal() {
@@ -186,7 +187,7 @@ describe('proposal money preview', () => {
     vi.useFakeTimers();
     const resolve: ((value: ChangeQuoteResult) => void)[] = [];
     const onQuote = vi.fn(() => new Promise<ChangeQuoteResult>((done) => { resolve.push(done); }));
-    const wrap = (input: ProposeChangeInput) => <NextIntlClientProvider locale="en" messages={messages}><ChangeQuote input={input} viewerRole="poster" onQuote={onQuote} /></NextIntlClientProvider>;
+    const wrap = (input: ProposeChangeInput) => <NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><ChangeQuote input={input} viewerRole="poster" onQuote={onQuote} /></TimeZoneProvider></NextIntlClientProvider>;
     const { rerender, container } = render(wrap(validInput));
     await act(async () => { await vi.advanceTimersByTimeAsync(350); });
     rerender(wrap({ ...validInput, priceCents: 9000 }));

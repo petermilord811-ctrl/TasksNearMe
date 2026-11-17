@@ -8,11 +8,12 @@ import { myTasksEmptyData, myTasksPageData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import myTasks from '../../../../messages/en/ui/myTasks.json';
 import { MyTasksScreen } from './my-tasks-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 afterEach(cleanup);
 const now = '2026-11-17T15:00:00.000Z';
 function renderTasks(data: MyTasksPageData = myTasksPageData, initialTab: 'open' | 'booked' | 'past' = 'open') {
-  return render(<NextIntlClientProvider locale="en" messages={{ ...messages, myTasks }}><MyTasksScreen data={data} now={now} initialTab={initialTab} /></NextIntlClientProvider>);
+  return render(<NextIntlClientProvider locale="en" messages={{ ...messages, myTasks }}><TimeZoneProvider timeZone="America/Chicago"><MyTasksScreen data={data} now={now} initialTab={initialTab} /></TimeZoneProvider></NextIntlClientProvider>);
 }
 
 describe('MyTasksScreen', () => {

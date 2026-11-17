@@ -21,24 +21,24 @@ describe('T-30: daylight saving time', () => {
     const fallStart = marketLocalToUtc('2026-11-01', '10:00', 'America/Chicago');
     const fall = cancellationSummary(DEFAULT_CANCELLATION, funded, fallStart);
     expect(Date.parse(fallStart) - Date.parse(fall.freeUntil)).toBe(24 * HOUR);
-    expect(formatDateTime(fall.freeUntil)).toBe('Sat, Oct 31 · 11:00 am');
+    expect(formatDateTime(fall.freeUntil, 'en', 'America/Chicago')).toBe('Sat, Oct 31 · 11:00 am');
     // Sun Mar 14, 2027, 10:00 am CDT: 24 h earlier was CST, so 9:00 am Saturday.
     const springStart = marketLocalToUtc('2027-03-14', '10:00', 'America/Chicago');
     const spring = cancellationSummary(DEFAULT_CANCELLATION, funded, springStart);
     expect(Date.parse(springStart) - Date.parse(spring.freeUntil)).toBe(24 * HOUR);
-    expect(formatDateTime(spring.freeUntil)).toBe('Sat, Mar 13 · 9:00 am');
+    expect(formatDateTime(spring.freeUntil, 'en', 'America/Chicago')).toBe('Sat, Mar 13 · 9:00 am');
   });
 
   it('approves 72 h after the work is sent, and reminds 24 h and 4 h before, across the change', () => {
     // Sent Sat Oct 31, 2026 at noon CDT; due Tue Nov 3 at 11:00 am CST (72 hours, one of them repeated).
     const sent = new Date(marketLocalToUtc('2026-10-31', '12:00', 'America/Chicago'));
     const due = new Date(sent.getTime() + 72 * HOUR);
-    expect(formatDateTime(due)).toBe('Tue, Nov 3 · 11:00 am');
+    expect(formatDateTime(due, 'en', 'America/Chicago')).toBe('Tue, Nov 3 · 11:00 am');
     expect(approvalReminderDue(due, sent, new Date(due.getTime() - 24 * HOUR))).toEqual({ threshold: 24, hoursLeft: 24 });
     expect(approvalReminderDue(due, sent, new Date(due.getTime() - 4 * HOUR))).toEqual({ threshold: 4, hoursLeft: 4 });
     // Sent Fri Mar 12, 2027 at 6:00 pm CST; due Mon Mar 15 at 7:00 pm CDT.
     const springSent = new Date(marketLocalToUtc('2027-03-12', '18:00', 'America/Chicago'));
-    expect(formatDateTime(new Date(springSent.getTime() + 72 * HOUR))).toBe('Mon, Mar 15 · 7:00 pm');
+    expect(formatDateTime(new Date(springSent.getTime() + 72 * HOUR), 'en', 'America/Chicago')).toBe('Mon, Mar 15 · 7:00 pm');
   });
 
   it('opens check-in 2 h and 30 min before a start just after the clocks spring forward', () => {
@@ -47,7 +47,7 @@ describe('T-30: daylight saving time', () => {
     const booking: BookingFacts = { status: 'confirmed', startAt: start, remote: false, onMyWayAt: null, arrivedAt: null, fundingExpiresAt: null, approvalDueAt: null, completedAt: null };
     const [onMyWay] = bookingActions(booking, 'helper', new Date(start.getTime() - 3 * HOUR));
     expect(onMyWay).toMatchObject({ id: 'on_my_way', enabled: false, disabledReason: { code: 'available_at', at: new Date(start.getTime() - 2 * HOUR).toISOString() } });
-    expect(formatTime(new Date(start.getTime() - 2 * HOUR))).toBe('12:30 am');
+    expect(formatTime(new Date(start.getTime() - 2 * HOUR), 'en', 'America/Chicago')).toBe('12:30 am');
   });
 
   it('offers each wall-clock start time once on the night the clocks fall back', () => {

@@ -7,6 +7,7 @@ import { ACTION_ERROR_CODES, PROBLEM_REASONS, PROBLEM_UNAVAILABLE_REASONS, route
 import { deskCompletionView, deskReportProblemPageData, reportProblemUnavailableData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { ReportProblemContent, ReportProblemScreen } from './report-problem-screen';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
@@ -29,7 +30,7 @@ function mount(data: ReportProblemPageData = deskReportProblemPageData, override
     onUploadPhoto: vi.fn().mockResolvedValue({ ok: true, photo: deskCompletionView.photos[0] }),
     ...overrides,
   };
-  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><ReportProblemScreen data={data} handlers={handlers} now={now} /></NextIntlClientProvider>) };
+  return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><ReportProblemScreen data={data} handlers={handlers} now={now} /></TimeZoneProvider></NextIntlClientProvider>) };
 }
 
 async function fillReport(user: ReturnType<typeof userEvent.setup>, text = description) {
@@ -116,7 +117,7 @@ describe('ReportProblemScreen', () => {
 
   it.each(ACTION_ERROR_CODES)('renders friendly feedback for action error %s', (code) => {
     const handlers: ReportProblemHandlers = { onSubmit: vi.fn(), onUploadPhoto: vi.fn() };
-    render(<NextIntlClientProvider locale="en" messages={messages}><ReportProblemContent data={deskReportProblemPageData} handlers={handlers} now={now} initialResult={{ ok: false, code }} /></NextIntlClientProvider>);
+    render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><ReportProblemContent data={deskReportProblemPageData} handlers={handlers} now={now} initialResult={{ ok: false, code }} /></TimeZoneProvider></NextIntlClientProvider>);
     const expected = code === 'expired' || code === 'not_allowed' ? messages.reportProblem.errors[code]
       : code in messages.forms.actionErrors ? messages.forms.actionErrors[code as keyof typeof messages.forms.actionErrors] : messages.feedback.error[code];
     expect(screen.getByText(expected)).toBeVisible();
@@ -125,10 +126,10 @@ describe('ReportProblemScreen', () => {
   it('offers reload after a booking change and support after the approval window ends', async () => {
     const user = userEvent.setup();
     const handlers: ReportProblemHandlers = { onSubmit: vi.fn(), onUploadPhoto: vi.fn() };
-    const { rerender } = render(<NextIntlClientProvider locale="en" messages={messages}><ReportProblemContent key="changed" data={deskReportProblemPageData} handlers={handlers} now={now} initialResult={{ ok: false, code: 'not_allowed' }} /></NextIntlClientProvider>);
+    const { rerender } = render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><ReportProblemContent key="changed" data={deskReportProblemPageData} handlers={handlers} now={now} initialResult={{ ok: false, code: 'not_allowed' }} /></TimeZoneProvider></NextIntlClientProvider>);
     await user.click(screen.getByRole('button', { name: messages.reportProblem.reload }));
     expect(navigation.refresh).toHaveBeenCalledOnce();
-    rerender(<NextIntlClientProvider locale="en" messages={messages}><ReportProblemContent key="expired" data={deskReportProblemPageData} handlers={handlers} now={now} initialResult={{ ok: false, code: 'expired' }} /></NextIntlClientProvider>);
+    rerender(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><ReportProblemContent key="expired" data={deskReportProblemPageData} handlers={handlers} now={now} initialResult={{ ok: false, code: 'expired' }} /></TimeZoneProvider></NextIntlClientProvider>);
     expect(screen.getByRole('link', { name: messages.reportProblem.getHelp })).toHaveAttribute('href', routes.help());
   });
 
