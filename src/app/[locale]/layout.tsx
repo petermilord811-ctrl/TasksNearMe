@@ -28,9 +28,11 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image', images: [SHARE_IMAGES.en] },
   // The web app manifest (src/app/manifest.ts) is linked automatically; iPhones read these instead.
   icons: {
+    // Google Search takes ICO and PNG favicons, not SVG, and prefers them larger than 48 px: the 192 px PNG comes
+    // first (after Next's favicon.ico), the SVG after it for browsers.
     icon: [
-      { url: '/ui/brand/icon.svg', type: 'image/svg+xml' },
       { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/ui/brand/icon.svg', type: 'image/svg+xml' },
     ],
     apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
