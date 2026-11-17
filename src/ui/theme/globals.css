@@ -407,9 +407,9 @@
 
 /* ---- Scrollbars ---------------------------------------------------------------------------------------
    The page has no browser scrollbar at all (so no strip is kept for one beside the map or the town): a thin
-   thumb floats over the right edge instead (`PageScrollbar` in src/ui/motion), shown only while the page
-   scrolls, while the pointer is near the right edge or on the thumb, and while it's dragged; it fades out a
-   moment after. Inner scrolling areas keep a thin native scrollbar whose thumb is invisible until the area
+   thumb floats over the right edge instead (`ScrollbarActivity` in src/ui/motion), shown only while the page
+   scrolls, while the pointer is near the right edge or on the bar, and while it's held; it fades out a
+   moment after. A mouse drags the thumb and clicks the track as on a browser's scrollbar. Inner scrolling areas keep a thin native scrollbar whose thumb is invisible until the area
    scrolls or is hovered; its track is clear, so it never shows as a bar either. `ScrollbarActivity` marks
    `data-scrolling` and the page's `data-scrollbar-near`. Areas that hide theirs (`[scrollbar-width:none]`) keep
    it hidden. */
@@ -439,7 +439,9 @@
   html::-webkit-scrollbar { display: none; }
 }
 
-/* The page's floating thumb (PageScrollbar): out of the way and out of reach until it's wanted. */
+/* The page's floating scrollbar (ScrollbarActivity): out of the way and out of reach until it's wanted. While a
+   mouse is at the edge the whole strip takes clicks, thumb and track, like a browser's own scrollbar; hovering it
+   widens the thumb and shows a faint track (inset like the thumb's travel, INSET_PX). */
 .page-scrollbar {
   position: fixed;
   top: 0;
@@ -452,7 +454,22 @@
   transition: opacity 0.6s var(--ease-out);
 }
 .page-scrollbar[data-active] { opacity: 1; transition-duration: 0.16s; }
+.page-scrollbar[data-reachable] { pointer-events: auto; cursor: default; }
 .page-scrollbar[hidden] { display: none; }
+.page-scrollbar::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  bottom: 4px;
+  width: 9px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-out);
+}
+.page-scrollbar:hover::before,
+.page-scrollbar[data-held]::before { opacity: 1; }
 .page-scrollbar-thumb {
   position: absolute;
   top: 0;
@@ -464,15 +481,15 @@
   transition: width 0.2s var(--ease-out), right 0.2s var(--ease-out), background-color 0.2s var(--ease-out);
   will-change: transform;
 }
-.page-scrollbar[data-active] .page-scrollbar-thumb { pointer-events: auto; cursor: default; }
-.page-scrollbar-thumb:hover,
-.page-scrollbar[data-dragging] .page-scrollbar-thumb {
+.page-scrollbar:hover .page-scrollbar-thumb,
+.page-scrollbar[data-held] .page-scrollbar-thumb {
   right: 2px;
   width: 9px;
   background: color-mix(in oklab, var(--foreground) 46%, transparent);
 }
+.page-scrollbar[data-dragging] .page-scrollbar-thumb { background: color-mix(in oklab, var(--foreground) 56%, transparent); }
 @media (pointer: coarse) {
-  .page-scrollbar[data-active] .page-scrollbar-thumb { pointer-events: none; }
+  .page-scrollbar[data-reachable] { pointer-events: none; }
 }
 
 @layer base {
