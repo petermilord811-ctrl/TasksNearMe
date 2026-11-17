@@ -2,13 +2,17 @@ import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { CATEGORY_SLUGS } from '@/contracts';
+import { Suspense } from 'react';
+import { CATEGORY_SLUGS, type CategorySeoContent } from '@/contracts';
 import { getCategoryPageData, listCategorySlugs } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
 import { categorySeoContent } from '@/modules/seo/category-content';
 import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, categoryServiceNode, SITE_NAME } from '@/modules/seo/structured-data';
+import { requestRows } from '@/platform/auth/audience';
+import { searchEngineRows } from '@/shared/sample-data';
+import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { CategoryScreen } from '@/ui/screens/public/category-screen';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
@@ -26,7 +30,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/[market]/[category]'>): Promise<Metadata> {
   const { market, category } = await params;
-  const [page, t, categoryName] = await Promise.all([getCategoryPageData(market, category), getTranslations('server.meta.category'), categoryNames()]);
+  const [page, t, categoryName] = await Promise.all([getCategoryPageData(market, category, searchEngineRows()), getTranslations('server.meta.category'), categoryNames()]);
   if (!page) return {};
   // The category's name in the page's language: the database's is English.
   const values = { category: categoryName(page.data.category.slug), market: page.data.market.name };
@@ -36,9 +40,14 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   };
 }
 
+/**
+ * Unknown markets and categories are a real 404 (outside Suspense). The structured data and the search content
+ * (counts of real rows only, questions, the city guide, links) are the same for everyone; the screen's tasks and
+ * helpers are drawn for the visitor inside Suspense (src/shared/sample-data.ts).
+ */
 async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]'>) {
   const { market, category } = await params;
-  const page = await getCategoryPageData(market, category);
+  const page = await getCategoryPageData(market, category, searchEngineRows());
   if (!page) notFound();
   const [context, t, categoryName] = await Promise.all([structuredDataContext(), getTranslations('server.meta.category'), categoryNames()]);
   // Counts, questions people ask, the city guide and related links (docs/seo/PLAN.md S3).
@@ -65,9 +74,17 @@ async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]
           }),
         ]}
       />
-      <CategoryScreen data={{ ...page.data, seo }} now={page.now} />
+      <Suspense fallback={<PageSkeleton variant="detail" />}>
+        <Category market={view.slug} category={shown.slug} seo={seo} />
+      </Suspense>
     </>
   );
+}
+
+async function Category({ market, category, seo }: { market: string; category: string; seo: CategorySeoContent }) {
+  const page = await getCategoryPageData(market, category, await requestRows());
+  if (!page) notFound();
+  return <CategoryScreen data={{ ...page.data, seo }} now={page.now} />;
 }
 
 export default withClientMessages('[locale]/(public)/[market]/[category]/page.tsx', CategoryPage);

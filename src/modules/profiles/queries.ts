@@ -23,11 +23,13 @@ import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
 import { helperProfiles, helperServices, helperWorkSamples } from './schema';
 import { badgesFor } from '@/modules/badges/service';
-import { GENERATED_ID_PATTERN } from '@/shared/sample-data';
+import { rowScopeCondition, type RowScope } from '@/shared/sample-data';
 
 /**
  * Public helper cards. Only active helpers with active accounts appear. Last names, exact
  * locations, and contact details never leave this module: the area is a neighborhood name.
+ * The public reads take `rows` (src/shared/sample-data.ts): `real` leaves the sample people out, for the public where
+ * samples are hidden; signed-in readers keep `all`.
  */
 
 export function initialsOf(firstName: string, lastName: string): string {
@@ -96,7 +98,9 @@ export async function listPublicHelpers(options: {
   marketId: string;
   categorySlug?: CategorySlug;
   limit: number;
+  rows?: RowScope;
 }): Promise<HelperSummary[]> {
+  const rowScope = options.rows ?? 'all';
 
   const rows = await db
     .select({ profile: helperProfiles, user: users, areaName: areas.name })
@@ -109,6 +113,7 @@ export async function listPublicHelpers(options: {
         eq(users.status, 'active'),
         eq(areas.marketId, options.marketId),
         offersCategory(options.categorySlug),
+        rowScopeCondition(rowScope, users.id),
       ),
     )
     .orderBy(desc(helperProfiles.completedCount), sql`${helperProfiles.ratingAverage} desc nulls last`, asc(users.name))
@@ -145,16 +150,16 @@ export async function listPublicHelpers(options: {
   }
 
   const badges = await badgesFor(db, rows.map(({ user }) => user.id));
-  const recommended = await recommendedByCounts(db, rows.map(({ user }) => user.id));
+  const recommended = await recommendedByCounts(db, rows.map(({ user }) => user.id), rowScope);
   return rows.map(({ profile, user, areaName }) => withRecommended(toHelperSummary(profile, user, areaName, servicesByHelper.get(user.id) ?? [], badges.get(user.id)), recommended));
 }
 
 /**
- * How many helpers listPublicHelpers would show in the market (and category), not only the first few. `realOnly`
+ * How many helpers listPublicHelpers would show in the market (and category), not only the first few. `rows: 'real'`
  * leaves sample data out (src/shared/sample-data.ts), for counts shown as facts on public pages.
  */
 export async function countPublicHelpers(
-  options: { marketId: string; categorySlug?: CategorySlug; realOnly?: boolean },
+  options: { marketId: string; categorySlug?: CategorySlug; rows?: RowScope },
   database: Db = db,
 ): Promise<number> {
   const [row] = await database
@@ -168,7 +173,7 @@ export async function countPublicHelpers(
         eq(users.status, 'active'),
         eq(areas.marketId, options.marketId),
         offersCategory(options.categorySlug),
-        options.realOnly ? sql`${users.id} ~ ${GENERATED_ID_PATTERN}` : undefined,
+        rowScopeCondition(options.rows ?? 'all', users.id),
       ),
     );
   return row?.value ?? 0;
@@ -187,14 +192,17 @@ export async function countFoundingHelpers(marketId: string, database: Db = db):
 const KM_PER_MILE = 1.609344;
 const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
 
-/** `/helpers/[handle]`: the public profile of an active helper. Null for unknown or inactive helpers. */
-export async function getHelperProfile(handle: string, database: Db = db): Promise<HelperProfilePageData | null> {
+/**
+ * `/helpers/[handle]`: the public profile of an active helper. Null for unknown or inactive helpers, and with
+ * `rows: 'real'` for sample people (whose reviews by sample authors are left out too).
+ */
+export async function getHelperProfile(handle: string, database: Db = db, rows: RowScope = 'all'): Promise<HelperProfilePageData | null> {
   const [row] = await database
     .select({ profile: helperProfiles, user: users, areaName: areas.name })
     .from(helperProfiles)
     .innerJoin(users, eq(users.id, helperProfiles.userId))
     .innerJoin(areas, eq(areas.id, helperProfiles.areaId))
-    .where(and(eq(helperProfiles.handle, handle), eq(helperProfiles.status, 'active'), eq(users.status, 'active')))
+    .where(and(eq(helperProfiles.handle, handle), eq(helperProfiles.status, 'active'), eq(users.status, 'active'), rowScopeCondition(rows, users.id)))
     .limit(1);
   if (!row) return null;
   const userId = row.user.id;
@@ -211,7 +219,7 @@ export async function getHelperProfile(handle: string, database: Db = db): Promi
       .from(reviews)
       .innerJoin(users, eq(users.id, reviews.authorUserId))
       .innerJoin(categories, eq(categories.id, reviews.categoryId))
-      .where(and(eq(reviews.subjectUserId, userId), eq(reviews.direction, 'client_to_helper'), eq(reviews.status, 'published')))
+      .where(and(eq(reviews.subjectUserId, userId), eq(reviews.direction, 'client_to_helper'), eq(reviews.status, 'published'), rowScopeCondition(rows, reviews.authorUserId)))
       .orderBy(desc(reviews.publishedAt))
       .limit(10),
     database
@@ -234,7 +242,7 @@ export async function getHelperProfile(handle: string, database: Db = db): Promi
   const tagSet = new Set<string>(HELPER_REVIEW_TAGS);
 
   const achievements = (await badgesFor(database, [row.user.id])).get(row.user.id) ?? [];
-  const recommended = await recommendedByCounts(database, [row.user.id]);
+  const recommended = await recommendedByCounts(database, [row.user.id], rows);
   return {
     helper: withRecommended(toHelperSummary(
       row.profile,
@@ -274,29 +282,30 @@ export function fileUrl(file: { id: string; storageKey: string; width: number; h
   return file.storageKey.startsWith('public/') ? `/${file.storageKey.slice('public/'.length)}` : photoSrc(file);
 }
 
-/** Active helper handles, for generateStaticParams. */
-export async function listActiveHelperHandles(database: Db = db): Promise<string[]> {
-  const rows = await database
+/** Active helper handles, for generateStaticParams (`rows` as in getHelperProfile). */
+export async function listActiveHelperHandles(database: Db = db, rows: RowScope = 'all'): Promise<string[]> {
+  const found = await database
     .select({ handle: helperProfiles.handle })
     .from(helperProfiles)
     .innerJoin(users, eq(users.id, helperProfiles.userId))
-    .where(and(eq(helperProfiles.status, 'active'), eq(users.status, 'active')));
-  return rows.map((r) => r.handle);
+    .where(and(eq(helperProfiles.status, 'active'), eq(users.status, 'active'), rowScopeCondition(rows, users.id)));
+  return found.map((r) => r.handle);
 }
 
 /**
  * The sitemap's helpers: those whose public profile shows (getHelperProfile's conditions, area included) and has
  * earned a place in search, with a completed task or a published review (src/modules/seo/indexable.ts); with when
- * the page last changed: the profile itself or its newest published review, whichever is later.
+ * the page last changed: the profile itself or its newest published review, whichever is later. `rows` as in
+ * getHelperProfile (search engines read the public's, src/shared/sample-data.ts `searchEngineRows`).
  */
-export async function listPublicProfileDates(database: Db = db): Promise<{ handle: string; updatedAt: Date }[]> {
+export async function listPublicProfileDates(database: Db = db, rows: RowScope = 'all'): Promise<{ handle: string; updatedAt: Date }[]> {
   const latestReview = database
     .select({ subjectUserId: reviews.subjectUserId, publishedAt: max(reviews.publishedAt).as('latest_published_at') })
     .from(reviews)
-    .where(and(eq(reviews.direction, 'client_to_helper'), eq(reviews.status, 'published')))
+    .where(and(eq(reviews.direction, 'client_to_helper'), eq(reviews.status, 'published'), rowScopeCondition(rows, reviews.authorUserId)))
     .groupBy(reviews.subjectUserId)
     .as('latest_review');
-  const rows = await database
+  const found = await database
     .select({ handle: helperProfiles.handle, profileUpdatedAt: helperProfiles.updatedAt, reviewedAt: latestReview.publishedAt })
     .from(helperProfiles)
     .innerJoin(users, eq(users.id, helperProfiles.userId))
@@ -307,10 +316,11 @@ export async function listPublicProfileDates(database: Db = db): Promise<{ handl
         eq(helperProfiles.status, 'active'),
         eq(users.status, 'active'),
         or(gt(helperProfiles.completedCount, 0), gt(helperProfiles.ratingCount, 0)),
+        rowScopeCondition(rows, users.id),
       ),
     )
     .orderBy(asc(helperProfiles.handle));
-  return rows.map(({ handle, profileUpdatedAt, reviewedAt }) => {
+  return found.map(({ handle, profileUpdatedAt, reviewedAt }) => {
     // The profile's time comes back as Postgres text (a mode: 'string' column), the review's as a Date.
     const changed = new Date(profileUpdatedAt);
     const reviewed = reviewedAt ? new Date(reviewedAt) : null;

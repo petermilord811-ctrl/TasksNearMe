@@ -36,6 +36,7 @@ import { loadTaskBoard } from '@/modules/tasks/board';
 import { taskDrafter } from '@/modules/tasks/server';
 import { db } from '@/platform/db/client';
 import { WELCOME_PROGRAM } from '@/modules/rewards/programs';
+import { rowScopeCondition, type RowScope } from '@/shared/sample-data';
 import { normalizeZip } from '@/shared/us-zip';
 import { buildBecomeHelperPageData, buildPricingPageData, landingFeeExamples } from './page-data';
 import { quoteBreakdown } from '@/modules/payments/fees';
@@ -45,6 +46,11 @@ import { citiesComingNext, WAITLIST_TAG, waitlistDemand } from './waitlist';
  * Public marketing page data. Cached (Cache Components) so the pages prerender and stay fast;
  * tagged per market so admin changes to policies, flags, or helpers can refresh them.
  * `now` is captured with the data so relative times ("Posted 2 hours ago") match it.
+ *
+ * Every read that shows people or tasks takes `rows` (src/shared/sample-data.ts): the page's `requestRows()`
+ * (src/platform/auth/audience.ts), so the public sees real rows only where samples are hidden and signed-in testers
+ * still see the demo marketplace; `searchEngineRows()` for metadata and structured data. It's an argument, so each
+ * scope is its own cache entry. Markets, areas, categories and fees are configuration and are never filtered.
  */
 
 export const marketTag = (slug: string) => `market:${slug}`;
@@ -57,28 +63,28 @@ export interface WithNow<T> {
 const FEATURED_HELPERS = 3;
 const RECENT_TASKS = 4;
 
-async function loadMarketPage(slug: string): Promise<WithNow<MarketPageData> | null> {
+async function loadMarketPage(slug: string, rows: RowScope): Promise<WithNow<MarketPageData> | null> {
   const market = await findPublicMarket(slug);
   if (!market) return null;
   const now = new Date();
   const [view, categories, featuredHelpers, recentTasks] = await Promise.all([
     getMarketView(market),
     listCategoryViews(market.id),
-    listPublicHelpers({ marketId: market.id, limit: FEATURED_HELPERS }),
-    listRecentOpenTasks(db, { marketId: market.id, limit: RECENT_TASKS, now }),
+    listPublicHelpers({ marketId: market.id, limit: FEATURED_HELPERS, rows }),
+    listRecentOpenTasks(db, { marketId: market.id, limit: RECENT_TASKS, now, rows }),
   ]);
   return { data: { market: view, categories, recentTasks, featuredHelpers }, now: now.toISOString() };
 }
 
-export async function getHomePageData(): Promise<WithNow<HomePageData> | null> {
+export async function getHomePageData(rows: RowScope): Promise<WithNow<HomePageData> | null> {
   'use cache';
   cacheLife('minutes');
   cacheTag(marketTag(DEFAULT_MARKET_SLUG));
-  const page = await loadMarketPage(DEFAULT_MARKET_SLUG);
+  const page = await loadMarketPage(DEFAULT_MARKET_SLUG, rows);
   if (!page) return null;
   // Pricing transparency and the founding reward, from the same sources as /pricing and /become-a-helper.
   const { market, policy } = await defaultMarketPolicy();
-  const [flags, helpers] = await Promise.all([getFlags(market.id), countLandingHelpers(market.id, new Date(page.now))]);
+  const [flags, helpers] = await Promise.all([getFlags(market.id), countLandingHelpers(market.id, new Date(page.now), rows)]);
   const helper = buildBecomeHelperPageData({ fees: policy.fees, flags });
   const reward = helper.welcomeReward;
   return {
@@ -88,7 +94,7 @@ export async function getHomePageData(): Promise<WithNow<HomePageData> | null> {
       feeExample: buildPricingPageData(policy).fixedExample,
       feeExamples: landingFeeExamples(policy.fees),
       ...(reward ? { welcomeReward: { amountCents: reward.amountCents, checks: reward.checks } } : {}),
-      map: await landingMap(market),
+      map: await landingMap(market, rows),
       // The wizard drafts with AI only when the market allows it and a writer is set up (as on /app/tasks/new).
       aiDraftingEnabled: Boolean(flags.ai_drafting) && taskDrafter !== null,
       helpers,
@@ -100,10 +106,10 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * The hero's helper counts: active helpers (and active accounts) in the market with a verified ID, and how many
- * of those have open time posted that runs into the next 7 days. Counts only.
+ * of those have open time posted that runs into the next 7 days. Counts only, of `rows`.
  */
-async function countLandingHelpers(marketId: string, now: Date): Promise<HomePageData['helpers']> {
-  const verifiedHelper = and(eq(helperProfiles.status, 'active'), isNotNull(helperProfiles.idVerifiedAt));
+async function countLandingHelpers(marketId: string, now: Date, rows: RowScope): Promise<HomePageData['helpers']> {
+  const verifiedHelper = and(eq(helperProfiles.status, 'active'), isNotNull(helperProfiles.idVerifiedAt), rowScopeCondition(rows, users.id));
   const [verified, open] = await Promise.all([
     db
       .select({ value: count() })
@@ -134,9 +140,9 @@ async function countLandingHelpers(marketId: string, now: Date): Promise<HomePag
 const MAP_PINS = 60;
 const KM_PER_MILE = 1.609344;
 
-async function landingMap(market: { id: string; centerLat: number; centerLng: number; serviceRadiusKm: number }): Promise<LandingMapData> {
+async function landingMap(market: { id: string; centerLat: number; centerLng: number; serviceRadiusKm: number }, rows: RowScope): Promise<LandingMapData> {
   const [open, areaRows] = await Promise.all([
-    listRecentOpenTasks(db, { marketId: market.id, limit: MAP_PINS, now: new Date() }),
+    listRecentOpenTasks(db, { marketId: market.id, limit: MAP_PINS, now: new Date(), rows }),
     db
       .select({ name: areaTable.name, lat: areaTable.centerLat, lng: areaTable.centerLng })
       .from(areaTable)
@@ -174,16 +180,17 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
   };
 }
 
-export async function getMarketPageData(slug: string): Promise<WithNow<MarketPageData> | null> {
+export async function getMarketPageData(slug: string, rows: RowScope): Promise<WithNow<MarketPageData> | null> {
   'use cache';
   cacheLife('minutes');
   cacheTag(marketTag(slug));
-  return loadMarketPage(slug);
+  return loadMarketPage(slug, rows);
 }
 
 export async function getCategoryPageData(
   marketSlug: string,
   categorySlug: string,
+  rows: RowScope,
 ): Promise<WithNow<CategoryPageData> | null> {
   'use cache';
   cacheLife('minutes');
@@ -195,15 +202,15 @@ export async function getCategoryPageData(
   if (!category) return null;
   const now = new Date();
   const [topHelpers, recentTasks] = await Promise.all([
-    listPublicHelpers({ marketId: market.id, categorySlug: category.slug as CategorySlug, limit: FEATURED_HELPERS }),
-    listRecentOpenTasks(db, { marketId: market.id, categorySlug: category.slug as CategorySlug, limit: RECENT_TASKS, now }),
+    listPublicHelpers({ marketId: market.id, categorySlug: category.slug as CategorySlug, limit: FEATURED_HELPERS, rows }),
+    listRecentOpenTasks(db, { marketId: market.id, categorySlug: category.slug as CategorySlug, limit: RECENT_TASKS, now, rows }),
   ]);
   return { data: { market: view, category, recentTasks, topHelpers }, now: now.toISOString() };
 }
 
 /**
  * Real helpers offering a category in a market, and its open tasks: facts the category page states (SEO plan S3), so
- * sample data never counts (src/shared/sample-data.ts).
+ * sample data never counts, whoever reads and in every build (src/shared/sample-data.ts).
  */
 export async function getCategorySupply(marketSlug: string, categorySlug: CategorySlug): Promise<{ helperCount: number; openTaskCount: number }> {
   'use cache';
@@ -212,8 +219,8 @@ export async function getCategorySupply(marketSlug: string, categorySlug: Catego
   const market = await findPublicMarket(marketSlug);
   if (!market) return { helperCount: 0, openTaskCount: 0 };
   const [helperCount, openTaskCount] = await Promise.all([
-    countPublicHelpers({ marketId: market.id, categorySlug, realOnly: true }),
-    countOpenTasks(db, { marketId: market.id, categorySlug, now: new Date(), realOnly: true }),
+    countPublicHelpers({ marketId: market.id, categorySlug, rows: 'real' }),
+    countOpenTasks(db, { marketId: market.id, categorySlug, now: new Date(), rows: 'real' }),
   ]);
   return { helperCount, openTaskCount };
 }
@@ -321,17 +328,18 @@ export async function getWaitlistDemand(zip: string): Promise<WaitlistDemand | n
 export async function getTaskBoardPageData(
   marketSlug: string,
   query: TaskBoardPageData['query'],
+  rows: RowScope,
 ): Promise<WithNow<TaskBoardPageData> | null> {
-  return loadTaskBoard(marketSlug, query);
+  return loadTaskBoard(marketSlug, query, { rows });
 }
 
-/** `/tasks/[taskSlug]`: what anyone may see, plus similar open tasks. */
-export async function getPublicTaskPageData(slug: string): Promise<WithNow<PublicTaskPageData> | null> {
+/** `/tasks/[taskSlug]`: what anyone may see, plus similar open tasks. Null for a sample task with `rows: 'real'`. */
+export async function getPublicTaskPageData(slug: string, rows: RowScope): Promise<WithNow<PublicTaskPageData> | null> {
   'use cache';
   cacheLife('minutes');
   cacheTag('tasks', `task:${slug}`);
   const now = new Date();
-  const found = await findPublicTask(db, slug, now);
+  const found = await findPublicTask(db, slug, now, rows);
   if (!found) return null;
   const market = await findPublicMarket(found.marketSlug);
   if (!market) return null;
@@ -344,6 +352,7 @@ export async function getPublicTaskPageData(slug: string): Promise<WithNow<Publi
       limit: 3,
       now,
       excludeTaskId: found.task.id,
+      rows,
     }),
   ]);
   const category = categories.find((c) => c.slug === found.task.categorySlug);
@@ -355,28 +364,28 @@ export async function getPublicTaskPageData(slug: string): Promise<WithNow<Publi
 }
 
 /** Recent open task slugs, for generateStaticParams. */
-export async function listRecentTaskSlugs(limit = 20): Promise<string[]> {
+export async function listRecentTaskSlugs(rows: RowScope, limit = 20): Promise<string[]> {
   'use cache';
   cacheLife('minutes');
   cacheTag('tasks');
   const market = await findPublicMarket(DEFAULT_MARKET_SLUG);
   if (!market) return [];
-  const recent = await listRecentOpenTasks(db, { marketId: market.id, limit, now: new Date() });
+  const recent = await listRecentOpenTasks(db, { marketId: market.id, limit, now: new Date(), rows });
   return recent.map((task) => task.slug);
 }
 
-/** `/helpers/[handle]`: an active helper's public profile. */
-export async function getHelperProfilePageData(handle: string) {
+/** `/helpers/[handle]`: an active helper's public profile. Null for sample people with `rows: 'real'`. */
+export async function getHelperProfilePageData(handle: string, rows: RowScope) {
   'use cache';
   cacheLife('minutes');
   cacheTag('helpers', `helper:${handle}`);
-  return getHelperProfile(handle);
+  return getHelperProfile(handle, db, rows);
 }
 
 /** Active helper handles, for generateStaticParams. */
-export async function listHelperHandles(): Promise<string[]> {
+export async function listHelperHandles(rows: RowScope): Promise<string[]> {
   'use cache';
   cacheLife('hours');
   cacheTag('helpers');
-  return listActiveHelperHandles();
+  return listActiveHelperHandles(db, rows);
 }

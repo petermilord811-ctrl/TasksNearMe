@@ -10,6 +10,8 @@ import { JsonLd } from '@/modules/seo/json-ld';
 import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { parseTaskBoardQuery } from '@/modules/tasks/projections';
+import { requestRows } from '@/platform/auth/audience';
+import { searchEngineRows } from '@/shared/sample-data';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { TaskBoardScreen } from '@/ui/screens/public/task-board-screen';
 import { publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
@@ -21,7 +23,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/[market]/tasks'>): Promise<Metadata> {
   const { market } = await params;
-  const [page, t] = await Promise.all([getMarketPageData(market), getTranslations('server.meta.taskBoard')]);
+  const [page, t] = await Promise.all([getMarketPageData(market, searchEngineRows()), getTranslations('server.meta.taskBoard')]);
   if (!page) return {};
   const values = { market: page.data.market.name };
   // Filtered and paged URLs all point search engines at the plain board.
@@ -31,7 +33,10 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   };
 }
 
-/** Filters live in the URL, so the list renders per request inside Suspense; the data is cached per query. */
+/**
+ * Filters live in the URL, so the list renders per request inside Suspense; the data is cached per query and per
+ * visitor's rows (src/shared/sample-data.ts: sample tasks for signed-in testers only).
+ */
 function TaskBoardPage({ params, searchParams }: PageProps<'/[locale]/[market]/tasks'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -41,8 +46,8 @@ function TaskBoardPage({ params, searchParams }: PageProps<'/[locale]/[market]/t
 }
 
 async function Board({ params, searchParams }: Pick<PageProps<'/[locale]/[market]/tasks'>, 'params' | 'searchParams'>) {
-  const [{ market }, search] = await Promise.all([params, searchParams]);
-  const page = await getTaskBoardPageData(market, parseTaskBoardQuery(search));
+  const [{ market }, search, rows] = await Promise.all([params, searchParams, requestRows()]);
+  const page = await getTaskBoardPageData(market, parseTaskBoardQuery(search), rows);
   if (!page) notFound();
   const [context, t] = await Promise.all([structuredDataContext(), getTranslations('server.meta.taskBoard')]);
   const view = page.data.market;

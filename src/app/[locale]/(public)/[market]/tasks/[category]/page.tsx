@@ -11,6 +11,8 @@ import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexabl
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { loadTaskBoard } from '@/modules/tasks/board';
 import { parseTaskBoardQuery } from '@/modules/tasks/projections';
+import { requestRows } from '@/platform/auth/audience';
+import { searchEngineRows } from '@/shared/sample-data';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { TaskBoardScreen } from '@/ui/screens/public/task-board-screen';
 import { publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
@@ -41,7 +43,7 @@ async function hubCopy(slug: CategorySlug, market: string) {
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/[market]/tasks/[category]'>): Promise<Metadata> {
   const { market, category } = await params;
-  const page = await getCategoryPageData(market, category);
+  const page = await getCategoryPageData(market, category, searchEngineRows());
   if (!page) return {};
   const { market: view, category: shown } = page.data;
   const copy = await hubCopy(shown.slug, view.name);
@@ -51,7 +53,10 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   };
 }
 
-/** Filters live in the URL, so the list renders per request inside Suspense; the data is cached per query. */
+/**
+ * Filters live in the URL, so the list renders per request inside Suspense; the data is cached per query and per
+ * visitor's rows (src/shared/sample-data.ts: sample tasks for signed-in testers only).
+ */
 function TaskHubPage({ params, searchParams }: PageProps<'/[locale]/[market]/tasks/[category]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -61,9 +66,9 @@ function TaskHubPage({ params, searchParams }: PageProps<'/[locale]/[market]/tas
 }
 
 async function Hub({ params, searchParams }: Pick<PageProps<'/[locale]/[market]/tasks/[category]'>, 'params' | 'searchParams'>) {
-  const [{ market, category }, search] = await Promise.all([params, searchParams]);
-  // Only a category the market offers has a hub.
-  const page = await getCategoryPageData(market, category);
+  const [{ market, category }, search, rows] = await Promise.all([params, searchParams, requestRows()]);
+  // Only a category the market offers has a hub (configuration: the same for every visitor).
+  const page = await getCategoryPageData(market, category, searchEngineRows());
   if (!page) notFound();
   const { market: view, category: shown } = page.data;
   const [copy, context, boardTitle] = await Promise.all([
@@ -73,7 +78,7 @@ async function Hub({ params, searchParams }: Pick<PageProps<'/[locale]/[market]/
   ]);
   // The path names the category; a `type` is read for it (the parser keeps a type only with its category).
   const query = parseTaskBoardQuery({ ...search, category: shown.slug });
-  const board = await loadTaskBoard(view.slug, query, { category: shown.slug, heading: { title: copy.title, intro: copy.intro } });
+  const board = await loadTaskBoard(view.slug, query, { category: shown.slug, heading: { title: copy.title, intro: copy.intro }, rows });
   if (!board) notFound();
   return (
     <>

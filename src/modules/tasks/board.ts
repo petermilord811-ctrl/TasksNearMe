@@ -17,20 +17,21 @@ import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
 import { budgetSpread } from '@/shared/budget-spread';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
-import { GENERATED_ID_PATTERN } from '@/shared/sample-data';
+import { realRowsOnly, type RowScope } from '@/shared/sample-data';
 import { taskTypeOf, taskTypesFor } from '@/shared/task-types';
 import { BOARD_PAGE_SIZE, toTaskPublicView, whenRange } from './projections';
-import { boardConditions, boardOrder, listBoardTasks, openIn, selectPublic, taskPriceCents, timeCondition, toRow, type BoardFilterKey } from './queries';
+import { boardConditions, boardOrder, listBoardTasks, openIn, selectPublic, taskPriceCents, timeCondition, toRow, type BoardFilterKey, type BoardScope } from './queries';
 import { tasks } from './schema';
 
 /**
  * The public task board, Craigslist-style (completion plan 7.4): every filter in the URL, a count beside every
  * option, and the rows grouped by neighborhood (the first few of each, most tasks first, remote work last) or
  * one page at a time by day or in one list. Real counts only. Cached per filter set for minutes, under the
- * market's and the tasks' tags, like the rest of the public pages.
+ * market's and the tasks' tags, like the rest of the public pages. The scope's `rows` (src/shared/sample-data.ts)
+ * applies to every list and count: the public sees real tasks only where samples are hidden.
  */
 const SECTION_SIZE = 5;
-type Scope = { marketId: string; now: Date; areaIds: ReadonlyMap<string, string> };
+type Scope = BoardScope;
 
 const intOf = (value: unknown) => Number(value ?? 0) || 0;
 
@@ -62,8 +63,8 @@ export async function boardFacets(database: Db, query: TaskBoardQueryState, scop
     database.select({ n: sum(eq(tasks.mode, 'remote')) }).from(tasks).innerJoin(categories, joined).where(where('remote')),
     typeField
       ? database
-          // Budgets from real tasks only: a demo row's price must never read as what the market pays (sample-data.ts).
-          .select({ value: sql<string | null>`(${tasks.details} ->> ${typeField})`, n: count(), budgets: sql<number[] | null>`array_agg(${taskPriceCents}) filter (where ${tasks.id} ~ ${GENERATED_ID_PATTERN})` })
+          // Budgets from real tasks only, whoever reads: a demo row's price must never read as what the market pays (sample-data.ts).
+          .select({ value: sql<string | null>`(${tasks.details} ->> ${typeField})`, n: count(), budgets: sql<number[] | null>`array_agg(${taskPriceCents}) filter (where ${realRowsOnly(tasks.id)})` })
           .from(tasks)
           .innerJoin(categories, joined)
           .where(where('type'))
@@ -132,24 +133,25 @@ export async function boardSections(database: Db, query: TaskBoardQueryState, sc
   return [...sections.values()].sort((a, b) => (a.kind === 'remote' ? 1 : 0) - (b.kind === 'remote' ? 1 : 0) || b.count - a.count || (a.areaName ?? '').localeCompare(b.areaName ?? ''));
 }
 
-/** Real counts for the market: open tasks, and the ones posted since midnight (market time). */
-export async function boardStats(database: Db, marketId: string, now: Date): Promise<TaskBoardPageData['stats']> {
+/** Real counts for the market: open tasks, and the ones posted since midnight (market time). `rows` as in `openIn`. */
+export async function boardStats(database: Db, marketId: string, now: Date, rows: RowScope = 'all'): Promise<TaskBoardPageData['stats']> {
   const midnight = new Date(marketLocalToUtc(marketDayKey(now), '00:00'));
   const [row] = await database
     .select({ open: count(), today: sql<number>`coalesce(sum(case when ${tasks.publishedAt} >= ${midnight} then 1 else 0 end), 0)::int` })
     .from(tasks)
-    .where(and(...openIn(marketId, now)));
+    .where(and(...openIn(marketId, now, rows)));
   return { openCount: intOf(row?.open), postedToday: intOf(row?.today) };
 }
 
 /**
  * Everything the board shows for one market and filter set. `category` fixes the category (b7's
- * /[market]/tasks/[category] hub pages), `heading` replaces the board's own title and intro.
+ * /[market]/tasks/[category] hub pages), `heading` replaces the board's own title and intro. `rows` is which rows
+ * count (the page's `requestRows()`, src/platform/auth/audience.ts): an argument, so each scope is its own cache entry.
  */
 export async function loadTaskBoard(
   marketSlug: string,
   query: TaskBoardQueryState,
-  options: { category?: CategorySlug; heading?: { title: string; intro: string } } = {},
+  options: { category?: CategorySlug; heading?: { title: string; intro: string }; rows?: RowScope } = {},
 ): Promise<{ data: TaskBoardPageData; now: ISODateTime } | null> {
   'use cache';
   cacheLife('minutes');
@@ -160,17 +162,18 @@ export async function loadTaskBoard(
   const effective: TaskBoardQueryState = options.category && options.category !== query.category ? { ...query, category: options.category, type: undefined } : query;
   const areaRows = await db.select({ id: areas.id, slug: areas.slug, name: areas.name }).from(areas).where(eq(areas.marketId, market.id));
   const areaIds = new Map(areaRows.map((area) => [area.slug, area.id]));
-  const scope: Scope = { marketId: market.id, now, areaIds };
+  const rows = options.rows ?? 'all';
+  const scope: Scope = { marketId: market.id, now, areaIds, rows };
   // By neighborhood across several (or all) of them; one neighborhood, by day, or one list are paged instead.
   const sectioned = effective.group === 'area' && effective.areas.length !== 1;
   const [view, categoryViews, facets, stats, listing] = await Promise.all([
     getMarketView(market),
     listCategoryViews(market.id),
     boardFacets(db, effective, scope, areaRows),
-    boardStats(db, market.id, now),
+    boardStats(db, market.id, now, rows),
     sectioned
       ? boardSections(db, effective, scope, areaRows).then((sections) => ({ sections, tasks: sections.flatMap((section) => section.tasks), totalCount: sections.reduce((sum, section) => sum + section.count, 0) }))
-      : listBoardTasks(db, { marketId: market.id, query: effective, now, areaIds }).then((page) => ({ sections: undefined, ...page })),
+      : listBoardTasks(db, { marketId: market.id, query: effective, now, areaIds, rows }).then((page) => ({ sections: undefined, ...page })),
   ]);
   return {
     data: {

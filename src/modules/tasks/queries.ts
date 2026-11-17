@@ -8,7 +8,7 @@ import { areas, categories, markets } from '../markets/schema';
 import { BOARD_PAGE_SIZE, toTaskPublicView, whenRange, type PublicTaskRow } from './projections';
 import { POSTED_MS, TIME_SLOTS } from '@/shared/board-match';
 import { taskMarks, tasks } from './schema';
-import { GENERATED_ID_PATTERN } from '@/shared/sample-data';
+import { rowScopeCondition, type RowScope } from '@/shared/sample-data';
 
 /** Public task reads. Only open tasks whose window hasn't ended are listed. */
 
@@ -70,9 +70,23 @@ export function toRow(row: Row): PublicTaskRow {
   };
 }
 
-/** Open, not past, and not hidden by staff: what the board, the feeds and the public pages list. */
-export function openIn(marketId: string, now: Date): SQL[] {
-  return [eq(tasks.marketId, marketId), eq(tasks.status, 'open'), gt(tasks.windowEnd, now), isNull(tasks.hiddenAt)];
+/**
+ * Open, not past, and not hidden by staff: what the board, the feeds and the public pages list. `rows: 'real'` leaves
+ * sample tasks out, for the public where samples are hidden (src/shared/sample-data.ts); signed-in readers keep `all`.
+ */
+export function openIn(marketId: string, now: Date, rows: RowScope = 'all'): SQL[] {
+  const conditions = [eq(tasks.marketId, marketId), eq(tasks.status, 'open'), gt(tasks.windowEnd, now), isNull(tasks.hiddenAt)];
+  const real = rowScopeCondition(rows, tasks.id);
+  return real ? [...conditions, real] : conditions;
+}
+
+/** The scope the board's filters apply in: the market, the time, its neighborhoods by slug, and which rows count. */
+export interface BoardScope {
+  marketId: string;
+  now: Date;
+  areaIds: ReadonlyMap<string, string>;
+  /** `real` for the public where samples are hidden (src/shared/sample-data.ts). Saved-search alerts keep `all`. */
+  rows?: RowScope;
 }
 
 /** The board's filters (completion plan 7.4), as `parseTaskBoardQuery` returns them. */
@@ -117,11 +131,12 @@ export function typeCondition(category: CategorySlug, slug: string): SQL {
 
 /**
  * Every filter as SQL, on top of "open, not past, not hidden" (needs the categories join). `skip` leaves one
- * filter out, for that filter's own counts. `areaIds` maps the market's neighborhood slugs to ids.
+ * filter out, for that filter's own counts. `areaIds` maps the market's neighborhood slugs to ids; `rows` which
+ * rows count (every count and list the public board shows goes through here).
  */
-export function boardConditions(query: BoardFilters, scope: { marketId: string; now: Date; areaIds: ReadonlyMap<string, string> }, skip?: BoardFilterKey): SQL[] {
+export function boardConditions(query: BoardFilters, scope: BoardScope, skip?: BoardFilterKey): SQL[] {
   const { now } = scope;
-  const conditions = openIn(scope.marketId, now);
+  const conditions = openIn(scope.marketId, now, scope.rows);
   if (query.category && skip !== 'category') {
     conditions.push(eq(categories.slug, query.category));
     if (query.type && skip !== 'type') conditions.push(typeCondition(query.category, query.type));
@@ -167,11 +182,11 @@ export async function marketAreaIds(db: Db, marketId: string): Promise<Map<strin
 /** One page of the board's matching tasks, in its order. */
 export async function listBoardTasks(
   db: Db,
-  options: { marketId: string; query: BoardFilters & Pick<TaskBoardQueryState, 'sort' | 'page'>; now: Date; areaIds?: ReadonlyMap<string, string> },
+  options: { marketId: string; query: BoardFilters & Pick<TaskBoardQueryState, 'sort' | 'page'>; now: Date; areaIds?: ReadonlyMap<string, string>; rows?: RowScope },
 ): Promise<{ tasks: TaskPublicView[]; totalCount: number }> {
   const { query, now } = options;
   const areaIds = options.areaIds ?? (query.areas?.length ? await marketAreaIds(db, options.marketId) : new Map<string, string>());
-  const where = and(...boardConditions(query, { marketId: options.marketId, now, areaIds }));
+  const where = and(...boardConditions(query, { marketId: options.marketId, now, areaIds, rows: options.rows }));
 
   const [total] = await db
     .select({ value: count() })
@@ -272,12 +287,12 @@ export async function listFeedTasks(
   };
 }
 
-/** Newest open tasks, for the home, market, and category pages. */
+/** Newest open tasks, for the home, market, and category pages (`rows`: which rows count, as in `openIn`). */
 export async function listRecentOpenTasks(
   db: Db,
-  options: { marketId: string; categorySlug?: CategorySlug; limit: number; now: Date; excludeTaskId?: string },
+  options: { marketId: string; categorySlug?: CategorySlug; limit: number; now: Date; excludeTaskId?: string; rows?: RowScope },
 ): Promise<TaskPublicView[]> {
-  const conditions = openIn(options.marketId, options.now);
+  const conditions = openIn(options.marketId, options.now, options.rows);
   if (options.categorySlug) conditions.push(eq(categories.slug, options.categorySlug));
   if (options.excludeTaskId) conditions.push(ne(tasks.id, options.excludeTaskId));
   const rows = await selectPublic(db)
@@ -288,16 +303,15 @@ export async function listRecentOpenTasks(
 }
 
 /**
- * How many open tasks the board lists in the market (and category). `realOnly` leaves sample data out
+ * How many open tasks the board lists in the market (and category). `rows: 'real'` leaves sample data out
  * (src/shared/sample-data.ts), for counts shown as facts on public pages.
  */
 export async function countOpenTasks(
   db: Db,
-  options: { marketId: string; categorySlug?: CategorySlug; now: Date; realOnly?: boolean },
+  options: { marketId: string; categorySlug?: CategorySlug; now: Date; rows?: RowScope },
 ): Promise<number> {
-  const conditions = openIn(options.marketId, options.now);
+  const conditions = openIn(options.marketId, options.now, options.rows);
   if (options.categorySlug) conditions.push(eq(categories.slug, options.categorySlug));
-  if (options.realOnly) conditions.push(sql`${tasks.id} ~ ${GENERATED_ID_PATTERN}`);
   const [row] = await db
     .select({ value: count() })
     .from(tasks)
@@ -308,29 +322,34 @@ export async function countOpenTasks(
 
 /**
  * The sitemap's tasks in a market: the ones the board lists (open, not past, not hidden), newest first, with their
- * category and last change. Closed tasks stay reachable but are noindex, so they're left out.
+ * category and last change. Closed tasks stay reachable but are noindex, so they're left out. `rows`: which rows
+ * count, as in `openIn` (search engines read the public's, src/shared/sample-data.ts `searchEngineRows`).
  */
 export async function listOpenTaskDates(
   db: Db,
-  options: { marketId: string; now: Date; limit: number },
+  options: { marketId: string; now: Date; limit: number; rows?: RowScope },
 ): Promise<{ slug: string; categorySlug: string; updatedAt: Date }[]> {
   return db
     .select({ slug: tasks.slug, categorySlug: categories.slug, updatedAt: tasks.updatedAt })
     .from(tasks)
     .innerJoin(categories, eq(categories.id, tasks.categoryId))
-    .where(and(...openIn(options.marketId, options.now)))
+    .where(and(...openIn(options.marketId, options.now, options.rows)))
     .orderBy(desc(tasks.publishedAt), asc(tasks.id))
     .limit(options.limit);
 }
 
-/** A task anyone may see by its slug (drafts never), and whether it still takes offers. */
+/**
+ * A task anyone may see by its slug (drafts never), and whether it still takes offers. With `rows: 'real'` a sample
+ * task is not found (the public where samples are hidden).
+ */
 export async function findPublicTask(
   db: Db,
   slug: string,
   now: Date,
+  rows: RowScope = 'all',
 ): Promise<{ task: TaskPublicView; marketId: string; marketSlug: string; acceptingOffers: boolean } | null> {
   const [row] = await selectPublic(db)
-    .where(and(eq(tasks.slug, slug), ne(tasks.status, 'draft'), isNull(tasks.hiddenAt)))
+    .where(and(eq(tasks.slug, slug), ne(tasks.status, 'draft'), isNull(tasks.hiddenAt), rowScopeCondition(rows, tasks.id)))
     .limit(1);
   if (!row) return null;
   return {

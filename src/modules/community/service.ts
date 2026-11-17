@@ -35,6 +35,7 @@ import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { realRowsOnly, type RowScope } from '@/shared/sample-data';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { auditRoleOf } from '@/modules/tasks/moderation';
@@ -154,25 +155,28 @@ async function authorsOf(db: Db, userIds: string[], viewerId: string): Promise<M
 
 /**
  * "Recommended by N neighbors" (7.8): people who booked the helper and thanked them in a post, or named them
- * in an answer. A helper naming themself doesn't count.
+ * in an answer. A helper naming themself doesn't count. `rows: 'real'` counts real authors only (the public where
+ * samples are hidden, src/shared/sample-data.ts): the demo marketplace's people never recommend anyone there.
  */
-export async function recommendedByCounts(db: Db, helperIds: string[]): Promise<Map<string, number>> {
+export async function recommendedByCounts(db: Db, helperIds: string[], rows: RowScope = 'all'): Promise<Map<string, number>> {
   const ids = [...new Set(helperIds)];
   if (ids.length === 0) return new Map();
-  const rows = await db.execute<{ helper: string; total: number }>(sql`
+  const realPostAuthor = rows === 'real' ? sql`and ${realRowsOnly(communityPosts.authorUserId)}` : sql``;
+  const realReplyAuthor = rows === 'real' ? sql`and ${realRowsOnly(sql`r.author_user_id`)}` : sql``;
+  const found = await db.execute<{ helper: string; total: number }>(sql`
     select picks.helper, count(distinct picks.who)::int as total from (
       select ${communityPosts.helperUserId} as helper, ${communityPosts.authorUserId} as who
         from ${communityPosts}
-        where ${communityPosts.kind} = 'thanks' and ${communityPosts.status} = 'visible' and ${inArray(communityPosts.helperUserId, ids)}
+        where ${communityPosts.kind} = 'thanks' and ${communityPosts.status} = 'visible' and ${inArray(communityPosts.helperUserId, ids)} ${realPostAuthor}
       union all
       select r.recommended_helper_user_id as helper, r.author_user_id as who
         from ${communityReplies} r
         where r.status = 'visible' and r.recommended_helper_user_id in (${sql.join(ids.map((id) => sql`${id}`), sql`, `)})
-          and r.author_user_id <> r.recommended_helper_user_id
+          and r.author_user_id <> r.recommended_helper_user_id ${realReplyAuthor}
           and exists (select 1 from ${bookings} b where b.poster_user_id = r.author_user_id and b.helper_user_id = r.recommended_helper_user_id and b.status = 'completed')
     ) picks
     group by picks.helper`);
-  return new Map(rows.rows.map((row) => [row.helper, Number(row.total)]));
+  return new Map(found.rows.map((row) => [row.helper, Number(row.total)]));
 }
 
 async function helperCardsOf(db: Db, picks: { helperUserId: string; byUserId: string }[]): Promise<Map<string, CommunityHelperCard>> {
