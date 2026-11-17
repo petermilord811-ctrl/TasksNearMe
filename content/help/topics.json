@@ -18,5 +18,10 @@
     "slug": "safety",
     "title": "Safety and problems",
     "description": "Staying safe and reporting a problem."
+  },
+  {
+    "slug": "guides",
+    "title": "Guides",
+    "description": "Hiring, pricing and earning with local tasks."
   }
 ]

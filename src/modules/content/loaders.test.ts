@@ -22,7 +22,7 @@ function hrefs(blocks: ContentBlock[]): string[] {
 }
 
 const slugs = listHelpArticleSlugs();
-const STATIC_PAGES = ['/', '/pricing', '/how-it-works', '/trust-and-safety', '/become-a-helper', '/help', '/waitlist'];
+const STATIC_PAGES = ['/', '/pricing', '/how-it-works', '/trust-and-safety', '/become-a-helper', '/help', '/waitlist', '/cities'];
 
 function isKnownInternalLink(href: string): boolean {
   const pathname = href.split(/[?#]/)[0]!;

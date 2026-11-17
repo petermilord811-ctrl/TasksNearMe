@@ -18,5 +18,10 @@
     "slug": "safety",
     "title": "Seguridad y problemas",
     "description": "Cómo mantenerte seguro y reportar un problema."
+  },
+  {
+    "slug": "guides",
+    "title": "Guías",
+    "description": "Contratar ayuda, precios y ganar dinero con tareas locales."
   }
 ]
