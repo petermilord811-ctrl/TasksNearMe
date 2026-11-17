@@ -4,6 +4,7 @@ import { ArrowRight, CalendarDays, CircleDollarSign, Plus, Search, UserRoundPlus
 import { useTranslations } from 'next-intl';
 import { routes, type AppHomePageData, type HelperHomeData, type ISODateTime } from '@/contracts';
 import { marketClockTime } from '@/shared/format';
+import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Money } from '@/ui/components/money/money';
@@ -64,7 +65,9 @@ function EarningsSummary({ earnings }: { earnings: HelperHomeData['earnings'] })
 
 export function HomeScreen({ data, now }: HomeScreenProps) {
   const t = useTranslations('home');
-  const hour = Number(marketClockTime(now).split(':')[0]);
+  // "Good morning" on the person's own clock (their home market's, completion plan 8.1).
+  const { timeZone } = useFormat();
+  const hour = Number(marketClockTime(now, timeZone).split(':')[0]);
   const period = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
   const primaryAction = data.mode === 'poster'
     ? { label: t('postTask'), href: routes.app.newTask(), icon: Plus }

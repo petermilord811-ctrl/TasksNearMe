@@ -9,7 +9,7 @@ import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType,
 import { formatMoney } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { attentionHref } from '@/ui/lib/attention-href';
-import { useFormat, type Formatters } from '@/ui/lib/format';
+import { formattersFor, useFormat, type Formatters } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -74,8 +74,9 @@ const icons: Record<NotificationType, LucideIcon> = {
 };
 
 /** A notification's moment ("Tue, Dec 1, 9:00 am") or day ("Dec 8"), for its words. */
-function notificationDate(params: NotificationView['params'], { formatDate, formatDateTime }: Formatters): string {
-  if (params?.at) return formatDateTime(params.at);
+function notificationDate(params: NotificationView['params'], { formatDate, formatDateTime, locale }: Formatters): string {
+  // On the clock of the booking or series it's about, when it says (completion plan 8.1).
+  if (params?.at) return params.timeZone ? formattersFor(locale, params.timeZone).formatDateTime(params.at) : formatDateTime(params.at);
   // Noon UTC: the same calendar day in every US market.
   return params?.day ? formatDate(`${params.day}T18:00:00.000Z`) : '';
 }

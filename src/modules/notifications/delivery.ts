@@ -9,7 +9,7 @@ import { users } from '@/modules/accounts/schema';
 import { marketTimeZones } from '@/modules/markets/time-zone';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { formatDate, formatDateTime, formatMoney, marketLocalToUtc } from '@/shared/format';
+import { formatDate, formatDateTime, formatMoney } from '@/shared/format';
 import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
 import { DELIVERY_CHANNELS, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
 import { renderNotificationEmail } from './emails';
@@ -102,8 +102,8 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     days: params.days ?? 0,
     track: params.track ?? 'other',
     hasDate: params.at === undefined && params.day === undefined ? 'no' : 'yes',
-    // In the recipient's market zone (completion plan 8.1): their own clock, the booking's in practice.
-    date: params.at ? formatDateTime(params.at, locale, timeZone) : params.day ? formatDate(marketLocalToUtc(params.day, '12:00', timeZone), { locale, ...(timeZone ? { timeZone } : {}) }) : '',
+    // On the clock of the booking or series it's about (its params' zone), else the recipient's (completion plan 8.1).
+    date: params.at ? formatDateTime(params.at, locale, params.timeZone ?? timeZone) : params.day ? formatDate(`${params.day}T18:00:00.000Z`, { locale }) : '',
     by: params.by ?? 'other',
     badge: params.badge ?? 'other',
     tier: params.tier ?? 1,

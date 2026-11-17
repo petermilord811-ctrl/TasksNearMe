@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { PasskeyOptionsResult } from './auth';
 import type { ActionHandler, ActionResult, QueryHandler } from './actions';
 import type { EmailInput, OneTimeCodeInput, PhoneInput, SocialProvider, SocialSignInInput } from './auth';
-import type { Cents, ISODateTime, Photo } from './common';
+import type { Cents, ISODateTime, Photo, TimeZone } from './common';
 import { APP_LOCALES, type AppLocale } from './locale';
 import { emailField, oneTimeCodeField, personNameField } from './forms';
 import type { PhotoUploadResult } from './posting';
@@ -127,7 +127,8 @@ export interface NotificationView {
   title?: string;
   /** Who did it ("Jordan T."). */
   actorName?: string;
-  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number; count?: number; on?: 'post' | 'reply'; search?: string };
+  /** `at` and `day` are on the clock of `timeZone`, the market of the booking or series it's about (completion plan 8.1). */
+  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number; count?: number; on?: 'post' | 'reply'; search?: string; timeZone?: TimeZone };
   /** Where it leads (same targets as the home's attention items). */
   target: AttentionTarget;
   createdAt: ISODateTime;

@@ -38,6 +38,7 @@ import { helpersToAlert, replacementHelpers } from '@/modules/offers/task-alerts
 import { reactToEvent } from '@/modules/badges/reactions';
 import { reactForOperations } from '@/modules/oncall/reactions';
 import { publishRealtime } from '@/modules/realtime/reactions';
+import { marketTimeZone } from '@/modules/markets/time-zone';
 
 /**
  * Notifications from outbox events (the dispatcher), the notifications page, and the account page
@@ -74,7 +75,7 @@ async function taskTitle(db: Db, taskId: string | undefined): Promise<string | u
 async function bookingContext(db: Db, bookingId: string | undefined) {
   if (!bookingId) return null;
   const [row] = await db
-    .select({ id: bookings.id, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, title: tasks.title })
+    .select({ id: bookings.id, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, title: tasks.title, marketId: bookings.marketId })
     .from(bookings)
     .innerJoin(tasks, eq(tasks.id, bookings.taskId))
     .where(eq(bookings.id, bookingId))
@@ -327,12 +328,14 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const seriesId = text(p.seriesId);
       if (!seriesId) return [];
       const [series] = await db
-        .select({ posterUserId: bookingSeries.posterUserId, helperUserId: bookingSeries.helperUserId, title: tasks.title })
+        .select({ posterUserId: bookingSeries.posterUserId, helperUserId: bookingSeries.helperUserId, title: tasks.title, marketId: bookingSeries.marketId })
         .from(bookingSeries)
         .innerJoin(tasks, eq(tasks.id, bookingSeries.templateTaskId))
         .where(eq(bookingSeries.id, seriesId))
         .limit(1);
       if (!series) return [];
+      // Dates it names are on the series' market clock (completion plan 8.1).
+      const timeZone = await marketTimeZone(db, series.marketId);
       const target: AttentionTarget = { kind: 'series', seriesId };
       const [posterName, helperName] = await Promise.all([nameOf(db, series.posterUserId), nameOf(db, series.helperUserId)]);
       const by = text(p.by);
@@ -343,19 +346,19 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
           return [toHelper('series_started')];
         case 'series.paused': {
           const until = text(p.until);
-          return [toHelper('series_paused', until ? { day: until } : undefined)];
+          return [toHelper('series_paused', until ? { day: until, timeZone } : undefined)];
         }
         case 'series.resumed':
           return by === 'system' ? [toHelper('series_resumed', { by: 'system' }), toPoster('series_resumed', { by: 'system' })] : [toHelper('series_resumed', { by: 'poster' })];
         case 'series.stopped': {
           const endsOn = text(p.endsOn);
           if (by === 'poster') return [toHelper('series_stopped', { by: 'poster' })];
-          if (by === 'helper') return [toPoster('series_stopped', { by: 'helper', ...(endsOn ? { day: endsOn } : {}) })];
+          if (by === 'helper') return [toPoster('series_stopped', { by: 'helper', ...(endsOn ? { day: endsOn, timeZone } : {}) })];
           return [toHelper('series_stopped', { by: 'system' }), toPoster('series_stopped', { by: 'system' })];
         }
         default: {
           const start = text(p.start);
-          const params = (who: 'poster' | 'helper' | 'payment'): NotificationView['params'] => ({ by: who, ...(start ? { at: start } : {}) });
+          const params = (who: 'poster' | 'helper' | 'payment'): NotificationView['params'] => ({ by: who, ...(start ? { at: start, timeZone } : {}) });
           if (by === 'poster') return [toHelper('series_visit_skipped', params('poster'))];
           if (by === 'helper') return [toPoster('series_visit_skipped', params('helper'))];
           return [toHelper('series_visit_skipped', params('payment')), toPoster('series_visit_skipped', params('payment'))];
@@ -367,7 +370,7 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const booking = await bookingContext(db, text(p.bookingId) ?? event.aggregateId);
       if (!booking) return [];
       const payBy = text(p.payBy);
-      return [{ userId: booking.posterUserId, type: 'scheduled_payment_failed' as const, target: { kind: 'booking', bookingId: booking.id } as AttentionTarget, title: booking.title, ...(payBy ? { params: { at: payBy } } : {}) }];
+      return [{ userId: booking.posterUserId, type: 'scheduled_payment_failed' as const, target: { kind: 'booking', bookingId: booking.id } as AttentionTarget, title: booking.title, ...(payBy ? { params: { at: payBy, timeZone: await marketTimeZone(db, booking.marketId) } } : {}) }];
     }
     case 'verification.updated': {
       const planned = verificationNotificationFor(p);
