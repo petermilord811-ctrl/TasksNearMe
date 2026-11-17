@@ -67,7 +67,7 @@ export const GAINESVILLE_HELPER_TEXT: Record<string, { headline?: string; bio?: 
   },
   h21: { headline: 'Home and garden tidy-ups in Thornebrook and Millhopper' },
   h22: { bio: 'I help students and young professionals move around University Heights, Midtown and the streets near UF, and rebuild what had to come apart.' },
-  h24: { headline: 'Limpieza ligera en el sureste de Gainesville / Light cleaning in Southeast Gainesville' },
+  h24: { headline: 'Limpieza ligera / Light cleaning in Southeast Gainesville' },
   h25: {
     headline: 'New in Gainesville and ready to build and lift',
     bio: 'Just moved here from Dublin. I have assembled more flat-pack furniture than I can count and I am glad to help with moves around downtown and Pleasant Street.',

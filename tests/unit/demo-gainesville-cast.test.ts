@@ -24,6 +24,8 @@ describe("the demo cast's move to Gainesville (plan 8.6)", () => {
     for (const helper of DEMO_HELPERS) {
       const text = { ...{ headline: helper.headline, bio: helper.bio }, ...GAINESVILLE_HELPER_TEXT[helper.key] };
       expect(`${text.headline} ${text.bio}`, helper.key).not.toMatch(AUSTIN_PLACES);
+      // The profile form's limit.
+      expect(text.headline.length, helper.key).toBeLessThanOrEqual(80);
     }
     for (const key of Object.keys(GAINESVILLE_HELPER_TEXT)) expect(DEMO_HELPERS.map((helper) => helper.key)).toContain(key);
   });
