@@ -41,6 +41,15 @@
       "title": "Únete a la lista de espera",
       "description": "TasksNearMe aún no está en tu ciudad. Déjanos tu correo y tu código postal y te avisaremos cuando abramos cerca de ti."
     },
+    "cities": {
+      "crumb": "Ciudades",
+      "title": "Ciudades: dónde está TasksNearMe y adónde llega pronto",
+      "description": "TasksNearMe abre ciudad por ciudad en todo Estados Unidos. Mira dónde puedes reservar ayuda local hoy, qué ciudades está pidiendo la gente, y únete a la lista de espera para la tuya."
+    },
+    "citiesState": {
+      "title": "TasksNearMe en {state}: ciudades abiertas y próximas",
+      "description": "Dónde está TasksNearMe en {state}, las ciudades que la gente está pidiendo y cómo unirte a la lista de espera o registrarte como ayudante."
+    },
     "help": {
       "title": "Centro de ayuda",
       "description": "Respuestas sobre cómo publicar tareas, pagos y tarifas, cómo verificarte como ayudante y cómo mantenerte seguro."
@@ -452,5 +461,58 @@
       "how": "Cada trabajo muestra cuánto paga, cuándo se necesita y la zona general. Envía una oferta con tu precio; verás la dirección exacta cuando se confirme la reserva.",
       "pays": "Mira cuánto paga cada uno y cuándo, y envía una oferta."
     }
+  },
+  "states": {
+    "AL": "Alabama",
+    "AK": "Alaska",
+    "AZ": "Arizona",
+    "AR": "Arkansas",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DE": "Delaware",
+    "DC": "Distrito de Columbia",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "HI": "Hawái",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "IA": "Iowa",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Luisiana",
+    "ME": "Maine",
+    "MD": "Maryland",
+    "MA": "Massachusetts",
+    "MI": "Míchigan",
+    "MN": "Minnesota",
+    "MS": "Misisipi",
+    "MO": "Misuri",
+    "MT": "Montana",
+    "NE": "Nebraska",
+    "NV": "Nevada",
+    "NH": "Nuevo Hampshire",
+    "NJ": "Nueva Jersey",
+    "NM": "Nuevo México",
+    "NY": "Nueva York",
+    "NC": "Carolina del Norte",
+    "ND": "Dakota del Norte",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregón",
+    "PA": "Pensilvania",
+    "RI": "Rhode Island",
+    "SC": "Carolina del Sur",
+    "SD": "Dakota del Sur",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UT": "Utah",
+    "VT": "Vermont",
+    "VA": "Virginia",
+    "WA": "Washington",
+    "WV": "Virginia Occidental",
+    "WI": "Wisconsin",
+    "WY": "Wyoming"
   }
 }

@@ -1,0 +1,34 @@
+{
+  "title": "TasksNearMe, ciudad por ciudad",
+  "intro": "Abrimos una ciudad a la vez, para que cada una empiece con ayudantes que viven cerca y que ya pasaron sus verificaciones. Reserva ayuda donde ya estamos, o dinos dónde estás y te escribiremos cuando lleguemos.",
+  "open": {
+    "title": "Dónde estamos",
+    "live": "Abierta",
+    "prelaunch": "Abre pronto",
+    "empty": "Todavía no hay ninguna ciudad abierta. La primera abre pronto.",
+    "visit": "Tareas y ayudantes en {city}"
+  },
+  "next": {
+    "title": "Adónde vamos después",
+    "intro": "Las ciudades que más se piden. Cada solicitud acerca una ciudad.",
+    "empty": "Aquí nadie ha pedido una ciudad todavía. Dinos dónde estás y la tuya podría ser la próxima.",
+    "people": "{count, plural, one {# persona esperando} other {# personas esperando}}",
+    "helpers": "{count, plural, one {# ayudante con todo listo} other {# ayudantes con todo listo}}"
+  },
+  "states": {
+    "title": "Todos los estados",
+    "open": "{count, plural, one {# ciudad abierta} other {# ciudades abiertas}}",
+    "waiting": "{count, plural, one {# persona esperando} other {# personas esperando}}",
+    "none": "Todavía no"
+  },
+  "actions": {
+    "waitlist": "Unirme a la lista de espera",
+    "helper": "Ganar dinero como ayudante"
+  },
+  "state": {
+    "title": "TasksNearMe en {state}",
+    "intro": "Dónde estamos en {state} y las ciudades que la gente está pidiendo. Únete a la lista de espera para la tuya, o regístrate para ayudar a tus vecinos cuando lleguemos.",
+    "back": "Todos los estados",
+    "others": "Otros estados"
+  }
+}

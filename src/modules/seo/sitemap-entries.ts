@@ -34,6 +34,8 @@ export interface SitemapData {
   helpArticles: { slug: string; updatedAt: ISODateTime }[];
   /** Published legal documents only (drafts are noindex). */
   legalDocs: { doc: LegalDoc; updatedAt: ISODateTime }[];
+  /** `/cities` state pages with something real to show (src/shared/us-states.ts `statePageIndexable`), by slug. */
+  cityStates?: string[];
 }
 
 export interface SitemapPage {
@@ -70,6 +72,9 @@ export function sitemapPages(data: SitemapData, options: { listings: boolean }):
     { path: routes.help(), lastModified: latestDate(data.helpArticles.map((article) => article.updatedAt)) },
     ...data.helpArticles.map((article) => ({ path: routes.help(article.slug), lastModified: article.updatedAt })),
     ...data.legalDocs.map((legal) => ({ path: routes.legal(legal.doc), lastModified: legal.updatedAt })),
+    // Where we're open and going next (plan 8.7); empty state pages stay out (doorway rule).
+    { path: routes.cities() },
+    ...(data.cityStates ?? []).map((slug) => ({ path: routes.cities(slug) })),
   ];
   const markets = data.markets.filter((market) => market.indexable);
   for (const market of markets) {

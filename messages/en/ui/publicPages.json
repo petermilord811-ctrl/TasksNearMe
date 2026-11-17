@@ -415,6 +415,8 @@
     "rewards": "Become a helper with rewards",
     "noRewards": "Become a helper without rewards",
     "pricing": "Pricing examples",
-    "trust": "Trust and safety"
+    "trust": "Trust and safety",
+    "cities": "Cities: where we are and where we go next",
+    "citiesState": "Cities: one state, with demand and no open city"
   }
 }

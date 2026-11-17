@@ -25,6 +25,7 @@ const data: SitemapData = {
     { slug: 'who-sees-my-address', updatedAt: '2026-11-12T17:00:00.000Z' },
   ],
   legalDocs: [{ doc: 'terms', updatedAt: '2026-11-01T17:00:00.000Z' }],
+  cityStates: ['texas'],
 };
 
 describe('sitemapPages', () => {
@@ -42,6 +43,8 @@ describe('sitemapPages', () => {
       '/help/post-your-first-task',
       '/help/who-sees-my-address',
       '/legal/terms',
+      '/cities',
+      '/cities/texas',
       '/austin',
       '/austin/tasks',
       '/austin/furniture-assembly',
@@ -103,7 +106,7 @@ describe('sitemapPages', () => {
 
   it('works with no markets, tasks, helpers or published legal texts', () => {
     const empty = sitemapPages({ homeMarketSlug: 'austin', markets: [], helpers: [], helpArticles: [], legalDocs: [] }, ALL);
-    expect(empty.map((page) => page.path)).toEqual(['/', '/how-it-works', '/pricing', '/become-a-helper', '/trust-and-safety', '/help']);
+    expect(empty.map((page) => page.path)).toEqual(['/', '/how-it-works', '/pricing', '/become-a-helper', '/trust-and-safety', '/help', '/cities']);
     expect(empty.every((page) => page.lastModified === undefined)).toBe(true);
   });
 });

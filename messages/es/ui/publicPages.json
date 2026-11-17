@@ -415,6 +415,8 @@
     "rewards": "Ser ayudante con recompensas",
     "noRewards": "Ser ayudante sin recompensas",
     "pricing": "Ejemplos de precios",
-    "trust": "Confianza y seguridad"
+    "trust": "Confianza y seguridad",
+    "cities": "Ciudades: dónde estamos y adónde vamos",
+    "citiesState": "Ciudades: un estado con demanda y sin ciudad abierta"
   }
 }

@@ -5,6 +5,7 @@ import { helperProfiles } from '@/modules/profiles/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { stateOfZip, tidyCityName, zip3Of } from '@/shared/us-zip';
+import { rowScopeCondition, type RowScope } from '@/shared/sample-data';
 import { COMING_NEXT_LIMIT, rankCities, type CityCount } from './demand';
 import { waitlistEntries } from './schema';
 
@@ -63,7 +64,11 @@ export async function waitlistDemand(db: Db, zip: string): Promise<WaitlistDeman
  * The cities people ask for most, outside the ZIP3 prefixes we already cover (`coveredPrefixes`, the open
  * markets'). Grouped by the tidied city name and state; at least 3 people per city.
  */
-export async function citiesComingNext(db: Db, coveredPrefixes: readonly string[], limit = COMING_NEXT_LIMIT): Promise<WaitlistCity[]> {
+/**
+ * `rows: 'real'` counts only real helpers (5.24: public pages and search engines never see sample people as demand);
+ * waitlist entries are always real, since no seed writes them.
+ */
+export async function citiesComingNext(db: Db, coveredPrefixes: readonly string[], limit = COMING_NEXT_LIMIT, rows: RowScope = 'all'): Promise<WaitlistCity[]> {
   const covered = sql`${sql.raw(`'{${coveredPrefixes.filter((prefix) => /^\d{3}$/.test(prefix)).join(',')}}'`)}::text[]`;
   const [waitlistRows, helperRows] = await Promise.all([
     db
@@ -85,7 +90,7 @@ export async function citiesComingNext(db: Db, coveredPrefixes: readonly string[
       })
       .from(helperProfiles)
       .innerJoin(users, eq(users.id, helperProfiles.userId))
-      .where(and(waitingHelper, isNotNull(helperProfiles.homeCity), isNotNull(helperProfiles.homeState), sql`not (left(${helperProfiles.homeZip}, 3) = any(${covered}))`))
+      .where(and(waitingHelper, rowScopeCondition(rows, users.id), isNotNull(helperProfiles.homeCity), isNotNull(helperProfiles.homeState), sql`not (left(${helperProfiles.homeZip}, 3) = any(${covered}))`))
       .groupBy(sql`lower(${helperProfiles.homeCity})`, helperProfiles.homeState),
   ]);
   return rankCities(waitlistRows as CityCount[], helperRows as CityCount[], limit);

@@ -10,6 +10,7 @@ export * from './timeline';
 export * from './messaging';
 export * from './tasks';
 export * from './marketing';
+export * from './cities';
 export * from './forms';
 export * from './auth';
 export * from './content';

@@ -20,6 +20,7 @@ import forms from './forms.json';
 import report from './report.json';
 import signIn from './signIn.json';
 import waitlist from './waitlist.json';
+import cities from './cities.json';
 import help from './help.json';
 import helpContact from './helpContact.json';
 import legal from './legal.json';
@@ -96,6 +97,6 @@ import adminWebhooks from './adminWebhooks.json';
 import beta from './beta.json';
 import adminBeta from './adminBeta.json';
 
-const uiMessages = { brand, common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, help, helpContact, legal, taskBoard, community, questions, savedSearches, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, bookingSheets, paymentsPage, receipt, earnings, home, landing, review, savedHelpers, helpersBrowse, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase, adminBooking, adminBookings, adminTask, adminAudit, adminPayments, adminStaff, adminConfig, adminRewards, adminUsers, adminUser, adminVerification, staffVerify, push, rewards, changes, invites, inviteCard, availability, clients, series, proposal, report, posterIdentity, adminResponseTimes, adminSavedReplies, adminMetrics, helperStanding, badges, adminWebhooks, beta, adminBeta };
+const uiMessages = { brand, common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, cities, help, helpContact, legal, taskBoard, community, questions, savedSearches, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, bookingSheets, paymentsPage, receipt, earnings, home, landing, review, savedHelpers, helpersBrowse, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase, adminBooking, adminBookings, adminTask, adminAudit, adminPayments, adminStaff, adminConfig, adminRewards, adminUsers, adminUser, adminVerification, staffVerify, push, rewards, changes, invites, inviteCard, availability, clients, series, proposal, report, posterIdentity, adminResponseTimes, adminSavedReplies, adminMetrics, helperStanding, badges, adminWebhooks, beta, adminBeta };
 
 export default uiMessages;

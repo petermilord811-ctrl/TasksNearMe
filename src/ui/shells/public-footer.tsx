@@ -70,6 +70,7 @@ export function PublicFooter({ variant, onSwitchLanguage }: { variant: 'default'
                     <ArrowUpRight aria-hidden="true" className="size-3.5 transition-transform duration-300 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
                   </Link>
                 </li>
+                <li><Link href={routes.cities()} className={linkClass}>{t('footer.allCities')}</Link></li>
               </ul>
             </div>
           </div>

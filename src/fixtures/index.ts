@@ -54,3 +54,4 @@ export * from './staff-controls';
 export * from './beta';
 export * from './bot-check';
 export * from './public-support';
+export * from './cities';

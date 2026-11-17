@@ -103,6 +103,8 @@ export const routes = {
   /** `from: 'beta'`: from an invite-only step (private beta) rather than from outside the service area. */
   /** `zip`: fills the form and shows how many people already wait near it (posting's "We're not in Dallas yet"). */
   waitlist: (query: { from?: 'beta'; zip?: string } = {}) => withQuery('/waitlist', { from: query.from, zip: query.zip }),
+  /** Where we're open and where we go next (plan 8.7); with a state's slug (`florida`), that state's page. */
+  cities: (stateSlug?: string) => (stateSlug ? `/cities/${enc(stateSlug)}` : '/cities'),
   /** An invite link (private beta): keeps the code for sign-up or helper setup, then opens sign-in. */
   invite: (code: string) => `/invite/${enc(code)}`,
 

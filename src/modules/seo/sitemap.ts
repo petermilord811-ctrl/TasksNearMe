@@ -2,6 +2,7 @@ import 'server-only';
 import type { MetadataRoute } from 'next';
 import { cacheLife, cacheTag } from 'next/cache';
 import { listHelpArticleDates, listPublishedLegalDocs } from '@/modules/content/loaders';
+import { listDirectoryStates } from '@/modules/marketing/cities';
 import { marketTag } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, findPublicMarket, listCategoryViews, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { listPublicProfileDates } from '@/modules/profiles/queries';
@@ -9,6 +10,7 @@ import { listOpenTaskDates } from '@/modules/tasks/queries';
 import { appUrl } from '@/integrations/oauth';
 import { db } from '@/platform/db/client';
 import { searchEngineRows, type RowScope } from '@/shared/sample-data';
+import { statePageIndexable } from '@/shared/us-states';
 import { marketPagesIndexable } from './indexable';
 import { sitemapEntries, sitemapPages, type SitemapData } from './sitemap-entries';
 
@@ -42,13 +44,14 @@ export async function loadSitemapEntries(options: { listings: boolean; rows?: Ro
     }),
   );
   // Open tasks are loaded either way: market and category pages take their dates from them.
-  const helpers = options.listings ? await listPublicProfileDates(db, rows) : [];
+  const [helpers, states] = await Promise.all([options.listings ? listPublicProfileDates(db, rows) : [], listDirectoryStates(rows)]);
   const data: SitemapData = {
     homeMarketSlug: DEFAULT_MARKET_SLUG,
     markets: markets.filter((market) => market !== null),
     helpers: helpers.map((helper) => ({ handle: helper.handle, updatedAt: helper.updatedAt.toISOString() })),
     helpArticles: listHelpArticleDates(),
     legalDocs: listPublishedLegalDocs(),
+    cityStates: states.filter(statePageIndexable).map((state) => state.slug),
   };
   return { entries: sitemapEntries(appUrl(), sitemapPages(data, options)), marketSlugs };
 }

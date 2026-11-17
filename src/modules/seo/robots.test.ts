@@ -69,6 +69,8 @@ describe('robotsFile', () => {
     '/es/email/unsubscribe',
     '/invite/ABC123',
     '/es/invite/ABC123',
+    '/account/not-me?token=abc',
+    '/es/account/not-me',
   ])('%s is closed to crawlers', (url) => {
     expect(crawlable(url, rules)).toBe(false);
   });

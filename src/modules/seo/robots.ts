@@ -19,8 +19,8 @@ import { absoluteUrl } from './sitemap-entries';
 
 /** Sections that are also a page of their own (/code) or could be mistaken for the start of a market slug. */
 const CLOSED_SECTIONS = ['/admin', '/dev', '/code'];
-/** Sections whose addresses always go deeper. */
-const CLOSED_FOLDERS = ['/email/', '/invite/'];
+/** Sections whose addresses always go deeper: one-time links from emails (/account/not-me, plan 5.23) and invites. */
+const CLOSED_FOLDERS = ['/email/', '/invite/', '/account/'];
 
 export function disallowedPaths(): string[] {
   const inEveryLanguage = (path: string) => APP_LOCALES.map((locale) => localizedPath(path, locale));

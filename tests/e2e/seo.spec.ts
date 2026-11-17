@@ -40,6 +40,9 @@ test.describe('search engines', () => {
       '/es/austin/furniture-assembly/cost',
       '/austin/tasks/furniture-assembly',
       '/es/austin/tasks/furniture-assembly',
+      '/cities',
+      '/es/cities',
+      '/cities/texas',
     ]) {
       expect(paths, path).toContain(path);
     }
@@ -151,6 +154,34 @@ test.describe('search engines', () => {
     await page.goto('/es/austin/tasks/yard-cleanup');
     await expect(page).toHaveTitle('Trabajos de limpieza de jardín cerca de ti en Austin · TasksNearMe');
     await expect(page.getByRole('heading', { level: 1, name: 'Trabajos de limpieza de jardín cerca de ti en Austin' })).toBeVisible();
+  });
+
+  test('/cities: where we are and every state; a state page is indexed only with something real to show', async ({ page }) => {
+    await page.goto('/cities');
+    await expect(page).toHaveTitle('Cities: where TasksNearMe is open and coming next · TasksNearMe');
+    await expect(page.getByRole('heading', { level: 1, name: 'TasksNearMe, city by city' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Tasks and helpers in Austin/ })).toHaveAttribute('href', '/austin');
+    // Gainesville is paused until plan 8.1: not listed anywhere yet.
+    await expect(page.getByRole('link', { name: /Tasks and helpers in Gainesville/ })).toHaveCount(0);
+    const states = page.getByRole('region', { name: 'Every state' });
+    await expect(states.getByRole('link')).toHaveCount(51);
+    await states.getByRole('link', { name: /^Texas/ }).click();
+    await expect(page).toHaveURL(/\/cities\/texas$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'TasksNearMe in Texas' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Tasks and helpers in Austin/ })).toBeVisible();
+    await expect(page.locator('head meta[name="robots"]')).not.toHaveAttribute('content', /noindex/);
+    const [trail] = await structuredData(page);
+    expect((trail!.itemListElement as Array<{ name: string }>).map((item) => item.name)).toEqual(['TasksNearMe', 'Cities', 'Texas']);
+
+    // Nothing open and nobody waiting: there for people, kept out of search.
+    await page.goto('/cities/wyoming');
+    await expect(page.getByRole('heading', { level: 1, name: 'TasksNearMe in Wyoming' })).toBeVisible();
+    await expect(page.locator('head meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+
+    await page.goto('/es/cities/new-york');
+    await expect(page).toHaveTitle('TasksNearMe en Nueva York: ciudades abiertas y próximas · TasksNearMe');
+    await page.goto('/cities/narnia');
+    await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
   });
 
   test('a public task and a helper profile carry only what their page shows', async ({ page }) => {

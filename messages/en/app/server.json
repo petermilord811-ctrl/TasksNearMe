@@ -41,6 +41,15 @@
       "title": "Join the waitlist",
       "description": "TasksNearMe isn't in your city yet. Leave your email and ZIP code and we'll tell you when we open near you."
     },
+    "cities": {
+      "crumb": "Cities",
+      "title": "Cities: where TasksNearMe is open and coming next",
+      "description": "TasksNearMe opens city by city across the US. See where you can book local help today, the cities people are asking for, and join the waitlist for yours."
+    },
+    "citiesState": {
+      "title": "TasksNearMe in {state}: cities open and coming next",
+      "description": "Where TasksNearMe is open in {state}, the cities people are asking for, and how to join the waitlist or sign up as a helper."
+    },
     "help": {
       "title": "Help center",
       "description": "Answers about posting tasks, payments and fees, getting verified as a helper, and staying safe."
@@ -452,5 +461,58 @@
       "how": "Each task shows what it pays, when it's needed and the general area. Send an offer with your price; you'll see the exact address once the booking is confirmed.",
       "pays": "See what each one pays and when, then send an offer."
     }
+  },
+  "states": {
+    "AL": "Alabama",
+    "AK": "Alaska",
+    "AZ": "Arizona",
+    "AR": "Arkansas",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DE": "Delaware",
+    "DC": "District of Columbia",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "HI": "Hawaii",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "IA": "Iowa",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Louisiana",
+    "ME": "Maine",
+    "MD": "Maryland",
+    "MA": "Massachusetts",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MS": "Mississippi",
+    "MO": "Missouri",
+    "MT": "Montana",
+    "NE": "Nebraska",
+    "NV": "Nevada",
+    "NH": "New Hampshire",
+    "NJ": "New Jersey",
+    "NM": "New Mexico",
+    "NY": "New York",
+    "NC": "North Carolina",
+    "ND": "North Dakota",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregon",
+    "PA": "Pennsylvania",
+    "RI": "Rhode Island",
+    "SC": "South Carolina",
+    "SD": "South Dakota",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UT": "Utah",
+    "VT": "Vermont",
+    "VA": "Virginia",
+    "WA": "Washington",
+    "WV": "West Virginia",
+    "WI": "Wisconsin",
+    "WY": "Wyoming"
   }
 }

@@ -1,0 +1,34 @@
+{
+  "title": "TasksNearMe, city by city",
+  "intro": "We open one city at a time, so each one starts with helpers who live nearby and have passed their checks. Book help where we're open, or tell us where you are and we'll email you when we get there.",
+  "open": {
+    "title": "Where we are",
+    "live": "Open",
+    "prelaunch": "Opening soon",
+    "empty": "No city is open yet. The first one opens soon.",
+    "visit": "Tasks and helpers in {city}"
+  },
+  "next": {
+    "title": "Where we go next",
+    "intro": "The cities people ask for most. Every request brings a city closer.",
+    "empty": "No one has asked for a city here yet. Tell us where you are, and yours could be next.",
+    "people": "{count, plural, one {# person waiting} other {# people waiting}}",
+    "helpers": "{count, plural, one {# helper ready} other {# helpers ready}}"
+  },
+  "states": {
+    "title": "Every state",
+    "open": "{count, plural, one {# city open} other {# cities open}}",
+    "waiting": "{count, plural, one {# person waiting} other {# people waiting}}",
+    "none": "Not yet"
+  },
+  "actions": {
+    "waitlist": "Join the waitlist",
+    "helper": "Earn as a helper"
+  },
+  "state": {
+    "title": "TasksNearMe in {state}",
+    "intro": "Where we're open in {state}, and the cities people are asking for. Join the waitlist for yours, or sign up to help your neighbors when we arrive.",
+    "back": "All states",
+    "others": "Other states"
+  }
+}
