@@ -320,3 +320,9 @@ Every date is shown, and every day line drawn, on the clock of the market it bel
 - 8.3 (51807b0, migration 0062; 32e5565): going live queues one email per untold, subscribed waitlist entry the market covers, in the language the person joined in (`/waitlist` now records it) and matched to their interest. The `waitlist.city_open` job sends 100 a minute with retries; it holds while the market isn't live or sign-up there is invite-only, and skips suppressed, unsubscribed and already-local addresses. One-click unsubscribe, signed with `appSecret()` for a year; the entry is kept so the form can't add the address back.
 - Checks: `npm run check` (3324 tests); DB tests for admin-markets, city-open and national (23); e2e market-status and waitlist-city-open on the e2e build, both projects; the changed previews at 360 and 1280.
 - Left: a helper waiting for the launch market while it's paused already has it as their home market, so pausing and reopening the launch market wouldn't tell them (a per-helper told mark would fix it; not needed for Gainesville).
+
+## 2026-11-17 — Find work for a helper waiting for their city (plan 8.4, tasksnearme-8c)
+
+A helper who gave a ZIP no open market covers keeps a placeholder home market (Gainesville after the flip), so find work showed them its tasks. Now (63128fa) find work says "We're not in {city} yet": that we'll email them when it opens, how many others near their ZIP are waiting (waitlist entries and helpers, by ZIP3), a link to the waitlist for that ZIP, and their setup to finish meanwhile, or that they're ready. No list, no filters. Once a market covering their ZIP opens, find work is theirs again.
+- Also, for tasksnearme-37's Gainesville flip: 26 test files pinned to Austin's clock (b7ac2ad), passing with either default zone; a city's own zone name opens when it keeps a supported US clock (b0386d9).
+- Checks: tsc, the find-work screen tests (both states), test:db national and find-work (12).
