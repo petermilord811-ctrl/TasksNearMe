@@ -240,7 +240,7 @@ d4 task board and task page), **owner** (§8). Status as of writing.
 |---|---|---|---|
 | S1.1 | robots.txt, sitemap.xml with hreflang, canonical and language links | b7 | Live |
 | S1.2 | IndexNow: job runner announces new and changed sitemap pages every 15 min; `scripts/seo/indexnow.mjs` after deploys | b7 | Live (4e4a1cf; 42 pages accepted) |
-| S1.3 | Search Console: submit sitemap, inspect key pages, daily report of queries, positions and indexed pages (`scripts/seo/google.mjs`) | b7 | Waits for the owner's access grant |
+| S1.3 | Search Console: submit sitemap, inspect key pages, daily report of queries, positions and indexed pages (`scripts/seo/google.mjs`) | b7 | Live since 2026-11-17: sitemap read (62 pages, 0 errors), 54 indexed, 8 newest discovered; first queries at positions 13–96 |
 | S1.4 | Request indexing for the ten most important URLs | owner | §8 |
 | S1.5 | Bing Webmaster Tools: import from Search Console | owner | §8 |
 | S1.6 | Footer links to Austin's category pages and the board (every indexable page within 3 clicks) | UI (83) | Live (f13f131) |
