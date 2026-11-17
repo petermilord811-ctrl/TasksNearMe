@@ -14,6 +14,8 @@ const HIDDEN_CLOSE_MS = 120_000;
 
 export interface BoardLiveProps {
   marketSlug: string;
+  /** The market's zone: "today" and "mornings" in the board's filters are on its clock. */
+  timeZone: string;
   query: BoardMatchQuery;
   /** The market's neighborhoods (slug and name): a public task names its area, the filter its slug. */
   areas: { slug: string; name: string }[];
@@ -30,7 +32,7 @@ export interface BoardLiveProps {
  * reach its row as they happen (board-live-store). Without JavaScript or a stream, the board is simply the page
  * as it loaded.
  */
-export function BoardLive({ marketSlug, query, areas, shownIds, listId }: BoardLiveProps) {
+export function BoardLive({ marketSlug, timeZone, query, areas, shownIds, listId }: BoardLiveProps) {
   const t = useTranslations('taskBoard.live');
   const router = useRouter();
   const [fresh, setFresh] = useState<string[]>([]);
@@ -40,7 +42,7 @@ export function BoardLive({ marketSlug, query, areas, shownIds, listId }: BoardL
   const areaNames = useMemo(() => new Map(areas.map((area) => [area.slug, area.name])), [areas]);
   // The filters can change while the stream stays open (a soft navigation): an effect event reads the latest.
   const onTask = useEffectEvent((task: TaskPublicView) => {
-    if (!taskMatchesBoard(task, query, { now: new Date(), areaNames })) return;
+    if (!taskMatchesBoard(task, query, { now: new Date(), areaNames, timeZone })) return;
     setFresh((ids) => (ids.includes(task.id) ? ids : [...ids, task.id].slice(-50)));
   });
   const onState = useEffectEvent((state: TaskLiveState) => {

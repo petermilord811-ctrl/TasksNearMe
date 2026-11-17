@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ActionHandler, QueryHandler } from './actions';
-import type { CategorySlug, Cents, ISODateTime } from './common';
+import type { CategorySlug, Cents, ISODateTime, TimeZone } from './common';
 import type { ContentBlock } from './content';
 import { emailField, zipField } from './forms';
 import type { PriceBreakdown, PricingInput } from './money';
@@ -22,6 +22,8 @@ export interface MarketView {
   /** Neighborhood names, used as coverage examples. */
   areaNames: string[];
   serviceRadiusMiles: number;
+  /** Its IANA zone: its tasks' dates are shown, and its days start, on this clock (completion plan 8.1). */
+  timeZone: TimeZone;
 }
 
 export interface CategoryView {

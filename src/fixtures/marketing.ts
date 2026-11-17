@@ -35,6 +35,7 @@ export const austinMarket: MarketView = {
   status: 'prelaunch',
   areaNames: ['Mueller', 'East Austin', 'Hyde Park', 'Windsor Park', 'Crestview', 'Travis Heights', 'Zilker', 'Circle C'],
   serviceRadiusMiles: 15,
+  timeZone: 'America/Chicago',
 };
 
 /** Mirrors the seeded categories (db/seeds/data/austin.ts). */

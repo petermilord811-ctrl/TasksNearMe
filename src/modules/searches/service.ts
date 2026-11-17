@@ -13,8 +13,9 @@ import {
   type SavedSearchInput,
   type TaskBoardQueryState,
 } from '@/contracts';
-import { CATEGORY_SLUGS } from '@/contracts/common';
+import { CATEGORY_SLUGS, type TimeZone } from '@/contracts/common';
 import { areas, categories, markets } from '@/modules/markets/schema';
+import { marketTimeZone, marketTimeZones } from '@/modules/markets/time-zone';
 import { notifications } from '@/modules/notifications/schema';
 import { parseTaskBoardQuery } from '@/modules/tasks/projections';
 import { boardConditions, findTaskWithPublicView, listBoardTasks } from '@/modules/tasks/queries';
@@ -166,7 +167,9 @@ export async function instantSearchMatches(db: Db, taskId: string, now: Date, on
   const rows = await db.select().from(savedSearches).where(and(eq(savedSearches.marketId, task.marketId), eq(savedSearches.alert, 'instant'), onlyUserId ? eq(savedSearches.userId, onlyUserId) : undefined));
   if (rows.length === 0) return [];
   const { names } = await areaMaps(db, task.marketId);
-  const since = new Date(marketLocalToUtc(marketDayKey(now), '00:00'));
+  // "A day" for the alert cap and "today" in the filters are the market's own (completion plan 8.1).
+  const timeZone = await marketTimeZone(db, task.marketId);
+  const since = new Date(marketLocalToUtc(marketDayKey(now, timeZone), '00:00', timeZone));
   const people = [...new Set(rows.map((row) => row.userId))];
   const sentToday = await db
     .select({ userId: notifications.userId, value: count() })
@@ -178,26 +181,43 @@ export async function instantSearchMatches(db: Db, taskId: string, now: Date, on
   for (const row of rows) {
     if (row.userId === task.posterUserId || out.some((match) => match.userId === row.userId)) continue;
     if ((sent.get(row.userId) ?? 0) >= INSTANT_ALERTS_PER_DAY) continue;
-    if (!taskMatchesBoard(found.view, parseTaskBoardQuery(row.params), { now, areaNames: names })) continue;
+    if (!taskMatchesBoard(found.view, parseTaskBoardQuery(row.params), { now, areaNames: names, timeZone })) continue;
     if (await isBlockedBetween(db, row.userId, task.posterUserId)) continue;
     out.push({ userId: row.userId, searchId: row.id, name: row.name });
   }
   return out;
 }
 
-/** The digest goes out from 8 am, market time. */
+/** The digest goes out from 8 am on the search's market's clock. */
 const DIGEST_HOUR = '08:00';
 
+/** 8 am today in a market's zone: the digest's send time there. */
+const digestTime = (now: Date, timeZone: TimeZone) => new Date(marketLocalToUtc(marketDayKey(now, timeZone), DIGEST_HOUR, timeZone));
+
 /**
- * The morning digest (a job): each daily search not sent since this morning counts the tasks posted since its
- * last digest that it fits, and says how many (when there are any). Runs every tick; does its work once a day.
+ * The morning digest (a job): each daily search not sent since this morning (8 am in its market, completion plan
+ * 8.1) counts the tasks posted since its last digest that it fits, and says how many (when there are any). Runs
+ * every tick; does its work once a day per search.
  */
 export async function runSavedSearchDigests(db: Db, now: Date): Promise<number> {
-  const sendFrom = new Date(marketLocalToUtc(marketDayKey(now), DIGEST_HOUR));
-  if (now < sendFrom) return 0;
-  const due = await db.select().from(savedSearches).where(and(eq(savedSearches.alert, 'daily'), or(isNull(savedSearches.lastDigestAt), lt(savedSearches.lastDigestAt, sendFrom)))).limit(500);
+  // The latest 8 am that has come in any market's zone: a search due now wasn't sent since its own, which is no later.
+  const zoneRows = await db.selectDistinct({ timeZone: markets.timeZone }).from(markets);
+  const passed = zoneRows.map((row) => digestTime(now, row.timeZone)).filter((at) => at <= now);
+  if (passed.length === 0) return 0;
+  const latest = new Date(Math.max(...passed.map((at) => at.getTime())));
+  const candidates = await db
+    .select()
+    .from(savedSearches)
+    .where(and(eq(savedSearches.alert, 'daily'), or(isNull(savedSearches.lastDigestAt), lt(savedSearches.lastDigestAt, latest))))
+    .limit(500);
+  const zones = await marketTimeZones(db, candidates.map((row) => row.marketId));
+  const due = candidates.filter((row) => {
+    const sendFrom = digestTime(now, zones.get(row.marketId)!);
+    return now >= sendFrom && (!row.lastDigestAt || row.lastDigestAt < sendFrom);
+  });
   let sent = 0;
   for (const row of due) {
+    const timeZone = zones.get(row.marketId)!;
     const { ids } = await areaMaps(db, row.marketId);
     const since = new Date(Math.max((row.lastDigestAt ?? row.createdAt).getTime(), now.getTime() - 86_400_000));
     const query = parseTaskBoardQuery(row.params);
@@ -205,14 +225,14 @@ export async function runSavedSearchDigests(db: Db, now: Date): Promise<number> 
       .select({ value: count() })
       .from(tasks)
       .innerJoin(categories, eq(categories.id, tasks.categoryId))
-      .where(and(...boardConditions(query, { marketId: row.marketId, now, areaIds: ids }), gte(tasks.publishedAt, since)));
+      .where(and(...boardConditions(query, { marketId: row.marketId, timeZone, now, areaIds: ids }), gte(tasks.publishedAt, since)));
     const total = Number(found?.value ?? 0);
     await db.transaction(async (tx) => {
       await tx.update(savedSearches).set({ lastDigestAt: now }).where(eq(savedSearches.id, row.id));
       if (total > 0) {
         await tx
           .insert(outboxEvents)
-          .values({ id: `evt_digest_${row.id}_${marketDayKey(now)}`, type: 'searches.digest', aggregateType: 'saved_search', aggregateId: row.id, payload: { searchId: row.id, userId: row.userId, count: total, name: row.name } })
+          .values({ id: `evt_digest_${row.id}_${marketDayKey(now, timeZone)}`, type: 'searches.digest', aggregateType: 'saved_search', aggregateId: row.id, payload: { searchId: row.id, userId: row.userId, count: total, name: row.name } })
           .onConflictDoNothing();
       }
     });

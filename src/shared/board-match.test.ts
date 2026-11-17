@@ -20,7 +20,9 @@ const task: TaskPublicView = {
   postedAt: '2026-11-17T14:50:00.000Z',
   taskType: 'desk',
 };
-const matches = (query: Partial<BoardMatchQuery>, candidate: TaskPublicView = task) => taskMatchesBoard(candidate, { ...base, ...query }, { now, areaNames });
+const AUSTIN = 'America/Chicago';
+const GAINESVILLE = 'America/New_York';
+const matches = (query: Partial<BoardMatchQuery>, candidate: TaskPublicView = task) => taskMatchesBoard(candidate, { ...base, ...query }, { now, areaNames, timeZone: AUSTIN });
 
 describe('taskMatchesBoard', () => {
   it('passes a new open task through an unfiltered board, and never a closed or past one', () => {
@@ -71,20 +73,32 @@ describe('taskMatchesBoard', () => {
     expect(matches({ times: ['morning'] })).toBe(true);
     expect(matches({ times: ['evening'] })).toBe(false);
     expect(matches({ times: ['evening', 'morning'] })).toBe(true);
-    expect(touchesTime({ ...task.schedule, flexible: true }, 'evening')).toBe(true);
+    expect(touchesTime({ ...task.schedule, flexible: true }, 'evening', AUSTIN)).toBe(true);
     // 11:30 am to 12:30 pm touches both the morning and the afternoon.
     const noon = { windowStart: '2026-11-18T17:30:00.000Z', windowEnd: '2026-11-18T18:30:00.000Z', flexible: false };
-    expect(touchesTime(noon, 'morning')).toBe(true);
-    expect(touchesTime(noon, 'afternoon')).toBe(true);
-    expect(touchesTime(noon, 'evening')).toBe(false);
+    expect(touchesTime(noon, 'morning', AUSTIN)).toBe(true);
+    expect(touchesTime(noon, 'afternoon', AUSTIN)).toBe(true);
+    expect(touchesTime(noon, 'evening', AUSTIN)).toBe(false);
+  });
+});
+
+describe('each board on its own market’s clock (plan 8.1)', () => {
+  it('ends “today” at the market’s midnight, and reads mornings on its clock', () => {
+    // 9 am in Austin is 10 am in Gainesville; today ends an hour earlier in UTC there.
+    expect(whenRange('today', now, GAINESVILLE)).toEqual({ from: now, to: new Date('2026-11-18T05:00:00.000Z') });
+    // 11:30 am to 12:30 pm in Austin is 12:30 to 1:30 pm in Gainesville: afternoon only there.
+    const noon = { windowStart: '2026-11-18T17:30:00.000Z', windowEnd: '2026-11-18T18:30:00.000Z', flexible: false };
+    expect(touchesTime(noon, 'morning', GAINESVILLE)).toBe(false);
+    expect(touchesTime(noon, 'morning', AUSTIN)).toBe(true);
+    expect(taskMatchesBoard({ ...task, schedule: noon }, { ...base, times: ['morning'] }, { now, areaNames, timeZone: GAINESVILLE })).toBe(false);
   });
 });
 
 describe('whenRange', () => {
   it('ends today at midnight and this week on Sunday night, in Austin', () => {
-    expect(whenRange('any', now)).toBeNull();
-    expect(whenRange('today', now)).toEqual({ from: now, to: new Date('2026-11-18T06:00:00.000Z') });
-    expect(whenRange('this_week', now)).toEqual({ from: now, to: new Date('2026-11-23T06:00:00.000Z') });
-    expect(whenRange('this_weekend', now)).toEqual({ from: new Date('2026-11-21T06:00:00.000Z'), to: new Date('2026-11-23T06:00:00.000Z') });
+    expect(whenRange('any', now, AUSTIN)).toBeNull();
+    expect(whenRange('today', now, AUSTIN)).toEqual({ from: now, to: new Date('2026-11-18T06:00:00.000Z') });
+    expect(whenRange('this_week', now, AUSTIN)).toEqual({ from: now, to: new Date('2026-11-23T06:00:00.000Z') });
+    expect(whenRange('this_weekend', now, AUSTIN)).toEqual({ from: new Date('2026-11-21T06:00:00.000Z'), to: new Date('2026-11-23T06:00:00.000Z') });
   });
 });

@@ -1,10 +1,11 @@
 import { and, asc, count, desc, gt, gte, ilike, inArray, isNull, lt, lte, ne, notInArray, or, eq, sql, type SQL } from 'drizzle-orm';
-import { MARKET_TIME_ZONE } from '@/contracts/common';
+import type { TimeZone } from '@/contracts/common';
 import type { CategorySlug, FindWorkPageData, TaskBoardQueryState, TaskBoardSort, TaskBoardTime, TaskPublicView } from '@/contracts';
 import { taskTypesFor } from '@/shared/task-types';
 import type { Db } from '@/platform/db/connect';
 import { users } from '../accounts/schema';
 import { areas, categories, markets } from '../markets/schema';
+import { marketTimeZone } from '../markets/time-zone';
 import { BOARD_PAGE_SIZE, toTaskPublicView, whenRange, type PublicTaskRow } from './projections';
 import { POSTED_MS, TIME_SLOTS } from '@/shared/board-match';
 import { taskMarks, tasks } from './schema';
@@ -83,6 +84,8 @@ export function openIn(marketId: string, now: Date, rows: RowScope = 'all'): SQL
 /** The scope the board's filters apply in: the market, the time, its neighborhoods by slug, and which rows count. */
 export interface BoardScope {
   marketId: string;
+  /** The market's zone: "today", "this weekend" and "mornings" are on its clock (completion plan 8.1). */
+  timeZone: TimeZone;
   now: Date;
   areaIds: ReadonlyMap<string, string>;
   /** `real` for the public where samples are hidden (src/shared/sample-data.ts). Saved-search alerts keep `all`. */
@@ -97,16 +100,16 @@ export type BoardFilterKey = 'category' | 'type' | 'q' | 'areas' | 'price' | 'pr
 /** What a client offers for the whole task: the fixed price, or the rate × the estimated hours. */
 export const taskPriceCents = sql<number>`coalesce(${tasks.budgetCents}, round(${tasks.hourlyRateCents} * coalesce(${tasks.estimatedHours}, 1)))`;
 
-/** Minutes after midnight, Central time: morning before noon, afternoon to 5 pm, evening after. */
+/** Minutes after midnight on the market's own clock: morning before noon, afternoon to 5 pm, evening after. */
 export { TIME_SLOTS };
 
-const localMinutes = (column: typeof tasks.windowStart | typeof tasks.windowEnd) =>
-  sql`(extract(hour from (${column} at time zone ${MARKET_TIME_ZONE})) * 60 + extract(minute from (${column} at time zone ${MARKET_TIME_ZONE})))`;
+const localMinutes = (column: typeof tasks.windowStart | typeof tasks.windowEnd, timeZone: TimeZone) =>
+  sql`(extract(hour from (${column} at time zone ${timeZone})) * 60 + extract(minute from (${column} at time zone ${timeZone})))`;
 
-/** The window touches the slot (a flexible day touches every slot). */
-export function timeCondition(time: TaskBoardTime): SQL {
+/** The window touches the slot on the market's clock (a flexible day touches every slot). */
+export function timeCondition(time: TaskBoardTime, timeZone: TimeZone): SQL {
   const [from, to] = TIME_SLOTS[time];
-  return or(eq(tasks.flexible, true), and(sql`${localMinutes(tasks.windowStart)} < ${to}`, sql`${localMinutes(tasks.windowEnd)} > ${from}`))!;
+  return or(eq(tasks.flexible, true), and(sql`${localMinutes(tasks.windowStart, timeZone)} < ${to}`, sql`${localMinutes(tasks.windowEnd, timeZone)} > ${from}`))!;
 }
 
 /** Each word in the title or the description (case-insensitive; LIKE wildcards in the words are literal). */
@@ -155,10 +158,10 @@ export function boardConditions(query: BoardFilters, scope: BoardScope, skip?: B
   }
   if (query.pricing && skip !== 'pricing') conditions.push(eq(tasks.pricingType, query.pricing));
   if (query.posted && skip !== 'posted') conditions.push(gte(tasks.publishedAt, new Date(now.getTime() - POSTED_MS[query.posted])));
-  if (query.times?.length && skip !== 'times') conditions.push(or(...query.times.map(timeCondition))!);
+  if (query.times?.length && skip !== 'times') conditions.push(or(...query.times.map((time) => timeCondition(time, scope.timeZone)))!);
   if (query.few && skip !== 'few') conditions.push(lte(tasks.offerCount, 1));
   if (skip !== 'when') {
-    const range = whenRange(query.when, now);
+    const range = whenRange(query.when, now, scope.timeZone);
     if (range) conditions.push(lt(tasks.windowStart, range.to), gt(tasks.windowEnd, range.from));
   }
   if (query.remoteOnly && skip !== 'remote') conditions.push(eq(tasks.mode, 'remote'));
@@ -182,11 +185,12 @@ export async function marketAreaIds(db: Db, marketId: string): Promise<Map<strin
 /** One page of the board's matching tasks, in its order. */
 export async function listBoardTasks(
   db: Db,
-  options: { marketId: string; query: BoardFilters & Pick<TaskBoardQueryState, 'sort' | 'page'>; now: Date; areaIds?: ReadonlyMap<string, string>; rows?: RowScope },
+  options: { marketId: string; query: BoardFilters & Pick<TaskBoardQueryState, 'sort' | 'page'>; now: Date; areaIds?: ReadonlyMap<string, string>; rows?: RowScope; timeZone?: TimeZone },
 ): Promise<{ tasks: TaskPublicView[]; totalCount: number }> {
   const { query, now } = options;
   const areaIds = options.areaIds ?? (query.areas?.length ? await marketAreaIds(db, options.marketId) : new Map<string, string>());
-  const where = and(...boardConditions(query, { marketId: options.marketId, now, areaIds, rows: options.rows }));
+  const timeZone = options.timeZone ?? (await marketTimeZone(db, options.marketId));
+  const where = and(...boardConditions(query, { marketId: options.marketId, timeZone, now, areaIds, rows: options.rows }));
 
   const [total] = await db
     .select({ value: count() })
@@ -235,7 +239,8 @@ export async function listFeedTasks(
   // find work's: blocked people, the distance, the helper's hidden and saved tasks.
   const areaIds = new Map((await db.select({ id: areas.id, slug: areas.slug }).from(areas).where(eq(areas.marketId, options.marketId))).map((area) => [area.slug, area.id]));
   const { sort: _sort, view: _view, distance: _distance, saved: _saved, page: _page, ...filters } = query;
-  const conditions = boardConditions({ ...filters, areas: filters.areas ?? [], times: filters.times ?? [], few: filters.few ?? false }, { marketId: options.marketId, now, areaIds });
+  const timeZone = await marketTimeZone(db, options.marketId);
+  const conditions = boardConditions({ ...filters, areas: filters.areas ?? [], times: filters.times ?? [], few: filters.few ?? false }, { marketId: options.marketId, timeZone, now, areaIds });
   if (options.excludePosterIds.length > 0) conditions.push(notInArray(tasks.posterUserId, options.excludePosterIds));
   const miles = center ? milesFrom(center) : sql<number | null>`null`;
   if (center && options.maxMiles !== null) {

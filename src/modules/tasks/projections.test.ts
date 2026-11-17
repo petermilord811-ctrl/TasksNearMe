@@ -35,6 +35,8 @@ const deskRow: PublicTaskRow = {
   },
 };
 
+const AUSTIN = 'America/Chicago';
+
 describe('toTaskPublicView', () => {
   it('matches the canonical public desk task', () => {
     expect(toTaskPublicView(deskRow)).toEqual({ ...deskPublicTask, poster: { ...deskPublicTask.poster, ratingAsClient: undefined } });
@@ -101,15 +103,15 @@ describe('board query', () => {
   it('turns "when" into market-calendar ranges', () => {
     // Tuesday, Nov 17, 2026, 9:00 am in Austin.
     const now = new Date('2026-11-17T15:00:00.000Z');
-    expect(whenRange('any', now)).toBeNull();
-    expect(whenRange('today', now)).toEqual({ from: now, to: new Date('2026-11-18T06:00:00.000Z') });
-    expect(whenRange('this_week', now)).toEqual({ from: now, to: new Date('2026-11-23T06:00:00.000Z') });
-    expect(whenRange('this_weekend', now)).toEqual({
+    expect(whenRange('any', now, AUSTIN)).toBeNull();
+    expect(whenRange('today', now, AUSTIN)).toEqual({ from: now, to: new Date('2026-11-18T06:00:00.000Z') });
+    expect(whenRange('this_week', now, AUSTIN)).toEqual({ from: now, to: new Date('2026-11-23T06:00:00.000Z') });
+    expect(whenRange('this_weekend', now, AUSTIN)).toEqual({
       from: new Date('2026-11-21T06:00:00.000Z'),
       to: new Date('2026-11-23T06:00:00.000Z'),
     });
     // On Sunday the weekend is what's left of today.
     const sunday = new Date('2026-11-22T18:00:00.000Z');
-    expect(whenRange('this_weekend', sunday)).toEqual({ from: sunday, to: new Date('2026-11-23T06:00:00.000Z') });
+    expect(whenRange('this_weekend', sunday, AUSTIN)).toEqual({ from: sunday, to: new Date('2026-11-23T06:00:00.000Z') });
   });
 });

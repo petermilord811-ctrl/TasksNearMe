@@ -153,6 +153,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
             {filtered && <p className="text-sm font-semibold tabular-nums" role="status">{t('results', { count: data.totalCount })}</p>}
             <BoardLive
               marketSlug={market.slug}
+              timeZone={market.timeZone}
               query={{ category: query.category, type: query.type, q: query.q, areas: query.areas, minPrice: query.minPrice, maxPrice: query.maxPrice, pricing: query.pricing, posted: query.posted, times: query.times, few: query.few, when: query.when, remoteOnly: query.remoteOnly }}
               areas={data.facets.areas.map(({ slug, name }) => ({ slug, name }))}
               shownIds={data.tasks.map((task) => task.id)}

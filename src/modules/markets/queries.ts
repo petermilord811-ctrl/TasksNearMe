@@ -44,6 +44,7 @@ export async function getMarketView(market: MarketRow, database: Db = db): Promi
     state: market.state,
     status: market.status as MarketView['status'],
     areaNames: areaRows.map((row) => row.name),
+    timeZone: market.timeZone,
     // "Within about N miles": round down so we never promise more than we cover.
     serviceRadiusMiles: Math.floor(market.serviceRadiusKm / KM_PER_MILE),
   };

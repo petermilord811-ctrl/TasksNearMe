@@ -27,7 +27,8 @@ let areaRows: { id: string; slug: string; name: string }[] = [];
 let areaIds = new Map<string, string>();
 
 const query = (params: Record<string, string> = {}): TaskBoardQueryState => parseTaskBoardQuery(params);
-const scope = () => ({ marketId, now, areaIds });
+// Austin's board, on its own clock (completion plan 8.1).
+const scope = () => ({ marketId, timeZone: 'America/Chicago', now, areaIds });
 
 interface Snapshot {
   tx: Db;

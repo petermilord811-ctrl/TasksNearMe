@@ -10,9 +10,11 @@ import {
   type TaskBoardQueryState,
   type TaskBoardSection,
   type TaskPublicView,
+  type TimeZone,
 } from '@/contracts';
 import { areas, categories } from '@/modules/markets/schema';
 import { findPublicMarket, getMarketView, listCategoryViews } from '@/modules/markets/queries';
+import { marketTimeZone } from '@/modules/markets/time-zone';
 import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
 import { budgetSpread } from '@/shared/budget-spread';
@@ -43,7 +45,7 @@ export async function boardFacets(database: Db, query: TaskBoardQueryState, scop
   const typeField = query.category ? taskTypesFor(query.category)[0]?.field : undefined;
   const since = (days: number) => new Date(scope.now.getTime() - days * 86_400_000);
   const range = (key: 'today' | 'this_week' | 'this_weekend') => {
-    const span = whenRange(key, scope.now)!;
+    const span = whenRange(key, scope.now, scope.timeZone)!;
     return sql`${tasks.windowStart} < ${span.to} and ${tasks.windowEnd} > ${span.from}`;
   };
   const preset = (key: TaskBoardPricePreset) => {
@@ -56,7 +58,7 @@ export async function boardFacets(database: Db, query: TaskBoardQueryState, scop
     database.select({ area: tasks.publicAreaId, n: count() }).from(tasks).innerJoin(categories, joined).where(where('areas')).groupBy(tasks.publicAreaId),
     database.select({ pricing: tasks.pricingType, n: count() }).from(tasks).innerJoin(categories, joined).where(where('pricing')).groupBy(tasks.pricingType),
     database.select({ '24h': sum(sql`${tasks.publishedAt} >= ${since(1)}`), '3d': sum(sql`${tasks.publishedAt} >= ${since(3)}`), '7d': sum(sql`${tasks.publishedAt} >= ${since(7)}`) }).from(tasks).innerJoin(categories, joined).where(where('posted')),
-    database.select({ morning: sum(timeCondition('morning')), afternoon: sum(timeCondition('afternoon')), evening: sum(timeCondition('evening')) }).from(tasks).innerJoin(categories, joined).where(where('times')),
+    database.select({ morning: sum(timeCondition('morning', scope.timeZone)), afternoon: sum(timeCondition('afternoon', scope.timeZone)), evening: sum(timeCondition('evening', scope.timeZone)) }).from(tasks).innerJoin(categories, joined).where(where('times')),
     database.select({ today: sum(range('today')), this_week: sum(range('this_week')), this_weekend: sum(range('this_weekend')) }).from(tasks).innerJoin(categories, joined).where(where('when')),
     database.select({ under50: sum(preset('under50')), from50: sum(preset('from50')), from100: sum(preset('from100')), from200: sum(preset('from200')) }).from(tasks).innerJoin(categories, joined).where(where('price')),
     database.select({ n: sum(lte(tasks.offerCount, 1)) }).from(tasks).innerJoin(categories, joined).where(where('few')),
@@ -134,8 +136,10 @@ export async function boardSections(database: Db, query: TaskBoardQueryState, sc
 }
 
 /** Real counts for the market: open tasks, and the ones posted since midnight (market time). `rows` as in `openIn`. */
-export async function boardStats(database: Db, marketId: string, now: Date, rows: RowScope = 'all'): Promise<TaskBoardPageData['stats']> {
-  const midnight = new Date(marketLocalToUtc(marketDayKey(now), '00:00'));
+/** The market's open count, and what was posted since its own midnight ("posted today"). */
+export async function boardStats(database: Db, marketId: string, now: Date, rows: RowScope = 'all', timeZone?: TimeZone): Promise<TaskBoardPageData['stats']> {
+  const zone = timeZone ?? (await marketTimeZone(database, marketId));
+  const midnight = new Date(marketLocalToUtc(marketDayKey(now, zone), '00:00', zone));
   const [row] = await database
     .select({ open: count(), today: sql<number>`coalesce(sum(case when ${tasks.publishedAt} >= ${midnight} then 1 else 0 end), 0)::int` })
     .from(tasks)
@@ -163,14 +167,14 @@ export async function loadTaskBoard(
   const areaRows = await db.select({ id: areas.id, slug: areas.slug, name: areas.name }).from(areas).where(eq(areas.marketId, market.id));
   const areaIds = new Map(areaRows.map((area) => [area.slug, area.id]));
   const rows = options.rows ?? 'all';
-  const scope: Scope = { marketId: market.id, now, areaIds, rows };
+  const scope: Scope = { marketId: market.id, timeZone: market.timeZone, now, areaIds, rows };
   // By neighborhood across several (or all) of them; one neighborhood, by day, or one list are paged instead.
   const sectioned = effective.group === 'area' && effective.areas.length !== 1;
   const [view, categoryViews, facets, stats, listing] = await Promise.all([
     getMarketView(market),
     listCategoryViews(market.id),
     boardFacets(db, effective, scope, areaRows),
-    boardStats(db, market.id, now, rows),
+    boardStats(db, market.id, now, rows, market.timeZone),
     sectioned
       ? boardSections(db, effective, scope, areaRows).then((sections) => ({ sections, tasks: sections.flatMap((section) => section.tasks), totalCount: sections.reduce((sum, section) => sum + section.count, 0) }))
       : listBoardTasks(db, { marketId: market.id, query: effective, now, areaIds, rows }).then((page) => ({ sections: undefined, ...page })),
@@ -186,7 +190,7 @@ export async function loadTaskBoard(
       pageCount: listing.sections ? 1 : Math.max(1, Math.ceil(listing.totalCount / BOARD_PAGE_SIZE)),
       facets,
       stats,
-      today: marketDayKey(now),
+      today: marketDayKey(now, market.timeZone),
       ...(options.heading ? { heading: options.heading } : {}),
     },
     now: now.toISOString(),

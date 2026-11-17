@@ -50,7 +50,7 @@ const posted = (id: string, change: Partial<TaskPublicView> = {}): TaskPublicVie
 function renderLive(props: Partial<Parameters<typeof BoardLive>[0]> = {}) {
   return render(<NextIntlClientProvider locale="en" timeZone="America/Chicago" messages={messages}>
     <div id="board-list" />
-    <BoardLive marketSlug="austin" query={{ areas: [], times: [], few: false, when: 'any', remoteOnly: false, category: 'furniture-assembly' }} areas={[{ slug: 'mueller', name: 'Mueller' }]} shownIds={['tsk_on_page']} listId="board-list" {...props} />
+    <BoardLive marketSlug="austin" timeZone="America/Chicago" query={{ areas: [], times: [], few: false, when: 'any', remoteOnly: false, category: 'furniture-assembly' }} areas={[{ slug: 'mueller', name: 'Mueller' }]} shownIds={['tsk_on_page']} listId="board-list" {...props} />
   </NextIntlClientProvider>);
 }
 
