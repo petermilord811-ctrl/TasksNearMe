@@ -108,7 +108,7 @@ describe('bounces and complaints', () => {
 
   it('skips notification email to a suppressed address, but not texts', () => {
     const now2 = new Date('2026-11-12T18:00:00.000Z');
-    expect(planDelivery({ type: 'booking_confirmed', channel: 'email', enabled: true, hasAddress: true, suppressed: true, now: now2 })).toEqual({ action: 'skip', reason: 'email_suppressed' });
-    expect(planDelivery({ type: 'booking_confirmed', channel: 'sms', enabled: true, hasAddress: true, suppressed: true, now: now2 })).toEqual({ action: 'send' });
+    expect(planDelivery({ type: 'booking_confirmed', channel: 'email', enabled: true, hasAddress: true, suppressed: true, timeZone: 'America/Chicago', now: now2 })).toEqual({ action: 'skip', reason: 'email_suppressed' });
+    expect(planDelivery({ type: 'booking_confirmed', channel: 'sms', enabled: true, hasAddress: true, suppressed: true, timeZone: 'America/Chicago', now: now2 })).toEqual({ action: 'send' });
   });
 });

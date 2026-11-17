@@ -46,4 +46,12 @@ describe('in Spanish', () => {
     expect(spanish.text).not.toBe(english.text);
     expect(spanish.push.body).toBe(spanish.subject);
   });
+  it('names times in the recipient’s market zone (plan 8.1)', () => {
+    const skipped = { ...base, title: 'Weekly cleaning', type: 'series_visit_skipped' as const, params: { at: '2026-11-21T15:30:00.000Z', by: 'helper' as const } };
+    expect(deliveryContent(skipped, 'en', 'America/New_York').subject).toContain('Sat, Nov 21 · 10:30 am');
+    expect(deliveryContent(skipped, 'en', 'America/Chicago').subject).toContain('Sat, Nov 21 · 9:30 am');
+    // A calendar day stays that day, wherever the market is.
+    const paused = { ...base, title: 'Weekly cleaning', type: 'series_paused' as const, params: { day: '2026-12-05' } };
+    expect(deliveryContent(paused, 'es', 'America/New_York').subject).toContain('sáb, 5 de dic');
+  });
 });

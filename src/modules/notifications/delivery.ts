@@ -1,11 +1,12 @@
 import { and, asc, count, eq, gte, inArray, isNull, lt, lte, or } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
-import type { AppLocale, AttentionTarget, NotificationTopic, NotificationType, NotificationView } from '@/contracts';
+import type { AppLocale, AttentionTarget, NotificationTopic, NotificationType, NotificationView, TimeZone } from '@/contracts';
 import { DEFAULT_LOCALE, localeOrDefault, routes } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
 import { createEmailProvider, type EmailProvider } from '@/integrations/email';
 import { createSmsSender, type SmsSender } from '@/integrations/sms';
 import { users } from '@/modules/accounts/schema';
+import { marketTimeZones } from '@/modules/markets/time-zone';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { formatDate, formatDateTime, formatMoney, marketLocalToUtc } from '@/shared/format';
@@ -86,7 +87,7 @@ const appUrl = () => (process.env.APP_URL ?? 'http://localhost:3000').replace(/\
  * One notification as an email (subject, text, designed version, unsubscribe headers), a text message and a
  * push, in the recipient's language.
  */
-export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'> & { id?: string }, locale: AppLocale = DEFAULT_LOCALE) {
+export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'> & { id?: string }, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone) {
   const t = tFor(locale);
   const params: NonNullable<NotificationView['params']> = row.params ?? {};
   const sentence = t(`types.${row.type as NotificationType}`, {
@@ -101,7 +102,8 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     days: params.days ?? 0,
     track: params.track ?? 'other',
     hasDate: params.at === undefined && params.day === undefined ? 'no' : 'yes',
-    date: params.at ? formatDateTime(params.at, locale) : params.day ? formatDate(marketLocalToUtc(params.day, '12:00'), { locale }) : '',
+    // In the recipient's market zone (completion plan 8.1): their own clock, the booking's in practice.
+    date: params.at ? formatDateTime(params.at, locale, timeZone) : params.day ? formatDate(marketLocalToUtc(params.day, '12:00', timeZone), { locale, ...(timeZone ? { timeZone } : {}) }) : '',
     by: params.by ?? 'other',
     badge: params.badge ?? 'other',
     tier: params.tier ?? 1,
@@ -165,16 +167,19 @@ interface Person {
   pushDevices: number;
   /** The language their notifications go out in. */
   locale: AppLocale;
+  /** Their home market's time zone: quiet hours, and the times their notifications name (completion plan 8.1). */
+  timeZone: TimeZone;
 }
 
 async function peopleOf(db: Db, userIds: string[]): Promise<Map<string, Person>> {
   if (userIds.length === 0) return new Map();
   const [rows, prefs, devices] = await Promise.all([
-    db.select({ id: users.id, email: users.email, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt, locale: users.locale }).from(users).where(inArray(users.id, userIds)),
+    db.select({ id: users.id, email: users.email, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt, locale: users.locale, homeMarketId: users.homeMarketId }).from(users).where(inArray(users.id, userIds)),
     db.select().from(notificationPreferences).where(inArray(notificationPreferences.userId, userIds)),
     db.select({ userId: pushSubscriptions.userId, devices: count() }).from(pushSubscriptions).where(inArray(pushSubscriptions.userId, userIds)).groupBy(pushSubscriptions.userId),
   ]);
   const devicesOf = new Map(devices.map((row) => [row.userId, row.devices]));
+  const zones = await marketTimeZones(db, rows.map((row) => row.homeMarketId));
   const emails = rows.map((row) => row.email?.toLowerCase()).filter((email): email is string => Boolean(email));
   const suppressed = new Set(
     emails.length > 0 ? (await db.select({ email: emailSuppressions.email }).from(emailSuppressions).where(inArray(emailSuppressions.email, emails))).map((row) => row.email) : [],
@@ -182,7 +187,7 @@ async function peopleOf(db: Db, userIds: string[]): Promise<Map<string, Person>>
   const people = new Map<string, Person>(
     rows.map((row) => [
       row.id,
-      { email: row.email || null, emailSuppressed: suppressed.has(row.email?.toLowerCase() ?? ''), phone: row.phone, phoneVerified: row.phoneVerifiedAt !== null, preferences: new Map(), pushDevices: devicesOf.get(row.id) ?? 0, locale: localeOrDefault(row.locale) },
+      { email: row.email || null, emailSuppressed: suppressed.has(row.email?.toLowerCase() ?? ''), phone: row.phone, phoneVerified: row.phoneVerifiedAt !== null, preferences: new Map(), pushDevices: devicesOf.get(row.id) ?? 0, locale: localeOrDefault(row.locale), timeZone: zones.get(row.homeMarketId)! },
     ]),
   );
   for (const pref of prefs) people.get(pref.userId)?.preferences.set(`${pref.topic}:${pref.channel}`, pref.enabled === 'true');
@@ -194,9 +199,9 @@ const addressOf = (person: Person, channel: DeliveryChannel) =>
 const channelOn = (person: Person, topic: NotificationTopic, channel: DeliveryChannel) => (channel === 'push' ? pushOn(topic) : preferenceOn(person.preferences, topic, channel));
 
 /** Sends a claimed delivery and records the outcome: sent, or failed with the next try. */
-async function attempt(db: Db, providers: DeliveryProviders, delivery: DeliveryRow, row: NotificationRow, to: string, now: Date, locale: AppLocale): Promise<boolean> {
+async function attempt(db: Db, providers: DeliveryProviders, delivery: DeliveryRow, row: NotificationRow, to: string, now: Date, person: Pick<Person, 'locale' | 'timeZone'>): Promise<boolean> {
   try {
-    await sendOne(db, providers, delivery, row, to, deliveryContent(row, locale), now);
+    await sendOne(db, providers, delivery, row, to, deliveryContent(row, person.locale, person.timeZone), now);
     await db.update(notificationDeliveries).set({ status: 'sent', sentAt: now, attempts: delivery.attempts + 1, reason: null, sendAfter: null, updatedAt: now }).where(eq(notificationDeliveries.id, delivery.id));
     return true;
   } catch (error) {
@@ -244,6 +249,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
         hasAddress: to !== null,
         suppressed: person.emailSuppressed,
         now,
+        timeZone: person.timeZone,
       });
       const [claimed] = await db
         .insert(notificationDeliveries)
@@ -260,7 +266,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
         })
         .onConflictDoNothing({ target: [notificationDeliveries.notificationId, notificationDeliveries.channel] })
         .returning();
-      if (claimed && plan.action === 'send' && to && (await attempt(db, providers, claimed, notification, to, now, person.locale))) sent += 1;
+      if (claimed && plan.action === 'send' && to && (await attempt(db, providers, claimed, notification, to, now, person))) sent += 1;
     }
   }
 
@@ -300,7 +306,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
         ),
       )
       .returning();
-    if (claimed && claimed.status === 'sending' && to && person && (await attempt(db, providers, claimed, notification, to, now, person.locale))) sent += 1;
+    if (claimed && claimed.status === 'sending' && to && person && (await attempt(db, providers, claimed, notification, to, now, person))) sent += 1;
   }
   return { sent };
 }

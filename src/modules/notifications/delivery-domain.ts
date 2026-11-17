@@ -1,4 +1,4 @@
-import { NOTIFICATION_CHANNELS, type NotificationChannel, type NotificationTopic, type NotificationType } from '@/contracts';
+import { NOTIFICATION_CHANNELS, type NotificationChannel, type NotificationTopic, type NotificationType, type TimeZone } from '@/contracts';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
@@ -108,7 +108,7 @@ export function preferenceOn(stored: ReadonlyMap<string, boolean>, topic: Notifi
   return stored.get(`${topic}:${channel}`) ?? DEFAULT_PREFERENCES[topic].includes(channel);
 }
 
-/** Texts that can wait aren't sent between 9 pm and 8 am, market time. */
+/** Texts that can wait aren't sent between 9 pm and 8 am in the recipient's market (their own clock). */
 export const QUIET_HOURS = { from: 21, until: 8 } as const;
 
 function nextDayKey(day: string): string {
@@ -116,13 +116,13 @@ function nextDayKey(day: string): string {
   return new Date(Date.UTC(year!, month! - 1, date! + 1)).toISOString().slice(0, 10);
 }
 
-/** When quiet hours end, if `now` is inside them (8 am market time, daylight saving included). */
-export function quietHoursEnd(now: Date): Date | null {
-  const hour = Number(marketClockTime(now).slice(0, 2));
+/** When quiet hours end, if `now` is inside them (8 am in the recipient's market zone, daylight saving included). */
+export function quietHoursEnd(now: Date, timeZone: TimeZone): Date | null {
+  const hour = Number(marketClockTime(now, timeZone).slice(0, 2));
   if (hour >= QUIET_HOURS.until && hour < QUIET_HOURS.from) return null;
-  const today = marketDayKey(now);
+  const today = marketDayKey(now, timeZone);
   const day = hour >= QUIET_HOURS.from ? nextDayKey(today) : today;
-  return new Date(marketLocalToUtc(day, `${String(QUIET_HOURS.until).padStart(2, '0')}:00`));
+  return new Date(marketLocalToUtc(day, `${String(QUIET_HOURS.until).padStart(2, '0')}:00`, timeZone));
 }
 
 /**
@@ -149,13 +149,15 @@ export function planDelivery(input: {
   /** The email address bounced or complained (email_suppressions): nothing more goes to it. */
   suppressed?: boolean;
   now: Date;
+  /** The recipient's market zone (their home market), for quiet hours. */
+  timeZone: TimeZone;
 }): DeliveryPlan {
   if (!input.enabled) return { action: 'skip', reason: 'preference_off' };
   if (!input.hasAddress) return { action: 'skip', reason: missingAddressReason(input.channel) };
   if (input.channel === 'email' && input.suppressed) return { action: 'skip', reason: 'email_suppressed' };
   // Texts and pushes that can wait don't buzz anyone at night.
   if (input.channel !== 'email' && !URGENT_TYPES.has(input.type)) {
-    const until = quietHoursEnd(input.now);
+    const until = quietHoursEnd(input.now, input.timeZone);
     if (until) return { action: 'hold', until };
   }
   return { action: 'send' };
