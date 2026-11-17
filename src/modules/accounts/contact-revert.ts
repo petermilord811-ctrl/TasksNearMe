@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, inArray, isNotNull, lt, lte, ne, notInArray, or } from 'drizzle-orm';
-import type { ActionResult, ContactRevertPageData } from '@/contracts';
-import { SOCIAL_PROVIDERS } from '@/contracts';
+import type { ActionResult, ContactRevertPageData, TimeZone } from '@/contracts';
+import { MARKET_TIME_ZONE, SOCIAL_PROVIDERS } from '@/contracts';
+import { markets } from '@/modules/markets/schema';
 import { privacyRequests } from '@/modules/notifications/schema';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
 import { rateLimited } from '@/platform/actions/results';
@@ -103,7 +104,7 @@ export async function redeemContactRevertLink(deps: RedeemDeps, token: unknown):
     const row = await rowOf(tx, id, true);
     if (!row || !checkContactRevertLink(String(token), claimOf(row), now).ok) return false;
     const [user] = await tx
-      .select({ id: users.id, email: users.email, phone: users.phone, status: users.status, contactHoldAt: users.contactHoldAt })
+      .select({ id: users.id, email: users.email, phone: users.phone, status: users.status, contactHoldAt: users.contactHoldAt, homeMarketId: users.homeMarketId })
       .from(users)
       .where(eq(users.id, row.userId))
       .limit(1)
@@ -123,7 +124,9 @@ export async function redeemContactRevertLink(deps: RedeemDeps, token: unknown):
     await tx.update(phoneVerifications).set({ status: 'canceled', updatedAt: now }).where(and(eq(phoneVerifications.userId, user.id), eq(phoneVerifications.status, 'pending')));
     if (!user.contactHoldAt) await tx.update(users).set({ contactHoldAt: now }).where(eq(users.id, user.id));
 
-    const caseId = await openCase(tx, { row, user, revert, sessionsEnded: ended.length, since, removedKeys, removedLinks, now });
+    const [market] = await tx.select({ timeZone: markets.timeZone }).from(markets).where(eq(markets.id, user.homeMarketId)).limit(1);
+    const timeZone = market?.timeZone ?? MARKET_TIME_ZONE;
+    const caseId = await openCase(tx, { timeZone, row, user, revert, sessionsEnded: ended.length, since, removedKeys, removedLinks, now });
     const audit = (action: string, metadata: Record<string, unknown>) =>
       ({ id: newId('aud'), at: now.toISOString(), actorId: null, actorRole: 'system', action, targetType: 'user', targetId: user.id, metadata: { via: 'not_me_link', revertId: row.id, ...metadata }, ip });
     await tx.insert(auditLog).values([
@@ -175,6 +178,8 @@ const DESCRIPTION: Record<Kind, string> = {
 };
 
 interface CaseFacts {
+  /** The account's home market's zone: the note's times are shown in it, with its abbreviation. */
+  timeZone: TimeZone;
   row: typeof contactChangeReverts.$inferSelect;
   user: { id: string; email: string; phone: string | null };
   revert: Revert;
@@ -188,7 +193,8 @@ interface CaseFacts {
 /** What trust and safety need to know, for the case's internal note (staff only, English like the staff tools). */
 async function noteFor(tx: Tx, facts: CaseFacts): Promise<string> {
   const { row, user, revert } = facts;
-  const at = (date: Date) => formatDateTime(date, 'en');
+  const zoneName = (date: Date) => new Intl.DateTimeFormat('en-US', { timeZone: facts.timeZone, timeZoneName: 'short' }).formatToParts(date).find((part) => part.type === 'timeZoneName')?.value ?? '';
+  const at = (date: Date) => `${formatDateTime(date, 'en', facts.timeZone)} ${zoneName(date)}`.trim();
   const lines: string[] = [];
   if (row.kind === 'email') {
     lines.push(`“Not you?” link from the email change notice sent to the old address. The email changed from ${row.previousValue} to ${row.newValue} on ${at(row.createdAt)}.`);

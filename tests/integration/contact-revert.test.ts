@@ -168,6 +168,8 @@ describe('using the "Not you?" link after an email change', () => {
     const [note] = await db.select().from(supportCaseEvents).where(eq(supportCaseEvents.caseId, caseId));
     expect(note).toMatchObject({ kind: 'note', visibility: 'internal' });
     expect(note!.body).toContain(`Undone: the account uses ${old()} again.`);
+    // Times in the account's market's zone, named (Austin's here).
+    expect(note!.body).toMatch(/ on .+ · .+ C[SD]T\./);
     expect(note!.body).toContain('Signed out everywhere (2 sessions).');
     expect(note!.body).toContain('the passkey “Before”, the passkey “Phone”, Google');
     const [event] = await db.select().from(outboxEvents).where(eq(outboxEvents.aggregateId, caseId));
