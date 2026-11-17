@@ -59,7 +59,7 @@ describe('saved searches', () => {
       await db.delete(blocks).where(and(eq(blocks.blockerId, ana), eq(blocks.blockedId, 'usr_chris')));
     }
     // Ten alerts already today: the eleventh waits.
-    const today = new Date(marketLocalToUtc(marketDayKey(now), '00:10'));
+    const today = new Date(marketLocalToUtc(marketDayKey(now, 'America/Chicago'), '00:10', 'America/Chicago'));
     await db.insert(notifications).values(Array.from({ length: INSTANT_ALERTS_PER_DAY }, () => ({ id: newId('ntf'), userId: ana, type: 'saved_search_match', target: { kind: 'saved_search' as const, searchId: 'x' }, sourceEventId: newId('evt'), createdAt: today > now ? now : today })));
     try {
       expect((await instantSearchMatches(db, taskId, now)).some((match) => match.userId === ana)).toBe(false);
@@ -72,7 +72,7 @@ describe('saved searches', () => {
     const [search] = await db.select().from(savedSearches).where(and(eq(savedSearches.userId, ana), eq(savedSearches.name, 'Furniture in Mueller')));
     await setSavedSearchAlert(db, ana, search!.id, 'daily', now);
     // Last sent yesterday morning; it's 9 am now.
-    const nine = new Date(marketLocalToUtc(marketDayKey(now), '09:00'));
+    const nine = new Date(marketLocalToUtc(marketDayKey(now, 'America/Chicago'), '09:00', 'America/Chicago'));
     await db.update(savedSearches).set({ lastDigestAt: new Date(nine.getTime() - 25 * 3_600_000) }).where(eq(savedSearches.id, search!.id));
     await db.update(tasks).set({ publishedAt: new Date(nine.getTime() - 3_600_000) }).where(eq(tasks.id, taskId));
     await runSavedSearchDigests(db, nine);

@@ -244,14 +244,14 @@ describe('regular visits', () => {
       templateTaskId: template.id,
       proposalId: 'prp_wp_series',
       cadence: 'weekly',
-      anchorDate: marketDayKey(template.start),
+      anchorDate: marketDayKey(template.start, 'America/Chicago'),
       startTime: '09:00',
       durationMinutes: 180,
       pricingType: 'fixed',
       priceCents: 6000,
       scopeText: desk!.description,
       status: 'paused',
-      pausedUntil: marketDayKey(new Date(Date.now() + 8 * DAY)),
+      pausedUntil: marketDayKey(new Date(Date.now() + 8 * DAY), 'America/Chicago'),
       changedBy: 'poster',
     });
     const visitStart = visitTask.start;
@@ -400,7 +400,7 @@ describe('rebook proposals', () => {
     const [task] = await db.select({ description: tasks.description }).from(tasks).where(eq(tasks.id, past.id));
     await db.insert(bookings).values({ id: PAST, taskId: past.id, posterUserId: CLIENT, helperUserId: HELPER, marketId: 'mkt_austin', policyVersionId: policy.id, status: 'completed', completedVia: 'poster', startAt: past.start, confirmedAt: past.start, completedAt: new Date(past.start.getTime() + 4 * HOUR) });
     await db.insert(bookingTerms).values({ id: 'btm_wp_past', bookingId: PAST, version: 1, pricingType: 'fixed', priceCents: 6000, breakdown: quoteBreakdown(policy.fees, { type: 'fixed', priceCents: 6000 }), scopeText: task!.description, startAt: past.start });
-    const proposal = { date: marketDayKey(new Date(Date.now() + 3 * DAY)), startTime: '10:00', pricing: { type: 'fixed' as const, priceCents: 6000 }, message: 'Same as last time?' };
+    const proposal = { date: marketDayKey(new Date(Date.now() + 3 * DAY), 'America/Chicago'), startTime: '10:00', pricing: { type: 'fixed' as const, priceCents: 6000 }, message: 'Same as last time?' };
     expect(await proposeRebook(db, HELPER, PAST, proposal, now())).toMatchObject({ ok: true, code: 'sent' });
     const [row] = await db.select().from(rebookProposals).where(and(eq(rebookProposals.fromBookingId, PAST), eq(rebookProposals.status, 'sent')));
     proposalId = row!.id;

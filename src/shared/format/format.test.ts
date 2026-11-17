@@ -89,11 +89,11 @@ describe('date and time in America/Chicago', () => {
 describe('marketLocalToUtc', () => {
   it('converts Austin wall-clock times to UTC across daylight saving', async () => {
     const { marketLocalToUtc } = await import('./index');
-    expect(marketLocalToUtc('2026-11-21', '10:00')).toBe('2026-11-21T16:00:00.000Z'); // CST, UTC-6
-    expect(marketLocalToUtc('2026-07-04', '10:00')).toBe('2026-07-04T15:00:00.000Z'); // CDT, UTC-5
-    expect(marketLocalToUtc('2026-11-01', '01:30')).toBe('2026-11-01T06:30:00.000Z'); // repeated hour: first
-    expect(marketLocalToUtc('2026-03-08', '02:30')).toBe('2026-03-08T08:30:00.000Z'); // skipped hour: moves forward
-    expect(() => marketLocalToUtc('2026-11-21', '10am')).toThrow(RangeError);
+    expect(marketLocalToUtc('2026-11-21', '10:00', 'America/Chicago')).toBe('2026-11-21T16:00:00.000Z'); // CST, UTC-6
+    expect(marketLocalToUtc('2026-07-04', '10:00', 'America/Chicago')).toBe('2026-07-04T15:00:00.000Z'); // CDT, UTC-5
+    expect(marketLocalToUtc('2026-11-01', '01:30', 'America/Chicago')).toBe('2026-11-01T06:30:00.000Z'); // repeated hour: first
+    expect(marketLocalToUtc('2026-03-08', '02:30', 'America/Chicago')).toBe('2026-03-08T08:30:00.000Z'); // skipped hour: moves forward
+    expect(() => marketLocalToUtc('2026-11-21', '10am', 'America/Chicago')).toThrow(RangeError);
   });
 });
 

@@ -58,8 +58,8 @@ describe('the series calendar', () => {
     const series = { timeZone: 'America/Chicago', anchorDate: '2027-03-09', startTime: '09:00', cadence: 'weekly' as const }; // DST starts Mar 14
     expect(visitStart(series, 1).toISOString()).toBe('2027-03-09T15:00:00.000Z');
     expect(visitStart(series, 2).toISOString()).toBe('2027-03-16T14:00:00.000Z');
-    expect(marketClockTime(visitStart(series, 2))).toBe('09:00');
-    expect(marketDayKey(visitStart(series, 2))).toBe('2027-03-16');
+    expect(marketClockTime(visitStart(series, 2), 'America/Chicago')).toBe('09:00');
+    expect(marketDayKey(visitStart(series, 2), 'America/Chicago')).toBe('2027-03-16');
   });
 
   it('keeps a Gainesville series at 9:00 am Eastern across the same DST change (plan 8.1)', () => {

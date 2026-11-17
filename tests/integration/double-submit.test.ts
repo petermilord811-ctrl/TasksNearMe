@@ -123,7 +123,7 @@ describe('T-05: booking twice at once', () => {
     await db.insert(tasks).values({ ...cleaning!, id: 'tsk_t05_rbk', slug: 't05-rbk-x9y8', posterUserId: client, status: 'completed', offerCount: 0, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 3 * HOUR) });
     await db.insert(bookings).values({ id: 'bkg_t05_rbk', taskId: 'tsk_t05_rbk', posterUserId: client, helperUserId: 'usr_sam', marketId: cleaning!.marketId, policyVersionId: policy!.id, status: 'completed', startAt: start, confirmedAt: start, completedAt: new Date(start.getTime() + 4 * HOUR) });
     await db.insert(bookingTerms).values({ id: 'btm_t05_rbk', bookingId: 'bkg_t05_rbk', version: 1, pricingType: 'fixed', priceCents: 9000, breakdown: quoteBreakdown(policy!.fees, { type: 'fixed', priceCents: 9000 }), scopeText: cleaning!.description, startAt: start });
-    const date = marketDayKey(new Date(Date.now() + 3 * 24 * HOUR));
+    const date = marketDayKey(new Date(Date.now() + 3 * 24 * HOUR), 'America/Chicago');
     expect(await proposeRebook(db, 'usr_sam', 'bkg_t05_rbk', { date, startTime: '10:00', pricing: { type: 'fixed', priceCents: 9000 }, message: 'Same as last time?' }, new Date())).toMatchObject({ ok: true });
     const [proposal] = await db.select().from(rebookProposals).where(and(eq(rebookProposals.fromBookingId, 'bkg_t05_rbk'), eq(rebookProposals.status, 'sent')));
 

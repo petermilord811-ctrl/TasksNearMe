@@ -21,7 +21,7 @@ import { finalBreakdown, quoteBreakdown } from '@/modules/payments/fees';
 import { marketClockTime, marketDayKey } from '@/shared/format';
 import { AUSTIN, AUSTIN_AREAS, CATEGORIES } from '../../db/seeds/data/austin';
 import { DEMO_MARKETS, demoAreaId, demoMarketId } from '../../db/seeds/demo/markets';
-import { buildDemoPlan, defaultDemoPolicies, DEMO_PREFIX, REVIEW_TAGS, type DemoPlan } from '../../db/seeds/demo/plan';
+import { buildDemoPlan, defaultDemoPolicies, DEMO_PREFIX, DEMO_TIME_ZONE, REVIEW_TAGS, type DemoPlan } from '../../db/seeds/demo/plan';
 
 const DAYTIME = new Date('2026-11-14T18:10:00.000Z'); // 12:10 in Austin
 const NIGHT = new Date('2026-11-15T07:40:00.000Z'); // 01:40 in Austin
@@ -186,12 +186,12 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
         details: task.details,
         photoIds: [],
         location: task.mode === 'remote' ? { mode: 'remote' as const } : { mode: 'local' as const, placeId: 'plc_demo' },
-        schedule: { date: marketDayKey(task.windowStart), flexible, ...(flexible ? {} : { startTime: marketClockTime(task.windowStart), endTime: marketClockTime(task.windowEnd) }) },
+        schedule: { date: marketDayKey(task.windowStart, DEMO_TIME_ZONE), flexible, ...(flexible ? {} : { startTime: marketClockTime(task.windowStart, DEMO_TIME_ZONE), endTime: marketClockTime(task.windowEnd, DEMO_TIME_ZONE) }) },
         budget: task.pricingType === 'fixed'
           ? { type: 'fixed' as const, priceCents: task.budgetCents! }
           : { type: 'hourly' as const, rateCents: task.hourlyRateCents!, estimatedHours: task.estimatedHours!, hoursCap: task.hoursCap! },
       };
-      const parsed = createTaskDraftSchema({ rules: POSTING_RULES, categories: CATEGORY_VIEWS, now: task.publishedAt.toISOString(), market: { timeZone: 'America/Chicago' } }).safeParse(draft);
+      const parsed = createTaskDraftSchema({ rules: POSTING_RULES, categories: CATEGORY_VIEWS, now: task.publishedAt.toISOString(), market: { timeZone: DEMO_TIME_ZONE } }).safeParse(draft);
       expect(parsed.success, `${task.id}: ${JSON.stringify(parsed.error?.issues)}`).toBe(true);
       // Where: the poster's own address and neighborhood, shown only as a point near the neighborhood's center.
       if (task.mode === 'remote') {
@@ -245,9 +245,9 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
       expect(offer.updatedAt.getTime()).toBeGreaterThanOrEqual(offer.createdAt.getTime());
       expect(offer.createdAt.getTime()).toBeLessThan(now.getTime());
       // The offer form's rules: a start time it offers, a price at or above the minimum, hours at least the estimate.
-      const rules = offerRulesFor(task, { minPriceCents: category.minPriceCents }, 'America/Chicago');
-      expect(marketDayKey(offer.proposedStart)).toBe(rules.date);
-      expect(rules.startTimes).toContain(marketClockTime(offer.proposedStart));
+      const rules = offerRulesFor(task, { minPriceCents: category.minPriceCents }, DEMO_TIME_ZONE);
+      expect(marketDayKey(offer.proposedStart, DEMO_TIME_ZONE)).toBe(rules.date);
+      expect(rules.startTimes).toContain(marketClockTime(offer.proposedStart, DEMO_TIME_ZONE));
       expect(offer.pricingType).toBe(task.pricingType);
       if (offer.pricingType === 'fixed') expect(offer.priceCents!).toBeGreaterThanOrEqual(rules.minPriceCents);
       else expect(offer.hoursCap!).toBeGreaterThanOrEqual(rules.minHoursCap ?? 0);
@@ -288,7 +288,7 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
       if (booking.status === 'confirmed') expect(booking.startAt.getTime()).toBeGreaterThan(now.getTime());
       if (booking.status === 'in_progress') {
         expect(booking.arrivedAt!.getTime()).toBeLessThan(now.getTime());
-        const hour = Number(marketClockTime(now).slice(0, 2));
+        const hour = Number(marketClockTime(now, DEMO_TIME_ZONE).slice(0, 2));
         expect(hour >= 9 && hour < 19).toBe(true);
       }
       // Never two bookings at once for a helper.

@@ -117,7 +117,7 @@ describe('the task board', () => {
       expect(cents).toBeLessThanOrEqual(12000);
     }
     const mornings = (await listBoardTasks(tx, { marketId, query: query({ time: 'morning', group: 'none' }), now, areaIds })).tasks;
-    for (const task of mornings) expect(task.schedule.flexible || marketClockTime(task.schedule.windowStart) < '12:00').toBe(true);
+    for (const task of mornings) expect(task.schedule.flexible || marketClockTime(task.schedule.windowStart, 'America/Chicago') < '12:00').toBe(true);
   }));
 
   it('groups by neighborhood: a few rows each, most tasks first, remote work last', () => inSnapshot(async ({ tx, all }) => {
@@ -140,7 +140,7 @@ describe('the task board', () => {
   it('counts the market’s open tasks and the ones posted since midnight', () => inSnapshot(async ({ tx, all }) => {
     const stats = await boardStats(tx, marketId, now);
     expect(stats.openCount).toBe(all.length);
-    const midnight = new Date(marketLocalToUtc(marketDayKey(now), '00:00'));
+    const midnight = new Date(marketLocalToUtc(marketDayKey(now, 'America/Chicago'), '00:00', 'America/Chicago'));
     expect(stats.postedToday).toBe(all.filter((task) => new Date(task.postedAt) >= midnight).length);
   }));
 });

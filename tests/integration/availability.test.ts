@@ -19,8 +19,8 @@ const pay = createDevPaymentProvider();
 const deps = { db, payments: pay };
 const now = () => new Date();
 const DAY = 86_400_000;
-const day = (offset: number) => marketDayKey(new Date(Date.now() + offset * DAY));
-const at = (date: string, time: string) => new Date(marketLocalToUtc(date, time));
+const day = (offset: number) => marketDayKey(new Date(Date.now() + offset * DAY), 'America/Chicago');
+const at = (date: string, time: string) => new Date(marketLocalToUtc(date, time, 'America/Chicago'));
 const yard = (date: string, startTime = '09:00', endTime = '13:00'): AvailabilityPostInput => ({
   categorySlug: 'yard-cleanup',
   date,

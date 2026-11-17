@@ -109,7 +109,7 @@ afterAll(async () => {
 });
 
 describe('regular visits', () => {
-  const firstDay = marketDayKey(new Date(start.getTime() + 3 * DAY));
+  const firstDay = marketDayKey(new Date(start.getTime() + 3 * DAY), 'America/Chicago');
 
   it('only repeats where the market has regular visits and the category allows it', async () => {
     await db.update(featureFlags).set({ enabled: false }).where(and(eq(featureFlags.key, 'recurring'), eq(featureFlags.marketId, 'global')));
@@ -128,7 +128,7 @@ describe('regular visits', () => {
     // Ben sees how it repeats and the first four dates before paying.
     const page = await getProposalPage(db, provider, null, 'usr_ben', proposal!.id, start);
     expect(page?.proposal.schedule).toMatchObject({ cadence: 'weekly', durationMinutes: 180 });
-    expect(page?.proposal.visitStarts?.map((iso) => marketDayKey(iso))).toEqual([0, 7, 14, 21].map((days) => marketDayKey(new Date(Date.parse(`${firstDay}T18:00:00Z`) + days * DAY))));
+    expect(page?.proposal.visitStarts?.map((iso) => marketDayKey(iso, 'America/Chicago'))).toEqual([0, 7, 14, 21].map((days) => marketDayKey(new Date(Date.parse(`${firstDay}T18:00:00Z`) + days * DAY), 'America/Chicago')));
 
     // A card he doesn't ask to save is kept anyway: the next visits are charged to it.
     const accepted = await acceptProposal(deps, 'usr_ben', proposal!.id, { payment: { kind: 'dev_card', card: 'success', save: false }, acceptTerms: true }, start);
@@ -143,7 +143,7 @@ describe('regular visits', () => {
     const visits = await visitsOf(seriesId);
     expect(visits.map((row) => [row.visitIndex, row.status])).toEqual([[1, 'confirmed'], [2, 'scheduled'], [3, 'scheduled'], [4, 'scheduled']]);
     for (const row of visits.slice(1)) {
-      expect(marketClockTime(row.startAt)).toBe('09:00');
+      expect(marketClockTime(row.startAt, 'America/Chicago')).toBe('09:00');
       expect(row.fundingDueAt?.getTime()).toBe(row.startAt.getTime() - 48 * HOUR);
       expect(row.fundingExpiresAt?.getTime()).toBe(row.startAt.getTime() - 12 * HOUR);
       expect(row.fundingMethodId).toBe(card!.id);
@@ -268,15 +268,15 @@ describe('regular visits', () => {
     await runSeriesCalendars(db, now);
     const seventh = await visit(7);
     expect(seventh.status).toBe('scheduled');
-    const resumeOn = marketDayKey(new Date(seventh.startAt.getTime() + 8 * DAY));
+    const resumeOn = marketDayKey(new Date(seventh.startAt.getTime() + 8 * DAY), 'America/Chicago');
     resumedOn = resumeOn;
     expect(await pauseSeries(db, 'usr_jordan', seriesId, { resumeOn }, now)).toEqual({ ok: false, code: 'not_allowed' });
-    expect(await pauseSeries(db, 'usr_ben', seriesId, { resumeOn: marketDayKey(new Date(now.getTime() + 120 * DAY)) }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { resumeOn: ['out_of_range'] } });
+    expect(await pauseSeries(db, 'usr_ben', seriesId, { resumeOn: marketDayKey(new Date(now.getTime() + 120 * DAY), 'America/Chicago') }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { resumeOn: ['out_of_range'] } });
     expect(await pauseSeries(db, 'usr_ben', seriesId, { resumeOn }, now)).toEqual({ ok: true, code: 'updated' });
     expect(await visit(7)).toMatchObject({ status: 'canceled', cancelReason: 'series_paused' });
     // Nothing new joins the calendar before the resume date.
     await runSeriesCalendars(db, new Date(now.getTime() + DAY));
-    expect((await visitsOf(seriesId)).filter((row) => row.status === 'scheduled' && marketDayKey(row.startAt) < resumeOn)).toHaveLength(0);
+    expect((await visitsOf(seriesId)).filter((row) => row.status === 'scheduled' && marketDayKey(row.startAt, 'America/Chicago') < resumeOn)).toHaveLength(0);
     // On the date, it's active again with the next four visits.
     await runSeriesCalendars(db, new Date(Date.parse(`${resumeOn}T12:00:00Z`)));
     const [series] = await db.select().from(bookingSeries).where(eq(bookingSeries.id, seriesId));
@@ -285,7 +285,7 @@ describe('regular visits', () => {
     expect(resumed).toHaveLength(1);
     const after = (await visitsOf(seriesId)).filter((row) => row.status === 'scheduled');
     expect(after).toHaveLength(4);
-    expect(after.every((row) => marketDayKey(row.startAt) >= resumeOn)).toBe(true);
+    expect(after.every((row) => marketDayKey(row.startAt, 'America/Chicago') >= resumeOn)).toBe(true);
   });
 
   it('adds no visits while the market’s outage switch is on, and catches up once it’s off (5.18)', async () => {
@@ -314,9 +314,9 @@ describe('regular visits', () => {
     expect(await cancelSeries(db, 'usr_jordan', seriesId, now)).toEqual({ ok: false, code: 'not_allowed' });
     expect(await endSeries(db, 'usr_jordan', seriesId, now)).toEqual({ ok: true, code: 'updated' });
     const [series] = await db.select().from(bookingSeries).where(eq(bookingSeries.id, seriesId));
-    expect(series).toMatchObject({ status: 'ended', endsOn: marketDayKey(new Date(now.getTime() + 7 * DAY)), changedBy: 'helper' });
+    expect(series).toMatchObject({ status: 'ended', endsOn: marketDayKey(new Date(now.getTime() + 7 * DAY), 'America/Chicago'), changedBy: 'helper' });
     for (const row of await visitsOf(seriesId)) {
-      if (marketDayKey(row.startAt) > series!.endsOn! && row.status !== 'completed') expect(row.status).toBe('canceled');
+      if (marketDayKey(row.startAt, 'America/Chicago') > series!.endsOn! && row.status !== 'completed') expect(row.status).toBe('canceled');
     }
     expect(await cancelSeries(db, 'usr_ben', seriesId, now)).toEqual({ ok: false, code: 'not_allowed' });
     expect((await getSeriesPage(db, 'usr_ben', seriesId, now))?.series.actions).toEqual(['message']);

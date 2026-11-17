@@ -30,7 +30,7 @@ const pay = createDevPaymentProvider();
 const deps = { db, payments: pay };
 const now = () => new Date();
 const DAY = 86_400_000;
-const day = (offset: number) => marketDayKey(new Date(Date.now() + offset * DAY));
+const day = (offset: number) => marketDayKey(new Date(Date.now() + offset * DAY), 'America/Chicago');
 const cipher = process.env.FIELD_ENCRYPTION_KEY ? createFieldCipher(process.env.FIELD_ENCRYPTION_KEY) : null;
 const proposal = (offset: number, priceCents = 9000) => ({ date: day(offset), startTime: '10:00', pricing: { type: 'fixed' as const, priceCents }, message: 'Same as last time?' });
 

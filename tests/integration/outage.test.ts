@@ -99,7 +99,7 @@ beforeAll(async () => {
   await db.insert(tasks).values({ ...cleaning!, id: 'tsk_out_rbk', slug: 'out-rbk-slug', posterUserId: 'usr_ruth', status: 'completed', offerCount: 0, version: 1, windowStart: past, windowEnd: new Date(past.getTime() + 3 * HOUR) });
   await db.insert(bookings).values({ id: 'bkg_out_rbk', taskId: 'tsk_out_rbk', posterUserId: 'usr_ruth', helperUserId: 'usr_sam', marketId: cleaning!.marketId, policyVersionId: policy!.id, status: 'completed', startAt: past, confirmedAt: past, completedAt: new Date(past.getTime() + 4 * HOUR) });
   await db.insert(bookingTerms).values({ id: 'btm_out_rbk', bookingId: 'bkg_out_rbk', version: 1, pricingType: 'fixed', priceCents: 9000, breakdown: quoteBreakdown(policy!.fees, { type: 'fixed', priceCents: 9000 }), scopeText: cleaning!.description, startAt: past });
-  expect(await proposeRebook(db, 'usr_sam', 'bkg_out_rbk', { date: marketDayKey(new Date(Date.now() + 3 * 24 * HOUR)), startTime: '10:00', pricing: { type: 'fixed', priceCents: 9000 }, message: 'Same as last time?' }, new Date())).toMatchObject({ ok: true });
+  expect(await proposeRebook(db, 'usr_sam', 'bkg_out_rbk', { date: marketDayKey(new Date(Date.now() + 3 * 24 * HOUR), 'America/Chicago'), startTime: '10:00', pricing: { type: 'fixed', priceCents: 9000 }, message: 'Same as last time?' }, new Date())).toMatchObject({ ok: true });
   ready.proposalId = (await db.select().from(rebookProposals).where(and(eq(rebookProposals.fromBookingId, 'bkg_out_rbk'), eq(rebookProposals.status, 'sent'))))[0]!.id;
 });
 
