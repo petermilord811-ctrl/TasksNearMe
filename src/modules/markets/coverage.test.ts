@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { awaitingCity, helpersCoveredBy, marketForZip, marketStatusChange } from './coverage';
+import { AUSTIN } from '../../../db/seeds/data/austin';
+import { DEMO_TIME_ZONE } from '../../../db/seeds/demo/plan';
+import { GAINESVILLE } from '../../../db/seeds/data/gainesville';
+import { awaitingCity, helpersCoveredBy, isSupportedTimeZone, marketForZip, marketStatusChange } from './coverage';
 
 const austin = { id: 'mkt_austin', status: 'prelaunch', zipPrefixes: ['786', '787'] };
 const dallas = { id: 'mkt_dallas', status: 'paused', zipPrefixes: ['750', '752'] };
@@ -47,9 +50,16 @@ describe('opening a market', () => {
     expect(marketStatusChange({ status: 'paused', timeZone: 'America/New_York' }, 'live')).toEqual({ ok: true });
     expect(marketStatusChange({ status: 'paused', timeZone: 'America/Los_Angeles' }, 'prelaunch')).toEqual({ ok: true });
     expect(marketStatusChange({ status: 'paused', timeZone: 'Pacific/Honolulu' }, 'prelaunch')).toEqual({ ok: true });
-    // Outside the zones whose days and names are checked: still refused.
+    // A city's own zone name with the same clock all year: Detroit and Indianapolis keep Eastern time, Boise Mountain.
+    for (const zone of ['America/Detroit', 'America/Indiana/Indianapolis', 'America/Boise']) expect(marketStatusChange({ status: 'paused', timeZone: zone }, 'live'), zone).toEqual({ ok: true });
+    // Outside the zones whose days and names are checked: still refused (Mexico City keeps no daylight saving).
     expect(marketStatusChange({ status: 'paused', timeZone: 'Europe/Madrid' }, 'live')).toEqual({ ok: false, code: 'time_zone_unsupported' });
+    expect(marketStatusChange({ status: 'paused', timeZone: 'America/Mexico_City' }, 'live')).toEqual({ ok: false, code: 'time_zone_unsupported' });
     expect(marketStatusChange({ status: 'paused', timeZone: 'Not/AZone' }, 'prelaunch')).toEqual({ ok: false, code: 'time_zone_unsupported' });
+  });
+
+  it('can open every market the seeds make', () => {
+    for (const zone of [AUSTIN.timeZone, GAINESVILLE.timeZone, DEMO_TIME_ZONE]) expect(isSupportedTimeZone(zone), zone).toBe(true);
   });
 
   it('allows pausing in any zone, and refuses a change to the same status', () => {
