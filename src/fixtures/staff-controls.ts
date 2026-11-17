@@ -14,5 +14,8 @@ export const accountSuspended: AdminAccountView = { status: 'suspended', isStaff
 
 export const accountBanned: AdminAccountView = { status: 'banned', isStaff: false, actions: ['reinstate'] };
 
+/** Someone used the "Not you?" link in a contact change notice (5.23): an admin (or trust and safety) can clear the hold. */
+export const accountContactHold: AdminAccountView = { status: 'active', contactHold: { at: '2026-11-23T09:12:00.000Z' }, isStaff: false, actions: ['suspend', 'request_ban', 'clear_contact_hold'] };
+
 export const staffCancelAllowed = { refundCents: 8800, allowed: true } as const;
 export const staffCancelAboveLimit = { refundCents: 24000, allowed: false } as const;

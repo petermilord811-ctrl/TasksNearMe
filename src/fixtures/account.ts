@@ -1,4 +1,4 @@
-import type { AccountHandlers, AccountPageData, EmailUnsubscribeHandlers, EmailUnsubscribePageData, NotificationHandlers, NotificationsPageData, NotificationView } from '@/contracts';
+import type { AccountHandlers, AccountPageData, ContactRevertHandlers, ContactRevertPageData, EmailUnsubscribeHandlers, EmailUnsubscribePageData, NotificationHandlers, NotificationsPageData, NotificationView } from '@/contracts';
 import { routes } from '@/contracts';
 import { DESK_TIMES } from './timeline';
 
@@ -149,6 +149,19 @@ export const fakeUnsubscribeHandlers: EmailUnsubscribeHandlers = {
   onUnsubscribe: () => wait({ ok: true, code: 'updated' }),
   onResubscribe: () => wait({ ok: true, code: 'updated' }),
 };
+
+/** The "Not you?" link in a contact change notice (`/account/not-me`, completion plan 5.23), in each state. */
+export const contactRevertPages = {
+  ask: { state: 'ask' },
+  invalid: { state: 'invalid' },
+} satisfies Record<string, ContactRevertPageData>;
+
+export const fakeContactRevertHandlers: ContactRevertHandlers = {
+  onConfirm: () => wait({ ok: true, code: 'updated' }),
+};
+
+/** Maya's account after someone used the link: the email, phone and ways to sign in are held for staff. */
+export const heldAccountData: AccountPageData = { ...mayaAccountData, contactChangesHeld: true };
 
 /** Back on the account page after each way connecting can end (UI previews). */
 export const accountSignInNotices = {

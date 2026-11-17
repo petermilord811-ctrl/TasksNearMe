@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { routes, type AdminBookingHandlers, type AdminUserHandlers, type PreviewEntry, type StaffViewer } from '@/contracts';
 import {
   accountBanned,
+  accountContactHold,
   accountPendingBan,
   accountSuspended,
   ADMIN_NOW,
@@ -19,7 +20,7 @@ import { AdminBookingScreen, AdminUserScreen } from '@/ui/screens/admin';
 import { AdminReasonAction } from '@/ui/screens/admin/admin-reason-action';
 import { AdminShell } from '@/ui/shells/admin-shell';
 
-/** Staff account and booking controls (completion plan 5.14). */
+/** Staff account and booking controls (completion plan 5.14), and clearing a "Not you?" hold (5.23). */
 
 const group = 'Admin: account and booking controls';
 const shell = (viewer: StaffViewer, path: string, children: ReactNode) => <AdminShell viewer={viewer} handlers={{ onSignOut: fakeHandler({ ok: true, code: 'updated' }) }} currentPath={path}>{children}</AdminShell>;
@@ -36,6 +37,7 @@ export const staffControlsPreviews: PreviewEntry[] = [
   { id: 'screen-admin-user/account-pending-ban', group, title: 'Account: a ban waiting for a second reviewer', layout: 'fullscreen', render: () => shell(rileyStaff, routes.admin.user(adminUserJordanData.user.id), <AdminUserScreen data={{ ...adminUserJordanData, account: accountPendingBan }} handlers={userHandlers} now={ADMIN_NOW} />) },
   { id: 'screen-admin-user/account-suspended', group, title: 'Account: suspended', layout: 'fullscreen', render: () => shell(morganStaff, routes.admin.user(adminUserJordanData.user.id), <AdminUserScreen data={{ ...adminUserJordanData, account: accountSuspended }} handlers={userHandlers} now={ADMIN_NOW} />) },
   { id: 'screen-admin-user/account-banned', group, title: 'Account: banned (an admin view)', layout: 'fullscreen', render: () => shell(rileyStaff, routes.admin.user(adminUserJordanData.user.id), <AdminUserScreen data={{ ...adminUserJordanData, account: accountBanned }} handlers={userHandlers} now={ADMIN_NOW} />) },
+  { id: 'screen-admin-user/account-contact-hold', group, title: 'Account: sign-in details held after “Not you?”', layout: 'fullscreen', render: () => shell(rileyStaff, routes.admin.user(adminUserJordanData.user.id), <AdminUserScreen data={{ ...adminUserJordanData, account: accountContactHold }} handlers={userHandlers} now={ADMIN_NOW} />) },
   { id: 'screen-admin-booking/staff-cancel', group, title: 'Booking: support can cancel it', layout: 'fullscreen', render: () => shell(morganStaff, routes.admin.booking(adminBookingSettledData.booking.id), <AdminBookingScreen data={{ ...adminBookingSettledData, staffCancel: staffCancelAllowed }} handlers={bookingHandlers} now={ADMIN_NOW} />) },
   { id: 'screen-admin-booking/staff-cancel-above-limit', group, title: 'Booking: the refund is above an agent’s limit', layout: 'fullscreen', render: () => shell(alexStaff, routes.admin.booking(adminBookingSettledData.booking.id), <AdminBookingScreen data={{ ...adminBookingSettledData, staffCancel: staffCancelAboveLimit }} handlers={bookingHandlers} now={ADMIN_NOW} />) },
   {

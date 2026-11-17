@@ -148,6 +148,7 @@ function AdminAccountSection({ account, onAccountAction }: { account: NonNullabl
     <div className={cn(adminSection, 'space-y-3')}>
       <StatusBadge tone={tone} label={t(`status.${account.status}`)} />
       {account.pendingBan && <p className="text-sm"><time dateTime={account.pendingBan.at}>{t('pendingBan', { name: account.pendingBan.requestedByName, date: formatDateTime(account.pendingBan.at), reason: account.pendingBan.reason })}</time></p>}
+      {account.contactHold && <p className="flex items-start gap-2 text-sm"><ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" /><time dateTime={account.contactHold.at}>{t('contactHold', { date: formatDateTime(account.contactHold.at) })}</time></p>}
       {account.isStaff && <p className="text-sm text-muted-foreground">{t('staffNote')}</p>}
       {onAccountAction && account.actions.length > 0 && <div className="flex flex-wrap gap-2">
         {account.actions.map((action) => <AdminReasonAction

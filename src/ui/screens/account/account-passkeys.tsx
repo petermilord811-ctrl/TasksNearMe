@@ -16,10 +16,12 @@ const noSubscribe = () => () => {};
 
 /**
  * Passkeys on the account: each with its name and when it was added, a way to remove it, and "Add a passkey"
- * (the device's prompt, then a name). The email code keeps working whatever happens here.
+ * (the device's prompt, then a name). The email code keeps working whatever happens here. While `held`
+ * (completion plan 5.23) none can be added; removing still works.
  */
-export function AccountPasskeys({ passkeys, handlers }: {
+export function AccountPasskeys({ passkeys, held = false, handlers }: {
   passkeys: AccountSignInMethods['passkeys'];
+  held?: boolean;
   handlers: Required<Pick<AccountHandlers, 'onPasskeyRegistrationOptions' | 'onAddPasskey' | 'onRemovePasskey'>>;
 }) {
   const { formatDate } = useFormat();
@@ -91,7 +93,7 @@ export function AccountPasskeys({ passkeys, handlers }: {
         </Button>
       </li>)}
     </ul>}
-    {supported ? <div className="space-y-3">
+    {held ? <p className="text-sm text-muted-foreground">{t('held')}</p> : supported ? <div className="space-y-3">
       <div className="space-y-1.5">
         <label htmlFor={`${id}-name`} className="text-sm font-medium">{t('nameLabel')}</label>
         <Input id={`${id}-name`} value={name} maxLength={60} placeholder={t('defaultName')} aria-describedby={`${id}-name-hint`} onChange={(event) => setName(event.target.value)} disabled={busy !== null} />

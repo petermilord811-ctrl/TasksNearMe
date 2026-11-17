@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes, type AccountHandlers, type AccountPageData, type AccountProfileInput, type ActionResult } from '@/contracts';
-import { deletionWaitingPrivacy, exportReadyPrivacy, fakeAccountHandlers, fakeHandler, jordanAccountData, jordanProfilePhoto, mayaAccountData, newAccountData } from '@/fixtures';
+import { deletionWaitingPrivacy, exportReadyPrivacy, fakeAccountHandlers, fakeHandler, heldAccountData, jordanAccountData, jordanProfilePhoto, mayaAccountData, newAccountData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import account from '../../../../messages/en/ui/account.json';
 import { AccountScreen } from './account-screen';
@@ -45,6 +45,26 @@ describe('AccountScreen', () => {
     expect(screen.getByText(account.contact.noPhone)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Add a phone number' })).toBeEnabled();
     expect(screen.queryByText(/••••/)).not.toBeInTheDocument();
+  });
+
+  it('says why nothing can change while a "Not you?" link holds the account, and still lets ways in be removed', () => {
+    const passkeyHandlers: Partial<AccountHandlers> = {
+      onPasskeyRegistrationOptions: vi.fn(async () => ({ ok: false as const, code: 'not_allowed' as const })),
+      onAddPasskey: vi.fn(async (): Promise<ActionResult> => ({ ok: false, code: 'not_allowed' })),
+      onRemovePasskey: vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' })),
+    };
+    mount({ ...heldAccountData, signIn: { ...heldAccountData.signIn, passkeys: [{ id: 'pky_maya', name: 'Laptop', createdAt: '2026-11-18T15:00:00.000Z', backedUp: false }] } }, passkeyHandlers);
+    expect(screen.getByText(account.contact.heldTitle)).toBeVisible();
+    expect(screen.getByText(account.contact.held)).toBeVisible();
+    expect(screen.getByRole('link', { name: account.contact.heldSupport })).toHaveAttribute('href', routes.app.support());
+    expect(screen.queryByRole('button', { name: 'Change your email' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change your phone number' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Connect Microsoft' })).not.toBeInTheDocument();
+    expect(screen.getByText(account.signIn.held)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Disconnect Google' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: account.passkeys.add })).not.toBeInTheDocument();
+    expect(screen.getByText(account.passkeys.held)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Remove passkey Laptop' })).toBeEnabled();
   });
 
   it('keeps locked preference switches on and cannot invoke a mutation for them', async () => {

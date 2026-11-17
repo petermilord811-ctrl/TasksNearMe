@@ -41,7 +41,7 @@ export function AccountScreen({ data, handlers, initialDialog }: {
         </div>
       </Section>
     </div>
-    <div className={cardClass}><Section title={t('contact.title')} description={t('contact.description')}><AccountContact email={data.profile.email} phone={data.phone} handlers={handlers} initialDialog={initialDialog} /></Section></div>
+    <div className={cardClass}><Section title={t('contact.title')} description={t('contact.description')}><AccountContact email={data.profile.email} phone={data.phone} held={data.contactChangesHeld === true} handlers={handlers} initialDialog={initialDialog} /></Section></div>
     {data.verification && <div className={cardClass}><Section title={t('verification.title')} description={t(`verification.descriptions.${data.verification.role}`)}>
       <div className="space-y-4">
         <VerificationBadges badges={data.verification.badges} />
@@ -49,7 +49,7 @@ export function AccountScreen({ data, handlers, initialDialog }: {
       </div>
     </Section></div>}
     {data.badges && <div className={cardClass}><Section title={badges('title')} description={badges('description')}><OwnBadgesPanel data={data.badges} /></Section></div>}
-    <div className={cardClass}><Section title={t('signIn.title')} description={t('signIn.description')}><AccountSignIn methods={data.signIn} onConnect={handlers.onConnectSignIn} onDisconnect={handlers.onDisconnectSignIn} />{handlers.onPasskeyRegistrationOptions && handlers.onAddPasskey && handlers.onRemovePasskey && <AccountPasskeys passkeys={data.signIn.passkeys} handlers={{ onPasskeyRegistrationOptions: handlers.onPasskeyRegistrationOptions, onAddPasskey: handlers.onAddPasskey, onRemovePasskey: handlers.onRemovePasskey }} />}</Section></div>
+    <div className={cardClass}><Section title={t('signIn.title')} description={t('signIn.description')}><AccountSignIn methods={data.signIn} held={data.contactChangesHeld === true} onConnect={handlers.onConnectSignIn} onDisconnect={handlers.onDisconnectSignIn} />{handlers.onPasskeyRegistrationOptions && handlers.onAddPasskey && handlers.onRemovePasskey && <AccountPasskeys passkeys={data.signIn.passkeys} held={data.contactChangesHeld === true} handlers={{ onPasskeyRegistrationOptions: handlers.onPasskeyRegistrationOptions, onAddPasskey: handlers.onAddPasskey, onRemovePasskey: handlers.onRemovePasskey }} />}</Section></div>
     <div className={cardClass}><Section title={t('preferences.title')} description={t('preferences.description')}><AccountPreferences preferences={data.preferences} onSave={handlers.onSavePreference} /></Section></div>
     <div className={cardClass}><Section title={push('device.title')}><PushDeviceSetting push={data.push} handlers={handlers} /></Section></div>
     {handlers.onSaveLanguage && <div className={cardClass}><Section title={t('language.title')} description={t('language.description')}><AccountLanguage language={data.language} onSave={handlers.onSaveLanguage} /></Section></div>}

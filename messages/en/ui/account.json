@@ -54,7 +54,10 @@
     "confirm": "Confirm",
     "resend": "Send a new code",
     "newCodeSent": "A new code is on its way.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "heldTitle": "Changes are paused",
+    "held": "Someone told us a recent change to your email or phone wasn't you, so email, phone and sign-in changes are paused while our team checks your account.",
+    "heldSupport": "Contact support"
   },
   "signIn": {
     "title": "Ways to sign in",
@@ -75,7 +78,8 @@
       "already_used": "That {provider} account already signs in to another TasksNearMe account.",
       "email_unconfirmed": "{provider} didn't confirm the email address on that account, so it can't be connected.",
       "failed": "Something went wrong connecting {provider}. Try again."
-    }
+    },
+    "held": "Connecting Google or Microsoft is paused while our team checks your account. You can still disconnect one, and the email code keeps working."
   },
   "preferences": {
     "title": "Notifications",
@@ -180,7 +184,12 @@
     "unsubscribeInvalid": "Unsubscribe link that doesn't work",
     "exportReady": "Account · data copy ready",
     "deletionWaiting": "Account · deletion waiting for a booking",
-    "pushDevice": "Account · notifications on this device"
+    "pushDevice": "Account · notifications on this device",
+    "contactHeld": "Account · changes paused after “This wasn’t me”",
+    "notMeAsk": "“This wasn’t me” link: asks first",
+    "notMeDone": "“This wasn’t me” link: account being secured",
+    "notMeInvalid": "“This wasn’t me” link that can’t be used",
+    "notMeRateLimited": "“This wasn’t me” link: too many tries"
   },
   "unsubscribe": {
     "title": "Email preferences",
@@ -224,7 +233,8 @@
     "addedOn": "Added {date}",
     "synced": "Synced across your devices",
     "cancelled": "Nothing was added.",
-    "unsupported": "This browser can't use passkeys."
+    "unsupported": "This browser can't use passkeys.",
+    "held": "Adding a passkey is paused while our team checks your account. You can still remove one."
   },
   "verification": {
     "title": "Verification",
@@ -241,5 +251,43 @@
     "off": "Off: nobody sees your activity, and you don't see theirs.",
     "hint": "Only people you share a conversation or booking with ever see it, never exact times, and never on your public profile.",
     "failed": "That didn't save. Try again."
+  },
+  "notMe": {
+    "metaTitle": "Secure your account",
+    "eyebrow": "Account security",
+    "contactSupport": "Contact support",
+    "ask": {
+      "title": "Didn't make this change?",
+      "text": "If you didn't change the email or phone number on your TasksNearMe account, we'll secure it now. You don't need to sign in.",
+      "listTitle": "What happens",
+      "items": {
+        "signOut": "Every device signed in to the account is signed out.",
+        "undo": "The change is undone, if it was made in the last {days} days.",
+        "signIns": "Passkeys and Google or Microsoft sign-ins added around the time of the change are removed.",
+        "pause": "Email, phone and sign-in changes are paused until our team has checked the account."
+      },
+      "confirm": "Secure my account",
+      "working": "Securing your account…",
+      "madeIt": "Made the change yourself? You can close this page."
+    },
+    "done": {
+      "title": "Your account is being secured",
+      "text": "Thanks for telling us. Every device on the account has been signed out.",
+      "listTitle": "What happens next",
+      "items": {
+        "team": "Our trust and safety team checks the account and writes to you. Until then, email, phone and sign-in changes are paused.",
+        "signIn": "You can sign in again with a code sent to your email.",
+        "more": "Something else to tell us, or your email doesn't work any more? Contact support."
+      },
+      "signIn": "Sign in"
+    },
+    "invalid": {
+      "title": "This link can't be used",
+      "text": "It may have been used already, be more than {days} days old, or have been copied only in part.",
+      "listTitle": "What you can do",
+      "items": {
+        "contact": "If you're worried about your account, tell our support team what happened. They can secure it for you."
+      }
+    }
   }
 }

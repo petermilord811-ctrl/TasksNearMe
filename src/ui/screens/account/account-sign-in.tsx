@@ -16,14 +16,16 @@ import { Spinner } from '@/ui/primitives/spinner';
 /**
  * "Ways to sign in": the email code (always on), and Google and Microsoft, each connected or not. Connecting
  * leaves for the provider's page (a full page load) and comes back with `methods.notice`; disconnecting
- * stays here.
+ * stays here. While `held` (completion plan 5.23) nothing new can be connected; disconnecting still works.
  */
 export function AccountSignIn({
   methods,
+  held = false,
   onConnect,
   onDisconnect,
 }: {
   methods: AccountSignInMethods;
+  held?: boolean;
   onConnect: ActionHandler<SocialSignInInput>;
   onDisconnect: ActionHandler<SocialSignInInput>;
 }) {
@@ -88,7 +90,7 @@ export function AccountSignIn({
                 <span className="block font-medium">{name}</span>
                 <span className="block text-sm text-muted-foreground">{connectedAt ? t('connectedOn', { date: formatDate(connectedAt) }) : t('notConnected')}</span>
               </span>
-              <Button
+              {(connectedAt || !held) && <Button
                 type="button"
                 variant="outline"
                 disabled={busy !== null}
@@ -98,12 +100,12 @@ export function AccountSignIn({
               >
                 {busy === provider && <Spinner aria-hidden="true" />}
                 {t(connectedAt ? 'disconnect' : 'connect')}
-              </Button>
+              </Button>}
             </li>
           );
         })}
       </ul>
-      <p className="text-sm text-muted-foreground">{t('hint')}</p>
+      <p className="text-sm text-muted-foreground">{t(held ? 'held' : 'hint')}</p>
       <FormFeedback result={result?.result} successMessage={result ? t('disconnected', { provider: names(result.provider) }) : undefined} />
     </div>
   );

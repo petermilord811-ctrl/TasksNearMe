@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { BadgeCheck, CircleCheck, Mail, Phone } from 'lucide-react';
+import Link from 'next/link';
+import { BadgeCheck, CircleCheck, Mail, Phone, ShieldAlert } from 'lucide-react';
 import {
   CONTACT_CODE_MINUTES,
+  routes,
   emailInputSchema,
   oneTimeCodeInputSchema,
   phoneInputSchema,
@@ -34,11 +36,13 @@ type Channel = 'email' | 'phone';
 /**
  * Contact details: the email and the phone number, each changed (or the phone added) in a dialog. The
  * first step sends a 6-digit code to the new address or number; entering it (the sixth digit sends it)
- * makes the change. Until then nothing changes.
+ * makes the change. Until then nothing changes. While `held` (a "Not you?" link was used, completion plan 5.23)
+ * nothing can change: a notice says why, and there are no change buttons.
  */
-export function AccountContact({ email, phone, handlers, initialDialog }: {
+export function AccountContact({ email, phone, held = false, handlers, initialDialog }: {
   email: string;
   phone?: AccountPageData['phone'];
+  held?: boolean;
   handlers: ContactHandlers;
   /** Previews only: open a dialog at a step, as if the code was just sent to `sentTo`. */
   initialDialog?: { channel: Channel; sentTo?: string };
@@ -65,6 +69,16 @@ export function AccountContact({ email, phone, handlers, initialDialog }: {
   const fromPreview = opening === 0 ? initialDialog?.sentTo : undefined;
   return (
     <div className="space-y-4">
+      {held && (
+        <Alert className="border-warning/40">
+          <ShieldAlert aria-hidden="true" className="text-warning" />
+          <AlertDescription className="space-y-1 text-foreground">
+            <p className="font-medium">{t('heldTitle')}</p>
+            <p>{t('held')}</p>
+            <Link href={routes.app.support()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('heldSupport')}</Link>
+          </AlertDescription>
+        </Alert>
+      )}
       <div aria-live="polite" aria-atomic="true">
         {done && (
           <Alert role="status" className="border-success/30">
@@ -81,7 +95,7 @@ export function AccountContact({ email, phone, handlers, initialDialog }: {
           <span aria-hidden="true" className="col-start-1 row-span-2 row-start-1 grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground"><Mail className="size-4" /></span>
           <span className="col-start-2 row-start-1 min-w-0 font-medium">{t('email')}</span>
           <span className="col-span-2 col-start-2 row-start-2 min-w-0 text-sm text-muted-foreground [overflow-wrap:anywhere]">{email}</span>
-          <Button type="button" variant="outline" className="col-start-3 row-start-1" aria-label={t('changeEmailLabel')} onClick={() => show('email')}>{t('change')}</Button>
+          {!held && <Button type="button" variant="outline" className="col-start-3 row-start-1" aria-label={t('changeEmailLabel')} onClick={() => show('email')}>{t('change')}</Button>}
         </li>
         <li className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 p-4">
           <span aria-hidden="true" className="col-start-1 row-span-2 row-start-1 grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
@@ -89,10 +103,10 @@ export function AccountContact({ email, phone, handlers, initialDialog }: {
           </span>
           <span className="col-start-2 row-start-1 min-w-0 font-medium">{t('phone')}</span>
           <span className="col-span-2 col-start-2 row-start-2 min-w-0 text-sm tabular-nums text-muted-foreground">{phone ? t(phone.verified ? 'phoneVerified' : 'phoneUnverified', { last4: phone.last4 }) : t('noPhone')}</span>
-          <Button type="button" variant="outline" className="col-start-3 row-start-1" aria-label={t(phone ? 'changePhoneLabel' : 'addPhoneLabel')} onClick={() => show('phone')}>{t(phone ? 'change' : 'add')}</Button>
+          {!held && <Button type="button" variant="outline" className="col-start-3 row-start-1" aria-label={t(phone ? 'changePhoneLabel' : 'addPhoneLabel')} onClick={() => show('phone')}>{t(phone ? 'change' : 'add')}</Button>}
         </li>
       </ul>
-      {!phone && <p className="text-sm text-muted-foreground">{t('noPhoneHint')}</p>}
+      {!phone && !held && <p className="text-sm text-muted-foreground">{t('noPhoneHint')}</p>}
 
       <ChangeDialog open={open === 'email'} onClose={() => setOpen(null)} title={t('emailDialog.title')}>
         <EmailChange key={`email-${opening}`} handlers={handlers} sentTo={fromPreview} onDone={(changed) => finished({ channel: 'email', email: changed })} />

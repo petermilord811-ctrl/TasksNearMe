@@ -54,7 +54,10 @@
     "confirm": "Confirmar",
     "resend": "Enviar un código nuevo",
     "newCodeSent": "Un código nuevo va en camino.",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "heldTitle": "Los cambios están en pausa",
+    "held": "Alguien nos avisó que no fuiste tú quien hizo un cambio reciente en tu correo o teléfono, así que los cambios de correo, teléfono e inicio de sesión están en pausa mientras nuestro equipo revisa tu cuenta.",
+    "heldSupport": "Contactar a soporte"
   },
   "signIn": {
     "title": "Formas de iniciar sesión",
@@ -75,7 +78,8 @@
       "already_used": "Esa cuenta de {provider} ya inicia sesión en otra cuenta de TasksNearMe.",
       "email_unconfirmed": "{provider} no confirmó la dirección de correo de esa cuenta, así que no se puede conectar.",
       "failed": "Algo salió mal al conectar {provider}. Inténtalo de nuevo."
-    }
+    },
+    "held": "Conectar Google o Microsoft está en pausa mientras nuestro equipo revisa tu cuenta. Aún puedes desconectarlos, y el código por correo sigue funcionando."
   },
   "preferences": {
     "title": "Notificaciones",
@@ -180,7 +184,12 @@
     "unsubscribeInvalid": "Enlace para cancelar que no funciona",
     "exportReady": "Cuenta · copia de datos lista",
     "deletionWaiting": "Cuenta · eliminación en espera de una reserva",
-    "pushDevice": "Cuenta · notificaciones en este dispositivo"
+    "pushDevice": "Cuenta · notificaciones en este dispositivo",
+    "contactHeld": "Cuenta · cambios en pausa después de “No fui yo”",
+    "notMeAsk": "Enlace “No fui yo”: pregunta primero",
+    "notMeDone": "Enlace “No fui yo”: protegiendo la cuenta",
+    "notMeInvalid": "Enlace “No fui yo” que no se puede usar",
+    "notMeRateLimited": "Enlace “No fui yo”: demasiados intentos"
   },
   "unsubscribe": {
     "title": "Preferencias de correo",
@@ -224,7 +233,8 @@
     "addedOn": "Agregada el {date}",
     "synced": "Sincronizada en tus dispositivos",
     "cancelled": "No se agregó nada.",
-    "unsupported": "Este navegador no admite llaves de acceso."
+    "unsupported": "Este navegador no admite llaves de acceso.",
+    "held": "Agregar una llave de acceso está en pausa mientras nuestro equipo revisa tu cuenta. Aún puedes quitar una."
   },
   "verification": {
     "title": "Verificación",
@@ -241,5 +251,43 @@
     "off": "Desactivado: nadie ve tu actividad, y tú tampoco ves la suya.",
     "hint": "Solo lo ven las personas con las que tienes una conversación o una reserva, nunca con la hora exacta y nunca en tu perfil público.",
     "failed": "No se guardó. Inténtalo de nuevo."
+  },
+  "notMe": {
+    "metaTitle": "Protege tu cuenta",
+    "eyebrow": "Seguridad de la cuenta",
+    "contactSupport": "Contactar a soporte",
+    "ask": {
+      "title": "¿No hiciste este cambio?",
+      "text": "Si no cambiaste el correo ni el número de teléfono de tu cuenta de TasksNearMe, la protegeremos ahora. No necesitas iniciar sesión.",
+      "listTitle": "Qué pasa",
+      "items": {
+        "signOut": "Se cierra la sesión en todos los dispositivos conectados a la cuenta.",
+        "undo": "Se deshace el cambio, si se hizo en los últimos {days} días.",
+        "signIns": "Se quitan las llaves de acceso y los inicios de sesión con Google o Microsoft agregados cerca del momento del cambio.",
+        "pause": "Los cambios de correo, teléfono e inicio de sesión quedan en pausa hasta que nuestro equipo revise la cuenta."
+      },
+      "confirm": "Proteger mi cuenta",
+      "working": "Protegiendo tu cuenta…",
+      "madeIt": "¿Hiciste tú el cambio? Puedes cerrar esta página."
+    },
+    "done": {
+      "title": "Estamos protegiendo tu cuenta",
+      "text": "Gracias por avisarnos. Se cerró la sesión en todos los dispositivos de la cuenta.",
+      "listTitle": "Qué sigue",
+      "items": {
+        "team": "Nuestro equipo de confianza y seguridad revisa la cuenta y te escribe. Mientras tanto, los cambios de correo, teléfono e inicio de sesión están en pausa.",
+        "signIn": "Puedes volver a iniciar sesión con un código que te enviamos por correo.",
+        "more": "¿Quieres contarnos algo más, o tu correo ya no funciona? Contacta a soporte."
+      },
+      "signIn": "Iniciar sesión"
+    },
+    "invalid": {
+      "title": "Este enlace no se puede usar",
+      "text": "Puede que ya se haya usado, que tenga más de {days} días o que se haya copiado solo en parte.",
+      "listTitle": "Qué puedes hacer",
+      "items": {
+        "contact": "Si te preocupa tu cuenta, cuéntale a nuestro equipo de soporte qué pasó. Pueden protegerla por ti."
+      }
+    }
   }
 }

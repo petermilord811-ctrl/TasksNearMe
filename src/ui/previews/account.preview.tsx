@@ -1,6 +1,7 @@
 import { routes, type AccountHandlers, type AccountPageData, type AppShellHandlers, type PreviewEntry, type SignedInViewer } from '@/contracts';
-import { accountSignInNotices, deletionWaitingPrivacy, exportReadyPrivacy, samplePushSetup, fakeAccountHandlers, fakeHandler, fakeUnsubscribeHandlers, jordanAccountData, jordanShell, mayaAccountData, mayaShell, newAccountData, publicViewer, unsubscribePages } from '@/fixtures';
+import { accountSignInNotices, contactRevertPages, deletionWaitingPrivacy, exportReadyPrivacy, samplePushSetup, fakeAccountHandlers, fakeContactRevertHandlers, fakeHandler, fakeUnsubscribeHandlers, heldAccountData, jordanAccountData, jordanShell, mayaAccountData, mayaShell, newAccountData, publicViewer, unsubscribePages } from '@/fixtures';
 import { AccountScreen } from '@/ui/screens/account/account-screen';
+import { ContactRevertContent } from '@/ui/screens/account/contact-revert-screen';
 import { EmailUnsubscribeScreen } from '@/ui/screens/account/email-unsubscribe-screen';
 import { PublicShell } from '@/ui/shells/public-shell';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -76,6 +77,7 @@ export const accountPreviews: PreviewEntry[] = [
   preview('email-in-use', copy.previews.emailInUse, mayaAccountData, mayaShell, fakeAccountHandlers, 'email-in-use'),
   preview('phone-add', copy.previews.phoneAdd, newAccountData, { ...mayaShell, unreadMessages: 0, unreadNotifications: 0 }, fakeAccountHandlers, undefined, { channel: 'phone' }),
   preview('phone-code-wrong', copy.previews.phoneCodeWrong, mayaAccountData, mayaShell, fakeAccountHandlers, 'code-wrong', { channel: 'phone', sentTo: '(512) 555-0199' }),
+  preview('contact-held', copy.previews.contactHeld, heldAccountData),
   ...([
     ['confirm', copy.previews.unsubscribeConfirm],
     ['unsubscribed', copy.previews.unsubscribeDone],
@@ -84,5 +86,15 @@ export const accountPreviews: PreviewEntry[] = [
   ] as const).map(([state, title]): PreviewEntry => ({
     id: `screen-email-unsubscribe/${state}`, title, group: copy.previews.group, layout: 'fullscreen',
     render: () => <PublicShell viewer={publicViewer} currentPath="/email/unsubscribe"><EmailUnsubscribeScreen data={unsubscribePages[state]} handlers={fakeUnsubscribeHandlers} /></PublicShell>,
+  })),
+  // The "Not you?" link in a contact change notice (completion plan 5.23).
+  ...([
+    ['ask', copy.previews.notMeAsk, contactRevertPages.ask, {}],
+    ['done', copy.previews.notMeDone, contactRevertPages.ask, { initialStep: 'done' }],
+    ['invalid', copy.previews.notMeInvalid, contactRevertPages.invalid, {}],
+    ['rate-limited', copy.previews.notMeRateLimited, contactRevertPages.ask, { initialResult: { ok: false, code: 'rate_limited', retryAt: '2026-11-21T18:05:00.000Z' } }],
+  ] as const).map(([variant, title, data, seed]): PreviewEntry => ({
+    id: `screen-contact-revert/${variant}`, title, group: copy.previews.group, layout: 'fullscreen',
+    render: () => <PublicShell viewer={publicViewer} currentPath="/account/not-me"><ContactRevertContent data={data} handlers={fakeContactRevertHandlers} {...seed} /></PublicShell>,
   })),
 ];
