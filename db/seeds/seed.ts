@@ -1,5 +1,6 @@
 /**
- * Idempotent seed: Austin market, areas, categories, policy v1 (published) and v2 (draft),
+ * Idempotent seed: Austin market, areas, categories, policy v1 (published) and v2 (draft); Gainesville's market
+ * (paused until plan 8.1), areas, categories and policy;
  * feature flags. People and tasks are added by later phases (from src/fixtures).
  */
 import { and, eq, inArray, isNotNull, like, or, sql } from 'drizzle-orm';
@@ -21,6 +22,7 @@ import {
 import { staffRoles, users } from '../../src/modules/accounts/schema';
 import { helperProfiles, helperServices } from '../../src/modules/profiles/schema';
 import { AUSTIN, AUSTIN_AREAS, AUSTIN_ZIP_PREFIXES, CATEGORIES } from './data/austin';
+import { GAINESVILLE, GAINESVILLE_AREAS, GAINESVILLE_POLICY_EFFECTIVE_FROM, GAINESVILLE_POLICY_ID, GAINESVILLE_ZIP_PREFIXES, gainesvilleAreaId } from './data/gainesville';
 import { PEOPLE, displayNameOf, type SeedPerson } from './data/people';
 import { CURRENT_TERMS_VERSION } from '../../src/modules/accounts/terms';
 import { recomputeBadges } from '../../src/modules/badges/service';
@@ -116,6 +118,38 @@ export async function seedDatabase(url: string): Promise<void> {
             timers: DEFAULT_TIMERS,
           },
         ])
+        .onConflictDoNothing();
+
+      // Gainesville, FL: the first city (owner, 2026-11-17), with Austin's categories, price guidance and fees to start.
+      // Production gets the same rows from migration 0061.
+      await tx
+        .insert(markets)
+        .values({ ...GAINESVILLE, zipPrefixes: GAINESVILLE_ZIP_PREFIXES })
+        .onConflictDoUpdate({ target: markets.id, set: { name: GAINESVILLE.name, timeZone: GAINESVILLE.timeZone, zipPrefixes: GAINESVILLE_ZIP_PREFIXES } });
+      for (const area of GAINESVILLE_AREAS) {
+        const row = { id: gainesvilleAreaId(area.slug), marketId: GAINESVILLE.id, slug: area.slug, name: area.name, centerLat: area.lat, centerLng: area.lng };
+        await tx.insert(areas).values(row).onConflictDoUpdate({ target: areas.id, set: { name: area.name, centerLat: area.lat, centerLng: area.lng } });
+      }
+      for (const { guidance, ...category } of CATEGORIES) {
+        await tx
+          .insert(marketCategories)
+          .values({ marketId: GAINESVILLE.id, categoryId: category.id, enabled: true, priceGuidance: guidance })
+          .onConflictDoNothing();
+      }
+      await tx
+        .insert(marketPolicies)
+        .values({
+          id: GAINESVILLE_POLICY_ID,
+          marketId: GAINESVILLE.id,
+          version: 1,
+          status: 'published',
+          effectiveFrom: GAINESVILLE_POLICY_EFFECTIVE_FROM,
+          fees: DEFAULT_FEES,
+          cancellation: DEFAULT_CANCELLATION,
+          timers: DEFAULT_TIMERS,
+          publishedBy: 'system',
+          publishedAt: GAINESVILLE_POLICY_EFFECTIVE_FROM,
+        })
         .onConflictDoNothing();
 
       for (const [key, flag] of Object.entries(DEFAULT_FLAGS)) {
