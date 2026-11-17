@@ -1,4 +1,3 @@
-import { MARKET_TIME_ZONE } from '@/contracts/common';
 import { stateOfZip, zip3Of } from '@/shared/us-zip';
 
 /**
@@ -54,14 +53,19 @@ export function awaitingCity(profile: { areaId: string | null; homeZip: string |
 export type MarketStatusChange = { ok: true } | { ok: false; code: 'unchanged' | 'time_zone_unsupported' };
 
 /**
- * Whether staff may move a market to `next`. Dates and times are formatted in America/Chicago everywhere
- * (src/shared/format, `MARKET_TIME_ZONE`), so a market in another time zone can't open, live or pre-launch
- * (pre-launch takes bookings from invited clients, whose times would read in the wrong zone), until formatting
- * follows each market's own zone (completion plan 8.1). Pausing is allowed in any zone.
+ * The zones a market can open in (completion plan 8.1): every date is shown, and every day line drawn, on the
+ * market's own clock, and the US zones are the ones whose names, quiet hours and calendar days are checked
+ * (date-only displays use noon UTC, the same day from Hawaii to the East Coast).
+ */
+export const SUPPORTED_TIME_ZONES: readonly string[] = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Phoenix', 'America/Los_Angeles', 'America/Anchorage', 'Pacific/Honolulu'];
+
+/**
+ * Whether staff may move a market to `next`. A market opens (live or pre-launch, which takes invited clients'
+ * bookings) only in a supported zone; pausing is allowed in any zone.
  */
 export function marketStatusChange(market: { status: string; timeZone: string }, next: MarketStatus): MarketStatusChange {
   if (market.status === next) return { ok: false, code: 'unchanged' };
-  if (next !== 'paused' && market.timeZone !== MARKET_TIME_ZONE) return { ok: false, code: 'time_zone_unsupported' };
+  if (next !== 'paused' && !SUPPORTED_TIME_ZONES.includes(market.timeZone)) return { ok: false, code: 'time_zone_unsupported' };
   return { ok: true };
 }
 

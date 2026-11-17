@@ -41,11 +41,15 @@ describe('a helper waiting for their city', () => {
 });
 
 describe('opening a market', () => {
-  it('opens a market (live or pre-launch) only in the time zone dates are formatted in', () => {
+  it('opens a market (live or pre-launch) in any US zone, now that dates follow each market’s clock (plan 8.1)', () => {
     expect(marketStatusChange({ status: 'prelaunch', timeZone: 'America/Chicago' }, 'live')).toEqual({ ok: true });
-    expect(marketStatusChange({ status: 'prelaunch', timeZone: 'America/New_York' }, 'live')).toEqual({ ok: false, code: 'time_zone_unsupported' });
-    // Pre-launch takes invited clients' bookings, whose times would read in Austin's zone.
-    expect(marketStatusChange({ status: 'paused', timeZone: 'America/Los_Angeles' }, 'prelaunch')).toEqual({ ok: false, code: 'time_zone_unsupported' });
+    // Gainesville, the first city.
+    expect(marketStatusChange({ status: 'paused', timeZone: 'America/New_York' }, 'live')).toEqual({ ok: true });
+    expect(marketStatusChange({ status: 'paused', timeZone: 'America/Los_Angeles' }, 'prelaunch')).toEqual({ ok: true });
+    expect(marketStatusChange({ status: 'paused', timeZone: 'Pacific/Honolulu' }, 'prelaunch')).toEqual({ ok: true });
+    // Outside the zones whose days and names are checked: still refused.
+    expect(marketStatusChange({ status: 'paused', timeZone: 'Europe/Madrid' }, 'live')).toEqual({ ok: false, code: 'time_zone_unsupported' });
+    expect(marketStatusChange({ status: 'paused', timeZone: 'Not/AZone' }, 'prelaunch')).toEqual({ ok: false, code: 'time_zone_unsupported' });
   });
 
   it('allows pausing in any zone, and refuses a change to the same status', () => {

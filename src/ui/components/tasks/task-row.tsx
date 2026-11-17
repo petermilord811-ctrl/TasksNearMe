@@ -1,7 +1,6 @@
 import { Clock, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CategorySlug, ISODateTime, TaskPublicView } from '@/contracts';
-import { MARKET_TIME_ZONE } from '@/contracts/common';
 import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
@@ -29,15 +28,16 @@ const NEW_FOR_MS = 24 * 3_600_000;
 export function TaskRow({ task, now, showArea = true, href = routes.publicTask(task.slug), visitKey }: { task: TaskPublicView; now: ISODateTime; showArea?: boolean; href?: string; visitKey?: string }) {
   const t = useTranslations('taskBoard.row');
   const card = useTranslations('taskCard');
-  const { formatDate, formatDateTime, formatTimeRange, locale } = useFormat();
+  const { formatDate, formatDateTime, formatTimeRange, locale, timeZone } = useFormat();
   const Icon = categoryIcons[task.categorySlug];
   const start = new Date(task.schedule.windowStart);
   const isNew = new Date(now).getTime() - new Date(task.postedAt).getTime() < NEW_FOR_MS;
   const price = task.budget.type === 'fixed' ? formatMoney(task.budget.priceCents) : `${formatMoney(task.budget.rateCents)}${card('perHour')}`;
   const priceNote = task.budget.type === 'hourly' ? card('upToHours', { hours: formatHours(task.budget.hoursCap) }) : null;
   const tag = locale === 'es' ? 'es-US' : 'en-US';
-  const weekday = new Intl.DateTimeFormat(tag, { timeZone: MARKET_TIME_ZONE, weekday: 'short' }).format(start);
-  const dayOfMonth = new Intl.DateTimeFormat(tag, { timeZone: MARKET_TIME_ZONE, day: 'numeric' }).format(start);
+  // The board's market clock (completion plan 8.1).
+  const weekday = new Intl.DateTimeFormat(tag, { timeZone, weekday: 'short' }).format(start);
+  const dayOfMonth = new Intl.DateTimeFormat(tag, { timeZone, day: 'numeric' }).format(start);
 
   return <article className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-3 px-3 py-2.5 transition-colors duration-150 hover:bg-foreground/[0.03] sm:grid-cols-[3.25rem_minmax(0,1fr)_auto] sm:px-4 dark:hover:bg-white/[0.03]">
     <time dateTime={task.schedule.windowStart} title={formatDateTime(task.schedule.windowStart)} className="flex flex-col items-center rounded-lg bg-secondary/70 px-1 py-1 text-center leading-tight text-secondary-foreground">

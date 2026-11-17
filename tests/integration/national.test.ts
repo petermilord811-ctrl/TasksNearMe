@@ -25,6 +25,8 @@ const DALLAS_HELPER = 'usr_nat_dallas';
 const DENVER_HELPER = 'usr_nat_denver';
 const DALLAS = 'mkt_test_nat_dallas';
 const NEW_YORK = 'mkt_test_nat_newyork';
+/** A market in a zone dates aren't checked in (outside the US): it can't open. */
+const ABROAD = 'mkt_test_nat_abroad';
 const riley: StaffActor = { id: 'usr_riley', roles: ['admin'] };
 const morgan: StaffActor = { id: 'usr_morgan', roles: ['support_lead'] };
 const now = new Date();
@@ -43,15 +45,16 @@ beforeAll(async () => {
   const [austin] = await db.select().from(markets).where(eq(markets.id, 'mkt_austin'));
   await db.insert(markets).values({ ...austin!, id: DALLAS, slug: 'test-nat-dallas', name: 'Dallas', status: 'paused', zipPrefixes: ['752'], centerLat: 32.7767, centerLng: -96.797 });
   await db.insert(markets).values({ ...austin!, id: NEW_YORK, slug: 'test-nat-newyork', name: 'New York', state: 'NY', status: 'paused', timeZone: 'America/New_York', zipPrefixes: ['100'], centerLat: 40.7128, centerLng: -74.006 });
+  await db.insert(markets).values({ ...austin!, id: ABROAD, slug: 'test-nat-madrid', name: 'Madrid', state: 'MD', status: 'paused', timeZone: 'Europe/Madrid', zipPrefixes: ['999'], centerLat: 40.7128, centerLng: -74.006 });
 });
 
 afterAll(async () => {
   const people = [DALLAS_HELPER, DENVER_HELPER];
   await db.delete(outboxEvents).where(inArray(outboxEvents.aggregateId, people));
-  await db.delete(auditLog).where(and(eq(auditLog.action, 'config.market_status'), inArray(auditLog.targetId, [DALLAS, NEW_YORK])));
+  await db.delete(auditLog).where(and(eq(auditLog.action, 'config.market_status'), inArray(auditLog.targetId, [DALLAS, NEW_YORK, ABROAD])));
   await db.delete(helperProfiles).where(inArray(helperProfiles.userId, people));
   await db.delete(users).where(inArray(users.id, people));
-  await db.delete(markets).where(inArray(markets.id, [DALLAS, NEW_YORK]));
+  await db.delete(markets).where(inArray(markets.id, [DALLAS, NEW_YORK, ABROAD]));
   await db.delete(waitlistEntries).where(like(waitlistEntries.email, 'nat-%@example.test'));
   await pool.end();
 });
@@ -107,13 +110,18 @@ describe('the waitlist across the US', () => {
 });
 
 describe('opening a market', () => {
-  it('is for admins only, and refuses to open a market outside the time zone dates are shown in', async () => {
+  it('is for admins only, opens a market in another US zone, and refuses one whose dates are not checked', async () => {
     expect(await setMarketStatus(db, morgan, DALLAS, { status: 'prelaunch', reason: 'Opening Dallas' }, now)).toEqual({ ok: false, code: 'not_allowed' });
-    expect(await setMarketStatus(db, riley, NEW_YORK, { status: 'live', reason: 'Opening New York' }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } });
+    // Dates follow each market's own clock (completion plan 8.1): an Eastern market opens like a Central one.
+    expect(await setMarketStatus(db, riley, NEW_YORK, { status: 'prelaunch', reason: 'Helpers first' }, now)).toEqual({ ok: true, code: 'updated' });
     const [york] = await db.select({ status: markets.status }).from(markets).where(eq(markets.id, NEW_YORK));
-    expect(york!.status).toBe('paused');
-    // Pre-launch takes invited clients' bookings, whose times would read in Central time: refused there too.
-    expect(await setMarketStatus(db, riley, NEW_YORK, { status: 'prelaunch', reason: 'Helpers first' }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } });
+    expect(york!.status).toBe('prelaunch');
+    expect(await setMarketStatus(db, riley, NEW_YORK, { status: 'paused', reason: 'Not opening it yet' }, now)).toEqual({ ok: true, code: 'updated' });
+    // Outside the US zones: refused, live or pre-launch; pausing still works.
+    expect(await setMarketStatus(db, riley, ABROAD, { status: 'live', reason: 'Opening Madrid' }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } });
+    expect(await setMarketStatus(db, riley, ABROAD, { status: 'prelaunch', reason: 'Helpers first' }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } });
+    const [abroad] = await db.select({ status: markets.status }).from(markets).where(eq(markets.id, ABROAD));
+    expect(abroad!.status).toBe('paused');
   });
 
   it('brings in the helpers who waited there, tells them, and audits the change', async () => {

@@ -16,7 +16,7 @@ export interface MarketTimeSelectProps extends Omit<ComponentProps<'select'>, 'c
 
 const times = Array.from({ length: 48 }, (_, index) => `${String(Math.floor(index / 2)).padStart(2, '0')}:${index % 2 === 0 ? '00' : '30'}`);
 
-/** Shared market-local HH:MM values, with labels formatted in America/Chicago. */
+/** Shared market-local HH:MM values, with labels formatted on the page's market clock (completion plan 8.1). */
 export function MarketTimeSelect({ date, placeholder, className, ...props }: MarketTimeSelectProps) {
   const { formatTime, timeZone } = useFormat();
   return <select {...props} className={cn(nativeSelectClassName, 'tabular-nums', className)}>
