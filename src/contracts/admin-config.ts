@@ -116,8 +116,9 @@ export type OutageSwitchInput = z.input<typeof outageSwitchInputSchema>;
 /**
  * An admin opens, pauses or pre-launches a market (owner, 2026-11-14: national, cities open in turn). Moving a
  * market to pre-launch or live brings in the helpers who waited there and tells them. Until dates follow each
- * market's own time zone, `live` is refused for a market outside America/Chicago: `validation_failed` with
- * `fieldErrors.status: ['not_supported']`.
+ * market's own time zone (completion plan 8.1), opening (pre-launch or live) is refused for a market outside
+ * America/Chicago: `validation_failed` with `fieldErrors.timeZone: ['not_supported']` (the market's zone, not the
+ * status asked for, is what isn't supported yet).
  */
 export const marketStatusInputSchema = z.object({
   status: z.enum(['prelaunch', 'live', 'paused'], code('invalid')),

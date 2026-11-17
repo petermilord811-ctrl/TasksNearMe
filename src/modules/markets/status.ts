@@ -29,8 +29,9 @@ export async function setMarketStatus(db: Db, staff: StaffActor, marketId: strin
   if (!market) return { ok: false, code: 'not_found' };
   const change = marketStatusChange(market, next);
   if (!change.ok) {
-    // The same status again changes nothing; another time zone can't go live yet.
-    return change.code === 'unchanged' ? { ok: true, code: 'updated' } : { ok: false, code: 'validation_failed', fieldErrors: { status: ['not_supported'] } };
+    // The same status again changes nothing. A market whose time zone dates can't be shown in yet can't open: the
+    // refusal names the market's zone (its `timeZone`), so the config page says why instead of blaming the status.
+    return change.code === 'unchanged' ? { ok: true, code: 'updated' } : { ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } };
   }
   await db.transaction(async (tx) => {
     await tx.update(markets).set({ status: next, updatedAt: now.toISOString() }).where(eq(markets.id, market.id));

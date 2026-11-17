@@ -109,11 +109,11 @@ describe('the waitlist across the US', () => {
 describe('opening a market', () => {
   it('is for admins only, and refuses to open a market outside the time zone dates are shown in', async () => {
     expect(await setMarketStatus(db, morgan, DALLAS, { status: 'prelaunch', reason: 'Opening Dallas' }, now)).toEqual({ ok: false, code: 'not_allowed' });
-    expect(await setMarketStatus(db, riley, NEW_YORK, { status: 'live', reason: 'Opening New York' }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { status: ['not_supported'] } });
+    expect(await setMarketStatus(db, riley, NEW_YORK, { status: 'live', reason: 'Opening New York' }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } });
     const [york] = await db.select({ status: markets.status }).from(markets).where(eq(markets.id, NEW_YORK));
     expect(york!.status).toBe('paused');
     // Pre-launch takes invited clients' bookings, whose times would read in Central time: refused there too.
-    expect(await setMarketStatus(db, riley, NEW_YORK, { status: 'prelaunch', reason: 'Helpers first' }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { status: ['not_supported'] } });
+    expect(await setMarketStatus(db, riley, NEW_YORK, { status: 'prelaunch', reason: 'Helpers first' }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } });
   });
 
   it('brings in the helpers who waited there, tells them, and audits the change', async () => {
