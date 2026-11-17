@@ -55,12 +55,14 @@ test('staff make an invite, a newcomer joins with its link, and others are held 
   await staffSignIn(page, 'morgan@example.test');
   await page.goto('/admin/beta');
   await expect(page.getByRole('heading', { level: 1, name: 'Private beta' })).toBeVisible();
-  await page.getByLabel('Name', { exact: true }).fill(label);
-  await page.getByLabel('How many people').fill('1');
-  await page.getByLabel('Your own code (optional)').fill(code);
-  await page.getByRole('button', { name: 'Create invite' }).click();
+  // One section per market (Austin, and Gainesville since 2026-11-17): the invites here are Austin's.
+  const austin = page.getByRole('region', { name: 'Austin' });
+  await austin.getByLabel('Name', { exact: true }).fill(label);
+  await austin.getByLabel('How many people').fill('1');
+  await austin.getByLabel('Your own code (optional)').fill(code);
+  await austin.getByRole('button', { name: 'Create invite' }).click();
   await expect(page.getByText('Invite created.')).toBeVisible();
-  const card = page.getByRole('listitem').filter({ hasText: label });
+  const card = austin.getByRole('listitem').filter({ hasText: label });
   await expect(card).toContainText(code);
   await expect(card).toContainText('0 of 1');
 
@@ -116,13 +118,13 @@ test('staff make an invite, a newcomer joins with its link, and others are held 
   // Staff withdraw a live invite: it leaves the active ones.
   const spare = `${label} spare`;
   await page.reload();
-  await page.getByLabel('Name', { exact: true }).fill(spare);
-  await page.getByRole('button', { name: 'Create invite' }).click();
+  await austin.getByLabel('Name', { exact: true }).fill(spare);
+  await austin.getByRole('button', { name: 'Create invite' }).click();
   await expect(page.getByText('Invite created.')).toBeVisible();
-  const spareCard = page.getByRole('listitem').filter({ hasText: spare });
+  const spareCard = austin.getByRole('listitem').filter({ hasText: spare });
   await spareCard.getByRole('button', { name: /^Withdraw invite/ }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Withdraw invite' }).click();
   await expect(spareCard).toHaveCount(0);
-  await page.getByText(/^Used up, expired and withdrawn/).click();
-  await expect(page.getByRole('listitem').filter({ hasText: spare })).toContainText('Withdrawn');
+  await austin.getByText(/^Used up, expired and withdrawn/).click();
+  await expect(austin.getByRole('listitem').filter({ hasText: spare })).toContainText('Withdrawn');
 });

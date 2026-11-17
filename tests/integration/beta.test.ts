@@ -156,6 +156,13 @@ describe('the switches', () => {
 });
 
 describe('the staff page', () => {
+  it('offers invites only into open markets: paused Gainesville (until plan 8.1) has no section and refuses one', async () => {
+    const page = await getAdminBetaPage(db, lead, now, 'http://localhost:3000');
+    expect(page.markets.map((market) => market.id)).toContain(MARKET);
+    expect(page.markets.map((market) => market.id)).not.toContain('mkt_gainesville');
+    expect(await createInviteCode(db, lead, { marketId: 'mkt_gainesville', role: 'poster', label: `${LABEL} paused`, maxUses: 5 }, now)).toEqual({ ok: false, code: 'not_found' });
+  });
+
   it('shows the switches, each invite with its uses and who joined, and who may manage', async () => {
     const page = await getAdminBetaPage(db, lead, now, 'http://localhost:3000');
     expect(page).toMatchObject({ canManage: true, canSwitch: false });

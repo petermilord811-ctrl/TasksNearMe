@@ -108,9 +108,12 @@ export async function redeemInvite(
 // ---- Staff ----------------------------------------------------------------------------------------------
 
 const JOINERS_SHOWN = 50;
+/** Markets people can be invited into: pre-launch (invited bookings) and live. Paused ones are invisible. */
+const INVITE_STATUSES = ['prelaunch', 'live'] as const;
 
 export async function getAdminBetaPage(db: Db, staff: StaffActor, now: Date, appUrl: string): Promise<AdminBetaPageData> {
-  const marketRows = await db.select({ id: markets.id, name: markets.name }).from(markets).orderBy(markets.name);
+  // Invites are for cities that are open or about to open: a paused market (Gainesville until plan 8.1) has none.
+  const marketRows = await db.select({ id: markets.id, name: markets.name }).from(markets).where(inArray(markets.status, [...INVITE_STATUSES])).orderBy(markets.name);
   const marketIds = marketRows.map((m) => m.id);
   const [codeRows, accessRows] = await Promise.all([
     marketIds.length ? db.select().from(betaInviteCodes).where(inArray(betaInviteCodes.marketId, marketIds)).orderBy(desc(betaInviteCodes.createdAt)) : [],
@@ -193,7 +196,7 @@ export async function createInviteCode(
   const parsed = inviteCodeCreateSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const { marketId, role, label, maxUses, expiresInDays, customCode } = parsed.data;
-  const [market] = await db.select({ id: markets.id }).from(markets).where(eq(markets.id, marketId)).limit(1);
+  const [market] = await db.select({ id: markets.id }).from(markets).where(and(eq(markets.id, marketId), inArray(markets.status, [...INVITE_STATUSES]))).limit(1);
   if (!market) return { ok: false, code: 'not_found' };
   const expiresAt = typeof expiresInDays === 'number' ? new Date(now.getTime() + expiresInDays * 24 * 60 * 60 * 1000) : null;
 
