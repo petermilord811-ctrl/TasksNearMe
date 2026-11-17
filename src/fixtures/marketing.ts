@@ -8,6 +8,7 @@ import type {
   HomePageData,
   LandingAiSuggestResult,
   LandingMapData,
+  MarketPageData,
   MarketView,
   PriceBreakdown,
   PricingPageData,
@@ -244,6 +245,15 @@ export const homeNoRewardData: HomePageData = { ...homePageData, welcomeReward: 
 /** Before launch: no helpers verified yet, and no AI drafting (the hero hides both). */
 export const homePrelaunchData: HomePageData = { ...homePageData, aiDraftingEnabled: false, helpers: { verified: 0, openThisWeek: 0 } };
 
+/**
+ * Before the first real helper and task: what the public sees where sample rows are hidden (owner, 2026-11-17;
+ * src/shared/sample-data.ts). No tasks on the town or the map, no helpers, no counts; the configuration stays.
+ */
+export const homeNoListingsData: HomePageData = { ...homePageData, recentTasks: [], featuredHelpers: [], map: { ...austinLandingMap, pins: [] }, helpers: { verified: 0, openThisWeek: 0 } };
+
+/** The market page before the first real helper and task (as `homeNoListingsData`). */
+export const marketNoListingsData: MarketPageData = { market: austinMarket, categories: categoryViews, recentTasks: [], featuredHelpers: [] };
+
 export const furnitureCategoryPageData: CategoryPageData = {
   market: austinMarket,
   category: categoryViews[0]!,
@@ -332,6 +342,9 @@ export const movingCategoryWithSeoEmptyData: CategoryPageData = {
     related: [{ label: 'Furniture assembly', href: '/austin/furniture-assembly' }, { label: 'Pricing and fees', href: '/pricing' }],
   },
 };
+
+/** A category page before the first real helper and task: no tasks, no helpers, no counts, no city guide. */
+export const categoryNoListingsData: CategoryPageData = { ...movingCategoryWithSeoEmptyData, topHelpers: [] };
 
 export const pricingPageData: PricingPageData = {
   fees: { posterFeePercent: 10, posterMinimumCents: 300, helperFeePercent: 10 },

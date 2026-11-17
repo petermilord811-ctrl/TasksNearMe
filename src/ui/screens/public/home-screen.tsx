@@ -1,5 +1,6 @@
 ﻿import type { CategorySlug, HomePageData, ISODateTime } from '@/contracts';
 import type { LatLng } from '@/shared/geo';
+import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { Hero } from '@/ui/landing/hero';
 import { LandingProvider } from '@/ui/landing/landing-state';
 import { MapSection } from '@/ui/landing/map-section';
@@ -42,5 +43,20 @@ export function HomeScreen({ data, now, mapMode = 'interactive', initialLocation
         <ClosingSection data={data} />
       </div>
     </LandingProvider>
+  );
+}
+
+/**
+ * The landing while it streams in. The page reads who's visiting before it draws (signed-in testers also see the demo
+ * marketplace), so the prerendered shell holds this: a hero-tall placeholder on the page's paper, so the footer never
+ * shows first.
+ */
+export function HomeScreenSkeleton() {
+  return (
+    <div className="paper min-h-svh">
+      <div className="mx-auto w-full max-w-[78rem] px-gutter pt-32 sm:pt-36 lg:pt-[clamp(6.5rem,15svh,10rem)]">
+        <PageSkeleton variant="cards" />
+      </div>
+    </div>
   );
 }

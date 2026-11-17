@@ -1,11 +1,11 @@
 import type { CategorySlug, HomePageData, PreviewEntry } from '@/contracts';
 import { routes } from '@/contracts';
-import { homeEmptyMapData, homeNoRewardData, homePageData, previewSuggestTaskWithAi, publicViewer } from '@/fixtures';
+import { homeEmptyMapData, homeNoListingsData, homeNoRewardData, homePageData, previewSuggestTaskWithAi, publicViewer } from '@/fixtures';
 import type { LatLng } from '@/shared/geo';
 import { LandingHandlersProvider } from '@/ui/landing/landing-handlers';
 import { LandingProvider } from '@/ui/landing/landing-state';
 import { MapSection } from '@/ui/landing/map-section';
-import { HomeScreen } from '@/ui/screens/public';
+import { HomeScreen, HomeScreenSkeleton } from '@/ui/screens/public';
 import { PublicShell } from '@/ui/shells/public-shell';
 import copy from '../../../messages/en/ui/landing.json';
 
@@ -52,6 +52,21 @@ export const landingPreviews: PreviewEntry[] = [
   landing('screen-home/default', copy.previews.default, homePageData),
   landing('screen-home/no-reward', copy.previews.noReward, homeNoRewardData),
   landing('screen-home/empty-map', copy.previews.emptyMap, homeEmptyMapData),
+  // What the public sees before the first real helper and task (sample rows are for signed-in testers only).
+  landing('screen-home/no-listings', copy.previews.noListings, homeNoListingsData),
+  {
+    id: 'screen-home/loading',
+    group: copy.previews.group,
+    title: copy.previews.loading,
+    layout: 'fullscreen',
+    render: () => (
+      <div data-theme="light" className="bg-background text-foreground">
+        <PublicShell viewer={publicViewer} currentPath={routes.home()} variant="landing">
+          <HomeScreenSkeleton />
+        </PublicShell>
+      </div>
+    ),
+  },
   landing('screen-home/dark', copy.previews.dark, homePageData, 'dark'),
   map('component-landing-map/default', copy.previews.map),
   map('component-landing-map/near-you', copy.previews.mapNearYou, { location: inMueller }),

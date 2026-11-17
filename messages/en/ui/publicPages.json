@@ -400,6 +400,8 @@
   "previews": {
     "group": "Public marketing pages",
     "market": "Austin market",
+    "marketNoListings": "Austin market, no helpers or tasks yet",
+    "categoryNoListings": "Moving help, no helpers, tasks or counts yet",
     "furniture": "Furniture assembly",
     "moving": "Moving help without tasks",
     "furnitureSeo": "Furniture assembly with counts, city guide, questions and related links",

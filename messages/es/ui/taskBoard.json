@@ -39,6 +39,8 @@
     "paged": "Tablero de tareas · página 2",
     "filteredEmpty": "Tablero de tareas · sin tareas coincidentes",
     "noTasks": "Tablero de tareas · sin tareas abiertas",
+    "noListings": "Tablero de tareas · todavía nada publicado, todo en 0",
+    "hubNoListings": "Tablero de tareas · página de categoría, todavía nada publicado",
     "byDay": "Tablero de tareas · por día",
     "cards": "Tablero de tareas · tarjetas",
     "filtered": "Tablero de tareas · con filtros",

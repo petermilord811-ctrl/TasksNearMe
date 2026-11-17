@@ -400,6 +400,8 @@
   "previews": {
     "group": "Páginas públicas de presentación",
     "market": "Mercado de Austin",
+    "marketNoListings": "Mercado de Austin, todavía sin ayudantes ni tareas",
+    "categoryNoListings": "Ayuda con mudanzas, todavía sin ayudantes, tareas ni cifras",
     "furniture": "Armado de muebles",
     "moving": "Ayuda con mudanzas sin tareas",
     "furnitureSeo": "Armado de muebles con cifras, guía de la ciudad, preguntas y enlaces relacionados",

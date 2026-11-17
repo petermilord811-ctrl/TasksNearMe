@@ -378,6 +378,8 @@
     "default": "Página de inicio",
     "noReward": "Página de inicio, sin recompensa de fundadores",
     "emptyMap": "Página de inicio, sin tareas abiertas",
+    "noListings": "Página de inicio, todavía sin ayudantes ni tareas",
+    "loading": "Página de inicio, cargando",
     "dark": "Página de inicio, oscura",
     "map": "Mapa y lista cercana",
     "mapNearYou": "Mapa, cerca de ti",

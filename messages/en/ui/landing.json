@@ -378,6 +378,8 @@
     "default": "Landing page",
     "noReward": "Landing page, no founding reward",
     "emptyMap": "Landing page, no open tasks",
+    "noListings": "Landing page, no helpers or tasks yet",
+    "loading": "Landing page, loading",
     "dark": "Landing page, dark",
     "map": "Map and nearby list",
     "mapNearYou": "Map, near you",

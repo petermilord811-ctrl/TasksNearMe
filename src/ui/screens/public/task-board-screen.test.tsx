@@ -9,6 +9,8 @@ import {
   taskBoardFilteredData,
   taskBoardFilteredEmptyData,
   taskBoardHubData,
+  taskBoardHubNoListingsData,
+  taskBoardNoListingsData,
   taskBoardNoTasksData,
   taskBoardPageData,
   taskBoardPagedData,
@@ -188,6 +190,19 @@ describe('TaskBoardScreen', () => {
     expect(screen.getByRole('heading', { name: 'No open tasks right now' })).toBeDefined();
     expect(screen.getByText('none posted today yet')).toBeDefined();
     for (const link of screen.getAllByRole('link', { name: 'Post a task' })) expect(hrefOf(link)).toBe(routes.app.newTask());
+  });
+
+  it('invites posting before the first real task, every count at 0, on the board and on a category hub', () => {
+    renderBoard(taskBoardNoListingsData);
+    expect(screen.getByRole('heading', { name: 'No open tasks right now' })).toBeDefined();
+    cleanup();
+    // The hub's category is the page, not a filter to clear; another filter on top of it is.
+    renderBoard(taskBoardHubNoListingsData);
+    expect(screen.getByRole('heading', { name: 'No open tasks right now' })).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'Clear filters' })).toBeNull();
+    cleanup();
+    renderBoard({ ...taskBoardHubNoListingsData, query: { ...taskBoardHubNoListingsData.query, when: 'today' } });
+    expect(screen.getByRole('heading', { name: 'No tasks match these filters' })).toBeDefined();
   });
 
   it('turns off remote work without dropping the category or the timing', () => {

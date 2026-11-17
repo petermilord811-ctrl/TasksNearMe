@@ -229,6 +229,37 @@ export const taskBoardNoTasksData: TaskBoardPageData = {
   stats: { openCount: 0, postedToday: 0 },
 };
 
+/** Every filter's count with nothing open: the board's facets before the first real task. */
+const noFacets: TaskBoardFacets = {
+  categories: {},
+  types: [],
+  areas: facets.areas.map((area) => ({ ...area, count: 0 })),
+  pricing: { fixed: 0, hourly: 0 },
+  posted: { '24h': 0, '3d': 0, '7d': 0 },
+  times: { morning: 0, afternoon: 0, evening: 0 },
+  when: { today: 0, this_week: 0, this_weekend: 0 },
+  prices: { under50: 0, from50: 0, from100: 0, from200: 0 },
+  few: 0,
+  remote: 0,
+};
+
+/**
+ * Before the first real task: the public's board where sample tasks are hidden (owner, 2026-11-17;
+ * src/shared/sample-data.ts). No rows, and every count 0.
+ */
+export const taskBoardNoListingsData: TaskBoardPageData = { ...taskBoardNoTasksData, facets: noFacets };
+
+/** A category's job hub before its first real task: its type tiles at 0, with no prices. */
+export const taskBoardHubNoListingsData: TaskBoardPageData = {
+  ...taskBoardHubData,
+  sections: [],
+  tasks: [],
+  totalCount: 0,
+  pageCount: 1,
+  stats: { openCount: 0, postedToday: 0 },
+  facets: { ...noFacets, types: taskBoardHubData.facets.types.map(({ slug }) => ({ slug, count: 0 })) },
+};
+
 export const publicTaskPageData: PublicTaskPageData = {
   task: deskPublicTask,
   category: categoryViews[0]!,

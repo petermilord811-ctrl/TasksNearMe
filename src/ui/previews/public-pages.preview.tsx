@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { CategoryPageData, PreviewEntry } from '@/contracts';
 import { routes } from '@/contracts';
-import { becomeHelperNoRewardsData, becomeHelperPageData, categoryViews, cleaningPublicTask, furnitureCategoryPageData, furnitureCategoryWithSeoData, furnitureCostGuideData, movingCostGuideData, homePageData, lee, movingCategoryPageData, movingCategoryWithSeoEmptyData, pricingPageData, publicViewer, remoteComputerPublicTask, sam, yardPublicTask } from '@/fixtures';
+import { becomeHelperNoRewardsData, becomeHelperPageData, categoryNoListingsData, categoryViews, cleaningPublicTask, furnitureCategoryPageData, furnitureCategoryWithSeoData, furnitureCostGuideData, movingCostGuideData, homePageData, lee, marketNoListingsData, movingCategoryPageData, movingCategoryWithSeoEmptyData, pricingPageData, publicViewer, remoteComputerPublicTask, sam, yardPublicTask } from '@/fixtures';
 import { PublicShell } from '@/ui/shells/public-shell';
 import { BecomeHelperScreen, CategoryScreen, CostGuideScreen, HowItWorksScreen, MarketScreen, PricingScreen, TrustSafetyScreen } from '@/ui/screens/public';
 import copy from '../../../messages/en/ui/publicPages.json';
@@ -17,6 +17,9 @@ function page(id: string, title: string, path: string, render: () => ReactNode):
 
 export const publicPagePreviews: PreviewEntry[] = [
   page('screen-market/default', copy.previews.market, routes.market(), () => <MarketScreen data={homePageData} now={now} />),
+  // Before the first real helper and task: what the public sees (sample rows are for signed-in testers only).
+  page('screen-market/no-listings', copy.previews.marketNoListings, routes.market(), () => <MarketScreen data={marketNoListingsData} now={now} />),
+  page('screen-category/no-listings', copy.previews.categoryNoListings, routes.category('moving-help'), () => <CategoryScreen data={categoryNoListingsData} now={now} />),
   page('screen-category/furniture', copy.previews.furniture, routes.category('furniture-assembly'), () => <CategoryScreen data={furnitureCategoryPageData} now={now} />),
   page('screen-category/moving-empty', copy.previews.moving, routes.category('moving-help'), () => <CategoryScreen data={movingCategoryPageData} now={now} />),
   page('screen-category/furniture-seo', copy.previews.furnitureSeo, routes.category('furniture-assembly'), () => <CategoryScreen data={furnitureCategoryWithSeoData} now={now} />),

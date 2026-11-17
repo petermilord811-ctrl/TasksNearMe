@@ -64,6 +64,9 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
         .map((type) => ({ ...type, href: href({ type: type.slug === query.type ? undefined : type.slug }), selected: type.slug === query.type }))
     : [];
   const filtered = activeFilterCount(query) > 0;
+  // On a category's job hub the category is the page, not a filter: with nothing else chosen, an empty hub invites a
+  // post like the whole board does (before launch every hub is empty for the public).
+  const emptyFiltered = filtered && !(data.heading && query.category && activeFilterCount(query) === 1);
   const tomorrow = marketDayKey(new Date(new Date(`${data.today}T12:00:00Z`).getTime() + 86_400_000));
 
   // The filters in effect, each a link that removes it.
@@ -101,7 +104,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const dayLabel = (day: string, sample: TaskPublicView) => (day === data.today ? t('today') : day === tomorrow ? t('tomorrow') : formatDate(sample.schedule.windowStart));
 
   const list = data.tasks.length === 0
-    ? <EmptyState title={t(filtered ? 'filteredEmptyTitle' : 'noTasksTitle')} body={t(filtered ? 'filteredEmptyBody' : 'noTasksBody')} action={filtered ? { label: t('clearFilters'), href: localeHref(routes.taskBoard(market.slug), locale) } : { label: t('postTask'), href: localeHref(routes.app.newTask(), locale) }} />
+    ? <EmptyState title={t(emptyFiltered ? 'filteredEmptyTitle' : 'noTasksTitle')} body={t(emptyFiltered ? 'filteredEmptyBody' : 'noTasksBody')} action={emptyFiltered ? { label: t('clearFilters'), href: localeHref(routes.taskBoard(market.slug), locale) } : { label: t('postTask'), href: localeHref(routes.app.newTask(), locale) }} />
     : query.view === 'cards'
       ? <ul className="grid gap-3 sm:grid-cols-2">{data.tasks.map((task) => <li key={task.id} className="min-w-0"><PublicTaskCard task={task} now={now} headingLevel={2} /></li>)}</ul>
       : data.sections

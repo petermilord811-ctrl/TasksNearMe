@@ -39,6 +39,8 @@
     "paged": "Task board · page 2",
     "filteredEmpty": "Task board · no matching tasks",
     "noTasks": "Task board · no open tasks",
+    "noListings": "Task board · nothing posted yet, every count at 0",
+    "hubNoListings": "Task board · category page, nothing posted yet",
     "byDay": "Task board · by day",
     "cards": "Task board · cards",
     "filtered": "Task board · filtered",
