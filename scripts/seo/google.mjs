@@ -16,9 +16,14 @@
  * (the owner's service account, an Owner of the Search Console property). Never print or commit it.
  */
 import crypto from 'node:crypto';
+import dns from 'node:dns';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+
+// Google's API front end answers this server's IPv6 address with a bare HTML 403 (since about 2026-11-15; IPv4 works),
+// and Node tries IPv6 first: ask DNS for IPv4 addresses first.
+dns.setDefaultResultOrder('ipv4first');
 
 export const SITE = 'sc-domain:tasksnearme.com';
 export const ORIGIN = 'https://tasksnearme.com';
