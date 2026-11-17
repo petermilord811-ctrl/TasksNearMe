@@ -113,7 +113,7 @@ Before handing a ticket off, `npm run check` must pass, with the contracts compi
 
 ## Conventions
 
-- TypeScript strict. Money is integer cents. Timestamps are UTC ISO strings, displayed in America/Chicago via `@/shared/format`: in components, `const { formatDate } = useFormat()` (`@/ui/lib/format`) formats in the page's language; server code passes the reader's `locale`.
+- TypeScript strict. Money is integer cents. Timestamps are UTC ISO strings, displayed in the time zone of the market they belong to (`markets.time_zone`) via `@/shared/format`: in components, `const { formatDate } = useFormat()` (`@/ui/lib/format`) formats in the page's language and zone (the viewer's home market, or the market a page is about, set with `MarketTime` from `@/ui/lib/market-time`); server code passes the market's zone and the reader's `locale`.
 - English and Spanish (`docs/automation/decisions.md`, 2026-11-13). Every message in `messages/en` needs its Spanish in `messages/es` (same keys, ICU arguments and tags): `npm run i18n:check -- <namespace>` shows what's missing, and `src/i18n/catalog.test.ts` fails otherwise. Emails, texts and push go out in the recipient's `users.locale`.
 - Canonical people and money values: `src/fixtures` (mirrors `docs/ui/ui-contract.md` §2–§3).
 - Branches: `ui/UI-xxx-*` for Codex work, `feat/*` for yours. Commit or push only when the user asks.

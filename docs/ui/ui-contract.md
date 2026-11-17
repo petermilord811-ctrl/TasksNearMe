@@ -11,7 +11,7 @@ This document explains the data every screen works with. **The code is authorita
 ## 1. Rules
 
 1. Pages (Claude) read data only through `src/modules/<module>/queries.ts`. Those functions take the current `Viewer` and return **role-aware projections**, applying the visibility rules in §5 so pages can't leak data. UI components (Codex) receive those projections as props and never fetch.
-2. Money is **integer cents** (`Cents`). Timestamps are ISO-8601 UTC strings, displayed in `America/Chicago`.
+2. Money is **integer cents** (`Cents`). Timestamps are ISO-8601 UTC strings, displayed in the time zone of the market they belong to (`markets.time_zone`; completion plan 8.1).
 3. Canonical values in §3 are fixed. Tests assert them.
 4. All fixture people and places are fictional. The only street name is "Example Lane".
 
@@ -68,7 +68,7 @@ Fees: poster service fee = max(10% of price, $3.00); helper service fee = 10% of
 
 ```ts
 type Cents = number;            // integer
-type ISODateTime = string;      // UTC; display in America/Chicago
+type ISODateTime = string;      // UTC; display in its market's time zone
 type CategorySlug = 'furniture-assembly' | 'moving-help' | 'yard-cleanup' | 'light-cleaning' | 'computer-help';
 type StaffRole = 'support_agent' | 'support_lead' | 'trust_safety' | 'finance' | 'admin';
 

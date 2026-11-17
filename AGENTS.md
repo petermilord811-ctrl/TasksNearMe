@@ -73,7 +73,7 @@ Anything else needs a contract request first.
 5. **Links:** build every href with `routes` from `@/contracts`. No hard-coded paths.
 6. **Money and time:**
    - Money: `formatMoney` (integer cents). Never compute an amount.
-   - Dates and times: the `@/shared/format` helpers (America/Chicago).
+   - Dates and times: the `@/shared/format` helpers through `useFormat()`, which format in the page's market's time zone (never name a zone yourself).
    - Distance bands: map to copy.
 7. **Privacy.** Only `ExactAddressPanel` renders an `ExactAddress`. Never render last names, emails, or phone numbers unless a contract field gives them to that screen. Message text arrives as `MessageSegment[]`; render masked segments, and never try to detect contact details yourself.
 8. **Copy.**
