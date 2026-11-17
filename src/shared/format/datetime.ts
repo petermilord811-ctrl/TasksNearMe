@@ -3,9 +3,10 @@ import { DEFAULT_LOCALE, INTL_LOCALES, type AppLocale } from '@/contracts/locale
 
 /**
  * Date and time formatting, in the time zone of the market a date belongs to (completion plan 8.1): a task's,
- * a booking's, an availability slot's. Never the server's or the browser's own zone. Every helper takes the
- * market's IANA zone (`markets.time_zone`: Austin America/Chicago, Gainesville America/New_York); left out, it
- * falls back to `MARKET_TIME_ZONE`, the default market's (8.1 is moving every caller to pass it). Display helpers
+ * a booking's, an availability slot's. Never the server's or the browser's own zone. The day-line and wall-clock
+ * helpers (`marketDayKey`, `marketClockTime`, `marketLocalToUtc`) require the market's IANA zone
+ * (`markets.time_zone`: Austin America/Chicago, Gainesville America/New_York), so nothing silently falls back to
+ * another market's clock; the display helpers take it too, and fall back to `MARKET_TIME_ZONE`. Display helpers
  * take the reader's language (English when left out); components get them bound to the page's language and zone
  * from `useFormat()` (src/ui/lib/format.ts).
  *   formatDate        → "Sat, Nov 21"                      es: "sáb, 21 de nov"
@@ -108,17 +109,17 @@ export function formatDateTime(value: ISODateTime | Date, locale: AppLocale = DE
 const clockFormatter = perZone((timeZone) => new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
 
 /** Wall-clock time in the market's time zone, 24-hour, e.g. "10:30" (the inverse of `marketLocalToUtc`). */
-export function marketClockTime(value: ISODateTime | Date, timeZone?: TimeZone): string {
+export function marketClockTime(value: ISODateTime | Date, timeZone: TimeZone): string {
   return clockFormatter(timeZone).format(toDate(value));
 }
 
 /** Calendar day in the market's time zone, e.g. "2026-11-21": the day line is the market's own midnight. */
-export function marketDayKey(value: ISODateTime | Date, timeZone?: TimeZone): string {
+export function marketDayKey(value: ISODateTime | Date, timeZone: TimeZone): string {
   return dayKeyFormatter(timeZone).format(toDate(value));
 }
 
 export function formatTimeRange(start: ISODateTime | Date, end: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone): string {
-  if (marketDayKey(start, timeZone) === marketDayKey(end, timeZone)) {
+  if (marketDayKey(start, timeZone ?? MARKET_TIME_ZONE) === marketDayKey(end, timeZone ?? MARKET_TIME_ZONE)) {
     return `${formatTime(start, locale, timeZone)}–${formatTime(end, locale, timeZone)}`;
   }
   return `${formatDateTime(start, locale, timeZone)}–${formatDateTime(end, locale, timeZone)}`;
@@ -154,7 +155,7 @@ const offsetFormatter = perZone(
 );
 
 /** Minutes the market's zone is ahead of UTC at `instant` (Austin: −360 in winter, −300 in summer; Gainesville an hour later). */
-function marketOffsetMinutes(instant: Date, timeZone?: TimeZone): number {
+function marketOffsetMinutes(instant: Date, timeZone: TimeZone): number {
   const parts = Object.fromEntries(offsetFormatter(timeZone).formatToParts(instant).map((p) => [p.type, p.value]));
   const asUtc = Date.UTC(
     Number(parts.year),
@@ -172,7 +173,7 @@ function marketOffsetMinutes(instant: Date, timeZone?: TimeZone): number {
  * Times that don't exist (the spring-forward gap) move forward by the gap; repeated times
  * (fall back) resolve to the first occurrence.
  */
-export function marketLocalToUtc(date: string, time: string, timeZone?: TimeZone): ISODateTime {
+export function marketLocalToUtc(date: string, time: string, timeZone: TimeZone): ISODateTime {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   const clock = /^(\d{2}):(\d{2})$/.exec(time);
   if (!match || !clock) throw new RangeError(`Invalid market date or time: ${date} ${time}`);
