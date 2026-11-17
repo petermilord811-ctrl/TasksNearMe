@@ -11,6 +11,7 @@ import { CONTACT_REVERT_MS, contactRevertToken } from '@/modules/accounts/contac
 import { createPhoneVerification } from '@/modules/accounts/phone-verification';
 import { accounts, contactChangeReverts, passkeys, sessions, users } from '@/modules/accounts/schema';
 import { createHeldAccountLinkGuard } from '@/modules/accounts/sign-in/provider-gate';
+import { privacyRequests } from '@/modules/notifications/schema';
 import { getAccountPage } from '@/modules/notifications/service';
 import { reactForOperations } from '@/modules/oncall/reactions';
 import { anonymizeAccount } from '@/modules/privacy/requests';
@@ -56,6 +57,7 @@ afterAll(async () => {
     await db.delete(auditLog).where(inArray(auditLog.targetId, cases.map((id) => `/admin/cases/${id}`)));
   }
   await db.delete(auditLog).where(inArray(auditLog.targetId, made));
+  await db.delete(privacyRequests).where(inArray(privacyRequests.userId, made));
   await db.update(users).set({ contactHoldAt: null }).where(eq(users.id, 'usr_taylor'));
   await db.delete(users).where(inArray(users.id, made));
   await pool.end();
@@ -300,6 +302,45 @@ describe('a newer change, a phone change, and links that must change nothing', (
     const [opened] = await casesOf(lee.userId);
     const [note] = await db.select().from(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id));
     expect(note!.body).toContain('Undone: the account uses the number ending in 0181 again.');
+  });
+
+  it('withdraws a deletion asked for since a day before the change, and names an older one in the case note', async () => {
+    const ana = await person('ana');
+    const ben = await person('ben');
+    // Ana's deletion was asked for after her email changed: what someone who took the account would do.
+    await changeEmail(ana, `ccr-ana-new-${RUN}@example.test`);
+    const anaLink = tokenIn((await latest(ana.email, 'email', 'email-changed'))?.body);
+    const fresh = `prv_ccr_fresh_${RUN}`;
+    await db.insert(privacyRequests).values({ id: fresh, userId: ana.userId, kind: 'deletion', status: 'requested', scheduledFor: new Date(Date.now() + 7 * DAY), createdAt: new Date() });
+    // Ben asked to delete his account three days before his email changed.
+    const older = `prv_ccr_older_${RUN}`;
+    await db.insert(privacyRequests).values({ id: older, userId: ben.userId, kind: 'deletion', status: 'requested', scheduledFor: new Date(Date.now() + 4 * DAY), createdAt: new Date(Date.now() - 3 * DAY) });
+    await changeEmail(ben, `ccr-ben-new-${RUN}@example.test`);
+    const benLink = tokenIn((await latest(ben.email, 'email', 'email-changed'))?.body);
+
+    const now = new Date();
+    expect(await redeemContactRevertLink({ db, now, ip: null }, anaLink)).toEqual({ ok: true, code: 'updated' });
+    expect(await redeemContactRevertLink({ db, now, ip: null }, benLink)).toEqual({ ok: true, code: 'updated' });
+
+    // Withdrawn as "Keep my account" does, and audited.
+    expect((await db.select().from(privacyRequests).where(eq(privacyRequests.id, fresh)))[0]).toMatchObject({ status: 'withdrawn', completedAt: now });
+    const [withdrawn] = await auditOf(ana.userId, 'account.deletion_withdrawn');
+    expect(withdrawn).toMatchObject({ actorId: null, actorRole: 'system' });
+    expect(withdrawn!.metadata).toMatchObject({ via: 'not_me_link', requestId: fresh });
+    expect((await auditOf(ana.userId, 'account.contact_change_reported'))[0]!.metadata).toMatchObject({ deletionsWithdrawn: 1 });
+    // The older one stays.
+    expect((await db.select().from(privacyRequests).where(eq(privacyRequests.id, older)))[0]).toMatchObject({ status: 'requested', completedAt: null });
+    expect(await auditOf(ben.userId, 'account.deletion_withdrawn')).toEqual([]);
+
+    const noteOf = async (userId: string) => {
+      const [opened] = await casesOf(userId);
+      const [note] = await db.select().from(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id));
+      return note!.body ?? '';
+    };
+    const anaNote = await noteOf(ana.userId);
+    expect(anaNote).toMatch(/Deleting the account was requested on .+: withdrawn, so it can't run before the account is checked\./);
+    expect(anaNote).not.toContain('it happens on');
+    expect(await noteOf(ben.userId)).toMatch(/Deleting the account was requested on .+, before .+; it happens on .+ unless it's withdrawn\./);
   });
 
   it('changes nothing for a forged, unknown or expired link, and says the same for each', async () => {

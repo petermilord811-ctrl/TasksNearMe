@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, isNotNull, lt, lte, ne, notInArray, or } from 'drizzle-orm';
 import type { ActionResult, ContactRevertPageData, TimeZone } from '@/contracts';
-import { MARKET_TIME_ZONE, SOCIAL_PROVIDERS } from '@/contracts';
+import { DELETION_GRACE_DAYS, MARKET_TIME_ZONE, SOCIAL_PROVIDERS } from '@/contracts';
 import { markets } from '@/modules/markets/schema';
 import { privacyRequests } from '@/modules/notifications/schema';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
@@ -21,7 +21,8 @@ import { accounts, contactChangeReverts, passkeys, phoneVerifications, sessions,
  * 1. signs every device out (the session rows go, as a ban does);
  * 2. undoes the change, unless a newer change of the same kind replaced it or another account took the old value;
  * 3. removes passkeys and Google or Microsoft sign-ins added since a day before the change (an attacker adds one
- *    to get back in, often just before changing the email), each audited;
+ *    to get back in, often just before changing the email), each audited, and withdraws a deletion of the account
+ *    asked for since then (it would run before staff could read the case: its grace period is as long as the link);
  * 4. holds the email, phone and ways to sign in until trust and safety or an admin clears it (signing in with an
  *    emailed code still works, so the owner gets back in);
  * 5. opens an urgent account case for trust and safety (on-call paging, 5.12), or adds to the one already open;
@@ -120,13 +121,19 @@ export async function redeemContactRevertLink(deps: RedeemDeps, token: unknown):
       .delete(accounts)
       .where(and(eq(accounts.userId, user.id), inArray(accounts.providerId, [...SOCIAL_PROVIDERS]), gte(accounts.createdAt, since)))
       .returning({ id: accounts.id, provider: accounts.providerId });
+    // A deletion asked for since then is withdrawn, as the person's own "Keep my account" does (privacy/requests.ts).
+    const withdrawnDeletions = await tx
+      .update(privacyRequests)
+      .set({ status: 'withdrawn', completedAt: now })
+      .where(and(eq(privacyRequests.userId, user.id), eq(privacyRequests.kind, 'deletion'), eq(privacyRequests.status, 'requested'), gte(privacyRequests.createdAt, since)))
+      .returning({ id: privacyRequests.id, createdAt: privacyRequests.createdAt });
     // A code sent before now can't finish a phone change any more.
     await tx.update(phoneVerifications).set({ status: 'canceled', updatedAt: now }).where(and(eq(phoneVerifications.userId, user.id), eq(phoneVerifications.status, 'pending')));
     if (!user.contactHoldAt) await tx.update(users).set({ contactHoldAt: now }).where(eq(users.id, user.id));
 
     const [market] = await tx.select({ timeZone: markets.timeZone }).from(markets).where(eq(markets.id, user.homeMarketId)).limit(1);
     const timeZone = market?.timeZone ?? MARKET_TIME_ZONE;
-    const caseId = await openCase(tx, { timeZone, row, user, revert, sessionsEnded: ended.length, since, removedKeys, removedLinks, now });
+    const caseId = await openCase(tx, { timeZone, row, user, revert, sessionsEnded: ended.length, since, removedKeys, removedLinks, withdrawnDeletions, now });
     const audit = (action: string, metadata: Record<string, unknown>) =>
       ({ id: newId('aud'), at: now.toISOString(), actorId: null, actorRole: 'system', action, targetType: 'user', targetId: user.id, metadata: { via: 'not_me_link', revertId: row.id, ...metadata }, ip });
     await tx.insert(auditLog).values([
@@ -136,11 +143,13 @@ export async function redeemContactRevertLink(deps: RedeemDeps, token: unknown):
         ...(revert.done ? {} : { notReverted: revert.why }),
         ...(row.kind === 'email' ? { from: row.newValue, to: row.previousValue } : { fromLast4: last4(row.newValue), toLast4: last4(row.previousValue) }),
         sessionsEnded: ended.length,
+        deletionsWithdrawn: withdrawnDeletions.length,
         held: true,
         caseId,
       }),
       ...removedKeys.map((key) => audit('account.passkey_removed', { passkeyId: key.id, name: key.name ?? '' })),
       ...removedLinks.map((link) => audit('account.sign_in_disconnected', { provider: link.provider })),
+      ...withdrawnDeletions.map((request) => audit('account.deletion_withdrawn', { requestId: request.id })),
     ]);
     return true;
   });
@@ -187,6 +196,7 @@ interface CaseFacts {
   since: Date;
   removedKeys: { id: string; name: string | null }[];
   removedLinks: { id: string; provider: string }[];
+  withdrawnDeletions: { id: string; createdAt: Date }[];
   now: Date;
 }
 
@@ -215,12 +225,16 @@ async function noteFor(tx: Tx, facts: CaseFacts): Promise<string> {
     .where(and(eq(contactChangeReverts.userId, user.id), ne(contactChangeReverts.id, row.id), gte(contactChangeReverts.createdAt, new Date(facts.now.getTime() - CONTACT_REVERT_MS))))
     .orderBy(desc(contactChangeReverts.createdAt));
   if (others.length > 0) lines.push(`Other changes in the last 7 days: ${others.map((other) => `${other.kind === 'email' ? 'email' : 'phone number'} on ${at(other.createdAt)}`).join('; ')}. Each notice has its own link.`);
+  for (const deletion of facts.withdrawnDeletions) lines.push(`Deleting the account was requested on ${at(deletion.createdAt)}, after ${at(facts.since)}: withdrawn, so it can't run before the account is checked.`);
   const [deletion] = await tx
-    .select({ scheduledFor: privacyRequests.scheduledFor })
+    .select({ scheduledFor: privacyRequests.scheduledFor, createdAt: privacyRequests.createdAt })
     .from(privacyRequests)
     .where(and(eq(privacyRequests.userId, user.id), eq(privacyRequests.kind, 'deletion'), eq(privacyRequests.status, 'requested')))
     .limit(1);
-  if (deletion) lines.push(`Deleting the account was requested${deletion.scheduledFor ? `; it happens on ${at(deletion.scheduledFor)}` : ''} unless it's withdrawn.`);
+  if (deletion) {
+    const runs = deletion.scheduledFor ?? new Date(deletion.createdAt.getTime() + DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000);
+    lines.push(`Deleting the account was requested on ${at(deletion.createdAt)}, before ${at(facts.since)}; it happens on ${at(runs)} unless it's withdrawn.`);
+  }
   lines.push('Held: the email, phone and ways to sign in can’t change until trust and safety or an admin clears the hold on the person page, once the account is back with its owner. Signing in with an emailed code still works.');
   return lines.join('\n');
 }

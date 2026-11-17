@@ -231,10 +231,11 @@ export interface ContactRevertPageData {
 
 /**
  * `onConfirm` ("This wasn't me"): every device on the account is signed out; the change is undone if nothing newer
- * replaced it; passkeys and Google or Microsoft sign-ins added since about the time of the change are removed;
- * the email, phone and ways to sign in are held until our team clears the account; and trust and safety get an
- * urgent case. ok `updated` (show what happens next). Errors: `not_found` (used, expired or not a link of ours:
- * show the `invalid` state, never which), `rate_limited` with `retryAt`, `unknown`.
+ * replaced it; passkeys and Google or Microsoft sign-ins added since about the time of the change are removed, and
+ * a deletion of the account asked for since then is withdrawn; the email, phone and ways to sign in are held until
+ * our team clears the account; and trust and safety get an urgent case. ok `updated` (show what happens next).
+ * Errors: `not_found` (used, expired or not a link of ours: show the `invalid` state, never which), `rate_limited`
+ * with `retryAt`, `unknown`.
  */
 export interface ContactRevertHandlers {
   onConfirm: () => Promise<ActionResult>;
