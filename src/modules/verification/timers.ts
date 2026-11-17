@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
 import type { FileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
+import { userTimeZone } from '@/modules/markets/time-zone';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
@@ -112,7 +113,7 @@ export async function runVerificationTimers(db: Db, deps: VerificationTimerDeps,
       db.select().from(identityCaptures).where(eq(identityCaptures.userId, capture.userId)),
     ]);
     // The current check itself passed (a renewal's earlier check counting doesn't make these final).
-    const standing = identityStanding(identityRows, now, captureRows);
+    const standing = identityStanding(identityRows, now, captureRows, await userTimeZone(db, capture.userId));
     if (!standing.verified || !standing.cleared) continue;
     if (await deleteIdentityCapturePhotos({ db, storage: deps.storage }, capture.id, now)) {
       idPhotosDeleted += 1;
@@ -232,7 +233,7 @@ async function runIdExpiry(db: Db, deps: VerificationTimerDeps, now: Date, scope
       db.select().from(identityVerifications).where(eq(identityVerifications.userId, userId)),
       db.select().from(identityCaptures).where(eq(identityCaptures.userId, userId)),
     ]);
-    const standing = identityStanding(rows, now, captures);
+    const standing = identityStanding(rows, now, captures, await userTimeZone(db, userId));
     if (!standing.verified || !standing.expiresAt || !idExpiryNoticeDue(standing.expiresAt, now)) continue;
     const passed = now.getTime() >= standing.expiresAt.getTime();
     await db.insert(identityVerifications).values({
@@ -265,7 +266,7 @@ async function runIdExpiry(db: Db, deps: VerificationTimerDeps, now: Date, scope
       db.select().from(identityVerifications).where(eq(identityVerifications.userId, renewal.userId)),
       db.select().from(identityCaptures).where(eq(identityCaptures.userId, renewal.userId)),
     ]);
-    const standing = identityStanding(rows, now, captures);
+    const standing = identityStanding(rows, now, captures, await userTimeZone(db, renewal.userId));
     // Still counting: nothing to do yet.
     if (standing.renewal) continue;
     const resets = rows.filter((row) => row.providerSessionId === null).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());

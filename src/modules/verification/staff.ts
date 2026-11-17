@@ -50,6 +50,7 @@ import { users } from '@/modules/accounts/schema';
 import { areas } from '@/modules/markets/schema';
 import { personSummaryOf, type StaffActor } from '@/modules/support/staff';
 import { files } from '@/modules/tasks/schema';
+import { marketTimeZones } from '@/modules/markets/time-zone';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { ByteCipher, FieldCipher } from '@/platform/crypto/field-encryption';
@@ -207,10 +208,11 @@ async function identityQueue(db: Db, now: Date, readerOn = aiWritingSetUp(), dec
     db.select().from(users).where(inArray(users.id, ids)),
   ]);
   const out: AdminIdentityReviewRow[] = [];
+  const zones = await marketTimeZones(db, people.map((person) => person.homeMarketId));
   // A deleted account has nothing left to decide.
   for (const person of people.filter((row) => row.status !== 'deleted')) {
     const theirs = captures.filter((row) => row.userId === person.id);
-    const standing = identityStanding(rows.filter((row) => row.userId === person.id), now, theirs);
+    const standing = identityStanding(rows.filter((row) => row.userId === person.id), now, theirs, zones.get(person.homeMarketId)!);
     const waiting = standing.capture?.status === 'submitted' ? theirs.find((row) => row.id === standing.capture!.id) : undefined;
     if (standing.blocked === 'duplicate_id' && standing.duplicate) {
       // The same ID on another account: staff look at both before the double check opens.

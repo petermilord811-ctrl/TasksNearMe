@@ -6,6 +6,7 @@ import { isReservedEmailAddress } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
 import { files } from '@/modules/tasks/schema';
+import { marketTimeZones } from '@/modules/markets/time-zone';
 import { auditLog } from '@/platform/audit/schema';
 import type { ByteCipher, FieldCipher, KeyedHasher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
@@ -115,7 +116,7 @@ export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, sco
   if (!deps.reader) return 0;
   const hasher = deps.hasher === undefined ? identityDocumentHasherFromEnv() : deps.hasher;
   const rows = await db
-    .select({ capture: identityCaptures, email: users.email, firstName: users.firstName, lastName: users.lastName })
+    .select({ capture: identityCaptures, email: users.email, firstName: users.firstName, lastName: users.lastName, homeMarketId: users.homeMarketId })
     .from(identityCaptures)
     .innerJoin(users, eq(users.id, identityCaptures.userId))
     .where(
@@ -129,7 +130,8 @@ export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, sco
     .orderBy(asc(identityCaptures.submittedAt))
     .limit(BATCH);
   let read = 0;
-  for (const { capture, email, firstName, lastName } of rows) {
+  const zones = await marketTimeZones(db, rows.map((row) => row.homeMarketId));
+  for (const { capture, email, firstName, lastName, homeMarketId } of rows) {
     const reader = isReservedEmailAddress(email) ? createStandInIdReader() : deps.reader;
     const [file] = await db.select().from(files).where(eq(files.id, capture.frontFileId!)).limit(1);
     const sealed = file ? await deps.storage.get(file.storageKey) : null;
@@ -146,7 +148,7 @@ export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, sco
     } else {
       try {
         const reading = await reader.read({ document: { bytes, contentType: file.contentType }, declaredType: capture.documentType as IdentityDocumentType });
-        check = { ...deriveIdentityAutoCheck(reading, { firstName, lastName }, now), by: reader.name, at: now.toISOString() };
+        check = { ...deriveIdentityAutoCheck(reading, { firstName, lastName }, now, zones.get(homeMarketId)!), by: reader.name, at: now.toISOString() };
         // The number lives only in `reading`, for this hash.
         documentHash = reading.readable && hasher ? identityDocumentHash(reading, hasher) : null;
       } catch (error) {

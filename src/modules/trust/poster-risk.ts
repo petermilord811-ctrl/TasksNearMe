@@ -5,6 +5,7 @@ import { payments } from '@/modules/payments/schema';
 import { supportCases } from '@/modules/support/schema';
 import { identityStanding } from '@/modules/verification/standing';
 import { identityVerifications } from '@/modules/verification/schema';
+import { userTimeZone } from '@/modules/markets/time-zone';
 import type { Db } from '@/platform/db/connect';
 
 /**
@@ -50,7 +51,7 @@ export async function posterRiskFacts(db: Db, userId: string, now: Date): Promis
   const [user] = await db.select({ createdAt: users.createdAt }).from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return null;
   const rows = await db.select().from(identityVerifications).where(eq(identityVerifications.userId, userId)).orderBy(asc(identityVerifications.createdAt));
-  const standing = identityStanding(rows, now);
+  const standing = identityStanding(rows, now, [], await userTimeZone(db, userId));
   const lastVerified = rows.filter((row) => row.status === 'verified').at(-1)?.createdAt ?? new Date(0);
   const staffRequested = rows.some((row) => row.requestedReason === 'staff_request' && row.createdAt > lastVerified);
   const [reports] = await db

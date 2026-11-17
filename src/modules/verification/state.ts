@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray } from 'drizzle-orm';
+import { MARKET_TIME_ZONE } from '@/contracts';
 import type {
   AddressRejectionReason,
   CategorySlug,
@@ -13,6 +14,7 @@ import { users } from '@/modules/accounts/schema';
 import { awaitingCity, OPEN_MARKET_STATUSES } from '@/modules/markets/coverage';
 import { categories, markets } from '@/modules/markets/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
+import { marketTimeZone } from '@/modules/markets/time-zone';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
@@ -71,7 +73,7 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
   ]);
   // Outside every city we're open in: the helper gave a ZIP and waits for their city (owner, 2026-11-14).
   const waitingIn = profile ? awaitingCity(profile, openMarkets) : null;
-  const identity = identityStanding(identityRows, now, captureRows);
+  const identity = identityStanding(identityRows, now, captureRows, user ? await marketTimeZone(db, user.homeMarketId) : MARKET_TIME_ZONE);
   const address = addressStanding(addressRows);
   const background = backgroundStanding(backgroundRows, now);
 

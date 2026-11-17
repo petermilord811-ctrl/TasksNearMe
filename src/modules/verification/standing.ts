@@ -12,8 +12,8 @@ import type {
   IdentityStatus,
   LivenessPrompt,
 } from '@/contracts';
-import { LIVENESS_PROMPTS } from '@/contracts';
-import { marketLocalToUtc } from '@/shared/format';
+import { LIVENESS_PROMPTS, type TimeZone } from '@/contracts';
+import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
  * Where each verification track stands, as pure functions of its rows (blueprint 06 §1, extended
@@ -42,11 +42,14 @@ export const ID_EXPIRY_RULES = {
   noticeDays: 30,
 } as const;
 
-/** The first instant after an ID's expiry month, in Austin (an ID is good through its expiry date). */
-export function idExpiresAt(month: number, year: number): Date | undefined {
+/**
+ * The first instant after an ID's expiry month, in the person's own market zone (an ID is good through its expiry
+ * date, a calendar date where they live; completion plan 8.1).
+ */
+export function idExpiresAt(month: number, year: number, timeZone: TimeZone): Date | undefined {
   if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year) || year < 2000 || year > 2200) return undefined;
   const next = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
-  return new Date(marketLocalToUtc(`${next.year}-${String(next.month).padStart(2, '0')}-01`, '00:00'));
+  return new Date(marketLocalToUtc(`${next.year}-${String(next.month).padStart(2, '0')}-01`, '00:00', timeZone));
 }
 
 /** The 30-day notice (and the new check it asks for) is due. */
@@ -167,11 +170,11 @@ function asRequestReason(value: string | null): IdentityRequestReason | undefine
  * When the ID behind a verified session runs out: the expiry month of the photos our team approved for it
  * (the newest approved capture in its window, from `windowStart`, made before the session).
  */
-function verificationExpiry(session: IdentityRow, captures: readonly CaptureRow[], windowStart: number): Date | undefined {
+function verificationExpiry(session: IdentityRow, captures: readonly CaptureRow[], windowStart: number, timeZone: TimeZone): Date | undefined {
   const approval = captures.findLast((row) => row.status === 'approved' && row.createdAt.getTime() >= windowStart && row.createdAt.getTime() <= session.createdAt.getTime());
   const month = approval?.autoCheck?.expiresMonth;
   const year = approval?.autoCheck?.expiresYear;
-  return month && year ? idExpiresAt(month, year) : undefined;
+  return month && year ? idExpiresAt(month, year, timeZone) : undefined;
 }
 
 /**
@@ -180,7 +183,8 @@ function verificationExpiry(session: IdentityRow, captures: readonly CaptureRow[
  * session, and an approved one isn't a failed try. The provider's verified result is what verifies, so
  * helpers verified before stage 1 existed stay verified without a capture.
  */
-export function identityStanding(rows: readonly IdentityRow[], now: Date, captures: readonly CaptureRow[] = []): IdentityStanding {
+/** `timeZone`: the person's own (their home market's), where their ID's dates are calendar dates. */
+export function identityStanding(rows: readonly IdentityRow[], now: Date, captures: readonly CaptureRow[], timeZone: TimeZone): IdentityStanding {
   const ordered = byCreated(rows);
   const latest = ordered.at(-1);
   const resetIndex = ordered.findLastIndex((row) => row.providerSessionId === null);
@@ -219,7 +223,7 @@ export function identityStanding(rows: readonly IdentityRow[], now: Date, captur
   }
   if (verified) {
     // The ID behind it runs out at the end of its expiry month (6.3): from then on it doesn't count.
-    const expiresAt = verificationExpiry(latest!, allCaptures, resetAt);
+    const expiresAt = verificationExpiry(latest!, allCaptures, resetAt, timeZone);
     if (expiresAt) {
       standing.expiresAt = expiresAt;
       if (now.getTime() >= expiresAt.getTime()) {
@@ -237,7 +241,7 @@ export function identityStanding(rows: readonly IdentityRow[], now: Date, captur
     const previousResetAt = previousResetIndex >= 0 ? ordered[previousResetIndex]!.createdAt.getTime() : Number.NEGATIVE_INFINITY;
     const counted = ordered.slice(previousResetIndex + 1, resetIndex).at(-1);
     const countedClears = counted?.status === 'verified' && (counted.nameMatches !== false || counted.nameConfirmedAt !== null);
-    const countsUntil = counted && countedClears ? verificationExpiry(counted, allCaptures, previousResetAt) : undefined;
+    const countsUntil = counted && countedClears ? verificationExpiry(counted, allCaptures, previousResetAt, timeZone) : undefined;
     if (countsUntil && now.getTime() < countsUntil.getTime()) {
       standing.renewal = { countsUntil };
       standing.cleared = true;
@@ -375,11 +379,10 @@ export function calendarDate(value: string | undefined): { year: number; month: 
   return { year, month, day };
 }
 
-/** Today's date in Austin (America/Chicago), as the ID's dates are calendar dates there. */
-function austinToday(now: Date): { year: number; month: number; day: number } {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(now);
-  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
-  return { year: get('year'), month: get('month'), day: get('day') };
+/** Today's date where the person lives (their market's zone), as the ID's dates are calendar dates there. */
+function localToday(now: Date, timeZone: TimeZone): { year: number; month: number; day: number } {
+  const [year, month, day] = marketDayKey(now, timeZone).split('-').map(Number) as [number, number, number];
+  return { year, month, day };
 }
 
 const dayNumber = (date: { year: number; month: number; day: number }) => date.year * 10_000 + date.month * 100 + date.day;
@@ -389,13 +392,13 @@ const dayNumber = (date: { year: number; month: number; day: number }) => date.y
  * rule as the provider's check), 18 or older, not expired, and the expiry month and year. The name, birth
  * date and document number are never returned, so they're never stored.
  */
-export function deriveIdentityAutoCheck(reading: IdentityReading, account: { firstName: string; lastName: string }, now: Date): IdentityAutoCheckAnswers {
+export function deriveIdentityAutoCheck(reading: IdentityReading, account: { firstName: string; lastName: string }, now: Date, timeZone: TimeZone): IdentityAutoCheckAnswers {
   if (!reading.readable) return { readable: false };
-  const today = austinToday(now);
+  const today = localToday(now, timeZone);
   const born = calendarDate(reading.dateOfBirth);
   const expires = calendarDate(reading.expiryDate);
   const nameMatches = reading.givenNames?.trim() && reading.surname?.trim() ? namesMatch(account, { firstName: reading.givenNames, lastName: reading.surname }) : undefined;
-  // 18 on the 18th birthday (in Austin); someone born on Feb 29 turns 18 on Mar 1 in a common year.
+  // 18 on the 18th birthday (where they live); someone born on Feb 29 turns 18 on Mar 1 in a common year.
   const isAdult = born ? dayNumber(today) >= dayNumber({ year: born.year + IDENTITY_CAPTURE_RULES.adultAge, month: born.month, day: born.day }) : undefined;
   return {
     readable: true,
