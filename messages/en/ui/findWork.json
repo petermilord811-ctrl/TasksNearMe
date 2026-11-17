@@ -57,7 +57,9 @@
     "blockedReasons": "Find work · blocked reasons",
     "map": "Find work · map (phones)",
     "saved": "Find work · saved",
-    "byPay": "Find work · highest pay"
+    "byPay": "Find work · highest pay",
+    "waiting": "Find work · waiting for their city",
+    "waitingReady": "Find work · waiting, ready"
   },
   "perHour": "{rate}/h",
   "earn": "You'd earn {amount}",
@@ -111,5 +113,14 @@
     "unknown": "Your offer didn’t go through. Try again.",
     "undo_failed": "Your offer couldn’t be withdrawn here. Open the task to withdraw it.",
     "bot_check": "We couldn't confirm you're a person, so the offer wasn't sent. Try again."
+  },
+  "waiting": {
+    "title": "We're not in {city} yet",
+    "body": "Find work lists tasks in the cities we're open in. We'll email you the day TasksNearMe opens in {city}, {state}.",
+    "demand": "{people, plural, =0 {You're the first person near {zip} to ask for us.} one {# other person near {zip} is waiting for us too.} other {# other people near {zip} are waiting for us too.}}",
+    "waitlist": "See the waitlist for {zip}",
+    "setupTitle": "Get ready meanwhile",
+    "setupBody": "Finish your profile and checks now, so you can take tasks the day we open in {city}.",
+    "ready": "Your profile and checks are done: you'll be ready the day we open in {city}."
   }
 }

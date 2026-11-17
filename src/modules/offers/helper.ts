@@ -43,6 +43,8 @@ import { consumeRateLimit } from '@/platform/rate-limit';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { mapTiles } from '@/modules/markets/map-tiles';
 import { marketTimeZone } from '@/modules/markets/time-zone';
+import { waitlistDemand } from '@/modules/marketing/waitlist';
+import type { HomePlace } from '@/modules/markets/coverage';
 import {
   distanceBandOf,
   helperOfferActions,
@@ -80,6 +82,8 @@ export interface HelperState {
   /** The helper's area center; distances are measured from here. */
   center: { lat: number; lng: number } | null;
   marketId: string | null;
+  /** The helper waits for their city (no open market covers their ZIP): no tasks to find yet (plan 8.4). */
+  awaitingCity: HomePlace | null;
 }
 
 export async function loadHelperState(db: Db, userId: string, now: Date): Promise<HelperState> {
@@ -106,6 +110,7 @@ export async function loadHelperState(db: Db, userId: string, now: Date): Promis
     },
     center: area ? { lat: area.centerLat, lng: area.centerLng } : null,
     marketId: area?.marketId ?? user?.marketId ?? null,
+    awaitingCity: state.awaitingCity,
   };
 }
 
@@ -171,6 +176,29 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
   const query = parseFindWorkQuery(params);
   // The helper's market: its cards' days and "today" are on its clock (completion plan 8.1).
   const timeZone = await marketTimeZone(db, state.marketId);
+  // Waiting for their city (completion plan 8.4): their home market is only a placeholder (categories and policy),
+  // so its tasks aren't theirs to find. Say so, with who else is waiting near them and their setup meanwhile.
+  if (state.awaitingCity) {
+    const place = state.awaitingCity;
+    const [demand, categories, [market]] = await Promise.all([
+      waitlistDemand(db, place.zip),
+      listCategoryViews(state.marketId, db),
+      db.select({ lat: markets.centerLat, lng: markets.centerLng }).from(markets).where(eq(markets.id, state.marketId)).limit(1),
+    ]);
+    return {
+      query,
+      categories,
+      cards: [],
+      totalCount: 0,
+      pageCount: 1,
+      setup: state.setup,
+      map: { ...mapTiles(), marketCenter: market ? { lat: market.lat, lng: market.lng } : { lat: 30.2672, lng: -97.7431 } },
+      today: marketDayKey(now, timeZone),
+      timeZone,
+      savedCount: 0,
+      waitingFor: { city: place.city, state: place.state, zip: place.zip, waiting: demand?.waiting ?? 0, helpersWaiting: demand?.helpersWaiting ?? 1 },
+    };
+  }
   const [categoryViews, categoryRows] = await Promise.all([
     listCategoryViews(state.marketId, db),
     db.select({ slug: categories.slug, requiresBackgroundCheck: categories.requiresBackgroundCheck, minPriceCents: categories.minPriceCents }).from(categories),

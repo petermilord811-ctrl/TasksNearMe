@@ -1,5 +1,5 @@
 import { OFFER_BLOCKED_REASONS, routes, type AppShellHandlers, type FindWorkPageData, type PreviewEntry } from '@/contracts';
-import { fakeFindWorkHandlers, fakeHandler, findWorkByPayData, findWorkEmptyData, findWorkMapViewData, findWorkNotBookableData, findWorkPageData, findWorkSavedData, jordanShell, priyaShell } from '@/fixtures';
+import { fakeFindWorkHandlers, fakeHandler, findWorkByPayData, findWorkEmptyData, findWorkMapViewData, findWorkNotBookableData, findWorkPageData, findWorkSavedData, findWorkWaitingData, findWorkWaitingReadyData, jordanShell, priyaShell } from '@/fixtures';
 import { FindWorkScreen } from '@/ui/screens/work/find-work-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/findWork.json';
@@ -17,6 +17,8 @@ export const findWorkPreviews: PreviewEntry[] = [
   preview('map', copy.previews.map, findWorkMapViewData),
   preview('saved', copy.previews.saved, findWorkSavedData),
   preview('by-pay', copy.previews.byPay, findWorkByPayData),
+  preview('waiting', copy.previews.waiting, findWorkWaitingData),
+  preview('waiting-ready', copy.previews.waitingReady, findWorkWaitingReadyData),
   preview('blocked-reasons', copy.previews.blockedReasons, {
     ...findWorkPageData,
     cards: OFFER_BLOCKED_REASONS.map((blockedReason, index) => ({ ...findWorkPageData.cards[index % findWorkPageData.cards.length], myOffer: undefined, task: { ...findWorkPageData.cards[index % findWorkPageData.cards.length].task, id: `blocked-${blockedReason}` }, blockedReason })),

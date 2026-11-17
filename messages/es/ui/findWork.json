@@ -57,7 +57,9 @@
     "blockedReasons": "Buscar trabajo · motivos de bloqueo",
     "map": "Buscar trabajo · mapa (teléfonos)",
     "saved": "Buscar trabajo · guardadas",
-    "byPay": "Buscar trabajo · mejor pagadas"
+    "byPay": "Buscar trabajo · mejor pagadas",
+    "waiting": "Buscar trabajo · esperando su ciudad",
+    "waitingReady": "Buscar trabajo · esperando, listo"
   },
   "perHour": "{rate}/h",
   "earn": "Ganarías {amount}",
@@ -111,5 +113,14 @@
     "unknown": "Tu oferta no se envió. Inténtalo de nuevo.",
     "undo_failed": "Tu oferta no se pudo retirar desde aquí. Abre la tarea para retirarla.",
     "bot_check": "No pudimos confirmar que eres una persona, así que la oferta no se envió. Vuelve a intentarlo."
+  },
+  "waiting": {
+    "title": "Todavía no estamos en {city}",
+    "body": "Aquí aparecen las tareas de las ciudades donde ya estamos. Te escribiremos el día que TasksNearMe abra en {city}, {state}.",
+    "demand": "{people, plural, =0 {Eres la primera persona cerca de {zip} en pedirnos.} one {# persona más cerca de {zip} también nos espera.} other {# personas más cerca de {zip} también nos esperan.}}",
+    "waitlist": "Ver la lista de espera de {zip}",
+    "setupTitle": "Mientras tanto, prepárate",
+    "setupBody": "Termina tu perfil y tus verificaciones ahora para que puedas tomar tareas el día que abramos en {city}.",
+    "ready": "Tu perfil y tus verificaciones están listos: podrás empezar el día que abramos en {city}."
   }
 }

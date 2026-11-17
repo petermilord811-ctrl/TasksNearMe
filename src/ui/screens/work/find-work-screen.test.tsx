@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { OFFER_BLOCKED_REASONS, routes, type ActionResult, type FindWorkHandlers, type FindWorkPageData } from '@/contracts';
-import { fakeFindWorkHandlers, findWorkByPayData, findWorkEmptyData, findWorkMapViewData, findWorkNotBookableData, findWorkPageData, findWorkSavedData } from '@/fixtures';
+import { fakeFindWorkHandlers, findWorkByPayData, findWorkEmptyData, findWorkMapViewData, findWorkNotBookableData, findWorkPageData, findWorkSavedData, findWorkWaitingData, findWorkWaitingReadyData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import findWork from '../../../../messages/en/ui/findWork.json';
 import { FindWorkScreen } from './find-work-screen';
@@ -19,6 +19,30 @@ function renderWork(data: FindWorkPageData = findWorkPageData, handlers: FindWor
   return render(<NextIntlClientProvider locale="en" messages={{ ...messages, findWork }}><TimeZoneProvider timeZone="America/Chicago"><FindWorkScreen data={data} now={now} handlers={handlers ?? undefined} liveMap={false} /></TimeZoneProvider></NextIntlClientProvider>);
 }
 const list = () => screen.getByRole('region', { name: findWork.resultsLabel });
+
+describe('FindWorkScreen for a helper waiting for their city (plan 8.4)', () => {
+  it('says we are not there yet, who else is waiting, and leads to the waitlist and the setup instead of a list', () => {
+    renderWork(findWorkWaitingData);
+    expect(screen.getByRole('heading', { level: 2, name: "We're not in Pretty Prairie yet" })).toBeDefined();
+    expect(screen.getByText(/the day TasksNearMe opens in Pretty Prairie, KS\./)).toBeDefined();
+    // Two on the waitlist and one other helper.
+    expect(screen.getByText('3 other people near 67570 are waiting for us too.')).toBeDefined();
+    expect(screen.getByRole('link', { name: 'See the waitlist for 67570' }).getAttribute('href')).toBe(routes.waitlist({ zip: '67570' }));
+    const setup = screen.getByRole('region', { name: 'Get ready meanwhile' });
+    expect(within(setup).getByText(/the day we open in Pretty Prairie/)).toBeDefined();
+    expect(within(setup).getByRole('link').getAttribute('href')).toBe(routes.app.helperOnboarding('identity'));
+    // No tasks from another city, and no filters for them.
+    expect(screen.queryAllByRole('article')).toHaveLength(0);
+    expect(screen.queryByRole('search')).toBeNull();
+  });
+
+  it('says they are ready when their setup is done, and when nobody else has asked yet', () => {
+    renderWork(findWorkWaitingReadyData);
+    expect(screen.getByText("You're the first person near 67570 to ask for us.")).toBeDefined();
+    expect(screen.getByText("Your profile and checks are done: you'll be ready the day we open in Pretty Prairie.")).toBeDefined();
+    expect(screen.queryByRole('region', { name: 'Get ready meanwhile' })).toBeNull();
+  });
+});
 
 describe('FindWorkScreen', () => {
   it('lists tasks by day with the pay, what the helper earns, the area, and the offer status', () => {

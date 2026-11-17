@@ -109,6 +109,22 @@ export const findWorkNotBookableData: FindWorkPageData = {
   savedCount: 0,
 };
 
+/**
+ * Waiting for their city (completion plan 8.4): Priya gave a ZIP in Pretty Prairie, KS, which no open market covers.
+ * Two people on the waitlist and one other helper wait near her, and she still has checks to finish.
+ */
+export const findWorkWaitingData: FindWorkPageData = {
+  ...findWorkNotBookableData,
+  cards: [],
+  totalCount: 0,
+  pageCount: 1,
+  savedCount: 0,
+  waitingFor: { city: 'Pretty Prairie', state: 'KS', zip: '67570', waiting: 2, helpersWaiting: 2 },
+};
+
+/** Waiting, with her setup done: ready the day the city opens. */
+export const findWorkWaitingReadyData: FindWorkPageData = { ...findWorkWaitingData, setup: findWorkPageData.setup, waitingFor: { city: 'Pretty Prairie', state: 'KS', zip: '67570', waiting: 0, helpersWaiting: 1 } };
+
 export const findWorkEmptyData: FindWorkPageData = {
   ...findWorkPageData,
   query: { ...findWorkPageData.query, category: 'moving-help', distance: 'within_2_mi' },

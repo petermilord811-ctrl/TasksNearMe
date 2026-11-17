@@ -89,6 +89,17 @@ export interface HelperSetupState {
 }
 
 /** `/app/find-work`: open tasks near the helper, newest or soonest first. */
+/** Where a waiting helper lives, and the people waiting near their ZIP (its first three digits, about one metro). */
+export interface FindWorkWaiting {
+  /** The city they typed, its state ("Pretty Prairie", "KS"), and their ZIP. */
+  city: string;
+  state: string;
+  zip: string;
+  /** People on the waitlist near that ZIP, and helpers waiting there (this one included). */
+  waiting: number;
+  helpersWaiting: number;
+}
+
 export interface FindWorkPageData {
   query: {
     category?: CategorySlug;
@@ -116,6 +127,11 @@ export interface FindWorkPageData {
   savedCount: number;
   /** The bot check for one-tap offers (contracts/bot-check.ts, action `offer`). Absent: none is set up. */
   botCheck?: BotCheckConfig;
+  /**
+   * The helper waits for their city (completion plan 8.4): they gave a ZIP no open market covers, so there's no list
+   * (`cards` is empty) but "We're not in {city} yet", their setup to finish meanwhile, and who else is waiting there.
+   */
+  waitingFor?: FindWorkWaiting;
 }
 
 /**

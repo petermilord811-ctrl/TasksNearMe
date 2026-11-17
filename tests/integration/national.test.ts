@@ -5,6 +5,7 @@ import { waitlistEntries } from '@/modules/marketing/schema';
 import { citiesComingNext, joinWaitlist, waitlistDemand } from '@/modules/marketing/waitlist';
 import { markets } from '@/modules/markets/schema';
 import { setMarketStatus } from '@/modules/markets/status';
+import { getFindWorkPageData } from '@/modules/offers/helper';
 import { helperProfiles } from '@/modules/profiles/schema';
 import type { StaffActor } from '@/modules/support/staff';
 import { computeOnboarding } from '@/modules/verification/progress';
@@ -99,6 +100,17 @@ describe('the waitlist across the US', () => {
     expect(await waitlistDemand(db, '09001')).toBeNull();
   });
 
+  it('shows a waiting helper "not in their city yet" on find work, never another market’s tasks (plan 8.4)', async () => {
+    const waiting = await getFindWorkPageData(db, DENVER_HELPER, {}, now);
+    expect(waiting?.waitingFor).toEqual({ city: 'Denver', state: 'CO', zip: '80202', waiting: 2, helpersWaiting: 1 });
+    expect(waiting?.cards).toEqual([]);
+    expect(waiting?.totalCount).toBe(0);
+    // A helper with a neighborhood in an open market finds its tasks as before.
+    const jordan = await getFindWorkPageData(db, 'usr_jordan', {}, now);
+    expect(jordan?.waitingFor).toBeUndefined();
+    expect(jordan!.cards.length).toBeGreaterThan(0);
+  });
+
   it('lists cities with at least three people, outside the prefixes we cover', async () => {
     const next = await citiesComingNext(db, ['786', '787']);
     expect(next.find((city) => city.city === 'Denver' && city.state === 'CO')).toMatchObject({ people: 3, helpersWaiting: 1 });
@@ -128,6 +140,8 @@ describe('opening a market', () => {
     expect(await setMarketStatus(db, riley, DALLAS, { status: 'prelaunch', reason: 'Opening Dallas to helpers' }, now)).toEqual({ ok: true, code: 'updated' });
     const [moved] = await db.select({ market: users.homeMarketId }).from(users).where(eq(users.id, DALLAS_HELPER));
     expect(moved!.market).toBe(DALLAS);
+    // Their city is open: find work is theirs again (plan 8.4).
+    expect((await getFindWorkPageData(db, DALLAS_HELPER, {}, now))?.waitingFor).toBeUndefined();
     const [stayed] = await db.select({ market: users.homeMarketId }).from(users).where(eq(users.id, DENVER_HELPER));
     expect(stayed!.market).toBe('mkt_austin');
 
