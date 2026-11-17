@@ -12,7 +12,8 @@
     "prohibited": "This isn't allowed on TasksNearMe. See the list of prohibited tasks.",
     "out_of_range": "Choose a value within the allowed range.",
     "unchanged": "That's what you have now.",
-    "in_market": "That's in a city we already serve. Choose it from the list instead."
+    "in_market": "That's in a city we already serve. Choose it from the list instead.",
+    "held": "Changes are paused while our team checks your account. Contact support if you need help."
   },
   "fields": {
     "email": {

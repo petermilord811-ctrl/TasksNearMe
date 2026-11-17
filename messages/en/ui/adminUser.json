@@ -247,7 +247,14 @@
         "title": "Decline this ban request",
         "description": "The account stays as it is. The request and your reason stay in the audit log.",
         "submit": "Decline"
+      },
+      "clear_contact_hold": {
+        "trigger": "Clear the hold",
+        "title": "Clear the hold on sign-in details",
+        "description": "They can change their email and phone and add ways to sign in again. Clear it only once the account is back with its owner.",
+        "submit": "Clear hold"
       }
-    }
+    },
+    "contactHold": "Email, phone and sign-in changes held since {date}: someone used the “Not you?” link in a contact change notice. Check its case before clearing the hold."
   }
 }

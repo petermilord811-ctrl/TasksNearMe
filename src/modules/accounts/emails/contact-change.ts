@@ -1,16 +1,18 @@
 import { createTranslator } from 'next-intl';
-import { DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
+import { CONTACT_REVERT_DAYS, DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 import type { RenderedEmail } from './welcome';
 
 /**
  * Changing the account's email or phone. A new email's code goes to the new address (it proves the person
- * reads it); once the change is made, the old address gets a notice with a way to reach support if it
- * wasn't them. A changed phone number gets the same notice by email (texts only show the last 4 digits).
+ * reads it); once the change is made, the old address gets a notice with a "Not you?" link (completion plan
+ * 5.23) that secures the account without signing in. A changed phone number gets the same notice by email
+ * (it shows only the last 4 digits), and the old number gets the link by text.
  */
 
 const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.emails' }));
+const smsFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.sms' }));
 
 const heading = (text: string) =>
   `<h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:30px;line-height:36px;font-weight:800;letter-spacing:-0.8px;color:${EMAIL_COLORS.ink};">${esc(text)}</h1>`;
@@ -39,30 +41,37 @@ ${paragraph(t('emailChangeCode.body', { email }))}
   };
 }
 
-function changedNotice(kind: 'emailChanged' | 'phoneChanged', values: Record<string, string>, appUrl: string, locale: AppLocale): RenderedEmail {
+/** `revertUrl`: the change's "Not you?" link (contact-revert-token.ts), which works once for `CONTACT_REVERT_DAYS`. */
+function changedNotice(kind: 'emailChanged' | 'phoneChanged', values: Record<string, string>, revertUrl: string, appUrl: string, locale: AppLocale): RenderedEmail {
   const t = tFor(locale);
-  const helpUrl = `${appUrl}${routes.app.support()}`;
+  const helpUrl = `${appUrl}${routes.helpContact()}`;
   const preheader = t(`${kind}.preheader`, values);
   const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
 ${heading(t(`${kind}.heading`))}
 ${paragraph(t(`${kind}.body`, values))}
-${paragraph(t(`${kind}.notYou`), false)}
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:22px;"><tr><td>${emailButton({ href: helpUrl, label: t(`${kind}.help`), variant: 'dark' })}</td></tr></table>
+${paragraph(t(`${kind}.notYou`, { days: CONTACT_REVERT_DAYS }), false)}
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:22px;"><tr><td>${emailButton({ href: revertUrl, label: t(`${kind}.help`), variant: 'dark' })}</td></tr></table>
+<p class="muted" style="margin:18px 0 0;font-family:${EMAIL_FONT};font-size:14px;line-height:21px;color:${EMAIL_COLORS.muted};">${esc(t(`${kind}.once`))} <a href="${esc(helpUrl)}" style="color:${EMAIL_COLORS.muted};text-decoration:underline;">${esc(t(`${kind}.contact`))}</a></p>
 </td></tr>`;
   return {
     subject: t(`${kind}.subject`),
     preheader,
     html: emailLayout({ title: t(`${kind}.title`), preheader, appUrl, body, footer: '', lang: locale }),
-    text: t(`${kind}.text`, { ...values, helpUrl }),
+    text: t(`${kind}.text`, { ...values, revertUrl, helpUrl, days: CONTACT_REVERT_DAYS }),
   };
 }
 
 /** To the old address, after the account switched to `newEmail`. */
-export function renderEmailChangedNotice({ newEmail, appUrl, locale = DEFAULT_LOCALE }: { newEmail: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
-  return changedNotice('emailChanged', { newEmail }, appUrl, locale);
+export function renderEmailChangedNotice({ newEmail, revertUrl, appUrl, locale = DEFAULT_LOCALE }: { newEmail: string; revertUrl: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
+  return changedNotice('emailChanged', { newEmail }, revertUrl, appUrl, locale);
 }
 
 /** To the account's email, after its phone number changed (only the last 4 digits are shown). */
-export function renderPhoneChangedNotice({ last4, appUrl, locale = DEFAULT_LOCALE }: { last4: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
-  return changedNotice('phoneChanged', { last4 }, appUrl, locale);
+export function renderPhoneChangedNotice({ last4, revertUrl, appUrl, locale = DEFAULT_LOCALE }: { last4: string; revertUrl: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
+  return changedNotice('phoneChanged', { last4 }, revertUrl, appUrl, locale);
+}
+
+/** The text to the old number after the phone changed: the same "Not you?" link, and nothing about the new number. */
+export function renderPhoneChangedText({ revertUrl, locale = DEFAULT_LOCALE }: { revertUrl: string; locale?: AppLocale }): string {
+  return smsFor(locale)('phoneChanged', { url: revertUrl, days: CONTACT_REVERT_DAYS });
 }

@@ -111,6 +111,11 @@ export const FIELD_ERROR_CODES = [
   'must_accept',
   /** A place inside a city we already serve, given where another one was asked for (a helper's ZIP in their own market). */
   'in_market',
+  /**
+   * Held: the account's email, phone and ways to sign in can't change until our team has checked it (someone used
+   * the "Not you?" link in a contact change notice, completion plan 5.23).
+   */
+  'held',
 ] as const;
 export type FieldErrorCode = (typeof FIELD_ERROR_CODES)[number];
 

@@ -13,6 +13,7 @@ import { db } from '@/platform/db/client';
 import { requestNow } from '@/platform/clock';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS } from '@/shared/locale';
+import { isContactHeld } from './contact-revert';
 import { confirmEnrollment, redeemSetupCode, verifyStaffTotp } from './staff-authenticator';
 import { staffCheckIsStrict } from './staff-dev-code';
 import { passkeys, users } from './schema';
@@ -54,6 +55,8 @@ export async function connectSignInAction(input: SocialSignInInput): Promise<Act
   const { provider } = parsed.data;
   const viewer = await getViewer();
   if (viewer.kind !== 'user' || !offeredSocialProviders().includes(provider)) return { ok: false, code: 'not_allowed' };
+  // Held after a "Not you?" link (completion plan 5.23): no new way to sign in until staff clear it.
+  if (await isContactHeld(db, viewer.user.id)) return { ok: false, code: 'not_allowed' };
   const back = `${routes.app.account()}?connect=${provider}`;
   // Development and tests only: this browser asked for the stand-in instead of the real provider.
   const additionalParams = standInParams((await cookies()).get(STAND_IN_COOKIE)?.value);
@@ -80,7 +83,7 @@ export async function disconnectSignInAction(input: SocialSignInInput): Promise<
 /** AccountHandlers.onPasskeyRegistrationOptions: the WebAuthn request for a new passkey on this account. */
 export async function passkeyRegistrationOptionsAction(): Promise<PasskeyOptionsResult> {
   const viewer = await getViewer();
-  if (viewer.kind !== 'user') return { ok: false, code: 'not_allowed' };
+  if (viewer.kind !== 'user' || (await isContactHeld(db, viewer.user.id))) return { ok: false, code: 'not_allowed' };
   try {
     const options = await auth.api.generatePasskeyRegistrationOptions({ headers: await headers() });
     return { ok: true, options: options as unknown as Record<string, unknown> };
@@ -94,7 +97,7 @@ const passkeyNameSchema = z.string().trim().min(1).max(60);
 /** AccountHandlers.onAddPasskey: the device's answer is checked and the passkey saved under its name. */
 export async function addPasskeyAction(input: { response?: Record<string, unknown>; name?: string }): Promise<ActionResult> {
   const viewer = await getViewer();
-  if (viewer.kind !== 'user') return { ok: false, code: 'not_allowed' };
+  if (viewer.kind !== 'user' || (await isContactHeld(db, viewer.user.id))) return { ok: false, code: 'not_allowed' };
   const name = passkeyNameSchema.safeParse(input?.name);
   if (!input?.response || typeof input.response !== 'object' || !name.success) return { ok: false, code: 'validation_failed', fieldErrors: { name: ['required'] } };
   try {

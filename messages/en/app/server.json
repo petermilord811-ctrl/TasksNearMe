@@ -342,9 +342,11 @@
       "title": "Your email was changed",
       "heading": "Your email was changed",
       "body": "Your TasksNearMe account now uses {newEmail} instead of this address. Sign-in codes and updates go there from now on.",
-      "notYou": "Didn't change it? Contact support right away so we can secure your account.",
-      "help": "Contact support",
-      "text": "Your TasksNearMe account now uses {newEmail} instead of this address. Didn't change it? Contact support right away: {helpUrl}"
+      "notYou": "Didn't change it? Tell us within {days} days and we'll secure your account: we sign out every device, undo the change and pause further changes until our team has checked it.",
+      "help": "This wasn't me",
+      "text": "Your TasksNearMe account now uses {newEmail} instead of this address.\n\nDidn't change it? Secure your account within {days} days (the link works once): {revertUrl}\n\nSomething else? Contact support: {helpUrl}",
+      "once": "The button works once.",
+      "contact": "Something else? Contact support"
     },
     "phoneChanged": {
       "subject": "Your TasksNearMe phone number was changed",
@@ -352,9 +354,11 @@
       "title": "Your phone number was changed",
       "heading": "Your phone number was changed",
       "body": "Your TasksNearMe account now uses the number ending in {last4}. Booking texts and sign-in checks go there from now on.",
-      "notYou": "Didn't change it? Contact support right away so we can secure your account.",
-      "help": "Contact support",
-      "text": "Your TasksNearMe account now uses the number ending in {last4}. Didn't change it? Contact support right away: {helpUrl}"
+      "notYou": "Didn't change it? Tell us within {days} days and we'll secure your account: we sign out every device, undo the change and pause further changes until our team has checked it.",
+      "help": "This wasn't me",
+      "text": "Your TasksNearMe account now uses the number ending in {last4}.\n\nDidn't change it? Secure your account within {days} days (the link works once): {revertUrl}\n\nSomething else? Contact support: {helpUrl}",
+      "once": "The button works once.",
+      "contact": "Something else? Contact support"
     },
     "giftCard": {
       "subject": "Your {amount} gift card is ready",
@@ -407,7 +411,8 @@
     }
   },
   "sms": {
-    "phoneCode": "{code} is your TasksNearMe code. It works for {minutes} minutes. We'll never call to ask for it."
+    "phoneCode": "{code} is your TasksNearMe code. It works for {minutes} minutes. We'll never call to ask for it.",
+    "phoneChanged": "TasksNearMe: the phone number on your account was changed. Not you? Secure your account within {days} days: {url}"
   },
   "seo": {
     "categoryFaq": {

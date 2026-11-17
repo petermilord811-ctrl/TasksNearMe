@@ -7,7 +7,7 @@ import { passkey } from '@better-auth/passkey';
 import { accounts, passkeys, sessions, users, verifications } from '@/modules/accounts/schema';
 import { renderEmailChangeCodeEmail } from '@/modules/accounts/emails/contact-change';
 import { renderSignInCodeEmail } from '@/modules/accounts/emails/sign-in-code';
-import { createProviderConnectedHook, createProviderGate } from '@/modules/accounts/sign-in/provider-gate';
+import { createHeldAccountLinkGuard, createProviderConnectedHook, createProviderGate } from '@/modules/accounts/sign-in/provider-gate';
 import { userFromProviderProfile } from '@/modules/accounts/sign-in/providers';
 import { createEmailProvider } from '@/integrations/email';
 import { appUrl, socialProviderKeys, standInSecret, standInSocialProviders } from '@/integrations/oauth';
@@ -99,7 +99,8 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
       },
     },
     databaseHooks: {
-      account: { create: { after: createProviderConnectedHook(db) } },
+      // No new Google or Microsoft link while a "Not you?" link holds the account (plan 5.23).
+      account: { create: { before: createHeldAccountLinkGuard(db), after: createProviderConnectedHook(db) } },
       // A new account takes the language it signed up in (src/platform/auth/locale.ts).
       user: { create: { before: async (user, ctx) => withRequestLocale(user, ctx) } },
       session: {

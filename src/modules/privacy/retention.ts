@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import type { FileStorage } from '@/integrations/storage';
+import { pruneContactReverts } from '@/modules/accounts/contact-revert';
 import { sessions, verifications } from '@/modules/accounts/schema';
 import { bookingCompletionPhotos, bookingExpenses } from '@/modules/bookings/schema';
 import { messages } from '@/modules/messaging/schema';
@@ -16,7 +17,9 @@ import { rateLimits } from '@/platform/rate-limit/schema';
  * - messages: a conversation's messages and their attachments, 2 years after its last message;
  * - completion photos and receipts: 2 years after the booking finished;
  * - the audit log: 7 years;
- * - expired sessions and sign-in codes, and old rate-limit windows: housekeeping.
+ * - expired sessions and sign-in codes, and old rate-limit windows: housekeeping;
+ * - "Not you?" links (completion plan 5.23): the old and new address or number an expired link kept are cleared,
+ *   and the rows go a month after they expired.
  * Nothing is kept past these while a support case about it is open. Payments, ledger and tax records keep
  * their 7 years (the first fall due in 2033; a sweep is added before then). Each sweep takes a batch, so a
  * backlog clears over a few runs without a long transaction.
@@ -143,16 +146,20 @@ export async function sweepAudit(db: Db, now: Date, limit = 1_000): Promise<numb
   return due.length;
 }
 
-/** Housekeeping: sessions and sign-in codes a day past their expiry, rate-limit windows a week old. */
+/**
+ * Housekeeping: sessions and sign-in codes a day past their expiry, rate-limit windows a week old, and what expired
+ * "Not you?" links kept.
+ */
 export async function sweepExpired(db: Db, now: Date): Promise<number> {
   const dayAgo = new Date(now.getTime() - DAY_MS);
   const weekAgo = new Date(now.getTime() - 7 * DAY_MS);
-  const [a, b, c] = await Promise.all([
+  const [a, b, c, d] = await Promise.all([
     db.delete(sessions).where(lt(sessions.expiresAt, dayAgo)).returning({ id: sessions.id }),
     db.delete(verifications).where(lt(verifications.expiresAt, dayAgo)).returning({ id: verifications.id }),
     db.delete(rateLimits).where(lt(rateLimits.windowStart, weekAgo)).returning({ key: rateLimits.key }),
+    pruneContactReverts(db, now),
   ]);
-  return a.length + b.length + c.length;
+  return a.length + b.length + c.length + d;
 }
 
 export async function runRetention(db: Db, deps: RetentionDeps, now: Date) {

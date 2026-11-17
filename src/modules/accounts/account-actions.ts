@@ -5,6 +5,7 @@ import { refresh } from 'next/cache';
 import type { ActionResult, EmailChangeConfirmInput, EmailInput, OneTimeCodeInput, PhoneInput, PhotoUploadResult } from '@/contracts';
 import { createEmailProvider } from '@/integrations/email';
 import { appUrl } from '@/integrations/oauth';
+import { createSmsSender } from '@/integrations/sms';
 import { fileStorage } from '@/modules/tasks/server';
 import { auth } from '@/platform/auth/auth';
 import { getViewer } from '@/platform/auth/viewer';
@@ -26,7 +27,7 @@ async function signedInUserId(): Promise<string | null> {
 
 /** Built per request: cheap, and a provider key added to the environment applies at once. */
 function contacts(): ContactChange {
-  return createContactChange({ db, auth, email: createEmailProvider(db), phoneVerification, appUrl: appUrl() });
+  return createContactChange({ db, auth, email: createEmailProvider(db), sms: createSmsSender(db), phoneVerification, appUrl: appUrl() });
 }
 
 function refreshed(result: ActionResult): ActionResult {

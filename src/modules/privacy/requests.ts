@@ -6,7 +6,7 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne, notInArray, or
 import { DATA_EXPORT_DAYS, DELETION_GRACE_DAYS, localeOrDefault, type AccountPrivacyView, type ActionResult, type DeletionBlocker } from '@/contracts';
 import { isReservedEmailAddress, type EmailProvider } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
-import { accounts, phoneVerifications, sessions, staffAuthenticators, staffRoles, users, verifications } from '@/modules/accounts/schema';
+import { accounts, contactChangeReverts, passkeys, phoneVerifications, sessions, staffAuthenticators, staffRoles, users, verifications } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
@@ -290,8 +290,11 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
       .where(eq(users.id, userId));
     await tx.delete(sessions).where(eq(sessions.userId, userId));
     await tx.delete(accounts).where(eq(accounts.userId, userId));
+    await tx.delete(passkeys).where(eq(passkeys.userId, userId));
     await tx.delete(verifications).where(eq(verifications.identifier, user.email));
     await tx.delete(phoneVerifications).where(eq(phoneVerifications.userId, userId));
+    // "Not you?" links keep old addresses and numbers (completion plan 5.23).
+    await tx.delete(contactChangeReverts).where(eq(contactChangeReverts.userId, userId));
     await tx.delete(staffRoles).where(eq(staffRoles.userId, userId));
     await tx.delete(staffAuthenticators).where(eq(staffAuthenticators.userId, userId));
     await tx.delete(notificationPreferences).where(eq(notificationPreferences.userId, userId));

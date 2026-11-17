@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { renderEmailChangedNotice, renderPhoneChangedNotice, renderPhoneChangedText } from './contact-change';
 import { renderSignInCodeEmail } from './sign-in-code';
 import { renderWelcomeEmail, type WelcomeEmailInput } from './welcome';
 
@@ -102,5 +103,29 @@ describe('the emails in Spanish', () => {
     expect(email.text).toContain('10 minutos');
     expect(email.html).toContain('<html lang="es"');
     expect(renderSignInCodeEmail({ code: '482915', minutes: 10, appUrl: 'https://tasksnearme.example' }).html).toContain('<html lang="en"');
+  });
+});
+
+describe('the email and phone change notices (completion plan 5.23)', () => {
+  const revertUrl = 'https://tasksnearme.example/account/not-me?token=ccr_0123456789abcdef0123456789abcdef.sig';
+
+  it('send the old address the "Not you?" link, with support as a second way', () => {
+    const email = renderEmailChangedNotice({ newEmail: 'new@example.test', revertUrl, appUrl: 'https://tasksnearme.example' });
+    expect(email.html).toContain(`href="${revertUrl}"`);
+    expect(email.html).toContain('This wasn&#39;t me');
+    expect(email.html).toContain('href="https://tasksnearme.example/help/contact"');
+    expect(email.html).not.toContain('/app/support');
+    expect(email.text).toContain(`Secure your account within 7 days (the link works once): ${revertUrl}`);
+    expect(email.text).toContain('new@example.test');
+  });
+
+  it('tell the account about a new phone number with the same link, and text the old number without the new one', () => {
+    const email = renderPhoneChangedNotice({ last4: '0182', revertUrl, appUrl: 'https://tasksnearme.example', locale: 'es' });
+    expect(email.subject).toBe('Se cambió tu número de teléfono de TasksNearMe');
+    expect(email.html).toContain(`href="${revertUrl}"`);
+    expect(email.html).toContain('No fui yo');
+    expect(email.text).toContain(revertUrl);
+    expect(renderPhoneChangedText({ revertUrl })).toBe(`TasksNearMe: the phone number on your account was changed. Not you? Secure your account within 7 days: ${revertUrl}`);
+    expect(renderPhoneChangedText({ revertUrl, locale: 'es' })).toContain('¿No fuiste tú?');
   });
 });

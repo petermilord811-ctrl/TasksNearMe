@@ -34,7 +34,7 @@ const sent: { to: string; tag?: string }[] = [];
 const outbox = createDevOutboxEmailProvider(db);
 const email: EmailProvider = { name: 'recording', send: async (message) => { sent.push({ to: message.to, tag: message.tag }); await outbox.send(message); } };
 const phoneVerification = createPhoneVerification({ db, sms: createDevOutboxSmsSender(db), secret: 'test-secret' });
-const contacts = createContactChange({ db, auth, email, phoneVerification, appUrl: BASE });
+const contacts = createContactChange({ db, auth, email, sms: createDevOutboxSmsSender(db), phoneVerification, appUrl: BASE });
 
 async function latest(to: string, channel: 'email' | 'sms' = 'email') {
   const [row] = await db

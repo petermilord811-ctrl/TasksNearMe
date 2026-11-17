@@ -28,7 +28,8 @@ const SEND_RULES = {
 
 export type StartResult =
   | { ok: true; maskedPhone: string; resendAvailableAt: Date }
-  | { ok: false; reason: 'invalid' | 'not_supported' | 'in_use' }
+  /** `held`: a "Not you?" link holds the account's phone until staff clear it (completion plan 5.23). */
+  | { ok: false; reason: 'invalid' | 'not_supported' | 'in_use' | 'held' }
   | { ok: false; reason: 'rate_limited'; retryAt: Date };
 
 export type VerifyResult =
@@ -60,6 +61,11 @@ export function createPhoneVerification({ db, sms, secret, now = () => new Date(
     return row ?? null;
   }
 
+  async function held(userId: string): Promise<boolean> {
+    const [row] = await db.select({ at: users.contactHoldAt }).from(users).where(eq(users.id, userId)).limit(1);
+    return Boolean(row?.at);
+  }
+
   async function cancelPending(userId: string, at: Date) {
     await db
       .update(phoneVerifications)
@@ -77,6 +83,8 @@ export function createPhoneVerification({ db, sms, secret, now = () => new Date(
 
     async start(userId: string, phoneInput: string): Promise<StartResult> {
       const at = now();
+      // Sign-in's phone step and the account page both come here.
+      if (await held(userId)) return { ok: false, reason: 'held' };
       const phone = normalizeUsPhone(phoneInput);
       if (!phone) return { ok: false, reason: /^\s*\+(?!1)/.test(phoneInput) ? 'not_supported' : 'invalid' };
 
@@ -141,6 +149,11 @@ export function createPhoneVerification({ db, sms, secret, now = () => new Date(
       }
       if (!row || row.status !== 'pending' || !row.codeHash) return { ok: false, reason: 'no_pending' };
       if (row.expiresAt <= at) return { ok: false, reason: 'expired' };
+      // A code sent just before a "Not you?" link held the account never sets the number.
+      if (await held(userId)) {
+        await cancelPending(userId, at);
+        return { ok: false, reason: 'no_pending' };
+      }
 
       const expected = Buffer.from(row.codeHash, 'hex');
       const actual = Buffer.from(hashCode(row.id, code.trim()), 'hex');

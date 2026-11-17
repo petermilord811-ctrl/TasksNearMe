@@ -148,18 +148,28 @@ export interface AdminUserPageData {
   account?: AdminAccountView;
 }
 
-/** Account-level moderation on the person page (completion plan 5.14). */
-export const ACCOUNT_ACTIONS = ['suspend', 'reinstate', 'request_ban', 'approve_ban', 'decline_ban'] as const;
+/**
+ * Account-level moderation on the person page (completion plan 5.14), and clearing the hold a "Not you?" link put
+ * on the account's sign-in details (5.23).
+ */
+export const ACCOUNT_ACTIONS = ['suspend', 'reinstate', 'request_ban', 'approve_ban', 'decline_ban', 'clear_contact_hold'] as const;
 export type AccountActionId = (typeof ACCOUNT_ACTIONS)[number];
 
 /**
  * The person's account (completion plan 5.14). A suspension or a ban stops sign-in, ends every current session
  * and suspends the helper profile. A ban takes two reviewers: one requests it, another approves it (blueprint
- * 08). `actions`, in this order, are what the viewer may do; staff accounts get none (change their roles first).
+ * 08). `actions`, in this order, are what the viewer may do; staff accounts get none of the moderation ones
+ * (change their roles first).
  */
 export interface AdminAccountView {
   status: 'active' | 'suspended' | 'banned';
   pendingBan?: { requestedById: string; requestedByName: string; reason: string; at: ISODateTime };
+  /**
+   * Since `at`, the email, phone and ways to sign in are held (completion plan 5.23): someone used the "Not you?"
+   * link in a contact change notice, and an urgent account case is open for it. Trust and safety and admins clear
+   * the hold (`clear_contact_hold`, never on their own account) once the account is back with its owner.
+   */
+  contactHold?: { at: ISODateTime };
   isStaff: boolean;
   actions: AccountActionId[];
 }

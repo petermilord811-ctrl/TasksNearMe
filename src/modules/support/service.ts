@@ -19,6 +19,7 @@ import type {
   SupportTopic,
 } from '@/contracts';
 import { CASE_STATUSES, newSupportRequestInputSchema, reportInputSchema, routes, supportReplyInputSchema } from '@/contracts';
+import { CONTACT_REVERT_CASE_REASON } from '@/modules/accounts/contact-revert';
 import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { earnings } from '@/modules/earnings/schema';
@@ -48,6 +49,8 @@ type CaseRow = typeof supportCases.$inferSelect;
 const REQUEST_TYPE: Record<SupportTopic, string> = { booking: 'request', payment: 'payment_issue', account: 'account', safety: 'safety', other: 'request' };
 /** Staff's case subjects. `account_access` is the public contact form's "I can't get into my account" (5.22). */
 const TOPIC_SUBJECT: Record<SupportTopic | 'account_access', string> = { booking: 'Booking', payment: 'Payment', account: 'Account', safety: 'Safety', other: 'Something else', account_access: 'Can’t get into their account' };
+/** The case a "Not you?" link opens (5.23, `support_cases.reason`): what staff see, and what the account's owner sees. */
+const CONTACT_REVERT_SUBJECT = { staff: '“Not you?” on a contact change', member: TOPIC_SUBJECT.account };
 /** Reports support looks at first. */
 const HIGH_PRIORITY_REASONS: ReadonlySet<ReportReason> = new Set(['harassment', 'scam_or_fraud', 'off_platform_payment', 'unsafe_behavior', 'discrimination']);
 
@@ -94,7 +97,8 @@ export async function caseLabelsOf(db: Db, rows: CaseRow[], viewerId?: string): 
     rows.map((row) => {
       const name = row.subjectUserId ? nameOf.get(row.subjectUserId) : undefined;
       const booking = row.bookingId ? bookingOf.get(row.bookingId) : undefined;
-      const topic = row.topic ? TOPIC_SUBJECT[row.topic as keyof typeof TOPIC_SUBJECT] : undefined;
+      const topic =
+        row.reason === CONTACT_REVERT_CASE_REASON ? CONTACT_REVERT_SUBJECT[viewerId ? 'member' : 'staff'] : row.topic ? TOPIC_SUBJECT[row.topic as keyof typeof TOPIC_SUBJECT] : undefined;
       const viewerRole = !viewerId ? undefined : booking?.posterUserId === viewerId ? 'poster' : booking?.helperUserId === viewerId ? 'helper' : undefined;
       return [row.id, { subject: name ?? booking?.title ?? topic ?? 'Support', ...(viewerRole ? { viewerRole } : {}) }];
     }),

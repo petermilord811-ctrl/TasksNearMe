@@ -15,10 +15,14 @@ import { setHelperSuspension } from './staff';
  * the person has now, and suspends their helper profile (its open offers are withdrawn). A ban is requested by
  * one reviewer and approved by another. Staff accounts are left to role changes first. Everything is audited
  * with its reason; the audit log is also where a pending ban request lives.
+ *
+ * A used "Not you?" link holds the account's email, phone and ways to sign in (completion plan 5.23,
+ * ./contact-revert.ts); trust and safety and admins clear the hold, on any account but their own.
  */
 
 const MODERATORS: readonly StaffRole[] = ['trust_safety', 'support_lead', 'admin'];
 const BAN_REVIEWERS: readonly StaffRole[] = ['trust_safety', 'admin'];
+const HOLD_CLEARERS: readonly StaffRole[] = ['trust_safety', 'admin'];
 const BAN_TRAIL = ['account.ban_requested', 'account.banned', 'account.ban_declined', 'account.reinstated'];
 const has = (staff: StaffActor, roles: readonly StaffRole[]) => staff.roles.some((role) => roles.includes(role));
 
@@ -36,7 +40,7 @@ async function pendingBan(db: Db, userId: string) {
 /** What the person page's Account section shows, and which actions this staff member has. */
 export async function adminAccountView(db: Db, staff: StaffActor, userId: string): Promise<AdminAccountView | undefined> {
   const [[user], roles, pending] = await Promise.all([
-    db.select({ status: users.status }).from(users).where(eq(users.id, userId)).limit(1),
+    db.select({ status: users.status, contactHoldAt: users.contactHoldAt }).from(users).where(eq(users.id, userId)).limit(1),
     db.select({ role: staffRoles.role }).from(staffRoles).where(eq(staffRoles.userId, userId)),
     pendingBan(db, userId),
   ]);
@@ -52,9 +56,12 @@ export async function adminAccountView(db: Db, staff: StaffActor, userId: string
     if (pending && has(staff, BAN_REVIEWERS) && pending.actorId !== staff.id) actions.push('approve_ban');
     if (pending && (has(staff, BAN_REVIEWERS) || pending.actorId === staff.id)) actions.push('decline_ban');
   }
+  // Staff accounts too (by someone else): the hold isn't moderation, and a staff member never clears their own.
+  if (user.contactHoldAt && has(staff, HOLD_CLEARERS) && staff.id !== userId) actions.push('clear_contact_hold');
   return {
     status,
     ...(pending ? { pendingBan: { requestedById: pending.actorId ?? '', requestedByName: pending.actorName ?? '', reason: pending.reason ?? '', at: new Date(pending.at).toISOString() } } : {}),
+    ...(user.contactHoldAt ? { contactHold: { at: user.contactHoldAt.toISOString() } } : {}),
     isStaff: roles.length > 0,
     actions,
   };
@@ -95,6 +102,10 @@ export async function moderateAccount(db: Db, staff: StaffActor, userId: string,
       break;
     case 'decline_ban':
       await audit('account.ban_declined', { requestedById: view.pendingBan?.requestedById });
+      break;
+    case 'clear_contact_hold':
+      await db.update(users).set({ contactHoldAt: null }).where(eq(users.id, String(userId)));
+      await audit('account.contact_hold_cleared', { heldSince: view.contactHold?.at });
       break;
   }
   return { ok: true, code: 'updated' };

@@ -342,9 +342,11 @@
       "title": "Se cambió tu correo",
       "heading": "Se cambió tu correo",
       "body": "Tu cuenta de TasksNearMe ahora usa {newEmail} en lugar de esta dirección. Los códigos de inicio de sesión y las novedades llegarán allí de ahora en adelante.",
-      "notYou": "¿No fuiste tú quien lo cambió? Contacta a soporte de inmediato para que podamos proteger tu cuenta.",
-      "help": "Contactar a soporte",
-      "text": "Tu cuenta de TasksNearMe ahora usa {newEmail} en lugar de esta dirección. ¿No fuiste tú quien lo cambió? Contacta a soporte de inmediato: {helpUrl}"
+      "notYou": "¿No fuiste tú quien lo cambió? Avísanos en los próximos {days} días y protegeremos tu cuenta: cerramos la sesión en todos los dispositivos, deshacemos el cambio y pausamos otros cambios hasta que nuestro equipo la revise.",
+      "help": "No fui yo",
+      "text": "Tu cuenta de TasksNearMe ahora usa {newEmail} en lugar de esta dirección.\n\n¿No fuiste tú quien lo cambió? Protege tu cuenta en los próximos {days} días (el enlace funciona una sola vez): {revertUrl}\n\n¿Algo más? Contacta a soporte: {helpUrl}",
+      "once": "Este botón funciona una sola vez.",
+      "contact": "¿Algo más? Contacta a soporte"
     },
     "phoneChanged": {
       "subject": "Se cambió tu número de teléfono de TasksNearMe",
@@ -352,9 +354,11 @@
       "title": "Se cambió tu número de teléfono",
       "heading": "Se cambió tu número de teléfono",
       "body": "Tu cuenta de TasksNearMe ahora usa el número que termina en {last4}. Los mensajes de texto de reservas y las verificaciones de inicio de sesión llegarán allí de ahora en adelante.",
-      "notYou": "¿No fuiste tú quien lo cambió? Contacta a soporte de inmediato para que podamos proteger tu cuenta.",
-      "help": "Contactar a soporte",
-      "text": "Tu cuenta de TasksNearMe ahora usa el número que termina en {last4}. ¿No fuiste tú quien lo cambió? Contacta a soporte de inmediato: {helpUrl}"
+      "notYou": "¿No fuiste tú quien lo cambió? Avísanos en los próximos {days} días y protegeremos tu cuenta: cerramos la sesión en todos los dispositivos, deshacemos el cambio y pausamos otros cambios hasta que nuestro equipo la revise.",
+      "help": "No fui yo",
+      "text": "Tu cuenta de TasksNearMe ahora usa el número que termina en {last4}.\n\n¿No fuiste tú quien lo cambió? Protege tu cuenta en los próximos {days} días (el enlace funciona una sola vez): {revertUrl}\n\n¿Algo más? Contacta a soporte: {helpUrl}",
+      "once": "Este botón funciona una sola vez.",
+      "contact": "¿Algo más? Contacta a soporte"
     },
     "giftCard": {
       "subject": "Tu tarjeta de regalo de {amount} está lista",
@@ -407,7 +411,8 @@
     }
   },
   "sms": {
-    "phoneCode": "{code} es tu código de TasksNearMe. Funciona durante {minutes} minutos. Nunca te llamaremos para pedírtelo."
+    "phoneCode": "{code} es tu código de TasksNearMe. Funciona durante {minutes} minutos. Nunca te llamaremos para pedírtelo.",
+    "phoneChanged": "TasksNearMe: se cambió el número de teléfono de tu cuenta. ¿No fuiste tú? Protege tu cuenta en los próximos {days} días: {url}"
   },
   "seo": {
     "categoryFaq": {

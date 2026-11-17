@@ -203,6 +203,41 @@ export interface AccountPageData {
    * today" and "Seen"; when off, nobody does, and they don't see anyone else's either (it's mutual).
    */
   activity?: { shown: boolean };
+  /**
+   * The account's sign-in details are held (completion plan 5.23): someone used the "Not you?" link in a contact
+   * change notice, and our team checks the account before anything changes again. Say so, and don't offer to
+   * change the email or phone, connect Google or Microsoft, or add a passkey: the server refuses those
+   * (`fieldErrors.email` or `fieldErrors.phone`: `held`; `not_allowed` for the sign-in methods). Removing a
+   * passkey or a connected sign-in still works, since it only takes a way in away.
+   */
+  contactChangesHeld?: boolean;
+}
+
+/**
+ * How long the "Not you?" link in an email or phone change notice works, in days (completion plan 5.23). It undoes
+ * the change only within that time.
+ */
+export const CONTACT_REVERT_DAYS = 7;
+
+/**
+ * `routes.contactRevert(token)`: the "Not you?" link in an email or phone change notice, sent to the old address
+ * or number and opened without signing in (completion plan 5.23). The page asks first, since mail apps open
+ * links to scan them. `ask`: the link can still be used. `invalid`: it was used, has expired, was changed or isn't
+ * ours; all four look the same, and the page never says anything about the account.
+ */
+export interface ContactRevertPageData {
+  state: 'ask' | 'invalid';
+}
+
+/**
+ * `onConfirm` ("This wasn't me"): every device on the account is signed out; the change is undone if nothing newer
+ * replaced it; passkeys and Google or Microsoft sign-ins added since about the time of the change are removed;
+ * the email, phone and ways to sign in are held until our team clears the account; and trust and safety get an
+ * urgent case. ok `updated` (show what happens next). Errors: `not_found` (used, expired or not a link of ours:
+ * show the `invalid` state, never which), `rate_limited` with `retryAt`, `unknown`.
+ */
+export interface ContactRevertHandlers {
+  onConfirm: () => Promise<ActionResult>;
 }
 
 /** The account's language (blueprint 01, P2). */
@@ -295,7 +330,8 @@ export type AccountProfileInput = z.input<typeof accountProfileInputSchema>;
  * - `onCancelDeletion`: keeps the account; ok `updated`.
  * - `onSignOut`: ok with `redirectTo` (the public home).
  * - `onConnectSignIn`: ok `sent` with `redirectTo`, the provider's page on another site (navigate with a full
- *   page load). It sends the person back to the account page with `signIn.notice`. Errors: `not_allowed`.
+ *   page load). It sends the person back to the account page with `signIn.notice`. Errors: `not_allowed` (also
+ *   while `contactChangesHeld`).
  * - `onDisconnectSignIn`: ok `updated` (the email code still works). Errors: `not_found` (not connected).
  */
 export interface AccountHandlers extends PushHandlers {
@@ -314,25 +350,30 @@ export interface AccountHandlers extends PushHandlers {
   /** ok `updated`. */
   onRemovePhoto: () => Promise<ActionResult>;
   /**
-   * A 6-digit code to the new address. ok `sent`. `fieldErrors.email`: `invalid`, `unchanged`, `in_use`.
-   * `rate_limited` + `retryAt`. Calling it again with the same address sends a new code.
+   * A 6-digit code to the new address. ok `sent`. `fieldErrors.email`: `invalid`, `unchanged`, `in_use`, `held`
+   * (`contactChangesHeld`). `rate_limited` + `retryAt`. Calling it again with the same address sends a new code.
    */
   onStartEmailChange: ActionHandler<EmailInput>;
   /**
-   * Switches the account to the new address (the old one gets a notice). ok `updated`.
-   * `fieldErrors.code`: `incorrect`, `expired`.
+   * Switches the account to the new address (the old one gets a notice with a "Not you?" link). ok `updated`.
+   * `fieldErrors.code`: `incorrect`, `expired`; `fieldErrors.email`: `in_use`, `held`.
    */
   onConfirmEmailChange: ActionHandler<EmailChangeConfirmInput>;
   /**
    * A 6-digit code by text to the new number. ok `sent`. `fieldErrors.phone`: `invalid`, `not_supported`,
-   * `in_use`, `unchanged`. `rate_limited` + `retryAt` (also when a new code is asked for too soon).
+   * `in_use`, `unchanged`, `held`. `rate_limited` + `retryAt` (also when a new code is asked for too soon).
    */
   onStartPhoneChange: ActionHandler<PhoneInput>;
-  /** Verifies the new number. ok `updated`. `fieldErrors.code`: `incorrect`, `expired`; `rate_limited` after 3 wrong codes. */
+  /**
+   * Verifies the new number (the old one gets a text, and the account's email a notice, each with a "Not you?"
+   * link). ok `updated`. `fieldErrors.code`: `incorrect`, `expired`; `fieldErrors.phone`: `held`; `rate_limited`
+   * after 3 wrong codes.
+   */
   onConfirmPhoneChange: ActionHandler<OneTimeCodeInput>;
   /**
    * "Add a passkey": the options start the device's prompt; its answer and a name go to `onAddPasskey` (ok
-   * `saved`). `onRemovePasskey`: ok `updated`. Errors: `not_allowed`, `unknown`.
+   * `saved`). `onRemovePasskey`: ok `updated`. Errors: `not_allowed` (also while `contactChangesHeld`, except
+   * removing), `unknown`.
    */
   onPasskeyRegistrationOptions?: () => Promise<PasskeyOptionsResult>;
   onAddPasskey?: ActionHandler<{ response: Record<string, unknown>; name: string }>;

@@ -27,6 +27,19 @@ export function createProviderGate(db: Db) {
 }
 
 /**
+ * Better Auth's `account.create.before`: while a "Not you?" link holds the account (completion plan 5.23), Google
+ * or Microsoft can't be connected to it, from the account page or by signing in with an address it uses. Better
+ * Auth then answers `unable_to_link_account`, and signing in with an emailed code still works.
+ */
+export function createHeldAccountLinkGuard(db: Db) {
+  return async (account: { userId: string; providerId: string }): Promise<false | undefined> => {
+    if (!isSocialProvider(account.providerId)) return undefined;
+    const [row] = await db.select({ held: users.contactHoldAt }).from(users).where(eq(users.id, account.userId)).limit(1);
+    return row?.held ? false : undefined;
+  };
+}
+
+/**
  * Better Auth's `account.create.after` (it runs once the account row is saved): Google or Microsoft was
  * connected to an account. It goes in the audit log, and when the account has no names yet (a new account),
  * the provider's names prefill the profile step. Names are never overwritten.

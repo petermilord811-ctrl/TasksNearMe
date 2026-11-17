@@ -588,6 +588,8 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     ...(pushSetup() ? { push: pushSetup()! } : {}),
     language: localeOrDefault(user.locale),
     activity: { shown: user.showActivity },
+    // A "Not you?" link holds the email, phone and ways to sign in until staff clear it (completion plan 5.23).
+    ...(user.contactHoldAt ? { contactChangesHeld: true } : {}),
   };
 }
 
