@@ -34,7 +34,7 @@ export const adminConfigPreviews: PreviewEntry[] = [
   // Where we're open (completion plan 8.2): the confirm step for going live (with the waitlist email count, 8.3), the
   // time-zone refusal from the server, no markets, and the section read-only for staff who aren't admins.
   config('markets-live-dialog', p.marketsLive, { marketDialog: { marketId: 'mkt_austin', status: 'live' } }),
-  config('markets-refused', p.marketsRefused, { marketDialog: { marketId: 'mkt_boise', status: 'live', result: { ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } } } }, adminConfigStaleMarketsData),
+  config('markets-refused', p.marketsRefused, { marketDialog: { marketId: 'mkt_laredo', status: 'live', result: { ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } } } }, adminConfigStaleMarketsData),
   config('markets-empty', p.marketsEmpty, {}, adminConfigNoMarketsData),
   {
     id: 'screen-admin-config/markets-read-only', group: copy.previews.group, title: p.marketsReadOnly, layout: 'fullscreen',

@@ -14,10 +14,11 @@ import { markets } from './schema';
 
 /**
  * Opening cities in turn (owner, 2026-11-14). An admin moves a market between pre-launch, live and paused, with a
- * reason, audited. A market that becomes open (pre-launch or live) brings in the helpers who waited outside every
- * open market with a ZIP it covers: their home market becomes this one, and they're told to choose a
- * neighborhood (the `city_open` notification). Their checks carry over; the home address is asked for next. Moving
- * between pre-launch and live brings nobody in again: helpers there were told when it opened.
+ * reason, audited. Whenever a market is open (pre-launch or live) after the change, it brings in the helpers who wait
+ * with a ZIP it covers (no neighborhood yet) and whose home market isn't this one yet: their home market becomes this
+ * one, and they're told to choose a neighborhood (the `city_open` notification). Their checks carry over; the home
+ * address is asked for next. The home market is the mark: nobody is told twice, and a market opened some other way (a
+ * migration's SQL) still brings its waiting helpers in at its next change here.
  *
  * Going live also tells the waitlist (completion plan 8.3): the entries whose ZIP it covers and that were never told
  * are queued in this transaction, and the job runner emails them (src/modules/marketing/city-open.ts).
@@ -40,8 +41,7 @@ export async function setMarketStatus(db: Db, staff: StaffActor, marketId: strin
   }
   await db.transaction(async (tx) => {
     await tx.update(markets).set({ status: next, updatedAt: now.toISOString() }).where(eq(markets.id, market.id));
-    const opening = isOpenMarketStatus(next) && !isOpenMarketStatus(market.status);
-    const covered = opening ? await waitingHelpersFor(tx, { ...market, status: next }) : [];
+    const covered = isOpenMarketStatus(next) ? (await waitingHelpersFor(tx, { ...market, status: next })).filter((helper) => helper.homeMarketId !== market.id) : [];
     for (const helper of covered) {
       await tx.update(users).set({ homeMarketId: market.id, updatedAt: now }).where(eq(users.id, helper.userId));
       await emitVerificationEvent(tx, helper.userId, 'helper', 'city_open', { city: market.name });
@@ -61,10 +61,13 @@ export async function setMarketStatus(db: Db, staff: StaffActor, marketId: strin
   return { ok: true, code: 'updated' };
 }
 
-/** Helpers outside every open market (a ZIP, no neighborhood) whose ZIP the market covers. */
+/**
+ * Helpers who wait with a ZIP the market covers (no neighborhood yet), with their home market: those whose home market
+ * is already this one came in before (or started here) and aren't brought in again.
+ */
 export async function waitingHelpersFor(db: Pick<Db, 'select'>, market: { id: string; status: string; zipPrefixes: string[] }) {
   const waiting = await db
-    .select({ userId: helperProfiles.userId, homeZip: helperProfiles.homeZip, areaId: helperProfiles.areaId })
+    .select({ userId: helperProfiles.userId, homeZip: helperProfiles.homeZip, areaId: helperProfiles.areaId, homeMarketId: users.homeMarketId })
     .from(helperProfiles)
     .innerJoin(users, eq(users.id, helperProfiles.userId))
     .where(and(isNull(helperProfiles.areaId), isNotNull(helperProfiles.homeZip), eq(users.status, 'active')));

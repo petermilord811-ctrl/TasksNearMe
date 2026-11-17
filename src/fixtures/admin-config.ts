@@ -21,8 +21,8 @@ const launch: AdminPolicyValues = {
 /**
  * The Markets section (completion plan 8.2), as Riley (an admin) sees it: Austin in pre-launch, Gainesville paused with
  * helpers and a waitlist waiting for it, Tulsa live with its waitlist's "we're open" email still going out (8.3), and
- * Boise paused and refused, its row made with a zone dates aren't checked in (America/Boise, not one of the supported
- * US zones, plan 8.1). Counts are made up for previews.
+ * Laredo paused and refused, its row made with a zone whose clock no supported US zone keeps (America/Mexico_City,
+ * which dropped daylight saving; plan 8.1). Counts are made up for previews.
  */
 export const adminMarketRows: AdminMarketRow[] = [
   {
@@ -45,7 +45,7 @@ export const adminMarketRows: AdminMarketRow[] = [
     ],
   },
   {
-    id: 'mkt_boise', slug: 'boise', name: 'Boise', state: 'ID', status: 'paused', zipPrefixes: ['836', '837'], timeZone: 'America/Boise',
+    id: 'mkt_laredo', slug: 'laredo', name: 'Laredo', state: 'TX', status: 'paused', zipPrefixes: ['780'], timeZone: 'America/Mexico_City',
     helpersWaiting: 2,
     waitlist: { entries: 17, told: 0, queued: 0, toTell: 17 },
     openingRefused: 'time_zone_unsupported',
@@ -97,7 +97,7 @@ export const adminConfigPausedData: AdminConfigPageData = {
 export const adminConfigNeverPausedData: AdminConfigPageData = { ...adminConfigData, outage: { paused: false } };
 
 /**
- * A page loaded before Boise's zone was refused (a stale page): its buttons arrive enabled, and the server's refusal
+ * A page loaded before Laredo's zone was refused (a stale page): its buttons arrive enabled, and the server's refusal
  * is what the confirm step shows.
  */
 export const adminConfigStaleMarketsData: AdminConfigPageData = {

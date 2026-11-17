@@ -121,10 +121,10 @@ describe('the Markets section (plan 8.2)', () => {
 
   it('shows the time-zone refusal and offers the opening buttons disabled', () => {
     mount();
-    const boise = card('Boise, ID');
-    expect(boise.getByText("Boise can't open yet: dates and times can't be shown in its time zone (America/Boise) yet. Pausing works.")).toBeInTheDocument();
-    expect(boise.getByRole('button', { name: 'Take Boise live' })).toBeDisabled();
-    expect(boise.getByRole('button', { name: 'Move Boise to pre-launch' })).toBeDisabled();
+    const laredo = card('Laredo, TX');
+    expect(laredo.getByText("Laredo can't open yet: dates and times can't be shown in its time zone (America/Mexico_City) yet. Pausing works.")).toBeInTheDocument();
+    expect(laredo.getByRole('button', { name: 'Take Laredo live' })).toBeDisabled();
+    expect(laredo.getByRole('button', { name: 'Move Laredo to pre-launch' })).toBeDisabled();
     expect(card('Gainesville, FL').getByRole('button', { name: 'Take Gainesville live' })).toBeEnabled();
   });
 
@@ -158,11 +158,11 @@ describe('the Markets section (plan 8.2)', () => {
     const user = userEvent.setup();
     const handlers = mount(adminConfigStaleMarketsData);
     handlers.onSetMarketStatus.mockResolvedValue({ ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } });
-    await user.click(card('Boise, ID').getByRole('button', { name: 'Take Boise live' }));
-    const dialog = within(await screen.findByRole('alertdialog', { name: 'Take Boise live?' }));
-    await user.type(dialog.getByLabelText('Reason'), 'Opening Boise for the season.');
-    await user.click(dialog.getByRole('button', { name: 'Take Boise live' }));
-    expect(await dialog.findByText("Boise can't open yet: dates and times can't be shown in its time zone (America/Boise) yet. Pausing works.")).toBeInTheDocument();
+    await user.click(card('Laredo, TX').getByRole('button', { name: 'Take Laredo live' }));
+    const dialog = within(await screen.findByRole('alertdialog', { name: 'Take Laredo live?' }));
+    await user.type(dialog.getByLabelText('Reason'), 'Opening Laredo for the season.');
+    await user.click(dialog.getByRole('button', { name: 'Take Laredo live' }));
+    expect(await dialog.findByText("Laredo can't open yet: dates and times can't be shown in its time zone (America/Mexico_City) yet. Pausing works.")).toBeInTheDocument();
     expect(navigation.refresh).not.toHaveBeenCalled();
   });
 

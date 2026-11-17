@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { marketStatusChange } from './coverage';
 import { canChangeMarketStatus, marketStatusActions, openingRefusal } from './status-actions';
 
-const facts = { helpersWaiting: 7, waitlistToTell: 40 };
-// Europe/London: a zone no US market's dates are shown in, refused before and after plan 8.1.
+const facts = { helpersToBringIn: 7, waitlistToTell: 40 };
+// Europe/London: a zone whose clock no supported US zone keeps, refused before and after plan 8.1.
 const ZONES = ['America/Chicago', 'America/New_York', 'America/Denver', 'Pacific/Honolulu', 'Europe/London'];
 
 describe('the Markets section’s buttons (plan 8.2)', () => {
@@ -14,19 +14,20 @@ describe('the Markets section’s buttons (plan 8.2)', () => {
     expect(marketStatusActions(['support_lead', 'trust_safety', 'finance'], { status: 'live', timeZone: 'America/Chicago', ...facts })).toEqual([]);
   });
 
-  it('offer the two other statuses in order, each confirmed, and say what opening a paused market does', () => {
+  it('offer the two other statuses in order, each confirmed, and say what opening the market does', () => {
     expect(marketStatusActions(['admin'], { status: 'paused', timeZone: 'America/Chicago', ...facts })).toEqual([
       { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 7, waitlistEmails: 0 },
       { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 7, waitlistEmails: 40 },
     ]);
   });
 
-  it('bring nobody in between pre-launch and live, and email the waitlist only when going live', () => {
+  it('bring in whoever still waits there whenever it is open after the move, and email the waitlist only when going live', () => {
+    // A market opened some other way (a migration) still has helpers to bring in: the next move to an open status does.
     expect(marketStatusActions(['admin'], { status: 'prelaunch', timeZone: 'America/Chicago', ...facts })).toEqual([
-      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 40 },
+      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 7, waitlistEmails: 40 },
       { id: 'paused', kind: 'destructive', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0 },
     ]);
-    expect(marketStatusActions(['admin'], { status: 'live', timeZone: 'America/Chicago', ...facts }).map(({ id, helpersIn, waitlistEmails }) => ({ id, helpersIn, waitlistEmails }))).toEqual([
+    expect(marketStatusActions(['admin'], { status: 'live', timeZone: 'America/Chicago', ...facts, helpersToBringIn: 0 }).map(({ id, helpersIn, waitlistEmails }) => ({ id, helpersIn, waitlistEmails }))).toEqual([
       { id: 'prelaunch', helpersIn: 0, waitlistEmails: 0 },
       { id: 'paused', helpersIn: 0, waitlistEmails: 0 },
     ]);

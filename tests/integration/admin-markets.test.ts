@@ -1,4 +1,4 @@
-import { and, eq, like } from 'drizzle-orm';
+import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { AdminMarketRow } from '@/contracts';
 import type { EmailProvider } from '@/integrations/email';
@@ -18,18 +18,25 @@ import { outboxEvents } from '@/platform/outbox/schema';
 /**
  * Completion plan 8.2: the config page's Markets section. Each market's status, ZIP3 prefixes, time zone, waiting
  * helpers, waitlist (and its "we're open" email, 8.3) and last status change, for every staff role; buttons for
- * admins only. This file's own market (a copy of Austin as "Wichita", ZIP3 672), helper and entries (am-*@example.test).
+ * admins only. And bringing waiting helpers in by state: whenever a market is open after a change, those whose home
+ * market isn't it yet, even when it was opened outside the switch (a migration's SQL). This file's own markets (copies
+ * of Austin as "Wichita", ZIP3 672, and "Omaha", 681), helpers and entries (am-*@example.test).
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 const WICHITA = 'mkt_test_am_wichita';
 const HELPER = 'usr_am_helper';
+const OMAHA = 'mkt_test_am_omaha';
+const OMAHA_HELPER = 'usr_am_omaha';
 const riley: StaffActor = { id: 'usr_riley', roles: ['admin'] };
 const alex: StaffActor = { id: 'usr_alex', roles: ['support_agent'] };
 const now = new Date('2026-12-02T15:00:00.000Z');
 const quiet: EmailProvider = { name: 'test', async send() {} };
 
 const wichita = async (staff: StaffActor): Promise<AdminMarketRow> => (await getAdminMarkets(db, staff)).find((row) => row.id === WICHITA)!;
+const omaha = async (): Promise<AdminMarketRow> => (await getAdminMarkets(db, riley)).find((row) => row.id === OMAHA)!;
+const cityOpenEvents = (userId: string) =>
+  db.select({ id: outboxEvents.id }).from(outboxEvents).where(and(eq(outboxEvents.aggregateId, userId), sql`${outboxEvents.payload}->>'outcome' = 'city_open'`));
 
 beforeAll(async () => {
   const [austin] = await db.select().from(markets).where(eq(markets.id, 'mkt_austin'));
@@ -38,6 +45,9 @@ beforeAll(async () => {
   const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, 'usr_jordan'));
   await db.insert(users).values({ ...jordan!, id: HELPER, email: 'am-helper-account@example.test', name: 'Am Helper', phone: null, phoneVerifiedAt: null, homeMarketId: 'mkt_austin', createdAt: now });
   await db.insert(helperProfiles).values({ ...profile!, userId: HELPER, handle: 'am-helper', status: 'draft', foundingNumber: null, completedCount: 0, areaId: null, homeZip: '67202', homeCity: 'Wichita', homeState: 'KS' });
+  await db.insert(markets).values({ ...austin!, id: OMAHA, slug: 'test-am-omaha', name: 'Omaha', state: 'NE', status: 'paused', zipPrefixes: ['681'], centerLat: 41.2565, centerLng: -95.9345 });
+  await db.insert(users).values({ ...jordan!, id: OMAHA_HELPER, email: 'am-omaha-account@example.test', name: 'Am Omaha', phone: null, phoneVerifiedAt: null, homeMarketId: 'mkt_austin', createdAt: now });
+  await db.insert(helperProfiles).values({ ...profile!, userId: OMAHA_HELPER, handle: 'am-omaha', status: 'draft', foundingNumber: null, completedCount: 0, areaId: null, homeZip: '68102', homeCity: 'Omaha', homeState: 'NE' });
   await joinWaitlist(db, { email: 'am-1@example.test', zip: '67202', interest: 'need_help' }, now);
   await joinWaitlist(db, { email: 'am-2@example.test', zip: '67203', interest: 'both' }, now);
   await joinWaitlist(db, { email: 'am-3@example.test', zip: '67204', interest: 'give_help' }, now);
@@ -47,11 +57,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.delete(waitlistEntries).where(like(waitlistEntries.email, 'am-%@example.test'));
-  await db.delete(outboxEvents).where(eq(outboxEvents.aggregateId, HELPER));
-  await db.delete(auditLog).where(and(eq(auditLog.action, 'config.market_status'), eq(auditLog.targetId, WICHITA)));
-  await db.delete(helperProfiles).where(eq(helperProfiles.userId, HELPER));
-  await db.delete(users).where(eq(users.id, HELPER));
-  await db.delete(markets).where(eq(markets.id, WICHITA));
+  await db.delete(outboxEvents).where(inArray(outboxEvents.aggregateId, [HELPER, OMAHA_HELPER]));
+  await db.delete(auditLog).where(and(eq(auditLog.action, 'config.market_status'), inArray(auditLog.targetId, [WICHITA, OMAHA])));
+  await db.delete(helperProfiles).where(inArray(helperProfiles.userId, [HELPER, OMAHA_HELPER]));
+  await db.delete(users).where(inArray(users.id, [HELPER, OMAHA_HELPER]));
+  await db.delete(markets).where(inArray(markets.id, [WICHITA, OMAHA]));
   await pool.end();
 });
 
@@ -73,9 +83,9 @@ describe('the Markets section on /admin/config (plan 8.2)', () => {
       { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 1, waitlistEmails: 0 },
       { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 1, waitlistEmails: 2 },
     ]);
-    // The same helpers setMarketStatus would bring in.
+    // The same helpers setMarketStatus would bring in: waiting there, home market elsewhere.
     const [market] = await db.select().from(markets).where(eq(markets.id, WICHITA));
-    expect((await waitingHelpersFor(db, { ...market!, status: 'live' })).length).toBe(row.helpersWaiting);
+    expect((await waitingHelpersFor(db, { ...market!, status: 'live' })).filter((helper) => helper.homeMarketId !== WICHITA)).toHaveLength(row.actions.find((action) => action.id === 'live')!.helpersIn);
     // A support agent reads the same, with no buttons.
     expect(await wichita(alex)).toEqual({ ...row, actions: [] });
   });
@@ -105,5 +115,38 @@ describe('the Markets section on /admin/config (plan 8.2)', () => {
     ]);
     expect(await setMarketStatus(db, riley, WICHITA, { status: 'live', reason: 'Trying a zone we can’t show.' }, now)).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { timeZone: ['not_supported'] } });
     await db.update(markets).set({ timeZone: 'America/Chicago' }).where(eq(markets.id, WICHITA));
+  });
+});
+
+describe('bringing waiting helpers in, by state (plan 8.2)', () => {
+  it('brings them in at the next move to an open status when the market was opened outside the switch, and tells each once', async () => {
+    // A migration opens Omaha in SQL: nobody is brought in or told.
+    await db.update(markets).set({ status: 'prelaunch' }).where(eq(markets.id, OMAHA));
+    expect(await cityOpenEvents(OMAHA_HELPER)).toHaveLength(0);
+    const opened = await omaha();
+    expect(opened).toMatchObject({ status: 'prelaunch', helpersWaiting: 1 });
+    expect(opened.actions.map(({ id, helpersIn }) => ({ id, helpersIn }))).toEqual([
+      { id: 'live', helpersIn: 1 },
+      { id: 'paused', helpersIn: 0 },
+    ]);
+
+    // Live through the switch: the waiting helper comes in and is told.
+    expect(await setMarketStatus(db, riley, OMAHA, { status: 'live', reason: 'Omaha goes live for the test.' }, now)).toEqual({ ok: true, code: 'updated' });
+    const [moved] = await db.select({ market: users.homeMarketId }).from(users).where(eq(users.id, OMAHA_HELPER));
+    expect(moved!.market).toBe(OMAHA);
+    expect(await cityOpenEvents(OMAHA_HELPER)).toHaveLength(1);
+    const [live] = await db.select({ metadata: auditLog.metadata }).from(auditLog).where(and(eq(auditLog.action, 'config.market_status'), eq(auditLog.targetId, OMAHA)));
+    expect(live?.metadata).toMatchObject({ from: 'prelaunch', to: 'live', helpersBroughtIn: 1 });
+    expect((await omaha()).actions.map(({ id, helpersIn }) => ({ id, helpersIn }))).toEqual([
+      { id: 'prelaunch', helpersIn: 0 },
+      { id: 'paused', helpersIn: 0 },
+    ]);
+
+    // Another pre-launch and live round tells nobody again.
+    expect(await setMarketStatus(db, riley, OMAHA, { status: 'prelaunch', reason: 'Omaha back to pre-launch for the test.' }, now)).toEqual({ ok: true, code: 'updated' });
+    expect(await setMarketStatus(db, riley, OMAHA, { status: 'live', reason: 'Omaha live again for the test.' }, now)).toEqual({ ok: true, code: 'updated' });
+    expect(await cityOpenEvents(OMAHA_HELPER)).toHaveLength(1);
+    const rounds = await db.select({ metadata: auditLog.metadata }).from(auditLog).where(and(eq(auditLog.action, 'config.market_status'), eq(auditLog.targetId, OMAHA)));
+    expect(rounds.map((row) => row.metadata.helpersBroughtIn).sort()).toEqual([0, 0, 1]);
   });
 });

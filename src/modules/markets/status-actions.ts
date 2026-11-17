@@ -6,7 +6,8 @@ import { isOpenMarketStatus, MARKET_STATUSES, marketStatusChange } from './cover
  * (./status.ts): only admins change a market's status (blueprint 08 §4); a market moves to either other status, each
  * confirmed with a reason; opening it (pre-launch or live) is refused where dates can't be shown in its zone yet
  * (`marketStatusChange`, completion plan 8.1), and pausing never is. Each button says what it would do: the helpers
- * an opening brings in, and the waitlist emails going live sends (8.3).
+ * it brings in (whenever the market is open after the move, those waiting there whose home market isn't this one
+ * yet, as setMarketStatus does), and the waitlist emails going live sends (8.3).
  */
 
 export const canChangeMarketStatus = (roles: readonly StaffRole[]) => roles.includes('admin');
@@ -16,8 +17,8 @@ const KINDS: Record<AdminMarketStatus, ActionKind> = { prelaunch: 'secondary', l
 export interface MarketStatusFacts {
   status: string;
   timeZone: string;
-  /** Helpers with a ZIP it covers and no neighborhood: they come in when it opens from paused. */
-  helpersWaiting: number;
+  /** Helpers with a ZIP it covers, no neighborhood and a home market elsewhere: they come in whenever it's open after a move. */
+  helpersToBringIn: number;
   /** Waitlist entries it covers, never told and still subscribed: they're emailed when it goes live. */
   waitlistToTell: number;
 }
@@ -30,7 +31,7 @@ export function marketStatusActions(roles: readonly StaffRole[], market: MarketS
     kind: KINDS[status],
     enabled: marketStatusChange(market, status).ok,
     confirm: true,
-    helpersIn: isOpenMarketStatus(status) && !isOpenMarketStatus(market.status) ? market.helpersWaiting : 0,
+    helpersIn: isOpenMarketStatus(status) ? market.helpersToBringIn : 0,
     waitlistEmails: status === 'live' ? market.waitlistToTell : 0,
   }));
 }

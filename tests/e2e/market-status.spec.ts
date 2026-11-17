@@ -4,8 +4,8 @@ import { devSignIn } from './support/sign-in';
 /**
  * Completion plan 8.2 on the dev data, read only: the config page's Markets section lists each market (status, ZIP
  * prefixes, time zone, waiting helpers, waitlist). An admin opens a market's confirm step and closes it again without
- * changing anything: other specs rely on Austin's and Gainesville's statuses, and opening Gainesville would work once
- * dates follow each market's zone (plan 8.1). The status changes and the waitlist emails are DB tests
+ * changing anything: other specs rely on Austin's and Gainesville's statuses, which the seed sets (plan 8.6 moves them),
+ * so the spec takes whichever move Austin's card offers. The status changes and the waitlist emails are DB tests
  * (tests/integration/admin-markets.test.ts, city-open.test.ts). A support agent reads the section, with no buttons.
  * Loading the real page is the point: a server screen hands the Server Action to the client dialog.
  */
@@ -31,11 +31,15 @@ test('an admin sees every market and its confirm step, and closes it without cha
   await expect(gainesville.getByText('America/New_York')).toBeVisible();
   const status = (await austin.getByText(/^(Pre-launch|Live|Paused)$/).first().textContent()) ?? '';
 
-  // Pause is offered whatever Austin's status: its confirm step asks for a reason, and Cancel changes nothing.
-  await austin.getByRole('button', { name: 'Pause Austin' }).click();
-  const dialog = page.getByRole('alertdialog', { name: 'Pause Austin?' });
-  await expect(dialog.getByText(/^Austin closes for now/)).toBeVisible();
-  await dialog.getByRole('button', { name: 'Pause Austin' }).click();
+  // The first move Austin's card offers (it depends on Austin's status): its confirm step, titled after the button,
+  // says what the move does and asks for a reason; Cancel changes nothing.
+  const move = austin.getByRole('button').first();
+  const label = ((await move.textContent()) ?? '').trim();
+  expect(label).toMatch(/^(Move Austin to pre-launch|Take Austin live|Pause Austin)$/);
+  await move.click();
+  const dialog = page.getByRole('alertdialog', { name: `${label}?` });
+  await expect(dialog.getByText(/^Austin (opens|goes|closes)/)).toBeVisible();
+  await dialog.getByRole('button', { name: label }).click();
   await expect(dialog.getByText('Write why, in at least 10 characters.')).toBeVisible();
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).toBeHidden();

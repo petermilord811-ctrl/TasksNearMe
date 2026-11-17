@@ -88,7 +88,10 @@ export type AdminMarketStatus = (typeof ADMIN_MARKET_STATUSES)[number];
 
 /** A status the viewer can move a market to, and what the move does: the counts its confirm step names. */
 export interface AdminMarketStatusAction extends ActionDescriptor<AdminMarketStatus> {
-  /** Waiting helpers it brings in and tells to choose a neighborhood (opening a paused market). */
+  /**
+   * Waiting helpers it brings in and tells to choose a neighborhood: whenever the market is open after the move, those
+   * with a ZIP it covers whose home market isn't this one yet. 0 for pausing.
+   */
   helpersIn: number;
   /** Waitlist entries it emails that the city is open (going live, completion plan 8.3). */
   waitlistEmails: number;
@@ -173,8 +176,8 @@ export type OutageSwitchInput = z.input<typeof outageSwitchInputSchema>;
 
 /**
  * An admin opens, pauses or pre-launches a market (owner, 2026-11-14: national, cities open in turn). Moving a
- * market to pre-launch or live from paused brings in the helpers who waited there and tells them; going live also
- * emails its waitlist (completion plan 8.3). Opening (pre-launch or live) is refused for a market in a zone dates
+ * market to pre-launch or live brings in the helpers who wait there and haven't come in yet (their home market is
+ * elsewhere) and tells them; going live also emails its waitlist (completion plan 8.3). Opening (pre-launch or live) is refused for a market in a zone dates
  * aren't shown and checked in (outside the supported US zones, completion plan 8.1): `validation_failed` with
  * `fieldErrors.timeZone: ['not_supported']` (the market's zone, not the status asked for, is what isn't supported).
  */

@@ -26,13 +26,13 @@ export async function getAdminMarkets(db: Db, staff: StaffActor): Promise<AdminM
   const helperPrefix = sql<string>`left(${helperProfiles.homeZip}, 3)`;
   const waitlistPrefix = sql<string>`left(${waitlistEntries.zip}, 3)`;
   const [helperRows, waitlistRows, tellRows, changes] = await Promise.all([
-    // Helpers who gave a ZIP instead of a neighborhood (as waitingHelpersFor counts them), by ZIP3.
+    // Helpers who gave a ZIP instead of a neighborhood (as waitingHelpersFor finds them), by ZIP3 and home market.
     db
-      .select({ prefix: helperPrefix, count: sql<number>`count(*)::int` })
+      .select({ prefix: helperPrefix, homeMarketId: users.homeMarketId, count: sql<number>`count(*)::int` })
       .from(helperProfiles)
       .innerJoin(users, eq(users.id, helperProfiles.userId))
       .where(and(isNull(helperProfiles.areaId), isNotNull(helperProfiles.homeZip), eq(users.status, 'active')))
-      .groupBy(helperPrefix),
+      .groupBy(helperPrefix, users.homeMarketId),
     db
       .select({
         prefix: waitlistPrefix,
@@ -53,7 +53,8 @@ export async function getAdminMarkets(db: Db, staff: StaffActor): Promise<AdminM
       .where(and(eq(auditLog.action, 'config.market_status'), eq(auditLog.targetType, 'market'), inArray(auditLog.targetId, ids)))
       .orderBy(desc(auditLog.at), desc(auditLog.id)),
   ]);
-  const helpersBy = new Map(helperRows.map((row) => [row.prefix, row.count]));
+  const helpersOver = (prefixes: readonly string[], counted: (homeMarketId: string) => boolean) =>
+    helperRows.filter((row) => prefixes.includes(row.prefix) && counted(row.homeMarketId)).reduce((total, row) => total + row.count, 0);
   const entriesBy = new Map(waitlistRows.map((row) => [row.prefix, row.entries]));
   const toTellBy = new Map(waitlistRows.map((row) => [row.prefix, row.toTell]));
   const tells = (marketId: string, statuses: readonly string[]) => tellRows.filter((row) => row.marketId === marketId && statuses.includes(row.status ?? '')).reduce((total, row) => total + row.count, 0);
@@ -62,7 +63,9 @@ export async function getAdminMarkets(db: Db, staff: StaffActor): Promise<AdminM
 
   return rows.map((market): AdminMarketRow => {
     const status = statusOf(market.status) ?? 'paused';
-    const helpersWaiting = sumOver(market.zipPrefixes, helpersBy);
+    const helpersWaiting = helpersOver(market.zipPrefixes, () => true);
+    // The ones setMarketStatus brings in: their home market isn't this one yet.
+    const helpersToBringIn = helpersOver(market.zipPrefixes, (homeMarketId) => homeMarketId !== market.id);
     const toTell = sumOver(market.zipPrefixes, toTellBy);
     const last = lastChange.get(market.id);
     const from = statusOf(last?.metadata.from);
@@ -80,7 +83,7 @@ export async function getAdminMarkets(db: Db, staff: StaffActor): Promise<AdminM
       waitlist: { entries: sumOver(market.zipPrefixes, entriesBy), told: tells(market.id, ['sent']), queued: tells(market.id, ['queued', 'sending']), toTell },
       ...(last && from && to ? { lastChange: { at: isoOf(last.at), by: last.by ?? 'Staff', reason: last.reason ?? '', from, to } } : {}),
       ...(refusal ? { openingRefused: refusal } : {}),
-      actions: marketStatusActions(staff.roles, { status: market.status, timeZone: market.timeZone, helpersWaiting, waitlistToTell: toTell }),
+      actions: marketStatusActions(staff.roles, { status: market.status, timeZone: market.timeZone, helpersToBringIn, waitlistToTell: toTell }),
     };
   });
 }
