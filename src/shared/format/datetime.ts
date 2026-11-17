@@ -1,11 +1,13 @@
-import { MARKET_TIME_ZONE, type ISODateTime } from '@/contracts/common';
+import { MARKET_TIME_ZONE, type ISODateTime, type TimeZone } from '@/contracts/common';
 import { DEFAULT_LOCALE, INTL_LOCALES, type AppLocale } from '@/contracts/locale';
 
 /**
- * Date and time formatting for the Austin market. Always formats in America/Chicago,
- * whatever the server's or browser's own time zone is. Display helpers take the reader's language
- * (English when left out); components get them bound to the page's language from `useFormat()`
- * (src/ui/lib/format.ts).
+ * Date and time formatting, in the time zone of the market a date belongs to (completion plan 8.1): a task's,
+ * a booking's, an availability slot's. Never the server's or the browser's own zone. Every helper takes the
+ * market's IANA zone (`markets.time_zone`: Austin America/Chicago, Gainesville America/New_York); left out, it
+ * falls back to `MARKET_TIME_ZONE`, the default market's (8.1 is moving every caller to pass it). Display helpers
+ * take the reader's language (English when left out); components get them bound to the page's language and zone
+ * from `useFormat()` (src/ui/lib/format.ts).
  *   formatDate        → "Sat, Nov 21"                      es: "sáb, 21 de nov"
  *   formatMonthYear   → "Nov 2026"                         es: "nov 2026"
  *   formatTime        → "10:30 am"                         es: "10:30 a.m."
@@ -15,7 +17,7 @@ import { DEFAULT_LOCALE, INTL_LOCALES, type AppLocale } from '@/contracts/locale
  *   formatHours       → "3.5 h"
  */
 
-const FORMATTERS = new Map<AppLocale, {
+const FORMATTERS = new Map<string, {
   date: Intl.DateTimeFormat;
   dateWithYear: Intl.DateTimeFormat;
   monthYear: Intl.DateTimeFormat;
@@ -23,32 +25,41 @@ const FORMATTERS = new Map<AppLocale, {
   relative: Intl.RelativeTimeFormat;
 }>();
 
-/** One set of formatters per language, made on first use. */
-function formattersOf(locale: AppLocale) {
-  let set = FORMATTERS.get(locale);
+/** One set of formatters per language and zone, made on first use. */
+function formattersOf(locale: AppLocale, timeZone: TimeZone = MARKET_TIME_ZONE) {
+  const key = `${locale}|${timeZone}`;
+  let set = FORMATTERS.get(key);
   if (!set) {
     const tag = INTL_LOCALES[locale];
     set = {
-      date: new Intl.DateTimeFormat(tag, { timeZone: MARKET_TIME_ZONE, weekday: 'short', month: 'short', day: 'numeric' }),
-      dateWithYear: new Intl.DateTimeFormat(tag, { timeZone: MARKET_TIME_ZONE, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
-      monthYear: new Intl.DateTimeFormat(tag, { timeZone: MARKET_TIME_ZONE, month: 'short', year: 'numeric' }),
-      time: new Intl.DateTimeFormat(tag, { timeZone: MARKET_TIME_ZONE, hour: 'numeric', minute: '2-digit', hour12: true }),
+      date: new Intl.DateTimeFormat(tag, { timeZone, weekday: 'short', month: 'short', day: 'numeric' }),
+      dateWithYear: new Intl.DateTimeFormat(tag, { timeZone, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+      monthYear: new Intl.DateTimeFormat(tag, { timeZone, month: 'short', year: 'numeric' }),
+      time: new Intl.DateTimeFormat(tag, { timeZone, hour: 'numeric', minute: '2-digit', hour12: true }),
       relative: new Intl.RelativeTimeFormat(tag, { numeric: 'auto' }),
     };
-    FORMATTERS.set(locale, set);
+    FORMATTERS.set(key, set);
   }
   return set;
+}
+
+/** One formatter per zone for the machine-readable helpers (day keys, clock times, offsets). */
+function perZone(make: (timeZone: TimeZone) => Intl.DateTimeFormat) {
+  const made = new Map<TimeZone, Intl.DateTimeFormat>();
+  return (timeZone: TimeZone = MARKET_TIME_ZONE) => {
+    let formatter = made.get(timeZone);
+    if (!formatter) {
+      formatter = make(timeZone);
+      made.set(timeZone, formatter);
+    }
+    return formatter;
+  };
 }
 
 /** "now" in each language (under a minute either way). */
 const NOW: Record<AppLocale, string> = { en: 'now', es: 'ahora' };
 
-const dayKeyFormatter = new Intl.DateTimeFormat('en-CA', {
-  timeZone: MARKET_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
+const dayKeyFormatter = perZone((timeZone) => new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }));
 
 function toDate(value: ISODateTime | Date): Date {
   const date = value instanceof Date ? value : new Date(value);
@@ -56,50 +67,45 @@ function toDate(value: ISODateTime | Date): Date {
   return date;
 }
 
-export function formatDate(value: ISODateTime | Date, options: { withYear?: boolean; locale?: AppLocale } = {}): string {
-  const set = formattersOf(options.locale ?? DEFAULT_LOCALE);
+export function formatDate(value: ISODateTime | Date, options: { withYear?: boolean; locale?: AppLocale; timeZone?: TimeZone } = {}): string {
+  const set = formattersOf(options.locale ?? DEFAULT_LOCALE, options.timeZone);
   return (options.withYear ? set.dateWithYear : set.date).format(toDate(value));
 }
 
-/** Month and year in the market time zone, e.g. "Nov 2026" (verification badges, member-since). */
-export function formatMonthYear(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE): string {
-  return formattersOf(locale).monthYear.format(toDate(value));
+/** Month and year in the market's time zone, e.g. "Nov 2026" (verification badges, member-since). */
+export function formatMonthYear(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone): string {
+  return formattersOf(locale, timeZone).monthYear.format(toDate(value));
 }
 
-export function formatTime(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE): string {
-  const parts = formattersOf(locale).time.formatToParts(toDate(value));
+export function formatTime(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone): string {
+  const parts = formattersOf(locale, timeZone).time.formatToParts(toDate(value));
   const hour = parts.find((p) => p.type === 'hour')?.value ?? '';
   const minute = parts.find((p) => p.type === 'minute')?.value ?? '00';
   const dayPeriod = (parts.find((p) => p.type === 'dayPeriod')?.value ?? '').toLowerCase();
   return `${hour}:${minute} ${dayPeriod}`;
 }
 
-export function formatDateTime(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE): string {
-  return `${formatDate(value, { locale })} · ${formatTime(value, locale)}`;
+export function formatDateTime(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone): string {
+  return `${formatDate(value, { locale, ...(timeZone ? { timeZone } : {}) })} · ${formatTime(value, locale, timeZone)}`;
 }
 
-const clockFormatter = new Intl.DateTimeFormat('en-GB', {
-  timeZone: MARKET_TIME_ZONE,
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: 'h23',
-});
+const clockFormatter = perZone((timeZone) => new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
 
-/** Wall-clock time in the market time zone, 24-hour, e.g. "10:30" (the inverse of `marketLocalToUtc`). */
-export function marketClockTime(value: ISODateTime | Date): string {
-  return clockFormatter.format(toDate(value));
+/** Wall-clock time in the market's time zone, 24-hour, e.g. "10:30" (the inverse of `marketLocalToUtc`). */
+export function marketClockTime(value: ISODateTime | Date, timeZone?: TimeZone): string {
+  return clockFormatter(timeZone).format(toDate(value));
 }
 
-/** Calendar day in the market time zone, e.g. "2026-11-21". */
-export function marketDayKey(value: ISODateTime | Date): string {
-  return dayKeyFormatter.format(toDate(value));
+/** Calendar day in the market's time zone, e.g. "2026-11-21": the day line is the market's own midnight. */
+export function marketDayKey(value: ISODateTime | Date, timeZone?: TimeZone): string {
+  return dayKeyFormatter(timeZone).format(toDate(value));
 }
 
-export function formatTimeRange(start: ISODateTime | Date, end: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE): string {
-  if (marketDayKey(start) === marketDayKey(end)) {
-    return `${formatTime(start, locale)}–${formatTime(end, locale)}`;
+export function formatTimeRange(start: ISODateTime | Date, end: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone): string {
+  if (marketDayKey(start, timeZone) === marketDayKey(end, timeZone)) {
+    return `${formatTime(start, locale, timeZone)}–${formatTime(end, locale, timeZone)}`;
   }
-  return `${formatDateTime(start, locale)}–${formatDateTime(end, locale)}`;
+  return `${formatDateTime(start, locale, timeZone)}–${formatDateTime(end, locale, timeZone)}`;
 }
 
 const UNITS: Array<{ unit: Intl.RelativeTimeFormatUnit; ms: number }> = [
@@ -127,20 +133,13 @@ export function formatHours(hours: number): string {
   return `${rounded} h`;
 }
 
-const offsetFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: MARKET_TIME_ZONE,
-  hourCycle: 'h23',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-});
+const offsetFormatter = perZone(
+  (timeZone) => new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+);
 
-/** Minutes the market time zone is ahead of UTC at `instant` (Austin: -360 in winter, -300 in summer). */
-function marketOffsetMinutes(instant: Date): number {
-  const parts = Object.fromEntries(offsetFormatter.formatToParts(instant).map((p) => [p.type, p.value]));
+/** Minutes the market's zone is ahead of UTC at `instant` (Austin: −360 in winter, −300 in summer; Gainesville an hour later). */
+function marketOffsetMinutes(instant: Date, timeZone?: TimeZone): number {
+  const parts = Object.fromEntries(offsetFormatter(timeZone).formatToParts(instant).map((p) => [p.type, p.value]));
   const asUtc = Date.UTC(
     Number(parts.year),
     Number(parts.month) - 1,
@@ -153,19 +152,19 @@ function marketOffsetMinutes(instant: Date): number {
 }
 
 /**
- * A wall-clock date and time in the market ("2026-11-21", "10:00") → UTC ISO string.
+ * A wall-clock date and time in the market ("2026-11-21", "10:00", its zone) → UTC ISO string.
  * Times that don't exist (the spring-forward gap) move forward by the gap; repeated times
  * (fall back) resolve to the first occurrence.
  */
-export function marketLocalToUtc(date: string, time: string): ISODateTime {
+export function marketLocalToUtc(date: string, time: string, timeZone?: TimeZone): ISODateTime {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   const clock = /^(\d{2}):(\d{2})$/.exec(time);
   if (!match || !clock) throw new RangeError(`Invalid market date or time: ${date} ${time}`);
   const wallAsUtc = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(clock[1]), Number(clock[2]));
   // Candidate instants from the offsets on either side of a daylight-saving change.
-  const first = wallAsUtc - marketOffsetMinutes(new Date(wallAsUtc)) * 60_000;
-  const second = wallAsUtc - marketOffsetMinutes(new Date(first)) * 60_000;
-  const wallOf = (instant: number) => instant + marketOffsetMinutes(new Date(instant)) * 60_000;
+  const first = wallAsUtc - marketOffsetMinutes(new Date(wallAsUtc), timeZone) * 60_000;
+  const second = wallAsUtc - marketOffsetMinutes(new Date(first), timeZone) * 60_000;
+  const wallOf = (instant: number) => instant + marketOffsetMinutes(new Date(instant), timeZone) * 60_000;
   const exact = [first, second].filter((instant) => wallOf(instant) === wallAsUtc);
   // A repeated time takes its first occurrence; a skipped time moves forward past the gap.
   const instant = exact.length > 0 ? Math.min(...exact) : Math.max(first, second);

@@ -97,6 +97,55 @@ describe('marketLocalToUtc', () => {
   });
 });
 
+describe('each market in its own time zone (completion plan 8.1)', () => {
+  const EASTERN = 'America/New_York'; // Gainesville, FL
+  const CENTRAL = 'America/Chicago'; // Austin, TX
+  // 10:30 am in Gainesville on Sat, Nov 21, 2026 (EST, UTC−5) = 15:30 UTC = 9:30 am in Austin.
+  const start = '2026-11-21T15:30:00.000Z';
+
+  it('formats the same instant in each market’s own clock', async () => {
+    const f = await import('./index');
+    expect(f.formatTime(start, 'en', EASTERN)).toBe('10:30 am');
+    expect(f.formatTime(start, 'en', CENTRAL)).toBe('9:30 am');
+    expect(f.formatDateTime(start, 'es', EASTERN)).toBe('sáb, 21 de nov · 10:30 a.m.');
+    expect(f.formatDate(start, { timeZone: EASTERN, withYear: true })).toBe('Sat, Nov 21, 2026');
+    expect(f.formatTimeRange(start, '2026-11-21T18:00:00.000Z', 'en', EASTERN)).toBe('10:30 am–1:00 pm');
+    expect(f.marketClockTime(start, EASTERN)).toBe('10:30');
+    expect(f.marketClockTime(start, CENTRAL)).toBe('09:30');
+  });
+
+  it('draws the day line at each market’s own midnight', async () => {
+    const f = await import('./index');
+    // 12:30 am Sunday in Gainesville is still 11:30 pm Saturday in Austin.
+    const late = '2026-11-22T05:30:00.000Z';
+    expect(f.marketDayKey(late, EASTERN)).toBe('2026-11-22');
+    expect(f.marketDayKey(late, CENTRAL)).toBe('2026-11-21');
+    // A range across Gainesville's midnight names both days there, but is one evening in Austin.
+    expect(f.formatTimeRange('2026-11-22T03:00:00.000Z', '2026-11-22T05:30:00.000Z', 'en', CENTRAL)).toBe('9:00 pm–11:30 pm');
+    expect(f.formatTimeRange('2026-11-22T03:00:00.000Z', '2026-11-22T05:30:00.000Z', 'en', EASTERN)).toBe('Sat, Nov 21 · 10:00 pm–Sun, Nov 22 · 12:30 am');
+    expect(f.formatMonthYear('2026-12-01T05:30:00.000Z', 'en', EASTERN)).toBe('Dec 2026');
+    expect(f.formatMonthYear('2026-12-01T05:30:00.000Z', 'en', CENTRAL)).toBe('Nov 2026');
+  });
+
+  it('turns wall-clock times into instants in each zone, across both DST changes on the same Sundays', async () => {
+    const f = await import('./index');
+    expect(f.marketLocalToUtc('2026-11-21', '10:00', EASTERN)).toBe('2026-11-21T15:00:00.000Z'); // EST, UTC−5
+    expect(f.marketLocalToUtc('2026-07-04', '10:00', EASTERN)).toBe('2026-07-04T14:00:00.000Z'); // EDT, UTC−4
+    // Fall back, Nov 1, 2026: 1:30 am happens twice in each zone, an hour apart between them.
+    expect(f.marketLocalToUtc('2026-11-01', '01:30', EASTERN)).toBe('2026-11-01T05:30:00.000Z');
+    expect(f.marketLocalToUtc('2026-11-01', '01:30', CENTRAL)).toBe('2026-11-01T06:30:00.000Z');
+    expect(f.formatTime('2026-11-01T05:30:00.000Z', 'en', EASTERN)).toBe('1:30 am');
+    expect(f.formatTime('2026-11-01T06:30:00.000Z', 'en', EASTERN)).toBe('1:30 am');
+    // Spring forward, Mar 8, 2026: 2:30 am doesn't exist in either zone and moves past the gap.
+    expect(f.marketLocalToUtc('2026-03-08', '02:30', EASTERN)).toBe('2026-03-08T07:30:00.000Z');
+    expect(f.marketLocalToUtc('2026-03-08', '02:30', CENTRAL)).toBe('2026-03-08T08:30:00.000Z');
+    // Midnight on the DST Sundays is still the same calendar day in each zone.
+    expect(f.marketDayKey(f.marketLocalToUtc('2026-03-08', '00:00', EASTERN), EASTERN)).toBe('2026-03-08');
+    expect(f.marketDayKey(f.marketLocalToUtc('2026-11-01', '23:59', EASTERN), EASTERN)).toBe('2026-11-01');
+    expect(f.marketDayKey(f.marketLocalToUtc('2026-11-01', '00:00', CENTRAL), EASTERN)).toBe('2026-11-01');
+  });
+});
+
 describe('money inputs', () => {
   it('parses typed amounts into cents', async () => {
     const { parseMoneyInput, formatMoneyInput } = await import('./index');

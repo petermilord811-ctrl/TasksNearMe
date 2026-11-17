@@ -7,10 +7,20 @@
 /** Integer amount in US cents. Format with `formatMoney` from `@/shared/format`. */
 export type Cents = number;
 
-/** ISO-8601 timestamp in UTC, e.g. "2026-11-21T16:30:00.000Z". Display in America/Chicago. */
+/**
+ * ISO-8601 timestamp in UTC, e.g. "2026-11-21T16:30:00.000Z". Displayed in the time zone of the market it belongs
+ * to (completion plan 8.1): the contract carries that zone (`timeZone`) beside it.
+ */
 export type ISODateTime = string;
 
-export const MARKET_TIME_ZONE = 'America/Chicago';
+/** An IANA time zone, a market's own (`markets.time_zone`): "America/Chicago" (Austin), "America/New_York" (Gainesville). */
+export type TimeZone = string;
+
+/**
+ * The fallback zone, the default market's, for a date that belongs to no market. Anything that belongs to a
+ * market (a task, a booking, an availability slot, a person's home market) carries and uses that market's zone.
+ */
+export const MARKET_TIME_ZONE: TimeZone = 'America/Chicago';
 
 export const CATEGORY_SLUGS = [
   'furniture-assembly',
