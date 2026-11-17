@@ -62,7 +62,7 @@ const param = (url: string, key: string) => new URL(url, 'http://localhost').sea
 
 /** A helper up to the ID step. Not a reserved test domain, so the configured reader (a stub) reads the ID. */
 async function helper(id: string) {
-  await db.insert(users).values({ id, email: `${id.replace(/_/g, '-')}@qa.tasksnearme-test.net`, name: 'Vera T.', firstName: 'Vera', lastName: 'Tester', phone: `+1512555${String(PEOPLE.indexOf(id)).padStart(2, '0')}66`, phoneVerifiedAt: at(-400), createdAt: at(-400) });
+  await db.insert(users).values({ id, email: `${id.replace(/_/g, '-')}@qa.tasksnearme-test.net`, name: 'Vera T.', firstName: 'Vera', lastName: 'Tester', phone: `+1512555${String(PEOPLE.indexOf(id)).padStart(2, '0')}66`, phoneVerifiedAt: at(-400), createdAt: at(-400), homeMarketId: 'mkt_austin' });
   await db.insert(helperProfiles).values({ userId: id, handle: id.replace(/_/g, '-'), headline: 'Careful help around the house', bio: 'I help neighbors with careful work and always leave the place tidy. References on request.', languages: ['en'], status: 'draft', areaId: 'area_mueller' });
   const [yard] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, 'yard-cleanup'));
   await db.insert(helperServices).values({ id: `svc_${id}`, userId: id, categoryId: yard!.id, pricingType: 'hourly', hourlyRateCents: 3000, minHours: 2, description: '', status: 'active' });

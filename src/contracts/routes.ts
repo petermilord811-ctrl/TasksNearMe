@@ -35,7 +35,8 @@ export type LegalDoc = (typeof LEGAL_DOCS)[number];
 export const ONBOARDING_STEPS = ['profile', 'services', 'area', 'phone', 'identity', 'address', 'payout', 'background', 'done'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
-const DEFAULT_MARKET = 'austin';
+/** The first city (owner, 2026-11-17: Gainesville, FL; Austin until then, now a later city). */
+const DEFAULT_MARKET = 'gainesville';
 const enc = encodeURIComponent;
 
 /** Task board filters as URL parameters. Defaults (`when: any`, `sort: soonest`, page 1) are left out. */

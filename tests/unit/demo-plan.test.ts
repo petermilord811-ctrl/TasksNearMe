@@ -19,19 +19,22 @@ import { computeOnboarding } from '@/modules/verification/progress';
 import { DEFAULT_FEES } from '@/modules/markets/policy-defaults';
 import { finalBreakdown, quoteBreakdown } from '@/modules/payments/fees';
 import { marketClockTime, marketDayKey } from '@/shared/format';
-import { AUSTIN, AUSTIN_AREAS, CATEGORIES } from '../../db/seeds/data/austin';
+import { CATEGORIES } from '../../db/seeds/data/austin';
+import { GAINESVILLE, GAINESVILLE_AREAS, gainesvilleAreaId } from '../../db/seeds/data/gainesville';
 import { DEMO_MARKETS, demoAreaId, demoMarketId } from '../../db/seeds/demo/markets';
 import { buildDemoPlan, defaultDemoPolicies, DEMO_PREFIX, DEMO_TIME_ZONE, REVIEW_TAGS, type DemoPlan } from '../../db/seeds/demo/plan';
 
-const DAYTIME = new Date('2026-11-14T18:10:00.000Z'); // 12:10 in Austin
-const NIGHT = new Date('2026-11-15T07:40:00.000Z'); // 01:40 in Austin
+const DAYTIME = new Date('2026-11-14T18:10:00.000Z'); // 13:10 in Gainesville, 12:10 in the Central-time markets
+const NIGHT = new Date('2026-11-15T07:40:00.000Z'); // 02:40 in Gainesville, 01:40 in Central time
+/** Each market's clock: the hand-written cast in Gainesville (Eastern), the generated markets in Central time. */
+const zoneOf = (marketId: string) => (marketId === GAINESVILLE.id ? GAINESVILLE.timeZone : DEMO_TIME_ZONE);
 const KM_PER_MILE = 1.609344;
 const POLICIES = defaultDemoPolicies();
 const categoryBySlug = new Map(CATEGORIES.map((category) => [category.slug as CategorySlug, category]));
 const categoryById = new Map(CATEGORIES.map((category) => [category.id, category]));
 /** Every demo neighborhood: its center and its market. */
 const areaById = new Map<string, { lat: number; lng: number; marketId: string }>([
-  ...AUSTIN_AREAS.map((area) => [`area_${area.slug.replaceAll('-', '_')}`, { lat: area.lat, lng: area.lng, marketId: AUSTIN.id }] as const),
+  ...GAINESVILLE_AREAS.map((area) => [gainesvilleAreaId(area.slug), { lat: area.lat, lng: area.lng, marketId: GAINESVILLE.id }] as const),
   ...DEMO_MARKETS.flatMap((market) => market.areas.map((area) => [demoAreaId(market, area), { lat: area.lat, lng: area.lng, marketId: demoMarketId(market) }] as const)),
 ]);
 const POSTING_RULES: TaskPostingRules = { minLeadHours: 3, maxLeadDays: 14, maxPhotos: 8, maxPhotoMegabytes: 10, maxExpenseAllowanceCents: 50_000 };
@@ -85,7 +88,7 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
     const posters = plan.people.length - helpers;
     expect(plan.tasks.length / posters).toBeGreaterThanOrEqual(3);
     expect(plan.tasks.length / helpers).toBeGreaterThanOrEqual(3);
-    for (const client of plan.clients.filter((c) => c.marketId !== AUSTIN.id)) expect(plan.tasks.some((task) => task.posterUserId === client.userId), client.userId).toBe(true);
+    for (const client of plan.clients.filter((c) => c.marketId !== GAINESVILLE.id)) expect(plan.tasks.some((task) => task.posterUserId === client.userId), client.userId).toBe(true);
   });
 
   it('comes out the same on every run, with demo ids only', () => {
@@ -142,7 +145,7 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
         expect(service.fromPriceCents ?? service.hourlyRateCents ?? 0).toBeGreaterThanOrEqual(category.slug === 'moving-help' ? 3000 : category.minPriceCents);
       }
     }
-    // Every category has at least two helpers in every market beyond Austin.
+    // Every category has at least two helpers in every generated market (beyond the cast's Gainesville).
     for (const market of DEMO_MARKETS) {
       for (const category of CATEGORIES) {
         const offering = plan.people.filter((p) => p.homeMarketId === demoMarketId(market) && p.helper?.services.some((service) => service.categoryId === category.id));
@@ -186,12 +189,12 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
         details: task.details,
         photoIds: [],
         location: task.mode === 'remote' ? { mode: 'remote' as const } : { mode: 'local' as const, placeId: 'plc_demo' },
-        schedule: { date: marketDayKey(task.windowStart, DEMO_TIME_ZONE), flexible, ...(flexible ? {} : { startTime: marketClockTime(task.windowStart, DEMO_TIME_ZONE), endTime: marketClockTime(task.windowEnd, DEMO_TIME_ZONE) }) },
+        schedule: { date: marketDayKey(task.windowStart, zoneOf(task.marketId)), flexible, ...(flexible ? {} : { startTime: marketClockTime(task.windowStart, zoneOf(task.marketId)), endTime: marketClockTime(task.windowEnd, zoneOf(task.marketId)) }) },
         budget: task.pricingType === 'fixed'
           ? { type: 'fixed' as const, priceCents: task.budgetCents! }
           : { type: 'hourly' as const, rateCents: task.hourlyRateCents!, estimatedHours: task.estimatedHours!, hoursCap: task.hoursCap! },
       };
-      const parsed = createTaskDraftSchema({ rules: POSTING_RULES, categories: CATEGORY_VIEWS, now: task.publishedAt.toISOString(), market: { timeZone: DEMO_TIME_ZONE } }).safeParse(draft);
+      const parsed = createTaskDraftSchema({ rules: POSTING_RULES, categories: CATEGORY_VIEWS, now: task.publishedAt.toISOString(), market: { timeZone: zoneOf(task.marketId) } }).safeParse(draft);
       expect(parsed.success, `${task.id}: ${JSON.stringify(parsed.error?.issues)}`).toBe(true);
       // Where: the poster's own address and neighborhood, shown only as a point near the neighborhood's center.
       if (task.mode === 'remote') {
@@ -245,9 +248,9 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
       expect(offer.updatedAt.getTime()).toBeGreaterThanOrEqual(offer.createdAt.getTime());
       expect(offer.createdAt.getTime()).toBeLessThan(now.getTime());
       // The offer form's rules: a start time it offers, a price at or above the minimum, hours at least the estimate.
-      const rules = offerRulesFor(task, { minPriceCents: category.minPriceCents }, DEMO_TIME_ZONE);
-      expect(marketDayKey(offer.proposedStart, DEMO_TIME_ZONE)).toBe(rules.date);
-      expect(rules.startTimes).toContain(marketClockTime(offer.proposedStart, DEMO_TIME_ZONE));
+      const rules = offerRulesFor(task, { minPriceCents: category.minPriceCents }, zoneOf(task.marketId));
+      expect(marketDayKey(offer.proposedStart, zoneOf(task.marketId))).toBe(rules.date);
+      expect(rules.startTimes).toContain(marketClockTime(offer.proposedStart, zoneOf(task.marketId)));
       expect(offer.pricingType).toBe(task.pricingType);
       if (offer.pricingType === 'fixed') expect(offer.priceCents!).toBeGreaterThanOrEqual(rules.minPriceCents);
       else expect(offer.hoursCap!).toBeGreaterThanOrEqual(rules.minHoursCap ?? 0);
@@ -288,7 +291,7 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
       if (booking.status === 'confirmed') expect(booking.startAt.getTime()).toBeGreaterThan(now.getTime());
       if (booking.status === 'in_progress') {
         expect(booking.arrivedAt!.getTime()).toBeLessThan(now.getTime());
-        const hour = Number(marketClockTime(now, DEMO_TIME_ZONE).slice(0, 2));
+        const hour = Number(marketClockTime(now, zoneOf(booking.marketId)).slice(0, 2));
         expect(hour >= 9 && hour < 19).toBe(true);
       }
       // Never two bookings at once for a helper.

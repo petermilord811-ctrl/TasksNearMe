@@ -59,7 +59,12 @@ import { paymentMethods, payments, refunds } from '../../src/modules/payments/sc
 import { devCardRef } from '../../src/integrations/payments';
 import { quoteBreakdown } from '../../src/modules/payments/fees';
 
-export async function seedDatabase(url: string): Promise<void> {
+/**
+ * `testWorld`: the e2e and integration tests' world (the CLI seed, test:db's reset, the e2e reset, perf scratch
+ * databases). Their cast lives in Austin, so Austin stays open there. Without it, the seed gives the owner's world:
+ * Gainesville the first city, Austin a later one (paused). The preview's empty-database seed never sets it.
+ */
+export async function seedDatabase(url: string, options: { testWorld?: boolean } = {}): Promise<void> {
   const { db, pool } = createDb(url, { max: 2 });
   try {
     await db.transaction(async (tx) => {
@@ -152,6 +157,9 @@ export async function seedDatabase(url: string): Promise<void> {
         })
         .onConflictDoNothing();
 
+      // The test world reopens Austin, where the e2e and integration cast lives (production's Austin is paused).
+      if (options.testWorld) await tx.update(markets).set({ status: 'prelaunch' }).where(eq(markets.id, AUSTIN.id));
+
       for (const [key, flag] of Object.entries(DEFAULT_FLAGS)) {
         await tx
           .insert(featureFlags)
@@ -204,7 +212,8 @@ export async function upsertPeople(tx: Tx, people: readonly SeedPerson[]): Promi
       termsVersion: CURRENT_TERMS_VERSION,
       mode: person.mode,
       ...(person.locale ? { locale: person.locale } : {}),
-      ...(person.homeMarketId ? { homeMarketId: person.homeMarketId } : {}),
+      // Explicit, never the column's default: the cast is Austin's.
+      homeMarketId: person.homeMarketId ?? AUSTIN.id,
       createdAt: new Date(person.createdAt),
     };
     await tx.insert(users).values(user).onConflictDoUpdate({ target: users.id, set: { ...user, createdAt: undefined } });
@@ -269,14 +278,14 @@ async function seedTasks(tx: Tx): Promise<void> {
   if (!key) throw new Error('FIELD_ENCRYPTION_KEY is not set (see .env.example).');
   const cipher = createFieldCipher(key);
   const now = new Date();
-  // The seed's tasks are Austin's: their windows are on Austin's clock (completion plan 8.1).
-  const today = marketDayKey(now, AUSTIN.timeZone);
   const areaRows = await tx.select().from(areas);
 
   for (const seed of SEED_TASKS) {
-    const date = addDays(today, seed.daysFromToday);
-    const windowStart = new Date(marketLocalToUtc(date, seed.start ?? '00:00', AUSTIN.timeZone));
-    const windowEnd = new Date(marketLocalToUtc(date, seed.end ?? '23:59', AUSTIN.timeZone));
+    // Each task on its own market's clock: Austin's cast, or Gainesville's few.
+    const market = seed.market === 'gainesville' ? GAINESVILLE : AUSTIN;
+    const date = addDays(marketDayKey(now, market.timeZone), seed.daysFromToday);
+    const windowStart = new Date(marketLocalToUtc(date, seed.start ?? '00:00', market.timeZone));
+    const windowEnd = new Date(marketLocalToUtc(date, seed.end ?? '23:59', market.timeZone));
     const place = seed.placeId ? FAKE_PLACES.find((p) => p.placeId === seed.placeId) : undefined;
     if (seed.placeId && !place) throw new Error(`Unknown seed place ${seed.placeId}`);
     const area = place ? nearestArea(areaRows, place) : null;
@@ -308,7 +317,7 @@ async function seedTasks(tx: Tx): Promise<void> {
       id: seed.id,
       slug: seed.slug,
       posterUserId: seed.posterId,
-      marketId: AUSTIN.id,
+      marketId: market.id,
       categoryId: seed.categoryId,
       title: seed.title,
       description: seed.description,

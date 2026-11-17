@@ -1,5 +1,7 @@
 /**
  * npm run db:migrate | db:seed | db:reset   (dev database from .env.local)
+ *   db:seed and db:reset give the test world (Austin open for the cast); `npm run db:seed -- --production` gives the
+ *   world a fresh production database gets (Gainesville the first city, Austin paused), for CI's production build.
  * npm run db:demo
  *   Adds the demo marketplace (db/seeds/demo: Austin and 14 more markets, ~600 people, 1,200 tasks with offers, bookings and reviews) on top of
  *   the seed, or moves it up to today. The preview does this on every deploy. e2e expects the plain seed, so a
@@ -20,7 +22,8 @@ const url = process.env.DATABASE_URL ?? '';
 
 const commands: Record<string, () => Promise<void>> = {
   migrate: () => migrateDatabase(url),
-  seed: () => seedDatabase(url),
+  // The test world (dev, CI's e2e, the e2e database), unless --production: the build that ships prerenders from that.
+  seed: () => seedDatabase(url, { testWorld: !process.argv.slice(3).includes('--production') }),
   reset: () => resetDatabase(url),
   demo: async () => {
     const written = await seedDemoData(url);

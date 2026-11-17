@@ -100,7 +100,7 @@ async function signIn(address: string): Promise<Headers> {
 async function person(label: string) {
   const userId = `usr_ccr_${label}_${RUN}`;
   const email = `ccr-${label}-${RUN}@example.test`;
-  await db.insert(users).values({ id: userId, email, name: 'Robin C.', firstName: 'Robin', lastName: 'Cole', emailVerified: true });
+  await db.insert(users).values({ id: userId, email, name: 'Robin C.', firstName: 'Robin', lastName: 'Cole', emailVerified: true, homeMarketId: 'mkt_austin' });
   made.push(userId);
   return { userId, email, headers: await signIn(email) };
 }

@@ -20,7 +20,7 @@ export type TimeZone = string;
  * The fallback zone, the default market's, for a date that belongs to no market. Anything that belongs to a
  * market (a task, a booking, an availability slot, a person's home market) carries and uses that market's zone.
  */
-export const MARKET_TIME_ZONE: TimeZone = 'America/Chicago';
+export const MARKET_TIME_ZONE: TimeZone = 'America/New_York';
 
 export const CATEGORY_SLUGS = [
   'furniture-assembly',

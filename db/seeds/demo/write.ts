@@ -27,6 +27,7 @@ import { recomputeBadges } from '../../../src/modules/badges/service';
 import { cacheTagInvalidations } from '../../../src/platform/cache/schema';
 import { seedVerification, upsertPeople, type Tx } from '../seed';
 import { AUSTIN, CATEGORIES } from '../data/austin';
+import { GAINESVILLE } from '../data/gainesville';
 import { DEMO_MARKETS, demoAreaId, demoMarketId, demoPolicyId } from './markets';
 import { buildDemoPlan, DEMO_PREFIX, DEMO_TIME_ZONE, type DemoPlan, type DemoPolicies } from './plan';
 import { buildDemoCommunity, buildDemoQuestions, type DemoCommunity, type DemoTaskQuestion } from './community';
@@ -68,13 +69,13 @@ export async function writeDemoMarkets(tx: Tx): Promise<void> {
   }
 }
 
-/** Each market's current published policy (Austin's from the base seed, the others from `writeDemoMarkets`). */
+/** Each market's current published policy (Gainesville's from the base seed or migration 0061, the others from `writeDemoMarkets`). */
 export async function loadDemoPolicies(tx: Tx): Promise<DemoPolicies> {
-  const marketIds = [AUSTIN.id, ...DEMO_MARKETS.map(demoMarketId)];
+  const marketIds = [GAINESVILLE.id, ...DEMO_MARKETS.map(demoMarketId)];
   const rows = await tx.select().from(marketPolicies).where(and(inArray(marketPolicies.marketId, marketIds), eq(marketPolicies.status, 'published')));
   const policies: DemoPolicies = {};
   for (const row of rows.sort((a, b) => a.version - b.version)) policies[row.marketId] = { id: row.id, fees: row.fees };
-  for (const marketId of marketIds) if (!policies[marketId]) throw new Error(`Demo data: no published policy for ${marketId} (Austin's comes from the base seed).`);
+  for (const marketId of marketIds) if (!policies[marketId]) throw new Error(`Demo data: no published policy for ${marketId} (Gainesville's comes from the base seed or migration 0061).`);
   return policies;
 }
 
@@ -283,7 +284,8 @@ export async function seedDemoData(url: string, now = new Date()): Promise<{ mar
       'helpers',
       'markets',
       'sitemap',
-      ...[AUSTIN.slug, ...DEMO_MARKETS.map((market) => market.slug)].map((slug) => `market:${slug}`),
+      // Austin's too: its pages lose the cast's tasks when the cast moves to Gainesville.
+      ...[GAINESVILLE.slug, AUSTIN.slug, ...DEMO_MARKETS.map((market) => market.slug)].map((slug) => `market:${slug}`),
       ...plan.tasks.map((task) => `task:${task.slug}`),
       ...plan.people.flatMap((person) => (person.helper ? [`helper:${person.helper.handle}`] : [])),
     ];

@@ -4,7 +4,7 @@ import { users } from '@/modules/accounts/schema';
 import { signUpUnfinished } from '@/modules/accounts/sign-up';
 import { betaAccess, betaInviteCodes } from '@/modules/beta/schema';
 import { betaGatesFor, createInviteCode, getAdminBetaPage, redeemInvite, revokeInviteCode, setBetaGate } from '@/modules/beta/service';
-import { featureFlags } from '@/modules/markets/schema';
+import { featureFlags, markets } from '@/modules/markets/schema';
 import type { StaffActor } from '@/modules/support/staff';
 import { auditLog } from '@/platform/audit/schema';
 import { createDb } from '@/platform/db/connect';
@@ -156,11 +156,18 @@ describe('the switches', () => {
 });
 
 describe('the staff page', () => {
-  it('offers invites only into open markets: paused Gainesville (until plan 8.1) has no section and refuses one', async () => {
-    const page = await getAdminBetaPage(db, lead, now, 'http://localhost:3000');
-    expect(page.markets.map((market) => market.id)).toContain(MARKET);
-    expect(page.markets.map((market) => market.id)).not.toContain('mkt_gainesville');
-    expect(await createInviteCode(db, lead, { marketId: 'mkt_gainesville', role: 'poster', label: `${LABEL} paused`, maxUses: 5 }, now)).toEqual({ ok: false, code: 'not_found' });
+  it('offers invites only into open markets: a paused one has no section and refuses one', async () => {
+    // Gainesville, paused for this test only.
+    const [gainesville] = await db.select({ status: markets.status }).from(markets).where(eq(markets.id, 'mkt_gainesville'));
+    await db.update(markets).set({ status: 'paused' }).where(eq(markets.id, 'mkt_gainesville'));
+    try {
+      const page = await getAdminBetaPage(db, lead, now, 'http://localhost:3000');
+      expect(page.markets.map((market) => market.id)).toContain(MARKET);
+      expect(page.markets.map((market) => market.id)).not.toContain('mkt_gainesville');
+      expect(await createInviteCode(db, lead, { marketId: 'mkt_gainesville', role: 'poster', label: `${LABEL} paused`, maxUses: 5 }, now)).toEqual({ ok: false, code: 'not_found' });
+    } finally {
+      await db.update(markets).set({ status: gainesville!.status }).where(eq(markets.id, 'mkt_gainesville'));
+    }
   });
 
   it('shows the switches, each invite with its uses and who joined, and who may manage', async () => {

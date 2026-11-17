@@ -30,6 +30,8 @@ async function newPoster(id: string, options: { daysOld?: number; phone?: boolea
     name: 'Test P.',
     firstName: 'Test',
     lastName: 'Poster',
+    // Posts in Austin, with the test world's addresses (new accounts start in the default market).
+    homeMarketId: 'mkt_austin',
     createdAt: new Date(NOW.getTime() - (options.daysOld ?? 90) * 86_400_000),
     phone: options.phone === false ? null : `+1512555${String(Math.floor(1000 + Math.random() * 8999))}`,
     phoneVerifiedAt: options.phone === false ? null : NOW,

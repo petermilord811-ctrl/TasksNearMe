@@ -7,7 +7,9 @@ export const AUSTIN = {
   state: 'TX',
   timeZone: 'America/Chicago',
   currency: 'USD',
-  status: 'prelaunch',
+  // A later city since 2026-11-17 (owner: Gainesville, FL is the first): paused, so its pages 404 and Austin ZIPs wait.
+  // The test world (seedDatabase's testWorld) reopens it for the e2e and integration cast, who live here.
+  status: 'paused',
   centerLat: 30.2672,
   centerLng: -97.7431,
   serviceRadiusKm: 25,

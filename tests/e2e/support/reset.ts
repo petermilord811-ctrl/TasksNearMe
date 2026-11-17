@@ -66,7 +66,7 @@ export async function resetE2eData(request: APIRequestContext): Promise<void> {
     await pool.end();
   }
 
-  await seedDatabase(url);
+  await seedDatabase(url, { testWorld: true });
 
   // The dev server may outlive many runs: drop its cached public pages so they show the reseeded data.
   const cleared = await request.post('/dev/cache');

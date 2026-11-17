@@ -48,7 +48,7 @@ const at = (days: number) => new Date(t0.getTime() + days * DAY);
 
 /** A helper up to the step a test needs: basics, phone, agreement (and optionally ID and payouts). */
 async function helper(id: string, options: { identity?: boolean; payout?: boolean; inHome?: boolean } = {}) {
-  await db.insert(users).values({ id, email: `${id}@example.test`, name: 'Vera T.', firstName: 'Vera', lastName: 'Tester', phone: `+1512555${id.length}${PEOPLE.indexOf(id)}99`, phoneVerifiedAt: at(-30), createdAt: at(-30) });
+  await db.insert(users).values({ id, email: `${id}@example.test`, name: 'Vera T.', firstName: 'Vera', lastName: 'Tester', phone: `+1512555${id.length}${PEOPLE.indexOf(id)}99`, phoneVerifiedAt: at(-30), createdAt: at(-30), homeMarketId: 'mkt_austin' });
   await db.insert(helperProfiles).values({ userId: id, handle: id.replace(/_/g, '-'), headline: 'Careful help around the house', bio: 'I help neighbors with careful work and always leave the place tidy. References on request.', languages: ['en'], status: 'draft', areaId: 'area_mueller' });
   const [cat] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, options.inHome ? 'light-cleaning' : 'yard-cleanup'));
   await db.insert(helperServices).values({ id: `svc_${id}`, userId: id, categoryId: cat!.id, pricingType: 'hourly', hourlyRateCents: 3000, minHours: 2, description: '', status: 'active' });

@@ -4,7 +4,7 @@ import { devSignIn, submitEmailStep } from './support/sign-in';
 /**
  * Private beta (blueprint 11 B-068). Staff make an invite on /admin/beta; a newcomer signs up through its link;
  * someone without a working code is held at the invite step (and out of the app) with the waitlist on offer;
- * helper setup asks for a helper invite. Austin's switches stay off for the other suites: the newcomers'
+ * helper setup asks for a helper invite. The markets' switches stay off for the other suites: the newcomers'
  * browsers carry `tnm_beta_gate=on`, which turns both on for that browser only (never in production).
  */
 
@@ -55,14 +55,15 @@ test('staff make an invite, a newcomer joins with its link, and others are held 
   await staffSignIn(page, 'morgan@example.test');
   await page.goto('/admin/beta');
   await expect(page.getByRole('heading', { level: 1, name: 'Private beta' })).toBeVisible();
-  // One section per market (Austin, and Gainesville since 2026-11-17): the invites here are Austin's.
-  const austin = page.getByRole('region', { name: 'Austin' });
-  await austin.getByLabel('Name', { exact: true }).fill(label);
-  await austin.getByLabel('How many people').fill('1');
-  await austin.getByLabel('Your own code (optional)').fill(code);
-  await austin.getByRole('button', { name: 'Create invite' }).click();
+  // One section per open market (Gainesville, and the test world's Austin). New accounts start in Gainesville, the
+  // first city, so the invites here are Gainesville's.
+  const gainesville = page.getByRole('region', { name: 'Gainesville' });
+  await gainesville.getByLabel('Name', { exact: true }).fill(label);
+  await gainesville.getByLabel('How many people').fill('1');
+  await gainesville.getByLabel('Your own code (optional)').fill(code);
+  await gainesville.getByRole('button', { name: 'Create invite' }).click();
   await expect(page.getByText('Invite created.')).toBeVisible();
-  const card = austin.getByRole('listitem').filter({ hasText: label });
+  const card = gainesville.getByRole('listitem').filter({ hasText: label });
   await expect(card).toContainText(code);
   await expect(card).toContainText('0 of 1');
 
@@ -93,7 +94,7 @@ test('staff make an invite, a newcomer joins with its link, and others are held 
 
   // Staff see who joined; the used-up invite moves to the past ones.
   await page.reload();
-  await page.getByText(/^Used up, expired and withdrawn/).click();
+  await gainesville.getByText(/^Used up, expired and withdrawn/).click();
   const usedUp = page.getByRole('listitem').filter({ hasText: label });
   await usedUp.getByText('1 person joined').click();
   await expect(usedUp.getByRole('link', { name: 'Bea T.' })).toBeVisible();
@@ -118,13 +119,13 @@ test('staff make an invite, a newcomer joins with its link, and others are held 
   // Staff withdraw a live invite: it leaves the active ones.
   const spare = `${label} spare`;
   await page.reload();
-  await austin.getByLabel('Name', { exact: true }).fill(spare);
-  await austin.getByRole('button', { name: 'Create invite' }).click();
+  await gainesville.getByLabel('Name', { exact: true }).fill(spare);
+  await gainesville.getByRole('button', { name: 'Create invite' }).click();
   await expect(page.getByText('Invite created.')).toBeVisible();
-  const spareCard = austin.getByRole('listitem').filter({ hasText: spare });
+  const spareCard = gainesville.getByRole('listitem').filter({ hasText: spare });
   await spareCard.getByRole('button', { name: /^Withdraw invite/ }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Withdraw invite' }).click();
   await expect(spareCard).toHaveCount(0);
-  await austin.getByText(/^Used up, expired and withdrawn/).click();
-  await expect(austin.getByRole('listitem').filter({ hasText: spare })).toContainText('Withdrawn');
+  await gainesville.getByText(/^Used up, expired and withdrawn/).click();
+  await expect(gainesville.getByRole('listitem').filter({ hasText: spare })).toContainText('Withdrawn');
 });

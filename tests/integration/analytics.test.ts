@@ -1,6 +1,7 @@
 import { eq, inArray, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
+import { METRICS_TIME_ZONE } from '@/modules/analytics/domain';
 import { getAdminMetrics } from '@/modules/analytics/service';
 import { bookingTerms, bookings, helperStrikes } from '@/modules/bookings/schema';
 import { DEFAULT_FEES } from '@/modules/markets/policy-defaults';
@@ -11,6 +12,7 @@ import { supportCases } from '@/modules/support/schema';
 import type { StaffActor } from '@/modules/support/staff';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
+import { marketLocalToUtc } from '@/shared/format';
 
 /**
  * `/admin/metrics` (B-067) against the database. The period is a week in February 2031, so only the rows made
@@ -86,7 +88,8 @@ afterAll(async () => {
 describe('market metrics', () => {
   it('follows the week’s posted tasks from offer to booking again', async () => {
     const data = await getAdminMetrics(db, casey, 7, now);
-    expect(data.from).toBe('2031-02-06T06:00:00.000Z');
+    // Midnight on Thursday, Feb 6, on the platform's clock (the default market's).
+    expect(data.from).toBe(marketLocalToUtc('2031-02-06', '00:00', METRICS_TIME_ZONE));
     expect(data.funnel.steps.map((step) => [step.id, step.count])).toEqual([['posted', 4], ['offered', 2], ['booked', 1], ['completed', 1], ['rebooked', 1]]);
     expect(data.liquidity.overall).toEqual({
       offerWithin2h: { part: 1, whole: 2, percent: 50 },

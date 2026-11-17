@@ -48,7 +48,7 @@ export interface SeedPerson {
   phone?: string;
   /** The language emails and texts go out in; unset means the default (English). */
   locale?: 'en' | 'es';
-  /** Default Austin (the column's default). */
+  /** The cast is Austin's (`mkt_austin`, set explicitly by the seed); Gainesville's poster names hers. */
   homeMarketId?: string;
   createdAt: string;
   helper?: SeedHelper;
@@ -61,6 +61,8 @@ export const PEOPLE: SeedPerson[] = [
   { id: 'usr_ruth', email: 'ruth@example.test', firstName: 'Ruth', lastName: 'Alvarez', mode: 'poster', phone: '+15125550103', createdAt: '2026-11-02T15:00:00.000Z' },
   { id: 'usr_ben', email: 'ben@example.test', firstName: 'Ben', lastName: 'Wright', mode: 'poster', phone: '+15125550104', createdAt: '2026-10-01T15:00:00.000Z' },
   { id: 'usr_ana', email: 'ana@example.test', firstName: 'Ana', lastName: 'Patel', mode: 'poster', phone: '+15125550105', createdAt: '2026-09-20T15:00:00.000Z' },
+  // Gainesville, the first city: a poster there, so its landing and map have open work in the test world.
+  { id: 'usr_grace', email: 'grace@example.test', firstName: 'Grace', lastName: 'Okafor', mode: 'poster', phone: '+13525550110', homeMarketId: 'mkt_gainesville', createdAt: '2026-11-10T15:00:00.000Z' },
   {
     id: 'usr_jordan',
     email: 'jordan@example.test',

@@ -29,8 +29,10 @@ test.describe('public tasks', () => {
   });
 
   test('home and category pages show recent tasks', async ({ page }) => {
+    // The landing shows the first city's (Gainesville's) recent tasks.
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Assemble a desk (flat-pack, 1 item)' })).toBeVisible();
+    // Its list row (the map pin links to the same page).
+    await expect(page.getByRole('link', { name: /^Assemble a tall bookcase Furniture assembly/ })).toBeVisible();
     // Yard cleanup: no other e2e test posts or cancels yard tasks.
     await page.goto('/austin/yard-cleanup');
     await expect(page.getByRole('link', { name: 'Rake and bag front-yard leaves' })).toBeVisible();

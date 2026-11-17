@@ -442,6 +442,13 @@
       "when": 1794952947197,
       "tag": "0062_waitlist_city_open",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1794956641248,
+      "tag": "0063_gainesville_opens",
+      "breakpoints": true
     }
   ]
 }

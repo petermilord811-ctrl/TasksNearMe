@@ -114,7 +114,7 @@ export function buildDemoCommunity(plan: DemoPlan, now: Date): DemoCommunity {
   for (const marketId of markets) {
     const key = marketId.replace(/^mkt_(demo_)?/, '');
     const clients = plan.clients.filter((client) => client.marketId === marketId);
-    const helpers = plan.people.filter((person) => person.helper && (person.homeMarketId ?? 'mkt_austin') === marketId).map((person) => person.id);
+    const helpers = plan.people.filter((person) => person.helper && (person.homeMarketId ?? 'mkt_gainesville') === marketId).map((person) => person.id);
     const completed = plan.bookings.filter((booking) => booking.marketId === marketId && booking.status === 'completed');
     const everyone = [...clients.map((client) => client.userId), ...helpers];
     if (clients.length < 3) continue;
@@ -254,7 +254,7 @@ export function buildDemoQuestions(plan: DemoPlan, now: Date): DemoTaskQuestion[
   const markets = [...new Set(plan.tasks.map((task) => task.marketId))];
   for (const marketId of markets) {
     const key = marketId.replace(/^mkt_(demo_)?/, '');
-    const helpers = plan.people.filter((person) => person.helper && (person.homeMarketId ?? 'mkt_austin') === marketId).map((person) => person.id);
+    const helpers = plan.people.filter((person) => person.helper && (person.homeMarketId ?? 'mkt_gainesville') === marketId).map((person) => person.id);
     const open = plan.tasks.filter((task) => task.marketId === marketId && task.status === 'open' && task.windowEnd > now);
     if (helpers.length === 0 || open.length === 0) continue;
     let n = 0;

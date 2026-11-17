@@ -32,20 +32,23 @@ test.describe('search engines', () => {
       '/pricing',
       '/es/pricing',
       '/help/who-sees-my-address',
-      '/austin',
-      '/austin/tasks',
-      '/austin/furniture-assembly',
-      '/es/austin/furniture-assembly',
-      '/austin/furniture-assembly/cost',
-      '/es/austin/furniture-assembly/cost',
-      '/austin/tasks/furniture-assembly',
-      '/es/austin/tasks/furniture-assembly',
+      // The first city's pages (Gainesville since 2026-11-17).
+      '/gainesville',
+      '/gainesville/tasks',
+      '/gainesville/furniture-assembly',
+      '/es/gainesville/furniture-assembly',
+      '/gainesville/furniture-assembly/cost',
+      '/es/gainesville/furniture-assembly/cost',
+      '/gainesville/tasks/furniture-assembly',
+      '/es/gainesville/tasks/furniture-assembly',
       '/cities',
       '/es/cities',
-      '/cities/texas',
+      '/cities/florida',
     ]) {
       expect(paths, path).toContain(path);
     }
+    // A later city (Austin, open here only for the test cast) stays out until it is live.
+    expect(paths.filter((path) => /^\/(es\/)?austin(\/|$)/.test(path))).toEqual([]);
     expect(paths.filter((path) => /^\/(es\/)?(app|admin|dev|api|code|sign-in|waitlist|legal)(\/|$)/.test(path))).toEqual([]);
     // Task pages and helper profiles are listed only in the `on` mode (the unit tests cover that list).
     expect(paths.filter((path) => /^\/(es\/)?(tasks|helpers)\//.test(path))).toEqual([]);
@@ -161,8 +164,8 @@ test.describe('search engines', () => {
     await expect(page).toHaveTitle('Cities: where TasksNearMe is open and coming next · TasksNearMe');
     await expect(page.getByRole('heading', { level: 1, name: 'TasksNearMe, city by city' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Tasks and helpers in Austin/ })).toHaveAttribute('href', '/austin');
-    // Gainesville is paused until plan 8.1: not listed anywhere yet.
-    await expect(page.getByRole('link', { name: /Tasks and helpers in Gainesville/ })).toHaveCount(0);
+    // Gainesville, the first city, is open (pre-launch).
+    await expect(page.getByRole('link', { name: /Tasks and helpers in Gainesville/ })).toHaveAttribute('href', '/gainesville');
     const states = page.getByRole('region', { name: 'Every state' });
     await expect(states.getByRole('link')).toHaveCount(51);
     await states.getByRole('link', { name: /^Texas/ }).click();

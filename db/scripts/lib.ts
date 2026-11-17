@@ -40,5 +40,5 @@ export async function resetDatabase(url: string): Promise<void> {
     await pool.end();
   }
   await migrateDatabase(url);
-  await seedDatabase(url);
+  await seedDatabase(url, { testWorld: true });
 }

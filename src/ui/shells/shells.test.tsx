@@ -104,7 +104,8 @@ describe('PublicShell', () => {
     for (const doc of LEGAL_DOCS) {
       expect(legal.getByRole('link', { name: uiMessages.shell.legal[doc] })).toHaveAttribute('href', routes.legal(doc));
     }
-    expect(footer.getByRole('link', { name: /^Austin, TX/ })).toHaveAttribute('href', routes.market());
+    // The first city (Gainesville since 2026-11-17).
+    expect(footer.getByRole('link', { name: /^Gainesville, FL/ })).toHaveAttribute('href', routes.market());
     // Opening city by city: somewhere else, the city list.
     expect(footer.getByRole('link', { name: uiMessages.shell.footer.cityNext })).toHaveAttribute('href', routes.waitlist());
     expect(footer.getByRole('link', { name: 'Trust & safety' })).toHaveAttribute('href', routes.trustAndSafety());

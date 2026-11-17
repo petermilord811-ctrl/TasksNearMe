@@ -24,10 +24,12 @@ import type { FeeSchedule } from '@/modules/markets/schema';
 import { DEFAULT_FEES } from '@/modules/markets/policy-defaults';
 import { finalBreakdown, quoteBreakdown } from '@/modules/payments/fees';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
-import { AUSTIN, AUSTIN_AREAS, CATEGORIES } from '../data/austin';
+import { AUSTIN_AREAS, CATEGORIES } from '../data/austin';
+import { GAINESVILLE, GAINESVILLE_AREAS, GAINESVILLE_POLICY_ID, gainesvilleAreaId } from '../data/gainesville';
 import type { SeedPerson } from '../data/people';
 import { DEMO_MARKETS, NAME_POOLS, demoAreaId, demoMarketId, demoPolicyId, type DemoMarket } from './markets';
-import { AREA_STREETS, DEMO_CLIENTS, DEMO_HELPERS, HOUSEHOLD_NEEDS, type DemoClient, type DemoHelper, type HomeKind, type Household } from './people';
+import { AUSTIN_TO_GAINESVILLE_AREA, GAINESVILLE_AREA_STREETS, GAINESVILLE_HELPER_TEXT } from './gainesville-cast';
+import { DEMO_CLIENTS, DEMO_HELPERS, HOUSEHOLD_NEEDS, type DemoClient, type DemoHelper, type HomeKind, type Household } from './people';
 import { createRng, hashOf, type Rng } from './rng';
 import {
   COMPLETION_NOTES,
@@ -202,9 +204,9 @@ export interface DemoPlan {
 /** Each market's published policy (id and fees), by market id. */
 export type DemoPolicies = Record<string, { id: string; fees: FeeSchedule }>;
 
-/** The policies the writer creates (and the base seed's for Austin), all with the default fees. */
+/** The policies the writer creates (and Gainesville's, from the base seed and migration 0061), all with the default fees. */
 export function defaultDemoPolicies(): DemoPolicies {
-  return Object.fromEntries([[AUSTIN.id, { id: 'pol_austin_v1', fees: DEFAULT_FEES }], ...DEMO_MARKETS.map((market) => [demoMarketId(market), { id: demoPolicyId(market), fees: DEFAULT_FEES }])]);
+  return Object.fromEntries([[GAINESVILLE.id, { id: GAINESVILLE_POLICY_ID, fees: DEFAULT_FEES }], ...DEMO_MARKETS.map((market) => [demoMarketId(market), { id: demoPolicyId(market), fees: DEFAULT_FEES }])]);
 }
 
 interface AreaRef {
@@ -238,6 +240,8 @@ interface MarketRun {
   everyClientPosts: boolean;
   /** One helper in this many shares open time slots. */
   availabilityEvery: number;
+  /** The market's IANA zone: its tasks' days and times are on this clock. */
+  timeZone: string;
 }
 
 interface HelperRef {
@@ -312,15 +316,13 @@ function addDayKey(dayKey: string, days: number): string {
 }
 
 /**
- * The demo markets' clock (completion plan 8.1): every demo market is in Central time today (./markets.ts, write.ts),
- * so the plan's days and times are on it. Moving the demo to another market changes this with the markets' rows.
+ * The generated demo markets' clock (completion plan 8.1): all fourteen are Central-time cities (./markets.ts, write.ts).
+ * The hand-written cast runs on its own market's clock, Gainesville's (Eastern), since it moved there (owner, 2026-11-17).
  */
 export const DEMO_TIME_ZONE = 'America/Chicago';
 
-const at = (dayKey: string, time: string) => new Date(marketLocalToUtc(dayKey, time, DEMO_TIME_ZONE));
-
-function clockLabel(date: Date): string {
-  const [h, m] = marketClockTime(date, DEMO_TIME_ZONE).split(':').map(Number) as [number, number];
+function clockLabel(date: Date, timeZone: string): string {
+  const [h, m] = marketClockTime(date, timeZone).split(':').map(Number) as [number, number];
   const suffix = h < 12 ? 'AM' : 'PM';
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${suffix}`;
 }
@@ -449,9 +451,7 @@ function uniqueName(rng: Rng, names: Set<string>): [string, string] {
 
 export function buildDemoPlan(input: { now: Date; policies: DemoPolicies }): DemoPlan {
   const { now, policies } = input;
-  const today = marketDayKey(now, DEMO_TIME_ZONE);
   const nowMs = now.getTime();
-  const localHour = Number(marketClockTime(now, DEMO_TIME_ZONE).slice(0, 2));
 
   const people: SeedPerson[] = [];
   const clientsOut: DemoPlan['clients'] = [];
@@ -474,6 +474,10 @@ export function buildDemoPlan(input: { now: Date; policies: DemoPolicies }): Dem
 
   /** One market from people to bookings, with its own randomness (the order of draws is the plan's identity). */
   function runMarket(run: MarketRun, rng: Rng, helperSpecs: DemoHelper[], clientSpecs: DemoClient[], taskCount: number): void {
+    // Days and times on this market's own clock.
+    const today = marketDayKey(now, run.timeZone);
+    const localHour = Number(marketClockTime(now, run.timeZone).slice(0, 2));
+    const at = (dayKey: string, time: string) => new Date(marketLocalToUtc(dayKey, time, run.timeZone));
     const ids = {
       user: (key: string) => `usr_${DEMO_PREFIX}${run.tag}${key}`,
       num: (num: number) => `${run.tag}${String(num).padStart(run.pad, '0')}`,
@@ -771,7 +775,7 @@ export function buildDemoPlan(input: { now: Date; policies: DemoPolicies }): Dem
           estimatedHours: pricing.type === 'hourly' ? pricing.estimatedHours : null,
           hoursCap: pricing.type === 'hourly' ? pricing.hoursCap : null,
           proposedStart,
-          message: offerMessage(taskRng, task.category, task.client.spec.firstName, clockLabel(proposedStart)),
+          message: offerMessage(taskRng, task.category, task.client.spec.firstName, clockLabel(proposedStart, run.timeZone)),
           brings,
           expiresAt: new Date(Math.min(windowStart.getTime(), submittedAt.getTime() + 72 * HOUR)),
           revision: revised ? 2 : 1,
@@ -956,7 +960,7 @@ export function buildDemoPlan(input: { now: Date; policies: DemoPolicies }): Dem
       }
 
       // A short conversation on the booking.
-      const lines = bookingChat(taskRng, { clientFirstName: task.client.spec.firstName, helperFirstName: helper.firstName, tool, startLabel: clockLabel(startAt), done: lifecycle === 'completed' });
+      const lines = bookingChat(taskRng, { clientFirstName: task.client.spec.firstName, helperFirstName: helper.firstName, tool, startLabel: clockLabel(startAt, run.timeZone), done: lifecycle === 'completed' });
       const times = [
         bookedAt.getTime() + taskRng.int(5, 60) * MINUTE,
         bookedAt.getTime() + taskRng.int(70, 240) * MINUTE,
@@ -1027,32 +1031,37 @@ export function buildDemoPlan(input: { now: Date; policies: DemoPolicies }): Dem
     tasks.push(...marketTasks);
   }
 
-  // Austin: the hand-written cast, with the ids, slugs and order of draws it has had from the start.
-  const austinAreas = new Map(
-    AUSTIN_AREAS.map((area) => {
-      const streets = AREA_STREETS[area.slug]!;
-      const ref: AreaRef = { id: `area_${area.slug.replaceAll('-', '_')}`, slug: area.slug, name: area.name, lat: area.lat, lng: area.lng, zip: streets.zip, streets: streets.streets, highRise: area.slug === 'downtown', label: area.name };
-      return [area.slug, ref];
+  // The hand-written cast, with the ids and order of draws it has had from the start, in Gainesville since it became the
+  // first city (owner, 2026-11-17). Its people still name the Austin neighborhoods they were written for, so the areas
+  // are keyed by those and each maps to a Gainesville neighborhood of the same character (./gainesville-cast.ts).
+  const castAreas = new Map(
+    AUSTIN_AREAS.map((austinArea) => {
+      const slug = AUSTIN_TO_GAINESVILLE_AREA[austinArea.slug]!;
+      const area = GAINESVILLE_AREAS.find((candidate) => candidate.slug === slug)!;
+      const streets = GAINESVILLE_AREA_STREETS[slug]!;
+      const ref: AreaRef = { id: gainesvilleAreaId(slug), slug, name: area.name, lat: area.lat, lng: area.lng, zip: streets.zip, streets: streets.streets, highRise: slug === 'downtown', label: area.name };
+      return [austinArea.slug, ref];
     }),
   );
   runMarket(
     {
-      marketId: AUSTIN.id,
+      marketId: GAINESVILLE.id,
       tag: '',
       pad: 3,
       slugHashLength: 4,
-      areaCode: '512',
-      state: AUSTIN.state,
-      cityOf: () => AUSTIN.name,
-      areas: austinAreas,
+      areaCode: '352',
+      state: GAINESVILLE.state,
+      cityOf: () => GAINESVILLE.name,
+      areas: castAreas,
       rural: false,
       priceFactor: 1,
-      policy: policyOf(AUSTIN.id),
+      policy: policyOf(GAINESVILLE.id),
       everyClientPosts: false,
       availabilityEvery: 3,
+      timeZone: GAINESVILLE.timeZone,
     },
     createRng(AUSTIN_SEED),
-    DEMO_HELPERS,
+    DEMO_HELPERS.map((helper) => ({ ...helper, ...GAINESVILLE_HELPER_TEXT[helper.key] })),
     DEMO_CLIENTS,
     AUSTIN_TASK_COUNT,
   );
@@ -1084,6 +1093,7 @@ export function buildDemoPlan(input: { now: Date; policies: DemoPolicies }): Dem
         policy: policyOf(demoMarketId(market)),
         everyClientPosts: true,
         availabilityEvery: 4,
+        timeZone: DEMO_TIME_ZONE,
       },
       rng,
       helperSpecs,

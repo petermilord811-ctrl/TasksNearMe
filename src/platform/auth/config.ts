@@ -124,7 +124,8 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
         phoneVerifiedAt: { type: 'date', required: false, input: false },
         mode: { type: 'string', required: false, defaultValue: 'poster', input: false },
         status: { type: 'string', required: false, defaultValue: 'active', input: false },
-        homeMarketId: { type: 'string', required: false, defaultValue: 'mkt_austin', input: false },
+        // New people start in the first city (owner, 2026-11-17: Gainesville), as the column's default.
+        homeMarketId: { type: 'string', required: false, defaultValue: 'mkt_gainesville', input: false },
         // The profile photo (a file id); set from the account page, never by sign-in.
         avatarFileId: { type: 'string', required: false, input: false },
         // 'en' | 'es': set at sign-up from the request, changed on the account page.

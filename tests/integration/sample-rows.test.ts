@@ -31,8 +31,16 @@ import { isRealRecordId, isSampleId, realRowsOnly, rowsFor, searchEngineRows } f
  *
  * The switch is on in production builds only (devHelpersOn() is true here), so `rowsFor(audience, true)` turns it on.
  * The cached reads use the app's database client and next/cache, so both are swapped for this file.
+ *
+ * The home page, the prebuilt task pages and the sitemap follow the default market, so this file makes it Austin,
+ * where the base seed's cast lives (production's first city, Gainesville, has no seeded helpers).
  */
 
+const PREVIOUS_DEFAULT_MARKET = vi.hoisted(() => {
+  const previous = process.env.DEFAULT_MARKET_SLUG;
+  process.env.DEFAULT_MARKET_SLUG = 'austin';
+  return previous;
+});
 const { db, pool } = await vi.hoisted(async () => {
   const { createDb } = await import('@/platform/db/connect');
   return createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
@@ -111,6 +119,8 @@ afterAll(async () => {
   await db.delete(helperProfiles).where(eq(helperProfiles.userId, helperId));
   await db.delete(users).where(inArray(users.id, [helperId, clientId]));
   await pool.end();
+  if (PREVIOUS_DEFAULT_MARKET === undefined) delete process.env.DEFAULT_MARKET_SLUG;
+  else process.env.DEFAULT_MARKET_SLUG = PREVIOUS_DEFAULT_MARKET;
 });
 
 const allReal = (ids: string[]) => ids.every(isRealRecordId);

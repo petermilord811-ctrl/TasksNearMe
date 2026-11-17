@@ -4,7 +4,7 @@ import { buildDemoCommunity } from '../../db/seeds/demo/community';
 import { buildDemoPlan, defaultDemoPolicies } from '../../db/seeds/demo/plan';
 
 /**
- * The demo marketplace's community (completion plan 7.11): busier markets talk more, so Austin's feed runs past
+ * The demo marketplace's community (completion plan 7.11): busier markets talk more, so the first city's feed (Gainesville, where the hand-written cast lives) runs past
  * one page and reads as continuous; every row is a demo row, on its own post and market, and nothing is dated
  * after "now".
  */
@@ -14,12 +14,12 @@ const community = buildDemoCommunity(plan, now);
 const postsIn = (marketId: string) => community.posts.filter((post) => post.marketId === marketId);
 
 describe('the demo community', () => {
-  it('gives Austin more than a page of posts, and every market with neighbors a few', () => {
-    expect(postsIn('mkt_austin').length).toBeGreaterThan(FEED_PAGE_SIZE);
+  it('gives Gainesville more than a page of posts, and every market with neighbors a few', () => {
+    expect(postsIn('mkt_gainesville').length).toBeGreaterThan(FEED_PAGE_SIZE);
     const markets = [...new Set(plan.clients.map((client) => client.marketId))];
     for (const marketId of markets) expect(postsIn(marketId).length, marketId).toBeGreaterThanOrEqual(5);
     // All four kinds in the busiest market.
-    expect(new Set(postsIn('mkt_austin').map((post) => post.kind))).toEqual(new Set(['recommendation', 'question', 'tip', 'thanks']));
+    expect(new Set(postsIn('mkt_gainesville').map((post) => post.kind))).toEqual(new Set(['recommendation', 'question', 'tip', 'thanks']));
   });
 
   it('marks every row as demo, once each, with replies on their own posts and nothing in the future', () => {

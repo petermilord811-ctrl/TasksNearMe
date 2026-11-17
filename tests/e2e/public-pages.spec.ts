@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 /** Public marketing pages, wired to the seeded Austin market, people, and launch policy. */
 test.describe('public pages', () => {
-  test('home: the landing page from the database', async ({ page }, testInfo) => {
+  test('home: the landing page from the database', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle('TasksNearMe: tasks near me, done by trusted local helpers');
     await expect(page.getByRole('heading', { level: 1, name: 'Everyday tasks, done by people nearby.' })).toBeVisible();
@@ -13,16 +13,17 @@ test.describe('public pages', () => {
     await expect(page.getByText('$54.00', { exact: true }).first()).toBeAttached();
     // The welcome gift card, while the program is on.
     await expect(page.getByText('$50.00 gift card')).toBeAttached();
-    // Featured helpers are active helpers only (Priya's profile is still a draft); they float around the
-    // hero on wide screens.
-    if (testInfo.project.name === 'app-desktop') await expect(page.getByText('Sam K.').first()).toBeVisible();
+    // The landing is the first city's (Gainesville since 2026-11-17): its featured helpers are its own active helpers,
+    // so Austin's cast (Sam K., or Priya, whose profile is a draft) never features here, and its open tasks show
+    // Gainesville's neighborhoods.
+    await expect(page.getByText('Sam K.')).toHaveCount(0);
     await expect(page.getByText('Priya')).toHaveCount(0);
-    await expect(page.getByText('Travis Heights').first()).toBeVisible();
+    await expect(page.getByText('Duckpond').first()).toBeVisible();
   });
 
   test('home map: the nearest open tasks to a shared location, one category at a time', async ({ page, context }) => {
     await context.grantPermissions(['geolocation']);
-    await context.setGeolocation({ latitude: 30.2989, longitude: -97.7064 }); // Mueller
+    await context.setGeolocation({ latitude: 29.6566, longitude: -82.3193 }); // Duckpond, Gainesville (the first city)
     await page.goto('/');
     const map = page.locator('#tasks-near-you');
     await expect(map.getByRole('list', { name: 'Newest open tasks' })).toBeVisible();

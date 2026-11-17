@@ -25,7 +25,7 @@ async function main() {
   await admin.end();
 
   await migrateDatabase(perfUrl.toString());
-  await seedDatabase(perfUrl.toString());
+  await seedDatabase(perfUrl.toString(), { testWorld: true });
   const counts = await multiply(perfUrl.toString(), copies);
   console.log(JSON.stringify(counts, null, 1));
 }

@@ -63,7 +63,7 @@ async function bill() {
 
 describe('helper onboarding', () => {
   it('runs from profile to bookable to complete', async () => {
-    await db.insert(users).values({ id: userId, email: 'onboarding@example.test', name: 'Sam K.', firstName: 'Sam', lastName: 'Kline' });
+    await db.insert(users).values({ id: userId, email: 'onboarding@example.test', name: 'Sam K.', firstName: 'Sam', lastName: 'Kline', homeMarketId: 'mkt_austin' });
 
     // Profile: a unique handle (Sam Kim already has "sam-k"); onboarding needs the helper agreement.
     const input = { headline: 'Careful cleaning and yard help', bio: 'I clean homes and tidy yards carefully, and I always leave things better than I found them.', languages: ['en' as const, 'es' as const] };

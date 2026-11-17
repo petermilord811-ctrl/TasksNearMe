@@ -35,6 +35,11 @@ export const FAKE_PLACES: readonly GeoPlace[] = [
   { placeId: 'plc_circlec_510', line1: '510 Mock Trail', city: 'Austin', state: 'TX', zip: '78739', lat: 30.1866, lng: -97.8842 },
   { placeId: 'plc_roundrock_44', line1: '44 Sample Way', city: 'Round Rock', state: 'TX', zip: '78664', lat: 30.5083, lng: -97.6789 },
   { placeId: 'plc_waco_100', line1: '100 Example Road', city: 'Waco', state: 'TX', zip: '76701', lat: 31.5493, lng: -97.1467 },
+  // Gainesville, FL, the first city (owner, 2026-11-17): the base seed's few tasks there.
+  { placeId: 'plc_duckpond_2201', line1: '2201 Example Lane', city: 'Gainesville', state: 'FL', zip: '32601', lat: 29.6566, lng: -82.3193 },
+  { placeId: 'plc_midtown_2207', line1: '2207 Sample Street', city: 'Gainesville', state: 'FL', zip: '32603', lat: 29.6528, lng: -82.3441 },
+  { placeId: 'plc_haile_2213', line1: '2213 Placeholder Avenue', city: 'Gainesville', state: 'FL', zip: '32608', lat: 29.6101, lng: -82.4377 },
+  { placeId: 'plc_gnv_northeast_2219', line1: '2219 Demo Court', city: 'Gainesville', state: 'FL', zip: '32609', lat: 29.6733, lng: -82.2998 },
 ];
 
 const SAMPLE_PLACE_PREFIX = 'plc_';

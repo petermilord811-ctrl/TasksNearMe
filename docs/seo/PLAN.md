@@ -249,7 +249,7 @@ d4 task board and task page), **owner** (§8). Status as of writing.
 ### S2 Supply-gated pages
 | ID | Item | Owner | Status |
 |---|---|---|---|
-| S2.1 | Market pages (city, board, categories) indexed once `live`, Austin from the start; others noindex + out of the sitemap | b7 | Live (4e4a1cf) |
+| S2.1 | Market pages (city, board, categories) indexed once `live`, the launch market from the start (Gainesville since 2026-11-17; Austin is paused, its pages 404 until it opens); others noindex + out of the sitemap | b7 | Live (4e4a1cf) |
 | S2.2 | Helper profiles indexed (in `on`) only with a completed task or a published review | b7 | Live (4e4a1cf); listed only in `on` |
 | S2.3 | Task pages indexed (in `on`) only while open, public and from a poster with a verified phone; closed ones noindex, follow with a banner (already the board's rule) | b7 | Rule in place; poster check at launch |
 

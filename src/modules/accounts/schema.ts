@@ -30,7 +30,7 @@ export const users = pgTable(
     phoneVerifiedAt: timestamp('phone_verified_at', { withTimezone: true }),
     mode: text('mode').notNull().default('poster'), // poster | helper
     status: text('status').notNull().default('active'), // active | restricted | suspended | banned | deleted
-    homeMarketId: text('home_market_id').notNull().default('mkt_austin'),
+    homeMarketId: text('home_market_id').notNull().default('mkt_gainesville'),
     /** "I'm 18 or older", ticked during sign-up. */
     adultAttestedAt: timestamp('adult_attested_at', { withTimezone: true }),
     termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),

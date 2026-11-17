@@ -2,9 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 import { devSignIn } from './support/sign-in';
 
 /**
- * Completion plan 5.15 on the dev data, read only: an admin finds the outage switch on the config page (bookings
- * open) and its reason dialog, closed again without pausing (pausing Austin would stop every other spec's
- * bookings while it ran; tests/integration/outage.test.ts pauses and reopens). Loading the real page is the
+ * Completion plan 5.15 on the dev data, read only: an admin finds the outage switch on the config page (the first
+ * city's, Gainesville's, bookings open) and its reason dialog, closed again without pausing (a pause would hold
+ * other specs' bookings while it ran; tests/integration/outage.test.ts pauses and reopens). Loading the real page is the
  * point: a server screen hands the Server Action to the client dialog. A client's pages carry no notice.
  */
 
@@ -22,7 +22,7 @@ test('an admin finds the outage switch with bookings open, behind a reason dialo
   const outage = page.getByRole('region', { name: 'Outage switch' });
   await expect(outage.getByText('Bookings open', { exact: true })).toBeVisible({ timeout: 45_000 });
   await outage.getByRole('button', { name: 'Pause bookings' }).click();
-  const dialog = page.getByRole('alertdialog', { name: 'Pause new bookings in Austin?' });
+  const dialog = page.getByRole('alertdialog', { name: 'Pause new bookings in Gainesville?' });
   await expect(dialog.getByLabel('Reason')).toBeVisible();
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).toBeHidden();

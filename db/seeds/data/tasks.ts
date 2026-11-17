@@ -21,9 +21,78 @@ export interface SeedTask {
   budget: { type: 'fixed'; priceCents: number } | { type: 'hourly'; rateCents: number; estimatedHours: number; hoursCap: number };
   offerCount: number;
   postedHoursAgo: number;
+  /** The market, when not Austin (the cast's): Gainesville's few tasks, so the first city's landing has open work. */
+  market?: 'gainesville';
 }
 
 export const SEED_TASKS: SeedTask[] = [
+  // Gainesville, the first city (owner, 2026-11-17): a few open tasks for its landing page and map.
+  {
+    id: 'tsk_gnv_bookcase',
+    slug: 'assemble-a-tall-bookcase-duckpond-g7k2',
+    posterId: 'usr_grace',
+    categoryId: 'cat_furniture_assembly',
+    title: 'Assemble a tall bookcase',
+    description: 'Flat-pack bookcase, about 50 parts, boxes in the front room. I would like it anchored to the wall.',
+    details: { itemType: 'bookshelf', itemCount: 1, wallAnchoring: true, toolsOnSite: false },
+    placeId: 'plc_duckpond_2201',
+    daysFromToday: 3,
+    start: '10:00',
+    end: '13:00',
+    budget: { type: 'fixed', priceCents: 7000 },
+    offerCount: 0,
+    postedHoursAgo: 6,
+    market: 'gainesville',
+  },
+  {
+    id: 'tsk_gnv_leaves',
+    slug: 'rake-and-bag-oak-leaves-haile-plantation-g2m9',
+    posterId: 'usr_grace',
+    categoryId: 'cat_yard_cleanup',
+    title: 'Rake and bag oak leaves',
+    description: 'Big backyard under two live oaks. Paper yard bags are in the garage; the city picks them up at the curb.',
+    details: { yardSize: 'large', work: 'leaves', greenWastePlan: 'curbside', toolsOnSite: true },
+    placeId: 'plc_haile_2213',
+    daysFromToday: 5,
+    start: '08:00',
+    end: '11:00',
+    budget: { type: 'fixed', priceCents: 14000 },
+    offerCount: 0,
+    postedHoursAgo: 18,
+    market: 'gainesville',
+  },
+  {
+    id: 'tsk_gnv_cleaning',
+    slug: 'light-cleaning-one-bedroom-midtown-g8x1',
+    posterId: 'usr_grace',
+    categoryId: 'cat_light_cleaning',
+    title: 'Light cleaning for a one-bedroom apartment',
+    description: 'Kitchen, bathroom and floors before my parents visit. Supplies are under the sink.',
+    details: { bedrooms: 1, bathrooms: 1, suppliesOnSite: true, pets: false },
+    placeId: 'plc_midtown_2207',
+    daysFromToday: 7,
+    budget: { type: 'fixed', priceCents: 10000 },
+    offerCount: 0,
+    postedHoursAgo: 30,
+    market: 'gainesville',
+  },
+  {
+    id: 'tsk_gnv_moving',
+    slug: 'help-loading-a-moving-truck-northeast-g4t6',
+    posterId: 'usr_grace',
+    categoryId: 'cat_moving_help',
+    title: 'Help loading a 15 ft truck',
+    description: 'Two-bedroom house into a rental truck in the driveway. Mostly boxes, a sofa and a bed frame.',
+    details: { moveType: 'load_truck', rooms: 2, heavyItems: 'Sofa, bed frame', stairFlights: 0, elevator: false },
+    placeId: 'plc_gnv_northeast_2219',
+    daysFromToday: 4,
+    start: '09:00',
+    end: '13:00',
+    budget: { type: 'hourly', rateCents: 3600, estimatedHours: 3, hoursCap: 4 },
+    offerCount: 0,
+    postedHoursAgo: 9,
+    market: 'gainesville',
+  },
   {
     id: 'tsk_desk',
     slug: 'assemble-a-desk-mueller-7f3k',

@@ -13,8 +13,8 @@ export const GAINESVILLE = {
   state: 'FL',
   timeZone: 'America/New_York',
   currency: 'USD',
-  // Paused (invisible, no bookings) until dates follow each market's zone (plan 8.1); it opens through marketStatusChange.
-  status: 'paused',
+  // Pre-launch: the first city. Migration 0063 opened it in production (0061 put it in paused until plan 8.1 landed).
+  status: 'prelaunch',
   centerLat: 29.6516,
   centerLng: -82.3248,
   serviceRadiusKm: 25,
