@@ -87,7 +87,8 @@ export function OfferFields({ rules, onDraftMessage }: {
   /** "Write it for me" on the message, when drafting is on for this helper. */
   onDraftMessage?: QueryHandler<OfferMessageDraftInput, OfferMessageDraftResult>;
 }) {
-  const { formatTime } = useFormat();
+  // On the task's market clock (completion plan 8.1).
+  const { formatTime } = useFormat(rules.timeZone);
   const t = useTranslations('helperTask.form');
   const fields = useTranslations('forms');
   const { register, watch, control, setValue, setError, clearErrors } = useFormContext<OfferInput>();
@@ -116,7 +117,7 @@ export function OfferFields({ rules, onDraftMessage }: {
       </>}
     <OfferField name="startTime" label={t('startTime')} hint={t('startTimeHint')}>{(id, invalid) => <select {...register('startTime')} id={id} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="min-h-11 w-full scroll-mb-40 rounded-[10px] border border-input bg-background px-3 text-base tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
       <option value="" disabled>{t('chooseStart')}</option>
-      {rules.startTimes.map((time) => <option key={time} value={time}>{formatTime(marketLocalToUtc(rules.date, time))}</option>)}
+      {rules.startTimes.map((time) => <option key={time} value={time}>{formatTime(marketLocalToUtc(rules.date, time, rules.timeZone))}</option>)}
     </select>}</OfferField>
     <OfferField name="message" label={t('message')} hint={t('privacy')}>{(id, invalid) => <>
       <Textarea {...register('message')} id={id} maxLength={rules.messageMaxLength} rows={4} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error ${id}-count`} className="min-h-28 scroll-mb-40" />

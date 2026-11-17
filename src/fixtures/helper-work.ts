@@ -17,6 +17,9 @@ import { chris } from './people';
 import { deskDraft, uploadedTaskPhotos } from './posting';
 import { compactTaskDetails } from '@/contracts';
 
+/** These fixtures are Austin's tasks: dates and times on Central time, named rather than assumed (plan 8.1). */
+const AUSTIN_ZONE = 'America/Chicago';
+
 /**
  * The marketplace from Jordan's side (furniture, moving, and yard; bookable). "Now" is Tue,
  * Nov 17, 2026, 9:00 am in Austin. Distances are bands from East Austin.
@@ -75,6 +78,7 @@ export const findWorkPageData: FindWorkPageData = {
   setup: jordanSetup,
   map: findWorkMap,
   today: '2026-11-17',
+  timeZone: AUSTIN_ZONE,
   savedCount: 1,
 };
 
@@ -121,6 +125,7 @@ export const fakeFindWorkHandlers: FindWorkHandlers = {
 };
 
 const deskRules: OfferRules = {
+  timeZone: AUSTIN_ZONE,
   date: '2026-11-21',
   startTimes: ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30'],
   pricingType: 'fixed',
@@ -167,7 +172,7 @@ export const helperYardNoOffer: HelperTaskView = {
   details: { yardSize: 'medium', work: 'leaves', greenWastePlan: 'curbside', toolsOnSite: true },
   photos: [],
   setup: jordanSetup,
-  offerRules: { date: '2026-11-28', startTimes: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30'], pricingType: 'fixed', minPriceCents: 2500, messageMaxLength: 500 },
+  offerRules: { timeZone: AUSTIN_ZONE, date: '2026-11-28', startTimes: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30'], pricingType: 'fixed', minPriceCents: 2500, messageMaxLength: 500 },
   offerDefaults: { pricing: { type: 'fixed', priceCents: 12000 }, startTime: '09:00', message: '', brings: [] },
   aiDraftingEnabled: true,
 };
@@ -181,6 +186,7 @@ export const helperMovingHourly: HelperTaskView = {
   expenseAllowance: { amountCents: 2000, description: 'Up to $20 for moving blankets or tape' },
   setup: jordanSetup,
   offerRules: {
+    timeZone: AUSTIN_ZONE,
     date: '2026-11-22',
     startTimes: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30'],
     pricingType: 'hourly',
@@ -200,7 +206,7 @@ export const helperComputerBlocked: HelperTaskView = {
   photos: [],
   blockedReason: 'category_not_offered',
   setup: jordanSetup,
-  offerRules: { date: '2026-11-23', startTimes: ['10:00', '10:30', '11:00', '11:30'], pricingType: 'fixed', minPriceCents: 2500, messageMaxLength: 500 },
+  offerRules: { timeZone: AUSTIN_ZONE, date: '2026-11-23', startTimes: ['10:00', '10:30', '11:00', '11:30'], pricingType: 'fixed', minPriceCents: 2500, messageMaxLength: 500 },
   offerDefaults: { pricing: { type: 'fixed', priceCents: 4000 }, startTime: '10:00', message: '', brings: [] },
   aiDraftingEnabled: true,
 };

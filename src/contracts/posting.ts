@@ -288,8 +288,10 @@ function FIELD(code: FieldErrorCode) {
  * The draft schema, built from the page's rules and categories so the client and the server apply
  * the same checks. Issue paths are dotted field names (`schedule.startTime`, `details.itemType`).
  */
-export function createTaskDraftSchema(context: Pick<PostTaskPageData, 'rules' | 'categories' | 'now'>) {
+/** `context.market.timeZone`: the poster's market, whose wall-clock dates and times the form takes (plan 8.1). */
+export function createTaskDraftSchema(context: Pick<PostTaskPageData, 'rules' | 'categories' | 'now'> & { market: Pick<MarketView, 'timeZone'> }) {
   const { rules, categories } = context;
+  const timeZone = context.market.timeZone;
   const now = new Date(context.now).getTime();
 
   return z
@@ -347,13 +349,13 @@ export function createTaskDraftSchema(context: Pick<PostTaskPageData, 'rules' | 
 
       if (draft.location.mode === 'remote' && !category.remoteAllowed) issue(['location', 'mode'], 'not_supported');
 
-      // Schedule: market-local window → UTC, within the lead-time policy.
+      // Schedule: the market's local window → UTC, within the lead-time policy.
       const { date, flexible, startTime, endTime } = draft.schedule;
       if (!flexible && !startTime) issue(['schedule', 'startTime'], 'required');
       if (!flexible && !endTime) issue(['schedule', 'endTime'], 'required');
       if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        const start = new Date(marketLocalToUtc(date, flexible || !startTime ? '00:00' : startTime)).getTime();
-        const dayEnd = new Date(marketLocalToUtc(date, '23:30')).getTime();
+        const start = new Date(marketLocalToUtc(date, flexible || !startTime ? '00:00' : startTime, timeZone)).getTime();
+        const dayEnd = new Date(marketLocalToUtc(date, '23:30', timeZone)).getTime();
         const earliest = now + rules.minLeadHours * 3_600_000;
         const latest = now + rules.maxLeadDays * 86_400_000;
         // Flexible days only need some of the day left after the lead time.

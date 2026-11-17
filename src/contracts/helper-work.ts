@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { ActionDescriptor, ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
 import type { BotCheckConfig, BotCheckInput } from './bot-check';
 import type { OfferActionId } from './action-ids';
-import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
+import type { CategorySlug, Cents, ISODateTime, Photo, TimeZone } from './common';
 import type { InviteView } from './invites';
 import type { CategoryView } from './marketing';
 import type { PriceBreakdown, PricingInput } from './money';
@@ -110,6 +110,8 @@ export interface FindWorkPageData {
   map: FindWorkMap;
   /** Today in the market's time, for "Today" and "Tomorrow". */
   today: string;
+  /** The helper's market zone: the cards' dates and times are shown on its clock (completion plan 8.1). */
+  timeZone: TimeZone;
   /** Open tasks the helper saved. */
   savedCount: number;
   /** The bot check for one-tap offers (contracts/bot-check.ts, action `offer`). Absent: none is set up. */
@@ -174,9 +176,11 @@ export interface HelperTaskView {
 }
 
 export interface OfferRules {
-  /** The task's date in the market time zone, "2026-11-21". */
+  /** The task's market zone (completion plan 8.1): `date` and `startTimes` are on its clock. */
+  timeZone: TimeZone;
+  /** The task's date in its market's zone, "2026-11-21". */
   date: string;
-  /** Allowed start times in the market time zone, 30-minute steps ("10:00", "10:30", …). */
+  /** Allowed start times in its market's zone, 30-minute steps ("10:00", "10:30", …). */
   startTimes: string[];
   /** The offer must match the task's pricing type. */
   pricingType: 'fixed' | 'hourly';

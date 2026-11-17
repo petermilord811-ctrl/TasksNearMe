@@ -191,7 +191,7 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
           ? { type: 'fixed' as const, priceCents: task.budgetCents! }
           : { type: 'hourly' as const, rateCents: task.hourlyRateCents!, estimatedHours: task.estimatedHours!, hoursCap: task.hoursCap! },
       };
-      const parsed = createTaskDraftSchema({ rules: POSTING_RULES, categories: CATEGORY_VIEWS, now: task.publishedAt.toISOString() }).safeParse(draft);
+      const parsed = createTaskDraftSchema({ rules: POSTING_RULES, categories: CATEGORY_VIEWS, now: task.publishedAt.toISOString(), market: { timeZone: 'America/Chicago' } }).safeParse(draft);
       expect(parsed.success, `${task.id}: ${JSON.stringify(parsed.error?.issues)}`).toBe(true);
       // Where: the poster's own address and neighborhood, shown only as a point near the neighborhood's center.
       if (task.mode === 'remote') {
@@ -245,7 +245,7 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
       expect(offer.updatedAt.getTime()).toBeGreaterThanOrEqual(offer.createdAt.getTime());
       expect(offer.createdAt.getTime()).toBeLessThan(now.getTime());
       // The offer form's rules: a start time it offers, a price at or above the minimum, hours at least the estimate.
-      const rules = offerRulesFor(task, { minPriceCents: category.minPriceCents });
+      const rules = offerRulesFor(task, { minPriceCents: category.minPriceCents }, 'America/Chicago');
       expect(marketDayKey(offer.proposedStart)).toBe(rules.date);
       expect(rules.startTimes).toContain(marketClockTime(offer.proposedStart));
       expect(offer.pricingType).toBe(task.pricingType);

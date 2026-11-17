@@ -31,7 +31,7 @@ export function OfferForm({ data, handlers, revising = false, onCancel, initialR
   const own = revising ? data.myOffer : undefined;
   const form = useForm<OfferInput>({ resolver: zodResolver(schema), defaultValues: own ? {
     pricing: own.pricing,
-    startTime: data.offerRules.startTimes.find((time) => marketLocalToUtc(data.offerRules.date, time) === own.proposedStart) ?? '',
+    startTime: data.offerRules.startTimes.find((time) => marketLocalToUtc(data.offerRules.date, time, data.offerRules.timeZone) === own.proposedStart) ?? '',
     message: own.message, brings: own.brings,
   } : data.offerDefaults });
   const { setError, setFocus } = form;

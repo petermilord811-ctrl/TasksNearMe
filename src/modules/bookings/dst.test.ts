@@ -54,7 +54,7 @@ describe('T-30: daylight saving time', () => {
     // A window from midnight to 4:00 am on Nov 1, 2026: 1:00 and 1:30 happen twice.
     const windowStart = new Date(marketLocalToUtc('2026-11-01', '00:00'));
     const windowEnd = new Date(windowStart.getTime() + 5 * HOUR);
-    const rules = offerRulesFor({ windowStart, windowEnd, pricingType: 'fixed', estimatedHours: null }, { minPriceCents: 2500 });
+    const rules = offerRulesFor({ windowStart, windowEnd, pricingType: 'fixed', estimatedHours: null }, { minPriceCents: 2500 }, 'America/Chicago');
     expect(rules.startTimes).toEqual([...new Set(rules.startTimes)]);
     expect(rules.startTimes).toContain('01:30');
     expect(rules.startTimes.at(0)).toBe('00:00');
@@ -64,8 +64,27 @@ describe('T-30: daylight saving time', () => {
     // Mar 14, 2027: 2:00–2:59 am never happens.
     const windowStart = new Date(marketLocalToUtc('2027-03-14', '01:00'));
     const windowEnd = new Date(marketLocalToUtc('2027-03-14', '05:00'));
-    const rules = offerRulesFor({ windowStart, windowEnd, pricingType: 'fixed', estimatedHours: null }, { minPriceCents: 2500 });
+    const rules = offerRulesFor({ windowStart, windowEnd, pricingType: 'fixed', estimatedHours: null }, { minPriceCents: 2500 }, 'America/Chicago');
     expect(rules.startTimes.some((time) => time.startsWith('02:'))).toBe(false);
     expect(rules.startTimes).toEqual(['01:00', '01:30', '03:00', '03:30', '04:00', '04:30']);
+  });
+  it('does the same on a Gainesville task’s own clock (Eastern, the same Sundays, an hour earlier in UTC) (plan 8.1)', () => {
+    const EASTERN = 'America/New_York';
+    // Fall back: 1:00 and 1:30 am happen twice in Gainesville too; each once in the form, on Eastern time.
+    const fallStart = new Date(marketLocalToUtc('2026-11-01', '00:00', EASTERN));
+    expect(fallStart.toISOString()).toBe('2026-11-01T04:00:00.000Z');
+    const fall = offerRulesFor({ windowStart: fallStart, windowEnd: new Date(fallStart.getTime() + 5 * HOUR), pricingType: 'fixed', estimatedHours: null }, { minPriceCents: 2500 }, EASTERN);
+    expect(fall.timeZone).toBe(EASTERN);
+    expect(fall.startTimes).toEqual([...new Set(fall.startTimes)]);
+    expect(fall.startTimes.at(0)).toBe('00:00');
+    // Spring forward: no 2:xx am in Gainesville either.
+    const spring = offerRulesFor(
+      { windowStart: new Date(marketLocalToUtc('2027-03-14', '01:00', EASTERN)), windowEnd: new Date(marketLocalToUtc('2027-03-14', '05:00', EASTERN)), pricingType: 'fixed', estimatedHours: null },
+      { minPriceCents: 2500 },
+      EASTERN,
+    );
+    expect(spring.startTimes).toEqual(['01:00', '01:30', '03:00', '03:30', '04:00', '04:30']);
+    // The same instants read on Austin's clock are an hour earlier: a Gainesville task never shows Central times.
+    expect(offerRulesFor({ windowStart: fallStart, windowEnd: new Date(fallStart.getTime() + 2 * HOUR), pricingType: 'fixed', estimatedHours: null }, { minPriceCents: 2500 }, 'America/Chicago').startTimes.at(0)).toBe('23:00');
   });
 });

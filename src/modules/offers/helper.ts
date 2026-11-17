@@ -42,6 +42,7 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { mapTiles } from '@/modules/markets/map-tiles';
+import { marketTimeZone } from '@/modules/markets/time-zone';
 import {
   distanceBandOf,
   helperOfferActions,
@@ -168,6 +169,8 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
   const state = await loadHelperState(db, userId, now);
   if (!state.marketId) return null;
   const query = parseFindWorkQuery(params);
+  // The helper's market: its cards' days and "today" are on its clock (completion plan 8.1).
+  const timeZone = await marketTimeZone(db, state.marketId);
   const [categoryViews, categoryRows] = await Promise.all([
     listCategoryViews(state.marketId, db),
     db.select({ slug: categories.slug, requiresBackgroundCheck: categories.requiresBackgroundCheck, minPriceCents: categories.minPriceCents }).from(categories),
@@ -248,7 +251,7 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
         ...(myOffer ? { myOffer } : {}),
         ...(blockedReason && !myOffer ? { blockedReason } : {}),
         earnings,
-        startDay: marketDayKey(view.schedule.windowStart),
+        startDay: marketDayKey(view.schedule.windowStart, timeZone),
         isNew: now.getTime() - Date.parse(view.postedAt) < NEW_FOR_HOURS * 3_600_000,
         saved: savedIds.has(view.id),
         ...(quickOffer ? { quickOffer } : {}),
@@ -262,7 +265,8 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
       ...(state.center && area ? { area: { name: area.name, center: state.center, serviceRadiusMiles: state.facts.serviceRadiusMiles } } : {}),
       marketCenter: market ? { lat: market.lat, lng: market.lng } : (state.center ?? { lat: 30.2672, lng: -97.7431 }),
     },
-    today: marketDayKey(now),
+    today: marketDayKey(now, timeZone),
+    timeZone,
     savedCount: savedIds.size,
   };
 }
@@ -360,7 +364,7 @@ export async function getHelperTaskView(db: Db, userId: string, taskId: string, 
         .where(eq(taskPhotos.taskId, taskId))
         .orderBy(asc(taskPhotos.position))
     : [];
-  const rules = offerRulesFor(row.task, row.category);
+  const rules = offerRulesFor(row.task, row.category, await marketTimeZone(db, row.task.marketId));
 
   return {
     task,
@@ -426,7 +430,7 @@ async function prepareOffer(db: Db, userId: string, taskId: string, input: Offer
   const distanceMiles = state.center && point && row.task.mode !== 'remote' ? milesBetween(state.center, point) : null;
   if (offerBlockedReason(state.facts, taskFacts(row, distanceMiles), now)) return { ready: false as const, result: { ok: false, code: 'not_allowed' } as ActionResult };
 
-  const rules = offerRulesFor(row.task, row.category);
+  const rules = offerRulesFor(row.task, row.category, await marketTimeZone(db, row.task.marketId));
   const parsed = createOfferInputSchema(rules).safeParse(input);
   if (!parsed.success) return { ready: false as const, result: validationFailed(parsed.error) };
   const offer = parsed.data;
@@ -435,7 +439,7 @@ async function prepareOffer(db: Db, userId: string, taskId: string, input: Offer
     row,
     values: {
       ...pricingColumns(offer.pricing),
-      proposedStart: new Date(marketLocalToUtc(rules.date, offer.startTime)),
+      proposedStart: new Date(marketLocalToUtc(rules.date, offer.startTime, rules.timeZone)),
       message: offer.message,
       brings: offer.brings,
       expiresAt: offerExpiresAt(row.task.windowStart, now),
@@ -490,7 +494,7 @@ export async function submitQuickOffer(db: Db, userId: string, taskId: string, n
   if (!row || row.task.status === 'draft') return { ok: false, code: 'not_found' };
   const budget = budgetOfTask(row.task);
   if (budget.type !== 'fixed') return { ok: false, code: 'not_allowed' };
-  return submitOffer(db, userId, row.task.id, offerDefaultsFor(budget, offerRulesFor(row.task, row.category)), now);
+  return submitOffer(db, userId, row.task.id, offerDefaultsFor(budget, offerRulesFor(row.task, row.category, await marketTimeZone(db, row.task.marketId))), now);
 }
 
 /** Undo for a one-tap offer: withdraws the helper's active offer on the task (as "Withdraw" on the offer does). */

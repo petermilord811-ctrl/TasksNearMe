@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { and, count, eq, inArray } from 'drizzle-orm';
 import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
-import type { ActionResult, AddressSuggestion, CategorySlug, PostTaskPageData, PostTaskRepeat, TaskDraftInput, TaskPostingRules } from '@/contracts';
+import type { ActionResult, AddressSuggestion, CategorySlug, PostTaskPageData, PostTaskRepeat, TaskDraftInput, TaskPostingRules, TimeZone } from '@/contracts';
 import { compactTaskDetails, createTaskDraftSchema, REPEAT_PLACE_PREFIX } from '@/contracts';
 import { GeocoderUnavailableError, type GeoPlace, type Geocoder } from '@/integrations/geocoding';
 import { fieldError, validationFailed } from '@/platform/actions/results';
@@ -61,17 +61,18 @@ export function nextRepeatSchedule(
   task: { windowStart: Date; windowEnd: Date; flexible: boolean },
   rules: Pick<TaskPostingRules, 'minLeadHours' | 'maxLeadDays'>,
   at: Date,
+  timeZone: TimeZone,
 ): TaskDraftInput['schedule'] {
-  const window = task.flexible ? {} : { startTime: marketClockTime(task.windowStart), endTime: marketClockTime(task.windowEnd) };
-  const weekday = weekdayOf(marketDayKey(task.windowStart));
+  const window = task.flexible ? {} : { startTime: marketClockTime(task.windowStart, timeZone), endTime: marketClockTime(task.windowEnd, timeZone) };
+  const weekday = weekdayOf(marketDayKey(task.windowStart, timeZone));
   const earliest = at.getTime() + rules.minLeadHours * 3_600_000;
   const latest = at.getTime() + rules.maxLeadDays * 86_400_000;
   let soonest: string | undefined;
   for (let offset = 0; offset <= rules.maxLeadDays + 1; offset += 1) {
-    const day = marketDayKey(new Date(at.getTime() + offset * 86_400_000));
+    const day = marketDayKey(new Date(at.getTime() + offset * 86_400_000), timeZone);
     // As the draft schema checks it: the window's start, or (flexible) some of the day left after the lead time.
-    const opens = new Date(marketLocalToUtc(day, window.startTime ?? '23:30')).getTime();
-    const begins = new Date(marketLocalToUtc(day, window.startTime ?? '00:00')).getTime();
+    const opens = new Date(marketLocalToUtc(day, window.startTime ?? '23:30', timeZone)).getTime();
+    const begins = new Date(marketLocalToUtc(day, window.startTime ?? '00:00', timeZone)).getTime();
     if (opens < earliest || begins > latest) continue;
     soonest ??= day;
     if (weekdayOf(day) === weekday) return { date: day, flexible: task.flexible, ...window };
@@ -203,7 +204,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
       details: task.details,
       photoIds: [],
       location,
-      schedule: nextRepeatSchedule(task, data.rules, now()),
+      schedule: nextRepeatSchedule(task, data.rules, now(), data.market.timeZone),
       budget:
         task.pricingType === 'hourly'
           ? { type: 'hourly', rateCents: task.hourlyRateCents ?? 0, estimatedHours: task.estimatedHours ?? 0, hoursCap: task.hoursCap ?? 0 }
@@ -311,10 +312,10 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
       if (owned.length !== photoIds.length) return fail(fieldError('photoIds', 'invalid'));
     }
 
-    // When: market-local window → UTC. A flexible day spans the whole day.
+    // When: the market's local window → UTC. A flexible day spans the whole day.
     const { date, flexible, startTime, endTime } = draft.schedule;
-    const windowStart = new Date(marketLocalToUtc(date, flexible ? '00:00' : startTime!));
-    const windowEnd = new Date(marketLocalToUtc(date, flexible ? '23:59' : endTime!));
+    const windowStart = new Date(marketLocalToUtc(date, flexible ? '00:00' : startTime!, data.market.timeZone));
+    const windowEnd = new Date(marketLocalToUtc(date, flexible ? '23:59' : endTime!, data.market.timeZone));
 
     const taskId = newId('tsk');
     const slug = `${slugPart(draft.title) || 'task'}-${location?.areaSlug ?? 'remote'}-${randomBytes(3).toString('hex').slice(0, 4)}`;

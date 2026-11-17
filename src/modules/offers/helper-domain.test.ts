@@ -57,13 +57,11 @@ describe('offer rules', () => {
   it('builds the form rules from the window, as in the fixtures', () => {
     const deskRules = offerRulesFor(
       { windowStart: new Date('2026-11-21T16:00:00.000Z'), windowEnd: new Date('2026-11-21T19:00:00.000Z'), pricingType: 'fixed', estimatedHours: null },
-      { minPriceCents: 2500 },
-    );
+      { minPriceCents: 2500 }, 'America/Chicago');
     expect(deskRules).toEqual(helperDeskWithOffer.offerRules);
     const movingRules = offerRulesFor(
       { windowStart: new Date('2026-11-22T15:00:00.000Z'), windowEnd: new Date('2026-11-22T19:00:00.000Z'), pricingType: 'hourly', estimatedHours: 3.5 },
-      { minPriceCents: 3500 },
-    );
+      { minPriceCents: 3500 }, 'America/Chicago');
     expect(movingRules).toEqual(helperMovingHourly.offerRules);
   });
 

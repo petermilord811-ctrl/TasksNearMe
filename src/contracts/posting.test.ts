@@ -62,6 +62,15 @@ describe('task draft schema', () => {
     });
   });
 
+  it('reads the date and times on the poster’s market clock (plan 8.1)', () => {
+    // Now is 9:00 am CST = 10:00 am EST. Noon in Gainesville is only 2 hours away; in Austin it's 3.
+    const gainesville = createTaskDraftSchema({ ...postTaskPageData, market: { timeZone: 'America/New_York' } });
+    const noon = { ...deskDraft, schedule: { date: '2026-11-17', flexible: false, startTime: '12:00', endTime: '14:00' } };
+    expect(schema.safeParse(noon).success).toBe(true);
+    expect(gainesville.safeParse(noon).success).toBe(false);
+    expect(gainesville.safeParse({ ...noon, schedule: { ...noon.schedule, startTime: '13:00', endTime: '15:00' } }).success).toBe(true);
+  });
+
   it('enforces category minimums and sensible hourly caps', () => {
     expect(errorsOf({ ...deskDraft, budget: { type: 'fixed', priceCents: 2000 } })).toMatchObject({
       'budget.priceCents': 'out_of_range',

@@ -141,8 +141,8 @@ describe('Post again', () => {
   it('keeps a flexible day flexible, and falls back to the soonest allowed date when the weekday is too far', () => {
     const rules = { minLeadHours: 2, maxLeadDays: 3 };
     // A flexible Saturday, repeated on a Tuesday morning with only 3 days allowed: the soonest day (today).
-    expect(nextRepeatSchedule({ windowStart: new Date('2026-11-14T06:00:00.000Z'), windowEnd: new Date('2026-11-15T05:59:00.000Z'), flexible: true }, rules, NOW)).toEqual({ date: '2026-11-17', flexible: true });
+    expect(nextRepeatSchedule({ windowStart: new Date('2026-11-14T06:00:00.000Z'), windowEnd: new Date('2026-11-15T05:59:00.000Z'), flexible: true }, rules, NOW, 'America/Chicago')).toEqual({ date: '2026-11-17', flexible: true });
     // A Wednesday 10–12 window within reach: tomorrow.
-    expect(nextRepeatSchedule({ windowStart: new Date('2026-11-11T16:00:00.000Z'), windowEnd: new Date('2026-11-11T18:00:00.000Z'), flexible: false }, rules, NOW)).toEqual({ date: '2026-11-18', flexible: false, startTime: '10:00', endTime: '12:00' });
+    expect(nextRepeatSchedule({ windowStart: new Date('2026-11-11T16:00:00.000Z'), windowEnd: new Date('2026-11-11T18:00:00.000Z'), flexible: false }, rules, NOW, 'America/Chicago')).toEqual({ date: '2026-11-18', flexible: false, startTime: '10:00', endTime: '12:00' });
   });
 });
