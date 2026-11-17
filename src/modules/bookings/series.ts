@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { bookingsPaused } from '@/modules/markets/outage';
-import { and, asc, desc, eq, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
   CardBrand,
