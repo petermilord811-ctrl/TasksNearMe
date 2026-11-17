@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { NotificationTopic } from '@/contracts';
 import { NOTIFICATION_TOPICS } from '@/contracts';
+import { appSecret } from '@/platform/crypto/app-secret';
 
 /**
  * Unsubscribing from one topic's emails with the link in the email itself (no sign-in): the link carries the
@@ -11,8 +12,6 @@ import { NOTIFICATION_TOPICS } from '@/contracts';
  * A link works for a year from the day it was sent (the day is signed into it), so an old email still works but a
  * leaked link stops eventually. Links sent before dates were added work until LEGACY_LINKS_UNTIL.
  */
-
-const secret = (env: Record<string, string | undefined> = process.env) => env.BETTER_AUTH_SECRET ?? 'dev-only-secret';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const UNSUBSCRIBE_LINK_DAYS = 365;
@@ -25,7 +24,7 @@ function signature(payload: string, key: string): string {
 
 const dayOf = (at: Date) => Math.floor(at.getTime() / DAY_MS);
 
-export function unsubscribeToken(userId: string, topic: NotificationTopic, key = secret(), now: Date = new Date()): string {
+export function unsubscribeToken(userId: string, topic: NotificationTopic, key = appSecret(), now: Date = new Date()): string {
   const day = dayOf(now).toString(36);
   return `${userId}.${topic}.${day}.${signature(`unsubscribe:${userId}:${topic}:${day}`, key)}`;
 }
@@ -34,7 +33,7 @@ function sameSignature(given: string, expected: string): boolean {
   return given.length === expected.length && timingSafeEqual(Buffer.from(given), Buffer.from(expected));
 }
 
-export function readUnsubscribeToken(token: unknown, key = secret(), now: Date = new Date()): { userId: string; topic: NotificationTopic } | null {
+export function readUnsubscribeToken(token: unknown, key = appSecret(), now: Date = new Date()): { userId: string; topic: NotificationTopic } | null {
   if (typeof token !== 'string' || token.length > 200) return null;
   const parts = token.split('.');
   if (parts.length !== 3 && parts.length !== 4) return null;
