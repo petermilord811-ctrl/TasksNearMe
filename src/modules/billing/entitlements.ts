@@ -20,6 +20,3 @@ export function aiSearchAccess(db: Db, userId: string, now: Date): Promise<AiSea
 export function consumeAiSearch(db: Db, userId: string, now: Date): Promise<{ ok: true; remaining: number | null } | { ok: false; reason: AiSearchBlock }> {
   return consume(db, userId, now);
 }
-
-/** @deprecated The first name, kept until the dashboard (9.9) calls `consumeAiSearch`. */
-export const useAiSearch = consumeAiSearch;
