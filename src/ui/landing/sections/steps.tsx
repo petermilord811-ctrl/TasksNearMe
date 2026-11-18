@@ -44,7 +44,7 @@ export function StepsSection() {
 
   return (
     <LazyMotion features={domMax}>
-      <section id="how-it-works" aria-labelledby="steps-title" className="scroll-mt-24 py-20 sm:py-28 lg:py-32">
+      <section id="how-it-works" aria-labelledby="steps-title" className="scroll-mt-24 py-12 sm:py-28 lg:py-32">
         <div className="mx-auto max-w-content px-gutter">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <Heading id="steps-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} />
@@ -93,18 +93,22 @@ export function StepsSection() {
                     className="h-full"
                   >
                     <HoverLift className="h-full" surfaceClassName="lift-shadow rounded-3xl border border-foreground/[0.07] bg-card/75" glow={`var(--iri-${index + 1})`} tilt={3}>
-                      <div className="flex h-full flex-col p-6">
+                      {/* Phones: a row per step, the icon beside the words with its number on it (audit M7). */}
+                      <div className="flex h-full flex-col p-6 max-sm:flex-row max-sm:items-start max-sm:gap-4 max-sm:p-5">
                         <span className="flex items-center gap-3">
                           <span
-                            className="lift-icon grid size-14 place-items-center rounded-2xl text-white shadow-[0_10px_24px_-10px_var(--primary-glow)]"
+                            className="lift-icon relative grid size-14 place-items-center rounded-2xl text-white shadow-[0_10px_24px_-10px_var(--primary-glow)] max-sm:size-12"
                             style={{ backgroundImage: 'var(--iridescent)', backgroundSize: '200% 100%', backgroundPosition: `${index * 50}% 50%` }}
                           >
-                            <Icon aria-hidden="true" className="size-6" />
+                            <Icon aria-hidden="true" className="size-6 max-sm:size-5" />
+                            <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-foreground text-xs font-semibold text-background tabular-nums sm:hidden">{index + 1}</span>
                           </span>
-                          <span aria-hidden="true" className="lift-number font-display text-5xl font-semibold tabular-nums">{index + 1}</span>
+                          <span aria-hidden="true" className="lift-number font-display text-5xl font-semibold tabular-nums max-sm:hidden">{index + 1}</span>
                         </span>
-                        <h3 className="mt-6 font-display text-xl font-semibold tracking-[-0.02em]">{t(`${key}.title`)}</h3>
-                        <p className="mt-2 text-muted-foreground">{t(`${key}.body`)}</p>
+                        <div className="min-w-0">
+                          <h3 className="mt-6 font-display text-xl font-semibold tracking-[-0.02em] max-sm:mt-0 max-sm:text-lg">{t(`${key}.title`)}</h3>
+                          <p className="mt-2 text-muted-foreground max-sm:mt-1">{t(`${key}.body`)}</p>
+                        </div>
                       </div>
                     </HoverLift>
                   </m.li>

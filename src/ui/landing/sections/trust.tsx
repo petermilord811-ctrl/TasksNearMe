@@ -22,7 +22,7 @@ export function TrustSection() {
     { key: 'reviews', Icon: Star, glow: 'var(--reward)', span: 'lg:col-span-7', picture: <ReviewsPicture client={art('client')} helper={art('helper')} rule={art('reviewsRule')} /> },
   ];
   return (
-    <section id="trust" aria-labelledby="trust-title" className="scroll-mt-24 py-20 sm:py-28 lg:py-32">
+    <section id="trust" aria-labelledby="trust-title" className="scroll-mt-24 py-12 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-content px-gutter">
         <Heading id="trust-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} />
         <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-12">
@@ -31,8 +31,10 @@ export function TrustSection() {
               <Reveal index={index} className="h-full">
                 <HoverLift className="h-full" surfaceClassName="lift-shadow rounded-3xl border border-foreground/[0.07] bg-card/75" glow={glow} tilt={2.5}>
                   <div className="flex h-full flex-col p-5 sm:p-6">
-                    <div aria-hidden="true" className="relative h-44 overflow-hidden rounded-2xl border border-foreground/[0.05] bg-foreground/[0.025]">{picture}</div>
-                    <h3 className="mt-6 flex items-center gap-3 font-display text-lg font-semibold tracking-[-0.02em]">
+                    {/* The pictures come alive on hover, which phones don't have, and the words say the same: phones
+                        read the four promises as compact cards (audit M7). */}
+                    <div aria-hidden="true" className="relative h-44 overflow-hidden rounded-2xl border border-foreground/[0.05] bg-foreground/[0.025] max-sm:hidden">{picture}</div>
+                    <h3 className="mt-6 flex items-center gap-3 font-display text-lg font-semibold tracking-[-0.02em] max-sm:mt-0">
                       <span className="lift-icon grid size-10 shrink-0 place-items-center rounded-xl bg-violet-soft text-violet"><Icon aria-hidden="true" className="size-5" /></span>
                       {t(`${key}.title`)}
                     </h3>

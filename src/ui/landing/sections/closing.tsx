@@ -22,7 +22,7 @@ export function ClosingSection({ data, season }: { data: HomePageData; season?: 
     { key: 'payment', Icon: CreditCard },
   ] as const;
   return (
-    <section aria-labelledby="closing-title" className="px-gutter pt-12 pb-24 sm:pb-32">
+    <section aria-labelledby="closing-title" className="px-gutter pt-6 pb-16 sm:pt-12 sm:pb-32">
       <Reveal variant="bloom" origin="50% 100%" className="mx-auto max-w-content">
         <HoverLift surfaceClassName="overflow-hidden rounded-[2.5rem] text-white" glow="#ffffff" tilt={0} lift={0} grow={0}>
           <div aria-hidden="true" className="absolute inset-0 -z-10 [animation:hue-drift_14s_ease-in-out_infinite]" style={{ backgroundImage: `var(--closing-gradient, ${BRAND_GRADIENT})`, backgroundSize: '220% 220%' }} />

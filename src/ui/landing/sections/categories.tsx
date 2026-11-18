@@ -10,7 +10,7 @@ export function CategoriesSection({ data }: { data: HomePageData }) {
   const openCounts: Partial<Record<CategorySlug, number>> = {};
   for (const pin of data.map.pins) openCounts[pin.categorySlug] = (openCounts[pin.categorySlug] ?? 0) + 1;
   return (
-    <section aria-labelledby="categories-title" className="py-20 sm:py-28 lg:py-32">
+    <section aria-labelledby="categories-title" className="py-12 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-content px-gutter">
         <Heading id="categories-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} body={t('body')} />
         <div className="mt-10"><CategoryCards categories={data.categories} openCounts={openCounts} /></div>

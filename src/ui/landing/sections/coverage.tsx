@@ -30,7 +30,7 @@ export function CoverageSection({ data }: { data: HomePageData }) {
   };
 
   return (
-    <section aria-labelledby="coverage-title" className="py-16 sm:py-20">
+    <section aria-labelledby="coverage-title" className="sm:py-20">
       <div className="mx-auto max-w-content px-gutter">
         <Reveal>
           <HoverLift surfaceClassName="rounded-[2rem] border border-dashed border-foreground/15 bg-card/45" glow="var(--violet)" tilt={0} lift={0} grow={0}>
@@ -45,7 +45,9 @@ export function CoverageSection({ data }: { data: HomePageData }) {
                   <ArrowLink href={routes.becomeAHelper()}>{t('helpersAnywhere')}</ArrowLink>
                 </div>
               </div>
-              <ul className="flex flex-wrap gap-2">
+              {/* Phones: one row that scrolls sideways (the card's padding bleeds, the next chip peeks in at the edge), not a
+                  column of a dozen chips (audit M7). */}
+              <ul className="flex flex-wrap gap-2 max-sm:-mx-6 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:*:shrink-0 max-sm:px-6 max-sm:pb-1 max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%_-_2.5rem),transparent)] max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden">
                 {data.market.areaNames.map((name) => {
                   const area = areas.get(name);
                   const count = open.get(name) ?? 0;
@@ -66,11 +68,11 @@ export function CoverageSection({ data }: { data: HomePageData }) {
                   return (
                     <li key={name}>
                       {area && landing ? (
-                        <button type="button" onClick={() => show(area)} aria-describedby={hintId} className="area-chip inline-flex min-h-10 items-center gap-1.5 rounded-full border border-foreground/[0.07] bg-card/80 px-3.5 text-sm font-medium">
+                        <button type="button" onClick={() => show(area)} aria-describedby={hintId} className="area-chip inline-flex min-h-10 items-center gap-1.5 rounded-full border border-foreground/[0.07] bg-card/80 px-3.5 text-sm font-medium whitespace-nowrap">
                           {inside}
                         </button>
                       ) : (
-                        <span className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3.5 text-sm">{inside}</span>
+                        <span className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3.5 text-sm whitespace-nowrap">{inside}</span>
                       )}
                     </li>
                   );

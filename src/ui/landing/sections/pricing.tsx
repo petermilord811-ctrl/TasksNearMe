@@ -8,7 +8,7 @@ import { ArrowLink, Heading } from './heading';
 export function PricingSection({ data }: { data: HomePageData }) {
   const t = useTranslations('landing.pricing');
   return (
-    <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-24 py-20 sm:py-28 lg:py-32">
+    <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-24 py-12 sm:py-28 lg:py-32">
       <div className="mx-auto grid max-w-content items-center gap-10 px-gutter lg:grid-cols-2 lg:gap-16">
         <div>
           <Heading id="pricing-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} body={t('body')} />

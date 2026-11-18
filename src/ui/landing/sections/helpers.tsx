@@ -33,7 +33,7 @@ export function HelpersSection({ data }: { data: HomePageData }) {
     { key: 'repeat', Icon: Repeat },
   ] as const;
   return (
-    <section id="for-helpers" aria-labelledby="helpers-title" className="scroll-mt-24 py-20 sm:py-28 lg:py-32">
+    <section id="for-helpers" aria-labelledby="helpers-title" className="scroll-mt-24 py-12 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-content px-gutter">
         <Reveal variant="bloom" origin="50% 100%">
           <div className="relative overflow-hidden rounded-[2.25rem] border border-foreground/[0.07] bg-card/70 p-6 shadow-card sm:p-10 lg:p-14">
@@ -74,7 +74,8 @@ export function HelpersSection({ data }: { data: HomePageData }) {
                 </Reveal>
               </div>
               <div className="grid gap-4">
-                <Reveal variant="bloom" index={1} origin="50% 50%">
+                {/* On phones it's left out: the pricing section has already shown what a helper keeps (audit M7). */}
+                <Reveal variant="bloom" index={1} origin="50% 50%" className="max-sm:hidden">
                   <HoverLift surfaceClassName="lift-shadow rounded-[1.75rem] border border-foreground/[0.07] bg-card/85" glow="var(--violet)" tilt={3} lift={5}>
                     <div className="p-6">
                       <p className="inline-flex items-center gap-2 text-sm font-semibold"><WalletCards aria-hidden="true" className="lift-icon size-4 text-violet" />{t('earnTitle')}</p>
