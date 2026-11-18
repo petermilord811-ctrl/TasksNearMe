@@ -5,6 +5,7 @@ import { routes, type CostGuidePageData } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
+import { ServicePhoto } from '@/ui/components/media/service-photo';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { buttonVariants } from '@/ui/primitives/button';
 import { RelatedLinks } from './category-seo-sections';
@@ -22,11 +23,15 @@ export function CostGuideScreen({ data }: { data: CostGuidePageData }) {
   const factors = Object.keys(t.raw(`costGuide.factors.${category.slug}`) as Record<string, string>);
   const at = (cents: number) => ({ price: formatMoney(cents), unit });
   return <div className="space-y-section">
-    <div className="space-y-4">
-      <Link href={routes.category(category.slug, market.slug)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
-        <ArrowLeft aria-hidden="true" className="size-4" />{t('costGuide.back', { category: categoryName(category.slug), market: market.name })}
-      </Link>
-      <PageHeader title={data.question} description={t(`categories.${category.slug}.pricing`)} />
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-end lg:gap-10">
+      <div className="space-y-4">
+        <Link href={routes.category(category.slug, market.slug)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
+          <ArrowLeft aria-hidden="true" className="size-4" />{t('costGuide.back', { category: categoryName(category.slug), market: market.name })}
+        </Link>
+        <PageHeader title={data.question} description={t(`categories.${category.slug}.pricing`)} />
+      </div>
+      {/* The category's second photo, so the guide doesn't repeat its category page (src/shared/service-photos.ts). */}
+      <ServicePhoto category={category.slug} slot="alternate" crop="landscape" sizes="(min-width: 1024px) 22rem, 100vw" className="rounded-[1.375rem] border border-foreground/[0.07]" />
     </div>
     <section aria-label={t('costGuide.typicalTitle', { market: market.name })} className="space-y-3 rounded-[1.375rem] border border-foreground/[0.05] bg-secondary p-card text-secondary-foreground">
       <p className="font-display text-xl font-semibold tracking-[-0.015em] tabular-nums md:text-2xl">{t(`category.typical.${unit}`, { market: market.name, low: formatMoney(lowCents), high: formatMoney(highCents) })}</p>
