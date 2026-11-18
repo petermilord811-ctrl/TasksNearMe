@@ -76,4 +76,4 @@ First person for what a helper says or does on the day: *Voy en camino*, *Llegar
 
 ## Formats
 
-Dates, times and money come from `@/shared/format` in the page's language ("sáb, 21 de nov", "10:30 a.m.", "$60.00"); write times in copy the same way ("8 a.m."). Don't write them into copy. Central time is *hora del centro*.
+Dates, times and money come from `@/shared/format` in the page's language ("sáb, 21 de nov", "10:30 a.m.", "$60.00"); write times in copy the same way ("8 a.m."). Don't write them into copy. A time zone is the `{zone}` argument, Intl's name in the page's language (*hora central*, *hora oriental*, *hora del Pacífico*, all lowercase), never a city's time or a hard-coded *hora del centro* (plan 8.1). Write the sentence so it reads with the name in place: *Los horarios están en {zone}*, *Inicio · {zone}*, *Nuevo inicio ({zone})*, not *Las horas están en {zone}* (*horas… hora*), and don't start a sentence with it.
