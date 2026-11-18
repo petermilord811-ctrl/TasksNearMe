@@ -127,25 +127,29 @@ test('account: a profile photo shows everywhere and is public only while current
   await expect(page.getByText('Your new photo is saved.')).toBeVisible();
   const avatar = page.getByRole('img', { name: 'Profile photo of Casey M.' });
   await expect(avatar).toBeVisible();
-  const src = await avatar.getAttribute('src');
+  // next/image may set `src` again once mounted (to catch an error from before hydration), which makes it absolute
+  // against the page's own address; compare the path and query.
+  const pathOf = (value: string | null) => { const url = new URL(value ?? '', 'http://localhost'); return `${url.pathname}${url.search}`; };
+  const src = pathOf(await avatar.getAttribute('src'));
   // Shown at 256 px (completion plan 5.7): the route resizes the stored 512 px square.
   expect(src).toMatch(/^\/api\/files\/fil_[0-9a-z]+\?w=256$/);
   // Cropped to a square, re-encoded, and readable without signing in while it's the current photo.
-  const served = await request.get(src!);
+  const served = await request.get(src);
   expect(served.status()).toBe(200);
   expect(served.headers()['content-type']).toBe('image/webp');
   const meta = await sharp(await served.body()).metadata();
   expect([meta.width, meta.height]).toEqual([256, 256]);
-  const stored = await sharp(await (await request.get(src!.replace(/\?.*$/, ''))).body()).metadata();
+  const stored = await sharp(await (await request.get(src.replace(/\?.*$/, ''))).body()).metadata();
   expect([stored.width, stored.height]).toEqual([512, 512]);
 
   // After a reload the account menu shows it too.
   await page.reload();
-  await expect(page.getByRole('button', { name: /account menu for Casey M\./ }).locator('img')).toHaveAttribute('src', src!);
+  const menuPhoto = page.getByRole('button', { name: /account menu for Casey M\./ }).locator('img');
+  await expect.poll(async () => pathOf(await menuPhoto.getAttribute('src'))).toBe(src);
 
   await page.getByRole('button', { name: 'Remove photo' }).click();
   await expect(page.getByText('Your photo was removed.')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Avatar with initials CM' })).toBeVisible();
-  expect((await request.get(src!)).status()).toBe(404);
-  expect((await request.get(src!.replace(/\?.*$/, ''))).status()).toBe(404);
+  expect((await request.get(src)).status()).toBe(404);
+  expect((await request.get(src.replace(/\?.*$/, ''))).status()).toBe(404);
 });
