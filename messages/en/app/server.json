@@ -37,6 +37,10 @@
       "title": "Sign in or create an account",
       "description": "Sign in to TasksNearMe with a code we email you. No password needed."
     },
+    "signUp": {
+      "title": "Create your account",
+      "description": "Join TasksNearMe for free: get help with everyday tasks from verified neighbors, or help out and earn."
+    },
     "waitlist": {
       "title": "Join the waitlist",
       "description": "TasksNearMe isn't in your city yet. Leave your email and ZIP code and we'll tell you when we open near you."

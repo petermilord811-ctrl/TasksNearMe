@@ -101,6 +101,8 @@ const PUBLIC: Record<string, string> = {
   'accounts/sign-in/actions#passkeySignInOptions': 'a WebAuthn challenge',
   'accounts/sign-in/actions#passkeySignIn': 'checks the device’s signed answer',
   'accounts/sign-in/actions#signOutOfSignUp': 'signs this browser out',
+  'accounts/sign-in/sign-up-actions#startSignUp': 'creating an account starts here (Turnstile, then sign-in’s code with its rate limits)',
+  'accounts/sign-in/sign-up-actions#signUpWith': 'starts Google or Microsoft sign-in, keeping what the person is here for',
   'accounts/actions#signOut': 'signs this browser out',
   'marketing/actions#joinWaitlistAction': 'the public waitlist (rate-limited per address)',
   'marketing/actions#unsubscribeWaitlistByLinkAction': 'the waitlist email’s unsubscribe page (8.3), with its signed token; 20 an hour per token',

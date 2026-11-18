@@ -27,7 +27,7 @@ export function safeNextPath(raw: string | null | undefined): string {
   try {
     const url = new URL(value, 'http://localhost');
     if (url.origin !== 'http://localhost') return fallback;
-    if (url.pathname === '/sign-in' || url.pathname.startsWith('/api/')) return fallback;
+    if (url.pathname === '/sign-in' || url.pathname === '/sign-up' || url.pathname.startsWith('/api/')) return fallback;
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return fallback;

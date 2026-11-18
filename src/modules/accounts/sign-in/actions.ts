@@ -21,6 +21,7 @@ import { users } from '../schema';
 import { CURRENT_TERMS_VERSION } from '../terms';
 import { sendWelcomeEmail } from '../welcome';
 import { clearPendingEmail, readPendingEmail, writePendingEmail } from './pending-email';
+import { applyPendingSignUp, applySignUpIntent } from './sign-up-apply';
 import {
   BLOCKED_STATUSES,
   clientIp,
@@ -154,6 +155,8 @@ export async function verifyEmailCode(next: string, input: OneTimeCodeInput): Pr
       headers: await headers(),
     });
     await clearPendingEmail();
+    // From `/sign-up`: a new account takes the names, the terms and the side of the app given there (plan 9.6).
+    await applyPendingSignUp(db, result.user.id, pending.email, await requestNow());
     return continueAfterSignIn(next, result.user.id, 'updated');
   } catch (error) {
     if (isAPIError(error)) {
@@ -216,6 +219,8 @@ export async function saveProfile(next: string, input: ProfileInput & BotCheckIn
       updatedAt: now,
     })
     .where(eq(users.id, userId));
+  // The side of the app chosen on `/sign-up` (plan 9.6), also after Google or Microsoft.
+  await applySignUpIntent(db, userId, now);
   // Sign-up is done: the welcome email goes out after the response (once per account).
   after(() => sendWelcomeEmail(db, createEmailProvider(db), userId, now).catch((error: unknown) => console.error('[welcome]', error)));
   return continueAfterSignIn(next, userId, 'saved');

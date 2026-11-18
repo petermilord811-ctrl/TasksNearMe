@@ -112,7 +112,7 @@ test.describe('sign-in and sign-up', () => {
     for (let i = 0; i < 3; i += 1) {
       await requestCode(page, email);
       await page.getByRole('button', { name: 'Use a different email' }).click();
-      await expect(page.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'Sign in', exact: true })).toBeVisible();
     }
     await untilShown(page.getByText('There have been too many attempts'), async () => {
       await page.getByLabel('Email').fill(email, { timeout: 5_000 });
@@ -135,7 +135,7 @@ test.describe('sign-in and sign-up', () => {
 
   test('unsafe next links fall back to the app', async ({ page }) => {
     await page.goto('/sign-in?next=https%3A%2F%2Fevil.example');
-    await expect(page.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Sign in', exact: true })).toBeVisible();
   });
 });
 

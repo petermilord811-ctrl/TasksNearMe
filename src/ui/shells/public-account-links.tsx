@@ -21,12 +21,19 @@ export function PublicAccountLinks({ viewer, placement }: {
       ? { href: routes.admin.home(), label: t('staffArea') }
       : { href: routes.app.home(), label: t('goToApp') };
 
+  // Signed out: creating an account has its own page too (completion plan 9.6).
+  const signUp = resolved.kind === 'public' ? { href: routes.signUp(), label: t('signUp') } : null;
+
   if (placement === 'menu') {
-    return <Link href={account.href} className={cn(buttonVariants({ variant: 'outline' }), 'w-full rounded-full')}>{account.label}</Link>;
+    return <div className="grid gap-2">
+      {signUp && <Link href={signUp.href} className={cn(buttonVariants({ variant: 'outline' }), 'w-full rounded-full')}>{signUp.label}</Link>}
+      <Link href={account.href} className={cn(buttonVariants({ variant: signUp ? 'ghost' : 'outline' }), 'w-full rounded-full')}>{account.label}</Link>
+    </div>;
   }
 
   return <>
     <Link href={account.href} className={cn(buttonVariants({ variant: 'ghost' }), 'hidden rounded-full lg:inline-flex')}>{account.label}</Link>
+    {signUp && <Link href={signUp.href} className={cn(buttonVariants({ variant: 'outline' }), 'hidden rounded-full lg:inline-flex')}>{signUp.label}</Link>}
     <Link href={resolved.kind === 'public' ? routes.signIn(routes.app.newTask()) : routes.app.newTask()} className={cn(buttonVariants(), 'rounded-full px-4 shadow-[0_8px_20px_-8px_var(--primary-glow)] transition-[transform,box-shadow,background-color] hover:-translate-y-px hover:bg-primary-hover hover:shadow-[0_12px_26px_-8px_var(--primary-glow)] active:translate-y-0 active:scale-[0.97]')}>{t('postTask')}</Link>
   </>;
 }

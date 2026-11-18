@@ -22,11 +22,14 @@ export function SocialSignIn({
   error,
   onContinueWith,
   className,
+  withHint = true,
 }: {
   providers: SocialProvider[];
   error?: { provider: SocialProvider; reason: SocialSignInError };
   onContinueWith: ActionHandler<SocialSignInInput>;
   className?: string;
+  /** False when more buttons follow (the passkey): the page shows `ProviderHint` under the whole group instead. */
+  withHint?: boolean;
 }) {
   const t = useTranslations('signIn.social');
   const [pending, setPending] = useState<SocialProvider | null>(null);
@@ -90,10 +93,17 @@ export function SocialSignIn({
           </button>
         ))}
       </div>
-      {providers.includes('microsoft') && <p className="text-xs text-muted-foreground">{t('microsoftHint')}</p>}
+      {withHint && <ProviderHint providers={providers} />}
       <FormFeedback result={result} />
     </div>
   );
+}
+
+/** Which accounts Microsoft takes, under the sign-in buttons (not wedged between them). */
+export function ProviderHint({ providers }: { providers: SocialProvider[] }) {
+  const t = useTranslations('signIn.social');
+  if (!providers.includes('microsoft')) return null;
+  return <p className="text-[13px] leading-5 text-muted-foreground">{t('microsoftHint')}</p>;
 }
 
 /** "or" between the providers and the email field. */

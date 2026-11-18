@@ -102,6 +102,8 @@ export const routes = {
   contactRevert: (token: string) => withQuery('/account/not-me', { token }),
   legal: (doc: LegalDoc) => `/legal/${doc}`,
   signIn: (next?: string) => withQuery('/sign-in', { next }),
+  /** Creating an account (completion plan 9.6): the same steps as sign-in after its own first one. */
+  signUp: (next?: string) => withQuery('/sign-up', { next }),
   /** `from: 'beta'`: from an invite-only step (private beta) rather than from outside the service area. */
   /** `zip`: fills the form and shows how many people already wait near it (posting's "We're not in Dallas yet"). */
   waitlist: (query: { from?: 'beta'; zip?: string } = {}) => withQuery('/waitlist', { from: query.from, zip: query.zip }),

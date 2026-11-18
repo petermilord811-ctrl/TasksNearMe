@@ -51,10 +51,13 @@ describe('PublicShell', () => {
     expect(within(screen.getByRole('main')).getByRole('heading', { name: 'Local help' })).toBeInTheDocument();
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', routes.signIn());
+    // Creating an account has its own page (completion plan 9.6).
+    expect(screen.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', routes.signUp());
     expect(screen.getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', routes.signIn(routes.app.newTask()));
     await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
     const menu = within(screen.getByRole('dialog', { name: 'Explore TasksNearMe' }));
     expect(menu.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', routes.signIn());
+    expect(menu.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', routes.signUp());
     expect(menu.getByRole('link', { name: 'Become a helper' })).toBeInTheDocument();
   });
 
@@ -66,6 +69,7 @@ describe('PublicShell', () => {
     await act(async () => { resolveViewer(mayaShell); await viewer; });
     expect(screen.getByRole('heading', { name: 'Local help' })).toBe(content);
     expect(screen.getByRole('link', { name: 'Go to the app' })).toHaveAttribute('href', routes.app.home());
+    expect(screen.queryByRole('link', { name: 'Sign up' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', routes.app.newTask());
     await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
     const menu = within(screen.getByRole('dialog', { name: 'Explore TasksNearMe' }));

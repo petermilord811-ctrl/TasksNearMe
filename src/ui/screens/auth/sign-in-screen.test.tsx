@@ -16,6 +16,8 @@ import {
   signInProfileStep,
   signInProfileStepPrefilled,
   signInResults,
+  signInSignUpStep,
+  signInSignUpStepWithProviders,
 } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import forms from '../../../../messages/en/ui/forms.json';
@@ -195,11 +197,46 @@ describe('sign-in forms', () => {
     const view = show(<SignInScreen data={signInEmailStep} handlers={suppliedHandlers} />);
     await userEvent.type(screen.getByLabelText('Email'), 'maya@example.test');
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(screen.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
     view.rerender(<SignInScreen data={signInEmailCodeStep} handlers={suppliedHandlers} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Check your email' })).toBeVisible();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByLabelText('6-digit code')).toHaveValue('');
+  });
+});
+
+describe('creating an account (/sign-up)', () => {
+  it('sends the details with what the person is here for, and links to sign-in', async () => {
+    const onStartSignUp = vi.fn(async (): Promise<ActionResult> => signInResults.codeSent);
+    show(<SignInScreen data={signInSignUpStep} handlers={handlers({ onStartSignUp })} />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible();
+    expect(screen.getByRole('radio', { name: /I need help with tasks/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(onStartSignUp).not.toHaveBeenCalled();
+    expect((await screen.findAllByText(forms.fieldErrors.required)).length).toBeGreaterThan(0);
+
+    await userEvent.click(screen.getByRole('radio', { name: /I want to help and earn/ }));
+    await userEvent.type(screen.getByLabelText('First name'), 'Bea');
+    await userEvent.type(screen.getByLabelText('Last name'), 'Tester');
+    await userEvent.type(screen.getByLabelText('Email'), 'bea@example.test');
+    await userEvent.click(screen.getByRole('checkbox', { name: "I'm 18 or older" }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /I agree to the Terms of service/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    await waitFor(() => expect(onStartSignUp).toHaveBeenCalledWith({ firstName: 'Bea', lastName: 'Tester', email: 'bea@example.test', intent: 'help_out', adultAttested: true, termsAccepted: true }));
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', routes.signIn(signInSignUpStep.next));
+  });
+
+  it('carries the choice to Google and Microsoft', async () => {
+    const onSignUpWith = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'sent', redirectTo: '#provider' }));
+    show(<SignInScreen data={signInSignUpStepWithProviders} handlers={handlers({ onSignUpWith })} />);
+    await userEvent.click(screen.getByRole('radio', { name: /I want to help and earn/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    await waitFor(() => expect(onSignUpWith).toHaveBeenCalledWith({ provider: 'google', intent: 'help_out' }));
+  });
+
+  it('links from sign-in to creating an account, keeping where the person was going', () => {
+    show(<EmailStep data={{ ...signInEmailStep, next: routes.app.newTask() }} handlers={handlers()} />);
+    expect(screen.getByRole('link', { name: 'Create an account' })).toHaveAttribute('href', routes.signUp(routes.app.newTask()));
   });
 });
 

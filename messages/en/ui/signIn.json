@@ -1,9 +1,10 @@
 {
-  "oneAccount": "Sign in and sign up happen here, with the same steps.",
+  "oneAccount": "One account for getting help and for helping out.",
   "email": {
-    "title": "Sign in or create an account",
+    "title": "Sign in",
     "description": "We'll email you a code to continue. No password to remember.",
-    "descriptionWithProviders": "Continue with an account below, or get a code by email. No password to remember."
+    "descriptionWithProviders": "Continue with an account below, or get a code by email. No password to remember.",
+    "newHere": "New to TasksNearMe? <link>Create an account</link>"
   },
   "social": {
     "or": "or",
@@ -87,7 +88,9 @@
     "social-not-allowed": "Account unavailable (Google)",
     "social-failed": "Microsoft sign-in failed",
     "bot-check-refused": "Email step: bot check turned down",
-    "bot-check-expired": "Name step: bot check timed out"
+    "bot-check-expired": "Name step: bot check timed out",
+    "sign-up": "Create an account",
+    "sign-up-with-providers": "Create an account, with Google and Microsoft"
   },
   "passkey": {
     "action": "Sign in with a passkey",
@@ -110,5 +113,22 @@
     "expiredHint": "Codes work for 10 minutes. Ask for a new one on the sign-in page.",
     "missing": "There's no code here",
     "missingHint": "Open this page with the Copy code button in your sign-in email."
+  },
+  "signUp": {
+    "title": "Create your account",
+    "description": "It's free. Get help with everyday tasks, or help neighbors and earn.",
+    "intent": {
+      "label": "What brings you to TasksNearMe?",
+      "get_help": {
+        "title": "I need help with tasks",
+        "hint": "Post a task and choose from the offers helpers nearby send."
+      },
+      "help_out": {
+        "title": "I want to help and earn",
+        "hint": "Set up your helper profile, then send offers on tasks near you."
+      }
+    },
+    "submit": "Create account",
+    "haveAccount": "Already have an account? <link>Sign in</link>"
   }
 }

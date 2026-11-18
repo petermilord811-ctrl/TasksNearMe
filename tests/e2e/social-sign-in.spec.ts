@@ -31,7 +31,7 @@ test.describe('sign-in with Google or Microsoft', () => {
 
   test('a new person continues with Google, finds their name filled in, and lands in the app', async ({ page }, testInfo) => {
     await page.goto('/sign-in?next=%2Fapp');
-    await expect(page.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Sign in', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Continue with Google' }).click();
     await chooseSomeoneElse(page, 'google', 'Robin Alvarez', freshEmail(testInfo.project.name, 'google'));
 

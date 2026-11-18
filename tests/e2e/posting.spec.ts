@@ -94,7 +94,7 @@ test('a poster starts from an example: its words, its questions and its details,
 
 test('posting without a verified phone goes through phone verification first', async ({ page }) => {
   await page.goto('/sign-in?next=%2Fapp%2Ftasks%2Fnew');
-  await expect(page.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Sign in', exact: true })).toBeVisible();
   // Signed out: the sign-in flow keeps the destination, which needs a phone (see sign-in.spec.ts).
   expect(page.url()).toContain('next=%2Fapp%2Ftasks%2Fnew');
 });

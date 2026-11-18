@@ -22,7 +22,9 @@ export function PasskeySignIn({ onPasskeyOptions, onPasskeySignIn, onResult }: {
 }) {
   const t = useTranslations('signIn.passkey');
   const router = useRouter();
-  const supported = useSyncExternalStore(noSubscribe, browserSupportsWebAuthn, () => false);
+  // Rendered from the server on: nearly every browser has passkeys, so the form below never jumps when the page
+  // hydrates (audit M5). The rare browser without them drops the row once it's known.
+  const supported = useSyncExternalStore(noSubscribe, browserSupportsWebAuthn, () => true);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string>();
   if (!supported) return null;

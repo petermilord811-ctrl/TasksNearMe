@@ -1,0 +1,66 @@
+import { describe, expect, it } from 'vitest';
+import { routes, signUpInputSchema, signUpSocialInputSchema } from '@/contracts';
+import { destinationAfterSignUp, modeForIntent } from './sign-up-domain';
+import { decodePendingSignUp, encodePendingSignUp, type PendingSignUp } from './sign-up-pending';
+import { safeNextPath } from './steps';
+
+/** `/sign-up`'s rules and the cookie that carries its answers to the code step (completion plan 9.6). */
+
+describe('where a new account starts', () => {
+  it('opens helper setup for someone here to help, and the app for someone here for help', () => {
+    expect(destinationAfterSignUp('help_out', routes.app.home())).toBe(routes.app.helperOnboarding());
+    expect(destinationAfterSignUp('get_help', routes.app.home())).toBe(routes.app.home());
+    expect(modeForIntent('help_out')).toBe('helper');
+    expect(modeForIntent('get_help')).toBe('poster');
+  });
+
+  it('keeps a destination the person was already headed to', () => {
+    expect(destinationAfterSignUp('help_out', routes.app.newTask())).toBe(routes.app.newTask());
+    expect(destinationAfterSignUp('get_help', '/app/find-work/tsk_desk')).toBe('/app/find-work/tsk_desk');
+  });
+
+  it('never sends the flow back to sign-in or sign-up', () => {
+    expect(safeNextPath('/sign-up')).toBe(routes.app.home());
+    expect(safeNextPath('/sign-up?next=%2Fapp')).toBe(routes.app.home());
+  });
+});
+
+describe('the sign-up form', () => {
+  const filled = { firstName: 'Bea', lastName: 'Tester', email: ' Bea@Example.test ', intent: 'help_out', adultAttested: true, termsAccepted: true } as const;
+
+  it('needs the names, a valid email, a choice, 18+ and the terms', () => {
+    expect(signUpInputSchema.safeParse(filled).success).toBe(true);
+    for (const missing of ['firstName', 'lastName', 'email', 'intent'] as const) {
+      expect(signUpInputSchema.safeParse({ ...filled, [missing]: '' }).success, missing).toBe(false);
+    }
+    expect(signUpInputSchema.safeParse({ ...filled, adultAttested: false }).success).toBe(false);
+    expect(signUpInputSchema.safeParse({ ...filled, termsAccepted: false }).success).toBe(false);
+    expect(signUpInputSchema.safeParse({ ...filled, intent: 'admin' }).success).toBe(false);
+  });
+
+  it('carries the choice to Google and Microsoft', () => {
+    expect(signUpSocialInputSchema.safeParse({ provider: 'google', intent: 'get_help' }).success).toBe(true);
+    expect(signUpSocialInputSchema.safeParse({ provider: 'google' }).success).toBe(false);
+  });
+});
+
+describe('the pending sign-up cookie', () => {
+  const secret = 'test-secret-0123456789';
+  const fromForm: PendingSignUp = { intent: 'help_out', details: { email: 'bea@example.test', firstName: 'Bea', lastName: 'Tester', agreedAt: Date.UTC(2026, 10, 18, 12) } };
+
+  it('reads back what it wrote, with or without the form’s details', () => {
+    expect(decodePendingSignUp(encodePendingSignUp(fromForm, secret), secret)).toEqual(fromForm);
+    expect(decodePendingSignUp(encodePendingSignUp({ intent: 'get_help' }, secret), secret)).toEqual({ intent: 'get_help' });
+  });
+
+  it('refuses anything this server didn’t sign, or in another shape', () => {
+    const raw = encodePendingSignUp(fromForm, secret);
+    const [payload, signature] = raw.split('.') as [string, string];
+    expect(decodePendingSignUp(raw, 'another-secret')).toBeNull();
+    expect(decodePendingSignUp(`${payload}x.${signature}`, secret)).toBeNull();
+    expect(decodePendingSignUp(undefined, secret)).toBeNull();
+    expect(decodePendingSignUp('not-a-cookie', secret)).toBeNull();
+    expect(decodePendingSignUp(encodePendingSignUp({ intent: 'admin' } as unknown as PendingSignUp, secret), secret)).toBeNull();
+    expect(decodePendingSignUp(encodePendingSignUp({ intent: 'get_help', details: { email: 'x@example.test' } } as unknown as PendingSignUp, secret), secret)).toBeNull();
+  });
+});

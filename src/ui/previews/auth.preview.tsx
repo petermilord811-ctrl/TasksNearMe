@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ActionResult, PreviewEntry, SignInPageData } from '@/contracts';
 import { routes } from '@/contracts';
-import { botCheckResults, fakeSignInHandlers, publicViewer, standInBotCheck, signInEmailStep, signInEmailStepWithProviders, signInSocialErrors, signInEmailCodeStep, signInProfileStep, signInProfileStepPrefilled, signInPhoneStep, signInPhoneStepOffer, signInPhoneCodeStep, signInResults } from '@/fixtures';
+import { botCheckResults, fakeSignInHandlers, publicViewer, standInBotCheck, signInEmailStep, signInEmailStepWithProviders, signInSocialErrors, signInEmailCodeStep, signInProfileStep, signInProfileStepPrefilled, signInPhoneStep, signInPhoneStepOffer, signInPhoneCodeStep, signInResults, signInSignUpStep, signInSignUpStepWithProviders } from '@/fixtures';
 import { PublicShell } from '@/ui/shells/public-shell';
 import { SignInScreen, EmailCodeStep, PhoneStep, ProfileStep, EmailStep } from '@/ui/screens/auth';
 import { SignInFrame } from '@/ui/screens/auth/sign-in-screen';
@@ -14,6 +14,8 @@ function page(id: string, variant: keyof typeof copy.previews, render: () => Rea
 
 const screens: [keyof typeof copy.previews, SignInPageData][] = [
   ['email', signInEmailStep], ['email-with-providers', signInEmailStepWithProviders],
+  // `/sign-up`'s first step (completion plan 9.6), with the stand-in bot check as outside production.
+  ['sign-up', { ...signInSignUpStep, botCheck: standInBotCheck }], ['sign-up-with-providers', { ...signInSignUpStepWithProviders, botCheck: standInBotCheck }],
   ['social-cancelled', signInSocialErrors.cancelled], ['social-unconfirmed', signInSocialErrors.emailUnconfirmed], ['social-use-email-code', signInSocialErrors.useEmailCode],
   ['social-not-allowed', signInSocialErrors.notAllowed], ['social-failed', signInSocialErrors.failed],
   ['email-code', signInEmailCodeStep], ['profile', signInProfileStep], ['profile-prefilled', signInProfileStepPrefilled],

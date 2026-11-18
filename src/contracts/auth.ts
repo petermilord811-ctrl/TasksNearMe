@@ -10,8 +10,13 @@ import { emailField, mustAcceptField, oneTimeCodeField, personNameField, usPhone
  * name and age → (when the destination needs it) phone → phone code. The app decides the step
  * from the session and the pending codes; the UI renders `data.step` and never keeps its own step.
  * During a private beta, a new account that has no invite yet gets `invite_code` before the name and age.
+ *
+ * `/sign-up` (completion plan 9.6) is the same flow with its own first step, `sign_up`: name, email, what the person
+ * is here for, 18+ and the terms, or Google and Microsoft. What it gathers is kept until the email code is right, then
+ * saved at once, so the `profile` step doesn't ask again (it still comes after Google or Microsoft, for the 18+ and the
+ * terms, and after an invite). `/sign-in` never shows `sign_up`.
  */
-export const SIGN_IN_STEPS = ['email', 'email_code', 'invite_code', 'profile', 'phone', 'phone_code'] as const;
+export const SIGN_IN_STEPS = ['sign_up', 'email', 'email_code', 'invite_code', 'profile', 'phone', 'phone_code'] as const;
 export type SignInStep = (typeof SIGN_IN_STEPS)[number];
 
 /** Why we ask for a phone number. Posting, offering, and booking need a verified phone. */
@@ -42,6 +47,13 @@ export type SocialSignInError = (typeof SOCIAL_SIGN_IN_ERRORS)[number];
 export const socialSignInInputSchema = z.object({ provider: z.enum(SOCIAL_PROVIDERS) });
 export type SocialSignInInput = z.input<typeof socialSignInInputSchema>;
 
+/**
+ * What a new person is here for (the `sign_up` step): getting help with tasks (they start as a client, in the app), or
+ * helping out and earning (they start as a helper, in helper setup). Either can do both later.
+ */
+export const SIGN_UP_INTENTS = ['get_help', 'help_out'] as const;
+export type SignUpIntent = (typeof SIGN_UP_INTENTS)[number];
+
 export interface SignInPageData {
   step: SignInStep;
   /** The same-site path the flow ends at (already validated by the app). */
@@ -68,7 +80,7 @@ export interface SignInPageData {
   /** `invite_code`: the market that's invite-only, and the code from an invite link the person opened. */
   invite?: SignInInvite;
   /**
-   * `email` (action `sign_in`) and `profile` (action `sign_up`): the bot check to run before Continue
+   * `email` (action `sign_in`), `sign_up` and `profile` (action `sign_up`): the bot check to run before Continue
    * (contracts/bot-check.ts). Absent: none is set up.
    */
   botCheck?: BotCheckConfig;
@@ -88,6 +100,21 @@ export const profileInputSchema = z.object({
   termsAccepted: mustAcceptField,
 });
 export type ProfileInput = z.input<typeof profileInputSchema>;
+
+/** The `sign_up` step: who they are, how to reach them, what they're here for, 18+ and terms. */
+export const signUpInputSchema = z.object({
+  firstName: personNameField(40),
+  lastName: personNameField(60),
+  email: emailField,
+  intent: z.enum(SIGN_UP_INTENTS),
+  adultAttested: mustAcceptField,
+  termsAccepted: mustAcceptField,
+});
+export type SignUpInput = z.input<typeof signUpInputSchema>;
+
+/** The `sign_up` step's Google and Microsoft buttons carry what the person chose they're here for. */
+export const signUpSocialInputSchema = socialSignInInputSchema.extend({ intent: z.enum(SIGN_UP_INTENTS) });
+export type SignUpSocialInput = z.input<typeof signUpSocialInputSchema>;
 
 export const phoneInputSchema = z.object({ phone: usPhoneField });
 export type PhoneInput = z.input<typeof phoneInputSchema>;
@@ -115,6 +142,19 @@ export interface SignInHandlers {
    */
   onPasskeyOptions?: () => Promise<PasskeyOptionsResult>;
   onPasskeySignIn?: ActionHandler<{ response: Record<string, unknown> }>;
+  /**
+   * `sign_up` step (given on `/sign-up` only), with the bot check's answer: keeps the details and emails a code. ok
+   * `sent` with `redirectTo`: the same page, now for where the person goes after (helper setup when they're here to
+   * help); navigate with `router.replace`, and it shows the `email_code` step. Errors: `validation_failed` +
+   * `fieldErrors` (`firstName`, `lastName`, `email`, `intent`, `adultAttested`, `termsAccepted`, `botCheck`),
+   * `rate_limited` + `retryAt`, `not_allowed`.
+   */
+  onStartSignUp?: ActionHandler<SignUpInput & BotCheckInput>;
+  /**
+   * `sign_up` step: "Continue with Google / Microsoft", with what the person is here for. As `onContinueWith`: ok
+   * `sent` with `redirectTo` the provider's page (a full page load).
+   */
+  onSignUpWith?: ActionHandler<SignUpSocialInput>;
   /** `email` step, with the bot check's answer. ok `sent`. `fieldErrors.botCheck`: the check was turned down. */
   onRequestEmailCode: ActionHandler<EmailInput & BotCheckInput>;
   /**

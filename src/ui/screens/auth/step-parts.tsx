@@ -18,9 +18,10 @@ export function StepHeading({ title, children }: { title: string; children?: Rea
   </div>;
 }
 
-export function ContinueButton({ pending }: { pending: boolean }) {
+/** The step's submit button: "Continue", or the step's own words ("Create account"). */
+export function ContinueButton({ pending, label }: { pending: boolean; label?: string }) {
   const t = useTranslations('forms');
   return <Button type="submit" disabled={pending} aria-busy={pending} className="w-full">
-    {pending && <Spinner aria-hidden="true" />}{t('continue')}
+    {pending && <Spinner aria-hidden="true" />}{label ?? t('continue')}
   </Button>;
 }

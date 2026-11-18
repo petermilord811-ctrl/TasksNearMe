@@ -3,13 +3,14 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import { emailInputSchema, type EmailInput } from '@/contracts';
+import { emailInputSchema, routes, type EmailInput } from '@/contracts';
 import { TextFormField } from '@/ui/components/forms/text-form-field';
 import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useFormAction } from '@/ui/lib/use-form-action';
 import { PasskeySignIn } from './passkey-sign-in';
-import { OrDivider, SocialSignIn } from './social-sign-in';
+import { OrDivider, ProviderHint, SocialSignIn } from './social-sign-in';
 import { ContinueButton, StepHeading, type SignInStepProps } from './step-parts';
 
 export function EmailStep({ data, handlers, initialResult, onResult }: SignInStepProps) {
@@ -21,8 +22,9 @@ export function EmailStep({ data, handlers, initialResult, onResult }: SignInSte
   const check = useBotCheck(data.botCheck, 'sign_in');
   return <div className="space-y-6">
     <StepHeading title={t('email.title')}><p>{t(providers.length > 0 ? 'email.descriptionWithProviders' : 'email.description')}</p></StepHeading>
-    {providers.length > 0 && <SocialSignIn providers={providers} error={data.socialError} onContinueWith={handlers.onContinueWith} />}
+    {providers.length > 0 && <SocialSignIn providers={providers} error={data.socialError} onContinueWith={handlers.onContinueWith} withHint={false} />}
     {handlers.onPasskeyOptions && handlers.onPasskeySignIn && <PasskeySignIn onPasskeyOptions={handlers.onPasskeyOptions} onPasskeySignIn={handlers.onPasskeySignIn} {...(onResult ? { onResult } : {})} />}
+    <ProviderHint providers={providers} />
     {(providers.length > 0 || (handlers.onPasskeyOptions && handlers.onPasskeySignIn)) && <OrDivider label={t('social.or')} />}
     <form noValidate onSubmit={form.handleSubmit(async (input) => {
       await action.run(handlers.onRequestEmailCode, { ...input, ...(check.token ? { botCheck: check.token } : {}) });
@@ -33,5 +35,8 @@ export function EmailStep({ data, handlers, initialResult, onResult }: SignInSte
       <FormFeedback result={action.result} successMessage={t('codeSent')} />
       <ContinueButton pending={action.pending || form.formState.isSubmitting} />
     </form>
+    <p className="text-sm text-muted-foreground">{t.rich('email.newHere', {
+      link: (chunks) => <Link href={routes.signUp(data.next === routes.app.home() ? undefined : data.next)} className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline">{chunks}</Link>,
+    })}</p>
   </div>;
 }

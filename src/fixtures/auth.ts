@@ -11,6 +11,10 @@ export const signInEmailStep: SignInPageData = { step: 'email', next };
 /** Google and Microsoft are offered (production with keys; development and tests use the stand-in). */
 export const signInEmailStepWithProviders: SignInPageData = { step: 'email', next, socialProviders: ['google', 'microsoft'] };
 
+/** `/sign-up`'s first step (completion plan 9.6): the form, without and with Google and Microsoft. */
+export const signInSignUpStep: SignInPageData = { step: 'sign_up', next };
+export const signInSignUpStepWithProviders: SignInPageData = { step: 'sign_up', next, socialProviders: ['google', 'microsoft'] };
+
 /** Back from Google or Microsoft without signing in, one per reason. */
 export const signInSocialErrors = {
   cancelled: { ...signInEmailStepWithProviders, socialError: { provider: 'google', reason: 'cancelled' } },
@@ -91,6 +95,9 @@ export const signInResults = {
 /** Handlers for previews: every call succeeds after a short delay. */
 export const fakeSignInHandlers: SignInHandlers = {
   onRequestEmailCode: fakeHandler(signInResults.codeSent),
+  // `/sign-up`: the real one also returns the same page bound to where the person goes next.
+  onStartSignUp: fakeHandler(signInResults.codeSent),
+  onSignUpWith: fakeHandler({ ok: true, code: 'sent', redirectTo: '#continue-with-provider' }),
   // The real one returns the provider's page; previews stay put (only the hash changes).
   onContinueWith: fakeHandler({ ok: true, code: 'sent', redirectTo: '#continue-with-provider' }),
   onVerifyEmailCode: fakeHandler(signInResults.done),

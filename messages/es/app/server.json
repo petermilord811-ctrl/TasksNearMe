@@ -37,6 +37,10 @@
       "title": "Inicia sesión o crea una cuenta",
       "description": "Inicia sesión en TasksNearMe con un código que te enviamos por correo. Sin contraseña."
     },
+    "signUp": {
+      "title": "Crea tu cuenta",
+      "description": "Únete gratis a TasksNearMe: consigue ayuda con las tareas de todos los días de vecinos verificados, o ayuda y gana dinero."
+    },
     "waitlist": {
       "title": "Únete a la lista de espera",
       "description": "TasksNearMe aún no está en tu ciudad. Déjanos tu correo y tu código postal y te avisaremos cuando abramos cerca de ti."

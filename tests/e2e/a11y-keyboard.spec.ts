@@ -99,7 +99,7 @@ test('keyboard only: a new person signs up with an emailed code', async ({ page 
   test.setTimeout(150_000);
   const email = `e2e-kbd-${Date.now()}@example.test`;
   await page.goto('/sign-in');
-  await expect(page.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Sign in', exact: true })).toBeVisible();
   await auditPage(page, testInfo.project.name);
   // The skip link comes first, shows itself when focused, and moves on to the page's content.
   await page.keyboard.press('Tab');

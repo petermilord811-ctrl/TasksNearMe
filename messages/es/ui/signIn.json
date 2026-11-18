@@ -1,9 +1,10 @@
 {
-  "oneAccount": "Inicias sesión o creas tu cuenta aquí, con los mismos pasos.",
+  "oneAccount": "Una sola cuenta para conseguir ayuda y para ayudar.",
   "email": {
-    "title": "Inicia sesión o crea una cuenta",
+    "title": "Inicia sesión",
     "description": "Te enviaremos un código por correo para continuar. Sin contraseñas que recordar.",
-    "descriptionWithProviders": "Continúa con una de las cuentas de abajo, o recibe un código por correo. Sin contraseñas que recordar."
+    "descriptionWithProviders": "Continúa con una de las cuentas de abajo, o recibe un código por correo. Sin contraseñas que recordar.",
+    "newHere": "¿Primera vez en TasksNearMe? <link>Crea una cuenta</link>"
   },
   "social": {
     "or": "o",
@@ -87,7 +88,9 @@
     "social-not-allowed": "Cuenta no disponible (Google)",
     "social-failed": "Falló el inicio de sesión con Microsoft",
     "bot-check-refused": "Paso del correo: verificación rechazada",
-    "bot-check-expired": "Paso del nombre: se acabó el tiempo de la verificación"
+    "bot-check-expired": "Paso del nombre: se acabó el tiempo de la verificación",
+    "sign-up": "Crear una cuenta",
+    "sign-up-with-providers": "Crear una cuenta, con Google y Microsoft"
   },
   "passkey": {
     "action": "Iniciar sesión con una llave de acceso",
@@ -110,5 +113,22 @@
     "expiredHint": "Los códigos funcionan 10 minutos. Pide uno nuevo en la página de inicio de sesión.",
     "missing": "Aquí no hay ningún código",
     "missingHint": "Abre esta página con el botón Copiar código de tu correo de inicio de sesión."
+  },
+  "signUp": {
+    "title": "Crea tu cuenta",
+    "description": "Es gratis. Consigue ayuda con las tareas de todos los días, o ayuda a tus vecinos y gana dinero.",
+    "intent": {
+      "label": "¿Qué te trae a TasksNearMe?",
+      "get_help": {
+        "title": "Necesito ayuda con tareas",
+        "hint": "Publica una tarea y elige entre las ofertas que te envían ayudantes cercanos."
+      },
+      "help_out": {
+        "title": "Quiero ayudar y ganar dinero",
+        "hint": "Crea tu perfil de ayudante y luego envía ofertas para tareas cerca de ti."
+      }
+    },
+    "submit": "Crear cuenta",
+    "haveAccount": "¿Ya tienes una cuenta? <link>Inicia sesión</link>"
   }
 }
