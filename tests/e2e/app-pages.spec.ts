@@ -22,7 +22,16 @@ async function ensureConversation(page: Page): Promise<void> {
   await expect(list.or(page.getByRole('heading', { name: 'No messages yet' }))).toBeVisible({ timeout: 30_000 });
   if (await list.count()) return;
   await page.goto('/app/tasks/tsk_desk/offers/off_sam');
-  await page.getByRole('button', { name: 'Message helper' }).first().click();
+  // Below 1024 px the action bar keeps every action after the first under "More".
+  const direct = page.getByRole('button', { name: 'Message helper', exact: true });
+  const more = page.getByRole('button', { name: 'More', exact: true });
+  await expect(direct.or(more).first()).toBeVisible({ timeout: 30_000 });
+  // A tap before the page hydrates opens nothing: tap again until the sheet shows the action.
+  await expect(async () => {
+    if (!(await direct.first().isVisible())) await more.click({ timeout: 5_000 });
+    await expect(direct.first()).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 45_000 });
+  await direct.first().click();
   await expect(page).toHaveURL(/\/app\/messages\/thr_/, { timeout: 30_000 });
 }
 
