@@ -4,7 +4,7 @@
   "backToBooking": "Back to booking",
   "work": "The work",
   "deadline": "Report before {date} at {time}; after that, the booking is approved automatically.",
-  "deadlineRelative": "Approval deadline: {relative} (Central time).",
+  "deadlineRelative": "Approval deadline: {relative} ({zone}).",
   "reason": "What is the problem?",
   "reasonHint": "Choose the reason that describes what happened.",
   "reasons": {

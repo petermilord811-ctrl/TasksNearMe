@@ -26,7 +26,7 @@ function useResendCountdown(at?: string) {
 }
 
 export function CodeStep({ data, handlers, initialResult, onResult, channel }: SignInStepProps & { channel: 'email' | 'phone' }) {
-  const { formatDateTime } = useFormat();
+  const { formatDateTime, zoneName } = useFormat();
   const t = useTranslations('signIn');
   const fields = useTranslations('forms.fields');
   const id = useId();
@@ -52,7 +52,7 @@ export function CodeStep({ data, handlers, initialResult, onResult, channel }: S
       <Button type="button" variant="outline" disabled={pending || seconds === null || seconds > 0} aria-busy={action.pending && pendingAction === 'resend'} aria-describedby={data.resendAvailableAt ? `${id}-resend` : undefined} className="w-full" onClick={async () => { setPendingAction('resend'); await action.run(resend, undefined); }}>
         {action.pending && pendingAction === 'resend' && <Spinner aria-hidden="true" />}{t('resend')}
       </Button>
-      {data.resendAvailableAt && <p id={`${id}-resend`} className="text-center text-sm tabular-nums text-muted-foreground">{seconds === null ? t('resendAt', { at: formatDateTime(data.resendAvailableAt) }) : seconds > 0 ? t('resendCountdown', { seconds }) : t('resendReady')}</p>}
+      {data.resendAvailableAt && <p id={`${id}-resend`} className="text-center text-sm tabular-nums text-muted-foreground">{seconds === null ? t('resendAt', { zone: zoneName, at: formatDateTime(data.resendAvailableAt) }) : seconds > 0 ? t('resendCountdown', { seconds }) : t('resendReady')}</p>}
       <Button type="button" variant="ghost" disabled={pending} aria-busy={action.pending && pendingAction === 'change'} className="w-full whitespace-normal" onClick={async () => { setPendingAction('change'); await action.run(change, undefined); }}>
         {action.pending && pendingAction === 'change' && <Spinner aria-hidden="true" />}{t(channel === 'email' ? 'changeEmail' : 'changePhone')}
       </Button>

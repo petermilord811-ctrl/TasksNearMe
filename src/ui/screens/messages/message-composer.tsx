@@ -37,7 +37,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   initialPending?: boolean;
   initialBody?: string;
 }) {
-  const { formatDateTime } = useFormat();
+  const { formatDateTime, zoneName } = useFormat();
   const t = useTranslations('thread.composer');
   const fields = useTranslations('forms.fieldErrors');
   const id = useId();
@@ -169,7 +169,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     </div>
     {specialError ? <div aria-live="polite" aria-atomic="true"><Alert role="status" className="border-destructive/30"><CircleAlert aria-hidden="true" className="text-destructive" /><AlertDescription className="text-foreground">
       <p>{t(result.code === 'not_allowed' ? 'notAllowed' : 'rateLimited')}</p>
-      {result.code === 'rate_limited' && result.retryAt && <p className="tabular-nums">{t('retryAt', { at: formatDateTime(result.retryAt) })}</p>}
+      {result.code === 'rate_limited' && result.retryAt && <p className="tabular-nums">{t('retryAt', { at: formatDateTime(result.retryAt), zone: zoneName })}</p>}
       {result.code === 'not_allowed' && <Button type="button" variant="outline" className="mt-2" onClick={() => router.refresh()}>{t('reload')}</Button>}
     </AlertDescription></Alert></div> : <FormFeedback result={feedback} successMessage={result?.ok && result.code === 'sent' ? t('sent') : undefined} />}
   </form>;

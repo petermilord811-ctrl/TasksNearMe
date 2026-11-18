@@ -29,7 +29,7 @@ export function BookingConfirmContent({ data, handlers, now, initialResult, init
   initialResult?: PaymentAttemptResult;
   initialPending?: boolean;
 }) {
-  const { formatDate, formatDateTime } = useFormat();
+  const { formatDate, formatDateTime, zoneName } = useFormat();
   const t = useTranslations('bookingConfirm');
   const categories = useTranslations('helperCard.categories');
   const { task, offer } = data;
@@ -47,7 +47,7 @@ export function BookingConfirmContent({ data, handlers, now, initialResult, init
       </div>
       <div className="flex items-start gap-2">
         <CalendarDays aria-hidden="true" className="mt-1 size-5 shrink-0 text-primary" />
-        <div><p className="text-sm text-muted-foreground">{t('agreedStart')}</p><time dateTime={offer.proposedStart} className="font-medium tabular-nums">{formatDateTime(offer.proposedStart)}</time></div>
+        <div><p className="text-sm text-muted-foreground">{t('agreedStart', { zone: zoneName })}</p><time dateTime={offer.proposedStart} className="font-medium tabular-nums">{formatDateTime(offer.proposedStart)}</time></div>
       </div>
       <GeneralArea location={task.location} />
       <p className="flex items-start gap-2 rounded-2xl bg-muted/70 px-3.5 py-3 text-sm">

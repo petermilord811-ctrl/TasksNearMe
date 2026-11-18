@@ -4,7 +4,7 @@
   "backToBooking": "Volver a la reserva",
   "work": "El trabajo",
   "deadline": "Reporta antes del {date} a las {time}; después, la reserva se aprueba automáticamente.",
-  "deadlineRelative": "Plazo de aprobación: {relative} (hora del centro).",
+  "deadlineRelative": "Plazo de aprobación: {relative} ({zone}).",
   "reason": "¿Cuál es el problema?",
   "reasonHint": "Elige el motivo que describa lo que pasó.",
   "reasons": {

@@ -231,7 +231,7 @@ describe('BookingHubActions', () => {
   it('shows retryAt in Central time after a rate limit', async () => {
     mount(undefined, vi.fn(fakeHandler({ ok: false, code: 'rate_limited', retryAt: '2026-11-21T16:05:00.000Z' }, 0)));
     await userEvent.click(screen.getByRole('button', { name: messages.actions.arrived }));
-    expect(await screen.findByText(/Try again after Sat, Nov 21.*10:05 am.*Central time/)).toBeVisible();
+    expect(await screen.findByText(/Try again after Sat, Nov 21.*10:05 am \(Central Time\)/)).toBeVisible();
     expect(navigation.push).not.toHaveBeenCalled();
     expect(navigation.refresh).not.toHaveBeenCalled();
   });

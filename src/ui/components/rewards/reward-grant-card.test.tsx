@@ -5,7 +5,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, REWARD_PROGRAM_CODES, REWARD_STATUSES, REWARD_VOID_REASONS, routes, type ActionResult, type RewardGrantView, type RewardsHandlers } from '@/contracts';
 import { fakeHandler, fakeRewardsHandlers, REWARDS_NOW, rewardGrantsByStatus, rewardsRedeemableData } from '@/fixtures';
-import { formatDate, formatDateTime, formatMoney } from '@/shared/format';
+import { MARKET_TIME_ZONE } from '@/contracts/common';
+import { formatDate, formatDateTime, formatMoney, timeZoneName } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import rewards from '../../../../messages/en/ui/rewards.json';
 import { RewardGrantCard } from './reward-grant-card';
@@ -97,7 +98,7 @@ describe('RewardGrantCard', () => {
   it('shows the retry time for a rate limit', async () => {
     mount(redeemable, fakeHandler({ ok: false, code: 'rate_limited', retryAt: REWARDS_NOW }, 0));
     await userEvent.click(screen.getByRole('button', { name: rewards.actions.redeem }));
-    expect(await screen.findByText(`Try again after ${formatDateTime(REWARDS_NOW)} (Central time).`)).toBeVisible();
+    expect(await screen.findByText(`Try again after ${formatDateTime(REWARDS_NOW)} (${timeZoneName(MARKET_TIME_ZONE)}).`)).toBeVisible();
   });
 
   it('shows validation feedback even if a handler unexpectedly returns field errors', async () => {

@@ -23,7 +23,7 @@ export function ReportProblemContent({ data, handlers, now, initialResult, initi
   initialResult?: ActionResult;
   initialPending?: boolean;
 }) {
-  const { formatDate, formatRelative, formatTime } = useFormat();
+  const { formatDate, formatRelative, formatTime, zoneName } = useFormat();
   const t = useTranslations('reportProblem');
   return <div className="mx-auto max-w-reading space-y-6">
     <Link href={routes.app.booking(data.booking.id)} className={backLink}>
@@ -38,7 +38,7 @@ export function ReportProblemContent({ data, handlers, now, initialResult, initi
       <Clock3 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
       <div className="space-y-2">
         <p className="tabular-nums">{t('deadline', { date: formatDate(data.approvalDueAt), time: formatTime(data.approvalDueAt) })}</p>
-        <p className="text-sm tabular-nums">{t('deadlineRelative', { relative: formatRelative(data.approvalDueAt, now) })}</p>
+        <p className="text-sm tabular-nums">{t('deadlineRelative', { relative: formatRelative(data.approvalDueAt, now), zone: zoneName })}</p>
       </div>
     </aside>}
     {data.unavailable && <section aria-label={t('unavailable.title')} className={cn(surface, surfacePad, 'space-y-3 border-warning/40 dark:border-warning/40')}>

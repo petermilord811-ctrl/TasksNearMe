@@ -63,7 +63,7 @@
     "rate_limited": "Hubo demasiados intentos. Espera antes de volver a intentarlo.",
     "limit_reached": "Por ahora llegaste a un límite en tu cuenta. Consulta el centro de ayuda para ver los detalles."
   },
-  "retryAt": "Inténtalo de nuevo después de {at} (hora del centro).",
+  "retryAt": "Inténtalo de nuevo después de {at} ({zone}).",
   "getHelp": "Visitar el centro de ayuda",
   "continue": "Continuar",
   "pending": "Procesando…",

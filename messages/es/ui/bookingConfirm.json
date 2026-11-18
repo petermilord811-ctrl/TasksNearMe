@@ -4,7 +4,7 @@
   "backToOffer": "Volver a la oferta",
   "backToTask": "Volver a la tarea",
   "summary": "Tu tarea",
-  "agreedStart": "Inicio acordado (hora del centro)",
+  "agreedStart": "Inicio acordado ({zone})",
   "helper": "Tu ayudante",
   "message": "Mensaje de tu ayudante",
   "brings": "Lleva: {items}",

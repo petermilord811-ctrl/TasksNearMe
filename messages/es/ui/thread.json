@@ -69,7 +69,7 @@
     "invalidAttachments": "Revisa tus fotos. Puedes adjuntar hasta {maximum, plural, one {# foto} other {# fotos}}.",
     "notAllowed": "No puedes enviar un mensaje en esta conversación ahora. Recarga para ver su estado actual.",
     "rateLimited": "Estás enviando mensajes muy rápido. Espera antes de intentarlo de nuevo.",
-    "retryAt": "Inténtalo de nuevo después de las {at} (hora del centro).",
+    "retryAt": "Inténtalo de nuevo después de las {at} ({zone}).",
     "reload": "Recargar conversación",
     "attach": "Adjuntar fotos",
     "photos": "Fotos para enviar",

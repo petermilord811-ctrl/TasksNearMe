@@ -69,7 +69,7 @@
     "invalidAttachments": "Check your photos. You can attach up to {maximum, plural, one {# photo} other {# photos}}.",
     "notAllowed": "You can't send a message in this conversation right now. Reload to see its current status.",
     "rateLimited": "You're sending messages too quickly. Wait before trying again.",
-    "retryAt": "Try again after {at} (Central time).",
+    "retryAt": "Try again after {at} ({zone}).",
     "reload": "Reload conversation",
     "attach": "Attach photos",
     "photos": "Photos to send",

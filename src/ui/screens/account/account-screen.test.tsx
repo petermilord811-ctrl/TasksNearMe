@@ -8,6 +8,8 @@ import { deletionWaitingPrivacy, exportReadyPrivacy, fakeAccountHandlers, fakeHa
 import messages from '../../../../messages/en/ui';
 import account from '../../../../messages/en/ui/account.json';
 import { AccountScreen } from './account-screen';
+import { MARKET_TIME_ZONE } from '@/contracts/common';
+import { timeZoneName } from '@/shared/format';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
@@ -249,7 +251,7 @@ describe('AccountScreen', () => {
     mount(mayaAccountData, { onRequestExport });
     await userEvent.click(screen.getByRole('button', { name: 'Request a copy of my data' }));
     expect(await screen.findByText(messages.forms.actionErrors.rate_limited)).toBeVisible();
-    expect(screen.getByText(/Try again after.*Central time/)).toBeVisible();
+    expect(screen.getByText(new RegExp(`Try again after .*\\(${timeZoneName(MARKET_TIME_ZONE)}\\)`))).toBeVisible();
     expect(screen.getByRole('button', { name: 'Request a copy of my data' })).toBeEnabled();
   });
 

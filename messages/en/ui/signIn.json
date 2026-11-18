@@ -37,7 +37,7 @@
   "newCodeSent": "New code sent.",
   "resend": "Send a new code",
   "resendCountdown": "You can send a new code in {seconds, plural, one {# second} other {# seconds}}.",
-  "resendAt": "You can send a new code after {at} (Central time).",
+  "resendAt": "You can send a new code after {at} ({zone}).",
   "resendReady": "You can send a new code now.",
   "changeEmail": "Use a different email",
   "changePhone": "Use a different number",

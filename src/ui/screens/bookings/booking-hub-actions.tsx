@@ -35,7 +35,7 @@ export interface BookingHubActionsProps {
 }
 
 export function BookingHubActions({ data, handlers, sheets, initialResult, initialPending }: BookingHubActionsProps) {
-  const { formatDateTime, formatTime } = useFormat();
+  const { formatDateTime, formatTime, zoneName } = useFormat();
   const t = useTranslations('bookingHub');
   const feedback = useTranslations('feedback');
   const forms = useTranslations('forms');
@@ -108,7 +108,7 @@ export function BookingHubActions({ data, handlers, sheets, initialResult, initi
       {result.ok ? <CircleCheck aria-hidden="true" className="text-success" /> : <CircleAlert aria-hidden="true" className="text-destructive" />}
       <AlertDescription className="space-y-2 text-foreground">
         <p>{!result.ok && result.code === 'not_allowed' ? t('actionErrors.not_allowed') : feedback(`${result.ok ? 'success' : 'error'}.${result.code}`)}</p>
-        {!result.ok && result.code === 'rate_limited' && result.retryAt && <p className="tabular-nums">{forms('retryAt', { at: formatDateTime(result.retryAt) })}</p>}
+        {!result.ok && result.code === 'rate_limited' && result.retryAt && <p className="tabular-nums">{forms('retryAt', { at: formatDateTime(result.retryAt), zone: zoneName })}</p>}
         {!result.ok && <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {(result.code === 'not_allowed' || result.code === 'version_conflict') && <Button type="button" variant="outline" onClick={() => router.refresh()}>{t('reload')}</Button>}
           <Link href={routes.help()} className="inline-flex min-h-11 items-center rounded-sm text-primary underline underline-offset-4">{forms('getHelp')}</Link>

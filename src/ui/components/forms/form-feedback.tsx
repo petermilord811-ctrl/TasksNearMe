@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { VerifyIdentityLink } from './verify-identity-link';
 
 export function FormFeedback({ result, successMessage, errorMessage }: { result?: ActionResult; successMessage?: string; errorMessage?: string }) {
-  const { formatDateTime } = useFormat();
+  const { formatDateTime, zoneName } = useFormat();
   const t = useTranslations('forms');
   const feedback = useTranslations('feedback');
   const onlyFields = result && !result.ok && result.code === 'validation_failed' && Object.values(result.fieldErrors ?? {}).some((codes) => codes?.length);
@@ -17,7 +17,7 @@ export function FormFeedback({ result, successMessage, errorMessage }: { result?
       {result.ok ? <CircleCheck aria-hidden="true" className="text-success" /> : <CircleAlert aria-hidden="true" className="text-destructive" />}
       <AlertDescription className="text-foreground">
         <p>{result.ok ? successMessage ?? feedback(`success.${result.code}`) : errorMessage ?? (t.has(`actionErrors.${result.code}`) ? t(`actionErrors.${result.code}`) : feedback(`error.${result.code}`))}</p>
-        {!result.ok && result.code === 'rate_limited' && result.retryAt && <p className="tabular-nums">{t('retryAt', { at: formatDateTime(result.retryAt) })}</p>}
+        {!result.ok && result.code === 'rate_limited' && result.retryAt && <p className="tabular-nums">{t('retryAt', { at: formatDateTime(result.retryAt), zone: zoneName })}</p>}
         {!result.ok && result.code === 'identity_required' && <VerifyIdentityLink label={t('verifyIdentity')} />}
         {!result.ok && <Link href={routes.help()} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">{t('getHelp')}</Link>}
       </AlertDescription>

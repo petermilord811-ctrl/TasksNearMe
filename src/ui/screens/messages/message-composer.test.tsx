@@ -88,7 +88,7 @@ describe('MessageComposer', () => {
     expect(input()).toHaveValue('Keep this draft'); expect(screen.getByRole('img')).toBeInTheDocument();
     await user.click(send());
     expect(await screen.findByText(thread.composer.rateLimited)).toBeInTheDocument();
-    expect(screen.getByText('Try again after Sat, Nov 21 · 10:10 am (Central time).')).toBeInTheDocument();
+    expect(screen.getByText('Try again after Sat, Nov 21 · 10:10 am (Central Time).')).toBeInTheDocument();
     expect(navigation.refresh).not.toHaveBeenCalled();
   });
 
