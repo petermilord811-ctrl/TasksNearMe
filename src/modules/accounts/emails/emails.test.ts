@@ -29,6 +29,15 @@ describe('the welcome email', () => {
     expect(email.html).not.toContain('first task of');
   });
 
+  it('leaves the phone out where texts don’t go out (plan 9.2): two checks, and the steps renumbered', () => {
+    const email = renderWelcomeEmail({ ...base, offer: { ...offer, checks: ['identity', 'background'] } });
+    expect(email.html).not.toContain('&#10003; Phone');
+    expect(email.html).not.toContain('Verify your phone');
+    expect(email.text).not.toContain('Verify your phone');
+    for (const check of ['ID', 'Background check']) expect(email.html).toContain(`&#10003; ${check}`);
+    expect(email.html).toContain('Pass a background check');
+  });
+
   it('reads the same in Spanish', () => {
     const email = renderWelcomeEmail({ ...base, offer, locale: 'es' });
     expect(email.subject).toBe('¡Te damos la bienvenida, Robin! Verifícate y recibe una tarjeta de regalo de $50');

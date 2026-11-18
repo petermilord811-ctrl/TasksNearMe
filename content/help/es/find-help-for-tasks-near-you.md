@@ -19,7 +19,7 @@ Al publicar solo compartes tu zona general. Consulta [quién ve mi dirección](/
 
 Ayudantes cercanos te envían ofertas con su precio y una hora de inicio. En cada una, revisa:
 
-- **Sus verificaciones.** Todo ayudante verifica su teléfono, una identificación oficial con una selfie en vivo y su domicilio antes de poder enviar ofertas. Los servicios dentro de tu casa también requieren una verificación de antecedentes aprobada.
+- **Sus verificaciones.** Todo ayudante verifica una identificación oficial con una selfie en vivo y su domicilio antes de poder enviar ofertas. Los servicios dentro de tu casa también requieren una verificación de antecedentes aprobada.
 - **Las reseñas y las tareas completadas** de sus clientes anteriores.
 - **El precio y lo que incluye.** Ves la tarifa de servicio y tu total antes de reservar.
 

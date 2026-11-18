@@ -22,7 +22,7 @@ You only share your general area when you post. See [who sees my address](/help/
 
 Helpers nearby send offers with their price and a start time. For each one, look at:
 
-- **Their checks.** Every helper verifies their phone, a government ID with a live selfie, and their home address before they can send offers. Services in your home also need a cleared background check.
+- **Their checks.** Every helper verifies a government ID with a live selfie and their home address before they can send offers. Services in your home also need a cleared background check.
 - **Reviews and completed tasks** from people who booked them.
 - **The price and what it covers.** You see the service fee and your total before you book.
 

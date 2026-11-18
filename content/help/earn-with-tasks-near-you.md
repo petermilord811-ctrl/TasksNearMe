@@ -9,7 +9,7 @@ If you're handy, strong or patient with a computer, your neighbors need you. On 
 
 ## Get verified once
 
-Before you send offers, you verify your phone, a government ID with a live selfie, and your home address. Services in someone's home also need a cleared background check. See [getting verified](/help/getting-verified).
+Before you send offers, you verify a government ID with a live selfie and your home address, and your phone if we ask for it. Services in someone's home also need a cleared background check. See [getting verified](/help/getting-verified).
 
 If we're not in your city yet, you can sign up and finish your checks now. We'll tell you when your city opens.
 

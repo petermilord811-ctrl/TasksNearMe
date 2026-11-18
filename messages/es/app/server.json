@@ -450,8 +450,8 @@
       },
       "checked": {
         "question": "¿Cómo se verifica a los ayudantes?",
-        "answer": "Antes de enviar ofertas, cada ayudante verifica su teléfono, una identificación oficial con una selfie en vivo y su domicilio. Los clientes ven una insignia con la fecha de cada verificación.",
-        "inHome": "Antes de enviar ofertas, cada ayudante verifica su teléfono, una identificación oficial con una selfie en vivo y su domicilio. Este servicio se hace en tu casa, así que además necesitan una verificación de antecedentes aprobada para poder hacerlo."
+        "answer": "Antes de enviar ofertas, cada ayudante verifica una identificación oficial con una selfie en vivo y su domicilio. Los clientes ven una insignia con la fecha de cada verificación.",
+        "inHome": "Antes de enviar ofertas, cada ayudante verifica una identificación oficial con una selfie en vivo y su domicilio. Este servicio se hace en tu casa, así que además necesitan una verificación de antecedentes aprobada para poder hacerlo."
       },
       "remote": {
         "question": "¿Se puede hacer a distancia?",

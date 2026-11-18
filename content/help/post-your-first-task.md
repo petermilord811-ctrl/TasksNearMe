@@ -21,6 +21,6 @@ Posting is free. You only pay when you book a helper.
 2. Compare offers, profiles, and reviews. You can message a helper before you book.
 3. Book the helper you want. You see the full total before you confirm.
 
-> [!info] You need a verified phone number to post. We text you a code the first time.
+> [!info] If we ask for your phone number before you post, we text you a code once to confirm it.
 
 See [how it works](/how-it-works) for the whole journey.

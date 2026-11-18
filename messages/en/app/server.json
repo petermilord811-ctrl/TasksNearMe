@@ -450,8 +450,8 @@
       },
       "checked": {
         "question": "How are helpers checked?",
-        "answer": "Before sending offers, every helper verifies their phone, a government ID with a live selfie, and their home address. Clients see a badge with the date of each check.",
-        "inHome": "Before sending offers, every helper verifies their phone, a government ID with a live selfie, and their home address. This service happens in your home, so helpers also need a cleared background check before they can take it."
+        "answer": "Before sending offers, every helper verifies a government ID with a live selfie and their home address. Clients see a badge with the date of each check.",
+        "inHome": "Before sending offers, every helper verifies a government ID with a live selfie and their home address. This service happens in your home, so helpers also need a cleared background check before they can take it."
       },
       "remote": {
         "question": "Can it be done remotely?",

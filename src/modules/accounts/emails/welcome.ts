@@ -97,6 +97,8 @@ export function renderWelcomeEmail(input: WelcomeEmailInput): RenderedEmail {
   const onboarding = url(routes.app.helperOnboarding());
   const subject = offer ? t('welcome.subjectOffer', { firstName: input.firstName, amount }) : t('welcome.subject', { firstName: input.firstName });
   const preheader = offer ? t('welcome.preheaderOffer', { amount }) : t('welcome.preheader');
+  // The phone step only where texts work (plan 9.2: the offer's checks leave it out otherwise).
+  const withPhone = (offer?.checks ?? ['phone']).includes('phone');
   // The checks that earn the gift card, as chips on it.
   const checkChips = offer
     ? (offer.checks ?? (['phone', 'identity', 'background'] as const))
@@ -131,9 +133,9 @@ export function renderWelcomeEmail(input: WelcomeEmailInput): RenderedEmail {
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
 ${stepRow('1', t('welcome.steps.account.title'), t('welcome.steps.account.body'), 'done', false, t('welcome.steps.done'))}
 ${stepRow('2', t('welcome.steps.profile.title'), t('welcome.steps.profile.body'), 'next')}
-${stepRow('3', t('welcome.steps.phone.title'), t('welcome.steps.phone.body'), 'next')}
-${stepRow('4', t('welcome.steps.identity.title'), t('welcome.steps.identity.body'), 'next')}
-${stepRow('5', t('welcome.steps.background.title'), t('welcome.steps.background.body'), 'next')}
+${withPhone ? stepRow('3', t('welcome.steps.phone.title'), t('welcome.steps.phone.body'), 'next') : ''}
+${stepRow(withPhone ? '4' : '3', t('welcome.steps.identity.title'), t('welcome.steps.identity.body'), 'next')}
+${stepRow(withPhone ? '5' : '4', t('welcome.steps.background.title'), t('welcome.steps.background.body'), 'next')}
 ${stepRow('', t('welcome.steps.reward.title', { amount }), t('welcome.steps.reward.body', { redeemDays: offer.redeemWithinDays }), 'reward', true)}
 </table>
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:20px;"><tr><td>${emailButton({ href: onboarding, label: t('welcome.gift.cta') })}</td></tr></table>
@@ -186,7 +188,7 @@ ${emailButton({ href: url(routes.becomeAHelper()), label: t('welcome.helper.cta'
       t('welcome.steps.title', { amount }),
       `[x] ${t('welcome.steps.account.title')}`,
       `[ ] ${t('welcome.steps.profile.title')}: ${t('welcome.steps.profile.body')}`,
-      `[ ] ${t('welcome.steps.phone.title')}: ${t('welcome.steps.phone.body')}`,
+      ...(withPhone ? [`[ ] ${t('welcome.steps.phone.title')}: ${t('welcome.steps.phone.body')}`] : []),
       `[ ] ${t('welcome.steps.identity.title')}: ${t('welcome.steps.identity.body')}`,
       `[ ] ${t('welcome.steps.background.title')}: ${t('welcome.steps.background.body')}`,
       `${t('welcome.steps.reward.title', { amount })} ${t('welcome.steps.reward.body', { redeemDays: offer.redeemWithinDays })}`,

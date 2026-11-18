@@ -21,6 +21,6 @@ Publicar es gratis. Solo pagas cuando reservas a un ayudante.
 2. Compara ofertas, perfiles y reseñas. Puedes enviar un mensaje a un ayudante antes de reservar.
 3. Reserva al ayudante que quieras. Ves el total completo antes de confirmar.
 
-> [!info] Necesitas un número de teléfono verificado para publicar. Te enviamos un código por mensaje de texto la primera vez.
+> [!info] Si te pedimos tu número de teléfono antes de publicar, te enviamos un código una vez para confirmarlo.
 
 Consulta [cómo funciona](/how-it-works) para ver todo el recorrido.

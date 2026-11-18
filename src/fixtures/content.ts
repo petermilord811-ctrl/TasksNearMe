@@ -21,7 +21,7 @@ const addressPrivacy: HelpArticleSummary = {
 const getVerified: HelpArticleSummary = {
   slug: 'getting-verified',
   title: 'Getting verified as a helper',
-  summary: 'Phone, ID and home address checks, payout setup, and a background check for in-home help.',
+  summary: 'ID and home address checks, payout setup, a background check for in-home help, and your phone when we ask for it.',
 };
 const payoutTiming: HelpArticleSummary = {
   slug: 'when-do-i-get-paid',
