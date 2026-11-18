@@ -275,10 +275,10 @@ Ties go to the newest, then the id. Everything is one SQL query over both tables
 - **Rename the entry.** "Community" becomes **Neighbors** (Spanish **Vecinos**; first proposed as Neighborhood, which didn't fit the dock), on the same route, `/app/community`. Its post pages (`/app/community/*`) stay under it. Suggested icon: lucide `MapPinned`, or `UsersRound`.
 - **Move it to the primary group, right after Home, for both modes.** It is now where open tasks and neighbors' asks meet, and both clients and helpers come back to it daily.
 - **Phones (the dock has five places).**
-  - Clients: Home · Neighborhood · Tasks · Bookings · Messages. Account already lives in the avatar menu.
-  - Helpers: Home · Find work · Neighborhood · Bookings · Messages, with Earnings in the avatar menu and on the desktop rail.
+  - Clients: Home · Neighbors · Tasks · Bookings · Messages (Spanish Vecinos). Account already lives in the avatar menu.
+  - Helpers: Home · Find work · Neighbors · Bookings · Messages, with Earnings in the avatar menu and on the desktop rail.
 
-  The final order is the dashboard helper's call.
+  The final order was the dashboard helper's call; the nav landed in 842d591 and 79f8b61.
 - **No change to "Post a task".** The top bar's quick action stays; the composer's Task chip leads to the same wizard.
 
 ## 11. Build (contract first)
