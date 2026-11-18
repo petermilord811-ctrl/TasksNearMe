@@ -75,14 +75,29 @@ describe('PaymentsScreen', () => {
     const cards = screen.getByRole('heading', { name: copy.cards, level: 2 });
     const receipts = screen.getByRole('heading', { name: copy.receipts, level: 2 });
     expect(cards.compareDocumentPosition(receipts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getAllByRole('heading', { level: 3, name: 'Nov 2026' }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('heading', { level: 3, name: 'Oct 2026' }).length).toBeGreaterThan(0);
-    // Five show; the other three are behind "Show 3 older receipts".
+    // Each month once, folded or not: the newest five end in September, so the rest of September shows with them
+    // rather than under its own second "Sep 2026" behind "Show older receipts" (sweep).
+    for (const month of ['Nov 2026', 'Oct 2026', 'Sep 2026', 'Aug 2026']) expect(screen.getAllByRole('heading', { level: 3, name: month, hidden: true })).toHaveLength(1);
+    // Six show; the other two (August) are behind "Show 2 older receipts".
     const details = container.querySelector('details')!;
     expect(details).not.toHaveAttribute('open');
-    expect(within(details).getByText('Show 3 older receipts')).toBeInTheDocument();
-    for (const receipt of mayaPaymentsHistoryData.receipts.slice(5)) expect(details).toContainElement(screen.getByRole('link', { name: receipt.title, hidden: true }));
-    for (const receipt of mayaPaymentsHistoryData.receipts.slice(0, 5)) expect(details).not.toContainElement(screen.getByRole('link', { name: receipt.title }));
+    expect(within(details).getByText('Show 2 older receipts')).toBeInTheDocument();
+    for (const receipt of mayaPaymentsHistoryData.receipts.slice(6)) expect(details).toContainElement(screen.getByRole('link', { name: receipt.title, hidden: true }));
+    for (const receipt of mayaPaymentsHistoryData.receipts.slice(0, 6)) expect(details).not.toContainElement(screen.getByRole('link', { name: receipt.title }));
+  });
+
+  it('folds nothing when the newest month alone runs past five, and keeps a month that starts after the fifth folded whole', () => {
+    const november = mayaPaymentsHistoryData.receipts.slice(0, 2);
+    const many = Array.from({ length: 6 }, (_, index) => ({ ...november[index % 2]!, bookingId: `bkg_nov_${index}`, title: `November job ${index + 1}`, paidAt: `2026-11-${String(20 - index).padStart(2, '0')}T15:00:00.000Z` }));
+    const { container, unmount } = mount({ ...mayaPaymentsHistoryData, receipts: many });
+    expect(container.querySelector('details')).toBeNull();
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Nov 2026' })).toHaveLength(1);
+    unmount();
+    // Five in November and October, then September: the cut stays at five.
+    const atBoundary = [...mayaPaymentsHistoryData.receipts.slice(0, 4), { ...mayaPaymentsHistoryData.receipts[3]!, bookingId: 'bkg_oct_extra', title: 'October extra', paidAt: '2026-10-02T15:00:00.000Z' }, ...mayaPaymentsHistoryData.receipts.slice(4)];
+    const second = mount({ ...mayaPaymentsHistoryData, receipts: atBoundary });
+    expect(within(second.container.querySelector('details')!).getByText(`Show ${atBoundary.length - 5} older receipts`)).toBeInTheDocument();
+    for (const month of ['Nov 2026', 'Oct 2026', 'Sep 2026', 'Aug 2026']) expect(screen.getAllByRole('heading', { level: 3, name: month, hidden: true })).toHaveLength(1);
   });
 
   it('keeps the add-card form a tap away when cards are saved, and moves focus to it', () => {

@@ -71,8 +71,15 @@ export function PaymentsScreen(props: PaymentsScreenProps) {
  */
 export function PaymentsContent({ data, handlers, cardsPreview }: PaymentsScreenProps & { cardsPreview?: PaymentCardsPreviewState }) {
   const t = useTranslations('paymentsPage');
-  const recent = data.receipts.slice(0, RECENT_RECEIPTS);
-  const older = data.receipts.slice(RECENT_RECEIPTS);
+  const { dayKey } = useFormat();
+  // The newest few, and the rest of the last one's month with them: a month cut in two would get its heading twice,
+  // once above the newest and again under "Show older receipts" (sweep).
+  const monthOf = (receipt: ReceiptRow) => dayKey(receipt.paidAt).slice(0, 7);
+  let cut = Math.min(RECENT_RECEIPTS, data.receipts.length);
+  const lastShown = data.receipts[cut - 1];
+  while (lastShown && cut < data.receipts.length && monthOf(data.receipts[cut]!) === monthOf(lastShown)) cut += 1;
+  const recent = data.receipts.slice(0, cut);
+  const older = data.receipts.slice(cut);
   return <div className="mx-auto w-full max-w-content space-y-8">
     <PageHeader title={t('title')} description={t('description')} />
     <PaymentCards methods={data.methods} newCard={data.newCard} handlers={handlers} preview={cardsPreview} />
