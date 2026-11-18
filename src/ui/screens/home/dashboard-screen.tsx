@@ -44,8 +44,9 @@ function EarningsGlance({ earnings }: { earnings: NonNullable<DashboardData['ear
     <Link href={routes.app.earnings()} aria-describedby="home-earnings" className="group/earn flex items-center gap-3.5 rounded-[1.375rem] border bg-card py-2.5 pr-3 pl-3.5 shadow-card transition-[translate] duration-200 ease-[var(--ease-out)] hover:-translate-y-px motion-reduce:hover:translate-y-0">
       <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-secondary-foreground"><Wallet className="size-5" /></span>
       <dl className="flex min-w-0 flex-1 items-center gap-4">
-        <div className="min-w-0"><dt className="text-xs text-muted-foreground">{t('earnings.upcoming')}</dt><dd className="font-display text-lg leading-6 font-semibold"><Money cents={earnings.upcomingCents} /></dd></div>
-        <div className="min-w-0 border-l pl-4"><dt className="text-xs text-muted-foreground">{t('earnings.onTheWay')}</dt><dd className="font-display text-lg leading-6 font-semibold"><Money cents={earnings.onTheWayCents} /></dd></div>
+        {/* On phones the longer label takes two even lines and "On the way" keeps its one. */}
+        <div className="min-w-0"><dt className="text-xs text-balance text-muted-foreground">{t('earnings.upcoming')}</dt><dd className="font-display text-lg leading-6 font-semibold"><Money cents={earnings.upcomingCents} /></dd></div>
+        <div className="shrink-0 border-l pl-4"><dt className="text-xs whitespace-nowrap text-muted-foreground">{t('earnings.onTheWay')}</dt><dd className="font-display text-lg leading-6 font-semibold"><Money cents={earnings.onTheWayCents} /></dd></div>
       </dl>
       <span className="sr-only">{t('earnings.link')}</span>
       <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover/earn:translate-x-0.5 motion-reduce:transition-none" />
