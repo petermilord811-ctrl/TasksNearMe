@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, ne, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, or } from 'drizzle-orm';
 import type {
   ActionResult,
   BookingActionId,
@@ -18,6 +18,7 @@ import type {
 import { routes } from '@/contracts';
 import { marketPolicies } from '@/modules/markets/schema';
 import { offers } from '@/modules/offers/schema';
+import { earnings } from '@/modules/earnings/schema';
 import { payments, refunds } from '@/modules/payments/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
@@ -117,6 +118,11 @@ async function policyOf(db: Db, policyVersionId: string): Promise<BookingPolicy>
 
 export { clientSummary } from './people';
 
+/** Charges that went through (a refund later doesn't undo that they did). */
+const RECEIVED = ['succeeded', 'partially_refunded', 'refunded'];
+/** What the client pays for the booking itself: its payment, a change's, or an invite's captured hold (tips aside). */
+const BOOKING_CHARGES = ['booking_funding', 'change_funding', 'invite_authorization'] as const;
+
 function timelineOf(
   booking: BookingRow,
   task: { publishedAt: Date | null; createdAt: Date },
@@ -142,17 +148,19 @@ function timelineOf(
     if (payment.status === 'failed') add(payment.updatedAt, 'system', 'payment_failed', viewer.role === 'poster' ? { amountCents: payment.amountCents } : undefined);
   }
   add(booking.confirmedAt, 'poster', 'booked');
+  // A charge refunded later was still received (aa's sweep D4), and it happened when it was made: a refund rewrites
+  // the row's updatedAt, never its createdAt.
   for (const payment of bookingMoney) {
-    if (payment.status !== 'succeeded') continue;
-    if (viewer.role === 'poster') add(payment.updatedAt, 'system', 'payment_succeeded', { amountCents: payment.amountCents });
-    else add(payment.updatedAt, 'system', 'payment_held', payment.purpose === 'booking_funding' ? { amountCents: viewer.helperEarningsCents } : undefined);
+    if (!RECEIVED.includes(payment.status)) continue;
+    if (viewer.role === 'poster') add(payment.createdAt, 'system', 'payment_succeeded', { amountCents: payment.amountCents });
+    else add(payment.createdAt, 'system', 'payment_held', payment.purpose === 'booking_funding' ? { amountCents: viewer.helperEarningsCents } : undefined);
   }
   add(booking.onMyWayAt, 'helper', 'on_my_way');
   add(booking.arrivedAt, 'helper', 'arrived');
   add(booking.completionSubmittedAt, 'helper', 'completion_submitted');
   if (booking.status === 'completed') add(booking.completedAt, booking.completedVia === 'auto' ? 'system' : 'poster', booking.completedVia === 'auto' ? 'auto_approved' : 'approved');
   for (const payment of paymentRows) {
-    if (payment.purpose === 'tip' && ['succeeded', 'partially_refunded', 'refunded'].includes(payment.status)) add(payment.updatedAt, 'poster', 'tip_added', { amountCents: payment.amountCents });
+    if (payment.purpose === 'tip' && RECEIVED.includes(payment.status)) add(payment.createdAt, 'poster', 'tip_added', { amountCents: payment.amountCents });
   }
   if (booking.status === 'canceled' && booking.cancelReason !== 'funding_failed') {
     const reason = booking.cancelReason ?? '';
@@ -203,7 +211,8 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
       amountCents: row.amountCents,
       status: shownPaymentStatus(row),
       ...(row.methodBrand ? { method: { brand: row.methodBrand as CardBrand, ...(row.methodLast4 ? { last4: row.methodLast4 } : {}) } } : {}),
-      at: row.updatedAt.toISOString(),
+      // When it was charged (a refund rewrites updatedAt, D4); a failure when it failed.
+      at: (row.status === 'failed' ? row.updatedAt : row.createdAt).toISOString(),
     }));
   // Refunds (cancellations, unused amounts, settlements, goodwill) follow the charges in the client's history.
   if (role === 'poster') {
@@ -305,6 +314,18 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
     .orderBy(desc(bookings.startAt));
   if (rows.length === 0) return withRegular({ needsAction: [], upcoming: [], past: [] });
 
+  // What actually moved on a finished booking (aa's sweep D6): the client's charges less the refunds, the helper's
+  // earnings rows (a tip aside). The agreed terms only while it's ahead.
+  const finished = rows.filter((row) => FINAL.includes(row.booking.status)).map((row) => row.booking.id);
+  const [chargeRows, refundRows, earningRows] = finished.length
+    ? await Promise.all([
+        db.select({ bookingId: payments.bookingId, amountCents: payments.amountCents }).from(payments).where(and(inArray(payments.bookingId, finished), inArray(payments.purpose, [...BOOKING_CHARGES]), inArray(payments.status, RECEIVED))),
+        db.select({ bookingId: refunds.bookingId, amountCents: refunds.amountCents }).from(refunds).where(and(inArray(refunds.bookingId, finished), eq(refunds.status, 'succeeded'))),
+        db.select({ bookingId: earnings.bookingId, amountCents: earnings.amountCents }).from(earnings).where(and(inArray(earnings.bookingId, finished), ne(earnings.kind, 'tip'))),
+      ])
+    : [[], [], []];
+  const sumFor = (list: { bookingId: string | null; amountCents: number }[], id: string) => list.filter((row) => row.bookingId === id).reduce((sum, row) => sum + row.amountCents, 0);
+
   const taskIds = [...new Set(rows.map((row) => row.booking.taskId))];
   const views = new Map((await Promise.all(taskIds.map((id) => findTaskWithPublicView(db, id)))).flatMap((f) => (f ? [[f.view.id, f.view] as const] : [])));
   const helpers = await getHelperSummaries(rows.map((row) => row.booking.helperUserId), db);
@@ -329,7 +350,13 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
         otherParty: { id: other.id, displayName: other.displayName, initials: other.initials, ...(other.photo ? { photo: other.photo } : {}), memberSince: other.memberSince, phoneVerified: other.phoneVerified },
         start: terms.startAt.toISOString(),
         location: view.location,
-        amountCents: role === 'poster' ? (terms.breakdown.posterChargedCents ?? terms.breakdown.posterTotalCents) : terms.breakdown.helperEarningsCents,
+        amountCents: FINAL.includes(booking.status)
+          ? role === 'poster'
+            ? sumFor(chargeRows, booking.id) - sumFor(refundRows, booking.id)
+            : sumFor(earningRows, booking.id)
+          : role === 'poster'
+            ? (terms.breakdown.posterChargedCents ?? terms.breakdown.posterTotalCents)
+            : terms.breakdown.helperEarningsCents,
         needsAction: nextStep !== undefined,
         ...(nextStep ? { nextStep } : {}),
       },

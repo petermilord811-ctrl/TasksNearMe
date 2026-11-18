@@ -322,15 +322,25 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
 
 // ---- The client: receipts and cards ------------------------------------------------------------------
 
-async function chargesOf(db: Db, posterUserId: string, bookingId?: string, purpose: 'booking_funding' | 'tip' = 'booking_funding') {
-  const conditions = [eq(payments.payerUserId, posterUserId), eq(payments.purpose, purpose), inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded'])];
+/** What the client pays for a booking itself: its payment, a change's and an invite's captured hold (aa's sweep D5). */
+const BOOKING_CHARGES = ['booking_funding', 'change_funding', 'invite_authorization'];
+
+/**
+ * The client's charges that went through, oldest first, dated when they were made (a refund rewrites updatedAt, D4):
+ * the booking's own (`booking`) or tips (`tip`).
+ */
+async function chargesOf(db: Db, posterUserId: string, bookingId?: string, kind: 'booking' | 'tip' = 'booking') {
+  const conditions = [eq(payments.payerUserId, posterUserId), kind === 'tip' ? eq(payments.purpose, 'tip') : inArray(payments.purpose, BOOKING_CHARGES), inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded'])];
   if (bookingId) conditions.push(eq(payments.bookingId, bookingId));
-  return db.select().from(payments).where(and(...conditions)).orderBy(desc(payments.updatedAt));
+  return db.select().from(payments).where(and(...conditions)).orderBy(asc(payments.createdAt));
 }
 
 /** `/app/payments`: receipts (newest first) and saved cards. */
 export async function getPaymentsPage(db: Db, posterUserId: string): Promise<PaymentsPageData> {
   const [charges, tips] = await Promise.all([chargesOf(db, posterUserId), chargesOf(db, posterUserId, undefined, 'tip')]);
+  // One row per booking: its payment and any change's together (D5), dated by the first, newest bookings first.
+  const chargesByBooking = new Map<string, typeof charges>();
+  for (const charge of charges) if (charge.bookingId) chargesByBooking.set(charge.bookingId, [...(chargesByBooking.get(charge.bookingId) ?? []), charge]);
   const bookingIds = charges.flatMap((c) => (c.bookingId ? [c.bookingId] : []));
   const [bookingRows, refundRows, methodRows] = await Promise.all([
     bookingIds.length
@@ -350,7 +360,9 @@ export async function getPaymentsPage(db: Db, posterUserId: string): Promise<Pay
   ]);
   const byBooking = new Map(bookingRows.map((row) => [row.booking.id, row]));
   const helpers = await people(db, bookingRows.map((row) => row.booking.helperUserId));
-  const receipts: ReceiptRow[] = charges.flatMap((charge) => {
+  const receipts: ReceiptRow[] = [...chargesByBooking.values()].flatMap((bookingCharges) => {
+    const charge = bookingCharges[0]!;
+    const charged = bookingCharges.reduce((sum, row) => sum + row.amountCents, 0);
     const booking = charge.bookingId ? byBooking.get(charge.bookingId) : undefined;
     const helper = booking ? helpers.get(booking.booking.helperUserId) : undefined;
     if (!booking || !helper) return [];
@@ -363,15 +375,16 @@ export async function getPaymentsPage(db: Db, posterUserId: string): Promise<Pay
         title: booking.title,
         categorySlug: booking.categorySlug as CategorySlug,
         helper,
-        paidAt: charge.updatedAt.toISOString(),
-        chargedCents: charge.amountCents,
+        paidAt: charge.createdAt.toISOString(),
+        chargedCents: charged,
         refundedCents: refunded,
         ...(tipped > 0 ? { tipCents: tipped } : {}),
-        netCents: charge.amountCents - refunded + tipped,
+        netCents: charged - refunded + tipped,
         status: shownPaymentStatus(charge),
       },
     ];
   });
+  receipts.sort((a, b) => b.paidAt.localeCompare(a.paidAt));
   return {
     receipts,
     methods: methodRows.map((m) => ({ id: m.id, brand: m.brand as CardBrand, last4: m.last4, expMonth: m.expMonth, expYear: m.expYear, isDefault: m.isDefault })),
@@ -408,10 +421,10 @@ export async function getReceiptPage(db: Db, posterUserId: string, bookingId: st
       const charge = charges.find((c) => c.id === r.paymentId);
       return { id: r.id, kind: 'refund' as const, amountCents: r.amountCents, reason: r.reason, ...(r.reason === 'plan_rebate' && rebateCapCents !== undefined ? { rebateCapCents } : {}), ...(charge ? method(charge) : {}), at: r.createdAt.toISOString() };
     }),
-    ...tips.map((tip) => ({ id: tip.id, kind: 'tip' as const, amountCents: tip.amountCents, ...method(tip), at: tip.updatedAt.toISOString() })),
+    ...tips.map((tip) => ({ id: tip.id, kind: 'tip' as const, amountCents: tip.amountCents, ...method(tip), at: tip.createdAt.toISOString() })),
   ];
   const net = lines.reduce((total, line) => total + (line.kind === 'refund' ? -line.amountCents : line.amountCents), 0);
-  const firstCharge = charges[charges.length - 1]!;
+  const firstCharge = charges[0]!;
   return {
     receiptNumber: `TNM-${firstCharge.createdAt.getUTCFullYear()}-${row.booking.id.slice(-6).toUpperCase()}`,
     issuedAt: (row.booking.completedAt ?? firstCharge.createdAt).toISOString(),
