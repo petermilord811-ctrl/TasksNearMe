@@ -2,6 +2,7 @@ import { index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex } fro
 import { sql } from 'drizzle-orm';
 import { users } from '../accounts/schema';
 import { areas, markets } from '../markets/schema';
+import { tasks } from '../tasks/schema';
 
 /**
  * The community feed (completion plan 7.7–7.8): members of a market ask their neighbors for a recommendation,
@@ -32,6 +33,12 @@ export const communityPosts = pgTable(
     moderatedByUserId: text('moderated_by_user_id').references(() => users.id),
     moderatedAt: timestamp('moderated_at', { withTimezone: true }),
     pinnedReplyId: text('pinned_reply_id'),
+    /**
+     * The task this post became ("Ask for help", completion plan 9.10): its author posted the ask as a task. The post
+     * links to it (closed once the task is booked, done, canceled or expired) and the task back to its discussion.
+     * Set null if the task row ever goes away, so a task is never kept alive by a post.
+     */
+    taskId: text('task_id').references(() => tasks.id, { onDelete: 'set null' }),
     replyCount: integer('reply_count').notNull().default(0),
     thanksCount: integer('thanks_count').notNull().default(0),
     helpfulCount: integer('helpful_count').notNull().default(0),
@@ -46,6 +53,8 @@ export const communityPosts = pgTable(
     index('community_posts_helper_idx').on(t.helperUserId),
     // One thanks post per booking.
     uniqueIndex('community_posts_booking_idx').on(t.bookingId).where(sql`${t.bookingId} is not null`),
+    // One post per task it became.
+    uniqueIndex('community_posts_task_idx').on(t.taskId).where(sql`${t.taskId} is not null`),
   ],
 );
 
@@ -93,4 +102,22 @@ export const communityReactions = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.targetKind, t.targetId, t.userId, t.kind] }), index('community_reactions_user_idx').on(t.userId, t.createdAt)],
+);
+
+/**
+ * Saved posts (completion plan 9.10, Reddit-style): a member keeps a post to come back to. Private to them; read
+ * through the same rules as the feed (visible posts in their market, nobody they blocked or who blocked them).
+ */
+export const communitySaves = pgTable(
+  'community_saves',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    postId: text('post_id')
+      .notNull()
+      .references(() => communityPosts.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.postId] }), index('community_saves_user_idx').on(t.userId, t.createdAt)],
 );

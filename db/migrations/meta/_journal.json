@@ -449,6 +449,13 @@
       "when": 1794956641248,
       "tag": "0063_gainesville_opens",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1794963351110,
+      "tag": "0064_community_portal",
+      "breakpoints": true
     }
   ]
 }
