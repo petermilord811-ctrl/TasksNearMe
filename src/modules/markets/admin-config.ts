@@ -95,7 +95,7 @@ export async function publishPolicy(db: Db, staff: StaffActor, marketId: string,
   await db.transaction(async (tx) => {
     // One publisher at a time per market (versions are numbered in order).
     await tx.execute(sql`select id from ${marketPolicies} where market_id = ${market.id} for update`);
-    const [last] = await tx.select({ version: marketPolicies.version }).from(marketPolicies).where(eq(marketPolicies.marketId, market.id)).orderBy(desc(marketPolicies.version)).limit(1);
+    const [last] = await tx.select({ version: marketPolicies.version, plans: marketPolicies.plans }).from(marketPolicies).where(eq(marketPolicies.marketId, market.id)).orderBy(desc(marketPolicies.version)).limit(1);
     const version = (last?.version ?? 0) + 1;
     await tx.update(marketPolicies).set({ status: 'retired' }).where(and(eq(marketPolicies.marketId, market.id), eq(marketPolicies.status, 'published')));
     await tx.insert(marketPolicies).values({
@@ -115,6 +115,8 @@ export async function publishPolicy(db: Db, staff: StaffActor, marketId: string,
         maxLeadDays: values.maxLeadDays,
         minLeadHours: values.minLeadHours,
       },
+      // The plans (9.13) aren't on this form: they carry over, or a fee change would reset them to the defaults (aa's sweep #4).
+      plans: last?.plans ?? null,
       publishedBy: staff.id,
       publishedAt: at,
     });

@@ -53,8 +53,11 @@ export interface PlanMembership {
   plan: PlanCode;
   interval: PlanInterval;
   priceCents: Cents;
-  /** `past_due`: the last payment failed and Stripe is retrying; the plan still counts meanwhile. */
-  status: 'active' | 'past_due';
+  /**
+   * `past_due`: the last payment failed and Stripe is retrying; the plan still counts meanwhile. `unpaid`: it's on
+   * hold (unpaid, paused or not yet paid) and doesn't count until a payment goes through: say so, with Manage.
+   */
+  status: 'active' | 'past_due' | 'unpaid';
   /** When it renews, or ends when `cancelAtPeriodEnd`. */
   periodEnd: ISODateTime;
   cancelAtPeriodEnd: boolean;
@@ -92,6 +95,10 @@ export interface PlanPageData {
    * may not have it yet), `checkout_canceled` (nothing was charged).
    */
   notice?: 'subscribed' | 'checkout_canceled';
+  /** Back from paying for this plan, before Stripe's confirmation arrived: show it as confirming, with no buttons. */
+  confirming?: PlanCode;
+  /** The person has billing history (a customer at Stripe): Manage (invoices, the card) is offered even without a plan. */
+  portal?: true;
 }
 
 export interface PlanCheckoutInput {

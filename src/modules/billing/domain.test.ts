@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_FEES, DEFAULT_PLANS } from '@/modules/markets/policy-defaults';
-import { aiSearchLimit, bookingRebateCents, breakEvenMonthlyCents, estimatedRebateCents, feeRebateCents, periodEndAfter, planCounts, planOffers } from './domain';
+import { aiSearchLimit, bookingRebateCents, breakEvenMonthlyCents, estimatedRebateCents, feeRebateCents, periodEndAfter, planCounts, planOffers, RENEWAL_GRACE_MS, subscriptionLive } from './domain';
 
 const now = new Date('2026-11-18T15:00:00.000Z');
 const later = new Date('2026-12-18T15:00:00.000Z');
@@ -9,7 +9,7 @@ describe('plans (completion plan 9.13)', () => {
   it('count while active, trialing or past due (Stripe retrying) and paid up; not once canceled, unpaid or ended', () => {
     for (const status of ['active', 'trialing', 'past_due']) expect(planCounts({ status, currentPeriodEnd: later }, now)).toBe(true);
     for (const status of ['canceled', 'unpaid', 'incomplete', 'incomplete_expired', 'paused']) expect(planCounts({ status, currentPeriodEnd: later }, now)).toBe(false);
-    expect(planCounts({ status: 'active', currentPeriodEnd: now }, now)).toBe(false);
+    expect(planCounts({ status: 'active', currentPeriodEnd: now, cancelAtPeriodEnd: true }, now)).toBe(false);
   });
 
   it('pays back half the fee, within the month’s cap and what the platform still has', () => {
@@ -53,8 +53,19 @@ describe('plans (completion plan 9.13)', () => {
     expect(aiSearchLimit(DEFAULT_PLANS, ['plus', 'pro'])).toBe(100);
   });
 
-  it('starts a stand-in period of a month or a year', () => {
+  it('starts a stand-in period of a month or a year, on the month’s last day when the day doesn’t exist', () => {
     expect(periodEndAfter(now, 'month').toISOString()).toBe('2026-12-18T15:00:00.000Z');
     expect(periodEndAfter(now, 'year').toISOString()).toBe('2027-11-18T15:00:00.000Z');
+    expect(periodEndAfter(new Date('2027-01-31T12:00:00.000Z'), 'month').toISOString()).toBe('2027-02-28T12:00:00.000Z');
+    expect(periodEndAfter(new Date('2028-02-29T12:00:00.000Z'), 'year').toISOString()).toBe('2029-02-28T12:00:00.000Z');
+  });
+
+  it('keeps a renewing plan for 3 days past its period while Stripe’s renewal event arrives, but not one set to cancel', () => {
+    const ended = new Date(now.getTime() - 86_400_000);
+    expect(planCounts({ status: 'active', currentPeriodEnd: ended }, now)).toBe(true);
+    expect(planCounts({ status: 'active', currentPeriodEnd: ended, cancelAtPeriodEnd: true }, now)).toBe(false);
+    expect(planCounts({ status: 'active', currentPeriodEnd: new Date(now.getTime() - RENEWAL_GRACE_MS - 1) }, now)).toBe(false);
+    expect(subscriptionLive('unpaid')).toBe(true);
+    expect(subscriptionLive('canceled')).toBe(false);
   });
 });

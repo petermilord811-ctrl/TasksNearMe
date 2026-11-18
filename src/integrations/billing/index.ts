@@ -41,8 +41,12 @@ export interface BillingProvider {
   readonly name: 'stripe' | 'dev';
   createCustomer(input: { userId: string; email: string; name: string }): Promise<{ customerId: string }>;
   createCheckout(input: CheckoutInput): Promise<{ url: string; sessionId: string }>;
-  createPortal(input: { customerId: string; returnUrl: string }): Promise<{ url: string }>;
+  createPortal(input: { customerId: string; returnUrl: string; idempotencyKey: string }): Promise<{ url: string }>;
   getSubscription(subscriptionId: string): Promise<BillingSubscription>;
+  /** Every subscription of the customer, ended ones too: checked before a new checkout (aa's sweep #1). */
+  listSubscriptions(customerId: string): Promise<BillingSubscription[]>;
+  /** Stops it renewing: it ends with the period paid for (an account deletion was asked for). */
+  cancelAtPeriodEnd(subscriptionId: string): Promise<void>;
   /** Ends it now, with no refund (an account being deleted). */
   cancelNow(subscriptionId: string): Promise<void>;
 }
@@ -64,6 +68,10 @@ export function createDevBilling(): BillingProvider {
       return { url: returnUrl };
     },
     getSubscription: unsupported,
+    async listSubscriptions() {
+      return [];
+    },
+    async cancelAtPeriodEnd() {},
     async cancelNow() {},
   };
 }

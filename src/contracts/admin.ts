@@ -12,6 +12,7 @@ import type { PersonSummary } from './people';
 import type { PublicReviewView } from './profiles';
 import { CASE_RESOLUTIONS, CASE_STATUSES } from './status';
 import type { BookingStatus, CaseResolution, CaseStatus, CaseType, EarningsStatus } from './status';
+import type { EarningsKind } from './earnings';
 
 /**
  * Staff tools, part 1 (blueprint 02 §1.3, 03 §9; backlog B-052, B-054): the queues, the case list, and
@@ -317,7 +318,7 @@ export interface AdminBookingMoney {
   refundedCents: Cents;
   refunds: { id: string; amountCents: Cents; reason: string; status: 'pending' | 'succeeded' | 'failed'; createdAt: ISODateTime }[];
   /** Transfers to the helper, a client's tip (`tip`, UI-057) included. */
-  earnings: { kind: 'earnings' | 'reimbursement' | 'cancellation_compensation' | 'tip'; amountCents: Cents; status: EarningsStatus; transferredAt?: ISODateTime }[];
+  earnings: { kind: EarningsKind; amountCents: Cents; status: EarningsStatus; transferredAt?: ISODateTime }[];
 }
 
 /**

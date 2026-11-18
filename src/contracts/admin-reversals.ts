@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ActionHandler, FieldErrorCode } from './actions';
 import type { Cents, ISODateTime } from './common';
+import type { EarningsKind } from './earnings';
 
 /**
  * Taking back a helper's transfer (blueprint 08: finance only, reversals need a case link; completion plan
@@ -12,7 +13,7 @@ const code = (value: FieldErrorCode) => value;
 
 export interface AdminTransferRow {
   earningsId: string;
-  kind: 'earnings' | 'reimbursement' | 'cancellation_compensation' | 'tip';
+  kind: EarningsKind;
   transferredCents: Cents;
   reversedCents: Cents;
   /** What can still be taken back. */

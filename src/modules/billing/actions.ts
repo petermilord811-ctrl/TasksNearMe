@@ -6,9 +6,14 @@ import { createBillingProvider } from '@/integrations/billing';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
+import { rateLimited } from '@/platform/actions/results';
+import { consumeRateLimit } from '@/platform/rate-limit';
 import { openPortal, startCheckout } from './service';
 
 /** Server Actions behind `/app/plan` (src/contracts/billing.ts, completion plan 9.13). */
+
+/** Each opens a Stripe page: plenty for a person, little for a script (aa's sweep #9; Stripe's limit is shared with payments). */
+const BILLING_RULE = { limit: 10, windowSeconds: 10 * 60 };
 
 async function signedInUserId(): Promise<string | null> {
   const viewer = await getViewer();
@@ -19,7 +24,10 @@ async function signedInUserId(): Promise<string | null> {
 export async function subscribeToPlanAction(input: PlanCheckoutInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await startCheckout(db, createBillingProvider(), userId, input, await requestNow());
+  const now = await requestNow();
+  const limited = await consumeRateLimit(db, `billing:checkout:${userId}`, BILLING_RULE, now);
+  if (!limited.ok) return rateLimited(limited.retryAt);
+  const result = await startCheckout(db, createBillingProvider(), userId, input, now);
   if (result.ok) refresh();
   return result;
 }
@@ -28,7 +36,10 @@ export async function subscribeToPlanAction(input: PlanCheckoutInput): Promise<A
 export async function managePlanAction(): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  const result = await openPortal(db, createBillingProvider(), userId, await requestNow());
+  const now = await requestNow();
+  const limited = await consumeRateLimit(db, `billing:portal:${userId}`, BILLING_RULE, now);
+  if (!limited.ok) return rateLimited(limited.retryAt);
+  const result = await openPortal(db, createBillingProvider(), userId, now);
   if (result.ok) refresh();
   return result;
 }

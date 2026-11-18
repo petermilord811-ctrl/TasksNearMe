@@ -53,8 +53,8 @@ test('a new account subscribes to Plus, cancels it to the period’s end, keeps 
 
   // Subscribe (the stand-in starts it at once and comes back with the thank-you).
   await expect(async () => {
-    await plus.getByRole('button', { name: 'Subscribe to Plus: $4.99 a month' }).click({ timeout: 5_000 });
-    await expect(page).toHaveURL(/\/app\/plan\?checkout=done$/, { timeout: 10_000 });
+    await plus.getByRole('button', { name: 'Subscribe monthly: Plus, $4.99 a month' }).click({ timeout: 5_000 });
+    await expect(page).toHaveURL(/\/app\/plan\?checkout=done&plan=plus$/, { timeout: 10_000 });
   }).toPass({ timeout: 60_000 });
   await expect(page.getByRole('status').filter({ hasText: 'Thanks for subscribing' })).toBeVisible();
   await expect(plus.getByText('Your plan')).toBeVisible({ timeout: 15_000 });
@@ -63,7 +63,7 @@ test('a new account subscribes to Plus, cancels it to the period’s end, keeps 
   await expect(page.getByText(/^100 AI searches left this month/)).toBeVisible();
   // Pro can still be added; Plus can't be bought twice.
   await expect(plus.getByRole('button', { name: /Subscribe/ })).toHaveCount(0);
-  await expect(pro.getByRole('button', { name: 'Subscribe to Pro: $7.99 a month' })).toBeVisible();
+  await expect(pro.getByRole('button', { name: 'Subscribe monthly: Pro, $7.99 a month' })).toBeVisible();
 
   // Cancel: it stays until the period ends and won't renew. Then keep it.
   await plus.getByRole('button', { name: 'Manage or cancel' }).click();

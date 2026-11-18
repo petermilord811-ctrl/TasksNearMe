@@ -40,6 +40,8 @@ function MembershipStatus({ membership, offer }: { membership: PlanMembership; o
   const t = useTranslations('plan');
   const { formatDate } = useFormat();
   const name = t(`plans.${membership.plan}.name`);
+  // On hold (unpaid, paused): it doesn't count until a payment goes through; Manage fixes the card.
+  if (membership.status === 'unpaid') return <div className="rounded-2xl bg-secondary/60 p-4 text-sm"><p className="flex items-start gap-2 font-medium text-destructive"><CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('current.unpaid', { plan: name })}</p></div>;
   return <div className="space-y-1.5 rounded-2xl bg-secondary/60 p-4 text-sm">
     {membership.status === 'past_due' && <p className="flex items-start gap-2 font-medium text-destructive"><CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('current.pastDue', { plan: name })}</p>}
     <p>{membership.cancelAtPeriodEnd ? t('current.ends', { date: formatDate(membership.periodEnd, { withYear: true }) }) : t('current.renews', { date: formatDate(membership.periodEnd, { withYear: true }), price: money(membership.priceCents) })}</p>
@@ -61,12 +63,13 @@ function PlanCard({ offer, membership, estimate, data, handlers }: { offer: Plan
         <p className="text-sm font-medium text-muted-foreground">{t(`plans.${offer.plan}.for`)}</p>
         <h2 id={`plan-${offer.plan}`} className="font-display text-2xl font-semibold tracking-[-0.02em]">{name}</h2>
       </div>
-      {membership && <Badge>{t('current.badge')}</Badge>}
+      {membership && membership.status !== 'unpaid' && <Badge>{t('current.badge')}</Badge>}
     </div>
     <p className="tabular-nums"><span className="font-display text-3xl font-semibold tracking-[-0.02em]">{t('price.month', { price: money(offer.monthlyCents) })}</span> <span className="text-muted-foreground">{t('price.year', { price: money(offer.yearlyCents) })}</span></p>
     <ul className="space-y-2.5 text-[15px]">
       <li className="flex items-start gap-2.5"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-success" />{t(`plans.${offer.plan}.rebate`, { share, cap: money(offer.rebateMonthlyCapCents) })}</li>
-      <li className="flex items-start gap-2.5"><Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />{t(`plans.${offer.plan}.ai`, { count: offer.aiSearchesPerMonth })}</li>
+      {/* AI search only where Claude is set up (aa's sweep #8): the plan still pays back its fees without it. */}
+      {data.aiSearch.reason !== 'ai_off' && <li className="flex items-start gap-2.5"><Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />{t(`plans.${offer.plan}.ai`, { count: offer.aiSearchesPerMonth })}</li>}
     </ul>
     <p className="text-sm text-muted-foreground">{t(`plans.${offer.plan}.breakEven`, { amount: money(offer.breakEvenMonthlyCents) })}</p>
     {estimate && <p className="rounded-2xl border border-primary/20 bg-primary/[0.06] p-3 text-sm tabular-nums">{t(`estimate.${offer.plan}`, { count: estimate.bookings, amount: money(estimate.savedCents) })}</p>}
@@ -77,13 +80,30 @@ function PlanCard({ offer, membership, estimate, data, handlers }: { offer: Plan
           <Button type="button" variant="outline" disabled={pending} onClick={() => run(handlers.onManage)}>{t('manage')}</Button>
           <p className="text-xs text-muted-foreground">{t('manageHint')}</p>
         </div>
+      ) : data.confirming === offer.plan ? (
+        // Paid, and Stripe's confirmation is on its way: no second checkout meanwhile (aa's sweep #1).
+        <p role="status" className="text-sm text-muted-foreground">{t('current.confirming', { plan: name })}</p>
       ) : (
         !data.unavailable && <>
-          <Button type="button" disabled={pending} aria-label={t('subscribe.label', { plan: name, price: t('price.month', { price: priceOf('month') }) })} onClick={() => subscribe('month')}>{t('subscribe.month')}</Button>
-          <Button type="button" variant="outline" disabled={pending} aria-label={t('subscribe.label', { plan: name, price: priceOf('year') })} onClick={() => subscribe('year')}>{t('subscribe.year')}</Button>
+          {/* The name starts with the visible words, then says which plan and price (WCAG 2.5.3, aa's sweep #11). */}
+          <Button type="button" disabled={pending} aria-label={t('subscribe.label', { action: t('subscribe.month'), plan: name, price: t('price.month', { price: priceOf('month') }) })} onClick={() => subscribe('month')}>{t('subscribe.month')}</Button>
+          <Button type="button" variant="outline" disabled={pending} aria-label={t('subscribe.label', { action: t('subscribe.year'), plan: name, price: t('price.yearOnly', { price: priceOf('year') }) })} onClick={() => subscribe('year')}>{t('subscribe.year')}</Button>
         </>
       )}
     </div>
+  </section>;
+}
+
+/** A former subscriber's invoices and card, on Stripe's portal (aa's sweep #7). */
+function BillingHistory({ onManage }: { onManage: PlanHandlers['onManage'] }) {
+  const t = useTranslations('plan');
+  const { pending, run } = useAction();
+  return <section aria-labelledby="plan-billing" className={cn(cardClass, 'flex flex-wrap items-center justify-between gap-3')}>
+    <div className="min-w-0 space-y-1">
+      <h2 id="plan-billing" className="text-lg font-semibold">{t('billing.title')}</h2>
+      <p className="text-[15px] text-muted-foreground">{t('billing.body')}</p>
+    </div>
+    <Button type="button" variant="outline" disabled={pending} onClick={() => run(onManage)}>{t('billing.open')}</Button>
   </section>;
 }
 
@@ -115,6 +135,7 @@ export function PlanScreen({ data, handlers }: { data: PlanPageData; handlers: P
             : t('aiSearch.used', { date: data.aiSearch.resetsAt ? formatDate(data.aiSearch.resetsAt) : '' })}
       </p>
     </section>
+    {data.portal && data.memberships.length === 0 && <BillingHistory onManage={handlers.onManage} />}
     <section aria-labelledby="plan-terms" className={cn(cardClass, 'space-y-3')}>
       <h2 id="plan-terms" className="text-lg font-semibold">{t('terms.title')}</h2>
       <ul className="space-y-2 text-[15px] text-muted-foreground">

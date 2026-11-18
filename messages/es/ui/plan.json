@@ -23,19 +23,22 @@
   },
   "price": {
     "month": "{price} al mes",
-    "year": "o {price} al año"
+    "year": "o {price} al año",
+    "yearOnly": "{price} al año"
   },
   "subscribe": {
     "month": "Suscribirme por mes",
     "year": "Suscribirme por año",
-    "label": "Suscribirme a {plan}: {price}"
+    "label": "{action}: {plan}, {price}"
   },
   "current": {
     "badge": "Tu plan",
     "renews": "Se renueva el {date} por {price}.",
     "ends": "Termina el {date} y no se renovará.",
     "pastDue": "Tu último pago no se completó. Stripe lo intentará de nuevo; actualiza tu tarjeta en Administrar para conservar {plan}.",
-    "rebated": "Devuelto este mes: {amount} de {cap}."
+    "rebated": "Devuelto este mes: {amount} de {cap}.",
+    "unpaid": "Tu {plan} está en pausa hasta que se complete un pago. Actualiza tu tarjeta en Administrar para reactivarlo.",
+    "confirming": "Confirmando tu {plan} con Stripe. Actualiza la página en unos segundos."
   },
   "manage": "Administrar o cancelar",
   "manageHint": "Cancela, cambia tu tarjeta o consulta tus facturas en la página segura de Stripe.",
@@ -66,5 +69,10 @@
     "title": "Planes opcionales",
     "intro": "Todo lo anterior funciona sin un plan. Para quienes reservan o ayudan a menudo, un plan devuelve parte de la tarifa cada mes, hasta un límite.",
     "link": "Ver planes"
+  },
+  "billing": {
+    "title": "Historial de facturación",
+    "body": "Consulta tus facturas y la tarjeta registrada en la página segura de Stripe.",
+    "open": "Abrir facturación"
   }
 }

@@ -91,9 +91,16 @@ export function createStripeBilling(config: { secretKey: string; fetch?: typeof 
       const session = await stripe.request('POST', '/checkout/sessions', params, input.idempotencyKey);
       return { url: str(session.url)!, sessionId: str(session.id)! };
     },
-    async createPortal({ customerId, returnUrl }) {
-      const session = await stripe.request('POST', '/billing_portal/sessions', new URLSearchParams({ customer: customerId, return_url: returnUrl, configuration: await portalConfigurationId() }));
+    async createPortal({ customerId, returnUrl, idempotencyKey }) {
+      const session = await stripe.request('POST', '/billing_portal/sessions', new URLSearchParams({ customer: customerId, return_url: returnUrl, configuration: await portalConfigurationId() }), idempotencyKey);
       return { url: str(session.url)! };
+    },
+    async listSubscriptions(customerId) {
+      const list = await stripe.request('GET', '/subscriptions', new URLSearchParams({ customer: customerId, status: 'all', limit: '100' }));
+      return ((list.data as StripeObject[] | undefined) ?? []).map(subscriptionFromStripe);
+    },
+    async cancelAtPeriodEnd(subscriptionId) {
+      await stripe.request('POST', `/subscriptions/${encodeURIComponent(subscriptionId)}`, new URLSearchParams({ cancel_at_period_end: 'true' }), `cancel-at-period-end:${subscriptionId}`);
     },
     async getSubscription(subscriptionId) {
       return subscriptionFromStripe(await stripe.request('GET', `/subscriptions/${encodeURIComponent(subscriptionId)}`));

@@ -23,19 +23,22 @@
   },
   "price": {
     "month": "{price} a month",
-    "year": "or {price} a year"
+    "year": "or {price} a year",
+    "yearOnly": "{price} a year"
   },
   "subscribe": {
     "month": "Subscribe monthly",
     "year": "Subscribe yearly",
-    "label": "Subscribe to {plan}: {price}"
+    "label": "{action}: {plan}, {price}"
   },
   "current": {
     "badge": "Your plan",
     "renews": "Renews {date} at {price}.",
     "ends": "Ends {date} and won't renew.",
     "pastDue": "Your last payment didn't go through. Stripe will try again; update your card in Manage to keep {plan}.",
-    "rebated": "Paid back this month: {amount} of {cap}."
+    "rebated": "Paid back this month: {amount} of {cap}.",
+    "unpaid": "Your {plan} is on hold until a payment goes through. Update your card in Manage to restart it.",
+    "confirming": "Confirming your {plan} with Stripe. Refresh the page in a few seconds."
   },
   "manage": "Manage or cancel",
   "manageHint": "Cancel, change your card or see invoices on Stripe's secure page.",
@@ -66,5 +69,10 @@
     "title": "Optional plans",
     "intro": "Everything above works without a plan. For people who book or help often, a plan pays part of the fee back each month, up to a cap.",
     "link": "See plans"
+  },
+  "billing": {
+    "title": "Billing history",
+    "body": "See your invoices and the card on file on Stripe's secure page.",
+    "open": "Open billing"
   }
 }

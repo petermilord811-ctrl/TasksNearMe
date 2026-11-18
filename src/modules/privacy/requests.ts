@@ -34,7 +34,7 @@ import { renderAccountDeletedNotice } from './emails';
 import { devHelpersOn } from '@/shared/dev-helpers';
 import { createBillingProvider } from '@/integrations/billing';
 import { aiUsage } from '@/modules/billing/schema';
-import { endSubscriptionsOf } from '@/modules/billing/service';
+import { endSubscriptionsOf, stopRenewalsOf } from '@/modules/billing/service';
 
 /**
  * Privacy requests (blueprint 08 §5; completion plan 3.3). A copy of the data is prepared by the job runner,
@@ -121,6 +121,8 @@ export async function requestAccountDeletion(db: Db, userId: string, now: Date):
     await db.insert(privacyRequests).values({ id: newId('prv'), userId, kind: 'deletion', status: 'requested', scheduledFor: new Date(now.getTime() + DELETION_GRACE_DAYS * DAY_MS), createdAt: now });
     await db.insert(auditLog).values({ id: newId('aud'), actorId: userId, actorRole: 'user', action: 'account.deletion_requested', targetType: 'user', targetId: userId });
   }
+  // Plans (9.13): nothing renews while the deletion waits (aa's sweep #6); each ends with the period paid for.
+  await stopRenewalsOf(db, createBillingProvider(), userId, now);
   return { ok: true, code: 'submitted' };
 }
 

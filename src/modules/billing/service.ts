@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { PLAN_CODES, PLAN_INTERVALS, routes, type AiSearchAccess, type AiSearchBlock, type ActionResult, type Cents, type PlanCheckoutInput, type PlanCode, type PlanEstimate, type PlanMembership, type PlanPageData } from '@/contracts';
 import { aiWritingSetUp } from '@/integrations/ai';
-import type { BillingProvider } from '@/integrations/billing';
+import type { BillingProvider, BillingSubscription } from '@/integrations/billing';
 import { subscriptionFromStripe } from '@/integrations/billing/stripe-billing';
 import { appUrl } from '@/integrations/oauth';
 import type { PaymentProvider } from '@/integrations/payments';
@@ -19,7 +19,7 @@ import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { marketDayKey } from '@/shared/format';
-import { aiSearchLimit, bookingRebateCents, estimatedRebateCents, periodEndAfter, planCounts, planOffers, PLAN_PRODUCT_NAMES } from './domain';
+import { aiSearchLimit, bookingRebateCents, estimatedRebateCents, periodEndAfter, planCounts, planOffers, PLAN_PRODUCT_NAMES, subscriptionLive } from './domain';
 import { aiUsage, billingCustomers, subscriptions } from './schema';
 
 /**
@@ -46,7 +46,7 @@ export async function versionPlans(db: Db, policyVersionId: string): Promise<Pla
 
 // ---- Who holds what -------------------------------------------------------------------------------------------
 
-/** The person's plans that count now, by plan (the latest subscription of each). */
+/** The person's plans that count now, by plan (the latest subscription of each; a renewing one gets a short grace). */
 export async function activePlans(db: Db, userId: string, now: Date): Promise<Map<PlanCode, SubscriptionRow>> {
   const rows = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).orderBy(desc(subscriptions.currentPeriodEnd));
   const held = new Map<PlanCode, SubscriptionRow>();
@@ -55,6 +55,12 @@ export async function activePlans(db: Db, userId: string, now: Date): Promise<Ma
     if (!held.has(plan) && planCounts(row, now)) held.set(plan, row);
   }
   return held;
+}
+
+/** Subscriptions that haven't ended (counting, or waiting on a payment), newest first. */
+async function liveRows(db: Pick<Db, 'select'>, userId: string): Promise<SubscriptionRow[]> {
+  const rows = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).orderBy(desc(subscriptions.currentPeriodEnd));
+  return rows.filter((row) => subscriptionLive(row.status));
 }
 
 async function homeMarketOf(db: Db, userId: string) {
@@ -104,6 +110,18 @@ export async function consumeAiSearch(db: Db, userId: string, now: Date): Promis
   return { ok: true, remaining: Math.max(0, state.limit - row.count) };
 }
 
+/**
+ * Gives back the search just counted when it couldn't run (Claude unavailable, or it refused): an outage must not use
+ * up a person's month (aa's sweep #3). Never below zero.
+ */
+export async function releaseAiSearch(db: Db, userId: string, now: Date): Promise<void> {
+  const period = marketDayKey(now, await userTimeZone(db, userId)).slice(0, 7);
+  await db
+    .update(aiUsage)
+    .set({ count: sql`greatest(${aiUsage.count} - 1, 0)`, updatedAt: now })
+    .where(and(eq(aiUsage.userId, userId), eq(aiUsage.feature, AI_SEARCH), eq(aiUsage.period, period)));
+}
+
 // ---- Checkout and the portal ----------------------------------------------------------------------------------
 
 const isPlan = (value: unknown): value is PlanCode => (PLAN_CODES as readonly unknown[]).includes(value);
@@ -122,16 +140,23 @@ async function customerFor(db: Db, provider: BillingProvider, user: { id: string
 
 /**
  * Starts a subscription: Stripe Checkout (its URL to go to), or, with the stand-in, the plan at once (back to the
- * plan page). Refused while the person already holds that plan.
+ * plan page). Refused while the person has that plan live, here or at Stripe: a checkout that finished before its
+ * webhook arrived, or one in another tab, must not become a second paid subscription (aa's sweep #1). What Stripe
+ * holds is mirrored on the way.
  */
 export async function startCheckout(db: Db, provider: BillingProvider | null, userId: string, input: PlanCheckoutInput, now: Date): Promise<ActionResult> {
   if (!provider || !isPlan(input?.plan) || !isInterval(input?.interval)) return { ok: false, code: 'not_allowed' };
   const user = await homeMarketOf(db, userId);
   if (!user) return { ok: false, code: 'not_allowed' };
-  if ((await activePlans(db, userId, now)).has(input.plan)) return { ok: false, code: 'not_allowed' };
+  if ((await liveRows(db, userId)).some((row) => row.plan === input.plan)) return { ok: false, code: 'not_allowed' };
   const { plans } = await marketPlans(db, user.marketId);
   const priceCents = input.interval === 'year' ? plans[input.plan].yearlyCents : plans[input.plan].monthlyCents;
   const customerId = await customerFor(db, provider, { id: userId, email: user.email, name: user.name });
+  if (provider.name === 'stripe') {
+    const remote = await provider.listSubscriptions(customerId);
+    for (const sub of remote) await syncLocked(db, sub, now);
+    if (remote.some((sub) => sub.metadata.plan === input.plan && subscriptionLive(sub.status))) return { ok: false, code: 'not_allowed' };
+  }
 
   if (provider.name === 'dev') {
     const id = newId('sub');
@@ -150,7 +175,7 @@ export async function startCheckout(db: Db, provider: BillingProvider | null, us
       updatedAt: now,
     });
     await db.insert(auditLog).values({ id: newId('aud'), actorId: userId, actorRole: 'user', action: 'billing.subscribed', targetType: 'subscription', targetId: id, metadata: { plan: input.plan, interval: input.interval, priceCents, provider: 'dev' } });
-    return { ok: true, code: 'updated', redirectTo: `${routes.app.plan()}?checkout=done` };
+    return { ok: true, code: 'updated', redirectTo: `${routes.app.plan()}?checkout=done&plan=${input.plan}` };
   }
 
   const base = `${appUrl()}${routes.app.plan()}`;
@@ -162,7 +187,7 @@ export async function startCheckout(db: Db, provider: BillingProvider | null, us
     priceCents,
     productName: PLAN_PRODUCT_NAMES[input.plan],
     marketId: user.marketId,
-    successUrl: `${base}?checkout=done`,
+    successUrl: `${base}?checkout=done&plan=${input.plan}`,
     cancelUrl: `${base}?checkout=canceled`,
     // A double click within the minute opens the same session.
     idempotencyKey: `checkout:${userId}:${input.plan}:${input.interval}:${Math.floor(now.getTime() / 60_000)}`,
@@ -171,20 +196,27 @@ export async function startCheckout(db: Db, provider: BillingProvider | null, us
 }
 
 /**
- * Manage or cancel: Stripe's customer portal. The stand-in has no portal: it cancels the person's plans at the end of
- * their period, or, when they're already cancelling, keeps them (what the portal's two buttons do), and comes back.
+ * Manage or cancel: Stripe's customer portal, for anyone with a billing customer (an unpaid or paused plan's card, a
+ * former subscriber's invoices: aa's sweep #7). The stand-in has no portal: it cancels the person's plans at the end
+ * of their period, or, when they're already cancelling, keeps them (what the portal's two buttons do), and comes back.
  */
 export async function openPortal(db: Db, provider: BillingProvider | null, userId: string, now: Date): Promise<ActionResult> {
   if (!provider) return { ok: false, code: 'not_allowed' };
-  const held = [...(await activePlans(db, userId, now)).values()];
   const [customer] = await db.select().from(billingCustomers).where(eq(billingCustomers.userId, userId)).limit(1);
-  if (!customer || held.length === 0) return { ok: false, code: 'not_allowed' };
+  if (!customer || customer.provider !== provider.name) return { ok: false, code: 'not_allowed' };
   if (provider.name === 'dev') {
+    const held = [...(await activePlans(db, userId, now)).values()];
+    if (held.length === 0) return { ok: false, code: 'not_allowed' };
     const cancel = held.some((row) => !row.cancelAtPeriodEnd);
     await db.update(subscriptions).set({ cancelAtPeriodEnd: cancel, updatedAt: now }).where(inArray(subscriptions.id, held.map((row) => row.id)));
     return { ok: true, code: 'updated', redirectTo: routes.app.plan() };
   }
-  const portal = await provider.createPortal({ customerId: customer.providerCustomerId, returnUrl: `${appUrl()}${routes.app.plan()}` });
+  const portal = await provider.createPortal({
+    customerId: customer.providerCustomerId,
+    returnUrl: `${appUrl()}${routes.app.plan()}`,
+    // A double click within the minute opens the same session.
+    idempotencyKey: `portal:${userId}:${Math.floor(now.getTime() / 60_000)}`,
+  });
   return { ok: true, code: 'updated', redirectTo: portal.url };
 }
 
@@ -201,7 +233,7 @@ export function isBillingEvent(type: string | null): boolean {
  * and events out of order all end in Stripe's current state. Subscriptions that aren't ours (no `userId` or `plan` in
  * the metadata, or an unknown person) are ignored.
  */
-export async function syncSubscription(db: Db, sub: ReturnType<typeof subscriptionFromStripe>, now: Date): Promise<boolean> {
+export async function syncSubscription(db: Pick<Db, 'select' | 'insert' | 'update'>, sub: ReturnType<typeof subscriptionFromStripe>, now: Date): Promise<boolean> {
   const { userId, plan, marketId } = sub.metadata;
   if (!userId || !isPlan(plan) || !sub.id) return false;
   const [user] = await db.select({ id: users.id, marketId: users.homeMarketId }).from(users).where(eq(users.id, userId)).limit(1);
@@ -234,6 +266,17 @@ export async function syncSubscription(db: Db, sub: ReturnType<typeof subscripti
   return true;
 }
 
+/**
+ * One subscription at a time (aa's sweep #5): the lock is taken before Stripe is read, so two events racing for the
+ * same subscription write in turn, each with what Stripe says once it holds the lock, and the first sight inserts once.
+ */
+async function syncLocked(db: Db, sub: BillingSubscription, now: Date): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`billing-sub:${sub.id}`}))`);
+    return syncSubscription(tx, sub, now);
+  });
+}
+
 export async function handleBillingWebhook(db: Db, provider: BillingProvider | null, input: { payload: string; signature: string | null; secret: string }, now: Date): Promise<{ status: number; body: { ok: boolean; ignored?: boolean } }> {
   if (!verifyStripeSignature({ payload: input.payload, header: input.signature, secret: input.secret, now })) return { status: 400, body: { ok: false } };
   let event: { type?: unknown; data?: { object?: Record<string, unknown> } };
@@ -246,16 +289,41 @@ export async function handleBillingWebhook(db: Db, provider: BillingProvider | n
   const subscriptionId =
     event.type === 'checkout.session.completed' ? (object.mode === 'subscription' && typeof object.subscription === 'string' ? object.subscription : null) : typeof object.id === 'string' ? object.id : null;
   if (!provider || provider.name !== 'stripe' || !subscriptionId) return { status: 200, body: { ok: true, ignored: true } };
-  const synced = await syncSubscription(db, await provider.getSubscription(subscriptionId), now);
+  const synced = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`billing-sub:${subscriptionId}`}))`);
+    return syncSubscription(tx, await provider.getSubscription(subscriptionId), now);
+  });
   return { status: 200, body: synced ? { ok: true } : { ok: true, ignored: true } };
 }
 
-/** An account being deleted: its subscriptions end now (no renewal charges after it's gone). */
+/**
+ * An account being deleted: every subscription that hasn't ended ends now, counting or not (unpaid, paused, a second
+ * one at Stripe), so nothing renews or charges after the account is gone (aa's sweep #1, #6).
+ */
 export async function endSubscriptionsOf(db: Db, provider: BillingProvider | null, userId: string, now: Date): Promise<void> {
-  const held = [...(await activePlans(db, userId, now)).values()];
-  for (const row of held) {
-    if (row.provider === 'stripe' && provider?.name === 'stripe') await provider.cancelNow(row.providerSubscriptionId);
+  const stripe = provider?.name === 'stripe' ? provider : null;
+  const ids = new Set<string>();
+  if (stripe) {
+    const [customer] = await db.select().from(billingCustomers).where(and(eq(billingCustomers.userId, userId), eq(billingCustomers.provider, 'stripe'))).limit(1);
+    if (customer) for (const sub of await stripe.listSubscriptions(customer.providerCustomerId)) if (subscriptionLive(sub.status)) ids.add(sub.id);
+  }
+  for (const row of await liveRows(db, userId)) {
+    if (row.provider === 'stripe') ids.add(row.providerSubscriptionId);
     await db.update(subscriptions).set({ status: 'canceled', cancelAtPeriodEnd: false, endedAt: now, updatedAt: now }).where(eq(subscriptions.id, row.id));
+  }
+  if (stripe) for (const id of ids) await stripe.cancelNow(id);
+}
+
+/**
+ * A deletion was asked for: nothing renews while it waits (7 days, longer while something blocks it), so no new
+ * period is charged and then lost (aa's sweep #6). Each plan ends with the period paid for; withdrawing the deletion
+ * leaves them cancelling, and the person can keep them in the portal.
+ */
+export async function stopRenewalsOf(db: Db, provider: BillingProvider | null, userId: string, now: Date): Promise<void> {
+  for (const row of await liveRows(db, userId)) {
+    if (row.cancelAtPeriodEnd) continue;
+    if (row.provider === 'stripe' && provider?.name === 'stripe') await provider.cancelAtPeriodEnd(row.providerSubscriptionId);
+    await db.update(subscriptions).set({ cancelAtPeriodEnd: true, updatedAt: now }).where(eq(subscriptions.id, row.id));
   }
 }
 
@@ -365,22 +433,45 @@ async function estimatesFor(db: Db, userId: string, plans: PlanPolicy, now: Date
   return estimates;
 }
 
-export async function planPageData(db: Db, provider: BillingProvider | null, userId: string, mode: 'client' | 'helper', now: Date, notice?: PlanPageData['notice']): Promise<PlanPageData | null> {
+/**
+ * `/app/plan`. `returned`: Stripe's return (`checkout=done&plan=…` or `checkout=canceled`); a plan just paid for shows as
+ * confirming, with no buttons, until its webhook lands (aa's sweep #1).
+ */
+export async function planPageData(
+  db: Db,
+  provider: BillingProvider | null,
+  userId: string,
+  mode: 'client' | 'helper',
+  now: Date,
+  returned: { notice?: PlanPageData['notice']; plan?: string } = {},
+): Promise<PlanPageData | null> {
   const user = await homeMarketOf(db, userId);
   if (!user) return null;
-  const [{ plans, fees }, held, timeZone, aiSearch] = await Promise.all([marketPlans(db, user.marketId), activePlans(db, userId, now), userTimeZone(db, userId), aiSearchAccess(db, userId, now)]);
+  const [{ plans, fees }, held, live, timeZone, aiSearch, [customer]] = await Promise.all([
+    marketPlans(db, user.marketId),
+    activePlans(db, userId, now),
+    liveRows(db, userId),
+    userTimeZone(db, userId),
+    aiSearchAccess(db, userId, now),
+    db.select({ provider: billingCustomers.provider }).from(billingCustomers).where(eq(billingCustomers.userId, userId)).limit(1),
+  ]);
   const monthStart = marketMonthStart(now, timeZone);
+  // The plans that count, then any that wait on a payment (unpaid, paused, incomplete): those say so, with Manage.
+  const shown = [...held.values()];
+  for (const row of live) if (!shown.some((other) => other.plan === row.plan)) shown.push(row);
   const memberships: PlanMembership[] = await Promise.all(
-    [...held.values()].map(async (row) => ({
+    shown.map(async (row) => ({
       plan: row.plan as PlanCode,
       interval: row.interval === 'year' ? ('year' as const) : ('month' as const),
       priceCents: row.priceCents,
-      status: row.status === 'past_due' ? ('past_due' as const) : ('active' as const),
+      status: !held.has(row.plan as PlanCode) ? ('unpaid' as const) : row.status === 'past_due' ? ('past_due' as const) : ('active' as const),
       periodEnd: row.currentPeriodEnd.toISOString(),
       cancelAtPeriodEnd: row.cancelAtPeriodEnd,
       rebatedThisMonthCents: await rebatedThisMonth(db, userId, row.plan as PlanCode, monthStart),
     })),
   );
+  const notice = returned.notice;
+  const confirming = notice === 'subscribed' && isPlan(returned.plan) && !memberships.some((membership) => membership.plan === returned.plan) ? returned.plan : undefined;
   return {
     offers: planOffers(plans, fees, mode === 'helper' ? 'pro' : 'plus'),
     memberships,
@@ -389,5 +480,7 @@ export async function planPageData(db: Db, provider: BillingProvider | null, use
     aiSearch,
     ...(provider ? {} : { unavailable: true as const }),
     ...(notice ? { notice } : {}),
+    ...(confirming ? { confirming } : {}),
+    ...(provider && customer?.provider === provider.name ? { portal: true as const } : {}),
   };
 }

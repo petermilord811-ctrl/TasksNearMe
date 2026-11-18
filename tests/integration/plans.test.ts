@@ -1,11 +1,11 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createDevBilling } from '@/integrations/billing';
+import { createDevBilling, type BillingProvider, type BillingSubscription } from '@/integrations/billing';
 import { subscriptionFromStripe } from '@/integrations/billing/stripe-billing';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
 import { aiUsage, billingCustomers, subscriptions } from '@/modules/billing/schema';
-import { activePlans, aiSearchAccess, endSubscriptionsOf, openPortal, planPageData, startCheckout, syncSubscription, consumeAiSearch } from '@/modules/billing/service';
+import { activePlans, aiSearchAccess, consumeAiSearch, endSubscriptionsOf, openPortal, planPageData, releaseAiSearch, startCheckout, stopRenewalsOf, syncSubscription } from '@/modules/billing/service';
 import { confirmBooking, getBookingConfirmPage } from '@/modules/bookings/confirm';
 import { bookings } from '@/modules/bookings/schema';
 import { earnings } from '@/modules/earnings/schema';
@@ -66,7 +66,7 @@ afterAll(async () => {
 
 describe('plans', () => {
   it('subscribes at once with the stand-in, refuses the same plan twice, and lists it on the page', async () => {
-    expect(await startCheckout(db, billing, CLIENT, { plan: 'plus', interval: 'month' }, now)).toEqual({ ok: true, code: 'updated', redirectTo: '/app/plan?checkout=done' });
+    expect(await startCheckout(db, billing, CLIENT, { plan: 'plus', interval: 'month' }, now)).toEqual({ ok: true, code: 'updated', redirectTo: '/app/plan?checkout=done&plan=plus' });
     expect(await startCheckout(db, billing, CLIENT, { plan: 'plus', interval: 'year' }, now)).toEqual({ ok: false, code: 'not_allowed' });
     expect(await startCheckout(db, null, CLIENT, { plan: 'pro', interval: 'month' }, now)).toEqual({ ok: false, code: 'not_allowed' });
     expect([...(await activePlans(db, CLIENT, now)).keys()]).toEqual(['plus']);
@@ -145,6 +145,68 @@ describe('plans', () => {
     expect(await db.select().from(subscriptions).where(eq(subscriptions.providerSubscriptionId, 'sub_test_plans'))).toHaveLength(1);
     expect(await syncSubscription(db, subscriptionFromStripe({ id: 'sub_other', status: 'active', metadata: { plan: 'pro' } }), now)).toBe(false);
     expect(await syncSubscription(db, subscriptionFromStripe({ id: 'sub_other', status: 'active', metadata: { userId: 'usr_nobody', plan: 'pro' } }), now)).toBe(false);
+  });
+
+  it('gives back a search that couldn’t run, never below zero', async () => {
+    const before = (await aiSearchAccess(db, HELPER, now)).remaining ?? 0;
+    expect(await consumeAiSearch(db, HELPER, now)).toMatchObject({ ok: true });
+    await releaseAiSearch(db, HELPER, now);
+    expect((await aiSearchAccess(db, HELPER, now)).remaining).toBe(before);
+    await releaseAiSearch(db, CLIENT, now);
+    const [row] = await db.select({ count: aiUsage.count }).from(aiUsage).where(eq(aiUsage.userId, CLIENT));
+    expect(row?.count ?? 0).toBeGreaterThanOrEqual(0);
+  });
+
+  it('with Stripe: a plan live at Stripe (paid before its webhook) blocks a second checkout and shows up mirrored', async () => {
+    const live: BillingSubscription = { id: 'sub_fake_live', customerId: 'cus_fake', status: 'active', currentPeriodEnd: new Date(now.getTime() + 20 * 86_400_000), cancelAtPeriodEnd: false, endedAt: null, interval: 'month', unitAmountCents: 499, metadata: { userId: CLIENT, plan: 'plus', interval: 'month', marketId: 'mkt_austin' } };
+    const canceled: string[] = [];
+    const renewalsStopped: string[] = [];
+    let checkouts = 0;
+    const stripe: BillingProvider = {
+      name: 'stripe',
+      createCustomer: async () => ({ customerId: 'cus_fake' }),
+      createCheckout: async () => {
+        checkouts += 1;
+        return { url: 'https://checkout.stripe.test/cs', sessionId: 'cs_fake' };
+      },
+      createPortal: async () => ({ url: 'https://billing.stripe.test/p' }),
+      getSubscription: async () => live,
+      listSubscriptions: async () => [live],
+      cancelAtPeriodEnd: async (id) => {
+        renewalsStopped.push(id);
+      },
+      cancelNow: async (id) => {
+        canceled.push(id);
+      },
+    };
+    // The client's dev plans from the earlier tests are gone first, so only Stripe's matters here.
+    await db.delete(subscriptions).where(eq(subscriptions.userId, CLIENT));
+    await db.delete(billingCustomers).where(eq(billingCustomers.userId, CLIENT));
+    expect(await startCheckout(db, stripe, CLIENT, { plan: 'plus', interval: 'year' }, now)).toEqual({ ok: false, code: 'not_allowed' });
+    expect(checkouts).toBe(0);
+    expect((await activePlans(db, CLIENT, now)).get('plus')).toMatchObject({ provider: 'stripe', providerSubscriptionId: 'sub_fake_live' });
+    // Another plan still opens Checkout.
+    expect(await startCheckout(db, stripe, CLIENT, { plan: 'pro', interval: 'month' }, now)).toEqual({ ok: true, code: 'updated', redirectTo: 'https://checkout.stripe.test/cs' });
+    // The page: Plus is held; back from paying for Pro before its webhook, Pro shows as confirming.
+    const page = await planPageData(db, stripe, CLIENT, 'client', now, { notice: 'subscribed', plan: 'pro' });
+    expect(page?.confirming).toBe('pro');
+    expect(page?.portal).toBe(true);
+    // A deletion asked for: nothing renews meanwhile. Done: everything live ends at Stripe.
+    await stopRenewalsOf(db, stripe, CLIENT, now);
+    expect(renewalsStopped).toEqual(['sub_fake_live']);
+    expect((await activePlans(db, CLIENT, now)).get('plus')?.cancelAtPeriodEnd).toBe(true);
+    await endSubscriptionsOf(db, stripe, CLIENT, now);
+    expect(canceled).toEqual(['sub_fake_live']);
+    expect((await activePlans(db, CLIENT, now)).size).toBe(0);
+  });
+
+  it('shows an unpaid plan as on hold, with Manage, and not as held', async () => {
+    await syncSubscription(db, { id: 'sub_fake_unpaid', customerId: 'cus_fake', status: 'unpaid', currentPeriodEnd: new Date(now.getTime() + 86_400_000), cancelAtPeriodEnd: false, endedAt: null, interval: 'month', unitAmountCents: 799, metadata: { userId: CLIENT, plan: 'pro', interval: 'month', marketId: 'mkt_austin' } }, now);
+    const page = await planPageData(db, billing, CLIENT, 'client', now);
+    expect(page?.memberships.find((membership) => membership.plan === 'pro')).toMatchObject({ status: 'unpaid' });
+    expect((await activePlans(db, CLIENT, now)).has('pro')).toBe(false);
+    // Unpaid but live: no second checkout for it either.
+    expect(await startCheckout(db, billing, CLIENT, { plan: 'pro', interval: 'month' }, now)).toEqual({ ok: false, code: 'not_allowed' });
   });
 
   it('ends every plan when the account is deleted', async () => {

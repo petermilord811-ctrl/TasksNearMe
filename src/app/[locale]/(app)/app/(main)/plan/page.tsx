@@ -30,9 +30,10 @@ function PlanPage({ searchParams }: { searchParams: Promise<Record<string, strin
 async function Plan({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.plan()));
-  const { checkout } = await searchParams;
+  const { checkout, plan } = await searchParams;
   const notice: PlanPageData['notice'] = checkout === 'done' ? 'subscribed' : checkout === 'canceled' ? 'checkout_canceled' : undefined;
-  const data = await planPageData(db, createBillingProvider(), viewer.user.id, viewer.user.mode === 'helper' ? 'helper' : 'client', await requestNow(), notice);
+  const returned = { ...(notice ? { notice } : {}), ...(typeof plan === 'string' ? { plan } : {}) };
+  const data = await planPageData(db, createBillingProvider(), viewer.user.id, viewer.user.mode === 'helper' ? 'helper' : 'client', await requestNow(), returned);
   if (!data) redirect(routes.app.home());
   return <PlanScreen data={data} handlers={{ onSubscribe: subscribeToPlanAction, onManage: managePlanAction }} />;
 }
