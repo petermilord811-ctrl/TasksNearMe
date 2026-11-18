@@ -1,5 +1,5 @@
-import type { CSSProperties, ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, BellRing, Check, LayoutGrid, List, Lock, Plus, X } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { ArrowLeft, ArrowRight, ArrowUpDown, BellRing, Check, ChevronDown, LayoutGrid, List, Lock, Plus, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { ISODateTime, TaskBoardPageData, TaskBoardQuery, TaskPublicView } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -29,9 +29,31 @@ function SegmentLink({ href, selected, label, icon }: { href: string; selected: 
   </Link></li>;
 }
 
-// The controls row scrolls sideways on phones; its ends fade over the page gutter so a cut control reads as "more".
-const EDGE_FADE = 'linear-gradient(to right, transparent, #000 var(--spacing-gutter, 1rem), #000 calc(100% - var(--spacing-gutter, 1rem)), transparent)';
-const edgeFade = { '--board-fade': EDGE_FADE } as CSSProperties;
+/** One choice in the sort menu: a full-width row, checked when it's the current one. */
+function MenuLink({ href, selected, label }: { href: string; selected: boolean; label: string }) {
+  return <li><Link href={href} rel="nofollow" aria-current={selected ? 'true' : undefined} className={cn('flex min-h-10 items-center justify-between gap-3 rounded-md px-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring', selected ? 'font-semibold text-foreground' : 'text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground')}>
+    {label}{selected && <Check aria-hidden="true" className="size-4 text-primary" />}
+  </Link></li>;
+}
+
+/**
+ * Sort and grouping in one menu (audit M19, L10, 2026-11-18): the toolbar keeps this and the view toggle only, so on a
+ * phone it fits on one line instead of a sideways row of eight chips cut at the edge. A native <details>, so it works
+ * before the page's scripts and without them; each choice is a link, as the chips were.
+ */
+function SortMenu({ children, summary }: { children: ReactNode; summary: string }) {
+  return <details className="group/sort relative">
+    <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg bg-foreground/[0.05] px-3 text-[13px] font-medium focus-visible:outline-2 focus-visible:outline-ring dark:bg-white/[0.06] [&::-webkit-details-marker]:hidden">
+      <ArrowUpDown aria-hidden="true" className="size-4 text-muted-foreground" />{summary}
+      <ChevronDown aria-hidden="true" className="size-4 text-muted-foreground transition-transform group-open/sort:rotate-180 motion-reduce:transition-none" />
+    </summary>
+    <div className="absolute right-0 z-30 mt-2 w-60 space-y-2 rounded-xl border border-foreground/[0.08] bg-card p-2 shadow-lg dark:border-white/[0.08]">{children}</div>
+  </details>;
+}
+
+function MenuGroup({ label, children }: { label: string; children: ReactNode }) {
+  return <nav aria-label={label}><p className="px-2 pt-1 pb-0.5 text-xs font-semibold text-muted-foreground">{label}</p><ul>{children}</ul></nav>;
+}
 
 function Rows({ tasks, now, showArea = true, visitKey }: { tasks: TaskPublicView[]; now: ISODateTime; showArea?: boolean; visitKey: string }) {
   return <ol className="divide-y divide-foreground/[0.06] dark:divide-white/[0.05]">{tasks.map((task) => <li key={task.id}><TaskRow task={task} now={now} showArea={showArea} visitKey={visitKey} /></li>)}</ol>;
@@ -152,13 +174,15 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
     </header>
 
     <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6">
-      <aside aria-label={t('filters')} className="lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pb-2 lg:pr-1">
+      {/* The rail grows with the page: a nested scroll box cut the neighborhoods off with no hint (audit M19). */}
+      <aside aria-label={t('filters')}>
         <BoardFilters board={data} />
       </aside>
 
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="flex items-center gap-3">
+          {/* min-h: the Live status arrives after the page and must not push the list down when it does (audit M18). */}
+          <div className="flex min-h-9 items-center gap-3">
             {/* The market's own counts are in the header; a board the person filtered says how many match (a hub's own
                 category isn't their filter, so the count shows once, audit M42). */}
             {emptyFiltered && <p className="text-sm font-semibold tabular-nums" role="status">{t('results', { count: data.totalCount })}</p>}
@@ -171,10 +195,11 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
               listId="board-list"
             />
           </div>
-          {/* One row: it scrolls sideways on phones rather than stacking three rows above the first task. */}
-          <div className="-mx-gutter flex w-[calc(100%+2*var(--page-gutter))] gap-2 overflow-x-auto px-gutter py-0.5 [scrollbar-width:none] sm:mx-0 sm:ml-auto sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0 [mask-image:var(--board-fade)] [-webkit-mask-image:var(--board-fade)] sm:[mask-image:none] sm:[-webkit-mask-image:none]" style={edgeFade}>
-            <Segmented label={t('sort')}>{TASK_BOARD_SORTS.map((sort) => <SegmentLink key={sort} href={href({ sort })} selected={query.sort === sort} label={t(`sortOptions.${sort}`)} />)}</Segmented>
-            {query.view === 'list' && <Segmented label={t('group')}>{TASK_BOARD_GROUPS.map((group) => <SegmentLink key={group} href={href({ group })} selected={query.group === group} label={t(`groupOptions.${group}`)} />)}</Segmented>}
+          <div className="ml-auto flex items-center gap-2">
+            <SortMenu summary={t('sortSummary', { sort: t(`sortOptions.${query.sort}`) })}>
+              <MenuGroup label={t('sort')}>{TASK_BOARD_SORTS.map((sort) => <MenuLink key={sort} href={href({ sort })} selected={query.sort === sort} label={t(`sortOptions.${sort}`)} />)}</MenuGroup>
+              {query.view === 'list' && <MenuGroup label={t('group')}>{TASK_BOARD_GROUPS.map((group) => <MenuLink key={group} href={href({ group })} selected={query.group === group} label={t(`groupOptions.${group}`)} />)}</MenuGroup>}
+            </SortMenu>
             <Segmented label={t('view')}>{TASK_BOARD_VIEWS.map((view) => <SegmentLink key={view} href={href({ view })} selected={query.view === view} label={t(`viewOptions.${view}`)} icon={view === 'list' ? <List aria-hidden="true" className="size-4" /> : <LayoutGrid aria-hidden="true" className="size-4" />} />)}</Segmented>
           </div>
         </div>

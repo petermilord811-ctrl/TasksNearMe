@@ -73,6 +73,8 @@ test('the board groups tasks by neighborhood, filters by link and searches', asy
 
 test('one list sorted by newest, paged, with the day on each row', async ({ page }) => {
   await page.goto('/austin/tasks?group=none&sort=newest');
+  // Sort and grouping live in one menu (audit M19, L10).
+  await page.getByText('Sort: Newest').click();
   await expect(page.getByRole('navigation', { name: 'Sort' }).getByRole('link', { name: /Newest/ })).toHaveAttribute('aria-current', 'true');
   await expect(page.getByRole('main').getByRole('region')).toHaveCount(0);
   const rows = page.getByRole('main').getByRole('article');

@@ -35,7 +35,8 @@ export interface PublicShellProps {
 /** `<main>` for each variant; `default` turns into the landing's when the page holds the marker. */
 const MAIN_CLASS = {
   landing: 'min-h-svh flex-1 overflow-x-clip outline-none',
-  minimal: 'mx-auto w-full max-w-content flex-1 px-gutter pt-28 pb-10 outline-none sm:pt-32',
+  // Sign-in and sign-up: the form fills the first screen, so the footer never moves as the page streams in.
+  minimal: 'mx-auto w-full max-w-content min-h-svh flex-1 px-gutter pt-28 pb-10 outline-none sm:pt-32',
   default: [
     'mx-auto w-full max-w-content min-h-svh flex-1 px-gutter pt-28 pb-10 outline-none sm:pt-32',
     'has-[[data-landing-page]]:mx-0 has-[[data-landing-page]]:max-w-none has-[[data-landing-page]]:p-0 has-[[data-landing-page]]:overflow-x-clip',

@@ -13,6 +13,7 @@
   },
   "remoteOnly": "Solo remotas",
   "sort": "Ordenar",
+  "sortSummary": "Ordenar: {sort}",
   "sortOptions": {
     "soonest": "Más próximas",
     "newest": "Más recientes",
