@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ActionResult, HelperOnboardingHandlers, HelperOnboardingPageData, HelperServicesInput } from '@/contracts';
-import { fakeOnboardingHandlers, onboardingAreaStep, onboardingProfileStep, onboardingSetupAbout, onboardingSetupAboutExamples, onboardingSetupServicesChosen } from '@/fixtures';
+import type { ActionResult, HelperAreaInput, HelperOnboardingHandlers, HelperOnboardingPageData, HelperServicesInput } from '@/contracts';
+import { fakeOnboardingHandlers, onboardingAreaStep, onboardingProfileStep, onboardingSetupAbout, onboardingSetupAboutExamples, onboardingSetupAboutPhoto, onboardingSetupServicesChosen } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import esMessages from '../../../../messages/es/ui';
 import { buildExamples, EXAMPLE_VARIANTS } from './setup-examples';
@@ -20,7 +20,14 @@ beforeEach(() => {
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
 });
-afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); window.history.replaceState(null, '', '/'); });
+afterEach(async () => {
+  cleanup();
+  // A part shown just before the end scrolls in the next frame: let it run while matchMedia is still stubbed.
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+  vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  window.history.replaceState(null, '', '/');
+});
 
 const ok = (redirectTo?: string): ActionResult => ({ ok: true, code: 'saved', ...(redirectTo ? { redirectTo } : {}) });
 function show(data: HelperOnboardingPageData, handlers: Partial<HelperOnboardingHandlers> = {}): ReactElement {
@@ -150,6 +157,113 @@ describe('helper setup, the profile in one flow (plan 9.11)', () => {
     await act(async () => { await user.click(screen.getByRole('button', { name: /Next: Where you help/ })); });
     expect(await screen.findByRole('heading', { level: 2, name: 'What you do' })).toBeVisible();
     expect(screen.getByLabelText('Your price, from', { selector: '[aria-invalid="true"]' })).toBeInTheDocument();
+  });
+});
+
+/** Services and area saved and the profile written, opened at What you do (so Where you help's step can be tapped). */
+const allWritten: HelperOnboardingPageData = { ...onboardingSetupAboutPhoto, step: 'services', agreementNeeded: false };
+const partsNav = () => within(screen.getByRole('navigation', { name: /profile.s parts/ }));
+/** The line beside the buttons: Saving…, Saved, Not saved yet… */
+const statusLine = () => screen.getByRole('button', { name: /^(Next: |Save and continue)/ }).parentElement!.querySelector('p[aria-live="polite"]')!;
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+/** Everything kept in this tab, as one string. */
+const kept = () => Array.from({ length: window.sessionStorage.length }, (_, index) => window.sessionStorage.getItem(window.sessionStorage.key(index)!) ?? '').join('\n');
+const pricedAt = (cents: number) => expect.objectContaining({ services: expect.arrayContaining([expect.objectContaining({ categorySlug: 'light-cleaning', fromPriceCents: cents })]) });
+
+async function changePriceThenOpenArea(user: ReturnType<typeof userEvent.setup>) {
+  const price = screen.getByLabelText('Your price, from');
+  await user.clear(price);
+  await user.type(price, '95');
+  // Before What you do saves itself: on to Where you help.
+  await user.click(partsNav().getByRole('button', { name: /Where you help/ }));
+  expect(await screen.findByRole('heading', { level: 2, name: 'Where you help' })).toBeVisible();
+}
+
+describe('each part saves on its own (aa’s sweep S3)', () => {
+  it('a change in another part never cancels a part’s save on the way', async () => {
+    const user = userEvent.setup();
+    const onSaveServices = vi.fn(async (_input: HelperServicesInput) => ok());
+    const onSaveArea = vi.fn(async (_input: HelperAreaInput) => ok());
+    render(show(allWritten, { onSaveServices, onSaveArea }));
+    await changePriceThenOpenArea(user);
+    await user.selectOptions(screen.getByLabelText('Service radius'), '8');
+    await waitFor(() => expect(onSaveArea).toHaveBeenCalledWith(expect.objectContaining({ serviceRadiusMiles: 8 })), { timeout: 4000 });
+    await waitFor(() => expect(onSaveServices).toHaveBeenCalledWith(pricedAt(9500)), { timeout: 4000 });
+  });
+
+  it('Save and continue first sends what every part has waiting, and waits for each', async () => {
+    const user = userEvent.setup();
+    const calls: string[] = [];
+    const services = deferred<ActionResult>();
+    const onSaveServices = vi.fn((_input: HelperServicesInput) => { calls.push('services'); return services.promise; });
+    const onSaveArea = vi.fn(async () => { calls.push('area'); return ok(); });
+    const onSaveProfile = vi.fn(async () => { calls.push('profile'); return ok('/app/helper/onboarding/identity'); });
+    render(show(allWritten, { onSaveServices, onSaveArea, onSaveProfile }));
+    await changePriceThenOpenArea(user);
+    // Next on Where you help saves only that part (nothing changed there) and never drops another's.
+    await user.click(screen.getByRole('button', { name: /Next: Introduce yourself/ }));
+    await user.click(await screen.findByRole('button', { name: 'Save and continue' }));
+    await waitFor(() => expect(onSaveServices).toHaveBeenCalledWith(pricedAt(9500)));
+    expect(onSaveProfile).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+    await act(async () => { services.resolve(ok()); await services.promise; });
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/app/helper/onboarding/identity'));
+    expect(calls).toEqual(['services', 'profile']);
+    expect(kept()).toBe('');
+  });
+
+  it('a part that can’t save stops Save and continue: it opens with the error, and what was typed stays', async () => {
+    const user = userEvent.setup();
+    const onSaveServices = vi.fn(async (_input: HelperServicesInput): Promise<ActionResult> => ({ ok: false, code: 'unknown' }));
+    const onSaveProfile = vi.fn(async () => ok('/app/helper/onboarding/identity'));
+    render(show(allWritten, { onSaveServices, onSaveProfile }));
+    await changePriceThenOpenArea(user);
+    await user.click(screen.getByRole('button', { name: /Next: Introduce yourself/ }));
+    await user.click(await screen.findByRole('button', { name: 'Save and continue' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'What you do' })).toBeVisible();
+    expect(await screen.findByText(/We couldn.t complete that action/)).toBeVisible();
+    expect(onSaveServices).toHaveBeenLastCalledWith(pricedAt(9500));
+    expect(screen.getByLabelText('Your price, from')).toHaveValue('95');
+    expect(statusLine()).not.toHaveTextContent(/^Saved$/);
+    expect(onSaveProfile).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+    expect(kept()).toContain('"fromPriceCents":9500');
+  });
+
+  it('says Saved only when what’s on screen is saved', async () => {
+    const user = userEvent.setup();
+    const first = deferred<ActionResult>();
+    let saves = 0;
+    const onSaveServices = vi.fn((_input: HelperServicesInput) => ((saves += 1) === 1 ? first.promise : Promise.resolve(ok())));
+    render(show(allWritten, { onSaveServices }));
+    const price = screen.getByLabelText('Your price, from');
+    await user.clear(price);
+    await user.type(price, '95');
+    await waitFor(() => expect(onSaveServices).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    // Typed again while that save was on its way ($95.50): the newer price isn't saved yet.
+    await user.type(price, '.5');
+    await act(async () => { first.resolve(ok()); await first.promise; });
+    expect(statusLine()).toHaveTextContent('Not saved yet');
+    await waitFor(() => expect(onSaveServices).toHaveBeenLastCalledWith(pricedAt(9550)), { timeout: 4000 });
+    await waitFor(() => expect(statusLine()).toHaveTextContent(/^Saved$/));
+  });
+
+  it('a save that failed still says so after moving between parts', async () => {
+    const user = userEvent.setup();
+    const onSaveServices = vi.fn(async (_input: HelperServicesInput): Promise<ActionResult> => ({ ok: false, code: 'unknown' }));
+    render(show(allWritten, { onSaveServices }));
+    const price = screen.getByLabelText('Your price, from');
+    await user.clear(price);
+    await user.type(price, '95');
+    await waitFor(() => expect(statusLine()).toHaveTextContent(/Couldn.t save just now/), { timeout: 4000 });
+    await user.click(partsNav().getByRole('button', { name: /Where you help/ }));
+    await user.click(await screen.findByRole('button', { name: 'Back' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'What you do' })).toBeVisible();
+    expect(statusLine()).toHaveTextContent(/Couldn.t save just now/);
   });
 });
 

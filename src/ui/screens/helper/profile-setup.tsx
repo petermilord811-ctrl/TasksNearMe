@@ -36,6 +36,7 @@ function partInUrl(): SetupPart | undefined {
 }
 
 type Status = 'idle' | 'saving' | 'saved' | 'unsaved' | 'invalid' | 'agreement' | 'failed';
+const NO_STATUS: Record<SetupPart, Status> = { services: 'idle', area: 'idle', about: 'idle' };
 
 /** The part a page opens: its own, or for `profile` the first part not saved yet (Introduce yourself once all are). */
 export function startingPart(data: Pick<HelperOnboardingPageData, 'step' | 'progress'>): SetupPart {
@@ -89,6 +90,10 @@ function showFieldErrors<T extends FieldValues>(form: UseFormReturn<T>, result: 
  * Helper setup's profile in one flow (plan 9.11): What you do, Where you help and Introduce yourself, one part at a time,
  * with Back and Next that keep everything typed. A part saves itself a moment after typing stops once it's valid, and
  * on Next; text not saved yet stays in this tab across a reload. Save and continue goes on to the checks.
+ *
+ * Each part saves on its own (aa's sweep S3): its own pending autosave, which a change in another part or Next there
+ * never cancels, and its own status line. Save and continue first sends what every part still has waiting, waiting for
+ * each, and stops on a part that can't save, so nothing typed is dropped when the drafts are cleared.
  */
 export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingPageData; handlers: HelperOnboardingHandlers }) {
   const t = useTranslations('helperOnboarding.setup');
@@ -101,7 +106,12 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
   const [firstPart] = useState<SetupPart>(() => startingPart(data));
   const [part, setPart] = useState<SetupPart>(firstPart);
   const [saved, setSaved] = useState(() => savedParts(data));
-  const [status, setStatus] = useState<Status>('idle');
+  // Which parts are saved, for code that runs after an await (`saved` is the render's copy).
+  const savedNow = useRef(saved);
+  // Each part's own status: the line by the buttons speaks for the part on screen.
+  const [statuses, setStatuses] = useState<Record<SetupPart, Status>>(NO_STATUS);
+  const status = statuses[part];
+  const setStatus = (which: SetupPart, next: Status) => setStatuses((current) => (current[which] === next ? current : { ...current, [which]: next }));
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<ActionResult>();
   const [notice, setNotice] = useState<'restored' | { finishFirst: SetupPart } | null>(null);
@@ -114,14 +124,21 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
 
   // What each part last saved, to save only what changed.
   const lastSaved = useRef<Record<SetupPart, string>>({ services: JSON.stringify(data.values.services), area: JSON.stringify({ where: 'market', homeZip: '', homeCity: '', ...data.values.area }), about: JSON.stringify(data.values.profile) });
-  const inFlight = useRef<Partial<Record<SetupPart, Promise<ActionResult | null>>>>({});
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inFlight = useRef<Partial<Record<SetupPart, Promise<ActionResult>>>>({});
+  // Each part's own autosave on its way: a change in another part, or Next there, never cancels it.
+  const timers = useRef<Partial<Record<SetupPart, ReturnType<typeof setTimeout>>>>({});
+  function cancelAutosave(which: SetupPart) {
+    const waiting = timers.current[which];
+    if (waiting !== undefined) clearTimeout(waiting);
+    delete timers.current[which];
+  }
 
   const servicesValues = useWatch({ control: services.control });
   const areaValues = useWatch({ control: area.control });
   const aboutValues = useWatch({ control: about.control });
   const valuesOf = (which: SetupPart) => forms[which].getValues() as HelperServicesInput | HelperAreaInput | HelperProfileInput;
   const changed = (which: SetupPart) => JSON.stringify(valuesOf(which)) !== lastSaved.current[which];
+  const schemaOf = (which: SetupPart) => (which === 'services' ? createHelperServicesSchema(data.categories) : which === 'area' ? helperAreaInputSchema : helperProfileInputSchema);
 
   // Text typed and not saved before a reload comes back once, after the page has hydrated.
   useEffect(() => {
@@ -136,13 +153,13 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function save(which: SetupPart, quiet: boolean): Promise<ActionResult | null> {
+  async function save(which: SetupPart, quiet: boolean): Promise<ActionResult> {
     const running = inFlight.current[which];
     if (running) await running;
     const values = valuesOf(which);
     const snapshot = JSON.stringify(values);
-    const run = (async (): Promise<ActionResult | null> => {
-      setStatus('saving');
+    const run = (async (): Promise<ActionResult> => {
+      setStatus(which, 'saving');
       let outcome: ActionResult;
       try {
         outcome = which === 'services'
@@ -155,19 +172,23 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
       }
       if (outcome.ok) {
         lastSaved.current[which] = snapshot;
-        setSaved((current) => ({ ...current, [which]: true }));
+        savedNow.current = { ...savedNow.current, [which]: true };
+        setSaved(savedNow.current);
+        const typedSince = changed(which);
         writeUnsaved(key, (current) => {
           const next = { ...current };
-          if (JSON.stringify(valuesOf(which)) === snapshot) delete next[which];
-          else Object.assign(next, { [which]: { values: valuesOf(which), base: snapshot } });
+          if (typedSince) Object.assign(next, { [which]: { values: valuesOf(which), base: snapshot } });
+          else delete next[which];
           return next;
         });
-        setStatus('saved');
+        // Typed again while it saved: that isn't saved yet, and goes up with the part's own autosave.
+        setStatus(which, typedSince ? 'unsaved' : 'saved');
+        if (typedSince && timers.current[which] === undefined) scheduleLatest.current(which);
       } else if (quiet) {
-        setStatus('failed');
+        setStatus(which, 'failed');
       } else {
         // On Next, the form shows the server's answer (FormFeedback) and the fields it names.
-        setStatus(outcome.code === 'validation_failed' ? 'invalid' : 'idle');
+        setStatus(which, outcome.code === 'validation_failed' ? 'invalid' : 'idle');
         showFieldErrors(forms[which] as unknown as UseFormReturn<FieldValues>, outcome);
       }
       return outcome;
@@ -180,21 +201,43 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
     }
   }
 
+  /**
+   * Sends what a part has waiting, now (its autosave cancelled), after any save of it already on its way, and resolves
+   * with how that went: ok at once when nothing's new (unless `force`), `invalid` when what's typed can't be saved yet.
+   */
+  async function flush(which: SetupPart, force = false): Promise<ActionResult | 'invalid'> {
+    cancelAutosave(which);
+    const running = inFlight.current[which];
+    if (running) await running;
+    if (!force && savedNow.current[which] && !changed(which)) return { ok: true, code: 'saved' };
+    if (!schemaOf(which).safeParse(valuesOf(which)).success) return 'invalid';
+    return save(which, false);
+  }
+
   /** A part that's valid saves itself a moment after typing stops (Introduce yourself only once the agreement is accepted). */
   function schedule(which: SetupPart) {
-    if (timer.current) clearTimeout(timer.current);
-    if (!changed(which)) return;
+    cancelAutosave(which);
+    if (!changed(which)) {
+      // Back to what's saved: nothing to send, nor to keep for a reload.
+      writeUnsaved(key, (current) => {
+        const next = { ...current };
+        delete next[which];
+        return next;
+      });
+      if (!inFlight.current[which]) setStatus(which, savedNow.current[which] ? 'saved' : 'idle');
+      return;
+    }
     writeUnsaved(key, (current) => ({ ...current, [which]: { values: valuesOf(which), base: lastSaved.current[which] } }));
-    setStatus('unsaved');
-    timer.current = setTimeout(() => {
+    setStatus(which, 'unsaved');
+    timers.current[which] = setTimeout(() => {
+      delete timers.current[which];
       const values = valuesOf(which);
-      const schema = which === 'services' ? createHelperServicesSchema(data.categories) : which === 'area' ? helperAreaInputSchema : helperProfileInputSchema;
-      if (!schema.safeParse(values).success) {
-        setStatus('invalid');
+      if (!schemaOf(which).safeParse(values).success) {
+        setStatus(which, 'invalid');
         return;
       }
       if (which === 'about' && data.agreementNeeded && (values as HelperProfileInput).acceptHelperAgreement !== true) {
-        setStatus('agreement');
+        setStatus(which, 'agreement');
         return;
       }
       void save(which, true);
@@ -209,7 +252,7 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
     const subscriptions = SETUP_PARTS.map((which) => (forms[which] as unknown as UseFormReturn<FieldValues>).watch(() => scheduleLatest.current(which)));
     return () => {
       subscriptions.forEach((subscription) => subscription.unsubscribe());
-      if (timer.current) clearTimeout(timer.current);
+      SETUP_PARTS.forEach(cancelAutosave);
     };
     // The forms live as long as the page; `schedule` reads current values when it runs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -219,7 +262,8 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
   function show(next: SetupPart, move = true) {
     setPart(next);
     setResult(undefined);
-    setStatus(changed(next) ? 'unsaved' : saved[next] ? 'saved' : 'idle');
+    // A part keeps its own status (a save that failed still says so); one with nothing to say yet says where it stands.
+    setStatuses((current) => (current[next] !== 'idle' ? current : { ...current, [next]: changed(next) ? 'unsaved' : savedNow.current[next] ? 'saved' : 'idle' }));
     if (!move) return;
     setNotice(null);
     requestAnimationFrame(() => {
@@ -255,21 +299,23 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
 
   async function next() {
     if (pending) return;
-    if (timer.current) clearTimeout(timer.current);
+    // This part saves now; another part's own autosave goes on.
+    cancelAutosave(part);
     const form = forms[part] as unknown as UseFormReturn<FieldValues>;
     const valid = await form.trigger(undefined, { shouldFocus: true });
     if (part === 'about' && data.agreementNeeded && about.getValues('acceptHelperAgreement') !== true) {
       about.setError('acceptHelperAgreement', { type: 'manual', message: 'must_accept' }, { shouldFocus: valid });
-      setStatus('agreement');
+      setStatus(part, 'agreement');
       return;
     }
     if (!valid) {
-      setStatus('invalid');
+      setStatus(part, 'invalid');
       return;
     }
+    const others = SETUP_PARTS.filter((which) => which !== 'about');
     if (part === 'about') {
       // Everything before Introduce yourself has to be saved first.
-      const missing = SETUP_PARTS.find((which) => which !== 'about' && !saved[which]);
+      const missing = others.find((which) => !savedNow.current[which]);
       if (missing) {
         goTo(missing);
         setNotice({ finishFirst: missing });
@@ -277,10 +323,27 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
       }
     }
     setPending(true);
-    const outcome = part === 'about' || changed(part) || !saved[part] ? await save(part, false) : { ok: true as const, code: 'saved' as const };
+    if (part === 'about') {
+      // Save and continue clears every draft: first what the other parts still have waiting goes up, each awaited. A
+      // part that can't save stops here and opens with its errors.
+      for (const which of others) {
+        const sent = await flush(which);
+        if (sent !== 'invalid' && sent.ok) continue;
+        setPending(false);
+        goTo(which);
+        if (sent === 'invalid') {
+          setNotice({ finishFirst: which });
+          void (forms[which] as unknown as UseFormReturn<FieldValues>).trigger();
+        } else setResult(sent);
+        return;
+      }
+    }
+    // Introduce yourself always saves (the agreement, and where to go next); the others when something's new.
+    const sent = await flush(part, part === 'about');
     setPending(false);
-    if (!outcome?.ok) {
-      setResult(outcome ?? undefined);
+    const outcome: ActionResult = sent === 'invalid' ? { ok: false, code: 'validation_failed' } : sent;
+    if (!outcome.ok) {
+      setResult(outcome);
       return;
     }
     if (part === 'about') {

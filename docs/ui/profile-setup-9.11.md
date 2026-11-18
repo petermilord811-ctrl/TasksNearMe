@@ -44,6 +44,7 @@ Then **Save and continue** goes where the server says (`redirectTo`): the ID che
 ### Autosave
 
 - A part that is valid saves by itself a moment after typing stops (about 1.5 s), and on Next. A status line says **Saving…**, **Saved** or **Not saved yet: check the highlighted field**.
+- Each part saves on its own (aa's sweep S3): its own pending autosave, which a change in another part or Next there never cancels, and its own status, so **Saved** speaks for the part on screen and only once what's on it is saved. **Save and continue** first sends what the other parts still have waiting, each save awaited, and stops on a part that can't save (it opens with its error) before the tab's drafts are cleared.
 - Introduce yourself saves by itself only once the helper agreement is accepted (the server requires it for a first save in onboarding). Until then its text lives in the tab and goes up with Save and continue.
 - Parts 1 and 2 can be saved before Introduce yourself: their save creates the draft helper profile when there is none yet (today only the profile save does). A draft profile is invisible to clients, as today.
 
