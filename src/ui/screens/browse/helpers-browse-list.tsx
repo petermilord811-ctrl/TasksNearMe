@@ -43,16 +43,18 @@ function Row({ row, handlers, onMessage }: { row: HelperBrowseRow; handlers: Sav
     router.refresh();
   }
 
-  return <li className="flex min-w-0 flex-col gap-3">
-    <div className="flex-1"><HelperCard helper={helper} /></div>
-    {row.nextOpenTime && <p className="flex items-center gap-2 text-sm font-medium"><CalendarClock aria-hidden="true" className="size-4 shrink-0 text-primary" /><span><time dateTime={row.nextOpenTime.start}>{t('nextOpen', { date: formatDateTime(row.nextOpenTime.start) })}</time>{' · '}{categories(row.nextOpenTime.categorySlug)}</span></p>}
-    <div className="flex flex-wrap gap-2">
-      <Link href={routes.app.requestHelper(helper.handle)} className={buttonVariants({ variant: 'secondary' })}>{t('request', { name: helper.displayName })}</Link>
-      <Button type="button" variant="outline" aria-pressed={saved} aria-busy={pending} disabled={pending} aria-label={t(saved ? 'unsaveLabel' : 'saveLabel', { name: helper.displayName })} onClick={() => void toggle()}>
-        {pending ? <Spinner aria-hidden="true" /> : saved ? <BookmarkCheck aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
-        {t(saved ? 'saved' : 'save')}
-      </Button>
-    </div>
+  // Ask and Save live in the card's own footer, so they read as this helper's (audit M35).
+  return <li className="min-w-0">
+    <HelperCard helper={helper} footer={<div className="space-y-3">
+      {row.nextOpenTime && <p className="flex items-center gap-2 text-sm font-medium"><CalendarClock aria-hidden="true" className="size-4 shrink-0 text-primary" /><span><time dateTime={row.nextOpenTime.start}>{t('nextOpen', { date: formatDateTime(row.nextOpenTime.start) })}</time>{' · '}{categories(row.nextOpenTime.categorySlug)}</span></p>}
+      <div className="flex flex-wrap gap-2">
+        <Link href={routes.app.requestHelper(helper.handle)} className={buttonVariants({ variant: 'secondary', className: 'flex-1' })}>{t('request', { name: helper.displayName })}</Link>
+        <Button type="button" variant="outline" aria-pressed={saved} aria-busy={pending} disabled={pending} aria-label={t(saved ? 'unsaveLabel' : 'saveLabel', { name: helper.displayName })} onClick={() => void toggle()}>
+          {pending ? <Spinner aria-hidden="true" /> : saved ? <BookmarkCheck aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
+          {t(saved ? 'saved' : 'save')}
+        </Button>
+      </div>
+    </div>} />
   </li>;
 }
 
@@ -61,6 +63,6 @@ export function HelpersBrowseList({ rows, handlers }: { rows: HelperBrowseRow[];
   const [message, setMessage] = useState('');
   return <>
     <p role="status" className={message ? 'text-sm font-medium' : 'sr-only'}>{message}</p>
-    <ul className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">{rows.map((row) => <Row key={row.helper.id} row={row} handlers={handlers} onMessage={setMessage} />)}</ul>
+    <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{rows.map((row) => <Row key={row.helper.id} row={row} handlers={handlers} onMessage={setMessage} />)}</ul>
   </>;
 }

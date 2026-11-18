@@ -9,12 +9,17 @@ test('a client finds helpers by category, saves one, and finds them in saved hel
   await devSignIn(page, 'chris@example.test');
   await page.goto('/app/helpers');
   await expect(page.getByRole('heading', { level: 1, name: 'Find helpers' })).toBeVisible({ timeout: 30_000 });
-  const filters = page.getByRole('form', { name: 'Filter helpers' });
-  await filters.getByLabel('Category').selectOption('computer-help');
-  await filters.getByRole('button', { name: 'Show helpers' }).click();
+  // The filters are one compact bar (audit M35): categories as chips, the neighborhood applying as soon as it's picked.
+  await page.getByRole('list', { name: 'Category' }).getByRole('link', { name: 'Computer and phone help' }).click();
   await expect(page).toHaveURL(/\/app\/helpers\?.*category=computer-help/, { timeout: 30_000 });
   await expect(page.getByRole('link', { name: 'Ask Lee M.' })).toHaveAttribute('href', '/app/helpers/lee-m/request');
   await expect(page.getByRole('link', { name: 'Ask Sam K.' })).toHaveCount(0);
+  const filters = page.getByRole('search', { name: 'Filter helpers' });
+  const area = filters.getByLabel('Neighborhood');
+  const areaSlug = await area.locator('option').nth(1).getAttribute('value');
+  await area.selectOption(areaSlug!);
+  await expect(page).toHaveURL(new RegExp(`area=${areaSlug}.*category=computer-help|category=computer-help.*area=${areaSlug}`), { timeout: 30_000 });
+  await page.goto('/app/helpers?category=computer-help');
 
   await page.getByRole('button', { name: 'Save Lee M.' }).click();
   await expect(page.getByText('Lee M. is in your saved helpers.')).toBeVisible({ timeout: 30_000 });

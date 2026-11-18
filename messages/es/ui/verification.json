@@ -11,6 +11,13 @@
   "backgroundAt": "Antecedentes verificados · {date}",
   "backgroundMeaningAt": "La verificación de antecedentes salió sin observaciones en {date}. No garantiza la calidad del trabajo ni cubre todas las posibles inquietudes.",
   "phone": "Teléfono verificado",
+  "short": {
+    "lead": "Verificado:",
+    "identity": "Identidad",
+    "background": "Antecedentes",
+    "address": "Domicilio",
+    "phone": "Teléfono"
+  },
   "phoneMeaning": "Esta persona confirmó que tiene acceso a su número de teléfono. Esto no verifica su identidad ni la calidad de su trabajo.",
   "none": "Aún no hay insignias de verificación",
   "statuses": {

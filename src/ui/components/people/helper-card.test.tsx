@@ -38,7 +38,9 @@ describe('HelperCard', () => {
     expect(screen.getByText('Usually replies within an hour')).toBeInTheDocument();
     expect(screen.getByText('from $50.00')).toBeInTheDocument();
     expect(screen.getByText('$38.00/h')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ID verified' })).toBeInTheDocument();
+    // Verification as one line of short words, each explaining itself on tap (audit L14).
+    expect(screen.getByRole('list', { name: 'Verification badges' })).toHaveTextContent('Verified:IDBackgroundPhone');
+    expect(screen.getByRole('button', { name: 'ID' })).toBeInTheDocument();
     expect(screen.queryByText(/Founding helper/)).not.toBeInTheDocument();
   });
 
@@ -55,8 +57,19 @@ describe('HelperCard', () => {
     renderHelper(lee, 'compact');
     expect(screen.queryByText('Furniture assembly')).not.toBeInTheDocument();
     expect(screen.queryByText(/from \$/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Background checked' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Background' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: lee.displayName })).toHaveAttribute('href', routes.helperProfile(lee.handle));
+  });
+
+  it('shows the founding badge once, numbered, and a footer inside the card (audit L14, M35)', () => {
+    const founding = { code: 'founding_helper' as const, tier: 1, tierCount: 1, threshold: 1, foundingNumber: 63, earnedAt: '2026-09-01T12:00:00.000Z' };
+    render(
+      <NextIntlClientProvider locale="en" messages={{ ...uiMessages, helperCard }}>
+        <HelperCard helper={{ ...jordan, topBadges: [founding] }} footer={<button type="button">Ask Jordan T.</button>} />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.getAllByText(/Founding helper/)).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Ask Jordan T.' }).closest('article')).toBeInTheDocument();
   });
 
   it('does not invent a response time or amount when optional data is absent', () => {

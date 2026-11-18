@@ -11,6 +11,13 @@
   "backgroundAt": "Background checked · {date}",
   "backgroundMeaningAt": "The background check came back clear in {date}. It does not guarantee work quality or cover every possible concern.",
   "phone": "Phone verified",
+  "short": {
+    "lead": "Verified:",
+    "identity": "ID",
+    "background": "Background",
+    "address": "Address",
+    "phone": "Phone"
+  },
   "phoneMeaning": "This person confirmed access to their phone number. This does not verify their identity or work quality.",
   "none": "No verification badges yet",
   "statuses": {

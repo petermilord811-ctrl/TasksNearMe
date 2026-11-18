@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react';
+import { Sparkles, Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { RatingSummary } from '@/contracts';
 
@@ -10,7 +10,8 @@ export function RatingStars({ rating }: RatingStarsProps) {
   const t = useTranslations('verification');
 
   if (!rating) {
-    return <span className="inline-flex rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">{t('new')}</span>;
+    // A small label, not a grey bar that reads like an empty field (audit L14).
+    return <span className="inline-flex w-fit items-center gap-1 rounded-full bg-badge-brand px-2 py-0.5 text-xs leading-5 font-semibold text-badge-brand-foreground"><Sparkles aria-hidden="true" className="size-3.5 shrink-0" />{t('new')}</span>;
   }
 
   return (

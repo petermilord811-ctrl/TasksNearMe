@@ -1,5 +1,6 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { Clock3, MapPin, ThumbsUp } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { HelperSummary } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -15,13 +16,17 @@ export interface HelperCardProps {
   helper: HelperSummary;
   /** `compact` once a price is on the table (an offer, a booking): who they are and why to trust them, without their services' prices. */
   variant?: 'compact' | 'full';
+  /** The card's own actions (Ask, Save), inside it under a hairline (audit M35), not loose under its edge. */
+  footer?: ReactNode;
 }
 
-export function HelperCard({ helper, variant = 'full' }: HelperCardProps) {
+export function HelperCard({ helper, variant = 'full', footer }: HelperCardProps) {
   const t = useTranslations('helperCard');
+  // The numbered "Founding helper #63" line says it already; the same badge among the top three would repeat it (audit L14).
+  const topBadges = helper.foundingHelperNumber !== undefined ? helper.topBadges?.filter((badge) => badge.code !== 'founding_helper') : helper.topBadges;
 
   return (
-    <article className={cn('h-full min-w-0 space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card dark:border-white/[0.06]', variant === 'full' && 'md:p-5')}>
+    <article className={cn('h-full min-w-0 space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card dark:border-white/[0.06]', variant === 'full' && 'md:p-5', footer !== undefined && 'flex flex-col space-y-0 gap-4')}>
       <div className="flex items-start gap-3">
         <span className="shrink-0 rounded-full p-0.5 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_14%,transparent)]">
           <InitialsAvatar initials={helper.initials} photo={helper.photo} size={variant === 'full' ? 'lg' : 'md'} />
@@ -42,8 +47,8 @@ export function HelperCard({ helper, variant = 'full' }: HelperCardProps) {
         </p>
       )}
       <ReliableBadge reliable={helper.reliable} />
-      <VerificationBadges badges={helper.badges} compact />
-      <TopBadges badges={helper.topBadges} />
+      <VerificationBadges badges={helper.badges} compact variant="line" />
+      <TopBadges badges={topBadges} />
       <div className="space-y-2">
         <RatingStars rating={helper.rating} />
         <p className="text-sm tabular-nums text-muted-foreground">{t('completed', { count: helper.completedCount })}</p>
@@ -72,6 +77,7 @@ export function HelperCard({ helper, variant = 'full' }: HelperCardProps) {
           </div>
         ))}
       </dl>}
+      {footer !== undefined && <div className="mt-auto border-t border-border pt-4">{footer}</div>}
     </article>
   );
 }
