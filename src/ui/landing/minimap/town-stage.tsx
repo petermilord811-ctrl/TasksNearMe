@@ -231,6 +231,8 @@ export function TownStage({
   const [stillDone, setStillDone] = useState(mode === 'static');
   /** The still picture couldn't load (missing, offline): the skeleton stays, with the pins and cards on it. */
   const [stillBroken, setStillBroken] = useState(false);
+  /** The theme when the still was called for: its picture loads first (eager, high priority), the other's lazily. */
+  const [stillDark, setStillDark] = useState(false);
   const [onScreen, setOnScreen] = useState(true);
   const [hidden, setHidden] = useState(false);
   const [covered, setCovered] = useState(false);
@@ -262,14 +264,20 @@ export function TownStage({
     const worker = startTownWorker(layout, flora, controller.signal);
     const code = import('./town');
     code.catch(() => {}); // a failed download is handled where it's awaited
-    const build = async () => {
+    // Whether this GPU is worth it, as soon as the worker can tell: without one the still picture is the page's
+    // largest picture (its LCP on phones), so it starts loading now rather than after the page has settled.
+    const worthIt = (async () => {
       const gpu = worker ? await worker.gpu : null;
-      if (controller.signal.aborted) return;
-      if (!(typeof gpu === 'string' ? !SOFTWARE_RENDERER.test(gpu) : webglWorthIt())) {
-        worker?.stop();
-        setFailed(true);
-        return;
-      }
+      return typeof gpu === 'string' ? !SOFTWARE_RENDERER.test(gpu) : webglWorthIt();
+    })();
+    void worthIt.then((ok) => {
+      if (ok || controller.signal.aborted) return;
+      worker?.stop();
+      setStillDark(darkAt(stage));
+      setFailed(true);
+    });
+    const build = async () => {
+      if (!(await worthIt) || controller.signal.aborted) return;
       try {
         const [model, { createTown, townPalette }] = await Promise.all([worker ? worker.scene : Promise.resolve(null), code]);
         if (controller.signal.aborted) return;
@@ -300,6 +308,7 @@ export function TownStage({
         if (controller.signal.aborted) return;
         // The still picture stays; in development, say why.
         if (process.env.NODE_ENV !== 'production') console.error('The 3D town could not start:', error);
+        setStillDark(darkAt(stage));
         setFailed(true);
       }
     };
@@ -601,32 +610,30 @@ export function TownStage({
             once it has loaded). Each layout its own. */}
         {failed && (
           <div aria-hidden="true" className={cn('absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none', stillReady ? 'opacity-100' : 'opacity-0')}>
-            {/* The wide still also shows the land left of the stage (it's 2600 × 1000 units; the stage starts at 1000). */}
-            <picture className="dark:hidden">
-              <source media={WIDE_QUERY} srcSet={`/ui/landing/town-${flora}-wide-light-${season}.webp`} />
-              <img
-                src={`/ui/landing/town-${flora}-band-light-${season}.webp`}
-                alt=""
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-                onLoad={() => setStillReady(true)}
-                onError={stillFailed}
-                className="absolute top-0 left-0 size-full max-w-none lg:left-[-62.5%] lg:w-[162.5%]"
-              />
-            </picture>
-            <picture className="hidden dark:block">
-              <source media={WIDE_QUERY} srcSet={`/ui/landing/town-${flora}-wide-dark-${season}.webp`} />
-              <img
-                src={`/ui/landing/town-${flora}-band-dark-${season}.webp`}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                onLoad={() => setStillReady(true)}
-                onError={stillFailed}
-                className="absolute top-0 left-0 size-full max-w-none lg:left-[-62.5%] lg:w-[162.5%]"
-              />
-            </picture>
+            {/* The wide still also shows the land left of the stage (it's 2600 × 1000 units; the stage starts at 1000).
+                The band (phones and tablets) comes in two sizes, 800 and 1250 px wide. The theme's own picture loads
+                first and at high priority (it's the page's LCP without a GPU); the other only if the theme changes. */}
+            {(['light', 'dark'] as const).map((theme) => {
+              const first = (theme === 'dark') === stillDark;
+              const band = `/ui/landing/town-${flora}-band-${theme}-${season}`;
+              return (
+                <picture key={theme} className={theme === 'light' ? 'dark:hidden' : 'hidden dark:block'}>
+                  <source media={WIDE_QUERY} srcSet={`/ui/landing/town-${flora}-wide-${theme}-${season}.webp`} />
+                  <img
+                    src={`${band}.webp`}
+                    srcSet={`${band}-800.webp 800w, ${band}.webp 1250w`}
+                    sizes="(min-width: 640px) 104vw, 108vw"
+                    alt=""
+                    loading={first ? 'eager' : 'lazy'}
+                    fetchPriority={first ? 'high' : 'auto'}
+                    decoding="async"
+                    onLoad={() => setStillReady(true)}
+                    onError={stillFailed}
+                    className="absolute top-0 left-0 size-full max-w-none lg:left-[-62.5%] lg:w-[162.5%]"
+                  />
+                </picture>
+              );
+            })}
             {LAYOUTS.map(({ layout: drawn, shown: shownAt }) => (
               <div key={drawn} className={cn('absolute inset-0', shownAt)}>
                 {pins.map(({ slotId, task }) => {

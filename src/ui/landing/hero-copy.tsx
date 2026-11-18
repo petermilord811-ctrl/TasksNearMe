@@ -17,9 +17,9 @@ import { useOptionalLanding, type Audience } from './landing-state';
  * On wide screens a row may run wider than the column, as far as the town's empty top-left corner reaches at that
  * height: the town's 16:10 stage is as tall as the hero (about the screen), sits against the right edge when the
  * screen is wider than it, and keeps 750 of its 1600 units clear (75svh). Minus where the column starts and a gap.
+ * It's a row's own width (the line of new tasks takes whatever the promises leave; the market line and the switch
+ * read it as a container).
  */
-const WIDE_ROW = 'lg:w-max lg:max-w-[calc(max(0px,calc(100vw-160svh))+75svh-max(0px,calc(50vw-39rem))-var(--page-gutter)-1.5rem)]';
-/** The same reach, as the row's own width (the line of new tasks takes whatever the promises leave). */
 const WIDE_LINE = 'lg:w-[calc(max(0px,calc(100vw-160svh))+75svh-max(0px,calc(50vw-39rem))-var(--page-gutter)-1.5rem)]';
 
 /**
@@ -54,18 +54,32 @@ export function HeroCopy({ data, now }: { data: HomePageData; now: ISODateTime }
 
   return (
     <div className="max-w-xl lg:pointer-events-auto lg:max-w-[30rem] xl:max-w-[34rem]">
-      <div className={cn('enter flex flex-wrap items-center gap-x-3 gap-y-2', WIDE_ROW)} style={{ ['--enter-delay' as string]: '40ms' }}>
-        <AreaPicker data={data} area={area} onPick={pickArea} />
-        <AudienceSwitch
-          audience={audience}
-          reward={data.welcomeReward}
-          onChange={(next) => {
-            if (next === audience) return;
-            setSwitched(true);
-            if (landing) landing.setAudience(next);
-            else setOwnAudience(next);
-          }}
-        />
+      {/* The market line and the switch: side by side where the hero's reach (a container, WIDE_LINE) holds them both,
+          one under the other where it doesn't. The room decides, not the words' width, so the brand font arriving after
+          the first paint can't re-wrap the row and push the headline down (CLS 0.011 at 1280 × 800). English needs about
+          550 px (36.5rem leaves room for a longer city); Spanish ("Pronto en …", "Necesito ayuda": about 590 px, more
+          for "Ya disponible en …") is wider than the reach on common screens, so it always takes two lines. */}
+      <div className={cn('lg:pointer-events-none lg:@container', WIDE_LINE)}>
+        <div
+          className={cn(
+            'enter flex flex-wrap items-center gap-x-3 gap-y-2',
+            'lg:pointer-events-auto lg:w-max lg:max-w-full lg:flex-col lg:items-start',
+            'lg:@min-[36.5rem]:[&:not(:lang(es))]:flex-row lg:@min-[36.5rem]:[&:not(:lang(es))]:items-center',
+          )}
+          style={{ ['--enter-delay' as string]: '40ms' }}
+        >
+          <AreaPicker data={data} area={area} onPick={pickArea} />
+          <AudienceSwitch
+            audience={audience}
+            reward={data.welcomeReward}
+            onChange={(next) => {
+              if (next === audience) return;
+              setSwitched(true);
+              if (landing) landing.setAudience(next);
+              else setOwnAudience(next);
+            }}
+          />
+        </div>
       </div>
       <h1 id="hero-title" className="mt-6 font-display text-[clamp(2.6rem,min(4.5vw,7.2svh),4.75rem)] leading-[0.95] font-semibold tracking-[-0.045em] text-balance [font-stretch:94%] lg:mt-[clamp(0.75rem,2svh,1.5rem)]">
         <MaskLines

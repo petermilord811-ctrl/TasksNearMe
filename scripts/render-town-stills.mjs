@@ -14,6 +14,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
+import sharp from 'sharp';
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => {
@@ -56,6 +57,8 @@ try {
       const file = resolve(out, `town-${still.name}.webp`);
       const bytes = Buffer.from(url.slice('data:image/webp;base64,'.length), 'base64');
       writeFileSync(file, bytes);
+      // The band also comes 800 px wide, for phones (town-stage.tsx's srcset: the still is their LCP without a GPU).
+      if (still.layout === 'band') await sharp(bytes).resize(800).webp({ quality: 80 }).toFile(file.replace(/\.webp$/, '-800.webp'));
       console.log(`${still.name}: ${Math.round(bytes.length / 1024)} KB in ${((Date.now() - started) / 1000).toFixed(1)} s → ${file}`);
     } catch (error) {
       failed++;
