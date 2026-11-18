@@ -76,6 +76,22 @@ export const mayaPaymentsWithTipData: PaymentsPageData = {
   receipts: [deskAllowanceReceipt, { ...deskReceipt, tipCents: 900, netCents: 7500 }, yardRefundedReceipt],
 };
 
+/** A longer history (plan 9.14, audit M36): receipts over four months, grouped by month with the older ones folded. */
+const pastReceipt = (bookingId: string, title: string, categorySlug: ReceiptRow['categorySlug'], helper: typeof jordan | typeof sam, paidAt: string, chargedCents: number): ReceiptRow => ({
+  bookingId, title, categorySlug, helper: person(helper), paidAt, chargedCents, refundedCents: 0, netCents: chargedCents, status: 'succeeded',
+});
+export const mayaPaymentsHistoryData: PaymentsPageData = {
+  ...mayaPaymentsPageData,
+  receipts: [
+    ...mayaPaymentsPageData.receipts,
+    pastReceipt('bkg_shelves_oct', 'Hang three floating shelves', 'furniture-assembly', jordan, '2026-10-09T16:30:00.000Z', 5500),
+    pastReceipt('bkg_move_sep', 'Move a couch and two boxes upstairs', 'moving-help', sam, '2026-09-26T14:00:00.000Z', 13200),
+    pastReceipt('bkg_clean_sep', 'Clean the kitchen after a party', 'light-cleaning', sam, '2026-09-12T19:00:00.000Z', 8800),
+    pastReceipt('bkg_wifi_aug', 'Set up the new Wi‑Fi router', 'computer-help', jordan, '2026-08-30T17:15:00.000Z', 4400),
+    pastReceipt('bkg_bed_aug', 'Assemble a bed frame', 'furniture-assembly', jordan, '2026-08-14T15:45:00.000Z', 7700),
+  ],
+};
+
 export const paymentsEmptyData: PaymentsPageData = { receipts: [], methods: [], newCard: devCards };
 
 /** The desk receipt with the allowance refund. */

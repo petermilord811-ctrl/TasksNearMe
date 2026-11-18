@@ -28,7 +28,10 @@ describe('tips on receipts (UI-057)', () => {
     render(<NextIntlClientProvider locale="en" messages={messages}>
       <PaymentsScreen data={mayaPaymentsWithTipData} handlers={{ onAddCard: noop, onRemoveCard: noop, onMakeDefault: noop }} now="2026-11-25T15:00:00.000Z" />
     </NextIntlClientProvider>);
-    expect(screen.getByText('Charged $66.00 · Refunded $0.00 · Tip $9.00 · Net $75.00')).toBeInTheDocument();
-    expect(screen.getByText('Charged $86.00 · Refunded $12.00 · Net $74.00')).toBeInTheDocument();
+    // The tipped row says the tip and what was paid in all; no "Refunded $0.00" where nothing came back (audit L30).
+    const tipped = screen.getByText('Tip $9.00').closest('li')!;
+    expect(within(tipped).getAllByText('$75.00').length).toBeGreaterThan(0);
+    expect(within(tipped).queryByText(/Refunded/)).not.toBeInTheDocument();
+    expect(screen.getByText('Charged $86.00 · Refunded $12.00')).toBeInTheDocument();
   });
 });

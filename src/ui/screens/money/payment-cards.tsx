@@ -1,9 +1,10 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, Plus } from 'lucide-react';
 import type { ActionResult, PaymentMethodHandlers, PaymentsPageData, SavedPaymentMethod } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { PaymentMethodLabel } from '@/ui/components/payments';
@@ -63,7 +64,8 @@ function SavedCard({ method, handlers, onRemoved, onRemovalFocus, initialOpen = 
   }
 
   const feedback = <FormFeedback result={result && !result.ok ? { ...result, fieldErrors: undefined } : result} successMessage={t(operation === 'remove' ? 'removed' : 'defaultUpdated')} errorMessage={result && !result.ok && result.code === 'not_allowed' && operation === 'remove' ? t('removeNotAllowed') : undefined} />;
-  return <li ref={item} tabIndex={-1} aria-labelledby={`${id}-label`} className="space-y-3 rounded-xl py-4 outline-offset-4 first:pt-0 last:pb-0 focus-visible:outline-2 focus-visible:outline-ring">
+  // No rounded corners on the row itself: with the hairline between rows they drew a box around one card (audit L30).
+  return <li ref={item} tabIndex={-1} aria-labelledby={`${id}-label`} className="space-y-3 py-4 outline-offset-4 first:pt-0 last:pb-0 focus-visible:rounded-lg focus-visible:outline-2 focus-visible:outline-ring">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
         <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground"><CreditCard className="size-5" /></span>
@@ -100,12 +102,20 @@ export function PaymentCards({ methods, newCard, handlers, preview }: Pick<Payme
   const heading = useRef<HTMLHeadingElement>(null);
   // This confirmation survives when refreshed data removes the saved-card row.
   const [removalResult, setRemovalResult] = useState<ActionResult>();
+  // With cards saved, adding one is a tap away rather than a form above the receipts (audit M36); with none, it's open.
+  const [adding, setAdding] = useState(methods.length === 0 || preview?.adding === true || preview?.addResult !== undefined);
+  const addHeading = useRef<HTMLHeadingElement>(null);
+  const open = adding || methods.length === 0;
   return <section aria-labelledby={`${id}-cards`} className="space-y-4">
     <div><h2 ref={heading} tabIndex={-1} id={`${id}-cards`} className="font-display text-xl font-semibold tracking-[-0.015em] lg:text-[22px]">{t('cards')}</h2><p className="mt-1 text-sm text-muted-foreground">{t('cardsHint')}</p></div>
     <FormFeedback result={removalResult} successMessage={t('removed')} />
-    <div className="space-y-6 rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] p-4 sm:p-6">
+    <div className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] p-4 sm:p-6">
       {methods.length ? <ul className="divide-y divide-foreground/[0.07] dark:divide-white/[0.06]">{methods.map((method) => <SavedCard key={method.id} method={method} handlers={handlers} onRemoved={setRemovalResult} onRemovalFocus={() => heading.current?.focus()} initialOpen={preview?.removeMethodId === method.id} initialResult={preview?.removeMethodId === method.id ? preview.removeResult : undefined} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noCards')}</p>}
-      <div className="space-y-4 border-t border-foreground/[0.07] pt-6 dark:border-white/[0.06]"><h3 className="font-display text-lg font-semibold tracking-[-0.01em]">{t('addTitle')}</h3><AddCardForm collection={newCard} onAddCard={handlers.onAddCard} initialResult={preview?.addResult} initialPending={preview?.adding} /></div>
+      <div className="border-t border-foreground/[0.07] pt-5 dark:border-white/[0.06]">
+        {open
+          ? <div className="space-y-4"><h3 ref={addHeading} tabIndex={-1} className="font-display text-lg font-semibold tracking-[-0.01em] outline-none">{t('addTitle')}</h3><AddCardForm collection={newCard} onAddCard={handlers.onAddCard} initialResult={preview?.addResult} initialPending={preview?.adding} /></div>
+          : <Button type="button" variant="outline" onClick={() => { flushSync(() => setAdding(true)); addHeading.current?.focus(); }}><Plus aria-hidden="true" />{t('addTitle')}</Button>}
+      </div>
     </div>
   </section>;
 }

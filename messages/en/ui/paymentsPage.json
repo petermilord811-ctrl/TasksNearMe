@@ -3,8 +3,11 @@
   "description": "Your receipts and saved cards, all in one place.",
   "receipts": "Receipts",
   "helper": "Helper: {name}",
-  "paidAt": "Paid {date}",
-  "amounts": "Charged {charged} · Refunded {refunded}{hasTip, select, yes { · Tip {tip}} other {}} · Net {net}",
+  "youPaid": "You paid",
+  "chargedRefunded": "Charged {charged} · Refunded {refunded}",
+  "tip": "Tip {tip}",
+  "showOlder": "{count, plural, one {Show # older receipt} other {Show # older receipts}}",
+  "hideOlder": "Hide older receipts",
   "emptyTitle": "No payments yet",
   "emptyBody": "When you book a helper, your receipts will appear here.",
   "postTask": "Post a task",
@@ -51,6 +54,7 @@
     "with-tip": "Payments: a receipt with a tip",
     "receipt-tip": "Receipt: with a tip",
     "earnings-tip": "Earnings: a tip from a client",
-    "earnings-instant": "Earnings: cash out now"
+    "earnings-instant": "Earnings: cash out now",
+    "history": "Payments: a longer history, by month"
   }
 }

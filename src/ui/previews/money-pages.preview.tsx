@@ -6,7 +6,7 @@ import {
   deskReceiptPageData, deskSimpleReceiptPageData, earningsEmptyData, earningsFirstPayoutData,
   fakeEarningsHandlers, fakeHandler, fakePaymentMethodHandlers, jordanEarningsActionNeededData,
   jordanEarningsPageData, jordanShell, mayaPaymentsPageData, mayaShell, paymentsEmptyData,
-  deskTipReceiptPageData, jordanEarningsInstantData, jordanEarningsWithTipData, mayaPaymentsWithTipData,
+  deskTipReceiptPageData, jordanEarningsInstantData, jordanEarningsWithTipData, mayaPaymentsHistoryData, mayaPaymentsWithTipData,
 } from '@/fixtures';
 import { EarningsScreen, ReceiptScreen } from '@/ui/screens/money';
 import { PaymentsContent, PaymentsScreen } from '@/ui/screens/money/payments-screen';
@@ -43,6 +43,7 @@ export const moneyPagePreviews: PreviewEntry[] = [
   paymentsPreview('default', copy.previews.default, mayaPaymentsPageData),
   paymentsPreview('empty', copy.previews.empty, paymentsEmptyData),
   paymentsPreview('with-tip', copy.previews['with-tip'], mayaPaymentsWithTipData),
+  paymentsPreview('history', copy.previews.history, mayaPaymentsHistoryData),
   paymentsPreview('adding-card', copy.previews['adding-card'], mayaPaymentsPageData, { adding: true }),
   paymentsPreview('card-declined', copy.previews['card-declined'], mayaPaymentsPageData, { addResult: declined }, { ...fakePaymentMethodHandlers, onAddCard: fakeHandler(declined) }),
   paymentsPreview('remove-confirm', copy.previews['remove-confirm'], mayaPaymentsPageData, { removeMethodId: mayaPaymentsPageData.methods[1].id }),

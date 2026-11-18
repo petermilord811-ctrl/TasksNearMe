@@ -3,8 +3,11 @@
   "description": "Tus recibos y tarjetas guardadas, todo en un solo lugar.",
   "receipts": "Recibos",
   "helper": "Ayudante: {name}",
-  "paidAt": "Pagado el {date}",
-  "amounts": "Cobrado {charged} · Reembolsado {refunded}{hasTip, select, yes { · Propina {tip}} other {}} · Neto {net}",
+  "youPaid": "Pagaste",
+  "chargedRefunded": "Cobrado {charged} · Reembolsado {refunded}",
+  "tip": "Propina {tip}",
+  "showOlder": "{count, plural, one {Ver # recibo anterior} other {Ver # recibos anteriores}}",
+  "hideOlder": "Ocultar recibos anteriores",
   "emptyTitle": "Aún no hay pagos",
   "emptyBody": "Cuando reserves a un ayudante, tus recibos aparecerán aquí.",
   "postTask": "Publicar una tarea",
@@ -51,6 +54,7 @@
     "with-tip": "Pagos: un recibo con propina",
     "receipt-tip": "Recibo: con propina",
     "earnings-tip": "Ganancias: una propina de un cliente",
-    "earnings-instant": "Ganancias: cobrar ahora"
+    "earnings-instant": "Ganancias: cobrar ahora",
+    "history": "Pagos: un historial más largo, por mes"
   }
 }

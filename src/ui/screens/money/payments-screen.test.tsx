@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, DEV_TEST_CARDS, routes, type ActionResult, type PaymentMethodHandlers, type PaymentsPageData } from '@/contracts';
-import { mayaPaymentsPageData, paymentsEmptyData } from '@/fixtures';
+import { mayaPaymentsHistoryData, mayaPaymentsPageData, paymentsEmptyData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { PaymentsScreen } from './payments-screen';
 
@@ -31,19 +31,33 @@ function mount(data: PaymentsPageData = mayaPaymentsPageData, overrides: Partial
   return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><PaymentsScreen data={data} handlers={handlers} now={now} /></NextIntlClientProvider>) };
 }
 
+/** With cards saved, the add-card form sits behind "Add a card" (audit M36). */
+function mountAdding(data: PaymentsPageData = mayaPaymentsPageData, overrides: Partial<PaymentMethodHandlers> = {}) {
+  const mounted = mount(data, overrides);
+  fireEvent.click(screen.getByRole('button', { name: copy.addTitle }));
+  return mounted;
+}
+
 describe('PaymentsScreen', () => {
   it('shows each supplied receipt amount, helper, paid date, status, and receipt link', () => {
     mount();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByText('Charged $86.00 · Refunded $12.00 · Net $74.00')).toBeVisible();
-    expect(screen.getByText('Charged $66.00 · Refunded $0.00 · Net $66.00')).toBeVisible();
-    expect(screen.getByText('Charged $99.00 · Refunded $99.00 · Net $0.00')).toBeVisible();
+    const row = (title: string) => within(screen.getByRole('link', { name: title }).closest('li')!);
+    const [allowance, desk, yard] = mayaPaymentsPageData.receipts;
+    // What the client paid, and a refund only when there was one (audit L30).
+    expect(row(allowance!.title).getByText('Charged $86.00 · Refunded $12.00')).toBeVisible();
+    expect(row(allowance!.title).getAllByText('$74.00').length).toBeGreaterThan(0);
+    expect(row(desk!.title).getAllByText('$66.00').length).toBeGreaterThan(0);
+    expect(row(desk!.title).queryByText(/Refunded/)).not.toBeInTheDocument();
+    expect(row(yard!.title).getByText('Charged $99.00 · Refunded $99.00')).toBeVisible();
+    expect(row(yard!.title).getAllByText('$0.00').length).toBeGreaterThan(0);
     for (const receipt of mayaPaymentsPageData.receipts) {
       const link = screen.getByRole('link', { name: receipt.title });
       expect(link).toHaveAttribute('href', routes.app.receipt(receipt.bookingId));
-      const row = within(link.closest('li')!);
-      expect(row.getByText(`Helper: ${receipt.helper.displayName}`)).toBeVisible();
-      expect(row.getByText(messages.status.payment[receipt.status])).toBeVisible();
+      const item = within(link.closest('li')!);
+      expect(item.getByText(`Helper: ${receipt.helper.displayName}`)).toBeVisible();
+      expect(item.getByText(messages.status.payment[receipt.status])).toBeVisible();
+      expect(item.getAllByText(copy.youPaid).length).toBeGreaterThan(0);
       expect(link.closest('li')!.querySelector('time')).toHaveAttribute('dateTime', receipt.paidAt);
     }
   });
@@ -51,8 +65,32 @@ describe('PaymentsScreen', () => {
   it('renders the supplied net even when a synthetic row does not balance', () => {
     const receipt = { ...mayaPaymentsPageData.receipts[0]!, netCents: 6600 };
     mount({ ...mayaPaymentsPageData, receipts: [receipt] });
-    expect(screen.getByText('Charged $86.00 · Refunded $12.00 · Net $66.00')).toBeVisible();
-    expect(screen.queryByText(/Net \$74\.00/)).not.toBeInTheDocument();
+    expect(screen.getByText('Charged $86.00 · Refunded $12.00')).toBeVisible();
+    expect(screen.getAllByText('$66.00').length).toBeGreaterThan(0);
+    expect(screen.queryByText('$74.00')).not.toBeInTheDocument();
+  });
+
+  it('puts the saved cards before the receipts and groups receipts by month, the older ones folded', () => {
+    const { container } = mount(mayaPaymentsHistoryData);
+    const cards = screen.getByRole('heading', { name: copy.cards, level: 2 });
+    const receipts = screen.getByRole('heading', { name: copy.receipts, level: 2 });
+    expect(cards.compareDocumentPosition(receipts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Nov 2026' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Oct 2026' }).length).toBeGreaterThan(0);
+    // Five show; the other three are behind "Show 3 older receipts".
+    const details = container.querySelector('details')!;
+    expect(details).not.toHaveAttribute('open');
+    expect(within(details).getByText('Show 3 older receipts')).toBeInTheDocument();
+    for (const receipt of mayaPaymentsHistoryData.receipts.slice(5)) expect(details).toContainElement(screen.getByRole('link', { name: receipt.title, hidden: true }));
+    for (const receipt of mayaPaymentsHistoryData.receipts.slice(0, 5)) expect(details).not.toContainElement(screen.getByRole('link', { name: receipt.title }));
+  });
+
+  it('keeps the add-card form a tap away when cards are saved, and moves focus to it', () => {
+    mount();
+    expect(screen.queryByRole('form', { name: copy.addTitle })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: copy.addTitle }));
+    expect(addForm()).toBeVisible();
+    expect(screen.getByRole('heading', { level: 3, name: copy.addTitle })).toHaveFocus();
   });
 
   it('explains empty receipts and cards and offers the task route', () => {
@@ -65,7 +103,7 @@ describe('PaymentsScreen', () => {
   });
 
   it('shows masked cards, expiry, and the supplied default', () => {
-    mount();
+    mountAdding();
     expect(within(visa()).getByText('Expires 08/28')).toBeVisible();
     expect(within(visa()).getByText(messages.payments.picker.default)).toBeVisible();
     // The default card says so and has no "Make default".
@@ -188,7 +226,7 @@ describe('PaymentsScreen', () => {
 
   it('sends the chosen test card and default choice, preserving both after a decline', async () => {
     const user = userEvent.setup();
-    const { handlers } = mount(undefined, { onAddCard: vi.fn().mockResolvedValue({ ok: false, code: 'payment_declined' }) });
+    const { handlers } = mountAdding(undefined, { onAddCard: vi.fn().mockResolvedValue({ ok: false, code: 'payment_declined' }) });
     const declined = screen.getByRole('radio', { name: messages.payments.testCards.declined });
     await user.click(declined);
     await user.click(defaultCheckbox());
@@ -206,7 +244,7 @@ describe('PaymentsScreen', () => {
   it('refreshes after adding and follows a supplied redirect', async () => {
     const user = userEvent.setup();
     const redirectTo = routes.app.payments();
-    const { handlers } = mount(undefined, { onAddCard: vi.fn().mockResolvedValue({ ok: true, code: 'saved', redirectTo }) });
+    const { handlers } = mountAdding(undefined, { onAddCard: vi.fn().mockResolvedValue({ ok: true, code: 'saved', redirectTo }) });
     await user.click(addButton());
     expect(await screen.findByText(copy.saved)).toBeVisible();
     expect(handlers.onAddCard).toHaveBeenCalledExactlyOnceWith({ card: 'success', makeDefault: false });
@@ -217,7 +255,7 @@ describe('PaymentsScreen', () => {
   it('locks all add-card controls and ignores duplicate submission while pending', async () => {
     let finish!: (result: ActionResult) => void;
     const onAddCard = vi.fn(() => new Promise<ActionResult>((resolve) => { finish = resolve; }));
-    mount(undefined, { onAddCard });
+    mountAdding(undefined, { onAddCard });
     fireEvent.submit(addForm());
     fireEvent.submit(addForm());
     const pending = await screen.findByRole('button', { name: copy.adding });
@@ -237,7 +275,7 @@ describe('PaymentsScreen', () => {
 
   it.each(['card', 'makeDefault'] as const)('focuses the %s field after server validation fails', async (field) => {
     const user = userEvent.setup();
-    mount(undefined, { onAddCard: vi.fn().mockResolvedValue({ ok: false, code: 'validation_failed', fieldErrors: { [field]: ['invalid'] } }) });
+    mountAdding(undefined, { onAddCard: vi.fn().mockResolvedValue({ ok: false, code: 'validation_failed', fieldErrors: { [field]: ['invalid'] } }) });
     await user.click(addButton());
     expect(await screen.findByText(messages.forms.fieldErrors.invalid)).toBeVisible();
     const control = field === 'card' ? screen.getByRole('radio', { name: messages.payments.testCards.success }) : defaultCheckbox();
@@ -248,7 +286,7 @@ describe('PaymentsScreen', () => {
 
   it.each(ACTION_ERROR_CODES)('announces friendly add-card feedback for %s', async (code) => {
     const user = userEvent.setup();
-    mount(undefined, { onAddCard: vi.fn().mockResolvedValue({ ok: false, code }) });
+    mountAdding(undefined, { onAddCard: vi.fn().mockResolvedValue({ ok: false, code }) });
     await user.click(addButton());
     const expected = code === 'payment_declined' ? copy.declined
       : code in messages.forms.actionErrors ? messages.forms.actionErrors[code as keyof typeof messages.forms.actionErrors]
@@ -262,7 +300,7 @@ describe('PaymentsScreen', () => {
 
   it('handles rejected add-card requests without losing the current selection', async () => {
     const user = userEvent.setup();
-    mount(undefined, { onAddCard: vi.fn().mockRejectedValue(new Error('offline')) });
+    mountAdding(undefined, { onAddCard: vi.fn().mockRejectedValue(new Error('offline')) });
     await user.click(screen.getByRole('radio', { name: messages.payments.testCards.insufficient_funds }));
     await user.click(addButton());
     expect(await screen.findByText(messages.feedback.error.unknown)).toBeVisible();
