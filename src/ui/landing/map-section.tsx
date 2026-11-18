@@ -105,7 +105,8 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
             </figcaption>
           </figure>
           {/* Paper behind the heading, so it reads over the map; it melts into the map with no edge. */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden lg:block" style={{ background: 'radial-gradient(50% 36% at 6% 20%, var(--background) 42%, color-mix(in oklab, var(--background) 70%, transparent) 60%, transparent 82%)' }} />
+          {/* Close around the words only (audit M8: a wider one read as a haze over a quarter of the map). */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden lg:block" style={{ background: 'radial-gradient(40% 30% at 4% 19%, var(--background) 36%, color-mix(in oklab, var(--background) 60%, transparent) 56%, transparent 76%)' }} />
         </div>
 
         <div className="relative order-1 px-gutter pt-14 sm:pt-20 lg:pointer-events-none lg:order-none lg:col-start-2 lg:row-start-1 lg:px-0 lg:pt-[max(9rem,11vw)]">

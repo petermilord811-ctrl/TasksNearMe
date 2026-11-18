@@ -29,7 +29,7 @@
   --accent-foreground: #17120e;
   --destructive: #b42318;
   --destructive-foreground: #ffffff;
-  --border: #e9e0d4;
+  --border: #e5dccf;
   --input: #8f8577;
   --ring: #7c5cff;
   --success: #217a46;
@@ -91,6 +91,12 @@
   --badge-danger-foreground: #a02a1f;
   --badge-reward: #fff0d4;
   --badge-reward-foreground: #704605;
+  /* A highlighted card (a welcome gift, a reward, a note that matters): a card with a warm tint, its edge and an
+     accent for its icon and heading (9.8). Badge colors are for small badges, never whole surfaces. */
+  --callout: #fff7ea;
+  --callout-foreground: #2a1d0c;
+  --callout-border: #efdcba;
+  --callout-accent: #8f5300;
 }
 
 :root {
@@ -123,9 +129,9 @@
   color-scheme: dark;
   --background: #0f0d0b;
   --foreground: #f7f1ea;
-  --card: #181511;
+  --card: #1c1915;
   --card-foreground: #f7f1ea;
-  --popover: #1d1914;
+  --popover: #221e19;
   --popover-foreground: #f7f1ea;
   --primary: #ff8b5c;
   --primary-foreground: #1a0b04;
@@ -133,13 +139,13 @@
   --primary-glow: rgb(255 139 92 / 0.35);
   --secondary: #2c1e16;
   --secondary-foreground: #ffd3b8;
-  --muted: #1f1b16;
+  --muted: #24201a;
   --muted-foreground: #b8aea2;
   --accent: #231e35;
   --accent-foreground: #f7f1ea;
   --destructive: #ff8a80;
   --destructive-foreground: #2a0f0c;
-  --border: #2e2822;
+  --border: #3a332b;
   --input: #8a8075;
   --ring: #a48bff;
   --success: #7fd39c;
@@ -199,8 +205,12 @@
   --badge-warning-foreground: #f5cf8f;
   --badge-danger: #3d1a16;
   --badge-danger-foreground: #ffb4aa;
-  --badge-reward: #3a2d10;
-  --badge-reward-foreground: #f5d48f;
+  --badge-reward: #2d2517;
+  --badge-reward-foreground: #f0d49a;
+  --callout: #241f17;
+  --callout-foreground: #f7f1ea;
+  --callout-border: #5a4826;
+  --callout-accent: #f2c36b;
   }
 }
 
@@ -208,9 +218,9 @@
   color-scheme: dark;
   --background: #0f0d0b;
   --foreground: #f7f1ea;
-  --card: #181511;
+  --card: #1c1915;
   --card-foreground: #f7f1ea;
-  --popover: #1d1914;
+  --popover: #221e19;
   --popover-foreground: #f7f1ea;
   --primary: #ff8b5c;
   --primary-foreground: #1a0b04;
@@ -218,13 +228,13 @@
   --primary-glow: rgb(255 139 92 / 0.35);
   --secondary: #2c1e16;
   --secondary-foreground: #ffd3b8;
-  --muted: #1f1b16;
+  --muted: #24201a;
   --muted-foreground: #b8aea2;
   --accent: #231e35;
   --accent-foreground: #f7f1ea;
   --destructive: #ff8a80;
   --destructive-foreground: #2a0f0c;
-  --border: #2e2822;
+  --border: #3a332b;
   --input: #8a8075;
   --ring: #a48bff;
   --success: #7fd39c;
@@ -284,8 +294,12 @@
   --badge-warning-foreground: #f5cf8f;
   --badge-danger: #3d1a16;
   --badge-danger-foreground: #ffb4aa;
-  --badge-reward: #3a2d10;
-  --badge-reward-foreground: #f5d48f;
+  --badge-reward: #2d2517;
+  --badge-reward-foreground: #f0d49a;
+  --callout: #241f17;
+  --callout-foreground: #f7f1ea;
+  --callout-border: #5a4826;
+  --callout-accent: #f2c36b;
 }
 
 @theme inline {
@@ -350,6 +364,10 @@
   --color-badge-danger-foreground: var(--badge-danger-foreground);
   --color-badge-reward: var(--badge-reward);
   --color-badge-reward-foreground: var(--badge-reward-foreground);
+  --color-callout: var(--callout);
+  --color-callout-foreground: var(--callout-foreground);
+  --color-callout-border: var(--callout-border);
+  --color-callout-accent: var(--callout-accent);
   --text-display: clamp(2.75rem, 5.6vw, 4.75rem);
   --text-display--line-height: 1.02;
   --text-display--letter-spacing: -0.04em;
@@ -393,16 +411,18 @@
 }
 [data-theme="dark"] { --paper: url("/ui/landing/paper-dark.webp"); }
 @utility paper {
+  /* The marble under a veil of the background (9.8, audit M11 and M12): its darkest vein ends up about 2 L* off
+     the page (raw it is 16 in light, 14 in dark), a warmth you feel more than see, never a line through the words
+     or around the cards. */
+  --paper-veil: color-mix(in oklab, var(--background) 86%, transparent);
   background-color: var(--background);
-  background-image: var(--paper);
+  background-image: linear-gradient(var(--paper-veil), var(--paper-veil)), var(--paper);
   background-size: 2048px 2048px;
   background-position: 50% 0;
 }
-/* The signed-in app's screens are dense: there the same paper sits under a veil of the background, at about
-   half its strength, so it reads as a calm surface rather than a pattern. */
+/* The signed-in app's screens are dense: there the paper is veiled further (about 1 L*), a calm surface. */
 [data-app-surface].paper {
-  --paper-veil: color-mix(in oklab, var(--background) 55%, transparent);
-  background-image: linear-gradient(var(--paper-veil), var(--paper-veil)), var(--paper);
+  --paper-veil: color-mix(in oklab, var(--background) 92%, transparent);
 }
 
 /* ---- Scrollbars ---------------------------------------------------------------------------------------
@@ -508,16 +528,18 @@
 /* ---- Motion (src/ui/motion) -------------------------------------------------------------------
    Content is visible without JavaScript. `data-motion="on"` on <html> (set after hydration, never under
    reduced motion) lets [data-reveal] elements start hidden until they scroll into view. */
+/* Quick and plain (audit M7: 560–800 ms with a blur left whole sections blank after a fling or a jump): about 300 ms,
+   a short rise, no blur unless a piece asks for one (`--reveal-blur`). */
 [data-reveal] {
   transition:
-    opacity var(--dur-slow) var(--ease-out) var(--reveal-delay, 0ms),
-    transform var(--dur-slower) var(--ease-out) var(--reveal-delay, 0ms),
-    filter var(--dur-slow) var(--ease-out) var(--reveal-delay, 0ms);
+    opacity 300ms var(--ease-out) var(--reveal-delay, 0ms),
+    transform 360ms var(--ease-out) var(--reveal-delay, 0ms),
+    filter 300ms var(--ease-out) var(--reveal-delay, 0ms);
 }
 html[data-motion="on"] [data-reveal]:not([data-revealed]) {
   opacity: 0;
-  transform: translate3d(0, var(--reveal-rise, 18px), 0) scale(var(--reveal-scale, 1));
-  filter: blur(var(--reveal-blur, 8px));
+  transform: translate3d(0, var(--reveal-rise, 12px), 0) scale(var(--reveal-scale, 1));
+  filter: blur(var(--reveal-blur, 0px));
 }
 html[data-motion="on"] [data-reveal="bloom"]:not([data-revealed]) {
   --reveal-scale: 0.92;

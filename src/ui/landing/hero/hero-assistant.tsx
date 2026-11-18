@@ -444,7 +444,8 @@ export function HeroAssistant({ assistant: a, className }: { assistant: HeroAssi
                 className={cn(
                   'mt-[0.55rem] shrink-0 overflow-hidden leading-6 whitespace-nowrap text-muted-foreground transition-[max-width,opacity,margin] duration-300 ease-[var(--ease-out)]',
                   // Room for the longest prompt ("Necesito ayuda para…"); it's only a cap, so shorter ones keep their width.
-                  a.text ? '-mr-2 max-w-0 opacity-0' : 'max-w-[11.5rem] opacity-100',
+                  // Under 400 px it folds away (still the field's label), so the example has the row (audit M6).
+                  a.text ? '-mr-2 max-w-0 opacity-0' : 'max-w-[11.5rem] opacity-100 max-[400px]:-mr-2 max-[400px]:max-w-0 max-[400px]:opacity-0',
                 )}
               >
                 {helper && <span className="sr-only">{t('helperLabel')}: </span>}

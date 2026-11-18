@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, type AccountHandlers, type AccountPageData, type ActionResult } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Spinner } from '@/ui/primitives/spinner';
+import { cn } from '@/ui/lib/utils';
 import { Switch } from '@/ui/primitives/switch';
 import { useAccountAction } from './use-account-action';
 
@@ -24,8 +25,9 @@ function PreferenceSwitch({ preference, onSave, hintId, onResult }: {
   const label = t('preferences.switchLabel', { topic: t(`preferences.topics.${preference.topic}`), channel: t(`preferences.channels.${preference.channel}`) });
 
   return <div className="relative flex items-center justify-center">
-    <label htmlFor={id} className="flex min-h-11 min-w-11 items-center justify-center px-2">
-      <Switch id={id} aria-label={label} aria-describedby={preference.locked ? hintId : undefined} aria-busy={action.pending} checked={preference.locked || enabled} disabled={preference.locked || action.pending} onCheckedChange={async (nextEnabled) => {
+    <label htmlFor={id} className="relative flex min-h-11 min-w-11 items-center justify-center px-2">
+      {/* Always on (bookings, payments, the account's email): fully on, not faded, with a lock on it (audit L8). */}
+      <Switch id={id} aria-label={label} aria-describedby={preference.locked ? hintId : undefined} aria-busy={action.pending} checked={preference.locked || enabled} disabled={preference.locked || action.pending} className={cn(preference.locked && 'disabled:cursor-default disabled:opacity-100')} onCheckedChange={async (nextEnabled) => {
         const previous = enabled;
         setEnabled(nextEnabled);
         onResult(undefined, label);
@@ -33,6 +35,7 @@ function PreferenceSwitch({ preference, onSave, hintId, onResult }: {
         if (!result?.ok) setEnabled(previous);
         onResult(result, label);
       }} />
+      {preference.locked && <LockKeyhole aria-hidden="true" className="pointer-events-none absolute -top-0.5 right-0.5 size-3.5 rounded-full bg-card p-px text-muted-foreground" />}
     </label>
     {action.pending && <Spinner aria-hidden="true" className="absolute right-0 size-3" />}
   </div>;

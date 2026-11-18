@@ -81,7 +81,7 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
         </div>
         <Controller control={form.control} name="interest" render={({ field, fieldState }) => <FieldSet data-invalid={fieldState.invalid} className="gap-3">
           <FieldLegend id={`${id}-interest-label`} className="mb-0">{forms('fields.interest.label')}</FieldLegend>
-          <FieldDescription id={`${id}-interest-hint`}>{forms('fields.interest.hint')}</FieldDescription>
+          <FieldDescription id={`${id}-interest-hint`} className="mt-1">{forms('fields.interest.hint')}</FieldDescription>
           <RadioGroup
             name={field.name}
             value={field.value ?? ''}
@@ -94,7 +94,7 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
             aria-invalid={fieldState.invalid}
             className="gap-2"
           >
-            {WAITLIST_INTERESTS.map((interest, index) => <Field key={interest} orientation="horizontal" className="gap-3 rounded-2xl border border-foreground/[0.1] px-3 transition-[background-color,border-color] duration-200 hover:border-foreground/25 has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-brand-soft dark:border-white/[0.1]">
+            {WAITLIST_INTERESTS.map((interest, index) => <Field key={interest} orientation="horizontal" className="gap-3 rounded-2xl border border-border px-3 transition-[background-color,border-color] duration-200 hover:border-foreground/25 has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-brand-soft">
               <RadioGroupItem id={`${id}-${interest}`} value={interest} ref={index === 0 ? field.ref : undefined} />
               <FieldLabel htmlFor={`${id}-${interest}`} className="min-h-11 flex-1 py-3 text-base font-normal">{t(`interests.${interest}`)}</FieldLabel>
             </Field>)}

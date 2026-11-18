@@ -71,3 +71,28 @@ describe('motion primitives under reduced motion', () => {
     expect(observe).not.toHaveBeenCalled();
   });
 });
+
+describe('MotionRoot with motion on', () => {
+  it('shows what is on screen at once, and what a jump carried past when the scroll settles (audit M7)', () => {
+    document.documentElement.dataset.motion = 'ready';
+    const rects = new Map([['Near', { top: 100, bottom: 300 }], ['Passed', { top: 2000, bottom: 2400 }], ['Ahead', { top: 3000, bottom: 3400 }]]);
+    const measure = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const { top, bottom } = rects.get(this.textContent ?? '') ?? { top: 0, bottom: 0 };
+      return { top, bottom, left: 0, right: 0, width: 0, height: bottom - top, x: 0, y: top, toJSON: () => ({}) } as DOMRect;
+    });
+    try {
+      render(<><MotionRoot /><Reveal><p>Near</p></Reveal><Reveal><p>Passed</p></Reveal><Reveal><p>Ahead</p></Reveal></>);
+      const wrapper = (text: string) => screen.getByText(text).parentElement;
+      expect(document.documentElement.dataset.motion).toBe('on');
+      expect(wrapper('Near')).toHaveAttribute('data-revealed');
+      expect(wrapper('Passed')).not.toHaveAttribute('data-revealed');
+      // A jump to the footer: "Passed" is now above the screen, "Ahead" still below it.
+      rects.set('Passed', { top: -900, bottom: -500 });
+      fireEvent(window, new Event('scrollend'));
+      expect(wrapper('Passed')).toHaveAttribute('data-revealed');
+      expect(wrapper('Ahead')).not.toHaveAttribute('data-revealed');
+    } finally {
+      measure.mockRestore();
+    }
+  });
+});

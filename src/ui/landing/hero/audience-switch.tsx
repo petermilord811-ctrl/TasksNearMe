@@ -1,10 +1,11 @@
 'use client';
 
 import { useId } from 'react';
+import { Gift } from 'lucide-react';
 import { LazyMotion, domMax, m } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import type { HomePageData } from '@/contracts';
-import { formatMoney } from '@/shared/format';
+import { formatMoney, formatMoneyShort } from '@/shared/format';
 import { spring, usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import type { Audience } from '../landing-state';
@@ -35,7 +36,8 @@ export function AudienceSwitch({ audience, onChange, reward }: { audience: Audie
               onClick={() => onChange(side)}
               className={cn(
                 // 32 px to the eye, 44 px to the finger (the hit area reaches past the pill).
-                'relative isolate inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition-colors duration-300 after:absolute after:-inset-y-1.5 after:inset-x-0 after:content-[""]',
+                // One line in every language (audit M10: "Necesito / ayuda" wrapped inside its pill at 360).
+                'relative isolate inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold whitespace-nowrap transition-colors duration-300 after:absolute after:-inset-y-1.5 after:inset-x-0 after:content-[""]',
                 on ? 'text-background' : 'text-foreground/70 hover:text-foreground',
               )}
             >
@@ -49,8 +51,10 @@ export function AudienceSwitch({ audience, onChange, reward }: { audience: Audie
               )}
               {t(side)}
               {side === 'helper' && open && (
-                <span className={cn('rounded-full px-1.5 py-px text-[11px] leading-4 font-bold tabular-nums', on ? 'bg-reward text-reward-foreground' : 'bg-reward/20 text-foreground')}>
-                  <span aria-hidden="true">+{formatMoney(open.amountCents)}</span>
+                // A gift and whole dollars, so it reads as the welcome gift card, not a fee (audit L5).
+                <span className={cn('inline-flex items-center gap-1 rounded-full px-1.5 py-px text-xs leading-4 font-bold tabular-nums', on ? 'bg-reward text-reward-foreground' : 'bg-reward/20 text-foreground')}>
+                  <Gift aria-hidden="true" className="size-3" />
+                  <span aria-hidden="true">+{formatMoneyShort(open.amountCents)}</span>
                   <span className="sr-only">{t('rewardSpoken', { amount: formatMoney(open.amountCents) })}</span>
                 </span>
               )}

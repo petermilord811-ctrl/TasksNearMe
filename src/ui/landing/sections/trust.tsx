@@ -52,14 +52,16 @@ export function TrustSection() {
 }
 
 function Tag({ children, className }: { children: ReactNode; className?: string }) {
-  return <span className={cn('inline-flex items-center gap-1 rounded-full border border-foreground/[0.07] bg-card px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap text-foreground/80 shadow-[0_6px_14px_-10px_rgb(0_0_0/0.45)]', className)}>{children}</span>;
+  return <span className={cn('inline-flex items-center gap-1 rounded-full border border-foreground/[0.07] bg-card px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-foreground/80 shadow-[0_6px_14px_-10px_rgb(0_0_0/0.45)]', className)}>{children}</span>;
 }
 
 /** An ID card being checked: a badge pops on, a scan sweeps across while it's pointed at. */
 function IdPicture({ idCheck, backgroundCheck }: { idCheck: string; backgroundCheck: string }) {
   return (
-    <div className="absolute inset-0 grid place-items-center">
-      <div className="trust-id relative w-80 max-w-[84%]">
+    // Centered with flex (a grid's auto column grew to the card's 320 px, so on a phone it ran past the frame), and
+    // on a phone nearly the frame's width, so the tags fit; a longer one (Spanish) wraps inside the card.
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="trust-id relative w-80 max-w-[calc(100%-1.5rem)]">
         <div className="relative overflow-hidden rounded-2xl border border-foreground/[0.08] bg-card p-3.5 shadow-[0_16px_34px_-20px_rgb(0_0_0/0.5)]">
           <div className="flex items-center gap-3">
             <span className="grid size-11 shrink-0 place-items-center rounded-full text-white" style={{ backgroundImage: 'var(--iridescent)' }}><UserRound className="size-5" /></span>
@@ -69,8 +71,8 @@ function IdPicture({ idCheck, backgroundCheck }: { idCheck: string; backgroundCh
             </span>
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <Tag><BadgeCheck className="size-3.5 text-violet" />{idCheck}</Tag>
-            <Tag><ShieldCheck className="size-3.5 text-violet" />{backgroundCheck}</Tag>
+            <Tag className="rounded-xl whitespace-normal"><BadgeCheck className="size-3.5 shrink-0 text-violet" />{idCheck}</Tag>
+            <Tag className="rounded-xl whitespace-normal"><ShieldCheck className="size-3.5 shrink-0 text-violet" />{backgroundCheck}</Tag>
           </div>
           <span className="trust-scan" />
         </div>
@@ -119,7 +121,7 @@ function PaymentPicture({ pay, approve, paid }: { pay: string; approve: string; 
               <span className="trust-node grid size-10 place-items-center rounded-full border border-foreground/[0.08] bg-card text-violet shadow-[0_8px_18px_-12px_rgb(0_0_0/0.5)]" style={{ ['--node' as string]: index }}>
                 <Icon className="size-4.5" />
               </span>
-              <span className="text-[11px] leading-tight font-semibold text-foreground/75">{label}</span>
+              <span className="text-xs leading-tight font-semibold text-foreground/75">{label}</span>
             </li>
           ))}
         </ol>
@@ -135,7 +137,7 @@ function ReviewsPicture({ client, helper, rule }: { client: string; helper: stri
       <div className="relative flex items-start justify-center gap-3">
         {[client, helper].map((who, index) => (
           <div key={who} className={cn('trust-review w-36 rounded-2xl border border-foreground/[0.08] bg-card p-3 shadow-[0_12px_28px_-18px_rgb(0_0_0/0.5)]', index === 1 && 'mt-4')}>
-            <span className="block text-[11px] font-semibold text-muted-foreground">{who}</span>
+            <span className="block text-xs font-semibold text-muted-foreground">{who}</span>
             <span className="mt-1.5 flex gap-0.5 text-reward">
               {[0, 1, 2, 3, 4].map((star) => <Star key={star} className="size-3.5" />)}
             </span>
@@ -145,7 +147,7 @@ function ReviewsPicture({ client, helper, rule }: { client: string; helper: stri
         ))}
         <span className="trust-lock absolute top-1/2 left-1/2 grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-foreground/[0.08] bg-card text-foreground/70 shadow-[0_8px_18px_-10px_rgb(0_0_0/0.5)]"><LockKeyhole className="size-4" /></span>
       </div>
-      <span className="text-[11px] font-medium text-muted-foreground">{rule}</span>
+      <span className="text-xs font-medium text-muted-foreground">{rule}</span>
     </div>
   );
 }

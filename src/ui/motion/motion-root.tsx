@@ -29,10 +29,21 @@ export function MotionRoot() {
           observer.unobserve(entry.target);
         }
       },
-      { rootMargin: '0px 0px -8% 0px', threshold: 0.12 },
+      // A quarter-screen ahead: a section is already showing when it arrives, after a fling or a jump too (audit M7).
+      { rootMargin: '0px 0px 25% 0px', threshold: 0 },
     );
     const watch = (scope: ParentNode) => scope.querySelectorAll(REVEAL).forEach((element) => observer.observe(element));
     watch(document);
+    // Whatever a fling or a jump (the footer's "On this page", find in page) carried past shows at once when the
+    // scroll settles, so going back up never lands on blank paper (audit M7).
+    const revealPassed = () => {
+      for (const element of document.querySelectorAll(REVEAL)) {
+        if (element.getBoundingClientRect().bottom > 0) continue;
+        reveal(element);
+        observer.unobserve(element);
+      }
+    };
+    window.addEventListener('scrollend', revealPassed, { passive: true });
     // Client islands that mount later (the map, lists) bring their own reveals.
     const mutations = new MutationObserver((records) => {
       for (const record of records) {
@@ -49,6 +60,7 @@ export function MotionRoot() {
     return () => {
       observer.disconnect();
       mutations.disconnect();
+      window.removeEventListener('scrollend', revealPassed);
       if (root.dataset.motion === 'on') root.dataset.motion = 'ready';
     };
   }, []);

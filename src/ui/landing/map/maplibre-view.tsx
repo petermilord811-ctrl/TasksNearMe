@@ -375,6 +375,16 @@ export function MapLibreView({
           return { center: { lat: center.lat, lng: center.lng }, zoom: Math.max(zoom - 1.2, camera.zoom), pitch: 0, bearing: 0 };
         }
       }
+      // No tasks to frame (a city before it opens, or none yet): the service area itself, whole, in the room the
+      // panels leave (audit M8: the ring ran off the map's edge beside the explorer).
+      if (map.serviceRadiusMiles > 0) {
+        const box = circleBounds(map.center, map.serviceRadiusMiles * METERS_PER_MILE);
+        const camera = instance.cameraForBounds([box.west, box.south, box.east, box.north], { padding: 40, maxZoom: zoom + 0.8 });
+        if (camera?.center && camera.zoom !== undefined) {
+          const center = LngLat.convert(camera.center);
+          return { center: { lat: center.lat, lng: center.lng }, zoom: Math.max(zoom - 2, camera.zoom), pitch: 0, bearing: 0 };
+        }
+      }
       return { center: map.center, zoom, pitch: 0, bearing: 0 };
     };
     applyPadding();

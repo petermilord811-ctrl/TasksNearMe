@@ -23,11 +23,11 @@ const CHECK_ICON: Record<OnboardingStepState, ReactNode> = {
   done: <CircleCheck className="text-success" />,
   in_review: <Clock className="text-info" />,
   current: <Circle className="text-primary" />,
-  todo: <Circle className="text-badge-reward-foreground/60" />,
-  locked: <Lock className="text-badge-reward-foreground/60" />,
-  skipped: <Circle className="text-badge-reward-foreground/60" />,
+  todo: <Circle className="text-callout-accent/70" />,
+  locked: <Lock className="text-callout-accent/70" />,
+  skipped: <Circle className="text-callout-accent/70" />,
   // Waits for the helper's city to open (national, cities in turn); none of the gift card's checks do today.
-  later: <CircleDashed className="text-badge-reward-foreground/60" />,
+  later: <CircleDashed className="text-callout-accent/70" />,
 };
 
 /** The onboarding step to continue with: the first check not done (its step), else the setup's start. */
@@ -75,17 +75,16 @@ export function WelcomeGiftCardView({ card, headingLevel = 2, className }: { car
     ? { href: nextCheckHref(card), label: t('continue') }
     : card.state === 'ready' ? { href: routes.app.rewards(), label: t('pick') } : null;
 
-  return <section aria-labelledby={titleId} className={cn('group/gift relative isolate overflow-hidden rounded-[1.375rem] border border-badge-reward-foreground/15 bg-badge-reward p-4 text-badge-reward-foreground shadow-card sm:p-6', className)}>
-    <span aria-hidden="true" className="pointer-events-none absolute -top-24 -right-20 -z-10 size-72 rounded-full opacity-35 blur-3xl" style={{ backgroundImage: 'var(--iridescent)' }} />
+  return <section aria-labelledby={titleId} className={cn('group/gift relative isolate overflow-hidden rounded-[1.375rem] border border-callout-border bg-callout p-4 text-callout-foreground shadow-card sm:p-6', className)}>
     <div className="flex flex-col-reverse gap-5 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0 flex-1 space-y-3">
-        <p className="text-xs font-semibold tracking-[0.16em] uppercase">{t('eyebrow')}</p>
+        <p className="text-xs font-semibold tracking-[0.16em] text-callout-accent uppercase">{t('eyebrow')}</p>
         <Heading id={titleId} className="font-display text-2xl leading-tight font-semibold tracking-[-0.02em] text-balance">{title}</Heading>
         <p className="max-w-reading">{body}</p>
         <div className="space-y-2 pt-1">
           <p className="text-sm font-medium tabular-nums">{t('progress', { done, total: card.checks.length })}</p>
           <ol aria-label={t('checksLabel')} className="grid gap-2 sm:grid-cols-3">
-            {card.checks.map(({ check, state }) => <li key={check} className={cn('flex min-h-12 items-center gap-2.5 rounded-xl border border-badge-reward-foreground/12 bg-card/55 px-3 py-2 dark:bg-white/[0.04]', state === 'done' && 'border-success/30')}>
+            {card.checks.map(({ check, state }) => <li key={check} className={cn('flex min-h-12 items-center gap-2.5 rounded-xl border border-callout-border bg-card/70 px-3 py-2 dark:bg-white/[0.04]', state === 'done' && 'border-success/30')}>
               <span aria-hidden="true" className="shrink-0 [&_svg]:size-5">{CHECK_ICON[state]}</span>
               <span className="min-w-0">
                 <span className="block text-sm font-semibold text-foreground">{t(`checks.${check}`)}</span>
@@ -98,7 +97,7 @@ export function WelcomeGiftCardView({ card, headingLevel = 2, className }: { car
         {action && <Link href={action.href} className="group/cta inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-shadow hover:shadow-[0_12px_28px_-12px_rgb(0_0_0/0.45)]">
           {action.label}<ArrowRight aria-hidden="true" className="size-4 transition-transform duration-300 group-hover/cta:translate-x-0.5" />
         </Link>}
-        <p className="text-xs text-badge-reward-foreground">{t('fineprint')}</p>
+        <p className="text-xs">{t('fineprint')}</p>
       </div>
       <GiftCardArt amountCents={card.amountCents} state={card.state} />
     </div>
@@ -111,7 +110,7 @@ export function WelcomeGiftStrip({ card, className }: { card: WelcomeGiftCard; c
   const done = card.checks.filter((entry) => entry.state === 'done').length;
   const amount = giftAmount(card.amountCents);
   const earned = card.state !== 'open';
-  return <aside aria-label={t('stripLabel')} className={cn('flex flex-wrap items-center gap-x-2 gap-y-2 rounded-2xl border border-badge-reward-foreground/15 bg-badge-reward px-3 py-2.5 text-sm text-badge-reward-foreground', className)}>
+  return <aside aria-label={t('stripLabel')} className={cn('flex flex-wrap items-center gap-x-2 gap-y-2 rounded-2xl border border-callout-border bg-callout px-3 py-2.5 text-sm text-callout-foreground', className)}>
     <p className="sr-only">{earned ? t('stripEarnedSr', { amount }) : t('stripSr', { done, total: card.checks.length, amount })}</p>
     <ol aria-hidden="true" className="flex flex-wrap items-center gap-1.5">
       {card.checks.map(({ check, state }) => <li key={check} className={cn('inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 font-medium', state === 'done' ? 'bg-success/15 text-foreground' : 'bg-card/60 dark:bg-white/[0.05]')}>

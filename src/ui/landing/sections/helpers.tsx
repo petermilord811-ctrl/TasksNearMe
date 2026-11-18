@@ -63,7 +63,7 @@ export function HelpersSection({ data }: { data: HomePageData }) {
                             helper.photo ? (
                               <Image key={helper.id} src={helper.photo.src} alt="" width={36} height={36} unoptimized className="size-9 rounded-full object-cover ring-2 ring-card" />
                             ) : (
-                              <span key={helper.id} className="grid size-9 place-items-center rounded-full text-[11px] font-semibold tracking-tight text-white ring-2 ring-card" style={{ backgroundImage: 'var(--iridescent)' }}>{helper.initials}</span>
+                              <span key={helper.id} className="grid size-9 place-items-center rounded-full text-xs font-semibold tracking-tight text-white ring-2 ring-card" style={{ backgroundImage: 'var(--iridescent)' }}>{helper.initials}</span>
                             ),
                           )}
                         </span>

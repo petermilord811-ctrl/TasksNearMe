@@ -14,14 +14,15 @@ export interface EmptyStateProps {
 }
 
 /**
- * Nothing here yet: a quiet dashed panel with the icon in a soft tile under a faint glow, the title in the
+ * Nothing here yet: a quiet dashed panel with the icon in a soft tile under a faint light, the title in the
  * display face, a line of help and, when there's a next step, its button.
  */
 export function EmptyState({ title, body, icon, action, headingLevel = 2 }: EmptyStateProps) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
     <div className="relative isolate flex flex-col items-center overflow-hidden rounded-[1.375rem] border border-dashed border-foreground/15 bg-card/70 px-6 py-12 text-center dark:border-white/[0.12]">
-      <span aria-hidden="true" className="pointer-events-none absolute top-0 left-1/2 -z-10 h-44 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--primary)_13%,transparent),transparent)]" />
+      {/* A soft light from above, inside the panel (an orange glow read as a stain: audit L6, L7); none in dark. */}
+      <span aria-hidden="true" className="pointer-events-none absolute top-0 left-1/2 -z-10 h-40 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(255_255_255/0.85),transparent)] dark:hidden" />
       <span aria-hidden="true" className="mb-5 grid size-14 place-items-center rounded-2xl bg-brand-soft text-primary shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_14%,transparent)] [&_svg]:size-6">
         {icon ?? <Inbox />}
       </span>

@@ -55,7 +55,7 @@ export function CoverageSection({ data }: { data: HomePageData }) {
                       {name}
                       {count > 0 && ' '}
                       {count > 0 && (
-                        <span className="ml-0.5 grid min-w-5 place-items-center rounded-full bg-violet-soft px-1.5 text-[11px] leading-5 font-semibold text-violet tabular-nums">
+                        <span className="ml-0.5 grid min-w-5 place-items-center rounded-full bg-violet-soft px-1.5 text-xs leading-5 font-semibold text-violet tabular-nums">
                           {count}
                           {' '}
                           <span className="sr-only">{t('openTasks', { count })}</span>

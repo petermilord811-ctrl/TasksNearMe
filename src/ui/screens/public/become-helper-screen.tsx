@@ -21,22 +21,21 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
   const giftAmount = welcome ? formatMoney(welcome.amountCents).replace(/\.00$/, '') : '';
 
   return <div className="space-y-8">
-    <div className="relative isolate space-y-6 overflow-hidden rounded-[1.75rem] border border-foreground/[0.06] bg-[linear-gradient(115deg,var(--color-brand-soft),var(--color-clay-soft)_55%,var(--color-violet-soft))] p-5 sm:p-10 dark:border-white/[0.06]">
+    <div className="space-y-6">
       <PageHeader title={t('title')} description={t('description')} />
       <Link href={onboardingHref} className={buttonVariants()}>{t('cta')}</Link>
     </div>
 
     {/* The welcome gift card first (blueprint 05 §2, 2026-11-14): three checks, then $50, for every helper. */}
-    {welcome && <section aria-labelledby="welcome-gift-title" className="relative isolate overflow-hidden rounded-[1.75rem] border border-badge-reward-foreground/15 bg-badge-reward p-5 text-badge-reward-foreground sm:p-10">
-      <span aria-hidden="true" className="pointer-events-none absolute -top-32 -right-24 -z-10 size-96 rounded-full opacity-40 blur-3xl" style={{ backgroundImage: 'var(--iridescent)' }} />
+    {welcome && <section aria-labelledby="welcome-gift-title" className="relative isolate overflow-hidden rounded-[1.75rem] border border-callout-border bg-callout p-5 text-callout-foreground sm:p-10">
       <div className="grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_auto]">
         <div className="space-y-4">
-          <p className="text-xs font-semibold tracking-[0.16em] uppercase">{t('welcomeEyebrow')}</p>
+          <p className="text-xs font-semibold tracking-[0.16em] text-callout-accent uppercase">{t('welcomeEyebrow')}</p>
           <h2 id="welcome-gift-title" className="font-display text-3xl leading-tight font-semibold tracking-[-0.03em] text-balance sm:text-4xl">{t('welcomeOffer', { amount: giftAmount })}</h2>
           <p className="max-w-reading text-lg">{t('welcomeTerms')}</p>
           {/* Pills sized to their words in a wrapping row, not three equal columns where one wraps to three lines (audit L23). */}
           <ol className="flex flex-wrap gap-3">
-            {welcome.checks.map((check, index) => <li key={check} className="inline-flex min-h-14 items-center gap-3 rounded-2xl border border-badge-reward-foreground/12 bg-card/60 px-4 py-3 text-foreground dark:bg-white/[0.04]">
+            {welcome.checks.map((check, index) => <li key={check} className="inline-flex min-h-14 items-center gap-3 rounded-2xl border border-callout-border bg-card/70 px-4 py-3 text-foreground dark:bg-white/[0.04]">
               <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-foreground text-sm font-semibold text-background tabular-nums">{index + 1}</span>
               <span className="font-semibold">{t(`welcomeChecks.${check}`)}</span>
             </li>)}
@@ -77,7 +76,7 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
         <Section title={t('earningsTitle')}><p className="text-muted-foreground">{t('earningsDescription')}</p></Section>
         <Section title={t('timingTitle')}>
           <p className="text-muted-foreground">{t('timingDescription')}</p>
-          <p className="rounded-2xl bg-muted p-4 font-medium tabular-nums">{t('firstPayout', { days: data.firstPayoutDays })}</p>
+          <p className="rounded-2xl border border-border bg-card p-4 font-medium tabular-nums">{t('firstPayout', { days: data.firstPayoutDays })}</p>
         </Section>
       </div>
       <PriceBreakdown breakdown={data.exampleEarnings} variant="helper" title={t('earningsBreakdownTitle')} />
@@ -86,8 +85,8 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
     {(welcome || repeat) && <Section title={t('rewardsTitle')} description={t('rewardsDescription')}>
       {/* The welcome gift card has the top of the page; here, only the reward that isn't told there (audit M47). */}
       <div className="max-w-xl">
-        {repeat && <section aria-label={t('repeatTitle')} className="rounded-xl border border-border bg-badge-reward p-4 text-badge-reward-foreground sm:p-6">
-          <Gift aria-hidden="true" className="mb-3 size-6" />
+        {repeat && <section aria-label={t('repeatTitle')} className="rounded-[1.375rem] border border-callout-border bg-callout p-4 text-callout-foreground sm:p-6">
+          <Gift aria-hidden="true" className="mb-3 size-6 text-callout-accent" />
           <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('repeatTitle')}</h3>
           <p className="mt-3 text-lg font-semibold tabular-nums">{t('repeatOffer', { amount: formatMoney(repeat.amountCents) })}</p>
           <p className="mt-4 text-sm">{t('repeatTerms', { bookings: repeat.bookingsNeeded, days: repeat.withinDays, minimum: formatMoney(repeat.minTaskPriceCents) })}</p>
