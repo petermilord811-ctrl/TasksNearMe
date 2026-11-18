@@ -340,10 +340,7 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
             {part === 'services' && <SetupServices form={services} categories={data.categories} defaults={data.serviceDefaults} />}
             {part === 'area' && <AreaFields form={area} areas={data.areas} remoteAllowed={remoteAllowed} homeMarket={data.homeMarket} awaitingCity={data.awaitingCity} />}
             {part === 'about' && <>
-              <div className="space-y-3">
-                <h3 className="text-base font-semibold">{t('about.photoTitle')}</h3>
-                <ProfilePhotoField initials={data.person.initials} photo={data.person.photo} maxPhotoMegabytes={data.maxPhotoMegabytes} note="helperEditor" onUpload={handlers.onUploadPhoto} onRemove={handlers.onRemovePhoto} />
-              </div>
+              <ProfilePhotoField initials={data.person.initials} photo={data.person.photo} maxPhotoMegabytes={data.maxPhotoMegabytes} note="helperEditor" onUpload={handlers.onUploadPhoto} onRemove={handlers.onRemovePhoto} />
               {data.profileDraft === 'ai'
                 ? <ProfileDraftPanel onDraft={handlers.onDraftProfile} disabled={pending} onDrafted={(draft) => { keepBefore(); fill(draft); }} onUndo={undoDraft} />
                 : <ExamplesPanel facts={{ firstName: data.person.firstName, services: chosenServices.map((service) => service.categorySlug), area: areaName, languages: aboutValues.languages?.filter((code): code is NonNullable<typeof code> => Boolean(code)) ?? [] }} disabled={pending} onUse={(draft) => { keepBefore(); fill(draft); }} onUndo={undoDraft} />}
