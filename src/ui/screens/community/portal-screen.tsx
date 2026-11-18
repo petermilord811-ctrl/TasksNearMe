@@ -35,7 +35,7 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
           <PortalToolbar data={data} />
           <ActiveFilters data={data} />
         </div>
-        <PortalLive data={data} listId="portal-stream" />
+        <PortalLive data={data} listId="portal-stream" {...(handlers.onCheckFresh ? { onCheckFresh: handlers.onCheckFresh } : {})} />
         <div id="portal-stream" className="scroll-mt-28 space-y-3">
           {query.view === 'list' && data.items.length > 0 && <ListGroupBar data={data} />}
           {data.items.length === 0

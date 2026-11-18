@@ -245,6 +245,8 @@ export interface PortalMore {
  * - `onPost`: the composer's post, as `CommunityNewPostHandlers.onPost` (ok `sent` with `redirectTo` the post).
  * - `onMore`: the next page, read as the page reads it; `null` when the viewer can't read the portal. Without it,
  *   "Show more" is a link to the next page.
+ * - `onCheckFresh`: of the new items the live pill heard about (`post:<id>`, `task:<id>`), the ones this viewer would
+ *   see: not their own, not from someone blocked either way, still up. The pill counts only those (sweep P5).
  */
 export interface PortalHandlers {
   onReact: ActionHandler<CommunityReactInput>;
@@ -252,4 +254,5 @@ export interface PortalHandlers {
   onSaveTask?: ActionHandler<{ taskId: string; saved: boolean }>;
   onPost: ActionHandler<CommunityPostInput>;
   onMore?: (query: PortalQuery & { page: number }) => Promise<PortalMore | null>;
+  onCheckFresh?: (keys: string[]) => Promise<string[]>;
 }

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { routes } from '@/contracts/routes';
-import { createCommunityPostAction, loadPortalPageAction, reactInCommunityAction, saveCommunityPostAction } from '@/modules/community/actions';
+import { createCommunityPostAction, loadPortalPageAction, portalFreshAction, reactInCommunityAction, saveCommunityPostAction } from '@/modules/community/actions';
 import { getPortal } from '@/modules/community/portal';
 import { saveTaskAction } from '@/modules/offers/helper-actions';
 import { staffActorOf } from '@/modules/support/staff';
@@ -47,6 +47,7 @@ async function Portal({ searchParams }: Pick<PageProps<'/[locale]/app/community'
         ...(data.helps ? { onSaveTask: saveTaskAction } : {}),
         onPost: createCommunityPostAction,
         onMore: loadPortalPageAction,
+        onCheckFresh: portalFreshAction,
       }}
     />
   );

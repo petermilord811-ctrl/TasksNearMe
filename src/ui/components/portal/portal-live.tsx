@@ -22,7 +22,7 @@ type Data = Pick<PortalPageData, 'query' | 'live' | 'areas' | 'market' | 'items'
  * "3 new · Show", above the stream; nothing moves under the reader until they ask. Offer counts on task cards and
  * rows update as they change. A search or Saved view waits for a reload (a notice carries ids, not words).
  */
-export function PortalLive({ data, listId }: { data: Data; listId: string }) {
+export function PortalLive({ data, listId, onCheckFresh }: { data: Data; listId: string; onCheckFresh?: (keys: string[]) => Promise<string[]> }) {
   const t = useTranslations('portal.live');
   const router = useRouter();
   const [fresh, setFresh] = useState<string[]>([]);
@@ -30,7 +30,10 @@ export function PortalLive({ data, listId }: { data: Data; listId: string }) {
   const { query, live } = data;
   const shown = useMemo(() => new Set(data.items.map((item) => `${item.type}:${item.id}`)), [data.items]);
   const areaNames = useMemo(() => new Set(data.areas.filter((area) => !live.areaSlugs || live.areaSlugs.includes(area.slug)).map((area) => area.name)), [data.areas, live.areaSlugs]);
-  const quiet = Boolean(query.q) || query.saved;
+  // Top ranks by engagement, so a brand-new item wouldn't appear there (sweep P5).
+  const quiet = Boolean(query.q) || query.saved || query.sort === 'top';
+  // The server's word on each new item: would this reader see it (not their own, nobody blocked either way, still up)?
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
 
   const add = (key: string) => setFresh((keys) => (keys.includes(key) ? keys : [...keys, key].slice(-50)));
 
@@ -97,7 +100,20 @@ export function PortalLive({ data, listId }: { data: Data; listId: string }) {
     };
   }, [data.market.slug]);
 
-  const count = fresh.filter((key) => !shown.has(key)).length;
+  // Ask about the items not checked yet, a moment after they arrive (several notices become one request).
+  useEffect(() => {
+    if (!onCheckFresh) return;
+    const pending = fresh.filter((key) => !(key in checked));
+    if (pending.length === 0) return;
+    const timer = window.setTimeout(() => {
+      onCheckFresh(pending)
+        .then((visible) => setChecked((before) => ({ ...before, ...Object.fromEntries(pending.map((key) => [key, visible.includes(key)])) })))
+        .catch(() => undefined);
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [fresh, checked, onCheckFresh]);
+
+  const count = fresh.filter((key) => !shown.has(key) && (!onCheckFresh || checked[key] === true)).length;
   const show = () => {
     setFresh([]);
     document.getElementById(listId)?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });

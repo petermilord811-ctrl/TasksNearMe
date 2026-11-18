@@ -36,6 +36,7 @@ import { taskQuestions } from '@/modules/questions/schema';
 import { toTaskPublicView } from '@/modules/tasks/projections';
 import { keywordCondition, openIn, selectPublic, toRow } from '@/modules/tasks/queries';
 import { taskMarks, tasks } from '@/modules/tasks/schema';
+import { blockedPeopleOf } from '@/modules/trust/blocks';
 import type { Db } from '@/platform/db/connect';
 import { avatarPhoto } from '@/modules/files/photos';
 import { marketDayKey } from '@/shared/format';
@@ -459,6 +460,25 @@ function areasOf(scope: Scope, counts: Map<string | null, number>): PortalArea[]
 /** Whether this view pages (the Feed; the List by day or in one neighborhood) or shows sections (the List by neighborhood). */
 const sectioned = (scope: Scope) => scope.query.view === 'list' && scope.query.group === 'area' && scope.place.kind !== 'area';
 const pageSize = (query: PortalQueryState) => (query.view === 'list' ? PORTAL_LIST_PAGE_SIZE : PORTAL_FEED_PAGE_SIZE);
+
+/**
+ * Which of the new items a portal reader heard about (`post:<id>`, `task:<id>`) they would actually see (sweep P5):
+ * not their own, not from someone blocked either way, still visible (a post) or open and shown (a task). The market's
+ * stream names no authors, so the pill asks here before it counts. At most 50 keys.
+ */
+export async function visibleFreshKeys(db: Db, viewerId: string, keys: readonly string[]): Promise<string[]> {
+  const wanted = keys.filter((key): key is string => typeof key === 'string').slice(0, 50);
+  const postIds = wanted.flatMap((key) => (key.startsWith('post:') ? [key.slice(5)] : []));
+  const taskIds = wanted.flatMap((key) => (key.startsWith('task:') ? [key.slice(5)] : []));
+  const [blocked, postRows, taskRows] = await Promise.all([
+    blockedPeopleOf(db, viewerId),
+    postIds.length ? db.select({ id: communityPosts.id, author: communityPosts.authorUserId }).from(communityPosts).where(and(inArray(communityPosts.id, postIds), eq(communityPosts.status, 'visible'))) : Promise.resolve([]),
+    taskIds.length ? db.select({ id: tasks.id, poster: tasks.posterUserId }).from(tasks).where(and(inArray(tasks.id, taskIds), eq(tasks.status, 'open'), isNull(tasks.hiddenAt))) : Promise.resolve([]),
+  ]);
+  const hidden = new Set([viewerId, ...blocked]);
+  const seen = new Set([...postRows.filter((row) => !hidden.has(row.author)).map((row) => `post:${row.id}`), ...taskRows.filter((row) => !hidden.has(row.poster)).map((row) => `task:${row.id}`)]);
+  return wanted.filter((key) => seen.has(key));
+}
 
 export async function getPortal(db: Db, viewer: CommunityViewer, params: Params, now: Date): Promise<PortalPageData | null> {
   const scope = await scopeFor(db, viewer, parsePortalQuery(params), now);

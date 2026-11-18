@@ -210,7 +210,9 @@ export async function recommendedByCounts(db: Db, helperIds: string[], rows: Row
 }
 
 async function helperCardsOf(db: Db, picks: { helperUserId: string; byUserId: string }[], viewerId: string): Promise<Map<string, CommunityHelperCard>> {
-  const helperIds = [...new Set(picks.map((pick) => pick.helperUserId))];
+  // Never a card for someone blocked either way (sweep P11): its Request link would lead to a 404, as their profile does.
+  const blocked = new Set(await blockedPeopleOf(db, viewerId));
+  const helperIds = [...new Set(picks.map((pick) => pick.helperUserId))].filter((id) => !blocked.has(id));
   if (helperIds.length === 0) return new Map();
   const [rows, recommended] = await Promise.all([
     db

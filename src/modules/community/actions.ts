@@ -6,7 +6,7 @@ import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
-import { getPortalMore } from './portal';
+import { getPortalMore, visibleFreshKeys } from './portal';
 import { createCommunityPost, deleteOwnCommunityItem, moderateCommunityItem, pinCommunityAnswer, reactInCommunity, replyToCommunityPost, saveCommunityPost, type CommunityViewer } from './service';
 
 /** Server Actions behind the community pages (src/contracts/community.ts). */
@@ -41,6 +41,16 @@ export async function loadPortalPageAction(query: PortalQuery & { page: number }
     },
     await requestNow(),
   );
+}
+
+/**
+ * The portal's "N new · Show" pill (sweep P5): of the new items it heard about, the ones this viewer would see (not
+ * their own, not from someone blocked either way, still up).
+ */
+export async function portalFreshAction(keys: string[]): Promise<string[]> {
+  const viewer = await communityViewer();
+  if (!viewer || !Array.isArray(keys)) return [];
+  return visibleFreshKeys(db, viewer.id, keys);
 }
 
 /** Keeps a post in the viewer's Saved, or takes it out (plan 9.10). */
