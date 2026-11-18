@@ -6,29 +6,33 @@ import { getAdminNav, getAppNav, getPublicNav, isNavItemActive, type NavItem } f
 
 const ids = (items: NavItem[]) => items.map((item) => item.id);
 
-describe('app navigation', () => {
-  it('keeps the poster tabs and secondary links in the specified order', () => {
-    const nav = getAppNav(mayaShell.mode);
-    expect(ids(nav.primary)).toEqual(['home', 'tasks', 'bookings', 'messages', 'account']);
-    expect(ids(nav.secondary)).toEqual(['community', 'savedSearches', 'helpers', 'saved', 'payments', 'support']);
-    expect(nav.primary.map((item) => item.href)).toEqual([
-      routes.app.home(), routes.app.tasks(), routes.app.bookings(), routes.app.messages(), routes.app.account(),
-    ]);
-    expect(nav.secondary.map((item) => item.href)).toEqual([
-      routes.app.community(), routes.app.savedSearches(), routes.app.helpers(), routes.app.saved(), routes.app.payments(), routes.app.support(),
-    ]);
+describe('app navigation (completion plan 9.14)', () => {
+  it('keeps five everyday places, the Neighborhood among them (docs/ui/portal-9.10.md §10)', () => {
+    const poster = getAppNav(mayaShell.mode);
+    const helper = getAppNav(jordanShell.mode);
+    expect(ids(poster.primary)).toEqual(['home', 'community', 'tasks', 'bookings', 'messages']);
+    expect(ids(helper.primary)).toEqual(['home', 'findWork', 'community', 'bookings', 'messages']);
+    expect(poster.primary.map((item) => item.href)).toEqual([routes.app.home(), routes.app.community(), routes.app.tasks(), routes.app.bookings(), routes.app.messages()]);
+    expect(helper.primary[1]!.href).toBe(routes.app.findWork());
   });
 
-  it('keeps the helper tabs and secondary links in the specified order', () => {
-    const nav = getAppNav(jordanShell.mode);
-    expect(ids(nav.primary)).toEqual(['home', 'findWork', 'bookings', 'messages', 'earnings']);
-    expect(ids(nav.secondary)).toEqual(['community', 'savedSearches', 'offers', 'availability', 'clients', 'rewards', 'support']);
-    expect(nav.primary.map((item) => item.href)).toEqual([
-      routes.app.home(), routes.app.findWork(), routes.app.bookings(), routes.app.messages(), routes.app.earnings(),
+  it("gives each mode its own tools, and both the account's pages", () => {
+    expect(ids(getAppNav('poster').secondary)).toEqual(['helpers', 'saved', 'savedSearches']);
+    expect(ids(getAppNav('helper').secondary)).toEqual(['offers', 'availability', 'earnings', 'clients', 'rewards', 'savedSearches']);
+    expect(getAppNav('helper').secondary.map((item) => item.href)).toEqual([
+      routes.app.offers(), routes.app.availability(), routes.app.earnings(), routes.app.clients(), routes.app.rewards(), routes.app.savedSearches(),
     ]);
-    expect(nav.secondary.map((item) => item.href)).toEqual([
-      routes.app.community(), routes.app.savedSearches(), routes.app.offers(), routes.app.availability(), routes.app.clients(), routes.app.rewards(), routes.app.support(),
-    ]);
+    for (const mode of ['poster', 'helper'] as const) {
+      expect(getAppNav(mode).account.map((item) => item.href)).toEqual([routes.app.account(), routes.app.payments(), routes.app.support()]);
+    }
+  });
+
+  it('puts every destination in one place only', () => {
+    for (const mode of ['poster', 'helper'] as const) {
+      const nav = getAppNav(mode);
+      const all = [...nav.primary, ...nav.secondary, ...nav.account].map((item) => item.id);
+      expect(new Set(all).size).toBe(all.length);
+    }
   });
 });
 

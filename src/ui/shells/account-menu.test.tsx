@@ -27,17 +27,22 @@ async function openMenu() {
 
 describe('AccountMenu', () => {
   it.each([
-    { viewer: mayaShell, extra: 'Saved helpers', extraHref: routes.app.saved(), absent: 'Rewards' },
-    { viewer: jordanShell, extra: 'Rewards', extraHref: routes.app.rewards(), absent: 'Saved helpers' },
-  ])('shows the $viewer.mode account destinations', async ({ viewer, extra, extraHref, absent }) => {
+    { viewer: mayaShell, tools: [['Find helpers', routes.app.helpers()], ['Saved helpers', routes.app.saved()], ['Saved searches', routes.app.savedSearches()]] },
+    { viewer: jordanShell, tools: [['Offers', routes.app.offers()], ['Availability', routes.app.availability()], ['Earnings', routes.app.earnings()], ['My clients', routes.app.clients()], ['Rewards', routes.app.rewards()], ['Saved searches', routes.app.savedSearches()]] },
+  ])('shows the $viewer.mode tools (below the rail’s width) and the account’s pages, once each', async ({ viewer, tools }) => {
     show(viewer);
     const menu = await openMenu();
+    for (const [name, href] of tools) {
+      const tool = within(menu).getByRole('menuitem', { name });
+      expect(tool).toHaveAttribute('href', href);
+      // Wide screens have them on the rail instead.
+      expect(tool).toHaveClass('lg:hidden');
+    }
     expect(within(menu).getByRole('menuitem', { name: 'Account' })).toHaveAttribute('href', routes.app.account());
-    expect(within(menu).getByRole('menuitem', { name: extra })).toHaveAttribute('href', extraHref);
-    expect(within(menu).queryByRole('menuitem', { name: absent })).not.toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Payments' })).toHaveAttribute('href', routes.app.payments());
     expect(within(menu).getByRole('menuitem', { name: 'Support' })).toHaveAttribute('href', routes.app.support());
-    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Community', 'Saved searches', 'Account', extra, 'Payments', 'Support', 'Switch to dark mode', 'Español', 'Sign out']);
+    expect(within(menu).queryByRole('menuitem', { name: 'Neighborhood' })).not.toBeInTheDocument();
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([...tools.map(([name]) => name), 'Account', 'Payments', 'Support', 'Switch to dark mode', 'Español', 'Sign out']);
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: `${viewer.initials}, account menu for ${viewer.displayName}` })).toHaveFocus();

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { BellRing, CreditCard, Gift, Heart, Languages, LifeBuoy, LoaderCircle, LogOut, MessagesSquare, Moon, Sun, UserRound } from 'lucide-react';
+import { Languages, LoaderCircle, LogOut, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ActionHandler, ActionResult, LanguageSwitchHandler, SignedInViewer, StaffViewer } from '@/contracts';
 import { APP_LOCALES, LOCALE_NAMES } from '@/contracts/locale';
@@ -14,6 +14,8 @@ import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/ui/primitives/dropdown-menu';
 import { useLanguageSwitch } from './language-switch';
+import { getAppNav, type NavItem } from './nav';
+import { NAV_ICONS } from './nav-icons';
 import { switchTheme, useEffectiveTheme } from './theme-toggle';
 
 /** The avatar: a soft ring that warms to the brand color while pointed at or open. */
@@ -64,17 +66,13 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage }: AccountMenu
     }
   }
 
-  const links = viewer.kind === 'user' ? [
-    { id: 'community', href: routes.app.community(), icon: MessagesSquare },
-    // Phones reach their saved searches (and can stop an alert) from here (completion plan 7.10).
-    { id: 'savedSearches', href: routes.app.savedSearches(), icon: BellRing },
-    { id: 'account', href: routes.app.account(), icon: UserRound },
-    viewer.mode === 'helper'
-      ? { id: 'rewards', href: routes.app.rewards(), icon: Gift }
-      : { id: 'saved', href: routes.app.saved(), icon: Heart },
-    { id: 'payments', href: routes.app.payments(), icon: CreditCard },
-    { id: 'support', href: routes.app.support(), icon: LifeBuoy },
-  ] : [];
+  // Members (completion plan 9.14): the mode's tools where the rail isn't shown (they're on it on wide screens), then
+  // the account's pages at every width. Staff menus stay at sign out.
+  const nav = viewer.kind === 'user' ? getAppNav(viewer.mode) : null;
+  const item = ({ id, href }: NavItem, className?: string) => {
+    const Icon = NAV_ICONS[id];
+    return <DropdownMenuItem key={id} asChild className={className}><Link href={href}><Icon aria-hidden="true" />{t(`nav.${id}`)}</Link></DropdownMenuItem>;
+  };
 
   return (
     <div className="relative shrink-0">
@@ -87,12 +85,12 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage }: AccountMenu
         <DropdownMenuContent align="end" sideOffset={8} className="w-64 max-w-[calc(100vw-2rem)]">
           <DropdownMenuLabel className="px-2.5 pt-2 pb-1.5 font-display text-[0.9375rem] font-semibold break-words">{viewer.displayName}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {links.map(({ id, href, icon: Icon }) => (
-            <DropdownMenuItem key={id} asChild>
-              <Link href={href}><Icon aria-hidden="true" />{t(`nav.${id}`)}</Link>
-            </DropdownMenuItem>
-          ))}
-          {links.length > 0 && <DropdownMenuSeparator />}
+          {nav && <>
+            {nav.secondary.map((link) => item(link, 'lg:hidden'))}
+            <DropdownMenuSeparator className="lg:hidden" />
+            {nav.account.map((link) => item(link))}
+            <DropdownMenuSeparator />
+          </>}
           {/* Members: the theme and the language, also here because the bar's switches don't fit on phones (staff
               tools stay in English, and their menu stays at sign out). */}
           {viewer.kind === 'user' && <>

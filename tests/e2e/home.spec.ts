@@ -93,3 +93,26 @@ test("a helper's dashboard: jobs first, earnings at a glance, and nearby tasks o
     await expect(page.getByText(/Exact addresses are never shown on the map/)).toBeVisible();
   }
 });
+
+test('the signed-in navigation (9.14): five everyday places, the tools in one place, the account in the menu', async ({ page }, testInfo) => {
+  await devSignIn(page, 'jordan@example.test');
+  const desktop = testInfo.project.name === 'app-desktop';
+  // The rail on wide screens, the dock on phones: the same five (a helper's: Find work second).
+  const everyday = page.getByRole('navigation', { name: desktop ? 'Main navigation' : 'App navigation' });
+  // The dock's narrow columns name the Neighborhood "Neighbors".
+  const neighborhood = desktop ? 'Neighborhood' : 'Neighbors';
+  await expect(everyday.getByRole('link')).toHaveText(['Home', 'Find work', neighborhood, 'Bookings', /^Messages/]);
+  await expect(everyday.getByRole('link', { name: neighborhood })).toHaveAttribute('href', /\/app\/community$/);
+  await page.getByRole('button', { name: /account menu for Jordan/ }).click();
+  const menu = page.getByRole('menu');
+  await expect(menu.getByRole('menuitem', { name: 'Account' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Support' })).toBeVisible();
+  if (desktop) {
+    // The tools are on the rail under the line, not in the menu too.
+    await expect(page.getByRole('navigation', { name: 'More navigation' }).getByRole('link')).toHaveText(['Offers', 'Availability', 'Earnings', 'My clients', 'Rewards', 'Saved searches']);
+    await expect(menu.getByRole('menuitem', { name: 'Earnings' })).toBeHidden();
+  } else {
+    await expect(menu.getByRole('menuitem', { name: 'Earnings' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Offers' })).toHaveAttribute('href', /\/app\/offers$/);
+  }
+});

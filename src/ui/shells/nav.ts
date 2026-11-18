@@ -50,39 +50,47 @@ export function getPublicNav(): NavItem[] {
   ];
 }
 
-/** Navigation is presentation of the supplied mode, not an access check. */
-export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[] } {
-  return {
-    primary: [
-      { id: 'home', href: routes.app.home(), exact: true },
-      mode === 'poster'
-        ? { id: 'tasks', href: routes.app.tasks() }
-        : { id: 'findWork', href: routes.app.findWork() },
-      { id: 'bookings', href: routes.app.bookings() },
-      { id: 'messages', href: routes.app.messages() },
-      mode === 'poster'
-        ? { id: 'account', href: routes.app.account() }
-        : { id: 'earnings', href: routes.app.earnings() },
-    ],
-    secondary: mode === 'poster'
-      ? [
-          { id: 'community', href: routes.app.community() },
-          { id: 'savedSearches', href: routes.app.savedSearches() },
+/**
+ * The signed-in navigation (completion plan 9.14; before and after in docs/ui/dashboard-9.9.md §7). Presentation of
+ * the supplied mode, not an access check.
+ * - `primary`: five places for every day, on the rail and the phone dock. A client's: Home, the Neighborhood (plan
+ *   9.10's portal, where neighbors' asks and open tasks meet), Tasks, Bookings, Messages. A helper's: Home, Find work,
+ *   the Neighborhood, Bookings, Messages (docs/ui/portal-9.10.md §10).
+ * - `secondary`: the mode's tools, on the rail under the line (wide screens) and in the avatar menu below that width.
+ * - `account`: the account's pages, in the avatar menu at every width.
+ * Each destination has one place on a screen.
+ */
+export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[]; account: NavItem[] } {
+  const home: NavItem = { id: 'home', href: routes.app.home(), exact: true };
+  const neighborhood: NavItem = { id: 'community', href: routes.app.community() };
+  const last: NavItem[] = [{ id: 'bookings', href: routes.app.bookings() }, { id: 'messages', href: routes.app.messages() }];
+  const account: NavItem[] = [
+    { id: 'account', href: routes.app.account() },
+    { id: 'payments', href: routes.app.payments() },
+    { id: 'support', href: routes.app.support() },
+  ];
+  return mode === 'poster'
+    ? {
+        primary: [home, neighborhood, { id: 'tasks', href: routes.app.tasks() }, ...last],
+        secondary: [
           { id: 'helpers', href: routes.app.helpers() },
           { id: 'saved', href: routes.app.saved() },
-          { id: 'payments', href: routes.app.payments() },
-          { id: 'support', href: routes.app.support() },
-        ]
-      : [
-          { id: 'community', href: routes.app.community() },
           { id: 'savedSearches', href: routes.app.savedSearches() },
+        ],
+        account,
+      }
+    : {
+        primary: [home, { id: 'findWork', href: routes.app.findWork() }, neighborhood, ...last],
+        secondary: [
           { id: 'offers', href: routes.app.offers() },
           { id: 'availability', href: routes.app.availability() },
+          { id: 'earnings', href: routes.app.earnings() },
           { id: 'clients', href: routes.app.clients() },
           { id: 'rewards', href: routes.app.rewards() },
-          { id: 'support', href: routes.app.support() },
+          { id: 'savedSearches', href: routes.app.savedSearches() },
         ],
-  };
+        account,
+      };
 }
 
 /** The app still owns route authorization; these are the ticket's role-specific links. */

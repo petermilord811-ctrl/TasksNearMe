@@ -69,8 +69,11 @@
     "howItWorks": "Cómo funciona",
     "becomeAHelper": "Hazte ayudante",
     "pricing": "Precios",
-    "community": "Comunidad",
+    "community": "Vecindario",
     "savedSearches": "Búsquedas guardadas"
+  },
+  "navShort": {
+    "community": "Vecinos"
   },
   "footer": {
     "tagline": "Buenos vecinos. Listas de pendientes más ligeras.",

@@ -1,17 +1,9 @@
 import { useTranslations } from 'next-intl';
-import { BadgeCheck, BookOpen, ChartColumn, Webhook, CalendarDays, CalendarCheck, CircleDollarSign, ClipboardList, FileClock, Flag, Gift, Heart, HelpCircle, Home, Inbox, ListChecks, MessageCircle, MessageSquareText, MessagesSquare, BellRing, Search, Settings, Ticket, ShieldCheck, Timer, UserRound, UserSearch, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { cn } from '@/ui/lib/utils';
 import { NavIndicator } from './nav-indicator';
 import { NavLink } from './nav-link';
-import type { NavId, NavItem } from './nav';
-
-const icons: Record<NavId, LucideIcon> = {
-  home: Home, tasks: ClipboardList, bookings: CalendarCheck, messages: MessageCircle, community: MessagesSquare, savedSearches: BellRing,
-  account: UserRound, findWork: Search, earnings: Wallet, helpers: UserSearch, saved: Heart, payments: CircleDollarSign,
-  support: HelpCircle, offers: Inbox, availability: CalendarDays, clients: Users, rewards: Gift,
-  queues: ListChecks, cases: BookOpen, reports: Flag, users: Users, verifications: BadgeCheck, responseTimes: Timer, savedReplies: MessageSquareText, metrics: ChartColumn, webhooks: Webhook, beta: Ticket, config: Settings,
-  audit: FileClock, staff: ShieldCheck, howItWorks: HelpCircle, becomeAHelper: Users, pricing: CircleDollarSign,
-};
+import { NAV_ICONS } from './nav-icons';
+import type { NavItem } from './nav';
 
 /** The current link's own pill, shown until the sliding one (NavIndicator) has measured and takes over. */
 const STATIC_PILL = {
@@ -43,10 +35,12 @@ export function Navigation({ items, label, currentPath, unreadMessages = 0, vari
       <NavIndicator className={SLIDING_PILL[variant]} />
       <ul className={cn('relative', bottom ? 'grid grid-cols-5 gap-1' : 'space-y-0.5')}>
         {items.map((item) => {
-          const Icon = icons[item.id];
+          const Icon = NAV_ICONS[item.id];
           const count = item.id === 'messages' ? unreadMessages : 0;
+          // The dock's five columns are narrow: a long name has a short one there ("Neighbors" for the Neighborhood).
+          const name = bottom && t.has(`navShort.${item.id}`) ? t(`navShort.${item.id}`) : t(`nav.${item.id}`);
           return <li key={item.id} className="min-w-0">
-            <NavLink item={item} currentPath={currentPath} aria-label={count > 0 ? `${t(`nav.${item.id}`)} ${t('unreadMessages', { count })}` : undefined}
+            <NavLink item={item} currentPath={currentPath} aria-label={count > 0 ? `${name} ${t('unreadMessages', { count })}` : undefined}
               className={cn(
                 'group/item relative z-[1] flex min-w-0 font-medium transition-[color,background-color,box-shadow] duration-300 ease-[var(--ease-out)] aria-[current=page]:text-foreground',
                 bottom
@@ -56,7 +50,7 @@ export function Navigation({ items, label, currentPath, unreadMessages = 0, vari
                 PILL_STEPS_ASIDE,
               )}>
               <Icon aria-hidden="true" className={cn('shrink-0 text-muted-foreground transition-[color,translate] duration-300 ease-[var(--ease-out)] group-hover/item:text-foreground group-aria-[current=page]/item:text-primary', bottom ? 'size-[1.375rem] group-aria-[current=page]/item:-translate-y-px' : 'size-5')} />
-              <span className={cn('break-words', bottom && 'max-w-full text-center')}>{t(`nav.${item.id}`)}</span>
+              <span className={cn('break-words', bottom && 'max-w-full text-center')}>{name}</span>
               {count > 0 && <>{' '}<span aria-hidden="true" className={cn('rounded-full bg-primary text-center font-semibold text-primary-foreground tabular-nums', bottom ? 'absolute top-1 left-[calc(50%+0.3rem)] min-w-4 px-1 text-[10px] leading-4 ring-2 ring-background' : 'ml-auto min-w-6 px-1.5 text-xs leading-5')}>{count}</span></>}
             </NavLink>
           </li>;
