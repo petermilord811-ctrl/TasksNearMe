@@ -1,5 +1,6 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, or } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { users } from '@/modules/accounts/schema';
 import { getDashboard } from '@/modules/home/service';
 import { getMyTasks } from '@/modules/offers/owner';
 import { offers } from '@/modules/offers/schema';
@@ -7,18 +8,28 @@ import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
-afterAll(() => pool.end());
+afterAll(async () => {
+  await db.delete(offers).where(eq(offers.taskId, 'tsk_home_ana'));
+  await db.delete(tasks).where(inArray(tasks.id, ['tsk_home_ana']));
+  await db.delete(users).where(eq(users.id, CLIENT));
+  await pool.end();
+});
 
 const ZONE = 'America/Chicago';
-const ana = { id: 'usr_ana', firstName: 'Ana', mode: 'poster' as const, timeZone: ZONE };
+// A client of the test's own (a copy of Ana): other files post as Ana, and the dashboard lists five rows a tab.
+const CLIENT = 'usr_home_client';
+const ana = { id: CLIENT, firstName: 'Ana', mode: 'poster' as const, timeZone: ZONE };
 const jordan = { id: 'usr_jordan', firstName: 'Jordan', mode: 'helper' as const, timeZone: ZONE };
 
 beforeAll(async () => {
-  // Ana's own copy of the desk with one new offer from Jordan.
+  const [seeded] = await db.select().from(users).where(eq(users.id, 'usr_ana'));
+  if (!seeded) throw new Error('The seeded Ana is missing');
+  await db.insert(users).values({ ...seeded, id: CLIENT, email: 'home-client@example.test', phone: null, phoneVerifiedAt: null });
+  // The client's own copy of the desk with one new offer from Jordan.
   const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
   const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
   if (!desk || !offer) throw new Error('The seeded desk is missing');
-  await db.insert(tasks).values({ ...desk, id: 'tsk_home_ana', slug: 'home-ana-desk', posterUserId: 'usr_ana', status: 'open', offerCount: 1, version: 1 });
+  await db.insert(tasks).values({ ...desk, id: 'tsk_home_ana', slug: 'home-ana-desk', posterUserId: CLIENT, status: 'open', offerCount: 1, version: 1 });
   await db.insert(offers).values({ ...offer, id: 'off_home_ana', taskId: 'tsk_home_ana', status: 'pending', posterSeenAt: null, revision: 1, expiresAt: new Date(Date.now() + 86_400_000) });
 });
 
@@ -44,7 +55,7 @@ describe('the dashboard (completion plan 9.9)', () => {
 
   it("says the same tasks need the client as My tasks does (one rule, audit M16)", async () => {
     const now = new Date();
-    const [home, mine] = await Promise.all([getDashboard(db, ana, {}, now), getMyTasks(db, 'usr_ana', now)]);
+    const [home, mine] = await Promise.all([getDashboard(db, ana, {}, now), getMyTasks(db, CLIENT, now)]);
     const fromHome = home.attention.flatMap((item) => (item.target.kind === 'task' && ['review_offers', 'choose_offer', 'no_offers'].includes(item.kind) ? [item.target.taskId] : []));
     const fromMyTasks = mine.needsYou.filter((row) => ['new_offers', 'choose_soon', 'no_offers'].includes(row.attention!.kind)).map((row) => row.id);
     expect(new Set(fromHome)).toEqual(new Set(fromMyTasks));
@@ -72,10 +83,23 @@ describe('the dashboard (completion plan 9.9)', () => {
     expect(home.query.tab).toBe('bookings');
     expect(home.tabs.map((tab) => tab.id)).toEqual(['bookings', 'offers', 'nearby']);
     expect(home.earnings!.upcomingCents).toBeGreaterThanOrEqual(0);
+    // Jordan's offers that still count, as find work says: made since the task last reopened (an earlier one leaves
+    // the way open). Read before and after, so offers other files add or reopen meanwhile don't count.
+    const standing = async () =>
+      new Set(
+        (
+          await db
+            .select({ taskId: offers.taskId })
+            .from(offers)
+            .innerJoin(tasks, eq(tasks.id, offers.taskId))
+            .where(and(eq(offers.helperUserId, 'usr_jordan'), or(isNull(tasks.reopenedAt), gte(offers.createdAt, tasks.reopenedAt))))
+        ).map((row) => row.taskId),
+      );
+    const before = await standing();
     const nearby = await getDashboard(db, jordan, { tab: 'nearby' }, new Date());
+    const after = await standing();
     expect(nearby.items.every((item) => item.kind === 'nearby' && item.side === 'helper' && item.target.kind === 'find_work_task')).toBe(true);
-    const offered = new Set((await db.select({ taskId: offers.taskId }).from(offers).where(eq(offers.helperUserId, 'usr_jordan'))).map((row) => row.taskId));
-    expect(nearby.items.some((item) => item.target.kind === 'find_work_task' && offered.has(item.target.taskId))).toBe(false);
+    expect(nearby.items.some((item) => item.target.kind === 'find_work_task' && before.has(item.target.taskId) && after.has(item.target.taskId))).toBe(false);
     expect(nearby.seeAll).toEqual({ kind: 'find_work', query: {} });
   });
 
