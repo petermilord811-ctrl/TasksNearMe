@@ -402,6 +402,7 @@
     "ready": "Publicando “{title}” de nuevo. Todo lo de la vez anterior está completo, excepto las fotos, para la próxima fecha disponible. Revísalo y publica.",
     "addressDeleted": "Publicando “{title}” de nuevo. La dirección anterior se eliminó 180 días después de tu última reserva allí, así que búscala de nuevo."
   },
+  "fromPost": "Viene de tu publicación del vecindario “{title}”: ya tiene sus palabras. Revísalas, agrega los detalles que necesitan los ayudantes y publica. La publicación enlazará a esta tarea.",
   "templates": {
     "heading": "Empezar con un ejemplo",
     "hint": "Completa el título, la descripción y los detalles. Puedes cambiar lo que quieras.",

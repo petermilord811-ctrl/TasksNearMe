@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { CATEGORY_SLUGS, findTaskTemplate, isTaskTemplateId, routes, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, type CategorySlug } from '@/contracts';
+import { communityPostForTask } from '@/modules/community/service';
 import { getFlags } from '@/modules/markets/queries';
 import {
   draftTaskWithAi,
@@ -49,8 +50,10 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
   const wantsAiDraft = search.ai === '1' && Boolean(describe);
   // "Post again" (plan 4.2): one of the person's own finished tasks.
   const again = typeof search.again === 'string' && /^tsk_[A-Za-z0-9_-]{1,40}$/.test(search.again) ? search.again : undefined;
+  // "Ask for help" (plan 9.10): one of the person's own community posts; its words are read from the post itself.
+  const fromPostId = !again && typeof search.from === 'string' && /^cpo_[A-Za-z0-9_-]{1,60}$/.test(search.from) ? search.from : undefined;
   // "Post a task like this" (an example, blueprint 01 P2): only when no repeat or words of their own came along.
-  const templateId = !again && !describe && !title && isTaskTemplateId(search.template) ? search.template : undefined;
+  const templateId = !again && !fromPostId && !describe && !title && isTaskTemplateId(search.template) ? search.template : undefined;
   // Signing in (and verifying a phone) comes back here with the same category, words and request.
   const here = routes.app.newTask({
     ...(initialCategory ? { category: initialCategory } : {}),
@@ -59,6 +62,7 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
     ...(wantsAiDraft ? { ai: true } : {}),
     ...(again ? { again } : {}),
     ...(templateId ? { template: templateId } : {}),
+    ...(fromPostId ? { fromPost: fromPostId } : {}),
   });
   if (viewer.kind !== 'user') redirect(routes.signIn(here));
   const userId = viewer.user.id;
@@ -67,7 +71,12 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
   // Risk may ask for an ID check before posting (blueprint 01 P2); it comes back here once it passes.
   await requirePosterIdentity(db, userId, await requestNow(), here);
 
-  const [data, marketId, repeat] = await Promise.all([taskPosting.pageData(userId), homeMarketIdOf(userId), again ? taskPosting.repeat(userId, again) : null]);
+  const [data, marketId, repeat, fromPost] = await Promise.all([
+    taskPosting.pageData(userId),
+    homeMarketIdOf(userId),
+    again ? taskPosting.repeat(userId, again) : null,
+    fromPostId ? communityPostForTask(db, userId, fromPostId) : null,
+  ]);
   if (!data || !marketId) redirect(routes.app.home());
   const flags = await getFlags(marketId);
   // A per-person key, so a saved draft never shows up for someone else on a shared device. Posting a task again
@@ -78,9 +87,16 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
   const botCheck = await botCheckForPage();
   // The example must be one this market offers (its category is in the market).
   const fromTemplate = templateId && data.templates?.some((template) => template.id === templateId) ? findTaskTemplate(templateId) : undefined;
-  // Like "Post again", a start from an example keeps its own tab draft (an unrelated draft in progress never
-  // replaces it, and it never overwrites one).
-  const storageKey = fromTemplate ? draftStorageKey.replace(/:v1$/, `:template:${fromTemplate.id}:v1`) : draftStorageKey;
+  // Like "Post again", a start from an example or a post keeps its own tab draft (an unrelated draft in progress
+  // never replaces it, and it never overwrites one).
+  const storageKey = fromTemplate
+    ? draftStorageKey.replace(/:v1$/, `:template:${fromTemplate.id}:v1`)
+    : fromPost
+      ? draftStorageKey.replace(/:v1$/, `:post:${fromPost.id}:v1`)
+      : draftStorageKey;
+  // The post's own words, within the wizard's limits; the person checks them like anything else.
+  const postTitle = fromPost ? fromPost.title.replace(/\s+/g, ' ').trim().slice(0, TASK_TITLE_MAX) : '';
+  const postWords = fromPost ? fromPost.body.trim().slice(0, TASK_DESCRIPTION_MAX) : '';
 
   return (
     <PostTaskScreen
@@ -91,9 +107,16 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
         ...(wantsAiDraft && aiDraftingEnabled ? { autoDraft: true } : {}),
         draftStorageKey: storageKey,
         ...(repeat ? { repeat } : {}),
-        ...(fromTemplate ? { initialTemplate: fromTemplate.id, initialCategory: fromTemplate.categorySlug } : initialCategory ? { initialCategory } : {}),
-        ...(title ? { initialTitle: title } : {}),
-        ...(describe ? { initialDescription: describe } : {}),
+        ...(fromTemplate
+          ? { initialTemplate: fromTemplate.id, initialCategory: fromTemplate.categorySlug }
+          : initialCategory
+            ? { initialCategory }
+            : fromPost?.categorySlug && data.categories.some((category) => category.slug === fromPost.categorySlug)
+              ? { initialCategory: fromPost.categorySlug }
+              : {}),
+        ...(title ? { initialTitle: title } : postTitle ? { initialTitle: postTitle } : {}),
+        ...(describe ? { initialDescription: describe } : postWords ? { initialDescription: postWords } : {}),
+        ...(fromPost ? { fromPost: { id: fromPost.id, title: fromPost.title } } : {}),
       }}
       handlers={{
         onDraftWithAi: draftTaskWithAi,

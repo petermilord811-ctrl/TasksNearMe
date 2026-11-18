@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { FormProvider, useForm, useWatch, type FieldErrors, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, Check, Lock, Repeat } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Lock, MessagesSquare, Repeat } from 'lucide-react';
 import { createTaskDraftSchema, findTaskTemplate, POST_TASK_STEPS, routes, type ActionResult, type AddressSuggestion, type AiTaskDraft, type Photo, type PostTaskHandlers, type PostTaskPageData, type PostTaskStep, type TaskDraftInput } from '@/contracts';
 import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
@@ -241,7 +241,8 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     if (lock.current || posted.current) return;
     lock.current = true; setPending(true); setResult(undefined); setInvalid(false); clearErrors();
     let next: ActionResult;
-    try { next = await handlers.onPost({ ...valuesToPost, ...(check.token ? { botCheck: check.token } : {}) }); }
+    // "Ask for help" (plan 9.10): the post it started from, so the post and the new task link to each other.
+    try { next = await handlers.onPost({ ...valuesToPost, ...(check.token ? { botCheck: check.token } : {}), ...(data.fromPost ? { fromPostId: data.fromPost.id } : {}) }); }
     catch { next = { ok: false, code: 'unknown' }; }
     if (next.ok) {
       posted.current = true;
@@ -276,6 +277,10 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         </ol>
         <div aria-live="polite" className="text-xs text-muted-foreground">{storageFailed ? t('storageUnavailable') : restored ? t('restored') : t('saved')}</div>
       </header>
+      {data.fromPost && <p className="flex items-start gap-2.5 rounded-2xl border border-primary/20 bg-primary/[0.06] p-3.5 text-sm">
+        <MessagesSquare aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+        <span>{t('fromPost', { title: data.fromPost.title })}</span>
+      </p>}
       {data.repeat && <p className="flex items-start gap-2.5 rounded-2xl border border-primary/20 bg-primary/[0.06] p-3.5 text-sm">
         <Repeat aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
         <span>{t(data.repeat.addressDeleted ? 'repeat.addressDeleted' : 'repeat.ready', { title: data.repeat.fromTitle })}</span>

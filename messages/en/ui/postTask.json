@@ -402,6 +402,7 @@
     "ready": "Posting “{title}” again. Everything from last time is filled in except photos, on the next date that fits. Check it, then post.",
     "addressDeleted": "Posting “{title}” again. The old address was deleted 180 days after your last booking there, so search for it again."
   },
+  "fromPost": "From your neighborhood post “{title}”: its words are filled in. Check them, add the details helpers need, then post. The post will link to this task.",
   "templates": {
     "heading": "Start from an example",
     "hint": "It fills in the title, the description and the details. You can change anything.",

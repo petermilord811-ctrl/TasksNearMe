@@ -245,6 +245,12 @@ export interface PostTaskPageData {
    * it opens on the Where step instead.
    */
   repeat?: PostTaskRepeat;
+  /**
+   * "Ask for help" (plan 9.10), from `?from=<post>`: the person's own community post (a recommendation request or a
+   * question) the wizard starts from. Its title, words and service come in as `initialTitle`, `initialDescription`
+   * and `initialCategory`; posting sends its id as `fromPostId` so the post and the task link to each other.
+   */
+  fromPost?: { id: string; title: string };
   rules: TaskPostingRules;
   /** The `ai_drafting` flag: show "Help me describe this". */
   aiDraftingEnabled: boolean;
@@ -392,8 +398,11 @@ export interface PostTaskHandlers {
   /** FormData with one `file` (JPEG, PNG, WebP, or HEIC). */
   onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
   onQuote: QueryHandler<{ budget: PricingInput; expenseAllowanceCents: Cents }, PriceBreakdown>;
-  /** Sends the bot check's answer as `botCheck` (`fieldErrors.botCheck` when it's turned down). */
-  onPost: ActionHandler<TaskDraftInput & BotCheckInput>;
+  /**
+   * Sends the bot check's answer as `botCheck` (`fieldErrors.botCheck` when it's turned down), and with `fromPost`
+   * the post's id as `fromPostId`, which links the new task to it.
+   */
+  onPost: ActionHandler<TaskDraftInput & BotCheckInput & { fromPostId?: string }>;
   /** Thumbnails for photo ids restored from a saved draft (only the person's own uploads). */
   onResolvePhotos?: QueryHandler<{ photoIds: string[] }, Photo[]>;
 }

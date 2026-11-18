@@ -29,6 +29,7 @@ import { GEO_STAND_IN_COOKIE, wantsGeoStandIn } from '@/integrations/geocoding';
 import { findProhibitedPhrase, maskContactDetails } from '@/modules/trust/contact-masking';
 import { GLOBAL_PROHIBITED_PHRASES } from '@/modules/trust/prohibited';
 import { checkBot } from '@/modules/accounts/bot-check';
+import { linkCommunityPostToTask } from '@/modules/community/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { consumeRateLimit } from '@/platform/rate-limit';
@@ -131,7 +132,7 @@ export async function quoteTaskPrice(input: { budget: PricingInput; expenseAllow
 /** Posting attempts per person (B-061 rate-limit review). */
 const POSTING_RULE = { limit: 30, windowSeconds: 60 * 60 };
 
-export async function postTaskAction(input: TaskDraftInput & BotCheckInput): Promise<ActionResult> {
+export async function postTaskAction(input: TaskDraftInput & BotCheckInput & { fromPostId?: string }): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   // Turnstile before anything is saved (blueprint 06 §4: posting).
@@ -142,6 +143,8 @@ export async function postTaskAction(input: TaskDraftInput & BotCheckInput): Pro
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const outcome = await (await postingForRequest()).post(userId, input);
   if (!outcome.ok) return outcome.result;
+  // "Ask for help" (plan 9.10): the author's own community post becomes this task's discussion, and links to it.
+  if (typeof input?.fromPostId === 'string' && input.fromPostId) await linkCommunityPostToTask(db, userId, input.fromPostId, outcome.taskId, new Date());
 
   // Boards, market pages, and the new task page show it right away.
   const marketId = await homeMarketIdOf(userId);
