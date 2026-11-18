@@ -2,6 +2,7 @@ import { and, desc, eq, gt, gte, ilike, inArray, isNull, ne, notInArray, or, sql
 import {
   CATEGORY_SLUGS,
   PORTAL_ALL_AREAS,
+  PORTAL_CITYWIDE,
   PORTAL_FEED_PAGE_SIZE,
   PORTAL_GENERAL,
   PORTAL_LIST_PAGE_SIZE,
@@ -91,6 +92,8 @@ async function scopeFor(db: Db, viewer: CommunityViewer, query: PortalQueryState
     db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, viewer.id)).limit(1),
   ]);
   const base = { viewer, facts, now, timeZone, marketAreas, nearbyIds, helps: profile?.status === 'active' };
+  // Only what belongs to no neighborhood: citywide posts and remote tasks ("See all" under "Across {market}", sweep P10).
+  if (query.area === PORTAL_CITYWIDE) return { ...base, query, place: { kind: 'citywide' }, areaIds: [], withCitywide: true };
   const one = query.area && query.area !== PORTAL_ALL_AREAS ? marketAreas.find((area) => area.slug === query.area) : undefined;
   if (one) return { ...base, query, place: { kind: 'area', slug: one.slug, name: one.name }, areaIds: [one.id], withCitywide: false };
   // A neighborhood that isn't the market's is dropped: the place is near you, as with no `area` at all.
@@ -349,7 +352,8 @@ async function statsOf(db: Db, scope: Scope): Promise<PortalPageData['stats']> {
           // Counted as the rail lists them (audit M23): never the viewer, nobody blocked either way.
           ne(helperProfiles.userId, scope.viewer.id),
           scope.facts.blocked.length > 0 ? notInArray(helperProfiles.userId, scope.facts.blocked) : undefined,
-          scope.areaIds ? (scope.areaIds.length > 0 ? inArray(helperProfiles.areaId, scope.areaIds) : sql`false`) : undefined,
+          // Citywide work is anyone's in the market: there, the market's helpers.
+          scope.areaIds && scope.place.kind !== 'citywide' ? (scope.areaIds.length > 0 ? inArray(helperProfiles.areaId, scope.areaIds) : sql`false`) : undefined,
         ),
       ),
   ]);
@@ -390,7 +394,8 @@ async function railOf(db: Db, scope: Scope): Promise<PortalRail> {
           eq(areas.marketId, facts.market.id),
           ne(helperProfiles.userId, viewer.id),
           facts.blocked.length > 0 ? notInArray(helperProfiles.userId, facts.blocked) : undefined,
-          scope.areaIds ? (scope.areaIds.length > 0 ? inArray(helperProfiles.areaId, scope.areaIds) : sql`false`) : undefined,
+          // Citywide work is anyone's in the market: there, the market's helpers.
+          scope.areaIds && scope.place.kind !== 'citywide' ? (scope.areaIds.length > 0 ? inArray(helperProfiles.areaId, scope.areaIds) : sql`false`) : undefined,
         ),
       )
       .orderBy(desc(helperProfiles.completedCount), desc(helperProfiles.ratingCount))
@@ -458,7 +463,7 @@ function areasOf(scope: Scope, counts: Map<string | null, number>): PortalArea[]
 }
 
 /** Whether this view pages (the Feed; the List by day or in one neighborhood) or shows sections (the List by neighborhood). */
-const sectioned = (scope: Scope) => scope.query.view === 'list' && scope.query.group === 'area' && scope.place.kind !== 'area';
+const sectioned = (scope: Scope) => scope.query.view === 'list' && scope.query.group === 'area' && scope.place.kind !== 'area' && scope.place.kind !== 'citywide';
 const pageSize = (query: PortalQueryState) => (query.view === 'list' ? PORTAL_LIST_PAGE_SIZE : PORTAL_FEED_PAGE_SIZE);
 
 /**

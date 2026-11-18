@@ -37,7 +37,8 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
         </div>
         <PortalLive data={data} listId="portal-stream" {...(handlers.onCheckFresh ? { onCheckFresh: handlers.onCheckFresh } : {})} />
         <div id="portal-stream" className="scroll-mt-28 space-y-3">
-          {query.view === 'list' && data.items.length > 0 && <ListGroupBar data={data} />}
+          {/* One neighborhood (or what's citywide) lists by day only, so there's no grouping to choose (sweep P9). */}
+          {query.view === 'list' && data.items.length > 0 && data.place.kind !== 'area' && data.place.kind !== 'citywide' && <ListGroupBar data={data} />}
           {data.items.length === 0
             ? <PortalEmpty data={data} />
             : <PortalStream key={streamKey} data={data} now={now} visitKey={visitKey} handlers={handlers} />}

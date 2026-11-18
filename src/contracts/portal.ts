@@ -39,6 +39,8 @@ export type PortalGroup = (typeof PORTAL_GROUPS)[number];
 
 /** `area` for the whole market. */
 export const PORTAL_ALL_AREAS = 'all';
+/** `area` for what belongs to no one neighborhood: citywide posts and remote tasks (the List's "Across {market}"). */
+export const PORTAL_CITYWIDE = 'citywide';
 /** `category` for posts about no one service. */
 export const PORTAL_GENERAL = 'general';
 export type PortalCategory = CategorySlug | typeof PORTAL_GENERAL;
@@ -53,7 +55,10 @@ export const PORTAL_SECTION_SIZE = 5;
 
 /** `routes.app.community(query)`. Defaults are left out of the URL. */
 export interface PortalQuery {
-  /** Absent: near you (your neighborhood, those within 3 miles, citywide posts and remote tasks). `all`: the market. A slug: one neighborhood. */
+  /**
+   * Absent: near you (your neighborhood, those within 3 miles, citywide posts and remote tasks). `all`: the market.
+   * `citywide`: only what belongs to no neighborhood. A slug: one neighborhood.
+   */
   area?: string;
   category?: PortalCategory;
   type?: PortalType;
@@ -190,6 +195,8 @@ export interface PortalRail {
 export type PortalPlace =
   | { kind: 'nearby'; areaName: string }
   | { kind: 'market' }
+  /** Citywide posts and remote tasks only (`area=citywide`). */
+  | { kind: 'citywide' }
   | { kind: 'area'; slug: string; name: string };
 
 export interface PortalPageData {

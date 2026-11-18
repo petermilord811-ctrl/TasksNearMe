@@ -153,6 +153,7 @@
     "group": "Community",
     "post": "Community · a recommendation request with answers",
     "postStaff": "Community · staff view of a hidden reply",
+    "postReplyBlocked": "Post: can’t reply yet (phone first)",
     "newPost": "Community · new post",
     "newThanks": "Community · thank a helper"
   },

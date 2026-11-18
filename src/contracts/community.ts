@@ -146,6 +146,11 @@ export interface CommunityPostPageData {
   replies: CommunityReplyView[];
   viewer: {
     canReply: boolean;
+    /**
+     * Why the viewer can't reply to a post that's open (sweep P3): a verified phone first (only where texts are on,
+     * plan 9.2), or an account that can't post right now. Absent when they can reply, or when the post itself is closed.
+     */
+    replyBlocked?: 'phone_required' | 'suspended';
     /** The post's author pins the answer that helped. */
     canPin: boolean;
     isAuthor: boolean;

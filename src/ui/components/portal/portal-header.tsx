@@ -10,7 +10,10 @@ import { portalHref } from './portal-href';
 export function usePlaceName(data: Pick<PortalPageData, 'place' | 'market'>): string {
   const t = useTranslations('portal.place');
   const { place } = data;
-  return place.kind === 'nearby' ? t('nearby', { area: place.areaName }) : place.kind === 'area' ? t('area', { area: place.name }) : t('market', { market: data.market.name });
+  if (place.kind === 'nearby') return t('nearby', { area: place.areaName });
+  if (place.kind === 'area') return t('area', { area: place.name });
+  if (place.kind === 'citywide') return t('citywide', { market: data.market.name });
+  return t('market', { market: data.market.name });
 }
 
 /** The query string of a portal URL as hidden inputs: a search form that changes the words and keeps the rest. */

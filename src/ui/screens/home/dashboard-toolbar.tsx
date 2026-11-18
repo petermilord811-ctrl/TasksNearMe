@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, type ReactNode } from 'react';
+import { startTransition, useId, useOptimistic, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, LayoutGrid, List, Map as MapIcon, X } from 'lucide-react';
@@ -37,9 +37,14 @@ export function DashboardToolbar({ data }: { data: DashboardData }) {
   const t = useTranslations('home.lists');
   const categoryName = useTranslations('helperCard.categories');
   const router = useRouter();
-  const { query } = data;
+  // A choice shows at once (sweep D12: the selects snapped back to the old value until the new page arrived). The URL
+  // stays the truth: the shown query follows it again once the navigation lands (Next's guide, interactive apps).
+  const [query, choose] = useOptimistic(data.query, (current, change: DashboardQuery) => ({ ...current, ...change }) as typeof current);
   const base = dashboardBase(query);
-  const go = (change: DashboardQuery) => router.push(routes.app.home({ ...base, ...change }), { scroll: false });
+  const go = (change: DashboardQuery) => startTransition(async () => {
+    choose(change);
+    router.push(routes.app.home({ ...base, ...change }), { scroll: false });
+  });
   const filtered = query.status !== 'active' || query.date !== 'any' || Boolean(query.category);
   const dates = query.status === 'done' ? 'pastDateOptions' : 'dateOptions';
   const views: DashboardView[] = data.mapAvailable ? ['list', 'cards', 'map'] : ['list', 'cards'];

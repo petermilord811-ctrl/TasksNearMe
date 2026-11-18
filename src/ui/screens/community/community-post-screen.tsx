@@ -43,7 +43,13 @@ export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreen
     </section>
 
     <div className="space-y-3 rounded-[1.375rem] border border-border bg-card p-4 shadow-card sm:p-5">
-      {viewer.canReply ? <CommunityReplyForm data={data} onReply={handlers.onReply} /> : <p className="text-sm text-muted-foreground">{t('replyForm.closed')}</p>}
+      {/* An open post this reader can't reply to says why, as a new post does (sweep P3); "Replies are closed" is for
+          a post that is. */}
+      {viewer.canReply
+        ? <CommunityReplyForm data={data} onReply={handlers.onReply} />
+        : viewer.replyBlocked
+          ? <p role="status" className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">{t(`postBlocked.${viewer.replyBlocked}`)} {viewer.replyBlocked === 'phone_required' && <Link href={routes.app.account()} className="font-semibold text-primary underline underline-offset-4">{t('verifyPhone')}</Link>}</p>
+          : <p className="text-sm text-muted-foreground">{t('replyForm.closed')}</p>}
       <p className="text-xs text-muted-foreground">{t('guidelines')} <Link href={routes.legal('community-guidelines')} className="font-medium text-primary underline underline-offset-4">{t('guidelinesLink')}</Link></p>
     </div>
   </div>;

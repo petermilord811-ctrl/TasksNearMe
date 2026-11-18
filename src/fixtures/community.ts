@@ -131,6 +131,13 @@ export const communityPostHelperViewData: CommunityPostPageData = {
   ],
 };
 
+/** Lee reads Maya's request before verifying his phone (texts are on): he's told why he can't reply yet (sweep P3). */
+export const communityPostReplyBlockedData: CommunityPostPageData = {
+  ...communityPostHelperViewData,
+  viewer: { canReply: false, replyBlocked: 'phone_required', canPin: false, isAuthor: false, isStaff: false },
+  recommendOptions: [],
+};
+
 /** Staff see a hidden reply, marked, with the moderation controls. */
 export const communityPostStaffData: CommunityPostPageData = {
   ...communityPostPageData,

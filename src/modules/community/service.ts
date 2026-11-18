@@ -431,7 +431,14 @@ export async function getCommunityPost(db: Db, viewer: CommunityViewer, postId: 
     market: { slug: facts.market.slug, name: facts.market.name },
     post: view,
     replies,
-    viewer: { canReply: post.status === 'visible' && !facts.postBlocked, canPin: isAuthor && post.status === 'visible', isAuthor, isStaff: viewer.staff !== null },
+    viewer: {
+      canReply: post.status === 'visible' && !facts.postBlocked,
+      // Say why when the post is open but this reader can't reply (sweep P3), not just "Replies are closed".
+      ...(post.status === 'visible' && facts.postBlocked ? { replyBlocked: facts.postBlocked } : {}),
+      canPin: isAuthor && post.status === 'visible',
+      isAuthor,
+      isStaff: viewer.staff !== null,
+    },
     recommendOptions: options,
     alreadyRecommended: Boolean(mine),
   };

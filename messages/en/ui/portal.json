@@ -4,6 +4,7 @@
   "place": {
     "nearby": "{area} and nearby",
     "market": "All of {market}",
+    "citywide": "Across {market}",
     "area": "{area}"
   },
   "stats": {
@@ -106,6 +107,7 @@
   },
   "list": {
     "seeAll": "See all {count} in {area}",
+    "seeAllCitywide": "See all {count} citywide",
     "market": "Across {market}",
     "marketHint": "Citywide posts and remote tasks",
     "today": "Today",

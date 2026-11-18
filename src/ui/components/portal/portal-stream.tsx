@@ -4,6 +4,7 @@ import { Fragment, useEffect, useEffectEvent, useRef, useState, useTransition, t
 import { ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionHandler, CommunityReactInput, ISODateTime, PortalHandlers, PortalItem, PortalPageData, PortalQuery } from '@/contracts';
+import { PORTAL_CITYWIDE } from '@/contracts/portal';
 import { routes } from '@/contracts/routes';
 import { PostCard } from '@/ui/components/community/post-card';
 import { useFormat } from '@/ui/lib/format';
@@ -26,7 +27,7 @@ const TRENDING_AFTER = 8;
 const panelClass = 'overflow-hidden rounded-[1.125rem] border border-border bg-card shadow-card';
 const panelHeadClass = 'flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-border/80 bg-muted/50 px-3 py-2 sm:px-4';
 
-type StreamData = Pick<PortalPageData, 'items' | 'sections' | 'query' | 'pageCount' | 'market' | 'today' | 'rail'>;
+type StreamData = Pick<PortalPageData, 'items' | 'sections' | 'query' | 'pageCount' | 'market' | 'today' | 'rail' | 'place'>;
 type StreamHandlers = Pick<PortalHandlers, 'onReact' | 'onSavePost' | 'onSaveTask' | 'onMore'>;
 
 function FeedItem({ item, now, visitKey, query, onReact, onSavePost, onSaveTask }: { item: PortalItem; now: ISODateTime; visitKey: string; query: PortalQuery; onReact: ActionHandler<CommunityReactInput> } & Pick<StreamHandlers, 'onSavePost' | 'onSaveTask'>) {
@@ -146,14 +147,16 @@ export function PortalStream({ data, now, visitKey, handlers }: { data: StreamDa
       {data.sections.map((section) => {
         const name = section.kind === 'market' ? t('list.market', { market: data.market.name }) : section.areaName ?? section.key;
         const seeAll = section.count > section.items.length;
+        // "See all" picks the neighborhood, or for "Across {market}" what belongs to none (sweep P10).
+        const seeAllHref = section.kind === 'market' ? portalHref(query, { area: PORTAL_CITYWIDE }) : section.areaSlug ? portalHref(query, { area: section.areaSlug }) : undefined;
         return <section key={section.key} aria-labelledby={`portal-${section.key}`} className={panelClass}>
           <header className={panelHeadClass}>
             <h2 id={`portal-${section.key}`} className="text-[15px] font-semibold">
               {name}<span className="ml-2 text-[13px] font-normal text-muted-foreground tabular-nums">{t('list.count', { count: section.count })}</span>
               {section.kind === 'market' && <span className="block text-xs font-normal text-muted-foreground">{t('list.marketHint')}</span>}
             </h2>
-            {seeAll && section.areaSlug && <Link href={portalHref(query, { area: section.areaSlug })} className="inline-flex min-h-8 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
-              {t('list.seeAll', { count: section.count, area: name })}<ArrowRight aria-hidden="true" className="size-3.5" />
+            {seeAll && seeAllHref && <Link href={seeAllHref} className="inline-flex min-h-8 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+              {section.kind === 'market' ? t('list.seeAllCitywide', { count: section.count }) : t('list.seeAll', { count: section.count, area: name })}<ArrowRight aria-hidden="true" className="size-3.5" />
             </Link>}
           </header>
           <ol className="divide-y divide-border/70">{section.items.map((item) => <li key={keyOf(item)}><PortalRow item={item} now={now} visitKey={visitKey} showArea={section.kind === 'market'} /></li>)}</ol>
@@ -162,17 +165,21 @@ export function PortalStream({ data, now, visitKey, handlers }: { data: StreamDa
     </div>;
   }
 
-  // ---- The List by day (or in one neighborhood): a panel per day posted, newest first in the order given.
+  // ---- The List by day (or in one neighborhood): a panel per day posted, the newest day first, each day's rows in
+  //      the order given (the sort).
   const yesterday = dayKey(new Date(Date.parse(`${data.today}T12:00:00Z`) - 86_400_000));
-  const days = items.reduce<{ day: string; items: PortalItem[] }[]>((groups, item) => {
-    const day = dayKey(item.at);
-    const group = groups.find((candidate) => candidate.day === day);
-    if (group) group.items.push(item);
-    else groups.push({ day, items: [item] });
-    return groups;
-  }, []);
+  const days = items
+    .reduce<{ day: string; items: PortalItem[] }[]>((groups, item) => {
+      const day = dayKey(item.at);
+      const group = groups.find((candidate) => candidate.day === day);
+      if (group) group.items.push(item);
+      else groups.push({ day, items: [item] });
+      return groups;
+    }, [])
+    .sort((a, b) => b.day.localeCompare(a.day));
   const dayLabel = (day: string, sample: PortalItem) => (day === data.today ? t('list.today') : day === yesterday ? t('list.yesterday') : formatDate(sample.at));
-  const byDay = query.group === 'day' || query.sort === 'new';
+  // One neighborhood, or what's citywide, is always by day (design §3: grouping by neighborhood means nothing there; sweep P9).
+  const byDay = data.place.kind === 'area' || data.place.kind === 'citywide' || query.group === 'day' || query.sort === 'new';
   return <>
     {byDay
       ? <div className="space-y-3">{days.map((group) => <section key={group.day} aria-labelledby={`portal-day-${group.day}`} className={panelClass}>

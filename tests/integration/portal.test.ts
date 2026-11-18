@@ -93,6 +93,23 @@ describe('the neighborhood portal', () => {
     }
   });
 
+  it('lists only what belongs to no neighborhood under area=citywide, by day, with the market’s helpers (sweep P10)', async () => {
+    const citywide = await getPortal(db, lee, { area: 'citywide', view: 'list' }, now);
+    expect(citywide?.place).toEqual({ kind: 'citywide' });
+    expect(citywide?.sections).toBeUndefined();
+    for (const item of citywide?.items ?? []) {
+      if (item.type === 'post') expect(item.post.areaSlug).toBeUndefined();
+      else expect(item.task.task.location.kind).toBe('remote');
+    }
+    // The same items as the List's "Across {market}" section, which links here.
+    const sections = await getPortal(db, lee, all({ view: 'list', sort: 'hot' }), now);
+    const across = sections?.sections?.find((section) => section.kind === 'market');
+    expect(citywide?.totalCount ?? 0).toBe(across?.count ?? 0);
+    // Citywide work is anyone's in the market: the rail counts the market's helpers.
+    const market = await getPortal(db, lee, all(), now);
+    expect(citywide?.stats.helpers).toBe(market?.stats.helpers);
+  });
+
   it('saves a post for later, and Saved reads through the hidden and blocked rules', async () => {
     const postId = await post(ben, `Portal saved ${run}`, 'tip');
     expect(await saveCommunityPost(db, lee, { postId, saved: true }, now)).toMatchObject({ ok: true });

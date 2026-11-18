@@ -238,8 +238,9 @@ describe('the lists', () => {
     renderDashboard(mayaDashboardSearchData);
     fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'done' } });
     expect(navigation.push).toHaveBeenCalledWith(routes.app.home({ tab: 'tasks', status: 'done', q: 'desk' }), { scroll: false });
+    // A second choice before the first one's page arrives keeps it (sweep D12: the choice shows at once).
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'moving-help' } });
-    expect(navigation.push).toHaveBeenLastCalledWith(routes.app.home({ tab: 'tasks', category: 'moving-help', q: 'desk' }), { scroll: false });
+    expect(navigation.push).toHaveBeenLastCalledWith(routes.app.home({ tab: 'tasks', status: 'done', category: 'moving-help', q: 'desk' }), { scroll: false });
     cleanup();
     renderDashboard(mayaDashboardFilteredData);
     expect(screen.getByLabelText('Date')).toHaveDisplayValue('Last 7 days');

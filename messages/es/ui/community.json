@@ -153,6 +153,7 @@
     "group": "Comunidad",
     "post": "Comunidad · publicación pidiendo una recomendación, con respuestas",
     "postStaff": "Comunidad · vista del equipo de una respuesta oculta",
+    "postReplyBlocked": "Publicación: aún no puede responder (primero el teléfono)",
     "newPost": "Comunidad · nueva publicación",
     "newThanks": "Comunidad · agradecer a un ayudante"
   },

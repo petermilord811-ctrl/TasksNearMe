@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CommunityPostPageData, CommunityReactInput, PortalHandlers, PortalPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
-import { communityPostHelperViewData, communityPostPageData, fakeHandler, portalBlockedData, portalEmptyData, portalFeedData, portalFilteredEmptyData, portalHelperData, portalListData, portalLongThreadData, portalPostWithTaskData, portalSavedData } from '@/fixtures';
+import { communityPostHelperViewData, communityPostPageData, communityPostReplyBlockedData, fakeHandler, portalBlockedData, portalEmptyData, portalFeedData, portalFilteredEmptyData, portalHelperData, portalListData, portalLongThreadData, portalPostWithTaskData, portalSavedData, portalTasksData } from '@/fixtures';
 import { resetLastVisits } from '@/ui/lib/last-visit';
 import messages from '../../../../messages/en/ui';
 import { CommunityPostScreen } from './community-post-screen';
@@ -25,6 +25,20 @@ const portal = (data: PortalPageData, change: Partial<PortalHandlers> = {}) => w
 const post = (data: CommunityPostPageData) => wrap(<CommunityPostScreen data={data} now={now} handlers={{ onReact: fakeHandler({ ok: true, code: 'updated' }), onReply: fakeHandler({ ok: true, code: 'sent' }), onPin: fakeHandler({ ok: true, code: 'updated' }), onDelete: fakeHandler({ ok: true, code: 'updated' }) }} />);
 
 describe('PortalScreen', () => {
+  it('links "Across {market}" to everything citywide (sweep P10)', () => {
+    portal({ ...portalListData, sections: portalListData.sections!.map((section) => (section.kind === 'market' ? { ...section, count: 9 } : section)) });
+    const link = screen.getByRole('link', { name: /See all 9 citywide/ });
+    expect(link.getAttribute('href')).toContain('area=citywide');
+  });
+
+  it('lists one neighborhood by day, newest day first, with no grouping to choose (sweep P9)', () => {
+    portal({ ...portalTasksData, query: { ...portalTasksData.query, view: 'list' } });
+    const days = [...document.querySelectorAll('[id^="portal-day-"]')].map((heading) => heading.id.slice('portal-day-'.length));
+    expect(days.length).toBeGreaterThan(0);
+    expect(days).toEqual([...days].sort().reverse());
+    expect(screen.queryByRole('navigation', { name: 'Group' })).toBeNull();
+  });
+
   it('names the place, lists its neighborhoods with counts, and asks first', () => {
     portal(portalFeedData);
     expect(screen.getByRole('heading', { level: 1, name: 'Mueller and nearby' })).toBeDefined();
@@ -130,6 +144,21 @@ describe('PortalScreen', () => {
 });
 
 describe('CommunityPostScreen', () => {
+  it('says why an open post takes no reply from this reader, and how to fix it (sweep P3)', () => {
+    post(communityPostReplyBlockedData);
+    expect(screen.getByText(/Verify your phone number to post and reply\./)).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Verify your phone' }).getAttribute('href')).toBe(routes.app.account());
+    expect(screen.queryByText('Replies are closed.')).toBeNull();
+    cleanup();
+    post({ ...communityPostReplyBlockedData, viewer: { ...communityPostReplyBlockedData.viewer, replyBlocked: 'suspended' } });
+    expect(screen.getByText(/Your account can't post right now\./)).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'Verify your phone' })).toBeNull();
+    cleanup();
+    // A closed post says it's closed.
+    post({ ...communityPostHelperViewData, viewer: { ...communityPostHelperViewData.viewer, canReply: false } });
+    expect(screen.getByText('Replies are closed.')).toBeDefined();
+  });
+
   it('marks the replies since your last visit, never your own, and says how many', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(Date.parse(now));
