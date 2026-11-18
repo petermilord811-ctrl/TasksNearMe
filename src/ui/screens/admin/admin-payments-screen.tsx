@@ -14,6 +14,7 @@ import { Input } from '@/ui/primitives/input';
 import { Label } from '@/ui/primitives/label';
 import messages from '../../../../messages/en/ui/adminPayments.json';
 import { AdminFilterChip, adminCard, adminMoneyTd, adminPanel, adminSection, adminTableFrame, adminTd, adminTh, adminTr, AdminWhen } from './admin-ui';
+import { UrlForm } from '@/ui/components/forms/url-form';
 
 export interface AdminPaymentsScreenProps { data: AdminPaymentsPageData; now: ISODateTime }
 
@@ -66,7 +67,7 @@ export function AdminPaymentsScreen({ data, now }: AdminPaymentsScreenProps) {
       <h2 id={`${id}-totals`} className="text-xs font-semibold tracking-[0.04em] text-muted-foreground uppercase">{t('totalsTitle')}</h2>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">{([['charged', data.totals.chargedCents], ['refunded', data.totals.refundedCents], ['transferred', data.totals.transferredCents], ['paidOut', data.totals.paidOutCents]] as const).map(([key, cents]) => <div key={key} className={cn(adminPanel, 'space-y-1 p-4')}><dt className="text-sm text-muted-foreground">{t(`totals.${key}`)}</dt><dd className="font-display text-[1.625rem] leading-8 font-semibold tracking-[-0.02em] tabular-nums">{formatMoney(cents)}</dd></div>)}</dl>
     </section>
-    <form method="get" action={routes.admin.payments()} role="search" aria-label={t('search')} className={cn(adminSection, 'space-y-2')}>
+    <UrlForm urlKey={data.query} method="get" action={routes.admin.payments()} role="search" aria-label={t('search')} className={cn(adminSection, 'space-y-2')}>
       <input type="hidden" name="tab" value={data.tab} />
       <Label htmlFor={`${id}-search`}>{t('search')}</Label>
       <div className="flex flex-col gap-2 sm:flex-row"><Input progressive key={data.query} id={`${id}-search`} name="q" type="search" defaultValue={data.query} aria-describedby={`${id}-hint`} className="min-w-0 flex-1" /><Button progressive type="submit"><Search aria-hidden="true" className="size-4" />{t('submitSearch')}</Button></div>
@@ -74,7 +75,7 @@ export function AdminPaymentsScreen({ data, now }: AdminPaymentsScreenProps) {
         <p id={`${id}-hint`} className="text-sm text-muted-foreground">{t('searchHint')}</p>
         {data.query && <Link href={routes.admin.payments({ tab: data.tab })} className="inline-flex min-h-11 items-center gap-1 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline"><X aria-hidden="true" className="size-4" />{t('clearSearch')}</Link>}
       </div>
-    </form>
+    </UrlForm>
     <nav aria-label={t('tabsLabel')}>
       <ul className="flex flex-wrap gap-2">{ADMIN_MONEY_TABS.map((tab) => <li key={tab}>
         <AdminFilterChip href={routes.admin.payments({ tab, q: data.query || undefined })} current={tab === data.tab} count={data.counts[tab]}>{t(`tabs.${tab}`)}</AdminFilterChip>

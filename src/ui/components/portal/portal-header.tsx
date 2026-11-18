@@ -2,6 +2,7 @@ import { ClipboardList, MapPinned, MessagesSquare, Search, Users } from 'lucide-
 import { useLocale, useTranslations } from 'next-intl';
 import type { PortalPageData } from '@/contracts';
 import { PORTAL_Q_MAX } from '@/contracts/portal';
+import { UrlForm } from '@/ui/components/forms/url-form';
 import { localeHref } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 import { portalHref } from './portal-href';
@@ -30,13 +31,13 @@ export function PortalSearch({ data, id, className }: { data: Pick<PortalPageDat
   const t = useTranslations('portal.search');
   const locale = useLocale();
   const keep = portalHref(data.query, { q: undefined });
-  return <form role="search" action={localeHref(new URL(keep, 'https://portal.invalid').pathname, locale)} method="get" className={cn('relative', className)}>
+  return <UrlForm urlKey={data.query.q ?? ''} role="search" action={localeHref(new URL(keep, 'https://portal.invalid').pathname, locale)} method="get" className={cn('relative', className)}>
     <label htmlFor={id} className="sr-only">{t('label')}</label>
     <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
     <input id={id} name="q" type="search" defaultValue={data.query.q ?? ''} maxLength={PORTAL_Q_MAX} placeholder={t('placeholder')} className="h-11 w-full min-w-0 rounded-full border border-input bg-card pr-4 pl-10 text-base outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted-foreground hover:border-foreground/40 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 sm:text-sm" />
     <HiddenFields href={keep} except={['q', 'page']} />
     <button type="submit" className="sr-only">{t('submit')}</button>
-  </form>;
+  </UrlForm>;
 }
 
 /**

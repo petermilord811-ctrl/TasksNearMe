@@ -14,6 +14,7 @@ import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { Label } from '@/ui/primitives/label';
 import { AdminFilterChip, adminCard, adminMoneyTd, adminSection, adminTableFrame, adminTd, adminTh, adminTr, AdminWhen } from './admin-ui';
+import { UrlForm } from '@/ui/components/forms/url-form';
 
 export interface AdminBookingsScreenProps { data: AdminBookingsPageData; now: ISODateTime }
 
@@ -69,7 +70,7 @@ export function AdminBookingsScreen({ data, now }: AdminBookingsScreenProps) {
   const total = data.counts[data.filter];
   return <div className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
     <PageHeader title={t('title')} description={t('intro')} />
-    <form method="get" action={routes.admin.bookings()} role="search" aria-label={t('search')} className={cn(adminSection, 'space-y-2')}>
+    <UrlForm urlKey={data.query} method="get" action={routes.admin.bookings()} role="search" aria-label={t('search')} className={cn(adminSection, 'space-y-2')}>
       <input type="hidden" name="filter" value={data.filter} />
       <Label htmlFor={`${id}-search`}>{t('search')}</Label>
       <div className="flex flex-col gap-2 sm:flex-row"><Input progressive key={data.query} id={`${id}-search`} name="q" type="search" defaultValue={data.query} aria-describedby={`${id}-hint`} className="min-w-0 flex-1" /><Button progressive type="submit"><Search aria-hidden="true" className="size-4" />{t('submitSearch')}</Button></div>
@@ -77,7 +78,7 @@ export function AdminBookingsScreen({ data, now }: AdminBookingsScreenProps) {
         <p id={`${id}-hint`} className="text-sm text-muted-foreground">{t('searchHint')}</p>
         {data.query && <Link href={routes.admin.bookings({ filter: data.filter })} className="inline-flex min-h-11 items-center gap-1 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline"><X aria-hidden="true" className="size-4" />{t('clearSearch')}</Link>}
       </div>
-    </form>
+    </UrlForm>
     <nav aria-label={t('filtersLabel')}>
       <ul className="flex flex-wrap gap-2">{ADMIN_BOOKING_FILTERS.map((filter) => <li key={filter}>
         <AdminFilterChip href={routes.admin.bookings({ filter, q: data.query || undefined })} current={filter === data.filter} count={data.counts[filter]}>{t(`filters.${filter}`)}</AdminFilterChip>

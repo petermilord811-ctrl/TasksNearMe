@@ -7,6 +7,7 @@ import { TASK_BOARD_POSTED, TASK_BOARD_PRICE_PRESETS, TASK_BOARD_TIMES } from '@
 import { LocaleLink as Link, localeHref } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
+import { UrlForm } from '@/ui/components/forms/url-form';
 import { FiltersToggle } from './filters-toggle';
 
 type Board = Pick<TaskBoardPageData, 'market' | 'categories' | 'query' | 'facets'>;
@@ -73,14 +74,14 @@ export function BoardFilters({ board }: { board: Board }) {
 
   return <FiltersToggle label={t('panel.toggle')} count={activeFilterCount(query)}>
     <div className="space-y-4">
-      <form action={formAction(href({ q: undefined }))} method="get" role="search" className="space-y-1.5">
+      <UrlForm urlKey={query.q ?? ''} action={formAction(href({ q: undefined }))} method="get" role="search" className="space-y-1.5">
         <label htmlFor="board-q" className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('search.label')}</label>
         <div className="flex gap-1.5">
           <input id="board-q" name="q" type="search" defaultValue={query.q ?? ''} maxLength={80} placeholder={t('search.placeholder')} className="h-10 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" />
           <button type="submit" className={buttonVariants({ size: 'icon', className: 'size-10 shrink-0' })}><Search aria-hidden="true" className="size-4" /><span className="sr-only">{t('search.submit')}</span></button>
         </div>
         <HiddenFields href={href({ q: undefined })} except={['q', 'page']} />
-      </form>
+      </UrlForm>
 
       <Group name="category" title={t('category')}>
         <Option href={href({ category: undefined, type: undefined })} selected={!query.category} label={t('allCategories')} count={totalAll} />
@@ -101,7 +102,7 @@ export function BoardFilters({ board }: { board: Board }) {
         <Option href={href({ minPrice: undefined, maxPrice: undefined })} selected={query.minPrice === undefined && query.maxPrice === undefined} label={t('anyPrice')} />
         {TASK_BOARD_PRICE_PRESETS.map((preset) => <Option key={preset.key} href={priceKey === preset.key ? href({ minPrice: undefined, maxPrice: undefined }) : href({ minPrice: 'min' in preset ? preset.min : undefined, maxPrice: 'max' in preset ? preset.max : undefined })} selected={priceKey === preset.key} label={t(`pricePresets.${preset.key}`)} count={facets.prices[preset.key]} />)}
         <li>
-          <form action={formAction(href({}))} method="get" className="flex items-center gap-1.5 px-2 pt-1">
+          <UrlForm urlKey={`${query.minPrice ?? ''}-${query.maxPrice ?? ''}`} action={formAction(href({}))} method="get" className="flex items-center gap-1.5 px-2 pt-1">
             <HiddenFields href={href({ minPrice: undefined, maxPrice: undefined })} except={['min', 'max', 'page']} />
             <label className="sr-only" htmlFor="board-min">{t('priceRange.min')}</label>
             <input id="board-min" name="min" inputMode="numeric" pattern="[0-9]*" defaultValue={query.minPrice ?? ''} placeholder={t('priceRange.min')} className="h-9 w-0 min-w-0 flex-1 rounded-lg border border-input bg-background px-2 text-sm tabular-nums" />
@@ -109,7 +110,7 @@ export function BoardFilters({ board }: { board: Board }) {
             <label className="sr-only" htmlFor="board-max">{t('priceRange.max')}</label>
             <input id="board-max" name="max" inputMode="numeric" pattern="[0-9]*" defaultValue={query.maxPrice ?? ''} placeholder={t('priceRange.max')} className="h-9 w-0 min-w-0 flex-1 rounded-lg border border-input bg-background px-2 text-sm tabular-nums" />
             <button type="submit" className={buttonVariants({ variant: 'outline', size: 'sm', className: 'h-9 shrink-0' })}>{t('priceRange.apply')}</button>
-          </form>
+          </UrlForm>
         </li>
       </Group>
 

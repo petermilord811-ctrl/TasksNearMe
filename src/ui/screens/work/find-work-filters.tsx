@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Bookmark, Check, List, Map as MapIcon, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { FindWorkPageData, FindWorkQuery, FindWorkSort } from '@/contracts';
+import { UrlForm } from '@/ui/components/forms/url-form';
 import { FIND_WORK_DISTANCES, FIND_WORK_SORTS } from '@/contracts/helper-work';
 import { routes } from '@/contracts/routes';
 import { TASK_BOARD_POSTED, TASK_BOARD_PRICE_PRESETS, TASK_BOARD_TIMES, TASK_BOARD_WHEN } from '@/contracts/tasks';
@@ -82,7 +83,7 @@ export function FindWorkFilters({ data }: { data: FindWorkPageData }) {
         <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto sm:mx-auto sm:max-w-xl sm:rounded-t-2xl">
           <SheetHeader><SheetTitle>{t('filtersTitle')}</SheetTitle><SheetDescription>{t('filtersDescription')}</SheetDescription></SheetHeader>
           <div className="space-y-5 px-4 pb-6">
-            <form role="search" className="space-y-2" onSubmit={(event) => {
+            <UrlForm urlKey={query.q ?? ''} role="search" className="space-y-2" onSubmit={(event) => {
               event.preventDefault();
               const value = String(new FormData(event.currentTarget).get('q') ?? '').trim().slice(0, 80);
               router.push(href({ q: value || undefined }));
@@ -92,7 +93,7 @@ export function FindWorkFilters({ data }: { data: FindWorkPageData }) {
                 <input id="find-work-q" name="q" type="search" defaultValue={query.q ?? ''} maxLength={80} placeholder={board('search.placeholder')} className="h-11 min-w-0 flex-1 rounded-xl border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" />
                 <button type="submit" className={cn(chip, on)}><Search aria-hidden="true" className="size-4" />{board('search.submit')}</button>
               </div>
-            </form>
+            </UrlForm>
             {types.length > 0 && <nav aria-label={board('types')} className="space-y-2"><p className="text-sm font-semibold">{board('types')}</p>
               <ul className="flex flex-wrap gap-2">{types.map((type) => <li key={type.slug}><Option href={href({ type: query.type === type.slug ? undefined : type.slug })} selected={query.type === type.slug}>{card(`types.${query.category}.${type.slug}`)}</Option></li>)}</ul>
             </nav>}

@@ -11,6 +11,7 @@ import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { Label } from '@/ui/primitives/label';
 import { AdminCode, adminCard, adminSection, adminSelect, adminTableFrame, adminTd, adminTh, adminTr, AdminWhen } from './admin-ui';
+import { UrlForm } from '@/ui/components/forms/url-form';
 
 export interface AdminAuditScreenProps { data: AdminAuditPageData; now: ISODateTime }
 
@@ -84,7 +85,7 @@ export function AdminAuditScreen({ data, now }: AdminAuditScreenProps) {
   const filtered = Object.values(filters).some(Boolean);
   return <div className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
     <PageHeader title={t('title')} description={t('intro')} />
-    <form method="get" action={routes.admin.audit()} aria-label={t('filters')} className={cn(adminSection, 'space-y-4')}>
+    <UrlForm urlKey={JSON.stringify(filters)} method="get" action={routes.admin.audit()} aria-label={t('filters')} className={cn(adminSection, 'space-y-4')}>
       <h2 className="flex items-center gap-2 font-display text-lg leading-6 font-semibold tracking-[-0.01em]"><Filter aria-hidden="true" className="size-4 text-muted-foreground" />{t('filters')}</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-2"><Label htmlFor={`${id}-actor`}>{t('actor')}</Label><Input progressive id={`${id}-actor`} name="actor" defaultValue={filters.actor ?? ''} aria-describedby={`${id}-actor-hint`} /><p id={`${id}-actor-hint`} className="text-sm text-muted-foreground">{t('actorHint')}</p></div>
@@ -98,7 +99,7 @@ export function AdminAuditScreen({ data, now }: AdminAuditScreenProps) {
         <Button progressive type="submit"><Filter aria-hidden="true" className="size-4" />{t('apply')}</Button>
         {filtered && <Link href={routes.admin.audit()} className="inline-flex min-h-11 items-center gap-1 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline"><X aria-hidden="true" className="size-4" />{t('clear')}</Link>}
       </div>
-    </form>
+    </UrlForm>
     <section aria-label={t('results')} className="space-y-3">
       <p className="text-sm font-medium tabular-nums text-muted-foreground">{t('count', { count: data.entries.length })}</p>
       {data.entries.length === 0 ? <EmptyState title={t('emptyTitle')} body={t('emptyBody')} icon={<History className="size-6" />} action={filtered ? { label: t('clear'), href: routes.admin.audit() } : undefined} /> : <>

@@ -13,6 +13,7 @@ import { Input } from '@/ui/primitives/input';
 import { Label } from '@/ui/primitives/label';
 import { AdminHelperBadge, AdminUserRoles } from './admin-user-summary';
 import { adminCardLink, adminSection, adminTableFrame, adminTd, adminTh, adminTr } from './admin-ui';
+import { UrlForm } from '@/ui/components/forms/url-form';
 
 export interface AdminUsersScreenProps { data: AdminUsersPageData; now: ISODateTime }
 
@@ -38,11 +39,11 @@ export function AdminUsersScreen({ data, now }: AdminUsersScreenProps) {
   const id = useId();
   return <div className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
     <PageHeader title={t('title')} description={t('intro')} />
-    <form method="get" action={routes.admin.users(data.query)} role="search" aria-label={t('search')} className={cn(adminSection, 'space-y-2')}>
+    <UrlForm urlKey={data.query} method="get" action={routes.admin.users(data.query)} role="search" aria-label={t('search')} className={cn(adminSection, 'space-y-2')}>
       <Label htmlFor={`${id}-search`}>{t('search')}</Label>
       <div className="flex flex-col gap-2 sm:flex-row"><Input progressive key={data.query} id={`${id}-search`} name="q" type="search" defaultValue={data.query} aria-describedby={`${id}-hint`} className="min-w-0 flex-1" /><Button progressive type="submit"><Search aria-hidden="true" className="size-4" />{t('submitSearch')}</Button></div>
       <p id={`${id}-hint`} className="text-sm text-muted-foreground">{t('searchHint')}</p>
-    </form>
+    </UrlForm>
     <section aria-label={t('results')} className="space-y-3">
       <p className="text-sm font-medium tabular-nums text-muted-foreground">{t('count', { count: data.totalCount })}</p>
       {data.rows.length === 0 ? <EmptyState title={t('emptyTitle')} body={t('emptyBody')} action={{ label: t('clearSearch'), href: routes.admin.users() }} /> : <>
