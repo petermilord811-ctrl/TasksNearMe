@@ -44,6 +44,8 @@
     "title": "Tu perfil de ayudante",
     "description": "Mantén al día tus servicios, tu zona y tus muestras de trabajo.",
     "viewPublic": "Ver perfil público",
+    "publicNotYet": "Tu perfil público aparecerá cuando ya puedan reservarte.",
+    "publicPaused": "Tu perfil está en pausa, así que tu página pública está oculta.",
     "sectionsLabel": "Editar secciones del perfil",
     "sections": {
       "profile": "Perfil",
@@ -64,6 +66,7 @@
       "group": "Editor del perfil de ayudante",
       "default": "Edita tu perfil",
       "paused": "Perfil en pausa",
+      "draft": "Perfil en borrador, aún no público",
       "emptySamples": "Sin muestras de trabajo",
       "sampleLimit": "Límite de muestras de trabajo alcanzado",
       "verificationMissing": "Verificación por terminar",

@@ -204,6 +204,16 @@ describe('helper profile editor screen', () => {
     expect(visibility.getByRole('status')).toHaveTextContent('Saved');
   });
 
+  it("links to the public profile only while it's live: a draft or paused one says why there's none yet", () => {
+    const draft = show(<HelperProfileEditorScreen data={{ ...samProfileEditorData, publicProfile: false }} handlers={fakeProfileEditorHandlers} />);
+    expect(screen.queryByRole('link', { name: 'View public profile' })).not.toBeInTheDocument();
+    expect(screen.getByText('Your public profile appears once you can be booked.')).toBeVisible();
+    draft.unmount();
+    show(<HelperProfileEditorScreen data={{ ...samProfileEditorData, paused: true, publicProfile: false }} handlers={fakeProfileEditorHandlers} />);
+    expect(screen.queryByRole('link', { name: 'View public profile' })).not.toBeInTheDocument();
+    expect(screen.getByText('Your profile is paused, so your public page is hidden.')).toBeVisible();
+  });
+
   it('builds the public profile link from the handle and offers all phone sections', () => {
     showEditor();
     expect(screen.getByRole('link', { name: 'View public profile' })).toHaveAttribute('href', routes.helperProfile(samProfileEditorData.handle));

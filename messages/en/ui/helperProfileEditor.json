@@ -44,6 +44,8 @@
     "title": "Your helper profile",
     "description": "Keep your services, area, and work samples up to date.",
     "viewPublic": "View public profile",
+    "publicNotYet": "Your public profile appears once you can be booked.",
+    "publicPaused": "Your profile is paused, so your public page is hidden.",
     "sectionsLabel": "Edit profile sections",
     "sections": {
       "profile": "Profile",
@@ -64,6 +66,7 @@
       "group": "Helper profile editor",
       "default": "Edit your profile",
       "paused": "Paused profile",
+      "draft": "Draft profile, not public yet",
       "emptySamples": "No work samples",
       "sampleLimit": "Work sample limit reached",
       "verificationMissing": "Verification to finish",

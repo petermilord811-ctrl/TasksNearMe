@@ -14,7 +14,9 @@ const fullSamples: HelperProfileEditorData = { ...samProfileEditorData, workSamp
 export const helperProfileEditorPreviews: PreviewEntry[] = [
   preview('default', copy.screen.previews.default),
   preview('with-photo', copy.screen.previews.withPhoto, { ...samProfileEditorData, person: { ...samProfileEditorData.person, photo: samProfilePhoto } }),
-  preview('paused', copy.screen.previews.paused, { ...samProfileEditorData, paused: true }, 'visibility'),
+  preview('paused', copy.screen.previews.paused, { ...samProfileEditorData, paused: true, publicProfile: false }, 'visibility'),
+  // Not bookable yet: no public page, so no link to one (it would be "not found").
+  preview('draft', copy.screen.previews.draft, { ...samProfileEditorData, publicProfile: false, verification: onboardingIdentityStep.verification, progress: onboardingIdentityStep.progress }),
   ...(['services', 'area', 'tools', 'work-samples', 'verification', 'visibility'] as const).map((section) => preview(section, copy.screen.sections[section], samProfileEditorData, section)),
   preview('empty-work-samples', copy.screen.previews.emptySamples, { ...samProfileEditorData, workSamples: [] }, 'work-samples'),
   preview('work-sample-limit', copy.screen.previews.sampleLimit, fullSamples, 'work-samples'),

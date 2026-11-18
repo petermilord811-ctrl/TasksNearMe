@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CircleCheck, Eye, Pause, Play } from 'lucide-react';
+import { CircleCheck, Eye, EyeOff, Pause, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useForm, useWatch } from 'react-hook-form';
 import { routes, type HelperProfileEditorData, type HelperProfileEditorHandlers, type HelperStandingView } from '@/contracts';
@@ -84,7 +84,10 @@ export function HelperProfileEditorScreen({ data, handlers, initialSection = 'pr
   const allDone = standing !== undefined && standing.steps.every((step) => step.state === 'done' || step.state === 'skipped' || step.state === 'later') && (!standing.giftCard || standing.giftCard.state !== 'open');
   return <div className="mx-auto max-w-reading space-y-6">
     <PageHeader title={t('screen.title')} description={t('screen.description')} />
-    <Link href={routes.helperProfile(data.handle)} className={buttonVariants({ variant: 'outline' })}><Eye aria-hidden="true" />{t('screen.viewPublic')}</Link>
+    {/* Only a live profile has a public page: a draft or paused one would lead to "not found". */}
+    {data.publicProfile
+      ? <Link href={routes.helperProfile(data.handle)} className={buttonVariants({ variant: 'outline' })}><Eye aria-hidden="true" />{t('screen.viewPublic')}</Link>
+      : <p className="flex items-start gap-2.5 text-sm text-muted-foreground"><EyeOff aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{t(data.paused ? 'screen.publicPaused' : 'screen.publicNotYet')}</span></p>}
     {standing && (allDone
       ? <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-success/25 bg-success/10 px-4 py-3 text-sm"><CircleCheck aria-hidden="true" className="size-5 shrink-0 text-success" /><span className="min-w-0 flex-1">{t('screen.allChecksDone')}</span><button type="button" onClick={() => open('verification')} className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{t('screen.seeChecks')}</button></p>
       : <HelperStandingPanel standing={standing} />)}

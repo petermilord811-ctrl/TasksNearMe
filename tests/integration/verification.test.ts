@@ -197,8 +197,11 @@ describe('helper onboarding', () => {
   it('pauses and resumes, and manages work samples', async () => {
     expect(await setHelperPaused(db, userId, true, now())).toEqual({ ok: true, code: 'updated' });
     expect((await profile()).status).toBe('paused');
+    // A paused profile has no public page, so the editor doesn't link to one.
+    expect(await getProfileEditorData(db, userId, now())).toMatchObject({ paused: true, publicProfile: false });
     expect(await setHelperPaused(db, userId, false, now())).toEqual({ ok: true, code: 'updated' });
     expect((await profile()).status).toBe('active');
+    expect(await getProfileEditorData(db, userId, now())).toMatchObject({ paused: false, publicProfile: true });
 
     const image = await sharp({ create: { width: 900, height: 600, channels: 3, background: '#88aa66' } }).jpeg().toBuffer();
     const upload = async (caption: string) => {
