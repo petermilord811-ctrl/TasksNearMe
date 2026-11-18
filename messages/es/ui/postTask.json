@@ -44,7 +44,7 @@
     },
     "suggest": {
       "label": "¿No sabes cuál elegir? Describe lo que necesitas",
-      "placeholder": "Por ejemplo: rastrillar las hojas del jardín del frente",
+      "placeholder": "p. ej.: rastrillar mi jardín",
       "hint": "Bastan unas palabras. Te sugerimos una categoría; tú eliges.",
       "soundsLike": "Parece {category}.",
       "use": "Usar {category}",

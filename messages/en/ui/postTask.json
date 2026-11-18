@@ -44,7 +44,7 @@
     },
     "suggest": {
       "label": "Not sure which one? Describe what you need",
-      "placeholder": "For example: rake the leaves in my front yard",
+      "placeholder": "e.g. rake my front yard",
       "hint": "A few words are enough. We suggest a category; you choose.",
       "soundsLike": "Sounds like {category}.",
       "use": "Use {category}",
