@@ -23,43 +23,50 @@ offers and bookings as compact lists you can filter, switch to cards or a map, a
 ```
 360 (phone)                          768 (tablet, no rail)                1280 (rail + content ≈ 950 px)
 ┌───────────────────────────┐        ┌───────────────────────────────┐    ┌──────┬────────────────────────────────────────┐
-│ Good evening, Jordan       │        │ Good evening, Jordan [$75│$110]│    │ rail │ Good evening, Jordan       [$75 │ $110 →]│
-│ 2 things need you · 2 …    │        │ 2 things need you · 2 bookings │    │      │ 2 things need you · 2 bookings …       │
-│ [$75 upcoming │ $110 →]    │        │ ┌─────────────────────────────┐│    │      │ ┌────────────────────────────────────┐ │
-│ ┌────────────────────────┐ │        │ │🔍 Search, or describe…  [Search][✨ Ask AI]│  │      │ │🔍 Search, or describe…  [Search][✨ Ask AI]│
-│ │🔍 Search, or describe →│ │        │ └─────────────────────────────┘│    │      │ └────────────────────────────────────┘ │
-│ │[✨ Describe it and ask AI]│        │ (AI answer, when asked)        │    │      │ (AI answer, when asked)                │
-│ └────────────────────────┘ │        │ Needs your attention           │    │      │ Needs your attention                   │
-│ Needs your attention       │        │ ┌ row ─────────────────────────┐│    │      │ ┌ row ─────────────────────────────────┐│
-│ ┌ row ──────────────────┐  │        │ [Bookings 2][Offers 3][Nearby 3]│    │      │ [Bookings 2] [Offers 3] [Nearby 3]     │
-│ [Bookings 2][Offers 3]→    │        │ [Status ▾][Date ▾][Category ▾] [☰▦🗺]│ │      │ [Status ▾][Date ▾][Category ▾] [☰ List ▦ Cards 🗺 Map]│
-│ [Status ▾][Date ▾]→ [☰▦🗺] │        │ ┌ rows ────────────────────────┐│    │      │ ┌ rows ─────────────┐┌ map (map view) ┐│
-│ ┌ rows ─────────────────┐  │        │ │ SAT  Assemble a desk   $54.00││    │      │ │ SAT Assemble a desk││  (sticky)      ││
-│ │ SAT Assemble a desk    │  │        │ │ 21   Booked · Mueller · 10:30││    │      │ │ 21  Booked · …  $54 ││                ││
-│ │ 21  Booked · $54 · …   │  │        │ └──────────────────────────────┘│    │      │ └────────────────────┘└────────────────┘│
-│ └───────────────────────┘  │        │           See all bookings →    │    │      │                    See all bookings →  │
-└───────────────────────────┘        └───────────────────────────────┘    └──────┴────────────────────────────────────────┘
+│ Good evening, Jordan       │        │ Good evening, Jordan [$54│$0] │    │ rail │ Good evening, Jordan       [$54 │ $0 →]│
+│ 🔔 2 things need you       │        │ 🔔 2 things need you  📅 2 …   │    │      │ 🔔 2 things need you  📅 2 bookings …  │
+│ 📅 2 bookings coming up    │        │ Needs your attention           │    │      │ Needs your attention                   │
+│ [$54 upcoming │ $0 →]      │        │ ┌ row ─────────────────────────┐│    │      │ ┌ row ─────────────────────────────────┐│
+│ Needs your attention       │        │ ┌─────────────────────────────┐│    │      │ ┌────────────────────────────────────┐ │
+│ ┌ row ──────────────────┐  │        │ │🔍 Describe the work…  (→)(✨)││    │      │ │🔍 What work …   [Search][✨ Ask AI] │ │
+│ ┌───────────────────────┐  │        │ └─────────────────────────────┘│    │      │ └────────────────────────────────────┘ │
+│ │🔍 Describe the… (→)(✨)│  │        │ [Bookings 2][Offers 3][Nearby 3]│    │      │ [Bookings 2] [Offers 3] [Nearby 3]     │
+│ └───────────────────────┘  │        │ [Status ▾][Date ▾][Category ▾] [☰▦🗺]│ │      │ [Status ▾][Date ▾][Category ▾] [☰ List ▦ Cards 🗺 Map]│
+│ [Bookings 2][Offers 3]…    │        │ ┌ 5 rows ──────────────────────┐│    │      │ ┌ 5 rows ───────────┐┌ map (map view) ┐│
+│ [Status ▾][Date ▾]         │        │ │ SAT  Assemble a desk   $54.00││    │      │ │ SAT Assemble a desk││  (sticky)      ││
+│ [Category ▾]      [☰▦🗺]   │        │ │ 21   Booked · 10:30 · Mueller││    │      │ │ 21  Booked · …  $54 ││                ││
+│ ┌ 5 rows (2 lines each) ┐  │        │ └──────────────────────────────┘│    │      │ └────────────────────┘└────────────────┘│
+│ │ SAT Assemble a…  $54  │  │        │ Showing 5 of 16  See all bookings →│ │      │ Showing 5 of 16     See all bookings → │
+│ │ 21  Booked · 10:30 · … │  │        └───────────────────────────────┘    └──────┴────────────────────────────────────────┘
+│ └───────────────────────┘  │
+│ Showing 5 of 16  See all → │
+└───────────────────────────┘
 ```
-- **Header.** The greeting (H1) and one line that sums up the day from the counts ("2 things need you · 3 bookings
-  coming up"). Helpers get *earnings at a glance* beside it (under it on phones): upcoming and on the way, linking to
-  Earnings. The header has no button of its own: the bar's quick action (Post a task / Find work) is already one tap
+- **Header.** The greeting (H1) and two facts from the counts, side by side and each whole when the line wraps ("2
+  things need you", "3 bookings coming up"; audit L9). Helpers who can take work get *earnings at a glance* beside it
+  (under it on phones): upcoming and on the way, linking to Earnings. The header has no button of its own: the bar's quick action (Post a task / Find work) is already one tap
   away on every width, and the empty states carry the first step.
-- **Search.** One field, a Search button (keyword, in the URL) and, when AI search is allowed, an Ask AI button that
-  sends the same words to AI search. On phones Search is the arrow inside the field and Ask AI a full-width button
-  under it ("Describe it and ask AI"). With `needs_plan` or
+- **Order** (audit M17): what needs the person first, then the search right above the lists it searches.
+- **Search.** One row on every width: the field, a Search button (keyword, in the URL) and, when AI search is
+  allowed, Ask AI, which sends the same words to AI search (icons on phones, words from 640 px). With `needs_plan` or
   `monthly_limit`, one line under the field links to the plan page; with `ai_off`, nothing. AI searches left this month
   show under the field when they're counted.
 - **AI answer.** A panel under the search, only after an AI search: what it understood (category, when, area), then
   for someone who needs help a task draft to post (opens the wizard with the words, title and category filled in) and
   up to 3 helpers who do this; for a helper, up to 5 open tasks that match. "See all" links carry the same filters to
   Find helpers or Find work. A line says AI can be wrong. Closing it leaves the dashboard as it was.
-- **Needs your attention.** The attention list as before (deadlines first). When nothing needs you, one quiet line
-  instead of a large empty panel.
-- **Helper setup / waiting for the city.** A helper who can't send offers yet sees the setup panel; a helper whose city
-  isn't open yet sees the waiting note (plan 8.4) in place of the Nearby list.
+- **Needs your attention.** The attention list as before (deadlines first): the three most urgent, the rest behind
+  "Show N more" at the list's end (audit M15, M17). When nothing needs you, one quiet line instead of a large empty
+  panel. One rule (audit M16): a task needs its client exactly when My tasks says so (new
+  offers, a choice due soon, no offers yet), from the same function; the dashboard adds what My tasks doesn't cover
+  (messages, bookings, offers sent). A check-in whose start has passed says so ("… was due to start", "Was due at 10:30 AM"; M51).
+- **Helper setup / waiting for the city.** A helper who can't send offers yet sees "Finish setting up" first in the
+  attention list (one prompt, no separate panel); a helper whose city isn't open yet sees the waiting note (plan 8.4)
+  in place of the Nearby list.
 - **Lists.** A row of tabs with counts (they are also the "at a glance"), then the filters and the view switch, then
   the items, then "See all … →" to the full page for that list.
-  - Phones: the tabs scroll sideways; the three filters scroll sideways beside the view switch (icons), which stays put.
+  - Phones: the tabs scroll sideways when they don't fit; the three filters and the view switch (icons) wrap, never
+    scroll.
   - 768: everything fits on one row each; cards in 2 columns; the map above the list.
   - 1280: filters on the left, view switch on the right; cards in 3 columns; the map to the right of the list, sticky.
 
@@ -86,7 +93,9 @@ offers and bookings as compact lists you can filter, switch to cards or a map, a
 - **Category:** the market's categories.
 - **Keyword:** every word must appear in the title, the area or the other person's name (own items), or in the title
   or description (Nearby, the board's search). The tab counts show where the matches are.
-- **Limits:** up to 20 rows per tab; the count and "See all" lead to the full page.
+- **Limits** (audit M15): the next 5 rows per tab (a map shows up to 20 places), "Showing 5 of N", and "See all" to
+  the list's own page. On phones a row is two lines: the title and the money, then the status (with a bell when it
+  needs you), the start time and the area.
 
 ## 4. Views
 
@@ -140,14 +149,19 @@ meet (9.10's portal), was a secondary link.
 
 | Place | "I need help" | "I can help" |
 |---|---|---|
-| Rail and phone dock (every day) | Home · Neighborhood · Tasks · Bookings · Messages | Home · Find work · Neighborhood · Bookings · Messages |
+| Rail and phone dock (every day) | Home · Neighbors · Tasks · Bookings · Messages | Home · Find work · Neighbors · Bookings · Messages |
 | Rail under the line (wide screens); avatar menu below that width | Find helpers · Saved helpers · Saved searches | Offers · Availability · Earnings · My clients · Rewards · Saved searches |
 | Avatar menu (every width) | Account · Payments · Support · theme · language · Sign out | Account · Payments · Support · theme · language · Sign out |
 
-- **Five places for every day.** The Neighborhood (9.10's portal, `/app/community`, the old Community) joins them:
-  it's where neighbors' asks and open tasks meet, and both sides come back to it daily. The order is the portal's
-  (docs/ui/portal-9.10.md §10): right after Home for clients, after Find work for helpers. The phone dock calls it
-  "Neighbors" (es "Vecinos"): at 360 px its five columns break "Neighborhood" mid-word.
+- **Five places for every day.** Neighbors (9.10's portal, `/app/community`, the old Community) joins them: it's
+  where neighbors' asks and open tasks meet, and both sides come back to it daily. The order is the portal's
+  (docs/ui/portal-9.10.md §10): right after Home for clients, after Find work for helpers. One name everywhere
+  (audit L15), "Neighbors" (es "Vecinos"), because "Neighborhood" breaks mid-word in the phone dock's five 72 px
+  columns at 360 px; Find work is "Trabajos" in Spanish for the same reason (L16).
+- **The mode switch** ("I need help" / "I can help") stays in the bar from 640 px; on phones it moves into the avatar
+  menu, so the bar is one row there (audit M38).
+- **The setup banner** ("Finish setting up to start helping") stays off the setup pages themselves (L17) and off
+  Home, whose "Needs your attention" starts with the same step.
 - **Each destination has one place on a screen.** The mode's tools sit on the rail under the line on wide screens, and
   in the avatar menu where there's no rail (phones and tablets), never both. Account moves out of the client's dock
   (it was also in the menu); Earnings moves from the helper's dock to the tools (and the dashboard's earnings at a

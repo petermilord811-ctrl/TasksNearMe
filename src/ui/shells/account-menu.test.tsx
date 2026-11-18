@@ -48,6 +48,18 @@ describe('AccountMenu', () => {
     expect(screen.getByRole('button', { name: `${viewer.initials}, account menu for ${viewer.displayName}` })).toHaveFocus();
   });
 
+  it('switches the mode from the menu on phones, where the bar has no switch (audit M38)', async () => {
+    const onModeChange = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated', redirectTo: routes.app.helperOnboarding() }));
+    render(<NextIntlClientProvider locale="en" messages={uiMessages}><AccountMenu viewer={mayaShell} onSignOut={vi.fn()} onModeChange={onModeChange} /></NextIntlClientProvider>);
+    const menu = await openMenu();
+    const item = within(menu).getByRole('menuitem', { name: 'Switch to “I can help”' });
+    // Only below `sm`: wider bars have the switch itself.
+    expect(item).toHaveClass('sm:hidden');
+    await userEvent.click(item);
+    expect(onModeChange).toHaveBeenCalledExactlyOnceWith({ mode: 'helper' });
+    await vi.waitFor(() => expect(push).toHaveBeenCalledWith(routes.app.helperOnboarding()));
+  });
+
   it('switches the theme and the language from the menu (the bar has no room for them on phones)', async () => {
     const onSwitchLanguage = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
     render(<NextIntlClientProvider locale="en" messages={uiMessages}><AccountMenu viewer={mayaShell} onSignOut={vi.fn()} onSwitchLanguage={onSwitchLanguage} /></NextIntlClientProvider>);

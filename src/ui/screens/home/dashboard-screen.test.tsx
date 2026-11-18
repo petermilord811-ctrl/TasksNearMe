@@ -55,6 +55,8 @@ const attentionCopy: Record<AttentionKind, RegExp> = {
   answer_invite: /invited you/i,
   answer_counter: /counter/i,
   answer_proposal: /proposed a booking/i,
+  choose_offer: /choose a helper/i,
+  no_offers: /no offers yet/i,
 };
 
 const attentionTargets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
@@ -89,11 +91,28 @@ describe('Needs your attention', () => {
     expect(region('Needs your attention').getByRole('link')).toHaveAttribute('href', href);
   });
 
-  it('keeps the order given, the payout problem first, with deadlines on the market clock', () => {
+  it('keeps the order given, the payout problem first, with deadlines on the market clock; past three, "Show 1 more" (audit M15)', () => {
     renderDashboard(jordanDashboardPayoutData, { now: DASHBOARD_HELPER_NOW });
-    const links = region('Needs your attention').getAllByRole('link');
-    expect(links.map((link) => link.getAttribute('href'))).toEqual([routes.app.earnings(), routes.app.booking('bkg_desk'), routes.app.findWorkTask('tsk_moving'), routes.app.thread('thr_bkg_desk')]);
-    expect(links[1]).toHaveTextContent('10:30 am');
+    const attention = region('Needs your attention');
+    const hrefs = () => attention.getAllByRole('link').map((link) => link.getAttribute('href'));
+    expect(hrefs()).toEqual([routes.app.earnings(), routes.app.booking('bkg_desk'), routes.app.findWorkTask('tsk_moving')]);
+    expect(attention.getAllByRole('link')[1]).toHaveTextContent('10:30 am');
+    const more = attention.getByRole('button', { name: 'Show 1 more' });
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(more);
+    expect(hrefs()).toEqual([routes.app.earnings(), routes.app.booking('bkg_desk'), routes.app.findWorkTask('tsk_moving'), routes.app.thread('thr_bkg_desk')]);
+    expect(attention.getByRole('button', { name: 'Show fewer' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('says a check-in was due once its start has passed (audit M51)', () => {
+    const checkIn = jordanDashboardData.attention.find((item) => item.kind === 'check_in_today')!;
+    renderDashboard({ ...jordanDashboardData, attention: [checkIn] }, { now: '2026-11-21T19:00:00.000Z' });
+    const link = region('Needs your attention').getByRole('link');
+    expect(link).toHaveAccessibleName(/was due to start/);
+    expect(link).toHaveTextContent('Was due at 10:30 am');
+    cleanup();
+    renderDashboard({ ...jordanDashboardData, attention: [checkIn] }, { now: DASHBOARD_HELPER_NOW });
+    expect(region('Needs your attention').getByRole('link')).toHaveAccessibleName(/starts today/);
   });
 
   it('says so in one line when nothing needs the person', () => {

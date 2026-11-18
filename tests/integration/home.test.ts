@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getDashboard } from '@/modules/home/service';
+import { getMyTasks } from '@/modules/offers/owner';
 import { offers } from '@/modules/offers/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
@@ -26,7 +27,8 @@ describe('the dashboard (completion plan 9.9)', () => {
     const home = await getDashboard(db, ana, {}, new Date());
     expect(home.firstName).toBe('Ana');
     expect(home.sides).toEqual({ client: true, helper: false });
-    expect(home.attention).toContainEqual(expect.objectContaining({ kind: 'review_offers', count: 1, target: { kind: 'task', taskId: 'tsk_home_ana' } }));
+    // A new offer (or, when the task starts within a day, a choice to make soon), as My tasks says.
+    expect(home.attention).toContainEqual(expect.objectContaining({ kind: expect.stringMatching(/^(review_offers|choose_offer)$/), target: { kind: 'task', taskId: 'tsk_home_ana' } }));
     expect(home.query.tab).toBe('tasks');
     expect(home.tabs.map((tab) => tab.id)).toEqual(['tasks', 'offers', 'bookings']);
     const task = home.items.find((item) => item.key === 'task:tsk_home_ana');
@@ -38,6 +40,16 @@ describe('the dashboard (completion plan 9.9)', () => {
     const offersTab = await getDashboard(db, ana, { tab: 'offers' }, new Date());
     expect(offersTab.items).toContainEqual(expect.objectContaining({ key: 'offer_received:off_home_ana', side: 'client', needsYou: true, target: { kind: 'offer', taskId: 'tsk_home_ana', offerId: 'off_home_ana' } }));
     expect(offersTab.tabs.find((tab) => tab.id === 'offers')!.count).toBeGreaterThanOrEqual(1);
+  });
+
+  it("says the same tasks need the client as My tasks does (one rule, audit M16)", async () => {
+    const now = new Date();
+    const [home, mine] = await Promise.all([getDashboard(db, ana, {}, now), getMyTasks(db, 'usr_ana', now)]);
+    const fromHome = home.attention.flatMap((item) => (item.target.kind === 'task' && ['review_offers', 'choose_offer', 'no_offers'].includes(item.kind) ? [item.target.taskId] : []));
+    const fromMyTasks = mine.needsYou.filter((row) => ['new_offers', 'choose_soon', 'no_offers'].includes(row.attention!.kind)).map((row) => row.id);
+    expect(new Set(fromHome)).toEqual(new Set(fromMyTasks));
+    // And each of those tasks is marked on the Tasks tab.
+    for (const id of fromMyTasks) expect(home.items.find((item) => item.key === `task:${id}`)?.needsYou ?? true).toBe(true);
   });
 
   it('filters by status, category and words, and counts each tab under them', async () => {

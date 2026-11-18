@@ -22,20 +22,19 @@
   "search": {
     "label": {
       "poster": "Busca en tus tareas, ofertas y reservas",
-      "helper": "Busca en tus trabajos, ofertas y tareas cercanas"
+      "helper": "Busca en tus reservas, ofertas y tareas cercanas"
     },
     "placeholder": {
-      "poster": "¿Con qué necesitas ayuda?",
-      "helper": "¿Qué trabajo buscas?"
+      "poster": "¿Qué necesitas?",
+      "helper": "Describe el trabajo"
     },
     "placeholderPlain": {
-      "poster": "Busca en tus tareas y reservas",
-      "helper": "Busca en tus trabajos y ofertas"
+      "poster": "Busca en tus tareas",
+      "helper": "Busca en tus reservas"
     },
     "submit": "Buscar",
     "clear": "Borrar búsqueda",
     "ai": "Preguntar a la IA",
-    "aiLong": "Descríbelo y pregunta a la IA",
     "remaining": "{count, plural, one {Te queda # búsqueda con IA este mes} other {Te quedan # búsquedas con IA este mes}}",
     "remainingRenews": "{count, plural, one {Te queda # búsqueda con IA este mes} other {Te quedan # búsquedas con IA este mes}} · se renuevan el {date}",
     "needsPlan": "Describe lo que necesitas y la IA te encuentra ayudantes y tareas. Viene con un plan.",
@@ -243,7 +242,10 @@
       "payout_action_needed": "Actualiza tus datos bancarios en Ganancias para resolver el problema con el pago.",
       "answer_invite": "Acepta, rechaza o sugiere otras condiciones antes de que venza la solicitud.",
       "answer_counter": "Acepta o rechaza las nuevas condiciones antes de que venzan.",
-      "answer_proposal": "Revisa los detalles y luego acepta y paga, o rechaza."
+      "answer_proposal": "Revisa los detalles y luego acepta y paga, o rechaza.",
+      "choose_offer": "Empieza pronto. Compara las ofertas y reserva una.",
+      "no_offers": "Invita a un ayudante que te guste, o revisa el precio y el horario.",
+      "check_in_late": "Abre la reserva para avisar que vas en camino, o escríbele al cliente."
     },
     "deadline": "Vence {deadline}",
     "approvalDeadline": "Aprueba o reporta un problema antes de {deadline}. Después, la tarea se aprueba automáticamente.",
@@ -257,7 +259,14 @@
       "answer_invite": "{name} te invitó a {title}",
       "answer_counter": "{name} envió una contraoferta para {title}",
       "answer_proposal": "{name} propuso una reserva: {title}"
-    }
+    },
+    "choose_offer": "Elige un ayudante para {title}",
+    "no_offers": "Aún no hay ofertas en {title}",
+    "chooseDeadline": "Reserva un ayudante antes de {deadline}.",
+    "check_in_late": "{title} debía empezar",
+    "startedAt": "Debía empezar a las {time} · {date}",
+    "more": "Mostrar {count} más",
+    "fewer": "Mostrar menos"
   },
   "previews": {
     "group": "Pantallas · Inicio",
@@ -274,6 +283,7 @@
     "helperPayoutAction": "Ayudante · se necesita una acción en el pago",
     "helperNotSetUp": "Ayudante · terminar la configuración",
     "helperWaiting": "Ayudante · esperando su ciudad",
+    "helperLate": "Ayudante · un trabajo que ya debía empezar",
     "helperDone": "Ayudante · terminadas en los últimos 30 días",
     "both": "Ambos lados · ayudar y recibir ayuda",
     "clientPaymentAccess": "Cliente · plazos de pago y acceso",

@@ -53,16 +53,16 @@ export function getPublicNav(): NavItem[] {
 /**
  * The signed-in navigation (completion plan 9.14; before and after in docs/ui/dashboard-9.9.md §7). Presentation of
  * the supplied mode, not an access check.
- * - `primary`: five places for every day, on the rail and the phone dock. A client's: Home, the Neighborhood (plan
- *   9.10's portal, where neighbors' asks and open tasks meet), Tasks, Bookings, Messages. A helper's: Home, Find work,
- *   the Neighborhood, Bookings, Messages (docs/ui/portal-9.10.md §10).
+ * - `primary`: five places for every day, on the rail and the phone dock. A client's: Home, Neighbors (plan 9.10's
+ *   portal, where neighbors' asks and open tasks meet; one name everywhere, audit L15), Tasks, Bookings, Messages. A
+ *   helper's: Home, Find work, Neighbors, Bookings, Messages (docs/ui/portal-9.10.md §10).
  * - `secondary`: the mode's tools, on the rail under the line (wide screens) and in the avatar menu below that width.
  * - `account`: the account's pages, in the avatar menu at every width.
  * Each destination has one place on a screen.
  */
 export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[]; account: NavItem[] } {
   const home: NavItem = { id: 'home', href: routes.app.home(), exact: true };
-  const neighborhood: NavItem = { id: 'community', href: routes.app.community() };
+  const neighbors: NavItem = { id: 'community', href: routes.app.community() };
   const last: NavItem[] = [{ id: 'bookings', href: routes.app.bookings() }, { id: 'messages', href: routes.app.messages() }];
   const account: NavItem[] = [
     { id: 'account', href: routes.app.account() },
@@ -71,7 +71,7 @@ export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[
   ];
   return mode === 'poster'
     ? {
-        primary: [home, neighborhood, { id: 'tasks', href: routes.app.tasks() }, ...last],
+        primary: [home, neighbors, { id: 'tasks', href: routes.app.tasks() }, ...last],
         secondary: [
           { id: 'helpers', href: routes.app.helpers() },
           { id: 'saved', href: routes.app.saved() },
@@ -80,7 +80,7 @@ export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[
         account,
       }
     : {
-        primary: [home, { id: 'findWork', href: routes.app.findWork() }, neighborhood, ...last],
+        primary: [home, { id: 'findWork', href: routes.app.findWork() }, neighbors, ...last],
         secondary: [
           { id: 'offers', href: routes.app.offers() },
           { id: 'availability', href: routes.app.availability() },

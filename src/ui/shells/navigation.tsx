@@ -37,8 +37,7 @@ export function Navigation({ items, label, currentPath, unreadMessages = 0, vari
         {items.map((item) => {
           const Icon = NAV_ICONS[item.id];
           const count = item.id === 'messages' ? unreadMessages : 0;
-          // The dock's five columns are narrow: a long name has a short one there ("Neighbors" for the Neighborhood).
-          const name = bottom && t.has(`navShort.${item.id}`) ? t(`navShort.${item.id}`) : t(`nav.${item.id}`);
+          const name = t(`nav.${item.id}`);
           return <li key={item.id} className="min-w-0">
             <NavLink item={item} currentPath={currentPath} aria-label={count > 0 ? `${name} ${t('unreadMessages', { count })}` : undefined}
               className={cn(

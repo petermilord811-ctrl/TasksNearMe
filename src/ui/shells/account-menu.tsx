@@ -4,9 +4,9 @@ import { useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Languages, LoaderCircle, LogOut, Moon, Sun } from 'lucide-react';
+import { ArrowLeftRight, Languages, LoaderCircle, LogOut, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
-import type { ActionHandler, ActionResult, LanguageSwitchHandler, SignedInViewer, StaffViewer } from '@/contracts';
+import type { ActionHandler, ActionResult, AppShellHandlers, LanguageSwitchHandler, SignedInViewer, StaffViewer } from '@/contracts';
 import { APP_LOCALES, LOCALE_NAMES } from '@/contracts/locale';
 import { routes } from '@/contracts/routes';
 import { AvatarPhoto } from '@/ui/components/people/avatar-photo';
@@ -26,9 +26,11 @@ export interface AccountMenuProps {
   onSignOut: ActionHandler;
   /** The language row's handler (the bars' switch is hidden on phones, so the menu carries it too). */
   onSwitchLanguage?: LanguageSwitchHandler;
+  /** Members: the mode switch, which the bar shows from `sm` and this menu below it (audit M38). */
+  onModeChange?: AppShellHandlers['onModeChange'];
 }
 
-export function AccountMenu({ viewer, onSignOut, onSwitchLanguage }: AccountMenuProps) {
+export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange }: AccountMenuProps) {
   const t = useTranslations('shell');
   // The initials, also shown when the photo can't be loaded (plan 9.3).
   const initials = <span aria-hidden="true" className={cn(AVATAR, 'inline-flex items-center justify-center text-sm font-semibold text-secondary-foreground')}>{viewer.initials}</span>;
@@ -68,6 +70,28 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage }: AccountMenu
     }
   }
 
+  /** The other mode, on phones (the bar's switch is hidden there): the app may lead to helper setup first. */
+  async function switchMode() {
+    if (viewer.kind !== 'user' || !onModeChange || pendingRef.current) return;
+    pendingRef.current = true;
+    setMessage({ text: t('mode.pending'), error: false });
+    let result: ActionResult;
+    try {
+      result = await onModeChange({ mode: viewer.mode === 'poster' ? 'helper' : 'poster' });
+    } catch {
+      result = { ok: false, code: 'unknown' };
+    }
+    pendingRef.current = false;
+    const text = feedback(`${result.ok ? 'success' : 'error'}.${result.code}`);
+    setMessage({ text, error: !result.ok });
+    if (result.ok) {
+      toast.success(text);
+      if (result.redirectTo) router.push(result.redirectTo);
+    } else {
+      toast.error(text);
+    }
+  }
+
   // Members (completion plan 9.14): the mode's tools where the rail isn't shown (they're on it on wide screens), then
   // the account's pages at every width. Staff menus stay at sign out.
   const nav = viewer.kind === 'user' ? getAppNav(viewer.mode) : null;
@@ -87,6 +111,12 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage }: AccountMenu
         <DropdownMenuContent align="end" sideOffset={8} className="w-64 max-w-[calc(100vw-2rem)]">
           <DropdownMenuLabel className="px-2.5 pt-2 pb-1.5 font-display text-[0.9375rem] font-semibold break-words">{viewer.displayName}</DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {viewer.kind === 'user' && onModeChange && <>
+            <DropdownMenuItem className="sm:hidden" onSelect={() => void switchMode()}>
+              <ArrowLeftRight aria-hidden="true" />{t(viewer.mode === 'poster' ? 'mode.toHelper' : 'mode.toPoster')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="sm:hidden" />
+          </>}
           {nav && <>
             {nav.secondary.map((link) => item(link, 'lg:hidden'))}
             <DropdownMenuSeparator className="lg:hidden" />

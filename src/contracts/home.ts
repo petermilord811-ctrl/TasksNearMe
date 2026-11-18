@@ -71,6 +71,10 @@ export const ATTENTION_KINDS = [
   'answer_counter',
   /** Client: a helper proposed a booking; pay or decline (UI-032). */
   'answer_proposal',
+  /** Client: an open task starts within a day and has offers; choose one (My tasks' "choose soon", plan 9.9). */
+  'choose_offer',
+  /** Client: an open task has had no offers for a day; invite a helper or adjust it (My tasks' "no offers"). */
+  'no_offers',
 ] as const;
 export type AttentionKind = (typeof ATTENTION_KINDS)[number];
 
@@ -118,9 +122,13 @@ export type DashboardStatus = (typeof DASHBOARD_STATUSES)[number];
 export const DASHBOARD_DATES = ['any', 'today', 'week', 'month'] as const;
 export type DashboardDate = (typeof DASHBOARD_DATES)[number];
 
-/** The keyword's longest length, and how many rows a tab shows (the full page has the rest). */
+/**
+ * The keyword's longest length, and how many rows a tab shows: the next 5 (a map, up to 20 places); the list's own
+ * page has the rest ("See all").
+ */
 export const DASHBOARD_KEYWORD_MAX = 80;
-export const DASHBOARD_LIST_LIMIT = 20;
+export const DASHBOARD_LIST_LIMIT = 5;
+export const DASHBOARD_MAP_LIMIT = 20;
 
 /** `/app`'s filters, in the URL (`routes.app.home(query)`, defaults left out). */
 export interface DashboardQuery {
@@ -243,7 +251,7 @@ export interface DashboardData {
   query: DashboardQueryState;
   /** The person's tabs, in order, with their counts under the filters. */
   tabs: DashboardTabSummary[];
-  /** The current tab's items under the filters: soonest first (`done`: the latest first), at most `DASHBOARD_LIST_LIMIT`. */
+  /** The current tab's items under the filters: soonest first (`done`: the latest first), the first `DASHBOARD_LIST_LIMIT` (on a map, `DASHBOARD_MAP_LIMIT`). */
   items: DashboardItem[];
   /** The market's categories, for the filter. */
   categories: CategorySlug[];

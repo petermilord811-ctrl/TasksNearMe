@@ -85,6 +85,8 @@ export const homePreviews: PreviewEntry[] = [
   screen('helper-done', copy.previews.helperDone, jordanDashboardDoneData, jordanShell, DASHBOARD_HELPER_NOW),
   screen('helper-payout-action', copy.previews.helperPayoutAction, jordanDashboardPayoutData, jordanShell, DASHBOARD_HELPER_NOW),
   screen('helper-ai-answer', copy.previews.helperAiAnswer, jordanDashboardData, jordanShell, DASHBOARD_HELPER_NOW, { ai: aiAnswerHelperResult, answer: { status: 'done', text: 'Moving or furniture work this weekend', result: aiAnswerHelperResult } }),
+  // The same morning 15 minutes after the desk's 10:30 start, not checked in yet (audit M51): the past tense.
+  screen('helper-late', copy.previews.helperLate, jordanDashboardData, jordanShell, '2026-11-21T16:45:00.000Z'),
   screen('helper-not-set-up', copy.previews.helperNotSetUp, priyaDashboardData, priyaShell, DASHBOARD_HELPER_NOW),
   screen('helper-waiting', copy.previews.helperWaiting, priyaDashboardWaitingData, priyaShell, DASHBOARD_HELPER_NOW),
   screen('both', copy.previews.both, jordanBothDashboardData, jordanShell, DASHBOARD_HELPER_NOW),

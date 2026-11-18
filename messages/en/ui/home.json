@@ -25,17 +25,16 @@
       "helper": "Search your jobs, offers and tasks nearby"
     },
     "placeholder": {
-      "poster": "What do you need help with?",
-      "helper": "Describe the work you want"
+      "poster": "What do you need?",
+      "helper": "Describe the work"
     },
     "placeholderPlain": {
-      "poster": "Search your tasks and bookings",
-      "helper": "Search your jobs and offers"
+      "poster": "Search your tasks",
+      "helper": "Search your jobs"
     },
     "submit": "Search",
     "clear": "Clear search",
     "ai": "Ask AI",
-    "aiLong": "Describe it and ask AI",
     "remaining": "{count, plural, one {# AI search left this month} other {# AI searches left this month}}",
     "remainingRenews": "{count, plural, one {# AI search left this month} other {# AI searches left this month}} · renews {date}",
     "needsPlan": "Describe what you need and AI finds helpers and tasks for you. It comes with a plan.",
@@ -243,7 +242,10 @@
       "payout_action_needed": "Update your bank details in Earnings to resolve the payout problem.",
       "answer_invite": "Accept, decline, or suggest different terms before the request expires.",
       "answer_counter": "Accept or decline the new terms before they expire.",
-      "answer_proposal": "Review the details, then accept and pay or decline."
+      "answer_proposal": "Review the details, then accept and pay or decline.",
+      "choose_offer": "It starts soon. Compare the offers and book one.",
+      "no_offers": "Invite a helper you like, or check the price and the time.",
+      "check_in_late": "Open the booking to say you're on your way, or message the client."
     },
     "deadline": "Due {deadline}",
     "approvalDeadline": "Approve or report a problem by {deadline}. After that, the task is approved automatically.",
@@ -257,7 +259,14 @@
       "answer_invite": "{name} invited you to {title}",
       "answer_counter": "{name} sent a counter-offer for {title}",
       "answer_proposal": "{name} proposed a booking: {title}"
-    }
+    },
+    "choose_offer": "Choose a helper for {title}",
+    "no_offers": "No offers yet on {title}",
+    "chooseDeadline": "Book a helper before {deadline}.",
+    "check_in_late": "{title} was due to start",
+    "startedAt": "Was due at {time} · {date}",
+    "more": "Show {count} more",
+    "fewer": "Show fewer"
   },
   "previews": {
     "group": "Screens · Home",
@@ -274,6 +283,7 @@
     "helperPayoutAction": "Helper · payout action needed",
     "helperNotSetUp": "Helper · finish setting up",
     "helperWaiting": "Helper · waiting for their city",
+    "helperLate": "Helper · a job past its start time",
     "helperDone": "Helper · done in the last 30 days",
     "both": "Both sides · helping and getting help",
     "clientPaymentAccess": "Client · payment and access deadlines",

@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { ArrowLeftRight, CalendarCheck, CalendarPlus, CheckCheck, ChevronRight, CircleAlert, ClipboardCheck, Clock, CreditCard, DoorOpen, MessageCircle, MessagesSquare, RefreshCw, UserRoundPlus, type LucideIcon } from 'lucide-react';
+import { ArrowLeftRight, CalendarCheck, CalendarPlus, ChevronRight, CircleAlert, ClipboardCheck, Clock, CreditCard, DoorOpen, ListChecks, MessageCircle, MessagesSquare, RefreshCw, UserRoundPlus, UserSearch, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { AttentionItem, AttentionKind } from '@/contracts';
+import type { AttentionItem, AttentionKind, ISODateTime } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
-import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { cn } from '@/ui/lib/utils';
 import { attentionHref } from '@/ui/lib/attention-href';
+import { MoreItems } from './more-items';
 
 const icons: Record<AttentionKind, LucideIcon> = {
   approve_work: ClipboardCheck,
@@ -20,16 +20,20 @@ const icons: Record<AttentionKind, LucideIcon> = {
   answer_invite: CalendarPlus,
   answer_counter: ArrowLeftRight,
   answer_proposal: CalendarPlus,
+  choose_offer: ListChecks,
+  no_offers: UserSearch,
 };
 
-function AttentionRow({ item }: { item: AttentionItem }) {
+function AttentionRow({ item, now }: { item: AttentionItem; now?: ISODateTime }) {
   const { formatDate, formatDateTime, formatTime } = useFormat();
   const t = useTranslations('home');
   const Icon = icons[item.kind];
   const payout = item.kind === 'payout_action_needed';
   const setup = item.kind === 'finish_setup';
   const named = item.actorName !== undefined && (item.kind === 'answer_invite' || item.kind === 'answer_counter' || item.kind === 'answer_proposal');
-  const headline = named
+  // A check-in whose start has passed says so (audit M51), rather than "starts today".
+  const late = item.kind === 'check_in_today' && item.dueAt !== undefined && now !== undefined && Date.parse(item.dueAt) < Date.parse(now);
+  const headline = late ? 'check_in_late' : named
     ? `named.${item.kind}`
     : item.kind === 'review_offers' && item.count === undefined
       ? 'reviewOffersWithoutCount'
@@ -38,6 +42,7 @@ function AttentionRow({ item }: { item: AttentionItem }) {
         : item.kind;
   const deadlineKey = item.kind === 'approve_work' ? 'approvalDeadline'
     : item.kind === 'finish_payment' ? 'paymentDeadline'
+    : item.kind === 'choose_offer' ? 'chooseDeadline'
       : item.kind === 'answer_cant_access' || item.kind === 'answer_invite' || item.kind === 'answer_counter' || item.kind === 'answer_proposal' ? 'answerDeadline' : 'deadline';
 
   return <li>
@@ -53,11 +58,11 @@ function AttentionRow({ item }: { item: AttentionItem }) {
         <span className={cn('block font-semibold tabular-nums group-hover:underline underline-offset-4', payout && 'text-badge-danger-foreground', setup && 'text-badge-warning-foreground')}>
           {t(`attention.${headline}`, { title: item.title ?? t('attention.taskFallback'), count: item.count ?? 0, name: item.actorName ?? '' })}
         </span>
-        <span className="block text-sm leading-6 text-muted-foreground">{t(`attention.body.${item.kind}`)}</span>
+        <span className="block text-sm leading-6 text-muted-foreground">{t(`attention.body.${late ? 'check_in_late' : item.kind}`)}</span>
         {item.dueAt && <span className="flex items-start gap-1.5 pt-0.5 text-sm font-medium tabular-nums">
           <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
           <time dateTime={item.dueAt}>{item.kind === 'check_in_today'
-            ? t('attention.startTime', { time: formatTime(item.dueAt), date: formatDate(item.dueAt) })
+            ? t(late ? 'attention.startedAt' : 'attention.startTime', { time: formatTime(item.dueAt), date: formatDate(item.dueAt) })
             : t(`attention.${deadlineKey}`, { deadline: formatDateTime(item.dueAt) })}</time>
         </span>}
       </span>
@@ -66,9 +71,19 @@ function AttentionRow({ item }: { item: AttentionItem }) {
   </li>;
 }
 
-export function AttentionList({ items }: { items: AttentionItem[] }) {
-  const t = useTranslations('home');
-  return items.length > 0
-    ? <ul className="overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] [&>li+li]:border-t [&>li+li]:border-foreground/[0.07] dark:[&>li+li]:border-white/[0.06]">{items.map((item) => <AttentionRow key={item.id} item={item} />)}</ul>
-    : <EmptyState headingLevel={3} title={t('empty.attention.title')} body={t('empty.attention.body')} icon={<CheckCheck className="size-6" />} />;
+/** How many items show before "Show N more": the most urgent, so the lists stay near the first screen (audit M15, M17). */
+export const ATTENTION_SHOWN = 3;
+const ROWS = '[&>li+li]:border-t [&>li+li]:border-foreground/[0.07] dark:[&>li+li]:border-white/[0.06]';
+
+/** What needs the person, most urgent first (the dashboard says "You're all caught up" itself when there's nothing). */
+export function AttentionList({ items, now }: { items: AttentionItem[]; now?: ISODateTime }) {
+  const t = useTranslations('home.attention');
+  const row = (item: AttentionItem) => <AttentionRow key={item.id} item={item} {...(now ? { now } : {})} />;
+  const rest = items.slice(ATTENTION_SHOWN);
+  return <div className="overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]">
+    <ul className={ROWS}>{items.slice(0, ATTENTION_SHOWN).map(row)}</ul>
+    {rest.length > 0 && <MoreItems more={t('more', { count: rest.length })} fewer={t('fewer')}>
+      <ul className={cn(ROWS, 'border-t border-foreground/[0.07] dark:border-white/[0.06]')}>{rest.map(row)}</ul>
+    </MoreItems>}
+  </div>;
 }

@@ -38,7 +38,8 @@ export function AppShell({ viewer, handlers, children, currentPath, layout = 'ta
     <AppBar>
       <div className="mx-auto flex max-w-admin flex-wrap items-center gap-x-2 gap-y-2 px-gutter py-2 sm:flex-nowrap sm:gap-x-3 sm:py-2.5">
         <Logo animated />
-        <div className="order-last w-full sm:order-none sm:ml-3 sm:w-auto lg:ml-5"><ModeSwitch mode={viewer.mode} onModeChange={handlers.onModeChange} /></div>
+        {/* On phones the avatar menu switches the mode instead, so the bar stays one row (audit M38). */}
+        <div className="hidden sm:ml-3 sm:block lg:ml-5"><ModeSwitch mode={viewer.mode} onModeChange={handlers.onModeChange} /></div>
         <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
           {/* The next thing to do in this mode, one tap away. */}
           <QuickAction mode={viewer.mode} />
@@ -49,7 +50,7 @@ export function AppShell({ viewer, handlers, children, currentPath, layout = 'ta
             <Bell aria-hidden="true" className="size-5" />
             {viewer.unreadNotifications > 0 && <span aria-hidden="true" className="absolute top-1 right-0.5 min-w-5 rounded-full bg-primary px-1.5 text-center text-[0.6875rem] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{viewer.unreadNotifications}</span>}
           </Link>
-          <AccountMenu viewer={viewer} onSignOut={handlers.onSignOut} onSwitchLanguage={handlers.onSwitchLanguage} />
+          <AccountMenu viewer={viewer} onSignOut={handlers.onSignOut} onSwitchLanguage={handlers.onSwitchLanguage} onModeChange={handlers.onModeChange} />
         </div>
       </div>
     </AppBar>
@@ -66,7 +67,7 @@ export function AppShell({ viewer, handlers, children, currentPath, layout = 'ta
           <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-warning/15 text-warning"><CirclePause className="size-5" /></span>
           <div className="min-w-0 space-y-1"><p id="notice-bookings-paused" className="font-semibold text-foreground">{t('notices.bookingsPaused.title')}</p><p className="text-muted-foreground">{t('notices.bookingsPaused.body')}</p></div>
         </section>}
-        {viewer.mode === 'helper' && !viewer.helperReady && <HelperSetupLink />}
+        {viewer.mode === 'helper' && !viewer.helperReady && <HelperSetupLink currentPath={currentPath} />}
         {children}
       </main>
     </div>

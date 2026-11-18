@@ -186,7 +186,8 @@ describe('AppShell', () => {
   });
 
   it('shows helper setup only for an unfinished helper and omits zero-count badges from names', () => {
-    show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Home</h1></AppShell>);
+    pathname.mockReturnValue(routes.app.findWork());
+    show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Find work</h1></AppShell>);
     expect(screen.getByRole('link', { name: 'Finish setting up to start helping' })).toHaveAttribute('href', routes.app.helperOnboarding());
     expect(screen.getByRole('link', { name: 'Notifications' })).toHaveAttribute('href', routes.app.notifications());
     expect(within(screen.getByRole('navigation', { name: 'App navigation' })).getByRole('link', { name: 'Messages' })).toBeInTheDocument();
@@ -195,6 +196,15 @@ describe('AppShell', () => {
   it('omits helper setup on the setup steps themselves (it would lead to the page it sits on)', () => {
     pathname.mockReturnValue(routes.app.helperOnboarding('phone'));
     show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Phone</h1></AppShell>);
+    expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
+  });
+
+  it("omits helper setup on Home, whose \"Needs your attention\" starts with that step (plan 9.9)", () => {
+    show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Home</h1></AppShell>);
+    expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
+    cleanup();
+    pathname.mockReturnValue(`/es${routes.app.home()}`);
+    show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Inicio</h1></AppShell>);
     expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
   });
 

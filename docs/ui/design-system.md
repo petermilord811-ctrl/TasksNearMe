@@ -96,8 +96,9 @@ Inputs use at least 16 px text so iOS doesn't zoom.
 
 **Signed-in app**
 - **Tab pages** (Home, list pages) have a top bar (logo, **mode switch**, notifications bell with count, avatar menu) and, on phones, a **bottom nav** (completion plan 9.14; docs/ui/dashboard-9.9.md §7).
-  - Poster mode: **Home · Neighborhood · Tasks · Bookings · Messages**.
-  - Helper mode: **Home · Find work · Neighborhood · Bookings · Messages**.
+  - Poster mode: **Home · Neighbors · Tasks · Bookings · Messages**.
+  - Helper mode: **Home · Find work · Neighbors · Bookings · Messages**.
+  - On phones the bar is one row: the **mode switch** moves into the avatar menu below 640 px.
 - **Detail and flow pages** (booking page, offer detail, wizard, conversation, confirmation) hide the bottom nav. They show a top bar with back and title, and a **sticky bottom action bar** for the primary action. Respect `env(safe-area-inset-bottom)`.
 - **Desktop (≥ 1024 px):** a left sidebar with the same items, then the mode's tools under a line: Find helpers, Saved helpers, Saved searches (poster); Offers, Availability, Earnings, My clients, Rewards, Saved searches (helper). Below 1024 px the tools are in the avatar menu instead.
 - **Avatar menu (every width):** Account, Payments, Support, the theme and the language, Sign out. Each destination has one place on a screen.

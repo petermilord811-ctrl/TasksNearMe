@@ -99,20 +99,29 @@ test('the signed-in navigation (9.14): five everyday places, the tools in one pl
   const desktop = testInfo.project.name === 'app-desktop';
   // The rail on wide screens, the dock on phones: the same five (a helper's: Find work second).
   const everyday = page.getByRole('navigation', { name: desktop ? 'Main navigation' : 'App navigation' });
-  // The dock's narrow columns name the Neighborhood "Neighbors".
-  const neighborhood = desktop ? 'Neighborhood' : 'Neighbors';
-  await expect(everyday.getByRole('link')).toHaveText(['Home', 'Find work', neighborhood, 'Bookings', /^Messages/]);
-  await expect(everyday.getByRole('link', { name: neighborhood })).toHaveAttribute('href', /\/app\/community$/);
+  // The portal (9.10) has one name everywhere: "Neighbors" (audit L15).
+  await expect(everyday.getByRole('link')).toHaveText(['Home', 'Find work', 'Neighbors', 'Bookings', /^Messages/]);
+  await expect(everyday.getByRole('link', { name: 'Neighbors' })).toHaveAttribute('href', /\/app\/community$/);
+  // Checked before the menu opens: an open menu hides the rest of the page from assistive technology.
+  const modeSwitch = page.getByRole('group', { name: 'Choose how to use TasksNearMe' });
+  if (desktop) {
+    // The tools are on the rail under the line, not in the menu too; the bar has the mode switch.
+    await expect(page.getByRole('navigation', { name: 'More navigation' }).getByRole('link')).toHaveText(['Offers', 'Availability', 'Earnings', 'My clients', 'Rewards', 'Saved searches']);
+    await expect(modeSwitch).toBeVisible();
+  } else {
+    // On phones the bar is one row: the mode switch is in the avatar menu instead (audit M38).
+    await expect(modeSwitch).toBeHidden();
+  }
   await page.getByRole('button', { name: /account menu for Jordan/ }).click();
   const menu = page.getByRole('menu');
   await expect(menu.getByRole('menuitem', { name: 'Account' })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Support' })).toBeVisible();
   if (desktop) {
-    // The tools are on the rail under the line, not in the menu too.
-    await expect(page.getByRole('navigation', { name: 'More navigation' }).getByRole('link')).toHaveText(['Offers', 'Availability', 'Earnings', 'My clients', 'Rewards', 'Saved searches']);
     await expect(menu.getByRole('menuitem', { name: 'Earnings' })).toBeHidden();
+    await expect(menu.getByRole('menuitem', { name: 'Switch to “I need help”' })).toBeHidden();
   } else {
     await expect(menu.getByRole('menuitem', { name: 'Earnings' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: 'Offers' })).toHaveAttribute('href', /\/app\/offers$/);
+    await expect(menu.getByRole('menuitem', { name: 'Switch to “I need help”' })).toBeVisible();
   }
 });

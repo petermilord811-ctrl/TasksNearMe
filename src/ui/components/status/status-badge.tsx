@@ -18,13 +18,17 @@ export interface StatusBadgeProps {
   icon?: ReactNode;
   /** `sm`: inside a dense row's line of details (the dashboard's lists). */
   size?: 'sm' | 'md';
+  /** One line, cut with "…" when the line is too narrow (the full label stays readable to screen readers). */
+  truncate?: boolean;
+  /** Layout in the parent's line (e.g. how far it may shrink); never colors, which come from `tone`. */
+  className?: string;
 }
 
-export function StatusBadge({ tone, label, icon, size = 'md' }: StatusBadgeProps) {
+export function StatusBadge({ tone, label, icon, size = 'md', truncate = false, className }: StatusBadgeProps) {
   return (
-    <span className={cn('inline-flex max-w-full items-center gap-1.5 rounded-full font-medium', size === 'sm' ? 'px-2 py-px text-xs leading-5' : 'px-3 py-1 text-sm leading-5', tones[tone])}>
+    <span className={cn('inline-flex max-w-full items-center gap-1.5 rounded-full font-medium', truncate && 'min-w-0', size === 'sm' ? 'px-2 py-px text-xs leading-5' : 'px-3 py-1 text-sm leading-5', tones[tone], className)}>
       {icon && <span aria-hidden="true" className={cn('shrink-0', size === 'sm' ? '[&_svg]:size-3.5' : '[&_svg]:size-4')}>{icon}</span>}
-      <span className="min-w-0 break-words">{label}</span>
+      <span className={truncate ? 'min-w-0 truncate' : 'min-w-0 break-words'}>{label}</span>
     </span>
   );
 }

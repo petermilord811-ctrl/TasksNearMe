@@ -92,8 +92,9 @@ describe('items', () => {
   it("makes a client's task a row: its stage, offers, whether it needs them, and its own page", () => {
     const desk = mayaTaskItems.find((item) => item.key === 'task:tsk_desk')!;
     expect(desk).toMatchObject({ kind: 'task', side: 'client', stage: 'open', needsYou: true, offers: { count: 3, new: 1 }, target: { kind: 'task', taskId: 'tsk_desk' }, money: { kind: 'budget' } });
-    // No offers yet is a nudge, not something that needs her now.
-    expect(mayaTaskItems.find((item) => item.key === 'task:tsk_fridge')).toMatchObject({ stage: 'open', needsYou: false });
+    // No offers after a day needs her too, as on My tasks (one rule for both pages).
+    expect(mayaTaskItems.find((item) => item.key === 'task:tsk_fridge')).toMatchObject({ stage: 'open', needsYou: true });
+    expect(mayaTaskItems.find((item) => item.key === 'task:tsk_remote_laptop' || item.target.kind === 'task' && item.target.taskId === myTasksPageData.open[1]!.id)).toMatchObject({ needsYou: false });
     // Booked: the booking's start and the helper.
     const truck = mayaTaskItems.find((item) => item.key === 'task:tsk_truck')!;
     expect(truck).toMatchObject({ stage: 'booked', needsYou: true, when: { start: '2026-11-16T15:00:00.000Z' }, person: { displayName: 'Jordan T.' } });
@@ -145,7 +146,7 @@ describe('the filters', () => {
   });
 
   it('keeps only what needs the person, or one stage, or one category', () => {
-    expect(filterDashboardItems(mayaTaskItems, { ...all, status: 'needs_you' }, context).map((item) => item.key)).toEqual(['task:tsk_truck', 'task:tsk_desk']);
+    expect(filterDashboardItems(mayaTaskItems, { ...all, status: 'needs_you' }, context).map((item) => item.key)).toEqual(['task:tsk_truck', 'task:tsk_desk', 'task:tsk_fridge']);
     expect(filterDashboardItems(mayaTaskItems, { ...all, status: 'booked' }, context).every((item) => item.stage === 'booked')).toBe(true);
     expect(filterDashboardItems(mayaTaskItems, { ...all, category: 'yard-cleanup' }, context).every((item) => item.categorySlug === 'yard-cleanup')).toBe(true);
   });

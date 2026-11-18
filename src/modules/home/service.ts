@@ -128,8 +128,13 @@ async function clientAttention(db: Db, userId: string, mine: MyTasks, now: Date)
       attention.push({ id: `att_access_${booking.id}`, kind: 'answer_cant_access', title, dueAt: booking.posterResponseDueAt.toISOString(), target: { kind: 'booking', bookingId: booking.id } });
     }
   }
-  for (const task of mine.open) {
-    if (task.newOfferCount > 0) attention.push({ id: `att_offers_${task.id}`, kind: 'review_offers', title: task.title, count: task.newOfferCount, target: { kind: 'task', taskId: task.id } });
+  // My tasks' own "needs you" (one rule for both pages, plan 9.9): new offers, a choice to make soon, no offers after a
+  // day. A payment or work to review is the booking's item above.
+  for (const task of mine.needsYou) {
+    const target = { kind: 'task' as const, taskId: task.id };
+    if (task.attention?.kind === 'new_offers') attention.push({ id: `att_offers_${task.id}`, kind: 'review_offers', title: task.title, count: task.newOfferCount, target });
+    else if (task.attention?.kind === 'choose_soon') attention.push({ id: `att_choose_${task.id}`, kind: 'choose_offer', title: task.title, ...(task.attention.dueAt ? { dueAt: task.attention.dueAt } : {}), target });
+    else if (task.attention?.kind === 'no_offers') attention.push({ id: `att_no_offers_${task.id}`, kind: 'no_offers', title: task.title, target });
   }
   for (const counter of counters) {
     attention.push({ id: `att_counter_${counter.id}`, kind: 'answer_counter', title: counter.title, ...(counter.expiresAt ? { dueAt: counter.expiresAt.toISOString() } : {}), ...named(counter.actorName), target: { kind: 'task', taskId: counter.taskId } });

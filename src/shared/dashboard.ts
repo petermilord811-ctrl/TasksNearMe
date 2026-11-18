@@ -3,6 +3,7 @@ import {
   DASHBOARD_DATES,
   DASHBOARD_KEYWORD_MAX,
   DASHBOARD_LIST_LIMIT,
+  DASHBOARD_MAP_LIMIT,
   DASHBOARD_STATUSES,
   DASHBOARD_TABS,
   DASHBOARD_VIEWS,
@@ -180,10 +181,11 @@ export function composeDashboardLists(
   const filtered = (tab: DashboardTab) => filterDashboardItems(itemsOf[tab], state, { ...context, keywordApplied: tab === 'nearby' });
   const current = filtered(state.tab);
   const mapAvailable = dashboardMapHelps(itemsOf[state.tab]);
+  const view = state.view === 'map' && !mapAvailable ? 'list' : state.view;
   return {
-    query: { ...state, view: state.view === 'map' && !mapAvailable ? 'list' : state.view },
+    query: { ...state, view },
     tabs: tabs.map((id) => ({ id, count: id === state.tab ? current.length : filtered(id).length })),
-    items: current.slice(0, DASHBOARD_LIST_LIMIT),
+    items: current.slice(0, view === 'map' ? DASHBOARD_MAP_LIMIT : DASHBOARD_LIST_LIMIT),
     mapAvailable,
   };
 }
@@ -212,8 +214,8 @@ const TASK_STAGES: Record<TaskStatus, DashboardStage> = { draft: 'open', open: '
 const OFFER_STAGES: Record<OfferStatus, DashboardStage> = { pending: 'open', stale: 'open', accepted: 'done', declined: 'done', withdrawn: 'done', expired: 'done' };
 
 /**
- * A client's own task. `location` comes from the task's public view (the owner's row has none). A nudge with no offers
- * yet isn't something that needs them now; new offers, a payment, work to review or a choice to make soon are.
+ * A client's own task. `location` comes from the task's public view (the owner's row has none). It needs them when My
+ * tasks says so (its "needs you": new offers, a choice to make soon, no offers after a day, a payment, work to review).
  */
 export function ownTaskItem(row: OwnerTaskRow, location: TaskLocation, taskType?: string): DashboardItem {
   const booked = row.booking && row.status === 'assigned';
@@ -227,7 +229,7 @@ export function ownTaskItem(row: OwnerTaskRow, location: TaskLocation, taskType?
     when: booked ? { start: row.booking!.start } : { start: row.schedule.windowStart, end: row.schedule.windowEnd, ...(row.schedule.flexible ? { flexible: true } : {}) },
     location,
     stage: TASK_STAGES[row.status],
-    needsYou: Boolean(row.attention && row.attention.kind !== 'no_offers'),
+    needsYou: Boolean(row.attention),
     status: { kind: 'task', status: row.status },
     money: { kind: 'budget', pricing: row.budget },
     ...(row.booking ? { person: personOf(row.booking.helper) } : {}),

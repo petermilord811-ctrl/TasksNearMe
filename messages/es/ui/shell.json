@@ -36,7 +36,9 @@
     "label": "Elige cómo usar TasksNearMe",
     "poster": "Necesito ayuda",
     "helper": "Puedo ayudar",
-    "pending": "Cambiando de modo…"
+    "pending": "Cambiando de modo…",
+    "toHelper": "Cambiar a “Puedo ayudar”",
+    "toPoster": "Cambiar a “Necesito ayuda”"
   },
   "nav": {
     "home": "Inicio",
@@ -44,7 +46,7 @@
     "bookings": "Reservas",
     "messages": "Mensajes",
     "account": "Cuenta",
-    "findWork": "Buscar trabajo",
+    "findWork": "Trabajos",
     "earnings": "Ganancias",
     "helpers": "Buscar ayudantes",
     "saved": "Ayudantes guardados",
@@ -70,11 +72,8 @@
     "howItWorks": "Cómo funciona",
     "becomeAHelper": "Hazte ayudante",
     "pricing": "Precios",
-    "community": "Vecindario",
+    "community": "Vecinos",
     "savedSearches": "Búsquedas guardadas"
-  },
-  "navShort": {
-    "community": "Vecinos"
   },
   "footer": {
     "tagline": "Buenos vecinos. Listas de pendientes más ligeras.",

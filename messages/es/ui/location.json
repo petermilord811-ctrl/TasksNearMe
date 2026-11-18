@@ -9,9 +9,9 @@
   "remoteDescription": "Puedes ayudar desde donde estés.",
   "distance": {
     "under-1-mi": "A menos de 1 milla",
-    "about-1-mi": "A aproximadamente 1 milla",
-    "about-2-mi": "A aproximadamente 2 millas",
-    "about-5-mi": "A aproximadamente 5 millas",
+    "about-1-mi": "A una milla, más o menos",
+    "about-2-mi": "A unas 2 millas",
+    "about-5-mi": "A unas 5 millas",
     "over-5-mi": "A más de 5 millas"
   },
   "exactAddress": "Dirección de la tarea",

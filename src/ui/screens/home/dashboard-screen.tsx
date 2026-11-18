@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, CheckCheck, Inbox, MapPinned, Plus, Search, SearchX, SlidersHorizontal, Wallet } from 'lucide-react';
+import { ArrowRight, BellDot, CalendarDays, CheckCheck, Inbox, MapPinned, Plus, Search, SearchX, SlidersHorizontal, Wallet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type DashboardData, type DashboardHandlers, type DashboardTab, type ISODateTime } from '@/contracts';
 import { marketClockTime } from '@/shared/format';
@@ -144,25 +144,28 @@ export function DashboardScreen({ data, now, handlers, liveMap = true, initialAi
     <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
         <h1 className="font-display text-[1.75rem] leading-[1.12] font-semibold tracking-[-0.03em] text-balance lg:text-[2.125rem]">{t(`greeting.${period}`, { firstName: data.firstName })}</h1>
-        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[15px] leading-6 text-muted-foreground">
-          <span className={cn(data.summary.needsYou > 0 && 'font-semibold text-foreground')}>{t('summary.needsYou', { count: data.summary.needsYou })}</span>
-          <span aria-hidden="true">·</span>
-          <span>{t('summary.upcoming', { count: data.summary.upcoming })}</span>
-        </p>
+        {/* Two facts side by side, each whole when the line wraps (no separator left dangling). */}
+        <ul className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[15px] leading-6 text-muted-foreground">
+          <li className={cn('inline-flex items-center gap-1.5', data.summary.needsYou > 0 && 'font-semibold text-foreground')}>
+            <BellDot aria-hidden="true" className={cn('size-4 shrink-0', data.summary.needsYou > 0 && 'text-primary')} />{t('summary.needsYou', { count: data.summary.needsYou })}
+          </li>
+          <li className="inline-flex items-center gap-1.5"><CalendarDays aria-hidden="true" className="size-4 shrink-0" />{t('summary.upcoming', { count: data.summary.upcoming })}</li>
+        </ul>
       </div>
       {data.earnings && <EarningsGlance earnings={data.earnings} />}
     </header>
 
-    <DashboardSearch data={data} {...(handlers?.onAiSearch ? { onAiSearch: handlers.onAiSearch } : {})} {...(initialAiAnswer ? { initialAnswer: initialAiAnswer } : {})} />
-
+    {/* What needs the person first; then the search, right above the lists it searches. */}
     <section aria-labelledby="home-attention" className="space-y-3">
       <SectionTitle id="home-attention">{t('sections.attention')}</SectionTitle>
       {data.attention.length > 0
-        ? <AttentionList items={data.attention} />
+        ? <AttentionList items={data.attention} now={now} />
         : <p className="flex items-center gap-2.5 rounded-[1.375rem] border border-dashed bg-card/60 px-4 py-3 text-sm text-muted-foreground"><CheckCheck aria-hidden="true" className="size-5 shrink-0 text-primary" />{t('caughtUp')}</p>}
     </section>
 
     {data.waitingFor && <WaitingForCityNote waiting={data.waitingFor} />}
+
+    <DashboardSearch data={data} {...(handlers?.onAiSearch ? { onAiSearch: handlers.onAiSearch } : {})} {...(initialAiAnswer ? { initialAnswer: initialAiAnswer } : {})} />
 
     <DashboardLists data={data} liveMap={liveMap} />
   </div>;

@@ -74,7 +74,8 @@ export function DashboardSearch({ data, onAiSearch, initialAnswer }: { data: Das
         router.push(routes.app.home({ ...dashboardBase(query), q: words || undefined }), { scroll: false });
       }}>
       {keep.map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
-      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+      {/* One row on every width: the field, Search, and Ask AI (icons on phones, words from `sm`). */}
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <div className="relative min-w-0 flex-1">
           <label htmlFor="home-search" className="sr-only">{t(`label.${mode}`)}</label>
           <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
@@ -88,16 +89,15 @@ export function DashboardSearch({ data, onAiSearch, initialAnswer }: { data: Das
             placeholder={t(canAsk ? `placeholder.${mode}` : `placeholderPlain.${mode}`)}
             enterKeyHint="search"
             autoComplete="off"
-            className="h-12 w-full min-w-0 rounded-2xl border border-transparent bg-muted pr-12 pl-11 text-base text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring/30 sm:pr-3 [&::-webkit-search-cancel-button]:hidden"
+            className="h-11 w-full min-w-0 rounded-2xl border border-transparent bg-muted pr-3 pl-11 text-base text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring/30 sm:h-12 [&::-webkit-search-cancel-button]:hidden"
           />
-          <Button type="submit" progressive variant="ghost" size="icon" aria-label={t('submit')} className="absolute top-1/2 right-1 size-10 min-h-10 min-w-10 -translate-y-1/2 rounded-xl text-primary sm:hidden">
-            <ArrowRight aria-hidden="true" className="size-5" />
-          </Button>
         </div>
-        <Button type="submit" progressive variant="outline" className="hidden h-12 px-5 sm:inline-flex">{t('submit')}</Button>
-        {canAsk && <Button type="button" onClick={() => void ask()} disabled={pending} aria-busy={pending} className="h-12 px-5">
+        <Button type="submit" progressive variant="outline" aria-label={t('submit')} className="size-11 shrink-0 px-0 sm:h-12 sm:w-auto sm:px-5">
+          <ArrowRight aria-hidden="true" className="size-5 sm:hidden" /><span className="hidden sm:inline">{t('submit')}</span>
+        </Button>
+        {canAsk && <Button type="button" onClick={() => void ask()} disabled={pending} aria-busy={pending} aria-label={t('ai')} className="size-11 shrink-0 px-0 sm:h-12 sm:w-auto sm:px-5">
           {pending ? <LoaderCircle aria-hidden="true" className="animate-spin motion-reduce:animate-none" /> : <Sparkles aria-hidden="true" />}
-          <span className="sm:hidden">{t('aiLong')}</span><span className="hidden sm:inline">{t('ai')}</span>
+          <span className="hidden sm:inline">{t('ai')}</span>
         </Button>}
       </div>
     </form>

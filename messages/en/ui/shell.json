@@ -36,7 +36,9 @@
     "label": "Choose how to use TasksNearMe",
     "poster": "I need help",
     "helper": "I can help",
-    "pending": "Changing mode…"
+    "pending": "Changing mode…",
+    "toHelper": "Switch to “I can help”",
+    "toPoster": "Switch to “I need help”"
   },
   "nav": {
     "home": "Home",
@@ -70,11 +72,8 @@
     "howItWorks": "How it works",
     "becomeAHelper": "Become a helper",
     "pricing": "Pricing",
-    "community": "Neighborhood",
+    "community": "Neighbors",
     "savedSearches": "Saved searches"
-  },
-  "navShort": {
-    "community": "Neighbors"
   },
   "footer": {
     "tagline": "Good neighbors. Lighter to-do lists.",

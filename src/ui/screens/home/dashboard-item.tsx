@@ -1,4 +1,4 @@
-import { CalendarDays, Clock, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, UserRound, type LucideIcon } from 'lucide-react';
+import { BellDot, CalendarDays, Clock, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, UserRound, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { CategorySlug, DashboardItem, DashboardMoney, ISODateTime } from '@/contracts';
@@ -54,6 +54,8 @@ export function useItemFacts(item: DashboardItem) {
     remote: item.location.kind === 'remote',
     day: formatDate(item.when.start),
     time: item.when.end ? (item.when.flexible ? t('flexibleRange') : formatTimeRange(item.when.start, item.when.end)) : formatTime(item.when.start),
+    /** Phones' shorter time: when it starts (or "Flexible time"). */
+    startTime: item.when.end && item.when.flexible ? t('flexibleRange') : formatTime(item.when.start),
     person: item.person ? t(item.side === 'client' ? 'helper' : 'client', { name: item.person.displayName }) : null,
     offers: item.offers ? { count: t('offers', { count: item.offers.count }), fresh: item.offers.new > 0 ? t('newOffers', { count: item.offers.new }) : null } : null,
     href: dashboardTargetHref(item.target),
@@ -68,22 +70,25 @@ export function DateTile({ start, className }: { start: ISODateTime; className?:
   const weekday = new Intl.DateTimeFormat(tag, { timeZone, weekday: 'short' }).format(date);
   const dayOfMonth = new Intl.DateTimeFormat(tag, { timeZone, day: 'numeric' }).format(date);
   return <time dateTime={start} className={cn('flex flex-col items-center justify-center rounded-xl bg-secondary px-1 py-1.5 text-center leading-none text-secondary-foreground', className)}>
-    <span aria-hidden="true" className="text-[11px] font-semibold tracking-wide uppercase">{weekday.replace('.', '')}</span>
+    <span aria-hidden="true" className="text-xs font-semibold tracking-wide uppercase">{weekday.replace('.', '')}</span>
     <span aria-hidden="true" className="mt-1 text-base font-bold tabular-nums">{dayOfMonth}</span>
     <span className="sr-only">{formatDate(start)}</span>
   </time>;
 }
 
+/** "Needs you": the bell of the dashboard's summary on phones (the words for screen readers), the words from `sm`. */
 function NeedsYou() {
   const t = useTranslations('home.item');
-  return <span className="inline-flex items-center gap-1 rounded-full bg-badge-warning px-2 py-px text-xs leading-5 font-semibold text-badge-warning-foreground">
-    <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />{t('needsYou')}
+  return <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-badge-warning px-1 py-px text-xs leading-5 font-semibold whitespace-nowrap text-badge-warning-foreground sm:px-2">
+    <BellDot aria-hidden="true" className="size-3.5 sm:hidden" />
+    <span aria-hidden="true" className="hidden size-1.5 rounded-full bg-current sm:inline-block" />
+    <span className="sr-only sm:not-sr-only">{t('needsYou')}</span>
   </span>;
 }
 
 function NewMark() {
   const t = useTranslations('home.item');
-  return <span className="ml-2 inline-flex translate-y-[-1px] items-center rounded-full bg-badge-brand px-1.5 py-px align-middle text-[11px] font-semibold text-badge-brand-foreground">{t('new')}</span>;
+  return <span className="ml-2 inline-flex translate-y-[-1px] items-center rounded-full bg-badge-brand px-1.5 py-px align-middle text-xs font-semibold text-badge-brand-foreground">{t('new')}</span>;
 }
 
 export interface DashboardRowProps {
@@ -96,7 +101,8 @@ export interface DashboardRowProps {
 
 /**
  * One item as a dense row: the day tile, the title (the whole row opens it), then its status and what it is, where,
- * when and with whom; the money on the right (in the details line on phones). Never an address.
+ * when and with whom; the money on the right. Never an address. Phones (audit M15): two lines, the title and the
+ * money, then the status, the start time and the area.
  */
 export function DashboardRow({ item, active = false, onActiveChange, headingLevel = 3 }: DashboardRowProps) {
   const facts = useItemFacts(item);
@@ -108,29 +114,31 @@ export function DashboardRow({ item, active = false, onActiveChange, headingLeve
     onMouseLeave={onActiveChange ? () => onActiveChange(null) : undefined}
     onFocus={onActiveChange ? () => onActiveChange(item.key) : undefined}
     onBlur={onActiveChange ? () => onActiveChange(null) : undefined}
-    className="group/row relative grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-3 px-3 py-3 transition-colors duration-150 hover:bg-muted/70 has-[a:focus-visible]:bg-muted/70 has-[a:focus-visible]:outline-2 has-[a:focus-visible]:-outline-offset-2 has-[a:focus-visible]:outline-ring data-[active]:bg-muted sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:px-4"
+    className="group/row relative grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-2.5 transition-colors duration-150 hover:bg-muted/70 has-[a:focus-visible]:bg-muted/70 has-[a:focus-visible]:outline-2 has-[a:focus-visible]:-outline-offset-2 has-[a:focus-visible]:outline-ring data-[active]:bg-muted sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:items-start sm:gap-y-0 sm:px-4 sm:py-3"
   >
-    <DateTile start={item.when.start} className="min-h-12" />
-    <div className="min-w-0 space-y-1.5">
-      <Heading className="text-[15px]/5 font-semibold [overflow-wrap:anywhere]">
-        <Link href={facts.href} className="rounded-sm outline-none after:absolute after:inset-0 after:content-[''] hover:text-primary focus-visible:underline focus-visible:decoration-2 focus-visible:underline-offset-4">{item.title}</Link>
+    <DateTile start={item.when.start} className="row-span-2 min-h-11 sm:row-span-1 sm:min-h-12" />
+    {/* Phones: the title and the details line are the grid's own two rows (the details under the money too). */}
+    <div className="contents sm:block sm:min-w-0 sm:space-y-1.5">
+      <Heading className="col-start-2 row-start-1 min-w-0 truncate text-[15px]/5 font-semibold sm:overflow-visible sm:whitespace-normal sm:[overflow-wrap:anywhere]">
+        {/* The whole row opens it (the link's ::after); the padding makes the link's own box 24 px tall too (WCAG 2.5.8). */}
+        <Link href={facts.href} className="rounded-sm py-1 outline-none after:absolute after:inset-0 after:content-[''] hover:text-primary focus-visible:underline focus-visible:decoration-2 focus-visible:underline-offset-4">{item.title}</Link>
         {item.isNew && <NewMark />}
       </Heading>
-      <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] leading-5 text-muted-foreground">
-        <StatusBadge size="sm" tone={facts.status.tone} label={facts.status.label} />
+      <p className="col-span-2 col-start-2 row-start-2 flex min-w-0 items-center gap-x-2 gap-y-1 overflow-hidden text-[13px] leading-5 text-muted-foreground sm:flex-wrap sm:gap-x-2.5">
+        {/* Phones: the status keeps up to half the line and the time stays whole; the area takes what's left. */}
+        <StatusBadge size="sm" truncate tone={facts.status.tone} label={facts.status.label} className="max-w-[50%] shrink-0 sm:max-w-full" />
         {item.needsYou && <NeedsYou />}
-        {facts.money && <span className="font-display text-sm font-semibold text-foreground tabular-nums sm:hidden">{facts.money.amount}</span>}
-        <span className="inline-flex min-w-0 items-center gap-1"><CategoryIcon aria-hidden="true" className="size-3.5 shrink-0" />{facts.category}</span>
-        <span className="inline-flex items-center gap-1">{facts.remote ? <Laptop aria-hidden="true" className="size-3.5 shrink-0" /> : <MapPin aria-hidden="true" className="size-3.5 shrink-0" />}{facts.area}</span>
-        <span className="inline-flex items-center gap-1 tabular-nums"><Clock aria-hidden="true" className="size-3.5 shrink-0" />{facts.time}</span>
-        {facts.person && <span className="inline-flex items-center gap-1"><UserRound aria-hidden="true" className="size-3.5 shrink-0" />{facts.person}</span>}
-        {facts.offers && <span className="tabular-nums">{facts.offers.count}{facts.offers.fresh && <span className="font-semibold text-foreground"> · {facts.offers.fresh}</span>}</span>}
+        <span className="hidden min-w-0 items-center gap-1 sm:inline-flex"><CategoryIcon aria-hidden="true" className="size-3.5 shrink-0" />{facts.category}</span>
+        <span className="inline-flex shrink-0 items-center gap-1 tabular-nums"><Clock aria-hidden="true" className="size-3.5 shrink-0" /><span className="sm:hidden">{facts.startTime}</span><span className="hidden sm:inline">{facts.time}</span></span>
+        <span className="inline-flex min-w-0 flex-1 items-center gap-1 sm:flex-none">{facts.remote ? <Laptop aria-hidden="true" className="size-3.5 shrink-0" /> : <MapPin aria-hidden="true" className="size-3.5 shrink-0" />}<span className="truncate">{facts.area}</span></span>
+        {facts.person && <span className="hidden items-center gap-1 sm:inline-flex"><UserRound aria-hidden="true" className="size-3.5 shrink-0" />{facts.person}</span>}
+        {facts.offers && <span className="hidden tabular-nums sm:inline">{facts.offers.count}{facts.offers.fresh && <span className="font-semibold text-foreground"> · {facts.offers.fresh}</span>}</span>}
       </p>
     </div>
-    {facts.money && <p className="hidden text-right leading-tight sm:block">
-      <span className="block text-xs text-muted-foreground">{facts.money.caption}</span>
-      <span className="mt-0.5 block font-display text-base font-semibold tabular-nums">{facts.money.amount}</span>
-      {facts.money.note && <span className="block text-xs text-muted-foreground tabular-nums">{facts.money.note}</span>}
+    {facts.money && <p className="col-start-3 row-start-1 text-right leading-tight">
+      <span className="hidden text-xs text-muted-foreground sm:block">{facts.money.caption}</span>
+      <span className="block font-display text-[15px] font-semibold whitespace-nowrap tabular-nums sm:mt-0.5 sm:text-base">{facts.money.amount}</span>
+      {facts.money.note && <span className="hidden text-xs text-muted-foreground tabular-nums sm:block">{facts.money.note}</span>}
     </p>}
   </article>;
 }
