@@ -64,7 +64,8 @@ export function TopBar({ logo, nav, actions, menu }: { logo: ReactNode; nav: Rea
   }, []);
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-navigation px-3 pt-3 sm:px-5 sm:pt-4">
+    // The page's banner landmark (one per page: the app shell's AppBar is the other shell's).
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-navigation px-3 pt-3 sm:px-5 sm:pt-4">
       <div
         ref={ref}
         onFocusCapture={() => showRef.current(true)}
@@ -80,6 +81,6 @@ export function TopBar({ logo, nav, actions, menu }: { logo: ReactNode; nav: Rea
         <div className="hidden min-w-0 flex-1 lg:block">{nav}</div>
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">{actions}{menu}</div>
       </div>
-    </div>
+    </header>
   );
 }

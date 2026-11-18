@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, LockKeyhole } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadPageData, type ThreadSubject, type ThreadSummary } from '@/contracts';
@@ -32,14 +32,21 @@ function subjectHref(subject: ThreadSubject) {
 }
 
 export function ThreadScreen({ data, handlers, now, safety, inbox }: ThreadScreenProps) {
-  const inboxCopy = useTranslations('inbox');
   if (!inbox || inbox.length === 0) return <ThreadContent data={data} handlers={handlers} now={now} safety={safety} />;
-  // Wide screens: the conversations beside the open one, like a mail or chat app; phones keep one pane at a time.
+  return <ThreadPanes inbox={inbox} currentId={data.thread.id} now={now}><ThreadContent data={data} handlers={handlers} now={now} safety={safety} wide /></ThreadPanes>;
+}
+
+/**
+ * Wide screens: the conversations beside the open one, like a mail or chat app; phones keep one pane at a time. The
+ * page renders the list apart from the conversation, so opening one keeps the list on screen while it loads.
+ */
+export function ThreadPanes({ inbox, currentId, now, children }: { inbox: ThreadSummary[]; currentId: string; now: ISODateTime; children: ReactNode }) {
+  const inboxCopy = useTranslations('inbox');
   return <div className="lg:grid lg:grid-cols-[21rem_minmax(0,1fr)] lg:items-start lg:gap-5">
     <aside aria-label={inboxCopy('title')} className="hidden overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card lg:sticky lg:top-24 lg:flex lg:h-[calc(100dvh-8rem)] lg:flex-col dark:border-white/[0.06]">
-      <InboxList threads={inbox} now={now} currentId={data.thread.id} variant="pane" />
+      <InboxList threads={inbox} now={now} currentId={currentId} variant="pane" />
     </aside>
-    <ThreadContent data={data} handlers={handlers} now={now} safety={safety} wide />
+    {children}
   </div>;
 }
 

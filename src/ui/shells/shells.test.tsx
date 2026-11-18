@@ -12,8 +12,8 @@ import { AppShell } from './app-shell';
 import { DetailPageShell } from './detail-page-shell';
 import { PublicShell } from './public-shell';
 
-const { pathname, push } = vi.hoisted(() => ({ pathname: vi.fn(), push: vi.fn() }));
-vi.mock('next/navigation', () => ({ usePathname: pathname, useRouter: () => ({ push }) }));
+const { pathname, push, layoutSegment } = vi.hoisted(() => ({ pathname: vi.fn(), push: vi.fn(), layoutSegment: vi.fn(() => '(main)') }));
+vi.mock('next/navigation', () => ({ usePathname: pathname, useRouter: () => ({ push }), useSelectedLayoutSegment: () => layoutSegment() }));
 
 const handlers: AppShellHandlers = {
   onModeChange: fakeHandler({ ok: true, code: 'updated' }, 0),
@@ -41,6 +41,11 @@ describe('shell landmarks', () => {
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main');
     expect(screen.getByRole('main')).toHaveAttribute('tabindex', '-1');
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
+  it.each(shells.slice(0, 2))('%s has one banner landmark, its top bar', (_, createShell) => {
+    show(createShell());
+    expect(screen.getAllByRole('banner')).toHaveLength(1);
   });
 });
 
@@ -152,6 +157,24 @@ describe('PublicShell', () => {
 });
 
 describe('AppShell', () => {
+  it('takes its layout from the route group: (flow) without the phone dock, (main) with it', () => {
+    layoutSegment.mockReturnValue('(flow)');
+    const { container, unmount } = show(<AppShell viewer={mayaShell} handlers={handlers}><h1>A conversation</h1></AppShell>);
+    expect(container.querySelector('[data-app-shell]')?.getAttribute('data-app-shell')).toBe('flow');
+    expect(screen.queryByRole('navigation', { name: 'App navigation' })).not.toBeInTheDocument();
+    unmount();
+    layoutSegment.mockReturnValue('(main)');
+    const main = show(<AppShell viewer={mayaShell} handlers={handlers}><h1>Messages</h1></AppShell>);
+    expect(main.container.querySelector('[data-app-shell]')?.getAttribute('data-app-shell')).toBe('tabs');
+    expect(screen.getByRole('navigation', { name: 'App navigation' })).toBeInTheDocument();
+    // A screen that fixes its layout (previews) keeps it, whatever the group.
+    main.unmount();
+    layoutSegment.mockReturnValue('(flow)');
+    show(<AppShell viewer={mayaShell} handlers={handlers} layout="tabs"><h1>Preview</h1></AppShell>);
+    expect(screen.getByRole('navigation', { name: 'App navigation' })).toBeInTheDocument();
+    layoutSegment.mockReturnValue('(main)');
+  });
+
   it('keeps the flow page clear of mobile tab navigation', () => {
     show(<AppShell viewer={mayaShell} handlers={handlers} layout="flow"><h1>Post a task</h1></AppShell>);
     expect(screen.queryByRole('navigation', { name: 'App navigation' })).not.toBeInTheDocument();

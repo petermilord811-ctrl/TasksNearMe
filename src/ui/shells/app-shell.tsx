@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import type { AppShellHandlers, ShellNotice, SignedInViewer } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { buttonVariants } from '@/ui/primitives/button';
-import { cn } from '@/ui/lib/utils';
 import { AppBar } from './app-bar';
 import { Logo } from './logo';
 import { ScrollbarActivity } from '@/ui/motion/scrollbar-activity';
@@ -17,22 +16,31 @@ import { HelperSetupLink } from './helper-setup-link';
 import { QuickAction } from './quick-action';
 import { ThemeToggle } from './theme-toggle';
 import { Navigation } from './navigation';
+import { AppShellFrame, TabsOnly, type AppShellLayout } from './app-shell-layout';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { getAppNav } from './nav';
 
-export interface AppShellProps { viewer: SignedInViewer; handlers: AppShellHandlers; children: ReactNode; currentPath?: string; layout?: 'tabs' | 'flow'; notices?: readonly ShellNotice[] }
+export interface AppShellProps {
+  viewer: SignedInViewer;
+  handlers: AppShellHandlers;
+  children: ReactNode;
+  currentPath?: string;
+  /** Fixed by previews and tests; otherwise the route group decides (`useAppShellLayout`). */
+  layout?: AppShellLayout;
+  notices?: readonly ShellNotice[];
+}
 
 /**
  * The signed-in app, in the landing page's language: the paper under everything, a pinned glass bar (the logo, how
  * you're using TasksNearMe, the next step for that mode, the language and theme switches, notifications and your
  * account, whose menu also carries the theme and the language on phones), on wide screens a floating rail of links
- * whose current pill glides between pages, and on phones a glass dock of five tabs. `flow` pages (posting a task)
- * keep the dock away. `notices` (the outage switch) sit above every page's content, before the helper setup link.
+ * whose current pill glides between pages, and on phones a glass dock of five tabs. `flow` pages (posting a task, a
+ * booking, a conversation: the `(flow)` route group) keep the dock away; one shell serves both groups. `notices` (the outage switch) sit above every page's content, before the helper setup link.
  */
-export function AppShell({ viewer, handlers, children, currentPath, layout = 'tabs', notices = [] }: AppShellProps) {
+export function AppShell({ viewer, handlers, children, currentPath, layout, notices = [] }: AppShellProps) {
   const t = useTranslations('shell');
   const nav = getAppNav(viewer.mode);
-  return <div data-app-shell={layout} data-app-surface="" className={cn('paper flex min-h-dvh flex-col [--app-bottom-offset:0px]', layout === 'tabs' && 'pb-[var(--app-bottom-offset)] max-lg:[--app-bottom-offset:var(--app-bottom-nav-height)]')}>
+  return <AppShellFrame layout={layout} className="paper flex min-h-dvh flex-col [--app-bottom-offset:0px]">
     <SkipLink />
     <ScrollbarActivity />
     <AppBar>
@@ -71,8 +79,10 @@ export function AppShell({ viewer, handlers, children, currentPath, layout = 'ta
         {children}
       </main>
     </div>
-    {layout === 'tabs' && <MobileBottomNav>
-      <Navigation items={nav.primary} label={t('mobileNavigation')} currentPath={currentPath} unreadMessages={viewer.unreadMessages} variant="bottom" />
-    </MobileBottomNav>}
-  </div>;
+    <TabsOnly layout={layout}>
+      <MobileBottomNav>
+        <Navigation items={nav.primary} label={t('mobileNavigation')} currentPath={currentPath} unreadMessages={viewer.unreadMessages} variant="bottom" />
+      </MobileBottomNav>
+    </TabsOnly>
+  </AppShellFrame>;
 }

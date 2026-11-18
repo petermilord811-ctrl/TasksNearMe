@@ -1,2 +1,2 @@
 export { InboxScreen, type InboxScreenProps } from './inbox-screen';
-export { ThreadScreen, type ThreadScreenProps } from './thread-screen';
+export { ThreadContent, ThreadPanes, ThreadScreen, type ThreadScreenProps } from './thread-screen';

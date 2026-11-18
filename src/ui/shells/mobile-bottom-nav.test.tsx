@@ -9,7 +9,7 @@ import { ActionBar } from '@/ui/components/actions/action-bar';
 import messages from '../../../messages/en/ui';
 import { AppShell } from './app-shell';
 
-vi.mock('next/navigation', () => ({ usePathname: () => routes.app.bookings(), useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('next/navigation', () => ({ usePathname: () => routes.app.bookings(), useRouter: () => ({ push: vi.fn() }), useSelectedLayoutSegment: () => '(main)' }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const handlers: AppShellHandlers = {

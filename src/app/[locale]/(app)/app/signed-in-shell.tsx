@@ -11,26 +11,26 @@ import { dispatchNotifications, unreadNotificationCount } from '@/modules/notifi
 import { getViewer, toSignedInViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
-import { AppShell, type AppShellProps } from '@/ui/shells';
+import { AppShell } from '@/ui/shells';
 import { requestNow } from '@/platform/clock';
 import { AppShellSkeleton } from '@/ui/shells/app-shell-skeleton';
 
-type ShellLayout = NonNullable<AppShellProps['layout']>;
-
 /**
- * The signed-in shell, shared by the (main) and (flow) route groups. Visitors without a session
- * go to sign-in, and so do accounts that haven't finished signing up (name, 18+ and terms, or a private
- * beta invite): `/sign-in` shows the step they stopped at. `flow` hides the phone tab bar for step-by-step screens like posting a task.
+ * The signed-in shell: one, in `(app)/app/layout.tsx`, for both route groups, so a hop between (main) and (flow)
+ * keeps it mounted (it was a shell per group, swapped on every hop, with the loading shell between). The group picks
+ * the layout (`useAppShellLayout`): (flow) hides the phone tab bar for step-by-step and detail screens. Visitors
+ * without a session go to sign-in, and so do accounts that haven't finished signing up (name, 18+ and terms, or a
+ * private beta invite): `/sign-in` shows the step they stopped at.
  */
-export function SignedInShell({ layout, children }: { layout: ShellLayout; children: React.ReactNode }) {
+export function SignedInShell({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={<AppShellSkeleton layout={layout} />}>
-      <ViewerShell layout={layout}>{children}</ViewerShell>
+    <Suspense fallback={<AppShellSkeleton />}>
+      <ViewerShell>{children}</ViewerShell>
     </Suspense>
   );
 }
 
-async function ViewerShell({ layout, children }: { layout: ShellLayout; children: React.ReactNode }) {
+async function ViewerShell({ children }: { children: React.ReactNode }) {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.home()));
   if (await signUpUnfinished(db, viewer.user.id)) redirect(routes.signIn(routes.app.home()));
@@ -46,7 +46,7 @@ async function ViewerShell({ layout, children }: { layout: ShellLayout; children
   // from the request (getViewer set it), and a page about another market names that market's.
   return (
     <TimeZoneProvider timeZone={viewer.user.timeZone}>
-      <AppShell viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications }} notices={notices} handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction }} layout={layout}>
+      <AppShell viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications }} notices={notices} handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction }}>
         {children}
       </AppShell>
     </TimeZoneProvider>

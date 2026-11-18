@@ -15,14 +15,9 @@ const BUBBLES: { mine: boolean; width: string; height: string }[] = [
  * the left; the person and the task on top, then the chat panel, as tall as the real one, with its last messages and
  * the composer at the bottom.
  */
-export function ThreadSkeleton() {
-  return (
-    <SkeletonPage className="lg:grid lg:grid-cols-[21rem_minmax(0,1fr)] lg:items-start lg:gap-5">
-      <div className="hidden space-y-3 overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card p-3 shadow-card lg:sticky lg:top-24 lg:block lg:h-[calc(100dvh-8rem)] dark:border-white/[0.06]">
-        <Skeleton className="h-11 w-full rounded-xl" />
-        <SkeletonChips widths={['w-14', 'w-20', 'w-18', 'w-22']} />
-        <SkeletonRows rows={6} leading="avatar" trailing="time" className="rounded-none border-0 bg-transparent shadow-none" />
-      </div>
+export function ThreadSkeleton({ pane = false }: { pane?: boolean }) {
+  // `pane`: the conversation alone, for beside the real list (the page renders the list apart, so it stays on screen).
+  const conversation = (
       <div className="mx-auto flex w-full max-w-reading flex-col gap-3 lg:max-w-none">
         <div className="flex min-w-0 items-center gap-3">
           <Skeleton className="size-10 shrink-0 rounded-full" />
@@ -36,6 +31,16 @@ export function ThreadSkeleton() {
           <Skeleton className="mt-2 h-12 w-full rounded-full" />
         </div>
       </div>
+  );
+  if (pane) return <SkeletonPage>{conversation}</SkeletonPage>;
+  return (
+    <SkeletonPage className="lg:grid lg:grid-cols-[21rem_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <div className="hidden space-y-3 overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card p-3 shadow-card lg:sticky lg:top-24 lg:block lg:h-[calc(100dvh-8rem)] dark:border-white/[0.06]">
+        <Skeleton className="h-11 w-full rounded-xl" />
+        <SkeletonChips widths={['w-14', 'w-20', 'w-18', 'w-22']} />
+        <SkeletonRows rows={6} leading="avatar" trailing="time" className="rounded-none border-0 bg-transparent shadow-none" />
+      </div>
+      {conversation}
     </SkeletonPage>
   );
 }

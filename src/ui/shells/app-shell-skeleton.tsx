@@ -1,10 +1,23 @@
 import { SkeletonHeader, SkeletonPage, SkeletonRows } from '@/ui/components/feedback/skeleton-parts';
 import { cn } from '@/ui/lib/utils';
 import { Skeleton } from '@/ui/primitives/skeleton';
+import { Suspense } from 'react';
+import { TabsOnly } from './app-shell-layout';
 import { Logo } from './logo';
 
 /** The rail's rows: the five everyday places, a divider, then the mode's three tools. */
 const RAIL_ROWS = ['w-20', 'w-24', 'w-16', 'w-20', 'w-24', null, 'w-24', 'w-24', 'w-28'];
+
+/** The phone's tab dock as MobileBottomNav draws it (shapes, no links). */
+const dock = (
+        <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-2.5 pb-[max(.625rem,env(safe-area-inset-bottom))] lg:hidden">
+          <div className="app-glass mx-auto grid max-w-md grid-cols-5 gap-1 rounded-[1.75rem] border border-foreground/[0.07] p-1.5 shadow-[0_1px_2px_rgb(23_18_14/0.05),0_18px_40px_-18px_rgb(40_20_5/0.45)] dark:border-white/[0.08] dark:shadow-[0_18px_40px_-16px_rgb(0_0_0/0.8)]">
+            {Array.from({ length: 5 }, (_, index) => (
+              <div key={index} className="flex min-h-14 flex-col items-center justify-center gap-1.5"><Skeleton className="size-5 rounded-md" /><Skeleton className="h-2.5 w-10" /></div>
+            ))}
+          </div>
+        </div>
+);
 
 /**
  * The signed-in shell while the session loads (plan 9.4b): AppShell's bar, rail and phone dock in their places, with
@@ -14,9 +27,9 @@ const RAIL_ROWS = ['w-20', 'w-24', 'w-16', 'w-20', 'w-24', null, 'w-24', 'w-24',
  * AppShell's attributes: while a navigation shows it, the real shell can still be in the page (hidden), and code and
  * tests that look for the shell, its dock or #main must find that one only.
  */
-export function AppShellSkeleton({ layout = 'tabs' }: { layout?: 'tabs' | 'flow' }) {
+export function AppShellSkeleton({ layout }: { layout?: 'tabs' | 'flow' }) {
   return (
-    <div data-app-shell-skeleton={layout} className={cn('paper flex min-h-dvh flex-col', layout === 'tabs' && 'max-lg:pb-24')}>
+    <div data-app-shell-skeleton={layout ?? 'route'} className={cn('paper flex min-h-dvh flex-col', layout === 'tabs' && 'max-lg:pb-24')}>
       {/* AppBar's look at the top of the page; not AppBar itself, which owns --app-header-offset while it's mounted. */}
       <div className="app-glass sticky top-0 z-navigation border-b border-transparent">
         <div className="mx-auto flex max-w-admin items-center gap-x-2 px-gutter py-2 sm:gap-x-3 sm:py-2.5">
@@ -47,16 +60,12 @@ export function AppShellSkeleton({ layout = 'tabs' }: { layout?: 'tabs' | 'flow'
           </SkeletonPage>
         </div>
       </div>
-      {/* The phone's tab dock, as MobileBottomNav draws it. */}
-      {layout === 'tabs' && (
-        <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-2.5 pb-[max(.625rem,env(safe-area-inset-bottom))] lg:hidden">
-          <div className="app-glass mx-auto grid max-w-md grid-cols-5 gap-1 rounded-[1.75rem] border border-foreground/[0.07] p-1.5 shadow-[0_1px_2px_rgb(23_18_14/0.05),0_18px_40px_-18px_rgb(40_20_5/0.45)] dark:border-white/[0.08] dark:shadow-[0_18px_40px_-16px_rgb(0_0_0/0.8)]">
-            {Array.from({ length: 5 }, (_, index) => (
-              <div key={index} className="flex min-h-14 flex-col items-center justify-center gap-1.5"><Skeleton className="size-5 rounded-md" /><Skeleton className="h-2.5 w-10" /></div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* The phone's tab dock, as MobileBottomNav draws it. Without a fixed layout (the one shell's fallback) the route
+          group decides, in a client island inside its own Suspense (a route hook can't run in a fallback outside one:
+          CLIENT_HOOK_DYNAMIC at prerender): (flow) pages never show a dock that then vanishes, and (main) pages get
+          it, and the room above it, a moment later in the same response. */}
+      {layout === 'tabs' && dock}
+      {layout === undefined && <Suspense fallback={null}><TabsOnly>{dock}<div aria-hidden="true" className="h-24 lg:hidden" /></TabsOnly></Suspense>}
     </div>
   );
 }
