@@ -6,7 +6,7 @@ import type { AiSearchInput, AiSearchResult, CategorySlug, DashboardItem, TaskBo
 import { AI_STAND_IN_COOKIE, wantsAiStandIn } from '@/integrations/ai';
 import { createFakeNeedMatcher, createNeedMatcher, type NeedMatcher } from '@/integrations/ai/need-matcher';
 import { users } from '@/modules/accounts/schema';
-import { useAiSearch } from '@/modules/billing/entitlements';
+import { consumeAiSearch } from '@/modules/billing/entitlements';
 import { areas, categories, markets } from '@/modules/markets/schema';
 import { getFindWorkPageData, loadHelperState } from '@/modules/offers/helper';
 import { getHelpersBrowse } from '@/modules/profiles/browse';
@@ -65,7 +65,7 @@ export async function searchWithAi(input: AiSearchInput): Promise<AiSearchResult
   return runAiSearch(
     {
       matcher: matcher ? (standIn ? createFakeNeedMatcher() : matcher) : null,
-      useSearch: () => useAiSearch(db, userId, now),
+      consumeSearch: () => consumeAiSearch(db, userId, now),
       allowBurst: async () => (await consumeRateLimit(db, `ai-search:${userId}`, AI_SEARCH_BURST, now)).ok,
       categoryKeywords: async (category: CategorySlug) => {
         const [row] = await db.select({ keywords: categories.prohibitedKeywords }).from(categories).where(eq(categories.slug, category)).limit(1);

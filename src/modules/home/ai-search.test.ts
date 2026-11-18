@@ -18,7 +18,7 @@ function deps(overrides: Partial<AiSearchDeps> = {}): AiSearchDeps & { calls: st
   return {
     calls,
     matcher: match(),
-    useSearch: vi.fn(async () => { calls.push('count'); return { ok: true as const, remaining: 9 }; }),
+    consumeSearch: vi.fn(async () => { calls.push('count'); return { ok: true as const, remaining: 9 }; }),
     allowBurst: vi.fn(async () => { calls.push('burst'); return true; }),
     categoryKeywords: vi.fn(async () => ['gas line']),
     areas: vi.fn(async () => AREAS),
@@ -73,7 +73,7 @@ describe('AI search', () => {
     expect(await runAiSearch(deps({ matcher: null }), { text: 'a desk', mode: 'poster' })).toEqual({ ok: false, code: 'ai_off' });
     const burst = deps({ allowBurst: vi.fn(async () => false) });
     expect(await runAiSearch(burst, { text: 'a desk', mode: 'poster' })).toEqual({ ok: false, code: 'rate_limited' });
-    expect(burst.useSearch).not.toHaveBeenCalled();
+    expect(burst.consumeSearch).not.toHaveBeenCalled();
     const banned = deps();
     expect(await runAiSearch(banned, { text: 'help me sell a gun', mode: 'poster' })).toEqual({ ok: false, code: 'prohibited' });
     expect(banned.calls).toEqual(['burst']);
@@ -81,7 +81,7 @@ describe('AI search', () => {
 
   it("says what the plan says when it doesn't allow a search", async () => {
     for (const reason of ['needs_plan', 'monthly_limit', 'ai_off'] as const) {
-      const d = deps({ useSearch: vi.fn(async () => ({ ok: false as const, reason })) });
+      const d = deps({ consumeSearch: vi.fn(async () => ({ ok: false as const, reason })) });
       expect(await runAiSearch(d, { text: 'a desk', mode: 'poster' })).toEqual({ ok: false, code: reason });
       expect(d.matcher!.match).not.toHaveBeenCalled();
     }

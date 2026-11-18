@@ -38,8 +38,8 @@ export interface AiSearchFilters {
 export interface AiSearchDeps {
   /** Null when AI search isn't set up here (production without a key). */
   matcher: NeedMatcher | null;
-  /** The plan's check, counting this search (billing's `useAiSearch`). */
-  useSearch: () => Promise<{ ok: true; remaining: number | null } | { ok: false; reason: AiSearchBlock }>;
+  /** The plan's check, counting this search (billing's `consumeAiSearch`). */
+  consumeSearch: () => Promise<{ ok: true; remaining: number | null } | { ok: false; reason: AiSearchBlock }>;
   /** Counts one search toward `AI_SEARCH_BURST`; false once over it. */
   allowBurst: () => Promise<boolean>;
   /** The category's own prohibited words (the global list is added here). */
@@ -69,7 +69,7 @@ export async function runAiSearch(deps: AiSearchDeps, input: { text: unknown; mo
   if (!deps.matcher) return { ok: false, code: 'ai_off' };
   if (!(await deps.allowBurst())) return { ok: false, code: 'rate_limited' };
   if (findProhibitedPhrase(text, GLOBAL_PROHIBITED_PHRASES)) return { ok: false, code: 'prohibited' };
-  const allowed = await deps.useSearch();
+  const allowed = await deps.consumeSearch();
   if (!allowed.ok) return { ok: false, code: allowed.reason };
 
   const areas = await deps.areas();

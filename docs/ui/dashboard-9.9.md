@@ -121,9 +121,10 @@ offers and bookings as compact lists you can filter, switch to cards or a map, a
 
 ## 6. AI search ("describe what you need")
 
-- Gate: `aiSearchAccess(db, userId, now)` when rendering (show the box, the remaining count, or the plan link);
-  `useAiSearch(db, userId, now)` right before each search (checks and counts in one step). Today's stand-in allows it in
-  development and tests only.
+- Gate (plan 9.13, src/modules/billing/entitlements.ts): `aiSearchAccess(db, userId, now)` when rendering (show the
+  box with "N searches left this month" and the reset date, or the plan link); `consumeAiSearch(db, userId, now)` right
+  before each search (checks and counts in one step). 5 searches a month free, 100 with a plan; months are calendar
+  months in the person's market zone.
 - Claude (official SDK, `src/integrations/ai/claude.ts`, structured output) reads the words and returns the intent (get
   help or find work), the category, the keywords, when and the neighborhood if said, and a short task title. Without a
   key, development and tests use a rule-based stand-in with the same output; tests always use it (`tnm_ai_stand_in`).
