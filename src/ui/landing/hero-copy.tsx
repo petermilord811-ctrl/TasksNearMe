@@ -56,15 +56,16 @@ export function HeroCopy({ data, now }: { data: HomePageData; now: ISODateTime }
     <div className="max-w-xl lg:pointer-events-auto lg:max-w-[30rem] xl:max-w-[34rem]">
       {/* The market line and the switch: side by side where the hero's reach (a container, WIDE_LINE) holds them both,
           one under the other where it doesn't. The room decides, not the words' width, so the brand font arriving after
-          the first paint can't re-wrap the row and push the headline down (CLS 0.011 at 1280 × 800). English needs about
-          550 px (36.5rem leaves room for a longer city); Spanish ("Pronto en …", "Necesito ayuda": about 590 px, more
-          for "Ya disponible en …") is wider than the reach on common screens, so it always takes two lines. */}
+          the first paint can't re-wrap the row and push the headline down (CLS 0.011 at 1280 × 800). 37rem holds the
+          widest today: Spanish ("Pronto en …", "Necesito ayuda"), about 586 px; English is about 549. One line where it
+          fits matters on short screens: two would make the words taller than the hero, which then grows, and the town's
+          stage with it, when the font swaps (CLS 0.02). A live market's Spanish line ("Ya disponible en …") is wider. */}
       <div className={cn('lg:pointer-events-none lg:@container', WIDE_LINE)}>
         <div
           className={cn(
             'enter flex flex-wrap items-center gap-x-3 gap-y-2',
             'lg:pointer-events-auto lg:w-max lg:max-w-full lg:flex-col lg:items-start',
-            'lg:@min-[36.5rem]:[&:not(:lang(es))]:flex-row lg:@min-[36.5rem]:[&:not(:lang(es))]:items-center',
+            'lg:@min-[37rem]:flex-row lg:@min-[37rem]:items-center',
           )}
           style={{ ['--enter-delay' as string]: '40ms' }}
         >
