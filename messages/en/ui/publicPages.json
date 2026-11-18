@@ -154,7 +154,8 @@
   },
   "market": {
     "title": "Everyday help in {market}",
-    "description": "Find a hand with assembly, moving, yard cleanup, cleaning, or computer help. Start with a task and choose the offer that fits."
+    "description": "Find a hand with assembly, moving, yard cleanup, cleaning, or computer help. Start with a task and choose the offer that fits.",
+    "aboutTitle": "Getting help in {market}"
   },
   "category": {
     "title": "{category} in {market}",

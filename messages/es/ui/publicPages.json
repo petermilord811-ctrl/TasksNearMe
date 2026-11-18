@@ -154,7 +154,8 @@
   },
   "market": {
     "title": "Ayuda de todos los días en {market}",
-    "description": "Encuentra una mano para armar muebles, hacer una mudanza, limpiar el jardín, limpiar la casa o resolver un problema con la computadora. Empieza con una tarea y elige la oferta que mejor te convenga."
+    "description": "Encuentra una mano para armar muebles, hacer una mudanza, limpiar el jardín, limpiar la casa o resolver un problema con la computadora. Empieza con una tarea y elige la oferta que mejor te convenga.",
+    "aboutTitle": "Cómo conseguir ayuda en {market}"
   },
   "category": {
     "title": "{category} en {market}",

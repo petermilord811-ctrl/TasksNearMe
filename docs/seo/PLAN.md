@@ -53,6 +53,22 @@ Facts that shape everything:
   form validation (zod, pulled in through `@/contracts`) rides along on public pages (§5, S9).
 - Visible text: home ~1,100 words, a category page ~510, the board ~680.
 
+**2026-11-18, after the Gainesville flip (Ship 44202542176, then d0ff36f):**
+- Search Console has 30 of the 74 sitemap pages indexed: every site-wide page in both languages (home, how it works,
+  pricing, become a helper, trust and safety, the help center). 38 are "discovered, not indexed" and 6 are still
+  unknown: Gainesville's 34 pages, /cities, /cities/florida and the newest guides, none crawled yet.
+- Nothing technical holds them back. All 74 answer 200 in about 10 ms, with self-canonicals, hreflang (en, es,
+  x-default) and JSON-LD. The sitemap carries real lastmod dates and its hreflang links.
+- Austin's 34 indexed pages now answer 404 and drop out as Google recrawls them. Since d0ff36f that includes the board
+  and the job hubs, which streamed a soft 404 before.
+- What limits indexing is Google's crawl rate for a four-day-old domain: about 1 to 15 pages a day so far.
+- What raises it:
+  - Google recrawling the home page, which links to every Gainesville page;
+  - "Request indexing" (§8);
+  - links from other sites (§8);
+  - pages with substance once crawled (S1.7).
+- Austin's job hubs were the pages Google never crawled at all, while it indexed the category and cost pages.
+
 **The biggest risk, resolved 2026-11-17 (§6.1):** public pages showed sample people with fake ratings, reviews and
 "ID verified · Background checked" badges, and Google could index those pages. The owner chose (a): only signed-in
 testers see the sample marketplace; the public and search engines see real rows only.
@@ -244,7 +260,8 @@ d4 task board and task page), **owner** (§8). Status as of writing.
 | S1.3 | Search Console: submit sitemap, inspect key pages, daily report of queries, positions and indexed pages (`scripts/seo/google.mjs`) | b7 | Live since 2026-11-17: sitemap read (62 pages, 0 errors), 54 indexed, 8 newest discovered; first queries at positions 13–96 |
 | S1.4 | Request indexing for the ten most important URLs | owner | §8 |
 | S1.5 | Bing Webmaster Tools: import from Search Console | owner | §8 |
-| S1.6 | Footer links to Austin's category pages and the board (every indexable page within 3 clicks) | UI (83) | Live (f13f131) |
+| S1.6 | Footer links to the first city's category pages and the board (every indexable page within 3 clicks) | UI (83) | Live (f13f131) |
+| S1.7 | City guide on the city page (`content/cities/<market>.md`, Spanish in `content/cities/es/`): the area, the city's year, prices and safety, ~330 more words on a page that was mostly empty states | 37 | Built 2026-11-18 (Gainesville) |
 
 ### S2 Supply-gated pages
 | ID | Item | Owner | Status |
@@ -414,21 +431,22 @@ loads 233 kB of gzipped JavaScript (445 before). Search Console still answers 40
      `service-account-for-seo@gen-lang-client-0595306371.iam.gserviceaccount.com` as **Owner** of the verified Domain
      property `tasksnearme.com`.
    - Leave the AI features control at "Include".
-2. **Request indexing** (URL Inspection → Request indexing), about 10 a day:
-   - `https://tasksnearme.com/`, `/es`, `/austin`, `/austin/tasks`;
-   - the five `/austin/<category>` pages;
-   - `/become-a-helper`.
+2. **Request indexing** (URL Inspection → Request indexing), about 10 a day. Gainesville's pages, since 2026-11-18:
+   - `https://tasksnearme.com/` (Google's copy still shows Austin), `/gainesville`, `/gainesville/tasks`;
+   - `/cities`, `/cities/florida`;
+   - the five `/gainesville/<category>` pages;
+   - the next days: `/es/gainesville`, the cost guides (`/gainesville/<category>/cost`), the newest help guides.
 3. **Bing Webmaster Tools:** sign in, "Import from Google Search Console".
 4. ~~**Decide on the sample data** (§6.1).~~ Done 2026-11-17: (a), hidden from the public and search engines.
 5. **Profiles named exactly "TasksNearMe"**, each linking to tasksnearme.com: LinkedIn, Facebook, Instagram, X, a
    Nextdoor business page, Crunchbase, a Product Hunt launch. Send the URLs, and they go into the Organization's
    `sameAs`.
-6. **Austin links and mentions** (never paid links):
-   - neighborhood associations and newsletters;
-   - UT Austin housing and move-in pages;
-   - local press;
-   - r/Austin (people search "taskrabbit austin reddit");
-   - furniture stores and property managers (the IKEA model: book assembly at checkout).
+6. **Gainesville links and mentions** (never paid links), the first city since 2026-11-17:
+   - neighborhood associations and newsletters (Duckpond, Pleasant Street, University Heights, Haile Plantation);
+   - UF's off-campus housing and move-in pages, and student organizations;
+   - local press: The Independent Florida Alligator, The Gainesville Sun, WUFT, Mainstreet Daily News;
+   - r/GNV and r/ufl (people search "reddit gainesville handyman");
+   - apartment complexes and property managers near campus (move-in and move-out help), furniture sellers.
 7. **Google Business Profile:** the marketplace itself is likely ineligible (lead generation); helpers who run real
    businesses can have their own.
 8. **At launch:** the posting-flow notice and the privacy-policy line for Google Jobs (S6), and who pays for background

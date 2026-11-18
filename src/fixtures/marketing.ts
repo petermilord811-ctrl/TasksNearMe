@@ -3,6 +3,7 @@ import type {
   CategoryPageData,
   CategorySeoContent,
   CategorySlug,
+  ContentBlock,
   CostGuidePageData,
   CategoryView,
   HomePageData,
@@ -254,8 +255,17 @@ export const homePrelaunchData: HomePageData = { ...homePageData, aiDraftingEnab
  */
 export const homeNoListingsData: HomePageData = { ...homePageData, recentTasks: [], featuredHelpers: [], map: { ...austinLandingMap, pins: [] }, helpers: { verified: 0, openThisWeek: 0 } };
 
-/** The market page before the first real helper and task (as `homeNoListingsData`). */
-export const marketNoListingsData: MarketPageData = { market: austinMarket, categories: categoryViews, recentTasks: [], featuredHelpers: [] };
+/** A city's own guide (content/cities), as its page shows it: the area, the city's year, prices and safety. */
+export const marketCityGuide: ContentBlock[] = [
+  { type: 'paragraph', content: ['TasksNearMe connects people in Austin with verified neighbors for everyday tasks. You describe what you need, helpers nearby send offers with their price, and you choose the one that fits.'] },
+  { type: 'heading', text: 'Where it works' },
+  { type: 'paragraph', content: ['The city and nearby, within about 15 miles of downtown. Helpers see only the general area while they make offers, and only the helper you book sees the address.'] },
+  { type: 'heading', text: 'The year' },
+  { type: 'list', ordered: false, items: [['Spring: yard cleanups as the oaks drop their old leaves.'], ['Summer: outdoor work goes best early in the day.']] },
+];
+
+/** The market page before the first real helper and task (as `homeNoListingsData`), with the city's guide. */
+export const marketNoListingsData: MarketPageData = { market: austinMarket, categories: categoryViews, recentTasks: [], featuredHelpers: [], about: marketCityGuide };
 
 export const furnitureCategoryPageData: CategoryPageData = {
   market: austinMarket,

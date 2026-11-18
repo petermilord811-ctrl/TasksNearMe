@@ -1,5 +1,5 @@
 ---
-title: Gana dinero con trabajos cerca de ti
+title: Cómo ganar dinero con trabajos cerca de ti
 summary: Elige el trabajo, pon tu precio y cobra por tareas cerca de casa.
 ---
 Si eres hábil con las manos, tienes fuerza o paciencia con las computadoras, tus vecinos te necesitan. En TasksNearMe eliges las tareas, pones tu precio y cobras a través de la app.

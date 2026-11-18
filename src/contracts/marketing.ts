@@ -152,6 +152,11 @@ export interface MarketPageData {
   categories: CategoryView[];
   recentTasks: TaskPublicView[];
   featuredHelpers: HelperSummary[];
+  /**
+   * The city's own guide, in the page's language (content/cities): the area it covers, its year, prices and safety.
+   * Absent: the section doesn't show.
+   */
+  about?: ContentBlock[];
 }
 
 export interface CategoryPageData {

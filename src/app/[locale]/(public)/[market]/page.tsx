@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
+import { getCityGuide } from '@/modules/content/loaders';
 import { getMarketPageData } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
@@ -14,7 +15,7 @@ import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { MarketScreen } from '@/ui/screens/public/market-screen';
 import { MarketTime } from '@/ui/lib/market-time';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
-import { routes } from '@/contracts';
+import { routes, type ContentBlock } from '@/contracts';
 
 export async function generateStaticParams() {
   const slugs = await listPublicMarketSlugs();
@@ -38,8 +39,8 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
 
 /**
  * Params are awaited outside Suspense, so every market URL gets its own cached shell and unknown ones a real 404. The
- * structured data names only the city and its services. The screen is drawn for the visitor inside Suspense
- * (src/shared/sample-data.ts: sample people and tasks for signed-in testers only).
+ * structured data names only the city and its services, and the city's guide is the same for everyone. The screen is
+ * drawn for the visitor inside Suspense (src/shared/sample-data.ts: sample people and tasks for signed-in testers only).
  */
 async function MarketPage({ params }: PageProps<'/[locale]/[market]'>) {
   const { market } = await params;
@@ -48,6 +49,7 @@ async function MarketPage({ params }: PageProps<'/[locale]/[market]'>) {
   const [context, t, categoryName] = await Promise.all([structuredDataContext(), getTranslations('server.meta.market'), categoryNames()]);
   const { market: view, categories } = page.data;
   const path = routes.market(view.slug);
+  const about = getCityGuide(view.slug, context.locale) ?? undefined;
   return (
     <>
       <JsonLd
@@ -66,16 +68,16 @@ async function MarketPage({ params }: PageProps<'/[locale]/[market]'>) {
         ]}
       />
       <Suspense fallback={<PageSkeleton variant="cards" />}>
-        <Market slug={view.slug} />
+        <Market slug={view.slug} about={about} />
       </Suspense>
     </>
   );
 }
 
-async function Market({ slug }: { slug: string }) {
+async function Market({ slug, about }: { slug: string; about?: ContentBlock[] }) {
   const page = await getMarketPageData(slug, await requestRows());
   if (!page) notFound();
-  return <MarketTime timeZone={page.data.market.timeZone}><MarketScreen data={page.data} now={page.now} /></MarketTime>;
+  return <MarketTime timeZone={page.data.market.timeZone}><MarketScreen data={{ ...page.data, ...(about ? { about } : {}) }} now={page.now} /></MarketTime>;
 }
 
 export default withClientMessages('[locale]/(public)/[market]/page.tsx', MarketPage);

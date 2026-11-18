@@ -5,11 +5,12 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { CATEGORY_SLUGS, routes } from '@/contracts';
-import { categoryViews, furnitureCategoryPageData, homeEmptyMapData } from '@/fixtures';
+import { categoryViews, furnitureCategoryPageData, homeEmptyMapData, marketNoListingsData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { HomeScreen } from './home-screen';
 import { CategoryScreen } from './category-screen';
 import { HowItWorksScreen } from './how-it-works-screen';
+import { MarketScreen } from './market-screen';
 
 afterEach(cleanup);
 const now = '2026-11-17T15:00:00.000Z';
@@ -31,6 +32,18 @@ describe('public marketing copy', () => {
     const copy = messages.publicPages.categories[slug];
     expect(Object.keys(copy.included).length).toBeGreaterThan(0);
     expect(Object.keys(copy.excluded).length).toBeGreaterThan(0);
+  });
+});
+
+describe("the city's page", () => {
+  it("shows the city's guide when there is one, and no empty section without it", () => {
+    renderScreen(<MarketScreen data={marketNoListingsData} now={now} />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Getting help in Austin' })).toBeDefined();
+    expect(screen.getByRole('heading', { level: 3, name: 'Where it works' })).toBeDefined();
+    expect(screen.getByText(/only the helper you book sees the address/)).toBeDefined();
+    cleanup();
+    renderScreen(<MarketScreen data={{ ...marketNoListingsData, about: undefined }} now={now} />);
+    expect(screen.queryByRole('heading', { name: 'Getting help in Austin' })).toBeNull();
   });
 });
 

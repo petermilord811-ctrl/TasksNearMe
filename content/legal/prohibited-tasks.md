@@ -15,7 +15,7 @@ updated: 2026-11-11
 - Handling passwords, banking, or crypto wallets, or installing remote-access tools.
 
 ## 2. Category limits {#categories}
-Each category lists what's included and what isn't on its page, for example [furniture assembly](/austin/furniture-assembly).
+Each category lists what's included and what isn't on its page, for example [furniture assembly](/gainesville/furniture-assembly).
 
 ## 3. What we do {#enforcement}
 We remove tasks that break these rules and may restrict accounts. Report a task you think breaks them.

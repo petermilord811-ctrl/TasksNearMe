@@ -153,6 +153,21 @@ export function getLocalGuide(marketSlug: string, categorySlug: string, locale: 
   return blocks.length > 0 ? blocks : null;
 }
 
+/**
+ * A city's own guide (content/cities/<market>.md; Spanish in content/cities/es/<market>.md): what TasksNearMe is there,
+ * the area it covers, the city's year, and how prices and safety work, shown on the city's page (docs/seo/PLAN.md S2).
+ * Null when there is none in that language: a page never mixes languages.
+ */
+export function getCityGuide(marketSlug: string, locale: AppLocale = DEFAULT_LOCALE): ContentBlock[] | null {
+  if (!SLUG.test(marketSlug)) return null;
+  const dir = locale === DEFAULT_LOCALE ? path.join(CONTENT_DIR, 'cities') : path.join(CONTENT_DIR, 'cities', locale);
+  const file = path.join(dir, `${marketSlug}.md`);
+  if (!fs.existsSync(/*turbopackIgnore: true*/ file)) return null;
+  const { body } = splitFrontMatter(fs.readFileSync(/*turbopackIgnore: true*/ file, 'utf8'));
+  const blocks = parseBlocks(body);
+  return blocks.length > 0 ? blocks : null;
+}
+
 /** The legal documents in effect, with their last update, for the sitemap. Drafts are noindex, so they're left out. */
 export function listPublishedLegalDocs(): { doc: LegalDoc; updatedAt: ISODateTime }[] {
   return LEGAL_DOCS.flatMap((doc) => {

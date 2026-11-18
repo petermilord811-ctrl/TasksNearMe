@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ContentBlock, InlineNode } from '@/contracts';
 import { CATEGORY_SLUGS, LEGAL_DOCS } from '@/contracts';
 import fs from 'node:fs';
-import { getHelpArticle, getHelpCenterData, getLegalDoc, getLocalGuide, listHelpArticleDates, listHelpArticleSlugs, listPublishedLegalDocs } from './loaders';
+import { getCityGuide, getHelpArticle, getHelpCenterData, getLegalDoc, getLocalGuide, listHelpArticleDates, listHelpArticleSlugs, listPublishedLegalDocs } from './loaders';
 
 /** Checks the real files in content/: every article and document parses, and links resolve. */
 
@@ -31,7 +31,9 @@ function isKnownInternalLink(href: string): boolean {
   if (legal) return (LEGAL_DOCS as readonly string[]).includes(legal[1]!);
   const help = /^\/help\/([a-z0-9-]+)$/.exec(pathname);
   if (help) return slugs.includes(help[1]!);
-  const category = /^\/austin\/([a-z-]+)$/.exec(pathname);
+  // Only an open city's pages: Gainesville, the first city (Austin's answer 404 while it's paused).
+  if (pathname === '/gainesville' || pathname === '/gainesville/tasks') return true;
+  const category = /^\/gainesville\/(?:tasks\/)?([a-z-]+)(?:\/cost)?$/.exec(pathname);
   if (category) return (CATEGORY_SLUGS as readonly string[]).includes(category[1]!);
   return false;
 }
@@ -134,6 +136,33 @@ describe('city guides (content/local)', () => {
     expect(getLocalGuide('chicago', 'furniture-assembly')).toBeNull();
     expect(getLocalGuide('austin', '../legal/terms')).toBeNull();
     expect(getLocalGuide('../content', 'furniture-assembly')).toBeNull();
+  });
+});
+
+describe("a city's own guide (content/cities)", () => {
+  const words = (blocks: ContentBlock[]) =>
+    JSON.stringify(blocks).replace(/"(type|content|items|text|href|ordered|tone|strong)":/g, ' ').split(/\s+/).filter((word) => /\p{L}/u.test(word)).length;
+  const cities = fs.readdirSync('content/cities').filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3));
+
+  it('exists for Gainesville, the first city', () => {
+    expect(cities).toContain('gainesville');
+  });
+
+  it.each(cities)('%s exists in English and Spanish, with substance, the same links, and links only to https or this site', (city) => {
+    const english = getCityGuide(city, 'en')!;
+    const spanish = getCityGuide(city, 'es')!;
+    for (const [locale, blocks] of [['en', english], ['es', spanish]] as const) {
+      expect(blocks, locale).not.toBeNull();
+      expect(words(blocks), locale).toBeGreaterThan(250);
+      for (const href of hrefs(blocks)) expect(href.startsWith('https://') || isKnownInternalLink(href), href).toBe(true);
+    }
+    expect(spanish.map((block) => block.type)).toEqual(english.map((block) => block.type));
+    expect(hrefs(spanish)).toEqual(hrefs(english));
+  });
+
+  it('has nothing for a city without one, and refuses unsafe slugs', () => {
+    expect(getCityGuide('chicago')).toBeNull();
+    expect(getCityGuide('../legal/terms')).toBeNull();
   });
 });
 
