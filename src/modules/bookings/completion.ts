@@ -26,7 +26,8 @@ import { consumeRateLimit } from '@/platform/rate-limit';
 import { checklistAnswers, checklistFor } from './checklist';
 import { autoApproveDue, completionViewOf } from './completion-view';
 import { getBookingView, type HubDeps } from './hub';
-import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookings, bookingTerms } from './schema';
+import { OPEN_CHANGE_STATUSES } from './changes-domain';
+import { bookingChangeRequests, bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookings, bookingTerms } from './schema';
 
 /**
  * Completing the work and reporting a problem (blueprint 02 J6, 03 §4): the helper sends evidence
@@ -157,6 +158,11 @@ export async function submitCompletion(db: Db, helperId: string, bookingId: stri
       .where(and(eq(bookings.id, ctx.booking.id), eq(bookings.status, ctx.booking.status)))
       .returning({ id: bookings.id });
     if (rows.length === 0) return false;
+    // The final numbers come from these terms: an open change can't re-price the booking now (money review #4).
+    await tx
+      .update(bookingChangeRequests)
+      .set({ status: 'expired', decidedAt: now, updatedAt: now })
+      .where(and(eq(bookingChangeRequests.bookingId, ctx.booking.id), inArray(bookingChangeRequests.status, [...OPEN_CHANGE_STATUSES])));
     await tx.insert(bookingCompletions).values({
       bookingId: ctx.booking.id,
       submittedAt: now,

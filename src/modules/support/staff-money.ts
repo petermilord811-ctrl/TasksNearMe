@@ -36,6 +36,7 @@ import { consumeRateLimit } from '@/platform/rate-limit';
 import { refundRequests, supportCases } from './schema';
 import { bookingMoneyFacts, caseRowsFor, conversationView, discretionaryRefundedCents, personSummaryOf, previewResolution, resolveCase, type StaffActor } from './staff';
 import { MONEY_RESOLUTIONS, canApproveRefund, canWorkCases, refundLimitOf, type ResolutionMoney } from './staff-domain';
+import { refundAcross, refundableCharges, refundMade } from '@/modules/payments/refund-across';
 
 /**
  * Money for staff (UI-019; blueprint 04 §6, 08 staff limits): the money effects of case resolutions, the
@@ -59,40 +60,23 @@ async function audit(db: Db, staff: StaffActor, action: string, targetType: stri
   });
 }
 
-/** Refunds part of a booking's charge through the provider (idempotent by key); false when it failed. */
+/**
+ * Refunds part of a booking's money through the provider, idempotent by key; false when it failed. It's spread over the
+ * booking's charges that still have money on them (its payment, a paid change), each up to what's left of it (money
+ * review #2, lifecycle review #7): a refund larger than the first charge no longer fails at the provider.
+ */
 async function refundCharge(
   db: Db,
   payments_: PaymentProvider,
   input: { bookingId: string; amountCents: number; reason: string; idempotencyKey: string; now: Date },
 ): Promise<boolean> {
+  // An earlier refund under this key: one charge (before the spread) or several.
   const [existing] = await db.select({ status: refunds.status }).from(refunds).where(eq(refunds.idempotencyKey, input.idempotencyKey)).limit(1);
   if (existing) return existing.status !== 'failed';
-  const [charge] = await db
-    .select()
-    .from(payments)
-    .where(and(eq(payments.bookingId, input.bookingId), eq(payments.purpose, 'booking_funding'), inArray(payments.status, ['succeeded', 'partially_refunded'])))
-    .limit(1);
-  if (!charge?.providerRef) return false;
-  const result = await payments_.refund({ chargeRef: charge.providerRef, amountCents: input.amountCents, idempotencyKey: input.idempotencyKey });
-  await db.insert(refunds).values({
-    id: newId('ref'),
-    paymentId: charge.id,
-    bookingId: input.bookingId,
-    amountCents: input.amountCents,
-    reason: input.reason,
-    status: result.status,
-    providerRef: result.refundRef,
-    idempotencyKey: input.idempotencyKey,
-    createdAt: input.now,
-  });
-  if (result.status !== 'succeeded') return false;
-  const succeeded = await db.select({ amountCents: refunds.amountCents }).from(refunds).where(and(eq(refunds.paymentId, charge.id), eq(refunds.status, 'succeeded')));
-  const refunded = succeeded.reduce((sum, row) => sum + row.amountCents, 0);
-  await db
-    .update(payments)
-    .set({ status: refunded >= charge.amountCents ? 'refunded' : 'partially_refunded', updatedAt: input.now })
-    .where(eq(payments.id, charge.id));
-  return true;
+  const earlier = await refundMade(db, input.idempotencyKey);
+  if (earlier.made) return earlier.ok;
+  const result = await refundAcross({ db, payments: payments_ }, input.bookingId, await refundableCharges(db, input.bookingId), input.amountCents, { reason: input.reason, key: input.idempotencyKey }, input.now);
+  return result.ok;
 }
 
 /**

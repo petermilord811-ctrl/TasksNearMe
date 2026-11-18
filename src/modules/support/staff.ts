@@ -49,7 +49,7 @@ import type { EmailProvider } from '@/integrations/email';
 import { staffRoles, users } from '@/modules/accounts/schema';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { payments, refunds } from '@/modules/payments/schema';
-import { bookingTerms, bookings } from '@/modules/bookings/schema';
+import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { photoFromFile } from '@/modules/files/uploads';
 import { messages, threadParticipants, threads } from '@/modules/messaging/schema';
 import { initialsOf } from '@/modules/profiles/queries';
@@ -545,8 +545,9 @@ export async function bookingMoneyFacts(db: Db, bookingId: string): Promise<Book
     .where(eq(bookings.id, bookingId))
     .limit(1);
   if (!row) return null;
-  const [[terms], paid, refunded, policy] = await Promise.all([
+  const [[terms], [completion], paid, refunded, policy] = await Promise.all([
     db.select({ breakdown: bookingTerms.breakdown }).from(bookingTerms).where(and(eq(bookingTerms.bookingId, bookingId), eq(bookingTerms.version, row.termsVersion))).limit(1),
+    db.select({ final: bookingCompletions.finalBreakdown }).from(bookingCompletions).where(eq(bookingCompletions.bookingId, bookingId)).limit(1),
     // A client's tip is the helper's (UI-057): not part of what staff refund or settle.
     db
       .select({ amountCents: payments.amountCents })
@@ -557,7 +558,10 @@ export async function bookingMoneyFacts(db: Db, bookingId: string): Promise<Book
   ]);
   const chargedCents = paid.reduce((sum, item) => sum + item.amountCents, 0);
   if (!terms || !policy || chargedCents === 0) return null;
-  return { fees: policy.fees, priceCents: terms.breakdown.taskPriceCents, chargedCents, refundedCents: refunded.reduce((sum, item) => sum + item.amountCents, 0) };
+  // Once the work is submitted, a settlement is measured from the submitted price, not the agreed one (an hourly cap):
+  // the submitted numbers already give back the unused hours, so counting from the cap gave them back twice (money
+  // review #3). Settled: the client pays P' plus its fee (and approved expenses); the rest comes back.
+  return { fees: policy.fees, priceCents: completion?.final.taskPriceCents ?? terms.breakdown.taskPriceCents, chargedCents, refundedCents: refunded.reduce((sum, item) => sum + item.amountCents, 0) };
 }
 
 /** The money a resolution would move on this case's booking, and whether it is within the viewer's refund limit. */

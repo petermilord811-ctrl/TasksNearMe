@@ -14,10 +14,9 @@ import { refundLimitOf } from '@/modules/support/staff-domain';
 import { createPaymentProvider, type PaymentProvider } from '@/integrations/payments';
 import { recordCompensation } from '@/modules/earnings/service';
 import { marketPolicies } from '@/modules/markets/schema';
-import { openRefundCase } from '@/modules/oncall/reactions';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { cancellationSummary, lateCancellation } from '@/modules/payments/fees';
-import { payments, refunds } from '@/modules/payments/schema';
+import { refundAcross, refundableCharges } from '@/modules/payments/refund-across';
 import { supportCases } from '@/modules/support/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
@@ -28,7 +27,8 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { reopenAfterHelperCancel } from './after-cancel';
 import { CANT_ACCESS_AFTER_ARRIVAL_MS, CANT_ACCESS_ANSWER_MS } from './domain';
-import { bookings, bookingTerms, helperStrikes } from './schema';
+import { OPEN_CHANGE_STATUSES } from './changes-domain';
+import { bookingChangeRequests, bookings, bookingTerms, helperStrikes } from './schema';
 
 /**
  * The booking sheets (blueprint 03 §4, 04 §6): cancelling with the policy outcome and the money that
@@ -107,37 +107,16 @@ export async function previewCancellation(db: Db, userId: string, bookingId: str
   };
 }
 
-/** Refunds the booking's captured charge (in part or in full). */
+/**
+ * Refunds a cancellation (money review #1, #2): `amountCents` spread over the booking's charges that still have money
+ * on them (its payment, then any paid change), oldest first, each up to what's left of it. A charge already partly
+ * refunded (a lower price after a change, a goodwill refund) still counts, and a refund larger than the first charge
+ * reaches the change's. Each refund row is written (pending) before the provider is called; a refusal or a throw
+ * leaves it failed with a case in finance's queue.
+ */
 async function refundCharge(deps: SheetDeps, booking: BookingRow, amountCents: number, now: Date): Promise<void> {
   if (amountCents <= 0) return;
-  const [charge] = await deps.db
-    .select()
-    .from(payments)
-    .where(and(eq(payments.bookingId, booking.id), eq(payments.purpose, 'booking_funding'), eq(payments.status, 'succeeded')))
-    .limit(1);
-  if (!charge?.providerRef) return;
-  const idempotencyKey = `refund:${booking.id}:cancellation`;
-  const result = await deps.payments.refund({ chargeRef: charge.providerRef, amountCents, idempotencyKey });
-  await deps.db
-    .insert(refunds)
-    .values({
-      id: newId('ref'),
-      paymentId: charge.id,
-      bookingId: booking.id,
-      amountCents,
-      reason: 'cancellation',
-      status: result.status,
-      providerRef: result.refundRef,
-      idempotencyKey,
-      createdAt: now,
-    })
-    .onConflictDoNothing({ target: refunds.idempotencyKey });
-  if (result.status === 'succeeded') {
-    await deps.db
-      .update(payments)
-      .set({ status: amountCents >= charge.amountCents ? 'refunded' : 'partially_refunded', updatedAt: now })
-      .where(eq(payments.id, charge.id));
-  }
+  await refundAcross(deps, booking.id, await refundableCharges(deps.db, booking.id), amountCents, { reason: 'cancellation', key: `refund:${booking.id}:cancellation` }, now);
 }
 
 /**
@@ -173,6 +152,11 @@ async function cancelWith(
     if (updated.length === 0) return false;
     // A client cancellation or no-show leaves the task closed; the client can reopen it (find a replacement).
     await tx.update(tasks).set({ status: 'canceled', updatedAt: now }).where(eq(tasks.id, booking.taskId));
+    // Open changes end with the booking (money review #4): none can be accepted or paid afterwards.
+    await tx
+      .update(bookingChangeRequests)
+      .set({ status: 'expired', decidedAt: now, updatedAt: now })
+      .where(and(eq(bookingChangeRequests.bookingId, booking.id), inArray(bookingChangeRequests.status, [...OPEN_CHANGE_STATUSES])));
     if (outcome.strike) {
       await tx.insert(helperStrikes).values({ id: newId('stk'), helperUserId: booking.helperUserId, bookingId: booking.id, reason: outcome.strike, createdAt: now });
     }
@@ -247,69 +231,13 @@ export async function cancelBookingByStaff(deps: SheetDeps, staff: { id: string;
     { reason: 'admin', late: false, refund, compensation: 0, strike: null },
     { by: 'staff', note: parsed.data.note, expected: [row.booking.status], staff: { role, refundCents: refund } },
     now,
-    () => refundRemainders(deps, row.booking, charges, now),
+    async () => {
+      await refundAcross(deps, row.booking.id, charges, null, { reason: 'cancellation', key: `refund:${row.booking.id}:staff_cancel` }, now);
+    },
   );
 }
 
-/** A charge on the booking and how much of it can still be refunded. */
-export interface RefundableCharge {
-  id: string;
-  providerRef: string | null;
-  amountCents: number;
-  remainingCents: number;
-}
 
-/**
- * The booking's charges with money left on them (completion plan 5.18): the booking itself and any paid changes,
- * minus what was refunded already (goodwill, a change that lowered the price) or is being refunded.
- */
-export async function refundableCharges(db: Db, bookingId: string): Promise<RefundableCharge[]> {
-  const charges = await db
-    .select()
-    .from(payments)
-    .where(and(eq(payments.bookingId, bookingId), inArray(payments.purpose, ['booking_funding', 'change_funding']), inArray(payments.status, ['succeeded', 'partially_refunded'])));
-  if (charges.length === 0) return [];
-  const taken = await db
-    .select({ paymentId: refunds.paymentId, amountCents: refunds.amountCents })
-    .from(refunds)
-    .where(and(inArray(refunds.paymentId, charges.map((charge) => charge.id)), inArray(refunds.status, ['succeeded', 'pending'])));
-  return charges
-    .map((charge) => ({
-      id: charge.id,
-      providerRef: charge.providerRef,
-      amountCents: charge.amountCents,
-      remainingCents: charge.amountCents - taken.filter((row) => row.paymentId === charge.id).reduce((total, row) => total + row.amountCents, 0),
-    }))
-    .filter((charge) => charge.remainingCents > 0);
-}
-
-/**
- * Refunds what's left of each charge. The refund row is written (pending) before the provider is called, so a
- * call that throws leaves a failed refund and a case in finance's queue (opened once per payment) instead of
- * nothing.
- */
-async function refundRemainders(deps: SheetDeps, booking: BookingRow, charges: RefundableCharge[], now: Date): Promise<void> {
-  for (const charge of charges) {
-    const idempotencyKey = `refund:${booking.id}:staff_cancel:${charge.id}`;
-    const [pending] = await deps.db
-      .insert(refunds)
-      .values({ id: newId('ref'), paymentId: charge.id, bookingId: booking.id, amountCents: charge.remainingCents, reason: 'cancellation', status: 'pending', providerRef: null, idempotencyKey, createdAt: now })
-      .onConflictDoNothing({ target: refunds.idempotencyKey })
-      .returning({ id: refunds.id });
-    if (!pending) continue;
-    try {
-      if (!charge.providerRef) throw new Error(`payment ${charge.id} has no provider reference`);
-      const result = await deps.payments.refund({ chargeRef: charge.providerRef, amountCents: charge.remainingCents, idempotencyKey });
-      await deps.db.update(refunds).set({ status: result.status, providerRef: result.refundRef }).where(eq(refunds.id, pending.id));
-      if (result.status === 'succeeded') await deps.db.update(payments).set({ status: 'refunded', updatedAt: now }).where(eq(payments.id, charge.id));
-      if (result.status === 'failed') await openRefundCase(deps.db, charge.id, 'staff_cancel_refund_failed', now);
-    } catch (error) {
-      console.error(`[bookings] refunding ${charge.id} after a staff cancellation failed`, error);
-      await deps.db.update(refunds).set({ status: 'failed' }).where(eq(refunds.id, pending.id));
-      await openRefundCase(deps.db, charge.id, 'staff_cancel_refund_failed', now);
-    }
-  }
-}
 
 const STAFF_CANCELABLE = ['confirmed', 'scheduled', 'in_progress'];
 const STAFF_CANCEL_LEADS: readonly StaffRole[] = ['support_lead', 'trust_safety', 'admin'];

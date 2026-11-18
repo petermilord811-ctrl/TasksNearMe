@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lte, ne } from 'drizzle-orm';
 import type {
   ActionResult,
   AddCardInput,
@@ -20,6 +20,7 @@ import type {
 import { addCardInputSchema } from '@/contracts';
 import { createPaymentProvider, type CollectedCard, type PaymentProvider } from '@/integrations/payments';
 import { redeemCredits } from '@/modules/credits/service';
+import { refundAcross, refundableCharges } from '@/modules/payments/refund-across';
 import { helperRebateAmount, helperRebateTerms, lockRebates, payPosterRebate, versionPlans } from '@/modules/billing/service';
 import { stripeConnectFromEnv } from '@/integrations/payments/stripe-connect';
 import { instantPayoutOffer } from './instant';
@@ -115,37 +116,18 @@ export async function recordCompletionMoney(db: Db, bookingId: string, now: Date
     aggregateId: bookingId,
     payload: { bookingId, helperUserId: row.booking.helperUserId, earningsCents: final.helperEarningsCents },
   });
+  // The client's refund of unused hours, allowance or a settlement, across the booking's charges (a paid change is its
+  // own charge, money review #2), once: an earlier run's refund (also under the older single key) counts.
   const refundCents = final.posterRefundCents ?? 0;
   if (refundCents > 0 && payments_) {
-    const [charge] = await db
-      .select()
-      .from(payments)
-      .where(and(eq(payments.bookingId, bookingId), eq(payments.purpose, 'booking_funding'), inArray(payments.status, ['succeeded', 'partially_refunded'])))
+    const reason =
+      row.booking.completedVia === 'settlement' ? 'dispute_settlement' : row.terms.pricingType === 'hourly' && (final.approvedExpensesCents ?? 0) === 0 ? 'unused_cap' : 'unused_allowance';
+    const [existing] = await db
+      .select({ id: refunds.id })
+      .from(refunds)
+      .where(and(eq(refunds.bookingId, bookingId), inArray(refunds.reason, ['unused_cap', 'unused_allowance', 'dispute_settlement']), ne(refunds.status, 'failed')))
       .limit(1);
-    if (charge?.providerRef) {
-      const idempotencyKey = `refund:${bookingId}:completion`;
-      const [existing] = await db.select({ id: refunds.id }).from(refunds).where(eq(refunds.idempotencyKey, idempotencyKey)).limit(1);
-      if (!existing) {
-        const result = await payments_.refund({ chargeRef: charge.providerRef, amountCents: refundCents, idempotencyKey });
-        await db.insert(refunds).values({
-          id: newId('ref'),
-          paymentId: charge.id,
-          bookingId,
-          amountCents: refundCents,
-          reason:
-            row.booking.completedVia === 'settlement'
-              ? 'dispute_settlement'
-              : row.terms.pricingType === 'hourly' && (final.approvedExpensesCents ?? 0) === 0
-                ? 'unused_cap'
-                : 'unused_allowance',
-          status: result.status,
-          providerRef: result.refundRef,
-          idempotencyKey,
-          createdAt: now,
-        });
-        if (result.status === 'succeeded') await db.update(payments).set({ status: 'partially_refunded', updatedAt: now }).where(eq(payments.id, charge.id));
-      }
-    }
+    if (!existing) await refundAcross({ db, payments: payments_ }, bookingId, await refundableCharges(db, bookingId), refundCents, { reason, key: `refund:${bookingId}:completion` }, now);
   }
   // The client's credit (src/modules/credits): up to what the platform earned here, never more than they paid.
   if (payments_) {

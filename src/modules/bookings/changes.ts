@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lte, notInArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, lte, notInArray, sql } from 'drizzle-orm';
 import type {
   AcceptChangeInput,
   ActionResult,
@@ -20,7 +20,8 @@ import type { ChargeResult, PaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { quoteBreakdown } from '@/modules/payments/fees';
-import { payments, refunds } from '@/modules/payments/schema';
+import { refundAcross, refundableCharges } from '@/modules/payments/refund-across';
+import { payments } from '@/modules/payments/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
@@ -279,10 +280,21 @@ export async function getChangeReviewPage(db: Db, payments_: PaymentProvider | n
   };
 }
 
-/** The new terms version, inside the caller's transaction: false when the terms moved on meanwhile. */
+/** A booking a change can still apply to: ahead or under way, the work not yet submitted (money review #4). */
+const CHANGEABLE = ['confirmed', 'scheduled', 'in_progress'];
+
+/**
+ * The new terms version, inside the caller's transaction: false when the terms moved on meanwhile, or the booking
+ * is no longer open to a change (canceled, the work submitted, completed: its money is already settled, so a change
+ * paid then goes to support to refund instead of re-pricing it).
+ */
 async function writeChange(tx: Tx, row: ChangeRow, now: Date): Promise<boolean> {
-  const [booking] = await tx.select().from(bookings).where(eq(bookings.id, row.bookingId)).limit(1);
+  const [booking] = await tx.select().from(bookings).where(eq(bookings.id, row.bookingId)).limit(1).for('update');
   if (!booking || booking.termsVersion !== row.fromVersion) return false;
+  if (!CHANGEABLE.includes(booking.status) || booking.completionSubmittedAt) return false;
+  // Still open now: a change withdrawn, declined or expired meanwhile never applies, even if its payment lands later.
+  const [current] = await tx.select({ status: bookingChangeRequests.status }).from(bookingChangeRequests).where(eq(bookingChangeRequests.id, row.id)).limit(1).for('update');
+  if (!current || !(OPEN_CHANGE_STATUSES as readonly string[]).includes(current.status)) return false;
   const terms = changeTermsOf(row);
   const version = booking.termsVersion + 1;
   await tx.insert(bookingTerms).values({
@@ -309,20 +321,9 @@ async function writeChange(tx: Tx, row: ChangeRow, now: Date): Promise<boolean> 
 /** Applies accepted terms: a new terms version (the start moves if it changed); a lower total is refunded. */
 async function applyChange(db: Db, payments_: PaymentProvider | null, row: ChangeRow, now: Date): Promise<boolean> {
   const applied = await db.transaction((tx) => writeChange(tx, row, now));
+  // The lower total comes back across the booking's charges, each up to what's left of it (money review #2).
   if (applied && row.differenceCents < 0 && payments_) {
-    const [charge] = await db
-      .select()
-      .from(payments)
-      .where(and(eq(payments.bookingId, row.bookingId), eq(payments.purpose, 'booking_funding'), inArray(payments.status, ['succeeded', 'partially_refunded'])))
-      .orderBy(desc(payments.createdAt))
-      .limit(1);
-    if (charge?.providerRef) {
-      const idempotencyKey = `refund:${row.bookingId}:change:${row.id}`;
-      const amountCents = -row.differenceCents;
-      const result = await payments_.refund({ chargeRef: charge.providerRef, amountCents, idempotencyKey });
-      await db.insert(refunds).values({ id: newId('ref'), paymentId: charge.id, bookingId: row.bookingId, amountCents, reason: 'change_decrease', status: result.status, providerRef: result.refundRef, idempotencyKey, createdAt: now });
-      if (result.status === 'succeeded') await db.update(payments).set({ status: 'partially_refunded', updatedAt: now }).where(eq(payments.id, charge.id));
-    }
+    await refundAcross({ db, payments: payments_ }, row.bookingId, await refundableCharges(db, row.bookingId), -row.differenceCents, { reason: 'change_decrease', key: `refund:${row.bookingId}:change:${row.id}` }, now);
   }
   return applied;
 }
