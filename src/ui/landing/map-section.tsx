@@ -88,18 +88,20 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
         <div aria-hidden="true" className="pointer-events-none absolute top-0 left-1/2 z-[4] hidden h-px w-[min(56rem,62%)] -translate-x-1/2 opacity-55 lg:block dark:opacity-90" style={{ background: 'linear-gradient(90deg, transparent, var(--iri-1) 22%, var(--iri-2) 50%, var(--iri-3) 78%, transparent)' }} />
         {/* The real map: between the heading and the list on phones, under everything on wide screens. */}
         <div className="relative order-2 mt-6 h-[62svh] max-h-[36rem] min-h-[24rem] lg:absolute lg:inset-0 lg:order-none lg:mt-0 lg:h-auto lg:max-h-none">
-          <figure className="m-0 size-full">
+          {/* Below 1024 px the caption goes under the map, not over its bottom edge, where "Explore the map" sits. */}
+          <figure className="m-0 size-full max-lg:flex max-lg:flex-col">
             <p className="sr-only">{t('mapLabel', { market })}</p>
             <TaskMap
               map={data.map}
               market={market}
               mode={mapMode}
               variant="fill"
+              className="max-lg:min-h-0 max-lg:flex-1"
               padding={wide ? WIDE_PADDING : undefined}
               arrival={arrival}
               controlsClassName="right-[var(--page-gutter)] bottom-[16%] lg:top-[max(29rem,44%)] lg:right-auto lg:bottom-auto lg:left-[max(var(--page-gutter),calc(50%-35.5rem))] lg:items-start"
             />
-            <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] flex flex-wrap items-center justify-between gap-2 px-gutter pb-2 text-xs text-muted-foreground lg:mx-auto lg:max-w-[78rem] lg:pb-[3.5%]">
+            <figcaption className="pointer-events-none z-[1] flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-gutter pt-2 text-xs text-muted-foreground lg:absolute lg:inset-x-0 lg:bottom-0 lg:mx-auto lg:max-w-[78rem] lg:pt-0 lg:pb-[3.5%]">
               <span className="inline-flex items-center gap-1.5"><MapPin aria-hidden="true" className="size-3.5" />{t('caption')}</span>
               <span>{data.map.attribution}</span>
             </figcaption>

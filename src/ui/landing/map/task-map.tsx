@@ -424,7 +424,7 @@ export function TaskMap({
         <button
           type="button"
           onClick={() => setFullscreen(true)}
-          className="glass absolute bottom-12 left-1/2 z-[2] inline-flex min-h-11 -translate-x-1/2 items-center gap-2 rounded-full px-5 text-sm font-semibold text-foreground shadow-overlay transition-transform active:scale-95 lg:hidden"
+          className="glass absolute bottom-12 left-1/2 z-[2] inline-flex min-h-11 -translate-x-1/2 items-center gap-2 rounded-full px-5 text-sm font-semibold whitespace-nowrap text-foreground shadow-overlay transition-transform active:scale-95 lg:hidden"
         >
           <Expand aria-hidden="true" className="size-4 text-violet" />
           {t('exploreMap')}

@@ -37,7 +37,6 @@ export function HelpersSection({ data }: { data: HomePageData }) {
       <div className="mx-auto max-w-content px-gutter">
         <Reveal variant="bloom" origin="50% 100%">
           <div className="relative overflow-hidden rounded-[2.25rem] border border-foreground/[0.07] bg-card/70 p-6 shadow-card sm:p-10 lg:p-14">
-            <div aria-hidden="true" className="pointer-events-none absolute -top-32 -right-24 size-96 rounded-full opacity-35 blur-3xl" style={{ background: 'var(--iridescent)' }} />
             <div className="relative grid items-center gap-10 lg:grid-cols-[1.15fr_1fr]">
               <div>
                 <Heading id="helpers-title" eyebrow={t('eyebrow')} title={t('title')} accent={t('titleAccent')} body={t('body')} />

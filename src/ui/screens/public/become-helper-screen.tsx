@@ -1,5 +1,5 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { BadgeCheck, CircleDollarSign, Gift, ShieldCheck } from 'lucide-react';
+import { BadgeCheck, CircleDollarSign, Clock, Gift, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { BecomeHelperPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -76,7 +76,7 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
         <Section title={t('earningsTitle')}><p className="text-muted-foreground">{t('earningsDescription')}</p></Section>
         <Section title={t('timingTitle')}>
           <p className="text-muted-foreground">{t('timingDescription')}</p>
-          <p className="rounded-2xl border border-border bg-card p-4 font-medium tabular-nums">{t('firstPayout', { days: data.firstPayoutDays })}</p>
+          <p className="flex items-start gap-2.5 font-medium tabular-nums"><Clock aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" />{t('firstPayout', { days: data.firstPayoutDays })}</p>
         </Section>
       </div>
       <PriceBreakdown breakdown={data.exampleEarnings} variant="helper" title={t('earningsBreakdownTitle')} />
