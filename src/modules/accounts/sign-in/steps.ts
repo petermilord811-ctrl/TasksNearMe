@@ -28,6 +28,9 @@ export function safeNextPath(raw: string | null | undefined): string {
     const url = new URL(value, 'http://localhost');
     if (url.origin !== 'http://localhost') return fallback;
     if (url.pathname === '/sign-in' || url.pathname === '/sign-up' || url.pathname.startsWith('/api/')) return fallback;
+    // The parser resolves dot segments, so "/.//evil.example" or "/app/..//evil.example" comes out as "//evil.example",
+    // which a browser reads as another host: check the path it returns, not only the one it was given.
+    if (url.pathname.startsWith('//')) return fallback;
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return fallback;

@@ -24,6 +24,11 @@ describe('safeNextPath', () => {
     '',
     'https://evil.example/app',
     '//evil.example/app',
+    // Dot segments the parser resolves into a protocol-relative "//evil.example" (sweep 2026-11-18).
+    '/.//evil.example/x',
+    '/%2e//evil.example',
+    '/app/..//evil.example',
+    '/app/%2e%2e/%2e%2e//evil.example',
     '/\\evil.example',
     'javascript:alert(1)',
     '/sign-in?next=/app',
