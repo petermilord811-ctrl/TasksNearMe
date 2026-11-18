@@ -3,7 +3,8 @@
   "description": "Track your task payments, reimbursed expenses, and bank payouts.",
   "totals": {
     "label": "Your totals",
-    "upcoming": "Upcoming",
+    "upcoming": "Earned, not paid out yet",
+    "onHold": "{amount} of it is on hold while a problem report is reviewed.",
     "onTheWay": "On the way",
     "paidThisYear": "Paid this year"
   },

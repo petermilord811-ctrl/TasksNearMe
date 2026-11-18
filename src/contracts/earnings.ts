@@ -129,8 +129,10 @@ export interface InstantPayoutOffer {
 /** `/app/earnings`. */
 export interface EarningsPageData {
   totals: {
-    /** Approved work not yet transferred, plus amounts on hold. */
+    /** Earned, not paid out yet: approved work not yet transferred, plus amounts on hold (audit L12: not "upcoming bookings"). */
     upcomingCents: Cents;
+    /** The part of `upcomingCents` on hold while a problem report is reviewed; said under the total when above zero. */
+    onHoldCents: Cents;
     /** Transferred, waiting for the bank payout. */
     onTheWayCents: Cents;
     /** Paid out this calendar year. */

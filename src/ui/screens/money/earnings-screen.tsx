@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { CircleDollarSign, Info, Landmark } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BadgeTone, type EarningsHandlers, type EarningsPageData, type EarningsRowView, type ISODateTime, type PayoutAccountStatus, type PayoutStatus } from '@/contracts';
-import { marketLocalToUtc } from '@/shared/format';
+import { formatMoney, marketLocalToUtc } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
@@ -67,9 +67,11 @@ export function EarningsScreen({ data, handlers, now }: EarningsScreenProps) {
     <PageHeader title={t('title')} description={t('description')} />
     {/* The three totals in one card: stacked on phones, side by side from small screens up. */}
     <dl aria-label={t('totals.label')} className="grid divide-y divide-foreground/[0.07] overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] sm:grid-cols-3 sm:divide-x sm:divide-y-0 dark:divide-white/[0.06]">
-      {totals.map(({ label, cents }) => <div key={label} className="flex items-center justify-between gap-3 p-4 sm:block md:p-6">
+      {totals.map(({ label, cents }) => <div key={label} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 p-4 sm:block md:p-6">
         <dt className="text-sm text-muted-foreground">{t(`totals.${label}`)}</dt>
         <dd className="tabular-nums sm:mt-2"><Money cents={cents} size="lg" /></dd>
+        {/* What part of it waits on a problem report (audit L12). */}
+        {label === 'upcoming' && data.totals.onHoldCents > 0 && <dd className="w-full text-sm text-muted-foreground sm:mt-1">{t('totals.onHold', { amount: formatMoney(data.totals.onHoldCents) })}</dd>}
       </div>)}
     </dl>
     <section aria-labelledby="earnings-payout-account" className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] p-4 md:p-6">

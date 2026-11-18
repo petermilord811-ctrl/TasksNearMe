@@ -308,7 +308,7 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
   const latestPayout = payoutRows.reduce<(typeof payoutRows)[number] | undefined>((latest, row) => (!latest || row.createdAt > latest.createdAt ? row : latest), undefined);
   const bankFixed = latestPayout?.status === 'failed' && account?.bankUpdatedAt != null && account.bankUpdatedAt >= latestPayout.updatedAt;
   return {
-    totals: { upcomingCents: sum(['not_due', 'on_hold', 'scheduled']), onTheWayCents: sum(['transferred']), paidThisYearCents: paidThisYear },
+    totals: { upcomingCents: sum(['not_due', 'on_hold', 'scheduled']), onHoldCents: sum(['on_hold']), onTheWayCents: sum(['transferred']), paidThisYearCents: paidThisYear },
     rows: all,
     payoutAccount: {
       status,

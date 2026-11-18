@@ -3,7 +3,8 @@
   "description": "Sigue tus pagos por tareas, los gastos reembolsados y los pagos a tu banco.",
   "totals": {
     "label": "Tus totales",
-    "upcoming": "Próximos",
+    "upcoming": "Ganado, aún sin pagar",
+    "onHold": "{amount} está en espera mientras se revisa un reporte de problema.",
     "onTheWay": "En camino",
     "paidThisYear": "Pagado este año"
   },

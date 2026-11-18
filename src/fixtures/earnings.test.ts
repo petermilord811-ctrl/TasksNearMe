@@ -8,6 +8,7 @@ const sum = (data: EarningsPageData, statuses: string[]) =>
 describe('money fixtures', () => {
   it.each([jordanEarningsPageData, earningsFirstPayoutData])('earnings totals add up from the rows', (data) => {
     expect(data.totals.upcomingCents).toBe(sum(data, ['not_due', 'on_hold', 'scheduled']));
+    expect(data.totals.onHoldCents).toBe(sum(data, ['on_hold']));
     expect(data.totals.onTheWayCents).toBe(sum(data, ['transferred']));
     expect(data.totals.paidThisYearCents).toBe(sum(data, ['paid_out']));
   });

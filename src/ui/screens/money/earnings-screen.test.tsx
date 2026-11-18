@@ -19,6 +19,17 @@ function mount(data: EarningsPageData = jordanEarningsPageData, handlers: Earnin
 }
 
 describe('EarningsScreen', () => {
+  it('names the first total for what it is, and says what part of it is on hold (audit L12)', () => {
+    mount();
+    const totals = screen.getByLabelText(earnings.totals.label);
+    expect(within(totals).getByText('Earned, not paid out yet')).toBeInTheDocument();
+    expect(within(totals).queryByText('Upcoming')).not.toBeInTheDocument();
+    expect(screen.getByText('$63.00 of it is on hold while a problem report is reviewed.')).toBeInTheDocument();
+    cleanup();
+    mount(earningsFirstPayoutData);
+    expect(screen.queryByText(/on hold while a problem report/)).not.toBeInTheDocument();
+  });
+
   it('shows supplied totals, every transfer kind, client, amount, status and booking links', () => {
     mount();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);

@@ -181,7 +181,7 @@ const disputedEarnings: EarningsRowView = {
 };
 
 export const jordanEarningsPageData: EarningsPageData = {
-  totals: { upcomingCents: 7500, onTheWayCents: movingEarnings.amountCents, paidThisYearCents: 6200 },
+  totals: { upcomingCents: 7500, onHoldCents: 6300, onTheWayCents: movingEarnings.amountCents, paidThisYearCents: 6200 },
   rows: [disputedEarnings, lateCancellationEarnings, movingEarnings, deskReimbursement, deskEarnings],
   payoutAccount: { status: 'active', bankLast4: '6789', actionNeeded: false },
   firstPayoutNotice: false,
@@ -208,14 +208,14 @@ export const jordanEarningsActionNeededData: EarningsPageData = {
 
 /** A new helper before the first payout. */
 export const earningsFirstPayoutData: EarningsPageData = {
-  totals: { upcomingCents: 5400, onTheWayCents: 0, paidThisYearCents: 0 },
+  totals: { upcomingCents: 5400, onHoldCents: 0, onTheWayCents: 0, paidThisYearCents: 0 },
   rows: [{ ...deskEarnings, status: 'scheduled', payout: undefined, transferredAt: undefined }],
   payoutAccount: { status: 'active', bankLast4: '6789', actionNeeded: false },
   firstPayoutNotice: true,
 };
 
 export const earningsEmptyData: EarningsPageData = {
-  totals: { upcomingCents: 0, onTheWayCents: 0, paidThisYearCents: 0 },
+  totals: { upcomingCents: 0, onHoldCents: 0, onTheWayCents: 0, paidThisYearCents: 0 },
   rows: [],
   payoutAccount: { status: 'active', bankLast4: '6789', actionNeeded: false },
   firstPayoutNotice: true,
