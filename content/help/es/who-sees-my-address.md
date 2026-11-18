@@ -3,13 +3,13 @@ title: ¿Quién ve mi dirección?
 summary: Solo el ayudante que reservas, y solo después de que confirmas.
 topic: getting-started
 order: 2
-updated: 2026-11-14
+updated: 2026-11-18
 ---
 Tu dirección exacta llega a **una sola persona: el ayudante que reservas**, y solo cuando la reserva está confirmada.
 
 ## Antes de reservar
 
-Todos los demás, incluidos los ayudantes que hacen ofertas, solo ven tu vecindario (por ejemplo, Mueller) y una distancia aproximada. Los números de teléfono y los correos en los mensajes permanecen ocultos hasta que se confirma la reserva.
+Todos los demás, incluidos los ayudantes que hacen ofertas, solo ven tu vecindario (por ejemplo, Duckpond) y una distancia aproximada. Los números de teléfono y los correos en los mensajes permanecen ocultos hasta que se confirma la reserva.
 
 ## Después de la tarea
 

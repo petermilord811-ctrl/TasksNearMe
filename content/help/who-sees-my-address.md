@@ -3,13 +3,13 @@ title: Who sees my address?
 summary: Only the helper you book, and only after you confirm.
 topic: getting-started
 order: 2
-updated: 2026-11-14
+updated: 2026-11-18
 ---
 Your exact address goes to **one person: the helper you book**, and only once the booking is confirmed.
 
 ## Before you book
 
-Everyone else, including helpers making offers, sees only your neighborhood (for example, Mueller) and a rough distance. Phone numbers and emails in messages stay hidden until the booking is confirmed.
+Everyone else, including helpers making offers, sees only your neighborhood (for example, Duckpond) and a rough distance. Phone numbers and emails in messages stay hidden until the booking is confirmed.
 
 ## After the task
 

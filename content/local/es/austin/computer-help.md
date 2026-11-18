@@ -1,7 +1,7 @@
 ---
 updated: 2026-11-14
 ---
-La ayuda con computadoras y teléfonos sirve para que te sientas cómodo con tus aparatos: configurar una laptop o un teléfono nuevos, hacer que funcionen el Wi-Fi y las impresoras, respaldos y una limpieza básica, y explicaciones con paciencia. Se hace en casa o en una sesión guiada compartiendo la pantalla.
+La ayuda con computadoras y teléfonos sirve para que uses tus aparatos con comodidad: configurar una laptop o un teléfono nuevos, hacer que funcionen el Wi-Fi y las impresoras, respaldos y una limpieza básica, y explicaciones con paciencia. Se hace en casa o en una sesión guiada compartiendo la pantalla.
 
 ## En casa o a distancia
 

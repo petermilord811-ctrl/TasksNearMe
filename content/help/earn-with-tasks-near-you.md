@@ -3,7 +3,7 @@ title: Earning with tasks near you
 summary: Choose the work, set your price, and get paid for tasks close to home.
 topic: guides
 order: 3
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 If you're handy, strong or patient with a computer, your neighbors need you. On TasksNearMe you pick the tasks, set your price and get paid through the app.
 
@@ -27,6 +27,6 @@ After the task, you add what's needed (photos, hours) and the poster approves it
 
 ## Build your reputation
 
-Good reviews and repeat bookings bring more offers your way. Clients can save you and book you again.
+Good reviews and repeat bookings bring more work your way. Clients can save you and book you again.
 
 Ready? [Become a helper](/become-a-helper), or see [where we are](/cities).
