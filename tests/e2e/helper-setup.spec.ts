@@ -92,6 +92,14 @@ test('a new helper sets up their profile in one flow and goes on to the checks',
   const photo = await sharp({ create: { width: 1200, height: 800, channels: 3, background: { r: 120, g: 90, b: 160 } } }).jpeg().toBuffer();
   const adjust = page.getByRole('dialog', { name: 'Adjust your photo' });
   await untilShown(adjust, () => page.getByLabel('Add a photo').setInputFiles({ name: 'me.jpg', mimeType: 'image/jpeg', buffer: photo }));
+  // The circle it marks is what everyone will see: the whole square that's saved, cropped round (aa's sweep S7). Both
+  // measured at the same instant (the dialog scales in as it opens).
+  const { frame, circle } = await adjust.getByTestId('photo-crop-frame').evaluate((element) => {
+    const box = (node: Element | null) => (node ? (({ x, y, width, height }) => ({ x, y, width, height }))(node.getBoundingClientRect()) : null);
+    return { frame: box(element), circle: box(element.querySelector('[data-testid="photo-crop-circle"]')) };
+  });
+  expect(circle).not.toBeNull();
+  for (const side of ['x', 'y', 'width', 'height'] as const) expect(Math.abs(circle![side] - frame![side])).toBeLessThanOrEqual(1);
   await adjust.getByRole('button', { name: 'Use this photo' }).click();
   await expect(page.getByText('Your new photo is saved.')).toBeVisible();
   await page.getByRole('button', { name: 'Draft my profile' }).click();

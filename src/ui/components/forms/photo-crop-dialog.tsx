@@ -117,8 +117,10 @@ export function PhotoCropDialog({ image, onCancel, onConfirm, onChooseAnother }:
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL, positioned by the crop */}
               <img src={image.src} alt="" draggable={false} className="pointer-events-none absolute max-w-none" style={{ left: `${box.left}%`, top: `${box.top}%`, width: `${box.width}%`, height: `${box.height}%` }} />
-              {/* The round avatar people will see; the corners outside it are dimmed. */}
-              <span aria-hidden="true" className="pointer-events-none absolute inset-[6%] rounded-full shadow-[0_0_0_999px_rgb(23_18_14/0.5)] ring-2 ring-white/90" />
+              {/* The round avatar people will see: every avatar shows the whole saved square cropped round, so the circle
+                  fills the frame (aa's sweep S7: an 88% circle showed faces about 12% larger than they come out). The
+                  corners outside it are dimmed. */}
+              <span aria-hidden="true" data-testid="photo-crop-circle" className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_0_999px_rgb(23_18_14/0.5)] ring-2 ring-white/90 ring-inset" />
             </div>
             <p id={`${id}-hint`} className="text-center text-sm text-muted-foreground">{t('hint')}</p>
             <div className="flex w-full max-w-80 items-center gap-3">
