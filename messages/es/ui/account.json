@@ -259,7 +259,7 @@
     "ask": {
       "title": "¿No hiciste este cambio?",
       "text": "Si no cambiaste el correo ni el número de teléfono de tu cuenta de TasksNearMe, la protegeremos ahora. No necesitas iniciar sesión.",
-      "listTitle": "Qué pasa",
+      "listTitle": "Qué pasará",
       "items": {
         "signOut": "Se cierra la sesión en todos los dispositivos conectados a la cuenta.",
         "undo": "Se deshace el cambio, si se hizo en los últimos {days} días.",

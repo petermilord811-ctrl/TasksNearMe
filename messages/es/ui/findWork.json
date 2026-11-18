@@ -59,7 +59,7 @@
     "saved": "Buscar trabajo · guardadas",
     "byPay": "Buscar trabajo · mejor pagadas",
     "waiting": "Buscar trabajo · esperando su ciudad",
-    "waitingReady": "Buscar trabajo · esperando, listo"
+    "waitingReady": "Buscar trabajo · esperando, todo listo"
   },
   "perHour": "{rate}/h",
   "earn": "Ganarías {amount}",
@@ -116,8 +116,8 @@
   },
   "waiting": {
     "title": "Todavía no estamos en {city}",
-    "body": "Aquí aparecen las tareas de las ciudades donde ya estamos. Te escribiremos el día que TasksNearMe abra en {city}, {state}.",
-    "demand": "{people, plural, =0 {Eres la primera persona cerca de {zip} en pedirnos.} one {# persona más cerca de {zip} también nos espera.} other {# personas más cerca de {zip} también nos esperan.}}",
+    "body": "La página de Buscar trabajo muestra las tareas de las ciudades donde ya estamos. Te escribiremos el día que TasksNearMe abra en {city}, {state}.",
+    "demand": "{people, plural, =0 {Eres la primera persona cerca de {zip} en pedir que lleguemos.} one {Otra persona cerca de {zip} también nos espera.} other {Otras # personas cerca de {zip} también nos esperan.}}",
     "waitlist": "Ver la lista de espera de {zip}",
     "setupTitle": "Mientras tanto, prepárate",
     "setupBody": "Termina tu perfil y tus verificaciones ahora para que puedas tomar tareas el día que abramos en {city}.",

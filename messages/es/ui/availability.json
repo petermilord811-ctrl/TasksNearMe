@@ -11,7 +11,7 @@
   "startTime": "Hora de inicio",
   "endTime": "Hora de fin",
   "chooseTime": "Elige una hora",
-  "timeHint": "Las horas están en {zone}.",
+  "timeHint": "Los horarios están en {zone}.",
   "timePolicy": "Empieza al menos {leadHours} h a partir de ahora. Cada espacio puede durar hasta {maxHours} h.",
   "currentTime": "Hora actual ({zone}): {now}",
   "areaLabel": "Tu zona de servicio",

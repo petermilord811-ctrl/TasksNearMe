@@ -34,7 +34,7 @@
     "date": "Fecha",
     "dateHint": "Elige una fecha del {first} al {last}.",
     "startTime": "Hora de inicio",
-    "startTimeHint": "Las horas están en {zone}. Elige un inicio con al menos {hours, plural, one {# hora} other {# horas}} de anticipación.",
+    "startTimeHint": "Los horarios están en {zone}. Elige un inicio con al menos {hours, plural, one {# hora} other {# horas}} de anticipación.",
     "pricingType": "Tipo de precio",
     "pricingTypeHint": "Se completó el último precio. Puedes conservarlo o elegir uno nuevo.",
     "fixed": "Precio fijo",
