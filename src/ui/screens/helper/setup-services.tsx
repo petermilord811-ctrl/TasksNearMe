@@ -4,7 +4,7 @@ import { useId, useState } from 'react';
 import { useFieldArray, useWatch, type UseFormReturn } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { Check, ChevronDown, ShieldCheck, X } from 'lucide-react';
-import type { CategorySlug, CategoryView, HelperServicesInput, ServiceDefault } from '@/contracts';
+import { hourlyMinimum, type CategorySlug, type CategoryView, type HelperServicesInput, type ServiceDefault } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { FieldError } from '@/ui/primitives/field';
 import { Input } from '@/ui/primitives/input';
@@ -14,13 +14,13 @@ import { HelperField, ServiceMoneyField } from './helper-forms';
 
 type ServiceRow = HelperServicesInput['services'][number];
 
-/** A new service, prefilled from the server's defaults (or the category's minimum when there are none). */
+/** A new service, prefilled from the server's defaults (or the least the category allows when there are none). */
 function newService(category: CategoryView, defaults: Partial<Record<CategorySlug, ServiceDefault>>): ServiceRow {
   const preset = defaults[category.slug];
   if (preset) return { categorySlug: category.slug, ...preset, description: '' };
   return category.defaultPricingType === 'fixed'
     ? { categorySlug: category.slug, pricingType: 'fixed', fromPriceCents: category.minPriceCents, description: '' }
-    : { categorySlug: category.slug, pricingType: 'hourly', hourlyRateCents: category.minPriceCents, minHours: category.minHours ?? 1, description: '' };
+    : { categorySlug: category.slug, pricingType: 'hourly', hourlyRateCents: hourlyMinimum(category).rateCents, minHours: category.minHours ?? 1, description: '' };
 }
 
 /**
@@ -92,6 +92,8 @@ function ServiceCard({ form, index, service, category, defaults, onRemove }: { f
   const name = categoryName(category.slug);
   const errors = form.formState.errors.services?.[index];
   const [noteOpen, setNoteOpen] = useState(Boolean(service.description));
+  // An hourly rate's least: the category's minimum (for a task) over the minimum hours (aa's sweep S6).
+  const leastHourly = hourlyMinimum(category, service.minHours);
 
   function setPricing(pricingType: 'fixed' | 'hourly') {
     if (pricingType === service.pricingType) return;
@@ -101,7 +103,7 @@ function ServiceCard({ form, index, service, category, defaults, onRemove }: { f
       form.setValue(`services.${index}.hourlyRateCents`, undefined);
       form.setValue(`services.${index}.minHours`, undefined);
     } else {
-      form.setValue(`services.${index}.hourlyRateCents`, preset?.pricingType === 'hourly' ? preset.hourlyRateCents : category.minPriceCents, { shouldDirty: true });
+      form.setValue(`services.${index}.hourlyRateCents`, preset?.pricingType === 'hourly' ? preset.hourlyRateCents : hourlyMinimum(category).rateCents, { shouldDirty: true });
       form.setValue(`services.${index}.minHours`, preset?.pricingType === 'hourly' ? preset.minHours : (category.minHours ?? 1), { shouldDirty: true });
       form.setValue(`services.${index}.fromPriceCents`, undefined);
     }
@@ -131,7 +133,7 @@ function ServiceCard({ form, index, service, category, defaults, onRemove }: { f
     {service.pricingType === 'fixed'
       ? <ServiceMoneyField key="fixed" form={form} name={`services.${index}.fromPriceCents`} label={t('fromPrice')} hint={t('minimum', { amount: formatMoney(category.minPriceCents) })} />
       : <div className="grid gap-4 sm:grid-cols-2">
-        <ServiceMoneyField key="hourly" form={form} name={`services.${index}.hourlyRateCents`} label={t('hourlyRate')} hint={t('minimum', { amount: formatMoney(category.minPriceCents) })} />
+        <ServiceMoneyField key="hourly" form={form} name={`services.${index}.hourlyRateCents`} label={t('hourlyRate')} hint={t('hourlyMinimum', { amount: formatMoney(leastHourly.rateCents), minimum: formatMoney(category.minPriceCents), hours: leastHourly.hours })} />
         <HelperField id={`${id}-hours`} label={t('minHours')} hint={forms('minHoursHint')} error={errors?.minHours?.message}>
           <Input {...form.register(`services.${index}.minHours`, { setValueAs: (value: string) => value === '' ? undefined : Number(value) })} id={`${id}-hours`} type="number" inputMode="numeric" min={1} max={8} step={1} aria-invalid={!!errors?.minHours} aria-describedby={`${id}-hours-hint${errors?.minHours ? ` ${id}-hours-error` : ''}`} className="max-w-32 tabular-nums" />
         </HelperField>

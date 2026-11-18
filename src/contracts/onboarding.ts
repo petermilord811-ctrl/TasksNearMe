@@ -111,6 +111,9 @@ export type ProfileDraftResult =
   | { ok: true; draft: { headline: string; bio: string } }
   | { ok: false; code: 'unavailable' | 'rate_limited' | 'prohibited' };
 
+/** The most hours a service's minimum can be. */
+const MAX_SERVICE_HOURS = 8;
+
 const serviceSchema = z.object({
   categorySlug: z.enum(CATEGORY_SLUGS, code('required')),
   pricingType: z.enum(['fixed', 'hourly'], code('required')),
@@ -118,9 +121,21 @@ const serviceSchema = z.object({
   fromPriceCents: z.number(code('required')).int().positive(code('required')).optional(),
   /** Hourly: rate and minimum hours. */
   hourlyRateCents: z.number(code('required')).int().positive(code('required')).optional(),
-  minHours: z.number(code('required')).int().min(1, code('out_of_range')).max(8, code('out_of_range')).optional(),
+  minHours: z.number(code('required')).int().min(1, code('out_of_range')).max(MAX_SERVICE_HOURS, code('out_of_range')).optional(),
   description: z.string(code('required')).trim().max(300, code('too_long')),
 });
+
+/**
+ * The lowest hourly rate a service can list (aa's sweep S6). A category's minimum price is for a task, and hourly work
+ * reaches it over its hours, as posting and offers check it (rate × hours ≥ the minimum): here over the service's
+ * minimum hours, never fewer than the category's. `hours`: the hours it's worked out for. The setup and editor hints
+ * show it; the services schema checks it.
+ */
+export function hourlyMinimum(category: Pick<CategoryView, 'minPriceCents' | 'minHours'>, minHours?: number): { rateCents: Cents; hours: number } {
+  const least = Math.max(1, category.minHours ?? 1);
+  const hours = typeof minHours === 'number' && Number.isInteger(minHours) ? Math.min(Math.max(minHours, least), MAX_SERVICE_HOURS) : least;
+  return { rateCents: Math.ceil(category.minPriceCents / hours), hours };
+}
 
 /** Services, checked against the market's categories (minimum prices, hourly minimums). */
 export function createHelperServicesSchema(categories: Pick<CategoryView, 'slug' | 'minPriceCents' | 'minHours'>[]) {
@@ -140,6 +155,7 @@ export function createHelperServicesSchema(categories: Pick<CategoryView, 'slug'
           else if (service.fromPriceCents < category.minPriceCents) issue('fromPriceCents', 'out_of_range');
         } else {
           if (service.hourlyRateCents === undefined) issue('hourlyRateCents', 'required');
+          else if (service.hourlyRateCents < hourlyMinimum(category, service.minHours).rateCents) issue('hourlyRateCents', 'out_of_range');
           if (service.minHours === undefined) issue('minHours', 'required');
           else if (category.minHours && service.minHours < category.minHours) issue('minHours', 'out_of_range');
         }
@@ -538,6 +554,11 @@ export interface HelperProfileEditorData {
   verification: VerificationSummary;
   /** Paused profiles don't appear in search and can't receive invites. */
   paused: boolean;
+  /**
+   * The public profile page (`routes.helperProfile(handle)`) is live: the profile is active. A draft (not bookable yet),
+   * paused or suspended profile has none, so the editor doesn't link to a page that isn't there.
+   */
+  publicProfile: boolean;
   /** The `ai_drafting` flag, and drafting is set up: show "Write it for me" on the profile. */
   aiDraftingEnabled: boolean;
   /** Claude's draft, or written examples when it isn't set up (plan 9.11). */

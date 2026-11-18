@@ -436,7 +436,7 @@ Any action without a row shows a success toast and stays in the current scenario
 | Category | Structured fields | Minimum price / guidance (Austin, mock) | Blocked keywords (examples) |
 |---|---|---|---|
 | `furniture-assembly` | items (type: desk / bed / dresser / shelf / table / chair / other; brand optional; quantity 1–20), floor, elevator, tools on site, anchor to wall | $25 · desk $50–$80 | electrical, wiring, gas, plumbing, light fixture |
-| `moving-help` | home size (studio → 4+ bedrooms), tasks (load, unload, rearrange, pack), heavy items, flights of stairs | $35/h, 2 h minimum · $32–$40/h | piano, safe, truck, transport, haul away, hazardous |
+| `moving-help` | home size (studio → 4+ bedrooms), tasks (load, unload, rearrange, pack), heavy items, flights of stairs | $35 a task (the hourly rate times the hours), 2 h minimum · $32–$40/h | piano, safe, truck, transport, haul away, hazardous |
 | `yard-cleanup` | area size (small / medium / large), tasks (leaves, weeding, debris, hand pruning), bags provided, green-waste plan (curbside / poster handles) | $25 · $60–$140 | pesticide, herbicide, weed killer, irrigation, chainsaw, tree removal, ladder |
 | `light-cleaning` | bedrooms, bathrooms, supplies provided, extras (inside fridge, inside oven, interior windows), pets | $60 · $90–$160 | mold, biohazard, post-construction |
 | `computer-help` | devices (laptop, desktop, phone, tablet, printer, router), issue description, remote OK (screen share only; no remote-control software) | $25 · $35–$70 | crypto wallet, bank login, password |

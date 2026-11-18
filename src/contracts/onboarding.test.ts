@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 import { categoryViews, onboardingBackgroundPending, onboardingDone, samProfileEditorData } from '@/fixtures';
-import { createHelperServicesSchema, helperAreaInputSchema, helperProfileInputSchema, helperToolsInputSchema } from './onboarding';
+import { createHelperServicesSchema, helperAreaInputSchema, helperProfileInputSchema, helperToolsInputSchema, hourlyMinimum } from './onboarding';
 
 function errorsOf(schema: z.ZodType, input: unknown): Record<string, string> {
   const result = schema.safeParse(input);
@@ -49,6 +49,25 @@ describe('helper onboarding schemas', () => {
         services: [{ categorySlug: 'yard-cleanup', pricingType: 'hourly', hourlyRateCents: 3000, minHours: 2, description: 'Leaves and weeding.' }],
       }),
     ).toEqual({});
+  });
+
+  it('services: an hourly rate reaches the category minimum over its minimum hours, as posting and offers check it (aa’s sweep S6)', () => {
+    const hourly = (categorySlug: 'moving-help' | 'yard-cleanup', hourlyRateCents: number, minHours: number) =>
+      errorsOf(services, { services: [{ categorySlug, pricingType: 'hourly', hourlyRateCents, minHours, description: '' }] });
+    // Moving help: $35 for a task, at least 2 hours: $17.50 an hour, or $11.67 over 3 hours.
+    expect(hourly('moving-help', 1749, 2)).toEqual({ 'services.0.hourlyRateCents': 'out_of_range' });
+    expect(hourly('moving-help', 1750, 2)).toEqual({});
+    expect(hourly('moving-help', 1166, 3)).toEqual({ 'services.0.hourlyRateCents': 'out_of_range' });
+    expect(hourly('moving-help', 1167, 3)).toEqual({});
+    // Yard cleanup by the hour: its $25 over the helper's own minimum hours.
+    expect(hourly('yard-cleanup', 1200, 2)).toEqual({ 'services.0.hourlyRateCents': 'out_of_range' });
+    expect(hourly('yard-cleanup', 1250, 2)).toEqual({});
+    // The least rate and the hours it's worked out for: never fewer than the category's hours, never more than 8.
+    const moving = categoryViews.find((category) => category.slug === 'moving-help')!;
+    expect(hourlyMinimum(moving)).toEqual({ rateCents: 1750, hours: 2 });
+    expect(hourlyMinimum(moving, 3)).toEqual({ rateCents: 1167, hours: 3 });
+    expect(hourlyMinimum(moving, 1)).toEqual({ rateCents: 1750, hours: 2 });
+    expect(hourlyMinimum(moving, 20)).toEqual({ rateCents: 438, hours: 8 });
   });
 
   it('area: a known radius', () => {

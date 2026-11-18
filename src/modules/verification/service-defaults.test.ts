@@ -7,9 +7,13 @@ describe('the pricing helper setup prefills (plan 9.11)', () => {
     expect(serviceDefaultsFor(categoryViews)).toEqual(setupServiceDefaults);
   });
 
-  it('never goes under the category minimum', () => {
-    // Moving help's typical range starts at $32/h, under its $35/h minimum.
-    expect(serviceDefaultsFor(categoryViews)['moving-help']).toEqual({ pricingType: 'hourly', hourlyRateCents: 3500, minHours: 2 });
+  it('never goes under what a service may list', () => {
+    // Moving help's $35 minimum is for a task: $17.50 an hour over its 2 hours, so its typical $32 an hour stands (aa's sweep S6).
+    expect(serviceDefaultsFor(categoryViews)['moving-help']).toEqual({ pricingType: 'hourly', hourlyRateCents: 3200, minHours: 2 });
+    // A typical range that starts lower starts at the least allowed.
+    const [assembly, moving] = categoryViews;
+    expect(serviceDefaultsFor([{ ...moving!, priceGuidance: { lowCents: 1500, highCents: 2500, unit: 'hour' } }])).toEqual({ 'moving-help': { pricingType: 'hourly', hourlyRateCents: 1750, minHours: 2 } });
+    expect(serviceDefaultsFor([{ ...assembly!, priceGuidance: { lowCents: 2000, highCents: 4000, unit: 'item' } }])).toEqual({ 'furniture-assembly': { pricingType: 'fixed', fromPriceCents: 2500 } });
   });
 
   it('uses the minimum when the range is in another unit', () => {

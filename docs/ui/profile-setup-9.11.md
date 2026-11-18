@@ -23,7 +23,7 @@ The three profile steps become **one page, "Your helper profile", in three parts
 
 | Part | Asks for | Saved as |
 |---|---|---|
-| 1. What you do | Services: categories as chips; for each, fixed or hourly and a price, prefilled from the market's typical range; an optional note | `onSaveServices` (unchanged rules) |
+| 1. What you do | Services: categories as chips; for each, fixed or hourly and a price, prefilled from the market's typical range; an optional note | `onSaveServices` (the rules as before, and an hourly rate reaches the category's minimum over its minimum hours, as posting and offers check it: aa's sweep S6) |
 | 2. Where you help | Neighborhood (with the map), radius as chips, remote help when a chosen service allows it; "Somewhere else in the US" (ZIP and city) | `onSaveArea` (unchanged rules) |
 | 3. Introduce yourself | Photo (with the 9.3 adjust step), headline, about me, languages; a draft from Claude or an example from templates, built on parts 1 and 2; the helper agreement when it's needed | `onUploadPhoto`, `onSaveProfile` (unchanged rules) |
 

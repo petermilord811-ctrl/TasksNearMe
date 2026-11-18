@@ -127,11 +127,12 @@ const priyaValues: HelperOnboardingPageData['values'] = {
 
 /**
  * The prefilled pricing helper setup offers (plan 9.11), as the server derives it from `categoryViews`: the
- * category's usual pricing at the low end of its typical range, never under its minimum.
+ * category's usual pricing at the low end of its typical range, never under what a service may list (moving help's
+ * $35 minimum is for a task: $17.50 an hour over its 2 hours, so its typical $32 an hour).
  */
 export const setupServiceDefaults: Partial<Record<CategorySlug, ServiceDefault>> = {
   'furniture-assembly': { pricingType: 'fixed', fromPriceCents: 5000 },
-  'moving-help': { pricingType: 'hourly', hourlyRateCents: 3500, minHours: 2 },
+  'moving-help': { pricingType: 'hourly', hourlyRateCents: 3200, minHours: 2 },
   'yard-cleanup': { pricingType: 'fixed', fromPriceCents: 6000 },
   'light-cleaning': { pricingType: 'fixed', fromPriceCents: 9000 },
   'computer-help': { pricingType: 'fixed', fromPriceCents: 3500 },
@@ -545,6 +546,7 @@ export const samProfileEditorData: HelperProfileEditorData = {
     background: { status: 'clear', checkedAt: sam.badges.backgroundCheckedAt!, requiredFor: ['furniture-assembly', 'moving-help', 'light-cleaning'], disclosureNeeded: false, validUntil: '2027-01-12T16:00:00.000Z', renewalOpen: false, canStart: false },
   },
   paused: false,
+  publicProfile: true,
   aiDraftingEnabled: true,
   profileDraft: 'ai',
 };

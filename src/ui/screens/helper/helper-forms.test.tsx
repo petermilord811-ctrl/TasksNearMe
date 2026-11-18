@@ -84,6 +84,22 @@ describe('helper profile and service forms', () => {
     expect(onSave).toHaveBeenCalledWith({ services: [{ categorySlug: 'moving-help', pricingType: 'hourly', hourlyRateCents: 3500, minHours: 2, description: 'Moving help.' }] });
   });
 
+  it('checks an hourly rate against the category minimum over the minimum hours, and says so (aa’s sweep S6)', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(saved);
+    renderForm(<HelperServicesForm values={{ services: [{ categorySlug: 'moving-help', pricingType: 'hourly', hourlyRateCents: 1500, minHours: 2, description: 'Moving help.' }] }} categories={samProfileEditorData.categories} onSave={onSave} />);
+    // Moving help's $35 minimum is for a task, not an hour: $17.50 an hour over its 2 hours.
+    expect(screen.getByText('Category minimum: $35.00 a task, with at least 2 hours.')).toBeVisible();
+    expect(screen.getByText('Your rate for one hour of help: at least $17.50 ($35.00 for 2 hours).')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText(messages.forms.fieldErrors.out_of_range)).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+    await user.clear(screen.getByLabelText('Hourly rate ($)'));
+    await user.type(screen.getByLabelText('Hourly rate ($)'), '20');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ services: [{ categorySlug: 'moving-help', pricingType: 'hourly', hourlyRateCents: 2000, minHours: 2, description: 'Moving help.' }] }));
+  });
+
   it('shows nested server field errors and leaves unsaved values available to correct', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn(() => Promise.resolve<ActionResult>({ ok: false, code: 'validation_failed', fieldErrors: { 'services.0.fromPriceCents': ['out_of_range'] } }));

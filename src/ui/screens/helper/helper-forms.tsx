@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { MapPinned, Plus, Sparkles, Trash2 } from 'lucide-react';
 import {
-  createHelperServicesSchema, helperAreaInputSchema, helperProfileInputSchema, helperToolsInputSchema,
+  createHelperServicesSchema, helperAreaInputSchema, helperProfileInputSchema, helperToolsInputSchema, hourlyMinimum,
   SERVICE_RADIUS_MILES, type ActionHandler, type AwaitingCity, type CategoryView, type HelperAreaInput, type HelperHomeMarket,
   type HelperOnboardingPageData, type HelperProfileInput, type HelperServicesInput, type HelperToolsInput,
   type ProfileDraftInput, type ProfileDraftResult, type QueryHandler, routes,
@@ -245,6 +245,8 @@ export function HelperServicesForm({ values, categories, onSave, submitLabel }: 
         const pricingId = `${id}-${index}-pricing`;
         const hoursId = `${id}-${index}-hours`;
         const descriptionId = `${id}-${index}-description`;
+        // An hourly rate's least: the category's minimum (for a task) over the minimum hours (aa's sweep S6).
+        const leastHourly = category ? hourlyMinimum(category, service.minHours) : undefined;
         return <fieldset key={row.id} className="min-w-0 space-y-5 rounded-xl border bg-card p-4 sm:p-5">
           <legend className="px-1 font-heading text-base font-semibold">{t('forms.services.service', { number: index + 1 })}</legend>
           <HelperField id={categoryId} label={t('forms.services.category')} hint={t('forms.services.categoryHint')} error={errors?.categorySlug?.message} errorText={errors?.categorySlug?.message === 'invalid' ? t('forms.services.duplicate') : undefined}>
@@ -268,7 +270,7 @@ export function HelperServicesForm({ values, categories, onSave, submitLabel }: 
             </select>
           </HelperField>
           {service.pricingType === 'fixed' ? <ServiceMoneyField key="fixed" form={form} name={`services.${index}.fromPriceCents`} label={t('forms.services.fromPrice')} hint={t('forms.services.fromPriceHint', { amount: formatMoney(category?.minPriceCents ?? 0) })} /> : <div className="grid gap-5 sm:grid-cols-2">
-            <ServiceMoneyField key="hourly" form={form} name={`services.${index}.hourlyRateCents`} label={t('forms.services.hourlyRate')} hint={t('forms.services.hourlyRateHint')} />
+            <ServiceMoneyField key="hourly" form={form} name={`services.${index}.hourlyRateCents`} label={t('forms.services.hourlyRate')} hint={category && leastHourly ? t('forms.services.hourlyRateMinimum', { amount: formatMoney(leastHourly.rateCents), minimum: formatMoney(category.minPriceCents), hours: leastHourly.hours }) : t('forms.services.hourlyRateHint')} />
             <HelperField id={hoursId} label={t('forms.services.minHours')} hint={t('forms.services.minHoursHint')} error={errors?.minHours?.message}>
               <Input {...form.register(`services.${index}.minHours`, { setValueAs: (value: string) => value === '' ? undefined : Number(value) })} id={hoursId} type="number" inputMode="numeric" min={1} max={8} step={1} aria-invalid={!!errors?.minHours} aria-describedby={`${hoursId}-hint${errors?.minHours ? ` ${hoursId}-error` : ''}`} className="tabular-nums" />
             </HelperField>

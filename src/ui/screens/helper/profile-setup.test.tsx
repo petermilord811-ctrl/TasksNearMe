@@ -267,6 +267,37 @@ describe('each part saves on its own (aa’s sweep S3)', () => {
   });
 });
 
+describe('hourly prices (aa’s sweep S6)', () => {
+  it('start at the typical rate, and the least shown and allowed is the category’s minimum over the minimum hours', async () => {
+    const user = userEvent.setup();
+    const onSaveServices = vi.fn(async (_input: HelperServicesInput) => ok());
+    render(show(onboardingProfileStep, { onSaveServices }));
+    await user.click(screen.getByRole('button', { name: /^Moving help/ }));
+    // Typical $32–$40 an hour; its $35 minimum is for a task: $17.50 an hour over 2 hours.
+    expect(screen.getByLabelText('Your hourly rate')).toHaveValue('32');
+    expect(screen.getByText('At least $17.50 an hour ($35.00 for 2 hours).')).toBeVisible();
+    const hours = screen.getByLabelText('Minimum hours');
+    await user.clear(hours);
+    await user.type(hours, '3');
+    expect(screen.getByText('At least $11.67 an hour ($35.00 for 3 hours).')).toBeVisible();
+    await user.clear(hours);
+    await user.type(hours, '2');
+    // Under it: Next says so, and nothing under it is ever sent.
+    const rate = screen.getByLabelText('Your hourly rate');
+    await user.clear(rate);
+    await user.type(rate, '15');
+    await user.click(screen.getByRole('button', { name: /Next: Where you help/ }));
+    expect(await screen.findByText('Choose a value within the allowed range.')).toBeVisible();
+    expect(screen.getByRole('heading', { level: 2, name: 'What you do' })).toBeVisible();
+    await user.clear(rate);
+    await user.type(rate, '20');
+    await user.click(screen.getByRole('button', { name: /Next: Where you help/ }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Where you help' })).toBeVisible();
+    expect(onSaveServices).toHaveBeenLastCalledWith({ services: [{ categorySlug: 'moving-help', pricingType: 'hourly', hourlyRateCents: 2000, minHours: 2, description: '' }] });
+    expect(onSaveServices.mock.calls.some(([input]) => input.services.some((service) => (service.hourlyRateCents ?? 0) < 1750))).toBe(false);
+  });
+});
+
 describe('written examples (plan 9.11)', () => {
   const name = (slug: string) => (uiMessages.helperCard.categories as Record<string, string>)[slug]!;
   const t = (messages: typeof uiMessages) => (key: string, values: Record<string, string | number> = {}) => {

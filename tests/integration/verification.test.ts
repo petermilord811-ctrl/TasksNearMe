@@ -3,6 +3,7 @@ import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
 import { afterAll, describe, expect, it } from 'vitest';
+import { createHelperServicesSchema } from '@/contracts';
 import { createFakeGeocoder } from '@/integrations/geocoding';
 import { createLocalFileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
@@ -175,12 +176,22 @@ describe('helper onboarding', () => {
     expect(page?.person).toEqual({ firstName: 'Robin', displayName: 'Robin L.', initials: 'RL' });
     expect(page?.maxPhotoMegabytes).toBe(10);
     expect(['ai', 'template']).toContain(page?.profileDraft);
-    // Prefilled prices: the category's usual pricing, never under its minimum.
+    // Prefilled prices: the category's usual pricing, never under what a service may list (aa's sweep S6: hourly work
+    // reaches the category's minimum over its minimum hours, so moving help starts at its typical $32 an hour).
+    const listable = createHelperServicesSchema(page?.categories ?? []);
     for (const category of page?.categories ?? []) {
       const preset = page?.serviceDefaults[category.slug];
       expect(preset?.pricingType).toBe(category.defaultPricingType);
-      expect((preset?.fromPriceCents ?? preset?.hourlyRateCents ?? 0) >= category.minPriceCents).toBe(true);
+      expect(listable.safeParse({ services: [{ categorySlug: category.slug, ...preset, description: '' }] }).success).toBe(true);
     }
+    expect(page?.serviceDefaults['moving-help']).toEqual({ pricingType: 'hourly', hourlyRateCents: 3200, minHours: 2 });
+
+    // The server checks an hourly rate as posting and offers do: its minimum hours must come to the category's
+    // minimum ($35 for moving help, so $17.50 an hour over 2 hours), where the schema never looked at the rate.
+    const moving = (hourlyRateCents: number, minHours = 2) => ({ services: [{ categorySlug: 'moving-help' as const, pricingType: 'hourly' as const, hourlyRateCents, minHours, description: '' }] });
+    expect(await saveHelperServices(db, first, moving(1500), now())).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { 'services.0.hourlyRateCents': ['out_of_range'] } });
+    expect(await saveHelperServices(db, first, moving(1750), now())).toEqual({ ok: true, code: 'saved' });
+    expect(await saveHelperServices(db, first, moving(1200, 3), now())).toEqual({ ok: true, code: 'saved' });
   });
 
   it('pauses and resumes, and manages work samples', async () => {
