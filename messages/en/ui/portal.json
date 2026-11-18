@@ -1,0 +1,188 @@
+{
+  "title": "Neighbors",
+  "eyebrow": "Neighbors",
+  "place": {
+    "nearby": "{area} and nearby",
+    "market": "All of {market}",
+    "area": "{area}"
+  },
+  "stats": {
+    "tasks": "{count, plural, =0 {No open tasks} one {# open task} other {# open tasks}}",
+    "posts": "{count, plural, =0 {No posts this week} one {# post this week} other {# posts this week}}",
+    "helpers": "{count, plural, =0 {No helpers yet} one {# helper} other {# helpers}}"
+  },
+  "search": {
+    "label": "Search the neighborhood",
+    "placeholder": "Search posts and tasks",
+    "submit": "Search"
+  },
+  "areas": {
+    "label": "Neighborhoods",
+    "nearby": "Near you",
+    "all": "All of {market}",
+    "yours": "Your neighborhood",
+    "more": "More",
+    "moreTitle": "Neighborhoods in {market}",
+    "nearbyGroup": "Near you",
+    "elsewhere": "Elsewhere in {market}"
+  },
+  "composer": {
+    "label": "Start a post",
+    "prompt": "Ask your neighbors…",
+    "kinds": {
+      "recommendation": "Recommendation",
+      "question": "Question",
+      "tip": "Tip",
+      "thanks": "Thanks"
+    },
+    "postTask": "Post a task"
+  },
+  "types": {
+    "label": "Show",
+    "all": "Everything",
+    "task": "Tasks",
+    "recommendation": "Recommendations",
+    "question": "Questions",
+    "tip": "Tips",
+    "thanks": "Thanks"
+  },
+  "sort": {
+    "label": "Sort",
+    "hot": "Hot",
+    "new": "New",
+    "top": "Top"
+  },
+  "view": {
+    "label": "View",
+    "feed": "Feed",
+    "list": "List"
+  },
+  "group": {
+    "label": "Group",
+    "area": "By neighborhood",
+    "day": "By day"
+  },
+  "category": {
+    "label": "Service",
+    "all": "All services",
+    "general": "General"
+  },
+  "time": {
+    "label": "Posted",
+    "any": "Any time",
+    "24h": "Past day",
+    "7d": "Past week",
+    "30d": "Past month"
+  },
+  "saved": {
+    "label": "Saved",
+    "count": "Saved · {count}"
+  },
+  "filters": {
+    "button": "Filters",
+    "buttonCount": "Filters, {count} on",
+    "title": "Filters",
+    "clearAll": "Clear all",
+    "remove": "Remove filter: {label}",
+    "active": "Filters in use",
+    "keyword": "“{q}”"
+  },
+  "moreTaskFilters": "More task filters",
+  "task": {
+    "flair": "Task",
+    "posted": "posted a task",
+    "offers": "{count, plural, =0 {Be the first to offer} one {# offer} other {# offers}}",
+    "questions": "{count, plural, one {# question} other {# questions}}",
+    "fromPost": "From a neighborhood post",
+    "cta": {
+      "yours": "Manage",
+      "helper": "Make an offer",
+      "neighbor": "View task"
+    },
+    "remote": "Remote",
+    "anyTime": "Any time that day"
+  },
+  "list": {
+    "seeAll": "See all {count} in {area}",
+    "market": "Across {market}",
+    "marketHint": "Citywide posts and remote tasks",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "count": "{count, plural, one {# item} other {# items}}",
+    "replies": "{count, plural, =0 {No replies} one {# reply} other {# replies}}",
+    "helpful": "{count} helpful"
+  },
+  "rail": {
+    "label": "Around the neighborhood",
+    "yourStuff": "Your stuff",
+    "yourTasks": "Your open tasks",
+    "yourPosts": "Your posts",
+    "savedItems": "{count, plural, =0 {Nothing saved yet} one {# saved item} other {# saved items}}",
+    "nothingYet": "Your open tasks, posts and saved items show up here.",
+    "offers": "{count, plural, =0 {No offers yet} one {# offer} other {# offers}}",
+    "replies": "{count, plural, =0 {No replies yet} one {# reply} other {# replies}}",
+    "helpers": "Helpers nearby",
+    "helpersAll": "See all helpers",
+    "helpersNone": "No helpers work here yet. Helpers from nearby can still offer on your tasks.",
+    "request": "Request",
+    "requestLabel": "Request {name}",
+    "recommendedBy": "{count, plural, =0 {New here} one {# neighbor recommends} other {# neighbors recommend}}",
+    "trending": "Active this week",
+    "trendingNone": "Nothing busy yet this week.",
+    "trendingMeta": "{replies, plural, =0 {no replies} one {# reply} other {# replies}} · {helpful} helpful",
+    "goodToKnow": "Good to know",
+    "privacy": "Exact addresses go only to the booked helper, never here.",
+    "guidelines": "Be kind and keep it local. Crime and safety reports belong with the police (911 in an emergency)."
+  },
+  "inFeed": {
+    "helpers": "Helpers near you",
+    "yourStuff": "Waiting for you"
+  },
+  "empty": {
+    "firstTitle": "It's quiet in {place} so far",
+    "firstBody": "Be the first: ask who your neighbors trust, ask a question, or post a task.",
+    "suggestions": "Try one of these",
+    "suggestRecommendation": "Who do you recommend for yard cleanup?",
+    "suggestQuestion": "How long does a flat-pack wardrobe take?",
+    "suggestTask": "Post a task and get offers",
+    "filteredTitle": "Nothing like that here yet",
+    "filteredBody": "Try all of {market}, or clear the filters.",
+    "wider": "Show all of {market}",
+    "clear": "Clear filters",
+    "savedTitle": "Nothing saved yet",
+    "savedBody": "Tap Save on a post to keep it here for later.",
+    "backToAll": "Back to everything"
+  },
+  "live": {
+    "show": "{count, plural, one {# new} other {# new}} · Show",
+    "announce": "{count, plural, one {# new post or task} other {# new posts and tasks}} near you",
+    "loading": "Loading…"
+  },
+  "more": {
+    "show": "Show more",
+    "loading": "Loading more…",
+    "loaded": "{count, plural, =0 {Nothing more} one {# more added} other {# more added}}",
+    "end": "You're all caught up",
+    "failed": "Couldn't load more. Try again."
+  },
+  "loading": "Loading the neighborhood",
+  "previews": {
+    "group": "Neighborhood portal",
+    "feed": "Portal · Feed near you (Hot)",
+    "feedNew": "Portal · Feed, newest first",
+    "list": "Portal · List by neighborhood",
+    "listByDay": "Portal · List by day",
+    "helper": "Portal · a helper's Feed",
+    "tasks": "Portal · tasks in one neighborhood",
+    "saved": "Portal · Saved",
+    "filteredEmpty": "Portal · nothing matches",
+    "empty": "Portal · first day, nothing yet",
+    "blocked": "Portal · verify your phone first",
+    "staff": "Portal · staff see a hidden post",
+    "loading": "Portal · loading",
+    "spanish": "Portal · Spanish-speaking neighbors",
+    "longThread": "Post · a long thread (30 replies)",
+    "postWithTask": "Post · posted as a task",
+    "taskDiscussion": "Task page · its neighborhood post"
+  }
+}

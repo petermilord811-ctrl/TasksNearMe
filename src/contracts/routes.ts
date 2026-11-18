@@ -6,10 +6,11 @@ import type { AdminRewardFilter } from './admin-people';
 import type { AdminVerificationQueue } from './admin-verification';
 import { DEFAULT_METRICS_PERIOD, type MetricsPeriodDays } from './analytics';
 import type { CategorySlug } from './common';
-import type { CommunityFeedQuery, CommunityPostKind } from './community';
+import type { CommunityPostKind } from './community';
 import type { FindWorkQuery } from './helper-work';
 import type { DashboardQuery } from './home';
 import type { ExactAddress } from './location';
+import { PORTAL_Q_MAX, type PortalQuery } from './portal';
 import { TASK_BOARD_Q_MAX, TASK_BOARD_TIMES, type TaskBoardQuery } from './tasks';
 
 /**
@@ -137,8 +138,9 @@ export const routes = {
     /** `ai`: the wizard drafts the task with AI from `describe` as it opens (when the market allows it). */
     /** `again`: "Post again" (plan 4.2): one of the poster's own finished tasks, repeated (`PostTaskPageData.repeat`). */
     /** `template`: start from one of the examples (`TASK_TEMPLATE_IDS`), as a page's "Post a task like this". */
-    newTask: (query: { category?: CategorySlug; title?: string; describe?: string; ai?: boolean; again?: string; template?: string } = {}) =>
-      withQuery('/app/tasks/new', { category: query.category, title: query.title, describe: query.describe, ai: query.ai ? '1' : undefined, again: query.again, template: query.template }),
+    /** `fromPost`: "Ask for help" (plan 9.10): the author's own community post, filled in by the server and linked once posted. */
+    newTask: (query: { category?: CategorySlug; title?: string; describe?: string; ai?: boolean; again?: string; template?: string; fromPost?: string } = {}) =>
+      withQuery('/app/tasks/new', { category: query.category, title: query.title, describe: query.describe, ai: query.ai ? '1' : undefined, again: query.again, template: query.template, from: query.fromPost }),
     task: (taskId: string) => `/app/tasks/${enc(taskId)}`,
     offer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}`,
     confirmOffer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}/confirm`,
@@ -191,14 +193,26 @@ export const routes = {
     bookingCalendar: (bookingId: string) => `/app/bookings/${enc(bookingId)}/calendar.ics`,
     messages: () => '/app/messages',
     thread: (threadId: string) => `/app/messages/${enc(threadId)}`,
-    /** The community feed (plan 7.7). Defaults (`nearby`, `active`, page 1) are left out. */
-    community: (query: CommunityFeedQuery = {}) =>
-      withQuery('/app/community', {
-        scope: query.scope && query.scope !== 'nearby' ? query.scope : undefined,
-        sort: query.sort && query.sort !== 'active' ? query.sort : undefined,
-        kind: query.kind,
+    /**
+     * The neighborhood portal (plan 9.10): posts and tasks near you, as a Feed or a List, over one set of filters.
+     * Defaults (near you, everything, any time, `hot`, the Feed, by neighborhood, page 1) are left out, in a fixed
+     * order, so the same filters always make the same URL.
+     */
+    community: (query: PortalQuery = {}) => {
+      const q = query.q?.trim().slice(0, PORTAL_Q_MAX);
+      return withQuery('/app/community', {
+        area: query.area,
+        category: query.category,
+        type: query.type,
+        time: query.time,
+        q: q ? q : undefined,
+        saved: query.saved ? '1' : undefined,
+        sort: query.sort && query.sort !== 'hot' ? query.sort : undefined,
+        view: query.view && query.view !== 'feed' ? query.view : undefined,
+        group: query.group && query.group !== 'area' ? query.group : undefined,
         page: query.page && query.page > 1 ? String(query.page) : undefined,
-      }),
+      });
+    },
     communityPost: (postId: string) => `/app/community/${enc(postId)}`,
     newCommunityPost: (kind?: CommunityPostKind) => withQuery('/app/community/new', { kind }),
     payments: () => '/app/payments',

@@ -68,6 +68,7 @@ import support from './support.json';
 import supportCase from './supportCase.json';
 import taskBoard from './taskBoard.json';
 import community from './community.json';
+import portal from './portal.json';
 import questions from './questions.json';
 import savedSearches from './savedSearches.json';
 import taskCard from './taskCard.json';
@@ -78,6 +79,6 @@ import verification from './verification.json';
 import waitlist from './waitlist.json';
 import cities from './cities.json';
 
-const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helpContact, helperCard, helperOnboarding, helperStanding, badges, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, community, questions, savedSearches, taskCard, taskManage, thread, timeline, verification, waitlist, cities, beta };
+const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helpContact, helperCard, helperOnboarding, helperStanding, badges, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, community, portal, questions, savedSearches, taskCard, taskManage, thread, timeline, verification, waitlist, cities, beta };
 
 export default uiMessages;

@@ -4,10 +4,10 @@ import { auditLog } from '@/platform/audit/schema';
 import { createDb } from '@/platform/db/connect';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { communityPosts, communityReactions, communityReplies } from '@/modules/community/schema';
+import { getPortal } from '@/modules/community/portal';
 import {
   createCommunityPost,
   deleteOwnCommunityItem,
-  getCommunityFeed,
   getCommunityPost,
   getNewCommunityPostPage,
   moderateCommunityItem,
@@ -33,6 +33,15 @@ const unique = () => `${Date.now().toString(36)}${Math.random().toString(36).sli
 
 afterAll(() => pool.end());
 
+/**
+ * The recommendation requests in the portal (plan 9.10) across the whole market, newest first (every post here is
+ * one): what the posts-only feed listed, without the open tasks other test files may be posting meanwhile.
+ */
+async function marketPosts(viewer: { id: string; staff: null }) {
+  const page = await getPortal(db, viewer, { area: 'all', sort: 'new', type: 'recommendation' }, now);
+  return { page, posts: page?.items.flatMap((item) => (item.type === 'post' ? [item.post] : [])) ?? [] };
+}
+
 async function post(viewer: { id: string; staff: null }, title: string, extra: Record<string, string> = {}) {
   const result = await createCommunityPost(db, viewer, { kind: 'recommendation', title, body: 'Who do you recommend for a flat-pack desk? Call me at 512-555-0199.', categorySlug: 'furniture-assembly', ...extra }, now);
   expect(result).toMatchObject({ ok: true, code: 'sent' });
@@ -49,10 +58,10 @@ describe('community posts', () => {
     const [event] = await db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'community.posted'), eq(outboxEvents.aggregateId, id)));
     expect(event?.payload).toMatchObject({ postId: id });
 
-    const feed = await getCommunityFeed(db, lee, { scope: 'market', sort: 'new' }, now);
-    const shown = feed?.posts.find((candidate) => candidate.id === id);
+    const feed = await marketPosts(lee);
+    const shown = feed.posts.find((candidate) => candidate.id === id);
     expect(shown).toMatchObject({ kind: 'recommendation', title, author: { displayName: 'Maya R.', role: 'poster', isYou: false } });
-    expect(feed?.stats.postsThisWeek).toBeGreaterThan(0);
+    expect(feed.page?.stats.postsThisWeek).toBeGreaterThan(0);
   });
 
   it('turns away safety and crime posts, which belong with the police', async () => {
@@ -89,8 +98,8 @@ describe('community posts', () => {
     expect(row?.helpfulCount).toBe(0);
     await reactInCommunity(db, lee, { targetKind: 'post', targetId: id, kind: 'helpful', on: true }, now);
     expect(await db.select().from(outboxEvents).where(eq(outboxEvents.id, `evt_helpful_post_${id}_1`))).toHaveLength(1);
-    const feed = await getCommunityFeed(db, lee, { scope: 'market', sort: 'new' }, now);
-    expect(feed?.posts.find((candidate) => candidate.id === id)?.reactions).toMatchObject({ helpful: 1, mine: ['helpful'] });
+    const feed = await marketPosts(lee);
+    expect(feed.posts.find((candidate) => candidate.id === id)?.reactions).toMatchObject({ helpful: 1, mine: ['helpful'] });
     expect(await db.select().from(communityReactions).where(and(eq(communityReactions.targetId, id), eq(communityReactions.userId, 'usr_lee')))).toHaveLength(1);
   });
 
@@ -103,16 +112,16 @@ describe('community posts', () => {
     const page = await getCommunityPost(db, maya, id);
     expect(page?.replies[0]).toMatchObject({ id: replyId, pinned: true });
     expect(await db.select().from(outboxEvents).where(eq(outboxEvents.id, `evt_pinned_${replyId}`))).toHaveLength(1);
-    const feed = await getCommunityFeed(db, maya, { scope: 'market', sort: 'new' }, now);
-    expect(feed?.posts.find((candidate) => candidate.id === id)?.previewReplies.map((reply) => reply.id)).toEqual([replyId]);
+    const feed = await marketPosts(maya);
+    expect(feed.posts.find((candidate) => candidate.id === id)?.previewReplies.map((reply) => reply.id)).toEqual([replyId]);
   });
 
   it('keeps blocked people apart both ways', async () => {
     const id = await post(maya, `Moving boxes ${unique()}`);
     await db.insert(blocks).values({ blockerId: 'usr_maya', blockedId: 'usr_ben', createdAt: now }).onConflictDoNothing();
     try {
-      const feed = await getCommunityFeed(db, ben, { scope: 'market', sort: 'new' }, now);
-      expect(feed?.posts.some((candidate) => candidate.id === id)).toBe(false);
+      const feed = await marketPosts(ben);
+      expect(feed.posts.some((candidate) => candidate.id === id)).toBe(false);
       expect(await getCommunityPost(db, ben, id)).toBeNull();
       expect(await replyToCommunityPost(db, ben, id, { body: 'Hello there' }, now)).toMatchObject({ ok: false });
     } finally {

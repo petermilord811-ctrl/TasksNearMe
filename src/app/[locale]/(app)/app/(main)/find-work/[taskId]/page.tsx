@@ -9,6 +9,8 @@ import { getHelperTaskView } from '@/modules/offers/helper';
 import { helperOfferActionHandler, quoteOfferAction, reviseOfferAction, submitOfferAction } from '@/modules/offers/helper-actions';
 import { answerTaskQuestionAction, askTaskQuestionAction, deleteTaskQuestionAction, moderateTaskQuestionAction, pinTaskQuestionAction } from '@/modules/questions/actions';
 import { getTaskQuestions } from '@/modules/questions/service';
+import { communityPostOfTask } from '@/modules/community/service';
+import { TaskDiscussionLink } from '@/ui/components/community/task-discussion-link';
 import { staffActorOf } from '@/modules/support/staff';
 import { TaskQuestions } from '@/ui/components/questions/task-questions';
 import { getViewer } from '@/platform/auth/viewer';
@@ -32,7 +34,7 @@ async function HelperTask({ params }: Pick<PageProps<'/[locale]/app/find-work/[t
   const [{ taskId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.findWorkTask(taskId)));
   const now = await requestNow();
-  const [data, botCheck, questions] = await Promise.all([getHelperTaskView(db, viewer.user.id, taskId, now), botCheckForPage(), getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId)]);
+  const [data, botCheck, questions, discussion] = await Promise.all([getHelperTaskView(db, viewer.user.id, taskId, now), botCheckForPage(), getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId), communityPostOfTask(db, taskId)]);
   if (!data) notFound();
   return (
     <div className="space-y-6">
@@ -47,7 +49,8 @@ async function HelperTask({ params }: Pick<PageProps<'/[locale]/app/find-work/[t
         onOfferAction: helperOfferActionHandler,
       }}
     />
-    {/* Questions before offering (completion plan 7.9). */}
+    {/* The neighborhood post it came from (plan 9.10), then questions before offering (7.9). */}
+    {discussion && <TaskDiscussionLink discussion={discussion} />}
     {questions && <TaskQuestions data={questions} now={now.toISOString()} handlers={{
         onAsk: askTaskQuestionAction.bind(null, taskId),
         onAnswer: answerTaskQuestionAction.bind(null, taskId),

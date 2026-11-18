@@ -1,12 +1,13 @@
 'use server';
 
 import { refresh } from 'next/cache';
-import type { ActionResult, CommunityFeedMore, CommunityFeedQuery, CommunityModerationInput, CommunityPostInput, CommunityReactInput, CommunityReplyInput } from '@/contracts';
+import type { ActionResult, CommunityModerationInput, CommunityPostInput, CommunityReactInput, CommunityReplyInput, PortalMore, PortalQuery } from '@/contracts';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
-import { createCommunityPost, deleteOwnCommunityItem, getCommunityFeed, moderateCommunityItem, pinCommunityAnswer, reactInCommunity, replyToCommunityPost, type CommunityViewer } from './service';
+import { getPortalMore } from './portal';
+import { createCommunityPost, deleteOwnCommunityItem, moderateCommunityItem, pinCommunityAnswer, reactInCommunity, replyToCommunityPost, saveCommunityPost, type CommunityViewer } from './service';
 
 /** Server Actions behind the community pages (src/contracts/community.ts). */
 
@@ -16,15 +17,39 @@ async function communityViewer(): Promise<CommunityViewer | null> {
 }
 
 /**
- * The feed's next page for "Show more posts" (completion plan 7.7): the same query read the way the page reads it
- * (the viewer's market, blocks both ways, visible posts only); the query is parsed like the address's.
+ * The portal's next page for "Show more" (plan 9.10): the same filters read the way the page reads them (the
+ * viewer's market and place, blocks both ways), parsed like the address's, so nothing sent here widens what they see.
  */
-export async function loadCommunityFeedPageAction(query: CommunityFeedQuery & { page: number }): Promise<CommunityFeedMore | null> {
+export async function loadPortalPageAction(query: PortalQuery & { page: number }): Promise<PortalMore | null> {
   const viewer = await communityViewer();
   if (!viewer) return null;
-  const params = { scope: String(query?.scope ?? ''), sort: String(query?.sort ?? ''), kind: String(query?.kind ?? ''), page: String(Number(query?.page) || 1) };
-  const data = await getCommunityFeed(db, viewer, params, await requestNow());
-  return data ? { posts: data.posts, page: data.query.page, pageCount: data.pageCount } : null;
+  const text = (value: unknown) => (typeof value === 'string' ? value : undefined);
+  return getPortalMore(
+    db,
+    viewer,
+    {
+      area: text(query?.area),
+      category: text(query?.category) as PortalQuery['category'],
+      type: text(query?.type) as PortalQuery['type'],
+      time: text(query?.time) as PortalQuery['time'],
+      q: text(query?.q),
+      saved: query?.saved === true,
+      sort: text(query?.sort) as PortalQuery['sort'],
+      view: text(query?.view) as PortalQuery['view'],
+      group: text(query?.group) as PortalQuery['group'],
+      page: Number(query?.page) || 1,
+    },
+    await requestNow(),
+  );
+}
+
+/** Keeps a post in the viewer's Saved, or takes it out (plan 9.10). */
+export async function saveCommunityPostAction(input: { postId: string; saved: boolean }): Promise<ActionResult> {
+  const viewer = await communityViewer();
+  if (!viewer) return { ok: false, code: 'not_allowed' };
+  const result = await saveCommunityPost(db, viewer, input, await requestNow());
+  if (result.ok) refresh();
+  return result;
 }
 
 export async function createCommunityPostAction(input: CommunityPostInput): Promise<ActionResult> {

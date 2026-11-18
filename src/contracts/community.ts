@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ActionHandler, FieldErrorCode } from './actions';
-import type { CategorySlug, ISODateTime } from './common';
+import type { BadgeView } from './badges';
+import type { CategorySlug, ISODateTime, Photo } from './common';
 
 /**
  * The community feed (completion plan 7.7–7.8): neighbors ask for a recommendation, ask a question, share a tip,
@@ -14,14 +15,6 @@ const code = (value: FieldErrorCode) => value;
 
 export const COMMUNITY_POST_KINDS = ['recommendation', 'question', 'tip', 'thanks'] as const;
 export type CommunityPostKind = (typeof COMMUNITY_POST_KINDS)[number];
-
-/** Near you (your neighborhood, the ones within a few miles, and posts for the whole market), or the whole market. */
-export const COMMUNITY_SCOPES = ['nearby', 'market'] as const;
-export type CommunityScope = (typeof COMMUNITY_SCOPES)[number];
-
-/** Latest activity (new replies bring a post back up), newest posts, or the most helpful this month. */
-export const COMMUNITY_SORTS = ['active', 'new', 'top'] as const;
-export type CommunitySort = (typeof COMMUNITY_SORTS)[number];
 
 export const COMMUNITY_REACTIONS = ['thanks', 'helpful'] as const;
 export type CommunityReaction = (typeof COMMUNITY_REACTIONS)[number];
@@ -39,6 +32,29 @@ export interface CommunityAuthor {
   /** A helper's public profile. */
   helperHandle?: string;
   isYou: boolean;
+  /** Their profile photo, when they added one (shown inside the app). */
+  photo?: Photo;
+  /** The card behind their name (plan 9.10, LinkedIn-style): earned facts only, never claims. */
+  card?: CommunityAuthorCard;
+}
+
+/** What people have done here, as an author's card shows it. */
+export interface CommunityAuthorCard {
+  memberSince: ISODateTime;
+  /** A helper's record (an active helper profile). */
+  helper?: {
+    headline?: string;
+    rating?: { average: number; count: number };
+    completedCount: number;
+    /** Neighbors who booked them and recommended or thanked them here (plan 7.8). */
+    recommendedBy: number;
+    /** How fast they usually answer a new conversation (plan 7.12). */
+    responseTime?: 'hour' | 'few_hours' | 'day';
+    /** Up to 3 achievement badges, most notable first (plan 6.4). */
+    badges: BadgeView[];
+    /** Ask them for help directly; absent on your own card. */
+    requestHref?: string;
+  };
 }
 
 export interface CommunityReactionsView {
@@ -59,6 +75,8 @@ export interface CommunityHelperCard {
   recommendedBy: number;
   /** The helper recommended themself. */
   selfTag: boolean;
+  /** Ask them for help directly (the request page); absent when the helper is the viewer. */
+  requestHref?: string;
 }
 
 export interface CommunityReplyView {
@@ -91,29 +109,35 @@ export interface CommunityPostView {
   /** The feed shows the pinned answer, or the latest replies. */
   previewReplies: CommunityReplyView[];
   moderation?: { status: 'hidden' | 'removed'; reason?: string };
+  /** The neighborhood's slug, for the flair that filters by it (absent for the whole market). */
+  areaSlug?: string;
+  /** The viewer saved it (plan 9.10). */
+  saved?: boolean;
+  /** The task it became ("Ask for help"): its state now; the link stays once the task closes. */
+  task?: CommunityPostTask;
+  /**
+   * The author's own recommendation request or question that hasn't become a task yet: the posting wizard, filled
+   * in from the post (`routes.app.newTask({ fromPost })`). Absent for everyone else.
+   */
+  askForHelpHref?: string;
 }
 
-export interface CommunityFeedQuery {
-  scope?: CommunityScope;
-  sort?: CommunitySort;
-  kind?: CommunityPostKind;
-  page?: number;
+/** The neighborhood post a task came from ("Ask for help", plan 9.10), as the task's own pages link back to it. */
+export interface CommunityTaskDiscussion {
+  postId: string;
+  title: string;
+  replyCount: number;
 }
 
-export interface CommunityFeedPageData {
-  market: { slug: string; name: string };
-  query: Required<Omit<CommunityFeedQuery, 'kind'>> & { kind?: CommunityPostKind };
-  /** The viewer's neighborhood, which "Near you" centers on. */
-  yourArea?: { slug: string; name: string };
-  posts: CommunityPostView[];
-  totalCount: number;
-  pageCount: number;
-  /** Real numbers for the market: posts this week, replies today. */
-  stats: { postsThisWeek: number; repliesToday: number };
-  /** Why the viewer can't post yet (a verified phone first), when they can't. */
-  postBlocked?: 'phone_required' | 'suspended';
-  /** For live updates: the neighborhoods (ids) "near you" covers, when that's the scope. */
-  liveAreaIds?: string[];
+/** A post's task, as the post shows it. */
+export interface CommunityPostTask {
+  id: string;
+  title: string;
+  /** Where it opens for the viewer: their own task's page, a helper's offer page, or the task's page. */
+  href: string;
+  /** Taking offers, booked (someone's on it), done, or closed (canceled or expired). */
+  state: 'open' | 'booked' | 'done' | 'closed';
+  offerCount: number;
 }
 
 export interface CommunityPostPageData {
@@ -133,15 +157,19 @@ export interface CommunityPostPageData {
   alreadyRecommended: boolean;
 }
 
-export interface CommunityNewPostPageData {
+/** The new-post form's choices: on its own page, and in the portal's composer (plan 9.10). */
+export interface CommunityComposerData {
   market: { slug: string; name: string };
-  kind: CommunityPostKind;
   categories: { slug: CategorySlug }[];
   areas: { slug: string; name: string }[];
   yourArea?: { slug: string; name: string };
   /** Helpers the viewer can thank: completed, paid bookings not thanked yet. */
   thankOptions: { bookingId: string; helperName: string; taskTitle: string; completedAt: ISODateTime }[];
   postBlocked?: 'phone_required' | 'suspended';
+}
+
+export interface CommunityNewPostPageData extends CommunityComposerData {
+  kind: CommunityPostKind;
 }
 
 export const COMMUNITY_TITLE_MAX = 120;
@@ -176,6 +204,13 @@ export interface CommunityReactInput {
   on: boolean;
 }
 
+/** Save a post for later, or take it out of Saved (plan 9.10). */
+export const communitySaveInputSchema = z.object({
+  postId: z.string(code('required')).trim().min(1, code('required')).max(80, code('invalid')),
+  saved: z.boolean(code('required')),
+});
+export type CommunitySaveInput = z.input<typeof communitySaveInputSchema>;
+
 export const communityModerationInputSchema = z.object({
   action: z.enum(['hide', 'remove', 'restore'], code('required')),
   reason: z.string(code('required')).trim().min(5, code('too_short')).max(500, code('too_long')),
@@ -194,8 +229,9 @@ export interface CommunityNewPostHandlers {
  * - `onReact`: ok `updated`. Errors: `not_found`, `rate_limited`.
  * - `onReply`: ok `sent`. Errors: `validation_failed`, `rate_limited`, `not_allowed` (closed, or blocked).
  * - `onPin`: the author pins (or unpins with `null`) the answer that helped. ok `updated`.
- * - `onDelete`: an author removes their own post or reply. ok `updated` (a post: `redirectTo` the feed).
+ * - `onDelete`: an author removes their own post or reply. ok `updated` (a post: `redirectTo` the portal).
  * - `onModerate`: staff only. ok `updated`.
+ * - `onSavePost`: keep the post in Saved, or take it out (plan 9.10). ok `updated`. Errors: `not_found`, `rate_limited`.
  */
 export interface CommunityPostHandlers {
   onReact: ActionHandler<CommunityReactInput>;
@@ -203,21 +239,5 @@ export interface CommunityPostHandlers {
   onPin: ActionHandler<{ replyId: string | null }>;
   onDelete: ActionHandler<{ target: 'post' | 'reply'; id: string }>;
   onModerate?: ActionHandler<{ target: 'post' | 'reply'; id: string } & CommunityModerationInput>;
-}
-
-/** The feed's reactions (the same as a post's). */
-/** One more page of the same feed (completion plan 7.7, continuous like LinkedIn's), read as the page reads it. */
-export interface CommunityFeedMore {
-  posts: CommunityPostView[];
-  page: number;
-  pageCount: number;
-}
-
-export interface CommunityFeedHandlers {
-  onReact: ActionHandler<CommunityReactInput>;
-  /**
-   * The next page, appended under the posts already shown ("Show more posts", or on its own near the end of the
-   * list). `null` when the viewer can't read the feed (signed out). Without it, the next page is a link.
-   */
-  onMore?: (query: CommunityFeedQuery & { page: number }) => Promise<CommunityFeedMore | null>;
+  onSavePost?: ActionHandler<{ postId: string; saved: boolean }>;
 }

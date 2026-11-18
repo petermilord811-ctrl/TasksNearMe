@@ -1,6 +1,6 @@
-import type { CommunityAuthor, CommunityFeedPageData, CommunityHelperCard, CommunityNewPostPageData, CommunityPostPageData, CommunityPostView, CommunityReplyView } from '@/contracts';
+import type { CommunityAuthor, CommunityHelperCard, CommunityNewPostPageData, CommunityPostPageData, CommunityPostView, CommunityReplyView } from '@/contracts';
 
-/** The community feed (completion plan 7.7–7.8), as the community service returns it for Maya in Mueller. */
+/** The community (completion plan 7.7–7.8), as the community service returns it for Maya in Mueller. */
 
 const market = { slug: 'austin', name: 'Austin' };
 const author = (displayName: string, initials: string, role: CommunityAuthor['role'], extra: Partial<CommunityAuthor> = {}): CommunityAuthor => ({ displayName, initials, role, verified: false, isYou: false, ...extra });
@@ -107,26 +107,8 @@ const tip: CommunityPostView = {
   previewReplies: [],
 };
 
-export const communityFeedPageData: CommunityFeedPageData = {
-  market,
-  query: { scope: 'nearby', sort: 'active', page: 1 },
-  yourArea: { slug: 'mueller', name: 'Mueller' },
-  posts: [recommendation, question, thanks, tip],
-  totalCount: 4,
-  pageCount: 1,
-  stats: { postsThisWeek: 18, repliesToday: 7 },
-};
-
-export const communityFeedEmptyData: CommunityFeedPageData = {
-  ...communityFeedPageData,
-  query: { scope: 'nearby', sort: 'active', kind: 'tip', page: 1 },
-  posts: [],
-  totalCount: 0,
-  stats: { postsThisWeek: 0, repliesToday: 0 },
-};
-
-/** Not phone-verified yet: reading works, posting waits. */
-export const communityFeedBlockedData: CommunityFeedPageData = { ...communityFeedPageData, postBlocked: 'phone_required' };
+/** The community's posts near Maya, liveliest first (the portal's fixtures, src/fixtures/portal.ts, build on them). */
+export const communityFeedPosts: CommunityPostView[] = [recommendation, question, thanks, tip];
 
 export const communityPostPageData: CommunityPostPageData = {
   market,

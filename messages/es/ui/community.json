@@ -1,5 +1,5 @@
 {
-  "title": "Comunidad",
+  "title": "Vecinos",
   "intro": "Pregunta a tus vecinos de {market} a quién contratarían, cómo lo harían y quién hizo un gran trabajo.",
   "stats": "{posts, plural, one {# publicación} other {# publicaciones}} esta semana · {replies, plural, one {# respuesta} other {# respuestas}} hoy",
   "composer": {
@@ -65,7 +65,9 @@
     "thanked": "Le agradecieron",
     "selfTag": "Recomendación propia",
     "recommendedBy": "{count, plural, =0 {Recién llegó a TasksNearMe} one {# recomendación de vecinos} other {# recomendaciones de vecinos}}",
-    "view": "Ver perfil"
+    "view": "Ver perfil",
+    "request": "Solicitar",
+    "requestLabel": "Solicitar a {name}"
   },
   "replyForm": {
     "label": "Tu respuesta",
@@ -94,7 +96,7 @@
   "verifyPhone": "Verificar tu teléfono",
   "newPost": {
     "title": "Nueva publicación",
-    "back": "Volver a la comunidad",
+    "back": "Volver a Vecinos",
     "kind": "¿Qué tipo de publicación?",
     "titleLabel": "Título",
     "titleHints": {
@@ -127,7 +129,7 @@
     "announce": "{count, plural, one {# publicación nueva} other {# publicaciones nuevas}} en la comunidad",
     "loading": "Cargando…"
   },
-  "back": "Comunidad",
+  "back": "Vecinos",
   "moderation": {
     "hidden": "Oculto por el equipo",
     "removed": "Eliminado",
@@ -149,9 +151,6 @@
   },
   "previews": {
     "group": "Comunidad",
-    "feed": "Comunidad · publicaciones cerca de ti",
-    "feedEmpty": "Comunidad · aún no hay nada",
-    "feedBlocked": "Comunidad · primero verifica tu teléfono",
     "post": "Comunidad · publicación pidiendo una recomendación, con respuestas",
     "postStaff": "Comunidad · vista del equipo de una respuesta oculta",
     "newPost": "Comunidad · nueva publicación",
@@ -168,5 +167,41 @@
     "loaded": "{count, plural, =0 {No hay más publicaciones} one {Se agregó # publicación más} other {Se agregaron # publicaciones más}}",
     "end": "Estás al día",
     "failed": "No se pudieron cargar más publicaciones. Inténtalo de nuevo."
-  }
+  },
+  "authorCard": {
+    "open": "Sobre {name}",
+    "memberSince": "En TasksNearMe desde {date}",
+    "rating": "{average} ({count, plural, one {# reseña} other {# reseñas}})",
+    "tasksDone": "{count, plural, =0 {Todavía sin tareas completadas} one {# tarea completada} other {# tareas completadas}}",
+    "recommendedBy": "{count, plural, =0 {Todavía sin recomendaciones} one {# recomendación de vecinos} other {# recomendaciones de vecinos}}",
+    "badges": "Insignias",
+    "viewProfile": "Ver perfil",
+    "request": "Solicitar",
+    "roleHint": {
+      "helper": "Ofrece ayuda en TasksNearMe",
+      "poster": "Ha publicado tareas aquí",
+      "neighbor": "Forma parte de la comunidad"
+    }
+  },
+  "save": {
+    "save": "Guardar",
+    "saved": "Guardada",
+    "saveLabel": "Guardar: {title}",
+    "unsaveLabel": "Quitar de Guardado: {title}",
+    "failed": "No se pudo guardar. Inténtalo de nuevo."
+  },
+  "askForHelp": {
+    "action": "Pedir ayuda",
+    "hint": "Publícala como tarea y recibe ofertas de ayudantes"
+  },
+  "postTask": {
+    "label": "Ya es una tarea",
+    "state": "{state, select, open {{count, plural, =0 {Abierta a ofertas} one {# oferta hasta ahora} other {# ofertas hasta ahora}}} booked {Reservada} done {Completada} other {Cerrada}}",
+    "open": "Abrir la tarea"
+  },
+  "thread": {
+    "showMore": "{count, plural, one {Ver # respuesta más} other {Ver # respuestas más}}",
+    "showLess": "Ver menos respuestas"
+  },
+  "fromTask": "Viene de una publicación del vecindario"
 }

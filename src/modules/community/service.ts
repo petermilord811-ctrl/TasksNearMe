@@ -1,30 +1,34 @@
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, notInArray, sql, type SQL } from 'drizzle-orm';
 import {
   COMMUNITY_POST_KINDS,
-  COMMUNITY_SCOPES,
-  COMMUNITY_SORTS,
   communityModerationInputSchema,
   communityPostInputSchema,
   communityReplyInputSchema,
+  communitySaveInputSchema,
+  routes,
   type ActionResult,
   type CategorySlug,
   type CommunityAuthor,
-  type CommunityFeedPageData,
+  type CommunityComposerData,
   type CommunityHelperCard,
   type CommunityModerationInput,
   type CommunityNewPostPageData,
   type CommunityPostInput,
   type CommunityPostKind,
   type CommunityPostPageData,
+  type CommunityPostTask,
   type CommunityPostView,
   type CommunityReactInput,
   type CommunityReaction,
   type CommunityReplyInput,
   type CommunityReplyView,
+  type CommunityTaskDiscussion,
 } from '@/contracts';
 import { loadPhoneCheck, phoneGatePasses } from '@/modules/accounts/phone-check';
 import { users } from '@/modules/accounts/schema';
+import { badgesFor } from '@/modules/badges/service';
 import { bookings } from '@/modules/bookings/schema';
+import { avatarPhoto } from '@/modules/files/photos';
 import { areas, categories, markets } from '@/modules/markets/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { savedHelpers } from '@/modules/reviews/schema';
@@ -36,13 +40,14 @@ import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { responseTimeRange } from '@/shared/response-time';
 import { realRowsOnly, type RowScope } from '@/shared/sample-data';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { auditRoleOf } from '@/modules/tasks/moderation';
 import type { StaffActor } from '@/modules/support/staff';
-import { authorRole, communityLimits, FEED_PAGE_SIZE, helpfulMilestone, initialsOf, isSafetyOrCrimePost, milesBetween, NEARBY_MILES, REACTION_RULE, TOP_WINDOW_DAYS } from './domain';
-import { communityPosts, communityReactions, communityReplies } from './schema';
+import { ASK_FOR_HELP_KINDS, authorRole, communityLimits, helpfulMilestone, initialsOf, isSafetyOrCrimePost, milesBetween, NEARBY_MILES, postTaskState, REACTION_RULE, SAVE_RULE } from './domain';
+import { communityPosts, communityReactions, communityReplies, communitySaves } from './schema';
 
 /**
  * The community feed (completion plan 7.7–7.8). Everything is read for one signed-in member: their market,
@@ -55,27 +60,14 @@ export interface CommunityViewer {
   staff: StaffActor | null;
 }
 
-type SearchParams = Record<string, string | string[] | undefined>;
-type PostRow = typeof communityPosts.$inferSelect;
+export type PostRow = typeof communityPosts.$inferSelect;
 type ReplyRow = typeof communityReplies.$inferSelect;
 
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 const oneOf = <T extends string>(value: string | undefined, options: readonly T[]): T | undefined => (options as readonly string[]).includes(value ?? '') ? (value as T) : undefined;
-
-export function parseCommunityQuery(params: SearchParams): CommunityFeedPageData['query'] {
-  const page = Number.parseInt(first(params.page) ?? '', 10);
-  const kind = oneOf(first(params.kind), COMMUNITY_POST_KINDS);
-  return {
-    scope: oneOf(first(params.scope), COMMUNITY_SCOPES) ?? 'nearby',
-    sort: oneOf(first(params.sort), COMMUNITY_SORTS) ?? 'active',
-    ...(kind ? { kind } : {}),
-    page: Number.isFinite(page) && page > 1 ? Math.min(page, 500) : 1,
-  };
-}
 
 // ---- The viewer ---------------------------------------------------------------------------------
 
-interface ViewerFacts {
+export interface ViewerFacts {
   user: typeof users.$inferSelect;
   market: { id: string; slug: string; name: string };
   area?: { id: string; slug: string; name: string; lat: number; lng: number };
@@ -84,7 +76,7 @@ interface ViewerFacts {
   blocked: string[];
 }
 
-async function viewerFacts(db: Db, userId: string): Promise<ViewerFacts | null> {
+export async function viewerFacts(db: Db, userId: string): Promise<ViewerFacts | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user || user.status === 'deleted' || user.status === 'banned') return null;
   const [market] = await db.select({ id: markets.id, slug: markets.slug, name: markets.name }).from(markets).where(eq(markets.id, user.homeMarketId)).limit(1);
@@ -112,7 +104,8 @@ async function viewerFacts(db: Db, userId: string): Promise<ViewerFacts | null> 
   };
 }
 
-async function nearbyAreaIds(db: Db, facts: ViewerFacts): Promise<string[]> {
+/** Your neighborhood and those within `NEARBY_MILES` of it (their centers); none when we don't know yours. */
+export async function nearbyAreaIds(db: Db, facts: ViewerFacts): Promise<string[]> {
   if (!facts.area) return [];
   const rows = await db.select({ id: areas.id, lat: areas.centerLat, lng: areas.centerLng }).from(areas).where(eq(areas.marketId, facts.market.id));
   const center = { lat: facts.area.lat, lng: facts.area.lng };
@@ -121,13 +114,27 @@ async function nearbyAreaIds(db: Db, facts: ViewerFacts): Promise<string[]> {
 
 // ---- Reading ------------------------------------------------------------------------------------
 
+/**
+ * Authors as everyone sees them, with the card behind their name (plan 9.10): when they joined, and for active
+ * helpers their record here (rating, tasks done, "recommended by", reply time, top badges). Earned facts only.
+ */
 async function authorsOf(db: Db, userIds: string[], viewerId: string): Promise<Map<string, CommunityAuthor>> {
   const ids = [...new Set(userIds)];
   if (ids.length === 0) return new Map();
   const [people, profiles, verified, posters] = await Promise.all([
-    db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids)),
+    db.select({ id: users.id, name: users.name, createdAt: users.createdAt, avatarFileId: users.avatarFileId }).from(users).where(inArray(users.id, ids)),
     db
-      .select({ userId: helperProfiles.userId, handle: helperProfiles.handle, status: helperProfiles.status, areaName: areas.name })
+      .select({
+        userId: helperProfiles.userId,
+        handle: helperProfiles.handle,
+        status: helperProfiles.status,
+        areaName: areas.name,
+        headline: helperProfiles.headline,
+        ratingAverage: helperProfiles.ratingAverage,
+        ratingCount: helperProfiles.ratingCount,
+        completedCount: helperProfiles.completedCount,
+        responseTimeMinutes: helperProfiles.responseTimeMinutes,
+      })
       .from(helperProfiles)
       .leftJoin(areas, eq(areas.id, helperProfiles.areaId))
       .where(inArray(helperProfiles.userId, ids)),
@@ -135,6 +142,8 @@ async function authorsOf(db: Db, userIds: string[], viewerId: string): Promise<M
     db.selectDistinct({ userId: tasks.posterUserId }).from(tasks).where(and(inArray(tasks.posterUserId, ids), ne(tasks.status, 'draft'))),
   ]);
   const profileOf = new Map(profiles.map((row) => [row.userId, row]));
+  const helperIds = profiles.filter((row) => row.status === 'active').map((row) => row.userId);
+  const [recommended, badges] = await Promise.all([recommendedByCounts(db, helperIds), badgesFor(db, helperIds)]);
   const verifiedIds = new Set(verified.map((row) => row.userId));
   const posterIds = new Set(posters.map((row) => row.userId));
   return new Map(
@@ -142,6 +151,7 @@ async function authorsOf(db: Db, userIds: string[], viewerId: string): Promise<M
       const profile = profileOf.get(person.id);
       const activeHelper = profile?.status === 'active';
       const name = person.name || '—';
+      const responseTime = activeHelper ? responseTimeRange(profile?.responseTimeMinutes) : undefined;
       const author: CommunityAuthor = {
         displayName: name,
         initials: initialsOf(name),
@@ -150,6 +160,23 @@ async function authorsOf(db: Db, userIds: string[], viewerId: string): Promise<M
         ...(activeHelper && profile?.areaName ? { areaName: profile.areaName } : {}),
         ...(activeHelper && profile ? { helperHandle: profile.handle } : {}),
         isYou: person.id === viewerId,
+        ...(person.avatarFileId ? { photo: avatarPhoto(person.avatarFileId, name) } : {}),
+        card: {
+          memberSince: person.createdAt.toISOString(),
+          ...(activeHelper && profile
+            ? {
+                helper: {
+                  ...(profile.headline ? { headline: profile.headline } : {}),
+                  ...(profile.ratingCount > 0 && profile.ratingAverage !== null ? { rating: { average: Math.round(profile.ratingAverage * 10) / 10, count: profile.ratingCount } } : {}),
+                  completedCount: profile.completedCount,
+                  recommendedBy: recommended.get(person.id) ?? 0,
+                  ...(responseTime ? { responseTime } : {}),
+                  badges: (badges.get(person.id) ?? []).slice(0, 3),
+                  ...(person.id !== viewerId ? { requestHref: routes.app.requestHelper(profile.handle) } : {}),
+                },
+              }
+            : {}),
+        },
       };
       return [person.id, author];
     }),
@@ -182,7 +209,7 @@ export async function recommendedByCounts(db: Db, helperIds: string[], rows: Row
   return new Map(found.rows.map((row) => [row.helper, Number(row.total)]));
 }
 
-async function helperCardsOf(db: Db, picks: { helperUserId: string; byUserId: string }[]): Promise<Map<string, CommunityHelperCard>> {
+async function helperCardsOf(db: Db, picks: { helperUserId: string; byUserId: string }[], viewerId: string): Promise<Map<string, CommunityHelperCard>> {
   const helperIds = [...new Set(picks.map((pick) => pick.helperUserId))];
   if (helperIds.length === 0) return new Map();
   const [rows, recommended] = await Promise.all([
@@ -204,6 +231,7 @@ async function helperCardsOf(db: Db, picks: { helperUserId: string; byUserId: st
       ...(row.ratingCount > 0 && row.ratingAverage !== null ? { rating: { average: Math.round(row.ratingAverage * 10) / 10, count: row.ratingCount } } : {}),
       recommendedBy: recommended.get(row.userId) ?? 0,
       selfTag: false,
+      ...(row.userId !== viewerId ? { requestHref: routes.app.requestHelper(row.handle) } : {}),
     });
   }
   return cards;
@@ -226,19 +254,53 @@ async function myReactions(db: Db, userId: string, targets: { kind: 'post' | 're
 const moderationOf = (row: { status: string; moderationReason: string | null }, staff: boolean) =>
   row.status !== 'visible' && staff ? { moderation: { status: row.status as 'hidden' | 'removed', ...(row.moderationReason ? { reason: row.moderationReason } : {}) } } : {};
 
-/** Turns rows into views: authors, the viewer's reactions, helper cards, and each post's preview replies. */
-async function hydrate(db: Db, viewer: CommunityViewer, posts: PostRow[], replies: ReplyRow[], previews: Map<string, ReplyRow[]>): Promise<{ posts: CommunityPostView[]; replies: CommunityReplyView[] }> {
+/**
+ * The tasks posts became ("Ask for help", plan 9.10), as each post shows its own: the state now and where it opens
+ * for the viewer. A task staff hid shows only to its poster.
+ */
+async function postTasksOf(db: Db, viewer: CommunityViewer, posts: PostRow[], now: Date): Promise<Map<string, CommunityPostTask>> {
+  const taskIds = [...new Set(posts.map((post) => post.taskId).filter((id): id is string => Boolean(id)))];
+  if (taskIds.length === 0) return new Map();
+  const [rows, [profile]] = await Promise.all([
+    db
+      .select({ id: tasks.id, slug: tasks.slug, title: tasks.title, status: tasks.status, offerCount: tasks.offerCount, posterUserId: tasks.posterUserId, windowEnd: tasks.windowEnd, hiddenAt: tasks.hiddenAt })
+      .from(tasks)
+      .where(inArray(tasks.id, taskIds)),
+    db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, viewer.id)).limit(1),
+  ]);
+  const helps = profile?.status === 'active';
+  const out = new Map<string, CommunityPostTask>();
+  for (const row of rows) {
+    const yours = row.posterUserId === viewer.id;
+    if (row.hiddenAt && !yours) continue;
+    const state = postTaskState(row, now);
+    const href = yours ? routes.app.task(row.id) : helps && state === 'open' ? routes.app.findWorkTask(row.id) : routes.publicTask(row.slug);
+    out.set(row.id, { id: row.id, title: row.title, href, state, offerCount: row.offerCount });
+  }
+  return out;
+}
+
+/**
+ * Turns rows into views: authors, the viewer's reactions and saves, helper cards, each post's preview replies, its
+ * task, and "Ask for help" on the viewer's own asks.
+ */
+export async function hydrate(db: Db, viewer: CommunityViewer, posts: PostRow[], replies: ReplyRow[], previews: Map<string, ReplyRow[]>, now: Date = new Date()): Promise<{ posts: CommunityPostView[]; replies: CommunityReplyView[] }> {
   const allReplies = [...replies, ...[...previews.values()].flat()];
-  const [authors, mine, cards, areaNames] = await Promise.all([
+  const postIds = posts.map((post) => post.id);
+  const [authors, mine, cards, areaInfo, saves, postTasks] = await Promise.all([
     authorsOf(db, [...posts.map((post) => post.authorUserId), ...allReplies.map((reply) => reply.authorUserId)], viewer.id),
     myReactions(db, viewer.id, [...posts.map((post) => ({ kind: 'post' as const, id: post.id })), ...allReplies.map((reply) => ({ kind: 'reply' as const, id: reply.id }))]),
     helperCardsOf(db, [
       ...posts.filter((post) => post.helperUserId).map((post) => ({ helperUserId: post.helperUserId!, byUserId: post.authorUserId })),
       ...allReplies.filter((reply) => reply.recommendedHelperUserId).map((reply) => ({ helperUserId: reply.recommendedHelperUserId!, byUserId: reply.authorUserId })),
-    ]),
+    ], viewer.id),
     posts.some((post) => post.areaId)
-      ? db.select({ id: areas.id, name: areas.name }).from(areas).where(inArray(areas.id, [...new Set(posts.map((post) => post.areaId).filter((id): id is string => Boolean(id)))])).then((rows) => new Map(rows.map((row) => [row.id, row.name])))
-      : Promise.resolve(new Map<string, string>()),
+      ? db.select({ id: areas.id, name: areas.name, slug: areas.slug }).from(areas).where(inArray(areas.id, [...new Set(posts.map((post) => post.areaId).filter((id): id is string => Boolean(id)))])).then((rows) => new Map(rows.map((row) => [row.id, row])))
+      : Promise.resolve(new Map<string, { id: string; name: string; slug: string }>()),
+    postIds.length > 0
+      ? db.select({ postId: communitySaves.postId }).from(communitySaves).where(and(eq(communitySaves.userId, viewer.id), inArray(communitySaves.postId, postIds))).then((rows) => new Set(rows.map((row) => row.postId)))
+      : Promise.resolve(new Set<string>()),
+    postTasksOf(db, viewer, posts, now),
   ]);
   const staff = viewer.staff !== null;
   const replyView = (reply: ReplyRow, pinnedId: string | null): CommunityReplyView | null => {
@@ -260,7 +322,10 @@ async function hydrate(db: Db, viewer: CommunityViewer, posts: PostRow[], replie
     const author = authors.get(post.authorUserId);
     if (!author) return [];
     const thanked = post.helperUserId ? cards.get(post.helperUserId) : undefined;
-    const areaName = post.areaId ? areaNames.get(post.areaId) : undefined;
+    const area = post.areaId ? areaInfo.get(post.areaId) : undefined;
+    const areaName = area?.name;
+    const task = post.taskId ? postTasks.get(post.taskId) : undefined;
+    const asks = post.authorUserId === viewer.id && post.status === 'visible' && !post.taskId && (ASK_FOR_HELP_KINDS as readonly string[]).includes(post.kind);
     return [{
       id: post.id,
       kind: post.kind as CommunityPostKind,
@@ -276,6 +341,10 @@ async function hydrate(db: Db, viewer: CommunityViewer, posts: PostRow[], replie
       ...(thanked ? { thankedHelper: thanked } : {}),
       previewReplies: (previews.get(post.id) ?? []).map((reply) => replyView(reply, post.pinnedReplyId)).filter((view): view is CommunityReplyView => view !== null),
       ...moderationOf(post, staff),
+      ...(area ? { areaSlug: area.slug } : {}),
+      saved: saves.has(post.id),
+      ...(task ? { task } : {}),
+      ...(asks ? { askForHelpHref: routes.app.newTask({ fromPost: post.id }) } : {}),
     }];
   });
   const pinnedId = posts[0]?.pinnedReplyId ?? null;
@@ -283,7 +352,7 @@ async function hydrate(db: Db, viewer: CommunityViewer, posts: PostRow[], replie
 }
 
 /** The pinned answer, or the two latest replies, for each post in the feed. */
-async function previewsOf(db: Db, posts: PostRow[], blocked: string[]): Promise<Map<string, ReplyRow[]>> {
+export async function previewsOf(db: Db, posts: PostRow[], blocked: string[]): Promise<Map<string, ReplyRow[]>> {
   const previews = new Map<string, ReplyRow[]>();
   if (posts.length === 0) return previews;
   const pinnedIds = posts.map((post) => post.pinnedReplyId).filter((id): id is string => Boolean(id));
@@ -306,53 +375,6 @@ async function previewsOf(db: Db, posts: PostRow[], blocked: string[]): Promise<
     previews.set(post.id, pin ? [pin] : latest.filter((reply) => reply.postId === post.id).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()));
   }
   return previews;
-}
-
-export async function getCommunityFeed(db: Db, viewer: CommunityViewer, params: SearchParams, now: Date): Promise<CommunityFeedPageData | null> {
-  const facts = await viewerFacts(db, viewer.id);
-  if (!facts) return null;
-  const query = parseCommunityQuery(params);
-  const conditions: SQL[] = [eq(communityPosts.marketId, facts.market.id), eq(communityPosts.status, 'visible')];
-  if (facts.blocked.length > 0) conditions.push(notInArray(communityPosts.authorUserId, facts.blocked));
-  if (query.kind) conditions.push(eq(communityPosts.kind, query.kind));
-  let nearby: string[] | undefined;
-  if (query.scope === 'nearby' && facts.area) {
-    nearby = await nearbyAreaIds(db, facts);
-    conditions.push(or(isNull(communityPosts.areaId), inArray(communityPosts.areaId, nearby))!);
-  }
-  if (query.sort === 'top') conditions.push(gte(communityPosts.createdAt, new Date(now.getTime() - TOP_WINDOW_DAYS * 86_400_000)));
-  const order = query.sort === 'new'
-    ? [desc(communityPosts.createdAt), desc(communityPosts.id)]
-    : query.sort === 'top'
-      ? [desc(communityPosts.helpfulCount), desc(communityPosts.thanksCount), desc(communityPosts.createdAt), desc(communityPosts.id)]
-      : [desc(communityPosts.lastActivityAt), desc(communityPosts.id)];
-  const where = and(...conditions);
-  const weekAgo = new Date(now.getTime() - 7 * 86_400_000);
-  const dayAgo = new Date(now.getTime() - 86_400_000);
-  const [[total], rows, [week], [today]] = await Promise.all([
-    db.select({ value: count() }).from(communityPosts).where(where),
-    db.select().from(communityPosts).where(where).orderBy(...order).limit(FEED_PAGE_SIZE).offset((query.page - 1) * FEED_PAGE_SIZE),
-    db.select({ value: count() }).from(communityPosts).where(and(eq(communityPosts.marketId, facts.market.id), eq(communityPosts.status, 'visible'), gte(communityPosts.createdAt, weekAgo))),
-    db
-      .select({ value: count() })
-      .from(communityReplies)
-      .innerJoin(communityPosts, eq(communityPosts.id, communityReplies.postId))
-      .where(and(eq(communityPosts.marketId, facts.market.id), eq(communityReplies.status, 'visible'), gte(communityReplies.createdAt, dayAgo))),
-  ]);
-  const previews = await previewsOf(db, rows, facts.blocked);
-  const { posts } = await hydrate(db, viewer, rows, [], previews);
-  const totalCount = Number(total?.value ?? 0);
-  return {
-    market: { slug: facts.market.slug, name: facts.market.name },
-    query,
-    ...(facts.area ? { yourArea: { slug: facts.area.slug, name: facts.area.name } } : {}),
-    posts,
-    totalCount,
-    pageCount: Math.max(1, Math.ceil(totalCount / FEED_PAGE_SIZE)),
-    stats: { postsThisWeek: Number(week?.value ?? 0), repliesToday: Number(today?.value ?? 0) },
-    ...(facts.postBlocked ? { postBlocked: facts.postBlocked } : {}),
-    ...(nearby ? { liveAreaIds: nearby } : {}),
-  };
 }
 
 /** Helpers the viewer can name on a recommendation request: ones they booked or saved, and themself. */
@@ -381,7 +403,7 @@ async function visiblePost(db: Db, viewer: CommunityViewer, facts: ViewerFacts, 
   return post;
 }
 
-export async function getCommunityPost(db: Db, viewer: CommunityViewer, postId: string): Promise<CommunityPostPageData | null> {
+export async function getCommunityPost(db: Db, viewer: CommunityViewer, postId: string, now: Date = new Date()): Promise<CommunityPostPageData | null> {
   const facts = await viewerFacts(db, viewer.id);
   if (!facts) return null;
   const post = await visiblePost(db, viewer, facts, postId);
@@ -392,7 +414,7 @@ export async function getCommunityPost(db: Db, viewer: CommunityViewer, postId: 
   const rows = await db.select().from(communityReplies).where(and(...replyConditions)).orderBy(asc(communityReplies.createdAt), asc(communityReplies.id));
   // The pinned answer first, then the conversation in order.
   const ordered = [...rows.filter((reply) => reply.id === post.pinnedReplyId), ...rows.filter((reply) => reply.id !== post.pinnedReplyId)];
-  const { posts, replies } = await hydrate(db, viewer, [post], ordered, new Map());
+  const { posts, replies } = await hydrate(db, viewer, [post], ordered, new Map(), now);
   const view = posts[0];
   if (!view) return null;
   const isAuthor = post.authorUserId === viewer.id;
@@ -417,6 +439,12 @@ export async function getNewCommunityPostPage(db: Db, viewer: CommunityViewer, k
   const facts = await viewerFacts(db, viewer.id);
   if (!facts) return null;
   const kind = oneOf(kindParam, COMMUNITY_POST_KINDS) ?? 'recommendation';
+  return { ...(await composerData(db, facts)), kind };
+}
+
+/** The new-post form's choices, on its own page and in the portal's composer: services, neighborhoods, helpers to thank. */
+export async function composerData(db: Db, facts: ViewerFacts): Promise<CommunityComposerData> {
+  const viewer = { id: facts.user.id };
   const [categoryRows, areaRows, completed] = await Promise.all([
     db.select({ slug: categories.slug }).from(categories).orderBy(asc(categories.slug)),
     db.select({ slug: areas.slug, name: areas.name }).from(areas).where(eq(areas.marketId, facts.market.id)).orderBy(asc(areas.name)),
@@ -437,7 +465,6 @@ export async function getNewCommunityPostPage(db: Db, viewer: CommunityViewer, k
   ]);
   return {
     market: { slug: facts.market.slug, name: facts.market.name },
-    kind,
     categories: categoryRows.map((row) => ({ slug: row.slug as CategorySlug })),
     areas: areaRows,
     ...(facts.area ? { yourArea: { slug: facts.area.slug, name: facts.area.name } } : {}),
@@ -625,7 +652,7 @@ export async function deleteOwnCommunityItem(db: Db, viewer: CommunityViewer, ta
     if (!post || post.status === 'removed') return { ok: false, code: 'not_found' };
     if (post.authorUserId !== viewer.id) return { ok: false, code: 'not_allowed' };
     await db.update(communityPosts).set({ status: 'removed', moderationReason: 'author', moderatedByUserId: viewer.id, moderatedAt: now, updatedAt: now }).where(eq(communityPosts.id, post.id));
-    return { ok: true, code: 'updated', redirectTo: '/app/community' };
+    return { ok: true, code: 'updated', redirectTo: routes.app.community() };
   }
   const [reply] = await db.select().from(communityReplies).where(eq(communityReplies.id, String(id))).limit(1);
   if (!reply || reply.status === 'removed') return { ok: false, code: 'not_found' };
@@ -671,4 +698,71 @@ export async function moderateCommunityItem(db: Db, staff: StaffActor, target: '
     });
   });
   return { ok: true, code: 'updated' };
+}
+
+// ---- Saved posts and "Ask for help" (plan 9.10) ---------------------------------------------------------------
+
+/** Keeps a post in the viewer's Saved, or takes it out. Saving needs a post they can read now; taking out never does. */
+export async function saveCommunityPost(db: Db, viewer: CommunityViewer, input: { postId: string; saved: boolean }, now: Date): Promise<ActionResult> {
+  const parsed = communitySaveInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const { postId } = parsed.data;
+  if (!parsed.data.saved) {
+    await db.delete(communitySaves).where(and(eq(communitySaves.userId, viewer.id), eq(communitySaves.postId, postId)));
+    return { ok: true, code: 'updated' };
+  }
+  const facts = await viewerFacts(db, viewer.id);
+  if (!facts) return { ok: false, code: 'not_allowed' };
+  const post = await visiblePost(db, viewer, facts, postId);
+  if (!post || post.status !== 'visible') return { ok: false, code: 'not_found' };
+  const limited = await consumeRateLimit(db, `community:save:${viewer.id}`, SAVE_RULE, now);
+  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
+  await db.insert(communitySaves).values({ userId: viewer.id, postId: post.id, createdAt: now }).onConflictDoNothing();
+  return { ok: true, code: 'updated' };
+}
+
+/** The viewer's own ask that "Ask for help" can turn into a task: visible, a recommendation request or a question, no task yet. */
+async function askablePost(db: Db, userId: string, postId: string): Promise<PostRow | null> {
+  const [post] = await db
+    .select()
+    .from(communityPosts)
+    .where(and(eq(communityPosts.id, String(postId)), eq(communityPosts.authorUserId, userId), eq(communityPosts.status, 'visible'), inArray(communityPosts.kind, [...ASK_FOR_HELP_KINDS]), isNull(communityPosts.taskId)))
+    .limit(1);
+  return post ?? null;
+}
+
+/**
+ * "Ask for help" (plan 9.10): what the posting wizard starts from, read from the post itself (the address only names
+ * it), so nobody can fill a task from someone else's words.
+ */
+export async function communityPostForTask(db: Db, userId: string, postId: string): Promise<{ id: string; title: string; body: string; categorySlug?: CategorySlug } | null> {
+  const post = await askablePost(db, userId, postId);
+  if (!post) return null;
+  return { id: post.id, title: post.title, body: post.body, ...(post.categorySlug ? { categorySlug: post.categorySlug as CategorySlug } : {}) };
+}
+
+/**
+ * Links the author's post to the task they just posted from it, once: the post then shows the task, and the task its
+ * discussion. Only the poster's own task and their own ask; a post that already has a task keeps it.
+ */
+export async function linkCommunityPostToTask(db: Db, userId: string, postId: string, taskId: string, now: Date): Promise<boolean> {
+  const [task] = await db.select({ id: tasks.id }).from(tasks).where(and(eq(tasks.id, String(taskId)), eq(tasks.posterUserId, userId))).limit(1);
+  if (!task || !(await askablePost(db, userId, postId))) return false;
+  const linked = await db
+    .update(communityPosts)
+    .set({ taskId: task.id, updatedAt: now })
+    .where(and(eq(communityPosts.id, String(postId)), eq(communityPosts.authorUserId, userId), isNull(communityPosts.taskId)))
+    .returning({ id: communityPosts.id })
+    .catch(() => []);
+  return linked.length > 0;
+}
+
+/** The neighborhood post a task came from, for the task's own pages ("From a neighborhood post"); visible posts only. */
+export async function communityPostOfTask(db: Db, taskId: string): Promise<CommunityTaskDiscussion | null> {
+  const [post] = await db
+    .select({ postId: communityPosts.id, title: communityPosts.title, replyCount: communityPosts.replyCount })
+    .from(communityPosts)
+    .where(and(eq(communityPosts.taskId, String(taskId)), eq(communityPosts.status, 'visible')))
+    .limit(1);
+  return post ?? null;
 }

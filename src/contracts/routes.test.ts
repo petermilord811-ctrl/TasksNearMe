@@ -16,6 +16,8 @@ describe('routes', () => {
     expect(routes.app.newTask({ describe: 'load a truck', ai: false })).toBe('/app/tasks/new?describe=load+a+truck');
     // "Use this draft" after "Write it with AI": the title too.
     expect(routes.app.newTask({ category: 'moving-help', title: 'Load a 10 ft truck', describe: 'Two hours.' })).toBe('/app/tasks/new?category=moving-help&title=Load+a+10+ft+truck&describe=Two+hours.');
+    // "Ask for help" (plan 9.10): the post's id only; the server reads its words.
+    expect(routes.app.newTask({ fromPost: 'cpo_desk' })).toBe('/app/tasks/new?from=cpo_desk');
   });
 
   it('puts task board filters in the URL and leaves defaults out', () => {
@@ -47,5 +49,14 @@ describe('routes', () => {
       'https://www.google.com/maps/search/?api=1&query=1234%20Example%20Lane%2C%20Apt%202B%2C%20Austin%2C%20TX%2078723',
     );
     expect(href).not.toContain('Buzz');
+  });
+});
+
+describe('the neighborhood portal (plan 9.10)', () => {
+  it('leaves the defaults out and keeps one order, so the same filters make the same URL', () => {
+    expect(routes.app.community()).toBe('/app/community');
+    expect(routes.app.community({ sort: 'hot', view: 'feed', group: 'area', saved: false, page: 1 })).toBe('/app/community');
+    expect(routes.app.community({ page: 2, view: 'list', sort: 'new', saved: true, q: ' leaf  bags ', time: '7d', type: 'task', category: 'yard-cleanup', area: 'mueller', group: 'day' }))
+      .toBe('/app/community?area=mueller&category=yard-cleanup&type=task&time=7d&q=leaf++bags&saved=1&sort=new&view=list&group=day&page=2');
   });
 });

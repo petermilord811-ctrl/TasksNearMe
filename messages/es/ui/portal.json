@@ -1,0 +1,188 @@
+{
+  "title": "Vecinos",
+  "eyebrow": "Vecinos",
+  "place": {
+    "nearby": "{area} y alrededores",
+    "market": "Todo {market}",
+    "area": "{area}"
+  },
+  "stats": {
+    "tasks": "{count, plural, =0 {No hay tareas abiertas} one {# tarea abierta} other {# tareas abiertas}}",
+    "posts": "{count, plural, =0 {Ninguna publicación esta semana} one {# publicación esta semana} other {# publicaciones esta semana}}",
+    "helpers": "{count, plural, =0 {Todavía sin ayudantes} one {# ayudante} other {# ayudantes}}"
+  },
+  "search": {
+    "label": "Buscar en el vecindario",
+    "placeholder": "Buscar publicaciones y tareas",
+    "submit": "Buscar"
+  },
+  "areas": {
+    "label": "Vecindarios",
+    "nearby": "Cerca de ti",
+    "all": "Todo {market}",
+    "yours": "Tu vecindario",
+    "more": "Más",
+    "moreTitle": "Vecindarios de {market}",
+    "nearbyGroup": "Cerca de ti",
+    "elsewhere": "En otras partes de {market}"
+  },
+  "composer": {
+    "label": "Empezar una publicación",
+    "prompt": "Pregunta a tus vecinos…",
+    "kinds": {
+      "recommendation": "Recomendación",
+      "question": "Pregunta",
+      "tip": "Consejo",
+      "thanks": "Gracias"
+    },
+    "postTask": "Publicar tarea"
+  },
+  "types": {
+    "label": "Mostrar",
+    "all": "Todo",
+    "task": "Tareas",
+    "recommendation": "Recomendaciones",
+    "question": "Preguntas",
+    "tip": "Consejos",
+    "thanks": "Gracias"
+  },
+  "sort": {
+    "label": "Ordenar",
+    "hot": "Populares",
+    "new": "Nuevas",
+    "top": "Más útiles"
+  },
+  "view": {
+    "label": "Vista",
+    "feed": "Tarjetas",
+    "list": "Lista"
+  },
+  "group": {
+    "label": "Agrupar",
+    "area": "Por vecindario",
+    "day": "Por día"
+  },
+  "category": {
+    "label": "Servicio",
+    "all": "Todos los servicios",
+    "general": "General"
+  },
+  "time": {
+    "label": "Publicado",
+    "any": "Cualquier momento",
+    "24h": "Último día",
+    "7d": "Última semana",
+    "30d": "Último mes"
+  },
+  "saved": {
+    "label": "Guardado",
+    "count": "Guardado · {count}"
+  },
+  "filters": {
+    "button": "Filtros",
+    "buttonCount": "Filtros, {count} activos",
+    "title": "Filtros",
+    "clearAll": "Quitar todos",
+    "remove": "Quitar el filtro: {label}",
+    "active": "Filtros activos",
+    "keyword": "“{q}”"
+  },
+  "moreTaskFilters": "Más filtros de tareas",
+  "task": {
+    "flair": "Tarea",
+    "posted": "publicó una tarea",
+    "offers": "{count, plural, =0 {Sé la primera persona en ofertar} one {# oferta} other {# ofertas}}",
+    "questions": "{count, plural, one {# pregunta} other {# preguntas}}",
+    "fromPost": "Viene de una publicación del vecindario",
+    "cta": {
+      "yours": "Administrar",
+      "helper": "Hacer una oferta",
+      "neighbor": "Ver tarea"
+    },
+    "remote": "A distancia",
+    "anyTime": "Cualquier hora de ese día"
+  },
+  "list": {
+    "seeAll": "Ver los {count} de {area}",
+    "market": "En todo {market}",
+    "marketHint": "Publicaciones para toda la ciudad y tareas a distancia",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "count": "{count, plural, one {# elemento} other {# elementos}}",
+    "replies": "{count, plural, =0 {Sin respuestas} one {# respuesta} other {# respuestas}}",
+    "helpful": "{count} útil"
+  },
+  "rail": {
+    "label": "En el vecindario",
+    "yourStuff": "Lo tuyo",
+    "yourTasks": "Tus tareas abiertas",
+    "yourPosts": "Tus publicaciones",
+    "savedItems": "{count, plural, =0 {Todavía no guardas nada} one {# elemento guardado} other {# elementos guardados}}",
+    "nothingYet": "Aquí aparecen tus tareas abiertas, tus publicaciones y lo que guardes.",
+    "offers": "{count, plural, =0 {Todavía sin ofertas} one {# oferta} other {# ofertas}}",
+    "replies": "{count, plural, =0 {Todavía sin respuestas} one {# respuesta} other {# respuestas}}",
+    "helpers": "Ayudantes cerca",
+    "helpersAll": "Ver todos los ayudantes",
+    "helpersNone": "Todavía no hay ayudantes que trabajen aquí. Los de vecindarios cercanos pueden ofertar en tus tareas.",
+    "request": "Solicitar",
+    "requestLabel": "Solicitar a {name}",
+    "recommendedBy": "{count, plural, =0 {Recién llegó} one {# recomendación de vecinos} other {# recomendaciones de vecinos}}",
+    "trending": "Con actividad esta semana",
+    "trendingNone": "Todavía no hay nada con mucha actividad esta semana.",
+    "trendingMeta": "{replies, plural, =0 {sin respuestas} one {# respuesta} other {# respuestas}} · {helpful} útil",
+    "goodToKnow": "Bueno saber",
+    "privacy": "La dirección exacta solo la recibe el ayudante reservado, nunca aparece aquí.",
+    "guidelines": "Sé amable y habla de lo local. Los reportes de delitos y de seguridad son para la policía (911 en una emergencia)."
+  },
+  "inFeed": {
+    "helpers": "Ayudantes cerca de ti",
+    "yourStuff": "Te espera"
+  },
+  "empty": {
+    "firstTitle": "Por ahora todo está en calma en {place}",
+    "firstBody": "Da el primer paso: pregunta en quién confían tus vecinos, haz una pregunta o publica una tarea.",
+    "suggestions": "Prueba con una de estas",
+    "suggestRecommendation": "¿A quién recomiendan para limpiar el jardín?",
+    "suggestQuestion": "¿Cuánto se tarda en armar un clóset de cajas planas?",
+    "suggestTask": "Publica una tarea y recibe ofertas",
+    "filteredTitle": "Todavía no hay nada así aquí",
+    "filteredBody": "Prueba con todo {market} o quita los filtros.",
+    "wider": "Ver todo {market}",
+    "clear": "Quitar filtros",
+    "savedTitle": "Todavía no guardas nada",
+    "savedBody": "Toca Guardar en una publicación para tenerla aquí más tarde.",
+    "backToAll": "Volver a todo"
+  },
+  "live": {
+    "show": "{count, plural, one {# nueva} other {# nuevas}} · Ver",
+    "announce": "{count, plural, one {# publicación o tarea nueva} other {# publicaciones y tareas nuevas}} cerca de ti",
+    "loading": "Cargando…"
+  },
+  "more": {
+    "show": "Ver más",
+    "loading": "Cargando más…",
+    "loaded": "{count, plural, =0 {No hay más} one {Se agregó # más} other {Se agregaron # más}}",
+    "end": "Estás al día",
+    "failed": "No se pudo cargar más. Inténtalo de nuevo."
+  },
+  "loading": "Cargando el vecindario",
+  "previews": {
+    "group": "Portal del vecindario",
+    "feed": "Portal · tarjetas cerca de ti (populares)",
+    "feedNew": "Portal · tarjetas, las más nuevas primero",
+    "list": "Portal · lista por vecindario",
+    "listByDay": "Portal · lista por día",
+    "helper": "Portal · lo que ve un ayudante",
+    "tasks": "Portal · tareas en un vecindario",
+    "saved": "Portal · guardado",
+    "filteredEmpty": "Portal · no hay resultados",
+    "empty": "Portal · primer día, todavía nada",
+    "blocked": "Portal · primero verifica tu teléfono",
+    "staff": "Portal · el personal ve una publicación oculta",
+    "loading": "Portal · cargando",
+    "spanish": "Portal · vecinos que escriben en español",
+    "longThread": "Publicación · una conversación larga (30 respuestas)",
+    "postWithTask": "Publicación · ya es una tarea",
+    "taskDiscussion": "Página de la tarea · su publicación del vecindario"
+  }
+}

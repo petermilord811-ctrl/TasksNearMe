@@ -11,7 +11,8 @@ const icons = { thanks: Heart, helpful: ThumbsUp } as const;
 
 /**
  * Thanks and Helpful on a post or a reply (completion plan 7.7): toggles that answer at once and settle when the
- * server agrees (back as they were if it doesn't). Your own posts show the counts without the buttons.
+ * server agrees (back as they were if it doesn't). Your own posts show the counts without the buttons. On phones
+ * each shows its icon and count (the words stay for screen readers), so a card's actions keep to one line (9.10).
  */
 export function ReactionBar({ target, reactions, own, onReact, replies }: {
   target: { kind: 'post' | 'reply'; id: string };
@@ -65,12 +66,15 @@ export function ReactionBar({ target, reactions, own, onReact, replies }: {
         )}
       >
         <Icon aria-hidden="true" className={cn('size-4 transition-transform duration-150', pressed && 'fill-current motion-safe:scale-110')} />
-        {label}
+        <span className="max-sm:sr-only">{label}</span>
         {state[kind] > 0 && <span className="tabular-nums">{state[kind]}</span>}
       </button>;
     })}
     {replies && <Link href={replies.href} className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring dark:hover:bg-white/[0.06]">
-      <MessageCircle aria-hidden="true" className="size-4" />{replies.count > 0 ? t('replyCount', { count: replies.count }) : t('reply')}
+      <MessageCircle aria-hidden="true" className="size-4" />
+      {replies.count > 0
+        ? <><span className="max-sm:sr-only">{t('replyCount', { count: replies.count })}</span><span aria-hidden="true" className="tabular-nums sm:hidden">{replies.count}</span></>
+        : <span className="max-sm:sr-only">{t('reply')}</span>}
     </Link>}
   </div>;
 }

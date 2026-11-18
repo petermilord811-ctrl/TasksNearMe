@@ -14,6 +14,7 @@ export * from './auth';
 export * from './content';
 export * from './board';
 export * from './community';
+export * from './portal';
 export * from './questions';
 export * from './searches';
 export * from './profiles';

@@ -100,14 +100,14 @@ export async function noticesFor(db: Db, event: Pick<EventRow, 'type' | 'payload
   const plan = planNotices(event);
   if (!plan) return [];
   if (plan.kind === 'community') {
-    // Only for a post people can see; the market's signed-in members get its id, kind and neighborhood.
+    // Only for a post people can see; the market's signed-in members get its id, kind, neighborhood and service.
     const [post] = await db
-      .select({ id: communityPosts.id, kind: communityPosts.kind, areaId: communityPosts.areaId })
+      .select({ id: communityPosts.id, kind: communityPosts.kind, areaId: communityPosts.areaId, categorySlug: communityPosts.categorySlug })
       .from(communityPosts)
       .where(and(eq(communityPosts.id, plan.postId), eq(communityPosts.marketId, plan.marketId), eq(communityPosts.status, 'visible')))
       .limit(1);
     if (!post) return [];
-    const envelopes: RealtimeEnvelope[] = [{ channel: marketChannel(plan.marketId), notice: { type: 'community', event: plan.event, post: post.id, kind: post.kind, area: post.areaId ?? '' } }];
+    const envelopes: RealtimeEnvelope[] = [{ channel: marketChannel(plan.marketId), notice: { type: 'community', event: plan.event, post: post.id, kind: post.kind, area: post.areaId ?? '', category: post.categorySlug ?? '' } }];
     for (const userId of plan.userIds) {
       if (plan.actorId && (await isBlockedBetween(db, plan.actorId, userId))) continue;
       envelopes.push({ channel: userChannel(userId), notice: { type: 'update', event: `community.${plan.event}`, post: post.id } });

@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { routes } from '@/contracts/routes';
-import { deleteOwnCommunityItemAction, moderateCommunityItemAction, pinCommunityAnswerAction, reactInCommunityAction, replyToCommunityPostAction } from '@/modules/community/actions';
+import { deleteOwnCommunityItemAction, moderateCommunityItemAction, pinCommunityAnswerAction, reactInCommunityAction, replyToCommunityPostAction, saveCommunityPostAction } from '@/modules/community/actions';
 import { getCommunityPost } from '@/modules/community/service';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
@@ -32,7 +32,8 @@ async function Post({ params }: Pick<PageProps<'/[locale]/app/community/[postId]
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.communityPost(postId)));
   const staff = staffActorOf(viewer.user);
-  const [data, now] = await Promise.all([getCommunityPost(db, { id: viewer.user.id, staff }, postId), requestNow()]);
+  const now = await requestNow();
+  const data = await getCommunityPost(db, { id: viewer.user.id, staff }, postId, now);
   if (!data) notFound();
   return (
     <CommunityPostScreen
@@ -43,6 +44,7 @@ async function Post({ params }: Pick<PageProps<'/[locale]/app/community/[postId]
         onReply: replyToCommunityPostAction.bind(null, postId),
         onPin: pinCommunityAnswerAction.bind(null, postId),
         onDelete: deleteOwnCommunityItemAction,
+        onSavePost: saveCommunityPostAction,
         ...(staff ? { onModerate: moderateCommunityItemAction } : {}),
       }}
     />

@@ -10,6 +10,8 @@ import { getTaskOwnerView } from '@/modules/offers/owner';
 import { ownerDepsFor } from '@/modules/offers/server';
 import { answerTaskQuestionAction, askTaskQuestionAction, deleteTaskQuestionAction, moderateTaskQuestionAction, pinTaskQuestionAction } from '@/modules/questions/actions';
 import { getTaskQuestions } from '@/modules/questions/service';
+import { communityPostOfTask } from '@/modules/community/service';
+import { TaskDiscussionLink } from '@/ui/components/community/task-discussion-link';
 import { staffActorOf } from '@/modules/support/staff';
 import { TaskQuestions } from '@/ui/components/questions/task-questions';
 import { getViewer } from '@/platform/auth/viewer';
@@ -39,7 +41,7 @@ async function ManageTask({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskI
     ? await Promise.all([getTaskOwnerView(deps, viewer.user.id, taskId, now), invitesForTask(db, bookingDeps()?.payments ?? null, viewer.user.id, taskId, now)])
     : [null, []];
   if (!data) notFound();
-  const questions = await getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId);
+  const [questions, discussion] = await Promise.all([getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId), communityPostOfTask(db, taskId)]);
   return (
     <div className="space-y-6">
     <TaskManageScreen
@@ -53,7 +55,8 @@ async function ManageTask({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskI
         onSavePushSubscription: savePushSubscriptionAction,
       }}
     />
-    {/* Questions from helpers (completion plan 7.9): the poster answers and pins them here. */}
+    {/* The neighborhood post it came from (plan 9.10), then questions from helpers (7.9), answered and pinned here. */}
+    {discussion && <TaskDiscussionLink discussion={discussion} />}
     {questions && <TaskQuestions data={questions} now={now.toISOString()} handlers={{
         onAsk: askTaskQuestionAction.bind(null, taskId),
         onAnswer: answerTaskQuestionAction.bind(null, taskId),

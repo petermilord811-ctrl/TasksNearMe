@@ -1,5 +1,5 @@
 {
-  "title": "Community",
+  "title": "Neighbors",
   "intro": "Ask your neighbors in {market} who they'd hire, how they'd go about it, and who did a great job.",
   "stats": "{posts, plural, one {# post} other {# posts}} this week · {replies, plural, one {# reply} other {# replies}} today",
   "composer": {
@@ -65,7 +65,9 @@
     "thanked": "Thanked",
     "selfTag": "Recommended themself",
     "recommendedBy": "{count, plural, =0 {New on TasksNearMe} one {Recommended by # neighbor} other {Recommended by # neighbors}}",
-    "view": "View profile"
+    "view": "View profile",
+    "request": "Request",
+    "requestLabel": "Request {name}"
   },
   "replyForm": {
     "label": "Your reply",
@@ -94,7 +96,7 @@
   "verifyPhone": "Verify your phone",
   "newPost": {
     "title": "New post",
-    "back": "Back to the community",
+    "back": "Back to Neighbors",
     "kind": "What kind of post?",
     "titleLabel": "Title",
     "titleHints": {
@@ -127,7 +129,7 @@
     "announce": "{count, plural, one {# new post} other {# new posts}} in the community",
     "loading": "Loading…"
   },
-  "back": "Community",
+  "back": "Neighbors",
   "moderation": {
     "hidden": "Hidden by staff",
     "removed": "Removed",
@@ -149,9 +151,6 @@
   },
   "previews": {
     "group": "Community",
-    "feed": "Community · feed near you",
-    "feedEmpty": "Community · nothing yet",
-    "feedBlocked": "Community · verify your phone first",
     "post": "Community · a recommendation request with answers",
     "postStaff": "Community · staff view of a hidden reply",
     "newPost": "Community · new post",
@@ -168,5 +167,41 @@
     "loaded": "{count, plural, =0 {No more posts} one {# more post added} other {# more posts added}}",
     "end": "You're all caught up",
     "failed": "Couldn't load more posts. Try again."
-  }
+  },
+  "authorCard": {
+    "open": "About {name}",
+    "memberSince": "Member since {date}",
+    "rating": "{average} ({count, plural, one {# review} other {# reviews}})",
+    "tasksDone": "{count, plural, =0 {No tasks done yet} one {# task done} other {# tasks done}}",
+    "recommendedBy": "{count, plural, =0 {No recommendations yet} one {Recommended by # neighbor} other {Recommended by # neighbors}}",
+    "badges": "Badges",
+    "viewProfile": "View profile",
+    "request": "Request",
+    "roleHint": {
+      "helper": "Offers help on TasksNearMe",
+      "poster": "Has posted tasks here",
+      "neighbor": "A neighbor in the community"
+    }
+  },
+  "save": {
+    "save": "Save",
+    "saved": "Saved",
+    "saveLabel": "Save: {title}",
+    "unsaveLabel": "Remove from Saved: {title}",
+    "failed": "Couldn't save that. Try again."
+  },
+  "askForHelp": {
+    "action": "Ask for help",
+    "hint": "Post it as a task and get offers from helpers"
+  },
+  "postTask": {
+    "label": "Posted as a task",
+    "state": "{state, select, open {{count, plural, =0 {Taking offers} one {# offer so far} other {# offers so far}}} booked {Booked} done {Done} other {Closed}}",
+    "open": "Open the task"
+  },
+  "thread": {
+    "showMore": "{count, plural, one {Show # more reply} other {Show # more replies}}",
+    "showLess": "Show fewer replies"
+  },
+  "fromTask": "From a neighborhood post"
 }

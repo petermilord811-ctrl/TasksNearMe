@@ -5,8 +5,9 @@ import { createDb } from '../../src/platform/db/connect';
 import { devSignIn } from './support/sign-in';
 
 /**
- * The community feed (completion plan 7.7–7.8), two people in two browsers: Maya asks her neighbors for a
- * recommendation; Lee, with the feed open, sees "1 new post · Show", opens it, and answers by naming himself;
+ * The community (completion plan 7.7–7.8, in the neighborhood portal since 9.10), two people in two browsers: Maya
+ * asks her neighbors for a recommendation in the composer; Lee, with the portal open, sees "1 new · Show", opens
+ * it, and answers by naming himself;
  * Maya's page shows the answer without a reload, she pins it, and Lee's answer carries the pin. Contact details
  * stay masked, and a crime report is turned away.
  */
@@ -19,23 +20,26 @@ test('neighbors ask, answer, recommend a helper and pin the answer, live', async
   const lee = await leeContext.newPage();
   try {
     await devSignIn(lee, 'lee@example.test');
-    await lee.goto('/app/community?scope=market&sort=new');
-    await expect(lee.getByRole('heading', { level: 1, name: 'Community' })).toBeVisible();
+    await lee.goto('/app/community?area=all&sort=new');
+    await expect(lee.getByRole('heading', { level: 1, name: 'All of Austin' })).toBeVisible();
 
     await devSignIn(maya, 'maya@example.test');
     await maya.goto('/app/community');
-    await maya.getByRole('region', { name: 'Start a post' }).getByRole('link', { name: 'Ask for a recommendation' }).click();
-    await expect(maya.getByRole('heading', { level: 1, name: 'New post' })).toBeVisible();
+    // The composer opens in place on a recommendation request (a tap before the page hydrates opens the same form on
+    // its own page instead). Phones show only the prompt; wider screens also show each kind.
+    await maya.getByRole('region', { name: 'Start a post' }).getByRole('link', { name: 'Ask your neighbors…' }).click();
+    const composer = maya.getByRole('form', { name: /^(Start a post|New post)$/ });
+    await expect(composer.getByRole('radio', { name: 'Ask for a recommendation' })).toBeChecked();
     // Crime and safety reports belong with the police.
-    await maya.getByLabel('Title').fill('Suspicious person on our street');
-    await maya.getByLabel('Details').fill('Saw a suspicious man looking into cars last night on Elm.');
-    await maya.getByRole('button', { name: 'Post', exact: true }).click();
-    await expect(maya.getByText(/Crime and safety reports belong with the police/).first()).toBeVisible();
+    await composer.getByLabel('Title').fill('Suspicious person on our street');
+    await composer.getByLabel('Details').fill('Saw a suspicious man looking into cars last night on Elm.');
+    await composer.getByRole('button', { name: 'Post', exact: true }).click();
+    await expect(composer.getByText(/Crime and safety reports belong with the police/).first()).toBeVisible();
 
     const title = `Who do you recommend for a bookshelf? (${Date.now()})`;
-    await maya.getByLabel('Title').fill(title);
-    await maya.getByLabel('Details').fill('A tall flat-pack bookshelf that needs anchoring. Text me at 512-555-0142.');
-    await maya.getByRole('button', { name: 'Post', exact: true }).click();
+    await composer.getByLabel('Title').fill(title);
+    await composer.getByLabel('Details').fill('A tall flat-pack bookshelf that needs anchoring. Text me at 512-555-0142.');
+    await composer.getByRole('button', { name: 'Post', exact: true }).click();
     await expect(maya.getByRole('heading', { level: 1, name: title })).toBeVisible({ timeout: 30_000 });
     // The post shows the number masked. (The form page stays mounted but hidden after the move, typed text and all,
     // so the check looks inside the post itself.)
@@ -44,8 +48,8 @@ test('neighbors ask, answer, recommend a helper and pin the answer, live', async
     await expect(posted).not.toContainText('512-555-0142');
     const postUrl = maya.url();
 
-    // Lee's open feed announces it without moving; Show brings it in.
-    const pill = lee.getByRole('button', { name: /^\d+ new posts? · Show$/ });
+    // Lee's open portal announces it without moving; Show brings it in.
+    const pill = lee.getByRole('button', { name: /^\d+ new · Show$/ });
     await expect(pill).toBeVisible({ timeout: 15_000 });
     await pill.click();
     await lee.getByRole('link', { name: title }).click();
@@ -116,16 +120,17 @@ test('the feed keeps going: older posts are added as the reader reaches the end,
   test.setTimeout(120_000);
   await withOldPosts(25, async (titles) => {
     await devSignIn(page, 'maya@example.test');
-    await page.goto('/app/community?scope=market&sort=new');
-    await expect(page.getByRole('heading', { level: 1, name: 'Community' })).toBeVisible();
-    const feed = page.locator('#community-feed > ol > li');
+    // Tips across the market, newest first: the old tips come last.
+    await page.goto('/app/community?area=all&type=tip&sort=new');
+    await expect(page.getByRole('heading', { level: 1, name: 'All of Austin' })).toBeVisible();
+    const feed = page.locator('#portal-stream li[data-item]');
     // A page holds 20: the oldest post isn't there until the reader reaches the end.
     await expect(feed).toHaveCount(20);
     const oldest = page.getByRole('link', { name: titles[titles.length - 1]! });
     await expect(oldest).toHaveCount(0);
 
     // Reaching the end adds the next page by itself, without a tap.
-    const more = page.getByRole('link', { name: 'Show more posts' });
+    const more = page.getByRole('link', { name: 'Show more' });
     await more.scrollIntoViewIfNeeded();
     await expect.poll(() => feed.count(), { timeout: 15_000 }).toBeGreaterThan(20);
     // And the rest, scrolling on (after three pages by themselves, "Show more posts" waits for a tap).

@@ -66,6 +66,7 @@ import { adminConfigPreviews } from './admin-config.preview';
 import { helpersBrowsePreviews } from './helpers-browse.preview';
 import { reportPreviews } from './report.preview';
 import { communityPreviews } from './community.preview';
+import { portalPreviews } from './portal.preview';
 import { questionPreviews } from './questions.preview';
 import { searchPreviews } from './searches.preview';
 import { rewardsPreviews } from './rewards.preview';
@@ -158,6 +159,7 @@ export const previews: PreviewEntry[] = [
   ...seriesPreviews,
   ...reportPreviews,
   ...communityPreviews,
+  ...portalPreviews,
   ...questionPreviews,
   ...searchPreviews,
 ];
