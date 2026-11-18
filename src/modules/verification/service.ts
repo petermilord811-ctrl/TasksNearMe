@@ -487,6 +487,8 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
     },
     verification: verificationSummary(state, result.backgroundRequired, optionalCipher(), promptSecret()),
     paused: state.profile.status === 'paused',
+    // As the public page decides (profiles/queries getHelperProfile): only an active profile has one.
+    publicProfile: state.profile.status === 'active',
     ...(await draftingFor(db, userId)),
   };
 }
