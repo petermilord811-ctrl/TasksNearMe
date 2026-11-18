@@ -467,6 +467,11 @@ export interface HelperOnboardingPageData {
    * opens its part; `profile` opens the first part not saved yet.
    */
   person: HelperSetupPerson;
+  /**
+   * The signed-in helper's own id. Setup keeps text not saved yet in the tab under it (aa's sweep S4), so another account
+   * signed in to the same tab never gets it, even with the same display name.
+   */
+  userId: string;
   /** The profile photo's size limit, as on the account page. */
   maxPhotoMegabytes: number;
   /** Prefilled pricing for each category the helper picks. */

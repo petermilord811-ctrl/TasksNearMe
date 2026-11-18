@@ -52,11 +52,39 @@ function savedParts(data: Pick<HelperOnboardingPageData, 'progress'>): Record<Se
 
 /**
  * Text typed and not saved yet, kept in this tab (not shared across accounts on the device), per part, with the saved
- * values it was typed over: it comes back only on top of those same saved values, never over newer ones.
+ * values it was typed over: it comes back only on top of those same saved values, never over newer ones. Kept under
+ * the account's id (aa's sweep S4): two accounts can share a display name, and a tab can sign in as either.
  */
 interface Draft<T> { values: T; base: string }
 interface Unsaved { services?: Draft<HelperServicesInput>; area?: Draft<HelperAreaInput>; about?: Draft<HelperProfileInput> }
-const storageKey = (person: HelperOnboardingPageData['person']) => `tnm:helper-setup:${person.displayName}`;
+const storageKey = (userId: string) => `tnm:helper-setup:${userId}`;
+
+/**
+ * A part's values in one form, whoever wrote them (aa's sweep S4): text trimmed, empty fields left out, keys sorted,
+ * services in one order, the helper agreement left out (it's recorded once, never part of the profile the page gets
+ * back), and an area's fields for the other choice left out (the server keeps only the chosen one's). What the browser
+ * saved and what the server sends back then compare equal, so text typed after a part saved comes back after a reload.
+ */
+function comparable(which: SetupPart, values: unknown): string {
+  const tidy = (value: unknown): unknown => {
+    if (typeof value === 'string') return value.trim();
+    if (Array.isArray(value)) return value.map(tidy);
+    if (value === null || typeof value !== 'object') return value;
+    const fields = Object.entries(value).map(([name, field]) => [name, tidy(field)] as const).filter(([, field]) => field !== undefined && field !== null && field !== '');
+    return Object.fromEntries(fields.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+  };
+  const part = tidy(values) as Record<string, unknown>;
+  if (which === 'about') delete part.acceptHelperAgreement;
+  if (which === 'area') {
+    if (part.where === 'elsewhere') delete part.areaId;
+    else for (const field of ['homeZip', 'homeCity']) delete part[field];
+  }
+  if (which === 'services' && Array.isArray(part.services)) {
+    const slug = (service: unknown) => String((service as { categorySlug?: unknown } | null)?.categorySlug ?? '');
+    part.services = [...part.services].sort((a, b) => (slug(a) < slug(b) ? -1 : slug(a) > slug(b) ? 1 : 0));
+  }
+  return JSON.stringify(part);
+}
 function readUnsaved(key: string): Unsaved {
   try {
     return JSON.parse(window.sessionStorage.getItem(key) ?? '{}') as Unsaved;
@@ -101,7 +129,7 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
   const id = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const top = useRef<HTMLDivElement>(null);
-  const key = storageKey(data.person);
+  const key = storageKey(data.userId);
 
   const [firstPart] = useState<SetupPart>(() => startingPart(data));
   const [part, setPart] = useState<SetupPart>(firstPart);
@@ -122,8 +150,8 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
   const about = useForm<HelperProfileInput>({ resolver: zodResolver(helperProfileInputSchema), defaultValues: data.values.profile });
   const forms = { services, area, about } as const;
 
-  // What each part last saved, to save only what changed.
-  const lastSaved = useRef<Record<SetupPart, string>>({ services: JSON.stringify(data.values.services), area: JSON.stringify({ where: 'market', homeZip: '', homeCity: '', ...data.values.area }), about: JSON.stringify(data.values.profile) });
+  // What each part last saved (`comparable`), to save only what changed.
+  const lastSaved = useRef<Record<SetupPart, string>>({ services: comparable('services', data.values.services), area: comparable('area', { where: 'market', homeZip: '', homeCity: '', ...data.values.area }), about: comparable('about', data.values.profile) });
   const inFlight = useRef<Partial<Record<SetupPart, Promise<ActionResult>>>>({});
   // Each part's own autosave on its way: a change in another part, or Next there, never cancels it.
   const timers = useRef<Partial<Record<SetupPart, ReturnType<typeof setTimeout>>>>({});
@@ -137,7 +165,7 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
   const areaValues = useWatch({ control: area.control });
   const aboutValues = useWatch({ control: about.control });
   const valuesOf = (which: SetupPart) => forms[which].getValues() as HelperServicesInput | HelperAreaInput | HelperProfileInput;
-  const changed = (which: SetupPart) => JSON.stringify(valuesOf(which)) !== lastSaved.current[which];
+  const changed = (which: SetupPart) => comparable(which, valuesOf(which)) !== lastSaved.current[which];
   const schemaOf = (which: SetupPart) => (which === 'services' ? createHelperServicesSchema(data.categories) : which === 'area' ? helperAreaInputSchema : helperProfileInputSchema);
 
   // Text typed and not saved before a reload comes back once, after the page has hydrated.
@@ -157,7 +185,7 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
     const running = inFlight.current[which];
     if (running) await running;
     const values = valuesOf(which);
-    const snapshot = JSON.stringify(values);
+    const snapshot = comparable(which, values);
     const run = (async (): Promise<ActionResult> => {
       setStatus(which, 'saving');
       let outcome: ActionResult;

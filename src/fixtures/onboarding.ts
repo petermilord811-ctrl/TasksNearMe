@@ -162,6 +162,7 @@ const base = {
   agreementNeeded: false,
   homeMarket: { name: 'Austin', zipPrefixes: ['786', '787'] },
   person: priyaSetupPerson,
+  userId: 'usr_priya',
   maxPhotoMegabytes: 10,
   serviceDefaults: setupServiceDefaults,
   profileDraft: 'ai' as const,

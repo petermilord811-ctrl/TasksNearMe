@@ -38,7 +38,7 @@ Then **Save and continue** goes where the server says (`redirectTo`): the ID che
 ### Back and Next keep everything
 
 - The three parts are one client form. Back never loses anything, saved or not.
-- Every change is also kept in this tab (`sessionStorage`, not shared across accounts on a device), so a reload, or a page remount on the browser's Back, puts back what was typed. The draft is cleared once the profile is saved.
+- Every change is also kept in this tab (`sessionStorage`, not shared across accounts on a device, and under the account's id, so another account signed in to the tab never gets it), so a reload, or a page remount on the browser's Back, puts back what was typed. It comes back only over the saved values it was typed over, compared once both are in one form (trimmed, without the agreement, services in one order: aa's sweep S4). The draft is cleared once the profile is saved.
 - Next checks the part (the same zod schemas as today), saves it if it changed, and moves on. A part that fails shows its errors in place; nothing moves.
 
 ### Autosave

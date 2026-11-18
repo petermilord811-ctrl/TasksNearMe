@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ActionResult, HelperAreaInput, HelperOnboardingHandlers, HelperOnboardingPageData, HelperServicesInput } from '@/contracts';
+import type { ActionResult, HelperAreaInput, HelperOnboardingHandlers, HelperOnboardingPageData, HelperProfileInput, HelperServicesInput } from '@/contracts';
 import { fakeOnboardingHandlers, onboardingAreaStep, onboardingProfileStep, onboardingSetupAbout, onboardingSetupAboutExamples, onboardingSetupAboutPhoto, onboardingSetupServicesChosen } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import esMessages from '../../../../messages/es/ui';
@@ -135,7 +135,7 @@ describe('helper setup, the profile in one flow (plan 9.11)', () => {
   });
 
   it('keeps text not saved yet in this tab and puts it back after a reload', async () => {
-    window.sessionStorage.setItem('tnm:helper-setup:Priya S.', JSON.stringify({ services: { values: onboardingSetupServicesChosen.values.services, base: JSON.stringify(onboardingProfileStep.values.services) } }));
+    window.sessionStorage.setItem('tnm:helper-setup:usr_priya', JSON.stringify({ services: { values: onboardingSetupServicesChosen.values.services, base: JSON.stringify(onboardingProfileStep.values.services) } }));
     render(show(onboardingProfileStep));
     expect(await screen.findByText('We kept what you typed before.')).toBeVisible();
     expect(screen.getByRole('button', { name: /^Light cleaning/ })).toHaveAttribute('aria-pressed', 'true');
@@ -143,7 +143,7 @@ describe('helper setup, the profile in one flow (plan 9.11)', () => {
   });
 
   it('never puts back text typed over saved values that have changed since', async () => {
-    window.sessionStorage.setItem('tnm:helper-setup:Priya S.', JSON.stringify({ services: { values: onboardingSetupServicesChosen.values.services, base: JSON.stringify({ services: [] , stale: true }) } }));
+    window.sessionStorage.setItem('tnm:helper-setup:usr_priya', JSON.stringify({ services: { values: onboardingSetupServicesChosen.values.services, base: JSON.stringify({ services: [] , stale: true }) } }));
     render(show(onboardingProfileStep));
     await act(async () => { await new Promise((resolve) => requestAnimationFrame(() => resolve(null))); });
     expect(screen.queryByText('We kept what you typed before.')).not.toBeInTheDocument();
@@ -169,6 +169,15 @@ function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => { resolve = done; });
   return { promise, resolve };
+}
+/**
+ * A services handler that keeps a copy of each call: the form's values share their nested objects (the rows) with the
+ * form, so a recorded call would change as typing goes on.
+ */
+function servicesSaves() {
+  const sent: HelperServicesInput[] = [];
+  const handler = vi.fn(async (input: HelperServicesInput) => { sent.push(JSON.parse(JSON.stringify(input)) as HelperServicesInput); return ok(); });
+  return { sent, handler };
 }
 /** Everything kept in this tab, as one string. */
 const kept = () => Array.from({ length: window.sessionStorage.length }, (_, index) => window.sessionStorage.getItem(window.sessionStorage.key(index)!) ?? '').join('\n');
@@ -270,7 +279,7 @@ describe('each part saves on its own (aa’s sweep S3)', () => {
 describe('hourly prices (aa’s sweep S6)', () => {
   it('start at the typical rate, and the least shown and allowed is the category’s minimum over the minimum hours', async () => {
     const user = userEvent.setup();
-    const onSaveServices = vi.fn(async (_input: HelperServicesInput) => ok());
+    const { sent, handler: onSaveServices } = servicesSaves();
     render(show(onboardingProfileStep, { onSaveServices }));
     await user.click(screen.getByRole('button', { name: /^Moving help/ }));
     // Typical $32–$40 an hour; its $35 minimum is for a task: $17.50 an hour over 2 hours.
@@ -294,7 +303,64 @@ describe('hourly prices (aa’s sweep S6)', () => {
     await user.click(screen.getByRole('button', { name: /Next: Where you help/ }));
     expect(await screen.findByRole('heading', { level: 2, name: 'Where you help' })).toBeVisible();
     expect(onSaveServices).toHaveBeenLastCalledWith({ services: [{ categorySlug: 'moving-help', pricingType: 'hourly', hourlyRateCents: 2000, minHours: 2, description: '' }] });
-    expect(onSaveServices.mock.calls.some(([input]) => input.services.some((service) => (service.hourlyRateCents ?? 0) < 1750))).toBe(false);
+    expect(sent.some((input) => input.services.some((service) => (service.hourlyRateCents ?? 0) < 1750))).toBe(false);
+  });
+});
+
+describe('text not saved yet, kept in this tab (aa’s sweep S4)', () => {
+  it('comes back after a reload once its part saved, though the server trims it and leaves the agreement out', async () => {
+    const user = userEvent.setup();
+    const onSaveProfile = vi.fn(async (_input: HelperProfileInput) => ok());
+    render(show(onboardingSetupAboutExamples, { onSaveProfile }));
+    const bio = () => screen.getByLabelText('About you', { selector: 'textarea' });
+    await user.type(screen.getByLabelText('Headline'), 'Careful cleaning in Mueller ');
+    await user.type(bio(), 'I clean kitchens, bathrooms and floors with my own supplies.');
+    await user.click(screen.getByRole('checkbox', { name: /I agree to the Helper agreement/ }));
+    await waitFor(() => expect(onSaveProfile).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    await waitFor(() => expect(statusLine()).toHaveTextContent(/^Saved$/));
+    await user.type(bio(), ' I bring a vacuum.');
+    cleanup();
+
+    // The reload: the page as the server sends it now, trimmed and without the agreement (it's recorded).
+    const sent = onSaveProfile.mock.lastCall![0];
+    render(show({ ...onboardingSetupAboutExamples, agreementNeeded: false, values: { ...onboardingSetupAboutExamples.values, profile: { headline: sent.headline.trim(), bio: sent.bio.trim(), languages: sent.languages } } }));
+    expect(await screen.findByText('We kept what you typed before.')).toBeVisible();
+    expect(bio()).toHaveValue('I clean kitchens, bathrooms and floors with my own supplies. I bring a vacuum.');
+  });
+
+  it('comes back whatever order the server keeps the services in', async () => {
+    const user = userEvent.setup();
+    const { sent: saves, handler: onSaveServices } = servicesSaves();
+    render(show(onboardingProfileStep, { onSaveServices }));
+    // Yard cleanup first, then furniture assembly: the server keeps them in category order.
+    await user.click(screen.getByRole('button', { name: /^Yard cleanup/ }));
+    await user.click(screen.getByRole('button', { name: /^Furniture assembly/ }));
+    await waitFor(() => expect(onSaveServices).toHaveBeenLastCalledWith({ services: [expect.objectContaining({ categorySlug: 'yard-cleanup' }), expect.objectContaining({ categorySlug: 'furniture-assembly' })] }), { timeout: 4000 });
+    await waitFor(() => expect(statusLine()).toHaveTextContent(/^Saved$/));
+    const yardPrice = () => within(screen.getByRole('region', { name: 'Yard cleanup' })).getByLabelText('Your price, from');
+    await user.clear(yardPrice());
+    await user.type(yardPrice(), '75');
+    cleanup();
+
+    const sent = saves.at(-1)!.services;
+    const inCategoryOrder = ['furniture-assembly', 'yard-cleanup'].map((slug) => {
+      const { categorySlug, pricingType, fromPriceCents, description } = sent.find((service) => service.categorySlug === slug)!;
+      return { categorySlug, pricingType, ...(fromPriceCents !== undefined ? { fromPriceCents } : {}), description };
+    });
+    render(show({ ...onboardingProfileStep, step: 'services', values: { ...onboardingProfileStep.values, services: { services: inCategoryOrder } } }));
+    expect(await screen.findByText('We kept what you typed before.')).toBeVisible();
+    expect(yardPrice()).toHaveValue('75');
+  });
+
+  it('belongs to its account: another account with the same name, or another id, never gets it', async () => {
+    const draft = JSON.stringify({ services: { values: onboardingSetupServicesChosen.values.services, base: JSON.stringify(onboardingProfileStep.values.services) } });
+    // What another "Priya S." typed in this tab: under the name, as drafts once were, or under her own id.
+    window.sessionStorage.setItem('tnm:helper-setup:Priya S.', draft);
+    window.sessionStorage.setItem('tnm:helper-setup:usr_another_priya', draft);
+    render(show(onboardingProfileStep));
+    await act(async () => { await new Promise((resolve) => requestAnimationFrame(() => resolve(null))); });
+    expect(screen.queryByText('We kept what you typed before.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Light cleaning/ })).toHaveAttribute('aria-pressed', 'false');
   });
 });
 

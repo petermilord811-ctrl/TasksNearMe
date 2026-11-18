@@ -174,6 +174,8 @@ describe('helper onboarding', () => {
     const state = (step: string) => page?.progress.steps.find((entry) => entry.step === step)?.state;
     expect([state('services'), state('area'), state('profile')]).toEqual(['done', 'done', 'current']);
     expect(page?.person).toEqual({ firstName: 'Robin', displayName: 'Robin L.', initials: 'RL' });
+    // Setup keeps text not saved yet under the account's id (aa's sweep S4).
+    expect(page?.userId).toBe(first);
     expect(page?.maxPhotoMegabytes).toBe(10);
     expect(['ai', 'template']).toContain(page?.profileDraft);
     // Prefilled prices: the category's usual pricing, never under what a service may list (aa's sweep S6: hourly work

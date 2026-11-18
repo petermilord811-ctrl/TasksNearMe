@@ -425,6 +425,7 @@ export async function getOnboardingPageData(db: Db, userId: string, step: Onboar
     ...(welcomeReward ? { welcomeReward } : {}),
     // The profile in one flow (plan 9.11): the card's person, the photo's limit, prefilled prices and drafting help.
     person: setupPerson(person),
+    userId,
     maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)),
     serviceDefaults: serviceDefaultsFor(shared.categories),
     profileDraft: aiWritingSetUp() && flags.ai_drafting === true ? 'ai' : 'template',
