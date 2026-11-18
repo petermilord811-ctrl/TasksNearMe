@@ -7,7 +7,7 @@ import { LiveOfferCount, NewSinceBadge } from '@/ui/components/tasks/task-live';
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
-import { categoryIcons, useTaskPrice } from './task-feed-card';
+import { categoryIcons, HelperStandingNote, useHelperStanding, useTaskPrice } from './task-feed-card';
 
 const NEW_FOR_MS = 24 * 3_600_000;
 const rowClass = 'grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-3 px-3 py-2.5 transition-colors duration-150 hover:bg-muted/60 sm:grid-cols-[3.25rem_minmax(0,1fr)_auto] sm:px-4';
@@ -27,6 +27,7 @@ function TaskRow({ view, now, visitKey, showArea }: { view: PortalTaskView; now:
   const weekday = new Intl.DateTimeFormat(tag, { timeZone, weekday: 'short' }).format(start);
   const day = new Intl.DateTimeFormat(tag, { timeZone, day: 'numeric' }).format(start);
   const recent = Date.parse(now) - Date.parse(task.postedAt) < NEW_FOR_MS;
+  const standing = useHelperStanding(view);
   return <article className={rowClass}>
     <time dateTime={task.schedule.windowStart} title={formatDateTime(task.schedule.windowStart)} className="flex flex-col items-center rounded-lg bg-secondary/80 px-1 py-1 text-center leading-tight text-secondary-foreground">
       <span className="text-[11px] font-semibold tracking-wide uppercase">{weekday}</span>
@@ -46,6 +47,7 @@ function TaskRow({ view, now, visitKey, showArea }: { view: PortalTaskView; now:
         <span className="inline-flex items-center gap-1 tabular-nums"><Clock aria-hidden="true" className="size-3.5 shrink-0" />{task.schedule.flexible ? t('task.anyTime') : formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd)}</span>
         <LiveOfferCount taskId={task.id} offerCount={task.offerCount} renderedAt={now} />
       </p>
+      {view.relation === 'helper' && <HelperStandingNote view={view} closed={standing.closed} size="sm" />}
     </div>
     <p className="hidden text-right leading-tight sm:block">
       <span className="block font-display text-base font-semibold tabular-nums">{price}</span>

@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { OFFER_BLOCKED_REASONS, routes, type ActionResult, type FindWorkHandlers, type FindWorkPageData } from '@/contracts';
-import { fakeFindWorkHandlers, findWorkByPayData, findWorkEmptyData, findWorkMapViewData, findWorkNotBookableData, findWorkPageData, findWorkSavedData, findWorkWaitingData, findWorkWaitingReadyData } from '@/fixtures';
+import { fakeFindWorkHandlers, findWorkByPayData, findWorkEmptyData, findWorkMapViewData, findWorkNotBookableData, findWorkOfferAgainData, findWorkPageData, findWorkSavedData, findWorkWaitingData, findWorkWaitingReadyData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import findWork from '../../../../messages/en/ui/findWork.json';
 import { FindWorkScreen } from './find-work-screen';
@@ -56,7 +56,8 @@ describe('FindWorkScreen', () => {
     expect(days[0]).toMatch(/Nov 21/);
     expect(within(list()).getByText("You'd earn $54.00")).toBeVisible();
     expect(within(list()).getByText("You'd earn $31.50/h")).toBeVisible();
-    expect(within(list()).getAllByText('New')).toHaveLength(4);
+    // The two tasks he can't take fold to one line, without "New" (audit M22).
+    expect(within(list()).getAllByText('New')).toHaveLength(2);
     expect(within(list()).getByText('You made an offer')).toBeVisible();
     expect(within(list()).getAllByText(/About 2 miles away/).length).toBeGreaterThan(0);
   });
@@ -188,6 +189,26 @@ describe('FindWorkScreen', () => {
   it.each(OFFER_BLOCKED_REASONS)('shows the supplied %s reason without deciding eligibility', (blockedReason) => {
     renderWork({ ...findWorkPageData, cards: [{ ...findWorkPageData.cards[1]!, blockedReason }] });
     expect(screen.getByText(findWork.blockedReasons[blockedReason])).toBeVisible();
+  });
+
+  it('lets the helper send a new offer once theirs expired, and counts live offers only (audit M21)', () => {
+    renderWork(findWorkOfferAgainData);
+    const couch = within(list()).getByRole('article', { name: 'Carry a couch up two flights' });
+    expect(within(couch).getByText('Your offer expired')).toBeVisible();
+    expect(within(couch).getByRole('link', { name: 'Send a new offer: Carry a couch up two flights' })).toHaveAttribute('href', routes.app.findWorkTask('tsk_couch'));
+    expect(within(couch).getByText('No live offers')).toBeVisible();
+    expect(within(couch).queryByText('No offers yet')).toBeNull();
+  });
+
+  it('folds the tasks a helper can\'t take to one line, at the end of their day (audit M22)', () => {
+    const [desk, moving] = [findWorkPageData.cards[0]!, findWorkPageData.cards[1]!];
+    const blocked = { ...findWorkPageData.cards[2]!, startDay: moving.startDay };
+    renderWork({ ...findWorkPageData, cards: [desk, blocked, moving], totalCount: 3 });
+    const titles = within(list()).getAllByRole('article').map((article) => article.getAttribute('aria-labelledby'));
+    expect(titles).toEqual([`find-work-${desk.task.id}`, `find-work-${moving.task.id}`, `find-work-${blocked.task.id}`]);
+    const folded = within(list()).getByRole('article', { name: blocked.task.title });
+    expect(within(folded).getByText(findWork.blockedReasons.category_not_offered)).toBeVisible();
+    expect(within(folded).queryByText(blocked.task.excerpt)).toBeNull();
   });
 
   it('links the setup banner to the supplied identity step', () => {

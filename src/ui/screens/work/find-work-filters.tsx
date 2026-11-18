@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bookmark, Check, List, Map as MapIcon, Search, SlidersHorizontal, X } from 'lucide-react';
@@ -11,6 +11,7 @@ import { routes } from '@/contracts/routes';
 import { TASK_BOARD_POSTED, TASK_BOARD_PRICE_PRESETS, TASK_BOARD_TIMES, TASK_BOARD_WHEN } from '@/contracts/tasks';
 import { taskTypesFor } from '@/shared/task-types';
 import { cn } from '@/ui/lib/utils';
+import { ScrollRow } from '@/ui/components/layout/scroll-row';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/ui/primitives/sheet';
 
 // Pills as everywhere in the app: the picked one in the brand tint with an inner ring, the rest quiet until hovered.
@@ -18,21 +19,18 @@ const chip = 'inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowr
 const on = 'border-primary/40 bg-brand-soft text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_22%,transparent)] [&>svg:first-child]:text-primary';
 const off = 'border-foreground/[0.1] bg-card text-foreground hover:border-foreground/25 hover:bg-background dark:border-white/[0.1]';
 
-// A row that scrolls sideways when it doesn't fit (a phone): no scrollbar, room above and below for the focus ring,
-// and ends that fade over the page gutter, so a chip cut at the edge reads as "more this way". Where everything
-// fits, the fade only covers the empty gutter.
-const sideScroll = '-mx-gutter -my-1 overflow-x-auto px-gutter py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
-const EDGE_FADE = 'linear-gradient(to right, transparent, #000 var(--spacing-gutter, 1rem), #000 calc(100% - var(--spacing-gutter, 1rem)), transparent)';
-const edgeFade: CSSProperties = { maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE };
+// On phones the toolbar's buttons show their icons (their names stay for screen readers), so the row fits 360 px.
+const phoneIcon = 'max-sm:min-w-10 max-sm:justify-center max-sm:px-0';
 
 function Option({ href, selected, children }: { href: string; selected: boolean; children: ReactNode }) {
   return <Link href={href} aria-current={selected ? 'true' : undefined} className={cn(chip, selected ? on : off)}>{selected && <Check aria-hidden="true" className="size-4" />}{children}</Link>;
 }
 
 /**
- * The find-work filter bar, pinned under the app's top bar: list or map (phones), all filters in a sheet,
- * the sort, saved tasks, and the categories as chips. Active filters show as chips that remove themselves.
- * Everything lives in the URL; the app filters.
+ * The find-work filter bar, pinned under the app's top bar: the map or the list (phones), all filters in a sheet,
+ * the sort, saved tasks, and the categories as chips. On phones the first row is icons with the sort, so it fits
+ * (audit M22); the categories scroll sideways, an end fading while more is past it. Active filters show as chips
+ * that remove themselves. Everything lives in the URL; the app filters.
  */
 export function FindWorkFilters({ data }: { data: FindWorkPageData }) {
   const t = useTranslations('findWork');
@@ -70,16 +68,15 @@ export function FindWorkFilters({ data }: { data: FindWorkPageData }) {
   const sorts = FIND_WORK_SORTS.filter((sort) => sort !== 'nearest' || data.map.area);
 
   return <div className="app-glass sticky top-[var(--app-header-offset,0px)] z-20 -mx-gutter flex flex-col gap-2 border-b border-foreground/[0.06] px-gutter py-2.5 transition-[top] duration-300 ease-[var(--ease-out)] dark:border-white/[0.06]">
-    <div className={sideScroll} style={edgeFade}><div className="flex w-max items-center gap-2">
-      <div role="group" aria-label={t('views.label')} className="flex shrink-0 rounded-full border bg-card p-0.5 lg:hidden">
-        {(['list', 'map'] as const).map((view) => <Link key={view} href={href({ view })} aria-current={query.view === view ? 'true' : undefined} className={cn('inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium', query.view === view ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent')}>
-          {view === 'list' ? <List aria-hidden="true" className="size-4" /> : <MapIcon aria-hidden="true" className="size-4" />}{t(`views.${view}`)}
-        </Link>)}
-      </div>
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      {/* Phones and tablets: one button to the other view (both show side by side from `lg`). */}
+      <Link href={href({ view: query.view === 'map' ? 'list' : 'map' })} className={cn(chip, off, phoneIcon, 'lg:hidden')}>
+        {query.view === 'map' ? <List aria-hidden="true" className="size-4" /> : <MapIcon aria-hidden="true" className="size-4" />}<span className="max-sm:sr-only">{t(`views.${query.view === 'map' ? 'list' : 'map'}`)}</span>
+      </Link>
       <Sheet>
         <SheetTrigger asChild>
-          <button type="button" className={cn(chip, filterCount > 0 ? on : off)}>
-            <SlidersHorizontal aria-hidden="true" className="size-4" />{t('filtersButton')}{filterCount > 0 && <span className="rounded-full bg-primary px-1.5 text-xs text-primary-foreground tabular-nums">{filterCount}</span>}
+          <button type="button" className={cn(chip, filterCount > 0 ? on : off, filterCount > 0 ? 'max-sm:px-2.5' : phoneIcon)}>
+            <SlidersHorizontal aria-hidden="true" className="size-4" /><span className="max-sm:sr-only">{t('filtersButton')}</span>{filterCount > 0 && <span className="rounded-full bg-primary px-1.5 text-xs text-primary-foreground tabular-nums">{filterCount}</span>}
           </button>
         </SheetTrigger>
         <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto sm:mx-auto sm:max-w-xl sm:rounded-t-2xl">
@@ -135,21 +132,21 @@ export function FindWorkFilters({ data }: { data: FindWorkPageData }) {
         <select
           value={query.sort}
           onChange={(event) => router.push(href({ sort: event.target.value as FindWorkSort }))}
-          className={cn(chip, off, 'appearance-none pr-8')}
+          className={cn(chip, off, 'appearance-none pr-8 max-sm:pr-7 max-sm:pl-3')}
         >
           {sorts.map((sort) => <option key={sort} value={sort}>{t(`sortOptions.${sort}`)}</option>)}
         </select>
         <span aria-hidden="true" className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">▾</span>
       </label>
-      <Link href={href({ saved: !query.saved })} aria-current={query.saved ? 'true' : undefined} className={cn(chip, query.saved ? on : off)}>
-        <Bookmark aria-hidden="true" className="size-4" />{t('savedFilter')}{data.savedCount > 0 && <span className="tabular-nums text-muted-foreground">{data.savedCount}</span>}
+      <Link href={href({ saved: !query.saved })} aria-current={query.saved ? 'true' : undefined} className={cn(chip, query.saved ? on : off, data.savedCount > 0 ? 'max-sm:px-3' : phoneIcon)}>
+        <Bookmark aria-hidden="true" className="size-4" /><span className="max-sm:sr-only">{t('savedFilter')}</span>{data.savedCount > 0 && <span className="tabular-nums text-muted-foreground">{data.savedCount}</span>}
       </Link>
-    </div></div>
-    <nav aria-label={t('category')} className={sideScroll} style={edgeFade}>
-      <ul className="flex w-max gap-2">
+    </div>
+    <nav aria-label={t('category')}>
+      <ScrollRow currentKey={query.category ?? 'all'} className="-my-1 gap-2 py-1">
         <li><Option href={href({ category: undefined })} selected={query.category === undefined}>{t('allCategories')}</Option></li>
         {data.categories.map((category) => <li key={category.slug}><Option href={href({ category: category.slug })} selected={query.category === category.slug}>{categoryName(category.slug)}</Option></li>)}
-      </ul>
+      </ScrollRow>
     </nav>
     {active.length > 0 && <ul aria-label={t('activeFilters')} className="flex flex-wrap gap-2">
       {active.map((filter) => <li key={filter.key}><Link href={filter.remove} className="inline-flex min-h-9 items-center gap-1 rounded-full bg-secondary px-3 text-sm text-secondary-foreground hover:bg-accent" aria-label={t('removeFilter', { filter: filter.label })}>{filter.label}<X aria-hidden="true" className="size-3.5" /></Link></li>)}

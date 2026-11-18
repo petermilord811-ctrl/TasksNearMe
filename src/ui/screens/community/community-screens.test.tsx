@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CommunityPostPageData, CommunityReactInput, PortalHandlers, PortalPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
-import { communityPostHelperViewData, communityPostPageData, fakeHandler, portalBlockedData, portalEmptyData, portalFeedData, portalFilteredEmptyData, portalListData, portalLongThreadData, portalPostWithTaskData, portalSavedData } from '@/fixtures';
+import { communityPostHelperViewData, communityPostPageData, fakeHandler, portalBlockedData, portalEmptyData, portalFeedData, portalFilteredEmptyData, portalHelperData, portalListData, portalLongThreadData, portalPostWithTaskData, portalSavedData } from '@/fixtures';
 import { resetLastVisits } from '@/ui/lib/last-visit';
 import messages from '../../../../messages/en/ui';
 import { CommunityPostScreen } from './community-post-screen';
@@ -47,11 +47,29 @@ describe('PortalScreen', () => {
     expect(within(post).getByRole('link', { name: 'Ask for help' }).getAttribute('href')).toBe(routes.app.newTask({ fromPost: 'cpo_desk' }));
     const task = screen.getByRole('article', { name: /Put together a queen bed frame tonight/ });
     expect(within(task).getByRole('link', { name: 'View task' }).getAttribute('href')).toBe(routes.publicTask('put-together-a-queen-bed-frame-tonight-mueller-g7h8'));
-    const yours = screen.getByRole('article', { name: /Assemble a desk/ });
-    expect(within(yours).getByRole('link', { name: 'Manage' }).getAttribute('href')).toBe(routes.app.task('tsk_desk'));
+    // Her own task isn't news in the stream: it waits in Your stuff (audit M20).
+    expect(screen.queryByRole('article', { name: /Assemble a desk/ })).toBeNull();
+    expect(screen.getAllByRole('link', { name: /Assemble a desk/ }).every((link) => link.getAttribute('href') === routes.app.task('tsk_desk'))).toBe(true);
     // A task from a neighborhood post links back to it.
     const shelf = screen.getByRole('article', { name: /Assemble and anchor a tall bookshelf/ });
     expect(within(shelf).getByRole('link', { name: /How long does anchoring a tall bookshelf take/ }).getAttribute('href')).toBe(routes.app.communityPost('cpo_shelf_ask'));
+  });
+
+  it('shows a helper where they stand on each task, as find work says it (audit M23)', () => {
+    portal(portalHelperData, { onSaveTask: fakeHandler({ ok: true, code: 'updated' }) });
+    const card = (name: RegExp) => within(screen.getByRole('article', { name }));
+    const computer = card(/Set up a new laptop/);
+    expect(computer.getByText("You don't offer this service")).toBeDefined();
+    expect(computer.getByRole('link', { name: 'View task' })).toBeDefined();
+    expect(computer.queryByRole('link', { name: 'Make an offer' })).toBeNull();
+    const bed = card(/queen bed frame/);
+    expect(bed.getByText('Your offer expired')).toBeDefined();
+    expect(bed.getByRole('link', { name: 'Send a new offer' }).getAttribute('href')).toBe(routes.app.findWorkTask('tsk_board_bed'));
+    expect(bed.getByText('No live offers')).toBeDefined();
+    const dresser = card(/six-drawer dresser/);
+    expect(dresser.getByText('You made an offer')).toBeDefined();
+    expect(dresser.getByRole('link', { name: 'View your offer' })).toBeDefined();
+    expect(card(/two-door wardrobe/).getByRole('link', { name: 'Make an offer' })).toBeDefined();
   });
 
   it('keeps every filter when the view, sort or type changes', () => {
@@ -89,7 +107,7 @@ describe('PortalScreen', () => {
     portal(portalListData);
     const mueller = screen.getByRole('region', { name: /^Mueller/ });
     expect(within(mueller).getAllByRole('article')).toHaveLength(5);
-    expect(within(mueller).getByRole('link', { name: 'See all 8 in Mueller' }).getAttribute('href')).toBe(routes.app.community({ view: 'list', area: 'mueller' }));
+    expect(within(mueller).getByRole('link', { name: 'See all 7 in Mueller' }).getAttribute('href')).toBe(routes.app.community({ view: 'list', area: 'mueller' }));
     expect(screen.getByRole('region', { name: /^Across Austin/ })).toBeDefined();
   });
 

@@ -29,6 +29,15 @@ function OwnOffer({ status }: { status: NonNullable<FindWorkCard['myOffer']>['st
   return <StatusBadge {...badge} />;
 }
 
+/** Offers that ended without a booking: the helper may offer again (audit M21), so the row says so and leads there. */
+const CLOSED_OFFERS = ['expired', 'declined', 'withdrawn'] as const;
+type ClosedOffer = (typeof CLOSED_OFFERS)[number];
+const closedOfferOf = (card: FindWorkCard): ClosedOffer | undefined =>
+  card.myOffer && (CLOSED_OFFERS as readonly string[]).includes(card.myOffer.status) ? (card.myOffer.status as ClosedOffer) : undefined;
+
+/** Tasks the helper can't take (another service, outside their area…) fold to one compact row (audit M22); "finish setting up" doesn't, since it's every task. */
+export const isFoldedCard = (card: FindWorkCard) => Boolean(card.blockedReason && card.blockedReason !== 'not_bookable');
+
 /**
  * One open task in the helper's list: what it is, where (the general area and a distance band), when, the
  * client's budget and what the helper would earn, how many offers it has, whether it's new, and whether
@@ -67,6 +76,27 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
     ? t('earn', { amount: formatMoney(card.earnings.amountCents) })
     : t('earnHourly', { rate: formatMoney(card.earnings.rateCents) });
   const titleId = `find-work-${task.id}`;
+  const closed = closedOfferOf(card);
+  // Live offers only: an expired one of yours isn't "no offers yet" in disguise.
+  const offersLabel = closed && task.offerCount === 0 ? t('noLiveOffers') : card_('offers', { count: task.offerCount });
+
+  if (isFoldedCard(card)) {
+    return <article aria-labelledby={titleId} className="flex min-w-0 items-center gap-3 rounded-[1.125rem] border border-dashed border-border bg-card/60 py-2 pr-1.5 pl-3 sm:pl-4">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-xl opacity-75" style={{ background: `color-mix(in oklab, var(--cat-${task.categorySlug}) 12%, transparent)`, color: `var(--cat-${task.categorySlug})` }}><Icon aria-hidden="true" className="size-4" /></span>
+      {/* The title on one line, the reason in full under it (no "New": it's not one to act on). */}
+      <div className="min-w-0 flex-1 leading-tight">
+        <h3 id={titleId} className="truncate text-sm font-semibold">
+          <Link href={routes.app.findWorkTask(task.id)} className="rounded-sm text-foreground/85 underline-offset-4 hover:text-primary hover:underline">{task.title}</Link>
+        </h3>
+        <p className="mt-0.5 flex min-w-0 items-start gap-1.5 text-xs text-muted-foreground">
+          <Info aria-hidden="true" className="mt-px size-3.5 shrink-0" /><span className="min-w-0"><span>{t(`blockedReasons.${card.blockedReason}`)}</span> <span aria-hidden="true">·</span> <span className="whitespace-nowrap tabular-nums">{budget}</span></span>
+        </p>
+      </div>
+      {onHide && <button type="button" onClick={onHide} aria-label={t('hide', { title: task.title })} className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+        <EyeOff aria-hidden="true" className="size-4" />
+      </button>}
+    </article>;
+  }
 
   return <article
     aria-labelledby={titleId}
@@ -89,18 +119,22 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">{task.location.kind === 'remote' ? <Laptop aria-hidden="true" className="size-4" /> : <MapPin aria-hidden="true" className="size-4" />}{task.location.kind === 'remote' ? card_('remote') : task.location.areaName}{task.location.kind === 'local' && task.location.distanceBand ? ` · ${location(`distance.${task.location.distanceBand}`)}` : ''}</span>
         <span className="inline-flex items-center gap-1.5 tabular-nums"><CalendarDays aria-hidden="true" className="size-4" />{schedule}</span>
-        <span className="tabular-nums">{card_('offers', { count: task.offerCount })}</span>
+        <span className="tabular-nums">{offersLabel}</span>
       </p>
       {task.excerpt && <p className="line-clamp-2 text-sm text-foreground/80">{task.excerpt}</p>}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
         {/* On a phone the note keeps the line beside save and hide: "You made an offer" over its status, never split. */}
         <div className="min-w-0 flex-1 basis-36 text-sm">
-          {card.myOffer ? <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1"><span className="font-medium whitespace-nowrap">{t('myOffer')}</span><OwnOffer status={card.myOffer.status} /></span>
+          {closed ? <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="font-medium">{t(`myOfferClosed.${closed}`)}</span>
+              {!card.quickOffer && <Link href={routes.app.findWorkTask(task.id)} aria-label={t('offerAgainLabel', { title: task.title })} className="font-semibold text-primary underline-offset-4 hover:underline">{t('offerAgain')}</Link>}
+            </span>
+            : card.myOffer ? <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1"><span className="font-medium whitespace-nowrap">{t('myOffer')}</span><OwnOffer status={card.myOffer.status} /></span>
             : card.blockedReason ? <span className="inline-flex items-start gap-1.5 text-muted-foreground"><Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(`blockedReasons.${card.blockedReason}`)}</span>
               : <time dateTime={task.postedAt} title={formatDateTime(task.postedAt)} className="text-muted-foreground tabular-nums">{card_('posted', { relative: formatRelative(task.postedAt, now) })}</time>}
         </div>
         {(onToggleSave || onHide || (card.quickOffer && onQuickOffer)) && <div className="ml-auto flex shrink-0 items-center gap-1">
-          {card.quickOffer && onQuickOffer && !card.myOffer && (offerState === 'sent'
+          {card.quickOffer && onQuickOffer && (offerState === 'sent'
             ? <span className="mr-1 inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-success"><Check aria-hidden="true" className="size-4" />{t('quickOfferSent')}</span>
             : <button
               type="button"
@@ -131,6 +165,7 @@ export function FindWorkCardContext({ card }: { card: FindWorkCard }) {
   const location = useTranslations('location');
   return <div className="space-y-3">
     {card.task.location.kind === 'local' && card.task.location.distanceBand && <p className="flex items-center gap-2 text-sm text-muted-foreground"><MapPin aria-hidden="true" className="size-4 shrink-0" />{location(`distance.${card.task.location.distanceBand}`)}</p>}
-    {card.myOffer ? <div className="space-y-2"><p className="text-sm font-medium">{t('myOffer')}</p><OwnOffer status={card.myOffer.status} /></div> : card.blockedReason && <p className="flex items-start gap-2 text-sm"><Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span>{t(`blockedReasons.${card.blockedReason}`)}</span></p>}
+    {closedOfferOf(card) ? <p className="text-sm font-medium">{t(`myOfferClosed.${closedOfferOf(card)!}`)}</p>
+      : card.myOffer ? <div className="space-y-2"><p className="text-sm font-medium">{t('myOffer')}</p><OwnOffer status={card.myOffer.status} /></div> : card.blockedReason && <p className="flex items-start gap-2 text-sm"><Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span>{t(`blockedReasons.${card.blockedReason}`)}</span></p>}
   </div>;
 }

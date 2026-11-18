@@ -97,7 +97,9 @@
     "cta": {
       "yours": "Administrar",
       "helper": "Hacer una oferta",
-      "neighbor": "Ver tarea"
+      "neighbor": "Ver tarea",
+      "yourOffer": "Ver tu oferta",
+      "offerAgain": "Enviar una nueva oferta"
     },
     "remote": "A distancia",
     "anyTime": "Cualquier hora de ese día"

@@ -13,6 +13,7 @@ import type {
   MyOfferRow,
   MyOffersPageData,
   OfferActionId,
+  OfferBlockedReason,
   OfferInput,
   OfferStatus,
   PriceBreakdown,
@@ -68,6 +69,9 @@ import { offers } from './schema';
  */
 
 const ACTIVE: OfferStatus[] = ['pending', 'stale'];
+/** Offers that ended without a booking: the helper may offer on the task again (an expired one is a routine case). */
+export const CLOSED_OFFER_STATUSES: readonly OfferStatus[] = ['expired', 'declined', 'withdrawn'];
+const isClosedOffer = (status: OfferStatus) => CLOSED_OFFER_STATUSES.includes(status);
 type OfferRow = typeof offers.$inferSelect;
 type TaskRow = typeof tasks.$inferSelect;
 
@@ -229,22 +233,7 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
   ]);
   const savedIds = new Set(savedRows.map((row) => row.taskId));
 
-  const taskIds = found.map((item) => item.view.id);
-  const myOffers = taskIds.length
-    ? await db
-        .select({ id: offers.id, taskId: offers.taskId, status: offers.status, expiresAt: offers.expiresAt })
-        .from(offers)
-        .innerJoin(tasks, eq(tasks.id, offers.taskId))
-        // Offers made before Find a replacement reopened a task belong to the canceled booking.
-        .where(and(eq(offers.helperUserId, userId), inArray(offers.taskId, taskIds), or(isNull(tasks.reopenedAt), gte(offers.createdAt, tasks.reopenedAt))))
-        .orderBy(desc(offers.createdAt))
-    : [];
-  const latestOffer = new Map<string, { id: string; status: OfferStatus }>();
-  for (const offer of myOffers) {
-    if (latestOffer.has(offer.taskId)) continue;
-    const expired = ACTIVE.includes(offer.status as OfferStatus) && offer.expiresAt <= now;
-    latestOffer.set(offer.taskId, { id: offer.id, status: expired ? 'expired' : (offer.status as OfferStatus) });
-  }
+  const latestOffer = await latestOffersOf(db, userId, found.map((item) => item.view.id), now);
 
   const marketAreas = await db.select({ slug: areas.slug, name: areas.name }).from(areas).where(eq(areas.marketId, state.marketId)).orderBy(asc(areas.name));
   return {
@@ -257,6 +246,8 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
           ? { ...view, location: { ...view.location, distanceBand: distanceBandOf(distanceMiles) } }
           : view;
       const myOffer = latestOffer.get(view.id);
+      // An offer that expired (or was declined or withdrawn) leaves the way open to offer again (audit M21).
+      const canOffer = !myOffer || isClosedOffer(myOffer.status);
       const blockedReason = offerBlockedReason(
         state.facts,
         {
@@ -273,13 +264,13 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
       const earnings = earningsFor(fees, view.budget);
       // One tap (completion plan 4.3): a fixed-price task the helper can offer on, at the poster's price.
       const quickOffer =
-        !myOffer && !blockedReason && view.budget.type === 'fixed' && earnings.type === 'fixed' && view.budget.priceCents >= (minPrice.get(view.categorySlug) ?? 0)
+        canOffer && !blockedReason && view.budget.type === 'fixed' && earnings.type === 'fixed' && view.budget.priceCents >= (minPrice.get(view.categorySlug) ?? 0)
           ? { priceCents: view.budget.priceCents, earningsCents: earnings.amountCents, proposedStart: view.schedule.windowStart }
           : undefined;
       return {
         task,
         ...(myOffer ? { myOffer } : {}),
-        ...(blockedReason && !myOffer ? { blockedReason } : {}),
+        ...(blockedReason && canOffer ? { blockedReason } : {}),
         earnings,
         startDay: marketDayKey(view.schedule.windowStart, timeZone),
         isNew: now.getTime() - Date.parse(view.postedAt) < NEW_FOR_HOURS * 3_600_000,
@@ -299,6 +290,60 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
     timeZone,
     savedCount: savedIds.size,
   };
+}
+
+/**
+ * The helper's latest offer on each task in this round (offers made before Find a replacement reopened a task belong
+ * to the canceled booking), an active one past its expiry read as expired.
+ */
+export async function latestOffersOf(db: Db, userId: string, taskIds: string[], now: Date): Promise<Map<string, { id: string; status: OfferStatus }>> {
+  const latest = new Map<string, { id: string; status: OfferStatus }>();
+  if (taskIds.length === 0) return latest;
+  const rows = await db
+    .select({ id: offers.id, taskId: offers.taskId, status: offers.status, expiresAt: offers.expiresAt })
+    .from(offers)
+    .innerJoin(tasks, eq(tasks.id, offers.taskId))
+    .where(and(eq(offers.helperUserId, userId), inArray(offers.taskId, taskIds), or(isNull(tasks.reopenedAt), gte(offers.createdAt, tasks.reopenedAt))))
+    .orderBy(desc(offers.createdAt));
+  for (const offer of rows) {
+    if (latest.has(offer.taskId)) continue;
+    const expired = ACTIVE.includes(offer.status as OfferStatus) && offer.expiresAt <= now;
+    latest.set(offer.taskId, { id: offer.id, status: expired ? 'expired' : (offer.status as OfferStatus) });
+  }
+  return latest;
+}
+
+/** A helper's latest offer on a task, and why they can't offer on it when they can't. */
+export interface HelperOfferStanding {
+  myOffer?: { id: string; status: OfferStatus };
+  blockedReason?: OfferBlockedReason;
+}
+
+/**
+ * Where a helper stands on each task, as find work says it (the portal's task cards use the same answer, plan 9.10
+ * and audit M23): their latest offer, and why they can't offer when they can't (an active or booked offer comes
+ * first; a closed one leaves the way open again).
+ */
+export async function helperOfferStates(db: Db, userId: string, taskIds: string[], now: Date): Promise<Map<string, HelperOfferStanding>> {
+  const states = new Map<string, HelperOfferStanding>();
+  if (taskIds.length === 0) return states;
+  const [state, rows, latest] = await Promise.all([
+    loadHelperState(db, userId, now),
+    db
+      .select({ task: tasks, category: categories })
+      .from(tasks)
+      .innerJoin(categories, eq(categories.id, tasks.categoryId))
+      .where(inArray(tasks.id, taskIds)),
+    latestOffersOf(db, userId, taskIds, now),
+  ]);
+  for (const row of rows) {
+    const point = row.task.publicLat !== null && row.task.publicLng !== null ? { lat: row.task.publicLat, lng: row.task.publicLng } : null;
+    const distanceMiles = state.center && point && row.task.mode !== 'remote' ? milesBetween(state.center, point) : null;
+    const myOffer = latest.get(row.task.id);
+    const blockedReason = !myOffer || isClosedOffer(myOffer.status) ? offerBlockedReason(state.facts, taskFacts(row, distanceMiles), now) : undefined;
+    states.set(row.task.id, { ...(myOffer ? { myOffer } : {}), ...(blockedReason ? { blockedReason } : {}) });
+  }
+  return states;
 }
 
 // ---- Task view ----------------------------------------------------------------------------------

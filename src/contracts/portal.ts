@@ -1,6 +1,8 @@
 import type { ActionHandler } from './actions';
 import type { CategorySlug, ISODateTime, Photo, TimeZone } from './common';
 import type { CommunityComposerData, CommunityPostInput, CommunityPostKind, CommunityPostView, CommunityReactInput } from './community';
+import type { OfferBlockedReason } from './helper-work';
+import type { OfferStatus } from './status';
 import type { TaskPublicView } from './tasks';
 
 /**
@@ -79,7 +81,11 @@ export interface PortalQueryState extends PortalQuery {
   page: number;
 }
 
-/** How a task opens for this viewer: their own task's page, a helper's offer page, or the task's page. */
+/**
+ * How a task opens for this viewer: their own task's page, a helper's offer page, or the task's page. The viewer's
+ * own open tasks stay out of the stream (they wait in Your stuff, audit M20), so `yours` shows only where a task is
+ * read on its own.
+ */
 export type PortalTaskRelation = 'yours' | 'helper' | 'neighbor';
 
 export interface PortalTaskView {
@@ -93,6 +99,13 @@ export interface PortalTaskView {
   fromPost?: { id: string; title: string };
   /** A helper's own save (find work's marks); absent for people who don't help. */
   saved?: boolean;
+  /**
+   * For a helper, where they stand on it, as find work says it (audit M23): their latest offer (an expired, declined
+   * or withdrawn one can be sent again), and why they can't offer when they can't (another service, outside their
+   * area…). Absent for people who don't help.
+   */
+  myOffer?: { status: OfferStatus };
+  blockedReason?: OfferBlockedReason;
 }
 
 /** One thing in the stream. `at` is when it was posted. */

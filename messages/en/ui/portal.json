@@ -97,7 +97,9 @@
     "cta": {
       "yours": "Manage",
       "helper": "Make an offer",
-      "neighbor": "View task"
+      "neighbor": "View task",
+      "yourOffer": "View your offer",
+      "offerAgain": "Send a new offer"
     },
     "remote": "Remote",
     "anyTime": "Any time that day"

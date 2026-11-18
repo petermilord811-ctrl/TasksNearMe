@@ -29,6 +29,7 @@ import {
 import { users } from '@/modules/accounts/schema';
 import { areas, categories } from '@/modules/markets/schema';
 import { marketTimeZone } from '@/modules/markets/time-zone';
+import { helperOfferStates, type HelperOfferStanding } from '@/modules/offers/helper';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { taskQuestions } from '@/modules/questions/schema';
@@ -127,6 +128,8 @@ function taskConditions(scope: Scope, skip?: FilterKey): SQL[] {
   // Signed-in members see the market as it is (sample rows too, as on the board when signed in).
   const conditions: SQL[] = openIn(facts.market.id, scope.now, 'all');
   if (facts.blocked.length > 0) conditions.push(notInArray(tasks.posterUserId, facts.blocked));
+  // The viewer's own tasks aren't news here: they wait in Your stuff (audit M20), not in the stream and its counts.
+  conditions.push(ne(tasks.posterUserId, viewer.id));
   // A helper's "not interested" (find work's hide) stays out here too.
   conditions.push(sql`not exists (select 1 from ${taskMarks} where ${taskMarks.taskId} = ${tasks.id} and ${taskMarks.userId} = ${viewer.id} and ${taskMarks.kind} = 'hidden')`);
   if (skip !== 'area' && scope.areaIds) {
@@ -204,7 +207,7 @@ async function itemsOf(db: Db, scope: Scope, rows: ItemRow[]): Promise<PortalIte
 /** Tasks as the portal shows them: the public view, where each opens for the viewer, questions, its post, saves. */
 async function taskViewsOf(db: Db, scope: Scope, ids: string[]): Promise<Map<string, PortalTaskView>> {
   if (ids.length === 0) return new Map();
-  const [rows, posters, questions, fromPosts, saved] = await Promise.all([
+  const [rows, posters, questions, fromPosts, saved, offerStates] = await Promise.all([
     selectPublic(db).where(inArray(tasks.id, ids)),
     db.select({ id: tasks.id, posterUserId: tasks.posterUserId }).from(tasks).where(inArray(tasks.id, ids)),
     db
@@ -219,6 +222,8 @@ async function taskViewsOf(db: Db, scope: Scope, ids: string[]): Promise<Map<str
     scope.helps
       ? db.select({ taskId: taskMarks.taskId }).from(taskMarks).where(and(eq(taskMarks.userId, scope.viewer.id), eq(taskMarks.kind, 'saved'), inArray(taskMarks.taskId, ids)))
       : Promise.resolve([] as { taskId: string }[]),
+    // A helper's standing on each task, as find work says it (audit M23): their offer, or why they can't make one.
+    scope.helps ? helperOfferStates(db, scope.viewer.id, ids, scope.now) : Promise.resolve(new Map<string, HelperOfferStanding>()),
   ]);
   const posterOf = new Map(posters.map((row) => [row.id, row.posterUserId]));
   const questionsOf = new Map(questions.map((row) => [row.taskId, Number(row.n)]));
@@ -231,6 +236,7 @@ async function taskViewsOf(db: Db, scope: Scope, ids: string[]): Promise<Map<str
     const relation = posterOf.get(row.id) === scope.viewer.id ? 'yours' : scope.helps ? 'helper' : 'neighbor';
     const href = relation === 'yours' ? routes.app.task(row.id) : relation === 'helper' ? routes.app.findWorkTask(row.id) : routes.publicTask(row.slug);
     const fromPost = postOf.get(row.id);
+    const standing = relation === 'helper' ? offerStates.get(row.id) : undefined;
     views.set(row.id, {
       task,
       href,
@@ -238,6 +244,8 @@ async function taskViewsOf(db: Db, scope: Scope, ids: string[]): Promise<Map<str
       questionCount: questionsOf.get(row.id) ?? 0,
       ...(fromPost ? { fromPost } : {}),
       ...(scope.helps && relation !== 'yours' ? { saved: savedIds.has(row.id) } : {}),
+      ...(standing?.myOffer ? { myOffer: { status: standing.myOffer.status } } : {}),
+      ...(standing?.blockedReason ? { blockedReason: standing.blockedReason } : {}),
     });
   }
   return views;
@@ -320,7 +328,7 @@ async function facetsOf(db: Db, scope: Scope): Promise<{ facets: PortalFacets; a
   };
 }
 
-/** Real numbers for the place: open tasks and posts this week (whatever the other filters), and its active helpers. */
+/** Real numbers for the place: open tasks and posts this week (whatever the other filters), and the active helpers who work there besides the viewer. */
 async function statsOf(db: Db, scope: Scope): Promise<PortalPageData['stats']> {
   const plain: Scope = { ...scope, query: { saved: false, sort: 'new', view: 'feed', group: 'area', page: 1, ...(scope.query.area ? { area: scope.query.area } : {}) } };
   const weekAgo = portalSince('7d', scope.now)!;
@@ -333,7 +341,16 @@ async function statsOf(db: Db, scope: Scope): Promise<PortalPageData['stats']> {
       .select({ n: sql<number>`count(*)::int` })
       .from(helperProfiles)
       .innerJoin(areas, eq(areas.id, helperProfiles.areaId))
-      .where(and(eq(helperProfiles.status, 'active'), eq(areas.marketId, scope.facts.market.id), scope.areaIds ? (scope.areaIds.length > 0 ? inArray(helperProfiles.areaId, scope.areaIds) : sql`false`) : undefined)),
+      .where(
+        and(
+          eq(helperProfiles.status, 'active'),
+          eq(areas.marketId, scope.facts.market.id),
+          // Counted as the rail lists them (audit M23): never the viewer, nobody blocked either way.
+          ne(helperProfiles.userId, scope.viewer.id),
+          scope.facts.blocked.length > 0 ? notInArray(helperProfiles.userId, scope.facts.blocked) : undefined,
+          scope.areaIds ? (scope.areaIds.length > 0 ? inArray(helperProfiles.areaId, scope.areaIds) : sql`false`) : undefined,
+        ),
+      ),
   ]);
   return { openTasks: Number(counts.rows[0]?.tasks ?? 0), postsThisWeek: Number(counts.rows[0]?.posts ?? 0), helpers: Number(helpers[0]?.n ?? 0) };
 }

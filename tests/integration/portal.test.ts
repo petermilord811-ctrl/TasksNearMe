@@ -56,11 +56,15 @@ describe('the neighborhood portal', () => {
     const forLee = await items(lee, all());
     expect(forLee.some((item) => item.type === 'post' && item.id === postId)).toBe(true);
     const leeTask = forLee.find((item) => item.type === 'task' && item.id === taskId);
-    expect(leeTask?.type === 'task' && leeTask.task).toMatchObject({ relation: 'helper', href: routes.app.findWorkTask(taskId) });
+    // Lee helps with furniture and computers: find work's answer for a yard job is that he doesn't offer it (audit M23).
+    expect(leeTask?.type === 'task' && leeTask.task).toMatchObject({ relation: 'helper', href: routes.app.findWorkTask(taskId), blockedReason: 'category_not_offered' });
     const mayaTask = (await items(maya, all())).find((item) => item.type === 'task' && item.id === taskId);
     expect(mayaTask?.type === 'task' && mayaTask.task).toMatchObject({ relation: 'neighbor', href: routes.publicTask(`portal-${taskId}`) });
-    const benTask = (await items(ben, all())).find((item) => item.type === 'task' && item.id === taskId);
-    expect(benTask?.type === 'task' && benTask.task).toMatchObject({ relation: 'yours', href: routes.app.task(taskId) });
+    expect(mayaTask?.type === 'task' && mayaTask.task.blockedReason).toBeUndefined();
+    // Ben's own task isn't in his stream or its counts: it waits in Your stuff (audit M20).
+    const forBen = await getPortal(db, ben, all(), now);
+    expect(forBen?.items.some((item) => item.type === 'task' && item.id === taskId)).toBe(false);
+    expect(forBen?.rail.yourTasks.map((task) => task.id)).toContain(taskId);
     // Tasks never name more than the neighborhood.
     expect(JSON.stringify(leeTask)).not.toMatch(/line1|zip|accessNotes/);
   });

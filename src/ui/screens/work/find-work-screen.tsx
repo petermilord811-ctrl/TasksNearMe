@@ -16,7 +16,7 @@ import { AreaMap, type AreaMapPlace } from '@/ui/components/map/area-map';
 import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';
 import { FindWorkFilters } from './find-work-filters';
-import { FindWorkRow, useBudgetLabel } from './find-work-row';
+import { FindWorkRow, isFoldedCard, useBudgetLabel } from './find-work-row';
 
 export interface FindWorkScreenProps {
   data: FindWorkPageData;
@@ -155,6 +155,8 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
     if (last && last.day === day) last.cards.push(card);
     else groups.push({ day, cards: [card] });
   }
+  // Tasks the helper can't take fold to one line at the end of their group (audit M22), the rest in their order.
+  for (const group of groups) group.cards.sort((a, b) => Number(isFoldedCard(a)) - Number(isFoldedCard(b)));
 
   async function toggleSave(card: FindWorkCard) {
     if (!handlers) return;

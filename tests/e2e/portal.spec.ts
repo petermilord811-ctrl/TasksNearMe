@@ -117,16 +117,27 @@ test('a neighbor asks in the composer, then turns the question into a task that 
     // The task's own page links back to the post it came from.
     await expect(page.getByRole('link', { name: new RegExp(`From a neighborhood post.*${title.slice(TITLE_PREFIX.length + 1, TITLE_PREFIX.length + 20)}`) })).toHaveAttribute('href', postUrl);
 
-    // The post now shows its task (and no more "Ask for help"); the portal's task card links back to the post.
+    // The post now shows its task (and no more "Ask for help").
     await page.goto(postUrl);
     const link = page.getByRole('link', { name: /Posted as a task/ });
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute('href', taskPath);
     await expect(page.getByRole('link', { name: 'Ask for help' })).toHaveCount(0);
-    await page.goto('/app/community?type=task&sort=new');
-    const card = page.getByRole('article', { name: title });
-    await expect(card.getByRole('link', { name: title })).toHaveAttribute('href', taskPath);
-    await expect(card.getByRole('link', { name: /From a neighborhood post/ })).toHaveAttribute('href', postUrl);
+    // Her own task waits in Your stuff, not in her stream (audit M20); for a neighbor, its card links back to the post.
+    await page.goto('/app/community?area=all&type=task&sort=new');
+    await expect(page.getByRole('article', { name: title })).toHaveCount(0);
+    const lee = await browser.newContext();
+    try {
+      const leePage = await lee.newPage();
+      await devSignIn(leePage, 'lee@example.test');
+      await leePage.goto('/app/community?area=all&type=task&sort=new');
+      const card = leePage.getByRole('article', { name: title });
+      // Exactly the title: the link to the post it came from carries the same words after "From a neighborhood post".
+      await expect(card.getByRole('link', { name: title, exact: true })).toHaveAttribute('href', `/app/find-work/${taskPath.split('/').at(-1)}`);
+      await expect(card.getByRole('link', { name: /From a neighborhood post/ })).toHaveAttribute('href', postUrl);
+    } finally {
+      await lee.close();
+    }
   } finally {
     await closePortalTasks();
     await context.close();

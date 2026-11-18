@@ -41,6 +41,14 @@
   "clearFilters": "Clear filters",
   "privacy": "You'll see the exact address after the booking is confirmed.",
   "myOffer": "You made an offer",
+  "myOfferClosed": {
+    "expired": "Your offer expired",
+    "declined": "Your offer was declined",
+    "withdrawn": "You withdrew your offer"
+  },
+  "offerAgain": "Send a new offer",
+  "offerAgainLabel": "Send a new offer: {title}",
+  "noLiveOffers": "No live offers",
   "blockedReasons": {
     "not_bookable": "Finish setting up to send offers",
     "needs_background_check": "Needs a background check",
@@ -58,6 +66,7 @@
     "map": "Find work · map (phones)",
     "saved": "Find work · saved",
     "byPay": "Find work · highest pay",
+    "offerAgain": "Find work · an expired offer, to send again",
     "waiting": "Find work · waiting for their city",
     "waitingReady": "Find work · waiting, ready"
   },

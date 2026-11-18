@@ -41,6 +41,14 @@
   "clearFilters": "Borrar filtros",
   "privacy": "Verás la dirección exacta cuando se confirme la reserva.",
   "myOffer": "Hiciste una oferta",
+  "myOfferClosed": {
+    "expired": "Tu oferta venció",
+    "declined": "Rechazaron tu oferta",
+    "withdrawn": "Retiraste tu oferta"
+  },
+  "offerAgain": "Enviar una nueva oferta",
+  "offerAgainLabel": "Enviar una nueva oferta: {title}",
+  "noLiveOffers": "Sin ofertas vigentes",
   "blockedReasons": {
     "not_bookable": "Termina la configuración para enviar ofertas",
     "needs_background_check": "Requiere verificación de antecedentes",
@@ -58,6 +66,7 @@
     "map": "Buscar trabajo · mapa (teléfonos)",
     "saved": "Buscar trabajo · guardadas",
     "byPay": "Buscar trabajo · mejor pagadas",
+    "offerAgain": "Buscar trabajo · una oferta vencida, para enviar de nuevo",
     "waiting": "Buscar trabajo · esperando su ciudad",
     "waitingReady": "Buscar trabajo · esperando, todo listo"
   },

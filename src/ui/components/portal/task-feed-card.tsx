@@ -1,10 +1,12 @@
-import { CalendarDays, ClipboardList, Hammer, Laptop, Leaf, MapPin, MessageCircleQuestion, MessagesSquare, Package, Sparkles, type LucideIcon } from 'lucide-react';
+import { CalendarDays, ClipboardList, Hammer, Info, Laptop, Leaf, MapPin, MessageCircleQuestion, MessagesSquare, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionHandler, CategorySlug, ISODateTime, PortalTaskView, TaskPublicView } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
 import { SaveButton } from '@/ui/components/community/save-button';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
+import { StatusBadge } from '@/ui/components/status/status-badge';
+import { useOfferStatus } from '@/ui/components/status/use-status';
 import { LiveOfferCount, NewSinceBadge } from '@/ui/components/tasks/task-live';
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
@@ -31,11 +33,38 @@ export function useTaskPrice(task: TaskPublicView): { price: string; note: strin
 
 const factClass = 'inline-flex min-h-7 items-center gap-1.5 rounded-full bg-muted px-2.5 text-xs font-medium text-foreground/80';
 
+/** Offers that ended without a booking: the helper may send a new one (as find work says, audit M21 and M23). */
+const CLOSED_OFFERS = ['expired', 'declined', 'withdrawn'] as const;
+type ClosedOffer = (typeof CLOSED_OFFERS)[number];
+
+/** A helper's standing on a task, as find work says it (audit M23): their next step, and a line saying why. */
+export function useHelperStanding(view: PortalTaskView): { cta: string; primary: boolean; closed?: ClosedOffer } {
+  const t = useTranslations('portal.task.cta');
+  const closed = view.myOffer && (CLOSED_OFFERS as readonly string[]).includes(view.myOffer.status) ? (view.myOffer.status as ClosedOffer) : undefined;
+  if (view.relation !== 'helper') return { cta: t(view.relation), primary: false };
+  if (view.blockedReason) return { cta: t('neighbor'), primary: false };
+  if (view.myOffer && !closed) return { cta: t('yourOffer'), primary: false };
+  return closed ? { cta: t('offerAgain'), primary: true, closed } : { cta: t('helper'), primary: true };
+}
+
+/** What a helper's line under the task says: why they can't offer, their offer's status, or that it ended. */
+export function HelperStandingNote({ view, closed, size = 'md' }: { view: PortalTaskView; closed?: ClosedOffer; size?: 'sm' | 'md' }) {
+  const findWork = useTranslations('findWork');
+  const live = view.myOffer && !closed ? view.myOffer.status : undefined;
+  const offerBadge = useOfferStatus(live ?? 'pending', 'helper');
+  const text = size === 'sm' ? 'text-[13px]' : 'text-sm';
+  if (view.blockedReason) return <p className={cn('flex items-start gap-1.5 text-muted-foreground', text)}><Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />{findWork(`blockedReasons.${view.blockedReason}`)}</p>;
+  if (live) return <p className={cn('flex flex-wrap items-center gap-x-2 gap-y-1', text)}><span className="font-medium">{findWork('myOffer')}</span><StatusBadge {...offerBadge} size="sm" /></p>;
+  if (closed) return <p className={cn('font-medium', text)}>{findWork(`myOfferClosed.${closed}`)}</p>;
+  return null;
+}
+
 /**
  * An open task as a card in the neighborhood's feed (completion plan 9.10): who posted it and where (the
  * neighborhood, never closer), the title and the first words, the price, when it is and what kind of job, the
- * neighborhood post it came from, and its next step for this viewer (manage your own, make an offer as a helper,
- * or have a look). Offers count live; questions are its discussion.
+ * neighborhood post it came from, and its next step for this viewer (manage your own, or have a look; a helper's
+ * follows find work: make an offer, see theirs, send a new one once it expired, or why it isn't open to them).
+ * Offers count live; questions are its discussion.
  */
 export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2 }: { view: PortalTaskView; now: ISODateTime; visitKey: string; onSaveTask?: ActionHandler<{ taskId: string; saved: boolean }>; headingLevel?: 2 | 3 }) {
   const t = useTranslations('portal');
@@ -52,6 +81,8 @@ export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2
       ? card('scheduledWindow', { date: formatDate(task.schedule.windowStart), window: formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd) })
       : formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd);
   const place = task.location.kind === 'remote' ? t('task.remote') : task.location.areaName;
+  const standing = useHelperStanding(view);
+  const findWork = useTranslations('findWork');
 
   return <article aria-labelledby={`task-${task.id}`} className="min-w-0 space-y-3 rounded-[1.375rem] border border-border bg-card p-4 shadow-card sm:p-5">
     <div className="flex items-start justify-between gap-3">
@@ -94,11 +125,14 @@ export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2
       <span className="truncate font-medium">{view.fromPost.title}</span>
     </Link>}
 
+    {view.relation === 'helper' && <HelperStandingNote view={view} closed={standing.closed} />}
+
     <div className="flex flex-wrap items-center gap-2 border-t border-border/70 pt-3">
-      <Link href={view.href} className={buttonVariants({ size: 'sm', variant: view.relation === 'helper' ? 'default' : 'outline', className: 'min-h-9' })}>{t(`task.cta.${view.relation}`)}</Link>
+      <Link href={view.href} className={buttonVariants({ size: 'sm', variant: standing.primary ? 'default' : 'outline', className: 'min-h-9' })}>{standing.cta}</Link>
       {onSaveTask && view.saved !== undefined && <SaveButton id={task.id} title={task.title} saved={view.saved} target={{ kind: 'task', onSave: onSaveTask }} compact="phone" />}
       <p className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
-        <LiveOfferCount taskId={task.id} offerCount={task.offerCount} renderedAt={now} />
+        {/* Live offers only: an expired one of the helper's own isn't "no offers yet" (audit M21). */}
+        {standing.closed && task.offerCount === 0 ? <span className="tabular-nums">{findWork('noLiveOffers')}</span> : <LiveOfferCount taskId={task.id} offerCount={task.offerCount} renderedAt={now} />}
         {view.questionCount > 0 && <span className="inline-flex items-center gap-1 tabular-nums"><MessageCircleQuestion aria-hidden="true" className="size-3.5" />{t('task.questions', { count: view.questionCount })}</span>}
       </p>
     </div>

@@ -82,6 +82,30 @@ export const findWorkPageData: FindWorkPageData = {
   savedCount: 1,
 };
 
+/** Chris's couch, an hour's carry: Jordan's offer on it expired while the task stayed open. */
+const couchForJordan: TaskPublicView = {
+  ...movingPublicTask,
+  id: 'tsk_couch',
+  slug: 'carry-a-couch-up-two-flights-crestview-4c1e',
+  title: 'Carry a couch up two flights',
+  excerpt: 'A three-seat couch from the curb to a second-floor apartment. Narrow stairs, no elevator.',
+  schedule: { windowStart: '2026-11-22T20:00:00.000Z', windowEnd: '2026-11-22T22:00:00.000Z', flexible: false },
+  budget: { type: 'hourly', rateCents: 3000, estimatedHours: 1.5, hoursCap: 2 },
+  offerCount: 0,
+  postedAt: '2026-11-15T16:00:00.000Z',
+};
+
+/** His offer expired and the task is still open: he can send a new one, and no live offer is "no offers yet" (audit M21). */
+export const findWorkOfferAgainData: FindWorkPageData = {
+  ...findWorkPageData,
+  cards: [
+    ...findWorkPageData.cards.slice(0, 2),
+    { task: couchForJordan, myOffer: { id: 'off_jordan_couch', status: 'expired' }, earnings: { type: 'hourly', rateCents: 2700, capCents: 5400 }, startDay: '2026-11-22', isNew: false, saved: false },
+    ...findWorkPageData.cards.slice(2),
+  ],
+  totalCount: findWorkPageData.cards.length + 1,
+};
+
 /** Highest pay first (no day groups). */
 export const findWorkByPayData: FindWorkPageData = {
   ...findWorkPageData,
