@@ -118,7 +118,8 @@ test.describe('sign-in and sign-up', () => {
       await page.getByLabel('Email').fill(email, { timeout: 5_000 });
       await page.getByRole('button', { name: 'Continue', exact: true }).click({ timeout: 5_000 });
     });
-    await expect(page.getByText(/Try again after .* \(Central time\)/)).toBeVisible();
+    // The time names the page's market zone (plan 8.1), such as "Eastern Time" while Gainesville is the default.
+    await expect(page.getByText(/Try again after .+ \(\w+ Time\)/)).toBeVisible();
   });
 
   test('signed-in people skip sign-in', async ({ page }) => {
