@@ -9,6 +9,7 @@ import type {
   PayoutAccountStatus,
 } from '@/contracts';
 import { ONBOARDING_STEPS } from '@/contracts';
+import type { PhoneCheck } from '@/modules/accounts/phone-check';
 
 /**
  * Helper onboarding as a pure function (docs/blueprint/06 §1, extended 2026-11-12). Order: profile (with
@@ -29,6 +30,10 @@ import { ONBOARDING_STEPS } from '@/contracts';
  * background check; the home address waits (`later`) because we verify addresses only where we're open. They're
  * never bookable until their city opens and they choose a neighborhood; with everything else done, setup is
  * complete and the done step says we'll tell them when their city opens.
+ *
+ * The phone counts only where texts work (`phoneCheck`, plan 9.2): without an SMS provider (`off`) it isn't a step
+ * at all, and nothing waits for it; in the grace (`asked`: the helper started their ID check before texts worked)
+ * it stays a step to do but locks nothing and isn't needed to be bookable.
  */
 
 export interface OnboardingFacts {
@@ -40,6 +45,8 @@ export interface OnboardingFacts {
   /** Outside every open market: the area is a ZIP and city, the home address waits, nothing is bookable. */
   awaitingCity?: boolean;
   phoneVerified: boolean;
+  /** Whether the phone is asked for or needed (plan 9.2, `phone-check.ts`). Default `required`. */
+  phoneCheck?: PhoneCheck;
   /**
    * `captureInReview`: our team has it: our own check's photos (stage 1), a double check that didn't
    * confirm them, or the same ID on another account. `renewal`: a new check was asked for because the ID
@@ -84,20 +91,25 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
     background: facts.background.status === 'invited' || facts.background.status === 'pending' || facts.background.status === 'consider',
   };
   const basics = done.profile && done.services && done.area;
+  const phoneCheck = facts.phoneCheck ?? 'required';
+  // What the phone gates may go ahead: a verified phone, or no texts here, or the grace.
+  const phoneOk = done.phone || phoneCheck !== 'required';
+  // No texts and no verified phone: the step isn't shown.
+  const phoneShown = phoneCheck !== 'off' || done.phone;
   const locked: Record<OnboardingStep, boolean> = {
     profile: false,
     services: false,
     area: false,
     phone: !basics,
-    identity: !basics || !done.phone,
-    address: !basics || !done.phone || !identityVerified,
-    payout: !basics || !done.phone || !identityVerified,
-    background: !basics || !done.phone || !identityVerified || !done.payout,
-    done: !(basics && done.phone && identityVerified && done.payout),
+    identity: !basics || !phoneOk,
+    address: !basics || !phoneOk || !identityVerified,
+    payout: !basics || !phoneOk || !identityVerified,
+    background: !basics || !phoneOk || !identityVerified || !done.payout,
+    done: !(basics && phoneOk && identityVerified && done.payout),
   };
-  const ready = done.profile && done.phone && done.identity && done.address && done.payout && !waiting;
+  const ready = done.profile && phoneOk && done.identity && done.address && done.payout && !waiting;
   // Waiting for their city: everything we can check now is done; the address comes when the city opens.
-  const complete = basics && done.background && (ready || (waiting && done.profile && done.phone && done.identity && done.payout));
+  const complete = basics && done.background && (ready || (waiting && done.profile && phoneOk && done.identity && done.payout));
   done.done = complete;
   const later = (step: OnboardingStep) => waiting && step === 'address' && !done.address;
 
@@ -106,7 +118,9 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
     : [];
 
   const firstIncomplete =
-    ONBOARDING_STEPS.find((step) => step !== 'done' && !done[step] && !later(step) && !(step === 'background' && !backgroundRequired)) ?? 'done';
+    ONBOARDING_STEPS.find(
+      (step) => step !== 'done' && !done[step] && !later(step) && !(step === 'background' && !backgroundRequired) && !(step === 'phone' && phoneCheck !== 'required'),
+    ) ?? 'done';
 
   const stateOf = (step: OnboardingStep): OnboardingStepState => {
     if (step === 'background' && !backgroundRequired) return 'skipped';
@@ -121,7 +135,7 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
 
   return {
     progress: {
-      steps: ONBOARDING_STEPS.map((step) => ({ step, state: stateOf(step) })),
+      steps: ONBOARDING_STEPS.filter((step) => step !== 'phone' || phoneShown).map((step) => ({ step, state: stateOf(step) })),
       bookable: bookableCategories.length > 0,
       bookableCategories,
     },
@@ -131,9 +145,9 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
   };
 }
 
-/** Whether a step may be opened now (locked steps send people to the first step still to do). */
+/** Whether a step may be opened now (locked steps, and ones not shown, send people to the first step still to do). */
 export function canOpenStep(facts: OnboardingFacts, step: OnboardingStep): boolean {
   const { progress } = computeOnboarding(facts);
   const state = progress.steps.find((s) => s.step === step)?.state;
-  return state !== 'locked' && state !== 'skipped' && state !== 'later';
+  return state !== undefined && state !== 'locked' && state !== 'skipped' && state !== 'later';
 }

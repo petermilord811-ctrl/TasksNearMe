@@ -6,6 +6,7 @@ import { computeOnboarding } from '@/modules/verification/progress';
 import { identityVerifications } from '@/modules/verification/schema';
 import { loadOnboardingState } from '@/modules/verification/state';
 import type { Db } from '@/platform/db/connect';
+import { smsAvailable } from '@/integrations/sms';
 
 /**
  * Where a person stands (completion plan 6.5): the verification steps, for the profile's first page (onboarding's
@@ -55,7 +56,8 @@ export async function accountVerificationFor(db: Db, userId: string, now: Date):
   const identityState: OnboardingStepState | null = !identity ? null : identity.status === 'verified' ? 'done' : identity.status === 'processing' ? 'in_review' : 'todo';
   return {
     role: 'client',
-    steps: [{ step: 'phone', state: phoneVerified ? 'done' : 'todo' }, ...(identityState ? [{ step: 'identity' as const, state: identityState }] : [])],
+    // No texts here (plan 9.2): the phone isn't asked for, so it isn't listed unless it was verified before.
+    steps: [...(phoneVerified || smsAvailable() ? [{ step: 'phone' as const, state: phoneVerified ? ('done' as const) : ('todo' as const) }] : []), ...(identityState ? [{ step: 'identity' as const, state: identityState }] : [])],
     badges: { ...(identity?.status === 'verified' && identity.verifiedAt ? { idVerifiedAt: identity.verifiedAt.toISOString() } : {}), phoneVerified },
   };
 }

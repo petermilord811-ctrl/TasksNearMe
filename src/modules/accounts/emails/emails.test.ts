@@ -19,7 +19,7 @@ describe('the welcome email', () => {
   it('leads with the welcome gift card for every verified helper, with its three checks and no spots (2026-11-14)', () => {
     const email = renderWelcomeEmail({ ...base, offer });
     expect(email.subject).toBe('Welcome, Robin! Get verified and get a $50 gift card');
-    expect(email.preheader).toBe('Every helper who passes three quick checks gets a $50 gift card. No spots to race for.');
+    expect(email.preheader).toBe('Every helper who passes our quick checks gets a $50 gift card. No spots to race for.');
     expect(email.html).toContain('>$50<');
     for (const check of ['Phone', 'ID', 'Background check']) expect(email.html).toContain(`&#10003; ${check}`);
     expect(email.html).toContain('Verify your phone');

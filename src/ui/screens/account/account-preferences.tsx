@@ -45,17 +45,19 @@ export function AccountPreferences({ preferences, onSave }: {
   const t = useTranslations('account');
   const hintId = useId();
   const [feedback, setFeedback] = useState<{ result?: ActionResult; label: string }>();
+  // The channels this site has (no text column where texts don't go out, plan 9.2).
+  const channels = NOTIFICATION_CHANNELS.filter((channel) => preferences.some((item) => item.channel === channel));
 
   return <div className="space-y-4">
     <table className="w-full table-fixed text-sm">
       <caption className="sr-only">{t('preferences.caption')}</caption>
       <thead><tr className="border-b">
         <th scope="col" className="w-2/5 py-3 text-left font-medium text-muted-foreground">{t('preferences.topic')}</th>
-        {NOTIFICATION_CHANNELS.map((channel) => <th key={channel} scope="col" className="px-1 py-3 text-center font-medium text-muted-foreground">{t(`preferences.channels.${channel}`)}</th>)}
+        {channels.map((channel) => <th key={channel} scope="col" className="px-1 py-3 text-center font-medium text-muted-foreground">{t(`preferences.channels.${channel}`)}</th>)}
       </tr></thead>
       <tbody>{NOTIFICATION_TOPICS.map((topic) => <tr key={topic} className="border-b last:border-b-0">
         <th scope="row" className="py-3 pr-2 text-left font-medium">{t(`preferences.topics.${topic}`)}</th>
-        {NOTIFICATION_CHANNELS.map((channel) => {
+        {channels.map((channel) => {
           const preference = preferences.find((item) => item.topic === topic && item.channel === channel);
           return <td key={channel} className="px-1 py-1">{preference ? <PreferenceSwitch key={`${preference.enabled}-${preference.locked}`} preference={preference} onSave={onSave} hintId={hintId} onResult={(result, label) => setFeedback({ result, label })} /> : <span className="block text-center text-muted-foreground">{t('preferences.unavailable')}</span>}</td>;
         })}

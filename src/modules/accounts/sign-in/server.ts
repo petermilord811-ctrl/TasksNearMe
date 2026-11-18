@@ -8,6 +8,7 @@ import { createSmsSender } from '@/integrations/sms';
 import { auth } from '@/platform/auth/auth';
 import { authRequestHeaders } from '@/platform/auth/request-headers';
 import { db } from '@/platform/db/client';
+import { loadPhoneCheck } from '../phone-check';
 import { createPhoneVerification } from '../phone-verification';
 import { users } from '../schema';
 import { readPendingEmail } from './pending-email';
@@ -69,13 +70,14 @@ export async function resolveCurrentSignIn(rawNext: string | null | undefined, r
   }
   const user = await loadSignInUser(userId);
   if (!user) return resolveSignInStep({ next, now });
-  const pendingPhone = await phoneVerification.pending(userId);
+  const [pendingPhone, phone] = await Promise.all([phoneVerification.pending(userId), loadPhoneCheck(db, userId)]);
   // Private beta: an account that hasn't finished signing up may need an invite first.
   const invite = profileComplete(user) ? null : await signUpInviteFor(db, userId);
   return resolveSignInStep({
     next,
     now,
     user,
+    phoneCheck: phone.check,
     ...(invite ? { invite } : {}),
     ...(pendingPhone
       ? { pendingPhone: { maskedPhone: pendingPhone.maskedPhone, resendAvailableAt: pendingPhone.resendAvailableAt } }

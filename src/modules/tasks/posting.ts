@@ -11,6 +11,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
+import { loadPhoneCheck, phoneGatePasses } from '../accounts/phone-check';
 import { users } from '../accounts/schema';
 import { fuzzedPublicPoint, inServiceArea, nearestArea } from '../markets/geo';
 import { getMarketView, getPublishedPolicy, listCategoryViews } from '../markets/queries';
@@ -221,7 +222,10 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
     const fail = (result: ActionResult): PostTaskOutcome => ({ ok: false, result });
 
     const poster = await loadPoster(userId);
-    if (!poster || !POSTING_STATUSES.has(poster.status) || !poster.phoneVerifiedAt) return fail({ ok: false, code: 'not_allowed' });
+    if (!poster || !POSTING_STATUSES.has(poster.status)) return fail({ ok: false, code: 'not_allowed' });
+    // A verified phone first where texts work (plan 9.2: not without SMS, nor in the grace).
+    const phone = await loadPhoneCheck(db, userId);
+    if (!phoneGatePasses(phone.check, poster.phoneVerifiedAt !== null)) return fail({ ok: false, code: 'not_allowed' });
     // Risk asked this client to verify their ID first (src/modules/trust/poster-risk.ts).
     if (await posterIdentityRequirement(db, userId, at)) return fail({ ok: false, code: 'identity_required' });
     const data = await pageData(userId);

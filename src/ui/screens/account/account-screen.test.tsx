@@ -49,6 +49,20 @@ describe('AccountScreen', () => {
     expect(screen.queryByText(/••••/)).not.toBeInTheDocument();
   });
 
+  it('asks for no phone and has no text column where texts don’t go out (plan 9.2)', () => {
+    mount({ ...newAccountData, textsOff: true, preferences: newAccountData.preferences.filter((preference) => preference.channel !== 'sms') });
+    expect(screen.queryByText(account.contact.noPhone)).not.toBeInTheDocument();
+    expect(screen.queryByText(account.contact.noPhoneHint)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add a phone number' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: account.preferences.channels.sms })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: account.preferences.channels.email })).toBeVisible();
+    cleanup();
+    // A number verified before shows, without a button to change it (that needs a code by text).
+    mount({ ...mayaAccountData, textsOff: true });
+    expect(screen.getByText('•••• 0101 · Verified')).toBeVisible();
+    expect(screen.queryByRole('button', { name: account.contact.changePhoneLabel })).not.toBeInTheDocument();
+  });
+
   it('says why nothing can change while a "Not you?" link holds the account, and still lets ways in be removed', () => {
     const passkeyHandlers: Partial<AccountHandlers> = {
       onPasskeyRegistrationOptions: vi.fn(async () => ({ ok: false as const, code: 'not_allowed' as const })),

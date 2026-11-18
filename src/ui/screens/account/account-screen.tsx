@@ -41,8 +41,8 @@ export function AccountScreen({ data, handlers, initialDialog }: {
         </div>
       </Section>
     </div>
-    <div className={cardClass}><Section title={t('contact.title')} description={t('contact.description')}><AccountContact email={data.profile.email} phone={data.phone} held={data.contactChangesHeld === true} handlers={handlers} initialDialog={initialDialog} /></Section></div>
-    {data.verification && <div className={cardClass}><Section title={t('verification.title')} description={t(`verification.descriptions.${data.verification.role}`)}>
+    <div className={cardClass}><Section title={t('contact.title')} description={t('contact.description')}><AccountContact email={data.profile.email} phone={data.phone} held={data.contactChangesHeld === true} texts={data.textsOff !== true} handlers={handlers} initialDialog={initialDialog} /></Section></div>
+    {data.verification && <div className={cardClass}><Section title={t('verification.title')} description={t(`verification.descriptions.${data.verification.role === 'client' && !data.verification.steps.some((entry) => entry.step === 'phone') ? 'clientIdOnly' : data.verification.role}`)}>
       <div className="space-y-4">
         <VerificationBadges badges={data.verification.badges} />
         <VerificationChecklist steps={data.verification.steps} role={data.verification.role} />

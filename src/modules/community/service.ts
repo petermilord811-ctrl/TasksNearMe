@@ -22,6 +22,7 @@ import {
   type CommunityReplyInput,
   type CommunityReplyView,
 } from '@/contracts';
+import { loadPhoneCheck, phoneGatePasses } from '@/modules/accounts/phone-check';
 import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { areas, categories, markets } from '@/modules/markets/schema';
@@ -98,7 +99,9 @@ async function viewerFacts(db: Db, userId: string): Promise<ViewerFacts | null> 
   const [area] = areaId
     ? await db.select({ id: areas.id, slug: areas.slug, name: areas.name, lat: areas.centerLat, lng: areas.centerLng, marketId: areas.marketId }).from(areas).where(eq(areas.id, areaId)).limit(1)
     : [];
-  const postBlocked = user.status === 'suspended' || user.status === 'restricted' ? 'suspended' : user.phoneVerifiedAt ? undefined : 'phone_required';
+  // A verified phone first where texts work (plan 9.2: not without SMS, nor in the grace).
+  const phone = await loadPhoneCheck(db, userId);
+  const postBlocked = user.status === 'suspended' || user.status === 'restricted' ? 'suspended' : phoneGatePasses(phone.check, user.phoneVerifiedAt !== null) ? undefined : 'phone_required';
   return {
     user,
     market,

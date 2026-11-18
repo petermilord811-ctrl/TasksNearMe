@@ -25,6 +25,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 export interface WelcomeOffer {
   amountCents: number;
   redeemWithinDays: number;
+  /** The checks that earn it (no phone where texts don't work, plan 9.2). Default: phone, ID and background. */
+  checks?: readonly ('phone' | 'identity' | 'background')[];
 }
 
 export interface WelcomeEmailInput {
@@ -95,9 +97,9 @@ export function renderWelcomeEmail(input: WelcomeEmailInput): RenderedEmail {
   const onboarding = url(routes.app.helperOnboarding());
   const subject = offer ? t('welcome.subjectOffer', { firstName: input.firstName, amount }) : t('welcome.subject', { firstName: input.firstName });
   const preheader = offer ? t('welcome.preheaderOffer', { amount }) : t('welcome.preheader');
-  // The three checks that earn the gift card, as chips on it.
+  // The checks that earn the gift card, as chips on it.
   const checkChips = offer
-    ? (['phone', 'identity', 'background'] as const)
+    ? (offer.checks ?? (['phone', 'identity', 'background'] as const))
         .map((check) => `<span style="display:inline-block;margin:0 6px 6px 0;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,0.22);font-size:13px;line-height:18px;font-weight:700;color:#ffffff;">&#10003; ${esc(t(`welcome.gift.checks.${check}`))}</span>`)
         .join('')
     : '';

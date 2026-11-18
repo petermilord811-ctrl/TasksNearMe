@@ -1,6 +1,8 @@
 import type { BecomeHelperPageData, PricingPageData } from '@/contracts';
 import type { CancellationPolicy, FeeSchedule, PolicyTimers } from '@/modules/markets/schema';
 import { finalBreakdown, lateCancellation, posterFeeCents, quoteBreakdown } from '@/modules/payments/fees';
+import { smsAvailable } from '@/integrations/sms';
+import { welcomeChecksFor } from '@/modules/rewards/domain';
 import { FIRST_PAYOUT_DAYS, REPEAT_PROGRAM, WELCOME_PROGRAM } from '@/modules/rewards/programs';
 
 /**
@@ -80,7 +82,7 @@ export function buildBecomeHelperPageData({ fees, flags }: BecomeHelperInput): B
   return {
     exampleEarnings: quoteBreakdown(fees, { type: 'fixed', priceCents: DESK_CENTS }),
     firstPayoutDays: FIRST_PAYOUT_DAYS,
-    ...(flags['reward.welcome'] === true ? { welcomeReward: { amountCents: WELCOME_PROGRAM.amountCents, checks: WELCOME_PROGRAM.checks, redeemWithinDays: WELCOME_PROGRAM.redeemWithinDays } } : {}),
+    ...(flags['reward.welcome'] === true ? { welcomeReward: { amountCents: WELCOME_PROGRAM.amountCents, checks: welcomeChecksFor(smsAvailable()), redeemWithinDays: WELCOME_PROGRAM.redeemWithinDays } } : {}),
     ...(flags['reward.repeat'] === true ? { repeatReward: { ...REPEAT_PROGRAM } } : {}),
     inHomeCategoriesRequireBackgroundCheck: flags.background_checks === true,
   };

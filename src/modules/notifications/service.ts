@@ -9,6 +9,7 @@ import type {
   NotificationView,
 } from '@/contracts';
 import { accountProfileInputSchema, BADGE_CODES, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, type BadgeCode } from '@/contracts';
+import { smsAvailable } from '@/integrations/sms';
 import { users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
@@ -567,6 +568,8 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     getSignInMethods(db, { id: user.id, email: user.email }, returned),
   ]);
   const stored = new Map(prefRows.map((row) => [`${row.topic}:${row.channel}`, row.enabled === 'true']));
+  // No texts here (plan 9.2): no phone to ask for, and no text column.
+  const texts = smsAvailable();
   return {
     profile: {
       firstName: user.firstName,
@@ -578,9 +581,10 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     },
     maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)),
     ...(user.phone ? { phone: { last4: user.phone.slice(-4), verified: user.phoneVerifiedAt !== null } } : {}),
+    ...(texts ? {} : { textsOff: true as const }),
     signIn,
     preferences: NOTIFICATION_TOPICS.flatMap((topic) =>
-      NOTIFICATION_CHANNELS.map((channel) => {
+      NOTIFICATION_CHANNELS.filter((channel) => texts || channel !== 'sms').map((channel) => {
         const locked = isLocked(topic, channel);
         const enabled = preferenceOn(stored, topic, channel);
         return { topic, channel, enabled, locked };

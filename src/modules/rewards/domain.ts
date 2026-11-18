@@ -25,6 +25,14 @@ export const REWARD_RULES = {
 export const WELCOME_CHECKS = ['phone', 'identity', 'background'] as const;
 export type WelcomeCheck = (typeof WELCOME_CHECKS)[number];
 
+/**
+ * The checks that earn the card here: all three where texts work; the ID and background checks where they don't
+ * (plan 9.2, decisions.md 2026-11-18: the phone can't be checked without an SMS provider, and the card stays reachable).
+ */
+export function welcomeChecksFor(sms: boolean): readonly WelcomeCheck[] {
+  return sms ? WELCOME_CHECKS : WELCOME_CHECKS.filter((check) => check !== 'phone');
+}
+
 /** When each check passed (null: not yet): the phone code, the ID (both stages), a clear background check. */
 export interface WelcomeFacts {
   phoneVerifiedAt: Date | null;
@@ -35,13 +43,13 @@ export interface WelcomeFacts {
 const CHECK_FACT: Record<WelcomeCheck, keyof WelcomeFacts> = { phone: 'phoneVerifiedAt', identity: 'idVerifiedAt', background: 'backgroundCheckedAt' };
 
 /** The welcome checks that have passed, in order. */
-export function welcomeChecksDone(facts: WelcomeFacts): WelcomeCheck[] {
-  return WELCOME_CHECKS.filter((check) => facts[CHECK_FACT[check]] !== null);
+export function welcomeChecksDone(facts: WelcomeFacts, checks: readonly WelcomeCheck[] = WELCOME_CHECKS): WelcomeCheck[] {
+  return checks.filter((check) => facts[CHECK_FACT[check]] !== null);
 }
 
-/** The moment the last of the three checks passed (the welcome gift card is earned then), or null. */
-export function welcomeEarnedAt(facts: WelcomeFacts): Date | null {
-  const times = WELCOME_CHECKS.map((check) => facts[CHECK_FACT[check]]);
+/** The moment the last of the checks passed (the welcome gift card is earned then), or null. */
+export function welcomeEarnedAt(facts: WelcomeFacts, checks: readonly WelcomeCheck[] = WELCOME_CHECKS): Date | null {
+  const times = checks.map((check) => facts[CHECK_FACT[check]]);
   if (times.some((time) => time === null)) return null;
   return new Date(Math.max(...times.map((time) => time!.getTime())));
 }

@@ -72,7 +72,7 @@
       "cityHint": "Donde vives, como Dallas o Tulsa.",
       "zipInMarket": "Ese código postal está en {market}. Elige «En {market}» y tu vecindario.",
       "zipNotSupported": "Escribe un código postal de EE. UU.",
-      "elsewhereNote": "Abrimos ciudad por ciudad. Ya puedes completar tus verificaciones de teléfono, identidad y antecedentes. Cuando abramos en tu ciudad, elegirás tu vecindario y agregarás tu domicilio.",
+      "elsewhereNote": "Abrimos ciudad por ciudad. Ya puedes completar tus verificaciones. Cuando abramos en tu ciudad, elegirás tu vecindario y agregarás tu domicilio.",
       "waiting": "Estás en la lista de {city}, {state}. Te avisaremos en cuanto abramos allí."
     },
     "tools": {

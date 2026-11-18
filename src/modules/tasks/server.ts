@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { createTaskDrafter } from '@/integrations/ai/task-drafter';
 import { createFakeGeocoder, createGeocoder } from '@/integrations/geocoding';
 import { createFileStorage } from '@/integrations/storage';
+import { loadPhoneCheck, phoneGatePasses } from '@/modules/accounts/phone-check';
 import { users } from '@/modules/accounts/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { db } from '@/platform/db/client';
@@ -22,8 +23,11 @@ export async function homeMarketIdOf(userId: string): Promise<string | null> {
   return row?.marketId ?? null;
 }
 
-/** Posting needs a verified phone (blueprint 06 §1); the sign-in flow asks for one when needed. */
-export async function hasVerifiedPhone(userId: string): Promise<boolean> {
-  const [row] = await db.select({ at: users.phoneVerifiedAt }).from(users).where(eq(users.id, userId)).limit(1);
-  return Boolean(row?.at);
+/**
+ * Posting needs a verified phone (blueprint 06 §1) where texts work, unless the grace applies (plan 9.2,
+ * `phone-check.ts`); the sign-in flow asks for one when needed.
+ */
+export async function phoneGateOpen(userId: string): Promise<boolean> {
+  const phone = await loadPhoneCheck(db, userId);
+  return phoneGatePasses(phone.check, phone.verified);
 }

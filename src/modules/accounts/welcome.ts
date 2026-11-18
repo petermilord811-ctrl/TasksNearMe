@@ -4,6 +4,8 @@ import type { EmailProvider } from '@/integrations/email';
 import { appUrl } from '@/integrations/oauth';
 import { getFlags } from '@/modules/markets/queries';
 import { categories, markets } from '@/modules/markets/schema';
+import { smsAvailable } from '@/integrations/sms';
+import { welcomeChecksFor } from '@/modules/rewards/domain';
 import { WELCOME_PROGRAM } from '@/modules/rewards/programs';
 import type { Db } from '@/platform/db/connect';
 import { renderWelcomeEmail, type WelcomeOffer } from './emails/welcome';
@@ -13,7 +15,7 @@ import { users } from './schema';
 export async function welcomeOfferFor(db: Db, marketId: string): Promise<WelcomeOffer | undefined> {
   const flags = await getFlags(marketId, db);
   if (flags['reward.welcome'] !== true) return undefined;
-  return { amountCents: WELCOME_PROGRAM.amountCents, redeemWithinDays: WELCOME_PROGRAM.redeemWithinDays };
+  return { amountCents: WELCOME_PROGRAM.amountCents, redeemWithinDays: WELCOME_PROGRAM.redeemWithinDays, checks: welcomeChecksFor(smsAvailable()) };
 }
 
 /**

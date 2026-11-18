@@ -72,7 +72,9 @@ async function refreshHelperPages(userId: string) {
  */
 async function nextStepAfter(userId: string, saved: OnboardingStep): Promise<string> {
   const { progress, firstIncomplete } = computeOnboarding((await loadOnboardingState(db, userId, await requestNow())).facts);
-  const following = ONBOARDING_STEPS.slice(ONBOARDING_STEPS.indexOf(saved) + 1).find((step) => {
+  // The steps shown (no phone step without texts, plan 9.2), in order.
+  const shown = progress.steps.map((entry) => entry.step);
+  const following = (shown.includes(saved) ? shown.slice(shown.indexOf(saved) + 1) : ONBOARDING_STEPS.slice(ONBOARDING_STEPS.indexOf(saved) + 1).filter((step) => shown.includes(step))).find((step) => {
     const state = progress.steps.find((s) => s.step === step)?.state;
     return state !== 'skipped' && state !== 'later' && (state !== 'done' || step === 'done');
   });

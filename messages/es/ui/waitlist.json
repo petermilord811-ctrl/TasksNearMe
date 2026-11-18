@@ -31,7 +31,7 @@
   "cityHint": "Así sabemos qué ciudad abrir después.",
   "helpers": {
     "title": "¿Puedes ayudar? Verifícate ya, vivas donde vivas",
-    "body": "Los ayudantes de cualquier lugar de EE. UU. pueden completar hoy sus verificaciones de teléfono, identidad y antecedentes y ganar una tarjeta de regalo de <amount></amount>. Tendrás todo listo el día que abramos en tu ciudad.",
+    "body": "Los ayudantes de cualquier lugar de EE. UU. pueden completar hoy sus verificaciones y ganar una tarjeta de regalo de <amount></amount>. Tendrás todo listo el día que abramos en tu ciudad.",
     "cta": "Hazte ayudante"
   },
   "comingNext": {

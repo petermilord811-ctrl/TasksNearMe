@@ -24,7 +24,7 @@ describe('the welcome email', () => {
     const id = await throwawayClient(db, 'usr_welcome_once');
     const email = `${id}@example.test`;
     const offer = await welcomeOfferFor(db, 'mkt_austin');
-    expect(offer).toEqual({ amountCents: 5000, redeemWithinDays: 90 });
+    expect(offer).toEqual({ amountCents: 5000, redeemWithinDays: 90, checks: ['phone', 'identity', 'background'] });
 
     expect(await sendWelcomeEmail(db, outbox, id, new Date())).toBe('sent');
     expect(await sendWelcomeEmail(db, outbox, id, new Date())).toBe('already_sent');

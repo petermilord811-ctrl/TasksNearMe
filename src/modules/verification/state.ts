@@ -10,6 +10,7 @@ import type {
   VerificationSummary,
 } from '@/contracts';
 import { currentAgreements } from '@/modules/accounts/agreements';
+import { loadPhoneCheck } from '@/modules/accounts/phone-check';
 import { users } from '@/modules/accounts/schema';
 import { awaitingCity, OPEN_MARKET_STATUSES } from '@/modules/markets/coverage';
 import { categories, markets } from '@/modules/markets/schema';
@@ -50,7 +51,7 @@ export async function emitVerificationEvent(
 }
 
 export async function loadOnboardingState(db: Db, userId: string, now: Date) {
-  const [[user], [profile], serviceRows, identityRows, addressRows, backgroundRows, [payout], agreements, captureRows, openMarkets] = await Promise.all([
+  const [[user], [profile], serviceRows, identityRows, addressRows, backgroundRows, [payout], agreements, captureRows, openMarkets, phone] = await Promise.all([
     db
       .select({ firstName: users.firstName, lastName: users.lastName, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt, homeMarketId: users.homeMarketId })
       .from(users)
@@ -70,6 +71,8 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
     currentAgreements(db, userId),
     db.select().from(identityCaptures).where(eq(identityCaptures.userId, userId)).orderBy(asc(identityCaptures.createdAt)),
     db.select({ id: markets.id, status: markets.status, zipPrefixes: markets.zipPrefixes }).from(markets).where(inArray(markets.status, [...OPEN_MARKET_STATUSES])),
+    // Whether the phone is asked for at all (plan 9.2: only where texts work; asked, not needed, in the grace).
+    loadPhoneCheck(db, userId),
   ]);
   // Outside every city we're open in: the helper gave a ZIP and waits for their city (owner, 2026-11-14).
   const waitingIn = profile ? awaitingCity(profile, openMarkets) : null;
@@ -87,6 +90,7 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
     areaSet: Boolean(profile?.areaId) || waitingIn !== null,
     awaitingCity: waitingIn !== null,
     phoneVerified: Boolean(user?.phone && user.phoneVerifiedAt),
+    phoneCheck: phone.check,
     // Waiting for our team: photos in review, a double check that didn't confirm their approval, or the
     // same ID on another account. `renewal`: a new check while the earlier one still counts (6.3).
     identity: {

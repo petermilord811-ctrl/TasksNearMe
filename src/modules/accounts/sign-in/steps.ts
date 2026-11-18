@@ -1,5 +1,6 @@
 import type { PhoneReason, SignInInvite, SignInPageData, SocialProvider, SocialSignInError } from '@/contracts';
 import { routes } from '@/contracts';
+import type { PhoneCheck } from '../phone-check';
 
 /**
  * The sign-in flow as pure functions (blueprint 02 §1: email code → phone verification when
@@ -33,7 +34,7 @@ export function safeNextPath(raw: string | null | undefined): string {
   }
 }
 
-/** Posting, making offers, and booking need a verified phone (blueprint 06 §1). */
+/** Posting, making offers, and booking need a verified phone (blueprint 06 §1) where texts work (plan 9.2). */
 export function phoneReasonFor(next: string): PhoneReason | null {
   const path = next.split(/[?#]/)[0] ?? '';
   if (path === routes.app.newTask()) return 'post';
@@ -65,6 +66,8 @@ export interface SignInState {
   socialError?: { provider: SocialProvider; reason: SocialSignInError };
   /** Private beta: finishing sign-up waits for an invite in this market (src/modules/beta). */
   invite?: SignInInvite;
+  /** Whether the phone step can come (plan 9.2): only `required` asks for it here. Default `required`. */
+  phoneCheck?: PhoneCheck;
   now: Date;
 }
 
@@ -129,7 +132,8 @@ export function resolveSignInStep(state: SignInState): SignInResolution {
   }
 
   const phoneReason = phoneReasonFor(next);
-  if (phoneReason && !user.phoneVerifiedAt) {
+  // No texts here (`off`), or the grace (`asked`: the account page and setup ask instead): no phone step.
+  if (phoneReason && !user.phoneVerifiedAt && (state.phoneCheck ?? 'required') === 'required') {
     if (state.pendingPhone) {
       const resendAvailableAt = resendAt(state.pendingPhone.resendAvailableAt, now);
       return {

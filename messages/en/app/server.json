@@ -238,7 +238,7 @@
       "replacement_search_started": "{actorName} canceled {title}. Your task is open for offers again, and we told helpers nearby.",
       "badge_earned": "{tier, plural, =1 {You earned a badge: {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}}} other {Your {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}} badge reached level #}}.",
       "city_open": "TasksNearMe is open in {title}. Choose your neighborhood to start taking tasks.",
-      "reward_earned": "Your welcome gift card{hasAmount, select, yes { of {amount}} other {}} is yours: your phone, ID and background checks all passed.",
+      "reward_earned": "Your welcome gift card{hasAmount, select, yes { of {amount}} other {}} is yours: your verification checks all passed.",
       "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on your Rewards page.",
       "community_reply": "{actorName} answered your post: {title}.",
       "community_answer_pinned": "{actorName} pinned your answer on the post: {title}.",
@@ -261,7 +261,7 @@
     "welcome": {
       "subjectOffer": "Welcome, {firstName}! Get verified and get a {amount} gift card",
       "subject": "Welcome to TasksNearMe, {firstName}",
-      "preheaderOffer": "Every helper who passes three quick checks gets a {amount} gift card. No spots to race for.",
+      "preheaderOffer": "Every helper who passes our quick checks gets a {amount} gift card. No spots to race for.",
       "preheader": "Your account is ready: book local help, or earn on your own schedule.",
       "title": "Welcome to TasksNearMe",
       "greeting": "Welcome, {firstName}!",
@@ -274,7 +274,7 @@
           "identity": "ID",
           "background": "Background check"
         },
-        "for": "For every helper who passes our three checks. No spots to race for, and no first task needed.",
+        "for": "For every helper who passes our checks. No spots to race for, and no first task needed.",
         "cta": "Get verified",
         "learn": "How earning works"
       },
@@ -423,7 +423,7 @@
       "heading": "TasksNearMe is open in {city}",
       "preheader": "{interest, select, give_help {Get verified and send offers on tasks near you.} both {Post a task, or help with one near you.} other {Post a task and get offers from helpers near you.}}",
       "intro": "You joined our waitlist for {zip}, and we're there now.",
-      "body": "{interest, select, give_help {Set up your helper profile, verify your phone and ID, and add where your earnings go. Then send offers on tasks near you.} both {Post a task, and helpers near you send offers. Or set up your helper profile, get verified and send offers on tasks nearby.} other {Describe your task and your budget, and helpers near you send offers. You pay when you book. Your helper is paid after the task is done.}}",
+      "body": "{interest, select, give_help {Set up your helper profile, get verified, and add where your earnings go. Then send offers on tasks near you.} both {Post a task, and helpers near you send offers. Or set up your helper profile, get verified and send offers on tasks nearby.} other {Describe your task and your budget, and helpers near you send offers. You pay when you book. Your helper is paid after the task is done.}}",
       "cta": "{interest, select, give_help {Become a helper} other {Post a task}}",
       "secondary": "{interest, select, both {Become a helper} other {See TasksNearMe in {city}}}",
       "why": "You're getting this because {email} joined the TasksNearMe waitlist for {zip}. It's the only email we send about it.",

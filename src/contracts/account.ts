@@ -190,6 +190,11 @@ export interface AccountPageData {
   maxPhotoMegabytes: number;
   /** Never the full number. */
   phone?: { last4: string; verified: boolean };
+  /**
+   * No texts here (no SMS provider, completion plan 9.2): don't ask for a phone or offer to change one (a number
+   * verified earlier shows without a button), and `preferences` carry no `sms` rows.
+   */
+  textsOff?: true;
   signIn: AccountSignInMethods;
   /** Each topic by channel. Booking and payment emails can't be turned off (they're receipts and safety). */
   preferences: { topic: NotificationTopic; channel: NotificationChannel; enabled: boolean; locked: boolean }[];

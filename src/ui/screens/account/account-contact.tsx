@@ -39,9 +39,11 @@ type Channel = 'email' | 'phone';
  * makes the change. Until then nothing changes. While `held` (a "Not you?" link was used, completion plan 5.23)
  * nothing can change: a notice says why, and there are no change buttons.
  */
-export function AccountContact({ email, phone, held = false, handlers, initialDialog }: {
+export function AccountContact({ email, phone, held = false, texts = true, handlers, initialDialog }: {
   email: string;
   phone?: AccountPageData['phone'];
+  /** False where no texts go out (plan 9.2): no phone row to add one, and an earlier number shows without a button. */
+  texts?: boolean;
   held?: boolean;
   handlers: ContactHandlers;
   /** Previews only: open a dialog at a step, as if the code was just sent to `sentTo`. */
@@ -97,16 +99,16 @@ export function AccountContact({ email, phone, held = false, handlers, initialDi
           <span className="col-span-2 col-start-2 row-start-2 min-w-0 text-sm text-muted-foreground [overflow-wrap:anywhere]">{email}</span>
           {!held && <Button type="button" variant="outline" className="col-start-3 row-start-1" aria-label={t('changeEmailLabel')} onClick={() => show('email')}>{t('change')}</Button>}
         </li>
-        <li className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 p-4">
+        {(texts || phone) && <li className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 p-4">
           <span aria-hidden="true" className="col-start-1 row-span-2 row-start-1 grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
             {phone?.verified ? <BadgeCheck className="size-4 text-success" /> : <Phone className="size-4" />}
           </span>
           <span className="col-start-2 row-start-1 min-w-0 font-medium">{t('phone')}</span>
           <span className="col-span-2 col-start-2 row-start-2 min-w-0 text-sm tabular-nums text-muted-foreground">{phone ? t(phone.verified ? 'phoneVerified' : 'phoneUnverified', { last4: phone.last4 }) : t('noPhone')}</span>
-          {!held && <Button type="button" variant="outline" className="col-start-3 row-start-1" aria-label={t(phone ? 'changePhoneLabel' : 'addPhoneLabel')} onClick={() => show('phone')}>{t(phone ? 'change' : 'add')}</Button>}
-        </li>
+          {!held && texts && <Button type="button" variant="outline" className="col-start-3 row-start-1" aria-label={t(phone ? 'changePhoneLabel' : 'addPhoneLabel')} onClick={() => show('phone')}>{t(phone ? 'change' : 'add')}</Button>}
+        </li>}
       </ul>
-      {!phone && !held && <p className="text-sm text-muted-foreground">{t('noPhoneHint')}</p>}
+      {!phone && !held && texts && <p className="text-sm text-muted-foreground">{t('noPhoneHint')}</p>}
 
       <ChangeDialog open={open === 'email'} onClose={() => setOpen(null)} title={t('emailDialog.title')}>
         <EmailChange key={`email-${opening}`} handlers={handlers} sentTo={fromPreview} onDone={(changed) => finished({ channel: 'email', email: changed })} />

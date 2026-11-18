@@ -31,6 +31,14 @@ export function createDevOutboxSmsSender(db: Db): SmsSender {
   };
 }
 
+/**
+ * Whether texts can go out here: Twilio's keys are set, or the dev outbox stands in (development and the e2e build).
+ * Without it nothing asks for a phone number or a code (completion plan 9.2, `src/modules/accounts/phone-check.ts`).
+ */
+export function smsAvailable(env: Record<string, string | undefined> = process.env): boolean {
+  return devHelpersOn(env) || twilioFromEnv(env) !== null;
+}
+
 export function createSmsSender(db: Db, env: Record<string, string | undefined> = process.env): SmsSender {
   const twilio = twilioFromEnv(env);
   const production = !devHelpersOn(env);

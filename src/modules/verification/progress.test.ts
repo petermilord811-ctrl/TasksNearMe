@@ -152,3 +152,45 @@ describe('a helper waiting for their city (owner, 2026-11-14: national, cities o
   });
 });
 
+
+describe('the phone only where texts work (plan 9.2)', () => {
+  const noTexts: OnboardingFacts = { ...basics, phoneCheck: 'off' };
+
+  it('without an SMS provider, has no phone step, and the ID check opens right after the basics', () => {
+    const result = computeOnboarding(noTexts);
+    expect(result.progress.steps.map((entry) => entry.step)).not.toContain('phone');
+    expect(states(noTexts)).toMatchObject({ area: 'done', identity: 'todo' });
+    expect(result.firstIncomplete).toBe('identity');
+    expect(canOpenStep(noTexts, 'phone')).toBe(false);
+    expect(canOpenStep(noTexts, 'identity')).toBe(true);
+  });
+
+  it('without an SMS provider, is bookable and complete with no phone', () => {
+    const all = { ...ready, phoneVerified: false, phoneCheck: 'off' as const, background: { status: 'clear' as const, eligible: true } };
+    const result = computeOnboarding(all);
+    expect(result.progress.bookable).toBe(true);
+    expect(result.progress.bookableCategories).toEqual(['light-cleaning', 'yard-cleanup']);
+    expect(result.complete).toBe(true);
+    expect(states(all)).toMatchObject({ payout: 'done', done: 'done' });
+  });
+
+  it('without an SMS provider, still shows a phone verified earlier as done', () => {
+    expect(states({ ...noTexts, phoneVerified: true }).phone).toBe('done');
+  });
+
+  it('in the grace, asks for the phone (a step to do) but locks nothing and keeps the helper bookable', () => {
+    const grace = { ...ready, phoneVerified: false, phoneCheck: 'asked' as const };
+    const result = computeOnboarding(grace);
+    expect(states(grace)).toMatchObject({ phone: 'todo', identity: 'done', payout: 'done' });
+    expect(result.progress.bookable).toBe(true);
+    // The next thing to do is what's needed, not the phone.
+    expect(computeOnboarding({ ...grace, payout: 'not_started' }).firstIncomplete).toBe('payout');
+    expect(canOpenStep(grace, 'phone')).toBe(true);
+  });
+
+  it('where texts work and the helper never started without one, needs the phone first, as before', () => {
+    const required = { ...basics, phoneCheck: 'required' as const };
+    expect(states(required)).toMatchObject({ phone: 'todo', identity: 'locked' });
+    expect(computeOnboarding({ ...ready, phoneVerified: false, phoneCheck: 'required' }).progress.bookable).toBe(false);
+  });
+});

@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, ne, notExists, or, sql } from 'drizzle-orm';
-import { WELCOME_GIFT_CHECKS, type OnboardingProgress, type OnboardingStepState, type RewardStatus, type WelcomeGiftCard, type WelcomeGiftCheck } from '@/contracts';
+import { type OnboardingProgress, type OnboardingStepState, type RewardStatus, type WelcomeGiftCard, type WelcomeGiftCheck } from '@/contracts';
+import { smsAvailable } from '@/integrations/sms';
 import { users } from '@/modules/accounts/schema';
 import { getFlags } from '@/modules/markets/queries';
 import { areas, markets } from '@/modules/markets/schema';
@@ -15,6 +16,7 @@ import {
   marketMonthStart,
   nextMarketMonthStart,
   welcomeChecksDone,
+  welcomeChecksFor,
   welcomeEarnedAt,
   welcomeReleases,
   type RewardBudgets,
@@ -102,7 +104,7 @@ export async function ensureWelcomeGrant(
   }
   if (grants.some(turnedDown)) return null;
   const person = await welcomePerson(db, userId);
-  if (!person?.isHelper || person.status !== 'active' || !welcomeEarnedAt(person)) return null;
+  if (!person?.isHelper || person.status !== 'active' || !welcomeEarnedAt(person, welcomeChecksFor(smsAvailable()))) return null;
   if (!(await programOn(db, person.marketId))) return null;
   const created = await createGrant(
     db,
@@ -166,7 +168,8 @@ export async function runWelcomeRewards(db: Db, now: Date, options: { budgets?: 
         and(
           isNotNull(helperProfiles.idVerifiedAt),
           isNotNull(helperProfiles.backgroundCheckedAt),
-          isNotNull(users.phoneVerifiedAt),
+          // The phone counts only where texts work (plan 9.2).
+          ...(smsAvailable() ? [isNotNull(users.phoneVerifiedAt)] : []),
           eq(users.status, 'active'),
           inArray(sql`coalesce(${areas.marketId}, ${users.homeMarketId})`, on),
           notExists(
@@ -210,8 +213,9 @@ export async function welcomeCardFor(db: Db, userId: string, now: Date, progress
     .orderBy(desc(rewardGrants.createdAt));
   let live = grants.find((grant) => grant.status !== 'voided');
   if (!live && grants.some(turnedDown)) return undefined;
-  if (!live && person.isHelper && welcomeEarnedAt(person)) live = (await ensureWelcomeGrant(db, userId, now)) ?? undefined;
-  const done = new Set(welcomeChecksDone(person));
+  const checks = welcomeChecksFor(smsAvailable());
+  if (!live && person.isHelper && welcomeEarnedAt(person, checks)) live = (await ensureWelcomeGrant(db, userId, now)) ?? undefined;
+  const done = new Set(welcomeChecksDone(person, checks));
   const stepState = (check: WelcomeGiftCheck): OnboardingStepState => {
     if (done.has(check)) return 'done';
     // The checks are onboarding steps of the same names.
@@ -221,7 +225,7 @@ export async function welcomeCardFor(db: Db, userId: string, now: Date, progress
   const base: WelcomeGiftCard = {
     state: 'open',
     amountCents: live?.amountCents ?? REWARD_RULES.welcome.amountCents,
-    checks: WELCOME_GIFT_CHECKS.map((check) => ({ check, state: stepState(check) })),
+    checks: checks.map((check) => ({ check, state: stepState(check) })),
     ...(person.foundingNumber !== null ? { foundingNumber: person.foundingNumber } : {}),
   };
   if (!live) return base;

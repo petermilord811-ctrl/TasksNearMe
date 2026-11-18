@@ -240,7 +240,8 @@
     "title": "Verification",
     "descriptions": {
       "helper": "Each check you've passed, and what's left before you can take tasks.",
-      "client": "Your verified phone, and any ID check our team asked for."
+      "client": "Your verified phone, and any ID check our team asked for.",
+      "clientIdOnly": "The ID check our team asked for, and where it stands."
     }
   },
   "activity": {

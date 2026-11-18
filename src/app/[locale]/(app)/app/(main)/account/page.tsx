@@ -61,7 +61,8 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
   const now = await requestNow();
   const [page, verification, badges] = await Promise.all([getAccountPage(db, viewer.user.id, { connect, error }, now), accountVerificationFor(db, viewer.user.id, now), ownBadges(db, viewer.user.id)]);
   if (!page) notFound();
-  const data = { ...page, verification, badges };
+  // A client with nothing to verify (no texts here, plan 9.2, and no ID check asked for) gets no verification section.
+  const data = { ...page, ...(verification.role === 'helper' || verification.steps.length > 0 ? { verification } : {}), badges };
   return (
     <AccountScreen
       data={data}

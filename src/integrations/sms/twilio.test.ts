@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createSmsSender, SmsRejectedError } from './index';
+import { createSmsSender, smsAvailable, SmsRejectedError } from './index';
 import { createTwilioSmsSender, twilioFromEnv } from './twilio';
 
 const json = (body: unknown, status = 201) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -36,6 +36,12 @@ describe('Twilio texts', () => {
     expect(twilioFromEnv({ TWILIO_ACCOUNT_SID: 'AC1', TWILIO_AUTH_TOKEN: 't', TWILIO_MESSAGING_SERVICE_SID: 'MG1' })?.name).toBe('twilio');
     expect(() => twilioFromEnv({ TWILIO_ACCOUNT_SID: 'AC1' })).toThrow(/TWILIO_AUTH_TOKEN/);
     expect(() => twilioFromEnv({ TWILIO_ACCOUNT_SID: 'AC1', TWILIO_AUTH_TOKEN: 't' })).toThrow(/TWILIO_MESSAGING_SERVICE_SID/);
+  });
+
+  it('counts as set up with Twilio’s keys or the dev outbox, and not in production without the keys (plan 9.2)', () => {
+    expect(smsAvailable({ NODE_ENV: 'production' })).toBe(false);
+    expect(smsAvailable({ NODE_ENV: 'production', TWILIO_ACCOUNT_SID: 'AC1', TWILIO_AUTH_TOKEN: 't', TWILIO_MESSAGING_SERVICE_SID: 'MG1' })).toBe(true);
+    expect(smsAvailable({ NODE_ENV: 'test' })).toBe(true);
   });
 
   it('refuses to send in production without Twilio, rather than drop the text', async () => {

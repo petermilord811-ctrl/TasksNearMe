@@ -138,6 +138,23 @@ describe('resolveSignInStep', () => {
   });
 });
 
+describe('the phone step only where texts work (plan 9.2)', () => {
+  it.each(['/app/tasks/new', '/app/find-work/tsk_desk', '/app/tasks/tsk_1/offers/off_2/confirm'])('goes straight on to %s without an SMS provider or in the grace', (next) => {
+    for (const phoneCheck of ['off', 'asked'] as const) {
+      expect(resolveSignInStep({ next, now, user: complete, phoneCheck })).toEqual({ kind: 'done', redirectTo: next });
+      // A code sent before texts stopped working doesn't bring the step back either.
+      expect(resolveSignInStep({ next, now, user: complete, phoneCheck, pendingPhone: { maskedPhone: '(512) •••-••67' } })).toEqual({ kind: 'done', redirectTo: next });
+    }
+  });
+
+  it('asks for it where texts work, as before', () => {
+    expect(resolveSignInStep({ next: '/app/tasks/new', now, user: complete, phoneCheck: 'required' })).toEqual({
+      kind: 'step',
+      data: { step: 'phone', next: '/app/tasks/new', phoneReason: 'post' },
+    });
+  });
+});
+
 describe('displayNameOf', () => {
   it('uses the first name and last initial', () => {
     expect(displayNameOf('Maya', 'rivera')).toBe('Maya R.');

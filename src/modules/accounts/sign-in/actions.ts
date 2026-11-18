@@ -8,6 +8,7 @@ import { cookies, headers } from 'next/headers';
 import type { ActionResult, BotCheckInput, EmailInput, OneTimeCodeInput, PasskeyOptionsResult, PhoneInput, ProfileInput, SocialSignInInput } from '@/contracts';
 import { emailInputSchema, oneTimeCodeInputSchema, phoneInputSchema, profileInputSchema, routes, socialSignInInputSchema } from '@/contracts';
 import { createEmailProvider } from '@/integrations/email';
+import { smsAvailable } from '@/integrations/sms';
 import { offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
 import { fieldError, rateLimited, validationFailed } from '@/platform/actions/results';
 import { auth } from '@/platform/auth/auth';
@@ -15,6 +16,7 @@ import { db } from '@/platform/db/client';
 import { consumeRateLimits } from '@/platform/rate-limit';
 import { signUpInviteFor } from '@/modules/beta/server';
 import { checkBot } from '../bot-check';
+import { loadPhoneCheck } from '../phone-check';
 import { users } from '../schema';
 import { CURRENT_TERMS_VERSION } from '../terms';
 import { sendWelcomeEmail } from '../welcome';
@@ -48,11 +50,12 @@ async function continueAfterSignIn(rawNext: string, userId: string, code: 'updat
   const next = safeNextPath(rawNext);
   const user = await loadSignInUser(userId);
   if (user) {
-    const pending = await phoneVerification.pending(userId);
+    const [pending, phone] = await Promise.all([phoneVerification.pending(userId), loadPhoneCheck(db, userId)]);
     const resolution = resolveSignInStep({
       next,
       now: await requestNow(),
       user,
+      phoneCheck: phone.check,
       ...(pending ? { pendingPhone: { maskedPhone: pending.maskedPhone, resendAvailableAt: pending.resendAvailableAt } } : {}),
     });
     if (resolution.kind === 'done') return { ok: true, code, redirectTo: resolution.redirectTo };
@@ -229,7 +232,8 @@ function phoneStartResult(result: Awaited<ReturnType<typeof phoneVerification.st
 
 export async function sendPhoneCode(_next: string, input: PhoneInput): Promise<ActionResult> {
   const userId = await requireUserId();
-  if (!userId) return { ok: false, code: 'not_allowed' };
+  // No texts here (plan 9.2): the step isn't offered, so a stale page can't send one either.
+  if (!userId || !smsAvailable()) return { ok: false, code: 'not_allowed' };
   const parsed = phoneInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   return phoneStartResult(await phoneVerification.start(userId, parsed.data.phone));
@@ -237,7 +241,7 @@ export async function sendPhoneCode(_next: string, input: PhoneInput): Promise<A
 
 export async function resendPhoneCode(_next: string): Promise<ActionResult> {
   const userId = await requireUserId();
-  if (!userId) return { ok: false, code: 'not_allowed' };
+  if (!userId || !smsAvailable()) return { ok: false, code: 'not_allowed' };
   const pending = await phoneVerification.pending(userId);
   if (!pending) {
     refresh();

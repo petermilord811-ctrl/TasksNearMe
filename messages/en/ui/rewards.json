@@ -31,7 +31,7 @@
     },
     "rules": {
       "title": "How rewards work",
-      "welcome": "{amount} gift card once your phone, ID and background checks pass. No booking needed.",
+      "welcome": "{amount} gift card once your verification checks pass. No booking needed.",
       "repeat": "{amount} for your third paid booking with the same client within 90 days.",
       "repeatThreshold": "Each qualifying booking must have a task price of {threshold} or more.",
       "hold": "Booking rewards have a 7-day hold after the work is completed and paid. Welcome gift cards get a quick check from our team first.",
@@ -121,7 +121,7 @@
       "ready": "Your {amount} gift card is ready",
       "delivered": "Your {amount} gift card was sent"
     },
-    "openBody": "Every helper who passes these three checks gets a {amount} gift card. No spots to race for, and no first task needed.",
+    "openBody": "Every helper who passes these checks gets a {amount} gift card. No spots to race for, and no first task needed.",
     "earnedBody": "Our team gives it a quick check, then you pick your card on <link>Rewards</link>.",
     "queuedBody": "So many helpers got verified this month that yours is in line for the next round. It moves on by {date}, with nothing to do on your side.",
     "readyBody": "Pick your card on <link>Rewards</link> by {date}.",

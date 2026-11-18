@@ -14,7 +14,7 @@ import {
   searchTaskAddresses,
   uploadTaskPhoto,
 } from '@/modules/tasks/actions';
-import { hasVerifiedPhone, homeMarketIdOf, taskDrafter, taskPosting } from '@/modules/tasks/server';
+import { homeMarketIdOf, phoneGateOpen, taskDrafter, taskPosting } from '@/modules/tasks/server';
 import { requirePosterIdentity } from '@/modules/verification/poster-identity';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
@@ -62,8 +62,8 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
   });
   if (viewer.kind !== 'user') redirect(routes.signIn(here));
   const userId = viewer.user.id;
-  // The sign-in flow asks for (and verifies) a phone when the destination needs one.
-  if (!(await hasVerifiedPhone(userId))) redirect(routes.signIn(here));
+  // The sign-in flow asks for (and verifies) a phone when the destination needs one (only where texts work, plan 9.2).
+  if (!(await phoneGateOpen(userId))) redirect(routes.signIn(here));
   // Risk may ask for an ID check before posting (blueprint 01 P2); it comes back here once it passes.
   await requirePosterIdentity(db, userId, await requestNow(), here);
 

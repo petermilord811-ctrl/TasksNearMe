@@ -72,7 +72,7 @@
       "cityHint": "Where you live, like Dallas or Tulsa.",
       "zipInMarket": "That ZIP is in {market}. Choose “In {market}” and pick your neighborhood.",
       "zipNotSupported": "Enter a US ZIP code.",
-      "elsewhereNote": "We're opening city by city. You can finish your phone, ID and background checks now. When we open in your city, you'll choose your neighborhood and add your home address.",
+      "elsewhereNote": "We're opening city by city. You can finish your verification checks now. When we open in your city, you'll choose your neighborhood and add your home address.",
       "waiting": "You're on the list for {city}, {state}. We'll tell you the moment we open there."
     },
     "tools": {

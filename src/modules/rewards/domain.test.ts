@@ -10,6 +10,7 @@ import {
   repeatProgress,
   repeatTrigger,
   welcomeChecksDone,
+  welcomeChecksFor,
   welcomeEarnedAt,
   welcomeReleases,
   type BookingFact,
@@ -31,6 +32,16 @@ describe('the welcome gift card (the owner’s rule of 2026-11-14)', () => {
     // Any order: the phone added last earns it then.
     expect(welcomeEarnedAt({ phoneVerifiedAt: day(9), idVerifiedAt: day(3), backgroundCheckedAt: day(6) })).toEqual(day(9));
     expect(welcomeEarnedAt({ phoneVerifiedAt: null, idVerifiedAt: day(3), backgroundCheckedAt: day(6) })).toBeNull();
+  });
+
+  it('needs the ID and background checks alone where texts don’t work (plan 9.2), all three where they do', () => {
+    expect(welcomeChecksFor(true)).toEqual(['phone', 'identity', 'background']);
+    const noTexts = welcomeChecksFor(false);
+    expect(noTexts).toEqual(['identity', 'background']);
+    const facts = { phoneVerifiedAt: null, idVerifiedAt: day(3), backgroundCheckedAt: day(6) };
+    expect(welcomeEarnedAt(facts, noTexts)).toEqual(day(6));
+    expect(welcomeChecksDone(facts, noTexts)).toEqual(['identity', 'background']);
+    expect(welcomeEarnedAt(facts, welcomeChecksFor(true))).toBeNull();
   });
 
   it('is $50 with no cohort, threshold, window or monthly budget (the program switch is the only limit)', () => {

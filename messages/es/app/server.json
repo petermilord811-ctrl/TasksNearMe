@@ -238,7 +238,7 @@
       "replacement_search_started": "{actorName} canceló {title}. Tu tarea vuelve a estar abierta a ofertas y avisamos a los ayudantes cercanos.",
       "badge_earned": "{tier, plural, =1 {Ganaste una insignia: {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}}} other {Tu insignia {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}} subió al nivel #}}.",
       "city_open": "TasksNearMe ya está en {title}. Elige tu vecindario para empezar a recibir tareas.",
-      "reward_earned": "Tu tarjeta de regalo de bienvenida{hasAmount, select, yes { de {amount}} other {}} es tuya: pasaste las verificaciones de teléfono, identidad y antecedentes.",
+      "reward_earned": "Tu tarjeta de regalo de bienvenida{hasAmount, select, yes { de {amount}} other {}} es tuya: pasaste todas las verificaciones.",
       "reward_ready": "Tu tarjeta de regalo{hasAmount, select, yes { de {amount}} other {}} está lista. Elige tu tarjeta en tu página de Recompensas.",
       "community_reply": "{actorName} respondió a tu publicación: {title}.",
       "community_answer_pinned": "{actorName} fijó tu respuesta en la publicación: {title}.",
@@ -261,7 +261,7 @@
     "welcome": {
       "subjectOffer": "¡Te damos la bienvenida, {firstName}! Verifícate y recibe una tarjeta de regalo de {amount}",
       "subject": "Te damos la bienvenida a TasksNearMe, {firstName}",
-      "preheaderOffer": "Cada ayudante que pasa tres verificaciones rápidas recibe una tarjeta de regalo de {amount}. Sin lugares limitados.",
+      "preheaderOffer": "Cada ayudante que pasa nuestras verificaciones rápidas recibe una tarjeta de regalo de {amount}. Sin lugares limitados.",
       "preheader": "Tu cuenta está lista: reserva ayuda local o gana dinero a tu propio ritmo.",
       "title": "Te damos la bienvenida a TasksNearMe",
       "greeting": "¡Te damos la bienvenida, {firstName}!",
@@ -274,7 +274,7 @@
           "identity": "Identidad",
           "background": "Antecedentes"
         },
-        "for": "Para cada ayudante que pasa nuestras tres verificaciones. Sin lugares limitados y sin necesidad de una primera tarea.",
+        "for": "Para cada ayudante que pasa nuestras verificaciones. Sin lugares limitados y sin necesidad de una primera tarea.",
         "cta": "Verifícate",
         "learn": "Cómo se gana dinero"
       },
@@ -423,7 +423,7 @@
       "heading": "TasksNearMe ya está en {city}",
       "preheader": "{interest, select, give_help {Verifícate y envía ofertas en tareas cerca de ti.} both {Publica una tarea o ayuda con una cerca de ti.} other {Publica una tarea y recibe ofertas de ayudantes cerca de ti.}}",
       "intro": "Te uniste a nuestra lista de espera para {zip}, y ya llegamos.",
-      "body": "{interest, select, give_help {Crea tu perfil de ayudante, verifica tu teléfono y tu identidad, e indica dónde quieres recibir tus ganancias. Luego envía ofertas en tareas cerca de ti.} both {Publica una tarea y los ayudantes cerca de ti te envían ofertas. O crea tu perfil de ayudante, verifícate y envía ofertas en tareas cercanas.} other {Describe tu tarea y tu presupuesto, y los ayudantes cerca de ti te envían ofertas. Pagas al reservar. A tu ayudante se le paga después de terminar la tarea.}}",
+      "body": "{interest, select, give_help {Crea tu perfil de ayudante, verifícate e indica dónde quieres recibir tus ganancias. Luego envía ofertas en tareas cerca de ti.} both {Publica una tarea y los ayudantes cerca de ti te envían ofertas. O crea tu perfil de ayudante, verifícate y envía ofertas en tareas cercanas.} other {Describe tu tarea y tu presupuesto, y los ayudantes cerca de ti te envían ofertas. Pagas al reservar. A tu ayudante se le paga después de terminar la tarea.}}",
       "cta": "{interest, select, give_help {Hazte ayudante} other {Publicar una tarea}}",
       "secondary": "{interest, select, both {Hazte ayudante} other {Ver TasksNearMe en {city}}}",
       "why": "Recibes esto porque {email} se unió a la lista de espera de TasksNearMe para {zip}. Es el único correo que enviamos sobre esto.",

@@ -64,7 +64,7 @@
     "rewardsDescription": "Gift cards are separate from your task earnings. Available programs and their terms are shown here.",
     "welcomeTitle": "Welcome gift card",
     "welcomeOffer": "Get verified, get a {amount} gift card",
-    "welcomeTerms": "Every helper who passes our three checks gets one. No spots to race for, and no first task needed.",
+    "welcomeTerms": "Every helper who passes our checks gets one. No spots to race for, and no first task needed.",
     "welcomeUnlock": "Our team gives it a quick check, then you pick your card. Redeem within {redeemDays, plural, one {# day} other {# days}}. One welcome gift card per person.",
     "welcomeEyebrow": "Welcome gift card",
     "welcomeChecks": {

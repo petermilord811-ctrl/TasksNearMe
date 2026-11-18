@@ -64,7 +64,7 @@
     "rewardsDescription": "Las tarjetas de regalo son aparte de lo que ganas por tus tareas. Aquí se muestran los programas disponibles y sus términos.",
     "welcomeTitle": "Tarjeta de regalo de bienvenida",
     "welcomeOffer": "Verifícate y recibe una tarjeta de regalo de {amount}",
-    "welcomeTerms": "Cada ayudante que pasa nuestras tres verificaciones recibe una. Sin lugares limitados y sin necesidad de una primera tarea.",
+    "welcomeTerms": "Cada ayudante que pasa nuestras verificaciones recibe una. Sin lugares limitados y sin necesidad de una primera tarea.",
     "welcomeUnlock": "Nuestro equipo la revisa rápidamente y luego eliges tu tarjeta. Canjéala dentro de {redeemDays, plural, one {# día} other {# días}}. Una tarjeta de regalo de bienvenida por persona.",
     "welcomeEyebrow": "Tarjeta de regalo de bienvenida",
     "welcomeChecks": {
