@@ -108,6 +108,22 @@ export interface PolicyTimers {
   minLeadHours: number;
 }
 
+/**
+ * The optional plans' prices and what they add (completion plan 9.13, decisions.md 2026-11-18). Null on a policy
+ * version means the defaults (`DEFAULT_PLANS`, policy-defaults.ts).
+ */
+export interface PlanPolicy {
+  /**
+   * For clients: part of the client service fee back on completed bookings (`posterFeeRebateBps` of it), up to
+   * `rebateMonthlyCapCents` in a calendar month, and AI search.
+   */
+  plus: { monthlyCents: number; yearlyCents: number; posterFeeRebateBps: number; rebateMonthlyCapCents: number; aiSearchesPerMonth: number };
+  /** For helpers: part of the helper fee back on completed bookings, up to `rebateMonthlyCapCents` a month, and AI search for tasks. */
+  pro: { monthlyCents: number; yearlyCents: number; helperFeeRebateBps: number; rebateMonthlyCapCents: number; aiSearchesPerMonth: number };
+  /** Without a plan. */
+  free: { aiSearchesPerMonth: number };
+}
+
 /** Immutable once published; bookings reference the version they were confirmed under. */
 export const marketPolicies = pgTable(
   'market_policies',
@@ -122,6 +138,8 @@ export const marketPolicies = pgTable(
     fees: jsonb('fees').$type<FeeSchedule>().notNull(),
     cancellation: jsonb('cancellation').$type<CancellationPolicy>().notNull(),
     timers: jsonb('timers').$type<PolicyTimers>().notNull(),
+    /** Plan prices and benefits (9.13); null: `DEFAULT_PLANS`. */
+    plans: jsonb('plans').$type<PlanPolicy>(),
     publishedBy: text('published_by'),
     publishedAt: tsz('published_at'),
     createdAt: createdAt(),

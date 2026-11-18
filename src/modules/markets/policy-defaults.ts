@@ -1,4 +1,4 @@
-import type { CancellationPolicy, FeeSchedule, PolicyTimers } from './schema';
+import type { CancellationPolicy, FeeSchedule, PlanPolicy, PolicyTimers } from './schema';
 
 /**
  * Launch defaults from docs/blueprint/04 §3 and §6, and 03 §1. Seeded as market policy v1.
@@ -6,6 +6,18 @@ import type { CancellationPolicy, FeeSchedule, PolicyTimers } from './schema';
  * never re-prices existing bookings.
  */
 export const DEFAULT_FEES: FeeSchedule = { posterBps: 1000, posterMinCents: 300, helperBps: 1000 };
+
+/**
+ * The optional plans (completion plan 9.13, decisions.md 2026-11-18): Plus for clients, Pro for helpers. A rebate is
+ * the share of that side's service fee paid back on each booking completed while subscribed (5,000 bps: half), up to a
+ * cap per calendar month (the same cap on yearly plans): without it the busiest people's rebates would cut most of
+ * the platform's fee (9c's review: an uncapped half-fee rebate is 5% of a subscriber's volume).
+ */
+export const DEFAULT_PLANS: PlanPolicy = {
+  plus: { monthlyCents: 499, yearlyCents: 3999, posterFeeRebateBps: 5000, rebateMonthlyCapCents: 1500, aiSearchesPerMonth: 100 },
+  pro: { monthlyCents: 799, yearlyCents: 5999, helperFeeRebateBps: 5000, rebateMonthlyCapCents: 4000, aiSearchesPerMonth: 100 },
+  free: { aiSearchesPerMonth: 5 },
+};
 
 export const DEFAULT_CANCELLATION: CancellationPolicy = {
   freeUntilHours: 24,
