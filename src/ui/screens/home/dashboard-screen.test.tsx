@@ -25,6 +25,10 @@ import {
   ruthDashboardData,
 } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
+import enEarnings from '../../../../messages/en/ui/earnings.json';
+import enHome from '../../../../messages/en/ui/home.json';
+import esEarnings from '../../../../messages/es/ui/earnings.json';
+import esHome from '../../../../messages/es/ui/home.json';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { DashboardScreen } from './dashboard-screen';
 import { dashboardTargetHref } from './links';
@@ -143,6 +147,17 @@ describe('the header', () => {
     expect(earnings.getByText('$75.00')).toBeVisible();
     expect(earnings.getByText('$110.25')).toBeVisible();
     expect(earnings.getByRole('link')).toHaveAttribute('href', routes.app.earnings());
+    // Earned work not paid out yet, not "Upcoming", which read as money from the bookings ahead (audit L12).
+    const term = earnings.getByText('Earned, not paid out yet');
+    expect(term.tagName).toBe('DT');
+    expect(term.nextElementSibling).toHaveTextContent('$75.00');
+  });
+
+  it('names each glance total as the Earnings page names it, in English and Spanish (audit L12)', () => {
+    for (const [home, earnings] of [[enHome, enEarnings], [esHome, esEarnings]] as const) {
+      expect(home.earnings.upcoming).toBe(earnings.totals.upcoming);
+      expect(home.earnings.onTheWay).toBe(earnings.totals.onTheWay);
+    }
   });
 
   it.each([

@@ -15,7 +15,7 @@
   },
   "caughtUp": "You’re all caught up. Anything that needs you will show here.",
   "earnings": {
-    "upcoming": "Upcoming",
+    "upcoming": "Earned, not paid out yet",
     "onTheWay": "On the way",
     "link": "Open Earnings"
   },
