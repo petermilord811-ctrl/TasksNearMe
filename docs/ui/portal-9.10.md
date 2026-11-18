@@ -11,7 +11,7 @@ The portal makes them one place for signed-in members. It is one stream of what 
 - **Feed:** cards, as on Nextdoor and Reddit.
 - **List:** dense rows, as on Craigslist.
 
-Both views use one set of filters in one URL. The route stays `/app/community`, so notification links and bookmarks keep working. The page is called **Neighborhood**.
+Both views use one set of filters in one URL. The route stays `/app/community`, so notification links and bookmarks keep working. The page is called **Neighbors** (Spanish **Vecinos**), as in the nav: "Neighborhood" broke mid-word in the phone dock (9c, 2026-11-18). "Neighborhood" stays wherever it means the area.
 
 The public board doesn't change. Signed-out visitors and search engines keep `/[market]/tasks` and its job hubs (tasksnearme-37's pages).
 
@@ -50,16 +50,16 @@ The public board doesn't change. Signed-out visitors and search engines keep `/[
 
 ```
 ┌ app rail ┐┌──────────────── main, 952 px ──────────────────────────────────────────────────┐
-│ Home     ││ NEIGHBORHOOD                                         [🔍 Search the neighborhood ]│
+│ Home     ││ NEIGHBORS                                            [🔍 Search the neighborhood ]│
 │ Neighbor…││ Mueller and nearby                                                              │
-│ Tasks    ││ 12 open tasks · 18 posts this week · 9 helpers                                  │
+│ Tasks    ││ ▤ 12 open tasks  💬 18 posts this week  👥 9 helpers                              │
 │ Bookings ││ ( Near you 42 )( Mueller 17 )( Windsor Park 9 )( Hyde Park 6 )( All of Austin )( More ▾ )│
-│ Messages ││┌──────────── center, ~620 px ────────────────────┐ ┌──── rail, 300 px ─────────┐│
+│ Messages ││┌──────────── center, ~650 px ────────────────────┐ ┌──── rail, 280 px ─────────┐│
 │ …        │││ (MR) Ask your neighbors…                       │ │ Your stuff                ││
 │          │││ [Recommendation][Question][Tip][Thanks][+ Task]│ │  Desk assembly · 2 offers ││
 │          ││└────────────────────────────────────────────────┘ │  Your post · 3 replies    ││
 │          ││ Everything 42  Tasks 12  Recommendations 8  Questions 9 …│  Saved 4                  ││
-│          ││ [Hot|New|Top] [Service: All ▾] [Any time ▾]  [Feed|List]│ ├───────────────────────────┤│
+│          ││ [Hot|New|Top] [⚙ Filters ▾]               [Feed|List]│ ├───────────────────────────┤│
 │          ││ ┌ post card ────────────────────────────────┐   │ │ Helpers nearby            ││
 │          ││ │ (MR) Maya R. ✓ Poster · Mueller · 2h  [Rec]│   │ │  (SK) Sam K. ★4.9 · 6 rec ││
 │          ││ │ Who do you recommend for a desk?           │   │ │  [Request]  See all →     ││
@@ -76,19 +76,20 @@ The public board doesn't change. Signed-out visitors and search engines keep `/[
 - **The app's rail is the portal's left column.** The shell's floating rail (264 px) already plays the part of Reddit's left column: the app's places.
 - **The neighborhoods sit at the top of the center column, not in a third column.** A third portal column at this width would squeeze the feed under 460 px: cards would wrap every title, and the list would lose its price column. As a strip under the heading, the neighborhoods are the first control at every width.
 - **The rail scrolls with the page,** as Reddit's does. A tall sticky rail with a scroll of its own is worse than one that leaves the feed alone.
+- **One toolbar row in every language.** Hot, New and Top; **Filters**, a panel under the button with the service and when it was posted (each option with its count) and Saved; and Feed or List. The design's inline Service and Posted menus wrapped this row at 1280 (three rows in Spanish), so they moved into the panel; the filters in use show as removable chips under the row.
 - **Width beyond 1280.** If the shell's rail ever collapses to icons on wide pages (f7's shells), a third column can hold the neighborhoods and services with counts. That's listed under §9.
 
 ### 768: tablet (the shell's dock instead of its rail)
 
 ```
 ┌──────────────── one column, max 42 rem ────────────────┐
-│ NEIGHBORHOOD                    [🔍 Search          ]  │
+│ NEIGHBORS                       [🔍 Search          ]  │
 │ Mueller and nearby · 12 open tasks · 18 posts · 9 helpers│
 │ ( Near you )( Mueller )( Windsor Park )( … )( More ▾ )  │
 │ ┌ composer ┐                                           │
 │ ┌ Your task "Desk assembly" has 2 offers  → ┐  (only when something needs you) │
 │ Everything · Tasks · Recommendations · Questions · …    │
-│ [Hot|New|Top] [Service ▾] [Any time ▾]       [Feed|List]│
+│ [Hot|New|Top] [⚙ Filters ▾]                  [Feed|List]│
 │ card · card · card                                      │
 │ ⟷ Helpers nearby (a sideways row of 3–6 cards)          │  after the third item, Feed only
 │ card · card · card · card · card                        │
@@ -101,25 +102,26 @@ The public board doesn't change. Signed-out visitors and search engines keep `/[
 
 ```
 ┌─────────── 360 ───────────┐
-│ NEIGHBORHOOD               │
+│ NEIGHBORS                  │
 │ Mueller and nearby         │
-│ 12 tasks · 18 posts · 9 helpers │
-│ (Near you)(Mueller)(Wind…→ │  sideways, edges fade
-│ ┌ (MR) Ask your neighbors… ┐│
-│ │ [Rec][Question][Tip]…  → ││  sideways
-│ Everything · Tasks · Rec… →│  sideways
-│ [Hot|New|Top] [⚙ Filters 2] [▤|☰] │
+│ ▤ 12 open tasks  💬 18 posts │
+│ 👥 9 helpers                │
+│ (Near you)(Mueller)(Wind…→ │  sideways; an end fades while more is past it
+│ (MR) [Ask your neighbors…](+)│  one line; the kind is picked in the form
+│ (Desk assembly · 2 offers)(Saved 4) │  wraps, only when something needs you
+│ Everything · Tasks · Rec… →│  sideways, the chosen tab in view
+│ [🔥Hot|✨|🏆] [⚙ 2] [▤|☰]   │  inactive sorts as icons
 │ ┌ card, full width ───────┐│
 │ │ …                        ││
 │      ( ↑ 3 new · Show )     │  fixed under the top bar
 └──────── dock (5 tabs) ─────┘
 ```
 
-On phones, the Filters sheet holds the service, the time, search and Saved, each option with its count.
+On phones, the Filters sheet holds the service, the time, search and Saved, each option with its count. Only two rows scroll sideways (the neighborhoods and the types); every other row wraps or fits.
 
 ### List view (every width)
 
-The List view uses the same frame: heading, strip, composer, tabs and toolbar, and on desktop the same rail. Only the center column changes, so switching views never moves the page around the reader.
+The List view uses the same frame: heading, strip, composer, tabs and toolbar, and on desktop the same rail. Only the center column changes, so switching views never moves the page around the reader. The grouping (By neighborhood, By day) sits right above the rows.
 
 ```
 ┌ Mueller · 17 ─────────────────────────────────── See all → ┐
@@ -270,7 +272,7 @@ Ties go to the newest, then the id. Everything is one SQL query over both tables
 
 ## 10. Navigation (for the dashboard helper, 9.9 and 9.14; I don't edit the nav files)
 
-- **Rename the entry.** "Community" becomes **Neighborhood** (Spanish **Vecindario**), on the same route, `/app/community`. Its post pages (`/app/community/*`) stay under it. Suggested icon: lucide `MapPinned`, or `UsersRound`.
+- **Rename the entry.** "Community" becomes **Neighbors** (Spanish **Vecinos**; first proposed as Neighborhood, which didn't fit the dock), on the same route, `/app/community`. Its post pages (`/app/community/*`) stay under it. Suggested icon: lucide `MapPinned`, or `UsersRound`.
 - **Move it to the primary group, right after Home, for both modes.** It is now where open tasks and neighbors' asks meet, and both clients and helpers come back to it daily.
 - **Phones (the dock has five places).**
   - Clients: Home · Neighborhood · Tasks · Bookings · Messages. Account already lives in the avatar menu.
