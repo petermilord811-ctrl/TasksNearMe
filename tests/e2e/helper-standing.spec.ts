@@ -19,8 +19,8 @@ test('a new helper sees the welcome gift card and every verification step on the
   const checklist = page.getByRole('region', { name: 'Your verification' });
   await expect(checklist.getByText('ID check', { exact: true })).toBeVisible();
   await expect(checklist.getByText('Home address', { exact: true })).toBeVisible();
-  // The profile form is still right below.
-  await expect(page.getByRole('heading', { name: 'Introduce yourself' })).toBeVisible();
+  // The profile's flow is on the same page (plan 9.11), at its first part not saved yet.
+  await expect(page.getByRole('heading', { level: 2, name: 'What you do' })).toBeVisible();
 });
 
 test('the account page shows a helper’s checks and a client’s phone', async ({ page }) => {

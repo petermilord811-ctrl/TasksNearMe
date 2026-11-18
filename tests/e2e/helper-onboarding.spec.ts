@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import sharp from 'sharp';
-import { devSignIn } from './support/sign-in';
+import { devSignIn, untilShown } from './support/sign-in';
 
 /**
  * Helper onboarding through the dev provider stand-ins: the profile with the helper agreement, services,
@@ -39,31 +39,33 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
   expect((await page.goto('/helpers/priya-s'))?.status()).toBe(404);
   await devSignIn(page, 'priya@example.test');
 
-  // Profile, with the helper agreement
+  // The profile in one flow (plan 9.11): What you do, Where you help, Introduce yourself. Priya's seeded profile has its
+  // area but no services, so the flow opens at What you do. Yard cleanup needs no background check.
   await page.goto('/app/helper/onboarding/profile');
+  await expect(page.getByRole('heading', { level: 2, name: 'What you do' })).toBeVisible();
+  // Pressed again if the first press came before the page hydrated.
+  await untilShown(page.getByRole('button', { name: /^Yard cleanup/, pressed: true }), () => page.getByRole('button', { name: /^Yard cleanup/ }).click());
+  // The segmented control's label covers its visually hidden radio: press the label.
+  await page.getByText('By the hour', { exact: true }).click();
+  await expect(page.getByRole('radio', { name: 'By the hour' })).toBeChecked();
+  await page.getByLabel('Your hourly rate').fill('30');
+  await page.getByLabel('Minimum hours').fill('2');
+  await page.getByRole('button', { name: 'Add a note' }).click();
+  await page.getByLabel('About your yard cleanup (optional)').fill('Leaves, weeding, and light hand pruning.');
+  await page.getByRole('button', { name: 'Next: Where you help' }).click();
+  await expect(page).toHaveURL(/\/onboarding\/area$/);
+  await expect(page.getByLabel('Home area')).toHaveValue('area_north_loop');
+  await page.getByRole('button', { name: 'Next: Introduce yourself' }).click();
+
+  // Introduce yourself, with the helper agreement
+  await expect(page).toHaveURL(/\/onboarding\/profile$/);
   await page.getByLabel('Headline').fill('Careful yard help in North Loop');
   await page.getByLabel('About you', { exact: true }).fill('I rake, weed, and tidy yards carefully, and I bag everything for curbside pickup.');
   await page.getByRole('button', { name: 'Save and continue' }).click();
   await expect(page.getByText('Agree to the Helper agreement and the Community guidelines to continue.')).toBeVisible();
   await page.getByRole('checkbox', { name: /I agree to the Helper agreement/ }).check();
   await page.getByRole('button', { name: 'Save and continue' }).click();
-
-  // Services: yard cleanup needs no background check
-  await expect(page).toHaveURL(/\/onboarding\/services$/);
-  await page.getByRole('button', { name: 'Add service' }).click();
-  await page.getByLabel('Service category').selectOption('yard-cleanup');
-  await page.getByLabel('Pricing type').selectOption('hourly');
-  await page.getByLabel('Hourly rate ($)').fill('30');
-  await page.getByLabel('Minimum hours').fill('2');
-  await page.getByLabel('Service description').fill('Leaves, weeding, and light hand pruning.');
-  await page.getByRole('button', { name: 'Save and continue' }).click();
-
-  // Steps already done are skipped: Priya's seeded profile has its area, and her phone was verified at
-  // sign-up, so "Save and continue" goes straight to the ID check. The area step still saves.
-  await expect(page).toHaveURL(/\/onboarding\/identity$/);
-  await page.goto('/app/helper/onboarding/area');
-  await page.getByLabel('Home area').selectOption({ label: 'North Loop' });
-  await page.getByRole('button', { name: 'Save and continue' }).click();
+  // Her phone was verified at sign-up (and without texts there's no phone step), so the ID check is next.
 
   // ID check, stage 1: our own photos, after the Texas biometric notice
   await expect(page).toHaveURL(/\/onboarding\/identity$/);

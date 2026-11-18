@@ -184,5 +184,112 @@
       "changeCity": "Cambiar tu ciudad"
     },
     "giftStep": "Cuenta para tu tarjeta de regalo de bienvenida"
+  },
+  "setup": {
+    "title": "Tu perfil de ayudante",
+    "description": "Tres partes cortas. Después, unas verificaciones para que los clientes puedan contratarte.",
+    "partOf": "Parte {number} de {total}",
+    "partsLabel": "Las partes de tu perfil",
+    "parts": {
+      "services": "Lo que haces",
+      "area": "Dónde ayudas",
+      "about": "Preséntate"
+    },
+    "intros": {
+      "services": "Elige la ayuda que ofreces y fija tus precios. Cada precio empieza en lo habitual aquí; cámbialo como te convenga.",
+      "area": "Elige desde dónde trabajas y hasta dónde te desplazas. Los clientes ven tu vecindario, nunca tu dirección.",
+      "about": "Agrega una foto y unas palabras, para que los clientes sepan quién va a llegar."
+    },
+    "after": "Después: unas verificaciones para que los clientes puedan contratarte.",
+    "back": "Atrás",
+    "next": "Siguiente: {part}",
+    "finish": "Guardar y continuar",
+    "finishFirst": "Termina “{part}” primero y luego guarda.",
+    "status": {
+      "saving": "Guardando…",
+      "saved": "Guardado",
+      "unsaved": "Aún sin guardar",
+      "invalid": "Aún sin guardar: revisa los campos marcados.",
+      "agreement": "Aún sin guardar: acepta el Acuerdo para ayudantes para guardar.",
+      "failed": "No se pudo guardar ahora. Lo intentaremos de nuevo al continuar."
+    },
+    "restored": "Conservamos lo que escribiste antes.",
+    "services": {
+      "choose": "¿Con qué puedes ayudar?",
+      "chooseHint": "Elige uno o más.",
+      "typical": {
+        "item": "Lo habitual: {low}–{high} por artículo",
+        "hour": "Lo habitual: {low}–{high} por hora",
+        "task": "Lo habitual: {low}–{high} por tarea"
+      },
+      "pricing": "Cómo cobras por {service}",
+      "fixed": "Precio fijo",
+      "hourly": "Por hora",
+      "fromPrice": "Tu precio, desde",
+      "hourlyRate": "Tu tarifa por hora",
+      "minHours": "Horas mínimas",
+      "minimum": "Al menos {amount}.",
+      "note": "Agregar una nota",
+      "noteLabel": "Sobre tu servicio de {service} (opcional)",
+      "noteHint": "Qué incluye o qué llevas. Hasta 300 caracteres.",
+      "background": "Requiere una verificación de antecedentes antes de poder aceptarlo.",
+      "remove": "Quitar {service}",
+      "none": "Elige al menos un servicio."
+    },
+    "about": {
+      "photoTitle": "Tu foto",
+      "draftTitle": "¿Necesitas un punto de partida?",
+      "preview": "Cómo te ven los clientes",
+      "previewShow": "Ver cómo te ven los clientes",
+      "previewHide": "Ocultar la vista previa",
+      "previewHint": "Tu tarjeta en los resultados de búsqueda y en tus ofertas.",
+      "noHeadline": "Tu titular aparece aquí.",
+      "noArea": "Tu vecindario",
+      "new": "Ayudante nuevo"
+    },
+    "examples": {
+      "title": "Empieza con un ejemplo",
+      "description": "Ejemplos hechos con tus servicios y tu zona. Elige uno y hazlo tuyo. No se guarda nada hasta que guardes.",
+      "use": "Usar un ejemplo",
+      "another": "Probar otro ejemplo",
+      "undo": "Deshacer",
+      "used": "El ejemplo {number} de {total} está en los campos de abajo. Cambia lo que quieras.",
+      "undone": "Volvió tu propio texto.",
+      "needServices": "Elige primero tus servicios en “Lo que haces” y los ejemplos los mencionarán.",
+      "headlines": {
+        "plain": "{services} en {area}",
+        "careful": "{services} con cuidado y buen trato en {area}",
+        "neighbor": "Ayuda vecinal con {services} en {area}"
+      },
+      "intros": {
+        "plain": "Hola, soy {name}. Ayudo a mis vecinos de {area} con {services}.",
+        "careful": "Soy {name} y me encargo de {services} para vecinos de {area}.",
+        "neighbor": "¡Hola! Soy {name}, de {area}, y con gusto ayudo con {services}."
+      },
+      "closings": {
+        "plain": "Cuéntame qué necesitas y cuándo, y confirmo los detalles antes de empezar.",
+        "careful": "Te mantengo al tanto mientras trabajo y dejo todo ordenado al terminar.",
+        "neighbor": "Escríbeme con lo que necesitas. Con gusto respondo tus preguntas antes de que reserves."
+      },
+      "services": {
+        "furniture-assembly": "Armo muebles para ensamblar paso a paso, reviso cada unión y puedo llevarme el empaque.",
+        "moving-help": "Ayudo a cargar, mover y descargar, con cuidado en escaleras, puertas y pisos.",
+        "yard-cleanup": "Rastrillo y embolso hojas, quito maleza y retiro los desechos del jardín, para que lo disfrutes.",
+        "light-cleaning": "Me encargo de la limpieza diaria: cocinas, baños, pisos y polvo.",
+        "computer-help": "Configuro y arreglo computadoras, teléfonos, impresoras y wifi, y explico todo con paciencia."
+      },
+      "languages": "Hablo {languages}.",
+      "andMore": "{services} y más"
+    },
+    "previews": {
+      "services": "Configuración de ayudante: lo que haces",
+      "servicesChosen": "Configuración de ayudante: dos servicios elegidos",
+      "area": "Configuración de ayudante: dónde ayudas",
+      "about": "Configuración de ayudante: sobre ti, con el borrador de Claude",
+      "aboutExamples": "Configuración de ayudante: sobre ti, con ejemplos",
+      "aboutPhoto": "Configuración de ayudante: sobre ti, con foto",
+      "invalid": "Configuración de ayudante: una parte con errores",
+      "saveFailed": "Configuración de ayudante: un guardado que falló"
+    }
   }
 }

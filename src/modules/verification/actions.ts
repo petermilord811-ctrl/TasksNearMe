@@ -101,15 +101,18 @@ export async function onboardingSaveProfile(input: HelperProfileInput): Promise<
   return saved(userId, await saveHelperProfile(db, userId, input, await requestNow(), { requireAgreement: true, origin }), 'profile');
 }
 
+/** Services and area can come first (plan 9.11) and start the draft profile, so the private beta's invite applies too. */
 export async function onboardingSaveServices(input: HelperServicesInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
+  if (await helperInviteFor(db, userId)) return { ok: false, code: 'not_allowed' };
   return saved(userId, await saveHelperServices(db, userId, input, await requestNow()), 'services');
 }
 
 export async function onboardingSaveArea(input: HelperAreaInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
+  if (await helperInviteFor(db, userId)) return { ok: false, code: 'not_allowed' };
   return saved(userId, await saveHelperArea(db, userId, input, await requestNow()), 'area');
 }
 

@@ -42,6 +42,7 @@ import { normalizeZip, stateOfZip, tidyCityName } from '@/shared/us-zip';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { computeOnboarding } from './progress';
+import { serviceDefaultsFor } from './service-defaults';
 import { loadOnboardingState, syncHelperProfile, verificationSummary, type OnboardingState } from './state';
 
 /**
@@ -137,6 +138,19 @@ export async function saveHelperProfile(
   return { ok: true, code: 'saved' };
 }
 
+/**
+ * The draft helper profile, created when the first part of setup is saved (plan 9.11: services and area can come
+ * before the headline and about me). A draft is invisible to clients until setup makes it active.
+ */
+async function ensureDraftProfile(db: Db, userId: string): Promise<boolean> {
+  const [existing] = await db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
+  if (existing) return true;
+  const [user] = await db.select({ firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) return false;
+  await db.insert(helperProfiles).values({ userId, handle: await uniqueHandle(db, user.firstName, user.lastName), status: 'draft' }).onConflictDoNothing();
+  return true;
+}
+
 async function marketIdOf(db: Db, userId: string): Promise<string | null> {
   const [row] = await db.select({ marketId: users.homeMarketId }).from(users).where(eq(users.id, userId)).limit(1);
   return row?.marketId ?? null;
@@ -144,11 +158,11 @@ async function marketIdOf(db: Db, userId: string): Promise<string | null> {
 
 export async function saveHelperServices(db: Db, userId: string, input: HelperServicesInput, now: Date): Promise<ActionResult> {
   const marketId = await marketIdOf(db, userId);
-  const [profile] = await db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
-  if (!marketId || !profile) return { ok: false, code: 'not_allowed' };
+  if (!marketId) return { ok: false, code: 'not_allowed' };
   const categoryViews = await listCategoryViews(marketId, db);
   const parsed = createHelperServicesSchema(categoryViews).safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
+  if (!(await ensureDraftProfile(db, userId))) return { ok: false, code: 'not_allowed' };
 
   const categoryRows = await db.select({ id: categories.id, slug: categories.slug }).from(categories);
   const idOf = new Map(categoryRows.map((row) => [row.slug, row.id]));
@@ -210,6 +224,7 @@ export async function saveHelperArea(db: Db, userId: string, input: HelperAreaIn
     if (!area) return fieldError('areaId', 'invalid');
     place = { areaId: area.id, homeZip: null, homeCity: null, homeState: null };
   }
+  if (!(await ensureDraftProfile(db, userId))) return { ok: false, code: 'not_allowed' };
   const updated = await db
     .update(helperProfiles)
     .set({ ...place, ...reach })
@@ -383,8 +398,12 @@ function waitingFor(state: OnboardingState) {
 }
 
 export async function getOnboardingPageData(db: Db, userId: string, step: OnboardingStep, now: Date): Promise<HelperOnboardingPageData | null> {
-  const [state, shared] = await Promise.all([loadOnboardingState(db, userId, now), sharedPageData(db, userId)]);
-  if (!shared) return null;
+  const [state, shared, [person]] = await Promise.all([
+    loadOnboardingState(db, userId, now),
+    sharedPageData(db, userId),
+    db.select({ name: users.name, firstName: users.firstName, lastName: users.lastName, avatarFileId: users.avatarFileId }).from(users).where(eq(users.id, userId)).limit(1),
+  ]);
+  if (!shared || !person) return null;
   const result = computeOnboarding(state.facts, step);
   const flags = await getFlags(shared.market.id, db);
   // The $50 welcome gift card and where its three checks stand (blueprint 05 §2, 2026-11-14): every helper earns it.
@@ -404,7 +423,28 @@ export async function getOnboardingPageData(db: Db, userId: string, step: Onboar
     firstPayoutDays: FIRST_PAYOUT_DAYS,
     aiDraftingEnabled: aiWritingSetUp() && flags.ai_drafting === true,
     ...(welcomeReward ? { welcomeReward } : {}),
+    // The profile in one flow (plan 9.11): the card's person, the photo's limit, prefilled prices and drafting help.
+    person: setupPerson(person),
+    maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)),
+    serviceDefaults: serviceDefaultsFor(shared.categories),
+    profileDraft: aiWritingSetUp() && flags.ai_drafting === true ? 'ai' : 'template',
   };
+}
+
+/** The person as clients see them on a helper card: first name, "First L.", initials and photo. */
+function setupPerson(person: { name: string; firstName: string; lastName: string; avatarFileId: string | null }): HelperOnboardingPageData['person'] {
+  return {
+    firstName: person.firstName,
+    displayName: person.name,
+    initials: initialsOf(person.firstName, person.lastName),
+    ...(person.avatarFileId ? { photo: avatarPhoto(person.avatarFileId, person.name) } : {}),
+  };
+}
+
+/** "Write it for me" with Claude, or the written examples without it (plan 9.11). */
+async function draftingFor(db: Db, userId: string): Promise<Pick<HelperProfileEditorData, 'aiDraftingEnabled' | 'profileDraft'>> {
+  const ai = await aiDraftingEnabledFor(db, userId);
+  return { aiDraftingEnabled: ai, profileDraft: ai ? 'ai' : 'template' };
 }
 
 /** Where onboarding should be: a locked step opens the first step still to do. */
@@ -425,11 +465,7 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
   const result = computeOnboarding(state.facts);
   return {
     handle: state.profile.handle,
-    person: {
-      displayName: person.name,
-      initials: initialsOf(person.firstName, person.lastName),
-      ...(person.avatarFileId ? { photo: avatarPhoto(person.avatarFileId, person.name) } : {}),
-    },
+    person: setupPerson(person),
     progress: result.progress,
     categories: shared.categories,
     areas: shared.areas,
@@ -448,7 +484,7 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
     },
     verification: verificationSummary(state, result.backgroundRequired, optionalCipher(), promptSecret()),
     paused: state.profile.status === 'paused',
-    aiDraftingEnabled: await aiDraftingEnabledFor(db, userId),
+    ...(await draftingFor(db, userId)),
   };
 }
 

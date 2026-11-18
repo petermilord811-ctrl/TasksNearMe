@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { ONBOARDING_STEPS, routes, type OnboardingStep } from '@/contracts';
+import { removeProfilePhotoAction, uploadProfilePhotoAction } from '@/modules/accounts/account-actions';
 import { draftHelperProfileAction } from '@/modules/assist/actions';
 import {
   onboardingAcceptIdentityNotice,
@@ -77,6 +78,8 @@ async function Onboarding({ params }: Pick<PageProps<'/[locale]/app/helper/onboa
         onStartBackgroundCheck: onboardingStartBackgroundCheck,
         onRefreshStatus: onboardingRefreshStatus,
         onSavePushSubscription: savePushSubscriptionAction,
+        onUploadPhoto: uploadProfilePhotoAction,
+        onRemovePhoto: removeProfilePhotoAction,
       }}
     />
   );

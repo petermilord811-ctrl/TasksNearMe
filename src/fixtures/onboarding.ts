@@ -1,14 +1,17 @@
 import type {
   AddressSuggestion,
+  CategorySlug,
   AreaOption,
   HelperOnboardingHandlers,
   IdentityCaptureSummary,
   HelperOnboardingPageData,
   HelperProfileEditorData,
   HelperProfileEditorHandlers,
+  HelperSetupPerson,
   OnboardingProgress,
   OnboardingStep,
   OnboardingStepState,
+  ServiceDefault,
   VerificationSummary,
   WelcomeGiftCard,
 } from '@/contracts';
@@ -122,6 +125,23 @@ const priyaValues: HelperOnboardingPageData['values'] = {
   area: { areaId: 'area_mueller', serviceRadiusMiles: 5, remoteOk: false },
 };
 
+/**
+ * The prefilled pricing helper setup offers (plan 9.11), as the server derives it from `categoryViews`: the
+ * category's usual pricing at the low end of its typical range, never under its minimum.
+ */
+export const setupServiceDefaults: Partial<Record<CategorySlug, ServiceDefault>> = {
+  'furniture-assembly': { pricingType: 'fixed', fromPriceCents: 5000 },
+  'moving-help': { pricingType: 'hourly', hourlyRateCents: 3500, minHours: 2 },
+  'yard-cleanup': { pricingType: 'fixed', fromPriceCents: 6000 },
+  'light-cleaning': { pricingType: 'fixed', fromPriceCents: 9000 },
+  'computer-help': { pricingType: 'fixed', fromPriceCents: 3500 },
+};
+
+/** Priya, a new helper, as clients will see her (no photo yet). */
+export const priyaSetupPerson: HelperSetupPerson = { firstName: 'Priya', displayName: 'Priya S.', initials: 'PS' };
+/** The profile photo Priya adds in setup (previews). */
+export const priyaProfilePhoto = { id: 'fil_avatar_priya', src: '/samples/avatar-priya.svg', alt: 'Priya S.', width: 512, height: 512 };
+
 const base = {
   categories: categoryViews,
   areas: austinAreaOptions,
@@ -140,6 +160,10 @@ const base = {
   aiDraftingEnabled: true,
   agreementNeeded: false,
   homeMarket: { name: 'Austin', zipPrefixes: ['786', '787'] },
+  person: priyaSetupPerson,
+  maxPhotoMegabytes: 10,
+  serviceDefaults: setupServiceDefaults,
+  profileDraft: 'ai' as const,
 };
 
 const lockedAfterBasics: OnboardingStep[] = ['phone', 'identity', 'address', 'payout', 'background', 'done'];
@@ -168,6 +192,42 @@ export const onboardingAreaStep: HelperOnboardingPageData = {
   progress: progress('area', { locked: lockedAfterBasics }),
   values: { ...priyaValues, area: emptyValues.area },
   verification: { ...notStarted, background: cleaningNeedsCheck },
+};
+
+/**
+ * Helper setup's profile in one flow (plan 9.11). A new helper with services chosen but not saved yet (What you do).
+ */
+export const onboardingSetupServicesChosen: HelperOnboardingPageData = {
+  ...onboardingProfileStep,
+  step: 'services',
+  values: { ...emptyValues, services: priyaValues.services },
+};
+
+/** Services and area saved: the flow opens Introduce yourself (the helper agreement still to accept). */
+export const onboardingSetupAbout: HelperOnboardingPageData = {
+  ...base,
+  agreementNeeded: true,
+  step: 'profile',
+  progress: {
+    steps: ONBOARDING_STEPS.map((step): { step: OnboardingStep; state: OnboardingStepState } => ({
+      step,
+      state: step === 'services' || step === 'area' ? 'done' : step === 'profile' ? 'current' : lockedAfterBasics.includes(step) ? 'locked' : 'todo',
+    })),
+    bookable: false,
+    bookableCategories: [],
+  },
+  values: { ...priyaValues, profile: emptyValues.profile },
+  verification: notStarted,
+};
+
+/** Introduce yourself with written examples instead of Claude (no AI set up). */
+export const onboardingSetupAboutExamples: HelperOnboardingPageData = { ...onboardingSetupAbout, aiDraftingEnabled: false, profileDraft: 'template' };
+
+/** Introduce yourself with a photo and the profile written. */
+export const onboardingSetupAboutPhoto: HelperOnboardingPageData = {
+  ...onboardingSetupAbout,
+  person: { ...priyaSetupPerson, photo: priyaProfilePhoto },
+  values: priyaValues,
 };
 
 /** Somewhere else in the US (owner, 2026-11-14: national, cities open in turn): a ZIP and city instead of a neighborhood. */
@@ -453,7 +513,7 @@ export const samProfilePhoto = { id: 'fil_avatar_sam', src: '/samples/avatar-sam
 export const samProfileEditorData: HelperProfileEditorData = {
   handle: sam.handle,
   // No profile photo yet (the editor offers to add one).
-  person: { displayName: sam.displayName, initials: sam.initials },
+  person: { firstName: 'Sam', displayName: sam.displayName, initials: sam.initials },
   progress: progress('done', { bookableCategories: sam.services.map((s) => s.categorySlug) }),
   categories: categoryViews,
   areas: austinAreaOptions,
@@ -486,6 +546,7 @@ export const samProfileEditorData: HelperProfileEditorData = {
   },
   paused: false,
   aiDraftingEnabled: true,
+  profileDraft: 'ai',
 };
 
 /** What "Write it for me" drafts for Sam in previews and tests. */
@@ -516,6 +577,8 @@ export const fakeOnboardingHandlers: HelperOnboardingHandlers = {
   onStartPayout: () => wait({ ok: true, code: 'updated', redirectTo: '/dev/providers/payout' }),
   onStartBackgroundCheck: () => wait({ ok: true, code: 'updated', redirectTo: '/dev/providers/background' }),
   onRefreshStatus: () => wait({ ok: true, code: 'updated' }),
+  onUploadPhoto: () => wait({ ok: true, photo: priyaProfilePhoto }, 700),
+  onRemovePhoto: () => wait({ ok: true, code: 'updated' }),
 };
 
 export const fakeProfileEditorHandlers: HelperProfileEditorHandlers = {

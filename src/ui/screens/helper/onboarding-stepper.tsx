@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Check, ChevronDown, Gift, Hourglass, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type OnboardingProgress, type OnboardingStep } from '@/contracts';
+import { routes, type OnboardingProgress, type OnboardingStep, type OnboardingStepState } from '@/contracts';
 import { cn } from '@/ui/lib/utils';
 
 /**
@@ -13,12 +13,25 @@ import { cn } from '@/ui/lib/utils';
  * it; "All steps" opens the list (done steps link back for changes). `giftSteps`: the steps that earn the welcome
  * gift card, marked with a small gift, in the list and on the phone's line.
  */
-export function OnboardingStepper({ progress, step: currentStep, giftSteps }: { progress: OnboardingProgress; step: OnboardingStep; giftSteps?: readonly OnboardingStep[] }) {
+/** The profile's three steps are one part of setup (plan 9.11): one entry, done once all three are. */
+const PROFILE_STEPS: readonly OnboardingStep[] = ['profile', 'services', 'area'];
+
+function grouped(steps: OnboardingProgress['steps']): OnboardingProgress['steps'] {
+  const profile = steps.filter((item) => PROFILE_STEPS.includes(item.step));
+  if (profile.length === 0) return steps;
+  const state: OnboardingStepState = profile.every((item) => item.state === 'done') ? 'done' : profile.some((item) => item.state === 'current') ? 'current' : 'todo';
+  const rest = steps.filter((item) => !PROFILE_STEPS.includes(item.step));
+  return [{ step: 'profile', state }, ...rest];
+}
+
+export function OnboardingStepper({ progress, step: viewing, giftSteps }: { progress: OnboardingProgress; step: OnboardingStep; giftSteps?: readonly OnboardingStep[] }) {
   const t = useTranslations('helperOnboarding');
   const [expanded, setExpanded] = useState(false);
-  const total = progress.steps.length;
-  const position = Math.max(0, progress.steps.findIndex((item) => item.step === currentStep));
-  const done = progress.steps.filter((item) => item.state === 'done' || item.state === 'skipped').length;
+  const steps = grouped(progress.steps);
+  const currentStep = PROFILE_STEPS.includes(viewing) ? 'profile' : viewing;
+  const total = steps.length;
+  const position = Math.max(0, steps.findIndex((item) => item.step === currentStep));
+  const done = steps.filter((item) => item.state === 'done' || item.state === 'skipped').length;
   return <nav aria-label={t('screen.progressLabel')} className="space-y-3">
     <div className="flex items-center gap-3 sm:hidden">
       <div className="min-w-0 flex-1">
@@ -36,7 +49,7 @@ export function OnboardingStepper({ progress, step: currentStep, giftSteps }: { 
     {/* Phones: the bar above names the step, so the list (the current step's box too) waits for "All steps" and
         the step's own card sits right under the bar. */}
     <ol className={cn('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4', !expanded && 'max-sm:hidden')}>
-      {progress.steps.map(({ step, state }, index) => {
+      {steps.map(({ step, state }, index) => {
         const content = <><span aria-hidden="true" className={cn('flex size-7 shrink-0 items-center justify-center rounded-full border text-sm tabular-nums', state === 'current' && 'border-primary bg-primary text-primary-foreground', state === 'done' && 'border-primary/20 bg-secondary text-secondary-foreground')}>
           {state === 'done' ? <Check className="size-4" /> : state === 'locked' ? <Lock className="size-3.5" /> : state === 'in_review' ? <Hourglass className="size-3.5" /> : index + 1}
         </span><span className="min-w-0"><span className="flex items-center gap-1 text-sm font-medium">{t(`screen.steps.${step}`)}{giftSteps?.includes(step) && <Gift aria-hidden="true" className="size-3.5 shrink-0 text-badge-reward-foreground" />}</span><span className="block text-xs text-muted-foreground">{t(`screen.states.${state}`)}{giftSteps?.includes(step) && <span className="sr-only">. {t('screen.giftStep')}</span>}</span></span></>;

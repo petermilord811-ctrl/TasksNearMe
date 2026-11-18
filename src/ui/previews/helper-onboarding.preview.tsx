@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
-import { ACTION_ERROR_CODES, BACKGROUND_CHECK_STATUSES, IDENTITY_STATUSES, PAYOUT_ACCOUNT_STATUSES, routes, type AppShellHandlers, type HelperOnboardingPageData, type PreviewEntry } from '@/contracts';
-import { fakeHandler, fakeOnboardingHandlers, onboardingAreaAwaiting, onboardingAreaElsewhere, onboardingAreaStep, onboardingDoneAwaitingCity, onboardingDoneAwaitingCityPending, onboardingIdentityCaptureApproved, onboardingBackgroundNotStarted, onboardingBackgroundPending, onboardingDone, onboardingIdentityProcessing, onboardingIdentityRetry, onboardingIdentityStep, onboardingPayoutActionNeeded, onboardingPayoutStep, onboardingProfileStep, onboardingServicesStep, priyaShell, samProfileDraft } from '@/fixtures';
+import { ACTION_ERROR_CODES, BACKGROUND_CHECK_STATUSES, IDENTITY_STATUSES, PAYOUT_ACCOUNT_STATUSES, routes, type AppShellHandlers, type HelperOnboardingHandlers, type HelperOnboardingPageData, type PreviewEntry } from '@/contracts';
+import { fakeHandler, fakeOnboardingHandlers, onboardingAreaAwaiting, onboardingAreaElsewhere, onboardingAreaStep, onboardingDoneAwaitingCity, onboardingDoneAwaitingCityPending, onboardingIdentityCaptureApproved, onboardingBackgroundNotStarted, onboardingBackgroundPending, onboardingDone, onboardingIdentityProcessing, onboardingIdentityRetry, onboardingIdentityStep, onboardingPayoutActionNeeded, onboardingPayoutStep, onboardingProfileStep, onboardingServicesStep, onboardingSetupAbout, onboardingSetupAboutExamples, onboardingSetupAboutPhoto, onboardingSetupServicesChosen, priyaShell, samProfileDraft } from '@/fixtures';
 import { HelperOnboardingScreen } from '@/ui/screens/helper/helper-onboarding-screen';
 import { VerificationPanel } from '@/ui/screens/helper/verification-panel';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -9,8 +9,9 @@ import copy from '../../../messages/en/ui/helperOnboarding.json';
 import verificationCopy from '../../../messages/en/ui/verification.json';
 
 const shellHandlers: AppShellHandlers = { onModeChange: fakeHandler({ ok: true, code: 'updated' }), onSignOut: fakeHandler({ ok: true, code: 'updated' }) };
-function preview(variant: string, title: string, data: HelperOnboardingPageData): PreviewEntry {
-  return { id: `screen-helper-onboarding/${variant}`, title, group: copy.screen.previews.group, layout: 'fullscreen', render: () => <AppShell viewer={priyaShell} handlers={shellHandlers} currentPath={routes.app.helperOnboarding(data.step)} layout="flow"><HelperOnboardingScreen data={data} handlers={fakeOnboardingHandlers} /></AppShell> };
+function preview(variant: string, title: string, data: HelperOnboardingPageData, options: { click?: string; handlers?: Partial<HelperOnboardingHandlers> } = {}): PreviewEntry {
+  const screen = <HelperOnboardingScreen data={data} handlers={{ ...fakeOnboardingHandlers, ...options.handlers }} />;
+  return { id: `screen-helper-onboarding/${variant}`, title, group: copy.screen.previews.group, layout: 'fullscreen', render: () => <AppShell viewer={priyaShell} handlers={shellHandlers} currentPath={routes.app.helperOnboarding(data.step)} layout="flow">{options.click ? <ClickOnLoad label={options.click}>{screen}</ClickOnLoad> : screen}</AppShell> };
 }
 
 function ProviderErrors() {
@@ -18,18 +19,20 @@ function ProviderErrors() {
   return <main className="mx-auto max-w-reading space-y-6 px-gutter py-8"><h1 className="text-2xl font-bold">{t('screen.previews.errors')}</h1><p>{t('screen.previews.errorHint')}</p>{ACTION_ERROR_CODES.map((code) => <VerificationPanel key={code} track="identity" verification={onboardingIdentityCaptureApproved.verification} categories={onboardingIdentityStep.categories} bookableCategories={[]} initialResult={{ ok: false, code }} handlers={{ ...fakeOnboardingHandlers, onStartIdentity: fakeHandler({ ok: false, code }, 1800) }} />)}</main>;
 }
 
+const nextPart = (part: keyof typeof copy.setup.parts) => copy.setup.next.replace('{part}', copy.setup.parts[part]);
+
 export const helperOnboardingPreviews: PreviewEntry[] = [
-  preview('profile', copy.screen.steps.profile, onboardingProfileStep),
-  {
-    id: 'screen-helper-onboarding/profile-drafted', title: copy.screen.previews.profileDrafted, group: copy.screen.previews.group, layout: 'fullscreen',
-    render: () => <AppShell viewer={priyaShell} handlers={shellHandlers} currentPath={routes.app.helperOnboarding('profile')} layout="flow">
-      <ClickOnLoad label={copy.forms.profile.ai.draft}>
-        <HelperOnboardingScreen data={onboardingProfileStep} handlers={{ ...fakeOnboardingHandlers, onDraftProfile: async () => ({ ok: true, draft: samProfileDraft }) }} />
-      </ClickOnLoad>
-    </AppShell>,
-  },
+  // The profile in one flow (plan 9.11): a new helper starts at What you do.
+  preview('profile', copy.setup.previews.services, onboardingProfileStep),
+  preview('setup-services-chosen', copy.setup.previews.servicesChosen, onboardingSetupServicesChosen),
+  preview('setup-invalid', copy.setup.previews.invalid, onboardingProfileStep, { click: nextPart('area') }),
+  preview('setup-save-failed', copy.setup.previews.saveFailed, onboardingSetupServicesChosen, { click: nextPart('area'), handlers: { onSaveServices: async () => ({ ok: false, code: 'unknown' }) } }),
+  preview('setup-about', copy.setup.previews.about, onboardingSetupAbout),
+  preview('profile-drafted', copy.screen.previews.profileDrafted, onboardingSetupAbout, { click: copy.forms.profile.ai.draft, handlers: { onDraftProfile: async () => ({ ok: true, draft: samProfileDraft }) } }),
+  preview('setup-about-examples', copy.setup.previews.aboutExamples, onboardingSetupAboutExamples, { click: copy.setup.examples.use }),
+  preview('setup-about-photo', copy.setup.previews.aboutPhoto, onboardingSetupAboutPhoto),
   preview('services', copy.screen.steps.services, onboardingServicesStep),
-  preview('area', copy.screen.steps.area, onboardingAreaStep),
+  preview('area', copy.setup.previews.area, onboardingAreaStep),
   // National (owner, 2026-11-14): a helper somewhere else in the US gives a ZIP and city, and waits for it to open.
   preview('area-elsewhere', copy.screen.previews.areaElsewhere, onboardingAreaElsewhere),
   preview('area-awaiting', copy.screen.previews.areaAwaiting, onboardingAreaAwaiting),

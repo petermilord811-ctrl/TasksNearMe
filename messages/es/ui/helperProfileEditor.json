@@ -70,6 +70,9 @@
       "saveError": "Error al guardar",
       "uploadError": "Error al subir",
       "withPhoto": "Con foto de perfil"
-    }
+    },
+    "allChecksDone": "Todas tus verificaciones están listas y tu perfil se puede reservar.",
+    "seeChecks": "Ver tus verificaciones",
+    "sectionsPhoneHint": "Elige qué quieres cambiar."
   }
 }

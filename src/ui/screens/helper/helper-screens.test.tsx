@@ -10,8 +10,8 @@ import uiMessages from '../../../../messages/en/ui';
 import { HelperOnboardingScreen } from './helper-onboarding-screen';
 import { HelperProfileEditorScreen } from './helper-profile-editor-screen';
 
-const { push } = vi.hoisted(() => ({ push: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+const { push, refresh } = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh }), usePathname: () => '/app/helper/onboarding/profile' }));
 let desktop = false;
 
 beforeEach(() => {
@@ -54,7 +54,10 @@ describe('helper onboarding screen', () => {
   it('links completed steps and keeps locked steps out of the link path', () => {
     show(<HelperOnboardingScreen data={onboardingIdentityStep} handlers={fakeOnboardingHandlers} />);
     const navigation = within(screen.getByRole('navigation', { name: 'Helper setup progress' }));
-    for (const { step, state } of onboardingIdentityStep.progress.steps) {
+    // The profile's three steps are one entry (plan 9.11), done here, linking to the profile.
+    expect(navigation.queryByText(uiMessages.helperOnboarding.screen.steps.services)).not.toBeInTheDocument();
+    expect(navigation.queryByText(uiMessages.helperOnboarding.screen.steps.area)).not.toBeInTheDocument();
+    for (const { step, state } of onboardingIdentityStep.progress.steps.filter(({ step }) => step !== 'services' && step !== 'area')) {
       const label = uiMessages.helperOnboarding.screen.steps[step];
       if (state === 'done') {
         expect(navigation.getByRole('link', { name: new RegExp(`${label}\\s*Done`) })).toHaveAttribute('href', routes.app.helperOnboarding(step));

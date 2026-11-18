@@ -70,6 +70,9 @@
       "saveError": "Save error",
       "uploadError": "Upload error",
       "withPhoto": "With a profile photo"
-    }
+    },
+    "allChecksDone": "All your checks are done, and your profile can be booked.",
+    "seeChecks": "See your checks",
+    "sectionsPhoneHint": "Choose what to change."
   }
 }

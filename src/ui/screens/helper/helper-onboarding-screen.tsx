@@ -6,8 +6,9 @@ import { PageHeader } from '@/ui/components/layout/page-header';
 import { PushPrompt } from '@/ui/components/push/push-device';
 import { WelcomeGiftCardView, WelcomeGiftStrip } from '@/ui/components/rewards/welcome-gift-card';
 import { buttonVariants } from '@/ui/primitives/button';
+import { cn } from '@/ui/lib/utils';
 import { AddressStep } from './address-step';
-import { HelperAreaForm, HelperProfileForm, HelperServicesForm } from './helper-forms';
+import { HelperProfileSetup } from './profile-setup';
 import { IdentityCaptureStep } from './identity-capture';
 import { PhoneStep } from './phone-step';
 import { OnboardingStepper } from './onboarding-stepper';
@@ -60,26 +61,24 @@ function OnboardingDone({ data, onSavePushSubscription }: { data: HelperOnboardi
 export function HelperOnboardingScreen({ data, handlers, standing }: { data: HelperOnboardingPageData; handlers: HelperOnboardingHandlers; standing?: HelperStandingView }) {
   const t = useTranslations('helperOnboarding');
   const { step } = data;
-  const remoteAllowed = data.values.services.services.some((service) => data.categories.some((category) => category.slug === service.categorySlug && category.remoteAllowed));
+  const profileParts = step === 'profile' || step === 'services' || step === 'area';
   const currentIndex = data.progress.steps.findIndex((entry) => entry.step === step);
   const next = currentIndex >= 0 ? data.progress.steps.slice(currentIndex + 1).find((entry) => entry.state !== 'skipped' && entry.state !== 'later') : undefined;
   // The ID step's first stage is our own capture; the provider's double check follows once it's approved.
   const capture = data.verification.identity.capture;
   const capturing = step === 'identity' && capture !== undefined && (capture.stage === 'needed' || capture.stage === 'in_review');
   const provider = (step === 'identity' && !capturing) || step === 'payout' || step === 'background';
-  return <div className="mx-auto max-w-reading space-y-6 pb-24 sm:pb-0">
-    <PageHeader title={t('screen.title')} description={t('screen.description')} />
-    <OnboardingStepper progress={data.progress} step={step} giftSteps={data.welcomeReward ? GIFT_STEPS : undefined} />
-    {/* The three checks and the gift card they earn, on every step between the profile's first page and the end. */}
-    {data.welcomeReward && step !== 'profile' && step !== 'done' && <WelcomeGiftStrip card={data.welcomeReward} />}
-    {/* The profile's first page: the welcome gift card and every verification step ahead (completion plan 6.5). */}
-    {step === 'profile' && standing && <HelperStandingPanel standing={standing} />}
-    {(step === 'profile' || step === 'services' || step === 'area') && <section className="space-y-5 rounded-xl border bg-card p-card shadow-card">
-      <div className="space-y-2"><h2 className="text-xl font-semibold">{t(`screen.titles.${step}`)}</h2><p className="text-muted-foreground">{t(`screen.descriptions.${step}`)}</p></div>
-      {step === 'profile' && <HelperProfileForm key={step} values={data.values.profile} languageOptions={data.languageOptions} onSave={handlers.onSaveProfile} onDraft={data.aiDraftingEnabled ? handlers.onDraftProfile : undefined} submitLabel={t('screen.saveContinue')} agreementNeeded={data.agreementNeeded} />}
-      {step === 'services' && <HelperServicesForm key={step} values={data.values.services} categories={data.categories} onSave={handlers.onSaveServices} submitLabel={t('screen.saveContinue')} />}
-      {step === 'area' && <HelperAreaForm key={step} values={data.values.area} areas={data.areas} remoteAllowed={remoteAllowed} onSave={handlers.onSaveArea} submitLabel={t('screen.saveContinue')} homeMarket={data.homeMarket} awaitingCity={data.awaitingCity} />}
-    </section>}
+  // The profile's flow is wider on desktop: About you shows the card clients will see beside the form.
+  return <div className={cn('mx-auto space-y-6 pb-24 sm:pb-0', profileParts ? 'max-w-reading lg:max-w-4xl' : 'max-w-reading')}>
+    <PageHeader title={t(profileParts ? 'setup.title' : 'screen.title')} description={t(profileParts ? 'setup.description' : 'screen.description')} />
+    {/* The profile's flow shows its own three parts; the checks after it show every step, the profile as one. */}
+    {!profileParts && <OnboardingStepper progress={data.progress} step={step} giftSteps={data.welcomeReward ? GIFT_STEPS : undefined} />}
+    {/* The checks and the gift card they earn, on every step after the profile and before the end. */}
+    {data.welcomeReward && !profileParts && step !== 'done' && <WelcomeGiftStrip card={data.welcomeReward} />}
+    {/* The profile in one flow (plan 9.11): What you do, Where you help and Introduce yourself, then the checks. */}
+    {profileParts && <HelperProfileSetup data={data} handlers={handlers} />}
+    {/* The checks ahead and the gift card they earn, under the profile's flow (completion plan 6.5). */}
+    {profileParts && standing && <HelperStandingPanel standing={standing} />}
     {(step === 'phone' || step === 'address') && <>
       {step === 'phone' ? <PhoneStep verification={data.verification} handlers={handlers} /> : <AddressStep verification={data.verification} handlers={handlers} />}
       {next && next.state !== 'locked' && <div><Link href={routes.app.helperOnboarding(next.step)} className={buttonVariants({ variant: 'outline', className: 'w-full sm:w-auto' })}>{t('screen.continueStep', { step: t(`screen.steps.${next.step}`) })}</Link></div>}

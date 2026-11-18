@@ -160,6 +160,29 @@ describe('helper onboarding', () => {
     expect((await getOnboardingPageData(db, userId, 'done', now()))?.welcomeReward).toMatchObject({ state: 'earned', amountCents: 5000, foundingNumber: 98 });
   });
 
+  it('takes the services and the area before the headline, starting a draft profile (plan 9.11)', async () => {
+    const first = 'usr_setup_first';
+    await db.insert(users).values({ id: first, email: 'setup-first@example.test', name: 'Robin L.', firstName: 'Robin', lastName: 'Lane', homeMarketId: 'mkt_austin' });
+    // No profile yet: the first part saved starts a draft one, invisible to clients.
+    expect(await saveHelperServices(db, first, { services: [{ categorySlug: 'yard-cleanup', pricingType: 'fixed', fromPriceCents: 6000, description: '' }] }, now())).toEqual({ ok: true, code: 'saved' });
+    const [draft] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, first));
+    expect(draft).toMatchObject({ handle: 'robin-l', status: 'draft', headline: '', bio: '' });
+    expect(await saveHelperArea(db, first, { areaId: 'area_mueller', serviceRadiusMiles: 5, remoteOk: false }, now())).toEqual({ ok: true, code: 'saved' });
+
+    const page = await getOnboardingPageData(db, first, 'profile', now());
+    const state = (step: string) => page?.progress.steps.find((entry) => entry.step === step)?.state;
+    expect([state('services'), state('area'), state('profile')]).toEqual(['done', 'done', 'current']);
+    expect(page?.person).toEqual({ firstName: 'Robin', displayName: 'Robin L.', initials: 'RL' });
+    expect(page?.maxPhotoMegabytes).toBe(10);
+    expect(['ai', 'template']).toContain(page?.profileDraft);
+    // Prefilled prices: the category's usual pricing, never under its minimum.
+    for (const category of page?.categories ?? []) {
+      const preset = page?.serviceDefaults[category.slug];
+      expect(preset?.pricingType).toBe(category.defaultPricingType);
+      expect((preset?.fromPriceCents ?? preset?.hourlyRateCents ?? 0) >= category.minPriceCents).toBe(true);
+    }
+  });
+
   it('pauses and resumes, and manages work samples', async () => {
     expect(await setHelperPaused(db, userId, true, now())).toEqual({ ok: true, code: 'updated' });
     expect((await profile()).status).toBe('paused');

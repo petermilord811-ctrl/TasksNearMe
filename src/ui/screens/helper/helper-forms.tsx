@@ -26,11 +26,12 @@ import { useFormAction } from '@/ui/lib/use-form-action';
 import { cn } from '@/ui/lib/utils';
 import { AreaMap } from '@/ui/components/map/area-map';
 import { useMapTiles } from '@/ui/components/map/map-tiles';
+import { ExamplesPanel, type ExampleFacts } from './setup-examples';
 
-const selectClass = 'min-h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-invalid:border-destructive';
-const checkboxClass = 'size-5 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+export const selectClass = 'min-h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-invalid:border-destructive';
+export const checkboxClass = 'size-5 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
-function HelperField({ id, label, hint, error, errorText, children }: { id: string; label: string; hint?: ReactNode; error?: string; errorText?: string; children: ReactNode }) {
+export function HelperField({ id, label, hint, error, errorText, children }: { id: string; label: string; hint?: ReactNode; error?: string; errorText?: string; children: ReactNode }) {
   const t = useTranslations('forms');
   const helper = useTranslations('helperOnboarding');
   return <Field data-invalid={!!error} className="gap-2">
@@ -68,7 +69,7 @@ function SaveButton({ pending, label }: { pending: boolean; label?: string }) {
  * "Write it for me": a few words about the helper go to `onDraft`, and the headline and about-me it returns
  * replace what's in the form (Undo puts it back). Nothing is saved until the form is.
  */
-function ProfileDraftPanel({ onDraft, disabled, onDrafted, onUndo }: {
+export function ProfileDraftPanel({ onDraft, disabled, onDrafted, onUndo }: {
   onDraft: QueryHandler<ProfileDraftInput, ProfileDraftResult>;
   disabled: boolean;
   onDrafted: (draft: { headline: string; bio: string }) => void;
@@ -112,49 +113,17 @@ function ProfileDraftPanel({ onDraft, disabled, onDrafted, onUndo }: {
   </div>;
 }
 
-export function HelperProfileForm({ values, languageOptions, onSave, onDraft, submitLabel, agreementNeeded = false }: {
-  values: HelperProfileInput; languageOptions: HelperOnboardingPageData['languageOptions']; onSave: ActionHandler<HelperProfileInput>; submitLabel?: string;
-  /** "Write it for me", when drafting is on for this person. */
-  onDraft?: QueryHandler<ProfileDraftInput, ProfileDraftResult>;
-  /** The helper agreement still needs accepting (onboarding): a required checkbox. */
-  agreementNeeded?: boolean;
-}) {
+/**
+ * The profile's fields (headline, about me, languages, and the helper agreement when it's needed): the editor's
+ * profile form and helper setup's About you (plan 9.11) share them.
+ */
+export function ProfileFields({ form, languageOptions, agreementNeeded = false }: { form: UseFormReturn<HelperProfileInput>; languageOptions: HelperOnboardingPageData['languageOptions']; agreementNeeded?: boolean }) {
   const t = useTranslations('helperOnboarding');
   const fields = useTranslations('forms');
   const id = useId();
-  const form = useForm<HelperProfileInput>({ resolver: zodResolver(helperProfileInputSchema), defaultValues: values });
-  const action = useHelperFormAction(form);
-  const pending = action.pending || form.formState.isSubmitting;
-  const headline = useWatch({ control: form.control, name: 'headline' });
-  const bio = useWatch({ control: form.control, name: 'bio' });
-  // What the draft replaced, for Undo.
-  const [beforeDraft, setBeforeDraft] = useState<{ headline: string; bio: string }>();
-  const fill = (next: { headline: string; bio: string }) => {
-    form.setValue('headline', next.headline, { shouldDirty: true, shouldValidate: true });
-    form.setValue('bio', next.bio, { shouldDirty: true, shouldValidate: true });
-  };
-  return <form noValidate onSubmit={form.handleSubmit(async (input) => {
-    if (agreementNeeded && input.acceptHelperAgreement !== true) {
-      form.setError('acceptHelperAgreement', { type: 'manual', message: 'must_accept' }, { shouldFocus: true });
-      return;
-    }
-    await action.run(onSave, input);
-  })} aria-busy={pending} className="space-y-6">
-    <p className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('forms.profile.privacy')}</p>
-    {onDraft && <ProfileDraftPanel
-      onDraft={onDraft}
-      disabled={pending}
-      onDrafted={(draft) => {
-        setBeforeDraft((kept) => kept ?? { headline: form.getValues('headline'), bio: form.getValues('bio') });
-        fill(draft);
-      }}
-      onUndo={() => {
-        if (beforeDraft) fill(beforeDraft);
-        setBeforeDraft(undefined);
-      }}
-    />}
-    <fieldset disabled={pending} className="space-y-6">
-      <legend className="sr-only">{t('forms.profile.title')}</legend>
+  const headline = useWatch({ control: form.control, name: 'headline' }) ?? '';
+  const bio = useWatch({ control: form.control, name: 'bio' }) ?? '';
+  return <>
       <div className="space-y-2"><TextFormField control={form.control} name="headline" label={t('forms.profile.headline')} hint={t('forms.profile.headlineHint')} maxLength={80} /><p className="text-right text-sm tabular-nums text-muted-foreground">{t('forms.counter', { count: headline.length, maximum: 80 })}</p></div>
       <Controller name="bio" control={form.control} render={({ field, fieldState }) => <HelperField id={`${id}-bio`} label={t('forms.profile.bio')} hint={<span className="flex flex-wrap justify-between gap-2"><span>{t('forms.profile.bioHint')}</span><span className="tabular-nums">{t('forms.counter', { count: bio.length, maximum: 1000 })}</span></span>} error={fieldState.error?.message}>
         <Textarea {...field} id={`${id}-bio`} maxLength={1000} rows={5} aria-invalid={fieldState.invalid} aria-describedby={`${id}-bio-hint${fieldState.error ? ` ${id}-bio-error` : ''}`} />
@@ -177,13 +146,69 @@ export function HelperProfileForm({ values, languageOptions, onSave, onDraft, su
         </label>
         {fieldState.error && <FieldError id={`${id}-agreement-error`}>{t('forms.profile.agreementRequired')}</FieldError>}
       </div>} />}
+  </>;
+}
+
+export function HelperProfileForm({ values, languageOptions, onSave, onDraft, examples, submitLabel, agreementNeeded = false }: {
+  values: HelperProfileInput; languageOptions: HelperOnboardingPageData['languageOptions']; onSave: ActionHandler<HelperProfileInput>; submitLabel?: string;
+  /** "Write it for me", when drafting is on for this person. */
+  onDraft?: QueryHandler<ProfileDraftInput, ProfileDraftResult>;
+  /** Without Claude: written examples built from these (plan 9.11). */
+  examples?: ExampleFacts;
+  /** The helper agreement still needs accepting (onboarding): a required checkbox. */
+  agreementNeeded?: boolean;
+}) {
+  const t = useTranslations('helperOnboarding');
+  const form = useForm<HelperProfileInput>({ resolver: zodResolver(helperProfileInputSchema), defaultValues: values });
+  const action = useHelperFormAction(form);
+  const pending = action.pending || form.formState.isSubmitting;
+  // What the draft replaced, for Undo.
+  const [beforeDraft, setBeforeDraft] = useState<{ headline: string; bio: string }>();
+  const fill = (next: { headline: string; bio: string }) => {
+    form.setValue('headline', next.headline, { shouldDirty: true, shouldValidate: true });
+    form.setValue('bio', next.bio, { shouldDirty: true, shouldValidate: true });
+  };
+  return <form noValidate onSubmit={form.handleSubmit(async (input) => {
+    if (agreementNeeded && input.acceptHelperAgreement !== true) {
+      form.setError('acceptHelperAgreement', { type: 'manual', message: 'must_accept' }, { shouldFocus: true });
+      return;
+    }
+    await action.run(onSave, input);
+  })} aria-busy={pending} className="space-y-6">
+    <p className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">{t('forms.profile.privacy')}</p>
+    {onDraft ? <ProfileDraftPanel
+      onDraft={onDraft}
+      disabled={pending}
+      onDrafted={(draft) => {
+        setBeforeDraft((kept) => kept ?? { headline: form.getValues('headline'), bio: form.getValues('bio') });
+        fill(draft);
+      }}
+      onUndo={() => {
+        if (beforeDraft) fill(beforeDraft);
+        setBeforeDraft(undefined);
+      }}
+    /> : examples && <ExamplesPanel
+      facts={examples}
+      disabled={pending}
+      onUse={(draft) => {
+        setBeforeDraft((kept) => kept ?? { headline: form.getValues('headline'), bio: form.getValues('bio') });
+        fill(draft);
+      }}
+      onUndo={() => {
+        if (beforeDraft) fill(beforeDraft);
+        setBeforeDraft(undefined);
+      }}
+    />}
+    <fieldset disabled={pending} className="space-y-6">
+      <legend className="sr-only">{t('forms.profile.title')}</legend>
+      <ProfileFields form={form} languageOptions={languageOptions} agreementNeeded={agreementNeeded} />
     </fieldset>
     <FormFeedback result={action.result} successMessage={t('forms.saved')} />
     <SaveButton pending={pending} label={submitLabel} />
   </form>;
 }
 
-function ServiceMoneyField({ form, name, label, hint }: { form: UseFormReturn<HelperServicesInput>; name: `services.${number}.fromPriceCents` | `services.${number}.hourlyRateCents`; label: string; hint: string }) {
+export function ServiceMoneyField({ form, name, label, hint }: { form: UseFormReturn<HelperServicesInput>; name: `services.${number}.fromPriceCents` | `services.${number}.hourlyRateCents`; label: string; hint: string }) {
   const id = useId();
   const [editing, setEditing] = useState<{ cents: number; raw: string }>();
   return <Controller name={name} control={form.control} render={({ field, fieldState }) => <HelperField id={id} label={label} hint={hint} error={fieldState.error?.message}>
@@ -267,30 +292,25 @@ export function HelperServicesForm({ values, categories, onSave, submitLabel }: 
 }
 
 /**
- * Where the helper helps. With `homeMarket`, two choices (owner, 2026-11-14: national, cities open in turn): a
- * neighborhood in the market, or somewhere else in the US by ZIP and city; a helper elsewhere finishes their checks
- * now and chooses a neighborhood when their city opens. Without it, the neighborhood only (older callers).
+ * Where the helper helps (the area's fields): a neighborhood in the market with the radius and the map, or with
+ * `homeMarket`, somewhere else in the US by ZIP and city. The editor's area form and helper setup's Where you help
+ * (plan 9.11) share them.
  */
-export function HelperAreaForm({ values, areas, remoteAllowed, onSave, submitLabel, liveMap = true, homeMarket, awaitingCity }: { values: HelperAreaInput; areas: HelperOnboardingPageData['areas']; remoteAllowed: boolean; onSave: ActionHandler<HelperAreaInput>; submitLabel?: string; liveMap?: boolean; homeMarket?: HelperHomeMarket; awaitingCity?: AwaitingCity }) {
+export function AreaFields({ form, areas, remoteAllowed, liveMap = true, homeMarket, awaitingCity }: { form: UseFormReturn<HelperAreaInput>; areas: HelperOnboardingPageData['areas']; remoteAllowed: boolean; liveMap?: boolean; homeMarket?: HelperHomeMarket; awaitingCity?: AwaitingCity }) {
   const t = useTranslations('helperOnboarding');
   const id = useId();
   const tiles = useMapTiles();
-  const form = useForm<HelperAreaInput>({ resolver: zodResolver(helperAreaInputSchema), defaultValues: { where: 'market', homeZip: '', homeCity: '', ...values } });
   const where = useWatch({ control: form.control, name: 'where' }) ?? 'market';
   const areaId = useWatch({ control: form.control, name: 'areaId' });
   const radius = useWatch({ control: form.control, name: 'serviceRadiusMiles' });
   const zip = useWatch({ control: form.control, name: 'homeZip' }) ?? '';
   const chosenArea = areas.find((area) => area.id === areaId);
-  const action = useHelperFormAction(form);
-  const pending = action.pending || form.formState.isSubmitting;
   const errors = form.formState.errors;
   const elsewhere = homeMarket !== undefined && where === 'elsewhere';
   // A ZIP the market already covers: say so before saving (the server answers `in_market` too).
   const zipInMarket = elsewhere && /^\d{5}$/.test(zip.trim()) && homeMarket.zipPrefixes.includes(zip.trim().slice(0, 3));
   const zipError = errors.homeZip?.message;
-  return <form noValidate onSubmit={form.handleSubmit(async (input) => { await action.run(onSave, input); })} aria-busy={pending} className="space-y-6">
-    <fieldset disabled={pending} className="space-y-6">
-      <legend className="sr-only">{t('forms.area.title')}</legend>
+  return <>
       {homeMarket && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium text-foreground">{t('forms.area.where')}</legend>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -321,6 +341,23 @@ export function HelperAreaForm({ values, areas, remoteAllowed, onSave, submitLab
         <AreaMap styleUrl={tiles.styleUrl} attribution={tiles.attribution} places={[]} serviceArea={{ center: chosenArea.center, radiusMiles: Number(radius) || 5 }} fallbackCenter={chosenArea.center} label={t('forms.area.mapLabel', { area: chosenArea.name, miles: Number(radius) || 5 })} groupLabel={(count) => String(count)} live={liveMap} className="h-56" />
         <p className="text-sm text-muted-foreground">{t('forms.area.mapHint', { area: chosenArea.name, miles: Number(radius) || 5 })}</p>
       </div>}
+  </>;
+}
+
+/**
+ * Where the helper helps. With `homeMarket`, two choices (owner, 2026-11-14: national, cities open in turn): a
+ * neighborhood in the market, or somewhere else in the US by ZIP and city; a helper elsewhere finishes their checks
+ * now and chooses a neighborhood when their city opens. Without it, the neighborhood only (older callers).
+ */
+export function HelperAreaForm({ values, areas, remoteAllowed, onSave, submitLabel, liveMap = true, homeMarket, awaitingCity }: { values: HelperAreaInput; areas: HelperOnboardingPageData['areas']; remoteAllowed: boolean; onSave: ActionHandler<HelperAreaInput>; submitLabel?: string; liveMap?: boolean; homeMarket?: HelperHomeMarket; awaitingCity?: AwaitingCity }) {
+  const t = useTranslations('helperOnboarding');
+  const form = useForm<HelperAreaInput>({ resolver: zodResolver(helperAreaInputSchema), defaultValues: { where: 'market', homeZip: '', homeCity: '', ...values } });
+  const action = useHelperFormAction(form);
+  const pending = action.pending || form.formState.isSubmitting;
+  return <form noValidate onSubmit={form.handleSubmit(async (input) => { await action.run(onSave, input); })} aria-busy={pending} className="space-y-6">
+    <fieldset disabled={pending} className="space-y-6">
+      <legend className="sr-only">{t('forms.area.title')}</legend>
+      <AreaFields form={form} areas={areas} remoteAllowed={remoteAllowed} liveMap={liveMap} homeMarket={homeMarket} awaitingCity={awaitingCity} />
     </fieldset>
     <FormFeedback result={action.result} successMessage={t('forms.saved')} />
     <SaveButton pending={pending} label={submitLabel} />

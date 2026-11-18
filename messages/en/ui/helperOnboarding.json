@@ -184,5 +184,112 @@
       "changeCity": "Change your city"
     },
     "giftStep": "Counts toward your welcome gift card"
+  },
+  "setup": {
+    "title": "Your helper profile",
+    "description": "Three short parts. Then a few checks, so clients can book you.",
+    "partOf": "Part {number} of {total}",
+    "partsLabel": "Your profile's parts",
+    "parts": {
+      "services": "What you do",
+      "area": "Where you help",
+      "about": "Introduce yourself"
+    },
+    "intros": {
+      "services": "Choose the help you offer and set your prices. Each price starts at what's typical here; change it to suit you.",
+      "area": "Choose where you work from and how far you'll travel. Clients see your neighborhood, never your address.",
+      "about": "Add a photo and a few words, so clients know who's coming."
+    },
+    "after": "After this: a few checks so clients can book you.",
+    "back": "Back",
+    "next": "Next: {part}",
+    "finish": "Save and continue",
+    "finishFirst": "Finish “{part}” first, then save.",
+    "status": {
+      "saving": "Saving…",
+      "saved": "Saved",
+      "unsaved": "Not saved yet",
+      "invalid": "Not saved yet: check the highlighted fields.",
+      "agreement": "Not saved yet: agree to the Helper agreement to save.",
+      "failed": "Couldn't save just now. We'll try again when you continue."
+    },
+    "restored": "We kept what you typed before.",
+    "services": {
+      "choose": "What can you help with?",
+      "chooseHint": "Choose one or more.",
+      "typical": {
+        "item": "Typical {low}–{high} per item",
+        "hour": "Typical {low}–{high} per hour",
+        "task": "Typical {low}–{high} per task"
+      },
+      "pricing": "How you charge for {service}",
+      "fixed": "Fixed price",
+      "hourly": "By the hour",
+      "fromPrice": "Your price, from",
+      "hourlyRate": "Your hourly rate",
+      "minHours": "Minimum hours",
+      "minimum": "At least {amount}.",
+      "note": "Add a note",
+      "noteLabel": "About your {service} (optional)",
+      "noteHint": "What's included, or what you bring. Up to 300 characters.",
+      "background": "Needs a background check before you can take it.",
+      "remove": "Remove {service}",
+      "none": "Choose at least one service."
+    },
+    "about": {
+      "photoTitle": "Your photo",
+      "draftTitle": "Need a start?",
+      "preview": "How clients see you",
+      "previewShow": "See how clients see you",
+      "previewHide": "Hide the preview",
+      "previewHint": "Your card in search results and on your offers.",
+      "noHeadline": "Your headline appears here.",
+      "noArea": "Your neighborhood",
+      "new": "New helper"
+    },
+    "examples": {
+      "title": "Start from an example",
+      "description": "Examples built from your services and area. Pick one, then make it sound like you. Nothing is saved until you save.",
+      "use": "Use an example",
+      "another": "Try another example",
+      "undo": "Undo",
+      "used": "Example {number} of {total} is in the boxes below. Change anything you like.",
+      "undone": "Your own words are back.",
+      "needServices": "Choose your services in “What you do” first, and the examples will name them.",
+      "headlines": {
+        "plain": "{services} in {area}",
+        "careful": "Careful, friendly {services} in {area}",
+        "neighbor": "Your neighbor for {services} around {area}"
+      },
+      "intros": {
+        "plain": "Hi, I'm {name}. I help neighbors in {area} with {services}.",
+        "careful": "I'm {name}, and I take on {services} for neighbors around {area}.",
+        "neighbor": "Hello! I'm {name}, a neighbor in {area} who's happy to help with {services}."
+      },
+      "closings": {
+        "plain": "Tell me what you need and when, and I'll confirm the details before I start.",
+        "careful": "I keep you posted as I go, and I leave things tidy when I'm done.",
+        "neighbor": "Send me a message with what you need. I'm glad to answer questions before you book."
+      },
+      "services": {
+        "furniture-assembly": "I put flat-pack furniture together step by step, check every joint, and can take the packaging away.",
+        "moving-help": "I help load, carry and unload, and I take care with stairs, doorways and floors.",
+        "yard-cleanup": "I rake and bag leaves, pull weeds and clear yard waste, so your yard is ready to enjoy.",
+        "light-cleaning": "I take care of everyday cleaning: kitchens, bathrooms, floors and dusting.",
+        "computer-help": "I set up and fix computers, phones, printers and Wi-Fi, and explain things patiently."
+      },
+      "languages": "I speak {languages}.",
+      "andMore": "{services} and more"
+    },
+    "previews": {
+      "services": "Helper setup: what you do",
+      "servicesChosen": "Helper setup: two services chosen",
+      "area": "Helper setup: where you help",
+      "about": "Helper setup: about you, with Claude's draft",
+      "aboutExamples": "Helper setup: about you, with examples",
+      "aboutPhoto": "Helper setup: about you, with a photo",
+      "invalid": "Helper setup: a part with errors",
+      "saveFailed": "Helper setup: a save that failed"
+    }
   }
 }

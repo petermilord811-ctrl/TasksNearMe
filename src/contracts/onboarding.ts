@@ -2,7 +2,7 @@ import type { PushHandlers, PushSetup } from './account';
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
 import type { OneTimeCodeInput, PhoneInput } from './auth';
-import type { CategorySlug, ISODateTime, Photo } from './common';
+import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
 import { CATEGORY_SLUGS } from './common';
 import { zipField } from './forms';
 import type { CategoryView } from './marketing';
@@ -54,6 +54,32 @@ export interface OnboardingProgress {
 
 export const LANGUAGE_CODES = ['en', 'es', 'vi', 'zh', 'ar', 'ko', 'tl', 'fr', 'de', 'hi'] as const;
 export type LanguageCode = (typeof LANGUAGE_CODES)[number];
+
+/**
+ * A new service's prefilled pricing in helper setup (plan 9.11): the category's usual pricing, at the low end of the
+ * market's typical range and never under its minimum. The helper changes it before saving.
+ */
+export interface ServiceDefault {
+  pricingType: 'fixed' | 'hourly';
+  fromPriceCents?: Cents;
+  hourlyRateCents?: Cents;
+  minHours?: number;
+}
+
+/**
+ * Help with the headline and "about me" (plan 9.11): `ai`, "Write it for me" (Claude, when it's set up and the
+ * `ai_drafting` flag is on); `template`, "Start from an example" (written examples, filled in with the helper's
+ * services and area).
+ */
+export type ProfileDraftHelp = 'ai' | 'template';
+
+/** The helper as clients will see them on their card: the setup's photo and live preview (plan 9.11). */
+export interface HelperSetupPerson {
+  firstName: string;
+  displayName: string;
+  initials: string;
+  photo?: Photo;
+}
 
 /** Service radius choices in miles. */
 export const SERVICE_RADIUS_MILES = [2, 5, 8, 12, 15] as const;
@@ -419,6 +445,18 @@ export interface HelperOnboardingPageData {
   welcomeReward?: WelcomeGiftCard;
   /** The `ai_drafting` flag, and drafting is set up: show "Write it for me" on the profile step. */
   aiDraftingEnabled: boolean;
+  /**
+   * The profile in one flow (plan 9.11): the steps `profile`, `services` and `area` show one page in three parts,
+   * What you do (services), Where you help (area) and Introduce yourself (photo, headline, about me, languages). The step
+   * opens its part; `profile` opens the first part not saved yet.
+   */
+  person: HelperSetupPerson;
+  /** The profile photo's size limit, as on the account page. */
+  maxPhotoMegabytes: number;
+  /** Prefilled pricing for each category the helper picks. */
+  serviceDefaults: Partial<Record<CategorySlug, ServiceDefault>>;
+  /** Claude's draft or written examples on Introduce yourself. */
+  profileDraft: ProfileDraftHelp;
 }
 
 /**
@@ -460,6 +498,10 @@ export interface HelperOnboardingHandlers {
   /** `acknowledged`: the disclosure summary was acknowledged just now (needed while `background.disclosureNeeded`). */
   onStartBackgroundCheck: ActionHandler<{ acknowledged?: boolean }>;
   onRefreshStatus: ActionHandler;
+  /** The profile photo on Introduce yourself, as on the account page: FormData with one `file`; resolves with the photo. */
+  onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
+  /** Back to initials; ok `updated`. */
+  onRemovePhoto: () => Promise<ActionResult>;
 }
 
 /**
@@ -474,7 +516,7 @@ export type WorkSampleUploadResult =
 export interface HelperProfileEditorData {
   handle: string;
   /** How people see the helper: the display name, initials and profile photo (the same as on the account page). */
-  person: { displayName: string; initials: string; photo?: Photo };
+  person: HelperSetupPerson;
   progress: OnboardingProgress;
   categories: CategoryView[];
   areas: AreaOption[];
@@ -498,6 +540,8 @@ export interface HelperProfileEditorData {
   paused: boolean;
   /** The `ai_drafting` flag, and drafting is set up: show "Write it for me" on the profile. */
   aiDraftingEnabled: boolean;
+  /** Claude's draft, or written examples when it isn't set up (plan 9.11). */
+  profileDraft: ProfileDraftHelp;
 }
 
 /**
