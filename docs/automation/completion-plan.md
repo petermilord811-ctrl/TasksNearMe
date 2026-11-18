@@ -169,7 +169,7 @@ Read as (tasksnearme-9c, coordinator): "non ai integration (use claude one and n
 
 | # | Item | Session | What it includes |
 |---|---|---|---|
-| 9.1 ◐ | Find the uncomfortable UIs (an audit) | tasksnearme-9c (helper) | Every main page at 360 and 1280, signed out, as a client and as a helper, light and dark, with Spanish spot checks: what feels broken, cramped, slow, inconsistent or confusing. `docs/ui/audit-2026-11-18.md` with screenshots; each finding fixed or routed to a row below |
+| 9.1 ☑ 92fb9ce | Find the uncomfortable UIs (an audit) | tasksnearme-9c (helper) | Every main page at 360 and 1280, signed out, as a client and as a helper, light and dark, with Spanish spot checks: what feels broken, cramped, slow, inconsistent or confusing. `docs/ui/audit-2026-11-18.md` with screenshots; each finding fixed or routed to a row below |
 | 9.2 ☑ d76a304 | Phone check only when SMS is set up | tasksnearme-8c | When Twilio isn't configured, nothing asks for a phone number or code (sign-in, helper setup, the account page), and the phone isn't required for the ID check, bookability or badges. When SMS is configured later, people without a verified phone are asked, not blocked retroactively (decide and record the grace) |
 | 9.3 ◐ | The avatar works | tasksnearme-9c (helper) | Setting, changing and removing a profile photo works from start to finish (upload, crop or fit, preview, save) and shows everywhere a person appears; find and fix the break |
 | 9.4 | Skeleton bugs | tasksnearme-f7 | Every loading skeleton matches its page's real layout: no jumps when content arrives, no wrong shapes, none that never resolve; both themes |
