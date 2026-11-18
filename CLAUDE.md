@@ -47,7 +47,7 @@ The only Codex-path files you created are setup stubs: `src/ui/theme/*`, `src/ui
 ## Wiring pattern
 
 ```tsx
-// src/app/[locale]/(app)/app/(main)/bookings/[bookingId]/page.tsx — Claude
+// src/app/[locale]/(app)/app/(flow)/bookings/[bookingId]/page.tsx — Claude
 export default function Page({ params }: { params: Promise<{ bookingId: string }> }) {
   return (
     <Suspense fallback={<BookingHubSkeleton />}>
