@@ -35,10 +35,14 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
 }
 
 /**
- * Filters live in the URL, so the list renders per request inside Suspense; the data is cached per query and per
- * visitor's rows (src/shared/sample-data.ts: sample tasks for signed-in testers only).
+ * The city is checked outside Suspense, as on the market page, so an unknown or closed one gets a real 404 (inside
+ * Suspense, the 200 has already streamed). Filters live in the URL, so the list renders per request inside Suspense;
+ * the data is cached per query and per visitor's rows (src/shared/sample-data.ts: sample tasks for signed-in testers
+ * only).
  */
-function TaskBoardPage({ params, searchParams }: PageProps<'/[locale]/[market]/tasks'>) {
+async function TaskBoardPage({ params, searchParams }: PageProps<'/[locale]/[market]/tasks'>) {
+  const { market } = await params;
+  if (!(await getMarketPageData(market, searchEngineRows()))) notFound();
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Board params={params} searchParams={searchParams} />

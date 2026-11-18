@@ -55,10 +55,15 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
 }
 
 /**
- * Filters live in the URL, so the list renders per request inside Suspense; the data is cached per query and per
- * visitor's rows (src/shared/sample-data.ts: sample tasks for signed-in testers only).
+ * The city and category are checked outside Suspense, as on the market page, so an unknown or closed city, or a
+ * category it doesn't offer, gets a real 404 (inside Suspense, the 200 has already streamed). Filters live in the URL,
+ * so the list renders per request inside Suspense; the data is cached per query and per visitor's rows
+ * (src/shared/sample-data.ts: sample tasks for signed-in testers only).
  */
-function TaskHubPage({ params, searchParams }: PageProps<'/[locale]/[market]/tasks/[category]'>) {
+async function TaskHubPage({ params, searchParams }: PageProps<'/[locale]/[market]/tasks/[category]'>) {
+  const { market, category } = await params;
+  // Only a category the market offers has a hub (configuration: the same for every visitor).
+  if (!(await getCategoryPageData(market, category, searchEngineRows()))) notFound();
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <Hub params={params} searchParams={searchParams} />
@@ -68,7 +73,6 @@ function TaskHubPage({ params, searchParams }: PageProps<'/[locale]/[market]/tas
 
 async function Hub({ params, searchParams }: Pick<PageProps<'/[locale]/[market]/tasks/[category]'>, 'params' | 'searchParams'>) {
   const [{ market, category }, search, rows] = await Promise.all([params, searchParams, requestRows()]);
-  // Only a category the market offers has a hub (configuration: the same for every visitor).
   const page = await getCategoryPageData(market, category, searchEngineRows());
   if (!page) notFound();
   const { market: view, category: shown } = page.data;

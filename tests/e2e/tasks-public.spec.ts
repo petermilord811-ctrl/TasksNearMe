@@ -42,4 +42,14 @@ test.describe('public tasks', () => {
     const response = await page.goto('/tasks/no-such-task');
     expect(response?.status()).toBe(404);
   });
+
+  test("a board or job hub of a city that isn't open, or of a category it lacks, answers a real 404", async ({ request }, testInfo) => {
+    test.skip(testInfo.project.name !== 'app-desktop', 'status codes only; one project is enough');
+    // The status, not only the page: the check runs before the 200 streams. An unknown city takes the same path as a
+    // paused one (Austin in production; the test world keeps it open).
+    for (const path of ['/nowhere/tasks', '/es/nowhere/tasks', '/nowhere/tasks/moving-help', '/gainesville/tasks/no-such-category']) {
+      expect((await request.get(path)).status(), path).toBe(404);
+    }
+    expect((await request.get('/gainesville/tasks/moving-help')).status()).toBe(200);
+  });
 });
