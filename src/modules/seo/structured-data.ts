@@ -1,12 +1,14 @@
 import type { CategorySlug, HelperProfilePageData, HelperServiceDetail, ISODateTime, MarketView, PriceGuidance } from '@/contracts';
 import { APP_LOCALES, INTL_LOCALES, type AppLocale } from '@/contracts/locale';
 import { localizedPath } from '@/shared/locale';
+import { servicePhotoSize, servicePhotoSrc, type ServicePhoto, type ServicePhotoCrop } from '@/shared/service-photos';
 import { absoluteUrl } from './sitemap-entries';
 
 /**
  * schema.org structured data (JSON-LD) for the public pages: the site's name and logo for search results, breadcrumbs,
  * and what a market, a category or a helper offers. Pure. Pages pass only what they already show, so the markup
- * never carries more than the page does (T-20, B-020): no addresses, no contact details, no last names, no photos.
+ * never carries more than the page does (T-20, B-020): no addresses, no contact details, no last names, no photos of
+ * people on TasksNearMe (the licensed service photos are stock pictures of the work, credited as their license asks).
  * TasksNearMe arranges the work but doesn't do it, so services name it as the `broker`, never the provider.
  */
 
@@ -146,6 +148,26 @@ export function categoryServiceNode(
     broker: organizationRef(context),
     areaServed: cityNode(input.market),
     offers: priceRange(input.priceGuidance),
+  };
+}
+
+/**
+ * A licensed service photo (src/shared/service-photos.ts, plan 9.12) as Google Images reads image metadata: the file, what
+ * it shows in the page's language, who took it, its license and the page it comes from. Its own source and
+ * photographer, never TasksNearMe, as the license is theirs.
+ */
+export function servicePhotoNode(context: StructuredDataContext, photo: ServicePhoto, crop: ServicePhotoCrop): JsonLdNode {
+  const size = servicePhotoSize(crop);
+  return {
+    '@type': 'ImageObject',
+    contentUrl: absoluteUrl(context.baseUrl, servicePhotoSrc(photo, crop, size.width)),
+    width: size.width,
+    height: size.height,
+    description: photo.alt[context.locale],
+    creditText: `${photo.credit.photographer} / ${photo.credit.source}`,
+    creator: { '@type': 'Person', name: photo.credit.photographer, url: photo.credit.profileUrl },
+    license: photo.credit.licenseUrl,
+    acquireLicensePage: photo.credit.sourceUrl,
   };
 }
 

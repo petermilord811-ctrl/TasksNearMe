@@ -81,7 +81,9 @@ test.describe('search engines', () => {
     await expect(head.locator('meta[property="og:locale"]')).toHaveAttribute('content', 'es_US');
     await expect(head.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/og\/tasksnearme-es\.png$/);
     const nodes = await structuredData(page);
-    expect(nodes.map((node) => node['@type'])).toEqual(['BreadcrumbList', 'Service']);
+    expect(nodes.map((node) => node['@type'])).toEqual(['BreadcrumbList', 'Service', 'ImageObject']);
+    // The header's licensed photo, credited to its photographer and source, described in Spanish (plan 9.12).
+    expect(nodes[2]).toMatchObject({ license: expect.stringMatching(/^https:\/\/(www\.pexels\.com|unsplash\.com)\//), creator: { '@type': 'Person' } });
     expect(nodes[1]).toMatchObject({ serviceType: 'Armado de muebles', areaServed: { '@type': 'City', name: 'Austin' } });
   });
 

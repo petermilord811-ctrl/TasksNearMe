@@ -9,7 +9,7 @@ import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/qu
 import { JsonLd } from '@/modules/seo/json-ld';
 import { categorySeoContent } from '@/modules/seo/category-content';
 import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
-import { breadcrumbNode, categoryServiceNode, SITE_NAME } from '@/modules/seo/structured-data';
+import { breadcrumbNode, categoryServiceNode, servicePhotoNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { requestRows } from '@/platform/auth/audience';
 import { searchEngineRows } from '@/shared/sample-data';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
@@ -17,6 +17,7 @@ import { CategoryScreen } from '@/ui/screens/public/category-screen';
 import { MarketTime } from '@/ui/lib/market-time';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
+import { servicePhoto } from '@/shared/service-photos';
 
 /** Every enabled category in every public market (there's no [market] layout to pass the market down). */
 export async function generateStaticParams() {
@@ -73,6 +74,8 @@ async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]
             path,
             priceGuidance: shown.priceGuidance,
           }),
+          // The photo in the page's header, with its credit and license (plan 9.12).
+          servicePhotoNode(context, servicePhoto(shown.slug, 'primary'), 'wide'),
         ]}
       />
       <Suspense fallback={<PageSkeleton variant="detail" />}>

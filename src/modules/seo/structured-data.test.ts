@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { austinMarket, categoryViews } from '@/fixtures/marketing';
 import { jordanProfilePageData } from '@/fixtures/profiles';
+import { servicePhoto } from '@/shared/service-photos';
 import {
   breadcrumbNode,
   categoryServiceNode,
@@ -8,9 +9,10 @@ import {
   helperProfileNode,
   marketServiceNode,
   organizationNode,
+  servicePhotoNode,
   SITE_NAME,
-  websiteNode,
   type StructuredDataContext,
+  websiteNode,
 } from './structured-data';
 
 const en: StructuredDataContext = { baseUrl: 'https://tasksnearme.com', locale: 'en' };
@@ -179,5 +181,23 @@ describe('helpArticleNode', () => {
       inLanguage: 'es-US',
       author: { '@type': 'Organization', name: 'TasksNearMe' },
     });
+  });
+});
+
+describe('servicePhotoNode', () => {
+  it("describes a licensed service photo as its source licenses it, in the page's language (plan 9.12)", () => {
+    const photo = servicePhoto('moving-help');
+    const node = servicePhotoNode(es, photo, 'wide');
+    expect(node).toMatchObject({
+      '@type': 'ImageObject',
+      description: photo.alt.es,
+      creditText: `${photo.credit.photographer} / ${photo.credit.source}`,
+      creator: { '@type': 'Person', name: photo.credit.photographer, url: photo.credit.profileUrl },
+      license: photo.credit.licenseUrl,
+      acquireLicensePage: photo.credit.sourceUrl,
+    });
+    expect(node.contentUrl).toMatch(new RegExp(`^https://tasksnearme\\.com/ui/services/${photo.name}-wide-\\d+\\.webp$`));
+    // Never TasksNearMe as the creator or the licensor.
+    expect(JSON.stringify(node)).not.toContain('TasksNearMe');
   });
 });

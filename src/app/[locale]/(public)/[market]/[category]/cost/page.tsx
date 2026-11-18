@@ -3,11 +3,12 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { CATEGORY_SLUGS, routes } from '@/contracts';
+import { servicePhoto } from '@/shared/service-photos';
 import { getCostGuideData, listCategorySlugs } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
 import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
-import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
+import { breadcrumbNode, servicePhotoNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { formatMoney } from '@/shared/format';
 import { CostGuideScreen } from '@/ui/screens/public/cost-guide-screen';
 import { MarketTime } from '@/ui/lib/market-time';
@@ -69,6 +70,8 @@ async function CostGuidePage({ params }: PageProps<'/[locale]/[market]/[category
             { name: categoryName(shown.slug), path: routes.category(shown.slug, view.slug) },
             { name: question, path },
           ]),
+          // The guide's photo (the category's second one), with its credit and license (plan 9.12).
+          servicePhotoNode(context, servicePhoto(shown.slug, 'alternate'), 'landscape'),
         ]}
       />
       <MarketTime timeZone={data.market.timeZone}><CostGuideScreen data={{ ...data, question, related }} /></MarketTime>
