@@ -4,10 +4,10 @@ import { useTranslations } from 'next-intl';
 import { routes, type CostGuidePageData } from '@/contracts';
 import { formatMoney, formatMoneyShort } from '@/shared/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
+import { ClosingCta } from '@/ui/components/layout/closing-cta';
 import { Section } from '@/ui/components/layout/section';
 import { ServicePhoto } from '@/ui/components/media/service-photo';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
-import { buttonVariants } from '@/ui/primitives/button';
 import { RelatedLinks } from './category-seo-sections';
 
 /**
@@ -59,11 +59,7 @@ export function CostGuideScreen({ data }: { data: CostGuidePageData }) {
         {(['post', 'offers', 'book'] as const).map((step) => <li key={step} className="pl-1">{t(`costGuide.steps.${step}`)}</li>)}
       </ol>
     </Section>
-    <section className="relative isolate space-y-4 overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card md:p-10 dark:border-white/[0.06]">
-      <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] md:text-3xl">{t('category.ctaTitle')}</h2>
-      <p className="max-w-reading text-muted-foreground">{t('category.ctaBody')}</p>
-      <Link href={routes.app.newTask()} className={buttonVariants({ size: 'lg' })}>{t('shared.postTask')}</Link>
-    </section>
+    <ClosingCta title={t('category.ctaTitle')} body={t('category.ctaBody')} action={{ href: routes.app.newTask(), label: t('shared.postTask') }} />
     <RelatedLinks links={data.related} market={market.name} />
   </div>;
 }

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { routes, type CategoryPageData, type ISODateTime } from '@/contracts';
 import { formatMoneyShort } from '@/shared/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
+import { ClosingCta } from '@/ui/components/layout/closing-cta';
 import { Section } from '@/ui/components/layout/section';
 import { ServicePhoto } from '@/ui/components/media/service-photo';
 import { buttonVariants } from '@/ui/primitives/button';
@@ -44,7 +45,7 @@ export function CategoryScreen({ data, now }: { data: CategoryPageData; now: ISO
     {data.seo && <CategoryAbout seo={data.seo} market={market.name} />}
     <MarketActivity tasks={data.recentTasks} helpers={data.topHelpers} now={now} market={data.market} helpersTitle={t('category.helpersTitle')} />
     {data.seo && <CategoryFaq seo={data.seo} />}
-    <section className="relative isolate space-y-4 overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] p-card md:p-10"><h2 className="font-display text-2xl font-semibold tracking-[-0.02em] md:text-3xl">{t('category.ctaTitle')}</h2><p className="max-w-reading text-muted-foreground">{t('category.ctaBody')}</p><Link href={routes.app.newTask()} className={buttonVariants({ size: 'lg' })}>{t('shared.postTask')}</Link></section>
+    <ClosingCta title={t('category.ctaTitle')} body={t('category.ctaBody')} action={{ href: routes.app.newTask(), label: t('shared.postTask') }} />
     {data.seo && <CategoryRelated seo={data.seo} market={market.name} />}
   </div>;
 }

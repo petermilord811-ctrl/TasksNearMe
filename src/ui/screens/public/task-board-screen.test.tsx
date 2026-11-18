@@ -182,6 +182,8 @@ describe('TaskBoardScreen', () => {
   it('clears every filter for a filtered empty state', () => {
     renderBoard(taskBoardFilteredEmptyData);
     expect(screen.getByRole('heading', { name: 'No tasks match these filters' })).toBeDefined();
+    // Other tasks are open: the filters stay, to change these.
+    expect(screen.getByRole('complementary', { name: 'Filter open tasks' })).toBeDefined();
     expect(hrefOf(screen.getByRole('link', { name: 'Clear filters' }))).toBe(routes.taskBoard('austin'));
   });
 
@@ -195,6 +197,11 @@ describe('TaskBoardScreen', () => {
   it('invites posting before the first real task, every count at 0, on the board and on a category hub', () => {
     renderBoard(taskBoardNoListingsData);
     expect(screen.getByRole('heading', { name: 'No open tasks right now' })).toBeDefined();
+    // Nothing to filter, sort or lay out yet: the empty state has the width (f7's visual pass, 2026-11-18), and saving
+    // the search, for an alert when the first task comes, stays.
+    expect(screen.queryByRole('complementary', { name: 'Filter open tasks' })).toBeNull();
+    expect(screen.queryByText(/^Sort:/)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Save this search' })).toBeDefined();
     cleanup();
     // The hub's category is the page, not a filter to clear; another filter on top of it is.
     renderBoard(taskBoardHubNoListingsData);

@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import { Fingerprint } from 'lucide-react';
 import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
 import type { ActionResult, SignInHandlers } from '@/contracts';
-import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
+import { SignInOptionButton } from './social-sign-in';
 
 const noSubscribe = () => () => {};
 
@@ -62,10 +62,11 @@ export function PasskeySignIn({ onPasskeyOptions, onPasskeySignIn, onResult }: {
     }
   }
 
+  // The same button as Google's and Microsoft's above it (social-sign-in.tsx).
   return <div className="space-y-2">
-    <Button type="button" variant="outline" className="w-full" disabled={pending} aria-busy={pending} onClick={() => void signIn()}>
-      {pending ? <Spinner aria-hidden="true" /> : <Fingerprint aria-hidden="true" />}{t(pending ? 'pending' : 'action')}
-    </Button>
+    <SignInOptionButton disabled={pending} aria-busy={pending} onClick={() => void signIn()} icon={pending ? <Spinner className="size-4" /> : <Fingerprint className="size-5" />}>
+      {t(pending ? 'pending' : 'action')}
+    </SignInOptionButton>
     <p aria-live="polite" className="text-sm text-muted-foreground empty:hidden">{message}</p>
   </div>;
 }

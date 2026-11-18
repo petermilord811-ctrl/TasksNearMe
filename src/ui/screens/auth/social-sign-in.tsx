@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { CircleAlert } from 'lucide-react';
 import type { ActionHandler, ActionResult, SocialProvider, SocialSignInError, SocialSignInInput } from '@/contracts';
@@ -76,26 +76,43 @@ export function SocialSignIn({
           </AlertDescription>
         </Alert>
       )}
-      <div className="grid gap-2.5">
+      <div className="grid gap-3">
         {providers.map((provider) => (
-          <button
+          <SignInOptionButton
             key={provider}
-            type="button"
             onClick={() => start(provider)}
             disabled={pending !== null}
             aria-busy={pending === provider}
-            className="group/social relative inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-full border border-foreground/[0.12] bg-card px-5 text-[15px] font-semibold text-foreground shadow-xs transition-[background-color,border-color,box-shadow,transform] duration-200 outline-none hover:border-foreground/25 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.06]"
+            icon={pending === provider ? <Spinner aria-hidden="true" className="size-4" /> : <ProviderLogo provider={provider} />}
           >
-            <span className="absolute left-4 grid size-6 place-items-center">
-              {pending === provider ? <Spinner aria-hidden="true" className="size-4" /> : <ProviderLogo provider={provider} className="transition-transform duration-300 group-hover/social:scale-110" />}
-            </span>
             {t(`continue.${provider}`)}
-          </button>
+          </SignInOptionButton>
         ))}
       </div>
       {withHint && <ProviderHint providers={providers} />}
       <FormFeedback result={result} />
     </div>
+  );
+}
+
+/**
+ * One sign-in option above the email form: Google, Microsoft and the passkey share it, so they read as one stack of
+ * equal buttons, each with its icon at the start and its label centred (f7's visual pass of the live site, 2026-11-18:
+ * the passkey's was shorter, smaller, centred and, in dark, lighter than the card).
+ */
+export function SignInOptionButton({ icon, className, children, ...props }: Omit<ComponentProps<'button'>, 'type'> & { icon: ReactNode }) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'group/option relative inline-flex min-h-12 w-full items-center justify-center rounded-full border border-foreground/[0.12] bg-card px-11 py-2 text-center text-[15px] leading-5 font-semibold text-foreground shadow-xs transition-[background-color,border-color,box-shadow,transform] duration-200 outline-none hover:border-foreground/25 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.06]',
+        className,
+      )}
+      {...props}
+    >
+      <span aria-hidden="true" className="absolute start-4 grid size-6 place-items-center transition-transform duration-300 group-hover/option:scale-110">{icon}</span>
+      {children}
+    </button>
   );
 }
 

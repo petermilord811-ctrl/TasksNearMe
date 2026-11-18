@@ -53,11 +53,25 @@ export interface BotCheckState {
   widget: React.ReactNode;
 }
 
+/** How long a check may run with no token before its frame shows anyway. */
+export const BOT_CHECK_SLOW_MS = 10_000;
+
 function TurnstileWidget({ siteKey, action, resetCount, onToken, onFailed }: { siteKey: string; action: BotCheckAction; resetCount: number; onToken: (token: string | undefined) => void; onFailed: () => void }) {
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string>(undefined);
   const locale = useLocale();
-  const reportToken = useEffectEvent((token: string | undefined) => onToken(token));
+  // `interaction-only` shows nothing until Cloudflare wants a click, yet its frame kept about 72 px of the form, a blank
+  // band above "Create account" (f7's visual pass of the live site, 2026-11-18). So the frame stays out of the layout
+  // until Cloudflare says it needs the person (`before-interactive-callback`), and after that for the rest of the round
+  // (one round per token, `resetCount`). A check that takes too long without a token shows its frame too, so a challenge
+  // that never announced itself can't hide; a token afterwards folds it away again.
+  const [rounds, setRounds] = useState<{ interactive?: number; slow?: number; token?: number }>({});
+  const open = rounds.interactive === resetCount || (rounds.slow === resetCount && rounds.token !== resetCount);
+  const mark = useEffectEvent((what: 'interactive' | 'slow' | 'token') => setRounds((current) => ({ ...current, [what]: resetCount })));
+  const reportToken = useEffectEvent((token: string | undefined) => {
+    onToken(token);
+    if (token) mark('token');
+  });
   const reportFailed = useEffectEvent(() => onFailed());
 
   useEffect(() => {
@@ -78,6 +92,7 @@ function TurnstileWidget({ siteKey, action, resetCount, onToken, onFailed }: { s
           reportToken(undefined);
           reportFailed();
         },
+        'before-interactive-callback': () => mark('interactive'),
       });
     }, () => { if (!cancelled) reportFailed(); });
     return () => {
@@ -94,7 +109,14 @@ function TurnstileWidget({ siteKey, action, resetCount, onToken, onFailed }: { s
     }
   }, [resetCount]);
 
-  return <div ref={container} className="min-h-0 empty:hidden" />;
+  useEffect(() => {
+    const timer = window.setTimeout(() => mark('slow'), BOT_CHECK_SLOW_MS);
+    return () => window.clearTimeout(timer);
+  }, [resetCount]);
+
+  // Closed, the frame keeps the form's width (Turnstile's `flexible` size reads it) but takes no height and no room in
+  // the flow, so the margins around the field collapse as if it weren't there.
+  return <div ref={container} data-slot="bot-check-widget" data-open={open} className={open ? 'min-h-0 empty:hidden' : 'absolute inset-x-0 top-0 h-0 overflow-hidden'} />;
 }
 
 /** The bot check for one form. `config` absent: nothing to check (the server decides what that means). */
@@ -119,7 +141,7 @@ export function BotCheckField({ check, result }: { check: BotCheckState; result?
   const id = useId();
   const serverCode = result && !result.ok ? result.fieldErrors?.botCheck?.[0] : undefined;
   const message = check.failed ? t('unavailable') : serverCode ? t(serverCode === 'expired' ? 'expired' : serverCode === 'required' ? 'required' : 'failed') : undefined;
-  return <div className="space-y-2">
+  return <div className="relative space-y-2">
     {check.widget}
     <p id={id} role="status" aria-live="polite" className={message ? 'text-sm font-medium text-destructive' : 'sr-only'}>{message}</p>
   </div>;

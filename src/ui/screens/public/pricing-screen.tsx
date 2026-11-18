@@ -6,6 +6,7 @@ import type { PricingPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { formatMoney } from '@/shared/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
+import { ClosingCta } from '@/ui/components/layout/closing-cta';
 import { Section } from '@/ui/components/layout/section';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { buttonVariants } from '@/ui/primitives/button';
@@ -94,6 +95,7 @@ function CancellationExample({ data }: { data: PricingPageData }) {
 /** Fee policy and examples are supplied by the app; this screen only formats them. */
 export function PricingScreen({ data }: PricingScreenProps) {
   const t = useTranslations('publicPages.pricing');
+  const pages = useTranslations('publicPages');
 
   return <div className="space-y-8">
     <PageHeader title={t('title')} description={t('description')} />
@@ -169,6 +171,6 @@ export function PricingScreen({ data }: PricingScreenProps) {
         </div>
       </section>)}
     </div>
-    <Link href={routes.app.newTask()} className={cn(buttonVariants(), 'whitespace-normal text-center')}>{t('postTask')}</Link>
+    <ClosingCta title={pages('category.ctaTitle')} body={pages('category.ctaBody')} action={{ href: routes.app.newTask(), label: t('postTask') }} />
   </div>;
 }

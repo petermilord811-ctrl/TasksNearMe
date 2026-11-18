@@ -22,8 +22,11 @@ export function EmailStep({ data, handlers, initialResult, onResult }: SignInSte
   const check = useBotCheck(data.botCheck, 'sign_in');
   return <div className="space-y-6">
     <StepHeading title={t('email.title')}><p>{t(providers.length > 0 ? 'email.descriptionWithProviders' : 'email.description')}</p></StepHeading>
-    {providers.length > 0 && <SocialSignIn providers={providers} error={data.socialError} onContinueWith={handlers.onContinueWith} withHint={false} />}
-    {handlers.onPasskeyOptions && handlers.onPasskeySignIn && <PasskeySignIn onPasskeyOptions={handlers.onPasskeyOptions} onPasskeySignIn={handlers.onPasskeySignIn} {...(onResult ? { onResult } : {})} />}
+    {/* Google, Microsoft and the passkey: one stack, spaced like the provider buttons among themselves. */}
+    {(providers.length > 0 || (handlers.onPasskeyOptions && handlers.onPasskeySignIn)) && <div className="space-y-3">
+      {providers.length > 0 && <SocialSignIn providers={providers} error={data.socialError} onContinueWith={handlers.onContinueWith} withHint={false} />}
+      {handlers.onPasskeyOptions && handlers.onPasskeySignIn && <PasskeySignIn onPasskeyOptions={handlers.onPasskeyOptions} onPasskeySignIn={handlers.onPasskeySignIn} {...(onResult ? { onResult } : {})} />}
+    </div>}
     <ProviderHint providers={providers} />
     {(providers.length > 0 || (handlers.onPasskeyOptions && handlers.onPasskeySignIn)) && <OrDivider label={t('social.or')} />}
     <form noValidate onSubmit={form.handleSubmit(async (input) => {

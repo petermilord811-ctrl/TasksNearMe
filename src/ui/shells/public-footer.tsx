@@ -71,10 +71,12 @@ export function PublicFooter({ variant, onSwitchLanguage }: { variant: 'default'
       {/* The horizon: centered on the footer's top line, half above it (behind the page's last block) and half
           below; each glow fades to nothing, so there's no line where the page stops and the footer starts. While the
           page is still loading (a skeleton, role=status and aria-busy) it stays off: it reaches 14rem above the
-          footer, into the first screen, and would be pushed away when the page arrives (plan 9.4, audit H2-H4). */}
+          footer, into the first screen, and would be pushed away when the page arrives (plan 9.4, audit H2-H4).
+          Not on phones: with no slogan there it lit an empty band above the logo and tinted the card above it (f7's
+          visual pass, 2026-11-18); the hairline marks where the footer starts instead. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 -top-56 -z-10 h-[30rem] opacity-80 group-has-[[role=status][aria-busy=true]]/site:hidden dark:opacity-55"
+        className="pointer-events-none absolute inset-x-0 -top-56 -z-10 h-[30rem] opacity-80 group-has-[[role=status][aria-busy=true]]/site:hidden max-sm:hidden dark:opacity-55"
         style={{
           background: [
             'radial-gradient(38% 44% at 50% 50%, color-mix(in oklab, var(--iri-2) 16%, transparent), transparent 72%)',
@@ -83,7 +85,7 @@ export function PublicFooter({ variant, onSwitchLanguage }: { variant: 'default'
           ].join(', '),
         }}
       />
-      <div className="relative mx-auto max-w-content px-gutter pt-12 pb-8 sm:pt-16">
+      <div className="relative mx-auto max-w-content px-gutter pt-8 pb-8 sm:pt-16">
         <Reveal className="hidden gap-5 sm:flex sm:flex-row sm:items-end sm:justify-between">
           <p className="max-w-xl font-display text-4xl leading-[1.04] font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
             {t('footer.tagline')}
@@ -91,7 +93,7 @@ export function PublicFooter({ variant, onSwitchLanguage }: { variant: 'default'
           <p className="max-w-72 text-sm leading-relaxed text-muted-foreground">{t('footer.introduction')}</p>
         </Reveal>
         {/* A hairline that fades out at both ends, instead of a rule across the page. */}
-        <div aria-hidden="true" className="mb-8 hidden h-px bg-[linear-gradient(90deg,transparent,color-mix(in_oklab,var(--foreground)_8%,transparent)_30%,color-mix(in_oklab,var(--foreground)_8%,transparent)_70%,transparent)] sm:my-11 sm:block" />
+        <div aria-hidden="true" className="mb-8 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_oklab,var(--foreground)_8%,transparent)_30%,color-mix(in_oklab,var(--foreground)_8%,transparent)_70%,transparent)] sm:my-11 sm:block" />
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3 sm:gap-y-9 lg:grid-cols-[1.25fr_1fr_1fr_1fr]">
           <div className="col-span-2 space-y-4 sm:col-span-3 lg:col-span-1">

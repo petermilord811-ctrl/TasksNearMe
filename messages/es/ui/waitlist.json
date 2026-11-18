@@ -1,5 +1,5 @@
 {
-  "title": "Todavía no estamos en tu ciudad.",
+  "title": "Todavía no estamos en tu ciudad",
   "description": "TasksNearMe abre ciudad por ciudad en todo EE. UU. Dinos dónde estás y te escribiremos cuando abramos cerca de ti. Cuantos más vecinos lo pidan, antes llegamos.",
   "join": "Unirme a la lista de espera",
   "interests": {
@@ -23,7 +23,7 @@
     "unsubscribeInvalid": "Enlace para cancelar la lista de espera que no funciona"
   },
   "beta": {
-    "title": "Por ahora, TasksNearMe es solo con invitación.",
+    "title": "Por ahora, TasksNearMe es solo con invitación",
     "description": "Estamos dejando entrar a la gente poco a poco mientras empezamos. Deja tu correo y tu código postal, y te avisaremos por correo cuando haya un lugar."
   },
   "demand": "{count, plural, one {# persona cerca de {zip} ya está esperando} other {# personas cerca de {zip} ya están esperando}}",

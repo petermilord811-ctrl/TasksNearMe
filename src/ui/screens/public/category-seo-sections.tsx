@@ -1,5 +1,5 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { ChevronDown } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CategorySeoContent, RelatedLink } from '@/contracts';
 import { ContentBlocks } from '@/ui/components/content/content-blocks';
@@ -56,11 +56,16 @@ export function CategoryRelated({ seo, market }: { seo: CategorySeoContent; mark
 export function RelatedLinks({ links, market }: { links: readonly RelatedLink[]; market: string }) {
   const t = useTranslations('publicPages.category.seo');
   if (links.length === 0) return null;
+  // Each link its own item, an arrow at its start and room around it: two that wrapped on a phone read as one paragraph
+  // (f7's visual pass of the live site, 2026-11-18).
   return <Section title={t('relatedTitle', { market })}>
-    <ul className="grid gap-x-8 sm:grid-cols-2">
+    <ul className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
       {links.map((link) => (
         <li key={link.href}>
-          <Link href={link.href} className="flex min-h-11 items-center rounded-md font-medium text-primary underline-offset-4 hover:underline">{link.label}</Link>
+          <Link href={link.href} className="group flex min-h-11 items-start gap-2 rounded-md py-2.5 leading-snug font-medium text-primary underline-offset-4 hover:underline">
+            <ArrowRight aria-hidden="true" className="mt-0.5 size-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" />
+            <span className="min-w-0">{link.label}</span>
+          </Link>
         </li>
       ))}
     </ul>

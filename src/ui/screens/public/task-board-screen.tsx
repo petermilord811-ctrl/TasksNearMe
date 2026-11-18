@@ -7,6 +7,7 @@ import { TASK_BOARD_GROUPS, TASK_BOARD_PRICE_PRESETS, TASK_BOARD_SORTS, TASK_BOA
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link, localeHref } from '@/ui/lib/locale-link';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
+import { PAGE_TITLE_CLASS } from '@/ui/components/layout/page-header';
 import { BoardFilters, activeFilterCount, boardHref } from '@/ui/components/search/board-filters';
 import { BoardLive } from '@/ui/components/search/board-live';
 import { TaskTypeTiles } from '@/ui/components/search/task-type-tiles';
@@ -90,6 +91,10 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const emptyFiltered = filtered && !(data.heading && query.category && activeFilterCount(query) === 1);
   // A job hub ("moving help jobs near you") is for helpers: becoming one leads, posting follows (audit M42).
   const hub = Boolean(data.heading);
+  // A market with no open tasks has nothing to filter, sort or lay out: the empty state takes the width, where the rail
+  // (every count 0) ran some 1,600 px below it at 1280 (f7's visual pass of the live site, 2026-11-18). Saving the
+  // search and the live status stay: they're how people hear of the first task.
+  const nothingYet = data.stats.openCount === 0;
   const tomorrow = dayKey(new Date(new Date(`${data.today}T12:00:00Z`).getTime() + 86_400_000));
 
   // The filters in effect, each a link that removes it.
@@ -126,6 +131,9 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
     : null;
   const dayLabel = (day: string, sample: TaskPublicView) => (day === data.today ? t('today') : day === tomorrow ? t('tomorrow') : formatDate(sample.schedule.windowStart));
 
+  // Save this view and get alerts when a new task fits (completion plan 7.10); signing in comes first.
+  const saveSearch = <Link href={routes.app.newSavedSearch(routes.taskBoard(market.slug, { ...query, page: undefined }))} rel="nofollow" className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-foreground/[0.1] bg-card px-3 text-[13px] font-semibold hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring dark:border-white/[0.1]"><BellRing aria-hidden="true" className="size-4 text-primary" />{saved('save')}</Link>;
+
   const list = data.tasks.length === 0
     ? <EmptyState
         title={t(emptyFiltered ? 'filteredEmptyTitle' : 'noTasksTitle')}
@@ -156,7 +164,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   return <div className="space-y-5">
     <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0 max-w-3xl space-y-1.5">
-        <h1 className="font-display text-[1.75rem]/[1.15] font-semibold tracking-[-0.02em] sm:text-[2rem]/[1.1]">{data.heading?.title ?? t('title', { market: market.name })}</h1>
+        <h1 className={PAGE_TITLE_CLASS}>{data.heading?.title ?? t('title', { market: market.name })}</h1>
         <p className="text-[15px] text-muted-foreground">{data.heading?.intro ?? t('description')}</p>
         <p className="flex flex-wrap gap-x-2 text-sm font-medium tabular-nums">
           <span>{t('stats.open', { count: data.stats.openCount })}</span>
@@ -173,11 +181,11 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
         : <Link href={routes.app.newTask()} className={buttonVariants({ className: 'shrink-0' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>}
     </header>
 
-    <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6">
+    <div className={cn('grid items-start gap-5', !nothingYet && 'lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6')}>
       {/* The rail grows with the page: a nested scroll box cut the neighborhoods off with no hint (audit M19). */}
-      <aside aria-label={t('filters')}>
+      {!nothingYet && <aside aria-label={t('filters')}>
         <BoardFilters board={data} />
-      </aside>
+      </aside>}
 
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
@@ -195,21 +203,20 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
               listId="board-list"
             />
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          {/* With nothing open there's no sorting or layout, and the alert takes their place on this row. */}
+          {nothingYet && <div className="ml-auto">{saveSearch}</div>}
+          {!nothingYet && <div className="ml-auto flex items-center gap-2">
             <SortMenu summary={t('sortSummary', { sort: t(`sortOptions.${query.sort}`) })}>
               <MenuGroup label={t('sort')}>{TASK_BOARD_SORTS.map((sort) => <MenuLink key={sort} href={href({ sort })} selected={query.sort === sort} label={t(`sortOptions.${sort}`)} />)}</MenuGroup>
               {query.view === 'list' && <MenuGroup label={t('group')}>{TASK_BOARD_GROUPS.map((group) => <MenuLink key={group} href={href({ group })} selected={query.group === group} label={t(`groupOptions.${group}`)} />)}</MenuGroup>}
             </SortMenu>
             <Segmented label={t('view')}>{TASK_BOARD_VIEWS.map((view) => <SegmentLink key={view} href={href({ view })} selected={query.view === view} label={t(`viewOptions.${view}`)} icon={view === 'list' ? <List aria-hidden="true" className="size-4" /> : <LayoutGrid aria-hidden="true" className="size-4" />} />)}</Segmented>
-          </div>
+          </div>}
         </div>
 
         {query.category && typeTiles.length > 1 && <TaskTypeTiles category={query.category} items={typeTiles} />}
 
-        {/* Save this view and get alerts when a new task fits (completion plan 7.10); signing in comes first. */}
-        <div className="flex justify-end">
-          <Link href={routes.app.newSavedSearch(routes.taskBoard(market.slug, { ...query, page: undefined }))} rel="nofollow" className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-foreground/[0.1] bg-card px-3 text-[13px] font-semibold hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring dark:border-white/[0.1]"><BellRing aria-hidden="true" className="size-4 text-primary" />{saved('save')}</Link>
-        </div>
+        {!nothingYet && <div className="flex justify-end">{saveSearch}</div>}
         {chips.length > 0 && <nav aria-label={t('active')} className="flex flex-wrap items-center gap-1.5">
           {chips.map((chip) => <Link key={chip.key} href={chip.href} rel="nofollow" aria-label={t('removeFilter', { label: chip.label })} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-primary/30 bg-brand-soft px-3 text-[13px] font-medium transition-colors hover:border-primary/60 focus-visible:outline-2 focus-visible:outline-ring">{chip.label}<X aria-hidden="true" className="size-3.5" /></Link>)}
           <Link href={routes.taskBoard(market.slug, { view: query.view, group: query.group, sort: query.sort })} rel="nofollow" className="inline-flex min-h-8 items-center px-2 text-[13px] font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('clearAll')}</Link>

@@ -11,7 +11,7 @@
   "next": {
     "title": "Where we go next",
     "intro": "The cities people ask for most. Every request brings a city closer.",
-    "empty": "No one has asked for a city here yet. Tell us where you are, and yours could be next.",
+    "empty": "No one has asked for a city here yet. <link>Tell us where you are</link>, and yours could be next.",
     "people": "{count, plural, one {# person waiting} other {# people waiting}}",
     "helpers": "{count, plural, one {# helper ready} other {# helpers ready}}"
   },

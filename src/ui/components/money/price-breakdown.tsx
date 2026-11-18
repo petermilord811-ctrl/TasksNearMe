@@ -30,11 +30,13 @@ function Line({
   total?: boolean;
   secondary?: boolean;
 }) {
-  // A total stands on a soft band of its own, so the figure that matters reads first.
+  // A total stands on a band of its own, so the figure that matters reads first: a callout band, 9.8's one highlight (it
+  // was the secondary peach, f7's visual pass, 2026-11-18). In a card a grid stretched, the room left goes above the
+  // total (`mt-auto`), so two cards side by side end on their totals instead of one floating mid-card.
   return (
-    <div className={cn(
+    <div data-total={total || undefined} className={cn(
       'flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2',
-      total && 'mt-3 -mx-3 rounded-2xl bg-secondary/70 px-3 py-3 font-semibold text-secondary-foreground',
+      total && 'mt-auto -mx-3 rounded-2xl border border-callout-border bg-callout px-3 py-3 font-semibold text-callout-foreground',
       secondary && 'text-sm text-muted-foreground',
     )}>
       <dt className="min-w-0 flex-1">{label}</dt>
@@ -54,9 +56,10 @@ export function PriceBreakdown({ breakdown, variant, title, posterTotalLabel, he
   const Heading = headingLevel === 4 ? 'h4' : headingLevel === 3 ? 'h3' : 'h2';
 
   return (
-    <section aria-label={titleText} className={cn(!flat && [surface, surfacePad], 'w-full min-w-0', className)}>
+    <section aria-label={titleText} className={cn(!flat && [surface, surfacePad], 'flex w-full min-w-0 flex-col', className)}>
       <Heading className={cn('font-heading font-semibold', flat ? 'mb-2 text-[1.0625rem]/6 tracking-[-0.01em]' : 'mb-3 text-xl/7 tracking-[-0.015em]')}>{titleText}</Heading>
-      <dl className="text-base">
+      {/* The line before a total keeps the 12 px a total used to take as its own top margin. */}
+      <dl className="flex flex-1 flex-col text-base [&>div:has(+[data-total])]:mb-3">
         <Line label={t('taskPrice')}><Money cents={breakdown.taskPriceCents} /></Line>
         {hourly && (
           <Line label={hourly.basis === 'cap' ? t('hourlyCap') : t('approvedHours')} secondary>

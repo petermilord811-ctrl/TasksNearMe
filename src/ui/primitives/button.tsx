@@ -29,7 +29,9 @@ const buttonVariants = cva(
         default: "h-9 px-5 py-2 has-[>svg]:px-4",
         xs: "h-6 gap-1 px-2.5 text-xs has-[>svg]:px-2 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-8 gap-1.5 px-4 has-[>svg]:px-3",
-        lg: "h-10 px-6 text-[0.9375rem] has-[>svg]:px-5",
+        // A page's main action: taller than the default as well as larger type. At h-10 the base's min-h-11 made it the
+        // default's height with bigger text, two primary buttons that differed only in type (f7's visual pass, 2026-11-18).
+        lg: "h-12 px-6 text-[0.9375rem] has-[>svg]:px-5",
         icon: "size-9",
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8",

@@ -11,7 +11,7 @@
   "next": {
     "title": "Adónde vamos después",
     "intro": "Las ciudades que más se piden. Cada solicitud acerca una ciudad.",
-    "empty": "Aquí nadie ha pedido una ciudad todavía. Dinos dónde estás y la tuya podría ser la próxima.",
+    "empty": "Aquí nadie ha pedido una ciudad todavía. <link>Dinos dónde estás</link> y la tuya podría ser la próxima.",
     "people": "{count, plural, one {# persona esperando} other {# personas esperando}}",
     "helpers": "{count, plural, one {# ayudante con todo listo} other {# ayudantes con todo listo}}"
   },

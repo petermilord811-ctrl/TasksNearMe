@@ -110,7 +110,7 @@ describe('waitlist across the US (owner, 2026-11-14: national, cities open in tu
     expect(items[0]).toHaveTextContent('12 helpers ready');
     expect(items[2]).not.toHaveTextContent('helpers ready');
     expect(screen.getByRole('heading', { name: 'Can help? Get verified now, wherever you live' })).toBeInTheDocument();
-    expect(screen.getByText((_, element) => element?.tagName === 'P' && /earn a \$50\.00 gift card/.test(element.textContent ?? ''))).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && /earn a \$50 gift card/.test(element.textContent ?? ''))).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Become a helper' })).toHaveAttribute('href', routes.becomeAHelper());
   });
 

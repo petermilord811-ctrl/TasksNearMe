@@ -29,10 +29,13 @@ function OpenCities({ cities, emptyText }: { cities: OpenCity[]; emptyText: stri
   </ul>;
 }
 
-function ComingNext({ cities, emptyText }: { cities: WaitlistCity[]; emptyText: string }) {
+function ComingNext({ cities }: { cities: WaitlistCity[] }) {
   const t = useTranslations('cities');
   const wait = useTranslations('waitlist');
-  if (cities.length === 0) return <p className="text-muted-foreground">{emptyText}</p>;
+  // Empty, it says what to do about it: the waitlist, in the sentence (f7's visual pass, 2026-11-18).
+  if (cities.length === 0) return <p className="text-muted-foreground">{t.rich('next.empty', {
+    link: (chunks) => <Link href={routes.waitlist()} className="font-medium text-primary underline underline-offset-4 hover:text-primary/80">{chunks}</Link>,
+  })}</p>;
   return <ol className={`divide-y divide-foreground/[0.07] dark:divide-white/[0.07] ${card}`}>
     {cities.map((city, index) => <li key={`${city.city}-${city.state}`} className="flex min-h-12 items-center gap-3 py-2">
       <span aria-hidden="true" className="w-6 shrink-0 text-sm font-semibold text-muted-foreground tabular-nums">{index + 1}</span>
@@ -66,33 +69,40 @@ function StateStatus({ state }: { state: DirectoryState }) {
   return <span className="shrink-0 text-sm text-muted-foreground">{t('states.none')}</span>;
 }
 
-/** States as rows: the name, its status right after it (not at the far edge of a column, audit L22), and a chevron. */
-function StateList({ states }: { states: DirectoryState[] }) {
-  return <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
-    {states.map((state) => <li key={state.code}>
-      <Link href={routes.cities(state.slug)} className="group flex min-h-11 items-center gap-2.5 rounded-md py-2">
-        <span className="font-medium underline-offset-4 group-hover:underline">{state.name}</span>
-        <StateStatus state={state} />
-        <ChevronRight aria-hidden="true" className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-      </Link>
-    </li>)}
-  </ul>;
-}
+/** One row of the state card: full width, so every row's chevron lines up at the card's edge. */
+const stateRow = 'group flex min-h-12 w-full items-center gap-2.5 px-card py-2 transition-colors hover:bg-foreground/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring dark:hover:bg-white/[0.04]';
 
-/** The states with nothing yet, as names only, folded away so the page isn't 49 rows of "Not yet" (audit M49). */
-function OtherStates({ states }: { states: DirectoryState[] }) {
+/**
+ * States as rows of one card: the name, its status right after it (not at the far edge of a column, audit L22), and a
+ * chevron. `rest`, the states with nothing yet, folds away under the last row as names only, so the page isn't 49 rows
+ * of "Not yet" (audit M49). One card with one row width: a lone state in a three-column grid was a third as wide as the
+ * folded row under it, their chevrons apart, and the folded row had no fill in dark (f7's visual pass, 2026-11-18).
+ */
+function StateCard({ states, rest = [] }: { states: DirectoryState[]; rest?: DirectoryState[] }) {
   const t = useTranslations('cities');
-  return <details className="group rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06]">
-    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-[1.375rem] px-card font-medium [&::-webkit-details-marker]:hidden">
-      {t('states.browse', { count: states.length })}
-      <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90 motion-reduce:transition-none" />
-    </summary>
-    <ul className="grid grid-cols-2 gap-x-4 px-card pb-3 sm:grid-cols-3 lg:grid-cols-4">
+  if (states.length === 0 && rest.length === 0) return null;
+  return <div className="divide-y divide-foreground/[0.07] overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:divide-white/[0.07] dark:border-white/[0.06]">
+    {states.length > 0 && <ul className="divide-y divide-foreground/[0.07] dark:divide-white/[0.07]">
       {states.map((state) => <li key={state.code}>
-        <Link href={routes.cities(state.slug)} className="flex min-h-11 items-center rounded-md text-sm underline-offset-4 hover:underline">{state.name}</Link>
+        <Link href={routes.cities(state.slug)} className={stateRow}>
+          <span className="font-medium underline-offset-4 group-hover:underline">{state.name}</span>
+          <StateStatus state={state} />
+          <ChevronRight aria-hidden="true" className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        </Link>
       </li>)}
-    </ul>
-  </details>;
+    </ul>}
+    {rest.length > 0 && <details className="group/rest">
+      <summary className={`${stateRow} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+        <span className="font-medium">{t('states.browse', { count: rest.length })}</span>
+        <ChevronRight aria-hidden="true" className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-open/rest:rotate-90 motion-reduce:transition-none" />
+      </summary>
+      <ul className="grid grid-cols-2 gap-x-4 px-card pb-3 sm:grid-cols-3 lg:grid-cols-4">
+        {rest.map((state) => <li key={state.code}>
+          <Link href={routes.cities(state.slug)} className="flex min-h-11 items-center rounded-md text-sm underline-offset-4 hover:underline">{state.name}</Link>
+        </li>)}
+      </ul>
+    </details>}
+  </div>;
 }
 
 export function CitiesScreen({ data }: { data: CitiesPageData }) {
@@ -106,14 +116,14 @@ export function CitiesScreen({ data }: { data: CitiesPageData }) {
       <OpenCities cities={data.openCities} emptyText={t('open.empty')} />
     </Section>
     <Section title={t('next.title')} description={t('next.intro')}>
-      <ComingNext cities={data.comingNext} emptyText={t('next.empty')} />
+      <ComingNext cities={data.comingNext} />
     </Section>
     <Section title={t('states.title')}>
       {/* States with a city or people waiting first; the rest folded away. */}
-      <div className="space-y-4">
-        <StateList states={data.states.filter((state) => state.openCities > 0 || state.peopleWaiting > 0)} />
-        <OtherStates states={data.states.filter((state) => state.openCities === 0 && state.peopleWaiting === 0)} />
-      </div>
+      <StateCard
+        states={data.states.filter((state) => state.openCities > 0 || state.peopleWaiting > 0)}
+        rest={data.states.filter((state) => state.openCities === 0 && state.peopleWaiting === 0)}
+      />
     </Section>
   </div>;
 }
@@ -135,10 +145,10 @@ export function StateCitiesScreen({ data }: { data: StateCitiesPageData }) {
       <OpenCities cities={data.openCities} emptyText={t('state.noneYet', { state })} />
     </Section>
     <Section title={t('next.title')}>
-      <ComingNext cities={data.comingNext} emptyText={t('next.empty')} />
+      <ComingNext cities={data.comingNext} />
     </Section>
     {data.others.length > 0 && <Section title={t('state.others')}>
-      <StateList states={data.others} />
+      <StateCard states={data.others} />
     </Section>}
   </div>;
 }

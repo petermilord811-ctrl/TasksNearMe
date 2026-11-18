@@ -11,12 +11,13 @@ import { WAITLIST_INTERESTS, waitlistInputSchema } from '@/contracts/marketing';
 import { routes } from '@/contracts/routes';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { TextFormField } from '@/ui/components/forms/text-form-field';
-import { Money } from '@/ui/components/money/money';
+import { formatMoneyShort } from '@/shared/format';
 import { useFormAction } from '@/ui/lib/use-form-action';
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/ui/primitives/field';
 import { RadioGroup, RadioGroupItem } from '@/ui/primitives/radio-group';
 import { Spinner } from '@/ui/primitives/spinner';
+import { PAGE_TITLE_CLASS } from '@/ui/components/layout/page-header';
 
 export interface WaitlistScreenProps {
   data: WaitlistPageData;
@@ -60,7 +61,7 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
   return <section aria-labelledby={`${id}-title`} className="mx-auto max-w-reading space-y-6 py-4 sm:py-8">
     <header className="space-y-3">
       <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><MapPin className="size-6" /></span>
-      <h1 id={`${id}-title`} className="font-display text-2xl font-semibold leading-8 tracking-[-0.025em] lg:text-3xl lg:leading-[38px]">{t(data.from === 'beta' ? 'beta.title' : 'title')}</h1>
+      <h1 id={`${id}-title`} className={PAGE_TITLE_CLASS}>{t(data.from === 'beta' ? 'beta.title' : 'title')}</h1>
       <p className="text-muted-foreground">{t(data.from === 'beta' ? 'beta.description' : 'description')}</p>
       {data.demand && nearby > 0 && <p className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm text-secondary-foreground"><Users aria-hidden="true" className="size-4 text-primary" />{t('demand', { count: nearby, zip: data.demand.zip })}</p>}
     </header>
@@ -75,7 +76,8 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
     })}>
       <FieldGroup>
         <TextFormField control={form.control} name="email" label={forms('fields.email.label')} hint={forms('fields.email.hint')} type="email" autoComplete="email" required disabled={pending} />
-        <div className="grid gap-6 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)]">
+        {/* Room for the ZIP's hint on two lines; at 10rem it took three, "help." alone on the last (f7's visual pass). */}
+        <div className="grid gap-6 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
           <TextFormField control={form.control} name="zip" label={forms('fields.zip.label')} hint={forms('fields.zip.hint')} autoComplete="postal-code" inputMode="numeric" maxLength={5} required disabled={pending} />
           <TextFormField control={form.control} name="city" label={t('city')} hint={t('cityHint')} autoComplete="address-level2" maxLength={60} disabled={pending} />
         </div>
@@ -112,7 +114,8 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
     {data.helperReward && <section aria-labelledby={`${id}-helpers`} className={`space-y-3 ${card}`}>
       <span aria-hidden="true" className="grid size-10 place-items-center rounded-xl bg-badge-reward text-badge-reward-foreground"><BadgeCheck className="size-5" /></span>
       <h2 id={`${id}-helpers`} className="text-[17px] font-semibold leading-6 lg:text-lg">{t('helpers.title')}</h2>
-      <p className="text-muted-foreground">{t.rich('helpers.body', { amount: () => <Money cents={data.helperReward!.amountCents} /> })}</p>
+      {/* Marketing copy: "$50", as the become-a-helper page says it, not a receipt's "$50.00" (f7's visual pass, 2026-11-18). */}
+      <p className="text-muted-foreground">{t.rich('helpers.body', { amount: () => formatMoneyShort(data.helperReward!.amountCents) })}</p>
       <Link href={routes.becomeAHelper()} className={buttonVariants({ variant: 'outline', className: 'w-full sm:w-auto' })}>{t('helpers.cta')}<ArrowRight aria-hidden="true" /></Link>
     </section>}
 

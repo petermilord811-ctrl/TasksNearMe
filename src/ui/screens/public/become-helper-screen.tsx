@@ -5,10 +5,10 @@ import type { BecomeHelperPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { formatMoney } from '@/shared/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
+import { ClosingCta } from '@/ui/components/layout/closing-cta';
 import { Section } from '@/ui/components/layout/section';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { buttonVariants } from '@/ui/primitives/button';
-import { cn } from '@/ui/lib/utils';
 
 export interface BecomeHelperScreenProps { data: BecomeHelperPageData }
 
@@ -98,10 +98,6 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
     </Section>}
     <p className="text-sm text-muted-foreground">{t('rewardPolicy')}</p>
 
-    <section className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 sm:p-6 dark:border-white/[0.06]">
-      <h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.015em] lg:text-[22px] lg:leading-[30px]">{t('closingTitle')}</h2>
-      <p className="mt-2 text-muted-foreground">{t('closingDescription')}</p>
-      <Link href={onboardingHref} className={cn(buttonVariants(), 'mt-4')}>{t('cta')}</Link>
-    </section>
+    <ClosingCta title={t('closingTitle')} body={t('closingDescription')} action={{ href: onboardingHref, label: t('cta') }} />
   </div>;
 }

@@ -1,9 +1,8 @@
-import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useTranslations } from 'next-intl';
 import { BadgeCheck, CalendarCheck2, Camera, CreditCard, Lock, MessagesSquare, PencilLine, Search, ShieldCheck, Star, UsersRound, Wallet, type LucideIcon } from 'lucide-react';
 import { routes } from '@/contracts/routes';
 import { PageHeader } from '@/ui/components/layout/page-header';
-import { buttonVariants } from '@/ui/primitives/button';
+import { ClosingCta } from '@/ui/components/layout/closing-cta';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/primitives/tabs';
 
 const STEPS = ['one', 'two', 'three', 'four', 'five'] as const;
@@ -46,7 +45,12 @@ export function HowItWorksScreen() {
               </li>;
             })}
           </ol>
-          <Link href={role === 'poster' ? routes.app.newTask() : routes.signIn(routes.app.helperOnboarding())} className={buttonVariants({ className: 'ml-14' })}>{t(role === 'poster' ? 'shared.postTask' : 'howItWorks.helperAction')}</Link>
+          {/* Each side ends on the card every public page ends on, with that side's next step. */}
+          <ClosingCta
+            title={t(role === 'poster' ? 'category.ctaTitle' : 'becomeHelper.closingTitle')}
+            body={t(role === 'poster' ? 'category.ctaBody' : 'becomeHelper.closingDescription')}
+            action={role === 'poster' ? { href: routes.app.newTask(), label: t('shared.postTask') } : { href: routes.signIn(routes.app.helperOnboarding()), label: t('howItWorks.helperAction') }}
+          />
         </TabsContent>)}
       </Tabs>
       <aside aria-labelledby="how-promises" className="space-y-4 lg:sticky lg:top-28">

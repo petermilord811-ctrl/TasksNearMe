@@ -113,7 +113,7 @@ test('staff make an invite, a newcomer joins with its link, and others are held 
   await second.page.goto('/app');
   await expect(inviteStep(second.page)).toBeVisible({ timeout: 30_000 });
   await second.page.getByRole('link', { name: 'Join the waitlist' }).click();
-  await expect(second.page.getByRole('heading', { level: 1, name: 'TasksNearMe is invite-only for now.' })).toBeVisible({ timeout: 30_000 });
+  await expect(second.page.getByRole('heading', { level: 1, name: 'TasksNearMe is invite-only for now' })).toBeVisible({ timeout: 30_000 });
   await second.context.close();
 
   // Staff withdraw a live invite: it leaves the active ones.
