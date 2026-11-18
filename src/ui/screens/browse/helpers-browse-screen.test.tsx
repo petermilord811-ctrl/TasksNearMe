@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
+import { Activity } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes, type HelpersBrowsePageData, type SavedHelperHandlers } from '@/contracts';
 import { fakeHandler, helpersBrowseData, helpersBrowseEmptyData, helpersBrowseFilteredData } from '@/fixtures';
@@ -51,6 +52,60 @@ describe('HelpersBrowseScreen', () => {
     // A typed name waits for Enter or Search.
     fireEvent.change(within(form).getByRole('searchbox', { name: copy.search }), { target: { value: 'Jor' } });
     expect(submit).toHaveBeenCalledTimes(2);
+  });
+
+  it('follows the URL after Clear or Back, so old values never ride along on the next search (sweep D10)', () => {
+    const handlers: SavedHelperHandlers = { onToggleSaved: fakeHandler({ ok: true, code: 'updated' }, 0) };
+    const screenAt = (data: HelpersBrowsePageData) => <NextIntlClientProvider locale="en" messages={uiMessages}><HelpersBrowseScreen data={data} handlers={handlers} /></NextIntlClientProvider>;
+    const view = render(screenAt(helpersBrowseFilteredData));
+    const form = screen.getByRole<HTMLFormElement>('search', { name: copy.filtersTitle });
+    vi.spyOn(form, 'requestSubmit').mockImplementation(() => {});
+    const search = within(form).getByRole('searchbox', { name: copy.search });
+    const area = within(form).getByLabelText<HTMLSelectElement>(copy.area);
+    const open = within(form).getByRole('checkbox', { name: copy.openTimes });
+    fireEvent.change(search, { target: { value: 'Jor' } });
+
+    // Clear (or Back to the unfiltered list): the same form, now with the URL's empty filters.
+    view.rerender(screenAt(helpersBrowseData));
+    expect(search).toHaveValue('');
+    expect(area).toHaveValue('');
+    expect(open).not.toBeChecked();
+    expect(form.querySelector('input[name="category"]')).toBeNull();
+    expect(Object.fromEntries(new FormData(form))).toEqual({ q: '', area: '' });
+
+    // Back to the filtered list: the filters come back, and the control in use keeps its focus.
+    area.focus();
+    view.rerender(screenAt(helpersBrowseFilteredData));
+    expect(area).toHaveValue('mueller');
+    expect(open).toBeChecked();
+    expect(area).toHaveFocus();
+    expect(Object.fromEntries(new FormData(form))).toEqual({ category: 'furniture-assembly', q: '', area: 'mueller', open: '1' });
+
+    // A refresh with the same URL (saving a helper refreshes the page) leaves a name being typed alone.
+    fireEvent.change(search, { target: { value: 'Sam' } });
+    view.rerender(screenAt({ ...helpersBrowseFilteredData, query: { ...helpersBrowseFilteredData.query } }));
+    expect(search).toHaveValue('Sam');
+  });
+
+  it('comes back showing its own URL when the router shows a page it kept hidden (Back, or Clear to it) (sweep D10)', () => {
+    // Next keeps a page you leave alive but hidden (React's Activity) and shows it again as it was left.
+    const handlers: SavedHelperHandlers = { onToggleSaved: fakeHandler({ ok: true, code: 'updated' }, 0) };
+    const page = (mode: 'visible' | 'hidden') => <Activity mode={mode}><NextIntlClientProvider locale="en" messages={uiMessages}><HelpersBrowseScreen data={helpersBrowseData} handlers={handlers} /></NextIntlClientProvider></Activity>;
+    const view = render(page('visible'));
+    const form = screen.getByRole<HTMLFormElement>('search', { name: copy.filtersTitle });
+    vi.spyOn(form, 'requestSubmit').mockImplementation(() => {});
+    fireEvent.change(within(form).getByRole('searchbox', { name: copy.search }), { target: { value: 'Jor' } });
+    // Picking a neighborhood applies it: the router moves to that URL and hides this page.
+    fireEvent.change(within(form).getByLabelText(copy.area), { target: { value: 'mueller' } });
+    fireEvent.click(within(form).getByRole('checkbox', { name: copy.openTimes }));
+    view.rerender(page('hidden'));
+    view.rerender(page('visible'));
+    const shown = screen.getByRole<HTMLFormElement>('search', { name: copy.filtersTitle });
+    expect(shown).toBe(form);
+    expect(within(shown).getByRole('searchbox', { name: copy.search })).toHaveValue('');
+    expect(within(shown).getByLabelText(copy.area)).toHaveValue('');
+    expect(within(shown).getByRole('checkbox', { name: copy.openTimes })).not.toBeChecked();
+    expect(Object.fromEntries(new FormData(shown))).toEqual({ q: '', area: '' });
   });
 
   it("keeps Ask and Save inside each helper's card", () => {
