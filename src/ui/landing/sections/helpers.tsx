@@ -2,17 +2,19 @@ import Image from 'next/image';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useTranslations } from 'next-intl';
 import { ArrowRight, BadgeCheck, CalendarClock, Gift, Phone, Repeat, ShieldCheck, Star, WalletCards } from 'lucide-react';
-import { routes, type HelperSummary, type HomePageData } from '@/contracts';
+import { routes, type HelperSummary, type HomePageData, type WelcomeGiftCheck } from '@/contracts';
 import { formatMoney } from '@/shared/format';
+import { cn } from '@/ui/lib/utils';
 import { HoverLift, Magnetic, Reveal } from '@/ui/motion';
 import { ArrowLink, Heading } from './heading';
 
 /** The checks that earn the welcome gift card, in onboarding order (blueprint 05 §2, 2026-11-14). */
-const REWARD_CHECKS = [
-  { key: 'phone', Icon: Phone },
-  { key: 'id', Icon: BadgeCheck },
-  { key: 'background', Icon: ShieldCheck },
-] as const;
+/** Each check the welcome gift asks for (the data says which: the phone only where texts go out, 9.2), drawn so. */
+const REWARD_CHECKS: Record<WelcomeGiftCheck, { key: 'phone' | 'id' | 'background'; Icon: typeof Phone }> = {
+  phone: { key: 'phone', Icon: Phone },
+  identity: { key: 'id', Icon: BadgeCheck },
+  background: { key: 'background', Icon: ShieldCheck },
+};
 
 /**
  * For helpers: the pitch, what a helper keeps from a task (the fee engine's own example), the welcome gift card
@@ -93,14 +95,15 @@ export function HelpersSection({ data }: { data: HomePageData }) {
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0">
                             <p className="inline-flex items-center gap-2 text-sm font-semibold"><Gift aria-hidden="true" className="lift-icon size-4 text-primary" />{t('rewardTitle')}</p>
-                            <p className="mt-3 font-display text-4xl font-semibold tracking-[-0.03em]">{t('rewardAmount', { amount: formatMoney(reward.amountCents) })}</p>
+                            {/* One line on a 360 phone too (audit L33): a step smaller there, and no card art beside it. */}
+                            <p className="mt-3 font-display text-3xl font-semibold tracking-[-0.03em] text-balance sm:text-4xl">{t('rewardAmount', { amount: formatMoney(reward.amountCents) })}</p>
                           </div>
                           <GiftCardArt amount={formatMoney(reward.amountCents)} />
                         </div>
                         <p className="mt-2 text-sm text-muted-foreground">{t('rewardBody')}</p>
-                        {/* The three checks that earn it, drawn in one after another as the card comes in. */}
-                        <ol aria-label={t('rewardStepsLabel')} className="mt-5 grid grid-cols-3 gap-2">
-                          {REWARD_CHECKS.map(({ key, Icon }, index) => (
+                        {/* The checks that earn it (two or three), drawn in one after another as the card comes in. */}
+                        <ol aria-label={t('rewardStepsLabel')} className={cn('mt-5 grid gap-2', reward.checks.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+                          {reward.checks.map((check) => REWARD_CHECKS[check]).map(({ key, Icon }, index) => (
                             <li key={key} className="flex flex-col items-center gap-1.5 rounded-2xl bg-foreground/[0.04] px-2 py-3 text-center text-xs font-medium dark:bg-white/[0.05]">
                               <span className="relative grid size-8 place-items-center rounded-full bg-success/12 text-success">
                                 <Icon aria-hidden="true" className="size-4" />
@@ -172,7 +175,7 @@ function HelperStripCard({ helper }: { helper: HelperSummary }) {
 /** A small gift card, tilted, with a light that sweeps across it now and then (still under reduced motion). */
 function GiftCardArt({ amount }: { amount: string }) {
   return (
-    <span aria-hidden="true" className="lift-icon relative mt-1 grid h-14 w-[5.5rem] shrink-0 -rotate-6 overflow-hidden rounded-xl p-2 text-white shadow-[0_14px_28px_-14px_rgb(124_58_237/0.7)]" style={{ backgroundImage: 'var(--iridescent)' }}>
+    <span aria-hidden="true" className="lift-icon relative mt-1 grid h-14 w-[5.5rem] shrink-0 -rotate-6 overflow-hidden rounded-xl p-2 text-white shadow-[0_14px_28px_-14px_rgb(124_58_237/0.7)] max-[420px]:hidden" style={{ backgroundImage: 'var(--iridescent)' }}>
       <span className="absolute inset-0 bg-[radial-gradient(120%_90%_at_20%_0%,rgb(255_255_255/0.45),transparent_55%)]" />
       <span className="absolute inset-y-0 -left-1/2 w-1/2 bg-[linear-gradient(90deg,transparent,rgb(255_255_255/0.55),transparent)] [animation:sheen_3.6s_var(--ease-out)_1.2s_infinite] motion-reduce:hidden" />
       <span className="relative h-2.5 w-3.5 rounded-[3px] bg-white/70" />

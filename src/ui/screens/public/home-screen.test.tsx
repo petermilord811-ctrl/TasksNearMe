@@ -92,11 +92,17 @@ describe('HomeScreen (the landing page)', () => {
     show();
     const reward = homePageData.welcomeReward!;
     expect(screen.getByText(t('helpers.rewardAmount', { amount: formatMoney(reward.amountCents) }))).toBeInTheDocument();
-    // Every helper who passes the three checks gets it: the checks, and no count of spots.
+    // Every helper who passes the checks gets it: the checks the data names, and no count of spots.
     const checks = screen.getByRole('list', { name: t('helpers.rewardStepsLabel') });
     expect(within(checks).getAllByRole('listitem').map((item) => item.textContent)).toEqual([t('helpers.rewardChecks.phone'), t('helpers.rewardChecks.id'), t('helpers.rewardChecks.background')]);
     expect(screen.queryByText(/spots? (left|claimed)/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: t('helpers.rewardTerms') })).toHaveAttribute('href', routes.legal('rewards-terms'));
+    cleanup();
+
+    // Without texts set up there's no phone check (9.2): two checks, no phone step.
+    show({ ...homePageData, welcomeReward: { ...reward, checks: ['identity', 'background'] } });
+    const twoChecks = screen.getByRole('list', { name: t('helpers.rewardStepsLabel') });
+    expect(within(twoChecks).getAllByRole('listitem').map((item) => item.textContent)).toEqual([t('helpers.rewardChecks.id'), t('helpers.rewardChecks.background')]);
     cleanup();
 
     show(homeNoRewardData);

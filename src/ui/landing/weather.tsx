@@ -470,7 +470,10 @@ export function SeasonWeather({ season, still = false, className }: { season: Se
       data-weather={season}
       className={cn(
         'pointer-events-none transition-opacity duration-[1200ms] ease-out motion-reduce:transition-none',
-        '[mask-image:linear-gradient(to_bottom,#000,#000_78%,transparent)]',
+        // Never over the words (audit M6): on phones the air starts below them, over the town's band; on wide
+        // screens it keeps to the town's side. It still fades out before the hero's bottom edge.
+        '[mask-image:linear-gradient(to_bottom,transparent_0%,transparent_50%,#000_62%,#000_80%,transparent)]',
+        'lg:[mask-image:linear-gradient(to_right,transparent_0%,transparent_34%,#000_50%),linear-gradient(to_bottom,#000,#000_78%,transparent)] lg:[mask-composite:intersect]',
         ready ? 'opacity-100' : 'opacity-0',
         className,
       )}

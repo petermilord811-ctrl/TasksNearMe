@@ -2,15 +2,16 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { Building2, Expand, Flame, Layers, Loader2, LocateFixed, MapPinned, Minus, MousePointerClick, Move, Plus, RotateCw, Shrink, Target, X } from 'lucide-react';
+import { Building2, Expand, Flame, Layers, Loader2, LocateFixed, MapPinned, Minus, Move, Navigation2, Plus, RotateCw, Shrink, Target, X, ZoomIn } from 'lucide-react';
 import type { LandingMapData } from '@/contracts';
 import { distanceMiles, roundMiles } from '@/shared/geo';
-import { usePrefersReducedMotion } from '@/ui/motion';
+import { useFinePointer } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { whenHeroReady } from '../hero-ready';
 import { useLanding } from '../landing-state';
 import { prefetchBaseStyle } from './base-style';
 import { MAP_FRAME_ATTRIBUTE, useOptionalMapExplorer, type MapLayers } from './explorer-state';
+import { MapCardRail } from './card-rail';
 import type { MapControls, MapViewProps } from './maplibre-view';
 import { StaticMap } from './static-map';
 
@@ -63,7 +64,6 @@ export function TaskMap({
   // Pointing at a category quiets the other pins; picking one also flies the map to its tasks.
   const { activeCategory, selectedCategory, litTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location, requestLocation } = useLanding();
   const explorer = useOptionalMapExplorer();
-  const reduced = usePrefersReducedMotion();
   const userPoint = location.status === 'granted' ? location.point : undefined;
   const frameRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -76,8 +76,12 @@ export function TaskMap({
   const [ready, setReady] = useState(false);
   const [controls, setControls] = useState<MapControls | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const [engaged, setEngaged] = useState(false);
   const [hint, setHint] = useState<Hint | null>(null);
+  /** The hints are about a mouse and a keyboard (Ctrl/⌘ + wheel, right-drag): only for a fine pointer. */
+  const fine = useFinePointer();
+  /** The map is turned away from north: the compass shows (its needle is turned by hand, no re-render). */
+  const [turned, setTurned] = useState(false);
+  const needleRef = useRef<SVGSVGElement>(null);
   /** A mouse is over the live map: the hint follows it instead of sitting by the controls. */
   const [pointerOver, setPointerOver] = useState(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -244,7 +248,6 @@ export function TaskMap({
     setHint(which);
     hintTimer.current = window.setTimeout(() => setHint(null), ms);
   };
-  const use = () => controls?.engage();
 
   // The hint at the pointer: placed by hand on each move (no re-render), a step behind it, never under it.
   const followPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -256,13 +259,13 @@ export function TaskMap({
     const y = Math.min(event.clientY - box.top + 22, box.height - bubble.offsetHeight - 12);
     bubble.style.transform = `translate3d(${Math.max(8, x)}px, ${Math.max(8, y)}px, 0)`;
   };
-  const mouseOnLive = fill && liveReady && !fullscreen;
+  const mouseOnLive = fill && liveReady && !fullscreen && fine;
   const onMouseEnter = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== 'mouse' || !mouseOnLive) return;
     setPointerOver(true);
     followPointer(event);
     // The first time on the map in this visit: how it works, once.
-    if (!engaged && !hint && firstVisitToMap()) showHint('intro', 2600);
+    if (!hint && firstVisitToMap()) showHint('intro', 3600);
   };
 
   return (
@@ -277,7 +280,7 @@ export function TaskMap({
       onPointerMove={pointerOver ? followPointer : (event) => mouseOnLive && event.pointerType === 'mouse' && onMouseEnter(event)}
       onPointerLeave={() => setPointerOver(false)}
       // The map's own cursors (globals.css): a lens to look around, with a plus once the wheel zooms it.
-      data-map-cursor={fill && liveReady ? (engaged ? 'zoom' : 'explore') : undefined}
+      data-map-cursor={fill && liveReady ? 'explore' : undefined}
       role={fullscreen ? 'dialog' : undefined}
       aria-modal={fullscreen ? true : undefined}
       aria-label={fullscreen && market ? t('fullscreenLabel', { market }) : undefined}
@@ -321,7 +324,7 @@ export function TaskMap({
             userPoint={userPoint}
             milesById={milesById}
             withinMiles={explorer?.withinMiles ?? null}
-            padding={fullscreen ? undefined : padding}
+            padding={fullscreen ? FULLSCREEN_PADDING : padding}
             fade={fullscreen ? 'none' : fill ? 'vertical' : 'all'}
             homeZoom={fill ? 11 : 10.3}
             arrival={arrival}
@@ -330,12 +333,11 @@ export function TaskMap({
             request={explorer?.request ?? null}
             onControls={(next) => setControls(() => next)}
             onView={explorer?.setView}
-            onEngagedChange={(on) => {
-              setEngaged(on);
-              if (on) showHint('engaged', 2600);
-              else setHint((current) => (current === 'engaged' ? null : current));
+            onBearing={(bearing) => {
+              if (needleRef.current) needleRef.current.style.transform = `rotate(${-bearing}deg)`;
+              setTurned(Math.abs(bearing) > 0.5);
             }}
-            onBlockedWheel={() => showHint('blocked', 1800)}
+            onBlockedWheel={() => fine && showHint('blocked', 1800)}
             onReady={() => setReady(true)}
             onFailed={() => setFailed(true)}
           />
@@ -343,8 +345,8 @@ export function TaskMap({
       )}
 
       {fill && liveReady && controls && (
-        <div className={cn('absolute z-[2] flex flex-col items-end gap-2', fullscreen ? 'right-4 bottom-6' : controlsClassName)}>
-          {/* How the wheel works here: after a click, it zooms the map; before, it scrolls the page. */}
+        <div className={cn('absolute z-[2] flex flex-col items-end gap-2', fullscreen ? 'right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(9.75rem+env(safe-area-inset-bottom))]' : controlsClassName)}>
+          {/* How the map moves here (the wheel scrolls the page; Ctrl/⌘ + wheel zooms the map). */}
           <div
             aria-hidden="true"
             className={cn(
@@ -360,7 +362,6 @@ export function TaskMap({
           <button
             type="button"
             onClick={() => {
-              use();
               if (location.status === 'granted') explorer?.requestFocus({ kind: 'area', point: location.point });
               else requestLocation();
             }}
@@ -371,21 +372,32 @@ export function TaskMap({
           >
             {location.status === 'locating' ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <LocateFixed aria-hidden="true" className="size-4" />}
           </button>
-          <LayersControl layers={layers} onChange={(next) => { use(); setLayers(next); }} />
+          <LayersControl layers={layers} onChange={setLayers} />
           <button
             ref={openRef}
             type="button"
-            onClick={() => {
-              use();
-              setFullscreen((on) => !on);
-            }}
+            onClick={() => setFullscreen((on) => !on)}
             aria-label={fullscreen ? t('fullscreenClose') : t('fullscreenOpen')}
             aria-pressed={fullscreen}
-            className="glass inline-flex size-11 items-center justify-center rounded-full text-foreground/80 transition-transform hover:text-foreground active:scale-95"
+            // Phones and tablets have "Explore the map" for this, and full screen's own close button.
+            className="glass inline-flex size-11 items-center justify-center rounded-full text-foreground/80 transition-transform hover:text-foreground active:scale-95 max-lg:hidden"
           >
             {fullscreen ? <Shrink aria-hidden="true" className="size-4" /> : <Expand aria-hidden="true" className="size-4" />}
           </button>
-          <div role="group" aria-label={t('zoomLabel')} className="glass flex flex-col overflow-hidden rounded-full">
+          {/* Turned away from north (a right-drag, a two-finger twist, Shift + ←/→): back to north in one press. */}
+          {turned && (
+            <button
+              type="button"
+              onClick={() => controls.resetNorth()}
+              aria-label={t('north')}
+              title={t('north')}
+              className="glass inline-flex size-11 items-center justify-center rounded-full text-violet transition-transform hover:text-foreground active:scale-95"
+            >
+              <Navigation2 ref={needleRef} aria-hidden="true" className="size-4 fill-current transition-transform duration-150 ease-out motion-reduce:transition-none" />
+            </button>
+          )}
+          {/* Touch screens pinch to zoom: no + and − crowding the map there. */}
+          <div role="group" aria-label={t('zoomLabel')} className="glass flex flex-col overflow-hidden rounded-full [@media(pointer:coarse)]:hidden">
             <button type="button" onClick={() => controls.zoomBy(1)} aria-label={t('zoomIn')} className="inline-flex size-11 items-center justify-center text-foreground/80 transition-colors hover:bg-foreground/[0.05] hover:text-foreground active:scale-95">
               <Plus aria-hidden="true" className="size-4" />
             </button>
@@ -406,6 +418,20 @@ export function TaskMap({
         </div>
       )}
 
+      {/* Phones and tablets: the map scrolls past with one finger, so exploring it gets its own full screen (one finger
+          moves the map there, and the tasks ride along the bottom). */}
+      {fill && liveReady && !fullscreen && (
+        <button
+          type="button"
+          onClick={() => setFullscreen(true)}
+          className="glass absolute bottom-12 left-1/2 z-[2] inline-flex min-h-11 -translate-x-1/2 items-center gap-2 rounded-full px-5 text-sm font-semibold text-foreground shadow-overlay transition-transform active:scale-95 lg:hidden"
+        >
+          <Expand aria-hidden="true" className="size-4 text-violet" />
+          {t('exploreMap')}
+        </button>
+      )}
+      {/* Full screen: the tasks as a row of cards along the bottom, in step with the pins. */}
+      {fill && liveReady && fullscreen && <MapCardRail map={map} className="absolute inset-x-0 bottom-0 z-[2]" />}
       {fill && failed && mode !== 'static' && (
         <div className={cn('absolute z-[2] flex flex-col items-end gap-2', controlsClassName)}>
           <button
@@ -419,7 +445,6 @@ export function TaskMap({
         </div>
       )}
 
-      {fill && liveReady && engaged && !fullscreen && !reduced && <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] rounded-none ring-2 ring-violet/25 ring-inset" />}
 
       {fullscreen && (
         <button
@@ -436,16 +461,23 @@ export function TaskMap({
   );
 }
 
-type Hint = 'intro' | 'engaged' | 'blocked';
+/** Full screen: room for the row of task cards along the bottom (fractions of the map), so no pin hides under it. */
+const FULLSCREEN_PADDING = { top: 0.1, right: 0.06, bottom: 0.26, left: 0.06 };
 
-/** What the wheel and a drag do on the map right now, in one line. */
+type Hint = 'intro' | 'blocked';
+
+/** Apple keyboards zoom with ⌘ (as MapLibre's cooperative gestures read them); the rest with Ctrl. */
+const appleKeys = () => typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac');
+
+/** How the map moves, in one line: the first time (`intro`), and after a plain wheel over it (`blocked`). */
 function HintChip({ hint }: { hint: Hint | null }) {
   const t = useTranslations('landing.map');
-  const Icon = hint === 'blocked' ? MousePointerClick : hint === 'intro' ? Move : Target;
+  const apple = appleKeys();
+  const Icon = hint === 'blocked' ? ZoomIn : Move;
   return (
-    <span className="glass inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium whitespace-nowrap text-foreground shadow-overlay">
-      <Icon className="size-3.5 text-violet" />
-      {hint === 'blocked' ? t('engageFirst') : hint === 'intro' ? t('exploreHint') : t('engaged')}
+    <span className="glass inline-flex w-max max-w-[min(26rem,calc(100vw-7rem))] items-center gap-2 rounded-2xl px-3.5 py-2 text-xs font-medium text-balance text-foreground shadow-overlay">
+      <Icon className="size-3.5 shrink-0 text-violet" />
+      {hint === 'blocked' ? (apple ? t('cmdZoom') : t('ctrlZoom')) : t('exploreHint', { key: apple ? '⌘' : 'Ctrl' })}
     </span>
   );
 }

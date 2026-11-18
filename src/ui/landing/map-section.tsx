@@ -87,7 +87,7 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-[4] hidden h-16 rounded-t-[2.75rem] shadow-[inset_0_1px_0_rgb(255_255_255/0.7)] lg:block dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.13)]" />
         <div aria-hidden="true" className="pointer-events-none absolute top-0 left-1/2 z-[4] hidden h-px w-[min(56rem,62%)] -translate-x-1/2 opacity-55 lg:block dark:opacity-90" style={{ background: 'linear-gradient(90deg, transparent, var(--iri-1) 22%, var(--iri-2) 50%, var(--iri-3) 78%, transparent)' }} />
         {/* The real map: between the heading and the list on phones, under everything on wide screens. */}
-        <div className="relative order-2 mt-6 h-[72svh] max-h-[40rem] min-h-[26rem] lg:absolute lg:inset-0 lg:order-none lg:mt-0 lg:h-auto lg:max-h-none">
+        <div className="relative order-2 mt-6 h-[62svh] max-h-[36rem] min-h-[24rem] lg:absolute lg:inset-0 lg:order-none lg:mt-0 lg:h-auto lg:max-h-none">
           <figure className="m-0 size-full">
             <p className="sr-only">{t('mapLabel', { market })}</p>
             <TaskMap

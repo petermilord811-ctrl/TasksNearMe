@@ -41,6 +41,9 @@
   "calendarWeek": "Week {week}",
   "calendarWeekNumber": "Week number",
   "scrollableRegion": "Scrollable content",
+  "mapTwoFingers": "Use two fingers to move the map",
+  "mapCtrlZoom": "Pinch, or hold Ctrl and scroll, to zoom the map",
+  "mapCmdZoom": "Pinch, or hold ⌘ and scroll, to zoom the map",
   "days": {
     "today": "Today",
     "tomorrow": "Tomorrow"

@@ -12,7 +12,7 @@ import { usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { addAreaGlowLayers, createAreaGlow, type AreaGlow } from './area-glow';
 import { applyRestyle, preparedBaseStyle } from './base-style';
-import { createWheelGate, type WheelGate } from './engage';
+import { watchPlainWheel, type WheelHint } from './wheel-hint';
 import type { MapFocusRequest, MapLayers } from './explorer-state';
 import { arrivalCamera, arrivalProgress, circleBounds, circleRing, METERS_PER_MILE, outsideCircle, type MapCamera, type ViewBounds } from './map-math';
 import { PinCardBody, pinPrice } from './pin-card';
@@ -22,8 +22,8 @@ import { FADE_VERTICAL } from './static-map';
 
 export interface MapControls {
   zoomBy: (delta: number) => void;
-  /** The visitor used one of the page's map controls: the wheel zooms the map now. */
-  engage: () => void;
+  /** Turns the map back to north (and flat again, unless the 3D buildings are on). */
+  resetNorth: () => void;
 }
 
 type Padding = { top: number; right: number; bottom: number; left: number };
@@ -66,13 +66,13 @@ export interface MapViewProps {
   layers?: MapLayers;
   fullscreen?: boolean;
   request?: MapFocusRequest | null;
-  /** Receives the page's handles on the map (zoom, engage); null when the map goes away. */
+  /** Receives the page's handles on the map (zoom, north); null when the map goes away. */
   onControls?: (controls: MapControls | null) => void;
   /** What the map shows, once it has settled (not while it follows the scroll); null when it goes away. */
   onView?: (bounds: ViewBounds | null) => void;
-  /** The wheel zooms the map (true) or scrolls the page (false). */
-  onEngagedChange?: (engaged: boolean) => void;
-  /** A wheel over the map while it scrolls the page: the page can say how to zoom. */
+  /** Which way the map faces (degrees from north) once the visitor turns it; 0 again once it's back to north. */
+  onBearing?: (bearing: number) => void;
+  /** A plain wheel over the map (it scrolls the page): the page can say how to zoom. */
   onBlockedWheel?: () => void;
 }
 
@@ -191,7 +191,7 @@ export function MapLibreView({
   request = null,
   onControls,
   onView,
-  onEngagedChange,
+  onBearing,
   onBlockedWheel,
 }: MapViewProps) {
   const t = useTranslations('landing.map');
@@ -212,7 +212,7 @@ export function MapLibreView({
   const [arrivalLit, setArrivalLit] = useState<string | null>(null);
   const reduced = usePrefersReducedMotion();
   const records = useRef(new Map<string, MarkerRecord>());
-  const gate = useRef<WheelGate | null>(null);
+  const gate = useRef<WheelHint | null>(null);
   const stopArrival = useRef<() => void>(() => {});
   /** The pick the map last flew to (undefined: none yet, the map just came up). */
   const flownCategory = useRef<string | null | undefined>(undefined);
@@ -221,9 +221,9 @@ export function MapLibreView({
   const homeView = useRef<MapCamera | null>(null);
   const labels = { map: label ?? t('layerTasks'), twoFingers: t('twoFingers'), ctrlZoom: t('ctrlZoom'), cmdZoom: t('cmdZoom') };
   const perHour = (rate: string) => t('perHour', { rate });
-  const latest = useRef({ onHighlight, onPick, onReady, onFailed, onControls, onView, onEngagedChange, onBlockedWheel, pins, padding, reduced, arrival, homeZoom, labels, perHour, lit: litTaskId, first: [] as string[] });
+  const latest = useRef({ onHighlight, onPick, onReady, onFailed, onControls, onView, onBearing, onBlockedWheel, pins, padding, reduced, arrival, homeZoom, labels, perHour, lit: litTaskId, first: [] as string[] });
   useEffect(() => {
-    latest.current = { onHighlight, onPick, onReady, onFailed, onControls, onView, onEngagedChange, onBlockedWheel, pins, padding, reduced, arrival, homeZoom, labels, perHour, lit: litTaskId, first: [litTaskId, pickedTaskId, arrivalLit].filter((id): id is string => Boolean(id)) };
+    latest.current = { onHighlight, onPick, onReady, onFailed, onControls, onView, onBearing, onBlockedWheel, pins, padding, reduced, arrival, homeZoom, labels, perHour, lit: litTaskId, first: [litTaskId, pickedTaskId, arrivalLit].filter((id): id is string => Boolean(id)) };
   });
   /**
    * Leaving a pin or its card: after a short grace (time to reach the card, or the next pin), let go of that task,
@@ -268,10 +268,13 @@ export function MapLibreView({
         maxZoom: 17,
         maxPitch: 60,
         attributionControl: false,
-        // Fine pointers: the wheel is the gate's to switch on. Touch: one finger scrolls the page, two move the map.
-        scrollZoom: coarse,
-        cooperativeGestures: coarse,
-        dragRotate: false,
+        // The page always scrolls past the map: a plain wheel or one finger scrolls the page; Ctrl/⌘ + wheel or a
+        // trackpad pinch zooms, and on touch two fingers move, zoom and turn the map (full screen lifts it, below).
+        scrollZoom: true,
+        cooperativeGestures: true,
+        // Turning: right-drag or Ctrl + drag with a mouse, a two-finger twist on touch, Shift + ←/→ on the keyboard.
+        // Only turning: tilting stays for the 3D buildings' own view.
+        dragRotate: true,
         pitchWithRotate: false,
         touchPitch: false,
         fadeDuration: 120,
@@ -286,8 +289,6 @@ export function MapLibreView({
       latest.current.onFailed();
       return;
     }
-    instance.touchZoomRotate.disableRotation();
-    instance.keyboard.disableRotation();
     mapRef.current = instance;
     const recordsNow = records.current;
     let themeWatch: MutationObserver | null = null;
@@ -325,7 +326,22 @@ export function MapLibreView({
       setArrivalLit(null);
       // Stopped on the city view: the list can follow it now. Stopped part-way: the next move reports.
       if (landed) reportView();
+      reportBearing();
     };
+    // Which way the map faces, for the compass (not while the arrival turns it with the scroll).
+    let bearingFrame = 0;
+    let reportedBearing = 0;
+    function reportBearing() {
+      bearingFrame = 0;
+      if (arriving) return;
+      const bearing = instance.getBearing();
+      if (Math.abs(bearing - reportedBearing) < 0.25) return;
+      reportedBearing = bearing;
+      latest.current.onBearing?.(bearing);
+    }
+    instance.on('rotate', () => {
+      if (!bearingFrame) bearingFrame = requestAnimationFrame(reportBearing);
+    });
     if (arriving) {
       window.addEventListener('scroll', onScroll, { passive: true });
       arrivalFrame = requestAnimationFrame(followScroll);
@@ -336,22 +352,12 @@ export function MapLibreView({
     };
     instance.on('dragstart', () => stopArrival.current());
     instance.on('zoomstart', takeOver);
+    instance.on('rotatestart', takeOver);
     instance.on('pitchstart', takeOver);
     instance.getCanvas().addEventListener('keydown', () => stopArrival.current());
 
-    // ---- The wheel (fine pointers) ----
-    if (!coarse) {
-      gate.current = createWheelGate({
-        container: instance.getContainer(),
-        enableZoom: () => instance.scrollZoom.enable(),
-        disableZoom: () => instance.scrollZoom.disable(),
-        onChange: (engaged) => {
-          if (engaged) stopArrival.current();
-          latest.current.onEngagedChange?.(engaged);
-        },
-        onBlockedWheel: () => latest.current.onBlockedWheel?.(),
-      });
-    }
+    // ---- The wheel (fine pointers): it scrolls the page; a plain one gets the page to say how to zoom ----
+    if (!coarse) gate.current = watchPlainWheel({ container: instance.getContainer(), onPlainWheel: () => latest.current.onBlockedWheel?.() });
 
     // Keep the camera clear of the page's panels over the map, as the map resizes.
     const applyPadding = () => {
@@ -658,12 +664,11 @@ export function MapLibreView({
       latest.current.onControls?.({
         zoomBy: (delta) => {
           stopArrival.current();
-          gate.current?.engage();
           instance.easeTo({ zoom: instance.getZoom() + delta, duration: latest.current.reduced ? 0 : 420 });
         },
-        engage: () => {
+        resetNorth: () => {
           stopArrival.current();
-          gate.current?.engage();
+          instance.easeTo({ bearing: 0, ...(lastBuildings.current ? {} : { pitch: 0 }), duration: latest.current.reduced ? 0 : 520 });
         },
       });
       latest.current.onReady();
@@ -693,6 +698,7 @@ export function MapLibreView({
       window.clearTimeout(styleGrace);
       window.clearTimeout(clearTimer.current);
       cancelAnimationFrame(arrivalFrame);
+      cancelAnimationFrame(bearingFrame);
       cancelAnimationFrame(layoutFrame);
       window.removeEventListener('scroll', onScroll);
       themeWatch?.disconnect();
@@ -748,19 +754,16 @@ export function MapLibreView({
     else live.easeTo({ pitch: 0, bearing: 0, duration });
   }, [live, layers.buildings, reduced]);
 
-  // Full screen: every gesture works there, and the wheel always zooms.
+  // Full screen: no page to scroll, so every gesture moves the map there (one finger, a plain wheel).
   useEffect(() => {
     if (!live || live !== mapRef.current) return;
     if (fullscreen) stopArrival.current();
-    gate.current?.lock(fullscreen);
-    const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
-    if (coarse) {
-      if (fullscreen) live.cooperativeGestures.disable();
-      else live.cooperativeGestures.enable();
-    }
+    gate.current?.setFree(fullscreen);
+    if (fullscreen) live.cooperativeGestures.disable();
+    else live.cooperativeGestures.enable();
     const container = live.getContainer();
     live.resize();
-    live.setPadding(paddingFor(fullscreen ? undefined : padding, container.clientWidth, container.clientHeight));
+    live.setPadding(paddingFor(padding, container.clientWidth, container.clientHeight));
   }, [live, fullscreen, padding]);
 
   // A picked category flies the map to its tasks; clearing it flies back out to the whole area. Only a change of

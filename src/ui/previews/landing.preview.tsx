@@ -6,6 +6,8 @@ import type { Season } from '@/shared/seasons';
 import { LandingHandlersProvider } from '@/ui/landing/landing-handlers';
 import { LandingProvider } from '@/ui/landing/landing-state';
 import { MapSection } from '@/ui/landing/map-section';
+import { MapCardRail } from '@/ui/landing/map/card-rail';
+import { MapExplorerProvider } from '@/ui/landing/map/explorer-state';
 import { HomeScreen, HomeScreenSkeleton } from '@/ui/screens/public';
 import { PublicShell } from '@/ui/shells/public-shell';
 import copy from '../../../messages/en/ui/landing.json';
@@ -65,6 +67,27 @@ function map(id: string, title: string, options: { location?: LatLng; category?:
   };
 }
 
+/** The full-screen map's row of task cards (9.7), on its own: the live map isn't drawn in previews. */
+function rail(id: string, title: string, theme: 'light' | 'dark' = 'light'): PreviewEntry {
+  return {
+    id,
+    group: copy.previews.group,
+    title,
+    layout: 'fullscreen',
+    render: () => (
+      <div data-theme={theme} className="bg-background text-foreground">
+        <LandingProvider>
+          <MapExplorerProvider>
+            <div className="paper relative h-[34rem]">
+              <MapCardRail map={homePageData.map} className="absolute inset-x-0 bottom-0" />
+            </div>
+          </MapExplorerProvider>
+        </LandingProvider>
+      </div>
+    ),
+  };
+}
+
 export const landingPreviews: PreviewEntry[] = [
   landing('screen-home/default', copy.previews.default, homePageData),
   landing('screen-home/no-reward', copy.previews.noReward, homeNoRewardData),
@@ -97,4 +120,6 @@ export const landingPreviews: PreviewEntry[] = [
   map('component-landing-map/near-you', copy.previews.mapNearYou, { location: inMueller }),
   map('component-landing-map/outside-area', copy.previews.mapOutside, { location: inDallas }),
   map('component-landing-map/category', copy.previews.mapCategory, { category: 'yard-cleanup' }),
+  rail('component-landing-map/card-row', copy.previews.mapRail),
+  rail('component-landing-map/card-row-dark', copy.previews.mapRailDark, 'dark'),
 ];

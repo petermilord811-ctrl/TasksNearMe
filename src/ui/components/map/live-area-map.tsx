@@ -2,9 +2,9 @@
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { Map as MapLibreMap, Marker, getVersion, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl';
 import { routes } from '@/contracts';
-import { createWheelGate } from '@/ui/landing/map/engage';
 import { circleBounds, circleRing, METERS_PER_MILE } from '@/ui/landing/map/map-math';
 import { readMapColors, restylePlan } from '@/ui/landing/map/restyle';
 import { cn } from '@/ui/lib/utils';
@@ -43,6 +43,9 @@ function serviceGeoJson(serviceArea: AreaMapProps['serviceArea']) {
 }
 
 export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, activeId, onActiveChange, onSelect, label, groupLabel, visible, onReady, onFailed }: Omit<AreaMapProps, 'styleUrl' | 'attribution'> & { styleUrl: string; visible: boolean; onReady: () => void; onFailed: () => void }) {
+  const t = useTranslations('common');
+  // How to move the map, in the page's language (MapLibre says it when a gesture would have scrolled the page).
+  const gestureText = useRef({ twoFingers: t('mapTwoFingers'), ctrlZoom: t('mapCtrlZoom'), cmdZoom: t('mapCmdZoom') });
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markers = useRef<{ marker: Marker; element: HTMLButtonElement; ids: string[] }[]>([]);
@@ -58,7 +61,6 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
   useEffect(() => {
     const container = ref.current;
     if (!container) return;
-    const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
     let map: MapLibreMap;
     try {
       map = new MapLibreMap({
@@ -69,8 +71,15 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
         minZoom: 8.5,
         maxZoom: 16.5,
         attributionControl: false,
-        scrollZoom: coarse,
-        cooperativeGestures: coarse,
+        // The page always scrolls past the map: a plain wheel or one finger scrolls the page; Ctrl/⌘ + wheel or a
+        // trackpad pinch zooms, and two fingers move the map on touch (MapLibre's cooperative gestures).
+        scrollZoom: true,
+        cooperativeGestures: true,
+        locale: {
+          'CooperativeGesturesHandler.MobileHelpText': gestureText.current.twoFingers,
+          'CooperativeGesturesHandler.WindowsHelpText': gestureText.current.ctrlZoom,
+          'CooperativeGesturesHandler.MacHelpText': gestureText.current.cmdZoom,
+        },
         dragRotate: false,
         pitchWithRotate: false,
         touchPitch: false,
@@ -83,7 +92,6 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
     mapRef.current = map;
     map.touchZoomRotate.disableRotation();
     map.keyboard.disableRotation();
-    const gate = coarse ? null : createWheelGate({ container, enableZoom: () => map.scrollZoom.enable(), disableZoom: () => map.scrollZoom.disable() });
     // Set up once the style and the first full render are in ('load'). On a slow connection the tiles can take a
     // while: once the style itself is in, the map is usable while the rest fills in, so after a while it's set up
     // anyway. Only a style that never arrives (or a lost GPU surface) means the drawn map stays.
@@ -144,7 +152,6 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
         element.addEventListener('blur', leave);
         element.addEventListener('click', (event) => {
           event.stopPropagation();
-          gate?.engage();
           if (single) {
             latest.current.onSelect?.(single.id);
             return;
@@ -224,7 +231,6 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
     return () => {
       window.clearTimeout(giveUp);
       themeWatch.disconnect();
-      gate?.destroy();
       for (const item of markers.current) item.marker.remove();
       markers.current = [];
       mapRef.current = null;
