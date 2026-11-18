@@ -13,6 +13,10 @@
     "helper": "Tú ayudas"
   },
   "needsAction": "Requiere tu acción",
+  "money": {
+    "poster": "Total",
+    "helper": "Ganarás"
+  },
   "amount": {
     "poster": "Total {amount}",
     "helper": "Ganarás {amount}"
@@ -37,8 +41,8 @@
   "nextStep": {
     "pay": "Paga para confirmar. La retención termina {relative}.",
     "review_work": "Revisa el trabajo antes de {date}, o se aprobará automáticamente.",
-    "on_my_way": "Toca \"En camino\" cuando salgas. Empieza a las {time}.",
-    "check_in": "Toca \"Ya llegué\" cuando llegues. Empieza a las {time}."
+    "on_my_way": "{late, select, yes {Debía empezar {today, select, yes {a las {time}} other {el {date}}}: toca \"En camino\" ahora o escríbele al cliente.} other {Toca \"En camino\" cuando salgas. Empieza {today, select, yes {a las {time}} other {el {date}}}.}}",
+    "check_in": "{late, select, yes {Debía empezar {today, select, yes {a las {time}} other {el {date}}}: toca \"Ya llegué\" cuando llegues o escríbele al cliente.} other {Toca \"Ya llegué\" cuando llegues. Empieza {today, select, yes {a las {time}} other {el {date}}}.}}"
   },
   "regular": {
     "title": "Visitas regulares",

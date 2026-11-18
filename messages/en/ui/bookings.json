@@ -13,6 +13,10 @@
     "helper": "You're helping"
   },
   "needsAction": "Needs your action",
+  "money": {
+    "poster": "Total",
+    "helper": "You'll earn"
+  },
   "amount": {
     "poster": "Total {amount}",
     "helper": "You'll earn {amount}"
@@ -37,8 +41,8 @@
   "nextStep": {
     "pay": "Pay to confirm. The hold ends {relative}.",
     "review_work": "Review the work by {date}, or it's approved automatically.",
-    "on_my_way": "Tap \"On my way\" when you leave. It starts at {time}.",
-    "check_in": "Tap \"I'm here\" when you arrive. It starts at {time}."
+    "on_my_way": "{late, select, yes {This was due to start {today, select, yes {at {time}} other {{date}}}: tap \"On my way\" now, or message the client.} other {Tap \"On my way\" when you leave. It starts {today, select, yes {at {time}} other {{date}}}.}}",
+    "check_in": "{late, select, yes {This was due to start {today, select, yes {at {time}} other {{date}}}: tap \"I'm here\" when you arrive, or message the client.} other {Tap \"I'm here\" when you arrive. It starts {today, select, yes {at {time}} other {{date}}}.}}"
   },
   "regular": {
     "title": "Regular visits",

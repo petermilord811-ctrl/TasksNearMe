@@ -1,16 +1,17 @@
 import Link from 'next/link';
-import { CalendarDays, ChevronRight, CircleAlert, MapPin, Monitor } from 'lucide-react';
+import { CircleAlert, Clock, MapPin, Monitor } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BookingListRow, type BookingsPageData, type ISODateTime } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
+import { CompactList, CompactRow, DayTile, ListGroupLabel, RowFact, RowMoney } from '@/ui/components/layout/compact-list';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useBookingStatus } from '@/ui/components/status/use-status';
+import { CATEGORY_ICONS } from '@/ui/components/tasks/category-icons';
 import { groupByDay, useDayLabel } from '@/ui/components/time/day-groups';
-import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/primitives/tabs';
 import { RegularVisitsSection } from './regular-visits-section';
@@ -23,47 +24,46 @@ export interface BookingsScreenProps {
   now: ISODateTime;
 }
 
-export function BookingRow({ row, tab, now, headingLevel = 2 }: { row: BookingListRow; tab: BookingTab; now: ISODateTime; headingLevel?: 2 | 3 }) {
-  const { formatDateTime, formatRelative, formatTime } = useFormat();
+/**
+ * One booking as a compact row (plan 9.14, audit M28): the day, the task (the row opens the booking), its status,
+ * what, when, where and with whom, and the money; what the viewer does next under it. The role shows only when the
+ * list mixes bookings as client and as helper. A check-in step whose start has passed says so (audit M51).
+ */
+export function BookingRow({ row, tab, now, headingLevel = 2, showRole = false }: { row: BookingListRow; tab: BookingTab; now: ISODateTime; headingLevel?: 2 | 3; showRole?: boolean }) {
+  const { formatDateTime, formatRelative, formatTime, dayKey } = useFormat();
   const t = useTranslations('bookings');
   const card = useTranslations('taskCard');
   const status = useBookingStatus(row.status, row.viewerRole);
-  const titleId = `booking-${tab}-${row.id}`;
-  const LocationIcon = row.location.kind === 'remote' ? Monitor : MapPin;
-  const Heading = headingLevel === 2 ? 'h2' : 'h3';
+  const CategoryIcon = CATEGORY_ICONS[row.categorySlug];
+  const amount = formatMoney(row.amountCents);
+  const step = row.nextStep;
+  const dueAt = step?.dueAt;
+  // "at 2:00 pm" today, the date too on another day; past tense once a start has passed.
+  const today = dueAt !== undefined && dayKey(dueAt) === dayKey(now);
+  const late = dueAt !== undefined && (step?.kind === 'on_my_way' || step?.kind === 'check_in') && Date.parse(dueAt) <= Date.parse(now);
 
-  return <article aria-labelledby={titleId} className={cn('group relative min-w-0 rounded-xl border border-border bg-card p-4 shadow-card transition-colors hover:border-primary hover:bg-accent focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background md:p-6', row.needsAction && 'border-warning')}>
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm font-medium text-secondary-foreground">{card(`categories.${row.categorySlug}`)}</p>
-      <StatusBadge {...status} />
-    </div>
-    <div className="mt-4 flex items-start justify-between gap-3">
-      <Heading id={titleId} className="text-[17px]/6 font-semibold group-hover:text-primary md:text-lg/6.5"><Link href={routes.app.booking(row.id)} className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">{row.title}</Link></Heading>
-      <ChevronRight aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-    </div>
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <StatusBadge tone="neutral" label={t(`roles.${row.viewerRole}`)} />
-      {row.needsAction && <StatusBadge tone="warning" label={t('needsAction')} />}
-    </div>
-    {row.nextStep && <p className="mt-3 flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium tabular-nums">
-      <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-      {t(`nextStep.${row.nextStep.kind}`, row.nextStep.dueAt
-        ? { relative: formatRelative(row.nextStep.dueAt, now), date: formatDateTime(row.nextStep.dueAt), time: formatTime(row.nextStep.dueAt) }
-        : { relative: '', date: '', time: '' })}
+  return <CompactRow
+    titleId={`booking-${tab}-${row.id}`}
+    title={row.title}
+    href={routes.app.booking(row.id)}
+    headingLevel={headingLevel}
+    tone={row.needsAction ? 'attention' : 'default'}
+    leading={<DayTile at={row.start} />}
+    facts={<>
+      <StatusBadge size="sm" {...status} />
+      {showRole && <StatusBadge size="sm" tone="neutral" label={t(`roles.${row.viewerRole}`)} />}
+      <RowFact icon={CategoryIcon}>{card(`categories.${row.categorySlug}`)}</RowFact>
+      <RowFact icon={Clock} className="tabular-nums"><time dateTime={row.start}>{formatTime(row.start)}</time><span>{' · '}{formatRelative(row.start, now)}</span></RowFact>
+      <RowFact icon={row.location.kind === 'remote' ? Monitor : MapPin}>{row.location.kind === 'remote' ? t('remote') : row.location.areaName}</RowFact>
+      <span className="inline-flex min-w-0 items-center gap-1.5"><InitialsAvatar initials={row.otherParty.initials} photo={row.otherParty.photo} size="xs" /><span className="truncate">{row.otherParty.displayName}</span></span>
+    </>}
+    trailing={<RowMoney caption={t(`money.${row.viewerRole}`)} amount={amount} />}
+    trailingInline={t(`amount.${row.viewerRole}`, { amount })}
+    note={step && <p className="flex items-start gap-1.5 font-medium text-foreground tabular-nums">
+      <CircleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-warning" />
+      <span>{t(`nextStep.${step.kind}`, { relative: dueAt ? formatRelative(dueAt, now) : '', date: dueAt ? formatDateTime(dueAt) : '', time: dueAt ? formatTime(dueAt) : '', today: today ? 'yes' : 'no', late: late ? 'yes' : 'no' })}</span>
     </p>}
-    <div className="mt-5 flex items-center gap-3">
-      <InitialsAvatar initials={row.otherParty.initials} photo={row.otherParty.photo} size="sm" />
-      <p className="text-sm font-medium">{row.otherParty.displayName}</p>
-    </div>
-    <div className="mt-4 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
-      <div className="flex items-start gap-2">
-        <CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-        <div className="tabular-nums"><time dateTime={row.start}>{formatDateTime(row.start)}</time><p className="mt-1">{formatRelative(row.start, now)}</p></div>
-      </div>
-      <p className="flex items-start gap-2"><LocationIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{row.location.kind === 'remote' ? t('remote') : row.location.areaName}</span></p>
-    </div>
-    <p className="mt-5 border-t border-border pt-4 font-semibold tabular-nums">{t(`amount.${row.viewerRole}`, { amount: formatMoney(row.amountCents) })}</p>
-  </article>;
+  />;
 }
 
 /** Bookings as client or helper: what needs the viewer first (with the step), then upcoming by day, then past. */
@@ -72,6 +72,8 @@ export function BookingsScreen({ data, now }: BookingsScreenProps) {
   const { dayKey } = useFormat();
   const dayLabel = useDayLabel(dayKey(now));
   const initialTab = tabs.find((tab) => data[tab].length > 0) ?? 'upcoming';
+  // "You booked" / "You're helping" only matters when the lists hold both (audit M28).
+  const showRole = new Set([...data.needsAction, ...data.upcoming, ...data.past].map((row) => row.viewerRole)).size > 1;
 
   return <div className="mx-auto w-full max-w-content space-y-6">
     <PageHeader title={t('title')} description={t('description')} />
@@ -83,11 +85,11 @@ export function BookingsScreen({ data, now }: BookingsScreenProps) {
       {tabs.map((tab) => <TabsContent key={tab} value={tab}>
         {data[tab].length > 0
           ? tab === 'upcoming'
-            ? <div className="space-y-6">{groupByDay(data.upcoming, (row) => row.start, dayKey).map((group) => <section key={group.day} aria-labelledby={`upcoming-${group.day}`} className="space-y-3">
-                <h2 id={`upcoming-${group.day}`} className="text-sm font-semibold text-muted-foreground">{dayLabel(group.day)}</h2>
-                <ul className="space-y-4">{group.items.map((row) => <li key={row.id}><BookingRow row={row} tab={tab} now={now} headingLevel={3} /></li>)}</ul>
+            ? <div className="space-y-5">{groupByDay(data.upcoming, (row) => row.start, dayKey).map((group) => <section key={group.day} aria-labelledby={`upcoming-${group.day}`} className="space-y-2">
+                <ListGroupLabel id={`upcoming-${group.day}`}>{dayLabel(group.day)}</ListGroupLabel>
+                <CompactList>{group.items.map((row) => <li key={row.id}><BookingRow row={row} tab={tab} now={now} headingLevel={3} showRole={showRole} /></li>)}</CompactList>
               </section>)}</div>
-            : <ul className="space-y-4">{data[tab].map((row) => <li key={row.id}><BookingRow row={row} tab={tab} now={now} /></li>)}</ul>
+            : <CompactList>{data[tab].map((row) => <li key={row.id}><BookingRow row={row} tab={tab} now={now} showRole={showRole} /></li>)}</CompactList>
           : <div className="space-y-3">
             <EmptyState title={t(`empty.${tab}.title`)} body={t(`empty.${tab}.body`)} action={tab === 'upcoming' ? { label: t('postTask'), href: routes.app.newTask() } : undefined} />
             {tab === 'upcoming' && <div className="flex justify-center"><Link href={routes.app.findWork()} className={buttonVariants({ variant: 'outline' })}>{t('findWork')}</Link></div>}

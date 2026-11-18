@@ -46,13 +46,14 @@ describe('BookingsScreen', () => {
     const row = mayaBookingsPageData.upcoming[0];
     expect(screen.getByRole('link', { name: row.title })).toHaveAttribute('href', routes.app.booking(row.id));
     const article = within(screen.getByRole('article', { name: row.title }));
-    expect(article.getByText('You booked')).toBeVisible();
+    // A client's own list doesn't say "You booked" on every row (audit M28).
+    expect(article.queryByText('You booked')).not.toBeInTheDocument();
     expect(article.getByText('Booked')).toBeVisible();
     expect(article.getByText('Total $66.00')).toBeVisible();
     expect(article.getByText('Furniture assembly')).toBeVisible();
     expect(article.getByText('Jordan T.')).toBeVisible();
     expect(article.getByRole('img', { name: 'Avatar with initials JT' })).toBeVisible();
-    expect(article.getByText('Sat, Nov 21 · 10:30 am')).toBeVisible();
+    expect(article.getByText('10:30 am')).toHaveAttribute('dateTime', row.start);
     expect(article.getByText('Mueller')).toBeVisible();
     // Upcoming goes by day.
     expect(screen.getByRole('heading', { level: 2, name: 'Sat, Nov 21' })).toBeVisible();
@@ -68,9 +69,10 @@ describe('BookingsScreen', () => {
     renderBookings(mayaBookingsNeedsActionData);
     expect(screen.getByRole('tab', { name: 'Needs action (1)' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('Needs your approval')).toBeVisible();
-    expect(screen.getByText('Needs your action')).toBeVisible();
+    expect(screen.getByRole('article')).toHaveAttribute('data-tone', 'attention');
     await user.click(screen.getByRole('tab', { name: 'Upcoming (1)' }));
-    expect(screen.getByText('Needs your action')).toBeVisible();
+    expect(screen.getByRole('article')).toHaveAttribute('data-tone', 'attention');
+    expect(screen.getByText(/^Review the work by /)).toBeVisible();
   });
 
   it('uses each row role, supplied money, and other person even when roles share a list', () => {
@@ -100,6 +102,15 @@ describe('BookingsScreen', () => {
     expect(screen.getByRole('heading', { name: 'Nothing has finished yet' })).toBeVisible();
     await user.click(screen.getByRole('tab', { name: 'Needs action (0)' }));
     expect(screen.getByRole('heading', { name: 'Nothing needs your action' })).toBeVisible();
+  });
+
+  it('words the check-in step by the clock: ahead of the start, and once it has passed (audit M51)', () => {
+    const helperRow = jordanBookingsPageData.upcoming[0]!;
+    const due = (start: string) => ({ ...helperRow, id: `bkg_${start}`, start, needsAction: true, nextStep: { kind: 'on_my_way' as const, dueAt: start } });
+    renderBookings({ ...bookingsEmptyData, needsAction: [due('2026-11-17T16:00:00.000Z'), due('2026-11-17T09:00:00.000Z'), due('2026-11-16T20:00:00.000Z')] });
+    expect(screen.getByText('Tap "On my way" when you leave. It starts at 10:00 am.')).toBeVisible();
+    expect(screen.getByText('This was due to start at 3:00 am: tap "On my way" now, or message the client.')).toBeVisible();
+    expect(screen.getByText('This was due to start Mon, Nov 16 · 2:00 pm: tap "On my way" now, or message the client.')).toBeVisible();
   });
 
   it('labels a remote booking without adding an area', () => {
