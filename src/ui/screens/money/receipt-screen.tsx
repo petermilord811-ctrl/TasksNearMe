@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { routes, type ReceiptLine, type ReceiptPageData } from '@/contracts';
+import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Money } from '@/ui/components/money/money';
@@ -8,7 +9,7 @@ import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { PaymentMethodLabel } from '@/ui/components/payments';
 import { PrintReceiptButton } from './print-receipt-button';
 
-const refundReasons = ['cancellation', 'unused_cap', 'unused_allowance', 'change_decrease', 'dispute_settlement', 'goodwill', 'poster_credit'] as const;
+const refundReasons = ['cancellation', 'unused_cap', 'unused_allowance', 'change_decrease', 'dispute_settlement', 'goodwill', 'poster_credit', 'plan_rebate'] as const;
 
 function ReceiptActivity({ line }: { line: ReceiptLine }) {
   const { formatDateTime } = useFormat();
@@ -17,7 +18,7 @@ function ReceiptActivity({ line }: { line: ReceiptLine }) {
   return <li className="flex min-w-0 flex-wrap items-start justify-between gap-3 py-4 first:pt-0 last:pb-0">
     <div className="min-w-0 space-y-1">
       <p className="font-medium">{t(line.kind)}</p>
-      {line.kind === 'refund' && <p className="text-sm">{t(`refundReasons.${reason}`)}</p>}
+      {line.kind === 'refund' && <p className="text-sm">{reason === 'plan_rebate' ? t('refundReasons.plan_rebate', { cap: formatMoney(line.rebateCapCents ?? 0) }) : t(`refundReasons.${reason}`)}</p>}
       <time dateTime={line.at} className="block text-sm tabular-nums text-muted-foreground">{formatDateTime(line.at)}</time>
       {line.method && <p className="text-sm text-muted-foreground"><PaymentMethodLabel method={line.method} /></p>}
     </div>

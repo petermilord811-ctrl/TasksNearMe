@@ -10,7 +10,9 @@ import { db } from '@/platform/db/client';
  *   finished after the browser closed); charge.dispute.created and .closed (chargebacks: a case for staff);
  * - Connect: account.updated, account.external_account.created and .updated (a helper's bank works again after a
  *   failed payout), and payout.created, .paid, .failed and .canceled, from a Connect endpoint (events on connected
- *   accounts) pointed at this URL and signed with STRIPE_CONNECT_WEBHOOK_SECRET.
+ *   accounts) pointed at this URL and signed with STRIPE_CONNECT_WEBHOOK_SECRET;
+ * - plans (9.13): checkout.session.completed and customer.subscription.created, .updated, .deleted, .paused and
+ *   .resumed (each is read back from Stripe, src/modules/billing/service.ts).
  *
  * Every signed event goes through the webhook inbox (src/modules/webhooks/inbox.ts): recorded once by its id,
  * retried with backoff when processing fails, and listed for staff when it can't be processed.

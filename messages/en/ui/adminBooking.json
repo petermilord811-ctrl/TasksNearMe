@@ -36,7 +36,8 @@
     "unused_allowance": "Unused expense allowance",
     "change_decrease": "Agreed price decrease",
     "other": "Other refund",
-    "poster_credit": "Client's credit"
+    "poster_credit": "Client's credit",
+    "plan_rebate": "Plus fee back"
   },
   "earnings": "Helper earnings",
   "noEarnings": "No earnings have been recorded for this booking.",
@@ -44,7 +45,8 @@
     "earnings": "Task earnings",
     "reimbursement": "Reimbursed expenses",
     "cancellation_compensation": "Cancellation compensation",
-    "tip": "Tip"
+    "tip": "Tip",
+    "fee_rebate": "Pro fee back"
   },
   "transferred": "Transferred {at}",
   "cases": "Cases about this booking",
@@ -164,7 +166,8 @@
       "earnings": "Earnings",
       "reimbursement": "Reimbursed expenses",
       "cancellation_compensation": "Cancellation compensation",
-      "tip": "Tip"
+      "tip": "Tip",
+      "fee_rebate": "Pro fee back"
     },
     "amounts": "{transferred} sent · {reversed} taken back",
     "historyTitle": "Taken back",

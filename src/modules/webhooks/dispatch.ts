@@ -5,6 +5,8 @@ import { personaIdentityFromEnv } from '@/integrations/persona';
 import { bookingDeps } from '@/modules/bookings/server';
 import { handleConnectWebhook } from '@/modules/payments/connect';
 import { handleStripePaymentWebhook, stripeEventType } from '@/modules/payments/stripe-webhooks';
+import { createBillingProvider } from '@/integrations/billing';
+import { handleBillingWebhook, isBillingEvent } from '@/modules/billing/service';
 import { recordEmailFeedback } from '@/modules/notifications/suppressions';
 import { handleCheckrWebhook, handlePersonaWebhook, handleStripeIdentityWebhook } from '@/modules/verification/webhooks';
 import type { Db } from '@/platform/db/connect';
@@ -38,6 +40,8 @@ async function stripe(db: Db, payload: string, headers: WebhookHeaders, now: Dat
     const secrets = [env('STRIPE_CONNECT_WEBHOOK_SECRET'), secret].filter((value): value is string => Boolean(value));
     return handleConnectWebhook(db, { payload, signature, secrets }, now);
   }
+  // Plans (completion plan 9.13): checkout and subscription events, read back from Stripe.
+  if (isBillingEvent(type)) return handleBillingWebhook(db, createBillingProvider(), { payload, signature, secret }, now);
   if (type?.startsWith('payment_intent.') || type?.startsWith('charge.dispute.')) {
     const deps = bookingDeps();
     if (!deps) return { status: 200, body: { ok: true, ignored: true } };

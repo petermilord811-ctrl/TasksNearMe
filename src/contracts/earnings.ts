@@ -45,8 +45,13 @@ export interface ReceiptLine {
   id: string;
   kind: 'charge' | 'refund' | 'tip';
   amountCents: Cents;
-  /** Refunds: why (`cancellation`, `unused_cap`, `unused_allowance`, `change_decrease`, `dispute_settlement`, `goodwill`). */
+  /**
+   * Refunds: why (`cancellation`, `unused_cap`, `unused_allowance`, `change_decrease`, `dispute_settlement`, `goodwill`,
+   * `poster_credit`, `plan_rebate`: part of the service fee back with Plus, plan 9.13).
+   */
   reason?: string;
+  /** `plan_rebate`: the most Plus pays back in a month, said on the line. */
+  rebateCapCents?: Cents;
   method?: PaymentMethodLabel;
   at: ISODateTime;
 }
@@ -94,7 +99,8 @@ export interface PaymentMethodHandlers {
 // ---- The helper: earnings and payouts ---------------------------------------------------------------
 
 /** `tip`: the client's tip after approval (UI-057), all of it the helper's. */
-export const EARNINGS_KINDS = ['earnings', 'reimbursement', 'cancellation_compensation', 'tip'] as const;
+/** `fee_rebate`: part of the helper fee back with Pro (completion plan 9.13). */
+export const EARNINGS_KINDS = ['earnings', 'reimbursement', 'cancellation_compensation', 'tip', 'fee_rebate'] as const;
 export type EarningsKind = (typeof EARNINGS_KINDS)[number];
 
 /** A transfer to the helper for one booking. */

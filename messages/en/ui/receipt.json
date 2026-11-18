@@ -19,7 +19,8 @@
     "dispute_settlement": "Problem resolved with a refund",
     "goodwill": "Goodwill refund",
     "other": "Refund",
-    "poster_credit": "TasksNearMe credit"
+    "poster_credit": "TasksNearMe credit",
+    "plan_rebate": "Service fee back with Plus (up to {cap} a month)"
   },
   "tip": "Tip"
 }

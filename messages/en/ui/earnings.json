@@ -34,7 +34,8 @@
     "earnings": "Earnings",
     "reimbursement": "Expense reimbursement",
     "cancellation_compensation": "Late cancellation",
-    "tip": "Tip"
+    "tip": "Tip",
+    "fee_rebate": "Fee back with Pro"
   },
   "holdReasons": {
     "dispute": "A problem was reported; support is looking at it",

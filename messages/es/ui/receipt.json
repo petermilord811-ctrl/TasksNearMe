@@ -19,7 +19,8 @@
     "dispute_settlement": "Problema resuelto con un reembolso",
     "goodwill": "Reembolso de cortesía",
     "other": "Reembolso",
-    "poster_credit": "Crédito de TasksNearMe"
+    "poster_credit": "Crédito de TasksNearMe",
+    "plan_rebate": "Tarifa de servicio devuelta con Plus (hasta {cap} al mes)"
   },
   "tip": "Propina"
 }

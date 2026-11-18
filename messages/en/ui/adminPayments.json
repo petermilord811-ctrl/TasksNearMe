@@ -76,7 +76,10 @@
     "goodwill": "Goodwill",
     "fraud": "Fraud",
     "refunded_in_dispute": "Refunded in a dispute",
-    "tip": "Tip"
+    "tip": "Tip",
+    "poster_credit": "Client's credit",
+    "plan_rebate": "Plus fee back",
+    "fee_rebate": "Pro fee back"
   },
   "bank": "Bank ending {last4}",
   "columns": {

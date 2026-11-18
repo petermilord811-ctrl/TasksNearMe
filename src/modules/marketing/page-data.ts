@@ -1,5 +1,7 @@
 import type { BecomeHelperPageData, PricingPageData } from '@/contracts';
-import type { CancellationPolicy, FeeSchedule, PolicyTimers } from '@/modules/markets/schema';
+import { planOffers } from '@/modules/billing/domain';
+import { DEFAULT_PLANS } from '@/modules/markets/policy-defaults';
+import type { CancellationPolicy, FeeSchedule, PlanPolicy, PolicyTimers } from '@/modules/markets/schema';
 import { finalBreakdown, lateCancellation, posterFeeCents, quoteBreakdown } from '@/modules/payments/fees';
 import { smsAvailable } from '@/integrations/sms';
 import { welcomeChecksFor } from '@/modules/rewards/domain';
@@ -14,6 +16,8 @@ export interface PublishedPolicy {
   fees: FeeSchedule;
   cancellation: CancellationPolicy;
   timers: PolicyTimers;
+  /** Null: the default plans (9.13). */
+  plans?: PlanPolicy | null;
 }
 
 /** The worked examples (blueprint 04 §3): a $60 desk, moving help at $35/h, a $20 allowance. */
@@ -40,7 +44,8 @@ function minimumFeeExamplePrice(fees: FeeSchedule): number {
   return Math.max(100, Math.floor(thresholdCents / 2 / 100) * 100);
 }
 
-export function buildPricingPageData({ fees, cancellation, timers }: PublishedPolicy): PricingPageData {
+/** `plansOpen`: subscribing works here (Stripe, or the stand-in), so the page lists the optional plans (9.13). */
+export function buildPricingPageData({ fees, cancellation, timers, plans }: PublishedPolicy, options: { plansOpen?: boolean } = {}): PricingPageData {
   const fixedExample = quoteBreakdown(fees, { type: 'fixed', priceCents: DESK_CENTS });
   const funded = quoteBreakdown(fees, MOVING);
   const withAllowance = quoteBreakdown(fees, { type: 'fixed', priceCents: DESK_CENTS }, { expenseAllowanceCents: ALLOWANCE_CENTS });
@@ -58,6 +63,7 @@ export function buildPricingPageData({ fees, cancellation, timers }: PublishedPo
       lateFeeMinimumCents: cancellation.lateFeeMinCents,
     },
     timers: { autoApproveHours: timers.autoApproveHours, inviteHoldHours: timers.inviteTtlHours },
+    ...(options.plansOpen ? { plans: planOffers(plans ?? DEFAULT_PLANS, fees, 'plus') } : {}),
     fixedExample,
     minimumFeeExample: quoteBreakdown(fees, { type: 'fixed', priceCents: minimumFeeExamplePrice(fees) }),
     hourlyExample: { funded, final: finalBreakdown(fees, funded, { approvedHours: MOVING_APPROVED_HOURS }) },

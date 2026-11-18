@@ -32,6 +32,9 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { buildDataExport, dataExportFilename } from './data-export';
 import { renderAccountDeletedNotice } from './emails';
 import { devHelpersOn } from '@/shared/dev-helpers';
+import { createBillingProvider } from '@/integrations/billing';
+import { aiUsage } from '@/modules/billing/schema';
+import { endSubscriptionsOf } from '@/modules/billing/service';
 
 /**
  * Privacy requests (blueprint 08 §5; completion plan 3.3). A copy of the data is prepared by the job runner,
@@ -266,6 +269,9 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await helperOfferAction(db, userId, offer.id, 'withdraw_offer', now);
   }
 
+  // Plans (9.13): they end now, so nothing renews and charges after the account is gone.
+  await endSubscriptionsOf(db, createBillingProvider(), userId, now);
+
   const photoFiles = await db
     .select({ id: files.id, storageKey: files.storageKey })
     .from(files)
@@ -298,6 +304,7 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.delete(staffRoles).where(eq(staffRoles.userId, userId));
     await tx.delete(staffAuthenticators).where(eq(staffAuthenticators.userId, userId));
     await tx.delete(notificationPreferences).where(eq(notificationPreferences.userId, userId));
+    await tx.delete(aiUsage).where(eq(aiUsage.userId, userId));
     await tx.delete(notifications).where(eq(notifications.userId, userId));
     await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
     await tx.delete(savedHelpers).where(or(eq(savedHelpers.userId, userId), eq(savedHelpers.helperUserId, userId)));

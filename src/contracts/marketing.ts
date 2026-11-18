@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, QueryHandler } from './actions';
+import type { PlanOffer } from './billing';
 import type { CategorySlug, Cents, ISODateTime, TimeZone } from './common';
 import type { ContentBlock } from './content';
 import { emailField, zipField } from './forms';
@@ -231,6 +232,8 @@ export interface PricingPageData {
   hourlyExample: { funded: PriceBreakdown; final: PriceBreakdown };
   /** Desk with a $20 allowance and an $8 receipt. */
   expensesExample: PriceBreakdown;
+  /** The optional plans (completion plan 9.13), Plus first; absent where they aren't open (no Stripe here). */
+  plans?: PlanOffer[];
   lateCancellationExample: {
     taskPriceCents: Cents;
     /** What the poster paid for this task (the full refund when canceling in time). */

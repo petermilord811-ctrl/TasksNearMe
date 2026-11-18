@@ -34,7 +34,8 @@
     "earnings": "Ganancias",
     "reimbursement": "Reembolso de gastos",
     "cancellation_compensation": "Cancelación tardía",
-    "tip": "Propina"
+    "tip": "Propina",
+    "fee_rebate": "Comisión devuelta con Pro"
   },
   "holdReasons": {
     "dispute": "Se reportó un problema; soporte lo está revisando",

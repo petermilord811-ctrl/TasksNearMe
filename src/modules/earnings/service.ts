@@ -20,6 +20,7 @@ import type {
 import { addCardInputSchema } from '@/contracts';
 import { createPaymentProvider, type CollectedCard, type PaymentProvider } from '@/integrations/payments';
 import { redeemCredits } from '@/modules/credits/service';
+import { helperRebateAmount, helperRebateTerms, lockRebates, payPosterRebate, versionPlans } from '@/modules/billing/service';
 import { stripeConnectFromEnv } from '@/integrations/payments/stripe-connect';
 import { instantPayoutOffer } from './instant';
 import { customerFor, newCardCollection } from '@/modules/payments/cards';
@@ -156,7 +157,21 @@ export async function recordCompletionMoney(db: Db, bookingId: string, now: Date
     if (charge?.providerRef) {
       const credited = await redeemCredits(db, payments_, { bookingId, posterUserId: row.booking.posterUserId, charge: { id: charge.id, providerRef: charge.providerRef }, capCents: Math.min(final.platformRevenueCents, final.posterTotalCents) }, now);
       if (credited > 0 && charge.status === 'succeeded') await db.update(payments).set({ status: 'partially_refunded', updatedAt: now }).where(eq(payments.id, charge.id));
+      // Plus (completion plan 9.13): part of the client fee back, within the month's cap, after the credit.
+      const rebated = await payPosterRebate(db, payments_, { bookingId, posterUserId: row.booking.posterUserId, policyVersionId: row.booking.policyVersionId, feeCents: final.posterFeeCents, platformCents: Math.min(final.platformRevenueCents, final.posterTotalCents), charge: { id: charge.id, providerRef: charge.providerRef } }, now);
+      if (rebated > 0) await db.update(payments).set({ status: 'partially_refunded', updatedAt: now }).where(and(eq(payments.id, charge.id), eq(payments.status, 'succeeded')));
     }
+  }
+  // Pro (9.13): part of the helper fee back with the earnings, within the month's cap and what the platform still has
+  // from this booking after the client's credit and Plus rebate.
+  const helperUserId = row.booking.helperUserId;
+  const proTerms = await helperRebateTerms(db, { bookingId, helperUserId, policyVersionId: row.booking.policyVersionId }, now);
+  if (proTerms) {
+    await db.transaction(async (tx) => {
+      await lockRebates(tx, helperUserId);
+      const amountCents = await helperRebateAmount(tx, { bookingId, helperUserId, feeCents: final.helperFeeCents, platformCents: final.platformRevenueCents }, proTerms);
+      await transfer(tx, { bookingId, helperUserId, kind: 'fee_rebate', amountCents }, now);
+    });
   }
 }
 
@@ -385,11 +400,13 @@ export async function getReceiptPage(db: Db, posterUserId: string, bookingId: st
   const helper = helpers.get(row.booking.helperUserId);
   if (!helper || charges.length === 0) return null;
   const method = (p: (typeof charges)[number]) => (p.methodBrand ? { method: { brand: p.methodBrand as CardBrand, ...(p.methodLast4 ? { last4: p.methodLast4 } : {}) } } : {});
+  // Plus's money back says its monthly cap on the line (9.13), from the booking's own policy version.
+  const rebateCapCents = refundRows.some((r) => r.reason === 'plan_rebate') ? (await versionPlans(db, row.booking.policyVersionId)).plus.rebateMonthlyCapCents : undefined;
   const lines: ReceiptLine[] = [
     ...charges.map((c) => ({ id: c.id, kind: 'charge' as const, amountCents: c.amountCents, ...method(c), at: c.createdAt.toISOString() })),
     ...refundRows.map((r) => {
       const charge = charges.find((c) => c.id === r.paymentId);
-      return { id: r.id, kind: 'refund' as const, amountCents: r.amountCents, reason: r.reason, ...(charge ? method(charge) : {}), at: r.createdAt.toISOString() };
+      return { id: r.id, kind: 'refund' as const, amountCents: r.amountCents, reason: r.reason, ...(r.reason === 'plan_rebate' && rebateCapCents !== undefined ? { rebateCapCents } : {}), ...(charge ? method(charge) : {}), at: r.createdAt.toISOString() };
     }),
     ...tips.map((tip) => ({ id: tip.id, kind: 'tip' as const, amountCents: tip.amountCents, ...method(tip), at: tip.updatedAt.toISOString() })),
   ];

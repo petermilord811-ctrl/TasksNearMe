@@ -125,6 +125,11 @@
     "hint": "La página se vuelve a cargar en el idioma que elijas.",
     "failed": "No pudimos cambiar tu idioma. Inténtalo de nuevo."
   },
+  "plan": {
+    "title": "Plan",
+    "description": "Opcional: dinero de vuelta en las tarifas y búsqueda con IA. Todo funciona sin un plan.",
+    "link": "Ver planes"
+  },
   "helper": {
     "title": "Ayudar a otros",
     "descriptions": {

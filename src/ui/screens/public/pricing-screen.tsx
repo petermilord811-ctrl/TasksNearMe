@@ -1,6 +1,6 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { CircleDollarSign, Clock, CreditCard } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import type { PricingPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { formatMoney } from '@/shared/format';
@@ -11,6 +11,25 @@ import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';
 
 export interface PricingScreenProps { data: PricingPageData }
+
+/** The optional plans (completion plan 9.13): what each adds, its price and cap, and a link to subscribe. */
+function PricingPlans({ plans }: { plans: NonNullable<PricingPageData['plans']> }) {
+  const t = useTranslations('plan');
+  const locale = useLocale();
+  const money = (cents: number) => formatMoney(cents).replace(/\.00$/, '');
+  return <Section title={t('pricing.title')}>
+    <p className="max-w-reading text-muted-foreground">{t('pricing.intro')}</p>
+    <div className="grid gap-4 md:grid-cols-2">
+      {plans.map((offer) => <div key={offer.plan} className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-5 shadow-card dark:border-white/[0.06]">
+        <p className="text-sm font-medium text-muted-foreground">{t(`plans.${offer.plan}.for`)}</p>
+        <h3 className="font-display text-xl font-semibold tracking-[-0.01em]">{t(`plans.${offer.plan}.name`)}</h3>
+        <p className="mt-2 tabular-nums"><span className="font-semibold">{t('price.month', { price: money(offer.monthlyCents) })}</span> <span className="text-muted-foreground">{t('price.year', { price: money(offer.yearlyCents) })}</span></p>
+        <p className="mt-2 text-sm">{t(`plans.${offer.plan}.rebate`, { share: new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(offer.rebateBps / 10_000), cap: money(offer.rebateMonthlyCapCents) })}</p>
+      </div>)}
+    </div>
+    <Link href={routes.app.plan()} className={cn(buttonVariants({ variant: 'outline' }), 'w-fit')}>{t('pricing.link')}</Link>
+  </Section>;
+}
 
 /** Fee policy and examples are supplied by the app; this screen only formats them. */
 export function PricingScreen({ data }: PricingScreenProps) {
@@ -37,6 +56,7 @@ export function PricingScreen({ data }: PricingScreenProps) {
         </div>
       </div>
     </Section>
+    {data.plans && <PricingPlans plans={data.plans} />}
 
     <div className="space-y-4">
       <p className="max-w-reading text-muted-foreground">{t('fixedIntro', { price: formatMoney(data.fixedExample.taskPriceCents) })}</p>
