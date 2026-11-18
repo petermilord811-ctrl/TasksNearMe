@@ -85,8 +85,10 @@ export function FindWorkRow({ card, now, active, onActiveChange, saved, onToggle
       <span className="flex size-8 shrink-0 items-center justify-center rounded-xl opacity-75" style={{ background: `color-mix(in oklab, var(--cat-${task.categorySlug}) 12%, transparent)`, color: `var(--cat-${task.categorySlug})` }}><Icon aria-hidden="true" className="size-4" /></span>
       {/* The title on one line, the reason in full under it (no "New": it's not one to act on). */}
       <div className="min-w-0 flex-1 leading-tight">
-        <h3 id={titleId} className="truncate text-sm font-semibold">
-          <Link href={routes.app.findWorkTask(task.id)} className="rounded-sm text-foreground/85 underline-offset-4 hover:text-primary hover:underline">{task.title}</Link>
+        {/* At least 24 px tall to tap (WCAG 2.5.8; text-sm alone is 17.5): padding the negative margin gives back, so the
+            row keeps its height, and above the reason line it reaches into. */}
+        <h3 id={titleId} className="min-w-0 text-sm font-semibold">
+          <Link href={routes.app.findWorkTask(task.id)} className="relative -my-1 block truncate rounded-sm py-1 text-foreground/85 underline-offset-4 hover:text-primary hover:underline">{task.title}</Link>
         </h3>
         <p className="mt-0.5 flex min-w-0 items-start gap-1.5 text-xs text-muted-foreground">
           <Info aria-hidden="true" className="mt-px size-3.5 shrink-0" /><span className="min-w-0"><span>{t(`blockedReasons.${card.blockedReason}`)}</span> <span aria-hidden="true">·</span> <span className="whitespace-nowrap tabular-nums">{budget}</span></span>
