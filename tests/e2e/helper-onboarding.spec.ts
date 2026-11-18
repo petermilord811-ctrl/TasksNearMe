@@ -53,12 +53,13 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
   await page.getByRole('button', { name: 'Add a note' }).click();
   await page.getByLabel('About your yard cleanup (optional)').fill('Leaves, weeding, and light hand pruning.');
   await page.getByRole('button', { name: 'Next: Where you help' }).click();
-  await expect(page).toHaveURL(/\/onboarding\/area$/);
+  // The part is in the address's fragment (the page's path stays).
+  await expect(page).toHaveURL(/\/onboarding\/profile#area$/);
   await expect(page.getByLabel('Home area')).toHaveValue('area_north_loop');
   await page.getByRole('button', { name: 'Next: Introduce yourself' }).click();
 
   // Introduce yourself, with the helper agreement
-  await expect(page).toHaveURL(/\/onboarding\/profile$/);
+  await expect(page).toHaveURL(/\/onboarding\/profile#about$/);
   await page.getByLabel('Headline').fill('Careful yard help in North Loop');
   await page.getByLabel('About you', { exact: true }).fill('I rake, weed, and tidy yards carefully, and I bag everything for curbside pickup.');
   await page.getByRole('button', { name: 'Save and continue' }).click();

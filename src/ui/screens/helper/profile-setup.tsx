@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useForm, useWatch, type FieldValues, type Path, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,11 +24,16 @@ import { SetupServices } from './setup-services';
 /** The profile's three parts, in the order setup asks for them (plan 9.11). */
 export const SETUP_PARTS = ['services', 'area', 'about'] as const;
 export type SetupPart = (typeof SETUP_PARTS)[number];
-/** Each part's onboarding step (its address). */
-const STEP_OF: Record<SetupPart, OnboardingStep> = { services: 'services', area: 'area', about: 'profile' };
-const PART_OF: Partial<Record<OnboardingStep, SetupPart>> = { services: 'services', area: 'area', profile: 'about' };
 const AUTOSAVE_MS = 1500;
-const SETUP_PATH = /\/app\/helper\/onboarding\/(profile|services|area)$/;
+
+/**
+ * The part the address names in its fragment (`#services`, `#area`, `#about`). Never in its path: a save refreshes the
+ * page for the address, and another path is another page, which React starts over (keeping this one hidden).
+ */
+function partInUrl(): SetupPart | undefined {
+  const name = window.location.hash.slice(1);
+  return SETUP_PARTS.find((part) => part === name);
+}
 
 type Status = 'idle' | 'saving' | 'saved' | 'unsaved' | 'invalid' | 'agreement' | 'failed';
 
@@ -88,13 +93,13 @@ function showFieldErrors<T extends FieldValues>(form: UseFormReturn<T>, result: 
 export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingPageData; handlers: HelperOnboardingHandlers }) {
   const t = useTranslations('helperOnboarding.setup');
   const router = useRouter();
-  const pathname = usePathname();
   const id = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const top = useRef<HTMLDivElement>(null);
   const key = storageKey(data.person);
 
-  const [part, setPart] = useState<SetupPart>(() => startingPart(data));
+  const [firstPart] = useState<SetupPart>(() => startingPart(data));
+  const [part, setPart] = useState<SetupPart>(firstPart);
   const [saved, setSaved] = useState(() => savedParts(data));
   const [status, setStatus] = useState<Status>('idle');
   const [pending, setPending] = useState(false);
@@ -128,20 +133,6 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
     // After the first paint (a notice, not part of the server's page).
     if (SETUP_PARTS.some(fits)) requestAnimationFrame(() => setNotice('restored'));
     // Once, on mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // The address follows the part, so a reload or a link lands on it; the browser's Back moves between parts.
-  const urlPart = PART_OF[(pathname.match(SETUP_PATH)?.[1] ?? '') as OnboardingStep];
-  const [seenUrlPart, setSeenUrlPart] = useState(urlPart);
-  if (urlPart !== seenUrlPart) {
-    setSeenUrlPart(urlPart);
-    if (urlPart && urlPart !== part) setPart(urlPart);
-  }
-  useEffect(() => {
-    // On arrival at /profile showing another part, the address says which part this is.
-    if (urlPart && urlPart !== part) window.history.replaceState(window.history.state, '', pathname.replace(SETUP_PATH, `/app/helper/onboarding/${STEP_OF[part]}`));
-    // Only on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -224,18 +215,43 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function goTo(next: SetupPart) {
+  /** Shows a part. `move` (when people go to it) clears the notice, scrolls to the setup's top and focuses its heading. */
+  function show(next: SetupPart, move = true) {
     setPart(next);
     setResult(undefined);
-    setNotice(null);
     setStatus(changed(next) ? 'unsaved' : saved[next] ? 'saved' : 'idle');
-    if (SETUP_PATH.test(pathname)) window.history.pushState(null, '', pathname.replace(SETUP_PATH, `/app/helper/onboarding/${STEP_OF[next]}`));
+    if (!move) return;
+    setNotice(null);
     requestAnimationFrame(() => {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       top.current?.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
       heading.current?.focus({ preventScroll: true });
     });
   }
+
+  function goTo(next: SetupPart) {
+    show(next);
+    window.history.pushState(null, '', `#${next}`);
+  }
+
+  // The address's fragment follows the part, so a reload lands on it and the browser's Back moves between parts.
+  const showLatest = useRef(show);
+  useEffect(() => {
+    showLatest.current = show;
+  });
+  useEffect(() => {
+    const follow = () => showLatest.current(partInUrl() ?? firstPart);
+    window.addEventListener('popstate', follow);
+    // A reload or a link naming another part opens it, once the page has hydrated.
+    const named = partInUrl();
+    const frame = named && named !== firstPart ? requestAnimationFrame(() => showLatest.current(named, false)) : undefined;
+    return () => {
+      window.removeEventListener('popstate', follow);
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
+    // Once, on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function next() {
     if (pending) return;

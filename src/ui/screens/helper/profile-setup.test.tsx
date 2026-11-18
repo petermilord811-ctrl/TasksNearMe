@@ -20,7 +20,7 @@ beforeEach(() => {
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
 });
-afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); window.history.replaceState(null, '', '/'); });
 
 const ok = (redirectTo?: string): ActionResult => ({ ok: true, code: 'saved', ...(redirectTo ? { redirectTo } : {}) });
 function show(data: HelperOnboardingPageData, handlers: Partial<HelperOnboardingHandlers> = {}): ReactElement {
@@ -69,6 +69,28 @@ describe('helper setup, the profile in one flow (plan 9.11)', () => {
     await user.click(screen.getByRole('button', { name: /Next: Introduce yourself/ }));
     await waitFor(() => expect(onSaveArea).toHaveBeenCalledWith(expect.objectContaining({ where: 'market', areaId: 'area_mueller' })));
     expect(await screen.findByRole('heading', { level: 2, name: 'Introduce yourself' })).toBeVisible();
+  });
+
+  it('keeps the part in the address’s fragment, never its path, and follows the browser’s Back and a reload', async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/app/helper/onboarding/services');
+    render(show(onboardingSetupServicesChosen, { onSaveServices: vi.fn(async () => ok()) }));
+    await user.click(screen.getByRole('button', { name: /Next: Where you help/ }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Where you help' })).toBeVisible();
+    // Another path would be another page: a save refreshes the page for the address, and React would start it over.
+    expect(window.location.pathname).toBe('/app/helper/onboarding/services');
+    expect(window.location.hash).toBe('#area');
+
+    // The browser's Back to the address without a fragment: the part the page opened with.
+    window.history.replaceState(null, '', '/app/helper/onboarding/services');
+    act(() => { window.dispatchEvent(new PopStateEvent('popstate')); });
+    expect(await screen.findByRole('heading', { level: 2, name: 'What you do' })).toBeVisible();
+    cleanup();
+
+    // A reload of an address naming a part opens it.
+    window.history.replaceState(null, '', '/app/helper/onboarding/services#area');
+    render(show(onboardingSetupServicesChosen));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Where you help' })).toBeVisible();
   });
 
   it('fills Introduce yourself from a written example without Claude, needs the agreement, then goes on to the checks', async () => {

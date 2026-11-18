@@ -62,9 +62,10 @@ test('a new helper sets up their profile in one flow and goes on to the checks',
   await assemblyPrice.fill('65');
   await page.getByRole('button', { name: 'Next: Where you help' }).click();
 
-  // Where you help: the address follows the part; a reload keeps the chosen neighborhood.
+  // Where you help: the address's fragment follows the part (never its path: a save refreshes the page for the
+  // address); a reload opens the same part and keeps the chosen neighborhood.
   await expect(part(page, 'Where you help')).toBeVisible();
-  await expect(page).toHaveURL(/\/app\/helper\/onboarding\/area$/);
+  await expect(page).toHaveURL(/\/app\/helper\/onboarding\/profile#area$/);
   const homeArea = page.getByLabel('Home area');
   await homeArea.selectOption({ index: 1 });
   const chosen = await homeArea.inputValue();
@@ -83,6 +84,11 @@ test('a new helper sets up their profile in one flow and goes on to the checks',
 
   // Introduce yourself: a photo with its adjust step, a draft, the live card, and the agreement.
   await expect(part(page, 'Introduce yourself')).toBeVisible();
+  // The browser's Back and Forward move between the parts too.
+  await page.goBack();
+  await expect(part(page, 'Where you help')).toBeVisible();
+  await page.goForward();
+  await expect(part(page, 'Introduce yourself')).toBeVisible();
   const photo = await sharp({ create: { width: 1200, height: 800, channels: 3, background: { r: 120, g: 90, b: 160 } } }).jpeg().toBuffer();
   const adjust = page.getByRole('dialog', { name: 'Adjust your photo' });
   await untilShown(adjust, () => page.getByLabel('Add a photo').setInputFiles({ name: 'me.jpg', mimeType: 'image/jpeg', buffer: photo }));
@@ -94,8 +100,11 @@ test('a new helper sets up their profile in one flow and goes on to the checks',
   if (testInfo.project.name === 'app-desktop') {
     await expect(page.getByRole('complementary', { name: 'How clients see you' }).getByText(headline)).toBeVisible();
   } else {
-    await page.getByRole('button', { name: 'See how clients see you' }).click();
-    await expect(page.getByText(headline).last()).toBeVisible();
+    // The card the button opens (the desktop's card is on the page too, hidden on phones).
+    const toggle = page.getByRole('button', { name: 'See how clients see you' });
+    const card = page.locator(`[id="${await toggle.getAttribute('aria-controls')}"]`);
+    await toggle.click();
+    await expect(card.getByText(headline)).toBeVisible();
   }
   await page.getByRole('checkbox', { name: /I agree to the Helper agreement/ }).check();
   await page.getByRole('button', { name: 'Save and continue' }).click();

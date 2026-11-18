@@ -33,7 +33,7 @@ Then **Save and continue** goes where the server says (`redirectTo`): the ID che
 
 ### Addresses
 
-`/app/helper/onboarding/profile`, `/services` and `/area` all show the flow. `services` and `area` open their part; `profile` opens the first part not yet saved (a new helper starts at What you do). Moving between parts updates the address, so a reload, the browser's Back, a notification link or the editor's links land on the right part. The steps after the profile keep their pages.
+`/app/helper/onboarding/profile`, `/services` and `/area` all show the flow. `services` and `area` open their part; `profile` opens the first part not yet saved (a new helper starts at What you do), so notification links and the editor's links land on the right part. Moving between parts puts the part in the address's fragment (`#services`, `#area`, `#about`) and never changes its path, so a reload and the browser's Back and Forward land on the right part too. (Changing the path made the page start over after a save: a save refreshes the page for the current address, and another path is another page, which React starts fresh while keeping the old one hidden.) The steps after the profile keep their pages.
 
 ### Back and Next keep everything
 
