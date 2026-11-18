@@ -20,6 +20,7 @@ import { users } from '@/modules/accounts/schema';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { MAX_PHOTO_BYTES, photoFromFile } from '@/modules/files/uploads';
 import { profilePhotoOf } from '@/modules/files/photos';
+import { declinedByCancel } from '@/modules/offers/closing';
 import { offers } from '@/modules/offers/schema';
 import { initialsOf } from '@/modules/profiles/queries';
 import { files, tasks } from '@/modules/tasks/schema';
@@ -126,18 +127,9 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
   const lastVisitBySeries = new Map(lastVisits.map((visit) => [visit.seriesId, visit.startAt]));
   const offerById = new Map(offerRows.map((offer) => [offer.id, offer]));
   const bookedOffers = new Set(bookedRows.map((row) => row.offerId));
-  // A declined offer on a canceled task: canceling an open task declines the offers still in play (offers/owner.ts
-  // cancelTask, staff's close_task), so its conversation says the task was canceled (sweep D9), not that another
-  // offer was chosen; one the client declined earlier reads the same, as nobody was chosen. Booking an offer declines
-  // the others in the same step, so an offer declined at the very moment another was accepted did lose to it, and
-  // keeps saying so if the task is canceled later.
-  const canceledTaskIds = [...new Set(offerRows.filter((offer) => offer.status === 'declined' && taskById.get(offer.taskId)?.status === 'canceled').map((offer) => offer.taskId))];
-  const acceptedRows = canceledTaskIds.length
-    ? await db.select({ taskId: offers.taskId, closedAt: offers.closedAt }).from(offers).where(and(inArray(offers.taskId, canceledTaskIds), eq(offers.status, 'accepted')))
-    : [];
-  const choiceMoments = new Set(acceptedRows.flatMap((row) => (row.closedAt ? [`${row.taskId}@${row.closedAt.getTime()}`] : [])));
-  const declinedReason = (offer: typeof offers.$inferSelect, taskStatus: string): ComposerClosedReason =>
-    taskStatus === 'canceled' && !(offer.closedAt && choiceMoments.has(`${offer.taskId}@${offer.closedAt.getTime()}`)) ? 'task_canceled' : 'offer_declined';
+  // A declined offer whose task's cancellation declined it says the task was canceled (sweep D9), not that another
+  // offer was chosen: offers/closing.ts has the rule, shared with the offer page and My offers.
+  const canceledOffers = await declinedByCancel(db, offerRows, (taskId) => taskById.get(taskId)?.status);
   for (const thread of list) {
     const task = taskById.get(thread.taskId);
     if (!task) continue;
@@ -175,7 +167,7 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
       const open = ['pending', 'stale'].includes(offer.status) && offer.expiresAt > now;
       const closed = !open && !booked;
       // An offer still pending past its expiry is expired, whether or not the job runner has marked it yet.
-      const closedReason: ComposerClosedReason = offer.status === 'declined' ? declinedReason(offer, task.status) : offer.status === 'withdrawn' ? 'offer_withdrawn' : offer.status === 'accepted' ? 'offer_ended' : 'offer_expired';
+      const closedReason: ComposerClosedReason = offer.status === 'declined' ? (canceledOffers.has(offer.id) ? 'task_canceled' : 'offer_declined') : offer.status === 'withdrawn' ? 'offer_withdrawn' : offer.status === 'accepted' ? 'offer_ended' : 'offer_expired';
       out.set(thread.id, {
         title: task.title,
         subject: viewerId === task.posterUserId ? { kind: 'offer_for_client', taskId: thread.taskId, offerId: offer.id } : { kind: 'task_for_helper', taskId: thread.taskId },

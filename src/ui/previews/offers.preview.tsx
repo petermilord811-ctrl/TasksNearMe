@@ -1,5 +1,5 @@
 import { ACTION_ERROR_CODES, routes, type AppShellHandlers, type OfferDetailPageData, type OfferView, type PreviewEntry } from '@/contracts';
-import { deskOfferDetailData, deskOfferExpiredDetailData, deskOfferJordan, deskOfferLee, deskOfferSam, deskOfferSamExpired, deskOfferSamStale, deskOwnerView, fakeHandler, mayaShell } from '@/fixtures';
+import { deskOfferDetailData, deskOfferExpiredDetailData, deskOfferTaskCanceledDetailData, deskOfferJordan, deskOfferLee, deskOfferSam, deskOfferSamExpired, deskOfferSamStale, deskOwnerView, fakeHandler, mayaShell } from '@/fixtures';
 import { OfferCard } from '@/ui/components/offers/offer-card';
 import { OfferComparison } from '@/ui/components/offers/offer-comparison';
 import { OfferDetailScreen } from '@/ui/screens/tasks/offer-detail-screen';
@@ -36,6 +36,7 @@ export const offerPreviews: PreviewEntry[] = [
   detail('default', copy.previews.detail, deskOfferDetailData),
   detail('default-with-tabs', copy.previews.detail, deskOfferDetailData, onAction, 'tabs'),
   detail('masked-message', copy.previews.masked, { ...deskOfferDetailData, offer: deskOfferLee }),
+  detail('task-canceled', copy.previews.detailTaskCanceled, deskOfferTaskCanceledDetailData),
   detail('updated', copy.previews.updated, { ...deskOfferDetailData, offer: deskOfferSam }),
   detail('stale', copy.previews.stale, { ...deskOfferDetailData, offer: deskOfferSamStale }),
   detail('expired', copy.previews.detailExpired, deskOfferExpiredDetailData),

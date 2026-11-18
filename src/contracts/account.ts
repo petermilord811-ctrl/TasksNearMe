@@ -21,6 +21,8 @@ export const NOTIFICATION_TYPES = [
   'offer_received',
   'offer_updated',
   'offer_declined',
+  /** A task the helper had an open offer on was canceled (its cancellation declined the offer: sweep D9). */
+  'task_canceled',
   'booking_confirmed',
   'booking_canceled',
   'helper_on_the_way',

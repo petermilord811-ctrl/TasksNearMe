@@ -25,8 +25,10 @@ export function useBookingStatus(status: BookingStatus, viewer: ViewerRole): Sta
   return { label: t(`booking.${viewer}.${status}`), tone: bookingTones[status] };
 }
 
-export function useOfferStatus(status: OfferStatus, viewer: ViewerRole): StatusLabel {
+/** `taskCanceled`: the offer was declined because its task was canceled (sweep D9), so "Task canceled", not "Not selected". */
+export function useOfferStatus(status: OfferStatus, viewer: ViewerRole, options: { taskCanceled?: boolean } = {}): StatusLabel {
   const t = useTranslations('status');
+  if (status === 'declined' && options.taskCanceled) return { label: t('offer.task_canceled'), tone: offerTones.declined };
   return { label: t(status === 'pending' ? `offer.pending_${viewer}` : `offer.${status}`), tone: status === 'pending' && viewer === 'poster' ? 'brand' : offerTones[status] };
 }
 

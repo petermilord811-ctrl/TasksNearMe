@@ -40,6 +40,11 @@ export interface OfferView {
   breakdown: PriceBreakdown;
   /** From the domain: book, decline, message. Disabled ones carry a reason. */
   actions: ActionDescriptor<OfferActionId>[];
+  /**
+   * `declined` because the task was canceled while this offer was open, not because another was chosen (sweep D9):
+   * say the task was canceled, never "You declined" or "Not selected".
+   */
+  taskCanceled?: boolean;
 }
 
 export const TASK_CANCEL_REASONS = ['no_longer_needed', 'found_help_elsewhere', 'details_wrong', 'other'] as const;

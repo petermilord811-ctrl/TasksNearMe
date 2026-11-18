@@ -167,6 +167,8 @@ export interface HelperOfferView {
   breakdown: PriceBreakdown;
   /** From the domain: revise, withdraw, reconfirm (stale), message. */
   actions: ActionDescriptor<OfferActionId>[];
+  /** `declined` because the task was canceled while this offer was open, not because another was chosen (sweep D9). */
+  taskCanceled?: boolean;
 }
 
 /** `/app/find-work/[taskId]`: a task from the helper's side (never the address before booking). */
@@ -278,7 +280,7 @@ export interface HelperWorkHandlers {
 }
 
 export interface MyOfferRow {
-  offer: Pick<HelperOfferView, 'id' | 'status' | 'pricing' | 'proposedStart' | 'expiresAt' | 'revision' | 'breakdown'>;
+  offer: Pick<HelperOfferView, 'id' | 'status' | 'pricing' | 'proposedStart' | 'expiresAt' | 'revision' | 'breakdown' | 'taskCanceled'>;
   task: TaskPublicView;
 }
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, ArrowLeftRight, Award, BadgeCheck, Gift, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, LifeBuoy, MessagesSquare, CircleHelp, BellRing, Repeat, ThumbsUp, Pin, SkipForward, UserSearch, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MapPinned, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowLeftRight, Award, BadgeCheck, Gift, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, LifeBuoy, MessagesSquare, CircleHelp, BellRing, Repeat, ThumbsUp, Pin, SkipForward, UserSearch, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, ClipboardX, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MapPinned, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatMoney } from '@/shared/format';
@@ -18,6 +18,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   offer_received: MessageSquarePlus,
   offer_updated: RefreshCw,
   offer_declined: X,
+  task_canceled: ClipboardX,
   booking_confirmed: CalendarCheck,
   booking_canceled: CalendarX,
   helper_on_the_way: Navigation,

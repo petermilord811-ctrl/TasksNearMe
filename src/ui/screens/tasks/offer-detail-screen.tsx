@@ -24,7 +24,7 @@ export function OfferDetailScreen({ data, handlers, now }: OfferDetailScreenProp
   const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('offers');
   const { offer, task } = data;
-  const status = useOfferStatus(offer.status, 'poster');
+  const status = useOfferStatus(offer.status, 'poster', { taskCanceled: offer.taskCanceled });
   // What it would cost to book only matters while the offer can be booked (audit M31).
   const open = offer.status === 'pending' || offer.status === 'stale';
   return <div className="mx-auto max-w-reading space-y-6">
@@ -36,7 +36,8 @@ export function OfferDetailScreen({ data, handlers, now }: OfferDetailScreenProp
     </header>
     {!open && <p className="flex items-start gap-2.5 rounded-2xl bg-secondary/70 px-4 py-3.5 text-sm text-secondary-foreground">
       <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-      <span>{t(`closedNotice.${offer.status as Exclude<OfferStatus, 'pending' | 'stale'>}`, { helper: offer.helper.displayName, relative: formatRelative(offer.expiresAt, now) })}</span>
+      {/* Declined by the task's cancellation, not by the client (sweep D9). */}
+      <span>{offer.taskCanceled ? t('closedNotice.task_canceled') : t(`closedNotice.${offer.status as Exclude<OfferStatus, 'pending' | 'stale'>}`, { helper: offer.helper.displayName, relative: formatRelative(offer.expiresAt, now) })}</span>
     </p>}
     <section aria-labelledby="offer-helper-title" className="space-y-3">
       <h2 id="offer-helper-title" className="text-xl/7 font-semibold md:text-[22px]/7.5">{t('helper')}</h2>

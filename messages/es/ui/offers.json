@@ -24,7 +24,8 @@
     "expired": "Esta oferta venció {relative}. Aún puedes solicitar a {helper} directamente, con tu propio precio y horario.",
     "declined": "Rechazaste esta oferta.",
     "withdrawn": "{helper} retiró esta oferta.",
-    "accepted": "Reservaste esta oferta."
+    "accepted": "Reservaste esta oferta.",
+    "task_canceled": "Esta tarea se canceló, así que esta oferta se cerró."
   },
   "compareOthers": "Comparar con {count, plural, one {# otra oferta} other {# otras ofertas}}",
   "comparison": "Comparar ofertas",
@@ -47,6 +48,7 @@
     "comparison": "Comparar tres ofertas",
     "detail": "Detalles de la oferta",
     "detailExpired": "Una oferta vencida: vuelve a solicitar al ayudante",
+    "detailTaskCanceled": "Cerrada porque la tarea se canceló",
     "masked": "Oferta con datos de contacto ocultos",
     "updated": "Detalles de la oferta actualizados",
     "error": "Error en la acción de la oferta: {code}",

@@ -252,6 +252,9 @@ export const deskOfferDetailData: OfferDetailPageData = {
 /** Sam's offer after it expired: what it was, why it can't be booked, and "Request this helper". */
 export const deskOfferExpiredDetailData: OfferDetailPageData = { ...deskOfferDetailData, offer: deskOfferSamExpired, otherPendingOffers: 0 };
 
+/** Maya canceled the desk while Jordan's offer was open: it closed because of that, not because she declined it (sweep D9). */
+export const deskOfferTaskCanceledDetailData: OfferDetailPageData = { ...deskOfferDetailData, offer: { ...deskOfferJordan, status: 'declined', isNew: false, actions: [], taskCanceled: true }, otherPendingOffers: 0 };
+
 const wait = <T,>(value: T, ms = 500) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 
 export const fakeTaskOwnerHandlers: TaskOwnerHandlers = {

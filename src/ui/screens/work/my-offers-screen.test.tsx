@@ -72,6 +72,13 @@ describe('MyOffersScreen', () => {
     expect(screen.queryByText('Waiting for client')).not.toBeInTheDocument();
   });
 
+  it("says 'Task canceled' for an offer its task's cancellation declined, not 'Not selected' (sweep D9)", () => {
+    const [row] = myOffersPageData.closed;
+    renderOffers({ ...myOffersPageData, closed: [{ ...row!, offer: { ...row!.offer, taskCanceled: true } }] }, 'closed');
+    expect(screen.getByText('Task canceled')).toBeVisible();
+    expect(screen.queryByText('Not selected')).not.toBeInTheDocument();
+  });
+
   it('supports keyboard navigation to the booked tab', async () => {
     const user = userEvent.setup();
     renderOffers();

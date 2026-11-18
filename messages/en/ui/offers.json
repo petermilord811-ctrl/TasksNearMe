@@ -24,7 +24,8 @@
     "expired": "This offer expired {relative}. You can still request {helper} directly, with your own price and time.",
     "declined": "You declined this offer.",
     "withdrawn": "{helper} withdrew this offer.",
-    "accepted": "You booked this offer."
+    "accepted": "You booked this offer.",
+    "task_canceled": "This task was canceled, so this offer closed."
   },
   "compareOthers": "Compare with {count, plural, one {# other offer} other {# other offers}}",
   "comparison": "Compare offers",
@@ -47,6 +48,7 @@
     "comparison": "Compare three offers",
     "detail": "Offer details",
     "detailExpired": "An expired offer: request the helper again",
+    "detailTaskCanceled": "Closed because the task was canceled",
     "masked": "Offer with hidden contact details",
     "updated": "Updated offer details",
     "error": "Offer action error: {code}",

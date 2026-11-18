@@ -30,6 +30,7 @@ const copy: Record<NotificationType, RegExp> = {
   offer_received: /sent an offer/,
   offer_updated: /updated their offer/,
   offer_declined: /wasn't selected/,
+  task_canceled: /was canceled/,
   booking_confirmed: /is confirmed/,
   booking_canceled: /was canceled/,
   helper_on_the_way: /is on the way/,

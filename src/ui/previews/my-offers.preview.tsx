@@ -18,7 +18,8 @@ export const myOffersPreviews: PreviewEntry[] = [
   preview('default', copy.previews.default, myOffersPageData),
   preview('empty', copy.previews.empty, myOffersEmptyData),
   preview('booked', copy.previews.booked, { ...myOffersPageData, booked: [{ ...myOffersPageData.active[0], offer: { ...myOffersPageData.active[0].offer, status: 'accepted' } }] }, 'booked'),
-  preview('closed', copy.previews.closed, { ...myOffersPageData, closed: ['declined', 'withdrawn', 'expired'].map((status, index) => ({ ...myOffersPageData.closed[0], offer: { ...myOffersPageData.closed[0].offer, id: `closed-${index}`, status: status as 'declined' | 'withdrawn' | 'expired' } })) }, 'closed'),
+  // The declined statuses, and one declined because its task was canceled ("Task canceled", sweep D9).
+  preview('closed', copy.previews.closed, { ...myOffersPageData, closed: [...['declined', 'withdrawn', 'expired'].map((status, index) => ({ ...myOffersPageData.closed[0], offer: { ...myOffersPageData.closed[0].offer, id: `closed-${index}`, status: status as 'declined' | 'withdrawn' | 'expired' } })), { ...myOffersPageData.closed[0], offer: { ...myOffersPageData.closed[0].offer, id: 'closed-task-canceled', status: 'declined' as const, taskCanceled: true } }] }, 'closed'),
   preview('updated', copy.previews.updated, { ...myOffersPageData, active: [{ ...myOffersPageData.active[0], offer: { ...myOffersPageData.active[0].offer, revision: 2 } }, myOffersPageData.active[1]] }),
   preview('empty-booked', copy.previews.emptyBooked, myOffersEmptyData, 'booked'),
   preview('empty-closed', copy.previews.emptyClosed, myOffersEmptyData, 'closed'),

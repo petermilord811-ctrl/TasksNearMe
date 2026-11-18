@@ -15,6 +15,7 @@ import { bookings } from '@/modules/bookings/schema';
 import { photoFromFile } from '@/modules/files/uploads';
 import { areas, categories, markets } from '@/modules/markets/schema';
 import { offers } from '@/modules/offers/schema';
+import { declinedForCancel } from '@/modules/offers/closing';
 import { supportCases } from '@/modules/support/schema';
 import { caseRowsFor, personSummaryOf, staffById, type StaffActor } from '@/modules/support/staff';
 import { validationFailed } from '@/platform/actions/results';
@@ -173,8 +174,9 @@ export async function moderateTask(db: Db, staff: StaffActor, taskId: string, in
     case 'close_task':
       await db.transaction(async (tx) => {
         await tx.update(tasks).set({ status: 'canceled', offerCount: 0, updatedAt: now, version: task.version + 1 }).where(eq(tasks.id, task.id));
-        await tx.update(offers).set({ status: 'declined', closedAt: now, updatedAt: now }).where(and(eq(offers.taskId, task.id), inArray(offers.status, ACTIVE_OFFERS)));
-        await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'task.canceled', aggregateType: 'task', aggregateId: task.id, payload: { taskId: task.id, reason: 'staff' } });
+        const declined = await tx.update(offers).set({ status: 'declined', closedAt: now, updatedAt: now }).where(and(eq(offers.taskId, task.id), inArray(offers.status, ACTIVE_OFFERS))).returning({ id: offers.id, helperUserId: offers.helperUserId });
+        // The task is canceled for the helpers whose offers were open too: each hears it once.
+        await tx.insert(outboxEvents).values([{ id: newId('evt'), type: 'task.canceled', aggregateType: 'task', aggregateId: task.id, payload: { taskId: task.id, reason: 'staff' } }, ...declinedForCancel(task.id, declined)]);
         await tx.insert(auditLog).values(audit('task.close'));
       });
       break;

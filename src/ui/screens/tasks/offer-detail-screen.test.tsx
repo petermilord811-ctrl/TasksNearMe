@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes, type ActionResult, type OfferView } from '@/contracts';
-import { deskOfferDetailData, deskOfferLee, deskOfferSamExpired, deskOfferSamStale } from '@/fixtures';
+import { deskOfferDetailData, deskOfferLee, deskOfferSamExpired, deskOfferSamStale, deskOfferTaskCanceledDetailData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import offers from '../../../../messages/en/ui/offers.json';
 import { OfferDetailScreen } from './offer-detail-screen';
@@ -60,6 +60,14 @@ describe('OfferDetailScreen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Request this helper' }));
     expect(handler).toHaveBeenCalledExactlyOnceWith({ offerId: 'off_sam', action: 'request_helper' });
     expect(push).toHaveBeenCalledExactlyOnceWith(redirectTo);
+  });
+
+  it('says the task was canceled when that closed the offer, not "You declined" or "Not selected" (sweep D9)', () => {
+    show(deskOfferTaskCanceledDetailData.offer);
+    expect(screen.getByText('This task was canceled, so this offer closed.')).toBeVisible();
+    expect(screen.getByText('Task canceled')).toBeVisible();
+    expect(screen.queryByText('You declined this offer.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not selected')).not.toBeInTheDocument();
   });
 
   it('keeps the control busy during submission and announces a failed result', async () => {

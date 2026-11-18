@@ -29,6 +29,7 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
+import { declinedByCancel, declinedForCancel } from './closing';
 import { byAttention, offerSortKey, ownerTaskAttention, posterOfferActions, taskOwnerActions } from './domain';
 import { offers } from './schema';
 
@@ -187,13 +188,15 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
 }
 
 async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows: OfferRow[], now: Date): Promise<OfferView[]> {
-  const [helpers, facts] = await Promise.all([
+  const [helpers, facts, canceled] = await Promise.all([
     getHelperSummaries(
       rows.map((row) => row.helperUserId),
       deps.db,
     ),
     // "Reliable" helps the client compare offers (blueprint 01 P2).
     reliabilityFacts(deps.db, rows.map((row) => row.helperUserId), now),
+    // Declined by the task's cancellation, not by the client's choice (sweep D9).
+    declinedByCancel(deps.db, rows, () => task.status),
   ]);
   const masked = task.status !== 'assigned' && task.status !== 'completed';
   return rows
@@ -216,6 +219,7 @@ async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows
         isNew: row.posterSeenAt === null && ACTIVE.includes(row.status as OfferStatus),
         breakdown: quoteBreakdown(deps.fees, pricing, { expenseAllowanceCents: task.expenseAllowanceCents }),
         actions: posterOfferActions(row, task, now),
+        ...(canceled.has(row.id) ? { taskCanceled: true } : {}),
       };
     });
 }
@@ -335,17 +339,16 @@ export async function cancelTask(db: Db, userId: string, taskId: string, reason:
   if (task.status !== 'open') return { ok: false, code: 'not_allowed' };
   await db.transaction(async (tx) => {
     await tx.update(tasks).set({ status: 'canceled', offerCount: 0, updatedAt: now, version: task.version + 1 }).where(eq(tasks.id, taskId));
-    await tx
+    const declined = await tx
       .update(offers)
       .set({ status: 'declined', closedAt: now, updatedAt: now })
-      .where(and(eq(offers.taskId, taskId), inArray(offers.status, ACTIVE)));
-    await tx.insert(outboxEvents).values({
-      id: newId('evt'),
-      type: 'task.canceled',
-      aggregateType: 'task',
-      aggregateId: taskId,
-      payload: { taskId, reason },
-    });
+      .where(and(eq(offers.taskId, taskId), inArray(offers.status, ACTIVE)))
+      .returning({ id: offers.id, helperUserId: offers.helperUserId });
+    await tx.insert(outboxEvents).values([
+      { id: newId('evt'), type: 'task.canceled', aggregateType: 'task', aggregateId: taskId, payload: { taskId, reason } },
+      // Each helper whose offer was still open hears the task was canceled, once (an offer closed before isn't told).
+      ...declinedForCancel(taskId, declined),
+    ]);
     await tx.insert(auditLog).values({
       id: newId('aud'),
       actorId: userId,

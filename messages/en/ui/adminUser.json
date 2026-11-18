@@ -104,6 +104,7 @@
     "offer_received": "New offer",
     "offer_updated": "Offer updated",
     "offer_declined": "Offer not selected",
+    "task_canceled": "Task canceled",
     "booking_confirmed": "Booking confirmed",
     "booking_canceled": "Booking canceled",
     "helper_on_the_way": "Helper on the way",

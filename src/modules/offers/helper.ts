@@ -58,6 +58,7 @@ import {
   type HelperOfferFacts,
   type TaskOfferFacts,
 } from './helper-domain';
+import { declinedByCancel } from './closing';
 import { offerPricing } from './owner';
 import { offers } from './schema';
 
@@ -655,6 +656,8 @@ export async function getMyOffers(db: Db, userId: string, now: Date): Promise<My
     ),
   );
   const feesByMarket = new Map<string, FeeSchedule | null>();
+  // Declined by the task's cancellation, not by the client's choice (sweep D9): "Task canceled", not "Not selected".
+  const canceled = await declinedByCancel(db, rows, (taskId) => views.get(taskId)?.row.status);
   const toRow = async (row: OfferRow): Promise<MyOfferRow | null> => {
     const found = views.get(row.taskId);
     if (!found) return null;
@@ -672,6 +675,7 @@ export async function getMyOffers(db: Db, userId: string, now: Date): Promise<My
         expiresAt: row.expiresAt.toISOString(),
         revision: row.revision,
         breakdown: quoteBreakdown(fees, pricing),
+        ...(canceled.has(row.id) ? { taskCanceled: true } : {}),
       },
       task: found.view,
     };

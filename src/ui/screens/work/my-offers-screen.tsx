@@ -33,7 +33,7 @@ export function OfferRow({ row, now, tab, headingLevel = 2 }: { row: MyOfferRow;
   const t = useTranslations('myOffers');
   const taskCopy = useTranslations('taskCard');
   const { offer, task } = row;
-  const status = useOfferStatus(offer.status, 'helper');
+  const status = useOfferStatus(offer.status, 'helper', { taskCanceled: offer.taskCanceled });
   const CategoryIcon = CATEGORY_ICONS[task.categorySlug];
   const price = offer.pricing.type === 'fixed' ? formatMoney(offer.pricing.priceCents) : t('hourlyPrice', {
     rate: formatMoney(offer.pricing.rateCents), hours: formatHours(offer.pricing.estimatedHours), cap: formatHours(offer.pricing.hoursCap),

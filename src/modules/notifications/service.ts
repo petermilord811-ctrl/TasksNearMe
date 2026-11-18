@@ -173,7 +173,9 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
     case 'offer.declined': {
       const helper = text(p.helperUserId);
       const taskId = text(p.taskId);
-      return helper && taskId ? [{ userId: helper, type: 'offer_declined', target: { kind: 'find_work_task', taskId }, title: await taskTitle(db, taskId) }] : [];
+      // Declined because the task was canceled while the offer was open (offers/closing.ts): say so, not "wasn't selected".
+      const type = p.reason === 'task_canceled' ? 'task_canceled' : 'offer_declined';
+      return helper && taskId ? [{ userId: helper, type, target: { kind: 'find_work_task', taskId }, title: await taskTitle(db, taskId) }] : [];
     }
     case 'booking.confirmed':
     case 'booking.on_my_way':
