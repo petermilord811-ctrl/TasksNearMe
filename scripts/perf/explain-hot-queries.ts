@@ -37,7 +37,7 @@ async function main() {
   const { db } = await import('../../src/platform/db/client');
   const { getFindWorkPageData } = await import('../../src/modules/offers/helper');
   const { listBoardTasks, listRecentOpenTasks } = await import('../../src/modules/tasks/queries');
-  const { getAppHome } = await import('../../src/modules/home/service');
+  const { getDashboard } = await import('../../src/modules/home/service');
   const { getBookingView, getBookingsPage } = await import('../../src/modules/bookings/hub');
   const { hubDeps } = await import('../../src/modules/bookings/server');
   const { getInbox, getThreadPage } = await import('../../src/modules/messaging/service');
@@ -63,8 +63,8 @@ async function main() {
     ['find work: a category, nearest', () => getFindWorkPageData(db, helper.id, { category: 'furniture-assembly', sort: 'nearest' }, now)],
     ['public board and map', () => listBoardTasks(db, { marketId: market.id, query: { page: 1 } as never, now })],
     ['public category page', () => listRecentOpenTasks(db, { marketId: market.id, categorySlug: 'furniture-assembly', limit: 6, now })],
-    ['client home', () => getAppHome(db, { id: poster.id, firstName: poster.first_name, mode: 'poster' }, now)],
-    ['helper home', () => getAppHome(db, { id: helper.id, firstName: helper.first_name, mode: 'helper' }, now)],
+    ['client home', () => getDashboard(db, { id: poster.id, firstName: poster.first_name, mode: 'poster', timeZone: 'America/New_York' }, {}, now)],
+    ['helper home', () => getDashboard(db, { id: helper.id, firstName: helper.first_name, mode: 'helper', timeZone: 'America/New_York' }, {}, now)],
     ['bookings list', () => getBookingsPage(db, poster.id, now)],
     ['booking hub', () => getBookingView(hubDeps(), poster.id, booking.id, now)],
     ['inbox', () => getInbox(db, poster.id, now)],

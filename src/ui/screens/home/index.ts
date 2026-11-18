@@ -1,1 +1,1 @@
-export { HomeScreen, type HomeScreenProps } from './home-screen';
+export { DashboardScreen, type DashboardScreenProps } from './dashboard-screen';

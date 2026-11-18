@@ -1,12 +1,16 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { getAppHome } from '@/modules/home/service';
+import { getDashboard } from '@/modules/home/service';
 import { offers } from '@/modules/offers/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 afterAll(() => pool.end());
+
+const ZONE = 'America/Chicago';
+const ana = { id: 'usr_ana', firstName: 'Ana', mode: 'poster' as const, timeZone: ZONE };
+const jordan = { id: 'usr_jordan', firstName: 'Jordan', mode: 'helper' as const, timeZone: ZONE };
 
 beforeAll(async () => {
   // Ana's own copy of the desk with one new offer from Jordan.
@@ -17,29 +21,75 @@ beforeAll(async () => {
   await db.insert(offers).values({ ...offer, id: 'off_home_ana', taskId: 'tsk_home_ana', status: 'pending', posterSeenAt: null, revision: 1, expiresAt: new Date(Date.now() + 86_400_000) });
 });
 
-describe('the home', () => {
-  it("shows the client's new offers in Needs your attention, and their open tasks", async () => {
-    const home = await getAppHome(db, { id: 'usr_ana', firstName: 'Ana', mode: 'poster' }, new Date());
-    if (home.mode !== 'poster') throw new Error('expected the client home');
+describe('the dashboard (completion plan 9.9)', () => {
+  it("shows a client's new offers in Needs your attention, their tasks first, and the offer waiting on them", async () => {
+    const home = await getDashboard(db, ana, {}, new Date());
     expect(home.firstName).toBe('Ana');
-    expect(home.attention).toContainEqual(
-      expect.objectContaining({ kind: 'review_offers', count: 1, target: { kind: 'task', taskId: 'tsk_home_ana' } }),
-    );
-    expect(home.openTasks.map((t) => t.id)).toContain('tsk_home_ana');
+    expect(home.sides).toEqual({ client: true, helper: false });
+    expect(home.attention).toContainEqual(expect.objectContaining({ kind: 'review_offers', count: 1, target: { kind: 'task', taskId: 'tsk_home_ana' } }));
+    expect(home.query.tab).toBe('tasks');
+    expect(home.tabs.map((tab) => tab.id)).toEqual(['tasks', 'offers', 'bookings']);
+    const task = home.items.find((item) => item.key === 'task:tsk_home_ana');
+    expect(task).toMatchObject({ stage: 'open', needsYou: true, offers: { count: 1, new: 1 }, target: { kind: 'task', taskId: 'tsk_home_ana' } });
+    // The general area only: a public point, never an address.
+    expect(task?.location.kind).toBe('local');
+    expect(JSON.stringify(task)).not.toMatch(/line1|zip|accessNotes/);
+
+    const offersTab = await getDashboard(db, ana, { tab: 'offers' }, new Date());
+    expect(offersTab.items).toContainEqual(expect.objectContaining({ key: 'offer_received:off_home_ana', side: 'client', needsYou: true, target: { kind: 'offer', taskId: 'tsk_home_ana', offerId: 'off_home_ana' } }));
+    expect(offersTab.tabs.find((tab) => tab.id === 'offers')!.count).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows a bookable helper's earnings and nearby tasks, without setup", async () => {
-    const home = await getAppHome(db, { id: 'usr_jordan', firstName: 'Jordan', mode: 'helper' }, new Date());
-    if (home.mode !== 'helper') throw new Error('expected the helper home');
-    expect(home.setup.bookable).toBe(true);
-    expect(home.attention.map((a) => a.kind)).not.toContain('finish_setup');
-    expect(home.suggestions.every((card) => !card.blockedReason && !card.myOffer)).toBe(true);
-    expect(home.earnings.upcomingCents).toBeGreaterThanOrEqual(0);
+  it('filters by status, category and words, and counts each tab under them', async () => {
+    const done = await getDashboard(db, ana, { status: 'done' }, new Date());
+    expect(done.items.every((item) => item.stage === 'done')).toBe(true);
+    const yard = await getDashboard(db, ana, { category: 'yard-cleanup' }, new Date());
+    expect(yard.items.every((item) => item.categorySlug === 'yard-cleanup')).toBe(true);
+    const words = await getDashboard(db, ana, { q: 'zzz-no-such-words' }, new Date());
+    expect(words.items).toEqual([]);
+    // Searching adds the open tasks nearby for a client.
+    expect(words.tabs.map((tab) => tab.id)).toEqual(['tasks', 'offers', 'bookings', 'nearby']);
+    expect(words.tabs.every((tab) => tab.count === 0)).toBe(true);
+    expect(words.seeAll).toEqual({ kind: 'tasks' });
+  });
+
+  it("shows a bookable helper's jobs first, their earnings, and nearby matches they haven't offered on", async () => {
+    const home = await getDashboard(db, jordan, {}, new Date());
+    expect(home.setup).toBeUndefined();
+    expect(home.attention.map((item) => item.kind)).not.toContain('finish_setup');
+    expect(home.query.tab).toBe('bookings');
+    expect(home.tabs.map((tab) => tab.id)).toEqual(['bookings', 'offers', 'nearby']);
+    expect(home.earnings!.upcomingCents).toBeGreaterThanOrEqual(0);
+    const nearby = await getDashboard(db, jordan, { tab: 'nearby' }, new Date());
+    expect(nearby.items.every((item) => item.kind === 'nearby' && item.side === 'helper' && item.target.kind === 'find_work_task')).toBe(true);
+    const offered = new Set((await db.select({ taskId: offers.taskId }).from(offers).where(eq(offers.helperUserId, 'usr_jordan'))).map((row) => row.taskId));
+    expect(nearby.items.some((item) => item.target.kind === 'find_work_task' && offered.has(item.target.taskId))).toBe(false);
+    expect(nearby.seeAll).toEqual({ kind: 'find_work', query: {} });
   });
 
   it('asks a helper who is not set up to finish first', async () => {
-    const home = await getAppHome(db, { id: 'usr_priya', firstName: 'Priya', mode: 'helper' }, new Date());
-    if (home.mode !== 'helper') throw new Error('expected the helper home');
+    const home = await getDashboard(db, { id: 'usr_priya', firstName: 'Priya', mode: 'helper', timeZone: ZONE }, {}, new Date());
     expect(home.attention[0]).toMatchObject({ kind: 'finish_setup', target: { kind: 'onboarding' } });
+    expect(home.setup?.bookable).toBe(false);
+  });
+
+  it('shows both sides to a helper who also posts, in helper mode', async () => {
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    await db.insert(tasks).values({ ...desk!, id: 'tsk_home_jordan', slug: 'home-jordan-desk', posterUserId: 'usr_jordan', status: 'open', offerCount: 0, version: 1 });
+    try {
+      const home = await getDashboard(db, jordan, { tab: 'tasks' }, new Date());
+      expect(home.sides).toEqual({ client: true, helper: true });
+      expect(home.tabs.map((tab) => tab.id)).toEqual(['bookings', 'offers', 'nearby', 'tasks']);
+      expect(home.items.map((item) => item.key)).toContain('task:tsk_home_jordan');
+    } finally {
+      await db.delete(tasks).where(eq(tasks.id, 'tsk_home_jordan'));
+    }
+  });
+
+  it('shows the list for a map where no map helps', async () => {
+    // Ana's tasks are all at her home: one neighborhood.
+    const home = await getDashboard(db, ana, { view: 'map' }, new Date());
+    if (!home.mapAvailable) expect(home.query.view).toBe('list');
+    else expect(home.query.view).toBe('map');
   });
 });

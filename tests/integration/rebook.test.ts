@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
-import { getAppHome } from '@/modules/home/service';
+import { getDashboard } from '@/modules/home/service';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { notifications } from '@/modules/notifications/schema';
 import { dispatchNotifications } from '@/modules/notifications/service';
@@ -118,7 +118,7 @@ describe('my clients and rebooking', () => {
     await dispatchNotifications(db, new Date(), 10_000);
     const notes = await db.select().from(notifications).where(and(eq(notifications.userId, 'usr_ana'), eq(notifications.type, 'rebook_proposed')));
     expect(notes.some((note) => note.target.kind === 'proposal' && note.target.proposalId === row!.id)).toBe(true);
-    const home = await getAppHome(db, { id: 'usr_ana', firstName: 'Ana', mode: 'poster' }, now());
+    const home = await getDashboard(db, { id: 'usr_ana', firstName: 'Ana', mode: 'poster', timeZone: 'America/Chicago' }, {}, now());
     expect(home.attention).toContainEqual(expect.objectContaining({ kind: 'answer_proposal', target: { kind: 'proposal', proposalId: row!.id } }));
     expect(await withdrawProposal(db, 'usr_sam', row!.id, now())).toEqual({ ok: true, code: 'updated' });
   });

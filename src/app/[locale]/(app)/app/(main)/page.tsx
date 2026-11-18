@@ -3,30 +3,36 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
-import { getAppHome } from '@/modules/home/service';
+import { searchWithAi } from '@/modules/home/actions';
+import { getDashboard } from '@/modules/home/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
-import { HomeScreen } from '@/ui/screens/home';
+import { DashboardScreen } from '@/ui/screens/home';
 import { requestNow } from '@/platform/clock';
+import { parseDashboardQuery } from '@/shared/dashboard';
 
 export const metadata: Metadata = { title: 'Home', robots: { index: false } };
 
-/** The signed-in home for the viewer's mode: needs your attention, then what's coming up. */
-function AppHomePage() {
+/**
+ * The signed-in home as a dashboard (completion plan 9.9): what needs the person, then their tasks, offers and
+ * bookings with the filters in the URL, and AI search where the plan allows it.
+ */
+function AppHomePage({ searchParams }: PageProps<'/[locale]/app'>) {
   return (
-    <Suspense fallback={<PageSkeleton variant="cards" />}>
-      <Home />
+    <Suspense fallback={<PageSkeleton variant="list" />}>
+      <Home searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function Home() {
-  const viewer = await getViewer();
+async function Home({ searchParams }: Pick<PageProps<'/[locale]/app'>, 'searchParams'>) {
+  const [viewer, params] = await Promise.all([getViewer(), searchParams]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.home()));
   const now = await requestNow();
-  const data = await getAppHome(db, { id: viewer.user.id, firstName: viewer.user.firstName, mode: viewer.user.mode }, now);
-  return <HomeScreen data={data} now={now.toISOString()} />;
+  const data = await getDashboard(db, { id: viewer.user.id, firstName: viewer.user.firstName, mode: viewer.user.mode, timeZone: viewer.user.timeZone }, parseDashboardQuery(params), now);
+  // Ask AI only where the plan allows it (completion plan 9.13); the Server Action checks again and counts.
+  return <DashboardScreen data={data} now={now.toISOString()} handlers={data.aiSearch.allowed ? { onAiSearch: searchWithAi } : {}} />;
 }
 
 export default withClientMessages('[locale]/(app)/app/(main)/page.tsx', AppHomePage);

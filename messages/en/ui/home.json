@@ -4,23 +4,219 @@
     "afternoon": "Good afternoon, {firstName}",
     "evening": "Good evening, {firstName}"
   },
-  "description": {
-    "poster": "A little help, one task at a time. Here’s what’s happening.",
-    "helper": "Your next steps and the tasks coming up."
+  "summary": {
+    "needsYou": "{count, plural, =0 {Nothing needs you right now} one {# thing needs you} other {# things need you}}",
+    "upcoming": "{count, plural, =0 {No bookings coming up} one {# booking coming up} other {# bookings coming up}}"
   },
-  "postTask": "Post a task",
-  "findWork": "Find work",
-  "allBookings": "All bookings",
-  "myTasks": "My tasks",
-  "myOffers": "My offers",
-  "earningsLink": "Earnings",
   "sections": {
     "attention": "Needs your attention",
+    "earnings": "Earnings at a glance",
+    "lists": "Your tasks, offers and bookings"
+  },
+  "caughtUp": "You’re all caught up. Anything that needs you will show here.",
+  "earnings": {
     "upcoming": "Upcoming",
-    "openTasks": "Open tasks",
-    "activeOffers": "Active offers",
-    "nearby": "Nearby tasks",
-    "earnings": "Earnings at a glance"
+    "onTheWay": "On the way",
+    "link": "Open Earnings"
+  },
+  "search": {
+    "label": {
+      "poster": "Search your tasks, offers and bookings",
+      "helper": "Search your jobs, offers and tasks nearby"
+    },
+    "placeholder": {
+      "poster": "What do you need help with?",
+      "helper": "Describe the work you want"
+    },
+    "placeholderPlain": {
+      "poster": "Search your tasks and bookings",
+      "helper": "Search your jobs and offers"
+    },
+    "submit": "Search",
+    "clear": "Clear search",
+    "ai": "Ask AI",
+    "aiLong": "Describe it and ask AI",
+    "remaining": "{count, plural, one {# AI search left this month} other {# AI searches left this month}}",
+    "remainingRenews": "{count, plural, one {# AI search left this month} other {# AI searches left this month}} · renews {date}",
+    "needsPlan": "Describe what you need and AI finds helpers and tasks for you. It comes with a plan.",
+    "monthlyLimit": "You’ve used this month’s AI searches.",
+    "monthlyLimitRenews": "You’ve used this month’s AI searches. They renew {date}.",
+    "seePlans": "See plans",
+    "matches": "{count, plural, =0 {No matches for “{q}” in this list} one {# match for “{q}”} other {# matches for “{q}”}}"
+  },
+  "ai": {
+    "title": "What AI found",
+    "close": "Close the AI answer",
+    "searching": "Reading what you need…",
+    "lookingFor": "Looking for",
+    "anyCategory": "Any kind of task",
+    "when": {
+      "today": "Today",
+      "this_week": "This week",
+      "this_weekend": "This weekend"
+    },
+    "near": "Near {area}",
+    "words": "Words: {words}",
+    "draft": {
+      "title": "Post it as a task",
+      "body": "A new task opens with your words and this title. You can change anything before you post it.",
+      "action": "Use this draft"
+    },
+    "helpers": {
+      "title": "Helpers who do this",
+      "empty": "No helpers for this nearby yet. Post the task and nearby helpers will see it.",
+      "seeAll": "See all helpers",
+      "jobs": "{count, plural, =0 {New on TasksNearMe} one {# task done} other {# tasks done}}"
+    },
+    "tasks": {
+      "find_work": "Open tasks that match",
+      "get_help": "Similar open tasks nearby",
+      "empty": "No open tasks match right now.",
+      "seeAllFindWork": "See more in Find work",
+      "seeAllBoard": "See all open tasks"
+    },
+    "disclaimer": "AI suggestions can be wrong. Check the details before you book or send an offer.",
+    "errors": {
+      "too_short": "Describe it in a few more words (3 to 300 characters).",
+      "ai_off": "AI search isn’t available right now. Search still finds your tasks, offers and bookings.",
+      "needs_plan": "AI search comes with a plan.",
+      "monthly_limit": "You’ve used this month’s AI searches.",
+      "prohibited": "That’s something that can’t be booked on TasksNearMe.",
+      "rate_limited": "That’s a lot of searches in a row. Wait a minute, then try again.",
+      "unavailable": "AI couldn’t answer just now. Try again, or use Search."
+    },
+    "prohibitedLink": "See what can’t be booked"
+  },
+  "lists": {
+    "tabsLabel": "Lists",
+    "tabs": {
+      "tasks": "Tasks",
+      "offers": "Offers",
+      "bookings": "Bookings",
+      "nearby": "Nearby"
+    },
+    "tabItems": "{count, plural, one {item} other {items}}",
+    "filtersLabel": "Filters",
+    "status": "Status",
+    "date": "Date",
+    "category": "Category",
+    "statusOptions": {
+      "active": "Active",
+      "needs_you": "Needs you",
+      "open": "Open",
+      "booked": "Booked",
+      "done": "Done"
+    },
+    "dateOptions": {
+      "any": "Any time",
+      "today": "Today",
+      "week": "Next 7 days",
+      "month": "Next 30 days"
+    },
+    "pastDateOptions": {
+      "any": "Any time",
+      "today": "Today",
+      "week": "Last 7 days",
+      "month": "Last 30 days"
+    },
+    "allCategories": "All",
+    "clear": "Clear filters",
+    "viewsLabel": "Show as",
+    "views": {
+      "list": "List",
+      "cards": "Cards",
+      "map": "Map"
+    },
+    "showing": "Showing {shown} of {count}",
+    "seeAll": {
+      "tasks": "See all your tasks",
+      "offers": "See all your offers",
+      "bookings": "See all bookings",
+      "find_work": "See more in Find work",
+      "board": "See all open tasks"
+    }
+  },
+  "item": {
+    "needsYou": "Needs you",
+    "new": "New",
+    "remote": "Remote",
+    "flexibleRange": "Flexible time",
+    "client": "Client: {name}",
+    "helper": "Helper: {name}",
+    "offers": "{count, plural, =0 {No offers yet} one {# offer} other {# offers}}",
+    "newOffers": "{count, plural, one {# new} other {# new}}",
+    "money": {
+      "budget": "Budget",
+      "offer": "Offer",
+      "total": "Total",
+      "earn": "You earn"
+    },
+    "perHour": "{rate}/h",
+    "upToHours": "up to {hours}"
+  },
+  "map": {
+    "label": "Map of the general areas in this list",
+    "group": "{count, plural, one {# item here} other {# items here}}",
+    "place": "{title}, {money}, {area}",
+    "remote": "{count, plural, one {# remote item isn’t on the map.} other {# remote items aren’t on the map.}}",
+    "privacy": "Areas are approximate. Exact addresses are never shown on the map.",
+    "close": "Close",
+    "open": "Open",
+    "empty": {
+      "title": "Nothing here has a place on the map",
+      "body": "Remote tasks have no neighborhood, and the filters may leave nothing to show.",
+      "action": "Show the list"
+    }
+  },
+  "empty": {
+    "tasks": {
+      "title": "No tasks yet",
+      "body": "Post a task to tell nearby helpers what you need. Your tasks and their offers show here.",
+      "action": "Post a task"
+    },
+    "offers": {
+      "client": {
+        "title": "No offers waiting",
+        "body": "When helpers make offers on your open tasks, they show here so you can compare them.",
+        "action": "See your tasks"
+      },
+      "helper": {
+        "title": "No offers sent yet",
+        "body": "Find a task you can help with. The offers you send show here.",
+        "action": "Find work"
+      }
+    },
+    "bookings": {
+      "client": {
+        "title": "No bookings yet",
+        "body": "When you book a helper, the booking shows here with its day and time.",
+        "action": "Find helpers"
+      },
+      "helper": {
+        "title": "No jobs booked yet",
+        "body": "When a client books you, the job shows here with its day and time.",
+        "action": "Find work"
+      }
+    },
+    "nearby": {
+      "title": "No open tasks near you right now",
+      "body": "New tasks are posted every day. Find work has more ways to search.",
+      "action": "Find work",
+      "waitingTitle": "Tasks show here once {city} opens",
+      "waitingBody": "We’ll email you the day it does. Meanwhile, finish setting up so you’re ready."
+    },
+    "filtered": {
+      "title": "Nothing matches these filters",
+      "body": "Try another status or date, or clear the filters.",
+      "action": "Clear filters"
+    },
+    "search": {
+      "title": "No matches for “{q}”",
+      "body": "Try other words, or look in another list above.",
+      "bodyAi": "Try other words, or describe what you need and ask AI.",
+      "action": "Clear search",
+      "post": "Post a task: “{q}”"
+    }
   },
   "attention": {
     "taskFallback": "this task",
@@ -63,50 +259,34 @@
       "answer_proposal": "{name} proposed a booking: {title}"
     }
   },
-  "empty": {
-    "attention": {
-      "title": "You're all caught up",
-      "body": "Anything that needs your attention will appear here."
-    },
-    "upcoming": {
-      "title": "No upcoming bookings",
-      "posterBody": "When you book a helper, your next task will appear here.",
-      "helperBody": "When a client books you, your next task will appear here."
-    },
-    "openTasks": {
-      "title": "What could you use a hand with?",
-      "body": "Post a task to tell nearby helpers what you need. Your open tasks and new offers will appear here."
-    },
-    "activeOffers": {
-      "title": "No active offers yet",
-      "body": "Find a task you can help with. The offers you send will appear here."
-    },
-    "nearby": {
-      "title": "No nearby tasks to show",
-      "body": "Check Find work for more tasks and different search options."
-    }
-  },
-  "earnings": {
-    "upcoming": "Upcoming",
-    "onTheWay": "On the way"
-  },
-  "setup": {
-    "title": "Get ready to send offers",
-    "body": "You can browse tasks while you finish setting up your helper profile.",
-    "action": "Finish setup"
-  },
   "previews": {
     "group": "Screens · Home",
-    "client": "Client · attention and upcoming tasks",
+    "client": "Client · tasks, attention and AI search",
+    "clientOffers": "Client · offers waiting",
+    "clientBookingsCards": "Client · bookings as cards",
     "clientEmpty": "Client · a fresh start",
-    "helper": "Helper · today and nearby tasks",
+    "clientFiltered": "Client · filters match nothing",
+    "clientSearch": "Client · keyword search",
+    "clientAiNeedsPlan": "Client · AI search comes with a plan",
+    "helper": "Helper · jobs, earnings and nearby",
+    "helperNearbyMap": "Helper · nearby tasks on the map",
+    "helperOffers": "Helper · offers sent",
     "helperPayoutAction": "Helper · payout action needed",
     "helperNotSetUp": "Helper · finish setting up",
+    "helperWaiting": "Helper · waiting for their city",
+    "helperDone": "Helper · done in the last 30 days",
+    "both": "Both sides · helping and getting help",
     "clientPaymentAccess": "Client · payment and access deadlines",
-    "helperEmpty": "Helper · empty sections",
     "helperInvite": "Helper · answer a booking request",
     "clientCounter": "Client · answer a counter-offer",
     "clientProposal": "Client · answer a booking proposal",
-    "helperWaiting": "Helper · waiting for their city"
+    "aiAnswerClient": "AI answer · someone who needs help",
+    "aiAnswerHelper": "AI answer · a helper looking for work",
+    "aiAnswerError": "AI answer · something went wrong",
+    "clientMap": "Client · tasks on the map",
+    "clientAiMonthlyLimit": "Client · AI searches used up this month",
+    "helperAiAnswer": "Helper · AI answer open",
+    "aiAnswerPending": "AI answer · reading",
+    "aiAnswerProhibited": "AI answer · can't be booked here"
   }
 }

@@ -4,23 +4,219 @@
     "afternoon": "Buenas tardes, {firstName}",
     "evening": "Buenas noches, {firstName}"
   },
-  "description": {
-    "poster": "Un poco de ayuda, una tarea a la vez. Esto es lo que está pasando.",
-    "helper": "Tus próximos pasos y las tareas que se acercan."
+  "summary": {
+    "needsYou": "{count, plural, =0 {Nada requiere tu atención ahora} one {# cosa requiere tu atención} other {# cosas requieren tu atención}}",
+    "upcoming": "{count, plural, =0 {Ninguna reserva próxima} one {# reserva próxima} other {# reservas próximas}}"
   },
-  "postTask": "Publicar una tarea",
-  "findWork": "Buscar trabajo",
-  "allBookings": "Todas las reservas",
-  "myTasks": "Mis tareas",
-  "myOffers": "Mis ofertas",
-  "earningsLink": "Ganancias",
   "sections": {
     "attention": "Requiere tu atención",
+    "earnings": "Ganancias de un vistazo",
+    "lists": "Tus tareas, ofertas y reservas"
+  },
+  "caughtUp": "Estás al día. Lo que requiera tu atención aparecerá aquí.",
+  "earnings": {
     "upcoming": "Próximas",
-    "openTasks": "Tareas abiertas",
-    "activeOffers": "Ofertas activas",
-    "nearby": "Tareas cercanas",
-    "earnings": "Ganancias de un vistazo"
+    "onTheWay": "En camino",
+    "link": "Abrir Ganancias"
+  },
+  "search": {
+    "label": {
+      "poster": "Busca en tus tareas, ofertas y reservas",
+      "helper": "Busca en tus trabajos, ofertas y tareas cercanas"
+    },
+    "placeholder": {
+      "poster": "¿Con qué necesitas ayuda?",
+      "helper": "¿Qué trabajo buscas?"
+    },
+    "placeholderPlain": {
+      "poster": "Busca en tus tareas y reservas",
+      "helper": "Busca en tus trabajos y ofertas"
+    },
+    "submit": "Buscar",
+    "clear": "Borrar búsqueda",
+    "ai": "Preguntar a la IA",
+    "aiLong": "Descríbelo y pregunta a la IA",
+    "remaining": "{count, plural, one {Te queda # búsqueda con IA este mes} other {Te quedan # búsquedas con IA este mes}}",
+    "remainingRenews": "{count, plural, one {Te queda # búsqueda con IA este mes} other {Te quedan # búsquedas con IA este mes}} · se renuevan el {date}",
+    "needsPlan": "Describe lo que necesitas y la IA te encuentra ayudantes y tareas. Viene con un plan.",
+    "monthlyLimit": "Ya usaste las búsquedas con IA de este mes.",
+    "monthlyLimitRenews": "Ya usaste las búsquedas con IA de este mes. Se renuevan el {date}.",
+    "seePlans": "Ver planes",
+    "matches": "{count, plural, =0 {No hay resultados para “{q}” en esta lista} one {# resultado para “{q}”} other {# resultados para “{q}”}}"
+  },
+  "ai": {
+    "title": "Lo que encontró la IA",
+    "close": "Cerrar la respuesta de la IA",
+    "searching": "Leyendo lo que necesitas…",
+    "lookingFor": "Buscando",
+    "anyCategory": "Cualquier tipo de tarea",
+    "when": {
+      "today": "Hoy",
+      "this_week": "Esta semana",
+      "this_weekend": "Este fin de semana"
+    },
+    "near": "Cerca de {area}",
+    "words": "Palabras: {words}",
+    "draft": {
+      "title": "Publícalo como tarea",
+      "body": "Se abre una tarea nueva con tus palabras y este título. Puedes cambiar lo que quieras antes de publicarla.",
+      "action": "Usar este borrador"
+    },
+    "helpers": {
+      "title": "Ayudantes que hacen esto",
+      "empty": "Todavía no hay ayudantes cerca para esto. Publica la tarea y los ayudantes cercanos la verán.",
+      "seeAll": "Ver todos los ayudantes",
+      "jobs": "{count, plural, =0 {Recién llegó a TasksNearMe} one {# tarea hecha} other {# tareas hechas}}"
+    },
+    "tasks": {
+      "find_work": "Tareas abiertas que coinciden",
+      "get_help": "Tareas abiertas parecidas cerca",
+      "empty": "Ahora no hay tareas abiertas que coincidan.",
+      "seeAllFindWork": "Ver más en Buscar trabajo",
+      "seeAllBoard": "Ver todas las tareas abiertas"
+    },
+    "disclaimer": "Las sugerencias de la IA pueden equivocarse. Revisa los detalles antes de reservar o enviar una oferta.",
+    "errors": {
+      "too_short": "Descríbelo con algunas palabras más (de 3 a 300 caracteres).",
+      "ai_off": "La búsqueda con IA no está disponible ahora. Buscar sigue encontrando tus tareas, ofertas y reservas.",
+      "needs_plan": "La búsqueda con IA viene con un plan.",
+      "monthly_limit": "Ya usaste las búsquedas con IA de este mes.",
+      "prohibited": "Eso es algo que no se puede reservar en TasksNearMe.",
+      "rate_limited": "Son muchas búsquedas seguidas. Espera un minuto y vuelve a intentarlo.",
+      "unavailable": "La IA no pudo responder ahora. Inténtalo de nuevo o usa Buscar."
+    },
+    "prohibitedLink": "Ver lo que no se puede reservar"
+  },
+  "lists": {
+    "tabsLabel": "Listas",
+    "tabs": {
+      "tasks": "Tareas",
+      "offers": "Ofertas",
+      "bookings": "Reservas",
+      "nearby": "Cerca"
+    },
+    "tabItems": "{count, plural, one {elemento} other {elementos}}",
+    "filtersLabel": "Filtros",
+    "status": "Estado",
+    "date": "Fecha",
+    "category": "Categoría",
+    "statusOptions": {
+      "active": "En curso",
+      "needs_you": "Requiere tu atención",
+      "open": "Abiertas",
+      "booked": "Reservadas",
+      "done": "Terminadas"
+    },
+    "dateOptions": {
+      "any": "Cualquier fecha",
+      "today": "Hoy",
+      "week": "Próximos 7 días",
+      "month": "Próximos 30 días"
+    },
+    "pastDateOptions": {
+      "any": "Cualquier fecha",
+      "today": "Hoy",
+      "week": "Últimos 7 días",
+      "month": "Últimos 30 días"
+    },
+    "allCategories": "Todas",
+    "clear": "Quitar filtros",
+    "viewsLabel": "Mostrar como",
+    "views": {
+      "list": "Lista",
+      "cards": "Tarjetas",
+      "map": "Mapa"
+    },
+    "showing": "Se muestran {shown} de {count}",
+    "seeAll": {
+      "tasks": "Ver todas tus tareas",
+      "offers": "Ver todas tus ofertas",
+      "bookings": "Ver todas las reservas",
+      "find_work": "Ver más en Buscar trabajo",
+      "board": "Ver todas las tareas abiertas"
+    }
+  },
+  "item": {
+    "needsYou": "Requiere tu atención",
+    "new": "Nueva",
+    "remote": "A distancia",
+    "flexibleRange": "Horario flexible",
+    "client": "Cliente: {name}",
+    "helper": "Ayudante: {name}",
+    "offers": "{count, plural, =0 {Aún sin ofertas} one {# oferta} other {# ofertas}}",
+    "newOffers": "{count, plural, one {# nueva} other {# nuevas}}",
+    "money": {
+      "budget": "Presupuesto",
+      "offer": "Oferta",
+      "total": "Total",
+      "earn": "Ganas"
+    },
+    "perHour": "{rate}/h",
+    "upToHours": "hasta {hours}"
+  },
+  "map": {
+    "label": "Mapa de las zonas generales de esta lista",
+    "group": "{count, plural, one {# elemento aquí} other {# elementos aquí}}",
+    "place": "{title}, {money}, {area}",
+    "remote": "{count, plural, one {# elemento a distancia no está en el mapa.} other {# elementos a distancia no están en el mapa.}}",
+    "privacy": "Las zonas son aproximadas. El mapa nunca muestra direcciones exactas.",
+    "close": "Cerrar",
+    "open": "Abrir",
+    "empty": {
+      "title": "Nada de esto tiene un lugar en el mapa",
+      "body": "Las tareas a distancia no tienen vecindario, y puede que los filtros no dejen nada que mostrar.",
+      "action": "Mostrar la lista"
+    }
+  },
+  "empty": {
+    "tasks": {
+      "title": "Aún no tienes tareas",
+      "body": "Publica una tarea para contarles a los ayudantes cercanos lo que necesitas. Tus tareas y sus ofertas aparecen aquí.",
+      "action": "Publicar una tarea"
+    },
+    "offers": {
+      "client": {
+        "title": "No hay ofertas esperando",
+        "body": "Cuando los ayudantes hagan ofertas en tus tareas abiertas, aparecen aquí para que las compares.",
+        "action": "Ver tus tareas"
+      },
+      "helper": {
+        "title": "Aún no has enviado ofertas",
+        "body": "Busca una tarea en la que puedas ayudar. Las ofertas que envíes aparecen aquí.",
+        "action": "Buscar trabajo"
+      }
+    },
+    "bookings": {
+      "client": {
+        "title": "Aún no tienes reservas",
+        "body": "Cuando reserves a un ayudante, la reserva aparece aquí con su día y hora.",
+        "action": "Buscar ayudantes"
+      },
+      "helper": {
+        "title": "Aún no tienes trabajos reservados",
+        "body": "Cuando un cliente te reserve, el trabajo aparece aquí con su día y hora.",
+        "action": "Buscar trabajo"
+      }
+    },
+    "nearby": {
+      "title": "Ahora no hay tareas abiertas cerca de ti",
+      "body": "Cada día se publican tareas nuevas. Buscar trabajo tiene más maneras de buscar.",
+      "action": "Buscar trabajo",
+      "waitingTitle": "Las tareas aparecerán aquí cuando abramos en {city}",
+      "waitingBody": "Te enviaremos un correo ese día. Mientras tanto, termina tu configuración para empezar ese mismo día."
+    },
+    "filtered": {
+      "title": "Nada coincide con estos filtros",
+      "body": "Prueba con otro estado u otra fecha, o quita los filtros.",
+      "action": "Quitar filtros"
+    },
+    "search": {
+      "title": "No hay resultados para “{q}”",
+      "body": "Prueba con otras palabras, o mira en otra lista de arriba.",
+      "bodyAi": "Prueba con otras palabras, o describe lo que necesitas y pregunta a la IA.",
+      "action": "Borrar búsqueda",
+      "post": "Publicar una tarea: “{q}”"
+    }
   },
   "attention": {
     "taskFallback": "esta tarea",
@@ -63,50 +259,34 @@
       "answer_proposal": "{name} propuso una reserva: {title}"
     }
   },
-  "empty": {
-    "attention": {
-      "title": "Estás al día",
-      "body": "Lo que necesite tu atención aparecerá aquí."
-    },
-    "upcoming": {
-      "title": "No hay reservas próximas",
-      "posterBody": "Cuando reserves a un ayudante, tu siguiente tarea aparecerá aquí.",
-      "helperBody": "Cuando un cliente te reserve, tu siguiente tarea aparecerá aquí."
-    },
-    "openTasks": {
-      "title": "¿En qué te vendría bien una mano?",
-      "body": "Publica una tarea para contarles a los ayudantes cercanos lo que necesitas. Tus tareas abiertas y las ofertas nuevas aparecerán aquí."
-    },
-    "activeOffers": {
-      "title": "Aún no hay ofertas activas",
-      "body": "Busca una tarea en la que puedas ayudar. Las ofertas que envíes aparecerán aquí."
-    },
-    "nearby": {
-      "title": "No hay tareas cercanas para mostrar",
-      "body": "Mira Buscar trabajo para ver más tareas y otras opciones de búsqueda."
-    }
-  },
-  "earnings": {
-    "upcoming": "Próximas",
-    "onTheWay": "En camino"
-  },
-  "setup": {
-    "title": "Prepárate para enviar ofertas",
-    "body": "Puedes explorar tareas mientras terminas de configurar tu perfil de ayudante.",
-    "action": "Terminar configuración"
-  },
   "previews": {
     "group": "Pantallas · Inicio",
-    "client": "Cliente · atención y próximas tareas",
+    "client": "Cliente · tareas, atención y búsqueda con IA",
+    "clientOffers": "Cliente · ofertas esperando",
+    "clientBookingsCards": "Cliente · reservas como tarjetas",
     "clientEmpty": "Cliente · un nuevo comienzo",
-    "helper": "Ayudante · hoy y tareas cercanas",
+    "clientFiltered": "Cliente · los filtros no coinciden con nada",
+    "clientSearch": "Cliente · búsqueda por palabras",
+    "clientAiNeedsPlan": "Cliente · la búsqueda con IA viene con un plan",
+    "helper": "Ayudante · trabajos, ganancias y tareas cercanas",
+    "helperNearbyMap": "Ayudante · tareas cercanas en el mapa",
+    "helperOffers": "Ayudante · ofertas enviadas",
     "helperPayoutAction": "Ayudante · se necesita una acción en el pago",
     "helperNotSetUp": "Ayudante · terminar la configuración",
+    "helperWaiting": "Ayudante · esperando su ciudad",
+    "helperDone": "Ayudante · terminadas en los últimos 30 días",
+    "both": "Ambos lados · ayudar y recibir ayuda",
     "clientPaymentAccess": "Cliente · plazos de pago y acceso",
-    "helperEmpty": "Ayudante · secciones vacías",
-    "helperInvite": "Ayudante · responder a una solicitud de reserva",
-    "clientCounter": "Cliente · responder a una contraoferta",
-    "clientProposal": "Cliente · responder a una propuesta de reserva",
-    "helperWaiting": "Ayudante · esperando su ciudad"
+    "helperInvite": "Ayudante · responder una solicitud de reserva",
+    "clientCounter": "Cliente · responder una contraoferta",
+    "clientProposal": "Cliente · responder una propuesta de reserva",
+    "aiAnswerClient": "Respuesta de la IA · alguien que necesita ayuda",
+    "aiAnswerHelper": "Respuesta de la IA · un ayudante que busca trabajo",
+    "aiAnswerError": "Respuesta de la IA · algo salió mal",
+    "clientMap": "Cliente · tareas en el mapa",
+    "clientAiMonthlyLimit": "Cliente · ya usó las búsquedas con IA del mes",
+    "helperAiAnswer": "Ayudante · respuesta de la IA abierta",
+    "aiAnswerPending": "Respuesta de la IA · leyendo",
+    "aiAnswerProhibited": "Respuesta de la IA · no se puede reservar aquí"
   }
 }

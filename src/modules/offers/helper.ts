@@ -170,7 +170,8 @@ function earningsFor(fees: FeeSchedule | null, budget: PricingInput): FindWorkCa
   return { type: 'hourly', rateCents: Math.round(capCents / budget.hoursCap), capCents };
 }
 
-export async function getFindWorkPageData(db: Db, userId: string, params: SearchParams, now: Date): Promise<FindWorkPageData | null> {
+/** `feed`: the dashboard's own window and page size (completion plan 9.9); Find work uses neither. */
+export async function getFindWorkPageData(db: Db, userId: string, params: SearchParams, now: Date, feed: { window?: { from: Date; to: Date }; limit?: number } = {}): Promise<FindWorkPageData | null> {
   const state = await loadHelperState(db, userId, now);
   if (!state.marketId) return null;
   const query = parseFindWorkQuery(params);
@@ -214,6 +215,7 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
     center: state.center,
     maxMiles: maxMilesOf(query.distance),
     viewerId: userId,
+    ...feed,
   });
   const [fees, [market], [area], savedRows] = await Promise.all([
     feesFor(db, state.marketId),

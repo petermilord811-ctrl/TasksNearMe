@@ -1,12 +1,21 @@
-import type { BookingListRow } from './bookings';
-import type { Cents, ISODateTime } from './common';
-import type { FindWorkCard, FindWorkWaiting, HelperSetupState, MyOfferRow } from './helper-work';
-import type { OwnerTaskRow } from './offers';
+import { z } from 'zod';
+import type { QueryHandler } from './actions';
+import type { AiSearchAccess } from './billing';
+import type { Cents, CategorySlug, ISODateTime, Mode, Photo } from './common';
+import type { FindWorkQuery, FindWorkWaiting, HelperSetupState } from './helper-work';
+import type { HelperBrowseQuery } from './helpers-browse';
+import type { TaskLocation } from './location';
+import type { PricingInput } from './money';
+import type { HelperSummary } from './people';
 import type { OnboardingStep } from './routes';
+import type { BookingStatus, OfferStatus, TaskStatus } from './status';
+import type { TaskBoardQuery } from './tasks';
 
 /**
- * The signed-in home (`/app`, blueprint 02 §1.2): "Needs your attention" first, then what's coming up.
- * The mode switch picks the dashboard: the client's or the helper's. Every item is decided by the app.
+ * The signed-in home (`/app`, blueprint 02 §1.2; completion plan 9.9): a dashboard. What needs you first, then your
+ * tasks, offers and bookings as compact lists with a few filters, a view switch (list, cards, map) and a search that
+ * works without AI, plus AI search where the plan allows it. Design: docs/ui/dashboard-9.9.md. Every item, stage,
+ * count and tab is decided by the app; the page shows them.
  */
 
 /** Where an attention item leads; the UI picks the route builder by `kind`. */
@@ -80,34 +89,229 @@ export interface AttentionItem {
   target: AttentionTarget;
 }
 
-/** The client's home. */
-export interface PosterHomeData {
-  mode: 'poster';
-  /** First name, for "Good morning, Maya". */
-  firstName: string;
-  /** Most urgent first. */
-  attention: AttentionItem[];
-  /** The next bookings (up to 3), soonest first. */
-  upcoming: BookingListRow[];
-  /** Open tasks (up to 3), newest first. */
-  openTasks: OwnerTaskRow[];
+// ---- The dashboard (completion plan 9.9) ----------------------------------------------------------
+
+/**
+ * The lists. `tasks`: a client's own tasks. `offers`: offers waiting on a client (on their open tasks) and offers a
+ * helper sent. `bookings`: bookings on either side (a helper's jobs). `nearby`: open tasks near the person (a
+ * helper's find-work matches; a client's only while searching).
+ */
+export const DASHBOARD_TABS = ['tasks', 'offers', 'bookings', 'nearby'] as const;
+export type DashboardTab = (typeof DASHBOARD_TABS)[number];
+
+/** How a list shows: compact rows (the default), cards, or a map of the items' general areas. */
+export const DASHBOARD_VIEWS = ['list', 'cards', 'map'] as const;
+export type DashboardView = (typeof DASHBOARD_VIEWS)[number];
+
+/**
+ * The status filter, by stage. `active` (the default): open and booked. `needs_you`: something to do now.
+ * `open`: taking offers, or an offer waiting. `booked`: a booking (or a task booked). `done`: finished, canceled,
+ * expired, declined or withdrawn, and offers that were accepted (their booking is in Bookings).
+ */
+export const DASHBOARD_STATUSES = ['active', 'needs_you', 'open', 'booked', 'done'] as const;
+export type DashboardStatus = (typeof DASHBOARD_STATUSES)[number];
+
+/**
+ * The date filter, on the market's calendar from the start of today: `today`, the next 7 days (`week`) or the next
+ * 30 (`month`). With the `done` status it looks back instead (today, the last 7 or 30 days).
+ */
+export const DASHBOARD_DATES = ['any', 'today', 'week', 'month'] as const;
+export type DashboardDate = (typeof DASHBOARD_DATES)[number];
+
+/** The keyword's longest length, and how many rows a tab shows (the full page has the rest). */
+export const DASHBOARD_KEYWORD_MAX = 80;
+export const DASHBOARD_LIST_LIMIT = 20;
+
+/** `/app`'s filters, in the URL (`routes.app.home(query)`, defaults left out). */
+export interface DashboardQuery {
+  /** Absent: the person's first tab. */
+  tab?: DashboardTab;
+  /** Default `list`. */
+  view?: DashboardView;
+  /** Default `active`. */
+  status?: DashboardStatus;
+  /** Default `any`. */
+  date?: DashboardDate;
+  category?: CategorySlug;
+  /** Words to find (each of them). */
+  q?: string;
 }
 
-/** The helper's home. */
-export interface HelperHomeData {
-  mode: 'helper';
+/** The filters in effect: the tab the app chose and the defaults filled in. */
+export interface DashboardQueryState {
+  tab: DashboardTab;
+  view: DashboardView;
+  status: DashboardStatus;
+  date: DashboardDate;
+  category?: CategorySlug;
+  q?: string;
+}
+
+export type DashboardItemKind = 'task' | 'offer_received' | 'offer_sent' | 'booking' | 'nearby';
+export type DashboardStage = 'open' | 'booked' | 'done';
+
+/** The status badge: the UI's own status labels and tones for tasks, bookings and offers (`viewer`: which side). */
+export type DashboardItemStatus =
+  | { kind: 'task'; status: TaskStatus }
+  | { kind: 'booking'; status: BookingStatus; viewer: 'poster' | 'helper' }
+  | { kind: 'offer'; status: OfferStatus; viewer: 'poster' | 'helper' };
+
+/**
+ * The money on a row. `budget`: what a task offers (the client's own, or a nearby task's). `offer`: an offer's price.
+ * `total`: what the client pays for a booking. `earn`: what the helper earns (a booking, or a nearby task after the
+ * service fee).
+ */
+export type DashboardMoney =
+  | { kind: 'budget'; pricing: PricingInput }
+  | { kind: 'offer'; pricing: PricingInput }
+  | { kind: 'total'; cents: Cents }
+  | { kind: 'earn'; cents: Cents };
+
+/** Where a row leads; the UI builds the link with `routes`. */
+export type DashboardTarget =
+  /** The client's own task. */
+  | { kind: 'task'; taskId: string }
+  /** An offer on the client's task. */
+  | { kind: 'offer'; taskId: string; offerId: string }
+  | { kind: 'booking'; bookingId: string }
+  /** A task from the helper's side (Find work). */
+  | { kind: 'find_work_task'; taskId: string }
+  /** A nearby task for a client: its public page. */
+  | { kind: 'public_task'; slug: string };
+
+export interface DashboardItem {
+  /** Unique in a list: `<kind>:<id>`. */
+  key: string;
+  kind: DashboardItemKind;
+  /** The viewer's side: their own task or a booking they pay for (`client`), or work they do or could do (`helper`). */
+  side: 'client' | 'helper';
+  title: string;
+  categorySlug: CategorySlug;
+  /** Its type under the category, when known (src/shared/task-types.ts). */
+  taskType?: string;
+  /** A window (tasks) or a start (bookings, offers: the proposed start). `flexible`: any time in the window. */
+  when: { start: ISODateTime; end?: ISODateTime; flexible?: boolean };
+  /** The general area or remote: never an address. */
+  location: TaskLocation;
+  stage: DashboardStage;
+  /** Something to do now (new offers, payment, approval, an offer to confirm again, a booking step). */
+  needsYou: boolean;
+  status: DashboardItemStatus;
+  money?: DashboardMoney;
+  /** The other person: the helper on the client's side, the client on the helper's side. */
+  person?: { displayName: string; initials: string; photo?: Photo };
+  /** A client's task: its offers so far, and those not opened yet. */
+  offers?: { count: number; new: number };
+  /** Nearby: posted in the last 24 hours. */
+  isNew?: boolean;
+  target: DashboardTarget;
+}
+
+/** A tab and how many items it holds under the filters in effect. */
+export interface DashboardTabSummary {
+  id: DashboardTab;
+  count: number;
+}
+
+/** "See all" for a tab: its full page, with the same category and words where that page has them. */
+export type DashboardSeeAll =
+  | { kind: 'tasks' }
+  | { kind: 'offers' }
+  | { kind: 'bookings' }
+  | { kind: 'find_work'; query: FindWorkQuery }
+  | { kind: 'board'; market: string; query: TaskBoardQuery };
+
+/** The map view: the tiles, where to look when nothing frames it, and a helper's area. */
+export interface DashboardMap {
+  styleUrl: string;
+  attribution: string;
+  center: { lat: number; lng: number };
+  serviceArea?: { name: string; center: { lat: number; lng: number }; radiusMiles: number };
+}
+
+/** `/app`. */
+export interface DashboardData {
+  /** For "Good morning, Maya". */
   firstName: string;
+  mode: Mode;
+  /** The sides the person has: the mode's always, the other one when they use it too (docs/ui/dashboard-9.9.md §3). */
+  sides: { client: boolean; helper: boolean };
+  /** Most urgent first; both sides' items for someone who has both. */
   attention: AttentionItem[];
-  upcoming: BookingListRow[];
-  /** Active offers (up to 3), soonest start first. */
-  activeOffers: MyOfferRow[];
-  /** Nearby open tasks the helper can offer on (up to 3). */
-  suggestions: FindWorkCard[];
-  earnings: { upcomingCents: Cents; onTheWayCents: Cents };
-  setup: HelperSetupState;
-  /** Waiting for their city (completion plan 8.4): find work's same `waitingFor`, shown instead of nearby tasks. */
+  /** The header's line: how many items need the person, and bookings coming up (both sides). */
+  summary: { needsYou: number; upcoming: number };
+  query: DashboardQueryState;
+  /** The person's tabs, in order, with their counts under the filters. */
+  tabs: DashboardTabSummary[];
+  /** The current tab's items under the filters: soonest first (`done`: the latest first), at most `DASHBOARD_LIST_LIMIT`. */
+  items: DashboardItem[];
+  /** The market's categories, for the filter. */
+  categories: CategorySlug[];
+  /** The current tab's full page. */
+  seeAll: DashboardSeeAll;
+  /** The map helps: the current tab's items (filters aside) are in two or more neighborhoods. */
+  mapAvailable: boolean;
+  map: DashboardMap;
+  /** Helpers: earnings at a glance, once they can take work or have money on its way. */
+  earnings?: { upcomingCents: Cents; onTheWayCents: Cents };
+  /** Helpers: setup, when they can't send offers yet (the attention list leads to the next step). */
+  setup?: HelperSetupState;
+  /** Helpers waiting for their city (completion plan 8.4): shown instead of the nearby list. */
   waitingFor?: FindWorkWaiting;
+  /** AI search ("describe what you need"): whether the plan allows it now (completion plan 9.13). */
+  aiSearch: AiSearchAccess;
 }
 
-/** `/app` (the public home is `HomePageData` in marketing.ts). */
-export type AppHomePageData = PosterHomeData | HelperHomeData;
+// ---- AI search ("describe what you need") ---------------------------------------------------------
+
+export const AI_SEARCH_TEXT_MIN = 3;
+export const AI_SEARCH_TEXT_MAX = 300;
+
+export const aiSearchInputSchema = z.object({ text: z.string().trim().min(AI_SEARCH_TEXT_MIN).max(AI_SEARCH_TEXT_MAX) });
+export type AiSearchInput = z.infer<typeof aiSearchInputSchema>;
+
+/** `get_help`: the person wants something done; `find_work`: a helper looking for tasks. */
+export type AiSearchIntent = 'get_help' | 'find_work';
+
+/** What AI understood from the words: the filters it searched with (the UI says it back). */
+export interface AiSearchUnderstanding {
+  intent: AiSearchIntent;
+  category?: CategorySlug;
+  /** When it's wanted, if said. */
+  when?: 'today' | 'this_week' | 'this_weekend';
+  /** A neighborhood of the market, if one was named. */
+  area?: { slug: string; name: string };
+  /** The words searched for (a few). */
+  keywords: string[];
+}
+
+/**
+ * The answer: real rows found with AI's filters, never invented. `draft`: a task to post (get help; the wizard opens
+ * with it). `helpers`: who does this (get help), most reliable first, up to 3. `tasks`: open tasks that match, soonest
+ * first, up to 5 (a helper's find-work view, a client's public page).
+ */
+export interface AiSearchAnswer {
+  understood: AiSearchUnderstanding;
+  draft?: { title: string; category: CategorySlug; describe: string };
+  helpers: HelperSummary[];
+  tasks: DashboardItem[];
+  /** "See all" for the helpers (Find helpers) and the tasks (Find work, or the board). */
+  helpersQuery?: HelperBrowseQuery;
+  tasksLink?: Extract<DashboardSeeAll, { kind: 'find_work' | 'board' }>;
+}
+
+/**
+ * - `too_short`: fewer than 3 characters (or more than 300).
+ * - `ai_off`, `needs_plan`, `monthly_limit`: as `AiSearchAccess` (billing.ts); `remaining` is what's left after this one.
+ * - `prohibited`: the words describe something that can't be posted.
+ * - `rate_limited`: too many searches in a short time.
+ * - `unavailable`: AI didn't answer (try again, or use the keyword search).
+ */
+export type AiSearchResult =
+  | { ok: true; answer: AiSearchAnswer; remaining: number | null }
+  | { ok: false; code: 'too_short' | 'ai_off' | 'needs_plan' | 'monthly_limit' | 'prohibited' | 'rate_limited' | 'unavailable' };
+
+/** The dashboard's handlers. `onAiSearch` runs only on an explicit click (Ask AI), never per keystroke. */
+export interface DashboardHandlers {
+  onAiSearch?: QueryHandler<AiSearchInput, AiSearchResult>;
+}

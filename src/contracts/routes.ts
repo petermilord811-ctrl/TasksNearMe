@@ -8,6 +8,7 @@ import { DEFAULT_METRICS_PERIOD, type MetricsPeriodDays } from './analytics';
 import type { CategorySlug } from './common';
 import type { CommunityFeedQuery, CommunityPostKind } from './community';
 import type { FindWorkQuery } from './helper-work';
+import type { DashboardQuery } from './home';
 import type { ExactAddress } from './location';
 import { TASK_BOARD_Q_MAX, TASK_BOARD_TIMES, type TaskBoardQuery } from './tasks';
 
@@ -115,7 +116,19 @@ export const routes = {
   invite: (code: string) => `/invite/${enc(code)}`,
 
   app: {
-    home: () => '/app',
+    /**
+     * The dashboard (completion plan 9.9). Defaults (`list`, `active`, any date) are left out; without `tab` the
+     * person's first tab shows.
+     */
+    home: (query: DashboardQuery = {}) =>
+      withQuery('/app', {
+        tab: query.tab,
+        view: query.view && query.view !== 'list' ? query.view : undefined,
+        status: query.status && query.status !== 'active' ? query.status : undefined,
+        date: query.date && query.date !== 'any' ? query.date : undefined,
+        category: query.category,
+        q: query.q?.trim() || undefined,
+      }),
     tasks: () => '/app/tasks',
     /** The posting wizard; `category` starts it in that category. */
     /** The posting wizard; `describe` carries someone's own words in (the landing page's assistant). */

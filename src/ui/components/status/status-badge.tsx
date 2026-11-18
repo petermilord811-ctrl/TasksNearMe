@@ -16,12 +16,14 @@ export interface StatusBadgeProps {
   tone: BadgeTone;
   label: string;
   icon?: ReactNode;
+  /** `sm`: inside a dense row's line of details (the dashboard's lists). */
+  size?: 'sm' | 'md';
 }
 
-export function StatusBadge({ tone, label, icon }: StatusBadgeProps) {
+export function StatusBadge({ tone, label, icon, size = 'md' }: StatusBadgeProps) {
   return (
-    <span className={cn('inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium leading-5', tones[tone])}>
-      {icon && <span aria-hidden="true" className="shrink-0 [&_svg]:size-4">{icon}</span>}
+    <span className={cn('inline-flex max-w-full items-center gap-1.5 rounded-full font-medium', size === 'sm' ? 'px-2 py-px text-xs leading-5' : 'px-3 py-1 text-sm leading-5', tones[tone])}>
+      {icon && <span aria-hidden="true" className={cn('shrink-0', size === 'sm' ? '[&_svg]:size-3.5' : '[&_svg]:size-4')}>{icon}</span>}
       <span className="min-w-0 break-words">{label}</span>
     </span>
   );

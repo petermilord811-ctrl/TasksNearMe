@@ -232,6 +232,10 @@ export async function listFeedTasks(
     maxMiles: number | null;
     /** The helper: their hidden tasks stay out, and `query.saved` keeps only the saved ones. */
     viewerId?: string;
+    /** Only windows that touch this time (the dashboard's date filter, completion plan 9.9). */
+    window?: { from: Date; to: Date };
+    /** Rows per page; the board's page size when absent. */
+    limit?: number;
   },
 ): Promise<{ tasks: { view: TaskPublicView; distanceMiles: number | null; posterUserId: string; status: string; windowEnd: Date }[]; totalCount: number }> {
   const { query, now, center } = options;
@@ -252,6 +256,7 @@ export async function listFeedTasks(
     conditions.push(sql`not ${mark('hidden')}`);
     if (query.saved) conditions.push(mark('saved'));
   }
+  if (options.window) conditions.push(lt(tasks.windowStart, options.window.to), gt(tasks.windowEnd, options.window.from));
   const where = and(...conditions);
   // What the client offers for the whole task: the fixed price, or the rate times the hours cap.
   const pay = sql`coalesce(${tasks.budgetCents}, round(${tasks.hourlyRateCents} * ${tasks.hoursCap}))`;
@@ -278,8 +283,8 @@ export async function listFeedTasks(
     .leftJoin(areas, eq(areas.id, tasks.publicAreaId))
     .where(where)
     .orderBy(...order)
-    .limit(BOARD_PAGE_SIZE)
-    .offset((query.page - 1) * BOARD_PAGE_SIZE);
+    .limit(options.limit ?? BOARD_PAGE_SIZE)
+    .offset((query.page - 1) * (options.limit ?? BOARD_PAGE_SIZE));
   return {
     tasks: rows.map(({ distanceMiles, posterUserId, ...row }) => ({
       view: toTaskPublicView(toRow(row)),
