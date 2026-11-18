@@ -63,6 +63,7 @@
     "cancel-sheet": "Cancelar con un motivo",
     "cancel-error": "Cancelación no disponible",
     "allowance": "Tarea con asignación para gastos",
-    "push-prompt": "Esperando ofertas, con notificaciones sugeridas"
+    "push-prompt": "Esperando ofertas, con notificaciones sugeridas",
+    "loading": "Una tarea · cargando"
   }
 }

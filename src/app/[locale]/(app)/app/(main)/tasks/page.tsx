@@ -3,16 +3,16 @@ import { Suspense } from 'react';
 import { getMyTasks } from '@/modules/offers/owner';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { PageSkeleton } from '@/ui/components';
 import { MyTasksScreen } from '@/ui/screens/tasks';
 import { requestNow } from '@/platform/clock';
+import { MyTasksSkeleton } from '@/ui/screens/tasks/my-tasks-skeleton';
 
 export const metadata: Metadata = { title: 'My tasks' };
 
 /** The poster's tasks: open, booked, past. */
 export default function MyTasksPage() {
   return (
-    <Suspense fallback={<PageSkeleton variant="list" />}>
+    <Suspense fallback={<MyTasksSkeleton />}>
       <MyTasks />
     </Suspense>
   );

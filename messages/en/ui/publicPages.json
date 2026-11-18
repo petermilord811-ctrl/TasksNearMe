@@ -421,6 +421,8 @@
     "pricing": "Pricing examples",
     "trust": "Trust and safety",
     "cities": "Cities: where we are and where we go next",
-    "citiesState": "Cities: one state, with demand and no open city"
+    "citiesState": "Cities: one state, with demand and no open city",
+    "categoryLoading": "Category page · loading",
+    "boardLoading": "Task board · loading"
   }
 }

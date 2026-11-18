@@ -421,6 +421,8 @@
     "pricing": "Ejemplos de precios",
     "trust": "Confianza y seguridad",
     "cities": "Ciudades: dónde estamos y adónde vamos",
-    "citiesState": "Ciudades: un estado con demanda y sin ciudad abierta"
+    "citiesState": "Ciudades: un estado con demanda y sin ciudad abierta",
+    "categoryLoading": "Página de categoría · cargando",
+    "boardLoading": "Trabajos disponibles · cargando"
   }
 }

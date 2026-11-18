@@ -77,7 +77,9 @@
     "clientVisitNoCard": "Client: no card on file for the visit",
     "helperVisitScheduled": "Helper: a regular visit before it's paid",
     "helperVisitWaiting": "Helper: waiting for the client's payment",
-    "clientFarAhead": "Client: a booking far ahead, paid later"
+    "clientFarAhead": "Client: a booking far ahead, paid later",
+    "listLoading": "Bookings · loading",
+    "loading": "A booking · loading"
   },
   "back": "All bookings",
   "change": {

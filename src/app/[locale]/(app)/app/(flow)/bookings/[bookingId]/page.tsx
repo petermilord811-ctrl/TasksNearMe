@@ -17,16 +17,16 @@ import { finishTipVerificationAction, tipAction } from '@/modules/bookings/tip-a
 import { finishScheduledVerificationAction, payScheduledAction } from '@/modules/bookings/series-actions';
 import { hubDeps } from '@/modules/bookings/server';
 import { getViewer } from '@/platform/auth/viewer';
-import { PageSkeleton } from '@/ui/components';
 import { BookingHubScreen } from '@/ui/screens/bookings';
 import { requestNow } from '@/platform/clock';
+import { BookingHubSkeleton } from '@/ui/screens/bookings/booking-hub-skeleton';
 
 export const metadata: Metadata = { title: 'Booking', robots: { index: false } };
 
 /** One booking for its client or its helper (anyone else: not found). */
 function BookingPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]'>) {
   return (
-    <Suspense fallback={<PageSkeleton variant="detail" />}>
+    <Suspense fallback={<BookingHubSkeleton />}>
       <Booking params={params} />
     </Suspense>
   );

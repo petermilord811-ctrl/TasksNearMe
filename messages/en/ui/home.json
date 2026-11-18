@@ -297,6 +297,9 @@
     "clientAiMonthlyLimit": "Client · AI searches used up this month",
     "helperAiAnswer": "Helper · AI answer open",
     "aiAnswerPending": "AI answer · reading",
-    "aiAnswerProhibited": "AI answer · can't be booked here"
+    "aiAnswerProhibited": "AI answer · can't be booked here",
+    "dashboardLoading": "Dashboard · loading",
+    "shellLoading": "Signed-in shell · loading",
+    "shellFlowLoading": "Signed-in shell, a step-by-step page · loading"
   }
 }

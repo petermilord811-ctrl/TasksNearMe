@@ -6,16 +6,16 @@ import { posterOfferAction } from '@/modules/offers/actions';
 import { getOfferDetail } from '@/modules/offers/owner';
 import { ownerDepsFor } from '@/modules/offers/server';
 import { getViewer } from '@/platform/auth/viewer';
-import { PageSkeleton } from '@/ui/components';
 import { OfferDetailScreen } from '@/ui/screens/tasks';
 import { requestNow } from '@/platform/clock';
+import { OfferDetailSkeleton } from '@/ui/screens/tasks/task-detail-skeletons';
 
 export const metadata: Metadata = { title: 'Offer' };
 
 /** One offer on the poster's task. Opening it marks it seen. */
 function OfferDetailPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]/offers/[offerId]'>) {
   return (
-    <Suspense fallback={<PageSkeleton variant="detail" />}>
+    <Suspense fallback={<OfferDetailSkeleton />}>
       <OfferDetail params={params} />
     </Suspense>
   );

@@ -5,16 +5,16 @@ import { routes } from '@/contracts';
 import { getBookingsPage } from '@/modules/bookings/hub';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { PageSkeleton } from '@/ui/components';
 import { BookingsScreen } from '@/ui/screens/bookings';
 import { requestNow } from '@/platform/clock';
+import { BookingsSkeleton } from '@/ui/screens/bookings/bookings-skeleton';
 
 export const metadata: Metadata = { title: 'Bookings', robots: { index: false } };
 
 /** Every booking as client or helper: needs action, upcoming, past. */
 export default function BookingsPage() {
   return (
-    <Suspense fallback={<PageSkeleton variant="list" />}>
+    <Suspense fallback={<BookingsSkeleton />}>
       <Bookings />
     </Suspense>
   );

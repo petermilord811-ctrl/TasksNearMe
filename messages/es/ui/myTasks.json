@@ -36,7 +36,8 @@
     "emptyBooked": "Sin tareas reservadas",
     "emptyPast": "Sin tareas anteriores",
     "pastStatuses": "Tareas completadas, canceladas y vencidas",
-    "allAttention": "Mis tareas · todo lo que puede necesitarte"
+    "allAttention": "Mis tareas · todo lo que puede necesitarte",
+    "loading": "Mis tareas · cargando"
   },
   "needsYou": {
     "for": ": {title}",

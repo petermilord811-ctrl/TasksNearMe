@@ -9,16 +9,16 @@ import { blockUserAction, reportUserAction } from '@/modules/support/actions';
 import { getReportSubject } from '@/modules/support/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { PageSkeleton } from '@/ui/components';
 import { ThreadScreen } from '@/ui/screens/messages';
 import { requestNow } from '@/platform/clock';
+import { ThreadSkeleton } from '@/ui/screens/messages/thread-skeleton';
 
 export const metadata: Metadata = { title: 'Conversation', robots: { index: false } };
 
 /** One conversation for its two people (anyone else: not found). Opening it marks it read. */
 function ThreadPage({ params }: PageProps<'/[locale]/app/messages/[threadId]'>) {
   return (
-    <Suspense fallback={<PageSkeleton variant="detail" />}>
+    <Suspense fallback={<ThreadSkeleton />}>
       <Thread params={params} />
     </Suspense>
   );

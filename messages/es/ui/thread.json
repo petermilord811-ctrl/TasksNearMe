@@ -82,7 +82,8 @@
       "identity_required": "Aviso de verificación de identidad necesaria"
     },
     "withList": "Conversación junto a la lista, con los mensajes nuevos marcados",
-    "repliesReactions": "Respuestas que citan un mensaje, reacciones y respuestas guardadas"
+    "repliesReactions": "Respuestas que citan un mensaje, reacciones y respuestas guardadas",
+    "loading": "Conversación · cargando"
   },
   "composer": {
     "label": "Mensaje",

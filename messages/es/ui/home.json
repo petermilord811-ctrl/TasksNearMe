@@ -297,6 +297,9 @@
     "clientAiMonthlyLimit": "Cliente · ya usó las búsquedas con IA del mes",
     "helperAiAnswer": "Ayudante · respuesta de la IA abierta",
     "aiAnswerPending": "Respuesta de la IA · leyendo",
-    "aiAnswerProhibited": "Respuesta de la IA · no se puede reservar aquí"
+    "aiAnswerProhibited": "Respuesta de la IA · no se puede reservar aquí",
+    "dashboardLoading": "Inicio · cargando",
+    "shellLoading": "Área con sesión · cargando",
+    "shellFlowLoading": "Área con sesión, página paso a paso · cargando"
   }
 }

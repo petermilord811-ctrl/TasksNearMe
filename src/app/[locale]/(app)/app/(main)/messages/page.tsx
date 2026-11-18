@@ -6,16 +6,16 @@ import { routes } from '@/contracts';
 import { getInbox } from '@/modules/messaging/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { PageSkeleton } from '@/ui/components';
 import { InboxScreen } from '@/ui/screens/messages';
 import { requestNow } from '@/platform/clock';
+import { InboxSkeleton } from '@/ui/screens/messages/inbox-skeleton';
 
 export const metadata: Metadata = { title: 'Messages', robots: { index: false } };
 
 /** The viewer's conversations, latest activity first. */
 function MessagesPage() {
   return (
-    <Suspense fallback={<PageSkeleton variant="list" />}>
+    <Suspense fallback={<InboxSkeleton />}>
       <Inbox />
     </Suspense>
   );

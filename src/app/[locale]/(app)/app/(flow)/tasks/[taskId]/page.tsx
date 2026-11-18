@@ -16,17 +16,17 @@ import { staffActorOf } from '@/modules/support/staff';
 import { TaskQuestions } from '@/ui/components/questions/task-questions';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { PageSkeleton } from '@/ui/components';
 import { savePushSubscriptionAction } from '@/modules/notifications/actions';
 import { TaskManageScreen } from '@/ui/screens/tasks';
 import { requestNow } from '@/platform/clock';
+import { TaskManageSkeleton } from '@/ui/screens/tasks/task-detail-skeletons';
 
 export const metadata: Metadata = { title: 'Your task' };
 
 /** The poster's own task: offers, invites, compare, cancel. Anyone else gets a 404. */
 function ManageTaskPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]'>) {
   return (
-    <Suspense fallback={<PageSkeleton variant="detail" />}>
+    <Suspense fallback={<TaskManageSkeleton />}>
       <ManageTask params={params} />
     </Suspense>
   );

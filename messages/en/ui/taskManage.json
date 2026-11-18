@@ -63,6 +63,7 @@
     "cancel-sheet": "Cancel with a reason",
     "cancel-error": "Cancellation unavailable",
     "allowance": "Task with an expense allowance",
-    "push-prompt": "Waiting for offers, with notifications offered"
+    "push-prompt": "Waiting for offers, with notifications offered",
+    "loading": "A task · loading"
   }
 }

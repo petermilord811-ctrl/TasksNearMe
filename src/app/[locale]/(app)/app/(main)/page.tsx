@@ -7,10 +7,10 @@ import { searchWithAi } from '@/modules/home/actions';
 import { getDashboard } from '@/modules/home/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { PageSkeleton } from '@/ui/components';
 import { DashboardScreen } from '@/ui/screens/home';
 import { requestNow } from '@/platform/clock';
 import { parseDashboardQuery } from '@/shared/dashboard';
+import { DashboardSkeleton } from '@/ui/screens/home/dashboard-skeleton';
 
 export const metadata: Metadata = { title: 'Home', robots: { index: false } };
 
@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: 'Home', robots: { index: false } };
  */
 function AppHomePage({ searchParams }: PageProps<'/[locale]/app'>) {
   return (
-    <Suspense fallback={<PageSkeleton variant="list" />}>
+    <Suspense fallback={<DashboardSkeleton />}>
       <Home searchParams={searchParams} />
     </Suspense>
   );

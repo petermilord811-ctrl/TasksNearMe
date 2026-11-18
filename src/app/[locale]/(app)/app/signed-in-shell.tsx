@@ -10,10 +10,10 @@ import { shellNoticesFor } from '@/modules/markets/outage';
 import { dispatchNotifications, unreadNotificationCount } from '@/modules/notifications/service';
 import { getViewer, toSignedInViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { PageSkeleton } from '@/ui/components';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { AppShell, type AppShellProps } from '@/ui/shells';
 import { requestNow } from '@/platform/clock';
+import { AppShellSkeleton } from '@/ui/shells/app-shell-skeleton';
 
 type ShellLayout = NonNullable<AppShellProps['layout']>;
 
@@ -24,7 +24,7 @@ type ShellLayout = NonNullable<AppShellProps['layout']>;
  */
 export function SignedInShell({ layout, children }: { layout: ShellLayout; children: React.ReactNode }) {
   return (
-    <Suspense fallback={<PageSkeleton variant={layout === 'flow' ? 'form' : 'list'} />}>
+    <Suspense fallback={<AppShellSkeleton layout={layout} />}>
       <ViewerShell layout={layout}>{children}</ViewerShell>
     </Suspense>
   );

@@ -82,7 +82,8 @@
       "identity_required": "ID check needed feedback"
     },
     "withList": "Conversation beside the list, with new messages marked",
-    "repliesReactions": "Replies quoting a message, reactions and saved replies"
+    "repliesReactions": "Replies quoting a message, reactions and saved replies",
+    "loading": "Conversation · loading"
   },
   "composer": {
     "label": "Message",

@@ -77,7 +77,9 @@
     "clientVisitNoCard": "Cliente: no hay tarjeta guardada para la visita",
     "helperVisitScheduled": "Ayudante: una visita regular antes de que se pague",
     "helperVisitWaiting": "Ayudante: esperando el pago del cliente",
-    "clientFarAhead": "Cliente: una reserva con mucha anticipación, pagada después"
+    "clientFarAhead": "Cliente: una reserva con mucha anticipación, pagada después",
+    "listLoading": "Reservas · cargando",
+    "loading": "Una reserva · cargando"
   },
   "back": "Todas las reservas",
   "change": {

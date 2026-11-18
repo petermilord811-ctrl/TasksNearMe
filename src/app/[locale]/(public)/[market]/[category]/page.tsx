@@ -12,12 +12,12 @@ import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexabl
 import { breadcrumbNode, categoryServiceNode, servicePhotoNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { requestRows } from '@/platform/auth/audience';
 import { searchEngineRows } from '@/shared/sample-data';
-import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { CategoryScreen } from '@/ui/screens/public/category-screen';
 import { MarketTime } from '@/ui/lib/market-time';
 import { categoryNames, publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 import { routes } from '@/contracts';
 import { servicePhoto } from '@/shared/service-photos';
+import { CategorySkeleton } from '@/ui/screens/public/category-skeleton';
 
 /** Every enabled category in every public market (there's no [market] layout to pass the market down). */
 export async function generateStaticParams() {
@@ -78,7 +78,7 @@ async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]
           servicePhotoNode(context, servicePhoto(shown.slug, 'primary'), 'wide'),
         ]}
       />
-      <Suspense fallback={<PageSkeleton variant="detail" />}>
+      <Suspense fallback={<CategorySkeleton />}>
         <Category market={view.slug} category={shown.slug} seo={seo} />
       </Suspense>
     </>

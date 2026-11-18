@@ -36,7 +36,8 @@
     "emptyBooked": "No booked tasks",
     "emptyPast": "No past tasks",
     "pastStatuses": "Completed, canceled, and expired tasks",
-    "allAttention": "My tasks · everything that can need you"
+    "allAttention": "My tasks · everything that can need you",
+    "loading": "My tasks · loading"
   },
   "needsYou": {
     "for": ": {title}",

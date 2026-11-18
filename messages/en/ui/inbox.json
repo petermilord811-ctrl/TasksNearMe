@@ -23,7 +23,8 @@
     "client": "Client inbox",
     "helper": "Helper inbox",
     "empty": "Empty inbox",
-    "kinds": "Requests, support, and a new conversation"
+    "kinds": "Requests, support, and a new conversation",
+    "loading": "Messages · loading"
   },
   "filters": {
     "label": "Show",

@@ -32,6 +32,7 @@ import { offerPreviews } from './offers.preview';
 import { helperOnboardingPreviews } from './helper-onboarding.preview';
 import { helperProfileEditorPreviews } from './helper-profile-editor.preview';
 import { findWorkPreviews } from './find-work.preview';
+import { pageSkeletonPreviews } from './page-skeletons.preview';
 import { helperTaskPreviews } from './helper-task.preview';
 import { myOffersPreviews } from './my-offers.preview';
 import { bookingConfirmPreviews } from './booking-confirm.preview';
@@ -116,6 +117,7 @@ export const previews: PreviewEntry[] = [
   ...identityCheckPreviews,
   ...helperProfileEditorPreviews,
   ...findWorkPreviews,
+  ...pageSkeletonPreviews,
   ...helperTaskPreviews,
   ...myOffersPreviews,
   ...bookingConfirmPreviews,

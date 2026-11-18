@@ -23,7 +23,8 @@
     "client": "Bandeja de entrada del cliente",
     "helper": "Bandeja de entrada del ayudante",
     "empty": "Bandeja de entrada vacía",
-    "kinds": "Solicitudes, soporte y una conversación nueva"
+    "kinds": "Solicitudes, soporte y una conversación nueva",
+    "loading": "Mensajes · cargando"
   },
   "filters": {
     "label": "Mostrar",

@@ -50,6 +50,7 @@
     "masked": "Offer with hidden contact details",
     "updated": "Updated offer details",
     "error": "Offer action error: {code}",
-    "reliable": "A reliable helper's offer"
+    "reliable": "A reliable helper's offer",
+    "detailLoading": "An offer · loading"
   }
 }

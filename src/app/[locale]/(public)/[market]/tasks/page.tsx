@@ -12,10 +12,10 @@ import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { parseTaskBoardQuery } from '@/modules/tasks/projections';
 import { requestRows } from '@/platform/auth/audience';
 import { searchEngineRows } from '@/shared/sample-data';
-import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { TaskBoardScreen } from '@/ui/screens/public/task-board-screen';
 import { MarketTime } from '@/ui/lib/market-time';
 import { publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
+import { TaskBoardSkeleton } from '@/ui/screens/public/task-board-skeleton';
 
 export async function generateStaticParams() {
   const slugs = await listPublicMarketSlugs();
@@ -44,7 +44,7 @@ async function TaskBoardPage({ params, searchParams }: PageProps<'/[locale]/[mar
   const { market } = await params;
   if (!(await getMarketPageData(market, searchEngineRows()))) notFound();
   return (
-    <Suspense fallback={<PageSkeleton variant="list" />}>
+    <Suspense fallback={<TaskBoardSkeleton />}>
       <Board params={params} searchParams={searchParams} />
     </Suspense>
   );
