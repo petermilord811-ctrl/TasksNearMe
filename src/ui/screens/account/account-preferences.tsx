@@ -53,7 +53,8 @@ export function AccountPreferences({ preferences, onSave }: {
       <caption className="sr-only">{t('preferences.caption')}</caption>
       <thead><tr className="border-b">
         <th scope="col" className="w-2/5 py-3 text-left font-medium text-muted-foreground">{t('preferences.topic')}</th>
-        {channels.map((channel) => <th key={channel} scope="col" className="px-1 py-3 text-center font-medium text-muted-foreground">{t(`preferences.channels.${channel}`)}</th>)}
+        {/* Short column names (audit M37: "Text message (SMS)" wrapped to three lines on phones); each switch keeps the full name. */}
+        {channels.map((channel) => <th key={channel} scope="col" className="px-1 py-3 text-center font-medium text-muted-foreground">{t(`preferences.columns.${channel}`)}</th>)}
       </tr></thead>
       <tbody>{NOTIFICATION_TOPICS.map((topic) => <tr key={topic} className="border-b last:border-b-0">
         <th scope="row" className="py-3 pr-2 text-left font-medium">{t(`preferences.topics.${topic}`)}</th>

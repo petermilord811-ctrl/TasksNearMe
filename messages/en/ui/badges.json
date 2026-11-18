@@ -33,6 +33,8 @@
   "description": "Earned with completed, paid bookings. They show on your profile.",
   "none": "No badges yet. Your first comes with your first completed booking.",
   "upNextTitle": "Up next",
+  "moreWithNext": "What's next, and how badges are counted",
+  "moreHowCounted": "How badges are counted",
   "howCounted": "Badges count completed and paid bookings: never refunded or disputed ones, and at most 3 with the same person for the booking badges. Our team can remove a badge earned unfairly.",
   "previews": {
     "group": "Badges",

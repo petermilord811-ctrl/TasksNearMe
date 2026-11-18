@@ -172,10 +172,25 @@ describe('AccountScreen', () => {
     expect(privacy).toHaveTextContent(/Your account will be deleted on .*Nov 28/);
   });
 
+  it('groups the page under an index of its sections (audit M37)', () => {
+    mount(jordanAccountData);
+    const index = screen.getByRole('navigation', { name: 'Account sections' });
+    const links = within(index).getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['#account-profile', '#account-security', '#account-notifications', '#account-helping', '#account-privacy']);
+    for (const link of links) {
+      const group = document.querySelector(link.getAttribute('href')!)!;
+      expect(group).toBeInTheDocument();
+      expect(within(group as HTMLElement).getByRole('heading', { level: 2 })).toHaveTextContent(link.textContent!);
+    }
+    // Each card is a part of its group, and the notifications table's columns are short.
+    expect(screen.getByRole('heading', { level: 3, name: 'Contact details' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Email' })).toBeInTheDocument();
+  });
+
   it('shows supplied privacy dates and links to the privacy policy', () => {
     const { unmount } = mount(jordanAccountData);
     expect(screen.getByText(/Preparing your copy \(asked for .*Nov 20\)/)).toBeVisible();
-    expect(screen.getByRole('link', { name: /privacy/i })).toHaveAttribute('href', routes.legal('privacy'));
+    expect(screen.getByRole('link', { name: /privacy policy/i })).toHaveAttribute('href', routes.legal('privacy'));
     expectUnavailableButton('Request a copy of my data');
     unmount();
     mount(newAccountData);

@@ -1,6 +1,14 @@
 {
   "title": "Cuenta",
   "description": "Tus datos, notificaciones y opciones de privacidad.",
+  "groups": {
+    "label": "Secciones de la cuenta",
+    "profile": "Perfil",
+    "security": "Inicio de sesión y seguridad",
+    "notifications": "Notificaciones",
+    "helping": "Plan y ayuda",
+    "privacy": "Privacidad y datos"
+  },
   "profile": {
     "title": "Perfil",
     "description": "Tu foto y tu nombre, tal como los ve la gente en TasksNearMe.",
@@ -89,6 +97,10 @@
     "channels": {
       "email": "Correo",
       "sms": "Mensaje de texto (SMS)"
+    },
+    "columns": {
+      "email": "Correo",
+      "sms": "Texto"
     },
     "topics": {
       "bookings": "Reservas",

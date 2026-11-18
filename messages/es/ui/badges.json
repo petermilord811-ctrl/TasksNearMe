@@ -33,6 +33,8 @@
   "description": "Se ganan con reservas completadas y pagadas. Aparecen en tu perfil.",
   "none": "Aún no tienes insignias. La primera llega con tu primera reserva completada.",
   "upNextTitle": "Las siguientes",
+  "moreWithNext": "Lo siguiente y cómo se cuentan las insignias",
+  "moreHowCounted": "Cómo se cuentan las insignias",
   "howCounted": "Las insignias cuentan reservas completadas y pagadas: nunca las reembolsadas ni las disputadas, y como máximo 3 con la misma persona para las insignias de reservas. Nuestro equipo puede quitar una insignia obtenida de forma injusta.",
   "previews": {
     "group": "Insignias",

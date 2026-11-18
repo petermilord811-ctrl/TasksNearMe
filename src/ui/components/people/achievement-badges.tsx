@@ -1,4 +1,4 @@
-import { CalendarClock, CheckCheck, Clock, Gem, House, Medal, Repeat, Smile, Star, type LucideIcon } from 'lucide-react';
+import { CalendarClock, CheckCheck, ChevronRight, Clock, Gem, House, Medal, Repeat, Smile, Star, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { BadgeCode, BadgeProgressView, BadgeView, OwnBadgesData } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
@@ -92,13 +92,21 @@ export function OwnBadgesPanel({ data }: { data: OwnBadgesData }) {
         {badge.next && <Progress count={badge.next.count} threshold={badge.next.threshold} label={t('next', { count: badge.next.count, threshold: badge.next.threshold })} />}
       </li>)}
     </ul>}
-    {data.upNext.length > 0 && <section aria-labelledby="badges-up-next" className="space-y-3 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.07]">
-      <h3 id="badges-up-next" className="font-semibold">{t('upNextTitle')}</h3>
-      <ul className="space-y-3">{data.upNext.map((item: BadgeProgressView) => <li key={`${item.code}:${item.category ?? ''}`} className="space-y-1.5">
-        <p className="text-sm font-medium">{name(item)} <span className="font-normal text-muted-foreground">· {detail({ code: item.code, threshold: item.threshold })}</span></p>
-        <Progress count={item.count} threshold={item.threshold} label={t('progress', { count: item.count, threshold: item.threshold })} />
-      </li>)}</ul>
-    </section>}
-    <p className="text-sm text-muted-foreground">{t('howCounted')}</p>
+    {/* What's next and how badges count, one tap away: the account page is long enough (plan 9.14, audit M37). */}
+    <details className="group/more border-t border-foreground/[0.07] pt-3 dark:border-white/[0.07]">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+        <ChevronRight aria-hidden="true" className="size-4 shrink-0 transition-transform duration-200 group-open/more:rotate-90 motion-reduce:transition-none" />{t(data.upNext.length > 0 ? 'moreWithNext' : 'moreHowCounted')}
+      </summary>
+      <div className="space-y-4 pt-2">
+        {data.upNext.length > 0 && <section aria-labelledby="badges-up-next" className="space-y-3">
+          <h4 id="badges-up-next" className="font-semibold">{t('upNextTitle')}</h4>
+          <ul className="space-y-3">{data.upNext.map((item: BadgeProgressView) => <li key={`${item.code}:${item.category ?? ''}`} className="space-y-1.5">
+            <p className="text-sm font-medium">{name(item)} <span className="font-normal text-muted-foreground">· {detail({ code: item.code, threshold: item.threshold })}</span></p>
+            <Progress count={item.count} threshold={item.threshold} label={t('progress', { count: item.count, threshold: item.threshold })} />
+          </li>)}</ul>
+        </section>}
+        <p className="text-sm text-muted-foreground">{t('howCounted')}</p>
+      </div>
+    </details>
   </div>;
 }
