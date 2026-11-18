@@ -149,11 +149,15 @@
     "suggestTask": "Post a task and get offers",
     "filteredTitle": "Nothing like that here yet",
     "filteredBody": "Try all of {market}, or clear the filters.",
+    "filteredBodyCity": "Nothing in {market} matches these filters. Clear them to see everything.",
     "wider": "Show all of {market}",
     "clear": "Clear filters",
     "savedTitle": "Nothing saved yet",
     "savedBody": "Tap Save on a post to keep it here for later.",
-    "backToAll": "Back to everything"
+    "backToAll": "Back to everything",
+    "pastEndTitle": "Nothing on this page",
+    "pastEndBody": "You've reached the end. Start again from the first page.",
+    "firstPage": "Back to the first page"
   },
   "live": {
     "show": "{count, plural, one {# new} other {# new}} · Show",

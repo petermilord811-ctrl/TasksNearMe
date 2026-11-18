@@ -6,7 +6,7 @@ import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 import { ScrollRow } from '@/ui/components/layout/scroll-row';
-import { portalHref } from './portal-href';
+import { savedHref } from './portal-href';
 
 const cardClass = 'min-w-0 rounded-[1.375rem] border border-border bg-card p-4 shadow-card';
 const cardTitle = 'flex items-center gap-2 text-[13px] font-semibold tracking-wide text-muted-foreground uppercase';
@@ -109,7 +109,7 @@ export function YourStuffStrip({ rail, query }: { rail: PortalRailData; query: P
           <span className="shrink-0 rounded-full bg-primary px-1.5 py-px text-[11px] font-semibold text-primary-foreground tabular-nums">{t('rail.offers', { count: task.offerCount })}</span>
         </Link>
       </li>)}
-      {rail.savedCount > 0 && <li className="shrink-0"><Link href={portalHref(query, { saved: !query.saved })} aria-current={query.saved ? 'true' : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-[13px] font-medium shadow-card transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring aria-[current=true]:border-primary/50 aria-[current=true]:bg-brand-soft">
+      {rail.savedCount > 0 && <li className="shrink-0"><Link href={savedHref(query)} aria-current={query.saved ? 'true' : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-[13px] font-medium shadow-card transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring aria-[current=true]:border-primary/50 aria-[current=true]:bg-brand-soft">
         <Bookmark aria-hidden="true" className="size-4 text-primary" />{t('saved.count', { count: rail.savedCount })}
       </Link></li>}
     </ul>
@@ -145,7 +145,7 @@ export function PortalRail({ data }: { data: Pick<PortalPageData, 'rail' | 'quer
                 <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground tabular-nums"><MessagesSquare aria-hidden="true" className="size-3.5" />{post.replyCount}</span>
               </Link></li>)}</ul>
             </div>}
-            {rail.savedCount > 0 && <Link href={portalHref(query, { saved: !query.saved })} aria-current={query.saved ? 'true' : undefined} className={cn(rowLink, 'aria-[current=true]:bg-brand-soft')}>
+            {rail.savedCount > 0 && <Link href={savedHref(query)} aria-current={query.saved ? 'true' : undefined} className={cn(rowLink, 'aria-[current=true]:bg-brand-soft')}>
               <span className="inline-flex items-center gap-2 text-sm font-medium"><Bookmark aria-hidden="true" className="size-4 text-primary" />{t('savedItems', { count: rail.savedCount })}</span>
               <ArrowRight aria-hidden="true" className="size-3.5 text-muted-foreground" />
             </Link>}

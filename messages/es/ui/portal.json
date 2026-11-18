@@ -149,11 +149,15 @@
     "suggestTask": "Publica una tarea y recibe ofertas",
     "filteredTitle": "Todavía no hay nada así aquí",
     "filteredBody": "Prueba con todo {market} o quita los filtros.",
+    "filteredBodyCity": "Nada en {market} coincide con estos filtros. Quítalos para ver todo.",
     "wider": "Ver todo {market}",
     "clear": "Quitar filtros",
     "savedTitle": "Todavía no guardas nada",
     "savedBody": "Toca Guardar en una publicación para tenerla aquí más tarde.",
-    "backToAll": "Volver a todo"
+    "backToAll": "Volver a todo",
+    "pastEndTitle": "No hay nada en esta página",
+    "pastEndBody": "Llegaste al final. Empieza de nuevo desde la primera página.",
+    "firstPage": "Volver a la primera página"
   },
   "live": {
     "show": "{count, plural, one {# nueva} other {# nuevas}} · Ver",
