@@ -4,6 +4,7 @@ import type { ActionResult, AvailabilityHandlers, ISODateTime, MyAvailabilityPag
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { FinishSetupPanel } from '@/ui/components/helper/finish-setup-panel';
 import { PageHeader } from '@/ui/components/layout/page-header';
+import { useFormat } from '@/ui/lib/format';
 import { AvailabilityPostForm, type AvailabilityFormPreviewState } from './availability-post-form';
 import { AvailabilityPostCard } from './availability-post-card';
 
@@ -19,6 +20,8 @@ export function MyAvailabilityContent({ data, handlers, now, initialConfirmId, i
   initialCancelResult?: ActionResult;
 }) {
   const t = useTranslations('availability');
+  // "Times shown in Eastern Time": the market's zone, named in the page's language (8.1).
+  const { zoneName } = useFormat(data.timeZone);
   return <div className="mx-auto w-full max-w-reading space-y-section">
     <PageHeader title={t('title')} description={t('description')} />
     <div className="flex items-start gap-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 dark:border-white/[0.06]">
@@ -28,7 +31,7 @@ export function MyAvailabilityContent({ data, handlers, now, initialConfirmId, i
       : data.limits.activeCount >= data.limits.maxActive ? <p role="status" className="rounded-[1.375rem] border border-foreground/[0.05] bg-secondary p-card text-secondary-foreground">{t('atLimit', { count: data.limits.activeCount })}</p>
         : <AvailabilityPostForm data={data} onCreate={handlers.onCreate} now={now} {...formState} />}
     <section className="space-y-4" aria-label={t('postsTitle')}>
-      <div className="space-y-2"><h2 className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{t('postsTitle')}</h2><p className="text-sm text-muted-foreground">{t('marketTime')}</p></div>
+      <div className="space-y-2"><h2 className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{t('postsTitle')}</h2><p className="text-sm text-muted-foreground">{t('marketTime', { zone: zoneName })}</p></div>
       {data.posts.length ? <ul className="space-y-4">{data.posts.map((post) => <li key={post.id}><AvailabilityPostCard post={post} timeZone={data.timeZone} onCancel={handlers.onCancel} initialConfirm={initialConfirmId === post.id} initialResult={initialConfirmId === post.id ? initialCancelResult : undefined} /></li>)}</ul>
         : <EmptyState title={t('emptyTitle')} body={t(data.setup.bookable ? 'emptyBody' : 'emptySetupBody')} headingLevel={3} icon={<CalendarDays className="size-6" />} />}
     </section>

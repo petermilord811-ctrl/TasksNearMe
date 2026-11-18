@@ -98,7 +98,7 @@ export function WelcomeGiftCardView({ card, headingLevel = 2, className }: { car
         {action && <Link href={action.href} className="group/cta inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-shadow hover:shadow-[0_12px_28px_-12px_rgb(0_0_0/0.45)]">
           {action.label}<ArrowRight aria-hidden="true" className="size-4 transition-transform duration-300 group-hover/cta:translate-x-0.5" />
         </Link>}
-        <p className="text-xs text-badge-reward-foreground/80">{t('fineprint')}</p>
+        <p className="text-xs text-badge-reward-foreground">{t('fineprint')}</p>
       </div>
       <GiftCardArt amountCents={card.amountCents} state={card.state} />
     </div>
