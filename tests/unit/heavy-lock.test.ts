@@ -85,6 +85,46 @@ describe('acquireHeavyLock', () => {
     expect(readLock(lockFile)).toBeNull();
   });
 
+  it('hands the lock over in arrival order, and a job that asks again right after releasing goes to the back', async () => {
+    const options = { lockFile, heartbeatMs: 20, pollMs: 10, headPollMs: 5 };
+    const releaseA = await acquireHeavyLock('a', options);
+    const order: string[] = [];
+    const queued = (owner: string) =>
+      acquireHeavyLock(owner, options).then((release) => {
+        order.push(owner);
+        return release;
+      });
+    const b = queued('b');
+    await sleep(5);
+    const c = queued('c');
+    await sleep(40);
+    releaseA();
+    // The screenshot loop of 2026-11-18: release, ask again at once. It must wait behind b and c.
+    const aAgain = queued('a again');
+    const releaseB = await b;
+    await sleep(40);
+    expect(order).toEqual(['b']);
+    releaseB();
+    (await c)();
+    (await aAgain)();
+    expect(order).toEqual(['b', 'c', 'a again']);
+    expect(fs.readdirSync(`${lockFile}.queue`)).toEqual([]);
+  });
+
+  it("doesn't wait behind a ticket whose waiter is gone or stopped touching it", async () => {
+    const queueDir = `${lockFile}.queue`;
+    fs.mkdirSync(queueDir, { recursive: true });
+    fs.writeFileSync(path.join(queueDir, `000000000000001-${DEAD_PID}-000001.ticket`), '{}');
+    const frozen = path.join(queueDir, `000000000000002-${process.pid}-000001.ticket`);
+    fs.writeFileSync(frozen, '{}');
+    const old = new Date(Date.now() - 3 * minute);
+    fs.utimesSync(frozen, old, old);
+    const release = await acquireHeavyLock('next', { lockFile, heartbeatMs: 20, pollMs: 10, headPollMs: 5 });
+    expect(readLock(lockFile)).toMatchObject({ owner: 'next', pid: process.pid });
+    expect(fs.readdirSync(queueDir)).toEqual([]);
+    release();
+  });
+
   it('takes over the lock of a holder that crashed, and a late release leaves the new holder alone', async () => {
     const stamp = new Date().toISOString();
     fs.writeFileSync(lockFile, JSON.stringify({ owner: 'crashed', pid: DEAD_PID, startedAt: stamp, heartbeatAt: stamp }));

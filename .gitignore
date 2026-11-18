@@ -38,6 +38,7 @@ npm-debug.log*
 automation/runs/
 automation/logs/
 automation/heavy.lock
+automation/heavy.lock.queue/
 automation/dev-restart.request
 automation/dev-pause.request
 automation/dev-supervisor.pid
