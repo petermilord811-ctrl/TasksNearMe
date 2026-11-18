@@ -88,7 +88,7 @@ export interface ThreadSummary {
   contactMasking: boolean;
 }
 
-/** `/app/messages`: threads with the latest activity first. */
+/** `/app/messages`: threads with unread messages first, then the latest activity first (audit M33). */
 export interface InboxPageData {
   threads: ThreadSummary[];
 }
@@ -102,9 +102,19 @@ export const COMPOSER_DISABLED_REASONS = [
 ] as const;
 export type ComposerDisabledReason = (typeof COMPOSER_DISABLED_REASONS)[number];
 
+/**
+ * Why a `closed` conversation closed (audit L13), so the page can say so and point the way on: the offer expired,
+ * was declined or withdrawn, or ended otherwise (its booking was canceled); the booking was canceled or completed
+ * a while ago; the regular visits ended.
+ */
+export const COMPOSER_CLOSED_REASONS = ['offer_expired', 'offer_declined', 'offer_withdrawn', 'offer_ended', 'booking_canceled', 'booking_completed', 'series_ended'] as const;
+export type ComposerClosedReason = (typeof COMPOSER_CLOSED_REASONS)[number];
+
 export interface ComposerRules {
   canSend: boolean;
   disabledReason?: ComposerDisabledReason;
+  /** With `disabledReason: 'closed'`: why. */
+  closedReason?: ComposerClosedReason;
   maxLength: number;
   maxAttachments: number;
   maxPhotoMegabytes: number;

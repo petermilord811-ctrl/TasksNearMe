@@ -17,6 +17,33 @@
     "closed": "Esta conversación está cerrada",
     "unavailable": "Los mensajes no están disponibles en esta conversación"
   },
+  "closed": {
+    "offer_for_client": {
+      "offer_expired": "La oferta de {name} venció, así que esta conversación se cerró.",
+      "offer_declined": "Rechazaste la oferta de {name}, así que esta conversación se cerró.",
+      "offer_withdrawn": "{name} retiró su oferta, así que esta conversación se cerró.",
+      "offer_ended": "Esta oferta terminó, así que esta conversación se cerró."
+    },
+    "task_for_helper": {
+      "offer_expired": "Tu oferta venció, así que esta conversación se cerró.",
+      "offer_declined": "{name} eligió otra oferta, así que esta conversación se cerró.",
+      "offer_withdrawn": "Retiraste tu oferta, así que esta conversación se cerró.",
+      "offer_ended": "Esta oferta terminó, así que esta conversación se cerró."
+    },
+    "booking": {
+      "booking_canceled": "Esta reserva se canceló hace más de una semana, así que esta conversación se cerró.",
+      "booking_completed": "Esta reserva terminó hace más de un mes, así que esta conversación se cerró."
+    },
+    "series": {
+      "series_ended": "Estas visitas regulares terminaron, así que esta conversación se cerró."
+    }
+  },
+  "wayOn": {
+    "offer_for_client": "Abre la oferta para volver a solicitarle",
+    "task_for_helper": "Abrir la tarea",
+    "booking": "Abrir la reserva",
+    "series": "Abrir las visitas regulares"
+  },
   "log": "Mensajes de la conversación",
   "empty": "Aún no hay mensajes.",
   "you": "Tú",
@@ -31,6 +58,7 @@
     "booking": "Reserva con una foto y una actualización de estado",
     "offer-masked": "Oferta con teléfono y correo ocultos",
     "closed": "Conversación cerrada",
+    "closedExpired": "Cerrada: la oferta venció, con el siguiente paso",
     "blocked": "Conversación bloqueada",
     "helper": "Conversación del ayudante antes de la reserva",
     "empty": "Conversación nueva",

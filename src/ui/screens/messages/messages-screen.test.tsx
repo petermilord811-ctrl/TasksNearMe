@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes, type InboxPageData, type MessageView, type ThreadPageData, type ThreadSubject } from '@/contracts';
 import {
-  blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData,
+  blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, expiredOfferThreadPageData,
   fakeThreadHandlers, inboxEmptyData, maskedEmailMessage, mayaInboxPageData,
 } from '@/fixtures';
 import { formatDate, formatRelative, formatTime } from '@/shared/format';
@@ -94,6 +94,14 @@ describe('InboxScreen', () => {
 });
 
 describe('ThreadScreen', () => {
+  it('says why a closed conversation closed and links the way on (audit L13)', () => {
+    thread(expiredOfferThreadPageData);
+    const status = screen.getAllByRole('status').find((element) => element.textContent?.includes('closed'))!;
+    expect(status).toHaveTextContent("Lee M.'s offer expired, so this conversation closed.");
+    expect(within(status).getByRole('link', { name: 'Open the offer to request them again' })).toHaveAttribute('href', routes.app.offer('tsk_desk', 'off_lee'));
+    expect(screen.queryByRole('form', { name: 'Message' })).not.toBeInTheDocument();
+  });
+
   it('keeps contact segments masked and uses timeline copy inside a polite message log', () => {
     const { container } = thread();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);

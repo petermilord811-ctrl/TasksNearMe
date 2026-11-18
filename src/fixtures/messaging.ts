@@ -118,6 +118,8 @@ export const inboxEmptyData: InboxPageData = { threads: [] };
 /** Lee withdrew: the thread stays readable, but nobody can send. */
 export const closedThreadPageData: ThreadPageData = { ...deskOfferThreadPageData, composer: { ...composer, canSend: false, disabledReason: 'closed' } };
 export const blockedThreadPageData: ThreadPageData = { ...deskOfferThreadPageData, composer: { ...composer, canSend: false, disabledReason: 'blocked' } };
+/** Lee's offer expired, so the thread closed: why, and the way on (the offer, where Maya can request Lee again: audit L13). */
+export const expiredOfferThreadPageData: ThreadPageData = { ...deskOfferThreadPageData, composer: { ...composer, canSend: false, disabledReason: 'closed', closedReason: 'offer_expired' } };
 
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 let attachmentCount = 0;

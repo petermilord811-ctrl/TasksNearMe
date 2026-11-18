@@ -3,7 +3,7 @@ import {
   type ActionResult, type AppShellHandlers, type InboxPageData, type PreviewEntry, type ThreadHandlers, type ThreadPageData,
 } from '@/contracts';
 import {
-  blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData,
+  blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, expiredOfferThreadPageData,
   fakeHandler, fakeThreadHandlers, inboxEmptyData, jordanInboxPageData, jordanShell, mayaInboxPageData,
   mayaShell, movingOfferThreadForHelper,
 } from '@/fixtures';
@@ -57,6 +57,7 @@ export const messagesScreenPreviews: PreviewEntry[] = [
   threadPreview('booking', threadCopy.previews.booking, deskBookingThreadPageData),
   threadPreview('offer-masked', threadCopy.previews['offer-masked'], deskOfferThreadPageData),
   threadPreview('closed', threadCopy.previews.closed, closedThreadPageData),
+  threadPreview('closed-expired', threadCopy.previews.closedExpired, expiredOfferThreadPageData),
   threadPreview('blocked', threadCopy.previews.blocked, blockedThreadPageData),
   // Quote-replies, reactions and saved replies (completion plan 7.3).
   threadPreview('replies-reactions', threadCopy.previews.repliesReactions, {

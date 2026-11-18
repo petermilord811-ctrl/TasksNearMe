@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ComponentProps } from 'react';
-import { ArrowLeft, ArrowUpRight, LockKeyhole } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, LockKeyhole } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadPageData, type ThreadSubject, type ThreadSummary } from '@/contracts';
 import { InboxList } from '@/ui/components/messaging/inbox-list';
@@ -35,7 +35,7 @@ export function ThreadScreen({ data, handlers, now, safety, inbox }: ThreadScree
   const inboxCopy = useTranslations('inbox');
   if (!inbox || inbox.length === 0) return <ThreadContent data={data} handlers={handlers} now={now} safety={safety} />;
   // Wide screens: the conversations beside the open one, like a mail or chat app; phones keep one pane at a time.
-  return <div className="lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-5">
+  return <div className="lg:grid lg:grid-cols-[21rem_minmax(0,1fr)] lg:items-start lg:gap-5">
     <aside aria-label={inboxCopy('title')} className="hidden overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card lg:sticky lg:top-24 lg:flex lg:h-[calc(100dvh-8rem)] lg:flex-col dark:border-white/[0.06]">
       <InboxList threads={inbox} now={now} currentId={data.thread.id} variant="pane" />
     </aside>
@@ -56,28 +56,41 @@ export function ThreadContent({ data, handlers, now, safety, composerState, wide
 }) {
   const t = useTranslations('thread');
   const { thread, messages, composer } = data;
+  const closedReason = composer.disabledReason === 'closed' ? composer.closedReason : undefined;
 
-  return <div className={cn('mx-auto w-full space-y-4', wide ? 'max-w-reading lg:max-w-none' : 'max-w-reading')}>
-    <Link href={routes.app.messages()} className={buttonVariants({ variant: 'ghost', size: 'sm', className: cn('-ml-2', wide && 'lg:hidden') })}><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
-    <header className="flex min-w-0 items-start gap-3 sm:gap-4">
+  // One line on top (back, who, what it's about, the way to it), then the chat panel, which takes the rest of the
+  // screen so its composer sits at the bottom (audit M40; the page has no tab dock).
+  return <div className={cn('mx-auto flex w-full flex-col gap-3', wide ? 'max-w-reading lg:max-w-none' : 'max-w-reading')}>
+    <header className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <Link href={routes.app.messages()} aria-label={t('back')} title={t('back')} className={buttonVariants({ variant: 'ghost', size: 'icon', className: cn('-ml-2 size-11 shrink-0 rounded-full', wide && 'lg:hidden') })}><ArrowLeft aria-hidden="true" className="size-5" /></Link>
       <InitialsAvatar initials={thread.otherParty.initials} photo={thread.otherParty.photo} />
-      <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-        <h1 className="font-display text-2xl leading-tight font-semibold tracking-[-0.02em] sm:text-[1.75rem]">{t('title', { name: thread.otherParty.displayName })}</h1>
-        <ThreadPresence threadId={thread.id} presence={data.presence} className="mt-1" />
-        <p className="mt-1 text-sm text-muted-foreground">{thread.title}</p>
-        <Link href={subjectHref(thread.subject)} className="group/subject inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">
-          {t(`subject.${thread.subject.kind}`)}<ArrowUpRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover/subject:-translate-y-0.5 group-hover/subject:translate-x-0.5 motion-reduce:transition-none" />
-        </Link>
+      <div className="min-w-0 flex-1">
+        {/* The name alone on phones, so it fits; "Messages with …" for screen readers and from 640 px. */}
+        <h1 className="truncate font-display text-lg leading-tight font-semibold tracking-[-0.02em] sm:text-2xl">
+          <span aria-hidden="true" className="sm:hidden">{thread.otherParty.displayName}</span>
+          <span className="max-sm:sr-only">{t('title', { name: thread.otherParty.displayName })}</span>
+        </h1>
+        <div className="flex min-w-0 items-center gap-x-2 text-xs text-muted-foreground sm:text-sm">
+          <ThreadPresence threadId={thread.id} presence={data.presence} className="shrink-0 text-xs sm:text-sm" />
+          <span className="truncate">{thread.title}</span>
+        </div>
       </div>
+      <Link href={subjectHref(thread.subject)} title={t(`subject.${thread.subject.kind}`)} className="group/subject inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:justify-start">
+        <span className="max-sm:sr-only">{t(`subject.${thread.subject.kind}`)}</span><ArrowUpRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover/subject:-translate-y-0.5 group-hover/subject:translate-x-0.5 motion-reduce:transition-none" />
+      </Link>
       {safety && <ReportBlockMenu key={safety.subject.userId} subject={safety.subject} handlers={safety.handlers} />}
     </header>
-    {thread.contactMasking && <p className="flex items-start gap-2.5 rounded-2xl bg-secondary/70 px-4 py-3 text-sm leading-6 text-secondary-foreground"><LockKeyhole aria-hidden="true" className="mt-1 size-4 shrink-0" /><span>{t('masking')}</span></p>}
-    <div className="flex h-[max(32rem,calc(100dvh-21rem))] flex-col overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]">
+    {thread.contactMasking && <p className="flex items-start gap-2.5 rounded-2xl bg-secondary/70 px-4 py-2.5 text-sm leading-6 text-secondary-foreground"><LockKeyhole aria-hidden="true" className="mt-1 size-4 shrink-0" /><span>{t('masking')}</span></p>}
+    <div className={cn('flex flex-col overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]', thread.contactMasking ? 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-13rem))]' : 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-9rem))]', 'lg:h-[max(32rem,calc(100dvh-var(--app-header-offset,4.25rem)-10rem))]')}>
       <ReplyProvider>
       <MessageLog key={`log-${thread.id}`} messages={messages} otherParty={thread.otherParty} now={now} seenMessageId={data.seenMessageId} firstUnreadId={data.firstUnreadId} {...(composer.canSend && handlers.onReact ? { onReact: handlers.onReact } : {})} className="min-h-0 flex-1" />
       {composer.canSend
         ? <MessageComposerContent key={`composer-${thread.id}`} rules={composer} handlers={handlers} savedReplies={data.savedReplies} template={{ firstName: thread.otherParty.displayName.split(' ')[0] ?? '', task: thread.title }} {...composerState} />
-        : <p role="status" className="border-t border-foreground/[0.07] bg-muted/60 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm font-medium dark:border-white/[0.06]">{t(`disabled.${composer.disabledReason ?? 'unavailable'}`)}</p>}
+        : <div role="status" className="border-t border-foreground/[0.07] bg-muted/60 px-4 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] text-center text-sm dark:border-white/[0.06]">
+          {/* Why it closed and the way on (audit L13): the offer, the task, the booking or the visits it was about. */}
+          <p className="font-medium">{closedReason ? t(`closed.${thread.subject.kind}.${closedReason}`, { name: thread.otherParty.displayName }) : t(`disabled.${composer.disabledReason ?? 'unavailable'}`)}</p>
+          {closedReason && <Link href={subjectHref(thread.subject)} className="group/way mt-1 inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary underline-offset-4 hover:underline">{t(`wayOn.${thread.subject.kind}`)}<ArrowRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover/way:translate-x-0.5 motion-reduce:transition-none" /></Link>}
+        </div>}
       </ReplyProvider>
     </div>
   </div>;

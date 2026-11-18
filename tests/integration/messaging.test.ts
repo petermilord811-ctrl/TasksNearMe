@@ -56,8 +56,27 @@ describe('offer threads', () => {
     await sendMessage(db, 'usr_jordan', offerThread, { body: 'I can also come at 11.', attachmentIds: [] }, now());
     const inbox = await getInbox(db, 'usr_ruth', now());
     expect(inbox.threads.find((t) => t.id === offerThread)?.unreadCount).toBe(1);
+    // Unread conversations first, whatever their age (audit M33).
+    const firstRead = inbox.threads.findIndex((t) => t.unreadCount === 0);
+    expect(firstRead === -1 || inbox.threads.slice(firstRead).every((t) => t.unreadCount === 0)).toBe(true);
     await getThreadPage(db, 'usr_ruth', offerThread, now());
     expect((await getInbox(db, 'usr_ruth', now())).threads.find((t) => t.id === offerThread)?.unreadCount).toBe(0);
+  });
+
+  it('says why an offer thread closed: expired, declined or withdrawn (audit L13)', async () => {
+    const offer = await db.select().from(offers).where(eq(offers.id, 'off_msg_jordan')).then((rows) => rows[0]!);
+    try {
+      await db.update(offers).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(offers.id, 'off_msg_jordan'));
+      expect((await getThreadPage(db, 'usr_ruth', offerThread, now()))?.composer).toMatchObject({ canSend: false, disabledReason: 'closed', closedReason: 'offer_expired' });
+      await db.update(offers).set({ expiresAt: offer.expiresAt, status: 'declined' }).where(eq(offers.id, 'off_msg_jordan'));
+      expect((await getThreadPage(db, 'usr_jordan', offerThread, now()))?.composer).toMatchObject({ disabledReason: 'closed', closedReason: 'offer_declined' });
+      await db.update(offers).set({ status: 'withdrawn' }).where(eq(offers.id, 'off_msg_jordan'));
+      expect((await getThreadPage(db, 'usr_ruth', offerThread, now()))?.composer).toMatchObject({ disabledReason: 'closed', closedReason: 'offer_withdrawn' });
+    } finally {
+      await db.update(offers).set({ status: offer.status, expiresAt: offer.expiresAt }).where(eq(offers.id, 'off_msg_jordan'));
+    }
+    expect((await getThreadPage(db, 'usr_ruth', offerThread, now()))?.composer).toMatchObject({ canSend: true });
+    expect((await getThreadPage(db, 'usr_ruth', offerThread, now()))?.composer.closedReason).toBeUndefined();
   });
 
   it('refuses empty messages, other people, and blocked pairs', async () => {

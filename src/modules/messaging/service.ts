@@ -3,6 +3,7 @@ import { recomputeResponseTime } from '@/modules/profiles/response-time';
 import { and, asc, count, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
+  ComposerClosedReason,
   ComposerDisabledReason,
   InboxPageData,
   MessageView,
@@ -88,6 +89,8 @@ interface ThreadContext {
   /** Contact details stay hidden until a booking between the two is confirmed. */
   masking: boolean;
   closed: boolean;
+  /** Why it closed, when it did (audit L13). */
+  closedReason?: ComposerClosedReason;
 }
 
 /**
@@ -131,11 +134,13 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
       if (!booking) continue;
       const endedAt = booking.status === 'completed' ? booking.completedAt : booking.status === 'canceled' ? booking.canceledAt : null;
       const keepOpenDays = booking.status === 'completed' ? 30 : 7;
+      const closed = endedAt !== null && now.getTime() > endedAt.getTime() + keepOpenDays * DAY;
       out.set(thread.id, {
         title: task.title,
         subject: { kind: 'booking', bookingId: booking.id },
         masking: booking.status === 'pending_funding',
-        closed: endedAt !== null && now.getTime() > endedAt.getTime() + keepOpenDays * DAY,
+        closed,
+        ...(closed ? { closedReason: booking.status === 'completed' ? 'booking_completed' : 'booking_canceled' } : {}),
       });
     } else if (thread.kind === 'series') {
       // Regular visits: open while the series runs, and 30 days after its last visit once it's over.
@@ -143,22 +148,28 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
       if (!series) continue;
       const last = lastVisitBySeries.get(series.id);
       const over = series.status === 'canceled' || series.status === 'ended';
+      const closed = over && (!last || now.getTime() > last.getTime() + 30 * DAY);
       out.set(thread.id, {
         title: task.title,
         subject: { kind: 'series', seriesId: series.id },
         masking: false,
-        closed: over && (!last || now.getTime() > last.getTime() + 30 * DAY),
+        closed,
+        ...(closed ? { closedReason: 'series_ended' as const } : {}),
       });
     } else if (thread.kind === 'offer') {
       const offer = offerById.get(thread.linkedId);
       if (!offer) continue;
       const booked = bookedOffers.has(offer.id);
       const open = ['pending', 'stale'].includes(offer.status) && offer.expiresAt > now;
+      const closed = !open && !booked;
+      // An offer still pending past its expiry is expired, whether or not the job runner has marked it yet.
+      const closedReason: ComposerClosedReason = offer.status === 'declined' ? 'offer_declined' : offer.status === 'withdrawn' ? 'offer_withdrawn' : offer.status === 'accepted' ? 'offer_ended' : 'offer_expired';
       out.set(thread.id, {
         title: task.title,
         subject: viewerId === task.posterUserId ? { kind: 'offer_for_client', taskId: thread.taskId, offerId: offer.id } : { kind: 'task_for_helper', taskId: thread.taskId },
         masking: !booked,
-        closed: !open && !booked,
+        closed,
+        ...(closed ? { closedReason } : {}),
       });
     }
   }
@@ -293,7 +304,9 @@ export async function getInbox(db: Db, userId: string, now: Date): Promise<Inbox
     .where(eq(threadParticipants.userId, userId))
     .orderBy(desc(sql`coalesce(${threads.lastMessageAt}, ${threads.createdAt})`));
   const summaries = await summariesOf(db, rows.map(({ thread }) => thread), userId, now);
-  return { threads: rows.flatMap(({ thread }) => { const found = summaries.get(thread.id); return found ? [found.summary] : []; }) };
+  const list = rows.flatMap(({ thread }) => { const found = summaries.get(thread.id); return found ? [found.summary] : []; });
+  // Conversations waiting on the viewer first (audit M33), each group by latest activity (the query's order; sort is stable).
+  return { threads: list.sort((a, b) => Number(b.unreadCount > 0) - Number(a.unreadCount > 0)) };
 }
 
 /** One conversation for a participant (null for anyone else). Opening it marks it read. */
@@ -329,6 +342,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   }
   const lastMine = [...rows].reverse().find((row) => row.senderUserId === userId);
   const disabledReason: ComposerDisabledReason | undefined = blocked ? 'blocked' : found.context.closed ? 'closed' : undefined;
+  const closedReason = disabledReason === 'closed' ? found.context.closedReason : undefined;
   // Quotes (a replied-to message may be older than this page) and reactions, then the viewer's saved replies (7.3).
   const quotedIds = [...new Set(rows.flatMap((row) => (row.replyToMessageId ? [row.replyToMessageId] : [])))];
   const [quotedRows, reactionRows, replies] = await Promise.all([
@@ -364,6 +378,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     composer: {
       canSend: !disabledReason,
       ...(disabledReason ? { disabledReason } : {}),
+      ...(closedReason ? { closedReason } : {}),
       maxLength: 2000,
       maxAttachments: 4,
       maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)),

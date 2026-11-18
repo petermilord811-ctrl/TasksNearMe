@@ -17,6 +17,33 @@
     "closed": "This conversation is closed",
     "unavailable": "Messaging is unavailable in this conversation"
   },
+  "closed": {
+    "offer_for_client": {
+      "offer_expired": "{name}'s offer expired, so this conversation closed.",
+      "offer_declined": "You declined {name}'s offer, so this conversation closed.",
+      "offer_withdrawn": "{name} withdrew their offer, so this conversation closed.",
+      "offer_ended": "This offer ended, so this conversation closed."
+    },
+    "task_for_helper": {
+      "offer_expired": "Your offer expired, so this conversation closed.",
+      "offer_declined": "{name} chose another offer, so this conversation closed.",
+      "offer_withdrawn": "You withdrew your offer, so this conversation closed.",
+      "offer_ended": "This offer ended, so this conversation closed."
+    },
+    "booking": {
+      "booking_canceled": "This booking was canceled over a week ago, so this conversation closed.",
+      "booking_completed": "This booking finished over a month ago, so this conversation closed."
+    },
+    "series": {
+      "series_ended": "These regular visits ended, so this conversation closed."
+    }
+  },
+  "wayOn": {
+    "offer_for_client": "Open the offer to request them again",
+    "task_for_helper": "Open the task",
+    "booking": "Open the booking",
+    "series": "Open the regular visits"
+  },
   "log": "Conversation messages",
   "empty": "No messages yet.",
   "you": "You",
@@ -31,6 +58,7 @@
     "booking": "Booking with a photo and status update",
     "offer-masked": "Offer with masked phone and email",
     "closed": "Closed conversation",
+    "closedExpired": "Closed: the offer expired, with the way on",
     "blocked": "Blocked conversation",
     "helper": "Helper's pre-booking conversation",
     "empty": "New conversation",

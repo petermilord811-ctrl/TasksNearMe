@@ -37,5 +37,9 @@
     "placeholder": "Busca por nombre o tarea"
   },
   "noMatch": "Ninguna conversación coincide.",
+  "choose": {
+    "title": "Elige una conversación",
+    "body": "Elige una a la izquierda para leerla y responder. Las no leídas están arriba."
+  },
   "shown": "{count, plural, one {# conversación} other {# conversaciones}}"
 }
