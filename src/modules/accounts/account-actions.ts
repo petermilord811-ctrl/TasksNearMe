@@ -5,7 +5,7 @@ import { refresh } from 'next/cache';
 import type { ActionResult, EmailChangeConfirmInput, EmailInput, OneTimeCodeInput, PhoneInput, PhotoUploadResult } from '@/contracts';
 import { createEmailProvider } from '@/integrations/email';
 import { appUrl } from '@/integrations/oauth';
-import { createSmsSender } from '@/integrations/sms';
+import { createSmsSender, smsAvailable } from '@/integrations/sms';
 import { fileStorage } from '@/modules/tasks/server';
 import { auth } from '@/platform/auth/auth';
 import { getViewer } from '@/platform/auth/viewer';
@@ -75,7 +75,8 @@ export async function confirmEmailChangeAction(input: EmailChangeConfirmInput): 
 /** AccountHandlers.onStartPhoneChange: a code by text to the new number. */
 export async function startPhoneChangeAction(input: PhoneInput): Promise<ActionResult> {
   const userId = await signedInUserId();
-  if (!userId) return { ok: false, code: 'not_allowed' };
+  // No texts here (plan 9.2): no code can go out, so the account page and helper setup can't ask for one either.
+  if (!userId || !smsAvailable()) return { ok: false, code: 'not_allowed' };
   return contacts().startPhoneChange(userId, input);
 }
 

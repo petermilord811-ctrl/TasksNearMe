@@ -447,12 +447,15 @@ async function draftingFor(db: Db, userId: string): Promise<Pick<HelperProfileEd
   return { aiDraftingEnabled: ai, profileDraft: ai ? 'ai' : 'template' };
 }
 
-/** Where onboarding should be: a locked step opens the first step still to do. */
+/**
+ * Where onboarding should be: a locked step, or one not shown at all (the phone without texts, plan 9.2; aa's sweep
+ * S2: an old link or tab), opens the first step still to do.
+ */
 export async function onboardingRedirect(db: Db, userId: string, step: OnboardingStep, now: Date): Promise<OnboardingStep | null> {
   const state = await loadOnboardingState(db, userId, now);
   const result = computeOnboarding(state.facts);
   const stepState = result.progress.steps.find((s) => s.step === step)?.state;
-  return stepState === 'locked' || stepState === 'skipped' || stepState === 'later' ? result.firstIncomplete : null;
+  return stepState === undefined || stepState === 'locked' || stepState === 'skipped' || stepState === 'later' ? result.firstIncomplete : null;
 }
 
 export async function getProfileEditorData(db: Db, userId: string, now: Date): Promise<HelperProfileEditorData | null> {

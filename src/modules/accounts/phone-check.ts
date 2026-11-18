@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import { smsAvailable } from '@/integrations/sms';
-import { communityPosts } from '@/modules/community/schema';
+import { communityPosts, communityReplies } from '@/modules/community/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { identityCaptures, identityVerifications } from '@/modules/verification/schema';
 import type { Db } from '@/platform/db/connect';
@@ -13,7 +13,7 @@ import { users } from './schema';
  * - `off`: no SMS provider here (a production build without Twilio). Nothing asks for a phone number or a code, and
  *   nothing needs one: not sign-in, posting, community posts, helper setup, bookability, badges or the account page.
  * - `asked`: texts work, but the person already used the site without a phone while they didn't (the grace): they
- *   posted a task or a community post, or started their ID check. We ask for the phone and never block on it.
+ *   posted a task, a community post or a reply, or started their ID check. We ask for the phone and never block on it.
  * - `required`: texts work and the phone comes first, as before.
  * A verified phone always counts (the badge, texts), whatever the mode.
  */
@@ -41,11 +41,13 @@ export async function loadPhoneCheck(db: Db, userId: string, env: Record<string,
   if (!sms || verified) return { check: phoneCheckOf(sms, false), verified };
   const [row] = await db
     .select({
+      // The person's id as a value: inside a subquery a bare "id" column would mean that table's own id.
       used: sql<boolean>`(
-        exists (select 1 from ${tasks} where ${tasks.posterUserId} = ${users.id})
-        or exists (select 1 from ${communityPosts} where ${communityPosts.authorUserId} = ${users.id})
-        or exists (select 1 from ${identityVerifications} where ${identityVerifications.userId} = ${users.id})
-        or exists (select 1 from ${identityCaptures} where ${identityCaptures.userId} = ${users.id})
+        exists (select 1 from ${tasks} where ${tasks.posterUserId} = ${userId})
+        or exists (select 1 from ${communityPosts} where ${communityPosts.authorUserId} = ${userId})
+        or exists (select 1 from ${communityReplies} where ${communityReplies.authorUserId} = ${userId})
+        or exists (select 1 from ${identityVerifications} where ${identityVerifications.userId} = ${userId})
+        or exists (select 1 from ${identityCaptures} where ${identityCaptures.userId} = ${userId})
       )`,
     })
     .from(users)
