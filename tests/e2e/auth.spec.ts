@@ -15,6 +15,17 @@ test.describe('sign-in and page shells', () => {
     await expect(page.getByText('MR', { exact: true }).first()).toBeVisible();
   });
 
+  test('signed in, sign-in sends you on only within the site, however `next` is written (sweep 2026-11-18)', async ({ page }) => {
+    await devSignIn(page, 'maya@example.test');
+    const host = new URL(page.url()).host;
+    // Dot segments the URL parser resolves into a protocol-relative "//evil.example" (fd84388).
+    for (const next of ['/.//evil.example/x', '/%2e//evil.example', '/app/..//evil.example']) {
+      await page.goto(`/sign-in?next=${encodeURIComponent(next)}`);
+      await expect(page).toHaveURL(/\/app$/);
+      expect(new URL(page.url()).host).toBe(host);
+    }
+  });
+
   test('members never see the admin area', async ({ page }) => {
     await devSignIn(page, 'maya@example.test');
     await expect(page).toHaveURL(/\/app$/);

@@ -83,6 +83,10 @@
       "description": "Reserva ayuda local de confianza para las tareas de todos los días, con personas verificadas cerca de ti, y ve el precio completo antes de reservar.",
       "tagline": "Ayuda cotidiana de personas cerca de ti",
       "shareImageAlt": "TasksNearMe: ayuda cotidiana de personas cerca de ti"
+    },
+    "notFound": {
+      "title": "Página no encontrada",
+      "description": "Esta página no está en TasksNearMe. Sigue desde el inicio, las ciudades donde estamos o el centro de ayuda."
     }
   },
   "support": {

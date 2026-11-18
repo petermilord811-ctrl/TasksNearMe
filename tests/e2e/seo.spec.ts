@@ -191,8 +191,9 @@ test.describe('search engines', () => {
 
     await page.goto('/es/cities/new-york');
     await expect(page).toHaveTitle('TasksNearMe en Nueva York: ciudades abiertas y próximas · TasksNearMe');
+    // The /es visit made Spanish this browser's language, so the site's not-found page answers in Spanish.
     await page.goto('/cities/narnia');
-    await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'No pudimos encontrar esta página' })).toBeVisible();
   });
 
   test('a public task and a helper profile carry only what their page shows', async ({ page }) => {

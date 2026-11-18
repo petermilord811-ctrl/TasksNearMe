@@ -1,0 +1,38 @@
+{
+  "eyebrow": "Error 404",
+  "title": "No pudimos encontrar esta página",
+  "body": "Puede que el enlace sea antiguo o que la dirección tenga un error.",
+  "appBody": "Puede que se haya movido o que tu cuenta no pueda abrirla.",
+  "cities": "¿Buscas una ciudad donde aún no abrimos? <link>Mira dónde estamos</link>.",
+  "linksLabel": "Adónde ir ahora",
+  "links": {
+    "home": {
+      "label": "Inicio",
+      "hint": "Reserva ayuda o encuentra trabajo cerca de ti"
+    },
+    "cities": {
+      "label": "Ciudades",
+      "hint": "Dónde está abierto TasksNearMe"
+    },
+    "waitlist": {
+      "label": "Unirme a la lista de espera",
+      "hint": "Te avisamos cuando abramos cerca de ti"
+    },
+    "help": {
+      "label": "Centro de ayuda",
+      "hint": "Respuestas y formas de contactarnos"
+    },
+    "dashboard": {
+      "label": "Tu panel",
+      "hint": "Tus tareas, ofertas y reservas"
+    },
+    "bookings": {
+      "label": "Reservas",
+      "hint": "Próximas y pasadas"
+    },
+    "support": {
+      "label": "Soporte",
+      "hint": "Tus casos y formas de contactarnos"
+    }
+  }
+}

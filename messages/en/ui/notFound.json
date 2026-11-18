@@ -1,0 +1,38 @@
+{
+  "eyebrow": "Error 404",
+  "title": "This page could not be found",
+  "body": "The link may be old, or the address may have a typo.",
+  "appBody": "It may have moved, or it isn't open to your account.",
+  "cities": "Looking for a city we haven't opened yet? <link>See where we are</link>.",
+  "linksLabel": "Where to go next",
+  "links": {
+    "home": {
+      "label": "Home",
+      "hint": "Book help or find work near you"
+    },
+    "cities": {
+      "label": "Cities",
+      "hint": "Where TasksNearMe is open"
+    },
+    "waitlist": {
+      "label": "Join the waitlist",
+      "hint": "Hear when we open near you"
+    },
+    "help": {
+      "label": "Help center",
+      "hint": "Answers, and ways to reach us"
+    },
+    "dashboard": {
+      "label": "Your dashboard",
+      "hint": "Your tasks, offers and bookings"
+    },
+    "bookings": {
+      "label": "Bookings",
+      "hint": "Upcoming and past"
+    },
+    "support": {
+      "label": "Support",
+      "hint": "Your cases, and ways to reach us"
+    }
+  }
+}

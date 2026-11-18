@@ -83,6 +83,10 @@
       "description": "Book trusted local help for everyday tasks from verified people near you, and see the full price before you book.",
       "tagline": "Everyday help from people near you",
       "shareImageAlt": "TasksNearMe: everyday help from people near you"
+    },
+    "notFound": {
+      "title": "Page not found",
+      "description": "This page isn't on TasksNearMe. Find your way from the home page, the cities we're in, or the help center."
     }
   },
   "support": {
