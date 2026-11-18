@@ -96,6 +96,9 @@
     "helpersDescription": "Compare services, verification details, and feedback from completed bookings.",
     "noHelpersTitle": "Helpers will appear here",
     "noHelpersBody": "Post a task to let helpers know what you need.",
+    "firstTitle": "Be among the first in {market}",
+    "firstBody": "No one has posted here yet. Post the first task and helpers nearby can send offers, or get verified as a helper and be ready when tasks come in.",
+    "becomeHelper": "Become a helper",
     "coverageTitle": "Around {market}",
     "coverageNote": "{market} and nearby, within about {miles} miles",
     "outsideArea": "Outside the service area?",
@@ -161,9 +164,9 @@
     "title": "{category} in {market}",
     "pricingTitle": "Typical prices",
     "typical": {
-      "item": "Typical in {market}: {low}–{high} per item",
-      "hour": "Typical in {market}: {low}–{high} per hour",
-      "task": "Typical in {market}: {low}–{high} per task"
+      "item": "Typical in {market}: {low}⁠–⁠{high} per item",
+      "hour": "Typical in {market}: {low}⁠–⁠{high} per hour",
+      "task": "Typical in {market}: {low}⁠–⁠{high} per task"
     },
     "minimumHours": "{hours, plural, one {# hour minimum} other {# hours minimum}}",
     "guidanceNote": "These are typical task prices. Your agreed price and service fee appear before you book.",

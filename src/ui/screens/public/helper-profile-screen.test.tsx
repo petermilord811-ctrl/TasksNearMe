@@ -25,7 +25,10 @@ describe('HelperProfileScreen', () => {
 
   it('links the booking request to the supplied helper and shows the recent review count', () => {
     show();
-    expect(screen.getByRole('link', { name: 'Request Sam K.' })).toHaveAttribute('href', routes.app.requestHelper(samProfilePageData.helper.handle));
+    // The card's button, and on phones the one that stays in reach at the bottom (audit L19): both to the same request.
+    const requests = screen.getAllByRole('link', { name: 'Request Sam K.' });
+    expect(requests).toHaveLength(2);
+    for (const request of requests) expect(request).toHaveAttribute('href', routes.app.requestHelper(samProfilePageData.helper.handle));
     expect(screen.getByText('Showing the 4 most recent of 112 reviews')).toBeInTheDocument();
     expect(screen.getByText('Travels up to about 6 miles from Hyde Park')).toBeInTheDocument();
     expect(screen.getByText('Member since May 2024')).toBeInTheDocument();

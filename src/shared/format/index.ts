@@ -1,4 +1,4 @@
-export { formatMoney, formatMoneyInput, parseMoneyInput, type FormatMoneyOptions } from './money';
+export { formatMoney, formatMoneyInput, formatMoneyShort, parseMoneyInput, type FormatMoneyOptions } from './money';
 export {
   formatDate,
   formatMonthYear,

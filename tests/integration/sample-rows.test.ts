@@ -11,10 +11,11 @@ import {
   getMarketPageData,
   getPublicTaskPageData,
   getTaskBoardPageData,
+  getWaitlistPageData,
   listHelperHandles,
   listRecentTaskSlugs,
 } from '@/modules/marketing/queries';
-import { areas } from '@/modules/markets/schema';
+import { areas, markets } from '@/modules/markets/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { reviews } from '@/modules/reviews/schema';
 import { loadSitemapEntries } from '@/modules/seo/sitemap';
@@ -253,6 +254,21 @@ describe('task pages and helper profiles', () => {
     const handles = await listHelperHandles(SEARCH);
     expect(handles).toContain(handle);
     expect(handles).not.toContain(sampleHandle);
+  });
+});
+
+describe('the waitlist', () => {
+  it("offers the public real service areas only, never the demo marketplace's cities (audit M48)", async () => {
+    const demo = { id: 'mkt_demo_zz_sample_rows', slug: 'zz-sample-rows', name: 'Sampleton', state: 'KS', timeZone: 'America/Chicago', status: 'prelaunch', centerLat: 37.7, centerLng: -97.9, serviceRadiusKm: 20, zipPrefixes: ['999'] };
+    await db.insert(markets).values(demo);
+    try {
+      const shown = (await getWaitlistPageData(PUBLIC)).markets.map((market) => market.slug);
+      expect(shown).toContain(MARKET);
+      expect(shown).not.toContain(demo.slug);
+      expect((await getWaitlistPageData(TESTERS)).markets.map((market) => market.slug)).toContain(demo.slug);
+    } finally {
+      await db.delete(markets).where(eq(markets.id, demo.id));
+    }
   });
 });
 

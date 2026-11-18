@@ -29,7 +29,9 @@ export function HelpCenterScreen({ data }: { data: HelpCenterData }) {
         <FieldDescription id={`${searchId}-hint`}>{t('searchHint')}</FieldDescription>
       </Field>
     </div>
-    <p role="status" aria-live="polite" className="text-sm text-muted-foreground tabular-nums">{t('results', { count: resultCount })}</p>
+    {/* The live region stays in place (screen readers hear each change), but says nothing until there's a search: a count
+        before anyone typed read like a search result (audit L24). */}
+    <p role="status" aria-live="polite" className="text-sm text-muted-foreground tabular-nums empty:hidden">{normalizedQuery ? t('results', { count: resultCount }) : null}</p>
     {topics.length ? topics.map((topic) => <div key={topic.slug} id={topic.slug} className="scroll-mt-6"><Section title={topic.title} description={topic.description}>
       <ul className="divide-y rounded-[1.375rem] border border-foreground/[0.07] bg-card px-card shadow-card dark:border-white/[0.06]">{topic.articles.map((article) => <li key={article.slug}>
         <Link href={routes.help(article.slug)} className="group flex min-h-11 items-start gap-4 rounded-md py-4">

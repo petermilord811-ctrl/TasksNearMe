@@ -65,11 +65,12 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
         <div aria-hidden="true" className="h-24 bg-[linear-gradient(115deg,var(--color-brand-soft),var(--color-clay-soft)_55%,var(--color-violet-soft))] md:h-32" />
         <div className="grid gap-6 px-card pb-card lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8">
           <div className="min-w-0 space-y-5">
-            <div className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end md:-mt-14">
+            {/* The photo overlaps the band; the name starts below its edge, never across it (audit M44). */}
+            <div className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-start md:-mt-14">
               <span className="w-fit shrink-0 rounded-full bg-card p-1 shadow-card">
                 <InitialsAvatar initials={helper.initials} photo={helper.photo} size="xl" />
               </span>
-              <div className="min-w-0 space-y-1 sm:pb-1">
+              <div className="min-w-0 space-y-1 sm:pt-14 md:pt-16">
                 <h1 className="font-display text-2xl/8 font-semibold tracking-[-0.025em] break-words md:text-[32px]/10">{helper.displayName}</h1>
                 {helper.headline && <p className="text-base leading-6">{helper.headline}</p>}
               </div>
@@ -80,13 +81,13 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
                 <span>{t('travelRadius', { miles: data.serviceRadiusMiles, area: helper.areaName })}</span>
               </p>
               {data.remoteOk && <p className="inline-flex items-center gap-2 rounded-full bg-badge-neutral px-3 py-1 text-badge-neutral-foreground"><Laptop aria-hidden="true" className="size-4" />{t('remoteOk')}</p>}
-              {helper.foundingHelperNumber !== undefined && <p className="w-fit rounded-full bg-badge-brand px-3 py-1 font-medium tabular-nums text-badge-brand-foreground">{t('foundingHelper', { number: helper.foundingHelperNumber })}</p>}
+              {helper.foundingHelperNumber !== undefined && !data.achievements?.some((badge) => badge.code === 'founding_helper') && <p className="w-fit rounded-full bg-badge-brand px-3 py-1 font-medium tabular-nums text-badge-brand-foreground">{t('foundingHelper', { number: helper.foundingHelperNumber })}</p>}
             </div>
             <VerificationBadges badges={helper.badges} />
             {data.achievements && <AchievementBadgeList badges={data.achievements} />}
           </div>
           <div className="flex min-w-0 flex-col gap-4 border-t border-border pt-5 lg:mt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
-            <RatingStars rating={helper.rating} />
+            <div className="self-start"><RatingStars rating={helper.rating} /></div>
             <ul className="grid grid-cols-2 gap-2 text-sm tabular-nums">
               <li className="rounded-xl bg-muted/60 p-3">
                 <Check aria-hidden="true" className="mb-1 size-4 text-success" />
@@ -145,6 +146,9 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
           : <div className="space-y-2 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card dark:border-white/[0.06]"><p className="font-medium">{t('noReviews')}</p><p className="text-sm text-muted-foreground">{t('noReviewsDescription')}</p></div>}
       </section>
       <p><Link href={routes.app.report('helper', helper.handle)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.helper')}</Link></p>
+      <div className="sticky bottom-3 z-20 lg:hidden">
+        <Link href={routes.app.requestHelper(helper.handle)} className={cn(buttonVariants({ size: 'lg' }), 'h-auto min-h-12 w-full whitespace-normal py-2.5 shadow-[0_10px_30px_-10px_var(--primary-glow)]')}>{t('requestBooking', { name: helper.displayName })}</Link>
+      </div>
     </div>
   );
 }

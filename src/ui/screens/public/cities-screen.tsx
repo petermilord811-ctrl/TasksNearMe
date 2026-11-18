@@ -1,5 +1,5 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { ArrowLeft, MapPin } from 'lucide-react';
+import { ArrowLeft, ChevronRight, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CitiesPageData, DirectoryState, OpenCity, StateCitiesPageData, WaitlistCity } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -53,18 +53,46 @@ function Actions() {
   </div>;
 }
 
-function StateList({ states }: { states: DirectoryState[] }) {
+/**
+ * A state's status, in the one vocabulary every page uses (audit H8): Open (a live city), Opening soon (pre-launch),
+ * people waiting, or Not yet. The first two stand out as badges.
+ */
+function StateStatus({ state }: { state: DirectoryState }) {
   const t = useTranslations('cities');
+  const badge = 'inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-semibold';
+  if (state.liveCities > 0) return <span className={`${badge} bg-success/12 text-success`}>{t('states.open', { count: state.liveCities })}</span>;
+  if (state.openCities > 0) return <span className={`${badge} bg-primary/10 text-primary`}>{t('states.opening', { count: state.openCities })}</span>;
+  if (state.peopleWaiting > 0) return <span className="shrink-0 text-sm text-muted-foreground tabular-nums">{t('states.waiting', { count: state.peopleWaiting })}</span>;
+  return <span className="shrink-0 text-sm text-muted-foreground">{t('states.none')}</span>;
+}
+
+/** States as rows: the name, its status right after it (not at the far edge of a column, audit L22), and a chevron. */
+function StateList({ states }: { states: DirectoryState[] }) {
   return <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
     {states.map((state) => <li key={state.code}>
-      <Link href={routes.cities(state.slug)} className="flex min-h-11 items-baseline justify-between gap-3 rounded-md py-2 underline-offset-4 hover:underline">
-        <span className="font-medium">{state.name}</span>
-        <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
-          {state.openCities > 0 ? t('states.open', { count: state.openCities }) : state.peopleWaiting > 0 ? t('states.waiting', { count: state.peopleWaiting }) : t('states.none')}
-        </span>
+      <Link href={routes.cities(state.slug)} className="group flex min-h-11 items-center gap-2.5 rounded-md py-2">
+        <span className="font-medium underline-offset-4 group-hover:underline">{state.name}</span>
+        <StateStatus state={state} />
+        <ChevronRight aria-hidden="true" className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
       </Link>
     </li>)}
   </ul>;
+}
+
+/** The states with nothing yet, as names only, folded away so the page isn't 49 rows of "Not yet" (audit M49). */
+function OtherStates({ states }: { states: DirectoryState[] }) {
+  const t = useTranslations('cities');
+  return <details className="group rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06]">
+    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-[1.375rem] px-card font-medium [&::-webkit-details-marker]:hidden">
+      {t('states.browse', { count: states.length })}
+      <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90 motion-reduce:transition-none" />
+    </summary>
+    <ul className="grid grid-cols-2 gap-x-4 px-card pb-3 sm:grid-cols-3 lg:grid-cols-4">
+      {states.map((state) => <li key={state.code}>
+        <Link href={routes.cities(state.slug)} className="flex min-h-11 items-center rounded-md text-sm underline-offset-4 hover:underline">{state.name}</Link>
+      </li>)}
+    </ul>
+  </details>;
 }
 
 export function CitiesScreen({ data }: { data: CitiesPageData }) {
@@ -81,7 +109,11 @@ export function CitiesScreen({ data }: { data: CitiesPageData }) {
       <ComingNext cities={data.comingNext} emptyText={t('next.empty')} />
     </Section>
     <Section title={t('states.title')}>
-      <StateList states={data.states} />
+      {/* States with a city or people waiting first; the rest folded away. */}
+      <div className="space-y-4">
+        <StateList states={data.states.filter((state) => state.openCities > 0 || state.peopleWaiting > 0)} />
+        <OtherStates states={data.states.filter((state) => state.openCities === 0 && state.peopleWaiting === 0)} />
+      </div>
     </Section>
   </div>;
 }
@@ -89,16 +121,18 @@ export function CitiesScreen({ data }: { data: CitiesPageData }) {
 export function StateCitiesScreen({ data }: { data: StateCitiesPageData }) {
   const t = useTranslations('cities');
   const state = data.state.name;
+  // Worded by what the state has: never "where we're open" for a state where nothing is open (audit L26).
+  const intro = data.state.liveCities > 0 ? 'state.introLive' : data.state.openCities > 0 ? 'state.introOpening' : 'state.introNone';
   return <div className="space-y-section">
     <div className="space-y-4">
       <Link href={routes.cities()} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
         <ArrowLeft aria-hidden="true" className="size-4" />{t('state.back')}
       </Link>
-      <PageHeader title={t('state.title', { state })} description={t('state.intro', { state })} />
+      <PageHeader title={t('state.title', { state })} description={t(intro, { state })} />
       <Actions />
     </div>
     <Section title={t('open.title')}>
-      <OpenCities cities={data.openCities} emptyText={t('open.empty')} />
+      <OpenCities cities={data.openCities} emptyText={t('state.noneYet', { state })} />
     </Section>
     <Section title={t('next.title')}>
       <ComingNext cities={data.comingNext} emptyText={t('next.empty')} />

@@ -76,4 +76,4 @@ async function SignUp({ searchParams }: Pick<PageProps<'/[locale]/sign-up'>, 'se
   );
 }
 
-export default withClientMessages('[locale]/(public)/sign-up/page.tsx', SignUpPage);
+export default withClientMessages('[locale]/(auth)/sign-up/page.tsx', SignUpPage);

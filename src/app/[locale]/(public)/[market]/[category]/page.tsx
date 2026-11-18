@@ -52,7 +52,7 @@ async function CategoryPage({ params }: PageProps<'/[locale]/[market]/[category]
   if (!page) notFound();
   const [context, t, categoryName] = await Promise.all([structuredDataContext(), getTranslations('server.meta.category'), categoryNames()]);
   // Counts, questions people ask, the city guide and related links (docs/seo/PLAN.md S3).
-  const seo = await categorySeoContent(page.data, context.locale, categoryName);
+  const seo = await categorySeoContent(page.data, context.locale);
   const { market: view, category: shown } = page.data;
   const values = { category: categoryName(shown.slug), market: view.name };
   const path = routes.category(shown.slug, view.slug);

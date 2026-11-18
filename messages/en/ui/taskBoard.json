@@ -29,6 +29,7 @@
   "clearFilters": "Clear filters",
   "noTasksTitle": "No open tasks right now",
   "noTasksBody": "Local tasks appear here when someone needs help. Have something to get done? Post a task to get started.",
+  "hubEmptyBody": "Tasks show up here as people nearby post them. Set up your helper profile now, so you're ready to send an offer when one does.",
   "postTask": "Post a task",
   "privacy": "Exact addresses go only to the booked helper",
   "becomeHelper": "Become a helper",

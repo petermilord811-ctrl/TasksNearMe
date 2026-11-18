@@ -86,11 +86,21 @@ describe('PublicShell', () => {
     expect(screen.getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', postHref);
   });
 
+  it('gives sign-in and sign-up a minimal footer: the legal links and the language only (audit M45)', () => {
+    show(<PublicShell viewer={publicViewer} variant="minimal"><h1>Sign in</h1></PublicShell>);
+    const footer = within(screen.getByRole('contentinfo'));
+    expect(footer.getAllByRole('link').filter((link) => LEGAL_DOCS.some((doc) => link.getAttribute('href') === routes.legal(doc)))).toHaveLength(LEGAL_DOCS.length);
+    expect(footer.queryByRole('navigation', { name: 'Find local help' })).toBeNull();
+    expect(footer.queryByRole('link', { name: /^Gainesville, FL/ })).toBeNull();
+  });
+
   it('keeps Spanish pages on Spanish addresses (search engines follow them to Spanish pages)', () => {
     render(<NextIntlClientProvider locale="es" messages={uiMessages}><PublicShell viewer={publicViewer}><h1>Ayuda local</h1></PublicShell></NextIntlClientProvider>);
     const footer = within(screen.getByRole('contentinfo'));
-    const categories = within(footer.getByRole('navigation', { name: 'Find local help' }));
-    expect(categories.getByRole('link', { name: uiMessages.shell.categories['yard-cleanup'] })).toHaveAttribute('href', `/es${routes.category('yard-cleanup')}`);
+    // The desktop column and the phone row carry the same links (CSS shows one of them).
+    for (const nav of footer.getAllByRole('navigation', { name: 'Find local help' })) {
+      expect(within(nav).getByRole('link', { name: uiMessages.shell.categories['yard-cleanup'] })).toHaveAttribute('href', `/es${routes.category('yard-cleanup')}`);
+    }
     expect(footer.getByRole('link', { name: uiMessages.shell.footer.cityNext })).toHaveAttribute('href', `/es${routes.waitlist()}`);
     expect(screen.getAllByRole('link', { name: uiMessages.shell.homeLink })[0]).toHaveAttribute('href', '/es');
   });
@@ -98,10 +108,15 @@ describe('PublicShell', () => {
   it('includes every category and legal document with the contract destination', () => {
     show(<PublicShell viewer={publicViewer}><h1>Local help</h1></PublicShell>);
     const footer = within(screen.getByRole('contentinfo'));
-    const categories = within(footer.getByRole('navigation', { name: 'Find local help' }));
-    expect(categories.getAllByRole('link')).toHaveLength(CATEGORY_SLUGS.length);
-    for (const category of CATEGORY_SLUGS) {
-      expect(categories.getByRole('link', { name: uiMessages.shell.categories[category] })).toHaveAttribute('href', routes.category(category));
+    // Columns from the tablet width up, rows that open in place on phones (audit M45): CSS shows one of the two.
+    const groups = footer.getAllByRole('navigation', { name: 'Find local help' });
+    expect(groups).toHaveLength(2);
+    for (const group of groups) {
+      const categories = within(group);
+      expect(categories.getAllByRole('link')).toHaveLength(CATEGORY_SLUGS.length);
+      for (const category of CATEGORY_SLUGS) {
+        expect(categories.getByRole('link', { name: uiMessages.shell.categories[category] })).toHaveAttribute('href', routes.category(category));
+      }
     }
     const legal = within(footer.getByRole('navigation', { name: 'Policies and terms' }));
     expect(legal.getAllByRole('link')).toHaveLength(LEGAL_DOCS.length);
@@ -112,8 +127,8 @@ describe('PublicShell', () => {
     expect(footer.getByRole('link', { name: /^Gainesville, FL/ })).toHaveAttribute('href', routes.market());
     // Opening city by city: somewhere else, the city list.
     expect(footer.getByRole('link', { name: uiMessages.shell.footer.cityNext })).toHaveAttribute('href', routes.waitlist());
-    expect(footer.getByRole('link', { name: 'Trust & safety' })).toHaveAttribute('href', routes.trustAndSafety());
-    expect(footer.getByRole('link', { name: 'Help' })).toHaveAttribute('href', routes.help());
+    for (const link of footer.getAllByRole('link', { name: 'Trust & safety' })) expect(link).toHaveAttribute('href', routes.trustAndSafety());
+    for (const link of footer.getAllByRole('link', { name: 'Help' })) expect(link).toHaveAttribute('href', routes.help());
   });
 
   it('uses an explicit current path to highlight the public navigation', () => {

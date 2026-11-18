@@ -34,8 +34,9 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
           <p className="text-xs font-semibold tracking-[0.16em] uppercase">{t('welcomeEyebrow')}</p>
           <h2 id="welcome-gift-title" className="font-display text-3xl leading-tight font-semibold tracking-[-0.03em] text-balance sm:text-4xl">{t('welcomeOffer', { amount: giftAmount })}</h2>
           <p className="max-w-reading text-lg">{t('welcomeTerms')}</p>
-          <ol className="grid gap-3 sm:grid-cols-3">
-            {welcome.checks.map((check, index) => <li key={check} className="flex min-h-14 items-center gap-3 rounded-2xl border border-badge-reward-foreground/12 bg-card/60 px-4 py-3 text-foreground dark:bg-white/[0.04]">
+          {/* Pills sized to their words in a wrapping row, not three equal columns where one wraps to three lines (audit L23). */}
+          <ol className="flex flex-wrap gap-3">
+            {welcome.checks.map((check, index) => <li key={check} className="inline-flex min-h-14 items-center gap-3 rounded-2xl border border-badge-reward-foreground/12 bg-card/60 px-4 py-3 text-foreground dark:bg-white/[0.04]">
               <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-foreground text-sm font-semibold text-background tabular-nums">{index + 1}</span>
               <span className="font-semibold">{t(`welcomeChecks.${check}`)}</span>
             </li>)}
@@ -83,14 +84,8 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
     </div>
 
     {(welcome || repeat) && <Section title={t('rewardsTitle')} description={t('rewardsDescription')}>
-      <div className="grid items-start gap-4 md:grid-cols-2">
-        {welcome && <section aria-label={t('welcomeTitle')} className="rounded-xl border border-border bg-badge-reward p-4 text-badge-reward-foreground sm:p-6">
-          <Gift aria-hidden="true" className="mb-3 size-6" />
-          <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('welcomeTitle')}</h3>
-          <p className="mt-3 text-lg font-semibold tabular-nums">{t('welcomeOffer', { amount: giftAmount })}</p>
-          <p className="mt-4 text-sm">{t('welcomeTerms')}</p>
-          <p className="mt-3 text-sm">{t('welcomeUnlock', { redeemDays: welcome.redeemWithinDays })}</p>
-        </section>}
+      {/* The welcome gift card has the top of the page; here, only the reward that isn't told there (audit M47). */}
+      <div className="max-w-xl">
         {repeat && <section aria-label={t('repeatTitle')} className="rounded-xl border border-border bg-badge-reward p-4 text-badge-reward-foreground sm:p-6">
           <Gift aria-hidden="true" className="mb-3 size-6" />
           <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('repeatTitle')}</h3>

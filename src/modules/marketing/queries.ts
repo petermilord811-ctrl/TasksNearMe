@@ -293,17 +293,21 @@ export async function getBecomeHelperPageData(): Promise<BecomeHelperPageData> {
 
 /**
  * `/waitlist` (owner, 2026-11-14: national, cities open in turn): the markets we serve or are about to open, the
- * cities people ask for most, and the welcome gift card helpers anywhere can get verified for.
+ * cities people ask for most, and the welcome gift card helpers anywhere can get verified for. The demo marketplace's
+ * cities (`mkt_demo_<key>`) are for signed-in testers only: offered to the public as service areas, they told visitors
+ * TasksNearMe was in Chicago or Dallas (audit M48, 2026-11-18), as `/cities` already knew not to.
  */
-export async function getWaitlistPageData(): Promise<Omit<WaitlistPageData, 'initialZip' | 'demand' | 'from'>> {
+export async function getWaitlistPageData(rows: RowScope): Promise<Omit<WaitlistPageData, 'initialZip' | 'demand' | 'from'>> {
   'use cache';
   cacheLife('minutes');
   cacheTag('markets');
   cacheTag(WAITLIST_TAG);
-  const rows = (await Promise.all((await listPublicMarketSlugs()).map((slug) => findPublicMarket(slug)))).filter((market) => market !== null);
+  const open = (await Promise.all((await listPublicMarketSlugs()).map((slug) => findPublicMarket(slug))))
+    .filter((market) => market !== null)
+    .filter((market) => rows === 'all' || !market.id.startsWith('mkt_demo_'));
   const [markets, comingNext, flags] = await Promise.all([
-    Promise.all(rows.map((market) => getMarketView(market))),
-    citiesComingNext(db, rows.flatMap((market) => market.zipPrefixes)),
+    Promise.all(open.map((market) => getMarketView(market))),
+    citiesComingNext(db, open.flatMap((market) => market.zipPrefixes), undefined, rows),
     defaultMarketPolicy().then(({ market }) => getFlags(market.id)),
   ]);
   return { markets, comingNext, ...(flags['reward.welcome'] ? { helperReward: { amountCents: WELCOME_PROGRAM.amountCents } } : {}) };

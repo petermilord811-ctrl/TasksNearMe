@@ -3,13 +3,13 @@ import { ViewTransition } from 'react';
 import { BadgeCheck, Check, Laptop, Minus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CategoryPageData, type ISODateTime } from '@/contracts';
-import { formatMoney } from '@/shared/format';
+import { formatMoneyShort } from '@/shared/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
 import { ServicePhoto } from '@/ui/components/media/service-photo';
 import { buttonVariants } from '@/ui/primitives/button';
 import { CategoryAbout, CategoryCounts, CategoryFaq, CategoryRelated } from './category-seo-sections';
-import { FeaturedHelpers, RecentTasks, categoryIcons } from './marketing-sections';
+import { MarketActivity, categoryIcons } from './marketing-sections';
 
 export function CategoryScreen({ data, now }: { data: CategoryPageData; now: ISODateTime }) {
   const t = useTranslations('publicPages');
@@ -26,7 +26,7 @@ export function CategoryScreen({ data, now }: { data: CategoryPageData; now: ISO
       <ServicePhoto category={category.slug} crop="wide" preload sizes="(min-width: 1024px) 30rem, 100vw" className="rounded-[1.375rem] border border-foreground/[0.07]" />
     </div>
     <section aria-label={t('category.pricingTitle')} className="space-y-3 rounded-[1.375rem] border border-foreground/[0.05] bg-secondary p-card text-secondary-foreground">
-      <p className="font-display text-xl font-semibold tracking-[-0.015em] tabular-nums md:text-2xl">{t(`category.typical.${category.priceGuidance.unit}`, { market: market.name, low: formatMoney(category.priceGuidance.lowCents), high: formatMoney(category.priceGuidance.highCents) })}</p>
+      <p className="font-display text-xl font-semibold tracking-[-0.015em] tabular-nums md:text-2xl">{t(`category.typical.${category.priceGuidance.unit}`, { market: market.name, low: formatMoneyShort(category.priceGuidance.lowCents), high: formatMoneyShort(category.priceGuidance.highCents) })}</p>
       <p>{t(`categories.${category.slug}.pricing`)}</p>
       {category.defaultPricingType === 'hourly' && category.minHours !== undefined && <p className="text-sm tabular-nums">{t('category.minimumHours', { hours: category.minHours })}</p>}
       <p className="text-sm">{t('category.guidanceNote')}</p>
@@ -42,8 +42,7 @@ export function CategoryScreen({ data, now }: { data: CategoryPageData; now: ISO
       <p className="text-sm text-muted-foreground">{t('shared.privacy')}</p>
     </div>
     {data.seo && <CategoryAbout seo={data.seo} market={market.name} />}
-    <RecentTasks tasks={data.recentTasks} now={now} />
-    <FeaturedHelpers helpers={data.topHelpers} title={t('category.helpersTitle')} />
+    <MarketActivity tasks={data.recentTasks} helpers={data.topHelpers} now={now} market={data.market} helpersTitle={t('category.helpersTitle')} />
     {data.seo && <CategoryFaq seo={data.seo} />}
     <section className="relative isolate space-y-4 overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06] p-card md:p-10"><span aria-hidden="true" className="pointer-events-none absolute -top-24 -right-16 -z-10 size-72 rounded-full" style={{ background: `radial-gradient(closest-side, color-mix(in oklab, var(--cat-${category.slug}) 22%, transparent), transparent)` }} /><h2 className="font-display text-2xl font-semibold tracking-[-0.02em] md:text-3xl">{t('category.ctaTitle')}</h2><p className="max-w-reading text-muted-foreground">{t('category.ctaBody')}</p><Link href={routes.app.newTask()} className={buttonVariants({ size: 'lg' })}>{t('shared.postTask')}</Link></section>
     {data.seo && <CategoryRelated seo={data.seo} market={market.name} />}

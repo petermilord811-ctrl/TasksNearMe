@@ -35,6 +35,27 @@ export function CategoryGrid({ categories, market }: { categories: CategoryView[
   </Section>;
 }
 
+/**
+ * A city's or service's tasks and helpers (audit M41, 2026-11-18). With neither yet, one "Be among the first" card with
+ * two different next steps, instead of two identical empty cards that each said "Post a task". With tasks but no
+ * helpers, the empty helpers block is left out.
+ */
+export function MarketActivity({ tasks, helpers, now, market, helpersTitle }: { tasks: TaskPublicView[]; helpers: HelperSummary[]; now: ISODateTime; market: MarketView; helpersTitle?: string }) {
+  const t = useTranslations('publicPages.shared');
+  if (tasks.length === 0 && helpers.length === 0) {
+    return <Section title={t('firstTitle', { market: market.name })} description={t('firstBody')}>
+      <div className="flex flex-wrap gap-3">
+        <Link href={routes.app.newTask()} className={buttonVariants({ size: 'lg' })}>{t('postTask')}</Link>
+        <Link href={routes.becomeAHelper()} className={buttonVariants({ size: 'lg', variant: 'outline' })}>{t('becomeHelper')}</Link>
+      </div>
+    </Section>;
+  }
+  return <>
+    <RecentTasks tasks={tasks} now={now} />
+    {helpers.length > 0 && <FeaturedHelpers helpers={helpers} {...(helpersTitle ? { title: helpersTitle } : {})} />}
+  </>;
+}
+
 export function RecentTasks({ tasks, now }: { tasks: TaskPublicView[]; now: ISODateTime }) {
   const t = useTranslations('publicPages.shared');
   return <Section title={t('recentTasks')} description={t('recentTasksDescription')}>

@@ -76,7 +76,8 @@ describe('public screen interactions', () => {
   it('shows remote guidance only when the supplied category allows it', () => {
     const { rerender } = renderScreen(<CategoryScreen data={furnitureCategoryPageData} now={now} />);
     expect(screen.queryByText(messages.publicPages.category.remoteNote)).toBeNull();
-    expect(screen.getByText('Typical in Austin: $50.00–$80.00 per item')).toBeDefined();
+    // Whole dollars, and a range that never breaks at its dash (audit L20).
+    expect(screen.getByText('Typical in Austin: $50\u2060–\u2060$80 per item')).toBeDefined();
     rerender(<NextIntlClientProvider locale="en" messages={messages}><CategoryScreen data={{ ...furnitureCategoryPageData, category: categoryViews[4]!, recentTasks: [], topHelpers: [] }} now={now} /></NextIntlClientProvider>);
     expect(screen.getByText(messages.publicPages.category.remoteNote)).toBeDefined();
   });

@@ -73,4 +73,4 @@ async function SignIn({ searchParams }: Pick<PageProps<'/[locale]/sign-in'>, 'se
   );
 }
 
-export default withClientMessages('[locale]/(public)/sign-in/page.tsx', SignInPage);
+export default withClientMessages('[locale]/(auth)/sign-in/page.tsx', SignInPage);

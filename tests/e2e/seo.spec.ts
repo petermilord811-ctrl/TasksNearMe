@@ -93,7 +93,10 @@ test.describe('search engines', () => {
     await expect(cost).toBeVisible();
     await cost.click();
     await expect(faq.getByText(/^In Austin, typical prices are \$/)).toBeVisible();
-    await expect(page.getByRole('region', { name: 'More in Austin' }).getByRole('link', { name: 'Moving help' })).toHaveAttribute('href', '/austin/moving-help');
+    // Only this page's own links (audit L21): the footer below lists every service.
+    const more = page.getByRole('region', { name: 'More in Austin' });
+    await expect(more.getByRole('link', { name: 'How much does furniture assembly cost in Austin?' })).toHaveAttribute('href', '/austin/furniture-assembly/cost');
+    await expect(more.getByRole('link', { name: 'Moving help' })).toHaveCount(0);
     // Seeded people aren't real, so no counts line.
     await expect(page.getByText(/^\d+ verified helpers?/)).toHaveCount(0);
 
@@ -167,6 +170,9 @@ test.describe('search engines', () => {
     // Gainesville, the first city, is open (pre-launch).
     await expect(page.getByRole('link', { name: /Tasks and helpers in Gainesville/ })).toHaveAttribute('href', '/gainesville');
     const states = page.getByRole('region', { name: 'Every state' });
+    // States with a city or people waiting first, the rest folded into one list of names (audit M49).
+    await expect(states.getByRole('link', { name: /^Florida.*opening soon/ })).toBeVisible();
+    await states.getByText(/^All other states \(\d+\)$/).click();
     await expect(states.getByRole('link')).toHaveCount(51);
     await states.getByRole('link', { name: /^Texas/ }).click();
     await expect(page).toHaveURL(/\/cities\/texas$/);

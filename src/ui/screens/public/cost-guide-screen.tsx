@@ -2,7 +2,7 @@ import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { ArrowLeft, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type CostGuidePageData } from '@/contracts';
-import { formatMoney } from '@/shared/format';
+import { formatMoney, formatMoneyShort } from '@/shared/format';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
 import { ServicePhoto } from '@/ui/components/media/service-photo';
@@ -34,7 +34,7 @@ export function CostGuideScreen({ data }: { data: CostGuidePageData }) {
       <ServicePhoto category={category.slug} slot="alternate" crop="landscape" sizes="(min-width: 1024px) 22rem, 100vw" className="rounded-[1.375rem] border border-foreground/[0.07]" />
     </div>
     <section aria-label={t('costGuide.typicalTitle', { market: market.name })} className="space-y-3 rounded-[1.375rem] border border-foreground/[0.05] bg-secondary p-card text-secondary-foreground">
-      <p className="font-display text-xl font-semibold tracking-[-0.015em] tabular-nums md:text-2xl">{t(`category.typical.${unit}`, { market: market.name, low: formatMoney(lowCents), high: formatMoney(highCents) })}</p>
+      <p className="font-display text-xl font-semibold tracking-[-0.015em] tabular-nums md:text-2xl">{t(`category.typical.${unit}`, { market: market.name, low: formatMoneyShort(lowCents), high: formatMoneyShort(highCents) })}</p>
       {category.defaultPricingType === 'hourly' && category.minHours !== undefined && <p className="text-sm tabular-nums">{t('category.minimumHours', { hours: category.minHours })}</p>}
       <p className="text-sm">{t('category.guidanceNote')}</p>
     </section>

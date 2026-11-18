@@ -66,6 +66,8 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   // On a category's job hub the category is the page, not a filter: with nothing else chosen, an empty hub invites a
   // post like the whole board does (before launch every hub is empty for the public).
   const emptyFiltered = filtered && !(data.heading && query.category && activeFilterCount(query) === 1);
+  // A job hub ("moving help jobs near you") is for helpers: becoming one leads, posting follows (audit M42).
+  const hub = Boolean(data.heading);
   const tomorrow = dayKey(new Date(new Date(`${data.today}T12:00:00Z`).getTime() + 86_400_000));
 
   // The filters in effect, each a link that removes it.
@@ -103,7 +105,11 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const dayLabel = (day: string, sample: TaskPublicView) => (day === data.today ? t('today') : day === tomorrow ? t('tomorrow') : formatDate(sample.schedule.windowStart));
 
   const list = data.tasks.length === 0
-    ? <EmptyState title={t(emptyFiltered ? 'filteredEmptyTitle' : 'noTasksTitle')} body={t(emptyFiltered ? 'filteredEmptyBody' : 'noTasksBody')} action={emptyFiltered ? { label: t('clearFilters'), href: localeHref(routes.taskBoard(market.slug), locale) } : { label: t('postTask'), href: localeHref(routes.app.newTask(), locale) }} />
+    ? <EmptyState
+        title={t(emptyFiltered ? 'filteredEmptyTitle' : 'noTasksTitle')}
+        body={t(emptyFiltered ? 'filteredEmptyBody' : hub ? 'hubEmptyBody' : 'noTasksBody')}
+        action={emptyFiltered ? { label: t('clearFilters'), href: localeHref(routes.taskBoard(market.slug), locale) } : hub ? { label: t('becomeHelper'), href: localeHref(routes.becomeAHelper(), locale) } : { label: t('postTask'), href: localeHref(routes.app.newTask(), locale) }}
+      />
     : query.view === 'cards'
       ? <ul className="grid gap-3 sm:grid-cols-2">{data.tasks.map((task) => <li key={task.id} className="min-w-0"><PublicTaskCard task={task} now={now} headingLevel={2} /></li>)}</ul>
       : data.sections
@@ -137,7 +143,12 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
           <LastVisitNote visitKey={visitKey} now={now} />
         </p>
       </div>
-      <Link href={routes.app.newTask()} className={buttonVariants({ className: 'shrink-0' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>
+      {hub
+        ? <div className="flex shrink-0 flex-wrap gap-2">
+            <Link href={routes.becomeAHelper()} className={buttonVariants()}>{t('becomeHelper')}</Link>
+            <Link href={routes.app.newTask()} className={buttonVariants({ variant: 'outline' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>
+          </div>
+        : <Link href={routes.app.newTask()} className={buttonVariants({ className: 'shrink-0' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>}
     </header>
 
     <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6">
@@ -148,8 +159,9 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex items-center gap-3">
-            {/* The market's own counts are in the header; a filtered board says how many match. */}
-            {filtered && <p className="text-sm font-semibold tabular-nums" role="status">{t('results', { count: data.totalCount })}</p>}
+            {/* The market's own counts are in the header; a board the person filtered says how many match (a hub's own
+                category isn't their filter, so the count shows once, audit M42). */}
+            {emptyFiltered && <p className="text-sm font-semibold tabular-nums" role="status">{t('results', { count: data.totalCount })}</p>}
             <BoardLive
               marketSlug={market.slug}
               timeZone={market.timeZone}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIRECTORY_STATES, stateCodeOfSlug, statePageIndexable, stateSlugOf } from './us-states';
+import { DIRECTORY_STATES, STATE_NEIGHBORS, stateCodeOfSlug, statePageIndexable, stateSlugOf } from './us-states';
 import { US_STATE_CODES } from './us-zip';
 
 describe('directory states', () => {
@@ -23,5 +23,15 @@ describe('directory states', () => {
     expect(statePageIndexable({ openCities: 1, peopleWaiting: 0 })).toBe(true);
     expect(statePageIndexable({ openCities: 0, peopleWaiting: 3 })).toBe(true);
     expect(statePageIndexable({ openCities: 0, peopleWaiting: 0 })).toBe(false);
+  });
+
+  it('knows each state\'s land neighbors, both ways', () => {
+    expect(Object.keys(STATE_NEIGHBORS).sort()).toEqual(DIRECTORY_STATES.map(([code]) => code).sort());
+    for (const [code, neighbors] of Object.entries(STATE_NEIGHBORS) as [keyof typeof STATE_NEIGHBORS, readonly (keyof typeof STATE_NEIGHBORS)[]][]) {
+      expect(neighbors, code).not.toContain(code);
+      for (const neighbor of neighbors) expect(STATE_NEIGHBORS[neighbor], `${neighbor} borders ${code}`).toContain(code);
+    }
+    expect(STATE_NEIGHBORS.FL).toEqual(['AL', 'GA']);
+    expect(STATE_NEIGHBORS.HI).toEqual([]);
   });
 });

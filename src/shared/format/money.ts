@@ -14,6 +14,18 @@ export interface FormatMoneyOptions {
   signDisplay?: 'auto' | 'always';
 }
 
+const usdWhole = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+/**
+ * A price in marketing copy (typical prices, ranges): whole dollars without cents ("$50"), and cents only when there
+ * are some ("$52.50"). Breakdowns and receipts keep `formatMoney`'s two decimals (audit L20, 2026-11-18).
+ */
+export function formatMoneyShort(cents: Cents): string {
+  if (!Number.isInteger(cents) || cents < 0) throw new TypeError(`formatMoneyShort expects cents >= 0, received ${cents}`);
+  return cents % 100 === 0 ? usdWhole.format(cents / 100) : formatMoney(cents);
+}
+
+
 /**
  * Formats integer cents as US dollars with two decimals and a true minus sign:
  * 6600 → "$66.00", -600 → "−$6.00", with signDisplay "always": 2200 → "+$22.00".

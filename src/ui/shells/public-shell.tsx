@@ -18,7 +18,8 @@ export interface PublicShellProps {
   children: ReactNode;
   currentPath?: string;
   /** `landing`: the home page lays out its own full-width sections under the floating top bar. */
-  variant?: 'default' | 'landing';
+  /** `minimal`: sign-in and sign-up, with only the legal links and the language below the page. */
+  variant?: 'default' | 'landing' | 'minimal';
   /** The language switch's Server Action; without it (previews) the switch loads /es and /en like links. */
   onSwitchLanguage?: LanguageSwitchHandler;
 }

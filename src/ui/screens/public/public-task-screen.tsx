@@ -10,7 +10,7 @@ import { Section } from '@/ui/components/layout/section';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
-import { PublicTaskCard } from '@/ui/components/tasks/public-task-card';
+import { TaskRow } from '@/ui/components/tasks/task-row';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/ui/primitives/breadcrumb';
 import { buttonVariants } from '@/ui/primitives/button';
 import { categoryIcons } from './marketing-sections';
@@ -76,7 +76,13 @@ export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
         </div>
       </div>
     </div>
-    {data.similarTasks.length > 0 && <Section title={t('similarTasks')}><ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{data.similarTasks.map((similar) => <li key={similar.id} className="min-w-0"><PublicTaskCard task={similar} now={now} /></li>)}</ul></Section>}
+    {/* Compact rows, the board's: title, area, date, price and offers, without each poster's block again (audit M43:
+        three cards took 1,300 px on a phone). */}
+    {data.similarTasks.length > 0 && <Section title={t('similarTasks')}>
+      <ol className="divide-y divide-foreground/[0.06] rounded-[1.375rem] border border-foreground/[0.07] bg-card px-2 shadow-card dark:divide-white/[0.05] dark:border-white/[0.06]">
+        {data.similarTasks.map((similar) => <li key={similar.id}><TaskRow task={similar} now={now} /></li>)}
+      </ol>
+    </Section>}
     <div className="border-t pt-4 text-center"><Link href={routes.app.newTask()} className={buttonVariants({ variant: 'link', className: 'h-auto min-h-11 max-w-full whitespace-normal' })}>{t('postSimilar')}</Link></div>
     <p className="text-center"><Link href={routes.app.report('task', task.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.task')}</Link></p>
   </div>;

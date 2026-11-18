@@ -1,10 +1,10 @@
 import 'server-only';
 import { getTranslations } from 'next-intl/server';
-import type { AppLocale, CategoryPageData, CategorySeoContent, CategorySlug, FaqEntry, RelatedLink } from '@/contracts';
+import type { AppLocale, CategoryPageData, CategorySeoContent, FaqEntry, RelatedLink } from '@/contracts';
 import { routes } from '@/contracts';
 import { getHelpArticle, getLocalGuide } from '@/modules/content/loaders';
-import { getCategorySupply, listCategorySlugs } from '@/modules/marketing/queries';
-import { formatMoney } from '@/shared/format';
+import { getCategorySupply } from '@/modules/marketing/queries';
+import { formatMoneyShort } from '@/shared/format';
 
 /**
  * Help articles whose question and short answer the category FAQ reuses, so the help center and the category pages
@@ -24,21 +24,19 @@ const SHARED_ANSWERS = ['when-am-i-charged', 'who-sees-my-address'] as const;
 export async function categorySeoContent(
   data: CategoryPageData,
   locale: AppLocale,
-  categoryName: (slug: CategorySlug) => string,
 ): Promise<CategorySeoContent> {
   const { market, category } = data;
-  const [t, meta, hub, supply, slugs] = await Promise.all([
+  const [t, meta, hub, supply] = await Promise.all([
     getTranslations('server.seo.categoryFaq'),
     getTranslations('server.meta'),
     getTranslations('server.seo.taskHub'),
     getCategorySupply(market.slug, category.slug),
-    listCategorySlugs(market.slug),
   ]);
   const { lowCents, highCents, unit } = category.priceGuidance;
   const faq: FaqEntry[] = [
     {
       question: t(`cost.${category.slug}`, { market: market.name }),
-      answer: t('cost.answer', { market: market.name, low: formatMoney(lowCents), high: formatMoney(highCents), unit }),
+      answer: t('cost.answer', { market: market.name, low: formatMoneyShort(lowCents), high: formatMoneyShort(highCents), unit }),
     },
     {
       question: t('checked.question'),
@@ -50,12 +48,10 @@ export async function categorySeoContent(
       return article ? [{ question: article.title, answer: article.summary }] : [];
     }),
   ];
+  // Only what belongs to this page: the footer right below lists every service already (audit L21, 2026-11-18).
   const related: RelatedLink[] = [
     // The cost guide first: its title is the question people search.
     { label: t(`cost.${category.slug}`, { market: market.name }), href: routes.costGuide(category.slug, market.slug) },
-    ...slugs
-      .filter((slug) => slug !== category.slug)
-      .map((slug) => ({ label: categoryName(slug as CategorySlug), href: routes.category(slug as CategorySlug, market.slug) })),
     // The same work from the helper's side: this category's job hub (S4).
     { label: hub(`title.${category.slug}`, { market: market.name }), href: routes.taskBoard(market.slug, { category: category.slug }) },
     { label: meta('pricing.title'), href: routes.pricing() },

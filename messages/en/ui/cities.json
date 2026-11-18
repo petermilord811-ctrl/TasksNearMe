@@ -18,8 +18,10 @@
   "states": {
     "title": "Every state",
     "open": "{count, plural, one {# city open} other {# cities open}}",
+    "opening": "{count, plural, one {# city opening soon} other {# cities opening soon}}",
     "waiting": "{count, plural, one {# person waiting} other {# people waiting}}",
-    "none": "Not yet"
+    "none": "Not yet",
+    "browse": "All other states ({count})"
   },
   "actions": {
     "waitlist": "Join the waitlist",
@@ -27,8 +29,11 @@
   },
   "state": {
     "title": "TasksNearMe in {state}",
-    "intro": "Where we're open in {state}, and the cities people are asking for. Join the waitlist for yours, or sign up to help your neighbors when we arrive.",
+    "introLive": "Where we're open in {state}, and the cities people are asking for next. Join the waitlist for yours, or sign up to help your neighbors.",
+    "introOpening": "We're opening soon in {state}: see where, and the cities people are asking for next. Join the waitlist for yours, or get verified as a helper now.",
+    "introNone": "We're not in {state} yet. Tell us your city on the waitlist (the cities with the most requests open first), or get verified as a helper now.",
     "back": "All states",
-    "others": "Other states"
+    "others": "Other states",
+    "noneYet": "No city in {state} yet."
   }
 }

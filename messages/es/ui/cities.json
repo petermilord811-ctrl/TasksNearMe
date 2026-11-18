@@ -18,8 +18,10 @@
   "states": {
     "title": "Todos los estados",
     "open": "{count, plural, one {# ciudad abierta} other {# ciudades abiertas}}",
+    "opening": "{count, plural, one {# ciudad abre pronto} other {# ciudades abren pronto}}",
     "waiting": "{count, plural, one {# persona esperando} other {# personas esperando}}",
-    "none": "Todavía no"
+    "none": "Todavía no",
+    "browse": "Todos los demás estados ({count})"
   },
   "actions": {
     "waitlist": "Unirme a la lista de espera",
@@ -27,8 +29,11 @@
   },
   "state": {
     "title": "TasksNearMe en {state}",
-    "intro": "Dónde estamos en {state} y las ciudades que la gente está pidiendo. Únete a la lista de espera para la tuya, o regístrate para ayudar a tus vecinos cuando lleguemos.",
+    "introLive": "Dónde estamos en {state} y las ciudades que la gente pide después. Únete a la lista de espera para la tuya, o regístrate para ayudar a tus vecinos.",
+    "introOpening": "Pronto abrimos en {state}: mira dónde y las ciudades que la gente pide después. Únete a la lista de espera para la tuya, o verifícate como ayudante desde ya.",
+    "introNone": "Todavía no estamos en {state}. Dinos tu ciudad en la lista de espera (las ciudades con más solicitudes abren primero), o verifícate como ayudante desde ya.",
     "back": "Todos los estados",
-    "others": "Otros estados"
+    "others": "Otros estados",
+    "noneYet": "Todavía no hay ninguna ciudad en {state}."
   }
 }

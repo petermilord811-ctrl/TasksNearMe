@@ -29,6 +29,7 @@
   "clearFilters": "Borrar filtros",
   "noTasksTitle": "No hay tareas abiertas por ahora",
   "noTasksBody": "Las tareas locales aparecen aquí cuando alguien necesita ayuda. ¿Tienes algo que resolver? Publica una tarea para empezar.",
+  "hubEmptyBody": "Las tareas aparecen aquí cuando la gente cercana las publica. Crea tu perfil de ayudante ahora, para que puedas enviar una oferta en cuanto aparezca una.",
   "postTask": "Publicar una tarea",
   "privacy": "Las direcciones exactas solo se comparten con el ayudante reservado",
   "becomeHelper": "Ser ayudante",

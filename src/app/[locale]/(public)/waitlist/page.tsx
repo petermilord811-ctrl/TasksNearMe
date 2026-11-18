@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import { localeOrDefault } from '@/contracts';
 import { joinWaitlistAction } from '@/modules/marketing/actions';
 import { getWaitlistDemand, getWaitlistPageData } from '@/modules/marketing/queries';
+import { requestRows } from '@/platform/auth/audience';
 import { normalizeZip } from '@/shared/us-zip';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { WaitlistScreen } from '@/ui/screens/public/waitlist-screen';
@@ -28,7 +29,7 @@ function WaitlistPage({ searchParams }: PageProps<'/[locale]/waitlist'>) {
 }
 
 async function Waitlist({ searchParams }: Pick<PageProps<'/[locale]/waitlist'>, 'searchParams'>) {
-  const [{ from, zip }, data, locale] = await Promise.all([searchParams, getWaitlistPageData(), getLocale()]);
+  const [{ from, zip }, data, locale] = await Promise.all([searchParams, requestRows().then(getWaitlistPageData), getLocale()]);
   const initialZip = typeof zip === 'string' ? normalizeZip(zip) : null;
   const demand = initialZip ? await getWaitlistDemand(initialZip) : null;
   return (

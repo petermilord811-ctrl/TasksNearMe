@@ -5,7 +5,7 @@ import type { CitiesPageData, DirectoryState, OpenCity, StateCitiesPageData, Wai
 import { markets } from '@/modules/markets/schema';
 import { db } from '@/platform/db/client';
 import type { RowScope } from '@/shared/sample-data';
-import { DIRECTORY_STATES, type DirectoryStateCode } from '@/shared/us-states';
+import { DIRECTORY_STATES, STATE_NEIGHBORS, type DirectoryStateCode } from '@/shared/us-states';
 import { citiesComingNext, WAITLIST_TAG } from './waitlist';
 
 /**
@@ -48,6 +48,7 @@ function directoryStates(directory: Directory, nameOf: (code: DirectoryStateCode
     slug,
     name: nameOf(code),
     openCities: directory.openCities.filter((city) => city.state === code).length,
+    liveCities: directory.openCities.filter((city) => city.state === code && city.status === 'live').length,
     peopleWaiting: directory.comingNext.filter((city) => city.state === code).reduce((sum, city) => sum + city.people, 0),
   })).sort((a, b) => a.name.localeCompare(b.name, locale));
 }
@@ -65,15 +66,16 @@ export async function getStateCitiesPageData(
 ): Promise<StateCitiesPageData> {
   const directory = await loadDirectory(rows);
   const states = directoryStates(directory, nameOf, locale);
-  const at = states.findIndex((state) => state.code === code);
   return {
-    state: states[at]!,
+    state: states.find((state) => state.code === code)!,
     openCities: directory.openCities.filter((city) => city.state === code),
     comingNext: directory.comingNext.filter((city) => city.state === code),
-    // Other states with something to show first, then the alphabet's neighbors, so every state page links on.
+    // States with a city first, then the land neighbors (not the alphabet's: Florida listed DC, audit L26), then those
+    // with people waiting, so every state page links on to somewhere that means something.
     others: [
-      ...states.filter((state) => state.code !== code && (state.openCities > 0 || state.peopleWaiting > 0)),
-      ...[states[at - 1], states[at + 1]].filter((state): state is DirectoryState => Boolean(state)),
+      ...states.filter((state) => state.code !== code && state.openCities > 0),
+      ...STATE_NEIGHBORS[code].map((neighbor) => states.find((state) => state.code === neighbor)!),
+      ...states.filter((state) => state.code !== code && state.peopleWaiting > 0),
     ].filter((state, index, all) => all.findIndex((other) => other.code === state.code) === index).slice(0, 8),
   };
 }

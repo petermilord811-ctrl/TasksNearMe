@@ -45,7 +45,8 @@ test('a new person creates an account on its own page and lands where their choi
 
   await page.getByLabel('6-digit code').fill(await latestCode(context, email));
   // The sixth digit sends the code. No "Tell us your name": the form already said it.
-  await expect(page).toHaveURL(helping ? /\/app\/helper\/onboarding\/profile$/ : /\/app$/, { timeout: 30_000 });
+  // Helper setup (it opens at the first step still to do), or the app.
+  await expect(page).toHaveURL(helping ? /\/app\/helper\/onboarding\/[a-z-]+$/ : /\/app$/, { timeout: 30_000 });
   await expect(page.getByRole('heading', { level: 1, name: 'Tell us your name' })).toHaveCount(0);
   // The app's account button shows the initials of the names given on the form.
   if (!helping) await expect(page.getByText('DR', { exact: true }).first()).toBeVisible();

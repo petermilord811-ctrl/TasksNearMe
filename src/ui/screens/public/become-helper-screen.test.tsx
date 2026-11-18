@@ -21,8 +21,9 @@ describe('BecomeHelperScreen', () => {
     expect(within(band).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['1Verify your phone', '2Verify your ID', '3Pass a background check']);
     expect(within(band).getByRole('link', { name: 'Start and earn $50' })).toHaveAttribute('href', routes.signIn(routes.app.helperOnboarding()));
     expect(screen.queryByText(/spots? left/)).not.toBeInTheDocument();
-    const welcome = screen.getByRole('region', { name: 'Welcome gift card' });
-    expect(within(welcome).getByText('Get verified, get a $50 gift card')).toBeInTheDocument();
+    // Told once, at the top: the rewards section lists only the other program (audit M47).
+    expect(screen.queryByRole('region', { name: 'Welcome gift card' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Get verified, get a $50 gift card')).toHaveLength(1);
     expect(screen.getByRole('region', { name: 'Repeat-client gift card reward' })).toBeInTheDocument();
     expect(screen.getByText('Your first payout can take about 7 days.')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
@@ -55,7 +56,7 @@ describe('BecomeHelperScreen', () => {
       welcomeReward: { ...becomeHelperPageData.welcomeReward!, redeemWithinDays: 30 },
       repeatReward: { ...becomeHelperPageData.repeatReward!, unlockDays: 5, redeemWithinDays: 45 },
     });
-    const welcome = screen.getByRole('region', { name: 'Welcome gift card' });
+    const welcome = screen.getByRole('region', { name: 'Get verified, get a $50 gift card' });
     expect(within(welcome).getByText(/quick check/)).toHaveTextContent('Redeem within 30 days. One welcome gift card per person.');
     const repeat = screen.getByRole('region', { name: 'Repeat-client gift card reward' });
     expect(within(repeat).getByText(/3rd paid booking of \$25\.00 or more/)).toHaveTextContent('within 90 days');

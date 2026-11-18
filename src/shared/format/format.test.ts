@@ -4,6 +4,7 @@ import {
   formatDateTime,
   formatHours,
   formatMoney,
+  formatMoneyShort,
   formatMonthYear,
   formatRelative,
   formatTime,
@@ -191,5 +192,15 @@ describe('dates and times in Spanish', () => {
   it('leaves English as the default', () => {
     expect(formatDateTime(start, 'en', AUSTIN_ZONE)).toBe('Sat, Nov 21 · 10:30 am');
     expect(formatDateTime(start, 'en', AUSTIN_ZONE)).toBe('Sat, Nov 21 · 10:30 am');
+  });
+});
+
+describe('formatMoneyShort (marketing prices, audit L20)', () => {
+  it('drops the cents of whole dollars and keeps them otherwise', () => {
+    expect(formatMoneyShort(5000)).toBe('$50');
+    expect(formatMoneyShort(8000)).toBe('$80');
+    expect(formatMoneyShort(5250)).toBe('$52.50');
+    expect(formatMoneyShort(120000)).toBe('$1,200');
+    expect(() => formatMoneyShort(-100)).toThrow(TypeError);
   });
 });

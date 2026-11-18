@@ -19,7 +19,13 @@ export interface DirectoryState {
   code: string;
   slug: string;
   name: string;
+  /** Cities we serve in the state, live or pre-launch. */
   openCities: number;
+  /**
+   * How many of those are live: the rest are "Opening soon". One vocabulary everywhere (audit H8, 2026-11-18): Open
+   * (live), Opening soon (pre-launch), Not yet.
+   */
+  liveCities: number;
   /** Waitlist entries plus waiting helpers in the state's cities. */
   peopleWaiting: number;
 }
@@ -37,6 +43,6 @@ export interface StateCitiesPageData {
   openCities: OpenCity[];
   /** The state's cities people asked for, most first. */
   comingNext: WaitlistCity[];
-  /** Neighboring entries in the directory, for "Other states". */
+  /** "Other states": those with a city first, then the state's land neighbors, then those with people waiting. */
   others: DirectoryState[];
 }
