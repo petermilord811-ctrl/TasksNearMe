@@ -13,8 +13,10 @@ export const MARK_LINE = 'M11.9 13.9 14.8 16.8 21.67 8.74A7.4 7.4 0 0 0 8.6 13.5
 /**
  * The tasksnearme mark: the line above in white on an iridescent tile with a soft glassy depth, and a "near"
  * ripple under the pin's tip. The tile is CSS (no SVG gradient ids to collide when several logos share a page).
- * `animated` builds it once: the tile blooms, the line draws itself from the check around the pin, and the ripple
- * spreads. Pointed at (inside its link), the line draws again and a light sweeps the tile.
+ * `animated` draws the line once, from the check around the pin, on the document's first load only: the tile, the
+ * ripple and the wordmark are crisp from the first paint (no blur or bloom), and a header mounted later in the same
+ * document (`data-logo-settled` on <html>, theme-script.ts) shows the line already drawn, so switching pages never
+ * replays it. Pointed at (inside its link), the line draws again and a light sweeps the tile.
  */
 export function BrandMark({ className, animated = false }: { className?: string; animated?: boolean }) {
   return (
@@ -23,10 +25,9 @@ export function BrandMark({ className, animated = false }: { className?: string;
       className={cn(
         'brand-mark relative inline-grid size-9 shrink-0 place-items-center overflow-hidden rounded-[30%]',
         'shadow-[0_6px_16px_-6px_var(--primary-glow),inset_0_1px_0_rgb(255_255_255/0.35),inset_0_-3px_8px_rgb(46_16_96/0.28)]',
-        animated && 'bloom-in',
         className,
       )}
-      style={{ backgroundImage: 'var(--iridescent)', ['--bloom-origin' as string]: '50% 50%' }}
+      style={{ backgroundImage: 'var(--iridescent)' }}
     >
       <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_30%_8%,rgb(255_255_255/0.45),transparent_55%)]" />
       <span className="brand-mark-sheen pointer-events-none absolute inset-y-0 -left-full w-full bg-[linear-gradient(100deg,transparent_30%,rgb(255_255_255/0.5)_50%,transparent_70%)]" />
@@ -40,7 +41,6 @@ export function BrandMark({ className, animated = false }: { className?: string;
           stroke="white"
           strokeOpacity="0.6"
           strokeWidth="1.1"
-          className={cn(animated && '[animation:pulse-ring_1.6s_var(--ease-out)_1.15s_both]')}
           style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
         />
         <path
@@ -52,7 +52,7 @@ export function BrandMark({ className, animated = false }: { className?: string;
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeDasharray="1"
-          className={cn('brand-mark-line', animated && '[animation:draw_900ms_var(--ease-out)_200ms_both]')}
+          className={cn('brand-mark-line', animated && '[html:not([data-logo-settled])_&]:[animation:draw_900ms_var(--ease-out)_200ms_both]')}
           style={{ ['--draw-length' as string]: '1' }}
         />
       </svg>
@@ -74,7 +74,7 @@ export function Logo({ variant = 'full', animated = false, className }: { varian
   return (
     <Link href={routes.home()} aria-label={t('homeLink')} className={cn('brand-logo inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2.5 rounded-xl', className)}>
       <BrandMark animated={animated} />
-      {variant === 'full' && <Wordmark className={cn(animated && 'enter')} />}
+      {variant === 'full' && <Wordmark />}
     </Link>
   );
 }

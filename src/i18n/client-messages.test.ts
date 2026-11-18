@@ -43,8 +43,8 @@ describe('client namespaces per route file', () => {
     const uses = (route: ClientRoute, namespace: string) => (CLIENT_NAMESPACES[route] as readonly string[]).some((entry) => entry === namespace || entry.startsWith(`${namespace}.`));
     expect(uses('[locale]/(app)/app/(flow)/bookings/[bookingId]/page.tsx', 'bookingHub')).toBe(true);
     expect(uses('[locale]/(app)/app/(flow)/bookings/[bookingId]/page.tsx', 'landing')).toBe(false);
-    expect(uses('[locale]/(landing)/page.tsx', 'landing')).toBe(true);
-    expect(uses('[locale]/(landing)/page.tsx', 'bookingHub')).toBe(false);
+    expect(uses('[locale]/(public)/page.tsx', 'landing')).toBe(true);
+    expect(uses('[locale]/(public)/page.tsx', 'bookingHub')).toBe(false);
   });
 
   it('take only the keys a translator is called with, and the whole namespace when it is passed on', () => {
@@ -56,7 +56,7 @@ describe('client namespaces per route file', () => {
 
   it('keep public pages far below the whole catalog', () => {
     const whole = JSON.stringify(messagesFor('en')).length;
-    const publicRoutes = (Object.keys(CLIENT_NAMESPACES) as ClientRoute[]).filter((route) => route.startsWith('[locale]/(public)/') || route.startsWith('[locale]/(landing)/'));
+    const publicRoutes = (Object.keys(CLIENT_NAMESPACES) as ClientRoute[]).filter((route) => route.startsWith('[locale]/(public)/'));
     for (const route of publicRoutes) expect(JSON.stringify(pickMessages(messagesFor('en'), CLIENT_NAMESPACES[route])).length, route).toBeLessThan(whole / 10);
   });
 });

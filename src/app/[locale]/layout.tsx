@@ -9,6 +9,8 @@ import { mapTiles } from '@/modules/markets/map-tiles';
 import { fontVariables } from '@/ui/theme/fonts';
 import { themeInitScript } from '@/ui/theme/theme-script';
 import '@/ui/theme/globals.css';
+// Page switches and pending links (plan 9.5).
+import '@/ui/theme/transitions.css';
 import { appUrl } from '@/integrations/oauth';
 import { ClientMessages } from '@/i18n/client-messages';
 import { SHARE_IMAGES } from '@/i18n/metadata';

@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { LanguageSwitchHandler, ShellViewer } from '@/contracts';
+import { LandingPageMarker } from './landing-page-marker';
 import { Logo } from './logo';
 import { ScrollbarActivity } from '@/ui/motion/scrollbar-activity';
 import { SkipLink } from './skip-link';
@@ -17,12 +18,29 @@ export interface PublicShellProps {
   viewer: ShellViewer | Promise<ShellViewer>;
   children: ReactNode;
   currentPath?: string;
-  /** `landing`: the home page lays out its own full-width sections under the floating top bar. */
-  /** `minimal`: sign-in and sign-up, with only the legal links and the language below the page. */
+  /**
+   * `default`: every public page, the landing included. `<main>` is at least a screen tall, so the footer starts
+   * below the fold and content streaming in never pushes a footer already in view (plan 9.4, audit H2, H3 and H4).
+   * The landing page marks itself (`LandingPageMarker`) and the same shell lays it out full width and shows the
+   * footer's landing links, all from CSS `:has()`: one shell for the landing and the other public pages, so the top
+   * bar, the logo and the bar's state stay put between them (plan 9.5, audit M4 and L2).
+   * `landing`: the same as a page with the marker (previews).
+   * `minimal`: sign-in and sign-up, with only the legal links and the language below the page.
+   */
   variant?: 'default' | 'landing' | 'minimal';
   /** The language switch's Server Action; without it (previews) the switch loads /es and /en like links. */
   onSwitchLanguage?: LanguageSwitchHandler;
 }
+
+/** `<main>` for each variant; `default` turns into the landing's when the page holds the marker. */
+const MAIN_CLASS = {
+  landing: 'min-h-svh flex-1 overflow-x-clip outline-none',
+  minimal: 'mx-auto w-full max-w-content flex-1 px-gutter pt-28 pb-10 outline-none sm:pt-32',
+  default: [
+    'mx-auto w-full max-w-content min-h-svh flex-1 px-gutter pt-28 pb-10 outline-none sm:pt-32',
+    'has-[[data-landing-page]]:mx-0 has-[[data-landing-page]]:max-w-none has-[[data-landing-page]]:p-0 has-[[data-landing-page]]:overflow-x-clip',
+  ].join(' '),
+};
 
 export function PublicShell({ viewer, children, currentPath, variant = 'default', onSwitchLanguage }: PublicShellProps) {
   const t = useTranslations('shell');
@@ -47,7 +65,7 @@ export function PublicShell({ viewer, children, currentPath, variant = 'default'
   // One paper under every public page, the footer included (the landing page lays its own under its sections,
   // lined up with this one), so nothing starts or stops a background where the footer begins.
   return (
-    <div className="paper flex min-h-dvh flex-col">
+    <div className="paper group/site flex min-h-dvh flex-col">
       <SkipLink />
       <ScrollbarActivity />
       <TopBar
@@ -73,7 +91,8 @@ export function PublicShell({ viewer, children, currentPath, variant = 'default'
           </MobileMenu>
         }
       />
-      <main id="main" tabIndex={-1} className={variant === 'landing' ? 'flex-1 overflow-x-clip outline-none' : 'mx-auto w-full max-w-content flex-1 px-gutter pt-28 pb-10 outline-none sm:pt-32'}>
+      <main id="main" tabIndex={-1} className={MAIN_CLASS[variant]}>
+        {variant === 'landing' && <LandingPageMarker />}
         {children}
       </main>
       <PublicFooter variant={variant} onSwitchLanguage={onSwitchLanguage} />

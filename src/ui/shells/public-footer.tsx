@@ -5,6 +5,7 @@ import type { LanguageSwitchHandler } from '@/contracts';
 import { CATEGORY_SLUGS } from '@/contracts/common';
 import { LEGAL_DOCS, routes } from '@/contracts/routes';
 import { LANDING_SECTIONS } from '@/ui/landing/sections/ids';
+import { cn } from '@/ui/lib/utils';
 import { Reveal } from '@/ui/motion/reveal';
 import { LanguageSwitch } from './language-switch';
 import { Logo } from './logo';
@@ -17,6 +18,10 @@ import { Logo } from './logo';
  * categories, the cities (the first city, then the waitlist and every state) and the help a visitor would look for.
  * On phones it stays short (audit M45, 2026-11-18): no slogan block, the link groups as rows that open in place, and
  * the legal links on one wrapped line. Sign-in and sign-up use `minimal`: the legal links and the language only.
+ *
+ * The landing page and the other public pages share one shell (plan 9.5), so the footer carries both sets of links and
+ * CSS shows the right one: the shell is `group/site`, and the landing page holds the `data-landing-page` marker
+ * (PublicShell's LandingPageMarker). Hidden ones are `display: none`, so screen readers skip them too.
  */
 export function PublicFooter({ variant, onSwitchLanguage }: { variant: 'default' | 'landing' | 'minimal'; onSwitchLanguage?: LanguageSwitchHandler }) {
   const t = useTranslations('shell');
@@ -35,24 +40,26 @@ export function PublicFooter({ variant, onSwitchLanguage }: { variant: 'default'
   }
   const linkClass = 'group/link inline-flex min-h-11 items-center gap-1 rounded-md py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:min-h-10';
   const heading = 'mb-2 font-sans text-xs font-semibold tracking-[0.14em] text-foreground/70 uppercase';
-  // The link groups, once: columns from the tablet width up, rows that open in place on phones.
-  const groups: { title: string; links: FooterLinkItem[] }[] = [
-    variant === 'landing'
-      ? { title: t('footer.onThisPage'), links: LANDING_SECTIONS.map((section) => ({ href: `#${section}`, label: t(`footer.sections.${section}`), anchor: true })) }
-      : {
-          title: t('footer.explore'),
-          links: [
-            { href: routes.taskBoard(), label: t('footer.openTasks') },
-            { href: routes.howItWorks(), label: t('nav.howItWorks') },
-            { href: routes.becomeAHelper(), label: t('footer.becomeHelper') },
-            { href: routes.pricing(), label: t('nav.pricing') },
-          ],
-        },
+  // The link groups, once: columns from the tablet width up, rows that open in place on phones. On the landing page
+  // "On this page" takes Explore's place and two of Explore's links join the resources (`only`, see above).
+  const groups: FooterGroup[] = [
+    { title: t('footer.onThisPage'), only: 'landing', links: LANDING_SECTIONS.map((section) => ({ href: `#${section}`, label: t(`footer.sections.${section}`), anchor: true })) },
+    {
+      title: t('footer.explore'),
+      only: 'elsewhere',
+      links: [
+        { href: routes.taskBoard(), label: t('footer.openTasks') },
+        { href: routes.howItWorks(), label: t('nav.howItWorks') },
+        { href: routes.becomeAHelper(), label: t('footer.becomeHelper') },
+        { href: routes.pricing(), label: t('nav.pricing') },
+      ],
+    },
     { title: t('footer.categories'), links: CATEGORY_SLUGS.map((category) => ({ href: routes.category(category), label: t(`categories.${category}`) })) },
     {
       title: t('footer.resources'),
       links: [
-        ...(variant === 'landing' ? [{ href: routes.taskBoard(), label: t('footer.openTasks') }, { href: routes.becomeAHelper(), label: t('footer.becomeHelper') }] : []),
+        { href: routes.taskBoard(), label: t('footer.openTasks'), only: 'landing' },
+        { href: routes.becomeAHelper(), label: t('footer.becomeHelper'), only: 'landing' },
         { href: routes.trustAndSafety(), label: t('footer.trust') },
         { href: routes.help(), label: t('footer.help') },
       ],
@@ -62,10 +69,12 @@ export function PublicFooter({ variant, onSwitchLanguage }: { variant: 'default'
   return (
     <footer className="relative isolate">
       {/* The horizon: centered on the footer's top line, half above it (behind the page's last block) and half
-          below; each glow fades to nothing, so there's no line where the page stops and the footer starts. */}
+          below; each glow fades to nothing, so there's no line where the page stops and the footer starts. While the
+          page is still loading (a skeleton, role=status and aria-busy) it stays off: it reaches 14rem above the
+          footer, into the first screen, and would be pushed away when the page arrives (plan 9.4, audit H2-H4). */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 -top-56 -z-10 h-[30rem] opacity-80 dark:opacity-55"
+        className="pointer-events-none absolute inset-x-0 -top-56 -z-10 h-[30rem] opacity-80 group-has-[[role=status][aria-busy=true]]/site:hidden dark:opacity-55"
         style={{
           background: [
             'radial-gradient(38% 44% at 50% 50%, color-mix(in oklab, var(--iri-2) 16%, transparent), transparent 72%)',
@@ -113,22 +122,22 @@ export function PublicFooter({ variant, onSwitchLanguage }: { variant: 'default'
           </div>
 
           {groups.map((group) => (
-            <nav key={group.title} aria-label={group.title} className="hidden sm:block">
+            <nav key={group.title} aria-label={group.title} className={SHOWN_AS_COLUMN[group.only ?? 'always']}>
               <h2 className={heading}>{group.title}</h2>
-              <ul>{group.links.map((link) => <li key={link.href}><FooterLink link={link} className={linkClass} /></li>)}</ul>
+              <ul>{group.links.map((link) => <li key={link.href} className={SHOWN_AS_ITEM[link.only ?? 'always']}><FooterLink link={link} className={linkClass} /></li>)}</ul>
             </nav>
           ))}
 
           {/* Phones: the same groups as rows that open in place, not three long columns (audit M45). */}
           <div className="col-span-2 divide-y divide-foreground/[0.07] border-y border-foreground/[0.07] sm:hidden dark:divide-white/[0.07] dark:border-white/[0.07]">
             {groups.map((group) => (
-              <details key={group.title} className="group/details">
+              <details key={group.title} className={cn('group/details', SHOWN_AS_ROW[group.only ?? 'always'])}>
                 <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
                   {group.title}
                   <ChevronDown aria-hidden="true" className="size-4 text-muted-foreground transition-transform group-open/details:rotate-180 motion-reduce:transition-none" />
                 </summary>
                 <nav aria-label={group.title} className="pb-3">
-                  <ul className="grid grid-cols-2 gap-x-4">{group.links.map((link) => <li key={link.href}><FooterLink link={link} className={linkClass} /></li>)}</ul>
+                  <ul className="grid grid-cols-2 gap-x-4">{group.links.map((link) => <li key={link.href} className={SHOWN_AS_ITEM[link.only ?? 'always']}><FooterLink link={link} className={linkClass} /></li>)}</ul>
                 </nav>
               </details>
             ))}
@@ -152,12 +161,39 @@ export function PublicFooter({ variant, onSwitchLanguage }: { variant: 'default'
   );
 }
 
+/** Where a group or link shows: on every public page (unset), only on the landing page, or everywhere but there. */
+type FooterOnly = 'landing' | 'elsewhere';
+
 interface FooterLinkItem {
   href: string;
   label: string;
   /** A section of this page (`#id`): a plain anchor, not a page link. */
   anchor?: boolean;
+  only?: FooterOnly;
 }
+
+interface FooterGroup {
+  title: string;
+  links: FooterLinkItem[];
+  only?: FooterOnly;
+}
+
+/** The desktop columns (from sm), the phone rows and single links, by where they show. */
+const SHOWN_AS_COLUMN: Record<FooterOnly | 'always', string> = {
+  always: 'hidden sm:block',
+  landing: 'hidden sm:group-has-[[data-landing-page]]/site:block',
+  elsewhere: 'hidden sm:block sm:group-has-[[data-landing-page]]/site:hidden',
+};
+const SHOWN_AS_ROW: Record<FooterOnly | 'always', string> = {
+  always: '',
+  landing: 'hidden group-has-[[data-landing-page]]/site:block',
+  elsewhere: 'group-has-[[data-landing-page]]/site:hidden',
+};
+const SHOWN_AS_ITEM: Record<FooterOnly | 'always', string | undefined> = {
+  always: undefined,
+  landing: 'hidden group-has-[[data-landing-page]]/site:list-item',
+  elsewhere: 'group-has-[[data-landing-page]]/site:hidden',
+};
 
 function FooterLink({ link, className }: { link: FooterLinkItem; className: string }) {
   return link.anchor ? <a href={link.href} className={className}>{link.label}</a> : <Link href={link.href} className={className}>{link.label}</Link>;

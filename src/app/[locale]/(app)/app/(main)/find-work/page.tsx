@@ -8,8 +8,7 @@ import { getFindWorkPageData } from '@/modules/offers/helper';
 import { hideTaskAction, quickOfferAction, saveTaskAction, undoQuickOfferAction } from '@/modules/offers/helper-actions';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { PageSkeleton } from '@/ui/components';
-import { FindWorkScreen } from '@/ui/screens/work';
+import { FindWorkScreen, FindWorkSkeleton } from '@/ui/screens/work';
 import { requestNow } from '@/platform/clock';
 
 export const metadata: Metadata = { title: 'Find work', robots: { index: false } };
@@ -17,7 +16,7 @@ export const metadata: Metadata = { title: 'Find work', robots: { index: false }
 /** The helper feed: open tasks near the helper's area, with distance bands and filters. */
 function FindWorkPage({ searchParams }: PageProps<'/[locale]/app/find-work'>) {
   return (
-    <Suspense fallback={<PageSkeleton variant="cards" />}>
+    <Suspense fallback={<FindWorkSkeleton />}>
       <Feed searchParams={searchParams} />
     </Suspense>
   );

@@ -1,6 +1,7 @@
 import { OFFER_BLOCKED_REASONS, routes, type AppShellHandlers, type FindWorkPageData, type PreviewEntry } from '@/contracts';
 import { fakeFindWorkHandlers, fakeHandler, findWorkByPayData, findWorkEmptyData, findWorkMapViewData, findWorkNotBookableData, findWorkOfferAgainData, findWorkPageData, findWorkSavedData, findWorkWaitingData, findWorkWaitingReadyData, jordanShell, priyaShell } from '@/fixtures';
 import { FindWorkScreen } from '@/ui/screens/work/find-work-screen';
+import { FindWorkSkeleton } from '@/ui/screens/work/find-work-skeleton';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/findWork.json';
 
@@ -25,4 +26,6 @@ export const findWorkPreviews: PreviewEntry[] = [
     cards: OFFER_BLOCKED_REASONS.map((blockedReason, index) => ({ ...findWorkPageData.cards[index % findWorkPageData.cards.length], myOffer: undefined, task: { ...findWorkPageData.cards[index % findWorkPageData.cards.length].task, id: `blocked-${blockedReason}` }, blockedReason })),
     totalCount: OFFER_BLOCKED_REASONS.length,
   }),
+  // What the page shows while it loads, in its own shape (plan 9.4).
+  { id: 'screen-find-work/loading', title: copy.previews.loading, group: copy.previews.group, layout: 'fullscreen', render: () => <AppShell viewer={jordanShell} handlers={shellHandlers} currentPath={routes.app.findWork()}><FindWorkSkeleton /></AppShell> },
 ];

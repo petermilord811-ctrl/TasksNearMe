@@ -68,7 +68,8 @@
     "byPay": "Buscar trabajo · mejor pagadas",
     "offerAgain": "Buscar trabajo · una oferta vencida, para enviar de nuevo",
     "waiting": "Buscar trabajo · esperando su ciudad",
-    "waitingReady": "Buscar trabajo · esperando, todo listo"
+    "waitingReady": "Buscar trabajo · esperando, todo listo",
+    "loading": "Buscar trabajo · cargando"
   },
   "perHour": "{rate}/h",
   "earn": "Ganarías {amount}",

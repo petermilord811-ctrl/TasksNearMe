@@ -68,7 +68,8 @@
     "byPay": "Find work · highest pay",
     "offerAgain": "Find work · an expired offer, to send again",
     "waiting": "Find work · waiting for their city",
-    "waitingReady": "Find work · waiting, ready"
+    "waitingReady": "Find work · waiting, ready",
+    "loading": "Find work · loading"
   },
   "perHour": "{rate}/h",
   "earn": "You'd earn {amount}",

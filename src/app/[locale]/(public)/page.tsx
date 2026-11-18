@@ -13,6 +13,7 @@ import { searchEngineRows } from '@/shared/sample-data';
 import { parseSeason } from '@/shared/seasons';
 import { LandingHandlersProvider } from '@/ui/landing/landing-handlers';
 import { HomeScreen, HomeScreenSkeleton } from '@/ui/screens/public';
+import { LandingPageMarker } from '@/ui/shells/landing-page-marker';
 import { publicPageMetadata, structuredDataContext } from '@/i18n/metadata';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -27,7 +28,9 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
  * Home for the default market. The site's name and logo prerender with the shell; the landing itself is drawn for
  * the visitor (src/shared/sample-data.ts: sample people and tasks for signed-in testers only), per request inside
  * Suspense, from cached data. It dresses for the market's season; `?season=winter` (or spring, summer, fall) shows
- * another season's look, for a preview (the canonical address stays `/`).
+ * another season's look, for a preview (the canonical address stays `/`). It lives in the public pages' layout, so
+ * their shell (the top bar and its state) stays put between it and them (plan 9.5); its mark tells that shell to lay
+ * it out as the landing, in the static shell before anything streams.
  */
 async function HomePage({ searchParams }: { searchParams: SearchParams }) {
   // The public's data, cached: a missing default market is a real 404, before anything streams.
@@ -35,6 +38,7 @@ async function HomePage({ searchParams }: { searchParams: SearchParams }) {
   const [context, site] = await Promise.all([structuredDataContext(), getTranslations('server.meta.site')]);
   return (
     <>
+      <LandingPageMarker />
       {/* The site's name and logo for search results. */}
       <JsonLd nodes={[organizationNode(context, site('description')), websiteNode(context, site('description'))]} />
       <Suspense fallback={<HomeScreenSkeleton />}>
@@ -55,4 +59,4 @@ async function Landing({ searchParams }: { searchParams: SearchParams }) {
   );
 }
 
-export default withClientMessages('[locale]/(landing)/page.tsx', HomePage);
+export default withClientMessages('[locale]/(public)/page.tsx', HomePage);
