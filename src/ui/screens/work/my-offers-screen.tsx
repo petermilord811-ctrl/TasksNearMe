@@ -1,13 +1,14 @@
-import Link from 'next/link';
-import { CalendarDays, ChevronRight } from 'lucide-react';
+import { Clock, Hourglass, Laptop, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type InviteHandlers, type MyOfferRow, type MyOffersPageData } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
+import { CompactList, CompactRow, DayTile, RowFact, RowMoney } from '@/ui/components/layout/compact-list';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useOfferStatus } from '@/ui/components/status/use-status';
+import { CATEGORY_ICONS } from '@/ui/components/tasks/category-icons';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/primitives/tabs';
 import { MyInvites } from './my-invites';
 
@@ -23,50 +24,56 @@ export interface MyOffersScreenProps {
   initialTab?: OfferTab;
 }
 
-export function OfferRow({ row, now, headingLevel = 2 }: { row: MyOfferRow; now: ISODateTime; headingLevel?: 2 | 3 }) {
-  const { formatDateTime, formatRelative } = useFormat();
+/**
+ * One offer as a compact row (plan 9.14, audit M36): the proposed day, the task (the row opens it), the offer's
+ * status, what and where, the time and price, the expiry while it's waiting, and what the helper earns.
+ */
+export function OfferRow({ row, now, tab, headingLevel = 2 }: { row: MyOfferRow; now: ISODateTime; tab?: OfferTab; headingLevel?: 2 | 3 }) {
+  const { formatRelative, formatTime } = useFormat();
   const t = useTranslations('myOffers');
   const taskCopy = useTranslations('taskCard');
   const { offer, task } = row;
   const status = useOfferStatus(offer.status, 'helper');
-  const titleId = `my-offer-${offer.id}`;
-  const Heading = headingLevel === 2 ? 'h2' : 'h3';
+  const CategoryIcon = CATEGORY_ICONS[task.categorySlug];
   const price = offer.pricing.type === 'fixed' ? formatMoney(offer.pricing.priceCents) : t('hourlyPrice', {
     rate: formatMoney(offer.pricing.rateCents), hours: formatHours(offer.pricing.estimatedHours), cap: formatHours(offer.pricing.hoursCap),
   });
+  const earnings = formatMoney(offer.breakdown.helperEarningsCents);
+  const waiting = tab ? tab === 'active' : offer.status === 'pending' || offer.status === 'stale';
 
-  return <article aria-labelledby={titleId} className="group relative min-w-0 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card transition-[transform,box-shadow,border-color] duration-300 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:border-foreground/[0.12] hover:shadow-[0_1px_2px_rgb(23_18_14/0.04),0_18px_36px_-22px_rgb(60_30_10/0.34)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background md:p-6 dark:border-white/[0.06]">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm font-medium text-secondary-foreground">{taskCopy(`categories.${task.categorySlug}`)}</p>
-      <StatusBadge {...status} />
-    </div>
-    <div className="mt-4 flex items-start justify-between gap-3">
-      <Heading id={titleId} className="text-[17px]/6 font-semibold group-hover:text-primary md:text-lg/6.5"><Link href={routes.app.findWorkTask(task.id)} className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">{task.title}</Link></Heading>
-      <ChevronRight aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-    </div>
-    <p className="mt-3 flex items-start gap-2 text-sm tabular-nums text-muted-foreground"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><time dateTime={offer.proposedStart}>{t('proposedStart', { date: formatDateTime(offer.proposedStart) })}</time></p>
-    <dl className="mt-5 grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
-      <div><dt className="text-sm text-muted-foreground">{t('yourPrice')}</dt><dd className="mt-1 font-semibold tabular-nums">{price}</dd></div>
-      <div><dt className="text-sm text-muted-foreground">{t('earnings')}</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{formatMoney(offer.breakdown.helperEarningsCents)}</dd></div>
-    </dl>
-    <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
-      <div className="text-sm tabular-nums"><p>{t('expiry')}: <time dateTime={offer.expiresAt}>{formatDateTime(offer.expiresAt)}</time></p><p className="mt-1 text-muted-foreground">{t('expires', { relative: formatRelative(offer.expiresAt, now) })}</p></div>
-      {offer.revision > 1 && <StatusBadge tone="brand" label={t('updatedOffer')} />}
-    </div>
-  </article>;
+  return <CompactRow
+    titleId={`my-offer-${offer.id}`}
+    title={task.title}
+    href={routes.app.findWorkTask(task.id)}
+    headingLevel={headingLevel}
+    leading={<DayTile at={offer.proposedStart} />}
+    titleExtra={offer.revision > 1 ? <span className="ml-2 inline-flex translate-y-[-1px] items-center rounded-full bg-badge-brand px-1.5 py-px align-middle text-[11px] font-semibold text-badge-brand-foreground">{t('updatedOffer')}</span> : undefined}
+    facts={<>
+      <StatusBadge size="sm" {...status} />
+      <RowFact icon={CategoryIcon}>{taskCopy(`categories.${task.categorySlug}`)}</RowFact>
+      <RowFact icon={task.location.kind === 'remote' ? Laptop : MapPin}>{task.location.kind === 'remote' ? t('remote') : task.location.areaName}</RowFact>
+      <RowFact icon={Clock} className="tabular-nums"><time dateTime={offer.proposedStart}>{formatTime(offer.proposedStart)}</time></RowFact>
+      <RowFact className="tabular-nums">{t('priceFact', { price })}</RowFact>
+      {waiting && <RowFact icon={Hourglass} className="tabular-nums"><time dateTime={offer.expiresAt}>{t('expires', { relative: formatRelative(offer.expiresAt, now) })}</time></RowFact>}
+    </>}
+    trailing={<RowMoney caption={t('earnings')} amount={earnings} />}
+    trailingInline={t('earnShort', { amount: earnings })}
+  />;
 }
 
-export function MyOffersScreen({ data, now, inviteHandlers, initialTab = 'active' }: MyOffersScreenProps) {
+export function MyOffersScreen({ data, now, inviteHandlers, initialTab }: MyOffersScreenProps) {
   const t = useTranslations('myOffers');
+  // The first tab with offers in it, not an empty "Active (0)" (audit L18).
+  const openTab = initialTab ?? tabs.find((tab) => data[tab].length > 0) ?? 'active';
   return <div className="mx-auto w-full max-w-content space-y-6">
     <PageHeader title={t('title')} description={t('description')} />
     {data.invites && inviteHandlers && <MyInvites key={data.openInviteId ?? 'list'} invites={data.invites} openInviteId={data.openInviteId} handlers={inviteHandlers} now={now} />}
-    <Tabs defaultValue={initialTab} className="gap-6">
+    <Tabs defaultValue={openTab} className="gap-6">
       <TabsList aria-label={t('tabsLabel')} className="w-full sm:w-fit">
         {tabs.map((tab) => <TabsTrigger key={tab} value={tab} className="tabular-nums sm:min-w-28">{t('tabCount', { label: t(`tabs.${tab}`), count: data[tab].length })}</TabsTrigger>)}
       </TabsList>
       {tabs.map((tab) => <TabsContent key={tab} value={tab}>
-        {data[tab].length > 0 ? <ul className="space-y-4">{data[tab].map((row) => <li key={row.offer.id}><OfferRow row={row} now={now} /></li>)}</ul>
+        {data[tab].length > 0 ? <CompactList>{data[tab].map((row) => <li key={row.offer.id}><OfferRow row={row} now={now} tab={tab} /></li>)}</CompactList>
           : <EmptyState title={t(`empty.${tab}.title`)} body={t(`empty.${tab}.body`)} action={{ label: t('findWork'), href: routes.app.findWork() }} />}
       </TabsContent>)}
     </Tabs>

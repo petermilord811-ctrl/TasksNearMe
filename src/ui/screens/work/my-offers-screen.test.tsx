@@ -44,10 +44,19 @@ describe('MyOffersScreen', () => {
     const row = within(screen.getByRole('article', { name: myOffersPageData.active[0].task.title }));
     expect(row.getByRole('link')).toHaveAttribute('href', routes.app.findWorkTask(myOffersPageData.active[0].task.id));
     expect(row.getByText('Waiting for client')).toBeVisible();
-    expect(row.getByText('$60.00')).toBeVisible();
-    expect(row.getByText('$54.00')).toBeVisible();
+    expect(row.getByText('Your price $60.00')).toBeVisible();
+    // What the helper earns: on the right from 640 px, in the details line on phones.
+    expect(row.getAllByText('$54.00').length).toBeGreaterThan(0);
     expect(row.getByText('Expires in 3 days')).toBeVisible();
     expect(screen.queryByText('Updated offer')).not.toBeInTheDocument();
+  });
+
+  it('opens on the first tab with offers in it, not an empty one (audit L18)', () => {
+    const booked = myOffersPageData.active.map((row) => ({ ...row, offer: { ...row.offer, status: 'accepted' as const } }));
+    render(<NextIntlClientProvider locale="en" messages={{ ...messages, myOffers }}><MyOffersScreen data={{ ...myOffersPageData, active: [], booked }} now={now} /></NextIntlClientProvider>);
+    expect(screen.getByRole('tab', { name: 'Booked (2)' })).toHaveAttribute('aria-selected', 'true');
+    // A booked offer no longer waits, so it has no expiry.
+    expect(screen.queryByText(/^Expires/)).not.toBeInTheDocument();
   });
 
   it('shows the updated note for a supplied revision above one', () => {
