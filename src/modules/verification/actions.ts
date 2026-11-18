@@ -211,21 +211,28 @@ export async function onboardingRefreshStatus(): Promise<ActionResult> {
 
 // ---- Profile editor -------------------------------------------------------------------------------
 
+// The profile, services and area saves start a draft helper profile when there's none, like setup's: the private
+// beta's helper invite guards them too (aa's sweep S9). The editor page sends people without a profile to setup, but
+// an action is a public endpoint.
+
 export async function editorSaveProfile(input: HelperProfileInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
+  if (await helperInviteFor(db, userId)) return { ok: false, code: 'not_allowed' };
   return saved(userId, await saveHelperProfile(db, userId, input, await requestNow()));
 }
 
 export async function editorSaveServices(input: HelperServicesInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
+  if (await helperInviteFor(db, userId)) return { ok: false, code: 'not_allowed' };
   return saved(userId, await saveHelperServices(db, userId, input, await requestNow()));
 }
 
 export async function editorSaveArea(input: HelperAreaInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
+  if (await helperInviteFor(db, userId)) return { ok: false, code: 'not_allowed' };
   return saved(userId, await saveHelperArea(db, userId, input, await requestNow()));
 }
 
