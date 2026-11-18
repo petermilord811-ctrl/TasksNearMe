@@ -50,4 +50,22 @@ describe('PricingScreen', () => {
     expect(within(table).getAllByText('Full refund: $66.00')).toHaveLength(2);
     expect(within(table).queryByText('Full refund: $28.00')).not.toBeInTheDocument();
   });
+
+  it('keeps the fees and the fixed example open, with the other examples behind a disclosure each (audit M25)', () => {
+    const { container } = render(<NextIntlClientProvider locale="en" messages={{ ...uiMessages, publicPages }}><PricingScreen data={pricingPageData} /></NextIntlClientProvider>);
+    const disclosures = [...container.querySelectorAll('details')];
+    expect(disclosures.map((details) => details.querySelector('summary h2')?.textContent)).toEqual([publicPages.pricing.minimumTitle, publicPages.pricing.hourlyTitle, publicPages.pricing.expensesTitle, publicPages.pricing.cancellationTitle]);
+    expect(disclosures.every((details) => !details.open)).toBe(true);
+    expect(screen.getByRole('region', { name: 'Fixed price: what you pay' }).closest('details')).toBeNull();
+  });
+
+  it('shows each cancellation case as a card with its two amounts for phones (audit M24)', () => {
+    show();
+    const cards = screen.getAllByRole('listitem').filter((item) => item.querySelector('dl'));
+    expect(cards).toHaveLength(3);
+    const late = cards.find((card) => /You cancel less than 24 hours/.test(card.textContent ?? ''))!;
+    expect(within(late).getByText('$54.00')).toBeInTheDocument();
+    expect(within(late).getByText('$12.00')).toBeInTheDocument();
+    expect(within(late).getByText(publicPages.pricing.cancellationRefund)).toBeInTheDocument();
+  });
 });

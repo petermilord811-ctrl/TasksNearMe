@@ -68,6 +68,9 @@ test.describe('public pages', () => {
   test('pricing: every number comes from the fee engine and the published policy', async ({ page }) => {
     await page.goto('/pricing');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    // The fees and the fixed example are open; the other examples sit behind a disclosure each (audit M25).
+    await expect(page.getByText('$54.00', { exact: true }).first()).toBeVisible();
+    for (const summary of await page.getByRole('main').locator('details > summary').all()) await summary.click();
     for (const amount of ['$66.00', '$54.00', '$28.00', '$154.00', '$134.75', '$19.25', '$86.00', '$74.00']) {
       await expect(page.getByText(amount, { exact: true }).first()).toBeVisible();
     }
