@@ -11,6 +11,6 @@ Al empezar un semestre, mucha gente en Gainesville configura una laptop, un tel�
 
 Las paredes de yeso de las casas antiguas, como muchas cerca del centro, y las casas largas de un solo piso pueden dejar cuartos con poca señal. Tu ayudante puede revisar dónde está tu router y sugerir un mejor lugar o un sistema mesh; comprar equipo nuevo es decisión tuya.
 
-## En casa o en pantalla
+## En casa o a distancia
 
 Las preguntas rápidas suelen caber en una sesión guiada de 30 o 60 minutos en la que compartes tu pantalla. Configurar una impresora, un televisor o el Wi-Fi suele necesitar una visita. Ten tus dispositivos cargados y a la mano, y el nombre de tu Wi-Fi listo; las contraseñas las escribes tú.

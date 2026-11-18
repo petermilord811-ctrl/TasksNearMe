@@ -5,7 +5,7 @@ La mayoría de los muebles para armar en Gainesville llegan en cajas de tiendas 
 
 ## Apartamentos cerca del campus y casas antiguas
 
-Mucha gente cerca de la Universidad de Florida vive en edificios de apartamentos. Dile a tu ayudante en qué piso vives, si hay elevador y dónde estacionarse; algunos edificios piden reservar el elevador o la zona de carga para entregas grandes. En casas antiguas, como muchas de Duckpond o del barrio de Pleasant Street, menciona si hay puertas angostas o escaleras, para armar cada mueble en el cuarto donde se va a quedar.
+Mucha gente cerca de la Universidad de Florida vive en edificios de apartamentos. Dile a tu ayudante en qué piso vives, si hay elevador y dónde estacionarse; algunos edificios piden reservar el elevador o la zona de carga para entregas grandes. En casas antiguas, como muchas de Duckpond o del vecindario de Pleasant Street, menciona si hay puertas angostas o escaleras, para armar cada mueble en el cuarto donde se va a quedar.
 
 ## Semanas de mudanza
 

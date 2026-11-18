@@ -1,7 +1,7 @@
 ---
 updated: 2026-11-17
 ---
-La ayuda con mudanzas cubre la carga física: cargar y descargar, llevar cosas, mover muebles entre cuartos y empacar, por hora. El camión lo consigues tú; los ayudantes no llevan tus cosas en su propio vehículo.
+La ayuda con mudanzas cubre el trabajo pesado: cargar y descargar, llevar cosas, mover muebles entre cuartos y empacar, por hora. El camión lo consigues tú; los ayudantes no llevan tus cosas en su propio vehículo.
 
 ## En las semanas de mudanza de UF
 
@@ -9,7 +9,7 @@ Miles de estudiantes se mudan en Gainesville al mismo tiempo: en agosto, antes d
 
 ## Calor y tormentas de verano
 
-De junio a septiembre, las mañanas son más frescas y las tormentas de la tarde son comunes. Planea el trabajo pesado temprano, ten listas cobijas de mudanza o plástico para los muebles y los colchones, y di si hay un lugar techado cerca de donde se estacionará el camión.
+De junio a septiembre, las mañanas son más frescas y las tormentas de la tarde son comunes. Planea el trabajo pesado temprano, ten listas cobijas de mudanza o plástico para envolver los muebles y los colchones, y di si hay un lugar techado cerca de donde se estacionará el camión.
 
 ## Antes de que llegue tu ayudante
 

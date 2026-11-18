@@ -1,11 +1,11 @@
 ---
 updated: 2026-11-17
 ---
-La limpieza ligera es la limpieza habitual de la casa: cocinas, baños, pisos, quitar el polvo y un orden ligero. Sirve para el mantenimiento de siempre, para dejar todo listo antes de visitas o para limpiar al mudarte, siempre que el trabajo no se salga de eso. El moho, los residuos biológicos y el polvo de una obra no forman parte, y tampoco las ventanas exteriores por encima de la planta baja.
+La limpieza ligera es la limpieza habitual de la casa: cocinas, baños, pisos, quitar el polvo y ordenar un poco. Sirve para el mantenimiento de siempre, para dejar todo listo antes de recibir visitas o para limpiar al mudarte, siempre que el trabajo se quede dentro de ese alcance. El moho, los riesgos biológicos y el polvo de una obra no forman parte, y tampoco las ventanas exteriores por encima de la planta baja.
 
 ## Dile a tu ayudante qué va a encontrar
 
-El precio depende del tamaño de tu casa y de lo que quieres que se haga, así que indica los cuartos y cuántos baños hay. Di si hay productos de limpieza o si hay que traerlos, y menciona si hay mascotas.
+El precio depende del tamaño de tu casa y de lo que quieras que se haga, así que indica los cuartos y cuántos baños hay. Di si hay productos de limpieza o si hay que traerlos, y menciona si hay mascotas.
 
 ## Limpieza al mudarte cerca del campus
 
