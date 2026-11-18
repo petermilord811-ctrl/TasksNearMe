@@ -38,11 +38,13 @@ export function Timeline({ events, collapsible = false }: { events: TimelineEven
               <li key={event.id} className="relative flex min-w-0 gap-4 pb-6 last:pb-0">
                 {index < events.length - 1 && <span aria-hidden="true" className="absolute top-10 bottom-1 left-[17px] w-px rounded-full bg-gradient-to-b from-foreground/15 to-foreground/[0.05]" />}
                 <span aria-hidden="true" className={cn('relative flex size-9 shrink-0 items-center justify-center rounded-full ring-4 ring-card', actorTints[event.actor])}><Icon className="size-4" /></span>
-                <div className="min-w-0 pt-1">
+                {/* A container: in a narrow column (under 20rem) who and when stack, with no dot left dangling at the end
+                    of the first line (audit M26); wider, they share one line. */}
+                <div className="@container min-w-0 flex-1 pt-1">
                   <p className="break-words font-medium text-pretty">{label}</p>
-                  <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-sm text-muted-foreground">
+                  <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-sm text-muted-foreground @max-xs:flex-col @max-xs:gap-0">
                     <span>{event.actorName ?? t(`actors.${event.actor}`)}</span>
-                    <span aria-hidden="true" className="text-foreground/25">·</span>
+                    <span aria-hidden="true" className="text-foreground/25 @max-xs:hidden">·</span>
                     <time dateTime={event.at} className="tabular-nums">{formatDateTime(event.at)}</time>
                   </p>
                 </div>

@@ -53,6 +53,10 @@ describe('the booking page', () => {
     const view = await getBookingView(hub, 'usr_jordan', bookingId, new Date());
     expect(view).toMatchObject({ viewerRole: 'helper', addressVisibility: 'visible', exactAddress: { line1: '1234 Example Lane' } });
     expect(view?.payments).toBeUndefined();
+    // Money per role (audit M26): the client paid, and the helper sees their own $54.00 held, never the $66.00 total.
+    expect(view?.timeline.map((e) => e.type)).toEqual(['task_posted', 'offer_received', 'booked', 'payment_held']);
+    expect(view?.timeline.at(-1)?.params).toEqual({ amountCents: 5400 });
+    expect(view?.timeline.some((e) => e.params?.amountCents === 6600)).toBe(false);
     expect(view?.actions.map((a) => [a.id, a.enabled])).toEqual([
       ['on_my_way', false],
       ['arrived', false],

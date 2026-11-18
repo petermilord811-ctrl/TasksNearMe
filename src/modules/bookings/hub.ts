@@ -124,6 +124,7 @@ function timelineOf(
   paymentRows: (typeof payments.$inferSelect)[],
   priceCents: number,
   names: { poster: string; helper: string },
+  viewer: { role: 'poster' | 'helper'; helperEarningsCents: number },
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
   const add = (at: Date | null, actor: TimelineEvent['actor'], type: TimelineEvent['type'], params?: TimelineEvent['params']) => {
@@ -135,12 +136,16 @@ function timelineOf(
   if (offer) add(offer.createdAt, 'helper', 'offer_received', { amountCents: priceCents });
   // A tip is its own event after approval (a declined tip stays in the client's payments, not the timeline).
   const bookingMoney = paymentRows.filter((payment) => payment.purpose !== 'tip');
+  // Money per role (audit M26): the client's own payments with their amounts; the helper sees that the client paid,
+  // with the helper's own earnings for the booking's payment, never the client's total.
   for (const payment of bookingMoney) {
-    if (payment.status === 'failed') add(payment.updatedAt, 'system', 'payment_failed', { amountCents: payment.amountCents });
+    if (payment.status === 'failed') add(payment.updatedAt, 'system', 'payment_failed', viewer.role === 'poster' ? { amountCents: payment.amountCents } : undefined);
   }
   add(booking.confirmedAt, 'poster', 'booked');
   for (const payment of bookingMoney) {
-    if (payment.status === 'succeeded') add(payment.updatedAt, 'system', 'payment_succeeded', { amountCents: payment.amountCents });
+    if (payment.status !== 'succeeded') continue;
+    if (viewer.role === 'poster') add(payment.updatedAt, 'system', 'payment_succeeded', { amountCents: payment.amountCents });
+    else add(payment.updatedAt, 'system', 'payment_held', payment.purpose === 'booking_funding' ? { amountCents: viewer.helperEarningsCents } : undefined);
   }
   add(booking.onMyWayAt, 'helper', 'on_my_way');
   add(booking.arrivedAt, 'helper', 'arrived');
@@ -258,10 +263,15 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
         }
       : {}),
     deadlines: bookingDeadlines(facts, role, policy, now),
-    timeline: timelineOf(booking, task, offerRows[0] ?? null, paymentRows, terms.breakdown.taskPriceCents, {
-      poster: client.displayName,
-      helper: helper.displayName,
-    }),
+    timeline: timelineOf(
+      booking,
+      task,
+      offerRows[0] ?? null,
+      paymentRows,
+      terms.breakdown.taskPriceCents,
+      { poster: client.displayName, helper: helper.displayName },
+      { role, helperEarningsCents: terms.breakdown.helperEarningsCents },
+    ),
     ...(role === 'poster' ? { payments: paymentLines } : {}),
     ...(completion ? { completion } : {}),
     ...(role === 'poster' && review.facts?.helperSaved ? { helperSaved: true } : {}),

@@ -46,7 +46,7 @@ import {
 } from './money';
 import { deskOfferJordan } from './offers';
 import { chris, jordan, lee, maya, ruth, sam } from './people';
-import { DESK_TIMES, deskTimelineCompleted } from './timeline';
+import { DESK_TIMES, deskTimelineCompleted, deskTimelineHelper } from './timeline';
 
 /**
  * Booking confirmation (UI-010). "Now" for the desk is Tue, Nov 17, 2026, 9:00 am in Austin:
@@ -260,6 +260,7 @@ export const deskBookingHelperConfirmed: BookingView = {
   ...deskBookingPosterConfirmed,
   viewerRole: 'helper',
   payments: undefined,
+  timeline: deskTimelineHelper.slice(0, 4),
   actions: [
     action('on_my_way', 'primary', { enabled: false, disabledReason: { code: 'available_at', at: '2026-11-21T14:30:00.000Z' } }),
     action('message'),
@@ -271,7 +272,7 @@ export const deskBookingHelperConfirmed: BookingView = {
 export const deskBookingHelperDayOf: BookingView = {
   ...deskBookingHelperConfirmed,
   checkIn: { onMyWayAt: '2026-11-21T15:58:00.000Z' },
-  timeline: deskTimelineCompleted.slice(0, 5),
+  timeline: deskTimelineHelper.slice(0, 5),
   actions: [action('arrived', 'primary'), action('running_late'), action('message')],
 };
 
@@ -280,7 +281,7 @@ export const deskBookingHelperInProgress: BookingView = {
   ...deskBookingHelperDayOf,
   status: 'in_progress',
   checkIn: { onMyWayAt: '2026-11-21T15:58:00.000Z', arrivedAt: DESK_TIMES.arrived },
-  timeline: deskTimelineCompleted.slice(0, 6),
+  timeline: deskTimelineHelper.slice(0, 6),
   deadlines: {},
   actions: [action('submit_completion', 'primary'), action('message')],
 };
@@ -333,6 +334,7 @@ export const deskBookingHelperCompleted: BookingView = {
   ...deskBookingPosterCompleted,
   viewerRole: 'helper',
   payments: undefined,
+  timeline: deskTimelineHelper,
   deadlines: { addressHiddenAt: DESK_TIMES.addressHidden },
   actions: [action('review', 'primary'), action('message')],
 };
@@ -382,7 +384,7 @@ export const deskBookingHelperNoShowReported: BookingView = {
   addressVisibility: 'hidden_after_completion',
   payments: undefined,
   timeline: [
-    ...deskTimelineCompleted.slice(0, 4),
+    ...deskTimelineHelper.slice(0, 4),
     { id: 'evt_ns', at: '2026-11-21T17:01:00.000Z', actor: 'helper', actorName: 'Jordan T.', type: 'canceled' },
   ],
   actions: [action('contest_no_show', 'secondary'), action('message', 'secondary')],
@@ -544,7 +546,7 @@ export const deskBookingPosterTipped: BookingView = {
 export const deskBookingHelperTipped: BookingView = {
   ...deskBookingHelperCompleted,
   tip: { state: 'tipped', amountCents: 900, at: DESK_TIP_AT },
-  timeline: [...deskTimelineCompleted, deskTipEvent],
+  timeline: [...deskTimelineHelper, deskTipEvent],
 };
 
 /** Fake tip handlers: the tip goes through. */
@@ -790,6 +792,8 @@ export const movingBookingHelperCompletionHourly: BookingView = {
   ...movingBookingPosterCompletionHourly,
   viewerRole: 'helper',
   payments: undefined,
+  // Chris paid; Sam's own earnings on the 4 h cap ($126.00) are what's held (audit M26).
+  timeline: movingBookingPosterCompletionHourly.timeline.map((event) => (event.type === 'payment_succeeded' ? { ...event, type: 'payment_held' as const, params: { amountCents: 12600 } } : event)),
   actions: [action('message')],
 };
 
@@ -872,7 +876,7 @@ export const deskBookingHelperWithSheets: BookingView = {
 export const deskBookingHelperRunningLate: BookingView = {
   ...deskBookingHelperWithSheets,
   checkIn: { onMyWayAt: '2026-11-21T15:58:00.000Z', lateByMinutes: 20 },
-  timeline: [...deskTimelineCompleted.slice(0, 5), { id: 'evt_late', at: '2026-11-21T16:25:00.000Z', actor: 'helper', actorName: 'Jordan T.', type: 'running_late', params: { minutes: 20 } }],
+  timeline: [...deskTimelineHelper.slice(0, 5), { id: 'evt_late', at: '2026-11-21T16:25:00.000Z', actor: 'helper', actorName: 'Jordan T.', type: 'running_late', params: { minutes: 20 } }],
 };
 
 /** 11:00 am and no check-in: Maya may report a no-show. */

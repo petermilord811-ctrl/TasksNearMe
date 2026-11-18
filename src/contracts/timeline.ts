@@ -8,6 +8,8 @@ export const TIMELINE_EVENT_TYPES = [
   'invite_sent',
   'booked',
   'payment_succeeded',
+  /** The helper's side of a payment (audit M26): the client paid, and the helper's own earnings are held until approval. */
+  'payment_held',
   'payment_failed',
   'change_proposed',
   'change_applied',

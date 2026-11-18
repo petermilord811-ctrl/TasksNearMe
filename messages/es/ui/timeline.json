@@ -11,6 +11,7 @@
   "invite_sent": "Solicitud enviada",
   "booked": "Reserva confirmada",
   "payment_succeeded": "{hasAmount, select, yes {Pago recibido · {amount}} other {Pago recibido}}",
+  "payment_held": "{hasAmount, select, yes {El cliente pagó · tus {amount} quedan retenidos hasta que se apruebe la tarea} other {El cliente pagó · tus ganancias quedan retenidas hasta que se apruebe la tarea}}",
   "payment_failed": "El pago falló",
   "change_proposed": "Cambio propuesto",
   "change_applied": "Cambio aceptado",

@@ -32,3 +32,11 @@ export const deskTimelineCompleted: TimelineEvent[] = [
   { id: 'evt_8', at: DESK_TIMES.approved, actor: 'poster', actorName: 'Maya R.', type: 'approved' },
   { id: 'evt_9', at: DESK_TIMES.approved, actor: 'system', type: 'earnings_transferred', params: { amountCents: 5400 } },
 ];
+
+/**
+ * The same desk timeline as Jordan (the helper) sees it (audit M26): the client paid, and his own $54.00 is held until
+ * approval, never the client's $66.00 total.
+ */
+export const deskTimelineHelper: TimelineEvent[] = deskTimelineCompleted.map((event) =>
+  event.type === 'payment_succeeded' ? { ...event, type: 'payment_held', params: { amountCents: 5400 } } : event,
+);
