@@ -102,6 +102,18 @@ describe('ThreadScreen', () => {
     expect(screen.queryByRole('form', { name: 'Message' })).not.toBeInTheDocument();
   });
 
+  it('offers Reply only where a reply can be sent: not in a closed or blocked conversation', () => {
+    const open = thread(deskOfferThreadPageData);
+    expect(screen.getAllByRole('button', { name: 'Reply' }).length).toBeGreaterThan(0);
+    open.unmount();
+    for (const data of [expiredOfferThreadPageData, taskCanceledOfferThreadPageData, blockedThreadPageData]) {
+      const view = thread(data);
+      expect(screen.queryByRole('button', { name: 'Reply' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: /^Reply or react to/ })).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
   it('says the task was canceled, to the client and to the helper, never "declined" or "chose another offer" (sweep D9)', () => {
     for (const [data, wayOn, href] of [
       [taskCanceledOfferThreadPageData, 'Open the offer to request them again', routes.app.offer('tsk_desk', 'off_lee')],

@@ -50,7 +50,7 @@ function MessageContent({ message }: { message: MessageView }) {
 /** Messages from the same person within this long read as one group: their name once, tighter spacing. */
 const GROUP_MS = 5 * 60_000;
 
-export function MessageLog({ messages, otherParty, now, seenMessageId, firstUnreadId, onReact, className }: { messages: MessageView[]; otherParty: PersonSummary; now: ISODateTime; seenMessageId?: string; firstUnreadId?: string; onReact?: ActionHandler<{ messageId: string; emoji: MessageReaction; on: boolean }>; className?: string }) {
+export function MessageLog({ messages, otherParty, now, seenMessageId, firstUnreadId, onReact, canReply = false, className }: { messages: MessageView[]; otherParty: PersonSummary; now: ISODateTime; seenMessageId?: string; firstUnreadId?: string; onReact?: ActionHandler<{ messageId: string; emoji: MessageReaction; on: boolean }>; /** Reply only where one can be sent: not in a closed or blocked conversation. */ canReply?: boolean; className?: string }) {
   const { formatDate, formatDateTime, formatRelative, formatTime, dayKey } = useFormat();
   const t = useTranslations('thread');
   const router = useRouter();
@@ -171,18 +171,19 @@ export function MessageLog({ messages, otherParty, now, seenMessageId, firstUnre
                 </ul>;
               })()}
             </article>
-            {/* Reply and react: under the message, quiet until the pointer or the keyboard comes near on wide screens. */}
-            <div role="group" aria-label={t('actions.label', { name: sender })} className="flex items-center gap-0.5 opacity-100 transition-opacity lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover/msg:opacity-100">
-              <button type="button" onClick={() => setReplyTo({ id: message.id, name: sender, text: message.segments.map((segment) => ('text' in segment ? segment.text : '•••')).join('').slice(0, 120) })} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+            {/* Reply and react: under the message, quiet until the pointer or the keyboard comes near on wide screens; none
+                where nothing can be sent (a closed or blocked conversation has no composer to reply in). */}
+            {(canReply || onReact) && <div role="group" aria-label={t('actions.label', { name: sender })} className="flex items-center gap-0.5 opacity-100 transition-opacity lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover/msg:opacity-100">
+              {canReply && <button type="button" onClick={() => setReplyTo({ id: message.id, name: sender, text: message.segments.map((segment) => ('text' in segment ? segment.text : '•••')).join('').slice(0, 120) })} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
                 <Reply aria-hidden="true" className="size-3.5" />{t('actions.reply')}
-              </button>
+              </button>}
               {onReact && MESSAGE_REACTIONS.map((emoji) => {
                 const mineAlready = pendingReactions[`${message.id}:${emoji}`] ?? message.reactions?.find((reaction) => reaction.emoji === emoji)?.mine ?? false;
                 return <button key={emoji} type="button" aria-pressed={mineAlready} aria-label={t(`reactions.${emoji}`)} onClick={() => react(message.id, emoji, !mineAlready)} className={cn('inline-flex size-8 items-center justify-center rounded-full text-sm hover:bg-foreground/[0.05] focus-visible:outline-2 focus-visible:outline-ring', mineAlready && 'bg-brand-soft')}>
                   <span aria-hidden="true">{REACTION_EMOJI[emoji]}</span>
                 </button>;
               })}
-            </div>
+            </div>}
           </li>
           </Fragment>;
         })}
