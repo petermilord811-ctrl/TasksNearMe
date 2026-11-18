@@ -191,6 +191,8 @@ export const routes = {
     receipt: (bookingId: string) => `/app/payments/${enc(bookingId)}`,
     earnings: () => '/app/earnings',
     rewards: () => '/app/rewards',
+    /** The person's plan (completion plan 9.13): what it adds, subscribe, or manage and cancel. */
+    plan: () => '/app/plan',
     notifications: () => '/app/notifications',
     account: () => '/app/account',
     support: () => '/app/support',

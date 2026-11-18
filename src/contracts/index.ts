@@ -55,5 +55,6 @@ export * from './beta';
 export * from './bot-check';
 export * from './public-support';
 export * from './shell';
+export * from './billing';
 export * from './routes';
 export type { PreviewEntry } from './preview';
