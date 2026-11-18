@@ -19,6 +19,7 @@ function deps(overrides: Partial<AiSearchDeps> = {}): AiSearchDeps & { calls: st
     calls,
     matcher: match(),
     consumeSearch: vi.fn(async () => { calls.push('count'); return { ok: true as const, remaining: 9 }; }),
+    releaseSearch: vi.fn(async () => { calls.push('give back'); }),
     allowBurst: vi.fn(async () => { calls.push('burst'); return true; }),
     categoryKeywords: vi.fn(async () => ['gas line']),
     areas: vi.fn(async () => AREAS),
@@ -100,6 +101,31 @@ describe('AI search', () => {
     const boom = new TypeError('bug');
     expect(await runAiSearch(deps({ onError, matcher: { name: 'x', match: vi.fn(async () => { throw boom; }) } }), { text: 'a desk', mode: 'poster' })).toEqual({ ok: false, code: 'unavailable' });
     expect(onError).toHaveBeenCalledWith(boom);
+  });
+
+  it("gives the counted search back when AI is unavailable or refuses, so an outage doesn't use up the month (aa's sweep #3)", async () => {
+    for (const failure of [new AiUnavailableError('down'), new AiRefusedError(), new TypeError('bug')]) {
+      const d = deps({ onError: vi.fn(), matcher: { name: 'x', match: vi.fn(async () => { throw failure; }) } });
+      await runAiSearch(d, { text: 'a desk', mode: 'poster' });
+      expect(d.calls).toEqual(['burst', 'count', 'give back']);
+    }
+    // A give-back that fails is logged (never the words) and the person still gets the answer.
+    const lost = new Error('db down');
+    const onError = vi.fn();
+    const d = deps({ onError, releaseSearch: vi.fn(async () => { throw lost; }), matcher: { name: 'x', match: vi.fn(async () => { throw new AiUnavailableError('down'); }) } });
+    expect(await runAiSearch(d, { text: 'a desk', mode: 'poster' })).toEqual({ ok: false, code: 'unavailable' });
+    expect(onError).toHaveBeenCalledWith(lost);
+  });
+
+  it("keeps the search counted when AI answered, even when the answer is that it can't be booked", async () => {
+    for (const d of [deps(), deps({ matcher: match({ prohibited: true }) })]) {
+      await runAiSearch(d, { text: 'a desk', mode: 'poster' });
+      expect(d.releaseSearch).not.toHaveBeenCalled();
+    }
+    // Refused before counting: nothing to give back.
+    const d = deps({ consumeSearch: vi.fn(async () => ({ ok: false as const, reason: 'monthly_limit' as const })) });
+    await runAiSearch(d, { text: 'a desk', mode: 'poster' });
+    expect(d.releaseSearch).not.toHaveBeenCalled();
   });
 
   it('masks contact details in the draft it hands to the posting wizard', async () => {

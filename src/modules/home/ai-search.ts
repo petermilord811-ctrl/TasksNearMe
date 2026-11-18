@@ -40,6 +40,8 @@ export interface AiSearchDeps {
   matcher: NeedMatcher | null;
   /** The plan's check, counting this search (billing's `consumeAiSearch`). */
   consumeSearch: () => Promise<{ ok: true; remaining: number | null } | { ok: false; reason: AiSearchBlock }>;
+  /** Gives back the search `consumeSearch` just counted, when AI couldn't run it (billing's `releaseAiSearch`). */
+  releaseSearch: () => Promise<void>;
   /** Counts one search toward `AI_SEARCH_BURST`; false once over it. */
   allowBurst: () => Promise<boolean>;
   /** The category's own prohibited words (the global list is added here). */
@@ -59,8 +61,9 @@ export interface AiSearchDeps {
 /**
  * The checks, in order: 3–300 characters, AI set up here, the burst guard, nothing prohibited in the words, then the
  * plan (which counts the search, so it comes last before AI runs). Then AI reads the words; a refusal or a request
- * for something that can't be booked is `prohibited`. Then the searches: with the words first, and the category
- * alone when the words find nothing.
+ * for something that can't be booked is `prohibited`. When AI is unavailable or refuses, the search it never ran is
+ * given back, so an outage doesn't use up the person's month; an answer that the request can't be booked was a
+ * search, and counts. Then the searches: with the words first, and the category alone when the words find nothing.
  */
 export async function runAiSearch(deps: AiSearchDeps, input: { text: unknown; mode: Mode }): Promise<AiSearchResult> {
   const parsed = aiSearchInputSchema.safeParse({ text: typeof input?.text === 'string' ? input.text : '' });
@@ -77,6 +80,8 @@ export async function runAiSearch(deps: AiSearchDeps, input: { text: unknown; mo
   try {
     match = await deps.matcher.match({ text, mode: input.mode, areas: areas.map((area) => area.name) });
   } catch (error) {
+    // AI never answered, so the search goes back to the person's month (aa's sweep #3); a failed give-back is only logged.
+    await deps.releaseSearch().catch((releaseError: unknown) => deps.onError?.(releaseError));
     if (error instanceof AiRefusedError) return { ok: false, code: 'prohibited' };
     if (!(error instanceof AiUnavailableError)) deps.onError?.(error);
     return { ok: false, code: 'unavailable' };
