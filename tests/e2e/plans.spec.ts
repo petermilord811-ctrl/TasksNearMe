@@ -1,5 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { submitEmailStep } from './support/sign-in';
+import { openAccountGroup } from './support/account';
 
 /**
  * The optional plans (completion plan 9.13) with the billing stand-in: a new account sees both plans with their prices
@@ -70,8 +71,9 @@ test('a new account subscribes to Plus, cancels it to the period’s end, keeps 
   await plus.getByRole('button', { name: 'Manage or cancel' }).click();
   await expect(plus.getByText(/^Renews .+ at \$4\.99\.$/)).toBeVisible({ timeout: 30_000 });
 
-  // The account page leads here.
+  // The account page leads here (on phones its Plan group starts folded, plan 9.14b).
   await page.goto('/app/account');
+  await openAccountGroup(page, 'helping');
   await page.getByRole('link', { name: 'See plans' }).click();
   await expect(page).toHaveURL(/\/app\/plan$/, { timeout: 30_000 });
 });

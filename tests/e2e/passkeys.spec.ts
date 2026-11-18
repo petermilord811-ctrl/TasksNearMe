@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { devSignIn } from './support/sign-in';
+import { showPasskeys } from './support/account';
 
 /**
  * Passkeys (blueprint 01 P2) with Chromium's virtual authenticator (a platform authenticator with user
@@ -21,6 +22,8 @@ test('a passkey added on the account page signs the person back in', async ({ pa
   await page.getByLabel('Name this passkey').fill('Test laptop');
   await page.getByRole('button', { name: 'Add a passkey' }).click();
   await expect(page.getByText('Passkey added. Next time, sign in with it.')).toBeVisible({ timeout: 30_000 });
+  // The passkeys are listed behind "Your passkeys (n)" (plan 9.14b).
+  await showPasskeys(page);
   await expect(page.getByText('Test laptop')).toBeVisible();
 
   // Sign out, then back in with the passkey.
@@ -30,6 +33,7 @@ test('a passkey added on the account page signs the person back in', async ({ pa
   await expect(page).toHaveURL(/\/app\/account$/, { timeout: 45_000 });
 
   // Leave Priya as she was.
+  await showPasskeys(page);
   await page.getByRole('button', { name: 'Remove passkey Test laptop' }).click();
   await expect(page.getByText('Passkey removed.')).toBeVisible({ timeout: 30_000 });
 });

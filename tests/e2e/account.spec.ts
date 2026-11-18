@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { devSignIn } from './support/sign-in';
+import { openAccountGroup } from './support/account';
 
 /** Notifications and the account page (UI-017) on the seeded data. */
 
@@ -36,6 +37,8 @@ test('account: the phone stays masked and the receipts stay on', async ({ page }
   await expect(page.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible();
   await expect(page.getByText('•••• 0105 · Verified')).toBeVisible();
   expect(await page.content()).not.toContain('5550105');
+  // On phones the groups start folded except Profile (plan 9.14b).
+  await openAccountGroup(page, 'notifications');
   const locked = page.getByRole('switch', { name: 'Bookings by Email' });
   await expect(locked).toBeChecked();
   await expect(locked).toBeDisabled();

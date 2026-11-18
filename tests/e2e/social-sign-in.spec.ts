@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openAccountGroup } from './support/account';
 
 /**
  * "Continue with Google" and "Continue with Microsoft", through Better Auth's real flow with the stand-in
@@ -69,6 +70,8 @@ test.describe('sign-in with Google or Microsoft', () => {
     await chooseSomeoneElse(page, 'google', 'Quinn Mercer', freshEmail(testInfo.project.name, 'connect'));
     await completeProfile(page);
     await expect(page).toHaveURL(/\/app\/account/);
+    // On phones the account's groups start folded except Profile (plan 9.14b); back from connecting, Sign-in opens itself.
+    await openAccountGroup(page, 'security');
 
     await expect(page.getByRole('button', { name: 'Disconnect Google' })).toBeVisible();
     await page.getByRole('button', { name: 'Connect Microsoft' }).click();

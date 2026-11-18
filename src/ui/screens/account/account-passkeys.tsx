@@ -3,7 +3,7 @@
 import { useId, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Fingerprint } from 'lucide-react';
+import { ChevronDown, Fingerprint } from 'lucide-react';
 import { browserSupportsWebAuthn, startRegistration } from '@simplewebauthn/browser';
 import type { AccountHandlers, AccountSignInMethods, ActionResult } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
@@ -82,7 +82,13 @@ export function AccountPasskeys({ passkeys, held = false, handlers }: {
       <h3 id={`${id}-title`} className="flex items-center gap-2 font-semibold"><Fingerprint aria-hidden="true" className="size-5 text-muted-foreground" />{t('title')}</h3>
       <p className="text-sm text-muted-foreground">{t('description')}</p>
     </div>
-    {passkeys.length === 0 ? <p className="text-sm">{t('none')}</p> : <ul className="space-y-2">
+    {/* The passkeys themselves (their names, and Remove) behind Show: rarely needed, and the list grows (plan 9.14b). */}
+    {passkeys.length === 0 ? <p className="text-sm">{t('none')}</p> : <details className="group/keys">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl text-sm font-medium [&::-webkit-details-marker]:hidden">
+        {t('list', { count: passkeys.length })}
+        <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-transform group-open/keys:rotate-180 motion-reduce:transition-none" />
+      </summary>
+      <ul className="space-y-2 pt-1">
       {passkeys.map((key) => <li key={key.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-foreground/[0.07] p-3 dark:border-white/[0.06]">
         <span className="min-w-0 space-y-0.5">
           <span className="block font-medium break-words">{key.name || t('defaultName')}</span>
@@ -92,7 +98,8 @@ export function AccountPasskeys({ passkeys, held = false, handlers }: {
           {busy === key.id && <Spinner aria-hidden="true" />}{t('remove')}
         </Button>
       </li>)}
-    </ul>}
+      </ul>
+    </details>}
     {held ? <p className="text-sm text-muted-foreground">{t('held')}</p> : supported ? <div className="space-y-3">
       <div className="space-y-1.5">
         <label htmlFor={`${id}-name`} className="text-sm font-medium">{t('nameLabel')}</label>

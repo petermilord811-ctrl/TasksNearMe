@@ -160,8 +160,10 @@ export function ProfilePhotoField({
 
   const failed = outcome?.kind === 'failed' || outcome?.kind === 'remove_failed';
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-      <div className="relative w-fit shrink-0">
+    // Phones (plan 9.14b): the photo beside its label and buttons, the hint under them across the width; from 640 px
+    // the photo on the left and everything else beside it, in reading order.
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-3 sm:gap-x-6">
+      <div className="relative row-span-2 w-fit shrink-0 sm:row-span-4">
         <InitialsAvatar initials={initials} photo={pending ?? photo} size="xl" />
         {busy && (
           <span className="absolute inset-0 grid place-items-center rounded-full bg-background/70">
@@ -169,63 +171,59 @@ export function ProfilePhotoField({
           </span>
         )}
       </div>
-      <div className="min-w-0 flex-1 space-y-3">
-        <div className="space-y-1">
-          <p id={`${id}-label`} className="font-medium">{t('label')}</p>
-          <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-            {t('hint', { megabytes: maxPhotoMegabytes })}
-            {note && <> {t(`notes.${note}`)}</>}
+      <p id={`${id}-label`} className="col-start-2 self-end font-medium sm:self-start">{t('label')}</p>
+      <p id={`${id}-hint`} className="col-span-2 text-sm text-muted-foreground max-sm:order-2 sm:col-span-1 sm:col-start-2 sm:-mt-2">
+        {t('hint', { megabytes: maxPhotoMegabytes })}
+        {note && <> {t(`notes.${note}`)}</>}
+      </p>
+      <div className="col-start-2 flex flex-wrap gap-2 self-start max-sm:order-1">
+        <input
+          ref={fileInput}
+          id={id}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+          disabled={busy !== null}
+          aria-describedby={`${id}-hint ${id}-status`}
+          aria-busy={busy === 'upload' || undefined}
+          className="peer sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            // Cleared, so choosing the same file again still uploads it.
+            event.target.value = '';
+            if (file) void choose(file);
+          }}
+        />
+        <label
+          htmlFor={id}
+          aria-disabled={busy !== null || undefined}
+          className={cn(
+            buttonVariants({ variant: 'outline' }),
+            'min-h-11 cursor-pointer peer-focus-visible:border-ring peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50 peer-disabled:pointer-events-none peer-disabled:opacity-50',
+          )}
+        >
+          {busy === 'upload' ? <Spinner aria-hidden="true" /> : <ImagePlus aria-hidden="true" className="size-4" />}
+          {busy === 'upload' ? t('uploading') : t(photo ? 'change' : 'add')}
+        </label>
+        {photo && (
+          <Button type="button" variant="ghost" className="min-h-11" disabled={busy !== null} aria-busy={busy === 'remove'} onClick={() => void remove()}>
+            {busy === 'remove' ? <Spinner aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
+            {busy === 'remove' ? t('removing') : t('remove')}
+          </Button>
+        )}
+      </div>
+      <div id={`${id}-status`} aria-live="polite" aria-atomic="true" className="col-span-2 max-sm:order-3 sm:col-span-1 sm:col-start-2">
+        {outcome && (
+          <p className={cn('flex items-start gap-2 text-sm', failed ? 'text-destructive' : 'text-foreground')}>
+            {failed ? <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" /> : <CircleCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-success" />}
+            <span>
+              {outcome.kind === 'failed'
+                ? t(`errors.${outcome.code}`, { megabytes: maxPhotoMegabytes })
+                : outcome.kind === 'remove_failed'
+                  ? feedback(`error.${outcome.result.ok ? 'unknown' : outcome.result.code}`)
+                  : t(outcome.kind)}
+            </span>
           </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <input
-            ref={fileInput}
-            id={id}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-            disabled={busy !== null}
-            aria-describedby={`${id}-hint ${id}-status`}
-            aria-busy={busy === 'upload' || undefined}
-            className="peer sr-only"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              // Cleared, so choosing the same file again still uploads it.
-              event.target.value = '';
-              if (file) void choose(file);
-            }}
-          />
-          <label
-            htmlFor={id}
-            aria-disabled={busy !== null || undefined}
-            className={cn(
-              buttonVariants({ variant: 'outline' }),
-              'min-h-11 cursor-pointer peer-focus-visible:border-ring peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50 peer-disabled:pointer-events-none peer-disabled:opacity-50',
-            )}
-          >
-            {busy === 'upload' ? <Spinner aria-hidden="true" /> : <ImagePlus aria-hidden="true" className="size-4" />}
-            {busy === 'upload' ? t('uploading') : t(photo ? 'change' : 'add')}
-          </label>
-          {photo && (
-            <Button type="button" variant="ghost" className="min-h-11" disabled={busy !== null} aria-busy={busy === 'remove'} onClick={() => void remove()}>
-              {busy === 'remove' ? <Spinner aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
-              {busy === 'remove' ? t('removing') : t('remove')}
-            </Button>
-          )}
-        </div>
-        <div id={`${id}-status`} aria-live="polite" aria-atomic="true">
-          {outcome && (
-            <p className={cn('flex items-start gap-2 text-sm', failed ? 'text-destructive' : 'text-foreground')}>
-              {failed ? <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" /> : <CircleCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-success" />}
-              <span>
-                {outcome.kind === 'failed'
-                  ? t(`errors.${outcome.code}`, { megabytes: maxPhotoMegabytes })
-                  : outcome.kind === 'remove_failed'
-                    ? feedback(`error.${outcome.result.ok ? 'unknown' : outcome.result.code}`)
-                    : t(outcome.kind)}
-              </span>
-            </p>
-          )}
-        </div>
+        )}
       </div>
       <PhotoCropDialog image={cropping?.image ?? null} onCancel={() => setCropping(null)} onConfirm={(state) => void saveAdjusted(state)} onChooseAnother={chooseAnother} />
     </div>

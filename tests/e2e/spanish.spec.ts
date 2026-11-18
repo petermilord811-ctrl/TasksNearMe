@@ -4,6 +4,7 @@ import formsEs from '../../messages/es/ui/forms.json';
 import shellEn from '../../messages/en/ui/shell.json';
 import shellEs from '../../messages/es/ui/shell.json';
 import signInEs from '../../messages/es/ui/signIn.json';
+import { openAccountGroup } from './support/account';
 import { submitEmailStep } from './support/sign-in';
 
 /**
@@ -83,6 +84,8 @@ test('someone who signs up in Spanish gets a Spanish account, and can switch it 
   await expect(page).toHaveURL(/\/app$/, { timeout: 30_000 });
 
   await page.goto('/app/account');
+  // On phones the account's groups start folded; the language is under Notifications (plan 9.14b).
+  await openAccountGroup(page, 'notifications');
   const spanish = page.getByRole('group', { name: accountEs.language.title });
   await expect(spanish.getByRole('radio', { name: 'Español' })).toBeChecked();
   // The account and this device switch at once; the page loads again in English. (A tap before the page
@@ -92,5 +95,6 @@ test('someone who signs up in Spanish gets a Spanish account, and can switch it 
     await spanish.getByRole('radio', { name: 'English' }).click({ timeout: 5_000 });
     await expect(page.locator('html')).toHaveAttribute('lang', 'en', { timeout: 10_000 });
   }).toPass({ timeout: 60_000 });
+  await openAccountGroup(page, 'notifications');
   await expect(page.getByRole('group', { name: 'Language' }).getByRole('radio', { name: 'English' })).toBeChecked();
 });

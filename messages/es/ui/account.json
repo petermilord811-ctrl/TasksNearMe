@@ -7,7 +7,14 @@
     "security": "Inicio de sesión y seguridad",
     "notifications": "Notificaciones",
     "helping": "Plan y ayuda",
-    "privacy": "Privacidad y datos"
+    "privacy": "Privacidad y datos",
+    "summaries": {
+      "profile": "Foto, nombre, datos de contacto y verificación",
+      "security": "Código por correo, Google o Microsoft, llaves de acceso",
+      "notifications": "Correos y mensajes de texto, este dispositivo, idioma",
+      "helping": "Tu plan y tu perfil de ayudante",
+      "privacy": "Actividad, una copia de tus datos, eliminar la cuenta, cerrar sesión"
+    }
   },
   "profile": {
     "title": "Perfil",
@@ -251,7 +258,8 @@
     "synced": "Sincronizada en tus dispositivos",
     "cancelled": "No se agregó nada.",
     "unsupported": "Este navegador no admite llaves de acceso.",
-    "held": "Agregar una llave de acceso está en pausa mientras nuestro equipo revisa tu cuenta. Aún puedes quitar una."
+    "held": "Agregar una llave de acceso está en pausa mientras nuestro equipo revisa tu cuenta. Aún puedes quitar una.",
+    "list": "Tus llaves de acceso ({count})"
   },
   "verification": {
     "title": "Verificación",

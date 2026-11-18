@@ -7,7 +7,14 @@
     "security": "Sign-in and security",
     "notifications": "Notifications",
     "helping": "Plan and helping",
-    "privacy": "Privacy and data"
+    "privacy": "Privacy and data",
+    "summaries": {
+      "profile": "Photo, name, contact details and verification",
+      "security": "Email code, Google or Microsoft, passkeys",
+      "notifications": "Emails and texts, this device, language",
+      "helping": "Your plan and your helper profile",
+      "privacy": "Activity, a copy of your data, deleting the account, signing out"
+    }
   },
   "profile": {
     "title": "Profile",
@@ -251,7 +258,8 @@
     "synced": "Synced across your devices",
     "cancelled": "Nothing was added.",
     "unsupported": "This browser can't use passkeys.",
-    "held": "Adding a passkey is paused while our team checks your account. You can still remove one."
+    "held": "Adding a passkey is paused while our team checks your account. You can still remove one.",
+    "list": "Your passkeys ({count})"
   },
   "verification": {
     "title": "Verification",

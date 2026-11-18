@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { devSignIn } from './support/sign-in';
+import { openAccountGroup } from './support/account';
 
 /**
  * The signed-in pages after plan 9.14 (audit M30, M33, M34, M37, M40, L18), on the seeded data: detail pages leave
@@ -99,6 +100,19 @@ test('the account page is in groups, and its index jumps to each (audit M37)', a
   await expect(page).toHaveURL(/#account-privacy$/);
   await expect(page.getByRole('heading', { level: 2, name: 'Privacy and data' })).toBeInViewport();
   await expect(page.locator('#account-privacy').getByRole('button', { name: 'Sign out' })).toBeVisible();
+});
+
+test('on phones the account groups fold, and the one a link points at opens (plan 9.14b)', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-mobile', 'the groups fold below 1024 px');
+  test.setTimeout(120_000);
+  await devSignIn(page, 'maya@example.test');
+  await page.goto('/app/account#account-notifications');
+  await expect(page.locator('#account-notifications-title button')).toHaveAttribute('aria-expanded', 'true', { timeout: 45_000 });
+  await expect(page.getByRole('switch', { name: 'Bookings by Email' })).toBeVisible();
+  // Another group stays folded until it's opened.
+  await expect(page.getByRole('heading', { level: 3, name: 'Ways to sign in' })).toBeHidden();
+  await openAccountGroup(page, 'security');
+  await expect(page.getByRole('heading', { level: 3, name: 'Ways to sign in' })).toBeVisible();
 });
 
 test('the offer and booking pages render on the server without a fallback to the client (audit L29)', async ({ page }, testInfo) => {
