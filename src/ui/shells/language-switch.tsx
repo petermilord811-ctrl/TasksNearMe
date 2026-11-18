@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition, type MouseEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
+import { Globe } from 'lucide-react';
 // Values from their own modules, not the contracts barrel: it would bring every zod schema onto every page.
 import { APP_LOCALES, DEFAULT_LOCALE, LOCALE_NAMES, isAppLocale, type AppLocale } from '@/contracts/locale';
 import type { LanguageSwitchHandler } from '@/contracts';
@@ -19,8 +20,11 @@ export interface LanguageSwitchProps {
   /** The switch's group name ("Language"). */
   label: string;
   onSwitch?: LanguageSwitchHandler;
-  /** `pill`: the top bars' EN/ES switch with a sliding knob. `inline`: "English · Español" in the footer. */
-  variant?: 'pill' | 'inline';
+  /**
+   * `pill`: the top bars' EN/ES switch with a sliding knob. `inline`: "English · Español" in the footer. `compact`: a
+   * globe and the other language's code ("ES"), named in full ("Español"), for a crowded bar (1024–1280 px).
+   */
+  variant?: 'pill' | 'inline' | 'compact';
   className?: string;
 }
 
@@ -87,6 +91,28 @@ export function LanguageSwitch({ label, onSwitch, variant = 'pill', className }:
     event.preventDefault();
     switchTo(next);
   };
+
+  if (variant === 'compact') {
+    // One link, to the language this page isn't in: the switch a reader of the other language looks for.
+    const other = APP_LOCALES.find((option) => option !== shown) ?? DEFAULT_LOCALE;
+    return (
+      <nav aria-label={label} className={cn('shrink-0', className)}>
+        <a
+          href={hrefFor(other)}
+          hrefLang={other}
+          lang={other}
+          aria-busy={pending || undefined}
+          title={LOCALE_NAMES[other]}
+          onClick={(event) => choose(event, other)}
+          className={cn('inline-flex h-9 items-center gap-1.5 rounded-full bg-foreground/[0.06] px-3 text-xs font-semibold tracking-wide text-muted-foreground transition-colors hover:text-foreground', pending && 'animate-pulse motion-reduce:animate-none')}
+        >
+          <Globe aria-hidden="true" className="size-4" />
+          <span aria-hidden="true">{CODES[other]}</span>
+          <span className="sr-only">{LOCALE_NAMES[other]}</span>
+        </a>
+      </nav>
+    );
+  }
 
   if (variant === 'inline') {
     return (

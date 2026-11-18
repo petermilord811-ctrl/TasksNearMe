@@ -53,7 +53,7 @@ export function PublicShell({ viewer, children, currentPath, variant = 'default'
             <NavLink
               item={item}
               currentPath={currentPath}
-              className="flex min-h-11 items-center rounded-full px-3.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+              className="flex min-h-11 items-center whitespace-nowrap rounded-full px-3 xl:px-3.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
               activeClassName="bg-foreground/[0.07] text-foreground"
             >
               {t(`nav.${item.id}`)}
@@ -73,7 +73,10 @@ export function PublicShell({ viewer, children, currentPath, variant = 'default'
         logo={<><span className="min-[380px]:hidden"><Logo variant="mark" animated /></span><span className="hidden min-[380px]:inline-flex"><Logo animated /></span></>}
         nav={links('bar')}
         actions={<>
-          <LanguageSwitch label={t('footer.language')} onSwitch={onSwitchLanguage} className="hidden md:block" />
+          {/* Between 1024 and 1280 the nav and three buttons share the bar ("How it works" wrapped): the switch stays, as a
+              globe and the other language's code, since it's how a Spanish reader finds the Spanish site. */}
+          <LanguageSwitch label={t('footer.language')} onSwitch={onSwitchLanguage} className="hidden md:block lg:hidden xl:block" />
+          <LanguageSwitch label={t('footer.language')} onSwitch={onSwitchLanguage} variant="compact" className="hidden lg:block xl:hidden" />
           <ThemeToggle className="hidden sm:inline-flex" />
           <Suspense fallback={<PublicAccountLinks viewer={{ kind: 'public' }} placement="header" />}>
             <PublicAccountLinks viewer={viewer} placement="header" />

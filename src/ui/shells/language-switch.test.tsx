@@ -20,6 +20,19 @@ function show(props: Partial<Parameters<typeof LanguageSwitch>[0]> = {}) {
 }
 
 describe('LanguageSwitch', () => {
+  it('compact: one link to the other language, a globe and its code, named in full (1024–1280 px header)', async () => {
+    const onSwitch = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    show({ variant: 'compact', onSwitch });
+    const nav = within(screen.getByRole('navigation', { name: 'Language' }));
+    expect(nav.getAllByRole('link')).toHaveLength(1);
+    const spanish = nav.getByRole('link', { name: 'Español' });
+    expect(spanish).toHaveAttribute('href', '/es/pricing');
+    expect(spanish).toHaveAttribute('lang', 'es');
+    expect(spanish).toHaveTextContent('ES');
+    await act(async () => { fireEvent.click(spanish); });
+    expect(onSwitch).toHaveBeenCalledExactlyOnceWith({ locale: 'es' });
+  });
+
   it("links to this page in each language, the current one marked, each named with its code and in itself", () => {
     show();
     const nav = within(screen.getByRole('navigation', { name: 'Language' }));
