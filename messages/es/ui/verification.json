@@ -118,7 +118,7 @@
     "identityNameCheck": "Tu identidad está verificada, pero el nombre del documento es distinto al de tu cuenta. Nuestro equipo lo está revisando, normalmente en un día. Si el nombre de tu cuenta no es tu nombre legal, <account>actualízalo en la página de tu cuenta</account>.",
     "biometric": {
       "title": "Antes de tu verificación de identidad",
-      "body": "Nuestro socio de identidad, Persona, compara una foto de tu identificación con una selfie en vivo usando la geometría facial, un identificador biométrico. Se usa solo para verificar que eres la persona de la identificación. Persona la guarda, no nosotros, y le pedimos a Persona que la borre 30 días después de tu resultado. La ley de Texas exige tu consentimiento antes.",
+      "body": "Nuestro socio de identidad, Persona, compara una foto de tu identificación con una selfie en vivo usando la geometría facial, un identificador biométrico. Se usa solo para verificar que eres la persona de la identificación. Persona la guarda, no nosotros, y le pedimos a Persona que la borre 30 días después de tu resultado. Te pedimos tu consentimiento antes.",
       "checkbox": "Acepto la verificación biométrica descrita aquí.",
       "required": "Acepta la verificación biométrica para iniciar tu verificación de identidad."
     },
@@ -263,7 +263,7 @@
     },
     "notice": {
       "title": "Antes de tomar tus fotos",
-      "body": "Para comprobar que eres la persona de tu identificación, tomamos fotos de tu identificación y una selfie que sigue una instrucción, y nuestro equipo de confianza y seguridad compara tu cara con la foto de la identificación. Después, nuestro socio de identidad, Persona, verifica por segunda vez tu identificación y una selfie usando la geometría facial, un identificador biométrico. Las fotos se usan solo para verificar tu identidad. Guardamos las nuestras cifradas hasta que terminen las dos verificaciones y las borramos a más tardar 30 días después de nuestra decisión; le pedimos a Persona que borre las suyas 30 días después de su resultado. La ley de Texas exige tu consentimiento antes.",
+      "body": "Para comprobar que eres la persona de tu identificación, tomamos fotos de tu identificación y una selfie que sigue una instrucción, y nuestro equipo de confianza y seguridad compara tu cara con la foto de la identificación. Después, nuestro socio de identidad, Persona, verifica por segunda vez tu identificación y una selfie usando la geometría facial, un identificador biométrico. Las fotos se usan solo para verificar tu identidad. Guardamos las nuestras cifradas hasta que terminen las dos verificaciones y las borramos a más tardar 30 días después de nuestra decisión; le pedimos a Persona que borre las suyas 30 días después de su resultado. Te pedimos tu consentimiento antes.",
       "checkbox": "Acepto la verificación de identidad y selfie descrita aquí.",
       "required": "Acepta la verificación de identidad y selfie para tomar tus fotos.",
       "continue": "Continuar"
@@ -374,7 +374,7 @@
     },
     "previews": {
       "group": "Verificación de identidad: nuestras fotos y la segunda verificación",
-      "notice": "Antes de las fotos: el aviso de Texas",
+      "notice": "Antes de las fotos: el aviso biométrico",
       "noticeError": "El aviso sin aceptar",
       "type": "Qué identificación",
       "front": "Frente: elegir cámara o subir",

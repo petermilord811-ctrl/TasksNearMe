@@ -118,7 +118,7 @@
     "identityNameCheck": "Your ID is verified, but the name on it is different from the one on your account. Our team is checking it, usually within a day. If your account name isn't your legal name, <account>update it on your account page</account>.",
     "biometric": {
       "title": "Before your ID check",
-      "body": "Our ID partner, Persona, compares a photo of your ID with a live selfie using face geometry, a biometric identifier. It's used only to verify that you are the person on the ID. Persona keeps it, not us, and we ask Persona to delete it 30 days after your result. Texas law requires your consent first.",
+      "body": "Our ID partner, Persona, compares a photo of your ID with a live selfie using face geometry, a biometric identifier. It's used only to verify that you are the person on the ID. Persona keeps it, not us, and we ask Persona to delete it 30 days after your result. We ask for your consent first.",
       "checkbox": "I agree to the biometric check described here.",
       "required": "Agree to the biometric check to start your ID check."
     },
@@ -263,7 +263,7 @@
     },
     "notice": {
       "title": "Before you take your photos",
-      "body": "To check that you are the person on your ID, we take photos of your ID and a selfie that follows an instruction, and our trust and safety team compares your face with the photo on the ID. Then our ID partner, Persona, double-checks your ID and a selfie using face geometry, a biometric identifier. The photos are used only to verify your identity. We keep ours encrypted until both checks are finished and delete them no later than 30 days after our decision; we ask Persona to delete theirs 30 days after its result. Texas law requires your consent first.",
+      "body": "To check that you are the person on your ID, we take photos of your ID and a selfie that follows an instruction, and our trust and safety team compares your face with the photo on the ID. Then our ID partner, Persona, double-checks your ID and a selfie using face geometry, a biometric identifier. The photos are used only to verify your identity. We keep ours encrypted until both checks are finished and delete them no later than 30 days after our decision; we ask Persona to delete theirs 30 days after its result. We ask for your consent first.",
       "checkbox": "I agree to the ID and selfie check described here.",
       "required": "Agree to the ID and selfie check to take your photos.",
       "continue": "Continue"
@@ -374,7 +374,7 @@
     },
     "previews": {
       "group": "ID check: our photos and the double check",
-      "notice": "Before the photos: the Texas notice",
+      "notice": "Before the photos: the biometric notice",
       "noticeError": "The notice not accepted",
       "type": "Which ID",
       "front": "Front: choose camera or upload",
