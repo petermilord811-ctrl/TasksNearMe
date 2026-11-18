@@ -324,7 +324,21 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.delete(savedReplies).where(eq(savedReplies.userId, userId));
     await tx.delete(messageReactions).where(eq(messageReactions.userId, userId));
     await tx.update(communityPosts).set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now }).where(and(eq(communityPosts.authorUserId, userId), ne(communityPosts.status, 'removed')));
-    await tx.update(communityReplies).set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now }).where(and(eq(communityReplies.authorUserId, userId), ne(communityReplies.status, 'removed')));
+    const takenDown = await tx
+      .update(communityReplies)
+      .set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now })
+      .where(and(eq(communityReplies.authorUserId, userId), ne(communityReplies.status, 'removed')))
+      .returning({ id: communityReplies.id, postId: communityReplies.postId });
+    // The posts they replied on count only visible replies (sweep P8), as when an author or staff takes one down, and
+    // a pinned answer of theirs is unpinned.
+    const repliedOn = [...new Set(takenDown.map((reply) => reply.postId))];
+    if (repliedOn.length) {
+      await tx
+        .update(communityPosts)
+        .set({ replyCount: sql`(select count(*) from ${communityReplies} r where r.post_id = ${communityPosts.id} and r.status = 'visible')` })
+        .where(inArray(communityPosts.id, repliedOn));
+      await tx.update(communityPosts).set({ pinnedReplyId: null }).where(inArray(communityPosts.pinnedReplyId, takenDown.map((reply) => reply.id)));
+    }
     await tx.update(taskQuestions).set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now }).where(and(eq(taskQuestions.askerUserId, userId), ne(taskQuestions.status, 'removed')));
     const reacted = await tx.delete(communityReactions).where(eq(communityReactions.userId, userId)).returning({ targetKind: communityReactions.targetKind, targetId: communityReactions.targetId });
     for (const kind of ['post', 'reply'] as const) {

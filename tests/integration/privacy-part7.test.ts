@@ -57,6 +57,13 @@ describe('Part 7 and privacy', () => {
   });
 
   it('takes it down on deletion: saved things go, writing is removed, reactions go and counts follow', async () => {
+    // The post they replied on counts its visible replies, theirs and Maya's (not their reply staff hid), and theirs
+    // is the pinned answer.
+    await db.insert(communityReplies).values([
+      { id: `${theirPost}_r2`, postId: otherPost, authorUserId: 'usr_maya', body: 'Ours came on Tuesday.' },
+      { id: `${theirPost}_r3`, postId: otherPost, authorUserId: LEAVER, body: 'Call me about it.', status: 'hidden' },
+    ]);
+    await db.update(communityPosts).set({ replyCount: 2, pinnedReplyId: `${theirPost}_r` }).where(eq(communityPosts.id, otherPost));
     await anonymizeAccount(db, { storage, cipher, email, appUrl: 'http://localhost:3000' }, LEAVER, now);
     expect(await db.select().from(savedSearches).where(eq(savedSearches.userId, LEAVER))).toEqual([]);
     expect(await db.select().from(savedReplies).where(eq(savedReplies.userId, LEAVER))).toEqual([]);
@@ -65,7 +72,11 @@ describe('Part 7 and privacy', () => {
     const [reply] = await db.select().from(communityReplies).where(eq(communityReplies.id, `${theirPost}_r`));
     expect(reply?.status).toBe('removed');
     expect(await db.select().from(communityReactions).where(and(eq(communityReactions.userId, LEAVER)))).toEqual([]);
-    const [other] = await db.select({ helpful: communityPosts.helpfulCount }).from(communityPosts).where(eq(communityPosts.id, otherPost));
+    const [other] = await db.select({ helpful: communityPosts.helpfulCount, replies: communityPosts.replyCount, pinned: communityPosts.pinnedReplyId }).from(communityPosts).where(eq(communityPosts.id, otherPost));
     expect(other?.helpful).toBe(0);
+    // Their reply no longer counts and is no longer pinned (sweep P8); Maya's still counts, and the hidden one is removed.
+    expect(other).toMatchObject({ replies: 1, pinned: null });
+    const [hidden] = await db.select({ status: communityReplies.status }).from(communityReplies).where(eq(communityReplies.id, `${theirPost}_r3`));
+    expect(hidden?.status).toBe('removed');
   });
 });
