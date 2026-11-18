@@ -57,4 +57,4 @@ async function Booking({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
   );
 }
 
-export default withClientMessages('[locale]/(app)/app/(main)/bookings/[bookingId]/page.tsx', BookingPage);
+export default withClientMessages('[locale]/(app)/app/(flow)/bookings/[bookingId]/page.tsx', BookingPage);

@@ -57,7 +57,7 @@ async function ManageTask({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskI
     />
     {/* The neighborhood post it came from (plan 9.10), then questions from helpers (7.9), answered and pinned here. */}
     {discussion && <TaskDiscussionLink discussion={discussion} />}
-    {questions && <TaskQuestions data={questions} now={now.toISOString()} handlers={{
+    {questions && <TaskQuestions wide data={questions} now={now.toISOString()} handlers={{
         onAsk: askTaskQuestionAction.bind(null, taskId),
         onAnswer: answerTaskQuestionAction.bind(null, taskId),
         onPin: pinTaskQuestionAction.bind(null, taskId),
@@ -68,4 +68,4 @@ async function ManageTask({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskI
   );
 }
 
-export default withClientMessages('[locale]/(app)/app/(main)/tasks/[taskId]/page.tsx', ManageTaskPage);
+export default withClientMessages('[locale]/(app)/app/(flow)/tasks/[taskId]/page.tsx', ManageTaskPage);

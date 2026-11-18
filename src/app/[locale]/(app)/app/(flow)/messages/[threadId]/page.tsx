@@ -43,4 +43,4 @@ async function Thread({ params }: Pick<PageProps<'/[locale]/app/messages/[thread
   );
 }
 
-export default withClientMessages('[locale]/(app)/app/(main)/messages/[threadId]/page.tsx', ThreadPage);
+export default withClientMessages('[locale]/(app)/app/(flow)/messages/[threadId]/page.tsx', ThreadPage);

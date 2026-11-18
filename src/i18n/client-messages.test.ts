@@ -41,8 +41,8 @@ describe('client namespaces per route file', () => {
     // The pricing screen is a server component, so the page ships no messages; @/ui/screens/public's other screens don't count.
     expect(CLIENT_NAMESPACES['[locale]/(public)/pricing/page.tsx']).toEqual([]);
     const uses = (route: ClientRoute, namespace: string) => (CLIENT_NAMESPACES[route] as readonly string[]).some((entry) => entry === namespace || entry.startsWith(`${namespace}.`));
-    expect(uses('[locale]/(app)/app/(main)/bookings/[bookingId]/page.tsx', 'bookingHub')).toBe(true);
-    expect(uses('[locale]/(app)/app/(main)/bookings/[bookingId]/page.tsx', 'landing')).toBe(false);
+    expect(uses('[locale]/(app)/app/(flow)/bookings/[bookingId]/page.tsx', 'bookingHub')).toBe(true);
+    expect(uses('[locale]/(app)/app/(flow)/bookings/[bookingId]/page.tsx', 'landing')).toBe(false);
     expect(uses('[locale]/(landing)/page.tsx', 'landing')).toBe(true);
     expect(uses('[locale]/(landing)/page.tsx', 'bookingHub')).toBe(false);
   });

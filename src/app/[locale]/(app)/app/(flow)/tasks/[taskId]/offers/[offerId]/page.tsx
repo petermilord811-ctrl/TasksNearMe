@@ -31,4 +31,4 @@ async function OfferDetail({ params }: Pick<PageProps<'/[locale]/app/tasks/[task
   return <OfferDetailScreen data={data} now={now.toISOString()} handlers={{ onOfferAction: posterOfferAction }} />;
 }
 
-export default withClientMessages('[locale]/(app)/app/(main)/tasks/[taskId]/offers/[offerId]/page.tsx', OfferDetailPage);
+export default withClientMessages('[locale]/(app)/app/(flow)/tasks/[taskId]/offers/[offerId]/page.tsx', OfferDetailPage);
