@@ -46,6 +46,7 @@
     "emailTitle": "Email address hidden until booking",
     "unmaskedTitle": "Message after booking"
   },
+  "directions": "Directions",
   "directionsGoogle": "Directions in Google Maps",
   "directionsApple": "Directions in Apple Maps"
 }

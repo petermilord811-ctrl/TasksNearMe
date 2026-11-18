@@ -44,7 +44,9 @@ describe('booking actions', () => {
 
   it('offers the client a review, saving the helper, and Book again once completed; the helper a review and a new booking', () => {
     const completed = { ...confirmed, status: 'completed', completedAt: at('2026-11-21T19:05:00.000Z'), reviewWindowOpen: true };
-    expect(ids(bookingActions(completed, 'poster', start))).toEqual(['review', 'save_helper', 'book_again', 'message']);
+    expect(ids(bookingActions(completed, 'poster', start))).toEqual(['review', 'book_again', 'save_helper', 'message']);
+    // Without a review to write, Book again leads (the phone's bar shows the first action: audit M30).
+    expect(ids(bookingActions({ ...completed, reviewed: true }, 'poster', start))).toEqual(['book_again', 'save_helper', 'message']);
     expect(ids(bookingActions({ ...completed, reviewed: true, helperSaved: true }, 'poster', start))).toEqual(['book_again', 'message']);
     expect(ids(bookingActions(completed, 'helper', start))).toEqual(['review', 'offer_rebook', 'message']);
     expect(ids(bookingActions({ ...completed, reviewed: true }, 'helper', start))).toEqual(['offer_rebook', 'message']);

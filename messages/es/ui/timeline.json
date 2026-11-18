@@ -1,5 +1,6 @@
 {
   "title": "Cronología de la reserva",
+  "count": "{count, plural, one {# evento} other {# eventos}}",
   "previewGroup": "Cronología",
   "previewTitle": "Escritorio · completado",
   "empty": "Las actualizaciones aparecerán aquí a medida que avance la reserva.",

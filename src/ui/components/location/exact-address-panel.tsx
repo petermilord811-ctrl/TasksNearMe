@@ -1,12 +1,13 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import { Check, Copy, ExternalLink, LoaderCircle, Lock, Navigation } from 'lucide-react';
+import { Check, ChevronDown, Copy, ExternalLink, LoaderCircle, Lock, Navigation } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ExactAddress, ISODateTime } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/primitives/dropdown-menu';
 
 export interface ExactAddressPanelProps {
   address: ExactAddress;
@@ -64,15 +65,30 @@ export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions,
         </div>
       )}
 
-      {/* On phones the actions stack full width (four pills of different widths wrapped raggedly); from `sm` a row. */}
+      {/* One row (audit L32): copy, and the maps: with directions, one "Directions" menu (Google, Apple, or the map). */}
       <div className="space-y-2">
-        <div className="grid gap-2 sm:flex sm:flex-wrap">
-          <Button type="button" variant="outline" className="min-h-11 max-sm:justify-start" disabled={copyState === 'pending'} aria-busy={copyState === 'pending'} onClick={copyAddress}>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" className="min-h-11 flex-1 px-3.5 sm:flex-none sm:px-5" disabled={copyState === 'pending'} aria-busy={copyState === 'pending'} onClick={copyAddress}>
             {copyState === 'pending' ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" /> : copyState === 'success' ? <Check aria-hidden="true" className="size-4" /> : <Copy aria-hidden="true" className="size-4" />}
             {t(copyState === 'pending' ? 'copyPending' : 'copyAddress')}
           </Button>
-          {mapsHref ? (
-            <Button asChild variant="outline" className="min-h-11 max-sm:justify-start">
+          {/* Directions in the helper's own maps app, when the app supplies them (nothing is stored or geocoded). */}
+          {directions ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" className="min-h-11 flex-1 px-3.5 sm:flex-none sm:px-5"><Navigation aria-hidden="true" className="size-4" />{t('directions')}<ChevronDown aria-hidden="true" className="size-4" /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-56">
+                {([['google', directions.google], ['apple', directions.apple]] as const).map(([app, href]) => <DropdownMenuItem key={app} asChild className="min-h-11 flex-1 px-3.5 sm:flex-none sm:px-5">
+                  <a href={href} target="_blank" rel="noopener noreferrer"><Navigation aria-hidden="true" className="size-4" />{t(app === 'google' ? 'directionsGoogle' : 'directionsApple')}<span className="sr-only">{t('opensNewTab')}</span></a>
+                </DropdownMenuItem>)}
+                {mapsHref && <DropdownMenuItem asChild className="min-h-11 flex-1 px-3.5 sm:flex-none sm:px-5">
+                  <a href={mapsHref} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden="true" className="size-4" />{t('openMaps')}<span className="sr-only">{t('opensNewTab')}</span></a>
+                </DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : mapsHref ? (
+            <Button asChild variant="outline" className="min-h-11 flex-1 px-3.5 sm:flex-none sm:px-5">
               <a href={mapsHref} target="_blank" rel="noopener noreferrer">
                 <ExternalLink aria-hidden="true" className="size-4" />
                 {t('openMaps')}
@@ -81,24 +97,12 @@ export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions,
             </Button>
           ) : (
             // TODO(contract): routes.external.googleMapsSearch(address: ExactAddress): string.
-            <Button type="button" variant="outline" className="min-h-11 max-sm:justify-start" disabled aria-describedby={mapsHintId}>
+            <Button type="button" variant="outline" className="min-h-11 flex-1 px-3.5 sm:flex-none sm:px-5" disabled aria-describedby={mapsHintId}>
               <ExternalLink aria-hidden="true" className="size-4" />
               {t('openMaps')}
             </Button>
           )}
         </div>
-        {/* Directions in the helper's own maps app, when the app supplies them (nothing is stored or geocoded). */}
-        {directions && <div className="grid gap-2 sm:flex sm:flex-wrap">
-          {([['google', directions.google], ['apple', directions.apple]] as const).map(([app, href]) => (
-            <Button key={app} asChild variant="outline" className="min-h-11 max-sm:justify-start">
-              <a href={href} target="_blank" rel="noopener noreferrer">
-                <Navigation aria-hidden="true" className="size-4" />
-                {t(app === 'google' ? 'directionsGoogle' : 'directionsApple')}
-                <span className="sr-only">{t('opensNewTab')}</span>
-              </a>
-            </Button>
-          ))}
-        </div>}
         {!mapsHref && <p id={mapsHintId} className="text-sm text-muted-foreground">{t('mapsUnavailable')}</p>}
         <p role="status" aria-live="polite" aria-atomic="true" className={cn('text-sm', copyState === 'error' ? 'text-destructive' : 'text-muted-foreground')}>
           {copyState === 'success' ? t('copySuccess') : copyState === 'error' ? t('copyError') : null}

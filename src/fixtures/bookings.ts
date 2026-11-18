@@ -325,7 +325,7 @@ export const deskBookingPosterCompleted: BookingView = {
   completedVia: 'poster',
   deadlines: {},
   timeline: deskTimelineCompleted,
-  actions: [action('review', 'primary'), action('save_helper'), action('book_again'), action('message')],
+  actions: [action('review', 'primary'), action('book_again'), action('save_helper'), action('message')],
 };
 
 /** Jordan within 48 h of approval: still sees the address, until Mon 1:05 pm. */

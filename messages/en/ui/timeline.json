@@ -1,5 +1,6 @@
 {
   "title": "Booking timeline",
+  "count": "{count, plural, one {# event} other {# events}}",
   "previewGroup": "Timeline",
   "previewTitle": "Desk · completed",
   "empty": "Updates will appear here as the booking moves forward.",

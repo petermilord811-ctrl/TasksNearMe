@@ -352,14 +352,19 @@ describe('BookingHubScreen privacy and supplied data', () => {
     expect(screen.getByText(/You paid for up to 4 hours.*Unused hours are refunded after you approve/)).toBeVisible();
   });
 
-  it('shows an expense allowance the charge funds, inside the canonical total', () => {
+  it('shows an expense allowance the charge funds, and once the work is in, its final cost once (audit M29)', () => {
     const { container } = mount(deskBookingPosterCompletionWithExpenses);
     const allowance = deskBookingPosterCompletionWithExpenses.terms.expenseAllowance!;
     expect(container.textContent).toContain(formatMoney(allowance.amountCents));
     expect(container.textContent).toContain(allowance.description);
-    // $60.00 + $6.00 fee + the $20.00 allowance, as funded.
-    expect(screen.getByText('Total charged').closest('div')).toHaveTextContent(formatMoney(deskBookingPosterCompletionWithExpenses.terms.breakdown.posterTotalCents));
-    expect(deskBookingPosterCompletionWithExpenses.terms.breakdown.posterTotalCents).toBe(8600);
+    // One money card: what was charged up front ($60.00 + $6.00 fee + the $20.00 allowance), the refund, the final total.
+    const final = deskBookingPosterCompletionWithExpenses.completion!.finalBreakdown;
+    const money = screen.getByRole('region', { name: messages.completion.finalCost });
+    expect(within(money).getByText(messages.money.charged).closest('div')).toHaveTextContent(formatMoney(final.posterChargedCents!));
+    expect(within(money).getByText(messages.money.finalTotal).closest('div')).toHaveTextContent(formatMoney(final.posterTotalCents));
+    expect(final.posterChargedCents).toBe(deskBookingPosterCompletionWithExpenses.terms.breakdown.posterTotalCents);
+    expect(screen.getAllByRole('region', { name: messages.completion.finalCost })).toHaveLength(1);
+    expect(screen.queryByRole('region', { name: messages.money.title })).not.toBeInTheDocument();
   });
 
   it('shows absolute and relative funding and approval deadlines', () => {
@@ -387,7 +392,8 @@ describe('BookingHubScreen privacy and supplied data', () => {
     for (let index = 1; index < levels.length; index += 1) expect(levels[index]).toBeLessThanOrEqual(levels[index - 1] + 1);
     expect(screen.getByText(messages.bookingHub.noCheckIn)).toBeVisible();
     expect(screen.getByText(messages.bookingHub.noPayments)).toBeVisible();
-    expect(screen.getByText(messages.timeline.empty)).toBeVisible();
+    // The timeline is history: folded under its title until opened (audit M29).
+    expect(screen.getByText(messages.timeline.empty).closest('details')).not.toHaveAttribute('open');
     expect(onError).not.toHaveBeenCalled();
   });
 });
@@ -404,9 +410,17 @@ describe.each(roles)('BookingHubScreen %s copy coverage', (viewerRole) => {
       time: formatTime(deskBookingPosterConfirmed.terms.start, 'en', 'America/Chicago'),
       deadline: '',
       hasTime: status === 'pending_funding' || status === 'in_progress' || status === 'completion_submitted' ? 'no' : 'yes',
+      today: 'yes',
+      when: '',
+      late: 'no',
     }))).toBeVisible();
     expect(container.textContent).not.toMatch(/bookingHub\./);
     expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('says a confirmed booking was due to start once its start has passed (audit M51)', () => {
+    mount({ ...deskBookingPosterConfirmed, viewerRole }, '2026-11-21T23:00:00.000Z');
+    expect(screen.getByText(/^Was due to start Sat, Nov 21 at 10:30 am$/)).toBeVisible();
   });
 
   it.each(CANCEL_REASONS)('describes cancellation reason %s', (cancelReason) => {

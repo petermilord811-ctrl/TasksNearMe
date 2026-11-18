@@ -57,7 +57,7 @@ const stateTones: Record<BadgeTone, string> = {
 };
 
 function BookingState({ data, now, tone }: { data: BookingView; now: ISODateTime; tone: BadgeTone }) {
-  const { formatDate, formatDateTime, formatRelative, formatTime } = useFormat();
+  const { formatDate, formatDateTime, formatRelative, formatTime, dayKey } = useFormat();
   const t = useTranslations('bookingHub');
   const role = data.viewerRole;
   const fundingDeadline = data.deadlines.pendingFundingExpiresAt;
@@ -69,6 +69,11 @@ function BookingState({ data, now, tone }: { data: BookingView; now: ISODateTime
     helper: data.helper.displayName,
     date: formatDate(data.terms.start),
     time: stateTime ? formatTime(stateTime) : '',
+    // "Started at 1:55 am" today; with the day when it was another day (audit L32).
+    today: stateTime && dayKey(stateTime) !== dayKey(now) ? 'no' : 'yes',
+    when: stateTime ? formatDateTime(stateTime) : '',
+    // A confirmed booking whose start has passed (nobody checked in yet): "Was due to start" (audit M51).
+    late: data.status === 'confirmed' && Date.parse(data.terms.start) <= Date.parse(now) ? 'yes' : 'no',
     deadline: approvalDeadline ? formatDateTime(approvalDeadline) : '',
     hasTime: (data.status === 'completion_submitted' ? approvalDeadline : stateTime) ? 'yes' : 'no',
   };
@@ -120,6 +125,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
   const { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } = useFormat();
   const t = useTranslations('bookingHub');
   const sheetCopy = useTranslations('bookingSheets');
+  const completionCopy = useTranslations('completion');
   const categories = useTranslations('helperCard.categories');
   const status = useBookingStatus(data.status, data.viewerRole);
   const { terms, checkIn, openChange } = data;
@@ -169,7 +175,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
 
     {data.completion && <section aria-label={t('work')} className="space-y-4">
       <h2 className={sectionTitle}>{t('work')}</h2>
-      <CompletionSummary completion={data.completion} variant={data.viewerRole} />
+      <CompletionSummary completion={data.completion} variant={data.viewerRole} showCost={false} />
     </section>}
 
     <section aria-label={t(data.viewerRole === 'poster' ? 'helper' : 'client')} className="space-y-3">
@@ -233,24 +239,29 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
       <h2 className={sectionTitle}>{t('terms')}</h2>
       <div className={cn(surface, surfacePad, 'space-y-5')}>
         <div className="space-y-2"><h3 className="font-semibold">{t('scope')}</h3><p className="whitespace-pre-wrap break-words">{terms.scopeText}</p></div>
-        <div className="space-y-2"><h3 className="font-semibold">{t('pricing')}</h3><p className="tabular-nums">{terms.pricing.type === 'fixed'
-          ? t('fixedPrice', { amount: formatMoney(terms.pricing.priceCents) })
-          : t('hourlyPrice', { rate: formatMoney(terms.pricing.rateCents), estimate: formatHours(terms.pricing.estimatedHours), cap: formatHours(terms.pricing.hoursCap) })}</p></div>
         <div className="space-y-2"><h3 className="font-semibold">{t('allowance')}</h3>{terms.expenseAllowance ? <>
           <p className="font-medium tabular-nums">{formatMoney(terms.expenseAllowance.amountCents)}</p>
           <p className="break-words text-sm text-muted-foreground">{terms.expenseAllowance.description}</p>
         </> : <p className="text-sm text-muted-foreground">{t('noAllowance')}</p>}</div>
       </div>
-      <PriceBreakdown breakdown={terms.breakdown} variant={data.viewerRole} posterTotalLabel={t(data.status === 'pending_funding' ? 'totalDue' : 'totalCharged')} />
-      {data.viewerRole === 'poster' && terms.pricing.type === 'hourly' && <p className={note}>{t('hourlyNote', { hours: terms.pricing.hoursCap })}</p>}
+      {/* The money once (audit M29): the agreed price, the final cost once the work is in (else the agreed breakdown),
+          and for the client the card charged and its status, in one card. */}
+      <div className={cn(surface, surfacePad, 'space-y-4')}>
+        <p className="text-sm text-muted-foreground tabular-nums"><span className="font-medium text-foreground">{t('pricing')}:</span> {terms.pricing.type === 'fixed'
+          ? t('fixedPrice', { amount: formatMoney(terms.pricing.priceCents) })
+          : t('hourlyPrice', { rate: formatMoney(terms.pricing.rateCents), estimate: formatHours(terms.pricing.estimatedHours), cap: formatHours(terms.pricing.hoursCap) })}</p>
+        {data.completion
+          ? <PriceBreakdown flat headingLevel={3} breakdown={data.completion.finalBreakdown} variant={data.viewerRole} title={completionCopy(data.viewerRole === 'poster' ? 'finalCost' : 'earnings')} />
+          : <PriceBreakdown flat headingLevel={3} breakdown={terms.breakdown} variant={data.viewerRole} posterTotalLabel={t(data.status === 'pending_funding' ? 'totalDue' : 'totalCharged')} />}
+        {data.viewerRole === 'poster' && terms.pricing.type === 'hourly' && <p className={note}>{t('hourlyNote', { hours: terms.pricing.hoursCap })}</p>}
+        {data.viewerRole === 'poster' && data.payments && <section aria-label={t('payments')} className="space-y-3 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.07]">
+          <h3 className="font-heading text-[1.0625rem]/6 font-semibold tracking-[-0.01em]">{t('payments')}</h3>
+          {data.payments.length > 0 ? <ul className="divide-y divide-foreground/[0.07] dark:divide-white/[0.07]">{data.payments.map((payment) => <BookingPayment key={payment.id} payment={payment} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noPayments')}</p>}
+        </section>}
+      </div>
     </section>
 
-    {data.viewerRole === 'poster' && data.payments && <section aria-label={t('payments')} className={cn(surface, surfacePad, 'space-y-4')}>
-      <h2 className={sectionTitle}>{t('payments')}</h2>
-      {data.payments.length > 0 ? <ul className="divide-y divide-foreground/[0.07] dark:divide-white/[0.07]">{data.payments.map((payment) => <BookingPayment key={payment.id} payment={payment} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noPayments')}</p>}
-    </section>}
-
-    <div className={cn(surface, surfacePad)}><Timeline events={data.timeline} /></div>
+    <div className={cn(surface, surfacePad)}><Timeline events={data.timeline} collapsible /></div>
 
     <div className="flex items-start gap-2 text-sm text-muted-foreground">
       <HelpCircle aria-hidden="true" className="mt-1 size-5 shrink-0" />

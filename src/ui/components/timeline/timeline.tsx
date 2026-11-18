@@ -1,4 +1,4 @@
-import { CircleCheck, CircleUserRound, Headphones, Settings2 } from 'lucide-react';
+import { ChevronDown, CircleCheck, CircleUserRound, Headphones, Settings2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { TimelineActor, TimelineEvent } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
@@ -15,14 +15,16 @@ const actorTints: Record<TimelineActor, string> = {
   system: 'bg-foreground/[0.06] text-muted-foreground',
 };
 
-export function Timeline({ events }: { events: TimelineEvent[] }) {
+/**
+ * What happened, oldest first, each with who did it. `collapsible`: folded under its title and count until opened
+ * (the booking page, where it's history rather than the next step: audit M29).
+ */
+export function Timeline({ events, collapsible = false }: { events: TimelineEvent[]; collapsible?: boolean }) {
   const { formatDateTime, formatTime } = useFormat();
   const t = useTranslations('timeline');
-  return (
-    <section aria-label={t('title')} className="min-w-0">
-      <h2 className="mb-6 font-heading text-xl/7 font-semibold tracking-[-0.015em]">{t('title')}</h2>
-      {events.length === 0 ? <p className="text-muted-foreground">{t('empty')}</p> : (
-        <ol className="space-y-0">
+  const title = <h2 className={cn('font-heading text-xl/7 font-semibold tracking-[-0.015em]', !collapsible && 'mb-6')}>{t('title')}</h2>;
+  const list = events.length === 0 ? <p className={cn('text-muted-foreground', collapsible && 'mt-4')}>{t('empty')}</p> : (
+        <ol className={cn('space-y-0', collapsible && 'mt-6')}>
           {events.map((event, index) => {
             const Icon = actorIcons[event.actor];
             const params = event.params;
@@ -48,7 +50,25 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
             );
           })}
         </ol>
-      )}
+      );
+  if (collapsible) {
+    return (
+      <details className="group/timeline min-w-0">
+        <summary className="-m-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl p-2 focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+          {title}
+          <span className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground tabular-nums">
+            {t('count', { count: events.length })}
+            <ChevronDown aria-hidden="true" className="size-4 transition-transform duration-200 group-open/timeline:rotate-180 motion-reduce:transition-none" />
+          </span>
+        </summary>
+        {list}
+      </details>
+    );
+  }
+  return (
+    <section aria-label={t('title')} className="min-w-0">
+      {title}
+      {list}
     </section>
   );
 }

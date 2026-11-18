@@ -14,6 +14,8 @@ export interface CompletionSummaryProps {
   variant: 'poster' | 'helper';
   /** The summary leads the page (the problem report): its first photo is above the fold, so it loads at once. */
   leadsPage?: boolean;
+  /** Without the final cost, for a page that shows the money in one place of its own (the booking page: audit M29). */
+  showCost?: boolean;
 }
 
 function EvidencePhoto({ photo, title, receipt = false, eager = false }: { photo: Photo; title: string; receipt?: boolean; eager?: boolean }) {
@@ -67,7 +69,7 @@ function ChecklistSummary({ checklist }: { checklist: CompletionChecklistView })
 }
 
 /** Displays supplied evidence and final amounts without deriving payment totals. */
-export function CompletionSummary({ completion, variant, leadsPage = false }: CompletionSummaryProps) {
+export function CompletionSummary({ completion, variant, leadsPage = false, showCost = true }: CompletionSummaryProps) {
   const { formatDateTime } = useFormat();
   const t = useTranslations('completion');
 
@@ -95,6 +97,6 @@ export function CompletionSummary({ completion, variant, leadsPage = false }: Co
         </ul>
       </div>}
     </div>
-    <PriceBreakdown breakdown={completion.finalBreakdown} variant={variant} title={t(variant === 'poster' ? 'finalCost' : 'earnings')} />
+    {showCost && <PriceBreakdown breakdown={completion.finalBreakdown} variant={variant} title={t(variant === 'poster' ? 'finalCost' : 'earnings')} />}
   </div>;
 }

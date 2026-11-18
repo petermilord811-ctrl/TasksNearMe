@@ -73,9 +73,13 @@ describe('ExactAddressPanel', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
-  it('offers directions in the map apps the app supplies', () => {
+  it('offers directions in the map apps the app supplies, from one menu beside Copy (audit L32)', async () => {
+    const user = userEvent.setup();
     renderLocation(<ExactAddressPanel address={deskExactAddress} mapsHref="https://maps.example/search" directions={{ google: 'https://maps.example/google', apple: 'https://maps.example/apple' }} />);
-    expect(screen.getByRole('link', { name: /Directions in Google Maps/ })).toHaveAttribute('href', 'https://maps.example/google');
-    expect(screen.getByRole('link', { name: /Directions in Apple Maps/ })).toHaveAttribute('href', 'https://maps.example/apple');
+    expect(screen.queryByRole('link', { name: /Directions in Google Maps/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: location.directions }));
+    expect(screen.getByRole('menuitem', { name: /Directions in Google Maps/ })).toHaveAttribute('href', 'https://maps.example/google');
+    expect(screen.getByRole('menuitem', { name: /Directions in Apple Maps/ })).toHaveAttribute('href', 'https://maps.example/apple');
+    expect(screen.getByRole('menuitem', { name: /Open in maps/ })).toHaveAttribute('href', 'https://maps.example/search');
   });
 });

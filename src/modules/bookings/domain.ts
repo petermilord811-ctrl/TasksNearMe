@@ -130,8 +130,9 @@ function baseActions(booking: BookingFacts, role: BookingViewerRole, now: Date):
       case 'completed': {
         const actions: ActionDescriptor<BookingActionId>[] = [];
         if (REVIEW_PAGE_READY && !booking.reviewed && booking.reviewWindowOpen) actions.push(make('review', 'primary'));
-        if (!booking.helperSaved) actions.push(make('save_helper', 'secondary'));
+        // Book again before Save helper: once the work is done it's the likely next step, so it leads the phone's bar (audit M30).
         if (REQUEST_PAGE_READY) actions.push(make('book_again', 'secondary'));
+        if (!booking.helperSaved) actions.push(make('save_helper', 'secondary'));
         return actions;
       }
       case 'completion_submitted': {

@@ -46,6 +46,7 @@
     "emailTitle": "Correo electrónico oculto hasta la reserva",
     "unmaskedTitle": "Mensaje después de la reserva"
   },
+  "directions": "Cómo llegar",
   "directionsGoogle": "Cómo llegar en Google Maps",
   "directionsApple": "Cómo llegar en Apple Maps"
 }
