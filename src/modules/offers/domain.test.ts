@@ -85,9 +85,22 @@ describe("what needs the poster", () => {
     expect(ownerTaskAttention({ ...task, status: 'assigned', booking }, now)).toBeUndefined();
   });
 
+  it('asks to pay again when a booking paid later was declined, until its deadline', () => {
+    const payBy = new Date('2026-11-20T16:00:00.000Z');
+    const scheduled = { ...booking, status: 'scheduled', fundingExpiresAt: payBy };
+    expect(ownerTaskAttention({ ...task, status: 'assigned', booking: { ...scheduled, fundingFailure: 'payment_declined' } }, now)).toEqual({ kind: 'retry_payment', bookingId: 'bkg_1', dueAt: payBy.toISOString() });
+    // Not charged yet, or charged fine: nothing to do.
+    expect(ownerTaskAttention({ ...task, status: 'assigned', booking: scheduled }, now)).toBeUndefined();
+    expect(ownerTaskAttention({ ...task, status: 'assigned', booking: { ...scheduled, fundingFailure: null } }, now)).toBeUndefined();
+    // Past the deadline the booking is canceled (expireUnpaidScheduled): nothing to pay.
+    expect(ownerTaskAttention({ ...task, status: 'assigned', booking: { ...scheduled, fundingFailure: 'payment_declined', fundingExpiresAt: new Date('2026-11-17T14:00:00.000Z') } }, now)).toBeUndefined();
+  });
+
   it('asks to choose when offers wait and the task is within a day, then for new offers, then for helpers', () => {
     const soon = { ...task, windowStart: new Date('2026-11-18T14:00:00.000Z'), windowEnd: new Date('2026-11-18T17:00:00.000Z') };
-    expect(ownerTaskAttention({ ...soon, newOfferCount: 1 }, now)).toEqual({ kind: 'choose_soon', dueAt: '2026-11-18T17:00:00.000Z' });
+    // Choose by the time the offers end: the window's start at the latest, not its end.
+    expect(ownerTaskAttention({ ...soon, newOfferCount: 1 }, now)).toEqual({ kind: 'choose_soon', dueAt: '2026-11-18T14:00:00.000Z' });
+    expect(ownerTaskAttention({ ...soon, offersExpireAt: new Date('2026-11-18T09:00:00.000Z') }, now)).toEqual({ kind: 'choose_soon', dueAt: '2026-11-18T09:00:00.000Z' });
     expect(ownerTaskAttention({ ...task, newOfferCount: 1 }, now)).toEqual({ kind: 'new_offers' });
     expect(ownerTaskAttention(task, now)).toBeUndefined();
     expect(ownerTaskAttention({ ...task, activeOfferCount: 0 }, now)).toEqual({ kind: 'no_offers' });

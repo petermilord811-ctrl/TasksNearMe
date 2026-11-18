@@ -47,12 +47,13 @@ export type TaskCancelReason = (typeof TASK_CANCEL_REASONS)[number];
 
 /**
  * What needs the poster on a task, most urgent first (from the domain: `ownerTaskAttention`):
- * `finish_payment` (a booking waits for the card, until `dueAt`), `review_work` (the helper marked the
- * work complete: approve it or report a problem by `dueAt`), `choose_soon` (offers wait and the task's
- * time is within a day; it closes at `dueAt`), `new_offers` (offers the poster hasn't opened), and
- * `no_offers` (a day without an offer: invite helpers).
+ * `finish_payment` (a booking waits for the card, until `dueAt`), `retry_payment` (a booking paid later whose
+ * charge didn't go through: pay on the booking page by `dueAt`, or it's canceled), `review_work` (the helper marked
+ * the work complete: approve it or report a problem by `dueAt`), `choose_soon` (offers wait and the task's time is
+ * within a day; they end at `dueAt`), `new_offers` (offers the poster hasn't opened), and `no_offers` (a day
+ * without an offer: invite helpers).
  */
-export const OWNER_TASK_ATTENTIONS = ['finish_payment', 'review_work', 'choose_soon', 'new_offers', 'no_offers'] as const;
+export const OWNER_TASK_ATTENTIONS = ['finish_payment', 'retry_payment', 'review_work', 'choose_soon', 'new_offers', 'no_offers'] as const;
 export type OwnerTaskAttention = (typeof OWNER_TASK_ATTENTIONS)[number];
 
 export interface OwnerTaskRow {

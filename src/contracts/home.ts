@@ -53,6 +53,8 @@ export const ATTENTION_KINDS = [
   'review_offers',
   /** Client: a booking waits for payment. */
   'finish_payment',
+  /** Client: a booking paid later whose charge didn't go through; pay by `dueAt`, or it's canceled (a regular visit: skipped). */
+  'retry_payment',
   /** Client: the helper can't get in; answer before the deadline. */
   'answer_cant_access',
   /** Both: unread messages. */

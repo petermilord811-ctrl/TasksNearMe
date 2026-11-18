@@ -217,13 +217,18 @@ export const myTasksPageData: MyTasksPageData = {
   ],
 };
 
-/** Every kind of "Needs you" at once (previews): a payment to finish and a task about to close too. */
+/**
+ * Every kind of "Needs you" at once (previews): a payment to finish, a charge that didn't go through on a booking paid
+ * later, and a task about to close too.
+ */
 export const myTasksAllAttentionData: MyTasksPageData = {
   ...myTasksPageData,
   needsYou: [
     { ...remoteRow, title: 'Set up a new printer', id: 'tsk_printer', attention: { kind: 'finish_payment', dueAt: '2026-11-17T15:24:00.000Z', bookingId: 'bkg_printer' }, booking: { start: '2026-11-18T22:00:00.000Z', helper: personOf(lee), status: 'pending_funding' } },
+    // Paid later, and the card was declined: pay by the deadline (24 h before the start), or it's canceled.
+    { ...yardRow, attention: { kind: 'retry_payment', dueAt: '2026-11-27T15:00:00.000Z', bookingId: 'bkg_yard' }, booking: { ...yardRow.booking!, status: 'scheduled' } },
     truckRow,
-    { ...remoteRow, id: 'tsk_shelves', title: 'Hang three floating shelves', categorySlug: 'furniture-assembly', schedule: { windowStart: '2026-11-18T00:00:00.000Z', windowEnd: '2026-11-18T02:00:00.000Z', flexible: false }, attention: { kind: 'choose_soon', dueAt: '2026-11-18T02:00:00.000Z' } },
+    { ...remoteRow, id: 'tsk_shelves', title: 'Hang three floating shelves', categorySlug: 'furniture-assembly', schedule: { windowStart: '2026-11-18T00:00:00.000Z', windowEnd: '2026-11-18T02:00:00.000Z', flexible: false }, attention: { kind: 'choose_soon', dueAt: '2026-11-18T00:00:00.000Z' } },
     deskRow,
     fridgeRow,
   ],

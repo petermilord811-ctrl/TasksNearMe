@@ -43,13 +43,15 @@
     "for": ": {title}",
     "messages": {
       "finish_payment": "Termina de pagar para confirmar a {helper}. La retención termina {relative}.",
+      "retry_payment": "El pago para {helper} no se completó. Paga antes del {date} para conservar la reserva.",
       "review_work": "{helper} marcó el trabajo como completo. Revísalo antes del {date} o se aprobará automáticamente.",
-      "choose_soon": "{count, plural, one {# oferta está esperando} other {# ofertas están esperando}}, y la tarea se cierra {relative}.",
+      "choose_soon": "{count, plural, one {# oferta está esperando y termina} other {# ofertas están esperando y terminan}} {relative}.",
       "new_offers": "{count, plural, one {# oferta nueva} other {# ofertas nuevas}} para revisar.",
       "no_offers": "Sin ofertas después de un día: invita a un ayudante que te guste."
     },
     "actions": {
       "finish_payment": "Pagar ahora",
+      "retry_payment": "Pagar ahora",
       "review_work": "Revisar el trabajo",
       "choose_soon": "Elegir una oferta",
       "new_offers": "Ver ofertas",

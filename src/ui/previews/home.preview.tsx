@@ -76,6 +76,7 @@ export const homePreviews: PreviewEntry[] = [
     ...mayaDashboardData,
     attention: [
       { id: 'payment', kind: 'finish_payment', title: deskBookingPosterPendingFunding.task.title, dueAt: deskBookingPosterPendingFunding.deadlines.pendingFundingExpiresAt, target: { kind: 'booking', bookingId: deskBookingPosterPendingFunding.id } },
+      { id: 'retry', kind: 'retry_payment', title: 'Rake and bag front-yard leaves', dueAt: '2026-11-27T15:00:00.000Z', target: { kind: 'booking', bookingId: 'bkg_yard' } },
       { id: 'access', kind: 'answer_cant_access', title: deskBookingPosterCantAccessReported.task.title, dueAt: deskBookingPosterCantAccessReported.deadlines.posterResponseDueAt, target: { kind: 'booking', bookingId: deskBookingPosterCantAccessReported.id } },
     ],
   }, mayaShell, DASHBOARD_CLIENT_NOW),

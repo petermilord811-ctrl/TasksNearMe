@@ -72,8 +72,9 @@ function BookingState({ data, now, tone }: { data: BookingView; now: ISODateTime
     // "Started at 1:55 am" today; with the day when it was another day (audit L32).
     today: stateTime && dayKey(stateTime) !== dayKey(now) ? 'no' : 'yes',
     when: stateTime ? formatDateTime(stateTime) : '',
-    // A confirmed booking whose start has passed (nobody checked in yet): "Was due to start" (audit M51).
-    late: data.status === 'confirmed' && Date.parse(data.terms.start) <= Date.parse(now) ? 'yes' : 'no',
+    // A confirmed booking whose start has passed (nobody checked in yet): "Was due to start" (audit M51). Remote work
+    // has no check-in and stays confirmed until it's submitted, so it has simply started.
+    late: data.status === 'confirmed' && Date.parse(data.terms.start) <= Date.parse(now) ? (data.location.kind === 'remote' ? 'started' : 'yes') : 'no',
     deadline: approvalDeadline ? formatDateTime(approvalDeadline) : '',
     hasTime: (data.status === 'completion_submitted' ? approvalDeadline : stateTime) ? 'yes' : 'no',
   };

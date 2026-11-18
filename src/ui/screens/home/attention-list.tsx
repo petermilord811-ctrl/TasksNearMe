@@ -11,6 +11,7 @@ const icons: Record<AttentionKind, LucideIcon> = {
   approve_work: ClipboardCheck,
   review_offers: MessagesSquare,
   finish_payment: CreditCard,
+  retry_payment: CreditCard,
   answer_cant_access: DoorOpen,
   unread_messages: MessageCircle,
   check_in_today: CalendarCheck,
@@ -28,7 +29,8 @@ function AttentionRow({ item, now }: { item: AttentionItem; now?: ISODateTime })
   const { formatDate, formatDateTime, formatTime } = useFormat();
   const t = useTranslations('home');
   const Icon = icons[item.kind];
-  const payout = item.kind === 'payout_action_needed';
+  // Money that didn't go through (a payout, or a charge for a booking paid later) stands out: something is lost if it waits.
+  const payout = item.kind === 'payout_action_needed' || item.kind === 'retry_payment';
   const setup = item.kind === 'finish_setup';
   const named = item.actorName !== undefined && (item.kind === 'answer_invite' || item.kind === 'answer_counter' || item.kind === 'answer_proposal');
   // A check-in whose start has passed says so (audit M51), rather than "starts today".
@@ -42,6 +44,7 @@ function AttentionRow({ item, now }: { item: AttentionItem; now?: ISODateTime })
         : item.kind;
   const deadlineKey = item.kind === 'approve_work' ? 'approvalDeadline'
     : item.kind === 'finish_payment' ? 'paymentDeadline'
+    : item.kind === 'retry_payment' ? 'retryDeadline'
     : item.kind === 'choose_offer' ? 'chooseDeadline'
       : item.kind === 'answer_cant_access' || item.kind === 'answer_invite' || item.kind === 'answer_counter' || item.kind === 'answer_proposal' ? 'answerDeadline' : 'deadline';
 

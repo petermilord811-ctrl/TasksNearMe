@@ -39,6 +39,8 @@ describe("the poster's tasks and offers", () => {
     expect(jordan!.actions.map((a) => a.id)).toEqual(['book_offer', 'message_helper', 'decline_offer']);
     expect(view!.exactAddress).toMatchObject({ line1: '1234 Example Lane', line2: 'Apt 2B', zip: '78723' });
     expect(view!.actions.map((a) => a.id)).toEqual(['invite_helpers', 'cancel_task']);
+    // Seeing the offers here counts as opening them (sweep 2026-11-18): "1 new offer" clears on My tasks.
+    expect((await getMyTasks(db, 'usr_maya', now())).open.find((row) => row.id === 'tsk_desk')?.newOfferCount).toBe(0);
   });
 
   it('is only for the poster', async () => {
@@ -47,6 +49,7 @@ describe("the poster's tasks and offers", () => {
   });
 
   it('opening an offer marks it seen', async () => {
+    await db.update(offers).set({ posterSeenAt: null }).where(eq(offers.id, 'off_jordan'));
     const detail = await getOfferDetail(deps, 'usr_maya', 'tsk_desk', 'off_jordan', now());
     expect(detail).toMatchObject({ offer: { id: 'off_jordan' }, otherPendingOffers: 2, task: { id: 'tsk_desk' } });
     const mine = await getMyTasks(db, 'usr_maya', now());

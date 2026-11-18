@@ -46,6 +46,7 @@ const attentionCopy: Record<AttentionKind, RegExp> = {
   approve_work: /approve/i,
   review_offers: /new offers/i,
   finish_payment: /payment/i,
+  retry_payment: /didn't go through/i,
   answer_cant_access: /answer|reply|respond|access/i,
   unread_messages: /unread messages/i,
   check_in_today: /starts today/i,

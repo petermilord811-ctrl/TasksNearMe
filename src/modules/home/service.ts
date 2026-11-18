@@ -1,4 +1,4 @@
-import { and, eq, gt, gte, inArray, isNull, ne, or } from 'drizzle-orm';
+import { and, eq, gt, gte, inArray, isNull, ne, notInArray, or } from 'drizzle-orm';
 import {
   type AttentionItem,
   type CategorySlug,
@@ -82,10 +82,11 @@ async function unreadItem(db: Db, userId: string, now: Date): Promise<AttentionI
 
 async function bookingRows(db: Db, userId: string, role: 'poster' | 'helper') {
   return db
-    .select({ booking: bookings, title: tasks.title })
+    .select({ booking: bookings, title: tasks.title, mode: tasks.mode })
     .from(bookings)
     .innerJoin(tasks, eq(tasks.id, bookings.taskId))
-    .where(and(eq(role === 'poster' ? bookings.posterUserId : bookings.helperUserId, userId), inArray(bookings.status, ['pending_funding', 'confirmed', 'in_progress', 'completion_submitted'])));
+    // `scheduled`: paid later, for a charge that didn't go through (the client's `retry_payment`).
+    .where(and(eq(role === 'poster' ? bookings.posterUserId : bookings.helperUserId, userId), inArray(bookings.status, ['pending_funding', 'scheduled', 'confirmed', 'in_progress', 'completion_submitted'])));
 }
 
 /** Invites waiting on this person: sent ones for helpers, countered ones for clients. */
@@ -124,6 +125,9 @@ async function clientAttention(db: Db, userId: string, mine: MyTasks, now: Date)
       attention.push({ id: `att_approve_${booking.id}`, kind: 'approve_work', title, ...(booking.approvalDueAt ? { dueAt: booking.approvalDueAt.toISOString() } : {}), target: { kind: 'booking', bookingId: booking.id } });
     } else if (booking.status === 'pending_funding') {
       attention.push({ id: `att_pay_${booking.id}`, kind: 'finish_payment', title, ...(booking.fundingExpiresAt ? { dueAt: booking.fundingExpiresAt.toISOString() } : {}), target: { kind: 'booking', bookingId: booking.id } });
+    } else if (booking.status === 'scheduled' && booking.fundingFailure && (!booking.fundingExpiresAt || booking.fundingExpiresAt > now)) {
+      // Paid later, and the charge didn't go through: pay by the deadline, or it's canceled (as on the Bookings list).
+      attention.push({ id: `att_retry_${booking.id}`, kind: 'retry_payment', title, ...(booking.fundingExpiresAt ? { dueAt: booking.fundingExpiresAt.toISOString() } : {}), target: { kind: 'booking', bookingId: booking.id } });
     } else if (booking.status === 'in_progress' && booking.cantAccessAt && booking.posterResponseDueAt && booking.posterResponseDueAt > now) {
       attention.push({ id: `att_access_${booking.id}`, kind: 'answer_cant_access', title, dueAt: booking.posterResponseDueAt.toISOString(), target: { kind: 'booking', bookingId: booking.id } });
     }
@@ -160,9 +164,10 @@ async function helperAttention(
   }
   // "Today" on the booking's market clock (completion plan 8.1).
   const zones = await marketTimeZones(db, rows.map(({ booking }) => booking.marketId));
-  for (const { booking, title } of rows) {
+  for (const { booking, title, mode } of rows) {
     const timeZone = zones.get(booking.marketId)!;
-    if (booking.status === 'confirmed' && !booking.arrivedAt && marketDayKey(booking.startAt, timeZone) === marketDayKey(now, timeZone)) {
+    // Remote work has no trip or check-in: it stays confirmed until it's submitted.
+    if (booking.status === 'confirmed' && mode !== 'remote' && !booking.arrivedAt && marketDayKey(booking.startAt, timeZone) === marketDayKey(now, timeZone)) {
       attention.push({ id: `att_checkin_${booking.id}`, kind: 'check_in_today', title, dueAt: booking.startAt.toISOString(), target: { kind: 'booking', bookingId: booking.id } });
     }
   }
@@ -200,8 +205,9 @@ async function ownTaskItems(db: Db, mine: MyTasks): Promise<DashboardItem[]> {
   });
 }
 
-/** Offers waiting on the client: open ones on their open tasks, the unopened marked new. */
+/** Offers waiting on the client: open ones on their open tasks, the unopened marked new (none from people blocked either way). */
 async function receivedOfferItems(db: Db, userId: string, now: Date): Promise<DashboardItem[]> {
+  const blocked = await blockedPeopleOf(db, userId);
   const rows = await db
     .select({ offer: offers, taskId: tasks.id })
     .from(offers)
@@ -215,6 +221,7 @@ async function receivedOfferItems(db: Db, userId: string, now: Date): Promise<Da
         gt(offers.expiresAt, now),
         // Offers made before Find a replacement reopened a task belong to the canceled booking.
         or(isNull(tasks.reopenedAt), gte(offers.createdAt, tasks.reopenedAt)),
+        ...(blocked.length ? [notInArray(offers.helperUserId, blocked)] : []),
       ),
     );
   if (rows.length === 0) return [];

@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, ne, notInArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNull, ne, notInArray } from 'drizzle-orm';
 import type {
   ActionResult,
   BookingStatus,
@@ -73,7 +73,9 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
     .orderBy(desc(tasks.createdAt));
   const visible = rows.filter((row) => row.status !== 'draft');
   const ids = visible.map((row) => row.id);
-  // Open offers, newest first: their count, the unopened ones, and the newest one per task.
+  // Open offers, newest first: their count, the unopened ones, and the newest one per task. The ones the task page
+  // lists: not expired, not from someone either side blocked, and none from before Find a replacement reopened it.
+  const blocked = ids.length ? await blockedPeopleOf(db, userId) : [];
   const openOffers = ids.length
     ? await db
         .select({
@@ -81,7 +83,9 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
           taskId: offers.taskId,
           helperUserId: offers.helperUserId,
           posterSeenAt: offers.posterSeenAt,
+          createdAt: offers.createdAt,
           updatedAt: offers.updatedAt,
+          expiresAt: offers.expiresAt,
           pricingType: offers.pricingType,
           priceCents: offers.priceCents,
           hourlyRateCents: offers.hourlyRateCents,
@@ -89,11 +93,16 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
           hoursCap: offers.hoursCap,
         })
         .from(offers)
-        .where(and(inArray(offers.taskId, ids), inArray(offers.status, ACTIVE)))
+        .where(and(inArray(offers.taskId, ids), inArray(offers.status, ACTIVE), gt(offers.expiresAt, now), ...(blocked.length ? [notInArray(offers.helperUserId, blocked)] : [])))
         .orderBy(desc(offers.updatedAt))
     : [];
+  const reopenedAtOf = new Map(visible.map((row) => [row.id, row.reopenedAt]));
   const offersByTask = new Map<string, typeof openOffers>();
-  for (const offer of openOffers) offersByTask.set(offer.taskId, [...(offersByTask.get(offer.taskId) ?? []), offer]);
+  for (const offer of openOffers) {
+    const reopenedAt = reopenedAtOf.get(offer.taskId);
+    if (reopenedAt && offer.createdAt < reopenedAt) continue;
+    offersByTask.set(offer.taskId, [...(offersByTask.get(offer.taskId) ?? []), offer]);
+  }
   // Each task's booking (the latest that isn't canceled), with its current terms' start.
   const bookingRows = ids.length
     ? await db
@@ -103,6 +112,7 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
           status: bookings.status,
           helperUserId: bookings.helperUserId,
           fundingExpiresAt: bookings.fundingExpiresAt,
+          fundingFailure: bookings.fundingFailure,
           approvalDueAt: bookings.approvalDueAt,
           start: bookingTerms.startAt,
         })
@@ -125,15 +135,18 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
     const newestHelper = newest ? helpers.get(newest.helperUserId) : undefined;
     const booking = bookingOf.get(row.id);
     const bookingHelper = booking ? helpers.get(booking.helperUserId) : undefined;
+    const offersExpireAt = taskOffers.reduce<Date | undefined>((latest, offer) => (!latest || offer.expiresAt > latest ? offer.expiresAt : latest), undefined);
     const attention = ownerTaskAttention(
       {
         status,
         windowStart: row.windowStart,
         windowEnd: row.windowEnd,
-        postedAt: row.publishedAt ?? row.createdAt,
+        // A day without offers counts from when it went up again after a canceled booking.
+        postedAt: row.reopenedAt ?? row.publishedAt ?? row.createdAt,
         activeOfferCount: taskOffers.length,
         newOfferCount,
-        ...(booking ? { booking: { id: booking.id, status: booking.status, fundingExpiresAt: booking.fundingExpiresAt, approvalDueAt: booking.approvalDueAt } } : {}),
+        ...(offersExpireAt ? { offersExpireAt } : {}),
+        ...(booking ? { booking: { id: booking.id, status: booking.status, fundingExpiresAt: booking.fundingExpiresAt, fundingFailure: booking.fundingFailure, approvalDueAt: booking.approvalDueAt } } : {}),
       },
       now,
     );
@@ -229,6 +242,11 @@ export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: 
   const offerRows = current.filter((offer) => !blocked.includes(offer.helperUserId));
   const exactAddress = readExactAddress(deps.cipher, location[0]?.addressEnc);
   const bookingId = (await bookingIdsOf(deps.db, [taskId])).get(taskId);
+  const offerList = await offerViews(deps, task, offerRows, now);
+  // Seeing the offers here counts as opening them, so "N new offers" clears on My tasks and the dashboard (sweep
+  // 2026-11-18); this view still marks them new.
+  const unseen = offerRows.filter((offer) => offer.posterSeenAt === null && ACTIVE.includes(offer.status as OfferStatus)).map((offer) => offer.id);
+  if (unseen.length > 0) await deps.db.update(offers).set({ posterSeenAt: now }).where(and(inArray(offers.id, unseen), isNull(offers.posterSeenAt)));
 
   return {
     task: found.view,
@@ -239,7 +257,7 @@ export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: 
     ...(task.expenseAllowanceCents > 0
       ? { expenseAllowance: { amountCents: task.expenseAllowanceCents, description: task.expenseAllowanceNote ?? '' } }
       : {}),
-    offers: await offerViews(deps, task, offerRows, now),
+    offers: offerList,
     actions: taskOwnerActions(task),
     ...(bookingId ? { bookingId } : {}),
     ...(task.status === 'open' && pushSetup() ? { push: pushSetup()! } : {}),

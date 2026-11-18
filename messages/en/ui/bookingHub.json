@@ -161,7 +161,7 @@
     "poster": {
       "pending_funding": "{hasTime, select, yes {Finish paying by {today, select, yes {{time}} other {{when}}}} other {Finish paying to confirm your booking.}}",
       "scheduled": "Starts {date} at {time}. Your card is charged shortly before, not now.",
-      "confirmed": "{late, select, yes {Was due to start {date} at {time}} other {Starts {date} at {time}}}",
+      "confirmed": "{late, select, yes {Was due to start {date} at {time}} started {Started {date} at {time}} other {Starts {date} at {time}}}",
       "in_progress": "{hasTime, select, yes {Started {today, select, yes {at {time}} other {{when}}}} other {Your helper has started the task.}}",
       "completion_submitted": "{hasTime, select, yes {Approve by {deadline}, or it's approved automatically.} other {Your helper submitted the work. Approve it or report a problem.}}",
       "disputed": "A problem was reported. Follow the updates in your support case.",
@@ -171,7 +171,7 @@
     "helper": {
       "pending_funding": "{name} is booking you.",
       "scheduled": "Starts {date} at {time}. {name}'s card is charged shortly before.",
-      "confirmed": "{late, select, yes {Was due to start {date} at {time}} other {Starts {date} at {time}}}",
+      "confirmed": "{late, select, yes {Was due to start {date} at {time}} started {Started {date} at {time}} other {Starts {date} at {time}}}",
       "in_progress": "{hasTime, select, yes {Started {today, select, yes {at {time}} other {{when}}}} other {You started the task.}}",
       "completion_submitted": "Waiting for {name} to approve.",
       "disputed": "Support is reviewing a problem report about this booking.",

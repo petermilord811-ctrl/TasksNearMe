@@ -64,25 +64,37 @@ export interface OwnerTaskFacts {
   status: string;
   windowStart: Date;
   windowEnd: Date;
+  /** When the task last went up for offers: posted, or opened again after a canceled booking (`reopenedAt`). */
   postedAt: Date;
-  /** Pending and stale offers. */
+  /** Offers still open (pending or stale, not expired), from people the poster hasn't blocked. */
   activeOfferCount: number;
   newOfferCount: number;
+  /** When the last of those offers expires: by the window's start at the latest (`offerExpiresAt`). */
+  offersExpireAt?: Date;
   /** The task's booking, unless canceled. */
-  booking?: { id: string; status: string; fundingExpiresAt: Date | null; approvalDueAt: Date | null };
+  booking?: { id: string; status: string; fundingExpiresAt: Date | null; approvalDueAt: Date | null; fundingFailure?: string | null };
 }
 
 /** What needs the poster on a task now (see `OWNER_TASK_ATTENTIONS`), or nothing. */
 export function ownerTaskAttention(task: OwnerTaskFacts, now: Date): OwnerTaskRow['attention'] {
   const { booking } = task;
-  if (booking?.status === 'pending_funding' && (!booking.fundingExpiresAt || booking.fundingExpiresAt > now)) {
+  const payable = (deadline: Date | null) => !deadline || deadline > now;
+  if (booking?.status === 'pending_funding' && payable(booking.fundingExpiresAt)) {
     return { kind: 'finish_payment', bookingId: booking.id, ...(booking.fundingExpiresAt ? { dueAt: booking.fundingExpiresAt.toISOString() } : {}) };
+  }
+  // Paid later, and the charge didn't go through: the client pays on the booking page by the deadline, or the booking
+  // is canceled (a regular visit: skipped), as `bookingNextStep` says on the Bookings list.
+  if (booking?.status === 'scheduled' && booking.fundingFailure && payable(booking.fundingExpiresAt)) {
+    return { kind: 'retry_payment', bookingId: booking.id, ...(booking.fundingExpiresAt ? { dueAt: booking.fundingExpiresAt.toISOString() } : {}) };
   }
   if (booking?.status === 'completion_submitted') {
     return { kind: 'review_work', bookingId: booking.id, ...(booking.approvalDueAt ? { dueAt: booking.approvalDueAt.toISOString() } : {}) };
   }
   if (task.status !== 'open' || task.windowEnd <= now) return undefined;
-  if (task.activeOfferCount > 0 && task.windowStart.getTime() - now.getTime() <= DAY_MS) return { kind: 'choose_soon', dueAt: task.windowEnd.toISOString() };
+  // The time to choose by is when the offers end (the window's start at the latest), not the window's end.
+  if (task.activeOfferCount > 0 && task.windowStart.getTime() - now.getTime() <= DAY_MS) {
+    return { kind: 'choose_soon', dueAt: (task.offersExpireAt ?? task.windowStart).toISOString() };
+  }
   if (task.newOfferCount > 0) return { kind: 'new_offers' };
   if (task.activeOfferCount === 0 && now.getTime() - task.postedAt.getTime() >= DAY_MS) return { kind: 'no_offers' };
   return undefined;

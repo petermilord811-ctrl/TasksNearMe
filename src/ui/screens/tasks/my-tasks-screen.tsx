@@ -37,7 +37,7 @@ function useBudgetWords() {
 /** Where a row's "needs you" step leads: the booking for its own steps, helpers to invite, or the task's offers. */
 function attentionHref(row: OwnerTaskRow): string {
   const attention = row.attention;
-  if (attention?.bookingId && (attention.kind === 'finish_payment' || attention.kind === 'review_work')) return routes.app.booking(attention.bookingId);
+  if (attention?.bookingId && (attention.kind === 'finish_payment' || attention.kind === 'retry_payment' || attention.kind === 'review_work')) return routes.app.booking(attention.bookingId);
   if (attention?.kind === 'no_offers') return routes.app.helpers({ category: row.categorySlug });
   return routes.app.task(row.id);
 }

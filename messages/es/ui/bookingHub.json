@@ -161,7 +161,7 @@
     "poster": {
       "pending_funding": "{hasTime, select, yes {Completa el pago antes {today, select, yes {de las {time}} other {del {when}}}} other {Completa el pago para confirmar tu reserva.}}",
       "scheduled": "Empieza el {date} a las {time}. Se cobra a tu tarjeta poco antes, no ahora.",
-      "confirmed": "{late, select, yes {Debía empezar el {date} a las {time}} other {Empieza el {date} a las {time}}}",
+      "confirmed": "{late, select, yes {Debía empezar el {date} a las {time}} started {Empezó el {date} a las {time}} other {Empieza el {date} a las {time}}}",
       "in_progress": "{hasTime, select, yes {Empezó {today, select, yes {a las {time}} other {el {when}}}} other {Tu ayudante empezó la tarea.}}",
       "completion_submitted": "{hasTime, select, yes {Aprueba antes de {deadline}, o se aprobará automáticamente.} other {Tu ayudante envió el trabajo. Apruébalo o reporta un problema.}}",
       "disputed": "Se reportó un problema. Sigue las novedades en tu caso de soporte.",
@@ -171,7 +171,7 @@
     "helper": {
       "pending_funding": "{name} te está reservando.",
       "scheduled": "Empieza el {date} a las {time}. Se cobra a la tarjeta de {name} poco antes.",
-      "confirmed": "{late, select, yes {Debía empezar el {date} a las {time}} other {Empieza el {date} a las {time}}}",
+      "confirmed": "{late, select, yes {Debía empezar el {date} a las {time}} started {Empezó el {date} a las {time}} other {Empieza el {date} a las {time}}}",
       "in_progress": "{hasTime, select, yes {Empezó {today, select, yes {a las {time}} other {el {when}}}} other {Empezaste la tarea.}}",
       "completion_submitted": "Esperando que {name} apruebe.",
       "disputed": "Soporte está revisando un reporte de problema sobre esta reserva.",

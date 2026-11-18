@@ -423,6 +423,12 @@ describe.each(roles)('BookingHubScreen %s copy coverage', (viewerRole) => {
     expect(screen.getByText(/^Was due to start Sat, Nov 21 at 10:30 am$/)).toBeVisible();
   });
 
+  it('says remote work past its start has started, not that it was due (sweep 2026-11-18, D7)', () => {
+    mount({ ...deskBookingPosterConfirmed, viewerRole, location: { kind: 'remote' } }, '2026-11-21T23:00:00.000Z');
+    expect(screen.getByText(/^Started Sat, Nov 21 at 10:30 am$/)).toBeVisible();
+    expect(screen.queryByText(/Was due to start/)).toBeNull();
+  });
+
   it.each(CANCEL_REASONS)('describes cancellation reason %s', (cancelReason) => {
     const { container, onError } = mount({ ...deskBookingPosterCanceledLate, viewerRole, cancelReason });
     const expected = messages.bookingHub.canceled[viewerRole][cancelReason]

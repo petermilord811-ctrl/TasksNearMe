@@ -1,7 +1,9 @@
 import { and, eq, gte, inArray, isNull, or } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
+import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { getDashboard } from '@/modules/home/service';
+import { blocks } from '@/modules/messaging/schema';
 import { getMyTasks } from '@/modules/offers/owner';
 import { offers } from '@/modules/offers/schema';
 import { tasks } from '@/modules/tasks/schema';
@@ -51,6 +53,68 @@ describe('the dashboard (completion plan 9.9)', () => {
     const offersTab = await getDashboard(db, ana, { tab: 'offers' }, new Date());
     expect(offersTab.items).toContainEqual(expect.objectContaining({ key: 'offer_received:off_home_ana', side: 'client', needsYou: true, target: { kind: 'offer', taskId: 'tsk_home_ana', offerId: 'off_home_ana' } }));
     expect(offersTab.tabs.find((tab) => tab.id === 'offers')!.count).toBeGreaterThanOrEqual(1);
+  });
+
+  it("leaves out offers from someone the client blocked: Needs you, the Offers tab and My tasks (sweep 2026-11-18, D1)", async () => {
+    await db.insert(blocks).values({ blockerId: CLIENT, blockedId: 'usr_jordan' });
+    try {
+      const now = new Date();
+      const [home, offersTab, mine] = await Promise.all([getDashboard(db, ana, {}, now), getDashboard(db, ana, { tab: 'offers' }, now), getMyTasks(db, CLIENT, now)]);
+      expect(home.attention.filter((item) => item.kind === 'review_offers' || item.kind === 'choose_offer')).toEqual([]);
+      expect(offersTab.items.find((item) => item.key === 'offer_received:off_home_ana')).toBeUndefined();
+      const row = mine.open.find((task) => task.id === 'tsk_home_ana');
+      expect(row?.newOfferCount).toBe(0);
+      expect(row?.newestOffer).toBeUndefined();
+    } finally {
+      await db.delete(blocks).where(and(eq(blocks.blockerId, CLIENT), eq(blocks.blockedId, 'usr_jordan')));
+    }
+  });
+
+  it('asks the client to pay again when a booking paid later was declined, until its deadline (sweep 2026-11-18, D2)', async () => {
+    const [tv] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
+    const [tvTask] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
+    const terms = await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_tv'));
+    if (!tv || !tvTask || terms.length === 0) throw new Error('The seeded TV booking is missing');
+    const payBy = new Date(Date.now() + 2 * 86_400_000);
+    await db.insert(tasks).values({ ...tvTask, id: 'tsk_home_retry', slug: 'home-retry-tv', posterUserId: CLIENT, status: 'assigned', version: 1 });
+    await db.insert(bookings).values({ ...tv, id: 'bkg_home_retry', taskId: 'tsk_home_retry', posterUserId: CLIENT, status: 'scheduled', fundingFailure: 'payment_declined', fundingExpiresAt: payBy });
+    await db.insert(bookingTerms).values(terms.map((row) => ({ ...row, id: `${row.id}_home_retry`, bookingId: 'bkg_home_retry' })));
+    try {
+      const now = new Date();
+      const [home, mine] = await Promise.all([getDashboard(db, ana, {}, now), getMyTasks(db, CLIENT, now)]);
+      expect(home.attention).toContainEqual(expect.objectContaining({ kind: 'retry_payment', dueAt: payBy.toISOString(), target: { kind: 'booking', bookingId: 'bkg_home_retry' } }));
+      expect(mine.needsYou.find((row) => row.id === 'tsk_home_retry')?.attention).toEqual({ kind: 'retry_payment', bookingId: 'bkg_home_retry', dueAt: payBy.toISOString() });
+      // Past the deadline the booking is canceled (expireUnpaidScheduled): nothing to pay.
+      const late = new Date(payBy.getTime() + 60_000);
+      expect((await getDashboard(db, ana, {}, late)).attention.find((item) => item.kind === 'retry_payment')).toBeUndefined();
+    } finally {
+      await db.delete(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_home_retry'));
+      await db.delete(bookings).where(eq(bookings.id, 'bkg_home_retry'));
+      await db.delete(tasks).where(eq(tasks.id, 'tsk_home_retry'));
+    }
+  });
+
+  it("counts a reopened task's day without offers from when it went up again, and leaves out the earlier offers (sweep 2026-11-18, D11)", async () => {
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
+    if (!desk || !offer) throw new Error('The seeded desk is missing');
+    const now = new Date();
+    const day = 86_400_000;
+    await db.insert(tasks).values({ ...desk, id: 'tsk_home_reopened', slug: 'home-reopened-desk', posterUserId: CLIENT, status: 'open', offerCount: 0, version: 1, publishedAt: new Date(now.getTime() - 3 * day), reopenedAt: new Date(now.getTime() - 3_600_000), windowStart: new Date(now.getTime() + 5 * day), windowEnd: new Date(now.getTime() + 5 * day + 3 * 3_600_000) });
+    // An offer from before Find a replacement belongs to the canceled booking.
+    await db.insert(offers).values({ ...offer, id: 'off_home_reopened_old', taskId: 'tsk_home_reopened', status: 'pending', posterSeenAt: null, revision: 1, createdAt: new Date(now.getTime() - 2 * day), expiresAt: new Date(now.getTime() + 2 * day) });
+    try {
+      const row = (await getMyTasks(db, CLIENT, now)).open.find((task) => task.id === 'tsk_home_reopened');
+      expect(row?.newOfferCount).toBe(0);
+      expect(row?.newestOffer).toBeUndefined();
+      expect(row?.attention).toBeUndefined();
+      // A day after it went up again, it's a day without offers.
+      const later = (await getMyTasks(db, CLIENT, new Date(now.getTime() + day))).open.find((task) => task.id === 'tsk_home_reopened');
+      expect(later?.attention).toEqual({ kind: 'no_offers' });
+    } finally {
+      await db.delete(offers).where(eq(offers.taskId, 'tsk_home_reopened'));
+      await db.delete(tasks).where(eq(tasks.id, 'tsk_home_reopened'));
+    }
   });
 
   it("says the same tasks need the client as My tasks does (one rule, audit M16)", async () => {

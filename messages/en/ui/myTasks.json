@@ -43,13 +43,15 @@
     "for": ": {title}",
     "messages": {
       "finish_payment": "Finish paying to confirm {helper}. The hold ends {relative}.",
+      "retry_payment": "The payment for {helper} didn't go through. Pay by {date} to keep the booking.",
       "review_work": "{helper} marked the work complete. Review it by {date}, or it's approved automatically.",
-      "choose_soon": "{count, plural, one {# offer is waiting} other {# offers are waiting}}, and the task closes {relative}.",
+      "choose_soon": "{count, plural, one {# offer is waiting, and it ends} other {# offers are waiting, and they end}} {relative}.",
       "new_offers": "{count, plural, one {# new offer} other {# new offers}} to look at.",
       "no_offers": "No offers after a day: invite a helper you like."
     },
     "actions": {
       "finish_payment": "Pay now",
+      "retry_payment": "Pay now",
       "review_work": "Review the work",
       "choose_soon": "Choose an offer",
       "new_offers": "See offers",
