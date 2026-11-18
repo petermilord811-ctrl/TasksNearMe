@@ -97,8 +97,8 @@ export function PricingScreen({ data }: PricingScreenProps) {
 
   return <div className="space-y-8">
     <PageHeader title={t('title')} description={t('description')} />
-    <p className="flex w-fit max-w-full items-center gap-3 rounded-[1.375rem] bg-secondary py-3 pr-5 pl-3 text-secondary-foreground">
-      <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-card/70 text-primary"><CircleDollarSign className="size-5" /></span>
+    <p className="flex w-fit max-w-full items-center gap-3 rounded-[1.375rem] border border-callout-border bg-callout py-3 pr-5 pl-3 text-callout-foreground">
+      <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-card/70 text-callout-accent dark:bg-white/[0.05]"><CircleDollarSign className="size-5" /></span>
       <span>{t('paymentTiming')}</span>
     </p>
 

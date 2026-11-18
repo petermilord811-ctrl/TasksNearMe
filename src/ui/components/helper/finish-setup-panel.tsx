@@ -14,8 +14,8 @@ export interface FinishSetupPanelProps {
 export function FinishSetupPanel({ setup, title, body }: FinishSetupPanelProps) {
   const t = useTranslations('findWork');
   const heading = title ?? t('setupTitle');
-  return <section aria-label={heading} className="flex flex-col gap-4 rounded-xl border border-border bg-secondary p-card sm:flex-row sm:items-center sm:justify-between">
-    <div><h2 className="text-xl font-semibold text-secondary-foreground">{heading}</h2><p className="mt-2 text-sm text-secondary-foreground">{body ?? t('setupBody')}</p></div>
+  return <section aria-label={heading} className="flex flex-col gap-4 rounded-xl border border-callout-border bg-callout p-card text-callout-foreground sm:flex-row sm:items-center sm:justify-between">
+    <div><h2 className="text-xl font-semibold">{heading}</h2><p className="mt-2 text-sm">{body ?? t('setupBody')}</p></div>
     <Link href={routes.app.helperOnboarding(setup.nextOnboardingStep)} className={buttonVariants({ className: 'shrink-0' })}>{t('finishSetup')}<ArrowRight aria-hidden="true" /></Link>
   </section>;
 }

@@ -33,8 +33,8 @@ export function CostGuideScreen({ data }: { data: CostGuidePageData }) {
       {/* The category's second photo, so the guide doesn't repeat its category page (src/shared/service-photos.ts). */}
       <ServicePhoto category={category.slug} slot="alternate" crop="landscape" sizes="(min-width: 1024px) 22rem, 100vw" className="rounded-[1.375rem] border border-foreground/[0.07]" />
     </div>
-    <section aria-label={t('costGuide.typicalTitle', { market: market.name })} className="space-y-3 rounded-[1.375rem] border border-foreground/[0.05] bg-secondary p-card text-secondary-foreground">
-      <p className="font-display text-xl font-semibold tracking-[-0.015em] tabular-nums md:text-2xl">{t(`category.typical.${unit}`, { market: market.name, low: formatMoneyShort(lowCents), high: formatMoneyShort(highCents) })}</p>
+    <section aria-label={t('costGuide.typicalTitle', { market: market.name })} className="space-y-3 rounded-[1.375rem] border border-callout-border bg-callout p-card text-callout-foreground">
+      <p className="font-display text-xl font-semibold tracking-[-0.015em] text-callout-accent tabular-nums md:text-2xl">{t(`category.typical.${unit}`, { market: market.name, low: formatMoneyShort(lowCents), high: formatMoneyShort(highCents) })}</p>
       {category.defaultPricingType === 'hourly' && category.minHours !== undefined && <p className="text-sm tabular-nums">{t('category.minimumHours', { hours: category.minHours })}</p>}
       <p className="text-sm">{t('category.guidanceNote')}</p>
     </section>

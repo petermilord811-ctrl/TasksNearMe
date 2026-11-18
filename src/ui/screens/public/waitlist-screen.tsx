@@ -130,7 +130,7 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
       </ol>
     </section>}
 
-    {data.markets.length > 0 && <section aria-labelledby={`${id}-markets`} className="space-y-2 rounded-[1.375rem] bg-secondary p-4 text-secondary-foreground sm:p-6">
+    {data.markets.length > 0 && <section aria-labelledby={`${id}-markets`} className="space-y-2 rounded-[1.375rem] border border-callout-border bg-callout p-4 text-callout-foreground sm:p-6">
       <h2 id={`${id}-markets`} className="text-[17px] font-semibold leading-6 lg:text-lg">{t('marketsTitle')}</h2>
       <ul>
         {data.markets.map((market) => <li key={market.slug}><Link href={routes.market(market.slug)} className="inline-flex min-h-11 items-center py-2 underline underline-offset-4">{t('marketLink', { market: market.name })}</Link></li>)}
