@@ -104,10 +104,11 @@ export type ComposerDisabledReason = (typeof COMPOSER_DISABLED_REASONS)[number];
 
 /**
  * Why a `closed` conversation closed (audit L13), so the page can say so and point the way on: the offer expired,
- * was declined or withdrawn, or ended otherwise (its booking was canceled); the booking was canceled or completed
- * a while ago; the regular visits ended.
+ * was declined or withdrawn, or ended otherwise (its booking was canceled); the task was canceled with no offer
+ * chosen, which declines the offers still open (sweep D9: not "chose another offer"); the booking was canceled or
+ * completed a while ago; the regular visits ended.
  */
-export const COMPOSER_CLOSED_REASONS = ['offer_expired', 'offer_declined', 'offer_withdrawn', 'offer_ended', 'booking_canceled', 'booking_completed', 'series_ended'] as const;
+export const COMPOSER_CLOSED_REASONS = ['offer_expired', 'offer_declined', 'offer_withdrawn', 'offer_ended', 'task_canceled', 'booking_canceled', 'booking_completed', 'series_ended'] as const;
 export type ComposerClosedReason = (typeof COMPOSER_CLOSED_REASONS)[number];
 
 export interface ComposerRules {

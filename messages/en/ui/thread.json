@@ -22,13 +22,15 @@
       "offer_expired": "{name}'s offer expired, so this conversation closed.",
       "offer_declined": "You declined {name}'s offer, so this conversation closed.",
       "offer_withdrawn": "{name} withdrew their offer, so this conversation closed.",
-      "offer_ended": "This offer ended, so this conversation closed."
+      "offer_ended": "This offer ended, so this conversation closed.",
+      "task_canceled": "This task was canceled, so this conversation closed."
     },
     "task_for_helper": {
       "offer_expired": "Your offer expired, so this conversation closed.",
       "offer_declined": "{name} chose another offer, so this conversation closed.",
       "offer_withdrawn": "You withdrew your offer, so this conversation closed.",
-      "offer_ended": "This offer ended, so this conversation closed."
+      "offer_ended": "This offer ended, so this conversation closed.",
+      "task_canceled": "This task was canceled, so this conversation closed."
     },
     "booking": {
       "booking_canceled": "This booking was canceled over a week ago, so this conversation closed.",
@@ -59,6 +61,8 @@
     "offer-masked": "Offer with masked phone and email",
     "closed": "Closed conversation",
     "closedExpired": "Closed: the offer expired, with the way on",
+    "closedTaskCanceled": "Closed: the client canceled the task",
+    "closedTaskCanceledHelper": "Closed for the helper: the task was canceled",
     "blocked": "Blocked conversation",
     "helper": "Helper's pre-booking conversation",
     "empty": "New conversation",

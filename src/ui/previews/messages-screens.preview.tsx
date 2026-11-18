@@ -5,7 +5,7 @@ import {
 import {
   blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, expiredOfferThreadPageData,
   fakeHandler, fakeThreadHandlers, inboxEmptyData, jordanInboxPageData, jordanShell, mayaInboxPageData,
-  mayaShell, movingOfferThreadForHelper,
+  mayaShell, movingOfferThreadForHelper, taskCanceledOfferThreadPageData, taskCanceledThreadForHelperPageData,
 } from '@/fixtures';
 import { InboxScreen } from '@/ui/screens/messages';
 import { ThreadContent, ThreadScreen } from '@/ui/screens/messages/thread-screen';
@@ -58,6 +58,9 @@ export const messagesScreenPreviews: PreviewEntry[] = [
   threadPreview('offer-masked', threadCopy.previews['offer-masked'], deskOfferThreadPageData),
   threadPreview('closed', threadCopy.previews.closed, closedThreadPageData),
   threadPreview('closed-expired', threadCopy.previews.closedExpired, expiredOfferThreadPageData),
+  // The task was canceled while the offer was open (sweep D9): both sides say so, neither "declined" nor "chose another".
+  threadPreview('closed-task-canceled', threadCopy.previews.closedTaskCanceled, taskCanceledOfferThreadPageData),
+  threadPreview('closed-task-canceled-helper', threadCopy.previews.closedTaskCanceledHelper, taskCanceledThreadForHelperPageData, { helper: true }),
   threadPreview('blocked', threadCopy.previews.blocked, blockedThreadPageData),
   // Quote-replies, reactions and saved replies (completion plan 7.3).
   threadPreview('replies-reactions', threadCopy.previews.repliesReactions, {

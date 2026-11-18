@@ -120,6 +120,14 @@ export const closedThreadPageData: ThreadPageData = { ...deskOfferThreadPageData
 export const blockedThreadPageData: ThreadPageData = { ...deskOfferThreadPageData, composer: { ...composer, canSend: false, disabledReason: 'blocked' } };
 /** Lee's offer expired, so the thread closed: why, and the way on (the offer, where Maya can request Lee again: audit L13). */
 export const expiredOfferThreadPageData: ThreadPageData = { ...deskOfferThreadPageData, composer: { ...composer, canSend: false, disabledReason: 'closed', closedReason: 'offer_expired' } };
+/** Maya canceled the desk while Lee's offer was open: the thread says the task was canceled (sweep D9). */
+export const taskCanceledOfferThreadPageData: ThreadPageData = { ...deskOfferThreadPageData, composer: { ...composer, canSend: false, disabledReason: 'closed', closedReason: 'task_canceled' } };
+/** Jordan's side of a task canceled while his offer was open: not "chose another offer" (sweep D9). */
+export const taskCanceledThreadForHelperPageData: ThreadPageData = {
+  thread: movingOfferThreadForHelper,
+  messages: [{ id: 'msg_m1', sender: 'me', kind: 'text', segments: movingOfferThreadForHelper.lastMessage!.preview, attachments: [], createdAt: movingOfferThreadForHelper.lastMessage!.createdAt }],
+  composer: { ...composer, canSend: false, disabledReason: 'closed', closedReason: 'task_canceled' },
+};
 
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 let attachmentCount = 0;

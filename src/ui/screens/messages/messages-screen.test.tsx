@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes, type InboxPageData, type MessageView, type ThreadPageData, type ThreadSubject } from '@/contracts';
 import {
   blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, expiredOfferThreadPageData,
-  fakeThreadHandlers, inboxEmptyData, maskedEmailMessage, mayaInboxPageData,
+  fakeThreadHandlers, inboxEmptyData, maskedEmailMessage, mayaInboxPageData, taskCanceledOfferThreadPageData, taskCanceledThreadForHelperPageData,
 } from '@/fixtures';
 import { formatDate, formatRelative, formatTime } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
@@ -100,6 +100,20 @@ describe('ThreadScreen', () => {
     expect(status).toHaveTextContent("Lee M.'s offer expired, so this conversation closed.");
     expect(within(status).getByRole('link', { name: 'Open the offer to request them again' })).toHaveAttribute('href', routes.app.offer('tsk_desk', 'off_lee'));
     expect(screen.queryByRole('form', { name: 'Message' })).not.toBeInTheDocument();
+  });
+
+  it('says the task was canceled, to the client and to the helper, never "declined" or "chose another offer" (sweep D9)', () => {
+    for (const [data, wayOn, href] of [
+      [taskCanceledOfferThreadPageData, 'Open the offer to request them again', routes.app.offer('tsk_desk', 'off_lee')],
+      [taskCanceledThreadForHelperPageData, 'Open the task', routes.app.findWorkTask('tsk_moving')],
+    ] as const) {
+      const view = thread(data);
+      const status = screen.getAllByRole('status').find((element) => element.textContent?.includes('closed'))!;
+      expect(status).toHaveTextContent('This task was canceled, so this conversation closed.');
+      expect(status).not.toHaveTextContent(/declined|chose another/);
+      expect(within(status).getByRole('link', { name: wayOn })).toHaveAttribute('href', href);
+      view.unmount();
+    }
   });
 
   it('keeps contact segments masked and uses timeline copy inside a polite message log', () => {

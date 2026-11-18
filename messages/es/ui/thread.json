@@ -22,13 +22,15 @@
       "offer_expired": "La oferta de {name} venció, así que esta conversación se cerró.",
       "offer_declined": "Rechazaste la oferta de {name}, así que esta conversación se cerró.",
       "offer_withdrawn": "{name} retiró su oferta, así que esta conversación se cerró.",
-      "offer_ended": "Esta oferta terminó, así que esta conversación se cerró."
+      "offer_ended": "Esta oferta terminó, así que esta conversación se cerró.",
+      "task_canceled": "Esta tarea se canceló, así que esta conversación se cerró."
     },
     "task_for_helper": {
       "offer_expired": "Tu oferta venció, así que esta conversación se cerró.",
       "offer_declined": "{name} eligió otra oferta, así que esta conversación se cerró.",
       "offer_withdrawn": "Retiraste tu oferta, así que esta conversación se cerró.",
-      "offer_ended": "Esta oferta terminó, así que esta conversación se cerró."
+      "offer_ended": "Esta oferta terminó, así que esta conversación se cerró.",
+      "task_canceled": "Esta tarea se canceló, así que esta conversación se cerró."
     },
     "booking": {
       "booking_canceled": "Esta reserva se canceló hace más de una semana, así que esta conversación se cerró.",
@@ -59,6 +61,8 @@
     "offer-masked": "Oferta con teléfono y correo ocultos",
     "closed": "Conversación cerrada",
     "closedExpired": "Cerrada: la oferta venció, con el siguiente paso",
+    "closedTaskCanceled": "Cerrada: el cliente canceló la tarea",
+    "closedTaskCanceledHelper": "Cerrada para el ayudante: la tarea se canceló",
     "blocked": "Conversación bloqueada",
     "helper": "Conversación del ayudante antes de la reserva",
     "empty": "Conversación nueva",

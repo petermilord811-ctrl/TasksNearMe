@@ -7,6 +7,7 @@ import { bookings } from '@/modules/bookings/schema';
 import { canViewRelatedFile } from '@/modules/files/related-access';
 import { blocks, threads } from '@/modules/messaging/schema';
 import { getInbox, getThreadPage, offerThreadId, sendMessage } from '@/modules/messaging/service';
+import { cancelTask } from '@/modules/offers/owner';
 import { offers } from '@/modules/offers/schema';
 import { files, tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
@@ -91,6 +92,39 @@ describe('offer threads', () => {
     expect((await getThreadPage(db, 'usr_jordan', offerThread, now()))?.composer).toMatchObject({ canSend: false, disabledReason: 'blocked' });
     expect(await sendMessage(db, 'usr_jordan', offerThread, { body: 'Hello?', attachmentIds: [] }, now())).toEqual({ ok: false, code: 'not_allowed' });
     await db.delete(blocks).where(and(eq(blocks.blockerId, 'usr_ruth'), eq(blocks.blockedId, 'usr_jordan')));
+  });
+});
+
+describe('offer threads on a canceled task (sweep D9)', () => {
+  async function seededDeskAndOffer() {
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
+    if (!desk || !offer) throw new Error('The seeded desk is missing');
+    return { desk, offer };
+  }
+
+  it('says the task was canceled, to the client and the helper, when canceling it declined the open offer', async () => {
+    const { desk, offer } = await seededDeskAndOffer();
+    await db.insert(tasks).values({ ...desk, id: 'tsk_msg_cancel', slug: 'msg-cancel-desk', posterUserId: 'usr_ruth', status: 'open', offerCount: 1, version: 1 });
+    await db.insert(offers).values({ ...offer, id: 'off_msg_cancel', taskId: 'tsk_msg_cancel', status: 'pending', revision: 1, closedAt: null, expiresAt: new Date(Date.now() + 86_400_000) });
+    const thread = (await offerThreadId(db, 'off_msg_cancel', now()))!;
+    expect(await cancelTask(db, 'usr_ruth', 'tsk_msg_cancel', 'no_longer_needed', now())).toEqual({ ok: true, code: 'canceled' });
+    // Not "You declined Jordan's offer" for Ruth, nor "Ruth chose another offer" for Jordan.
+    for (const userId of ['usr_ruth', 'usr_jordan']) {
+      expect((await getThreadPage(db, userId, thread, now()))?.composer).toMatchObject({ canSend: false, disabledReason: 'closed', closedReason: 'task_canceled' });
+    }
+  });
+
+  it('still says another offer was chosen when booking it declined this one, even once the task is canceled', async () => {
+    const { desk, offer } = await seededDeskAndOffer();
+    const bookedAt = new Date(Date.now() - 3_600_000);
+    await db.insert(tasks).values({ ...desk, id: 'tsk_msg_chosen', slug: 'msg-chosen-desk', posterUserId: 'usr_ruth', status: 'canceled', offerCount: 0, version: 3 });
+    await db.insert(offers).values([
+      { ...offer, id: 'off_msg_chosen_lee', taskId: 'tsk_msg_chosen', helperUserId: 'usr_lee', status: 'accepted', revision: 1, closedAt: bookedAt },
+      { ...offer, id: 'off_msg_lost_jordan', taskId: 'tsk_msg_chosen', status: 'declined', revision: 1, closedAt: bookedAt },
+    ]);
+    const thread = (await offerThreadId(db, 'off_msg_lost_jordan', now()))!;
+    expect((await getThreadPage(db, 'usr_jordan', thread, now()))?.composer).toMatchObject({ disabledReason: 'closed', closedReason: 'offer_declined' });
   });
 });
 
