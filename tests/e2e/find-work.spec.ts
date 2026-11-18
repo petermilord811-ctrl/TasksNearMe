@@ -132,15 +132,24 @@ test('a helper saves a task, hides one (Undo brings it back), and sees the areas
     await expect(page.getByRole('link', { name: shelves })).toBeVisible();
     await page.goto('/app/find-work');
 
-    // Not interested: it leaves the list; Undo brings it back.
+    // Not interested: it leaves the list; Undo brings it back. The list changes at once and a server action saves
+    // each change after it, so each step waits for its save before the next relies on it (a reload right after the
+    // second hide sometimes came before the save and still showed the task).
+    const saved = () => page.waitForResponse((response) => response.request().method() === 'POST' && Boolean(response.request().headers()['next-action']));
+    const hiding = saved();
     await card(page, shelves).getByRole('button', { name: `Not interested in ${shelves}: hide it` }).click();
     await expect(page.getByText(`Hidden: ${shelves}.`)).toBeVisible();
     await expect(page.getByRole('link', { name: shelves })).toHaveCount(0);
+    await hiding;
+    const undoing = saved();
     await page.getByRole('button', { name: 'Undo' }).click();
     await expect(card(page, shelves)).toBeVisible();
+    await undoing;
     // Hidden stays hidden on the next visit, whatever the sort.
+    const hidingAgain = saved();
     await card(page, shelves).getByRole('button', { name: `Not interested in ${shelves}: hide it` }).click();
     await expect(page.getByText(`Hidden: ${shelves}.`)).toBeVisible();
+    await hidingAgain;
     await page.goto('/app/find-work?sort=pay');
     await expect(page.getByRole('link', { name: shelves })).toHaveCount(0);
 
