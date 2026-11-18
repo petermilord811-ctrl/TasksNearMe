@@ -11,6 +11,8 @@
   "postTask": "Publicar una tarea",
   "budget": "Presupuesto",
   "newOffers": "{count, number} nuevas",
+  "withHelper": "con {name}",
+  "needYou": "{count, plural, one {# te necesita} other {# te necesitan}}",
   "empty": {
     "open": {
       "title": "Aún no hay tareas abiertas",
@@ -37,14 +39,13 @@
     "allAttention": "Mis tareas · todo lo que puede necesitarte"
   },
   "needsYou": {
-    "title": "Te necesitan ({count})",
     "for": ": {title}",
     "messages": {
       "finish_payment": "Termina de pagar para confirmar a {helper}. La retención termina {relative}.",
-      "review_work": "{helper} marcó el trabajo como completo. Apruébalo o reporta un problema antes del {date}; después se aprueba automáticamente.",
+      "review_work": "{helper} marcó el trabajo como completo. Revísalo antes del {date} o se aprobará automáticamente.",
       "choose_soon": "{count, plural, one {# oferta está esperando} other {# ofertas están esperando}}, y la tarea se cierra {relative}.",
       "new_offers": "{count, plural, one {# oferta nueva} other {# ofertas nuevas}} para revisar.",
-      "no_offers": "Sin ofertas después de un día. Invita a un ayudante que te guste para que envíe una."
+      "no_offers": "Sin ofertas después de un día: invita a un ayudante que te guste."
     },
     "actions": {
       "finish_payment": "Pagar ahora",
@@ -55,6 +56,5 @@
     }
   },
   "newestOffer": "Oferta más reciente: {name}, {price}",
-  "rating": "calificado con {rating}",
-  "bookedWith": "{time} con {name}"
+  "rating": "calificado con {rating}"
 }

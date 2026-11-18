@@ -11,6 +11,8 @@
   "postTask": "Post a task",
   "budget": "Budget",
   "newOffers": "{count, number} new",
+  "withHelper": "with {name}",
+  "needYou": "{count, plural, one {# needs you} other {# need you}}",
   "empty": {
     "open": {
       "title": "No open tasks yet",
@@ -37,14 +39,13 @@
     "allAttention": "My tasks · everything that can need you"
   },
   "needsYou": {
-    "title": "Needs you ({count})",
     "for": ": {title}",
     "messages": {
       "finish_payment": "Finish paying to confirm {helper}. The hold ends {relative}.",
-      "review_work": "{helper} marked the work complete. Approve it or report a problem by {date}; after that it's approved automatically.",
+      "review_work": "{helper} marked the work complete. Review it by {date}, or it's approved automatically.",
       "choose_soon": "{count, plural, one {# offer is waiting} other {# offers are waiting}}, and the task closes {relative}.",
       "new_offers": "{count, plural, one {# new offer} other {# new offers}} to look at.",
-      "no_offers": "No offers after a day. Invite a helper you like to send one."
+      "no_offers": "No offers after a day: invite a helper you like."
     },
     "actions": {
       "finish_payment": "Pay now",
@@ -55,6 +56,5 @@
     }
   },
   "newestOffer": "Newest offer: {name}, {price}",
-  "rating": "rated {rating}",
-  "bookedWith": "{time} with {name}"
+  "rating": "rated {rating}"
 }
