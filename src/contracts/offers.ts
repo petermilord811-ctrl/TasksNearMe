@@ -121,7 +121,8 @@ export interface OfferDetailPageData {
 /**
  * Handlers for the owner screens.
  * - `onOfferAction`: `book_offer` resolves with `redirectTo` (the booking confirmation page),
- *   `message_helper` with `redirectTo` (the offer thread), `decline_offer` with `updated`.
+ *   `message_helper` with `redirectTo` (the offer thread), `decline_offer` with `updated`, and `request_helper`
+ *   (an expired offer on a task still open) with `redirectTo` (a direct request to that helper).
  * - `onTaskAction`: `edit_task`, `invite_helpers`, `post_again` resolve with `redirectTo`.
  * - `onCancelTask`: ok `canceled`. Errors: `not_allowed` (already booked: cancel the booking instead).
  */

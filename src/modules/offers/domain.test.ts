@@ -24,6 +24,13 @@ describe('poster offer actions', () => {
     expect(posterOfferActions({ status: 'pending' }, { ...openTask, status: 'assigned' }, now)).toEqual([]);
     expect(posterOfferActions({ status: 'pending' }, { ...openTask, windowEnd: new Date('2026-11-17T14:00:00.000Z') }, now)).toEqual([]);
     expect(posterOfferActions({ status: 'declined' }, openTask, now)).toEqual([]);
+    expect(posterOfferActions({ status: 'withdrawn' }, openTask, now)).toEqual([]);
+  });
+
+  it('an expired offer on a task still open: ask the helper again, directly (audit M31)', () => {
+    expect(posterOfferActions({ status: 'expired' }, openTask, now)).toEqual([{ id: 'request_helper', kind: 'secondary', enabled: true }]);
+    expect(posterOfferActions({ status: 'expired' }, { ...openTask, status: 'canceled' }, now)).toEqual([]);
+    expect(posterOfferActions({ status: 'expired' }, { ...openTask, windowEnd: new Date('2026-11-17T14:00:00.000Z') }, now)).toEqual([]);
   });
 });
 

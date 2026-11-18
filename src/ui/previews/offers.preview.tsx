@@ -1,5 +1,5 @@
 import { ACTION_ERROR_CODES, routes, type AppShellHandlers, type OfferDetailPageData, type OfferView, type PreviewEntry } from '@/contracts';
-import { deskOfferDetailData, deskOfferJordan, deskOfferLee, deskOfferSam, deskOfferSamStale, deskOwnerView, fakeHandler, mayaShell } from '@/fixtures';
+import { deskOfferDetailData, deskOfferExpiredDetailData, deskOfferJordan, deskOfferLee, deskOfferSam, deskOfferSamExpired, deskOfferSamStale, deskOwnerView, fakeHandler, mayaShell } from '@/fixtures';
 import { OfferCard } from '@/ui/components/offers/offer-card';
 import { OfferComparison } from '@/ui/components/offers/offer-comparison';
 import { OfferDetailScreen } from '@/ui/screens/tasks/offer-detail-screen';
@@ -29,7 +29,7 @@ export const offerPreviews: PreviewEntry[] = [
   card('declined', { ...deskOfferSam, status: 'declined', actions: [] }),
   card('accepted', { ...deskOfferJordan, isNew: false, status: 'accepted', actions: [] }),
   card('withdrawn', { ...deskOfferSam, status: 'withdrawn', actions: [] }),
-  card('expired', { ...deskOfferSam, status: 'expired', actions: [] }),
+  card('expired', deskOfferSamExpired),
   { id: 'offer-card/reliable', title: copy.previews.reliable, group: copy.previews.group, render: () => <OfferCard offer={{ ...deskOfferJordan, helper: { ...deskOfferJordan.helper, reliable: true } }} now={now} onAction={onAction} /> },
   { id: 'offer-card/selected', title: copy.previews.selected, group: copy.previews.group, render: () => <SelectableOfferPreview /> },
   { id: 'offer-comparison/three-offers', title: copy.previews.comparison, group: copy.previews.group, render: () => <OfferComparison offers={deskOwnerView.offers} now={now} /> },
@@ -38,5 +38,6 @@ export const offerPreviews: PreviewEntry[] = [
   detail('masked-message', copy.previews.masked, { ...deskOfferDetailData, offer: deskOfferLee }),
   detail('updated', copy.previews.updated, { ...deskOfferDetailData, offer: deskOfferSam }),
   detail('stale', copy.previews.stale, { ...deskOfferDetailData, offer: deskOfferSamStale }),
+  detail('expired', copy.previews.detailExpired, deskOfferExpiredDetailData),
   ...ACTION_ERROR_CODES.map((code) => detail(`error-${code.replaceAll('_', '-')}`, feedback.error[code], deskOfferDetailData, fakeHandler({ ok: false, code }))),
 ];

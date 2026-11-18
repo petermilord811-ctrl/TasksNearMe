@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes, type ActionResult, type OfferView } from '@/contracts';
-import { deskOfferDetailData, deskOfferLee, deskOfferSamStale } from '@/fixtures';
+import { deskOfferDetailData, deskOfferLee, deskOfferSamExpired, deskOfferSamStale } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import offers from '../../../../messages/en/ui/offers.json';
 import { OfferDetailScreen } from './offer-detail-screen';
@@ -47,6 +47,19 @@ describe('OfferDetailScreen', () => {
     expect(button).toHaveAccessibleDescription(messages.actionReasons.awaiting_other_party);
     await userEvent.click(button);
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('says an expired offer expired, drops what booking would cost, and asks the helper again (audit M31)', async () => {
+    const redirectTo = routes.app.requestHelper('sam-k');
+    const handler = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated', redirectTo }));
+    show(deskOfferSamExpired, handler);
+    expect(screen.getByText(/This offer expired .*You can still request Sam K\. directly/)).toBeVisible();
+    expect(screen.queryByRole('heading', { name: offers.breakdownTitle })).not.toBeInTheDocument();
+    expect(screen.queryByText(offers.paymentNote)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Book helper' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Request this helper' }));
+    expect(handler).toHaveBeenCalledExactlyOnceWith({ offerId: 'off_sam', action: 'request_helper' });
+    expect(push).toHaveBeenCalledExactlyOnceWith(redirectTo);
   });
 
   it('keeps the control busy during submission and announces a failed result', async () => {

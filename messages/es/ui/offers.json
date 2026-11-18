@@ -7,6 +7,7 @@
   "hourlyPrice": "{rate} por hora · tope de {cap}",
   "proposedStart": "Inicio propuesto",
   "expires": "Vence {relative}",
+  "expired": "Venció {relative}",
   "expiry": "Vencimiento de la oferta",
   "updated": "Oferta actualizada",
   "message": "Mensaje de tu ayudante",
@@ -19,6 +20,12 @@
   "offer": "La oferta",
   "breakdownTitle": "Lo que pagarás si reservas",
   "paymentNote": "Pagas al reservar. Tu ayudante recibe su pago cuando termina la tarea.",
+  "closedNotice": {
+    "expired": "Esta oferta venció {relative}. Aún puedes solicitar a {helper} directamente, con tu propio precio y horario.",
+    "declined": "Rechazaste esta oferta.",
+    "withdrawn": "{helper} retiró esta oferta.",
+    "accepted": "Reservaste esta oferta."
+  },
   "compareOthers": "Comparar con {count, plural, one {# otra oferta} other {# otras ofertas}}",
   "comparison": "Comparar ofertas",
   "comparisonDescription": "Revisa los detalles lado a lado. El total incluye tu tarifa de servicio y cualquier asignación para gastos.",
@@ -39,6 +46,7 @@
     "selected": "Oferta seleccionada para comparar",
     "comparison": "Comparar tres ofertas",
     "detail": "Detalles de la oferta",
+    "detailExpired": "Una oferta vencida: vuelve a solicitar al ayudante",
     "masked": "Oferta con datos de contacto ocultos",
     "updated": "Detalles de la oferta actualizados",
     "error": "Error en la acción de la oferta: {code}",

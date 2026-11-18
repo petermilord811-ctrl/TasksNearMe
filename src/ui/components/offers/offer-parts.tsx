@@ -11,14 +11,14 @@ export function OfferPrice({ pricing }: { pricing: PricingInput }) {
     : t('hourlyPrice', { rate: formatMoney(pricing.rateCents), cap: formatHours(pricing.hoursCap) })}</span>;
 }
 
-/** When the offer runs out: "Expires in 3 days", then the exact time. */
+/** When the offer runs out: "Expires in 3 days" (or "Expired yesterday"), then the exact time. */
 export function OfferExpiry({ offer, now }: { offer: OfferView; now: ISODateTime }) {
   const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('offers');
   return <time dateTime={offer.expiresAt} className="flex items-start gap-2 text-sm tabular-nums text-muted-foreground">
     <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
     <span>
-      <span className="block">{t('expires', { relative: formatRelative(offer.expiresAt, now) })}</span>
+      <span className="block">{t(offer.status === 'expired' ? 'expired' : 'expires', { relative: formatRelative(offer.expiresAt, now) })}</span>
       <span className="block">{formatDateTime(offer.expiresAt)}</span>
     </span>
   </time>;

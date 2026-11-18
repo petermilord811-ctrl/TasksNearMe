@@ -5,6 +5,7 @@ import { updateTag } from 'next/cache';
 import type { ActionResult, OfferActionId, TaskActionId, TaskCancelReason } from '@/contracts';
 import { routes, TASK_CANCEL_REASONS } from '@/contracts';
 import { categories } from '@/modules/markets/schema';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -52,6 +53,11 @@ export async function posterOfferAction(input: { offerId: string; action: OfferA
       const result = await declineOffer(db, userId, row.offer.id, await requestNow());
       if (result.ok) refreshTaskPages(row.task.slug);
       return result;
+    }
+    case 'request_helper': {
+      // The request page checks again that the helper can be booked, and lists this task among the client's open ones.
+      const [profile] = await db.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, row.offer.helperUserId)).limit(1);
+      return profile ? { ok: true, code: 'updated', redirectTo: routes.app.requestHelper(profile.handle) } : { ok: false, code: 'not_found' };
     }
     default:
       return { ok: false, code: 'not_allowed' };

@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import { routes, type AppShellHandlers, type PreviewEntry, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
-import { bookshelfOwnerWithInviteView, deskOwnerView, deskOwnerNoOffersView, deskOwnerStaleView, deskOwnerBookedView, remoteOwnerView, fakeHandler, fakeInviteHandlers, mayaShell, movingDraft, samplePushSetup } from '@/fixtures';
+import { bookshelfOwnerWithInviteView, deskOwnerView, deskOwnerNoOffersView, deskOwnerStaleView, deskOwnerBookedView, deskOwnerExpiredView, deskOwnerSomeExpiredView, remoteOwnerView, fakeHandler, fakeInviteHandlers, mayaShell, movingDraft, samplePushSetup } from '@/fixtures';
 import { TaskManageScreen } from '@/ui/screens/tasks/task-manage-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/taskManage.json';
@@ -27,6 +27,8 @@ export const taskManagePreviews: PreviewEntry[] = [
     render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.task(bookshelfOwnerWithInviteView.task.id)} layout="flow"><TaskManageScreen data={bookshelfOwnerWithInviteView} handlers={handlers} inviteHandlers={fakeInviteHandlers} now="2026-12-08T17:00:00.000Z" /></AppShell>,
   },
   preview('offers', deskOwnerView),
+  preview('expired-offers', deskOwnerExpiredView),
+  preview('some-expired', deskOwnerSomeExpiredView),
   preview('no-offers', deskOwnerNoOffersView),
   preview('push-prompt', { ...deskOwnerNoOffersView, push: samplePushSetup }),
   preview('stale-offer', deskOwnerStaleView),

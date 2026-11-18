@@ -27,6 +27,9 @@ export function posterOfferActions(
       { id: 'decline_offer', kind: 'destructive', enabled: true, confirm: true },
     ];
   }
+  // An offer that lapsed while the task is still open: the way on is asking the same helper again, as a direct
+  // request with the client's terms (audit M31). Declined and withdrawn offers have none.
+  if (offer.status === 'expired') return [{ id: 'request_helper', kind: 'secondary', enabled: true }];
   return [];
 }
 

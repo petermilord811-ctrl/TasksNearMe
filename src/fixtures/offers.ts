@@ -139,6 +139,22 @@ export const deskOwnerStaleView: TaskOwnerView = {
   offers: [deskOfferJordan, deskOfferSamStale, deskOfferLee],
 };
 
+/** An offer that lapsed while the task is still open: the client can ask the helper again (audit M31). */
+const expired = (offer: OfferView, expiresAt: string): OfferView => ({ ...offer, status: 'expired', isNew: false, expiresAt, actions: [{ id: 'request_helper', kind: 'secondary', enabled: true }] });
+export const deskOfferSamExpired: OfferView = expired(deskOfferSam, '2026-11-16T15:55:00.000Z');
+
+/** Every offer expired before Maya chose: no compare panel, the offers folded under "3 earlier offers". */
+export const deskOwnerExpiredView: TaskOwnerView = {
+  ...deskOwnerView,
+  offers: [expired(deskOfferJordan, '2026-11-17T06:55:00.000Z'), deskOfferSamExpired, expired(deskOfferLee, '2026-11-15T12:55:00.000Z')],
+};
+
+/** One offer still waiting, the two others expired: no comparison of one, the expired ones folded. */
+export const deskOwnerSomeExpiredView: TaskOwnerView = {
+  ...deskOwnerView,
+  offers: [deskOfferJordan, deskOfferSamExpired, expired(deskOfferLee, '2026-11-15T12:55:00.000Z')],
+};
+
 /** Booked with Jordan: the other offers were declined automatically. */
 export const deskOwnerBookedView: TaskOwnerView = {
   ...deskOwnerView,
@@ -228,6 +244,9 @@ export const deskOfferDetailData: OfferDetailPageData = {
   otherPendingOffers: 2,
 };
 
+/** Sam's offer after it expired: what it was, why it can't be booked, and "Request this helper". */
+export const deskOfferExpiredDetailData: OfferDetailPageData = { ...deskOfferDetailData, offer: deskOfferSamExpired, otherPendingOffers: 0 };
+
 const wait = <T,>(value: T, ms = 500) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 
 export const fakeTaskOwnerHandlers: TaskOwnerHandlers = {
@@ -237,7 +256,9 @@ export const fakeTaskOwnerHandlers: TaskOwnerHandlers = {
         ? { ok: true, code: 'updated', redirectTo: routes.app.confirmOffer('tsk_desk', offerId) }
         : action === 'message_helper'
           ? { ok: true, code: 'updated', redirectTo: routes.app.thread(`thr_${offerId}`) }
-          : { ok: true, code: 'updated' },
+          : action === 'request_helper'
+            ? { ok: true, code: 'updated', redirectTo: routes.app.requestHelper('sam-k') }
+            : { ok: true, code: 'updated' },
     ),
   onTaskAction: ({ action }) =>
     wait({ ok: true, code: 'updated', redirectTo: action === 'post_again' ? routes.app.newTask() : routes.app.task('tsk_desk') }),

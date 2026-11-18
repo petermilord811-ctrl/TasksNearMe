@@ -66,6 +66,8 @@ export const OFFER_ACTION_IDS = [
   'reconfirm_offer',
   /** The helper messages the client about their offer (the offer thread). */
   'message_poster',
+  /** The client asks the helper of an expired offer again, as a direct request (`routes.app.requestHelper`; audit M31). */
+  'request_helper',
 ] as const;
 export type OfferActionId = (typeof OFFER_ACTION_IDS)[number];
 

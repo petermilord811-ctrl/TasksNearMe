@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, TASK_CANCEL_REASONS, routes, type ActionResult, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
-import { bookshelfOwnerWithInviteView, deskOwnerBookedView, deskOwnerNoOffersView, deskOwnerView, fakeInviteHandlers, remoteOwnerView } from '@/fixtures';
+import { bookshelfOwnerWithInviteView, deskOwnerBookedView, deskOwnerExpiredView, deskOwnerNoOffersView, deskOwnerSomeExpiredView, deskOwnerView, fakeInviteHandlers, remoteOwnerView } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import taskManage from '../../../../messages/en/ui/taskManage.json';
 import inviteCard from '../../../../messages/en/ui/inviteCard.json';
@@ -36,7 +36,7 @@ describe('TaskManageScreen actions', () => {
   it('shows sent invites above offers with the supplied response actions', () => {
     render(<NextIntlClientProvider locale="en" messages={{ ...messages, inviteCard }}><TaskManageScreen data={bookshelfOwnerWithInviteView} handlers={ownerHandlers()} inviteHandlers={fakeInviteHandlers} now={now} /></NextIntlClientProvider>);
     const invites = screen.getByRole('region', { name: 'Invites you sent' });
-    const offers = screen.getByRole('region', { name: '0 offers' });
+    const offers = screen.getByRole('region', { name: 'Offers' });
     expect(invites.compareDocumentPosition(offers) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(invites).getByRole('button', { name: 'Accept counter' })).toBeEnabled();
   });
@@ -239,6 +239,40 @@ describe('TaskManageScreen offers and task details', () => {
     show(deskOwnerBookedView);
     expect(screen.getByRole('link', { name: 'View booking' })).toHaveAttribute('href', routes.app.booking('bkg_desk'));
     expect(screen.queryByRole('button', { name: 'Cancel task' })).not.toBeInTheDocument();
+  });
+
+  it('folds expired offers away from the comparison and offers the way on (audit M31)', async () => {
+    const user = userEvent.setup();
+    const handlers = ownerHandlers();
+    const { container } = show(deskOwnerExpiredView, handlers);
+    const section = screen.getByRole('region', { name: 'Offers' });
+    expect(within(section).getByRole('heading', { name: taskManage.noCurrentTitle })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: taskManage.compareTitle })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    const earlier = container.querySelector('details')!;
+    expect(earlier).not.toHaveAttribute('open');
+    expect(within(earlier).getByText('3 earlier offers')).toBeInTheDocument();
+    const requests = within(earlier).getAllByRole('button', { name: 'Request this helper', hidden: true });
+    expect(requests).toHaveLength(3);
+    expect(within(earlier).getAllByText(/^Expired /, { selector: 'span' }).length).toBe(3);
+    await user.click(earlier.querySelector('summary')!);
+    await user.click(requests[1]!);
+    expect(handlers.onOfferAction).toHaveBeenCalledExactlyOnceWith({ offerId: 'off_sam', action: 'request_helper' });
+  });
+
+  it('compares only when two or more offers are current, and keeps the expired ones folded', () => {
+    const { container } = show(deskOwnerSomeExpiredView);
+    expect(screen.getByRole('region', { name: '1 offer' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: taskManage.compareTitle })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: taskManage.sort })).not.toBeInTheDocument();
+    expect(within(container.querySelector('details')!).getByText('2 earlier offers')).toBeInTheDocument();
+  });
+
+  it('keeps Cancel task quiet beside the main action (audit M32)', () => {
+    show();
+    const cancel = screen.getByRole('button', { name: 'Cancel task' });
+    expect(cancel).toHaveAttribute('data-variant', 'outline');
+    expect(cancel.className).toMatch(/text-destructive/);
   });
 
   it('explains the local no-offer state using the supplied area', () => {

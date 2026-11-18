@@ -116,9 +116,10 @@ function QuestionItem({ question, data, handlers, now }: { question: TaskQuestio
  * Questions on a task (completion plan 7.9): the pinned answers first, then the newest; a helper's ask box when
  * they can ask, or why not; the poster answers each one and pins what every helper should read.
  */
-export function TaskQuestions({ data, handlers, now }: { data: TaskQuestionsData; handlers: TaskQuestionHandlers; now: ISODateTime }) {
+/** `wide`: as wide as the page's other cards (the poster's task page, audit L28), not the reading width. */
+export function TaskQuestions({ data, handlers, now, wide = false }: { data: TaskQuestionsData; handlers: TaskQuestionHandlers; now: ISODateTime; wide?: boolean }) {
   const t = useTranslations('questions');
-  return <section aria-labelledby={`questions-${data.taskId}`} className="mx-auto w-full max-w-reading space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.06]">
+  return <section aria-labelledby={`questions-${data.taskId}`} className={cn('mx-auto w-full space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.06]', wide ? 'max-w-content' : 'max-w-reading')}>
     <header className="space-y-1">
       <h2 id={`questions-${data.taskId}`} className="flex items-center gap-2 text-lg font-semibold"><CircleHelp aria-hidden="true" className="size-5 text-primary" />{t('title')} <span className="text-sm font-normal text-muted-foreground tabular-nums">{t('count', { count: data.questions.length })}</span></h2>
       <p className="text-sm text-muted-foreground">{t('intro')}</p>

@@ -122,7 +122,11 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
     const pending = pendingId === action.id;
     const link = getActionLink?.(action.id);
     const disabled = !action.enabled || pendingId !== null;
-    const variant = action.kind === 'primary' ? 'default' : action.kind === 'destructive' ? 'destructive' : 'outline';
+    // A destructive action after the first is quiet, red words on an outline, so it never outweighs the next step
+    // beside it (audit M32); its confirmation is where it turns red.
+    const quiet = action.kind === 'destructive' && action.id !== actions[0]?.id;
+    const variant = action.kind === 'primary' ? 'default' : action.kind === 'destructive' && !quiet ? 'destructive' : 'outline';
+    const tone = quiet ? 'text-destructive hover:text-destructive' : undefined;
     return (
       <div key={action.id} className="min-w-0 flex-1 lg:flex-none">
         {link ? <a
@@ -133,7 +137,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
           aria-describedby={reasonText ? reasonId : undefined}
           tabIndex={disabled ? -1 : undefined}
           data-action-id={action.id}
-          className={cn(buttonVariants({ variant }), 'min-h-11 w-full whitespace-normal px-4 py-2 text-center aria-disabled:pointer-events-none aria-disabled:opacity-50 lg:w-auto')}
+          className={cn(buttonVariants({ variant }), 'min-h-11 w-full whitespace-normal px-4 py-2 text-center aria-disabled:pointer-events-none aria-disabled:opacity-50 lg:w-auto', tone)}
           onClick={(event) => {
             if (disabled || pendingRef.current) { event.preventDefault(); return; }
             if (action.confirm) {
@@ -149,7 +153,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
           aria-busy={pending}
           aria-describedby={reasonText ? reasonId : undefined}
           data-action-id={action.id}
-          className="min-h-11 w-full whitespace-normal px-4 py-2 text-center lg:w-auto"
+          className={cn('min-h-11 w-full whitespace-normal px-4 py-2 text-center lg:w-auto', tone)}
           onClick={(event) => {
             if (pendingRef.current) return;
             if (onRequestAction?.(action.id, context === 'more' ? moreTrigger.current ?? event.currentTarget : event.currentTarget)) {
