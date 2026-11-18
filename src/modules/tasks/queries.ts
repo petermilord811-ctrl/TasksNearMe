@@ -112,14 +112,15 @@ export function timeCondition(time: TaskBoardTime, timeZone: TimeZone): SQL {
   return or(eq(tasks.flexible, true), and(sql`${localMinutes(tasks.windowStart, timeZone)} < ${to}`, sql`${localMinutes(tasks.windowEnd, timeZone)} > ${from}`))!;
 }
 
-/** Each word in the title or the description (case-insensitive; LIKE wildcards in the words are literal). */
+/**
+ * Each word in the title or the description as a reader sees them, contact details masked (`tasks.search_text`, aa's
+ * sweep P4): a hidden phone or email is never what a search finds a task by. Case-insensitive; LIKE wildcards in the
+ * words are literal.
+ */
 export function keywordCondition(q: string): SQL | undefined {
   const words = q.split(/\s+/).map((word) => word.trim()).filter(Boolean).slice(0, 6);
   if (words.length === 0) return undefined;
-  return and(...words.map((word) => {
-    const pattern = `%${word.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
-    return or(ilike(tasks.title, pattern), ilike(tasks.description, pattern))!;
-  }));
+  return and(...words.map((word) => ilike(tasks.searchText, `%${word.replace(/[\\%_]/g, (char) => `\\${char}`)}%`)));
 }
 
 /** The category's task type (src/shared/task-types.ts) from the task's details. */

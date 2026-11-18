@@ -6,6 +6,11 @@
 
 export const MASK = '[hidden]';
 
+/**
+ * These patterns also live in Postgres: contact-masking-sql.ts ports them for `tasks.search_text`, the generated column
+ * task search reads (migration 0066). Change one here and the same change needs a migration that redefines that column;
+ * tests/integration/task-search-masking.test.ts fails until the two agree.
+ */
 const PATTERNS: RegExp[] = [
   // Emails, including "name at domain dot com".
   /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/gi,

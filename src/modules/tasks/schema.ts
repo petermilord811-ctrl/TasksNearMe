@@ -1,6 +1,8 @@
+import { sql } from 'drizzle-orm';
 import { boolean, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
 import { users } from '../accounts/schema';
 import { areas, categories, markets } from '../markets/schema';
+import { maskContactDetailsSql } from '../trust/contact-masking-sql';
 
 /**
  * Tasks (docs/blueprint/08 §3). The exact address lives in `task_locations`, encrypted; tasks
@@ -60,6 +62,11 @@ export const tasks = pgTable(
       .references(() => categories.id),
     title: text('title').notNull(),
     description: text('description').notNull(),
+    /**
+     * What task search reads: the title and the description with contact details masked as the pages show them
+     * (contact-masking-sql.ts), kept by Postgres on every insert and update (aa's sweep P4, migration 0066).
+     */
+    searchText: text('search_text').generatedAlwaysAs(sql.raw(maskContactDetailsSql(`"title" || ' ' || "description"`))),
     details: jsonb('details').$type<Record<string, string | number | boolean>>().notNull().default({}),
     mode: text('mode').notNull(), // local | remote
     status: text('status').notNull(), // draft | open | assigned | completed | canceled | expired
