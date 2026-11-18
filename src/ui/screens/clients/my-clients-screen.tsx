@@ -27,7 +27,7 @@ function ClientRow({ row, now }: { row: MyClientRow; now: ISODateTime }) {
   return <article aria-labelledby={titleId} className="min-w-0 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="flex min-w-0 items-center gap-3">
-        <InitialsAvatar initials={client.initials} />
+        <InitialsAvatar initials={client.initials} photo={client.photo} />
         <div className="min-w-0">
           <h2 id={titleId} className="break-words font-display text-lg font-semibold tracking-[-0.01em]">{client.displayName}</h2>
           <p className="mt-1 text-sm tabular-nums text-muted-foreground">{t('bookingsTogether', { count: row.completedCount })}</p>

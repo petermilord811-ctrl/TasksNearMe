@@ -32,7 +32,7 @@ export function MyInvites({ invites, openInviteId, handlers, now }: {
     {invites.length ? <ul className="space-y-3">
       {/* The contract supplies open invites first; retain its ordering. */}
       {invites.map((invite) => <li key={`${invite.id}-${invite.status}`} className="flex min-w-0 flex-wrap items-center gap-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.06]">
-        <InitialsAvatar initials={invite.client.initials} />
+        <InitialsAvatar initials={invite.client.initials} photo={invite.client.photo} />
         <div className="min-w-0 flex-1 basis-40 space-y-1">
           <h3 className="break-words font-display text-[17px]/6 font-semibold tracking-[-0.015em]">{invite.task.title}</h3>
           <p className="text-sm text-muted-foreground">{t('invites.from', { name: invite.client.displayName })}</p>

@@ -13,6 +13,10 @@ revision=${2:-$(git rev-parse HEAD)}
 rm -rf "$out" preview-bundle.tgz
 mkdir -p "$out"
 cp -a .next/standalone/. "$out/"
+# Runtime data never ships. The file tracer can copy the build machine's .data/uploads (test exports, uploads) into the
+# standalone output, and a real .data/uploads folder in a release stops deploy.sh from linking it to the server's lasting
+# uploads folder: uploads then landed in the release and vanished with the next deploy (plan 9.3, the broken avatar).
+rm -rf "$out/.data"
 mkdir -p "$out/.next"
 cp -a .next/static "$out/.next/static"
 cp -a public "$out/public"

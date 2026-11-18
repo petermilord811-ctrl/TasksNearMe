@@ -76,7 +76,7 @@ export function TaskRow({ task, tab, now, headingLevel = 2 }: { task: OwnerTaskR
       </div>
       <p className="mt-3 flex items-start gap-2 text-sm tabular-nums text-muted-foreground"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{schedule}</span></p>
       {newest && <div className="mt-4 flex items-center gap-3 rounded-lg bg-muted/60 px-3 py-2.5">
-        <InitialsAvatar initials={newest.helper.initials} size="sm" />
+        <InitialsAvatar initials={newest.helper.initials} photo={newest.helper.photo} size="sm" />
         <p className="min-w-0 text-sm tabular-nums">
           <span className="block font-medium">{t('newestOffer', { name: newest.helper.displayName, price: priceLabel(newest.pricing) })}</span>
           <span className="block text-muted-foreground">

@@ -15,7 +15,9 @@ export interface FileStorage {
   delete(key: string): Promise<void>;
 }
 
-export function createLocalFileStorage(root = path.join(process.cwd(), '.data', 'uploads')): FileStorage {
+// The default folder is resolved at runtime only: traced at build time, every file in it (uploads, ID photos, exports)
+// was copied into the server bundles, and a release then shipped its own .data/uploads (plan 9.3).
+export function createLocalFileStorage(root = path.join(/*turbopackIgnore: true*/ process.cwd(), '.data', 'uploads')): FileStorage {
   const resolve = (key: string) => {
     if (!/^[a-z0-9_./-]+$/i.test(key) || key.includes('..')) throw new Error(`Invalid storage key: ${key}`);
     // Files written at runtime: without the ignore, Next's file tracer copies the whole project into builds.

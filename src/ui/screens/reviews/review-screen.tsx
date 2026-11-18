@@ -32,7 +32,7 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
     </Link>
     <header className="space-y-4">
       <div className="flex items-center gap-3">
-        <InitialsAvatar initials={data.subject.initials} />
+        <InitialsAvatar initials={data.subject.initials} photo={data.subject.photo} />
         <h1 className="min-w-0 break-words font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t('title', { name: data.subject.displayName })}</h1>
       </div>
       <div className="space-y-2">

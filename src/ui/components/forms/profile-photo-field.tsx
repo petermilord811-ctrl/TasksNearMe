@@ -1,21 +1,41 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { CircleAlert, CircleCheck, ImagePlus, Trash2 } from 'lucide-react';
 import type { ActionResult, Photo, PhotoUploadResult } from '@/contracts';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
+import type { CropState } from '@/ui/lib/photo-crop';
 import { cn } from '@/ui/lib/utils';
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
+import { croppedPhoto, PhotoCropDialog, type CropImage } from './photo-crop-dialog';
 
 type UploadFailure = Extract<PhotoUploadResult, { ok: false }>['code'];
 
+/** Decodes a chosen photo in the browser for the adjust step; null when it can't (HEIC outside Safari, a broken file). */
+async function decodePhoto(file: File): Promise<CropImage | null> {
+  if (typeof URL.createObjectURL !== 'function' || typeof Image === 'undefined') return null;
+  const src = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = src;
+    await image.decode();
+    if (!image.naturalWidth || !image.naturalHeight) throw new Error('no size');
+    return { src, width: image.naturalWidth, height: image.naturalHeight };
+  } catch {
+    URL.revokeObjectURL(src);
+    return null;
+  }
+}
+
 /**
- * The profile photo (the account page and the helper profile editor): the avatar as people see it, a button
- * to choose a new photo (the file input stays in the page, visually hidden but focusable) and one to remove
- * it. A new photo shows as soon as it's saved; the page then refreshes.
+ * The profile photo (the account page, the helper profile editor and helper setup): the avatar as people see it, a
+ * button to choose a new photo (the file input stays in the page, visually hidden but focusable) and one to remove
+ * it. A chosen photo opens "Adjust your photo" (move and zoom it in the round frame, plan 9.3) when the browser can
+ * read it; otherwise it's sent as it is and the server crops it. The adjusted photo shows at once while it uploads;
+ * the page then refreshes.
  */
 export function ProfilePhotoField({
   initials,
@@ -42,6 +62,12 @@ export function ProfilePhotoField({
   const photo = local && local.over === saved ? local.photo : saved;
   const [busy, setBusy] = useState<'upload' | 'remove' | null>(null);
   const [outcome, setOutcome] = useState<{ kind: 'uploaded' | 'removed' } | { kind: 'failed'; code: UploadFailure } | { kind: 'remove_failed'; result: ActionResult }>();
+  // The photo being adjusted, and the adjusted one shown while it uploads (local object URLs).
+  const [cropping, setCropping] = useState<{ image: CropImage; file: File } | null>(null);
+  const [pending, setPending] = useState<Photo | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const urls = useRef<string[]>([]);
+  useEffect(() => () => urls.current.forEach((url) => URL.revokeObjectURL(url)), []);
 
   async function upload(file: File) {
     if (busy) return;
@@ -60,6 +86,7 @@ export function ProfilePhotoField({
       result = { ok: false, code: 'unknown' };
     }
     setBusy(null);
+    setPending(null);
     if (!result.ok) {
       setOutcome({ kind: 'failed', code: result.code });
       return;
@@ -67,6 +94,48 @@ export function ProfilePhotoField({
     setLocal({ photo: result.photo, over: saved });
     setOutcome({ kind: 'uploaded' });
     router.refresh();
+  }
+
+  async function choose(file: File) {
+    if (busy || cropping) return;
+    if (file.size > maxPhotoMegabytes * 1024 * 1024) {
+      setOutcome({ kind: 'failed', code: 'too_large' });
+      return;
+    }
+    setOutcome(undefined);
+    const image = await decodePhoto(file);
+    if (!image) {
+      void upload(file);
+      return;
+    }
+    urls.current.push(image.src);
+    setCropping({ image, file });
+  }
+
+  async function saveAdjusted(state: CropState) {
+    const current = cropping;
+    if (!current) return;
+    setCropping(null);
+    let blob: Blob | null = null;
+    try {
+      blob = await croppedPhoto(current.image, state);
+    } catch {
+      blob = null;
+    }
+    // Without a canvas, the original goes up and the server crops it.
+    if (!blob) {
+      void upload(current.file);
+      return;
+    }
+    const src = URL.createObjectURL(blob);
+    urls.current.push(src);
+    setPending({ id: 'pending', src, alt: '', width: 512, height: 512 });
+    void upload(new File([blob], 'profile-photo.jpg', { type: 'image/jpeg' }));
+  }
+
+  function chooseAnother() {
+    setCropping(null);
+    fileInput.current?.click();
   }
 
   async function remove() {
@@ -93,7 +162,7 @@ export function ProfilePhotoField({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
       <div className="relative w-fit shrink-0">
-        <InitialsAvatar initials={initials} photo={photo} size="xl" />
+        <InitialsAvatar initials={initials} photo={pending ?? photo} size="xl" />
         {busy && (
           <span className="absolute inset-0 grid place-items-center rounded-full bg-background/70">
             <Spinner aria-hidden="true" className="size-6" />
@@ -110,6 +179,7 @@ export function ProfilePhotoField({
         </div>
         <div className="flex flex-wrap gap-2">
           <input
+            ref={fileInput}
             id={id}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
@@ -121,7 +191,7 @@ export function ProfilePhotoField({
               const file = event.target.files?.[0];
               // Cleared, so choosing the same file again still uploads it.
               event.target.value = '';
-              if (file) void upload(file);
+              if (file) void choose(file);
             }}
           />
           <label
@@ -157,6 +227,7 @@ export function ProfilePhotoField({
           )}
         </div>
       </div>
+      <PhotoCropDialog image={cropping?.image ?? null} onCancel={() => setCropping(null)} onConfirm={(state) => void saveAdjusted(state)} onChooseAnother={chooseAnother} />
     </div>
   );
 }

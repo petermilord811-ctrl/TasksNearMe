@@ -82,7 +82,7 @@ export function InboxList({ threads, now, currentId, variant = 'full' }: { threa
               current && 'bg-brand-soft/60 hover:bg-brand-soft/70',
             )}>
               <span className="relative shrink-0">
-                <InitialsAvatar initials={thread.otherParty.initials} size={pane ? 'sm' : 'md'} />
+                <InitialsAvatar initials={thread.otherParty.initials} photo={thread.otherParty.photo} size={pane ? 'sm' : 'md'} />
                 {unread && <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-primary ring-2 ring-card" />}
               </span>
               <div className="min-w-0 flex-1 space-y-1">

@@ -1,7 +1,6 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -10,6 +9,7 @@ import { toast } from 'sonner';
 import type { ActionHandler, ActionResult, LanguageSwitchHandler, SignedInViewer, StaffViewer } from '@/contracts';
 import { APP_LOCALES, LOCALE_NAMES } from '@/contracts/locale';
 import { routes } from '@/contracts/routes';
+import { AvatarPhoto } from '@/ui/components/people/avatar-photo';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/ui/primitives/dropdown-menu';
@@ -30,6 +30,8 @@ export interface AccountMenuProps {
 
 export function AccountMenu({ viewer, onSignOut, onSwitchLanguage }: AccountMenuProps) {
   const t = useTranslations('shell');
+  // The initials, also shown when the photo can't be loaded (plan 9.3).
+  const initials = <span aria-hidden="true" className={cn(AVATAR, 'inline-flex items-center justify-center text-sm font-semibold text-secondary-foreground')}>{viewer.initials}</span>;
   const theme = useEffectiveTheme();
   const language = useLanguageSwitch(onSwitchLanguage);
   const otherLanguage = APP_LOCALES.find((option) => option !== language.locale) ?? language.locale;
@@ -79,7 +81,7 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage }: AccountMenu
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button ref={triggerRef} type="button" variant="ghost" size="icon" className="group/avatar rounded-full p-0 hover:bg-transparent active:scale-95 dark:hover:bg-transparent" aria-label={t('accountMenu', { name: viewer.displayName, initials: viewer.initials })} aria-describedby={statusId} aria-busy={pending} disabled={pending}>
-            {pending ? <LoaderCircle aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" /> : viewer.photo ? <Image src={viewer.photo.src} alt="" width={44} height={44} unoptimized className={AVATAR} /> : <span aria-hidden="true" className={cn(AVATAR, 'inline-flex items-center justify-center text-sm font-semibold text-secondary-foreground')}>{viewer.initials}</span>}
+            {pending ? <LoaderCircle aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" /> : viewer.photo ? <AvatarPhoto src={viewer.photo.src} alt="" size={44} className={AVATAR} fallback={initials} /> : initials}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={8} className="w-64 max-w-[calc(100vw-2rem)]">

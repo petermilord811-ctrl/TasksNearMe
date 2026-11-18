@@ -47,7 +47,7 @@ export function InviteCardContent({ invite, handlers, now, headingLevel = 2, ini
   return <article aria-labelledby={`${id}-title`} className="min-w-0 space-y-5 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
-        <InitialsAvatar initials={other.initials} />
+        <InitialsAvatar initials={other.initials} photo={other.photo} />
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{t(invite.viewerRole === 'poster' ? 'toHelper' : 'fromClient', { name: other.displayName })}</p>
           <Heading id={`${id}-title`} className="font-heading text-lg/6 font-semibold"><Link href={invite.viewerRole === 'helper' ? routes.app.findWorkTask(invite.task.id) : routes.app.task(invite.task.id)} className="inline-flex min-h-11 items-center break-words rounded-md hover:text-primary hover:underline underline-offset-4">{invite.task.title}</Link></Heading>

@@ -31,3 +31,12 @@ export function photoFromFile(file: { id: string; width: number; height: number;
 export function avatarPhoto(fileId: string, alt = ''): Photo {
   return { id: fileId, src: photoSrc({ id: fileId, width: AVATAR_PX, height: AVATAR_PX }, AVATAR_SHOWN_PX), alt, width: AVATAR_SHOWN_PX, height: AVATAR_SHOWN_PX };
 }
+
+/**
+ * A person summary's `photo` (plan 9.3: the photo shows wherever the person appears in the app), spread into the
+ * summary: nothing without a photo. Clients' photos stay inside the app (decisions.md 2026-11-12), so public pages
+ * don't use this for clients.
+ */
+export function profilePhotoOf(user: { avatarFileId: string | null; name: string }): { photo?: Photo } {
+  return user.avatarFileId ? { photo: avatarPhoto(user.avatarFileId, user.name) } : {};
+}

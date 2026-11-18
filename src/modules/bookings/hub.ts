@@ -316,7 +316,7 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
         status: booking.status as BookingStatus,
         ...(booking.cancelReason ? { cancelReason: booking.cancelReason as CancelReason } : {}),
         viewerRole: role,
-        otherParty: { id: other.id, displayName: other.displayName, initials: other.initials, memberSince: other.memberSince, phoneVerified: other.phoneVerified },
+        otherParty: { id: other.id, displayName: other.displayName, initials: other.initials, ...(other.photo ? { photo: other.photo } : {}), memberSince: other.memberSince, phoneVerified: other.phoneVerified },
         start: terms.startAt.toISOString(),
         location: view.location,
         amountCents: role === 'poster' ? (terms.breakdown.posterChargedCents ?? terms.breakdown.posterTotalCents) : terms.breakdown.helperEarningsCents,

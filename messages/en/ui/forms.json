@@ -76,7 +76,7 @@
   },
   "profilePhoto": {
     "label": "Profile photo",
-    "hint": "A clear photo of your face helps people recognize you. JPG, PNG, WebP or HEIC, up to {megabytes, number} MB. We crop it to a square.",
+    "hint": "A clear photo of your face helps people recognize you. JPG, PNG, WebP or HEIC, up to {megabytes, number} MB. You can move and zoom it before it's saved.",
     "add": "Add a photo",
     "change": "Change photo",
     "remove": "Remove photo",
@@ -94,6 +94,18 @@
     "notes": {
       "publicProfile": "It also shows on your public helper profile.",
       "helperEditor": "It shows on your public profile, in search, and on your offers."
+    },
+    "crop": {
+      "title": "Adjust your photo",
+      "description": "Move and zoom it so your face sits in the circle. This is how people will see you.",
+      "frame": "Photo position",
+      "hint": "Drag the photo to move it. With a keyboard: the arrow keys move it, + and − zoom.",
+      "zoom": "Zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "save": "Use this photo",
+      "another": "Choose another",
+      "cancel": "Cancel"
     }
   },
   "aiDraft": {

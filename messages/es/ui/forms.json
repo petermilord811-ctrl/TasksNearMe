@@ -76,7 +76,7 @@
   },
   "profilePhoto": {
     "label": "Foto de perfil",
-    "hint": "Una foto clara de tu rostro ayuda a que te reconozcan. JPG, PNG, WebP o HEIC, de hasta {megabytes, number} MB. La recortamos en forma cuadrada.",
+    "hint": "Una foto clara de tu rostro ayuda a que te reconozcan. JPG, PNG, WebP o HEIC, de hasta {megabytes, number} MB. Puedes moverla y acercarla antes de guardarla.",
     "add": "Agregar una foto",
     "change": "Cambiar foto",
     "remove": "Quitar foto",
@@ -94,6 +94,18 @@
     "notes": {
       "publicProfile": "También se muestra en tu perfil público de ayudante.",
       "helperEditor": "Se muestra en tu perfil público, en las búsquedas y en tus ofertas."
+    },
+    "crop": {
+      "title": "Ajusta tu foto",
+      "description": "Muévela y acércala para que tu cara quede dentro del círculo. Así te verán los demás.",
+      "frame": "Posición de la foto",
+      "hint": "Arrastra la foto para moverla. Con el teclado: las flechas la mueven y + y − la acercan o alejan.",
+      "zoom": "Zoom",
+      "zoomIn": "Acercar",
+      "zoomOut": "Alejar",
+      "save": "Usar esta foto",
+      "another": "Elegir otra",
+      "cancel": "Cancelar"
     }
   },
   "aiDraft": {

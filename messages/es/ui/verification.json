@@ -149,7 +149,10 @@
     "compact": "Insignias compactas",
     "small": "Pequeña",
     "medium": "Mediana",
-    "large": "Grande"
+    "large": "Grande",
+    "avatarPhotos": "Fotos de perfil",
+    "photoMissing": "Una foto que no carga muestra las iniciales",
+    "photoAdjust": "Ajustar una nueva foto de perfil"
   },
   "address": "Domicilio verificado",
   "addressAt": "Domicilio verificado · {date}",

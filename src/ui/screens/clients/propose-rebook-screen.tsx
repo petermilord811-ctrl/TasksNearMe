@@ -38,7 +38,7 @@ export function ProposeRebookContent({ data, handlers, now, ...previewState }: P
       <p className="text-muted-foreground">{t('intro')}</p>
     </header>
     <section className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
-      <div className="flex items-center gap-3"><InitialsAvatar initials={data.client.initials} /><div className="min-w-0"><p className="text-sm text-muted-foreground">{t('client')}</p><p className="font-semibold break-words">{data.client.displayName}</p></div></div>
+      <div className="flex items-center gap-3"><InitialsAvatar initials={data.client.initials} photo={data.client.photo} /><div className="min-w-0"><p className="text-sm text-muted-foreground">{t('client')}</p><p className="font-semibold break-words">{data.client.displayName}</p></div></div>
       <div className="space-y-2 border-t pt-4">
         <p className="text-sm text-muted-foreground">{t('pastTask')}</p>
         <h2 className="font-display text-xl/7 font-semibold break-words tracking-[-0.015em]">{data.booking.title}</h2>

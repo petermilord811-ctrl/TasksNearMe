@@ -52,7 +52,7 @@ export function BookingRow({ row, tab, now, headingLevel = 2 }: { row: BookingLi
         : { relative: '', date: '', time: '' })}
     </p>}
     <div className="mt-5 flex items-center gap-3">
-      <InitialsAvatar initials={row.otherParty.initials} size="sm" />
+      <InitialsAvatar initials={row.otherParty.initials} photo={row.otherParty.photo} size="sm" />
       <p className="text-sm font-medium">{row.otherParty.displayName}</p>
     </div>
     <div className="mt-4 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
@@ -78,7 +78,7 @@ export function BookingsScreen({ data, now }: BookingsScreenProps) {
     <RegularVisitsSection regular={data.regular} />
     <Tabs defaultValue={initialTab} className="gap-6">
       <TabsList aria-label={t('tabsLabel')} className="w-full sm:w-fit">
-        {tabs.map((tab) => <TabsTrigger key={tab} value={tab} className="min-w-0 whitespace-normal tabular-nums [text-wrap:balance] max-sm:flex-auto max-sm:px-2.5 sm:min-w-28">{t('tabCount', { label: t(`tabs.${tab}`), count: data[tab].length })}</TabsTrigger>)}
+        {tabs.map((tab) => <TabsTrigger key={tab} value={tab} className="min-w-0 tabular-nums max-sm:flex-auto max-sm:px-2.5 max-sm:whitespace-normal max-sm:[text-wrap:balance] sm:min-w-28 sm:whitespace-nowrap">{t('tabCount', { label: t(`tabs.${tab}`), count: data[tab].length })}</TabsTrigger>)}
       </TabsList>
       {tabs.map((tab) => <TabsContent key={tab} value={tab}>
         {data[tab].length > 0

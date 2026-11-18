@@ -27,6 +27,7 @@ import { users } from '@/modules/accounts/schema';
 import { bookingCompletions, bookings, bookingTerms } from '@/modules/bookings/schema';
 import { paymentCustomers, paymentMethods, payments, refunds } from '@/modules/payments/schema';
 import { initialsOf } from '@/modules/profiles/queries';
+import { profilePhotoOf } from '@/modules/files/photos';
 import { categories } from '@/modules/markets/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { payoutAccounts } from '@/modules/verification/schema';
@@ -204,7 +205,7 @@ async function people(db: Db, ids: string[]): Promise<Map<string, PersonSummary>
   return new Map(
     rows.map((user) => [
       user.id,
-      { id: user.id, displayName: user.name, initials: initialsOf(user.firstName, user.lastName), memberSince: user.createdAt.toISOString(), phoneVerified: user.phoneVerifiedAt !== null },
+      { id: user.id, displayName: user.name, initials: initialsOf(user.firstName, user.lastName), ...profilePhotoOf(user), memberSince: user.createdAt.toISOString(), phoneVerified: user.phoneVerifiedAt !== null },
     ]),
   );
 }

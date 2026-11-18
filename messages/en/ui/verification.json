@@ -149,7 +149,10 @@
     "compact": "Compact badges",
     "small": "Small",
     "medium": "Medium",
-    "large": "Large"
+    "large": "Large",
+    "avatarPhotos": "Profile photos",
+    "photoMissing": "A photo that can't be loaded shows the initials",
+    "photoAdjust": "Adjust a new profile photo"
   },
   "address": "Address verified",
   "addressAt": "Address verified · {date}",

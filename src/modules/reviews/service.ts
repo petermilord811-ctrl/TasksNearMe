@@ -5,6 +5,7 @@ import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { categories } from '@/modules/markets/schema';
 import { getHelperSummaries, initialsOf } from '@/modules/profiles/queries';
+import { profilePhotoOf } from '@/modules/files/photos';
 import { openReviewFeedbackCase } from '@/modules/support/service';
 import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
@@ -94,6 +95,7 @@ export async function getReviewPage(db: Db, userId: string, bookingId: string, n
       id: subject.id,
       displayName: subject.name,
       initials: initialsOf(subject.firstName, subject.lastName),
+      ...profilePhotoOf(subject),
       memberSince: subject.createdAt.toISOString(),
       phoneVerified: subject.phoneVerifiedAt !== null,
     },

@@ -60,7 +60,7 @@ export function ThreadContent({ data, handlers, now, safety, composerState, wide
   return <div className={cn('mx-auto w-full space-y-4', wide ? 'max-w-reading lg:max-w-none' : 'max-w-reading')}>
     <Link href={routes.app.messages()} className={buttonVariants({ variant: 'ghost', size: 'sm', className: cn('-ml-2', wide && 'lg:hidden') })}><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
     <header className="flex min-w-0 items-start gap-3 sm:gap-4">
-      <InitialsAvatar initials={thread.otherParty.initials} />
+      <InitialsAvatar initials={thread.otherParty.initials} photo={thread.otherParty.photo} />
       <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
         <h1 className="font-display text-2xl leading-tight font-semibold tracking-[-0.02em] sm:text-[1.75rem]">{t('title', { name: thread.otherParty.displayName })}</h1>
         <ThreadPresence threadId={thread.id} presence={data.presence} className="mt-1" />

@@ -1,7 +1,7 @@
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import type { Photo } from '@/contracts';
 import { cn } from '@/ui/lib/utils';
+import { AvatarPhoto } from './avatar-photo';
 
 export interface InitialsAvatarProps {
   initials: string;
@@ -19,26 +19,22 @@ const sizes = {
 
 const pixels = { sm: 32, md: 44, lg: 64, xl: 96 } as const;
 
-/** A person's round avatar: their profile photo, or their initials. */
+/** A person's round avatar: their profile photo, or their initials (also when the photo can't be loaded). */
 export function InitialsAvatar({ initials, size = 'md', photo }: InitialsAvatarProps) {
   const t = useTranslations('verification');
-
-  if (photo) {
-    return (
-      <Image
-        src={photo.src}
-        alt={photo.alt ? t('photo', { name: photo.alt }) : t('avatar', { initials })}
-        width={pixels[size]}
-        height={pixels[size]}
-        unoptimized
-        className={cn('shrink-0 rounded-full bg-secondary object-cover', sizes[size])}
-      />
-    );
-  }
-
-  return (
+  const letters = (
     <span role="img" aria-label={t('avatar', { initials })} className={cn('inline-flex shrink-0 items-center justify-center rounded-full bg-secondary font-semibold text-secondary-foreground', sizes[size])}>
       <span aria-hidden="true">{initials}</span>
     </span>
+  );
+  if (!photo) return letters;
+  return (
+    <AvatarPhoto
+      src={photo.src}
+      alt={photo.alt ? t('photo', { name: photo.alt }) : t('avatar', { initials })}
+      size={pixels[size]}
+      className={cn('shrink-0 rounded-full bg-secondary object-cover', sizes[size])}
+      fallback={letters}
+    />
   );
 }

@@ -35,8 +35,10 @@ log "unpacking ${sha:0:12}"
 head -c 1500000000 | tar -xz -C "$staging" --no-same-owner
 [[ -f "$staging/server.js" && -f "$staging/prepare-db.cjs" ]] || { echo "bundle is missing server.js or prepare-db.cjs" >&2; exit 1; }
 
-# Uploaded files outlive releases (FILE_STORAGE=local writes to <cwd>/.data/uploads).
+# Uploaded files outlive releases (FILE_STORAGE=local writes to <cwd>/.data/uploads). A bundle that brought its own
+# .data/uploads folder would get the link inside it, and uploads would stay in this release (plan 9.3): replace it.
 mkdir -p "$staging/.data"
+rm -rf "$staging/.data/uploads"
 ln -sfn "$ROOT/uploads" "$staging/.data/uploads"
 rm -rf "$release"
 mv "$staging" "$release"

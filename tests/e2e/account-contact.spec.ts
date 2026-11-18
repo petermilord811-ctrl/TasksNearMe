@@ -122,6 +122,8 @@ test('account: a profile photo shows everywhere and is public only while current
   const png = await sharp({ create: { width: 900, height: 600, channels: 3, background: { r: 90, g: 140, b: 120 } } }).png().toBuffer();
 
   await page.getByLabel('Add a photo').setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: png });
+  // The adjust step (plan 9.3): kept as it opens, centred.
+  await page.getByRole('dialog', { name: 'Adjust your photo' }).getByRole('button', { name: 'Use this photo' }).click();
   await expect(page.getByText('Your new photo is saved.')).toBeVisible();
   const avatar = page.getByRole('img', { name: 'Profile photo of Casey M.' });
   await expect(avatar).toBeVisible();

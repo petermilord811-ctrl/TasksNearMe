@@ -18,6 +18,7 @@ import { MESSAGE_REACTIONS, MESSAGE_SAVED_REPLY_MAX, messageSavedReplyInputSchem
 import { users } from '@/modules/accounts/schema';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { MAX_PHOTO_BYTES, photoFromFile } from '@/modules/files/uploads';
+import { profilePhotoOf } from '@/modules/files/photos';
 import { offers } from '@/modules/offers/schema';
 import { initialsOf } from '@/modules/profiles/queries';
 import { files, tasks } from '@/modules/tasks/schema';
@@ -169,6 +170,7 @@ function personOf(user: typeof users.$inferSelect): PersonSummary {
     id: user.id,
     displayName: user.name,
     initials: initialsOf(user.firstName, user.lastName),
+    ...profilePhotoOf(user),
     memberSince: user.createdAt.toISOString(),
     phoneVerified: user.phoneVerifiedAt !== null,
   };

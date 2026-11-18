@@ -176,7 +176,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
       <h2 className={sectionTitle}>{t(data.viewerRole === 'poster' ? 'helper' : 'client')}</h2>
       {data.viewerRole === 'poster' ? <HelperCard helper={data.helper} variant="compact" /> : <div className={cn(surface, surfacePad, 'space-y-4')}>
         <div className="flex items-center gap-3">
-          <InitialsAvatar initials={data.poster.initials} />
+          <InitialsAvatar initials={data.poster.initials} photo={data.poster.photo} />
           <div className="min-w-0 space-y-1">
             <h3 className="break-words font-heading text-[17px]/6 font-semibold">{data.poster.displayName}</h3>
             <p className="text-sm text-muted-foreground">{t('memberSince', { date: formatMonthYear(data.poster.memberSince) })}</p>
