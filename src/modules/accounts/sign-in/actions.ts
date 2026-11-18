@@ -22,6 +22,7 @@ import { CURRENT_TERMS_VERSION } from '../terms';
 import { sendWelcomeEmail } from '../welcome';
 import { clearPendingEmail, readPendingEmail, writePendingEmail } from './pending-email';
 import { applyPendingSignUp, applySignUpIntent } from './sign-up-apply';
+import { clearPendingSignUp } from './sign-up-pending';
 import {
   BLOCKED_STATUSES,
   clientIp,
@@ -101,6 +102,9 @@ export async function continueWith(rawNext: string, input: SocialSignInInput): P
 
   const next = safeNextPath(rawNext);
   const back = routes.signIn(next);
+  // A sign-in starting here ends what `/sign-up` kept from an earlier start in this browser (aa's sweep S8); a start
+  // from `/sign-up` keeps its own after this (signUpWith).
+  await clearPendingSignUp();
   // Development and tests only: this browser asked for the stand-in instead of the real provider.
   const additionalParams = standInParams((await cookies()).get(STAND_IN_COOKIE)?.value);
   const { url } = await auth.api.signInSocial({
@@ -123,6 +127,8 @@ export async function requestEmailCode(_next: string, input: EmailInput & BotChe
   if (!parsed.success) return validationFailed(parsed.error);
   // No Turnstile here since 2026-11-14 (the owner's call: the widget kept them from signing in; decisions.md).
   // Floods are held by sendEmailCode's per-email and per-IP limits; sign-up, posting and offers keep Turnstile.
+  // A sign-in starting here ends what `/sign-up` kept from an earlier start (S8); startSignUp keeps its own after this.
+  await clearPendingSignUp();
   return sendEmailCode(parsed.data.email);
 }
 
@@ -171,16 +177,22 @@ export async function verifyEmailCode(next: string, input: OneTimeCodeInput): Pr
   }
 }
 
-/** The `invite_code` step's "Use a different email": signs out, and the page shows the email step. */
+/**
+ * The `invite_code` step's "Use a different email": signs out, and the page shows the email step. What `/sign-up` kept
+ * goes too, so it can't reach whoever signs in next in this browser (aa's sweep S8).
+ */
 export async function signOutOfSignUp(): Promise<ActionResult> {
   await auth.api.signOut({ headers: await headers() });
   await clearPendingEmail();
+  await clearPendingSignUp();
   refresh();
   return { ok: true, code: 'updated' };
 }
 
+/** The code step's "Use a different email": back to the first step, with nothing kept from `/sign-up` (S8). */
 export async function changeEmail(): Promise<ActionResult> {
   await clearPendingEmail();
+  await clearPendingSignUp();
   refresh();
   return { ok: true, code: 'updated' };
 }
@@ -303,6 +315,8 @@ export async function passkeySignIn(next: string, input: { response?: Record<str
     const userId = (result as { session?: { userId?: string } }).session?.userId;
     if (!userId) return { ok: false, code: 'not_allowed' };
     await clearPendingEmail();
+    // Signed in another way: what `/sign-up` kept was for another flow (S8).
+    await clearPendingSignUp();
     return continueAfterSignIn(next, userId, 'updated');
   } catch (error) {
     // An unknown passkey, a failed check, or an account that can't sign in.

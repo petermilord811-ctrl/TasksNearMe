@@ -1,12 +1,14 @@
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
-import { SIGN_UP_INTENTS, type SignUpIntent } from '@/contracts';
+import { SIGN_UP_INTENTS, SOCIAL_PROVIDERS, type SignUpIntent, type SocialProvider } from '@/contracts';
 
 /**
  * What `/sign-up` gathered (completion plan 9.6), kept in a short-lived signed cookie until the email code is right, or
  * until Google or Microsoft send the person back: what they're here for, and, from the form, their names, the email
  * they're for and when they ticked 18+ and the terms. Like the pending email (pending-email.ts), it needs no session.
+ * It counts only for the account its own flow reaches (sign-up-domain.ts `signUpIntentApplies`), and any other sign-in
+ * started in the browser ends it (actions.ts; aa's sweep S8).
  */
 const COOKIE = 'tnm_signup';
 const MAX_AGE_SECONDS = 30 * 60;
@@ -21,6 +23,11 @@ export interface PendingSignUp {
     /** Epoch ms when they ticked 18+ and the terms (the time the terms were accepted). */
     agreedAt: number;
   };
+  /**
+   * Google or Microsoft: which one, and when its button was pressed (epoch ms, the server's own clock, which Better
+   * Auth also stamps a new link with). The choice goes only to an account that linked that provider since.
+   */
+  via?: { provider: SocialProvider; at: number };
 }
 
 function signature(payload: string, secret: string): string {
@@ -41,13 +48,20 @@ export function decodePendingSignUp(raw: string | undefined, secret: string): Pe
   const actual = Buffer.from(signed);
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
   try {
-    const value = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Partial<PendingSignUp>;
+    const value = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Record<keyof PendingSignUp, unknown>;
     if (!(SIGN_UP_INTENTS as readonly unknown[]).includes(value.intent)) return null;
-    const details = value.details;
-    if (details === undefined) return { intent: value.intent as SignUpIntent };
-    const { email, firstName, lastName, agreedAt } = details;
-    if (typeof email !== 'string' || typeof firstName !== 'string' || typeof lastName !== 'string' || typeof agreedAt !== 'number') return null;
-    return { intent: value.intent as SignUpIntent, details: { email, firstName, lastName, agreedAt } };
+    const pending: PendingSignUp = { intent: value.intent as SignUpIntent };
+    if (value.details !== undefined) {
+      const { email, firstName, lastName, agreedAt } = (value.details ?? {}) as Record<string, unknown>;
+      if (typeof email !== 'string' || typeof firstName !== 'string' || typeof lastName !== 'string' || typeof agreedAt !== 'number') return null;
+      pending.details = { email, firstName, lastName, agreedAt };
+    }
+    if (value.via !== undefined) {
+      const { provider, at } = (value.via ?? {}) as Record<string, unknown>;
+      if (!(SOCIAL_PROVIDERS as readonly unknown[]).includes(provider) || typeof at !== 'number') return null;
+      pending.via = { provider: provider as SocialProvider, at };
+    }
+    return pending;
   } catch {
     return null;
   }
