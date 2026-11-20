@@ -89,7 +89,8 @@ describe('refund approvals', () => {
     const bookingId = await bigBooking('tsk_rra_stack');
     // An agent's $80 goes through; a second $80 would make $160 on this booking, over the $100 limit.
     expect(await staffRefund(db, pay, alex, bookingId, { amountCents: 8_000, reason: 'goodwill', note }, new Date())).toEqual({ ok: true, code: 'submitted' });
-    expect(await staffRefund(db, pay, alex, bookingId, { amountCents: 8_000, reason: 'goodwill', note }, new Date())).toEqual({ ok: true, code: 'sent' });
+    // A second refund of its own (its own note: the same form sent again within two minutes is the same request, money review #10).
+    expect(await staffRefund(db, pay, alex, bookingId, { amountCents: 8_000, reason: 'goodwill', note: `${note} A second one.` }, new Date())).toEqual({ ok: true, code: 'sent' });
     expect((await db.select().from(refunds).where(eq(refunds.bookingId, bookingId))).map((row) => row.amountCents)).toEqual([8_000]);
 
     // A lead approves up to $500 for the booking in all: $80 already refunded + $400 is fine, another $400 isn't.

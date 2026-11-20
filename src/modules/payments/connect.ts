@@ -1,12 +1,12 @@
-import { and, asc, eq, inArray, isNull, lte, notExists } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lte, ne, notExists, sum } from 'drizzle-orm';
 import { parseConnectEvent, type StripeConnect } from '@/integrations/payments/stripe-connect';
 import { verifyStripeSignature } from '@/integrations/stripe-identity';
-import { earnings, payouts } from '@/modules/earnings/schema';
+import { earnings, PAYOUT_REF_SET, payouts } from '@/modules/earnings/schema';
 import { recordPayoutAccountStatus } from '@/modules/verification/service';
 import { payoutAccounts } from '@/modules/verification/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { payments } from './schema';
+import { payments, refunds } from './schema';
 import type { StripeWebhookOutcome } from './stripe-webhooks';
 
 /**
@@ -40,17 +40,11 @@ export async function runScheduledTransfers(db: Db, connect: StripeConnect, now:
     const account = { providerAccountId: accountId };
     const later = () => db.update(earnings).set({ updatedAt: now }).where(and(eq(earnings.id, row.id), eq(earnings.status, 'scheduled')));
     try {
-      // A tip goes out from its own charge; everything else from the booking's (money review #7).
-      const [charge] = await db
-        .select({ providerRef: payments.providerRef })
-        .from(payments)
-        .where(and(eq(payments.bookingId, row.bookingId), eq(payments.provider, 'stripe'), inArray(payments.purpose, row.kind === 'tip' ? ['tip'] : ['booking_funding', 'invite_authorization']), inArray(payments.status, ['succeeded', 'partially_refunded'])))
-        .limit(1);
-      const source = charge?.providerRef ? await connect.chargeOf(charge.providerRef) : null;
+      const source = await sourceFor(db, connect, row);
       const result = await connect.transfer({
         amountCents: row.amountCents,
         accountId: account.providerAccountId,
-        ...(source && source.amountCents >= row.amountCents ? { sourceChargeId: source.chargeId } : {}),
+        ...(source ? { sourceChargeId: source.chargeId } : {}),
         group: `booking:${row.bookingId}`,
         idempotencyKey: `transfer:${row.id}`,
       });
@@ -58,7 +52,7 @@ export async function runScheduledTransfers(db: Db, connect: StripeConnect, now:
         await later();
         continue;
       }
-      await db.update(earnings).set({ status: 'transferred', transferRef: result.transferId, transferredAt: now, updatedAt: now }).where(and(eq(earnings.id, row.id), eq(earnings.status, 'scheduled')));
+      await db.update(earnings).set({ status: 'transferred', transferRef: result.transferId, sourcePaymentId: source?.paymentId ?? null, transferredAt: now, updatedAt: now }).where(and(eq(earnings.id, row.id), eq(earnings.status, 'scheduled')));
       moved += 1;
     } catch (error) {
       // Stripe or the network: the row stays scheduled and a later run tries again (same idempotency key), after the rest.
@@ -67,6 +61,60 @@ export async function runScheduledTransfers(db: Db, connect: StripeConnect, now:
     }
   }
   return moved;
+}
+
+/**
+ * The charge a transfer is tied to, when it still covers it (money review #7). A tip goes out from its own charge,
+ * everything else from the booking's. Stripe caps all transfers from one charge together at what the charge took, so
+ * what earlier transfers took from it (each row records its charge) and what was refunded from it count: a row that
+ * doesn't fit goes out from the platform's balance instead of failing at Stripe on every run.
+ */
+async function sourceFor(db: Db, connect: StripeConnect, row: typeof earnings.$inferSelect): Promise<{ paymentId: string; chargeId: string } | null> {
+  const [charge] = await db
+    .select({ id: payments.id, providerRef: payments.providerRef })
+    .from(payments)
+    .where(and(eq(payments.bookingId, row.bookingId), eq(payments.provider, 'stripe'), inArray(payments.purpose, row.kind === 'tip' ? ['tip'] : ['booking_funding', 'invite_authorization']), inArray(payments.status, ['succeeded', 'partially_refunded'])))
+    .limit(1);
+  if (!charge?.providerRef) return null;
+  const source = await connect.chargeOf(charge.providerRef);
+  if (!source) return null;
+  const [[refunded], [sent]] = await Promise.all([
+    db.select({ cents: sum(refunds.amountCents) }).from(refunds).where(and(eq(refunds.paymentId, charge.id), inArray(refunds.status, ['pending', 'succeeded']))),
+    db
+      .select({ cents: sum(earnings.amountCents) })
+      .from(earnings)
+      .where(and(eq(earnings.sourcePaymentId, charge.id), ne(earnings.id, row.id), inArray(earnings.status, ['transferred', 'paid_out', 'partially_reversed', 'reversed']))),
+  ]);
+  const left = source.amountCents - Number(refunded?.cents ?? 0) - Number(sent?.cents ?? 0);
+  return left >= row.amountCents ? { paymentId: charge.id, chargeId: source.chargeId } : null;
+}
+
+/**
+ * The earnings a paid payout carried (money review #13): the helper's oldest transfers made before it, as many as its
+ * amount holds. Linking every transfer made before the payout took ones whose money Stripe hadn't made available yet;
+ * those went out with the next payout, and when that one bounced nothing pointed back to them, so they stayed "paid out".
+ * Only transfers that fit go, oldest first, stopping at the first that doesn't, so the rest wait for the payout that
+ * carries them.
+ */
+async function linkPaidOut(db: Db, payout: { helperUserId: string; payoutId: string; amountCents: number; createdAt: Date }, now: Date): Promise<void> {
+  const [linked] = await db.select({ cents: sum(earnings.amountCents) }).from(earnings).where(eq(earnings.payoutId, payout.payoutId));
+  let room = payout.amountCents - Number(linked?.cents ?? 0);
+  const waiting = await db
+    .select({ id: earnings.id, amountCents: earnings.amountCents })
+    .from(earnings)
+    .where(and(eq(earnings.helperUserId, payout.helperUserId), eq(earnings.status, 'transferred'), isNull(earnings.payoutId), lte(earnings.transferredAt, payout.createdAt)))
+    .orderBy(asc(earnings.transferredAt), asc(earnings.id));
+  const ids: string[] = [];
+  for (const row of waiting) {
+    if (row.amountCents > room) break;
+    room -= row.amountCents;
+    ids.push(row.id);
+  }
+  if (ids.length === 0) return;
+  await db
+    .update(earnings)
+    .set({ status: 'paid_out', payoutId: payout.payoutId, updatedAt: now })
+    .where(and(inArray(earnings.id, ids), eq(earnings.status, 'transferred'), isNull(earnings.payoutId)));
 }
 
 /**
@@ -109,20 +157,28 @@ export async function handleConnectWebhook(db: Db, input: { payload: string; sig
   }
   const [account] = await db.select({ userId: payoutAccounts.userId }).from(payoutAccounts).where(eq(payoutAccounts.providerAccountId, parsed.accountId)).limit(1);
   if (!account) return { status: 200, body: { ok: true, ignored: true } };
-  const [existing] = await db.select({ id: payouts.id, status: payouts.status }).from(payouts).where(eq(payouts.providerRef, parsed.payoutId)).limit(1);
-  const payoutId = existing?.id ?? newId('po');
-  if (existing) {
+  const byRef = () => db.select({ id: payouts.id, status: payouts.status }).from(payouts).where(eq(payouts.providerRef, parsed.payoutId)).limit(1);
+  let [existing] = await byRef();
+  if (!existing) {
+    // Dated when Stripe made it, so the helper's payouts keep Stripe's order whatever order their events come in. One row
+    // per payout (money review #12): an instant payout's own row written meanwhile wins, and this event updates it.
+    const [inserted] = await db
+      .insert(payouts)
+      .values({ id: newId('po'), helperUserId: account.userId, amountCents: parsed.amountCents, status: parsed.status, arrivalDate: parsed.arrivalDate, bankLast4: '', providerRef: parsed.payoutId, createdAt: parsed.createdAt, updatedAt: now })
+      .onConflictDoNothing({ target: payouts.providerRef, where: PAYOUT_REF_SET })
+      .returning({ id: payouts.id });
+    if (!inserted) [existing] = await byRef();
+    else if (parsed.status !== 'paid' && parsed.status !== 'failed' && parsed.status !== 'canceled') return { status: 200, body: { ok: true } };
+    else existing = { id: inserted.id, status: 'new' };
+  }
+  if (!existing) return { status: 200, body: { ok: true, ignored: true } };
+  const payoutId = existing.id;
+  if (existing.status !== 'new') {
     if (!payoutMoves(existing.status, parsed.status)) return { status: 200, body: { ok: true, ignored: true } };
     await db.update(payouts).set({ status: parsed.status, arrivalDate: parsed.arrivalDate, amountCents: parsed.amountCents, updatedAt: now }).where(eq(payouts.id, payoutId));
-  } else {
-    // Dated when Stripe made it, so the helper's payouts keep Stripe's order whatever order their events come in.
-    await db.insert(payouts).values({ id: payoutId, helperUserId: account.userId, amountCents: parsed.amountCents, status: parsed.status, arrivalDate: parsed.arrivalDate, bankLast4: '', providerRef: parsed.payoutId, createdAt: parsed.createdAt, updatedAt: now });
   }
   if (parsed.status === 'paid') {
-    await db
-      .update(earnings)
-      .set({ status: 'paid_out', payoutId, updatedAt: now })
-      .where(and(eq(earnings.helperUserId, account.userId), eq(earnings.status, 'transferred'), isNull(earnings.payoutId), lte(earnings.transferredAt, parsed.createdAt)));
+    await linkPaidOut(db, { helperUserId: account.userId, payoutId, amountCents: parsed.amountCents, createdAt: parsed.createdAt }, now);
   } else if (parsed.status === 'failed' || parsed.status === 'canceled') {
     await db.update(earnings).set({ status: 'transferred', payoutId: null, updatedAt: now }).where(and(eq(earnings.payoutId, payoutId), eq(earnings.status, 'paid_out')));
   }

@@ -1,9 +1,9 @@
-import { and, asc, eq, gt, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, sql, sum } from 'drizzle-orm';
 import type { Cents, ISODateTime } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
 import { bookings } from '@/modules/bookings/schema';
 import { getFlags } from '@/modules/markets/queries';
-import { refunds } from '@/modules/payments/schema';
+import { payments as paymentRows, refunds } from '@/modules/payments/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { creditRedemptions, posterCredits } from './schema';
@@ -46,10 +46,32 @@ export async function availableCredit(db: Db, userId: string, now: Date): Promis
   return total > 0 ? { amountCents: total, expiresAt: rows[0]!.expiresAt.toISOString() } : null;
 }
 
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+
 /**
- * Uses a client's credit on a completed booking: one refund of up to `capCents` (what the platform earned,
- * and never more than the client paid) to the booking's charge, spread over their credits, soonest to
- * expire first. Safe to call again: the refund key and the redemption rows make it happen once.
+ * The most a credit can give back on this booking (money review #11): what the platform earned (`capCents`), less what it
+ * already gave back from its own funds here (goodwill, fraud), and never more than what's left on the charge.
+ */
+async function creditCap(tx: Tx, input: { bookingId: string; charge: { id: string }; capCents: Cents }): Promise<Cents> {
+  const live = inArray(refunds.status, ['pending', 'succeeded']);
+  const [[charge], [onCharge], [platformFunded]] = await Promise.all([
+    tx.select({ amountCents: paymentRows.amountCents }).from(paymentRows).where(eq(paymentRows.id, input.charge.id)).limit(1),
+    tx.select({ cents: sum(refunds.amountCents) }).from(refunds).where(and(eq(refunds.paymentId, input.charge.id), live)),
+    tx.select({ cents: sum(refunds.amountCents) }).from(refunds).where(and(eq(refunds.bookingId, input.bookingId), inArray(refunds.reason, ['goodwill', 'fraud']), live)),
+  ]);
+  const chargeLeft = (charge?.amountCents ?? 0) - Number(onCharge?.cents ?? 0);
+  return Math.min(input.capCents - Number(platformFunded?.cents ?? 0), chargeLeft);
+}
+
+/**
+ * Uses a client's credit on a completed booking: one refund of up to what the platform earned there (never more than the
+ * client paid, nor than is left on the charge), spread over their credits, soonest to expire first. Safe to call again:
+ * the refund key and the redemption rows make it happen once.
+ *
+ * Reserved before the provider is called (money review #11): under a lock on the client's credits, the refund row
+ * (pending), the redemptions and the lower balances are written in one transaction, so two completions at once can't
+ * both spend the same credit. A refusal (or no answer) marks the refund failed and gives the credit back for the next
+ * booking.
  */
 export async function redeemCredits(
   db: Db,
@@ -57,30 +79,32 @@ export async function redeemCredits(
   input: { bookingId: string; posterUserId: string; charge: { id: string; providerRef: string }; capCents: Cents },
   now: Date,
 ): Promise<Cents> {
-  const [already] = await db.select({ id: creditRedemptions.id }).from(creditRedemptions).where(eq(creditRedemptions.bookingId, input.bookingId)).limit(1);
-  if (already || input.capCents <= 0) return 0;
-  const credits = await db
-    .select()
-    .from(posterCredits)
-    .where(and(eq(posterCredits.userId, input.posterUserId), gt(posterCredits.remainingCents, 0), gt(posterCredits.expiresAt, now)))
-    .orderBy(asc(posterCredits.expiresAt));
-  let left = input.capCents;
-  const uses: { creditId: string; amountCents: Cents }[] = [];
-  for (const credit of credits) {
-    if (left <= 0) break;
-    const amount = Math.min(credit.remainingCents, left);
-    uses.push({ creditId: credit.id, amountCents: amount });
-    left -= amount;
-  }
-  const total = uses.reduce((sum, use) => sum + use.amountCents, 0);
-  if (total === 0) return 0;
-
+  if (input.capCents <= 0) return 0;
   const idempotencyKey = `credit:${input.bookingId}`;
-  const result = await payments.refund({ chargeRef: input.charge.providerRef, amountCents: total, idempotencyKey });
-  if (result.status !== 'succeeded') return 0;
-  await db.transaction(async (tx) => {
+  const plan = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`credits:${input.posterUserId}`}))`);
+    const [already] = await tx.select({ id: creditRedemptions.id }).from(creditRedemptions).where(eq(creditRedemptions.bookingId, input.bookingId)).limit(1);
+    const [tried] = await tx.select({ id: refunds.id }).from(refunds).where(eq(refunds.idempotencyKey, idempotencyKey)).limit(1);
+    if (already || tried) return null;
+    const cap = await creditCap(tx, input);
+    if (cap <= 0) return null;
+    const credits = await tx
+      .select()
+      .from(posterCredits)
+      .where(and(eq(posterCredits.userId, input.posterUserId), gt(posterCredits.remainingCents, 0), gt(posterCredits.expiresAt, now)))
+      .orderBy(asc(posterCredits.expiresAt));
+    let left = cap;
+    const uses: { creditId: string; amountCents: Cents }[] = [];
+    for (const credit of credits) {
+      if (left <= 0) break;
+      const amount = Math.min(credit.remainingCents, left);
+      uses.push({ creditId: credit.id, amountCents: amount });
+      left -= amount;
+    }
+    const total = uses.reduce((sum_, use) => sum_ + use.amountCents, 0);
+    if (total === 0) return null;
     const refundId = newId('ref');
-    await tx.insert(refunds).values({ id: refundId, paymentId: input.charge.id, bookingId: input.bookingId, amountCents: total, reason: 'poster_credit', status: 'succeeded', providerRef: result.refundRef, idempotencyKey, createdAt: now });
+    await tx.insert(refunds).values({ id: refundId, paymentId: input.charge.id, bookingId: input.bookingId, amountCents: total, reason: 'poster_credit', status: 'pending', providerRef: null, idempotencyKey, createdAt: now });
     for (const use of uses) {
       await tx.insert(creditRedemptions).values({ id: newId('crr'), creditId: use.creditId, bookingId: input.bookingId, refundId, amountCents: use.amountCents, createdAt: now });
       await tx
@@ -88,6 +112,29 @@ export async function redeemCredits(
         .set({ remainingCents: sql`${posterCredits.remainingCents} - ${use.amountCents}`, updatedAt: now })
         .where(eq(posterCredits.id, use.creditId));
     }
+    return { refundId, total, uses };
   });
-  return total;
+  if (!plan) return 0;
+
+  let result: Awaited<ReturnType<PaymentProvider['refund']>> | null = null;
+  try {
+    result = await payments.refund({ chargeRef: input.charge.providerRef, amountCents: plan.total, idempotencyKey });
+  } catch (error) {
+    console.error(`[credits] refunding the credit on ${input.bookingId} didn't answer`, error);
+  }
+  if (result?.status === 'succeeded') {
+    await db.update(refunds).set({ status: 'succeeded', providerRef: result.refundRef }).where(eq(refunds.id, plan.refundId));
+    return plan.total;
+  }
+  await db.transaction(async (tx) => {
+    await tx.update(refunds).set({ status: 'failed', ...(result ? { providerRef: result.refundRef } : {}) }).where(eq(refunds.id, plan.refundId));
+    await tx.delete(creditRedemptions).where(eq(creditRedemptions.refundId, plan.refundId));
+    for (const use of plan.uses) {
+      await tx
+        .update(posterCredits)
+        .set({ remainingCents: sql`${posterCredits.remainingCents} + ${use.amountCents}`, updatedAt: now })
+        .where(eq(posterCredits.id, use.creditId));
+    }
+  });
+  return 0;
 }

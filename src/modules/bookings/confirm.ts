@@ -439,6 +439,7 @@ export async function confirmBooking(
     method: chargeMethodOf(method),
     idempotencyKey: hold.idempotencyKey,
     description: `TasksNearMe booking ${hold.bookingId}`,
+    paymentId: hold.paymentId,
   });
   return settle(deps, posterId, hold.paymentId, result, now);
 }

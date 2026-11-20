@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNotNull, notInArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNotNull, notInArray, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
   AdminBookingPageData,
@@ -37,6 +37,7 @@ import { refundRequests, supportCases } from './schema';
 import { bookingMoneyFacts, caseRowsFor, conversationView, discretionaryRefundedCents, personSummaryOf, previewResolution, resolveCase, type StaffActor } from './staff';
 import { MONEY_RESOLUTIONS, canApproveRefund, canWorkCases, refundLimitOf, type ResolutionMoney } from './staff-domain';
 import { refundAcross, refundableCharges, refundMade } from '@/modules/payments/refund-across';
+import { DOUBLE_SUBMIT_MS, serialized, submissionKeys } from '@/modules/payments/double-submit';
 
 /**
  * Money for staff (UI-019; blueprint 04 §6, 08 staff limits): the money effects of case resolutions, the
@@ -308,29 +309,40 @@ export async function staffRefund(db: Db, payments_: PaymentProvider | null, sta
   const parsed = staffRefundInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   if (!payments_ || !canWorkCases(staff.roles)) return { ok: false, code: 'not_allowed' };
-  const money = await bookingMoneyFacts(db, String(bookingId));
-  if (!money) return { ok: false, code: 'not_allowed' };
-  const left = money.chargedCents - money.refundedCents;
-  if (parsed.data.amountCents > left) return { ok: false, code: 'not_allowed' };
-  const limited = await consumeRateLimit(db, `staff-refund:${staff.id}`, REFUND_RULE, now);
-  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
-  // Above the viewer's own limit for this booking (earlier refunds count): someone allowed approves it (blueprint 08).
-  const prior = await discretionaryRefundedCents(db, String(bookingId));
-  if (prior + parsed.data.amountCents > refundLimitOf(staff.roles)) {
-    const id = newId('rrq');
-    await db.insert(refundRequests).values({ id, bookingId: String(bookingId), amountCents: parsed.data.amountCents, reason: parsed.data.reason, note: parsed.data.note, requestedByUserId: staff.id, status: 'pending', createdAt: now });
-    await audit(db, staff, 'booking.refund_requested', 'booking', String(bookingId), now, { metadata: { requestId: id, amountCents: parsed.data.amountCents, reason: parsed.data.reason, note: parsed.data.note } });
-    return { ok: true, code: 'sent' };
-  }
-  const ok = await refundCharge(db, payments_, {
-    bookingId: String(bookingId),
-    amountCents: parsed.data.amountCents,
-    reason: parsed.data.reason,
-    idempotencyKey: `refund:${bookingId}:staff:${newId('req')}`,
-    now,
+  const id = String(bookingId);
+  const { amountCents, reason, note } = parsed.data;
+  // The same form sent twice moves the money once (money review #10): its key comes from what was asked, and one request
+  // per booking runs at a time, so the second finds the first one's refund (or request) and answers the same.
+  const keys = submissionKeys(`refund:${id}:staff`, [staff.id, amountCents, reason, note], now);
+  return serialized(db, `staff-refund:${id}`, async (): Promise<ActionResult> => {
+    for (const key of [keys.previous, keys.current]) {
+      const earlier = await refundMade(db, key);
+      if (earlier.made) return earlier.ok ? { ok: true, code: 'submitted' } : { ok: false, code: 'unknown' };
+    }
+    const [asked] = await db
+      .select({ id: refundRequests.id })
+      .from(refundRequests)
+      .where(and(eq(refundRequests.bookingId, id), eq(refundRequests.requestedByUserId, staff.id), eq(refundRequests.amountCents, amountCents), eq(refundRequests.reason, reason), eq(refundRequests.note, note), eq(refundRequests.status, 'pending'), gte(refundRequests.createdAt, new Date(now.getTime() - DOUBLE_SUBMIT_MS))))
+      .limit(1);
+    if (asked) return { ok: true, code: 'sent' };
+    const money = await bookingMoneyFacts(db, id);
+    if (!money) return { ok: false, code: 'not_allowed' };
+    const left = money.chargedCents - money.refundedCents;
+    if (amountCents > left) return { ok: false, code: 'not_allowed' };
+    const limited = await consumeRateLimit(db, `staff-refund:${staff.id}`, REFUND_RULE, now);
+    if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
+    // Above the viewer's own limit for this booking (earlier refunds count): someone allowed approves it (blueprint 08).
+    const prior = await discretionaryRefundedCents(db, id);
+    if (prior + amountCents > refundLimitOf(staff.roles)) {
+      const requestId = newId('rrq');
+      await db.insert(refundRequests).values({ id: requestId, bookingId: id, amountCents, reason, note, requestedByUserId: staff.id, status: 'pending', createdAt: now });
+      await audit(db, staff, 'booking.refund_requested', 'booking', id, now, { metadata: { requestId, amountCents, reason, note } });
+      return { ok: true, code: 'sent' };
+    }
+    const ok = await refundCharge(db, payments_, { bookingId: id, amountCents, reason, idempotencyKey: keys.current, now });
+    await audit(db, staff, 'booking.refund', 'booking', id, now, { metadata: { amountCents, reason, note, ok } });
+    return ok ? { ok: true, code: 'submitted' } : { ok: false, code: 'unknown' };
   });
-  await audit(db, staff, 'booking.refund', 'booking', String(bookingId), now, { metadata: { amountCents: parsed.data.amountCents, reason: parsed.data.reason, note: parsed.data.note, ok } });
-  return ok ? { ok: true, code: 'submitted' } : { ok: false, code: 'unknown' };
 }
 
 /** The exact address, after a reason that goes to the audit log. */

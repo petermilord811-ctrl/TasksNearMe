@@ -113,6 +113,7 @@ export function createStripePayments(config: { secretKey: string; fetch?: typeof
     });
     if (input.method.customerRef) params.set('customer', input.method.customerRef);
     if (input.offSession) params.set('off_session', 'true');
+    if (input.paymentId) params.set('metadata[payment_id]', input.paymentId);
     return stripe.request('POST', '/payment_intents', params, input.idempotencyKey);
   }
 

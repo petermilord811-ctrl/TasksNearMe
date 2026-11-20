@@ -1,19 +1,21 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
+import type { ChargeResult, PaymentFailureCode } from '@/integrations/payments';
 import { routes } from '@/contracts';
 import { verifyStripeSignature } from '@/integrations/stripe-identity';
-import { finishChangeVerification } from '@/modules/bookings/changes';
+import { finishChangeCharge, finishChangeVerification } from '@/modules/bookings/changes';
 import { finishBankVerification, settle, type BookingDeps } from '@/modules/bookings/confirm';
 import { bookingChangeRequests } from '@/modules/bookings/schema';
-import { finishTipVerification } from '@/modules/bookings/tips';
+import { finishTipCharge, finishTipVerification } from '@/modules/bookings/tips';
 import { finishCounterVerification, finishRequestVerification } from '@/modules/invites/service';
 import { invites } from '@/modules/invites/schema';
 import { postJournal } from '@/modules/ledger/journal';
 import { proposalFunded } from '@/modules/rebook/service';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
 import { auditLog } from '@/platform/audit/schema';
+import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
-import { refundAcross, refundableCharges } from './refund-across';
+import { refundWholePayment } from './refund-across';
 import { payments } from './schema';
 
 /**
@@ -38,7 +40,7 @@ export function stripeEventType(payload: string): string | null {
 
 export async function handleStripePaymentWebhook(deps: BookingDeps, input: { payload: string; signature: string | null; secret: string }, now: Date): Promise<StripeWebhookOutcome> {
   if (!verifyStripeSignature({ payload: input.payload, header: input.signature, secret: input.secret, now })) return { status: 400, body: { ok: false } };
-  let event: { type?: unknown; data?: { object?: { id?: unknown } } };
+  let event: { type?: unknown; data?: { object?: { id?: unknown; metadata?: unknown; last_payment_error?: unknown } } };
   try {
     event = JSON.parse(input.payload);
   } catch {
@@ -47,15 +49,25 @@ export async function handleStripePaymentWebhook(deps: BookingDeps, input: { pay
   if (event.type === 'charge.dispute.created' || event.type === 'charge.dispute.closed') return recordChargeback(deps, event.type, (event.data?.object ?? {}) as Record<string, unknown>, now);
   const intentId = event.data?.object?.id;
   if (typeof event.type !== 'string' || !EVENTS.has(event.type) || typeof intentId !== 'string') return { status: 200, body: { ok: true, ignored: true } };
-  const [payment] = await deps.db.select().from(payments).where(and(eq(payments.providerRef, intentId), eq(payments.provider, 'stripe'))).limit(1);
+  const object = event.data?.object ?? {};
+  const [known] = await deps.db.select().from(payments).where(and(eq(payments.providerRef, intentId), eq(payments.provider, 'stripe'))).limit(1);
+  const payment = known ?? (await byPaymentId(deps.db, object.metadata, intentId));
   // A charge that went through after we gave up on it (the payment window ran out during the bank's check, or the
   // attempt was replaced): the money came in for nothing, so it goes straight back (booking reviews, lifecycle #2).
   if (payment && payment.status === 'canceled' && event.type === 'payment_intent.succeeded' && payment.bookingId) {
     const [claimed] = await deps.db.update(payments).set({ status: 'succeeded', updatedAt: now }).where(and(eq(payments.id, payment.id), eq(payments.status, 'canceled'))).returning({ id: payments.id });
-    if (claimed) {
-      const charges = (await refundableCharges(deps.db, payment.bookingId)).filter((charge) => charge.id === payment.id);
-      await refundAcross({ db: deps.db, payments: deps.payments }, payment.bookingId, charges, null, { reason: 'late_capture', key: `refund:${payment.bookingId}:late_capture:${payment.id}` }, now);
-    }
+    if (claimed) await refundWholePayment({ db: deps.db, payments: deps.payments }, payment.id, 'late_capture', now);
+    return { status: 200, body: { ok: true } };
+  }
+  // A charge whose call never answered (a network error mid-call; money review #9): Stripe's event is the answer the call
+  // didn't give, found by the payment id on the intent.
+  if (payment && payment.status === 'processing' && (event.type === 'payment_intent.succeeded' || event.type === 'payment_intent.payment_failed')) {
+    const result: ChargeResult = event.type === 'payment_intent.succeeded' ? { status: 'succeeded', providerRef: intentId } : { status: 'failed', providerRef: intentId, failureCode: failureCodeOf(object.last_payment_error) };
+    if (payment.purpose === 'booking_funding') {
+      const settled = await settle(deps, payment.payerUserId, payment.id, result, now);
+      if (settled.ok && payment.bookingId) await proposalFunded(deps.db, payment.bookingId, now);
+    } else if (payment.purpose === 'tip') await finishTipCharge(deps, payment.id, result, now);
+    else if (payment.purpose === 'change_funding') await finishChangeCharge(deps, payment.id, result, now);
     return { status: 200, body: { ok: true } };
   }
   // Not ours, or already finished (the browser got there first): nothing to do.
@@ -86,6 +98,27 @@ export async function handleStripePaymentWebhook(deps: BookingDeps, input: { pay
     await finishTipVerification(deps, payer, payment.bookingId, payment.id, 'approved', now);
   }
   return { status: 200, body: { ok: true } };
+}
+
+/**
+ * The row of a charge whose call never answered (money review #9): it has no intent id yet, but the intent carries the
+ * row's id (`metadata[payment_id]`). The intent id is attached here, once, so later events find the row as usual.
+ */
+async function byPaymentId(db: Db, metadata: unknown, intentId: string) {
+  const paymentId = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>).payment_id : undefined;
+  if (typeof paymentId !== 'string' || !paymentId) return undefined;
+  const [claimed] = await db
+    .update(payments)
+    .set({ providerRef: intentId })
+    .where(and(eq(payments.id, paymentId), eq(payments.provider, 'stripe'), isNull(payments.providerRef)))
+    .returning();
+  return claimed;
+}
+
+/** The decline on a failed intent, in our codes. */
+function failureCodeOf(error: unknown): PaymentFailureCode {
+  const decline = error && typeof error === 'object' ? (error as { decline_code?: unknown; code?: unknown }) : {};
+  return decline.decline_code === 'insufficient_funds' || decline.code === 'insufficient_funds' ? 'insufficient_funds' : 'payment_declined';
 }
 
 /** Stripe's fee for a dispute when its balance transactions don't say (blueprint 04 §8: $15). */

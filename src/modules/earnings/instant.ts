@@ -7,7 +7,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { marketDayKey } from '@/shared/format';
-import { earnings, payouts } from './schema';
+import { earnings, PAYOUT_REF_SET, payouts } from './schema';
 
 /**
  * Instant payouts (blueprint 01 / 04 P2): the helper's transferred money on their debit card in minutes,
@@ -66,9 +66,12 @@ export async function requestInstantPayout(db: Db, connect: StripeConnect | null
   if (account!.provider === 'stripe') {
     // One request a minute at most reaches Stripe; its payout events mark the earnings paid out.
     const payout = await connect!.instantPayout({ accountId: account!.providerAccountId, amountCents: offer.availableCents, idempotencyKey: `instant:${helperUserId}:${Math.floor(now.getTime() / 60_000)}` });
+    // One row per payout (money review #12): a resend in the same minute gets the same payout from Stripe, and its event
+    // may have recorded it already. Either way it's this instant payout: its method and fee go on the one row.
     await db
       .insert(payouts)
-      .values({ id: payoutId, helperUserId, amountCents: offer.availableCents, status: 'in_transit', arrivalDate: payout.arrivalDate, bankLast4: '', method: 'instant', feeCents: offer.feeCents, providerRef: payout.payoutId, createdAt: now, updatedAt: now });
+      .values({ id: payoutId, helperUserId, amountCents: offer.availableCents, status: 'in_transit', arrivalDate: payout.arrivalDate, bankLast4: '', method: 'instant', feeCents: offer.feeCents, providerRef: payout.payoutId, createdAt: now, updatedAt: now })
+      .onConflictDoUpdate({ target: payouts.providerRef, targetWhere: PAYOUT_REF_SET, set: { method: 'instant', feeCents: offer.feeCents, updatedAt: now } });
   } else {
     await db.transaction(async (tx) => {
       await tx.insert(payouts).values({ id: payoutId, helperUserId, amountCents: offer.availableCents, status: 'paid', arrivalDate: marketDayKey(now, await userTimeZone(db, helperUserId)), bankLast4: DEV_BANK_LAST4, method: 'instant', feeCents: offer.feeCents, providerRef: `devpo_${payoutId.slice(3)}`, createdAt: now, updatedAt: now });

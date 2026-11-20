@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bookings } from '@/modules/bookings/schema';
 import { notifications } from '@/modules/notifications/schema';
 import { dispatchNotifications, getNotificationsPage } from '@/modules/notifications/service';
-import { payments } from '@/modules/payments/schema';
+import { payments, refunds } from '@/modules/payments/schema';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { createDb } from '@/platform/db/connect';
@@ -38,6 +38,7 @@ afterAll(async () => {
   await db.delete(auditLog).where(and(eq(auditLog.action, 'payment.refund_case_opened'), inArray(auditLog.targetId, PAYMENTS)));
   await db.delete(notifications).where(like(notifications.sourceEventId, 'evt\\_claim\\_%'));
   await db.delete(outboxEvents).where(like(outboxEvents.id, 'evt\\_claim\\_%'));
+  await db.delete(refunds).where(inArray(refunds.paymentId, PAYMENTS));
   await db.delete(payments).where(inArray(payments.id, PAYMENTS));
   await first.pool.end();
   await second.pool.end();
@@ -49,8 +50,9 @@ describe('outbox claims', () => {
   it('two dispatchers at once handle each event once', async () => {
     await db.insert(outboxEvents).values(PAYMENTS.map((paymentId, index) => refundNeeded(`evt_claim_${index}`, paymentId)));
     await Promise.all([dispatchNotifications(first.db, now), dispatchNotifications(second.db, now), dispatchNotifications(first.db, now)]);
-    const opened = await db.select({ paymentId: auditLog.targetId }).from(auditLog).where(and(eq(auditLog.action, 'payment.refund_case_opened'), inArray(auditLog.targetId, PAYMENTS)));
-    expect(opened.map((row) => row.paymentId).sort()).toEqual(PAYMENTS);
+    // Each payment went back once (money review #8: these refund on their own now, no case).
+    const back = await db.select({ paymentId: refunds.paymentId }).from(refunds).where(inArray(refunds.paymentId, PAYMENTS));
+    expect(back.map((row) => row.paymentId).sort()).toEqual(PAYMENTS);
     const events = await db.select().from(outboxEvents).where(like(outboxEvents.id, 'evt\\_claim\\_%'));
     expect(events.every((event) => event.dispatchedAt !== null)).toBe(true);
   });

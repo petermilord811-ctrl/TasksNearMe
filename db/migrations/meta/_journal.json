@@ -470,6 +470,13 @@
       "when": 1794984872587,
       "tag": "0066_task_search_masked",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1795195380763,
+      "tag": "0067_payouts_provider_ref_unique",
+      "breakpoints": true
     }
   ]
 }

@@ -124,7 +124,7 @@ async function chargeOne(deps: BookingDeps, booking: BookingRow, now: Date): Pro
   }
   let result: Awaited<ReturnType<PaymentProvider['charge']>>;
   try {
-    result = await deps.payments.charge({ amountCents: unknown?.amountCents ?? amountCents, method: chargeMethodOf(method), idempotencyKey: attempt.idempotencyKey, description: `TasksNearMe booking ${claimed.id}`, offSession: true });
+    result = await deps.payments.charge({ amountCents: unknown?.amountCents ?? amountCents, method: chargeMethodOf(method), idempotencyKey: attempt.idempotencyKey, description: `TasksNearMe booking ${claimed.id}`, offSession: true, paymentId: attempt.paymentId });
   } catch (error) {
     // A timeout, a 5xx, a rate limit: the money may or may not have moved. The attempt stays open and the job asks
     // again shortly with the same key (before the visit's deadline).
@@ -196,7 +196,7 @@ export async function payScheduledNow(deps: BookingDeps, posterId: string, booki
   if (!('providerRef' in method)) return method;
   const attempt = await openAttempt(deps.db, booking, amountCents, method, deps.payments.name, now);
   if (!attempt) return { ok: false, code: 'not_allowed' };
-  const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey: attempt.idempotencyKey, description: `TasksNearMe booking ${booking.id}` });
+  const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey: attempt.idempotencyKey, description: `TasksNearMe booking ${booking.id}`, paymentId: attempt.paymentId });
   return settle(deps, posterId, attempt.paymentId, result, now);
 }
 

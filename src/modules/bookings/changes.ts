@@ -384,8 +384,15 @@ async function chargeDifference(deps: BookingDeps, posterId: string, row: Change
     return true;
   });
   if (!started) return { ok: false, code: 'not_allowed' };
-  const result = await deps.payments.charge({ amountCents: row.differenceCents, method: chargeMethodOf(method), idempotencyKey, description: `TasksNearMe change ${row.id}` });
+  const result = await deps.payments.charge({ amountCents: row.differenceCents, method: chargeMethodOf(method), idempotencyKey, description: `TasksNearMe change ${row.id}`, paymentId });
   return settleDifference(deps, row.id, paymentId, result, now);
+}
+
+/** A change payment whose charge call never answered, finished from Stripe's event (money review #9). */
+export async function finishChangeCharge(deps: BookingDeps, paymentId: string, result: ChargeResult, now: Date): Promise<PaymentAttemptResult> {
+  const [change] = await deps.db.select({ id: bookingChangeRequests.id }).from(bookingChangeRequests).where(eq(bookingChangeRequests.paymentId, paymentId)).limit(1);
+  if (!change) return { ok: false, code: 'not_found' };
+  return settleDifference(deps, change.id, paymentId, result, now);
 }
 
 /** A change payment whose money came in (refunds come later): it can't be settled again. */

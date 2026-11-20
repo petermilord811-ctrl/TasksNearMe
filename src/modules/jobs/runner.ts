@@ -1,6 +1,7 @@
 import { runSavedSearchDigests } from '@/modules/searches/service';
 import { stripeConnectFromEnv } from '@/integrations/payments/stripe-connect';
 import { runScheduledTransfers } from '@/modules/payments/connect';
+import { cancelStaleCharges } from '@/modules/payments/stale-charges';
 import { expireDuePosts } from '@/modules/availability/service';
 import { expireDueProposals } from '@/modules/rebook/service';
 import { sql } from 'drizzle-orm';
@@ -67,6 +68,8 @@ export const JOBS: Job[] = [
   { name: 'bookings.auto_approve', run: (db, now) => autoApproveDue(db, now) },
   // Completed bookings whose earnings or refund didn't finish (a provider error): run again (booking reviews, money #5).
   { name: 'bookings.completion_money', run: (db, now) => recordMissingCompletionMoney(db, now).then(() => undefined) },
+  // Tips and change payments whose charge never answered, given up after an hour (money review #9).
+  { name: 'payments.stale_charges', run: (db, now) => cancelStaleCharges(db, now).then(() => undefined) },
   { name: 'bookings.approval_reminders', run: (db, now) => remindApprovalsDue(db, now) },
   { name: 'bookings.start_reminders', run: (db, now) => remindUpcomingBookings(db, now) },
   { name: 'reviews.publish', run: (db, now) => publishDueReviews(db, now) },

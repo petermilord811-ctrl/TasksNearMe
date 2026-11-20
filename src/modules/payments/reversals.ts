@@ -10,6 +10,7 @@ import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { devHelpersOn } from '@/shared/dev-helpers';
+import { serialized, submissionKeys } from './double-submit';
 
 /**
  * Taking back a helper's transfer (blueprint 08 `transfer_reversals`; completion plan 5.13). Finance only, and
@@ -78,14 +79,34 @@ export async function reverseTransfer(db: Db, connect: StripeConnect | null, sta
   if (!isFinance(staff)) return { ok: false, code: 'not_allowed' };
   const { earningsId, amountCents, caseId, reason } = parsed.data;
   const [row] = await db.select().from(earnings).where(and(eq(earnings.id, earningsId), eq(earnings.bookingId, bookingId))).limit(1);
-  if (!row || !row.transferRef || !TRANSFERRED.includes(row.status)) return { ok: false, code: 'not_allowed' };
+  if (!row?.transferRef || !TRANSFERRED.includes(row.status)) return { ok: false, code: 'not_allowed' };
+  const transferred = { ...row, transferRef: row.transferRef };
   const [onBooking] = await db.select({ id: supportCases.id }).from(supportCases).where(and(eq(supportCases.id, caseId), eq(supportCases.bookingId, bookingId))).limit(1);
   if (!onBooking) return { ok: false, code: 'validation_failed', fieldErrors: { caseId: ['invalid'] } };
+  // The same form sent twice reverses once (money review #10): its key comes from what was asked, and one reversal per
+  // transfer runs at a time, so the second finds the first one's row and answers the same.
+  const keys = submissionKeys(`trr:${row.id}`, [staff.id, amountCents, caseId, reason], now);
+  return serialized(db, `transfer-reversal:${row.id}`, async (): Promise<ActionResult> => {
+    const [earlier] = await db.select({ status: transferReversals.status }).from(transferReversals).where(inArray(transferReversals.idempotencyKey, [keys.previous, keys.current])).limit(1);
+    if (earlier) return earlier.status === 'succeeded' ? { ok: true, code: 'updated' } : { ok: false, code: 'insufficient_funds' };
+    return reverseOnce(db, connect, staff, bookingId, transferred, { amountCents, caseId, reason, idempotencyKey: keys.current }, now);
+  });
+}
+
+async function reverseOnce(
+  db: Db,
+  connect: StripeConnect | null,
+  staff: StaffActor,
+  bookingId: string,
+  row: typeof earnings.$inferSelect & { transferRef: string },
+  input: { amountCents: number; caseId: string; reason: string; idempotencyKey: string },
+  now: Date,
+): Promise<ActionResult> {
+  const { amountCents, caseId, reason, idempotencyKey } = input;
   const already = (await reversedByEarnings(db, [row.id])).get(row.id) ?? 0;
   if (amountCents > row.amountCents - already) return { ok: false, code: 'validation_failed', fieldErrors: { amountCents: ['out_of_range'] } };
 
   const id = newId('trr');
-  const idempotencyKey = `trr:${id}`;
   const outcome = connect
     ? await connect.reverseTransfer({ transferId: row.transferRef, amountCents, idempotencyKey, caseId })
     : !devHelpersOn()

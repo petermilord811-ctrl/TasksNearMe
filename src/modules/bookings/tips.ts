@@ -125,7 +125,7 @@ export async function tipBooking(deps: BookingDeps, userId: string, bookingId: s
     return true;
   });
   if (!started) return { ok: false, code: 'not_allowed' };
-  const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey, description: `TasksNearMe tip ${booking.id}` });
+  const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey, description: `TasksNearMe tip ${booking.id}`, paymentId });
   return settleTip(deps, paymentId, result, now);
 }
 
@@ -151,6 +151,11 @@ export async function finishTipVerification(
       ? { status: 'succeeded', providerRef: payment.providerRef }
       : { status: 'failed', providerRef: payment.providerRef, failureCode: completed.failureCode };
   return settleTip(deps, payment.id, result, now);
+}
+
+/** A tip whose charge call never answered, finished from Stripe's event (money review #9). */
+export async function finishTipCharge(deps: BookingDeps, paymentId: string, result: ChargeResult, now: Date): Promise<PaymentAttemptResult> {
+  return settleTip(deps, paymentId, result, now);
 }
 
 /** Records the provider's answer. Success pays the helper (all of it) and tells them, in one transaction. */

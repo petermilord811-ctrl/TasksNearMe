@@ -501,7 +501,7 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
     return { bookingId: bookingId!, paymentId, idempotencyKey };
   });
   if (!hold) return { ok: false, code: 'not_allowed' };
-  const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey: hold.idempotencyKey, description: `TasksNearMe booking ${hold.bookingId}` });
+  const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey: hold.idempotencyKey, description: `TasksNearMe booking ${hold.bookingId}`, paymentId: hold.paymentId });
   return accepted(db, row.id, await settle(deps, posterId, hold.paymentId, result, now), now);
 }
 

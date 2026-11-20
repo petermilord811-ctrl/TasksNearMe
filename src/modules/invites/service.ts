@@ -293,7 +293,7 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
     if (error instanceof SlotTaken || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
     throw error;
   }
-  const result = await deps.payments.authorize({ amountCents: breakdown.posterTotalCents, method: chargeMethodOf(method), idempotencyKey: `invite:${inviteId}:${paymentId}`, description: `TasksNearMe invite ${inviteId}` });
+  const result = await deps.payments.authorize({ amountCents: breakdown.posterTotalCents, method: chargeMethodOf(method), idempotencyKey: `invite:${inviteId}:${paymentId}`, description: `TasksNearMe invite ${inviteId}`, paymentId });
   return settleRequest(db, inviteId, paymentId, result.status === 'authorized' ? { status: 'authorized', providerRef: result.providerRef } : result, now, deps.payments);
 }
 
@@ -554,7 +554,7 @@ export async function acceptCounter(deps: BookingDeps, posterId: string, inviteI
     await db.insert(payments).values({ ...method, id: paymentId, amountCents: invite.counterBreakdown.posterTotalCents, status: 'processing', idempotencyKey: `invite:${invite.id}:${paymentId}`, createdAt: now, updatedAt: now });
     // The same card, on the person's customer (Stripe needs it to use the card again).
     const customer = deps.payments.name === 'stripe' ? await customerFor(db, posterId, 'stripe') : null;
-    const result = await deps.payments.authorize({ amountCents: invite.counterBreakdown.posterTotalCents, method: chargeMethodOf({ providerRef: held.methodRef, ...(customer?.ref ? { customerRef: customer.ref } : {}) }), idempotencyKey: `invite:${invite.id}:${paymentId}`, description: `TasksNearMe invite ${invite.id}` });
+    const result = await deps.payments.authorize({ amountCents: invite.counterBreakdown.posterTotalCents, method: chargeMethodOf({ providerRef: held.methodRef, ...(customer?.ref ? { customerRef: customer.ref } : {}) }), idempotencyKey: `invite:${invite.id}:${paymentId}`, description: `TasksNearMe invite ${invite.id}`, paymentId });
     if (result.status === 'failed') {
       await db.update(payments).set({ status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
       return { ok: false, code: result.failureCode };

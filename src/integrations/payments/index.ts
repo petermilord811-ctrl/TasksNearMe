@@ -53,6 +53,11 @@ export interface PaymentRequest {
   idempotencyKey: string;
   description: string;
   offSession?: boolean;
+  /**
+   * Our `payments` row. Stripe keeps it on the intent (`metadata[payment_id]`), so a webhook can find the row of a call
+   * that never answered (a network error mid-call: the row has no intent id yet; money review #9).
+   */
+  paymentId?: string;
 }
 
 export interface PaymentProvider {

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { users } from '../accounts/schema';
 
@@ -20,6 +21,11 @@ export const earnings = pgTable(
     status: text('status').notNull(),
     /** The provider's transfer id. */
     transferRef: text('transfer_ref'),
+    /**
+     * The payment whose charge Stripe moved it from (`source_transaction`), when it was tied to one: all transfers from one
+     * charge together stay within it (money review #7). Null: it went out from the platform's balance.
+     */
+    sourcePaymentId: text('source_payment_id'),
     transferredAt: timestamp('transferred_at', { withTimezone: true }),
     payoutId: text('payout_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -45,11 +51,12 @@ export const payouts = pgTable(
     method: text('method').notNull().default('standard'),
     /** What an instant payout cost the helper. */
     feeCents: integer('fee_cents').notNull().default(0),
+    /** Stripe's payout id: one row per payout, however its events and the instant request arrive (money review #12; unique when set). */
     providerRef: text('provider_ref'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('payouts_helper_idx').on(t.helperUserId, t.createdAt)],
+  (t) => [index('payouts_helper_idx').on(t.helperUserId, t.createdAt), uniqueIndex('payouts_provider_ref_idx').on(t.providerRef).where(sql`provider_ref is not null`)],
 );
 
 /**
@@ -79,3 +86,6 @@ export const transferReversals = pgTable(
   },
   (t) => [uniqueIndex('transfer_reversals_idempotency_idx').on(t.idempotencyKey), index('transfer_reversals_earnings_idx').on(t.earningsId)],
 );
+
+/** The conflict target for `payouts_provider_ref_idx` (partial: rows not sent to Stripe have no reference). */
+export const PAYOUT_REF_SET = sql`provider_ref is not null`;

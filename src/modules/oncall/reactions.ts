@@ -1,12 +1,11 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { createEmailProvider } from '@/integrations/email';
+import { createPaymentProvider, type PaymentProvider } from '@/integrations/payments';
 import { createSmsSender } from '@/integrations/sms';
 import { CONTACT_REVERT_CASE_REASON } from '@/modules/accounts/contact-revert';
-import { payments } from '@/modules/payments/schema';
-import { supportCaseEvents, supportCases } from '@/modules/support/schema';
-import { auditLog } from '@/platform/audit/schema';
+import { openRefundCase, refundWholePayment } from '@/modules/payments/refund-across';
+import { supportCases } from '@/modules/support/schema';
 import type { Db } from '@/platform/db/connect';
-import { newId } from '@/platform/db/ids';
 import { pageOnCall, type PagerDeps } from './pager';
 
 /**
@@ -15,8 +14,8 @@ import { pageOnCall, type PagerDeps } from './pager';
  * - `support.safety_report` pages the staff on call;
  * - `support.case_opened` pages them when the case was opened as urgent (a chargeback, or a "Not you?" link used
  *   on a contact change, 5.23); safety reports page on their own event;
- * - `payment.refund_needed` (a second tip, a change paid after its terms moved on) opens a payment case for
- *   finance, once per payment.
+ * - `payment.refund_needed` (a second tip, a change paid after its terms moved on, a payment after its booking ended)
+ *   refunds that payment in full, once; finance gets a case only when that can't happen (money review #8).
  */
 
 export interface ReactionEvent {
@@ -29,7 +28,7 @@ export interface ReactionEvent {
 const text = (value: unknown) => (typeof value === 'string' && value ? value : undefined);
 const words = (value: string) => value.replaceAll('_', ' ');
 
-export async function reactForOperations(db: Db, event: ReactionEvent, now: Date, pager: Partial<PagerDeps> = {}): Promise<void> {
+export async function reactForOperations(db: Db, event: ReactionEvent, now: Date, pager: Partial<PagerDeps> = {}, payments_?: PaymentProvider | null): Promise<void> {
   const deps = (): PagerDeps => ({ db, sms: pager.sms ?? createSmsSender(db), email: pager.email ?? createEmailProvider(db), ...(pager.env ? { env: pager.env } : {}) });
   switch (event.type) {
     case 'support.safety_report': {
@@ -52,46 +51,17 @@ export async function reactForOperations(db: Db, event: ReactionEvent, now: Date
       return;
     }
     case 'payment.refund_needed': {
-      await openRefundCase(db, text(event.payload.paymentId) ?? event.aggregateId, text(event.payload.reason) ?? (text(event.payload.changeId) ? 'change_conflict' : 'other'), now);
+      const paymentId = text(event.payload.paymentId) ?? event.aggregateId;
+      const reason = text(event.payload.reason) ?? (text(event.payload.changeId) ? 'change_conflict' : 'other');
+      // Money nothing is owed for goes back on its own (money review #8): staff's refund tool spreads over a booking's
+      // charges and leaves tips out, so it can't give back one particular payment. A refusal opens its own case; a
+      // payment that can't be refunded here (no provider, or not charged as we think) gets one for a person to look at.
+      const provider = payments_ === undefined ? createPaymentProvider() : payments_;
+      const outcome = provider ? await refundWholePayment({ db, payments: provider }, paymentId, reason, now) : 'not_charged';
+      if (outcome === 'not_charged') await openRefundCase(db, paymentId, reason, now);
       return;
     }
     default:
       return;
   }
-}
-
-/** A payment that support has to refund by hand gets a case in the requests queue, once. */
-export async function openRefundCase(db: Db, paymentId: string, reason: string, now: Date): Promise<string | null> {
-  const [seen] = await db.select({ id: auditLog.id }).from(auditLog).where(and(eq(auditLog.action, 'payment.refund_case_opened'), eq(auditLog.targetId, paymentId))).limit(1);
-  if (seen) return null;
-  const [payment] = await db.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
-  if (!payment) return null;
-  const caseId = newId('case');
-  const amount = `$${(payment.amountCents / 100).toFixed(2)}`;
-  const why = reason === 'second_tip' ? 'a second tip went through for the same booking' : reason === 'change_conflict' ? 'a change was paid after the booking’s terms moved on' : words(reason);
-  await db.transaction(async (tx) => {
-    await tx.insert(supportCases).values({
-      id: caseId,
-      type: 'payment_issue',
-      status: 'open',
-      priority: 'high',
-      bookingId: payment.bookingId,
-      openedByUserId: payment.payerUserId,
-      topic: 'payment',
-      description: `A payment of ${amount} needs a refund: ${why}.`,
-      createdAt: now,
-      updatedAt: now,
-    });
-    await tx.insert(supportCaseEvents).values({
-      id: newId('cev'),
-      caseId,
-      kind: 'note',
-      authorUserId: null,
-      visibility: 'internal',
-      body: `Refund payment ${payment.id} (${amount}) from the booking's refund tool, then resolve this case. Opened automatically (${reason}).`,
-      createdAt: now,
-    });
-    await tx.insert(auditLog).values({ id: newId('aud'), at: now.toISOString(), actorId: null, actorRole: 'system', action: 'payment.refund_case_opened', targetType: 'payment', targetId: paymentId, metadata: { caseId, reason } });
-  });
-  return caseId;
 }

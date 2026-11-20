@@ -1,4 +1,4 @@
-import { and, eq, like } from 'drizzle-orm';
+import { and, eq, inArray, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { EmailMessage, EmailProvider } from '@/integrations/email';
 import type { SmsMessage, SmsSender } from '@/integrations/sms';
@@ -6,14 +6,15 @@ import { bookings } from '@/modules/bookings/schema';
 import { users } from '@/modules/accounts/schema';
 import { onCallContacts, REPORTER_PAGES_PER_DAY } from '@/modules/oncall/pager';
 import { reactForOperations } from '@/modules/oncall/reactions';
-import { payments } from '@/modules/payments/schema';
+import { payments, refunds } from '@/modules/payments/schema';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { createDb } from '@/platform/db/connect';
 
 /**
  * Completion plan 5.12 against the database: safety reports and urgent cases page the staff on call (by text and
- * email, never with personal details), and a payment that needs a refund by hand opens a case for finance, once.
+ * email, never with personal details), and a payment nothing is owed for goes back on its own (money review #8), with a
+ * case for finance, once, only when it can't.
  * Texts and emails go to stand-ins; a payment and cases made for this file.
  */
 
@@ -29,7 +30,10 @@ const event = (type: string, aggregateId: string, payload: Record<string, unknow
 
 beforeAll(async () => {
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
-  await db.insert(payments).values({ id: 'pay_oc_tip', bookingId: 'bkg_tv', purpose: 'tip', payerUserId: booking!.posterUserId, amountCents: 500, status: 'succeeded', provider: 'dev', providerRef: 'devpi_oc_tip', idempotencyKey: 'pay:oc:tip' });
+  await db.insert(payments).values([
+    { id: 'pay_oc_tip', bookingId: 'bkg_tv', purpose: 'tip', payerUserId: booking!.posterUserId, amountCents: 500, status: 'succeeded', provider: 'dev', providerRef: 'devpi_oc_tip', idempotencyKey: 'pay:oc:tip' },
+    { id: 'pay_oc_tip_by_hand', bookingId: 'bkg_tv', purpose: 'tip', payerUserId: booking!.posterUserId, amountCents: 500, status: 'succeeded', provider: 'dev', providerRef: 'devpi_oc_tip_by_hand', idempotencyKey: 'pay:oc:tip:by-hand' },
+  ]);
   await db.insert(supportCases).values([
     { id: 'case_oc_urgent', type: 'payment_issue', status: 'open', priority: 'urgent', bookingId: 'bkg_tv', openedByUserId: booking!.posterUserId, description: 'Chargeback.' },
     { id: 'case_oc_normal', type: 'request', status: 'open', priority: 'normal', openedByUserId: booking!.posterUserId, description: 'A question.' },
@@ -41,9 +45,10 @@ afterAll(async () => {
   for (const row of opened) await db.delete(supportCaseEvents).where(eq(supportCaseEvents.caseId, row.id));
   await db.delete(supportCases).where(eq(supportCases.description, 'A payment of $5.00 needs a refund: a second tip went through for the same booking.'));
   await db.delete(supportCases).where(like(supportCases.id, 'case\\_oc\\_%'));
-  await db.delete(auditLog).where(and(eq(auditLog.action, 'payment.refund_case_opened'), eq(auditLog.targetId, 'pay_oc_tip')));
+  await db.delete(auditLog).where(and(eq(auditLog.action, 'payment.refund_case_opened'), inArray(auditLog.targetId, ['pay_oc_tip', 'pay_oc_tip_by_hand'])));
   await db.delete(auditLog).where(like(auditLog.targetId, '/admin/cases/case\\_oc\\_%'));
-  await db.delete(payments).where(eq(payments.id, 'pay_oc_tip'));
+  await db.delete(refunds).where(inArray(refunds.paymentId, ['pay_oc_tip', 'pay_oc_tip_by_hand']));
+  await db.delete(payments).where(inArray(payments.id, ['pay_oc_tip', 'pay_oc_tip_by_hand']));
   await pool.end();
 });
 
@@ -111,15 +116,29 @@ describe('paging the staff on call', () => {
   });
 });
 
-describe('a payment that needs a refund by hand', () => {
-  it('opens a high-priority payment case once, with the steps for finance', async () => {
+describe('a payment nothing is owed for', () => {
+  const caseFor = (description: string) => db.select().from(supportCases).where(eq(supportCases.description, description));
+
+  it('goes back on its own, once, with no case (money review #8)', async () => {
     const refund = event('payment.refund_needed', 'pay_oc_tip', { paymentId: 'pay_oc_tip', bookingId: 'bkg_tv', reason: 'second_tip' });
     await reactForOperations(db, refund, now, pager);
     await reactForOperations(db, refund, now, pager);
-    const cases = await db.select().from(supportCases).where(eq(supportCases.description, 'A payment of $5.00 needs a refund: a second tip went through for the same booking.'));
+    const back = await db.select().from(refunds).where(eq(refunds.paymentId, 'pay_oc_tip'));
+    expect(back.map((row) => [row.amountCents, row.reason, row.status])).toEqual([[500, 'second_tip', 'succeeded']]);
+    expect((await db.select({ status: payments.status }).from(payments).where(eq(payments.id, 'pay_oc_tip')))[0]?.status).toBe('refunded');
+    expect(await db.select().from(auditLog).where(and(eq(auditLog.action, 'payment.refund_case_opened'), eq(auditLog.targetId, 'pay_oc_tip')))).toHaveLength(0);
+  });
+
+  it('opens a high-priority payment case once when it can’t go back on its own, pointing a tip to the Stripe Dashboard', async () => {
+    const refund = event('payment.refund_needed', 'pay_oc_tip_by_hand', { paymentId: 'pay_oc_tip_by_hand', bookingId: 'bkg_tv', reason: 'second_tip' });
+    // No payment provider here: a person refunds it.
+    await reactForOperations(db, refund, now, pager, null);
+    await reactForOperations(db, refund, now, pager, null);
+    const cases = await caseFor('A payment of $5.00 needs a refund: a second tip went through for the same booking.');
     expect(cases).toHaveLength(1);
     expect(cases[0]).toMatchObject({ type: 'payment_issue', priority: 'high', bookingId: 'bkg_tv', status: 'open' });
     const [note] = await db.select().from(supportCaseEvents).where(eq(supportCaseEvents.caseId, cases[0]!.id));
-    expect(note).toMatchObject({ visibility: 'internal', body: expect.stringContaining('Refund payment pay_oc_tip ($5.00)') });
+    expect(note).toMatchObject({ visibility: 'internal', body: expect.stringContaining('Refund payment pay_oc_tip_by_hand ($5.00) in the Stripe Dashboard') });
+    expect(await db.select().from(refunds).where(eq(refunds.paymentId, 'pay_oc_tip_by_hand'))).toHaveLength(0);
   });
 });
