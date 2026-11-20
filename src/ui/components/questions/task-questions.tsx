@@ -66,7 +66,10 @@ function QuestionItem({ question, data, handlers, now }: { question: TaskQuestio
   const [editing, setEditing] = useState(false);
   const { pending, run } = useSubmit();
   const poster = data.viewer.isPoster;
+  // The poster answers, edits and pins only while questions are open (sweep QA1).
+  const canAnswer = poster && !data.closed && !question.moderation;
   const onDelete: ActionHandler<{ target: 'post' | 'reply'; id: string }> = () => handlers.onDelete({ questionId: question.id });
+  const noDelete: ActionHandler<{ target: 'post' | 'reply'; id: string }> = async () => ({ ok: false, code: 'not_allowed' });
   const onModerate = handlers.onModerate;
   return <li className={cn('space-y-2.5 rounded-2xl border p-3 sm:p-4', question.pinned ? 'border-primary/30 bg-brand-soft/40' : 'border-foreground/[0.07] dark:border-white/[0.06]', question.moderation && 'border-dashed border-destructive/50')}>
     <div className="flex items-start justify-between gap-2">
@@ -87,17 +90,22 @@ function QuestionItem({ question, data, handlers, now }: { question: TaskQuestio
           onDelete={onDelete}
           {...(!question.asker.isYou ? { reportHref: routes.app.report('question', question.id) } : {})}
           {...(data.viewer.isStaff && onModerate ? { onModerate: (input) => onModerate({ questionId: question.id, action: input.action, reason: input.reason }), hidden: Boolean(question.moderation) } : {})}
+          errorMessages={{ limit_reached: t('moderation.newerOpen') }}
         />
       </div>
     </div>
     {question.moderation && <p className="text-xs font-semibold text-destructive">{community(`moderation.${question.moderation.status}`)}{question.moderation.reason && <> · {community('moderation.reason', { reason: question.moderation.reason })}</>}</p>}
     <p className="whitespace-pre-line text-[15px]/6 [overflow-wrap:anywhere]">{question.body}</p>
     {question.answer && !editing && <div className="space-y-1 rounded-xl bg-foreground/[0.03] p-3 dark:bg-white/[0.04]">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('answer.from')}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('answer.from')}</p>
+        {/* The answer is the poster's: anyone else reports it, the helper who asked included (sweep QA3). */}
+        {!poster && !question.moderation && <div className="-my-1.5 -mr-1.5"><CommunityItemActions target="reply" id={question.id} label={t('answer.menuLabel', { name: question.asker.displayName })} own={false} onDelete={noDelete} reportHref={routes.app.report('answer', question.id)} /></div>}
+      </div>
       <p className="whitespace-pre-line text-[15px]/6 [overflow-wrap:anywhere]">{question.answer.body}</p>
     </div>}
-    {!question.answer && !poster && <p className="text-xs text-muted-foreground">{t('answer.waiting')}</p>}
-    {poster && !question.moderation && (!question.answer || editing
+    {!question.answer && (!poster || data.closed) && <p className="text-xs text-muted-foreground">{t(data.closed ? 'answer.none' : 'answer.waiting')}</p>}
+    {canAnswer && (!question.answer || editing
       ? <TextForm label={t('answer.label')} placeholder={t('answer.placeholder')} max={TASK_ANSWER_MAX} submit={t('answer.submit')} submitting={t('answer.submitting')} success={t('answer.sent')} initial={question.answer?.body ?? ''} onSubmit={async (body) => {
           const result = await handlers.onAnswer({ questionId: question.id, body });
           if (result.ok) setEditing(false);
@@ -123,6 +131,7 @@ export function TaskQuestions({ data, handlers, now, wide = false }: { data: Tas
     <header className="space-y-1">
       <h2 id={`questions-${data.taskId}`} className="flex items-center gap-2 text-lg font-semibold"><CircleHelp aria-hidden="true" className="size-5 text-primary" />{t('title')} <span className="text-sm font-normal text-muted-foreground tabular-nums">{t('count', { count: data.questions.length })}</span></h2>
       <p className="text-sm text-muted-foreground">{t('intro')}</p>
+      {data.closed && data.viewer.isPoster && <p className="text-sm text-muted-foreground">{t('closedPoster')}</p>}
     </header>
     {data.questions.length === 0
       ? <p className="text-sm text-muted-foreground">{t(data.viewer.isPoster ? 'posterEmpty' : 'empty')}</p>

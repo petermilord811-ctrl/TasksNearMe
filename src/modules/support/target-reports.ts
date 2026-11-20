@@ -16,9 +16,10 @@ import { supportCases } from './schema';
 import { markCaseRead } from './service';
 
 /**
- * Reports from pages (backlog B-059): a task, a helper's profile, or a review becomes a support case with
- * the target attached (`report_content` for tasks and reviews, `report_user` for profiles). Nobody reports
- * their own; reports share the conversation reports' limit (10 a day).
+ * Reports from pages (backlog B-059): a task, a helper's profile, a review, a community post or reply, or a task
+ * question or its answer becomes a support case with the target attached (`report_content`, or `report_user` for
+ * profiles), about the person who wrote it. Nobody reports their own; reports share the conversation reports' limit
+ * (10 a day).
  */
 
 const REPORT_RULE = { limit: 10, windowSeconds: 24 * 60 * 60 };
@@ -27,7 +28,7 @@ const HIGH_PRIORITY: ReadonlySet<ReportReason> = new Set(['harassment', 'scam_or
 interface Target {
   page: ReportPageData;
   subjectUserId: string;
-  context: { taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string };
+  context: { taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string; answer?: boolean };
 }
 
 async function targetOf(db: Db, userId: string, kind: string, id: string): Promise<Target | null> {
@@ -65,6 +66,19 @@ async function targetOf(db: Db, userId: string, kind: string, id: string): Promi
     if (!question || question.status !== 'visible' || question.askerUserId === userId) return null;
     const back = question.posterUserId === userId ? routes.app.task(question.taskId) : routes.app.findWorkTask(question.taskId);
     return { page: { target: { kind: target, id: question.id, name: question.asker }, backHref: back }, subjectUserId: question.askerUserId, context: { taskId: question.taskId, questionId: question.id } };
+  }
+  if (target === 'answer') {
+    // The poster's answer to a question, by the question's id: the case is about the poster who wrote it, and the
+    // helper who asked can report it too (sweep QA3). Never one's own answer.
+    const [question] = await db
+      .select({ id: taskQuestions.id, taskId: taskQuestions.taskId, status: taskQuestions.status, answerBody: taskQuestions.answerBody, posterUserId: tasks.posterUserId, poster: users.name })
+      .from(taskQuestions)
+      .innerJoin(tasks, eq(tasks.id, taskQuestions.taskId))
+      .innerJoin(users, eq(users.id, tasks.posterUserId))
+      .where(eq(taskQuestions.id, id))
+      .limit(1);
+    if (!question || question.status !== 'visible' || !question.answerBody || question.posterUserId === userId) return null;
+    return { page: { target: { kind: target, id: question.id, name: question.poster }, backHref: routes.app.findWorkTask(question.taskId) }, subjectUserId: question.posterUserId, context: { taskId: question.taskId, questionId: question.id, answer: true } };
   }
   if (target === 'reply') {
     const [reply] = await db

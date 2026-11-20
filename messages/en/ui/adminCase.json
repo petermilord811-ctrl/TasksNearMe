@@ -118,7 +118,12 @@
       "assignment": "Assignment changed",
       "resolution": "Resolution recorded",
       "reviewHidden": "Review hidden",
-      "reviewShown": "Review shown again"
+      "reviewShown": "Review shown again",
+      "question": {
+        "hidden": "Question hidden",
+        "removed": "Question removed",
+        "restored": "Question restored"
+      }
     },
     "assignedTo": "Assigned to {name}",
     "unassigned": "Unassigned",
@@ -193,7 +198,10 @@
     "breadcrumb": "Case details",
     "review-report": "Review report: the reported review",
     "review-hidden": "Review report: review hidden",
-    "review-agent": "Review report: an agent can't hide it"
+    "review-agent": "Review report: an agent can't hide it",
+    "question-answer": "Case · a reported answer",
+    "question-hidden": "Case · a reported question, hidden",
+    "question-restore-limit": "Case · restoring a question refused"
   },
   "review": {
     "title": "Reported review",
@@ -240,5 +248,48 @@
     "send": "Send email",
     "sending": "Sending…",
     "sent": "Email sent."
+  },
+  "question": {
+    "title": {
+      "question": "Reported question",
+      "answer": "Reported answer"
+    },
+    "onTask": "On the task",
+    "askedBy": "Asked by {name}",
+    "answeredBy": "Answered by {name}",
+    "pinned": "Pinned",
+    "reported": "This was reported",
+    "unanswered": "Not answered.",
+    "statuses": {
+      "visible": "Members can see it",
+      "hidden": "Hidden",
+      "removed": "Removed"
+    },
+    "reason": "Why:",
+    "takenBack": "Its helper took it back.",
+    "whatHideDoes": "Hiding or removing it takes the question and its answer off the task for members. Staff still see them, marked.",
+    "whatRestoreDoes": "Restoring it puts the question and its answer back on the task for members.",
+    "hide": "Hide",
+    "remove": "Remove",
+    "restore": "Restore",
+    "dialog": {
+      "hideTitle": "Hide this question?",
+      "hideDescription": "The question and its answer leave the task for members. The reason goes in the audit log and on this case.",
+      "removeTitle": "Remove this question?",
+      "removeDescription": "Like hiding, for content that breaks the rules outright. The reason goes in the audit log and on this case.",
+      "restoreTitle": "Restore this question?",
+      "restoreDescription": "The question and its answer go back on the task for members. The reason goes in the audit log and on this case.",
+      "reason": "Reason",
+      "hint": "5 to 500 characters, for example which guideline it breaks.",
+      "required": "Enter a reason of at least 5 characters.",
+      "tooLong": "Keep the reason under 500 characters.",
+      "notAllowed": "This case isn't about a question.",
+      "newerOpen": "This helper has a newer open question on the task. Hide or remove that one first, then restore this one.",
+      "cancel": "Cancel",
+      "pending": "Saving…",
+      "hideSubmit": "Hide question",
+      "removeSubmit": "Remove question",
+      "restoreSubmit": "Restore question"
+    }
   }
 }

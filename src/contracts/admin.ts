@@ -8,6 +8,7 @@ import type { Cents, ISODateTime, Photo, StaffRole } from './common';
 import type { AppLocale } from './locale';
 import type { ExactAddress } from './location';
 import type { PriceBreakdown } from './money';
+import type { CommunityModerationInput } from './community';
 import type { PersonSummary } from './people';
 import type { PublicReviewView } from './profiles';
 import { CASE_RESOLUTIONS, CASE_STATUSES } from './status';
@@ -118,8 +119,12 @@ export type AdminCaseActor = { kind: 'member'; person: PersonSummary } | { kind:
 
 export interface AdminCaseEventView {
   id: string;
-  /** `message`: between support and one party. `note`: staff only. `review`: the reported review was hidden or shown (staff only; `body` is the reason). */
-  kind: 'message' | 'note' | 'status' | 'assignment' | 'resolution' | 'review';
+  /**
+   * `message`: between support and one party. `note`: staff only. `review`: the reported review was hidden or shown
+   * (staff only; `body` is the reason). `question`: the reported question was hidden, removed or restored (staff only;
+   * `body` is the reason).
+   */
+  kind: 'message' | 'note' | 'status' | 'assignment' | 'resolution' | 'review' | 'question';
   actor: AdminCaseActor;
   /** Messages: whose conversation with support (an `AdminCaseParty` person id). */
   partyId?: string;
@@ -135,6 +140,8 @@ export interface AdminCaseEventView {
   resolution?: CaseResolution;
   /** `review` events: what staff did with the reported review. */
   reviewAction?: 'hidden' | 'shown';
+  /** `question` events: what staff did with the reported question (and its answer). */
+  questionAction?: 'hidden' | 'removed' | 'restored';
   at: ISODateTime;
 }
 
@@ -168,6 +175,8 @@ export interface AdminCasePageData {
   context?: { kind: 'conversation'; title: string };
   /** A review report's review: public content, so it shows without a reason. */
   review?: AdminCaseReview;
+  /** A reported question on a task, or its answer (sweep QA2): what members read, so it shows without a reason. */
+  question?: AdminCaseQuestion;
   /** What the viewer can do now (pure domain rules; the UI never decides). */
   actions: AdminCaseActionId[];
   /** Where `set_status` can move the case. */
@@ -196,6 +205,32 @@ export interface AdminCaseReview {
   /** Why staff hid it (staff only). */
   hiddenReason?: string;
   /** Hide it from public pages, or show it again: support leads, trust & safety and admins (audited). */
+  canModerate: boolean;
+}
+
+/**
+ * The question a report is about (sweep QA2), or its answer (QA3: the poster wrote it), as written, with the task it's on.
+ * Hiding or removing takes the question and its answer off the task for members (staff still see it, marked);
+ * restoring puts them back.
+ */
+export interface AdminCaseQuestion {
+  /** What the report was about: the helper's question, or the poster's answer to it. */
+  reported: 'question' | 'answer';
+  task: { id: string; title: string };
+  question: {
+    id: string;
+    body: string;
+    asker: { displayName: string; initials: string };
+    askedAt: ISODateTime;
+    /** The poster's answer, with who wrote it. */
+    answer?: { body: string; answeredAt: ISODateTime; poster: { displayName: string } };
+    pinned: boolean;
+  };
+  /** `removed` with the reason `author`: its helper took it back. */
+  status: 'visible' | 'hidden' | 'removed';
+  /** Why staff hid or removed it (staff only). */
+  reason?: string;
+  /** Hide, remove or restore it: every staff role, as on the task pages (audited, and noted on the case). */
   canModerate: boolean;
 }
 
@@ -301,6 +336,12 @@ export interface AdminCaseHandlers {
   onPreviewResolution: QueryHandler<CaseResolutionInput, ResolutionPreviewResult>;
   /** Hide or show the reported review (`review.canModerate`). ok `updated`; `not_allowed` otherwise. */
   onModerateReview: ActionHandler<ReviewModerationInput>;
+  /**
+   * Hide, remove or restore the reported question (`question.canModerate`; a reason of 5 to 500 characters). ok
+   * `updated`. Errors: `validation_failed`, `not_allowed` (not a question's case), `not_found`, `limit_reached`
+   * (restoring while its helper has a newer open question on the task: one open question each).
+   */
+  onModerateQuestion: ActionHandler<CommunityModerationInput>;
 }
 
 // ---- The staff booking page (UI-019) -------------------------------------------------------------------

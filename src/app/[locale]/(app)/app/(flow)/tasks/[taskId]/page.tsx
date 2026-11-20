@@ -41,7 +41,7 @@ async function ManageTask({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskI
     ? await Promise.all([getTaskOwnerView(deps, viewer.user.id, taskId, now), invitesForTask(db, bookingDeps()?.payments ?? null, viewer.user.id, taskId, now)])
     : [null, []];
   if (!data) notFound();
-  const [questions, discussion] = await Promise.all([getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId), communityPostOfTask(db, taskId)]);
+  const [questions, discussion] = await Promise.all([getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId, now), communityPostOfTask(db, taskId)]);
   return (
     <div className="space-y-6">
     <TaskManageScreen

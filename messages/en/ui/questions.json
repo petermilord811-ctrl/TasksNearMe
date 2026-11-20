@@ -5,7 +5,7 @@
   "ask": {
     "label": "Ask a question",
     "placeholder": "What do you need to know to make a good offer?",
-    "hint": "One open question at a time. No phone numbers or emails: they're hidden until a booking.",
+    "hint": "One open question at a time. Phone numbers and emails are hidden here.",
     "submit": "Ask",
     "submitting": "Sending…",
     "sent": "Question sent"
@@ -24,7 +24,9 @@
     "edit": "Edit answer",
     "submitting": "Sending…",
     "sent": "Answer posted",
-    "waiting": "Waiting for an answer"
+    "waiting": "Waiting for an answer",
+    "none": "Not answered",
+    "menuLabel": "The answer to {name}'s question"
   },
   "pinned": "Pinned",
   "pin": "Pin for everyone",
@@ -35,6 +37,12 @@
     "group": "Questions on a task",
     "helper": "Questions · a helper asks",
     "poster": "Questions · the poster answers",
-    "asked": "Questions · waiting for the answer"
+    "asked": "Questions · waiting for the answer",
+    "closedPoster": "Questions · closed, the poster's view",
+    "closedHelper": "Questions · closed, a helper's view"
+  },
+  "closedPoster": "Questions are closed: this task isn't taking offers any more. Helpers can still read your answers.",
+  "moderation": {
+    "newerOpen": "This helper has a newer open question on this task. Hide or remove that one first, then restore this one."
   }
 }

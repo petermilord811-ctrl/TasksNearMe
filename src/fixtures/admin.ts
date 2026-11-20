@@ -252,6 +252,68 @@ export const reviewHiddenAdminCaseData: AdminCasePageData = {
 /** An agent sees the review but can't hide it. */
 export const reviewReportAgentCaseData: AdminCasePageData = { ...reviewReportAdminCaseData, review: { ...reviewReportAdminCaseData.review!, canModerate: false } };
 
+/**
+ * Jordan reported Ben's answer to his own question on the leaf cleanup (sweep QA2, QA3): the case is about Ben, who
+ * wrote it, and shows the question and the answer with hide, remove and restore.
+ */
+export const answerReportAdminCaseData: AdminCasePageData = {
+  case: {
+    ...reportRow,
+    id: 'case_answer_report',
+    type: 'report_content',
+    priority: 'high',
+    subject: 'Ben W.',
+    openedBy: person(jordan),
+    description: 'The answer asks every helper to pay a $20 "key deposit" by Zelle before they come.',
+    photos: [],
+    reason: 'off_platform_payment',
+  },
+  parties: [
+    { person: person(jordan), role: 'opener', canMessage: true },
+    { person: ben, role: 'reported', canMessage: false },
+  ],
+  taskId: 'tsk_yard',
+  events: [{ id: 'aev_qa1', kind: 'status', actor: { kind: 'system' }, status: 'open', at: '2026-11-23T09:30:00.000Z' }],
+  question: {
+    reported: 'answer',
+    task: { id: 'tsk_yard', title: 'Rake and bag front-yard leaves' },
+    question: {
+      id: 'tqn_gate',
+      body: 'Is the side gate unlocked, or should I knock when I arrive?',
+      asker: { displayName: 'Jordan T.', initials: 'JT' },
+      askedAt: '2026-11-22T13:30:00.000Z',
+      answer: { body: 'Send a $20 key deposit by Zelle first and I will text you the gate code.', answeredAt: '2026-11-22T14:10:00.000Z', poster: { displayName: 'Ben W.' } },
+      pinned: true,
+    },
+    status: 'visible',
+    canModerate: true,
+  },
+  actions: ['assign_to_me', 'set_status', 'reply', 'add_note', 'resolve'],
+  nextStatuses: ['awaiting_poster', 'awaiting_support', 'escalated'],
+  resolutions: ['no_action', 'account_action'],
+};
+
+/** Ben reported Jordan's question; staff hid it (with its answer), and the timeline has the step. */
+export const questionHiddenAdminCaseData: AdminCasePageData = {
+  ...answerReportAdminCaseData,
+  case: { ...answerReportAdminCaseData.case, id: 'case_question_report', subject: 'Jordan T.', openedBy: ben, description: 'He asks for my phone number in every question.', reason: 'inappropriate_content', priority: 'normal' },
+  parties: [
+    { person: ben, role: 'opener', canMessage: true },
+    { person: person(jordan), role: 'reported', canMessage: false },
+  ],
+  question: {
+    ...answerReportAdminCaseData.question!,
+    reported: 'question',
+    question: { id: 'tqn_rakes', body: 'Do you have rakes? Text me the details at ••• ••• 0199.', asker: { displayName: 'Jordan T.', initials: 'JT' }, askedAt: '2026-11-22T14:40:00.000Z', pinned: false },
+    status: 'hidden',
+    reason: 'Asks for contact details: community guidelines §3.',
+  },
+  events: [
+    { id: 'aev_qh1', kind: 'status', actor: { kind: 'system' }, status: 'open', at: '2026-11-23T09:30:00.000Z' },
+    { id: 'aev_qh2', kind: 'question', questionAction: 'hidden', actor: { kind: 'staff', staff: morganStaffSummary }, body: 'Asks for contact details: community guidelines §3.', at: '2026-11-23T10:05:00.000Z' },
+  ],
+};
+
 /** A resolved request: it can be closed or reopened; notes still work. */
 export const resolvedAdminCaseData: AdminCasePageData = {
   case: {
@@ -326,6 +388,7 @@ export const fakeAdminCaseHandlers: AdminCaseHandlers = {
   onRevealConversation: () => wait({ ok: true, conversation: reportedConversation }),
   onPreviewResolution: () => wait({ ok: true, preview: settleAt45Preview }),
   onModerateReview: () => wait({ ok: true, code: 'updated' }),
+  onModerateQuestion: () => wait({ ok: true, code: 'updated' }),
 };
 
 // ---- Money resolutions and the staff booking page (UI-019) --------------------------------------------

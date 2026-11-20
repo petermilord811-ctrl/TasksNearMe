@@ -32,6 +32,12 @@ export interface TaskQuestionsData {
   taskId: string;
   /** Pinned answers first, then the newest. */
   questions: TaskQuestionView[];
+  /**
+   * Questions are closed, on the offers' rule (sweep QA1, QA5): the task was booked, canceled or ended, its window has
+   * started (offers close then), or its poster can't use their account. Nobody asks, answers, edits or pins; the
+   * questions stay readable.
+   */
+  closed: boolean;
   viewer: {
     /** The task's poster: answers and pins. */
     isPoster: boolean;
@@ -54,10 +60,14 @@ export type TaskAnswerInput = z.input<typeof taskAnswerInputSchema>;
 
 /**
  * - `onAsk`: ok `sent`. Errors: `validation_failed`, `not_allowed` (see `askBlocked`), `rate_limited`.
- * - `onAnswer` (the poster): ok `sent`. Errors: `validation_failed`, `not_allowed`.
- * - `onPin` (the poster): ok `updated`.
+ * - `onAnswer` (the poster, while not `closed`): ok `sent`. Errors: `validation_failed`, `not_allowed` (closed meanwhile).
+ * - `onPin` (the poster, while not `closed`): ok `updated`. Errors: `not_allowed` (closed meanwhile).
  * - `onDelete`: the asker takes back an unanswered question. ok `updated`.
- * - `onModerate`: staff only. ok `updated`.
+ * - `onModerate`: staff only. ok `updated`. Errors: `limit_reached` on `restore` when the helper has a newer open
+ *   question on the task (one open question each): hide or remove that one first.
+ *
+ * Reports: a question by someone else links `routes.app.report('question', id)`; an answer, for anyone but the poster
+ * who wrote it (the asker included), links `routes.app.report('answer', id)` with the question's id (sweep QA3).
  */
 export interface TaskQuestionHandlers {
   onAsk: ActionHandler<TaskQuestionInput>;

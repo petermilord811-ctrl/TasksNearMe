@@ -1,6 +1,6 @@
 import type { AppShellHandlers, PreviewEntry, TaskQuestionHandlers, TaskQuestionsData } from '@/contracts';
 import { routes } from '@/contracts/routes';
-import { fakeHandler, jordanShell, mayaShell, taskQuestionsAskedData, taskQuestionsHelperData, taskQuestionsPosterData } from '@/fixtures';
+import { fakeHandler, jordanShell, mayaShell, taskQuestionsAskedData, taskQuestionsClosedHelperData, taskQuestionsClosedPosterData, taskQuestionsHelperData, taskQuestionsPosterData } from '@/fixtures';
 import { TaskQuestions } from '@/ui/components/questions/task-questions';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/questions.json';
@@ -26,4 +26,6 @@ export const questionPreviews: PreviewEntry[] = [
   preview('helper', p.helper, taskQuestionsHelperData),
   preview('poster', p.poster, taskQuestionsPosterData, true),
   preview('asked', p.asked, taskQuestionsAskedData),
+  preview('closed-poster', p.closedPoster, taskQuestionsClosedPosterData, true),
+  preview('closed-helper', p.closedHelper, taskQuestionsClosedHelperData),
 ];

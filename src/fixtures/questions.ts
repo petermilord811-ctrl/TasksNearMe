@@ -19,14 +19,29 @@ const open: TaskQuestionView = {
 };
 
 /** A helper who can ask. */
-export const taskQuestionsHelperData: TaskQuestionsData = { taskId: 'tsk_yard', questions: [answered, open], viewer: { isPoster: false, canAsk: true, isStaff: false } };
+export const taskQuestionsHelperData: TaskQuestionsData = { taskId: 'tsk_yard', questions: [answered, open], closed: false, viewer: { isPoster: false, canAsk: true, isStaff: false } };
 
 /** The poster: answer the open one, pin or edit the answered one. */
-export const taskQuestionsPosterData: TaskQuestionsData = { taskId: 'tsk_yard', questions: [answered, open], viewer: { isPoster: true, canAsk: false, askBlocked: 'poster', isStaff: false } };
+export const taskQuestionsPosterData: TaskQuestionsData = { taskId: 'tsk_yard', questions: [answered, open], closed: false, viewer: { isPoster: true, canAsk: false, askBlocked: 'poster', isStaff: false } };
 
 /** The helper asked and waits for the answer. */
 export const taskQuestionsAskedData: TaskQuestionsData = {
   taskId: 'tsk_yard',
   questions: [answered, { ...open, asker: { displayName: 'Jordan T.', initials: 'JT', isYou: true } }],
+  closed: false,
   viewer: { isPoster: false, canAsk: false, askBlocked: 'already_asked', isStaff: false },
+};
+
+/**
+ * Closed (sweep QA1, QA5): the task was booked, or its window started. The poster reads, with no answer form, edit or
+ * pin; the open question stays unanswered.
+ */
+export const taskQuestionsClosedPosterData: TaskQuestionsData = { taskId: 'tsk_yard', questions: [answered, open], closed: true, viewer: { isPoster: true, canAsk: false, askBlocked: 'poster', isStaff: false } };
+
+/** Closed, for the helper who asked the answered question: they can still report the answer (sweep QA3). */
+export const taskQuestionsClosedHelperData: TaskQuestionsData = {
+  taskId: 'tsk_yard',
+  questions: [{ ...answered, asker: { displayName: 'Lee M.', initials: 'LM', isYou: true } }, open],
+  closed: true,
+  viewer: { isPoster: false, canAsk: false, askBlocked: 'closed', isStaff: false },
 };

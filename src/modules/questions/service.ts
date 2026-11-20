@@ -21,6 +21,7 @@ import { blockedPeopleOf, isBlockedBetween } from '@/modules/trust/blocks';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
+import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
@@ -37,15 +38,33 @@ export interface QuestionViewer {
 }
 
 const ASK_RULE = { limit: 10, windowSeconds: 24 * 60 * 60 };
+/** A poster who can use their account (offers/helper.ts reads the same). */
+const POSTER_ACTIVE = new Set(['active', 'restricted']);
+
+type QuestionTask = { id: string; posterUserId: string; status: string; windowStart: Date; posterStatus: string };
 
 async function taskOf(db: Db, taskId: string) {
-  const [task] = await db.select({ id: tasks.id, posterUserId: tasks.posterUserId, status: tasks.status, hiddenAt: tasks.hiddenAt, title: tasks.title }).from(tasks).where(eq(tasks.id, String(taskId))).limit(1);
+  const [task] = await db
+    .select({ id: tasks.id, posterUserId: tasks.posterUserId, status: tasks.status, hiddenAt: tasks.hiddenAt, title: tasks.title, windowStart: tasks.windowStart, posterStatus: users.status })
+    .from(tasks)
+    .innerJoin(users, eq(users.id, tasks.posterUserId))
+    .where(eq(tasks.id, String(taskId)))
+    .limit(1);
   return task && task.status !== 'draft' && !task.hiddenAt ? task : null;
 }
 
-async function askBlockedFor(db: Db, viewerId: string, task: { id: string; posterUserId: string; status: string }): Promise<AskBlockedReason | undefined> {
+/**
+ * Questions close on the offers' rule (offers/helper-domain.ts `offerBlockedReason`, sweep QA1 and QA5): once the task
+ * isn't open (booked, canceled, expired), once its window has started (offers expire then, PT1), or while its poster
+ * can't use their account. Then nobody asks, answers or pins.
+ */
+export function questionsClosed(task: Pick<QuestionTask, 'status' | 'windowStart' | 'posterStatus'>, now: Date): boolean {
+  return task.status !== 'open' || task.windowStart <= now || !POSTER_ACTIVE.has(task.posterStatus);
+}
+
+async function askBlockedFor(db: Db, viewerId: string, task: QuestionTask, now: Date): Promise<AskBlockedReason | undefined> {
   if (task.posterUserId === viewerId) return 'poster';
-  if (task.status !== 'open') return 'closed';
+  if (questionsClosed(task, now)) return 'closed';
   const [profile] = await db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, viewerId)).limit(1);
   if (profile?.status !== 'active') return 'not_helper';
   const [open] = await db
@@ -58,12 +77,13 @@ async function askBlockedFor(db: Db, viewerId: string, task: { id: string; poste
   return undefined;
 }
 
-export async function getTaskQuestions(db: Db, viewer: QuestionViewer, taskId: string): Promise<TaskQuestionsData | null> {
+export async function getTaskQuestions(db: Db, viewer: QuestionViewer, taskId: string, now: Date): Promise<TaskQuestionsData | null> {
   const task = await taskOf(db, taskId);
   if (!task) return null;
+  const closed = questionsClosed(task, now);
   const blocked = await blockedPeopleOf(db, viewer.id);
   // Someone the poster blocked (or who blocked them) sees no questions on their tasks.
-  if (blocked.includes(task.posterUserId)) return { taskId: task.id, questions: [], viewer: { isPoster: false, canAsk: false, askBlocked: 'closed', isStaff: viewer.staff !== null } };
+  if (blocked.includes(task.posterUserId)) return { taskId: task.id, questions: [], closed, viewer: { isPoster: false, canAsk: false, askBlocked: 'closed', isStaff: viewer.staff !== null } };
   const conditions = [eq(taskQuestions.taskId, task.id)];
   if (!viewer.staff) conditions.push(eq(taskQuestions.status, 'visible'));
   if (blocked.length > 0) conditions.push(notInArray(taskQuestions.askerUserId, blocked));
@@ -74,7 +94,7 @@ export async function getTaskQuestions(db: Db, viewer: QuestionViewer, taskId: s
     .where(and(...conditions))
     .orderBy(desc(taskQuestions.pinned), desc(taskQuestions.createdAt))
     .limit(100);
-  const askBlocked = await askBlockedFor(db, viewer.id, task);
+  const askBlocked = await askBlockedFor(db, viewer.id, task, now);
   const questions: TaskQuestionView[] = rows.map(({ question, name }) => ({
     id: question.id,
     asker: { displayName: name || '—', initials: initialsOf(name || '?'), isYou: question.askerUserId === viewer.id },
@@ -84,7 +104,7 @@ export async function getTaskQuestions(db: Db, viewer: QuestionViewer, taskId: s
     createdAt: question.createdAt.toISOString(),
     ...(viewer.staff && question.status !== 'visible' ? { moderation: { status: question.status as 'hidden' | 'removed', ...(question.moderationReason ? { reason: question.moderationReason } : {}) } } : {}),
   }));
-  return { taskId: task.id, questions, viewer: { isPoster: task.posterUserId === viewer.id, canAsk: !askBlocked, ...(askBlocked ? { askBlocked } : {}), isStaff: viewer.staff !== null } };
+  return { taskId: task.id, questions, closed, viewer: { isPoster: task.posterUserId === viewer.id, canAsk: !askBlocked, ...(askBlocked ? { askBlocked } : {}), isStaff: viewer.staff !== null } };
 }
 
 export async function askTaskQuestion(db: Db, viewer: QuestionViewer, taskId: string, input: TaskQuestionInput, now: Date): Promise<ActionResult> {
@@ -92,7 +112,7 @@ export async function askTaskQuestion(db: Db, viewer: QuestionViewer, taskId: st
   if (!parsed.success) return validationFailed(parsed.error);
   const task = await taskOf(db, taskId);
   if (!task) return { ok: false, code: 'not_found' };
-  if (await askBlockedFor(db, viewer.id, task)) return { ok: false, code: 'not_allowed' };
+  if (await askBlockedFor(db, viewer.id, task, now)) return { ok: false, code: 'not_allowed' };
   const limited = await consumeRateLimit(db, `question:${viewer.id}`, ASK_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const id = newId('tqn');
@@ -114,7 +134,7 @@ export async function answerTaskQuestion(db: Db, viewer: QuestionViewer, taskId:
   if (!parsed.success) return validationFailed(parsed.error);
   const task = await taskOf(db, taskId);
   if (!task) return { ok: false, code: 'not_found' };
-  if (task.posterUserId !== viewer.id || task.status !== 'open') return { ok: false, code: 'not_allowed' };
+  if (task.posterUserId !== viewer.id || questionsClosed(task, now)) return { ok: false, code: 'not_allowed' };
   const [question] = await db.select().from(taskQuestions).where(and(eq(taskQuestions.id, parsed.data.questionId), eq(taskQuestions.taskId, task.id), eq(taskQuestions.status, 'visible'))).limit(1);
   if (!question) return { ok: false, code: 'not_found' };
   if (await isBlockedBetween(db, viewer.id, question.askerUserId)) return { ok: false, code: 'not_allowed' };
@@ -131,7 +151,8 @@ export async function answerTaskQuestion(db: Db, viewer: QuestionViewer, taskId:
 export async function pinTaskQuestion(db: Db, viewer: QuestionViewer, taskId: string, questionId: string, pinned: boolean, now: Date): Promise<ActionResult> {
   const task = await taskOf(db, taskId);
   if (!task) return { ok: false, code: 'not_found' };
-  if (task.posterUserId !== viewer.id) return { ok: false, code: 'not_allowed' };
+  // Pinning is for helpers who still can offer: closed with the answers (sweep QA1).
+  if (task.posterUserId !== viewer.id || questionsClosed(task, now)) return { ok: false, code: 'not_allowed' };
   const updated = await db
     .update(taskQuestions)
     .set({ pinned: Boolean(pinned), updatedAt: now })
@@ -150,16 +171,44 @@ export async function deleteTaskQuestion(db: Db, viewer: QuestionViewer, questio
   return updated.length > 0 ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
 }
 
-export async function moderateTaskQuestion(db: Db, staff: StaffActor, questionId: string, input: { action: 'hide' | 'remove' | 'restore'; reason: string }, now: Date): Promise<ActionResult> {
+/** What a staff decision changed on a question, for whoever records it elsewhere too (its report's case). */
+export interface QuestionModeration {
+  questionId: string;
+  action: 'hide' | 'remove' | 'restore';
+  reason: string;
+  from: string;
+  to: 'visible' | 'hidden' | 'removed';
+}
+
+/**
+ * Staff hide, remove or restore a question (with its answer), audited. `alsoInTransaction` records the decision
+ * somewhere else in the same transaction (a report's case, sweep QA2).
+ */
+export async function moderateTaskQuestion(
+  db: Db,
+  staff: StaffActor,
+  questionId: string,
+  input: { action: 'hide' | 'remove' | 'restore'; reason: string },
+  now: Date,
+  alsoInTransaction?: (tx: Pick<Db, 'insert' | 'update'>, change: QuestionModeration) => Promise<void>,
+): Promise<ActionResult> {
   const parsed = communityModerationInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const status = parsed.data.action === 'restore' ? 'visible' : parsed.data.action === 'hide' ? 'hidden' : 'removed';
   const [question] = await db.select({ id: taskQuestions.id, status: taskQuestions.status }).from(taskQuestions).where(eq(taskQuestions.id, String(questionId))).limit(1);
   if (!question) return { ok: false, code: 'not_found' };
-  await db.transaction(async (tx) => {
-    await tx.update(taskQuestions).set({ status, moderationReason: status === 'visible' ? null : parsed.data.reason, moderatedByUserId: staff.id, moderatedAt: now, updatedAt: now }).where(eq(taskQuestions.id, question.id));
-    await tx.insert(auditLog).values({ id: newId('aud'), actorId: staff.id, actorRole: auditRoleOf(staff.roles), action: `question.${parsed.data.action}`, targetType: 'task_question', targetId: question.id, reason: parsed.data.reason, metadata: { from: question.status, to: status } });
-  });
+  try {
+    await db.transaction(async (tx) => {
+      await tx.update(taskQuestions).set({ status, moderationReason: status === 'visible' ? null : parsed.data.reason, moderatedByUserId: staff.id, moderatedAt: now, updatedAt: now }).where(eq(taskQuestions.id, question.id));
+      await tx.insert(auditLog).values({ id: newId('aud'), actorId: staff.id, actorRole: auditRoleOf(staff.roles), action: `question.${parsed.data.action}`, targetType: 'task_question', targetId: question.id, reason: parsed.data.reason, metadata: { from: question.status, to: status } });
+      if (alsoInTransaction) await alsoInTransaction(tx, { questionId: question.id, action: parsed.data.action, reason: parsed.data.reason, from: question.status, to: status });
+    });
+  } catch (error) {
+    // Restoring an unanswered question while its helper has a newer open one on the task: one open question each
+    // (the partial unique index). Say so instead of an unknown error (sweep QA4).
+    if (isUniqueViolation(error)) return { ok: false, code: 'limit_reached' };
+    throw error;
+  }
   return { ok: true, code: 'updated' };
 }
 

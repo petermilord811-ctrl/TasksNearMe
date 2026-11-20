@@ -1,14 +1,14 @@
 'use server';
 
 import { refresh, updateTag } from 'next/cache';
-import type { ActionResult, SavedReplyInput, CaseResolutionInput, CaseStatusInput, RefundDecisionInput, ResolutionPreviewResult, RestrictedAccessInput, RevealAddressResult, RevealConversationResult, ReviewModerationInput, StaffEmailContactInput, StaffNoteInput, StaffRefundInput, StaffReplyInput } from '@/contracts';
+import type { ActionResult, CommunityModerationInput, SavedReplyInput, CaseResolutionInput, CaseStatusInput, RefundDecisionInput, ResolutionPreviewResult, RestrictedAccessInput, RevealAddressResult, RevealConversationResult, ReviewModerationInput, StaffEmailContactInput, StaffNoteInput, StaffRefundInput, StaffReplyInput } from '@/contracts';
 import { createEmailProvider } from '@/integrations/email';
 import { appUrl } from '@/integrations/oauth';
 import { createPaymentProvider } from '@/integrations/payments';
 import { getViewer } from '@/platform/auth/viewer';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { db } from '@/platform/db/client';
-import { addCaseNote, assignCase, closeCase, moderateReportedReview, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffEmailContact, staffReply, type StaffActor } from './staff';
+import { addCaseNote, assignCase, closeCase, moderateCaseQuestion, moderateReportedReview, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffEmailContact, staffReply, type StaffActor } from './staff';
 import { archiveSavedReply, createSavedReply, updateSavedReply } from './saved-replies';
 import { decideRefundRequest, resolveCaseWithMoney, revealBookingAddress, revealBookingConversation, staffRefund } from './staff-money';
 import { requestNow } from '@/platform/clock';
@@ -76,6 +76,13 @@ export async function moderateReviewAction(caseId: string, input: ReviewModerati
     if (helperHandle) updateTag(`helper:${helperHandle}`);
   }
   return refreshed(result);
+}
+
+/** Hides, removes or restores the case's reported question on its task (sweep QA2). */
+export async function moderateQuestionAction(caseId: string, input: CommunityModerationInput): Promise<ActionResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return refreshed(await moderateCaseQuestion(db, actor, String(caseId), input, await requestNow()));
 }
 
 export async function closeCaseAction(caseId: string, version: number): Promise<ActionResult> {

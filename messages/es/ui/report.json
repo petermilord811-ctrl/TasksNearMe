@@ -5,7 +5,8 @@
     "review": "Reportar una reseña",
     "post": "Reportar una publicación",
     "reply": "Reportar una respuesta",
-    "question": "Reportar una pregunta"
+    "question": "Reportar una pregunta",
+    "answer": "Reportar una respuesta"
   },
   "subject": {
     "task": "{name}",
@@ -13,7 +14,8 @@
     "review": "Una reseña de {name}",
     "post": "{name}",
     "reply": "Una respuesta de {name}",
-    "question": "Una pregunta de {name}"
+    "question": "Una pregunta de {name}",
+    "answer": "Una respuesta de {name}"
   },
   "back": {
     "task": "Volver a la tarea",
@@ -21,7 +23,8 @@
     "review": "Volver al perfil",
     "post": "Volver a la publicación",
     "reply": "Volver a la publicación",
-    "question": "Volver a la tarea"
+    "question": "Volver a la tarea",
+    "answer": "Volver a la tarea"
   },
   "intro": "Cuéntale a soporte qué pasa. A la persona que reportes no se le dice quién la reportó.",
   "formTitle": "Tu reporte",
@@ -41,6 +44,7 @@
     "helper": "Reportar a un ayudante",
     "review": "Reportar una reseña",
     "submitted": "Reporte enviado",
-    "errors": "El reporte necesita un motivo y detalles"
+    "errors": "El reporte necesita un motivo y detalles",
+    "answer": "Reportar · una respuesta"
   }
 }

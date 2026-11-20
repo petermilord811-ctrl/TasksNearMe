@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { EllipsisVertical, Flag, Pin, PinOff, ShieldAlert, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import type { ActionHandler, ActionResult, CommunityModerationInput } from '@/contracts';
+import type { ActionErrorCode, ActionHandler, ActionResult, CommunityModerationInput } from '@/contracts';
 import { useLocale } from 'next-intl';
 import { localeHref } from '@/ui/lib/locale-link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
@@ -28,10 +28,12 @@ export interface CommunityItemActionsProps {
   /** Staff: hide, remove or restore with a reason. */
   onModerate?: ActionHandler<{ target: 'post' | 'reply'; id: string } & CommunityModerationInput>;
   hidden?: boolean;
+  /** Copy for error codes that mean something specific here (a question's restore: `limit_reached`). */
+  errorMessages?: Partial<Record<ActionErrorCode, string>>;
 }
 
 /** The "More" menu on a post or a reply (completion plan 7.7): pin, delete your own, report, and staff tools. */
-export function CommunityItemActions({ target, id, label, own, pin, onDelete, reportHref, onModerate, hidden = false }: CommunityItemActionsProps) {
+export function CommunityItemActions({ target, id, label, own, pin, onDelete, reportHref, onModerate, hidden = false, errorMessages }: CommunityItemActionsProps) {
   const t = useTranslations('community');
   const feedback = useTranslations('feedback');
   const router = useRouter();
@@ -53,7 +55,7 @@ export function CommunityItemActions({ target, id, label, own, pin, onDelete, re
       toast.success(success);
       done?.();
       if (result.redirectTo) router.push(localeHref(result.redirectTo, locale));
-    } else toast.error(feedback.has(`error.${result.code}`) ? feedback(`error.${result.code}`) : feedback('error.unknown'));
+    } else toast.error(errorMessages?.[result.code] ?? (feedback.has(`error.${result.code}`) ? feedback(`error.${result.code}`) : feedback('error.unknown')));
   });
 
   const hasItems = Boolean(pin) || own || Boolean(reportHref) || Boolean(onModerate);

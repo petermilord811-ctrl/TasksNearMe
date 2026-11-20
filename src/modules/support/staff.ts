@@ -5,6 +5,7 @@ import type {
   AdminCaseFilters,
   AdminCasePageData,
   AdminCaseParty,
+  AdminCaseQuestion,
   AdminCaseReview,
   AdminCaseRow,
   AdminCasesPageData,
@@ -18,6 +19,7 @@ import type {
   CaseStatus,
   CaseStatusInput,
   CaseType,
+  CommunityModerationInput,
   PersonSummary,
   Photo,
   ResolutionPreviewResult,
@@ -53,6 +55,8 @@ import { photoFromFile } from '@/modules/files/uploads';
 import { messages, threadParticipants, threads } from '@/modules/messaging/schema';
 import { initialsOf } from '@/modules/profiles/queries';
 import { helperProfiles } from '@/modules/profiles/schema';
+import { moderateTaskQuestion } from '@/modules/questions/service';
+import { taskQuestions } from '@/modules/questions/schema';
 import { recomputeRating } from '@/modules/reviews/service';
 import { reviews } from '@/modules/reviews/schema';
 import { categories, marketPolicies } from '@/modules/markets/schema';
@@ -367,6 +371,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
   const photoOf = new Map(fileRows.map((file) => [file.id, photoFromFile(file)]));
   const money = ctx.booking ? await bookingMoneyFacts(db, ctx.booking.id) : null;
   const reportedReview = row.context?.reviewId ? await reportedReviewOf(db, staff, row.context.reviewId) : null;
+  const reportedQuestion = row.context?.questionId ? await reportedQuestionOf(db, row.context.questionId, row.context.answer === true) : null;
 
   const timeline = events.flatMap((event): AdminCaseEventView[] => {
     const at = event.createdAt.toISOString();
@@ -390,6 +395,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
         ];
       }
       case 'note':
+        if (event.meta?.questionAction) return [{ id: event.id, kind: 'question', actor, questionAction: event.meta.questionAction, body: event.body ?? '', at }];
         return event.meta?.reviewAction
           ? [{ id: event.id, kind: 'review', actor, reviewAction: event.meta.reviewAction, body: event.body ?? '', at }]
           : [{ id: event.id, kind: 'note', actor, body: event.body ?? '', at }];
@@ -432,6 +438,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
     events: timeline,
     ...(contextTitle !== undefined ? { context: { kind: 'conversation' as const, title: contextTitle } } : {}),
     ...(reportedReview ? { review: reportedReview } : {}),
+    ...(reportedQuestion ? { question: reportedQuestion } : {}),
     actions: staffCaseActions(facts),
     nextStatuses: nextCaseStatuses(facts),
     resolutions: caseResolutions(facts),
@@ -519,6 +526,56 @@ export async function moderateReportedReview(
     await recomputeRating(tx, review.subjectUserId);
     const [profile] = await tx.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, review.subjectUserId)).limit(1);
     return { ok: true, code: 'updated', ...(profile?.handle ? { helperHandle: profile.handle } : {}) } as const;
+  });
+}
+
+// ---- A reported question on a task, or its answer (sweep QA2, QA3) ------------------------------------
+
+/** The question a report points at, with its answer and the task, as staff see it on the case (hidden ones too). */
+async function reportedQuestionOf(db: Db, questionId: string, answer: boolean): Promise<AdminCaseQuestion | null> {
+  const [row] = await db
+    .select({ question: taskQuestions, taskTitle: tasks.title, posterUserId: tasks.posterUserId })
+    .from(taskQuestions)
+    .innerJoin(tasks, eq(tasks.id, taskQuestions.taskId))
+    .where(eq(taskQuestions.id, questionId))
+    .limit(1);
+  if (!row) return null;
+  const { question } = row;
+  const people = await usersById(db, [question.askerUserId, row.posterUserId]);
+  const asker = people.get(question.askerUserId);
+  const poster = people.get(row.posterUserId);
+  const status = question.status === 'hidden' || question.status === 'removed' ? question.status : 'visible';
+  return {
+    reported: answer ? 'answer' : 'question',
+    task: { id: question.taskId, title: row.taskTitle },
+    question: {
+      id: question.id,
+      body: question.body,
+      asker: { displayName: asker?.name ?? '', initials: asker ? initialsOf(asker.firstName, asker.lastName) : '' },
+      askedAt: question.createdAt.toISOString(),
+      ...(question.answerBody && question.answeredAt
+        ? { answer: { body: question.answerBody, answeredAt: question.answeredAt.toISOString(), poster: { displayName: poster?.name ?? '' } } }
+        : {}),
+      pinned: question.pinned,
+    },
+    status,
+    ...(status !== 'visible' && question.moderationReason ? { reason: question.moderationReason } : {}),
+    // Questions are community content: every staff role moderates them, as on the task pages.
+    canModerate: true,
+  };
+}
+
+/**
+ * Hides, removes or restores the case's reported question (and its answer), audited, with the reason noted on the
+ * case for staff (sweep QA2). Restoring refuses with `limit_reached` while its helper has a newer open question.
+ */
+export async function moderateCaseQuestion(db: Db, staff: StaffActor, caseId: string, input: CommunityModerationInput, now: Date): Promise<ActionResult> {
+  const ctx = await loadCase(db, staff, caseId);
+  const questionId = ctx?.row.context?.questionId;
+  if (!ctx || !questionId) return { ok: false, code: 'not_allowed' };
+  const done = { hide: 'hidden', remove: 'removed', restore: 'restored' } as const;
+  return moderateTaskQuestion(db, staff, questionId, input, now, async (tx, change) => {
+    await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'note', authorUserId: staff.id, visibility: 'internal', body: change.reason, meta: { questionAction: done[change.action] }, createdAt: now });
   });
 }
 

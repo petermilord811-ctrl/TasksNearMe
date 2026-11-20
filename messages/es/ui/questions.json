@@ -5,7 +5,7 @@
   "ask": {
     "label": "Hacer una pregunta",
     "placeholder": "¿Qué necesitas saber para hacer una buena oferta?",
-    "hint": "Una pregunta abierta a la vez. Sin teléfonos ni correos: quedan ocultos hasta una reserva.",
+    "hint": "Una pregunta abierta a la vez. Aquí los teléfonos y correos quedan ocultos.",
     "submit": "Preguntar",
     "submitting": "Enviando…",
     "sent": "Pregunta enviada"
@@ -24,7 +24,9 @@
     "edit": "Editar respuesta",
     "submitting": "Enviando…",
     "sent": "Respuesta publicada",
-    "waiting": "Esperando respuesta"
+    "waiting": "Esperando respuesta",
+    "none": "Sin respuesta",
+    "menuLabel": "La respuesta a la pregunta de {name}"
   },
   "pinned": "Fijada",
   "pin": "Fijar para todos",
@@ -35,6 +37,12 @@
     "group": "Preguntas sobre una tarea",
     "helper": "Preguntas · un ayudante pregunta",
     "poster": "Preguntas · quien publicó responde",
-    "asked": "Preguntas · esperando la respuesta"
+    "asked": "Preguntas · esperando la respuesta",
+    "closedPoster": "Preguntas · cerradas, vista de quien publicó",
+    "closedHelper": "Preguntas · cerradas, vista de un ayudante"
+  },
+  "closedPoster": "Las preguntas están cerradas: esta tarea ya no recibe ofertas. Los ayudantes aún pueden leer tus respuestas.",
+  "moderation": {
+    "newerOpen": "Este ayudante tiene una pregunta abierta más reciente en esta tarea. Oculta o elimina esa primero y luego restaura esta."
   }
 }

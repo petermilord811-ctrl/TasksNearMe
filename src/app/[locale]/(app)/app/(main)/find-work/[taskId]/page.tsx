@@ -34,7 +34,7 @@ async function HelperTask({ params }: Pick<PageProps<'/[locale]/app/find-work/[t
   const [{ taskId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.findWorkTask(taskId)));
   const now = await requestNow();
-  const [data, botCheck, questions, discussion] = await Promise.all([getHelperTaskView(db, viewer.user.id, taskId, now), botCheckForPage(), getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId), communityPostOfTask(db, taskId)]);
+  const [data, botCheck, questions, discussion] = await Promise.all([getHelperTaskView(db, viewer.user.id, taskId, now), botCheckForPage(), getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId, now), communityPostOfTask(db, taskId)]);
   if (!data) notFound();
   return (
     <div className="space-y-6">

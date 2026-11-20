@@ -1,5 +1,5 @@
 import { routes, type AppShellHandlers, type PreviewEntry, type ReportPageData, type ReportPageHandlers } from '@/contracts';
-import { fakeHandler, jordanShell, reportHelperData, reportReviewData, reportTaskData } from '@/fixtures';
+import { fakeHandler, jordanShell, reportAnswerData, reportHelperData, reportReviewData, reportTaskData } from '@/fixtures';
 import { ReportContent } from '@/ui/screens/support';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/report.json';
@@ -19,6 +19,7 @@ export const reportPreviews: PreviewEntry[] = [
   report('task', p.task, reportTaskData),
   report('helper', p.helper, reportHelperData),
   report('review', p.review, reportReviewData),
+  report('answer', p.answer, reportAnswerData),
   report('submitted', p.submitted, reportTaskData, { initialResult: { ok: true, code: 'submitted' }, initialValues: { reason: 'scam_or_fraud', details: 'The task asks helpers to pay a deposit by gift card first.' } }),
   report('errors', p.errors, reportTaskData, { initialResult: { ok: false, code: 'validation_failed', fieldErrors: { reason: ['required'], details: ['too_short'] } } }),
 ];

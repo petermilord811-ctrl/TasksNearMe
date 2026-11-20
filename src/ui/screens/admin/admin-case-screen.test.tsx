@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes, type ActionResult, type AdminCaseHandlers, type AdminCasePageData } from '@/contracts';
-import { ADMIN_NOW, disputeAdminCaseData, fakeAdminCaseHandlers, reportAdminCaseData, reportedConversation, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData } from '@/fixtures';
+import { ADMIN_NOW, answerReportAdminCaseData, questionHiddenAdminCaseData, disputeAdminCaseData, fakeAdminCaseHandlers, reportAdminCaseData, reportedConversation, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData } from '@/fixtures';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import adminCase from '../../../../messages/en/ui/adminCase.json';
@@ -137,6 +137,40 @@ describe('a review report', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: adminCase.review.dialog.hideSubmit }));
     expect(onModerateReview).toHaveBeenCalledExactlyOnceWith({ visible: false, reason: 'Comments on the person, not the work.' });
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
+
+  it('shows a reported answer with its question and the task, and hides it with a reason (sweep QA2)', async () => {
+    const onModerateQuestion = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    render(content(answerReportAdminCaseData, { ...fakeAdminCaseHandlers, onModerateQuestion }));
+    const panel = section(adminCase.question.title.answer);
+    const data = answerReportAdminCaseData.question!;
+    expect(panel.getByText(data.question.body)).toBeVisible();
+    expect(panel.getByText(data.question.answer!.body)).toBeVisible();
+    expect(panel.getByText(adminCase.question.answeredBy.replace('{name}', 'Ben W.'))).toBeVisible();
+    expect(panel.getByRole('link', { name: data.task.title })).toHaveAttribute('href', routes.admin.task(data.task.id));
+    expect(panel.getByText(adminCase.question.statuses.visible)).toBeVisible();
+    await userEvent.click(panel.getByRole('button', { name: adminCase.question.remove }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(adminCase.question.dialog.removeTitle)).toBeVisible();
+    await userEvent.type(within(dialog).getByLabelText(adminCase.question.dialog.reason), 'Asks for money outside the app.');
+    await userEvent.click(within(dialog).getByRole('button', { name: adminCase.question.dialog.removeSubmit }));
+    expect(onModerateQuestion).toHaveBeenCalledExactlyOnceWith({ action: 'remove', reason: 'Asks for money outside the app.' });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
+
+  it('offers to restore a hidden question, says why a restore was refused, and shows the step', async () => {
+    const onModerateQuestion = vi.fn(async (): Promise<ActionResult> => ({ ok: false, code: 'limit_reached' }));
+    render(content(questionHiddenAdminCaseData, { ...fakeAdminCaseHandlers, onModerateQuestion }));
+    expect(screen.getByText(adminCase.details.events.question.hidden)).toBeVisible();
+    const panel = section(adminCase.question.title.question);
+    expect(panel.getByText(adminCase.question.statuses.hidden)).toBeVisible();
+    expect(panel.queryByRole('button', { name: adminCase.question.hide })).toBeNull();
+    await userEvent.click(panel.getByRole('button', { name: adminCase.question.restore }));
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.type(within(dialog).getByLabelText(adminCase.question.dialog.reason), 'Appeal accepted.');
+    await userEvent.click(within(dialog).getByRole('button', { name: adminCase.question.dialog.restoreSubmit }));
+    expect(onModerateQuestion).toHaveBeenCalledExactlyOnceWith({ action: 'restore', reason: 'Appeal accepted.' });
+    expect(await within(dialog).findByText(adminCase.question.dialog.newerOpen)).toBeVisible();
   });
 
   it('offers to show a hidden review again, with the step on the timeline', () => {

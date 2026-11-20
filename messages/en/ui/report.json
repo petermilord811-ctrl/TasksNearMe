@@ -5,7 +5,8 @@
     "review": "Report a review",
     "post": "Report a post",
     "reply": "Report a reply",
-    "question": "Report a question"
+    "question": "Report a question",
+    "answer": "Report an answer"
   },
   "subject": {
     "task": "{name}",
@@ -13,7 +14,8 @@
     "review": "A review by {name}",
     "post": "{name}",
     "reply": "A reply by {name}",
-    "question": "A question by {name}"
+    "question": "A question by {name}",
+    "answer": "An answer by {name}"
   },
   "back": {
     "task": "Back to the task",
@@ -21,7 +23,8 @@
     "review": "Back to the profile",
     "post": "Back to the post",
     "reply": "Back to the post",
-    "question": "Back to the task"
+    "question": "Back to the task",
+    "answer": "Back to the task"
   },
   "intro": "Tell support what's wrong. The person you report isn't told who reported them.",
   "formTitle": "Your report",
@@ -41,6 +44,7 @@
     "helper": "Report a helper",
     "review": "Report a review",
     "submitted": "Report sent",
-    "errors": "Report needs a reason and details"
+    "errors": "Report needs a reason and details",
+    "answer": "Report · an answer"
   }
 }

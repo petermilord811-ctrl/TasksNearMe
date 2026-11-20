@@ -1,8 +1,9 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { ACTION_ERROR_CODES, routes, type ActionResult, type AdminCaseHandlers, type AdminCasePageData, type PreviewEntry } from '@/contracts';
-import { ADMIN_NOW, adminHomeData, adminHomeQuietData, adminCasesPageData, adminCasesFilteredData, adminCasesEmptyData, alexStaff, contactAdminCaseData, contactAnsweredAdminCaseData, disputeAdminCaseData, reportAdminCaseData, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData, reportedConversation, fakeAdminCaseHandlers, fakeHandler } from '@/fixtures';
+import { ADMIN_NOW, adminHomeData, adminHomeQuietData, adminCasesPageData, adminCasesFilteredData, adminCasesEmptyData, alexStaff, answerReportAdminCaseData, questionHiddenAdminCaseData, contactAdminCaseData, contactAnsweredAdminCaseData, disputeAdminCaseData, reportAdminCaseData, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData, reportedConversation, fakeAdminCaseHandlers, fakeHandler } from '@/fixtures';
 import { AdminHomeScreen, AdminCasesScreen } from '@/ui/screens/admin';
 import { AdminCaseContent } from '@/ui/screens/admin/admin-case-screen';
+import { AdminReportedQuestion } from '@/ui/screens/admin/admin-reported-question';
 import { AdminShell } from '@/ui/shells/admin-shell';
 import copy from '../../../messages/en/ui/adminCase.json';
 import homeCopy from '../../../messages/en/ui/adminHome.json';
@@ -55,6 +56,12 @@ export const adminPreviews: PreviewEntry[] = [
   casePreview('review-report', p['review-report'], reviewReportAdminCaseData),
   casePreview('review-hidden', p['review-hidden'], reviewHiddenAdminCaseData),
   casePreview('review-agent', p['review-agent'], reviewReportAgentCaseData),
+  casePreview('question-answer', p['question-answer'], answerReportAdminCaseData),
+  casePreview('question-hidden', p['question-hidden'], questionHiddenAdminCaseData),
+  {
+    id: 'screen-admin-case/question-restore-limit', group: p.group, title: p['question-restore-limit'], layout: 'fullscreen',
+    render: () => <Shell path={routes.admin.case(questionHiddenAdminCaseData.case.id)} detail><AdminReportedQuestion data={questionHiddenAdminCaseData.question!} onModerate={fakeHandler({ ok: false, code: 'limit_reached' })} initialAction="restore" initialResult={{ ok: false, code: 'limit_reached' }} /></Shell>,
+  },
   casePreview('conversation-revealed', p['conversation-revealed'], reportAdminCaseData, { conversationState: { initialConversation: reportedConversation } }),
   casePreview('conversation-reason', p['conversation-reason'], reportAdminCaseData, { conversationState: { initialOpen: true, initialResult: { ok: false, code: 'validation_failed', fieldErrors: { reason: ['too_short'] } } } }),
   casePreview('reply-validation-failed', p['reply-validation-failed'], disputeAdminCaseData, { replyState: { initialResult: replyValidation } }),

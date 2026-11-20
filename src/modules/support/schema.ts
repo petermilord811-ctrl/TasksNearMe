@@ -29,7 +29,8 @@ export const supportCases = pgTable(
     /** Reports: the person reported. */
     subjectUserId: text('subject_user_id').references(() => users.id),
     /** Where a report came from (the conversation and its task), for support's review. */
-    context: jsonb('context').$type<{ threadId?: string; taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string }>(),
+    // `answer`: a report of the question's answer (its poster is the case's subject), not the question (sweep QA3).
+    context: jsonb('context').$type<{ threadId?: string; taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string; answer?: boolean }>(),
     reason: text('reason'),
     description: text('description').notNull().default(''),
     /** Photos sent with the case (files of kind `evidence`). */
@@ -81,7 +82,7 @@ export const supportCaseEvents = pgTable(
     status: text('status'),
     /** Assignment and resolution changes: the new assignee (null when unassigned) or the resolution. */
     /** `emailed`: staff's answer went to a public request's address. `fromContact`: that address wrote again (5.22). */
-    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown'; emailed?: boolean; fromContact?: boolean }>(),
+    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown'; questionAction?: 'hidden' | 'removed' | 'restored'; emailed?: boolean; fromContact?: boolean }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('support_case_events_case_idx').on(t.caseId, t.createdAt)],

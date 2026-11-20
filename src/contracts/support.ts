@@ -127,8 +127,12 @@ export interface ReportHandlers {
   onBlock: ActionHandler<{ blocked: boolean }>;
 }
 
-/** What a member reports from a page (backlog B-059): a task, a helper's profile, a review, or a community post or reply (7.7). */
-export const REPORT_TARGET_KINDS = ['task', 'helper', 'review', 'post', 'reply', 'question'] as const;
+/**
+ * What a member reports from a page (backlog B-059): a task, a helper's profile, a review, a community post or reply
+ * (7.7), or a question on a task or its answer (7.9). An `answer` is reported by its question's id, and the case is
+ * about the poster who wrote it (sweep QA3).
+ */
+export const REPORT_TARGET_KINDS = ['task', 'helper', 'review', 'post', 'reply', 'question', 'answer'] as const;
 export type ReportTargetKind = (typeof REPORT_TARGET_KINDS)[number];
 
 /** `routes.app.report(kind, id)`: the report form for one task, helper or review. */
