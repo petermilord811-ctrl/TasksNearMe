@@ -96,7 +96,9 @@
     "no_email": "No email address",
     "no_verified_phone": "No verified phone",
     "quiet_hours": "Quiet hours (9 pm to 8 am)",
-    "email_suppressed": "Their email bounced or was marked as spam"
+    "email_suppressed": "Their email bounced or was marked as spam",
+    "already_read": "They read the conversation before it went out",
+    "blocked": "One of them blocked the other before it went out"
   },
   "deliveryAttempts": "{count, plural, one {# try} other {# tries}}",
   "deliveryNextTry": "Next try {time}",

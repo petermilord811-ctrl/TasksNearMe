@@ -138,7 +138,10 @@ export const pushOn = (topic: NotificationTopic) => topic !== 'tips_and_news';
 export type DeliveryPlan =
   | { action: 'send' }
   | { action: 'hold'; until: Date }
-  | { action: 'skip'; reason: 'preference_off' | 'no_email' | 'no_verified_phone' | 'no_device' | 'email_suppressed' };
+  | { action: 'skip'; reason: 'preference_off' | 'no_email' | 'no_verified_phone' | 'no_device' | 'email_suppressed' | StaleReason };
+
+/** A message notification that's no longer news (sweep MN9): the conversation was read, or one of the two blocked the other. */
+export type StaleReason = 'already_read' | 'blocked';
 
 export const missingAddressReason = (channel: DeliveryChannel) => (channel === 'sms' ? 'no_verified_phone' : channel === 'push' ? 'no_device' : 'no_email');
 
@@ -150,6 +153,8 @@ export function planDelivery(input: {
   hasAddress: boolean;
   /** The email address bounced or complained (email_suppressions): nothing more goes to it. */
   suppressed?: boolean;
+  /** A message notification that's no longer news: nothing of it goes out. */
+  stale?: StaleReason;
   now: Date;
   /** The recipient's market zone (their home market), for quiet hours. */
   timeZone: TimeZone;
@@ -157,6 +162,7 @@ export function planDelivery(input: {
   if (!input.enabled) return { action: 'skip', reason: 'preference_off' };
   if (!input.hasAddress) return { action: 'skip', reason: missingAddressReason(input.channel) };
   if (input.channel === 'email' && input.suppressed) return { action: 'skip', reason: 'email_suppressed' };
+  if (input.stale) return { action: 'skip', reason: input.stale };
   // Texts and pushes that can wait don't buzz anyone at night.
   if (input.channel !== 'email' && !URGENT_TYPES.has(input.type)) {
     const until = quietHoursEnd(input.now, input.timeZone);

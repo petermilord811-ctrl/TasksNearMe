@@ -103,8 +103,12 @@ export type AdminUserActionId = (typeof ADMIN_USER_ACTIONS)[number];
 
 export const DELIVERY_STATUSES = ['sending', 'sent', 'held', 'failed', 'skipped'] as const;
 export type DeliveryStatus = (typeof DELIVERY_STATUSES)[number];
-/** Why an email or text wasn't sent (yet). A failed send carries the provider's error instead. */
-export const DELIVERY_REASONS = ['preference_off', 'no_email', 'no_verified_phone', 'quiet_hours', 'email_suppressed'] as const;
+/**
+ * Why an email or text wasn't sent (yet). A failed send carries the provider's error instead. `already_read` and
+ * `blocked`: a message notification no longer news when it would have gone out (the conversation was read, or one of
+ * the two blocked the other: sweep MN9).
+ */
+export const DELIVERY_REASONS = ['preference_off', 'no_email', 'no_verified_phone', 'quiet_hours', 'email_suppressed', 'already_read', 'blocked'] as const;
 export type DeliveryReason = (typeof DELIVERY_REASONS)[number];
 
 /** One email or text message for a notification (T-29), as support sees it. */

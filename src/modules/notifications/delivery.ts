@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, inArray, isNull, lt, lte, or } from 'drizzle-orm';
+import { and, asc, count, eq, gte, inArray, isNull, lt, lte, ne, or } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
 import type { AppLocale, AttentionTarget, NotificationTopic, NotificationType, NotificationView, TimeZone } from '@/contracts';
 import { DEFAULT_LOCALE, localeOrDefault, routes } from '@/contracts';
@@ -7,6 +7,8 @@ import { createEmailProvider, type EmailProvider } from '@/integrations/email';
 import { createSmsSender, type SmsSender } from '@/integrations/sms';
 import { users } from '@/modules/accounts/schema';
 import { marketTimeZones } from '@/modules/markets/time-zone';
+import { threadParticipants } from '@/modules/messaging/schema';
+import { isBlockedBetween } from '@/modules/trust/blocks';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { formatDate, formatDateTime, formatMoney } from '@/shared/format';
@@ -202,6 +204,22 @@ async function peopleOf(db: Db, userIds: string[]): Promise<Map<string, Person>>
   return people;
 }
 
+/**
+ * A message notification that's no longer news (sweep MN9): the person read the conversation, which reads its message
+ * notifications (MN1), or one of the two blocked the other. Whatever of it hasn't gone out yet is dropped: a text or
+ * push held through quiet hours, a send waiting for another try, or a fresh one read before this run.
+ */
+async function staleMessage(db: Db, row: NotificationRow): Promise<'already_read' | 'blocked' | null> {
+  if (row.type !== 'message_received' || row.target.kind !== 'thread') return null;
+  if (row.readAt) return 'already_read';
+  const [other] = await db
+    .select({ userId: threadParticipants.userId })
+    .from(threadParticipants)
+    .where(and(eq(threadParticipants.threadId, row.target.threadId), ne(threadParticipants.userId, row.userId)))
+    .limit(1);
+  return other && (await isBlockedBetween(db, row.userId, other.userId)) ? 'blocked' : null;
+}
+
 const addressOf = (person: Person, channel: DeliveryChannel) =>
   channel === 'email' ? person.email : channel === 'push' ? (person.pushDevices > 0 ? 'devices' : null) : person.phoneVerified ? person.phone : null;
 const channelOn = (person: Person, topic: NotificationTopic, channel: DeliveryChannel) => (channel === 'push' ? pushOn(topic) : preferenceOn(person.preferences, topic, channel));
@@ -251,6 +269,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     if (!person) continue;
     const topic: NotificationTopic | undefined = NOTIFICATION_TOPIC[notification.type as NotificationType];
     if (!topic) continue;
+    const stale = await staleMessage(db, notification);
     for (const channel of DELIVERY_CHANNELS) {
       // Push only where it's set up (no rows otherwise).
       if (channel === 'push' && !providers.push) continue;
@@ -261,6 +280,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
         enabled: channelOn(person, topic, channel),
         hasAddress: to !== null,
         suppressed: person.emailSuppressed,
+        ...(stale ? { stale } : {}),
         now,
         timeZone: person.timeZone,
       });
@@ -305,13 +325,14 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     const channel = delivery.channel as DeliveryChannel;
     const to = person && (channel !== 'push' || providers.push) ? addressOf(person, channel) : null;
     const topic = NOTIFICATION_TOPIC[notification.type as NotificationType];
-    // The person may have turned the channel off, or lost the address (or it bounced, or the device left), while it waited.
+    // The person may have turned the channel off, or lost the address (or it bounced, or the device left), while it
+    // waited; a message may have been read meanwhile.
     const stillOn = person && topic ? channelOn(person, topic, channel) : false;
     const bounced = channel === 'email' && person?.emailSuppressed === true;
-    const skipReason = !to ? missingAddressReason(channel) : bounced ? 'email_suppressed' : 'preference_off';
+    const skipReason = !to ? missingAddressReason(channel) : bounced ? 'email_suppressed' : !stillOn ? 'preference_off' : await staleMessage(db, notification);
     const [claimed] = await db
       .update(notificationDeliveries)
-      .set(stillOn && to && !bounced ? { status: 'sending', updatedAt: now } : { status: 'skipped', reason: skipReason, sendAfter: null, updatedAt: now })
+      .set(skipReason ? { status: 'skipped', reason: skipReason, sendAfter: null, updatedAt: now } : { status: 'sending', updatedAt: now })
       // Claimed only if nobody moved it meanwhile (a stuck send stays stuck until claimed here).
       .where(
         and(

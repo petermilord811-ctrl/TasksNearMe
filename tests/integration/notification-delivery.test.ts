@@ -1,9 +1,10 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, or } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { NotificationType } from '@/contracts';
+import type { AttentionTarget, NotificationType } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { EmailTimeoutError } from '@/integrations/email/timeout';
 import { deliverNotifications, type DeliveryProviders } from '@/modules/notifications/delivery';
+import { blocks, threadParticipants, threads } from '@/modules/messaging/schema';
 import { notificationDeliveries, notificationPreferences, notifications } from '@/modules/notifications/schema';
 import { createDb } from '@/platform/db/connect';
 
@@ -46,6 +47,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   const mine = [PERSON, NO_PHONE];
+  await db.delete(blocks).where(or(inArray(blocks.blockerId, mine), inArray(blocks.blockedId, mine)));
+  await db.delete(threadParticipants).where(inArray(threadParticipants.userId, mine));
+  await db.delete(threadParticipants).where(inArray(threadParticipants.threadId, ['thr_mn9_read', 'thr_mn9_blocked', 'thr_mn9_kept']));
+  await db.delete(threads).where(inArray(threads.id, ['thr_mn9_read', 'thr_mn9_blocked', 'thr_mn9_kept']));
   await db.delete(notificationDeliveries).where(inArray(notificationDeliveries.userId, mine));
   await db.delete(notifications).where(inArray(notifications.userId, mine));
   await db.delete(notificationPreferences).where(inArray(notificationPreferences.userId, mine));
@@ -54,7 +59,7 @@ afterAll(async () => {
 });
 
 let count = 0;
-async function notify(userId: string, type: NotificationType, at: Date): Promise<string> {
+async function notify(userId: string, type: NotificationType, at: Date, target: AttentionTarget = { kind: 'booking', bookingId: 'bkg_tv' }): Promise<string> {
   const id = `ntf_dlv_${++count}`;
   await db.insert(notifications).values({
     id,
@@ -62,7 +67,7 @@ async function notify(userId: string, type: NotificationType, at: Date): Promise
     type,
     title: 'Assemble a desk',
     actorName: 'Jordan T.',
-    target: { kind: 'booking', bookingId: 'bkg_tv' },
+    target,
     sourceEventId: `evt_dlv_${count}`,
     createdAt: at,
   });
@@ -151,6 +156,53 @@ describe('notification delivery', () => {
     const old = await notify(PERSON, 'offer_received', new Date(DAY.getTime() - 3 * 86_400_000));
     await run(DAY);
     expect(await deliveriesOf(old)).toEqual({});
+  });
+
+  it('drops a held text about a message once the conversation is read, or the sender is blocked (sweep MN9)', async () => {
+    // Saturday Dec 12, 2026 in Austin: 10 pm, then 8 am the next day.
+    const night = new Date('2026-12-13T04:00:00.000Z');
+    const morning = new Date('2026-12-13T14:00:00.000Z');
+    // Three conversations with Noa, Jordan and Maya; message texts turned on.
+    await db.insert(threads).values([
+      { id: 'thr_mn9_read', kind: 'offer', linkedId: 'off_mn9_read', taskId: 'tsk_desk', createdAt: night },
+      { id: 'thr_mn9_blocked', kind: 'offer', linkedId: 'off_mn9_blocked', taskId: 'tsk_desk', createdAt: night },
+      { id: 'thr_mn9_kept', kind: 'offer', linkedId: 'off_mn9_kept', taskId: 'tsk_desk', createdAt: night },
+    ]);
+    await db.insert(threadParticipants).values([
+      { threadId: 'thr_mn9_read', userId: PERSON },
+      { threadId: 'thr_mn9_read', userId: NO_PHONE },
+      { threadId: 'thr_mn9_blocked', userId: PERSON },
+      { threadId: 'thr_mn9_blocked', userId: 'usr_jordan' },
+      { threadId: 'thr_mn9_kept', userId: PERSON },
+      { threadId: 'thr_mn9_kept', userId: 'usr_maya' },
+    ]);
+    await db.insert(notificationPreferences).values({ userId: PERSON, topic: 'messages', channel: 'sms', enabled: 'true', updatedAt: night });
+    try {
+      const read = await notify(PERSON, 'message_received', night, { kind: 'thread', threadId: 'thr_mn9_read' });
+      const blocked = await notify(PERSON, 'message_received', night, { kind: 'thread', threadId: 'thr_mn9_blocked' });
+      const kept = await notify(PERSON, 'message_received', night, { kind: 'thread', threadId: 'thr_mn9_kept' });
+      await run(night);
+      for (const id of [read, blocked, kept]) expect(await deliveriesOf(id)).toMatchObject({ email: { status: 'sent' }, sms: { status: 'held', sendAfter: morning } });
+
+      // Before 8 am: they read the first conversation (which reads its notification, MN1) and block Jordan.
+      await db.update(notifications).set({ readAt: new Date(night.getTime() + 3_600_000) }).where(eq(notifications.id, read));
+      await db.insert(blocks).values({ blockerId: PERSON, blockedId: 'usr_jordan', createdAt: night });
+      sent = [];
+      await run(morning);
+      expect((await deliveriesOf(read)).sms).toMatchObject({ status: 'skipped', reason: 'already_read', sendAfter: null });
+      expect((await deliveriesOf(blocked)).sms).toMatchObject({ status: 'skipped', reason: 'blocked', sendAfter: null });
+      expect((await deliveriesOf(kept)).sms).toMatchObject({ status: 'sent' });
+      expect(mineSent().filter((item) => item.channel === 'sms')).toHaveLength(1);
+
+      // One read before its first run goes out by no channel at all.
+      const day = new Date('2026-12-13T16:00:00.000Z');
+      const early = await notify(PERSON, 'message_received', day, { kind: 'thread', threadId: 'thr_mn9_read' });
+      await db.update(notifications).set({ readAt: day }).where(eq(notifications.id, early));
+      await run(new Date(day.getTime() + 60_000));
+      expect(await deliveriesOf(early)).toMatchObject({ email: { status: 'skipped', reason: 'already_read' }, sms: { status: 'skipped', reason: 'already_read' } });
+    } finally {
+      await db.delete(notificationPreferences).where(and(eq(notificationPreferences.userId, PERSON), eq(notificationPreferences.topic, 'messages')));
+    }
   });
 
   it('stops sending when its run is out of time, and tries a send that timed out again later (sweep MN7)', async () => {
