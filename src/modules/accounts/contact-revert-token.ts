@@ -4,7 +4,7 @@ import { appSecret } from '@/platform/crypto/app-secret';
 
 /**
  * The "Not you?" link in an email or phone change notice (completion plan 5.23), sent to the old address or
- * number. It names one change (a `contact_change_reverts` row) and is signed with the app secret over everything
+ * number, or in the notice of a new way to sign in (security review SEC15), sent to the account's email. It names one change (a `contact_change_reverts` row) and is signed with the app secret over everything
  * about that change, so it can't be pointed at another change, another account or a later expiry. Nothing secret
  * is stored: the row keeps only its id, and the signature is recomputed when the link comes back. Expiry and
  * single use are the row's; `checkContactRevertLink` decides from both.
@@ -16,7 +16,7 @@ export const CONTACT_REVERT_MS = CONTACT_REVERT_DAYS * 24 * 60 * 60 * 1000;
 export interface ContactRevertClaim {
   id: string;
   userId: string;
-  kind: 'email' | 'phone';
+  kind: 'email' | 'phone' | 'sign_in';
   expiresAt: Date;
 }
 

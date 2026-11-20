@@ -387,6 +387,23 @@
       "once": "The button works once.",
       "contact": "Something else? Contact support"
     },
+    "signInAdded": {
+      "subject": "A new way to sign in was added to your TasksNearMe account",
+      "preheader": "{method} can now sign in to your account.",
+      "title": "A new way to sign in was added",
+      "heading": "A new way to sign in was added",
+      "body": "{method} can now be used to sign in to your TasksNearMe account.",
+      "notYou": "Didn't add it? Tell us within {days} days and we'll secure your account: we sign out every device, remove every way to sign in except the emailed code and pause further changes until our team has checked it.",
+      "help": "This wasn't me",
+      "text": "{method} can now be used to sign in to your TasksNearMe account.\n\nDidn't add it? Secure your account within {days} days (the link works once): {revertUrl}\n\nSomething else? Contact support: {helpUrl}",
+      "once": "The button works once.",
+      "contact": "Something else? Contact support",
+      "methods": {
+        "google": "Your Google account",
+        "microsoft": "Your Microsoft account",
+        "passkey": "A passkey named “{name}”"
+      }
+    },
     "giftCard": {
       "subject": "Your {amount} gift card is ready",
       "preheader": "Open the link to choose your gift card. Keep it private: it works like cash.",

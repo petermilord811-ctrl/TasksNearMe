@@ -5,7 +5,10 @@ import { cookies, headers } from 'next/headers';
 import { refresh, revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { languageInputSchema, routes, socialSignInInputSchema, type ActionResult, type LanguageInput, type PasskeyOptionsResult, type SocialSignInInput } from '@/contracts';
-import { offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
+import { createEmailProvider } from '@/integrations/email';
+import { appUrl, offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
+import { auditLog } from '@/platform/audit/schema';
+import { newId } from '@/platform/db/ids';
 import { validationFailed } from '@/platform/actions/results';
 import { auth } from '@/platform/auth/auth';
 import { getViewer } from '@/platform/auth/viewer';
@@ -17,6 +20,7 @@ import { isContactHeld } from './contact-revert';
 import { confirmEnrollment, redeemSetupCode, verifyStaffTotp } from './staff-authenticator';
 import { staffCheckIsStrict } from './staff-dev-code';
 import { passkeys, users } from './schema';
+import { noticeSignInAdded } from './sign-in-added';
 import { disconnectSignIn } from './sign-in-methods';
 
 const modeInput = z.object({ mode: z.enum(['poster', 'helper']) });
@@ -105,6 +109,10 @@ export async function addPasskeyAction(input: { response?: Record<string, unknow
   } catch {
     return { ok: false, code: 'not_allowed' };
   }
+  // Audited, and the account's email hears about it with a "Not you?" link (security review SEC15).
+  const now = await requestNow();
+  await db.insert(auditLog).values({ id: newId('aud'), actorId: viewer.user.id, actorRole: 'user', action: 'account.passkey_added', targetType: 'user', targetId: viewer.user.id, metadata: { name: name.data } });
+  await noticeSignInAdded({ db, email: createEmailProvider(db), appUrl: appUrl() }, { userId: viewer.user.id, method: { kind: 'passkey', name: name.data } }, now);
   revalidatePath(routes.app.account());
   return { ok: true, code: 'saved' };
 }

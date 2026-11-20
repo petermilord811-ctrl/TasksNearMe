@@ -387,6 +387,23 @@
       "once": "Este botón funciona una sola vez.",
       "contact": "¿Algo más? Contacta a soporte"
     },
+    "signInAdded": {
+      "subject": "Se agregó una nueva forma de iniciar sesión en tu cuenta de TasksNearMe",
+      "preheader": "{method} ya puede iniciar sesión en tu cuenta.",
+      "title": "Se agregó una nueva forma de iniciar sesión",
+      "heading": "Se agregó una nueva forma de iniciar sesión",
+      "body": "{method} ya se puede usar para iniciar sesión en tu cuenta de TasksNearMe.",
+      "notYou": "¿No fuiste tú quien la agregó? Avísanos en los próximos {days} días y protegeremos tu cuenta: cerramos la sesión en todos los dispositivos, quitamos todas las formas de iniciar sesión excepto el código por correo y pausamos cualquier otro cambio hasta que nuestro equipo revise la cuenta.",
+      "help": "No fui yo",
+      "text": "{method} ya se puede usar para iniciar sesión en tu cuenta de TasksNearMe.\n\n¿No fuiste tú quien la agregó? Protege tu cuenta en los próximos {days} días (el enlace funciona una sola vez): {revertUrl}\n\n¿Algo más? Contacta a soporte: {helpUrl}",
+      "once": "Este botón funciona una sola vez.",
+      "contact": "¿Algo más? Contacta a soporte",
+      "methods": {
+        "google": "Tu cuenta de Google",
+        "microsoft": "Tu cuenta de Microsoft",
+        "passkey": "Una llave de acceso llamada «{name}»"
+      }
+    },
     "giftCard": {
       "subject": "Tu tarjeta de regalo de {amount} está lista",
       "preheader": "Abre el enlace para elegir tu tarjeta de regalo. Mantenlo en privado: funciona como efectivo.",

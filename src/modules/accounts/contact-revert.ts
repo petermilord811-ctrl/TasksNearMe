@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNotNull, lt, lte, ne, notInArray, or } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, ne, notInArray, or } from 'drizzle-orm';
 import type { ActionResult, ContactRevertPageData, TimeZone } from '@/contracts';
 import { DELETION_GRACE_DAYS, MARKET_TIME_ZONE, SOCIAL_PROVIDERS } from '@/contracts';
 import { markets } from '@/modules/markets/schema';
@@ -15,14 +15,17 @@ import { CONTACT_REVERT_MS, checkContactRevertLink, contactRevertIdOf, type Cont
 import { accounts, contactChangeReverts, passkeys, phoneVerifications, sessions, users } from './schema';
 
 /**
- * "Not you?" (completion plan 5.23): recovering from an email or phone change the owner didn't make. Each change
- * leaves a row (`recordContactChange`) whose signed link goes to the old address or number. Using the link, once
- * and within 7 days, with no sign-in:
+ * "Not you?" (completion plan 5.23): recovering from an email or phone change the owner didn't make, or a new way to
+ * sign in they didn't add (a Google or Microsoft account connected, a passkey: sign-in-added.ts). Each leaves a row
+ * (`recordContactChange`) whose signed link goes to the old address or number, or to the account's email. Using the
+ * link, once and within 7 days, with no sign-in:
  * 1. signs every device out (the session rows go, as a ban does);
- * 2. undoes the change, unless a newer change of the same kind replaced it or another account took the old value;
- * 3. removes passkeys and Google or Microsoft sign-ins added since a day before the change (an attacker adds one
- *    to get back in, often just before changing the email), each audited, and withdraws a deletion of the account
- *    asked for since then (it would run before staff could read the case: its grace period is as long as the link);
+ * 2. undoes the change, and every later change of its kind (whose links then stop working), unless another account
+ *    took the old value; a new way to sign in is undone by step 3;
+ * 3. removes every passkey and Google or Microsoft sign-in, each audited: one added long before the change can be the
+ *    way back in (security review SEC15), and an emailed code still works. It also withdraws a deletion of the
+ *    account asked for since a day before the change (it would run before staff could read the case: its grace
+ *    period is as long as the link);
  * 4. holds the email, phone and ways to sign in until trust and safety or an admin clears it (signing in with an
  *    emailed code still works, so the owner gets back in);
  * 5. opens an urgent account case for trust and safety (on-call paging, 5.12), or adds to the one already open;
@@ -35,22 +38,23 @@ export const CONTACT_REVERT_RULES = {
   perLink: { limit: 5, windowSeconds: 60 * 60 },
 } satisfies Record<string, RateLimitRule>;
 
-/** Ways to sign in added from this long before the change on are removed with it. */
+/** A deletion asked for from this long before the change on is withdrawn with it. */
 export const SIGN_IN_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 /** Used and expired rows, without their values, stay this long for staff, then go. */
 export const KEEP_SPENT_ROWS_MS = 30 * 24 * 60 * 60 * 1000;
 /** `support_cases.reason` of the case a link opens. */
 export const CONTACT_REVERT_CASE_REASON = 'contact_change_reported';
 
-type Kind = 'email' | 'phone';
+type Kind = 'email' | 'phone' | 'sign_in';
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 const INVALID: ActionResult = { ok: false, code: 'not_found' };
 const FINISHED_CASES = ['resolved', 'closed'];
 const last4 = (phone: string | null | undefined) => (phone ? phone.slice(-4) : '');
 
 /**
- * A new email or phone on the account: the row behind its notice's "Not you?" link, valid for 7 days. `previous`
- * is what the change replaced (the old address, or the old number in E.164).
+ * A new email, phone or way to sign in on the account: the row behind its notice's "Not you?" link, valid for 7 days.
+ * `previous` is what the change replaced (the old address, or the old number in E.164; empty for a way to sign in),
+ * `next` what it brought (for a way to sign in: `google`, `microsoft` or `passkey:<name>`).
  */
 export async function recordContactChange(db: Pick<Db, 'insert'>, input: { userId: string; kind: Kind; previous: string; next: string }, now: Date): Promise<ContactRevertClaim> {
   const claim: ContactRevertClaim = { id: newId('ccr'), userId: input.userId, kind: input.kind, expiresAt: new Date(now.getTime() + CONTACT_REVERT_MS) };
@@ -116,10 +120,11 @@ export async function redeemContactRevertLink(deps: RedeemDeps, token: unknown):
     const revert = await undoChange(tx, row, user, now);
     const ended = await tx.delete(sessions).where(eq(sessions.userId, user.id)).returning({ id: sessions.id });
     const since = new Date(row.createdAt.getTime() - SIGN_IN_LOOKBACK_MS);
-    const removedKeys = await tx.delete(passkeys).where(and(eq(passkeys.userId, user.id), gte(passkeys.createdAt, since))).returning({ id: passkeys.id, name: passkeys.name });
+    // Every way in but the emailed code: the owner adds theirs again once staff clear the hold.
+    const removedKeys = await tx.delete(passkeys).where(eq(passkeys.userId, user.id)).returning({ id: passkeys.id, name: passkeys.name });
     const removedLinks = await tx
       .delete(accounts)
-      .where(and(eq(accounts.userId, user.id), inArray(accounts.providerId, [...SOCIAL_PROVIDERS]), gte(accounts.createdAt, since)))
+      .where(and(eq(accounts.userId, user.id), inArray(accounts.providerId, [...SOCIAL_PROVIDERS])))
       .returning({ id: accounts.id, provider: accounts.providerId });
     // A deletion asked for since then is withdrawn, as the person's own "Keep my account" does (privacy/requests.ts).
     const withdrawnDeletions = await tx
@@ -141,7 +146,11 @@ export async function redeemContactRevertLink(deps: RedeemDeps, token: unknown):
         kind: row.kind,
         reverted: revert.done,
         ...(revert.done ? {} : { notReverted: revert.why }),
-        ...(row.kind === 'email' ? { from: row.newValue, to: row.previousValue } : { fromLast4: last4(row.newValue), toLast4: last4(row.previousValue) }),
+        ...(row.kind === 'email'
+          ? { from: row.newValue, to: row.previousValue }
+          : row.kind === 'phone'
+            ? { fromLast4: last4(row.newValue), toLast4: last4(row.previousValue) }
+            : { method: row.newValue }),
         sessionsEnded: ended.length,
         deletionsWithdrawn: withdrawnDeletions.length,
         held: true,
@@ -158,18 +167,22 @@ export async function redeemContactRevertLink(deps: RedeemDeps, token: unknown):
 
 type Revert = { done: true } | { done: false; why: 'newer_change' | 'in_use' };
 
-/** Puts the old email or number back, if this change is still the latest of its kind and nobody else took the old one. */
+/**
+ * Puts the old email or number back, unless another account took it, undoing this change and every later one of its
+ * kind: changing the email twice in a row doesn't make the first notice's link useless (security review SEC15). The
+ * later changes' links stop working; they could only hold the account again, or hand it to whoever made them.
+ * A new way to sign in has nothing to put back: removing every way in undoes it.
+ */
 async function undoChange(tx: Tx, row: typeof contactChangeReverts.$inferSelect, user: { id: string; email: string; phone: string | null }, now: Date): Promise<Revert> {
-  const { previousValue: previous, newValue: next } = row;
-  if (!previous || !next) return { done: false, why: 'newer_change' };
-  const [latest] = await tx
-    .select({ id: contactChangeReverts.id })
-    .from(contactChangeReverts)
-    .where(and(eq(contactChangeReverts.userId, user.id), eq(contactChangeReverts.kind, row.kind)))
-    .orderBy(desc(contactChangeReverts.createdAt), desc(contactChangeReverts.id))
-    .limit(1);
+  if (row.kind === 'sign_in') return { done: true };
+  const { previousValue: previous } = row;
+  if (!previous) return { done: false, why: 'newer_change' };
+  await tx
+    .update(contactChangeReverts)
+    .set({ usedAt: now, previousValue: null, newValue: null })
+    .where(and(eq(contactChangeReverts.userId, user.id), eq(contactChangeReverts.kind, row.kind), gt(contactChangeReverts.createdAt, row.createdAt), isNull(contactChangeReverts.usedAt)));
   const current = row.kind === 'email' ? user.email.toLowerCase() : user.phone;
-  if (latest?.id !== row.id || current !== next) return { done: false, why: 'newer_change' };
+  if (current === previous) return { done: true };
   const column = row.kind === 'email' ? users.email : users.phone;
   const [taken] = await tx.select({ id: users.id }).from(users).where(and(eq(column, previous), ne(users.id, user.id))).limit(1);
   if (taken) return { done: false, why: 'in_use' };
@@ -179,7 +192,17 @@ async function undoChange(tx: Tx, row: typeof contactChangeReverts.$inferSelect,
   return { done: true };
 }
 
+/** A way to sign in as `recordContactChange` keeps it (`google`, `microsoft`, `passkey:<name>`), for staff. */
+function methodLabel(value: string | null): string {
+  if (value === 'google') return 'Google';
+  if (value === 'microsoft') return 'Microsoft';
+  if (value?.startsWith('passkey:')) return `the passkey “${value.slice('passkey:'.length)}”`;
+  return 'a way to sign in';
+}
+
 const DESCRIPTION: Record<Kind, string> = {
+  sign_in:
+    'The “Not you?” link in our notice of a new way to sign in was used. Every device was signed out, every way to sign in but an emailed code was removed, and the account’s email, phone and ways to sign in are held until our team has checked it.',
   email:
     'The “Not you?” link in our email change notice was used. Every device was signed out, and the account’s email, phone and ways to sign in are held until our team has checked it.',
   phone:
@@ -209,22 +232,29 @@ async function noteFor(tx: Tx, facts: CaseFacts): Promise<string> {
   if (row.kind === 'email') {
     lines.push(`“Not you?” link from the email change notice sent to the old address. The email changed from ${row.previousValue} to ${row.newValue} on ${at(row.createdAt)}.`);
     lines.push(revert.done ? `Undone: the account uses ${row.previousValue} again.` : revert.why === 'in_use' ? `Not undone: another account uses ${row.previousValue} now.` : 'Not undone: a newer email change replaced it.');
-  } else {
+  } else if (row.kind === 'phone') {
     lines.push(`“Not you?” link from the phone number change notice (a text to the old number and an email to the account). The number changed from the one ending in ${last4(row.previousValue)} to the one ending in ${last4(row.newValue)} on ${at(row.createdAt)}.`);
     lines.push(revert.done ? `Undone: the account uses the number ending in ${last4(row.previousValue)} again.` : revert.why === 'in_use' ? 'Not undone: another account uses the old number now.' : 'Not undone: a newer phone change replaced it.');
+  } else {
+    lines.push(`“Not you?” link from the notice of a new way to sign in, sent to the account’s email: ${methodLabel(row.newValue)} was added on ${at(row.createdAt)}.`);
   }
   lines.push(`Signed out everywhere (${facts.sessionsEnded === 1 ? '1 session' : `${facts.sessionsEnded} sessions`}).`);
   const removed = [
     ...facts.removedKeys.map((key) => (key.name ? `the passkey “${key.name}”` : 'a passkey')).sort(),
     ...facts.removedLinks.map((link) => (link.provider === 'google' ? 'Google' : link.provider === 'microsoft' ? 'Microsoft' : link.provider)).sort(),
   ];
-  lines.push(removed.length > 0 ? `Removed what was added to sign in since ${at(facts.since)}: ${removed.join(', ')}.` : `Nothing was added to sign in since ${at(facts.since)}.`);
+  lines.push(removed.length > 0 ? `Removed every way to sign in but an emailed code: ${removed.join(', ')}.` : 'There was no passkey or Google or Microsoft sign-in to remove.');
   const others = await tx
     .select({ kind: contactChangeReverts.kind, createdAt: contactChangeReverts.createdAt })
     .from(contactChangeReverts)
     .where(and(eq(contactChangeReverts.userId, user.id), ne(contactChangeReverts.id, row.id), gte(contactChangeReverts.createdAt, new Date(facts.now.getTime() - CONTACT_REVERT_MS))))
     .orderBy(desc(contactChangeReverts.createdAt));
-  if (others.length > 0) lines.push(`Other changes in the last 7 days: ${others.map((other) => `${other.kind === 'email' ? 'email' : 'phone number'} on ${at(other.createdAt)}`).join('; ')}. Each notice has its own link.`);
+  const kindLabel = (kind: string) => (kind === 'email' ? 'email' : kind === 'phone' ? 'phone number' : 'a new way to sign in');
+  if (others.length > 0) {
+    lines.push(
+      `Other changes in the last 7 days: ${others.map((other) => `${kindLabel(other.kind)} on ${at(other.createdAt)}`).join('; ')}. Later changes of this kind were undone with this one, and their links no longer work; the others keep their own.`,
+    );
+  }
   for (const deletion of facts.withdrawnDeletions) lines.push(`Deleting the account was requested on ${at(deletion.createdAt)}, after ${at(facts.since)}: withdrawn, so it can't run before the account is checked.`);
   const [deletion] = await tx
     .select({ scheduledFor: privacyRequests.scheduledFor, createdAt: privacyRequests.createdAt })

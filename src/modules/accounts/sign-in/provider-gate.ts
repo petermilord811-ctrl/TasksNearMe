@@ -1,9 +1,12 @@
 import { and, eq } from 'drizzle-orm';
 import type { ValidateUserInfoResult, ValidateUserInfoSource } from 'better-auth';
+import { createEmailProvider } from '@/integrations/email';
+import { appUrl } from '@/integrations/oauth';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { users } from '../schema';
+import { noticeSignInAdded, type AddedSignInMethod } from '../sign-in-added';
 import { GATE_ERRORS, idTokenClaims, isSocialProvider, providerNames } from './providers';
 import { BLOCKED_STATUSES, displayNameOf } from './steps';
 
@@ -41,10 +44,15 @@ export function createHeldAccountLinkGuard(db: Db) {
 
 /**
  * Better Auth's `account.create.after` (it runs once the account row is saved): Google or Microsoft was
- * connected to an account. It goes in the audit log, and when the account has no names yet (a new account),
- * the provider's names prefill the profile step. Names are never overwritten.
+ * connected to an account. It goes in the audit log, a finished account's email hears about it with a "Not you?"
+ * link (sign-in-added.ts, security review SEC15), and when the account has no names yet (a new account), the
+ * provider's names prefill the profile step. Names are never overwritten.
  */
-export function createProviderConnectedHook(db: Db) {
+export function createProviderConnectedHook(
+  db: Db,
+  notice: (input: { userId: string; method: AddedSignInMethod }) => Promise<unknown> = (input) =>
+    noticeSignInAdded({ db, email: createEmailProvider(db), appUrl: appUrl() }, input, new Date()),
+) {
   return async (account: { userId: string; providerId: string; idToken?: string | null }): Promise<void> => {
     if (!isSocialProvider(account.providerId)) return;
     await db.insert(auditLog).values({
@@ -56,6 +64,7 @@ export function createProviderConnectedHook(db: Db) {
       targetId: account.userId,
       metadata: { provider: account.providerId },
     });
+    await notice({ userId: account.userId, method: { kind: account.providerId === 'google' ? 'google' : 'microsoft' } });
     const claims = idTokenClaims(account.idToken);
     if (!claims) return;
     const { firstName, lastName } = providerNames(claims);

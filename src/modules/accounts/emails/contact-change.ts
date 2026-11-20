@@ -42,7 +42,7 @@ ${paragraph(t('emailChangeCode.body', { email }))}
 }
 
 /** `revertUrl`: the change's "Not you?" link (contact-revert-token.ts), which works once for `CONTACT_REVERT_DAYS`. */
-function changedNotice(kind: 'emailChanged' | 'phoneChanged', values: Record<string, string>, revertUrl: string, appUrl: string, locale: AppLocale): RenderedEmail {
+function changedNotice(kind: 'emailChanged' | 'phoneChanged' | 'signInAdded', values: Record<string, string>, revertUrl: string, appUrl: string, locale: AppLocale): RenderedEmail {
   const t = tFor(locale);
   const helpUrl = `${appUrl}${routes.helpContact()}`;
   const preheader = t(`${kind}.preheader`, values);
@@ -69,6 +69,19 @@ export function renderEmailChangedNotice({ newEmail, revertUrl, appUrl, locale =
 /** To the account's email, after its phone number changed (only the last 4 digits are shown). */
 export function renderPhoneChangedNotice({ last4, revertUrl, appUrl, locale = DEFAULT_LOCALE }: { last4: string; revertUrl: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
   return changedNotice('phoneChanged', { last4 }, revertUrl, appUrl, locale);
+}
+
+/** A new way to sign in, as the notice names it: Google, Microsoft, or a passkey by the name it was given. */
+export type AddedSignInMethod = { kind: 'google' | 'microsoft' } | { kind: 'passkey'; name: string };
+
+/**
+ * To the account's email, after a new way to sign in was added to a finished account (security review SEC15): its
+ * "Not you?" link signs every device out and removes every way in but the emailed code.
+ */
+export function renderSignInAddedNotice({ method, revertUrl, appUrl, locale = DEFAULT_LOCALE }: { method: AddedSignInMethod; revertUrl: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
+  const t = tFor(locale);
+  const label = method.kind === 'passkey' ? t('signInAdded.methods.passkey', { name: method.name }) : t(`signInAdded.methods.${method.kind}`);
+  return changedNotice('signInAdded', { method: label }, revertUrl, appUrl, locale);
 }
 
 /** The text to the old number after the phone changed: the same "Not you?" link, and nothing about the new number. */

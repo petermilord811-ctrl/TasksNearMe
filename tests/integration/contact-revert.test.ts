@@ -10,7 +10,8 @@ import { CONTACT_REVERT_CASE_REASON, getContactRevertPage, isContactHeld, KEEP_S
 import { CONTACT_REVERT_MS, contactRevertToken } from '@/modules/accounts/contact-revert-token';
 import { createPhoneVerification } from '@/modules/accounts/phone-verification';
 import { accounts, contactChangeReverts, passkeys, sessions, users } from '@/modules/accounts/schema';
-import { createHeldAccountLinkGuard } from '@/modules/accounts/sign-in/provider-gate';
+import { createHeldAccountLinkGuard, createProviderConnectedHook } from '@/modules/accounts/sign-in/provider-gate';
+import { noticeSignInAdded } from '@/modules/accounts/sign-in-added';
 import { privacyRequests } from '@/modules/notifications/schema';
 import { getAccountPage } from '@/modules/notifications/service';
 import { reactForOperations } from '@/modules/oncall/reactions';
@@ -26,11 +27,12 @@ import { outboxEvents } from '@/platform/outbox/schema';
 
 /**
  * "Not you?" (completion plan 5.23) against the database: the link in an email or phone change notice, used
- * without signing in. It ends every session, undoes the change unless a newer one replaced it, removes passkeys
- * and Google or Microsoft sign-ins added around the change, holds the account's sign-in details until trust and
- * safety clear them, opens an urgent case (which pages the on-call) and is audited. It works once, is rate-limited,
- * and a forged or expired link changes nothing. People made for this file sign in through Better Auth's real
- * endpoints, and change their email and phone through the account page's flows, codes read from the dev outbox.
+ * without signing in, or the one in the notice of a new way to sign in. It ends every session, undoes the change and
+ * any later one of its kind, removes every passkey and Google or Microsoft sign-in (security review SEC15), holds the
+ * account's sign-in details until trust and safety clear them, opens an urgent case (which pages the on-call) and is
+ * audited. It works once, is rate-limited, and a forged or expired link changes nothing. People made for this file
+ * sign in through Better Auth's real endpoints, and change their email and phone through the account page's flows,
+ * codes read from the dev outbox.
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
@@ -148,7 +150,7 @@ describe('using the "Not you?" link after an email change', () => {
     expect(await sessionCount(robin.userId)).toBe(2);
   });
 
-  it('ends every session, undoes the change, removes the ways in added around it, holds the account, opens an urgent case, and audits it all', async () => {
+  it('ends every session, undoes the change, removes every way in but the emailed code, holds the account, opens an urgent case, and audits it all', async () => {
     const now = new Date();
     expect(await redeemContactRevertLink({ db, now, ip: '203.0.113.21' }, token)).toEqual({ ok: true, code: 'updated' });
 
@@ -157,8 +159,9 @@ describe('using the "Not you?" link after an email change', () => {
     expect(user.emailVerified).toBe(true);
     expect(user.contactHoldAt).toEqual(now);
     expect(await sessionCount(robin.userId)).toBe(0);
-    expect((await db.select({ id: passkeys.id }).from(passkeys).where(eq(passkeys.userId, robin.userId))).map((row) => row.id)).toEqual([`pky_ccr_old_${RUN}`]);
-    expect((await db.select({ provider: accounts.providerId }).from(accounts).where(eq(accounts.userId, robin.userId))).map((row) => row.provider)).toEqual(['microsoft']);
+    // The old ones too (security review SEC15): one added long before the change can be the way back in.
+    expect(await db.select({ id: passkeys.id }).from(passkeys).where(eq(passkeys.userId, robin.userId))).toEqual([]);
+    expect((await db.select({ provider: accounts.providerId }).from(accounts).where(eq(accounts.userId, robin.userId))).map((row) => row.provider)).toEqual([]);
 
     // What the link kept is gone once it's used.
     const [row] = await db.select().from(contactChangeReverts).where(eq(contactChangeReverts.userId, robin.userId));
@@ -173,15 +176,15 @@ describe('using the "Not you?" link after an email change', () => {
     // Times in the account's market's zone, named (Austin's here).
     expect(note!.body).toMatch(/ on .+ · .+ C[SD]T\./);
     expect(note!.body).toContain('Signed out everywhere (2 sessions).');
-    expect(note!.body).toContain('the passkey “Before”, the passkey “Phone”, Google');
+    expect(note!.body).toContain('Removed every way to sign in but an emailed code: the passkey “Before”, the passkey “Old laptop”, the passkey “Phone”, Google, Microsoft.');
     const [event] = await db.select().from(outboxEvents).where(eq(outboxEvents.aggregateId, caseId));
     expect(event).toMatchObject({ type: 'support.case_opened', payload: { caseId, type: 'account', openedByUserId: robin.userId } });
 
     const [reported] = await auditOf(robin.userId, 'account.contact_change_reported');
     expect(reported).toMatchObject({ actorId: null, actorRole: 'system', ip: '203.0.113.21' });
     expect(reported!.metadata).toMatchObject({ via: 'not_me_link', kind: 'email', reverted: true, from: next(), to: old(), sessionsEnded: 2, held: true, caseId });
-    expect((await auditOf(robin.userId, 'account.passkey_removed')).map((entry) => entry.metadata.name).sort()).toEqual(['Before', 'Phone']);
-    expect((await auditOf(robin.userId, 'account.sign_in_disconnected')).map((entry) => entry.metadata.provider)).toEqual(['google']);
+    expect((await auditOf(robin.userId, 'account.passkey_removed')).map((entry) => entry.metadata.name).sort()).toEqual(['Before', 'Old laptop', 'Phone']);
+    expect((await auditOf(robin.userId, 'account.sign_in_disconnected')).map((entry) => entry.metadata.provider).sort()).toEqual(['google', 'microsoft']);
   });
 
   it('works once: the same link again changes nothing and reads like any broken link', async () => {
@@ -246,7 +249,7 @@ describe('using the "Not you?" link after an email change', () => {
 });
 
 describe('a newer change, a phone change, and links that must change nothing', () => {
-  it('leaves a newer email change alone, but still secures the account; the newer link then undoes its own change', async () => {
+  it('undoes a newer email change with the first, still securing the account, and the newer link then stops working (SEC15)', async () => {
     const sam = await person('sam');
     const second = `ccr-sam-2-${RUN}@example.test`;
     const third = `ccr-sam-3-${RUN}@example.test`;
@@ -255,24 +258,25 @@ describe('a newer change, a phone change, and links that must change nothing', (
     await changeEmail(sam, third);
     const newer = tokenIn((await latest(second, 'email', 'email-changed'))?.body);
 
+    // Two changes in a row don't make the first notice's link useless: it puts the original address back.
     expect(await redeemContactRevertLink({ db, now: new Date(), ip: null }, first)).toEqual({ ok: true, code: 'updated' });
     let user = await userOf(sam.userId);
-    expect(user.email).toBe(third);
+    expect(user.email).toBe(sam.email);
     expect(user.contactHoldAt).not.toBeNull();
     expect(await sessionCount(sam.userId)).toBe(0);
     const [reported] = await auditOf(sam.userId, 'account.contact_change_reported');
-    expect(reported!.metadata).toMatchObject({ reverted: false, notReverted: 'newer_change' });
+    expect(reported!.metadata).toMatchObject({ reverted: true, from: second, to: sam.email });
     const [opened] = await casesOf(sam.userId);
     const notes = async () => (await db.select({ body: supportCaseEvents.body }).from(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id))).map((row) => row.body ?? '');
-    expect((await notes()).join('\n')).toContain('Not undone: a newer email change replaced it.');
+    expect((await notes()).join('\n')).toContain(`Undone: the account uses ${sam.email} again.`);
     expect((await notes()).join('\n')).toContain('Other changes in the last 7 days: email on');
+    expect((await notes()).join('\n')).toContain('Later changes of this kind were undone with this one, and their links no longer work');
 
-    // The newer change's own link, from the address in between: it is the latest, so it is undone. The case gets a note.
-    expect(await redeemContactRevertLink({ db, now: new Date(), ip: null }, newer)).toEqual({ ok: true, code: 'updated' });
+    // The newer change's link went to the address in between, which whoever made it may hold: it changes nothing now.
+    expect(await redeemContactRevertLink({ db, now: new Date(), ip: null }, newer)).toEqual({ ok: false, code: 'not_found' });
     user = await userOf(sam.userId);
-    expect(user.email).toBe(second);
+    expect(user.email).toBe(sam.email);
     expect(await casesOf(sam.userId)).toHaveLength(1);
-    expect((await notes()).some((body) => body.startsWith('Another “Not you?” link was used.'))).toBe(true);
   });
 
   it('after a phone change, texts the old number and emails the account the same link, which puts the old number back', async () => {
@@ -406,5 +410,36 @@ describe('what the links keep', () => {
     await anonymizeAccount(db, { storage, cipher: fieldCipherFromEnv(), email: { name: 'memory', send: vi.fn(async () => undefined) }, appUrl: BASE }, leaver.userId, new Date());
     expect(await db.select().from(contactChangeReverts).where(eq(contactChangeReverts.userId, leaver.userId))).toEqual([]);
     expect(await db.select().from(passkeys).where(eq(passkeys.userId, leaver.userId))).toEqual([]);
+  });
+});
+
+describe('"Not you?" since the security review (SEC15)', () => {
+  const finished = (userId: string) => db.update(users).set({ termsAcceptedAt: new Date(), adultAttestedAt: new Date() }).where(eq(users.id, userId));
+
+  it('tells a finished account about a new way to sign in, and its link removes every way in', async () => {
+    const lee = await person('linked');
+    await finished(lee.userId);
+    await db.insert(accounts).values({ id: `acc_ccr_linked_${RUN}`, accountId: `google-linked-${RUN}`, providerId: 'google', userId: lee.userId });
+    await createProviderConnectedHook(db)({ userId: lee.userId, providerId: 'google' });
+    const notice = await latest(lee.email, 'email', 'sign-in-added');
+    expect(notice?.body).toContain('Your Google account can now be used to sign in to your TasksNearMe account.');
+    expect(await redeemContactRevertLink({ db, now: new Date(), ip: null }, tokenIn(notice?.body))).toEqual({ ok: true, code: 'updated' });
+    expect(await db.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.userId, lee.userId), eq(accounts.providerId, 'google')))).toEqual([]);
+    expect(await sessionCount(lee.userId)).toBe(0);
+    expect(await isContactHeld(db, lee.userId)).toBe(true);
+    const [opened] = await casesOf(lee.userId);
+    expect(opened?.description).toContain('a new way to sign in');
+    const [reported] = await auditOf(lee.userId, 'account.contact_change_reported');
+    expect(reported!.metadata).toMatchObject({ kind: 'sign_in', method: 'google', reverted: true });
+  });
+
+  it('names a new passkey, and says nothing about sign-up’s own first way in', async () => {
+    const kim = await person('passkey');
+    await finished(kim.userId);
+    expect(await noticeSignInAdded({ db, email: outbox, appUrl: BASE }, { userId: kim.userId, method: { kind: 'passkey', name: 'Work laptop' } }, new Date())).toBe(true);
+    expect((await latest(kim.email, 'email', 'sign-in-added'))?.body).toContain('A passkey named “Work laptop” can now be used to sign in');
+    const newcomer = await person('newcomer');
+    await createProviderConnectedHook(db)({ userId: newcomer.userId, providerId: 'google' });
+    expect(await latest(newcomer.email, 'email', 'sign-in-added')).toBeNull();
   });
 });
