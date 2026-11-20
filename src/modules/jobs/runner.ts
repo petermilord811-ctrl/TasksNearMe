@@ -4,7 +4,7 @@ import { runScheduledTransfers } from '@/modules/payments/connect';
 import { expireDuePosts } from '@/modules/availability/service';
 import { expireDueProposals } from '@/modules/rebook/service';
 import { sql } from 'drizzle-orm';
-import { autoApproveDue } from '@/modules/bookings/completion-view';
+import { autoApproveDue, recordMissingCompletionMoney } from '@/modules/bookings/completion-view';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { expireUnfundedBookings } from '@/modules/bookings/confirm';
 import { chargeDueScheduled, expireUnpaidScheduled } from '@/modules/bookings/scheduled';
@@ -63,6 +63,8 @@ export const JOBS: Job[] = [
   { name: 'bookings.scheduled_charges', run: async (db, now) => { const payments = createPaymentProvider(); if (payments) await chargeDueScheduled({ db, payments }, now); } },
   { name: 'bookings.expire_cant_access', run: (db, now) => expireCantAccess(db, now) },
   { name: 'bookings.auto_approve', run: (db, now) => autoApproveDue(db, now) },
+  // Completed bookings whose earnings or refund didn't finish (a provider error): run again (booking reviews, money #5).
+  { name: 'bookings.completion_money', run: (db, now) => recordMissingCompletionMoney(db, now).then(() => undefined) },
   { name: 'bookings.approval_reminders', run: (db, now) => remindApprovalsDue(db, now) },
   { name: 'bookings.start_reminders', run: (db, now) => remindUpcomingBookings(db, now) },
   { name: 'reviews.publish', run: (db, now) => publishDueReviews(db, now) },

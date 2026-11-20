@@ -1,11 +1,14 @@
-import { and, asc, eq, inArray, lte } from 'drizzle-orm';
+import { and, asc, eq, inArray, lte, sql } from 'drizzle-orm';
 import type { CompletionView } from '@/contracts';
 import { photoFromFile } from '@/modules/files/uploads';
 import { categories } from '@/modules/markets/schema';
 import { files, tasks } from '@/modules/tasks/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { earnings } from '@/modules/earnings/schema';
 import { recordCompletionMoney } from '@/modules/earnings/service';
+import { refunds } from '@/modules/payments/schema';
+import { realRowsOnly } from '@/shared/sample-data';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { checklistView } from './checklist';
@@ -28,7 +31,13 @@ export async function autoApproveDue(db: Db, now: Date, scope: { bookingId?: str
   if (approved.length === 0) return;
   for (const booking of approved) {
     await postEvent(db, bookingThreadLink(booking), 'status', { type: 'auto_approved' }, now);
-    await recordCompletionMoney(db, booking.id, now);
+    // One booking's provider error never strands the rest of the batch (booking reviews, money #5): the sweep below
+    // records what's missing.
+    try {
+      await recordCompletionMoney(db, booking.id, now);
+    } catch (error) {
+      console.error(`[bookings] completion money for ${booking.id} failed; the sweep retries it`, error);
+    }
   }
   await db.update(tasks).set({ status: 'completed', updatedAt: now }).where(inArray(tasks.id, approved.map((row) => row.taskId)));
   await db.insert(outboxEvents).values(
@@ -40,6 +49,46 @@ export async function autoApproveDue(db: Db, now: Date, scope: { bookingId?: str
       payload: { bookingId: row.id, taskId: row.taskId, via: 'auto' },
     })),
   );
+}
+
+/**
+ * Completed bookings whose money didn't finish (booking reviews, money #5): no earnings row yet, or a refund of unused
+ * hours, allowance or a settlement owed and not made. `recordCompletionMoney` is idempotent, so each is run again,
+ * oldest first, one at a time, with an error logged and left for the next run. Bookings completed in the last two
+ * minutes are left to their own request; seed and demo bookings (ids not in the generated form) are never touched.
+ */
+export async function recordMissingCompletionMoney(db: Db, now: Date, limit = 25): Promise<number> {
+  const settled = new Date(now.getTime() - 2 * 60_000);
+  const rows = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(bookingCompletions, eq(bookingCompletions.bookingId, bookings.id))
+    .where(
+      and(
+        eq(bookings.status, 'completed'),
+        lte(bookings.completedAt, settled),
+        // Real bookings only: seed and demo rows were written complete, and a payout must never be invented for them.
+        realRowsOnly(bookings.id),
+        sql`(
+          (coalesce((${bookingCompletions.finalBreakdown} ->> 'helperEarningsCents')::int, 0) > 0
+            and not exists (select 1 from ${earnings} e where e.booking_id = ${bookings.id} and e.kind = 'earnings'))
+          or (coalesce((${bookingCompletions.finalBreakdown} ->> 'posterRefundCents')::int, 0) > 0
+            and not exists (select 1 from ${refunds} r where r.booking_id = ${bookings.id} and r.reason in ('unused_cap', 'unused_allowance', 'dispute_settlement') and r.status <> 'failed'))
+        )`,
+      ),
+    )
+    .orderBy(asc(bookings.completedAt))
+    .limit(limit);
+  let done = 0;
+  for (const row of rows) {
+    try {
+      await recordCompletionMoney(db, row.id, now);
+      done += 1;
+    } catch (error) {
+      console.error(`[bookings] completion money for ${row.id} failed again`, error);
+    }
+  }
+  return done;
 }
 
 /** The submitted work for the booking page (both people). */

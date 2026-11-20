@@ -94,6 +94,11 @@ async function communityPost(db: Db, postId: string | undefined) {
  * Who hears about an event, and how. `onlyUserId` (deliverPending, for one person's page) lets the costly cases
  * look at that one person only.
  */
+/** Who an event notifies, and how (exported for tests). */
+export async function planNotifications(db: Db, event: EventRow): Promise<Planned[]> {
+  return plan(db, event);
+}
+
 async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Planned[]> {
   const p = event.payload as Payload;
   switch (event.type) {
@@ -179,6 +184,8 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
     }
     case 'booking.confirmed':
     case 'booking.on_my_way':
+    case 'booking.running_late':
+    case 'booking.cant_access':
     case 'booking.arrived':
     case 'booking.completion_submitted':
     case 'booking.completed':
@@ -201,6 +208,10 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
           return [forHelper('booking_confirmed')];
         case 'booking.on_my_way':
           return [forPoster('helper_on_the_way')];
+        case 'booking.running_late':
+          return [forPoster('helper_running_late', typeof p.minutes === 'number' ? { params: { minutes: p.minutes } } : {})];
+        case 'booking.cant_access':
+          return [forPoster('cant_access')];
         case 'booking.arrived':
           return [forPoster('helper_arrived')];
         case 'booking.completion_submitted':

@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, isNotNull, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import type { BookingViewerRole, CardBrand, PaymentAttemptResult, PayScheduledInput, ScheduledPaymentView, SeriesChargeFailure } from '@/contracts';
 import { payScheduledInputSchema } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
@@ -91,6 +91,10 @@ async function chargeFailed(db: Db, booking: BookingRow, failure: SeriesChargeFa
   });
 }
 
+/** An attempt with no answer for this long is the job's to ask again; the next look comes this soon. */
+const UNKNOWN_AFTER_MS = 2 * 60_000;
+const RETRY_UNKNOWN_MS = 10 * 60_000;
+
 /** Charges one due booking off-session with its saved card. */
 async function chargeOne(deps: BookingDeps, booking: BookingRow, now: Date): Promise<void> {
   const { db } = deps;
@@ -105,10 +109,29 @@ async function chargeOne(deps: BookingDeps, booking: BookingRow, now: Date): Pro
   const amountCents = await amountOf(db, claimed.id);
   const method = claimed.fundingMethodId ? await methodForChoice(deps, claimed.posterUserId, { kind: 'saved', methodId: claimed.fundingMethodId }) : null;
   if (!amountCents || !method || !('providerRef' in method)) return chargeFailed(db, claimed, 'no_card', attempts, now);
-  const attempt = await openAttempt(db, claimed, amountCents, { ...method, save: false }, deps.payments.name, now);
-  // The client is paying right now: their payment decides.
-  if (!attempt) return;
-  const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey: attempt.idempotencyKey, description: `TasksNearMe booking ${claimed.id}`, offSession: true });
+  // An earlier attempt of the job's whose outcome is unknown (the provider threw): asked again with the same key and the
+  // same off-session charge, which gives back that attempt's own result instead of charging twice (repeats review #2).
+  const [unknown] = await db
+    .select({ id: payments.id, idempotencyKey: payments.idempotencyKey, amountCents: payments.amountCents })
+    .from(payments)
+    .where(and(eq(payments.bookingId, claimed.id), eq(payments.status, 'processing'), isNull(payments.providerRef), lte(payments.createdAt, new Date(now.getTime() - UNKNOWN_AFTER_MS))))
+    .limit(1);
+  const attempt = unknown ? { paymentId: unknown.id, idempotencyKey: unknown.idempotencyKey } : await openAttempt(db, claimed, amountCents, { ...method, save: false }, deps.payments.name, now);
+  // The client is paying right now: their payment decides. The job looks again later, in case it doesn't go through.
+  if (!attempt) {
+    await db.update(bookings).set({ fundingDueAt: new Date(now.getTime() + RETRY_UNKNOWN_MS), updatedAt: now }).where(and(eq(bookings.id, claimed.id), eq(bookings.status, 'scheduled')));
+    return;
+  }
+  let result: Awaited<ReturnType<PaymentProvider['charge']>>;
+  try {
+    result = await deps.payments.charge({ amountCents: unknown?.amountCents ?? amountCents, method: chargeMethodOf(method), idempotencyKey: attempt.idempotencyKey, description: `TasksNearMe booking ${claimed.id}`, offSession: true });
+  } catch (error) {
+    // A timeout, a 5xx, a rate limit: the money may or may not have moved. The attempt stays open and the job asks
+    // again shortly with the same key (before the visit's deadline).
+    console.error(`[scheduled] charging ${claimed.id} didn't answer; asking again`, error);
+    await db.update(bookings).set({ fundingDueAt: new Date(now.getTime() + RETRY_UNKNOWN_MS), updatedAt: now }).where(and(eq(bookings.id, claimed.id), eq(bookings.status, 'scheduled')));
+    return;
+  }
   const settled = await settle(deps, claimed.posterUserId, attempt.paymentId, result, now);
   if (settled.ok) return;
   await chargeFailed(db, claimed, result.status === 'requires_action' ? 'requires_bank_verification' : result.status === 'failed' ? result.failureCode : 'payment_declined', attempts, now);

@@ -59,7 +59,8 @@ export async function refundAcross(
   bookingId: string,
   charges: RefundableCharge[],
   amountCents: number | null,
-  refund: { reason: string; key: string },
+  /** `caseReason`: the finance case's reason when a refund fails (default `<reason>_refund_failed`). */
+  refund: { reason: string; key: string; caseReason?: string },
   now: Date,
 ): Promise<{ refundedCents: number; ok: boolean }> {
   let refundedCents = 0;
@@ -85,12 +86,12 @@ export async function refundAcross(
         refundedCents += take;
         await deps.db.update(payments).set({ status: take >= charge.remainingCents ? 'refunded' : 'partially_refunded', updatedAt: now }).where(eq(payments.id, charge.id));
       } else ok = false;
-      if (result.status === 'failed') await openRefundCase(deps.db, charge.id, `${refund.reason}_refund_failed`, now);
+      if (result.status === 'failed') await openRefundCase(deps.db, charge.id, refund.caseReason ?? `${refund.reason}_refund_failed`, now);
     } catch (error) {
       ok = false;
       console.error(`[payments] refunding ${charge.id} (${refund.reason}) failed`, error);
       await deps.db.update(refunds).set({ status: 'failed' }).where(eq(refunds.id, pending.id));
-      await openRefundCase(deps.db, charge.id, `${refund.reason}_refund_failed`, now);
+      await openRefundCase(deps.db, charge.id, refund.caseReason ?? `${refund.reason}_refund_failed`, now);
     }
   }
   // More asked than the charges hold: nothing to take it from.

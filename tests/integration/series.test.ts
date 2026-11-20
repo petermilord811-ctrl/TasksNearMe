@@ -15,6 +15,7 @@ import { quoteBreakdown } from '@/modules/payments/fees';
 import { paymentMethods, payments } from '@/modules/payments/schema';
 import { rebookProposals } from '@/modules/rebook/schema';
 import { acceptProposal, getProposalPage, getProposeRebookPage, proposeRebook } from '@/modules/rebook/service';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
@@ -327,5 +328,58 @@ describe('regular visits', () => {
     const benHeard = await db.select({ type: notifications.type, params: notifications.params }).from(notifications).where(eq(notifications.userId, 'usr_ben'));
     expect(benHeard.map((row) => row.type)).toEqual(expect.arrayContaining(['scheduled_payment_failed', 'series_visit_skipped', 'series_stopped']));
     expect(benHeard.find((row) => row.type === 'series_stopped')?.params).toMatchObject({ by: 'helper', day: series!.endsOn });
+  });
+  it('keeps a pause when the helper ends a paused series: no visit comes back inside it (repeats review #4)', async () => {
+    const now = new Date(start.getTime() + 2 * DAY);
+    const pausedUntil = marketDayKey(new Date(now.getTime() + 60 * DAY), 'America/Chicago');
+    await db.update(bookingSeries).set({ status: 'paused', pausedUntil, endsOn: null }).where(eq(bookingSeries.id, seriesId));
+    const before = (await visitsOf(seriesId)).map((row) => row.visitIndex);
+    expect(await endSeries(db, 'usr_jordan', seriesId, now)).toEqual({ ok: true, code: 'updated' });
+    const [series] = await db.select().from(bookingSeries).where(eq(bookingSeries.id, seriesId));
+    expect(series).toMatchObject({ status: 'ended', pausedUntil });
+    await runSeriesCalendars(db, now);
+    expect((await visitsOf(seriesId)).map((row) => row.visitIndex)).toEqual(before);
+  });
+
+  it('stops a series when its helper is suspended: nothing more is put on the calendar or charged (repeats review #1)', async () => {
+    const now = new Date(start.getTime() + 2 * DAY);
+    await db.update(bookingSeries).set({ status: 'active', pausedUntil: null, endsOn: null }).where(eq(bookingSeries.id, seriesId));
+    await db.update(helperProfiles).set({ status: 'suspended' }).where(eq(helperProfiles.userId, 'usr_jordan'));
+    try {
+      await runSeriesCalendars(db, now);
+    } finally {
+      await db.update(helperProfiles).set({ status: 'active' }).where(eq(helperProfiles.userId, 'usr_jordan'));
+    }
+    const [series] = await db.select({ status: bookingSeries.status, changedBy: bookingSeries.changedBy }).from(bookingSeries).where(eq(bookingSeries.id, seriesId));
+    expect(series).toMatchObject({ status: 'canceled', changedBy: 'system' });
+    expect((await visitsOf(seriesId)).some((row) => row.status === 'scheduled')).toBe(false);
+  });
+
+  it('asks again with the same key when a scheduled charge gets no answer, and never charges twice (repeats review #2)', async () => {
+    const now = new Date(start.getTime() + 2 * DAY);
+    // A card that goes through (an earlier test switched the series to one that declines).
+    const [card] = await db.select().from(paymentMethods).where(and(eq(paymentMethods.userId, 'usr_ben'), eq(paymentMethods.providerRef, devCardRef('success')))).limit(1);
+    const target = (await visitsOf(seriesId)).find((row) => row.visitIndex === 3)!;
+    // Put one visit back on the calendar, due now.
+    await db.update(bookings).set({ status: 'scheduled', cancelReason: null, canceledAt: null, fundingDueAt: new Date(now.getTime() - 60_000), fundingExpiresAt: new Date(now.getTime() + DAY), fundingMethodId: card!.id }).where(eq(bookings.id, target.id));
+    await db.update(payments).set({ status: 'canceled' }).where(and(eq(payments.bookingId, target.id), inArray(payments.status, ['processing', 'requires_confirmation'])));
+    const keys: string[] = [];
+    const silent = { ...provider, charge: async (input: Parameters<typeof provider.charge>[0]) => { keys.push(input.idempotencyKey); throw new Error('timeout'); } };
+    await chargeDueScheduled({ db, payments: silent }, now);
+    const [waiting] = await db.select().from(bookings).where(eq(bookings.id, target.id));
+    expect(waiting?.status).toBe('scheduled');
+    expect(waiting?.fundingDueAt?.getTime()).toBe(now.getTime() + 10 * 60_000);
+    const open = await db.select().from(payments).where(and(eq(payments.bookingId, target.id), eq(payments.status, 'processing')));
+    expect(open).toHaveLength(1);
+    // Ten minutes on, the job asks again with the same key and the answer settles that same attempt.
+    const later = new Date(now.getTime() + 11 * 60_000);
+    const asked: string[] = [];
+    const answering = { ...provider, charge: async (input: Parameters<typeof provider.charge>[0]) => { asked.push(input.idempotencyKey); return provider.charge(input); } };
+    await chargeDueScheduled({ db, payments: answering }, later);
+    expect(asked).toEqual([keys[0]]);
+    const [paid] = await db.select().from(bookings).where(eq(bookings.id, target.id));
+    expect(paid?.status).toBe('confirmed');
+    const settled = await db.select().from(payments).where(and(eq(payments.bookingId, target.id), eq(payments.status, 'succeeded'), eq(payments.id, open[0]!.id)));
+    expect(settled).toHaveLength(1);
   });
 });

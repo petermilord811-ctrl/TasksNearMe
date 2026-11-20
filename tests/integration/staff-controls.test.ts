@@ -200,6 +200,7 @@ describe('support cancels a booking', () => {
     expect((await db.select().from(refunds).where(eq(refunds.bookingId, 'bkg_sc_fails'))).map((row) => [row.amountCents, row.status])).toEqual([[5000, 'failed']]);
     expect(await db.select().from(auditLog).where(and(eq(auditLog.action, 'booking.canceled_by_staff'), eq(auditLog.targetId, 'bkg_sc_fails')))).toHaveLength(1);
     const [opened] = await db.select().from(auditLog).where(and(eq(auditLog.action, 'payment.refund_case_opened'), eq(auditLog.targetId, 'pay_sc_fails')));
-    expect(opened?.metadata).toMatchObject({ reason: 'cancellation_refund_failed' });
+    // Finance tells a staff cancellation's failed refund apart from a client's (its own case reason).
+    expect(opened?.metadata).toMatchObject({ reason: 'staff_cancel_refund_failed' });
   });
 });

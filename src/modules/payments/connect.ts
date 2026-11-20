@@ -25,26 +25,26 @@ export async function runScheduledTransfers(db: Db, connect: StripeConnect, now:
     .select({ id: payments.id })
     .from(payments)
     .where(and(eq(payments.bookingId, earnings.bookingId), eq(payments.disputeStatus, 'open')));
+  // Only rows whose helper can be paid now (booking reviews, money #6): rows waiting on a payout account never take a
+  // place in the batch, and a row that failed goes to the back (its updatedAt is touched), so no set of stuck rows can
+  // hold up everyone else's transfers.
   const due = await db
-    .select()
+    .select({ row: earnings, accountId: payoutAccounts.providerAccountId })
     .from(earnings)
+    .innerJoin(payoutAccounts, and(eq(payoutAccounts.userId, earnings.helperUserId), eq(payoutAccounts.provider, 'stripe'), eq(payoutAccounts.status, 'active')))
     .where(and(eq(earnings.status, 'scheduled'), notExists(chargedBack)))
-    .orderBy(asc(earnings.createdAt))
+    .orderBy(asc(earnings.updatedAt), asc(earnings.createdAt))
     .limit(BATCH);
   let moved = 0;
-  for (const row of due) {
-    const [account] = await db
-      .select()
-      .from(payoutAccounts)
-      .where(and(eq(payoutAccounts.userId, row.helperUserId), eq(payoutAccounts.provider, 'stripe'), eq(payoutAccounts.status, 'active')))
-      .limit(1);
-    // Not ready for transfers yet: it waits (the helper sees it as scheduled).
-    if (!account) continue;
+  for (const { row, accountId } of due) {
+    const account = { providerAccountId: accountId };
+    const later = () => db.update(earnings).set({ updatedAt: now }).where(and(eq(earnings.id, row.id), eq(earnings.status, 'scheduled')));
     try {
+      // A tip goes out from its own charge; everything else from the booking's (money review #7).
       const [charge] = await db
         .select({ providerRef: payments.providerRef })
         .from(payments)
-        .where(and(eq(payments.bookingId, row.bookingId), eq(payments.provider, 'stripe'), inArray(payments.purpose, ['booking_funding', 'invite_authorization']), inArray(payments.status, ['succeeded', 'partially_refunded'])))
+        .where(and(eq(payments.bookingId, row.bookingId), eq(payments.provider, 'stripe'), inArray(payments.purpose, row.kind === 'tip' ? ['tip'] : ['booking_funding', 'invite_authorization']), inArray(payments.status, ['succeeded', 'partially_refunded'])))
         .limit(1);
       const source = charge?.providerRef ? await connect.chargeOf(charge.providerRef) : null;
       const result = await connect.transfer({
@@ -54,12 +54,16 @@ export async function runScheduledTransfers(db: Db, connect: StripeConnect, now:
         group: `booking:${row.bookingId}`,
         idempotencyKey: `transfer:${row.id}`,
       });
-      if (!result.ok) continue;
+      if (!result.ok) {
+        await later();
+        continue;
+      }
       await db.update(earnings).set({ status: 'transferred', transferRef: result.transferId, transferredAt: now, updatedAt: now }).where(and(eq(earnings.id, row.id), eq(earnings.status, 'scheduled')));
       moved += 1;
     } catch (error) {
-      // Stripe or the network: the row stays scheduled and the next run tries again (same idempotency key).
+      // Stripe or the network: the row stays scheduled and a later run tries again (same idempotency key), after the rest.
       console.error(`Transfer ${row.id} failed; it will be retried`, error);
+      await later();
     }
   }
   return moved;

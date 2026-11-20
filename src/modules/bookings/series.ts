@@ -27,6 +27,8 @@ import { getHelperSummaries } from '@/modules/profiles/queries';
 import { rebookProposals } from '@/modules/rebook/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
+import { users } from '@/modules/accounts/schema';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { marketTimeZone, marketTimeZones } from '@/modules/markets/time-zone';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -221,10 +223,24 @@ async function addVisit(db: Db, series: SeriesRow, template: typeof tasks.$infer
   }
 }
 
+/** Both people can still take part: active accounts, and the helper not suspended (a paused profile keeps its series). */
+async function seriesPeopleCanBook(db: Db, series: SeriesRow): Promise<boolean> {
+  const people = await db.select({ id: users.id, status: users.status }).from(users).where(inArray(users.id, [series.posterUserId, series.helperUserId]));
+  if (people.length < 2 || people.some((person) => person.status !== 'active')) return false;
+  const [profile] = await db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, series.helperUserId)).limit(1);
+  return profile?.status === 'active' || profile?.status === 'paused';
+}
+
 /** Keeps the series' next visits on the calendar (four ahead). A block between the two people stops it. */
 export async function fillCalendar(db: Db, seriesId: string, now: Date): Promise<void> {
   const [series] = await db.select().from(bookingSeries).where(eq(bookingSeries.id, seriesId)).limit(1);
   if (!series || !RUNNING.includes(series.status as SeriesStatus)) return;
+  // A suspended helper, or an account that can't act any more (suspended, banned, deleted), ends it, with the visits
+  // not yet paid: nothing more is charged to the client for work that can't happen (repeats review #1).
+  if (!(await seriesPeopleCanBook(db, series))) {
+    await stop(db, series, 'canceled', 'system', now);
+    return;
+  }
   const wanted = upcomingIndexes({ ...series, cadence: series.cadence as SeriesCadence, status: series.status as SeriesStatus, timeZone: await marketTimeZone(db, series.marketId) }, now);
   if (wanted.length === 0) return;
   const there = await db.select({ index: bookings.visitIndex }).from(bookings).where(and(eq(bookings.seriesId, series.id), inArray(bookings.visitIndex, wanted)));
@@ -262,13 +278,25 @@ export async function runSeriesCalendars(db: Db, now: Date): Promise<void> {
   for (const series of resuming) {
     await db.insert(outboxEvents).values({ id: newId('evt'), type: 'series.resumed', aggregateType: 'series', aggregateId: series.id, payload: { seriesId: series.id, by: 'system' } });
   }
-  const running = await db.select({ id: bookingSeries.id }).from(bookingSeries).where(inArray(bookingSeries.status, ['active', 'ended'])).orderBy(asc(bookingSeries.updatedAt)).limit(200);
+  // Every running series in turn, the least recently filled first, and each one touched once filled, so more than a
+  // batch of series never starves the newest (repeats review #3). Paused ones too: their dates from the resume day on
+  // are added ahead, so the resume day's visit isn't lost to its 12-hour deadline (#7). An ended series whose last
+  // date has passed has nothing left to add.
+  const yesterday = new Date(now.getTime() - 86_400_000).toISOString().slice(0, 10);
+  const running = await db
+    .select({ id: bookingSeries.id })
+    .from(bookingSeries)
+    .where(or(inArray(bookingSeries.status, ['active', 'paused']), and(eq(bookingSeries.status, 'ended'), sql`${bookingSeries.endsOn} >= ${yesterday}`)))
+    .orderBy(asc(bookingSeries.updatedAt))
+    .limit(200);
   for (const series of running) {
     try {
       await fillCalendar(db, series.id, now);
     } catch (error) {
       console.error(`[series] filling ${series.id} failed`, error);
     }
+    // Touched once filled (nothing shows a series' updatedAt): next time the others come first.
+    await db.update(bookingSeries).set({ updatedAt: now }).where(eq(bookingSeries.id, series.id));
   }
 }
 
@@ -298,8 +326,10 @@ async function stop(db: Db, series: SeriesRow, status: 'canceled' | 'ended', by:
   const endsOn = status === 'ended' ? endsOnFor(marketDayKey(now, timeZone)) : null;
   const [changed] = await db
     .update(bookingSeries)
-    .set({ status, endsOn, pausedUntil: null, changedBy: by, updatedAt: now })
-    .where(and(eq(bookingSeries.id, series.id), inArray(bookingSeries.status, ['active', 'paused'])))
+    // The helper's end keeps a pause: the notice period never brings back visits the client paused (repeats review #4).
+    .set({ status, endsOn, pausedUntil: status === 'ended' ? series.pausedUntil : null, changedBy: by, updatedAt: now })
+    // A cancel also ends a series in its notice period (a suspended helper, a block): its last visits aren't charged.
+    .where(and(eq(bookingSeries.id, series.id), inArray(bookingSeries.status, status === 'canceled' ? ['active', 'paused', 'ended'] : ['active', 'paused'])))
     .returning();
   if (!changed) return;
   const visits = (await scheduledVisits(db, series.id)).filter((visit) => !endsOn || marketDayKey(visit.startAt, timeZone) > endsOn);

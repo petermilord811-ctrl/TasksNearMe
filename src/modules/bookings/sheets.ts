@@ -232,7 +232,7 @@ export async function cancelBookingByStaff(deps: SheetDeps, staff: { id: string;
     { by: 'staff', note: parsed.data.note, expected: [row.booking.status], staff: { role, refundCents: refund } },
     now,
     async () => {
-      await refundAcross(deps, row.booking.id, charges, null, { reason: 'cancellation', key: `refund:${row.booking.id}:staff_cancel` }, now);
+      await refundAcross(deps, row.booking.id, charges, null, { reason: 'cancellation', key: `refund:${row.booking.id}:staff_cancel`, caseReason: 'staff_cancel_refund_failed' }, now);
     },
   );
 }
@@ -271,6 +271,8 @@ export async function reportRunningLate(db: Db, userId: string, bookingId: strin
   await db.transaction(async (tx) => {
     await tx.update(bookings).set({ lateByMinutes: minutes, updatedAt: now }).where(eq(bookings.id, booking.id));
     await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'running_late', params: { minutes } }, now);
+    // The client hears it (push, text, email by their settings), not only in the thread (booking reviews, lifecycle #4).
+    await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'booking.running_late', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, posterUserId: booking.posterUserId, helperUserId: booking.helperUserId, minutes } });
   });
   return { ok: true, code: 'updated' };
 }
@@ -302,6 +304,8 @@ export async function reportCantAccess(db: Db, userId: string, bookingId: string
       .set({ cantAccessAt: now, posterResponseDueAt: new Date(now.getTime() + CANT_ACCESS_ANSWER_MS), updatedAt: now })
       .where(eq(bookings.id, booking.id));
     await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'cant_access' }, now);
+    // The client has 30 minutes to answer before a late fee: they must hear it wherever they are (lifecycle #4).
+    await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'booking.cant_access', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, posterUserId: booking.posterUserId, helperUserId: booking.helperUserId } });
   });
   return { ok: true, code: 'updated' };
 }

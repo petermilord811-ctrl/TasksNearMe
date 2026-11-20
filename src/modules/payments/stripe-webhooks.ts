@@ -13,6 +13,7 @@ import { supportCaseEvents, supportCases } from '@/modules/support/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
+import { refundAcross, refundableCharges } from './refund-across';
 import { payments } from './schema';
 
 /**
@@ -47,6 +48,16 @@ export async function handleStripePaymentWebhook(deps: BookingDeps, input: { pay
   const intentId = event.data?.object?.id;
   if (typeof event.type !== 'string' || !EVENTS.has(event.type) || typeof intentId !== 'string') return { status: 200, body: { ok: true, ignored: true } };
   const [payment] = await deps.db.select().from(payments).where(and(eq(payments.providerRef, intentId), eq(payments.provider, 'stripe'))).limit(1);
+  // A charge that went through after we gave up on it (the payment window ran out during the bank's check, or the
+  // attempt was replaced): the money came in for nothing, so it goes straight back (booking reviews, lifecycle #2).
+  if (payment && payment.status === 'canceled' && event.type === 'payment_intent.succeeded' && payment.bookingId) {
+    const [claimed] = await deps.db.update(payments).set({ status: 'succeeded', updatedAt: now }).where(and(eq(payments.id, payment.id), eq(payments.status, 'canceled'))).returning({ id: payments.id });
+    if (claimed) {
+      const charges = (await refundableCharges(deps.db, payment.bookingId)).filter((charge) => charge.id === payment.id);
+      await refundAcross({ db: deps.db, payments: deps.payments }, payment.bookingId, charges, null, { reason: 'late_capture', key: `refund:${payment.bookingId}:late_capture:${payment.id}` }, now);
+    }
+    return { status: 200, body: { ok: true } };
+  }
   // Not ours, or already finished (the browser got there first): nothing to do.
   if (!payment || payment.status !== 'requires_confirmation') return { status: 200, body: { ok: true, ignored: true } };
   const payer = payment.payerUserId;
