@@ -31,7 +31,8 @@
     "submit": "Save search",
     "submitting": "Saving…",
     "full": "You have {max} saved searches, the most you can keep. Delete one to save this one.",
-    "manage": "Manage your saved searches"
+    "manage": "Manage your saved searches",
+    "backFindWork": "Back to find work"
   },
   "chips": {
     "price": "${min} to ${max}",
@@ -42,6 +43,31 @@
     "group": "Saved searches",
     "list": "Saved searches · three with different alerts",
     "empty": "Saved searches · none yet",
-    "new": "Save this search"
+    "new": "Save this search",
+    "edit": "Edit · a board search",
+    "editFindWork": "Edit · a find work search",
+    "editErrors": "Edit · a price that doesn't add up",
+    "newFindWork": "Save this search · from find work",
+    "listFindWork": "Saved searches · one from find work"
+  },
+  "sources": {
+    "board": "Task board",
+    "find_work": "Find work"
+  },
+  "edit": {
+    "title": "Edit saved search",
+    "back": "Back to saved searches",
+    "action": "Edit",
+    "actionLabel": "Edit {name}",
+    "fromBoard": "From the {market} task board",
+    "fromFindWork": "From find work in {market}",
+    "filtersHint": "What a task needs to fit. Leave a filter empty to take everything in {market}.",
+    "areasHint": "Choose up to {max}. None means all of {market}.",
+    "priceInvalid": "Enter whole dollars, up to $100,000.",
+    "priceOrder": "The minimum is more than the maximum.",
+    "distanceHint": "Measured from your neighborhood, as on find work.",
+    "submit": "Save changes",
+    "cancel": "Cancel",
+    "notFound": "This saved search was deleted. Go back to your saved searches."
   }
 }

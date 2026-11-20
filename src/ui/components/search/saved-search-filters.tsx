@@ -6,6 +6,7 @@ export function useFilterLabels(): (filters: Filters) => string[] {
   const board = useTranslations('taskBoard');
   const card = useTranslations('taskCard');
   const chips = useTranslations('savedSearches.chips');
+  const work = useTranslations('findWork');
   return (filters) => [
     ...(filters.category ? [card(`categories.${filters.category}`)] : []),
     ...(filters.category && filters.type ? [card(`types.${filters.category}.${filters.type}`)] : []),
@@ -18,6 +19,7 @@ export function useFilterLabels(): (filters: Filters) => string[] {
     ...(filters.posted ? [board(`postedOptions.${filters.posted}`)] : []),
     ...(filters.remoteOnly ? [board('remoteOnly')] : []),
     ...(filters.few ? [board('few')] : []),
+    ...(filters.distance ? [work(`distanceOptions.${filters.distance}`)] : []),
   ];
 }
 

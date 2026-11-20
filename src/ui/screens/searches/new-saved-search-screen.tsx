@@ -16,7 +16,7 @@ import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { Spinner } from '@/ui/primitives/spinner';
 
-/** Saving a board view (completion plan 7.10): its filters, a name (suggested from them), and the alerts. */
+/** Saving a board or find work view (completion plan 7.10): its filters, a name (suggested from them), and the alerts. */
 export function NewSavedSearchScreen({ data, handlers }: { data: NewSavedSearchPageData; handlers: NewSavedSearchHandlers }) {
   const t = useTranslations('savedSearches');
   const router = useRouter();
@@ -41,7 +41,7 @@ export function NewSavedSearchScreen({ data, handlers }: { data: NewSavedSearchP
     }
   });
   return <div className="mx-auto w-full max-w-reading space-y-5">
-    <Link href={data.from} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden="true" className="size-4" />{t('new.back')}</Link>
+    <Link href={data.from} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden="true" className="size-4" />{t(data.source === 'find_work' ? 'new.backFindWork' : 'new.back')}</Link>
     <h1 className="font-display text-[1.75rem]/[1.15] font-semibold tracking-[-0.02em]">{t('new.title')}</h1>
     {data.full
       ? <p role="status" className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">{t('new.full', { max: SAVED_SEARCH_MAX })} <Link href={routes.app.savedSearches()} className="font-semibold text-primary underline underline-offset-4">{t('new.manage')}</Link></p>

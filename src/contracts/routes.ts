@@ -159,7 +159,9 @@ export const routes = {
     savedSearches: () => '/app/saved-searches',
     /** Opens a saved search's board view. */
     savedSearch: (searchId: string) => `/app/saved-searches/${enc(searchId)}`,
-    /** Save the board view at `from` (its path and query). */
+    /** Rename a saved search, change its alerts and its filters (sweep SS5). */
+    editSavedSearch: (searchId: string) => `/app/saved-searches/${enc(searchId)}/edit`,
+    /** Save the board or find work view at `from` (its path and query). */
     newSavedSearch: (from: string) => withQuery('/app/saved-searches/new', { from }),
     /** A client's ID check, when risk asks for one; `next` is where to go once verified (an app path). */
     verifyIdentity: (next?: string) => withQuery('/app/verify-identity', { next }),

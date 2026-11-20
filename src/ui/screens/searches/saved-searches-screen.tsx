@@ -1,7 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
-import { ArrowRight, BellRing, Trash2 } from 'lucide-react';
+import { ArrowRight, BellRing, Pencil, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import type { ActionResult } from '@/contracts/actions';
@@ -32,6 +32,7 @@ function SearchRow({ search, handlers }: { search: SavedSearchView; handlers: Sa
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 space-y-1.5">
         <h2 className="text-[17px] font-semibold [overflow-wrap:anywhere]">{search.name}</h2>
+        {search.source === 'find_work' && <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('sources.find_work')}</p>}
         <SavedSearchFilterChips filters={search.filters} everything={t('everything', { market: search.marketName })} />
         <p className="text-sm text-muted-foreground tabular-nums">{search.marketName} · {t('openCount', { count: search.openCount })}</p>
       </div>
@@ -42,16 +43,21 @@ function SearchRow({ search, handlers }: { search: SavedSearchView; handlers: Sa
         <BellRing aria-hidden="true" className="mx-1.5 size-4 text-muted-foreground" />
         {SAVED_SEARCH_ALERTS.map((alert) => <button key={alert} type="button" role="radio" aria-checked={search.alert === alert} disabled={pending} onClick={() => search.alert !== alert && run(() => handlers.onAlert({ id: search.id, alert }), t('updated'))} className={cn('inline-flex min-h-9 items-center rounded-md px-2.5 text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-60', search.alert === alert ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>{t(`alerts.${alert}`)}</button>)}
       </div>
-      <button type="button" disabled={pending} onClick={() => run(() => handlers.onDelete({ id: search.id }), t('deleted'))} className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-60">
-        <Trash2 aria-hidden="true" className="size-4" /><span aria-hidden="true">{t('delete')}</span><span className="sr-only">{t('deleteLabel', { name: search.name })}</span>
-      </button>
+      <div className="flex items-center gap-1">
+        <Link href={routes.app.editSavedSearch(search.id)} className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring dark:hover:bg-white/[0.06]">
+          <Pencil aria-hidden="true" className="size-4" /><span aria-hidden="true">{t('edit.action')}</span><span className="sr-only">{t('edit.actionLabel', { name: search.name })}</span>
+        </Link>
+        <button type="button" disabled={pending} onClick={() => run(() => handlers.onDelete({ id: search.id }), t('deleted'))} className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-60">
+          <Trash2 aria-hidden="true" className="size-4" /><span aria-hidden="true">{t('delete')}</span><span className="sr-only">{t('deleteLabel', { name: search.name })}</span>
+        </button>
+      </div>
     </div>
   </li>;
 }
 
 /**
- * Saved searches (completion plan 7.10): each with its filters, how many open tasks fit now, a link to its board
- * view, and its alerts (right away, a morning digest, or off).
+ * Saved searches (completion plan 7.10): each with its filters, how many open tasks fit now, a link to its board or
+ * find work view, its alerts (right away, a morning digest, or off), and Edit for its name, alerts and filters (SS5).
  */
 export function SavedSearchesScreen({ data, handlers, boardHref }: { data: SavedSearchesPageData; handlers: SavedSearchesHandlers; boardHref: string }) {
   const t = useTranslations('savedSearches');

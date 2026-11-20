@@ -216,8 +216,8 @@ export async function listBoardTasks(
   return { tasks: rows.map((row) => toTaskPublicView(toRow(row))), totalCount: total?.value ?? 0 };
 }
 
-/** Great-circle miles from a point to a task's public point (null for tasks without one). */
-function milesFrom(center: { lat: number; lng: number }): SQL<number | null> {
+/** Great-circle miles from a point to a task's public point (null for tasks without one). Saved find work searches use it too. */
+export function milesFrom(center: { lat: number; lng: number }): SQL<number | null> {
   const lat = sql`${center.lat}::double precision`;
   const lng = sql`${center.lng}::double precision`;
   return sql<number | null>`(3958.8 * 2 * asin(sqrt(

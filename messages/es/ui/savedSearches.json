@@ -31,7 +31,8 @@
     "submit": "Guardar búsqueda",
     "submitting": "Guardando…",
     "full": "Tienes {max} búsquedas guardadas, el máximo. Elimina una para guardar esta.",
-    "manage": "Administrar tus búsquedas guardadas"
+    "manage": "Administrar tus búsquedas guardadas",
+    "backFindWork": "Volver a buscar trabajo"
   },
   "chips": {
     "price": "De ${min} a ${max}",
@@ -42,6 +43,31 @@
     "group": "Búsquedas guardadas",
     "list": "Búsquedas guardadas · tres con avisos distintos",
     "empty": "Búsquedas guardadas · ninguna aún",
-    "new": "Guardar esta búsqueda"
+    "new": "Guardar esta búsqueda",
+    "edit": "Editar · una búsqueda del tablero",
+    "editFindWork": "Editar · una búsqueda de buscar trabajo",
+    "editErrors": "Editar · un precio que no cuadra",
+    "newFindWork": "Guardar esta búsqueda · desde buscar trabajo",
+    "listFindWork": "Búsquedas guardadas · una de buscar trabajo"
+  },
+  "sources": {
+    "board": "Tablero de tareas",
+    "find_work": "Buscar trabajo"
+  },
+  "edit": {
+    "title": "Editar búsqueda guardada",
+    "back": "Volver a las búsquedas guardadas",
+    "action": "Editar",
+    "actionLabel": "Editar {name}",
+    "fromBoard": "Del tablero de tareas de {market}",
+    "fromFindWork": "De buscar trabajo en {market}",
+    "filtersHint": "Lo que una tarea debe cumplir. Deja un filtro vacío para incluir todo en {market}.",
+    "areasHint": "Elige hasta {max}. Ninguno incluye todo {market}.",
+    "priceInvalid": "Escribe dólares enteros, hasta $100,000.",
+    "priceOrder": "El mínimo es mayor que el máximo.",
+    "distanceHint": "Se mide desde tu vecindario, como en buscar trabajo.",
+    "submit": "Guardar cambios",
+    "cancel": "Cancelar",
+    "notFound": "Esta búsqueda guardada se eliminó. Vuelve a tus búsquedas guardadas."
   }
 }

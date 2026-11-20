@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Lock, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BellRing, Lock, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type FindWorkCard, type FindWorkHandlers, type FindWorkPageData, type FindWorkWaiting, type ISODateTime } from '@/contracts';
 import { formatMoney } from '@/shared/format';
@@ -106,6 +106,7 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
   // One bot check for the list's one-tap offers (contracts/bot-check.ts).
   const check = useBotCheck(data.botCheck, 'offer');
   const t = useTranslations('findWork');
+  const savedSearches = useTranslations('savedSearches');
   const budgetLabel = useBudgetLabel();
   const dayLabel = useDayLabel(data.today);
   const { query } = data;
@@ -214,7 +215,10 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
   const mapArea = data.map.area;
 
   return <div className="mx-auto w-full max-w-content space-y-4">
-    <PageHeader title={t('title')} description={t('description')} />
+    <PageHeader title={t('title')} description={t('description')}>
+      {/* Save these filters, with alerts when a new task fits (completion plan 7.10, sweep SS5); not the saved-tasks view. */}
+      {!query.saved && <Link href={routes.app.newSavedSearch(routes.app.findWork({ ...query, page: undefined, view: undefined, saved: undefined, sort: undefined }))} rel="nofollow" className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-foreground/[0.1] bg-card px-4 text-sm font-semibold hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring dark:border-white/[0.1]"><BellRing aria-hidden="true" className="size-4 text-primary" />{savedSearches('save')}</Link>}
+    </PageHeader>
     {!data.setup.bookable && <FinishSetupPanel setup={data.setup} />}
     <FindWorkFilters data={data} />
     <div aria-live="polite" className="empty:hidden">
