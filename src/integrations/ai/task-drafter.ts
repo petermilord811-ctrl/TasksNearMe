@@ -2,13 +2,15 @@ import { z } from 'zod';
 import type { AiTaskDraft, AppLocale, CategorySlug, DetailFieldDef, TaskDetailsValue } from '@/contracts';
 import { CATEGORY_DETAIL_FIELDS, compactTaskDetails, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, validateTaskDetails } from '@/contracts';
 import { CATEGORY_GUIDE } from './category-guide';
-import { asPromptText, claudeWriterFromEnv, oneLine, type ClaudeWriter } from './claude';
+import { aiWriterFromEnv } from './fallback';
+import { asPromptText, oneLine, type AiWriter } from './writer';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
- * "Help me describe this" (blueprint 02 J1 step 2). With `ANTHROPIC_API_KEY`, Claude drafts it (official
- * Anthropic SDK, `claude.ts`); without one, development and tests use the rule-based drafter below, which
- * turns plain words into the same structured draft, and production doesn't offer it. Nothing is posted.
+ * "Help me describe this" (blueprint 02 J1 step 2). With `KIMI_API_KEY` or `ANTHROPIC_API_KEY`, a model drafts it
+ * (Kimi first, Claude when Kimi isn't working: `fallback.ts`); without either, development and tests use the
+ * rule-based drafter below, which turns plain words into the same structured draft, and production doesn't offer
+ * it. Nothing is posted.
  */
 export interface TaskDrafter {
   readonly name: string;
@@ -203,7 +205,7 @@ export function createFakeTaskDrafter(): TaskDrafter {
   };
 }
 
-// ---- Claude -----------------------------------------------------------------------------------
+// ---- A model (Kimi, then Claude) ------------------------------------------------------------
 
 const DRAFT_SYSTEM = `You help people post a task on TasksNearMe, a US marketplace where neighbors book local help. You turn the few words someone typed into a clear task draft. They review and edit it before posting; nothing is posted automatically.
 
@@ -277,9 +279,9 @@ export function tidyDraft(
   };
 }
 
-export function createClaudeTaskDrafter(writer: ClaudeWriter): TaskDrafter {
+export function createAiTaskDrafter(writer: AiWriter): TaskDrafter {
   return {
-    name: `claude:${writer.model}`,
+    name: writer.name,
     async draft({ categorySlug, text, locale }) {
       const guide = CATEGORY_GUIDE[categorySlug];
       const prompt = [
@@ -304,11 +306,11 @@ export function createClaudeTaskDrafter(writer: ClaudeWriter): TaskDrafter {
 }
 
 /**
- * The drafter for this environment: Claude with a key; the rule-based one without a key outside
- * production; null when "Help me describe this" is unavailable.
+ * The drafter for this environment: a model with a key (Kimi, then Claude); the rule-based one without a key
+ * outside production; null when "Help me describe this" is unavailable.
  */
 export function createTaskDrafter(env: Record<string, string | undefined> = process.env): TaskDrafter | null {
-  const claude = claudeWriterFromEnv(env);
-  if (claude) return createClaudeTaskDrafter(claude);
+  const writer = aiWriterFromEnv(env);
+  if (writer) return createAiTaskDrafter(writer);
   return !devHelpersOn(env) ? null : createFakeTaskDrafter();
 }

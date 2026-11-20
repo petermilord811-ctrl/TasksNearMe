@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { validateTaskDetails } from '@/contracts';
-import type { ClaudeWriter } from './claude';
-import { createClaudeTaskDrafter, createFakeTaskDrafter } from './task-drafter';
+import { createAiTaskDrafter, createFakeTaskDrafter } from './task-drafter';
+import type { AiWriter } from './writer';
 
 const drafter = createFakeTaskDrafter();
 
@@ -38,19 +38,19 @@ describe('rule-based task drafter', () => {
   });
 });
 
-describe('Claude task drafter', () => {
+describe('AI task drafter', () => {
   it("writes in the page's language: Spanish for a Spanish page, English otherwise (sweep 2026-11-20, PT14)", async () => {
     const prompts: string[] = [];
-    const writer: ClaudeWriter = {
-      model: 'stub',
+    const writer: AiWriter = {
+      name: 'stub',
       write: async ({ prompt }) => {
         prompts.push(prompt);
         return { title: 'Armar un escritorio', description: 'Necesito armar un escritorio en la sala.', details: {}, openQuestions: [] } as never;
       },
     };
-    const claude = createClaudeTaskDrafter(writer);
-    await claude.draft({ categorySlug: 'furniture-assembly', text: 'armar mi escritorio', locale: 'es' });
-    await claude.draft({ categorySlug: 'furniture-assembly', text: 'build my desk' });
+    const ai = createAiTaskDrafter(writer);
+    await ai.draft({ categorySlug: 'furniture-assembly', text: 'armar mi escritorio', locale: 'es' });
+    await ai.draft({ categorySlug: 'furniture-assembly', text: 'build my desk' });
     expect(prompts[0]).toMatch(/^Language: Spanish$/m);
     expect(prompts[1]).toMatch(/^Language: English$/m);
   });

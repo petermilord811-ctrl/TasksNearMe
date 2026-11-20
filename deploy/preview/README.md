@@ -121,7 +121,12 @@ A feature whose keys are empty in `preview.env` is refused, the same as in produ
 - **Google sign-in:** needs `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, plus the redirect URI
   `https://tasksnearme.com/api/auth/callback/google` registered with Google.
 
-Email (Resend), AI (Anthropic) and address search (Mapbox) use the same keys as development.
+Email (Resend), Claude (Anthropic) and address search (Mapbox) use the same keys as development.
+
+Kimi doesn't: development's `KIMI_API_KEY` is NVIDIA's free trial key, whose terms keep it out of production and
+away from real people's data. Leave it out of `preview.env`, so Claude answers the writing help and AI search
+there. Even if it's copied in, a production build ignores it without `KIMI_IN_PRODUCTION=yes`. Add both only
+with a paid plan (docs/integration-points.md, "Writing help and AI search").
 
 The Content Security Policy is enforced in production builds (development only reports it), so it applies
 here first. When the preview blocks a script, a frame or a connection, the browser console names the

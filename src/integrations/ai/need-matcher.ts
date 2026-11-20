@@ -2,16 +2,17 @@ import { z } from 'zod';
 import { CATEGORY_SLUGS, TASK_TITLE_MAX, type CategorySlug, type Mode } from '@/contracts';
 import { devHelpersOn } from '@/shared/dev-helpers';
 import { CATEGORY_GUIDE } from './category-guide';
-import { asPromptText, claudeWriterFromEnv, oneLine, type ClaudeWriter } from './claude';
+import { aiWriterFromEnv } from './fallback';
+import { asPromptText, oneLine, type AiWriter } from './writer';
 import { createFakeTaskDrafter } from './task-drafter';
 
 /**
  * AI search on the dashboard ("describe what you need", completion plan 9.9): someone's own words become search
  * filters (who's asking for what, the category, when, the neighborhood, a few keywords) and, for someone who needs
  * help, a short task title. The app then searches with those filters, so every result is a real row; AI never
- * answers the person directly. With `ANTHROPIC_API_KEY` Claude reads the words (official Anthropic SDK, `claude.ts`,
- * one structured answer); without one, development and tests use the rule-based matcher below, and production
- * offers no AI search (the plan's gate says `ai_off`).
+ * answers the person directly. With `KIMI_API_KEY` or `ANTHROPIC_API_KEY` a model reads the words (Kimi first, Claude
+ * when Kimi isn't working: `fallback.ts`; one structured answer); without either, development and tests use the
+ * rule-based matcher below, and production offers no AI search (the plan's gate says `ai_off`).
  */
 
 export const NEED_WHENS = ['today', 'this_week', 'this_weekend'] as const;
@@ -108,7 +109,7 @@ export function createFakeNeedMatcher(): NeedMatcher {
   };
 }
 
-// ---- Claude -------------------------------------------------------------------------------------------
+// ---- A model (Kimi, then Claude) --------------------------------------------------------------------
 
 const MATCH_SYSTEM = `You turn what someone typed on TasksNearMe, a US marketplace where neighbors book local help, into search filters. The app searches with your filters and shows real helpers and open tasks; you never answer the person directly.
 
@@ -132,9 +133,9 @@ const matchSchema = z.object({
   prohibited: z.boolean(),
 });
 
-export function createClaudeNeedMatcher(writer: ClaudeWriter): NeedMatcher {
+export function createAiNeedMatcher(writer: AiWriter): NeedMatcher {
   return {
-    name: `claude:${writer.model}`,
+    name: writer.name,
     async match({ text, mode, areas }) {
       const prompt = [
         'Categories:',
@@ -152,9 +153,9 @@ export function createClaudeNeedMatcher(writer: ClaudeWriter): NeedMatcher {
   };
 }
 
-/** The matcher for this environment: Claude with a key; the rule-based one outside production; null otherwise. */
+/** The matcher for this environment: a model with a key (Kimi, then Claude); the rule-based one outside production; null otherwise. */
 export function createNeedMatcher(env: Record<string, string | undefined> = process.env): NeedMatcher | null {
-  const claude = claudeWriterFromEnv(env);
-  if (claude) return createClaudeNeedMatcher(claude);
+  const writer = aiWriterFromEnv(env);
+  if (writer) return createAiNeedMatcher(writer);
   return devHelpersOn(env) ? createFakeNeedMatcher() : null;
 }

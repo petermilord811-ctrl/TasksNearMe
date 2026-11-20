@@ -1,13 +1,14 @@
 import { z } from 'zod';
 import type { CategorySlug } from '@/contracts';
 import { CATEGORY_GUIDE } from './category-guide';
-import { AiUnavailableError, asPromptText, claudeWriterFromEnv, oneLine, type ClaudeWriter } from './claude';
+import { aiWriterFromEnv } from './fallback';
+import { AiUnavailableError, asPromptText, oneLine, type AiWriter } from './writer';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * "Write it for me" on a helper's profile (onboarding and the editor): their notes, services, area, tools
- * and languages in; a headline and an "about me" out, for them to review before saving. Claude with a
- * key; a plain stand-in without one outside production.
+ * and languages in; a headline and an "about me" out, for them to review before saving. A model with a
+ * key (Kimi, then Claude: `fallback.ts`); a plain stand-in without one outside production.
  */
 
 export const PROFILE_HEADLINE = { min: 10, max: 80 } as const;
@@ -63,9 +64,9 @@ export function tidyProfile(answer: ProfileDraft): ProfileDraft {
   return { headline, bio };
 }
 
-export function createClaudeProfileWriter(writer: ClaudeWriter): ProfileWriter {
+export function createAiProfileWriter(writer: AiWriter): ProfileWriter {
   return {
-    name: `claude:${writer.model}`,
+    name: writer.name,
     async draft(facts) {
       const prompt = [
         `First name: ${asPromptText(facts.firstName)}`,
@@ -112,9 +113,9 @@ export function createFakeProfileWriter(): ProfileWriter {
   };
 }
 
-/** Claude with a key; the stand-in without one outside production; null when unavailable. */
+/** A model with a key (Kimi, then Claude); the stand-in without one outside production; null when unavailable. */
 export function createProfileWriter(env: Record<string, string | undefined> = process.env): ProfileWriter | null {
-  const claude = claudeWriterFromEnv(env);
-  if (claude) return createClaudeProfileWriter(claude);
+  const writer = aiWriterFromEnv(env);
+  if (writer) return createAiProfileWriter(writer);
   return !devHelpersOn(env) ? null : createFakeProfileWriter();
 }

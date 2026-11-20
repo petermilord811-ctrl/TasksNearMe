@@ -2,7 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { IDENTITY_DOCUMENT_TYPES, type IdentityDocumentType } from '@/contracts';
-import { AiRefusedError, AiUnavailableError, DEFAULT_CLAUDE_MODEL } from './claude';
+import { DEFAULT_CLAUDE_MODEL } from './claude';
+import { AiRefusedError, AiUnavailableError } from './writer';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
@@ -14,6 +15,9 @@ import { devHelpersOn } from '@/shared/dev-helpers';
  * shown the selfie and never asked to compare faces: staff do that, and the provider double-checks.
  * With `ANTHROPIC_API_KEY` Claude reads it (through the official SDK, with the server-side fallback for a
  * declined request); without one, development and tests use a stand-in that reads nothing.
+ * Only Claude reads IDs, never Kimi (whose turn first covers writing help and AI search): an ID is government data
+ * with a name, birth date and number, NVIDIA's free key may not be sent personal data, and another reader would
+ * need its own privacy review and a check against staff decisions first.
  */
 
 export interface IdDocumentReading {

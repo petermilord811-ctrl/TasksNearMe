@@ -2,7 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
 import { ADDRESS_DOCUMENT_TYPES, type AddressDocumentType } from '@/contracts';
-import { AiRefusedError, AiUnavailableError, DEFAULT_CLAUDE_MODEL, type ClaudeClient } from './claude';
+import { DEFAULT_CLAUDE_MODEL, type ClaudeClient } from './claude';
+import { AiRefusedError, AiUnavailableError } from './writer';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
@@ -11,6 +12,9 @@ import { devHelpersOn } from '@/shared/dev-helpers';
  * kind of document is it. Only these answers are kept, never the document's text; staff still decide.
  * With `ANTHROPIC_API_KEY` Claude reads it (images and PDFs, through the official SDK); without one,
  * development and tests use a stand-in that reads nothing and trusts the declared type.
+ * Only Claude reads documents, never Kimi (whose turn first covers writing help and AI search): a proof of address
+ * carries a name and an address, NVIDIA's free key may not be sent personal data, and another reader would need
+ * its own privacy review and a check against staff decisions first.
  */
 
 export interface AddressDocumentReading {

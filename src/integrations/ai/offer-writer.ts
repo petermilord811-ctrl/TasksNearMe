@@ -1,13 +1,14 @@
 import { z } from 'zod';
 import type { CategorySlug } from '@/contracts';
 import { CATEGORY_GUIDE } from './category-guide';
-import { AiUnavailableError, asPromptText, claudeWriterFromEnv, type ClaudeWriter } from './claude';
+import { aiWriterFromEnv } from './fallback';
+import { AiUnavailableError, asPromptText, type AiWriter } from './writer';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * "Write it for me" on a helper's offer: the message that goes with the price and start time. It reads the
  * task as the helper sees it (contact details already masked, never the address) and the helper's own
- * profile. Claude with a key; a plain stand-in without one outside production.
+ * profile. A model with a key (Kimi, then Claude: `fallback.ts`); a plain stand-in without one outside production.
  */
 
 export interface OfferFacts {
@@ -55,9 +56,9 @@ export function tidyOfferMessage(message: string, maxLength: number): string {
   return (end > maxLength / 2 ? cut.slice(0, end + 1) : cut).trim();
 }
 
-export function createClaudeOfferWriter(writer: ClaudeWriter): OfferMessageWriter {
+export function createAiOfferWriter(writer: AiWriter): OfferMessageWriter {
   return {
-    name: `claude:${writer.model}`,
+    name: writer.name,
     async draft(facts) {
       const guide = CATEGORY_GUIDE[facts.task.categorySlug];
       const prompt = [
@@ -100,9 +101,9 @@ export function createFakeOfferWriter(): OfferMessageWriter {
   };
 }
 
-/** Claude with a key; the stand-in without one outside production; null when unavailable. */
+/** A model with a key (Kimi, then Claude); the stand-in without one outside production; null when unavailable. */
 export function createOfferWriter(env: Record<string, string | undefined> = process.env): OfferMessageWriter | null {
-  const claude = claudeWriterFromEnv(env);
-  if (claude) return createClaudeOfferWriter(claude);
+  const writer = aiWriterFromEnv(env);
+  if (writer) return createAiOfferWriter(writer);
   return !devHelpersOn(env) ? null : createFakeOfferWriter();
 }

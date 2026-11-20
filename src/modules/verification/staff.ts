@@ -43,7 +43,7 @@ import {
   identityCaptureRevealInputSchema,
   verificationActionInputSchema,
 } from '@/contracts';
-import { aiWritingSetUp } from '@/integrations/ai';
+import { aiReadingSetUp } from '@/integrations/ai';
 import type { FileStorage } from '@/integrations/storage';
 import { AGREEMENT_VERSIONS } from '@/modules/accounts/agreements';
 import { users } from '@/modules/accounts/schema';
@@ -187,7 +187,7 @@ export function identityReadingState(capture: { status: string; autoCheck: unkno
   return now < until ? { state: 'waiting', until: until.toISOString() } : { state: 'skipped', why: 'timed_out' };
 }
 
-async function identityQueue(db: Db, now: Date, readerOn = aiWritingSetUp(), deciding = true): Promise<AdminIdentityReviewRow[]> {
+async function identityQueue(db: Db, now: Date, readerOn = aiReadingSetUp(), deciding = true): Promise<AdminIdentityReviewRow[]> {
   // People who could need staff: photos waiting for review, a verified ID whose name didn't match, failed
   // tries, or the same ID on two accounts (not yet cleared).
   const [fromChecks, fromCaptures] = await Promise.all([
@@ -299,7 +299,7 @@ export async function getVerificationCounts(db: Db, now: Date): Promise<{ counts
   return { counts: { address: address.length, identity: identity.length, background: background.length }, ...(oldest ? { oldestAt: oldest } : {}) };
 }
 
-export async function getAdminVerificationsPage(db: Db, staff: StaffActor, queue: string | undefined, now: Date, readerOn = aiWritingSetUp()): Promise<AdminVerificationsPageData> {
+export async function getAdminVerificationsPage(db: Db, staff: StaffActor, queue: string | undefined, now: Date, readerOn = aiReadingSetUp()): Promise<AdminVerificationsPageData> {
   const [address, identity, background] = await Promise.all([addressQueue(db, now), identityQueue(db, now, readerOn, canDecideVerification(staff)), backgroundQueue(db, now)]);
   const chosen = (ADMIN_VERIFICATION_QUEUES as readonly string[]).includes(queue ?? '') ? (queue as AdminVerificationQueue) : address.length || !(identity.length || background.length) ? 'address' : identity.length ? 'identity' : 'background';
   return {
@@ -314,7 +314,7 @@ export async function getAdminVerificationsPage(db: Db, staff: StaffActor, queue
 
 // ---- A person's verification ----------------------------------------------------------------------
 
-export async function getPersonVerification(db: Db, staff: StaffActor, userId: string, now: Date, readerOn = aiWritingSetUp()): Promise<AdminPersonVerification> {
+export async function getPersonVerification(db: Db, staff: StaffActor, userId: string, now: Date, readerOn = aiReadingSetUp()): Promise<AdminPersonVerification> {
   const state = await loadOnboardingState(db, userId, now);
   const { identity, address, background } = state;
   const proofRows = state.addressRows.filter((row) => row.status !== 'withdrawn').reverse().slice(0, 5);

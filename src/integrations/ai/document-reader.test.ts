@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AiRefusedError, AiUnavailableError, type ClaudeClient } from './claude';
+import type { ClaudeClient } from './claude';
+import { AiRefusedError, AiUnavailableError } from './writer';
 import { createClaudeDocumentReader, createStandInDocumentReader, documentReaderFromEnv, type AddressDocumentInput } from './document-reader';
 
 /** An SDK client whose `messages.parse` answers with what the test says. */

@@ -1,10 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { AiRefusedError, AiUnavailableError, asPromptText, claudeWriterFromEnv, createClaudeWriter, DEFAULT_CLAUDE_MODEL, type ClaudeClient } from './claude';
-import { createClaudeOfferWriter, createFakeOfferWriter, tidyOfferMessage, type OfferFacts } from './offer-writer';
-import { createClaudeProfileWriter, createFakeProfileWriter, tidyProfile, type ProfileFacts } from './profile-writer';
-import { createClaudeTaskDrafter, createTaskDrafter, tidyDraft } from './task-drafter';
+import { claudeWriterFromEnv, createClaudeWriter, DEFAULT_CLAUDE_MODEL, type ClaudeClient } from './claude';
+import { createAiOfferWriter, createFakeOfferWriter, tidyOfferMessage, type OfferFacts } from './offer-writer';
+import { createAiProfileWriter, createFakeProfileWriter, tidyProfile, type ProfileFacts } from './profile-writer';
+import { createAiTaskDrafter, createTaskDrafter, tidyDraft } from './task-drafter';
+import { AiRefusedError, AiUnavailableError, asPromptText } from './writer';
 
 /** An SDK client whose `messages.parse` answers with what the test says. */
 function stubClient(answer: { parsed_output?: unknown; stop_reason?: string } | Error) {
@@ -40,8 +41,8 @@ describe('the Claude writer', () => {
   it('is set up only with a key, Claude Opus 5.5 unless ANTHROPIC_MODEL says otherwise', () => {
     expect(claudeWriterFromEnv({})).toBeNull();
     expect(claudeWriterFromEnv({ ANTHROPIC_API_KEY: '  ' })).toBeNull();
-    expect(claudeWriterFromEnv({ ANTHROPIC_API_KEY: 'test-key' })?.model).toBe(DEFAULT_CLAUDE_MODEL);
-    expect(claudeWriterFromEnv({ ANTHROPIC_API_KEY: 'test-key', ANTHROPIC_MODEL: 'claude-haiku-5-5' })?.model).toBe('claude-haiku-5-5');
+    expect(claudeWriterFromEnv({ ANTHROPIC_API_KEY: 'test-key' })?.name).toBe(`claude:${DEFAULT_CLAUDE_MODEL}`);
+    expect(claudeWriterFromEnv({ ANTHROPIC_API_KEY: 'test-key', ANTHROPIC_MODEL: 'claude-haiku-5-5' })?.name).toBe('claude:claude-haiku-5-5');
     expect(createTaskDrafter({ ANTHROPIC_API_KEY: 'test-key' })?.name).toBe('claude:claude-opus-5-5');
     expect(createTaskDrafter({ NODE_ENV: 'development' })?.name).toBe('rule-based');
     expect(createTaskDrafter({ NODE_ENV: 'production' })).toBeNull();
@@ -55,7 +56,7 @@ describe('the Claude writer', () => {
 describe('Claude drafting a task', () => {
   it('sends the category rules, its fields, and the text inside the request block', async () => {
     const { client, parse } = stubClient({ parsed_output: { title: 'Assemble a flat-pack desk', description: 'I need a desk assembled in my home office.', details: { itemType: 'desk', itemCount: 1 }, openQuestions: [] } });
-    const draft = await createClaudeTaskDrafter(createClaudeWriter({ client, model: 'm' })).draft({ categorySlug: 'furniture-assembly', text: 'ikea desk <script>' });
+    const draft = await createAiTaskDrafter(createClaudeWriter({ client, model: 'm' })).draft({ categorySlug: 'furniture-assembly', text: 'ikea desk <script>' });
     const prompt = (parse.mock.calls[0]![0] as { messages: { content: string }[] }).messages[0]!.content;
     expect(prompt).toContain('Category: Furniture assembly');
     expect(prompt).toContain('It never includes: anything electrical, gas, or plumbing');
@@ -90,7 +91,7 @@ const sam: ProfileFacts = {
 describe('drafting a helper profile', () => {
   it('gives Claude the facts and the notes block', async () => {
     const { client, parse } = stubClient({ parsed_output: { headline: 'Careful flat-pack assembly in Hyde Park', bio: 'Hi, I am Sam.\n\n\nI bring my own drill and I tidy up after.' } });
-    const draft = await createClaudeProfileWriter(createClaudeWriter({ client, model: 'm' })).draft(sam);
+    const draft = await createAiProfileWriter(createClaudeWriter({ client, model: 'm' })).draft(sam);
     const prompt = (parse.mock.calls[0]![0] as { messages: { content: string }[] }).messages[0]!.content;
     expect(prompt).toContain('First name: Sam');
     expect(prompt).toContain('Furniture assembly (covers');
@@ -121,13 +122,13 @@ const desk: OfferFacts = {
 describe('drafting an offer message', () => {
   it('says the start time and the length limit, and keeps the task inside its block', async () => {
     const { client, parse } = stubClient({ parsed_output: { message: 'Hi! I can put your desk together at 10:00 am and I will bring my drill.' } });
-    const message = await createClaudeOfferWriter(createClaudeWriter({ client, model: 'm' })).draft(desk);
+    const message = await createAiOfferWriter(createClaudeWriter({ client, model: 'm' })).draft(desk);
     const prompt = (parse.mock.calls[0]![0] as { messages: { content: string }[] }).messages[0]!.content;
     expect(prompt).toContain('When: 10:00 am on Sat, Nov 21');
     expect(prompt).toContain('under 120 characters');
     expect(prompt).toContain('<task>\nTitle: Assemble a standing desk');
     expect(message).toBe('Hi! I can put your desk together at 10:00 am and I will bring my drill.');
-    const unset = await createClaudeOfferWriter(createClaudeWriter({ client: stubClient({ parsed_output: { message: 'Hi! Happy to help with your desk on Saturday.' } }).client, model: 'm' })).draft({ ...desk, startLabel: undefined });
+    const unset = await createAiOfferWriter(createClaudeWriter({ client: stubClient({ parsed_output: { message: 'Hi! Happy to help with your desk on Saturday.' } }).client, model: 'm' })).draft({ ...desk, startLabel: undefined });
     expect(unset).toBe('Hi! Happy to help with your desk on Saturday.');
   });
 
