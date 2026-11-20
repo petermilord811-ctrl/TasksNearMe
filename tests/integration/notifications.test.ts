@@ -67,6 +67,28 @@ describe('notifications', () => {
     // Your own messages never count (sending also reads the thread).
     expect(await unreadMessageCount(db, 'usr_lee')).toBeLessThanOrEqual(leeBefore);
   });
+
+  it('tells the person about new messages again once they have read the thread (sweep MN1)', async () => {
+    const thread = (await offerThreadId(db, 'off_ntf_lee', new Date()))!;
+    const ofThread = async () =>
+      (await db.select().from(notifications).where(and(eq(notifications.userId, 'usr_chris'), eq(notifications.type, 'message_received')))).filter(
+        (row) => row.target.kind === 'thread' && row.target.threadId === thread,
+      );
+    // Chris reads the conversation (from the email's link, say), and its notification is read with it.
+    expect(await getThreadPage(db, 'usr_chris', thread, new Date())).not.toBeNull();
+    const before = await ofThread();
+    expect(before.length).toBeGreaterThan(0);
+    expect(before.filter((row) => row.readAt === null)).toEqual([]);
+    // Lee writes again: a new notification (it used to join the old unread one, so nothing went out).
+    await sendMessage(db, 'usr_lee', thread, { body: 'Parking is on the street, right?', attachmentIds: [] }, new Date());
+    await dispatchNotifications(db, new Date(), 10_000);
+    const after = await ofThread();
+    expect(after).toHaveLength(before.length + 1);
+    expect(after.filter((row) => row.readAt === null)).toHaveLength(1);
+    // Answering reads it too.
+    await sendMessage(db, 'usr_chris', thread, { body: 'Yes, right out front.', attachmentIds: [] }, new Date());
+    expect((await ofThread()).filter((row) => row.readAt === null)).toEqual([]);
+  });
 });
 
 describe('change and invite notifications', () => {
