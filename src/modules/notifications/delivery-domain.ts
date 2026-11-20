@@ -13,6 +13,7 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   offer_updated: 'offers',
   offer_declined: 'offers',
   task_canceled: 'offers',
+  task_expired: 'offers',
   booking_confirmed: 'bookings',
   booking_canceled: 'bookings',
   helper_on_the_way: 'bookings',

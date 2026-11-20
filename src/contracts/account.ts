@@ -23,6 +23,8 @@ export const NOTIFICATION_TYPES = [
   'offer_declined',
   /** A task the helper had an open offer on was canceled (its cancellation declined the offer: sweep D9). */
   'task_canceled',
+  /** The poster's task ended with nobody booked (the tasks.expire job, sweep PT6): post it again? */
+  'task_expired',
   'booking_confirmed',
   'booking_canceled',
   'helper_on_the_way',

@@ -29,6 +29,7 @@ import { documentReaderFromEnv } from '@/integrations/ai/document-reader';
 import { idReaderFromEnv } from '@/integrations/ai/id-document-reader';
 import { byteCipherFromEnv, fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
+import { expireEndedTasks } from '@/modules/tasks/expiry';
 import { pruneCacheTags } from '@/platform/cache/prune';
 import { announceChangedPages } from '@/modules/seo/indexnow-job';
 import { retryDueWebhooks } from '@/modules/webhooks/inbox';
@@ -53,6 +54,7 @@ export interface Job {
 /** Expiries first, then what they produce (notifications last). */
 export const JOBS: Job[] = [
   { name: 'offers.expire', run: (db, now) => expireDueOffers(db, now, {}) },
+  { name: 'tasks.expire', run: (db, now) => expireEndedTasks(db, now).then(() => undefined) },
   { name: 'invites.expire', run: (db, now) => expireDueInvites(db, createPaymentProvider(), now) },
   { name: 'availability.expire', run: (db, now) => expireDuePosts(db, now) },
   { name: 'rebook.expire', run: (db, now) => expireDueProposals(db, now) },

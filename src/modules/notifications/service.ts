@@ -182,6 +182,12 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const type = p.reason === 'task_canceled' ? 'task_canceled' : 'offer_declined';
       return helper && taskId ? [{ userId: helper, type, target: { kind: 'find_work_task', taskId }, title: await taskTitle(db, taskId) }] : [];
     }
+    case 'task.expired': {
+      // Its window ended with nobody booked (src/modules/tasks/expiry.ts): the poster can post it again from its page.
+      const taskId = text(p.taskId);
+      const poster = text(p.posterUserId);
+      return taskId && poster ? [{ userId: poster, type: 'task_expired', target: { kind: 'task', taskId }, title: await taskTitle(db, taskId) }] : [];
+    }
     case 'booking.confirmed':
     case 'booking.on_my_way':
     case 'booking.running_late':

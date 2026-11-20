@@ -19,6 +19,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   offer_updated: RefreshCw,
   offer_declined: X,
   task_canceled: ClipboardX,
+  task_expired: CalendarOff,
   booking_confirmed: CalendarCheck,
   booking_canceled: CalendarX,
   helper_on_the_way: Navigation,
