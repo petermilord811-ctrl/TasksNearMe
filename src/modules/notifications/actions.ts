@@ -35,10 +35,11 @@ export async function markAllNotificationsReadAction(): Promise<ActionResult> {
   return refreshed(await markAllNotificationsRead(db, userId, await requestNow()));
 }
 
+/** Opening one reads it, and the page refreshes: the bell's count is in the shell, which stays as it is between pages (sweep MN6). */
 export async function openNotificationAction(input: { notificationId: string }): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  return markNotificationRead(db, userId, String(input.notificationId), await requestNow());
+  return refreshed(await markNotificationRead(db, userId, String(input.notificationId), await requestNow()));
 }
 
 export async function saveAccountProfileAction(input: AccountProfileInput): Promise<ActionResult> {

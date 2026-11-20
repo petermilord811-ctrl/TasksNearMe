@@ -40,6 +40,8 @@ import { helpersToAlert, replacementHelpers } from '@/modules/offers/task-alerts
 import { reactToEvent } from '@/modules/badges/reactions';
 import { reactForOperations } from '@/modules/oncall/reactions';
 import { publishRealtime } from '@/modules/realtime/reactions';
+import { userChannel } from '@/platform/realtime/hub';
+import { publishNotices } from '@/platform/realtime/publish';
 import { marketTimeZone } from '@/modules/markets/time-zone';
 
 /**
@@ -601,13 +603,24 @@ export async function getNotificationsPage(db: Db, userId: string, now: Date): P
   };
 }
 
+/** The person's other devices hear their bell changed (sweep MN6): it lives in the shell, which a page doesn't redraw. */
+async function noticeBellRead(db: Db, userId: string, read: number): Promise<void> {
+  if (read > 0) await publishNotices(db, [{ channel: userChannel(userId), notice: { type: 'read' } }]);
+}
+
 export async function markNotificationRead(db: Db, userId: string, notificationId: string, now: Date): Promise<ActionResult> {
-  await db.update(notifications).set({ readAt: now }).where(and(eq(notifications.id, String(notificationId)), eq(notifications.userId, userId), isNull(notifications.readAt)));
+  const read = await db
+    .update(notifications)
+    .set({ readAt: now })
+    .where(and(eq(notifications.id, String(notificationId)), eq(notifications.userId, userId), isNull(notifications.readAt)))
+    .returning({ id: notifications.id });
+  await noticeBellRead(db, userId, read.length);
   return { ok: true, code: 'updated' };
 }
 
 export async function markAllNotificationsRead(db: Db, userId: string, now: Date): Promise<ActionResult> {
-  await db.update(notifications).set({ readAt: now }).where(and(eq(notifications.userId, userId), isNull(notifications.readAt)));
+  const read = await db.update(notifications).set({ readAt: now }).where(and(eq(notifications.userId, userId), isNull(notifications.readAt))).returning({ id: notifications.id });
+  await noticeBellRead(db, userId, read.length);
   return { ok: true, code: 'updated' };
 }
 

@@ -336,11 +336,23 @@ export async function getInbox(db: Db, userId: string, now: Date): Promise<Inbox
  * has an unread one), so an entry left unread after the person read the thread from its email or push link kept
  * every later message in it from reaching them, by any channel, until they tapped that old entry in the bell.
  */
-async function readMessageNotifications(db: Writer, userId: string, threadId: string, now: Date): Promise<void> {
-  await db
+async function readMessageNotifications(db: Writer, userId: string, threadId: string, now: Date): Promise<number> {
+  const read = await db
     .update(notifications)
     .set({ readAt: now })
-    .where(and(eq(notifications.userId, userId), eq(notifications.type, 'message_received'), isNull(notifications.readAt), sql`${notifications.target}->>'threadId' = ${threadId}`));
+    .where(and(eq(notifications.userId, userId), eq(notifications.type, 'message_received'), isNull(notifications.readAt), sql`${notifications.target}->>'threadId' = ${threadId}`))
+    .returning({ id: notifications.id });
+  return read.length;
+}
+
+/**
+ * The reader's own pages hear that they read a conversation (sweep MN6): the Messages and bell badges live in the
+ * signed-in shell, which stays mounted from page to page, and on the person's other devices. Only when something was
+ * unread, so the page that refreshes on it doesn't send another.
+ */
+async function noticeReadByReader(db: Db, userId: string, threadId: string, unreadBefore: number, notificationsRead: number): Promise<void> {
+  if (unreadBefore === 0 && notificationsRead === 0) return;
+  await publishNotices(db, [{ channel: userChannel(userId), notice: { type: 'read', thread: threadId } }]);
 }
 
 /**
@@ -380,7 +392,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   const mine = participants.find((row) => row.userId === userId);
   const theirs = participants.find((row) => row.userId === found.other.id);
   await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
-  await readMessageNotifications(db, userId, thread.id, now);
+  await noticeReadByReader(db, userId, thread.id, found.summary.unreadCount, await readMessageNotifications(db, userId, thread.id, now));
 
   const blocked = await isBlocked(db, userId, found.other.id);
   // Mutual (WhatsApp's rule, completion plan 7.1): someone who hides their own activity doesn't see anyone
@@ -485,7 +497,8 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
   });
   await db.update(threads).set({ lastMessageAt: now }).where(eq(threads.id, thread.id));
   await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
-  await readMessageNotifications(db, userId, thread.id, now);
+  // Answering reads the conversation too: the person's other devices hear it (this page refreshes with the action).
+  await noticeReadByReader(db, userId, thread.id, found.summary.unreadCount, await readMessageNotifications(db, userId, thread.id, now));
   // A helper's answer may change how fast they usually reply (completion plan 7.12); never holds up the message.
   const [helper] = await db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
   if (helper) await recomputeResponseTime(db, userId, now).catch((error) => console.error('[messaging] response time', error));

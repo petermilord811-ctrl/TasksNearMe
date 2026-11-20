@@ -4,7 +4,7 @@ import { users } from '@/modules/accounts/schema';
 import { blocks, messages } from '@/modules/messaging/schema';
 import { getThreadPage, notifyTyping, offerThreadId, sendMessage } from '@/modules/messaging/service';
 import { notifications } from '@/modules/notifications/schema';
-import { dispatchNotifications } from '@/modules/notifications/service';
+import { dispatchNotifications, markNotificationRead } from '@/modules/notifications/service';
 import { findTaskLiveState } from '@/modules/realtime/board';
 import { noticesFor } from '@/modules/realtime/reactions';
 import { createDb } from '@/platform/db/connect';
@@ -141,6 +141,32 @@ describe('real time through Postgres', () => {
     expect(hidden?.seenMessageId).toBeUndefined();
     const theirs = await getThreadPage(db, 'usr_lee', threadId, new Date(now.getTime() + 3000));
     expect(theirs?.presence).toBeUndefined();
+  });
+
+  it("tells the reader's own pages when they read a conversation or a notification, and only then (sweep MN6)", async () => {
+    // Lee writes again (after the read marks the tests above left, a few seconds ahead); Maya has it unread, with its
+    // notification in the bell.
+    const later = new Date(Date.now() + 60_000);
+    expect((await sendMessage(db, 'usr_lee', threadId, { body: 'The parking is on the left.', attachmentIds: [] }, later)).ok).toBe(true);
+    await dispatchNotifications(db, new Date(), 10_000);
+    const maya = collect(userChannel('usr_maya'));
+    await getThreadPage(db, 'usr_maya', threadId, new Date(later.getTime() + 1_000));
+    // Her badges (Messages and the bell) are in the shell, on this device and her others: they hear it.
+    expect(await waitFor(() => maya.got.some((notice) => notice.type === 'read' && notice.thread === threadId))).toBe(true);
+    // Nothing unread now: reading again sends nothing, so the page that refreshes on the notice doesn't start a loop.
+    maya.got.length = 0;
+    await getThreadPage(db, 'usr_maya', threadId, new Date(later.getTime() + 2_000));
+    expect(await waitFor(() => maya.got.length > 0, 600)).toBe(false);
+
+    // Opening a notification from the bell: her other devices' bells hear it too, once.
+    const [entry] = await db.insert(notifications).values({ id: 'ntf_mn6_bell', userId: 'usr_maya', type: 'offer_received', target: { kind: 'task', taskId: 'tsk_desk' }, sourceEventId: 'evt_mn6_bell' }).returning();
+    await markNotificationRead(db, 'usr_maya', entry!.id, new Date());
+    expect(await waitFor(() => maya.got.some((notice) => notice.type === 'read' && notice.thread === undefined))).toBe(true);
+    maya.got.length = 0;
+    await markNotificationRead(db, 'usr_maya', entry!.id, new Date());
+    expect(await waitFor(() => maya.got.length > 0, 600)).toBe(false);
+    await db.delete(notifications).where(eq(notifications.id, entry!.id));
+    maya.stop();
   });
 
   it('puts a posted task on its market’s public stream only while it’s open', async () => {
