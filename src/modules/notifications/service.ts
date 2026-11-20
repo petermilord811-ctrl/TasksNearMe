@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type {
   AccountPageData,
   AccountProfileInput,
@@ -13,6 +13,7 @@ import { smsAvailable } from '@/integrations/sms';
 import { users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
+import { messages, threadParticipants } from '@/modules/messaging/schema';
 import { offers } from '@/modules/offers/schema';
 import { avatarPhoto, MAX_PHOTO_BYTES } from '@/modules/files/photos';
 import { initialsOf } from '@/modules/profiles/queries';
@@ -433,6 +434,18 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
   }
 }
 
+/** Whether the person has a message from someone else in the conversation that they haven't read. */
+async function unreadMessageIn(db: Db, userId: string, threadId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: messages.id })
+    .from(messages)
+    .innerJoin(threadParticipants, and(eq(threadParticipants.threadId, messages.threadId), eq(threadParticipants.userId, userId)))
+    // `<>` leaves out the system's own lines too (no sender): the notification is about a message someone wrote.
+    .where(and(eq(messages.threadId, threadId), ne(messages.senderUserId, userId), or(isNull(threadParticipants.lastReadAt), gt(messages.createdAt, threadParticipants.lastReadAt))))
+    .limit(1);
+  return row !== undefined;
+}
+
 /** A claim this old belongs to a dispatcher that stopped half-way: the event is taken again (at least once). */
 const CLAIM_EXPIRES_MS = 5 * 60_000;
 
@@ -463,6 +476,9 @@ async function deliver(db: Db, event: EventRow, onlyUserId?: string): Promise<nu
     // Several unread messages in one thread make one notification.
     if (item.type === 'message_received' && item.target.kind === 'thread') {
       const threadId = item.target.threadId;
+      // None if they read the conversation after the message and before this ran (sweep MN13): the entry would sit
+      // unread, and the next message would join it instead of telling them.
+      if (!(await unreadMessageIn(db, item.userId, threadId))) continue;
       const unread = await db
         .select({ id: notifications.id, target: notifications.target })
         .from(notifications)

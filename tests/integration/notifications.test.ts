@@ -89,6 +89,28 @@ describe('notifications', () => {
     await sendMessage(db, 'usr_chris', thread, { body: 'Yes, right out front.', attachmentIds: [] }, new Date());
     expect((await ofThread()).filter((row) => row.readAt === null)).toEqual([]);
   });
+
+  it('makes no notification for a message read before the dispatcher got to it, so the next one tells them (sweep MN13)', async () => {
+    const thread = (await offerThreadId(db, 'off_ntf_lee', new Date()))!;
+    const ofThread = async () =>
+      (await db.select().from(notifications).where(and(eq(notifications.userId, 'usr_chris'), eq(notifications.type, 'message_received')))).filter(
+        (row) => row.target.kind === 'thread' && row.target.threadId === thread,
+      );
+    const before = await ofThread();
+    expect(before.filter((row) => row.readAt === null)).toEqual([]);
+    // Lee writes, and Chris has the conversation open: he reads it before the dispatcher runs.
+    await sendMessage(db, 'usr_lee', thread, { body: 'Running two minutes early.', attachmentIds: [] }, new Date());
+    expect(await getThreadPage(db, 'usr_chris', thread, new Date())).not.toBeNull();
+    await dispatchNotifications(db, new Date(), 10_000);
+    expect(await ofThread()).toHaveLength(before.length);
+    // Lee's next message makes a new, unread one (it used to join an unread entry made after Chris had read it all).
+    const next = new Date();
+    await sendMessage(db, 'usr_lee', thread, { body: 'Here now.', attachmentIds: [] }, next);
+    await dispatchNotifications(db, new Date(), 10_000);
+    const after = await ofThread();
+    expect(after).toHaveLength(before.length + 1);
+    expect(after.filter((row) => row.readAt === null).map((row) => row.createdAt >= next)).toEqual([true]);
+  });
 });
 
 describe('change and invite notifications', () => {
