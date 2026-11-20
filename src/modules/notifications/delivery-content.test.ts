@@ -39,6 +39,21 @@ describe('in Spanish', () => {
     expect(content.sms).toMatch(/^TasksNearMe: .+ http.+\/app\/bookings\/bkg_desk$/);
   });
 
+  it('links in Spanish: the page, the settings and the unsubscribe page start with /es (sweep MN12)', () => {
+    const spanish = deliveryContent({ ...base, type: 'offer_received', params: null }, 'es');
+    expect(spanish.push.url).toMatch(/^http\S*\/es\/app\/bookings\/bkg_desk$/);
+    expect(spanish.sms).toMatch(/ http\S*\/es\/app\/bookings\/bkg_desk$/);
+    expect(spanish.html).toContain('/es/app/bookings/bkg_desk');
+    expect(spanish.text).toContain('/es/app/bookings/bkg_desk');
+    expect(spanish.text).toContain('/es/app/account');
+    expect(spanish.text).toMatch(/\/es\/email\/unsubscribe\?token=/);
+    // Mail apps post the one-click unsubscribe to the API, which has no language.
+    expect(spanish.headers?.['List-Unsubscribe']).toMatch(/^<http\S*\/api\/email\/unsubscribe\?token=/);
+    // English is the default language: its links carry none.
+    const english = deliveryContent({ ...base, type: 'offer_received', params: null });
+    for (const text of [english.push.url, english.sms, english.text, english.html]) expect(text).not.toContain('/es/');
+  });
+
   it('words the details, the date and the email in Spanish', () => {
     expect(deliveryContent({ ...base, type: 'offer_received', params: { amountCents: 6000 } }, 'es').subject).toBe('Jordan T. envió una oferta de $60.00 para Armar un escritorio.');
     const english = deliveryContent({ ...base, type: 'offer_received', params: { amountCents: 6000 } });

@@ -2,6 +2,7 @@ import { createTranslator } from 'next-intl';
 import type { AppLocale, AttentionTarget, NotificationTopic, NotificationType } from '@/contracts';
 import { DEFAULT_LOCALE, routes } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
+import { localizedPath } from '@/shared/locale';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 import { isLockedPreference } from './delivery-domain';
 import { oneClickUnsubscribeUrl, unsubscribePageUrl } from './unsubscribe';
@@ -20,7 +21,7 @@ export interface NotificationEmailInput {
   /** What happened, already worded ("Your booking for … is confirmed."). */
   sentence: string;
   target: AttentionTarget;
-  /** The page it's about (absolute). */
+  /** The page it's about (absolute, in the recipient's language). */
   url: string;
   userId: string;
   appUrl: string;
@@ -44,8 +45,9 @@ export function renderNotificationEmail(input: NotificationEmailInput): Notifica
   const cta = t(`cta.${target.kind}`);
   const topicName = t(`topics.${topic}`);
   const locked = isLockedPreference(topic, 'email');
-  const settingsUrl = `${appUrl}${routes.app.account()}`;
-  const unsubscribeUrl = locked ? undefined : unsubscribePageUrl(appUrl, userId, topic);
+  // The footer's links open in the recipient's language too, signed out on any device (sweep MN12).
+  const settingsUrl = `${appUrl}${localizedPath(routes.app.account(), locale)}`;
+  const unsubscribeUrl = locked ? undefined : unsubscribePageUrl(appUrl, userId, topic, locale);
 
   const body = `<tr><td class="card-pad" style="padding:36px 40px 32px;">
 <p style="margin:0 0 10px;font-family:${EMAIL_FONT};font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:${EMAIL_COLORS.primary};">${esc(topicName)}</p>

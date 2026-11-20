@@ -10,6 +10,7 @@ import { marketTimeZones } from '@/modules/markets/time-zone';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { formatDate, formatDateTime, formatMoney } from '@/shared/format';
+import { localizedPath } from '@/shared/locale';
 import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
 import { DELIVERY_CHANNELS, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
 import { renderNotificationEmail } from './emails';
@@ -91,7 +92,8 @@ const appUrl = () => (process.env.APP_URL ?? 'http://localhost:3000').replace(/\
 
 /**
  * One notification as an email (subject, text, designed version, unsubscribe headers), a text message and a
- * push, in the recipient's language.
+ * push, in the recipient's language. Their links are too (/es/... for Spanish, sweep MN12): opened signed out, or in
+ * a browser set to another language, the page, sign-in and unsubscribe still come in the reader's language.
  */
 export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'> & { id?: string }, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone) {
   const t = tFor(locale);
@@ -117,7 +119,7 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     on: params.on ?? 'post',
     search: params.search ?? '',
   });
-  const url = `${appUrl()}${pathOf(row.target)}`;
+  const url = `${appUrl()}${localizedPath(pathOf(row.target), locale)}`;
   const type = row.type as NotificationType;
   const email = renderNotificationEmail({ type, topic: NOTIFICATION_TOPIC[type], sentence, target: row.target, url, userId: row.userId, appUrl: appUrl(), locale });
   return { ...email, sms: t('sms', { sentence, url }), push: { title: t('pushTitle'), body: sentence, url, ...(row.id ? { tag: row.id } : {}) } };

@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import type { NotificationTopic } from '@/contracts';
-import { NOTIFICATION_TOPICS } from '@/contracts';
+import type { AppLocale, NotificationTopic } from '@/contracts';
+import { DEFAULT_LOCALE, NOTIFICATION_TOPICS } from '@/contracts';
 import { appSecret } from '@/platform/crypto/app-secret';
+import { localizedPath } from '@/shared/locale';
 
 /**
  * Unsubscribing from one topic's emails with the link in the email itself (no sign-in): the link carries the
@@ -52,9 +53,9 @@ export function readUnsubscribeToken(token: unknown, key = appSecret(), now: Dat
   return { userId, topic: topic as NotificationTopic };
 }
 
-/** Where a person turns one topic's emails off. */
-export function unsubscribePageUrl(appUrl: string, userId: string, topic: NotificationTopic): string {
-  return `${appUrl}/email/unsubscribe?token=${encodeURIComponent(unsubscribeToken(userId, topic))}`;
+/** Where a person turns one topic's emails off, in their language (/es/... for Spanish: sweep MN12). */
+export function unsubscribePageUrl(appUrl: string, userId: string, topic: NotificationTopic, locale: AppLocale = DEFAULT_LOCALE): string {
+  return `${appUrl}${localizedPath('/email/unsubscribe', locale)}?token=${encodeURIComponent(unsubscribeToken(userId, topic))}`;
 }
 
 /** What mail apps post to for one-click unsubscribe (the `List-Unsubscribe` header). */
