@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement } from 'react';
@@ -119,6 +119,29 @@ describe('helper setup, the profile in one flow (plan 9.11)', () => {
     await user.click(screen.getByRole('button', { name: 'Save and continue' }));
     await waitFor(() => expect(push).toHaveBeenCalledWith('/app/helper/onboarding/identity'));
     expect(onSaveProfile).toHaveBeenCalledWith(expect.objectContaining({ headline: 'Light cleaning and yard cleanup in Mueller', acceptHelperAgreement: true }));
+  });
+
+  it('shows the field Save and continue stops on, also one that already had focus (journeys on a phone, J-H2)', async () => {
+    const user = userEvent.setup();
+    const onSaveProfile = vi.fn(async () => ok('/app/helper/onboarding/identity'));
+    render(show(onboardingSetupAboutExamples, { onSaveProfile }));
+    const scrolled = () => vi.mocked(window.HTMLElement.prototype.scrollIntoView).mock.contexts;
+    const headline = screen.getByLabelText('Headline');
+    await user.type(headline, 'Hi');
+    // An iPhone's tap on the sticky button leaves focus in the field: focusing it again moves nothing by itself.
+    vi.mocked(window.HTMLElement.prototype.scrollIntoView).mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+    await waitFor(() => expect(headline).toHaveAttribute('aria-invalid', 'true'));
+    expect(headline).toHaveFocus();
+    await waitFor(() => expect(scrolled()).toContain(headline));
+    // Valid words, no agreement: the agreement it stops on is shown too.
+    await user.click(screen.getByRole('button', { name: 'Use an example' }));
+    vi.mocked(window.HTMLElement.prototype.scrollIntoView).mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+    const agreement = screen.getByRole('checkbox', { name: /I agree to the Helper agreement/ });
+    await waitFor(() => expect(agreement).toHaveFocus());
+    await waitFor(() => expect(scrolled()).toContain(agreement));
+    expect(onSaveProfile).not.toHaveBeenCalled();
   });
 
   it('saves a valid part by itself a moment after typing stops', async () => {

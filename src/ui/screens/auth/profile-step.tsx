@@ -22,7 +22,8 @@ export function ProfileStep({ data, handlers, initialResult, onResult }: SignInS
     check.reset();
   })} aria-busy={action.pending} className="space-y-6">
     <StepHeading title={t('profile.title')}><p>{t('profile.privacy')}</p></StepHeading>
-    <TextFormField control={form.control} name="firstName" label={forms('fields.firstName.label')} hint={t('profile.firstNameHint')} autoComplete="given-name" />
+    {/* Focused as the step opens, as the code step's field is (journeys on a phone, J-H1: the first field a person met was Last name). */}
+    <TextFormField control={form.control} name="firstName" label={forms('fields.firstName.label')} hint={t('profile.firstNameHint')} autoComplete="given-name" autoFocus />
     <TextFormField control={form.control} name="lastName" label={forms('fields.lastName.label')} hint={t('profile.lastNameHint')} autoComplete="family-name" />
     <ConsentFields control={form.control} />
     {data.botCheck && <BotCheckField check={check} result={action.result} />}

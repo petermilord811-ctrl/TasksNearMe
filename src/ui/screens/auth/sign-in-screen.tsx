@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { LockKeyhole } from 'lucide-react';
 import type { ActionResult, SignInHandlers, SignInPageData } from '@/contracts';
@@ -25,12 +25,21 @@ export function SignInFrame({ children }: { children: ReactNode }) {
   </div>;
 }
 
-function SignInFlow({ data, handlers }: { data: SignInPageData; handlers: SignInHandlers }) {
+function SignInFlow({ data, handlers, moved }: { data: SignInPageData; handlers: SignInHandlers; moved: boolean }) {
   const [lastResult, setLastResult] = useState<ActionResult>();
   const Step = steps[data.step];
+  // A step that follows the person's answer opens at its top (journeys on a phone, J-H1). The address stays the same, so
+  // the page kept the last step's scroll: the code step's "We sent a code to …" and the name step's heading and First
+  // name sat above the screen, under the bar. A step's own first field keeps its focus.
+  useEffect(() => {
+    if (moved) window.scrollTo({ top: 0 });
+  }, [moved]);
   return <Step data={data} handlers={handlers} initialResult={lastResult} onResult={setLastResult} />;
 }
 
 export function SignInScreen({ data, handlers }: { data: SignInPageData; handlers: SignInHandlers }) {
-  return <SignInFrame><SignInFlow key={`${data.step}:${data.email ?? ''}:${data.maskedPhone ?? ''}`} data={data} handlers={handlers} /></SignInFrame>;
+  const step = `${data.step}:${data.email ?? ''}:${data.maskedPhone ?? ''}`;
+  // The step the page opened on: that one stays where the browser put it.
+  const [opened] = useState(step);
+  return <SignInFrame><SignInFlow key={step} moved={step !== opened} data={data} handlers={handlers} /></SignInFrame>;
 }

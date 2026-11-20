@@ -181,6 +181,20 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * After Next or Save and continue stops on a field: that field, shown (journeys on a phone, J-H2). Focusing a field that
+   * already has focus moves nothing, and a tap on the sticky buttons often leaves focus there (an iPhone's does), so a
+   * person who typed, scrolled down and tapped saw only the line by the buttons, the field far above.
+   */
+  function revealFocus() {
+    requestAnimationFrame(() => {
+      const field = document.activeElement;
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) || !top.current?.contains(field)) return;
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      field.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+    });
+  }
+
   async function save(which: SetupPart, quiet: boolean): Promise<ActionResult> {
     const running = inFlight.current[which];
     if (running) await running;
@@ -218,6 +232,7 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
         // On Next, the form shows the server's answer (FormFeedback) and the fields it names.
         setStatus(which, outcome.code === 'validation_failed' ? 'invalid' : 'idle');
         showFieldErrors(forms[which] as unknown as UseFormReturn<FieldValues>, outcome);
+        revealFocus();
       }
       return outcome;
     })();
@@ -334,10 +349,12 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
     if (part === 'about' && data.agreementNeeded && about.getValues('acceptHelperAgreement') !== true) {
       about.setError('acceptHelperAgreement', { type: 'manual', message: 'must_accept' }, { shouldFocus: valid });
       setStatus(part, 'agreement');
+      revealFocus();
       return;
     }
     if (!valid) {
       setStatus(part, 'invalid');
+      revealFocus();
       return;
     }
     const others = SETUP_PARTS.filter((which) => which !== 'about');

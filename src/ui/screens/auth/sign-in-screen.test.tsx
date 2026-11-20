@@ -40,6 +40,7 @@ beforeEach(() => {
     unobserve() {}
     disconnect() {}
   });
+  vi.stubGlobal('scrollTo', vi.fn());
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
@@ -52,6 +53,17 @@ function show(children: ReactElement) {
     wrapper: ({ children }) => <NextIntlClientProvider locale="en" messages={{ ...uiMessages, forms, signIn }}><TimeZoneProvider timeZone="America/Chicago">{children}</TimeZoneProvider></NextIntlClientProvider>,
   });
 }
+
+describe('moving between steps (journeys on a phone, J-H1)', () => {
+  it('opens a step that follows an answer at its top, with its first field focused; the first step stays put', async () => {
+    const view = show(<SignInScreen data={signInEmailCodeStep} handlers={handlers()} />);
+    await waitFor(() => expect(screen.getByLabelText('6-digit code')).toHaveFocus());
+    expect(window.scrollTo).not.toHaveBeenCalled();
+    view.rerender(<SignInScreen data={signInProfileStep} handlers={handlers()} />);
+    await waitFor(() => expect(screen.getByLabelText('First name')).toHaveFocus());
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0 });
+  });
+});
 
 describe('sign-in forms', () => {
   it('focuses the required email field without sending an empty request', async () => {
