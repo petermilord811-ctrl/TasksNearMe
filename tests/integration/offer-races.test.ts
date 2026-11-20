@@ -55,6 +55,22 @@ async function freshOffer(): Promise<string> {
 }
 
 const wins = (results: ActionResult[]) => results.filter((result) => result.ok).length;
+
+/**
+ * Waits until `count` connections wait to update an offer (at most 10 s). Waiters queue behind each other on a row, so
+ * only the first is blocked by the holder itself; each one's statement says what it waits to do.
+ */
+async function waitingToUpdateOffers(count: number): Promise<void> {
+  for (let tries = 0; tries < 200; tries += 1) {
+    const { rows } = await pool.query<{ waiting: number }>(
+      `select count(*)::int as waiting from pg_stat_activity
+       where datname = current_database() and wait_event_type = 'Lock' and query ilike 'update "offers"%'`,
+    );
+    if ((rows[0]?.waiting ?? 0) >= count) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`Fewer than ${count} saves reached the offer's row lock`);
+}
 const losers = (results: ActionResult[]) => results.filter((result) => !result.ok).map((result) => result.code);
 
 async function events(offerId: string, type: string) {
@@ -98,9 +114,23 @@ describe('one offer changed by several requests at once', () => {
 
   it('keeps one new revision when the helper saves twice', async () => {
     const id = await freshOffer();
-    const results = await Promise.all(
-      [6500, 7000, 7500].map((priceCents) => reviseOffer(db, 'usr_jordan', TASK, offer({ pricing: { type: 'fixed', priceCents } }), new Date())),
-    );
+    // All three saves must read revision 1 before any of them writes (a save that reads after another one landed is a
+    // real second revision). The test holds the offer's row until all three wait on it: reads aren't blocked, writes are.
+    const lock = await pool.connect();
+    let saves: Promise<ActionResult[]>;
+    try {
+      await lock.query('begin');
+      await lock.query('select 1 from offers where id = $1 for update', [id]);
+      saves = Promise.all(
+        [6500, 7000, 7500].map((priceCents) => reviseOffer(db, 'usr_jordan', TASK, offer({ pricing: { type: 'fixed', priceCents } }), new Date())),
+      );
+      await waitingToUpdateOffers(3);
+    } finally {
+      // Always let go, or every later write to the offer waits forever.
+      await lock.query('commit');
+      lock.release();
+    }
+    const results = await saves;
     expect(wins(results)).toBe(1);
     expect(losers(results)).toEqual(['version_conflict', 'version_conflict']);
     const [row] = await db.select({ revision: offers.revision }).from(offers).where(eq(offers.id, id));
