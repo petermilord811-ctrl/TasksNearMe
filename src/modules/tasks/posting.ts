@@ -173,6 +173,10 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
       .where(and(eq(tasks.id, String(taskId)), eq(tasks.posterUserId, userId)))
       .limit(1);
     if (!row || !REPEATABLE.has(row.task.status)) return null;
+    // Not a task staff hid or closed: Post again would put it back on the board (sweep 2026-11-20, PT13).
+    if (row.task.hiddenAt) return null;
+    const [closedByStaff] = await db.select({ id: auditLog.id }).from(auditLog).where(and(eq(auditLog.targetId, row.task.id), eq(auditLog.action, 'task.close'))).limit(1);
+    if (closedByStaff) return null;
     const data = await pageData(userId);
     if (!data || !data.categories.some((category) => category.slug === row.categorySlug)) return null;
     const { task } = row;

@@ -140,6 +140,16 @@ describe('Post again', () => {
     expect(await posting.repeat(POSTER, open.taskId)).toBeNull();
   });
 
+  it('never brings back a task staff hid or closed (sweep 2026-11-20, PT13)', async () => {
+    const hidden = await finishedDesk();
+    await db.update(tasks).set({ status: 'canceled', hiddenAt: NOW, hiddenReason: 'prohibited' }).where(eq(tasks.id, hidden));
+    expect(await posting.repeat(POSTER, hidden)).toBeNull();
+    const closed = await finishedDesk();
+    await db.update(tasks).set({ status: 'canceled' }).where(eq(tasks.id, closed));
+    await db.insert(auditLog).values({ id: `aud_pa_close_${closed.slice(-8)}`, actorId: 'usr_alex', actorRole: 'staff', action: 'task.close', targetType: 'task', targetId: closed });
+    expect(await posting.repeat(POSTER, closed)).toBeNull();
+  });
+
   it('keeps a flexible day flexible, and falls back to the soonest allowed date when the weekday is too far', () => {
     const rules = { minLeadHours: 2, maxLeadDays: 3 };
     // A flexible Saturday, repeated on a Tuesday morning with only 3 days allowed: the soonest day (today).

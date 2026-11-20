@@ -130,6 +130,10 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   const index = POST_TASK_STEPS.indexOf(step);
 
   useEffect(() => { resolvePhotos.current = handlers.onResolvePhotos; }, [handlers.onResolvePhotos]);
+  // The schema is rebuilt from `data` on every refresh (a live notice, coming back to the tab): the restore below reads
+  // it through a ref, so it runs once per draft, not again over what the person did since (sweep 2026-11-20, PT9).
+  const schemaRef = useRef(schema);
+  useEffect(() => { schemaRef.current = schema; }, [schema]);
 
   useEffect(() => {
     let active = true;
@@ -142,7 +146,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
           const raw = sessionStorage.getItem(key);
           const saved = raw ? readStoredDraft(raw) : undefined;
           if (saved) {
-            const savedStep = saved.step === 'review' && !schema.safeParse(saved.values).success ? 'category' : saved.step;
+            const savedStep = saved.step === 'review' && !schemaRef.current.safeParse(saved.values).success ? 'category' : saved.step;
             reset(saved.values); setStep(savedStep); setAddress(saved.address); setRestored(true);
             stepRef.current = savedStep; addressRef.current = saved.address;
             setPhotos((current) => current.filter((photo) => saved.values.photoIds.includes(photo.id)));
@@ -166,7 +170,10 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
       setReady(true);
     });
     return () => { active = false; };
-  }, [getValues, key, persistDraft, reset, schema]);
+  }, [getValues, key, persistDraft, reset]);
+
+  // Nothing left to load once the person removed the saved photos still loading (the query may still be under way).
+  const loadingSavedPhotos = restoringPhotos && (values.photoIds ?? []).length > 0;
 
   const saveDraft = useCallback(() => {
     if (!persistDraft || posted.current) return;
@@ -285,8 +292,8 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         <Repeat aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
         <span>{t(data.repeat.addressDeleted ? 'repeat.addressDeleted' : 'repeat.ready', { title: data.repeat.fromTitle })}</span>
       </p>}
-      <div role="status" aria-live="polite" className={restoringPhotos || photoRestoreFailed ? 'flex items-center gap-2 text-sm text-muted-foreground' : 'sr-only'}>
-        {restoringPhotos ? <><Spinner />{t('photos.loadingSaved')}</> : photoRestoreFailed ? t('photos.restoreFailed') : ''}
+      <div role="status" aria-live="polite" className={loadingSavedPhotos || photoRestoreFailed ? 'flex items-center gap-2 text-sm text-muted-foreground' : 'sr-only'}>
+        {loadingSavedPhotos ? <><Spinner />{t('photos.loadingSaved')}</> : photoRestoreFailed ? t('photos.restoreFailed') : ''}
       </div>
       {!botCheckRefused && <FormFeedback result={unknownFieldFailure ? { ...result, fieldErrors: undefined } : result} />}
       {invalid && !unknownFieldFailure && <p role="alert" className="text-sm text-destructive">{t('checkFields')}</p>}

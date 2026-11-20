@@ -86,6 +86,9 @@ describe('task draft schema', () => {
       errorsOf({ ...movingDraft, budget: { type: 'hourly', rateCents: 3500, estimatedHours: 30, hoursCap: 32 } }),
     ).toMatchObject({ 'budget.estimatedHours': 'out_of_range', 'budget.hoursCap': 'out_of_range' });
     expect(errorsOf({ ...movingDraft, budget: { type: 'hourly', rateCents: 3500, estimatedHours: 24, hoursCap: 24 } })).toEqual({});
+    // No more than an offer can carry: $100,000, or $1,000 an hour.
+    expect(errorsOf({ ...movingDraft, budget: { type: 'fixed', priceCents: 10_000_001 } })).toMatchObject({ 'budget.priceCents': 'out_of_range' });
+    expect(errorsOf({ ...movingDraft, budget: { type: 'hourly', rateCents: 100_001, estimatedHours: 2, hoursCap: 3 } })).toMatchObject({ 'budget.rateCents': 'out_of_range' });
   });
 
   it('caps the expense allowance', () => {

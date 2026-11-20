@@ -331,10 +331,11 @@ export function createTaskDraftSchema(context: Pick<PostTaskPageData, 'rules' | 
         endTime: timeField.optional(),
       }),
       budget: z.discriminatedUnion('type', [
-        z.object({ type: z.literal('fixed'), priceCents: z.number(FIELD('required')).int().positive(FIELD('required')) }),
+        // At most what an offer can carry ($100,000; $1,000 an hour): a bigger number overflowed the column (sweep).
+        z.object({ type: z.literal('fixed'), priceCents: z.number(FIELD('required')).int().positive(FIELD('required')).max(10_000_000, FIELD('out_of_range')) }),
         z.object({
           type: z.literal('hourly'),
-          rateCents: z.number(FIELD('required')).int().positive(FIELD('required')),
+          rateCents: z.number(FIELD('required')).int().positive(FIELD('required')).max(100_000, FIELD('out_of_range')),
           // At most a day's work, as offers, invites and changes take (sweep 2026-11-20: a longer estimate got no offer).
           estimatedHours: z.number(FIELD('required')).positive(FIELD('required')).multipleOf(0.5, FIELD('invalid')).max(24, FIELD('out_of_range')),
           hoursCap: z.number(FIELD('required')).positive(FIELD('required')).multipleOf(0.5, FIELD('invalid')).max(24, FIELD('out_of_range')),

@@ -184,6 +184,9 @@ export async function moderateTask(db: Db, staff: StaffActor, taskId: string, in
       if (!loaded.photoRows.some(({ file }) => file.id === action.photoId)) return { result: { ok: false, code: 'not_found' } };
       await db.transaction(async (tx) => {
         await tx.delete(taskPhotos).where(and(eq(taskPhotos.taskId, task.id), eq(taskPhotos.fileId, action.photoId)));
+        // No longer a task photo, so a new post (Post again, a saved draft) can't attach it again (sweep PT13). Its owner and
+        // staff can still open it (files/access.ts).
+        await tx.update(files).set({ kind: 'removed_task_photo' }).where(eq(files.id, action.photoId));
         await tx.update(tasks).set({ updatedAt: now }).where(eq(tasks.id, task.id));
         await tx.insert(auditLog).values(audit('task.remove_photo', { photoId: action.photoId }));
       });

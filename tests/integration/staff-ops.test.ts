@@ -106,6 +106,8 @@ describe('task moderation', () => {
     expect(page?.actions).toContain('remove_photo');
     expect((await moderateTask(db, taylor, 'tsk_mod2', { action: 'remove_photo', photoId: 'fil_mod_photo', reason: 'The photo shows the street number.' }, now())).result).toEqual({ ok: true, code: 'updated' });
     expect(await db.select().from(taskPhotos).where(eq(taskPhotos.taskId, 'tsk_mod2'))).toEqual([]);
+    // No longer a task photo: a new post can't attach it again (sweep 2026-11-20, PT13).
+    expect((await db.select({ kind: files.kind }).from(files).where(eq(files.id, 'fil_mod_photo')))[0]?.kind).toBe('removed_task_photo');
 
     expect((await moderateTask(db, taylor, 'tsk_mod2', { action: 'recategorize', categorySlug: 'moving-help', reason: 'Moving furniture between rooms, not assembly.' }, now())).result).toEqual({ ok: true, code: 'updated' });
     const [moved] = await db.select({ slug: categories.slug }).from(tasks).innerJoin(categories, eq(categories.id, tasks.categoryId)).where(eq(tasks.id, 'tsk_mod2'));

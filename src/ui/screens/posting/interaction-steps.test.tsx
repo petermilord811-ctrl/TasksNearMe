@@ -33,6 +33,10 @@ function ModeErrorControl() {
   const form = useFormContext<TaskDraftInput>();
   return <button type="button" onClick={() => form.setError('location.mode', { type: 'server', message: 'not_supported' }, { shouldFocus: true })}>Reject location mode</button>;
 }
+function PlaceErrorControl() {
+  const form = useFormContext<TaskDraftInput>();
+  return <button type="button" onClick={() => form.setError('location.placeId', { type: 'server', message: 'not_supported' })}>Reject the address</button>;
+}
 function PhotosHarness({ handlers, onBusyChange }: { handlers: PostTaskHandlers; onBusyChange?: (busy: boolean) => void }) {
   const [photos, setPhotos] = useState<Photo[]>([uploadedTaskPhotos[0]!]);
   return <PhotosStep data={postTaskPageData} handlers={handlers} photos={photos} onPhotosChange={setPhotos} onBusyChange={onBusyChange} />;
@@ -82,6 +86,14 @@ describe('posting address combobox', () => {
     expect(modeGroup).toHaveAccessibleDescription(`${messages.postTask.location.modeHint} ${messages.postTask.location.errors.not_supported}`);
     expect(screen.getByRole('alert')).toHaveTextContent(messages.postTask.location.errors.not_supported);
     await waitFor(() => expect(screen.getByRole('radio', { name: 'In person' })).toHaveFocus());
+  });
+
+  it("says an address the server refuses as outside the area is outside the area, not a phone message (sweep PT12)", async () => {
+    const user = userEvent.setup();
+    render(<Harness initialValues={deskDraft}><LocationHarness handlers={fakePostTaskHandlers} /><PlaceErrorControl /></Harness>);
+    await user.click(screen.getByRole('button', { name: 'Reject the address' }));
+    expect(await screen.findByText(messages.postTask.location.outOfArea)).toBeInTheDocument();
+    expect(screen.queryByText(messages.forms.fieldErrors.not_supported)).toBeNull();
   });
 
   it('preserves the saved address, unit, and notes when the selected mode is clicked again', async () => {

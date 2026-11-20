@@ -140,7 +140,8 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
           </ul>}
         </div>
         <FieldDescription id={`${id}-hint`}>{t('location.searchHint')}</FieldDescription>
-        {placeError && <FieldError id={`${id}-error`}>{errors(`fieldErrors.${errors.has(`fieldErrors.${placeError}`) ? placeError : 'invalid'}`)}</FieldError>}
+        {/* An address outside the area (`not_supported`) says so: the shared message for that code is about phone numbers (sweep PT12). */}
+        {placeError && <FieldError id={`${id}-error`}>{placeError === 'not_supported' ? t('location.outOfArea') : errors(`fieldErrors.${errors.has(`fieldErrors.${placeError}`) ? placeError : 'invalid'}`)}</FieldError>}
       </Field>
       <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
         {status === 'loading' && <p className="flex items-center gap-2"><LoaderCircle aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" />{t('location.loading')}</p>}
