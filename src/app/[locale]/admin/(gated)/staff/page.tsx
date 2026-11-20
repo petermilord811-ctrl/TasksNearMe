@@ -2,7 +2,7 @@ import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { createStaffSetupCodeAction, grantStaffRoleAction, removeStaffRoleAction, resetStaffAuthenticatorAction } from '@/modules/accounts/staff-actions';
+import { createStaffSetupCodeAction, decideStaffGrantAction, grantStaffRoleAction, removeStaffRoleAction, resetStaffAuthenticatorAction } from '@/modules/accounts/staff-actions';
 import { getAdminStaff } from '@/modules/accounts/staff-roles';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
@@ -26,9 +26,10 @@ async function AdminStaff() {
   const viewer = await getViewer();
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
-  const data = await getAdminStaff(db, staff);
+  const now = await requestNow();
+  const data = await getAdminStaff(db, staff, now);
   if (!data) notFound();
-  return <AdminStaffScreen data={data} now={(await requestNow()).toISOString()} handlers={{ onGrant: grantStaffRoleAction, onRemove: removeStaffRoleAction, onCreateSetupCode: createStaffSetupCodeAction, onResetAuthenticator: resetStaffAuthenticatorAction }} />;
+  return <AdminStaffScreen data={data} now={now.toISOString()} handlers={{ onGrant: grantStaffRoleAction, onRemove: removeStaffRoleAction, onDecideGrant: decideStaffGrantAction, onCreateSetupCode: createStaffSetupCodeAction, onResetAuthenticator: resetStaffAuthenticatorAction }} />;
 }
 
 export default withClientMessages('[locale]/admin/(gated)/staff/page.tsx', AdminStaffPage);

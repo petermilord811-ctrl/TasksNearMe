@@ -1,7 +1,7 @@
 {
   "title": "Staff",
   "intro": "Who works on TasksNearMe, and in which roles. Every change needs a reason and goes to the audit log.",
-  "rules": "There must always be at least two admins, and nobody can remove their own admin role.",
+  "rules": "There must always be at least two admins, and nobody can remove their own admin role. Nobody grants themselves a role. With two or more admins, a new role waits for a second admin to approve it within 48 hours, and every admin is emailed when a role takes effect.",
   "grantTitle": "Add a role",
   "email": "Email",
   "emailHint": "The email of an existing account.",
@@ -12,11 +12,12 @@
   "grant": "Add the role",
   "granting": "Adding…",
   "granted": "Role added.",
+  "sent": "Sent for approval. It takes effect once another admin approves it, within 48 hours.",
   "removed": "Role removed.",
   "errors": {
     "emailInvalid": "No account uses this email.",
     "roleRequired": "Choose a role.",
-    "roleInUse": "They already have this role.",
+    "roleInUse": "They already have this role, or a grant of it is waiting for approval.",
     "reasonRequired": "Enter a reason of at least 10 characters.",
     "reasonTooLong": "Keep the reason under 1,000 characters.",
     "notAllowed": "That change isn't possible now. Refresh the page to see the current roles."
@@ -43,7 +44,9 @@
     "granted": "Staff · role added",
     "notAllowed": "Staff · not allowed",
     "setupCode": "Staff · a setup code, shown once",
-    "resetDialog": "Staff · reset an authenticator"
+    "resetDialog": "Staff · reset an authenticator",
+    "pendingGrants": "Staff · waiting for a second admin",
+    "sent": "Staff · sent for approval"
   },
   "authenticator": {
     "none": "Authenticator app: not set up yet",
@@ -60,5 +63,24 @@
     "resetting": "Resetting…",
     "resetDone": "Authenticator reset. Give them a new setup code.",
     "failed": "That didn't work. Refresh the page and try again."
+  },
+  "pending": {
+    "title": "Waiting for a second admin",
+    "intro": "A new role takes effect once another admin approves it. Requests end after 48 hours.",
+    "role": "{name} as {role}",
+    "asked": "Asked {date} by {name}",
+    "expires": "Ends {date}",
+    "approve": "Approve",
+    "decline": "Decline",
+    "approving": "Approving…",
+    "declining": "Declining…",
+    "waiting": "Another admin decides this one: you asked for it, or it's for you.",
+    "approved": "Approved: the role is theirs now, and every admin has been emailed.",
+    "declined": "Declined.",
+    "errors": {
+      "expired": "This request ended after 48 hours. Ask again if it's still needed.",
+      "conflict": "Another admin decided this request first. Refresh the page to see it.",
+      "notAllowed": "You asked for this grant, or it's for you: another admin decides it."
+    }
   }
 }

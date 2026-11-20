@@ -65,11 +65,34 @@ export interface StaffAuthenticatorHandlers {
 }
 
 /** `routes.admin.staff()`: everyone with a staff role, by name. */
+/**
+ * A role grant waiting for a second admin (security review SEC19). With two or more admins, a grant takes effect only
+ * once another admin approves it, within `GRANT_APPROVAL_HOURS`; with one admin it takes effect at once, and every
+ * admin is told by email. Nobody grants themselves a role, nor approves a grant they asked for or one for themselves.
+ */
+export interface AdminPendingGrant {
+  /** The request's id (its audit row). */
+  id: string;
+  person: PersonSummary & { email: string };
+  role: StaffRole;
+  /** The admin who asked. */
+  requestedBy: string;
+  reason: string;
+  requestedAt: ISODateTime;
+  expiresAt: ISODateTime;
+  /** The viewer may approve or decline it: not the admin who asked, nor the person it's for. */
+  canDecide: boolean;
+}
+
+export const GRANT_APPROVAL_HOURS = 48;
+
 export interface AdminStaffPageData {
   members: AdminStaffMember[];
   adminCount: number;
   /** Roles the viewer may grant (every role, for an admin). */
   grantable: StaffRole[];
+  /** Grants waiting for a second admin, oldest first. */
+  pendingGrants: AdminPendingGrant[];
 }
 
 /**
@@ -90,8 +113,23 @@ export const staffRoleRemoveInputSchema = z.object({
 });
 export type StaffRoleRemoveInput = z.input<typeof staffRoleRemoveInputSchema>;
 
-/** Both ok `updated`. Errors: `validation_failed`, `not_allowed` (role or the admin minimum), `unknown`. */
+/** Approving or declining a pending grant (`AdminPendingGrant.id`). */
+export const staffGrantDecisionInputSchema = z.object({
+  requestId: z.string(code('required')).min(1, code('required')),
+  approve: z.boolean(code('required')),
+});
+export type StaffGrantDecisionInput = z.input<typeof staffGrantDecisionInputSchema>;
+
+/**
+ * - `onGrant`: ok `updated` (the role is theirs now: the only admin granted it) or `sent` (waiting for a second admin).
+ *   Errors: `validation_failed` (`email: ['invalid']`, `role: ['in_use']` when they have it or a grant of it waits),
+ *   `not_allowed` (oneself), `unknown`.
+ * - `onRemove`: ok `updated`. Errors: `validation_failed`, `not_allowed` (role or the admin minimum), `unknown`.
+ * - `onDecideGrant`: ok `updated`. Errors: `not_allowed` (one's own request, or a grant for oneself), `expired`,
+ *   `version_conflict` (another admin decided it first), `unknown`.
+ */
 export interface AdminStaffHandlers extends StaffAuthenticatorHandlers {
   onGrant: ActionHandler<StaffRoleGrantInput>;
   onRemove: ActionHandler<StaffRoleRemoveInput>;
+  onDecideGrant: ActionHandler<StaffGrantDecisionInput>;
 }

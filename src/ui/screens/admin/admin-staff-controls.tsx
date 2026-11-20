@@ -11,6 +11,7 @@ import {
   staffRoleGrantInputSchema,
   staffRoleRemoveInputSchema,
   type ActionResult,
+  type AdminPendingGrant,
   type AdminStaffHandlers,
   type AdminStaffMember,
   type AdminStaffPageData,
@@ -88,7 +89,7 @@ function GrantForm({ data, handlers, initialValues, initialResult }: { data: Adm
       <Textarea {...form.register('reason')} id={`${id}-reason`} rows={3} maxLength={1000} disabled={pending} aria-invalid={Boolean(reasonError)} aria-describedby={`${id}-reason-hint${reasonError ? ` ${id}-reason-error` : ''}`} />
       {reasonError && <FieldError id={`${id}-reason-error`}>{reasonError}</FieldError>}
     </Field>
-    <FormFeedback result={feedback} successMessage={t('granted')} errorMessage={feedback && !feedback.ok && feedback.code === 'not_allowed' ? t('errors.notAllowed') : undefined} />
+    <FormFeedback result={feedback} successMessage={feedback?.ok && feedback.code === 'sent' ? t('sent') : t('granted')} errorMessage={feedback && !feedback.ok && feedback.code === 'not_allowed' ? t('errors.notAllowed') : undefined} />
     <Button type="submit" disabled={pending} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'granting' : 'grant')}</Button>
   </form>;
 }
@@ -187,6 +188,53 @@ function MemberAuthenticator({ member, handlers, code, onCode, onReset, busy }: 
   </div>;
 }
 
+/** Grants waiting for a second admin (security review SEC19): another admin approves or declines each. */
+function PendingGrants({ grants, handlers }: { grants: AdminPendingGrant[]; handlers: AdminStaffHandlers }) {
+  const t = useTranslations('adminStaff.pending');
+  if (grants.length === 0) return null;
+  return <section aria-labelledby="staff-pending" className={cn(adminSection, 'space-y-3')}>
+    <h2 id="staff-pending" className={adminH2}>{t('title')}</h2>
+    <p className="text-sm text-muted-foreground">{t('intro')}</p>
+    <ul className="grid gap-3 lg:grid-cols-2">{grants.map((grant) => <li key={grant.id} className={cn(adminCard, 'space-y-3 sm:p-5')}><PendingGrant grant={grant} handlers={handlers} /></li>)}</ul>
+  </section>;
+}
+
+function PendingGrant({ grant, handlers }: { grant: AdminPendingGrant; handlers: AdminStaffHandlers }) {
+  const { formatDateTime } = useFormat();
+  const t = useTranslations('adminStaff.pending');
+  const roles = useTranslations('shell.roles');
+  const router = useRouter();
+  const [busy, setBusy] = useState<'approve' | 'decline' | undefined>();
+  const [result, setResult] = useState<{ approve: boolean; result: ActionResult } | undefined>();
+  const decide = async (approve: boolean) => {
+    setBusy(approve ? 'approve' : 'decline');
+    setResult(undefined);
+    let next: ActionResult;
+    try { next = await handlers.onDecideGrant({ requestId: grant.id, approve }); } catch { next = { ok: false, code: 'unknown' }; }
+    setBusy(undefined);
+    setResult({ approve, result: next });
+    if (next.ok) router.refresh();
+  };
+  const error = result && !result.result.ok
+    ? result.result.code === 'expired' ? t('errors.expired') : result.result.code === 'version_conflict' ? t('errors.conflict') : result.result.code === 'not_allowed' ? t('errors.notAllowed') : undefined
+    : undefined;
+  return <>
+    <div className="flex items-center gap-3"><InitialsAvatar initials={grant.person.initials} size="sm" /><div className="min-w-0">
+      <p className="font-semibold">{t('role', { name: grant.person.displayName, role: roles(grant.role) })}</p>
+      <p className="text-sm break-all text-muted-foreground">{grant.person.email}</p>
+    </div></div>
+    <p className="text-sm"><q>{grant.reason}</q></p>
+    <p className="text-sm text-muted-foreground"><time dateTime={grant.requestedAt}>{t('asked', { date: formatDateTime(grant.requestedAt), name: grant.requestedBy })}</time> · <time dateTime={grant.expiresAt}>{t('expires', { date: formatDateTime(grant.expiresAt) })}</time></p>
+    <FormFeedback result={result?.result} successMessage={result?.approve ? t('approved') : t('declined')} errorMessage={error} />
+    {grant.canDecide
+      ? !result?.result.ok && <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" disabled={Boolean(busy)} aria-busy={busy === 'approve'} onClick={() => void decide(true)}>{busy === 'approve' && <Spinner aria-hidden="true" />}{t(busy === 'approve' ? 'approving' : 'approve')}</Button>
+        <Button type="button" variant="outline" size="sm" disabled={Boolean(busy)} aria-busy={busy === 'decline'} onClick={() => void decide(false)}>{busy === 'decline' && <Spinner aria-hidden="true" />}{t(busy === 'decline' ? 'declining' : 'decline')}</Button>
+      </div>
+      : <p className="text-sm text-muted-foreground">{t('waiting')}</p>}
+  </>;
+}
+
 function MemberRoles({ member, onRemove, busy }: { member: AdminStaffMember; onRemove: (role: StaffRole, trigger: HTMLButtonElement) => void; busy: boolean }) {
   const { formatDate } = useFormat();
   const t = useTranslations('adminStaff');
@@ -219,6 +267,7 @@ export function AdminStaffControls({ data, handlers, initialGrantValues, initial
   const sheetClass = 'max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none';
   return <div className="space-y-6">
     <GrantForm data={data} handlers={handlers} initialValues={initialGrantValues} initialResult={initialGrantResult} />
+    <PendingGrants grants={data.pendingGrants} handlers={handlers} />
     <section aria-labelledby="staff-members" className="space-y-3">
       <h2 id="staff-members" className={adminH2}>{t('membersTitle')}</h2>
       <p className="text-sm tabular-nums text-muted-foreground">{t('count', { count: data.members.length, admins: data.adminCount })}</p>

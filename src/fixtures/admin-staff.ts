@@ -1,4 +1,4 @@
-import type { AdminStaffHandlers, AdminStaffMember, AdminStaffPageData, PersonSummary } from '@/contracts';
+import type { AdminPendingGrant, AdminStaffHandlers, AdminStaffMember, AdminStaffPageData, PersonSummary } from '@/contracts';
 
 /** Staff tools, part 6 (UI-037): the staff list, around Monday Nov 23, 2026 in Austin (`ADMIN_NOW`). */
 
@@ -29,13 +29,43 @@ const members: AdminStaffMember[] = [
 export const adminStaffSetupCode = { setupCode: 'K7QD-29XM-PR', expiresAt: '2026-11-24T21:00:00.000Z' };
 
 /** `/admin/staff` for Riley (an admin). */
-export const adminStaffData: AdminStaffPageData = { members, adminCount: 2, grantable: ['support_agent', 'support_lead', 'trust_safety', 'finance', 'admin'] };
+export const adminStaffData: AdminStaffPageData = { members, adminCount: 2, grantable: ['support_agent', 'support_lead', 'trust_safety', 'finance', 'admin'], pendingGrants: [] };
+
+/**
+ * Grants waiting for a second admin (security review SEC19): Sky asked for Alex to lead support, which Riley may
+ * decide; Riley asked for Casey to join trust and safety, which another admin decides.
+ */
+const pendingGrants: AdminPendingGrant[] = [
+  {
+    id: 'aud_grant_alex',
+    person: person('usr_alex', 'Alex P.', 'AP', 'alex@example.test'),
+    role: 'support_lead',
+    requestedBy: 'Sky D.',
+    reason: 'Alex leads the weekend support shift from December.',
+    requestedAt: '2026-11-22T18:30:00.000Z',
+    expiresAt: '2026-11-24T18:30:00.000Z',
+    canDecide: true,
+  },
+  {
+    id: 'aud_grant_casey',
+    person: person('usr_casey', 'Casey W.', 'CW', 'casey@example.test'),
+    role: 'trust_safety',
+    requestedBy: 'Riley N.',
+    reason: 'Casey covers chargeback reviews with trust and safety.',
+    requestedAt: '2026-11-23T14:05:00.000Z',
+    expiresAt: '2026-11-25T14:05:00.000Z',
+    canDecide: false,
+  },
+];
+
+export const adminStaffWithPendingGrants: AdminStaffPageData = { ...adminStaffData, pendingGrants };
 
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 
 export const fakeAdminStaffHandlers: AdminStaffHandlers = {
   onGrant: () => wait({ ok: true as const, code: 'updated' as const }),
   onRemove: () => wait({ ok: true as const, code: 'updated' as const }),
+  onDecideGrant: () => wait({ ok: true as const, code: 'updated' as const }),
   onCreateSetupCode: () => wait({ ok: true as const, ...adminStaffSetupCode }),
   onResetAuthenticator: () => wait({ ok: true as const, code: 'updated' as const }),
 };

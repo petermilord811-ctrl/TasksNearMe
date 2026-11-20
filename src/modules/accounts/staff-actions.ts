@@ -1,12 +1,15 @@
 'use server';
 
 import { refresh } from 'next/cache';
-import type { ActionResult, HelperSuspensionInput, StaffRoleGrantInput, StaffRoleRemoveInput, StaffAuthenticatorResetInput, StaffSetupCodeResult, StrikeReversalInput } from '@/contracts';
+import type { ActionResult, HelperSuspensionInput, StaffGrantDecisionInput, StaffRoleGrantInput, StaffRoleRemoveInput, StaffAuthenticatorResetInput, StaffSetupCodeResult, StrikeReversalInput } from '@/contracts';
+import { createEmailProvider } from '@/integrations/email';
+import { appUrl } from '@/integrations/oauth';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { reverseStrike, setHelperSuspension } from './staff';
-import { grantStaffRole, removeStaffRole } from './staff-roles';
+import { announceStaffGrant } from './staff-grant-notice';
+import { decideStaffGrant, grantStaffRole, removeStaffRole, type StaffGrantAnnouncement } from './staff-roles';
 import { requestNow } from '@/platform/clock';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createSetupCode, resetAuthenticator } from './staff-authenticator';
@@ -37,11 +40,23 @@ async function signedInStaff() {
   return viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
 }
 
-/** Admins grant a staff role (UI-037). */
+/** Every admin hears of a role that took effect (security review SEC19). */
+const announce = (grant: StaffGrantAnnouncement) => announceStaffGrant({ db, email: createEmailProvider(db), appUrl: appUrl() }, grant);
+
+/** Admins grant a staff role (UI-037): at once while there's one admin, otherwise for a second admin to approve. */
 export async function grantStaffRoleAction(input: StaffRoleGrantInput): Promise<ActionResult> {
   const staff = await signedInStaff();
   if (!staff) return { ok: false, code: 'not_allowed' };
-  const result = await grantStaffRole(db, staff, input, await requestNow());
+  const result = await grantStaffRole(db, staff, input, await requestNow(), announce);
+  if (result.ok) refresh();
+  return result;
+}
+
+/** A second admin approves or declines a waiting grant (security review SEC19). */
+export async function decideStaffGrantAction(input: StaffGrantDecisionInput): Promise<ActionResult> {
+  const staff = await signedInStaff();
+  if (!staff) return { ok: false, code: 'not_allowed' };
+  const result = await decideStaffGrant(db, staff, input, await requestNow(), announce);
   if (result.ok) refresh();
   return result;
 }

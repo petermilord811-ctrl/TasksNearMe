@@ -418,6 +418,25 @@
         "passkey": "A passkey named “{name}”"
       }
     },
+    "staffRoleGranted": {
+      "subject": "{person} now has the {role} role",
+      "preheader": "{person} ({email}) now has the {role} role on TasksNearMe.",
+      "title": "A staff role was granted",
+      "heading": "{person} now has the {role} role",
+      "granted": "{grantedBy} gave {person} ({email}) the {role} role.",
+      "approved": "{grantedBy} asked to give {person} ({email}) the {role} role, and {approvedBy} approved it.",
+      "reason": "Reason: “{reason}”",
+      "notYou": "Every admin gets this email. If you didn't expect it, remove the role on the staff page and check the audit log.",
+      "open": "Open the staff page",
+      "text": "{who}\n\nReason: “{reason}”\n\nEvery admin gets this email. If you didn't expect it, remove the role on the staff page and check the audit log: {staffUrl}",
+      "roles": {
+        "support_agent": "support agent",
+        "support_lead": "support lead",
+        "trust_safety": "trust and safety",
+        "finance": "finance",
+        "admin": "admin"
+      }
+    },
     "giftCard": {
       "subject": "Your {amount} gift card is ready",
       "preheader": "Open the link to choose your gift card. Keep it private: it works like cash.",

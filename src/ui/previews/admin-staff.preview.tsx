@@ -1,5 +1,6 @@
 import { routes, type PreviewEntry } from '@/contracts';
-import { ADMIN_NOW, adminStaffData, adminStaffSetupCode, fakeAdminStaffHandlers, fakeHandler, rileyStaff } from '@/fixtures';
+import type { AdminStaffPageData } from '@/contracts';
+import { ADMIN_NOW, adminStaffData, adminStaffSetupCode, adminStaffWithPendingGrants, fakeAdminStaffHandlers, fakeHandler, rileyStaff } from '@/fixtures';
 import type { AdminStaffPreviewState } from '@/ui/screens/admin/admin-staff-controls';
 import { AdminStaffContent } from '@/ui/screens/admin/admin-staff-screen';
 import { AdminShell } from '@/ui/shells/admin-shell';
@@ -7,11 +8,11 @@ import copy from '../../../messages/en/ui/adminStaff.json';
 
 const shellHandlers = { onSignOut: fakeHandler({ ok: true, code: 'updated' }) };
 
-function staff(id: string, title: string, state: AdminStaffPreviewState = {}): PreviewEntry {
+function staff(id: string, title: string, state: AdminStaffPreviewState = {}, data: AdminStaffPageData = adminStaffData): PreviewEntry {
   return {
     id: `screen-admin-staff/${id}`, group: copy.previews.group, title, layout: 'fullscreen',
     render: () => <AdminShell viewer={rileyStaff} handlers={shellHandlers} currentPath={routes.admin.staff()}>
-      <AdminStaffContent data={adminStaffData} handlers={fakeAdminStaffHandlers} now={ADMIN_NOW} {...state} />
+      <AdminStaffContent data={data} handlers={fakeAdminStaffHandlers} now={ADMIN_NOW} {...state} />
     </AdminShell>,
   };
 }
@@ -26,6 +27,8 @@ export const adminStaffPreviews: PreviewEntry[] = [
     initialGrantResult: { ok: false, code: 'validation_failed', fieldErrors: { email: ['invalid'] } },
   }),
   staff('granted', p.granted, { initialGrantResult: { ok: true, code: 'updated' } }),
+  staff('sent', p.sent, { initialGrantResult: { ok: true, code: 'sent' } }),
+  staff('pending-grants', p.pendingGrants, {}, adminStaffWithPendingGrants),
   staff('remove-dialog', p.removeDialog, { initialRemove: { userId: 'usr_alex', role: 'support_agent', reason } }),
   staff('not-allowed', p.notAllowed, { initialRemove: { userId: 'usr_sky', role: 'support_lead', reason, result: { ok: false, code: 'not_allowed' } } }),
   staff('setup-code', p.setupCode, { initialSetupCode: { userId: 'usr_alex', ...adminStaffSetupCode } }),

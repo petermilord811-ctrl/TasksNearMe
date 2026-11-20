@@ -418,6 +418,25 @@
         "passkey": "Una llave de acceso llamada «{name}»"
       }
     },
+    "staffRoleGranted": {
+      "subject": "{person} ahora tiene el rol de {role}",
+      "preheader": "{person} ({email}) ahora tiene el rol de {role} en TasksNearMe.",
+      "title": "Se otorgó un rol del equipo",
+      "heading": "{person} ahora tiene el rol de {role}",
+      "granted": "{grantedBy} le dio a {person} ({email}) el rol de {role}.",
+      "approved": "{grantedBy} pidió darle a {person} ({email}) el rol de {role}, y {approvedBy} lo aprobó.",
+      "reason": "Motivo: «{reason}»",
+      "notYou": "Todos los administradores reciben este correo. Si no lo esperabas, quita el rol en la página del equipo y revisa el registro de auditoría.",
+      "open": "Abrir la página del equipo",
+      "text": "{who}\n\nMotivo: «{reason}»\n\nTodos los administradores reciben este correo. Si no lo esperabas, quita el rol en la página del equipo y revisa el registro de auditoría: {staffUrl}",
+      "roles": {
+        "support_agent": "agente de soporte",
+        "support_lead": "líder de soporte",
+        "trust_safety": "confianza y seguridad",
+        "finance": "finanzas",
+        "admin": "administrador"
+      }
+    },
     "giftCard": {
       "subject": "Tu tarjeta de regalo de {amount} está lista",
       "preheader": "Abre el enlace para elegir tu tarjeta de regalo. Mantenlo en privado: funciona como efectivo.",

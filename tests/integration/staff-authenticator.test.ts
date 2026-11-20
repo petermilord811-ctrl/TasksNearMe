@@ -97,7 +97,7 @@ describe('the staff authenticator', () => {
     expect(page.otpauthUri).toContain(`secret=${page.secret}`);
     expect(page.secret).toBe(await secretOf(NEW));
 
-    const staffList = await getAdminStaff(db, riley);
+    const staffList = await getAdminStaff(db, riley, new Date());
     expect(staffList?.members.find((member) => member.person.id === NEW)).toMatchObject({ authenticator: 'pending', authenticatorActions: ['setup_code', 'reset'] });
 
     expect(await confirmEnrollment(deps, { id: NEW, sessionId: 'ses_tmp_totp_new' }, '000000', now)).toMatchObject({ ok: false, fieldErrors: { code: ['incorrect'] } });
