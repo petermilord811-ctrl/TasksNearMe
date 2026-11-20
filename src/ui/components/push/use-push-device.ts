@@ -99,7 +99,8 @@ async function currentState(publicKey: string | undefined): Promise<PushDeviceSt
 }
 
 export function usePushDevice(publicKey: string | undefined) {
-  const [state, setState] = useState<PushDeviceState>('checking');
+  // Without the site's key there's nothing to check: the server's HTML already says so, and nothing changes after.
+  const [state, setState] = useState<PushDeviceState>(publicKey ? 'checking' : 'not_set_up');
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
 

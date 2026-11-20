@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Bell, BellOff, BellRing } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PushHandlers, PushSetup } from '@/contracts';
+import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { usePushDevice, type PushDeviceState } from './use-push-device';
@@ -34,15 +35,20 @@ export function PushDeviceSetting({ push, handlers }: { push?: PushSetup; handle
   const device = usePushDevice(push?.publicKey);
   const on = device.state === 'on';
   const Icon = on ? BellRing : device.state === 'off' ? Bell : BellOff;
+  // While this device is checked, the button's place is kept, hidden: nearly every browser can, and the answer would
+  // otherwise add it just after the page hydrates, moving everything below under a press (as the passkeys did to
+  // "Download my data", 179150c).
+  const holding = device.state === 'checking';
   return <div className="space-y-3">
     <p className="text-sm text-muted-foreground">{t('description')}</p>
     <p aria-live="polite" className="flex items-start gap-2 text-sm"><Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(stateCopy[device.state])}</p>
-    {(device.state === 'off' || on) && <Button
+    {(device.state === 'off' || on || holding) && <Button
       type="button"
       variant="outline"
-      disabled={device.pending}
+      disabled={holding || device.pending}
+      aria-hidden={holding || undefined}
       aria-busy={device.pending}
-      className="h-auto min-h-11 w-full whitespace-normal sm:w-auto"
+      className={cn('h-auto min-h-11 w-full whitespace-normal sm:w-auto', holding && 'invisible')}
       onClick={() => { void (on ? device.turnOff(handlers.onRemovePushSubscription) : device.turnOn(handlers.onSavePushSubscription)); }}
     >
       {device.pending && <Spinner aria-hidden="true" />}
