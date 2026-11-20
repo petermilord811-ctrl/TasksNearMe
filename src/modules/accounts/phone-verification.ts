@@ -28,8 +28,11 @@ const SEND_RULES = {
 
 export type StartResult =
   | { ok: true; maskedPhone: string; resendAvailableAt: Date }
-  /** `held`: a "Not you?" link holds the account's phone until staff clear it (completion plan 5.23). */
-  | { ok: false; reason: 'invalid' | 'not_supported' | 'in_use' | 'held' }
+  /**
+   * `held`: a "Not you?" link holds the account's phone until staff clear it (completion plan 5.23). `verified`: the
+   * account has a verified number, which only the account page's change replaces (`{ change: true }`).
+   */
+  | { ok: false; reason: 'invalid' | 'not_supported' | 'in_use' | 'held' | 'verified' }
   | { ok: false; reason: 'rate_limited'; retryAt: Date };
 
 export type VerifyResult =
@@ -81,19 +84,18 @@ export function createPhoneVerification({ db, sms, secret, now = () => new Date(
       return { phone: row.phone, maskedPhone: maskUsPhone(row.phone), resendAvailableAt: row.resendAvailableAt };
     },
 
-    async start(userId: string, phoneInput: string): Promise<StartResult> {
+    async start(userId: string, phoneInput: string, { change = false }: { change?: boolean } = {}): Promise<StartResult> {
       const at = now();
       // Sign-in's phone step and the account page both come here.
       if (await held(userId)) return { ok: false, reason: 'held' };
+      // Sign-in's step is for an account without a verified number. A verified one is replaced only on the account
+      // page, which tells the account and the old number, with a "Not you?" link (security review SEC20).
+      if (!change) {
+        const [account] = await db.select({ verifiedAt: users.phoneVerifiedAt }).from(users).where(eq(users.id, userId)).limit(1);
+        if (account?.verifiedAt) return { ok: false, reason: 'verified' };
+      }
       const phone = normalizeUsPhone(phoneInput);
       if (!phone) return { ok: false, reason: /^\s*\+(?!1)/.test(phoneInput) ? 'not_supported' : 'invalid' };
-
-      const [owner] = await db
-        .select({ id: users.id })
-        .from(users)
-        .where(and(eq(users.phone, phone), ne(users.id, userId)))
-        .limit(1);
-      if (owner) return { ok: false, reason: 'in_use' };
 
       const previous = await latest(userId);
       if (previous?.status === 'locked' && previous.lockedUntil && previous.lockedUntil > at) {
@@ -112,6 +114,14 @@ export function createPhoneVerification({ db, sms, secret, now = () => new Date(
         at,
       );
       if (!limited.ok) return { ok: false, reason: 'rate_limited', retryAt: limited.retryAt };
+
+      // Counted first: whether another account uses a number can't be asked faster than texts are sent (SEC20).
+      const [owner] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(and(eq(users.phone, phone), ne(users.id, userId)))
+        .limit(1);
+      if (owner) return { ok: false, reason: 'in_use' };
 
       await cancelPending(userId, at);
       const id = newId('pv');

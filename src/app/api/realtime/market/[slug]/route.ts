@@ -1,4 +1,5 @@
 import type { TaskLiveState, TaskPublicView } from '@/contracts';
+import { limitAddress } from '@/modules/accounts/sign-in/server';
 import { findPublicMarket } from '@/modules/markets/queries';
 import { findTaskLiveState } from '@/modules/realtime/board';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
@@ -11,6 +12,18 @@ import { hideSamplesFor, isSampleId } from '@/shared/sample-data';
 
 /** Public streams per server before new ones are turned away (they fall back to the page as it loaded). */
 const MAX_PUBLIC_STREAMS = 2000;
+/**
+ * Public streams one client address may hold open (an IPv6 one by its /64): many tabs, but not the server's whole
+ * allowance (security review SEC23). Counted while each stream is open, on this server.
+ */
+const MAX_STREAMS_PER_ADDRESS = 20;
+const openByAddress = new Map<string, number>();
+
+function release(address: string) {
+  const left = (openByAddress.get(address) ?? 1) - 1;
+  if (left > 0) openByAddress.set(address, left);
+  else openByAddress.delete(address);
+}
 /** A newly posted task is read once for everyone watching, then kept for a little while. */
 const TASK_TTL_MS = 30_000;
 const recent = new Map<string, { at: number; view: Promise<TaskPublicView | null> }>();
@@ -55,9 +68,14 @@ export async function GET(request: Request, context: { params: Promise<{ slug: s
   if (!market) return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
   const hub = realtimeHub();
   if (hub.count() >= MAX_PUBLIC_STREAMS) return new Response(null, { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '120' } });
+  const address = await limitAddress();
+  if (address && (openByAddress.get(address) ?? 0) >= MAX_STREAMS_PER_ADDRESS) {
+    return new Response(null, { status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': '120' } });
+  }
   const hideSamples = hideSamplesFor(audienceOf(request));
-  return sseResponse(request.signal, (out) =>
-    hub.subscribe(marketChannel(market.id), (notice) => {
+  return sseResponse(request.signal, (out) => {
+    if (address) openByAddress.set(address, (openByAddress.get(address) ?? 0) + 1);
+    const unsubscribe = hub.subscribe(marketChannel(market.id), (notice) => {
       if (typeof notice.task !== 'string') return;
       if (hideSamples && isSampleId(notice.task)) return;
       if (notice.type === 'task.posted') {
@@ -69,6 +87,10 @@ export async function GET(request: Request, context: { params: Promise<{ slug: s
           if (state) out.send('task-state', state);
         });
       }
-    }),
-  );
+    });
+    return () => {
+      unsubscribe();
+      if (address) release(address);
+    };
+  });
 }

@@ -175,3 +175,13 @@ describe('the profile photo', () => {
     expect((await getAccountPage(db, userId))?.profile.photo).toBeUndefined();
   });
 });
+
+describe('asking whether an address is in use (security review SEC20)', () => {
+  it('is counted like a change: within the limit, then refused', async () => {
+    const probe = await signedIn('usr_contact_probe');
+    const tries = [];
+    for (const email of ['maya@example.test', 'sam@example.test', 'chris@example.test', 'lee@example.test']) tries.push(await contacts.startEmailChange(probe.userId, probe.headers, { email }));
+    expect(tries.slice(0, 3)).toEqual([0, 1, 2].map(() => ({ ok: false, code: 'validation_failed', fieldErrors: { email: ['in_use'] } })));
+    expect(tries[3]).toMatchObject({ ok: false, code: 'rate_limited' });
+  });
+});

@@ -128,6 +128,9 @@ export function tidyCityName(input: string | null | undefined): string | null {
   if (suffix && (US_STATE_CODES as readonly string[]).includes(suffix[1]!.toUpperCase())) city = city.slice(0, suffix.index).trim();
   city = city.replace(/,$/, '').trim();
   if (city.length < 2 || city.length > 60) return null;
+  // A city is shown on public pages (the waitlist's demand): nothing that reads as a number, an address or a link
+  // (security review 2026-11-20).
+  if (/[\d@/:\\]/.test(city) || /\.(?:com|net|org|io|co|me|app)\b/i.test(city)) return null;
   if (city === city.toLowerCase() || city === city.toUpperCase()) {
     city = city.toLowerCase().replace(/(^|[\s.-])(\p{L})/gu, (_, before: string, letter: string) => `${before}${letter.toUpperCase()}`);
   }

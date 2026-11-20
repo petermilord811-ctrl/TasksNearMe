@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import { stripeIdentityFromEnv } from '@/integrations/stripe-identity';
+import { stripeIdentityFromEnv, verifyStripeSignature } from '@/integrations/stripe-identity';
 import { parseResendEvent, signResendWebhook, verifyResendWebhook } from '@/integrations/email/resend-webhook';
 import { personaIdentityFromEnv } from '@/integrations/persona';
 import { bookingDeps } from '@/modules/bookings/server';
@@ -44,7 +44,12 @@ async function stripe(db: Db, payload: string, headers: WebhookHeaders, now: Dat
   if (isBillingEvent(type)) return handleBillingWebhook(db, createBillingProvider(), { payload, signature, secret }, now);
   if (type?.startsWith('payment_intent.') || type?.startsWith('charge.dispute.')) {
     const deps = bookingDeps();
-    if (!deps) return { status: 200, body: { ok: true, ignored: true } };
+    // Payments off: still only a signed event is answered as ignored. The inbox records what's answered, and an
+    // ignored id counts as handled, so a stranger could otherwise claim a real event's id first (security review SEC23).
+    if (!deps) {
+      if (!verifyStripeSignature({ payload, header: signature, secret, now })) return { status: 400, body: { ok: false } };
+      return { status: 200, body: { ok: true, ignored: true } };
+    }
     return handleStripePaymentWebhook(deps, { payload, signature, secret }, now);
   }
   return handleStripeIdentityWebhook(db, { payload, signature, secret, identity }, now);

@@ -3,6 +3,8 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { messageReactions, messages, savedReplies } from '@/modules/messaging/schema';
 import { deleteReply, getThreadPage, offerThreadId, reactToMessage, saveReply, sendMessage } from '@/modules/messaging/service';
 import { createDb } from '@/platform/db/connect';
+import { consumeRateLimit } from '@/platform/rate-limit';
+import { rateLimits } from '@/platform/rate-limit/schema';
 
 /**
  * A professional chat (completion plan 7.3) on Ruth's laptop task and Lee's offer: quote-replies (same thread only,
@@ -40,6 +42,21 @@ describe('chat', () => {
     expect(forLee.messages.find((message) => message.id === target.id)?.reactions).toEqual([{ emoji: 'thumbs_up', count: 1, mine: false }]);
     await reactToMessage(db, 'usr_ruth', thread, { messageId: target.id, emoji: 'thumbs_up', on: false }, now());
     expect(await db.select().from(messageReactions).where(and(eq(messageReactions.messageId, target.id), eq(messageReactions.userId, 'usr_ruth')))).toHaveLength(0);
+  });
+
+  it('takes reactions at a person’s pace, and none once the conversation closed (security review SEC21)', async () => {
+    const thread = (await offerThreadId(db, 'off_lee_computer', now()))!;
+    const page = (await getThreadPage(db, 'usr_ruth', thread, now()))!;
+    const target = page.messages.find((message) => message.kind === 'text')!;
+    // One instant for all of it, so the minute can't turn over halfway.
+    const at = now();
+    await db.delete(rateLimits).where(eq(rateLimits.key, 'message-reactions:usr_ruth'));
+    for (let i = 0; i < 60; i += 1) await consumeRateLimit(db, 'message-reactions:usr_ruth', { limit: 60, windowSeconds: 60 }, at);
+    expect(await reactToMessage(db, 'usr_ruth', thread, { messageId: target.id, emoji: 'heart', on: true }, at)).toMatchObject({ ok: false, code: 'rate_limited' });
+    await db.delete(rateLimits).where(eq(rateLimits.key, 'message-reactions:usr_ruth'));
+    // A year on, the task has long ended unbooked: its offer conversation is closed.
+    const later = new Date(at.getTime() + 365 * 24 * 3_600_000);
+    expect(await reactToMessage(db, 'usr_ruth', thread, { messageId: target.id, emoji: 'heart', on: true }, later)).toEqual({ ok: false, code: 'not_allowed' });
   });
 
   it('keeps saved replies per person, up to twenty, and lists them in the conversation', async () => {

@@ -255,6 +255,11 @@ function phoneStartResult(result: Awaited<ReturnType<typeof phoneVerification.st
     return { ok: true, code: 'sent' };
   }
   if (result.reason === 'rate_limited') return rateLimited(result.retryAt);
+  // The account has a verified number: the step isn't offered, and the account page changes it (security review SEC20).
+  if (result.reason === 'verified') {
+    refresh();
+    return { ok: false, code: 'not_allowed' };
+  }
   return fieldError('phone', result.reason);
 }
 
@@ -306,8 +311,16 @@ export async function changePhone(): Promise<ActionResult> {
   return { ok: true, code: 'updated' };
 }
 
+/** Asking for a passkey challenge: each one is a stored row (security review SEC20). */
+const PASSKEY_OPTIONS_RULE = { limit: 30, windowSeconds: 10 * 60 };
+
 /** The `email` step's "Sign in with a passkey": the WebAuthn request (its challenge waits in a cookie). */
 export async function passkeySignInOptions(): Promise<PasskeyOptionsResult> {
+  const ip = await limitAddress();
+  if (ip) {
+    const limited = await consumeRateLimits(db, [{ key: `passkey-options:ip:${ip}`, rule: PASSKEY_OPTIONS_RULE }]);
+    if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
+  }
   try {
     const options = await auth.api.generatePasskeyAuthenticationOptions({ headers: await headers() });
     return { ok: true, options: options as unknown as Record<string, unknown> };

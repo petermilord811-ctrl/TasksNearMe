@@ -58,6 +58,17 @@ describe('city names people type', () => {
     expect(tidyCityName(undefined)).toBeNull();
   });
 
+  it('keeps a number, an address or a link off the public pages (security review)', () => {
+    expect(tidyCityName('Call 512 555 0101')).toBeNull();
+    expect(tidyCityName('maya@example.com')).toBeNull();
+    expect(tidyCityName('cashjobs.com')).toBeNull();
+    expect(tidyCityName('example.org/jobs')).toBeNull();
+    // Place names with punctuation still count.
+    expect(tidyCityName("coeur d'alene")).toBe("Coeur D'alene");
+    expect(tidyCityName('Washington, D.C.')).toBe('Washington, D.C.');
+    expect(tidyCityName('São Paulo')).toBe('São Paulo');
+  });
+
   it('gives two spellings of a city one key', () => {
     expect(cityKey('San antonio')).toBe(cityKey('SAN ANTONIO, TX'));
     expect(cityKey('')).toBeNull();

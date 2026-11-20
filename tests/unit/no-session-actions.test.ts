@@ -122,25 +122,30 @@ function actionFiles(dir: string): string[] {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) return actionFiles(full);
     if (!/\.tsx?$/.test(entry.name) || /\.test\.tsx?$/.test(entry.name)) return [];
-    return /^'use server';/m.test(fs.readFileSync(full, 'utf8')) ? [full] : [];
+    // The file's own directive, in either quotes (an inline one in a function is indented, and isn't this).
+    return /^(['"])use server\1;?\s*$/m.test(fs.readFileSync(full, 'utf8')) ? [full] : [];
   });
 }
 
-const files = actionFiles(path.join(ROOT, 'src/modules'));
+// Every place an action can live, not only modules (security review SEC23): routes and platform code too.
+const files = ['src/modules', 'src/app', 'src/platform'].flatMap((dir) => actionFiles(path.join(ROOT, dir)));
+/** A file's key in PUBLIC: modules by their path inside src/modules (as before), others by their path inside src. */
+const keyOf = (file: string) => {
+  const inModules = path.relative(path.join(ROOT, 'src/modules'), file);
+  return (inModules.startsWith('..') ? path.relative(path.join(ROOT, 'src'), file) : inModules).split(path.sep).join('/').replace(/\.tsx?$/, '');
+};
 const modules = new Map<string, Record<string, unknown>>();
 
 beforeAll(async () => {
-  for (const file of files) {
-    const key = path.relative(path.join(ROOT, 'src/modules'), file).replace(/\.tsx?$/, '');
-    modules.set(key, (await import(/* @vite-ignore */ file)) as Record<string, unknown>);
-  }
+  for (const file of files) modules.set(keyOf(file), (await import(/* @vite-ignore */ file)) as Record<string, unknown>);
 }, 120_000);
 
 afterAll(() => vi.restoreAllMocks());
 
 describe('every Server Action without a session', () => {
-  it('finds the action files', () => {
+  it('finds the action files, outside modules too', () => {
     expect(files.length).toBeGreaterThan(30);
+    expect(files.map(keyOf)).toContain('platform/auth/dev-sign-in');
   });
 
   it('refuses without touching the database or signing anyone in (except the listed public ones)', async () => {
@@ -201,7 +206,7 @@ describe('every Server Action, read from the source', () => {
     const unchecked: { id: string; name: string; body: string }[] = [];
     const checkedActions = new Set<string>();
     for (const file of files) {
-      const key = path.relative(path.join(ROOT, 'src/modules'), file).replace(/\.tsx?$/, '');
+      const key = keyOf(file);
       const source = fs.readFileSync(file, 'utf8');
       const bodies = functionBodies(source);
       // Local helpers that check the session (`staff()`, `signedInUserId()`, …), found until nothing new is.

@@ -325,8 +325,16 @@ export type WaitlistInterest = (typeof WAITLIST_INTERESTS)[number];
 export const waitlistInputSchema = z.object({
   email: emailField,
   zip: zipField,
-  /** The city, as people call it (optional): groups demand by city on the waitlist page. */
-  city: z.string().trim().max(60, 'too_long').optional(),
+  /**
+   * The city, as people call it (optional): groups demand by city on the waitlist page, which is public. Letters,
+   * spaces and the punctuation of place names only, so it can't carry a number, an address or a link (security review).
+   */
+  city: z
+    .string()
+    .trim()
+    .max(60, 'too_long')
+    .regex(/^[\p{L}\p{M}\s.'’,()-]*$/u, 'invalid')
+    .optional(),
   interest: z.enum(WAITLIST_INTERESTS, 'required'),
 });
 export type WaitlistInput = z.input<typeof waitlistInputSchema>;

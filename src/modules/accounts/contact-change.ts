@@ -95,8 +95,8 @@ export function createContactChange({ db, auth, email, sms, phoneVerification, a
       if (!user) return { ok: false, code: 'not_allowed' };
       if (user.held) return fieldError('email', 'held');
       if (newEmail === user.email.toLowerCase()) return fieldError('email', 'unchanged');
-      if (await emailInUse(newEmail, userId)) return fieldError('email', 'in_use');
 
+      // Counted first: whether another account uses an address can't be asked faster than the limit (security review SEC20).
       const limited = await consumeRateLimits(
         db,
         [
@@ -106,6 +106,7 @@ export function createContactChange({ db, auth, email, sms, phoneVerification, a
         now(),
       );
       if (!limited.ok) return rateLimited(limited.retryAt);
+      if (await emailInUse(newEmail, userId)) return fieldError('email', 'in_use');
 
       await auth.api.requestEmailChangeEmailOTP({ body: { newEmail }, headers: requestHeaders });
       return { ok: true, code: 'sent' };
@@ -160,9 +161,12 @@ export function createContactChange({ db, auth, email, sms, phoneVerification, a
       const phone = normalizeUsPhone(parsed.data.phone);
       if (phone && phone === user.phone && user.phoneVerifiedAt) return fieldError('phone', 'unchanged');
 
-      const result = await phoneVerification.start(userId, parsed.data.phone);
+      // The account page replaces a verified number; its notice and "Not you?" link follow the code.
+      const result = await phoneVerification.start(userId, parsed.data.phone, { change: true });
       if (result.ok) return { ok: true, code: 'sent' };
       if (result.reason === 'rate_limited') return rateLimited(result.retryAt);
+      // Not here: the account page's change may replace a verified number.
+      if (result.reason === 'verified') return { ok: false, code: 'not_allowed' };
       return fieldError('phone', result.reason);
     },
 

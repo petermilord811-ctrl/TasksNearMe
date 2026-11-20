@@ -45,6 +45,8 @@ import { messageReactions, messages, savedReplies, threadParticipants, threads }
 
 const DAY = 86_400_000;
 const SEND_RATE_LIMIT = { limit: 60, windowSeconds: 3600 };
+/** Each reaction tells the other person at once: a person's pace, not a script's (security review SEC21). */
+const REACTION_RATE_LIMIT = { limit: 60, windowSeconds: 60 };
 const PAGE_SIZE = 100;
 /** The most one page of a conversation shows, the latest ones, however far back "Load earlier messages" went. */
 const MAX_SHOWN = 1_000;
@@ -511,7 +513,10 @@ export async function reactToMessage(db: Db, userId: string, threadId: string, i
   const [thread] = await db.select().from(threads).where(eq(threads.id, String(threadId))).limit(1);
   const found = thread ? await summaryOf(db, thread, userId, now) : null;
   if (!thread || !found) return { ok: false, code: 'not_found' };
-  if (await isBlocked(db, userId, found.other.id)) return { ok: false, code: 'not_allowed' };
+  // As for sending: not in a closed conversation (the page offers no reactions there either).
+  if (found.context.closed || (await isBlocked(db, userId, found.other.id))) return { ok: false, code: 'not_allowed' };
+  const limited = await consumeRateLimit(db, `message-reactions:${userId}`, REACTION_RATE_LIMIT, now);
+  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const [message] = await db.select({ id: messages.id }).from(messages).where(and(eq(messages.id, String(input.messageId)), eq(messages.threadId, thread.id), eq(messages.kind, 'text'))).limit(1);
   if (!message) return { ok: false, code: 'not_found' };
   if (input.on) await db.insert(messageReactions).values({ messageId: message.id, userId, emoji: input.emoji, createdAt: now }).onConflictDoNothing();

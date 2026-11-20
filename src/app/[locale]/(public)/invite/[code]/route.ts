@@ -24,7 +24,8 @@ export async function GET(_request: Request, { params }: RouteContext<'/[locale]
   if (ip && !(await consumeRateLimit(db, `invite-link:ip:${ip}`, { limit: 30, windowSeconds: 10 * 60 })).ok) redirect(home);
 
   const [invite] = await db.select({ role: betaInviteCodes.role }).from(betaInviteCodes).where(eq(betaInviteCodes.code, code)).limit(1);
-  (await cookies()).set(INVITE_COOKIE, code, {
+  // Only a code that exists is kept: another site's link can't put any text it likes in the invite step (SEC23).
+  if (invite) (await cookies()).set(INVITE_COOKIE, code, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',

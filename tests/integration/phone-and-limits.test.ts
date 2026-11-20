@@ -129,6 +129,27 @@ describe('phone verification', () => {
     expect(await phones.pending(userId)).toBeNull();
   });
 
+  it("sign-in's step doesn't replace a verified number; the account page's change does (security review SEC20)", async () => {
+    const t = clock('2026-11-17T19:00:00.000Z');
+    const phones = createPhoneVerification({ db, sms, secret: 'test-secret', now: t.now });
+    const userId = await newUser('usr_phone_verified');
+    // Numbers no other test here uses (a number on this account is in use for every later test).
+    await db.update(users).set({ phone: '+15125550197', phoneVerifiedAt: new Date('2026-11-01T00:00:00.000Z') }).where(eq(users.id, userId));
+    expect(await phones.start(userId, '512-555-0198')).toEqual({ ok: false, reason: 'verified' });
+    expect((await phones.start(userId, '512-555-0198', { change: true })).ok).toBe(true);
+  });
+
+  it('says a number is in use only within the send limits (security review SEC20)', async () => {
+    const t = clock('2026-11-17T20:00:00.000Z');
+    const phones = createPhoneVerification({ db, sms, secret: 'test-secret', now: t.now });
+    const userId = await newUser('usr_phone_probe');
+    // Maya's number: each try is counted, so numbers can't be checked against accounts faster than texts are sent.
+    const tries = [];
+    for (let i = 0; i < 4; i += 1) tries.push(await phones.start(userId, '(512) 555-0101'));
+    expect(tries.slice(0, 3)).toEqual([0, 1, 2].map(() => ({ ok: false, reason: 'in_use' })));
+    expect(tries[3]).toMatchObject({ ok: false, reason: 'rate_limited' });
+  });
+
   it('cancels a pending code when the person wants a different number', async () => {
     const t = clock('2026-11-17T18:00:00.000Z');
     const phones = createPhoneVerification({ db, sms, secret: 'test-secret', now: t.now });
