@@ -87,6 +87,10 @@ async function refundCharge(
  *   price and the client gets the difference back (a `dispute_settlement` refund);
  * - refund in full: everything left goes back and the booking ends (`refunded_in_dispute`);
  * - goodwill: a refund from platform funds; the helper's earnings stay as they are.
+ *
+ * Settling and refunding in full claim the booking before any money moves (lifecycle review #13): a client's approval
+ * landing at the same moment either wins (and the resolution fails) or finds the booking already ended. Before, both
+ * went through: the helper was paid on the agreed price and the client refunded too.
  */
 export async function applyResolutionMoney(
   db: Db,
@@ -130,23 +134,45 @@ export async function applyResolutionMoney(
           posterTotalCents: base.posterTotalCents - moved.posterRefundCents,
           posterRefundCents: (base.posterRefundCents ?? 0) + moved.posterRefundCents,
         };
-        await db.update(bookingCompletions).set({ finalBreakdown }).where(eq(bookingCompletions.bookingId, bookingId));
-        await db
-          .update(bookings)
-          .set({ status: 'completed', completedVia: 'settlement', completedAt: now, approvalDueAt: null, updatedAt: now })
-          .where(and(eq(bookings.id, bookingId), inArray(bookings.status, ['disputed', 'completion_submitted'])));
-        await recordCompletionMoney(db, bookingId, now, payments_);
+        const claimed = await db.transaction(async (tx) => {
+          const rows = await tx
+            .update(bookings)
+            .set({ status: 'completed', completedVia: 'settlement', completedAt: now, approvalDueAt: null, updatedAt: now })
+            .where(and(eq(bookings.id, bookingId), inArray(bookings.status, ['disputed', 'completion_submitted'])))
+            .returning({ id: bookings.id });
+          if (rows.length === 0) return false;
+          await tx.update(bookingCompletions).set({ finalBreakdown }).where(eq(bookingCompletions.bookingId, bookingId));
+          return true;
+        });
+        if (claimed) {
+          await recordCompletionMoney(db, bookingId, now, payments_);
+          return true;
+        }
+        const [after] = await db.select({ status: bookings.status, completedVia: bookings.completedVia }).from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+        if (after?.status !== 'completed' || after.completedVia !== 'settlement') return false;
+      } else if (row.booking.status !== 'completed') {
+        return true;
+      } else if (row.booking.completedVia !== 'settlement') {
+        // Approved by the client (or auto-approved) first: that completion stands, and this settlement doesn't apply.
+        return false;
       }
+      // Settled already (a retry after the money failed, or a stale page): finish the money, never twice.
+      await recordCompletionMoney(db, bookingId, now, payments_);
       return true;
     }
     case 'refund_full': {
-      const ok = moved.posterRefundCents === 0 || (await refundCharge(db, payments_, { bookingId, amountCents: moved.posterRefundCents, reason: 'dispute_settlement', idempotencyKey: key, now }));
-      if (!ok) return false;
-      await db
+      const claimed = await db
         .update(bookings)
         .set({ status: 'canceled', cancelReason: 'refunded_in_dispute', canceledBy: 'support', canceledAt: now, updatedAt: now })
-        .where(and(eq(bookings.id, bookingId), inArray(bookings.status, ['confirmed', 'in_progress', 'completion_submitted', 'disputed'])));
-      return true;
+        .where(and(eq(bookings.id, bookingId), inArray(bookings.status, ['confirmed', 'in_progress', 'completion_submitted', 'disputed'])))
+        .returning({ id: bookings.id });
+      if (claimed.length === 0) {
+        // Ended this way already (a retry): finish the refund. Ended any other way (approved and paid): nothing moves.
+        const [after] = await db.select({ status: bookings.status, cancelReason: bookings.cancelReason }).from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+        if (after?.status !== 'canceled' || after.cancelReason !== 'refunded_in_dispute') return false;
+      }
+      // A refund that fails now leaves a failed row and a case in finance's queue (refundAcross).
+      return moved.posterRefundCents === 0 || (await refundCharge(db, payments_, { bookingId, amountCents: moved.posterRefundCents, reason: 'dispute_settlement', idempotencyKey: key, now }));
     }
     case 'goodwill_refund':
       return refundCharge(db, payments_, { bookingId, amountCents: moved.posterRefundCents, reason: 'goodwill', idempotencyKey: key, now });

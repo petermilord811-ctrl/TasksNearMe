@@ -47,7 +47,6 @@ import {
 } from '@/contracts';
 import type { EmailProvider } from '@/integrations/email';
 import { staffRoles, users } from '@/modules/accounts/schema';
-import { getPublishedPolicy } from '@/modules/markets/queries';
 import { payments, refunds } from '@/modules/payments/schema';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { photoFromFile } from '@/modules/files/uploads';
@@ -56,7 +55,7 @@ import { initialsOf } from '@/modules/profiles/queries';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { recomputeRating } from '@/modules/reviews/service';
 import { reviews } from '@/modules/reviews/schema';
-import { categories } from '@/modules/markets/schema';
+import { categories, marketPolicies } from '@/modules/markets/schema';
 import { files, tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -539,13 +538,12 @@ export async function discretionaryRefundedCents(db: Db, bookingId: string): Pro
 
 export async function bookingMoneyFacts(db: Db, bookingId: string): Promise<BookingMoneyFacts | null> {
   const [row] = await db
-    .select({ termsVersion: bookings.termsVersion, marketId: tasks.marketId })
+    .select({ termsVersion: bookings.termsVersion, policyVersionId: bookings.policyVersionId })
     .from(bookings)
-    .innerJoin(tasks, eq(tasks.id, bookings.taskId))
     .where(eq(bookings.id, bookingId))
     .limit(1);
   if (!row) return null;
-  const [[terms], [completion], paid, refunded, policy] = await Promise.all([
+  const [[terms], [completion], paid, refunded, [policy]] = await Promise.all([
     db.select({ breakdown: bookingTerms.breakdown }).from(bookingTerms).where(and(eq(bookingTerms.bookingId, bookingId), eq(bookingTerms.version, row.termsVersion))).limit(1),
     db.select({ final: bookingCompletions.finalBreakdown }).from(bookingCompletions).where(eq(bookingCompletions.bookingId, bookingId)).limit(1),
     // A client's tip is the helper's (UI-057): not part of what staff refund or settle.
@@ -554,7 +552,8 @@ export async function bookingMoneyFacts(db: Db, bookingId: string): Promise<Book
       .from(payments)
       .where(and(eq(payments.bookingId, bookingId), notInArray(payments.purpose, ['tip']), inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded']))),
     db.select({ amountCents: refunds.amountCents }).from(refunds).where(and(eq(refunds.bookingId, bookingId), inArray(refunds.status, ['pending', 'succeeded']))),
-    getPublishedPolicy(row.marketId, db),
+    // The fees the booking was made under, not the market's latest (lifecycle review #9).
+    db.select({ fees: marketPolicies.fees }).from(marketPolicies).where(eq(marketPolicies.id, row.policyVersionId)).limit(1),
   ]);
   const chargedCents = paid.reduce((sum, item) => sum + item.amountCents, 0);
   if (!terms || !policy || chargedCents === 0) return null;

@@ -53,10 +53,16 @@ export function pricingOf(terms: ChangeTerms): PricingInput {
  * The proposed terms: today's terms with the sent fields that are allowed now. Fields that aren't allowed
  * (or don't fit the pricing type) are errors; unchanged fields don't count as changes.
  */
+/** When a new start may be (the propose page's picker): from the market's lead time up to its furthest day ahead. */
+export function changeScheduleWindow(timers: { minLeadHours?: number; maxLeadDays?: number } | null | undefined, now: Date): { earliest: Date; latest: Date } {
+  return { earliest: new Date(now.getTime() + (timers?.minLeadHours ?? 2) * HOUR), latest: new Date(now.getTime() + (timers?.maxLeadDays ?? 30) * 24 * HOUR) };
+}
+
 export function proposedTerms(
   current: ChangeTerms,
   input: Omit<ProposeChangeInput, 'message'>,
   allowed: readonly ProposableChangeType[],
+  window?: { earliest: Date; latest: Date },
 ): { terms: ChangeTerms; types: ProposableChangeType[] } | { fieldErrors: Record<string, FieldErrorCode[]> } {
   const errors: Record<string, FieldErrorCode[]> = {};
   const next: ChangeTerms = { ...current };
@@ -81,8 +87,12 @@ export function proposedTerms(
   if (input.start !== undefined && allow('schedule', 'start')) {
     const start = new Date(input.start);
     if (start.getTime() !== current.startAt.getTime()) {
-      next.startAt = start;
-      types.add('schedule');
+      // Only inside the window the page offers (lifecycle review #11): never in the past, nor past the furthest day.
+      if (Number.isNaN(start.getTime()) || (window && (start < window.earliest || start > window.latest))) errors.start = ['invalid'];
+      else {
+        next.startAt = start;
+        types.add('schedule');
+      }
     }
   }
   if (input.scopeText !== undefined && allow('scope', 'scopeText') && input.scopeText.trim() !== current.scopeText.trim()) {

@@ -151,7 +151,9 @@ describe('a pending ban (5.18)', () => {
 describe('support cancels a booking', () => {
   it('refunds the whole charge, with no strike, for a lead; an agent only within their limit', async () => {
     expect(await staffCancelView(db, alex.roles, { id: BOOKING, status: 'confirmed' })).toEqual({ refundCents: 8800, allowed: true });
-    expect(await staffCancelView(db, ['finance'], { id: BOOKING, status: 'confirmed' })).toEqual({ refundCents: 8800, allowed: true });
+    // Cancelling is case work: finance's refund limit isn't a cancel right (blueprint 08 staff roles; lifecycle review #15).
+    expect(await staffCancelView(db, ['finance'], { id: BOOKING, status: 'confirmed' })).toEqual({ refundCents: 8800, allowed: false });
+    expect(await cancelBookingByStaff(deps, { id: 'usr_casey', roles: ['finance'] }, BOOKING, { note: 'Finance trying to cancel this booking.' }, now)).toEqual({ ok: false, code: 'not_allowed' });
     expect(await cancelBookingByStaff(deps, morgan, BOOKING, { note: 'short' }, now)).toMatchObject({ ok: false, code: 'validation_failed' });
     expect(await cancelBookingByStaff(deps, morgan, BOOKING, { note: 'The helper is suspended; the client asked to cancel.' }, now)).toEqual({ ok: true, code: 'canceled' });
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, BOOKING));

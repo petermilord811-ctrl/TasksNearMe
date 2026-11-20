@@ -631,7 +631,9 @@ export async function settle(deps: BookingDeps, posterId: string, paymentId: str
     const [payment] = await tx.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
     if (!payment?.bookingId) return { kind: 'missing' as const };
     if (SETTLED.includes(payment.status)) return { kind: 'settled' as const, bookingId: payment.bookingId };
-    const [booking] = await tx.select().from(bookings).where(eq(bookings.id, payment.bookingId)).limit(1);
+    // The booking too (lifecycle review #10): a cancel or the hold's expiry landing between this read and the update
+    // below was overwritten to `confirmed`. Now it either lands first (and this sees it) or waits for this.
+    const [booking] = await tx.select().from(bookings).where(eq(bookings.id, payment.bookingId)).limit(1).for('update');
     await tx.update(payments).set({ status: 'succeeded', providerRef: result.providerRef, failureCode: null, updatedAt: now }).where(eq(payments.id, paymentId));
     if (!booking || !AWAITING_MONEY.includes(booking.status)) {
       // Paid after the hold ran out: support refunds it.

@@ -103,6 +103,8 @@ describe('address visibility', () => {
 describe('deadlines and needing action', () => {
   it('names the deadline that matters now', () => {
     expect(bookingDeadlines(confirmed, 'poster', policy, start)).toEqual({ noShowReportableAt: '2026-11-21T17:00:00.000Z' });
+    // A late update moves it, as it moves the report itself (lifecycle review #14).
+    expect(bookingDeadlines({ ...confirmed, lateByMinutes: 20 }, 'poster', policy, start)).toEqual({ noShowReportableAt: '2026-11-21T17:20:00.000Z' });
     const completed = { ...confirmed, status: 'completed', completedAt: at('2026-11-21T19:05:00.000Z') };
     expect(bookingDeadlines(completed, 'helper', policy, at('2026-11-22T00:00:00.000Z'))).toEqual({ addressHiddenAt: '2026-11-23T19:05:00.000Z' });
     expect(bookingDeadlines(completed, 'poster', policy, at('2026-11-22T00:00:00.000Z'))).toEqual({});

@@ -193,7 +193,8 @@ export function bookingDeadlines(booking: BookingFacts, role: BookingViewerRole,
     case 'pending_funding':
       return booking.fundingExpiresAt ? { pendingFundingExpiresAt: booking.fundingExpiresAt.toISOString() } : {};
     case 'confirmed':
-      return booking.remote ? {} : { noShowReportableAt: new Date(booking.startAt.getTime() + policy.noShowMinutes * MINUTE).toISOString() };
+      // A late update moves it by its minutes, like the report itself (lifecycle review #14).
+      return booking.remote ? {} : { noShowReportableAt: new Date(booking.startAt.getTime() + (policy.noShowMinutes + (booking.lateByMinutes ?? 0)) * MINUTE).toISOString() };
     case 'in_progress':
       return booking.posterResponseDueAt && now < booking.posterResponseDueAt ? { posterResponseDueAt: booking.posterResponseDueAt.toISOString() } : {};
     case 'completion_submitted':

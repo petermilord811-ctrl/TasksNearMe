@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, ne, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, ne, or } from 'drizzle-orm';
 import type {
   ActionResult,
   BookingActionId,
@@ -437,10 +437,12 @@ export async function runBookingAction(
     case 'add_to_calendar':
       return { ok: true, code: 'updated', redirectTo: routes.app.bookingCalendar(booking.id) };
     case 'im_here': {
+      // Only while the 30 minutes run, so the expiry and the answer can't both land (lifecycle review #12). The report
+      // stays on the record (the check-in list shows it), and the helper can't send another one.
       const answered = await db
         .update(bookings)
-        .set({ cantAccessAt: null, posterResponseDueAt: null, updatedAt: now })
-        .where(and(eq(bookings.id, booking.id), eq(bookings.status, 'in_progress')))
+        .set({ posterResponseDueAt: null, updatedAt: now })
+        .where(and(eq(bookings.id, booking.id), eq(bookings.status, 'in_progress'), gt(bookings.posterResponseDueAt, now)))
         .returning({ id: bookings.id });
       if (answered.length === 0) return { ok: false, code: 'version_conflict' };
       await recordEvent(db, 'booking.client_present', userId, booking);

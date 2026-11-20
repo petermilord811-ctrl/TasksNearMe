@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedChangeTypes, changeExpiresAt, proposedTerms, type ChangeTerms } from './changes-domain';
+import { allowedChangeTypes, changeExpiresAt, changeScheduleWindow, proposedTerms, type ChangeTerms } from './changes-domain';
 
 const start = new Date('2026-11-21T16:30:00.000Z');
 const before = new Date('2026-11-19T18:00:00.000Z');
@@ -34,5 +34,17 @@ describe('the proposed terms', () => {
     expect(proposedTerms(desk, { start: '2026-11-22T16:30:00.000Z' }, ['price', 'scope', 'expense_allowance'])).toEqual({ fieldErrors: { start: ['invalid'] } });
     expect(proposedTerms(desk, { hourlyRateCents: 4000 }, allowedBefore)).toEqual({ fieldErrors: { hourlyRateCents: ['invalid'] } });
     expect(proposedTerms(desk, { priceCents: 6000 }, allowedBefore)).toEqual({ fieldErrors: { priceCents: ['required'] } });
+  });
+
+  it('takes a new start only inside the window the page offers (lifecycle review #11)', () => {
+    const window = changeScheduleWindow({ minLeadHours: 2, maxLeadDays: 30 }, before);
+    expect(window).toEqual({ earliest: new Date('2026-11-19T20:00:00.000Z'), latest: new Date('2026-12-19T18:00:00.000Z') });
+    expect(proposedTerms(desk, { start: '2026-11-22T16:30:00.000Z' }, allowedBefore, window)).toMatchObject({ terms: { startAt: new Date('2026-11-22T16:30:00.000Z') }, types: ['schedule'] });
+    // In the past, inside the lead time, past the furthest day, or not a time at all.
+    for (const start of ['2026-11-18T16:30:00.000Z', '2026-11-19T19:00:00.000Z', '2026-12-20T16:30:00.000Z', 'soon']) {
+      expect(proposedTerms(desk, { start }, allowedBefore, window)).toEqual({ fieldErrors: { start: ['invalid'] } });
+    }
+    // The current start, sent back unchanged, is no change and needs no window.
+    expect(proposedTerms(desk, { start: start.toISOString(), priceCents: 7000 }, allowedBefore, changeScheduleWindow({ minLeadHours: 2 }, during))).toMatchObject({ types: ['price'] });
   });
 });

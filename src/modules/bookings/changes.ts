@@ -18,7 +18,7 @@ import type {
 import { acceptChangeInputSchema, proposeChangeInputSchema, routes } from '@/contracts';
 import type { ChargeResult, PaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
-import { getPublishedPolicy } from '@/modules/markets/queries';
+import { marketPolicies } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { refundAcross, refundableCharges } from '@/modules/payments/refund-across';
 import { payments } from '@/modules/payments/schema';
@@ -29,7 +29,7 @@ import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { allowedChangeTypes, changeExpiresAt, OPEN_CHANGE_STATUSES, pricingOf, proposedTerms, type ChangeTerms } from './changes-domain';
+import { allowedChangeTypes, changeExpiresAt, changeScheduleWindow, OPEN_CHANGE_STATUSES, pricingOf, proposedTerms, type ChangeTerms } from './changes-domain';
 import { bankStep, chargeMethodOf, methodForChoice, paymentPanel, type BookingDeps } from './confirm';
 import { pausedIn } from '@/modules/markets/outage';
 import { bookingChangeRequests, bookingTerms, bookings } from './schema';
@@ -47,6 +47,19 @@ type ChangeRow = typeof bookingChangeRequests.$inferSelect;
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 const PROPOSE_RULE = { limit: 10, windowSeconds: 60 * 60 };
+/** A page opened a while ago offered an earliest time a little before the server's (it moves with the clock). */
+const WINDOW_GRACE_MS = 15 * 60_000;
+
+/**
+ * The policy the booking was made under (lifecycle review #9): a change is priced with the fees the booking was quoted
+ * with, so a scope-only change costs nothing, whatever the market publishes later.
+ */
+async function bookingPolicy(db: Db, policyVersionId: string) {
+  const [row] = await db.select({ fees: marketPolicies.fees, timers: marketPolicies.timers }).from(marketPolicies).where(eq(marketPolicies.id, policyVersionId)).limit(1);
+  return row ?? null;
+}
+
+type PolicyTimers = { minLeadHours?: number; maxLeadDays?: number } | undefined;
 
 interface Loaded {
   booking: BookingRow;
@@ -132,20 +145,17 @@ export async function getProposeChangePage(db: Db, userId: string, bookingId: st
   const loaded = await loadBooking(db, userId, bookingId);
   if (!loaded) return null;
   await expireDueChanges(db, now, { bookingId: loaded.booking.id });
-  const [open, policy] = await Promise.all([openChangeOf(db, loaded.booking.id), getPublishedPolicy(loaded.marketId, db)]);
+  const [open, policy] = await Promise.all([openChangeOf(db, loaded.booking.id), bookingPolicy(db, loaded.booking.policyVersionId)]);
   const terms = termsOf(loaded.terms);
   const allowedTypes = allowedChangeTypes({ status: loaded.booking.status, pricingType: terms.pricingType, startAt: terms.startAt, now });
-  const timers = policy?.timers as { minLeadHours?: number; maxLeadDays?: number } | undefined;
+  const window = changeScheduleWindow(policy?.timers as PolicyTimers, now);
   return {
     booking: { id: loaded.booking.id, title: loaded.title, viewerRole: loaded.role },
     current: termsView(terms),
     allowedTypes,
     ...(allowedTypes.includes('schedule')
       ? {
-          scheduleWindow: {
-            earliest: new Date(now.getTime() + (timers?.minLeadHours ?? 2) * 3_600_000).toISOString(),
-            latest: new Date(now.getTime() + (timers?.maxLeadDays ?? 30) * 86_400_000).toISOString(),
-          },
+          scheduleWindow: { earliest: window.earliest.toISOString(), latest: window.latest.toISOString() },
         }
       : {}),
     ...(open ? { openChangeId: open.id } : {}),
@@ -162,10 +172,11 @@ async function prepare(db: Db, userId: string, bookingId: string, input: Propose
   const current = termsOf(loaded.terms);
   const allowed = allowedChangeTypes({ status: loaded.booking.status, pricingType: current.pricingType, startAt: current.startAt, now });
   if (allowed.length === 0) return { ok: false, result: { ok: false, code: 'not_allowed' } };
-  const next = proposedTerms(current, parsed.data, allowed);
-  if ('fieldErrors' in next) return { ok: false, result: { ok: false, code: 'validation_failed', fieldErrors: next.fieldErrors } };
-  const policy = await getPublishedPolicy(loaded.marketId, db);
+  const policy = await bookingPolicy(db, loaded.booking.policyVersionId);
   if (!policy) return { ok: false, result: { ok: false, code: 'unknown' } };
+  const window = changeScheduleWindow(policy.timers as PolicyTimers, now);
+  const next = proposedTerms(current, parsed.data, allowed, { earliest: new Date(window.earliest.getTime() - WINDOW_GRACE_MS), latest: window.latest });
+  if ('fieldErrors' in next) return { ok: false, result: { ok: false, code: 'validation_failed', fieldErrors: next.fieldErrors } };
   const before = loaded.terms.breakdown;
   const after = quoteBreakdown(policy.fees, pricingOf(next.terms), { expenseAllowanceCents: next.terms.expenseAllowanceCents });
   return { ok: true, loaded, terms: next.terms, types: next.types, before, after, differenceCents: after.posterTotalCents - before.posterTotalCents };

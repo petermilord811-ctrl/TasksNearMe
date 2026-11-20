@@ -1,4 +1,4 @@
-import { and, eq, inArray, lte } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lte, type SQL } from 'drizzle-orm';
 import type {
   ActionResult,
   BookingNoteInput,
@@ -26,7 +26,7 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { reopenAfterHelperCancel } from './after-cancel';
-import { CANT_ACCESS_AFTER_ARRIVAL_MS, CANT_ACCESS_ANSWER_MS } from './domain';
+import { CANT_ACCESS_AFTER_ARRIVAL_MS, CANT_ACCESS_ANSWER_MS, ON_MY_WAY_LEAD_MS } from './domain';
 import { OPEN_CHANGE_STATUSES } from './changes-domain';
 import { bookingChangeRequests, bookings, bookingTerms, helperStrikes } from './schema';
 
@@ -53,10 +53,11 @@ const SHEET_RATE_LIMIT = { limit: 20, windowSeconds: 600 };
 
 async function load(db: Db, bookingId: string) {
   const [row] = await db
-    .select({ booking: bookings, terms: bookingTerms, policy: marketPolicies })
+    .select({ booking: bookings, terms: bookingTerms, policy: marketPolicies, mode: tasks.mode })
     .from(bookings)
     .innerJoin(bookingTerms, and(eq(bookingTerms.bookingId, bookings.id), eq(bookingTerms.version, bookings.termsVersion)))
     .innerJoin(marketPolicies, eq(marketPolicies.id, bookings.policyVersionId))
+    .innerJoin(tasks, eq(tasks.id, bookings.taskId))
     .where(eq(bookings.id, bookingId))
     .limit(1);
   return row ?? null;
@@ -129,7 +130,7 @@ async function cancelWith(
   row: Loaded,
   actorId: string,
   outcome: ReturnType<typeof outcomeOf>,
-  details: { by: string; choice?: string; note?: string; expected: string[]; staff?: { role: string; refundCents: number } },
+  details: { by: string; choice?: string; note?: string; expected: string[]; staff?: { role: string; refundCents: number }; still?: SQL },
   now: Date,
   refund: () => Promise<void> = () => refundCharge(deps, row.booking, outcome.refund, now),
 ): Promise<ActionResult> {
@@ -147,7 +148,7 @@ async function cancelWith(
         posterResponseDueAt: null,
         updatedAt: now,
       })
-      .where(and(eq(bookings.id, booking.id), inArray(bookings.status, details.expected)))
+      .where(and(eq(bookings.id, booking.id), inArray(bookings.status, details.expected), details.still))
       .returning({ id: bookings.id });
     if (updated.length === 0) return false;
     // A client cancellation or no-show leaves the task closed; the client can reopen it (find a replacement).
@@ -247,8 +248,12 @@ export async function staffCancelRefund(db: Db, bookingId: string): Promise<numb
   return (await refundableCharges(db, bookingId)).reduce((total, charge) => total + charge.remainingCents, 0);
 }
 
+/**
+ * Cancellations are case work (blueprint 08, staff roles): leads, trust and safety and admins, or a support agent within
+ * their refund limit. Finance's refund limit isn't a cancel right (lifecycle review #15).
+ */
 export function staffMayCancel(roles: readonly StaffRole[], refundCents: number): boolean {
-  return roles.some((role) => STAFF_CANCEL_LEADS.includes(role)) || (roles.length > 0 && refundCents <= refundLimitOf(roles));
+  return roles.some((role) => STAFF_CANCEL_LEADS.includes(role)) || (roles.includes('support_agent') && refundCents <= refundLimitOf(['support_agent']));
 }
 
 /** The staff booking page's cancel control, when the booking can still be canceled (never on their own booking). */
@@ -265,9 +270,12 @@ export async function staffCancelView(db: Db, roles: readonly StaffRole[], booki
 
 export async function reportRunningLate(db: Db, userId: string, bookingId: string, minutes: LateByMinutes, now: Date): Promise<ActionResult> {
   if (!(LATE_BY_MINUTES as readonly number[]).includes(minutes)) return { ok: false, code: 'validation_failed', fieldErrors: { minutes: ['invalid'] } };
-  const [booking] = await db.select().from(bookings).where(eq(bookings.id, String(bookingId))).limit(1);
-  if (!booking || booking.helperUserId !== userId) return { ok: false, code: 'not_found' };
-  if (!['confirmed', 'in_progress'].includes(booking.status) || booking.arrivedAt) return { ok: false, code: 'not_allowed' };
+  const [row] = await db.select({ booking: bookings, mode: tasks.mode }).from(bookings).innerJoin(tasks, eq(tasks.id, bookings.taskId)).where(eq(bookings.id, String(bookingId))).limit(1);
+  const booking = row?.booking;
+  if (!row || !booking || booking.helperUserId !== userId) return { ok: false, code: 'not_found' };
+  // Like the booking page (domain.ts sheetActions): before arriving at a booking in person, from two hours before the
+  // start (lifecycle review #14). It moves the client's no-show time, so it can't be sent days ahead or for remote work.
+  if (booking.status !== 'confirmed' || row.mode === 'remote' || booking.arrivedAt || now.getTime() < booking.startAt.getTime() - ON_MY_WAY_LEAD_MS) return { ok: false, code: 'not_allowed' };
   await db.transaction(async (tx) => {
     await tx.update(bookings).set({ lateByMinutes: minutes, updatedAt: now }).where(eq(bookings.id, booking.id));
     await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'running_late', params: { minutes } }, now);
@@ -285,7 +293,8 @@ export async function reportNoShow(deps: SheetDeps, userId: string, bookingId: s
   if (!parsed.success) return validationFailed(parsed.error);
   // Like the booking page (domain.ts sheetActions): a late update moves the no-show time by its minutes.
   const reportableAt = row.booking.startAt.getTime() + (row.policy.timers.noShowMinutes + (row.booking.lateByMinutes ?? 0)) * 60_000;
-  if (row.booking.status !== 'confirmed' || row.booking.arrivedAt || now.getTime() < reportableAt) return { ok: false, code: 'not_allowed' };
+  // Remote work has no arrival to miss (lifecycle review #8): the page never offers it, and neither does the server.
+  if (row.booking.status !== 'confirmed' || row.mode === 'remote' || row.booking.arrivedAt || now.getTime() < reportableAt) return { ok: false, code: 'not_allowed' };
   return cancelWith(deps, row, userId, outcomeOf(row, 'no_show', now), { by: 'poster', note: parsed.data.note, expected: ['confirmed'] }, now);
 }
 
@@ -295,19 +304,24 @@ export async function reportCantAccess(db: Db, userId: string, bookingId: string
   if (!booking || booking.helperUserId !== userId) return { ok: false, code: 'not_found' };
   const parsed = bookingNoteInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
+  // Once per booking (lifecycle review #12): the client's "I'm here" keeps the report on the record, so it can't
+  // start the 30-minute clock again and again. After that, the helper reports a problem to support.
   if (booking.status !== 'in_progress' || booking.cantAccessAt) return { ok: false, code: 'not_allowed' };
   // The helper waits 20 minutes after arriving first (blueprint 03; the booking page opens the action then).
   if (!booking.arrivedAt || now.getTime() < booking.arrivedAt.getTime() + CANT_ACCESS_AFTER_ARRIVAL_MS) return { ok: false, code: 'not_allowed' };
-  await db.transaction(async (tx) => {
-    await tx
+  const reported = await db.transaction(async (tx) => {
+    const claimed = await tx
       .update(bookings)
       .set({ cantAccessAt: now, posterResponseDueAt: new Date(now.getTime() + CANT_ACCESS_ANSWER_MS), updatedAt: now })
-      .where(eq(bookings.id, booking.id));
+      .where(and(eq(bookings.id, booking.id), eq(bookings.status, 'in_progress'), isNull(bookings.cantAccessAt)))
+      .returning({ id: bookings.id });
+    if (claimed.length === 0) return false;
     await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'cant_access' }, now);
     // The client has 30 minutes to answer before a late fee: they must hear it wherever they are (lifecycle #4).
     await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'booking.cant_access', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, posterUserId: booking.posterUserId, helperUserId: booking.helperUserId } });
+    return true;
   });
-  return { ok: true, code: 'updated' };
+  return reported ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
 }
 
 /** Can't-access reports the client didn't answer: canceled as a client no-show (late terms). */
@@ -319,7 +333,8 @@ export async function expireCantAccess(db: Db, now: Date, scope: { bookingId?: s
   const deps: SheetDeps = { db, payments: payments_ };
   for (const { id } of due) {
     const row = await load(deps.db, id);
-    if (row) await cancelWith(deps, row, 'system', outcomeOf(row, 'poster_unavailable', now), { by: 'system', expected: ['in_progress'] }, now);
+    // Still unanswered when the cancel lands (lifecycle review #12): an "I'm here" a moment earlier wins.
+    if (row) await cancelWith(deps, row, 'system', outcomeOf(row, 'poster_unavailable', now), { by: 'system', expected: ['in_progress'], still: lte(bookings.posterResponseDueAt, now) }, now);
   }
 }
 
