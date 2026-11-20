@@ -25,6 +25,12 @@ const SAMPLES = [
   'Call (352) 555-0110, text +1 352.555.0110 or 3525550110.',
   'Text 352-555-0110 or write maya@example.net. Two flat-pack boxes, 6 shelves, about 2 hours.',
   'No contact details here: a 6-drawer dresser, 2 boxes, second floor.',
+  // Security review and sweep MN4 (migration 0068): the country code run in, other separators, "name at domain.com",
+  // styled digits, and what must stay searchable (a 12-digit tracking number, a date and time).
+  'Text +13525550101, 13525550101, 352/555/0101 or 352 555 01 01.',
+  'Write to maya at gmail.com or maya (at) gmail (dot) com.',
+  'Llama al ３５２５５５０１０１, 1º piso.',
+  'Tracking 151255501012 arrives Saturday 2026-11-21 at 10:30.',
 ];
 
 /** Runs `check` against one task copied from the seeded desk with `description`, then rolls everything back. */
@@ -48,7 +54,17 @@ describe('tasks.search_text', () => {
   it.each(SAMPLES)('masks like the pages do: %s', async (description) => {
     await withTask(description, async (tx, id) => {
       const [row] = await tx.select({ searchText: tasks.searchText }).from(tasks).where(eq(tasks.id, id));
-      expect(row!.searchText).toBe(maskContactDetails(`${TITLE} ${description}`).text);
+      // search_text is the NFKC form of what readers see (maskContactDetails keeps the characters as written).
+      expect(row!.searchText).toBe(maskContactDetails(`${TITLE} ${description}`).text.normalize('NFKC'));
+    });
+  });
+});
+
+describe('what stays searchable', () => {
+  it('keeps numbers that are not phones: a 12-digit tracking number, a date and a time', async () => {
+    await withTask(SAMPLES[SAMPLES.length - 1]!, async (tx, id) => {
+      const [row] = await tx.select({ searchText: tasks.searchText }).from(tasks).where(eq(tasks.id, id));
+      expect(row!.searchText).toContain('151255501012 arrives Saturday 2026-11-21 at 10:30');
     });
   });
 });

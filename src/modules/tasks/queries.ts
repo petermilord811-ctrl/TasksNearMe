@@ -127,7 +127,8 @@ export function timeCondition(time: TaskBoardTime, timeZone: TimeZone): SQL {
  * words are literal.
  */
 export function keywordCondition(q: string): SQL | undefined {
-  const words = q.split(/\s+/).map((word) => word.trim()).filter(Boolean).slice(0, 6);
+  // In NFKC form, as `search_text` is (contact-masking-sql.ts): a full-width word finds its plain spelling.
+  const words = q.normalize('NFKC').split(/\s+/).map((word) => word.trim()).filter(Boolean).slice(0, 6);
   if (words.length === 0) return undefined;
   return and(...words.map((word) => ilike(tasks.searchText, `%${word.replace(/[\\%_]/g, (char) => `\\${char}`)}%`)));
 }

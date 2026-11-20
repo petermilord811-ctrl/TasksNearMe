@@ -8,6 +8,17 @@ describe('maskContactDetails', () => {
     'Call 512-555-0101',
     'text (512) 555 0101 please',
     'or +1 512.555.0101',
+    // The country code run into the number, other separators, other countries, styled digits, a number run into a
+    // word, and "name at domain.com" (security review and sweep MN4, 2026-11-20).
+    'text +15125550101',
+    'call 15125550101 after 5',
+    'or 512/555/0101',
+    'call 512 555 01 01',
+    'llama al ５１２５５５０１０１',
+    'my number is5125550101',
+    'in London +447700900123',
+    'maya at example.com',
+    'maya (at) example (dot) com',
     'see https://example.com/listing',
     'www.example.org has photos',
     'my site example.io/desk',
@@ -23,8 +34,15 @@ describe('maskContactDetails', () => {
     'Between 10 and 1 on Saturday, budget $60.',
     'Two bedrooms, 1.5 baths, 3 flights of stairs.',
     'Model number 40112 from the store.',
+    // A longer run of digits isn't a phone number, nor is a date with a time.
+    'Tracking 151255501012 arrives Friday.',
+    'Saturday 2026-11-21 at 10:30, 2 boxes.',
   ])('leaves ordinary text alone: %j', (input) => {
     expect(maskContactDetails(input)).toEqual({ text: input, masked: false });
+  });
+
+  it('keeps the rest of the text as written while it reads styled digits as digits', () => {
+    expect(maskContactDetails('1º piso: llama al ３５２５５５０１０１, ½ hora antes')).toEqual({ text: '1º piso: llama al [hidden], ½ hora antes', masked: true });
   });
 });
 

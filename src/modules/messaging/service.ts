@@ -26,7 +26,7 @@ import { offers } from '@/modules/offers/schema';
 import { initialsOf } from '@/modules/profiles/queries';
 import { files, tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
-import { toMessageSegments } from '@/modules/trust/message-segments';
+import { shortenSegments, toMessageSegments } from '@/modules/trust/message-segments';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
@@ -397,7 +397,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     const reactions = reactionsOf(row.id);
     return {
       ...view,
-      ...(quote ? { replyTo: { id: quote.id, sender: quote.senderUserId === userId ? ('me' as const) : ('them' as const), segments: toMessageSegments(quote.body.length > 160 ? `${quote.body.slice(0, 157)}…` : quote.body, { mask: found.context.masking && quote.senderUserId !== userId }) } } : {}),
+      ...(quote ? { replyTo: { id: quote.id, sender: quote.senderUserId === userId ? ('me' as const) : ('them' as const), segments: shortenSegments(toMessageSegments(quote.body, { mask: found.context.masking && quote.senderUserId !== userId })) } } : {}),
       ...(reactions.length ? { reactions } : {}),
     };
   };

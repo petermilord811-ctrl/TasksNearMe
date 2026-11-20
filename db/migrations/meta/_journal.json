@@ -477,6 +477,13 @@
       "when": 1795195380763,
       "tag": "0067_payouts_provider_ref_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1795200152997,
+      "tag": "0068_task_search_contact_formats",
+      "breakpoints": true
     }
   ]
 }
