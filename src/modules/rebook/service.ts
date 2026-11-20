@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { and, desc, eq, lte, sql } from 'drizzle-orm';
 import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type {
@@ -39,6 +38,8 @@ import { validationFailed } from '@/platform/actions/results';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { isUniqueViolation } from '@/platform/db/errors';
+import { cancelIntents } from '@/modules/payments/cancel-intents';
+import { withCopySlug } from '@/modules/tasks/copy-slug';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
@@ -422,20 +423,26 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
     if (!taskId) {
       taskId = newId('tsk');
       const { id: _id, slug: _slug, createdAt: _created, updatedAt: _updated, publishedAt: _published, expiresAt: _expires, aiGenerationId: _ai, ...copy } = past.task;
-      await tx.insert(tasks).values({
-        ...copy,
-        id: taskId,
-        slug: `${past.task.slug.replace(/-[a-z0-9]{4}$/, '')}-${randomBytes(3).toString('hex').slice(0, 4)}`,
-        status: 'draft',
-        ...pricingColumnsForTask(pricing),
-        windowStart: row.startAt,
-        windowEnd: new Date(row.startAt.getTime() + length),
-        flexible: false,
-        offerCount: 0,
-        version: 1,
-        createdAt: now,
-        updatedAt: now,
-      });
+      const copyId = taskId;
+      // In a savepoint, so a slug that's taken is tried again with another (repeats review #16).
+      await withCopySlug(past.task.slug, (slug) =>
+        tx.transaction((savepoint) =>
+          savepoint.insert(tasks).values({
+            ...copy,
+            id: copyId,
+            slug,
+            status: 'draft',
+            ...pricingColumnsForTask(pricing),
+            windowStart: row.startAt,
+            windowEnd: new Date(row.startAt.getTime() + length),
+            flexible: false,
+            offerCount: 0,
+            version: 1,
+            createdAt: now,
+            updatedAt: now,
+          }),
+        ),
+      );
     }
     let bookingId = current.bookingId;
     const [live] = bookingId ? await tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1) : [];
@@ -476,7 +483,12 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
       });
     }
     await tx.update(rebookProposals).set({ taskId, bookingId, updatedAt: now }).where(eq(rebookProposals.id, row.id));
-    await tx.update(payments).set({ status: 'canceled', updatedAt: now }).where(and(eq(payments.bookingId, bookingId!), eq(payments.status, 'requires_confirmation')));
+    // A new attempt replaces one still waiting for the bank; its intent is canceled at the provider below (repeats review #5).
+    const replaced = await tx
+      .update(payments)
+      .set({ status: 'canceled', updatedAt: now })
+      .where(and(eq(payments.bookingId, bookingId!), eq(payments.status, 'requires_confirmation')))
+      .returning({ providerRef: payments.providerRef });
     const paymentId = newId('pay');
     const idempotencyKey = `${bookingId}:${paymentId}`;
     await tx.insert(payments).values({
@@ -498,9 +510,10 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
       createdAt: now,
       updatedAt: now,
     });
-    return { bookingId: bookingId!, paymentId, idempotencyKey };
+    return { bookingId: bookingId!, paymentId, idempotencyKey, replaced: replaced.map((payment) => payment.providerRef) };
   });
   if (!hold) return { ok: false, code: 'not_allowed' };
+  await cancelIntents(deps.payments, hold.replaced, `booking ${hold.bookingId}`);
   const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey: hold.idempotencyKey, description: `TasksNearMe booking ${hold.bookingId}`, paymentId: hold.paymentId });
   return accepted(db, row.id, await settle(deps, posterId, hold.paymentId, result, now), now);
 }

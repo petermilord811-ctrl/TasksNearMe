@@ -26,7 +26,7 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { reopenAfterHelperCancel } from './after-cancel';
-import { CANT_ACCESS_AFTER_ARRIVAL_MS, CANT_ACCESS_ANSWER_MS, ON_MY_WAY_LEAD_MS } from './domain';
+import { CANT_ACCESS_ANSWER_MS, cantAccessOpensAt, ON_MY_WAY_LEAD_MS } from './domain';
 import { OPEN_CHANGE_STATUSES } from './changes-domain';
 import { bookingChangeRequests, bookings, bookingTerms, helperStrikes } from './schema';
 
@@ -50,6 +50,7 @@ function appPayments(): PaymentProvider | null {
   return defaultProvider;
 }
 const SHEET_RATE_LIMIT = { limit: 20, windowSeconds: 600 };
+const RUNNING_LATE_RULE = { limit: 3, windowSeconds: 3600 };
 
 async function load(db: Db, bookingId: string) {
   const [row] = await db
@@ -173,6 +174,8 @@ async function cancelWith(
         helperCompensationCents: outcome.compensation,
         posterUserId: booking.posterUserId,
         helperUserId: booking.helperUserId,
+        // Who canceled (sweep MN10): they aren't told about their own act. Null for the system's cancels.
+        actorUserId: actorId === 'system' ? null : actorId,
       },
     });
     await tx.insert(auditLog).values({ id: newId('aud'), actorId, actorRole: details.staff?.role ?? 'user', action: 'booking.canceled', targetType: 'booking', targetId: booking.id, reason: outcome.reason });
@@ -180,7 +183,7 @@ async function cancelWith(
     if (details.staff) {
       await tx.insert(auditLog).values({ id: newId('aud'), at: now.toISOString(), actorId, actorRole: details.staff.role, action: 'booking.canceled_by_staff', targetType: 'booking', targetId: booking.id, reason: details.note ?? null, metadata: { refundCents: details.staff.refundCents } });
     }
-    await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'canceled' }, now);
+    await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'canceled' }, now, actorId === 'system' ? null : actorId);
     return true;
   });
   if (!done) return { ok: false, code: 'not_allowed' };
@@ -276,9 +279,13 @@ export async function reportRunningLate(db: Db, userId: string, bookingId: strin
   // Like the booking page (domain.ts sheetActions): before arriving at a booking in person, from two hours before the
   // start (lifecycle review #14). It moves the client's no-show time, so it can't be sent days ahead or for remote work.
   if (booking.status !== 'confirmed' || row.mode === 'remote' || booking.arrivedAt || now.getTime() < booking.startAt.getTime() - ON_MY_WAY_LEAD_MS) return { ok: false, code: 'not_allowed' };
+  // Each update texts the client, even in quiet hours: a few an hour per booking (security review), enough to say a
+  // new time twice.
+  const limited = await consumeRateLimit(db, `running-late:${booking.id}`, RUNNING_LATE_RULE, now);
+  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   await db.transaction(async (tx) => {
     await tx.update(bookings).set({ lateByMinutes: minutes, updatedAt: now }).where(eq(bookings.id, booking.id));
-    await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'running_late', params: { minutes } }, now);
+    await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'running_late', params: { minutes } }, now, userId);
     // The client hears it (push, text, email by their settings), not only in the thread (booking reviews, lifecycle #4).
     await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'booking.running_late', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, posterUserId: booking.posterUserId, helperUserId: booking.helperUserId, minutes } });
   });
@@ -308,7 +315,9 @@ export async function reportCantAccess(db: Db, userId: string, bookingId: string
   // start the 30-minute clock again and again. After that, the helper reports a problem to support.
   if (booking.status !== 'in_progress' || booking.cantAccessAt) return { ok: false, code: 'not_allowed' };
   // The helper waits 20 minutes after arriving first (blueprint 03; the booking page opens the action then).
-  if (!booking.arrivedAt || now.getTime() < booking.arrivedAt.getTime() + CANT_ACCESS_AFTER_ARRIVAL_MS) return { ok: false, code: 'not_allowed' };
+  // Nor before the start (security review): arriving early, the helper could otherwise start the client's clock before
+  // the agreed time.
+  if (!booking.arrivedAt || now.getTime() < cantAccessOpensAt(booking.arrivedAt, booking.startAt).getTime()) return { ok: false, code: 'not_allowed' };
   const reported = await db.transaction(async (tx) => {
     const claimed = await tx
       .update(bookings)
@@ -316,7 +325,7 @@ export async function reportCantAccess(db: Db, userId: string, bookingId: string
       .where(and(eq(bookings.id, booking.id), eq(bookings.status, 'in_progress'), isNull(bookings.cantAccessAt)))
       .returning({ id: bookings.id });
     if (claimed.length === 0) return false;
-    await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'cant_access' }, now);
+    await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'cant_access' }, now, userId);
     // The client has 30 minutes to answer before a late fee: they must hear it wherever they are (lifecycle #4).
     await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'booking.cant_access', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, posterUserId: booking.posterUserId, helperUserId: booking.helperUserId } });
     return true;

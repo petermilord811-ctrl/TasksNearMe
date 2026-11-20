@@ -59,6 +59,12 @@ export async function handleStripePaymentWebhook(deps: BookingDeps, input: { pay
     if (claimed) await refundWholePayment({ db: deps.db, payments: deps.payments }, payment.id, 'late_capture', now);
     return { status: 200, body: { ok: true } };
   }
+  // A hold we let go of while its call was out or its bank step open, authorized after all (repeats review #12): let go
+  // at the provider too, instead of holding the client's card until Stripe drops it days later.
+  if (payment && payment.status === 'canceled' && payment.purpose === 'invite_authorization' && event.type === 'payment_intent.amount_capturable_updated') {
+    await deps.payments.cancelAuthorization({ authorizationRef: intentId }).catch((error: unknown) => console.error(`[payments] letting go of ${payment.id} failed`, error));
+    return { status: 200, body: { ok: true } };
+  }
   // A charge whose call never answered (a network error mid-call; money review #9): Stripe's event is the answer the call
   // didn't give, found by the payment id on the intent.
   if (payment && payment.status === 'processing' && (event.type === 'payment_intent.succeeded' || event.type === 'payment_intent.payment_failed')) {

@@ -180,7 +180,8 @@ describe('contesting a no-show report', () => {
   it("lets the client contest a no-show after an unanswered can't-access report", async () => {
     const { bookingId } = await booked('tsk_ac_access', 2 * HOUR);
     const arrived = new Date();
-    await db.update(bookings).set({ status: 'in_progress', arrivedAt: arrived }).where(eq(bookings.id, bookingId));
+    // Arrived at the start: "can't get in" never opens before it (security review).
+    await db.update(bookings).set({ status: 'in_progress', arrivedAt: arrived, startAt: arrived }).where(eq(bookings.id, bookingId));
     const at = (minutes: number) => new Date(arrived.getTime() + minutes * 60_000);
     expect(await reportCantAccess(db, 'usr_jordan', bookingId, { note: 'Nobody at the door.' }, at(20))).toEqual({ ok: true, code: 'updated' });
     await expireCantAccess(db, at(51), { bookingId }, deps.payments);

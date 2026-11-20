@@ -11,6 +11,16 @@ export function isForeignKeyViolation(error: unknown): boolean {
   return hasCode(error, '23503');
 }
 
+/** The constraint a unique violation hit (`tasks_slug_unique`, say), or null. */
+export function violatedConstraint(error: unknown): string | null {
+  for (let current: unknown = error, depth = 0; current && depth < 4; depth += 1) {
+    const { code, constraint } = current as { code?: unknown; constraint?: unknown };
+    if (code === '23505') return typeof constraint === 'string' ? constraint : null;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return null;
+}
+
 function hasCode(error: unknown, code: string): boolean {
   for (let current: unknown = error, depth = 0; current && depth < 4; depth += 1) {
     if ((current as { code?: unknown }).code === code) return true;

@@ -93,7 +93,8 @@ describe('the day of the task', () => {
   it("cancels as a client no-show when nobody answers a can't-access report; the helper gets $12.00", async () => {
     const { bookingId } = await booked('tsk_sh_access', 2 * HOUR);
     const arrived = new Date();
-    await db.update(bookings).set({ status: 'in_progress', arrivedAt: arrived }).where(eq(bookings.id, bookingId));
+    // Arrived at the start: "can't get in" never opens before the start (security review).
+    await db.update(bookings).set({ status: 'in_progress', arrivedAt: arrived, startAt: arrived }).where(eq(bookings.id, bookingId));
     // The helper waits 20 minutes after arriving.
     const at = (minutes: number) => new Date(arrived.getTime() + minutes * 60_000);
     expect(await reportCantAccess(db, 'usr_jordan', bookingId, { note: 'Nobody at the door.' }, at(19))).toEqual({ ok: false, code: 'not_allowed' });

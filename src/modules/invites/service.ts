@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, like, lte, ne, sql } from 'drizzle-orm';
 import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type {
   ActionResult,
@@ -31,6 +31,7 @@ import { payments } from '@/modules/payments/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { tasks } from '@/modules/tasks/schema';
+import { maskContactDetails } from '@/modules/trust/contact-masking';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
@@ -39,6 +40,7 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { pausedIn } from '@/modules/markets/outage';
+import { holdKeysOf, releaseHold, releaseInviteHolds } from './holds';
 import { invites } from './schema';
 
 /**
@@ -94,24 +96,18 @@ async function feesOf(db: Db, marketId: string) {
   return (await getPublishedPolicy(marketId, db))?.fees ?? null;
 }
 
-/** Releases an invite's authorization (declined, cancelled, expired, replaced). */
-async function release(db: Db, payments_: PaymentProvider | null, paymentId: string | null, now: Date): Promise<void> {
-  if (!paymentId) return;
-  const [payment] = await db.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
-  if (!payment || payment.status !== 'authorized') return;
-  if (payment.providerRef && payments_) await payments_.cancelAuthorization({ authorizationRef: payment.providerRef });
-  await db.update(payments).set({ status: 'canceled', updatedAt: now }).where(eq(payments.id, payment.id));
-}
+/** The invite ended (canceled, declined, expired) or another acceptance took it, between reading it and booking. */
+class InviteTaken extends Error {}
 
-/** Expires open invites past their time and releases their holds (lazily and from the job runner). */
+/** Expires open invites past their time and lets go of every hold they made (lazily and from the job runner). */
 export async function expireDueInvites(db: Db, payments_: PaymentProvider | null, now: Date): Promise<void> {
   const due = await db
     .update(invites)
     .set({ status: 'expired', decidedAt: now, updatedAt: now })
     .where(and(inArray(invites.status, OPEN), lte(invites.expiresAt, now)))
-    .returning({ paymentId: invites.paymentId, slotId: invites.slotId });
+    .returning({ id: invites.id, slotId: invites.slotId });
   for (const row of due) {
-    await release(db, payments_, row.paymentId, now);
+    await releaseInviteHolds(db, payments_, row.id, now);
     await releaseSlot(db, row.slotId, now);
   }
 }
@@ -382,9 +378,15 @@ async function book(deps: BookingDeps, invite: InviteRow, pricing: PricingInput,
   const { db } = deps;
   const [payment] = invite.paymentId ? await db.select().from(payments).where(eq(payments.id, invite.paymentId)).limit(1) : [];
   if (!payment?.providerRef || payment.status !== 'authorized') return { ok: false, code: 'not_allowed' };
-  const [task] = await db.select().from(tasks).where(eq(tasks.id, invite.taskId)).limit(1);
+  const [row] = await db.select({ task: tasks, categorySlug: categories.slug }).from(tasks).innerJoin(categories, eq(categories.id, tasks.categoryId)).where(eq(tasks.id, invite.taskId)).limit(1);
+  const task = row?.task;
   const policy = task ? await getPublishedPolicy(task.marketId, db) : null;
-  if (!task || !policy || task.status !== 'open') return { ok: false, code: 'not_allowed' };
+  if (!row || !task || !policy || task.status !== 'open') return { ok: false, code: 'not_allowed' };
+  // Every way in checks the same (repeats review #9): the client accepting a counter too, not only the helper accepting.
+  // No block between the two, and the helper can still take work in this category.
+  if (await isBlockedBetween(db, invite.posterUserId, invite.helperUserId)) return { ok: false, code: 'not_allowed' };
+  const helper = await loadHelperState(db, invite.helperUserId, now);
+  if (!helper.facts.bookableCategories.includes(row.categorySlug as CategorySlug)) return { ok: false, code: 'not_allowed' };
   // The outage switch (5.15, 5.18) covers every way in, the counter's finished bank step included: the hold stays
   // authorized and the invite as it is, to accept once the switch is off.
   const paused = await pausedIn(db, task.marketId);
@@ -418,23 +420,48 @@ async function book(deps: BookingDeps, invite: InviteRow, pricing: PricingInput,
         startAt: start,
         createdAt: now,
       });
+      // The invite is claimed with its booking (repeats review #10): a client's cancel landing at the same moment either
+      // wins, and this booking never exists, or finds the invite accepted. Before, the cancel let go of the hold while the
+      // booking captured it, and the accept wrote over the cancel.
+      const [claimed] = await tx
+        .update(invites)
+        .set({ status: 'accepted', bookingId, decidedAt: now, updatedAt: now })
+        .where(and(eq(invites.id, invite.id), inArray(invites.status, ['sent', 'countered'])))
+        .returning({ id: invites.id });
+      if (!claimed) throw new InviteTaken();
       // Once captured, the hold is the booking's funding charge (refunds and payouts look for it).
       await tx.update(payments).set({ bookingId, purpose: 'booking_funding', amountCents: breakdown.posterTotalCents, status: 'processing', updatedAt: now }).where(eq(payments.id, payment.id));
     });
   } catch (error) {
-    // The task got another booking meanwhile.
-    if (isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
+    // The task got another booking meanwhile, or the invite ended.
+    if (error instanceof InviteTaken || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
     throw error;
   }
-  const captured = await deps.payments.capture({ authorizationRef: payment.providerRef, amountCents: breakdown.posterTotalCents, idempotencyKey: `capture:${invite.id}` });
+  const capture = () => deps.payments.capture({ authorizationRef: payment.providerRef!, amountCents: breakdown.posterTotalCents, idempotencyKey: `capture:${invite.id}` });
+  let captured: Awaited<ReturnType<PaymentProvider['capture']>>;
+  let unanswered = false;
+  try {
+    // A capture that throws is asked once more with the same key: it gives back the first one's result.
+    captured = await capture().catch(capture);
+  } catch (error) {
+    console.error(`[invites] capturing ${invite.id} didn't answer`, error);
+    captured = { status: 'failed', failureCode: 'payment_declined' };
+    unanswered = true;
+    // No answer twice (repeats review #12): the hold is let go at the provider. Had the capture gone through after all,
+    // the payment is marked canceled, so its late event refunds it (stripe-webhooks.ts).
+    await deps.payments.cancelAuthorization({ authorizationRef: payment.providerRef }).catch(() => undefined);
+    await db.update(payments).set({ status: 'canceled', updatedAt: now }).where(eq(payments.id, payment.id));
+  }
   if (captured.status === 'failed') {
-    await db.update(payments).set({ status: 'failed', failureCode: captured.failureCode, updatedAt: now }).where(eq(payments.id, payment.id));
+    await db.update(payments).set({ status: 'failed', failureCode: captured.failureCode, updatedAt: now }).where(and(eq(payments.id, payment.id), eq(payments.status, 'processing')));
     await db.update(bookings).set({ status: 'canceled', cancelReason: 'funding_failed', canceledAt: now, fundingExpiresAt: null, updatedAt: now }).where(eq(bookings.id, bookingId));
-    return { ok: false, code: captured.failureCode };
+    // The invite ends with its hold, and its slot opens again.
+    await db.update(invites).set({ status: 'auth_failed', updatedAt: now }).where(and(eq(invites.id, invite.id), eq(invites.status, 'accepted')));
+    await releaseSlot(db, invite.slotId, now);
+    return { ok: false, code: unanswered ? 'unknown' : captured.failureCode };
   }
   const result = await confirmFundedBooking(deps, invite.posterUserId, payment.id, payment.providerRef, now);
   if (!result.ok) return result;
-  await db.update(invites).set({ status: 'accepted', bookingId, decidedAt: now, updatedAt: now }).where(eq(invites.id, invite.id));
   await bookSlot(db, invite.slotId, now);
   await db.insert(outboxEvents).values({ id: newId('evt'), type: 'invite.accepted', aggregateType: 'invite', aggregateId: invite.id, payload: { inviteId: invite.id, bookingId, posterUserId: invite.posterUserId, helperUserId: invite.helperUserId } });
   return { ok: true, code: 'booked', redirectTo: routes.app.booking(bookingId) };
@@ -465,7 +492,7 @@ async function closeInvite(db: Db, payments_: PaymentProvider | null, invite: In
     .where(and(eq(invites.id, invite.id), inArray(invites.status, from)))
     .returning({ id: invites.id });
   if (!closed) return { ok: false, code: 'not_allowed' };
-  await release(db, payments_, invite.paymentId, now);
+  await releaseInviteHolds(db, payments_, invite.id, now);
   await releaseSlot(db, invite.slotId, now);
   return { ok: true, code: 'updated' };
 }
@@ -476,8 +503,8 @@ export async function closeSlotRequests(db: Db, payments_: PaymentProvider | nul
     .update(invites)
     .set({ status: 'declined', decidedAt: now, updatedAt: now })
     .where(and(eq(invites.slotId, slotId), inArray(invites.status, OPEN)))
-    .returning({ id: invites.id, paymentId: invites.paymentId, posterUserId: invites.posterUserId, helperUserId: invites.helperUserId });
-  for (const invite of closed) await release(db, payments_, invite.paymentId, now);
+    .returning({ id: invites.id });
+  for (const invite of closed) await releaseInviteHolds(db, payments_, invite.id, now);
 }
 
 export async function declineInvite(db: Db, payments_: PaymentProvider | null, helperId: string, inviteId: string, now: Date): Promise<ActionResult> {
@@ -502,9 +529,19 @@ export async function counterInvite(db: Db, payments_: PaymentProvider | null, h
   const invite = await ownInvite(db, payments_, helperId, inviteId, 'helper', now);
   if (!invite) return { ok: false, code: 'not_allowed' };
   if (invite.status !== 'sent') return { ok: false, code: invite.status === 'expired' ? 'expired' : 'not_allowed' };
-  const [task] = await db.select({ marketId: tasks.marketId, windowStart: tasks.windowStart, windowEnd: tasks.windowEnd }).from(tasks).where(eq(tasks.id, invite.taskId)).limit(1);
+  const [task] = await db
+    .select({ marketId: tasks.marketId, windowStart: tasks.windowStart, windowEnd: tasks.windowEnd, categorySlug: categories.slug })
+    .from(tasks)
+    .innerJoin(categories, eq(categories.id, tasks.categoryId))
+    .where(eq(tasks.id, invite.taskId))
+    .limit(1);
   const fees = task ? await feesOf(db, task.marketId) : null;
   if (!task || !fees) return { ok: false, code: 'unknown' };
+  // A helper who couldn't take the booking can't counter either (security review): a block between the two, or a helper
+  // suspended or no longer cleared for the category, sent the client a message and a counter to accept.
+  if (await isBlockedBetween(db, invite.posterUserId, helperId)) return { ok: false, code: 'not_allowed' };
+  const helper = await loadHelperState(db, helperId, now);
+  if (!helper.facts.bookableCategories.includes(task.categorySlug as CategorySlug)) return { ok: false, code: 'not_allowed' };
   const pricing = parsed.data.pricing ?? pricingFrom(invite.pricingType, invite.priceCents, invite.hourlyRateCents, invite.estimatedHours, invite.hoursCap);
   const start = parsed.data.start ? new Date(parsed.data.start) : invite.startAt;
   if (start < task.windowStart || start > task.windowEnd || start.getTime() - now.getTime() < 2 * HOUR) return { ok: false, code: 'validation_failed', fieldErrors: { start: ['invalid'] } };
@@ -549,9 +586,26 @@ export async function acceptCounter(deps: BookingDeps, posterId: string, inviteI
   const [held] = invite.paymentId ? await db.select().from(payments).where(eq(payments.id, invite.paymentId)).limit(1) : [];
   if (!held?.methodRef) return { ok: false, code: 'not_allowed' };
   if (invite.counterBreakdown.posterTotalCents > held.amountCents) {
+    // The amount counts for a new account's ID check (security review): a raised total is checked like a first request.
+    if (await posterIdentityRequirement(db, posterId, now, invite.counterBreakdown.posterTotalCents)) return { ok: false, code: 'identity_required' };
     const paymentId = newId('pay');
     const { id: _old, createdAt: _created, updatedAt: _updated, providerRef: _ref, failureCode: _failure, ...method } = held;
-    await db.insert(payments).values({ ...method, id: paymentId, amountCents: invite.counterBreakdown.posterTotalCents, status: 'processing', idempotencyKey: `invite:${invite.id}:${paymentId}`, createdAt: now, updatedAt: now });
+    // One new hold at a time (repeats review #12): a second tap while one is out or in the bank's step opens nothing, so
+    // no hold is left on the card that the invite never points at.
+    const opened = await db.transaction(async (tx) => {
+      await tx.execute(sql`select id from invites where id = ${invite.id} for update`);
+      const [current] = await tx.select({ status: invites.status, paymentId: invites.paymentId }).from(invites).where(eq(invites.id, invite.id)).limit(1);
+      if (current?.status !== 'countered' || current.paymentId !== held.id) return false;
+      const [pending] = await tx
+        .select({ id: payments.id })
+        .from(payments)
+        .where(and(like(payments.idempotencyKey, holdKeysOf(invite.id)), ne(payments.id, held.id), inArray(payments.status, UNDECIDED)))
+        .limit(1);
+      if (pending) return false;
+      await tx.insert(payments).values({ ...method, id: paymentId, amountCents: invite.counterBreakdown!.posterTotalCents, status: 'processing', idempotencyKey: `invite:${invite.id}:${paymentId}`, createdAt: now, updatedAt: now });
+      return true;
+    });
+    if (!opened) return { ok: false, code: 'not_allowed' };
     // The same card, on the person's customer (Stripe needs it to use the card again).
     const customer = deps.payments.name === 'stripe' ? await customerFor(db, posterId, 'stripe') : null;
     const result = await deps.payments.authorize({ amountCents: invite.counterBreakdown.posterTotalCents, method: chargeMethodOf({ providerRef: held.methodRef, ...(customer?.ref ? { customerRef: customer.ref } : {}) }), idempotencyKey: `invite:${invite.id}:${paymentId}`, description: `TasksNearMe invite ${invite.id}`, paymentId });
@@ -588,8 +642,18 @@ async function switchHold(deps: BookingDeps, invite: InviteRow, oldPaymentId: st
     .where(and(eq(payments.id, paymentId), inArray(payments.status, UNDECIDED)))
     .returning({ id: payments.id });
   if (!claimed) return settledCounter(deps.db, invite.id, paymentId);
-  await release(deps.db, deps.payments, oldPaymentId, now);
-  await deps.db.update(invites).set({ paymentId, updatedAt: now }).where(eq(invites.id, invite.id));
+  // The invite moves to the new hold only while it still waits on the counter with the old one; otherwise the new hold is
+  // let go instead of staying on the card (repeats review #12).
+  const [moved] = await deps.db
+    .update(invites)
+    .set({ paymentId, updatedAt: now })
+    .where(and(eq(invites.id, invite.id), eq(invites.status, 'countered'), eq(invites.paymentId, oldPaymentId)))
+    .returning({ id: invites.id });
+  if (!moved) {
+    await releaseHold(deps.db, deps.payments, paymentId, now);
+    return settledCounter(deps.db, invite.id, paymentId);
+  }
+  await releaseHold(deps.db, deps.payments, oldPaymentId, now);
   return book(deps, { ...invite, paymentId }, counterPricingOf(invite), invite.counterStartAt ?? invite.startAt, invite.counterBreakdown!, now);
 }
 
@@ -606,7 +670,11 @@ export async function finishCounterVerification(deps: BookingDeps, posterId: str
   if (!invite || !payment?.providerRef) return { ok: false, code: 'not_allowed' };
   // Stripe's webhook (or another tab) finished it first: the answer this call would have given (5.17).
   if (payment.status !== 'requires_confirmation') return settledCounter(deps.db, invite.id, payment.id);
-  if (invite.status !== 'countered' || !invite.paymentId) return { ok: false, code: 'not_allowed' };
+  if (invite.status !== 'countered' || !invite.paymentId) {
+    // The counter expired or ended while the bank's step was open: that new hold is let go (repeats review #12).
+    await releaseHold(deps.db, deps.payments, payment.id, now);
+    return { ok: false, code: invite.status === 'expired' ? 'expired' : 'not_allowed' };
+  }
   const completed = await deps.payments.completeAction({ providerRef: payment.providerRef, outcome });
   if (completed.status !== 'succeeded') {
     const [failed] = await deps.db
@@ -656,9 +724,10 @@ async function viewsOf(db: Db, rows: InviteRow[], viewerRole: 'poster' | 'helper
         task: { id: task.id, title: task.title, categorySlug: task.slug as CategorySlug },
         client,
         helper,
-        terms: { pricing: pricingFrom(row.pricingType, row.priceCents, row.hourlyRateCents, row.estimatedHours, row.hoursCap), start: row.startAt.toISOString(), ...(row.message ? { message: row.message } : {}) },
+        // Contact details stay hidden like an offer's before a booking (security review).
+        terms: { pricing: pricingFrom(row.pricingType, row.priceCents, row.hourlyRateCents, row.estimatedHours, row.hoursCap), start: row.startAt.toISOString(), ...(row.message ? { message: maskContactDetails(row.message).text } : {}) },
         ...(status === 'countered' && row.counterBreakdown
-          ? { counter: { pricing: counterPricingOf(row), start: (row.counterStartAt ?? row.startAt).toISOString(), message: row.counterMessage ?? '', breakdown: row.counterBreakdown } }
+          ? { counter: { pricing: counterPricingOf(row), start: (row.counterStartAt ?? row.startAt).toISOString(), message: maskContactDetails(row.counterMessage ?? '').text, breakdown: row.counterBreakdown } }
           : {}),
         breakdown: row.breakdown,
         ...(hold ? { authorizedCents: hold.amountCents } : {}),

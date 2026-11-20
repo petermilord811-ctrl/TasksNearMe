@@ -4,6 +4,7 @@ import { routes, TIP_RULES, tipInputSchema } from '@/contracts';
 import type { ChargeResult, PaymentProvider } from '@/integrations/payments';
 import { recordEarning } from '@/modules/earnings/service';
 import { bankStep, chargeMethodOf } from '@/modules/payments/cards';
+import { cancelIntents } from '@/modules/payments/cancel-intents';
 import { paymentMethods, payments } from '@/modules/payments/schema';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -98,11 +99,13 @@ export async function tipBooking(deps: BookingDeps, userId: string, bookingId: s
       .from(payments)
       .where(and(eq(payments.bookingId, booking.id), eq(payments.purpose, 'tip'), inArray(payments.status, ['processing', ...TIPPED])))
       .limit(1);
-    if (current) return false;
-    await tx
+    if (current) return null;
+    // Its intent is canceled at the provider once this commits (repeats review #5).
+    const replaced = await tx
       .update(payments)
       .set({ status: 'canceled', updatedAt: now })
-      .where(and(eq(payments.bookingId, booking.id), eq(payments.purpose, 'tip'), eq(payments.status, 'requires_confirmation')));
+      .where(and(eq(payments.bookingId, booking.id), eq(payments.purpose, 'tip'), eq(payments.status, 'requires_confirmation')))
+      .returning({ providerRef: payments.providerRef });
     await tx.insert(payments).values({
       id: paymentId,
       bookingId: booking.id,
@@ -122,9 +125,10 @@ export async function tipBooking(deps: BookingDeps, userId: string, bookingId: s
       createdAt: now,
       updatedAt: now,
     });
-    return true;
+    return replaced.map((row) => row.providerRef);
   });
   if (!started) return { ok: false, code: 'not_allowed' };
+  await cancelIntents(deps.payments, started, `tip on ${booking.id}`);
   const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey, description: `TasksNearMe tip ${booking.id}`, paymentId });
   return settleTip(deps, paymentId, result, now);
 }

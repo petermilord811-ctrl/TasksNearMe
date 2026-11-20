@@ -1,6 +1,5 @@
-import { randomBytes } from 'node:crypto';
 import { bookingsPaused } from '@/modules/markets/outage';
-import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
   CardBrand,
@@ -25,6 +24,7 @@ import { quoteBreakdown } from '@/modules/payments/fees';
 import { paymentMethods, payments } from '@/modules/payments/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { rebookProposals } from '@/modules/rebook/schema';
+import { withCopySlug } from '@/modules/tasks/copy-slug';
 import { tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import { users } from '@/modules/accounts/schema';
@@ -155,7 +155,14 @@ export async function startPendingSeries(db: Db, now: Date): Promise<number> {
     .leftJoin(bookingSeries, eq(bookingSeries.proposalId, rebookProposals.id))
     .where(and(sql`${rebookProposals.cadence} is not null`, isNull(bookingSeries.id), inArray(bookings.status, PAID)))
     .limit(50);
-  for (const proposal of pending) await startSeriesFromProposal(db, proposal.id, now);
+  for (const proposal of pending) {
+    // One that fails is logged and tried again next run; the others still start (repeats review #14).
+    try {
+      await startSeriesFromProposal(db, proposal.id, now);
+    } catch (error) {
+      console.error(`[series] starting the series of proposal ${proposal.id} failed`, error);
+    }
+  }
   return pending.length;
 }
 
@@ -172,11 +179,13 @@ async function addVisit(db: Db, series: SeriesRow, template: typeof tasks.$infer
   const taskId = newId('tsk');
   const bookingId = newId('bkg');
   try {
-    await db.transaction(async (tx) => {
+    // A slug that's taken is tried again with another (repeats review #16): it used to read as "this visit is there
+    // already", and the visit waited for the next run, or was lost when that came too late to charge.
+    await withCopySlug(template.slug, (slug) => db.transaction(async (tx) => {
       await tx.insert(tasks).values({
         ...copy,
         id: taskId,
-        slug: `${template.slug.replace(/-[a-z0-9]{4}$/, '')}-${randomBytes(3).toString('hex').slice(0, 4)}`,
+        slug,
         status: 'assigned',
         ...pricingColumnsForTask(pricing),
         description: series.scopeText,
@@ -216,7 +225,7 @@ async function addVisit(db: Db, series: SeriesRow, template: typeof tasks.$infer
         startAt: start,
         createdAt: now,
       });
-    });
+    }));
   } catch (error) {
     // Another run put this visit on the calendar first.
     if (!isUniqueViolation(error)) throw error;
@@ -241,11 +250,14 @@ export async function fillCalendar(db: Db, seriesId: string, now: Date): Promise
     await stop(db, series, 'canceled', 'system', now);
     return;
   }
-  const wanted = upcomingIndexes({ ...series, cadence: series.cadence as SeriesCadence, status: series.status as SeriesStatus, timeZone: await marketTimeZone(db, series.marketId) }, now);
-  if (wanted.length === 0) return;
-  const there = await db.select({ index: bookings.visitIndex }).from(bookings).where(and(eq(bookings.seriesId, series.id), inArray(bookings.visitIndex, wanted)));
-  const missing = wanted.filter((index) => !there.some((row) => row.index === index));
-  if (missing.length === 0) return;
+  const timeZone = await marketTimeZone(db, series.marketId);
+  const missingOf = async (reader: Db, row: SeriesRow) => {
+    const wanted = upcomingIndexes({ ...row, cadence: row.cadence as SeriesCadence, status: row.status as SeriesStatus, timeZone }, now);
+    if (wanted.length === 0) return [];
+    const there = await reader.select({ index: bookings.visitIndex }).from(bookings).where(and(eq(bookings.seriesId, row.id), inArray(bookings.visitIndex, wanted)));
+    return wanted.filter((index) => !there.some((visit) => visit.index === index));
+  };
+  if ((await missingOf(db, series)).length === 0) return;
   if (await isBlockedBetween(db, series.posterUserId, series.helperUserId)) {
     await stop(db, series, 'canceled', 'system', now);
     return;
@@ -257,7 +269,15 @@ export async function fillCalendar(db: Db, seriesId: string, now: Date): Promise
   const [template] = await db.select().from(tasks).where(eq(tasks.id, series.templateTaskId)).limit(1);
   const policy = await getPublishedPolicy(series.marketId, db);
   if (!template || !policy) return;
-  for (const index of missing) await addVisit(db, series, template, policy, index, now);
+  // Added under the series' lock, from its state then (repeats review #13): a pause or stop landing at this moment either
+  // comes first, and the dates follow it, or waits and then drops the new visits with the others.
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from booking_series where id = ${series.id} for update`);
+    const [current] = await tx.select().from(bookingSeries).where(eq(bookingSeries.id, series.id)).limit(1);
+    if (!current || !RUNNING.includes(current.status as SeriesStatus)) return;
+    const reader = tx as unknown as Db;
+    for (const index of await missingOf(reader, current)) await addVisit(reader, current, template, policy, index, now);
+  });
 }
 
 /** The job: starts series waiting for theirs, resumes paused ones on their date, and keeps every calendar filled. */
@@ -381,6 +401,39 @@ export async function pauseSeries(db: Db, posterId: string, seriesId: string, in
   return { ok: true, code: 'updated' };
 }
 
+/**
+ * The visits a pause dropped that are still ahead come back when the client starts again early (repeats review #8): the
+ * calendar never adds a visit twice, so they stayed skipped. Only those whose charge can still be made in time, on the
+ * series' card now.
+ */
+async function reviveVisitsOfPause(db: Db, series: SeriesRow, now: Date): Promise<void> {
+  const dropped = await db
+    .select()
+    .from(bookings)
+    .where(and(eq(bookings.seriesId, series.id), eq(bookings.status, 'canceled'), eq(bookings.cancelReason, 'series_paused'), gt(bookings.startAt, now)));
+  for (const visit of dropped) {
+    const chargeAt = firstChargeAt(VISIT_CHARGE_PLAN, visit.startAt, now);
+    if (!chargeAt) continue;
+    const [back] = await db
+      .update(bookings)
+      .set({
+        status: 'scheduled',
+        cancelReason: null,
+        canceledBy: null,
+        canceledAt: null,
+        fundingDueAt: chargeAt,
+        fundingExpiresAt: chargeSchedule(VISIT_CHARGE_PLAN, visit.startAt).deadline,
+        fundingMethodId: series.paymentMethodId,
+        fundingAttempts: 0,
+        fundingFailure: null,
+        updatedAt: now,
+      })
+      .where(and(eq(bookings.id, visit.id), eq(bookings.status, 'canceled'), eq(bookings.cancelReason, 'series_paused')))
+      .returning({ taskId: bookings.taskId });
+    if (back) await db.update(tasks).set({ status: 'assigned', updatedAt: now }).where(eq(tasks.id, back.taskId));
+  }
+}
+
 /** The client resumes before the date they picked. */
 export async function resumeSeries(db: Db, posterId: string, seriesId: string, now: Date): Promise<ActionResult> {
   const own = await ownSeries(db, posterId, seriesId);
@@ -391,6 +444,7 @@ export async function resumeSeries(db: Db, posterId: string, seriesId: string, n
     .where(and(eq(bookingSeries.id, own.series.id), eq(bookingSeries.status, 'paused')))
     .returning();
   if (!resumed) return { ok: false, code: 'not_allowed' };
+  await reviveVisitsOfPause(db, resumed, now);
   await db.insert(outboxEvents).values({ id: newId('evt'), type: 'series.resumed', aggregateType: 'series', aggregateId: own.series.id, payload: { seriesId: own.series.id, by: 'poster' } });
   await fillCalendar(db, own.series.id, now);
   return { ok: true, code: 'updated' };

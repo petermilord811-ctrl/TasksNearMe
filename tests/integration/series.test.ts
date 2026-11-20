@@ -360,6 +360,8 @@ describe('regular visits', () => {
     // A card that goes through (an earlier test switched the series to one that declines).
     const [card] = await db.select().from(paymentMethods).where(and(eq(paymentMethods.userId, 'usr_ben'), eq(paymentMethods.providerRef, devCardRef('success')))).limit(1);
     const target = (await visitsOf(seriesId)).find((row) => row.visitIndex === 3)!;
+    // The series runs again (the test before stopped it; a stopped series' visit is dropped, not charged: repeats review #13).
+    await db.update(bookingSeries).set({ status: 'active', pausedUntil: null, endsOn: null }).where(eq(bookingSeries.id, seriesId));
     // Put one visit back on the calendar, due now.
     await db.update(bookings).set({ status: 'scheduled', cancelReason: null, canceledAt: null, fundingDueAt: new Date(now.getTime() - 60_000), fundingExpiresAt: new Date(now.getTime() + DAY), fundingMethodId: card!.id }).where(eq(bookings.id, target.id));
     await db.update(payments).set({ status: 'canceled' }).where(and(eq(payments.bookingId, target.id), inArray(payments.status, ['processing', 'requires_confirmation'])));

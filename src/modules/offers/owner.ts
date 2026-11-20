@@ -18,6 +18,7 @@ import { quoteBreakdown } from '@/modules/payments/fees';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { isReliable, reliabilityFacts } from '@/modules/profiles/reliability';
 import { pushSetup } from '@/modules/notifications/push';
+import { closeTaskInvites } from '@/modules/invites/holds';
 import { readExactAddress } from '@/modules/tasks/locations';
 import { budgetOf } from '@/modules/tasks/projections';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
@@ -392,5 +393,8 @@ export async function cancelTask(db: Db, userId: string, taskId: string, reason:
     });
     return true;
   });
-  return canceled ? { ok: true, code: 'canceled' } : { ok: false, code: 'not_allowed' };
+  if (!canceled) return { ok: false, code: 'not_allowed' };
+  // Direct invites for the task end too, and let go of the client's card now (repeats review #11).
+  await closeTaskInvites(db, taskId, now);
+  return { ok: true, code: 'canceled' };
 }

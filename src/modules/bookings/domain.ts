@@ -14,6 +14,9 @@ export const ARRIVED_LEAD_MS = 30 * MINUTE;
 /** "Can't get in" opens 20 min after arriving; the client then has 30 min to answer. */
 export const CANT_ACCESS_AFTER_ARRIVAL_MS = 20 * MINUTE;
 export const CANT_ACCESS_ANSWER_MS = 30 * MINUTE;
+
+/** "Can't get in" opens 20 minutes after arriving, and never before the agreed start (security review). */
+export const cantAccessOpensAt = (arrivedAt: Date, startAt: Date): Date => new Date(Math.max(arrivedAt.getTime() + CANT_ACCESS_AFTER_ARRIVAL_MS, startAt.getTime()));
 /** The review page is wired (UI-015). */
 /** Change requests (UI-027): on once their pages are wired. */
 export const CHANGE_PAGES_READY = true;
@@ -266,7 +269,7 @@ export function sheetActions(booking: BookingFacts, role: BookingViewerRole, pol
   }
   if (booking.status === 'in_progress') {
     if (booking.remote || !booking.arrivedAt || booking.cantAccessAt) return [safety];
-    return [opensAt('cant_access', 'secondary', new Date(booking.arrivedAt.getTime() + CANT_ACCESS_AFTER_ARRIVAL_MS), now), safety];
+    return [opensAt('cant_access', 'secondary', cantAccessOpensAt(booking.arrivedAt, booking.startAt), now), safety];
   }
   return [];
 }

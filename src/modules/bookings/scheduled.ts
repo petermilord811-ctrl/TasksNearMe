@@ -2,6 +2,8 @@ import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, sql } from 'drizzle
 import type { BookingViewerRole, CardBrand, PaymentAttemptResult, PayScheduledInput, ScheduledPaymentView, SeriesChargeFailure } from '@/contracts';
 import { payScheduledInputSchema } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
+import { marketTimeZone } from '@/modules/markets/time-zone';
+import { cancelIntents } from '@/modules/payments/cancel-intents';
 import { paymentMethods, payments } from '@/modules/payments/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
@@ -11,7 +13,8 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { chargeMethodOf, finishBankVerification, methodForChoice, paymentPanel, settle, type BookingDeps } from './confirm';
-import { bookingTerms, bookings } from './schema';
+import { marketDayKey } from '@/shared/format';
+import { bookingSeries, bookingTerms, bookings } from './schema';
 import { ONE_TIME_CHARGE_PLAN, VISIT_CHARGE_PLAN, retryChargeAt, type ChargePlan } from './series-domain';
 
 /**
@@ -41,14 +44,19 @@ async function amountOf(db: Db, bookingId: string): Promise<number | null> {
  * Opens a payment attempt on a scheduled booking, unless one is already on its way (the job and the client
  * never both charge it): the booking row is locked, and an earlier attempt waiting for the bank is replaced.
  */
-async function openAttempt(db: Db, booking: BookingRow, amountCents: number, method: { paymentMethodId: string | null; providerRef: string; brand: string; last4: string; expMonth: number; expYear: number; save: boolean }, provider: string, now: Date): Promise<{ paymentId: string; idempotencyKey: string } | null> {
+async function openAttempt(db: Db, booking: BookingRow, amountCents: number, method: { paymentMethodId: string | null; providerRef: string; brand: string; last4: string; expMonth: number; expYear: number; save: boolean }, provider: string, now: Date): Promise<{ paymentId: string; idempotencyKey: string; replaced: (string | null)[] } | null> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select id from bookings where id = ${booking.id} for update`);
     const [current] = await tx.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, booking.id)).limit(1);
     if (current?.status !== 'scheduled') return null;
     const [inFlight] = await tx.select({ id: payments.id }).from(payments).where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'processing'))).limit(1);
     if (inFlight) return null;
-    await tx.update(payments).set({ status: 'canceled', updatedAt: now }).where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'requires_confirmation')));
+    // The replaced attempt's intent is canceled at the provider by the caller (repeats review #5).
+    const replaced = await tx
+      .update(payments)
+      .set({ status: 'canceled', updatedAt: now })
+      .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'requires_confirmation')))
+      .returning({ providerRef: payments.providerRef });
     const paymentId = newId('pay');
     const idempotencyKey = `${booking.id}:${paymentId}`;
     await tx.insert(payments).values({
@@ -70,18 +78,20 @@ async function openAttempt(db: Db, booking: BookingRow, amountCents: number, met
       createdAt: now,
       updatedAt: now,
     });
-    return { paymentId, idempotencyKey };
+    return { paymentId, idempotencyKey, replaced: replaced.map((row) => row.providerRef) };
   });
 }
 
 /** A charge that didn't go through: the next try (if any is left), and the client hears about the first one. */
 async function chargeFailed(db: Db, booking: BookingRow, failure: SeriesChargeFailure, attempts: number, now: Date): Promise<void> {
   const retryAt = retryChargeAt(planOf(booking), booking.startAt, now);
-  await db
+  const [still] = await db
     .update(bookings)
     .set({ fundingAttempts: attempts, fundingFailure: failure, fundingDueAt: retryAt ?? null, updatedAt: now })
-    .where(and(eq(bookings.id, booking.id), eq(bookings.status, 'scheduled')));
-  if (booking.fundingFailure) return;
+    .where(and(eq(bookings.id, booking.id), eq(bookings.status, 'scheduled')))
+    .returning({ id: bookings.id });
+  // A visit skipped, paused or stopped while its charge was out isn't one the client has to pay (repeats review #6).
+  if (!still || booking.fundingFailure) return;
   await db.insert(outboxEvents).values({
     id: newId('evt'),
     type: 'booking.funding_failed',
@@ -89,6 +99,26 @@ async function chargeFailed(db: Db, booking: BookingRow, failure: SeriesChargeFa
     aggregateId: booking.id,
     payload: { bookingId: booking.id, posterUserId: booking.posterUserId, failure, payBy: booking.fundingExpiresAt?.toISOString() ?? null },
   });
+}
+
+/**
+ * Why a claimed regular visit no longer goes ahead (repeats review #13), or null: the client paused (it falls before the
+ * resume date) or stopped the series, or the helper's end comes before it. Pausing and stopping drop the visits they
+ * find, but the job may have claimed this one at that moment.
+ */
+async function droppedBySeries(db: Db, booking: BookingRow): Promise<'series_paused' | 'series_stopped' | null> {
+  if (!booking.seriesId) return null;
+  const [series] = await db
+    .select({ status: bookingSeries.status, pausedUntil: bookingSeries.pausedUntil, endsOn: bookingSeries.endsOn, marketId: bookingSeries.marketId })
+    .from(bookingSeries)
+    .where(eq(bookingSeries.id, booking.seriesId))
+    .limit(1);
+  if (!series) return null;
+  if (series.status === 'canceled') return 'series_stopped';
+  const day = marketDayKey(booking.startAt, await marketTimeZone(db, series.marketId));
+  if (series.status === 'paused' && series.pausedUntil && day < series.pausedUntil) return 'series_paused';
+  if (series.status === 'ended' && series.endsOn && day > series.endsOn) return 'series_stopped';
+  return null;
 }
 
 /** An attempt with no answer for this long is the job's to ask again; the next look comes this soon. */
@@ -105,6 +135,12 @@ async function chargeOne(deps: BookingDeps, booking: BookingRow, now: Date): Pro
     .where(and(eq(bookings.id, booking.id), eq(bookings.status, 'scheduled'), lte(bookings.fundingDueAt, now)))
     .returning();
   if (!claimed) return;
+  const dropped = await droppedBySeries(db, claimed);
+  if (dropped) {
+    await db.update(bookings).set({ status: 'canceled', cancelReason: dropped, canceledBy: 'system', canceledAt: now, updatedAt: now }).where(and(eq(bookings.id, claimed.id), eq(bookings.status, 'scheduled')));
+    await db.update(tasks).set({ status: 'canceled', updatedAt: now }).where(eq(tasks.id, claimed.taskId));
+    return;
+  }
   const attempts = claimed.fundingAttempts + 1;
   const amountCents = await amountOf(db, claimed.id);
   const method = claimed.fundingMethodId ? await methodForChoice(deps, claimed.posterUserId, { kind: 'saved', methodId: claimed.fundingMethodId }) : null;
@@ -116,12 +152,13 @@ async function chargeOne(deps: BookingDeps, booking: BookingRow, now: Date): Pro
     .from(payments)
     .where(and(eq(payments.bookingId, claimed.id), eq(payments.status, 'processing'), isNull(payments.providerRef), lte(payments.createdAt, new Date(now.getTime() - UNKNOWN_AFTER_MS))))
     .limit(1);
-  const attempt = unknown ? { paymentId: unknown.id, idempotencyKey: unknown.idempotencyKey } : await openAttempt(db, claimed, amountCents, { ...method, save: false }, deps.payments.name, now);
+  const attempt = unknown ? { paymentId: unknown.id, idempotencyKey: unknown.idempotencyKey, replaced: [] } : await openAttempt(db, claimed, amountCents, { ...method, save: false }, deps.payments.name, now);
   // The client is paying right now: their payment decides. The job looks again later, in case it doesn't go through.
   if (!attempt) {
     await db.update(bookings).set({ fundingDueAt: new Date(now.getTime() + RETRY_UNKNOWN_MS), updatedAt: now }).where(and(eq(bookings.id, claimed.id), eq(bookings.status, 'scheduled')));
     return;
   }
+  await cancelIntents(deps.payments, attempt.replaced, `booking ${claimed.id}`);
   let result: Awaited<ReturnType<PaymentProvider['charge']>>;
   try {
     result = await deps.payments.charge({ amountCents: unknown?.amountCents ?? amountCents, method: chargeMethodOf(method), idempotencyKey: attempt.idempotencyKey, description: `TasksNearMe booking ${claimed.id}`, offSession: true, paymentId: attempt.paymentId });
@@ -134,6 +171,9 @@ async function chargeOne(deps: BookingDeps, booking: BookingRow, now: Date): Pro
   }
   const settled = await settle(deps, claimed.posterUserId, attempt.paymentId, result, now);
   if (settled.ok) return;
+  // The visit ended while its charge was out (skipped, paused, stopped; repeats review #6): money that came in goes back
+  // on its own (payment.refund_needed), and the client isn't told a payment failed.
+  if (settled.code === 'expired') return;
   await chargeFailed(db, claimed, result.status === 'requires_action' ? 'requires_bank_verification' : result.status === 'failed' ? result.failureCode : 'payment_declined', attempts, now);
 }
 
@@ -175,7 +215,7 @@ export async function expireUnpaidScheduled(db: Db, now: Date): Promise<number> 
     } else {
       // The task is open for offers again (its window is still ahead: the deadline is 24 h before the start).
       await db.update(tasks).set({ status: 'open', reopenedAt: now, offerCount: 0, updatedAt: now, version: sql`${tasks.version} + 1` }).where(eq(tasks.id, booking.taskId));
-      await db.insert(outboxEvents).values({ id: newId('evt'), type: 'booking.canceled', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, reason: 'funding_failed', refundCents: 0, helperCompensationCents: 0, posterUserId: booking.posterUserId, helperUserId: booking.helperUserId } });
+      await db.insert(outboxEvents).values({ id: newId('evt'), type: 'booking.canceled', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, reason: 'funding_failed', refundCents: 0, helperCompensationCents: 0, posterUserId: booking.posterUserId, helperUserId: booking.helperUserId, actorUserId: null } });
     }
     await db.insert(auditLog).values({ id: newId('aud'), actorId: 'system', actorRole: 'system', action: 'booking.canceled', targetType: 'booking', targetId: booking.id, reason: 'funding_failed' });
   }
@@ -196,6 +236,7 @@ export async function payScheduledNow(deps: BookingDeps, posterId: string, booki
   if (!('providerRef' in method)) return method;
   const attempt = await openAttempt(deps.db, booking, amountCents, method, deps.payments.name, now);
   if (!attempt) return { ok: false, code: 'not_allowed' };
+  await cancelIntents(deps.payments, attempt.replaced, `booking ${booking.id}`);
   const result = await deps.payments.charge({ amountCents, method: chargeMethodOf(method), idempotencyKey: attempt.idempotencyKey, description: `TasksNearMe booking ${booking.id}`, paymentId: attempt.paymentId });
   return settle(deps, posterId, attempt.paymentId, result, now);
 }

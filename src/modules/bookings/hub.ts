@@ -423,7 +423,7 @@ export async function runBookingAction(
       if (set.status === 'completed') await tx.update(tasks).set({ status: 'completed', updatedAt: now }).where(eq(tasks.id, booking.taskId));
       await recordEvent(tx, event, userId, booking);
       const type = threadEvent[action];
-      if (type) await postEvent(tx, bookingThreadLink(booking), 'status', { type }, now);
+      if (type) await postEvent(tx, bookingThreadLink(booking), 'status', { type }, now, userId);
       return true;
     });
     return updated ? { ok: true, code: 'updated' } : { ok: false, code: 'version_conflict' };

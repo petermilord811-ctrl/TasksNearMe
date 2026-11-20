@@ -24,6 +24,8 @@ import { offerPricing } from '@/modules/offers/owner';
 import { offers } from '@/modules/offers/schema';
 import { cancellationSummary, quoteBreakdown } from '@/modules/payments/fees';
 import { paymentCustomers, paymentMethods, payments } from '@/modules/payments/schema';
+import { closeTaskInvites } from '@/modules/invites/holds';
+import { cancelIntents } from '@/modules/payments/cancel-intents';
 import { availableCredit, ensureWelcomeCredit } from '@/modules/credits/service';
 import { bankStep, chargeMethodOf } from '@/modules/payments/cards';
 
@@ -33,6 +35,7 @@ import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
+import { maskContactDetails } from '@/modules/trust/contact-masking';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import { fieldError, validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -227,7 +230,8 @@ export async function getBookingConfirmPage(
         pricing: offerPricing(ctx.offer),
         proposedStart,
         message: toMessageSegments(ctx.offer.message, { mask: true }),
-        brings: ctx.offer.brings,
+        // Masked like the message (sweep MN2b): contact details in a brings line reach no one before booking.
+        brings: ctx.offer.brings.map((item) => maskContactDetails(item).text),
       },
       breakdown,
       cancellation: cancellationSummary(policy.cancellation, breakdown, proposedStart),
@@ -345,7 +349,7 @@ export async function confirmBooking(
   // More than 14 days ahead: booked now, paid later (the card is kept and charged 72 h before).
   if (paysLater(ctx.offer.proposedStart, now)) return scheduleBooking(deps, posterId, ctx, method, pricing, breakdown, policy.id, now);
 
-  let hold: { bookingId: string; paymentId: string; idempotencyKey: string };
+  let hold: { bookingId: string; paymentId: string; idempotencyKey: string; replaced: (string | null)[] };
   try {
     hold = await db.transaction(async (tx) => {
       await tx.execute(sql`select id from tasks where id = ${ctx.task.id} for update`);
@@ -401,11 +405,12 @@ export async function confirmBooking(
           createdAt: now,
         });
       }
-      // A new attempt replaces one still waiting for the bank.
-      await tx
+      // A new attempt replaces one still waiting for the bank (its intent is canceled at the provider below).
+      const replaced = await tx
         .update(payments)
         .set({ status: 'canceled', updatedAt: now })
-        .where(and(eq(payments.bookingId, bookingId), eq(payments.status, 'requires_confirmation')));
+        .where(and(eq(payments.bookingId, bookingId), eq(payments.status, 'requires_confirmation')))
+        .returning({ providerRef: payments.providerRef });
       const paymentId = newId('pay');
       const idempotencyKey = `${bookingId}:${paymentId}`;
       await tx.insert(payments).values({
@@ -427,13 +432,15 @@ export async function confirmBooking(
         createdAt: now,
         updatedAt: now,
       });
-      return { bookingId, paymentId, idempotencyKey };
+      return { bookingId, paymentId, idempotencyKey, replaced: replaced.map((row) => row.providerRef) };
     });
   } catch (error) {
     if (error instanceof HoldConflict || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
     throw error;
   }
 
+  // Left live, a bank step finished later would charge the client a second time (repeats review #5).
+  await cancelIntents(deps.payments, hold.replaced, `booking ${hold.bookingId}`);
   const result = await deps.payments.charge({
     amountCents,
     method: chargeMethodOf(method),
@@ -532,7 +539,7 @@ async function scheduleBooking(
         ...others.map((offer) => ({ id: newId('evt'), type: 'offer.declined', aggregateType: 'offer', aggregateId: offer.id, payload: { offerId: offer.id, taskId: ctx.task.id, helperUserId: offer.helperUserId, reason: 'task_booked' } })),
       ]);
       await tx.insert(auditLog).values({ id: newId('aud'), actorId: posterId, actorRole: 'user', action: 'booking.scheduled', targetType: 'booking', targetId: id });
-      await postEvent(tx, bookingThreadLink({ id, taskId: ctx.task.id, posterUserId: posterId, helperUserId: ctx.offer.helperUserId }), 'system', { type: 'booked' }, now);
+      await postEvent(tx, bookingThreadLink({ id, taskId: ctx.task.id, posterUserId: posterId, helperUserId: ctx.offer.helperUserId }), 'system', { type: 'booked' }, now, posterId);
       return id;
     });
   } catch (error) {
@@ -648,6 +655,19 @@ export async function settle(deps: BookingDeps, posterId: string, paymentId: str
       return { kind: 'expired' as const };
     }
     await tx.execute(sql`select id from tasks where id = ${booking.taskId} for update`);
+    // The task can still take the booking (sweep PT7): a client who canceled the task while the bank's step was open gets
+    // no booking, and no charge, back. Under the task's lock, so a cancel lands wholly before or after this. Open (offers,
+    // invites), a draft (a rebooking's, until paid) or assigned (a visit paid later) can; canceled, expired or done can't.
+    // The money that came in goes back on its own (payment.refund_needed).
+    const [task] = await tx.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, booking.taskId)).limit(1);
+    if (!task || !['open', 'draft', 'assigned'].includes(task.status)) {
+      await tx
+        .update(bookings)
+        .set({ status: 'canceled', cancelReason: 'poster_early', canceledBy: 'poster', canceledAt: now, fundingExpiresAt: null, fundingDueAt: null, updatedAt: now })
+        .where(eq(bookings.id, booking.id));
+      await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'payment.refund_needed', aggregateType: 'payment', aggregateId: paymentId, payload: { paymentId, bookingId: booking.id, reason: 'task_closed' } });
+      return { kind: 'expired' as const };
+    }
     await tx
       .update(bookings)
       .set({ status: 'confirmed', confirmedAt: now, fundingExpiresAt: null, fundingDueAt: null, fundingFailure: null, updatedAt: now })
@@ -707,11 +727,15 @@ export async function settle(deps: BookingDeps, posterId: string, paymentId: str
       targetType: 'booking',
       targetId: booking.id,
     });
-    if (booking.status !== 'scheduled') await postEvent(tx, bookingThreadLink(booking), 'system', { type: 'booked' }, now);
-    return { kind: 'booked' as const, bookingId: booking.id };
+    if (booking.status !== 'scheduled') await postEvent(tx, bookingThreadLink(booking), 'system', { type: 'booked' }, now, posterId);
+    return { kind: 'booked' as const, bookingId: booking.id, taskId: booking.taskId };
   });
 
-  if (outcome.kind === 'booked') return { ok: true, code: 'booked', redirectTo: routes.app.booking(outcome.bookingId) };
+  if (outcome.kind === 'booked') {
+    // Booked: the task's other invites end and let go of the client's card now, not in 48–72 hours (repeats review #11).
+    await closeTaskInvites(db, outcome.taskId, now, deps.payments);
+    return { ok: true, code: 'booked', redirectTo: routes.app.booking(outcome.bookingId) };
+  }
   if (outcome.kind === 'settled') return settledResult(db, outcome.bookingId);
   return { ok: false, code: outcome.kind === 'expired' ? 'expired' : 'not_found' };
 }

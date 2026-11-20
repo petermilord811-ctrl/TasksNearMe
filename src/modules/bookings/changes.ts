@@ -299,7 +299,7 @@ const CHANGEABLE = ['confirmed', 'scheduled', 'in_progress'];
  * is no longer open to a change (canceled, the work submitted, completed: its money is already settled, so a change
  * paid then goes to support to refund instead of re-pricing it).
  */
-async function writeChange(tx: Tx, row: ChangeRow, now: Date): Promise<boolean> {
+async function writeChange(tx: Tx, row: ChangeRow, now: Date, actorUserId: string | null): Promise<boolean> {
   const [booking] = await tx.select().from(bookings).where(eq(bookings.id, row.bookingId)).limit(1).for('update');
   if (!booking || booking.termsVersion !== row.fromVersion) return false;
   if (!CHANGEABLE.includes(booking.status) || booking.completionSubmittedAt) return false;
@@ -325,13 +325,13 @@ async function writeChange(tx: Tx, row: ChangeRow, now: Date): Promise<boolean> 
   });
   await tx.update(bookings).set({ termsVersion: version, startAt: terms.startAt, updatedAt: now }).where(eq(bookings.id, booking.id));
   await tx.update(bookingChangeRequests).set({ status: 'applied', decidedAt: now, updatedAt: now }).where(eq(bookingChangeRequests.id, row.id));
-  await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'change.applied', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, changeId: row.id } });
+  await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'change.applied', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, changeId: row.id, actorUserId } });
   return true;
 }
 
 /** Applies accepted terms: a new terms version (the start moves if it changed); a lower total is refunded. */
-async function applyChange(db: Db, payments_: PaymentProvider | null, row: ChangeRow, now: Date): Promise<boolean> {
-  const applied = await db.transaction((tx) => writeChange(tx, row, now));
+async function applyChange(db: Db, payments_: PaymentProvider | null, row: ChangeRow, now: Date, actorUserId: string | null): Promise<boolean> {
+  const applied = await db.transaction((tx) => writeChange(tx, row, now, actorUserId));
   // The lower total comes back across the booking's charges, each up to what's left of it (money review #2).
   if (applied && row.differenceCents < 0 && payments_) {
     await refundAcross({ db, payments: payments_ }, row.bookingId, await refundableCharges(db, row.bookingId), -row.differenceCents, { reason: 'change_decrease', key: `refund:${row.bookingId}:change:${row.id}` }, now);
@@ -428,12 +428,13 @@ async function settleDifference(deps: BookingDeps, changeId: string, paymentId: 
   }
   const outcome = await db.transaction(async (tx) => {
     await tx.execute(sql`select id from payments where id = ${paymentId} for update`);
-    const [payment] = await tx.select({ status: payments.status }).from(payments).where(eq(payments.id, paymentId)).limit(1);
+    const [payment] = await tx.select({ status: payments.status, payerUserId: payments.payerUserId }).from(payments).where(eq(payments.id, paymentId)).limit(1);
     if (!payment) return { kind: 'missing' as const };
     if (SETTLED.includes(payment.status)) return { kind: 'settled' as const };
     await tx.update(payments).set({ status: 'succeeded', providerRef: result.providerRef, failureCode: null, updatedAt: now }).where(eq(payments.id, paymentId));
     const [row] = await tx.select().from(bookingChangeRequests).where(eq(bookingChangeRequests.id, changeId)).limit(1);
-    if (!row || !(await writeChange(tx, row, now))) {
+    // The client's payment applies it (sweep MN10: they're the one who acted).
+    if (!row || !(await writeChange(tx, row, now, payment.payerUserId))) {
       // Paid but the terms moved on: support refunds it.
       await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'payment.refund_needed', aggregateType: 'payment', aggregateId: paymentId, payload: { paymentId, changeId } });
       return { kind: 'conflict' as const };
@@ -458,7 +459,7 @@ export async function acceptChange(deps: BookingDeps, userId: string, bookingId:
   if (row.proposedByUserId === userId) return { ok: false, code: 'not_allowed' };
   if (row.fromVersion !== loaded.booking.termsVersion) return { ok: false, code: 'version_conflict' };
   if (row.differenceCents <= 0) {
-    return (await applyChange(deps.db, deps.payments, row, now)) ? { ok: true, code: 'updated', redirectTo: routes.app.booking(loaded.booking.id) } : { ok: false, code: 'version_conflict' };
+    return (await applyChange(deps.db, deps.payments, row, now, userId)) ? { ok: true, code: 'updated', redirectTo: routes.app.booking(loaded.booking.id) } : { ok: false, code: 'version_conflict' };
   }
   if (loaded.role === 'poster') return chargeDifference(deps, userId, row, loaded.booking.marketId, input, now);
   await deps.db

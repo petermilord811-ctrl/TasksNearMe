@@ -214,7 +214,8 @@ describe('the booking sheets', () => {
 
   it("won't let the client say the helper can't get in", async () => {
     const arrived = new Date();
-    await db.update(bookings).set({ status: 'in_progress', arrivedAt: arrived }).where(eq(bookings.id, bookingId));
+    // Arrived at the start: "can't get in" never opens before it (security review).
+    await db.update(bookings).set({ status: 'in_progress', arrivedAt: arrived, startAt: arrived }).where(eq(bookings.id, bookingId));
     // 25 minutes after arriving, when the helper could report it.
     const later = new Date(arrived.getTime() + 25 * 60_000);
     expect(await reportCantAccess(db, CLIENT, bookingId, { note: 'Nobody at the door.' }, later)).toEqual({ ok: false, code: 'not_found' });

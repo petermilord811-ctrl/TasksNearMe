@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { closeTaskInvites } from '@/modules/invites/holds';
 import {
   taskModerationInputSchema,
   type ActionResult,
@@ -179,6 +180,8 @@ export async function moderateTask(db: Db, staff: StaffActor, taskId: string, in
         await tx.insert(outboxEvents).values([{ id: newId('evt'), type: 'task.canceled', aggregateType: 'task', aggregateId: task.id, payload: { taskId: task.id, reason: 'staff' } }, ...declinedForCancel(task.id, declined)]);
         await tx.insert(auditLog).values(audit('task.close'));
       });
+      // Direct invites for the task end too, and let go of the client's card now (repeats review #11).
+      await closeTaskInvites(db, task.id, now);
       break;
     case 'remove_photo': {
       if (!loaded.photoRows.some(({ file }) => file.id === action.photoId)) return { result: { ok: false, code: 'not_found' } };
