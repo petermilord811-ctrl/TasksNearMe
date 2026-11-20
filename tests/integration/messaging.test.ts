@@ -6,11 +6,13 @@ import { runBookingAction } from '@/modules/bookings/hub';
 import { bookings } from '@/modules/bookings/schema';
 import { canViewRelatedFile } from '@/modules/files/related-access';
 import { blocks, threads } from '@/modules/messaging/schema';
-import { getInbox, getThreadPage, offerThreadId, sendMessage } from '@/modules/messaging/service';
+import { bookingThreadLink, ensureThread, getInbox, getThreadPage, offerThreadId, sendMessage } from '@/modules/messaging/service';
+import { getPublishedPolicy } from '@/modules/markets/queries';
 import { cancelTask } from '@/modules/offers/owner';
 import { offers } from '@/modules/offers/schema';
 import { files, tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
+import { throwawayClient } from '../support/people';
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 afterAll(() => pool.end());
@@ -156,5 +158,28 @@ describe('booking threads', () => {
       ['system', 'booked'],
       ['status', 'on_my_way'],
     ]);
+  });
+
+  it('keeps contact details hidden until the booking is paid: not while it waits for its charge, nor once canceled unpaid (sweep MN3)', async () => {
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const policy = await getPublishedPolicy(desk!.marketId, db);
+    // People made for this test, so the booking never shows in the seeded people's lists.
+    const client = await throwawayClient(db, 'usr_mn3_client');
+    const helper = await throwawayClient(db, 'usr_mn3_helper', 'usr_jordan');
+    await db.insert(tasks).values({ ...desk!, id: 'tsk_mn3', slug: 'mn3-desk', posterUserId: client, status: 'assigned', offerCount: 0, version: 2 });
+    // Booked more than 14 days ahead: `scheduled`, its card charged 72 h before, free to cancel until then.
+    await db.insert(bookings).values({ id: 'bkg_mn3', taskId: 'tsk_mn3', posterUserId: client, helperUserId: helper, marketId: desk!.marketId, policyVersionId: policy!.id, status: 'scheduled', startAt: new Date(Date.now() + 20 * 86_400_000) });
+    const thread = await ensureThread(db, bookingThreadLink({ id: 'bkg_mn3', taskId: 'tsk_mn3', posterUserId: client, helperUserId: helper }), now());
+    expect(await sendMessage(db, helper, thread, { body: 'My cell is 512-555-0188', attachmentIds: [] }, now())).toEqual({ ok: true, code: 'sent' });
+    const waiting = await getThreadPage(db, client, thread, now());
+    expect(waiting?.thread.contactMasking).toBe(true);
+    expect(waiting?.messages.at(-1)?.segments).toContainEqual({ kind: 'masked', detail: 'phone', hint: '0188' });
+    expect(JSON.stringify(waiting?.messages)).not.toContain('512-555-0188');
+    // Canceled before its money came: still hidden.
+    await db.update(bookings).set({ status: 'canceled', cancelReason: 'funding_failed', canceledAt: now() }).where(eq(bookings.id, 'bkg_mn3'));
+    expect(JSON.stringify((await getThreadPage(db, client, thread, now()))?.messages)).not.toContain('512-555-0188');
+    // Paid: shown.
+    await db.update(bookings).set({ status: 'confirmed', confirmedAt: now(), cancelReason: null, canceledAt: null }).where(eq(bookings.id, 'bkg_mn3'));
+    expect(JSON.stringify((await getThreadPage(db, client, thread, now()))?.messages)).toContain('512-555-0188');
   });
 });

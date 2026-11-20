@@ -26,9 +26,9 @@ export interface OfferView {
   pricing: PricingInput;
   /** When the helper proposes to start, inside the task window. */
   proposedStart: ISODateTime;
-  /** The helper's message, with contact details masked until a booking is confirmed. */
+  /** The helper's message, with contact details masked until this helper's booking is confirmed (paid). */
   message: MessageSegment[];
-  /** What the helper will bring, e.g. "Drill", "Moving straps". */
+  /** What the helper will bring, e.g. "Drill", "Moving straps": their own words, masked as the message is. */
   brings: string[];
   expiresAt: ISODateTime;
   /** 1 for the first version; each edit adds one. */

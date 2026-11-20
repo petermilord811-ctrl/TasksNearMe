@@ -88,7 +88,7 @@ export async function postEvent(db: Writer, link: ThreadLink, kind: 'status' | '
 interface ThreadContext {
   title: string;
   subject: ThreadSubject;
-  /** Contact details stay hidden until a booking between the two is confirmed. */
+  /** Contact details stay hidden until a booking between the two is confirmed (paid). */
   masking: boolean;
   closed: boolean;
   /** Why it closed, when it did (audit L13). */
@@ -143,7 +143,9 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
       out.set(thread.id, {
         title: task.title,
         subject: { kind: 'booking', bookingId: booking.id },
-        masking: booking.status === 'pending_funding',
+        // Until it's paid (`confirmed_at`, set only when the money comes in): a booking made more than 14 days ahead
+        // is `scheduled`, unpaid and free to cancel, and one canceled before its money came never was (sweep MN3).
+        masking: booking.confirmedAt === null,
         closed,
         ...(closed ? { closedReason: booking.status === 'completed' ? 'booking_completed' : 'booking_canceled' } : {}),
       });

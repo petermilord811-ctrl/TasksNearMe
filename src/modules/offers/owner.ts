@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, ne, notInArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, ne, notInArray } from 'drizzle-orm';
 import type {
   ActionResult,
   BookingStatus,
@@ -23,6 +23,7 @@ import { budgetOf } from '@/modules/tasks/projections';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { files, taskLocations, taskPhotos, tasks } from '@/modules/tasks/schema';
 import { blockedPeopleOf, isBlockedBetween } from '@/modules/trust/blocks';
+import { maskContactDetails } from '@/modules/trust/contact-masking';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import { auditLog } from '@/platform/audit/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
@@ -49,6 +50,16 @@ export interface OwnerDeps {
   cipher: FieldCipher;
   /** The market's published fee schedule: what the poster would pay if they booked now. */
   fees: FeeSchedule;
+}
+
+/** The offers among `offerIds` whose booking was paid (confirmed at some point, even if canceled since). */
+async function paidOffers(db: Db, offerIds: string[]): Promise<Set<string>> {
+  if (offerIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ offerId: bookings.offerId })
+    .from(bookings)
+    .where(and(inArray(bookings.offerId, offerIds), isNotNull(bookings.confirmedAt)));
+  return new Set(rows.flatMap((row) => (row.offerId ? [row.offerId] : [])));
 }
 
 /** The booking behind each booked task (confirmed or later; a hold waiting for payment doesn't count). */
@@ -188,7 +199,7 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
 }
 
 async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows: OfferRow[], now: Date): Promise<OfferView[]> {
-  const [helpers, facts, canceled] = await Promise.all([
+  const [helpers, facts, canceled, paid] = await Promise.all([
     getHelperSummaries(
       rows.map((row) => row.helperUserId),
       deps.db,
@@ -197,8 +208,12 @@ async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows
     reliabilityFacts(deps.db, rows.map((row) => row.helperUserId), now),
     // Declined by the task's cancellation, not by the client's choice (sweep D9).
     declinedByCancel(deps.db, rows, () => task.status),
+    // Contact details in an offer show only once that helper's booking is paid (`confirmed_at`), as in their
+    // conversation (messaging/service.ts). The task's status used to decide for every offer on it, so booking one
+    // helper showed every other offerer's number under "Earlier offers", and a booking not paid yet (made more than
+    // 14 days ahead) showed the booked one's (sweep MN2). What a helper brings is their own words too.
+    paidOffers(deps.db, rows.map((row) => row.id)),
   ]);
-  const masked = task.status !== 'assigned' && task.status !== 'completed';
   return rows
     .filter((row) => helpers.has(row.helperUserId))
     .sort((a, b) => offerSortKey(a.status) - offerSortKey(b.status) || b.createdAt.getTime() - a.createdAt.getTime())
@@ -211,8 +226,8 @@ async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows
         status: row.status as OfferStatus,
         pricing,
         proposedStart: row.proposedStart.toISOString(),
-        message: toMessageSegments(row.message, { mask: masked }),
-        brings: row.brings,
+        message: toMessageSegments(row.message, { mask: !paid.has(row.id) }),
+        brings: paid.has(row.id) ? row.brings : row.brings.map((item) => maskContactDetails(item).text),
         expiresAt: row.expiresAt.toISOString(),
         revision: row.revision,
         submittedAt: row.updatedAt.toISOString(),
