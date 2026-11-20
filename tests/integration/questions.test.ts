@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { routes } from '@/contracts';
 import { blocks } from '@/modules/messaging/schema';
@@ -11,6 +11,7 @@ import { getAdminCase, moderateCaseQuestion, type StaffActor } from '@/modules/s
 import { getReportPage, reportTarget } from '@/modules/support/target-reports';
 import { tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
+import { deleteCases } from '../support/cases';
 import { createDb } from '@/platform/db/connect';
 import { outboxEvents } from '@/platform/outbox/schema';
 
@@ -84,6 +85,15 @@ describe('closing on the offers rule, reporting answers, restoring (sweep QA1, Q
   const later = `tsk_q_late_${Date.now().toString(36)}`;
   const booked = `tsk_q_booked_${Date.now().toString(36)}`;
   const fresh = `tsk_q_fresh_${Date.now().toString(36)}`;
+
+  // Reports about Ben (the answer) and Lee (the question) would count against them in later files (poster risk): gone at
+  // the end, with the task copies closed so later boards don't list them.
+  afterAll(async () => {
+    const ids = [taskId, later, booked, fresh];
+    const filed = await db.select({ id: supportCases.id }).from(supportCases).where(inArray(sql<string>`${supportCases.context}->>'taskId'`, ids));
+    await deleteCases(db, filed.map((row) => row.id));
+    await db.update(tasks).set({ status: 'canceled' }).where(inArray(tasks.id, ids));
+  });
 
   beforeAll(async () => {
     const [yard] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_yard'));

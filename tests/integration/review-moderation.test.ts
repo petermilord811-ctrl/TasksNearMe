@@ -12,6 +12,7 @@ import { getAdminCase, moderateReportedReview } from '@/modules/support/staff';
 import { reportTarget } from '@/modules/support/target-reports';
 import { auditLog } from '@/platform/audit/schema';
 import { createDb } from '@/platform/db/connect';
+import { casesOpenedBy, deleteCases } from '../support/cases';
 import { throwawayClient } from '../support/people';
 
 /**
@@ -21,7 +22,12 @@ import { throwawayClient } from '../support/people';
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
-afterAll(() => pool.end());
+// The report this file files is about Ruth, the review's author: removed at the end, or later files that book as Ruth
+// would be asked for an ID check (two reports in 30 days, poster risk).
+afterAll(async () => {
+  await deleteCases(db, await casesOpenedBy(db, ['usr_revmod_reporter']));
+  await pool.end();
+});
 
 const alex: StaffActor = { id: 'usr_alex', roles: ['support_agent'] };
 const morgan: StaffActor = { id: 'usr_morgan', roles: ['support_lead'] };
@@ -75,9 +81,8 @@ describe('a reported review on its case', () => {
   });
 
   it("brings the badges of the person it's about up to date when it's hidden or shown (sweep RV3)", async () => {
-    const reporter = await throwawayClient(db, 'usr_revmod_badges');
-    expect(await reportTarget(db, reporter, 'review', REVIEW, { reason: 'harassment', details: 'This review is about the person, not the work they did.' }, new Date())).toEqual({ ok: true, code: 'submitted' });
-    const [found] = await db.select({ id: supportCases.id }).from(supportCases).where(and(eq(supportCases.openedByUserId, reporter), sql`${supportCases.context}->>'reviewId' = ${REVIEW}`));
+    // The first test's case (one report about the review's author is enough).
+    const [found] = await db.select({ id: supportCases.id }).from(supportCases).where(and(eq(supportCases.openedByUserId, 'usr_revmod_reporter'), sql`${supportCases.context}->>'reviewId' = ${REVIEW}`));
     const stored = async () => (await db.select().from(userBadges).where(and(eq(userBadges.userId, 'usr_lee'), eq(userBadges.code, 'five_star'), eq(userBadges.scope, ''))))[0];
     const before = await stored();
     const expected = async () => tierFor('five_star', badgeCounts(await loadBadgeFacts(db, 'usr_lee')).find((item) => item.code === 'five_star' && item.scope === '')?.count ?? 0);

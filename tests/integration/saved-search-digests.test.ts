@@ -16,7 +16,16 @@ import { throwawayClient } from '../support/people';
  * no other task has, and its people are made for it.
  */
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
-afterAll(() => pool.end());
+// Nothing of this file's is left for later ones: its tasks close; its people's searches, block, alerts and digests go.
+afterAll(async () => {
+  const mine = `%${run}`;
+  await db.execute(sql`update tasks set status = 'canceled' where id like ${`tsk_dg_%${run}`}`);
+  await db.execute(sql`delete from saved_searches where user_id like ${mine}`);
+  await db.execute(sql`delete from blocks where blocker_id like ${mine} or blocked_id like ${mine}`);
+  await db.execute(sql`delete from notifications where user_id like ${mine}`);
+  await db.execute(sql`delete from outbox_events where (type = 'searches.digest' and payload->>'userId' like ${mine}) or id like ${`evt_dg_%${run}`}`);
+  await pool.end();
+});
 
 const run = Date.now().toString(36);
 const word = `zebracorn${run}`;

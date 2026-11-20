@@ -108,6 +108,9 @@ describe('saved from find work, and edited (sweep SS5)', () => {
   beforeAll(async () => {
     await db.delete(savedSearches).where(eq(savedSearches.userId, jordan));
   });
+  afterAll(async () => {
+    await db.delete(savedSearches).where(eq(savedSearches.userId, jordan));
+  });
 
   it('reads find work addresses, without paging, sorting or the saved-tasks view', () => {
     expect(parseSavedSearchAddress('/app/find-work?category=moving-help&distance=within_5_mi&page=2&saved=1&sort=newest&view=map')).toMatchObject({ source: 'find_work', params: { category: 'moving-help', distance: 'within_5_mi' } });
