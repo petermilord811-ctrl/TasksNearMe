@@ -276,7 +276,7 @@ export function sentOfferItem(row: MyOfferRow): DashboardItem {
     location: row.task.location,
     stage: OFFER_STAGES[row.offer.status],
     needsYou: row.offer.status === 'stale',
-    status: { kind: 'offer', status: row.offer.status, viewer: 'helper' },
+    status: { kind: 'offer', status: row.offer.status, viewer: 'helper', ...(row.offer.taskCanceled ? { taskCanceled: true } : {}) },
     money: { kind: 'earn', cents: row.offer.breakdown.helperEarningsCents },
     person: personOf(row.task.poster),
     target: { kind: 'find_work_task', taskId: row.task.id },

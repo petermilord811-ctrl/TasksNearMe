@@ -115,6 +115,10 @@ describe('items', () => {
     // An accepted offer became a booking (under Bookings): it's done here, so a job isn't listed twice.
     const accepted = sentOfferItem({ ...myOffersPageData.active[0]!, offer: { ...myOffersPageData.active[0]!.offer, status: 'accepted' } });
     expect(accepted).toMatchObject({ stage: 'done', needsYou: false });
+    // Declined because its task was canceled: the status carries it, so the badge says "Task canceled" (sweep D9).
+    const [closed] = myOffersPageData.closed;
+    expect(sentOfferItem({ ...closed!, offer: { ...closed!.offer, taskCanceled: true } }).status).toEqual({ kind: 'offer', status: 'declined', viewer: 'helper', taskCanceled: true });
+    expect(sentOfferItem(closed!).status).toEqual({ kind: 'offer', status: 'declined', viewer: 'helper' });
   });
 
   it("makes bookings rows with the client's total or the helper's earnings", () => {

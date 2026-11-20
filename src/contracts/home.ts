@@ -164,7 +164,8 @@ export type DashboardStage = 'open' | 'booked' | 'done';
 export type DashboardItemStatus =
   | { kind: 'task'; status: TaskStatus }
   | { kind: 'booking'; status: BookingStatus; viewer: 'poster' | 'helper' }
-  | { kind: 'offer'; status: OfferStatus; viewer: 'poster' | 'helper' };
+  /** `taskCanceled`: declined because the task was canceled while the offer was open (sweep D9): "Task canceled". */
+  | { kind: 'offer'; status: OfferStatus; viewer: 'poster' | 'helper'; taskCanceled?: boolean };
 
 /**
  * The money on a row. `budget`: what a task offers (the client's own, or a nearby task's). `offer`: an offer's price.

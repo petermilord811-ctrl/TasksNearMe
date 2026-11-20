@@ -9,6 +9,7 @@ import {
   DASHBOARD_CLIENT_NOW,
   DASHBOARD_HELPER_NOW,
   DESK_TIMES,
+  dashboardOf,
   jordanBothDashboardData,
   jordanDashboardData,
   jordanDashboardNearbyMapData,
@@ -20,6 +21,7 @@ import {
   mayaDashboardMonthlyLimitData,
   mayaDashboardNeedsPlanData,
   mayaDashboardSearchData,
+  myOffersPageData,
   priyaDashboardData,
   priyaDashboardWaitingData,
   ruthDashboardData,
@@ -29,6 +31,7 @@ import enEarnings from '../../../../messages/en/ui/earnings.json';
 import enHome from '../../../../messages/en/ui/home.json';
 import esEarnings from '../../../../messages/es/ui/earnings.json';
 import esHome from '../../../../messages/es/ui/home.json';
+import { sentOfferItem } from '@/shared/dashboard';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { DashboardScreen } from './dashboard-screen';
 import { dashboardTargetHref } from './links';
@@ -139,6 +142,14 @@ describe('the header', () => {
     cleanup();
     renderDashboard(jordanDashboardData, { now: DASHBOARD_HELPER_NOW });
     expect(screen.getByText('2 bookings coming up')).toBeVisible();
+  });
+
+  it("says 'Task canceled' on a helper's offer that the task's cancellation closed, not 'Not selected' (sweep D9)", () => {
+    const [closed] = myOffersPageData.closed;
+    const offers = [sentOfferItem({ ...closed!, offer: { ...closed!.offer, taskCanceled: true } })];
+    renderDashboard(dashboardOf({ firstName: 'Jordan', mode: 'helper', sides: { client: false, helper: true }, attention: [], itemsOf: { offers }, now: DASHBOARD_HELPER_NOW, query: { tab: 'offers', status: 'done' } }), { now: DASHBOARD_HELPER_NOW });
+    expect(screen.getByText('Task canceled')).toBeVisible();
+    expect(screen.queryByText('Not selected')).not.toBeInTheDocument();
   });
 
   it("shows a helper's earnings at a glance, opening Earnings", () => {

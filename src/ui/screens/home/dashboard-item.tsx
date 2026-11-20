@@ -21,7 +21,7 @@ const CATEGORY_ICONS: Record<CategorySlug, LucideIcon> = {
 function useItemStatus(item: DashboardItem): StatusLabel {
   const task = useTaskStatus(item.status.kind === 'task' ? item.status.status : 'open');
   const booking = useBookingStatus(item.status.kind === 'booking' ? item.status.status : 'confirmed', item.status.kind === 'task' ? 'poster' : item.status.viewer);
-  const offer = useOfferStatus(item.status.kind === 'offer' ? item.status.status : 'pending', item.status.kind === 'task' ? 'poster' : item.status.viewer);
+  const offer = useOfferStatus(item.status.kind === 'offer' ? item.status.status : 'pending', item.status.kind === 'task' ? 'poster' : item.status.viewer, { taskCanceled: item.status.kind === 'offer' && item.status.taskCanceled });
   return item.status.kind === 'task' ? task : item.status.kind === 'booking' ? booking : offer;
 }
 
