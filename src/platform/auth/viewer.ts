@@ -2,7 +2,8 @@ import 'server-only';
 import { eq } from 'drizzle-orm';
 import { cache } from 'react';
 import { STAFF_ROLES, type Mode, type Photo, type ShellViewer, type SignedInViewer, type StaffRole, type StaffViewer, type TimeZone } from '@/contracts';
-import { staffRoles, staffSessionChecks } from '@/modules/accounts/schema';
+import { staffRoles, staffSessionChecks, users } from '@/modules/accounts/schema';
+import { profileComplete } from '@/modules/accounts/sign-in/steps';
 import { avatarPhoto } from '@/modules/files/photos';
 import { userTimeZone } from '@/modules/markets/time-zone';
 import { helperProfiles } from '@/modules/profiles/schema';
@@ -56,12 +57,22 @@ export const getViewer = cache(async (): Promise<Viewer> => {
   // (one created while staff were blocking it, say): every page and action sees the public viewer (5.18).
   if (u.status && BLOCKED_STATUSES.has(u.status)) return { kind: 'public' };
 
-  const [roleRows, profileRows, checkRows, timeZone] = await Promise.all([
+  const [roleRows, profileRows, checkRows, timeZone, accountRows] = await Promise.all([
     db.select({ role: staffRoles.role }).from(staffRoles).where(eq(staffRoles.userId, u.id)),
     db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, u.id)),
     db.select({ verifiedAt: staffSessionChecks.verifiedAt }).from(staffSessionChecks).where(eq(staffSessionChecks.sessionId, session.session.id)),
     userTimeZone(db, u.id),
+    // From the row, not the session: a session's cached names could lag the profile step just saved.
+    db
+      .select({ firstName: users.firstName, lastName: users.lastName, adultAttestedAt: users.adultAttestedAt, termsAcceptedAt: users.termsAcceptedAt, phoneVerifiedAt: users.phoneVerifiedAt })
+      .from(users)
+      .where(eq(users.id, u.id)),
   ]);
+  // Sign-up unfinished (no name, 18+ or terms yet; a private beta's invite comes before them): signed out to every page
+  // and action, which send it to /sign-in to finish (security review SEC18). Only sign-in's own steps and the privacy
+  // requests read the session another way (tests/unit/unfinished-sign-up-actions.test.ts).
+  const account = accountRows[0];
+  if (!account || !profileComplete(account)) return { kind: 'public' };
   // The request's dates default to the person's own market clock (a page about another market names its own).
   setDefaultRequestTimeZone(timeZone);
 
@@ -88,6 +99,18 @@ export const getViewer = cache(async (): Promise<Viewer> => {
       timeZone,
     },
   };
+});
+
+/**
+ * The session's own account, finished signing up or not (never a suspended, banned or deleted one): only for what an
+ * unfinished sign-up may still do besides sign-in's steps, its privacy requests (src/modules/privacy/actions.ts).
+ * Everything else uses getViewer.
+ */
+export const getSessionAccountId = cache(async (): Promise<string | null> => {
+  const session = await auth.api.getSession({ headers: await authRequestHeaders() });
+  if (!session) return null;
+  const status = (session.user as typeof session.user & { status?: string }).status;
+  return status && BLOCKED_STATUSES.has(status) ? null : session.user.id;
 });
 
 export function toSignedInViewer(user: ViewerUser): SignedInViewer {

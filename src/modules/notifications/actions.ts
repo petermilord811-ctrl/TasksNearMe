@@ -15,7 +15,6 @@ import {
 } from './service';
 import { requestNow } from '@/platform/clock';
 import { checkPushSubscription, removePushSubscription, savePushSubscription } from './push';
-import { cancelAccountDeletion, requestAccountDeletion, requestDataExport } from '@/modules/privacy/requests';
 
 /** Server Actions behind the notifications and account pages (src/contracts/account.ts). */
 
@@ -57,24 +56,6 @@ export async function saveNotificationPreferenceAction(input: { topic: Notificat
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   return refreshed(await saveNotificationPreference(db, userId, input, await requestNow()));
-}
-
-export async function requestDataExportAction(): Promise<ActionResult> {
-  const userId = await signedInUserId();
-  if (!userId) return { ok: false, code: 'not_allowed' };
-  return refreshed(await requestDataExport(db, userId, await requestNow()));
-}
-
-export async function requestAccountDeletionAction(): Promise<ActionResult> {
-  const userId = await signedInUserId();
-  if (!userId) return { ok: false, code: 'not_allowed' };
-  return refreshed(await requestAccountDeletion(db, userId, await requestNow()));
-}
-
-export async function cancelAccountDeletionAction(): Promise<ActionResult> {
-  const userId = await signedInUserId();
-  if (!userId) return { ok: false, code: 'not_allowed' };
-  return refreshed(await cancelAccountDeletion(db, userId, await requestNow()));
 }
 
 export async function savePushSubscriptionAction(input: PushSubscriptionInput): Promise<ActionResult> {

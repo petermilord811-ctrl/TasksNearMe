@@ -5,6 +5,7 @@ import type { ActionResult, BetaGateInput, InviteCodeCreateInput, InviteCodeInpu
 import { inviteCodeInputSchema, routes } from '@/contracts';
 import { staffActorOf, type StaffActor } from '@/modules/support/staff';
 import { rateLimited, validationFailed } from '@/platform/actions/results';
+import { currentSessionUserId } from '@/modules/accounts/sign-in/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
@@ -19,19 +20,21 @@ import { createInviteCode, redeemInvite, revokeInviteCode, setBetaGate } from '.
 const REDEEM_RULE = { limit: 10, windowSeconds: 10 * 60 };
 
 async function redeem(input: InviteCodeInput, use: InviteUse): Promise<ActionResult> {
-  const viewer = await getViewer();
-  if (viewer.kind !== 'user') {
+  // Sign-up's invite comes before the name and terms, so that step reads the session as sign-in's other steps do;
+  // getViewer treats an unfinished sign-up as signed out (security review SEC18).
+  const userId = use === 'sign_up' ? await currentSessionUserId() : await getViewer().then((viewer) => (viewer.kind === 'user' ? viewer.user.id : null));
+  if (!userId) {
     refresh();
     return { ok: false, code: 'not_allowed' };
   }
   const parsed = inviteCodeInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const now = await requestNow();
-  const limited = await consumeRateLimit(db, `beta-invite:user:${viewer.user.id}`, REDEEM_RULE, now);
+  const limited = await consumeRateLimit(db, `beta-invite:user:${userId}`, REDEEM_RULE, now);
   if (!limited.ok) return rateLimited(limited.retryAt);
-  const marketId = await marketIdOf(db, viewer.user.id);
+  const marketId = await marketIdOf(db, userId);
   if (!marketId) return { ok: false, code: 'not_found' };
-  const result = await redeemInvite(db, { userId: viewer.user.id, marketId, code: parsed.data.inviteCode, use }, now);
+  const result = await redeemInvite(db, { userId, marketId, code: parsed.data.inviteCode, use }, now);
   if (result.ok) await clearInvitedCode();
   return result;
 }

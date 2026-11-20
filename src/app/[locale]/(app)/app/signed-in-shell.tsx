@@ -4,7 +4,6 @@ import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { setMode, signOut } from '@/modules/accounts/actions';
 import { checkPushSubscriptionAction, removePushSubscriptionAction } from '@/modules/notifications/actions';
-import { signUpUnfinished } from '@/modules/accounts/sign-up';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { unreadMessageCount } from '@/modules/messaging/service';
 import { shellNoticesFor } from '@/modules/markets/outage';
@@ -32,9 +31,9 @@ export function SignedInShell({ children }: { children: React.ReactNode }) {
 }
 
 async function ViewerShell({ children }: { children: React.ReactNode }) {
+  // getViewer treats an account that hasn't finished signing up as signed out (security review SEC18).
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.home()));
-  if (await signUpUnfinished(db, viewer.user.id)) redirect(routes.signIn(routes.app.home()));
   // The job runner does this every minute; doing it for the viewer too keeps pages current, and lets a
   // time-travel test (the test clock moves this request's "now") see its reminders and notifications.
   const now = await requestNow();

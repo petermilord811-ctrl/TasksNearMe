@@ -22,14 +22,12 @@ import {
   signOut,
 } from '@/modules/accounts/actions';
 import {
-  cancelAccountDeletionAction,
   removePushSubscriptionAction,
   savePushSubscriptionAction,
-  requestAccountDeletionAction,
-  requestDataExportAction,
   saveAccountProfileAction,
   saveNotificationPreferenceAction,
 } from '@/modules/notifications/actions';
+import { cancelAccountDeletionAction, requestAccountDeletionAction, requestDataExportAction } from '@/modules/privacy/actions';
 import { getAccountPage } from '@/modules/notifications/service';
 import { accountVerificationFor } from '@/modules/badges/standing';
 import { ownBadges } from '@/modules/badges/service';

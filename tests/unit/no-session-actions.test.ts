@@ -56,6 +56,7 @@ vi.mock('@/platform/auth/auth', () => ({
 }));
 vi.mock('@/platform/auth/viewer', () => ({
   getViewer: async () => ({ kind: 'public' }),
+  getSessionAccountId: async () => null,
   getPublicShellViewer: async () => ({ kind: 'public' }),
   toSignedInViewer: () => {
     throw new Error('no viewer');
@@ -175,7 +176,7 @@ describe('every Server Action without a session', () => {
  * does). Validation may come first; acting may not.
  */
 // `isLocalRequest`: development tools that only answer on this machine (src/shared/local-request.ts).
-const SESSION_CHECKS = ['getViewer', 'currentSessionUserId', 'requireUserId', 'auth.api.getSession', 'isLocalRequest'];
+const SESSION_CHECKS = ['getViewer', 'getSessionAccountId', 'currentSessionUserId', 'requireUserId', 'auth.api.getSession', 'isLocalRequest'];
 
 function functionBodies(source: string): Map<string, string> {
   const bodies = new Map<string, string>();
