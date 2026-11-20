@@ -33,8 +33,16 @@ export interface CollectedCard {
   expYear: number;
 }
 
-/** A card the browser collected, checked and attached to the person's customer (`prepareCard`). */
-export type PreparedCardResult = { ok: true; card: CollectedCard; customerRef: string } | { ok: false; reason: 'not_supported' };
+/**
+ * A card the browser collected, checked and attached to the person's customer (`prepareCard`). `customerRef` on a refusal:
+ * the person's customer, when one was made (or found) before the card was refused; the caller keeps it, so deleting the
+ * account deletes it at the provider too.
+ */
+export type PreparedCardResult =
+  | { ok: true; card: CollectedCard; customerRef: string }
+  | { ok: false; reason: 'not_supported'; customerRef?: string }
+  /** The bank refused the card as it went on the customer (Stripe attaches no card its bank declines): a decline's codes. */
+  | { ok: false; reason: 'declined'; failureCode: PaymentFailureCode; customerRef: string };
 
 export type AuthorizeResult =
   | { status: 'authorized'; providerRef: string }

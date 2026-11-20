@@ -290,8 +290,9 @@ export async function methodForChoice(deps: BookingDeps, posterId: string, choic
     if (!deps.payments.prepareCard) return fieldError('payment', 'invalid');
     const customer = await customerFor(deps.db, posterId, deps.payments.name);
     const prepared = await deps.payments.prepareCard({ paymentMethodRef: choice.paymentMethodId, customer });
-    if (!prepared.ok) return fieldError('payment', 'invalid');
-    if (!customer.ref) await deps.db.insert(paymentCustomers).values({ userId: posterId, provider: deps.payments.name, customerRef: prepared.customerRef }).onConflictDoNothing();
+    // Kept even when the card is refused: deleting the account deletes the customer at Stripe.
+    if (!customer.ref && prepared.customerRef) await deps.db.insert(paymentCustomers).values({ userId: posterId, provider: deps.payments.name, customerRef: prepared.customerRef }).onConflictDoNothing();
+    if (!prepared.ok) return prepared.reason === 'declined' ? { ok: false, code: prepared.failureCode } : fieldError('payment', 'invalid');
     return { ...prepared.card, paymentMethodId: null, save: choice.save, customerRef: prepared.customerRef };
   }
   if (!deps.payments.collectDevCard) return fieldError('payment.card', 'not_supported');

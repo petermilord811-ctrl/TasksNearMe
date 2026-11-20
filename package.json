@@ -31,7 +31,8 @@
     "db:reset": "tsx db/scripts/cli.ts reset",
     "staff:setup-code": "tsx db/scripts/cli.ts staff-setup-code",
     "push:keys": "node scripts/push-keys.mjs",
-    "test:db": "vitest run --config vitest.db.config.mts"
+    "test:db": "vitest run --config vitest.db.config.mts",
+    "test:stripe": "vitest run --config vitest.stripe.config.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.3.0",

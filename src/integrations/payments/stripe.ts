@@ -202,8 +202,17 @@ export function createStripePayments(config: { secretKey: string; fetch?: typeof
           ).id,
         )!;
       const attachedTo = str(method.customer);
-      if (attachedTo && attachedTo !== customerRef) return { ok: false, reason: 'not_supported' };
-      if (!attachedTo) await stripe.request('POST', `/payment_methods/${encodeURIComponent(paymentMethodRef)}/attach`, new URLSearchParams({ customer: customerRef }), `attach:${paymentMethodRef}`);
+      if (attachedTo && attachedTo !== customerRef) return { ok: false, reason: 'not_supported', customerRef };
+      if (!attachedTo) {
+        try {
+          await stripe.request('POST', `/payment_methods/${encodeURIComponent(paymentMethodRef)}/attach`, new URLSearchParams({ customer: customerRef }), `attach:${paymentMethodRef}`);
+        } catch (error) {
+          // Stripe attaches no card its bank declines (a decline, no funds): the codes of a declined charge, not an error
+          // (Stripe test-mode check: it threw out of booking, tipping, changes and adding a card).
+          if (error instanceof StripeError && error.status === 402 && error.body.type === 'card_error') return { ok: false, reason: 'declined', failureCode: failureCodeOf(error.body), customerRef };
+          throw error;
+        }
+      }
       const collected: CollectedCard = {
         providerRef: paymentMethodRef,
         brand: brand as CardBrand,

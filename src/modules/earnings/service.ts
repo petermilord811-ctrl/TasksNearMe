@@ -430,8 +430,10 @@ export async function addCard(db: Db, userId: string, input: AddCardInput, now: 
     if (!payments_.prepareCard) return { ok: false, code: 'not_allowed' };
     const customer = await customerFor(db, userId, payments_.name);
     const prepared = await payments_.prepareCard({ paymentMethodRef: parsed.data.paymentMethodId, customer });
-    if (!prepared.ok) return { ok: false, code: 'validation_failed', fieldErrors: { paymentMethodId: ['invalid'] } };
-    if (!customer.ref) await db.insert(paymentCustomers).values({ userId, provider: payments_.name, customerRef: prepared.customerRef }).onConflictDoNothing();
+    // Kept even when the card is refused: deleting the account deletes the customer at Stripe.
+    if (!customer.ref && prepared.customerRef) await db.insert(paymentCustomers).values({ userId, provider: payments_.name, customerRef: prepared.customerRef }).onConflictDoNothing();
+    // The bank refused it as it went on the customer, as the development cards that decline are refused below.
+    if (!prepared.ok) return prepared.reason === 'declined' ? { ok: false, code: 'payment_declined' } : { ok: false, code: 'validation_failed', fieldErrors: { paymentMethodId: ['invalid'] } };
     card = prepared.card;
   } else {
     if (!payments_.collectDevCard || !parsed.data.card) return { ok: false, code: 'not_allowed' };

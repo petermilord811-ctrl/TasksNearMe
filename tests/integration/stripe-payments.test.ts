@@ -26,6 +26,8 @@ const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 const SECRET = 'whsec_test_payments';
 // Their own client, so other files' bookings (and their rate limits) never meet this one's.
 const POSTER = 'usr_tmp_stripe';
+/** A client with no Stripe customer yet, whose card the bank refuses as it goes on the customer. */
+const REFUSED = 'usr_tmp_stripe_refused';
 
 /** What the fake Stripe has seen, and the state of its objects. */
 const stripe = {
@@ -42,7 +44,10 @@ const fakeFetch = (async (url: string, init?: RequestInit) => {
   const path = pathname.replace('/v1', '');
   stripe.calls.push({ method, path, params });
   if (path === '/payment_methods/pm_test_visa' && method === 'GET') return json({ id: 'pm_test_visa', type: 'card', customer: stripe.attachedTo, card: { brand: 'visa', last4: '4242', exp_month: 12, exp_year: 2031 } });
-  if (path === '/customers') return json({ id: 'cus_test_stella' });
+  if (path === '/payment_methods/pm_test_refused' && method === 'GET') return json({ id: 'pm_test_refused', type: 'card', customer: null, card: { brand: 'visa', last4: '0002', exp_month: 12, exp_year: 2031 } });
+  // Stripe attaches no card its bank declines.
+  if (path === '/payment_methods/pm_test_refused/attach') return json({ error: { type: 'card_error', code: 'card_declined', decline_code: 'generic_decline', message: 'Your card was declined.' } }, 402);
+  if (path === '/customers') return json({ id: params.get('metadata[user_id]') === REFUSED ? 'cus_test_refused' : 'cus_test_stella' });
   if (path === '/payment_methods/pm_test_visa/attach') {
     stripe.attachedTo = params.get('customer');
     return json({ id: 'pm_test_visa', customer: stripe.attachedTo });
@@ -66,10 +71,10 @@ const signed = (event: unknown, at = new Date()) => {
 const succeeded = (id: string) => signed({ id: `evt_${id}`, type: 'payment_intent.succeeded', data: { object: { id, object: 'payment_intent' } } });
 const pay = (payment: ConfirmBookingInput['payment']): ConfirmBookingInput => ({ offerRevision: 1, payment, acceptTerms: true });
 
-async function copyDesk(taskId: string, offerId: string) {
+async function copyDesk(taskId: string, offerId: string, poster = POSTER) {
   const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
   const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
-  await db.insert(tasks).values({ ...desk!, id: taskId, slug: `${taskId}-slug`, posterUserId: POSTER, status: 'open', offerCount: 1, version: 1 });
+  await db.insert(tasks).values({ ...desk!, id: taskId, slug: `${taskId}-slug`, posterUserId: poster, status: 'open', offerCount: 1, version: 1 });
   await db.insert(offers).values({ ...offer!, id: offerId, taskId, status: 'pending', revision: 1, expiresAt: new Date(Date.now() + 86_400_000) });
 }
 
@@ -81,6 +86,8 @@ beforeAll(async () => {
   await db.insert(users).values({ ...maya!, id: POSTER, email: 'tmp-stripe@example.test', name: 'Stella S.', firstName: 'Stella', lastName: 'Stone', phone: '+15125550612' });
   await copyDesk('tsk_stripe_1', 'off_stripe_1');
   await copyDesk('tsk_stripe_2', 'off_stripe_2');
+  await db.insert(users).values({ ...maya!, id: REFUSED, email: 'tmp-stripe-refused@example.test', phone: null, phoneVerifiedAt: null });
+  await copyDesk('tsk_stripe_3', 'off_stripe_3', REFUSED);
 });
 
 afterAll(async () => {
@@ -89,7 +96,9 @@ afterAll(async () => {
   if (saved.publishable === undefined) delete process.env.STRIPE_PUBLISHABLE_KEY;
   else process.env.STRIPE_PUBLISHABLE_KEY = saved.publishable;
   await db.delete(paymentMethods).where(and(eq(paymentMethods.userId, POSTER), eq(paymentMethods.provider, 'stripe')));
-  await db.delete(paymentCustomers).where(eq(paymentCustomers.userId, POSTER));
+  await db.delete(paymentCustomers).where(inArray(paymentCustomers.userId, [POSTER, REFUSED]));
+  // Off the board for other files.
+  await db.update(tasks).set({ status: 'canceled' }).where(eq(tasks.id, 'tsk_stripe_3'));
   await pool.end();
 });
 
@@ -135,6 +144,16 @@ describe('Stripe payments', () => {
     expect(stripe.calls.filter((call) => call.path === '/customers')).toHaveLength(1);
     const ids = (await db.select({ id: bookings.id }).from(bookings).where(inArray(bookings.taskId, ['tsk_stripe_1', 'tsk_stripe_2']))).map((row) => row.id);
     expect(ids).toHaveLength(2);
+  });
+
+  it('answers a card the bank refuses as it goes on the customer as declined, holding nothing and keeping the customer', async () => {
+    const result = await confirmBooking(deps, REFUSED, 'tsk_stripe_3', 'off_stripe_3', pay({ kind: 'stripe_card', paymentMethodId: 'pm_test_refused', save: true }), new Date());
+    expect(result).toEqual({ ok: false, code: 'payment_declined' });
+    expect(await db.select().from(bookings).where(eq(bookings.taskId, 'tsk_stripe_3'))).toEqual([]);
+    expect(await db.select().from(payments).where(eq(payments.payerUserId, REFUSED))).toEqual([]);
+    // The customer Stripe made is ours: deleting the account deletes it.
+    expect(await db.select({ ref: paymentCustomers.customerRef }).from(paymentCustomers).where(eq(paymentCustomers.userId, REFUSED))).toEqual([{ ref: 'cus_test_refused' }]);
+    expect(await db.select().from(paymentMethods).where(eq(paymentMethods.userId, REFUSED))).toEqual([]);
   });
 });
 

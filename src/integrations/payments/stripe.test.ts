@@ -118,7 +118,23 @@ describe('Stripe payments', () => {
     const jcb = fakeStripe(() => json({ id: 'pm_j', type: 'card', customer: null, card: { brand: 'jcb', last4: '0000', exp_month: 1, exp_year: 2030 } }));
     expect(await jcb.payments.prepareCard!({ paymentMethodRef: 'pm_j', customer: { ref: 'cus_1', userId: 'u', email: 'e', name: 'n' } })).toEqual({ ok: false, reason: 'not_supported' });
     const theirs = fakeStripe(() => json({ id: 'pm_t', type: 'card', customer: 'cus_other', card: { brand: 'visa', last4: '4242', exp_month: 1, exp_year: 2030 } }));
-    expect(await theirs.payments.prepareCard!({ paymentMethodRef: 'pm_t', customer: { ref: 'cus_mine', userId: 'u', email: 'e', name: 'n' } })).toEqual({ ok: false, reason: 'not_supported' });
+    expect(await theirs.payments.prepareCard!({ paymentMethodRef: 'pm_t', customer: { ref: 'cus_mine', userId: 'u', email: 'e', name: 'n' } })).toEqual({ ok: false, reason: 'not_supported', customerRef: 'cus_mine' });
+  });
+
+  it('reads a card the bank refuses as it goes on the customer as a decline, and names the customer made for it', async () => {
+    // Stripe attaches no card its bank declines (4000 0000 0000 0002, 4000 0000 0000 9995 in test mode).
+    const refusing = (decline: string) =>
+      fakeStripe((method, path) => {
+        if (method === 'GET') return json({ id: 'pm_no', type: 'card', customer: null, card: { brand: 'visa', last4: '0002', exp_month: 1, exp_year: 2031 } });
+        if (path === '/customers') return json({ id: 'cus_new' });
+        return json({ error: { type: 'card_error', code: 'card_declined', decline_code: decline, message: 'Your card was declined.' } }, 402);
+      });
+    const customer = { userId: 'usr_maya', email: 'maya@example.test', name: 'Maya Rivera' };
+    expect(await refusing('generic_decline').payments.prepareCard!({ paymentMethodRef: 'pm_no', customer })).toEqual({ ok: false, reason: 'declined', failureCode: 'payment_declined', customerRef: 'cus_new' });
+    expect(await refusing('insufficient_funds').payments.prepareCard!({ paymentMethodRef: 'pm_no', customer: { ...customer, ref: 'cus_maya' } })).toEqual({ ok: false, reason: 'declined', failureCode: 'insufficient_funds', customerRef: 'cus_maya' });
+    // Anything else isn't the card's fault.
+    const down = fakeStripe((method, path) => (method === 'GET' ? json({ id: 'pm_no', type: 'card', customer: null, card: { brand: 'visa', last4: '4242', exp_month: 1, exp_year: 2031 } }) : path === '/customers' ? json({ id: 'cus_new' }) : json({ error: { type: 'api_error' } }, 500)));
+    await expect(down.payments.prepareCard!({ paymentMethodRef: 'pm_no', customer })).rejects.toThrow();
   });
 });
 
