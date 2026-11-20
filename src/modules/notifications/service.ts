@@ -235,7 +235,9 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
           return [forPoster('approval_reminder', hours ? { params: { hours } } : {})];
         }
         case 'booking.canceled':
-          return [forPoster('booking_canceled'), forHelper('booking_canceled')];
+          // Not the person who canceled: they did it on screen, and an urgent text or push about it was noise (sweep
+          // MN10). A cancel by the system (unpaid, a missed deadline) names nobody and tells both.
+          return [forPoster('booking_canceled'), forHelper('booking_canceled')].filter((item) => item.userId !== text(p.actorUserId));
         case 'booking.tipped': {
           const cents = typeof p.amountCents === 'number' ? p.amountCents : undefined;
           return [forHelper('tip_received', cents ? { params: { amountCents: cents } } : {})];
@@ -260,7 +262,10 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const bookingId = text(p.bookingId);
       const ctx = await bookingContext(db, bookingId);
       if (!ctx || !bookingId) return [];
-      return [ctx.posterUserId, ctx.helperUserId].map((userId) => ({ userId, type: 'change_applied' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title: ctx.title }));
+      // Not the person who accepted it (sweep MN10); a change applied with no one named tells both.
+      return [ctx.posterUserId, ctx.helperUserId]
+        .filter((userId) => userId !== text(p.actorUserId))
+        .map((userId) => ({ userId, type: 'change_applied' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title: ctx.title }));
     }
     case 'rebook.proposed':
     case 'rebook.accepted':

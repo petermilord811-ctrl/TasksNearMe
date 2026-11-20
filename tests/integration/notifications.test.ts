@@ -108,6 +108,19 @@ describe('change and invite notifications', () => {
     expect(rows.filter((row) => row.type === 'change_applied').map((row) => row.userId).sort()).toEqual(['usr_chris', 'usr_lee']);
   });
 
+  it('tells only the other person when someone cancels or accepts a change themselves; a system cancel tells both (sweep MN10)', async () => {
+    await db.insert(outboxEvents).values([
+      { id: 'evt_mn10_canceled_by_chris', type: 'booking.canceled', aggregateType: 'booking', aggregateId: bookingId, payload: { bookingId, actorUserId: 'usr_chris' } },
+      { id: 'evt_mn10_canceled_by_system', type: 'booking.canceled', aggregateType: 'booking', aggregateId: bookingId, payload: { bookingId, actorUserId: null } },
+      { id: 'evt_mn10_change_by_lee', type: 'change.applied', aggregateType: 'booking', aggregateId: bookingId, payload: { bookingId, changeId: 'chg_mn10', actorUserId: 'usr_lee' } },
+    ]);
+    await dispatchAll();
+    const told = async (eventId: string) => (await db.select({ userId: notifications.userId }).from(notifications).where(eq(notifications.sourceEventId, eventId))).map((row) => row.userId).sort();
+    expect(await told('evt_mn10_canceled_by_chris')).toEqual(['usr_lee']);
+    expect(await told('evt_mn10_canceled_by_system')).toEqual(['usr_chris', 'usr_lee']);
+    expect(await told('evt_mn10_change_by_lee')).toEqual(['usr_chris']);
+  });
+
   it('tells the helper about an invite, and the client about a counter and an acceptance', async () => {
     const [terms] = await db.select({ breakdown: bookingTerms.breakdown }).from(bookingTerms).where(eq(bookingTerms.bookingId, bookingId)).limit(1);
     await db.insert(invites).values({
