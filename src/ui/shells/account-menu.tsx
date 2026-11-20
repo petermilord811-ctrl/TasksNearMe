@@ -16,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useLanguageSwitch } from './language-switch';
 import { getAppNav, type NavItem } from './nav';
 import { NAV_ICONS } from './nav-icons';
+import { forgetPersonalDrafts } from '@/ui/lib/personal-drafts';
 import { switchTheme, useEffectiveTheme } from './theme-toggle';
 
 /** The avatar: a soft ring that warms to the brand color while pointed at or open. */
@@ -54,6 +55,7 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange 
     let result: ActionResult;
     try {
       result = await onSignOut();
+      if (result.ok) forgetPersonalDrafts();
     } catch {
       result = { ok: false, code: 'unknown' };
     }

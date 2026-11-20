@@ -11,6 +11,7 @@ import { cn } from '@/ui/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/ui/primitives/alert-dialog';
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
+import { forgetPersonalDrafts } from '@/ui/lib/personal-drafts';
 import { useAccountAction } from './use-account-action';
 
 /**
@@ -92,7 +93,7 @@ export function AccountSignOut({ onSignOut }: Pick<AccountHandlers, 'onSignOut'>
   const t = useTranslations('account');
   const action = useAccountAction();
   return <div className="space-y-3">
-    <Button type="button" variant="outline" disabled={action.pending || Boolean(action.result?.ok)} aria-busy={action.pending} className="w-full sm:w-auto" onClick={() => { void action.run(onSignOut, undefined); }}>{action.pending ? <Spinner aria-hidden="true" /> : <LogOut aria-hidden="true" />}{t(action.pending ? 'signingOut' : 'signOut')}</Button>
+    <Button type="button" variant="outline" disabled={action.pending || Boolean(action.result?.ok)} aria-busy={action.pending} className="w-full sm:w-auto" onClick={() => { void action.run(async (input: void) => { const result = await onSignOut(input); if (result.ok) forgetPersonalDrafts(); return result; }, undefined); }}>{action.pending ? <Spinner aria-hidden="true" /> : <LogOut aria-hidden="true" />}{t(action.pending ? 'signingOut' : 'signOut')}</Button>
     <FormFeedback result={action.result} successMessage={t('signedOut')} />
   </div>;
 }

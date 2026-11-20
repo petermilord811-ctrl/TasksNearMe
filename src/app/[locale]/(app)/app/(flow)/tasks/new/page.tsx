@@ -89,11 +89,16 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
   const fromTemplate = templateId && data.templates?.some((template) => template.id === templateId) ? findTaskTemplate(templateId) : undefined;
   // Like "Post again", a start from an example or a post keeps its own tab draft (an unrelated draft in progress
   // never replaces it, and it never overwrites one).
+  // So do words or a category carried in from the landing page or a search (sweep 2026-11-20, PT11): an older draft in
+  // progress in the tab replaced them. Their key is a hash of what came in, so a reload of the same link restores it.
+  const carried = !repeat && (initialCategory || title || describe) ? createHash('sha256').update([initialCategory ?? '', title, describe].join('\n')).digest('hex').slice(0, 12) : null;
   const storageKey = fromTemplate
     ? draftStorageKey.replace(/:v1$/, `:template:${fromTemplate.id}:v1`)
     : fromPost
       ? draftStorageKey.replace(/:v1$/, `:post:${fromPost.id}:v1`)
-      : draftStorageKey;
+      : carried
+        ? draftStorageKey.replace(/:v1$/, `:from:${carried}:v1`)
+        : draftStorageKey;
   // The post's own words, within the wizard's limits; the person checks them like anything else.
   const postTitle = fromPost ? fromPost.title.replace(/\s+/g, ' ').trim().slice(0, TASK_TITLE_MAX) : '';
   const postWords = fromPost ? fromPost.body.trim().slice(0, TASK_DESCRIPTION_MAX) : '';

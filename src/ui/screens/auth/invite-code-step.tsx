@@ -8,6 +8,7 @@ import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { InviteCodeForm } from '../beta/invite-code-form';
 import { StepHeading, type SignInStepProps } from './step-parts';
+import { forgetPersonalDrafts } from '@/ui/lib/personal-drafts';
 
 /**
  * The private beta's `invite_code` step: a new account's invite code before the name and age, or the
@@ -24,6 +25,7 @@ export function InviteCodeStep({ data, handlers, initialResult, onResult }: Sign
     try {
       const result = await handlers.onSignOut();
       if (!result.ok) setLeaveResult(result);
+      else forgetPersonalDrafts();
     } catch {
       setLeaveResult({ ok: false, code: 'unknown' });
     } finally {

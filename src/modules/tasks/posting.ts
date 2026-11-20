@@ -54,6 +54,8 @@ const REPEATABLE = new Set(['completed', 'canceled', 'expired']);
 
 /** The weekday of a market-local day ("2026-11-21"), 0 = Sunday. */
 const weekdayOf = (day: string) => new Date(`${day}T12:00:00.000Z`).getUTCDay();
+/** A market-local day `days` later on the calendar: whole days, whatever their length (a clock change's day is 23 or 25 h). */
+const addDayKey = (day: string, days: number) => new Date(Date.UTC(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10)) + days)).toISOString().slice(0, 10);
 
 /**
  * The same window (or a flexible day) on the next date the posting rules allow: the same weekday as before when
@@ -70,8 +72,10 @@ export function nextRepeatSchedule(
   const earliest = at.getTime() + rules.minLeadHours * 3_600_000;
   const latest = at.getTime() + rules.maxLeadDays * 86_400_000;
   let soonest: string | undefined;
+  const today = marketDayKey(at, timeZone);
   for (let offset = 0; offset <= rules.maxLeadDays + 1; offset += 1) {
-    const day = marketDayKey(new Date(at.getTime() + offset * 86_400_000), timeZone);
+    // Calendar days, not 24-hour steps: the night the clocks spring forward, 24 h from just before midnight skipped a day.
+    const day = addDayKey(today, offset);
     // As the draft schema checks it: the window's start, or (flexible) some of the day left after the lead time.
     const opens = new Date(marketLocalToUtc(day, window.startTime ?? '23:30', timeZone)).getTime();
     const begins = new Date(marketLocalToUtc(day, window.startTime ?? '00:00', timeZone)).getTime();

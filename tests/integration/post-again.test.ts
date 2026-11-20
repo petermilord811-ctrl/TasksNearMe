@@ -150,6 +150,13 @@ describe('Post again', () => {
     expect(await posting.repeat(POSTER, closed)).toBeNull();
   });
 
+  it('counts calendar days across the spring clock change, so a weekly Sunday stays this Sunday (sweep 2026-11-20)', () => {
+    // Saturday Mar 13, 2027, 11:30 pm in Austin; the clocks spring forward that night (Sunday has 23 hours).
+    const lateSaturday = new Date('2027-03-14T05:30:00.000Z');
+    const sunday = { windowStart: new Date('2027-03-07T16:00:00.000Z'), windowEnd: new Date('2027-03-07T18:00:00.000Z'), flexible: false };
+    expect(nextRepeatSchedule(sunday, { minLeadHours: 3, maxLeadDays: 14 }, lateSaturday, 'America/Chicago')).toEqual({ date: '2027-03-14', flexible: false, startTime: '10:00', endTime: '12:00' });
+  });
+
   it('keeps a flexible day flexible, and falls back to the soonest allowed date when the weekday is too far', () => {
     const rules = { minLeadHours: 2, maxLeadDays: 3 };
     // A flexible Saturday, repeated on a Tuesday morning with only 3 days allowed: the soonest day (today).

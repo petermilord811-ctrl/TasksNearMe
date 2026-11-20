@@ -1,6 +1,7 @@
 import { withClientMessages } from '@/i18n/client-messages';
 import { switchLanguageAction } from '@/modules/accounts/language-actions';
 import { getPublicShellViewer } from '@/platform/auth/viewer';
+import { ForgetPersonalDrafts } from '@/ui/lib/forget-personal-drafts';
 import { PublicShell } from '@/ui/shells/public-shell';
 
 /**
@@ -9,7 +10,7 @@ import { PublicShell } from '@/ui/shells/public-shell';
  * was longer than the sign-in form). Same addresses as before: a route group doesn't change URLs.
  */
 function AuthLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <PublicShell viewer={getPublicShellViewer()} variant="minimal" onSwitchLanguage={switchLanguageAction}>{children}</PublicShell>;
+  return <PublicShell viewer={getPublicShellViewer()} variant="minimal" onSwitchLanguage={switchLanguageAction}><ForgetPersonalDrafts />{children}</PublicShell>;
 }
 
 export default withClientMessages('[locale]/(auth)/layout.tsx', AuthLayout);
