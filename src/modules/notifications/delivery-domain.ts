@@ -72,6 +72,9 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   // Saved searches (completion plan 7.10) are new-task alerts the person asked for.
   saved_search_match: 'task_alerts',
   saved_search_digest: 'task_alerts',
+  // Asking for a review is part of the booking (blueprint 02 J8): in the app and by email (sweep RV4).
+  review_prompt: 'bookings',
+  review_reminder: 'bookings',
 };
 
 /**

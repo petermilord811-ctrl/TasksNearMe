@@ -50,6 +50,16 @@
     "published": "Review visible",
     "submitting": "Sending a review",
     "success": "Review sent confirmation",
-    "unavailable": { "not_completed": "Task not completed", "window_closed": "Review window ended" }
+    "unavailable": {
+      "not_completed": "Task not completed",
+      "window_closed": "Review window ended"
+    },
+    "theirsMissing": "Window ended, no review from them",
+    "windowClosedTheirs": "Window ended, theirs to read"
+  },
+  "theirs": {
+    "title": "{name}'s review of you",
+    "published": "Published {date}",
+    "missing": "{name} didn't leave a review."
   }
 }

@@ -4,7 +4,7 @@ import {
 } from '@/contracts';
 import {
   deskReviewByClientData, deskReviewByHelperData, deskReviewPublishedData,
-  deskReviewSubmittedData, fakeHandler, jordanShell, mayaShell, reviewUnavailableData,
+  deskReviewSubmittedData, deskReviewTheirsMissingData, fakeHandler, jordanShell, mayaShell, reviewUnavailableData, reviewWindowClosedTheirsData,
 } from '@/fixtures';
 import { ReviewContent } from '@/ui/screens/reviews/review-screen';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -31,6 +31,8 @@ export const reviewPreviews: PreviewEntry[] = [
   preview('by-helper', copy.previews.byHelper, deskReviewByHelperData),
   preview('submitted', copy.previews.submitted, deskReviewSubmittedData),
   preview('published', copy.previews.published, deskReviewPublishedData),
+  preview('theirs-missing', copy.previews.theirsMissing, deskReviewTheirsMissingData),
+  preview('window-closed-theirs', copy.previews.windowClosedTheirs, reviewWindowClosedTheirsData),
   ...REVIEW_UNAVAILABLE_REASONS.map((reason) => preview(`unavailable-${reason.replaceAll('_', '-')}`, copy.previews.unavailable[reason], reviewUnavailableData[reason])),
   ...ACTION_ERROR_CODES.map((code) => preview(`result-${code.replaceAll('_', '-')}`, feedback.error[code], deskReviewByClientData, {
     ok: false, code,

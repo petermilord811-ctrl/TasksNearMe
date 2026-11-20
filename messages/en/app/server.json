@@ -134,7 +134,8 @@
         "verify_identity": "Verify your ID",
         "rewards": "Open your rewards",
         "community_post": "Open the post",
-        "saved_search": "Open your search"
+        "saved_search": "Open your search",
+        "booking_review": "Go to the reviews"
       },
       "next": {
         "offer_received": "Compare the offers on your task and book the one that fits. You're only charged when you book.",
@@ -191,14 +192,20 @@
         "question_received": "Answer it on your task; every helper reads the answer.",
         "question_answered": "Read the answer, then make your offer.",
         "saved_search_match": "Open your search to see it with the others.",
-        "saved_search_digest": "Open your search to see them."
+        "saved_search_digest": "Open your search to see them.",
+        "review_prompt": "It takes a minute. Reviews stay hidden until you've both written one, or for 14 days.",
+        "review_reminder": "After that, reviews for this booking close. They stay hidden until you've both written one."
       },
       "lockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates.",
       "optionalFooter": "You're getting this because {topic} emails are on.",
       "manage": "Manage notifications",
       "unsubscribe": "Unsubscribe from these emails",
       "textLockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates. Manage notifications: {settingsUrl}",
-      "textOptionalFooter": "You're getting this because {topic} emails are on. Manage notifications: {settingsUrl} · Unsubscribe: {unsubscribeUrl}"
+      "textOptionalFooter": "You're getting this because {topic} emails are on. Manage notifications: {settingsUrl} · Unsubscribe: {unsubscribeUrl}",
+      "ctaFor": {
+        "review_prompt": "Leave a review",
+        "review_reminder": "Leave a review"
+      }
     },
     "sms": "TasksNearMe: {sentence} {url}",
     "types": {
@@ -260,7 +267,9 @@
       "question_received": "{actorName} asked a question about {title}.",
       "question_answered": "{actorName} answered your question about {title}.",
       "saved_search_match": "New task for your search {search}: {title}.",
-      "saved_search_digest": "{count, plural, one {# new task for your search {search}} other {# new tasks for your search {search}}}."
+      "saved_search_digest": "{count, plural, one {# new task for your search {search}} other {# new tasks for your search {search}}}.",
+      "review_prompt": "How did it go with {actorName}? Leave a review for {title}.",
+      "review_reminder": "{days, plural, one {One day left} other {# days left}} to review {actorName} for {title}."
     },
     "pushTitle": "TasksNearMe",
     "receipt": {

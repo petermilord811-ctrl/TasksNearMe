@@ -117,7 +117,10 @@
     "title": "Your review",
     "rating": "You rated this {rating, plural, one {# star} other {# stars}}",
     "visible": "Visible since {date}",
-    "hidden": "Hidden until they review too"
+    "hidden": "Hidden until they review too",
+    "theirsTitle": "{name}'s review",
+    "theirsRating": "{name} rated you {rating, plural, one {# star} other {# stars}}",
+    "read": "Read the reviews"
   },
   "work": "The work",
   "memberSince": "Member since {date}",

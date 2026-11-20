@@ -26,6 +26,7 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
   const { formatDate, formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('review');
   const mine = data.mine;
+  const theirs = data.theirs;
   return <div className="mx-auto max-w-reading space-y-6">
     <Link href={routes.app.booking(data.booking.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
       <ArrowLeft aria-hidden="true" className="size-4" />{t('backToBooking')}
@@ -56,5 +57,18 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
       <h2 className="flex items-start gap-2 font-heading text-xl/7 font-semibold"><CircleAlert aria-hidden="true" className="mt-1 size-5 shrink-0 text-warning" />{t('unavailable.title')}</h2>
       <p>{t(`unavailable.${data.unavailable}`)}</p>
     </section> : <ReviewForm key={`${data.booking.id}-${data.direction}`} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />}
+    {/* Theirs, once it's published (both are in, or the 14 days ended) and not hidden: blueprint 08, sweep RV2. */}
+    {theirs ? <section aria-label={t('theirs.title', { name: data.subject.displayName })} className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6">
+      <div className="flex items-center gap-3">
+        <InitialsAvatar initials={data.subject.initials} photo={data.subject.photo} size="sm" />
+        <div className="min-w-0 space-y-0.5">
+          <h2 className="break-words font-heading text-xl/7 font-semibold">{t('theirs.title', { name: data.subject.displayName })}</h2>
+          <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={theirs.publishedAt}>{t('theirs.published', { date: formatDate(theirs.publishedAt) })}</time></p>
+        </div>
+      </div>
+      <RatingStars rating={{ average: theirs.rating, count: 1 }} />
+      {theirs.tags.length > 0 && <ul className="flex flex-wrap gap-2">{theirs.tags.map((tag) => <li key={tag}><Badge variant="secondary" className="whitespace-normal px-3 py-1 text-sm">{t(`tags.${tag}`)}</Badge></li>)}</ul>}
+      {theirs.body && <p className="whitespace-pre-wrap break-words leading-6">{theirs.body}</p>}
+    </section> : data.theirsMissing && <p className="px-1 text-sm text-muted-foreground">{t('theirs.missing', { name: data.subject.displayName })}</p>}
   </div>;
 }

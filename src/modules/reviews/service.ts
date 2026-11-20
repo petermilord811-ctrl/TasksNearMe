@@ -1,4 +1,4 @@
-import { and, desc, eq, lte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, lte, or, sql } from 'drizzle-orm';
 import type { ActionResult, HelperSummary, ReviewDirection, ReviewInput, ReviewPageData, SavedHelpersPageData } from '@/contracts';
 import { createReviewInputSchema } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
@@ -8,6 +8,8 @@ import { getHelperSummaries, initialsOf } from '@/modules/profiles/queries';
 import { profilePhotoOf } from '@/modules/files/photos';
 import { openReviewFeedbackCase } from '@/modules/support/service';
 import { tasks } from '@/modules/tasks/schema';
+import { isBlockedBetween } from '@/modules/trust/blocks';
+import { maskContactDetails } from '@/modules/trust/contact-masking';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
@@ -42,9 +44,11 @@ async function publish(db: Db, bookingId: string, now: Date): Promise<string | n
     .update(reviews)
     .set({ status: 'published', publishedAt: now })
     .where(and(eq(reviews.bookingId, bookingId), eq(reviews.status, 'submitted')))
-    .returning({ subject: reviews.subjectUserId, direction: reviews.direction });
+    .returning({ author: reviews.authorUserId, subject: reviews.subjectUserId, direction: reviews.direction });
   if (published.length === 0) return null;
-  await db.insert(outboxEvents).values({ id: newId('evt'), type: 'reviews.published', aggregateType: 'booking', aggregateId: bookingId, payload: { bookingId } });
+  // Who wrote each review published now and who it's about: only its subject hears it's out (sweep RV1).
+  const named = published.map((row) => ({ authorUserId: row.author, subjectUserId: row.subject }));
+  await db.insert(outboxEvents).values({ id: newId('evt'), type: 'reviews.published', aggregateType: 'booking', aggregateId: bookingId, payload: { bookingId, reviews: named } });
   const helper = published.find((row) => row.direction === 'client_to_helper')?.subject ?? null;
   if (helper) await recomputeRating(db, helper);
   return helper;
@@ -58,6 +62,70 @@ export async function publishDueReviews(db: Db, now: Date): Promise<void> {
     .innerJoin(bookings, eq(bookings.id, reviews.bookingId))
     .where(and(eq(reviews.status, 'submitted'), lte(bookings.completedAt, new Date(now.getTime() - WINDOW_MS))));
   for (const { bookingId } of due) if (bookingId) await publish(db, bookingId, now);
+}
+
+/** The reminder goes out this many days before the review window closes (sweep RV4). */
+export const REVIEW_REMINDER_DAYS = 3;
+/** A booking completed longer ago than this when prompts began isn't asked about: no backlog of old prompts. */
+const PROMPT_LOOKBACK_MS = 2 * 86_400_000;
+/** Someone who reviewed the same person this recently isn't asked again (weekly visits aren't a weekly prompt). */
+const RECENT_REVIEW_MS = 30 * 86_400_000;
+const DAY_MS = 86_400_000;
+
+/** Who on a completed booking still has a review to write: none across a block, nor anyone who reviewed the other person lately. */
+async function stillToReview(db: Db, booking: { id: string; posterUserId: string; helperUserId: string }, now: Date): Promise<string[]> {
+  if (await isBlockedBetween(db, booking.posterUserId, booking.helperUserId)) return [];
+  const out: string[] = [];
+  for (const [author, subject] of [[booking.posterUserId, booking.helperUserId], [booking.helperUserId, booking.posterUserId]] as const) {
+    const [written] = await db
+      .select({ id: reviews.id })
+      .from(reviews)
+      .where(and(eq(reviews.authorUserId, author), eq(reviews.subjectUserId, subject), or(eq(reviews.bookingId, booking.id), gt(reviews.createdAt, new Date(now.getTime() - RECENT_REVIEW_MS)))))
+      .limit(1);
+    if (!written) out.push(author);
+  }
+  return out;
+}
+
+/**
+ * Prompts to review (a job; sweep RV4, blueprint 02 J8: "Both are prompted after completion"). A booking just completed
+ * (approved, or approved on its own) asks both people; `REVIEW_REMINDER_DAYS` before its 14 days end, whoever hasn't
+ * reviewed yet is reminded once. Each goes out once per booking (a fixed event id), through the outbox to the bell and
+ * email, in the person's language. Returns the events made.
+ */
+export async function sendReviewPrompts(db: Db, now: Date): Promise<number> {
+  const steps = [
+    { type: 'reviews.prompt', prefix: 'evt_review_prompt_', from: new Date(now.getTime() - PROMPT_LOOKBACK_MS), to: now },
+    { type: 'reviews.reminder', prefix: 'evt_review_reminder_', from: new Date(now.getTime() - WINDOW_MS), to: new Date(now.getTime() - WINDOW_MS + REVIEW_REMINDER_DAYS * DAY_MS) },
+  ] as const;
+  let made = 0;
+  for (const step of steps) {
+    const due = await db
+      .select({ id: bookings.id, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, completedAt: bookings.completedAt })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.status, 'completed'),
+          gt(bookings.completedAt, step.from),
+          lte(bookings.completedAt, step.to),
+          sql`not exists (select 1 from ${outboxEvents} where ${outboxEvents.id} = ${step.prefix} || ${bookings.id})`,
+        ),
+      )
+      .orderBy(asc(bookings.completedAt))
+      .limit(200);
+    for (const booking of due) {
+      const userIds = await stillToReview(db, booking, now);
+      // Whole days left in the window (at least 1), for "3 days left to review".
+      const days = Math.max(1, Math.ceil((booking.completedAt!.getTime() + WINDOW_MS - now.getTime()) / DAY_MS));
+      const inserted = await db
+        .insert(outboxEvents)
+        .values({ id: `${step.prefix}${booking.id}`, type: step.type, aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, userIds, ...(step.type === 'reviews.reminder' ? { days } : {}) } })
+        .onConflictDoNothing()
+        .returning({ id: outboxEvents.id });
+      made += inserted.length;
+    }
+  }
+  return made;
 }
 
 async function bookingFor(db: Db, userId: string, bookingId: string) {
@@ -80,14 +148,17 @@ export async function getReviewPage(db: Db, userId: string, bookingId: string, n
   const found = await bookingFor(db, userId, String(bookingId));
   if (!found) return null;
   const subjectId = found.direction === 'client_to_helper' ? found.booking.helperUserId : found.booking.posterUserId;
-  const [[subject], [mine]] = await Promise.all([
+  const [[subject], [mine], [theirs]] = await Promise.all([
     db.select().from(users).where(eq(users.id, subjectId)).limit(1),
     db.select().from(reviews).where(and(eq(reviews.bookingId, found.booking.id), eq(reviews.authorUserId, userId))).limit(1),
+    db.select().from(reviews).where(and(eq(reviews.bookingId, found.booking.id), eq(reviews.authorUserId, subjectId))).limit(1),
   ]);
   if (!subject) return null;
   const completedAt = found.booking.completedAt;
   const publishesBy = new Date((completedAt ?? now).getTime() + WINDOW_MS);
   const unavailable = found.booking.status !== 'completed' ? 'not_completed' : !mine && now >= publishesBy ? 'window_closed' : undefined;
+  // Theirs, readable once published (both are in, or the window ended: blueprint 02 J8) and not hidden (sweep RV2).
+  const readable = theirs?.status === 'published' && theirs.publishedAt ? theirs : null;
   return {
     booking: { id: found.booking.id, title: found.title, categorySlug: found.categorySlug as ReviewPageData['booking']['categorySlug'], start: found.booking.startAt.toISOString() },
     direction: found.direction,
@@ -112,6 +183,17 @@ export async function getReviewPage(db: Db, userId: string, bookingId: string, n
       : {}),
     publishesBy: publishesBy.toISOString(),
     ...(unavailable ? { unavailable } : {}),
+    ...(readable
+      ? {
+          theirs: {
+            rating: readable.rating,
+            tags: readable.tags,
+            ...(readable.body ? { body: maskContactDetails(readable.body).text } : {}),
+            publishedAt: readable.publishedAt!.toISOString(),
+          },
+        }
+      : {}),
+    ...(found.booking.status === 'completed' && completedAt && now >= publishesBy && !theirs ? { theirsMissing: true as const } : {}),
   };
 }
 
@@ -155,6 +237,16 @@ export async function submitReview(db: Db, userId: string, bookingId: string, in
   const both = await db.select({ id: reviews.id }).from(reviews).where(eq(reviews.bookingId, found.booking.id));
   const rated = both.length >= 2 ? await publish(db, found.booking.id, now) : null;
   return { result: { ok: true, code: 'submitted', redirectTo: `/app/bookings/${encodeURIComponent(found.booking.id)}` }, ratedHelperId: rated };
+}
+
+/** The other person's review of the viewer on a booking, once it can be read (published, not hidden): the booking page (sweep RV2). */
+export async function theirReviewOf(db: Db, userId: string, bookingId: string) {
+  const [theirs] = await db
+    .select({ rating: reviews.rating, publishedAt: reviews.publishedAt })
+    .from(reviews)
+    .where(and(eq(reviews.bookingId, bookingId), eq(reviews.subjectUserId, userId), eq(reviews.status, 'published')))
+    .limit(1);
+  return theirs?.publishedAt ? { rating: theirs.rating, publishedAt: theirs.publishedAt.toISOString() } : null;
 }
 
 /** The viewer's review on a booking, for the booking page. */

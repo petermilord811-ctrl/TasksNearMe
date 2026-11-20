@@ -134,7 +134,8 @@
         "verify_identity": "Verificar tu identidad",
         "rewards": "Abrir tus recompensas",
         "community_post": "Abrir la publicación",
-        "saved_search": "Abrir tu búsqueda"
+        "saved_search": "Abrir tu búsqueda",
+        "booking_review": "Ir a las reseñas"
       },
       "next": {
         "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Solo se te cobra cuando reservas.",
@@ -191,14 +192,20 @@
         "question_received": "Respóndela en tu tarea; todos los ayudantes leen la respuesta.",
         "question_answered": "Lee la respuesta y luego haz tu oferta.",
         "saved_search_match": "Abre tu búsqueda para verla junto a las demás.",
-        "saved_search_digest": "Abre tu búsqueda para verlas."
+        "saved_search_digest": "Abre tu búsqueda para verlas.",
+        "review_prompt": "Toma un minuto. Las reseñas se mantienen ocultas hasta que ambos escriban la suya, o durante 14 días.",
+        "review_reminder": "Después, las reseñas de esta reserva se cierran. Se mantienen ocultas hasta que ambos escriban la suya."
       },
       "lockedFooter": "Los correos de reservas y pagos siempre están activados: son tus recibos y avisos de seguridad.",
       "optionalFooter": "Recibes esto porque los correos de {topic} están activados.",
       "manage": "Administrar notificaciones",
       "unsubscribe": "Cancelar la suscripción a estos correos",
       "textLockedFooter": "Los correos de reservas y pagos siempre están activados: son tus recibos y avisos de seguridad. Administrar notificaciones: {settingsUrl}",
-      "textOptionalFooter": "Recibes esto porque los correos de {topic} están activados. Administrar notificaciones: {settingsUrl} · Cancelar suscripción: {unsubscribeUrl}"
+      "textOptionalFooter": "Recibes esto porque los correos de {topic} están activados. Administrar notificaciones: {settingsUrl} · Cancelar suscripción: {unsubscribeUrl}",
+      "ctaFor": {
+        "review_prompt": "Dejar una reseña",
+        "review_reminder": "Dejar una reseña"
+      }
     },
     "sms": "TasksNearMe: {sentence} {url}",
     "types": {
@@ -260,7 +267,9 @@
       "question_received": "{actorName} hizo una pregunta sobre {title}.",
       "question_answered": "{actorName} respondió tu pregunta sobre {title}.",
       "saved_search_match": "Nueva tarea para tu búsqueda {search}: {title}.",
-      "saved_search_digest": "{count, plural, one {# tarea nueva para tu búsqueda {search}} other {# tareas nuevas para tu búsqueda {search}}}."
+      "saved_search_digest": "{count, plural, one {# tarea nueva para tu búsqueda {search}} other {# tareas nuevas para tu búsqueda {search}}}.",
+      "review_prompt": "¿Qué tal te fue con {actorName}? Deja una reseña sobre {title}.",
+      "review_reminder": "{days, plural, one {Queda un día} other {Quedan # días}} para dejar tu reseña de {actorName} sobre {title}."
     },
     "pushTitle": "TasksNearMe",
     "receipt": {

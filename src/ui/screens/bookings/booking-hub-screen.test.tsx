@@ -264,6 +264,16 @@ describe('BookingHubScreen privacy and supplied data', () => {
     expect(review).not.toHaveTextContent('Visible since');
   });
 
+  it("shows the other person's published rating with a link to read both reviews (sweep RV2)", () => {
+    mount({ ...deskBookingPosterCompleted, myReview: deskReviewPublishedData.mine, theirReview: { rating: 2, publishedAt: deskReviewPublishedData.mine!.publishedAt! } });
+    const theirs = screen.getByRole('region', { name: "Jordan T.'s review" });
+    expect(theirs).toHaveTextContent('Jordan T. rated you 2 stars');
+    expect(within(theirs).getByRole('link', { name: messages.bookingHub.review.read })).toHaveAttribute('href', routes.app.bookingReview(deskBookingPosterCompleted.id));
+    cleanup();
+    mount({ ...deskBookingPosterCompleted, myReview: deskReviewSubmittedData.mine });
+    expect(screen.queryByRole('region', { name: "Jordan T.'s review" })).not.toBeInTheDocument();
+  });
+
   it('shows the supplied publication date and preserves low ratings', () => {
     mount({ ...deskBookingHelperCompleted, myReview: { ...deskReviewPublishedData.mine!, rating: 1 } });
     const review = screen.getByRole('region', { name: messages.bookingHub.review.title });

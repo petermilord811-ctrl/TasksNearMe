@@ -111,6 +111,7 @@ export const bookingsPreviews: PreviewEntry[] = [
     ...deskBookingPosterCompleted,
     helperSaved: true,
     myReview: deskReviewPublishedData.mine,
+    theirReview: { rating: deskReviewPublishedData.theirs!.rating, publishedAt: deskReviewPublishedData.theirs!.publishedAt },
     actions: deskBookingPosterCompleted.actions.filter(({ id }) => id !== 'review' && id !== 'save_helper'),
   }, { now: deskReviewPublishedData.mine!.publishedAt! }),
   hubPreview('helper-completed', copy.previews.helperCompleted, deskBookingHelperCompleted, { now: afterApproval }),

@@ -58,6 +58,14 @@ export interface ReviewPageData {
   /** Both reviews become visible at the latest then (14 days after completion). */
   publishesBy: ISODateTime;
   unavailable?: ReviewUnavailableReason;
+  /**
+   * The other person's review of the viewer (`subject` wrote it; blueprint 08: read both once published, sweep RV2): there
+   * once it's published (both are in, or the 14 days ended), unless staff hid it. Its tags are the other direction's;
+   * contact details are masked, as on the public profile.
+   */
+  theirs?: { rating: number; tags: string[]; body?: string; publishedAt: ISODateTime };
+  /** The 14 days ended and the other person never reviewed. */
+  theirsMissing?: true;
 }
 
 /**

@@ -174,6 +174,13 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
         : t('review.hidden')}</p>
     </section>}
 
+    {data.theirReview && <section aria-label={t('review.theirsTitle', { name: (data.viewerRole === 'poster' ? data.helper : data.poster).displayName })} className={cn(surface, surfacePad, 'space-y-3')}>
+      <h2 className={sectionTitle}>{t('review.theirsTitle', { name: (data.viewerRole === 'poster' ? data.helper : data.poster).displayName })}</h2>
+      <p className="font-medium tabular-nums">{t('review.theirsRating', { name: (data.viewerRole === 'poster' ? data.helper : data.poster).displayName, rating: data.theirReview.rating })}</p>
+      <RatingStars rating={{ average: data.theirReview.rating, count: 1 }} />
+      <Link href={routes.app.bookingReview(data.id)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('review.read')}</Link>
+    </section>}
+
     {data.completion && <section aria-label={t('work')} className="space-y-4">
       <h2 className={sectionTitle}>{t('work')}</h2>
       <CompletionSummary completion={data.completion} variant={data.viewerRole} showCost={false} />

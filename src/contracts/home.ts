@@ -44,7 +44,9 @@ export type AttentionTarget =
   /** A community post (`routes.app.communityPost(postId)`, completion plan 7.7). */
   | { kind: 'community_post'; postId: string }
   /** A saved search's board view (`routes.app.savedSearch(searchId)`, completion plan 7.10). */
-  | { kind: 'saved_search'; searchId: string };
+  | { kind: 'saved_search'; searchId: string }
+  /** A completed booking's reviews (`routes.app.bookingReview(bookingId)`): leave yours, read theirs once published (sweep RV2, RV4). */
+  | { kind: 'booking_review'; bookingId: string };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */

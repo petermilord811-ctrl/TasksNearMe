@@ -44,7 +44,9 @@ export function renderNotificationEmail(input: NotificationEmailInput): Notifica
   // Not every type has a next step (the sentence says it all).
   const nextKey = `next.${type}` as 'next.offer_received';
   const next = t.has(nextKey) ? t(nextKey) : undefined;
-  const cta = t(`cta.${target.kind}`);
+  // A type can name its own button (`ctaFor`: "Leave a review"); otherwise the page it leads to does.
+  const ctaKey = `ctaFor.${type}` as 'cta.booking';
+  const cta = t.has(ctaKey) ? t(ctaKey) : t(`cta.${target.kind}`);
   const topicName = t(`topics.${topic}`);
   const locked = isLockedPreference(topic, 'email');
   // The footer's links open in the recipient's language too, signed out on any device (sweep MN12).

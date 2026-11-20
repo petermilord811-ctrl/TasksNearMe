@@ -53,6 +53,13 @@
     "unavailable": {
       "not_completed": "Tarea no completada",
       "window_closed": "Plazo para reseñar terminado"
-    }
+    },
+    "theirsMissing": "Plazo terminado, sin reseña de la otra persona",
+    "windowClosedTheirs": "Plazo terminado, su reseña para leer"
+  },
+  "theirs": {
+    "title": "La reseña de {name} sobre ti",
+    "published": "Publicada el {date}",
+    "missing": "{name} no dejó una reseña."
   }
 }

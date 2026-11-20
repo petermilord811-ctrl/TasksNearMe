@@ -117,7 +117,10 @@
     "title": "Tu reseña",
     "rating": "Le diste {rating, plural, one {# estrella} other {# estrellas}}",
     "visible": "Visible desde el {date}",
-    "hidden": "Oculta hasta que la otra persona también deje su reseña"
+    "hidden": "Oculta hasta que la otra persona también deje su reseña",
+    "theirsTitle": "La reseña de {name}",
+    "theirsRating": "{name} te dio {rating, plural, one {# estrella} other {# estrellas}}",
+    "read": "Leer las reseñas"
   },
   "work": "El trabajo",
   "memberSince": "Miembro desde el {date}",

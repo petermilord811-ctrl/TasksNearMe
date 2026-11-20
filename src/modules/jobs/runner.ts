@@ -17,7 +17,7 @@ import { sendCityOpenEmails } from '@/modules/marketing/city-open';
 import { createPaymentProvider } from '@/integrations/payments';
 import { expireDueInvites } from '@/modules/invites/service';
 import { expireDueOffers } from '@/modules/offers/helper';
-import { publishDueReviews } from '@/modules/reviews/service';
+import { publishDueReviews, sendReviewPrompts } from '@/modules/reviews/service';
 import { createFileStorage } from '@/integrations/storage';
 import { verificationProvidersFor } from '@/modules/verification/providers';
 import { runVerificationTimers } from '@/modules/verification/timers';
@@ -73,6 +73,8 @@ export const JOBS: Job[] = [
   { name: 'bookings.approval_reminders', run: (db, now) => remindApprovalsDue(db, now) },
   { name: 'bookings.start_reminders', run: (db, now) => remindUpcomingBookings(db, now) },
   { name: 'reviews.publish', run: (db, now) => publishDueReviews(db, now) },
+  // Asks both people to review a completed booking, and reminds whoever hasn't before the window closes (sweep RV4).
+  { name: 'reviews.prompts', run: (db, now) => sendReviewPrompts(db, now) },
   { name: 'verification.timers', run: (db, now) => runVerificationTimers(db, { storage: createFileStorage(), providers: verificationProvidersFor(process.env) }, now) },
   // Welcome gift cards for helpers whose three checks passed, and the month's waiting line (before notifications).
   { name: 'rewards.welcome', run: (db, now) => runWelcomeRewards(db, now) },

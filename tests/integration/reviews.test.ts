@@ -8,13 +8,16 @@ import { offers } from '@/modules/offers/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { getHelperProfile } from '@/modules/profiles/queries';
 import { reviews } from '@/modules/reviews/schema';
-import { getReviewPage, getSavedHelpers, setHelperSaved, submitReview } from '@/modules/reviews/service';
+import { planNotifications } from '@/modules/notifications/service';
+import { getReviewPage, getSavedHelpers, publishDueReviews, setHelperSaved, submitReview } from '@/modules/reviews/service';
 import { supportCaseEvents, supportCaseReads, supportCases } from '@/modules/support/schema';
 import { getSupportCasePage, getSupportPage } from '@/modules/support/service';
 import { getAdminCase } from '@/modules/support/staff';
 import { tasks } from '@/modules/tasks/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
+import { outboxEvents } from '@/platform/outbox/schema';
+import { throwawayClient } from '../support/people';
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 afterAll(() => pool.end());
@@ -74,6 +77,72 @@ describe('review text on the public profile (sweep RV5)', () => {
       expect((await db.select({ body: reviews.body }).from(reviews).where(eq(reviews.id, mine!.id)))[0]?.body).toBe(written);
     } finally {
       await db.update(reviews).set({ body: mine!.body }).where(eq(reviews.id, mine!.id));
+    }
+  });
+});
+
+describe('both reviews readable once published, and who hears it (sweep RV1, RV2)', () => {
+  let soloId = '';
+  let soloClient = '';
+  const hub = () => ({ db, cipher: fieldCipherFromEnv() });
+  beforeAll(async () => {
+    // A client made for this test books Sam on another copy of the desk; only the client will review.
+    soloClient = await throwawayClient(db, 'usr_rev_solo');
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_sam'));
+    await db.insert(tasks).values({ ...desk!, id: 'tsk_rev_solo', slug: 'rev-desk-solo', posterUserId: soloClient, status: 'open', offerCount: 1, version: 1 });
+    await db.insert(offers).values({ ...offer!, id: 'off_rev_solo', taskId: 'tsk_rev_solo', status: 'pending', revision: 1, expiresAt: new Date(Date.now() + DAY) });
+    const booked = await confirmBooking({ db, payments: createDevPaymentProvider() }, soloClient, 'tsk_rev_solo', 'off_rev_solo', { offerRevision: 1, payment: { kind: 'dev_card', card: 'success', save: false }, acceptTerms: true }, new Date());
+    if (!booked.ok || !booked.redirectTo) throw new Error(`Booking failed: ${JSON.stringify(booked)}`);
+    soloId = booked.redirectTo.split('/').pop()!;
+    await db.update(bookings).set({ status: 'completed', completedVia: 'poster', completedAt: new Date() }).where(eq(bookings.id, soloId));
+  });
+
+  it("shows each person the other's review once both are in, and tells each that the other's is out", async () => {
+    // The first booking: Ruth and Sam both reviewed (the first test above).
+    expect((await getReviewPage(db, 'usr_ruth', bookingId, new Date()))?.theirs).toMatchObject({ rating: 5, tags: ['clear_instructions'] });
+    expect((await getReviewPage(db, 'usr_sam', bookingId, new Date()))?.theirs).toMatchObject({ rating: 4, tags: ['careful'], body: 'Good work.' });
+    expect((await getBookingView(hub(), 'usr_sam', bookingId, new Date()))?.theirReview).toMatchObject({ rating: 4 });
+    expect((await getBookingView(hub(), 'usr_ruth', bookingId, new Date()))?.theirReview).toMatchObject({ rating: 5 });
+    const [event] = await db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'reviews.published'), eq(outboxEvents.aggregateId, bookingId)));
+    const planned = await planNotifications(db, event!);
+    expect(planned).toHaveLength(2);
+    expect(planned).toEqual(expect.arrayContaining([
+      expect.objectContaining({ userId: 'usr_sam', type: 'review_published', actorName: 'Ruth A.', target: { kind: 'booking_review', bookingId } }),
+      expect.objectContaining({ userId: 'usr_ruth', type: 'review_published', actorName: 'Sam K.', target: { kind: 'booking_review', bookingId } }),
+    ]));
+  });
+
+  it('when only one reviewed, publishes it after 14 days and tells only the person it is about', async () => {
+    expect((await submitReview(db, soloClient, soloId, { rating: 2, tags: [], body: 'Late. Text me first next time at 352-555-0101.' }, new Date())).result).toMatchObject({ ok: true });
+    // Double-blind until then: Sam reads nothing yet.
+    expect((await getReviewPage(db, 'usr_sam', soloId, new Date()))?.theirs).toBeUndefined();
+    expect((await getBookingView(hub(), 'usr_sam', soloId, new Date()))?.theirReview).toBeUndefined();
+    const later = new Date(Date.now() + 15 * DAY);
+    await publishDueReviews(db, later);
+    const [event] = await db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'reviews.published'), eq(outboxEvents.aggregateId, soloId)));
+    expect(event?.payload).toMatchObject({ bookingId: soloId, reviews: [{ authorUserId: soloClient, subjectUserId: 'usr_sam' }] });
+    expect(await planNotifications(db, event!)).toEqual([expect.objectContaining({ userId: 'usr_sam', type: 'review_published', actorName: 'Ruth A.' })]);
+    // Sam reads it (masked) though he never reviewed; the client reads that Sam didn't leave one.
+    const forSam = await getReviewPage(db, 'usr_sam', soloId, later);
+    expect(forSam).toMatchObject({ unavailable: 'window_closed', theirs: { rating: 2 } });
+    expect(forSam?.theirs?.body).not.toContain('555-0101');
+    const forClient = await getReviewPage(db, soloClient, soloId, later);
+    expect(forClient).toMatchObject({ theirsMissing: true, mine: { rating: 2 } });
+    expect(forClient?.theirs).toBeUndefined();
+    expect((await getBookingView(hub(), 'usr_sam', soloId, later))?.theirReview).toMatchObject({ rating: 2 });
+  });
+
+  it("keeps a review staff hid out of the other person's view", async () => {
+    const later = new Date(Date.now() + 15 * DAY);
+    const mine = and(eq(reviews.bookingId, soloId), eq(reviews.authorUserId, soloClient));
+    await db.update(reviews).set({ status: 'hidden', hiddenReason: 'Testing: hidden per policy.' }).where(mine);
+    try {
+      expect((await getReviewPage(db, 'usr_sam', soloId, later))?.theirs).toBeUndefined();
+      expect((await getReviewPage(db, 'usr_sam', soloId, later))?.theirsMissing).toBeUndefined();
+      expect((await getBookingView(hub(), 'usr_sam', soloId, later))?.theirReview).toBeUndefined();
+    } finally {
+      await db.update(reviews).set({ status: 'published', hiddenReason: null }).where(mine);
     }
   });
 });

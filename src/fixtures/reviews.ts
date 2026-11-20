@@ -29,16 +29,35 @@ export const deskReviewSubmittedData: ReviewPageData = {
   mine: { rating: 5, tags: ['on_time', 'careful', 'tidy'], body: 'Jordan had the desk up in no time and took the packaging with him.', submittedAt: '2026-11-21T20:00:00.000Z' },
 };
 
-/** Both sent: visible now. */
+/** Jordan's review of Maya, readable once both are in (sweep RV2). */
+const jordansReview: NonNullable<ReviewPageData['theirs']> = {
+  rating: 5,
+  tags: ['clear_instructions', 'ready_on_time'],
+  body: 'Everything was unboxed and ready, and Maya had the right screws sorted. Easy job.',
+  publishedAt: '2026-11-22T09:00:00.000Z',
+};
+
+/** Both sent: visible now, Jordan's too. */
 export const deskReviewPublishedData: ReviewPageData = {
   ...deskReviewSubmittedData,
   mine: { ...deskReviewSubmittedData.mine!, publishedAt: '2026-11-22T09:00:00.000Z' },
+  theirs: jordansReview,
+};
+
+/** The 14 days ended with only Maya's review: hers is visible, and Jordan didn't leave one. */
+export const deskReviewTheirsMissingData: ReviewPageData = {
+  ...deskReviewSubmittedData,
+  mine: { ...deskReviewSubmittedData.mine!, publishedAt: DESK_TIMES.reviewsPublishBy },
+  theirsMissing: true,
 };
 
 export const reviewUnavailableData: Record<ReviewUnavailableReason, ReviewPageData> = {
   not_completed: { ...deskReviewByClientData, unavailable: 'not_completed' },
   window_closed: { ...deskReviewByClientData, unavailable: 'window_closed' },
 };
+
+/** Maya never reviewed, and the window ended: Jordan's review of her is still hers to read. */
+export const reviewWindowClosedTheirsData: ReviewPageData = { ...deskReviewByClientData, unavailable: 'window_closed', theirs: { ...jordansReview, publishedAt: DESK_TIMES.reviewsPublishBy } };
 
 export const mayaSavedHelpersData: SavedHelpersPageData = { helpers: [jordan, sam, lee] };
 export const savedHelpersEmptyData: SavedHelpersPageData = { helpers: [] };

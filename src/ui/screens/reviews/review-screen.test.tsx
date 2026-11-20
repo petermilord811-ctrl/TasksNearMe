@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { ACTION_ERROR_CODES, CLIENT_REVIEW_TAGS, HELPER_REVIEW_TAGS, REVIEW_UNAVAILABLE_REASONS, routes, type ActionResult, type ReviewInput } from '@/contracts';
-import { deskReviewByClientData, deskReviewByHelperData, deskReviewPublishedData, deskReviewSubmittedData, fakeHandler, reviewUnavailableData } from '@/fixtures';
+import { deskReviewByClientData, deskReviewByHelperData, deskReviewPublishedData, deskReviewSubmittedData, deskReviewTheirsMissingData, fakeHandler, reviewUnavailableData, reviewWindowClosedTheirsData } from '@/fixtures';
 import { formatDate } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import { ReviewContent, ReviewScreen } from './review-screen';
@@ -224,6 +224,30 @@ describe('ReviewScreen', () => {
     expect(screen.getByText(messages.review.unavailable[reason])).toBeInTheDocument();
     expect(screen.getByRole('link', { name: messages.review.backToBooking })).toHaveAttribute('href', routes.app.booking(reviewUnavailableData[reason].booking.id));
     expect(screen.queryByRole('form')).not.toBeInTheDocument();
+  });
+
+  it("shows the other person's review once it's published, with its tags and text (sweep RV2)", () => {
+    mount({ data: deskReviewPublishedData });
+    const theirs = screen.getByRole('region', { name: "Jordan T.'s review of you" });
+    expect(theirs).toHaveTextContent('5 out of 5, 1 review');
+    expect(theirs).toHaveTextContent(messages.review.tags.clear_instructions);
+    expect(theirs).toHaveTextContent(deskReviewPublishedData.theirs!.body!);
+    expect(within(theirs).getByText(`Published ${formatDate(deskReviewPublishedData.theirs!.publishedAt)}`)).toBeInTheDocument();
+  });
+
+  it("says when the other person didn't review, and shows nothing of theirs before it's published", () => {
+    mount({ data: deskReviewTheirsMissingData });
+    expect(screen.getByText("Jordan T. didn't leave a review.")).toBeInTheDocument();
+    cleanup();
+    mount({ data: deskReviewSubmittedData });
+    expect(screen.queryByRole('region', { name: "Jordan T.'s review of you" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Jordan T. didn't leave a review.")).not.toBeInTheDocument();
+  });
+
+  it('still shows their review after the window closed on someone who never reviewed', () => {
+    mount({ data: reviewWindowClosedTheirsData });
+    expect(screen.getByText(messages.review.unavailable.window_closed)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: "Jordan T.'s review of you" })).toHaveTextContent(reviewWindowClosedTheirsData.theirs!.body!);
   });
 
   it('has copy for every direction tag and unavailable reason', () => {

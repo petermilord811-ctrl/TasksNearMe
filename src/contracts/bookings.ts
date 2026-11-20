@@ -211,6 +211,11 @@ export interface BookingView {
   helperSaved?: boolean;
   /** The viewer's review of this booking, once sent (UI-015). */
   myReview?: { rating: number; submittedAt: ISODateTime; publishedAt?: ISODateTime };
+  /**
+   * The other person's review of the viewer, once it can be read: published (both are in, or the 14 days ended) and not
+   * hidden (sweep RV2). Its text is on the review page (`routes.app.bookingReview`).
+   */
+  theirReview?: { rating: number; publishedAt: ISODateTime };
   /** Completed bookings (UI-057): the client's tip card (`available`), or the tip once given (both people). */
   tip?: BookingTipView;
   /**

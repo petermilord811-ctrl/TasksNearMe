@@ -21,7 +21,7 @@ export const mayaNotificationsData: NotificationsPageData = { notifications: des
 export const jordanNotificationsData: NotificationsPageData = {
   notifications: [
     { id: 'ntf_paid', type: 'payout_paid', params: { amountCents: 6200 }, target: { kind: 'earnings' }, createdAt: '2026-11-25T15:00:00.000Z' },
-    { id: 'ntf_review', type: 'review_published', title: desk, actorName: 'Maya R.', target: { kind: 'booking', bookingId: 'bkg_desk' }, createdAt: '2026-11-22T09:00:00.000Z' },
+    { id: 'ntf_review', type: 'review_published', title: desk, actorName: 'Maya R.', target: { kind: 'booking_review', bookingId: 'bkg_desk' }, createdAt: '2026-11-22T09:00:00.000Z' },
     { id: 'ntf_transferred', type: 'earnings_transferred', title: desk, params: { amountCents: 5400 }, target: { kind: 'earnings' }, createdAt: DESK_TIMES.approved, readAt: DESK_TIMES.approved },
   ],
   unreadCount: 2,

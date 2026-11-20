@@ -127,6 +127,10 @@ export const NOTIFICATION_TYPES = [
   'saved_search_match',
   /** The morning digest: `params.count` new tasks fit the saved search `params.search`. */
   'saved_search_digest',
+  /** Leave a review (sweep RV4): the booking `title` with `actorName` was completed; sent to both people at completion. */
+  'review_prompt',
+  /** One reminder, `params.days` before the review window closes, to whoever hasn't reviewed `actorName` for `title` yet. */
+  'review_reminder',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

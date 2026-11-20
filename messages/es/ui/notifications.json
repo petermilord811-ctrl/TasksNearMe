@@ -74,7 +74,9 @@
     "question_received": "{actorName} hizo una pregunta sobre {title}",
     "question_answered": "{actorName} respondió tu pregunta sobre {title}",
     "saved_search_match": "Nueva tarea para tu búsqueda {search}: {title}",
-    "saved_search_digest": "{count, plural, one {# tarea nueva para tu búsqueda {search}} other {# tareas nuevas para tu búsqueda {search}}}"
+    "saved_search_digest": "{count, plural, one {# tarea nueva para tu búsqueda {search}} other {# tareas nuevas para tu búsqueda {search}}}",
+    "review_prompt": "¿Qué tal te fue con {actorName}? Deja una reseña sobre {title}",
+    "review_reminder": "{days, plural, one {Queda un día} other {Quedan # días}} para dejar tu reseña de {actorName} sobre {title}"
   },
   "previews": {
     "group": "Notificaciones",

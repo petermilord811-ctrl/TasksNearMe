@@ -29,7 +29,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { recordCompletionMoney } from '@/modules/earnings/service';
-import { isHelperSaved, myReviewOf, setHelperSaved } from '@/modules/reviews/service';
+import { isHelperSaved, myReviewOf, setHelperSaved, theirReviewOf } from '@/modules/reviews/service';
 import { getBookingDispute } from '@/modules/support/service';
 import { bookingOpenChange } from './changes';
 import { bookingThreadLink, ensureThread, postEvent } from '@/modules/messaging/service';
@@ -73,12 +73,15 @@ const REVIEW_WINDOW_MS = 14 * 86_400_000;
 /** Facts for completed bookings: reviews and saved helpers. */
 async function reviewFacts(db: Db, booking: BookingRow, role: BookingViewerRole, now: Date) {
   if (booking.status !== 'completed') return {};
-  const [mine, saved] = await Promise.all([
-    myReviewOf(db, role === 'poster' ? booking.posterUserId : booking.helperUserId, booking.id),
+  const viewerId = role === 'poster' ? booking.posterUserId : booking.helperUserId;
+  const [mine, theirs, saved] = await Promise.all([
+    myReviewOf(db, viewerId, booking.id),
+    theirReviewOf(db, viewerId, booking.id),
     role === 'poster' ? isHelperSaved(db, booking.posterUserId, booking.helperUserId) : Promise.resolve(false),
   ]);
   return {
     mine,
+    theirs,
     facts: {
       reviewed: Boolean(mine),
       reviewWindowOpen: booking.completedAt !== null && now.getTime() < booking.completedAt.getTime() + REVIEW_WINDOW_MS,
@@ -285,6 +288,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     ...(completion ? { completion } : {}),
     ...(role === 'poster' && review.facts?.helperSaved ? { helperSaved: true } : {}),
     ...(review.mine ? { myReview: review.mine } : {}),
+    ...(review.theirs ? { theirReview: review.theirs } : {}),
     ...(tip ? { tip } : {}),
     ...(series ? { series } : {}),
     // The helper canceled and the task is open for offers again: the client's page links to it.

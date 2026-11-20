@@ -161,7 +161,9 @@
     "question_received": "Question received",
     "question_answered": "Question answered",
     "saved_search_match": "Saved search match",
-    "saved_search_digest": "Saved search digest"
+    "saved_search_digest": "Saved search digest",
+    "review_prompt": "Review prompt",
+    "review_reminder": "Review reminder"
   },
   "previews": {
     "group": "Admin · person details",

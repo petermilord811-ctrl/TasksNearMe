@@ -30,6 +30,7 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { communityPosts } from '@/modules/community/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import { instantSearchMatches } from '@/modules/searches/service';
+import { reviews } from '@/modules/reviews/schema';
 import { cancelReceiptMoney, EMAIL_ONLY_TYPES, isLockedPreference, preferenceOn } from './delivery-domain';
 import { privacyViewOf } from '@/modules/privacy/requests';
 import { requestIdentityAfterNameChange } from '@/modules/verification/tracks';
@@ -136,6 +137,45 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       if (!userId || !searchId || !total) return [];
       return [{ userId, type: 'saved_search_digest', target: { kind: 'saved_search', searchId }, params: { count: total, search: text(p.name) ?? '' } }];
     }
+    case 'reviews.published': {
+      // Each review published now is told to the person it's about, never its author (sweep RV1: when only one person
+      // reviewed, the 14-day publish told both that the other's review was out). It opens the reviews (RV2).
+      const booking = await bookingContext(db, text(p.bookingId) ?? event.aggregateId);
+      if (!booking) return [];
+      const named = Array.isArray(p.reviews)
+        ? p.reviews.flatMap((item) => {
+            const pair = (item ?? {}) as Payload;
+            return typeof pair.authorUserId === 'string' && typeof pair.subjectUserId === 'string' ? [{ authorUserId: pair.authorUserId, subjectUserId: pair.subjectUserId }] : [];
+          })
+        : // An event from before the payload named them: the booking's published reviews.
+          await db.select({ authorUserId: reviews.authorUserId, subjectUserId: reviews.subjectUserId }).from(reviews).where(and(eq(reviews.bookingId, booking.id), eq(reviews.status, 'published')));
+      const target: AttentionTarget = { kind: 'booking_review', bookingId: booking.id };
+      const told: Planned[] = [];
+      for (const { authorUserId, subjectUserId } of named) {
+        if (subjectUserId !== booking.posterUserId && subjectUserId !== booking.helperUserId) continue;
+        told.push({ userId: subjectUserId, type: 'review_published', target, title: booking.title, actorName: await nameOf(db, authorUserId) });
+      }
+      return told;
+    }
+    case 'reviews.prompt':
+    case 'reviews.reminder': {
+      // Leave a review (sweep RV4): at completion both people are asked; a few days before the 14 days end, whoever hasn't
+      // reviewed yet (src/modules/reviews/service.ts names them). Someone who reviewed meanwhile isn't asked.
+      const booking = await bookingContext(db, text(p.bookingId) ?? event.aggregateId);
+      const people = Array.isArray(p.userIds) ? p.userIds.filter((id): id is string => typeof id === 'string') : [];
+      if (!booking || people.length === 0) return [];
+      const written = await db.select({ authorUserId: reviews.authorUserId }).from(reviews).where(eq(reviews.bookingId, booking.id));
+      const target: AttentionTarget = { kind: 'booking_review', bookingId: booking.id };
+      const days = typeof p.days === 'number' ? p.days : undefined;
+      const asked: Planned[] = [];
+      for (const userId of people) {
+        if ((userId !== booking.posterUserId && userId !== booking.helperUserId) || written.some((row) => row.authorUserId === userId)) continue;
+        const other = userId === booking.posterUserId ? booking.helperUserId : booking.posterUserId;
+        const type: NotificationType = event.type === 'reviews.prompt' ? 'review_prompt' : 'review_reminder';
+        asked.push({ userId, type, target, title: booking.title, actorName: await nameOf(db, other), ...(type === 'review_reminder' && days !== undefined ? { params: { days } } : {}) });
+      }
+      return asked;
+    }
     case 'community.helpful': {
       const post = await communityPost(db, text(p.postId));
       const author = text(p.authorUserId);
@@ -203,8 +243,7 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
     case 'booking.start_reminder':
     case 'booking.canceled':
     case 'booking.tipped':
-    case 'earnings.transferred':
-    case 'reviews.published': {
+    case 'earnings.transferred': {
       const booking = await bookingContext(db, text(p.bookingId) ?? event.aggregateId);
       if (!booking) return [];
       const target: AttentionTarget = { kind: 'booking', bookingId: booking.id };
@@ -265,7 +304,7 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
           return [forHelper('earnings_transferred', { target: { kind: 'earnings' }, actorName: undefined, ...(cents ? { params: { amountCents: cents } } : {}) })];
         }
         default:
-          return [forPoster('review_published'), forHelper('review_published')];
+          return [];
       }
     }
     case 'change.proposed': {

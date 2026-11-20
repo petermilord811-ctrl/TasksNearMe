@@ -5,6 +5,10 @@ import { parseResendEvent, signResendWebhook, verifyResendWebhook } from '@/inte
 import { deliveryContent } from './delivery';
 import { planDelivery } from './delivery-domain';
 import { LEGACY_LINKS_UNTIL, readUnsubscribeToken, unsubscribeToken } from './unsubscribe';
+import server from '../../../messages/en/app/server.json';
+
+/** Types that name their own button (`ctaFor`, "Leave a review"); the rest say where the button goes. */
+const ownButton: Record<string, string> = server.notifications.email.ctaFor;
 
 const row = (type: (typeof NOTIFICATION_TYPES)[number], target: AttentionTarget = { kind: 'booking', bookingId: 'bkg_desk' }) => ({
   type,
@@ -21,7 +25,7 @@ describe('notification emails', () => {
     expect(email.html).toContain('<!doctype html>');
     expect(email.html).toContain(email.subject.replace(/'/g, '&#39;'));
     expect(email.html).toContain('href="http://localhost:3000/app/bookings/bkg_desk"');
-    expect(email.html).toContain('View the booking');
+    expect(email.html).toContain(ownButton[type] ?? 'View the booking');
     for (const text of [email.html, email.text]) expect(text).not.toMatch(/undefined|NaN|\{[a-zA-Z]+\}|server\.notifications/);
   });
 
