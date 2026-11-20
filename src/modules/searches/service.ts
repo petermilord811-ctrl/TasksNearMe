@@ -335,7 +335,8 @@ export async function updateSavedSearch(db: Db, userId: string, input: SavedSear
 
 export async function setSavedSearchAlert(db: Db, userId: string, id: string, alert: SavedSearchAlert, now: Date): Promise<ActionResult> {
   if (!(SAVED_SEARCH_ALERTS as readonly string[]).includes(alert)) return { ok: false, code: 'validation_failed' };
-  const updated = await db.update(savedSearches).set({ alert, updatedAt: now, ...(alert === 'daily' ? { lastDigestAt: now } : {}) }).where(and(eq(savedSearches.id, String(id)), eq(savedSearches.userId, userId))).returning({ id: savedSearches.id });
+  // Alerts turned on count from now: a digest never reports what came while they were off (instant ones too, SS6).
+  const updated = await db.update(savedSearches).set({ alert, updatedAt: now, ...(alert !== 'off' ? { lastDigestAt: now } : {}) }).where(and(eq(savedSearches.id, String(id)), eq(savedSearches.userId, userId))).returning({ id: savedSearches.id });
   return updated.length ? { ok: true, code: 'updated' } : { ok: false, code: 'not_found' };
 }
 
@@ -395,62 +396,97 @@ export async function instantSearchMatches(db: Db, taskId: string, now: Date, on
 const DIGEST_HOUR = '08:00';
 /** The furthest back a digest counts: a search whose last digest is older (alerts off for a while) starts here. */
 const DIGEST_LOOKBACK_MS = 7 * 86_400_000;
-/** Searches looked at per run (the most overdue first; the rest on the next tick). */
-const DIGEST_BATCH = 500;
+/** People looked at per run (the most overdue first; the rest on the next tick). */
+const DIGEST_PEOPLE = 200;
+/** The most tasks one search's digest counts (it says "N new tasks", never lists them). */
+const DIGEST_TASKS_MAX = 500;
 
 /** 8 am today in a market's zone: the digest's send time there. */
 const digestTime = (now: Date, timeZone: TimeZone) => new Date(marketLocalToUtc(marketDayKey(now, timeZone), DIGEST_HOUR, timeZone));
 
 /**
- * A digest's count, for one saved search: open tasks it fits that were posted since `since`, never the person's own,
- * never from someone blocked either way (sweep SS1, as instant alerts), within a find work search's distance.
+ * What one saved search's digest counts (task ids): open tasks it fits, posted since `since`, never the person's own,
+ * never from someone blocked either way (sweep SS1, as instant alerts), within a find work search's distance. An
+ * instant search's only the ones its alerts didn't send (past the day's cap, sweep SS6), or that the person heard
+ * about otherwise (a task alert).
  */
-async function digestCount(db: Db, row: typeof savedSearches.$inferSelect, since: Date, now: Date, timeZone: TimeZone): Promise<number> {
+async function digestMatches(db: Db, row: typeof savedSearches.$inferSelect, since: Date, now: Date, timeZone: TimeZone, people: { blocked: string[]; center?: { lat: number; lng: number } }): Promise<string[]> {
   const { ids } = await areaMaps(db, row.marketId);
   const query = parseTaskBoardQuery(row.params);
-  const [blocked, centers] = await Promise.all([blockedPeopleOf(db, row.userId), row.source === 'find_work' ? helperCenters(db, [row.userId]) : Promise.resolve(new Map())]);
   const conditions: SQL[] = [...boardConditions(query, { marketId: row.marketId, timeZone, now, areaIds: ids }), gte(tasks.publishedAt, since), ne(tasks.posterUserId, row.userId)];
-  if (blocked.length > 0) conditions.push(notInArray(tasks.posterUserId, blocked));
-  const center = centers.get(row.userId);
+  if (people.blocked.length > 0) conditions.push(notInArray(tasks.posterUserId, people.blocked));
   const maxMiles = maxMilesOf(distanceOf(row.params));
-  if (row.source === 'find_work' && center && maxMiles !== null) conditions.push(or(eq(tasks.mode, 'remote'), sql`${milesFrom(center)} <= ${maxMiles}`)!);
-  const [found] = await db.select({ value: count() }).from(tasks).innerJoin(categories, eq(categories.id, tasks.categoryId)).where(and(...conditions));
-  return Number(found?.value ?? 0);
+  if (row.source === 'find_work' && people.center && maxMiles !== null) conditions.push(or(eq(tasks.mode, 'remote'), sql`${milesFrom(people.center)} <= ${maxMiles}`)!);
+  if (row.alert === 'instant') {
+    conditions.push(sql`not exists (
+      select 1 from ${notifications} told join ${outboxEvents} posted on posted.id = told.source_event_id
+      where told.user_id = ${row.userId} and told.type in ('saved_search_match', 'task_match') and told.created_at >= ${since} and posted.aggregate_id = ${tasks.id}
+    )`);
+  }
+  const rows = await db.select({ id: tasks.id }).from(tasks).innerJoin(categories, eq(categories.id, tasks.categoryId)).where(and(...conditions)).limit(DIGEST_TASKS_MAX);
+  return rows.map((task) => task.id);
 }
 
 /**
- * The morning digest (a job): each daily search not sent since this morning (8 am in its market, completion plan
- * 8.1) counts the tasks posted since its last digest that it fits (at most 7 days back, sweep SS2), and says how many
- * (when there are any). Which searches are due is decided in SQL, the most overdue first (SS3), so searches not due
- * yet never crowd out due ones. Runs every tick; does its work once a day per search.
+ * The morning digest (a job), one per person and market (sweep SS6), from 8 am on the market's clock (completion plan
+ * 8.1): the new tasks their daily searches fit, and what their instant searches fit but didn't alert about (more than
+ * `INSTANT_ALERTS_PER_DAY` in a day wait for it), each task counted once. Each search counts from its last digest, at
+ * most 7 days back (SS2). Who is due is decided in SQL, the most overdue first (SS3), so people not due yet never crowd
+ * out due ones. Runs every tick; does its work once a day per person.
  */
 export async function runSavedSearchDigests(db: Db, now: Date): Promise<number> {
-  // Each market zone where 8 am has come today: its daily searches not sent since then are due.
+  // Each market zone where 8 am has come today: its searches not digested since then are due.
   const zoneRows = await db.selectDistinct({ timeZone: markets.timeZone }).from(markets);
-  const due = zoneRows.map((row) => ({ timeZone: row.timeZone, sendFrom: digestTime(now, row.timeZone) })).filter((zone) => zone.sendFrom <= now);
-  if (due.length === 0) return 0;
-  const candidates = await db
-    .select({ search: savedSearches, timeZone: markets.timeZone })
+  const zones = zoneRows.map((row) => ({ timeZone: row.timeZone, sendFrom: digestTime(now, row.timeZone) })).filter((zone) => zone.sendFrom <= now);
+  if (zones.length === 0) return 0;
+  const dueIn = (zone: (typeof zones)[number]) => and(eq(markets.timeZone, zone.timeZone), or(isNull(savedSearches.lastDigestAt), lt(savedSearches.lastDigestAt, zone.sendFrom)));
+  const due = and(inArray(savedSearches.alert, ['daily', 'instant']), or(...zones.map(dueIn)));
+  const people = await db
+    .select({ userId: savedSearches.userId, marketId: savedSearches.marketId, timeZone: markets.timeZone })
     .from(savedSearches)
     .innerJoin(markets, eq(markets.id, savedSearches.marketId))
-    .where(and(eq(savedSearches.alert, 'daily'), or(...due.map((zone) => and(eq(markets.timeZone, zone.timeZone), or(isNull(savedSearches.lastDigestAt), lt(savedSearches.lastDigestAt, zone.sendFrom)))))))
-    .orderBy(sql`${savedSearches.lastDigestAt} asc nulls first`, asc(savedSearches.id))
-    .limit(DIGEST_BATCH);
+    .where(due)
+    .groupBy(savedSearches.userId, savedSearches.marketId, markets.timeZone)
+    .orderBy(sql`min(${savedSearches.lastDigestAt}) asc nulls first`, asc(savedSearches.userId))
+    .limit(DIGEST_PEOPLE);
   let sent = 0;
-  for (const { search: row, timeZone } of candidates) {
-    // From the last digest (runs further apart than a day lose nothing: a late morning, the day the clocks fall back).
-    const since = new Date(Math.max((row.lastDigestAt ?? row.createdAt).getTime(), now.getTime() - DIGEST_LOOKBACK_MS));
-    const total = await digestCount(db, row, since, now, timeZone);
+  for (const person of people) {
+    const searches = await db
+      .select({ search: savedSearches })
+      .from(savedSearches)
+      .innerJoin(markets, eq(markets.id, savedSearches.marketId))
+      .where(and(eq(savedSearches.userId, person.userId), eq(savedSearches.marketId, person.marketId), due))
+      .orderBy(asc(savedSearches.createdAt));
+    if (searches.length === 0) continue;
+    const [blocked, centers] = await Promise.all([blockedPeopleOf(db, person.userId), helperCenters(db, [person.userId])]);
+    const seen = new Set<string>();
+    const counted: { id: string; name: string; count: number }[] = [];
+    for (const { search } of searches) {
+      // From the last digest (runs further apart than a day lose nothing: a late morning, the day the clocks fall back).
+      const since = new Date(Math.max((search.lastDigestAt ?? search.createdAt).getTime(), now.getTime() - DIGEST_LOOKBACK_MS));
+      const matches = await digestMatches(db, search, since, now, person.timeZone, { blocked, center: centers.get(person.userId) });
+      for (const taskId of matches) seen.add(taskId);
+      if (matches.length > 0) counted.push({ id: search.id, name: search.name, count: matches.length });
+    }
+    counted.sort((a, b) => b.count - a.count);
+    const top = counted[0];
     await db.transaction(async (tx) => {
-      await tx.update(savedSearches).set({ lastDigestAt: now }).where(eq(savedSearches.id, row.id));
-      if (total > 0) {
+      await tx.update(savedSearches).set({ lastDigestAt: now }).where(inArray(savedSearches.id, searches.map(({ search }) => search.id)));
+      if (top) {
         await tx
           .insert(outboxEvents)
-          .values({ id: `evt_digest_${row.id}_${marketDayKey(now, timeZone)}`, type: 'searches.digest', aggregateType: 'saved_search', aggregateId: row.id, payload: { searchId: row.id, userId: row.userId, count: total, name: row.name } })
+          .values({
+            id: `evt_digest_${person.userId}_${person.marketId}_${marketDayKey(now, person.timeZone)}`,
+            type: 'searches.digest',
+            aggregateType: 'user',
+            aggregateId: person.userId,
+            // `searchId` and `name`: the search with the most, for one-search digests.
+            payload: { userId: person.userId, marketId: person.marketId, count: seen.size, searches: counted, searchId: top.id, name: top.name },
+          })
           .onConflictDoNothing();
       }
     });
-    if (total > 0) sent += 1;
+    if (top) sent += 1;
   }
   return sent;
 }

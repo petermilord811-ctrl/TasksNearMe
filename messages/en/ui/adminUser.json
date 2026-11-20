@@ -163,7 +163,8 @@
     "saved_search_match": "Saved search match",
     "saved_search_digest": "Saved search digest",
     "review_prompt": "Review prompt",
-    "review_reminder": "Review reminder"
+    "review_reminder": "Review reminder",
+    "saved_searches_digest": "Saved searches digest"
   },
   "previews": {
     "group": "Admin · person details",

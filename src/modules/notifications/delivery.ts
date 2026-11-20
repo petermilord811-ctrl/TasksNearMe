@@ -85,6 +85,8 @@ function pathOf(target: AttentionTarget): string {
       return routes.app.savedSearch(target.searchId);
     case 'booking_review':
       return routes.app.bookingReview(target.bookingId);
+    case 'saved_searches':
+      return routes.app.savedSearches();
     case 'verify_identity':
       return routes.app.verifyIdentity();
     case 'rewards':

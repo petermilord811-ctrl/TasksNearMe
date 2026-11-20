@@ -20,5 +20,6 @@ export function attentionHref(target: AttentionTarget): string {
     case 'community_post': return routes.app.communityPost(target.postId);
     case 'saved_search': return routes.app.savedSearch(target.searchId);
     case 'booking_review': return routes.app.bookingReview(target.bookingId);
+    case 'saved_searches': return routes.app.savedSearches();
   }
 }

@@ -1,6 +1,8 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { blocks } from '@/modules/messaging/schema';
+import { notifications } from '@/modules/notifications/schema';
+import { planNotifications } from '@/modules/notifications/service';
 import { savedSearches } from '@/modules/searches/schema';
 import { runSavedSearchDigests } from '@/modules/searches/service';
 import { tasks } from '@/modules/tasks/schema';
@@ -36,19 +38,21 @@ const HOUR = 3_600_000;
 // 9 am in Austin today: the digest's run.
 const nine = new Date(marketLocalToUtc(marketDayKey(new Date(), CHICAGO), '09:00', CHICAGO));
 
-async function postTask(id: string, posterUserId: string, publishedAt: Date) {
-  const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
-  if (!desk) throw new Error('The seeded desk is missing');
-  await db.insert(tasks).values({ ...desk, id, slug: `dg-${id}`, title: `Assemble a ${word} desk`, posterUserId, status: 'open', offerCount: 0, publishedAt, createdAt: publishedAt, updatedAt: publishedAt, version: 1 });
+async function postTask(id: string, posterUserId: string, publishedAt: Date, keyword = word, from = 'tsk_desk') {
+  const [source] = await db.select().from(tasks).where(eq(tasks.id, from));
+  if (!source) throw new Error(`The seeded ${from} is missing`);
+  await db.insert(tasks).values({ ...source, id, slug: `dg-${id}`, title: `${source.title} ${keyword}`, posterUserId, status: 'open', offerCount: 0, publishedAt, createdAt: publishedAt, updatedAt: publishedAt, version: 1 });
 }
 
-async function latestDigestCount(userId: string): Promise<number> {
-  const [event] = await db
+const digestsOf = (userId: string) =>
+  db
     .select()
     .from(outboxEvents)
     .where(and(eq(outboxEvents.type, 'searches.digest'), sql`${outboxEvents.payload}->>'userId' = ${userId}`))
-    .orderBy(desc(outboxEvents.createdAt))
-    .limit(1);
+    .orderBy(desc(outboxEvents.createdAt));
+
+async function latestDigestCount(userId: string): Promise<number> {
+  const [event] = await digestsOf(userId);
   return event ? (event.payload as { count: number }).count : 0;
 }
 
@@ -92,5 +96,48 @@ describe('the morning digest', () => {
     } finally {
       await db.delete(savedSearches).where(inArray(savedSearches.userId, [crowd, gainesville]));
     }
+  });
+});
+
+describe('one digest per person (SS6)', () => {
+  it("carries what an instant search didn't alert about (past the day's cap) into the next morning, never what it did", async () => {
+    const person = await throwawayClient(db, `usr_dg_cap_${run}`);
+    const keyword = `quokka${run}`;
+    const searchId = `ssr_dg_cap_${run}`;
+    const last = new Date(nine.getTime() - 20 * HOUR);
+    await db.insert(savedSearches).values({ id: searchId, userId: person, marketId: 'mkt_austin', name: 'Quokka desks', source: 'board', params: { q: keyword }, alert: 'instant', lastDigestAt: last, createdAt: last, updatedAt: last });
+    // Two new tasks fit: one was alerted at once; the other came after the day's 10 alerts.
+    const alerted = `tsk_dg_alerted_${run}`;
+    await postTask(alerted, 'usr_chris', new Date(nine.getTime() - 5 * HOUR), keyword);
+    await postTask(`tsk_dg_over_${run}`, 'usr_chris', new Date(nine.getTime() - 4 * HOUR), keyword);
+    const posted = `evt_dg_posted_${run}`;
+    await db.insert(outboxEvents).values({ id: posted, type: 'task.posted', aggregateType: 'task', aggregateId: alerted, payload: { taskId: alerted } });
+    await db.insert(notifications).values({ id: `ntf_dg_${run}`, userId: person, type: 'saved_search_match', target: { kind: 'saved_search', searchId }, sourceEventId: posted, createdAt: new Date(nine.getTime() - 5 * HOUR) });
+    await runSavedSearchDigests(db, nine);
+    const [event] = await digestsOf(person);
+    expect(event?.payload).toMatchObject({ count: 1, searches: [{ id: searchId, name: 'Quokka desks', count: 1 }] });
+    expect(await planNotifications(db, event!)).toEqual([
+      expect.objectContaining({ userId: person, type: 'saved_search_digest', target: { kind: 'saved_search', searchId }, params: { count: 1, search: 'Quokka desks' } }),
+    ]);
+  });
+
+  it('gives a person one digest over all their searches, each task counted once', async () => {
+    const person = await throwawayClient(db, `usr_dg_two_${run}`);
+    const keyword = `wombat${run}`;
+    const last = new Date(nine.getTime() - 20 * HOUR);
+    const row = (id: string, name: string, params: Record<string, string>) => ({ id, userId: person, marketId: 'mkt_austin', name, source: 'board', params, alert: 'daily', lastDigestAt: last, createdAt: last, updatedAt: last });
+    await db.insert(savedSearches).values([row(`ssr_dg_all_${run}`, 'Everything wombat', { q: keyword }), row(`ssr_dg_desks_${run}`, 'Wombat furniture', { q: keyword, category: 'furniture-assembly' })]);
+    // Two desks fit both searches, a yard job only the first.
+    await postTask(`tsk_dg_w1_${run}`, 'usr_chris', new Date(nine.getTime() - 3 * HOUR), keyword);
+    await postTask(`tsk_dg_w2_${run}`, 'usr_chris', new Date(nine.getTime() - 2 * HOUR), keyword);
+    await postTask(`tsk_dg_w3_${run}`, 'usr_chris', new Date(nine.getTime() - HOUR), keyword, 'tsk_yard');
+    await runSavedSearchDigests(db, nine);
+    await runSavedSearchDigests(db, new Date(nine.getTime() + 10 * 60_000));
+    const events = await digestsOf(person);
+    expect(events).toHaveLength(1);
+    expect(events[0]!.payload).toMatchObject({ count: 3, searches: [{ name: 'Everything wombat', count: 3 }, { name: 'Wombat furniture', count: 2 }] });
+    expect(await planNotifications(db, events[0]!)).toEqual([
+      expect.objectContaining({ userId: person, type: 'saved_searches_digest', target: { kind: 'saved_searches' }, params: { count: 3, search: 'Everything wombat' } }),
+    ]);
   });
 });

@@ -131,11 +131,21 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
         : [{ userId: asker, type: 'question_answered', target: { kind: 'find_work_task', taskId }, title, actorName: await nameOf(db, poster) }];
     }
     case 'searches.digest': {
+      // One morning digest per person (sweep SS6, src/modules/searches/service.ts): one search names it and opens it;
+      // several open the list, naming the one with the most.
       const userId = text(p.userId);
-      const searchId = text(p.searchId);
       const total = typeof p.count === 'number' ? p.count : undefined;
-      if (!userId || !searchId || !total) return [];
-      return [{ userId, type: 'saved_search_digest', target: { kind: 'saved_search', searchId }, params: { count: total, search: text(p.name) ?? '' } }];
+      if (!userId || !total) return [];
+      const named = Array.isArray(p.searches)
+        ? p.searches.flatMap((item) => {
+            const search = (item ?? {}) as Payload;
+            return typeof search.id === 'string' && typeof search.name === 'string' ? [{ id: search.id, name: search.name }] : [];
+          })
+        : [];
+      if (named.length > 1) return [{ userId, type: 'saved_searches_digest', target: { kind: 'saved_searches' }, params: { count: total, search: named[0]!.name } }];
+      const searchId = named[0]?.id ?? text(p.searchId);
+      if (!searchId) return [];
+      return [{ userId, type: 'saved_search_digest', target: { kind: 'saved_search', searchId }, params: { count: total, search: named[0]?.name ?? text(p.name) ?? '' } }];
     }
     case 'reviews.published': {
       // Each review published now is told to the person it's about, never its author (sweep RV1: when only one person

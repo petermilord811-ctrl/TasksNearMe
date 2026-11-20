@@ -131,6 +131,8 @@ export const NOTIFICATION_TYPES = [
   'review_prompt',
   /** One reminder, `params.days` before the review window closes, to whoever hasn't reviewed `actorName` for `title` yet. */
   'review_reminder',
+  /** The morning digest over several saved searches (sweep SS6): `params.count` new tasks, the most for `params.search`. */
+  'saved_searches_digest',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

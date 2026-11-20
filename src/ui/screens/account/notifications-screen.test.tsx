@@ -89,6 +89,7 @@ const copy: Record<NotificationType, RegExp> = {
   saved_search_digest: /new tasks? for your search/,
   review_prompt: /How did it go with .*\? Leave a review for/,
   review_reminder: /left to review .* for/,
+  saved_searches_digest: /new tasks? for your saved searches, including/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },
@@ -108,6 +109,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   community_post: { target: { kind: 'community_post', postId: 'post / one' }, href: routes.app.communityPost('post / one') },
   saved_search: { target: { kind: 'saved_search', searchId: 'search / one' }, href: routes.app.savedSearch('search / one') },
   booking_review: { target: { kind: 'booking_review', bookingId: 'booking / one' }, href: routes.app.bookingReview('booking / one') },
+  saved_searches: { target: { kind: 'saved_searches' }, href: routes.app.savedSearches() },
 };
 
 describe('NotificationsScreen', () => {

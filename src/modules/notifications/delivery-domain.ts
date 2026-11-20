@@ -75,6 +75,7 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   // Asking for a review is part of the booking (blueprint 02 J8): in the app and by email (sweep RV4).
   review_prompt: 'bookings',
   review_reminder: 'bookings',
+  saved_searches_digest: 'task_alerts',
 };
 
 /**

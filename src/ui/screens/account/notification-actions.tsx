@@ -36,6 +36,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   review_published: Star,
   review_prompt: PenLine,
   review_reminder: Timer,
+  saved_searches_digest: BellRing,
   message_received: MessageCircle,
   support_replied: Headset,
   case_resolved: CircleCheck,

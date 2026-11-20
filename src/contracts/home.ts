@@ -46,7 +46,9 @@ export type AttentionTarget =
   /** A saved search's board view (`routes.app.savedSearch(searchId)`, completion plan 7.10). */
   | { kind: 'saved_search'; searchId: string }
   /** A completed booking's reviews (`routes.app.bookingReview(bookingId)`): leave yours, read theirs once published (sweep RV2, RV4). */
-  | { kind: 'booking_review'; bookingId: string };
+  | { kind: 'booking_review'; bookingId: string }
+  /** The person's saved searches (`routes.app.savedSearches()`): a morning digest over several of them (sweep SS6). */
+  | { kind: 'saved_searches' };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */

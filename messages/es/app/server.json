@@ -135,7 +135,8 @@
         "rewards": "Abrir tus recompensas",
         "community_post": "Abrir la publicación",
         "saved_search": "Abrir tu búsqueda",
-        "booking_review": "Ir a las reseñas"
+        "booking_review": "Ir a las reseñas",
+        "saved_searches": "Abrir tus búsquedas guardadas"
       },
       "next": {
         "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Solo se te cobra cuando reservas.",
@@ -194,7 +195,8 @@
         "saved_search_match": "Abre tu búsqueda para verla junto a las demás.",
         "saved_search_digest": "Abre tu búsqueda para verlas.",
         "review_prompt": "Toma un minuto. Las reseñas se mantienen ocultas hasta que ambos escriban la suya, o durante 14 días.",
-        "review_reminder": "Después, las reseñas de esta reserva se cierran. Se mantienen ocultas hasta que ambos escriban la suya."
+        "review_reminder": "Después, las reseñas de esta reserva se cierran. Se mantienen ocultas hasta que ambos escriban la suya.",
+        "saved_searches_digest": "Tu página de búsquedas guardadas tiene cada una, con sus filtros y avisos."
       },
       "lockedFooter": "Los correos de reservas y pagos siempre están activados: son tus recibos y avisos de seguridad.",
       "optionalFooter": "Recibes esto porque los correos de {topic} están activados.",
@@ -269,7 +271,8 @@
       "saved_search_match": "Nueva tarea para tu búsqueda {search}: {title}.",
       "saved_search_digest": "{count, plural, one {# tarea nueva para tu búsqueda {search}} other {# tareas nuevas para tu búsqueda {search}}}.",
       "review_prompt": "¿Qué tal te fue con {actorName}? Deja una reseña sobre {title}.",
-      "review_reminder": "{days, plural, one {Queda un día} other {Quedan # días}} para dejar tu reseña de {actorName} sobre {title}."
+      "review_reminder": "{days, plural, one {Queda un día} other {Quedan # días}} para dejar tu reseña de {actorName} sobre {title}.",
+      "saved_searches_digest": "{count, plural, one {# tarea nueva} other {# tareas nuevas}} para tus búsquedas guardadas, entre ellas {search}."
     },
     "pushTitle": "TasksNearMe",
     "receipt": {

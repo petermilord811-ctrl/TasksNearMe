@@ -76,7 +76,8 @@
     "saved_search_match": "New task for your search {search}: {title}",
     "saved_search_digest": "{count, plural, one {# new task for your search {search}} other {# new tasks for your search {search}}}",
     "review_prompt": "How did it go with {actorName}? Leave a review for {title}",
-    "review_reminder": "{days, plural, one {One day left} other {# days left}} to review {actorName} for {title}"
+    "review_reminder": "{days, plural, one {One day left} other {# days left}} to review {actorName} for {title}",
+    "saved_searches_digest": "{count, plural, one {# new task} other {# new tasks}} for your saved searches, including {search}"
   },
   "previews": {
     "group": "Notifications",

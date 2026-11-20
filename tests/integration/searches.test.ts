@@ -94,12 +94,15 @@ describe('saved searches', () => {
     await db.update(savedSearches).set({ lastDigestAt: new Date(nine.getTime() - 25 * 3_600_000) }).where(eq(savedSearches.id, search!.id));
     await db.update(tasks).set({ publishedAt: new Date(nine.getTime() - 3_600_000) }).where(eq(tasks.id, taskId));
     await runSavedSearchDigests(db, nine);
-    const events = await db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'searches.digest'), eq(outboxEvents.aggregateId, search!.id)));
+    // One digest for Ana (per person and market since sweep SS6), naming this search among hers.
+    const digests = () => db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'searches.digest'), eq(outboxEvents.aggregateId, ana)));
+    const events = await digests();
     expect(events).toHaveLength(1);
     expect((events[0]!.payload as { count: number }).count).toBeGreaterThan(0);
+    expect((events[0]!.payload as { searches: { id: string }[] }).searches.map((item) => item.id)).toContain(search!.id);
     // Again the same morning: nothing more.
     await runSavedSearchDigests(db, new Date(nine.getTime() + 600_000));
-    expect(await db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'searches.digest'), eq(outboxEvents.aggregateId, search!.id)))).toHaveLength(1);
+    expect(await digests()).toHaveLength(1);
   });
 });
 
