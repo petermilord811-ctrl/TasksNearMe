@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 import type { CategorySlug, LandingAiSuggestResult } from '@/contracts';
 import { AI_STAND_IN_COOKIE, wantsAiStandIn } from '@/integrations/ai';
 import { createFakeTaskDrafter } from '@/integrations/ai/task-drafter';
-import { clientIp } from '@/modules/accounts/sign-in/server';
+import { limitAddress } from '@/modules/accounts/sign-in/server';
 import { DEFAULT_MARKET_SLUG, findPublicMarket, getFlags } from '@/modules/markets/queries';
 import { categories } from '@/modules/markets/schema';
 import { taskDrafter } from '@/modules/tasks/server';
@@ -17,13 +17,13 @@ import { LANDING_AI_PER_DAY, LANDING_AI_PER_VISITOR, suggestLandingDraft } from 
 /**
  * The landing page's "Write it with AI" for signed-out visitors (`LandingHandlers.onSuggestWithAi`). The checks and
  * the cost guard live in `landing-ai.ts`. Visitors are counted by a hash of their IP (from the proxy-aware
- * `clientIp`), so no address is stored; their words are passed to the drafter and nowhere else.
+ * `limitAddress`, an IPv6 address by its /64), so no address is stored; their words are passed to the drafter and nowhere else.
  */
 export async function suggestTaskWithAi(input: { text: string; category: CategorySlug }): Promise<LandingAiSuggestResult> {
   // Tests ask for the rule-based stand-in, so they never reach Claude where a key is set (never honored in production).
   const standIn = wantsAiStandIn((await cookies()).get(AI_STAND_IN_COOKIE)?.value);
   const drafter = taskDrafter ? (standIn ? createFakeTaskDrafter() : taskDrafter) : null;
-  const visitor = createHash('sha256').update(`landing-ai:${(await clientIp()) ?? 'unknown'}`).digest('hex').slice(0, 32);
+  const visitor = createHash('sha256').update(`landing-ai:${(await limitAddress()) ?? 'unknown'}`).digest('hex').slice(0, 32);
 
   return suggestLandingDraft(
     {

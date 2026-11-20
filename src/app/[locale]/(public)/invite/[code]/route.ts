@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { routes } from '@/contracts';
-import { clientIp } from '@/modules/accounts/sign-in/server';
+import { limitAddress } from '@/modules/accounts/sign-in/server';
 import { normalizeInviteCode } from '@/modules/beta/rules';
 import { betaInviteCodes } from '@/modules/beta/schema';
 import { INVITE_COOKIE, INVITE_COOKIE_MAX_AGE } from '@/modules/beta/server';
@@ -20,7 +20,7 @@ export async function GET(_request: Request, { params }: RouteContext<'/[locale]
   const home = routes.signIn(routes.app.home());
   if (!/^[A-Z0-9]{1,24}$/.test(code)) redirect(home);
 
-  const ip = await clientIp();
+  const ip = await limitAddress();
   if (ip && !(await consumeRateLimit(db, `invite-link:ip:${ip}`, { limit: 30, windowSeconds: 10 * 60 })).ok) redirect(home);
 
   const [invite] = await db.select({ role: betaInviteCodes.role }).from(betaInviteCodes).where(eq(betaInviteCodes.code, code)).limit(1);

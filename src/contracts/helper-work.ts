@@ -214,13 +214,14 @@ const code = (value: FieldErrorCode) => value;
 export function createOfferInputSchema(rules: OfferRules) {
   return z
     .object({
+      // The same ceilings as posting (contracts/posting.ts): $100,000, $1,000 an hour, 24 hours (security review).
       pricing: z.discriminatedUnion('type', [
-        z.object({ type: z.literal('fixed'), priceCents: z.number(code('required')).int().positive(code('required')) }),
+        z.object({ type: z.literal('fixed'), priceCents: z.number(code('required')).int().positive(code('required')).max(10_000_000, code('out_of_range')) }),
         z.object({
           type: z.literal('hourly'),
-          rateCents: z.number(code('required')).int().positive(code('required')),
-          estimatedHours: z.number(code('required')).positive(code('required')).multipleOf(0.5, code('invalid')),
-          hoursCap: z.number(code('required')).positive(code('required')).multipleOf(0.5, code('invalid')),
+          rateCents: z.number(code('required')).int().positive(code('required')).max(100_000, code('out_of_range')),
+          estimatedHours: z.number(code('required')).positive(code('required')).multipleOf(0.5, code('invalid')).max(24, code('out_of_range')),
+          hoursCap: z.number(code('required')).positive(code('required')).multipleOf(0.5, code('invalid')).max(24, code('out_of_range')),
         }),
       ]),
       /** Market-local "HH:MM" from `rules.startTimes`. */

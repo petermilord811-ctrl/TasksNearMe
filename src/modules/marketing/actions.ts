@@ -2,7 +2,7 @@
 
 import type { ActionResult, WaitlistInput } from '@/contracts';
 import { localeOrDefault, waitlistInputSchema } from '@/contracts';
-import { clientIp } from '@/modules/accounts/sign-in/server';
+import { limitAddress } from '@/modules/accounts/sign-in/server';
 import { rateLimited, validationFailed } from '@/platform/actions/results';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
@@ -18,7 +18,7 @@ import { setWaitlistEmailsByToken } from './waitlist-unsubscribe';
 export async function joinWaitlistAction(locale: string, input: WaitlistInput): Promise<ActionResult> {
   const parsed = waitlistInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
-  const ip = await clientIp();
+  const ip = await limitAddress();
   if (ip) {
     const limited = await consumeRateLimit(db, `waitlist:ip:${ip}`, { limit: 5, windowSeconds: 60 * 60 });
     if (!limited.ok) return rateLimited(limited.retryAt);

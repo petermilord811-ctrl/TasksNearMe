@@ -29,11 +29,18 @@ export async function GET(request: Request, ctx: RouteContext<'/api/files/[id]'>
       (await isCurrentProfilePhoto(db, file)) ||
       (userId !== null && (await canViewRelatedFile(db, file, userId, await requestNow()))));
   // An empty key: the retention timer deleted the file itself and kept only the record (a receipt line).
-  const body = allowed && file.storageKey && !file.storageKey.startsWith('public/') ? await storage.get(file.storageKey) : null;
-  if (!file || !allowed || !body) return new Response('Not found', { status: 404 });
+  if (!file || !allowed || !file.storageKey || file.storageKey.startsWith('public/')) return new Response('Not found', { status: 404 });
 
   const asked = Number(new URL(request.url).searchParams.get('w'));
   const width = (PHOTO_WIDTHS as readonly number[]).includes(asked) ? (asked as PhotoWidth) : null;
+  // A file's bytes never change (a new upload is a new file), so asking again costs a 304. A private file is asked
+  // again on every use, after the access check above: once someone signs out or loses access, the browser can't show
+  // its copy (security review 2026-11-20). Private files must never land in shared caches.
+  const cacheControl = file.kind === 'work_sample' ? 'public, max-age=86400' : 'private, no-cache';
+  const etag = `"${file.id}${width ? `-w${width}` : ''}"`;
+  if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': cacheControl } });
+  const body = await storage.get(file.storageKey);
+  if (!body) return new Response('Not found', { status: 404 });
   const smaller = width !== null && file.contentType.startsWith('image/') && Math.max(file.width, file.height) > width;
   const served = smaller ? await resizedImage(body, width) : body;
 
@@ -41,8 +48,8 @@ export async function GET(request: Request, ctx: RouteContext<'/api/files/[id]'>
     headers: {
       'Content-Type': file.contentType,
       'Content-Length': String(served.length),
-      // Private files must never land in shared caches.
-      'Cache-Control': file.kind === 'work_sample' ? 'public, max-age=86400' : 'private, max-age=3600',
+      'Cache-Control': cacheControl,
+      ETag: etag,
       'X-Content-Type-Options': 'nosniff',
       'Content-Disposition': 'inline',
     },

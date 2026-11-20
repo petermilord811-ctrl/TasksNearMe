@@ -44,7 +44,7 @@ import { responseTimeRange } from '@/shared/response-time';
 import { realRowsOnly, type RowScope } from '@/shared/sample-data';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { auditRoleOf } from '@/modules/tasks/moderation';
+import { auditRoleOf, canModerateTasks } from '@/modules/tasks/moderation';
 import type { StaffActor } from '@/modules/support/staff';
 import { ASK_FOR_HELP_KINDS, authorRole, communityLimits, helpfulMilestone, initialsOf, isSafetyOrCrimePost, milesBetween, NEARBY_MILES, postTaskState, REACTION_RULE, SAVE_RULE } from './domain';
 import { communityPosts, communityReactions, communityReplies, communitySaves } from './schema';
@@ -437,7 +437,8 @@ export async function getCommunityPost(db: Db, viewer: CommunityViewer, postId: 
       ...(post.status === 'visible' && facts.postBlocked ? { replyBlocked: facts.postBlocked } : {}),
       canPin: isAuthor && post.status === 'visible',
       isAuthor,
-      isStaff: viewer.staff !== null,
+      // The moderation controls: trust and safety, support leads and admins, as for tasks (other staff read).
+      isStaff: viewer.staff !== null && canModerateTasks(viewer.staff.roles),
     },
     recommendOptions: options,
     alreadyRecommended: Boolean(mine),
@@ -676,6 +677,8 @@ export async function deleteOwnCommunityItem(db: Db, viewer: CommunityViewer, ta
 
 /** Staff hide, remove or restore a post or a reply, with a reason, in the audit log. */
 export async function moderateCommunityItem(db: Db, staff: StaffActor, target: 'post' | 'reply', id: string, input: CommunityModerationInput, now: Date): Promise<ActionResult> {
+  // Moderators only, as for tasks: finance or a support agent can't undo what trust and safety removed (security review).
+  if (!canModerateTasks(staff.roles)) return { ok: false, code: 'not_allowed' };
   const parsed = communityModerationInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const status = parsed.data.action === 'restore' ? 'visible' : parsed.data.action === 'hide' ? 'hidden' : 'removed';

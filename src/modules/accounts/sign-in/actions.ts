@@ -25,11 +25,12 @@ import { applyPendingSignUp, applySignUpIntent } from './sign-up-apply';
 import { clearPendingSignUp } from './sign-up-pending';
 import {
   BLOCKED_STATUSES,
-  clientIp,
   currentSessionUserId,
+  limitAddress,
   loadSignInUser,
   phoneVerification,
 } from './server';
+import { profileComplete } from './steps';
 import { displayNameOf, RESEND_AFTER_SECONDS, resolveSignInStep, safeNextPath } from './steps';
 import { requestNow } from '@/platform/clock';
 
@@ -41,6 +42,8 @@ import { requestNow } from '@/platform/clock';
 
 const EMAIL_SEND_RULES = {
   perEmail: { limit: 3, windowSeconds: 10 * 60 },
+  /** A day's codes to one address (security review 2026-11-20): enough to sign in on every device, not 400 emails. */
+  perEmailDay: { limit: 20, windowSeconds: 24 * 3600 },
   perIp: { limit: 10, windowSeconds: 10 * 60 },
 };
 
@@ -67,9 +70,10 @@ async function continueAfterSignIn(rawNext: string, userId: string, code: 'updat
 }
 
 async function sendEmailCode(email: string): Promise<ActionResult> {
-  const ip = await clientIp();
+  const ip = await limitAddress();
   const limited = await consumeRateLimits(db, [
     { key: `email-code:email:${email}`, rule: EMAIL_SEND_RULES.perEmail },
+    { key: `email-code:email-day:${email}`, rule: EMAIL_SEND_RULES.perEmailDay },
     ...(ip ? [{ key: `email-code:ip:${ip}`, rule: EMAIL_SEND_RULES.perIp }] : []),
   ]);
   if (!limited.ok) return rateLimited(limited.retryAt);
@@ -94,7 +98,7 @@ export async function continueWith(rawNext: string, input: SocialSignInInput): P
   const { provider } = parsed.data;
   if (!offeredSocialProviders().includes(provider)) return { ok: false, code: 'not_allowed' };
 
-  const ip = await clientIp();
+  const ip = await limitAddress();
   if (ip) {
     const limited = await consumeRateLimits(db, [{ key: `social-sign-in:ip:${ip}`, rule: SOCIAL_START_RULE }]);
     if (!limited.ok) return rateLimited(limited.retryAt);
@@ -208,6 +212,13 @@ export async function saveProfile(next: string, input: ProfileInput & BotCheckIn
   if (!userId) return { ok: false, code: 'not_allowed' };
   const parsed = profileInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
+  // Only while sign-up is unfinished: a member renames on the account page, which asks for the ID check again (plan
+  // 6.3) and refreshes the public profile (security review 2026-11-20).
+  const current = await loadSignInUser(userId);
+  if (!current || profileComplete(current)) {
+    refresh();
+    return { ok: false, code: 'not_allowed' };
+  }
   // Finishing sign-up (also with Google or Microsoft, which skip the email code): Turnstile first.
   const refused = await checkBot('sign_up', input?.botCheck);
   if (refused) return refused;

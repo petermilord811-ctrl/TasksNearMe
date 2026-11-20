@@ -29,6 +29,7 @@ const maya = { id: 'usr_maya', staff: null };
 const lee = { id: 'usr_lee', staff: null };
 const ben = { id: 'usr_ben', staff: null };
 const taylor = { id: 'usr_taylor', staff: { id: 'usr_taylor', roles: ['trust_safety' as const] } };
+const casey = { id: 'usr_casey', staff: { id: 'usr_casey', roles: ['finance' as const] } };
 const unique = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 afterAll(() => pool.end());
@@ -151,6 +152,17 @@ describe('community posts', () => {
     expect((await getCommunityPost(db, taylor, id))?.post.moderation).toEqual({ status: 'hidden', reason: 'Off-topic sales pitch' });
     const [audit] = await db.select().from(auditLog).where(and(eq(auditLog.targetType, 'community_post'), eq(auditLog.targetId, id)));
     expect(audit).toMatchObject({ action: 'community.post.hide', actorId: 'usr_taylor', reason: 'Off-topic sales pitch' });
+  });
+
+  it('leaves moderation to moderators: other staff read hidden posts but neither see the controls nor restore them (security review)', async () => {
+    // Ben's post: Maya's hourly posts are counted out for the tests that follow.
+    const id = await post(ben, `Moderators only ${unique()}`);
+    expect(await moderateCommunityItem(db, taylor.staff, 'post', id, { action: 'hide', reason: 'Off-topic sales pitch' }, now)).toMatchObject({ ok: true });
+    const page = await getCommunityPost(db, casey, id);
+    expect(page?.post.moderation).toEqual({ status: 'hidden', reason: 'Off-topic sales pitch' });
+    expect(page?.viewer.isStaff).toBe(false);
+    expect((await getCommunityPost(db, taylor, id))?.viewer.isStaff).toBe(true);
+    expect(await moderateCommunityItem(db, casey.staff, 'post', id, { action: 'restore', reason: 'Looks fine to me' }, now)).toEqual({ ok: false, code: 'not_allowed' });
   });
 
   it('lets authors take down their own reply, which updates the count', async () => {

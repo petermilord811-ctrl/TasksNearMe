@@ -1,3 +1,4 @@
+import { addressForLimits } from '@/shared/client-address';
 import 'server-only';
 import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
@@ -96,6 +97,12 @@ export async function clientIp(): Promise<string | null> {
   const list = await headers();
   const ip = list.get('x-forwarded-for')?.split(',')[0]?.trim() || list.get('x-real-ip')?.trim();
   return ip && !LOOPBACK.has(ip) ? ip : null;
+}
+
+/** The client's address as per-address rate limits count it: an IPv6 address by its /64 (src/shared/client-address.ts). */
+export async function limitAddress(): Promise<string | null> {
+  const ip = await clientIp();
+  return ip ? addressForLimits(ip) : null;
 }
 
 export { BLOCKED_STATUSES } from './steps';

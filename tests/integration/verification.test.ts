@@ -7,7 +7,9 @@ import { createHelperServicesSchema } from '@/contracts';
 import { createFakeGeocoder } from '@/integrations/geocoding';
 import { createLocalFileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
-import { helperProfiles } from '@/modules/profiles/schema';
+import { canViewFile } from '@/modules/files/access';
+import { helperProfiles, helperWorkSamples } from '@/modules/profiles/schema';
+import { files } from '@/modules/tasks/schema';
 import { submitAddressProof } from '@/modules/verification/address';
 import { acceptIdentityNotice, submitIdentityCapture } from '@/modules/verification/capture';
 import {
@@ -224,8 +226,13 @@ describe('helper onboarding', () => {
     expect(editor?.workSamples.map((s) => s.caption)).toEqual(['Front beds weeded', 'Leaves bagged']);
     expect(editor?.badges).toMatchObject({ phoneVerified: true, idVerifiedAt: expect.any(String), addressVerifiedAt: expect.any(String), backgroundCheckedAt: expect.any(String) });
 
+    const [kept] = await db.select({ fileId: helperWorkSamples.fileId }).from(helperWorkSamples).where(eq(helperWorkSamples.id, first.sample.id));
     expect(await removeWorkSample(db, userId, first.sample.id)).toEqual({ ok: true, code: 'updated' });
     expect(await removeWorkSample(db, 'usr_maya', second.sample.id)).toEqual({ ok: false, code: 'not_found' });
+    // Its photo is no longer public (security review 2026-11-20): a link someone kept opens for its owner and staff only.
+    const [photo] = await db.select().from(files).where(eq(files.id, kept!.fileId));
+    expect(canViewFile(photo!, { userId: null, isStaff: false })).toBe(false);
+    expect(canViewFile(photo!, { userId, isStaff: false })).toBe(true);
     editor = await getProfileEditorData(db, userId, now());
     expect(editor?.workSamples).toHaveLength(1);
     expect(editor?.values.area).toEqual({ where: 'market', areaId: 'area_mueller', serviceRadiusMiles: 5, remoteOk: false, homeZip: '', homeCity: '' });

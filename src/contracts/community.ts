@@ -154,6 +154,7 @@ export interface CommunityPostPageData {
     /** The post's author pins the answer that helped. */
     canPin: boolean;
     isAuthor: boolean;
+    /** A staff member who moderates (trust and safety, support leads, admins): shows the moderation controls. */
     isStaff: boolean;
   };
   /** A recommendation request: the helpers the viewer can name (ones they booked or saved, and themself). */

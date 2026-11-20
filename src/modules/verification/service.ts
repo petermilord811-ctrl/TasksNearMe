@@ -317,11 +317,14 @@ export async function updateWorkSample(db: Db, userId: string, input: { id: stri
 }
 
 export async function removeWorkSample(db: Db, userId: string, id: string): Promise<ActionResult> {
-  const removed = await db
+  const [removed] = await db
     .delete(helperWorkSamples)
     .where(and(eq(helperWorkSamples.id, id), eq(helperWorkSamples.userId, userId)))
-    .returning({ id: helperWorkSamples.id });
-  return removed.length ? { ok: true, code: 'updated' } : { ok: false, code: 'not_found' };
+    .returning({ id: helperWorkSamples.id, fileId: helperWorkSamples.fileId });
+  if (!removed) return { ok: false, code: 'not_found' };
+  // The photo stops being public with it: a link someone kept no longer opens it (security review 2026-11-20).
+  await db.update(files).set({ kind: 'removed_work_sample' }).where(and(eq(files.id, removed.fileId), eq(files.kind, 'work_sample')));
+  return { ok: true, code: 'updated' };
 }
 
 export async function reorderWorkSamples(db: Db, userId: string, ids: string[]): Promise<ActionResult> {

@@ -20,7 +20,8 @@ vi.mock('@/integrations/storage', () => ({ createFileStorage: () => ({ get: asyn
 vi.mock('@/modules/files/related-access', () => ({ canViewRelatedFile: async () => false, isCurrentProfilePhoto: async () => false }));
 
 const { GET } = await import('@/app/api/files/[id]/route');
-const fetchFile = (query = '') => GET(new Request(`http://localhost/api/files/fil_evidence${query}`), { params: Promise.resolve({ id: 'fil_evidence' }) } as never);
+const fetchFile = (query = '', headers: Record<string, string> = {}) =>
+  GET(new Request(`http://localhost/api/files/fil_evidence${query}`, { headers }), { params: Promise.resolve({ id: 'fil_evidence' }) } as never);
 const person = (overrides: object) => ({ kind: 'user', user: { id: 'usr_alex', staffRoles: [], staffTwoStepVerified: false, ...overrides } });
 
 beforeEach(() => {
@@ -39,6 +40,18 @@ describe('private files', () => {
   it('open for their owner', async () => {
     state.viewer = person({ id: 'usr_maya' });
     expect((await fetchFile()).status).toBe(200);
+  });
+
+  it('are asked for again on every use, so a browser stops showing them once access ends (security review)', async () => {
+    state.viewer = person({ id: 'usr_maya' });
+    const first = await fetchFile();
+    expect(first.headers.get('cache-control')).toBe('private, no-cache');
+    const etag = first.headers.get('etag')!;
+    // Asking again with the copy's tag costs nothing while access lasts...
+    expect((await fetchFile('', { 'if-none-match': etag })).status).toBe(304);
+    // ...and gets nothing after it ends.
+    state.viewer = { kind: 'public' };
+    expect((await fetchFile('', { 'if-none-match': etag })).status).toBe(404);
   });
 
   it('open for staff only after the two-step check', async () => {
