@@ -3,6 +3,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { updateTag } from 'next/cache';
 import { cookies } from 'next/headers';
+import { getLocale } from 'next-intl/server';
 import type {
   BotCheckInput,
   ActionResult,
@@ -16,7 +17,7 @@ import type {
   PricingInput,
   TaskDraftInput,
 } from '@/contracts';
-import { CATEGORY_SLUGS, routes } from '@/contracts';
+import { CATEGORY_SLUGS, localeOrDefault, routes } from '@/contracts';
 import { photoFromFile, storePhoto } from '@/modules/files/uploads';
 import { files } from '@/modules/tasks/schema';
 import { marketTag } from '@/modules/marketing/queries';
@@ -67,7 +68,7 @@ export async function draftTaskWithAi(input: { categorySlug: CategorySlug; text:
   // Tests ask for the stand-in, so they never reach Claude where a key is set.
   const drafter = wantsAiStandIn((await cookies()).get(AI_STAND_IN_COOKIE)?.value) ? createFakeTaskDrafter() : taskDrafter;
   try {
-    const draft = await drafter.draft({ categorySlug: input.categorySlug, text });
+    const draft = await drafter.draft({ categorySlug: input.categorySlug, text, locale: localeOrDefault(await getLocale()) });
     // The task board is public: no phone numbers, emails or links, whatever was typed.
     return { ok: true, draft: { ...draft, title: maskContactDetails(draft.title).text, description: maskContactDetails(draft.description).text } };
   } catch (error) {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { validateTaskDetails } from '@/contracts';
-import { createFakeTaskDrafter } from './task-drafter';
+import type { ClaudeWriter } from './claude';
+import { createClaudeTaskDrafter, createFakeTaskDrafter } from './task-drafter';
 
 const drafter = createFakeTaskDrafter();
 
@@ -34,5 +35,23 @@ describe('rule-based task drafter', () => {
     expect(draft.title.length).toBeGreaterThanOrEqual(4);
     expect(draft.description.length).toBeGreaterThanOrEqual(20);
     expect(draft.openQuestions.length).toBeGreaterThan(0);
+  });
+});
+
+describe('Claude task drafter', () => {
+  it("writes in the page's language: Spanish for a Spanish page, English otherwise (sweep 2026-11-20, PT14)", async () => {
+    const prompts: string[] = [];
+    const writer: ClaudeWriter = {
+      model: 'stub',
+      write: async ({ prompt }) => {
+        prompts.push(prompt);
+        return { title: 'Armar un escritorio', description: 'Necesito armar un escritorio en la sala.', details: {}, openQuestions: [] } as never;
+      },
+    };
+    const claude = createClaudeTaskDrafter(writer);
+    await claude.draft({ categorySlug: 'furniture-assembly', text: 'armar mi escritorio', locale: 'es' });
+    await claude.draft({ categorySlug: 'furniture-assembly', text: 'build my desk' });
+    expect(prompts[0]).toMatch(/^Language: Spanish$/m);
+    expect(prompts[1]).toMatch(/^Language: English$/m);
   });
 });
