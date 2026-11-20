@@ -58,5 +58,6 @@ export interface AdminPaymentsPageData {
   query: string;
   rows: AdminMoneyRow[];
   counts: Record<AdminMoneyTab, number>;
-  totals: AdminMoneyTotals;
+  /** Finance and admins only (blueprint 08: support see a summary): the 30-day totals. Support see no totals and no references. */
+  totals?: AdminMoneyTotals;
 }

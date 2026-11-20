@@ -24,8 +24,16 @@ describe('AdminPaymentsScreen', () => {
 
   it('shows the 30-day totals and explains each exception', () => {
     show();
-    expect(screen.getByText(formatMoney(adminPaymentsExceptionsData.totals.chargedCents))).toBeInTheDocument();
+    expect(screen.getByText(formatMoney(adminPaymentsExceptionsData.totals!.chargedCents))).toBeInTheDocument();
     for (const row of adminPaymentsExceptionsData.rows) expect(screen.getAllByText(copy.exceptionHelp[row.exception!]).length).toBeGreaterThan(0);
+  });
+
+  it('shows support the summary: no totals (security review SEC24)', () => {
+    const { totals, ...summary } = adminPaymentsExceptionsData;
+    show(summary);
+    expect(screen.queryByText(copy.totalsTitle)).not.toBeInTheDocument();
+    expect(screen.queryByText(formatMoney(totals!.chargedCents))).not.toBeInTheDocument();
+    for (const row of summary.rows) expect(screen.getAllByText(copy.exceptionHelp[row.exception!]).length).toBeGreaterThan(0);
   });
 
   it('keeps the search on every tab and searches with a GET form', () => {

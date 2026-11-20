@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { getAdminPayments, parseAdminMoneyTab } from '@/modules/support/staff-payments';
+import { getAdminPayments, parseAdminMoneyTab, paymentsViewOf } from '@/modules/support/staff-payments';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -26,6 +26,6 @@ async function AdminPayments({ searchParams }: Pick<PageProps<'/[locale]/admin/p
   if (!staff) notFound();
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? '';
   const now = await requestNow();
-  const data = await getAdminPayments(db, { tab: parseAdminMoneyTab(first(params.tab)), query: first(params.q) }, now);
+  const data = await getAdminPayments(db, { tab: parseAdminMoneyTab(first(params.tab)), query: first(params.q) }, now, paymentsViewOf(staff.roles));
   return <AdminPaymentsScreen data={data} now={now.toISOString()} />;
 }

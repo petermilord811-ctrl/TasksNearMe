@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, ne, notInArray, or, type SQL } from 'drizzle-orm';
+import { auditRoleOf } from '@/modules/tasks/moderation';
 import type {
   ActionResult,
   AdminCaseEventView,
@@ -669,7 +670,7 @@ async function audit(db: Pick<Db, 'insert'>, staff: StaffActor, action: string, 
     id: newId('aud'),
     at: now.toISOString(),
     actorId: staff.id,
-    actorRole: staff.roles[0] ?? 'staff',
+    actorRole: auditRoleOf(staff.roles),
     action,
     targetType: extra.targetType ?? 'support_case',
     targetId: extra.targetId ?? caseId,

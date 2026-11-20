@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { webhookActionInputSchema, WEBHOOK_PROVIDER_IDS, type ActionResult, type AdminWebhookRow, type AdminWebhooksPageData, type StaffRole, type WebhookActionInput, type WebhookProviderId } from '@/contracts';
+import { auditRoleOf } from '@/modules/tasks/moderation';
 import type { StaffActor } from '@/modules/support/staff';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -66,20 +67,21 @@ export async function actOnWebhook(db: Db, staff: StaffActor, input: WebhookActi
   if (!canSeeWebhooks(staff.roles)) return { ok: false, code: 'not_allowed' };
   const [row] = await db.select().from(webhookEvents).where(and(eq(webhookEvents.id, parsed.data.eventRowId), inArray(webhookEvents.status, ['failed', 'dead']))).limit(1);
   if (!row) return { ok: false, code: 'not_allowed' };
-  const audit = (action: string) =>
+  const audit = (action: string, reason?: string) =>
     db.insert(auditLog).values({
       id: newId('aud'),
       at: now.toISOString(),
       actorId: staff.id,
-      actorRole: staff.roles[0] ?? 'staff',
+      actorRole: auditRoleOf(staff.roles),
       action,
       targetType: 'webhook_event',
       targetId: row.id,
+      ...(reason ? { reason } : {}),
       metadata: { provider: row.provider, eventId: row.eventId, type: row.type, status: row.status, attempts: row.attempts },
     });
   if (parsed.data.action === 'dismiss') {
     if (!(await dismissWebhook(db, row.id, now))) return { ok: false, code: 'not_allowed' };
-    await audit('webhook.dismissed');
+    await audit('webhook.dismissed', parsed.data.reason);
     return { ok: true, code: 'updated' };
   }
   await audit('webhook.replayed');

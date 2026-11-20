@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { and, asc, desc, eq, gte, inArray, isNotNull, notInArray, or, sql } from 'drizzle-orm';
+import { auditRoleOf } from '@/modules/tasks/moderation';
 import type {
   ActionResult,
   AdminBookingPageData,
@@ -53,7 +54,7 @@ async function audit(db: Db, staff: StaffActor, action: string, targetType: stri
     id: newId('aud'),
     at: now.toISOString(),
     actorId: staff.id,
-    actorRole: staff.roles[0] ?? 'staff',
+    actorRole: auditRoleOf(staff.roles),
     action,
     targetType,
     targetId,

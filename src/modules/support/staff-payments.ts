@@ -6,6 +6,7 @@ import {
   type AdminMoneyTotals,
   type AdminPaymentsPageData,
   type PriceBreakdown,
+  type StaffRole,
 } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { bookingCompletions, bookings, bookingTerms } from '@/modules/bookings/schema';
@@ -184,7 +185,13 @@ async function totals(db: Db, now: Date): Promise<AdminMoneyTotals> {
 }
 
 /** `routes.admin.payments({ tab, q })`. */
-export async function getAdminPayments(db: Db, input: { tab: AdminMoneyTab; query: string }, now: Date): Promise<AdminPaymentsPageData> {
+/**
+ * Finance and admins get the full view; other staff a summary (blueprint 08: poster payments are a summary for support,
+ * full for finance): the same rows without the provider's references, and no 30-day totals.
+ */
+export const paymentsViewOf = (roles: readonly StaffRole[]): 'full' | 'summary' => (roles.some((role) => role === 'finance' || role === 'admin') ? 'full' : 'summary');
+
+export async function getAdminPayments(db: Db, input: { tab: AdminMoneyTab; query: string }, now: Date, view: 'full' | 'summary' = 'full'): Promise<AdminPaymentsPageData> {
   const query = input.query.trim().slice(0, 120);
   const [found, sums] = await Promise.all([
     Promise.all([exceptions(db, query, now), charges(db, query), refundRows(db, query), transfers(db, query), payoutRows(db, query)]),
@@ -194,9 +201,9 @@ export async function getAdminPayments(db: Db, input: { tab: AdminMoneyTab; quer
   return {
     tab: input.tab,
     query,
-    rows: byTab[input.tab].rows,
+    rows: view === 'full' ? byTab[input.tab].rows : byTab[input.tab].rows.map(({ reference: _reference, ...row }) => row),
     counts: Object.fromEntries(ADMIN_MONEY_TABS.map((tab) => [tab, byTab[tab].count])) as Record<AdminMoneyTab, number>,
-    totals: sums,
+    ...(view === 'full' ? { totals: sums } : {}),
   };
 }
 

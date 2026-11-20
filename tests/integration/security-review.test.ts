@@ -12,6 +12,9 @@ import { refundRequests, supportCases } from '@/modules/support/schema';
 import { addCaseNote, getAdminCase, getAdminCases, parseAdminCaseFilters, type StaffActor } from '@/modules/support/staff';
 import { decideRefundRequest, resolveCaseWithMoney, staffRefund } from '@/modules/support/staff-money';
 import { tasks } from '@/modules/tasks/schema';
+import { getBookingView } from '@/modules/bookings/hub';
+import { getAdminPayments } from '@/modules/support/staff-payments';
+import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { auditLog } from '@/platform/audit/schema';
 import { createDb } from '@/platform/db/connect';
 
@@ -155,5 +158,40 @@ describe('invite prices', () => {
     expect(await ask({ type: 'fixed', priceCents: 100 })).toMatchObject({ ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } });
     expect(await ask({ type: 'hourly', rateCents: 4000, estimatedHours: 6, hoursCap: 4 })).toMatchObject({ ok: false, code: 'validation_failed' });
     expect(await ask({ type: 'fixed', priceCents: 20_000_000 })).toMatchObject({ ok: false, code: 'validation_failed' });
+  });
+});
+
+describe('the booking page before payment (SEC13)', () => {
+  it('shows the helper the client’s text masked until the money comes in', async () => {
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
+    const start = new Date(now.getTime() + 20 * DAY);
+    const description = 'Assemble the desk. Text me at 352-555-0110 when you are close.';
+    await db.insert(tasks).values({ ...desk!, id: 'tsk_sec_later', slug: 'tsk-sec-later-slug', posterUserId: CLIENT, status: 'open', offerCount: 1, version: 1, description, windowStart: start, windowEnd: new Date(start.getTime() + 6 * HOUR) });
+    await db.insert(offers).values({ ...offer!, id: 'off_sec_later', taskId: 'tsk_sec_later', status: 'pending', revision: 1, proposedStart: start, expiresAt: new Date(now.getTime() + 72 * HOUR) });
+    await getBookingConfirmPage(deps, CLIENT, 'tsk_sec_later', 'off_sec_later', now);
+    expect(await confirmBooking(deps, CLIENT, 'tsk_sec_later', 'off_sec_later', { offerRevision: 1, payment: { kind: 'dev_card', card: 'success', save: false }, acceptTerms: true }, now)).toMatchObject({ ok: true });
+    const [booking] = await db.select().from(bookings).where(eq(bookings.taskId, 'tsk_sec_later'));
+    expect(booking?.status).toBe('scheduled');
+    const hub = { db, cipher: fieldCipherFromEnv() };
+    const helperView = await getBookingView(hub, 'usr_jordan', booking!.id, now);
+    expect(helperView?.terms.scopeText).toContain('Assemble the desk.');
+    expect(helperView?.terms.scopeText).not.toContain('555-0110');
+    expect((await getBookingView(hub, CLIENT, booking!.id, now))?.terms.scopeText).toBe(description);
+    // Paid: the helper reads it as written.
+    await db.update(bookings).set({ confirmedAt: now }).where(eq(bookings.id, booking!.id));
+    expect((await getBookingView(hub, 'usr_jordan', booking!.id, now))?.terms.scopeText).toBe(description);
+  });
+});
+
+describe('the payments view (SEC24)', () => {
+  it('is a summary for support (no provider references, no totals) and full for finance', async () => {
+    const full = await getAdminPayments(db, { tab: 'charges', query: '' }, now, 'full');
+    const summary = await getAdminPayments(db, { tab: 'charges', query: '' }, now, 'summary');
+    expect(full.totals).toBeDefined();
+    expect(full.rows.some((row) => row.reference)).toBe(true);
+    expect(summary.totals).toBeUndefined();
+    expect(summary.rows.length).toBe(full.rows.length);
+    expect(summary.rows.every((row) => row.reference === undefined)).toBe(true);
   });
 });

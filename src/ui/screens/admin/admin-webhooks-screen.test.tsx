@@ -27,6 +27,18 @@ describe('AdminWebhooksScreen', () => {
     expect(await within(items[0]!).findByText('It failed again. The error above is the latest.')).toBeTruthy();
   });
 
+  it('asks why before dismissing, and sends the reason (security review SEC24)', async () => {
+    const onAction = vi.fn().mockResolvedValueOnce({ ok: true, code: 'updated' });
+    render(withMessages(<AdminWebhooksScreen data={adminWebhooksFailingData} handlers={{ onAction }} now={ADMIN_NOW} />));
+    const [dead] = within(screen.getByRole('region', { name: 'Failing events' })).getAllByRole('listitem');
+    await userEvent.click(within(dead!).getByRole('button', { name: 'Dismiss Stripe payment_intent.succeeded' }));
+    expect(onAction).not.toHaveBeenCalled();
+    await userEvent.type(within(dead!).getByLabelText('Why dismiss it?'), 'Refunded by hand in the Stripe Dashboard.');
+    await userEvent.click(within(dead!).getByRole('button', { name: 'Dismiss Stripe payment_intent.succeeded' }));
+    expect(onAction).toHaveBeenCalledWith({ eventRowId: 'whk_dead_pi', action: 'dismiss', reason: 'Refunded by hand in the Stripe Dashboard.' });
+    expect(await within(dead!).findByText('Done.')).toBeTruthy();
+  });
+
   it('says when nothing is failing', () => {
     render(withMessages(<AdminWebhooksScreen data={adminWebhooksCalmData} handlers={{ onAction: vi.fn() }} now={ADMIN_NOW} />));
     expect(screen.getByText('Nothing is failing.')).toBeTruthy();

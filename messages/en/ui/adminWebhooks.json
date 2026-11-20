@@ -32,6 +32,11 @@
   "dismiss": "Dismiss",
   "replayLabel": "Replay {event}",
   "dismissLabel": "Dismiss {event}",
+  "dismissReason": "Why dismiss it?",
+  "dismissHint": "At least 10 characters. It goes in the audit log.",
+  "dismissConfirm": "Dismiss it",
+  "dismissCancel": "Keep it",
+  "reasonRequired": "Say why, in at least 10 characters.",
   "result": {
     "done": "Done.",
     "notAllowed": "This event can't be changed. It may have moved on: refresh the page.",

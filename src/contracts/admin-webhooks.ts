@@ -38,10 +38,16 @@ export interface AdminWebhooksPageData {
   canAct: boolean;
 }
 
-export const webhookActionInputSchema = z.object({
-  eventRowId: z.string(code('required')).min(1, code('required')),
-  action: z.enum(['replay', 'dismiss'], code('required')),
-});
+export const webhookActionInputSchema = z
+  .object({
+    eventRowId: z.string(code('required')).min(1, code('required')),
+    action: z.enum(['replay', 'dismiss'], code('required')),
+    /** Dismissing says why (security review SEC24): it goes in the audit log. */
+    reason: z.string(code('invalid')).trim().max(500, code('too_long')).optional(),
+  })
+  .superRefine((input, ctx) => {
+    if (input.action === 'dismiss' && (input.reason ?? '').length < 10) ctx.addIssue({ code: 'custom', path: ['reason'], message: (input.reason ?? '') === '' ? 'required' : 'too_short' });
+  });
 export type WebhookActionInput = z.input<typeof webhookActionInputSchema>;
 
 /**

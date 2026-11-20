@@ -63,10 +63,10 @@ export function AdminPaymentsScreen({ data, now }: AdminPaymentsScreenProps) {
   const total = data.counts[data.tab];
   return <div className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
     <PageHeader title={t('title')} description={t('intro')} />
-    <section aria-labelledby={`${id}-totals`} className="space-y-3">
+    {data.totals && <section aria-labelledby={`${id}-totals`} className="space-y-3">
       <h2 id={`${id}-totals`} className="text-xs font-semibold tracking-[0.04em] text-muted-foreground uppercase">{t('totalsTitle')}</h2>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">{([['charged', data.totals.chargedCents], ['refunded', data.totals.refundedCents], ['transferred', data.totals.transferredCents], ['paidOut', data.totals.paidOutCents]] as const).map(([key, cents]) => <div key={key} className={cn(adminPanel, 'space-y-1 p-4')}><dt className="text-sm text-muted-foreground">{t(`totals.${key}`)}</dt><dd className="font-display text-[1.625rem] leading-8 font-semibold tracking-[-0.02em] tabular-nums">{formatMoney(cents)}</dd></div>)}</dl>
-    </section>
+    </section>}
     <UrlForm urlKey={data.query} method="get" action={routes.admin.payments()} role="search" aria-label={t('search')} className={cn(adminSection, 'space-y-2')}>
       <input type="hidden" name="tab" value={data.tab} />
       <Label htmlFor={`${id}-search`}>{t('search')}</Label>

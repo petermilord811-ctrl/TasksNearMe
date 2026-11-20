@@ -117,8 +117,21 @@ describe('the webhook inbox', () => {
     handler.next = 'ok';
     expect(await actOnWebhook(db, { id: 'usr_riley', roles: ['admin'] }, { eventRowId: row.id, action: 'replay' }, now)).toEqual({ ok: true, code: 'updated' });
     expect(await rowOf('msg_inbox_g')).toMatchObject({ status: 'processed', payload: null });
-    expect(await actOnWebhook(db, { id: 'usr_riley', roles: ['admin'] }, { eventRowId: row.id, action: 'dismiss' }, now)).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await actOnWebhook(db, { id: 'usr_riley', roles: ['admin'] }, { eventRowId: row.id, action: 'dismiss', reason: 'Nothing more is needed here.' }, now)).toEqual({ ok: false, code: 'not_allowed' });
     const audit = await db.select().from(auditLog).where(and(eq(auditLog.targetType, 'webhook_event'), eq(auditLog.targetId, row.id)));
     expect(audit.map((item) => [item.action, item.actorId]).sort()).toEqual([['webhook.replayed', 'usr_casey'], ['webhook.replayed', 'usr_riley']]);
+  });
+
+  it('dismisses with a reason, kept in the audit log with the most senior role (security review SEC24)', async () => {
+    handler.next = 'throw';
+    await receiveWebhook(db, 'resend', payload('h'), headers('msg_inbox_h'), now);
+    await db.update(webhookEvents).set({ status: 'dead', nextAttemptAt: null }).where(eq(webhookEvents.eventId, 'msg_inbox_h'));
+    const row = (await getAdminWebhooks(db, now)).failing.find((item) => item.eventId === 'msg_inbox_h')!;
+    const both = { id: 'usr_casey', roles: ['finance', 'admin'] as ('finance' | 'admin')[] };
+    expect(await actOnWebhook(db, both, { eventRowId: row.id, action: 'dismiss' }, now)).toMatchObject({ ok: false, code: 'validation_failed', fieldErrors: { reason: ['required'] } });
+    expect(await actOnWebhook(db, both, { eventRowId: row.id, action: 'dismiss', reason: 'short' }, now)).toMatchObject({ ok: false, code: 'validation_failed', fieldErrors: { reason: ['too_short'] } });
+    expect(await actOnWebhook(db, both, { eventRowId: row.id, action: 'dismiss', reason: 'A test message to an address that no longer exists.' }, now)).toEqual({ ok: true, code: 'updated' });
+    const [audited] = await db.select().from(auditLog).where(and(eq(auditLog.action, 'webhook.dismissed'), eq(auditLog.targetId, row.id)));
+    expect(audited).toMatchObject({ actorId: 'usr_casey', actorRole: 'admin', reason: 'A test message to an address that no longer exists.' });
   });
 });

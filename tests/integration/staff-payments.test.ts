@@ -110,8 +110,8 @@ describe('the payments page', () => {
     const refundsTab = await getAdminPayments(db, { tab: 'refunds', query: 'bkg_pay_refund' }, now());
     expect(refundsTab.rows.every((row) => row.kind === 'refund')).toBe(true);
     expect(refundsTab.rows.find((row) => row.id === 'ref_pay_failed')).toMatchObject({ status: 'failed', detail: 'goodwill', amountCents: 500 });
-    expect(charges.totals.chargedCents).toBeGreaterThan(0);
-    expect(Object.values(charges.totals).every((cents) => Number.isInteger(cents) && cents >= 0)).toBe(true);
+    expect(charges.totals!.chargedCents).toBeGreaterThan(0);
+    expect(Object.values(charges.totals!).every((cents) => Number.isInteger(cents) && cents >= 0)).toBe(true);
   });
 
   it('searches by a person’s email or a booking id', async () => {

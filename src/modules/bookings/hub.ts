@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, inArray, isNull, ne, or } from 'drizzle-orm';
+import { maskContactDetails } from '@/modules/trust/contact-masking';
 import type {
   ActionResult,
   BookingActionId,
@@ -240,6 +241,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     scheduledPaymentViewOf(deps, booking, role),
   ]);
 
+  const helperBeforePayment = role === 'helper' && !booking.confirmedAt;
   return {
     id: booking.id,
     task: { id: task.id, title: found.view.title, categorySlug: found.view.categorySlug, schedule: found.view.schedule },
@@ -258,10 +260,12 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
       version: terms.version,
       pricing: pricingOf(terms),
       breakdown: terms.breakdown,
-      scopeText: terms.scopeText,
+      // Before the money comes in (`confirmed_at`), the helper reads the client's text masked, as in the conversation
+      // (security review SEC13): a booking paid later, or one canceled unpaid, showed contact details in full.
+      scopeText: helperBeforePayment ? maskContactDetails(terms.scopeText).text : terms.scopeText,
       start: terms.startAt.toISOString(),
       ...(terms.expenseAllowanceCents > 0
-        ? { expenseAllowance: { amountCents: terms.expenseAllowanceCents, description: task.expenseAllowanceNote ?? '' } }
+        ? { expenseAllowance: { amountCents: terms.expenseAllowanceCents, description: helperBeforePayment ? maskContactDetails(task.expenseAllowanceNote ?? '').text : (task.expenseAllowanceNote ?? '') } }
         : {}),
     },
     ...(booking.onMyWayAt || booking.arrivedAt || booking.lateByMinutes || booking.cantAccessAt
