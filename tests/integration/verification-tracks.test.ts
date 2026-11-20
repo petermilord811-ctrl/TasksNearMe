@@ -271,8 +271,10 @@ describe('ID checks', () => {
     // Staff ask for a new check; it starts, and nobody finishes it.
     expect(await verificationAction(db, providers, taylor, { userId: id, action: 'request_identity', note: 'Report of a shared account; new check.' }, at(41))).toEqual({ ok: true, code: 'updated' });
     expect((await loadOnboardingState(db, id, at(41))).identity).toMatchObject({ status: 'not_started', requested: 'staff_request', cleared: false, captureApproved: false });
-    await photosApproved(id, at(41));
-    expect((await startIdentity(db, providers, id, at(41), { consent: true })).ok).toBe(true);
+    // The helper starts a little after the request: rows on one user are read in createdAt order, and two rows written at
+    // the same instant could come back either way.
+    await photosApproved(id, at(41.01));
+    expect((await startIdentity(db, providers, id, at(41.01), { consent: true })).ok).toBe(true);
     await runVerificationTimers(db, { storage, providers }, at(42), { userIds: PEOPLE });
     expect((await loadOnboardingState(db, id, at(41.5))).identity.status).toBe('processing');
     await runVerificationTimers(db, { storage, providers }, at(43.1), { userIds: PEOPLE });
