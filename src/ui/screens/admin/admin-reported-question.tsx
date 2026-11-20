@@ -85,6 +85,7 @@ export function AdminReportedQuestion({ data, onModerate, initialAction, initial
         : <p className="text-sm text-muted-foreground">{t('unanswered')}</p>}
       {!visible && data.reason && <p className="text-sm"><span className="font-medium">{t(data.reason === 'author' ? 'takenBack' : 'reason')}</span>{data.reason !== 'author' && <> <span className="whitespace-pre-wrap">{data.reason}</span></>}</p>}
       <p className="text-sm text-muted-foreground">{t(visible ? 'whatHideDoes' : 'whatRestoreDoes')}</p>
+      {!data.canModerate && <p className="text-sm text-muted-foreground">{t('whoCan')}</p>}
       {data.canModerate && <div className="flex flex-wrap gap-2">
         {visible
           ? <>

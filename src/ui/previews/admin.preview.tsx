@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { ACTION_ERROR_CODES, routes, type ActionResult, type AdminCaseHandlers, type AdminCasePageData, type PreviewEntry } from '@/contracts';
-import { ADMIN_NOW, adminHomeData, adminHomeQuietData, adminCasesPageData, adminCasesFilteredData, adminCasesEmptyData, alexStaff, answerReportAdminCaseData, questionHiddenAdminCaseData, contactAdminCaseData, contactAnsweredAdminCaseData, disputeAdminCaseData, reportAdminCaseData, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData, reportedConversation, fakeAdminCaseHandlers, fakeHandler } from '@/fixtures';
+import { ADMIN_NOW, adminHomeData, adminHomeQuietData, adminCasesPageData, adminCasesFilteredData, adminCasesEmptyData, alexStaff, answerReportAdminCaseData, answerReportAgentCaseData, questionHiddenAdminCaseData, contactAdminCaseData, contactAnsweredAdminCaseData, disputeAdminCaseData, reportAdminCaseData, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData, reportedConversation, fakeAdminCaseHandlers, fakeHandler } from '@/fixtures';
 import { AdminHomeScreen, AdminCasesScreen } from '@/ui/screens/admin';
 import { AdminCaseContent } from '@/ui/screens/admin/admin-case-screen';
 import { AdminReportedQuestion } from '@/ui/screens/admin/admin-reported-question';
@@ -58,6 +58,7 @@ export const adminPreviews: PreviewEntry[] = [
   casePreview('review-agent', p['review-agent'], reviewReportAgentCaseData),
   casePreview('question-answer', p['question-answer'], answerReportAdminCaseData),
   casePreview('question-hidden', p['question-hidden'], questionHiddenAdminCaseData),
+  casePreview('question-agent', p['question-agent'], answerReportAgentCaseData),
   {
     id: 'screen-admin-case/question-restore-limit', group: p.group, title: p['question-restore-limit'], layout: 'fullscreen',
     render: () => <Shell path={routes.admin.case(questionHiddenAdminCaseData.case.id)} detail><AdminReportedQuestion data={questionHiddenAdminCaseData.question!} onModerate={fakeHandler({ ok: false, code: 'limit_reached' })} initialAction="restore" initialResult={{ ok: false, code: 'limit_reached' }} /></Shell>,

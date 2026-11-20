@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes, type ActionResult, type AdminCaseHandlers, type AdminCasePageData } from '@/contracts';
-import { ADMIN_NOW, answerReportAdminCaseData, questionHiddenAdminCaseData, disputeAdminCaseData, fakeAdminCaseHandlers, reportAdminCaseData, reportedConversation, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData } from '@/fixtures';
+import { ADMIN_NOW, answerReportAdminCaseData, answerReportAgentCaseData, questionHiddenAdminCaseData, disputeAdminCaseData, fakeAdminCaseHandlers, reportAdminCaseData, reportedConversation, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData } from '@/fixtures';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import adminCase from '../../../../messages/en/ui/adminCase.json';
@@ -156,6 +156,13 @@ describe('a review report', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: adminCase.question.dialog.removeSubmit }));
     expect(onModerateQuestion).toHaveBeenCalledExactlyOnceWith({ action: 'remove', reason: 'Asks for money outside the app.' });
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
+
+  it('tells an agent who moderates questions instead of offering the buttons', () => {
+    render(content(answerReportAgentCaseData));
+    const panel = section(adminCase.question.title.answer);
+    expect(panel.getByText(adminCase.question.whoCan)).toBeVisible();
+    expect(panel.queryByRole('button', { name: adminCase.question.hide })).toBeNull();
   });
 
   it('offers to restore a hidden question, says why a restore was refused, and shows the step', async () => {

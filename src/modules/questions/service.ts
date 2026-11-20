@@ -13,7 +13,7 @@ import {
 import { users } from '@/modules/accounts/schema';
 import { initialsOf } from '@/modules/community/domain';
 import { helperProfiles } from '@/modules/profiles/schema';
-import { auditRoleOf } from '@/modules/tasks/moderation';
+import { auditRoleOf, canModerateTasks } from '@/modules/tasks/moderation';
 import { tasks } from '@/modules/tasks/schema';
 import type { StaffActor } from '@/modules/support/staff';
 import { maskContactDetails } from '@/modules/trust/contact-masking';
@@ -82,8 +82,10 @@ export async function getTaskQuestions(db: Db, viewer: QuestionViewer, taskId: s
   if (!task) return null;
   const closed = questionsClosed(task, now);
   const blocked = await blockedPeopleOf(db, viewer.id);
+  // Moderators get the controls (trust and safety, support leads, admins, as for posts: SEC22); all staff read hidden ones.
+  const moderator = viewer.staff !== null && canModerateTasks(viewer.staff.roles);
   // Someone the poster blocked (or who blocked them) sees no questions on their tasks.
-  if (blocked.includes(task.posterUserId)) return { taskId: task.id, questions: [], closed, viewer: { isPoster: false, canAsk: false, askBlocked: 'closed', isStaff: viewer.staff !== null } };
+  if (blocked.includes(task.posterUserId)) return { taskId: task.id, questions: [], closed, viewer: { isPoster: false, canAsk: false, askBlocked: 'closed', isStaff: moderator } };
   const conditions = [eq(taskQuestions.taskId, task.id)];
   if (!viewer.staff) conditions.push(eq(taskQuestions.status, 'visible'));
   if (blocked.length > 0) conditions.push(notInArray(taskQuestions.askerUserId, blocked));
@@ -104,7 +106,7 @@ export async function getTaskQuestions(db: Db, viewer: QuestionViewer, taskId: s
     createdAt: question.createdAt.toISOString(),
     ...(viewer.staff && question.status !== 'visible' ? { moderation: { status: question.status as 'hidden' | 'removed', ...(question.moderationReason ? { reason: question.moderationReason } : {}) } } : {}),
   }));
-  return { taskId: task.id, questions, closed, viewer: { isPoster: task.posterUserId === viewer.id, canAsk: !askBlocked, ...(askBlocked ? { askBlocked } : {}), isStaff: viewer.staff !== null } };
+  return { taskId: task.id, questions, closed, viewer: { isPoster: task.posterUserId === viewer.id, canAsk: !askBlocked, ...(askBlocked ? { askBlocked } : {}), isStaff: moderator } };
 }
 
 export async function askTaskQuestion(db: Db, viewer: QuestionViewer, taskId: string, input: TaskQuestionInput, now: Date): Promise<ActionResult> {
@@ -192,6 +194,8 @@ export async function moderateTaskQuestion(
   now: Date,
   alsoInTransaction?: (tx: Pick<Db, 'insert' | 'update'>, change: QuestionModeration) => Promise<void>,
 ): Promise<ActionResult> {
+  // Moderators only, as for posts and replies (security review SEC22): other staff read, and can't undo a removal.
+  if (!canModerateTasks(staff.roles)) return { ok: false, code: 'not_allowed' };
   const parsed = communityModerationInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const status = parsed.data.action === 'restore' ? 'visible' : parsed.data.action === 'hide' ? 'hidden' : 'removed';

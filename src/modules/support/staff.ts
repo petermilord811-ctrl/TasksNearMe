@@ -57,6 +57,7 @@ import { messages, threadParticipants, threads } from '@/modules/messaging/schem
 import { initialsOf } from '@/modules/profiles/queries';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { moderateTaskQuestion } from '@/modules/questions/service';
+import { canModerateTasks } from '@/modules/tasks/moderation';
 import { taskQuestions } from '@/modules/questions/schema';
 import { recomputeBadges } from '@/modules/badges/service';
 import { recomputeRating } from '@/modules/reviews/service';
@@ -394,7 +395,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
   const photoOf = new Map(fileRows.map((file) => [file.id, photoFromFile(file)]));
   const money = ctx.booking ? await bookingMoneyFacts(db, ctx.booking.id) : null;
   const reportedReview = row.context?.reviewId ? await reportedReviewOf(db, staff, row.context.reviewId) : null;
-  const reportedQuestion = row.context?.questionId ? await reportedQuestionOf(db, row.context.questionId, row.context.answer === true) : null;
+  const reportedQuestion = row.context?.questionId ? await reportedQuestionOf(db, staff, row.context.questionId, row.context.answer === true) : null;
 
   const timeline = events.flatMap((event): AdminCaseEventView[] => {
     const at = event.createdAt.toISOString();
@@ -560,7 +561,7 @@ export async function moderateReportedReview(
 // ---- A reported question on a task, or its answer (sweep QA2, QA3) ------------------------------------
 
 /** The question a report points at, with its answer and the task, as staff see it on the case (hidden ones too). */
-async function reportedQuestionOf(db: Db, questionId: string, answer: boolean): Promise<AdminCaseQuestion | null> {
+async function reportedQuestionOf(db: Db, staff: StaffActor, questionId: string, answer: boolean): Promise<AdminCaseQuestion | null> {
   const [row] = await db
     .select({ question: taskQuestions, taskTitle: tasks.title, posterUserId: tasks.posterUserId })
     .from(taskQuestions)
@@ -588,8 +589,8 @@ async function reportedQuestionOf(db: Db, questionId: string, answer: boolean): 
     },
     status,
     ...(status !== 'visible' && question.moderationReason ? { reason: question.moderationReason } : {}),
-    // Questions are community content: every staff role moderates them, as on the task pages.
-    canModerate: true,
+    // Community content: trust and safety, support leads and admins moderate it (as posts, SEC22); other staff read.
+    canModerate: canModerateTasks(staff.roles),
   };
 }
 

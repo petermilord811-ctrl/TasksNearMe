@@ -43,6 +43,7 @@ export interface TaskQuestionsData {
     isPoster: boolean;
     canAsk: boolean;
     askBlocked?: AskBlockedReason;
+    /** A staff member who moderates (trust and safety, support leads, admins): shows hide, remove and restore. */
     isStaff: boolean;
   };
 }

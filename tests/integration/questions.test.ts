@@ -50,6 +50,15 @@ describe('questions on a task', () => {
     expect(told.some((row) => (row.target as { taskId?: string }).taskId === taskId)).toBe(true);
   });
 
+  it('gives the moderation controls to moderators only: trust and safety, support leads, admins (as posts, SEC22)', async () => {
+    const agent = { id: 'usr_alex', staff: { id: 'usr_alex', roles: ['support_agent' as const] } };
+    const lead = { id: 'usr_morgan', staff: { id: 'usr_morgan', roles: ['support_lead' as const] } };
+    expect((await getTaskQuestions(db, agent, taskId, now))?.viewer.isStaff).toBe(false);
+    expect((await getTaskQuestions(db, lead, taskId, now))?.viewer.isStaff).toBe(true);
+    const [one] = await db.select({ id: taskQuestions.id }).from(taskQuestions).where(eq(taskQuestions.taskId, taskId)).limit(1);
+    expect(await moderateTaskQuestion(db, agent.staff, one!.id, { action: 'hide', reason: 'An agent tries' }, now)).toEqual({ ok: false, code: 'not_allowed' });
+  });
+
   it('lets only the poster answer and pin, tells the helper once, and opens asking again', async () => {
     const question = (await getTaskQuestions(db, ben, taskId, now))!.questions.find((item) => item.asker.displayName === 'Lee M.')!;
     expect(await answerTaskQuestion(db, lee, taskId, { questionId: question.id, body: 'Answering myself' }, now)).toMatchObject({ ok: false, code: 'not_allowed' });
@@ -146,17 +155,21 @@ describe('closing on the offers rule, reporting answers, restoring (sweep QA1, Q
     const alex: StaffActor = { id: 'usr_alex', roles: ['support_agent'] };
     const [filed] = await db.select().from(supportCases).where(and(eq(supportCases.openedByUserId, 'usr_lee'), sql`${supportCases.context}->>'taskId' = ${fresh}`)).limit(1);
     const questionId = filed!.context!.questionId!;
+    const morgan: StaffActor = { id: 'usr_morgan', roles: ['support_lead'] };
     const page = await getAdminCase(db, alex, filed!.id, now);
     expect(page?.data.question).toMatchObject({
       reported: 'answer',
       task: { id: fresh },
       question: { id: questionId, body: 'Is the side gate open?', asker: { displayName: 'Lee M.' }, answer: { poster: { displayName: 'Ben W.' } } },
       status: 'visible',
-      canModerate: true,
+      canModerate: false,
     });
     expect(page?.data.taskId).toBe(fresh);
 
-    expect(await moderateCaseQuestion(db, alex, filed!.id, { action: 'hide', reason: 'Asks for money outside the app' }, now)).toEqual({ ok: true, code: 'updated' });
+    // An agent reads it; trust and safety, support leads and admins moderate it (as posts, SEC22).
+    expect(await moderateCaseQuestion(db, alex, filed!.id, { action: 'hide', reason: 'Asks for money outside the app' }, now)).toEqual({ ok: false, code: 'not_allowed' });
+    expect((await getAdminCase(db, morgan, filed!.id, now))?.data.question?.canModerate).toBe(true);
+    expect(await moderateCaseQuestion(db, morgan, filed!.id, { action: 'hide', reason: 'Asks for money outside the app' }, now)).toEqual({ ok: true, code: 'updated' });
     const hidden = await getAdminCase(db, alex, filed!.id, now);
     expect(hidden?.data.question).toMatchObject({ status: 'hidden', reason: 'Asks for money outside the app' });
     expect(hidden?.data.events.find((event) => event.kind === 'question')).toMatchObject({ questionAction: 'hidden', body: 'Asks for money outside the app', actor: { kind: 'staff' } });
@@ -164,12 +177,12 @@ describe('closing on the offers rule, reporting answers, restoring (sweep QA1, Q
     const audited = await db.select({ action: auditLog.action }).from(auditLog).where(eq(auditLog.targetId, questionId));
     expect(audited.map((row) => row.action)).toContain('question.hide');
 
-    expect(await moderateCaseQuestion(db, alex, filed!.id, { action: 'restore', reason: 'Checked again: the poster fixed it' }, now)).toEqual({ ok: true, code: 'updated' });
+    expect(await moderateCaseQuestion(db, morgan, filed!.id, { action: 'restore', reason: 'Checked again: the poster fixed it' }, now)).toEqual({ ok: true, code: 'updated' });
     expect((await getAdminCase(db, alex, filed!.id, now))?.data.question?.status).toBe('visible');
 
     // Only on a question's case.
     const [other] = await db.select({ id: supportCases.id }).from(supportCases).where(sql`${supportCases.context}->>'questionId' is null`).limit(1);
-    expect(await moderateCaseQuestion(db, alex, other!.id, { action: 'hide', reason: 'Not a question case' }, now)).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await moderateCaseQuestion(db, morgan, other!.id, { action: 'hide', reason: 'Not a question case' }, now)).toEqual({ ok: false, code: 'not_allowed' });
     expect((await getAdminCase(db, alex, other!.id, now))?.data.question).toBeUndefined();
   });
 

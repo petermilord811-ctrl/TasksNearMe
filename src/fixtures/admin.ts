@@ -293,6 +293,9 @@ export const answerReportAdminCaseData: AdminCasePageData = {
   resolutions: ['no_action', 'account_action'],
 };
 
+/** An agent reads the reported answer, but moderating it is for trust and safety, support leads and admins. */
+export const answerReportAgentCaseData: AdminCasePageData = { ...answerReportAdminCaseData, question: { ...answerReportAdminCaseData.question!, canModerate: false } };
+
 /** Ben reported Jordan's question; staff hid it (with its answer), and the timeline has the step. */
 export const questionHiddenAdminCaseData: AdminCasePageData = {
   ...answerReportAdminCaseData,

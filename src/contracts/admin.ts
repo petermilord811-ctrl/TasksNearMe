@@ -230,7 +230,7 @@ export interface AdminCaseQuestion {
   status: 'visible' | 'hidden' | 'removed';
   /** Why staff hid or removed it (staff only). */
   reason?: string;
-  /** Hide, remove or restore it: every staff role, as on the task pages (audited, and noted on the case). */
+  /** Hide, remove or restore it: trust and safety, support leads and admins, as for posts (audited, and noted on the case). */
   canModerate: boolean;
 }
 

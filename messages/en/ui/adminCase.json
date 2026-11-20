@@ -201,7 +201,8 @@
     "review-agent": "Review report: an agent can't hide it",
     "question-answer": "Case · a reported answer",
     "question-hidden": "Case · a reported question, hidden",
-    "question-restore-limit": "Case · restoring a question refused"
+    "question-restore-limit": "Case · restoring a question refused",
+    "question-agent": "Case · a reported answer, an agent's view"
   },
   "review": {
     "title": "Reported review",
@@ -290,6 +291,7 @@
       "hideSubmit": "Hide question",
       "removeSubmit": "Remove question",
       "restoreSubmit": "Restore question"
-    }
+    },
+    "whoCan": "Trust and safety, support leads and admins can hide, remove or restore a question."
   }
 }
