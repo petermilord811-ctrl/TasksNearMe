@@ -1,4 +1,7 @@
 /** @vitest-environment jsdom */
+import { act } from 'react';
+import { hydrateRoot, type Root } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -13,12 +16,15 @@ vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); webauthn.supported = true; });
 
 const t = messages.account.passkeys;
-function mount(passkeys: Parameters<typeof AccountPasskeys>[0]['passkeys'] = []) {
-  const handlers = {
+function makeHandlers() {
+  return {
     onPasskeyRegistrationOptions: vi.fn(async () => ({ ok: true as const, options: { challenge: 'abc', rp: { name: 'TasksNearMe' } } })),
     onAddPasskey: vi.fn(async () => ({ ok: true as const, code: 'saved' as const })),
     onRemovePasskey: vi.fn(async () => ({ ok: true as const, code: 'updated' as const })),
   };
+}
+function mount(passkeys: Parameters<typeof AccountPasskeys>[0]['passkeys'] = []) {
+  const handlers = makeHandlers();
   render(<NextIntlClientProvider locale="en" messages={messages}><AccountPasskeys passkeys={passkeys} handlers={handlers} /></NextIntlClientProvider>);
   return handlers;
 }
@@ -54,6 +60,28 @@ describe('AccountPasskeys', () => {
     await user.click(screen.getByRole('button', { name: 'Remove passkey iPhone' }));
     await waitFor(() => expect(handlers.onRemovePasskey).toHaveBeenCalledWith({ id: 'pky_1' }));
     expect(await screen.findByText(t.removed)).toBeInTheDocument();
+  });
+
+  it('hydrates without moving anything: the server’s HTML is already the add form a browser with passkeys shows', async () => {
+    // Drawn as "can't use passkeys" on the server, the section grew by the form when the page hydrated, and a press
+    // below it made before then was released beside its target (the Ship run's "Download my data" at eb8cba5).
+    const tree = <NextIntlClientProvider locale="en" messages={messages}><AccountPasskeys passkeys={[]} handlers={makeHandlers()} /></NextIntlClientProvider>;
+    const container = document.body.appendChild(document.createElement('div'));
+    let root = null as Root | null;
+    try {
+      container.innerHTML = renderToString(tree);
+      // Hydrating lifts what only waits for it (src/ui/primitives/gated.tsx); nothing else may change.
+      const settled = () => container.innerHTML.replace(/ (?:data-hydrating|aria-disabled|readonly)(?:="[^"]*")?/g, '');
+      const server = settled();
+      expect(screen.getByLabelText(t.nameLabel)).toBeInTheDocument();
+      await act(async () => {
+        root = hydrateRoot(container, tree);
+      });
+      expect(settled()).toBe(server);
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+    }
   });
 
   it('says so where the browser has no passkeys', () => {

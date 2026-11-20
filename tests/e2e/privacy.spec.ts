@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
+import { pressWhileHydrating } from './support/hydration';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -32,6 +33,10 @@ test('a copy of my data is prepared and downloads as a file; a deletion can be t
   expect(file.suggestedFilename()).toMatch(/^tasksnearme-data-\d{4}-\d{2}-\d{2}\.json$/);
   const data = JSON.parse(await readFile((await file.path())!, 'utf8'));
   expect(data).toMatchObject({ format: 'tasksnearme-data-export/1', account: { email: 'lee@example.test' } });
+  // Pressed before the page has hydrated and released after (a slow laptop), it still downloads: nothing above the
+  // link changes size as the page hydrates. On the Ship run at eb8cba5 the click above was lost that way.
+  const [again] = await Promise.all([page.waitForEvent('download', { timeout: 30_000 }), pressWhileHydrating(page, download)]);
+  expect(again.suggestedFilename()).toBe(file.suggestedFilename());
 
   // A retry after the deletion step finds the deletion still asked for: take it back first.
   const keep = privacy.getByRole('button', { name: 'Keep my account' });

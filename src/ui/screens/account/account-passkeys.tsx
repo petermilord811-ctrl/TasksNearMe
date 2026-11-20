@@ -28,7 +28,11 @@ export function AccountPasskeys({ passkeys, held = false, handlers }: {
   const t = useTranslations('account.passkeys');
   const id = useId();
   const router = useRouter();
-  const supported = useSyncExternalStore(noSubscribe, browserSupportsWebAuthn, () => false);
+  // Rendered from the server on, as on sign-in (audit M5): nearly every browser has passkeys, so the add form (inert
+  // until the page hydrates) is there from the start. Drawn as "can't use passkeys" instead, the section grew by the
+  // form as the page hydrated, and everything below it moved down under a press made before then: the Ship run's
+  // click on "Download my data" at eb8cba5 was released beside the link. A browser without passkeys gets the note.
+  const supported = useSyncExternalStore(noSubscribe, browserSupportsWebAuthn, () => true);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [result, setResult] = useState<ActionResult>();
