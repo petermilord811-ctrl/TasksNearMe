@@ -2,6 +2,7 @@ import { and, eq, inArray, like, sum } from 'drizzle-orm';
 import type { PaymentProvider } from '@/integrations/payments';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
 import { auditLog } from '@/platform/audit/schema';
+import { outboxEvents } from '@/platform/outbox/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { payments, refunds } from './schema';
@@ -123,8 +124,28 @@ export async function refundWholePayment(deps: { db: Db; payments: PaymentProvid
   if (remainingCents <= 0) return 'refunded';
   const charge: RefundableCharge = { id: payment.id, providerRef: payment.providerRef, amountCents: payment.amountCents, remainingCents, createdAt: payment.createdAt };
   const result = await refundAcross(deps, payment.bookingId, [charge], null, { reason, key: `refund:${payment.bookingId}:${reason}:${payment.id}` }, now);
+  // The payer hears it, and why (payment_refunded): no money comes back unexplained.
+  if (result.refundedCents > 0) {
+    const refundFor = REFUND_FOR[reason];
+    await deps.db.insert(outboxEvents).values({
+      id: newId('evt'),
+      type: 'payment.refunded',
+      aggregateType: 'payment',
+      aggregateId: payment.id,
+      payload: { paymentId: payment.id, bookingId: payment.bookingId, payerUserId: payment.payerUserId, amountCents: result.refundedCents, ...(refundFor ? { refundFor } : {}) },
+    });
+  }
   return result.ok ? 'refunded' : 'failed';
 }
+
+/** Why an automatic refund happened, as the payer's notice says it. */
+const REFUND_FOR: Record<string, 'late' | 'second_tip' | 'change' | undefined> = {
+  late_capture: 'late',
+  hold_expired: 'late',
+  task_closed: 'late',
+  second_tip: 'second_tip',
+  change_conflict: 'change',
+};
 
 const words = (value: string) => value.replaceAll('_', ' ');
 

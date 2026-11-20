@@ -17,6 +17,8 @@ import { handleConnectWebhook, runScheduledTransfers } from '@/modules/payments/
 import { reverseTransfer } from '@/modules/payments/reversals';
 import { payments, refunds } from '@/modules/payments/schema';
 import { cancelStaleCharges } from '@/modules/payments/stale-charges';
+import { planNotifications } from '@/modules/notifications/service';
+import { outboxEvents } from '@/platform/outbox/schema';
 import { handleStripePaymentWebhook } from '@/modules/payments/stripe-webhooks';
 import { supportCases } from '@/modules/support/schema';
 import type { StaffActor } from '@/modules/support/staff';
@@ -205,6 +207,10 @@ describe('a charge whose call never answered (MO9)', () => {
     await handleStripePaymentWebhook(deps, signedPayment(event), now);
     expect((await db.select().from(refunds).where(eq(refunds.paymentId, 'pay_tmp_mr_chg'))).map((row) => [row.amountCents, row.reason, row.status])).toEqual([[1200, 'late_capture', 'succeeded']]);
     expect(await status('pay_tmp_mr_chg')).toBe('refunded');
+    // The client hears it, and why, once (payment_refunded): no money comes back unexplained.
+    const told = await db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'payment.refunded'), eq(outboxEvents.aggregateId, 'pay_tmp_mr_chg')));
+    expect(told).toHaveLength(1);
+    expect(await planNotifications(db, told[0]!)).toEqual([expect.objectContaining({ userId: CLIENT, type: 'payment_refunded', params: { amountCents: 1200, refundFor: 'late' } })]);
   });
 });
 

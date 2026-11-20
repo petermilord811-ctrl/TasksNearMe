@@ -76,6 +76,8 @@ describe('the cancellation receipt (the owner\'s choice, 2026-11-20)', () => {
   it('goes by email only, as a booking email (always on, no unsubscribe)', () => {
     expect(channelsFor('booking_canceled_receipt')).toEqual(['email']);
     expect(channelsFor('booking_canceled')).toEqual(['email', 'sms', 'push']);
+    // Nudges and receipts that can wait never go by text.
+    for (const type of ['review_prompt', 'review_reminder', 'payment_refunded'] as const) expect(channelsFor(type)).toEqual(['email', 'push']);
     expect(NOTIFICATION_TOPIC.booking_canceled_receipt).toBe('bookings');
   });
 

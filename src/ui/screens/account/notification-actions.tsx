@@ -37,6 +37,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   review_prompt: PenLine,
   review_reminder: Timer,
   saved_searches_digest: BellRing,
+  payment_refunded: RotateCcw,
   message_received: MessageCircle,
   support_replied: Headset,
   case_resolved: CircleCheck,
@@ -149,6 +150,7 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
             count: notification.params?.count ?? 0,
             on: notification.params?.on ?? 'post',
             search: notification.params?.search ?? '',
+            refundFor: notification.params?.refundFor ?? 'other',
           })}
         </span>
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm leading-5">

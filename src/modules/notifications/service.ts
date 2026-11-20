@@ -186,6 +186,24 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       }
       return asked;
     }
+    case 'payment.refunded': {
+      // Money nothing was owed for went back on its own (money review #8): the payer hears it, and why, so no refund comes
+      // back unexplained.
+      const booking = await bookingContext(db, text(p.bookingId) ?? event.aggregateId);
+      const payer = text(p.payerUserId);
+      if (!booking || !payer) return [];
+      const refundFor = p.refundFor === 'late' || p.refundFor === 'second_tip' || p.refundFor === 'change' ? p.refundFor : undefined;
+      const cents = typeof p.amountCents === 'number' ? p.amountCents : undefined;
+      return [
+        {
+          userId: payer,
+          type: 'payment_refunded' as const,
+          target: { kind: 'booking', bookingId: booking.id } as AttentionTarget,
+          title: booking.title,
+          params: { ...(cents !== undefined ? { amountCents: cents } : {}), ...(refundFor ? { refundFor } : {}) },
+        },
+      ];
+    }
     case 'community.helpful': {
       const post = await communityPost(db, text(p.postId));
       const author = text(p.authorUserId);

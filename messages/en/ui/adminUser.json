@@ -164,7 +164,8 @@
     "saved_search_digest": "Saved search digest",
     "review_prompt": "Review prompt",
     "review_reminder": "Review reminder",
-    "saved_searches_digest": "Saved searches digest"
+    "saved_searches_digest": "Saved searches digest",
+    "payment_refunded": "Automatic refund"
   },
   "previews": {
     "group": "Admin · person details",

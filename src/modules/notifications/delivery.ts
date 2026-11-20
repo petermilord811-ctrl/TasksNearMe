@@ -124,6 +124,7 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     count: params.count ?? 0,
     on: params.on ?? 'post',
     search: params.search ?? '',
+    refundFor: params.refundFor ?? 'other',
   });
   const url = `${appUrl()}${localizedPath(pathOf(row.target), locale)}`;
   const type = row.type as NotificationType;

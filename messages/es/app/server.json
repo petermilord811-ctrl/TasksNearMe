@@ -196,7 +196,8 @@
         "saved_search_digest": "Abre tu búsqueda para verlas.",
         "review_prompt": "Toma un minuto. Las reseñas se mantienen ocultas hasta que ambos escriban la suya, o durante 14 días.",
         "review_reminder": "Después, las reseñas de esta reserva se cierran. Se mantienen ocultas hasta que ambos escriban la suya.",
-        "saved_searches_digest": "Tu página de búsquedas guardadas tiene cada una, con sus filtros y avisos."
+        "saved_searches_digest": "Tu página de búsquedas guardadas tiene cada una, con sus filtros y avisos.",
+        "payment_refunded": "Vuelve a la tarjeta con la que pagaste en 5 a 10 días hábiles, según tu banco."
       },
       "lockedFooter": "Los correos de reservas y pagos siempre están activados: son tus recibos y avisos de seguridad.",
       "optionalFooter": "Recibes esto porque los correos de {topic} están activados.",
@@ -272,7 +273,8 @@
       "saved_search_digest": "{count, plural, one {# tarea nueva para tu búsqueda {search}} other {# tareas nuevas para tu búsqueda {search}}}.",
       "review_prompt": "¿Qué tal te fue con {actorName}? Deja una reseña sobre {title}.",
       "review_reminder": "{days, plural, one {Queda un día} other {Quedan # días}} para dejar tu reseña de {actorName} sobre {title}.",
-      "saved_searches_digest": "{count, plural, one {# tarea nueva} other {# tareas nuevas}} para tus búsquedas guardadas, entre ellas {search}."
+      "saved_searches_digest": "{count, plural, one {# tarea nueva} other {# tareas nuevas}} para tus búsquedas guardadas, entre ellas {search}.",
+      "payment_refunded": "Te devolvimos {hasAmount, select, yes {{amount}} other {un pago}} de {title}: {refundFor, select, late {se cobró después de que la reserva terminó} second_tip {era una segunda propina para la misma reserva} change {el cambio se pagó cuando la reserva ya había cambiado} other {no se debía}}."
     },
     "pushTitle": "TasksNearMe",
     "receipt": {

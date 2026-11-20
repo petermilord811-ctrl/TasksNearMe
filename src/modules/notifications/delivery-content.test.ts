@@ -26,6 +26,10 @@ describe('email and text message content', () => {
     expect(deliveryContent({ ...base, type: 'helper_running_late', params: { minutes: 20 } }).subject).toBe('Jordan T. is running 20 minutes late for Assemble a desk.');
     expect(deliveryContent({ ...base, type: 'approval_reminder', params: { hours: 1 } }).subject).toBe("Approve Assemble a desk or report a problem. It's approved automatically in 1 hour.");
     expect(deliveryContent({ ...base, type: 'booking_confirmed', title: null, params: null }).subject).toBe('Your booking for your task is confirmed.');
+    // Money back on its own says how much and why (money review #8), in the reader's language.
+    expect(deliveryContent({ ...base, type: 'payment_refunded', params: { amountCents: 6600, refundFor: 'late' } }).subject).toBe('We refunded $66.00 for Assemble a desk: it came through after the booking had ended.');
+    expect(deliveryContent({ ...base, type: 'payment_refunded', params: { amountCents: 500, refundFor: 'second_tip' } }, 'es').subject).toMatch(/^Te devolvimos .*5[.,]00.* de Assemble a desk: era una segunda propina para la misma reserva\.$/);
+    expect(deliveryContent({ ...base, type: 'payment_refunded', params: null }).subject).toBe("We refunded a payment for Assemble a desk: it wasn't owed.");
   });
 });
 

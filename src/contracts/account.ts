@@ -133,6 +133,11 @@ export const NOTIFICATION_TYPES = [
   'review_reminder',
   /** The morning digest over several saved searches (sweep SS6): `params.count` new tasks, the most for `params.search`. */
   'saved_searches_digest',
+  /**
+   * Money nothing was owed for went back on its own (money review #8): `params.amountCents` on `title`, and why in
+   * `params.refundFor` (it came after the booking ended, a second tip, a change paid after the booking moved on).
+   */
+  'payment_refunded',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -152,7 +157,7 @@ export interface NotificationView {
   /** Who did it ("Jordan T."). */
   actorName?: string;
   /** `at` and `day` are on the clock of `timeZone`, the market of the booking or series it's about (completion plan 8.1). */
-  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number; count?: number; on?: 'post' | 'reply'; search?: string; timeZone?: TimeZone; money?: CancelReceiptMoney };
+  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number; count?: number; on?: 'post' | 'reply'; search?: string; timeZone?: TimeZone; money?: CancelReceiptMoney; refundFor?: 'late' | 'second_tip' | 'change' };
   /** Where it leads (same targets as the home's attention items). */
   target: AttentionTarget;
   createdAt: ISODateTime;
