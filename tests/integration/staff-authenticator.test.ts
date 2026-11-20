@@ -133,6 +133,25 @@ describe('the staff authenticator', () => {
     await db.delete(staffSessionChecks).where(eq(staffSessionChecks.sessionId, staff.sessionId));
   });
 
+  it('counts parallel guesses too: no more than 5 codes are checked in a window (sweep 2026-11-20)', async () => {
+    // Every attempt is counted before its code is looked at: a burst of guesses can't all pass a read of the count.
+    const staff = { id: PLAIN, sessionId: 'ses_tmp_totp_plain' };
+    const now = at('2026-11-23T22:00:00.000Z');
+    const results = await Promise.all(Array.from({ length: 12 }, () => verifyStaffTotp(deps, staff, '123123', now)));
+    expect(results.filter((result) => !result.ok && result.code === 'validation_failed')).toHaveLength(5);
+    expect(results.filter((result) => !result.ok && result.code === 'rate_limited')).toHaveLength(7);
+  });
+
+  it('renews an old check when the code is given again: a check lasts a working day (sweep 2026-11-20)', async () => {
+    const staff = { id: LOST, sessionId: 'ses_tmp_totp_lost' };
+    const old = new Date(Date.now() - 2 * 86_400_000);
+    await db.insert(staffSessionChecks).values({ sessionId: staff.sessionId, verifiedAt: old }).onConflictDoUpdate({ target: staffSessionChecks.sessionId, set: { verifiedAt: old } });
+    expect(await verifyStaffTotp(dev, staff, DEV_STAFF_CODE, at('2026-11-24T09:00:00.000Z'))).toEqual({ ok: true, code: 'updated' });
+    const [check] = await checksFor(staff.sessionId);
+    expect(Date.now() - check!.verifiedAt.getTime()).toBeLessThan(60_000);
+    await db.delete(staffSessionChecks).where(eq(staffSessionChecks.sessionId, staff.sessionId));
+  });
+
   it('is reset by another admin with a reason, which asks every session for a code again', async () => {
     const now = at('2026-11-23T18:00:00.000Z');
     await db.insert(staffAuthenticators).values({ userId: LOST, secretCiphertext: cipher.encrypt('JBSWY3DPEHPK3PXP'), confirmedAt: now, lastStep: null });

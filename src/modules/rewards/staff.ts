@@ -31,7 +31,9 @@ const LEADS = ['support_lead', 'admin'] as const;
 const WORKERS = ['support_agent', 'support_lead', 'trust_safety', 'admin'] as const;
 const has = (staff: StaffActor, roles: readonly string[]) => staff.roles.some((role) => roles.includes(role));
 
-export function staffRewardActions(staff: StaffActor, status: RewardStatus): StaffRewardActionId[] {
+export function staffRewardActions(staff: StaffActor, status: RewardStatus, helperUserId: string): StaffRewardActionId[] {
+  // Never on one's own account: another staff member decides (sweep 2026-11-20, security review).
+  if (helperUserId === staff.id) return [];
   const actions: StaffRewardActionId[] = [];
   if (status === 'in_review' && has(staff, LEADS)) actions.push('approve_review');
   if (status === 'in_review' && has(staff, [...LEADS, 'trust_safety'])) actions.push('reject_review');
@@ -83,7 +85,7 @@ async function rowsOf(db: Db, staff: StaffActor, grants: GrantRow[]): Promise<Ad
         ...(grant.holdUntil ? { holdUntil: grant.holdUntil.toISOString() } : {}),
         createdAt: grant.createdAt.toISOString(),
         signals,
-        actions: staffRewardActions(staff, status),
+        actions: staffRewardActions(staff, status, grant.helperUserId),
       },
     ];
   });
@@ -148,7 +150,7 @@ export async function decideReward(
   const parsed = rewardDecisionInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const [grant] = await db.select().from(rewardGrants).where(eq(rewardGrants.id, parsed.data.grantId)).limit(1);
-  if (!grant || !staffRewardActions(staff, grant.status as RewardStatus).includes(parsed.data.action)) return { ok: false, code: 'not_allowed' };
+  if (!grant || !staffRewardActions(staff, grant.status as RewardStatus, grant.helperUserId).includes(parsed.data.action)) return { ok: false, code: 'not_allowed' };
   const from = grant.status;
   const guarded = (set: Partial<typeof rewardGrants.$inferInsert>) =>
     db.update(rewardGrants).set({ ...set, updatedAt: now }).where(and(eq(rewardGrants.id, grant.id), eq(rewardGrants.status, from))).returning({ id: rewardGrants.id });

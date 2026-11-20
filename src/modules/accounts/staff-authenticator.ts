@@ -6,7 +6,7 @@ import { newTotpSecret, otpauthUri, verifyTotp } from '@/platform/auth/totp';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { consumeRateLimit, rateLimitReached } from '@/platform/rate-limit';
+import { consumeRateLimit, releaseRateLimit } from '@/platform/rate-limit';
 import { validationFailed } from '@/platform/actions/results';
 import { sessions, staffAuthenticators, staffRoles, staffSessionChecks, staffSetupCodes, users } from './schema';
 import type { StaffActor } from '@/modules/support/staff';
@@ -60,24 +60,24 @@ export async function getStaffVerifyPage(deps: StaffAuthDeps, staff: { id: strin
 }
 
 async function passSession(db: Db, sessionId: string) {
-  await db.insert(staffSessionChecks).values({ sessionId }).onConflictDoNothing();
+  // Passing again renews the check: it lasts a working day (platform/auth/staff-check.ts).
+  await db.insert(staffSessionChecks).values({ sessionId }).onConflictDoUpdate({ target: staffSessionChecks.sessionId, set: { verifiedAt: sql`now()` } });
 }
 
 /** The code from the authenticator (or, outside production, the development code). */
 export async function verifyStaffTotp(deps: StaffAuthDeps, staff: { id: string; sessionId: string }, code: string, now: Date): Promise<ActionResult> {
   const clean = code.replace(/\s/g, '');
   if (!/^\d{6}$/.test(clean)) return { ok: false, code: 'validation_failed', fieldErrors: { code: ['invalid'] } };
-  // 5 wrong codes in 10 minutes pause the checks; right ones don't count.
+  // 5 wrong codes in 10 minutes pause the checks; right ones don't count. Every attempt is counted first, with one
+  // atomic increment, and a right one given back: parallel guesses can't all pass a read of the count (sweep 2026-11-20).
   const key = `staff-two-step:user:${staff.id}`;
-  if (!(await rateLimitReached(deps.db, key, ATTEMPT_RULE, now)).ok) return { ok: false, code: 'rate_limited' };
+  if (!(await consumeRateLimit(deps.db, key, ATTEMPT_RULE, now)).ok) return { ok: false, code: 'rate_limited' };
   if (!deps.production && clean === DEV_STAFF_CODE) {
+    await releaseRateLimit(deps.db, key, ATTEMPT_RULE, now);
     await passSession(deps.db, staff.sessionId);
     return { ok: true, code: 'updated' };
   }
-  const wrong = async (): Promise<ActionResult> => {
-    await consumeRateLimit(deps.db, key, ATTEMPT_RULE, now);
-    return { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } };
-  };
+  const wrong = async (): Promise<ActionResult> => ({ ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } });
   const authenticator = await authenticatorOf(deps.db, staff.id);
   if (!authenticator?.confirmedAt) return wrong();
   const result = verifyTotp(deps.cipher.decrypt(authenticator.secretCiphertext), clean, now, authenticator.lastStep);
@@ -92,6 +92,7 @@ export async function verifyStaffTotp(deps: StaffAuthDeps, staff: { id: string; 
     .returning({ userId: staffAuthenticators.userId });
   // A code already used (a replay) counts as a wrong one.
   if (!claimed) return wrong();
+  await releaseRateLimit(deps.db, key, ATTEMPT_RULE, now);
   await passSession(deps.db, staff.sessionId);
   return { ok: true, code: 'updated' };
 }
@@ -99,7 +100,8 @@ export async function verifyStaffTotp(deps: StaffAuthDeps, staff: { id: string; 
 /** A setup code from an admin starts enrollment: a new secret, shown to the staff member until confirmed. */
 export async function redeemSetupCode(deps: StaffAuthDeps, staff: { id: string }, setupCode: string, now: Date): Promise<ActionResult> {
   const setupKey = `staff-setup:user:${staff.id}`;
-  if (!(await rateLimitReached(deps.db, setupKey, ATTEMPT_RULE, now)).ok) return { ok: false, code: 'rate_limited' };
+  // Counted first, given back when right (as verifyStaffTotp).
+  if (!(await consumeRateLimit(deps.db, setupKey, ATTEMPT_RULE, now)).ok) return { ok: false, code: 'rate_limited' };
   const existing = await authenticatorOf(deps.db, staff.id);
   if (existing?.confirmedAt) return { ok: false, code: 'not_allowed' };
   const [row] = await deps.db
@@ -107,10 +109,8 @@ export async function redeemSetupCode(deps: StaffAuthDeps, staff: { id: string }
     .from(staffSetupCodes)
     .where(and(eq(staffSetupCodes.userId, staff.id), eq(staffSetupCodes.codeHash, hashCode(setupCode, deps.secret)), isNull(staffSetupCodes.usedAt), gt(staffSetupCodes.expiresAt, now)))
     .limit(1);
-  if (!row) {
-    await consumeRateLimit(deps.db, setupKey, ATTEMPT_RULE, now);
-    return { ok: false, code: 'validation_failed', fieldErrors: { setupCode: ['incorrect'] } };
-  }
+  if (!row) return { ok: false, code: 'validation_failed', fieldErrors: { setupCode: ['incorrect'] } };
+  await releaseRateLimit(deps.db, setupKey, ATTEMPT_RULE, now);
   await deps.db.update(staffSetupCodes).set({ usedAt: now }).where(eq(staffSetupCodes.id, row.id));
   const secretCiphertext = deps.cipher.encrypt(newTotpSecret());
   await deps.db
@@ -125,12 +125,11 @@ export async function confirmEnrollment(deps: StaffAuthDeps, staff: { id: string
   const authenticator = await authenticatorOf(deps.db, staff.id);
   if (!authenticator || authenticator.confirmedAt) return { ok: false, code: 'not_allowed' };
   const key = `staff-two-step:user:${staff.id}`;
-  if (!(await rateLimitReached(deps.db, key, ATTEMPT_RULE, now)).ok) return { ok: false, code: 'rate_limited' };
+  // Counted first, given back when right (as verifyStaffTotp).
+  if (!(await consumeRateLimit(deps.db, key, ATTEMPT_RULE, now)).ok) return { ok: false, code: 'rate_limited' };
   const result = verifyTotp(deps.cipher.decrypt(authenticator.secretCiphertext), code.replace(/\s/g, ''), now, null);
-  if (!result.ok) {
-    await consumeRateLimit(deps.db, key, ATTEMPT_RULE, now);
-    return { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } };
-  }
+  if (!result.ok) return { ok: false, code: 'validation_failed', fieldErrors: { code: ['incorrect'] } };
+  await releaseRateLimit(deps.db, key, ATTEMPT_RULE, now);
   const [confirmed] = await deps.db
     .update(staffAuthenticators)
     .set({ confirmedAt: now, lastStep: result.step, updatedAt: now })

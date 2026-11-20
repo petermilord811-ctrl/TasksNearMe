@@ -92,6 +92,20 @@ describe('phone verification', () => {
     expect((await phones.start(userId, '512-555-0191')).ok).toBe(true);
   });
 
+  it('counts a burst of guesses too: no more than three are compared (sweep 2026-11-20)', async () => {
+    const t = clock('2026-11-17T17:00:00.000Z');
+    const phones = createPhoneVerification({ db, sms, secret: 'test-secret', now: t.now });
+    const userId = await newUser('usr_phone_burst');
+    await phones.start(userId, '512-555-0193');
+    const right = await lastText('+15125550193');
+    const wrong = right === '000000' ? '111111' : '000000';
+    // Each attempt is counted before its code is compared, so parallel guesses can't all read the same count.
+    const results = await Promise.all(Array.from({ length: 8 }, () => phones.verify(userId, wrong)));
+    expect(results.filter((result) => !result.ok && result.reason === 'incorrect')).toHaveLength(2);
+    expect(results.filter((result) => !result.ok && result.reason === 'locked')).toHaveLength(6);
+    expect(await phones.verify(userId, right)).toMatchObject({ ok: false, reason: 'locked' });
+  });
+
   it('expires codes, limits resends, and refuses numbers we cannot use', async () => {
     const t = clock('2026-11-17T17:00:00.000Z');
     const phones = createPhoneVerification({ db, sms, secret: 'test-secret', now: t.now });

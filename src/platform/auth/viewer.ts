@@ -10,6 +10,7 @@ import { db } from '@/platform/db/client';
 import { setDefaultRequestTimeZone } from '@/shared/format/request-zone';
 import { auth } from './auth';
 import { authRequestHeaders } from './request-headers';
+import { staffCheckCurrent } from './staff-check';
 
 export interface ViewerUser {
   id: string;
@@ -81,7 +82,8 @@ export const getViewer = cache(async (): Promise<Viewer> => {
       mode: u.mode === 'helper' ? 'helper' : 'poster',
       status: u.status ?? 'active',
       staffRoles: roles,
-      staffTwoStepVerified: checkRows.length > 0,
+      // A check lasts a working day, not the session's 30 days (staff-check.ts).
+      staffTwoStepVerified: staffCheckCurrent(checkRows),
       helperStatus: (profileRows[0]?.status as ViewerUser['helperStatus'] | undefined) ?? 'none',
       timeZone,
     },

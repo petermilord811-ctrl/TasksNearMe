@@ -100,8 +100,10 @@ export async function getAdminUser(db: Db, staff: StaffActor, userId: string, no
   ]);
   if (!row) return null;
   const actions: AdminUserPageData['actions'] = [];
-  if (canModerate(staff) && (row.helperStatus === 'active' || row.helperStatus === 'paused')) actions.push('suspend_helper');
-  if (canModerate(staff) && row.helperStatus === 'suspended') actions.push('reinstate_helper');
+  // Never on one's own account: another staff member decides (sweep 2026-11-20, security review).
+  const moderates = canModerate(staff) && user.id !== staff.id;
+  if (moderates && (row.helperStatus === 'active' || row.helperStatus === 'paused')) actions.push('suspend_helper');
+  if (moderates && row.helperStatus === 'suspended') actions.push('reinstate_helper');
   return {
     user: { ...row, ...(user.phone ? { phone: { last4: user.phone.slice(-4), verified: user.phoneVerifiedAt !== null } } : {}) },
     bookings: bookingRows.map(({ booking, title, breakdown }) => {
@@ -111,7 +113,7 @@ export async function getAdminUser(db: Db, staff: StaffActor, userId: string, no
     cases: await caseRowsFor(db, caseRows, now),
     rewards: (await getAdminRewardRows(db, { id: staff.id, roles: [] }, grants)).map((reward) => ({ ...reward, actions: [] })),
     strikes: strikeRows.map((strike) => ({ id: strike.id, bookingId: strike.bookingId, reason: strike.reason, at: strike.createdAt.toISOString(), ...(strike.reversedAt ? { reversedAt: strike.reversedAt.toISOString() } : {}) })),
-    canReverseStrikes: canModerate(staff),
+    canReverseStrikes: moderates,
     deliveries: deliveryRows.map(({ delivery, type }): AdminDeliveryRow => ({
       id: delivery.id,
       channel: delivery.channel as NotificationChannel,
@@ -132,7 +134,8 @@ export async function getAdminUser(db: Db, staff: StaffActor, userId: string, no
 export async function setHelperSuspension(db: Db, staff: StaffActor, userId: string, input: HelperSuspensionInput, now: Date): Promise<ActionResult> {
   const parsed = helperSuspensionInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
-  if (!canModerate(staff)) return { ok: false, code: 'not_allowed' };
+  // Never on one's own account: another staff member decides (sweep 2026-11-20, security review).
+  if (!canModerate(staff) || String(userId) === staff.id) return { ok: false, code: 'not_allowed' };
   const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, String(userId))).limit(1);
   if (!profile) return { ok: false, code: 'not_allowed' };
   const suspend = parsed.data.suspend;
@@ -168,7 +171,8 @@ export async function setHelperSuspension(db: Db, staff: StaffActor, userId: str
 export async function reverseStrike(db: Db, staff: StaffActor, userId: string, input: StrikeReversalInput, now: Date): Promise<ActionResult> {
   const parsed = strikeReversalInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
-  if (!canModerate(staff)) return { ok: false, code: 'not_allowed' };
+  // Never on one's own account: another staff member decides (sweep 2026-11-20, security review).
+  if (!canModerate(staff) || String(userId) === staff.id) return { ok: false, code: 'not_allowed' };
   return db.transaction(async (tx): Promise<ActionResult> => {
     const [strike] = await tx
       .update(helperStrikes)

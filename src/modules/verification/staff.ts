@@ -375,7 +375,8 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
   const latestBackground = background.latest;
   const inReviewProof = state.addressRows.find((row) => row.status === 'in_review');
   const actions: AdminVerificationActionId[] = [];
-  if (canDecideVerification(staff)) {
+  // Never on one's own account: another staff member decides (sweep 2026-11-20, security review).
+  if (canDecideVerification(staff) && userId !== staff.id) {
     if (inReviewProof) actions.push('review_address');
     if (address.verified) actions.push('request_address');
     if (identity.capture?.status === 'submitted') actions.push('review_identity_capture');
@@ -460,7 +461,8 @@ export async function decideAddress(db: Db, staff: StaffActor, input: AddressDec
       rejectionReason: decision === 'reject' ? (reason ?? 'other') : null,
       updatedAt: now,
     })
-    .where(and(eq(addressVerifications.id, verificationId), eq(addressVerifications.status, 'in_review')))
+    // Never on one's own account: another staff member decides (sweep 2026-11-20, security review).
+    .where(and(eq(addressVerifications.id, verificationId), eq(addressVerifications.status, 'in_review'), ne(addressVerifications.userId, staff.id)))
     .returning({ userId: addressVerifications.userId });
   const userId = updated[0]?.userId;
   if (!userId) return { ok: false, code: 'not_allowed' };
@@ -506,7 +508,7 @@ export async function decideIdentityCapture(db: Db, staff: StaffActor, input: Id
   let withoutReading: 'no_reader' | 'timed_out' | undefined;
   if (decision === 'approve') {
     let [capture] = await db.select().from(identityCaptures).where(eq(identityCaptures.id, captureId)).limit(1);
-    if (!capture || capture.status !== 'submitted') return { ok: false, code: 'not_allowed' };
+    if (!capture || capture.status !== 'submitted' || capture.userId === staff.id) return { ok: false, code: 'not_allowed' };
     const reader = options.reading?.reader ? options.reading : null;
     if (capture.autoCheck === null && reader) {
       await readCaptureNow(db, reader, captureId, now);
@@ -529,7 +531,8 @@ export async function decideIdentityCapture(db: Db, staff: StaffActor, input: Id
       staffNote: note,
       updatedAt: now,
     })
-    .where(and(eq(identityCaptures.id, captureId), eq(identityCaptures.status, 'submitted')))
+    // Never on one's own account: another staff member decides (sweep 2026-11-20, security review).
+    .where(and(eq(identityCaptures.id, captureId), eq(identityCaptures.status, 'submitted'), ne(identityCaptures.userId, staff.id)))
     .returning({ userId: identityCaptures.userId });
   const userId = updated[0]?.userId;
   if (!userId) return { ok: false, code: 'not_allowed' };

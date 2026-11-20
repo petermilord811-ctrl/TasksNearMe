@@ -1,6 +1,7 @@
 import 'server-only';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { E2E_BUILD } from '@/shared/dev-helpers';
+import { isLocalRequest } from '@/shared/local-request';
 import { readClockOffset } from './signing';
 
 /**
@@ -12,6 +13,11 @@ import { readClockOffset } from './signing';
  * `TEST_CLOCK=1` (preview, staging): `next.config.ts` inlines `TEST_CLOCK_BUILD`, so a production build
  * without it reduces `requestNow()` to `new Date()`. Outside development and the e2e build (which serves this
  * machine only: src/shared/dev-helpers.ts) it also needs `TEST_CLOCK_SECRET`.
+ *
+ * Without `TEST_CLOCK_SECRET`, the cookie is signed with the development secret below, which anyone can read here:
+ * then it moves only the clock of requests made on this machine (src/shared/local-request.ts), as the other
+ * stand-ins do. Through the public dev address a forged cookie would otherwise reset every hourly limit and
+ * end review windows early (sweep 2026-11-20, security review).
  */
 
 export const TEST_CLOCK_COOKIE = 'tnm_test_clock';
@@ -27,6 +33,10 @@ export async function requestNow(): Promise<Date> {
   if (process.env.TEST_CLOCK_BUILD !== '1') return new Date();
   const secret = testClockSecret();
   if (!secret) return new Date();
+  if (secret === DEV_SECRET) {
+    const list = await headers();
+    if (!isLocalRequest((name) => list.get(name))) return new Date();
+  }
   const offset = readClockOffset((await cookies()).get(TEST_CLOCK_COOKIE)?.value, secret);
   return new Date(Date.now() + offset);
 }

@@ -32,6 +32,9 @@ const nextConfig: NextConfig = {
     // Task photos (up to 10 MB) are uploaded through a Server Action in development.
     // Before launch: presigned direct uploads to storage (decisions.md).
     serverActions: { bodySizeLimit: '11mb', ...(devPublicHost ? { allowedOrigins: [devPublicHost] } : {}) },
+    // Next's MCP endpoint (/_next/mcp: the routes, which file each Server Action is in, compiling on demand) answers
+    // anyone who reaches the dev server, through the public dev address too (sweep 2026-11-20, security review).
+    mcpServer: false,
   },
   // Partial Prefetching is enabled per segment (`prefetch = 'partial'` on the app and admin
   // layouts). Globally it embedded a second copy of each public page's payload (decisions.md).

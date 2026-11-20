@@ -2,7 +2,7 @@ import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { createTranslator } from 'next-intl';
 import { localeOrDefault } from '@/contracts/locale';
 import { messagesFor, perLocale } from '@/i18n/catalog';
-import { and, desc, eq, ne } from 'drizzle-orm';
+import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { SmsRejectedError, type SmsSender } from '@/integrations/sms';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
@@ -143,10 +143,11 @@ export function createPhoneVerification({ db, sms, secret, now = () => new Date(
 
     async verify(userId: string, code: string): Promise<VerifyResult> {
       const at = now();
+      const lockedNow = (row: { status: string; lockedUntil: Date | null } | undefined) =>
+        row?.status === 'locked' && row.lockedUntil && row.lockedUntil > at ? row.lockedUntil : null;
       const row = await latest(userId);
-      if (row?.status === 'locked' && row.lockedUntil && row.lockedUntil > at) {
-        return { ok: false, reason: 'locked', retryAt: row.lockedUntil };
-      }
+      const lockedUntilNow = lockedNow(row);
+      if (lockedUntilNow) return { ok: false, reason: 'locked', retryAt: lockedUntilNow };
       if (!row || row.status !== 'pending' || !row.codeHash) return { ok: false, reason: 'no_pending' };
       if (row.expiresAt <= at) return { ok: false, reason: 'expired' };
       // A code sent just before a "Not you?" link held the account never sets the number.
@@ -155,10 +156,27 @@ export function createPhoneVerification({ db, sms, secret, now = () => new Date(
         return { ok: false, reason: 'no_pending' };
       }
 
+      // Every attempt is counted before its code is compared, with one atomic increment: a burst of guesses can't all be
+      // compared against the same count (sweep 2026-11-20). Past the limit, nothing more is compared.
+      const [counted] = await db
+        .update(phoneVerifications)
+        .set({ attempts: sql`${phoneVerifications.attempts} + 1`, updatedAt: at })
+        .where(and(eq(phoneVerifications.id, row.id), eq(phoneVerifications.status, 'pending')))
+        .returning({ attempts: phoneVerifications.attempts });
+      if (!counted) {
+        // A guess sent alongside the one that locked the code hears it's locked, as the next one would.
+        const lockedMeanwhile = lockedNow(await latest(userId));
+        return lockedMeanwhile ? { ok: false, reason: 'locked', retryAt: lockedMeanwhile } : { ok: false, reason: 'no_pending' };
+      }
+      if (counted.attempts > PHONE_MAX_ATTEMPTS) {
+        const lockedUntil = new Date(at.getTime() + PHONE_LOCK_MS);
+        await db.update(phoneVerifications).set({ status: 'locked', lockedUntil, updatedAt: at }).where(eq(phoneVerifications.id, row.id));
+        return { ok: false, reason: 'locked', retryAt: lockedUntil };
+      }
       const expected = Buffer.from(row.codeHash, 'hex');
       const actual = Buffer.from(hashCode(row.id, code.trim()), 'hex');
       if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
-        const attempts = row.attempts + 1;
+        const attempts = counted.attempts;
         if (attempts >= PHONE_MAX_ATTEMPTS) {
           const lockedUntil = new Date(at.getTime() + PHONE_LOCK_MS);
           await db
@@ -167,7 +185,6 @@ export function createPhoneVerification({ db, sms, secret, now = () => new Date(
             .where(eq(phoneVerifications.id, row.id));
           return { ok: false, reason: 'locked', retryAt: lockedUntil };
         }
-        await db.update(phoneVerifications).set({ attempts, updatedAt: at }).where(eq(phoneVerifications.id, row.id));
         return { ok: false, reason: 'incorrect' };
       }
 

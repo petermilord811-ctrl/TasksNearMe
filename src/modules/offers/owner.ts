@@ -332,8 +332,14 @@ export async function declineOffer(db: Db, userId: string, offerId: string, now:
     .limit(1);
   if (!row || row.posterUserId !== userId) return { ok: false, code: 'not_found' };
   if (!ACTIVE.includes(row.offer.status as OfferStatus)) return { ok: false, code: 'version_conflict' };
-  await db.transaction(async (tx) => {
-    await tx.update(offers).set({ status: 'declined', closedAt: now, updatedAt: now }).where(eq(offers.id, offerId));
+  const declined = await db.transaction(async (tx) => {
+    // Only while still open: a booking that accepted it meanwhile (or a withdrawal) wins (sweep 2026-11-20).
+    const [updated] = await tx
+      .update(offers)
+      .set({ status: 'declined', closedAt: now, updatedAt: now })
+      .where(and(eq(offers.id, offerId), inArray(offers.status, ACTIVE)))
+      .returning({ id: offers.id });
+    if (!updated) return false;
     await tx.insert(outboxEvents).values({
       id: newId('evt'),
       type: 'offer.declined',
@@ -342,7 +348,9 @@ export async function declineOffer(db: Db, userId: string, offerId: string, now:
       payload: { offerId, taskId: row.offer.taskId, helperUserId: row.offer.helperUserId },
     });
     await tx.insert(auditLog).values({ id: newId('aud'), actorId: userId, actorRole: 'user', action: 'offer.declined', targetType: 'offer', targetId: offerId });
+    return true;
   });
+  if (!declined) return { ok: false, code: 'version_conflict' };
   await refreshOfferCount(db, row.offer.taskId);
   return { ok: true, code: 'updated' };
 }

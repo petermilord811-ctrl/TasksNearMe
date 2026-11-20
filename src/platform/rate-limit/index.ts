@@ -63,3 +63,16 @@ export async function consumeRateLimits(
   }
   return refused ?? { ok: true, remaining: 0 };
 }
+
+/**
+ * Gives one hit of the current window back. For limits on failures that must count every attempt first (atomically,
+ * so parallel tries can't all pass a read of the count) and then return the ones that turned out right.
+ */
+export async function releaseRateLimit(db: Db, key: string, rule: RateLimitRule, now: Date = new Date()): Promise<void> {
+  const windowMs = rule.windowSeconds * 1000;
+  const windowStart = new Date(Math.floor(now.getTime() / windowMs) * windowMs);
+  await db
+    .update(rateLimits)
+    .set({ count: sql`greatest(${rateLimits.count} - 1, 0)` })
+    .where(sql`${rateLimits.key} = ${key} and ${rateLimits.windowStart} = ${windowStart}`);
+}

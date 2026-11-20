@@ -84,6 +84,8 @@ export async function grantStaffRole(db: Db, staff: StaffActor, input: StaffRole
   const { email, role, reason } = parsed.data;
   const [user] = await db.select({ id: users.id }).from(users).where(eq(sql`lower(${users.email})`, email.toLowerCase())).limit(1);
   if (!user) return { ok: false, code: 'validation_failed', fieldErrors: { email: ['invalid'] } };
+  // Never to oneself: another admin grants an admin more power, as with resets and setup codes (sweep 2026-11-20).
+  if (user.id === staff.id) return { ok: false, code: 'not_allowed' };
   const inserted = await db.transaction(async (tx) => {
     const rows = await tx.insert(staffRoles).values({ userId: user.id, role, grantedBy: staff.id, grantedAt: now }).onConflictDoNothing().returning({ userId: staffRoles.userId });
     if (rows.length === 0) return false;

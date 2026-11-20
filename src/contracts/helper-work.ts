@@ -249,9 +249,11 @@ export type OfferInput = z.input<ReturnType<typeof createOfferInputSchema>>;
  * - `onQuote`: the helper's breakdown for a price (the UI never computes fees).
  * - `onSubmitOffer`: ok `sent`. Errors: `validation_failed` (dotted `fieldErrors`), `not_allowed`
  *   (not bookable or task closed), `limit_reached` (too many active offers), `rate_limited`.
- * - `onReviseOffer`: ok `updated` (a new revision; the poster is told).
- * - `onOfferAction`: `withdraw_offer`, `reconfirm_offer` (ok `updated`). Messaging the poster
- *   arrives with messaging (UI-014).
+ * - `onReviseOffer`: ok `updated` (a new revision; the poster is told). Errors: `validation_failed`, `not_found`,
+ *   `expired`, `version_conflict` (the offer changed meanwhile: booked, declined, or revised in another tab),
+ *   `rate_limited`.
+ * - `onOfferAction`: `withdraw_offer`, `reconfirm_offer` (ok `updated`; `version_conflict` when the offer changed
+ *   meanwhile). Messaging the poster arrives with messaging (UI-014).
  */
 /**
  * "Write it for me" on the offer message: drafted from the task as the helper sees it, the helper's

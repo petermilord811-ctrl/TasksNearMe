@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, ne } from 'drizzle-orm';
 import { BADGE_TIERS, badgeModerationInputSchema, type ActionResult, type AdminBadgeRow, type BadgeCode, type BadgeModerationInput, type CategorySlug, type StaffRole } from '@/contracts';
 import { helperProfiles } from '@/modules/profiles/schema';
 import type { StaffActor } from '@/modules/support/staff';
@@ -54,7 +54,8 @@ export async function moderateBadge(db: Db, staff: StaffActor, input: BadgeModer
   const [row] = await db
     .update(userBadges)
     .set(revoke ? { revokedAt: now, revokedByUserId: staff.id, revokedReason: reason, updatedAt: now } : { revokedAt: null, revokedByUserId: null, revokedReason: null, updatedAt: now })
-    .where(and(eq(userBadges.id, badgeId), revoke ? isNull(userBadges.revokedAt) : isNotNull(userBadges.revokedAt)))
+    // Never on one's own account: another staff member decides (sweep 2026-11-20, security review).
+    .where(and(eq(userBadges.id, badgeId), revoke ? isNull(userBadges.revokedAt) : isNotNull(userBadges.revokedAt), ne(userBadges.userId, staff.id)))
     .returning({ userId: userBadges.userId, code: userBadges.code, scope: userBadges.scope, tier: userBadges.tier });
   if (!row) return { ok: false, code: 'not_allowed' };
   await db.insert(auditLog).values({

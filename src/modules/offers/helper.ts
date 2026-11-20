@@ -78,7 +78,7 @@ const isClosedOffer = (status: OfferStatus) => CLOSED_OFFER_STATUSES.includes(st
 type OfferRow = typeof offers.$inferSelect;
 type TaskRow = typeof tasks.$inferSelect;
 
-/** Sending offers: 20 an hour per helper. */
+/** Sending offers: 20 an hour per helper, and revising them another 20 (each one tells the poster again). */
 const OFFER_RATE_LIMIT = { limit: 20, windowSeconds: 3600 };
 
 // ---- Helper state -----------------------------------------------------------------------------
@@ -594,6 +594,9 @@ export async function withdrawOfferOnTask(db: Db, userId: string, taskId: string
 
 /** A new revision of the helper's active offer: back to pending, shown to the poster as new again. */
 export async function reviseOffer(db: Db, userId: string, taskId: string, input: OfferInput, now: Date): Promise<ActionResult> {
+  // As many as new offers: each one emails the poster and clears the board's cache (sweep 2026-11-20).
+  const limited = await consumeRateLimit(db, `offer-revise:${userId}`, OFFER_RATE_LIMIT, now);
+  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const prepared = await prepareOffer(db, userId, taskId, input, now);
   if (!prepared.ready) return prepared.result;
   const { row, values } = prepared;
@@ -604,13 +607,18 @@ export async function reviseOffer(db: Db, userId: string, taskId: string, input:
     .limit(1);
   if (!offer) return { ok: false, code: 'not_found' };
   if (offer.expiresAt <= now) return { ok: false, code: 'expired' };
-  await db.transaction(async (tx) => {
-    await tx
+  const revised = await db.transaction(async (tx) => {
+    // Only the revision read, while still open: a booking that accepted it meanwhile keeps its terms (sweep 2026-11-20).
+    const [updated] = await tx
       .update(offers)
       .set({ ...values, status: 'pending', revision: offer.revision + 1, posterSeenAt: null, updatedAt: now })
-      .where(eq(offers.id, offer.id));
+      .where(and(eq(offers.id, offer.id), eq(offers.revision, offer.revision), inArray(offers.status, ACTIVE)))
+      .returning({ id: offers.id });
+    if (!updated) return false;
     await recordOfferEvent(tx, 'offer.revised', userId, offer, row.task.posterUserId);
+    return true;
   });
+  if (!revised) return { ok: false, code: 'version_conflict' };
   await refreshOfferCount(db, row.task.id);
   return { ok: true, code: 'updated' };
 }
@@ -633,18 +641,29 @@ export async function helperOfferAction(db: Db, userId: string, offerId: string,
   }
   if (action !== 'withdraw_offer' && action !== 'reconfirm_offer') return { ok: false, code: 'not_allowed' };
 
-  await db.transaction(async (tx) => {
+  // Only while the offer still stands as read: a booking that accepted it meanwhile, or a second tap, finds it changed
+  // (sweep 2026-11-20). A withdrawal needs it open; a re-confirmation needs it still stale.
+  const changed = await db.transaction(async (tx) => {
     if (action === 'withdraw_offer') {
-      await tx.update(offers).set({ status: 'withdrawn', closedAt: now, updatedAt: now }).where(eq(offers.id, found.offer.id));
+      const [updated] = await tx
+        .update(offers)
+        .set({ status: 'withdrawn', closedAt: now, updatedAt: now })
+        .where(and(eq(offers.id, found.offer.id), inArray(offers.status, ACTIVE)))
+        .returning({ id: offers.id });
+      if (!updated) return false;
       await recordOfferEvent(tx, 'offer.withdrawn', userId, found.offer, found.task.posterUserId);
     } else {
-      await tx
+      const [updated] = await tx
         .update(offers)
         .set({ status: 'pending', expiresAt: offerExpiresAt(found.task.windowStart, now), posterSeenAt: null, updatedAt: now })
-        .where(eq(offers.id, found.offer.id));
+        .where(and(eq(offers.id, found.offer.id), eq(offers.status, 'stale')))
+        .returning({ id: offers.id });
+      if (!updated) return false;
       await recordOfferEvent(tx, 'offer.reconfirmed', userId, found.offer, found.task.posterUserId);
     }
+    return true;
   });
+  if (!changed) return { ok: false, code: 'version_conflict' };
   await refreshOfferCount(db, found.task.id);
   return { ok: true, code: 'updated' };
 }
