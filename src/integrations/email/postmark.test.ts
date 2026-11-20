@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createEmailProvider, isReservedEmailAddress } from './index';
 import { createPostmarkEmailProvider } from './postmark';
 import { createResendEmailProvider } from './resend';
+import { EMAIL_SEND_TIMEOUT_MS, EmailTimeoutError } from './timeout';
 
 const message = { to: 'robin@example.test', subject: 'Welcome', text: 'Hi Robin', html: '<p>Hi Robin</p>', tag: 'welcome' };
 
@@ -122,3 +123,26 @@ describe('Resend', () => {
   });
 });
 
+describe("a provider that doesn't answer (sweep MN7)", () => {
+  /** A provider that hangs: it answers only by failing once the call is given up. */
+  const hanging = () =>
+    vi.fn((_url: string, init?: RequestInit) => new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true })));
+
+  it.each([
+    ['Postmark', (fetch: typeof globalThis.fetch) => createPostmarkEmailProvider({ token: 't', from: 'x@example.test', fetch, timeoutMs: 50 })],
+    ['Resend', (fetch: typeof globalThis.fetch) => createResendEmailProvider({ apiKey: 'k', from: 'x@example.test', fetch, timeoutMs: 50 })],
+  ])('%s is given up after its time limit, as a failure to try again', async (name, make) => {
+    const fetch = hanging();
+    const error = await make(fetch as unknown as typeof globalThis.fetch).send(message).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(EmailTimeoutError);
+    expect(error).toMatchObject({ provider: name, message: `${name} didn't answer within 50 ms` });
+  }, 3_000);
+
+  it('gives each send 15 seconds by default', async () => {
+    expect(EMAIL_SEND_TIMEOUT_MS).toBe(15_000);
+    const fetch = vi.fn(async () => new Response('{}', { status: 200 }));
+    await createResendEmailProvider({ apiKey: 'k', from: 'x@example.test', fetch }).send(message);
+    await createPostmarkEmailProvider({ token: 't', from: 'x@example.test', fetch }).send(message);
+    for (const call of fetch.mock.calls as unknown as [string, RequestInit][]) expect(call[1].signal).toBeInstanceOf(AbortSignal);
+  });
+});

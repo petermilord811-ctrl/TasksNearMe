@@ -1,19 +1,20 @@
 import type { EmailProvider } from './index';
+import { fetchWithTimeout } from './timeout';
 
 /**
  * Postmark (docs/blueprint/07 §2): one API call per email, on the transactional stream. The plain-text
  * version always goes along with the HTML one. Postmark's own errors (an unverified sender, an inactive
- * recipient) come back as thrown errors with its error code, so callers can log them; nothing is retried
- * here (the notification deliveries retry on their own schedule).
+ * recipient) come back as thrown errors with its error code, so callers can log them, and so does no answer within
+ * 15 s (sweep MN7); nothing is retried here (the notification deliveries retry on their own schedule).
  */
 const ENDPOINT = 'https://api.postmarkapp.com/email';
 
-export function createPostmarkEmailProvider(options: { token: string; from: string; replyTo?: string; messageStream?: string; fetch?: typeof fetch }): EmailProvider {
+export function createPostmarkEmailProvider(options: { token: string; from: string; replyTo?: string; messageStream?: string; fetch?: typeof fetch; timeoutMs?: number }): EmailProvider {
   const send = options.fetch ?? fetch;
   return {
     name: 'postmark',
     async send(message) {
-      const response = await send(ENDPOINT, {
+      const response = await fetchWithTimeout(send, ENDPOINT, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-Postmark-Server-Token': options.token },
         body: JSON.stringify({
@@ -27,7 +28,7 @@ export function createPostmarkEmailProvider(options: { token: string; from: stri
           ...(message.headers ? { Headers: Object.entries(message.headers).map(([Name, Value]) => ({ Name, Value })) } : {}),
           MessageStream: options.messageStream ?? 'outbound',
         }),
-      });
+      }, 'Postmark', options.timeoutMs);
       if (response.ok) return;
       const detail = (await response.json().catch(() => null)) as { ErrorCode?: number; Message?: string } | null;
       throw new Error(`Postmark refused the email (HTTP ${response.status}${detail?.ErrorCode !== undefined ? `, error ${detail.ErrorCode}` : ''}): ${detail?.Message ?? 'no details'}`);

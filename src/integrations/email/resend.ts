@@ -1,4 +1,5 @@
 import type { EmailProvider } from './index';
+import { fetchWithTimeout } from './timeout';
 
 /**
  * Resend (resend.com): one API call per email, plain-text and designed versions, the kind as a tag. Handy
@@ -7,12 +8,12 @@ import type { EmailProvider } from './index';
  */
 const ENDPOINT = 'https://api.resend.com/emails';
 
-export function createResendEmailProvider(options: { apiKey: string; from: string; replyTo?: string; fetch?: typeof fetch }): EmailProvider {
+export function createResendEmailProvider(options: { apiKey: string; from: string; replyTo?: string; fetch?: typeof fetch; timeoutMs?: number }): EmailProvider {
   const send = options.fetch ?? fetch;
   return {
     name: 'resend',
     async send(message) {
-      const response = await send(ENDPOINT, {
+      const response = await fetchWithTimeout(send, ENDPOINT, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${options.apiKey}`,
@@ -29,7 +30,7 @@ export function createResendEmailProvider(options: { apiKey: string; from: strin
           ...(options.replyTo ? { reply_to: options.replyTo } : {}),
           ...(message.headers ? { headers: message.headers } : {}),
         }),
-      });
+      }, 'Resend', options.timeoutMs);
       if (response.ok) return;
       const detail = (await response.json().catch(() => null)) as { name?: string; message?: string } | null;
       throw new Error(`Resend refused the email (HTTP ${response.status}${detail?.name ? `, ${detail.name}` : ''}): ${detail?.message ?? 'no details'}`);

@@ -38,6 +38,12 @@ const MINUTE = 60_000;
 const RECENT_MS = 48 * 60 * MINUTE;
 /** A send that never finished (the process stopped) is retried after this. */
 const STUCK_MS = 10 * MINUTE;
+/**
+ * How long one run may spend sending (sweep MN7). It runs inside the job runner's lock, before the waitlist, privacy
+ * and transfer jobs, so a slow provider mustn't hold it for long: what's left goes out with the next minute's run.
+ * Checked before each notification; each send stops on its own after 15 s (Twilio, web push and email alike).
+ */
+export const DELIVERY_BUDGET_MS = 30_000;
 
 type NotificationRow = typeof notifications.$inferSelect;
 type DeliveryRow = typeof notificationDeliveries.$inferSelect;
@@ -221,9 +227,12 @@ async function attempt(db: Db, providers: DeliveryProviders, delivery: DeliveryR
   }
 }
 
-/** Plans new notifications (one row per channel) and sends what's due, oldest first. */
-export async function deliverNotifications(db: Db, now: Date, providers: DeliveryProviders = createDeliveryProviders(db), limit = 100): Promise<{ sent: number }> {
+/** Plans new notifications (one row per channel) and sends what's due, oldest first, for up to `budgetMs`. */
+export async function deliverNotifications(db: Db, now: Date, providers: DeliveryProviders = createDeliveryProviders(db), limit = 100, budgetMs = DELIVERY_BUDGET_MS): Promise<{ sent: number }> {
   let sent = 0;
+  // Real time, not `now` (the test clock moves that one).
+  const started = performance.now();
+  const outOfTime = () => performance.now() - started > budgetMs;
 
   const fresh = await db
     .select({ notification: notifications })
@@ -234,6 +243,8 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     .limit(limit);
   const people = await peopleOf(db, [...new Set(fresh.map(({ notification }) => notification.userId))]);
   for (const { notification } of fresh) {
+    // Between notifications only: one whose channels were planned is never fresh again, so all of them go now.
+    if (outOfTime()) return { sent };
     const person = people.get(notification.userId);
     if (!person) continue;
     const topic: NotificationTopic | undefined = NOTIFICATION_TOPIC[notification.type as NotificationType];
@@ -271,6 +282,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
   }
 
   // Held through quiet hours, failed and due for another try, or stuck mid-send.
+  if (outOfTime()) return { sent };
   const stuckBefore = new Date(now.getTime() - STUCK_MS);
   const due = await db
     .select({ delivery: notificationDeliveries, notification: notifications })
@@ -286,6 +298,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     .limit(limit);
   const waiting = await peopleOf(db, [...new Set(due.map(({ delivery }) => delivery.userId))]);
   for (const { delivery, notification } of due) {
+    if (outOfTime()) break;
     const person = waiting.get(delivery.userId);
     const channel = delivery.channel as DeliveryChannel;
     const to = person && (channel !== 'push' || providers.push) ? addressOf(person, channel) : null;

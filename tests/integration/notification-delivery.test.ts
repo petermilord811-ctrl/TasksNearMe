@@ -2,6 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { NotificationType } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
+import { EmailTimeoutError } from '@/integrations/email/timeout';
 import { deliverNotifications, type DeliveryProviders } from '@/modules/notifications/delivery';
 import { notificationDeliveries, notificationPreferences, notifications } from '@/modules/notifications/schema';
 import { createDb } from '@/platform/db/connect';
@@ -150,5 +151,32 @@ describe('notification delivery', () => {
     const old = await notify(PERSON, 'offer_received', new Date(DAY.getTime() - 3 * 86_400_000));
     await run(DAY);
     expect(await deliveriesOf(old)).toEqual({});
+  });
+
+  it('stops sending when its run is out of time, and tries a send that timed out again later (sweep MN7)', async () => {
+    // Saturday Feb 6, 2027, 10 am in Austin: away from the other tests' notifications.
+    const at = new Date('2027-02-06T16:00:00.000Z');
+    const offers: string[] = [];
+    for (let index = 0; index < 6; index += 1) offers.push(await notify(PERSON, 'offer_received', new Date(at.getTime() + index * 1_000)));
+    // A slow provider: each email takes 40 ms, and the run gets 100 ms.
+    const slow: DeliveryProviders = { ...providers, email: { name: 'slow', send: (message) => new Promise((resolve) => setTimeout(() => { sent.push({ channel: 'email', to: message.to, text: message.text }); resolve(); }, 40)) } };
+    await deliverNotifications(db, at, slow, 1_000, 100);
+    const first = await Promise.all(offers.map(deliveriesOf));
+    const done = first.filter((rows) => rows.email?.status === 'sent').length;
+    expect(done).toBeGreaterThan(0);
+    expect(done).toBeLessThan(offers.length);
+    // The oldest went first, and the rest weren't started (no rows yet), so the next run plans and sends them.
+    expect(first.map((rows) => rows.email?.status ?? 'none')).toEqual(offers.map((_, index) => (index < done ? 'sent' : 'none')));
+    await deliverNotifications(db, new Date(at.getTime() + 60_000), slow, 1_000);
+    expect((await Promise.all(offers.map(deliveriesOf))).map((rows) => rows.email?.status)).toEqual(offers.map(() => 'sent'));
+
+    // A provider that doesn't answer in time fails the send like a refusal, and it's tried again 5 minutes later.
+    const later = new Date(at.getTime() + 3_600_000);
+    const quiet = await notify(PERSON, 'offer_received', later);
+    const hanging: DeliveryProviders = { ...providers, email: { name: 'hanging', send: async () => { throw new EmailTimeoutError('Resend', 15_000); } } };
+    await deliverNotifications(db, later, hanging, 1_000);
+    expect((await deliveriesOf(quiet)).email).toMatchObject({ status: 'failed', attempts: 1, reason: "Resend didn't answer within 15 s", sendAfter: new Date(later.getTime() + 5 * 60_000) });
+    await run(new Date(later.getTime() + 5 * 60_000));
+    expect((await deliveriesOf(quiet)).email).toMatchObject({ status: 'sent', attempts: 2 });
   });
 });
